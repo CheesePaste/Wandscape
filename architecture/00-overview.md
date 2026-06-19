@@ -165,8 +165,9 @@ com.wsteam.wandscape/
 │   └── internal/                    #   任务池、调度器、生命周期实现
 │
 ├── npc/                             # [07] npc-system — NPC
-│   ├── entity/                      #   NPC 实体注册 + 属性
-│   └── internal/                    #   NPC API 实现
+│   ├── entity/                      #   WandscapeNpc (PathfinderMob + ECS 桥接)
+│   ├── internal/                    #   EntityComponentBridge + NpcApiImpl
+│   └── data/                        #   NpcDataImpl
 │
 ├── building/                        # [08] building-core — 建筑核心
 │   ├── block/                       #   建筑方块注册
@@ -235,9 +236,11 @@ com.wsteam.wandscape/
 |------|------|---------|
 | 0 — 地基 | ✅ 完成 | 01-shared-api 类型系统 + 16 data-driven-config 框架 |
 | core-engine | ✅ 已合并 | ECS + Blueprint + AtomicOp + Scheduler + 63 测试通过 |
+| core-engine V2.5 | ✅ 完成 | CompletableFuture 异步 tick 门控 + AsyncTickGatingTest (17 测试) |
 | engine-integration | ✅ 完成 | WandscapeEngine + WandscapeBlockOps + BuildingTaskSource + BuildingBlueprints + EngineBootstrap |
 | 1 — 02 wand | ✅ 完成 | WandItem, WandApiImpl, WandPresetLoader, 4 法杖 JSON |
 | 1 — 03 element | ✅ 完成 | ElementApiImpl, ElementMappingLoader, 5 元素映射 JSON, decomposable 标签 |
 | 1 — 08 building | ✅ 完成 | 3 Block/BE/BEtype + BuildingConfig + AbstractWandscapeBE + BuildingApiImpl + 3 JSON |
+| 2 — 07 NPC (V1) | ✅ 完成 | WandscapeNpc + EntityComponentBridge + WandscapeEntityOps + WandscapeRitualOps + NpcApiImpl + 215 测试 |
 
-**当前**：阶段 1 全部完成 — 阶段 2 (07 NPC + 05 atomic-ops + 06 task) 可开工
+**当前**：阶段 1 全部完成，阶段 2 NPC V1 落地 — 引擎闭环可验证

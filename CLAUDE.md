@@ -87,21 +87,34 @@
 - **模板变量**：`{{taskId}}`、`{{npcId}}`、`{{task.params.<key>}}`、`{{pos.x/y/z}}`、`{{event.<key>}}`
 - **引擎引导**：`CoreBootstrap.bootstrap(EngineConfig)` → `World`，注入边界实现
 - **事件驱动 Tick 门控 (V2.5)**：`CompletableFuture<Void>` — 异步 Op 阻止引擎逻辑帧推进，所有 Op resolve 后自动门开。`startAsyncOp()` / `hasPendingAsyncOps()`
-- **测试**：210 个 JUnit 5 测试 (63 核心引擎 + 130 适配层 + 17 AsyncTickGating)
+- **测试**：215 个 JUnit 5 测试 (63 核心引擎 + 130 适配层 + 17 AsyncTickGating + 5 WorldEcs)
 
-适配层边界接口 5 个，其中 `BlockOps` 已完成 MC 实现 (`WandscapeBlockOps`)，其余 3 个（`EntityOps`/`RitualOps`/`ColonyResourceAccess`）为 stub 实现在 `EngineBootstrap` 中。`EventBus` = `SimpleEventBus`（纯内存，无需适配）。
+适配层边界接口 5 个：`BlockOps` → `WandscapeBlockOps`，`EntityOps` → `WandscapeEntityOps` (V1 stub)，`RitualOps` → `WandscapeRitualOps` (self_teleport)，`ColonyResourceAccess` → stub (阶段 3)。`EventBus` = `SimpleEventBus`（纯内存，无需适配）。
 
 ### 引擎集成层（✅ 已实现）
 
-位于 `com.wsteam.wandscape.engine/`，5 个文件：
+位于 `com.wsteam.wandscape.engine/`，7 个文件：
 
 | 文件 | 职责 |
 |------|------|
 | `WandscapeEngine.java` | 单例持有 World 实例 |
 | `boundary/WandscapeBlockOps.java` | BlockOps MC 实现：Level.setBlock/getBlockState |
+| `boundary/WandscapeEntityOps.java` | EntityOps MC 实现：阶段 2 stub |
+| `boundary/WandscapeRitualOps.java` | RitualOps MC 实现：self_teleport 同步传送 |
 | `source/BuildingTaskSource.java` | TaskSource：轮询建筑 BE → TaskRequest → pool.addTask()，每 20 tick |
 | `source/blueprint/BuildingBlueprints.java` | 注册 "build:*" 5 个蓝图（stone_bricks/oak_planks/stone/dirt/glass） |
 | `bootstrap/EngineBootstrap.java` | 组装 EngineConfig + 边界实现 + TaskSource + Blueprint → CoreBootstrap.bootstrap() |
+
+### 07 NPC 系统（✅ V1 已实现）
+
+位于 `com.wsteam.wandscape.npc/`，4 个文件：
+
+| 文件 | 职责 |
+|------|------|
+| `entity/WandscapeNpc.java` | NPC 实体：PathfinderMob + FloatGoal + RandomStrollGoal + ECS 桥接 |
+| `internal/EntityComponentBridge.java` | 单例 MC↔ECS 双向映射 + syncPositions + onNpcJoin/LeaveWorld |
+| `internal/NpcApiImpl.java` | NpcApi 实现：查询 ECS World + EntityComponentBridge |
+| `data/NpcDataImpl.java` | NpcData 实现：包装 WandscapeNpc 字段 |
 
 在 `Wandscape.java` 的 `ServerStarting` 事件中调用 `EngineBootstrap.bootstrap()`。
 
@@ -112,9 +125,9 @@
 **2. 5 个边界接口的 MC 实现：**
 | 接口 | MC 实现做什么 | 优先级 |
 |------|-------------|--------|
-| `BlockOps` | `Level.setBlock()` / `getBlockState()` / `isAir()` | 阶段 1 必须 |
-| `EntityOps` | `LivingEntity.addEffect()` / `position()` | 阶段 2 |
-| `RitualOps` | 仪式引导过程轮询 | 阶段 2 |
+| `BlockOps` | `Level.setBlock()` / `getBlockState()` / `isAir()` | ✅ V1 完成 |
+| `EntityOps` | `LivingEntity.addEffect()` / `position()` | ✅ V1 stub |
+| `RitualOps` | self_teleport 同步传送 | ✅ V1 完成 |
 | `ColonyResourceAccess` | 对接仓库 BE 的元素存取 | 阶段 3 |
 | `EventBus` | `SimpleEventBus`（纯内存实现，已有，无需适配） | 阶段 0 ✅ |
 

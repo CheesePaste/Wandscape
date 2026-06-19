@@ -16,6 +16,9 @@ import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -23,6 +26,9 @@ import com.wsteam.wandscape.wand.item.WandItem;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -37,6 +43,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
@@ -58,6 +65,8 @@ public class Wandscape {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
+    public static final DeferredRegister<EntityType<?>> ENTITIES =
+            DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
 
     // ---- Data loader ----
     public static final WandscapeDataLoader DATA_LOADER = new WandscapeDataLoader();
@@ -106,6 +115,23 @@ public class Wandscape {
             BLOCK_ENTITIES.register("earth_node", () ->
                     new BlockEntityType<>(EarthNodeBE::new, Set.of(EARTH_NODE_BLOCK.get()), null));
 
+    // ---- 07 npc-system: entity ----
+    public static final DeferredHolder<EntityType<?>, EntityType<WandscapeNpc>> WANDSCAPE_NPC =
+            ENTITIES.register("wandscape_npc", () ->
+                    EntityType.Builder.of(WandscapeNpc::new, MobCategory.CREATURE)
+                            .sized(0.6f, 1.8f)
+                            .clientTrackingRange(10)
+                            .build("wandscape_npc"));
+
+    // ---- 07 npc-system: spawn egg ----
+    public static final DeferredItem<Item> WANDSCAPE_NPC_EGG =
+            ITEMS.register("wandscape_npc_spawn_egg", () ->
+                    new DeferredSpawnEggItem(
+                            () -> (EntityType<? extends Mob>) (EntityType<?>) WANDSCAPE_NPC.get(),
+                            0x4B0082,  // dark purple background
+                            0xFFD700,  // gold highlight
+                            new Item.Properties()));
+
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =
             CREATIVE_MODE_TABS.register("wandscape_tab", () -> CreativeModeTab.builder()
@@ -116,6 +142,7 @@ public class Wandscape {
                         output.accept(TOWN_HALL_ITEM.get());
                         output.accept(FOREST_NODE_ITEM.get());
                         output.accept(EARTH_NODE_ITEM.get());
+                        output.accept(WANDSCAPE_NPC_EGG.get());
                     })
                     .build());
 
@@ -129,6 +156,7 @@ public class Wandscape {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
+        ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
@@ -137,6 +165,7 @@ public class Wandscape {
 
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
+        WandscapeApis.setNpcApi(new NpcApiImpl());
 
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
@@ -145,7 +174,7 @@ public class Wandscape {
     private void commonSetup(FMLCommonSetupEvent event) {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
-        LOGGER.info("Wandscape common setup — wand, element, buildings: town_hall, forest_node, earth_node");
+        LOGGER.info("Wandscape common setup — wand, element, buildings, npc ready");
     }
 
     @SubscribeEvent
@@ -169,11 +198,15 @@ public class Wandscape {
 
         mcTickCount++;
 
-        // Gate: skip engine tick when async ops (e.g. MoveOp pathfinding) are in flight
+        // ① Sync MC entity positions → ECS (always, even when gate is closed)
+        EntityComponentBridge.INSTANCE.syncPositions(world);
+
+        // ② Gate: skip engine tick when async ops (e.g. MoveOp pathfinding) are in flight
         if (world.hasPendingAsyncOps()) {
             return;
         }
 
+        // ③ Engine logic tick
         engineTickCount++;
         world.tick(1.0f);
 

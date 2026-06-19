@@ -131,6 +131,15 @@ public class World {
         return store != null && store.has(entity);
     }
 
+    /** Remove a component from an entity. No-op if the store or entity doesn't exist. */
+    public <T> void removeComponent(long entity, Class<T> type) {
+        ComponentStore<T> store = getStore(type);
+        if (store != null) {
+            store.remove(entity);
+            Log.debug(TAG, "entity %d - %s", entity, type.getSimpleName());
+        }
+    }
+
     /**
      * Query entities that have ALL of the given component types.
      * Uses sorted-list intersection for performance.

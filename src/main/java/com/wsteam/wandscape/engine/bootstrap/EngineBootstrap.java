@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
-import com.wsteam.wandscape.core.boundary.RitualOps;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
@@ -18,9 +17,10 @@ import com.wsteam.wandscape.core.system.TaskSource;
 import com.wsteam.wandscape.core.system.WarehouseSource;
 import com.wsteam.wandscape.core.system.WorkbenchSource;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
-import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
+import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
+import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BuildingBlueprints;
 
@@ -58,36 +58,8 @@ public final class EngineBootstrap {
 
         // 4. Build boundary implementations
         WandscapeBlockOps blockOps = new WandscapeBlockOps();
-
-        // Stub boundary implementations for not-yet-implemented interfaces
-        com.wsteam.wandscape.core.boundary.EntityOps entityOps = new com.wsteam.wandscape.core.boundary.EntityOps() {
-            @Override
-            public void applyEffect(com.wsteam.wandscape.core.types.EntityId target,
-                                     com.wsteam.wandscape.core.types.EffectId effect,
-                                     int strength, int duration) {
-                // Stage 2: integrate with MC LivingEntity
-            }
-
-            @Override
-            public GridPos getPosition(com.wsteam.wandscape.core.types.EntityId entity) {
-                return GridPos.ORIGIN;
-            }
-        };
-
-        RitualOps ritualOps = new RitualOps() {
-            @Override
-            public void beginRitual(com.wsteam.wandscape.core.types.RitualId ritual,
-                                     GridPos target, World world, long casterId) {
-                // Stage 2: integrate with MC ritual execution
-            }
-
-            @Override
-            public com.wsteam.wandscape.core.op.OpResult pollRitual(
-                    com.wsteam.wandscape.core.types.RitualId ritual,
-                    GridPos target, World world, long casterId) {
-                return com.wsteam.wandscape.core.op.OpResult.DONE;
-            }
-        };
+        WandscapeEntityOps entityOps = new WandscapeEntityOps();
+        WandscapeRitualOps ritualOps = new WandscapeRitualOps();
 
         ColonyResourceAccess colonyResources = new ColonyResourceAccess() {
             @Override
@@ -110,7 +82,7 @@ public final class EngineBootstrap {
 
             @Override
             public int available(com.wsteam.wandscape.core.types.ResourceId resource) {
-                return Integer.MAX_VALUE; // Infinite resources for stage 1
+                return Integer.MAX_VALUE; // Infinite resources for stage 1-2
             }
         };
 
