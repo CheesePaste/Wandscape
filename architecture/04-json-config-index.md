@@ -92,4 +92,9 @@ data/wandscape/
 - `tags/block/decomposable.json` 方块标签已创建
 - 待实现：buildings/ recipes/ rituals/ multiblocks/ 类别
 
+## 阶段 1 状态
+
+- `buildings/` 类别已注册：3 文件（town_hall, forest_node, earth_node），由 08 building-core 加载
+- `WandscapeDataLoader.register()` 新增 parser 参数支持，BuildingConfigLoader 注册时注入 Gson 解析器
+
 > **维护规则**：新增 JSON 类别时在"目录结构"中添加一行，在"各类格式摘要"中添加一节。修改必填/可选字段时更新对应节的说明。

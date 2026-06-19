@@ -1,0 +1,27 @@
+{
+  "id": "town_hall",
+  "display_name": "殖民地市政厅",
+  "category": "basic",
+  "block_id": "wandscape:town_hall",
+  "pattern": [
+    [0, 0, 0]
+  ],
+  "block_mapping": {
+    "0,0,0": "wandscape:town_hall"
+  },
+  "comfort": 5,
+  "magic": 3,
+  "wonder": 2,
+  "maintenance_cost": 4,
+  "shutdown_penalty": {
+    "output_reduction": 0.5,
+    "time_multiplier": 2.0
+  },
+  "queue": {
+    "capacity": 5,
+    "task_types": ["building"]
+  },
+  "unlock_requirement": {
+    "min_wonder": 0
+  }
+}

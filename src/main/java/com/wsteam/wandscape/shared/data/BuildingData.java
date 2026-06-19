@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 
 public interface BuildingData {
     UUID getBuildingId();
+    UUID getColonyId();
     String getBuildingTypeId();
     String getCategory();
     BlockPos getPosition();

@@ -1,0 +1,27 @@
+{
+  "id": "forest_node",
+  "display_name": "森林节点",
+  "category": "node",
+  "block_id": "wandscape:forest_node",
+  "pattern": [
+    [0, 0, 0]
+  ],
+  "block_mapping": {
+    "0,0,0": "wandscape:forest_node"
+  },
+  "comfort": 1,
+  "magic": 2,
+  "wonder": 0,
+  "maintenance_cost": 2,
+  "shutdown_penalty": {
+    "output_reduction": 0.5,
+    "time_multiplier": 2.0
+  },
+  "queue": {
+    "capacity": 10,
+    "task_types": ["gathering"]
+  },
+  "unlock_requirement": {
+    "min_wonder": 0
+  }
+}
