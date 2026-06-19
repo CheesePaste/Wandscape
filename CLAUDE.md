@@ -80,7 +80,7 @@
 - **ECS 骨架**：`World` + `System` 有序 tick + `ComponentStore` + `query()` 交集查询
 - **Blueprint → TaskSequence**：声明式蓝图编译为原子操作序列，支持事件触发链
 - **AtomicOp sealed 层级**（7 种）：`TransformOp / BlockInteractOp / EntityInteractOp / RitualOp / ResourceRequestOp / EmitEventOp / IfConditionOp`
-- **纯/副作用 Op 批处理**：纯 Op（EmitEventOp、IfConditionOp）在一个 tick 内连续执行直到撞到副作用 Op
+- **OpExecutor 返回 CompletableFuture (V2.5)**：`execute()` 返回 `CompletableFuture<Void>` — 同步 Op `completedFuture(null)`，异步 Op `world.startAsyncOp(label)`。引擎绝不重调 execute()，看 `TaskExecutor.pendingFuture.isDone()` 决定推进。
 - **事件驱动编排**：`TriggerDeclaration` 声明"任务 X 完成后 source 任务 Y"，`EventBus` 延迟 unsubscribe 保证事件不丢失
 - **双层幂等**：EventBus 同 tick 合并 + `dedupKey` 跨 tick 去重
 - **System 蓝图**：`SystemBlueprintRegistry` + `SystemBlueprintSystem`，永久 subscribe 基础设施事件
@@ -159,8 +159,9 @@
   │   找本殖民地空闲 NPC → 评分(range×0.5+efficiency×0.3+level×0.2)
   │   → taskPool.assign(taskId, bestNpcId)
   │
-  ▼  TaskExecutionSystem (每 tick, 逐 NPC)
-  │   纯 Op(EmitEventOp/IfConditionOp) 连续执行直到撞到副作用 Op
+  ▼  TaskExecutionSystem (每引擎逻辑帧, 逐 NPC)
+  │   检查 pendingFuture.isDone() → 推进 stepIndex
+  │   否则 executor.execute() → future.isDone() → 同步推进 or 存 pendingFuture
   │   副作用 Op(TransformOp/RitualOp/...) → 调 OpExecutor → 调边界接口
   │
   ▼  步骤全部 DONE → taskPool.completeTask() → emit TaskCompleted

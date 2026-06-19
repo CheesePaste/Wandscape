@@ -149,7 +149,7 @@ sealed interface AtomicOp
 |-----------|---------|---------|
 | `BlockOps` | `setBlock, getBlock, isAir, toggle, activate, openGui` | World block manipulation |
 | `EntityOps` | `applyEffect, getPosition` | External entity interaction |
-| `RitualOps` | `beginRitual, pollRitual` | Channeled ritual lifecycle |
+| `RitualOps` | `beginRitual` → `CompletableFuture<Void>` | Ritual lifecycle (sync/async) |
 | `ColonyResourceAccess` | `hasEnough, reserve, commit, release, available` | Warehouse resource management |
 | `EventBus` | `emit, subscribe, unsubscribe` | Tick-delayed event dispatch |
 

@@ -95,40 +95,49 @@ record TaskSequence(List<AtomicOp> steps) {}
 
 ---
 
-## 5. OpResult 执行结果模型
+## 5. OpExecutor — Promise 模型 (V2.5)
 
-同步返回枚举：
-
-```java
-enum OpResult {
-    DONE,          // 瞬间完成，推进 stepIndex
-    WAITING,       // 异步操作已启动 → MC 边界层持有 CompletableFuture
-                   // TaskExecutionSystem 退出，不推进 stepIndex
-                   // 引擎逻辑帧门控关闭，直到 future.complete() 后重新打开
-}
-```
-
-System 调用 `opExecutor.execute(op, world, npcId)`，拿到结果后：
-- `DONE` → 扣魔力，推进 stepIndex / pop privateQueue
-- `WAITING` → 不扣魔力，不推进。MC 边界层在异步操作完成时调用 `future.complete(null)`，`whenComplete` 回调自
-动清理 pendingFutures。全部 resolve 后引擎逻辑帧自动推进。
-
-> **与 V1 的差异**: V1 用轮询（每 MC tick 调 `pollRitual()`）。V2.5 改为事件驱动 — `WAITING` 意味着"已在异步执行，MC 边界层完成后回调"，引擎 tick 停止推进直到所有异步 Op 完成。
-
----
-
-## 6. OpExecutor 策略注册表
-
-按操作类型分策略，非 System：
+`OpExecutor.execute()` 返回 `CompletableFuture<Void>`，而非同步枚举：
 
 ```java
 interface OpExecutor<T extends AtomicOp> {
     Class<T> opType();
-    OpResult execute(T op, World world, long npcId);
+    CompletableFuture<Void> execute(T op, World world, long npcId);
 }
 ```
 
-`TaskExecutionSystem` 通过注册表找到对应 executor 调用，自身只负责推进和状态切换。
+**同步 Op**：返回 `CompletableFuture.completedFuture(null)` → 引擎立刻推进 stepIndex。
+**异步 Op**：返回不完成的 future（来自 `world.startAsyncOp(label)`）→ 引擎将 future 存入 `TaskExecutor.pendingFuture`，不再重调 `execute()`。
+
+### 执行流程
+
+```
+引擎逻辑帧 N:
+  for each NPC:
+    if pendingFuture != null:
+      if pendingFuture.isDone() → 推进 stepIndex, 清空 pendingFuture, 继续
+      else → 跳过这个 NPC (still in-flight)
+    else:
+      future = executor.execute(currentOp)        ← 只调一次
+      if future.isDone() → 推进 stepIndex (同步)    ← 不重调
+      else → pendingFuture = future               ← 存着等 resolve
+```
+
+**关键约束**：引擎对同一个 AtomicOp **决不重调 `execute()`**。async Op 返回不完成的 future → 引擎存 pendingFuture → MC 层 `complete()` → 引擎下一逻辑帧检测到 `isDone()` → 推进 stepIndex → 继续下一个 Op。
+
+---
+
+## 6. 引擎门控 (V2.5)
+
+`World.pendingFutures` 列表收集所有异步 future。MC 层通过 `world.startAsyncOp(label)` 获取 future。`world.hasPendingAsyncOps()` 在 `Wandscape.onServerTick` 中门控：
+
+```
+MC tick:
+  asyncExec.tickAll()                    ← MC 层倒计时 → future.complete()
+  bridge.syncPositions(world)
+  if world.hasPendingAsyncOps() → return ← 跳过引擎 tick
+  world.tick()                           ← 全部 resolve → 引擎逻辑帧推进
+```
 
 ---
 
@@ -342,23 +351,30 @@ interface ColonyResourceAccess {
 ```
 遍历所有持有 Position, ManaPool, TaskExecutor, WandCarrier, Inventory 的 NPC:
 
-  1. 确定当前 AtomicOp：
+  1. 检查 pendingFuture:
+     if pendingFuture != null:
+       if pendingFuture.isDone() → 推进 stepIndex, pendingFuture=null, continue
+       else → 跳过此 NPC (still in-flight)
+
+  2. 确定当前 AtomicOp：
      - privateQueue 非空 → peek()
      - 否则 globalTaskId != null → currentSequence.get(stepIndex)
-     - 否则 continue
+     - 否则 → set IDLE, continue
 
-  2. 计算魔力消耗：actualCost = baseCost × bestManaEfficiency
+  3. ResourceRequestOp → 内联处理（走 ColonyResourceAccess）
 
-  3. 魔力检查：mana.current < actualCost → continue
+  4. 魔力检查：非纯 Op → actualCost = baseCost × bestManaEfficiency
+     → mana.current < actualCost → 跳过此 NPC
 
-  4. 执行：OpResult result = registry.get(op.getClass()).execute(op, world, npcId)
+  5. 执行：CompletableFuture<Void> future = executor.execute(op)
 
-  5. 处理结果：
-     DONE → 扣魔力，private 则 pop，global 则 stepIndex++
-            global 完成时清理 taskId，emit TaskCompletedEvent
-     WAITING → 不扣魔力，不推进，下 tick 重试
-     INTERRUPTED → 魔力不返还，清理 taskId，记录中断，emit TaskInterruptedEvent
+  6. 处理结果：
+     future.isDone() (同步) → 非纯 Op 扣魔力, 推进 stepIndex → break (副作用边界)
+                            → 纯 Op 已自推进 → continue (批处理)
+     !future.isDone() (异步) → pendingFuture = future → return (存着等 resolve)
 ```
+
+**关键约束**：引擎对同一个 AtomicOp **决不重调 execute()**。
 
 ---
 
@@ -541,10 +557,10 @@ record ResourceRequestOp(ResourceStack requested) implements AtomicOp {}
 ```
 
 `OpExecutor` 逻辑：
-1. 检查 `ColonyResourceAccess.hasEnough()` → 无货返回 `WAITING`
-2. `reserve()` → `Inventory.add()` → `commit()` → 返回 `DONE`
+1. 检查 `ColonyResourceAccess.hasEnough()` → 无货返回未完成的 future
+2. `reserve()` → `Inventory.add()` → `commit()` → 返回 `completedFuture(null)`
 
-`WAITING` 时任务挂起，`TaskSource` 检测事件后发布补货任务。
+未完成时任务挂起，`TaskSource` 检测事件后发布补货任务。
 
 ### 25.2 即时编排
 
@@ -552,11 +568,11 @@ record ResourceRequestOp(ResourceStack requested) implements AtomicOp {}
 
 ```java
 class ResourceRequestExecutor implements OpExecutor<ResourceRequestOp> {
-    OpResult execute(ResourceRequestOp op, World world, long npcId) {
+    CompletableFuture<Void> execute(ResourceRequestOp op, World world, long npcId) {
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         // 插入物品传送 RitualOp 到私有队列
         exec.privateQueue.push(new RitualOp(ITEM_TELEPORT, op.requested(), WAREHOUSE, NPC_INVENTORY));
-        return DONE;  // 编排本身是瞬时的
+        return CompletableFuture.completedFuture(null);  // 编排本身是瞬时的
     }
 }
 ```
@@ -573,37 +589,22 @@ class ResourceRequestExecutor implements OpExecutor<ResourceRequestOp> {
 
 ---
 
-## 27. RitualOp —— 异步执行 (V2.5)
+## 27. RitualOp —— Promise 模型 (V2.5)
 
-### 27.1 V2.5 事件驱动模型（推荐）
-
-仪式引导时长不固定，使用 `CompletableFuture` 事件驱动：
-
-```
-RitualOp 首次执行 → RitualExecutor.execute()
-  → beginRitual() 启动 MC 层引导
-  → world.startAsyncOp("ritual_warding") → 持有 future → 返回 WAITING
-  → 引擎逻辑帧门控关闭
-
-MC tick (×N):
-  仪式引导持续... MC 层维护引导进度
-
-引导完成 → MC 层: future.complete(null)
-  → whenComplete 自动清理 → 引擎逻辑帧门打开 → 下个逻辑帧 RitualOp DONE
-```
-
-### 27.2 旧轮询模型（仍保留）
-
-部分简单仪式（如 `self_teleport`）不走 CompletableFuture，而是沿用原有轮询接口在每个 MC tick 推进。选择权在 MC 边界实现：
+`RitualOps.beginRitual()` 返回 `CompletableFuture<Void>`：
 
 ```java
 interface RitualOps {
-    void beginRitual(RitualId ritual, GridPos target, World world, long casterId);
-    OpResult pollRitual(RitualId ritual, GridPos target, World world, long casterId);
+    CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world, long casterId);
 }
 ```
 
-核心层完全不管引导多久。中断即失败，无部分生效。
+- 同步仪式（如 self_teleport）：返回 `CompletableFuture.completedFuture(null)`
+- 通道仪式（如 warding）：返回不完成的 future，MC 层引导完成后 `complete(null)`
+
+`RitualExecutor.execute()` 直接透传 `beginRitual()` 的返回值给引擎。引擎根据 `future.isDone()` 决定立即推进还是存储到 `TaskExecutor.pendingFuture` 等待。
+
+不再有 `pollRitual()`——旧轮询模型已删除。
 
 ---
 
@@ -851,10 +852,10 @@ class Engine {
 `World`, `System`（接口）, `ComponentStore`（接口）, `HashMapComponentStore`
 
 ### AtomicOp（7）
-`AtomicOp`（sealed）, `TransformOp`, `BlockInteractOp`, `EntityInteractOp`, `RitualOp`, `ResourceRequestOp`, `OpResult`（枚举：DONE, WAITING）
+`AtomicOp`（sealed）, `TransformOp`, `BlockInteractOp`, `EntityInteractOp`, `RitualOp`, `ResourceRequestOp`
 
 ### OpExecutor（2）
-`OpExecutor`（接口）, `OpExecutorRegistry`
+`OpExecutor`（接口 — 返回 `CompletableFuture<Void>`）, `OpExecutorRegistry`
 
 ### 边界接口（5）
 `BlockOps`, `EntityOps`, `RitualOps`, `ColonyResourceAccess`, `EventBus`

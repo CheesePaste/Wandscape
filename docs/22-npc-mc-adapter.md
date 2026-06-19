@@ -280,8 +280,9 @@ public class WandscapeRitualOps implements RitualOps {
     }
 
     @Override
-    public OpResult pollRitual(RitualId ritual, GridPos target, World world, long casterId) {
-        return OpResult.DONE; // 阶段 2: 所有仪式瞬发
+    public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world, long casterId) {
+        // 阶段 2: 所有仪式瞬发 → completedFuture
+        return CompletableFuture.completedFuture(null);
     }
 }
 ```

@@ -221,8 +221,8 @@ TaskExecutionSystem.update(world):
 ```
 
 - 纯 Op 可以一口气跑一串（如 3 个 `IfConditionOp` + 1 个 `EmitEventOp`）
-- 撞到副作用 Op → 执行 → 无论结果都退出本轮（下 tick 继续下个 step）
-- WAITING 的副作用 Op 下 tick 重试同一个 step
+- 撞到副作用 Op（同步）→ 执行 → break（下 tick 继续下个 step）
+- 副作用 Op（异步）→ 存 pendingFuture → return（不重调 execute()）
 
 **优点**：`IfConditionOp(true) + EmitEventOp` 可在同一 tick 内原子完成，不会有"条件检查和 emit 跨越两个 tick"的竞争。
 
@@ -258,7 +258,7 @@ Trigger 永久订阅在 `SystemBlueprintRegistry` 上。
 #### 2.9.3 System 蓝图的 steps 执行
 
 当 system 蓝图有 steps（如自定义监控），由新增的 `SystemBlueprintSystem`（排在 `TaskSourcePoller` 之前）每 tick 驱动执行。约束：
-- 副作用 Op 不支持 WAITING（不存在"下 tick 重试"的上下文 — 无 NPC）
+- 副作用 Op 异步时 pendingFuture 存在 → 下 tick 重检 isDone()
 - 纯 Op 照常批处理（连续跑直到撞到副作用 Op 或末尾）
 
 #### 2.9.4 System 编排顺序更新
