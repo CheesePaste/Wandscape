@@ -15,7 +15,7 @@ public final class Log {
     private Log() {}
 
     // Default level: FINE for debug, INFO for normal
-    private static final Level DEFAULT_LEVEL = Level.FINE;
+    private static final Level DEFAULT_LEVEL = Level.INFO;
 
     static {
         // Configure root logger for clean console output
