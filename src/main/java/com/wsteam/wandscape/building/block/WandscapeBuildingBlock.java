@@ -1,11 +1,17 @@
 package com.wsteam.wandscape.building.block;
 
+import java.util.Map;
+
 import javax.annotation.Nullable;
 
 import com.mojang.serialization.MapCodec;
 import com.wsteam.wandscape.building.be.AbstractWandscapeBE;
+import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -14,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * Common block class for all Wandscape buildings.
@@ -37,8 +44,6 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
 
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
-        // Each instance captures its own typeId and beFactory in the closure.
-        // Codecs are used by structure blocks/commands — normal placement bypasses this.
         return simpleCodec(props -> new WandscapeBuildingBlock(props, this.buildingTypeId, this.beFactory));
     }
 
@@ -57,7 +62,34 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                     BlockEntityType<T> type) {
-        // Stage 1: no tick logic. Stage 3+ can add per-BE ticker here.
         return null;
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                                Player player, BlockHitResult hitResult) {
+        if (level.isClientSide) return InteractionResult.SUCCESS;
+
+        // Stage 1 debug: right-click enqueues a demo Build task for chain verification.
+        // In later stages, this opens the building GUI.
+        if (!(level.getBlockEntity(pos) instanceof AbstractWandscapeBE be)) {
+            return InteractionResult.FAIL;
+        }
+
+        String blockName = buildingTypeId;
+        WorkItem demo = new WorkItem(
+                "build:stone_bricks",
+                Map.of("x", String.valueOf(pos.getX() + 2),
+                       "y", String.valueOf(pos.getY()),
+                       "z", String.valueOf(pos.getZ())),
+                50
+        );
+        be.enqueueWork(demo);
+        player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal(
+                        "[Wandscape] Enqueued demo task: " + demo.blueprintId()
+                        + " at (x=" + (pos.getX() + 2) + ", z=" + pos.getZ() + ")"),
+                false);
+        return InteractionResult.SUCCESS;
     }
 }

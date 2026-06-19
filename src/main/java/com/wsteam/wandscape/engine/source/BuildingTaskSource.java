@@ -24,9 +24,12 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 public class BuildingTaskSource implements TaskSource {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    // Poll every 1 second (20 ticks) — fast enough to feel responsive,
-    // slow enough to not hammer chunk loads
+    // Poll every 1 second (20 ticks)
     private static final int POLL_INTERVAL_TICKS = 20;
+
+    // Log heartbeat every N polls to avoid spam
+    private int pollCount = 0;
+    private static final int HEARTBEAT_INTERVAL = 10; // every ~10 seconds
 
     @Override
     public int pollIntervalTicks() {
@@ -38,10 +41,14 @@ public class BuildingTaskSource implements TaskSource {
         BuildingApi api = getBuildingApi();
         if (api == null) return;
 
-        // Iterate all colonies. In stage 1, colonyId may be null — handle gracefully.
+        pollCount++;
+
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
-        // Also try getting buildings from the world's colony list once available
-        // For now, the BuildingApiImpl's implementation handles null colony = all buildings
+
+        if (pollCount % HEARTBEAT_INTERVAL == 0) {
+            LOGGER.info("[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}",
+                    pollCount, pool.size(), buildingIds.size());
+        }
 
         for (UUID buildingId : buildingIds) {
             WorkItem item = api.dequeueWork(buildingId);
@@ -55,12 +62,12 @@ public class BuildingTaskSource implements TaskSource {
 
             try {
                 long taskId = pool.addTask(request);
-                // Track task via deterministic UUID from engine task id
                 api.setCurrentTask(buildingId, toTaskUuid(taskId));
-                LOGGER.debug("BuildingTaskSource: published task #{} ({}) from building {}",
-                        taskId, item.blueprintId(), buildingId);
+                LOGGER.info("[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} params={} priority={} building={} pool_size={}",
+                        taskId, item.blueprintId(), item.params(), item.priority(),
+                        buildingId.toString().substring(0, 8), pool.size());
             } catch (Exception e) {
-                LOGGER.warn("BuildingTaskSource: failed to publish task '{}' from building {}: {}",
+                LOGGER.warn("[BuildingTaskSource] FAILED: blueprint={} building={} error={}",
                         item.blueprintId(), buildingId, e.getMessage());
             }
         }
@@ -70,7 +77,6 @@ public class BuildingTaskSource implements TaskSource {
         try {
             return WandscapeApis.getBuildingApi();
         } catch (IllegalStateException e) {
-            // BuildingCore not yet loaded
             return null;
         }
     }

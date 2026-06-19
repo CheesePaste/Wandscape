@@ -14,6 +14,7 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
@@ -39,6 +40,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -155,5 +157,24 @@ public class Wandscape {
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
         EngineBootstrap.bootstrap();
+    }
+
+    private int tickCount = 0;
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        var world = WandscapeEngine.getWorld();
+        if (world == null) return;
+
+        tickCount++;
+        world.tick(1.0f);
+
+        // Log every ~5 seconds (100 ticks) so user can confirm engine is alive
+        if (tickCount % 100 == 0) {
+            LOGGER.info("[Engine] tick #{} — entities={} tasks_in_pool={}",
+                    tickCount,
+                    world.getNextEntityId() - 1,
+                    world.taskPool != null ? world.taskPool.size() : 0);
+        }
     }
 }

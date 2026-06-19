@@ -59,7 +59,7 @@ public class BuildingApiImpl implements BuildingApi {
     public List<BuildingData> getColonyBuildings(UUID colonyId) {
         List<BuildingData> result = new ArrayList<>();
         for (BuildingData bd : byId.values()) {
-            if (colonyId.equals(bd.getColonyId())) {
+            if (colonyId == null || colonyId.equals(bd.getColonyId())) {
                 result.add(bd);
             }
         }
@@ -195,7 +195,7 @@ public class BuildingApiImpl implements BuildingApi {
     public List<UUID> getBuildingsWithPendingWork(UUID colonyId) {
         List<UUID> result = new ArrayList<>();
         for (BuildingData data : byId.values()) {
-            if (!colonyId.equals(data.getColonyId())) continue;
+            if (colonyId != null && !colonyId.equals(data.getColonyId())) continue;
             if (data.isShutdown()) continue;
             if (currentTasks.containsKey(data.getBuildingId())) continue;
 
