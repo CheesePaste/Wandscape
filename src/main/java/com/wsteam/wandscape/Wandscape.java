@@ -46,6 +46,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -152,6 +153,7 @@ public class Wandscape {
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::onEntityAttributeCreation);
 
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
@@ -175,6 +177,10 @@ public class Wandscape {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
         LOGGER.info("Wandscape common setup — wand, element, buildings, npc ready");
+    }
+
+    private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
+        event.put(WANDSCAPE_NPC.get(), WandscapeNpc.createAttributes().build());
     }
 
     @SubscribeEvent

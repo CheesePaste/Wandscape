@@ -12,7 +12,10 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.level.Level;
@@ -61,6 +64,21 @@ public class WandscapeNpc extends PathfinderMob {
 
     public WandscapeNpc(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
+    }
+
+    // ============================================================
+    // Attributes (must be registered via EntityAttributeCreationEvent)
+    // ============================================================
+
+    /**
+     * Creates the attribute supplier for this NPC.
+     * Register via {@code EntityAttributeCreationEvent} in common setup.
+     */
+    public static AttributeSupplier.Builder createAttributes() {
+        return Mob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, 40.0)
+                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.ATTACK_DAMAGE, 1.0);
     }
 
     // ============================================================
