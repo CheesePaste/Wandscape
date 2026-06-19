@@ -3,7 +3,7 @@
   "display_name": "Ritual Wand",
   "default_color": "#9400D3",
   "behaviors": {
-    "ritual": 1
+    "ritual": 2
   },
   "default_range": 1,
   "default_mana_cost_multiplier": 0.8,
