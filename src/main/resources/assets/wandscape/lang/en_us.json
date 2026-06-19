@@ -4,6 +4,7 @@
 
   "key.categories.wandscape": "Wandscape",
   "key.wandscape.demo": "Open UI Demo",
+  "key.wandscape.ui_editor": "Open UI Editor",
 
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",

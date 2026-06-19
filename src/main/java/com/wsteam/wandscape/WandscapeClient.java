@@ -5,6 +5,7 @@ import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
+import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -35,6 +36,13 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping OPEN_UI_EDITOR = new KeyMapping(
+            "key.wandscape.ui_editor",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_U,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         // Register game-bus listeners on the NeoForge EVENT_BUS (not mod bus)
@@ -49,11 +57,15 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_DEMO_SCREEN);
+        event.register(OPEN_UI_EDITOR);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
         while (OPEN_DEMO_SCREEN.consumeClick()) {
             Minecraft.getInstance().setScreen(new DemoScreen());
+        }
+        while (OPEN_UI_EDITOR.consumeClick()) {
+            Minecraft.getInstance().setScreen(new UIEditorScreen());
         }
     }
 
