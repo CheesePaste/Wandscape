@@ -94,6 +94,65 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 
 引擎包结构：`org.magiccolony.core.{boundary,component,ecs,event,op,system,task,types}` + `org.magiccolony.demo.MockBoundary`
 
+### 引擎集成层（⚠ 待实现 — 勿重复造轮子）
+
+核心引擎是纯 Java 21，零 MC 依赖。在 MC 中运行引擎需要一层**集成适配层**。**此层目前完全缺失**，是阶段 1-2 的最高优先级基础设施。
+
+#### 三件必须做的事
+
+**1. World 实例持有者** — `WandscapeEngine` 单例，在 ServerStarting 时 `Engine.bootstrap(config)`，所有模块通过它访问 ECS 世界 + 任务池。`EngineConfig` 需要注入 5 个边界接口的 MC 实现 + `List<TaskSource>` + `BlueprintRegistry` + `SystemBlueprintRegistry`。
+
+**2. 5 个边界接口的 MC 实现：**
+| 接口 | MC 实现做什么 | 优先级 |
+|------|-------------|--------|
+| `BlockOps` | `Level.setBlock()` / `getBlockState()` / `isAir()` | 阶段 1 必须 |
+| `EntityOps` | `LivingEntity.addEffect()` / `position()` | 阶段 2 |
+| `RitualOps` | 仪式引导过程轮询 | 阶段 2 |
+| `ColonyResourceAccess` | 对接仓库 BE 的元素存取 | 阶段 3 |
+| `EventBus` | `SimpleEventBus`（纯内存实现，已有，无需适配） | 阶段 0 ✅ |
+
+**3. TaskSource 实现** — 被 `TaskSourcePoller` 按间隔轮询，把各类工作转化为 `TaskRequest` 送入 `GlobalTaskPool`：
+| TaskSource | 状态 | 职责 |
+|------------|------|------|
+| `BuildingTaskSource` | ❌ 待实现 | **核心**：轮询所有建筑 BE 队列 → 出队 → `pool.addTask()` |
+| `WarehouseSource` | ✅ V1 stub | 资源低于阈值时触发补货 |
+| `WorkbenchSource` | ✅ V1 stub | 工作站生产队列 |
+| `PlayerManualSource` | ✅ 已有 | 玩家手动发布任务 |
+| `EventDrivenTaskSource` | ✅ 已有 | 领域事件→任务翻译（ResourceLow/MobNearby 等） |
+
+#### 建筑 → NPC 完整执行链路（建筑/引擎/调度/执行 四层协作）
+
+```
+建筑 BE 队列积累 WorkItem
+  │
+  ▼  BuildingTaskSource.poll() (TaskSourcePoller 每 N tick 调)
+  │   对每个殖民地、每个建筑 BE: hasWork() && 未关停 && 结构完整
+  │   出队 → 构造 TaskRequest(blueprintId, params, priority)
+  │
+  ▼  world.taskPool.addTask(request)
+  │   BlueprintRegistry.compile() → TaskSequence
+  │   例如 "build:stone_bricks" → [ResourceRequestOp, TransformOp.place]
+  │   大任务(priority>=50) → PENDING_APPROVAL, 小任务 → PENDING_ASSIGN
+  │
+  ▼  SchedulerSystem (每 2 tick)
+  │   找本殖民地空闲 NPC → 评分(range×0.5+efficiency×0.3+level×0.2)
+  │   → taskPool.assign(taskId, bestNpcId)
+  │
+  ▼  TaskExecutionSystem (每 tick, 逐 NPC)
+  │   纯 Op(EmitEventOp/IfConditionOp) 连续执行直到撞到副作用 Op
+  │   副作用 Op(TransformOp/RitualOp/...) → 调 OpExecutor → 调边界接口
+  │
+  ▼  步骤全部 DONE → taskPool.completeTask() → emit TaskCompleted
+      事件回调清除建筑 BE currentTaskId → BuildingTaskSource 下次 poll 发布下一个
+```
+
+#### 引擎集成的核心约束
+
+- **BE 不直接调 engine 的 taskPool**：建筑 BE 只存队列数据 + 暴露状态。`BuildingTaskSource` 是唯一把建筑队列送入引擎任务池的地方。违反此条会导致 BE 持有 engine 引用、跨层耦合。
+- **边界接口是单向依赖**：core 定义接口 → Wandscape 层实现。core 包永远不 import MC 类（`net.minecraft.*` / `com.wsteam.*`）。
+- **TaskSource 是引擎主动拉取（poll），不是 BE 推送（push）**：`TaskSourcePoller` 遍历建筑，不是建筑推任务给 pool。保证 engine tick 循环的统一节奏。
+- **Blueprint 需要在 Bootstrap 时注册**：建筑操作（place/break/convert）对应的 "build:*" blueprint 要在 `Engine.bootstrap()` 前注册到 `BlueprintRegistry`，否则 `TaskRequest` 编译阶段直接抛异常。
+
 ### Wandscape 模块依赖规则（最高优先级）
 
 ```
@@ -184,3 +243,5 @@ architecture/ 是项目结构的**实时快照**，不是设计文档。每条�
 4. **事件优先级依赖** → 事件仅用于通知，不用于编排顺序。需顺序用 API
 5. **建筑不写 pattern** → 单方块建筑也写 `"pattern": [[0,0,0]]`，统一起见
 6. **猜测 MC 类名** → 用 `minecraft-source` skill 查源码
+7. **在 BE 中直接调 engine** → 建筑 BE 只存队列数据，任务入池由 BuildingTaskSource 统一做。BE 不应持有 World 或 GlobalTaskPool 引用
+8. **跳过引擎集成层另起炉灶** → 引擎已有完整 ECS/任务池/调度/执行链，不要重新实现建筑任务分发逻辑。所有建筑任务必须走 `TaskRequest → GlobalTaskPool → SchedulerSystem` 路径

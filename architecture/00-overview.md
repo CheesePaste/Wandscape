@@ -107,6 +107,26 @@ org.magiccolony.core/
     └── MockBoundary.java             #   全部边界接口的 headless mock
 ```
 
+### 引擎集成层（⚠ 待实现）
+
+```
+com.wsteam.wandscape/engine/
+├── WandscapeEngine.java             #   单例持有 World，ServerStarting 时 bootstrap
+├── boundary/                        #   5 个边界接口的 MC 实现
+│   ├── WandscapeBlockOps.java       #   BlockOps → Level.setBlock/getBlockState
+│   ├── WandscapeEntityOps.java      #   EntityOps → LivingEntity.addEffect/position
+│   ├── WandscapeRitualOps.java      #   RitualOps → 仪式引导过程
+│   └── WandscapeResourceAccess.java #   ColonyResourceAccess → 仓库 BE 操作
+├── source/                          #   TaskSource MC 实现
+│   ├── BuildingTaskSource.java      #   轮询建筑 BE 队列 → pool.addTask()（核心）
+│   └── blueprint/                   #   建筑蓝图注册
+│       └── BuildingBlueprints.java  #   注册 "build:*" 蓝图到 BlueprintRegistry
+└── bootstrap/                       #   引导顺序编排
+    └── EngineBootstrap.java         #   创建 EngineConfig → Engine.bootstrap() → 注入 WandscapeEngine
+```
+
+> 此层是核心引擎和 MC 世界之间的桥梁。BE 不直接调 engine；所有任务通过 TaskSource poll 机制进入引擎。
+
 ### Wandscape MC 适配层
 
 ```
@@ -114,6 +134,8 @@ com.wsteam.wandscape/
 ├── Config.java                      # TOML 配置定义 (ModConfigSpec)
 ├── Wandscape.java                   # 主类 (@Mod) + 临时示例注册
 ├── WandscapeClient.java             # 客户端初始化
+│
+├── engine/                          # 引擎集成层（见上）
 │
 ├── shared/                          # [01] shared-api — 接口/事件/枚举
 │   ├── api/                         #   所有模块 API 接口定义
@@ -202,12 +224,15 @@ com.wsteam.wandscape/
 | 三数值 | 舒适值/魔法值/奇观值，由建筑首次建造提供，驱动发展 | docs/08-building-core.md |
 | 维护成本 | 建筑定期消耗木元素，扣到负数自动关停 | docs/08-building-core.md |
 | WandscapeApis | 静态 API 注册表，各模块初始化时注册自己的 API 实现 | docs/01-shared-api.md |
+| 引擎集成层 | core engine ↔ MC 桥梁。World 持有 + 5 边界实现 + TaskSource 列表 + Blueprint 注册 | CLAUDE.md §引擎集成层 |
+| BuildingTaskSource | 轮询建筑 BE 队列 → 构造 TaskRequest → GlobalTaskPool。唯一把建筑任务送入引擎的地方 | CLAUDE.md §引擎集成层 |
 
 ## 阶段状态
 
 | 阶段 | 状态 | 完成内容 |
 |------|------|---------|
-| 0 — 地基 | ✅ 完成 | 01-shared-api 全部类型系统 + 16 data-driven-config 框架 |
+| 0 — 地基 | ✅ 完成 | 01-shared-api 类型系统 + 16 data-driven-config 框架 |
 | core-engine | ✅ 已合并 | ECS + Blueprint + AtomicOp + Scheduler + 63 测试通过 |
+| engine-integration | ❌ 待实现 | WandscapeEngine + 5 边界 MC 实现 + BuildingTaskSource + BuildingBlueprints |
 
-**当前**：进入阶段 1 — 可视化（02 wand-system + 03 element-system + 08 building-core）
+**当前**：进入阶段 1 — 可视化（02 wand-system + 03 element-system + 08 building-core + engine-integration）

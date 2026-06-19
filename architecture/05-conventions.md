@@ -74,6 +74,9 @@ com.wsteam.wandscape.<module>/
 | 静默 catch 不记录日志 | 问题不可追踪 | 至少 LOGGER.warn() |
 | 单方块建筑不写 pattern | 结构验证分支代码 | 统一写 `[[0,0,0]]` |
 | tick() 中做重计算 | 服务端卡顿 | 缓存结果，事件触发时重算 |
+| BE 直接调 Engine/World/taskPool | 跨层耦合，BE 不该知道引擎实例 | BuildingTaskSource 是唯一入口，BE 只暴露队列状态 |
+| 另起炉灶实现任务分发 | 绕过引擎已有的 Scheduler/ECS/EventBus 链 | 所有建筑任务走 TaskRequest → GlobalTaskPool → SchedulerSystem |
+| 模块绕过引擎集成层直接 new World | 引擎实例不受控，多个 World 并存 | WandscapeEngine 单例统一管理，ServerStarting 时 bootstrap 一次 |
 
 ## 新增约定
 
