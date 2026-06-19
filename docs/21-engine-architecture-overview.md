@@ -23,7 +23,8 @@ The engine uses an **ECS** (Entity-Component-System) architecture with a **Bluep
 │                                                         │
 │  CoreBootstrap.bootstrap(EngineConfig) ──► World               │
 │                                                         │
-│  World.tick(delta):                                     │
+│  World.tick(delta) [gated by hasPendingAsyncOps()]:          │
+│    0. Wandscape.onServerTick checks gate                     │
 │    1. ManaRegenSystem                                   │
 │    2. SystemBlueprintSystem          ← V2               │
 │    3. TaskSourcePoller                                 │
@@ -184,6 +185,66 @@ Systems execute in registration order. Order matters:
 
 ---
 
+## Event-Driven Tick Gating (V2.5)
+
+### Rationale
+
+The engine tick is a **logic frame**, not a physics frame. Some operations (e.g., MoveOp pathfinding, RitualOp channeling) span multiple Minecraft ticks. The engine must wait for all async operations to complete before advancing to the next logic tick, analogous to `Promise.all().then(nextTick)` in JavaScript.
+
+Java's `CompletableFuture` provides the exact semantics we need:
+- `future.complete()` / `future.completeExceptionally()` — resolve/reject
+- `future.whenComplete((v, ex) -> ...)` — auto-cleanup callbacks
+- `future.orTimeout(30, TimeUnit.SECONDS)` — built-in timeout, NPCs never stuck forever
+
+### Architecture
+
+```
+┌─ MC Tick 1 ──► engineTickCount++ ──► world.tick() ──────────┐
+│  NPC1: TransformOp → DONE (instant)                          │
+│  NPC2: MoveOp → WAITING → world.startAsyncOp("move_10_64")   │
+│  NPC3: MoveOp → WAITING → world.startAsyncOp("move_20_64")   │
+│  → 2 CompletableFutures pending → gate closes                │
+├─ MC Tick 2 ──► world.hasPendingAsyncOps() → skip engine      │
+│  NPC2 arrives → future.complete(null) → auto-removed, 1 left │
+├─ MC Tick 3 ──► still pending (1 future)                      │
+│  NPC3 arrives → future.complete(null) → auto-removed, 0 left │
+├─ MC Tick 4 ──► !hasPendingAsyncOps() → engineTickCount++     │
+│  world.tick() → next logic frame                             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### API
+
+| Method | Returns | Caller | Purpose |
+|--------|---------|--------|---------|
+| `world.startAsyncOp(label)` | `CompletableFuture<Void>` | MC boundary (e.g. MoveOp executor) | Starts an async op, returns a future to complete later |
+| `world.hasPendingAsyncOps()` | `boolean` | `Wandscape.onServerTick` | Gate: true → skip engine tick |
+| `future.complete(null)` | — | MC event callback | Signal op success; `whenComplete` auto-removes from pending list |
+| `future.completeExceptionally(ex)` | — | MC error handler | Signal op failure; engine receives error + cleanup |
+| `future.orTimeout(30, SECONDS)` | `CompletableFuture<Void>` | MC boundary (setup) | Auto-reject after timeout; prevents stuck NPCs |
+
+### V1 compatibility
+
+All V1/V2 operations are synchronous (TransformOp, BlockInteractOp, EmitEventOp, etc.) — they return DONE immediately and never call `startAsyncOp()`. `pendingFutures` stays empty, the gate never blocks, and `world.tick()` runs every MC tick as before. The gating is **zero-overhead** for existing code.
+
+### Future async ops
+
+| Op | Async? | Resolution trigger |
+|----|--------|--------------------|
+| `MoveOp` | Yes | `Navigation.onArrived()` → `future.complete()` |
+| `RitualOp` (channeled) | Yes | Channel ticks elapsed → `future.complete()` |
+| `TransformOp` | No | Instant via `BlockOps.setBlock()` |
+| `BlockInteractOp` | No | Instant |
+| `EntityInteractOp` | No | Instant |
+
+### Safety
+
+- **Timeout**: `future.orTimeout(30, SECONDS)` — NPC stuck? Auto-reject → engine advances with failure, NPC falls back to teleport
+- **Exception**: `future.completeExceptionally()` — NPC died mid-op? Chunk unloaded? Clean failure, auto-removed from pending list via `whenComplete`
+- **Single-threaded**: MC server tick is single-threaded; `complete()` called from server thread via events, no concurrency issues
+
+---
+
 ## Source File Count
 
 | Package | Files | Purpose |
@@ -205,10 +266,12 @@ Systems execute in registration order. Order matters:
 
 ## Testing
 
-Three test suites, 32 tests total:
+193 tests total (63 core engine + 130 adapter layer):
 
 | Suite | Tests | Focus |
 |-------|-------|-------|
 | `ResourceWaitingFulfillTest` | 4 | Resource shortage → wait → fulfill → resume |
 | `EventDrivenTaskSourceTest` | 5 | Hardcoded event → task mappings |
 | `BlueprintEventSystemTest` | 23 | V2: EmitEventOp, IfConditionOp, triggers, batch, dedup, lifecycle |
+| `CoreSystemsTest` | 31 | Scheduler scoring, RitualOp lifecycle, private queue, approval, templates, mana regen, interrupts |
+| Adapter layer | 130 | BuildingConfig, NBT serialization, BlockOffset parsing, etc. |

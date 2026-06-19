@@ -159,22 +159,31 @@ public class Wandscape {
         EngineBootstrap.bootstrap();
     }
 
-    private int tickCount = 0;
+    private int engineTickCount = 0;
+    private int mcTickCount = 0;
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
         var world = WandscapeEngine.getWorld();
         if (world == null) return;
 
-        tickCount++;
+        mcTickCount++;
+
+        // Gate: skip engine tick when async ops (e.g. MoveOp pathfinding) are in flight
+        if (world.hasPendingAsyncOps()) {
+            return;
+        }
+
+        engineTickCount++;
         world.tick(1.0f);
 
-        // Log every ~5 seconds (100 ticks) so user can confirm engine is alive
-        if (tickCount % 100 == 0) {
-            LOGGER.info("[Engine] tick #{} — entities={} tasks_in_pool={}",
-                    tickCount,
+        // Heartbeat every ~5 seconds (100 MC ticks)
+        if (mcTickCount % 100 == 0) {
+            LOGGER.info("[Engine] engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
+                    engineTickCount, mcTickCount,
                     world.getNextEntityId() - 1,
-                    world.taskPool != null ? world.taskPool.size() : 0);
+                    world.taskPool != null ? world.taskPool.size() : 0,
+                    world.hasPendingAsyncOps() ? 1 : 0);
         }
     }
 }

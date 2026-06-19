@@ -9,6 +9,7 @@ import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The central ECS world. Owns component stores, systems, and boundary service references.
@@ -48,6 +49,47 @@ public class World {
     public BlueprintRegistry blueprintRegistry;
     public GlobalTaskPool taskPool;
     public OpExecutorRegistry opExecutors;
+
+    // ---- Async op tracking (event-driven tick gating, V2.5) ----
+    /**
+     * CompletableFutures for all in-flight async operations.
+     * Engine tick is gated until all futures complete.
+     * <p>
+     * Pattern: MC boundary calls {@link #startAsyncOp(String)} to get a
+     * future, then completes it when the MC-level operation finishes
+     * (pathfinding done, ritual channeled, etc.). The {@code whenComplete}
+     * callback auto-removes the future from this list.
+     */
+    private final List<CompletableFuture<Void>> pendingFutures = new ArrayList<>();
+
+    /**
+     * Start an async operation and get back a CompletableFuture.
+     * The engine tick is blocked until the MC boundary {@link CompletableFuture#complete
+     * completes} this future (or it completes exceptionally / times out).
+     *
+     * @param label short description for debug logging (e.g. "move_to_10_64_5")
+     * @return a future the MC boundary must complete when the operation finishes
+     */
+    public CompletableFuture<Void> startAsyncOp(String label) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        pendingFutures.add(future);
+        // Auto-remove from pending list on completion (success, failure, or timeout)
+        future.whenComplete((v, ex) -> {
+            pendingFutures.remove(future);
+            if (ex != null) {
+                Log.warn(TAG, "asyncOp '%s' failed: %s", label, ex.getMessage());
+            } else {
+                Log.debug(TAG, "asyncOp '%s' resolved — %d pending", label, pendingFutures.size());
+            }
+        });
+        Log.debug(TAG, "asyncOp started '%s' — %d pending total", label, pendingFutures.size());
+        return future;
+    }
+
+    /** True if any async op is still in-flight (engine tick is blocked). */
+    public boolean hasPendingAsyncOps() {
+        return !pendingFutures.isEmpty();
+    }
 
     // ---- Entity management ----
 

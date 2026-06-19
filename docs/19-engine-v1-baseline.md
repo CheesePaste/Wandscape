@@ -97,20 +97,23 @@ record TaskSequence(List<AtomicOp> steps) {}
 
 ## 5. OpResult 执行结果模型
 
-同步返回枚举，无异步/回调：
+同步返回枚举：
 
 ```java
 enum OpResult {
     DONE,          // 瞬间完成，推进 stepIndex
-    WAITING,       // 需要等待（物资不足/引导中），不推进，下 tick 重试
-    INTERRUPTED    // 中断，魔力不返还，任务失败
+    WAITING,       // 异步操作已启动 → MC 边界层持有 CompletableFuture
+                   // TaskExecutionSystem 退出，不推进 stepIndex
+                   // 引擎逻辑帧门控关闭，直到 future.complete() 后重新打开
 }
 ```
 
 System 调用 `opExecutor.execute(op, world, npcId)`，拿到结果后：
 - `DONE` → 扣魔力，推进 stepIndex / pop privateQueue
-- `WAITING` → 不扣魔力，不推进，下 tick 重试
-- `INTERRUPTED` → 魔力不返还，任务中断
+- `WAITING` → 不扣魔力，不推进。MC 边界层在异步操作完成时调用 `future.complete(null)`，`whenComplete` 回调自
+动清理 pendingFutures。全部 resolve 后引擎逻辑帧自动推进。
+
+> **与 V1 的差异**: V1 用轮询（每 MC tick 调 `pollRitual()`）。V2.5 改为事件驱动 — `WAITING` 意味着"已在异步执行，MC 边界层完成后回调"，引擎 tick 停止推进直到所有异步 Op 完成。
 
 ---
 
@@ -361,10 +364,43 @@ interface ColonyResourceAccess {
 
 ## 17. Tick 模型
 
-- **引擎 tick** ≠ 游戏 tick
-- 一个 AtomicOp 执行算一个引擎 tick
-- 游戏层可能用多个游戏 tick 做动画（粒子、引导等）
-- `WAITING` 的 AtomicOp 每引擎 tick 重试一次
+### 17.1 引擎逻辑帧 ≠ MC 游戏帧
+
+引擎 tick 是**逻辑帧**，与 MC 20tps 解耦。一次逻辑帧内：
+- SchedulerSystem 分配任务
+- TaskExecutionSystem 对每个 NPC 批处理纯 Op + 执行一个副作用 Op
+- 副作用 Op 全部 DONE 后逻辑帧推进
+
+### 17.2 异步操作门控 (V2.5)
+
+部分 Op（如 MoveOp 寻路、RitualOp 引导）需要多个 MC tick 才能完成。引擎用 `CompletableFuture` 实现类 Promise 的事件驱动门控：
+
+```
+引擎逻辑帧 N:
+  分发 Op 到各 NPC
+  ├─ NPC1: TransformOp → DONE (瞬时)
+  ├─ NPC2: MoveOp → WAITING → world.startAsyncOp("move_to_10_64")
+  └─ NPC3: MoveOp → WAITING → world.startAsyncOp("move_to_20_64")
+  → pendingFutures = 2 → 后续 MC tick 跳过 world.tick()
+
+MC tick (×N):
+  NPC2 到达终点 → future.complete(null) → pendingFutures = 1
+  NPC3 到达终点 → future.complete(null) → pendingFutures = 0
+  → !hasPendingAsyncOps() → 下一 MC tick 触发引擎逻辑帧 N+1
+```
+
+**API**:
+| 方法 | 用途 |
+|------|------|
+| `world.startAsyncOp(label)` → `CompletableFuture<Void>` | MC 边界层启动异步操作，获取 future |
+| `future.complete(null)` | MC 操作完成时 resolve |
+| `future.completeExceptionally(ex)` | MC 操作失败时 reject |
+| `future.orTimeout(30, SECONDS)` | 超时保护，NPC 永不卡死 |
+| `world.hasPendingAsyncOps()` | Wandscape.onServerTick 门控：true → 跳过引擎 tick |
+
+**V1 兼容**: 所有 V1/V2 操作都是同步的 — 返回 DONE 且不调 `startAsyncOp()`。`pendingFutures` 永远空，门控不开销。`whenComplete` 回调自动清理已完成的 future，无需手动管理。
+
+- `WAITING` 语义改变：不再每引擎 tick 轮询，而是 MC 层持有 CompletableFuture，操作完成时 `complete()`，引擎门自动打开。
 
 ---
 
@@ -537,9 +573,28 @@ class ResourceRequestExecutor implements OpExecutor<ResourceRequestOp> {
 
 ---
 
-## 27. RitualOp —— 非瞬发引导 = WAITING 轮询
+## 27. RitualOp —— 异步执行 (V2.5)
 
-仪式引导时长不固定，核心层用轮询模型：
+### 27.1 V2.5 事件驱动模型（推荐）
+
+仪式引导时长不固定，使用 `CompletableFuture` 事件驱动：
+
+```
+RitualOp 首次执行 → RitualExecutor.execute()
+  → beginRitual() 启动 MC 层引导
+  → world.startAsyncOp("ritual_warding") → 持有 future → 返回 WAITING
+  → 引擎逻辑帧门控关闭
+
+MC tick (×N):
+  仪式引导持续... MC 层维护引导进度
+
+引导完成 → MC 层: future.complete(null)
+  → whenComplete 自动清理 → 引擎逻辑帧门打开 → 下个逻辑帧 RitualOp DONE
+```
+
+### 27.2 旧轮询模型（仍保留）
+
+部分简单仪式（如 `self_teleport`）不走 CompletableFuture，而是沿用原有轮询接口在每个 MC tick 推进。选择权在 MC 边界实现：
 
 ```java
 interface RitualOps {
@@ -548,16 +603,7 @@ interface RitualOps {
 }
 ```
 
-流程：
-```
-开始 RitualOp → beginRitual() → 返回 WAITING
-    ↓ 后续 tick 轮询
-pollRitual() → 还在引导 → WAITING
-    ↓ 后续 tick 轮询
-pollRitual() → 引导完成 → DONE
-```
-
-核心层完全不管引导多久，只负责轮询。中断即失败，无部分生效。
+核心层完全不管引导多久。中断即失败，无部分生效。
 
 ---
 

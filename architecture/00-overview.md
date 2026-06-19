@@ -40,7 +40,7 @@ com.wsteam.wandscape.core/
 │   └── ColonyMetadata.java           #   殖民地元数据
 │
 ├── ecs/                              # ECS 框架
-│   ├── World.java                    #   世界容器 + tick()
+│   ├── World.java                    #   世界容器 + tick() + 异步 Op 门控 (startAsyncOp / hasPendingAsyncOps)
 │   ├── System.java                   #   系统接口
 │   ├── ComponentStore.java           #   组件存储接口
 │   └── HashMapComponentStore.java    #   组件存储实现
@@ -107,16 +107,16 @@ com.wsteam.wandscape.core/
     └── MockBoundary.java             #   全部边界接口的 headless mock
 ```
 
-### 引擎集成层（⚠ 待实现）
+### 引擎集成层
 
 ```
 com.wsteam.wandscape/engine/
 ├── WandscapeEngine.java             #   单例持有 World，ServerStarting 时 bootstrap
 ├── boundary/                        #   5 个边界接口的 MC 实现
 │   ├── WandscapeBlockOps.java       #   BlockOps → Level.setBlock/getBlockState
-│   ├── WandscapeEntityOps.java      #   EntityOps → LivingEntity.addEffect/position
-│   ├── WandscapeRitualOps.java      #   RitualOps → 仪式引导过程
-│   └── WandscapeResourceAccess.java #   ColonyResourceAccess → 仓库 BE 操作
+│   ├── WandscapeEntityOps.java      #   EntityOps → LivingEntity.addEffect/position (stub)
+│   ├── WandscapeRitualOps.java      #   RitualOps → 仪式引导过程 (stub)
+│   └── WandscapeResourceAccess.java #   ColonyResourceAccess → 仓库 BE 操作 (stub)
 ├── source/                          #   TaskSource MC 实现
 │   ├── BuildingTaskSource.java      #   轮询建筑 BE 队列 → pool.addTask()（核心）
 │   └── blueprint/                   #   建筑蓝图注册
@@ -126,6 +126,7 @@ com.wsteam.wandscape/engine/
 ```
 
 > 此层是核心引擎和 MC 世界之间的桥梁。BE 不直接调 engine；所有任务通过 TaskSource poll 机制进入引擎。
+> WandscapeEntityOps / WandscapeRitualOps 为 stub 实现，阶段 2 (NPC) 落地后补全。
 
 ### Wandscape MC 适配层
 
@@ -226,6 +227,7 @@ com.wsteam.wandscape/
 | WandscapeApis | 静态 API 注册表，各模块初始化时注册自己的 API 实现 | docs/01-shared-api.md |
 | 引擎集成层 | core engine ↔ MC 桥梁。World 持有 + 5 边界实现 + TaskSource 列表 + Blueprint 注册 | CLAUDE.md §引擎集成层 |
 | BuildingTaskSource | 轮询建筑 BE 队列 → 构造 TaskRequest → GlobalTaskPool。唯一把建筑任务送入引擎的地方 | CLAUDE.md §引擎集成层 |
+| 引擎逻辑帧门控 (V2.5) | `world.startAsyncOp()` → `CompletableFuture<Void>`。引擎 tick 在全部 future resolve 前阻塞 | docs/21-engine-architecture-overview.md |
 
 ## 阶段状态
 

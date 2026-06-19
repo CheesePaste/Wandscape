@@ -86,7 +86,8 @@
 - **条件控制**：`IfConditionOp` + `ConditionEvaluator` 注册表（`resource_below` / `inventory_has` / `inventory_full`）
 - **模板变量**：`{{taskId}}`、`{{npcId}}`、`{{task.params.<key>}}`、`{{pos.x/y/z}}`、`{{event.<key>}}`
 - **引擎引导**：`CoreBootstrap.bootstrap(EngineConfig)` → `World`，注入边界实现
-- **测试**：193 个 JUnit 5 测试 (63 核心引擎 + 130 适配层: 含 9 个 BuildingConfigTest)
+- **事件驱动 Tick 门控 (V2.5)**：`CompletableFuture<Void>` — 异步 Op 阻止引擎逻辑帧推进，所有 Op resolve 后自动门开。`startAsyncOp()` / `hasPendingAsyncOps()`
+- **测试**：210 个 JUnit 5 测试 (63 核心引擎 + 130 适配层 + 17 AsyncTickGating)
 
 适配层边界接口 5 个，其中 `BlockOps` 已完成 MC 实现 (`WandscapeBlockOps`)，其余 3 个（`EntityOps`/`RitualOps`/`ColonyResourceAccess`）为 stub 实现在 `EngineBootstrap` 中。`EventBus` = `SimpleEventBus`（纯内存，无需适配）。
 
