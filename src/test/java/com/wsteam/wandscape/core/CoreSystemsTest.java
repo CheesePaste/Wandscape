@@ -44,28 +44,28 @@ public class CoreSystemsTest {
             mock.seedWarehouse(ResourceId.WOOD, 200);
 
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
-            world = Engine.bootstrap(config);
+            world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
 
             center = new GridPos(0, 64, 0);
             colonyId = UUID.randomUUID();
-            Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             // NPC-A: high range (6), BUILDING:1, mid efficiency (0.9)
             // Score for BUILDING:1 = 6*0.5 + (1-0.9)*0.3 + 1*0.2 = 3.23
             Map<BehaviourTag, BehaviourLevel> capsA = Map.of(
                     BehaviourTag.BUILDING, new BehaviourLevel(1));
             WandCarrier wandA = new WandCarrier(capsA, 0.9f, 6);
-            npcHighRange = Engine.createNpc(world, 1, 64, 0, wandA, colonyId, 100, 5);
+            npcHighRange = CoreBootstrap.createNpc(world, 1, 64, 0, wandA, colonyId, 100, 5);
 
             // NPC-B: low range (1), BUILDING:3, good efficiency (0.7)
             // Score for BUILDING:1 = 1*0.5 + (1-0.7)*0.3 + 1*0.2 = 0.79
             Map<BehaviourTag, BehaviourLevel> capsB = Map.of(
                     BehaviourTag.BUILDING, new BehaviourLevel(3));
             WandCarrier wandB = new WandCarrier(capsB, 0.7f, 1);
-            npcHighLevel = Engine.createNpc(world, 2, 64, 0, wandB, colonyId, 100, 5);
+            npcHighLevel = CoreBootstrap.createNpc(world, 2, 64, 0, wandB, colonyId, 100, 5);
         }
 
         @Test
@@ -164,19 +164,19 @@ public class CoreSystemsTest {
             mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
-            world = Engine.bootstrap(config);
+            world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
 
             GridPos center = new GridPos(0, 64, 0);
             colonyId = UUID.randomUUID();
-            Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             Map<BehaviourTag, BehaviourLevel> caps = Map.of(
                     BehaviourTag.RITUAL, new BehaviourLevel(3));
             WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-            npc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
         }
 
         @Test
@@ -255,19 +255,19 @@ public class CoreSystemsTest {
             mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
-            world = Engine.bootstrap(config);
+            world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
 
             GridPos center = new GridPos(0, 64, 0);
             colonyId = UUID.randomUUID();
-            Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             Map<BehaviourTag, BehaviourLevel> caps = Map.of(
                     BehaviourTag.BUILDING, new BehaviourLevel(2));
             WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-            npc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
         }
 
         @Test
@@ -375,9 +375,9 @@ public class CoreSystemsTest {
                             TaskSequence.of("test:any",
                                     AtomicOp.TransformOp.place(
                                             new GridPos(0, 64, 0), BlockType.STONE))));
-            EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
-            world = Engine.bootstrap(config);
+            world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
         }
 
@@ -428,9 +428,9 @@ public class CoreSystemsTest {
 
             // Create NPC and tick
             UUID colonyId = UUID.randomUUID();
-            Engine.createColony(world, 0, 64, 0, 50);
+            CoreBootstrap.createColony(world, 0, 64, 0, 50);
             WandCarrier wand = new WandCarrier(Map.of(), 0.8f, 3);
-            Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
 
             tickN(10);
 
@@ -548,18 +548,18 @@ public class CoreSystemsTest {
             MockBoundary mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
-            world = Engine.bootstrap(config);
+            world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
 
             GridPos center = new GridPos(0, 64, 0);
             UUID colonyId = UUID.randomUUID();
-            Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             WandCarrier wand = new WandCarrier(Map.of(), 0.8f, 3);
             // max=100, starts full at 100, consume to 50, then regen has room
-            npc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
         }
 
         @Test
@@ -610,17 +610,17 @@ public class CoreSystemsTest {
             MockBoundary mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
-            world = Engine.bootstrap(config);
+            world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
 
             GridPos center = new GridPos(0, 64, 0);
             colonyId = UUID.randomUUID();
-            Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             WandCarrier wand = new WandCarrier(Map.of(), 0.8f, 3);
-            npc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
         }
 
         @Test

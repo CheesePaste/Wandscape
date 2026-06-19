@@ -10,7 +10,7 @@ Wandscape 有两层依赖：**跨项目依赖**（core-engine）和**模块间�
 com.wsteam.wandscape.core/  ← 核心引擎（纯 Java 21，零 MC 依赖）
   ↑ 所有 Wandscape 模块均可 import（项目内 library）
   ↑ 引擎集成层 (com.wsteam.wandscape.engine/) 负责创建 World、实现边界接口、注册 TaskSource
-  ↑ 其他模块通过引擎集成层间接使用引擎，不直接 new World / Engine.bootstrap()
+  ↑ 其他模块通过引擎集成层间接使用引擎，不直接 new World / CoreBootstrap.bootstrap()
 ```
 
 ### 模块间依赖规则（编译时强制）

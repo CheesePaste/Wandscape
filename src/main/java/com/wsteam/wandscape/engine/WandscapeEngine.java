@@ -9,7 +9,7 @@ import com.wsteam.wandscape.core.ecs.World;
  * Bootstrap happens once in {@link com.wsteam.wandscape.engine.bootstrap.EngineBootstrap}.
  *
  * <p>All MC-side modules access the engine world through this class.
- * None of them call {@code Engine.bootstrap()} directly.
+ * None of them call {@code CoreBootstrap.bootstrap()} directly.
  */
 public final class WandscapeEngine {
     private static World world;

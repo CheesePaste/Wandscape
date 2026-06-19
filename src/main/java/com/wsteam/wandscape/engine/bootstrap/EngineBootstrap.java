@@ -3,11 +3,11 @@ package com.wsteam.wandscape.engine.bootstrap;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.wsteam.wandscape.core.CoreBootstrap;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
-import com.wsteam.wandscape.core.Engine;
-import com.wsteam.wandscape.core.EngineConfig;
+import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.RitualOps;
 import com.wsteam.wandscape.core.ecs.World;
@@ -40,7 +40,7 @@ public final class EngineBootstrap {
      * Must be called once on server start, after all modules are initialized.
      */
     public static World bootstrap() {
-        LOGGER.info("Engine bootstrap starting...");
+        LOGGER.info("CoreBootstrap bootstrap starting...");
 
         // 1. Build blueprint registry and register build blueprints
         BlueprintRegistry blueprints = new BlueprintRegistry();
@@ -114,8 +114,8 @@ public final class EngineBootstrap {
             }
         };
 
-        // 5. Build EngineConfig
-        EngineConfig config = new EngineConfig(
+        // 5. Build CoreBootstrapConfig
+        CoreBootstrapConfig config = new CoreBootstrapConfig(
                 blockOps,
                 entityOps,
                 ritualOps,
@@ -126,7 +126,7 @@ public final class EngineBootstrap {
         );
 
         // 6. Bootstrap engine
-        World world = Engine.bootstrap(config);
+        World world = CoreBootstrap.bootstrap(config);
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
@@ -134,7 +134,7 @@ public final class EngineBootstrap {
         // 8. Store world in singleton
         WandscapeEngine.setWorld(world);
 
-        LOGGER.info("Engine bootstrap complete — {} systems, {} task sources, {} blueprints",
+        LOGGER.info("CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
                 world.systemCount(), taskSources.size(), blueprints);
         return world;
     }

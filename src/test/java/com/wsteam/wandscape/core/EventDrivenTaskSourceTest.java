@@ -43,22 +43,22 @@ public class EventDrivenTaskSourceTest {
         BlueprintRegistry blueprints = new BlueprintRegistry();
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
 
-        EngineConfig config = new EngineConfig(mock, mock, mock, mock, List.of(), blueprints,
+        CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
                 new SystemBlueprintRegistry());
-        world = Engine.bootstrap(config);
+        world = CoreBootstrap.bootstrap(config);
         DefaultOpExecutors.registerAll(world.opExecutors);
 
         GridPos colonyCenter = new GridPos(0, 64, 0);
         new EventDrivenTaskSource(world.taskPool, world.eventBus, () -> colonyCenter);
 
         colonyId = UUID.randomUUID();
-        Engine.createColony(world, colonyCenter.x(), colonyCenter.y(), colonyCenter.z(), 50);
+        CoreBootstrap.createColony(world, colonyCenter.x(), colonyCenter.y(), colonyCenter.z(), 50);
 
         Map<BehaviourTag, BehaviourLevel> caps = Map.of(
                 BehaviourTag.BUILDING, new BehaviourLevel(2),
                 BehaviourTag.RITUAL, new BehaviourLevel(1));
         WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-        npc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
     }
 
     // ======================== ResourceLow → gather ========================

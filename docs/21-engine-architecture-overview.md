@@ -21,7 +21,7 @@ The engine uses an **ECS** (Entity-Component-System) architecture with a **Bluep
 ┌──────────────▼──────────────────────────────────────────┐
 │  Core Engine                                            │
 │                                                         │
-│  Engine.bootstrap(EngineConfig) ──► World               │
+│  CoreBootstrap.bootstrap(EngineConfig) ──► World               │
 │                                                         │
 │  World.tick(delta):                                     │
 │    1. ManaRegenSystem                                   │
@@ -196,7 +196,7 @@ Systems execute in registration order. Order matters:
 | `event/` | 7 | Domain events + bus |
 | `task/` | 12 | Task system |
 | `system/` | 10 | Systems + task sources |
-| `core/` | 4 | Engine, Config, Log, TemplateResolver |
+| `core/` | 4 | CoreBootstrap, Config, Log, TemplateResolver |
 | `demo/` | 1 | Mock boundary |
 | `fxadapter/` | 1 | JavaFX visual adapter |
 | **Total** | **67** | Core + adaptor |

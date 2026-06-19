@@ -42,13 +42,13 @@ public class ResourceWaitingFulfillTest {
         BlueprintRegistry blueprints = new BlueprintRegistry();
         registerBlueprints(blueprints);
 
-        EngineConfig config = new EngineConfig(
+        CoreBootstrapConfig config = new CoreBootstrapConfig(
                 mock, mock, mock, mock,
                 List.of(), blueprints,
                 new SystemBlueprintRegistry()
         );
 
-        world = Engine.bootstrap(config);
+        world = CoreBootstrap.bootstrap(config);
         DefaultOpExecutors.registerAll(world.opExecutors);
         manualSource = new PlayerManualSource(world.taskPool);
 
@@ -56,13 +56,13 @@ public class ResourceWaitingFulfillTest {
 
         colonyId = UUID.randomUUID();
         GridPos center = new GridPos(0, 64, 0);
-        Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+        CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
         Map<BehaviourTag, BehaviourLevel> caps = Map.of(
                 BehaviourTag.BUILDING, new BehaviourLevel(2)
         );
         WandCarrier wand = new WandCarrier(caps, 0.8f, 2);
-        builderNpc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        builderNpc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
     }
 
     @Test

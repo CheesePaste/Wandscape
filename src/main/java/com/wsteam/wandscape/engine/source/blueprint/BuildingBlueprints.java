@@ -3,9 +3,8 @@ package com.wsteam.wandscape.engine.source.blueprint;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
+import com.wsteam.wandscape.core.CoreBootstrap;
 
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.Log;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
@@ -16,7 +15,7 @@ import com.wsteam.wandscape.core.types.GridPos;
 
 /**
  * Registers "build:*" blueprints that translate to {@link AtomicOp.TransformOp} sequences.
- * Called once before {@link com.wsteam.wandscape.core.Engine#bootstrap}.
+ * Called once before {@link CoreBootstrap#bootstrap}.
  *
  * <p>Each blueprint takes x/y/z params from the WorkItem and generates
  * a single-step TransformOp.place task. When elements and resources are

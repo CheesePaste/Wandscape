@@ -12,26 +12,26 @@ import com.wsteam.wandscape.core.types.GridPos;
 import java.util.UUID;
 
 /**
- * Engine bootstrap.
+ * CoreBootstrap bootstrap.
  * Wires up the ECS world with all component stores, systems, and boundary services.
  *
  * Usage:
  * <pre>
- *   World world = Engine.bootstrap(config);
+ *   World world = CoreBootstrap.bootstrap(config);
  *   // Create colony, NPCs, publish tasks...
  *   world.tick(delta); // call each frame
  * </pre>
  */
-public final class Engine {
+public final class CoreBootstrap {
 
-    private Engine() {}
+    private CoreBootstrap() {}
 
-    private static final String TAG = "Engine";
+    private static final String TAG = "CoreBootstrap";
 
     /**
      * Bootstrap a fresh World from the given config.
      */
-    public static World bootstrap(EngineConfig config) {
+    public static World bootstrap(CoreBootstrapConfig config) {
         Log.info(TAG, "bootstrap begin");
         World world = new World();
 

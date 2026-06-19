@@ -55,12 +55,12 @@ public class BlueprintEventSystemTest {
 
         BlueprintRegistry blueprints = new BlueprintRegistry();
 
-        EngineConfig config = new EngineConfig(
+        CoreBootstrapConfig config = new CoreBootstrapConfig(
                 mock, mock, mock, mock,
                 List.of(), blueprints,
                 new SystemBlueprintRegistry()
         );
-        world = Engine.bootstrap(config);
+        world = CoreBootstrap.bootstrap(config);
         DefaultOpExecutors.registerAll(world.opExecutors);
         manualSource = new PlayerManualSource(world.taskPool);
 
@@ -68,13 +68,13 @@ public class BlueprintEventSystemTest {
 
         center = new GridPos(0, 64, 0);
         colonyId = UUID.randomUUID();
-        Engine.createColony(world, center.x(), center.y(), center.z(), 50);
+        CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
         Map<BehaviourTag, BehaviourLevel> caps = Map.of(
                 BehaviourTag.BUILDING, new BehaviourLevel(2),
                 BehaviourTag.RITUAL, new BehaviourLevel(1));
         WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-        npc = Engine.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
     }
 
     // ===================================================================

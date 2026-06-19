@@ -18,7 +18,7 @@
 
 ```
 com.wsteam.wandscape.core/
-├── Engine.java                       # 引擎引导：bootstrap() → World
+├── CoreBootstrap.java                # 引擎引导：bootstrap() → World
 ├── EngineConfig.java                 # 引导配置：边界实现 + 蓝图注册表
 ├── Log.java                          # 核心层日志
 ├── TemplateResolver.java             # 模板变量解析器
@@ -122,7 +122,7 @@ com.wsteam.wandscape/engine/
 │   └── blueprint/                   #   建筑蓝图注册
 │       └── BuildingBlueprints.java  #   注册 "build:*" 蓝图到 BlueprintRegistry
 └── bootstrap/                       #   引导顺序编排
-    └── EngineBootstrap.java         #   创建 EngineConfig → Engine.bootstrap() → 注入 WandscapeEngine
+    └── EngineBootstrap.java         #   创建 EngineConfig → CoreBootstrap.bootstrap() → 注入 WandscapeEngine
 ```
 
 > 此层是核心引擎和 MC 世界之间的桥梁。BE 不直接调 engine；所有任务通过 TaskSource poll 机制进入引擎。

@@ -87,7 +87,7 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 - **System 蓝图**：`SystemBlueprintRegistry` + `SystemBlueprintSystem`，永久 subscribe 基础设施事件
 - **条件控制**：`IfConditionOp` + `ConditionEvaluator` 注册表（`resource_below` / `inventory_has` / `inventory_full`）
 - **模板变量**：`{{taskId}}`、`{{npcId}}`、`{{task.params.<key>}}`、`{{pos.x/y/z}}`、`{{event.<key>}}`
-- **引擎引导**：`Engine.bootstrap(EngineConfig)` → `World`，注入边界实现
+- **引擎引导**：`CoreBootstrap.bootstrap(EngineConfig)` → `World`，注入边界实现
 - **测试**：193 个 JUnit 5 测试 (63 核心引擎 + 130 适配层: 含 9 个 BuildingConfigTest)
 
 适配层边界接口 5 个，其中 `BlockOps` 已完成 MC 实现 (`WandscapeBlockOps`)，其余 3 个（`EntityOps`/`RitualOps`/`ColonyResourceAccess`）为 stub 实现在 `EngineBootstrap` 中。`EventBus` = `SimpleEventBus`（纯内存，无需适配）。
@@ -102,13 +102,13 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 | `boundary/WandscapeBlockOps.java` | BlockOps MC 实现：Level.setBlock/getBlockState |
 | `source/BuildingTaskSource.java` | TaskSource：轮询建筑 BE → TaskRequest → pool.addTask()，每 20 tick |
 | `source/blueprint/BuildingBlueprints.java` | 注册 "build:*" 5 个蓝图（stone_bricks/oak_planks/stone/dirt/glass） |
-| `bootstrap/EngineBootstrap.java` | 组装 EngineConfig + 边界实现 + TaskSource + Blueprint → Engine.bootstrap() |
+| `bootstrap/EngineBootstrap.java` | 组装 EngineConfig + 边界实现 + TaskSource + Blueprint → CoreBootstrap.bootstrap() |
 
 在 `Wandscape.java` 的 `ServerStarting` 事件中调用 `EngineBootstrap.bootstrap()`。
 
 #### 三件必须做的事
 
-**1. World 实例持有者** — `WandscapeEngine` 单例，在 ServerStarting 时 `Engine.bootstrap(config)`，所有模块通过它访问 ECS 世界 + 任务池。`EngineConfig` 需要注入 5 个边界接口的 MC 实现 + `List<TaskSource>` + `BlueprintRegistry` + `SystemBlueprintRegistry`。
+**1. World 实例持有者** — `WandscapeEngine` 单例，在 ServerStarting 时 `CoreBootstrap.bootstrap(config)`，所有模块通过它访问 ECS 世界 + 任务池。`EngineConfig` 需要注入 5 个边界接口的 MC 实现 + `List<TaskSource>` + `BlueprintRegistry` + `SystemBlueprintRegistry`。
 
 **2. 5 个边界接口的 MC 实现：**
 | 接口 | MC 实现做什么 | 优先级 |
@@ -159,7 +159,7 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 - **BE 不直接调 engine 的 taskPool**：建筑 BE 只存队列数据 + 暴露状态。`BuildingTaskSource` 是唯一把建筑队列送入引擎任务池的地方。违反此条会导致 BE 持有 engine 引用、跨层耦合。
 - **边界接口是单向依赖**：core 定义接口 → Wandscape 层实现。core 包永远不 import MC 类（`net.minecraft.*` / `com.wsteam.*`）。
 - **TaskSource 是引擎主动拉取（poll），不是 BE 推送（push）**：`TaskSourcePoller` 遍历建筑，不是建筑推任务给 pool。保证 engine tick 循环的统一节奏。
-- **Blueprint 需要在 Bootstrap 时注册**：建筑操作（place/break/convert）对应的 "build:*" blueprint 要在 `Engine.bootstrap()` 前注册到 `BlueprintRegistry`，否则 `TaskRequest` 编译阶段直接抛异常。
+- **Blueprint 需要在 Bootstrap 时注册**：建筑操作（place/break/convert）对应的 "build:*" blueprint 要在 `CoreBootstrap.bootstrap()` 前注册到 `BlueprintRegistry`，否则 `TaskRequest` 编译阶段直接抛异常。
 
 ### Wandscape 模块依赖规则（最高优先级）
 
