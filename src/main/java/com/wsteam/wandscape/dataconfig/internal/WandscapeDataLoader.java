@@ -74,6 +74,7 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
             registry.clear();
         }
 
+        int loaded = 0;
         for (var entry : data.entrySet()) {
             ResourceLocation loc = entry.getKey();
             String path = loc.getPath();
@@ -88,9 +89,12 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
 
             try {
                 registry.loadEntry(id, entry.getValue());
+                loaded++;
             } catch (Exception e) {
                 LOGGER.warn("Failed to parse config '{}': {}", loc, e.getMessage());
             }
         }
+        LOGGER.info("WandscapeDataLoader reloaded: {} files across {} categories",
+                loaded, registries.size());
     }
 }
