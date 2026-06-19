@@ -1,5 +1,7 @@
 package com.wsteam.wandscape;
 
+import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
+
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -8,6 +10,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -22,6 +25,11 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         Wandscape.LOGGER.info("Wandscape client setup complete");
+    }
+
+    @SubscribeEvent
+    static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
     }
 
     @SubscribeEvent
