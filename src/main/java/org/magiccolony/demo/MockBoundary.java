@@ -1,0 +1,164 @@
+package org.magiccolony.demo;
+
+import org.magiccolony.core.Log;
+import org.magiccolony.core.boundary.*;
+import org.magiccolony.core.ecs.World;
+import org.magiccolony.core.op.OpResult;
+import org.magiccolony.core.types.*;
+
+import java.util.*;
+
+/**
+ * Mock implementations of all boundary interfaces for headless testing/demo.
+ */
+public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResourceAccess {
+
+    // Simulated world blocks
+    private final Map<GridPos, BlockType> blocks = new HashMap<>();
+    // Simulated warehouse
+    private final Map<ResourceId, Integer> warehouse = new HashMap<>();
+    private final Map<ResourceId, Integer> reserved = new HashMap<>();
+    // Ritual tracking
+    private final Map<String, Integer> ritualChannels = new HashMap<>(); // key -> remaining ticks
+
+    // ---- BlockOps ----
+
+    private static final String TAG = "MockBoundary";
+
+    @Override
+    public void setBlock(GridPos pos, BlockType type) {
+        if (type.equals(BlockType.AIR)) {
+            blocks.remove(pos);
+        } else {
+            blocks.put(pos, type);
+        }
+        Log.debug(TAG, "setBlock %s → %s", pos, type.id());
+    }
+
+    @Override
+    public BlockType getBlock(GridPos pos) {
+        return blocks.getOrDefault(pos, BlockType.AIR);
+    }
+
+    @Override
+    public boolean isAir(GridPos pos) {
+        return getBlock(pos).equals(BlockType.AIR);
+    }
+
+    @Override
+    public void toggle(GridPos pos) {
+        Log.debug(TAG, "toggle %s", pos);
+    }
+
+    @Override
+    public void activate(GridPos pos) {
+        Log.debug(TAG, "activate %s", pos);
+    }
+
+    @Override
+    public void openGui(GridPos pos) {
+        Log.debug(TAG, "openGui %s", pos);
+    }
+
+    // ---- EntityOps ----
+
+    @Override
+    public void applyEffect(EntityId target, EffectId effect, int strength, int duration) {
+        Log.debug(TAG, "applyEffect %s strength=%d duration=%d on %s",
+                effect.id(), strength, duration, target);
+    }
+
+    @Override
+    public GridPos getPosition(EntityId entity) {
+        return GridPos.ORIGIN;
+    }
+
+    // ---- RitualOps ----
+
+    @Override
+    public void beginRitual(RitualId ritual, GridPos target, World world, long casterId) {
+        String key = ritual.id() + "@" + casterId;
+        int ticks = switch (ritual.id()) {
+            case "item_teleport", "player_summon" -> 1;
+            case "warding" -> 3;
+            case "group_vigor", "rain_call", "clear_weather" -> 5;
+            case "portal_gate" -> 8;
+            default -> 1;
+        };
+        ritualChannels.put(key, ticks);
+        Log.debug(TAG, "beginRitual %s target=%s ticks=%d caster=%d",
+                ritual.id(), target, ticks, casterId);
+    }
+
+    @Override
+    public OpResult pollRitual(RitualId ritual, GridPos target, World world, long casterId) {
+        String key = ritual.id() + "@" + casterId;
+        int remaining = ritualChannels.getOrDefault(key, -1);
+        if (remaining <= 0) {
+            ritualChannels.remove(key);
+            Log.debug(TAG, "pollRitual %s → DONE (caster %d)", ritual.id(), casterId);
+            return OpResult.DONE;
+        }
+        ritualChannels.put(key, remaining - 1);
+        Log.debug(TAG, "pollRitual %s → WAITING (%d ticks left)", ritual.id(), remaining);
+        return OpResult.WAITING;
+    }
+
+    // ---- ColonyResourceAccess ----
+
+    /** Seed the warehouse with initial resources. */
+    public void seedWarehouse(ResourceId resource, int amount) {
+        warehouse.merge(resource, amount, Integer::sum);
+        Log.debug(TAG, "seedWarehouse %s: +%d (total %d)", resource.id(), amount,
+                warehouse.getOrDefault(resource, 0));
+    }
+
+    @Override
+    public boolean hasEnough(ResourceId resource, int amount) {
+        int avail = available(resource);
+        return avail >= amount;
+    }
+
+    @Override
+    public boolean reserve(ResourceId resource, int amount) {
+        int avail = available(resource);
+        if (avail < amount) return false;
+        reserved.merge(resource, amount, Integer::sum);
+        Log.debug(TAG, "reserve %s: %d (available after: %d)", resource.id(), amount, available(resource));
+        return true;
+    }
+
+    @Override
+    public boolean commit(ResourceId resource, int amount) {
+        Integer res = reserved.get(resource);
+        if (res == null || res < amount) return false;
+        reserved.merge(resource, -amount, Integer::sum);
+        warehouse.merge(resource, -amount, Integer::sum);
+        Log.debug(TAG, "commit %s: -%d (remaining: %d)", resource.id(), amount,
+                warehouse.getOrDefault(resource, 0));
+        return true;
+    }
+
+    @Override
+    public void release(ResourceId resource, int amount) {
+        reserved.merge(resource, -amount, (a, b) -> Math.max(0, a + b));
+        Log.debug(TAG, "release %s: %d", resource.id(), amount);
+    }
+
+    @Override
+    public int available(ResourceId resource) {
+        int total = warehouse.getOrDefault(resource, 0);
+        int res = reserved.getOrDefault(resource, 0);
+        return Math.max(0, total - res);
+    }
+
+    /** Get total warehouse stock (including reserved). For UI display only. */
+    public int warehouseTotal(ResourceId resource) {
+        return warehouse.getOrDefault(resource, 0);
+    }
+
+    /** Get a copy of the block map for rendering. */
+    public Map<GridPos, BlockType> allBlocks() {
+        return new HashMap<>(blocks);
+    }
+}
