@@ -1,8 +1,9 @@
 package com.wsteam.wandscape.engine.boundary;
 
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -13,19 +14,18 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.op.OpResult;
+import com.wsteam.wandscape.core.types.GridPos;
 
 /**
  * Async TransformOp executor — exercises the V2.5 CompletableFuture gating.
  *
- * <p>Each TransformOp:
+ * <p>Two-phase execution:
  * <ol>
- *   <li>Registers a CompletableFuture via {@link World#startAsyncOp} → gate closes</li>
- *   <li>Stores a {@link Pending} record with countdown ticks</li>
- *   <li>Returns WAITING → engine tick pauses</li>
- *   <li>{@link #tickAll()} (called each MC tick from Wandscape.onServerTick)
- *       decrements counters and completes expired futures</li>
- *   <li>When the future completes, actual block placement executes</li>
- *   <li>Gate re-opens when all futures resolve → next engine logic tick</li>
+ *   <li>First call: creates a CompletableFuture → returns WAITING → gate closes</li>
+ *   <li>MC ticks count down via {@link #tickAll()} → future completes →
+ *       block placed by callback</li>
+ *   <li>Engine tick resumes, re-invokes same TransformOp → recognized as
+ *       already-done via {@code started} set → returns DONE → stepIndex advances</li>
  * </ol>
  *
  * <p>Set {@code V1_ASYNC_DELAY_TICKS = 0} for sync mode (standard TransformExecutor).
@@ -39,6 +39,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                    int remainingTicks) {}
 
     private final List<Pending> pending = new ArrayList<>();
+    /** Ops whose futures have completed (or are in-flight). Second call returns DONE. */
+    private final Set<GridPos> started = new HashSet<>();
 
     public AsyncTransformExecutor(int delayTicks) {
         this.delayTicks = delayTicks;
@@ -53,7 +55,6 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     @Override
     public OpResult execute(AtomicOp.TransformOp op, World world, long npcId) {
         if (delayTicks <= 0) {
-            // Sync fallback
             BlockOps blockOps = world.blockOps;
             if (blockOps != null) {
                 blockOps.setBlock(op.target(), op.to());
@@ -61,14 +62,21 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             return OpResult.DONE;
         }
 
-        // ① Register future → gate closes
+        // Already in-flight or completed → return DONE so engine advances stepIndex
+        if (started.contains(op.target())) {
+            started.remove(op.target());
+            LOGGER.debug("async TransformOp DONE (second call): {}→{} at {}",
+                    op.from().id(), op.to().id(), op.target());
+            return OpResult.DONE;
+        }
+
+        // First call: register async op → gate closes → return WAITING
+        started.add(op.target());
         CompletableFuture<Void> future = world.startAsyncOp(
                 "place_" + op.to().id() + "_" + op.target());
-
-        // ② Store for delayed completion + actual placement
         pending.add(new Pending(future, op, world, npcId, delayTicks));
 
-        // ③ Hook: when future completes, do the actual block placement
+        // Callback: place block when future completes
         future.thenRun(() -> {
             Pending p = findPending(future);
             if (p == null) return;
@@ -76,7 +84,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (p.world.blockOps != null) {
                 p.world.blockOps.setBlock(p.op.target(), p.op.to());
             }
-            LOGGER.debug("async TransformOp DONE: {}→{} at {}",
+            LOGGER.debug("async TransformOp placed: {}→{} at {}",
                     p.op.from().id(), p.op.to().id(), p.op.target());
         });
 
@@ -91,10 +99,9 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     public void tickAll() {
         if (pending.isEmpty()) return;
 
-        // Collect expired futures (complete(null) triggers thenRun which
-        // modifies pending — must complete after iteration)
+        // Collect expired futures BEFORE calling complete() — complete() triggers
+        // thenRun which modifies pending, so we must not iterate while modifying.
         List<CompletableFuture<Void>> toComplete = new ArrayList<>();
-        List<Integer> toUpdateIdx = new ArrayList<>();
 
         for (int i = 0; i < pending.size(); i++) {
             Pending p = pending.get(i);
@@ -102,18 +109,16 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (remaining <= 0) {
                 toComplete.add(p.future());
             } else {
-                toUpdateIdx.add(i);
                 pending.set(i, new Pending(p.future(), p.op(), p.world(), p.npcId(), remaining));
             }
         }
 
-        // Complete futures after iteration (safe: thenRun removes from pending)
         for (CompletableFuture<Void> f : toComplete) {
             f.complete(null);
         }
 
         if (!toComplete.isEmpty()) {
-            LOGGER.debug("async tickAll: {} completed, {} remaining",
+            LOGGER.debug("async tickAll: {} completed, {} remaining in-flight",
                     toComplete.size(), pending.size());
         }
     }
