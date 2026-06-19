@@ -6,11 +6,11 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.op.OpExecutorRegistry;
-import com.wsteam.wandscape.core.op.OpResult;
 import com.wsteam.wandscape.core.task.Blueprint;
 import com.wsteam.wandscape.core.task.TaskSequence;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Drives system blueprint steps via heartbeat.
@@ -78,12 +78,12 @@ public class SystemBlueprintSystem implements System {
                     OpExecutor<AtomicOp> executor =
                             (OpExecutor<AtomicOp>) (Object) opRegistry.get(op.getClass());
                     if (executor != null) {
-                        OpResult result = executor.execute(op, world, 0);
-                        if (result == OpResult.DONE) {
+                        CompletableFuture<Void> future = executor.execute(op, world, 0);
+                        if (future.isDone()) {
                             stepIndex++;
                             stepIndices.put(bp.id(), stepIndex);
                         }
-                        // WAITING: don't advance, retry next tick
+                        // Not done: don't advance, retry next tick
                     }
                     break; // One side-effect per tick
                 }

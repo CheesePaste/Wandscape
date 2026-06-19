@@ -180,44 +180,41 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void ritualOp_firstTick_beginsRitualAndWaits() {
-            // WARDING: MockBoundary.beginRitual sets channelTicks=3, then poll
-            // First tick: beginRitual called, then pollRitual → remaining=2 → WAITING
-            registerSimpleBp("test:ward_first",
-                    new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(5, 64, 0), 3));
-
-            long taskId = world.taskPool.addTask(
-                    makeRequest("test:ward_first", new GridPos(0, 64, 0), 10));
-
-            // Tick to assign + execute first op
-            world.tick(1.0f); // tick 1
-            world.tick(1.0f); // tick 2: scheduler heartbeat
-            world.tick(1.0f); // tick 3: TaskExec processes NPC
-
-            GlobalTask task = world.taskPool.get(taskId);
-            assertEquals(TaskState.IN_PROGRESS, task.state);
-            assertEquals(0, task.stepIndex, "RitualOp still at step 0 (WAITING)");
-
-            TaskExecutor exec = world.get(npc, TaskExecutor.class);
-            assertEquals(ExecutorState.WAITING, exec.state,
-                    "Executor WAITING after RitualOp first tick");
-        }
-
-        @Test
-        void ritualOp_pollsUntilDone_thenAdvances() {
-            registerSimpleBp("test:ward_poll",
+        void ritualOp_syncCompletesAndAdvancesStep() {
+            // V2.5 async model: MockBoundary.beginRitual returns completedFuture
+            // → RitualOp advances in one tick
+            registerSimpleBp("test:ward_sync",
                     new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(5, 64, 0), 3),
                     AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.GLASS));
 
             long taskId = world.taskPool.addTask(
-                    makeRequest("test:ward_poll", new GridPos(0, 64, 0), 10));
-            tickN(25);
+                    makeRequest("test:ward_sync", new GridPos(0, 64, 0), 10));
+            tickN(10);
 
             GlobalTask task = world.taskPool.get(taskId);
             assertEquals(TaskState.COMPLETED, task.state,
                     "Should complete after ritual + TransformOp");
             assertFalse(mock.isAir(new GridPos(5, 64, 0)),
-                    "TransformOp executed after ritual DONE");
+                    "TransformOp placed block after RitualOp DONE");
+        }
+
+        @Test
+        void ritualOp_engineDoesNotReinvokeExecute() {
+            // V2.5: execute() is called once for a RitualOp.
+            // MockBoundary returns completedFuture → advances immediately.
+            registerSimpleBp("test:ward_once",
+                    new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(10, 64, 0), 1));
+
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:ward_once", new GridPos(0, 64, 0), 10));
+            tickN(10);
+
+            GlobalTask task = world.taskPool.get(taskId);
+            assertEquals(TaskState.COMPLETED, task.state,
+                    "RitualOp should complete — execute() called once, returned completedFuture");
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+            assertNull(exec.pendingFuture, "No pending future after sync ritual");
+            assertNull(exec.globalTaskId, "Task released after completion");
         }
 
         // ---- helpers ----

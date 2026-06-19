@@ -7,9 +7,8 @@ import com.wsteam.wandscape.core.boundary.EntityOps;
 import com.wsteam.wandscape.core.boundary.RitualOps;
 import com.wsteam.wandscape.core.types.*;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.op.OpResult;
-
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Mock implementations of all boundary interfaces for headless testing/demo.
@@ -21,8 +20,6 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     // Simulated warehouse
     private final Map<ResourceId, Integer> warehouse = new HashMap<>();
     private final Map<ResourceId, Integer> reserved = new HashMap<>();
-    // Ritual tracking
-    private final Map<String, Integer> ritualChannels = new HashMap<>(); // key -> remaining ticks
 
     // ---- BlockOps ----
 
@@ -79,32 +76,10 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     // ---- RitualOps ----
 
     @Override
-    public void beginRitual(RitualId ritual, GridPos target, World world, long casterId) {
-        String key = ritual.id() + "@" + casterId;
-        int ticks = switch (ritual.id()) {
-            case "item_teleport", "player_summon" -> 1;
-            case "warding" -> 3;
-            case "group_vigor", "rain_call", "clear_weather" -> 5;
-            case "portal_gate" -> 8;
-            default -> 1;
-        };
-        ritualChannels.put(key, ticks);
-        Log.debug(TAG, "beginRitual %s target=%s ticks=%d caster=%d",
-                ritual.id(), target, ticks, casterId);
-    }
-
-    @Override
-    public OpResult pollRitual(RitualId ritual, GridPos target, World world, long casterId) {
-        String key = ritual.id() + "@" + casterId;
-        int remaining = ritualChannels.getOrDefault(key, -1);
-        if (remaining <= 0) {
-            ritualChannels.remove(key);
-            Log.debug(TAG, "pollRitual %s → DONE (caster %d)", ritual.id(), casterId);
-            return OpResult.DONE;
-        }
-        ritualChannels.put(key, remaining - 1);
-        Log.debug(TAG, "pollRitual %s → WAITING (%d ticks left)", ritual.id(), remaining);
-        return OpResult.WAITING;
+    public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world, long casterId) {
+        Log.debug(TAG, "beginRitual %s target=%s caster=%d → completed (sync)", ritual.id(), target, casterId);
+        // All rituals are sync for headless testing
+        return CompletableFuture.completedFuture(null);
     }
 
     // ---- ColonyResourceAccess ----

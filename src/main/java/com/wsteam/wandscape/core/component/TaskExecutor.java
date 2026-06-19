@@ -7,6 +7,7 @@ import com.wsteam.wandscape.core.task.TaskSequence;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * NPC-side task execution state.
@@ -31,6 +32,14 @@ public class TaskExecutor {
 
     /** Local execution state. */
     public ExecutorState state = ExecutorState.IDLE;
+
+    /**
+     * Pending async future for the current step. Non-null means this step
+     * has been submitted (via executor.execute()) and is awaiting completion.
+     * The engine does NOT re-invoke execute() — when this future resolves,
+     * stepIndex advances directly.
+     */
+    public CompletableFuture<Void> pendingFuture = null;
 
     /** Push an op to the back of the private queue. */
     public void pushPrivate(AtomicOp op) {
@@ -62,13 +71,14 @@ public class TaskExecutor {
         return !privateQueue.isEmpty() || globalTaskId != null;
     }
 
-    /** Reset to idle state, clearing all task data. */
+    /** Reset all state. */
     public void reset() {
         privateQueue.clear();
         globalTaskId = null;
         currentSequence = null;
         stepIndex = 0;
         taskParams = null;
+        pendingFuture = null;
         state = ExecutorState.IDLE;
     }
 
@@ -78,6 +88,7 @@ public class TaskExecutor {
         currentSequence = null;
         stepIndex = 0;
         taskParams = null;
+        pendingFuture = null;
         state = ExecutorState.IDLE;
     }
 }
