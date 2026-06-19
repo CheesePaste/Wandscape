@@ -17,7 +17,7 @@
 ### 核心引擎（纯 Java，零 MC 依赖）
 
 ```
-org.magiccolony.core/
+com.wsteam.wandscape.core/
 ├── Engine.java                       # 引擎引导：bootstrap() → World
 ├── EngineConfig.java                 # 引导配置：边界实现 + 蓝图注册表
 ├── Log.java                          # 核心层日志

@@ -1,20 +1,18 @@
 package com.wsteam.wandscape.core;
 
+import com.wsteam.wandscape.core.component.ManaPool;
+import com.wsteam.wandscape.core.component.TaskExecutor;
+import com.wsteam.wandscape.core.component.WandCarrier;
+import com.wsteam.wandscape.core.task.*;
+import com.wsteam.wandscape.core.types.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.magiccolony.core.Engine;
-import org.magiccolony.core.EngineConfig;
-import org.magiccolony.core.TemplateResolver;
-import org.magiccolony.core.component.*;
-import org.magiccolony.core.ecs.World;
-import org.magiccolony.core.op.AtomicOp;
-import org.magiccolony.core.op.DefaultOpExecutors;
-import org.magiccolony.core.system.PlayerManualSource;
-import org.magiccolony.core.system.SystemBlueprintRegistry;
-import org.magiccolony.core.task.*;
-import org.magiccolony.core.types.*;
-import org.magiccolony.demo.MockBoundary;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.op.DefaultOpExecutors;
+import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
+import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.*;
 

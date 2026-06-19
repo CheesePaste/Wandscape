@@ -7,7 +7,7 @@ Wandscape 有两层依赖：**跨项目依赖**（core-engine）和**模块间�
 ### 跨项目依赖（所有模块共有）
 
 ```
-org.magiccolony.core/  ← 核心引擎（纯 Java 21，零 MC 依赖）
+com.wsteam.wandscape.core/  ← 核心引擎（纯 Java 21，零 MC 依赖）
   ↑ 所有 Wandscape 模块均可 import（项目内 library）
   ↑ 引擎集成层 (com.wsteam.wandscape.engine/) 负责创建 World、实现边界接口、注册 TaskSource
   ↑ 其他模块通过引擎集成层间接使用引擎，不直接 new World / Engine.bootstrap()
@@ -20,14 +20,14 @@ org.magiccolony.core/  ← 核心引擎（纯 Java 21，零 MC 依赖）
   - 01-shared-api（必须）
   - 08-building-core（可选，仅建筑类模块）
   - 禁止依赖 02-07 或 09-16 中的任何其他模块
-  - org.magiccolony.core 是项目级依赖，所有模块自动可见，不在模块依赖规则管内
+  - com.wsteam.wandscape.core 是项目级依赖，所有模块自动可见，不在模块依赖规则管内
 ```
 
 ## 依赖图
 
 ```
                          ┌─────────────────────────┐
-                         │  org.magiccolony.core    │  ← 核心引擎（纯 Java）
+                         │  com.wsteam.wandscape.core    │  ← 核心引擎（纯 Java）
                          │  ECS + Task + Blueprint  │
                          └────────────┬────────────┘
                                       │ 实现边界接口

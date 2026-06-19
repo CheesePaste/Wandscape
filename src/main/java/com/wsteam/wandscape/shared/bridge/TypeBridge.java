@@ -5,13 +5,13 @@ import com.wsteam.wandscape.shared.data.TaskStatus;
 
 import net.minecraft.core.BlockPos;
 
-import org.magiccolony.core.task.TaskState;
-import org.magiccolony.core.types.BehaviourTag;
-import org.magiccolony.core.types.GridPos;
-import org.magiccolony.core.types.ResourceId;
+import com.wsteam.wandscape.core.task.TaskState;
+import com.wsteam.wandscape.core.types.BehaviourTag;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.ResourceId;
 
 /**
- * Bidirectional type mapping between core engine (org.magiccolony.core)
+ * Bidirectional type mapping between core engine (com.wsteam.wandscape.core)
  * and wandscape MC layer (com.wsteam.wandscape).
  *
  * <p>Core engine types are pure Java, zero MC dependencies.

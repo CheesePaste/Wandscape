@@ -71,7 +71,7 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 
 ## 架构
 
-### 核心引擎（`org.magiccolony.core`）— v2 已迁移
+### 核心引擎（`com.wsteam.wandscape.core`）— v2 已迁移
 
 2026-06-19 从 MagicColony 独立项目迁移。纯 Java 21 标准库，**与 Minecraft 零依赖**。适配层通过 `boundary/` 接口对接 MC 世界。
 
@@ -92,7 +92,7 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 
 适配层需要实现 5 个边界接口：`BlockOps`、`EntityOps`、`RitualOps`、`ColonyResourceAccess`、`EventBus`（已有 `SimpleEventBus` 可用）。`MockBoundary` 提供所有接口的 headless mock 实现。
 
-引擎包结构：`org.magiccolony.core.{boundary,component,ecs,event,op,system,task,types}` + `org.magiccolony.demo.MockBoundary`
+引擎包结构：`com.wsteam.wandscape.core.{boundary,component,ecs,event,op,system,task,types}` + `com.wsteam.wandscape.core.demo.MockBoundary`
 
 ### 引擎集成层（⚠ 待实现 — 勿重复造轮子）
 
@@ -203,9 +203,9 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 
 ## 代码约定
 
-- 包名 `com.wsteam.wandscape`（Wandscape 模块） / `org.magiccolony.core`（核心引擎）
+- 包名 `com.wsteam.wandscape`（Wandscape 模块） / `com.wsteam.wandscape.core`（核心引擎）
 - 模块对外接口在 `01-shared-api`，实现类 `internal` 可见性
-- 核心引擎文件从 MagicColony 迁移，保持原包名 `org.magiccolony.core`，不修改
+- 核心引擎文件从 MagicColony 迁移，保持原包名 `com.wsteam.wandscape.core`，不修改
 - NeoForge `DeferredRegister` 注册物品/方块/实体/BE/菜单
 - `/reload` 热重载所有 JSON 配置
 - JSON 目录：`data/wandscape/`（六类：wands / buildings / recipes / element_mappings / rituals / multiblocks）

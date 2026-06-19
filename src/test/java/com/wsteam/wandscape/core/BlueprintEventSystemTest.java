@@ -1,19 +1,20 @@
 package com.wsteam.wandscape.core;
 
+import com.wsteam.wandscape.core.component.Inventory;
+import com.wsteam.wandscape.core.component.WandCarrier;
+import com.wsteam.wandscape.core.event.SimpleEventBus;
+import com.wsteam.wandscape.core.system.SystemBlueprintSystem;
+import com.wsteam.wandscape.core.task.*;
+import com.wsteam.wandscape.core.types.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.magiccolony.core.Engine;
-import org.magiccolony.core.EngineConfig;
-import org.magiccolony.core.component.*;
-import org.magiccolony.core.ecs.World;
-import org.magiccolony.core.event.CustomEvent;
-import org.magiccolony.core.op.AtomicOp;
-import org.magiccolony.core.op.DefaultOpExecutors;
-import org.magiccolony.core.system.PlayerManualSource;
-import org.magiccolony.core.system.SystemBlueprintRegistry;
-import org.magiccolony.core.task.*;
-import org.magiccolony.core.types.*;
-import org.magiccolony.demo.MockBoundary;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.event.CustomEvent;
+import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.op.DefaultOpExecutors;
+import com.wsteam.wandscape.core.system.PlayerManualSource;
+import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
+import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -528,8 +529,8 @@ public class BlueprintEventSystemTest {
                 TaskSequence.of("System Build",
                         AtomicOp.TransformOp.place(center.add(5, 0, 0), BlockType.STONE)));
 
-        org.magiccolony.core.system.SystemBlueprintSystem sbSystem =
-                new org.magiccolony.core.system.SystemBlueprintSystem(sysBp);
+        SystemBlueprintSystem sbSystem =
+                new SystemBlueprintSystem(sysBp);
 
         assertTrue(mock.isAir(center.add(5, 0, 0)), "block is AIR before heartbeat");
 
@@ -548,12 +549,12 @@ public class BlueprintEventSystemTest {
                         new AtomicOp.EmitEventOp("sys_event_1", Map.of("n", "1")),
                         new AtomicOp.EmitEventOp("sys_event_2", Map.of("n", "2"))));
 
-        org.magiccolony.core.system.SystemBlueprintSystem sbSystem =
-                new org.magiccolony.core.system.SystemBlueprintSystem(sysBp);
+        SystemBlueprintSystem sbSystem =
+                new SystemBlueprintSystem(sysBp);
 
         sbSystem.update(world, 1.0f);
         // Manual dispatch since we call update() directly, not world.tick()
-        ((org.magiccolony.core.event.SimpleEventBus) world.eventBus).dispatch();
+        ((SimpleEventBus) world.eventBus).dispatch();
 
         boolean has1 = capturedEvents.stream().anyMatch(e -> "sys_event_1".equals(e.name()));
         boolean has2 = capturedEvents.stream().anyMatch(e -> "sys_event_2".equals(e.name()));
@@ -624,7 +625,7 @@ public class BlueprintEventSystemTest {
     }
 
     private static TaskRequest makeRequest(String blueprintId, GridPos pos,
-                                            Map<String, String> extra, int priority) {
+                                           Map<String, String> extra, int priority) {
         Map<String, String> params = new HashMap<>(extra);
         params.putIfAbsent("x", String.valueOf(pos.x()));
         params.putIfAbsent("y", String.valueOf(pos.y()));

@@ -1,22 +1,20 @@
 package com.wsteam.wandscape.core;
 
+import com.wsteam.wandscape.core.component.WandCarrier;
+import com.wsteam.wandscape.core.task.*;
+import com.wsteam.wandscape.core.types.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.magiccolony.core.Engine;
-import org.magiccolony.core.EngineConfig;
-import org.magiccolony.core.component.*;
-import org.magiccolony.core.ecs.World;
-import org.magiccolony.core.event.MobNearby;
-import org.magiccolony.core.event.ResourceFulfilled;
-import org.magiccolony.core.event.ResourceLow;
-import org.magiccolony.core.event.TaskAwaitingResources;
-import org.magiccolony.core.op.AtomicOp;
-import org.magiccolony.core.op.DefaultOpExecutors;
-import org.magiccolony.core.system.EventDrivenTaskSource;
-import org.magiccolony.core.system.SystemBlueprintRegistry;
-import org.magiccolony.core.task.*;
-import org.magiccolony.core.types.*;
-import org.magiccolony.demo.MockBoundary;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.event.MobNearby;
+import com.wsteam.wandscape.core.event.ResourceFulfilled;
+import com.wsteam.wandscape.core.event.ResourceLow;
+import com.wsteam.wandscape.core.event.TaskAwaitingResources;
+import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.op.DefaultOpExecutors;
+import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
+import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
+import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.HashMap;
 import java.util.List;

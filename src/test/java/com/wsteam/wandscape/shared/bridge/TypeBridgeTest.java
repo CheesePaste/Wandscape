@@ -4,9 +4,9 @@ import com.wsteam.wandscape.shared.data.BehaviorType;
 import com.wsteam.wandscape.shared.data.TaskStatus;
 
 import org.junit.jupiter.api.Test;
-import org.magiccolony.core.task.TaskState;
-import org.magiccolony.core.types.BehaviourTag;
-import org.magiccolony.core.types.ResourceId;
+import com.wsteam.wandscape.core.task.TaskState;
+import com.wsteam.wandscape.core.types.BehaviourTag;
+import com.wsteam.wandscape.core.types.ResourceId;
 
 import static org.junit.jupiter.api.Assertions.*;
 
