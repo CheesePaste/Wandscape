@@ -7,7 +7,10 @@ package org.magiccolony.core.types;
 public enum BehaviourTag {
     BUILDING,
     FARMING,
+    MINING,
+    LOGGING,
     CRAFTING,
+    GATHERING,
     RITUAL,
     ENTITY_INTERACTION
 }

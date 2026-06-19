@@ -1,42 +1,85 @@
 package com.wsteam.wandscape;
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-// An example config class. This is not required, but it's a good idea to have one to keep your config organized.
-// Demonstrates how to use Neo's config APIs
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
-    public static final ModConfigSpec.BooleanValue LOG_DIRT_BLOCK = BUILDER
-            .comment("Whether to log the dirt block on common setup")
-            .define("logDirtBlock", true);
+    public static final ModConfigSpec.IntValue COLONY_RADIUS = BUILDER
+            .comment("Default colony radius in blocks")
+            .defineInRange("general.colonyRadius", 128, 16, 512);
 
-    public static final ModConfigSpec.IntValue MAGIC_NUMBER = BUILDER
-            .comment("A magic number")
-            .defineInRange("magicNumber", 42, 0, Integer.MAX_VALUE);
+    public static final ModConfigSpec.IntValue MAINTENANCE_INTERVAL_MINUTES = BUILDER
+            .comment("Interval in minutes between maintenance cost deductions")
+            .defineInRange("general.maintenanceIntervalMinutes", 20, 1, 120);
 
-    public static final ModConfigSpec.ConfigValue<String> MAGIC_NUMBER_INTRODUCTION = BUILDER
-            .comment("What you want the introduction message to be for the magic number")
-            .define("magicNumberIntroduction", "The magic number is... ");
+    public static final ModConfigSpec.IntValue WAREHOUSE_SAVE_INTERVAL_MINUTES = BUILDER
+            .comment("Interval in minutes between warehouse auto-saves")
+            .defineInRange("general.warehouseSaveIntervalMinutes", 5, 1, 60);
 
-    // a list of strings that are treated as resource locations for items
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> ITEM_STRINGS = BUILDER
-            .comment("A list of items to log on common setup.")
-            .defineListAllowEmpty("items", List.of("minecraft:iron_ingot"), () -> "", Config::validateItemName);
+    public static final ModConfigSpec.IntValue SCHEDULER_HEARTBEAT_TICKS = BUILDER
+            .comment("Scheduler heartbeat interval in ticks (40 ticks = 2 seconds)")
+            .defineInRange("scheduler.heartbeatTicks", 40, 10, 200);
+
+    public static final ModConfigSpec.DoubleValue SAME_BUILDING_CONTINUATION_BONUS = BUILDER
+            .comment("Score bonus for NPC continuing tasks on the same building")
+            .defineInRange("scheduler.sameBuildingContinuationBonus", 50.0, 0.0, 500.0);
+
+    public static final ModConfigSpec.IntValue TASK_INTERRUPT_COOLDOWN_TICKS = BUILDER
+            .comment("Cooldown in ticks before an interrupted task can be re-assigned (6000 ticks = 5 minutes)")
+            .defineInRange("scheduler.taskInterruptCooldownTicks", 6000, 0, 72000);
+
+    public static final ModConfigSpec.IntValue STUCK_CHECK_INTERVAL_TICKS = BUILDER
+            .comment("Interval in ticks between NPC stuck checks (60 ticks = 3 seconds)")
+            .defineInRange("scheduler.stuckCheckIntervalTicks", 60, 20, 200);
+
+    public static final ModConfigSpec.DoubleValue STUCK_MIN_MOVE_DISTANCE = BUILDER
+            .comment("Minimum distance an NPC must move within stuck check interval to not be considered stuck")
+            .defineInRange("scheduler.stuckMinMoveDistance", 2.0, 0.5, 10.0);
+
+    public static final ModConfigSpec.IntValue STUCK_MAX_RETRIES = BUILDER
+            .comment("Number of consecutive stuck checks before NPC teleports")
+            .defineInRange("scheduler.stuckMaxRetries", 3, 1, 10);
+
+    public static final ModConfigSpec.IntValue DEFAULT_NPC_MAX_HEALTH = BUILDER
+            .comment("Default NPC max health")
+            .defineInRange("npc.defaultMaxHealth", 40, 10, 200);
+
+    public static final ModConfigSpec.IntValue DEFAULT_NPC_MAX_MANA = BUILDER
+            .comment("Default NPC max mana")
+            .defineInRange("npc.defaultMaxMana", 100, 20, 500);
+
+    public static final ModConfigSpec.IntValue DEFAULT_NPC_SPELL_POWER = BUILDER
+            .comment("Default NPC spell power")
+            .defineInRange("npc.defaultSpellPower", 1, 1, 10);
+
+    public static final ModConfigSpec.IntValue DEFAULT_NPC_MANA_REGEN = BUILDER
+            .comment("Default NPC mana regen per tick")
+            .defineInRange("npc.defaultManaRegen", 2, 0, 20);
+
+    public static final ModConfigSpec.DoubleValue HOUSE_MANA_REGEN_MULTIPLIER = BUILDER
+            .comment("Mana regen multiplier when NPC is in assigned house")
+            .defineInRange("npc.houseManaRegenMultiplier", 3.0, 1.0, 10.0);
+
+    public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
+            .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
+            .defineInRange("npc.walkThreshold", 64, 16, 256);
+
+    public static final ModConfigSpec.IntValue BASE_OPERATION_RANGE = BUILDER
+            .comment("Base operation range for wand operations")
+            .defineInRange("wand.baseOperationRange", 16, 4, 64);
+
+    public static final ModConfigSpec.IntValue PER_WAND_LEVEL_RANGE = BUILDER
+            .comment("Additional range per wand level")
+            .defineInRange("wand.perWandLevelRange", 8, 0, 32);
+
+    public static final ModConfigSpec.DoubleValue DEFAULT_MANA_COST_MULTIPLIER = BUILDER
+            .comment("Default mana cost multiplier for wands (lower = cheaper)")
+            .defineInRange("wand.defaultManaCostMultiplier", 1.0, 0.3, 1.0);
+
+    public static final ModConfigSpec.IntValue DEFAULT_WAND_RANGE = BUILDER
+            .comment("Default wand range")
+            .defineInRange("wand.defaultWandRange", 1, 1, 5);
 
     static final ModConfigSpec SPEC = BUILDER.build();
-
-    private static boolean validateItemName(final Object obj) {
-        return obj instanceof String itemName && BuiltInRegistries.ITEM.containsKey(ResourceLocation.parse(itemName));
-    }
 }

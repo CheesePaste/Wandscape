@@ -16,8 +16,8 @@ public enum TaskState {
     /** Waiting for resources - NPC released, task paused. */
     AWAITING_RESOURCES,
 
-    /** V2: interrupted. Treated as PENDING_ASSIGN in V1. */
-    // INTERRUPTED,
+    /** Task was interrupted mid-execution. Enters cooldown period. */
+    INTERRUPTED,
 
     /** Task finished successfully. */
     COMPLETED

@@ -9,13 +9,67 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 ./gradlew runClient      # 启动测试客户端
 ./gradlew runServer      # 启动测试服务端
 ./gradlew test           # 运行单元测试（含核心引擎 63 个测试）
+./gradlew runGameTestServer  # 运行 GameTest
 ```
 
-## 架构
+## 核心原则
 
-- **两层依赖**：所有模块只依赖 `01-shared-api`（接口层）和/或 `08-building-core`（建筑基类）。模块间通过 EventBus 事件和 API 接口通信，不直接引用。
-- **数据驱动**：建筑、法杖、配方、元素映射全部 JSON 定义（`data/wandscape/`）。
-- **接口先行**：每个模块对外暴露接口（在 01 中定义），实现类 internal 不对外暴露。
+所有代码和设计决策必须遵循这五条。违反任一条需在 PR 中说明理由。
+
+1. **高兼容性**：不修改原版行为，不硬编码方块/物品引用。功能通过 JSON 数据驱动，方块映射用标签。
+2. **原子化设计**：每个模块只做一件事。模块间通过接口 + 事件通信，不跨模块直接引用类。复杂功能拆解为原子操作序列。
+3. **轻度不硬核**：不引入生存难度惩罚。关停是效率降级而非建筑损坏。数值门槛低、递增平缓。
+4. **稳定性优先**：所有可能失败的路径必须有兜底（寻路失败→传送、魔力不足→等待、元素不足→物资等待）。不允许静默失败或崩溃。
+5. **文档即代码**：修改设计必须同步更新 `docs/` 中对应编号的文档。新增包/注册/事件/JSON格式 必须同步更新 `architecture/` 中对应文件。
+
+## 项目导航
+
+| 目录 | 用途 | 何时查阅 |
+|------|------|---------|
+| `docs/` | 模块设计文档（00-21），每模块一文件 + 路线图(17) + 已解决存档(98) + 待澄清(99) | 开始写某个模块的代码前 |
+| `architecture/` | 项目结构快照：包树、依赖图、注册表、事件、JSON格式 | 需要知道"某样东西在哪"或"某事件谁发谁听" |
+| `src/` | 实际 Java 代码 | 实现时 |
+
+**docs/ 和 architecture/ 的分工**：docs/ 描述"应该做成什么样"（设计意图、行为规则），architecture/ 描述"现在是什么样"（包结构、注册位置、事件流向）。前者是计划书，后者是快照。
+
+## 工作流
+
+### 写代码前
+
+1. **读 docs/**：找到对应模块的编号文档，理解设计意图和边界
+2. **读 `docs/17-development-roadmap.md`**：确认当前模块处于哪个阶段、依赖哪些前置模块
+3. **读 architecture/**：确认包位置、依赖规则、已有注册和事件
+4. **查 MC 源码**：涉及原版类/方法时，用 `minecraft-source` skill 查源码，不靠记忆猜测
+5. **扫一眼 `docs/99-open-questions.md`**：确认有无已记录的坑
+6. **查 `docs/98-resolved-issues.md`**：确认某个设计是否已有定论
+
+### 写代码时
+
+- 新增接口 → 放 `01-shared-api`
+- 新增事件 → 在 `01-shared-api` 定义，在 architecture/03-event-catalog.md 登记
+- 新增注册 → 在 architecture/02-registration-catalog.md 登记
+- 新增 JSON 格式 → 在 architecture/04-json-config-index.md 登记
+- 改变模块间交互 → 更新 architecture/01-module-dependencies.md
+- 所有可配置内容走 JSON（`data/wandscape/`），不硬编码
+
+### 写完后
+
+- 修改了设计 → 更新对应 `docs/NN-*.md`
+- 新增包/注册/事件/JSON → 更新 `architecture/` 对应文件
+- 解决了 `docs/99-open-questions.md` 中的问题 → 移到 `docs/98-resolved-issues.md`
+
+## MC 源码查阅
+
+**绝对不要臆断 Minecraft 类名和方法签名。** 涉及以下情况必须用 `minecraft-source` skill 查源码：
+
+- 原版类名、方法名、字段名
+- 原版行为逻辑（如村民 AI、寻路、方块实体 tick）
+- NeoForge 事件/API 用法
+- 原版 NBT 结构
+
+用法：`/minecraft-source <类名或方法名或关键词>`
+
+## 架构
 
 ### 核心引擎（`org.magiccolony.core`）— v2 已迁移
 
@@ -40,47 +94,93 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 
 引擎包结构：`org.magiccolony.core.{boundary,component,ecs,event,op,system,task,types}` + `org.magiccolony.demo.MockBoundary`
 
-### 模块地图
+### Wandscape 模块依赖规则（最高优先级）
 
-| 编号 | 模块 | 一句话 |
-|------|------|--------|
+```
+01-shared-api  ←  所有模块都可以依赖
+08-building-core  ←  建筑类模块可选依赖（自身仅依赖 01）
+02-07, 09-16  ←  互不直接引用，通过 EventBus 事件 + API 接口通信
+```
+
+违反此规则的代码不得合并。
+
+### 模块速查
+
+| 编号 | 模块 | 职责 |
+|------|------|------|
 | — | core-engine | 已迁移：ECS + Blueprint + Task + EventBus（v2） |
-| 01 | shared-api | 共享接口、事件、数据类型 |
-| 02 | wand-system | 法杖物品 + NBT + 能力并集 |
-| 03 | element-system | 三层 9 种元素 + 方块→元素映射 |
-| 04 | warehouse-system | 元素 + 物品统一存储 + GUI |
-| 05 | atomic-operations | 四种原子操作 A/B/C/D |
-| 06 | task-system | 全局任务池 + 调度器(2s) + 私有池 |
+| 01 | shared-api | 接口、事件、枚举、常量 — 纯定义无实现 |
+| 02 | wand-system | 法杖物品 + NBT 行为标签 + 能力并集 |
+| 03 | element-system | 三层 9 元素 + 方块→元素映射 |
+| 04 | warehouse-system | 元素+物品存储 + GUI |
+| 05 | atomic-operations | 原子操作 A/B/C/D 执行 |
+| 06 | task-system | 全局任务池 + 2s 调度器 + NPC 私有池 |
 | 07 | npc-system | NPC 实体 + 魔力 + 死亡/复活 |
 | 08 | building-core | 建筑 JSON 注册 + 三数值 + 维护 + 队列 |
-| 09 | node-building | 节点建筑 → 发布采集任务产出元素 |
-| 10 | production-stations | 制作站 + 万能工作站 + 魔药站 |
-| 11 | housing-mana-pool | 房屋分配 + 魔力池充能/抽取 |
-| 12 | tavern-recruitment | 酒馆 + NPC 招募(舒适值限制) |
+| 09 | node-building | 节点建筑产出元素 |
+| 10 | production-stations | 制作站 + 工作站 + 魔药站 |
+| 11 | housing-mana-pool | 房屋分配 + 魔力池 |
+| 12 | tavern-recruitment | 酒馆招募 NPC |
 | 13 | ritual-altar | 多方块祭坛 + 复活仪式 |
-| 14 | management-panel | 远程管理面板 + 小地图 + 远程建造 |
-| 15 | colony-lifecycle | 殖民地创建/删除 + 开局引导 |
-| 16 | data-driven-config | 全部 JSON 配置格式规范 |
+| 14 | management-panel | 远程管理面板 + 小地图 |
+| 15 | colony-lifecycle | 殖民地创建/删除 + 引导 |
+| 16 | data-driven-config | JSON 配置格式规范 |
 
 ### 关键设计决策
 
-- **全 NPC 默认 ritual:1**：与装备无关，复活后仍生效。保证所有 NPC 可执行物资传送等基础物流操作。
-- **维护成本负数→自动关停**：元素储量扣至负数后建筑自动关停（使用时间加倍、产出减半），避免经济崩溃。
-- **NPC 移动**：<64 方块尝试寻路步行（卡死检测兜底），≥64 / 寻路失败 / 卡死 → 入队私有 self_teleport 任务（Operation D，消耗由仪式 JSON 定义）。魔力不足原地等恢复（不中断任务）。
+- **全 NPC 默认 ritual:1**：与装备无关，`computeAbilities()` 自动合并。保证所有 NPC 可执行物资传送。
+- **维护成本负数→自动关停**：元素储量扣至负数后建筑关停（时间加倍、产出减半），玩家补足后手动重启。
+- **NPC 移动**：<64 方块尝试寻路步行（3s×3 次卡死检测），≥64/寻路失败/卡死 → 私有 self_teleport（Operation D）。魔力不足原地等恢复。
 - **操作射程**：`16 + wand.range × 8` 方块。超距自动传送后执行。
-- **连续执行优化**：NPC 完成建筑任务后可直接接同建筑下一个任务，跳过全局池匹配。但会在接取前预判魔力是否充足。
-- **三数值首次建造永久标记**：每种建筑类型首次建造贡献数值，拆除后重建不重复贡献。
+- **连续执行**：NPC 完成建筑任务后可直接接同建筑下一个任务（跳过全局匹配），接取前预判魔力。
+- **三数值永久标记**：每种建筑首次建造贡献数值，拆除重建不重复。
+- **事件通信**：模块间广播用 EventBus（默认 NORMAL 优先级），编排顺序用 API 直接调用。
+- **不洗 NBT**：完全使用 MC 原生序列化。`CompoundTag.copy()` 防外部修改。
 
 ### 文档
 
-- 设计文档在 `docs/`，编号 00 到 18（Wandscape 模块设计）。99 为审查问题汇总。
+- 设计文档在 `docs/`，编号 00 到 18（Wandscape 模块设计）+ 19-21（核心引擎）。99 为审查问题汇总。
 - 核心引擎文档：`docs/19-engine-v1-baseline.md`（V1 基线）、`docs/20-engine-v2-incremental.md`（V2 增量）、`docs/21-engine-architecture-overview.md`（架构总览）
 
 ## 代码约定
 
 - 包名 `com.wsteam.wandscape`（Wandscape 模块） / `org.magiccolony.core`（核心引擎）
-- 模块内实现类为 `internal` 可见性
-- NeoForge `DeferredRegister` 注册物品/方块/实体/BE/菜单
-- `/reload` 支持热重载所有 JSON 配置
-- 绝对不洗 NBT：完全使用 Minecraft 原生 NBT 序列化
+- 模块对外接口在 `01-shared-api`，实现类 `internal` 可见性
 - 核心引擎文件从 MagicColony 迁移，保持原包名 `org.magiccolony.core`，不修改
+- NeoForge `DeferredRegister` 注册物品/方块/实体/BE/菜单
+- `/reload` 热重载所有 JSON 配置
+- JSON 目录：`data/wandscape/`（六类：wands / buildings / recipes / element_mappings / rituals / multiblocks）
+- TOML 配置：`config/wandscape-common.toml`，ModConfigSpec 实现，服务端同步客户端
+
+## architecture/ 文件维护规则
+
+architecture/ 是项目结构的**实时快照**，不是设计文档。每条信息必须有代码对应。
+
+### 何时更新
+
+| 变更 | 更新文件 |
+|------|---------|
+| 新增/删除/重命名包 | 00-overview.md |
+| 模块间依赖关系变化 | 01-module-dependencies.md |
+| 新增 DeferredRegister 或注册项 | 02-registration-catalog.md |
+| 新增事件类、改变事件发布/订阅方 | 03-event-catalog.md |
+| 新增/修改 JSON 配置路径或格式 | 04-json-config-index.md |
+| 新增编码约定或发现反模式 | 05-conventions.md |
+
+### 编写格式
+
+- **包路径**：用 `com.wsteam.wandscape.<module>/` 格式，后跟一句话说明
+- **注册项**：用 `DeferredRegister<Type> NAME` 格式，标注所在模块
+- **事件**：用表格：事件类 → 发布模块 → 订阅模块 → 触发时机
+- **JSON 路径**：用 `data/wandscape/<category>/<file>.json` 格式，标注加载模块
+- **不写类名**：architecture/ 记录包级结构。具体类名在 `docs/` 或代码注释中
+- **保持精简**：每个文件不超过 150 行。超过则拆分子文件
+
+## 常见陷阱
+
+1. **直接 new 其他模块的类** → 改用 `WandscapeApis` 静态 API 查询
+2. **硬编码数值** → 放 `WandscapeConstants` 或 TOML 配置
+3. **忘记 copy NBT** → 用 `CompoundTag` 做 Map key 前必须 `copy()`
+4. **事件优先级依赖** → 事件仅用于通知，不用于编排顺序。需顺序用 API
+5. **建筑不写 pattern** → 单方块建筑也写 `"pattern": [[0,0,0]]`，统一起见
+6. **猜测 MC 类名** → 用 `minecraft-source` skill 查源码

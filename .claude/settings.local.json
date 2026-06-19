@@ -7,7 +7,9 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git branch *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew test *)"
     ]
   }
 }
