@@ -1,25 +1,45 @@
+# Wandscape
 
-Installation information
-=======
+Minecraft NeoForge 1.21.1 模组 — 殖民地自动化管理。
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+玩家使用魔法法杖指挥 NPC 法师建造建筑、采集元素、合成物品、执行仪式，从零开始发展一座自运转的魔法殖民地。
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+## 核心玩法
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
+- **法杖系统**：单一法杖物品 + NBT 定义行为标签与等级，永不损坏，动态染色
+- **NPC 法师**：携带法杖执行任务，拥有个人魔力池，死后可复活
+- **殖民地建设**：16 种建筑类型（节点/工作站/房屋/魔力池/酒馆/祭坛等），远程管理面板一键建造
+- **元素经济**：三层 9 种元素（土/木/水 → 火/铁/风 → 金/钻石/末影），通过采集、分解、合成流转
+- **三数值驱动**：舒适值、魔法值、奇观值控制殖民地发展阶段与解锁内容
 
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
-https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
+## 开发环境
 
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+```bash
+./gradlew runClient      # 启动测试客户端
+./gradlew build          # 编译
+./gradlew test           # 单元测试
+```
+
+- **MC 版本**：1.21.1
+- **NeoForge**：21.1.233
+- **Mappings**：Parchment 2024.11.17
+- **JDK**：21+
+
+## 项目结构
+
+```
+src/main/java/com/wsteam/wandscape/   # 16 个模块，严格两层依赖
+docs/new/                              # 完整设计文档 00-18
+data/wandscape/                        # JSON 配置（建筑/法杖/配方/元素/仪式）
+```
+
+## 设计原则
+
+1. **高兼容性** — 不修改原版，不洗 NBT，`/reload` 热重载
+2. **原子化** — 所有 NPC 工作拆为四种原子操作 A/B/C/D
+3. **稳定优先** — 不崩溃、不卡死，维护负数自动关停保护
+4. **不折磨玩家** — 远程管理面板，NPC 短距离步行/长距离传送，复活后仍可基础工作
+
+## 许可证
+
+MIT License — 详见 [LICENSE](LICENSE)
