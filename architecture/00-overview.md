@@ -233,8 +233,9 @@ com.wsteam.wandscape/
 |------|------|---------|
 | 0 — 地基 | ✅ 完成 | 01-shared-api 类型系统 + 16 data-driven-config 框架 |
 | core-engine | ✅ 已合并 | ECS + Blueprint + AtomicOp + Scheduler + 63 测试通过 |
-| engine-integration | ❌ 待实现 | WandscapeEngine + 5 边界 MC 实现 + BuildingTaskSource + BuildingBlueprints |
+| engine-integration | ✅ 完成 | WandscapeEngine + WandscapeBlockOps + BuildingTaskSource + BuildingBlueprints + EngineBootstrap |
+| 1 — 02 wand | ✅ 完成 | WandItem, WandApiImpl, WandPresetLoader, 4 法杖 JSON |
+| 1 — 03 element | ✅ 完成 | ElementApiImpl, ElementMappingLoader, 5 元素映射 JSON, decomposable 标签 |
+| 1 — 08 building | ✅ 完成 | 3 Block/BE/BEtype + BuildingConfig + AbstractWandscapeBE + BuildingApiImpl + 3 JSON |
 
-| 1 - 02/03 | ✅ 完成 | 02 wand-system (WandItem, WandApiImpl, WandPresetLoader) + 03 element-system (ElementApiImpl, ElementMappingLoader, 5 JSON 映射) |
-
-**当前**：阶段 1 继续 — 08 building-core (建筑核心)
+**当前**：阶段 1 全部完成 — 阶段 2 (07 NPC + 05 atomic-ops + 06 task) 可开工

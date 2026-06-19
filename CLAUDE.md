@@ -88,15 +88,23 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 - **条件控制**：`IfConditionOp` + `ConditionEvaluator` 注册表（`resource_below` / `inventory_has` / `inventory_full`）
 - **模板变量**：`{{taskId}}`、`{{npcId}}`、`{{task.params.<key>}}`、`{{pos.x/y/z}}`、`{{event.<key>}}`
 - **引擎引导**：`Engine.bootstrap(EngineConfig)` → `World`，注入边界实现
-- **测试**：183 个 JUnit 5 测试 (63 核心引擎 + 120 适配层: AbilitySetTest 18 + BehaviorTypeTest 13 + ElementTypeTest 12 + ElementMappingConfigTest 12 + WandPresetLoaderTest 10 + WandDataValidatorTest 17 + TypeBridgeTest 19 + ElementApiImplTest 10 + SimpleDataRegistryTest 9)
+- **测试**：193 个 JUnit 5 测试 (63 核心引擎 + 130 适配层: 含 9 个 BuildingConfigTest)
 
-适配层需要实现 5 个边界接口：`BlockOps`、`EntityOps`、`RitualOps`、`ColonyResourceAccess`、`EventBus`（已有 `SimpleEventBus` 可用）。`MockBoundary` 提供所有接口的 headless mock 实现。
+适配层边界接口 5 个，其中 `BlockOps` 已完成 MC 实现 (`WandscapeBlockOps`)，其余 3 个（`EntityOps`/`RitualOps`/`ColonyResourceAccess`）为 stub 实现在 `EngineBootstrap` 中。`EventBus` = `SimpleEventBus`（纯内存，无需适配）。
 
-引擎包结构：`com.wsteam.wandscape.core.{boundary,component,ecs,event,op,system,task,types}` + `com.wsteam.wandscape.core.demo.MockBoundary`
+### 引擎集成层（✅ 已实现）
 
-### 引擎集成层（⚠ 待实现 — 勿重复造轮子）
+位于 `com.wsteam.wandscape.engine/`，5 个文件：
 
-核心引擎是纯 Java 21，零 MC 依赖。在 MC 中运行引擎需要一层**集成适配层**。**此层目前完全缺失**，是阶段 1-2 的最高优先级基础设施。
+| 文件 | 职责 |
+|------|------|
+| `WandscapeEngine.java` | 单例持有 World 实例 |
+| `boundary/WandscapeBlockOps.java` | BlockOps MC 实现：Level.setBlock/getBlockState |
+| `source/BuildingTaskSource.java` | TaskSource：轮询建筑 BE → TaskRequest → pool.addTask()，每 20 tick |
+| `source/blueprint/BuildingBlueprints.java` | 注册 "build:*" 5 个蓝图（stone_bricks/oak_planks/stone/dirt/glass） |
+| `bootstrap/EngineBootstrap.java` | 组装 EngineConfig + 边界实现 + TaskSource + Blueprint → Engine.bootstrap() |
+
+在 `Wandscape.java` 的 `ServerStarting` 事件中调用 `EngineBootstrap.bootstrap()`。
 
 #### 三件必须做的事
 
@@ -114,7 +122,7 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 **3. TaskSource 实现** — 被 `TaskSourcePoller` 按间隔轮询，把各类工作转化为 `TaskRequest` 送入 `GlobalTaskPool`：
 | TaskSource | 状态 | 职责 |
 |------------|------|------|
-| `BuildingTaskSource` | ❌ 待实现 | **核心**：轮询所有建筑 BE 队列 → 出队 → `pool.addTask()` |
+| `BuildingTaskSource` | ✅ 已实现 | **核心**：轮询所有建筑 BE 队列 → 出队 → `pool.addTask()` |
 | `WarehouseSource` | ✅ V1 stub | 资源低于阈值时触发补货 |
 | `WorkbenchSource` | ✅ V1 stub | 工作站生产队列 |
 | `PlayerManualSource` | ✅ 已有 | 玩家手动发布任务 |
