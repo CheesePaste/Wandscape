@@ -82,7 +82,7 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
                 Map.of("x", String.valueOf(pos.getX() + 2),
                        "y", String.valueOf(pos.getY()),
                        "z", String.valueOf(pos.getZ())),
-                50
+                10 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
         );
         be.enqueueWork(demo);
         player.displayClientMessage(

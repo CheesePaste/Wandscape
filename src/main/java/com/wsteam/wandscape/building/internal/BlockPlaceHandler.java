@@ -109,7 +109,7 @@ public final class BlockPlaceHandler {
                                 "y", String.valueOf(target.getY()),
                                 "z", String.valueOf(target.getZ())
                         ),
-                        100 // High priority — structure repair
+                        49 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
                 );
                 be.enqueueWork(work);
                 missingCount++;
