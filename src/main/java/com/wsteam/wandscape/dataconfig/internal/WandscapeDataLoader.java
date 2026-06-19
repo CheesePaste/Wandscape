@@ -17,20 +17,55 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 
+/**
+ * Scans {@code data/wandscape/<category>/*.json} for each registered category.
+ *
+ * <p>Uses per-category {@code FileToIdConverter} scans rather than trying
+ * to use a single prefix — MC's {@code SimpleJsonResourceReloadListener}
+ * filters by resource path prefix, and our files are nested under
+ * {@code data/wandscape/<category>/}, not {@code data/wandscape/} directly.
+ */
 public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().create();
 
     private final Map<String, SimpleDataRegistry<?>> registries = new HashMap<>();
 
+    /**
+     * Directory passed to super is unused because we override
+     * {@link #prepare(ResourceManager, ProfilerFiller)} to scan per-category.
+     */
     public WandscapeDataLoader() {
-        super(GSON, "wandscape");
+        super(GSON, "");
     }
 
     public <T> WandscapeDataRegistry<T> register(String category, BiFunction<String, JsonElement, T> parser) {
         SimpleDataRegistry<T> registry = new SimpleDataRegistry<>(parser);
         registries.put(category, registry);
         return registry;
+    }
+
+    /**
+     * Override prepare to scan each registered category directory separately.
+     * Each category (e.g. "buildings") maps to {@code data/<ns>/<category>/*.json}.
+     *
+     * <p>{@code scanDirectory} strips the category prefix via {@code fileToId},
+     * so we re-insert it as {@code category/id} for downstream parsing.
+     */
+    @Override
+    protected Map<ResourceLocation, JsonElement> prepare(ResourceManager manager, ProfilerFiller profiler) {
+        Map<ResourceLocation, JsonElement> all = new HashMap<>();
+        for (String cat : registries.keySet()) {
+            Map<ResourceLocation, JsonElement> catData = new HashMap<>();
+            scanDirectory(manager, cat, GSON, catData);
+            for (var entry : catData.entrySet()) {
+                ResourceLocation newKey = ResourceLocation.fromNamespaceAndPath(
+                        entry.getKey().getNamespace(),
+                        cat + "/" + entry.getKey().getPath() + ".json");
+                all.put(newKey, entry.getValue());
+            }
+        }
+        return all;
     }
 
     @Override
