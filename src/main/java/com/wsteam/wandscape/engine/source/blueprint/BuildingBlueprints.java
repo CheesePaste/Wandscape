@@ -40,8 +40,10 @@ public final class BuildingBlueprints {
                 buildPlaceSteps(BlockType.DIRT, "Build dirt"));
         registry.register("build:glass",
                 buildPlaceSteps(BlockType.GLASS, "Build glass"));
+        registry.register("build:platform",
+                buildPlatformSteps(BlockType.STONE_BRICKS, "Build platform"));
 
-        Log.info(TAG, "registered %d build:* blueprints", 5);
+        Log.info(TAG, "registered %d build:* blueprints", 6);
     }
 
     /**
@@ -53,6 +55,24 @@ public final class BuildingBlueprints {
             return new TaskSequence(
                     List.of(AtomicOp.TransformOp.place(pos, blockType)),
                     label + " at " + pos);
+        };
+    }
+
+    /**
+     * Create a multi-step 3×3 platform blueprint (9 TransformOp.place steps).
+     * Takes base (x,y,z) and builds a flat 3×3 floor.
+     */
+    private static BlueprintSteps buildPlatformSteps(BlockType blockType, String label) {
+        return params -> {
+            GridPos base = parsePos(params);
+            List<AtomicOp> steps = new java.util.ArrayList<>();
+            for (int dx = 0; dx < 3; dx++) {
+                for (int dz = 0; dz < 3; dz++) {
+                    steps.add(AtomicOp.TransformOp.place(
+                            new GridPos(base.x() + dx, base.y(), base.z() + dz), blockType));
+                }
+            }
+            return new TaskSequence(steps, label + " 3x3 at " + base);
         };
     }
 

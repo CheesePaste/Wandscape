@@ -76,9 +76,8 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
             return InteractionResult.FAIL;
         }
 
-        String blockName = buildingTypeId;
         WorkItem demo = new WorkItem(
-                "build:stone_bricks",
+                "build:platform",  // 3×3 stone_bricks platform — 9 TransformOp steps
                 Map.of("x", String.valueOf(pos.getX() + 2),
                        "y", String.valueOf(pos.getY()),
                        "z", String.valueOf(pos.getZ())),
@@ -87,8 +86,9 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
         be.enqueueWork(demo);
         player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
-                        "[Wandscape] Enqueued demo task: " + demo.blueprintId()
-                        + " at (x=" + (pos.getX() + 2) + ", z=" + pos.getZ() + ")"),
+                        "[Wandscape] Enqueued demo: " + demo.blueprintId()
+                        + " 3×3 platform at (x=" + (pos.getX() + 2)
+                        + ", z=" + pos.getZ() + ") — 9 blocks"),
                 false);
         return InteractionResult.SUCCESS;
     }
