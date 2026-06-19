@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:dirt",
+  "build_cost": {
+    "earth": 1
+  },
+  "decompose_yield": {
+    "earth": 1
+  },
+  "decomposable": true
+}

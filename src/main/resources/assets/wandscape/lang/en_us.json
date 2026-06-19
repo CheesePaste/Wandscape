@@ -1,7 +1,6 @@
 {
-  "itemGroup.wandscape": "Example Mod Tab",
-  "block.wandscape.example_block": "Example Block",
-  "item.wandscape.example_item": "Example Item",
+  "itemGroup.wandscape": "Wandscape",
+  "item.wandscape.wand": "Wand",
 
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",

@@ -88,7 +88,7 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 - **条件控制**：`IfConditionOp` + `ConditionEvaluator` 注册表（`resource_below` / `inventory_has` / `inventory_full`）
 - **模板变量**：`{{taskId}}`、`{{npcId}}`、`{{task.params.<key>}}`、`{{pos.x/y/z}}`、`{{event.<key>}}`
 - **引擎引导**：`Engine.bootstrap(EngineConfig)` → `World`，注入边界实现
-- **测试**：63 个 JUnit 5 测试 (BlueprintEventSystemTest 23 + CoreSystemsTest 31 + EventDrivenTaskSourceTest 5 + ResourceWaitingFulfillTest 4)
+- **测试**：183 个 JUnit 5 测试 (63 核心引擎 + 120 适配层: AbilitySetTest 18 + BehaviorTypeTest 13 + ElementTypeTest 12 + ElementMappingConfigTest 12 + WandPresetLoaderTest 10 + WandDataValidatorTest 17 + TypeBridgeTest 19 + ElementApiImplTest 10 + SimpleDataRegistryTest 9)
 
 适配层需要实现 5 个边界接口：`BlockOps`、`EntityOps`、`RitualOps`、`ColonyResourceAccess`、`EventBus`（已有 `SimpleEventBus` 可用）。`MockBoundary` 提供所有接口的 headless mock 实现。
 
@@ -151,6 +151,40 @@ Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过�
 - `/reload` 热重载所有 JSON 配置
 - JSON 目录：`data/wandscape/`（六类：wands / buildings / recipes / element_mappings / rituals / multiblocks）
 - TOML 配置：`config/wandscape-common.toml`，ModConfigSpec 实现，服务端同步客户端
+
+## Testing
+
+### 测试组织
+
+- 核心引擎测试：`src/test/java/com/wsteam/wandscape/core/` - JUnit 5, 零 MC 依赖
+- 适配层单元测试：`src/test/java/com/wsteam/wandscape/<module>/internal/` - 仅纯逻辑，不依赖 MC 运行时
+- 包含 MC 运行时依赖的集成测试未来使用 `@GameTest` 或 `runGameTestServer`
+
+### 测试要求
+
+- **所有纯逻辑代码必须有单元测试**。纯逻辑定义：不依赖 `Minecraft.getInstance()`、`ItemStack`、`BlockState`、`Level`、`ServerPlayer` 或任何需要 MC 运行时的类
+- 测试类命名 `<ClassName>Test`，放在与被测类相同的包路径下（`src/test/java/` 镜像 `src/main/java/`）
+- 每个测试方法覆盖一个行为分支：正常路径、边界条件（null/空/负数）、错误路径
+- 使用纯 JUnit 5：`@Test`、`@BeforeEach`、`@Nested`、`static import org.junit.jupiter.api.Assertions.*`
+- 不需要 Mockito 或 AssertJ — 项目遵循最小依赖原则
+- `CompoundTag` 可独立构造（`new CompoundTag()`）无需 MC 运行时
+- `./gradlew test` 必须全绿才允许提交
+
+### 应该测什么
+
+- 枚举方法（`fromId`, `getId`, `getTier`）
+- 数据校验逻辑（`WandDataValidator.isValid`）
+- JSON 解析逻辑（`Xxx.fromJson` 静态方法）
+- 并集计算逻辑（`AbilitySet.merge`）
+- 类型桥接映射（`TypeBridge` 双向转换）
+- 注册表 CRUD（`SimpleDataRegistry` get/contains/clear）
+
+### 不测什么
+
+- 任何接收 `ItemStack` 参数的方法 → 需要 `DataComponents`，留待集成测试
+- 任何接收 `BlockState` 参数的方法 → 需要 `BuiltInRegistries`，留待集成测试
+- 任何继承 MC 构造器的类（`SimpleJsonResourceReloadListener` 等）
+- 渲染、GUI、网络包处理
 
 ## architecture/ 文件维护规则
 

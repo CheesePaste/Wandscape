@@ -141,9 +141,38 @@ public void onTaskCompleted(TaskCompletedEvent event) { ... }
 
 ### 4.5 测试约定
 
-每个模块提供：
-- 单元测试：纯逻辑部分（如能力并集计算、调度匹配、元素扣除）可在 JVM 下直接测试
-- 集成测试：需要 Minecraft 运行时的部分，使用 `@GameTest` 或手动测试清单
+**测试分层**：
+
+| 层级 | 范围 | 技术 | 示例 |
+|------|------|------|------|
+| 单元测试 | 纯逻辑：枚举、校验、JSON 解析、数据并集、类型映射 | JUnit 5, 零 MC 依赖 | `AbilitySetTest`, `WandDataValidatorTest` |
+| 集成测试 | MC 运行时：方块交互、物品 NBT、实体行为 | `@GameTest` (未来) | `WandApiImpl` 集成测试 |
+| 手动测试 | UI/渲染/GUI | 手动清单 | 法杖物品模型颜色渲染 |
+
+**单元测试强制要求**：
+
+1. **所有不依赖 Minecraft 运行时的纯逻辑代码必须有单元测试。**
+   纯逻辑定义：不通过任何路径依赖 `Minecraft.getInstance()`、`ItemStack`、`BlockState`、`Level`、`ServerPlayer` 或任何需要 MC 初始化才能工作的类。
+2. 测试类放在 `src/test/java/` 下，包路径与被测类镜像。
+3. 每个测试方法命名使用 `lowerCamelCase`，清晰描述场景和预期结果。
+4. 每个方法至少覆盖：正常路径 + 边界条件（null/空/负数/最大值）+ 错误路径。
+5. `./gradlew test` 必须全绿才允许提交。
+
+**测试工具栈**：
+
+- JUnit 5.10（platform BOM + Jupiter engine）
+- 不使用 Mockito、AssertJ 或其他第三方测试库（遵循最小依赖原则）
+- `CompoundTag` 可独立构造（`new CompoundTag()`），无需 MC 实例
+- `com.google.gson.JsonParser` 用于构造测试 JSON 输入
+
+**不可单元测试的情况**：
+
+- 构造器继承 MC 类（如 `SimpleJsonResourceReloadListener`）
+- 方法参数包含 `ItemStack`（需要 `DataComponents.CUSTOM_DATA`）
+- 方法参数包含 `BlockState`（需要 `BuiltInRegistries.BLOCK`）
+- 任何调用 `Minecraft.getInstance()` 或 `net.minecraft.server.MinecraftServer` 的代码
+
+这些情况应在文档中明确标注，等待集成测试阶段覆盖。
 
 ---
 

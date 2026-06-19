@@ -9,7 +9,11 @@
       "Bash(git branch *)",
       "Bash(git *)",
       "Bash(./gradlew compileJava)",
-      "Bash(./gradlew test *)"
+      "Bash(./gradlew test *)",
+      "Bash(./gradlew build *)",
+      "Bash(bash \".claude/skills/minecraft-source/scripts/decompile.sh\" \"ItemStack\")",
+      "Bash(bash \".claude/skills/minecraft-source/scripts/decompile.sh\" \"net.minecraft.world.item.component.CustomData\")",
+      "Bash(./gradlew dependencies *)"
     ]
   }
 }

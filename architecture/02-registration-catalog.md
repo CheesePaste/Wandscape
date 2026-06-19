@@ -26,7 +26,7 @@
 
 | 注册 ID | 声明模块 | 类型 |
 |---------|---------|------|
-| (待实现) | | |
+| `wandscape:wand` | 02 wand-system | WandItem (NBT 行为标签) |
 
 ### 实体
 
@@ -53,9 +53,13 @@
 3. **BlockItem 随方块一起注册**：在同一个模块中 `registerSimpleBlockItem`
 4. **创造模式物品栏**：每个标签在 `CREATIVE_MODE_TABS` 中注册，通过 `BuildCreativeModeTabContentsEvent` 添加物品
 
-## 阶段 0 状态
+## 阶段 1 状态
 
 - `BLOCKS`、`ITEMS`、`CREATIVE_MODE_TABS` 已在 `Wandscape.java` 中声明并注册到 modEventBus
-- 暂无实际注册项，待阶段 1 实现 02/03/08 模块时添加
+- `wandscape:wand` 法杖物品已注册 (WandItem)
+- `wandscape:wandscape_tab` 创造模式物品栏标签已注册
+- WandApi + ElementApi 在 `commonSetup` 中注册到 WandscapeApis
+- WandPresetLoader + ElementMappingLoader 通过 WandscapeDataLoader 注册
+- 待实现：08 building-core 方块/BE 注册
 
 > **维护规则**：新增注册项时在对应表格添加一行。删除时移除行并确认没有遗留引用。

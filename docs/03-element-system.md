@@ -1,8 +1,8 @@
 # 元素系统
 
 文档编号：NEW-03
-版本：1.0
-状态：三层元素定义 + 元素储量接口 + 方块→元素映射
+版本：1.1
+状态：三层元素定义 + 元素储量接口 + 方块→元素映射 | 单元测试完成：ElementTypeTest (12) + ElementMappingConfigTest (12) + ElementApiImplTest (10)
 依赖：01-shared-api
 
 ---
@@ -151,13 +151,17 @@ public class ElementApiImpl implements ElementApi {
 
 ## 六、独立测试方案
 
-### 单元测试
+### 单元测试（JVM，无需 MC 运行时）— 已完成
 
-1. **枚举完整性**：9 种元素全部可正反查找（ID → 枚举 → ID）
-2. **层级分组**：`getByTier(1)` 返回 3 种、`getByTier(2)` 返回 3 种、`getByTier(3)` 返回 3 种
-3. **JSON 加载**：`getBuildCost(Blocks.STONE_BRICKS)` 返回 `{EARTH: 4}`
-4. **JSON 加载**：`getDecomposeYield(Blocks.COBBLESTONE)` 返回 `{EARTH: 4}`
-5. **不可分解**：`isDecomposable(Blocks.STONE_BRICKS)` 返回 false
+测试位置：`src/test/java/com/wsteam/wandscape/element/internal/` + `src/test/java/com/wsteam/wandscape/shared/data/`
+
+1. **枚举完整性** (ElementTypeTest, 12 tests)：9 种元素 ID、三层分组（每层 3 种）、getTier 校验、全部 ID 小写、ID 唯一性
+2. **层级分组** (ElementApiImplTest, 10 tests)：`fromId` 大小写不敏感、`getTier` 正确返回、`getByTier(1/2/3)` 每层 3 种、无效 ID 返回 null
+3. **JSON 映射解析** (ElementMappingConfigTest, 12 tests)：`ElementMappingConfig.fromJson` 完整/缺失字段、decomposable true/false/缺失默认 false、无效元素类型抛异常、大 Long 值
+
+待完成（需要 MC 运行时）：
+- `ElementMappingLoader` 集成测试：`getBuildCost/getDecomposeYield/isDecomposable(BlockState)` 需要 `BuiltInRegistries.BLOCK`
+- 完整 JSON 加载 → `ElementMappingLoader.findConfig` 查询流程
 
 ### 集成测试
 

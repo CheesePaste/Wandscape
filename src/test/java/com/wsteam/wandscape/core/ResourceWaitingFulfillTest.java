@@ -1,7 +1,9 @@
-package org.magiccolony.core;
+package com.wsteam.wandscape.core;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.magiccolony.core.Engine;
+import org.magiccolony.core.EngineConfig;
 import org.magiccolony.core.component.*;
 import org.magiccolony.core.ecs.World;
 import org.magiccolony.core.event.ResourceFulfilled;

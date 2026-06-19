@@ -2,7 +2,7 @@ package com.wsteam.wandscape.dataconfig.internal;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 
@@ -27,26 +27,15 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
         super(GSON, "wandscape");
     }
 
-    public <T> WandscapeDataRegistry<T> register(String category, Class<T> type) {
-        SimpleDataRegistry<T> registry = new SimpleDataRegistry<>();
+    public <T> WandscapeDataRegistry<T> register(String category, BiFunction<String, JsonElement, T> parser) {
+        SimpleDataRegistry<T> registry = new SimpleDataRegistry<>(parser);
         registries.put(category, registry);
         return registry;
     }
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager manager, ProfilerFiller profiler) {
-        for (var entry : data.entrySet()) {
-            ResourceLocation loc = entry.getKey();
-            String path = loc.getPath();
-            int slashIdx = path.indexOf('/');
-            if (slashIdx < 0) continue;
-
-            String category = path.substring(0, slashIdx);
-            SimpleDataRegistry<?> registry = registries.get(category);
-            if (registry == null) {
-                LOGGER.warn("Unknown config category '{}' for file '{}'", category, loc);
-                continue;
-            }
+        for (SimpleDataRegistry<?> registry : registries.values()) {
             registry.clear();
         }
 
@@ -63,43 +52,10 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
             if (registry == null) continue;
 
             try {
-                registry.loadEntry(id, loc, entry.getValue());
+                registry.loadEntry(id, entry.getValue());
             } catch (Exception e) {
                 LOGGER.warn("Failed to parse config '{}': {}", loc, e.getMessage());
             }
-        }
-    }
-
-    private static class SimpleDataRegistry<T> implements WandscapeDataRegistry<T> {
-        private final Map<String, T> entries = new HashMap<>();
-        private Function<JsonElement, T> parser;
-
-        @Override
-        public T get(String id) {
-            return entries.get(id);
-        }
-
-        @Override
-        public Map<String, T> getAll() {
-            return Map.copyOf(entries);
-        }
-
-        @Override
-        public boolean contains(String id) {
-            return entries.containsKey(id);
-        }
-
-        @SuppressWarnings("unchecked")
-        void loadEntry(String id, ResourceLocation loc, JsonElement json) {
-            if (parser != null) {
-                entries.put(id, parser.apply(json));
-            } else {
-                entries.put(id, (T) json);
-            }
-        }
-
-        void clear() {
-            entries.clear();
         }
     }
 }

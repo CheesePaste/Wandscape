@@ -82,11 +82,14 @@ data/wandscape/
 - JSON 格式错误 → 警告日志 + 跳过该文件
 - 各模块通过 `WandscapeDataRegistry<T>` 查询加载的数据
 
-## 阶段 0 状态
+## 阶段 1 状态
 
 - `WandscapeDataRegistry<T>` 泛型查询接口已定义在 `shared/registry/`
-- `WandscapeDataLoader` 框架已实现在 `dataconfig/internal/`
+- `WandscapeDataLoader` 框架已实现在 `dataconfig/internal/`，支持 `BiFunction<String, JsonElement, T>` 解析器
 - `WandscapeDataLoader` 通过 `Wandscape.DATA_LOADER` 注册到服务端 reload 事件
-- 具体 JSON 类别注册和数据文件夹创建待阶段 1 实现
+- `wands/` 类别已注册：4 个法杖预设 JSON (builder/gatherer/crafter/ritual)，由 WandPresetLoader 加载
+- `element_mappings/` 类别已注册：5 个元素映射 JSON (cobblestone/oak_log/stone_bricks/stone/dirt)，由 ElementMappingLoader 加载
+- `tags/block/decomposable.json` 方块标签已创建
+- 待实现：buildings/ recipes/ rituals/ multiblocks/ 类别
 
 > **维护规则**：新增 JSON 类别时在"目录结构"中添加一行，在"各类格式摘要"中添加一节。修改必填/可选字段时更新对应节的说明。

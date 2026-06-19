@@ -1,8 +1,8 @@
 # 法杖系统
 
 文档编号：NEW-02
-版本：1.0
-状态：法杖物品 + NBT 结构 + 行为标签 + 能力并集
+版本：1.1
+状态：法杖物品 + NBT 结构 + 行为标签 + 能力并集 | 单元测试完成：WandDataValidatorTest (17) + WandPresetLoaderTest (10) + AbilitySetTest (18)
 依赖：01-shared-api
 
 ---
@@ -169,12 +169,17 @@ return new AbilitySet(merged);
 
 ## 六、独立测试方案
 
-### 单元测试（JVM，无需 MC 运行时）
+### 单元测试（JVM，无需 MC 运行时）— 已完成
 
-1. **NBT 校验测试**：传入合法/非法 NBT，验证 `WandDataValidator.isValid()`
-2. **能力并集测试**：创建多个模拟 ItemStack（带不同 NBT），验证 `computeAbilities()` 输出正确的最高等级映射
-3. **默认值测试**：缺失 range/mana_cost_multiplier 时返回默认值
-4. **NPC 默认 ritual:1 测试**：空法杖列表仍包含 ritual:1
+测试位置：`src/test/java/com/wsteam/wandscape/wand/internal/` + `src/test/java/com/wsteam/wandscape/shared/data/`
+
+1. **NBT 校验测试** (WandDataValidatorTest, 17 tests)：合法/非法 NBT 全覆盖 — 颜色格式、行为类型有效性、等级边界、range 边界 (1-5)、mana_cost_multiplier 边界 (0.3-1.0)、缺失可选字段
+2. **法杖预设解析测试** (WandPresetLoaderTest, 10 tests)：`WandPreset.fromJson` 有效 JSON、缺失必填字段抛异常、可选字段 present/absent、behaviors 多条目、NBT 内容校验
+3. **能力并集测试** (AbilitySetTest, 18 tests)：构造函数防御性拷贝、merge 多法杖取最大等级、satisfies 条件匹配、getLevel 查询、EMPTY 常量、不可变验证
+
+待完成（需要 MC 运行时）：
+- `WandApiImpl` 集成测试：`computeAbilities(List<ItemStack>)` 方法需要真实 ItemStack
+- NPC 默认 ritual:1 测试：集成到 NPC 系统测试中
 
 ### 集成测试（需要 MC 运行时）
 
