@@ -91,23 +91,30 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     public void tickAll() {
         if (pending.isEmpty()) return;
 
-        int completed = 0;
-        Iterator<Pending> iter = pending.iterator();
-        while (iter.hasNext()) {
-            Pending p = iter.next();
+        // Collect expired futures (complete(null) triggers thenRun which
+        // modifies pending — must complete after iteration)
+        List<CompletableFuture<Void>> toComplete = new ArrayList<>();
+        List<Integer> toUpdateIdx = new ArrayList<>();
+
+        for (int i = 0; i < pending.size(); i++) {
+            Pending p = pending.get(i);
             int remaining = p.remainingTicks() - 1;
             if (remaining <= 0) {
-                p.future().complete(null);
-                completed++;
+                toComplete.add(p.future());
             } else {
-                // Replace with decremented ticks (record is immutable)
-                int idx = pending.indexOf(p);
-                pending.set(idx, new Pending(p.future(), p.op(), p.world(), p.npcId(), remaining));
+                toUpdateIdx.add(i);
+                pending.set(i, new Pending(p.future(), p.op(), p.world(), p.npcId(), remaining));
             }
         }
-        if (completed > 0) {
+
+        // Complete futures after iteration (safe: thenRun removes from pending)
+        for (CompletableFuture<Void> f : toComplete) {
+            f.complete(null);
+        }
+
+        if (!toComplete.isEmpty()) {
             LOGGER.debug("async tickAll: {} completed, {} remaining",
-                    completed, pending.size());
+                    toComplete.size(), pending.size());
         }
     }
 
