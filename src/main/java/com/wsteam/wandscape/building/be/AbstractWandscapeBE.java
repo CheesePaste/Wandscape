@@ -146,7 +146,9 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 
     /** Whether the building has queued work and is ready to publish. */
     public boolean hasWork() {
-        return !taskQueue.isEmpty() && isOperational();
+        // Only check shutdown — structure damage should NOT block repair work.
+        // (Repair tasks use the same queue; blocking them creates a deadlock.)
+        return !taskQueue.isEmpty() && !isShutdown;
     }
 
     /** Peek at the next work item without removing it. */
@@ -163,11 +165,12 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 
     /**
      * Dequeue the next work item. Returns null if the queue is empty
-     * or the building is not operational.
+     * or the building is shut down.
      */
     @Nullable
     public WorkItem dequeueWork() {
-        if (!isOperational()) return null;
+        // Only check shutdown — structure damage should NOT block repair work.
+        if (isShutdown) return null;
         WorkItem item = taskQueue.pollFirst();
         if (item != null) setChanged();
         return item;

@@ -1,7 +1,10 @@
 package com.wsteam.wandscape.engine.source;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 
@@ -31,6 +34,9 @@ public class BuildingTaskSource implements TaskSource {
     private int pollCount = 0;
     private static final int HEARTBEAT_INTERVAL = 10; // every ~10 seconds
 
+    /** Tracks buildingId → engine taskId for active tasks. */
+    private final Map<UUID, Long> activeTasks = new ConcurrentHashMap<>();
+
     @Override
     public int pollIntervalTicks() {
         return POLL_INTERVAL_TICKS;
@@ -43,11 +49,21 @@ public class BuildingTaskSource implements TaskSource {
 
         pollCount++;
 
+        // ── 1. Cleanup: clear completed/stale tasks ──
+        for (Iterator<Map.Entry<UUID, Long>> it = activeTasks.entrySet().iterator(); it.hasNext(); ) {
+            var entry = it.next();
+            if (!pool.isActive(entry.getValue())) {
+                api.clearCurrentTask(entry.getKey());
+                it.remove();
+            }
+        }
+
+        // ── 2. Publish new work ──
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
-            LOGGER.info("[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}",
-                    pollCount, pool.size(), buildingIds.size());
+            LOGGER.info("[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, tracked_active={}",
+                    pollCount, pool.size(), buildingIds.size(), activeTasks.size());
         }
 
         for (UUID buildingId : buildingIds) {
@@ -63,6 +79,7 @@ public class BuildingTaskSource implements TaskSource {
             try {
                 long taskId = pool.addTask(request);
                 api.setCurrentTask(buildingId, toTaskUuid(taskId));
+                activeTasks.put(buildingId, taskId);
                 LOGGER.info("[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} params={} priority={} building={} pool_size={}",
                         taskId, item.blueprintId(), item.params(), item.priority(),
                         buildingId.toString().substring(0, 8), pool.size());

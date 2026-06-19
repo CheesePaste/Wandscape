@@ -6,8 +6,8 @@
 
 | 文件 | 作用 |
 |------|------|
-| `block/WandscapeBuildingBlock.java` | 建筑方块基类：持有 `buildingTypeId` + BE 工厂。右键→入队 demo `build:platform` 任务（阶段 1 临时） |
-| `be/AbstractWandscapeBE.java` | **建筑 BE 基类**：colonyId / 关停标记 / 结构完整性 / `Deque<WorkItem>` FIFO 队列 / currentTaskId。完整 NBT 持久化 |
+| `block/WandscapeBuildingBlock.java` | 建筑方块基类：持有 `buildingTypeId` + BE 工厂。右键→入队 `build:<typeId>` 任务（JSON 驱动蓝图） |
+| `be/AbstractWandscapeBE.java` | **建筑 BE 基类**：colonyId / 关停标记 / 结构完整性 / `Deque<WorkItem>` FIFO 队列 / currentTaskId。完整 NBT 持久化。`hasWork()`/`dequeueWork()` 只检查 shutdown，不检查 structureIntact（避免修复死锁） |
 | `be/TownHallBE.java` | 市政厅 BE（category: basic，殖民地中心） |
 | `be/ForestNodeBE.java` | 森林节点 BE（category: node，产木元素） |
 | `be/EarthNodeBE.java` | 大地节点 BE（category: node，产土元素） |

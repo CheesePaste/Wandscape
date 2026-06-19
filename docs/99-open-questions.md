@@ -25,6 +25,23 @@
 调度器评分中 `score += 50`（同建筑连续执行加成）是 magic number。该加成的作用：NPC 在某建筑完成任务后，同一建筑队列中还有下一个任务时，给该 NPC +50 评分让其优先接同建筑的下个任务，减少在不同建筑间来回跑。
 - **建议**：移至 TOML 全局配置（全殖民地共享此值），无需写入建筑 JSON
 
+### 1.4 结构损坏检测未实现
+
+2026-06-20：`docs/08-building-core.md` §六设计了结构完整性检测——`BlockEvent.BreakEvent` 触发 → `checkStructureIntegrity()` → 缺失方块入队修复。当前已有：
+- `AbstractWandscapeBE.checkStructureIntegrity()` ✅
+- `isStructureIntact` 标记 ✅
+- `BlockPlaceHandler` 监听 `EntityPlaceEvent` ✅
+缺失：
+- `BlockEvent.BreakEvent` 处理器不存在
+- `checkStructureIntegrity()` 只设 boolean，不自动入队修复任务
+- `BlockPlaceHandler` 虽在放置时检测并入队 repair，但 break 时不检测
+- **建议**：新建 `BlockBreakHandler` 监听 `BlockEvent.BreakEvent` → 判断被破坏方块是否属于某建筑 pattern → `checkStructureIntegrity()` → false 时入队 `build:<typeId>` repair
+
+### 1.5 GlobalTaskPool 内存泄漏
+
+`tasks` Map 永不清除 COMPLETED 任务。100+ 任务后内存持续增长。
+- **建议**：定时清理 or 上限策略（保留最近 N 个，或 COMPLETED 超过 5 分钟后清除）
+
 ---
 
 ## 二、后续阶段待办

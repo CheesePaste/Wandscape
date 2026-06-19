@@ -21,7 +21,7 @@
 | 症状 | 先看 |
 |------|------|
 | `Scheduler heartbeat - no idle NPCs` | `06-npc.md` → EntityComponentBridge, `00-core-engine.md` → SchedulerSystem |
-| `Blueprint not found: build:xxx` | `01-engine-bridge.md` → BuildingBlueprints |
+| `Blueprint not found: build:xxx` | `01-engine-bridge.md` → DataDrivenSteps, 检查 BuildingConfig JSON 是否已加载 |
 | `./gradlew test` 全红 | `00-core-engine.md` → 测试在 `src/test/java/.../core/` |
 | 建筑放了没反应 | `05-building.md` → BlockPlaceHandler, BuildingConfigLoader |
 | NPC 位置不更新 | `06-npc.md` → EntityComponentBridge.syncPositions |

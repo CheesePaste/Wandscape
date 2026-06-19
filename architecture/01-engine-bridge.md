@@ -13,7 +13,7 @@ MC 桥梁：实现 core 边界接口，WandscapeEngine 单例持有 World，Buil
 | `boundary/WandscapeRitualOps.java` | RitualOps MC 实现：`self_teleport` 通过 `EntityComponentBridge` 查找 NPC → `teleportTo()`，返回 completedFuture |
 | `boundary/AsyncTransformExecutor.java` | **V2.5 异步门控**：TransformOp 异步执行器，N-tick countdown + thenRun → 放置方块。`tickAll()` 递减计数器并完成 Future |
 | `source/BuildingTaskSource.java` | **核心 TaskSource**：每 20 tick 轮询 `BuildingApi.getBuildingsWithPendingWork()` → dequeue WorkItem → `pool.addTask(TaskRequest)` |
-| `source/blueprint/BuildingBlueprints.java` | 注册 6 个 `build:*` 蓝图（stone_bricks/oak_planks/stone/dirt/glass/platform） |
+| `source/blueprint/DataDrivenSteps.java` | 从 JSON BuildingConfig 自动生成 `build:<id>` 蓝图（pattern + block_mapping → TransformOp 序列） |
 
 ## 引擎 tick 流程
 

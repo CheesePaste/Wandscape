@@ -22,8 +22,10 @@ import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
-import com.wsteam.wandscape.engine.source.blueprint.BuildingBlueprints;
+import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
 
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
@@ -43,9 +45,16 @@ public final class EngineBootstrap {
     public static World bootstrap() {
         LOGGER.info("CoreBootstrap bootstrap starting...");
 
-        // 1. Build blueprint registry and register build blueprints
+        // 1. Build blueprint registry and register build blueprints from JSON
         BlueprintRegistry blueprints = new BlueprintRegistry();
-        BuildingBlueprints.registerAll(blueprints);
+
+        // Register build blueprints from loaded BuildingConfigs (JSON-driven)
+        BuildingConfigLoader buildingConfigs = BuildingConfigLoader.getInstance();
+        for (BuildingConfig config : buildingConfigs.getAll().values()) {
+            blueprints.register("build:" + config.id(), DataDrivenSteps.fromConfig(config));
+        }
+        LOGGER.info("  registered {} build blueprints from BuildingConfig JSON", buildingConfigs.getAll().size());
+
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
 
         // 2. Build system blueprint registry

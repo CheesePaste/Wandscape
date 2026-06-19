@@ -70,15 +70,17 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
                                                 Player player, BlockHitResult hitResult) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
 
-        // Stage 1 debug: right-click enqueues a demo Build task for chain verification.
+        // Stage 1 debug: right-click enqueues a build task for this building itself
+        // (reads blueprint auto-registered from BuildingConfig JSON).
         // In later stages, this opens the building GUI.
         if (!(level.getBlockEntity(pos) instanceof AbstractWandscapeBE be)) {
             return InteractionResult.FAIL;
         }
 
+        String bpId = "build:" + buildingTypeId;
         WorkItem demo = new WorkItem(
-                "build:platform",  // 3×3 stone_bricks platform — 9 TransformOp steps
-                Map.of("x", String.valueOf(pos.getX() + 2),
+                bpId,
+                Map.of("x", String.valueOf(pos.getX()),
                        "y", String.valueOf(pos.getY()),
                        "z", String.valueOf(pos.getZ())),
                 10 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
@@ -87,8 +89,8 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
         player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
                         "[Wandscape] Enqueued demo: " + demo.blueprintId()
-                        + " 3×3 platform at (x=" + (pos.getX() + 2)
-                        + ", z=" + pos.getZ() + ") — 9 blocks"),
+                        + " at (x=" + pos.getX() + ", y=" + pos.getY()
+                        + ", z=" + pos.getZ() + ")"),
                 false);
         return InteractionResult.SUCCESS;
     }

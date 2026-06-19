@@ -89,7 +89,10 @@ public final class BlockPlaceHandler {
             LOGGER.warn("[Building] BuildingApi not loaded: {}", e.getMessage());
         }
 
-        // 5. Validate structure: find missing blocks in pattern
+        // 5. Validate structure: find missing blocks in pattern.
+        //    If any blocks are missing, enqueue ONE repair job using the building's
+        //    own blueprint (registered from BuildingConfig JSON). The full blueprint
+        //    re-runs — already-correct blocks are no-ops, missing ones get placed.
         int missingCount = 0;
         for (BlockOffset offset : config.pattern()) {
             BlockPos target = pos.offset(offset.x(), offset.y(), offset.z());
@@ -100,36 +103,31 @@ public final class BlockPlaceHandler {
             String actualId = actual.getBlock().builtInRegistryHolder().key().location().toString();
 
             if (!actualId.equals(expectedBlockId)) {
-                WorkItem work = new WorkItem(
-                        "build:" + extractBlockName(expectedBlockId),
-                        java.util.Map.of(
-                                "x", String.valueOf(target.getX()),
-                                "y", String.valueOf(target.getY()),
-                                "z", String.valueOf(target.getZ())
-                        ),
-                        49 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
-                );
-                be.enqueueWork(work);
                 missingCount++;
-                LOGGER.info("[Building] Missing block at {} offset ({},{},{}) expected={} actual={} → enqueued repair",
+                LOGGER.info("[Building] Missing block at {} offset ({},{},{}) expected={} actual={}",
                         target, offset.x(), offset.y(), offset.z(), expectedBlockId, actualId);
             }
+        }
+
+        if (missingCount > 0) {
+            WorkItem work = new WorkItem(
+                    "build:" + buildingTypeId,
+                    java.util.Map.of(
+                            "x", String.valueOf(pos.getX()),
+                            "y", String.valueOf(pos.getY()),
+                            "z", String.valueOf(pos.getZ())
+                    ),
+                    49 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
+            );
+            be.enqueueWork(work);
+            LOGGER.info("[Building] Structure incomplete: type={} at {} — {} blocks missing, enqueued 1 repair job (blueprint=build:{})",
+                    buildingTypeId, pos, missingCount, buildingTypeId);
         }
 
         // 6. Mark structure status
         be.setStructureIntact(missingCount == 0);
         if (missingCount == 0) {
             LOGGER.info("[Building] Structure complete: type={} at {}", buildingTypeId, pos);
-        } else {
-            LOGGER.info("[Building] Structure incomplete: type={} at {} — {} blocks need repair",
-                    buildingTypeId, pos, missingCount);
         }
-    }
-
-    private static String extractBlockName(String fullId) {
-        // "minecraft:stone_bricks" → "stone_bricks"
-        // "wandscape:forest_node" → "forest_node"
-        int colon = fullId.indexOf(':');
-        return colon >= 0 ? fullId.substring(colon + 1) : fullId;
     }
 }

@@ -345,7 +345,19 @@ public class GlobalTaskPool {
     }
 
     public int size() {
-        return tasks.size();
+        // Only count active tasks — COMPLETED tasks are kept for history
+        // but should not inflate the pool size metric.
+        int count = 0;
+        for (GlobalTask t : tasks.values()) {
+            if (t.state != TaskState.COMPLETED) count++;
+        }
+        return count;
+    }
+
+    /** Check whether a task is still active (exists and not COMPLETED). */
+    public boolean isActive(long taskId) {
+        GlobalTask t = tasks.get(taskId);
+        return t != null && t.state != TaskState.COMPLETED;
     }
 
     public Collection<GlobalTask> all() {
