@@ -2,6 +2,9 @@
   "itemGroup.wandscape": "Wandscape",
   "item.wandscape.wand": "Wand",
 
+  "key.categories.wandscape": "Wandscape",
+  "key.wandscape.demo": "Open UI Demo",
+
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml.title": "Wandscape Configs",

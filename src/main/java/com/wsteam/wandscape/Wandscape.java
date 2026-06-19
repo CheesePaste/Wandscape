@@ -9,6 +9,7 @@ import com.wsteam.wandscape.building.be.EarthNodeBE;
 import com.wsteam.wandscape.building.be.ForestNodeBE;
 import com.wsteam.wandscape.building.be.TownHallBE;
 import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
+import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
@@ -162,6 +163,7 @@ public class Wandscape {
         CREATIVE_MODE_TABS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(BlockPlaceHandler.class);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 

@@ -14,7 +14,7 @@ out/
 
 
 .claude/settings.local.json
-
+assets/
 ### Eclipse ###
 .apt_generated
 .classpath

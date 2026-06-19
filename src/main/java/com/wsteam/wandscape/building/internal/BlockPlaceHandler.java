@@ -16,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
 /**
@@ -27,9 +26,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  *   <li>Enqueues {@link WorkItem}s for any missing pattern blocks</li>
  * </ol>
  *
- * <p>Registered on the NeoForge EVENT_BUS during mod construction.
+ * <p>Manually registered on NeoForge.EVENT_BUS in Wandscape constructor.
  */
-@EventBusSubscriber(modid = "wandscape", bus = EventBusSubscriber.Bus.GAME)
 public final class BlockPlaceHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
 
