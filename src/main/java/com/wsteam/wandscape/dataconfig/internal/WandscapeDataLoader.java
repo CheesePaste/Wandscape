@@ -33,14 +33,6 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
         return registry;
     }
 
-    /**
-     * Convenience: register with a parser that only needs the JsonElement (ignores id).
-     */
-    public <T> WandscapeDataRegistry<T> register(String category,
-                                                  java.util.function.Function<JsonElement, T> parser) {
-        return register(category, (id, json) -> parser.apply(json));
-    }
-
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager manager, ProfilerFiller profiler) {
         for (SimpleDataRegistry<?> registry : registries.values()) {

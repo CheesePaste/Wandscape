@@ -46,10 +46,9 @@ public final class BuildingConfigLoader {
      * Register the "buildings" category with the global data loader.
      * Call once during mod construction.
      */
-    @SuppressWarnings("unchecked")
     public WandscapeDataRegistry<BuildingConfig> registerWith(
             com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader loader) {
-        return loader.register("buildings", BuildingConfig.class, this::parseConfig);
+        return loader.register("buildings", (id, json) -> parseConfig(json));
     }
 
     /** Get a config by building type id. */
