@@ -1,0 +1,13 @@
+{
+  "itemGroup.wandscape": "Example Mod Tab",
+  "block.wandscape.example_block": "Example Block",
+  "item.wandscape.example_item": "Example Item",
+
+  "wandscape.configuration.title": "Wandscape Configs",
+  "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",
+  "wandscape.configuration.section.wandscape.common.toml.title": "Wandscape Configs",
+  "wandscape.configuration.items": "Item List",
+  "wandscape.configuration.logDirtBlock": "Log Dirt Block",
+  "wandscape.configuration.magicNumberIntroduction": "Magic Number Text",
+  "wandscape.configuration.magicNumber": "Magic Number"
+}
