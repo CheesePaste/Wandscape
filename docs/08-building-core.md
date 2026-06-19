@@ -2,7 +2,7 @@
 
 文档编号：NEW-08
 版本：1.0
-状态：建筑注册(JSON) + 三数值 + 维护成本 + 队列 + 关停
+状态：建筑注册(JSON) + 三数值 + 维护成本 + 队列 + 关停 + 统一交互入口
 依赖：01-shared-api
 
 ---
@@ -15,6 +15,7 @@
 - 统一建筑队列机制（所有建筑都有队列）
 - 建筑关停/重启
 - 建筑与任务系统的桥接（建筑队列 → 全局任务池）
+- 多方块建筑的统一交互入口（任意 pattern 方块右击路由到主 BE）
 
 **不包含：**
 - 具体建筑的功能逻辑（节点建筑、制作站等各自模块负责）
@@ -102,9 +103,123 @@
 
 ---
 
-## 三、三数值系统
+## 三、建筑统一交互入口
 
-### 3.1 计算规则
+### 3.1 设计原则
+
+多方块建筑由 pattern 定义的多个方块组成，但玩家和 NPC 与之交互时应视为一个整体。任意 pattern 方块被右击，统一路由到建筑的**主 BE**（anchor 方块处的 BE）。
+
+- 主 BE 位置 = 建筑放置时玩家指向的 pattern 原点方块（`[0,0,0]` 偏移）
+- 单方块建筑（pattern 仅 `[[0,0,0]]`）不依赖此机制，自身即主 BE
+- 路由表全局维护，World 级别生命周期
+
+### 3.2 坐标映射表
+
+```java
+// 全局注册表：任意 pattern 方块坐标 → 主 BE 坐标
+// World 级别单例，随世界加载重建
+public class BuildingAnchorRegistry {
+    // BlockPos(成员方块) → BlockPos(主BE所在方块)
+    private static final Map<BlockPos, BlockPos> ANCHORS = new HashMap<>();
+
+    /** 建筑结构验证通过后调用，注册 pattern 内所有方块到主 BE 的映射。 */
+    public static void register(BlockPos anchorPos, List<BlockOffset> pattern) {
+        for (BlockOffset offset : pattern) {
+            BlockPos memberPos = anchorPos.offset(offset.x(), offset.y(), offset.z());
+            ANCHORS.put(memberPos.immutable(), anchorPos.immutable());
+        }
+    }
+
+    /** 建筑被移除时调用，注销该建筑所有 pattern 方块的映射。 */
+    public static void unregister(BlockPos anchorPos, List<BlockOffset> pattern) {
+        for (BlockOffset offset : pattern) {
+            BlockPos memberPos = anchorPos.offset(offset.x(), offset.y(), offset.z());
+            ANCHORS.remove(memberPos);
+        }
+    }
+
+    /** 查询给定坐标是否属于某个建筑的 pattern 方块，返回主 BE 坐标。 */
+    @Nullable
+    public static BlockPos getAnchor(BlockPos pos) {
+        return ANCHORS.get(pos);
+    }
+
+    /** 世界卸载时清空。 */
+    public static void clear() {
+        ANCHORS.clear();
+    }
+}
+```
+
+### 3.3 交互路由
+
+```java
+// WandscapeBuildingBlock 中
+@Override
+protected ItemInteractionResult useItemOn(
+        ItemStack stack, BlockState state, Level level,
+        BlockPos pos, Player player, InteractionHand hand,
+        BlockHitResult hitResult) {
+
+    // Step 1: 查找该坐标的主 BE
+    BlockPos anchorPos = BuildingAnchorRegistry.getAnchor(pos);
+    if (anchorPos == null) {
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    // Step 2: 获取主 BE 并委托交互
+    BlockEntity be = level.getBlockEntity(anchorPos);
+    if (!(be instanceof AbstractWandscapeBE wandscapeBE)) {
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    return wandscapeBE.onPlayerInteract(player, hand, hitResult);
+}
+```
+
+```java
+// AbstractWandscapeBE 中
+/** 子类覆写此方法实现各自交互逻辑（开 GUI 等）。默认实现返回 PASS。 */
+protected ItemInteractionResult onPlayerInteract(Player player, InteractionHand hand,
+                                                  BlockHitResult hitResult) {
+    return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+}
+```
+
+### 3.4 注册/注销时机
+
+| 时机 | 操作 |
+|------|------|
+| 建筑放置后结构验证通过 | `BuildingAnchorRegistry.register(anchorPos, pattern)` |
+| 建筑被拆除 / BE 被移除 | `BuildingAnchorRegistry.unregister(anchorPos, pattern)` |
+| 世界加载 | 遍历已加载建筑 BE → 逐一 `register()` |
+| 世界卸载 | `BuildingAnchorRegistry.clear()` |
+
+### 3.5 NPC 交互路径
+
+NPC 与建筑的交互不经过 `useItemOn`（那是玩家右键的路径），NPC 走引擎的操作链：
+
+```
+NPC 需要与建筑交互
+  └→ OperationB(buildingId, action, params)
+      └→ AtomicExecutor → 查 BuildingApi.getBuilding(buildingId)
+          └→ 获取建筑坐标 → NPC 移动过去
+          └→ 调用 BE 对应方法（charge / extract / craft / decompose ...）
+```
+
+NPC 不受 pattern 路由影响——`buildingId` 始终指向主 BE，NPC 直接走到主 BE 坐标执行操作。
+
+### 3.6 性能
+
+- `HashMap.get()` O(1)，仅在玩家右击时触发（人速事件，非 tick 级）
+- 与建筑 pattern 大小无关
+- 无需每 tick 遍历或碰撞检测
+
+---
+
+## 四、三数值系统
+
+### 4.1 计算规则
 
 ```java
 // 舒适值 = 所有未关停建筑中，每种建筑类型的首次建造 comfort 之和
@@ -125,7 +240,7 @@ public int getColonyComfort(UUID colonyId) {
 - **关停即归零**：建筑关停后，该类型的数值贡献暂时移除
 - **即时永久解锁**：数值一旦获得，相关内容永久解锁。即使后续数值因关停暂时归零，已解锁内容不受影响。数值仅控制未来的解锁权限。
 
-### 3.2 示例
+### 4.2 示例
 
 ```
 首次建造"法师塔" → 舒适+2, 魔法+3, 奇观+5
@@ -139,16 +254,16 @@ public int getColonyComfort(UUID colonyId) {
 
 ---
 
-## 四、维护成本
+## 五、维护成本
 
-### 4.1 结算
+### 5.1 结算
 
 - **周期**：每 20 分钟（`MAINTENANCE_INTERVAL_TICKS`）
 - **材料**：统一使用木元素
 - **扣除**：从殖民地仓库扣除所有未关停建筑的 maintenance_cost 之和
 - **不足处理**：木元素不够 → 扣成负数 → 所有建筑**自动关停**。关停的建筑仍可使用，但**使用时间加倍、产出减半**（欠债惩罚）。玩家需手动补足元素使储量回正后重启建筑
 
-### 4.2 关停机制
+### 5.2 关停机制
 
 关停有两种触发方式：**手动关停**（玩家在管理面板操作）和**自动关停**（维护成本扣至负数触发）。两者效果相同：
 
@@ -158,15 +273,15 @@ public int getColonyComfort(UUID colonyId) {
 
 ---
 
-## 五、结构验证与自动修复
+## 六、结构验证与自动修复
 
-### 5.1 触发时机
+### 6.1 触发时机
 
 建筑的结构完整性不依赖定时轮询。触发检测的时机：
 - 建筑所在区块内发生方块破坏（`BlockEvent.BreakEvent`）
 - 建筑所在区块内发生爆炸（`ExplosionEvent.Detonate`）
 
-### 5.2 检测逻辑
+### 6.2 检测逻辑
 
 ```java
 public abstract class AbstractWandscapeBE extends BlockEntity {
@@ -218,7 +333,7 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 }
 ```
 
-### 5.3 修复规则
+### 6.3 修复规则
 
 - 修复任务与建造任务逻辑完全一致：计算缺失方块 → 生成 OperationA 序列 → 消耗对应元素
 - 修复任务自动以高优先级入队，排在玩家手动添加的任务之前
@@ -227,9 +342,9 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 
 ---
 
-## 六、建筑队列
+## 七、建筑队列
 
-### 5.1 统一模型
+### 7.1 统一模型
 
 每个建筑实体（BlockEntity）内部维护一个 FIFO 队列：
 
@@ -263,7 +378,7 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 
 > `colonyId` 在 BE 首次 `onLoad()` 时通过 `ColonyApi.getColonyId(pos)` 查询一次并缓存。建筑在殖民地内的坐标永不改变，无需重复查询。
 
-### 5.2 队列源
+### 7.2 队列源
 
 - 玩家在建筑 GUI 中手动添加任务（合成、分解、仪式等）
 - 节点建筑自动入队采集任务（冷却完毕后）
@@ -271,7 +386,7 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 
 ---
 
-## 七、核心 API
+## 八、核心 API
 
 ```java
 public interface BuildingApi {
@@ -296,10 +411,10 @@ public interface BuildingApi {
 
 ---
 
-## 八、方块实体层级
+## 九、方块实体层级
 
 ```
-AbstractWandscapeBE              ← 队列 + 关停 + 维护
+AbstractWandscapeBE              ← 队列 + 关停 + 维护 + 统一交互入口
     ├── NodeBuildingBE           ← 节点建筑（09 模块扩展）
     ├── ProductionStationBE      ← 制作站/工作站/魔药站（10 模块扩展）
     ├── HouseBE                  ← 房屋（11 模块扩展）
@@ -310,11 +425,11 @@ AbstractWandscapeBE              ← 队列 + 关停 + 维护
     └── TownHallBE               ← 市政厅（15 模块扩展）
 ```
 
-各模块只扩展自己需要的逻辑，核心的队列、关停、维护由 `AbstractWandscapeBE` 统一处理。
+各模块只扩展自己需要的逻辑，核心的队列、关停、维护、交互入口由 `AbstractWandscapeBE` 统一处理。
 
 ---
 
-## 九、独立测试方案
+## 十、独立测试方案
 
 ### 单元测试
 
@@ -324,6 +439,7 @@ AbstractWandscapeBE              ← 队列 + 关停 + 维护
 4. **队列容量**：入队超过容量 → 拒绝
 5. **结构检测**：给定 pattern + 部分方块不匹配 → 正确识别缺失列表
 6. **修复任务生成**：缺失 N 个方块 → 生成 N 个 OperationA 修复任务
+7. **交互路由**：`BuildingAnchorRegistry` register → getAnchor 返回正确主 BE 坐标 → unregister 后返回 null
 
 ### 集成测试
 
@@ -333,3 +449,4 @@ AbstractWandscapeBE              ← 队列 + 关停 + 维护
 4. 维护周期到达 → 木元素正确扣除
 5. 建筑队列：入队 3 个 → 逐个发布 → 全部完成
 6. 破坏建筑的一个方块 → 检测到结构损坏 → 修复任务自动入队 → NPC 修复 → 结构恢复完整
+7. 多方块建筑：右击非锚点 pattern 方块 → 路由到主 BE 的 `onPlayerInteract`

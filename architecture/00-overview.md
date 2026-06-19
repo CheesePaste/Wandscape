@@ -172,7 +172,7 @@ com.wsteam.wandscape/
 │   ├── be/                          #   AbstractWandscapeBE + 各建筑 BE
 │   ├── screen/                      #   建筑 GUI 基类
 │   ├── data/                        #   BuildingConfig JSON 解析
-│   └── internal/                    #   建筑 API 实现
+│   └── internal/                    #   BuildingApiImpl + BuildingAnchorRegistry
 │
 ├── node/                            # [09] node-building — 节点建筑
 │   └── internal/                    #   节点采集任务生成
