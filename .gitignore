@@ -12,7 +12,8 @@ build/
 out/
 !**/src/**/out/
 
-.run/
+
+.claude/settings.local.json
 
 ### Eclipse ###
 .apt_generated
