@@ -18,6 +18,7 @@ import com.wsteam.wandscape.core.system.WarehouseSource;
 import com.wsteam.wandscape.core.system.WorkbenchSource;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
@@ -103,7 +104,17 @@ public final class EngineBootstrap {
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
 
-        // 8. Store world in singleton
+        // 8. Override TransformOp executor with async version (V2.5 gating demo)
+        //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
+        int asyncDelay = 5; // 5 MC tick delay per TransformOp
+        if (asyncDelay > 0) {
+            AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
+            world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
+            WandscapeEngine.setAsyncExecutor(asyncExec);
+            LOGGER.info("  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
+        }
+
+        // 9. Store world in singleton
         WandscapeEngine.setWorld(world);
 
         LOGGER.info("CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",

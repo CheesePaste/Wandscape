@@ -3,6 +3,7 @@ package com.wsteam.wandscape.engine;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 
 /**
  * Singleton holder for the engine {@link World} instance.
@@ -13,6 +14,8 @@ import com.wsteam.wandscape.core.ecs.World;
  */
 public final class WandscapeEngine {
     private static World world;
+    @Nullable
+    static AsyncTransformExecutor asyncExec;
 
     private WandscapeEngine() {}
 
@@ -27,4 +30,9 @@ public final class WandscapeEngine {
     public static World getWorld() {
         return world;
     }
+
+    public static void setAsyncExecutor(AsyncTransformExecutor exec) { asyncExec = exec; }
+
+    @Nullable
+    public static AsyncTransformExecutor getAsyncExecutor() { return asyncExec; }
 }
