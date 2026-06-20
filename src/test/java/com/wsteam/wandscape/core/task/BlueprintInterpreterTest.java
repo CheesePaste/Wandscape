@@ -532,8 +532,9 @@ class BlueprintInterpreterTest {
 
             // -- Simulate EnqueueHelper output --
             // Boundary 2×1×2 = [[0,0,0],[1,0,0],[0,0,1],[1,0,1]]
-            // Pattern has [[0,0,0],[1,0,0]] → clear_offsets = [[0,0,1],[1,0,1]]
+            // Anchor = [0,0,0] excluded → clear_offsets = [[1,0,0],[0,0,1],[1,0,1]]
             JsonArray clearOffsets = new JsonArray();
+            clearOffsets.add(posArray(1, 0, 0));
             clearOffsets.add(posArray(0, 0, 1));
             clearOffsets.add(posArray(1, 0, 1));
 
@@ -554,30 +555,33 @@ class BlueprintInterpreterTest {
 
             TaskSequence seq = interpreter.interpret(clearAndBuild, p);
 
-            // Expected: 2 clear (place air) + 2 build place + 1 emit_event = 5 ops
-            assertEquals(5, seq.size());
+            // Expected: 3 clear (place air) + 2 build place + 1 emit_event = 6 ops
+            assertEquals(6, seq.size());
 
-            // First clear: anchor + clear_offsets[0] = (10,64,11) → place air
-            assertTrue(seq.get(0) instanceof AtomicOp.TransformOp, "step 0 should be place air");
+            // Clear ops (place air)
+            assertTrue(seq.get(0) instanceof AtomicOp.TransformOp, "step 0 should be clear (place air)");
             AtomicOp.TransformOp c0 = (AtomicOp.TransformOp) seq.get(0);
-            assertEquals(new GridPos(10, 64, 11), c0.target());
-            assertEquals(BlockType.AIR, c0.to(), "clear should set target to air");
+            assertEquals(new GridPos(11, 64, 10), c0.target()); // anchor + [1,0,0]
+            assertEquals(BlockType.AIR, c0.to());
 
-            // Second clear: anchor + clear_offsets[1] = (11,64,11)
             AtomicOp.TransformOp c1 = (AtomicOp.TransformOp) seq.get(1);
-            assertEquals(new GridPos(11, 64, 11), c1.target());
+            assertEquals(new GridPos(10, 64, 11), c1.target()); // anchor + [0,0,1]
             assertEquals(BlockType.AIR, c1.to());
 
-            // Place ops from place_structure call
-            assertTrue(seq.get(2) instanceof AtomicOp.TransformOp);
-            assertEquals(new GridPos(10, 64, 10), ((AtomicOp.TransformOp) seq.get(2)).target());
+            AtomicOp.TransformOp c2 = (AtomicOp.TransformOp) seq.get(2);
+            assertEquals(new GridPos(11, 64, 11), c2.target()); // anchor + [1,0,1]
+            assertEquals(BlockType.AIR, c2.to());
 
+            // Place ops from place_structure call
             assertTrue(seq.get(3) instanceof AtomicOp.TransformOp);
-            assertEquals(new GridPos(11, 64, 10), ((AtomicOp.TransformOp) seq.get(3)).target());
+            assertEquals(new GridPos(10, 64, 10), ((AtomicOp.TransformOp) seq.get(3)).target());
+
+            assertTrue(seq.get(4) instanceof AtomicOp.TransformOp);
+            assertEquals(new GridPos(11, 64, 10), ((AtomicOp.TransformOp) seq.get(4)).target());
 
             // Emit event from place_structure
-            assertTrue(seq.get(4) instanceof AtomicOp.EmitEventOp);
-            AtomicOp.EmitEventOp evt = (AtomicOp.EmitEventOp) seq.get(4);
+            assertTrue(seq.get(5) instanceof AtomicOp.EmitEventOp);
+            AtomicOp.EmitEventOp evt = (AtomicOp.EmitEventOp) seq.get(5);
             assertEquals("build_complete", evt.eventName());
             assertEquals("Test Hut", evt.templateParams().get("building_name"));
             assertEquals("2", evt.templateParams().get("blocks_placed"));

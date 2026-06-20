@@ -12,7 +12,6 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("EnqueueHelper.computeClearOffsets")
@@ -33,13 +32,14 @@ class EnqueueHelperTest {
     }
 
     // ──────────────────────────────────────────────
-    // Town hall scenario: 3×2×3 boundary, 12 pattern blocks (8 floor + 4 pillars)
-    // Anchor [0,0,0] is NOT in pattern — must be preserved
+    // Town hall: 3×2×3 boundary = 18 positions
+    // Clear = all 18 minus anchor [0,0,0] → 17
+    // Pattern positions ARE included — clear wipes the full box
     // ──────────────────────────────────────────────
 
     @Test
-    @DisplayName("town_hall: anchor excluded, non-pattern positions included")
-    void townHallAnchorPreserved() {
+    @DisplayName("town_hall: clear entire boundary box (17 positions), anchor excluded")
+    void townHallFullBox() {
         BuildingConfig cfg = new BuildingConfig(
                 "town_hall", "Test", "basic", "wandscape:test",
                 List.of(
@@ -65,57 +65,38 @@ class EnqueueHelperTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
-                null // no blueprint ref — doesn't matter for this test
+                null
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
         assertTrue(result.isJsonArray());
         JsonArray arr = result.getAsJsonArray();
 
-        // Boundary: 3×2×3 = 18 positions
-        // Pattern:  12 positions in block_mapping
-        // Anchor:    1 position [0,0,0] (auto-preserved)
-        // Expected clear_offsets: 18 - 12 - 1 = 5 positions
-        assertEquals(5, arr.size(), "should clear 5 non-pattern, non-anchor positions");
+        // Boundary: 3×2×3 = 18, minus anchor [0,0,0] = 17
+        assertEquals(17, arr.size(), "clear entire boundary box minus anchor");
 
-        // These are the 5 y=1 non-corner positions
-        // (-1,1,0), (0,1,-1), (0,1,0), (0,1,1), (1,1,0)
-        // Verify that ALL 12 pattern positions are NOT in clear_offsets
-        String[] patternKeys = {
-                "-1,0,-1", "-1,0,0", "-1,0,1",
-                "0,0,-1", "0,0,1",
-                "1,0,-1", "1,0,0", "1,0,1",
-                "-1,1,-1", "-1,1,1", "1,1,-1", "1,1,1"
-        };
-        String[] expectedClear = {"-1,1,0", "0,1,-1", "0,1,0", "0,1,1", "1,1,0"};
+        // Collect as keys
+        java.util.Set<String> clearKeys = collectKeys(arr);
 
-        // Collect clear_offsets as key strings
-        java.util.Set<String> clearKeys = new java.util.HashSet<>();
-        for (JsonElement el : arr) {
-            JsonArray pos = el.getAsJsonArray();
-            String key = pos.get(0).getAsInt() + "," + pos.get(1).getAsInt() + "," + pos.get(2).getAsInt();
-            clearKeys.add(key);
-        }
+        // Anchor must NOT be cleared
+        assertFalse(clearKeys.contains("0,0,0"), "anchor must not be cleared");
 
-        // Pattern positions must NOT be in clear_offsets
-        for (String pk : patternKeys) {
-            assertFalse(clearKeys.contains(pk),
-                    "pattern position " + pk + " must NOT be in clear_offsets");
-        }
-
-        // Anchor [0,0,0] must NOT be in clear_offsets
-        assertFalse(clearKeys.contains("0,0,0"),
-                "anchor [0,0,0] must NOT be in clear_offsets");
-
-        // Expected clear positions must be present
-        for (String ek : expectedClear) {
-            assertTrue(clearKeys.contains(ek),
-                    "expected clear position " + ek + " must be in clear_offsets");
+        // All non-anchor boundary positions must be present
+        // x ∈ {-1,0,1}, y ∈ {0,1}, z ∈ {-1,0,1}, skip (0,0,0)
+        for (int x = -1; x <= 1; x++) {
+            for (int y = 0; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    String key = x + "," + y + "," + z;
+                    if ("0,0,0".equals(key)) continue;
+                    assertTrue(clearKeys.contains(key),
+                            "boundary position " + key + " must be in clear_offsets");
+                }
+            }
         }
     }
 
     @Test
-    @DisplayName("single-block building: clear_offsets empty when boundary == pattern + anchor")
+    @DisplayName("single-block building: anchor-only boundary → empty clear")
     void singleBlockEmptyClear() {
         BuildingConfig cfg = new BuildingConfig(
                 "earth_node", "Test", "node", "wandscape:test",
@@ -130,18 +111,14 @@ class EnqueueHelperTest {
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
-        assertTrue(result.isJsonArray());
         JsonArray arr = result.getAsJsonArray();
-        // Boundary = 1 position [0,0,0], Pattern = [0,0,0], Anchor = auto-preserved
-        // clear = 1 - 1 - 0 = 0
         assertEquals(0, arr.size(),
-                "single-block building with boundary at anchor should have no clear offsets");
+                "single-block building: boundary == anchor → nothing to clear");
     }
 
     @Test
-    @DisplayName("large boundary: extra volume around pattern is cleared")
-    void largeBoundaryExtraVolume() {
-        // A 3×3×3 boundary with a 1×1×1 pattern at center
+    @DisplayName("large 3×3×3 boundary: 26 positions cleared, anchor excluded")
+    void largeBoundaryFullBox() {
         BuildingConfig cfg = new BuildingConfig(
                 "test_large", "Test", "basic", "wandscape:test",
                 List.of(off(0, 0, 0)),
@@ -157,19 +134,30 @@ class EnqueueHelperTest {
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
         JsonArray arr = result.getAsJsonArray();
 
-        // Boundary: 3×3×3 = 27 positions
-        // Pattern:  1 position "0,0,0"
-        // Anchor:   [0,0,0] same as pattern in this case, already in pattern keys
-        // clear = 27 - 1 = 26 positions
-        assertEquals(26, arr.size());
+        // Boundary: 3×3×3 = 27, minus anchor [0,0,0] = 26
+        assertEquals(26, arr.size(), "clear entire 27-cell box minus anchor");
 
-        // Verify [0,0,0] is NOT in clear offsets
-        java.util.Set<String> clearKeys = new java.util.HashSet<>();
+        java.util.Set<String> clearKeys = collectKeys(arr);
+        assertFalse(clearKeys.contains("0,0,0"), "anchor must not be cleared");
+
+        // All other 26 positions must be present
+        for (int x = -1; x <= 1; x++)
+            for (int y = -1; y <= 1; y++)
+                for (int z = -1; z <= 1; z++) {
+                    String key = x + "," + y + "," + z;
+                    if ("0,0,0".equals(key)) continue;
+                    assertTrue(clearKeys.contains(key), key + " must be in clear_offsets");
+                }
+    }
+
+    // ── helpers ──
+
+    private static java.util.Set<String> collectKeys(JsonArray arr) {
+        java.util.Set<String> keys = new java.util.HashSet<>();
         for (JsonElement el : arr) {
             JsonArray pos = el.getAsJsonArray();
-            String key = pos.get(0).getAsInt() + "," + pos.get(1).getAsInt() + "," + pos.get(2).getAsInt();
-            clearKeys.add(key);
+            keys.add(pos.get(0).getAsInt() + "," + pos.get(1).getAsInt() + "," + pos.get(2).getAsInt());
         }
-        assertFalse(clearKeys.contains("0,0,0"), "anchor/pattern position must not be cleared");
+        return keys;
     }
 }

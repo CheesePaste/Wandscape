@@ -1,9 +1,7 @@
 package com.wsteam.wandscape.building.internal;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -130,17 +128,17 @@ public final class EnqueueHelper {
     }
 
     /**
-     * Compute offsets to clear: all positions within the AABB boundary
-     * MINUS pattern offsets (those will be placed by the blueprint)
+     * Compute offsets to clear: ALL positions within the AABB boundary
      * MINUS the anchor [0,0,0] (removing it destroys the BE).
+     *
+     * <p>Pattern positions ARE included — the clear phase wipes the entire
+     * box to air, then the build phase places the pattern blocks on clean
+     * ground. Duplicate air→block is harmless (TransformOp.place overwrites).
      */
     static JsonElement computeClearOffsets(BuildingConfig config) {
-        Set<String> patternKeys = new HashSet<>(config.blockMapping().keySet());
-        // Always preserve the anchor — removing it kills the BE
-        patternKeys.add("0,0,0");
         JsonArray arr = new JsonArray();
         for (BlockOffset off : config.boundary().allPositions()) {
-            if (!patternKeys.contains(off.toKey())) {
+            if (!"0,0,0".equals(off.toKey())) {
                 arr.add(offsetToJson(off));
             }
         }
