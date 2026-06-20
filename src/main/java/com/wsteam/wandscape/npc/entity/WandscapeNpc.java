@@ -244,21 +244,33 @@ public class WandscapeNpc extends PathfinderMob {
     @Override
     public void onRemovedFromLevel() {
         RemovalReason reason = getRemovalReason();
-        if (!level().isClientSide && reason != null && reason.shouldSave()) {
+        if (!level().isClientSide && reason != null) {
             World world = WandscapeEngine.getWorld();
-            if (world != null) {
-                // NPC dying → release global task for reassignment (preserve stepIndex).
-                // Private queue is discarded along with ECS components.
-                if (reason == RemovalReason.KILLED && ecsEntityId > 0) {
+
+            // CHANGED_DIMENSION: entity is transitioning to another dimension,
+            // not leaving the world. Skip all cleanup — ECS components stay.
+            if (reason == RemovalReason.CHANGED_DIMENSION) {
+                super.onRemovedFromLevel();
+                return;
+            }
+
+            // KILLED / DISCARDED: entity is destroyed (died, /kill, despawn).
+            // Release global task for reassignment (preserve stepIndex),
+            // then destroy ECS components. Private queue is discarded.
+            if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
+                if (world != null && ecsEntityId > 0) {
                     var exec = world.get(ecsEntityId,
                             com.wsteam.wandscape.core.component.TaskExecutor.class);
                     if (exec != null && exec.globalTaskId != null) {
                         world.taskPool.releaseTaskForReassign(
                                 exec.globalTaskId, ecsEntityId, world);
                     }
+                    EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, world);
                 }
-                EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, world);
             }
+            // UNLOADED_TO_CHUNK / UNLOADED_WITH_PLAYER:
+            // Entity still exists, just unloaded. Keep ECS components alive
+            // for reconnection when the chunk/player returns.
         }
         super.onRemovedFromLevel();
     }
