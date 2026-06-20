@@ -512,9 +512,9 @@ class BlueprintInterpreterTest {
                            "blocks", ParamType.MAP_STRING_STRING, "name", ParamType.STRING,
                            "anchor", ParamType.POS),
                     List.of(
-                            // for_each clear_offsets → remove
+                            // for_each clear_offsets → place air (unconditional clear)
                             new StepNode.ForEachStep(new ExprNode.Var("clear_offsets"), "off",
-                                    List.of(new StepNode.RemoveStep(
+                                    List.of(new StepNode.PlaceStep(
                                             new ExprNode.Add(
                                                     new ExprNode.Var("anchor"),
                                                     new ExprNode.Var("off")),
@@ -554,18 +554,19 @@ class BlueprintInterpreterTest {
 
             TaskSequence seq = interpreter.interpret(clearAndBuild, p);
 
-            // Expected: 2 remove ops + 2 place ops + 1 emit_event = 5 ops
+            // Expected: 2 clear (place air) + 2 build place + 1 emit_event = 5 ops
             assertEquals(5, seq.size());
 
-            // First remove: anchor + clear_offsets[0] = (10,64,11)
-            assertTrue(seq.get(0) instanceof AtomicOp.TransformOp, "step 0 should be remove");
-            AtomicOp.TransformOp r0 = (AtomicOp.TransformOp) seq.get(0);
-            assertEquals(new GridPos(10, 64, 11), r0.target());
-            assertEquals(new BlockType("minecraft:air"), r0.from());
+            // First clear: anchor + clear_offsets[0] = (10,64,11) → place air
+            assertTrue(seq.get(0) instanceof AtomicOp.TransformOp, "step 0 should be place air");
+            AtomicOp.TransformOp c0 = (AtomicOp.TransformOp) seq.get(0);
+            assertEquals(new GridPos(10, 64, 11), c0.target());
+            assertEquals(BlockType.AIR, c0.to(), "clear should set target to air");
 
-            // Second remove: anchor + clear_offsets[1] = (11,64,11)
-            AtomicOp.TransformOp r1 = (AtomicOp.TransformOp) seq.get(1);
-            assertEquals(new GridPos(11, 64, 11), r1.target());
+            // Second clear: anchor + clear_offsets[1] = (11,64,11)
+            AtomicOp.TransformOp c1 = (AtomicOp.TransformOp) seq.get(1);
+            assertEquals(new GridPos(11, 64, 11), c1.target());
+            assertEquals(BlockType.AIR, c1.to());
 
             // Place ops from place_structure call
             assertTrue(seq.get(2) instanceof AtomicOp.TransformOp);

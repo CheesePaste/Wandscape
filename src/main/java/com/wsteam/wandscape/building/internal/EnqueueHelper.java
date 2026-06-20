@@ -131,10 +131,13 @@ public final class EnqueueHelper {
 
     /**
      * Compute offsets to clear: all positions within the AABB boundary
-     * MINUS positions that are in the pattern (those will be placed).
+     * MINUS pattern offsets (those will be placed by the blueprint)
+     * MINUS the anchor [0,0,0] (removing it destroys the BE).
      */
-    private static JsonElement computeClearOffsets(BuildingConfig config) {
+    static JsonElement computeClearOffsets(BuildingConfig config) {
         Set<String> patternKeys = new HashSet<>(config.blockMapping().keySet());
+        // Always preserve the anchor — removing it kills the BE
+        patternKeys.add("0,0,0");
         JsonArray arr = new JsonArray();
         for (BlockOffset off : config.boundary().allPositions()) {
             if (!patternKeys.contains(off.toKey())) {

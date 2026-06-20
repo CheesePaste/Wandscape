@@ -21,9 +21,9 @@
       "var": "off",
       "steps": [
         {
-          "type": "remove",
+          "type": "place",
           "at": {"+": ["$anchor", "$off"]},
-          "from": "minecraft:air"
+          "block": "minecraft:air"
         }
       ]
     },
