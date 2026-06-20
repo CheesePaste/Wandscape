@@ -22,6 +22,7 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
+import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -91,6 +92,7 @@ public final class EngineBootstrap {
         WandscapeBlockOps blockOps = new WandscapeBlockOps();
         WandscapeEntityOps entityOps = new WandscapeEntityOps();
         WandscapeRitualOps ritualOps = new WandscapeRitualOps();
+        WandscapeMovementOps movementOps = new WandscapeMovementOps();
 
         ColonyResourceAccess colonyResources = new ColonyResourceAccess() {
             @Override
@@ -122,6 +124,7 @@ public final class EngineBootstrap {
                 blockOps,
                 entityOps,
                 ritualOps,
+                movementOps,
                 colonyResources,
                 taskSources,
                 blueprints,
@@ -140,7 +143,8 @@ public final class EngineBootstrap {
         if (asyncDelay > 0) {
             AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
-            WandscapeEngine.setAsyncExecutor(asyncExec);
+            WandscapeEngine.setMovementOps(movementOps);
+        WandscapeEngine.setAsyncExecutor(asyncExec);
             LOGGER.info("  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 

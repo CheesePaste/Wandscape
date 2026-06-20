@@ -16,6 +16,7 @@ import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
 import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
@@ -54,6 +55,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -228,25 +230,29 @@ public class Wandscape {
     private int mcTickCount = 0;
 
     @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        FillBuildingCommand.register(event.getDispatcher());
+    }
+
+    @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
         var world = WandscapeEngine.getWorld();
         if (world == null) return;
 
         mcTickCount++;
 
-        // ① Tick async executor countdowns (resolves futures → opens gate)
+        // ① Tick movement ops (navigation polling + timeout/teleport fallback)
+        var movementOps = WandscapeEngine.getMovementOps();
+        if (movementOps != null) movementOps.tickAll(mcTickCount);
+
+        // ② Tick async executor countdowns (resolves futures → opens gate)
         var asyncExec = WandscapeEngine.getAsyncExecutor();
         if (asyncExec != null) asyncExec.tickAll();
 
-        // ② Sync MC entity positions → ECS (always, even when gate is closed)
+        // ③ Sync MC entity positions → ECS (always)
         EntityComponentBridge.INSTANCE.syncPositions(world);
 
-        // ② Gate: skip engine tick when async ops are in flight
-        if (world.hasPendingAsyncOps()) {
-            return;
-        }
-
-        // ③ Engine logic tick
+        // ④ Engine logic tick
         engineTickCount++;
         world.tick(1.0f);
 

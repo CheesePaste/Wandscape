@@ -6,6 +6,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
+import com.wsteam.wandscape.core.types.GridPos;
+
 /**
  * Sealed hierarchy of atomic operations that NPCs can perform.
  * Each variant carries the data needed by its corresponding OpExecutor.
@@ -21,6 +25,13 @@ public sealed interface AtomicOp
 
     /** Base mana cost for this operation (before wand efficiency). */
     int baseManaCost();
+
+    /**
+     * The world position this operation acts on, or {@code null} if positionless
+     * (e.g. event emission, conditional branching, entity targeting by ID).
+     */
+    @Nullable
+    GridPos target();
 
     // ---- Variants ----
 
@@ -58,6 +69,11 @@ public sealed interface AtomicOp
         public int baseManaCost() {
             return 5;
         }
+
+        @Override
+        public GridPos target() {
+            return target;
+        }
     }
 
     /** Interact with a block (toggle, activate, open GUI). */
@@ -66,13 +82,23 @@ public sealed interface AtomicOp
         public int baseManaCost() {
             return 2;
         }
+
+        @Override
+        public GridPos target() {
+            return target;
+        }
     }
 
     /** Apply an effect to a non-NPC entity. */
-    record EntityInteractOp(EntityId target, EffectId effect, int strength, int duration) implements AtomicOp {
+    record EntityInteractOp(EntityId entityId, EffectId effect, int strength, int duration) implements AtomicOp {
         @Override
         public int baseManaCost() {
             return 3;
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // targets an entity by ID, not a grid position
         }
     }
 
@@ -91,6 +117,11 @@ public sealed interface AtomicOp
                 default -> 10;
             };
         }
+
+        @Override
+        public GridPos target() {
+            return target;
+        }
     }
 
     /** Request resources from the colony warehouse. The executor resolves this inline. */
@@ -98,6 +129,11 @@ public sealed interface AtomicOp
         @Override
         public int baseManaCost() {
             return 1; // Teleportation cost handled by the ritual inserted into private queue
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // warehouse request, no world position
         }
     }
 
@@ -114,6 +150,11 @@ public sealed interface AtomicOp
         @Override
         public int baseManaCost() {
             return 0;
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // pure event emission, no world position
         }
     }
 
@@ -139,6 +180,11 @@ public sealed interface AtomicOp
         @Override
         public int baseManaCost() {
             return 0;
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // conditional logic, no world position
         }
     }
 }

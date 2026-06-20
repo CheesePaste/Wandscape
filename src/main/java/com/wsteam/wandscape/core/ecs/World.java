@@ -44,6 +44,7 @@ public class World {
     public BlockOps blockOps;
     public EntityOps entityOps;
     public RitualOps ritualOps;
+    public MovementOps movementOps;
     public ColonyResourceAccess colonyResources;
     public EventBus eventBus;
     public BlueprintRegistry blueprintRegistry;

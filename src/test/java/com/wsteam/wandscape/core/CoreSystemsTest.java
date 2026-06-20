@@ -46,7 +46,7 @@ public class CoreSystemsTest {
             mock.seedWarehouse(ResourceId.WOOD, 200);
 
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
             world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -166,7 +166,7 @@ public class CoreSystemsTest {
             mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
             world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -254,7 +254,7 @@ public class CoreSystemsTest {
             mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
             world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -374,7 +374,7 @@ public class CoreSystemsTest {
                             TaskSequence.of("test:any",
                                     AtomicOp.TransformOp.place(
                                             new GridPos(0, 64, 0), BlockType.STONE))));
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
             world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -547,7 +547,7 @@ public class CoreSystemsTest {
             MockBoundary mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
             world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -609,7 +609,7 @@ public class CoreSystemsTest {
             MockBoundary mock = new MockBoundary();
             mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
             BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                     new SystemBlueprintRegistry());
             world = CoreBootstrap.bootstrap(config);
             DefaultOpExecutors.registerAll(world.opExecutors);

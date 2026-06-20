@@ -39,6 +39,7 @@ public final class CoreBootstrap {
         world.blockOps = config.blockOps();
         world.entityOps = config.entityOps();
         world.ritualOps = config.ritualOps();
+        world.movementOps = config.movementOps();
         world.colonyResources = config.colonyResources();
         world.eventBus = new SimpleEventBus();
         Log.debug(TAG, "boundary services injected");

@@ -1,7 +1,5 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.UUID;
-
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -10,7 +8,6 @@ import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -63,33 +60,10 @@ public final class BlockPlaceHandler {
             return;
         }
 
-        // 3. Generate building ID — stored in BE NBT for persistence across restarts
-        UUID generatedId = UUID.randomUUID();
+        // 3. Register with BuildingApi (no-op if already registered)
+        EnqueueHelper.registerIfAbsent(pos, config, buildingTypeId);
 
-        // 4. Create BuildingData and register with API
-        BuildingDataImpl data = new BuildingDataImpl(
-                generatedId,
-                buildingTypeId,
-                config.category(),
-                pos,
-                null, // colonyId — not yet determined (stage 4: colony lifecycle)
-                config.comfort(),
-                config.magic(),
-                config.wonder(),
-                config.maintenanceCost(),
-                config.queue().capacity()
-        );
-
-        try {
-            var api = WandscapeApis.getBuildingApi();
-            api.registerBuilding(data);
-            LOGGER.info("[Building] Registered: id={} type={} comfort={} magic={} wonder={} maintenance={}",
-                    generatedId, buildingTypeId, config.comfort(), config.magic(), config.wonder(), config.maintenanceCost());
-        } catch (IllegalStateException e) {
-            LOGGER.warn("[Building] BuildingApi not loaded: {}", e.getMessage());
-        }
-
-        // 5. Validate structure: find missing blocks in pattern.
+        // 4. Validate structure: find missing blocks in pattern.
         //    If any blocks are missing, enqueue ONE repair job using the building's
         //    own blueprint (registered from BuildingConfig JSON). The full blueprint
         //    re-runs — already-correct blocks are no-ops, missing ones get placed.

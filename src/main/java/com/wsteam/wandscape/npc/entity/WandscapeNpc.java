@@ -12,6 +12,7 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -303,5 +304,27 @@ public class WandscapeNpc extends PathfinderMob {
     /** In-game display name for the NPC. */
     public String getNpcName() {
         return hasCustomName() ? getCustomName().getString() : "Wizard";
+    }
+
+    // ============================================================
+    // Work animation (called from engine boundary on op completion)
+    // ============================================================
+
+    /**
+     * Visual feedback for work completion: arm swing + particles at target.
+     * Called from AsyncTransformExecutor when a block op finishes.
+     */
+    public void doWorkAnimation(BlockPos target) {
+        this.swing(InteractionHand.MAIN_HAND);
+        if (level().isClientSide) return;
+        // Spawn particles at the target block position (server syncs to clients)
+        for (int i = 0; i < 5; i++) {
+            level().addParticle(
+                    ParticleTypes.WITCH,
+                    target.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
+                    target.getY() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
+                    target.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
+                    0, 0, 0);
+        }
     }
 }
