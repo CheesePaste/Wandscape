@@ -7,6 +7,8 @@ import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
+import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
+import com.wsteam.wandscape.warehouse.WarehouseMenu;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -22,6 +24,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -69,6 +72,11 @@ public class WandscapeClient {
         while (OPEN_UI_EDITOR.consumeClick()) {
             Minecraft.getInstance().setScreen(new UIEditorScreen());
         }
+    }
+
+    @SubscribeEvent
+    static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+        event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
     }
 
     @SubscribeEvent

@@ -21,6 +21,10 @@ import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
+import com.wsteam.wandscape.warehouse.WarehouseBE;
+import com.wsteam.wandscape.warehouse.WarehouseManager;
+import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.mojang.brigadier.CommandDispatcher;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -46,6 +50,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -61,6 +67,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -88,6 +95,8 @@ public class Wandscape {
             DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
             DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+            DeferredRegister.create(Registries.MENU, MODID);
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -146,6 +155,20 @@ public class Wandscape {
             BLOCK_ENTITIES.register("grand_tower", () ->
                     new BlockEntityType<>(GrandTowerBE::new, Set.of(GRAND_TOWER_BLOCK.get()), null));
 
+    // ---- 04 warehouse-system: block ----
+    public static final DeferredBlock<Block> WAREHOUSE_BLOCK = BLOCKS.register("warehouse",
+            () -> new WandscapeBuildingBlock(BUILDING_PROPS, WarehouseBE.TYPE_ID, WarehouseBE::new));
+    public static final DeferredItem<BlockItem> WAREHOUSE_ITEM =
+            ITEMS.registerSimpleBlockItem(WAREHOUSE_BLOCK);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WarehouseBE>> WAREHOUSE_BE =
+            BLOCK_ENTITIES.register("warehouse", () ->
+                    new BlockEntityType<>(WarehouseBE::new, Set.of(WAREHOUSE_BLOCK.get()), null));
+
+    // ---- 04 warehouse-system: menu ----
+    public static final DeferredHolder<MenuType<?>, MenuType<WarehouseMenu>> WAREHOUSE_MENU =
+            MENU_TYPES.register("warehouse", () ->
+                    new MenuType<>(WarehouseMenu::new, FeatureFlags.VANILLA_SET));
+
     // ---- 07 npc-system: entity ----
     public static final DeferredHolder<EntityType<?>, EntityType<WandscapeNpc>> WANDSCAPE_NPC =
             ENTITIES.register("wandscape_npc", () ->
@@ -179,6 +202,7 @@ public class Wandscape {
                         output.accept(EARTH_NODE_ITEM.get());
                         output.accept(GRAND_TOWER_ITEM.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
+                        output.accept(WAREHOUSE_ITEM.get());
                     })
                     .build());
 
@@ -190,12 +214,14 @@ public class Wandscape {
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::onEntityAttributeCreation);
+        modEventBus.addListener(this::onRegisterPayloads);
 
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         ENTITIES.register(modEventBus);
         PARTICLE_TYPES.register(modEventBus);
+        MENU_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
@@ -206,6 +232,7 @@ public class Wandscape {
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
+        WandscapeApis.setWarehouseApi(new WarehouseManager());
 
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
@@ -217,6 +244,15 @@ public class Wandscape {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
         LOGGER.info("Wandscape common setup — wand, element, buildings, npc ready");
+    }
+
+    private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
+        event.registrar(MODID)
+                .versioned("1.0")
+                .playToClient(
+                        WarehouseDataPacket.TYPE,
+                        WarehouseDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> WarehouseDataPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.Log;
-import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.ResourceLow;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
@@ -22,11 +21,8 @@ public class WarehouseSource implements TaskSource {
 
     // Default thresholds for key resources
     private final Map<ResourceId, Integer> thresholds = new HashMap<>();
-    private final EventBus eventBus;
 
-    public WarehouseSource(EventBus eventBus) {
-        this.eventBus = eventBus;
-        // Default thresholds
+    public WarehouseSource() {
         thresholds.put(ResourceId.STONE_BRICKS, 128);
         thresholds.put(ResourceId.GLASS, 64);
         thresholds.put(ResourceId.IRON_INGOT, 64);
@@ -50,7 +46,7 @@ public class WarehouseSource implements TaskSource {
                 int available = world.colonyResources.available(resource);
                 if (available < threshold) {
                     Log.debug(TAG, "low %s: %d < %d", resource.id(), available, threshold);
-                    eventBus.emit(new ResourceLow(resource, available, threshold));
+                    world.eventBus.emit(new ResourceLow(resource, available, threshold));
                 }
             }
         }

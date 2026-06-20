@@ -76,6 +76,11 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
             return InteractionResult.FAIL;
         }
 
+        // Let the BE handle the interaction (e.g. warehouse opens GUI)
+        if (be.onActivate(player)) {
+            return InteractionResult.SUCCESS;
+        }
+
         // Ensure the building is registered with BuildingApi.
         // Needed for command-placed blocks (EntityPlaceEvent doesn't fire for /setblock).
         com.wsteam.wandscape.building.internal.BuildingConfigLoader configLoader =

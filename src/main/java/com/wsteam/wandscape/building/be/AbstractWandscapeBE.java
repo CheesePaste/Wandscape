@@ -72,6 +72,15 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
     /** The building type id matching the JSON config. */
     protected abstract String getBuildingTypeId();
 
+    /**
+     * Called when a player right-clicks this building.
+     * Return {@code true} to consume the interaction (no default queue behavior).
+     * Default returns {@code false} — subclasses (e.g. WarehouseBE) override to open GUI.
+     */
+    public boolean onActivate(net.minecraft.world.entity.player.Player player) {
+        return false;
+    }
+
     // ---- Colony ID ----
 
     /**

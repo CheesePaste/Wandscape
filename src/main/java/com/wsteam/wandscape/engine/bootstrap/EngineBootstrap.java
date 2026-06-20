@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
@@ -86,7 +87,7 @@ public final class EngineBootstrap {
         // 3. Build task sources
         List<TaskSource> taskSources = new ArrayList<>();
         taskSources.add(new BuildingTaskSource());
-        taskSources.add(new WarehouseSource(null)); // eventBus wired by engine
+        taskSources.add(new WarehouseSource());
         taskSources.add(new WorkbenchSource());
 
         // 4. Build boundary implementations
@@ -95,30 +96,23 @@ public final class EngineBootstrap {
         WandscapeRitualOps ritualOps = new WandscapeRitualOps();
         WandscapeMovementOps movementOps = new WandscapeMovementOps();
 
-        ColonyResourceAccess colonyResources = new ColonyResourceAccess() {
-            @Override
-            public boolean hasEnough(com.wsteam.wandscape.core.types.ResourceId resource, int amount) {
-                return true; // Stage 3: integrate with warehouse BE
-            }
-
-            @Override
-            public boolean reserve(com.wsteam.wandscape.core.types.ResourceId resource, int amount) {
-                return true;
-            }
-
-            @Override
-            public boolean commit(com.wsteam.wandscape.core.types.ResourceId resource, int amount) {
-                return true;
-            }
-
-            @Override
-            public void release(com.wsteam.wandscape.core.types.ResourceId resource, int amount) {}
-
-            @Override
-            public int available(com.wsteam.wandscape.core.types.ResourceId resource) {
-                return Integer.MAX_VALUE; // Infinite resources for stage 1-2
-            }
-        };
+        // Use WarehouseManager (implements WarehouseApi + ColonyResourceAccess).
+        // Falls back to stub if warehouse module not loaded.
+        ColonyResourceAccess colonyResources;
+        var warehouseApi = WandscapeApis.getWarehouseApiSilently();
+        if (warehouseApi instanceof ColonyResourceAccess cra) {
+            colonyResources = cra;
+            LOGGER.info("  ColonyResourceAccess: WarehouseManager (live)");
+        } else {
+            colonyResources = new ColonyResourceAccess() {
+                @Override public boolean hasEnough(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
+                @Override public boolean reserve(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
+                @Override public boolean commit(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
+                @Override public void release(com.wsteam.wandscape.core.types.ResourceId r, int a) {}
+                @Override public int available(com.wsteam.wandscape.core.types.ResourceId r) { return Integer.MAX_VALUE; }
+            };
+            LOGGER.info("  ColonyResourceAccess: stub (warehouse not loaded)");
+        }
 
         // 5. Build CoreBootstrapConfig
         CoreBootstrapConfig config = new CoreBootstrapConfig(

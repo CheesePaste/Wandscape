@@ -33,6 +33,8 @@ public final class WandscapeApis {
         if (warehouseApi == null) throw new IllegalStateException("Module WarehouseSystem not loaded");
         return warehouseApi;
     }
+    @javax.annotation.Nullable
+    public static WarehouseApi getWarehouseApiSilently() { return warehouseApi; }
     public static void setWarehouseApi(WarehouseApi api) { warehouseApi = api; }
 
     public static TaskApi getTaskApi() {
