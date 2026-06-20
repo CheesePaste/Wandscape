@@ -1,6 +1,72 @@
 {
-  "parent": "minecraft:item/handheld",
+  "credit": "Wandscape 3D wand — floating gem, no tip",
   "textures": {
-    "layer0": "wandscape:item/wand"
+    "0": "wandscape:item/wand_3d",
+    "particle": "wandscape:item/wand_3d"
+  },
+  "elements": [
+    {
+      "name": "shaft",
+      "from": [7, 0, 7],
+      "to": [9, 10, 9],
+      "faces": {
+        "north": {"uv": [0, 4, 2, 14], "texture": "#0"},
+        "south": {"uv": [2, 4, 4, 14], "texture": "#0"},
+        "east":  {"uv": [4, 4, 6, 14], "texture": "#0"},
+        "west":  {"uv": [6, 4, 8, 14], "texture": "#0"},
+        "up":    {"uv": [0, 2, 2, 4],  "texture": "#0"},
+        "down":  {"uv": [2, 2, 4, 4],  "texture": "#0"}
+      }
+    },
+    {
+      "name": "gem",
+      "from": [6.5, 12, 6.5],
+      "to": [9.5, 15, 9.5],
+      "faces": {
+        "north": {"uv": [10, 0, 13, 3],  "texture": "#0", "tintindex": 0},
+        "south": {"uv": [10, 0, 13, 3],  "texture": "#0", "tintindex": 0},
+        "east":  {"uv": [10, 0, 13, 3],  "texture": "#0", "tintindex": 0},
+        "west":  {"uv": [10, 0, 13, 3],  "texture": "#0", "tintindex": 0},
+        "up":    {"uv": [10, 0, 13, 3],  "texture": "#0", "tintindex": 0},
+        "down":  {"uv": [10, 0, 13, 3],  "texture": "#0", "tintindex": 0}
+      }
+    }
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, -90, 55],
+      "translation": [0, 4.0, -4.5],
+      "scale": [0.85, 0.85, 0.85]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 90, -55],
+      "translation": [0, 4.0, -4.5],
+      "scale": [0.85, 0.85, 0.85]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, -90, 25],
+      "translation": [1.13, 3.2, -4.0],
+      "scale": [0.68, 0.68, 0.68]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 90, -25],
+      "translation": [1.13, 3.2, -4.0],
+      "scale": [0.68, 0.68, 0.68]
+    },
+    "ground": {
+      "translation": [0, 2, 0],
+      "scale": [0.5, 0.5, 0.5]
+    },
+    "gui": {
+      "rotation": [30, 225, 0],
+      "scale": [0.625, 0.625, 0.625]
+    },
+    "head": {
+      "translation": [0, 14, -5],
+      "scale": [0.75, 0.75, 0.75]
+    },
+    "fixed": {
+      "scale": [0.85, 0.85, 0.85]
+    }
   }
 }

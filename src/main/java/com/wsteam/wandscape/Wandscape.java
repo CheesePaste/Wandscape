@@ -5,6 +5,10 @@ import java.util.Set;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import com.wsteam.wandscape.building.be.EarthNodeBE;
 import com.wsteam.wandscape.building.be.ForestNodeBE;
 import com.wsteam.wandscape.building.be.GrandTowerBE;
@@ -28,6 +32,8 @@ import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 import com.wsteam.wandscape.wand.item.WandItem;
 
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EntityType;
@@ -73,6 +79,11 @@ public class Wandscape {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<EntityType<?>> ENTITIES =
             DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
+    public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
+            DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
+
+    // ---- Debug target ----
+    public static BlockPos debugDiamondTarget = null;
 
     // ---- Data loader ----
     public static final WandscapeDataLoader DATA_LOADER = new WandscapeDataLoader();
@@ -136,6 +147,10 @@ public class Wandscape {
                             .clientTrackingRange(10)
                             .build("wandscape_npc"));
 
+    // ---- 07 npc-system: particles ----
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CAST_BOLT =
+            PARTICLE_TYPES.register("cast_bolt", () -> new SimpleParticleType(false));
+
     // ---- 07 npc-system: spawn egg ----
     public static final DeferredItem<Item> WANDSCAPE_NPC_EGG =
             ITEMS.register("wandscape_npc_spawn_egg", () ->
@@ -173,6 +188,7 @@ public class Wandscape {
         ITEMS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         ENTITIES.register(modEventBus);
+        PARTICLE_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
@@ -209,6 +225,14 @@ public class Wandscape {
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
         EngineBootstrap.bootstrap();
+    }
+
+    @SubscribeEvent
+    public void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getState().is(Blocks.DIAMOND_BLOCK)) {
+            debugDiamondTarget = event.getPos();
+            LOGGER.info("[Debug] Diamond block placed at {}", debugDiamondTarget);
+        }
     }
 
     private int engineTickCount = 0;

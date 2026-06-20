@@ -96,7 +96,15 @@ public static final DeferredItem<Item> WAND = ITEMS.register("wand",
 
 ### 3.2 物品模型
 
-法杖物品的模型颜色由 `wand_color` NBT 动态染色（使用 `ItemColor` / tint 机制），配一个统一的 2D 法杖贴图 `textures/item/wand.png`。
+法杖为 3D 模型（`models/item/wand.json`）：
+- **木杆**：`[7,0,7]` → `[9,10,9]`，无 tintindex，始终显示木纹色
+- **浮空宝石**：`[6.5,12,6.5]` → `[9.5,15,9.5]`（3×3×3 立方体），tintindex:0，由 `wand_color` NBT 动态染色（`ItemColor` 机制）
+
+贴图 `textures/item/wand_3d.png`（16×16，左半木纹 + 右半宝石色块）。
+
+### 3.3 右键使用
+
+玩家右键法杖时，从视线方向发射一串彩色静止星星粒子（`CastBoltParticle`），颜色取自法杖 `wand_color` NBT。用于调试法杖颜色和粒子效果。
 
 ---
 
@@ -199,6 +207,7 @@ src/main/java/com/wandscape/wand/
   WandDataRegistry.java
 src/main/resources/
   assets/wandscape/textures/item/wand.png
+  assets/wandscape/textures/item/wand_3d.png
   assets/wandscape/models/item/wand.json
   data/wandscape/wands/*.json
 ```
