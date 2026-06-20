@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.engine.boundary;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -10,11 +11,14 @@ import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
@@ -33,7 +37,33 @@ public class WandscapeBlockOps implements BlockOps {
         Block block = resolveBlock(type);
         if (block != null) {
             BlockPos bp = toBlockPos(pos);
+            evacuateEntities(level, bp);
             level.setBlock(bp, block.defaultBlockState(), 3);
+        }
+    }
+
+    /** Push any living entities out of the target block before placing. */
+    private void evacuateEntities(Level level, BlockPos pos) {
+        List<Entity> occupants = level.getEntities((Entity) null, new AABB(pos),
+                e -> e.isAlive() && !e.isSpectator());
+        if (occupants.isEmpty()) return;
+
+        for (Entity e : occupants) {
+            // Try adjacent blocks first, then upward
+            boolean found = false;
+            for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH,
+                    Direction.EAST, Direction.WEST, Direction.UP}) {
+                BlockPos adj = pos.relative(dir);
+                if (level.getBlockState(adj).isAir() && level.getBlockState(adj.above()).isAir()) {
+                    e.teleportTo(adj.getX() + 0.5, adj.getY(), adj.getZ() + 0.5);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // Last resort: push straight up 2 blocks
+                e.teleportTo(pos.getX() + 0.5, pos.getY() + 2, pos.getZ() + 0.5);
+            }
         }
     }
 

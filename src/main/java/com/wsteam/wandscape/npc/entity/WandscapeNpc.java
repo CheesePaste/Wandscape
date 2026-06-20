@@ -120,12 +120,20 @@ public class WandscapeNpc extends PathfinderMob {
 
     @Override
     public void onRemovedFromLevel() {
-        // When the entity is permanently removed (killed, discarded, changed dim),
-        // unregister from ECS. Chunk unloads (!shouldSave) keep ECS components alive.
         RemovalReason reason = getRemovalReason();
         if (!level().isClientSide && reason != null && reason.shouldSave()) {
             World world = WandscapeEngine.getWorld();
             if (world != null) {
+                // NPC dying → release global task for reassignment (preserve stepIndex).
+                // Private queue is discarded along with ECS components.
+                if (reason == RemovalReason.KILLED && ecsEntityId > 0) {
+                    var exec = world.get(ecsEntityId,
+                            com.wsteam.wandscape.core.component.TaskExecutor.class);
+                    if (exec != null && exec.globalTaskId != null) {
+                        world.taskPool.releaseTaskForReassign(
+                                exec.globalTaskId, ecsEntityId, world);
+                    }
+                }
                 EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, world);
             }
         }

@@ -198,6 +198,32 @@ public class GlobalTaskPool {
         Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
     }
 
+    /**
+     * Called when an NPC dies while holding a global task.
+     * Preserves stepIndex so another NPC can resume where the dead one left off.
+     * Private queue is discarded (per user decision).
+     */
+    public void releaseTaskForReassign(long taskId, long npcId, World world) {
+        GlobalTask task = tasks.get(taskId);
+        if (task == null) return;
+
+        // Preserve progress
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        if (exec != null) {
+            task.stepIndex = exec.stepIndex;
+        }
+
+        // Detach NPC
+        releaseNpc(taskId, npcId, world);
+
+        // Re-queue
+        task.state = TaskState.PENDING_ASSIGN;
+        task.assignedNpcId = null;
+
+        Log.info(TAG, "reassign #%d '%s' — NPC %d died, step=%d re-queued",
+                taskId, task.sequence.label(), npcId, task.stepIndex);
+    }
+
     /** Advance stepIndex on the global task (called after DONE). */
     public void advanceStep(long taskId, int newStepIndex) {
         GlobalTask task = tasks.get(taskId);
