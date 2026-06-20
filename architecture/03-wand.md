@@ -1,16 +1,24 @@
 # 03 — 法杖系统 (`wand/`)
 
-法杖物品 + NBT 行为标签 + 能力并集 + JSON 预设加载。
+法杖物品 + NBT 行为标签 + 能力并集 + JSON 预设加载 + 3D 模型 + 使用射线粒子。
 
 ## 源文件 (5 文件)
 
 | 文件 | 作用 |
 |------|------|
-| `item/WandItem.java` | 法杖物品：隐藏耐久条，不可损坏。纯 `Item` 子类 |
+| `item/WandItem.java` | 法杖物品：隐藏耐久条，不可损坏，右键发射彩色射线粒子（`CastBoltParticle`）。纯 `Item` 子类 |
 | `internal/WandApiImpl.java` | WandApi 实现：从 ItemStack NBT 读 `wand_color` / `behaviors` / `range` / `mana_cost_multiplier`，`computeAbilities()` 取所有法杖行为等级最大值并集 |
 | `internal/WandBehaviorDataImpl.java` | WandBehaviorData 实现 record：color + behavior map + range + mana cost multiplier |
 | `internal/WandDataValidator.java` | NBT 校验器：颜色 hex 格式 / 行为类型有效性 / range [1-5] / mana_multiplier [0.3-1.0] |
 | `internal/WandPresetLoader.java` | 从 `data/wandscape/wands/*.json` 加载法杖预设 → WandPreset（含预制 NBT CompoundTag） |
+
+## 资源文件
+
+| 文件 | 作用 |
+|------|------|
+| `models/item/wand.json` | 3D 法杖模型：木杆（`[7,0,7]`→`[9,10,9]`，无 tintindex）+ 浮空宝石（`[6.5,12,6.5]`→`[9.5,15,9.5]`，tintindex:0） |
+| `textures/item/wand_3d.png` | 16×16 贴图：左半木纹（杆），右半宝石色块 |
+| `textures/item/wand.png` | 1.0 版本 2D 贴图（保留备用） |
 
 ## 注册项
 

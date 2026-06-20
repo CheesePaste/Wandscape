@@ -1,8 +1,8 @@
 # NPC MC 适配层
 
 文档编号：NEW-22
-版本：1.2
-状态：已实现（7 新文件 + 3 修改文件，215 测试全绿）
+版本：1.3
+状态：已实现（10 新文件 + 5 修改文件 + 施法动画 + 粒子特效 + debug 模式，全编译通过）
 依赖：core-engine (v2.5), 01-shared-api, engine integration layer
 
 ---
@@ -91,25 +91,36 @@ MC tick → onServerTick → syncPositions() → hasPendingAsyncOps? → world.t
 
 ## 四、文件清单
 
-### 新建文件 (8 个)
+### 新建文件 (10 个)
 
 | 文件 | 包 | 职责 | 预估行数 |
 |------|-----|------|---------|
-| `WandscapeNpc.java` | `com.wsteam.wandscape.npc.entity` | NPC 实体，PathfinderMob 子类 + FloatGoal + RandomStrollGoal | ~250 |
+| `WandscapeNpc.java` | `com.wsteam.wandscape.npc.entity` | NPC 实体，PathfinderMob 子类 + FloatGoal + RandomStrollGoal + 施法状态 + debug 模式 | ~280 |
 | `EntityComponentBridge.java` | `com.wsteam.wandscape.npc.internal` | MC↔ECS 双向映射 + syncPositions + onNpcJoin/LeaveWorld | ~120 |
 | `NpcApiImpl.java` | `com.wsteam.wandscape.npc.internal` | NpcApi 实现：spawnNpc / getColonyNpcs / getIdleNpcs 等 | ~100 |
 | `NpcDataImpl.java` | `com.wsteam.wandscape.npc.data` | NpcData 实现类，包装 WandscapeNpc 字段 | ~40 |
 | `WandscapeEntityOps.java` | `com.wsteam.wandscape.engine.boundary` | EntityOps MC 实现（阶段 2 stub） | ~40 |
 | `WandscapeRitualOps.java` | `com.wsteam.wandscape.engine.boundary` | RitualOps MC 实现：self_teleport 同步传送 | ~80 |
+| `WandscapeNpcModel.java` | `com.wsteam.wandscape.npc.client` | 自定义 HumanoidModel：施法时右臂抬高，角度跟随 NPC pitch |
+| `WandscapeNpcRenderer.java` | `com.wsteam.wandscape.npc.client` | 客户端渲染：施法时从右手发射彩色射线粒子 |
+| `CastBoltParticle.java` | `com.wsteam.wandscape.npc.client` | 施法粒子：全亮度静止星星，最后 20% 生命缩小消失 |
 | `EntityComponentBridgeTest.java` | `src/test/.../npc/bridge` | 桥接注册/注销/重连/syncPositions 测试 | ~80 |
 | `NpcApiImplTest.java` | `src/test/.../npc/internal` | NpcApi spawnNpc / getColonyNpcs 测试 | ~60 |
 
-### 修改文件 (2 个)
+### 修改文件 (3 个)
 
 | 文件 | 变更 |
 |------|------|
-| `Wandscape.java` | +`DeferredRegister<EntityType<?>> ENTITIES`、+`SpawnEggItem` 注册、+`NpcApiImpl` 注册、tick 中门控前 `syncPositions()` |
+| `Wandscape.java` | +`DeferredRegister<EntityType<?>> ENTITIES`、+`DeferredRegister<ParticleType<?>> PARTICLE_TYPES`、+`SpawnEggItem` 注册、+`CAST_BOLT` 粒子注册、+`NpcApiImpl` 注册、tick 中门控前 `syncPositions()`、+`debugDiamondTarget` 追踪钻石块放置 (`BlockEvent.EntityPlaceEvent`) |
+| `WandscapeClient.java` | +`CastBoltParticle.Provider` 注册 (`RegisterParticleProvidersEvent`) |
 | `EngineBootstrap.java` | 替换 stub `EntityOps`/`RitualOps` 为 `WandscapeEntityOps`/`WandscapeRitualOps` |
+
+### 新增资源文件
+
+| 文件 | 作用 |
+|------|------|
+| `particles/cast_bolt.json` | 粒子纹理引用 `wandscape:cast_bolt` |
+| `textures/particle/cast_bolt.png` | 8×8 十字星粒子贴图 |
 
 ## 五、类规格
 
@@ -358,6 +369,18 @@ ServerTick (Post):
 7. 世界中目标位置出现方块 ← 闭环验证成功
 ```
 
+### 施法动画验证（Debug 模式）
+
+```
+1. 放置钻石块（会被自动追踪到 debugDiamondTarget）
+2. 用 spawn egg 生成 wandscape_npc
+3. 右键 NPC → 提示 "[Debug] NPC casting ON — targeting (x,y,z)"
+4. NPC 右臂抬起指向钻石块方向（高低角度自适应）
+5. NPC 右手位置发射彩色射线粒子到钻石块中心（不会穿透）
+6. NPC 无法移动（施法锁止）
+7. 再次右键 → 施法关闭，恢复移动
+```
+
 ## 八、与 docs/07-npc-system.md 的差异（V1 vs 完整设计）
 
 本文档是 **阶段 2 V1 最小可扩展实现**，`docs/07-npc-system.md` 是完整的 NPC 系统设计目标。以下差异需要在后续阶段逐项对齐，**后期实现 NPC 完整功能前必须先阅读 07 文档**。
@@ -378,7 +401,9 @@ ServerTick (Post):
 | 法杖切换 | 接取任务自动选最匹配的法杖作主手 | 无 | 阶段 3 |
 | 背包管理 | 管理面板只读查看，亲自交互才能放取 | 仅 SimpleContainer(27)，无 GUI | 阶段 5 |
 | 状态机 | IDLE/WORKING/STUCK/DEAD 四状态 | 阶段 2 仅 IDLE/WORKING（引擎 ExecutorState 驱动） | 阶段 3 |
-| NBT 字段 | `colonyId`, `currentMana`, `assignedHouseId`, `inventory.save()` | `ecsEntityId`, `maxMana`, `manaRegenRate`, `colonyId` | 持续扩展 |
+| NBT 字段 | `colonyId`, `currentMana`, `assignedHouseId`, `inventory.save()` | `ecsEntityId`, `maxMana`, `manaRegenRate`, `colonyId`, `spellPower`, `DATA_CASTING` (synced), `DATA_DEBUG_TARGET` (synced) | 持续扩展 |
+| 施法动画 | 无设计 | 右臂角度自适应 pitch 的施法 pose，全亮度射线粒子，施法时锁定移动 | 已实现 |
+| Debug 模式 | 无设计 | 右键 NPC 切换 debugCasting，追踪钻石块坐标 | 内测工具 |
 
 ### 关键架构差异
 
@@ -388,7 +413,45 @@ ServerTick (Post):
 
 3. **ManaPool 权威源**：07 设计 NPC 字段是权威源，22 设计 ECS 是权威源。后期阶段不会再改回 NPC 自治 — 这是最终决策。
 
-## 九、不做（留给阶段 3+）
+## 九、施法动画与粒子系统
+
+### 9.1 施法状态同步
+
+NPC 通过 `EntityDataAccessor<Boolean> DATA_CASTING` 将施法状态从服务端同步到客户端。服务端每 tick 轮询 ECS `TaskExecutor` 状态（`state==ACTIVE && hasWork()`）或 debug 模式强制施法，客户端据此渲染动画和粒子。
+
+### 9.2 手臂动画
+
+`WandscapeNpcModel.setupAnim()` 在 `isCasting()` 时覆盖右臂角度：
+- **水平瞄准**（pitch=0）：右臂 `xRot = -1.2`（大致水平前伸，略上扬）
+- **上下瞄准**：`xRot = -1.2 + pitchRad`，pitch 正值（目标在下）→ 手臂下压，pitch 负值（目标在上）→ 手臂抬升
+- **左手不动**，保持默认姿态
+
+### 9.3 施法粒子
+
+`CastBoltParticle` 设计要点：
+- **全亮度**：`getLightColor()` 返回 `15728880`（等同 `end_rod` 粒子），黑夜可见
+- **静止**：构造函数和 `tick()` 中显式锁定 `xd=yd=zd=0`，仅标记射线路径
+- **消退**：生命最后 20% 期间 `quadSize` 从初始值线性缩小至 0
+- **渲染类型**：`PARTICLE_SHEET_TRANSLUCENT`（半透明粒子表）
+- **贴图**：8×8 十字星纹理（`cast_bolt.png`），通过 `SpriteSet` 按年龄切换帧
+
+### 9.4 射线方向
+
+`WandscapeNpcRenderer.spawnCastRay()`：
+- **起点**：右手位置，根据手臂角度动态计算 Y 和前后偏移（`armLen=0.75`，`armAngle=-1.2+pitchRad`）
+- **方向**：优先对准 `DATA_DEBUG_TARGET`（钻石块中心）；无目标时用 NPC 朝向 `(-sin, cos, 0)`
+- **射程**：有目标时止于目标点（`range=len`），无目标时默认 `RAY_RANGE=5.0`
+- **步长**：`RAY_STEP=0.4`（约 12 个粒子/5 格）
+
+### 9.5 Debug 模式
+
+验证 NPC 施法动画的临时调试入口（不用于正式游戏流程）：
+1. 放置**钻石块**（Wandscape 监听 `BlockEvent.EntityPlaceEvent` 记录坐标到 `debugDiamondTarget`）
+2. 右键 NPC → 切换 `debugCasting`，NPC 主手获得法杖，`DATA_DEBUG_TARGET` 同步钻石块坐标
+3. NPC 锁定移动、面向目标、发射射线粒子到目标点
+4. 再次右键 → 关闭调试模式
+
+## 十、不做（留给阶段 3+）
 
 - ❌ NPC 寻路到目标再执行 Op（需要 MoveOp + CompletableFuture 异步模型）
 - ❌ 卡死检测 → 自动入队 self_teleport

@@ -1,15 +1,24 @@
 package com.wsteam.wandscape.npc.entity;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -18,7 +27,11 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * A colony NPC — the MC-layer shell for an ECS-driven task executor.
@@ -59,6 +72,36 @@ public class WandscapeNpc extends PathfinderMob {
     public final SimpleContainer inventory = new SimpleContainer(27);
 
     // ============================================================
+    // Casting state (synced to client for animation + particles)
+    // ============================================================
+
+    private static final EntityDataAccessor<Boolean> DATA_CASTING =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.BOOLEAN);
+
+    public boolean isCasting() {
+        return this.entityData.get(DATA_CASTING);
+    }
+
+    public void setCasting(boolean casting) {
+        this.entityData.set(DATA_CASTING, casting);
+    }
+
+    /** Debug flag — when true, skips ECS polling and forces casting state. */
+    private boolean debugCasting = false;
+
+    /** Debug ray target (synced to client). */
+    private static final EntityDataAccessor<Optional<BlockPos>> DATA_DEBUG_TARGET =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+
+    public Optional<BlockPos> getDebugTarget() {
+        return this.entityData.get(DATA_DEBUG_TARGET);
+    }
+
+    public void setDebugTarget(BlockPos pos) {
+        this.entityData.set(DATA_DEBUG_TARGET, Optional.ofNullable(pos));
+    }
+
+    // ============================================================
     // Construction
     // ============================================================
 
@@ -93,6 +136,13 @@ public class WandscapeNpc extends PathfinderMob {
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6));
     }
 
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_CASTING, false);
+        builder.define(DATA_DEBUG_TARGET, Optional.empty());
+    }
+
     // ============================================================
     // Lifecycle — ECS bridge
     // ============================================================
@@ -100,8 +150,68 @@ public class WandscapeNpc extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        // Mana regen is handled by ManaRegenSystem in the engine.
-        // Stuck detection will be added in stage 3+.
+        if (!level().isClientSide) {
+            boolean casting;
+            if (debugCasting) {
+                casting = true;
+                BlockPos target = Wandscape.debugDiamondTarget;
+                if (target != null) {
+                    double dx = target.getX() + 0.5 - getX();
+                    double dz = target.getZ() + 0.5 - getZ();
+                    float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
+                    setYRot(yaw);
+                    yBodyRot = yaw;
+                    yHeadRot = yaw;
+                    double dy = target.getY() + 0.5 - (getY() + 1.4);
+                    double hDist = Math.sqrt(dx * dx + dz * dz);
+                    float pitch = (float) -Math.toDegrees(Math.atan2(dy, hDist));
+                    setXRot(pitch);
+                }
+            } else {
+                casting = false;
+                World ecsWorld = WandscapeEngine.getWorld();
+                if (ecsWorld != null && ecsEntityId > 0) {
+                    var exec = ecsWorld.get(ecsEntityId,
+                            com.wsteam.wandscape.core.component.TaskExecutor.class);
+                    casting = exec != null
+                            && exec.state == com.wsteam.wandscape.core.task.ExecutorState.ACTIVE
+                            && exec.hasWork();
+                }
+            }
+            if (casting != isCasting()) {
+                setCasting(casting);
+            }
+            if (isCasting()) {
+                getNavigation().stop();
+                setDeltaMovement(Vec3.ZERO);
+            }
+        }
+    }
+
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (level().isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        debugCasting = !debugCasting;
+        if (debugCasting) {
+            setItemInHand(InteractionHand.MAIN_HAND,
+                    new ItemStack(Wandscape.WAND.get()));
+            BlockPos target = Wandscape.debugDiamondTarget;
+            setDebugTarget(target);
+            if (target != null) {
+                player.sendSystemMessage(Component.literal(
+                        "[Wandscape Debug] NPC casting ON — targeting " + target));
+            } else {
+                player.sendSystemMessage(Component.literal(
+                        "[Wandscape Debug] NPC casting ON — no diamond target set"));
+            }
+        } else {
+            setDebugTarget(null);
+            player.sendSystemMessage(Component.literal(
+                    "[Wandscape Debug] NPC casting OFF"));
+        }
+        return InteractionResult.sidedSuccess(level().isClientSide);
     }
 
     @Override
