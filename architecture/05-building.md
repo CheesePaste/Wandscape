@@ -32,6 +32,10 @@
 
 已有 3 个：`town_hall.json` / `forest_node.json` / `earth_node.json`
 
+完整字段规范见 [`spec/building-json.md`](../spec/building-json.md) — 含 schema、默认值、字段实现状态、数据流
+
+蓝图 DSL 设计见 [`spec/blueprint-dsl.md`](../spec/blueprint-dsl.md) — Building JSON 引用 Blueprint 的逻辑容器分离方案
+
 ## 依赖
 
 - `shared/api/BuildingApi` / `shared/data/BuildingData` / `shared/data/WorkItem`

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonElement;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.Log;
@@ -55,13 +56,13 @@ public final class DataDrivenSteps {
         };
     }
 
-    private static GridPos parsePos(Map<String, String> params) {
+    private static GridPos parsePos(Map<String, JsonElement> params) {
         try {
-            int x = Integer.parseInt(params.getOrDefault("x", "0"));
-            int y = Integer.parseInt(params.getOrDefault("y", "0"));
-            int z = Integer.parseInt(params.getOrDefault("z", "0"));
+            int x = params.containsKey("x") ? params.get("x").getAsInt() : 0;
+            int y = params.containsKey("y") ? params.get("y").getAsInt() : 0;
+            int z = params.containsKey("z") ? params.get("z").getAsInt() : 0;
             return new GridPos(x, y, z);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | IllegalStateException e) {
             return GridPos.ORIGIN;
         }
     }

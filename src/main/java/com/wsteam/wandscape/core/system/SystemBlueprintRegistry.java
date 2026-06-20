@@ -6,6 +6,9 @@ import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.task.*;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+
 import java.util.*;
 
 /**
@@ -76,7 +79,13 @@ public class SystemBlueprintRegistry {
         String resolvedBpId = TemplateResolver.resolve(trigger.sourceBlueprintId(), templateVars);
 
         // Apply paramMapping
-        Map<String, String> taskParams = applyMapping(trigger.paramMapping(), event.params());
+        Map<String, String> rawParams = applyMapping(trigger.paramMapping(), event.params());
+
+        // Wrap string values as JsonPrimitive for TaskRequest
+        Map<String, JsonElement> taskParams = new HashMap<>();
+        for (var entry : rawParams.entrySet()) {
+            taskParams.put(entry.getKey(), new JsonPrimitive(entry.getValue()));
+        }
 
         // Dedup check
         if (trigger.dedupKey() != null) {
@@ -120,9 +129,13 @@ public class SystemBlueprintRegistry {
             String label = t.sequence.label();
             boolean labelMatch = label.startsWith(labelPrefix) || label.equals(blueprintId);
             if (labelMatch) {
-                if (label.equals(blueprintId) || label.contains(dedupValue)
-                        || t.taskParams.containsValue(dedupValue)) {
+                if (label.equals(blueprintId) || label.contains(dedupValue)) {
                     return true;
+                }
+                for (var v : t.taskParams.values()) {
+                    if (v.isJsonPrimitive() && v.getAsString().equals(dedupValue)) {
+                        return true;
+                    }
                 }
             }
         }

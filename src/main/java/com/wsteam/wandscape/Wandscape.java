@@ -12,6 +12,7 @@ import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
 import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -151,6 +152,7 @@ public class Wandscape {
     // ---- API instances ----
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();
     private final BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
+    public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
@@ -173,6 +175,8 @@ public class Wandscape {
 
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
+        BLUEPRINT_CONFIG_LOADER.registerWith(DATA_LOADER);
+        WandscapeEngine.setBlueprintConfigLoader(BLUEPRINT_CONFIG_LOADER);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

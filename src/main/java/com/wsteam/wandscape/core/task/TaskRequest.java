@@ -3,15 +3,17 @@ package com.wsteam.wandscape.core.task;
 import java.util.Collections;
 import java.util.Map;
 
+import com.google.gson.JsonElement;
+
 /**
  * Request to create a global task from a blueprint.
  * Published by TaskSources and compiled by BlueprintRegistry.
  *
- * <p>Location is carried in {@link #params} as {@code x}/{@code y}/{@code z} keys.
+ * <p>Parameters are typed {@link JsonElement} values (string, int, pos array, list, map).
  */
 public record TaskRequest(
         String blueprintId,
-        Map<String, String> params,
+        Map<String, JsonElement> params,
         int priority
 ) {
     public TaskRequest {

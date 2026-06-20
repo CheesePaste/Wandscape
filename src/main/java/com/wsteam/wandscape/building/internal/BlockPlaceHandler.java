@@ -110,15 +110,7 @@ public final class BlockPlaceHandler {
         }
 
         if (missingCount > 0) {
-            WorkItem work = new WorkItem(
-                    "build:" + buildingTypeId,
-                    java.util.Map.of(
-                            "x", String.valueOf(pos.getX()),
-                            "y", String.valueOf(pos.getY()),
-                            "z", String.valueOf(pos.getZ())
-                    ),
-                    49 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
-            );
+            WorkItem work = EnqueueHelper.buildWorkItem(config, pos, buildingTypeId, 49);
             be.enqueueWork(work);
             LOGGER.info("[Building] Structure incomplete: type={} at {} — {} blocks missing, enqueued 1 repair job (blueprint=build:{})",
                     buildingTypeId, pos, missingCount, buildingTypeId);

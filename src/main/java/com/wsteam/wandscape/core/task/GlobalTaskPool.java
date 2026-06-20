@@ -15,6 +15,9 @@ import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.*;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+
 /**
  * Central container for all global tasks. Manages task lifecycle and assignment.
  * Subscribes to ResourceFulfilledEvent to wake AWAITING_RESOURCES tasks.
@@ -222,8 +225,12 @@ public class GlobalTaskPool {
         }
         String resolvedBpId = TemplateResolver.resolve(trigger.sourceBlueprintId(), templateVars);
 
-        // Apply paramMapping (key rename)
-        Map<String, String> taskParams = applyMapping(trigger.paramMapping(), event.params());
+        // Apply paramMapping (key rename) and wrap values as JsonPrimitive
+        Map<String, String> rawParams = applyMapping(trigger.paramMapping(), event.params());
+        Map<String, JsonElement> taskParams = new HashMap<>();
+        for (var entry : rawParams.entrySet()) {
+            taskParams.put(entry.getKey(), new JsonPrimitive(entry.getValue()));
+        }
 
         // Dedup check
         if (trigger.dedupKey() != null) {
@@ -278,9 +285,13 @@ public class GlobalTaskPool {
             boolean labelMatch = label.startsWith(labelPrefix) || label.equals(blueprintId);
             if (labelMatch) {
                 // dedupValue appears in label, taskParams, or label==blueprintId
-                if (label.equals(blueprintId) || label.contains(dedupValue)
-                        || t.taskParams.containsValue(dedupValue)) {
+                if (label.equals(blueprintId) || label.contains(dedupValue)) {
                     return true;
+                }
+                for (var v : t.taskParams.values()) {
+                    if (v.isJsonPrimitive() && v.getAsString().equals(dedupValue)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -366,16 +377,16 @@ public class GlobalTaskPool {
 
     // ---- Helpers ----
 
-    private static GridPos parseGridPos(Map<String, String> params) {
+    private static GridPos parseGridPos(Map<String, JsonElement> params) {
         if (params == null) return null;
-        String xs = params.get("x");
-        String ys = params.get("y");
-        String zs = params.get("z");
-        if (xs != null && ys != null && zs != null) {
-            try {
-                return new GridPos(Integer.parseInt(xs), Integer.parseInt(ys), Integer.parseInt(zs));
-            } catch (NumberFormatException ignored) {
+        try {
+            var xEl = params.get("x");
+            var yEl = params.get("y");
+            var zEl = params.get("z");
+            if (xEl != null && yEl != null && zEl != null) {
+                return new GridPos(xEl.getAsInt(), yEl.getAsInt(), zEl.getAsInt());
             }
+        } catch (NumberFormatException | IllegalStateException ignored) {
         }
         return null;
     }

@@ -4,6 +4,10 @@ import java.util.*;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -39,10 +43,16 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
     private static final String TAG_TASK_QUEUE = "task_queue";
     private static final String TAG_CURRENT_TASK = "current_task";
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
-    private static final String TAG_QUEUE_ITEM_PARAMS = "params";
+    private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
-    private static final String TAG_QUEUE_ITEM_PARAM_KEY = "key";
-    private static final String TAG_QUEUE_ITEM_PARAM_VALUE = "value";
+
+    /**
+     * Shared Gson instance for NBT param serialization.
+     * Per decision #18: params stored as {@code gson.toJson(params)} flat JSON string.
+     */
+    private static final Gson PARAMS_GSON = new Gson();
+    private static final java.lang.reflect.Type PARAMS_TYPE =
+            new TypeToken<Map<String, JsonElement>>(){}.getType();
 
     // ---- State ----
     @Nullable
@@ -222,12 +232,11 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
             String blueprint = itemTag.getString(TAG_QUEUE_ITEM_BLUEPRINT);
             int priority = itemTag.getInt(TAG_QUEUE_ITEM_PRIORITY);
 
-            Map<String, String> params = new HashMap<>();
-            ListTag paramsTag = itemTag.getList(TAG_QUEUE_ITEM_PARAMS, Tag.TAG_COMPOUND);
-            for (int j = 0; j < paramsTag.size(); j++) {
-                CompoundTag kv = paramsTag.getCompound(j);
-                params.put(kv.getString(TAG_QUEUE_ITEM_PARAM_KEY),
-                        kv.getString(TAG_QUEUE_ITEM_PARAM_VALUE));
+            Map<String, JsonElement> params = Collections.emptyMap();
+            if (itemTag.contains(TAG_QUEUE_ITEM_PARAMS)) {
+                String json = itemTag.getString(TAG_QUEUE_ITEM_PARAMS);
+                params = PARAMS_GSON.fromJson(json, PARAMS_TYPE);
+                if (params == null) params = Collections.emptyMap();
             }
             taskQueue.addLast(new WorkItem(blueprint, params, priority));
         }
@@ -252,14 +261,9 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
             itemTag.putString(TAG_QUEUE_ITEM_BLUEPRINT, item.blueprintId());
             itemTag.putInt(TAG_QUEUE_ITEM_PRIORITY, item.priority());
 
-            ListTag paramsTag = new ListTag();
-            for (var entry : item.params().entrySet()) {
-                CompoundTag kv = new CompoundTag();
-                kv.putString(TAG_QUEUE_ITEM_PARAM_KEY, entry.getKey());
-                kv.putString(TAG_QUEUE_ITEM_PARAM_VALUE, entry.getValue());
-                paramsTag.add(kv);
-            }
-            itemTag.put(TAG_QUEUE_ITEM_PARAMS, paramsTag);
+            // Per decision #18: store params as gson.toJson(params) flat JSON string
+            String paramsJson = PARAMS_GSON.toJson(item.params());
+            itemTag.putString(TAG_QUEUE_ITEM_PARAMS, paramsJson);
             queueTag.add(itemTag);
         }
         tag.put(TAG_TASK_QUEUE, queueTag);

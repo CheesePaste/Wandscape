@@ -5,6 +5,8 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
@@ -182,10 +184,10 @@ public class ResourceWaitingFulfillTest {
     }
 
     private static TaskRequest makeRequest(String blueprintId, GridPos pos, int priority) {
-        Map<String, String> params = new HashMap<>();
-        params.put("x", String.valueOf(pos.x()));
-        params.put("y", String.valueOf(pos.y()));
-        params.put("z", String.valueOf(pos.z()));
+        Map<String, JsonElement> params = new HashMap<>();
+        params.put("x", new JsonPrimitive(pos.x()));
+        params.put("y", new JsonPrimitive(pos.y()));
+        params.put("z", new JsonPrimitive(pos.z()));
         return new TaskRequest(blueprintId, params, priority);
     }
 
@@ -209,11 +211,11 @@ public class ResourceWaitingFulfillTest {
         });
     }
 
-    private static GridPos parseLocation(Map<String, String> params) {
+    private static GridPos parseLocation(Map<String, JsonElement> params) {
         try {
-            int x = Integer.parseInt(params.getOrDefault("x", "0"));
-            int y = Integer.parseInt(params.getOrDefault("y", "0"));
-            int z = Integer.parseInt(params.getOrDefault("z", "0"));
+            int x = params.containsKey("x") ? params.get("x").getAsInt() : 0;
+            int y = params.containsKey("y") ? params.get("y").getAsInt() : 0;
+            int z = params.containsKey("z") ? params.get("z").getAsInt() : 0;
             return new GridPos(x, y, z);
         } catch (NumberFormatException e) {
             return GridPos.ORIGIN;

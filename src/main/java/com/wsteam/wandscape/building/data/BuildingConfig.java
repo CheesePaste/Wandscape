@@ -2,9 +2,12 @@ package com.wsteam.wandscape.building.data;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.Nullable;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
@@ -31,7 +34,8 @@ public record BuildingConfig(
         @SerializedName("maintenance_cost") int maintenanceCost,
         @SerializedName("shutdown_penalty") ShutdownPenalty shutdownPenalty,
         QueueDef queue,
-        @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement
+        @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement,
+        @Nullable BlueprintRef blueprint
 ) {
     public record ShutdownPenalty(
             @SerializedName("output_reduction") double outputReduction,
@@ -51,6 +55,22 @@ public record BuildingConfig(
             @SerializedName("min_wonder") int minWonder
     ) {
         public static final UnlockRequirement NONE = new UnlockRequirement(0);
+    }
+
+    /**
+     * Reference to a Blueprint DSL JSON that defines task logic for this building.
+     *
+     * @param id   the blueprint ID (e.g. "build:place_structure")
+     * @param bind key = blueprint param name, value = {@code $field_name}
+     *             bare variable reference to a building JSON field
+     */
+    public record BlueprintRef(
+            String id,
+            Map<String, String> bind
+    ) {
+        public BlueprintRef {
+            if (bind == null) bind = Collections.emptyMap();
+        }
     }
 
     /**
@@ -112,10 +132,27 @@ public record BuildingConfig(
                         obj.get("unlock_requirement"), UnlockRequirement.class);
             }
 
+            // Blueprint reference
+            BlueprintRef blueprint = null;
+            if (obj.has("blueprint")) {
+                JsonObject bpObj = obj.getAsJsonObject("blueprint");
+                String bpId = bpObj.get("id").getAsString();
+                Map<String, String> bind = Collections.emptyMap();
+                if (bpObj.has("bind")) {
+                    JsonObject bindObj = bpObj.getAsJsonObject("bind");
+                    Map<String, String> m = new HashMap<>();
+                    for (var entry : bindObj.entrySet()) {
+                        m.put(entry.getKey(), entry.getValue().getAsString());
+                    }
+                    bind = Map.copyOf(m);
+                }
+                blueprint = new BlueprintRef(bpId, bind);
+            }
+
             return new BuildingConfig(id, displayName, category, blockId,
                     pattern, blockMapping,
                     comfort, magic, wonder, maintenanceCost,
-                    shutdownPenalty, queue, unlockRequirement);
+                    shutdownPenalty, queue, unlockRequirement, blueprint);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

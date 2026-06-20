@@ -23,5 +23,17 @@
   },
   "unlock_requirement": {
     "min_wonder": 0
+  },
+  "boundary": {
+    "min": [0, 0, 0],
+    "max": [0, 0, 0]
+  },
+  "blueprint": {
+    "id": "build:place_structure",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
   }
 }

@@ -1,0 +1,33 @@
+{
+  "id": "build:place_structure",
+  "display_name": "Build Structure",
+  "description": "Iterate over building pattern offsets, placing each block from block_mapping. Emits build_complete event when done.",
+  "params": {
+    "offsets": "list<pos>",
+    "blocks": "map<string,string>",
+    "name": "string",
+    "anchor": "pos"
+  },
+  "steps": [
+    {
+      "type": "for_each",
+      "list": "$offsets",
+      "var": "off",
+      "steps": [
+        {
+          "type": "place",
+          "at": {"+": ["$anchor", "$off"]},
+          "block": {"get": ["$blocks", {"keyof": "$off"}]}
+        }
+      ]
+    },
+    {
+      "type": "emit_event",
+      "event": "build_complete",
+      "data": {
+        "building_name": "$name",
+        "blocks_placed": {"size": "$offsets"}
+      }
+    }
+  ]
+}

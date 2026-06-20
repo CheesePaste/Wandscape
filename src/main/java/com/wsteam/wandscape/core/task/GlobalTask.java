@@ -7,6 +7,8 @@ import com.wsteam.wandscape.core.types.ResourceStack;
 
 import java.util.*;
 
+import com.google.gson.JsonElement;
+
 /**
  * A task in the global pool. Tracks its lifecycle state, assigned NPC, and progress.
  */
@@ -24,7 +26,7 @@ public class GlobalTask {
     public final List<EventBus.Subscription> subscriptions;
 
     /** Original TaskRequest params (for EmitEventOp template resolution). */
-    public final Map<String, String> taskParams;
+    public final Map<String, JsonElement> taskParams;
 
     public TaskState state;
     public int stepIndex;
@@ -40,7 +42,7 @@ public class GlobalTask {
             int priority,
             List<TriggerDeclaration> triggers,
             List<EventBus.Subscription> subscriptions,
-            Map<String, String> taskParams,
+            Map<String, JsonElement> taskParams,
             TaskState state,
             int stepIndex,
             Long assignedNpcId,
@@ -68,7 +70,7 @@ public class GlobalTask {
     public static GlobalTask create(long id, TaskSequence sequence,
                                      Map<BehaviourTag, BehaviourLevel> requirements,
                                      int priority, List<TriggerDeclaration> triggers,
-                                     Map<String, String> taskParams,
+                                     Map<String, JsonElement> taskParams,
                                      TaskState initialState,
                                      ApprovalInfo approval) {
         return new GlobalTask(id, sequence, requirements, priority,
@@ -81,7 +83,7 @@ public class GlobalTask {
     public static GlobalTask createSmall(long id, TaskSequence sequence,
                                           Map<BehaviourTag, BehaviourLevel> requirements,
                                           int priority, List<TriggerDeclaration> triggers,
-                                          Map<String, String> taskParams) {
+                                          Map<String, JsonElement> taskParams) {
         return new GlobalTask(id, sequence, requirements, priority,
                 triggers, new ArrayList<>(), taskParams,
                 TaskState.PENDING_ASSIGN, 0, null, null,

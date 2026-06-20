@@ -3,6 +3,8 @@ package com.wsteam.wandscape.core;
 import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
@@ -126,10 +128,10 @@ public class EventDrivenTaskSourceTest {
     void fullRestockChain_resolvesWaitingTask() {
         // Heavy task needs 100 stone; warehouse has only 30
         GridPos loc = new GridPos(5, 64, 5);
-        Map<String, String> taskParams = new HashMap<>();
-        taskParams.put("x", String.valueOf(loc.x()));
-        taskParams.put("y", String.valueOf(loc.y()));
-        taskParams.put("z", String.valueOf(loc.z()));
+        Map<String, JsonElement> taskParams = new HashMap<>();
+        taskParams.put("x", new JsonPrimitive(loc.x()));
+        taskParams.put("y", new JsonPrimitive(loc.y()));
+        taskParams.put("z", new JsonPrimitive(loc.z()));
 
         world.blueprintRegistry.register("test:heavy", (BlueprintSteps) p ->
                 TaskSequence.of("Heavy Stone Task",
@@ -183,13 +185,13 @@ public class EventDrivenTaskSourceTest {
         return count;
     }
 
-    private static GridPos parseLocation(Map<String, String> params) {
+    private static GridPos parseLocation(Map<String, JsonElement> params) {
         try {
-            int x = Integer.parseInt(params.getOrDefault("x", "0"));
-            int y = Integer.parseInt(params.getOrDefault("y", "0"));
-            int z = Integer.parseInt(params.getOrDefault("z", "0"));
+            int x = params.containsKey("x") ? params.get("x").getAsInt() : 0;
+            int y = params.containsKey("y") ? params.get("y").getAsInt() : 0;
+            int z = params.containsKey("z") ? params.get("z").getAsInt() : 0;
             return new GridPos(x, y, z);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | IllegalStateException e) {
             return GridPos.ORIGIN;
         }
     }

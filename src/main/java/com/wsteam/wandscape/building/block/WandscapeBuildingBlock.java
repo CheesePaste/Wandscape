@@ -4,8 +4,10 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.MapCodec;
 import com.wsteam.wandscape.building.be.AbstractWandscapeBE;
+import com.wsteam.wandscape.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
@@ -70,28 +72,37 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
                                                 Player player, BlockHitResult hitResult) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
 
-        // Stage 1 debug: right-click enqueues a build task for this building itself
-        // (reads blueprint auto-registered from BuildingConfig JSON).
-        // In later stages, this opens the building GUI.
         if (!(level.getBlockEntity(pos) instanceof AbstractWandscapeBE be)) {
             return InteractionResult.FAIL;
         }
 
-        String bpId = "build:" + buildingTypeId;
-        WorkItem demo = new WorkItem(
-                bpId,
-                Map.of("x", String.valueOf(pos.getX()),
-                       "y", String.valueOf(pos.getY()),
-                       "z", String.valueOf(pos.getZ())),
-                10 // V1: below 50 to skip PENDING_APPROVAL (no approval UI yet)
-        );
+        WorkItem demo = buildEnqueueWorkItem(pos);
+        if (demo == null) {
+            return InteractionResult.FAIL;
+        }
         be.enqueueWork(demo);
         player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
-                        "[Wandscape] Enqueued demo: " + demo.blueprintId()
+                        "[Wandscape] Enqueued: " + demo.blueprintId()
                         + " at (x=" + pos.getX() + ", y=" + pos.getY()
                         + ", z=" + pos.getZ() + ")"),
                 false);
         return InteractionResult.SUCCESS;
+    }
+
+    /**
+     * Build a {@link WorkItem} for this building at the given position.
+     * Resolves blueprint ref bind + anchor from the building config.
+     * Returns null if the building config is missing.
+     */
+    @Nullable
+    public WorkItem buildEnqueueWorkItem(BlockPos pos) {
+        com.wsteam.wandscape.building.internal.BuildingConfigLoader configLoader =
+                com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance();
+        var config = configLoader.get(buildingTypeId);
+        if (config == null) {
+            return null;
+        }
+        return EnqueueHelper.buildWorkItem(config, pos, buildingTypeId, 10);
     }
 }

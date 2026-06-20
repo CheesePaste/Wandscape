@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 
 /**
  * Singleton holder for the engine {@link World} instance.
@@ -16,6 +17,8 @@ public final class WandscapeEngine {
     private static World world;
     @Nullable
     static AsyncTransformExecutor asyncExec;
+    @Nullable
+    private static BlueprintConfigLoader blueprintConfigLoader;
 
     private WandscapeEngine() {}
 
@@ -35,4 +38,14 @@ public final class WandscapeEngine {
 
     @Nullable
     public static AsyncTransformExecutor getAsyncExecutor() { return asyncExec; }
+
+    /** Set the blueprint config loader singleton (called from Wandscape constructor). */
+    public static void setBlueprintConfigLoader(BlueprintConfigLoader loader) {
+        blueprintConfigLoader = loader;
+    }
+
+    @Nullable
+    public static BlueprintConfigLoader getBlueprintConfigLoader() {
+        return blueprintConfigLoader;
+    }
 }

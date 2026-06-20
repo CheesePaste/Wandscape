@@ -1,8 +1,11 @@
 package com.wsteam.wandscape.engine.source.blueprint;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.op.AtomicOp;
@@ -29,8 +32,8 @@ class DataDrivenStepsTest {
         return new BlockOffset(x, y, z);
     }
 
-    private static Map<String, String> params(int x, int y, int z) {
-        return Map.of("x", String.valueOf(x), "y", String.valueOf(y), "z", String.valueOf(z));
+    private static Map<String, JsonElement> params(int x, int y, int z) {
+        return Map.of("x", new JsonPrimitive(x), "y", new JsonPrimitive(y), "z", new JsonPrimitive(z));
     }
 
     // ── Test 1: single-block building ──
@@ -45,7 +48,8 @@ class DataDrivenStepsTest {
                 1, 2, 0, 2,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
-                BuildingConfig.UnlockRequirement.NONE
+                BuildingConfig.UnlockRequirement.NONE,
+                null  // no blueprint ref in this test
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -76,7 +80,8 @@ class DataDrivenStepsTest {
                 1, 0, 1, 3,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
-                BuildingConfig.UnlockRequirement.NONE
+                BuildingConfig.UnlockRequirement.NONE,
+                null  // no blueprint ref in this test
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -112,7 +117,8 @@ class DataDrivenStepsTest {
                 1, 0, 0, 1,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
-                BuildingConfig.UnlockRequirement.NONE
+                BuildingConfig.UnlockRequirement.NONE,
+                null  // no blueprint ref in this test
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -136,7 +142,8 @@ class DataDrivenStepsTest {
                 0, 0, 0, 0,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
-                BuildingConfig.UnlockRequirement.NONE
+                BuildingConfig.UnlockRequirement.NONE,
+                null  // no blueprint ref in this test
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -168,7 +175,7 @@ class DataDrivenStepsTest {
         BuildingConfig cfg = singleBlockCfg();
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
 
-        TaskSequence seq = steps.generate(Map.of("x", "abc", "y", "64", "z", "5"));
+        TaskSequence seq = steps.generate(Map.of("x", new JsonPrimitive("abc"), "y", new JsonPrimitive("64"), "z", new JsonPrimitive("5")));
 
         assertEquals(1, seq.size());
         AtomicOp.TransformOp op = (AtomicOp.TransformOp) seq.get(0);
@@ -199,7 +206,7 @@ class DataDrivenStepsTest {
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
 
         // Only provide x, omit y and z
-        TaskSequence seq = steps.generate(Map.of("x", "42"));
+        TaskSequence seq = steps.generate(Map.of("x", new JsonPrimitive(42)));
 
         assertEquals(1, seq.size());
         AtomicOp.TransformOp op = (AtomicOp.TransformOp) seq.get(0);
@@ -216,7 +223,8 @@ class DataDrivenStepsTest {
                 1, 0, 0, 1,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
-                BuildingConfig.UnlockRequirement.NONE
+                BuildingConfig.UnlockRequirement.NONE,
+                null  // no blueprint ref in this test
         );
     }
 }

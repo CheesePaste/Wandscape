@@ -12,6 +12,8 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.types.ResourceId;
 
+import com.google.gson.JsonElement;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -131,7 +133,8 @@ public final class DefaultOpExecutors {
                 vars.put("npcId", String.valueOf(npcId));
                 if (exec.taskParams != null) {
                     for (var entry : exec.taskParams.entrySet()) {
-                        vars.put("task.params." + entry.getKey(), entry.getValue());
+                        vars.put("task.params." + entry.getKey(),
+                                jsonElementToString(entry.getValue()));
                     }
                 }
             }
@@ -142,6 +145,12 @@ public final class DefaultOpExecutors {
                 vars.put("pos.z", String.valueOf(pos.pos().z()));
             }
             return vars;
+        }
+
+        /** Convert a JsonElement to a string suitable for template resolution. */
+        private static String jsonElementToString(JsonElement el) {
+            if (el.isJsonPrimitive()) return el.getAsString();
+            return el.toString(); // JsonArray or JsonObject → its JSON representation
         }
     }
 

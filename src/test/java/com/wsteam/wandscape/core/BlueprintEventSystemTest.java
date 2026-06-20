@@ -6,6 +6,8 @@ import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.core.system.SystemBlueprintSystem;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
@@ -325,7 +327,7 @@ public class BlueprintEventSystemTest {
         GlobalTask gather = findTaskByBpId("gather:stone_bricks");
         assertNotNull(gather, "{{event.resource}} template should resolve");
         assertEquals(30, gather.priority);
-        assertEquals("64", gather.taskParams.get("amount"),
+        assertEquals("64", gather.taskParams.get("amount").getAsString(),
                 "paramMapping: amount → amount");
     }
 
@@ -348,8 +350,8 @@ public class BlueprintEventSystemTest {
 
         GlobalTask downstream = findTaskByBpId("test:downstream");
         assertNotNull(downstream, "Trigger should create downstream task");
-        assertEquals("3", downstream.taskParams.get("x"), "src_x→x");
-        assertEquals("5", downstream.taskParams.get("y"), "src_y→y");
+        assertEquals("3", downstream.taskParams.get("x").getAsString(), "src_x→x");
+        assertEquals("5", downstream.taskParams.get("y").getAsString(), "src_y→y");
         assertNull(downstream.taskParams.get("extra"), "unmapped key absent");
         assertNull(downstream.taskParams.get("src_x"), "original key renamed");
     }
@@ -373,8 +375,8 @@ public class BlueprintEventSystemTest {
 
         GlobalTask receiver = findTaskByBpId("test:receiver");
         assertNotNull(receiver);
-        assertEquals("1", receiver.taskParams.get("a"), "passthrough: a=1");
-        assertEquals("2", receiver.taskParams.get("b"), "passthrough: b=2");
+        assertEquals("1", receiver.taskParams.get("a").getAsString(), "passthrough: a=1");
+        assertEquals("2", receiver.taskParams.get("b").getAsString(), "passthrough: b=2");
     }
 
     @Test
@@ -626,10 +628,13 @@ public class BlueprintEventSystemTest {
 
     private static TaskRequest makeRequest(String blueprintId, GridPos pos,
                                            Map<String, String> extra, int priority) {
-        Map<String, String> params = new HashMap<>(extra);
-        params.putIfAbsent("x", String.valueOf(pos.x()));
-        params.putIfAbsent("y", String.valueOf(pos.y()));
-        params.putIfAbsent("z", String.valueOf(pos.z()));
+        Map<String, JsonElement> params = new HashMap<>();
+        for (var entry : extra.entrySet()) {
+            params.put(entry.getKey(), new JsonPrimitive(entry.getValue()));
+        }
+        params.putIfAbsent("x", new JsonPrimitive(pos.x()));
+        params.putIfAbsent("y", new JsonPrimitive(pos.y()));
+        params.putIfAbsent("z", new JsonPrimitive(pos.z()));
         return new TaskRequest(blueprintId, params, priority);
     }
 

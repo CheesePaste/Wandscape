@@ -9,6 +9,8 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.google.gson.JsonElement;
+
 /**
  * NPC-side task execution state.
  * Holds the private queue (high priority) and current global task progress.
@@ -28,7 +30,7 @@ public class TaskExecutor {
     public int stepIndex = 0;
 
     /** Original TaskRequest params (set by GlobalTaskPool.assign). Used by EmitEventOp template resolution. */
-    public Map<String, String> taskParams = null;
+    public Map<String, JsonElement> taskParams = null;
 
     /** Local execution state. */
     public ExecutorState state = ExecutorState.IDLE;

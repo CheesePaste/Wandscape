@@ -1,0 +1,624 @@
+package com.wsteam.wandscape.core.task;
+
+import java.util.*;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.types.*;
+
+/**
+ * Runtime interpreter for the Blueprint DSL.
+ *
+ * <p>Evaluates a {@link BlueprintDefinition} against concrete {@code params}
+ * and produces a flat {@link TaskSequence} of {@link AtomicOp}s.
+ *
+ * <p>Key behaviors:
+ * <ul>
+ *   <li><b>Expressions</b> are evaluated bottom-up against the current context
+ *       (blueprint params + loop variables).</li>
+ *   <li><b>{@code for_each}</b> expands its body once per list element.</li>
+ *   <li><b>{@code if}</b> evaluates condition, then expands one branch.</li>
+ *   <li><b>{@code call}</b> macro-expands another blueprint's steps inline,
+ *       with recursion detection.</li>
+ *   <li><b>{@code log}</b> emits engine log output directly (no AtomicOp).</li>
+ *   <li>All errors throw {@link BlueprintInterpretException}, which maps to
+ *       task FAILED state.</li>
+ * </ul>
+ */
+public final class BlueprintInterpreter {
+
+    private static final String TAG = "BlueprintInterp";
+
+    private final BlueprintRegistry registry;
+
+    public BlueprintInterpreter(BlueprintRegistry registry) {
+        this.registry = Objects.requireNonNull(registry, "registry must not be null");
+    }
+
+    /**
+     * Interpret a blueprint definition with the given params.
+     *
+     * @param definition the DSL AST to interpret
+     * @param params     the concrete parameter values (key = param name)
+     * @return a fully expanded TaskSequence ready for the task pool
+     * @throws BlueprintInterpretException on any DSL error
+     */
+    public TaskSequence interpret(BlueprintDefinition definition,
+                                  Map<String, JsonElement> params) {
+        Objects.requireNonNull(definition, "definition must not be null");
+        Objects.requireNonNull(params, "params must not be null");
+
+        // Validate required params
+        validateParams(definition, params);
+
+        // Create root context (immutable snapshot of supplied params)
+        Map<String, JsonElement> context = new HashMap<>(params);
+
+        // Expand root steps
+        Set<String> callStack = new HashSet<>();
+        callStack.add(definition.id());
+        List<AtomicOp> ops = expandSteps(definition.steps(), context, callStack);
+
+        String label = buildLabel(definition, params);
+        return new TaskSequence(ops, label);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Step expansion
+    // ─────────────────────────────────────────────────────────────────
+
+    private List<AtomicOp> expandSteps(List<StepNode> steps,
+                                        Map<String, JsonElement> context,
+                                        Set<String> callStack) {
+        List<AtomicOp> result = new ArrayList<>();
+        for (StepNode step : steps) {
+            result.addAll(expandStep(step, context, callStack));
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<AtomicOp> expandStep(StepNode step,
+                                       Map<String, JsonElement> context,
+                                       Set<String> callStack) {
+        return switch (step) {
+            case StepNode.PlaceStep s -> {
+                GridPos at = evalPos(s.at(), context, "place.at");
+                BlockType block = new BlockType(evalString(s.block(), context, "place.block"));
+                yield List.of(AtomicOp.TransformOp.place(at, block));
+            }
+            case StepNode.RemoveStep s -> {
+                GridPos at = evalPos(s.at(), context, "remove.at");
+                BlockType from = new BlockType(evalString(s.from(), context, "remove.from"));
+                yield List.of(AtomicOp.TransformOp.remove(at, from, Collections.emptyList()));
+            }
+            case StepNode.ConvertStep s -> {
+                GridPos at = evalPos(s.at(), context, "convert.at");
+                BlockType from = new BlockType(evalString(s.from(), context, "convert.from"));
+                BlockType to = new BlockType(evalString(s.to(), context, "convert.to"));
+                yield List.of(AtomicOp.TransformOp.convert(at, from, to));
+            }
+            case StepNode.BlockInteractStep s -> {
+                GridPos at = evalPos(s.at(), context, "block_interact.at");
+                InteractAction action = new InteractAction(s.action());
+                yield List.of(new AtomicOp.BlockInteractOp(at, action));
+            }
+            case StepNode.EntityInteractStep s -> {
+                String targetStr = evalString(s.target(), context, "entity_interact.target");
+                EntityId target = new EntityId(parseEntityId(targetStr));
+                EffectId effect = new EffectId(evalString(s.effect(), context, "entity_interact.effect"));
+                int strength = evalInt(s.strength(), context, "entity_interact.strength");
+                int duration = evalInt(s.duration(), context, "entity_interact.duration");
+                yield List.of(new AtomicOp.EntityInteractOp(target, effect, strength, duration));
+            }
+            case StepNode.RitualStep s -> {
+                RitualId ritual = new RitualId(evalString(s.ritual(), context, "ritual.ritual"));
+                GridPos at = evalPos(s.at(), context, "ritual.at");
+                int ticks = evalInt(s.channelTicks(), context, "ritual.channel_ticks");
+                yield List.of(new AtomicOp.RitualOp(ritual, at, ticks));
+            }
+            case StepNode.RequestResourceStep s -> {
+                String resource = evalString(s.resource(), context, "request_resource.resource");
+                int amount = evalInt(s.amount(), context, "request_resource.amount");
+                yield List.of(new AtomicOp.ResourceRequestOp(
+                        new ResourceStack(new ResourceId(resource), amount)));
+            }
+            case StepNode.EmitEventStep s -> {
+                String event = evalString(s.event(), context, "emit_event.event");
+                Map<String, String> data = new LinkedHashMap<>();
+                for (var entry : s.data().entrySet()) {
+                    data.put(entry.getKey(),
+                            evalString(entry.getValue(), context, "emit_event.data." + entry.getKey()));
+                }
+                yield List.of(new AtomicOp.EmitEventOp(event, data));
+            }
+            case StepNode.ForEachStep s -> expandForEach(s, context, callStack);
+            case StepNode.IfStep s -> expandIf(s, context, callStack);
+            case StepNode.CallStep s -> expandCall(s, context, callStack);
+            case StepNode.LogStep s -> {
+                String text = evalString(s.text(), context, "log.text");
+                String level = s.level();
+                switch (level) {
+                    case "warn" -> Log.warn(TAG, "%s", text);
+                    case "debug" -> Log.debug(TAG, "%s", text);
+                    default -> Log.info(TAG, "%s", text);
+                }
+                yield List.of(); // No AtomicOp
+            }
+        };
+    }
+
+    // ── for_each ──
+
+    private List<AtomicOp> expandForEach(StepNode.ForEachStep step,
+                                          Map<String, JsonElement> context,
+                                          Set<String> callStack) {
+        JsonElement listEl = evaluate(step.list(), context);
+
+        if (!listEl.isJsonArray()) {
+            throw new BlueprintInterpretException(
+                    "for_each list must evaluate to an array, got: " + listEl);
+        }
+
+        // Shadowing detection: loop var must not hide outer var
+        if (context.containsKey(step.var())) {
+            throw new BlueprintInterpretException(
+                    "for_each variable '" + step.var() + "' shadows an existing variable");
+        }
+
+        JsonArray array = listEl.getAsJsonArray();
+        List<AtomicOp> result = new ArrayList<>();
+
+        for (JsonElement element : array) {
+            // Create inner context with loop variable bound
+            Map<String, JsonElement> innerContext = new HashMap<>(context);
+            innerContext.put(step.var(), element);
+            result.addAll(expandSteps(step.steps(), innerContext, callStack));
+        }
+
+        return result;
+    }
+
+    // ── if ──
+
+    private List<AtomicOp> expandIf(StepNode.IfStep step,
+                                     Map<String, JsonElement> context,
+                                     Set<String> callStack) {
+        String conditionName = evalString(step.condition(), context, "if.condition");
+
+        // Build condition params map
+        Map<String, String> condParams = new LinkedHashMap<>();
+        for (var entry : step.params().entrySet()) {
+            condParams.put(entry.getKey(),
+                    evalString(entry.getValue(), context, "if.params." + entry.getKey()));
+        }
+
+        // Determine which branch to take.
+        // The actual condition evaluation happens at op-execution time
+        // (by the IfConditionExecutor looking up the condition evaluator).
+        // We emit both branches separated by an IfConditionOp.
+        List<AtomicOp> thenOps = expandSteps(step.thenSteps(), context, callStack);
+        List<AtomicOp> elseOps = expandSteps(step.elseSteps(), context, callStack);
+
+        List<AtomicOp> result = new ArrayList<>();
+
+        if (step.elseInvert()) {
+            // elseInvert: swap then/else semantics relative to condition
+            // → condition=false → skip then → jump to else
+            result.addAll(thenOps);
+            // IfConditionOp with elseSkip=true: skip when condition=false
+            result.add(new AtomicOp.IfConditionOp(conditionName, condParams,
+                    elseOps.size(), true));
+            result.addAll(elseOps);
+        } else {
+            // Normal: condition=true → skip else → jump to then
+            result.addAll(thenOps);
+            // IfConditionOp with elseSkip=false: skip when condition=true
+            result.add(new AtomicOp.IfConditionOp(conditionName, condParams,
+                    elseOps.size(), false));
+            result.addAll(elseOps);
+        }
+
+        return result;
+    }
+
+    // ── call ──
+
+    private List<AtomicOp> expandCall(StepNode.CallStep step,
+                                       Map<String, JsonElement> context,
+                                       Set<String> callStack) {
+        String calleeId = evalString(step.blueprintId(), context, "call.blueprint");
+
+        // Recursion detection
+        if (callStack.contains(calleeId)) {
+            throw new BlueprintInterpretException(
+                    "Recursive call detected: " + calleeId
+                    + " is already in the call stack " + callStack);
+        }
+
+        // Look up the callee blueprint
+        Blueprint calleeBp = registry.get(calleeId);
+        if (calleeBp == null) {
+            throw new BlueprintInterpretException(
+                    "Unknown blueprint in call: " + calleeId);
+        }
+
+        // The callee must be a DSL blueprint (BlueprintSteps wrapping a definition)
+        // For now, only DSL blueprints support macro expansion.
+        // Legacy Java lambda blueprints cannot be macro-expanded.
+        // TODO: add BlueprintDefinition to Blueprint record for DSL blueprints
+        throw new BlueprintInterpretException(
+                "call step requires a DSL blueprint with BlueprintDefinition. "
+                + "Legacy lambda blueprints cannot be macro-expanded: " + calleeId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Expression evaluation
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Evaluate an expression node against the given context.
+     * Returns the resulting JsonElement.
+     */
+    JsonElement evaluate(ExprNode expr, Map<String, JsonElement> context) {
+        return switch (expr) {
+            case ExprNode.LiteralString s -> new JsonPrimitive(s.value());
+            case ExprNode.LiteralInt i -> new JsonPrimitive(i.value());
+            case ExprNode.LiteralPos p -> posToJson(p.value());
+            case ExprNode.LiteralListPos l -> {
+                JsonArray arr = new JsonArray();
+                for (GridPos p : l.value()) arr.add(posToJson(p));
+                yield arr;
+            }
+            case ExprNode.LiteralListString l -> {
+                JsonArray arr = new JsonArray();
+                for (String s : l.value()) arr.add(new JsonPrimitive(s));
+                yield arr;
+            }
+            case ExprNode.LiteralMap m -> {
+                JsonObject obj = new JsonObject();
+                for (var entry : m.value().entrySet()) {
+                    obj.addProperty(entry.getKey(), entry.getValue());
+                }
+                yield obj;
+            }
+            case ExprNode.Var v -> {
+                JsonElement val = context.get(v.name());
+                if (val == null) {
+                    throw new BlueprintInterpretException(
+                            "Undefined variable: $" + v.name());
+                }
+                yield val;
+            }
+            case ExprNode.FieldAccess f -> {
+                GridPos pos = evalPos(f.target(), context, "fieldAccess");
+                yield switch (f.field()) {
+                    case "x" -> new JsonPrimitive(pos.x());
+                    case "y" -> new JsonPrimitive(pos.y());
+                    case "z" -> new JsonPrimitive(pos.z());
+                    default -> throw new BlueprintInterpretException(
+                            "Unknown field: " + f.field() + " (expected x, y, or z)");
+                };
+            }
+            case ExprNode.Add a -> evalArithmetic(a.left(), a.right(), context, true);
+            case ExprNode.Sub s -> {
+                int left = evalInt(s.left(), context, "sub.left");
+                int right = evalInt(s.right(), context, "sub.right");
+                yield new JsonPrimitive(left - right);
+            }
+            case ExprNode.Mul m -> {
+                int left = evalInt(m.left(), context, "mul.left");
+                int right = evalInt(m.right(), context, "mul.right");
+                yield new JsonPrimitive(left * right);
+            }
+            case ExprNode.Eq e -> evalCompare(e.left(), e.right(), context, "==");
+            case ExprNode.Neq e -> evalCompare(e.left(), e.right(), context, "!=");
+            case ExprNode.Gt e -> evalCompare(e.left(), e.right(), context, ">");
+            case ExprNode.Lt e -> evalCompare(e.left(), e.right(), context, "<");
+            case ExprNode.Gte e -> evalCompare(e.left(), e.right(), context, ">=");
+            case ExprNode.Lte e -> evalCompare(e.left(), e.right(), context, "<=");
+            case ExprNode.MapGet g -> evalMapGet(g, context);
+            case ExprNode.Size s -> evalSize(s, context);
+            case ExprNode.Format f -> evalFormat(f, context);
+            case ExprNode.KeyOf k -> {
+                GridPos pos = evalPos(k.target(), context, "keyof");
+                yield new JsonPrimitive(pos.x() + "," + pos.y() + "," + pos.z());
+            }
+        };
+    }
+
+    // ── Arithmetic helpers ──
+
+    private JsonElement evalArithmetic(ExprNode left, ExprNode right,
+                                        Map<String, JsonElement> context,
+                                        boolean isAdd) {
+        JsonElement l = evaluate(left, context);
+        JsonElement r = evaluate(right, context);
+
+        // pos + pos → pos
+        if (isAdd && l.isJsonArray() && r.isJsonArray()) {
+            GridPos lp = jsonToPos(l, "add.left");
+            GridPos rp = jsonToPos(r, "add.right");
+            return posToJson(new GridPos(lp.x() + rp.x(), lp.y() + rp.y(), lp.z() + rp.z()));
+        }
+
+        // int + int or int - int
+        int li = jsonToInt(l, isAdd ? "add.left" : "sub.left");
+        int ri = jsonToInt(r, isAdd ? "add.right" : "sub.right");
+        return new JsonPrimitive(isAdd ? li + ri : li - ri);
+    }
+
+    // ── Comparison ──
+
+    private JsonElement evalCompare(ExprNode left, ExprNode right,
+                                     Map<String, JsonElement> context,
+                                     String op) {
+        JsonElement l = evaluate(left, context);
+        JsonElement r = evaluate(right, context);
+
+        // If both are int-typed, compare as ints
+        if (isIntLike(l) && isIntLike(r)) {
+            int li = jsonToInt(l, "compare.left");
+            int ri = jsonToInt(r, "compare.right");
+            return new JsonPrimitive(compareInts(li, ri, op));
+        }
+
+        // Otherwise compare as strings
+        String ls = jsonToString(l);
+        String rs = jsonToString(r);
+        int cmp = ls.compareTo(rs);
+        return new JsonPrimitive(compareInts(cmp, 0, op));
+    }
+
+    private static boolean compareInts(int a, int b, String op) {
+        return switch (op) {
+            case "==" -> a == b;
+            case "!=" -> a != b;
+            case ">"  -> a > b;
+            case "<"  -> a < b;
+            case ">=" -> a >= b;
+            case "<=" -> a <= b;
+            default   -> throw new BlueprintInterpretException("Unknown comparison: " + op);
+        };
+    }
+
+    // ── Map get ──
+
+    private JsonElement evalMapGet(ExprNode.MapGet g, Map<String, JsonElement> context) {
+        JsonElement mapEl = evaluate(g.map(), context);
+        if (!mapEl.isJsonObject()) {
+            throw new BlueprintInterpretException(
+                    "MapGet: map must evaluate to an object, got: " + mapEl);
+        }
+        JsonElement keyEl = evaluate(g.key(), context);
+
+        // Implicit conversion: pos → string via toKey()
+        String keyStr;
+        if (keyEl.isJsonArray()) {
+            // It's a pos — convert to "x,y,z" format
+            GridPos pos = jsonToPos(keyEl, "mapGet.key");
+            keyStr = pos.x() + "," + pos.y() + "," + pos.z();
+        } else {
+            keyStr = jsonToString(keyEl);
+        }
+
+        JsonElement result = mapEl.getAsJsonObject().get(keyStr);
+        if (result == null) {
+            Log.warn(TAG, "MapGet: key '%s' not found in map, using empty string", keyStr);
+            return new JsonPrimitive("");
+        }
+        return result;
+    }
+
+    // ── Size ──
+
+    private JsonElement evalSize(ExprNode.Size s, Map<String, JsonElement> context) {
+        JsonElement target = evaluate(s.target(), context);
+        if (!target.isJsonArray()) {
+            throw new BlueprintInterpretException(
+                    "size: target must be an array, got: " + target);
+        }
+        return new JsonPrimitive(target.getAsJsonArray().size());
+    }
+
+    // ── Format ──
+
+    private JsonElement evalFormat(ExprNode.Format f, Map<String, JsonElement> context) {
+        String template = evalString(f.template(), context, "format.template");
+        List<String> argStrings = new ArrayList<>();
+        for (int i = 0; i < f.args().size(); i++) {
+            argStrings.add(evalString(f.args().get(i), context, "format.arg[" + i + "]"));
+        }
+
+        // Replace {} placeholders sequentially
+        StringBuilder result = new StringBuilder();
+        int argIndex = 0;
+        int placeholder = template.indexOf("{}");
+        int lastEnd = 0;
+        while (placeholder >= 0 && argIndex < argStrings.size()) {
+            result.append(template, lastEnd, placeholder);
+            result.append(argStrings.get(argIndex));
+            argIndex++;
+            lastEnd = placeholder + 2;
+            placeholder = template.indexOf("{}", lastEnd);
+        }
+        result.append(template.substring(lastEnd));
+
+        return new JsonPrimitive(result.toString());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Typed evaluation conveniences
+    // ─────────────────────────────────────────────────────────────────
+
+    private String evalString(ExprNode expr, Map<String, JsonElement> context,
+                              String fieldPath) {
+        JsonElement val = evaluate(expr, context);
+        return jsonToString(val);
+    }
+
+    private int evalInt(ExprNode expr, Map<String, JsonElement> context,
+                        String fieldPath) {
+        JsonElement val = evaluate(expr, context);
+        return jsonToInt(val, fieldPath);
+    }
+
+    private GridPos evalPos(ExprNode expr, Map<String, JsonElement> context,
+                            String fieldPath) {
+        JsonElement val = evaluate(expr, context);
+        return jsonToPos(val, fieldPath);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // JsonElement conversion helpers
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Convert a JsonElement to a string (with implicit int→string and pos→string). */
+    static String jsonToString(JsonElement el) {
+        if (el.isJsonPrimitive()) {
+            return el.getAsString();
+        }
+        if (el.isJsonArray()) {
+            // pos → "x,y,z" implicit conversion
+            GridPos pos = jsonToPos(el, "implicit");
+            return pos.x() + "," + pos.y() + "," + pos.z();
+        }
+        // Object → JSON representation
+        return el.toString();
+    }
+
+    /** Convert a JsonElement to int (with implicit string→int parsing). */
+    static int jsonToInt(JsonElement el, String fieldPath) {
+        if (el.isJsonPrimitive()) {
+            JsonPrimitive prim = el.getAsJsonPrimitive();
+            try {
+                if (prim.isNumber()) return prim.getAsInt();
+                if (prim.isString()) return Integer.parseInt(prim.getAsString());
+            } catch (NumberFormatException e) {
+                throw new BlueprintInterpretException(
+                        "Cannot parse as int: " + el + " at " + fieldPath);
+            }
+        }
+        throw new BlueprintInterpretException(
+                "Expected int value at " + fieldPath + ", got: " + el);
+    }
+
+    /** Convert a JsonElement to GridPos. */
+    static GridPos jsonToPos(JsonElement el, String fieldPath) {
+        if (!el.isJsonArray()) {
+            throw new BlueprintInterpretException(
+                    "Expected pos [x,y,z] at " + fieldPath + ", got: " + el);
+        }
+        JsonArray arr = el.getAsJsonArray();
+        if (arr.size() != 3) {
+            throw new BlueprintInterpretException(
+                    "Expected pos [x,y,z] with 3 elements at " + fieldPath
+                    + ", got " + arr.size() + " elements: " + arr);
+        }
+        return new GridPos(arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt());
+    }
+
+    /** Convert a GridPos to a JSON array [x,y,z]. */
+    static JsonArray posToJson(GridPos pos) {
+        JsonArray arr = new JsonArray();
+        arr.add(pos.x());
+        arr.add(pos.y());
+        arr.add(pos.z());
+        return arr;
+    }
+
+    /** Check if a JsonElement looks like an integer (for comparison type dispatch). */
+    private static boolean isIntLike(JsonElement el) {
+        return el.isJsonPrimitive() && el.getAsJsonPrimitive().isNumber();
+    }
+
+    /**
+     * Parse a string entity identifier to a long for {@link EntityId}.
+     * Tries UUID parsing first, then hash of the string.
+     * TODO: proper entity resolution by name/type when entity system is built.
+     */
+    private static long parseEntityId(String str) {
+        try {
+            return java.util.UUID.fromString(str).getMostSignificantBits();
+        } catch (IllegalArgumentException e) {
+            return str.hashCode(); // Fallback: use string hash as entity ID
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Validation & label
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Validate that all declared params are present. */
+    private void validateParams(BlueprintDefinition definition,
+                                 Map<String, JsonElement> params) {
+        for (var entry : definition.params().entrySet()) {
+            String name = entry.getKey();
+            ParamType type = entry.getValue();
+            if (!params.containsKey(name)) {
+                throw new BlueprintInterpretException(
+                        "Missing required param '" + name + "' (type: " + type
+                        + ") for blueprint '" + definition.id() + "'");
+            }
+            // Type checking is deferred to expression evaluation:
+            // when a step tries to use a param as a specific type (e.g. pos),
+            // the jsonToPos/jsonToInt methods will throw if the value is wrong.
+        }
+    }
+
+    /** Build a human-readable task label. */
+    private String buildLabel(BlueprintDefinition definition,
+                              Map<String, JsonElement> params) {
+        String label = definition.displayName();
+        if (label == null || label.isEmpty()) {
+            label = definition.id();
+        }
+
+        // Append anchor if present
+        JsonElement anchor = params.get("anchor");
+        if (anchor != null && anchor.isJsonArray()) {
+            try {
+                GridPos pos = jsonToPos(anchor, "label.anchor");
+                label += " at " + pos;
+            } catch (BlueprintInterpretException ignored) {
+                // Not a valid pos — skip appending
+            }
+        } else {
+            // Fallback to x/y/z
+            JsonElement x = params.get("x");
+            JsonElement y = params.get("y");
+            JsonElement z = params.get("z");
+            if (x != null && y != null && z != null) {
+                try {
+                    label += " at (" + jsonToInt(x, "x") + ", "
+                            + jsonToInt(y, "y") + ", " + jsonToInt(z, "z") + ")";
+                } catch (BlueprintInterpretException ignored) {
+                    // Skip
+                }
+            }
+        }
+        return label;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Exception type
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Thrown when blueprint interpretation fails.
+     * Maps to task FAILED state in the engine.
+     */
+    public static final class BlueprintInterpretException extends RuntimeException {
+        public BlueprintInterpretException(String message) {
+            super(message);
+        }
+
+        public BlueprintInterpretException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+}

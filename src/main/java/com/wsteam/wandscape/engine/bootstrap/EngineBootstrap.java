@@ -16,6 +16,7 @@ import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
 import com.wsteam.wandscape.core.system.TaskSource;
 import com.wsteam.wandscape.core.system.WarehouseSource;
 import com.wsteam.wandscape.core.system.WorkbenchSource;
+import com.wsteam.wandscape.core.task.BlueprintInterpreter;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
@@ -25,6 +26,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
+import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
 
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
@@ -45,15 +47,34 @@ public final class EngineBootstrap {
     public static World bootstrap() {
         LOGGER.info("CoreBootstrap bootstrap starting...");
 
-        // 1. Build blueprint registry and register build blueprints from JSON
+        // 1. Build blueprint registry
         BlueprintRegistry blueprints = new BlueprintRegistry();
 
-        // Register build blueprints from loaded BuildingConfigs (JSON-driven)
-        BuildingConfigLoader buildingConfigs = BuildingConfigLoader.getInstance();
-        for (BuildingConfig config : buildingConfigs.getAll().values()) {
-            blueprints.register("build:" + config.id(), DataDrivenSteps.fromConfig(config));
+        // 1a. Register DSL blueprints from JSON (BlueprintConfigLoader)
+        //     These are loaded by WandscapeDataLoader at startup / on /reload.
+        BlueprintConfigLoader bpConfigLoader = WandscapeEngine.getBlueprintConfigLoader();
+        if (bpConfigLoader != null) {
+            BlueprintInterpreter interpreter = new BlueprintInterpreter(blueprints);
+            bpConfigLoader.registerIn(blueprints, interpreter);
+            LOGGER.info("  registered {} DSL blueprints from JSON",
+                    bpConfigLoader.getAll().size());
         }
-        LOGGER.info("  registered {} build blueprints from BuildingConfig JSON", buildingConfigs.getAll().size());
+
+        // 1b. Legacy fallback: for buildings WITHOUT a blueprint ref,
+        //     register the old DataDrivenSteps version under "build:<id>".
+        BuildingConfigLoader buildingConfigs = BuildingConfigLoader.getInstance();
+        int legacyCount = 0;
+        for (BuildingConfig config : buildingConfigs.getAll().values()) {
+            if (config.blueprint() == null) {
+                // No blueprint ref → use legacy DataDrivenSteps
+                blueprints.register("build:" + config.id(), DataDrivenSteps.fromConfig(config));
+                legacyCount++;
+            }
+        }
+        if (legacyCount > 0) {
+            LOGGER.info("  registered {} legacy build blueprints from BuildingConfig JSON (no blueprint ref)",
+                    legacyCount);
+        }
 
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
 

@@ -11,6 +11,9 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -154,11 +157,11 @@ public class EventDrivenTaskSource implements TaskSource {
         lastGatherRequest.put(resource, now);
 
         GridPos loc = defaultLocation.get();
-        Map<String, String> params = new HashMap<>();
-        params.put("amount", String.valueOf(finalAmount));
-        params.put("x", String.valueOf(loc.x()));
-        params.put("y", String.valueOf(loc.y()));
-        params.put("z", String.valueOf(loc.z()));
+        Map<String, JsonElement> params = new HashMap<>();
+        params.put("amount", new JsonPrimitive(finalAmount));
+        params.put("x", new JsonPrimitive(loc.x()));
+        params.put("y", new JsonPrimitive(loc.y()));
+        params.put("z", new JsonPrimitive(loc.z()));
 
         long taskId = taskPool.addTask(new TaskRequest(blueprintId, params, priority));
         Log.info(TAG, "%s → task #%d gather:%s amount=%d inFlight=%d gap=%d pri=%d",
@@ -166,11 +169,11 @@ public class EventDrivenTaskSource implements TaskSource {
     }
 
     private void onMobNearby(MobNearby e) {
-        Map<String, String> params = new HashMap<>();
-        params.put("mobCount", String.valueOf(e.count()));
-        params.put("x", String.valueOf(e.pos().x()));
-        params.put("y", String.valueOf(e.pos().y()));
-        params.put("z", String.valueOf(e.pos().z()));
+        Map<String, JsonElement> params = new HashMap<>();
+        params.put("mobCount", new JsonPrimitive(e.count()));
+        params.put("x", new JsonPrimitive(e.pos().x()));
+        params.put("y", new JsonPrimitive(e.pos().y()));
+        params.put("z", new JsonPrimitive(e.pos().z()));
 
         long taskId = taskPool.addTask(new TaskRequest(
                 "ritual:defense",
@@ -214,7 +217,8 @@ public class EventDrivenTaskSource implements TaskSource {
 
         // Defense ritual
         registry.register("ritual:defense", (BlueprintSteps) params -> {
-            String count = params.getOrDefault("mobCount", "1");
+            String count = params.containsKey("mobCount")
+                    ? params.get("mobCount").getAsString() : "1";
             GridPos loc = parseLocation(params);
             return new TaskSequence(
                     List.of(new AtomicOp.RitualOp(RitualId.WARDING, loc, 3)),
@@ -225,8 +229,8 @@ public class EventDrivenTaskSource implements TaskSource {
     }
 
     private static TaskSequence gatherSteps(ResourceId resource, BlockType visualBlock,
-                                             Map<String, String> params) {
-        int amount = Integer.parseInt(params.getOrDefault("amount", "16"));
+                                             Map<String, JsonElement> params) {
+        int amount = params.containsKey("amount") ? params.get("amount").getAsInt() : 16;
         GridPos loc = parseLocation(params);
         return new TaskSequence(
                 List.of(
@@ -237,13 +241,13 @@ public class EventDrivenTaskSource implements TaskSource {
     }
 
     /** Parse a GridPos from x/y/z params. Returns ORIGIN if missing. */
-    private static GridPos parseLocation(Map<String, String> params) {
+    private static GridPos parseLocation(Map<String, JsonElement> params) {
         try {
-            int x = Integer.parseInt(params.getOrDefault("x", "0"));
-            int y = Integer.parseInt(params.getOrDefault("y", "0"));
-            int z = Integer.parseInt(params.getOrDefault("z", "0"));
+            int x = params.containsKey("x") ? params.get("x").getAsInt() : 0;
+            int y = params.containsKey("y") ? params.get("y").getAsInt() : 0;
+            int z = params.containsKey("z") ? params.get("z").getAsInt() : 0;
             return new GridPos(x, y, z);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | IllegalStateException e) {
             return GridPos.ORIGIN;
         }
     }
