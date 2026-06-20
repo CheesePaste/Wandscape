@@ -213,11 +213,14 @@ public class AsyncTickGatingTest {
     }
 
     // ===================================================================
-    // 4. Integration: gating interacts correctly with engine tick
+    // 4. Per-NPC isolation: concurrent async ops do NOT block other NPCs
     // ===================================================================
+    // V2.6: The global gate (hasPendingAsyncOps → skip engine tick) was removed.
+    // Per-NPC isolation via TaskExecutor.pendingFuture handles concurrency:
+    // each NPC independently waits for its own future; other NPCs keep running.
 
     @Nested
-    class GatingIntegrationTests {
+    class PerNpcIsolationTests {
         private World world;
 
         @BeforeEach
@@ -226,69 +229,44 @@ public class AsyncTickGatingTest {
         }
 
         @Test
-        void gateDoesNotBlockWhenNoOpStarted() {
-            // Simulate Wandscape.onServerTick:
-            // if (world.hasPendingAsyncOps()) return;
-            // world.tick(1.0f);
-            for (int i = 0; i < 100; i++) {
-                if (world.hasPendingAsyncOps()) {
-                    fail("Gate should NOT block when no async ops are in flight");
-                }
-                // world.tick(1.0f) would run here
-            }
-        }
+        void hasPendingAsyncOps_isDiagnostic_notBlocking() {
+            assertFalse(world.hasPendingAsyncOps());
 
-        @Test
-        void gateBlocksUntilAllResolved_thenAdvances() {
-            // Scenario: 2 MoveOps start, engine tick skipped until both complete
-            CompletableFuture<Void> move1 = world.startAsyncOp("move_npc1_to_10_64_5");
-            CompletableFuture<Void> move2 = world.startAsyncOp("move_npc2_to_20_64_8");
+            CompletableFuture<Void> move1 = world.startAsyncOp("move_npc1");
+            CompletableFuture<Void> move2 = world.startAsyncOp("move_npc2");
+            assertTrue(world.hasPendingAsyncOps());
 
-            int skippedTicks = 0;
-            int engineTicks = 0;
-
-            // MC tick 1-5: gate blocked
-            for (int i = 0; i < 5; i++) {
-                if (world.hasPendingAsyncOps()) {
-                    skippedTicks++;
-                } else {
-                    engineTicks++;
-                }
-            }
-            assertEquals(5, skippedTicks);
-            assertEquals(0, engineTicks, "Engine should NOT advance while ops in-flight");
-
-            // Both ops resolve
             move1.complete(null);
-            move2.complete(null);
+            assertTrue(world.hasPendingAsyncOps());
 
-            // MC tick 6: gate open → engine advances
-            if (!world.hasPendingAsyncOps()) {
-                engineTicks++;
-            }
-            assertEquals(1, engineTicks, "Engine should advance after all ops resolved");
+            move2.complete(null);
+            assertFalse(world.hasPendingAsyncOps());
         }
 
         @Test
-        void gateReopensOnlyAfterAllOpsResolve_notAfterFirst() {
-            CompletableFuture<Void> f1 = world.startAsyncOp("move_a");
-            CompletableFuture<Void> f2 = world.startAsyncOp("move_b");
+        void pendingFuturesTrackAllInFlightOps() {
+            CompletableFuture<Void> f1 = world.startAsyncOp("op_a");
+            CompletableFuture<Void> f2 = world.startAsyncOp("op_b");
+            CompletableFuture<Void> f3 = world.startAsyncOp("op_c");
 
-            // MC tick while f1 is done but f2 is pending
+            assertTrue(world.hasPendingAsyncOps());
+
             f1.complete(null);
-
-            int engineTicks = 0;
-            for (int i = 0; i < 10; i++) {
-                if (!world.hasPendingAsyncOps()) {
-                    engineTicks++;
-                }
-            }
-            assertEquals(0, engineTicks,
-                    "Gate should stay closed: f1 done but f2 still pending");
-
+            assertTrue(world.hasPendingAsyncOps());
             f2.complete(null);
-            assertFalse(world.hasPendingAsyncOps(),
-                    "Both done → gate open");
+            assertTrue(world.hasPendingAsyncOps());
+            f3.complete(null);
+            assertFalse(world.hasPendingAsyncOps());
+        }
+
+        @Test
+        void engineTickRunsEvenWithPendingOps() {
+            // V2.6: hasPendingAsyncOps no longer gates the engine tick.
+            // NPC A can be navigating while NPC B executes ops.
+            // Wandscape.onServerTick always calls world.tick().
+            world.startAsyncOp("npc_a_navigating");
+            assertTrue(world.hasPendingAsyncOps());
+            // Engine tick would still proceed here — no gate check
         }
     }
 

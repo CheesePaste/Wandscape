@@ -225,15 +225,10 @@ public class Wandscape {
         var asyncExec = WandscapeEngine.getAsyncExecutor();
         if (asyncExec != null) asyncExec.tickAll();
 
-        // ③ Sync MC entity positions → ECS (always, even when gate is closed)
+        // ③ Sync MC entity positions → ECS (always)
         EntityComponentBridge.INSTANCE.syncPositions(world);
 
-        // ④ Gate: skip engine tick when async ops are in flight
-        if (world.hasPendingAsyncOps()) {
-            return;
-        }
-
-        // ⑤ Engine logic tick
+        // ④ Engine logic tick
         engineTickCount++;
         world.tick(1.0f);
 
