@@ -46,9 +46,11 @@ The engine uses an **ECS** (Entity-Component-System) architecture with a **Bluep
 ### 1. Task Creation
 ```
 TaskSource.poll() or EventDrivenTaskSource.onEvent()
-  └─► TaskRequest(blueprintId, params, priority)
+  └─► TaskRequest(blueprintId, params{JsonElement}, priority)
       └─► BlueprintRegistry.compile()
-          └─► Blueprint.steps.generate(params) → TaskSequence
+          ├─ DSL Blueprint: BlueprintInterpreter.interpret(definition, params)
+          │     └─► evaluate ExprNodes → expand for_each/if/call → TaskSequence
+          └─ Legacy Lambda: BlueprintSteps.generate(params) → TaskSequence
           └─► CompiledBlueprint(sequence, triggers)
               └─► GlobalTaskPool.addTask() → GlobalTask
 ```

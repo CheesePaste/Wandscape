@@ -54,24 +54,30 @@
 | `DefaultOpExecutors.java` | 注册所有默认同步执行器 + 内置条件求值器 (`resource_below` / `inventory_has` / `inventory_full`) |
 | `ConditionEvaluator.java` | `@FunctionalInterface`：条件求值器，按名注册到 OpExecutorRegistry |
 
-## task/ — 任务系统 (14 文件)
+## task/ — 任务系统 (19 文件, 含 5 个 Blueprint DSL 类型)
 
 | 文件 | 作用 |
 |------|------|
 | `TaskState.java` | 枚举：PENDING_APPROVAL → PENDING_ASSIGN → IN_PROGRESS → AWAITING_RESOURCES / INTERRUPTED / COMPLETED |
 | `ExecutorState.java` | 枚举：IDLE / ACTIVE / WAITING（NPC 本地状态，区别于 GlobalTask 生命周期） |
-| `TaskRequest.java` | record：blueprintId + params(k-v map) + priority，TaskSource → pool 的请求 |
+| `TaskRequest.java` | record：blueprintId + params(Map\<String, JsonElement\>) + priority，TaskSource → pool 的请求 |
 | `TaskSequence.java` | record：不可变 AtomicOp 列表 + label |
-| `BlueprintSteps.java` | `@FunctionalInterface`：从 task params 生成 TaskSequence |
+| `BlueprintSteps.java` | `@FunctionalInterface`：`TaskSequence generate(Map<String, JsonElement> params)` |
 | `TriggerDeclaration.java` | record：事件触发声明 — "事件 X 匹配 → 用 template 参数编译蓝图 Y 为新任务" |
 | `Blueprint.java` | record：id + BlueprintSteps 生成器 + TriggerDeclaration 列表 |
 | `BlueprintRegistry.java` | 蓝图注册表 + `TaskCompiler` 实现：TaskRequest → CompiledBlueprint |
 | `CompiledBlueprint.java` | record：编译产物 = TaskSequence + TriggerDeclaration 列表 |
 | `TaskCompiler.java` | `@FunctionalInterface`：TaskRequest → CompiledBlueprint |
-| `GlobalTask.java` | 全局任务：lifecycle 状态 / 分配 NPC / stepIndex / TriggerDeclaration / EventBus 订阅 / 中断记录 / 审批信息 |
+| `GlobalTask.java` | 全局任务：lifecycle 状态 / 分配 NPC / stepIndex / TriggerDeclaration / EventBus 订阅 / 中断记录 / 审批信息。`taskParams` 为 `Map<String, JsonElement>` |
 | `GlobalTaskPool.java` | **中央任务池**：创建 / 审批 / 分配 / 推进 / 完成 / 资源等待 / 事件→任务翻译 / 去重 |
 | `InterruptRecord.java` | record：npcId + timestamp + interruption stepIndex |
 | `ApprovalInfo.java` | record：大任务审批元数据 |
+| **Blueprint DSL 类型 (5 新增)** | |
+| `BlueprintDefinition.java` | record：DSL AST 根对象（id + params + steps + displayName + description） |
+| `BlueprintInterpreter.java` | 运行时解释器：解析表达式 AST → 展开 for_each/if/call → 生成 TaskSequence。含递归检测、变量遮蔽检测、隐式类型转换 |
+| `ExprNode.java` | sealed interface：21 种表达式 AST 节点（6 字面量 + Var + FieldAccess + 算术 + 比较 + MapGet + Size + Format + KeyOf） |
+| `StepNode.java` | sealed interface：12 种 DSL 步骤类型（Place/Remove/Convert/BlockInteract/EntityInteract/Ritual/RequestResource/EmitEvent + ForEach/If/Call/Log） |
+| `ParamType.java` | sealed interface：6 种强类型参数声明（string/int/pos/list\<pos\>/list\<string\>/map\<string,string\>），含隐式转换规则 |
 
 ## system/ — ECS 系统 + TaskSource (11 文件)
 
@@ -85,7 +91,7 @@
 | `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → mana 检查 → dispatch → 异步等待 / 同步推进 |
 | `SystemBlueprintSystem.java` | ⑤ 每 tick 驱动系统蓝图（非全局任务池的基础设施任务），批量纯 Op，一个副作用 Op/tick |
 | `TaskSource.java` | 接口：`pollIntervalTicks()` + `poll(World, GlobalTaskPool)` |
-| `BuildingTaskSource.java` | 在 `engine/source/` — 轮询建筑 BE 队列（每 20 tick）|
+| `BuildingTaskSource.java` | 在 `engine/source/` — 轮询建筑 BE 队列（每 20 tick）。params 为 JsonElement，通过 EnqueueHelper 构造 |
 | `WarehouseSource.java` | V1 stub：监视仓库资源低于阈值时 emit ResourceLow 事件 |
 | `WorkbenchSource.java` | V1 stub：监视工作站生产队列 |
 | `PlayerManualSource.java` | 玩家手动发布任务（poll 为空，外部 push） |
@@ -132,7 +138,7 @@
 ```
 src/test/java/com/wsteam/wandscape/core/
 ├── ecs/          WorldEcsTest (5)
-├── task/          GlobalTaskPoolTest, BlueprintRegistryTest, ...
+├── task/          GlobalTaskPoolTest, BlueprintRegistryTest, BlueprintInterpreterTest (26), ...
 ├── op/            DefaultOpExecutorsTest, ...
 ├── system/        SchedulerSystemTest, TaskExecutionSystemTest, ...
 ├── event/         SimpleEventBusTest, ...

@@ -21,9 +21,10 @@
 | 症状 | 先看 |
 |------|------|
 | `Scheduler heartbeat - no idle NPCs` | `06-npc.md` → EntityComponentBridge, `00-core-engine.md` → SchedulerSystem |
-| `Blueprint not found: build:xxx` | `01-engine-bridge.md` → DataDrivenSteps, 检查 BuildingConfig JSON 是否已加载 |
+| `Blueprint not found: build:xxx` | `01-engine-bridge.md` → 检查 BuildingConfig JSON 是否加载、是否有 blueprint ref（新 DSL）或无 ref 时的 DataDrivenSteps fallback（遗留） |
+| `Unknown blueprint in call: xxx` | `01-engine-bridge.md` → BlueprintConfigLoader 是否注册了被引用的 DSL 蓝图 |
 | `./gradlew test` 全红 | `00-core-engine.md` → 测试在 `src/test/java/.../core/` |
-| 建筑放了没反应 | `05-building.md` → BlockPlaceHandler, BuildingConfigLoader |
+| 建筑放了没反应 | `05-building.md` → BlockPlaceHandler, EnqueueHelper, BuildingConfigLoader |
 | NPC 位置不更新 | `06-npc.md` → EntityComponentBridge.syncPositions |
 | 法杖预设加载失败 | `03-wand.md` → WandPresetLoader |
 | 异步 Op 卡住不推进 | `01-engine-bridge.md` → AsyncTransformExecutor, `00-core-engine.md` → TaskExecutionSystem |
@@ -32,12 +33,12 @@
 
 ```
 src/main/java/com/wsteam/wandscape/
-├── core/       (57 文件) → 00-core-engine.md   纯 Java ECS 引擎
-├── engine/     ( 8 文件) → 01-engine-bridge.md MC 桥梁层
+├── core/       (62 文件) → 00-core-engine.md   纯 Java ECS 引擎
+├── engine/     ( 9 文件) → 01-engine-bridge.md MC 桥梁层
 ├── shared/     (39 文件) → 02-shared-api.md    接口 + 事件 + 数据类
 ├── wand/       ( 5 文件) → 03-wand.md          法杖
 ├── element/    ( 3 文件) → 04-element.md       元素映射
-├── building/   (11 文件) → 05-building.md      建筑
+├── building/   (12 文件) → 05-building.md      建筑
 ├── npc/        ( 5 文件) → 06-npc.md           NPC
 └── dataconfig/ ( 2 文件) → 07-data-config.md   JSON 加载框架
 ```
