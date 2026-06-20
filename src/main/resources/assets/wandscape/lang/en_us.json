@@ -2,6 +2,13 @@
   "itemGroup.wandscape": "Wandscape",
   "item.wandscape.wand": "Wand",
 
+  "block.wandscape.town_hall": "Town Hall",
+  "block.wandscape.forest_node": "Forest Node",
+  "block.wandscape.earth_node": "Earth Node",
+  "block.wandscape.grand_tower": "Grand Mage Tower",
+  "entity.wandscape.wandscape_npc": "Wizard",
+  "item.wandscape.wandscape_npc_spawn_egg": "Wizard Spawn Egg",
+
   "key.categories.wandscape": "Wandscape",
   "key.wandscape.demo": "Open UI Demo",
   "key.wandscape.ui_editor": "Open UI Editor",

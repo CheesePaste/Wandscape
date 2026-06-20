@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.be.EarthNodeBE;
 import com.wsteam.wandscape.building.be.ForestNodeBE;
+import com.wsteam.wandscape.building.be.GrandTowerBE;
 import com.wsteam.wandscape.building.be.TownHallBE;
 import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
 import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
@@ -100,6 +101,8 @@ public class Wandscape {
             () -> new WandscapeBuildingBlock(BUILDING_PROPS, ForestNodeBE.TYPE_ID, ForestNodeBE::new));
     public static final DeferredBlock<Block> EARTH_NODE_BLOCK = BLOCKS.register("earth_node",
             () -> new WandscapeBuildingBlock(BUILDING_PROPS, EarthNodeBE.TYPE_ID, EarthNodeBE::new));
+    public static final DeferredBlock<Block> GRAND_TOWER_BLOCK = BLOCKS.register("grand_tower",
+            () -> new WandscapeBuildingBlock(BUILDING_PROPS, GrandTowerBE.TYPE_ID, GrandTowerBE::new));
 
     // ---- 08 building-core: block items ----
     public static final DeferredItem<BlockItem> TOWN_HALL_ITEM =
@@ -108,6 +111,8 @@ public class Wandscape {
             ITEMS.registerSimpleBlockItem(FOREST_NODE_BLOCK);
     public static final DeferredItem<BlockItem> EARTH_NODE_ITEM =
             ITEMS.registerSimpleBlockItem(EARTH_NODE_BLOCK);
+    public static final DeferredItem<BlockItem> GRAND_TOWER_ITEM =
+            ITEMS.registerSimpleBlockItem(GRAND_TOWER_BLOCK);
 
     // ---- 08 building-core: block entities ----
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TownHallBE>> TOWN_HALL_BE =
@@ -119,6 +124,9 @@ public class Wandscape {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EarthNodeBE>> EARTH_NODE_BE =
             BLOCK_ENTITIES.register("earth_node", () ->
                     new BlockEntityType<>(EarthNodeBE::new, Set.of(EARTH_NODE_BLOCK.get()), null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<GrandTowerBE>> GRAND_TOWER_BE =
+            BLOCK_ENTITIES.register("grand_tower", () ->
+                    new BlockEntityType<>(GrandTowerBE::new, Set.of(GRAND_TOWER_BLOCK.get()), null));
 
     // ---- 07 npc-system: entity ----
     public static final DeferredHolder<EntityType<?>, EntityType<WandscapeNpc>> WANDSCAPE_NPC =
@@ -147,6 +155,7 @@ public class Wandscape {
                         output.accept(TOWN_HALL_ITEM.get());
                         output.accept(FOREST_NODE_ITEM.get());
                         output.accept(EARTH_NODE_ITEM.get());
+                        output.accept(GRAND_TOWER_ITEM.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
                     })
                     .build());

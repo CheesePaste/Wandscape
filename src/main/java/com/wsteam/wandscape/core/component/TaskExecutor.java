@@ -37,11 +37,19 @@ public class TaskExecutor {
 
     /**
      * Pending async future for the current step. Non-null means this step
-     * has been submitted (via executor.execute()) and is awaiting completion.
-     * The engine does NOT re-invoke execute() — when this future resolves,
-     * stepIndex advances directly.
+     * has been submitted (via executor.execute() or navigator) and is
+     * awaiting completion.
+     *
+     * <p>When the future resolves:
+     * <ul><li>If {@link #pendingFutureIsNav} is true: was a nav future — do NOT
+     *     advance stepIndex, just continue to execute the op.</li>
+     *     <li>If false: was an op execution future — advance stepIndex
+     *     (the op was already performed via the future's callback).</li></ul>
      */
     public CompletableFuture<Void> pendingFuture = null;
+
+    /** Whether the pending future is from navigation (not op execution). */
+    public boolean pendingFutureIsNav = false;
 
     /** Push an op to the back of the private queue. */
     public void pushPrivate(AtomicOp op) {
@@ -81,6 +89,7 @@ public class TaskExecutor {
         stepIndex = 0;
         taskParams = null;
         pendingFuture = null;
+        pendingFutureIsNav = false;
         state = ExecutorState.IDLE;
     }
 
@@ -91,6 +100,7 @@ public class TaskExecutor {
         stepIndex = 0;
         taskParams = null;
         pendingFuture = null;
+        pendingFutureIsNav = false;
         state = ExecutorState.IDLE;
     }
 }

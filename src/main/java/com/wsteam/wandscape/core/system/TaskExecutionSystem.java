@@ -39,7 +39,7 @@ import java.util.concurrent.CompletableFuture;
 public class TaskExecutionSystem implements System {
 
     private static final String TAG = "TaskExec";
-    private static final double NAV_RANGE_SQ = 6.25; // 2.5² — horizontal operating range
+    private static final double NAV_RANGE_SQ = 25.0; // 5² — horizontal operating range
     private static final RitualId ITEM_TELEPORT = new RitualId("item_teleport");
 
     private final GlobalTaskPool taskPool;
@@ -58,7 +58,16 @@ public class TaskExecutionSystem implements System {
 
         for (long npcId : npcs) {
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
-            if (exec == null || !exec.hasWork()) continue;
+            if (exec == null) continue;
+
+            // Cancel leaked navigation for idle NPCs
+            // (can happen if releaseGlobalTask is called externally, e.g. manual cancel)
+            if (!exec.hasWork()) {
+                if (exec.state == ExecutorState.IDLE && world.movementOps != null) {
+                    world.movementOps.cancelNavigation(npcId);
+                }
+                continue;
+            }
 
             processNpc(world, npcId, exec, registry);
         }
@@ -73,11 +82,17 @@ public class TaskExecutionSystem implements System {
                 if (!exec.pendingFuture.isDone()) {
                     return; // still waiting — skip this NPC
                 }
-                // Future resolved → advance step
-                Log.debug(TAG, "NPC %d - async op resolved, advancing step", npcId);
+                // Future resolved
+                Log.debug(TAG, "NPC %d — future resolved (wasNav=%b)", npcId, exec.pendingFutureIsNav);
                 exec.pendingFuture = null;
-                advanceStep(exec, npcId, 1);
-                continue; // process next op
+                if (!exec.pendingFutureIsNav) {
+                    // Op future (e.g. AsyncTransformExecutor delay) —
+                    // the op already executed via future's thenRun callback.
+                    advanceStep(exec, npcId, 1);
+                }
+                // Nav future → do NOT advance. Continue to re-check
+                // range (now in-range) and execute the operation.
+                continue; // process next op (or re-process same op after nav)
             }
 
             // ---- 2. Determine current AtomicOp ----
@@ -107,6 +122,15 @@ public class TaskExecutionSystem implements System {
                 }
             }
 
+            // ---- 3.5. No-op skip: TransformOp where target already has desired block ----
+            if (currentOp instanceof AtomicOp.TransformOp top && world.blockOps != null) {
+                if (world.blockOps.getBlock(top.target()).equals(top.to())) {
+                    advanceStep(exec, npcId, 1);
+                    exec.state = ExecutorState.ACTIVE;
+                    continue; // skip → next op (batch through consecutive no-ops)
+                }
+            }
+
             // ---- 4. Mana check ----
             boolean isPure = isPureOp(currentOp);
             if (!isPure) {
@@ -131,6 +155,7 @@ public class TaskExecutionSystem implements System {
                         CompletableFuture<Void> navFuture = mov.navigateTo(
                                 npcId, target.x(), target.y(), target.z());
                         exec.pendingFuture = navFuture;
+                        exec.pendingFutureIsNav = true;
                         Log.debug(TAG, "NPC %d — navigating to %s", npcId, target);
                         return; // wait for nav to resolve
                     }
@@ -170,6 +195,7 @@ public class TaskExecutionSystem implements System {
 
             // ---- 7. Not done (async op) — store and wait ----
             exec.pendingFuture = future;
+            exec.pendingFutureIsNav = false;
             Log.debug(TAG, "NPC %d - async op in-flight, waiting", npcId);
             return; // don't have exec.state=WAITING — the future IS the state
         }
