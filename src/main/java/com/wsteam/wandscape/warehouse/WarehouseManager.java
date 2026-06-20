@@ -15,6 +15,7 @@ import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.event.ResourceInsufficientEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.component.DataComponents;
@@ -22,6 +23,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.component.CustomData;
+import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -36,6 +38,10 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String CATEGORY_STORAGE = "storage";
+
+    // ── Event throttle: avoid flooding ResourceInsufficientEvent ──
+    private final Map<ResourceId, Long> lastShortageNotify = new java.util.HashMap<>();
+    private static final long SHORTAGE_NOTIFY_COOLDOWN_MS = 10_000; // 10 seconds per resource
 
     // ── MVP: Element → block item mapping ──
     // Full version will use ElementMappingLoader for reverse lookup.
@@ -159,7 +165,18 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         WarehouseBE be = findAnyWarehouse();
         if (be == null) return false;
         ItemKey key = resourceToItemKey(resource);
-        return key != null && be.available(key) >= amount;
+        if (key == null) return false;
+        long avail = be.available(key);
+        if (avail >= amount) return true;
+
+        // Fire event with cooldown throttle
+        long now = System.currentTimeMillis();
+        long last = lastShortageNotify.getOrDefault(resource, 0L);
+        if (now - last >= SHORTAGE_NOTIFY_COOLDOWN_MS) {
+            lastShortageNotify.put(resource, now);
+            NeoForge.EVENT_BUS.post(new ResourceInsufficientEvent(resource, amount, (int) avail));
+        }
+        return false;
     }
 
     @Override

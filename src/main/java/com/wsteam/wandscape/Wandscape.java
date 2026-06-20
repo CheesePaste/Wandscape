@@ -24,6 +24,7 @@ import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.warehouse.WarehouseBE;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.mojang.brigadier.CommandDispatcher;
 
@@ -226,6 +227,7 @@ public class Wandscape {
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(BlockPlaceHandler.class);
+        WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
