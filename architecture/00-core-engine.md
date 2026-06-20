@@ -11,15 +11,16 @@
 | `TemplateResolver.java` | `{{variable}}` 模板解析器，用于 EmitEventOp 和 TriggerDeclaration 的参数替换 |
 | `Log.java` | 引擎日志工具（`[LEVEL] tag \| msg` 格式） |
 
-## boundary/ — 适配层边界接口 (5 文件)
+## boundary/ — 适配层边界接口 (6 文件)
 
-这 5 个接口由 `engine/` 包实现。
+这 6 个接口由 `engine/` 包实现。
 
 | 接口 | 作用 | MC 实现 |
 |------|------|---------|
-| `BlockOps.java` | 方块操作：setBlock / getBlockState / isAir / toggle / activate | WandscapeBlockOps |
+| `BlockOps.java` | 方块操作：setBlock / getBlockState / isAir / toggle / activate / openGui | WandscapeBlockOps |
 | `EntityOps.java` | 实体操作：applyEffect / getPosition | WandscapeEntityOps (stub) |
 | `RitualOps.java` | 仪式执行，V2.5 返回 `CompletableFuture<Void>` | WandscapeRitualOps |
+| `MovementOps.java` | NPC 移动：`navigateTo(npcId, x, y, z)` → CompletableFuture / `cancelNavigation(npcId)` | WandscapeMovementOps (纯传送) |
 | `ColonyResourceAccess.java` | 仓库资源 CRUD：hasEnough / reserve / commit / release | stub（阶段 3） |
 | `EventBus.java` | 领域事件总线：emit / subscribe / unsubscribe，同 tick 内事件批处理 | SimpleEventBus（纯内存，无需 MC 适配） |
 
@@ -39,7 +40,7 @@
 | `Position.java` | 实体世界坐标 (GridPos) |
 | `ManaPool.java` | NPC/建筑魔力池：current / max / regenPerTick，方法 regen() / consume() / add() |
 | `WandCarrier.java` | NPC 装备法杖能力并集：`level(tag)` / `satisfies(requirements)` / `EMPTY` 哨兵 |
-| `TaskExecutor.java` | NPC 任务执行状态：私有优先队列 / 当前 GlobalTask ID / stepIndex / taskParams / `pendingFuture` / ExecutorState |
+| `TaskExecutor.java` | NPC 任务执行状态：私有优先队列 / 当前 GlobalTask ID / stepIndex / taskParams / `pendingFuture` + `pendingFutureIsNav`（区分导航/执行 Future）/ `currentOpTarget`（当前 Op 世界坐标，驱动 NPC 法杖光束视觉） / ExecutorState |
 | `Inventory.java` | NPC 背包：列表存储 + 容量限制，add / remove / count / hasEnough |
 | `ColonyMember.java` | 标记 NPC 属于哪个殖民地 (UUID) |
 | `ColonyMetadata.java` | 殖民地元数据：center(GridPos) / territoryRadius / prosperity / `contains(pos)` |
@@ -88,7 +89,7 @@
 | `ManaRegenSystem.java` | ① 每 tick 恢复所有 ManaPool 实体的魔力 |
 | `TaskSourcePoller.java` | ② 按间隔轮询所有 TaskSource，将 TaskRequest 送入 GlobalTaskPool |
 | `SchedulerSystem.java` | ③ 每 2 tick 为可分配任务匹配最佳空闲 NPC（评分 = range×0.5 + efficiency×0.3 + behaviourLevel×0.2） |
-| `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → mana 检查 → dispatch → 异步等待 / 同步推进 |
+| `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → nav/no-op skip(跳已同方块 Op) → mana 检查 → 水平距离>5² 触发导航(Teleport) → dispatch → 异步等待/同步推进 + same-target batching。设置 `exec.currentOpTarget` 驱动客户端法杖光束
 | `SystemBlueprintSystem.java` | ⑤ 每 tick 驱动系统蓝图（非全局任务池的基础设施任务），批量纯 Op，一个副作用 Op/tick |
 | `TaskSource.java` | 接口：`pollIntervalTicks()` + `poll(World, GlobalTaskPool)` |
 | `BuildingTaskSource.java` | 在 `engine/source/` — 轮询建筑 BE 队列（每 20 tick）。params 为 JsonElement，通过 EnqueueHelper 构造 |

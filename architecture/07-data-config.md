@@ -18,6 +18,7 @@ WandscapeDataLoader (在 Wandscape 构造器中创建为 static final)
   ├── "wands"      → WandPresetLoader       → SimpleDataRegistry<WandPreset>
   ├── "element_mappings" → ElementMappingLoader → SimpleDataRegistry<ElementMappingConfig>
   ├── "buildings"  → BuildingConfigLoader    → SimpleDataRegistry<BuildingConfig>
+  ├── "blueprints" → BlueprintConfigLoader   → SimpleDataRegistry<BlueprintDefinition>
   └── (阶段 3+) "recipes" / "rituals" / "multiblocks"
 ```
 
@@ -29,7 +30,8 @@ WandscapeDataLoader (在 Wandscape 构造器中创建为 static final)
 data/wandscape/
 ├── wands/                    (4 文件) → 03-wand.md
 ├── element_mappings/         (5 文件) → 04-element.md
-├── buildings/                (3 文件) → 05-building.md
+├── buildings/                (4 文件) → 05-building.md
+├── blueprints/               (3 文件) → 01-engine-bridge.md
 ├── tags/block/               decomposable.json → 04-element.md
 ├── recipes/                  (阶段 3)
 │   ├── crafting/

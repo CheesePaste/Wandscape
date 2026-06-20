@@ -5,6 +5,7 @@ import java.util.Map;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.building.be.AbstractWandscapeBE;
 import com.wsteam.wandscape.building.data.BuildingConfig;
@@ -13,6 +14,7 @@ import com.wsteam.wandscape.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Block;
@@ -35,21 +37,17 @@ public final class FillBuildingCommand {
 
     public static final String NAME = "wandscape";
 
-    /** Call from {@code CommandRegistryEvent}. */
-    public static void register(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
-        var cmd = net.minecraft.commands.Commands.literal(NAME)
-                .then(net.minecraft.commands.Commands.literal("fill")
-                        .then(net.minecraft.commands.Commands.argument("buildingType",
-                                        StringArgumentType.word())
-                                .suggests(FillBuildingCommand::suggestTypes)
-                                .then(net.minecraft.commands.Commands.argument("spacing",
-                                                IntegerArgumentType.integer(1, 32))
-                                        .then(net.minecraft.commands.Commands.argument("count",
-                                                        IntegerArgumentType.integer(1, 64))
-                                                .executes(FillBuildingCommand::execute)))))
-                .requires(src -> src.hasPermission(2)); // operator-only
-
-        dispatcher.register(cmd);
+    /** Build the "fill" sub-command node. Attach to a parent {@code /wandscape} literal. */
+    public static LiteralArgumentBuilder<CommandSourceStack> buildNode() {
+        return net.minecraft.commands.Commands.literal("fill")
+                .then(net.minecraft.commands.Commands.argument("buildingType",
+                                StringArgumentType.word())
+                        .suggests(FillBuildingCommand::suggestTypes)
+                        .then(net.minecraft.commands.Commands.argument("spacing",
+                                        IntegerArgumentType.integer(1, 32))
+                                .then(net.minecraft.commands.Commands.argument("count",
+                                                IntegerArgumentType.integer(1, 64))
+                                        .executes(FillBuildingCommand::execute))));
     }
 
     /** Suggest known building type IDs. */

@@ -18,6 +18,11 @@ import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.FillBuildingCommand;
+import com.wsteam.wandscape.command.PublishBlueprintCommand;
+import com.mojang.brigadier.CommandDispatcher;
+
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
@@ -240,7 +245,12 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
-        FillBuildingCommand.register(event.getDispatcher());
+        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+        var cmd = Commands.literal("wandscape")
+                .then(FillBuildingCommand.buildNode())
+                .then(PublishBlueprintCommand.buildNode())
+                .requires(src -> src.hasPermission(2));
+        dispatcher.register(cmd);
     }
 
     @SubscribeEvent
