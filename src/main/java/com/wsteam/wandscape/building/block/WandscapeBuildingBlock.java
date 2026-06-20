@@ -76,14 +76,26 @@ public class WandscapeBuildingBlock extends BaseEntityBlock {
             return InteractionResult.FAIL;
         }
 
+        // Ensure the building is registered with BuildingApi.
+        // Needed for command-placed blocks (EntityPlaceEvent doesn't fire for /setblock).
+        com.wsteam.wandscape.building.internal.BuildingConfigLoader configLoader =
+                com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance();
+        var config = configLoader.get(buildingTypeId);
+        if (config == null) {
+            return InteractionResult.FAIL;
+        }
+        boolean newlyRegistered = com.wsteam.wandscape.building.internal.EnqueueHelper.registerIfAbsent(
+                pos, config, buildingTypeId);
+
         WorkItem demo = buildEnqueueWorkItem(pos);
         if (demo == null) {
             return InteractionResult.FAIL;
         }
         be.enqueueWork(demo);
+        String prefix = newlyRegistered ? "[Wandscape] Registered + Enqueued: " : "[Wandscape] Enqueued: ";
         player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
-                        "[Wandscape] Enqueued: " + demo.blueprintId()
+                        prefix + demo.blueprintId()
                         + " at (x=" + pos.getX() + ", y=" + pos.getY()
                         + ", z=" + pos.getZ() + ")"),
                 false);

@@ -2,6 +2,7 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -9,7 +10,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 
@@ -27,6 +30,42 @@ import net.minecraft.core.BlockPos;
 public final class EnqueueHelper {
 
     private EnqueueHelper() {}
+
+    /**
+     * Register a building with {@link BuildingApi} if it hasn't been registered yet.
+     * Handles both command-placed and naturally-placed buildings via right-click.
+     *
+     * @param pos            the building block position
+     * @param config         the building config
+     * @param buildingTypeId building type identifier
+     * @return true if newly registered, false if already registered
+     */
+    public static boolean registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId) {
+        try {
+            BuildingApi api = WandscapeApis.getBuildingApi();
+            if (api.getBuildingAt(pos) != null) {
+                return false; // already registered
+            }
+
+            UUID buildingId = UUID.randomUUID();
+            BuildingDataImpl data = new BuildingDataImpl(
+                    buildingId,
+                    buildingTypeId,
+                    config.category(),
+                    pos,
+                    null, // colonyId — stage 4
+                    config.comfort(),
+                    config.magic(),
+                    config.wonder(),
+                    config.maintenanceCost(),
+                    config.queue().capacity()
+            );
+            api.registerBuilding(data);
+            return true;
+        } catch (IllegalStateException e) {
+            return false; // API not available
+        }
+    }
 
     /**
      * Build a WorkItem for the given building at the given position.

@@ -12,6 +12,7 @@ import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
 import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
@@ -48,6 +49,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -202,6 +204,11 @@ public class Wandscape {
 
     private int engineTickCount = 0;
     private int mcTickCount = 0;
+
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        FillBuildingCommand.register(event.getDispatcher());
+    }
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
