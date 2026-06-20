@@ -19,6 +19,7 @@ import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
+import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
@@ -245,7 +246,8 @@ public class Wandscape {
         var root = net.minecraft.commands.Commands.literal("wandscape")
                 .requires(src -> src.hasPermission(2))
                 .then(FillBuildingCommand.fillNode())
-                .then(NavTestCommand.node());
+                .then(NavTestCommand.node())
+                .then(PublishBlueprintCommand.buildNode());
         dispatcher.register(root);
     }
 

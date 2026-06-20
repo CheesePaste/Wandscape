@@ -11,15 +11,16 @@
 | `TemplateResolver.java` | `{{variable}}` 模板解析器，用于 EmitEventOp 和 TriggerDeclaration 的参数替换 |
 | `Log.java` | 引擎日志工具（`[LEVEL] tag \| msg` 格式） |
 
-## boundary/ — 适配层边界接口 (5 文件)
+## boundary/ — 适配层边界接口 (6 文件)
 
-这 5 个接口由 `engine/` 包实现。
+这 6 个接口由 `engine/` 包实现。
 
 | 接口 | 作用 | MC 实现 |
 |------|------|---------|
-| `BlockOps.java` | 方块操作：setBlock / getBlockState / isAir / toggle / activate | WandscapeBlockOps |
+| `BlockOps.java` | 方块操作：setBlock / getBlockState / isAir / toggle / activate / openGui | WandscapeBlockOps |
 | `EntityOps.java` | 实体操作：applyEffect / getPosition | WandscapeEntityOps (stub) |
 | `RitualOps.java` | 仪式执行，V2.5 返回 `CompletableFuture<Void>` | WandscapeRitualOps |
+| `MovementOps.java` | NPC 移动：`navigateTo(npcId, x, y, z)` → CompletableFuture / `cancelNavigation(npcId)` | WandscapeMovementOps (纯传送) |
 | `ColonyResourceAccess.java` | 仓库资源 CRUD：hasEnough / reserve / commit / release | stub（阶段 3） |
 | `MovementOps.java` | 移动操作：navigateTo → CompletableFuture / cancelNavigation | WandscapeMovementOps（无状态适配器，写入 NavigationState） |
 | `EventBus.java` | 领域事件总线：emit / subscribe / unsubscribe，同 tick 内事件批处理 | SimpleEventBus（纯内存，无需 MC 适配） |
