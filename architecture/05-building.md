@@ -7,7 +7,7 @@
 | 文件 | 作用 |
 |------|------|
 | `block/WandscapeBuildingBlock.java` | 建筑方块基类：持有 `buildingTypeId` + BE 工厂。右键→`buildEnqueueWorkItem()` → 通过 `EnqueueHelper` 解析 BlueprintRef bind + 构造 anchor，`registerIfAbsent` 支持命令放置的建筑 |
-| `be/AbstractWandscapeBE.java` | **建筑 BE 基类**：colonyId / 关停标记 / 结构完整性 / `Deque<WorkItem>` FIFO 队列 / currentTaskId。完整 NBT 持久化（params 按 JSON 字符串存储）。`hasWork()`/`dequeueWork()` 只检查 shutdown，不检查 structureIntact（避免修复死锁） |
+| `be/AbstractWandscapeBE.java` | **建筑 BE 基类**：colonyId / 关停标记 / 结构完整性 / `Deque<WorkItem>` FIFO 队列 / currentTaskId / `onActivate(Player)` 钩子（仓库等覆写做无队列交互）。完整 NBT 持久化（params 按 JSON 字符串存储）。`hasWork()`/`dequeueWork()` 只检查 shutdown，不检查 structureIntact（避免修复死锁） |
 | `be/TownHallBE.java` | 市政厅 BE（category: basic，殖民地中心） |
 | `be/ForestNodeBE.java` | 森林节点 BE（category: node，产木元素） |
 | `be/EarthNodeBE.java` | 大地节点 BE（category: node，产土元素） |
@@ -28,12 +28,14 @@
 | `forest_node` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | ForestNodeBE |
 | `earth_node` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | EarthNodeBE |
 | `grand_tower` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | GrandTowerBE |
+| `warehouse` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | WarehouseBE |
 
-4 方块 + 4 BlockItem + 4 BE 类型均注册在 `Wandscape.java`。
+5 方块 + 5 BlockItem + 5 BE 类型均注册在 `Wandscape.java`。
+其中 warehouse 通过 `AbstractWandscapeBE.onActivate()` 钩子打开 GUI，不使用任务队列。
 
 ## JSON 格式 (`data/wandscape/buildings/`)
 
-已有 4 个：`town_hall.json` / `forest_node.json` / `earth_node.json` / `grand_tower.json`（206 pattern blocks，7×7×7 boundary，549 总 ops）
+已有 5 个：`town_hall.json` / `forest_node.json` / `earth_node.json` / `grand_tower.json`（206 pattern blocks，7×7×7 boundary，549 总 ops）/ `warehouse.json`（3×3×3 敞开正面，category=storage）
 
 完整字段规范见 [`spec/building-json.md`](../spec/building-json.md) — 含 schema、默认值、字段实现状态、数据流
 

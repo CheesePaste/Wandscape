@@ -14,15 +14,15 @@
 | `NpcApi.java` | NPC 查询/spawn/assignHouse | `npc/internal/NpcApiImpl` |
 | `AtomicExecutor.java` | 原子步骤 A/B/C/D 执行入口 | 阶段 2 由 core 引擎 OpExecutor 替代 |
 | `TaskApi.java` | 任务发布/审批/取消/挂起/查询 | 阶段 3 |
-| `WarehouseApi.java` | 殖民地元素/物品存取 | 阶段 3 |
+| `WarehouseApi.java` | 殖民地元素/物品存取 | `warehouse/WarehouseManager` |
 | `ColonyApi.java` | 殖民地创建/删除/查找 | 阶段 4 |
 | `HouseApi.java` | NPC→房屋绑定/解绑/查询 | 阶段 4 |
 | `ManaPoolApi.java` | 殖民地魔力池读写 | 阶段 4 |
 | `TavernApi.java` | 酒馆候选人刷新/招募 | 阶段 4 |
 
-## event/ — NeoForge 事件 (14 文件)
+## event/ — NeoForge 事件 (16 文件)
 
-全部继承 `net.neoforged.bus.api.Event`，定义在 shared 层，由各模块发布。
+全部继承 `net.neoforged.bus.api.Event`，定义在 shared 层，由各模块发布到 `NeoForge.EVENT_BUS`。
 
 | 事件 | 发布模块 | 触发时机 |
 |------|---------|---------|
@@ -36,11 +36,14 @@
 | `BuildingRestartedEvent` | 08 building | 建筑重启 |
 | `MaintenanceTickEvent` | 08 building | 维护结算周期 |
 | `ElementChangedEvent` | 04 warehouse | 元素储量变化 |
+| `ResourceInsufficientEvent` | 04 warehouse | ColonyResourceAccess.hasEnough() 返回 false（10s 冷却） |
 | `NpcDiedEvent` | 07 npc | NPC 死亡 |
 | `NpcRecruitedEvent` | 12 tavern | NPC 招募完成 |
 | `NpcResurrectedEvent` | 13 ritual | 复活仪式完成 |
 | `ColonyCreatedEvent` | 15 colony | 殖民地创建 |
 | `ColonyDeletedEvent` | 15 colony | 殖民地删除 |
+
+**订阅者**: `WarehouseNotificationHandler` 监听 `ResourceInsufficientEvent` → 聊天栏通知所有在线玩家。
 
 ## data/ — 数据类型 (17 文件)
 

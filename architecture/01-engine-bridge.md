@@ -7,7 +7,7 @@ MC 桥梁：实现 core 边界接口，WandscapeEngine 单例持有 World，Buil
 | 文件 | 作用 |
 |------|------|
 | `WandscapeEngine.java` | **单例**持有 World 实例 + AsyncTransformExecutor + BlueprintConfigLoader + WandscapeMovementOps。`ServerStarting` 时 `EngineBootstrap.bootstrap()` 注入 |
-| `bootstrap/EngineBootstrap.java` | 组装引导：创建边界 MC 实现 + TaskSource 列表 + 注册 DSL 蓝图 (BlueprintConfigLoader) + 遗留 DataDrivenSteps fallback → `CoreBootstrap.bootstrap(config)` → 注入单例 |
+| `bootstrap/EngineBootstrap.java` | 组装引导：创建边界 MC 实现 + TaskSource 列表 + 注册 DSL 蓝图 (BlueprintConfigLoader) + 遗留 DataDrivenSteps fallback → `CoreBootstrap.bootstrap(config)` → 注入单例。ColonyResourceAccess 从 `WandscapeApis` 获取 WarehouseManager（未注册时回退到 infinite stub） |
 | `boundary/WandscapeBlockOps.java` | BlockOps MC 实现：`Level.setBlock()` / `getBlockState()` / `isAir()`，放置前 `evacuateEntities()` 疏散方块内生物 |
 | `boundary/WandscapeMovementOps.java` | MovementOps MC 实现：无状态适配器，`navigateTo()` 写入 NavigationState（mode + target + future），由 NavigationSystem 驱动实际移动（≤32 寻路、>32 仪式传送、魔力不足等待） |
 | `boundary/WandscapeEntityOps.java` | EntityOps MC 实现：**阶段 2 stub**，applyEffect / getPosition 为空操作 |

@@ -27,6 +27,9 @@
 | Q13 | MVP 范围 | **先做物品** — 元素由 ElementMappingLoader 从物品推导，不在仓库存元素 |
 | Q14 | ItemKey NBT | **完整 ItemKey** — MVP 不特殊处理耐久/附魔，自然作为不同条目 |
 | Q15 | 实现分层 | **一个类实现两个接口** — WarehouseManager implements WarehouseApi + ColonyResourceAccess，复用 ElementMappingLoader |
+| Q16 | 建筑结构 | **3×3×3 敞开正面** — 石砖基座 + 橡木柱 + 橡木板屋顶，正面无墙可直接右键方块 |
+| Q17 | 游戏事件 | **NeoForge EVENT_BUS** — `ResourceInsufficientEvent` 在 hasEnough() 返回 false 时 post，10s 冷却 |
+| Q18 | 事件通知 | **聊天栏消息** — `WarehouseNotificationHandler` 订阅事件 → `sendSystemMessage` 到在线玩家 |
 
 ---
 
@@ -123,7 +126,18 @@ ColonyResourceAccessImpl:
   // 失败时查 ElementMappingLoader 反向映射
 ```
 
-## 六、文件清单
+## 六、游戏事件
+
+仓库通过 NeoForge EVENT_BUS 广播游戏层事件，UI/通知层订阅响应。
+
+| 事件 | 触发点 | 订阅者 |
+|------|--------|--------|
+| `ResourceInsufficientEvent` | `WarehouseManager.hasEnough()` false | `WarehouseNotificationHandler` → 聊天栏 |
+| `ElementChangedEvent` | 已定义，待接线 | UI 元素面板更新 |
+
+事件流：`core ResourceRequestOp` → `ColonyResourceAccess.hasEnough()` → `WarehouseManager` → `NeoForge.EVENT_BUS.post(ResourceInsufficientEvent)` → `WarehouseNotificationHandler.onResourceInsufficient()` → 全体在线玩家聊天栏。
+
+## 七、文件清单
 
 | 操作 | 文件 | 内容 |
 |------|------|------|

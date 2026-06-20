@@ -34,7 +34,7 @@
 
 | 模块 | 设计文档 | 备注 |
 |------|---------|------|
-| 04 warehouse-system | docs/04 ✅ | 仓库方块+BE+GUI+元素存储+物品存储+差量持久化 — **零实现** |
+| 04 warehouse-system | docs/04 ✅ | ✅ **已完成** — WarehouseBE (物品存储+GUI+NBT+reserve/commit/release), WarehouseManager (implements WarehouseApi + ColonyResourceAccess), ResourceInsufficientEvent + 聊天栏通知 |
 | 09 node-building | docs/09 ✅ | ForestNodeBE/EarthNodeBE 已注册但无自动采集逻辑, 无元素产出 |
 | 10 production-stations | docs/10 ✅ | 工作站/制作站/魔药站 — **零实现** |
 | 11 housing-mana-pool | docs/11 ✅ | 房屋绑定/魔力池 — **零实现** |
@@ -50,7 +50,7 @@ ColonyApi     — 接口存在，WandscapeApis 中从未注册
 HouseApi      — 接口存在，从未注册
 ManaPoolApi   — 接口存在，从未注册
 TavernApi     — 接口存在，从未注册
-WarehouseApi  — 接口存在，从未注册
+WarehouseApi  — ✅ 已注册 (WarehouseManager)
 TaskApi       — 接口存在，从未注册
 ```
 
