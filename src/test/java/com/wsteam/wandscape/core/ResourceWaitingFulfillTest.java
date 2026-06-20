@@ -45,7 +45,7 @@ public class ResourceWaitingFulfillTest {
         registerBlueprints(blueprints);
 
         CoreBootstrapConfig config = new CoreBootstrapConfig(
-                mock, mock, mock, mock,
+                mock, mock, mock, null, mock,
                 List.of(), blueprints,
                 new SystemBlueprintRegistry()
         );

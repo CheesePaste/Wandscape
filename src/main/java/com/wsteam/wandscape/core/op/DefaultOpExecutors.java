@@ -82,7 +82,7 @@ public final class DefaultOpExecutors {
         public CompletableFuture<Void> execute(AtomicOp.EntityInteractOp op, World world, long npcId) {
             EntityOps entityOps = world.entityOps;
             if (entityOps != null) {
-                entityOps.applyEffect(op.target(), op.effect(), op.strength(), op.duration());
+                entityOps.applyEffect(op.entityId(), op.effect(), op.strength(), op.duration());
             }
             return CompletableFuture.completedFuture(null);
         }

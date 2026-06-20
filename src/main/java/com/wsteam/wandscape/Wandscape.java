@@ -210,19 +210,23 @@ public class Wandscape {
 
         mcTickCount++;
 
-        // ① Tick async executor countdowns (resolves futures → opens gate)
+        // ① Tick movement ops (navigation polling + timeout/teleport fallback)
+        var movementOps = WandscapeEngine.getMovementOps();
+        if (movementOps != null) movementOps.tickAll(mcTickCount);
+
+        // ② Tick async executor countdowns (resolves futures → opens gate)
         var asyncExec = WandscapeEngine.getAsyncExecutor();
         if (asyncExec != null) asyncExec.tickAll();
 
-        // ② Sync MC entity positions → ECS (always, even when gate is closed)
+        // ③ Sync MC entity positions → ECS (always, even when gate is closed)
         EntityComponentBridge.INSTANCE.syncPositions(world);
 
-        // ② Gate: skip engine tick when async ops are in flight
+        // ④ Gate: skip engine tick when async ops are in flight
         if (world.hasPendingAsyncOps()) {
             return;
         }
 
-        // ③ Engine logic tick
+        // ⑤ Engine logic tick
         engineTickCount++;
         world.tick(1.0f);
 

@@ -45,7 +45,7 @@ public class EventDrivenTaskSourceTest {
         BlueprintRegistry blueprints = new BlueprintRegistry();
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
 
-        CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, mock, List.of(), blueprints,
+        CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
                 new SystemBlueprintRegistry());
         world = CoreBootstrap.bootstrap(config);
         DefaultOpExecutors.registerAll(world.opExecutors);

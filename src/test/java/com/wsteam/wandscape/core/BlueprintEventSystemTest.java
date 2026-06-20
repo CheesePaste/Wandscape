@@ -58,7 +58,7 @@ public class BlueprintEventSystemTest {
         BlueprintRegistry blueprints = new BlueprintRegistry();
 
         CoreBootstrapConfig config = new CoreBootstrapConfig(
-                mock, mock, mock, mock,
+                mock, mock, mock, null, mock,
                 List.of(), blueprints,
                 new SystemBlueprintRegistry()
         );

@@ -11,6 +11,10 @@ import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+
+import net.minecraft.core.BlockPos;
 
 /**
  * Async TransformOp executor — exercises V2.5 CompletableFuture model.
@@ -27,7 +31,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     private final int delayTicks;
 
     record Pending(CompletableFuture<Void> future, AtomicOp.TransformOp op, World world,
-                   int remainingTicks) {}
+                   long npcId, int remainingTicks) {}
 
     private final List<Pending> pending = new ArrayList<>();
 
@@ -59,7 +63,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         //    Engine stores this future in TaskExecutor.pendingFuture,
         //    does NOT re-invoke execute(). When complete() fires, engine
         //    advances stepIndex and calls execute() for the NEXT op.
-        pending.add(new Pending(future, op, world, delayTicks));
+        pending.add(new Pending(future, op, world, npcId, delayTicks));
 
         // Hook: place block when delay expires
         future.thenRun(() -> {
@@ -68,6 +72,12 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             pending.remove(p);
             if (p.world.blockOps != null) {
                 p.world.blockOps.setBlock(p.op.target(), p.op.to());
+            }
+            // Visual feedback on the NPC that performed the work
+            WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
+            if (npc != null) {
+                npc.doWorkAnimation(new BlockPos(
+                        p.op.target().x(), p.op.target().y(), p.op.target().z()));
             }
             LOGGER.debug("async TransformOp placed: {}→{} at {}",
                     p.op.from().id(), p.op.to().id(), p.op.target());
@@ -92,7 +102,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (remaining <= 0) {
                 toComplete.add(p.future());
             } else {
-                pending.set(i, new Pending(p.future(), p.op(), p.world(), remaining));
+                pending.set(i, new Pending(p.future(), p.op(), p.world(), p.npcId(), remaining));
             }
         }
 

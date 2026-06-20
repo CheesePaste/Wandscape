@@ -2,14 +2,18 @@ package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.Log;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.*;
 import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.RitualId;
+
+import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +39,7 @@ import java.util.concurrent.CompletableFuture;
 public class TaskExecutionSystem implements System {
 
     private static final String TAG = "TaskExec";
+    private static final double NAV_RANGE_SQ = 6.25; // 2.5² — horizontal operating range
     private static final RitualId ITEM_TELEPORT = new RitualId("item_teleport");
 
     private final GlobalTaskPool taskPool;
@@ -114,6 +119,24 @@ public class TaskExecutionSystem implements System {
                 if (mana.current() < actualCost) return; // insufficient mana
             }
 
+            // ---- 4.5. Range check (horizontal only) + navigation ----
+            GridPos target = currentOp.target();
+            if (target != null && world.movementOps != null) {
+                Position pos = world.get(npcId, Position.class);
+                if (pos != null) {
+                    double dx = pos.pos().x() - target.x();
+                    double dz = pos.pos().z() - target.z();
+                    if (dx * dx + dz * dz > NAV_RANGE_SQ) {
+                        MovementOps mov = world.movementOps;
+                        CompletableFuture<Void> navFuture = mov.navigateTo(
+                                npcId, target.x(), target.y(), target.z());
+                        exec.pendingFuture = navFuture;
+                        Log.debug(TAG, "NPC %d — navigating to %s", npcId, target);
+                        return; // wait for nav to resolve
+                    }
+                }
+            }
+
             // ---- 5. Execute → get future ----
             @SuppressWarnings("unchecked")
             OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) (Object) registry.get(currentOp.getClass());
@@ -131,7 +154,15 @@ public class TaskExecutionSystem implements System {
                     mana.consume(actualCost);
                     advanceStep(exec, npcId, 1);
                     exec.state = ExecutorState.ACTIVE;
-                    break; // one side-effect per tick
+
+                    // Same-target batching: if next op shares the same target,
+                    // stay in the loop to avoid redundant re-navigation.
+                    GridPos doneTarget = currentOp.target();
+                    AtomicOp nextOp = peekNextOp(exec);
+                    if (nextOp != null && sameTarget(doneTarget, nextOp.target())) {
+                        continue; // batch: process next op without breaking
+                    }
+                    break; // one side-effect per tick (normal flow)
                 }
                 // Pure op: already self-advanced inside execute() — continue batch
                 continue;
@@ -146,6 +177,8 @@ public class TaskExecutionSystem implements System {
         // No more work
         if (!exec.hasWork()) {
             exec.state = ExecutorState.IDLE;
+            // Cancel any in-flight navigation
+            if (world.movementOps != null) world.movementOps.cancelNavigation(npcId);
         }
     }
 
@@ -190,5 +223,23 @@ public class TaskExecutionSystem implements System {
 
     static boolean isPureOp(AtomicOp op) {
         return op instanceof AtomicOp.EmitEventOp || op instanceof AtomicOp.IfConditionOp;
+    }
+
+    /** Peek at the next op without consuming it. Returns null if none. */
+    @Nullable
+    private static AtomicOp peekNextOp(TaskExecutor exec) {
+        if (!exec.isPrivateQueueEmpty()) {
+            return exec.peekPrivate();
+        }
+        if (exec.globalTaskId != null && exec.currentSequence != null
+                && !exec.currentSequence.isComplete(exec.stepIndex)) {
+            return exec.currentSequence.get(exec.stepIndex);
+        }
+        return null;
+    }
+
+    /** True when both targets are non-null and equal. */
+    private static boolean sameTarget(@Nullable GridPos a, @Nullable GridPos b) {
+        return a != null && b != null && a.equals(b);
     }
 }
