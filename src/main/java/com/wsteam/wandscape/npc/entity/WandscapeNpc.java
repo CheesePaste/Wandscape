@@ -234,6 +234,8 @@ public class WandscapeNpc extends PathfinderMob {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide) {
+            // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
+            this.setPersistenceRequired();
             World world = WandscapeEngine.getWorld();
             if (world != null) {
                 EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);

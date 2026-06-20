@@ -19,6 +19,7 @@ import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
+import com.wsteam.wandscape.command.StressTestCommand;
 import com.mojang.brigadier.CommandDispatcher;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -249,6 +250,7 @@ public class Wandscape {
         var cmd = Commands.literal("wandscape")
                 .then(FillBuildingCommand.buildNode())
                 .then(PublishBlueprintCommand.buildNode())
+                .then(StressTestCommand.buildNode())
                 .requires(src -> src.hasPermission(2));
         dispatcher.register(cmd);
     }
