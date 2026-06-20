@@ -9,6 +9,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.*;
 import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.task.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.RitualId;
@@ -60,12 +61,7 @@ public class TaskExecutionSystem implements System {
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
             if (exec == null) continue;
 
-            // Cancel leaked navigation for idle NPCs
-            // (can happen if releaseGlobalTask is called externally, e.g. manual cancel)
             if (!exec.hasWork()) {
-                if (exec.state == ExecutorState.IDLE && world.movementOps != null) {
-                    world.movementOps.cancelNavigation(npcId);
-                }
                 continue;
             }
 
@@ -75,6 +71,29 @@ public class TaskExecutionSystem implements System {
 
     private void processNpc(World world, long npcId, TaskExecutor exec,
                             OpExecutorRegistry registry) {
+        // ---- 0. Compute task stance (once per task, from op targets' bounding box) ----
+        if (exec.stance == null && exec.currentSequence != null) {
+            exec.stance = computeTaskStance(exec.currentSequence);
+        }
+
+        // ---- 0.5 Navigate to stance if far away ----
+        if (exec.stance != null && exec.pendingFuture == null) {
+            Position pos = world.get(npcId, Position.class);
+            if (pos != null) {
+                double dx = pos.pos().x() - exec.stance.x();
+                double dz = pos.pos().z() - exec.stance.z();
+                if (dx * dx + dz * dz > NAV_RANGE_SQ && world.movementOps != null) {
+                    MovementOps mov = world.movementOps;
+                    CompletableFuture<Void> navFuture = mov.navigateTo(
+                            npcId, exec.stance.x(), exec.stance.y(), exec.stance.z());
+                    exec.pendingFuture = navFuture;
+                    exec.pendingFutureIsNav = true;
+                    Log.debug(TAG, "NPC %d — navigating to stance %s", npcId, exec.stance);
+                    return;
+                }
+            }
+        }
+
         while (exec.hasWork()) {
 
             // ---- 1. Pending async future from previous tick? ----
@@ -145,7 +164,7 @@ public class TaskExecutionSystem implements System {
 
             // ---- 4.5. Range check (horizontal only) + navigation ----
             GridPos target = currentOp.target();
-            if (target != null && world.movementOps != null) {
+            if (target != null && world.movementOps != null && exec.stance == null) {
                 Position pos = world.get(npcId, Position.class);
                 if (pos != null) {
                     double dx = pos.pos().x() - target.x();
@@ -207,8 +226,10 @@ public class TaskExecutionSystem implements System {
         if (!exec.hasWork()) {
             exec.state = ExecutorState.IDLE;
             exec.currentOpTarget = null;
-            // Cancel any in-flight navigation
-            if (world.movementOps != null) world.movementOps.cancelNavigation(npcId);
+            // Cancel any in-flight navigation that WE initiated
+            if (world.movementOps != null && exec.pendingFuture != null) {
+                world.movementOps.cancelNavigation(npcId);
+            }
         }
     }
 
@@ -272,5 +293,31 @@ public class TaskExecutionSystem implements System {
     /** True when both targets are non-null and equal. */
     private static boolean sameTarget(@Nullable GridPos a, @Nullable GridPos b) {
         return a != null && b != null && a.equals(b);
+    }
+
+    /**
+     * Compute a fixed standoff position from the bounding box of all
+     * position-bearing ops in the sequence. Returns null if no ops have targets.
+     */
+    @Nullable
+    static GridPos computeTaskStance(TaskSequence seq) {
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        boolean hasTarget = false;
+
+        for (int i = 0; i < seq.size(); i++) {
+            GridPos t = seq.get(i).target();
+            if (t != null) {
+                hasTarget = true;
+                if (t.x() < minX) minX = t.x();
+                if (t.x() > maxX) maxX = t.x();
+                if (t.y() < minY) minY = t.y();
+                if (t.z() < minZ) minZ = t.z();
+                if (t.z() > maxZ) maxZ = t.z();
+            }
+        }
+        if (!hasTarget) return null;
+        return new GridPos(minX - 2, minY + 1, (minZ + maxZ) / 2);
     }
 }

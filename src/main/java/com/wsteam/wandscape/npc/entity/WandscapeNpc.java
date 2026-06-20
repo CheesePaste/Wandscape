@@ -90,6 +90,20 @@ public class WandscapeNpc extends PathfinderMob {
     /** Debug flag — when true, skips ECS polling and forces casting state. */
     private boolean debugCasting = false;
 
+    /**
+     * When true, {@link RandomStrollGoal} is suppressed so
+     * {@code NavigationSystem} can control navigation without AI interference.
+     */
+    private boolean suppressWandering = false;
+
+    /** Enable or disable idle wandering AI. Called by NavigationSystem. */
+    public void setAiWanderingEnabled(boolean enabled) {
+        this.suppressWandering = !enabled;
+        if (!enabled) {
+            getNavigation().stop();
+        }
+    }
+
     /** Debug ray target (synced to client). */
     private static final EntityDataAccessor<Optional<BlockPos>> DATA_DEBUG_TARGET =
             SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
@@ -122,7 +136,8 @@ public class WandscapeNpc extends PathfinderMob {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 40.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
-                .add(Attributes.ATTACK_DAMAGE, 1.0);
+                .add(Attributes.ATTACK_DAMAGE, 1.0)
+                .add(Attributes.FOLLOW_RANGE, 32.0);
     }
 
     // ============================================================
@@ -133,8 +148,27 @@ public class WandscapeNpc extends PathfinderMob {
     protected void registerGoals() {
         // Priority 0: don't drown
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        // Priority 5: wander around when idle
-        this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6));
+        // Priority 5: wander around when idle (suppressed when MovementOps controls navigation)
+        this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6) {
+            @Override
+            public boolean canUse() {
+                return !suppressWandering && super.canUse();
+            }
+
+            @Override
+            public boolean canContinueToUse() {
+                return !suppressWandering && super.canContinueToUse();
+            }
+
+            @Override
+            public void stop() {
+                if (!suppressWandering) {
+                    super.stop(); // only clear navigation if stopping organically
+                }
+                // When suppressWandering is set, MovementOps owns the navigation —
+                // don't let the goal selector's cleanup kill our path.
+            }
+        });
     }
 
     @Override
@@ -183,7 +217,7 @@ public class WandscapeNpc extends PathfinderMob {
             if (casting != isCasting()) {
                 setCasting(casting);
             }
-            if (isCasting()) {
+            if (isCasting() && !suppressWandering) {
                 getNavigation().stop();
                 setDeltaMovement(Vec3.ZERO);
             }

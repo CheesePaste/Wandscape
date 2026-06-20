@@ -18,7 +18,7 @@
 | 操作射程缺失 | `16 + wand.range × 8`，超距自动传送 | — |
 | 源方块不匹配处理 | 通知玩家+任务退回/取消 | — |
 | 拆除重建是否刷数值 | 已解锁类型永久标记，重建不重复贡献 | — |
-| NPC 步行/传送规则模糊 | <64 寻路，≥64/失败/卡死→self_teleport(Operation D) | — |
+| NPC 步行/传送规则模糊 | ~~<64 寻路，≥64/失败/卡死→self_teleport(Operation D)~~ → 改为直接传送（`npc.setPos()`）。寻路在动态建筑工地不可靠，路径反复作废。 | — |
 | `BuildingData` 缺 `category` | 增加 `getCategory()` | — |
 | `HouseApi` 缺失 | 新增 `HouseApi` 接口 | — |
 | `OperationD` 不含消耗 | 增加 `manaCost` + `elementCost` | — |

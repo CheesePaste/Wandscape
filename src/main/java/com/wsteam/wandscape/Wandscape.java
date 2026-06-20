@@ -18,6 +18,7 @@ import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.FillBuildingCommand;
+import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.mojang.brigadier.CommandDispatcher;
@@ -246,13 +247,14 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
-        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-        var cmd = Commands.literal("wandscape")
-                .then(FillBuildingCommand.buildNode())
+        var dispatcher = event.getDispatcher();
+        var root = Commands.literal("wandscape")
+                .requires(src -> src.hasPermission(2))
+                .then(FillBuildingCommand.fillNode())
+                .then(NavTestCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
-                .then(StressTestCommand.buildNode())
-                .requires(src -> src.hasPermission(2));
-        dispatcher.register(cmd);
+                .then(StressTestCommand.buildNode());
+        dispatcher.register(root);
     }
 
     @SubscribeEvent
@@ -269,7 +271,7 @@ public class Wandscape {
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 
-        // ③ Engine logic tick
+        // ③ Engine logic tick (incl. NavigationSystem which drives movement)
         engineTickCount++;
         world.tick(1.0f);
 

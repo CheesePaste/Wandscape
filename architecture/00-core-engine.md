@@ -22,6 +22,7 @@
 | `RitualOps.java` | 仪式执行，V2.5 返回 `CompletableFuture<Void>` | WandscapeRitualOps |
 | `MovementOps.java` | NPC 移动：`navigateTo(npcId, x, y, z)` → CompletableFuture / `cancelNavigation(npcId)` | WandscapeMovementOps (纯传送) |
 | `ColonyResourceAccess.java` | 仓库资源 CRUD：hasEnough / reserve / commit / release | stub（阶段 3） |
+| `MovementOps.java` | 移动操作：navigateTo → CompletableFuture / cancelNavigation | WandscapeMovementOps（无状态适配器，写入 NavigationState） |
 | `EventBus.java` | 领域事件总线：emit / subscribe / unsubscribe，同 tick 内事件批处理 | SimpleEventBus（纯内存，无需 MC 适配） |
 
 ## ecs/ — ECS 框架 (4 文件)
@@ -33,14 +34,15 @@
 | `ComponentStore<T>.java` | 组件存储接口：add / remove / get / has / entities()（排序列表用于交集查询） |
 | `HashMapComponentStore<T>.java` | 基于 HashMap 的 ComponentStore 实现，写操作时使实体列表缓存失效 |
 
-## component/ — ECS 组件 (7 文件)
+## component/ — ECS 组件 (8 文件)
 
 | 组件 | 作用 |
 |------|------|
 | `Position.java` | 实体世界坐标 (GridPos) |
 | `ManaPool.java` | NPC/建筑魔力池：current / max / regenPerTick，方法 regen() / consume() / add() |
 | `WandCarrier.java` | NPC 装备法杖能力并集：`level(tag)` / `satisfies(requirements)` / `EMPTY` 哨兵 |
-| `TaskExecutor.java` | NPC 任务执行状态：私有优先队列 / 当前 GlobalTask ID / stepIndex / taskParams / `pendingFuture` + `pendingFutureIsNav`（区分导航/执行 Future）/ `currentOpTarget`（当前 Op 世界坐标，驱动 NPC 法杖光束视觉） / ExecutorState |
+| `NavigationState.java` | NPC 移动状态：mode (IDLE/PATHFINDING/TELEPORT_WAITING) / target GridPos / CompletableFuture / 卡死/超时追踪字段。NavigationSystem 的唯一数据源 |
+| `TaskExecutor.java` | NPC 任务执行状态：私有优先队列 / 当前 GlobalTask ID / stepIndex / taskParams / stance / `pendingFuture` / ExecutorState |
 | `Inventory.java` | NPC 背包：列表存储 + 容量限制，add / remove / count / hasEnough |
 | `ColonyMember.java` | 标记 NPC 属于哪个殖民地 (UUID) |
 | `ColonyMetadata.java` | 殖民地元数据：center(GridPos) / territoryRadius / prosperity / `contains(pos)` |
@@ -89,8 +91,9 @@
 | `ManaRegenSystem.java` | ① 每 tick 恢复所有 ManaPool 实体的魔力 |
 | `TaskSourcePoller.java` | ② 按间隔轮询所有 TaskSource，将 TaskRequest 送入 GlobalTaskPool |
 | `SchedulerSystem.java` | ③ 每 2 tick 为可分配任务匹配最佳空闲 NPC（评分 = range×0.5 + efficiency×0.3 + behaviourLevel×0.2） |
-| `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → nav/no-op skip(跳已同方块 Op) → mana 检查 → 水平距离>5² 触发导航(Teleport) → dispatch → 异步等待/同步推进 + same-target batching。设置 `exec.currentOpTarget` 驱动客户端法杖光束
-| `SystemBlueprintSystem.java` | ⑤ 每 tick 驱动系统蓝图（非全局任务池的基础设施任务），批量纯 Op，一个副作用 Op/tick |
+| `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → stance 计算 → mana 检查 → dispatch → 异步等待 / 同步推进 |
+| `NavigationSystem.java` | ⑤ (engine/system/) 所有 NPC 移动的单一驱动：读取 NavigationState → 寻路/传送/魔力等待。卡死检测、超时、重寻路 |
+| `SystemBlueprintSystem.java` | ⑥ 每 tick 驱动系统蓝图（非全局任务池的基础设施任务），批量纯 Op，一个副作用 Op/tick |
 | `TaskSource.java` | 接口：`pollIntervalTicks()` + `poll(World, GlobalTaskPool)` |
 | `BuildingTaskSource.java` | 在 `engine/source/` — 轮询建筑 BE 队列（每 20 tick）。params 为 JsonElement，通过 EnqueueHelper 构造 |
 | `WarehouseSource.java` | V1 stub：监视仓库资源低于阈值时 emit ResourceLow 事件 |

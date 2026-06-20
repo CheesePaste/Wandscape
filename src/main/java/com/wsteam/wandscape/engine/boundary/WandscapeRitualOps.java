@@ -12,6 +12,8 @@ import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
+import net.minecraft.core.particles.ParticleTypes;
+
 /**
  * MC implementation of {@link RitualOps}.
  *
@@ -27,7 +29,16 @@ public class WandscapeRitualOps implements RitualOps {
         if ("self_teleport".equals(ritual.id())) {
             WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(casterId);
             if (npc != null && !npc.isRemoved()) {
-                npc.teleportTo(target.x() + 0.5, target.y(), target.z() + 0.5);
+                npc.teleportTo(target.x() + 0.5, target.y() + 1, target.z() + 0.5);
+                // Visual feedback
+                for (int i = 0; i < 20; i++) {
+                    double ox = (npc.getRandom().nextDouble() - 0.5) * 1.5;
+                    double oy = npc.getRandom().nextDouble() * 2.0;
+                    double oz = (npc.getRandom().nextDouble() - 0.5) * 1.5;
+                    npc.level().addParticle(ParticleTypes.PORTAL,
+                            npc.getX() + ox, npc.getY() + oy, npc.getZ() + oz,
+                            0, 0, 0);
+                }
                 LOGGER.debug("self_teleport: NPC {} → {}", casterId, target);
             } else {
                 LOGGER.warn("self_teleport: NPC not found for casterId {}", casterId);

@@ -1,9 +1,9 @@
 # NPC MC 适配层
 
 文档编号：NEW-22
-版本：1.3
-状态：已实现（10 新文件 + 5 修改文件 + 施法动画 + 粒子特效 + debug 模式，全编译通过）
-依赖：core-engine (v2.5), 01-shared-api, engine integration layer
+版本：1.5
+状态：已实现（V2.6 移动重构：NavigationState + NavigationSystem + stance 站位 + ≤32 寻路 + 仪式传送兜底）
+依赖：core-engine (v2.6), 01-shared-api, engine integration layer
 
 ---
 
@@ -23,12 +23,14 @@
 MC 层                                   │  ECS 层 (纯 Java, 零 MC 引用)
                                         │
 WandscapeNpc (PathfinderMob)            │
-  ├─ ecsEntityId: long ════════════════╪═→ World 中 6 个 ComponentStore
+  ├─ ecsEntityId: long ════════════════╪═→ World 中 7 个 ComponentStore
   ├─ colonyId: UUID (阶段2=占位值)       │     Position / ManaPool / TaskExecutor
   ├─ currentMana (仅 NBT 持久化用)       │     WandCarrier / Inventory / ColonyMember
-  ├─ maxMana / manaRegenRate            │
+  ├─ maxMana / manaRegenRate            │     NavigationState (首次移动时添加)
   ├─ inventory: SimpleContainer(27)     │  ← SchedulerSystem 查到这里 → assign
   ├─ FloatGoal + RandomStrollGoal       │  ← TaskExecutionSystem 驱动执行
+  │     (受 setAiWanderingEnabled 控制)  │  ← NavigationSystem 驱动移动
+  ├─ faceTarget() + currentOpTarget     │  ← 施法时面向当前操作目标
   └─ tick() 空（魔力恢复由引擎管）        │  ← ManaRegenSystem 每引擎 tick 恢复魔力
 
 EntityComponentBridge (单例工具类)        │
@@ -39,16 +41,27 @@ EntityComponentBridge (单例工具类)        │
   └─ syncPositions(world) — 门控前调用   │
 
 Wandscape.onServerTick:                 │
-  1. bridge.syncPositions(world)        │  ← 始终执行（引擎门控前）
-  2. if (world.hasPendingAsyncOps())    │  ← V2.5 门控
-         return;                        │
-  3. world.tick(1.0f)                   │  ← 引擎逻辑帧推进
+  1. asyncExec.tickAll()                │  ← MC 异步倒计时
+  2. bridge.syncPositions(world)        │  ← 始终执行（ECS 位置同步）
+  3. world.tick(1.0f)                   │  ← 引擎逻辑帧（含 NavigationSystem）
+
+WandscapeMovementOps : MovementOps      │
+  └─ navigateTo(): 写入 NavigationState   │  ← 无状态适配器，NavigationSystem 驱动
+       (mode + target + future)           │
+
+WandscapeBlockOps : BlockOps            │
+  └─ setBlock(): 放置前先疏散方块内实体   │  ← evacuateEntities()
 
 WandscapeEntityOps : EntityOps          │
   └─ 阶段 2 stub（EntityInteractOp 未使用）│
 
 WandscapeRitualOps : RitualOps          │
   └─ self_teleport: 同步传送 → DONE     │
+                                        │
+NavigationSystem : System                │  ← ECS System，所有 NPC 移动的单一驱动
+  ├─ 读取 NavigationState               │     寻路 / 仪式传送 / 魔力等待
+  ├─ 卡死检测 (3×60tick) / 超时 (200tick)│
+  └─ 重寻路 (5×) / 传送 → arrive()      │
 ```
 
 ## 三、设计决策汇总（grill-me 17/17 确认）
@@ -71,7 +84,11 @@ WandscapeRitualOps : RitualOps          │
 | 14 | colonyId 来源 | 占位 UUID `00000000-...-00000000` | 阶段 2 无殖民地创建，占位让调度链完整运行 |
 | 15 | EntityComponentBridge 角色 | 单例工具类，非 System | 双向映射 + syncPositions；不加 ECS System |
 | 16 | syncPositions 精确位置 | `onServerTick` 门控前 | 始终同步，门控阻塞时也不例外 |
-| 17 | self_teleport 实现 | 同步传送 → DONE | 阶段 2 无 MoveOp；传送是瞬时操作，不走 CompletableFuture |
+| 17 | self_teleport 实现 | NavigationSystem 直接 teleportTo + 扣魔力 + 粒子 | 魔力逻辑在 NavigationSystem 层，RitualOps 保留低层传送能力 |
+| 18 | NPC 移动方式 | ≤32 寻路 / >32 仪式传送 / 卡死→传送 / 魔力不足等待（V2.6 重构） | 寻路提供步行观感，传送做长距离和卡死兜底。NavigationSystem 是单一驱动，通过 NavigationState 解耦 |
+| 19 | NPC 死亡处理 | 全局任务 releaseTaskForReassign（保留 stepIndex） | 私有池丢弃，任务重新入队 PENDING_ASSIGN，下一个空闲 NPC 可接续 |
+| 20 | 方块放置前疏散 | `evacuateEntities()` 推走生物 | 防止 NPC 或其他实体被方块卡住 |
+| 21 | 施法视觉效果 | `TaskExecutor.currentOpTarget` → NPC `faceTarget()` | 非 debug 模式下 NPC 也能面向实际操作目标施法 |
 
 ### 关键设计规则
 
@@ -85,8 +102,8 @@ NPC 实体                    ECS ManaPool
 
 **Position 同步流**：
 ```
-MC tick → onServerTick → syncPositions() → hasPendingAsyncOps? → world.tick()
-           ↑ 始终执行         ↑ MC→ECS 数据桥    ↑ V2.5 门控
+MC tick → onServerTick → asyncExec.tickAll() → syncPositions() → world.tick()
+                         ↑ 异步倒计时          ↑ MC→ECS 数据桥    ↑ ECS 系统执行
 ```
 
 ## 四、文件清单
@@ -104,6 +121,8 @@ MC tick → onServerTick → syncPositions() → hasPendingAsyncOps? → world.t
 | `WandscapeNpcModel.java` | `com.wsteam.wandscape.npc.client` | 自定义 HumanoidModel：施法时右臂抬高，角度跟随 NPC pitch |
 | `WandscapeNpcRenderer.java` | `com.wsteam.wandscape.npc.client` | 客户端渲染：施法时从右手发射彩色射线粒子 |
 | `CastBoltParticle.java` | `com.wsteam.wandscape.npc.client` | 施法粒子：全亮度静止星星，最后 20% 生命缩小消失 |
+| `NavigationState.java` | `com.wsteam.wandscape.core.component` | NPC 移动状态 ECS 组件：mode (IDLE/PATHFINDING/TELEPORT_WAITING) / target / future | ~60 |
+| `NavigationSystem.java` | `com.wsteam.wandscape.engine.system` | 所有 NPC 移动的单一 ECS System：寻路/传送/魔力等待/卡死/超时 | ~220 |
 | `EntityComponentBridgeTest.java` | `src/test/.../npc/bridge` | 桥接注册/注销/重连/syncPositions 测试 | ~80 |
 | `NpcApiImplTest.java` | `src/test/.../npc/internal` | NpcApi spawnNpc / getColonyNpcs 测试 | ~60 |
 
@@ -161,9 +180,31 @@ public class WandscapeNpc extends PathfinderMob {
     }
 
     @Override void onRemovedFromLevel(RemovalReason reason) {
-        if (!level().isClientSide && (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED)) {
-            EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, WandscapeEngine.getWorld());
+        if (!level().isClientSide && reason != null && reason.shouldSave()) {
+            World world = WandscapeEngine.getWorld();
+            if (world != null) {
+                // KILLED → 释放全局任务供其他 NPC 接续（保留 stepIndex）
+                if (reason == RemovalReason.KILLED && ecsEntityId > 0) {
+                    var exec = world.get(ecsEntityId, TaskExecutor.class);
+                    if (exec != null && exec.globalTaskId != null) {
+                        world.taskPool.releaseTaskForReassign(
+                            exec.globalTaskId, ecsEntityId, world);
+                    }
+                }
+                EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, world);
+            }
         }
+    }
+
+    /** 面向目标方块（yaw + pitch 计算） */
+    private void faceTarget(BlockPos target) {
+        double dx = target.getX() + 0.5 - getX();
+        double dz = target.getZ() + 0.5 - getZ();
+        float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
+        setYRot(yaw); yBodyRot = yaw; yHeadRot = yaw;
+        double dy = target.getY() + 0.5 - (getY() + 1.4);
+        double hDist = Math.sqrt(dx * dx + dz * dz);
+        setXRot((float) -Math.toDegrees(Math.atan2(dy, hDist)));
     }
 
     // === NBT ===
@@ -264,7 +305,54 @@ public final class EntityComponentBridge {
 }
 ```
 
-### 5.3 WandscapeEntityOps
+### 5.3 WandscapeMovementOps
+
+无状态适配器，`navigateTo()` 写入 `NavigationState`（mode + target + CompletableFuture），所有实际移动由 `NavigationSystem` 驱动。
+
+```java
+public class WandscapeMovementOps implements MovementOps {
+    @Override
+    public CompletableFuture<Void> navigateTo(long npcId, int x, int y, int z) {
+        // 验证 NPC 存在 → 已在范围内返回 completedFuture
+        // 获取或创建 NavigationState → 写入 mode=PATHFINDING + target + future
+        // NavigationSystem 在同一 tick 内拾取并驱动移动
+        return future;
+    }
+
+    @Override
+    public void cancelNavigation(long npcId) {
+        // reset NavigationState → complete future → npc.setAiWanderingEnabled(true)
+    }
+}
+```
+
+- **≤32 格水平距离**：寻路（`PathNavigation.moveTo()`，速度 1.0）
+- **>32 格水平距离**：仪式传送（扣 20 魔力 + 粒子特效）
+- **魔力不足**：TELEPORT_WAITING 模式，NavigationSystem 每 tick 检查魔力恢复
+- **卡死检测**：每 60 tick 检查位移 < 2 格，连续 3 次 → 传送
+- **超时**：200 tick / 10s → 传送
+- **重寻路**：`nav.isDone()` 但未到达时重新 `moveTo()`，最多 5 次
+- **不再有 `tickAll()` 方法**：轮询逻辑移入 NavigationSystem（ECS System）
+
+### 5.3b NavigationSystem (engine/system/)
+
+所有 NPC 移动的单一驱动。ECS System，注册在 `TaskExecutionSystem` 之后。
+
+```
+update(World, delta):
+  遍历 NavigationState + Position 的 NPC:
+    ├─ NPC 已移除 → reset
+    ├─ 已到达 (≤5 格) → arrive(): complete future, enable wandering AI
+    ├─ 首 tick → 初始化 startTick, suppress wandering, moveTo() 或 teleport
+    ├─ PATHFINDING:
+    │   ├─ nav.isDone() → re-path (≤5次) 或 switch to teleport
+    │   ├─ elapsed > 200 → switch to teleport
+    │   └─ stuck check (3×60tick, <2 block progress) → switch to teleport
+    └─ TELEPORT_WAITING:
+        └─ ManaPool.current >= 20 → consume + teleport + arrive
+```
+
+### 5.4 WandscapeEntityOps
 
 ```java
 public class WandscapeEntityOps implements EntityOps {
@@ -274,7 +362,25 @@ public class WandscapeEntityOps implements EntityOps {
 }
 ```
 
-### 5.4 WandscapeRitualOps
+### 5.5 WandscapeBlockOps
+
+实体疏散在 `setBlock()` 中自动执行：
+
+```java
+@Override
+public void setBlock(GridPos pos, BlockType type) {
+    Block block = resolveBlock(type);
+    if (block != null) {
+        BlockPos bp = toBlockPos(pos);
+        evacuateEntities(level, bp);  // 先推走生物
+        level.setBlock(bp, block.defaultBlockState(), 3);
+    }
+}
+```
+
+`evacuateEntities()` 逻辑：检查目标方块内是否有活体生物（非旁观者）→ 先尝试推至相邻空气方块（N/S/E/W/UP）→ 无空气邻接时直接推到上方 2 格。
+
+### 5.6 WandscapeRitualOps
 
 ```java
 public class WandscapeRitualOps implements RitualOps {
@@ -298,7 +404,7 @@ public class WandscapeRitualOps implements RitualOps {
 }
 ```
 
-### 5.5 NpcApiImpl
+### 5.7 NpcApiImpl
 
 ```java
 public class NpcApiImpl implements NpcApi {
@@ -321,7 +427,7 @@ public class NpcApiImpl implements NpcApi {
 }
 ```
 
-### 5.6 NpcDataImpl
+### 5.8 NpcDataImpl
 
 ```java
 record NpcDataImpl(UUID npcId, String name, int maxHealth, int currentHealth,
@@ -351,10 +457,10 @@ ServerStarting:
   EngineBootstrap.bootstrap()  // 注入真实的 WandscapeEntityOps / WandscapeRitualOps
 
 ServerTick (Post):
-  EntityComponentBridge.INSTANCE.syncPositions(world);  // ① 位置同步（始终）
-  if (world.hasPendingAsyncOps()) return;                // ② V2.5 门控
+  asyncExec.tickAll();                                   // ① MC 异步倒计时
+  EntityComponentBridge.INSTANCE.syncPositions(world);  // ② 位置同步（始终）
   engineTickCount++;
-  world.tick(1.0f);                                      // ③ 引擎逻辑帧
+  world.tick(1.0f);                                      // ③ 引擎逻辑帧（含 NavigationSystem）
 ```
 
 ## 七、阶段 2 验证路径
@@ -390,10 +496,10 @@ ServerTick (Post):
 | 类名 | `WandscapeVillager` | `WandscapeNpc` (PathfinderMob) | 无需对齐（设计演进） |
 | 魔力恢复 | NPC.tick() 自管，房屋内 ×3 | ManaRegenSystem 每引擎 tick 恢复，无房屋加成 | 阶段 4 |
 | 魔力权威源 | NPC 实体字段 | ECS ManaPool（ECS 写，NBT save 时回读） | 持续 |
-| 移动决策 | <64 寻路 / >=64 传送 / 卡死 3×3s 检测 | 无移动（阶段 2 Op 瞬发） | 阶段 3 |
-| 卡死→传送 | 自动入队私有 self_teleport（Operation D） | 未实现 | 阶段 3 |
-| self_teleport | 走标准 Operation D 路径（JSON mana_cost、粒子特效） | 同步传送 `npc.teleportTo()`，无 mana 消耗，无粒子 | 阶段 3 |
-| 死亡 | 物品掉落 + `NpcDiedEvent` | 未实现 | 阶段 3 |
+| 移动决策 | <64 寻路 / >=64 传送 / 卡死 3×3s 检测 | ≤32 寻路 / >32 仪式传送 / 卡死 3×60tick 检测 / 魔力不足等待 / 超时 10s 兜底。NavigationSystem 单一驱动，WandscapeMovementOps 无状态 | 已实现（V2.6 重构） |
+| 卡死→传送 | 自动入队私有 self_teleport（Operation D） | 已移除——传送无卡死可能 | 无需对齐 |
+| self_teleport | 走标准 Operation D 路径（JSON mana_cost、粒子特效） | MovementOps 直接传送，RitualOps 同步实现 | 阶段 3（需补粒子+消耗） |
+| 死亡 | 物品掉落 + `NpcDiedEvent` | `releaseTaskForReassign`（保留 stepIndex 重新入队）+ ECS 注销 | 阶段 3（需补物品掉落 + Event） |
 | 坟墓 | 永久存物品直到玩家手动移除 | 未实现 | 阶段 4 |
 | 复活 | Operation D 仪式，重生在祭坛旁，清空装备 | 未实现 | 阶段 5 |
 | 房屋绑定 | 绑定/解绑，空闲返回房屋，魔力恢复 ×3 | 未实现 (assignHouse 返回 false) | 阶段 4 |
@@ -402,7 +508,7 @@ ServerTick (Post):
 | 背包管理 | 管理面板只读查看，亲自交互才能放取 | 仅 SimpleContainer(27)，无 GUI | 阶段 5 |
 | 状态机 | IDLE/WORKING/STUCK/DEAD 四状态 | 阶段 2 仅 IDLE/WORKING（引擎 ExecutorState 驱动） | 阶段 3 |
 | NBT 字段 | `colonyId`, `currentMana`, `assignedHouseId`, `inventory.save()` | `ecsEntityId`, `maxMana`, `manaRegenRate`, `colonyId`, `spellPower`, `DATA_CASTING` (synced), `DATA_DEBUG_TARGET` (synced) | 持续扩展 |
-| 施法动画 | 无设计 | 右臂角度自适应 pitch 的施法 pose，全亮度射线粒子，施法时锁定移动 | 已实现 |
+| 施法动画 + 视觉反馈 | 无设计 | 右臂自适应 pitch 的施法 pose；ECS `TaskExecutor.currentOpTarget` → NPC `faceTarget()` 面向操作目标；全亮度射线粒子；施法时锁定移动 | 已实现 |
 | Debug 模式 | 无设计 | 右键 NPC 切换 debugCasting，追踪钻石块坐标 | 内测工具 |
 
 ### 关键架构差异
@@ -453,13 +559,20 @@ NPC 通过 `EntityDataAccessor<Boolean> DATA_CASTING` 将施法状态从服务�
 
 ## 十、不做（留给阶段 3+）
 
-- ❌ NPC 寻路到目标再执行 Op（需要 MoveOp + CompletableFuture 异步模型）
-- ❌ 卡死检测 → 自动入队 self_teleport
+- ❌ 寻路移动 → **已实现（V2.6）**：≤32 寻路 + 卡死检测 + 超时兜底 + 重寻路，NavigationSystem 单一驱动
+- ❌ 卡死检测 → **已实现（V2.6）**：3×60tick < 2 格进展 → 仪式传送
 - ❌ 房屋绑定 / 魔力恢复 ×3
-- ❌ 死亡掉落 / 坟墓
+- ❌ 死亡掉落物品 / 坟墓（死亡续传 `releaseTaskForReassign` 已实现）
 - ❌ AI 行为树 / 任务驱动移动
 - ❌ 背包 GUI / 管理面板
 - ❌ EntityInteractOp 真实实现（通过 Bridge 查找 MC 实体）
 - ❌ item_transport ritual 实现
 - ❌ 法杖装备监听 → WandCarrier 重建
 - ❌ 殖民地创建流程（colonyId 目前是占位值）
+
+### 已实现（从原"不做"列表中移除）
+
+- ✅ NPC 移动到目标（直接传送，`WandscapeMovementOps`）
+- ✅ 方块放置前疏散实体（`WandscapeBlockOps.evacuateEntities()`）
+- ✅ NPC 死亡时全局任务续传（`releaseTaskForReassign`，保留 stepIndex）
+- ✅ 施法时面向操作目标（`TaskExecutor.currentOpTarget` → `faceTarget()`）

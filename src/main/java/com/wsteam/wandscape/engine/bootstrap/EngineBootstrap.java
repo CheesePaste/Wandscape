@@ -24,6 +24,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
+import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
@@ -137,18 +138,24 @@ public final class EngineBootstrap {
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
 
-        // 8. Override TransformOp executor with async version (V2.5 gating demo)
+        // 8. Register NavigationSystem (drives all NPC movement via NavigationState)
+        NavigationSystem navSystem = new NavigationSystem();
+        world.addSystem(navSystem);
+
+        // 9. Override TransformOp executor with async version (V2.5 gating demo)
         //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
         int asyncDelay = 5; // 5 MC tick delay per TransformOp
         if (asyncDelay > 0) {
             AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
-            WandscapeEngine.setMovementOps(movementOps);
-        WandscapeEngine.setAsyncExecutor(asyncExec);
+            WandscapeEngine.setAsyncExecutor(asyncExec);
             LOGGER.info("  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 
-        // 9. Store world in singleton
+        // 10. Publish boundary services
+        WandscapeEngine.setMovementOps(movementOps);
+
+        // 11. Store world in singleton
         WandscapeEngine.setWorld(world);
 
         LOGGER.info("CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",

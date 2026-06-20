@@ -30,11 +30,12 @@ The engine uses an **ECS** (Entity-Component-System) architecture with a **Bluep
 │    3. TaskSourcePoller                                 │
 │    4. SchedulerSystem                                   │
 │    5. TaskExecutionSystem                               │
-│    6. EventBus.dispatch()              ← tick end        │
+│    6. NavigationSystem               ← V2.6             │
+│    7. EventBus.dispatch()              ← tick end        │
 │                                                         │
 │  ┌────────────┐  ┌──────────────┐  ┌────────────────┐  │
 │  │ Components  │  │ GlobalTask   │  │ OpExecutor     │  │
-│  │ (7 types)   │  │ Pool         │  │ Registry       │  │
+│  │ (8 types)   │  │ Pool         │  │ Registry       │  │
 │  └────────────┘  └──────────────┘  └────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -114,6 +115,7 @@ Task A executes EmitEventOp("planted", {crop: "wheat"})
 | `Inventory` | `items, capacity` | NPC 27-slot inventory |
 | `ColonyMember` | `colonyId` | Colony membership |
 | `ColonyMetadata` | `colonyId, center, radius` | Colony entity data |
+| `NavigationState` | `mode(IDLE/PATHFINDING/TELEPORT_WAITING), target, future, startTick, stuckChecks, repathCount` | NPC movement state — single source of truth, driven by NavigationSystem |
 
 ---
 
@@ -153,6 +155,7 @@ sealed interface AtomicOp
 | `EntityOps` | `applyEffect, getPosition` | External entity interaction |
 | `RitualOps` | `beginRitual` → `CompletableFuture<Void>` | Ritual lifecycle (sync/async) |
 | `ColonyResourceAccess` | `hasEnough, reserve, commit, release, available` | Warehouse resource management |
+| `MovementOps` | `navigateTo → CompletableFuture, cancelNavigation` | NPC movement (WandscapeMovementOps writes NavigationState, NavigationSystem drives it) |
 | `EventBus` | `emit, subscribe, unsubscribe` | Tick-delayed event dispatch |
 
 ---
@@ -182,8 +185,9 @@ Systems execute in registration order. Order matters:
 2. **SystemBlueprintSystem** — Drive system blueprint steps (V2)
 3. **TaskSourcePoller** — Generate new tasks (WarehouseSource, etc.)
 4. **SchedulerSystem** — Assign tasks to idle NPCs
-5. **TaskExecutionSystem** — Execute one tick of work per NPC
-6. **EventBus.dispatch()** — Deliver all queued events (tick end, not a System)
+5. **TaskExecutionSystem** — Execute one tick of work per NPC (writes NavigationState for movement)
+6. **NavigationSystem** — Drive all NPC movement (reads NavigationState, runs same tick)
+7. **EventBus.dispatch()** — Deliver all queued events (tick end, not a System)
 
 ---
 
@@ -203,8 +207,8 @@ Java's `CompletableFuture` provides the exact semantics we need:
 ```
 ┌─ MC Tick 1 ──► engineTickCount++ ──► world.tick() ──────────┐
 │  NPC1: TransformOp → DONE (instant)                          │
-│  NPC2: MoveOp → WAITING → world.startAsyncOp("move_10_64")   │
-│  NPC3: MoveOp → WAITING → world.startAsyncOp("move_20_64")   │
+│  NPC2: writes NavigationState → NavigationSystem starts move │
+│  NPC3: writes NavigationState → NavigationSystem starts move │
 │  → 2 CompletableFutures pending → gate closes                │
 ├─ MC Tick 2 ──► world.hasPendingAsyncOps() → skip engine      │
 │  NPC2 arrives → future.complete(null) → auto-removed, 1 left │
@@ -233,7 +237,7 @@ All V1/V2 operations are synchronous (TransformOp, BlockInteractOp, EmitEventOp,
 
 | Op | Async? | Resolution trigger |
 |----|--------|--------------------|
-| `MoveOp` | Yes | `Navigation.onArrived()` → `future.complete()` |
+| NPC movement (NavigationSystem) | Yes | Arrival / teleport → `NavigationState.future.complete()` |
 | `RitualOp` (channeled) | Yes | Channel ticks elapsed → `future.complete()` |
 | `TransformOp` | No | Instant via `BlockOps.setBlock()` |
 | `BlockInteractOp` | No | Instant |
@@ -253,7 +257,7 @@ All V1/V2 operations are synchronous (TransformOp, BlockInteractOp, EmitEventOp,
 |---------|-------|---------|
 | `types/` | 10 | Value types (GridPos, ResourceId, etc.) |
 | `ecs/` | 4 | ECS framework |
-| `component/` | 7 | ECS components |
+| `component/` | 8 | ECS components |
 | `boundary/` | 5 | Adaptor interfaces |
 | `op/` | 6 | AtomicOp + executors + conditions |
 | `event/` | 7 | Domain events + bus |
