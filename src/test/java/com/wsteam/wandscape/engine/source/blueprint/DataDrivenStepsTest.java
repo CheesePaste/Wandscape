@@ -49,7 +49,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null  // no blueprint ref in this test
+                null,  // no boundary
+                null  // no blueprint ref
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -81,7 +82,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null  // no blueprint ref in this test
+                null,  // no boundary
+                null  // no blueprint ref
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -118,7 +120,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null  // no blueprint ref in this test
+                null,  // no boundary
+                null  // no blueprint ref
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -143,7 +146,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null  // no blueprint ref in this test
+                null,  // no boundary
+                null  // no blueprint ref
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -224,7 +228,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null  // no blueprint ref in this test
+                null,  // no boundary
+                null  // no blueprint ref
         );
     }
 }

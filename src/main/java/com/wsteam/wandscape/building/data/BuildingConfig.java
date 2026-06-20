@@ -35,6 +35,7 @@ public record BuildingConfig(
         @SerializedName("shutdown_penalty") ShutdownPenalty shutdownPenalty,
         QueueDef queue,
         @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement,
+        @Nullable BoundaryBox boundary,
         @Nullable BlueprintRef blueprint
 ) {
     public record ShutdownPenalty(
@@ -64,6 +65,31 @@ public record BuildingConfig(
      * @param bind key = blueprint param name, value = {@code $field_name}
      *             bare variable reference to a building JSON field
      */
+    /** AABB 包围盒，角点相对于 anchor。 */
+    public record BoundaryBox(
+            BlockOffset min,
+            BlockOffset max
+    ) {
+        public BoundaryBox {
+            if (min == null || max == null) {
+                throw new IllegalArgumentException("boundary min and max must not be null");
+            }
+        }
+
+        /** 遍历 AABB 内所有坐标（含边界）。 */
+        public List<BlockOffset> allPositions() {
+            List<BlockOffset> result = new ArrayList<>();
+            for (int x = min.x(); x <= max.x(); x++) {
+                for (int y = min.y(); y <= max.y(); y++) {
+                    for (int z = min.z(); z <= max.z(); z++) {
+                        result.add(new BlockOffset(x, y, z));
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
     public record BlueprintRef(
             String id,
             Map<String, String> bind
@@ -132,6 +158,16 @@ public record BuildingConfig(
                         obj.get("unlock_requirement"), UnlockRequirement.class);
             }
 
+            // Boundary
+            BoundaryBox boundary = null;
+            if (obj.has("boundary")) {
+                JsonObject bObj = obj.getAsJsonObject("boundary");
+                BlockOffset.Deserializer offsetDs2 = new BlockOffset.Deserializer();
+                BlockOffset bMin = offsetDs2.deserialize(bObj.get("min"), BlockOffset.class, context);
+                BlockOffset bMax = offsetDs2.deserialize(bObj.get("max"), BlockOffset.class, context);
+                boundary = new BoundaryBox(bMin, bMax);
+            }
+
             // Blueprint reference
             BlueprintRef blueprint = null;
             if (obj.has("blueprint")) {
@@ -152,7 +188,7 @@ public record BuildingConfig(
             return new BuildingConfig(id, displayName, category, blockId,
                     pattern, blockMapping,
                     comfort, magic, wonder, maintenanceCost,
-                    shutdownPenalty, queue, unlockRequirement, blueprint);
+                    shutdownPenalty, queue, unlockRequirement, boundary, blueprint);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

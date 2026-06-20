@@ -247,13 +247,36 @@ public final class BlueprintInterpreter {
                     "Unknown blueprint in call: " + calleeId);
         }
 
-        // The callee must be a DSL blueprint (BlueprintSteps wrapping a definition)
-        // For now, only DSL blueprints support macro expansion.
-        // Legacy Java lambda blueprints cannot be macro-expanded.
-        // TODO: add BlueprintDefinition to Blueprint record for DSL blueprints
-        throw new BlueprintInterpretException(
-                "call step requires a DSL blueprint with BlueprintDefinition. "
-                + "Legacy lambda blueprints cannot be macro-expanded: " + calleeId);
+        // Must be a DSL blueprint with definition
+        BlueprintDefinition calleeDef = calleeBp.definition();
+        if (calleeDef == null) {
+            throw new BlueprintInterpretException(
+                    "Cannot macro-expand legacy lambda blueprint: " + calleeId
+                    + ". Only DSL blueprints (with BlueprintDefinition) support call.");
+        }
+
+        // Build callee context: evaluate "with" expressions against caller context
+        Map<String, JsonElement> calleeContext = new HashMap<>();
+        for (var withEntry : step.with().entrySet()) {
+            String paramName = withEntry.getKey();
+            ExprNode valueExpr = withEntry.getValue();
+            JsonElement value = evaluate(valueExpr, context);
+            calleeContext.put(paramName, value);
+        }
+
+        // Validate: all declared params must be provided
+        for (var paramEntry : calleeDef.params().entrySet()) {
+            if (!calleeContext.containsKey(paramEntry.getKey())) {
+                throw new BlueprintInterpretException(
+                        "call to '" + calleeId + "' missing required param '"
+                        + paramEntry.getKey() + "' (type: " + paramEntry.getValue() + ")");
+            }
+        }
+
+        // Expand callee steps with new call stack (includes callee for recursion detection)
+        Set<String> newStack = new HashSet<>(callStack);
+        newStack.add(calleeId);
+        return expandSteps(calleeDef.steps(), calleeContext, newStack);
     }
 
     // ─────────────────────────────────────────────────────────────────

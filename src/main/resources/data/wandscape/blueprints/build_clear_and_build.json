@@ -1,0 +1,46 @@
+{
+  "id": "build:clear_and_build",
+  "display_name": "Clear and Build",
+  "description": "First clears non-pattern blocks within the boundary AABB, then calls build:place_structure to place pattern blocks. clear_offsets is pre-computed by EnqueueHelper as boundary volume minus pattern offsets.",
+  "params": {
+    "clear_offsets": "list<pos>",
+    "offsets": "list<pos>",
+    "blocks": "map<string,string>",
+    "name": "string",
+    "anchor": "pos"
+  },
+  "steps": [
+    {
+      "type": "log",
+      "level": "info",
+      "text": {"format": ["[Clear] Clearing {} positions for {} at {}", {"size": "$clear_offsets"}, "$name", "$anchor"]}
+    },
+    {
+      "type": "for_each",
+      "list": "$clear_offsets",
+      "var": "off",
+      "steps": [
+        {
+          "type": "remove",
+          "at": {"+": ["$anchor", "$off"]},
+          "from": "minecraft:air"
+        }
+      ]
+    },
+    {
+      "type": "log",
+      "level": "info",
+      "text": {"format": ["[Clear] Done. Building {} at {}", "$name", "$anchor"]}
+    },
+    {
+      "type": "call",
+      "blueprint": "build:place_structure",
+      "with": {
+        "offsets": "$offsets",
+        "blocks": "$blocks",
+        "name": "$name",
+        "anchor": "$anchor"
+      }
+    }
+  ]
+}

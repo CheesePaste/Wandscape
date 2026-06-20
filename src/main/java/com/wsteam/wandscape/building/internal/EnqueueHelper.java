@@ -1,12 +1,15 @@
 package com.wsteam.wandscape.building.internal;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
@@ -57,6 +60,11 @@ public final class EnqueueHelper {
                     params.put(blueprintParamName, value);
                 }
             }
+            // 3. If boundary is present, pre-compute clear_offsets
+            //    (boundary volume minus pattern offsets — those get placed, not cleared)
+            if (config.boundary() != null) {
+                params.put("clear_offsets", computeClearOffsets(config));
+            }
         } else {
             // Legacy fallback: no blueprint ref → use "build:<typeId>" blueprint
             // with simple x/y/z params (in addition to anchor)
@@ -85,6 +93,7 @@ public final class EnqueueHelper {
             case "magic" -> new JsonPrimitive(config.magic());
             case "wonder" -> new JsonPrimitive(config.wonder());
             case "maintenance_cost" -> new JsonPrimitive(config.maintenanceCost());
+            case "boundary" -> boundaryToJson(config);
             default -> null;
         };
     }
@@ -109,6 +118,39 @@ public final class EnqueueHelper {
             obj.addProperty(entry.getKey(), entry.getValue());
         }
         return obj;
+    }
+
+    /** Convert boundary to a JsonObject {min: [x,y,z], max: [x,y,z]}. */
+    private static JsonElement boundaryToJson(BuildingConfig config) {
+        var b = config.boundary();
+        JsonObject obj = new JsonObject();
+        obj.add("min", offsetToJson(b.min()));
+        obj.add("max", offsetToJson(b.max()));
+        return obj;
+    }
+
+    /**
+     * Compute offsets to clear: all positions within the AABB boundary
+     * MINUS positions that are in the pattern (those will be placed).
+     */
+    private static JsonElement computeClearOffsets(BuildingConfig config) {
+        Set<String> patternKeys = new HashSet<>(config.blockMapping().keySet());
+        JsonArray arr = new JsonArray();
+        for (BlockOffset off : config.boundary().allPositions()) {
+            if (!patternKeys.contains(off.toKey())) {
+                arr.add(offsetToJson(off));
+            }
+        }
+        return arr;
+    }
+
+    /** Convert a BlockOffset to [x, y, z] JsonArray. */
+    private static JsonArray offsetToJson(BlockOffset off) {
+        JsonArray arr = new JsonArray();
+        arr.add(off.x());
+        arr.add(off.y());
+        arr.add(off.z());
+        return arr;
     }
 
     /** Convert a BlockPos to a [x, y, z] JsonArray. */

@@ -57,8 +57,10 @@ public final class BlueprintConfigLoader {
         for (var entry : definitions.entrySet()) {
             String id = entry.getKey();
             BlueprintDefinition def = entry.getValue();
-            registry.register(id, (BlueprintSteps) params ->
-                    interpreter.interpret(def, params));
+            // Register with definition so call steps can macro-expand this blueprint
+            registry.register(id, new Blueprint(id,
+                    (BlueprintSteps) params -> interpreter.interpret(def, params),
+                    def));
             Log.info(TAG, "registered blueprint: %s (params=%d steps=%d)",
                     id, def.params().size(), def.steps().size());
         }

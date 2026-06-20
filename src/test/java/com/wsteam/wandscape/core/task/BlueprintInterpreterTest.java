@@ -386,23 +386,200 @@ class BlueprintInterpreterTest {
     }
 
     // ─────────────────────────────────────────────────────
-    // Recursion detection
+    // call / recursion
     // ─────────────────────────────────────────────────────
 
-    @Test
-    @DisplayName("call recursion detection")
-    void callRecursionDetection() {
-        // Register a blueprint that calls itself
-        BlueprintDefinition selfCall = new BlueprintDefinition("recursive:self",
-                Collections.emptyMap(),
-                List.of(new StepNode.CallStep(
-                        new ExprNode.LiteralString("recursive:self"),
-                        Collections.emptyMap())));
+    @Nested
+    @DisplayName("call macro expansion")
+    class CallTests {
 
-        registry.register("recursive:self", new Blueprint("recursive:self",
-                (BlueprintSteps) p -> interpreter.interpret(selfCall, p)));
+        @Test
+        @DisplayName("call expands callee steps inline")
+        void callExpandsCalleeSteps() {
+            // Sub-blueprint: place a block at given position
+            BlueprintDefinition sub = new BlueprintDefinition("sub:place_one",
+                    Map.of("pos", ParamType.POS, "block", ParamType.STRING),
+                    List.of(new StepNode.PlaceStep(
+                            new ExprNode.Var("pos"),
+                            new ExprNode.Var("block"))));
 
-        assertThrows(BlueprintInterpreter.BlueprintInterpretException.class,
-                () -> interpreter.interpret(selfCall, Collections.emptyMap()));
+            registry.register("sub:place_one", new Blueprint("sub:place_one",
+                    (BlueprintSteps) p -> interpreter.interpret(sub, p), sub));
+
+            // Caller: calls sub with concrete values
+            BlueprintDefinition caller = new BlueprintDefinition("test:caller",
+                    Collections.emptyMap(),
+                    List.of(new StepNode.CallStep(
+                            new ExprNode.LiteralString("sub:place_one"),
+                            Map.of("pos", new ExprNode.LiteralPos(new GridPos(5, 64, 5)),
+                                   "block", new ExprNode.LiteralString("minecraft:stone")))));
+
+            registry.register("test:caller", new Blueprint("test:caller",
+                    (BlueprintSteps) p -> interpreter.interpret(caller, p), caller));
+
+            TaskSequence seq = interpreter.interpret(caller, Collections.emptyMap());
+            assertEquals(1, seq.size());
+            AtomicOp.TransformOp op = (AtomicOp.TransformOp) seq.get(0);
+            assertEquals(new GridPos(5, 64, 5), op.target());
+            assertEquals(new BlockType("minecraft:stone"), op.to());
+        }
+
+        @Test
+        @DisplayName("call missing param throws")
+        void callMissingParam() {
+            BlueprintDefinition sub = new BlueprintDefinition("sub:needs_a",
+                    Map.of("a", ParamType.STRING),
+                    List.of(new StepNode.LogStep("info", new ExprNode.Var("a"))));
+
+            registry.register("sub:needs_a", new Blueprint("sub:needs_a",
+                    (BlueprintSteps) p -> interpreter.interpret(sub, p), sub));
+
+            // Caller does NOT provide param "a"
+            BlueprintDefinition caller = new BlueprintDefinition("test:bad_call",
+                    Collections.emptyMap(),
+                    List.of(new StepNode.CallStep(
+                            new ExprNode.LiteralString("sub:needs_a"),
+                            Collections.emptyMap())));
+
+            assertThrows(BlueprintInterpreter.BlueprintInterpretException.class,
+                    () -> interpreter.interpret(caller, Collections.emptyMap()),
+                    "missing required param should throw");
+        }
+
+        @Test
+        @DisplayName("call recursion detection")
+        void callRecursionDetection() {
+            // A blueprint that calls itself
+            BlueprintDefinition selfCall = new BlueprintDefinition("recursive:self",
+                    Collections.emptyMap(),
+                    List.of(new StepNode.CallStep(
+                            new ExprNode.LiteralString("recursive:self"),
+                            Collections.emptyMap())));
+
+            registry.register("recursive:self", new Blueprint("recursive:self",
+                    (BlueprintSteps) p -> interpreter.interpret(selfCall, p), selfCall));
+
+            assertThrows(BlueprintInterpreter.BlueprintInterpretException.class,
+                    () -> interpreter.interpret(selfCall, Collections.emptyMap()));
+        }
+
+        @Test
+        @DisplayName("call non-DSL legacy blueprint throws")
+        void callLegacyBlueprint() {
+            // Register a legacy lambda blueprint (no definition)
+            registry.register("legacy:lambda", (BlueprintSteps) p ->
+                    new TaskSequence(List.of(), "legacy"));
+
+            BlueprintDefinition caller = new BlueprintDefinition("test:call_legacy",
+                    Collections.emptyMap(),
+                    List.of(new StepNode.CallStep(
+                            new ExprNode.LiteralString("legacy:lambda"),
+                            Collections.emptyMap())));
+
+            assertThrows(BlueprintInterpreter.BlueprintInterpretException.class,
+                    () -> interpreter.interpret(caller, Collections.emptyMap()),
+                    "Cannot macro-expand legacy lambda blueprint");
+        }
+
+        @Test
+        @DisplayName("clear_and_build: remove non-pattern blocks then place structure")
+        void clearAndBuildFlow() {
+            // -- Sub-blueprint: build:place_structure (for_each offsets → place) --
+            BlueprintDefinition placeStructDef = new BlueprintDefinition(
+                    "build:place_structure",
+                    Map.of("offsets", ParamType.LIST_POS, "blocks", ParamType.MAP_STRING_STRING,
+                           "name", ParamType.STRING, "anchor", ParamType.POS),
+                    List.of(
+                            new StepNode.ForEachStep(new ExprNode.Var("offsets"), "off",
+                                    List.of(new StepNode.PlaceStep(
+                                            new ExprNode.Add(
+                                                    new ExprNode.Var("anchor"),
+                                                    new ExprNode.Var("off")),
+                                            new ExprNode.MapGet(new ExprNode.Var("blocks"),
+                                                    new ExprNode.KeyOf(new ExprNode.Var("off")))))),
+                            new StepNode.EmitEventStep(new ExprNode.LiteralString("build_complete"),
+                                    Map.of("building_name", new ExprNode.Var("name"),
+                                           "blocks_placed", new ExprNode.Size(new ExprNode.Var("offsets"))))));
+            registry.register("build:place_structure", new Blueprint("build:place_structure",
+                    (BlueprintSteps) p -> interpreter.interpret(placeStructDef, p),
+                    placeStructDef));
+
+            // -- Master: build:clear_and_build --
+            // Params: clear_offsets(list<pos>), offsets, blocks, name, anchor
+            BlueprintDefinition clearAndBuild = new BlueprintDefinition(
+                    "build:clear_and_build",
+                    Map.of("clear_offsets", ParamType.LIST_POS, "offsets", ParamType.LIST_POS,
+                           "blocks", ParamType.MAP_STRING_STRING, "name", ParamType.STRING,
+                           "anchor", ParamType.POS),
+                    List.of(
+                            // for_each clear_offsets → remove
+                            new StepNode.ForEachStep(new ExprNode.Var("clear_offsets"), "off",
+                                    List.of(new StepNode.RemoveStep(
+                                            new ExprNode.Add(
+                                                    new ExprNode.Var("anchor"),
+                                                    new ExprNode.Var("off")),
+                                            new ExprNode.LiteralString("minecraft:air")))),
+                            // call place_structure
+                            new StepNode.CallStep(
+                                    new ExprNode.LiteralString("build:place_structure"),
+                                    Map.of("offsets", new ExprNode.Var("offsets"),
+                                           "blocks", new ExprNode.Var("blocks"),
+                                           "name", new ExprNode.Var("name"),
+                                           "anchor", new ExprNode.Var("anchor")))));
+            registry.register("build:clear_and_build", new Blueprint("build:clear_and_build",
+                    (BlueprintSteps) p -> interpreter.interpret(clearAndBuild, p),
+                    clearAndBuild));
+
+            // -- Simulate EnqueueHelper output --
+            // Boundary 2×1×2 = [[0,0,0],[1,0,0],[0,0,1],[1,0,1]]
+            // Pattern has [[0,0,0],[1,0,0]] → clear_offsets = [[0,0,1],[1,0,1]]
+            JsonArray clearOffsets = new JsonArray();
+            clearOffsets.add(posArray(0, 0, 1));
+            clearOffsets.add(posArray(1, 0, 1));
+
+            JsonArray offsets = new JsonArray();
+            offsets.add(posArray(0, 0, 0));
+            offsets.add(posArray(1, 0, 0));
+
+            JsonObject blocks = new JsonObject();
+            blocks.addProperty("0,0,0", "minecraft:stone_bricks");
+            blocks.addProperty("1,0,0", "minecraft:stone_bricks");
+
+            Map<String, JsonElement> p = new HashMap<>();
+            p.put("anchor", posArray(10, 64, 10));
+            p.put("clear_offsets", clearOffsets);
+            p.put("offsets", offsets);
+            p.put("blocks", blocks);
+            p.put("name", new JsonPrimitive("Test Hut"));
+
+            TaskSequence seq = interpreter.interpret(clearAndBuild, p);
+
+            // Expected: 2 remove ops + 2 place ops + 1 emit_event = 5 ops
+            assertEquals(5, seq.size());
+
+            // First remove: anchor + clear_offsets[0] = (10,64,11)
+            assertTrue(seq.get(0) instanceof AtomicOp.TransformOp, "step 0 should be remove");
+            AtomicOp.TransformOp r0 = (AtomicOp.TransformOp) seq.get(0);
+            assertEquals(new GridPos(10, 64, 11), r0.target());
+            assertEquals(new BlockType("minecraft:air"), r0.from());
+
+            // Second remove: anchor + clear_offsets[1] = (11,64,11)
+            AtomicOp.TransformOp r1 = (AtomicOp.TransformOp) seq.get(1);
+            assertEquals(new GridPos(11, 64, 11), r1.target());
+
+            // Place ops from place_structure call
+            assertTrue(seq.get(2) instanceof AtomicOp.TransformOp);
+            assertEquals(new GridPos(10, 64, 10), ((AtomicOp.TransformOp) seq.get(2)).target());
+
+            assertTrue(seq.get(3) instanceof AtomicOp.TransformOp);
+            assertEquals(new GridPos(11, 64, 10), ((AtomicOp.TransformOp) seq.get(3)).target());
+
+            // Emit event from place_structure
+            assertTrue(seq.get(4) instanceof AtomicOp.EmitEventOp);
+            AtomicOp.EmitEventOp evt = (AtomicOp.EmitEventOp) seq.get(4);
+            assertEquals("build_complete", evt.eventName());
+            assertEquals("Test Hut", evt.templateParams().get("building_name"));
+            assertEquals("2", evt.templateParams().get("blocks_placed"));
+        }
     }
 }
