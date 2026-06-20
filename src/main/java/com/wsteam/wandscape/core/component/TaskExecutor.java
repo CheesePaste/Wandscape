@@ -3,11 +3,14 @@ package com.wsteam.wandscape.core.component;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.TaskSequence;
+import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import javax.annotation.Nullable;
 
 import com.google.gson.JsonElement;
 
@@ -51,6 +54,14 @@ public class TaskExecutor {
     /** Whether the pending future is from navigation (not op execution). */
     public boolean pendingFutureIsNav = false;
 
+    /**
+     * Current op world-position target, for visual feedback (wand beam).
+     * Set by TaskExecutionSystem before executing an op; cleared on step advance.
+     * The NPC renderer reads this indirectly via {@code getDebugTarget()}.
+     */
+    @Nullable
+    public GridPos currentOpTarget = null;
+
     /** Push an op to the back of the private queue. */
     public void pushPrivate(AtomicOp op) {
         privateQueue.addLast(op);
@@ -90,6 +101,7 @@ public class TaskExecutor {
         taskParams = null;
         pendingFuture = null;
         pendingFutureIsNav = false;
+        currentOpTarget = null;
         state = ExecutorState.IDLE;
     }
 
@@ -101,6 +113,7 @@ public class TaskExecutor {
         taskParams = null;
         pendingFuture = null;
         pendingFutureIsNav = false;
+        currentOpTarget = null;
         state = ExecutorState.IDLE;
     }
 }

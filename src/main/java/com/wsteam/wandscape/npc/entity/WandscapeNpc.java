@@ -157,19 +157,10 @@ public class WandscapeNpc extends PathfinderMob {
                 casting = true;
                 BlockPos target = Wandscape.debugDiamondTarget;
                 if (target != null) {
-                    double dx = target.getX() + 0.5 - getX();
-                    double dz = target.getZ() + 0.5 - getZ();
-                    float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
-                    setYRot(yaw);
-                    yBodyRot = yaw;
-                    yHeadRot = yaw;
-                    double dy = target.getY() + 0.5 - (getY() + 1.4);
-                    double hDist = Math.sqrt(dx * dx + dz * dz);
-                    float pitch = (float) -Math.toDegrees(Math.atan2(dy, hDist));
-                    setXRot(pitch);
+                    setDebugTarget(target);
+                    faceTarget(target);
                 }
             } else {
-                casting = false;
                 World ecsWorld = WandscapeEngine.getWorld();
                 if (ecsWorld != null && ecsEntityId > 0) {
                     var exec = ecsWorld.get(ecsEntityId,
@@ -177,6 +168,16 @@ public class WandscapeNpc extends PathfinderMob {
                     casting = exec != null
                             && exec.state == com.wsteam.wandscape.core.task.ExecutorState.ACTIVE
                             && exec.hasWork();
+                    if (casting && exec.currentOpTarget != null) {
+                        var t = exec.currentOpTarget;
+                        BlockPos target = new BlockPos(t.x(), t.y(), t.z());
+                        setDebugTarget(target);
+                        faceTarget(target);
+                    } else {
+                        setDebugTarget(null);
+                    }
+                } else {
+                    casting = false;
                 }
             }
             if (casting != isCasting()) {
@@ -187,6 +188,20 @@ public class WandscapeNpc extends PathfinderMob {
                 setDeltaMovement(Vec3.ZERO);
             }
         }
+    }
+
+    /** Face the NPC toward a target block (yaw from horizontal, pitch from vertical angle). */
+    private void faceTarget(BlockPos target) {
+        double dx = target.getX() + 0.5 - getX();
+        double dz = target.getZ() + 0.5 - getZ();
+        float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
+        setYRot(yaw);
+        yBodyRot = yaw;
+        yHeadRot = yaw;
+        double dy = target.getY() + 0.5 - (getY() + 1.4);
+        double hDist = Math.sqrt(dx * dx + dz * dz);
+        float pitch = (float) -Math.toDegrees(Math.atan2(dy, hDist));
+        setXRot(pitch);
     }
 
     @Override

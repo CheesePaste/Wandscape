@@ -162,6 +162,9 @@ public class TaskExecutionSystem implements System {
                 }
             }
 
+            // ---- 4.6. Visual feedback: tell NPC where to aim its wand beam ----
+            exec.currentOpTarget = currentOp.target();
+
             // ---- 5. Execute → get future ----
             @SuppressWarnings("unchecked")
             OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) (Object) registry.get(currentOp.getClass());
@@ -203,6 +206,7 @@ public class TaskExecutionSystem implements System {
         // No more work
         if (!exec.hasWork()) {
             exec.state = ExecutorState.IDLE;
+            exec.currentOpTarget = null;
             // Cancel any in-flight navigation
             if (world.movementOps != null) world.movementOps.cancelNavigation(npcId);
         }
@@ -221,6 +225,7 @@ public class TaskExecutionSystem implements System {
                 exec.releaseGlobalTask();
             }
         }
+        exec.currentOpTarget = null; // clear visual target after step advances
     }
 
     private boolean handleResourceRequest(AtomicOp.ResourceRequestOp op, World world,
