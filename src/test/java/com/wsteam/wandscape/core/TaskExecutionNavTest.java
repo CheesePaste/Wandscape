@@ -192,27 +192,27 @@ public class TaskExecutionNavTest {
 
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
 
-            // Op0: out of range → navigate
+            // Stance: bbox (10..20, 0..0) → stance = (8, 64, 0)
+            // NPC at (0,64,0), stance at (8,64,0): dx²=64 > 25 → navigate to stance
             world.tick(1.0f);
-            assertTrue(movOps.hasActiveNav(npc));
+            assertTrue(movOps.hasActiveNav(npc), "navigating to stance");
             assertEquals(0, exec.stepIndex);
-            movOps.completeNav(npc);
+            assertNotNull(exec.stance, "stance computed from task targets");
+            assertEquals(8, exec.stance.x());
+            movOps.completeNav(npc); // NPC now at stance (8,64,0)
 
-            // Nav resolved → execute op0 → advance (but side-effect breaks after 1 op)
+            // Nav resolved → op0 at (10,64,0): dx=2 → in range, execute → advance
+            // Different target from op1 → break (one side-effect per tick)
             world.tick(1.0f);
-            assertEquals(1, exec.stepIndex, "op0 done (not complete yet — has op1)");
+            assertEquals(1, exec.stepIndex, "op0 done");
             assertEquals(TaskState.IN_PROGRESS, world.taskPool.get(taskId).state);
 
-            // Op1: out of range → navigate again
-            world.tick(1.0f);
-            assertTrue(movOps.hasActiveNav(npc), "navigating to op1");
-            assertEquals(1, exec.stepIndex, "step stays 1 during nav");
-            movOps.completeNav(npc);
-
-            // Nav resolved → execute op1 → sequence complete → release
+            // Op1 at (20,64,0): stance != null → skip per-op nav, execute directly from stance
             world.tick(1.0f);
             assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
-                    "op1 done, sequence complete");
+                    "op1 done from stance, sequence complete");
+            assertEquals(1, movOps.calls.stream().filter(s -> s.startsWith("nav:")).count(),
+                    "only one navigation (to stance), no per-op nav");
         }
 
         @Test
@@ -315,23 +315,25 @@ public class TaskExecutionNavTest {
         }
 
         @Test
-        void cancelNavigationWhenNpcGoesIdle() {
+        void releaseGlobalTaskResetsExecutorState() {
             TaskSequence seq = buildSeq("idle", new GridPos(10, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:idle", seq, world);
             world.taskPool.assign(taskId, npcA, world);
 
             world.tick(1.0f);
-            assertTrue(movOps.hasActiveNav(npcA));
+            TaskExecutor exec = world.get(npcA, TaskExecutor.class);
+            assertNotNull(exec.stance, "stance computed for task");
 
             // Manually release task (simulating interruption)
-            TaskExecutor exec = world.get(npcA, TaskExecutor.class);
             exec.releaseGlobalTask();
 
-            world.tick(1.0f);
-            assertFalse(movOps.hasActiveNav(npcA),
-                    "nav cancelled when NPC becomes idle");
-            assertTrue(movOps.calls.stream().anyMatch(s -> s.startsWith("cancel:")),
-                    "cancelNavigation should have been called");
+            assertNull(exec.globalTaskId);
+            assertNull(exec.currentSequence);
+            assertNull(exec.stance, "stance cleared on release");
+            assertEquals(ExecutorState.IDLE, exec.state);
+            // Navigation in MovementOps is NOT cancelled here —
+            // it times out naturally in WandscapeMovementOps.tickAll (200 ticks).
+            // The ControllableMovementOps mock doesn't auto-timeout, so nav stays active.
         }
     }
 
@@ -391,24 +393,30 @@ public class TaskExecutionNavTest {
         }
 
         @Test
-        void differentTarget_navigateAgain() {
+        void differentTarget_noNavigateAgainWhenStanceSet() {
             TaskSequence seq = buildSeq("separate",
                     new GridPos(10, 64, 0), new GridPos(16, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:sep", seq, world);
             world.taskPool.assign(taskId, npc, world);
 
-            // Nav to (10,64,0)
-            world.tick(1.0f);
-            movOps.completeNav(npc);
-
-            // Op0 executes → op1 different target → side-effect break
+            // Stance: bbox (10..16, 0..0) → stance = (8, 64, 0)
+            // Nav to stance
             world.tick(1.0f);
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
-            assertEquals(1, exec.stepIndex, "only op0 done (2-op sequence, not yet complete)");
+            assertNotNull(exec.stance, "stance computed");
+            assertEquals(8, exec.stance.x());
+            movOps.completeNav(npc); // NPC at stance (8,64,0)
 
-            // Tick: op1 at (16,64,0), NPC at (10,64,0): dx²=36 > 25 → navigate again
+            // Op0 at (10,64,0): dx=2 → in range, executes → advance → break (different target)
             world.tick(1.0f);
-            assertTrue(movOps.hasActiveNav(npc), "navigate again for different target");
+            assertEquals(1, exec.stepIndex, "op0 done");
+
+            // Op1 at (16,64,0): stance != null → per-op nav skipped, execute directly
+            world.tick(1.0f);
+            assertFalse(movOps.hasActiveNav(npc),
+                    "no per-op nav when stance is set");
+            assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
+                    "op1 done from stance");
         }
     }
 }

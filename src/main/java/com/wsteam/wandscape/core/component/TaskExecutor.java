@@ -62,6 +62,14 @@ public class TaskExecutor {
     @Nullable
     public GridPos currentOpTarget = null;
 
+    /**
+     * Fixed standoff position for the current task, computed from the bounding box
+     * of all position-bearing op targets. When non-null, per-op navigation is skipped
+     * — the NPC stays at this position and only rotates to face each target.
+     */
+    @Nullable
+    public GridPos stance = null;
+
     /** Push an op to the back of the private queue. */
     public void pushPrivate(AtomicOp op) {
         privateQueue.addLast(op);
@@ -102,6 +110,7 @@ public class TaskExecutor {
         pendingFuture = null;
         pendingFutureIsNav = false;
         currentOpTarget = null;
+        stance = null;
         state = ExecutorState.IDLE;
     }
 
@@ -114,6 +123,7 @@ public class TaskExecutor {
         pendingFuture = null;
         pendingFutureIsNav = false;
         currentOpTarget = null;
+        stance = null;
         state = ExecutorState.IDLE;
     }
 }

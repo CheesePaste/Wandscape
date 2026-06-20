@@ -150,6 +150,7 @@ class World {
     BlockOps blockOps;         // setBlock, getBlock, isAir, toggle, activate, openGui
     EntityOps entityOps;       // applyEffect, getPosition
     RitualOps ritualOps;       // applyRitual
+    MovementOps movementOps;   // navigateTo → CompletableFuture
     ResourceOps resourceOps;   // transfer
     ColonyResourceAccess colonyResources;  // hasEnough, reserve, commit, release, available
     EventBus eventBus;         // emit, subscribe
@@ -205,6 +206,19 @@ record Inventory(List<ResourceStack> items, int capacity) {}
 record ColonyId(UUID id) {}
 record ColonyMember(ColonyId colony) {}         // 挂在 NPC Entity 上
 record ColonyMetadata(ColonyId id, GridPos center, int prosperity) {}  // 挂在 Colony Entity 上
+```
+
+### 8.7 NavigationState
+NPC 移动状态的唯一数据源（V2.6）。由 NavigationSystem 驱动，其他系统通过写入此组件请求移动：
+```java
+class NavigationState {
+    enum Mode { IDLE, PATHFINDING, TELEPORT_WAITING }
+    Mode mode = Mode.IDLE;
+    @Nullable GridPos target;
+    @Nullable CompletableFuture<Void> future;
+    int startTick, stuckChecks, repathCount, lastCheckTick;
+    double lastCheckX, lastCheckZ;
+}
 ```
 
 ---
@@ -338,10 +352,12 @@ interface ColonyResourceAccess {
 
 ```
 1. ManaRegenSystem        — 先恢复资源
-2. TaskSourcePoller       — 生成新任务
-3. SchedulerSystem        — 分配任务给空闲 NPC
-4. TaskExecutionSystem    — NPC 干活（遍历 + 推进步骤）
-5. EventBus.dispatch()    — 清理本帧事件
+2. SystemBlueprintSystem  — 驱动系统蓝图 (V2)
+3. TaskSourcePoller       — 生成新任务
+4. SchedulerSystem        — 分配任务给空闲 NPC
+5. TaskExecutionSystem    — NPC 干活（遍历 + 推进步骤）
+6. NavigationSystem       — 驱动所有 NPC 移动（V2.6）
+7. EventBus.dispatch()    — 清理本帧事件
 ```
 
 ---
@@ -395,8 +411,8 @@ interface ColonyResourceAccess {
 引擎逻辑帧 N:
   分发 Op 到各 NPC
   ├─ NPC1: TransformOp → DONE (瞬时)
-  ├─ NPC2: MoveOp → WAITING → world.startAsyncOp("move_to_10_64")
-  └─ NPC3: MoveOp → WAITING → world.startAsyncOp("move_to_20_64")
+  ├─ NPC2: 写入 NavigationState → NavigationSystem 启动寻路
+  └─ NPC3: 写入 NavigationState → NavigationSystem 启动寻路
   → pendingFutures = 2 → 后续 MC tick 跳过 world.tick()
 
 MC tick (×N):
@@ -857,11 +873,11 @@ class Engine {
 ### OpExecutor（2）
 `OpExecutor`（接口 — 返回 `CompletableFuture<Void>`）, `OpExecutorRegistry`
 
-### 边界接口（5）
-`BlockOps`, `EntityOps`, `RitualOps`, `ColonyResourceAccess`, `EventBus`
+### 边界接口（6）
+`BlockOps`, `EntityOps`, `RitualOps`, `MovementOps`, `ColonyResourceAccess`, `EventBus`
 
-### Component（7）
-`Position`（record）, `ManaPool`（class）, `WandCarrier`（record）, `TaskExecutor`（class）, `Inventory`（record）, `ColonyMember`（record）, `ColonyMetadata`（record）
+### Component（8）
+`Position`（record）, `ManaPool`（class）, `WandCarrier`（record）, `TaskExecutor`（class）, `Inventory`（record）, `ColonyMember`（record）, `ColonyMetadata`（record）, `NavigationState`（class）
 
 ### 任务系统（8）
 `TaskSequence`, `GlobalTask`, `InterruptRecord`, `ApprovalInfo`, `TaskState`（枚举）, `GlobalTaskPool`, `TaskRequest`, `TaskCompiler`（接口）, `Blueprint`（接口）, `BlueprintRegistry`
@@ -885,7 +901,7 @@ class Engine {
 
 ## 41. 暂缓项（V2+）
 
-- 卡死监控与自愈（`StuckMonitorSystem`）
+- ~~卡死监控与自愈~~ → V2.6 已在 NavigationSystem 中实现（3×60tick < 2 格 → 传送）
 - 高级语义到 AtomicOp 的简易编译器
 - 多殖民地隔离（`SubWorld` 拆分）
 - 自动审批模式配置

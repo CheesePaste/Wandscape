@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.core;
 
+import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.HashMapComponentStore;
 import com.wsteam.wandscape.core.ecs.World;
@@ -52,6 +53,7 @@ public final class CoreBootstrap {
         world.registerComponent(Inventory.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMember.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMetadata.class, new HashMapComponentStore<>());
+        world.registerComponent(NavigationState.class, new HashMapComponentStore<>());
 
         // 3. Set up task compiler
         world.blueprintRegistry = config.blueprints();
