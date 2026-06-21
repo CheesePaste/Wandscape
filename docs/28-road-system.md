@@ -663,7 +663,20 @@ default_width = 3     # V2: 默认路宽
 
 **V3 策略**：写自己的轻量级模板扩展器（core 层定义规则，engine 层执行），只复用原版的**放置管道**（`StructureTemplate.placeInWorld()` + processors），不碰 Jigsaw 注册系统。
 
-### 14.3 架构概览
+### 14.3 grill-me 决策汇总
+
+| # | 决策 | 结论 |
+|---|------|------|
+| 1 | 模板尺寸 | **16×16 原版 + short (3×8) 短变体** |
+| 2 | NPC 参与方式 | **复用 processBlockInfos() → tiles → road:build_segment 蓝图 → NPC 逐格 place** |
+| 3 | 模板来源 | **直接抓取原版村庄街道 NBT** (village/*/streets/*.nbt) |
+| 4 | jigsaw 块处理 | **不处理**：structure_void 本身透明无碰撞 |
+| 5 | 模板缩放 | **保持 16×16**，加 straight_short (3×8 裁剪版) |
+| 6 | 模板元数据 | **JSON 外挂**：entry/exit 坐标 + budget_cost + weight |
+| 7 | 接入点 | **自动推算**：建筑半宽 + margin → 朝目标方向延伸 |
+| 8 | 分叉 | **V3 第一版不做**：先主线连通，分叉后续 |
+
+### 14.4 架构概览（修正版）
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -673,156 +686,217 @@ default_width = 3     # V2: 默认路宽
 │    ├─ computeMST(buildings, threshold) → 连通对列表                   │
 │    ├─ 输出：List<ConnectivityConstraint>                             │
 │    │    { fromA, toB, budget }  // budget = manhattanDist × 1.3      │
-│    └─ 不决定路径形状！                                                │
+│    └─ 不决定路径形状                                                  │
+│                                                                      │
+│  AccessPoint 计算                                                    │
+│    ├─ computeAccessPoint(building, targetDirection) → XZPoint        │
+│    └─ anchor + 半宽 + margin = 从建筑边缘伸出 1 格                    │
 │                                                                      │
 │  TemplateExpander（模板链生成器）                                      │
-│    ├─ 输入：Constraint + 当前位置 + 方向                               │
+│    ├─ 输入：Constraint + 接入点 + 方向                                │
 │    ├─ 输出：List<TemplatePlacement>                                  │
 │    │    { templateId, pos, rotation }                                │
-│    ├─ 算法：贪心前向扩展                                              │
-│    │    ├─ 从 A 出发，heading toward B                               │
-│    │    ├─ 每一步：从模板池选模板 → 放置 → 推进到出口点               │
-│    │    ├─ 允许随机偏移（±1 格的横向抖动）                            │
-│    │    ├─ 允许分叉（10% 概率多走一小段再回归）                       │
-│    │    ├─ 剩余 budget < 0 时停止                                     │
-│    │    └─ 接近现有路网时自然融合（≤ 2 格距离）                       │
+│    ├─ 算法：贪心前向扩展（无分叉）                                     │
+│    │    ├─ 从接入点出发，朝目标                                    │
+│    │    ├─ 每一步：加权随机选模板 → 确定旋转 → 推进到出口点            │
+│    │    ├─ 允许 ±1 格横向抖动                                         │
+│    │    ├─ budget 耗尽时停止                                          │
+│    │    └─ 接近目标末尾时用 straight_short 或 cap 收尾               │
 │    └─ 纯函数，不依赖 MC 类                                           │
 │                                                                      │
 │  OrganicRoadPlanner（编排器，取代 RoadPlanner）                        │
-│    ├─ 输入：List<BuildingData> + RoadNetwork（现有路网）              │
+│    ├─ 输入：List<BuildingData> + RoadNetwork                         │
 │    ├─ 步骤：                                                          │
 │    │    1. computeMST(buildings) → 连通对 (A,B)                      │
-│    │    2. 对每个 (A,B)：TemplateExpander.expand(A, B, budget)       │
-│    │    3. 合并所有 TemplatePlacement → 生成放置序列                  │
-│    │    4. 检测自然融合 → 删除冗余段                                   │
-│    └─ 输出：PlanResult { placements[], mergedAt[], budgetUsed }       │
+│    │    2. 每个建筑 → computeAccessPoint()                           │
+│    │    3. 每条边：TemplateExpander.expand(accessA, accessB, budget)  │
+│    │    4. 合并所有 TemplatePlacement                                 │
+│    └─ 输出：PlanResult { placements[], budgetUsed }                   │
 └──────────────┬───────────────────────────────────────────────────────┘
-               │ TemplatePlacement[] (templateId, BlockPos, Rotation)
+               │ TemplatePlacement[]
 ┌──────────────▼───────────────────────────────────────────────────────┐
 │  engine/road/                                                        │
 │                                                                      │
-│  RoadTemplatePlacer（取代 RoadBuilder）                               │
-│    ├─ StructureTemplateManager.getOrCreate(templateId)                │
-│    ├─ StructurePlaceSettings                                         │
-│    │    ├─ GravityProcessor(WORLD_SURFACE, -1)                       │
-│    │    └─ RuleProcessor(road_surface_rules)                         │
-│    └─ StructureTemplate.placeInWorld(level, ...)                     │
+│  RoadTemplatePlacer（取代 RoadBuilder.buildTiles）                     │
+│    ├─ 对每个 TemplatePlacement：                                       │
+│    │    1. StructureTemplateManager.get(vanillaTemplateId)            │
+│    │    2. 构造 StructurePlaceSettings：                              │
+│    │        ├─ setRotation(Rotation)                                 │
+│    │        └─ addProcessor(GravityProcessor(WORLD_SURFACE, -1))      │
+│    │           addProcessor(RuleProcessor(road_surface_rules))        │
+│    │    3. processBlockInfos(level, template, settings)               │
+│    │       → List<StructureBlockInfo> (已处理地形+规则的方块列表)     │
+│    │    4. 转成 JsonArray tiles（格式与 V1 完全一致）                  │
+│    │    5. 走现有 RoadTaskSource → road:build_segment 蓝图             │
+│    └─ NPC 照常 for_each place 逐格建造                                │
 │                                                                      │
-│  模板类型（data/wandscape/structure/road/）                           │
-│    ├─ straight_8.nbt     (3×8  直道)                                 │
-│    ├─ straight_4.nbt     (3×4  短直道)                                │
-│    ├─ corner.nbt         (3×3  L型转角)                              │
-│    ├─ merge.nbt          (3×3  道路融合点)                            │
-│    └─ cap.nbt            (3×2  路尽头)                                │
+│  模板 NBT（直接从原版 jar 抓取，放 data/wandscape/structure/road/）    │
+│    ├─ straight.nbt       (原版 straight_01, 3×16 直道)               │
+│    ├─ straight_short.nbt (裁剪版 3×8 短直道)                          │
+│    ├─ corner.nbt         (原版 corner_01, L 型转角)                   │
+│    ├─ crossroad.nbt      (原版 crossroad_01, 十字口)                  │
+│    └─ cap.nbt            (新建 3×2 路尽头)                             │
 │                                                                      │
-│  RoadTemplatePool（模板池，类比原版但更简单）                          │
-│    ├─ 每种模板有：id, 尺寸, 进入点列表, 出口点列表, 权重              │
-│    └─ 不依赖注册表，纯数据类                                          │
+│  模板元数据 JSON（data/wandscape/road_templates/）                     │
+│    └─ 每种模板：id, template_ref, width, entries[], exits[],          │
+│       budget_cost, weight                                             │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 14.4 与原版 Jigsaw 的差异
+### 14.5 与原版 Jigsaw 的差异
 
 | 维度 | 原版 Jigsaw | V3 自定义扩展器 |
 |------|------------|----------------|
-| **连接机制** | 模板内的 jigsaw block + pool 引用 | 模板入口/出口点（相对坐标） |
+| **连接机制** | 模板内的 jigsaw block + pool 引用 | JSON 元数据的 entry/exit 坐标 |
 | **池管理** | `StructureTemplatePool` 注册表 | 自定义 `RoadTemplatePool` 数据类 |
 | **碰撞检测** | `Shapes.joinIsNotEmpty` (VoxelShape) | `BoundingBox` 简单矩形 |
 | **方向匹配** | jigsaw 名称 + facing | 出口方向枚举 (NORTH/SOUTH/EAST/WEST) |
 | **随机性** | `RandomSource` 控制池选取 | 同 |
 | **终止** | terminator 模板 | cap 模板 or 接近目标 |
+| **NPC 建造** | 世界生成时同步放置 | for_each place 逐格原子操作 |
+| **模板来源** | 注册表动态加载 | 直接引用原版 NBT |
 
-### 14.5 模板入口/出口模型
-
-不同于原版 jigsaw block 的复杂 NBT，V3 模板用简单的**相对坐标标记**：
+### 14.6 模板元数据模型
 
 ```json
-// 模板元数据 (engine 层加载)
+// data/wandscape/road_templates/straight.json
 {
-  "id": "wandscape:road/straight_8",
-  "size": [3, 1, 8],
+  "id": "wandscape:road/straight",
+  "template": "village/plains/streets/straight_01",
+  "width": 3,
+  "budget_cost": 16,
+  "weight": 4,
   "entries": [
-    { "dx": 1, "dz": 0, "facing": "south" }
+    { "dx": 7, "dz": 0, "facing": "south" }
   ],
   "exits": [
-    { "dx": 1, "dz": 7, "facing": "south" }
+    { "dx": 7, "dz": 15, "facing": "south" }
+  ]
+}
+
+// straight_short.json
+{
+  "id": "wandscape:road/straight_short",
+  "template": "wandscape:road/straight_short",
+  "width": 3,
+  "budget_cost": 8,
+  "weight": 2,
+  "entries": [
+    { "dx": 7, "dz": 0, "facing": "south" }
   ],
-  "weight": 4,
-  "budget_cost": 8
+  "exits": [
+    { "dx": 7, "dz": 7, "facing": "south" }
+  ]
+}
+
+// corner.json — 基于原版 corner_01
+{
+  "id": "wandscape:road/corner",
+  "template": "village/plains/streets/corner_01",
+  "width": 3,
+  "budget_cost": 16,
+  "weight": 2,
+  "entries": [
+    { "dx": 7, "dz": 0,  "facing": "south" }
+  ],
+  "exits": [
+    { "dx": 15, "dz": 7, "facing": "east" }
+  ]
+}
+
+// crossroad.json
+{
+  "id": "wandscape:road/crossroad",
+  "template": "village/plains/streets/crossroad_01",
+  "width": 3,
+  "budget_cost": 16,
+  "weight": 1,
+  "entries": [
+    { "dx": 7, "dz": 0,  "facing": "south" },
+    { "dx": 7, "dz": 15, "facing": "north" },
+    { "dx": 0,  "dz": 7, "facing": "west" },
+    { "dx": 15, "dz": 7, "facing": "east" }
+  ],
+  "exits": [
+    { "dx": 7, "dz": 15, "facing": "north" },
+    { "dx": 7, "dz": 0,  "facing": "south" },
+    { "dx": 15, "dz": 7, "facing": "east" },
+    { "dx": 0,  "dz": 7, "facing": "west" }
+  ]
 }
 ```
 
-- `entries`：可以从哪些相对位置进入此模板
-- `exits`：模板的出口位置（下一个模板的起点）
-- `budget_cost`：消耗的路径预算（通常 = 长度）
-
-### 14.6 扩展算法伪代码
+### 14.7 扩展算法（V3 第一版，无分叉）
 
 ```
-expand(from: XZPoint, to: XZPoint, budget: int, network: RoadNetwork):
+expand(entryPos: BlockPos, target: XZPoint, budget: int, pool: RoadTemplatePool, obstacles: Set<BoundingBox>):
     result = []
-    pos = from
-    heading = direction toward to
+    pos = entryPos
+    heading = direction toward target
     
-    while budget > 0 and distance(pos, to) > TEMPLATE_SIZE:
-        // 1. 选模板：偏好与 heading 一致的模板
-        candidates = pool.filter(exits toward to ± 45°)
-        if candidates.isEmpty(): candidates = pool.all()
+    while budget > 0 and distance(pos, target) > 8:
+        // 1. 选模板：过滤出口方向与 heading 偏差 < 45° 的模板
+        candidates = pool.filterTemplate(exitsFacingToward(heading))
+        if candidates.isEmpty(): candidates = pool.straights()
         if candidates.isEmpty(): break
         
         template = weightedRandomPick(candidates)
         
-        // 2. 确定旋转：使出口朝向目标
-        rotation = bestRotation(template, heading)
+        // 2. 确定旋转：使出口尽可能朝向目标
+        rotation = bestRotationForExitToward(template, heading)
         
-        // 3. 检查碰撞（与建筑、已铺道路）
-        placedBbox = template.bbox.at(pos, rotation)
-        if collides(placedBbox, obstacles): 
-            // 尝试横向抖动
-            pos = jitter(pos, heading)
-            if still blocked: continue
+        // 3. 碰撞检测
+        placedBbox = computeBoundingBox(template, pos, rotation)
+        if collides(placedBbox, obstacles):
+            // 横向抖动 ±1 格
+            pos = pos + lateralJitter(heading)
+            if still collides: continue
         
         // 4. 记录放置
         result.add(TemplatePlacement(template.id, pos, rotation))
         budget -= template.budgetCost
         
-        // 5. 推进位置
-        exitLocal = template.exits[0].rotate(rotation)
-        pos = pos + exitLocal.toWorldOffset()
-        
-        // 6. 允许随机分叉（10% 概率，但不影响主线）
-        if random() < 0.10:
-            forkResult = expand(pos, to, budget * 0.3, network)
-            result.addAll(forkResult)
-            continue  // 主线继续
+        // 5. 推进到出口位置
+        exitLocal = template.exits[0].rotate(rotation).toWorldOffset()
+        pos = pos + exitLocal
+        heading = direction toward target  // 重新校准
     
-    // 收尾：如果接近目标但不够一个模板
-    if distance(pos, to) <= TEMPLATE_SIZE:
-        result.add(TemplatePlacement(cap.id, pos, rotation))
+    // 6. 收尾
+    if distance(pos, target) <= 8 and budget > 0:
+        result.add(TemplatePlacement("wandscape:road/straight_short", pos, rotation))
     
     return result
 ```
 
-### 14.7 V1→V3 变更总览
+### 14.8 V1→V3 变更总览
 
 | 组件 | V1 | V3 |
 |------|-----|-----|
 | **路径形状** | L 形 code-generated | 模板拼接，允许非直线 |
 | **PathGenerator** | LShape(from, to) | **废弃**（模板决定形状） |
 | **RoadPlanner** | computeMST + incrementalAdd + rebuild | **改为** `OrganicRoadPlanner`：MST 约束 + expand |
-| **RoadBuilder** | buildTiles（逐格 JsonArray） | **改为** `RoadTemplatePlacer`：`StructureTemplate.placeInWorld()` |
-| **NPC 操作** | 逐格 for_each place | 逐模板放置（一个模板 = 一个原子操作） |
-| **路宽** | 2 格硬编码 | 模板内设计 3 格（美术决定） |
+| **RoadBuilder** | buildTiles（逐格 JsonArray） | **改为** `RoadTemplatePlacer`：`processBlockInfos()` → tiles |
+| **NPC 操作** | 逐格 for_each place | **不变**！仍逐格 place，只是 tile 来源变了 |
+| **路宽** | 2 格硬编码 | 原版模板 3 格 |
 | **方块选择** | 硬编码 dirt_path | RuleProcessor（水面桥 + 磨损斑驳） |
 | **交叉口** | IntersectionDetector + stone_bricks | 模板自然重叠融合 |
 | **持久化** | edges + path 点列表 | edges + 模板放置列表 |
+| **接入点** | 无（直接从 anchor 算路径） | 自动推算 accessPoint |
 
-### 14.8 V3 待定问题（grill-me）
+### 14.9 V3 实施清单
 
-- [ ] 模板尺寸：标准 3×8 直道 or 更大？
-- [ ] 模板创建方式：`fillFromWorld` 抓取 or 手写 SNBT or 纯代码生成？
-- [ ] NPC 逐模板原子操作 vs 分解为逐格？（当前共识：逐格 → V3 改为逐模板）
-- [ ] budget 参数：manhattanDist × 1.3 是否合理？
-- [ ] 分叉概率和最大分叉深度
-- [ ] 模板网格对齐：自由放置 or 对齐到某个网格？
-- [ ] 蓝图层：新增 `TemplatePlaceOp` or 走现有 `place` step？
+| # | 任务 | 层 |
+|---|------|-----|
+| 1 | 抓取原版模板 NBT → `data/wandscape/structure/road/` | engine |
+| 2 | 制作 straight_short.nbt (3×8 裁剪) + cap.nbt (3×2) | engine |
+| 3 | 模板元数据 JSON（entry/exit + budget_cost + weight） | engine |
+| 4 | `AccessPointCalculator`（从 BuildingData → 接入点） | core |
+| 5 | `ConnectivityConstraint` record + `RoadTemplatePool` | core |
+| 6 | `TemplateExpander`（贪心前向扩展，无分叉） | core |
+| 7 | `OrganicRoadPlanner`（MST 约束 + expand） | core |
+| 8 | 单元测试（AccessPoint, TemplateExpander, RoadTemplatePool） | core |
+| 9 | `RoadTemplatePlacer`：`processBlockInfos()` → tiles → 现有管道 | engine |
+| 10 | `RoadEventListener.processPlannedEdges` 改为新路径 | engine |
+| 11 | `Config.java` 新增 `road.default_width` | shared |
+| 12 | `road_tiers.json` 改为 `default_block` + `rules` 引用 | data |
+| 13 | `road_rules/dirt.json` 路面规则 | data |
