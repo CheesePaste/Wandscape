@@ -5,6 +5,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
+import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 
 /**
@@ -18,6 +19,8 @@ public final class WandscapeEngine {
     private static World world;
     @Nullable
     static AsyncTransformExecutor asyncExec;
+    @Nullable
+    static WandscapeRitualOps ritualOps;
     @Nullable
     private static WandscapeMovementOps movementOps;
     @Nullable
@@ -41,6 +44,11 @@ public final class WandscapeEngine {
 
     @Nullable
     public static AsyncTransformExecutor getAsyncExecutor() { return asyncExec; }
+
+    public static void setRitualOps(WandscapeRitualOps ops) { ritualOps = ops; }
+
+    @Nullable
+    public static WandscapeRitualOps getRitualOps() { return ritualOps; }
 
     public static void setMovementOps(WandscapeMovementOps ops) { movementOps = ops; }
 

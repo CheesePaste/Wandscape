@@ -22,4 +22,7 @@ public interface ColonyResourceAccess {
 
     /** Get the currently available amount (not reserved). */
     int available(ResourceId resource);
+
+    /** Add resources directly to the colony warehouse (e.g. from node gathering). */
+    void addResource(ResourceId resource, int amount);
 }

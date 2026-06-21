@@ -95,6 +95,7 @@ public final class EngineBootstrap {
         WandscapeEntityOps entityOps = new WandscapeEntityOps();
         WandscapeRitualOps ritualOps = new WandscapeRitualOps();
         WandscapeMovementOps movementOps = new WandscapeMovementOps();
+        WandscapeEngine.setRitualOps(ritualOps);
 
         // Use WarehouseManager (implements WarehouseApi + ColonyResourceAccess).
         // Falls back to stub if warehouse module not loaded.
@@ -110,6 +111,7 @@ public final class EngineBootstrap {
                 @Override public boolean commit(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
                 @Override public void release(com.wsteam.wandscape.core.types.ResourceId r, int a) {}
                 @Override public int available(com.wsteam.wandscape.core.types.ResourceId r) { return Integer.MAX_VALUE; }
+                @Override public void addResource(com.wsteam.wandscape.core.types.ResourceId r, int a) {}
             };
             LOGGER.info("  ColonyResourceAccess: stub (warehouse not loaded)");
         }
@@ -128,6 +130,9 @@ public final class EngineBootstrap {
 
         // 6. Bootstrap engine
         World world = CoreBootstrap.bootstrap(config);
+
+        // 6a. Wire ritualOps into the world (after bootstrap so world exists)
+        world.ritualOps = ritualOps;
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);

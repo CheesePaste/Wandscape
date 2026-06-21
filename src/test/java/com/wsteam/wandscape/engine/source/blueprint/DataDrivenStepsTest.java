@@ -50,7 +50,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
-                null  // no blueprint ref
+                null,  // no blueprint ref
+                null   // no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -83,7 +84,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
-                null  // no blueprint ref
+                null,  // no blueprint ref
+                null   // no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -121,7 +123,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
-                null  // no blueprint ref
+                null,  // no blueprint ref
+                null   // no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -147,7 +150,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
-                null  // no blueprint ref
+                null,  // no blueprint ref
+                null   // no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -229,7 +233,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
-                null  // no blueprint ref
+                null,  // no blueprint ref
+                null   // no nodeConfig
         );
     }
 }

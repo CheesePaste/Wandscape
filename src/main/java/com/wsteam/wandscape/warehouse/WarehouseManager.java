@@ -211,6 +211,22 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         return key != null ? (int) be.available(key) : 0;
     }
 
+    @Override
+    public void addResource(ResourceId resource, int amount) {
+        WarehouseBE be = findAnyWarehouse();
+        if (be == null) {
+            LOGGER.warn("addResource({}, {}): NO warehouse found in BuildingApi — check warehouse was placed and registered", resource, amount);
+            return;
+        }
+        ItemKey key = resourceToItemKey(resource);
+        if (key == null) {
+            LOGGER.warn("addResource({}, {}): cannot map resource to ItemKey", resource, amount);
+            return;
+        }
+        be.add(key, amount);
+        LOGGER.info("addResource: {} x{} → warehouse ({} total)", resource.id(), amount, be.count(key));
+    }
+
     // ════════════════════════════════════════════════════════════
     //  Lookup helpers
     // ════════════════════════════════════════════════════════════

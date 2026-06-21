@@ -24,6 +24,12 @@
   "unlock_requirement": {
     "min_wonder": 0
   },
+  "node_config": {
+    "blueprint": "node:gather",
+    "element": "earth",
+    "amount_per_harvest": 8,
+    "channel_ticks": 200
+  },
   "boundary": {
     "min": [0, 0, 0],
     "max": [0, 0, 0]

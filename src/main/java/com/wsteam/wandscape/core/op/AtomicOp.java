@@ -103,7 +103,16 @@ public sealed interface AtomicOp
     }
 
     /** Perform a ritual (may involve channeling over multiple ticks). */
-    record RitualOp(RitualId ritual, GridPos target, int channelTicks) implements AtomicOp {
+    record RitualOp(RitualId ritual, GridPos target, int channelTicks,
+                    Map<String, String> params) implements AtomicOp {
+        public RitualOp {
+            if (params == null) params = Collections.emptyMap();
+        }
+
+        /** Convenience constructor without params (backward-compat). */
+        public RitualOp(RitualId ritual, GridPos target, int channelTicks) {
+            this(ritual, target, channelTicks, Collections.emptyMap());
+        }
         @Override
         public int baseManaCost() {
             // Rituals vary; base cost reflects minimum

@@ -119,7 +119,13 @@ public final class BlueprintInterpreter {
                 RitualId ritual = new RitualId(evalString(s.ritual(), context, "ritual.ritual"));
                 GridPos at = evalPos(s.at(), context, "ritual.at");
                 int ticks = evalInt(s.channelTicks(), context, "ritual.channel_ticks");
-                yield List.of(new AtomicOp.RitualOp(ritual, at, ticks));
+                // Evaluate params map
+                Map<String, String> params = new LinkedHashMap<>();
+                for (var entry : s.params().entrySet()) {
+                    params.put(entry.getKey(),
+                            evalString(entry.getValue(), context, "ritual.params." + entry.getKey()));
+                }
+                yield List.of(new AtomicOp.RitualOp(ritual, at, ticks, params));
             }
             case StepNode.RequestResourceStep s -> {
                 String resource = evalString(s.resource(), context, "request_resource.resource");

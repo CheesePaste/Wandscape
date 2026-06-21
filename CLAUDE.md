@@ -30,6 +30,8 @@
 
 ## 工作流
 
+**需求澄清前不写代码**：用户提出设计/实现问题时，先用 `grill-me` skill 反复追问直到需求明确、决策树每个分支都敲定，再进入写代码阶段。禁止需求模糊时直接动手写实现。
+
 **写代码前**：读对应 `docs/NN-*.md` → 读 `docs/17` 确认阶段 → 读 `architecture/00` 定位包 → 用 `minecraft-source` skill 查 MC 源码
 
 **写代码时**：新接口 → `shared/api/`，新事件 → `shared/event/` + 登记 `architecture/03`，新注册 → 登记 `architecture/02`，新 JSON → 登记 `architecture/04`，可配置内容走 `data/wandscape/`

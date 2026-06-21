@@ -4,6 +4,8 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -19,6 +21,15 @@ public interface RitualOps {
      * Begin a ritual. Returns a future that completes when the ritual is done.
      * Sync: {@code CompletableFuture.completedFuture(null)}
      * Async: incomplete future → MC adapter completes it when channeling finishes
+     *
+     * @param ritual       the ritual type ID
+     * @param target       world position the ritual acts on
+     * @param world        the ECS world
+     * @param casterId     the NPC entity ID performing the ritual
+     * @param channelTicks how long the channeling lasts (0 for instant)
+     * @param params       key-value parameters from the blueprint (element, amount, etc.)
      */
-    CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world, long casterId);
+    CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world,
+                                        long casterId, int channelTicks,
+                                        Map<String, String> params);
 }

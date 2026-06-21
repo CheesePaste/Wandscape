@@ -306,6 +306,10 @@ public class Wandscape {
         var asyncExec = WandscapeEngine.getAsyncExecutor();
         if (asyncExec != null) asyncExec.tickAll();
 
+        // ①b Tick channeled ritual countdowns
+        var ritualOps = WandscapeEngine.getRitualOps();
+        if (ritualOps != null) ritualOps.tickAll();
+
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 

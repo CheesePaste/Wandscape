@@ -39,6 +39,12 @@ public interface BuildingApi {
     @Nullable
     WorkItem dequeueWork(UUID buildingId);
 
+    /** Enqueue a WorkItem into the building's FIFO queue (e.g. auto-supply from node buildings). */
+    void enqueueWork(UUID buildingId, WorkItem work);
+
+    /** Get building IDs filtered by category. */
+    List<UUID> getBuildingsByCategory(@Nullable UUID colonyId, String category);
+
     /** Mark the building as having an active task in the engine pool. */
     void setCurrentTask(UUID buildingId, UUID taskId);
 

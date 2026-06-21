@@ -218,6 +218,27 @@ public class BuildingApiImpl implements BuildingApi {
     }
 
     @Override
+    public void enqueueWork(UUID buildingId, WorkItem work) {
+        BuildingData data = byId.get(buildingId);
+        if (data == null) return;
+
+        AbstractWandscapeBE be = getBeAt(data.getPosition());
+        if (be != null) be.enqueueWork(work);
+    }
+
+    @Override
+    public List<UUID> getBuildingsByCategory(@Nullable UUID colonyId, String category) {
+        List<UUID> result = new ArrayList<>();
+        for (BuildingData data : byId.values()) {
+            if (colonyId != null && !colonyId.equals(data.getColonyId())) continue;
+            if (category.equals(data.getCategory())) {
+                result.add(data.getBuildingId());
+            }
+        }
+        return result;
+    }
+
+    @Override
     public void setCurrentTask(UUID buildingId, UUID taskId) {
         currentTasks.put(buildingId, taskId);
         BuildingData data = byId.get(buildingId);

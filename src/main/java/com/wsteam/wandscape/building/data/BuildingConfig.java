@@ -36,7 +36,8 @@ public record BuildingConfig(
         QueueDef queue,
         @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement,
         @Nullable BoundaryBox boundary,
-        @Nullable BlueprintRef blueprint
+        @Nullable BlueprintRef blueprint,
+        @Nullable NodeConfig nodeConfig
 ) {
     public record ShutdownPenalty(
             @SerializedName("output_reduction") double outputReduction,
@@ -57,6 +58,16 @@ public record BuildingConfig(
     ) {
         public static final UnlockRequirement NONE = new UnlockRequirement(0);
     }
+
+    /**
+     * Node building configuration. Only present when {@code category == "node"}.
+     */
+    public record NodeConfig(
+            String blueprint,
+            String element,
+            @SerializedName("amount_per_harvest") int amountPerHarvest,
+            @SerializedName("channel_ticks") int channelTicks
+    ) {}
 
     /**
      * Reference to a Blueprint DSL JSON that defines task logic for this building.
@@ -185,10 +196,16 @@ public record BuildingConfig(
                 blueprint = new BlueprintRef(bpId, bind);
             }
 
+            // Node config (only for category=node buildings)
+            NodeConfig nodeConfig = null;
+            if (obj.has("node_config")) {
+                nodeConfig = context.deserialize(obj.get("node_config"), NodeConfig.class);
+            }
+
             return new BuildingConfig(id, displayName, category, blockId,
                     pattern, blockMapping,
                     comfort, magic, wonder, maintenanceCost,
-                    shutdownPenalty, queue, unlockRequirement, boundary, blueprint);
+                    shutdownPenalty, queue, unlockRequirement, boundary, blueprint, nodeConfig);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

@@ -196,7 +196,14 @@ public final class BlueprintConfigLoader {
         ExprNode ritual = parseExpr(obj.get("ritual"));
         ExprNode at = parseExpr(obj.get("at"));
         ExprNode channelTicks = parseExpr(obj.get("channel_ticks"));
-        return new StepNode.RitualStep(ritual, at, channelTicks);
+        Map<String, ExprNode> params = new LinkedHashMap<>();
+        if (obj.has("params")) {
+            JsonObject paramsObj = obj.getAsJsonObject("params");
+            for (var entry : paramsObj.entrySet()) {
+                params.put(entry.getKey(), parseExpr(entry.getValue()));
+            }
+        }
+        return new StepNode.RitualStep(ritual, at, channelTicks, params);
     }
 
     private StepNode parseRequestResource(JsonObject obj) {

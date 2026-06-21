@@ -48,7 +48,17 @@ public sealed interface StepNode {
      * Perform a ritual. JSON type: {@code "ritual"}.
      * → {@link com.wsteam.wandscape.core.op.AtomicOp.RitualOp}
      */
-    record RitualStep(ExprNode ritual, ExprNode at, ExprNode channelTicks) implements StepNode {}
+    record RitualStep(ExprNode ritual, ExprNode at, ExprNode channelTicks,
+                      Map<String, ExprNode> params) implements StepNode {
+        public RitualStep {
+            if (params == null) params = Map.of();
+        }
+
+        /** Backward-compat constructor without params. */
+        public RitualStep(ExprNode ritual, ExprNode at, ExprNode channelTicks) {
+            this(ritual, at, channelTicks, Map.of());
+        }
+    }
 
     /**
      * Request resources from colony warehouse. JSON type: {@code "request_resource"}.

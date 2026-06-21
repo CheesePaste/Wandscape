@@ -76,13 +76,23 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     // ---- RitualOps ----
 
     @Override
-    public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world, long casterId) {
-        Log.debug(TAG, "beginRitual %s target=%s caster=%d → completed (sync)", ritual.id(), target, casterId);
+    public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world,
+                                               long casterId, int channelTicks,
+                                               Map<String, String> params) {
+        Log.debug(TAG, "beginRitual %s target=%s caster=%d channel=%d params=%s → completed (sync)",
+                ritual.id(), target, casterId, channelTicks, params);
         // All rituals are sync for headless testing
         return CompletableFuture.completedFuture(null);
     }
 
     // ---- ColonyResourceAccess ----
+
+    @Override
+    public void addResource(ResourceId resource, int amount) {
+        warehouse.merge(resource, amount, Integer::sum);
+        Log.debug(TAG, "addResource %s: +%d (total %d)", resource.id(), amount,
+                warehouse.getOrDefault(resource, 0));
+    }
 
     /** Seed the warehouse with initial resources. */
     public void seedWarehouse(ResourceId resource, int amount) {

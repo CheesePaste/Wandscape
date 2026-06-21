@@ -95,7 +95,8 @@ public final class DefaultOpExecutors {
         public CompletableFuture<Void> execute(AtomicOp.RitualOp op, World world, long npcId) {
             RitualOps ritualOps = world.ritualOps;
             if (ritualOps == null) return CompletableFuture.completedFuture(null);
-            return ritualOps.beginRitual(op.ritual(), op.target(), world, npcId);
+            return ritualOps.beginRitual(op.ritual(), op.target(), world, npcId,
+                    op.channelTicks(), op.params());
         }
     }
 

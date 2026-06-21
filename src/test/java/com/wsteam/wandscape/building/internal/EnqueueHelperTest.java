@@ -65,7 +65,8 @@ class EnqueueHelperTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
-                null
+                null,
+                null  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -107,7 +108,8 @@ class EnqueueHelperTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
-                null
+                null,
+                null  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -128,7 +130,8 @@ class EnqueueHelperTest {
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, -1, -1), off(1, 1, 1)),
-                null
+                null,
+                null  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
