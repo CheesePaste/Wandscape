@@ -29,16 +29,19 @@ import net.minecraft.server.level.ServerLevel;
  * End-to-end test command for building + road pipeline.
  *
  * <p>Submits building blueprint tasks for N buildings placed in random
- * scattered positions around the command source.
+ * scattered positions around the command source, with optional random
+ * Y variation to test terrain adaptation.
  * NPCs build them → {@code build_complete} fires → RoadEventListener → roads.
  *
  * <p>Usage:
  * <pre>
  *   /wandscape roadtest &lt;spacing&gt; &lt;count&gt;
  *   /wandscape roadtest &lt;spacing&gt; &lt;count&gt; &lt;buildingType&gt;
+ *   /wandscape roadtest &lt;spacing&gt; &lt;count&gt; &lt;buildingType&gt; &lt;maxYVar&gt;
  * </pre>
  *
  * <p>Default building type: town_hall (tiny 3×2×3, fast to build).
+ * <p>maxYVar: max random Y offset from command source (default 0 = flat, 10 = rolling hills).
  * <p>Check progress: {@code /wandscape road info}
  */
 public final class RoadTestCommand {
@@ -48,20 +51,38 @@ public final class RoadTestCommand {
     private RoadTestCommand() {}
 
     public static CommandNode<CommandSourceStack> node() {
+        var maxYVarNode = Commands.argument("maxYVar", IntegerArgumentType.integer(0, 30))
+                .executes(ctx -> {
+                    String bt = com.mojang.brigadier.arguments.StringArgumentType
+                            .getString(ctx, "buildingType");
+                    int yv = IntegerArgumentType.getInteger(ctx, "maxYVar");
+                    return execute(ctx, bt, yv);
+                });
+
+        var buildingTypeNode = Commands.argument("buildingType",
+                        com.mojang.brigadier.arguments.StringArgumentType.word())
+                .executes(ctx -> {
+                    String bt = com.mojang.brigadier.arguments.StringArgumentType
+                            .getString(ctx, "buildingType");
+                    return execute(ctx, bt, 0);
+                })
+                .then(maxYVarNode);
+
+        var countNode = Commands.argument("count", IntegerArgumentType.integer(3, 16))
+                .executes(ctx -> execute(ctx, "town_hall", 0))
+                .then(buildingTypeNode);
+
+        var spacingNode = Commands.argument("spacing", IntegerArgumentType.integer(5, 64))
+                .then(countNode);
+
         return Commands.literal("roadtest")
                 .requires(src -> src.hasPermission(2))
-                .then(Commands.argument("spacing", IntegerArgumentType.integer(5, 64))
-                        .then(Commands.argument("count", IntegerArgumentType.integer(3, 16))
-                                .executes(ctx -> execute(ctx, "town_hall"))
-                                .then(Commands.argument("buildingType",
-                                        com.mojang.brigadier.arguments.StringArgumentType.word())
-                                        .executes(ctx -> execute(ctx,
-                                                com.mojang.brigadier.arguments.StringArgumentType
-                                                        .getString(ctx, "buildingType"))))))
+                .then(spacingNode)
                 .build();
     }
 
-    private static int execute(CommandContext<CommandSourceStack> ctx, String buildingType) {
+    private static int execute(CommandContext<CommandSourceStack> ctx,
+                                String buildingType, int maxYVar) {
         int spacing = IntegerArgumentType.getInteger(ctx, "spacing");
         int count = IntegerArgumentType.getInteger(ctx, "count");
         CommandSourceStack src = ctx.getSource();
@@ -86,6 +107,7 @@ public final class RoadTestCommand {
 
         // ── 3. Register buildings + submit blueprint tasks, randomly scattered ──
         BlockPos center = BlockPos.containing(src.getPosition());
+        int baseY = center.getY();
         int submitted = 0;
         int minRadius = spacing / 2;
         Random rng = new Random();
@@ -95,7 +117,10 @@ public final class RoadTestCommand {
             int radius = minRadius + rng.nextInt(spacing - minRadius + 1);
             int dx = (int) Math.round(radius * Math.cos(angle));
             int dz = (int) Math.round(radius * Math.sin(angle));
-            BlockPos pos = center.offset(dx, 0, dz);
+            int dy = maxYVar > 0
+                    ? rng.nextInt(-maxYVar, maxYVar + 1)
+                    : 0;
+            BlockPos pos = center.offset(dx, dy, dz);
 
             // Register in BuildingSavedData (initially structureIntact=false)
             EnqueueHelper.registerIfAbsent(pos, config, buildingType);
@@ -111,14 +136,19 @@ public final class RoadTestCommand {
         // ── 4. Report ──
         int threshold = WandscapeApis.getRoadApi().getBuildingThreshold();
         int poolSize = world.taskPool.size();
+        String terrainHint = maxYVar > 0
+                ? String.format("  Terrain: maxYVar=%d (random Y offsets applied)\n", maxYVar)
+                : "  Terrain: flat (all buildings at same Y)\n";
         String msg = String.format(
                 "[RoadTest] %d building tasks submitted (building=%s, maxRadius=%d)\n"
+                        + "%s"
                         + "  Total tasks in pool: %d\n"
                         + "  Road threshold: %d\n"
                         + "\n-> NPCs will build buildings first\n"
                         + "-> After %d buildings complete, MST roads auto-trigger\n"
                         + "-> Check /wandscape road info for progress",
                 submitted, buildingType, spacing,
+                terrainHint,
                 poolSize, threshold, threshold);
 
         src.sendSuccess(() -> Component.literal("§a" + msg), false);

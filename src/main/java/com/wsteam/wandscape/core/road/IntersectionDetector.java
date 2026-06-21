@@ -45,27 +45,18 @@ public final class IntersectionDetector {
 
     /**
      * Find all <em>directional</em> intersection points across multiple edges.
-     *
-     * <p>A point is a true intersection (crossing or T-junction) when
-     * edges pass through it with different axis directions (X vs Z).
-     * Collinear shared segments (both edges moving in X, or both in Z)
-     * are deduplication concerns, not intersections — they are excluded.
-     *
-     * @param edges all edges to check
-     * @return set of intersection XZ points (directional crossings only)
      */
     public static Set<XZPoint> detectAll(List<RoadEdge> edges) {
-        // Build a map: XZPoint → list of edges that contain it
         Map<XZPoint, List<RoadEdge>> pointToEdges = new HashMap<>();
         for (RoadEdge edge : edges) {
-            for (XZPoint p : edge.getPath()) {
-                pointToEdges.computeIfAbsent(p, k -> new ArrayList<>()).add(edge);
+            for (PathPoint pp : edge.getPath()) {
+                pointToEdges.computeIfAbsent(pp.xz(), k -> new ArrayList<>()).add(edge);
             }
         }
 
         Set<XZPoint> crossings = new HashSet<>();
         for (var entry : pointToEdges.entrySet()) {
-            if (entry.getValue().size() < 2) continue; // Only one edge at this point
+            if (entry.getValue().size() < 2) continue;
 
             XZPoint p = entry.getKey();
             List<RoadEdge> containingEdges = entry.getValue();
@@ -74,26 +65,22 @@ public final class IntersectionDetector {
             boolean hasZDirection = false;
 
             for (RoadEdge edge : containingEdges) {
-                List<XZPoint> path = edge.getPath();
-                int idx = path.indexOf(p);
+                List<PathPoint> path = edge.getPath();
+                int idx = indexOfXz(path, p);
                 if (idx < 0) continue;
 
-                // Determine travel direction through this point
-                boolean edgeMovesX = directionAt(path, idx, true);  // X differs
-                boolean edgeMovesZ = directionAt(path, idx, false); // Z differs
+                boolean edgeMovesX = directionAt3D(path, idx, true);
+                boolean edgeMovesZ = directionAt3D(path, idx, false);
 
                 if (edgeMovesX) hasXDirection = true;
                 if (edgeMovesZ) hasZDirection = true;
 
-                // Turn point (L-shape corner): has both X and Z direction
-                // A turn point shared with any other edge is always a crossing
                 if (edgeMovesX && edgeMovesZ) {
                     hasXDirection = true;
                     hasZDirection = true;
                 }
             }
 
-            // True intersection only when edges meet from different directions
             if (hasXDirection && hasZDirection) {
                 crossings.add(p);
             }
@@ -101,24 +88,23 @@ public final class IntersectionDetector {
         return crossings;
     }
 
-    /**
-     * Check whether the path has movement in the given axis at position {@code idx}.
-     *
-     * @param path the ordered path
-     * @param idx  index of the point to check
-     * @param xAxis true to check X movement, false for Z
-     * @return true if an adjacent point differs in the given axis
-     */
-    private static boolean directionAt(List<XZPoint> path, int idx, boolean xAxis) {
+    private static int indexOfXz(List<PathPoint> path, XZPoint target) {
+        for (int i = 0; i < path.size(); i++) {
+            if (path.get(i).xz().equals(target)) return i;
+        }
+        return -1;
+    }
+
+    private static boolean directionAt3D(List<PathPoint> path, int idx, boolean xAxis) {
         if (idx > 0) {
-            XZPoint prev = path.get(idx - 1);
-            XZPoint cur = path.get(idx);
+            PathPoint prev = path.get(idx - 1);
+            PathPoint cur = path.get(idx);
             if (xAxis && prev.x() != cur.x()) return true;
             if (!xAxis && prev.z() != cur.z()) return true;
         }
         if (idx < path.size() - 1) {
-            XZPoint cur = path.get(idx);
-            XZPoint next = path.get(idx + 1);
+            PathPoint cur = path.get(idx);
+            PathPoint next = path.get(idx + 1);
             if (xAxis && next.x() != cur.x()) return true;
             if (!xAxis && next.z() != cur.z()) return true;
         }

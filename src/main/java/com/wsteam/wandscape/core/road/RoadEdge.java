@@ -6,6 +6,7 @@ import java.util.UUID;
 
 /**
  * An edge in the road network — a road segment connecting two nodes.
+ * The path is stored as 3D points so terrain height is part of the data.
  * Mutable: status and segmentTaskIds change as segments are built.
  */
 public class RoadEdge {
@@ -23,12 +24,12 @@ public class RoadEdge {
     private final UUID fromNodeId;
     private final UUID toNodeId;
     private final String tier;
-    private final List<XZPoint> path;
+    private final List<PathPoint> path;
     private final List<Long> segmentTaskIds;
     private EdgeStatus status;
 
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
-                    String tier, List<XZPoint> path) {
+                    String tier, List<PathPoint> path) {
         this.edgeId = edgeId;
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
@@ -40,7 +41,7 @@ public class RoadEdge {
 
     /** Full constructor with status and existing task IDs (used by NBT load). */
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
-                    String tier, List<XZPoint> path,
+                    String tier, List<PathPoint> path,
                     List<Long> segmentTaskIds, EdgeStatus status) {
         this.edgeId = edgeId;
         this.fromNodeId = fromNodeId;
@@ -57,7 +58,7 @@ public class RoadEdge {
     public UUID getFromNodeId() { return fromNodeId; }
     public UUID getToNodeId() { return toNodeId; }
     public String getTier() { return tier; }
-    public List<XZPoint> getPath() { return List.copyOf(path); }
+    public List<PathPoint> getPath() { return List.copyOf(path); }
     public List<Long> getSegmentTaskIds() { return List.copyOf(segmentTaskIds); }
     public EdgeStatus getStatus() { return status; }
 

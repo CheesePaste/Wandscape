@@ -14,6 +14,7 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.road.NetworkDiff;
+import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadBuildingData;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -31,7 +32,6 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Listens for engine {@link CustomEvent}s related to road planning.
- * Registered AFTER engine bootstrap.
  *
  * <p>Handles:
  * <ul>
@@ -39,8 +39,8 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  *   <li>{@code road_segment_complete} — updates edge build progress</li>
  * </ul>
  *
- * <p>Uses V1's L-shape path generation (deterministic) with V3's
- * aesthetic block variation (vanilla-style worn path rules).
+ * <p>Uses V1 L-shape paths with 3D coordinates (Y interpolated)
+ * and V3 aesthetic block variation + excavation.
  */
 public final class RoadEventListener {
 
@@ -48,10 +48,6 @@ public final class RoadEventListener {
 
     private RoadEventListener() {}
 
-    /**
-     * Register this listener on the engine event bus.
-     * Call after engine bootstrap.
-     */
     public static void register() {
         var world = WandscapeEngine.getWorld();
         if (world == null || world.eventBus == null) {
@@ -80,7 +76,6 @@ public final class RoadEventListener {
         RoadSavedData roadData = RoadSavedData.getOrCreate(level);
         RoadConfig config = RoadConfig.getInstance();
 
-        // Collect building data
         List<RoadBuildingData> allBuildings = new ArrayList<>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
             if (!bs.isStructureIntact() || bs.isShutdown()) continue;
@@ -101,13 +96,11 @@ public final class RoadEventListener {
 
         RoadNetwork network = roadData.getNetwork();
 
-        // Collect building bounding boxes for tile placement
         var buildingBounds = new ArrayList<BoundingBox>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
             if (bs.isStructureIntact()) buildingBounds.add(bs.getBounds());
         }
 
-        // Parse new building info from event
         String anchorStr = event.params().get("anchor");
         String buildingName = event.params().get("building_name");
         RoadBuildingData newBuilding = null;
@@ -122,7 +115,7 @@ public final class RoadEventListener {
             }
         }
 
-        // ── First-time full plan (network is empty) ──
+        // ── First-time full plan ──
         if (network.isEmpty()) {
             LOGGER.info("[Road] First MST plan — {} buildings (threshold={})",
                     buildingCount, threshold);
@@ -136,33 +129,22 @@ public final class RoadEventListener {
 
             LOGGER.info("[Road] Full plan: {} edges", planned.getEdges().size());
 
-            // Register all building nodes
             for (RoadBuildingData bd : allBuildings) {
                 network.addNode(new RoadNode(bd.id(),
                         new GridPos(bd.x(), bd.y(), bd.z()),
                         RoadNode.NodeType.BUILDING));
             }
 
-            // Build tiles for each edge independently
             Set<XZPoint> occupiedTiles = new HashSet<>();
             for (RoadEdge edge : planned.getEdges().values()) {
                 network.addEdge(edge);
-                List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(
-                        edge.getPath(), config.getSegmentMaxLength());
-                for (List<XZPoint> seg : segments) {
-                    JsonArray tiles = RoadBuilder.buildTiles(
-                            level, seg, edge.getTier(), buildingBounds, occupiedTiles);
-                    if (!tiles.isEmpty()) {
-                        enqueueSegments(edge.getEdgeId(), tiles, config);
-                        occupiedTiles.addAll(RoadBuilder.extractXZ(tiles));
-                    }
-                }
+                enqueueEdge(edge, level, config, buildingBounds, occupiedTiles);
             }
             roadData.markChanged();
             return;
         }
 
-        // ── Incremental: connect new building to nearest existing node ──
+        // ── Incremental ──
         if (newBuilding == null) {
             LOGGER.debug("[Road] No new building parsed — skipping incremental");
             roadData.markChanged();
@@ -178,23 +160,21 @@ public final class RoadEventListener {
         LOGGER.info("[Road] Incremental: connecting {} at ({},{}) to network",
                 buildingName, newBuilding.x(), newBuilding.z());
 
-        // Collect occupied positions from existing edges
         Set<XZPoint> occupiedTiles = new HashSet<>();
         for (RoadEdge e : network.getEdges().values()) {
-            occupiedTiles.addAll(e.getPath());
+            occupiedTiles.addAll(extractXz(e.getPath()));
         }
 
         RoadPlanner.incrementalAdd(network, newBuilding);
 
-        // Find and enqueue the newly created edge
         for (RoadEdge edge : network.getEdges().values()) {
             if (edge.getFromNodeId().equals(newBuilding.id())
                     && edge.getStatus() == RoadEdge.EdgeStatus.PLANNED) {
 
-                List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(
+                List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(
                         edge.getPath(), config.getSegmentMaxLength());
-                for (List<XZPoint> seg : segments) {
-                    List<XZPoint> fresh = RoadPlanner.filterNewPath(seg, occupiedTiles);
+                for (List<PathPoint> seg : segments) {
+                    List<PathPoint> fresh = RoadPlanner.filterNewPath(seg, occupiedTiles);
                     if (!fresh.isEmpty()) {
                         JsonArray tiles = RoadBuilder.buildTiles(
                                 level, fresh, edge.getTier(), buildingBounds, new HashSet<>());
@@ -224,23 +204,21 @@ public final class RoadEventListener {
         try {
             edgeId = UUID.fromString(edgeIdStr);
         } catch (IllegalArgumentException e) {
-            LOGGER.warn("[Road] invalid edge_id in road_segment_complete: {}", edgeIdStr);
+            LOGGER.warn("[Road] invalid edge_id: {}", edgeIdStr);
             return;
         }
 
         RoadSavedData roadData = RoadSavedData.getOrCreate(level);
         RoadEdge edge = roadData.getNetwork().getEdge(edgeId);
-        if (edge != null
-                && edge.getStatus() == RoadEdge.EdgeStatus.BUILDING) {
+        if (edge != null && edge.getStatus() == RoadEdge.EdgeStatus.BUILDING) {
             edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
             roadData.markChanged();
             LOGGER.info("[Road] edge {} marked COMPLETE", edgeId.toString().substring(0, 8));
         }
     }
 
-    // ---- Rebuild (called from RoadApiImpl) ----
+    // ---- Rebuild ----
 
-    /** Trigger a full rebuild using V1 planner with diff. */
     static void triggerRebuild(UUID colonyId) {
         ServerLevel level = getServerLevel();
         if (level == null) return;
@@ -259,47 +237,48 @@ public final class RoadEventListener {
 
         RoadNetwork network = roadData.getNetwork();
 
-        // Collect building bounds
         var buildingBounds = new ArrayList<BoundingBox>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
             if (bs.isStructureIntact()) buildingBounds.add(bs.getBounds());
         }
 
-        // Compute diff
         NetworkDiff diff = RoadPlanner.rebuild(network, allBuildings);
         LOGGER.info("[Road] rebuild: {} retained, {} deprecated, {} new",
                 diff.retained().size(), diff.deprecated().size(), diff.newEdges().size());
 
-        // Collect occupied positions from retained + deprecated edges
         Set<XZPoint> occupiedTiles = new HashSet<>();
-        for (RoadEdge e : diff.retained()) occupiedTiles.addAll(e.getPath());
-        for (RoadEdge e : diff.deprecated()) occupiedTiles.addAll(e.getPath());
+        for (RoadEdge e : diff.retained()) occupiedTiles.addAll(extractXz(e.getPath()));
+        for (RoadEdge e : diff.deprecated()) occupiedTiles.addAll(extractXz(e.getPath()));
 
-        // Build tiles for new edges
         for (RoadEdge edge : diff.newEdges()) {
             network.addEdge(edge);
-            List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(
-                    edge.getPath(), config.getSegmentMaxLength());
-            for (List<XZPoint> seg : segments) {
-                JsonArray tiles = RoadBuilder.buildTiles(
-                        level, seg, edge.getTier(), buildingBounds, occupiedTiles);
-                if (!tiles.isEmpty()) {
-                    enqueueSegments(edge.getEdgeId(), tiles, config);
-                    occupiedTiles.addAll(RoadBuilder.extractXZ(tiles));
-                }
-            }
+            enqueueEdge(edge, level, config, buildingBounds, occupiedTiles);
         }
 
         roadData.setBuildingCount(allBuildings.size());
         roadData.markChanged();
     }
 
-    // ---- Segment enqueue ----
+    // ---- Helpers ----
+
+    private static void enqueueEdge(RoadEdge edge, ServerLevel level, RoadConfig config,
+                                     List<BoundingBox> buildingBounds,
+                                     Set<XZPoint> occupiedTiles) {
+        List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(
+                edge.getPath(), config.getSegmentMaxLength());
+        for (List<PathPoint> seg : segments) {
+            JsonArray tiles = RoadBuilder.buildTiles(
+                    level, seg, edge.getTier(), buildingBounds, occupiedTiles);
+            if (!tiles.isEmpty()) {
+                enqueueSegments(edge.getEdgeId(), tiles, config);
+                occupiedTiles.addAll(RoadBuilder.extractXZ(tiles));
+            }
+        }
+    }
 
     private static void enqueueSegments(UUID edgeId, JsonArray allTiles, RoadConfig config) {
         int maxLen = config.getSegmentMaxLength();
         int tileCount = allTiles.size();
-        int segCount = 0;
 
         for (int start = 0; start < tileCount; start += maxLen) {
             int end = Math.min(start + maxLen, tileCount);
@@ -310,13 +289,16 @@ public final class RoadEventListener {
             UUID segId = UUID.randomUUID();
             RoadTaskSource.enqueueSegment(
                     new RoadTaskSource.PendingSegment(segId, edgeId, segTiles));
-            segCount++;
         }
-        LOGGER.info("[Road] edge {}: {} tiles → {} segments → BUILDING",
-                edgeId.toString().substring(0, 8), tileCount, segCount);
+        LOGGER.info("[Road] edge {}: {} tiles enqueued",
+                edgeId.toString().substring(0, 8), tileCount);
     }
 
-    // ---- Helpers ----
+    private static Set<XZPoint> extractXz(List<PathPoint> path) {
+        Set<XZPoint> result = new HashSet<>();
+        for (PathPoint pp : path) result.add(pp.xz());
+        return result;
+    }
 
     private static BlockPos parseAnchor(String s) {
         String[] parts = s.split(",");
@@ -327,7 +309,6 @@ public final class RoadEventListener {
                     Integer.parseInt(parts[1]),
                     Integer.parseInt(parts[2]));
         } catch (NumberFormatException e) {
-            LOGGER.warn("[Road] invalid anchor format: {}", s);
             return null;
         }
     }

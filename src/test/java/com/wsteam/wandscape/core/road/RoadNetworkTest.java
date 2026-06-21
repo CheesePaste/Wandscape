@@ -73,7 +73,7 @@ class RoadNetworkTest {
         UUID toId = UUID.randomUUID();
 
         RoadEdge edge = new RoadEdge(edgeId, fromId, toId,
-                "dirt", List.of(new XZPoint(1, 0), new XZPoint(2, 0)));
+                "dirt", List.of(new PathPoint(1, 64, 0), new PathPoint(2, 64, 0)));
 
         network.addEdge(edge);
         assertEquals(1, network.edgeCount());
@@ -102,7 +102,8 @@ class RoadNetworkTest {
                 RoadNode.NodeType.BUILDING));
 
         RoadEdge edge = new RoadEdge(UUID.randomUUID(), nodeA, nodeB,
-                "dirt", PathGenerator.lShape(new XZPoint(0, 0), new XZPoint(5, 0)));
+                "dirt", PathGenerator.lShape3D(
+                        new PathPoint(0, 64, 0), new PathPoint(5, 64, 0)));
         network.addEdge(edge);
 
         assertFalse(network.isEmpty());

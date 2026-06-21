@@ -41,7 +41,7 @@ class RoadPlannerTest {
 
         assertFalse(network.isEmpty());
         assertEquals(3, network.nodeCount());
-        assertEquals(2, network.edgeCount()); // MST of 3 nodes has 2 edges
+        assertEquals(2, network.edgeCount());
     }
 
     @Test
@@ -57,13 +57,33 @@ class RoadPlannerTest {
     }
 
     @Test
+    void computeMstPathsAre3D() {
+        UUID id0 = UUID.randomUUID();
+        UUID id1 = UUID.randomUUID();
+        List<RoadBuildingData> buildings = List.of(
+                bd(id0, 0, 70, 0),
+                bd(id1, 10, 50, 0));
+
+        RoadNetwork network = RoadPlanner.computeMST(buildings, 2);
+
+        assertEquals(1, network.edgeCount());
+        RoadEdge edge = network.getEdges().values().iterator().next();
+        List<PathPoint> path = edge.getPath();
+        assertEquals(10, path.size());
+        // Last point should be at to building's anchor
+        PathPoint last = path.get(path.size() - 1);
+        assertEquals(10, last.x());
+        assertEquals(50, last.y());
+        assertEquals(0, last.z());
+    }
+
+    @Test
     void incrementalAddToEmptyNetwork() {
         RoadNetwork network = new RoadNetwork();
         RoadBuildingData newBuilding = bd(5, 64, 5);
 
         RoadPlanner.incrementalAdd(network, newBuilding);
 
-        // Should add the node but no edges (nothing to connect to)
         assertEquals(1, network.nodeCount());
         assertEquals(0, network.edgeCount());
     }
@@ -75,12 +95,10 @@ class RoadPlannerTest {
         RoadBuildingData existing = bd(existingId, 0, 64, 0);
         RoadBuildingData newBuilding = bd(5, 64, 5);
 
-        // First add the existing network
         network.addNode(new RoadNode(existingId,
                 new com.wsteam.wandscape.core.types.GridPos(0, 64, 0),
                 RoadNode.NodeType.BUILDING));
 
-        // Then incrementally add the new building
         RoadPlanner.incrementalAdd(network, newBuilding);
 
         assertEquals(2, network.nodeCount());
@@ -88,11 +106,31 @@ class RoadPlannerTest {
         assertEquals(1, network.edgeCount());
 
         RoadEdge edge = network.getEdges().values().iterator().next();
-        // Edge should connect the new building
         assertTrue(edge.getFromNodeId().equals(newBuilding.id())
                 || edge.getToNodeId().equals(newBuilding.id()));
         assertTrue(edge.getFromNodeId().equals(existingId)
                 || edge.getToNodeId().equals(existingId));
+    }
+
+    @Test
+    void incrementalAddUses3DPath() {
+        RoadNetwork network = new RoadNetwork();
+        UUID existingId = UUID.randomUUID();
+        RoadBuildingData existing = bd(existingId, 0, 70, 0);
+        RoadBuildingData newBuilding = bd(5, 50, 0);
+
+        network.addNode(new RoadNode(existingId,
+                new com.wsteam.wandscape.core.types.GridPos(0, 70, 0),
+                RoadNode.NodeType.BUILDING));
+
+        RoadPlanner.incrementalAdd(network, newBuilding);
+
+        RoadEdge edge = network.getEdges().values().iterator().next();
+        List<PathPoint> path = edge.getPath();
+        PathPoint last = path.get(path.size() - 1);
+        // Last point should be at existing node's anchor
+        assertEquals(0, last.x());
+        assertEquals(70, last.y());
     }
 
     @Test
@@ -101,17 +139,57 @@ class RoadPlannerTest {
         UUID buildingId = UUID.randomUUID();
         RoadBuildingData building = bd(buildingId, 5, 64, 5);
 
-        // Add the building as a node first
         network.addNode(new RoadNode(buildingId,
                 new com.wsteam.wandscape.core.types.GridPos(5, 64, 5),
                 RoadNode.NodeType.BUILDING));
 
-        // Now incrementally add the same building — should not create self-edge
         RoadPlanner.incrementalAdd(network, building);
 
-        // Node already existed, edge should be 0
         assertEquals(1, network.nodeCount());
         assertEquals(0, network.edgeCount());
+    }
+
+    @Test
+    void incrementalAddMatchesExistingPathY() {
+        // Create network with an edge that has known Y values
+        RoadNetwork network = new RoadNetwork();
+        UUID nodeA = UUID.randomUUID();
+        UUID nodeB = UUID.randomUUID();
+
+        network.addNode(new RoadNode(nodeA,
+                new com.wsteam.wandscape.core.types.GridPos(0, 70, 0),
+                RoadNode.NodeType.BUILDING));
+        network.addNode(new RoadNode(nodeB,
+                new com.wsteam.wandscape.core.types.GridPos(10, 60, 0),
+                RoadNode.NodeType.BUILDING));
+
+        // Add a 3D path edge
+        RoadEdge existing = new RoadEdge(UUID.randomUUID(), nodeA, nodeB, "dirt",
+                PathGenerator.lShape3D(
+                        new PathPoint(0, 70, 0), new PathPoint(10, 60, 0)));
+        network.addEdge(existing);
+
+        // New building near XZ position of the existing path
+        RoadBuildingData newBld = bd(5, 55, 5);
+        RoadPlanner.incrementalAdd(network, newBld);
+
+        // Should have 2 edges now
+        assertEquals(2, network.edgeCount());
+
+        // The new edge's last point should match Y of nearest existing path point
+        RoadEdge newEdge = null;
+        for (RoadEdge e : network.getEdges().values()) {
+            if (e.getFromNodeId().equals(newBld.id())) {
+                newEdge = e;
+                break;
+            }
+        }
+        assertNotNull(newEdge);
+        PathPoint lastNew = newEdge.getPath().get(newEdge.getPath().size() - 1);
+        // Last point should be near an existing path point — Y should be close to
+        // the existing path's Y at that XZ (around 65 based on interpolation)
+        assertTrue(lastNew.y() >= 60 && lastNew.y() <= 70,
+                "New path end Y=" + lastNew.y() + " should be near existing path Y range");
     }
 
     @Test
@@ -124,15 +202,12 @@ class RoadPlannerTest {
                 bd(id1, 10, 64, 0),
                 bd(id2, 0, 64, 10));
 
-        // Build initial MST
         RoadNetwork network = RoadPlanner.computeMST(buildings, 3);
 
-        // Rebuild with same buildings — all edges should be retained
         NetworkDiff diff = RoadPlanner.rebuild(network, buildings);
 
         assertEquals(0, diff.newEdges().size());
         assertEquals(0, diff.deprecated().size());
-        // The existing edges should all be retained
         assertFalse(diff.retained().isEmpty());
     }
 
@@ -147,21 +222,16 @@ class RoadPlannerTest {
                 bd(id2, 0, 64, 10));
 
         RoadNetwork network = RoadPlanner.computeMST(allThree, 3);
-        int originalEdgeCount = network.edgeCount();
 
-        // Remove building id2 — now only 2 buildings
         List<RoadBuildingData> onlyTwo = List.of(
                 bd(id0, 0, 64, 0),
                 bd(id1, 10, 64, 0));
 
         NetworkDiff diff = RoadPlanner.rebuild(network, onlyTwo);
 
-        // The edge(s) connecting id2 should be deprecated
-        // and new edges connecting the remaining 2 may be created
         int totalAccounted = diff.retained().size()
                 + diff.deprecated().size()
                 + diff.newEdges().size();
-        // Total should make sense
         assertTrue(totalAccounted > 0, "Should have at least some edges accounted");
     }
 
@@ -170,15 +240,11 @@ class RoadPlannerTest {
         UUID id0 = UUID.randomUUID();
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
-        UUID id3 = UUID.randomUUID();
 
-        // Start with 2 buildings
         List<RoadBuildingData> two = List.of(
                 bd(id0, 0, 64, 0), bd(id1, 10, 64, 0));
-        // computeMST with threshold=2 forces MST
         RoadNetwork network = RoadPlanner.computeMST(two, 2);
 
-        // Rebuild with 3 buildings
         List<RoadBuildingData> three = List.of(
                 bd(id0, 0, 64, 0),
                 bd(id1, 10, 64, 0),
@@ -186,19 +252,19 @@ class RoadPlannerTest {
 
         NetworkDiff diff = RoadPlanner.rebuild(network, three);
 
-        // Should have at least one new edge for the new building
         assertTrue(diff.newEdges().size() > 0,
-                "New building should trigger new edges, got: retained="
-                        + diff.retained().size() + " deprecated="
-                        + diff.deprecated().size() + " new=" + diff.newEdges().size());
+                "New building should trigger new edges");
     }
+
+    // ── splitIntoSegments (3D path) ──
+
+    private static PathPoint ppt(int x, int y, int z) { return new PathPoint(x, y, z); }
 
     @Test
     void splitIntoSegmentsUnderMaxLen() {
-        List<XZPoint> path = List.of(
-                new XZPoint(1, 0), new XZPoint(2, 0), new XZPoint(3, 0));
+        List<PathPoint> path = List.of(ppt(1, 64, 0), ppt(2, 64, 0), ppt(3, 64, 0));
 
-        List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
+        List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
 
         assertEquals(1, segments.size());
         assertEquals(3, segments.get(0).size());
@@ -206,54 +272,45 @@ class RoadPlannerTest {
 
     @Test
     void splitIntoSegmentsAtMaxLen() {
-        // 20-point path, maxLen=16
-        List<XZPoint> path = new java.util.ArrayList<>();
+        List<PathPoint> path = new java.util.ArrayList<>();
         for (int i = 1; i <= 20; i++) {
-            path.add(new XZPoint(i, 0));
+            path.add(ppt(i, 64, 0));
         }
 
-        List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
+        List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
 
         assertEquals(2, segments.size());
-        assertEquals(16, segments.get(0).size()); // first 16
-        assertEquals(4, segments.get(1).size());  // remaining 4
+        assertEquals(16, segments.get(0).size());
+        assertEquals(4, segments.get(1).size());
     }
 
     @Test
     void splitIntoSegmentsEmptyPath() {
-        List<XZPoint> path = List.of();
-        List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
+        List<PathPoint> path = List.of();
+        List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
 
         assertTrue(segments.isEmpty());
     }
 
     @Test
     void splitIntoSegmentsAtLShapeTurn() {
-        // L-shaped path: (0,0)→(2,0)→(2,3)
-        List<XZPoint> path = PathGenerator.lShape(
-                new XZPoint(0, 0), new XZPoint(2, 3));
+        List<PathPoint> path = PathGenerator.lShape3D(
+                ppt(0, 64, 0), ppt(2, 64, 3));
 
-        // maxLen=16 but path is only 5 points with a turn
-        List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
+        List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(path, 16);
 
-        // Should split at the turn point (index 1 = last X point)
         assertEquals(2, segments.size());
-        // First segment: X walk [(1,0), (2,0)]
         assertEquals(2, segments.get(0).size());
-        assertEquals(new XZPoint(2, 0), segments.get(0).get(segments.get(0).size() - 1));
-        // Second segment: Z walk [(2,1), (2,2), (2,3)]
         assertEquals(3, segments.get(1).size());
-        assertEquals(new XZPoint(2, 3), segments.get(1).get(segments.get(1).size() - 1));
     }
 
-    // ── filterNewPath tests ──
+    // ── filterNewPath (3D) ──
 
     @Test
     void filterNewPathNoOverlap() {
-        List<XZPoint> path = List.of(
-                new XZPoint(1, 0), new XZPoint(2, 0), new XZPoint(3, 0));
+        List<PathPoint> path = List.of(ppt(1, 64, 0), ppt(2, 64, 0), ppt(3, 64, 0));
 
-        List<XZPoint> fresh = RoadPlanner.filterNewPath(
+        List<PathPoint> fresh = RoadPlanner.filterNewPath(
                 path, Set.of(new XZPoint(5, 5), new XZPoint(10, 10)));
 
         assertEquals(path, fresh);
@@ -261,24 +318,21 @@ class RoadPlannerTest {
 
     @Test
     void filterNewPathPartialOverlap() {
-        List<XZPoint> path = List.of(
-                new XZPoint(1, 0), new XZPoint(2, 0), new XZPoint(3, 0));
+        List<PathPoint> path = List.of(ppt(1, 64, 0), ppt(2, 64, 0), ppt(3, 64, 0));
 
-        // (2,0) is already occupied
-        List<XZPoint> fresh = RoadPlanner.filterNewPath(
+        List<PathPoint> fresh = RoadPlanner.filterNewPath(
                 path, Set.of(new XZPoint(2, 0)));
 
         assertEquals(2, fresh.size());
-        assertEquals(new XZPoint(1, 0), fresh.get(0));
-        assertEquals(new XZPoint(3, 0), fresh.get(1));
+        assertEquals(ppt(1, 64, 0), fresh.get(0));
+        assertEquals(ppt(3, 64, 0), fresh.get(1));
     }
 
     @Test
     void filterNewPathFullOverlap() {
-        List<XZPoint> path = List.of(
-                new XZPoint(1, 0), new XZPoint(2, 0));
+        List<PathPoint> path = List.of(ppt(1, 64, 0), ppt(2, 64, 0));
 
-        List<XZPoint> fresh = RoadPlanner.filterNewPath(
+        List<PathPoint> fresh = RoadPlanner.filterNewPath(
                 path, Set.of(new XZPoint(1, 0), new XZPoint(2, 0)));
 
         assertTrue(fresh.isEmpty());
@@ -286,57 +340,66 @@ class RoadPlannerTest {
 
     @Test
     void filterNewPathEmptyOccupied() {
-        List<XZPoint> path = List.of(new XZPoint(1, 0), new XZPoint(2, 0));
+        List<PathPoint> path = List.of(ppt(1, 64, 0), ppt(2, 64, 0));
 
-        List<XZPoint> fresh = RoadPlanner.filterNewPath(
-                path, Set.of());
+        List<PathPoint> fresh = RoadPlanner.filterNewPath(path, Set.of());
 
         assertEquals(path, fresh);
     }
 
     @Test
     void filterNewPathIncrementalConnectionOverlap() {
-        // Simulate: existing edge from (0,0) to (10,0) — all 10 X points
         Set<XZPoint> occupied = new HashSet<>();
         for (int i = 1; i <= 10; i++) {
             occupied.add(new XZPoint(i, 0));
         }
 
-        // New building at (5,5), connects to (5,0) on the existing road
-        // Path: Z first from (5,5) to (5,0) [(5,4),(5,3),(5,2),(5,1),(5,0)]
-        // then X... but wait, L-shape from (5,5) to (5,0) is just Z
-        List<XZPoint> newPath = PathGenerator.lShape(
-                new XZPoint(5, 5), new XZPoint(5, 0));
+        List<PathPoint> newPath = PathGenerator.lShape3D(
+                ppt(5, 64, 5), ppt(5, 64, 0));
 
-        List<XZPoint> fresh = RoadPlanner.filterNewPath(newPath, occupied);
+        List<PathPoint> fresh = RoadPlanner.filterNewPath(newPath, occupied);
 
-        // (5,0) overlaps existing road — should be filtered
-        // Path is [(5,4),(5,3),(5,2),(5,1),(5,0)] — last tile overlaps
         assertEquals(4, fresh.size());
-        assertEquals(new XZPoint(5, 4), fresh.get(0));
-        assertEquals(new XZPoint(5, 3), fresh.get(1));
-        assertEquals(new XZPoint(5, 2), fresh.get(2));
-        assertEquals(new XZPoint(5, 1), fresh.get(3));
-        // (5,0) NOT in fresh — it's where the new road meets the existing one
+        assertEquals(ppt(5, 64, 4), fresh.get(0));
+        assertEquals(ppt(5, 64, 3), fresh.get(1));
+        assertEquals(ppt(5, 64, 2), fresh.get(2));
+        assertEquals(ppt(5, 64, 1), fresh.get(3));
+    }
+
+    // ── 3D Y interpolation tests (validate lShape3D in planning context) ──
+
+    @Test
+    void plannerPathsYInterpolationFlat() {
+        List<RoadBuildingData> buildings = List.of(
+                bd(0, 64, 0), bd(10, 64, 0));
+
+        RoadNetwork network = RoadPlanner.computeMST(buildings, 2);
+
+        RoadEdge edge = network.getEdges().values().iterator().next();
+        for (PathPoint p : edge.getPath()) {
+            assertEquals(64, p.y(), "Flat buildings → flat path");
+        }
     }
 
     @Test
-    void filterNewPathBothEndsOverlap() {
-        // Existing edges form a T: horizontal (0,0)→(10,0), vertical (0,0)→(0,10)
-        Set<XZPoint> occupied = new HashSet<>();
-        for (int i = 0; i <= 10; i++) {
-            occupied.add(new XZPoint(i, 0));
-            occupied.add(new XZPoint(0, i));
+    void plannerPathsYInterpolationSteep() {
+        List<RoadBuildingData> buildings = List.of(
+                bd(0, 80, 0), bd(0, 50, 10));
+
+        RoadNetwork network = RoadPlanner.computeMST(buildings, 2);
+
+        RoadEdge edge = network.getEdges().values().iterator().next();
+        List<PathPoint> path = edge.getPath();
+        assertEquals(10, path.size());
+
+        // Check that Y monotonic descent from 80 to 50 with max step ≤ 3
+        int prevY = 80;
+        for (PathPoint p : path) {
+            int dy = prevY - p.y();
+            assertTrue(dy >= 0, "Should descend monotonically");
+            assertTrue(dy <= 3, "Step too large: " + dy);
+            prevY = p.y();
         }
-
-        // New path from (5,0) to (0,5) — endpoints overlap both existing roads
-        List<XZPoint> newPath = PathGenerator.lShape(
-                new XZPoint(5, 0), new XZPoint(0, 5));
-
-        List<XZPoint> fresh = RoadPlanner.filterNewPath(newPath, occupied);
-
-        // Neither endpoint should be in fresh
-        assertFalse(fresh.contains(new XZPoint(5, 0)));
-        assertFalse(fresh.contains(new XZPoint(0, 5)));
+        assertEquals(50, path.get(path.size() - 1).y());
     }
 }

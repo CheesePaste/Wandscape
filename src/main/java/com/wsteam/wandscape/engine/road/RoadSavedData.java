@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.XZPoint;
 
 import net.minecraft.nbt.CompoundTag;
@@ -84,11 +85,12 @@ public final class RoadSavedData extends SavedData {
             e.putString("tier", edge.getTier());
             e.putString("status", edge.getStatus().name());
 
-            // Path: list of {x, z} pairs (Y is recomputed on load)
+            // Path: list of {x, y, z} 3D points
             ListTag pathTag = new ListTag();
-            for (XZPoint p : edge.getPath()) {
+            for (PathPoint p : edge.getPath()) {
                 CompoundTag pt = new CompoundTag();
                 pt.putInt("x", p.x());
+                pt.putInt("y", p.y());
                 pt.putInt("z", p.z());
                 pathTag.add(pt);
             }
@@ -136,12 +138,15 @@ public final class RoadSavedData extends SavedData {
                 status = RoadEdge.EdgeStatus.PLANNED;
             }
 
-            // Path
-            List<XZPoint> path = new ArrayList<>();
+            // Path (3D: x/y/z — backward compat: y defaults to 64 if missing)
+            List<PathPoint> path = new ArrayList<>();
             ListTag pathTag = e.getList("path", Tag.TAG_COMPOUND);
             for (int j = 0; j < pathTag.size(); j++) {
                 CompoundTag pt = pathTag.getCompound(j);
-                path.add(new XZPoint(pt.getInt("x"), pt.getInt("z")));
+                int px = pt.getInt("x");
+                int py = pt.contains("y") ? pt.getInt("y") : 64;
+                int pz = pt.getInt("z");
+                path.add(new PathPoint(px, py, pz));
             }
 
             // Segment task IDs

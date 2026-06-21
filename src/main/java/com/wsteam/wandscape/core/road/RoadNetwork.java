@@ -76,6 +76,38 @@ public class RoadNetwork {
         return nearest;
     }
 
+    /**
+     * Find the nearest existing path point to a target XZ position,
+     * using the actual stored Y from built edges.
+     *
+     * <p>Used by incrementalAdd to connect a new road at the correct
+     * vertical level where it meets the existing road network.
+     *
+     * @param targetXz the XZ position to search near
+     * @return a PathPoint from an existing edge closest to targetXz,
+     *         or a fallback using the nearest node's anchor
+     */
+    public PathPoint findNearestPathPoint(XZPoint targetXz) {
+        PathPoint bestPt = null;
+        int bestDist = Integer.MAX_VALUE;
+        for (RoadEdge edge : edges.values()) {
+            for (PathPoint pp : edge.getPath()) {
+                int dist = pp.xz().manhattanTo(targetXz);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestPt = pp;
+                }
+            }
+        }
+        if (bestPt != null) return bestPt;
+        // Fallback: use nearest node anchor with Y=64
+        RoadNode node = findNearestNode(targetXz);
+        if (node != null) {
+            return new PathPoint(node.pos().x(), node.pos().y(), node.pos().z());
+        }
+        return new PathPoint(targetXz.x(), 64, targetXz.z());
+    }
+
     public boolean isEmpty() {
         return nodes.isEmpty() && edges.isEmpty();
     }
