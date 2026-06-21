@@ -78,11 +78,14 @@ public final class RoadTemplatePlacer {
 
             // Generate tiles for this placement
             int rotationSteps = placement.rotation();
+            int totalBlocks = nbtData.blocks.size();
+            int skippedName = 0, skippedBuilding = 0, skippedOccupied = 0, skippedImpassable = 0, kept = 0;
             for (NbtBlockEntry entry : nbtData.blocks) {
                 // Skip invisible/structural blocks
                 if (entry.blockName.contains("structure_void")
                         || entry.blockName.contains("jigsaw")
                         || entry.blockName.contains("air")) {
+                    skippedName++;
                     continue;
                 }
 
@@ -94,18 +97,27 @@ public final class RoadTemplatePlacer {
                 int worldZ = placement.z() + rotated.dz();
 
                 // Skip tiles inside building bounds
-                if (insideAnyBuilding(worldX, worldZ, buildingBounds)) continue;
+                if (insideAnyBuilding(worldX, worldZ, buildingBounds)) {
+                    skippedBuilding++;
+                    continue;
+                }
 
                 // Skip already-claimed positions
                 XZPoint tileXz = new XZPoint(worldX, worldZ);
-                if (occupiedTiles.contains(tileXz)) continue;
+                if (occupiedTiles.contains(tileXz)) {
+                    skippedOccupied++;
+                    continue;
+                }
 
                 // Compute terrain height
                 int groundY = terrainHeightAt(level, worldX, worldZ);
                 BlockPos pos = new BlockPos(worldX, groundY, worldZ);
 
                 // Skip impassable positions
-                if (!isPassable(pos, level)) continue;
+                if (!isPassable(pos, level)) {
+                    skippedImpassable++;
+                    continue;
+                }
 
                 occupiedTiles.add(tileXz);
 
@@ -117,7 +129,12 @@ public final class RoadTemplatePlacer {
                 tile.add("pos", posArr);
                 tile.addProperty("block", entry.blockName);
                 allTiles.add(tile);
+                kept++;
             }
+
+            LOGGER.info("[RoadTemplatePlacer] template={} pos=({},{}) rot={}: {} total, kept={}, nameSkipped={}, buildingSkipped={}, occupiedSkipped={}, impassableSkipped={}",
+                    placement.templateId(), placement.x(), placement.z(), placement.rotation(),
+                    totalBlocks, kept, skippedName, skippedBuilding, skippedOccupied, skippedImpassable);
         }
 
         return allTiles;

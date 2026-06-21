@@ -38,6 +38,7 @@ import net.minecraft.server.level.ServerLevel;
  *   /wandscape roadtest &lt;spacing&gt; &lt;count&gt; &lt;buildingType&gt;
  * </pre>
  *
+ * <p>Default building type: town_hall (tiny 3×2×3, fast to build).
  * <p>Check progress: {@code /wandscape road info}
  */
 public final class RoadTestCommand {
@@ -51,7 +52,7 @@ public final class RoadTestCommand {
                 .requires(src -> src.hasPermission(2))
                 .then(Commands.argument("spacing", IntegerArgumentType.integer(5, 64))
                         .then(Commands.argument("count", IntegerArgumentType.integer(3, 16))
-                                .executes(ctx -> execute(ctx, "grand_tower"))
+                                .executes(ctx -> execute(ctx, "town_hall"))
                                 .then(Commands.argument("buildingType",
                                         com.mojang.brigadier.arguments.StringArgumentType.word())
                                         .executes(ctx -> execute(ctx,
