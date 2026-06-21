@@ -25,15 +25,18 @@ import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 /**
- * Converts template placements from core/road/ into buildable tiles
- * by parsing NBT templates directly and applying terrain height logic.
+ * Generates road tiles from NBT templates using vanilla-style terrain matching.
  *
- * <p>Maintains the NPC tile-by-tile construction model — each template
- * is decomposed into individual block positions, wrapped as JsonArray
- * tiles for the {@code road:build_segment} blueprint.
+ * <p>Each template is parsed, rotated, and its blocks are mapped to terrain
+ * surface height (equivalent to {@code GravityProcessor(WORLD_SURFACE, -1)}).
+ * Block variation rules are applied for a "worn path" aesthetic like vanilla.
+ *
+ * <p>Output tiles feed into {@code road:build_segment} for NPC construction.
  */
 public final class RoadTemplatePlacer {
 
@@ -41,18 +44,6 @@ public final class RoadTemplatePlacer {
 
     private RoadTemplatePlacer() {}
 
-    /**
-     * Convert a chain of template placements into road tiles.
-     * Parses NBT templates, rotates positions, maps to terrain height,
-     * filters passable tiles, and returns tile JSON for NPC construction.
-     *
-     * @param level          target level
-     * @param placements     ordered template placements from core
-     * @param pool           template pool for metadata lookups
-     * @param buildingBounds bounding boxes to skip
-     * @param occupiedTiles  mutable set of claimed XZ positions (updated in-place)
-     * @return JsonArray of {pos, block} objects for blueprint injection
-     */
     public static JsonArray buildTiles(
             ServerLevel level,
             List<TemplatePlacement> placements,
@@ -69,177 +60,162 @@ public final class RoadTemplatePlacer {
                 continue;
             }
 
-            // Load NBT from resources
             NbtData nbtData = loadTemplateNbt(meta.templateRef());
-            if (nbtData == null) {
-                LOGGER.warn("[RoadTemplatePlacer] failed to load NBT: {}", meta.templateRef());
-                continue;
-            }
+            if (nbtData == null) continue;
 
-            // Generate tiles for this placement
-            int rotationSteps = placement.rotation();
-            int totalBlocks = nbtData.blocks.size();
-            int skippedName = 0, skippedBuilding = 0, skippedOccupied = 0, skippedImpassable = 0, kept = 0;
+            int rot = placement.rotation();
+            int kept = 0;
             for (NbtBlockEntry entry : nbtData.blocks) {
-                // Skip invisible/structural blocks
+                // Skip void/jigsaw/air
                 if (entry.blockName.contains("structure_void")
                         || entry.blockName.contains("jigsaw")
                         || entry.blockName.contains("air")) {
-                    skippedName++;
                     continue;
                 }
 
                 // Rotate position
-                EntryExit local = new EntryExit(entry.x, entry.z, CardinalFacing.SOUTH);
-                EntryExit rotated = local.rotate(rotationSteps);
-
-                int worldX = placement.x() + rotated.dx();
-                int worldZ = placement.z() + rotated.dz();
-
-                // Skip tiles inside building bounds
-                if (insideAnyBuilding(worldX, worldZ, buildingBounds)) {
-                    skippedBuilding++;
-                    continue;
+                int wx = placement.x();
+                int wz = placement.z();
+                // Rotation applied to local (dx, dz) relative to template origin
+                int rdx = entry.x;
+                int rdz = entry.z;
+                for (int r = 0; r < (rot & 3); r++) {
+                    int tmp = rdx;
+                    rdx = rdz;
+                    rdz = -tmp;
                 }
+                wx += rdx;
+                wz += rdz;
 
-                // Skip already-claimed positions
-                XZPoint tileXz = new XZPoint(worldX, worldZ);
-                if (occupiedTiles.contains(tileXz)) {
-                    skippedOccupied++;
-                    continue;
-                }
+                if (insideAnyBuilding(wx, wz, buildingBounds)) continue;
 
-                // Compute terrain height
-                int groundY = terrainHeightAt(level, worldX, worldZ);
-                BlockPos pos = new BlockPos(worldX, groundY, worldZ);
+                XZPoint tileXz = new XZPoint(wx, wz);
+                if (occupiedTiles.contains(tileXz)) continue;
 
-                // Skip impassable positions
-                if (!isPassable(pos, level)) {
-                    skippedImpassable++;
-                    continue;
-                }
+                // Vanilla-style terrain matching: surface height - 1 + templateY
+                int surfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz);
+                int groundY = surfaceY - 1 + entry.y;
+                BlockPos pos = new BlockPos(wx, groundY, wz);
+
+                if (!isPassable(pos, level)) continue;
 
                 occupiedTiles.add(tileXz);
 
+                // Block variation — "worn path" like vanilla STREET_PLAINS
+                String block = applyVariation(level, pos, entry.blockName);
+
                 JsonObject tile = new JsonObject();
-                JsonArray posArr = new JsonArray();
-                posArr.add(pos.getX());
-                posArr.add(pos.getY());
-                posArr.add(pos.getZ());
-                tile.add("pos", posArr);
-                tile.addProperty("block", entry.blockName);
+                JsonArray arr = new JsonArray();
+                arr.add(pos.getX()); arr.add(pos.getY()); arr.add(pos.getZ());
+                tile.add("pos", arr);
+                tile.addProperty("block", block);
                 allTiles.add(tile);
                 kept++;
             }
 
-            LOGGER.info("[RoadTemplatePlacer] template={} pos=({},{}) rot={}: {} total, kept={}, nameSkipped={}, buildingSkipped={}, occupiedSkipped={}, impassableSkipped={}",
-                    placement.templateId(), placement.x(), placement.z(), placement.rotation(),
-                    totalBlocks, kept, skippedName, skippedBuilding, skippedOccupied, skippedImpassable);
+            LOGGER.info("[RoadTemplatePlacer] {} at ({},{}) rot={}: {} tiles",
+                    placement.templateId(), placement.x(), placement.z(),
+                    placement.rotation(), kept);
         }
 
         return allTiles;
     }
 
-    // ---- NBT loading ----
+    // ---- Vanilla-style block variation ----
 
-    /** Load and parse a structure NBT file from classpath (mod jar). */
+    /** Apply worn-path block variation matching vanilla STREET_PLAINS rules. */
+    static String applyVariation(Level level, BlockPos roadPos, String blockId) {
+        if (!"minecraft:dirt_path".equals(blockId)) return blockId;
+
+        BlockPos below = roadPos.below();
+        BlockState ground = level.getBlockState(below);
+
+        // Water underneath → wood planks (bridge)
+        if (!ground.getFluidState().isEmpty()) {
+            return "minecraft:oak_planks";
+        }
+
+        String groundName = ground.getBlock().builtInRegistryHolder()
+                .key().location().toString();
+
+        // Grass → 85% dirt_path, 15% grass_block (worn patches)
+        if ("minecraft:grass_block".equals(groundName)) {
+            long h = ((long) roadPos.getX() * 31 + roadPos.getZ()) ^ 0x3A7F;
+            if (Math.abs(h % 100) < 15) {
+                return "minecraft:grass_block";
+            }
+        }
+
+        // Stone/cobblestone → cobblestone (rocky path)
+        if ("minecraft:stone".equals(groundName)
+                || "minecraft:cobblestone".equals(groundName)) {
+            return "minecraft:cobblestone";
+        }
+
+        return blockId;
+    }
+
+    // ---- NBT loading (from classpath) ----
+
     private static NbtData loadTemplateNbt(String templateRef) {
         try {
-            // templateRef like "wandscape:road/straight" →
-            // classpath: "data/wandscape/structure/road/straight.nbt"
             String[] parts = templateRef.split(":", 2);
-            String namespace = parts.length == 2 ? parts[0] : "wandscape";
+            String ns = parts.length == 2 ? parts[0] : "wandscape";
             String path = parts.length == 2 ? parts[1] : templateRef;
-            String resourcePath = "data/" + namespace + "/structure/" + path + ".nbt";
+            String resourcePath = "data/" + ns + "/structure/" + path + ".nbt";
 
-            var classLoader = RoadTemplatePlacer.class.getClassLoader();
-            var stream = classLoader.getResourceAsStream(resourcePath);
+            var cl = RoadTemplatePlacer.class.getClassLoader();
+            var stream = cl.getResourceAsStream(resourcePath);
             if (stream == null) {
-                LOGGER.warn("[RoadTemplatePlacer] classpath miss: {}", resourcePath);
+                LOGGER.warn("[RoadTemplatePlacer] not found: {}", resourcePath);
                 return null;
             }
 
-            LOGGER.info("[RoadTemplatePlacer] loaded NBT: {} ({} bytes available)",
-                    resourcePath, stream.available());
             CompoundTag tag = NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
             stream.close();
-
-            NbtData data = parseBlocks(tag);
-            LOGGER.info("[RoadTemplatePlacer] parsed {} blocks from {}", data.blocks.size(), templateRef);
-            return data;
+            return parseBlocks(tag);
         } catch (Exception e) {
-            LOGGER.warn("[RoadTemplatePlacer] NBT load failed for {}: {}",
-                    templateRef, e.toString());
+            LOGGER.warn("[RoadTemplatePlacer] NBT load failed: {}", e.toString());
             return null;
         }
     }
 
-    /** Extract block entries from a structure NBT compound. */
     private static NbtData parseBlocks(CompoundTag root) {
-        // Read size
-        ListTag sizeTag = root.getList("size", 3); // TAG_Int
-        // size is [xSize, ySize, zSize]
-
-        // Read palette
-        List<PaletteEntry> palette = new ArrayList<>();
+        // Parse palette
+        List<String> palette = new ArrayList<>();
         if (root.contains("palettes", 9)) {
-            ListTag palettesTag = root.getList("palettes", 9);
-            if (!palettesTag.isEmpty()) {
-                ListTag firstPal = palettesTag.getList(0);
-                palette = readPalette(firstPal);
+            ListTag pt = root.getList("palettes", 9);
+            if (!pt.isEmpty()) {
+                ListTag p0 = pt.getList(0);
+                for (int i = 0; i < p0.size(); i++) {
+                    palette.add(p0.getCompound(i).getString("Name"));
+                }
             }
         } else if (root.contains("palette", 9)) {
-            ListTag palTag = root.getList("palette", 10);
-            palette = readPalette(palTag);
+            ListTag pt = root.getList("palette", 9);
+            for (int i = 0; i < pt.size(); i++) {
+                palette.add(pt.getCompound(i).getString("Name"));
+            }
         }
 
-        // Read blocks
-        List<NbtBlockEntry> blockEntries = new ArrayList<>();
-        ListTag blocksTag = root.getList("blocks", 10); // TAG_Compound
+        // Parse blocks
+        List<NbtBlockEntry> entries = new ArrayList<>();
+        ListTag blocksTag = root.getList("blocks", 10);
         for (int i = 0; i < blocksTag.size(); i++) {
-            CompoundTag blockTag = blocksTag.getCompound(i);
-            ListTag posTag = blockTag.getList("pos", 3);
+            CompoundTag bt = blocksTag.getCompound(i);
+            ListTag posTag = bt.getList("pos", 3);
             int bx = posTag.getInt(0);
             int by = posTag.getInt(1);
             int bz = posTag.getInt(2);
-            int stateIdx = blockTag.getInt("state");
-
-            String blockName = "minecraft:air";
-            if (stateIdx >= 0 && stateIdx < palette.size()) {
-                blockName = palette.get(stateIdx).name;
-            }
-
-            blockEntries.add(new NbtBlockEntry(bx, by, bz, blockName));
+            int si = bt.getInt("state");
+            String name = (si >= 0 && si < palette.size()) ? palette.get(si) : "minecraft:air";
+            entries.add(new NbtBlockEntry(bx, by, bz, name));
         }
 
-        return new NbtData(blockEntries);
-    }
-
-    private static List<PaletteEntry> readPalette(ListTag palTag) {
-        List<PaletteEntry> palette = new ArrayList<>();
-        for (int i = 0; i < palTag.size(); i++) {
-            CompoundTag entry = palTag.getCompound(i);
-            String name = entry.getString("Name");
-            palette.add(new PaletteEntry(name));
-        }
-        return palette;
+        return new NbtData(entries);
     }
 
     // ---- Terrain ----
-
-    private static int terrainHeightAt(Level level, int x, int z) {
-        int maxY = level.getMaxBuildHeight();
-        int minY = level.getMinBuildHeight();
-        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos(x, maxY, z);
-        while (mpos.getY() > minY) {
-            mpos.setY(mpos.getY() - 1);
-            var state = level.getBlockState(mpos);
-            if (!state.isAir() && state.getFluidState().isEmpty()) {
-                return mpos.getY() + 1;
-            }
-        }
-        return minY + 1;
-    }
 
     private static boolean isPassable(BlockPos pos, Level level) {
         var state = level.getBlockState(pos);
@@ -247,43 +223,25 @@ public final class RoadTemplatePlacer {
                 && state.getFluidState().isEmpty();
     }
 
-    private static boolean insideAnyBuilding(int x, int z,
-                                              Collection<BoundingBox> boxes) {
+    private static boolean insideAnyBuilding(int x, int z, Collection<BoundingBox> boxes) {
         for (BoundingBox box : boxes) {
             if (x >= box.minX() && x <= box.maxX()
-                    && z >= box.minZ() && z <= box.maxZ()) {
-                return true;
-            }
+                    && z >= box.minZ() && z <= box.maxZ()) return true;
         }
         return false;
     }
 
-    // ---- Internal types ----
-
-    private record PaletteEntry(String name) {}
+    // ---- Types ----
 
     private record NbtBlockEntry(int x, int y, int z, String blockName) {}
-
     private record NbtData(List<NbtBlockEntry> blocks) {}
 
-    // ---- Pool wrapper ----
-
     public static class RoadTemplateMetaPool {
-        private final Map<String, TemplateMeta> metas;
-
-        public RoadTemplateMetaPool(List<TemplateMeta> metaList) {
-            this.metas = new HashMap<>();
-            for (TemplateMeta m : metaList) {
-                metas.put(m.id(), m);
-            }
+        private final Map<String, TemplateMeta> metas = new HashMap<>();
+        public RoadTemplateMetaPool(List<TemplateMeta> list) {
+            for (TemplateMeta m : list) metas.put(m.id(), m);
         }
-
-        public TemplateMeta getMeta(String id) {
-            return metas.get(id);
-        }
-
-        public int size() {
-            return metas.size();
-        }
+        public TemplateMeta getMeta(String id) { return metas.get(id); }
+        public int size() { return metas.size(); }
     }
 }

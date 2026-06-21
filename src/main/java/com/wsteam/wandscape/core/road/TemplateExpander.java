@@ -47,62 +47,76 @@ public final class TemplateExpander {
         }
 
         List<TemplatePlacement> placements = new ArrayList<>();
-        XZPoint pos = entryPos;
+        XZPoint tip = entryPos;  // world position of the chain's leading edge
         int remaining = budget;
 
         while (remaining > 0) {
-            int dx = target.x() - pos.x();
-            int dz = target.z() - pos.z();
+            int dx = target.x() - tip.x();
+            int dz = target.z() - tip.z();
             int dist = Math.abs(dx) + Math.abs(dz);
 
-            // Close enough to target — stop
-            if (dist <= CLOSE_THRESHOLD) {
-                break;
-            }
+            // Close enough to target — done
+            if (dist <= CLOSE_THRESHOLD) break;
 
             CardinalFacing heading = CardinalFacing.toward(dx, dz);
 
             // Pick template whose exit can face toward heading
             RoadTemplatePool.Picked picked = pool.pickWithRotation(heading, rng);
-            if (picked == null) {
-                break;
-            }
+            if (picked == null) break;
 
             TemplateMeta tm = picked.template();
             int rotation = picked.rotation();
 
-            // Check if template origin position is blocked
-            boolean blocked = obstacles.contains(pos);
+            // Find the entry that best aligns with the chain's incoming direction
+            CardinalFacing incomingDir = heading.opposite();
+            EntryExit alignedEntry = findAlignedEntry(tm, rotation, incomingDir);
 
-            // Try lateral jitter if blocked
-            if (blocked) {
-                XZPoint jittered = jitter(pos, heading);
+            // Place template so its aligned entry sits at the chain tip
+            int originX = tip.x() - alignedEntry.dx();
+            int originZ = tip.z() - alignedEntry.dz();
+
+            // Collision check at origin
+            XZPoint originPt = new XZPoint(originX, originZ);
+            if (obstacles.contains(originPt)) {
+                XZPoint jittered = jitter(originPt, heading);
                 if (jittered != null && !obstacles.contains(jittered)) {
-                    pos = jittered;
-                    blocked = false;
+                    originX = jittered.x();
+                    originZ = jittered.z();
+                } else {
+                    continue; // try different template
                 }
             }
 
-            if (blocked) {
-                // Can't place here — try picking a different template
-                continue;
-            }
+            // Find the exit facing nearest to target heading
+            EntryExit exit = findBestExit(tm, rotation, heading);
 
-            // Compute exit world position
-            EntryExit bestExit = findBestExit(tm, rotation, heading);
-            XZPoint exitPos = new XZPoint(
-                    pos.x() + bestExit.dx(),
-                    pos.z() + bestExit.dz());
-
-            // Don't place if exit is on target side but far enough
-            placements.add(new TemplatePlacement(tm.id(), pos.x(), pos.z(), rotation));
+            // Record placement
+            placements.add(new TemplatePlacement(tm.id(), originX, originZ, rotation));
             remaining -= tm.budgetCost();
 
-            // Advance to exit
-            pos = exitPos;
+            // Advance chain tip to this template's exit world position
+            tip = new XZPoint(originX + exit.dx(), originZ + exit.dz());
         }
 
         return placements;
+    }
+
+    /**
+     * Find the entry whose rotated facing best matches {@code incomingDir}
+     * (the direction from which the chain arrives at this template).
+     */
+    static EntryExit findAlignedEntry(TemplateMeta template, int rotation, CardinalFacing incomingDir) {
+        EntryExit best = null;
+        int bestScore = Integer.MAX_VALUE;
+        for (EntryExit e : template.entries()) {
+            EntryExit rotated = e.rotate(rotation);
+            int score = RoadTemplatePool.angularDistance(rotated.facing(), incomingDir);
+            if (score < bestScore) {
+                bestScore = score;
+                best = rotated;
+            }
+        }
+        return best != null ? best : template.entries().get(0).rotate(rotation);
     }
 
     /**
