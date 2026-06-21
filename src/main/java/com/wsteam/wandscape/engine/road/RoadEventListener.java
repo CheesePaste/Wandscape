@@ -27,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
@@ -154,8 +155,21 @@ public final class RoadEventListener {
             }
         }
 
-        // Compute intersection points across ALL edges
+        // Collect all building bounding boxes to avoid placing roads on/inside buildings
+        BuildingSavedData bd = BuildingSavedData.get(level);
+        var buildingBounds = new ArrayList<BoundingBox>();
+        for (BuildingState bs : bd.getAllBuildings()) {
+            if (bs.isStructureIntact()) {
+                buildingBounds.add(bs.getBounds());
+            }
+        }
+
+        // Compute intersection points across ALL edges (directional crossing only)
         Set<XZPoint> intersections = IntersectionDetector.detectAll(allEdges);
+
+        // Track actual tile XZ positions placed by edges processed in this batch,
+        // so width-expanded tiles don't overlap between edges in the same batch.
+        Set<XZPoint> occupiedTiles = new HashSet<>();
 
         for (RoadEdge edge : allEdges) {
             if (edge.getStatus() != RoadEdge.EdgeStatus.PLANNED) continue;
@@ -171,11 +185,12 @@ public final class RoadEventListener {
             }
 
             List<List<XZPoint>> segments = RoadPlanner.splitIntoSegments(freshPath, maxLen);
+            boolean hasSegments = false;
 
             for (List<XZPoint> segPath : segments) {
                 UUID segId = UUID.randomUUID();
                 JsonArray tiles = RoadBuilder.buildTiles(level, segPath,
-                        edge.getTier(), intersections);
+                        edge.getTier(), intersections, buildingBounds, occupiedTiles);
 
                 if (tiles.isEmpty()) {
                     LOGGER.debug("[Road] segment {} has no passable tiles, skipping", segId);
@@ -184,10 +199,25 @@ public final class RoadEventListener {
 
                 RoadTaskSource.enqueueSegment(
                         new RoadTaskSource.PendingSegment(segId, edge.getEdgeId(), tiles));
+                hasSegments = true;
 
                 LOGGER.debug("[Road] enqueued segment {} ({} tiles) for edge {}",
                         segId, tiles.size(), edge.getEdgeId());
             }
+
+            // Set status to BUILDING so this edge is not re-processed on next event
+            if (hasSegments) {
+                edge.setStatus(RoadEdge.EdgeStatus.BUILDING);
+            } else {
+                edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
+            }
+
+            // Add this edge's fresh path points to occupied so subsequent edges
+            // in the same batch don't generate overlapping center-line tiles.
+            occupied.addAll(freshPath);
+
+            // Also track actual tile XZ positions for width-aware dedup
+            occupiedTiles.addAll(freshPath);
         }
     }
 

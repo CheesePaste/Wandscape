@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.command;
 
+import java.util.Random;
+
 import org.slf4j.Logger;
 
 import com.mojang.brigadier.Command;
@@ -26,9 +28,9 @@ import net.minecraft.server.level.ServerLevel;
 /**
  * End-to-end test command for building + road pipeline.
  *
- * <p>Submits building blueprint tasks for N buildings placed in a ring,
- * then NPCs build them. When a building completes, {@code build_complete}
- * fires naturally, triggering {@code RoadEventListener} to plan roads.
+ * <p>Submits building blueprint tasks for N buildings placed in random
+ * scattered positions around the command source.
+ * NPCs build them → {@code build_complete} fires → RoadEventListener → roads.
  *
  * <p>Usage:
  * <pre>
@@ -81,14 +83,17 @@ public final class RoadTestCommand {
             return 0;
         }
 
-        // ── 3. Register buildings + submit blueprint tasks in a ring ──
+        // ── 3. Register buildings + submit blueprint tasks, randomly scattered ──
         BlockPos center = BlockPos.containing(src.getPosition());
         int submitted = 0;
+        int minRadius = spacing / 2;
+        Random rng = new Random();
 
         for (int i = 0; i < count; i++) {
-            double angle = 2.0 * Math.PI * i / count;
-            int dx = (int) Math.round(spacing * Math.cos(angle));
-            int dz = (int) Math.round(spacing * Math.sin(angle));
+            double angle = 2.0 * Math.PI * rng.nextDouble();
+            int radius = minRadius + rng.nextInt(spacing - minRadius + 1);
+            int dx = (int) Math.round(radius * Math.cos(angle));
+            int dz = (int) Math.round(radius * Math.sin(angle));
             BlockPos pos = center.offset(dx, 0, dz);
 
             // Register in BuildingSavedData (initially structureIntact=false)
@@ -106,7 +111,7 @@ public final class RoadTestCommand {
         int threshold = WandscapeApis.getRoadApi().getBuildingThreshold();
         int poolSize = world.taskPool.size();
         String msg = String.format(
-                "[RoadTest] %d building tasks submitted to pool (building=%s, radius=%d)\n"
+                "[RoadTest] %d building tasks submitted (building=%s, maxRadius=%d)\n"
                         + "  Total tasks in pool: %d\n"
                         + "  Road threshold: %d\n"
                         + "\n-> NPCs will build buildings first\n"

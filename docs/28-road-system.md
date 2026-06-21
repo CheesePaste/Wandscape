@@ -1,8 +1,8 @@
 # 道路系统
 
 文档编号：NEW-28
-版本：1.0-draft
-状态：设计中（grill-me 进行中）
+版本：2.0-draft
+状态：V1 已实施，V2 设计中（混合原版 StructureTemplate 管道）
 依赖：01-shared-api, core/
 
 ---
@@ -366,7 +366,217 @@ segment_max_length = 16
 
 ---
 
-## 十二、待定问题
+## 十二、V2 方向：混合原版 StructureTemplate 管道
+
+> 2026-06-21：逆向分析原版村庄道路生成源码（NeoForge 21.1.233），提出结合方案。
+
+### 12.1 原版村庄道路生成机制
+
+原版村庄道路使用 **Jigsaw 扩展 + NBT 模板 + 处理器管道** 三层架构。
+
+#### 12.1.1 Jigsaw 拓扑生成（贪心扩展，非全局规划）
+
+```
+town_center (起点，RIGID)
+  → jigsaw "street" → 从 "village/plains/streets" 池随机取模板
+    → 该模板的 jigsaw "street" → 再随机取下一个模板
+      → ... 直到碰撞失败或超出 maxDepth
+        → fallback "terminator" 模板结束道路
+```
+
+核心在 `JigsawPlacement.Placer.tryPlacingChildren()`：
+- 每个 jigsaw 块从对应池里随机抽模板
+- 尝试所有旋转方向匹配 jigsaw 连接
+- `Shapes.joinIsNotEmpty` 检查与已放置结构碰撞
+- 第一个无碰撞的就放置（非确定性贪心）
+- 没有全局最短路径，没有最小生成树，没有优化目标
+
+#### 12.1.2 NBT 模板 = 预制的道路片段（不是程序化逐格）
+
+解析平原村庄 `straight_01.nbt`：
+```
+尺寸: 16×2×16
+方块: 258 total
+  dirt_path: 48 块（3格宽 × 16格长，占模板 18%）
+  jigsaw:    2 个（z=0、z=15 两端，用于连接下一个模板）
+  grass_block: 7 个（路边装饰锚点）
+  air:       201 个（模板其余部分）
+```
+
+**道路宽度是在模板里手工设计的，不是公式算出来的**。
+
+街道模板池（`PlainVillagePools`）：
+| 模板类型 | 数量 | 权重 | 用途 |
+|----------|------|------|------|
+| `straight_*` | 6 种 | 29 | 直线段 |
+| `corner_*` | 3 种 | 6 | 转角 |
+| `crossroad_*` | 6 种 | 11 | 十字路口 |
+| `turn_01` | 1 种 | 3 | 转弯 |
+| terminator | 4 种 | 4 | 路尽头 |
+
+关键发现：**crossroad 模板中的交叉口中心也是 dirt_path**，不用不同方块：
+```
+crossroad_01.nbt 布局 (Y=0 top-down):
+  x=7,8,9 三列贯通（3格宽直道）
+  z=7,8,9 三行贯通（3格宽直道）
+  中心 3×3 区域全是 dirt_path
+  没有 stone_bricks！
+```
+
+交叉口的识别是**形状**（道路变宽交叠），不是材质。
+
+#### 12.1.3 三级处理器管道 = 自然感来源
+
+`StructureTemplate.processBlockInfos()` 对模板每个方块依次运行：
+
+```
+Layer 1: BlockIgnoreProcessor(STRUCTURE_AND_AIR)
+  → 跳过结构方块和空气（模板的脚手架块）
+
+Layer 2: GravityProcessor(WORLD_SURFACE_WG, -1)
+  → 每方块独立计算 Y = 地形高度 - 1 + 模板Y
+  → 路面紧贴地形，不平铺
+
+Layer 3: RuleProcessor(街区规则)
+  → 方块级条件替换
+```
+
+**街区规则（`ProcessorLists.STREET_PLAINS`）**：
+```java
+规则 1: DIRT_PATH ∧ 世界水面 → OAK_PLANKS    (水上桥)
+规则 2: DIRT_PATH (10%)      → GRASS_BLOCK   (磨损斑驳)
+规则 3: GRASS_BLOCK ∧ 世界水面 → WATER        (水下淹没)
+规则 4: DIRT ∧ 世界水面       → WATER
+```
+
+每条规则（`ProcessorRule.test()`）测试两个条件：
+- `inputPredicate`：模板中应该放什么块
+- `locPredicate`：世界中那个位置当前是什么块
+- 都匹配 → `outputState` 替换
+
+#### 12.1.4 地形适应细节
+
+`GravityProcessor` 关键逻辑：
+```java
+int i = level.getHeight(heightmap, x, z) + offset;  // 地形Y + (-1)
+int j = blockInfo.pos().getY();                       // 模板中 Y = 0（路面）
+return new BlockPos(x, i + j, z);                    // = 地形高度 - 1 + 0
+```
+
+路面方块被放在地表一格高处。`DirtPathBlock` 形状只有 15/16 高，视觉上"嵌入"地表，形成踩踏痕迹。
+
+#### 12.1.5 沙漠村庄特殊处理
+
+沙漠村庄街道 **零处理器**：模板中的 dirt_path 直接放在沙子上。视觉上平淡但风格一致（沙漠 = 沙地路）。
+
+### 12.2 原版 vs Wandscape V1 对比
+
+| 维度 | 原版 | Wandscape V1 |
+|------|------|-------------|
+| **拓扑生成** | Jigsaw 贪心扩展（非确定性） | MST 全局最短（确定性） |
+| **路径单元** | NBT 模板（16×16 预设计） | 逐格 L 形程序化计算 |
+| **路宽** | 3 格（人工设计在模板里） | 2 格（perpDx/Dz 算法） |
+| **交叉口** | 专用 crossroad 模板（3×3 加宽） | IntersectionDetector + stone_bricks 替换 |
+| **地形适应** | GravityProcessor 每块重算 Y | terrainHeightAt 逐格扫描 |
+| **方块多样化** | RuleProcessor 规则（水面桥/磨损斑驳/沙漠配适） | 硬编码 dirt_path/stone_bricks |
+| **NPC 执行** | 结构级一次放置（模板内多个方块） | for_each 逐格 place |
+| **自然感** | 高（随机斑驳 + 地形贴合 + 水上桥） | 低（清一色 dirt_path） |
+
+### 12.3 混合方案：保留 MST 规划 + 复用原版放置管道
+
+**核心思想**：core/road/ 的 MST + PathGenerator 规划不变（确定性强），替换 engine/road/ 的逐格 tile 生成为原版 StructureTemplate 管道（自然感高）。
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  core/road/ (不变)                                              │
+│  MST → PathGenerator.lShape() → 确定路径 + 方向                  │
+│                                                                 │
+│  输出：模板放置指令序列                                          │
+│    TemplateOp { type: STRAIGHT|CORNER|CROSSROAD|T_JUNCTION,     │
+│                 pos: BlockPos, rotation: Rotation }              │
+└──────────────┬──────────────────────────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────────────────────────┐
+│  engine/road/ (替换 RoadBuilder.buildTiles)                     │
+│                                                                 │
+│  RoadTemplatePlacer:                                            │
+│    ├─ 根据路径方向序列确定模板类型                                │
+│    ├─ 对齐到 16×16 模板网格                                      │
+│    ├─ 构造 StructurePlaceSettings                               │
+│    │    ├─ GravityProcessor(WORLD_SURFACE, -1) ← 地形贴合        │
+│    │    ├─ RuleProcessor(road_surface_rules)   ← 方块规则        │
+│    │    └─ BlockIgnoreProcessor(STRUCTURE_AND_AIR) ← 跳过脚手架  │
+│    ├─ 调用 StructureTemplate.placeInWorld()                     │
+│    └─ 或生成 "road:place_template" 蓝图供 NPC 执行               │
+│                                                                 │
+│  需要新建的 NBT 模板 (data/wandscape/structure/road/):            │
+│    ├─ straight_3.nbt     (3×16 直道)                            │
+│    ├─ straight_3_short.nbt (3×8 短直道)                          │
+│    ├─ corner_3.nbt       (3×3 转角)                             │
+│    ├─ crossroad_3.nbt    (3×3 十字口)                            │
+│    └─ tjunction_3.nbt    (3×3 T型口)                             │
+│                                                                 │
+│  方块规则 (data/wandscape/road_surface_rules.json):              │
+│    └─ 按地形类型：grass→dirt_path(85%)/grass(15%)                │
+│        water→oak_planks, sand→smooth_sandstone, stone→cobble    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 12.4 关键技术验证
+
+**StructureTemplate.placeInWorld() 是公开 API**：
+```java
+// StructureTemplate.java:230 — 非 @Nullable，非 @Deprecated
+public boolean placeInWorld(
+    ServerLevelAccessor serverLevel,  // ServerLevel 实现此接口
+    BlockPos offset,                  // 模板内偏移
+    BlockPos pos,                     // 世界放置位置
+    StructurePlaceSettings settings,  // 旋转 + 处理器列表
+    RandomSource random,
+    int flags
+)
+```
+
+**在运行时加载模板**（不仅仅在 worldgen）：
+```java
+StructureTemplateManager stm = serverLevel.getStructureManager();
+StructureTemplate template = stm.getOrCreate(
+    ResourceLocation.fromNamespaceAndPath("wandscape", "road/straight_3"));
+// → 自动从 data/wandscape/structure/road/straight_3.nbt 加载
+```
+
+**三种模板来源**：
+1. `data/wandscape/structure/road/*.nbt`（资源包，自动加载，推荐）
+2. `fillFromWorld(level, pos, size, ...)`（运行时从世界抓取区域）
+3. `stm.readStructure(CompoundTag)`（手动构造 NBT）
+
+### 12.5 混合方案优缺点
+
+**优势**：
+- 道路自然感大幅提升（磨损斑驳、水上桥、地形贴合，与原版村庄一致）
+- 处理器管道可数据驱动配置
+- 结构级放置比逐格 for_each 更快
+- 模板可由美术设计（不需要改代码）
+- 核心规划算法（MST）保留确定性优势
+
+**代价**：
+- 需要维护 5+ 个 NBT 模板文件
+- 模板网格对齐带来复杂度（不像当前逐格计算那么灵活）
+- 跨模板边缘可能有不平整（需要重叠或过渡处理）
+- 蓝图层需要新增模板放置原子操作
+
+### 12.6 实施待定
+
+- [ ] 模板 NBT 文件设计（straight/corner/crossroad/t-junction）
+- [ ] 方块规则 JSON schema
+- [ ] `RoadTemplatePlacer`：路径 → 模板序列转换
+- [ ] 蓝图：新增 `road:place_template` 或直接用 API 同步放置
+- [ ] 模板网格对齐策略（MST 生成任意坐标 → 对齐到 16 格模板网格）
+- [ ] 是否符合"NPC 通过法杖执行原子操作"的设计理念？模板放置是批量操作，不符合逐原子操作
+
+---
+## 十三、待定问题
 
 - [ ] 路网可视化（V1 是否需要在管理面板显示道路？优先级低）
 - [ ] 建筑移址时如何处理关联节点（V1 不支持建筑移址，预留即可）
+- [ ] 是否实施 V2 混合方案（模板放路）？（见第十二章）
