@@ -1,0 +1,32 @@
+{
+  "id": "road:build_segment",
+  "display_name": "Road Segment",
+  "description": "Places road tiles along a pre-generated path segment. Tiles are injected as runtime param.",
+  "params": {
+    "segment_id": "string",
+    "edge_id": "string"
+  },
+  "steps": [
+    {
+      "type": "for_each",
+      "list": "$tiles",
+      "var": "tile",
+      "steps": [
+        {
+          "type": "place",
+          "at": {"get": ["$tile", "pos"]},
+          "block": {"get": ["$tile", "block"]}
+        }
+      ]
+    },
+    {
+      "type": "emit_event",
+      "event": "road_segment_complete",
+      "data": {
+        "segment_id": "$segment_id",
+        "edge_id": "$edge_id",
+        "tiles_placed": {"size": "$tiles"}
+      }
+    }
+  ]
+}

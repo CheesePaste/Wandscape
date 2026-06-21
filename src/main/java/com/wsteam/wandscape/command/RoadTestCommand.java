@@ -1,0 +1,121 @@
+package com.wsteam.wandscape.command;
+
+import org.slf4j.Logger;
+
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.tree.CommandNode;
+import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.building.internal.EnqueueHelper;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.task.TaskRequest;
+import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+
+/**
+ * End-to-end test command for building + road pipeline.
+ *
+ * <p>Submits building blueprint tasks for N buildings placed in a ring,
+ * then NPCs build them. When a building completes, {@code build_complete}
+ * fires naturally, triggering {@code RoadEventListener} to plan roads.
+ *
+ * <p>Usage:
+ * <pre>
+ *   /wandscape roadtest &lt;spacing&gt; &lt;count&gt;
+ *   /wandscape roadtest &lt;spacing&gt; &lt;count&gt; &lt;buildingType&gt;
+ * </pre>
+ *
+ * <p>Check progress: {@code /wandscape road info}
+ */
+public final class RoadTestCommand {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    private RoadTestCommand() {}
+
+    public static CommandNode<CommandSourceStack> node() {
+        return Commands.literal("roadtest")
+                .requires(src -> src.hasPermission(2))
+                .then(Commands.argument("spacing", IntegerArgumentType.integer(5, 64))
+                        .then(Commands.argument("count", IntegerArgumentType.integer(3, 16))
+                                .executes(ctx -> execute(ctx, "grand_tower"))
+                                .then(Commands.argument("buildingType",
+                                        com.mojang.brigadier.arguments.StringArgumentType.word())
+                                        .executes(ctx -> execute(ctx,
+                                                com.mojang.brigadier.arguments.StringArgumentType
+                                                        .getString(ctx, "buildingType"))))))
+                .build();
+    }
+
+    private static int execute(CommandContext<CommandSourceStack> ctx, String buildingType) {
+        int spacing = IntegerArgumentType.getInteger(ctx, "spacing");
+        int count = IntegerArgumentType.getInteger(ctx, "count");
+        CommandSourceStack src = ctx.getSource();
+
+        // ── 1. Validate building type ──
+        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
+        BuildingConfig config = configLoader.get(buildingType);
+        if (config == null) {
+            src.sendFailure(Component.literal(
+                    "[RoadTest] Unknown building type: " + buildingType
+                    + ". Known: " + configLoader.getAll().keySet()));
+            return 0;
+        }
+
+        // ── 2. Get engine references ──
+        World world = WandscapeEngine.getWorld();
+        if (world == null || world.taskPool == null) {
+            src.sendFailure(Component.literal(
+                    "[RoadTest] Engine not bootstrapped"));
+            return 0;
+        }
+
+        // ── 3. Register buildings + submit blueprint tasks in a ring ──
+        BlockPos center = BlockPos.containing(src.getPosition());
+        int submitted = 0;
+
+        for (int i = 0; i < count; i++) {
+            double angle = 2.0 * Math.PI * i / count;
+            int dx = (int) Math.round(spacing * Math.cos(angle));
+            int dz = (int) Math.round(spacing * Math.sin(angle));
+            BlockPos pos = center.offset(dx, 0, dz);
+
+            // Register in BuildingSavedData (initially structureIntact=false)
+            EnqueueHelper.registerIfAbsent(pos, config, buildingType);
+
+            // Submit the blueprint task so NPCs actually build the building
+            WorkItem work = EnqueueHelper.buildWorkItem(config, pos, buildingType, 10);
+            TaskRequest request = new TaskRequest(
+                    work.blueprintId(), work.params(), work.priority());
+            world.taskPool.addTask(request);
+            submitted++;
+        }
+
+        // ── 4. Report ──
+        int threshold = WandscapeApis.getRoadApi().getBuildingThreshold();
+        int poolSize = world.taskPool.size();
+        String msg = String.format(
+                "[RoadTest] %d building tasks submitted to pool (building=%s, radius=%d)\n"
+                        + "  Total tasks in pool: %d\n"
+                        + "  Road threshold: %d\n"
+                        + "\n-> NPCs will build buildings first\n"
+                        + "-> After %d buildings complete, MST roads auto-trigger\n"
+                        + "-> Check /wandscape road info for progress",
+                submitted, buildingType, spacing,
+                poolSize, threshold, threshold);
+
+        src.sendSuccess(() -> Component.literal("§a" + msg), false);
+        return Command.SINGLE_SUCCESS;
+    }
+}

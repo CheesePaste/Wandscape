@@ -81,5 +81,15 @@ public class Config {
             .comment("Default wand range")
             .defineInRange("wand.defaultWandRange", 1, 1, 5);
 
+    // ---- Road system ----
+
+    public static final ModConfigSpec.IntValue ROAD_BUILDING_THRESHOLD = BUILDER
+            .comment("Minimum number of buildings before road network is generated")
+            .defineInRange("road.buildingThreshold", 3, 2, 50);
+
+    public static final ModConfigSpec.IntValue ROAD_SEGMENT_MAX_LENGTH = BUILDER
+            .comment("Maximum tiles per road segment")
+            .defineInRange("road.segmentMaxLength", 16, 4, 64);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

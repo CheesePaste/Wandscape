@@ -14,6 +14,7 @@ public final class WandscapeApis {
     private static AtomicExecutor atomicExecutor;
     private static ColonyApi colonyApi;
     private static ManaPoolApi manaPoolApi;
+    private static RoadApi roadApi;
 
     private WandscapeApis() {}
 
@@ -84,4 +85,10 @@ public final class WandscapeApis {
         return manaPoolApi;
     }
     public static void setManaPoolApi(ManaPoolApi api) { manaPoolApi = api; }
+
+    public static RoadApi getRoadApi() {
+        if (roadApi == null) throw new IllegalStateException("Module RoadSystem not loaded");
+        return roadApi;
+    }
+    public static void setRoadApi(RoadApi api) { roadApi = api; }
 }

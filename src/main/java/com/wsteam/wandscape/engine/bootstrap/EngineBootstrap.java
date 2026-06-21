@@ -29,6 +29,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.engine.road.RoadTaskSource;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
@@ -90,6 +91,7 @@ public final class EngineBootstrap {
         taskSources.add(new BuildingTaskSource());
         taskSources.add(new WarehouseSource());
         taskSources.add(new WorkbenchSource());
+        taskSources.add(new RoadTaskSource());
 
         // 4. Build boundary implementations
         WandscapeBlockOps blockOps = new WandscapeBlockOps();

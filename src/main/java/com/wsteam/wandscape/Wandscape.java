@@ -18,7 +18,12 @@ import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
+import com.wsteam.wandscape.command.RoadCommand;
+import com.wsteam.wandscape.command.RoadTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
+import com.wsteam.wandscape.engine.road.RoadApiImpl;
+import com.wsteam.wandscape.engine.road.RoadEventListener;
+import com.wsteam.wandscape.engine.road.RoadSavedData;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
@@ -210,6 +215,9 @@ public class Wandscape {
         EngineBootstrap.bootstrap();
         BuildCompleteListener.register();
 
+        // ---- Road system ----
+        RoadEventListener.register();
+
         // Load persisted tasks from previous session
         ServerLevel level = event.getServer().overworld();
         var world = WandscapeEngine.getWorld();
@@ -220,6 +228,12 @@ public class Wandscape {
             world.taskPool.onChanged = saved::setDirty;
             LOGGER.info("Task persistence wired — pool has {} active tasks", world.taskPool.size());
         }
+
+        // Road persistence + API
+        var roadSaved = RoadSavedData.getOrCreate(level);
+        WandscapeEngine.setRoadSavedData(roadSaved);
+        WandscapeApis.setRoadApi(new RoadApiImpl());
+        LOGGER.info("Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
     }
 
     @SubscribeEvent
@@ -250,6 +264,8 @@ public class Wandscape {
                 .then(ManaCommand.node())
                 .then(NavTestCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
+                .then(RoadCommand.node())
+                .then(RoadTestCommand.node())
                 .then(StressTestCommand.buildNode());
         dispatcher.register(root);
     }

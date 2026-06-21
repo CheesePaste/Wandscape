@@ -42,6 +42,8 @@ public final class WandscapeEngine {
 
     @Nullable
     private static TaskPoolSavedData taskPoolSavedData;
+    @Nullable
+    private static com.wsteam.wandscape.engine.road.RoadSavedData roadSavedData;
 
     private WandscapeEngine() {}
 
@@ -56,6 +58,7 @@ public final class WandscapeEngine {
         world = null;
         asyncExec = null;
         movementOps = null;
+        roadSavedData = null;
         // blueprintConfigLoader: intentionally NOT nulled — it's a permanent singleton
         // whose internal definitions map is managed by WandscapeDataLoader resource reload.
         // Nulling it would break DSL blueprint registration on world re-entry.
@@ -99,4 +102,8 @@ public final class WandscapeEngine {
     @Nullable
     public static TaskPoolSavedData getTaskPoolSavedData() { return taskPoolSavedData; }
     public static void setTaskPoolSavedData(@Nullable TaskPoolSavedData v) { taskPoolSavedData = v; }
+
+    @Nullable
+    public static com.wsteam.wandscape.engine.road.RoadSavedData getRoadSavedData() { return roadSavedData; }
+    public static void setRoadSavedData(@Nullable com.wsteam.wandscape.engine.road.RoadSavedData v) { roadSavedData = v; }
 }
