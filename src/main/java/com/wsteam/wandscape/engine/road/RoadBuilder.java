@@ -192,7 +192,11 @@ public final class RoadBuilder {
         for (RoadConfig.WeightedBlock wb : palette) {
             totalWeight += wb.weight();
         }
-        long h = ((long) x * 31 + z) ^ 0x3A7F;
+        // Splitmix64-style hash: adjacent tiles decorrelate fully.
+        // Old ((long)x*31+z)^0x3A7F caused visible 3-tile repeating stripes.
+        long h = ((long) x * 0x9E3779B97F4A7C15L) ^ ((long) z * 0xC6A4A7935BD1E995L);
+        h = (h ^ (h >>> 30)) * 0xBF58476D1CE4E5B9L;
+        h = h ^ (h >>> 27);
         int roll = (int) (Math.abs(h) % totalWeight);
         int cumulative = 0;
         for (RoadConfig.WeightedBlock wb : palette) {

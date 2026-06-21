@@ -70,7 +70,7 @@ public final class DecorationPlanner {
             int perpDx = -fwdDz * side;
             int perpDz = fwdDx * side;
 
-            int offset = halfWidth + 1;
+            int offset = halfWidth; // road edge tile (already at road Y)
             int dx = p.x() + perpDx * offset;
             int dz = p.z() + perpDz * offset;
 

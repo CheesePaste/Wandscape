@@ -14,7 +14,6 @@ import com.wsteam.wandscape.core.road.DecorationPoint;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 /**
@@ -53,28 +52,34 @@ public final class DecorationBuilder {
         RoadConfig.DecorationConfig deco = config.getDecorationConfig();
 
         for (DecorationPoint pt : points) {
-            // Terrain: decoration sits on the surface block
-            int surfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, pt.x(), pt.z());
-            int groundY = surfaceY - 1; // top solid block
+            // Decoration sits at the road surface Y (trust the path elevation).
+            // The road builder already leveled the roadY — decorations align to it,
+            // not to the original terrain surface.
+            int roadY = pt.y();
 
-            BlockPos ground = new BlockPos(pt.x(), groundY, pt.z());
-            BlockState groundState = level.getBlockState(ground);
-            if (!groundState.isSolid() || !groundState.getFluidState().isEmpty()) continue;
+            // Validate that the road surface block exists here (solid, non-fluid)
+            BlockPos roadSurface = new BlockPos(pt.x(), roadY, pt.z());
+            BlockState surfaceState = level.getBlockState(roadSurface);
+            if (!surfaceState.isSolid() || !surfaceState.getFluidState().isEmpty()) {
+                LOGGER.debug("[Deco] road surface missing or water at ({},{},{}) — skip",
+                        pt.x(), roadY, pt.z());
+                continue;
+            }
 
-            // Building bounds — check the full height this decoration occupies
-            if (columnIntersectsBuilding(pt.x(), groundY, groundY + 2, pt.z(), buildingBounds)) continue;
+            // Building bounds: check full height [roadY, roadY+2]
+            if (columnIntersectsBuilding(pt.x(), roadY, roadY + 2, pt.z(), buildingBounds)) continue;
 
             switch (pt.type()) {
                 case "lamp" -> {
-                    tiles.add(makeTile(pt.x(), groundY + 1, pt.z(), deco.lampPost()));
-                    tiles.add(makeTile(pt.x(), groundY + 2, pt.z(), deco.lampLight()));
+                    tiles.add(makeTile(pt.x(), roadY + 1, pt.z(), deco.lampPost()));
+                    tiles.add(makeTile(pt.x(), roadY + 2, pt.z(), deco.lampLight()));
                 }
                 case "bench" -> {
                     String faced = deco.benchBlock() + "[facing=" + pt.facing() + "]";
-                    tiles.add(makeTile(pt.x(), groundY + 1, pt.z(), faced));
+                    tiles.add(makeTile(pt.x(), roadY + 1, pt.z(), faced));
                 }
                 default -> LOGGER.warn("[Deco] unknown decoration type '{}' at ({},{},{})",
-                        pt.type(), pt.x(), pt.y(), pt.z());
+                        pt.type(), pt.x(), roadY, pt.z());
             }
         }
 

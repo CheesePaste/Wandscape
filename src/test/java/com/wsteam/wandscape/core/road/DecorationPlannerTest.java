@@ -106,9 +106,9 @@ class DecorationPlannerTest {
         RoadEdge e = edge(pt(0, 64, 0), pt(9, 64, 0));
         List<DecorationPoint> pts = DecorationPlanner.planForEdge(e, 8, 0, 1);
 
-        // Road along +X → perp ±Z. halfWidth=1 → offset=2 from center.
+        // Road along +X → perp ±Z. halfWidth=1 → offset=1 (road edge).
         DecorationPoint dp = pts.get(0);
-        assertEquals(2, Math.abs(dp.z()), "Should be offset 2 from road center");
+        assertEquals(1, Math.abs(dp.z()), "Should be offset 1 from road center (road edge)");
     }
 
     @Test
