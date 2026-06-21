@@ -138,13 +138,14 @@ public class BuildingTaskSource implements TaskSource {
             params.put("element", new JsonPrimitive(nodeConfig.element()));
             params.put("amount", new JsonPrimitive(nodeConfig.amountPerHarvest()));
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
+            params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
 
             WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15);
             api.enqueueWork(buildingId, work);
-            LOGGER.info("[BuildingTaskSource] node supply: {} → {} x{} ({} ticks)",
+            LOGGER.info("[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana)",
                     buildingId.toString().substring(0, 8),
                     nodeConfig.element(), nodeConfig.amountPerHarvest(),
-                    nodeConfig.channelTicks());
+                    nodeConfig.channelTicks(), nodeConfig.manaCost());
         }
     }
 

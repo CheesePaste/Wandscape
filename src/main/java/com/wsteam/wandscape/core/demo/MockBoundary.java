@@ -77,10 +77,10 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     @Override
     public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world,
-                                               long casterId, int channelTicks,
+                                               long casterId,
                                                Map<String, String> params) {
-        Log.debug(TAG, "beginRitual %s target=%s caster=%d channel=%d params=%s → completed (sync)",
-                ritual.id(), target, casterId, channelTicks, params);
+        Log.debug(TAG, "beginRitual %s target=%s caster=%d params=%s → completed (sync)",
+                ritual.id(), target, casterId, params);
         // All rituals are sync for headless testing
         return CompletableFuture.completedFuture(null);
     }

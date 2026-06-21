@@ -25,7 +25,6 @@ public record BuildingConfig(
         String id,
         @SerializedName("display_name") String displayName,
         String category,
-        @SerializedName("block_id") String blockId,
         List<BlockOffset> pattern,
         @SerializedName("block_mapping") Map<String, String> blockMapping,
         int comfort,
@@ -66,8 +65,13 @@ public record BuildingConfig(
             String blueprint,
             String element,
             @SerializedName("amount_per_harvest") int amountPerHarvest,
-            @SerializedName("channel_ticks") int channelTicks
-    ) {}
+            @SerializedName("channel_ticks") int channelTicks,
+            @SerializedName("mana_cost") int manaCost
+    ) {
+        public NodeConfig {
+            if (manaCost <= 0) manaCost = 5; // default 5 mana
+        }
+    }
 
     /**
      * Reference to a Blueprint DSL JSON that defines task logic for this building.
@@ -76,6 +80,15 @@ public record BuildingConfig(
      * @param bind key = blueprint param name, value = {@code $field_name}
      *             bare variable reference to a building JSON field
      */
+    public record BlueprintRef(
+            String id,
+            Map<String, String> bind
+    ) {
+        public BlueprintRef {
+            if (bind == null) bind = Collections.emptyMap();
+        }
+    }
+
     /** AABB 包围盒，角点相对于 anchor。 */
     public record BoundaryBox(
             BlockOffset min,
@@ -101,15 +114,6 @@ public record BuildingConfig(
         }
     }
 
-    public record BlueprintRef(
-            String id,
-            Map<String, String> bind
-    ) {
-        public BlueprintRef {
-            if (bind == null) bind = Collections.emptyMap();
-        }
-    }
-
     /**
      * Custom Gson deserializer that applies defaults for missing optional sections.
      */
@@ -122,7 +126,6 @@ public record BuildingConfig(
             String id = getString(obj, "id", "");
             String displayName = getString(obj, "display_name", "");
             String category = getString(obj, "category", "basic");
-            String blockId = getString(obj, "block_id", "");
 
             // Pattern
             List<BlockOffset> pattern = List.of();
@@ -202,7 +205,7 @@ public record BuildingConfig(
                 nodeConfig = context.deserialize(obj.get("node_config"), NodeConfig.class);
             }
 
-            return new BuildingConfig(id, displayName, category, blockId,
+            return new BuildingConfig(id, displayName, category,
                     pattern, blockMapping,
                     comfort, magic, wonder, maintenanceCost,
                     shutdownPenalty, queue, unlockRequirement, boundary, blueprint, nodeConfig);

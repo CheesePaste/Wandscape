@@ -150,21 +150,32 @@ public class TaskExecutionSystem implements System {
                 }
             }
 
-            // ---- 4. Mana check ----
+            // ---- 4. Mana check + consume (before execution, for both sync and async) ----
             boolean isPure = isPureOp(currentOp);
             if (!isPure) {
                 ManaPool mana = world.get(npcId, ManaPool.class);
                 WandCarrier wc = world.get(npcId, WandCarrier.class);
                 if (mana == null || wc == null) return;
 
-                int baseCost = currentOp.baseManaCost();
-                int actualCost = Math.max(1, Math.round(baseCost * wc.bestManaEfficiency()));
-                if (mana.current() < actualCost) return; // insufficient mana
+                float actualCost = currentOp.baseManaCost() * wc.bestManaEfficiency();
+                if (mana.current() < actualCost) {
+                    // Insufficient mana: release global task back to pool for another NPC.
+                    // Private-queue ops stall (no taskId to release).
+                    if (!isPrivate && exec.globalTaskId != null && taskPool != null) {
+                        taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
+                        Log.debug(TAG, "NPC %d — mana %.1f < %.1f, released task #%d",
+                                npcId, mana.current(), actualCost, exec.globalTaskId);
+                    }
+                    return;
+                }
+                mana.consume(actualCost);
             }
 
             // ---- 4.5. Range check (horizontal only) + navigation ----
+            // RitualOp works at any distance (self_teleport, etc.) — skip nav
             GridPos target = currentOp.target();
-            if (target != null && world.movementOps != null && exec.stance == null) {
+            if (target != null && world.movementOps != null && exec.stance == null
+                    && !(currentOp instanceof AtomicOp.RitualOp)) {
                 Position pos = world.get(npcId, Position.class);
                 if (pos != null) {
                     double dx = pos.pos().x() - target.x();
@@ -181,8 +192,9 @@ public class TaskExecutionSystem implements System {
                 }
             }
 
-            // ---- 4.6. Visual feedback: tell NPC where to aim its wand beam ----
+            // ---- 4.6. Visual feedback: tell NPC where to aim its wand beam + op kind ----
             exec.currentOpTarget = currentOp.target();
+            exec.currentOpKind = opKind(currentOp);
 
             // ---- 5. Execute → get future ----
             @SuppressWarnings("unchecked")
@@ -194,11 +206,7 @@ public class TaskExecutionSystem implements System {
             // ---- 6. Already done? (sync op) ----
             if (future.isDone()) {
                 if (!isPure) {
-                    // Side-effect op: consume mana, advance stepIndex
-                    ManaPool mana = world.get(npcId, ManaPool.class);
-                    WandCarrier wc = world.get(npcId, WandCarrier.class);
-                    int actualCost = Math.max(1, Math.round(currentOp.baseManaCost() * wc.bestManaEfficiency()));
-                    mana.consume(actualCost);
+                    // Side-effect op: mana already consumed, advance stepIndex
                     advanceStep(exec, npcId, 1);
                     exec.state = ExecutorState.ACTIVE;
 
@@ -215,7 +223,7 @@ public class TaskExecutionSystem implements System {
                 continue;
             }
 
-            // ---- 7. Not done (async op) — store and wait ----
+            // ---- 7. Not done (async op) — store and wait (mana already consumed) ----
             exec.pendingFuture = future;
             exec.pendingFutureIsNav = false;
             Log.debug(TAG, "NPC %d - async op in-flight, waiting", npcId);
@@ -226,6 +234,7 @@ public class TaskExecutionSystem implements System {
         if (!exec.hasWork()) {
             exec.state = ExecutorState.IDLE;
             exec.currentOpTarget = null;
+            exec.currentOpKind = null;
             // Cancel any in-flight navigation that WE initiated
             if (world.movementOps != null && exec.pendingFuture != null) {
                 world.movementOps.cancelNavigation(npcId);
@@ -247,6 +256,7 @@ public class TaskExecutionSystem implements System {
             }
         }
         exec.currentOpTarget = null; // clear visual target after step advances
+        exec.currentOpKind = null;
     }
 
     private boolean handleResourceRequest(AtomicOp.ResourceRequestOp op, World world,
@@ -275,6 +285,17 @@ public class TaskExecutionSystem implements System {
 
     static boolean isPureOp(AtomicOp op) {
         return op instanceof AtomicOp.EmitEventOp || op instanceof AtomicOp.IfConditionOp;
+    }
+
+    /** Derive a visual-effect kind string from the op type, for client-side rendering. */
+    @Nullable
+    private static String opKind(AtomicOp op) {
+        return switch (op) {
+            case AtomicOp.RitualOp r      -> "ritual:" + r.ritual().id();
+            case AtomicOp.BlockInteractOp b -> "block_interact:" + b.action().id();
+            case AtomicOp.TransformOp t   -> "transform";
+            default                       -> null;
+        };
     }
 
     /** Peek at the next op without consuming it. Returns null if none. */

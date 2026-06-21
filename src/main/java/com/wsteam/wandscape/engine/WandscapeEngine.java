@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
@@ -22,6 +23,8 @@ public final class WandscapeEngine {
     @Nullable
     static WandscapeRitualOps ritualOps;
     @Nullable
+    static WandscapeBlockInteractExecutor blockInteractExec;
+    @Nullable
     private static WandscapeMovementOps movementOps;
     @Nullable
     private static BlueprintConfigLoader blueprintConfigLoader;
@@ -33,6 +36,13 @@ public final class WandscapeEngine {
             throw new IllegalStateException("World already bootstrapped");
         }
         world = w;
+    }
+
+    public static void reset() {
+        world = null;
+        asyncExec = null;
+        movementOps = null;
+        blueprintConfigLoader = null;
     }
 
     @Nullable
@@ -49,6 +59,11 @@ public final class WandscapeEngine {
 
     @Nullable
     public static WandscapeRitualOps getRitualOps() { return ritualOps; }
+
+    public static void setBlockInteractExec(WandscapeBlockInteractExecutor exec) { blockInteractExec = exec; }
+
+    @Nullable
+    public static WandscapeBlockInteractExecutor getBlockInteractExec() { return blockInteractExec; }
 
     public static void setMovementOps(WandscapeMovementOps ops) { movementOps = ops; }
 

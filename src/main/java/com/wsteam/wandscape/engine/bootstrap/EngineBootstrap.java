@@ -21,6 +21,7 @@ import com.wsteam.wandscape.core.task.BlueprintInterpreter;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
@@ -150,6 +151,14 @@ public final class EngineBootstrap {
             WandscapeEngine.setAsyncExecutor(asyncExec);
             LOGGER.info("  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
+
+        // 9b. Override BlockInteractOp executor with async version.
+        //     Handles both sync actions (toggle/activate/open_gui) and
+        //     async actions (gather/decompose/synthesize) with configurable timing/mana.
+        WandscapeBlockInteractExecutor blockInteractExec = new WandscapeBlockInteractExecutor();
+        world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
+        WandscapeEngine.setBlockInteractExec(blockInteractExec);
+        LOGGER.info("  WandscapeBlockInteractExecutor active (sync + async actions)");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

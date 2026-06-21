@@ -1,7 +1,11 @@
 package com.wsteam.wandscape.npc.entity;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -33,6 +37,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.ModList;
 
 /**
  * A colony NPC — the MC-layer shell for an ECS-driven task executor.
@@ -76,8 +81,41 @@ public class WandscapeNpc extends PathfinderMob {
     // Casting state (synced to client for animation + particles)
     // ============================================================
 
+    public static final int SKIN_VARIANT_COUNT = detectSkinVariants();
+
+    private static int detectSkinVariants() {
+        try {
+            Path dir = ModList.get().getModFileById(Wandscape.MODID).getFile()
+                    .findResource("assets", "wandscape", "textures", "entity", "wizard");
+            try (Stream<Path> files = Files.list(dir)) {
+                int count = (int) files
+                        .filter(p -> p.toString().endsWith(".png"))
+                        .count();
+                if (count > 0) return count;
+            }
+        } catch (IOException | RuntimeException ignored) {}
+        return 1;
+    }
+
+    private static final EntityDataAccessor<Integer> DATA_SKIN_VARIANT =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.INT);
+
+    private static final EntityDataAccessor<Integer> DATA_HAT_COLOR =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.INT);
+
     private static final EntityDataAccessor<Boolean> DATA_CASTING =
             SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.BOOLEAN);
+
+    private static final EntityDataAccessor<String> DATA_OP_KIND =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.STRING);
+
+    public int getSkinVariant() {
+        return this.entityData.get(DATA_SKIN_VARIANT);
+    }
+
+    public int getHatColor() {
+        return this.entityData.get(DATA_HAT_COLOR);
+    }
 
     public boolean isCasting() {
         return this.entityData.get(DATA_CASTING);
@@ -85,6 +123,15 @@ public class WandscapeNpc extends PathfinderMob {
 
     public void setCasting(boolean casting) {
         this.entityData.set(DATA_CASTING, casting);
+    }
+
+    /** Visual effect kind for the current op. Synced to client for renderer dispatch. */
+    public String getOpKind() {
+        return this.entityData.get(DATA_OP_KIND);
+    }
+
+    public void setOpKind(@Nullable String kind) {
+        this.entityData.set(DATA_OP_KIND, kind != null ? kind : "");
     }
 
     /** Debug flag — when true, skips ECS polling and forces casting state. */
@@ -174,8 +221,11 @@ public class WandscapeNpc extends PathfinderMob {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
+        builder.define(DATA_SKIN_VARIANT, -1);
+        builder.define(DATA_HAT_COLOR, 0);
         builder.define(DATA_CASTING, false);
         builder.define(DATA_DEBUG_TARGET, Optional.empty());
+        builder.define(DATA_OP_KIND, "");
     }
 
     // ============================================================
@@ -206,9 +256,11 @@ public class WandscapeNpc extends PathfinderMob {
                         var t = exec.currentOpTarget;
                         BlockPos target = new BlockPos(t.x(), t.y(), t.z());
                         setDebugTarget(target);
+                        setOpKind(exec.currentOpKind);
                         faceTarget(target);
                     } else {
                         setDebugTarget(null);
+                        setOpKind(null);
                     }
                 } else {
                     casting = false;
@@ -268,6 +320,12 @@ public class WandscapeNpc extends PathfinderMob {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide) {
+            if (getSkinVariant() < 0) {
+                this.entityData.set(DATA_SKIN_VARIANT, random.nextInt(SKIN_VARIANT_COUNT));
+            }
+            if (getHatColor() == 0) {
+                this.entityData.set(DATA_HAT_COLOR, generateRandomHatColor());
+            }
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
             World world = WandscapeEngine.getWorld();
@@ -275,6 +333,14 @@ public class WandscapeNpc extends PathfinderMob {
                 EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
             }
         }
+    }
+
+    private int generateRandomHatColor() {
+        float hue = random.nextFloat();
+        float saturation = 0.5f + random.nextFloat() * 0.5f;
+        float brightness = 0.3f + random.nextFloat() * 0.7f;
+        int rgb = java.awt.Color.HSBtoRGB(hue, saturation, brightness);
+        return 0xFF000000 | (rgb & 0x00FFFFFF);
     }
 
     @Override
@@ -318,11 +384,13 @@ public class WandscapeNpc extends PathfinderMob {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+        tag.putInt("SkinVariant", getSkinVariant());
+        tag.putInt("HatColor", getHatColor());
         // Read current mana from ECS (the authoritative source at runtime)
         World world = WandscapeEngine.getWorld();
         if (world != null && ecsEntityId > 0) {
             ManaPool mana = world.get(ecsEntityId, ManaPool.class);
-            tag.putInt("currentMana", mana != null ? mana.current() : currentMana);
+            tag.putInt("currentMana", mana != null ? (int) mana.current() : currentMana);
         } else {
             tag.putInt("currentMana", currentMana);
         }
@@ -339,6 +407,12 @@ public class WandscapeNpc extends PathfinderMob {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        if (tag.contains("SkinVariant")) {
+            this.entityData.set(DATA_SKIN_VARIANT, tag.getInt("SkinVariant"));
+        }
+        if (tag.contains("HatColor")) {
+            this.entityData.set(DATA_HAT_COLOR, tag.getInt("HatColor"));
+        }
         ecsEntityId = tag.getLong("EcsEntityId");
         currentMana = tag.getInt("currentMana");
         maxMana = tag.getInt("maxMana");

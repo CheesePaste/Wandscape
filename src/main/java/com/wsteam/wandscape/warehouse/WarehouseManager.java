@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.warehouse;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -16,35 +15,30 @@ import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.event.ResourceInsufficientEvent;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Container;
-import net.minecraft.world.item.component.CustomData;
-import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Implements both {@link WarehouseApi} and {@link ColonyResourceAccess}.
  *
- * <p>All operations delegate to the colony's {@link WarehouseBE}, found via
- * {@code BuildingApi.getColonyBuildings()} filtering by category=storage.
- * ResourceId ↔ ItemKey mapping uses a simple static table for MVP.
+ * <p>All item storage is in {@link ColonyItemBank} (Level SavedData).
+ * Warehouse blocks are terminals — destruction does not lose items.
  */
 public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String CATEGORY_STORAGE = "storage";
 
-    // ── Event throttle: avoid flooding ResourceInsufficientEvent ──
     private final Map<ResourceId, Long> lastShortageNotify = new java.util.HashMap<>();
-    private static final long SHORTAGE_NOTIFY_COOLDOWN_MS = 10_000; // 10 seconds per resource
+    private static final long SHORTAGE_NOTIFY_COOLDOWN_MS = 10_000;
 
-    // ── MVP: Element → block item mapping ──
-    // Full version will use ElementMappingLoader for reverse lookup.
     private static final Map<ElementType, String> ELEMENT_TO_BLOCK = Map.ofEntries(
             Map.entry(ElementType.WOOD, "minecraft:oak_log"),
             Map.entry(ElementType.EARTH, "minecraft:dirt"),
@@ -58,15 +52,15 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     );
 
     // ════════════════════════════════════════════════════════════
-    //  WarehouseApi — element operations (derived from items)
+    //  WarehouseApi — element operations
     // ════════════════════════════════════════════════════════════
 
     @Override
     public long getElement(UUID colonyId, ElementType type) {
         ItemKey key = elementToItemKey(type);
         if (key == null) return 0;
-        WarehouseBE be = findWarehouse(colonyId);
-        return be != null ? be.count(key) : 0;
+        ColonyItemBank bank = getBank();
+        return bank != null ? bank.count(colonyId, key) : 0;
     }
 
     @Override
@@ -81,18 +75,18 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     @Override
     public boolean consumeElement(UUID colonyId, ElementType type, long amount) {
-        WarehouseBE be = findWarehouse(colonyId);
-        if (be == null) return false;
         ItemKey key = elementToItemKey(type);
-        return key != null && be.consume(key, amount);
+        if (key == null) return false;
+        ColonyItemBank bank = getBank();
+        return bank != null && bank.consume(colonyId, key, amount);
     }
 
     @Override
     public void addElement(UUID colonyId, ElementType type, long amount) {
-        WarehouseBE be = findWarehouse(colonyId);
-        if (be == null) return;
         ItemKey key = elementToItemKey(type);
-        if (key != null) be.add(key, amount);
+        if (key == null) return;
+        ColonyItemBank bank = getBank();
+        if (bank != null) bank.add(colonyId, key, amount);
     }
 
     // ════════════════════════════════════════════════════════════
@@ -101,21 +95,20 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     @Override
     public long getItemCount(UUID colonyId, ItemKey key) {
-        WarehouseBE be = findWarehouse(colonyId);
-        return be != null ? be.count(key) : 0;
+        ColonyItemBank bank = getBank();
+        return bank != null ? bank.count(colonyId, key) : 0;
     }
 
     @Override
     public boolean extractItem(UUID colonyId, ItemKey key, long count, Container target) {
-        WarehouseBE be = findWarehouse(colonyId);
-        if (be == null || count <= 0) return false;
-        if (be.available(key) < count) return false;
+        ColonyItemBank bank = getBank();
+        if (bank == null || count <= 0) return false;
+        if (bank.available(colonyId, key) < count) return false;
 
         int take = (int) Math.min(count, 64);
         ItemStack stack = toItemStack(key, take);
         if (stack.isEmpty()) return false;
 
-        // Try to fit into target using vanilla Container contract
         int remainder = take;
         for (int slot = 0; slot < target.getContainerSize() && remainder > 0; slot++) {
             ItemStack existing = target.getItem(slot);
@@ -136,24 +129,23 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         }
         int taken = take - remainder;
         if (taken <= 0) return false;
-        be.consume(key, taken);
-        if (remainder > 0) be.add(key, remainder); // refund
+        bank.consume(colonyId, key, taken);
+        if (remainder > 0) bank.add(colonyId, key, remainder);
         return true;
     }
 
     @Override
     public void insertItems(UUID colonyId, List<ItemStack> stacks) {
-        WarehouseBE be = findWarehouse(colonyId);
-        if (be == null) return;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return;
         for (ItemStack stack : stacks) {
             if (stack.isEmpty()) continue;
             var rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (rl == null) continue;
             CompoundTag nbt = extractNbt(stack);
             ItemKey key = ItemKey.of(rl.toString(), nbt);
-            be.add(key, stack.getCount());
+            bank.add(colonyId, key, stack.getCount());
         }
-        LOGGER.debug("Warehouse insert: {} stacks", stacks.size());
     }
 
     // ════════════════════════════════════════════════════════════
@@ -162,18 +154,23 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     @Override
     public boolean hasEnough(ResourceId resource, int amount) {
-        WarehouseBE be = findAnyWarehouse();
-        if (be == null) return false;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
         ItemKey key = resourceToItemKey(resource);
         if (key == null) return false;
-        long avail = be.available(key);
-        if (avail >= amount) return true;
+        // Search all colonies for this resource
+        for (UUID colonyId : bank.getColonyIds()) {
+            if (bank.available(colonyId, key) >= amount) return true;
+        }
 
-        // Fire event with cooldown throttle
         long now = System.currentTimeMillis();
         long last = lastShortageNotify.getOrDefault(resource, 0L);
         if (now - last >= SHORTAGE_NOTIFY_COOLDOWN_MS) {
             lastShortageNotify.put(resource, now);
+            long avail = 0;
+            for (UUID colonyId : bank.getColonyIds()) {
+                avail += bank.available(colonyId, key);
+            }
             NeoForge.EVENT_BUS.post(new ResourceInsufficientEvent(resource, amount, (int) avail));
         }
         return false;
@@ -181,41 +178,59 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     @Override
     public boolean reserve(ResourceId resource, int amount) {
-        WarehouseBE be = findAnyWarehouse();
-        if (be == null) return false;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
         ItemKey key = resourceToItemKey(resource);
-        return key != null && be.reserve(key, amount);
+        if (key == null) return false;
+        for (UUID colonyId : bank.getColonyIds()) {
+            if (bank.available(colonyId, key) >= amount) {
+                return bank.reserve(colonyId, key, amount);
+            }
+        }
+        return false;
     }
 
     @Override
     public boolean commit(ResourceId resource, int amount) {
-        WarehouseBE be = findAnyWarehouse();
-        if (be == null) return false;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return false;
         ItemKey key = resourceToItemKey(resource);
-        return key != null && be.commit(key, amount);
+        if (key == null) return false;
+        for (UUID colonyId : bank.getColonyIds()) {
+            if (bank.commit(colonyId, key, amount)) return true;
+        }
+        return false;
     }
 
     @Override
     public void release(ResourceId resource, int amount) {
-        WarehouseBE be = findAnyWarehouse();
-        if (be == null) return;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return;
         ItemKey key = resourceToItemKey(resource);
-        if (key != null) be.release(key, amount);
+        if (key == null) return;
+        for (UUID colonyId : bank.getColonyIds()) {
+            bank.release(colonyId, key, amount);
+        }
     }
 
     @Override
     public int available(ResourceId resource) {
-        WarehouseBE be = findAnyWarehouse();
-        if (be == null) return 0;
+        ColonyItemBank bank = getBank();
+        if (bank == null) return 0;
         ItemKey key = resourceToItemKey(resource);
-        return key != null ? (int) be.available(key) : 0;
+        if (key == null) return 0;
+        long total = 0;
+        for (UUID colonyId : bank.getColonyIds()) {
+            total += bank.available(colonyId, key);
+        }
+        return (int) total;
     }
 
     @Override
     public void addResource(ResourceId resource, int amount) {
-        WarehouseBE be = findAnyWarehouse();
-        if (be == null) {
-            LOGGER.warn("addResource({}, {}): NO warehouse found in BuildingApi — check warehouse was placed and registered", resource, amount);
+        ColonyItemBank bank = getBank();
+        if (bank == null) {
+            LOGGER.warn("addResource({}, {}): ColonyItemBank not available", resource, amount);
             return;
         }
         ItemKey key = resourceToItemKey(resource);
@@ -223,44 +238,35 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             LOGGER.warn("addResource({}, {}): cannot map resource to ItemKey", resource, amount);
             return;
         }
-        be.add(key, amount);
-        LOGGER.info("addResource: {} x{} → warehouse ({} total)", resource.id(), amount, be.count(key));
-    }
-
-    // ════════════════════════════════════════════════════════════
-    //  Lookup helpers
-    // ════════════════════════════════════════════════════════════
-
-    @Nullable
-    private WarehouseBE findWarehouse(@Nullable UUID colonyId) {
-        var api = WandscapeApis.getBuildingApi();
-        for (var bd : api.getColonyBuildings(colonyId)) {
-            if (CATEGORY_STORAGE.equals(bd.getCategory()) && !bd.isShutdown()) {
-                var be = getBeAt(bd.getPosition());
-                if (be instanceof WarehouseBE wbe) return wbe;
+        // Add to the first colony that has a warehouse building registered
+        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+        for (var bd : api.getColonyBuildings(null)) {
+            if ("storage".equals(bd.getCategory()) && !bd.isShutdown()) {
+                UUID colonyId = bd.getColonyId();
+                if (colonyId == null) colonyId = new UUID(0, 0); // default colony
+                bank.add(colonyId, key, amount);
+                LOGGER.info("addResource: {} x{} → colony {} warehouse ({} total)",
+                        resource.id(), amount, colonyId, bank.count(colonyId, key));
+                return;
             }
         }
-        return null;
+        LOGGER.warn("addResource({}, {}): no active storage building found", resource, amount);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  Bank access
+    // ════════════════════════════════════════════════════════════
+
+    @Nullable
+    private ColonyItemBank getBank() {
+        Level level = getServerLevel();
+        return level != null ? ColonyItemBank.get(level) : null;
     }
 
     @Nullable
-    private WarehouseBE findAnyWarehouse() {
-        return findWarehouse(null);
-    }
-
-    @Nullable
-    private net.minecraft.world.level.block.entity.BlockEntity getBeAt(
-            net.minecraft.core.BlockPos pos) {
-        var level = getServerLevel();
-        if (level == null) return null;
-        return level.getBlockEntity(pos);
-    }
-
-    @Nullable
-    private static net.minecraft.world.level.Level getServerLevel() {
+    private static Level getServerLevel() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return null;
-        return server.overworld();
+        return server != null ? server.overworld() : null;
     }
 
     // ════════════════════════════════════════════════════════════
@@ -271,7 +277,6 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     private ItemKey resourceToItemKey(ResourceId resource) {
         String id = resource.id();
         if (!id.contains(":")) {
-            // Try ElementType match first
             try {
                 ElementType type = ElementType.valueOf(id.toUpperCase());
                 return elementToItemKey(type);
@@ -300,7 +305,6 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         return stack;
     }
 
-    /** Extract NBT from an ItemStack using 1.21.1 DataComponents API. */
     @Nullable
     private static CompoundTag extractNbt(ItemStack stack) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);

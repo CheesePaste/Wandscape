@@ -32,10 +32,26 @@ public sealed interface StepNode {
     record ConvertStep(ExprNode at, ExprNode from, ExprNode to) implements StepNode {}
 
     /**
-     * Interact with a block (toggle/activate/open GUI). JSON type: {@code "block_interact"}.
+     * Interact with a block. JSON type: {@code "block_interact"}.
      * → {@link com.wsteam.wandscape.core.op.AtomicOp.BlockInteractOp}
+     *
+     * @param action       the interaction type (toggle/activate/open_gui/gather/decompose/synthesize)
+     * @param params       action-specific key-value pairs (e.g. element, amount)
+     * @param channelTicks channeling duration in ticks (0 = instant for sync actions)
+     * @param manaCost     mana consumed by this interaction (configurable, unlike RitualOp)
      */
-    record BlockInteractStep(ExprNode at, String action) implements StepNode {}
+    record BlockInteractStep(ExprNode at, String action,
+                             Map<String, ExprNode> params,
+                             ExprNode channelTicks, ExprNode manaCost) implements StepNode {
+        public BlockInteractStep {
+            if (params == null) params = Map.of();
+        }
+
+        /** Backward-compat constructor for sync actions without params/channelTicks/manaCost. */
+        public BlockInteractStep(ExprNode at, String action) {
+            this(at, action, Map.of(), new ExprNode.LiteralInt(0), new ExprNode.LiteralInt(1));
+        }
+    }
 
     /**
      * Interact with an entity. JSON type: {@code "entity_interact"}.
@@ -47,16 +63,17 @@ public sealed interface StepNode {
     /**
      * Perform a ritual. JSON type: {@code "ritual"}.
      * → {@link com.wsteam.wandscape.core.op.AtomicOp.RitualOp}
+     * Channel ticks and mana cost are hardcoded in RitualOp per ritual type.
      */
-    record RitualStep(ExprNode ritual, ExprNode at, ExprNode channelTicks,
+    record RitualStep(ExprNode ritual, ExprNode at,
                       Map<String, ExprNode> params) implements StepNode {
         public RitualStep {
             if (params == null) params = Map.of();
         }
 
         /** Backward-compat constructor without params. */
-        public RitualStep(ExprNode ritual, ExprNode at, ExprNode channelTicks) {
-            this(ritual, at, channelTicks, Map.of());
+        public RitualStep(ExprNode ritual, ExprNode at) {
+            this(ritual, at, Map.of());
         }
     }
 

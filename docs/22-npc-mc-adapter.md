@@ -119,7 +119,9 @@ MC tick → onServerTick → asyncExec.tickAll() → syncPositions() → world.t
 | `WandscapeEntityOps.java` | `com.wsteam.wandscape.engine.boundary` | EntityOps MC 实现（阶段 2 stub） | ~40 |
 | `WandscapeRitualOps.java` | `com.wsteam.wandscape.engine.boundary` | RitualOps MC 实现：self_teleport 同步传送 | ~80 |
 | `WandscapeNpcModel.java` | `com.wsteam.wandscape.npc.client` | 自定义 HumanoidModel：施法时右臂抬高，角度跟随 NPC pitch |
-| `WandscapeNpcRenderer.java` | `com.wsteam.wandscape.npc.client` | 客户端渲染：施法时从右手发射彩色射线粒子 |
+| `WandscapeNpcRenderer.java` | `com.wsteam.wandscape.npc.client` | 客户端渲染：多皮肤变体选取 + 法师帽 Layer + 施法时从右手发射彩色射线粒子 |
+| `WizardHatModel.java` | `com.wsteam.wandscape.npc.client` | 法师帽模型 LayerDefinition：帽檐外圈/内圈 + 帽身三层锥体 |
+| `WizardHatLayer.java` | `com.wsteam.wandscape.npc.client` | 法师帽渲染层：跟随头部旋转，帽檐金色不着色，帽身按 skinVariant 着色 |
 | `CastBoltParticle.java` | `com.wsteam.wandscape.npc.client` | 施法粒子：全亮度静止星星，最后 20% 生命缩小消失 |
 | `NavigationState.java` | `com.wsteam.wandscape.core.component` | NPC 移动状态 ECS 组件：mode (IDLE/PATHFINDING/TELEPORT_WAITING) / target / future | ~60 |
 | `NavigationSystem.java` | `com.wsteam.wandscape.engine.system` | 所有 NPC 移动的单一 ECS System：寻路/传送/魔力等待/卡死/超时 | ~220 |
@@ -140,6 +142,8 @@ MC tick → onServerTick → asyncExec.tickAll() → syncPositions() → world.t
 |------|------|
 | `particles/cast_bolt.json` | 粒子纹理引用 `wandscape:cast_bolt` |
 | `textures/particle/cast_bolt.png` | 8×8 十字星粒子贴图 |
+| `textures/entity/wizard/wizard01~NN.png` | NPC 皮肤贴图变体（自动检测数量） |
+| `textures/entity/wizard_hat.png` | 法师帽贴图（64×64，金色帽檐+灰度帽身） |
 
 ## 五、类规格
 
@@ -150,6 +154,10 @@ public class WandscapeNpc extends PathfinderMob {
     // === 引擎桥接 ===
     long ecsEntityId = -1;       // ECS World 中的 entity ID
     UUID colonyId = PLACEHOLDER_COLONY;  // 阶段 2 占位 UUID
+
+    // === 外观 ===
+    static final int SKIN_VARIANT_COUNT = detectSkinVariants(); // 自动扫描 mod jar
+    DATA_SKIN_VARIANT (synced int, default -1) // 首次 onAddedToLevel 时随机分配
 
     // === 属性（权威值在 ECS，此处仅用于 NBT 持久化中转） ===
     int currentMana = 100;
@@ -456,6 +464,9 @@ Wandscape() 构造器:
 ServerStarting:
   EngineBootstrap.bootstrap()  // 注入真实的 WandscapeEntityOps / WandscapeRitualOps
 
+ServerStopped:
+  WandscapeEngine.reset()  // 清除全部静态引擎状态，支持退出世界后重新进入
+
 ServerTick (Post):
   asyncExec.tickAll();                                   // ① MC 异步倒计时
   EntityComponentBridge.INSTANCE.syncPositions(world);  // ② 位置同步（始终）
@@ -507,7 +518,7 @@ ServerTick (Post):
 | 法杖切换 | 接取任务自动选最匹配的法杖作主手 | 无 | 阶段 3 |
 | 背包管理 | 管理面板只读查看，亲自交互才能放取 | 仅 SimpleContainer(27)，无 GUI | 阶段 5 |
 | 状态机 | IDLE/WORKING/STUCK/DEAD 四状态 | 阶段 2 仅 IDLE/WORKING（引擎 ExecutorState 驱动） | 阶段 3 |
-| NBT 字段 | `colonyId`, `currentMana`, `assignedHouseId`, `inventory.save()` | `ecsEntityId`, `maxMana`, `manaRegenRate`, `colonyId`, `spellPower`, `DATA_CASTING` (synced), `DATA_DEBUG_TARGET` (synced) | 持续扩展 |
+| NBT 字段 | `colonyId`, `currentMana`, `assignedHouseId`, `inventory.save()` | `ecsEntityId`, `maxMana`, `manaRegenRate`, `colonyId`, `spellPower`, `SkinVariant`, `DATA_CASTING` (synced), `DATA_SKIN_VARIANT` (synced int), `DATA_DEBUG_TARGET` (synced) | 持续扩展 |
 | 施法动画 + 视觉反馈 | 无设计 | 右臂自适应 pitch 的施法 pose；ECS `TaskExecutor.currentOpTarget` → NPC `faceTarget()` 面向操作目标；全亮度射线粒子；施法时锁定移动 | 已实现 |
 | Debug 模式 | 无设计 | 右键 NPC 切换 debugCasting，追踪钻石块坐标 | 内测工具 |
 

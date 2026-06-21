@@ -2,7 +2,6 @@
   "id": "warehouse",
   "display_name": "殖民地仓库",
   "category": "storage",
-  "block_id": "wandscape:warehouse",
   "pattern": [
     [0, 0, 0],
     [-1, 0, -1], [0, 0, -1], [1, 0, -1],
@@ -15,7 +14,7 @@
     [-1, 2,  1], [0, 2,  1], [1, 2,  1]
   ],
   "block_mapping": {
-    "0,0,0": "wandscape:warehouse",
+    "0,0,0": "minecraft:barrel",
     "-1,0,-1": "minecraft:stone_bricks",
     "0,0,-1": "minecraft:stone_bricks",
     "1,0,-1": "minecraft:stone_bricks",

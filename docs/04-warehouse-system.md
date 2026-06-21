@@ -1,19 +1,20 @@
 # 抽象仓库系统
 
 文档编号：NEW-04
-版本：1.0
-状态：元素 + 物品统一存储 + GUI
-依赖：01-shared-api
+版本：3.0
+状态：纯 SavedData — ColonyItemBank 存储 + BuildingSavedData 管理 + BuildingInteractHandler 右键开 GUI。零自定义方块/BE。
+依赖：01-shared-api, 08-building-core (BuildingSavedData)
 
 ---
 
 ## 一、职责边界
 
-- 以殖民地为单位存储元素（长整数映射）和物品条目（ItemKey → 数量）
+- 以殖民地为单位存储物品条目（ItemKey → 数量），通过 `ColonyItemBank` (Level SavedData) 持久化
 - 提供存入/取出/查询接口给玩家和 NPC
 - 提供仓库 GUI（虚拟滚动，支持搜索）
+- 支持预留/提交/释放事务语义（用于异步任务资源预约）
 - 触发 `ElementChangedEvent` 当元素储量变化
-- 持久化（差量保存，不丢失数据）
+- **物品数据独立于方块**：仓库建筑破坏后物品不丢失，重建建筑即可继续使用
 
 **不包含：**
 - 元素如何产生（节点建筑负责）
@@ -22,34 +23,63 @@
 
 ---
 
-## 二、数据结构
+## 二、架构
 
-### 2.1 元素存储
-
-```java
-// 每个殖民地一个 ElementStore 实例
-private final Map<ElementType, Long> elements = new HashMap<>();
+```
+BuildingSavedData              ← 建筑注册 + 空间索引（category=storage）
+        ↓ 右键原版方块 (如 minecraft:barrel)
+BuildingInteractHandler        ← posIndex O(1) 查找 → 识别 category=storage → 打开 GUI
+        ↓
+WarehouseManager               ← API 实现（实现 WarehouseApi + ColonyResourceAccess）
+        ↓
+ColonyItemBank (SavedData)     ← 物品存储（Level SavedData，NBT 持久化）
 ```
 
-初始全为 0。无上限（long 范围，实际不可能打满）。
+仓库是 `BuildingSavedData` 管理的普通建筑（category=storage），pattern 全用原版方块，anchor 位置推荐 `minecraft:barrel` 作为交互终端。方块破坏 = 建筑标记为 structureIntact=false，物品不受影响。
 
-### 2.2 物品存储
+### 2.1 ColonyItemBank
+
+```java
+public class ColonyItemBank extends SavedData {
+    // colonyId → items
+    private final Map<UUID, Map<ItemKey, Long>> storage;
+    // 内存预留（不持久化）
+    private final Map<UUID, Map<ItemKey, Long>> reservations;
+
+    // 查询
+    long count(UUID colonyId, ItemKey key);
+    long available(UUID colonyId, ItemKey key);  // = count - reserved
+    Map<ItemKey, Long> getSnapshot(UUID colonyId);
+
+    // 存取
+    void add(UUID colonyId, ItemKey key, long amount);
+    boolean consume(UUID colonyId, ItemKey key, long amount);
+
+    // 事务预留（NPC 异步任务用）
+    boolean reserve(UUID colonyId, ItemKey key, long amount);
+    boolean commit(UUID colonyId, ItemKey key, long amount);
+    void release(UUID colonyId, ItemKey key, long amount);
+}
+```
+
+### 2.2 右键交互
+
+仓库不再有自定义方块/BE。右键拦截由 `BuildingInteractHandler` 统一处理（`building/internal/BuildingInteractHandler.java`）：
+
+```java
+// category=storage 分支：
+UUID colonyId = state.getColonyId();
+Map<ItemKey, Long> snapshot = ColonyItemBank.get(level).getSnapshot(colonyId);
+player.openMenu(WarehouseMenu.createMenuProvider(snapshot));
+```
+
+### 2.3 物品存储
 
 ```java
 private final Map<ItemKey, Long> items = new HashMap<>();
 ```
 
-**ItemKey 唯一性**：`itemId` + `CompoundTag`（MC 原生对象，已正确实现 `equals`/`hashCode`）作为复合键。相同 itemId + 语义相同 NBT = 同一仓库条目。构造时 `copy()` 防止外部修改影响键查找。可被 MC 原生的 `ItemStack.areItemStacksEqual()` 交叉验证。
-
-耐久度视为 NBT 的一部分。有耐久的物品（如法杖）不同耐久视为不同条目。
-
-### 2.3 殖民地维度隔离
-
-每个殖民地拥有完全独立的仓库实例。殖民地 ID 是仓库的主键。
-
-```java
-private final Map<UUID, ColonyWarehouse> warehouses = new HashMap<>();
-```
+**ItemKey 唯一性**：`itemId` + `CompoundTag`。相同 itemId + 语义相同 NBT = 同一条目。耐久度视为 NBT 的一部分。
 
 ---
 
@@ -126,17 +156,21 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> {
 
 ---
 
-## 五、性能要求
+## 五、持久化与性能
 
-- **查找 O(1)**：`HashMap<ItemKey, Long>`
-- **NBT 哈希缓存**：存入时计算，后续直接比较
-- **GUI 虚拟滚动**：只渲染可见行（约 20 行），即使有 10 万种物品也不卡
-- **序列化差量保存**：
-  - 脏标记：每个 `ColonyWarehouse` 维护 `dirtyElements` / `dirtyItems` 两个 `HashSet`，记录本次保存周期内变化的 key
-  - 保存时机：区块卸载时（`onChunkUnload`）+ 每 5 分钟定时（`MAINTENANCE_INTERVAL_TICKS` 的 1/4 = 5 分钟）
-  - 批量合并：同一周期内对同一 key 的多次操作（如 64 次分解），脏标记只记录一次，最终保存的是最终值
-  - 全量兜底：殖民地首次创建或加载后首次保存执行全量写入
-- **绝对不洗 NBT**：完全使用 Minecraft 原生 NBT 序列化
+### 5.1 持久化
+
+- `ColonyItemBank` 为 Level SavedData，NBT 全量保存
+- 脏标记：`setDirty()` 在任何存取操作后调用
+- 保存时机：MC 原生的 SavedData 自动保存（世界保存时）
+- reservation 不持久化（服务器重启后重新计算）
+- 仓库建筑破坏不影响物品数据
+
+### 5.2 性能
+
+- **查找 O(1)**：`ConcurrentHashMap<UUID, Map<ItemKey, Long>>`
+- **GUI 虚拟滚动**：只渲染可见行（约 20 行）
+- **线程安全**：`ConcurrentHashMap` 支持并发读写
 
 ---
 
@@ -153,7 +187,8 @@ public class WarehouseScreen extends AbstractContainerScreen<WarehouseMenu> {
 
 ### 集成测试
 
-1. 玩家打开仓库 GUI，拖入物品，关闭重开数据不丢失
+1. 右键原版 barrel（仓库 anchor）→ 打开 GUI，物品正常显示
 2. 虚拟滚动：插入 1000 种物品，GUI 不卡顿
 3. 搜索过滤正确
 4. 取出 NBT 物品后，物品属性完全一致
+5. 破坏仓库 anchor 方块 → 物品不丢失 → 重建后恢复

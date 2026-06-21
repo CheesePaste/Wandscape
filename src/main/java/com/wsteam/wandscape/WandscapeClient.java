@@ -5,6 +5,7 @@ import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
+import com.wsteam.wandscape.npc.client.WizardHatModel;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
@@ -82,6 +83,11 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
+    }
+
+    @SubscribeEvent
+    static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(WandscapeNpcRenderer.WIZARD_HAT_LAYER, WizardHatModel::createLayer);
     }
 
     @SubscribeEvent

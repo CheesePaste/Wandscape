@@ -15,12 +15,19 @@
 - 统一建筑队列机制（所有建筑都有队列）
 - 建筑关停/重启
 - 建筑与任务系统的桥接（建筑队列 → 全局任务池）
-- 多方块建筑的统一交互入口（任意 pattern 方块右击路由到主 BE）
+- 多方块建筑的统一交互入口（任意 pattern 方块右击 → BuildingSavedData.posIndex 查找 → 路由到对应逻辑）
 
 **不包含：**
 - 具体建筑的功能逻辑（节点建筑、制作站等各自模块负责）
-- 仓库 GUI 和存储（仓库模块负责）
+- 仓库 GUI 和存储（仓库模块负责，物品存储由 `ColonyItemBank` SavedData 管理）
 - 远程建造的 UI（管理面板模块负责）
+
+### 1.1 架构变更 (2026-06-21)
+
+建筑状态从 `AbstractWandscapeBE` (自定义方块挂载) 迁移到 `BuildingSavedData` (Level SavedData)。
+所有建筑使用原版方块，NPC 通过蓝图放置。`block_id` 字段已从 JSON 配置中移除。
+
+详见 `docs/27-multiblock-refactor-analysis.md`。
 
 ---
 
@@ -34,7 +41,6 @@
   "id": "mage_tower",
   "display_name": "法师塔",
   "category": "wonder",
-  "block_id": "wandscape:mage_tower",
   "pattern": [
     [0, 0, 0],
     [1, 0, 0],
@@ -74,9 +80,8 @@
 | id | string | 唯一标识 |
 | display_name | string | 管理面板显示名 |
 | category | enum |基础/节点/功能/奇观|
-| block_id | string | 对应方块 ID |
 | pattern | array[BlockOffset] | 建筑结构方块相对坐标列表。单方块建筑填 `[[0,0,0]]` |
-| block_mapping | object | 坐标→方块ID 映射，格式 `{"x,y,z": "modid:blockid"}` |
+| block_mapping | object | 坐标→原版方块ID 映射，格式 `{"x,y,z": "minecraft:stone_bricks"}` |
 | comfort | int | 首次建造提供的舒适值 |
 | magic | int | 首次建造提供的魔法值 |
 | wonder | int | 首次建造提供的奇观值 |
@@ -107,113 +112,30 @@
 
 ### 3.1 设计原则
 
-多方块建筑由 pattern 定义的多个方块组成，但玩家和 NPC 与之交互时应视为一个整体。任意 pattern 方块被右击，统一路由到建筑的**主 BE**（anchor 方块处的 BE）。
+多方块建筑由 pattern 定义的多个原版方块组成。任意 pattern 方块被右击时，通过 `BuildingSavedData.posIndex` (HashMap O(1)) 查找所属建筑，路由到对应的交互逻辑。
 
-- 主 BE 位置 = 建筑放置时玩家指向的 pattern 原点方块（`[0,0,0]` 偏移）
-- 单方块建筑（pattern 仅 `[[0,0,0]]`）不依赖此机制，自身即主 BE
-- 路由表全局维护，World 级别生命周期
+- `BuildingInteractHandler` 订阅 `PlayerInteractEvent.RightClickBlock`
+- `posIndex` 在 `BuildingSavedData.register()` 时构建，覆盖所有 pattern 方块位置
+- 仓库建筑 (`category=storage`)：直接 `ColonyItemBank.getSnapshot()` → `WarehouseMenu` GUI
+- 其他建筑：打印建筑状态信息（intact / shutdown / queue 大小）
 
-### 3.2 坐标映射表
+### 3.2 不再使用 BuildingAnchorRegistry
 
-```java
-// 全局注册表：任意 pattern 方块坐标 → 主 BE 坐标
-// World 级别单例，随世界加载重建
-public class BuildingAnchorRegistry {
-    // BlockPos(成员方块) → BlockPos(主BE所在方块)
-    private static final Map<BlockPos, BlockPos> ANCHORS = new HashMap<>();
+`BuildingAnchorRegistry` 已被 `BuildingSavedData.posIndex` 替代。后者是 Level SavedData 的一部分，随 NBT 持久化，不再需要世界加载时重建路由表。
 
-    /** 建筑结构验证通过后调用，注册 pattern 内所有方块到主 BE 的映射。 */
-    public static void register(BlockPos anchorPos, List<BlockOffset> pattern) {
-        for (BlockOffset offset : pattern) {
-            BlockPos memberPos = anchorPos.offset(offset.x(), offset.y(), offset.z());
-            ANCHORS.put(memberPos.immutable(), anchorPos.immutable());
-        }
-    }
+### 3.3 NPC 交互路径
 
-    /** 建筑被移除时调用，注销该建筑所有 pattern 方块的映射。 */
-    public static void unregister(BlockPos anchorPos, List<BlockOffset> pattern) {
-        for (BlockOffset offset : pattern) {
-            BlockPos memberPos = anchorPos.offset(offset.x(), offset.y(), offset.z());
-            ANCHORS.remove(memberPos);
-        }
-    }
-
-    /** 查询给定坐标是否属于某个建筑的 pattern 方块，返回主 BE 坐标。 */
-    @Nullable
-    public static BlockPos getAnchor(BlockPos pos) {
-        return ANCHORS.get(pos);
-    }
-
-    /** 世界卸载时清空。 */
-    public static void clear() {
-        ANCHORS.clear();
-    }
-}
-```
-
-### 3.3 交互路由
-
-```java
-// WandscapeBuildingBlock 中
-@Override
-protected ItemInteractionResult useItemOn(
-        ItemStack stack, BlockState state, Level level,
-        BlockPos pos, Player player, InteractionHand hand,
-        BlockHitResult hitResult) {
-
-    // Step 1: 查找该坐标的主 BE
-    BlockPos anchorPos = BuildingAnchorRegistry.getAnchor(pos);
-    if (anchorPos == null) {
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    // Step 2: 获取主 BE 并委托交互
-    BlockEntity be = level.getBlockEntity(anchorPos);
-    if (!(be instanceof AbstractWandscapeBE wandscapeBE)) {
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    return wandscapeBE.onPlayerInteract(player, hand, hitResult);
-}
-```
-
-```java
-// AbstractWandscapeBE 中
-/** 子类覆写此方法实现各自交互逻辑（开 GUI 等）。默认实现返回 PASS。 */
-protected ItemInteractionResult onPlayerInteract(Player player, InteractionHand hand,
-                                                  BlockHitResult hitResult) {
-    return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-}
-```
-
-### 3.4 注册/注销时机
-
-| 时机 | 操作 |
-|------|------|
-| 建筑放置后结构验证通过 | `BuildingAnchorRegistry.register(anchorPos, pattern)` |
-| 建筑被拆除 / BE 被移除 | `BuildingAnchorRegistry.unregister(anchorPos, pattern)` |
-| 世界加载 | 遍历已加载建筑 BE → 逐一 `register()` |
-| 世界卸载 | `BuildingAnchorRegistry.clear()` |
-
-### 3.5 NPC 交互路径
-
-NPC 与建筑的交互不经过 `useItemOn`（那是玩家右键的路径），NPC 走引擎的操作链：
+NPC 与建筑的交互不经过右键事件（那是玩家路径），NPC 走引擎的操作链：
 
 ```
 NPC 需要与建筑交互
   └→ OperationB(buildingId, action, params)
       └→ AtomicExecutor → 查 BuildingApi.getBuilding(buildingId)
           └→ 获取建筑坐标 → NPC 移动过去
-          └→ 调用 BE 对应方法（charge / extract / craft / decompose ...）
+          └→ 调用对应方法（charge / extract / craft / decompose ...）
 ```
 
-NPC 不受 pattern 路由影响——`buildingId` 始终指向主 BE，NPC 直接走到主 BE 坐标执行操作。
-
-### 3.6 性能
-
-- `HashMap.get()` O(1)，仅在玩家右击时触发（人速事件，非 tick 级）
-- 与建筑 pattern 大小无关
-- 无需每 tick 遍历或碰撞检测
+NPC 不受 pattern 路由影响——`buildingId` 始终指向建筑，NPC 直接走到 anchor 坐标执行操作。
 
 ---
 
@@ -277,68 +199,24 @@ public int getColonyComfort(UUID colonyId) {
 
 ### 6.1 触发时机
 
-建筑的结构完整性不依赖定时轮询。触发检测的时机：
-- 建筑所在区块内发生方块破坏（`BlockEvent.BreakEvent`）
-- 建筑所在区块内发生爆炸（`ExplosionEvent.Detonate`）
+结构完整性不依赖定时轮询。触发检测的时机：
+- 方块破坏：`BuildingBreakHandler` 订阅 `BlockEvent.BreakEvent` → 检查 `posIndex` → `structureIntact = false`
+- 爆炸：`BuildingBreakHandler` 订阅 `ExplosionEvent.Detonate` → 遍历受影响方块 → 同上
+- 建造完成验证：`BuildCompleteListener` 订阅引擎 `build_complete` 事件 → `verifyPattern()` → `structureIntact = true`
 
-### 6.2 检测逻辑
+### 6.2 被动损坏标记
 
-```java
-public abstract class AbstractWandscapeBE extends BlockEntity {
-    protected UUID colonyId;  // 通过 ColonyApi.getColonyId(getBlockPos()) 首次查询后缓存
-    protected BuildingConfig config;
-    protected boolean isStructureIntact = true;
+`BuildingBreakHandler` 通过 `BuildingSavedData.getBuildingIdAt(pos)` 判断被破坏的方块是否属于已知建筑。若属于且 `structureIntact` 当前为 true，则标记为 false。不做实时 pattern 验证（被破坏=不完整，无需验证）。
 
-    // 被方块破坏/爆炸事件触发
-    public void checkStructureIntegrity() {
-        List<BlockOffset> missing = new ArrayList<>();
-        for (BlockOffset offset : config.pattern()) {
-            BlockPos target = worldPosition.offset(offset);
-            BlockState expected = config.getBlockMapping().get(offset.toKey());
-            BlockState actual = level.getBlockState(target);
-            if (!actual.equals(expected)) {
-                missing.add(offset);
-            }
-        }
+### 6.3 建造完成验证
 
-        if (!missing.isEmpty()) {
-            isStructureIntact = false;
-            enqueueRepairTasks(missing);
-        } else {
-            isStructureIntact = true;
-        }
-    }
+`BuildCompleteListener.verifyPattern()` 遍历 `BuildingConfig.pattern()` 中每个 offset，检查世界中方块是否与 `block_mapping` 完全匹配。全部匹配则 `structureIntact = true`。
 
-    private void enqueueRepairTasks(List<BlockOffset> missing) {
-        for (BlockOffset offset : missing) {
-            BlockPos target = worldPosition.offset(offset);
-            BlockState expected = config.getBlockMapping().get(offset.toKey());
-            Map<ElementType, Long> cost = ElementApi.getBuildCost(expected);
-            TaskTemplate repairTask = new TaskTemplate(
-                BehaviorType.BUILDING,
-                config.getRequiredLevel("building"),
-                List.of(
-                    new OperationA(target, level.getBlockState(target), expected, false, cost)
-                ),
-                100 // 修复任务高优先级
-            );
-            TaskApi.enqueueBuildingTask(this.getId(), repairTask);
-        }
-    }
+### 6.4 修复策略
 
-    // 建筑功能是否可用（结构完整 + 未关停）
-    public boolean isOperational() {
-        return isStructureIntact && !isShutdown();
-    }
-}
-```
-
-### 6.3 修复规则
-
-- 修复任务与建造任务逻辑完全一致：计算缺失方块 → 生成 OperationA 序列 → 消耗对应元素
-- 修复任务自动以高优先级入队，排在玩家手动添加的任务之前
-- 结构损坏不影响建筑队列中已有任务的发布顺序，但新任务的发布暂停直到修复完成
-- 修复过程中建筑视为正常运行（只要还有一部分方块存在），不关停
+- `structureIntact = false` → 建筑不接受新任务
+- 现有队列中的任务保留（等待修复后恢复）
+- 可自动/手动排入修复任务（复用 `build:clear_and_build` 蓝图）
 
 ---
 
@@ -346,37 +224,23 @@ public abstract class AbstractWandscapeBE extends BlockEntity {
 
 ### 7.1 统一模型
 
-每个建筑实体（BlockEntity）内部维护一个 FIFO 队列：
+每个 `BuildingState`（存储在 `BuildingSavedData` 中）内部维护一个 FIFO 队列：
 
 ```java
-public abstract class AbstractWandscapeBE extends BlockEntity {
-    protected UUID colonyId;                // 所属殖民地，首次查询后缓存
-    protected final Queue<UUID> taskQueue = new ArrayDeque<>();
-    protected UUID currentTaskId;
-
-    @Override
-    public void onLoad() {
-        super.onLoad();
-        // colonyId 通过坐标查询一次并缓存，后续直接用
-        if (colonyId == null) {
-            colonyId = ColonyApi.getColonyId(getBlockPos());
-        }
-    }
-
-    // 条件满足时发布下一个任务
-    public void tryPublishNext() {
-        if (currentTaskId != null && !isTaskCompleted(currentTaskId)) return;
-        if (taskQueue.isEmpty()) return;
-        if (isShutdown()) return;
-
-        UUID nextTask = taskQueue.poll();
-        UUID published = TaskApi.publishTask(buildTask(nextTask), colonyId);
-        setCurrentTask(published);
-    }
+public class BuildingState implements BuildingData {
+    private final UUID buildingId;
+    private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
+    @Nullable private UUID currentTaskId;
+    // ...
 }
 ```
 
-> `colonyId` 在 BE 首次 `onLoad()` 时通过 `ColonyApi.getColonyId(pos)` 查询一次并缓存。建筑在殖民地内的坐标永不改变，无需重复查询。
+`BuildingTaskSource` 每 1 秒轮询 `BuildingApiImpl.getBuildingsWithPendingWork()`：
+- 过滤：`isStructureIntact() && !isShutdown() && hasWork() && currentTaskId == null && level.isLoaded(anchor)`
+- 出队 → 提交到 `GlobalTaskPool`
+- 标记 `currentTaskId` 直到任务完成
+
+队列和 currentTaskId 通过 `BuildingSavedData` NBT 持久化，服务器重启后恢复。
 
 ### 7.2 队列源
 
@@ -411,21 +275,23 @@ public interface BuildingApi {
 
 ---
 
-## 九、方块实体层级
+## 九、建筑状态存储
 
 ```
-AbstractWandscapeBE              ← 队列 + 关停 + 维护 + 统一交互入口
-    ├── NodeBuildingBE           ← 节点建筑（09 模块扩展）
-    ├── ProductionStationBE      ← 制作站/工作站/魔药站（10 模块扩展）
-    ├── HouseBE                  ← 房屋（11 模块扩展）
-    ├── ManaPoolBE               ← 魔力池（11 模块扩展）
-    ├── RitualAltarBE            ← 仪式祭坛（13 模块扩展）
-    ├── TavernBE                 ← 酒馆（12 模块扩展）
-    ├── WarehouseBE              ← 仓库（04 模块扩展）
-    └── TownHallBE               ← 市政厅（15 模块扩展）
+BuildingSavedData (Level SavedData)
+  ├── Map<UUID, BuildingState> buildings      ← 主索引
+  ├── Map<BlockPos, UUID> posIndex            ← 空间索引 (O(1) 右键查找)
+  ├── Map<ChunkPos, Set<UUID>> chunkIndex      ← 区块索引（区块卸载感知）
+  └── BuildingState
+        ├── buildingId / typeId / category / anchor / BoundingBox
+        ├── colonyId / shutdown / structureIntact
+        ├── Deque<WorkItem> taskQueue / currentTaskId
+        └── comfort / magic / wonder / maintenanceCost / queueCapacity
 ```
 
-各模块只扩展自己需要的逻辑，核心的队列、关停、维护、交互入口由 `AbstractWandscapeBE` 统一处理。
+`AbstractWandscapeBE` 及其所有子类（`TownHallBE`, `ForestNodeBE`, `EarthNodeBE`, `GrandTowerBE`）以及 `WarehouseBlock` + `WarehouseBE` 已全部删除。模组**零自定义方块/BE**。
+
+各模块未来扩展时通过 `BuildingState` 的 `extra` 字段或模块专属 SavedData 存储自定义数据。
 
 ---
 

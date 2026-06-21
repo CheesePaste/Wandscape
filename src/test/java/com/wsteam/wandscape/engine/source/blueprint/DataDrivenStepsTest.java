@@ -42,9 +42,9 @@ class DataDrivenStepsTest {
     @DisplayName("single block building: one TransformOp.place at anchor")
     void singleBlockBuilding() {
         BuildingConfig cfg = new BuildingConfig(
-                "earth_node", "大地节点", "node", "wandscape:earth_node",
+                "earth_node", "大地节点", "node",
                 List.of(off(0, 0, 0)),
-                Map.of("0,0,0", "wandscape:earth_node"),
+                Map.of("0,0,0", "minecraft:lodestone"),
                 1, 2, 0, 2,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
@@ -62,7 +62,7 @@ class DataDrivenStepsTest {
 
         AtomicOp.TransformOp op = (AtomicOp.TransformOp) seq.get(0);
         assertEquals(new GridPos(10, 64, 5), op.target());
-        assertEquals(new BlockType("wandscape:earth_node"), op.to());
+        assertEquals(new BlockType("minecraft:lodestone"), op.to());
         assertTrue(seq.label().contains("大地节点"));
     }
 
@@ -72,7 +72,7 @@ class DataDrivenStepsTest {
     @DisplayName("multi-block pattern: step per offset, coordinates correct")
     void multiBlockPattern() {
         BuildingConfig cfg = new BuildingConfig(
-                "test_multi", "Test Multi", "basic", "wandscape:test",
+                "test_multi", "Test Multi", "basic",
                 List.of(off(0, 0, 0), off(1, 0, 0), off(0, 1, 0)),
                 Map.of(
                         "0,0,0", "minecraft:stone_bricks",
@@ -115,7 +115,7 @@ class DataDrivenStepsTest {
     @DisplayName("missing block_mapping: skipped, remaining steps still generated")
     void missingBlockMapping() {
         BuildingConfig cfg = new BuildingConfig(
-                "test_missing", "Test Missing", "basic", "wandscape:test",
+                "test_missing", "Test Missing", "basic",
                 List.of(off(0, 0, 0), off(1, 0, 0)),
                 Map.of("1,0,0", "minecraft:stone"), // "0,0,0" intentionally missing
                 1, 0, 0, 1,
@@ -142,7 +142,7 @@ class DataDrivenStepsTest {
     @DisplayName("empty pattern: zero steps")
     void emptyPattern() {
         BuildingConfig cfg = new BuildingConfig(
-                "test_empty", "Test Empty", "basic", "wandscape:test",
+                "test_empty", "Test Empty", "basic",
                 List.of(),
                 Map.of(),
                 0, 0, 0, 0,
@@ -221,13 +221,65 @@ class DataDrivenStepsTest {
         assertEquals(new GridPos(42, 0, 0), op.target());
     }
 
+    // ── Test 9: bracket notation block states ──
+
+    @Test
+    @DisplayName("bracket notation: BlockType preserves state properties for engine")
+    void bracketNotationBlockState() {
+        BlockOffset off = off(0, 0, 0);
+        Map<String, String> mapping = Map.of("0,0,0", "minecraft:oak_stairs[facing=east,half=top]");
+        BuildingConfig cfg = new BuildingConfig(
+                "test_stairs", "Stairs Test", "basic",
+                List.of(off), mapping,
+                1, 0, 0, 1,
+                BuildingConfig.ShutdownPenalty.DEFAULT,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                null, null, null  // no boundary, no blueprint ref, no nodeConfig
+        );
+
+        BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
+        TaskSequence seq = steps.generate(Map.of("x", new JsonPrimitive(10),
+                "y", new JsonPrimitive(64), "z", new JsonPrimitive(10)));
+
+        assertEquals(1, seq.size());
+        AtomicOp.TransformOp op = (AtomicOp.TransformOp) seq.get(0);
+        assertEquals(new GridPos(10, 64, 10), op.target());
+        // BlockType must preserve full bracket notation for WandscapeBlockOps to parse
+        assertEquals("minecraft:oak_stairs[facing=east,half=top]", op.to().id());
+    }
+
+    @Test
+    @DisplayName("bracket notation: glass pane with connection states")
+    void bracketNotationGlassPane() {
+        BuildingConfig cfg = new BuildingConfig(
+                "test_pane", "Pane Test", "basic",
+                List.of(off(0, 0, 0)),
+                Map.of("0,0,0", "minecraft:glass_pane[north=true,south=true,east=false,west=false]"),
+                1, 0, 0, 1,
+                BuildingConfig.ShutdownPenalty.DEFAULT,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                null, null, null  // no boundary, no blueprint ref, no nodeConfig
+        );
+
+        BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
+        TaskSequence seq = steps.generate(Map.of("x", new JsonPrimitive(0),
+                "y", new JsonPrimitive(70), "z", new JsonPrimitive(0)));
+
+        assertEquals(1, seq.size());
+        AtomicOp.TransformOp op = (AtomicOp.TransformOp) seq.get(0);
+        assertEquals("minecraft:glass_pane[north=true,south=true,east=false,west=false]",
+                op.to().id());
+    }
+
     // ── helpers ──
 
     private static BuildingConfig singleBlockCfg() {
         return new BuildingConfig(
-                "test_single", "Test Single", "basic", "wandscape:test",
+                "test_single", "Test Single", "basic",
                 List.of(off(0, 0, 0)),
-                Map.of("0,0,0", "wandscape:test"),
+                Map.of("0,0,0", "minecraft:stone"),
                 1, 0, 0, 1,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,

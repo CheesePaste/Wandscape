@@ -99,10 +99,9 @@
 | | | `#wandscape:decomposable` 方块标签读取 |
 | | | `ElementApi` 接口 + 实现 |
 | 3rd | `08 building-core` | 建筑 JSON 注册加载（`data/wandscape/buildings/`）+ `BuildingConfig` 解析 |
-| | | `AbstractWandscapeBE`：FIFO 队列 + `colonyId` 缓存 + `onLoad()` |
-| | | 注册 2-3 种建筑方块（市政厅、森林节点、大地节点） |
+| | | **架构**：BuildingSavedData 方案（docs/27）— 建筑状态存 Level SavedData，零自定义方块 |
 | | | `BuildingApi` 接口 + 实现（`getBuilding()`、`registerBuildingType()`） |
-| | | 方块放置触发结构验证 |
+| | | 任务提交时注册建筑（structureIntact=false），建造完成后激活 |
 
 ### 美术线
 
@@ -152,6 +151,8 @@
 
 **目标**：NPC 接到任务 → 走到目标 → 执行操作改造方块。第一个可玩闭环。
 
+**当前状态**：核心闭环完成。超出原计划的增量：RitualOp 硬编码、寻路→私有队列、魔力 float 化。
+
 **预计**：程序 5-7 天 / 美术 3-4 天 / 建筑 0 天 / 数据 2-3 天
 
 ### 程序线
@@ -161,15 +162,16 @@
 | 4th | `07 npc-system` | NPC 实体注册（`wandscape_npc`，法师村民模型） |
 | | | 基本属性：生命/魔力/法术强度/恢复速率 |
 | | | 魔力每 tick 自然恢复 |
-| | | 空闲/工作中/死亡 三状态机 + 直接传送（不走寻路） |
+| | | 空闲/工作中/死亡 三状态机 + ≤32 寻路 / >32 私有队列 RitualOp(SELF_TELEPORT) |
 | | | `NpcApi` 接口 + 实现 |
 | | | NPC 背包 = 能力来源，`computeAbilities()` 自动合并 `ritual:1` |
 | | | NBT 持久化（`addAdditionalSaveData` / `readAdditionalSaveData`） |
-| 5th | `05 atomic-operations` | `OperationA` 完整执行：源校验→元素扣除→粒子→改方块→回收 |
-| | | `OperationD` 瞬发仪式（`self_teleport`、`item_transport`） |
-| | | `OperationB` stub（只做 `node_gathering`） |
+| 5th | `05 atomic-operations` | TransformOp / BlockInteractOp / ResourceRequestOp 完整执行 |
+| | | RitualOp：9 种仪式 channelTicks + baseManaCost **硬编码**（非 JSON 传入），魔力 float 化 |
+| | | EntityInteractOp stub（WandscapeEntityOps 空操作） |
 | | | `AtomicExecutor` 统一入口，返回 `CompletableFuture<ExecutionResult>` |
 | | | 魔力消耗公式 + 源方块不匹配兜底 |
+| | | **超出原计划**：RitualOp.channelTicks() 从 RitualId 推导；蓝图 DSL `"ritual"` 步骤不再需要 channel_ticks 字段 |
 | 6th | `06 task-system` | 全局任务池（`ConcurrentHashMap` + 按 priority 排序） |
 | | | 2s 调度器心跳：收集空闲 NPC → 能力匹配 → 评分分配 |
 | | | NPC 评分：`spellPower×10 + currentMana×0.1 + 连续执行加成` |
@@ -177,6 +179,11 @@
 | | | 私有池 + 建筑队列 → `tryPublishNext()` → 全局池 |
 | | | 中断冷却（5 分钟）+ 卡死自动重置（15 秒/3 次） |
 | | | `TaskApi` 接口 + 实现 |
+| | | **超出原计划**：NavigationSystem 距离>32 或寻路失败 → 向私有队列 pushFront RitualOp(SELF_TELEPORT)，统一走仪式系统；TaskExecutionSystem 跳过 RitualOp 射程检查 |
+| — | **V2.5 async engine** | AsyncTransformExecutor（N-tick countdown + thenRun），World pendingAsyncOps 门控 |
+| | | TaskExecutor.pendingFuture 机制，同步 op 批量连续、异步 op 挂起等待 |
+| | | WandscapeRitualOps 异步 channeling 已实现：PendingRitual 队列 + tickAll 倒计时 → future.complete |
+| | | **法力消耗修复**：同步/异步统一在执行前消耗（fix: AsyncTransformExecutor + node_gathering 不扣法力的 bug） |
 
 ### 美术线
 
@@ -215,7 +222,7 @@
 ```
 生成 NPC → NPC 有正确的模型+纹理+动画
 放置建筑方块 → BE 入队建造任务 → NPC 接到任务
-→ NPC 直接传送到目标位置 → 举起法杖施法
+→ NPC ≤32 寻路 / >32 私有队列 RitualOp(SELF_TELEPORT) 统一走仪式系统
 → 举起法杖 → 彩色光束粒子击中目标 → 方块被放置/破坏
 → 任务完成 → NPC 收起法杖回到空闲状态
 ```
@@ -226,78 +233,111 @@
 
 **目标**：采集→存储→消耗 完整经济链。殖民地资源正向循环。
 
-**预计**：程序 5-7 天 / 美术 4-5 天 / 建筑 2-3 天 / 数据 3-4 天
+**当前状态**：仓库就绪。BuildingSavedData 方案（docs/27）已设计，待实施。旧 BE 已按 27§11 清理。
+
+### 架构变更（docs/27 决策）
+
+旧：自定义方块 → BlockPlaceHandler → AbstractWandscapeBE（任务队列/NBT/状态全部耦合在 BE 上）
+新：纯原版方块 → EnqueueHelper 在任务提交时写入 **BuildingSavedData**（Level SavedData） → NPC 建造 → build_complete 事件激活 → 右键通过 PlayerInteractEvent 拦截
+
+**关键**：建筑不再有自定义方块/BE。所有运行时状态在 `BuildingSavedData`（类似 `ColonyItemBank`）。
+
+### 阶段 3 进度总览
+
+| 子任务 | 状态 | 备注 |
+|--------|:----:|------|
+| 04 warehouse-system | ✅ 完成 | ColonyItemBank (SavedData) + BuildingInteractHandler 右键 GUI + WarehouseManager + ResourceInsufficientEvent。零 BE |
+| BuildingSavedData (docs/27 Phase 1-6) | ✅ 完成 | BuildingState + BuildingSavedData + posIndex/chunkIndex + NBT + AABB 碰撞 + InteractHandler + BreakHandler + BuildCompleteListener + JSON 迁移 + WarehouseBE 移除 |
+| V2.5 async channeling | ✅ 完成 | WandscapeRitualOps：PendingRitual 队列 + tickAll 倒计时 + node_gathering 异步 ritual。channelTicks 硬编码在 WandscapeRitualOps.channelTicks(RitualId) |
+| 09 node-building 自动采集 | ✅ 完成 | BuildingTaskSource.supplyNodeBuildings() + node:gather 蓝图 + BuildingConfig.NodeConfig + BuildingApi.enqueueWork/getBuildingsByCategory |
+| 法力消耗修复 | ✅ 完成 | TaskExecutionSystem 法力消耗移到执行前，同步/异步统一路径（fix: async op 不消耗魔力的 bug） |
+| 10 production-stations | ❌ 未开始 | 零代码 |
+
+### 阶段 3 的执行顺序（按依赖，已完成项标记 ✅）
+
+```
+✅ BuildingSavedData (docs/27 Phase 1-6) — 已完成
+   └── BuildingState + BuildingSavedData + posIndex/chunkIndex + NBT
+   └── BuildingApiImpl 重构 + EnqueueHelper 重构 + AABB 碰撞
+   └── BuildingInteractHandler + BuildingBreakHandler + BuildCompleteListener
+   └── JSON 迁移（移除 block_id）+ WarehouseBE 移除
+
+✅ Async channeling (RitualOps Stage 3) — 已完成
+   └── WandscapeRitualOps: PendingRitual 队列 + tickAll 递减 channelTicks → future.complete()
+   └── node_gathering ritual: 异步 future → thenRun 回调 → ColonyResourceAccess.addResource()
+   └── channelTicks 硬编码在 WandscapeRitualOps.channelTicks(RitualId)，不可从 JSON 配置
+   └── TaskExecutionSystem 法力消耗修复：执行前统一扣除，同步/异步均生效
+
+✅ 节点自动采集 (09) — 已完成
+   └── BuildingTaskSource.supplyNodeBuildings() 每 20tick Phase 2
+   └── BuildingConfig.NodeConfig（blueprint + element + amountPerHarvest + channelTicks）
+   └── BuildingApi.enqueueWork() / getBuildingsByCategory() 适配 BuildingSavedData
+   └── node:gather DSL 蓝图：ritual step 带 params {element, amount}，channelTicks 由 ritual 类型硬编码
+   └── 采集完成 → future.thenRun → WarehouseManager.addResource() → ColonyItemBank.add()
+   └── 已知 BUG：仓库 GUI 不显示采集注入的元素（待排查 NBT 写入 + Menu 同步）
+
+1. 工作站 (10)
+   └── 工作站 GUI + decompose/synthesize 配方加载
+   └── 制作站 GUI + craft_wand 配方
+   └── 依赖：Async channeling + 仓库
+```
 
 ### 程序线
 
-| 顺序 | 模块 | 交付 |
-|------|------|------|
-| 7th | `04 warehouse-system` | 仓库方块+BE（继承 `AbstractWandscapeBE`） |
-| | | 元素存储 + 物品存储实现 |
-| | | 差量保存（脏标记 + 5 分钟定时 + 区块卸载 + 批量写入） |
-| | | `WarehouseApi` 接口 + 实现 |
-| | | 仓库 GUI（`Screen` + `AbstractContainerMenu`） |
-| 8th | `09 node-building` | 森林节点 BE（继承 `AbstractWandscapeBE`，自动入队采集任务） |
-| | | 大地节点 BE |
-| | | 补全 `OperationB.node_gathering`：NPC 到节点→引导→元素入仓 |
-| 9th | `10 production-stations` | 工作站 BE+GUI（decompose + synthesize） |
-| | | 制作站 BE+GUI（craft_wand） |
-| | | 配方 JSON 加载 + `WandscapeDataRegistry<RecipeConfig>` |
-| | | 补全 `OperationB.decompose` / `synthesize` / `craft_wand` |
+| 顺序 | 模块 | 交付 | 状态 |
+|------|------|------|:----:|
+| 7a | `RitualOps Stage 3` | WandscapeRitualOps 异步 channeling：PendingRitual 队列 + tickAll 倒计时 + node_gathering 异步 ritual。channelTicks 硬编码。法力消耗修复（执行前统一扣除） | ✅ |
+| 7b | `BuildingSavedData` | BuildingState + BuildingSavedData (NBT + posIndex + chunkIndex + AABB) + BuildingApiImpl 重构 + EnqueueHelper 重构 + InteractHandler + BreakHandler + BuildCompleteListener + JSON 迁移 + WarehouseBE 移除 | ✅ |
+| 7c | `04 warehouse-system` | ColonyItemBank (Level SavedData) + BuildingInteractHandler 右键 GUI + WarehouseManager + ResourceInsufficientEvent。零 BE | ✅ |
+| 9th | `09 node-building` | BuildingTaskSource.supplyNodeBuildings() → auto-publish 采集任务。node:gather DSL 蓝图 + BuildingConfig.NodeConfig。采集完成 → future.thenRun → WarehouseManager.addResource() | ✅ |
+| 10th | `10 production-stations` | 工作站 GUI（decompose → 元素 / synthesize → 物品） | ❌ |
+| | | 制作站 GUI（craft_wand → 消耗元素 → 产出 NBT 法杖） | ❌ |
+| | | 魔药站 GUI（brew_potion → 消耗元素 + 物品 → 药剂）— 可后置 | ❌ |
+| | | 配方 JSON 加载 + WandscapeDataRegistry\<RecipeConfig\> | ❌ |
 
 ### 美术线
 
-| 交付 | 规格 | 说明 |
-|------|------|------|
-| 仓库方块纹理 | 16×16 | 仓库正面/侧面/顶面 |
-| 仓库 GUI 贴图 | 256×256 | 元素储量槽 + 物品列表区域 + 进度条 |
-| 森林节点纹理 | 16×16 | 木质魔法节点外观 |
-| 大地节点纹理 | 16×16 | 石质魔法节点外观 |
-| 工作站纹理 | 16×16 | 万能工作台外观 |
-| 制作站纹理 | 16×16 | 法杖制作台外观 |
-| 工作站 GUI | 256×256 | 配方选择 + 输入/输出槽 + 进度箭头 |
-| 制作站 GUI | 256×256 | 法杖配方选择 + NBT 预览 |
-| 引导粒子 | 粒子贴图 | 节点采集/工作站合成的持续引导粒子环 |
-| 元素图标 | 16×16 每个 | 9 种元素的 GUI 小图标 |
+| 交付 | 状态 |
+|------|:----:|
+| 仓库方块纹理 + GUI 贴图 | ✅ |
+| 森林/大地/水域节点纹理（纯原版方块，通过 pattern 组合区分） | ❌ |
+| 工作站 + 制作站 GUI 贴图 | ❌ |
+| 引导粒子（节点采集/工作站合成的持续粒子环） | ❌ |
+| 元素图标（9 种，GUI 用） | ❌ |
 
 ### 建筑结构线
 
-| 交付 | 说明 |
-|------|------|
-| `warehouse.json` | 仓库建筑结构 pattern + block_mapping（~10-15 方块） |
-| 更新 `forest_node.json` | 确认阶段 1 的 pattern 可用于采集功能 |
-| 更新 `earth_node.json` | 同上 |
-| `workstation.json` | 工作站建筑结构 pattern + block_mapping（~8-12 方块） |
-| `crafting_station.json` | 制作站建筑结构 pattern + block_mapping（~8-12 方块） |
+| 交付 | 状态 |
+|------|:----:|
+| `warehouse.json`（pattern 纯原版方块） | ❌ |
+| `forest_node.json` / `earth_node.json` / `water_node.json`（移除 block_id） | ❌ |
+| `town_hall.json` / `grand_tower.json`（同上） | ❌ |
+| `workstation.json` / `crafting_station.json` | ❌ |
 
 ### 数据配置线
 
-| 交付 | 内容 |
-|------|------|
-| 工作站分解配方 | 首批 8-10 种原版方块的 decompose 配方 |
-| 工作站合成配方 | 首批 5-8 种原版方块的 synthesize 配方 |
-| 法杖制作配方 | `craft_builder_wand.json`、`craft_gatherer_wand.json` 等 |
-| 节点配置 | `forest_node.json` 中 `node_config` 的 `amount_per_harvest`、`channel_ticks` |
-| TOML 补充 | 仓库保存间隔、工作站引导时间等配置项 |
-
-### 跨线依赖
-
-```
-程序定义仓库/节点/工作站注册 ID ──→ 美术制作对应纹理
-程序定义 GUI 布局规格        ──→ 美术绘制 GUI 贴图
-美术完成建筑方块纹理          ──→ 建筑线编写 pattern + block_mapping
-程序定义配方 JSON schema    ──→ 数据线填充配方内容
-```
+| 交付 | 状态 |
+|------|:----:|
+| 元素映射 JSON（5 种原版方块→元素） | ✅ |
+| 工作站分解/合成配方 | ❌ |
+| 法杖制作配方 | ❌ |
+| 节点配置（element / amount_per_harvest / channel_ticks，现在由 BuildingState 持有） | ❌ |
 
 ### 阶段 3 验证
 
 ```
-放置森林节点 → 节点有正确的纹理外观
-→ 自动发布采集任务 → NPC 执行 node_gathering → 引导粒子环
-→ 木元素注入仓库 → 仓库 GUI 显示元素储量增加 + 元素图标
-→ 放置工作站（正确纹理）→ 打开 GUI → 下达分解 64 圆石
-→ NPC 执行 decompose → 土元素入仓 → 圆石消失
-→ 放置制作站 → 下达制作建筑法杖 → 消耗元素 → 法杖产出（带 NBT）
+✅ 放置仓库方块 → GUI 打开 → 物品存取正常 → 元素储量显示
+✅ ResourceInsufficientEvent → 聊天栏通知
+✅ WandscapeRitualOps 异步 channeling：node_gathering 引导 200tick → future.complete → addResource
+✅ BuildingTaskSource.supplyNodeBuildings() 自动入队采集任务
+✅ node:gather 蓝图 → NPC 执行 → 引导完成 → 元素注入仓库（仓库 GUI 显示 BUG 待修复）
+❌ self_teleport 引导 600 ticks（NPC 站立施法 30 秒而非瞬移）— ritual 仍返回 completedFuture
+❌ /wandscape fill forest_node → 任务提交 → BuildingSavedData 写入
+    → NPC 执行 build:place_structure 蓝图（全原版方块）
+    → build_complete 事件 → 验证 pattern → structureIntact=true
+    → 右键 lodestone → posIndex 定位 → 打开建筑面板
+❌ 工作站 GUI → 分解圆石 → 土元素入仓
+❌ 制作站 GUI → 制作法杖 → 消耗元素 → 产出带 NBT 法杖
 ```
 
 ---
@@ -451,12 +491,14 @@
 
 | 阶段 | 名称 | 程序 | 美术 | 建筑结构 | 数据配置 | 累计成果 |
 |------|------|------|------|---------|---------|---------|
-| 0 | 地基 | 01 骨架 + 16 | 图标+色板 | — | TOML 骨架 | 编译通过，类型系统就绪 |
-| 1 | 可视化 | 02 + 03 + 08 | 法杖+建筑纹理 | 3 种建筑结构 | 法杖+元素+建筑 JSON | 手持法杖，建筑而立 |
-| 2 | 闭环 | 07 + 05 + 06 | NPC+粒子+动画 | — | 仪式 JSON + NPC TOML | NPC 执行建造任务 |
-| 3 | 经济 | 04 + 09 + 10 | 仓库/节点/站纹理+GUI+元素图标 | 5 种建筑结构 | 配方 JSON + 节点配置 | 采集→存储→合成闭环 |
-| 4 | 殖民地 | 11 + 15 + 12 | 房屋/池/酒馆纹理+GUI | 4 种建筑结构 | 房屋/酒馆 JSON + 殖民地 TOML | 从零建立殖民地 |
-| 5 | 高级 | 13 + 14 | 祭坛+面板纹理+粒子+图标 | 祭坛多方块 | 祭坛+仪式 JSON | 仪式复活 + 远程管理 |
+| 0 | 地基 | ✅ 01 + 16 | ✅ 图标+色板 | — | ✅ TOML | 编译通过，类型系统就绪 |
+| 1 | 可视化 | ✅ 02 + 03 + 08 | ✅ 法杖+建筑纹理 | ✅ 4 种建筑 JSON | ✅ JSON | 手持法杖，建筑而立（SavedData 方案替代 BE） |
+| 2 | 闭环 | ✅ 07 + 05 + 06 + V2.5 | ✅ NPC+粒子+动画 | — | ✅ 仪式+NPC | NPC 执行建造任务 + 私有队列传送 |
+| 3 | 经济 | ✅ 04 + 09 / ❌ 10 | ⚠️ 仓库✅ 节点✅ 其余❌ | ❌ 5 种建筑 | ⚠️ 元素✅ 其它❌ | 仓库+节点采集闭环完成，async channeling 就绪 |
+| 4 | 殖民地 | ❌ 11 + 15 + 12 | ❌ | ❌ | ❌ | 零实现 |
+| 5 | 高级 | ❌ 13 + 14 | ❌ | ❌ | ❌ | 零实现 |
+
+**图例**：✅ 完成 / ⚠️ 部分 / ❌ 未开始
 
 ---
 
@@ -487,3 +529,27 @@
 - 美术线可在程序实现前先出纹理（只要有注册 ID）
 - 建筑线需等美术线出纹理后才能确定 block_mapping
 - 数据线需等程序线定义 JSON schema 后才能填充
+  当前状态速查                                                                                                                                                                                       
+  ┌─────────────────────────────┬──────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                        
+  │            模块             │ 状态 │                                                                备注                                                                │                        
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BuildingSavedData (docs/27) │  ✅  │ 全 Phase 1-6 完成：BuildingState + NBT + posIndex + AABB 碰撞 + InteractHandler + BreakHandler + BuildCompleteListener + JSON 迁移 │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Warehouse (04)              │  ✅  │ ColonyItemBank (SavedData) + GUI + WarehouseManager + ResourceInsufficientEvent。零 BE                                            │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Element mappings            │  ✅  │ 5 种 JSON                                                                                                                          │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BlockInteractOp 重构        │  ✅  │ WandscapeBlockInteractExecutor（sync + async）。channelTicks/manaCost 可配置。node_gathering 迁移至 block_interact                │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 节点产出元素                │  ✅  │ BuildingTaskSource.supplyNodeBuildings + node:gather 蓝图 + NodeConfig。已知 BUG：仓库 GUI 不显示                                  │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ RitualOp                    │  ✅  │ channelTicks/manaCost 硬编码。params 用于功能参数。node_gathering 已迁移至 BlockInteractOp。WandscapeRitualOps 仅保留魔法仪式    │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 工作站                      │  ❌  │ 零代码                                                                                                                             │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ BlockInteractOp             │  ⚠️  │ 只有 toggle/activate/open_gui，没有 decompose/synthesize                                                                           │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ WarehouseSource             │  ⚠️  │ 只 emit ResourceLow，不创建采集任务                                                                                                │
+  ├─────────────────────────────┼──────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ WorkbenchSource             │  ⚠️  │ poll() 空方法                                                                                                                      │
+  └─────────────────────────────┴──────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

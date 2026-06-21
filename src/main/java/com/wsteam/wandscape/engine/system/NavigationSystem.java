@@ -8,8 +8,12 @@ import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
+import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
@@ -20,8 +24,8 @@ import net.minecraft.core.particles.ParticleTypes;
  *
  * <p>Other systems request movement by writing {@link NavigationState}
  * (mode + target + future). This system picks it up on the next ECS tick
- * and drives the actual MC movement — pathfinding, ritual teleport, or
- * mana-gated waiting.
+ * and drives the actual MC movement — pathfinding for short range,
+ * self_teleport ritual via private queue for long range or pathfinding failure.
  *
  * <p>Registered after {@code TaskExecutionSystem} so that a navigation
  * request written during step-execution is picked up in the same
@@ -39,7 +43,6 @@ public class NavigationSystem implements System {
     private static final double STUCK_MIN_PROGRESS = 2.0;
     private static final int PATHFIND_TIMEOUT = 200;
     private static final int MAX_REPATH = 5;
-    static final int SELF_TELEPORT_MANA_COST = 20;
 
     private int tickCounter;
 
@@ -62,7 +65,7 @@ public class NavigationSystem implements System {
             double dz = npc.getZ() - (nav.target.z() + 0.5);
             double hDistSq = dx * dx + dz * dz;
 
-            // Arrived
+            // Arrived (all modes)
             if (hDistSq <= STOP_RANGE_SQ) {
                 arrive(nav, npc);
                 continue;
@@ -75,10 +78,11 @@ public class NavigationSystem implements System {
                 nav.lastCheckX = npc.getX();
                 nav.lastCheckZ = npc.getZ();
 
-                // If too far for pathfinding, switch to teleport
+                // Distance > 32 → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
                         && hDistSq > (long) PATHFIND_MAX_RANGE * PATHFIND_MAX_RANGE) {
-                    nav.mode = NavigationState.Mode.TELEPORT_WAITING;
+                    switchToRitualTeleport(nav, npcId, world);
+                    continue;
                 }
 
                 npc.setAiWanderingEnabled(false);
@@ -90,16 +94,17 @@ public class NavigationSystem implements System {
                             npcId, nav.target.x(), nav.target.y(), nav.target.z(), (int) hDistSq, ok);
                     if (!ok) {
                         LOGGER.info("[NavSys] NPC {} — moveTo failed immediately, switching to teleport", npcId);
-                        switchToTeleport(nav, npc, npcId, world);
+                        switchToRitualTeleport(nav, npcId, world);
                     }
                     continue;
                 }
-                // TELEPORT_WAITING: fall through to try-teleport immediately
+                // TELEPORT_WAITING / TELEPORT_RITUAL: fall through
             }
 
             switch (nav.mode) {
                 case PATHFINDING -> tickPathfinding(nav, npc, npcId, world);
                 case TELEPORT_WAITING -> tickTeleportWaiting(nav, npc, npcId, world);
+                case TELEPORT_RITUAL -> { /* ritual in private queue; arrival checked at top */ }
             }
         }
     }
@@ -118,18 +123,18 @@ public class NavigationSystem implements System {
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
                     LOGGER.info("[NavSys] NPC {} — re-path failed, switching to teleport", npcId);
-                    switchToTeleport(nav, npc, npcId, world);
+                    switchToRitualTeleport(nav, npcId, world);
                 }
             } else {
                 LOGGER.info("[NavSys] NPC {} — re-paths exhausted, switching to teleport", npcId);
-                switchToTeleport(nav, npc, npcId, world);
+                switchToRitualTeleport(nav, npcId, world);
             }
             return;
         }
 
         if (elapsed > PATHFIND_TIMEOUT) {
             LOGGER.info("[NavSys] NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
-            switchToTeleport(nav, npc, npcId, world);
+            switchToRitualTeleport(nav, npcId, world);
             return;
         }
 
@@ -143,7 +148,7 @@ public class NavigationSystem implements System {
                         npcId, nav.stuckChecks, String.format("%.2f", progress));
                 if (nav.stuckChecks >= MAX_STUCK_CHECKS) {
                     LOGGER.info("[NavSys] NPC {} — stuck, switching to teleport", npcId);
-                    switchToTeleport(nav, npc, npcId, world);
+                    switchToRitualTeleport(nav, npcId, world);
                     return;
                 }
             } else {
@@ -155,40 +160,52 @@ public class NavigationSystem implements System {
         }
     }
 
-    // ---- TELEPORT WAITING ----
+    // ---- TELEPORT WAITING (mana-gated, for non-zero-cost rituals) ----
 
     private void tickTeleportWaiting(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
         ManaPool mana = world.get(npcId, ManaPool.class);
-        if (mana != null && mana.current() >= SELF_TELEPORT_MANA_COST) {
-            if (tryTeleport(nav, npc, npcId, world)) {
-                arrive(nav, npc);
+        if (mana == null || mana.current() <= 0) return; // wait for mana regen
+        switchToRitualTeleport(nav, npcId, world);
+    }
+
+    // ---- Ritual teleport via private queue ----
+
+    /**
+     * Push a {@code RitualOp(SELF_TELEPORT)} to the NPC's private queue.
+     * TaskExecutionSystem picks it up, executes via {@code RitualOps.beginRitual()},
+     * and the NPC arrives at the target.
+     * <p>
+     * The nav future is completed immediately — TaskExec unblocks, finds the
+     * RitualOp in the private queue (which takes priority over global task steps),
+     * and executes it (range check is skipped for RitualOp).
+     */
+    private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        if (exec == null) {
+            // No TaskExecutor — fallback: complete nav future so caller unblocks
+            if (nav.future != null && !nav.future.isDone()) {
+                nav.future.complete(null);
             }
+            nav.reset();
+            return;
         }
+
+        GridPos target = nav.target;
+        exec.pushPrivateFront(new AtomicOp.RitualOp(RitualId.SELF_TELEPORT, target));
+        nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
+        nav.stuckChecks = 0;
+        nav.repathCount = 0;
+
+        // Unblock TaskExec — it will find the RitualOp in private queue next iteration
+        if (nav.future != null && !nav.future.isDone()) {
+            nav.future.complete(null);
+        }
+
+        LOGGER.info("[NavSys] NPC {} — self_teleport ritual queued → ({},{},{})",
+                npcId, target.x(), target.y(), target.z());
     }
 
     // ---- Internal ----
-
-    private void switchToTeleport(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
-        if (tryTeleport(nav, npc, npcId, world)) {
-            arrive(nav, npc);
-        } else {
-            nav.mode = NavigationState.Mode.TELEPORT_WAITING;
-            nav.stuckChecks = 0;
-            nav.repathCount = 0;
-        }
-    }
-
-    private boolean tryTeleport(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
-        ManaPool mana = world.get(npcId, ManaPool.class);
-        if (mana != null && !mana.consume(SELF_TELEPORT_MANA_COST)) {
-            return false;
-        }
-        npc.teleportTo(nav.target.x() + 0.5, nav.target.y(), nav.target.z() + 0.5);
-        spawnTeleportParticles(npc);
-        LOGGER.info("[NavSys] NPC {} teleported → ({},{},{})",
-                npcId, nav.target.x(), nav.target.y(), nav.target.z());
-        return true;
-    }
 
     private void arrive(NavigationState nav, WandscapeNpc npc) {
         npc.setAiWanderingEnabled(true);
@@ -196,16 +213,5 @@ public class NavigationSystem implements System {
             nav.future.complete(null);
         }
         nav.reset();
-    }
-
-    private static void spawnTeleportParticles(WandscapeNpc npc) {
-        for (int i = 0; i < 20; i++) {
-            double ox = (npc.getRandom().nextDouble() - 0.5) * 1.5;
-            double oy = npc.getRandom().nextDouble() * 2.0;
-            double oz = (npc.getRandom().nextDouble() - 0.5) * 1.5;
-            npc.level().addParticle(ParticleTypes.PORTAL,
-                    npc.getX() + ox, npc.getY() + oy, npc.getZ() + oz,
-                    0, 0, 0);
-        }
     }
 }

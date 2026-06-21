@@ -65,11 +65,11 @@ private final List<UUID> pendingAssignQueue = new ArrayList<>(); // 按 priority
 - **容量**：无上限
 - **优先级**：高于全局任务。NPC 必须先清空私有池
 - **来源**：
-  - 自传送 → `OperationD(ritualId="self_teleport")`：目标过远/寻路失败/卡死时自动生成。消耗由仪式 JSON 定义
-  - 区域清理 → `OperationA`：目标位置有非目标方块，需先清理
-  - 物资请求 → `OperationD(ritualId="item_transport")`：从仓库传送物品到背包
-  - 物资上缴 → `OperationD(ritualId="item_transport")`：背包物品存入仓库
-  - 魔力充能/抽取 → `OperationB(buildingId=魔力池, action="charge"/"extract")`
+  - 自传送 → `RitualOp(SELF_TELEPORT, target)`：距离 >32 或寻路失败/卡死时，由 NavigationSystem 自动推入私有队列（pushPrivateFront）。魔力消耗 0、引导 600 tick。TaskExecutionSystem 执行时跳过射程检查
+  - 区域清理 → `TransformOp`：目标位置有非目标方块，需先清理
+  - 物资请求 → `RitualOp(ITEM_TELEPORT, ...)`：从仓库传送物品到背包
+  - 物资上缴 → `RitualOp(ITEM_TELEPORT, ...)`：背包物品存入仓库
+  - 魔力充能/抽取 → `BlockInteractOp(buildingId=魔力池, action="charge"/"extract")`
 
 - **数据结构**：
 
@@ -200,7 +200,7 @@ NPC 空闲
                 └→ 未分配到 → 空闲，等下次心跳
 ```
 
-NPC 移动通过 `WandscapeMovementOps.navigateTo()` 直接传送（`npc.setPos()`），不用寻路。传送前检查水平距离：≤5 格视为已在范围内，跳过传送。寻路在动态建筑工地（方块不断被放置/移除）上根本不可靠——路径反复作废、NPC 被围困、卡死检测也难以通用——直接传送是确定性方案，对殖民地自动化模组完全可接受。
+NPC 移动通过 `WandscapeMovementOps.navigateTo()` 写入 NavigationState，由 NavigationSystem 驱动：≤32 格走原版寻路，>32 格或寻路失败/卡死时自动向私有队列推入 `RitualOp(SELF_TELEPORT)`（0 魔力 / 600 tick 引导），统一走仪式系统执行。TaskExecutionSystem 对 RitualOp 跳过射程检查，避免循环导航。≤5 格视为已在范围内，不触发移动。
 
 ---
 

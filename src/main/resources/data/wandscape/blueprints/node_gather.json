@@ -1,24 +1,26 @@
 {
   "id": "node:gather",
   "display_name": "节点采集",
-  "description": "NPC stands beside a node building and channels for channel_ticks. On completion, elements are injected directly into the colony warehouse.",
+  "description": "NPC stands beside a node building and channels. On completion, elements are injected directly into the colony warehouse. Channel ticks and mana cost are configurable per building.",
   "params": {
     "anchor": "pos",
     "element": "string",
     "amount": "int",
-    "channel_ticks": "int"
+    "channel_ticks": "int",
+    "mana_cost": "int"
   },
   "steps": [
     {
       "type": "log",
       "level": "info",
-      "text": {"format": ["[NodeGather] NPC gathering {} x{} at {} ({} ticks)", "$element", "$amount", "$anchor", "$channel_ticks"]}
+      "text": {"format": ["[NodeGather] NPC gathering {} x{} at {} ({}t, {} mana)", "$element", "$amount", "$anchor", "$channel_ticks", "$mana_cost"]}
     },
     {
-      "type": "ritual",
-      "ritual": "node_gathering",
+      "type": "block_interact",
+      "action": "gather",
       "at": "$anchor",
       "channel_ticks": "$channel_ticks",
+      "mana_cost": "$mana_cost",
       "params": {
         "element": "$element",
         "amount": "$amount"

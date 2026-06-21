@@ -2,12 +2,11 @@
   "id": "forest_node",
   "display_name": "森林节点",
   "category": "node",
-  "block_id": "wandscape:forest_node",
   "pattern": [
     [0, 0, 0]
   ],
   "block_mapping": {
-    "0,0,0": "wandscape:forest_node"
+    "0,0,0": "minecraft:moss_block"
   },
   "comfort": 1,
   "magic": 2,
@@ -28,7 +27,8 @@
     "blueprint": "node:gather",
     "element": "wood",
     "amount_per_harvest": 10,
-    "channel_ticks": 200
+    "channel_ticks": 200,
+    "mana_cost": 3
   },
   "boundary": {
     "min": [-1, -1, -1],

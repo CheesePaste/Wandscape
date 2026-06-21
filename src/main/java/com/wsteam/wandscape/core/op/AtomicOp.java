@@ -24,7 +24,7 @@ public sealed interface AtomicOp
                 AtomicOp.IfConditionOp {
 
     /** Base mana cost for this operation (before wand efficiency). */
-    int baseManaCost();
+    float baseManaCost();
 
     /**
      * The world position this operation acts on, or {@code null} if positionless
@@ -66,8 +66,8 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public int baseManaCost() {
-            return 5;
+        public float baseManaCost() {
+            return 0.2f;
         }
 
         @Override
@@ -76,11 +76,26 @@ public sealed interface AtomicOp
         }
     }
 
-    /** Interact with a block (toggle, activate, open GUI). */
-    record BlockInteractOp(GridPos target, InteractAction action) implements AtomicOp {
+    /**
+     * Interact with a block — sync (toggle/activate/open_gui) or async (gather/decompose/synthesize).
+     * Async actions use channelTicks for timing and params for action-specific data.
+     * Mana cost and channelTicks are configurable from the blueprint (unlike RitualOp).
+     */
+    record BlockInteractOp(GridPos target, InteractAction action,
+                           Map<String, String> params, int channelTicks,
+                           float manaCost) implements AtomicOp {
+        public BlockInteractOp {
+            if (params == null) params = Collections.emptyMap();
+        }
+
+        /** Backward-compat constructor for sync actions (toggle/activate/open_gui). */
+        public BlockInteractOp(GridPos target, InteractAction action) {
+            this(target, action, Collections.emptyMap(), 0, 1.0f);
+        }
+
         @Override
-        public int baseManaCost() {
-            return 2;
+        public float baseManaCost() {
+            return manaCost;
         }
 
         @Override
@@ -92,8 +107,8 @@ public sealed interface AtomicOp
     /** Apply an effect to a non-NPC entity. */
     record EntityInteractOp(EntityId entityId, EffectId effect, int strength, int duration) implements AtomicOp {
         @Override
-        public int baseManaCost() {
-            return 3;
+        public float baseManaCost() {
+            return 1.0f;
         }
 
         @Override
@@ -103,27 +118,37 @@ public sealed interface AtomicOp
     }
 
     /** Perform a ritual (may involve channeling over multiple ticks). */
-    record RitualOp(RitualId ritual, GridPos target, int channelTicks,
+    record RitualOp(RitualId ritual, GridPos target,
                     Map<String, String> params) implements AtomicOp {
         public RitualOp {
             if (params == null) params = Collections.emptyMap();
         }
 
         /** Convenience constructor without params (backward-compat). */
-        public RitualOp(RitualId ritual, GridPos target, int channelTicks) {
-            this(ritual, target, channelTicks, Collections.emptyMap());
+        public RitualOp(RitualId ritual, GridPos target) {
+            this(ritual, target, Collections.emptyMap());
         }
         @Override
-        public int baseManaCost() {
-            // Rituals vary; base cost reflects minimum
+        public float baseManaCost() {
             return switch (ritual.id()) {
-                case "item_teleport" -> 3;
-                case "player_summon" -> 5;
-                case "warding" -> 10;
-                case "group_vigor" -> 15;
-                case "rain_call", "clear_weather" -> 20;
-                case "portal_gate" -> 30;
-                default -> 10;
+                case "self_teleport", "item_teleport", "player_summon" -> 0;
+                case "warding" -> 15f;
+                case "group_vigor" -> 20f;
+                case "rain_call", "clear_weather" -> 30f;
+                case "portal_gate" -> 45f;
+                default -> 15f;
+            };
+        }
+
+        /** Channeling duration in ticks (0 = instant). Hardcoded per ritual type. */
+        public int channelTicks() {
+            return switch (ritual.id()) {
+                case "self_teleport", "item_teleport", "player_summon" -> 600;
+                case "warding" -> 200;
+                case "group_vigor" -> 400;
+                case "rain_call", "clear_weather" -> 1200;
+                case "portal_gate" -> 1800;
+                default -> 0;
             };
         }
 
@@ -136,8 +161,8 @@ public sealed interface AtomicOp
     /** Request resources from the colony warehouse. The executor resolves this inline. */
     record ResourceRequestOp(ResourceStack requested) implements AtomicOp {
         @Override
-        public int baseManaCost() {
-            return 1; // Teleportation cost handled by the ritual inserted into private queue
+        public float baseManaCost() {
+            return 0.0f; // Teleportation cost handled by the ritual inserted into private queue
         }
 
         @Override
@@ -157,7 +182,7 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public int baseManaCost() {
+        public float baseManaCost() {
             return 0;
         }
 
@@ -187,7 +212,7 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public int baseManaCost() {
+        public float baseManaCost() {
             return 0;
         }
 

@@ -19,7 +19,7 @@
 |------|------|---------|
 | `BlockOps.java` | 方块操作：setBlock / getBlockState / isAir / toggle / activate / openGui | WandscapeBlockOps |
 | `EntityOps.java` | 实体操作：applyEffect / getPosition | WandscapeEntityOps (stub) |
-| `RitualOps.java` | 仪式执行，V2.5 返回 `CompletableFuture<Void>` | WandscapeRitualOps |
+| `RitualOps.java` | 仪式执行，V2.5 返回 `CompletableFuture<Void>`。channelTicks 和 baseManaCost 由 RitualOp 硬编码（非外部传入） | WandscapeRitualOps |
 | `MovementOps.java` | NPC 移动：`navigateTo(npcId, x, y, z)` → CompletableFuture / `cancelNavigation(npcId)` | WandscapeMovementOps (纯传送) |
 | `ColonyResourceAccess.java` | 仓库资源 CRUD：hasEnough / reserve / commit / release | stub（阶段 3） |
 | `MovementOps.java` | 移动操作：navigateTo → CompletableFuture / cancelNavigation | WandscapeMovementOps（无状态适配器，写入 NavigationState） |
@@ -41,7 +41,7 @@
 | `Position.java` | 实体世界坐标 (GridPos) |
 | `ManaPool.java` | NPC/建筑魔力池：current / max / regenPerTick，方法 regen() / consume() / add() |
 | `WandCarrier.java` | NPC 装备法杖能力并集：`level(tag)` / `satisfies(requirements)` / `EMPTY` 哨兵 |
-| `NavigationState.java` | NPC 移动状态：mode (IDLE/PATHFINDING/TELEPORT_WAITING) / target GridPos / CompletableFuture / 卡死/超时追踪字段。NavigationSystem 的唯一数据源 |
+| `NavigationState.java` | NPC 移动状态：mode (IDLE/PATHFINDING/TELEPORT_WAITING/TELEPORT_RITUAL) / target GridPos / CompletableFuture / 卡死/超时追踪字段。NavigationSystem 的唯一数据源 |
 | `TaskExecutor.java` | NPC 任务执行状态：私有优先队列 / 当前 GlobalTask ID / stepIndex / taskParams / stance / `pendingFuture` / ExecutorState |
 | `Inventory.java` | NPC 背包：列表存储 + 容量限制，add / remove / count / hasEnough |
 | `ColonyMember.java` | 标记 NPC 属于哪个殖民地 (UUID) |
@@ -51,7 +51,7 @@
 
 | 文件 | 作用 |
 |------|------|
-| `AtomicOp.java` | **sealed 接口 + 7 种变体**：TransformOp(place/break/convert) / BlockInteractOp(toggle/activate/open_gui) / EntityInteractOp(apply effect) / RitualOp / ResourceRequestOp / EmitEventOp / IfConditionOp |
+| `AtomicOp.java` | **sealed 接口 + 7 种变体**：TransformOp(place/break/convert) / BlockInteractOp(toggle/activate/open_gui) / EntityInteractOp(apply effect) / RitualOp(ritual+target, channelTicks/baseManaCost硬编码) / ResourceRequestOp / EmitEventOp / IfConditionOp |
 | `OpExecutor<T>.java` | 执行器接口：`CompletableFuture<Void> execute(World, long entityId, T op)` — 同步返回 completedFuture，异步返回未完成 future |
 | `OpExecutorRegistry.java` | 注册表：AtomicOp 子类 → OpExecutor + 条件名 → ConditionEvaluator |
 | `DefaultOpExecutors.java` | 注册所有默认同步执行器 + 内置条件求值器 (`resource_below` / `inventory_has` / `inventory_full`) |
@@ -92,7 +92,7 @@
 | `TaskSourcePoller.java` | ② 按间隔轮询所有 TaskSource，将 TaskRequest 送入 GlobalTaskPool |
 | `SchedulerSystem.java` | ③ 每 2 tick 为可分配任务匹配最佳空闲 NPC（评分 = range×0.5 + efficiency×0.3 + behaviourLevel×0.2） |
 | `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → stance 计算 → mana 检查 → dispatch → 异步等待 / 同步推进 |
-| `NavigationSystem.java` | ⑤ (engine/system/) 所有 NPC 移动的单一驱动：读取 NavigationState → 寻路/传送/魔力等待。卡死检测、超时、重寻路 |
+| `NavigationSystem.java` | ⑤ (engine/system/) NPC 移动总控：≤32 寻路（moveTo + 卡死检测 + 超时），>32 或失败 → 向私有队列推入 RitualOp(SELF_TELEPORT)，由 TaskExecutionSystem 统一执行 |
 | `SystemBlueprintSystem.java` | ⑥ 每 tick 驱动系统蓝图（非全局任务池的基础设施任务），批量纯 Op，一个副作用 Op/tick |
 | `TaskSource.java` | 接口：`pollIntervalTicks()` + `poll(World, GlobalTaskPool)` |
 | `BuildingTaskSource.java` | 在 `engine/source/` — 轮询建筑 BE 队列（每 20 tick）。params 为 JsonElement，通过 EnqueueHelper 构造 |

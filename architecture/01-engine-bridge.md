@@ -6,14 +6,14 @@ MC 桥梁：实现 core 边界接口，WandscapeEngine 单例持有 World，Buil
 
 | 文件 | 作用 |
 |------|------|
-| `WandscapeEngine.java` | **单例**持有 World 实例 + AsyncTransformExecutor + BlueprintConfigLoader + WandscapeMovementOps。`ServerStarting` 时 `EngineBootstrap.bootstrap()` 注入 |
+| `WandscapeEngine.java` | **单例**持有 World 实例 + AsyncTransformExecutor + BlueprintConfigLoader + WandscapeMovementOps。`ServerStarting` 时 `EngineBootstrap.bootstrap()` 注入，`ServerStopped` 时 `reset()` 清除全部静态状态（支持退出世界后重新进入） |
 | `bootstrap/EngineBootstrap.java` | 组装引导：创建边界 MC 实现 + TaskSource 列表 + 注册 DSL 蓝图 (BlueprintConfigLoader) + 遗留 DataDrivenSteps fallback → `CoreBootstrap.bootstrap(config)` → 注入单例。ColonyResourceAccess 从 `WandscapeApis` 获取 WarehouseManager（未注册时回退到 infinite stub） |
 | `boundary/WandscapeBlockOps.java` | BlockOps MC 实现：`Level.setBlock()` / `getBlockState()` / `isAir()`，放置前 `evacuateEntities()` 疏散方块内生物 |
-| `boundary/WandscapeMovementOps.java` | MovementOps MC 实现：无状态适配器，`navigateTo()` 写入 NavigationState（mode + target + future），由 NavigationSystem 驱动实际移动（≤32 寻路、>32 仪式传送、魔力不足等待） |
+| `boundary/WandscapeMovementOps.java` | MovementOps MC 实现：无状态适配器，`navigateTo()` 写入 NavigationState（mode + target + future），由 NavigationSystem 驱动实际移动（≤32 寻路、>32 向私有队列推 RitualOp(SELF_TELEPORT)） |
 | `boundary/WandscapeEntityOps.java` | EntityOps MC 实现：**阶段 2 stub**，applyEffect / getPosition 为空操作 |
-| `boundary/WandscapeRitualOps.java` | RitualOps MC 实现：`self_teleport` 通过 `EntityComponentBridge` 查找 NPC → `teleportTo()`，返回 completedFuture |
+| `boundary/WandscapeRitualOps.java` | RitualOps MC 实现：Stage 2 同步，`self_teleport` 通过 `EntityComponentBridge` → `teleportTo()` + 粒子，返回 completedFuture。魔力消耗和引导时间由 RitualOp 硬编码（self_teleport: 0 mana / 600 ticks） |
 | `boundary/AsyncTransformExecutor.java` | **V2.5 异步门控**：TransformOp 异步执行器，N-tick countdown + thenRun → 放置方块。`tickAll()` 递减计数器并完成 Future |
-| `system/NavigationSystem.java` | **NPC 移动总控**：ECS System，注册在 TaskExecutionSystem 后。读取 NavigationState → 驱动寻路（moveTo + 卡死检测 + 超时 + 重寻路）/ 仪式传送（扣魔力 + 粒子）/ 魔力等待 |
+| `system/NavigationSystem.java` | **NPC 移动总控**：ECS System，注册在 TaskExecutionSystem 后。读取 NavigationState → 驱动寻路（moveTo + 卡死检测 + 超时 + 重寻路）/ 向私有队列推入 RitualOp(SELF_TELEPORT) 统一走仪式系统。TaskExecutionSystem 跳过 RitualOp 的射程检查 |
 | `source/BuildingTaskSource.java` | **核心 TaskSource**：每 20 tick 轮询 `BuildingApi.getBuildingsWithPendingWork()` → dequeue WorkItem → `pool.addTask(TaskRequest)`。WorkItem.params 为 `Map<String, JsonElement>` |
 | `source/blueprint/DataDrivenSteps.java` | **遗留 fallback**：无 BlueprintRef 的建筑自动注册 `build:<id>` 蓝图（pattern + block_mapping → TransformOp 序列） |
 | `source/blueprint/BlueprintConfigLoader.java` | **DSL 蓝图加载器**：从 `data/wandscape/blueprints/*.json` 解析为 BlueprintDefinition AST。`registerWith(WandscapeDataLoader)` + `registerIn(BlueprintRegistry)` |

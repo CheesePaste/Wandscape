@@ -1,45 +1,72 @@
 # 05 — 建筑核心 (`building/`)
 
-建筑方块 + BE + JSON 配置 + 结构验证 + 三数值系统。所有建筑类模块的基座。
+建筑状态通过 `BuildingSavedData` (Level SavedData) 管理，零自定义方块。所有建筑使用原版方块，NPC 通过蓝图放置。
 
-## 源文件 (13 文件)
+## 源文件 (12 文件)
 
 | 文件 | 作用 |
 |------|------|
-| `block/WandscapeBuildingBlock.java` | 建筑方块基类：持有 `buildingTypeId` + BE 工厂。右键→`buildEnqueueWorkItem()` → 通过 `EnqueueHelper` 解析 BlueprintRef bind + 构造 anchor，`registerIfAbsent` 支持命令放置的建筑 |
-| `be/AbstractWandscapeBE.java` | **建筑 BE 基类**：colonyId / 关停标记 / 结构完整性 / `Deque<WorkItem>` FIFO 队列 / currentTaskId / `onActivate(Player)` 钩子（仓库等覆写做无队列交互）。完整 NBT 持久化（params 按 JSON 字符串存储）。`hasWork()`/`dequeueWork()` 只检查 shutdown，不检查 structureIntact（避免修复死锁） |
-| `be/TownHallBE.java` | 市政厅 BE（category: basic，殖民地中心） |
-| `be/ForestNodeBE.java` | 森林节点 BE（category: node，产木元素） |
-| `be/EarthNodeBE.java` | 大地节点 BE（category: node，产土元素） |
-| `be/GrandTowerBE.java` | 大塔 BE（category: landmark，7×7×7 大型建筑测试） |
 | `data/BlockOffset.java` | record：[x,y,z] 相对偏移，含 `toKey()` 和 Gson Deserializer |
-| `data/BuildingConfig.java` | record：id / display_name / category / block_id / pattern / block_mapping / comfort/magic/wonder / maintenance / shutdown_penalty / queue / unlock + **BlueprintRef**（可选蓝图引用，含 id + bind） |
-| `internal/BuildingConfigLoader.java` | 单例：从 `data/wandscape/buildings/*.json` 加载 `BuildingConfig`，存 ConcurrentHashMap。注册自定义 Gson + BlockOffset/BuildingConfig Deserializer |
-| `internal/BuildingDataImpl.java` | BuildingData 接口的 package-private 可变实现 |
-| `internal/BuildingApiImpl.java` | BuildingApi 实现：三索引（byId / byPos / colony→activeCounts）+ 关停/重启 + 殖民地三数值计算 + 任务桥接（getBuildingsWithPendingWork / dequeueWork / setCurrentTask / clearCurrentTask） |
-| `internal/BlockPlaceHandler.java` | `@EventBusSubscriber`：监听 `EntityPlaceEvent`，放置时验证 pattern + 注册建筑 + 缺失方块通过 `EnqueueHelper.buildWorkItem()` 自动入队修复 |
-| `internal/EnqueueHelper.java` | **入队重命名模式**：读 BlueprintRef → resolve `$field_name` 绑定 → 硬编码 anchor = [x,y,z] → 构建 `WorkItem`（`Map<String, JsonElement>` params） |
+| `data/BuildingConfig.java` | record：id / display_name / category / pattern / block_mapping / comfort/magic/wonder / maintenance / shutdown_penalty / queue / unlock + BlueprintRef + BoundaryBox。不再包含 block_id 字段 |
+| `internal/BuildingConfigLoader.java` | 单例：从 `data/wandscape/buildings/*.json` 加载 `BuildingConfig`，存 ConcurrentHashMap |
+| `internal/BuildingState.java` | 可变建筑状态，实现 `BuildingData`：buildingId / typeId / category / anchor / BoundingBox / colonyId / shutdown / structureIntact / Deque\<WorkItem\> / currentTaskId / stats |
+| `internal/BuildingSavedData.java` | `extends SavedData` — 3 个索引（buildings / posIndex / chunkIndex）+ NBT 持久化 + AABB 重叠检测。`register()` 时检查 `BoundingBox.intersects()` |
+| `internal/BuildingOverlapException.java` | 注册重叠建筑时抛出 |
+| `internal/BuildingDataImpl.java` | `BuildingData` 接口的轻量实现（保留用于未来的简单场景） |
+| `internal/BuildingApiImpl.java` | `BuildingApi` 实现：三索引 + 关停/重启 + 殖民地三数值计算 + 任务桥接。全部通过 `BuildingSavedData` 读写，不再调用 `getBeAt()` |
+| `internal/EnqueueHelper.java` | 入队重命名模式：读 BlueprintRef → resolve `$field_name` 绑定 → 硬编码 anchor → 构建 `WorkItem`。`registerIfAbsent()` 创建 `BuildingState` 写入 `BuildingSavedData` |
+| `internal/BuildingInteractHandler.java` | `RightClickBlock` 事件 → `posIndex` O(1) 查找 → 仓库开 GUI / 其他打印信息 |
+| `internal/BuildingBreakHandler.java` | `BreakEvent` / `ExplosionEvent` → `posIndex` 查找 → `structureIntact = false` |
+| `internal/BuildCompleteListener.java` | 订阅引擎内部 `EventBus` 的 `build_complete` CustomEvent → 验证 pattern 完整性 → `structureIntact = true` |
 
 ## 注册项
 
-| 注册 ID | 类型 | DeferredRegister | BE |
-|---------|------|-----------------|-----|
-| `town_hall` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | TownHallBE |
-| `forest_node` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | ForestNodeBE |
-| `earth_node` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | EarthNodeBE |
-| `grand_tower` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | GrandTowerBE |
-| `warehouse` | WandscapeBuildingBlock | BLOCKS + ITEMS (BlockItem) | WarehouseBE |
+| 注册 ID | 类型 | 说明 |
+|---------|------|------|
+| `warehouse_menu` | `WarehouseMenu` | `MenuType` — 仓库 GUI ContainerMenu |
 
-5 方块 + 5 BlockItem + 5 BE 类型均注册在 `Wandscape.java`。
-其中 warehouse 通过 `AbstractWandscapeBE.onActivate()` 钩子打开 GUI，不使用任务队列。
+**零自定义方块/BE**。warehouse / town_hall / forest_node / earth_node / grand_tower 全部通过 `BuildingSavedData` 管理，方块完全由 NPC 用原版方块放置。仓库右键通过 `BuildingInteractHandler` 拦截（category=storage）。
 
 ## JSON 格式 (`data/wandscape/buildings/`)
 
-已有 5 个：`town_hall.json` / `forest_node.json` / `earth_node.json` / `grand_tower.json`（206 pattern blocks，7×7×7 boundary，549 总 ops）/ `warehouse.json`（3×3×3 敞开正面，category=storage）
+5 个：`town_hall.json` / `forest_node.json` / `earth_node.json` / `grand_tower.json` / `warehouse.json`
 
-完整字段规范见 [`spec/building-json.md`](../spec/building-json.md) — 含 schema、默认值、字段实现状态、数据流
+不再包含 `block_id` 字段。所有 `block_mapping` 值使用原版方块 ID。example:
 
-蓝图 DSL 设计见 [`spec/blueprint-dsl.md`](../spec/blueprint-dsl.md) — Building JSON 引用 Blueprint 的逻辑容器分离方案
+```json
+{
+  "id": "town_hall",
+  "display_name": "殖民地市政厅",
+  "category": "basic",
+  "pattern": [[-1,0,-1], [0,0,-1], [1,0,-1], ...],
+  "block_mapping": {
+    "0,0,0": "minecraft:stone_bricks",
+    ...
+  },
+  ...
+}
+```
+
+## 数据流
+
+```
+玩家/GUI 提交建造任务
+  → EnqueueHelper.registerIfAbsent() → BuildingSavedData (structureIntact=false)
+  → WorkItem → GlobalTaskPool
+  → NPC 领取 → 执行蓝图 → 放置原版方块
+  → emit_event("build_complete")
+  → BuildCompleteListener → 验证 pattern → structureIntact=true
+```
+
+## 交互流
+
+```
+玩家右键原版方块
+  → BuildingInteractHandler.RightClickBlock
+  → BuildingSavedData.posIndex.get(pos) O(1)
+  → 仓库 (category=storage): ColonyItemBank snapshot → WarehouseMenu GUI
+  → 其他: 打印建筑状态信息
+```
 
 ## 依赖
 
@@ -47,3 +74,4 @@
 - `shared/event/BuildingPlacedEvent` / `BuildingShutdownEvent` / `BuildingRestartedEvent`
 - `shared/registry/WandscapeApis`
 - `dataconfig/WandscapeDataLoader`
+- `core/event/CustomEvent` — BuildCompleteListener 订阅引擎事件

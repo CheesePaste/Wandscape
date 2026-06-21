@@ -221,7 +221,7 @@ public class EventDrivenTaskSource implements TaskSource {
                     ? params.get("mobCount").getAsString() : "1";
             GridPos loc = parseLocation(params);
             return new TaskSequence(
-                    List.of(new AtomicOp.RitualOp(RitualId.WARDING, loc, 3)),
+                    List.of(new AtomicOp.RitualOp(RitualId.WARDING, loc)),
                     "Defense Warding (mobs: " + count + ")");
         });
 

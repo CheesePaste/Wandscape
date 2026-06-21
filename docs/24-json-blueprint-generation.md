@@ -33,7 +33,7 @@ Building JSON                      Blueprint JSON
 ## 二、数据流（运行时）
 
 ```
-玩家右键 / BlockPlaceHandler
+玩家命令 / GUI
   │
   │ 1. 读 BuildingConfig.blueprint.bind
   │ 2. EnqueueHelper: 绑定 $field_name → json value
@@ -296,7 +296,7 @@ public record BlueprintRef(String id, Map<String, String> bind) {}
 
 ### 修改文件（18 个）
 
-`BlueprintSteps` / `TaskRequest` / `WorkItem` / `GlobalTask` / `TaskExecutor` / `GlobalTaskPool` / `DefaultOpExecutors` / `DataDrivenSteps` / `EventDrivenTaskSource` / `SystemBlueprintRegistry` / `BuildingConfig` / `AbstractWandscapeBE` / `WandscapeBuildingBlock` / `BlockPlaceHandler` / `EngineBootstrap` / `WandscapeEngine` / `Wandscape`
+`BlueprintSteps` / `TaskRequest` / `WorkItem` / `GlobalTask` / `TaskExecutor` / `GlobalTaskPool` / `DefaultOpExecutors` / `DataDrivenSteps` / `EventDrivenTaskSource` / `SystemBlueprintRegistry` / `BuildingConfig` / `BuildingSavedData` / `BuildingState` / `EnqueueHelper` / `EngineBootstrap` / `WandscapeEngine` / `Wandscape`
 
 ### 修改 JSON（3 个建筑）
 

@@ -55,12 +55,21 @@ public class TaskExecutor {
     public boolean pendingFutureIsNav = false;
 
     /**
-     * Current op world-position target, for visual feedback (wand beam).
+     * Current op world-position target, for visual feedback.
      * Set by TaskExecutionSystem before executing an op; cleared on step advance.
      * The NPC renderer reads this indirectly via {@code getDebugTarget()}.
      */
     @Nullable
     public GridPos currentOpTarget = null;
+
+    /**
+     * Kind of the currently executing op: "transform", "block_interact", "ritual", or null.
+     * Used by the renderer to choose visual effects:
+     * - transform/block_interact → wand beam + target particles
+     * - ritual → magic circle at target position
+     */
+    @Nullable
+    public String currentOpKind = null;
 
     /**
      * Fixed standoff position for the current task, computed from the bounding box
@@ -110,6 +119,7 @@ public class TaskExecutor {
         pendingFuture = null;
         pendingFutureIsNav = false;
         currentOpTarget = null;
+        currentOpKind = null;
         stance = null;
         state = ExecutorState.IDLE;
     }
@@ -123,6 +133,7 @@ public class TaskExecutor {
         pendingFuture = null;
         pendingFutureIsNav = false;
         currentOpTarget = null;
+        currentOpKind = null;
         stance = null;
         state = ExecutorState.IDLE;
     }

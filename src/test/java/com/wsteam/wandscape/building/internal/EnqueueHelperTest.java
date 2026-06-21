@@ -21,7 +21,6 @@ class EnqueueHelperTest {
         return new BlockOffset(x, y, z);
     }
 
-    /** Build a block_mapping map from alternating key,value pairs. */
     @SuppressWarnings("unchecked")
     private static Map<String, String> makeBlockMapping(String... kvPairs) {
         java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
@@ -31,17 +30,11 @@ class EnqueueHelperTest {
         return m;
     }
 
-    // ──────────────────────────────────────────────
-    // Town hall: 3×2×3 boundary = 18 positions
-    // Clear = all 18 minus anchor [0,0,0] → 17
-    // Pattern positions ARE included — clear wipes the full box
-    // ──────────────────────────────────────────────
-
     @Test
-    @DisplayName("town_hall: clear entire boundary box (17 positions), anchor excluded")
+    @DisplayName("town_hall: clear entire boundary box (18 positions), anchor included")
     void townHallFullBox() {
         BuildingConfig cfg = new BuildingConfig(
-                "town_hall", "Test", "basic", "wandscape:test",
+                "town_hall", "Test", "basic",
                 List.of(
                         off(-1, 0, -1), off(-1, 0, 0), off(-1, 0, 1),
                         off(0, 0, -1),                     off(0, 0, 1),
@@ -73,22 +66,15 @@ class EnqueueHelperTest {
         assertTrue(result.isJsonArray());
         JsonArray arr = result.getAsJsonArray();
 
-        // Boundary: 3×2×3 = 18, minus anchor [0,0,0] = 17
-        assertEquals(17, arr.size(), "clear entire boundary box minus anchor");
+        // Boundary: 3×2×3 = 18 — anchor is vanilla now, included in clear
+        assertEquals(18, arr.size(), "clear entire boundary box");
 
-        // Collect as keys
         java.util.Set<String> clearKeys = collectKeys(arr);
 
-        // Anchor must NOT be cleared
-        assertFalse(clearKeys.contains("0,0,0"), "anchor must not be cleared");
-
-        // All non-anchor boundary positions must be present
-        // x ∈ {-1,0,1}, y ∈ {0,1}, z ∈ {-1,0,1}, skip (0,0,0)
         for (int x = -1; x <= 1; x++) {
             for (int y = 0; y <= 1; y++) {
                 for (int z = -1; z <= 1; z++) {
                     String key = x + "," + y + "," + z;
-                    if ("0,0,0".equals(key)) continue;
                     assertTrue(clearKeys.contains(key),
                             "boundary position " + key + " must be in clear_offsets");
                 }
@@ -97,12 +83,12 @@ class EnqueueHelperTest {
     }
 
     @Test
-    @DisplayName("single-block building: anchor-only boundary → empty clear")
-    void singleBlockEmptyClear() {
+    @DisplayName("single-block building: anchor-only boundary → clear anchor")
+    void singleBlockClear() {
         BuildingConfig cfg = new BuildingConfig(
-                "earth_node", "Test", "node", "wandscape:test",
+                "earth_node", "Test", "node",
                 List.of(off(0, 0, 0)),
-                Map.of("0,0,0", "wandscape:earth_node"),
+                Map.of("0,0,0", "minecraft:lodestone"),
                 1, 2, 0, 2,
                 BuildingConfig.ShutdownPenalty.DEFAULT,
                 BuildingConfig.QueueDef.DEFAULT,
@@ -114,15 +100,15 @@ class EnqueueHelperTest {
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
         JsonArray arr = result.getAsJsonArray();
-        assertEquals(0, arr.size(),
-                "single-block building: boundary == anchor → nothing to clear");
+        assertEquals(1, arr.size(),
+                "single-block: anchor is vanilla → included in clear");
     }
 
     @Test
-    @DisplayName("large 3×3×3 boundary: 26 positions cleared, anchor excluded")
+    @DisplayName("large 3×3×3 boundary: all 27 positions cleared")
     void largeBoundaryFullBox() {
         BuildingConfig cfg = new BuildingConfig(
-                "test_large", "Test", "basic", "wandscape:test",
+                "test_large", "Test", "basic",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:stone"),
                 1, 0, 0, 1,
@@ -137,23 +123,17 @@ class EnqueueHelperTest {
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
         JsonArray arr = result.getAsJsonArray();
 
-        // Boundary: 3×3×3 = 27, minus anchor [0,0,0] = 26
-        assertEquals(26, arr.size(), "clear entire 27-cell box minus anchor");
+        assertEquals(27, arr.size(), "clear entire 27-cell box");
 
         java.util.Set<String> clearKeys = collectKeys(arr);
-        assertFalse(clearKeys.contains("0,0,0"), "anchor must not be cleared");
 
-        // All other 26 positions must be present
         for (int x = -1; x <= 1; x++)
             for (int y = -1; y <= 1; y++)
                 for (int z = -1; z <= 1; z++) {
                     String key = x + "," + y + "," + z;
-                    if ("0,0,0".equals(key)) continue;
                     assertTrue(clearKeys.contains(key), key + " must be in clear_offsets");
                 }
     }
-
-    // ── helpers ──
 
     private static java.util.Set<String> collectKeys(JsonArray arr) {
         java.util.Set<String> keys = new java.util.HashSet<>();

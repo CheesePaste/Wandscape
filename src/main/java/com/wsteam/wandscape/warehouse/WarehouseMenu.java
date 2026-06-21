@@ -1,5 +1,9 @@
 package com.wsteam.wandscape.warehouse;
 
+import java.util.Map;
+
+import com.wsteam.wandscape.shared.data.ItemKey;
+
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -71,7 +75,7 @@ public class WarehouseMenu extends AbstractContainerMenu {
     // ── MenuProvider factory ──
 
     /** Create a MenuProvider that bundles the item data packet. */
-    public static net.minecraft.world.MenuProvider createMenuProvider(WarehouseBE be) {
+    public static net.minecraft.world.MenuProvider createMenuProvider(Map<ItemKey, Long> snapshot) {
         return new net.minecraft.world.MenuProvider() {
             @Override
             public net.minecraft.network.chat.Component getDisplayName() {
@@ -81,8 +85,6 @@ public class WarehouseMenu extends AbstractContainerMenu {
             @Override
             public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
                 var menu = new WarehouseMenu(containerId, playerInv);
-                // Send data packet right after opening (server→client)
-                var snapshot = be.getItemsSnapshot();
                 if (!snapshot.isEmpty()) {
                     var packet = com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.from(snapshot);
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(

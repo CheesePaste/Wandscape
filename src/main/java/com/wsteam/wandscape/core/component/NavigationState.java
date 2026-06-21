@@ -21,7 +21,9 @@ public class NavigationState {
         /** Walking via vanilla {@code PathNavigation}. */
         PATHFINDING,
         /** Waiting for mana to regen before ritual teleport. */
-        TELEPORT_WAITING
+        TELEPORT_WAITING,
+        /** Self-teleport ritual pushed to private queue; waiting for TaskExec to consume it. */
+        TELEPORT_RITUAL
     }
 
     public Mode mode = Mode.IDLE;

@@ -6,19 +6,19 @@ package com.wsteam.wandscape.core.component;
  */
 public class ManaPool {
 
-    private int current;
+    private float current;
     private final int max;
-    private final int regenPerTick;
+    private final float regenPerTick;
 
-    public ManaPool(int current, int max, int regenPerTick) {
+    public ManaPool(float current, int max, float regenPerTick) {
         this.current = Math.min(current, max);
         this.max = max;
         this.regenPerTick = regenPerTick;
     }
 
-    public int current() { return current; }
+    public float current() { return current; }
     public int max() { return max; }
-    public int regenPerTick() { return regenPerTick; }
+    public float regenPerTick() { return regenPerTick; }
 
     /** Regenerate mana, capping at max. */
     public void regen() {
@@ -26,14 +26,14 @@ public class ManaPool {
     }
 
     /** Try to consume mana. Returns false if insufficient. */
-    public boolean consume(int amount) {
+    public boolean consume(float amount) {
         if (current < amount) return false;
         current -= amount;
         return true;
     }
 
     /** Add mana (e.g., from external source), capping at max. */
-    public void add(int amount) {
+    public void add(float amount) {
         current = Math.min(current + amount, max);
     }
 

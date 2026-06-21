@@ -2,7 +2,6 @@
   "id": "town_hall",
   "display_name": "殖民地市政厅",
   "category": "basic",
-  "block_id": "wandscape:town_hall",
   "pattern": [
     [-1, 0, -1], [-1, 0, 0], [-1, 0, 1],
     [0, 0, -1],             [0, 0, 1],

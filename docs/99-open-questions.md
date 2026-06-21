@@ -25,17 +25,10 @@
 调度器评分中 `score += 50`（同建筑连续执行加成）是 magic number。该加成的作用：NPC 在某建筑完成任务后，同一建筑队列中还有下一个任务时，给该 NPC +50 评分让其优先接同建筑的下个任务，减少在不同建筑间来回跑。
 - **建议**：移至 TOML 全局配置（全殖民地共享此值），无需写入建筑 JSON
 
-### 1.4 结构损坏检测未实现
+### 1.4 结构损坏检测 — 损坏标记已实现，自动修复入队未实现
 
-2026-06-20：`docs/08-building-core.md` §六设计了结构完整性检测——`BlockEvent.BreakEvent` 触发 → `checkStructureIntegrity()` → 缺失方块入队修复。当前已有：
-- `AbstractWandscapeBE.checkStructureIntegrity()` ✅
-- `isStructureIntact` 标记 ✅
-- `BlockPlaceHandler` 监听 `EntityPlaceEvent` ✅
-缺失：
-- `BlockEvent.BreakEvent` 处理器不存在
-- `checkStructureIntegrity()` 只设 boolean，不自动入队修复任务
-- `BlockPlaceHandler` 虽在放置时检测并入队 repair，但 break 时不检测
-- **建议**：新建 `BlockBreakHandler` 监听 `BlockEvent.BreakEvent` → 判断被破坏方块是否属于某建筑 pattern → `checkStructureIntegrity()` → false 时入队 `build:<typeId>` repair
+2026-06-21 更新：损坏检测已实现（`BuildingBreakHandler` 监听 `BreakEvent` / `ExplosionEvent` → `structureIntact = false`）。剩余：损坏后自动排入修复任务。
+- **建议**：`BuildingBreakHandler.handleBlockRemoval()` 中检测到损坏后，调用 `EnqueueHelper.buildWorkItem()` + `state.taskQueue.addLast()` 自动排入修复任务
 
 ### 1.5 GlobalTaskPool 内存泄漏
 
@@ -46,16 +39,17 @@
 
 ## 二、后续阶段待办
 
-| 事项 | 说明 |
-|------|------|
-| 魔力恢复速率调优 | 当前 2/tick 可能过高，实际游玩后根据反馈调整 |
-| 多人游戏同步 | MVP 后实施。底层数据模型已兼容多人（colonyId 隔离），主要增量工作：网络包同步、权限 UI、WandscapeApis 按 colony 查找实现 |
-| 进度/指南书 | Patchouli 或自定义指南书 |
-| JSON 版本迁移 | 格式变更时的自动迁移 |
-| 性能压测 | 100+ NPC、50+ 建筑场景 |
-| 区块加载 | NPC 执行任务时确保目标区块已加载 |
-| 多殖民地 | 一玩家多殖民地、殖民地间资源调配 |
-| 坟墓系统 | NPC 死亡后物品保管 |
+| 事项 | 说明                                                                                                                                             |
+|------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| 魔力恢复速率调优 | 当前 2/tick 可能过高，实际游玩后根据反馈调整                                                                                                                     |
+| 多人游戏同步 | MVP 后实施。底层数据模型已兼容多人（colonyId 隔离），主要增量工作：网络包同步、权限 UI、WandscapeApis 按 colony 查找实现                                                                |
+| 进度/指南书 | Patchouli 或自定义指南书                                                                                                                              |
+| JSON 版本迁移 | 格式变更时的自动迁移                                                                                                                                     |
+| 性能压测 | 100+ NPC、50+ 建筑场景                                                                                                                              |
+| 区块加载 | NPC 执行任务时确保目标区块已加载                                                                                                                             |
+| 多殖民地 | 一玩家多殖民地、殖民地间资源调配                                                                                                                               |
+| block_mapping 调色板格式 | 当前逐键映射在十万方块量级无瓶颈（解析和步骤生成均只执行一次）。未来建筑类型 > 50、单建筑 > 1000 方块时，迁移到 `palette: [id1, id2, ...]` + `data: [0, 1, ...]` 索引数组格式，空间节省 ~20 倍。不要向后兼容避免代码复杂 |
+| 坟墓系统 | NPC 死亡后物品保管                                                                                                                                    |
 
 ---
 

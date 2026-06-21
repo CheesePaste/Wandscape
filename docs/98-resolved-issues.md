@@ -33,6 +33,16 @@
 | 导出工具字母溢出 | 坐标→BlockState 直出 | — |
 | `WandscapeApis` 静态单例 | 接受权衡，测试时 set mock | — |
 | `OperationB.params` 类型安全 | 接受权衡 | — |
+| 引擎退出世界后重入崩溃 "World already bootstrapped" | `WandscapeEngine.reset()` 在 `ServerStoppedEvent` 时清除全部静态状态 | 2026-06-21 |
+| 建筑状态耦合在自定义方块 BE 中 | 迁移到 `BuildingSavedData` (Level SavedData)。建筑使用原版方块，NPC 通过蓝图放置。自定义建筑方块/BE 全部删除 | 2026-06-21 |
+| `block_id` 字段强制自定义方块 | 从 `BuildingConfig` 和所有 JSON 中移除。`block_mapping` 全部使用原版方块 ID | 2026-06-21 |
+| 右键交互依赖 `WandscapeBuildingBlock.useWithoutItem()` | 改为 `BuildingInteractHandler` 订阅 `PlayerInteractEvent.RightClickBlock` + `BuildingSavedData.posIndex` O(1) 查找 | 2026-06-21 |
+| `computeClearOffsets` 跳过 anchor 保护 BE | 移除跳过逻辑。anchor 也是原版方块，应该被 clear | 2026-06-21 |
+| 仓库物品存储在 `WarehouseBE` 中，方块破坏导致数据丢失 | 创建 `ColonyItemBank` (Level SavedData)。`WarehouseBE` 精简为 GUI 终端。物品数据独立于方块，方块破坏不丢失物品 | 2026-06-21 |
+| `WarehouseBE` 继承 `AbstractWandscapeBE` 仅复用 NBT/colonyId | `WarehouseBE` 改为直接继承 `BlockEntity`。colonyId/shutdown 从 `BuildingSavedData` 查询，物品存储迁移到 `ColonyItemBank` | 2026-06-21 |
+| 建筑注册无 AABB 重叠检测 | `BuildingSavedData.register()` 使用 MC 原生 `BoundingBox.intersects()` 检测重叠，冲突时抛出 `BuildingOverlapException` | 2026-06-21 |
+| `build_complete` 事件缺乏 anchor 信息 | 在 `build_place_structure.json` 的 `emit_event` data 中增加 `"anchor": "$anchor"` | 2026-06-21 |
+| `BuildingApiImpl.getBuildingsWithPendingWork()` 无区块感知 | 增加 `level.isLoaded(state.anchor)` 检查，未加载区块的建筑跳过 | 2026-06-21 |
 
 ---
 

@@ -22,14 +22,13 @@ public interface RitualOps {
      * Sync: {@code CompletableFuture.completedFuture(null)}
      * Async: incomplete future → MC adapter completes it when channeling finishes
      *
-     * @param ritual       the ritual type ID
-     * @param target       world position the ritual acts on
-     * @param world        the ECS world
-     * @param casterId     the NPC entity ID performing the ritual
-     * @param channelTicks how long the channeling lasts (0 for instant)
-     * @param params       key-value parameters from the blueprint (element, amount, etc.)
+     * @param ritual   the ritual type ID
+     * @param target   world position the ritual acts on
+     * @param world    the ECS world
+     * @param casterId the NPC entity ID performing the ritual
+     * @param params   key-value parameters from the blueprint (element, amount, etc.)
+     *                 Channeling duration is hardcoded per ritual type, not passed here.
      */
     CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world,
-                                        long casterId, int channelTicks,
-                                        Map<String, String> params);
+                                        long casterId, Map<String, String> params);
 }

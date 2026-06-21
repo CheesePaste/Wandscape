@@ -9,19 +9,15 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.level.BlockEvent;
-import com.wsteam.wandscape.building.be.EarthNodeBE;
-import com.wsteam.wandscape.building.be.ForestNodeBE;
-import com.wsteam.wandscape.building.be.GrandTowerBE;
-import com.wsteam.wandscape.building.be.TownHallBE;
-import com.wsteam.wandscape.building.block.WandscapeBuildingBlock;
-import com.wsteam.wandscape.building.internal.BlockPlaceHandler;
+import com.wsteam.wandscape.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
+import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
+import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
-import com.wsteam.wandscape.warehouse.WarehouseBE;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
@@ -53,14 +49,9 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -74,8 +65,8 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -86,12 +77,9 @@ public class Wandscape {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     // ---- DeferredRegisters ----
-    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<EntityType<?>> ENTITIES =
             DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
@@ -114,56 +102,6 @@ public class Wandscape {
     // ---- 03 element-system ----
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
     public static final ElementApiImpl ELEMENT_API = new ElementApiImpl(ELEMENT_MAPPING_LOADER);
-
-    // ---- 08 building-core: block properties ----
-    private static final BlockBehaviour.Properties BUILDING_PROPS =
-            BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.STONE)
-                    .strength(3.0f, 6.0f)
-                    .noOcclusion();
-
-    // ---- 08 building-core: blocks ----
-    public static final DeferredBlock<Block> TOWN_HALL_BLOCK = BLOCKS.register("town_hall",
-            () -> new WandscapeBuildingBlock(BUILDING_PROPS, TownHallBE.TYPE_ID, TownHallBE::new));
-    public static final DeferredBlock<Block> FOREST_NODE_BLOCK = BLOCKS.register("forest_node",
-            () -> new WandscapeBuildingBlock(BUILDING_PROPS, ForestNodeBE.TYPE_ID, ForestNodeBE::new));
-    public static final DeferredBlock<Block> EARTH_NODE_BLOCK = BLOCKS.register("earth_node",
-            () -> new WandscapeBuildingBlock(BUILDING_PROPS, EarthNodeBE.TYPE_ID, EarthNodeBE::new));
-    public static final DeferredBlock<Block> GRAND_TOWER_BLOCK = BLOCKS.register("grand_tower",
-            () -> new WandscapeBuildingBlock(BUILDING_PROPS, GrandTowerBE.TYPE_ID, GrandTowerBE::new));
-
-    // ---- 08 building-core: block items ----
-    public static final DeferredItem<BlockItem> TOWN_HALL_ITEM =
-            ITEMS.registerSimpleBlockItem(TOWN_HALL_BLOCK);
-    public static final DeferredItem<BlockItem> FOREST_NODE_ITEM =
-            ITEMS.registerSimpleBlockItem(FOREST_NODE_BLOCK);
-    public static final DeferredItem<BlockItem> EARTH_NODE_ITEM =
-            ITEMS.registerSimpleBlockItem(EARTH_NODE_BLOCK);
-    public static final DeferredItem<BlockItem> GRAND_TOWER_ITEM =
-            ITEMS.registerSimpleBlockItem(GRAND_TOWER_BLOCK);
-
-    // ---- 08 building-core: block entities ----
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TownHallBE>> TOWN_HALL_BE =
-            BLOCK_ENTITIES.register("town_hall", () ->
-                    new BlockEntityType<>(TownHallBE::new, Set.of(TOWN_HALL_BLOCK.get()), null));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ForestNodeBE>> FOREST_NODE_BE =
-            BLOCK_ENTITIES.register("forest_node", () ->
-                    new BlockEntityType<>(ForestNodeBE::new, Set.of(FOREST_NODE_BLOCK.get()), null));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EarthNodeBE>> EARTH_NODE_BE =
-            BLOCK_ENTITIES.register("earth_node", () ->
-                    new BlockEntityType<>(EarthNodeBE::new, Set.of(EARTH_NODE_BLOCK.get()), null));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<GrandTowerBE>> GRAND_TOWER_BE =
-            BLOCK_ENTITIES.register("grand_tower", () ->
-                    new BlockEntityType<>(GrandTowerBE::new, Set.of(GRAND_TOWER_BLOCK.get()), null));
-
-    // ---- 04 warehouse-system: block ----
-    public static final DeferredBlock<Block> WAREHOUSE_BLOCK = BLOCKS.register("warehouse",
-            () -> new WandscapeBuildingBlock(BUILDING_PROPS, WarehouseBE.TYPE_ID, WarehouseBE::new));
-    public static final DeferredItem<BlockItem> WAREHOUSE_ITEM =
-            ITEMS.registerSimpleBlockItem(WAREHOUSE_BLOCK);
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WarehouseBE>> WAREHOUSE_BE =
-            BLOCK_ENTITIES.register("warehouse", () ->
-                    new BlockEntityType<>(WarehouseBE::new, Set.of(WAREHOUSE_BLOCK.get()), null));
 
     // ---- 04 warehouse-system: menu ----
     public static final DeferredHolder<MenuType<?>, MenuType<WarehouseMenu>> WAREHOUSE_MENU =
@@ -198,12 +136,7 @@ public class Wandscape {
                     .icon(() -> new ItemStack(WAND.get()))
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
-                        output.accept(TOWN_HALL_ITEM.get());
-                        output.accept(FOREST_NODE_ITEM.get());
-                        output.accept(EARTH_NODE_ITEM.get());
-                        output.accept(GRAND_TOWER_ITEM.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
-                        output.accept(WAREHOUSE_ITEM.get());
                     })
                     .build());
 
@@ -217,16 +150,15 @@ public class Wandscape {
         modEventBus.addListener(this::onEntityAttributeCreation);
         modEventBus.addListener(this::onRegisterPayloads);
 
-        BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
-        BLOCK_ENTITIES.register(modEventBus);
         ENTITIES.register(modEventBus);
         PARTICLE_TYPES.register(modEventBus);
         MENU_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(BlockPlaceHandler.class);
+        NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
+        NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -269,7 +201,16 @@ public class Wandscape {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
+        buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
+        BuildCompleteListener.register();
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        LOGGER.info("Wandscape server stopped — resetting engine.");
+        buildingApi.setLevel(null);
+        WandscapeEngine.reset();
     }
 
     @SubscribeEvent
@@ -306,7 +247,11 @@ public class Wandscape {
         var asyncExec = WandscapeEngine.getAsyncExecutor();
         if (asyncExec != null) asyncExec.tickAll();
 
-        // ①b Tick channeled ritual countdowns
+        // ①b Tick async block interaction countdowns (gather/decompose/synthesize)
+        var blockInteractExec = WandscapeEngine.getBlockInteractExec();
+        if (blockInteractExec != null) blockInteractExec.tickAll();
+
+        // ①c Tick async ritual channeling countdowns (self_teleport, etc.)
         var ritualOps = WandscapeEngine.getRitualOps();
         if (ritualOps != null) ritualOps.tickAll();
 

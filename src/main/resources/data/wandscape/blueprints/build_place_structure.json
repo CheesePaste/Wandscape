@@ -26,7 +26,8 @@
       "event": "build_complete",
       "data": {
         "building_name": "$name",
-        "blocks_placed": {"size": "$offsets"}
+        "blocks_placed": {"size": "$offsets"},
+        "anchor": "$anchor"
       }
     }
   ]

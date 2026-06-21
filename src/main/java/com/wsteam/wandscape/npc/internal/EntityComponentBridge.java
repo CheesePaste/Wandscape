@@ -91,7 +91,7 @@ public final class EntityComponentBridge {
         // Apply current mana from NBT if it was consumed before save
         ManaPool mana = world.get(ecsId, ManaPool.class);
         if (mana != null && npc.currentMana < mana.max()) {
-            int toConsume = mana.current() - npc.currentMana;
+            float toConsume = mana.current() - npc.currentMana;
             if (toConsume > 0) {
                 mana.consume(toConsume);
             }

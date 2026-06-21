@@ -1,8 +1,8 @@
 # 原子操作
 
 文档编号：NEW-05
-版本：1.0
-状态：四种原子操作 A/B/C/D 完整定义与执行
+版本：2.0
+状态：BlockInteractOp 重构完成 — 可配置 channelTicks + manaCost。node_gathering 迁移至 block_interact。
 依赖：01-shared-api
 
 ---
@@ -75,47 +75,64 @@ public record OperationA(
 
 ---
 
-## 四、操作 B：建筑交互
+## 四、操作 B：建筑交互 (BlockInteractOp)
 
 ### 4.1 设计理念
 
-操作 B 不再处理"开关门、拉杆"等通用方块交互（原版村民已能胜任），而是聚焦于 **Wandscape 建筑的功能交互**。例如：与魔力池交互充能、从仓库存取物品等需要模组特定逻辑的场景。
+操作 B 聚焦于 **Wandscape 建筑的功能交互**。BlockInteractOp 具有**可配置**的 channelTicks 和 manaCost（与 RitualOp 的硬编码相反），使得不同建筑可以有不同的交互时长和消耗。
+
+同步动作（toggle/activate/open_gui）即时完成，异步动作（gather/decompose/synthesize）通过 `WandscapeBlockInteractExecutor` 实现倒计时 + thenRun 回调。
 
 ### 4.2 参数
 
 ```java
-public record OperationB(
-    UUID buildingId,            // Wandscape 建筑 ID（不是坐标，便于重构）
-    String action,              // 动作标识，如 "open_gui" "charge" "extract" "decompose" "synthesize"
-    Map<String, Object> params  // 操作参数（item_id, count, recipe_id, element, amount, channel_ticks 等）
-) implements AtomicStep {}
+// core/op/AtomicOp.java
+record BlockInteractOp(
+    GridPos target,
+    InteractAction action,
+    Map<String, String> params,   // action-specific data (element, amount, etc.)
+    int channelTicks,             // channeling duration (0 = instant for sync actions)
+    float manaCost               // mana consumed (configurable per action, unlike RitualOp)
+) implements AtomicOp {}
 ```
 
-### 4.3 典型应用
+### 4.3 蓝图 DSL 格式
 
-| 建筑 | action | 效果 |
-|------|--------|------|
-| 仓库 | open_gui | NPC 打开仓库界面（用于物资请求/上缴的物品存取） |
-| 魔力池 | charge | 将个人魔力注入公共魔力池（buildingId=目标魔力池） |
-| 魔力池 | extract | 从公共魔力池抽取魔力到个人池（buildingId=来源魔力池） |
-| 制作站 | craft | 触发制作流程 |
-| 工作站 | decompose | 分解物品→元素（params: item_id, count） |
-| 工作站 | synthesize | 元素合成物品（params: recipe_id, count） |
-| 节点建筑 | node_gathering | 采集元素注入仓库（params: element, amount, channel_ticks） |
-| 制作站 | craft_wand | 制作法杖/装备（params: recipe_id, count） |
-| 魔药站 | brew_potion | 制作药剂（params: recipe_id, count） |
-| 酒馆 | recruit | 招募 NPC（params: colonyId + 候选人全部属性） |
+```json
+{
+  "type": "block_interact",
+  "action": "gather",
+  "at": "$anchor",
+  "channel_ticks": "$channel_ticks",
+  "mana_cost": "$mana_cost",
+  "params": {
+    "element": "$element",
+    "amount": "$amount"
+  }
+}
+```
 
-MVP 期间，B 操作主要用于仓库存取、魔力池交互、节点采集、工作站分解合成、制作站制作法杖。
+`channel_ticks` 和 `mana_cost` 从建筑 JSON 的 `node_config` 传入，允许不同节点有不同数值。
 
-### 4.4 操作 B vs 操作 D 判断规则
+### 4.4 典型应用
 
-| 判断条件 | → B | → D |
-|---------|-----|-----|
-| 必须指定目标建筑实例？ | 是（buildingId 指向具体建筑） | 否（buildingId 可为 null） |
-| 效果与建筑功能绑定？ | 是（充能→魔力池、合成→工作站） | 否（传送、复活不依赖特定建筑） |
-| 建筑不存在时还能执行吗？ | 否 | 是（瞬发仪式无需建筑） |
-| 典型例子 | charge, extract, decompose, synthesize, craft_wand, node_gathering, recruit | self_teleport, item_transport, resurrection, rain_call |
+| 建筑 | action | 参数 | 说明 |
+|------|--------|------|------|
+| 节点建筑 | gather | element, amount, channel_ticks, mana_cost | 采集元素注入仓库 |
+| 工作站 | decompose | item_id, count | 分解物品→元素 |
+| 工作站 | synthesize | recipe_id, count | 元素合成物品 |
+| 仓库 | open_gui | — | 打开仓库 GUI（同步） |
+| 魔力池 | charge | amount | 充能魔力池 |
+| 魔力池 | extract | amount | 抽取魔力 |
+
+### 4.5 操作 B vs 操作 D 判断规则
+
+| 判断条件 | → B (BlockInteractOp) | → D (RitualOp) |
+|---------|----------------------|-----|
+| 交互时间 | **可配置**（蓝图/建筑 JSON 传入） | **硬编码**（RitualId 推导） |
+| 法力消耗 | **可配置**（蓝图/建筑 JSON 传入） | **硬编码**（RitualId 推导） |
+| 效果与建筑功能绑定？ | 是 | 否（魔法效果，不依赖特定建筑） |
+| 典型例子 | gather, decompose, synthesize, charge | self_teleport, warding, rain_call, portal_gate |
 
 ---
 
@@ -158,31 +175,30 @@ MVP 第一阶段操作 C 暂不实现。保留接口，数据驱动预留。
 ### 6.2 参数
 
 ```java
-public record OperationD(
-    UUID buildingId,          // 关联建筑（可为 null 表示不需建筑）
-    String ritualId,           // 仪式 ID，对应 JSON 配置
-    int channelTicks,          // 引导时间（0 = 瞬发）
-    boolean needsAltar,        // 是否需要仪式祭坛
-    long manaCost,             // 魔力消耗（来自仪式 JSON）
-    Map<ElementType, Long> elementCost  // 元素消耗（来自仪式 JSON）
-) implements AtomicStep {}
+// 运行时 AtomicOp（core/op/AtomicOp.java）
+record RitualOp(RitualId ritual, GridPos target) implements AtomicOp {
+    int baseManaCost();  // 硬编码 switch，按 ritual.id()
+    int channelTicks();   // 硬编码 switch，按 ritual.id()
+}
 ```
 
-### 6.3 仪式清单
+channelTicks 和 baseManaCost 均从 RitualId 硬编码推导，不由蓝图 JSON 传入。蓝图 `"ritual"` 步骤只需 `ritual`、`at`、`params` 三个字段（params 用于传递功能参数如 element/amount，不控制时间）。
 
-| 仪式 | ritualId | 引导时间 | 需祭坛 | 需求等级 |
-|------|----------|---------|--------|---------|
-| 自传送 | self_teleport | 瞬发 (0) | 否 | ritual 1 |
-| 物品传送 | item_transport | 瞬发 (0) | 否 | ritual 1 |
-| 玩家召唤 | summon_player | 瞬发 (0) | 否 | ritual 1 |
-| 守护结界 | guardian_barrier | 中引导 | 是 | ritual 2 |
-| 群体振奋 | mass_vigor | 中引导 | 是 | ritual 2 |
-| 复活 | resurrection | 长引导 | 是 | ritual 1 |
-| 唤雨 | rain_call | 长引导 | 是 | ritual 3 |
-| 驱雨 | rain_dispel | 长引导 | 是 | ritual 3 |
-| 折跃门 | warp_gate | 长引导 | 是 | ritual 3 |
+### 6.3 仪式清单（硬编码值）
+
+| 仪式 | ritualId | 魔力 | 引导时间 | 需祭坛 | 需求等级 |
+|------|----------|:---:|:---:|--------|---------|
+| 自传送 | self_teleport | 0 | 600 (30s) | 否 | ritual 1 |
+| 物品传送 | item_teleport | 0 | 600 (30s) | 否 | ritual 1 |
+| 玩家召唤 | player_summon | 0 | 600 (30s) | 否 | ritual 1 |
+| 守护结界 | warding | 10 | 200 (10s) | 是 | ritual 2 |
+| 群体振奋 | group_vigor | 15 | 400 (20s) | 是 | ritual 2 |
+| 唤雨 | rain_call | 20 | 1200 (60s) | 是 | ritual 3 |
+| 驱雨 | clear_weather | 20 | 1200 (60s) | 是 | ritual 3 |
+| 折跃门 | portal_gate | 30 | 1800 (90s) | 是 | ritual 3 |
 
 MVP 仅实现：物品传送、复活。充能魔力池为操作 B（见 §4.3）。
+self_teleport 由 NavigationSystem 在距离 >32 或寻路失败时自动推入私有队列，不需要蓝图显式声明。
 
 ---
 

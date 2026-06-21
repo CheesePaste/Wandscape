@@ -25,7 +25,6 @@ class BuildingConfigTest {
         json.addProperty("id", "town_hall");
         json.addProperty("display_name", "Town Hall");
         json.addProperty("category", "basic");
-        json.addProperty("block_id", "wandscape:town_hall");
         // No pattern, block_mapping, shutdown_penalty, queue, unlock_requirement
 
         BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
@@ -33,7 +32,6 @@ class BuildingConfigTest {
         assertEquals("town_hall", cfg.id());
         assertEquals("Town Hall", cfg.displayName());
         assertEquals("basic", cfg.category());
-        assertEquals("wandscape:town_hall", cfg.blockId());
         assertTrue(cfg.pattern().isEmpty());
         assertTrue(cfg.blockMapping().isEmpty());
         assertEquals(0, cfg.comfort());
@@ -56,7 +54,6 @@ class BuildingConfigTest {
               "id": "mage_tower",
               "display_name": "Mage Tower",
               "category": "wonder",
-              "block_id": "wandscape:mage_tower",
               "pattern": [[0,0,0], [1,0,0], [1,1,0]],
               "block_mapping": {"0,0,0": "minecraft:stone_bricks", "1,0,0": "wandscape:rune_pillar", "1,1,0": "wandscape:mage_crystal"},
               "comfort": 2,
@@ -97,8 +94,8 @@ class BuildingConfigTest {
     @Test
     void singleBlockPattern() {
         String json = """
-            {"id": "test", "display_name": "Test", "category": "basic", "block_id": "wandscape:test",
-             "pattern": [[0,0,0]], "block_mapping": {"0,0,0": "wandscape:test"}}
+            {"id": "test", "display_name": "Test", "category": "basic",
+             "pattern": [[0,0,0]], "block_mapping": {"0,0,0": "minecraft:stone"}}
             """;
 
         BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
@@ -134,7 +131,6 @@ class BuildingConfigTest {
             json.addProperty("id", "test");
             json.addProperty("display_name", "Test");
             json.addProperty("category", "basic");
-            json.addProperty("block_id", "wandscape:test");
 
             BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
             assertEquals(0.5, cfg.shutdownPenalty().outputReduction());
@@ -147,7 +143,6 @@ class BuildingConfigTest {
             json.addProperty("id", "test");
             json.addProperty("display_name", "Test");
             json.addProperty("category", "basic");
-            json.addProperty("block_id", "wandscape:test");
 
             BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
             assertEquals(5, cfg.queue().capacity());
@@ -160,7 +155,6 @@ class BuildingConfigTest {
             json.addProperty("id", "test");
             json.addProperty("display_name", "Test");
             json.addProperty("category", "basic");
-            json.addProperty("block_id", "wandscape:test");
 
             BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
             assertEquals(0, cfg.unlockRequirement().minWonder());

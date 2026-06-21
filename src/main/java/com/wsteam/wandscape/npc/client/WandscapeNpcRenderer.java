@@ -1,11 +1,18 @@
 package com.wsteam.wandscape.npc.client;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -13,34 +20,120 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.neoforged.fml.ModList;
 
 public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
 
-    private static final ResourceLocation TEXTURE =
-            ResourceLocation.fromNamespaceAndPath("wandscape", "textures/entity/wizard.png");
+    public static final ModelLayerLocation WIZARD_HAT_LAYER =
+            new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath("wandscape", "wandscape_npc"), "wizard_hat");
+
+    private static final ResourceLocation[] TEXTURES = detectTextures();
+
+    private static ResourceLocation[] detectTextures() {
+        try {
+            Path dir = ModList.get().getModFileById(Wandscape.MODID).getFile()
+                    .findResource("assets", "wandscape", "textures", "entity", "wizard");
+            try (Stream<Path> files = Files.list(dir)) {
+                List<String> names = files
+                        .map(p -> p.getFileName().toString())
+                        .filter(n -> n.endsWith(".png"))
+                        .sorted()
+                        .toList();
+                if (!names.isEmpty()) {
+                    ResourceLocation[] arr = new ResourceLocation[names.size()];
+                    for (int i = 0; i < names.size(); i++) {
+                        arr[i] = ResourceLocation.fromNamespaceAndPath("wandscape",
+                                "textures/entity/wizard/" + names.get(i));
+                    }
+                    return arr;
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {}
+        return new ResourceLocation[] {
+            ResourceLocation.fromNamespaceAndPath("wandscape", "textures/entity/wizard/wizard01.png")
+        };
+    }
     private static final float[] DEFAULT_CAST_COLOR = {1.0f, 1.0f, 1.0f};
     private static final double RAY_RANGE = 5.0;
     private static final double RAY_STEP = 0.4;
 
     public WandscapeNpcRenderer(EntityRendererProvider.Context ctx) {
         super(ctx, new WandscapeNpcModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+        this.addLayer(new WizardHatLayer(this,
+                new WizardHatModel(ctx.bakeLayer(WIZARD_HAT_LAYER))));
     }
 
     @Override
     public ResourceLocation getTextureLocation(WandscapeNpc entity) {
-        return TEXTURE;
+        int variant = entity.getSkinVariant();
+        if (variant < 0 || variant >= TEXTURES.length) {
+            return TEXTURES[0];
+        }
+        return TEXTURES[variant];
     }
 
     @Override
     public void render(WandscapeNpc entity, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         if (entity.isCasting()) {
-            spawnCastRay(entity);
+            String kind = entity.getOpKind();
+            if (kind != null && kind.startsWith("ritual:")) {
+                spawnRitualCircle(entity, kind.substring(7)); // "ritual:self_teleport" → "self_teleport"
+            } else {
+                spawnCastRay(entity);
+            }
         }
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+    }
+
+    // ── Magic circle (ritual ops) ──
+
+    private static final int CIRCLE_PARTICLES = 16;
+    private static final double CIRCLE_RADIUS = 0.8;
+
+    /**
+     * Spawn a rotating magic circle at the target position.
+     * Different ritual types can have different visual styles.
+     *
+     * @param entity   the casting NPC
+     * @param ritualId the ritual type (e.g. "self_teleport", "warding", "portal_gate")
+     */
+    private void spawnRitualCircle(WandscapeNpc entity, String ritualId) {
+        if (!entity.level().isClientSide) return;
+
+        ClientLevel level = (ClientLevel) entity.level();
+        Optional<BlockPos> target = entity.getDebugTarget();
+        if (target.isEmpty()) return;
+
+        BlockPos bp = target.get();
+        double cx = bp.getX() + 0.5;
+        double cz = bp.getZ() + 0.5;
+        long time = System.currentTimeMillis();
+
+        // Base rotation speed (varies slightly per ritual for visual variety)
+        double speed = switch (ritualId) {
+            case "portal_gate" -> 2.5;
+            case "rain_call", "clear_weather" -> 1.0;
+            default -> 1.8;
+        };
+        double baseAngle = (time % 4000) / 4000.0 * Math.PI * 2 * speed;
+
+        for (int ring = 0; ring < 3; ring++) {
+            double y = bp.getY() + 0.15 + ring * 0.35;
+            double radius = CIRCLE_RADIUS + ring * 0.05;
+            double offset = ring * 0.4; // stagger each ring
+
+            for (int i = 0; i < CIRCLE_PARTICLES; i++) {
+                double angle = baseAngle + offset + (i / (double) CIRCLE_PARTICLES) * Math.PI * 2;
+                double px = cx + Math.cos(angle) * radius;
+                double pz = cz + Math.sin(angle) * radius;
+                level.addParticle(ParticleTypes.ENCHANT, px, y, pz, 0, 0.02, 0);
+            }
+        }
     }
 
     private float[] getWandColor(WandscapeNpc entity) {

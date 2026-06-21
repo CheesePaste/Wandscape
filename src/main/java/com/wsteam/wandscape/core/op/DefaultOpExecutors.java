@@ -58,6 +58,11 @@ public final class DefaultOpExecutors {
         }
     }
 
+    /**
+     * Default BlockInteractExecutor — sync-only fallback for toggle/activate/open_gui.
+     * Replaced by {@code WandscapeBlockInteractExecutor} at bootstrap
+     * which also handles async actions (gather/decompose/synthesize).
+     */
     static class BlockInteractExecutor implements OpExecutor<AtomicOp.BlockInteractOp> {
         @Override public Class<AtomicOp.BlockInteractOp> opType() { return AtomicOp.BlockInteractOp.class; }
 
@@ -69,6 +74,7 @@ public final class DefaultOpExecutors {
                     case "toggle"   -> blockOps.toggle(op.target());
                     case "activate" -> blockOps.activate(op.target());
                     case "open_gui" -> blockOps.openGui(op.target());
+                    default -> { /* async actions handled by WandscapeBlockInteractExecutor */ }
                 }
             }
             return CompletableFuture.completedFuture(null);
@@ -96,7 +102,7 @@ public final class DefaultOpExecutors {
             RitualOps ritualOps = world.ritualOps;
             if (ritualOps == null) return CompletableFuture.completedFuture(null);
             return ritualOps.beginRitual(op.ritual(), op.target(), world, npcId,
-                    op.channelTicks(), op.params());
+                    op.params());
         }
     }
 
