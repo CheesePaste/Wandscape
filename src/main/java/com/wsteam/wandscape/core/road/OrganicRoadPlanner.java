@@ -2,6 +2,7 @@ package com.wsteam.wandscape.core.road;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -15,28 +16,28 @@ import java.util.UUID;
  * guarantee), then delegates to {@link TemplateExpander} for organic
  * template-based path generation.
  *
- * <p>Purely algorithmic — zero MC dependencies.
+ * <p>Two operation modes:
+ * <ul>
+ *   <li>{@link #plan} — full MST-based plan for all buildings (first-time setup)</li>
+ *   <li>{@link #incrementalExpand} — connect a single new building to the
+ *       nearest existing node in the network</li>
+ * </ul>
  */
 public final class OrganicRoadPlanner {
 
     /** Budget multiplier: manhattanDist × this = template budget. */
     private static final double BUDGET_MULTIPLIER = 1.3;
 
-    /** Minimum budget per constraint (prevents zero-budget for nearby buildings). */
+    /** Minimum budget per constraint. */
     private static final int MIN_BUDGET = 16;
 
     private OrganicRoadPlanner() {}
 
     /**
-     * Plan organic roads for a set of buildings.
+     * Plan organic roads for all buildings via MST constraints.
+     * Only called once when threshold is first reached.
      *
-     * @param buildings  all buildings in the colony
-     * @param accessFn   computes the access point for a building given a target direction
-     * @param threshold  minimum building count to trigger road planning
-     * @param pool       template pool for weighted random selection
-     * @param obstacles  set of blocked XZ positions (architectural/geographic)
-     * @param rng        random source for template selection
-     * @return placement plan, or empty if below threshold
+     * @return placement result per MST pair
      */
     public static PlanResult plan(
             List<RoadBuildingData> buildings,
@@ -47,20 +48,20 @@ public final class OrganicRoadPlanner {
             Random rng) {
 
         int count = buildings.size();
-        if (count < threshold) {
-            return new PlanResult(Collections.emptyList(), 0, 0);
+        if (count < threshold || count < 2) {
+            return PlanResult.EMPTY;
         }
 
-        // 1. Compute MST constraint pairs
+        // MST constraint pairs
         List<UuidPair> pairs = mstPairs(buildings);
         if (pairs.isEmpty()) {
-            return new PlanResult(Collections.emptyList(), 0, 0);
+            return PlanResult.EMPTY;
         }
 
-        // 2. For each pair: compute access points + budget, then expand
+        // For each pair: compute access points, expand
         List<TemplatePlacement> allPlacements = new ArrayList<>();
         Set<XZPoint> occupied = new HashSet<>(obstacles);
-        int totalBudgetUsed = 0;
+        int totalCost = 0;
 
         for (UuidPair pair : pairs) {
             RoadBuildingData bdA = findBuilding(buildings, pair.a());
@@ -69,8 +70,6 @@ public final class OrganicRoadPlanner {
 
             XZPoint centerA = XZPoint.fromBuildData(bdA);
             XZPoint centerB = XZPoint.fromBuildData(bdB);
-
-            // Compute direction and access points
             int dx = centerB.x() - centerA.x();
             int dz = centerB.z() - centerA.z();
             CardinalFacing dirAToB = CardinalFacing.toward(dx, dz);
@@ -82,44 +81,116 @@ public final class OrganicRoadPlanner {
             int manhattanDist = accessA.manhattanTo(accessB);
             int budget = Math.max(MIN_BUDGET, (int) (manhattanDist * BUDGET_MULTIPLIER));
 
-            // Add access points to occupied (don't build on them)
             occupied.add(accessA);
             occupied.add(accessB);
 
-            // Expand from A toward B
             List<TemplatePlacement> chain = TemplateExpander.expand(
                     accessA, accessB, budget, pool, occupied, rng);
 
             if (!chain.isEmpty()) {
+                totalCost += templateCost(chain, pool);
                 allPlacements.addAll(chain);
-                totalBudgetUsed += budget - remaining(chain, pool);
-                // Mark placement positions as occupied
+                // Mark placed origins as occupied
                 for (TemplatePlacement p : chain) {
                     occupied.add(new XZPoint(p.x(), p.z()));
                 }
             }
         }
 
-        return new PlanResult(allPlacements, pairs.size(), totalBudgetUsed);
-    }
-
-    // ---- MST constraint extraction ----
-
-    /** Unordered UUID pair representing an MST edge. */
-    record UuidPair(UUID a, UUID b) {
-        static UuidPair of(UUID x, UUID y) {
-            return x.compareTo(y) <= 0 ? new UuidPair(x, y) : new UuidPair(y, x);
+        if (allPlacements.isEmpty()) {
+            return PlanResult.EMPTY;
         }
+        return new PlanResult(allPlacements, pairs.size(), totalCost);
     }
+
+    /**
+     * Connect a new building to the nearest node in the existing road network.
+     * Used for incremental builds after the initial MST plan.
+     *
+     * @param newBuilding    the newly built building
+     * @param network        existing road network (nodes + edges)
+     * @param existingBldgs  all existing buildings (excluding the new one)
+     * @param accessFn       access point function
+     * @param pool           template pool
+     * @param obstacles      blocked XZ positions
+     * @param rng            random source
+     * @return placements for this single connection (may be empty if no nearby node)
+     */
+    public static List<TemplatePlacement> incrementalExpand(
+            RoadBuildingData newBuilding,
+            RoadNetwork network,
+            List<RoadBuildingData> existingBldgs,
+            AccessPointFn accessFn,
+            RoadTemplatePool pool,
+            Set<XZPoint> obstacles,
+            Random rng) {
+
+        if (network.isEmpty() || existingBldgs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Find nearest existing BUILDING node in the network
+        XZPoint newXz = XZPoint.fromBuildData(newBuilding);
+        RoadNode nearest = network.findNearestNode(newXz);
+        if (nearest == null) return Collections.emptyList();
+
+        // Find the RoadBuildingData for that node
+        RoadBuildingData nearestBd = null;
+        for (RoadBuildingData bd : existingBldgs) {
+            if (bd.id().equals(nearest.nodeId())) {
+                nearestBd = bd;
+                break;
+            }
+        }
+        if (nearestBd == null) return Collections.emptyList();
+
+        XZPoint nearestXz = XZPoint.fromBuildData(nearestBd);
+        int dx = nearestXz.x() - newXz.x();
+        int dz = nearestXz.z() - newXz.z();
+        CardinalFacing dirToNearest = CardinalFacing.toward(dx, dz);
+        CardinalFacing dirFromNearest = CardinalFacing.toward(-dx, -dz);
+
+        XZPoint accessNew = accessFn.compute(newBuilding, dirToNearest);
+        XZPoint accessNearest = accessFn.compute(nearestBd, dirFromNearest);
+
+        int manhattanDist = accessNew.manhattanTo(accessNearest);
+        int budget = Math.max(MIN_BUDGET, (int) (manhattanDist * BUDGET_MULTIPLIER));
+
+        Set<XZPoint> occupied = new HashSet<>(obstacles);
+        occupied.add(accessNew);
+        occupied.add(accessNearest);
+        // Also occupy existing road positions
+        for (RoadEdge e : network.getEdges().values()) {
+            occupied.addAll(e.getPath());
+        }
+
+        return TemplateExpander.expand(accessNew, accessNearest, budget, pool, occupied, rng);
+    }
+
+    // ---- Helpers ----
+
+    private static int templateCost(List<TemplatePlacement> chain, RoadTemplatePool pool) {
+        int cost = 0;
+        for (TemplatePlacement p : chain) {
+            TemplateMeta tm = pool.get(p.templateId());
+            if (tm != null) cost += tm.budgetCost();
+        }
+        return cost;
+    }
+
+    private static RoadBuildingData findBuilding(List<RoadBuildingData> buildings, UUID id) {
+        for (RoadBuildingData bd : buildings) {
+            if (bd.id().equals(id)) return bd;
+        }
+        return null;
+    }
+
+    // ---- MST ----
 
     static List<UuidPair> mstPairs(List<RoadBuildingData> buildings) {
         if (buildings.size() < 2) return Collections.emptyList();
-
-        List<XZPoint> points = buildings.stream()
-                .map(XZPoint::fromBuildData)
-                .toList();
+        List<XZPoint> points = buildings.stream().map(XZPoint::fromBuildData).toList();
         List<MstEdge> mst = MstCalculator.prim(points, XZPoint::manhattanTo);
-
         List<UuidPair> pairs = new ArrayList<>();
         for (MstEdge e : mst) {
             UUID a = buildings.get(e.fromIndex()).id();
@@ -129,32 +200,12 @@ public final class OrganicRoadPlanner {
         return pairs;
     }
 
-    // ---- Helpers ----
-
-    private static RoadBuildingData findBuilding(List<RoadBuildingData> buildings, UUID id) {
-        for (RoadBuildingData bd : buildings) {
-            if (bd.id().equals(id)) return bd;
+    record UuidPair(UUID a, UUID b) {
+        static UuidPair of(UUID x, UUID y) {
+            return x.compareTo(y) <= 0 ? new UuidPair(x, y) : new UuidPair(y, x);
         }
-        return null;
     }
 
-    private static int remaining(List<TemplatePlacement> placements, RoadTemplatePool pool) {
-        int cost = 0;
-        for (TemplatePlacement p : placements) {
-            TemplateMeta tm = pool.get(p.templateId());
-            if (tm != null) {
-                cost += tm.budgetCost();
-            }
-        }
-        return cost;
-    }
-
-    // ---- Functional interface ----
-
-    /**
-     * Compute the road access point for a building, given
-     * the direction toward the other building.
-     */
     @FunctionalInterface
     public interface AccessPointFn {
         XZPoint compute(RoadBuildingData building, CardinalFacing direction);
