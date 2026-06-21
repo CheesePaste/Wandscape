@@ -188,7 +188,7 @@ public final class RoadTemplatePlacer {
                 ListTag firstPal = palettesTag.getList(0);
                 palette = readPalette(firstPal);
             }
-        } else if (root.contains("palette", 10)) {
+        } else if (root.contains("palette", 9)) {
             ListTag palTag = root.getList("palette", 10);
             palette = readPalette(palTag);
         }
