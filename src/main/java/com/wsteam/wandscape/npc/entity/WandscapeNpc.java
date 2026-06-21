@@ -11,7 +11,9 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ManaPool;
+import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
@@ -109,6 +111,10 @@ public class WandscapeNpc extends PathfinderMob {
     private static final EntityDataAccessor<String> DATA_OP_KIND =
             SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.STRING);
 
+    /** Status text shown above the NPC's head (synced to client). */
+    private static final EntityDataAccessor<String> DATA_STATUS_TEXT =
+            SynchedEntityData.defineId(WandscapeNpc.class, EntityDataSerializers.STRING);
+
     public int getSkinVariant() {
         return this.entityData.get(DATA_SKIN_VARIANT);
     }
@@ -132,6 +138,15 @@ public class WandscapeNpc extends PathfinderMob {
 
     public void setOpKind(@Nullable String kind) {
         this.entityData.set(DATA_OP_KIND, kind != null ? kind : "");
+    }
+
+    /** Status text shown above head. Synced to client. */
+    public String getStatusText() {
+        return this.entityData.get(DATA_STATUS_TEXT);
+    }
+
+    public void setStatusText(String text) {
+        this.entityData.set(DATA_STATUS_TEXT, text != null ? text : "");
     }
 
     /** Debug flag — when true, skips ECS polling and forces casting state. */
@@ -226,6 +241,7 @@ public class WandscapeNpc extends PathfinderMob {
         builder.define(DATA_CASTING, false);
         builder.define(DATA_DEBUG_TARGET, Optional.empty());
         builder.define(DATA_OP_KIND, "");
+        builder.define(DATA_STATUS_TEXT, "");
     }
 
     // ============================================================
@@ -244,6 +260,7 @@ public class WandscapeNpc extends PathfinderMob {
                     setDebugTarget(target);
                     faceTarget(target);
                 }
+                setStatusText("[Debug] 施法中");
             } else {
                 World ecsWorld = WandscapeEngine.getWorld();
                 if (ecsWorld != null && ecsEntityId > 0) {
@@ -262,8 +279,16 @@ public class WandscapeNpc extends PathfinderMob {
                         setDebugTarget(null);
                         setOpKind(null);
                     }
+                    // Compute status text from ECS state
+                    String status = computeStatusText(ecsWorld);
+                    if (!status.equals(getStatusText())) {
+                        setStatusText(status);
+                    }
                 } else {
                     casting = false;
+                    if (!getStatusText().isEmpty()) {
+                        setStatusText("");
+                    }
                 }
             }
             if (casting != isCasting()) {
@@ -288,6 +313,94 @@ public class WandscapeNpc extends PathfinderMob {
         double hDist = Math.sqrt(dx * dx + dz * dz);
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, hDist));
         setXRot(pitch);
+    }
+
+    // ============================================================
+    // Status text (shown above NPC head)
+    // ============================================================
+
+    /**
+     * Compute a short status string from ECS state for overhead display.
+     */
+    private String computeStatusText(World ecsWorld) {
+        if (ecsWorld == null || ecsEntityId < 0) return "";
+
+        var exec = ecsWorld.get(ecsEntityId, com.wsteam.wandscape.core.component.TaskExecutor.class);
+        var nav = ecsWorld.get(ecsEntityId, NavigationState.class);
+
+        // 1. Navigation states (visible even if idle task-wise)
+        if (nav != null) {
+            switch (nav.mode) {
+                case TELEPORT_WAITING -> { return "等待魔力"; }
+                case TELEPORT_RITUAL   -> { return "等待传送"; }
+                case PATHFINDING       -> { return "移动中"; }
+            }
+        }
+
+        // 2. No task executor or no work → idle
+        if (exec == null || !exec.hasWork() || exec.state == ExecutorState.IDLE) return "空闲";
+
+        // 3. Pending async future (navigation or channeled op)
+        if (exec.pendingFuture != null && !exec.pendingFuture.isDone()) {
+            if (exec.pendingFutureIsNav) return "移动中";
+            // Channeled op in progress
+            String kind = exec.currentOpKind;
+            if (kind != null) {
+                if (kind.startsWith("block_interact:")) {
+                    String action = kind.substring("block_interact:".length());
+                    return actionDisplayName(action);
+                }
+                if (kind.startsWith("ritual:")) {
+                    String ritual = kind.substring("ritual:".length());
+                    return ritualDisplayName(ritual);
+                }
+            }
+            return "引导中";
+        }
+
+        // 4. Actively executing
+        if (exec.state == ExecutorState.ACTIVE) {
+            if (exec.currentSequence != null) {
+                return exec.currentSequence.label();
+            }
+            String kind = exec.currentOpKind;
+            if (kind != null) {
+                if (kind.startsWith("block_interact:")) {
+                    return actionDisplayName(kind.substring("block_interact:".length()));
+                }
+                if (kind.startsWith("ritual:")) {
+                    return ritualDisplayName(kind.substring("ritual:".length()));
+                }
+                if (kind.equals("transform")) return "建造中";
+            }
+            return "执行中";
+        }
+
+        if (exec.state == ExecutorState.WAITING) return "等待中";
+
+        return "";
+    }
+
+    private static String actionDisplayName(String action) {
+        return switch (action) {
+            case "gather" -> "采集中";
+            case "place" -> "放置中";
+            case "break" -> "破坏中";
+            case "interact" -> "交互中";
+            case "cast" -> "施法中";
+            default -> "执行: " + action;
+        };
+    }
+
+    private static String ritualDisplayName(String ritual) {
+        return switch (ritual) {
+            case "self_teleport" -> "传送中";
+            case "lightning" -> "召唤雷电";
+            case "portal_gate" -> "开启传送门";
+            case "rain_call" -> "祈雨";
+            case "clear_weather" -> "驱云";
+            default -> "施法: " + ritual;
+        };
     }
 
     @Override

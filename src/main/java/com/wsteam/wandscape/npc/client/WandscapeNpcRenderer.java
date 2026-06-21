@@ -11,6 +11,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -21,10 +23,12 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.fml.ModList;
+import org.joml.Matrix4f;
 
 public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
 
@@ -76,6 +80,9 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         return TEXTURES[variant];
     }
 
+    private static final float STATUS_SCALE = 0.025F;
+    private static final float STATUS_Y_OFFSET = 0.45F; // slightly below vanilla nametag
+
     @Override
     public void render(WandscapeNpc entity, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
@@ -88,6 +95,34 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
             }
         }
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+
+        // Render status text above NPC head
+        String status = entity.getStatusText();
+        if (!status.isEmpty()) {
+            renderStatusText(entity, status, poseStack, buffer, packedLight);
+        }
+    }
+
+    private void renderStatusText(WandscapeNpc entity, String text, PoseStack poseStack,
+                                  MultiBufferSource buffer, int packedLight) {
+        Component displayName = Component.literal("§7" + text); // gray italics-like
+        Font font = this.getFont();
+        double dist = this.entityRenderDispatcher.distanceToSqr(entity);
+        if (dist > 4096.0) return; // >64 blocks, don't render
+
+        poseStack.pushPose();
+        poseStack.translate(0, entity.getBbHeight() + STATUS_Y_OFFSET, 0);
+        poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+        poseStack.scale(STATUS_SCALE, -STATUS_SCALE, STATUS_SCALE);
+        Matrix4f matrix4f = poseStack.last().pose();
+
+        float x = (float)(-font.width(displayName) / 2);
+        int bgAlpha = (int)(Minecraft.getInstance().options.getBackgroundOpacity(0.25F) * 255.0F) << 24;
+        font.drawInBatch(displayName, x, 0, 0xDDDDDD, false, matrix4f, buffer,
+                Font.DisplayMode.SEE_THROUGH, bgAlpha, packedLight);
+        font.drawInBatch(displayName, x, 0, -1, false, matrix4f, buffer,
+                Font.DisplayMode.NORMAL, 0, packedLight);
+        poseStack.popPose();
     }
 
     // ── Magic circle (ritual ops) ──

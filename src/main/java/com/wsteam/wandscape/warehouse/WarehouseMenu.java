@@ -86,9 +86,11 @@ public class WarehouseMenu extends AbstractContainerMenu {
             public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
                 var menu = new WarehouseMenu(containerId, playerInv);
                 if (!snapshot.isEmpty()) {
-                    var packet = com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.from(snapshot);
-                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
-                            (net.minecraft.server.level.ServerPlayer) player, packet);
+                    var sp = (net.minecraft.server.level.ServerPlayer) player;
+                    var pkt = com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.from(snapshot);
+                    // Delay 1 tick — WarehouseScreen must be open on client before packet arrives
+                    sp.getServer().execute(() ->
+                            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(sp, pkt));
                 }
                 return menu;
             }
