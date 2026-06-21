@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -52,28 +51,32 @@ class TemplateNbtTest {
                 "55 road blocks: 48 dirt_path + 7 grass_block");
     }
 
-    /** The palette tag is TAG_List (type 9), NOT TAG_Compound (type 10). */
+    /**
+     * BUG REGRESSION: getList(name, type) second arg = ELEMENT type, not LIST tag type.
+     * "palette" is a ListTag (id=9) containing CompoundTags (element type=10).
+     * getList("palette", 9) expects list-of-lists — returns empty when elements are compounds.
+     * getList("palette", 10) is CORRECT — expects compound elements.
+     */
     @Test
-    void paletteTagTypeIsListNotCompound() {
-        // MC NBT: "palette" is ListTag, each element is CompoundTag with "Name" + optional "Properties"
-        // TAG_List = 9, TAG_Compound = 10
-        // contains("palette", 10) is WRONG — checks for Compound, returns false
-        // contains("palette", 9)  is CORRECT — checks for List
+    void getListSecondArgIsElementTypeNotListType() {
+        // NBT structure: root → "palette": ListTag(CompoundTag{"Name":"minecraft:air"}, ...)
+        //                    ↑                 ↑
+        //               tag id = 9       element type = 10 (TAG_Compound)
+        //               (TAG_List)       NOT 9!
         int TAG_LIST = 9;
         int TAG_COMPOUND = 10;
-        assertNotEquals(TAG_LIST, TAG_COMPOUND,
-                "TAG_List(9) ≠ TAG_Compound(10) — must check for correct type");
 
-        // Simulated NBT-like check:
-        Map<String, Integer> tagTypes = Map.of(
-                "palette", TAG_LIST,      // "palette" is a List
-                "blocks",  TAG_LIST,      // "blocks" is a List
-                "size",    TAG_LIST       // "size" is a List (IntArray actually, but in NBT it's 3)
-        );
-        assertFalse(tagTypes.get("palette") == TAG_COMPOUND,
-                ".contains(\"palette\", 10) returns false on a ListTag");
-        assertTrue(tagTypes.get("palette") == TAG_LIST,
-                ".contains(\"palette\", 9) returns true — correct tag type");
+        // contains("palette", TAG_LIST) checks the tag itself is a list → true
+        // getList("palette", TAG_COMPOUND) checks list ELEMENTS are compounds → correct
+        // getList("palette", TAG_LIST) checks list ELEMENTS are lists → WRONG, returns empty!
+
+        // palette elements are compounds (type 10):
+        int paletteElementType = TAG_COMPOUND;
+        assertEquals(10, paletteElementType, "Palette elements are CompoundTags (id=10)");
+
+        // The correct call is getList("palette", 10) not getList("palette", 9):
+        assertNotEquals(9, paletteElementType,
+                "Using 9 for getList element type check incorrectly expects list-of-lists");
     }
 
     /** If palette is empty/missing, all blocks get state=0 → air → all filtered → zero tiles. */

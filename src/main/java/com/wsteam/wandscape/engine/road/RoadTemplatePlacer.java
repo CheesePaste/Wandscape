@@ -61,22 +61,26 @@ public final class RoadTemplatePlacer {
             }
 
             NbtData nbtData = loadTemplateNbt(meta.templateRef());
-            if (nbtData == null) continue;
+            if (nbtData == null) {
+                LOGGER.warn("[RoadTemplatePlacer] NBT load failed for {}", meta.templateRef());
+                continue;
+            }
 
+            int total = nbtData.blocks.size();
             int rot = placement.rotation();
-            int kept = 0;
+            int kept = 0, skippedName = 0, skippedBuilding = 0, skippedOccupied = 0, skippedFluid = 0;
             for (NbtBlockEntry entry : nbtData.blocks) {
                 // Skip void/jigsaw/air
                 if (entry.blockName.contains("structure_void")
                         || entry.blockName.contains("jigsaw")
                         || entry.blockName.contains("air")) {
+                    skippedName++;
                     continue;
                 }
 
                 // Rotate position
                 int wx = placement.x();
                 int wz = placement.z();
-                // Rotation applied to local (dx, dz) relative to template origin
                 int rdx = entry.x;
                 int rdz = entry.z;
                 for (int r = 0; r < (rot & 3); r++) {
@@ -87,21 +91,19 @@ public final class RoadTemplatePlacer {
                 wx += rdx;
                 wz += rdz;
 
-                if (insideAnyBuilding(wx, wz, buildingBounds)) continue;
+                if (insideAnyBuilding(wx, wz, buildingBounds)) { skippedBuilding++; continue; }
 
                 XZPoint tileXz = new XZPoint(wx, wz);
-                if (occupiedTiles.contains(tileXz)) continue;
+                if (occupiedTiles.contains(tileXz)) { skippedOccupied++; continue; }
 
-                // Vanilla-style terrain matching: surface height - 1 + templateY
+                // Vanilla-style terrain matching
                 int surfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz);
                 int groundY = surfaceY - 1 + entry.y;
                 BlockPos pos = new BlockPos(wx, groundY, wz);
 
-                if (shouldSkip(pos, level)) continue;
+                if (shouldSkip(pos, level)) { skippedFluid++; continue; }
 
                 occupiedTiles.add(tileXz);
-
-                // Block variation — "worn path" like vanilla STREET_PLAINS
                 String block = applyVariation(level, pos, entry.blockName);
 
                 JsonObject tile = new JsonObject();
@@ -113,9 +115,9 @@ public final class RoadTemplatePlacer {
                 kept++;
             }
 
-            LOGGER.info("[RoadTemplatePlacer] {} at ({},{}) rot={}: {} tiles",
+            LOGGER.warn("[RoadTemplatePlacer] {} at ({},{}) rot={}: total={} kept={} nameSkip={} bldSkip={} occSkip={} fluidSkip={}",
                     placement.templateId(), placement.x(), placement.z(),
-                    placement.rotation(), kept);
+                    placement.rotation(), total, kept, skippedName, skippedBuilding, skippedOccupied, skippedFluid);
         }
 
         return allTiles;
@@ -183,16 +185,25 @@ public final class RoadTemplatePlacer {
     private static NbtData parseBlocks(CompoundTag root) {
         // Parse palette
         List<String> palette = new ArrayList<>();
-        if (root.contains("palettes", 9)) {
+        boolean foundPalettes = root.contains("palettes", 9);
+        boolean foundPalette = root.contains("palette", 9);
+
+        if (foundPalettes) {
             ListTag pt = root.getList("palettes", 9);
             if (!pt.isEmpty()) {
-                ListTag p0 = pt.getList(0);
+                net.minecraft.nbt.Tag elem = pt.get(0);
+                ListTag p0;
+                if (elem instanceof ListTag lt) {
+                    p0 = lt;
+                } else {
+                    p0 = pt.getList(0);
+                }
                 for (int i = 0; i < p0.size(); i++) {
                     palette.add(p0.getCompound(i).getString("Name"));
                 }
             }
-        } else if (root.contains("palette", 9)) {
-            ListTag pt = root.getList("palette", 9);
+        } else if (foundPalette) {
+            ListTag pt = root.getList("palette", 10);
             for (int i = 0; i < pt.size(); i++) {
                 palette.add(pt.getCompound(i).getString("Name"));
             }
@@ -211,6 +222,10 @@ public final class RoadTemplatePlacer {
             String name = (si >= 0 && si < palette.size()) ? palette.get(si) : "minecraft:air";
             entries.add(new NbtBlockEntry(bx, by, bz, name));
         }
+
+        LOGGER.warn("[RoadTemplatePlacer] parseBlocks: hasPalettes={} hasPalette={} paletteSize={} blockCount={} samplePalette={}",
+                foundPalettes, foundPalette, palette.size(), entries.size(),
+                palette.isEmpty() ? "EMPTY" : palette.get(0));
 
         return new NbtData(entries);
     }

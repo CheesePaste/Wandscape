@@ -1,98 +1,96 @@
-15:44:36: 正在执行 'runClient'…
+17:53:13: 正在执行 'runClient'…
 
 Reusing configuration cache.
 > Task :writeClientLegacyClasspath UP-TO-DATE
 > Task :generateModMetadata UP-TO-DATE
 > Task :downloadAssets UP-TO-DATE
-> Task :processResources UP-TO-DATE
 > Task :createMinecraftArtifacts UP-TO-DATE
+> Task :processResources UP-TO-DATE
 > Task :prepareClientRun UP-TO-DATE
 > Task :compileJava UP-TO-DATE
 > Task :classes UP-TO-DATE
 
 > Task :runClient
 WARN StatusConsoleListener Advanced terminal features are not available in this environment
-[15:44:38] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientdev, --version, 21.1.233, --assetIndex, 17, --assetsDir, C:\\Users\\mrx\\.gradle\\caches\\neoformruntime\\assets, --gameDir, ., --fml.fmlVersion, 4.0.42, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.233, --fml.neoFormVersion, 20240808.144430]
-[15:44:38] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Microsoft OpenJDK 64-Bit Server VM 21.0.7+6-LTS
-[15:44:38] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.7 by Microsoft; OS Windows 11 arch amd64 version 10.0
-[15:44:38] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
-[15:44:38] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
-[15:44:39] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.6 got version 4.6
-[15:44:39] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/C:/Users/mrx/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/2af2f021d8e02a0220dc27a7a72b4666d66d44ca/sponge-mixin-0.15.2+mixin.0.8.7.jar%23138!/ Service=ModLauncher Env=CLIENT
-[15:44:39] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2 GL version 4.6.0 NVIDIA 595.79, NVIDIA Corporation
-[15:44:39] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
-[15:44:39] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
+[17:53:14] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientdev, --version, 21.1.233, --assetIndex, 17, --assetsDir, C:\\Users\\mrx\\.gradle\\caches\\neoformruntime\\assets, --gameDir, ., --fml.fmlVersion, 4.0.42, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.233, --fml.neoFormVersion, 20240808.144430]
+[17:53:14] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Microsoft OpenJDK 64-Bit Server VM 21.0.7+6-LTS
+[17:53:14] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.7 by Microsoft; OS Windows 11 arch amd64 version 10.0
+[17:53:14] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
+[17:53:14] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
+[17:53:15] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.6 got version 4.6
+[17:53:15] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/C:/Users/mrx/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/2af2f021d8e02a0220dc27a7a72b4666d66d44ca/sponge-mixin-0.15.2+mixin.0.8.7.jar%23138!/ Service=ModLauncher Env=CLIENT
+[17:53:15] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2 GL version 4.6.0 NVIDIA 595.79, NVIDIA Corporation
+[17:53:15] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[17:53:15] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
      Mod List:
 		Name Version (Mod Id)
 
 		Minecraft 1.21.1 (minecraft)
 		NeoForge 21.1.233 (neoforge)
 		Wandscape 1.0.0 (wandscape)
-[15:44:40] [main/INFO] [mixin/]: Compatibility level set to JAVA_21
-[15:44:40] [main/INFO] [cp.mo.mo.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclientdev' with arguments [--version, 21.1.233, --gameDir, ., --assetsDir, C:\Users\mrx\.gradle\caches\neoformruntime\assets, --assetIndex, 17]
-[15:44:41] [Datafixer Bootstrap/INFO] [mojang/DataFixerBuilder]: 229 Datafixer optimizations took 246 milliseconds
-[15:44:41] [pool-7-thread-1/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.3).
-[15:44:45] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
-[15:44:45] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
-[15:44:45] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
-[15:44:45] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
-[15:44:45] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
-[15:44:45] [Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/D:/Projects/MCMOD/Wandscape/build/moddev/artifacts/neoforge-21.1.233.jar%23189!/assets/.mcassetsroot' uses unexpected schema
-[15:44:45] [Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/D:/Projects/MCMOD/Wandscape/build/moddev/artifacts/neoforge-21.1.233.jar%23189!/data/.mcassetsroot' uses unexpected schema
-[15:44:45] [Render thread/INFO] [mojang/YggdrasilAuthenticationService]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
-[15:44:45] [Render thread/INFO] [minecraft/Minecraft]: Setting user: Dev
-[15:44:45] [Render thread/INFO] [minecraft/Minecraft]: Backend library: LWJGL version 3.3.3+5
-[15:44:45] [modloading-worker-0/INFO] [ne.ne.ne.co.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.233, for MC 1.21.1
-[15:44:46] [Render thread/INFO] [ne.ne.ne.ga.GameTestHooks/]: Enabled Gametest Namespaces: [wandscape]
-[15:44:46] [Render thread/INFO] [minecraft/ReloadableResourceManager]: Reloading ResourceManager: vanilla, mod_resources, mod/wandscape, mod/neoforge
-[15:44:46] [Worker-Main-1/INFO] [co.ws.wa.Wandscape/]: Wandscape common setup — wand, element, buildings, npc ready
-[15:44:46] [Worker-Main-3/ERROR] [minecraft/Util]: Invalid path in pack: wandscape:models/block/$name.json, ignoring
-[15:44:46] [Worker-Main-3/ERROR] [minecraft/Util]: Invalid path in pack: wandscape:models/item/$name.json, ignoring
-[15:44:46] [Worker-Main-10/ERROR] [minecraft/Util]: Invalid path in pack: wandscape:blockstates/$name.json, ignoring
-[15:44:46] [Worker-Main-4/INFO] [co.ws.wa.Wandscape/]: Wandscape client setup complete
-[15:44:46] [Worker-Main-5/INFO] [minecraft/UnihexProvider]: Found unifont_jp_patch-15.1.05.hex, loading
-[15:44:46] [Worker-Main-6/INFO] [minecraft/UnihexProvider]: Found unifont_all_no_pua-15.1.05.hex, loading
-[15:44:47] [Worker-Main-3/WARN] [minecraft/ModelBakery]: Unable to load model: 'wandscape:item/wandscape_npc_spawn_egg' referenced from: wandscape:item/wandscape_npc_spawn_egg: java.io.FileNotFoundException: wandscape:models/item/wandscape_npc_spawn_egg.json
-[15:44:47] [Render thread/WARN] [minecraft/SoundEngine]: Missing sound for event: minecraft:item.goat_horn.play
-[15:44:47] [Render thread/WARN] [minecraft/SoundEngine]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
-[15:44:48] [Render thread/INFO] [mojang/Library]: OpenAL initialized on device OpenAL Soft on 扬声器 (Realtek(R) Audio)
-[15:44:48] [Render thread/INFO] [minecraft/SoundEngine]: Sound engine started
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
-[15:44:48] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
-[15:44:48] [Render thread/WARN] [minecraft/ShaderInstance]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
-[15:44:48] [Render thread/INFO] [ne.ne.ne.cl.en.an.js.AnimationLoader/]: Loaded 0 entity animations
-[15:44:54] [Render thread/INFO] [minecraft/LevelStorageSource]: Deleting level 新的世界
-[15:44:54] [Render thread/INFO] [minecraft/LevelStorageSource]: Attempt 1...
-[15:44:54] [Render thread/INFO] [minecraft/RecipeManager]: Loaded 1290 recipes
-[15:44:55] [Render thread/INFO] [minecraft/AdvancementTree]: Loaded 1399 advancements
-[15:44:55] [Render thread/INFO] [co.ws.wa.da.in.WandscapeDataLoader/]: WandscapeDataLoader reloaded: 19 files across 4 categories
+[17:53:16] [main/INFO] [mixin/]: Compatibility level set to JAVA_21
+[17:53:16] [main/INFO] [cp.mo.mo.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclientdev' with arguments [--version, 21.1.233, --gameDir, ., --assetsDir, C:\Users\mrx\.gradle\caches\neoformruntime\assets, --assetIndex, 17]
+[17:53:17] [Datafixer Bootstrap/INFO] [mojang/DataFixerBuilder]: 229 Datafixer optimizations took 284 milliseconds
+[17:53:18] [pool-7-thread-1/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.3).
+[17:53:22] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[17:53:22] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[17:53:22] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[17:53:22] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[17:53:22] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[17:53:22] [Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/D:/Projects/MCMOD/Wandscape/build/moddev/artifacts/neoforge-21.1.233.jar%23189!/assets/.mcassetsroot' uses unexpected schema
+[17:53:22] [Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/D:/Projects/MCMOD/Wandscape/build/moddev/artifacts/neoforge-21.1.233.jar%23189!/data/.mcassetsroot' uses unexpected schema
+[17:53:22] [Render thread/INFO] [mojang/YggdrasilAuthenticationService]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[17:53:22] [Render thread/INFO] [minecraft/Minecraft]: Setting user: Dev
+[17:53:22] [Render thread/INFO] [minecraft/Minecraft]: Backend library: LWJGL version 3.3.3+5
+[17:53:22] [modloading-worker-0/INFO] [ne.ne.ne.co.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.233, for MC 1.21.1
+[17:53:23] [Render thread/INFO] [ne.ne.ne.ga.GameTestHooks/]: Enabled Gametest Namespaces: [wandscape]
+[17:53:23] [Render thread/INFO] [minecraft/ReloadableResourceManager]: Reloading ResourceManager: vanilla, mod_resources, mod/wandscape, mod/neoforge
+[17:53:23] [Worker-Main-1/INFO] [co.ws.wa.Wandscape/]: Wandscape common setup — wand, element, buildings, npc ready
+[17:53:23] [Worker-Main-10/ERROR] [minecraft/Util]: Invalid path in pack: wandscape:blockstates/$name.json, ignoring
+[17:53:23] [Worker-Main-2/ERROR] [minecraft/Util]: Invalid path in pack: wandscape:models/block/$name.json, ignoring
+[17:53:23] [Worker-Main-2/ERROR] [minecraft/Util]: Invalid path in pack: wandscape:models/item/$name.json, ignoring
+[17:53:23] [Worker-Main-5/INFO] [minecraft/UnihexProvider]: Found unifont_jp_patch-15.1.05.hex, loading
+[17:53:23] [Worker-Main-22/INFO] [minecraft/UnihexProvider]: Found unifont_all_no_pua-15.1.05.hex, loading
+[17:53:23] [Worker-Main-4/INFO] [co.ws.wa.Wandscape/]: Wandscape client setup complete
+[17:53:23] [Worker-Main-20/WARN] [minecraft/ModelBakery]: Unable to load model: 'wandscape:item/wandscape_npc_spawn_egg' referenced from: wandscape:item/wandscape_npc_spawn_egg: java.io.FileNotFoundException: wandscape:models/item/wandscape_npc_spawn_egg.json
+[17:53:24] [Render thread/WARN] [minecraft/SoundEngine]: Missing sound for event: minecraft:item.goat_horn.play
+[17:53:24] [Render thread/WARN] [minecraft/SoundEngine]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[17:53:25] [Render thread/INFO] [mojang/Library]: OpenAL initialized on device OpenAL Soft on 扬声器 (Realtek(R) Audio)
+[17:53:25] [Render thread/INFO] [minecraft/SoundEngine]: Sound engine started
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[17:53:25] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[17:53:25] [Render thread/WARN] [minecraft/ShaderInstance]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[17:53:25] [Render thread/INFO] [ne.ne.ne.cl.en.an.js.AnimationLoader/]: Loaded 0 entity animations
+[17:53:29] [Render thread/INFO] [minecraft/RecipeManager]: Loaded 1290 recipes
+[17:53:29] [Render thread/INFO] [minecraft/AdvancementTree]: Loaded 1399 advancements
 [INFO ] BlueprintCfg | loaded blueprint: build:clear_and_build (params=5 steps=4)
 [INFO ] BlueprintCfg | loaded blueprint: demo:tnt_platform (params=1 steps=11)
 [INFO ] BlueprintCfg | loaded blueprint: road:build_segment (params=2 steps=2)
 [INFO ] BlueprintCfg | loaded blueprint: build:place_structure (params=4 steps=2)
 [INFO ] BlueprintCfg | loaded blueprint: node:gather (params=5 steps=3)
-[15:44:57] [Server thread/INFO] [minecraft/IntegratedServer]: Starting integrated minecraft server version 1.21.1
-[15:44:57] [Server thread/INFO] [minecraft/MinecraftServer]: Generating keypair
-[15:44:58] [Server thread/INFO] [minecraft/MinecraftServer]: Preparing start region for dimension minecraft:overworld
-[15:44:58] [progressListener/INFO] [minecraft/LoggerChunkProgressListener]: 准备生成区域中：2%
-[15:44:58] [Server thread/INFO] [ne.ne.ne.se.pe.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
-[15:44:58] [Server thread/INFO] [co.ws.wa.Wandscape/]: Wandscape server starting — bootstrapping engine...
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]: CoreBootstrap bootstrap starting...
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   registered 5 DSL blueprints from JSON
-[15:44:58] [progressListener/INFO] [minecraft/LoggerChunkProgressListener]: Time elapsed: 130 ms
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   ColonyResourceAccess: WarehouseManager (live)
+[17:53:30] [Render thread/INFO] [co.ws.wa.da.in.WandscapeDataLoader/]: WandscapeDataLoader reloaded: 19 files across 4 categories
+[17:53:32] [Server thread/INFO] [minecraft/IntegratedServer]: Starting integrated minecraft server version 1.21.1
+[17:53:32] [Server thread/INFO] [minecraft/MinecraftServer]: Generating keypair
+[17:53:33] [Server thread/INFO] [minecraft/MinecraftServer]: Preparing start region for dimension minecraft:overworld
+[17:53:33] [progressListener/INFO] [minecraft/LoggerChunkProgressListener]: 准备生成区域中：2%
+[17:53:33] [Server thread/INFO] [ne.ne.ne.se.pe.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[17:53:33] [Server thread/INFO] [co.ws.wa.Wandscape/]: Wandscape server starting — bootstrapping engine...
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]: CoreBootstrap bootstrap starting...
+[17:53:33] [progressListener/INFO] [minecraft/LoggerChunkProgressListener]: Time elapsed: 126 ms
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   registered 5 DSL blueprints from JSON
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   ColonyResourceAccess: WarehouseManager (live)
 [INFO ] BlueprintCfg | registered blueprint: road:build_segment (params=2 steps=2)
 [INFO ] BlueprintCfg | registered blueprint: demo:tnt_platform (params=1 steps=11)
 [INFO ] BlueprintCfg | registered blueprint: build:place_structure (params=4 steps=2)
@@ -101,205 +99,359 @@ WARN StatusConsoleListener Advanced terminal features are not available in this 
 [INFO ] EventSrc | registered default blueprints: gather:[wood,stone_bricks,stone,glass,iron_ingot,wheat], ritual:defense
 [INFO ] CoreBootstrap | bootstrap begin
 [INFO ] CoreBootstrap | bootstrap complete - 8 component stores, 5 systems, 4 task sources
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.AsyncTransformExecutor/]: AsyncTransformExecutor delay=5 ticks
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   AsyncTransformExecutor active: 5 tick delay per block
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   WandscapeBlockInteractExecutor active (sync + async actions)
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]: CoreBootstrap bootstrap complete — 6 systems, 4 task sources, com.wsteam.wandscape.core.task.BlueprintRegistry@16258735 blueprints
-[15:44:58] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: BuildCompleteListener registered on engine EventBus
-[15:44:58] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: RoadEventListener registered on engine EventBus
-[15:44:58] [Server thread/INFO] [co.ws.wa.Wandscape/]: Task persistence wired — pool has 0 active tasks
-[15:44:58] [Server thread/INFO] [co.ws.wa.Wandscape/]: Road system wired — 0 edges persisted
-[15:44:58] [Server thread/INFO] [minecraft/IntegratedServer]: Changing view distance to 12, from 10
-[15:44:58] [Server thread/INFO] [minecraft/IntegratedServer]: Changing simulation distance to 12, from 0
-[15:44:58] [Server thread/INFO] [minecraft/PlayerList]: Dev[local:E:a105612b] logged in with entity id 1 at (-5.5, -60.0, 8.5)
-[15:44:58] [Server thread/INFO] [minecraft/MinecraftServer]: Dev加入了游戏
-[15:44:59] [Render thread/INFO] [minecraft/AdvancementTree]: Loaded 2 advancements
-[15:45:03] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#100 mcTick=#100 — entities=0 tasks_in_pool=0 pendingAsync=0
-[INFO ] CoreBootstrap | createNpc #1 pos=(-6,-60,10) mana=100 caps=[] colony=00000000
-[15:45:06] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC e8f9dbb6 joined ECS as entity 1 (colony=00000000)
-[INFO ] CoreBootstrap | createNpc #2 pos=(-6,-60,9) mana=100 caps=[] colony=00000000
-[15:45:06] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 7b728b21 joined ECS as entity 2 (colony=00000000)
-[INFO ] CoreBootstrap | createNpc #3 pos=(-6,-60,9) mana=100 caps=[] colony=00000000
-[15:45:07] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC c6ba3285 joined ECS as entity 3 (colony=00000000)
-[INFO ] CoreBootstrap | createNpc #4 pos=(-5,-60,8) mana=100 caps=[] colony=00000000
-[15:45:07] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC f0fba44a joined ECS as entity 4 (colony=00000000)
-[INFO ] CoreBootstrap | createNpc #5 pos=(-4,-60,7) mana=100 caps=[] colony=00000000
-[15:45:07] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 6526099a joined ECS as entity 5 (colony=00000000)
-[15:45:07] [Render thread/INFO] [minecraft/ChatComponent]: [System] [CHAT] [Wandscape Debug] NPC casting ON — no diamond target set
-[INFO ] CoreBootstrap | createNpc #6 pos=(-4,-60,6) mana=100 caps=[] colony=00000000
-[15:45:07] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 816bce25 joined ECS as entity 6 (colony=00000000)
-[INFO ] CoreBootstrap | createNpc #7 pos=(-3,-60,5) mana=100 caps=[] colony=00000000
-[15:45:08] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 488ce45c joined ECS as entity 7 (colony=00000000)
-[15:45:08] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #10 — pool=0 tasks, buildings_with_work=0, tracked_active=0
-[15:45:08] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#200 mcTick=#200 — entities=7 tasks_in_pool=0 pendingAsync=0
-[15:45:10] [Render thread/INFO] [minecraft/ChatComponent]: [System] [CHAT] [RoadTest] 5/5 buildings registered at ring-radius=15\n  Total buildings in world: 5\n  Road threshold: 3\n  Task pool size: 0\n  build_complete event emitted for 宏伟法师塔 at 7, -60, -14\n\n-> Check /wandscape road info for network status\n-> NPCs will pick up road segments from the task pool
-[15:45:10] [Server thread/WARN] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] grand_tower at BlockPos{x=7, y=-60, z=-14} — pattern mismatch after build_complete
-[15:45:10] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] First MST triggered — 4 buildings (threshold=3)
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] publishing 7 road segments
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #1 segment=1eab89b8 edge=38652b26 tiles=10
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #2 segment=a2f8420e edge=38652b26 tiles=6
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #3 segment=ce4ef246 edge=38652b26 tiles=8
-[INFO ] TaskPool | addTask #1 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=11 triggers=0
-[INFO ] TaskPool | addTask #2 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=7 triggers=0
-[INFO ] TaskPool | addTask #3 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=9 triggers=0
-[INFO ] TaskPool | addTask #4 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=18 triggers=0
-[INFO ] TaskPool | addTask #5 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=6 triggers=0
-[INFO ] TaskPool | addTask #6 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=17 triggers=0
-[INFO ] TaskPool | addTask #7 'Road Segment' blueprint=road:build_segment state=PENDING_ASSIGN priority=10 steps=3 triggers=0
-[INFO ] TaskPool | assign #1 'Road Segment' �� NPC 7 (step=0/11 triggers=0)
-[INFO ] Scheduler | assigned #1 'Road Segment' �� NPC 7 (score=0.17 dist=20)
-[INFO ] TaskPool | assign #2 'Road Segment' �� NPC 6 (step=0/7 triggers=0)
-[INFO ] Scheduler | assigned #2 'Road Segment' �� NPC 6 (score=0.23 dist=12)
-[INFO ] TaskPool | assign #3 'Road Segment' �� NPC 5 (step=0/9 triggers=0)
-[INFO ] Scheduler | assigned #3 'Road Segment' �� NPC 5 (score=0.24 dist=11)
-[INFO ] TaskPool | assign #4 'Road Segment' �� NPC 4 (step=0/18 triggers=0)
-[INFO ] Scheduler | assigned #4 'Road Segment' �� NPC 4 (score=0.22 dist=13)
-[INFO ] TaskPool | assign #5 'Road Segment' �� NPC 3 (step=0/6 triggers=0)
-[INFO ] Scheduler | assigned #5 'Road Segment' �� NPC 3 (score=0.32 dist=6)
-[INFO ] TaskPool | assign #6 'Road Segment' �� NPC 1 (step=0/17 triggers=0)
-[INFO ] Scheduler | assigned #6 'Road Segment' �� NPC 1 (score=0.45 dist=1)
-[INFO ] TaskPool | assign #7 'Road Segment' �� NPC 2 (step=0/3 triggers=0)
-[INFO ] Scheduler | assigned #7 'Road Segment' �� NPC 2 (score=0.19 dist=16)
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.AsyncTransformExecutor/]: AsyncTransformExecutor delay=5 ticks
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   AsyncTransformExecutor active: 5 tick delay per block
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]:   WandscapeBlockInteractExecutor active (sync + async actions)
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.bo.EngineBootstrap/]: CoreBootstrap bootstrap complete — 6 systems, 4 task sources, com.wsteam.wandscape.core.task.BlueprintRegistry@35b91953 blueprints
+[17:53:33] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: BuildCompleteListener registered on engine EventBus
+[17:53:33] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: RoadEventListener registered on engine EventBus
+[17:53:33] [Server thread/INFO] [co.ws.wa.Wandscape/]: Task persistence wired — pool has 0 active tasks
+[17:53:33] [Server thread/INFO] [co.ws.wa.Wandscape/]: Road system wired — 0 edges persisted
+[17:53:33] [Server thread/INFO] [minecraft/IntegratedServer]: Changing view distance to 12, from 10
+[17:53:33] [Server thread/INFO] [minecraft/IntegratedServer]: Changing simulation distance to 12, from 0
+[17:53:34] [Server thread/INFO] [minecraft/PlayerList]: Dev[local:E:3ce1f500] logged in with entity id 1 at (-3.5, -60.0, 2.5)
+[17:53:34] [Server thread/INFO] [minecraft/MinecraftServer]: Dev加入了游戏
+[17:53:34] [Render thread/INFO] [minecraft/AdvancementTree]: Loaded 2 advancements
+[17:53:38] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#100 mcTick=#100 — entities=0 tasks_in_pool=0 pendingAsync=0
+[INFO ] CoreBootstrap | createNpc #1 pos=(-4,-60,4) mana=100 caps=[] colony=00000000
+[17:53:40] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 45a77a35 joined ECS as entity 1 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #2 pos=(-4,-60,3) mana=100 caps=[] colony=00000000
+[17:53:40] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC d226543b joined ECS as entity 2 (colony=00000000)
+[17:53:40] [Render thread/INFO] [minecraft/ChatComponent]: [System] [CHAT] [Wandscape Debug] NPC casting ON — no diamond target set
+[INFO ] CoreBootstrap | createNpc #3 pos=(-4,-60,2) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 66557b14 joined ECS as entity 3 (colony=00000000)
+[17:53:41] [Render thread/INFO] [minecraft/ChatComponent]: [System] [CHAT] [Wandscape Debug] NPC casting ON — no diamond target set
+[INFO ] CoreBootstrap | createNpc #4 pos=(-4,-60,1) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 92343847 joined ECS as entity 4 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #5 pos=(-4,-60,1) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 9d022d17 joined ECS as entity 5 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #6 pos=(-4,-60,0) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC e1ee3e9d joined ECS as entity 6 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #7 pos=(-4,-60,0) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 875ce5ad joined ECS as entity 7 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #8 pos=(-4,-60,-1) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC a87a0835 joined ECS as entity 8 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #9 pos=(-4,-60,-1) mana=100 caps=[] colony=00000000
+[17:53:41] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 5207aa32 joined ECS as entity 9 (colony=00000000)
+[INFO ] CoreBootstrap | createNpc #10 pos=(-4,-60,-2) mana=100 caps=[] colony=00000000
+[17:53:42] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC bbdcd410 joined ECS as entity 10 (colony=00000000)
+[17:53:43] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #10 — pool=0 tasks, buildings_with_work=0, tracked_active=0
+[17:53:43] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#200 mcTick=#200 — entities=10 tasks_in_pool=0 pendingAsync=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at 24,-60,-34
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at 24,-60,-34
+[INFO ] TaskPool | addTask #1 'Clear and Build at (24, -60, -34)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at -36,-60,-11
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at -36,-60,-11
+[INFO ] TaskPool | addTask #2 'Clear and Build at (-36, -60, -11)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at 28,-60,-31
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at 28,-60,-31
+[INFO ] TaskPool | addTask #3 'Clear and Build at (28, -60, -31)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at 24,-60,-31
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at 24,-60,-31
+[INFO ] TaskPool | addTask #4 'Clear and Build at (24, -60, -31)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at -31,-60,-33
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at -31,-60,-33
+[INFO ] TaskPool | addTask #5 'Clear and Build at (-31, -60, -33)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at 2,-60,24
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at 2,-60,24
+[INFO ] TaskPool | addTask #6 'Clear and Build at (2, -60, 24)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at -26,-60,-30
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at -26,-60,-30
+[INFO ] TaskPool | addTask #7 'Clear and Build at (-26, -60, -30)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at 7,-60,-32
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at 7,-60,-32
+[INFO ] TaskPool | addTask #8 'Clear and Build at (7, -60, -32)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at 33,-60,-2
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at 33,-60,-2
+[INFO ] TaskPool | addTask #9 'Clear and Build at (33, -60, -2)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[INFO ] BlueprintInterp | [Clear] Clearing 18 positions for ֳ��������� at -27,-60,0
+[INFO ] BlueprintInterp | [Clear] Done. Building ֳ��������� at -27,-60,0
+[INFO ] TaskPool | addTask #10 'Clear and Build at (-27, -60, 0)' blueprint=build:clear_and_build state=PENDING_ASSIGN priority=10 steps=31 triggers=0
+[17:53:44] [Render thread/INFO] [minecraft/ChatComponent]: [System] [CHAT] [RoadTest] 10 building tasks submitted (building=town_hall, maxRadius=40)\n  Total tasks in pool: 10\n  Road threshold: 3\n\n-> NPCs will build buildings first\n-> After 3 buildings complete, MST roads auto-trigger\n-> Check /wandscape road info for progress
+[INFO ] TaskPool | assign #1 'Clear and Build at (24, -60, -34)' �� NPC 10 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #1 'Clear and Build at (24, -60, -34)' �� NPC 10 (score=0.09 dist=43)
+[INFO ] TaskPool | assign #2 'Clear and Build at (-36, -60, -11)' �� NPC 8 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #2 'Clear and Build at (-36, -60, -11)' �� NPC 8 (score=0.11 dist=35)
+[INFO ] TaskPool | assign #3 'Clear and Build at (28, -60, -31)' �� NPC 9 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #3 'Clear and Build at (28, -60, -31)' �� NPC 9 (score=0.09 dist=44)
+[INFO ] TaskPool | assign #4 'Clear and Build at (24, -60, -31)' �� NPC 6 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #4 'Clear and Build at (24, -60, -31)' �� NPC 6 (score=0.10 dist=42)
+[INFO ] TaskPool | assign #5 'Clear and Build at (-31, -60, -33)' �� NPC 7 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #5 'Clear and Build at (-31, -60, -33)' �� NPC 7 (score=0.09 dist=44)
+[INFO ] TaskPool | assign #6 'Clear and Build at (2, -60, 24)' �� NPC 1 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #6 'Clear and Build at (2, -60, 24)' �� NPC 1 (score=0.17 dist=20)
+[INFO ] TaskPool | assign #7 'Clear and Build at (-26, -60, -30)' �� NPC 4 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #7 'Clear and Build at (-26, -60, -30)' �� NPC 4 (score=0.10 dist=39)
+[INFO ] TaskPool | assign #8 'Clear and Build at (7, -60, -32)' �� NPC 5 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #8 'Clear and Build at (7, -60, -32)' �� NPC 5 (score=0.11 dist=35)
+[INFO ] TaskPool | assign #9 'Clear and Build at (33, -60, -2)' �� NPC 3 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #9 'Clear and Build at (33, -60, -2)' �� NPC 3 (score=0.11 dist=36)
+[INFO ] TaskPool | assign #10 'Clear and Build at (-27, -60, 0)' �� NPC 2 (step=0/31 triggers=0)
+[INFO ] Scheduler | assigned #10 'Clear and Build at (-27, -60, 0)' �� NPC 2 (score=0.15 dist=24)
+[INFO ] TaskExec | NPC 2 �� mana -0.0 �� 100.0/100 (self_teleport)
+[INFO ] TaskExec | NPC 3 �� mana -0.0 �� 100.0/100 (self_teleport)
+[INFO ] TaskExec | NPC 4 �� mana -0.0 �� 100.0/100 (self_teleport)
 [INFO ] TaskExec | NPC 5 �� mana -0.0 �� 100.0/100 (self_teleport)
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #4 segment=b22d42b8 edge=09cee5be tiles=17
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #5 segment=149572f6 edge=09cee5be tiles=5
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #6 segment=bc215d0a edge=3a68fe96 tiles=16
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.ro.RoadTaskSource/]: [RoadTaskSource] published task #7 segment=f69b0172 edge=3a68fe96 tiles=2
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=1 → (-12,-59,0) hDist=7
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 1 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=2 → (-12,-59,-8) hDist=17
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 2 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=3 → (-12,-59,11) hDist=5
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 3 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=4 → (-12,-59,14) hDist=9
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 4 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=5 → (5,-59,10) hDist=9
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 5 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=6 → (5,-59,3) hDist=9
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 6 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=7 → (5,-59,0) hDist=9
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 7 — NavigationSystem will drive it
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 1 pathfinding → (-12,-59,0) hDistSq=57 ok=true
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 2 pathfinding → (-12,-59,-8) hDistSq=310 ok=true
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 3 pathfinding → (-12,-59,11) hDistSq=34 ok=true
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 4 pathfinding → (-12,-59,14) hDistSq=86 ok=true
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 5 pathfinding → (5,-59,10) hDistSq=90 ok=false
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 5 — moveTo failed immediately, switching to teleport
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 5 — self_teleport ritual queued → (5,-59,10)
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 6 pathfinding → (5,-59,3) hDistSq=90 ok=true
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 7 pathfinding → (5,-59,0) hDistSq=89 ok=true
-[15:45:11] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 5 — self_teleport channeling 600 ticks at (5, -59, 10)
-[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskPool | complete #5 'Road Segment' by NPC 3
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[15:45:13] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#300 mcTick=#300 — entities=7 tasks_in_pool=6 pendingAsync=1
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskPool | complete #2 'Road Segment' by NPC 6
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.0 �� 100.0/100 (self_teleport)
+[INFO ] TaskExec | NPC 7 �� mana -0.0 �� 100.0/100 (self_teleport)
+[INFO ] TaskExec | NPC 8 �� mana -0.0 �� 100.0/100 (self_teleport)
+[INFO ] TaskExec | NPC 9 �� mana -0.0 �� 100.0/100 (self_teleport)
+[INFO ] TaskExec | NPC 10 �� mana -0.0 �� 100.0/100 (self_teleport)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=1 → (-1,-59,24) hDist=20
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 1 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=2 → (-30,-59,0) hDist=26
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 2 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=3 → (30,-59,-2) hDist=34
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 3 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=4 → (-29,-59,-30) hDist=39
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 4 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=5 → (4,-59,-32) hDist=33
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 5 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=6 → (21,-59,-31) hDist=39
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 6 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=7 → (-34,-59,-33) hDist=44
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 7 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=8 → (-39,-59,-11) hDist=36
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 8 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=9 → (25,-59,-31) hDist=41
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 9 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] navigateTo npc=10 → (21,-59,-34) hDist=40
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeMovementOps/]: [MovementOps] nav queued for NPC 10 — NavigationSystem will drive it
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 1 pathfinding → (-1,-59,24) hDistSq=409 ok=true
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 2 pathfinding → (-30,-59,0) hDistSq=685 ok=false
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 2 — moveTo failed immediately, switching to teleport
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 2 — self_teleport ritual queued → (-30,-59,0)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 3 — self_teleport ritual queued → (30,-59,-2)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 4 — self_teleport ritual queued → (-29,-59,-30)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 5 — self_teleport ritual queued → (4,-59,-32)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 6 — self_teleport ritual queued → (21,-59,-31)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 7 — self_teleport ritual queued → (-34,-59,-33)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 8 — self_teleport ritual queued → (-39,-59,-11)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 9 — self_teleport ritual queued → (25,-59,-31)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.sy.NavigationSystem/]: [NavSys] NPC 10 — self_teleport ritual queued → (21,-59,-34)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 2 — self_teleport channeling 1 ticks at (-30, -59, 0)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 3 — self_teleport channeling 1 ticks at (30, -59, -2)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 4 — self_teleport channeling 1 ticks at (-29, -59, -30)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 5 — self_teleport channeling 1 ticks at (4, -59, -32)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 6 — self_teleport channeling 1 ticks at (21, -59, -31)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 7 — self_teleport channeling 1 ticks at (-34, -59, -33)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 8 — self_teleport channeling 1 ticks at (-39, -59, -11)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 9 — self_teleport channeling 1 ticks at (25, -59, -31)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] NPC 10 — self_teleport channeling 1 ticks at (21, -59, -34)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 2 → (-30, -59, 0)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 3 → (30, -59, -2)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 4 → (-29, -59, -30)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 5 → (4, -59, -32)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 6 → (21, -59, -31)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 7 → (-34, -59, -33)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 8 → (-39, -59, -11)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 9 → (25, -59, -31)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 10 → (21, -59, -34)
+[17:53:44] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] tickAll: 9 completed, 0 remaining
 [INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
 [INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
 [INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
 [INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
 [INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskPool | complete #1 'Road Segment' by NPC 7
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 2 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 3 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 6 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 7 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 8 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 9 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 10 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskPool | complete #10 'Clear and Build at (-27, -60, 0)' by NPC 2
+[INFO ] TaskPool | complete #9 'Clear and Build at (33, -60, -2)' by NPC 3
+[INFO ] TaskPool | complete #7 'Clear and Build at (-26, -60, -30)' by NPC 4
+[INFO ] TaskPool | complete #8 'Clear and Build at (7, -60, -32)' by NPC 5
+[INFO ] TaskPool | complete #4 'Clear and Build at (24, -60, -31)' by NPC 6
+[INFO ] TaskPool | complete #5 'Clear and Build at (-31, -60, -33)' by NPC 7
+[INFO ] TaskPool | complete #2 'Clear and Build at (-36, -60, -11)' by NPC 8
+[INFO ] TaskPool | complete #3 'Clear and Build at (28, -60, -31)' by NPC 9
+[INFO ] TaskPool | complete #1 'Clear and Build at (24, -60, -34)' by NPC 10
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=-27, y=-60, z=0} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=33, y=-60, z=-2} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=-26, y=-60, z=-30} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] First MST plan — 3 buildings (threshold=3)
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Full plan: 8 placements, 2 edges, cost=128
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (-26,-35) rot=3: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-40,-20) rot=0: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-33,2) rot=1: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (31,-9) rot=3: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (16,-9) rot=3: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (8,-2) rot=2: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (0,-9) rot=2: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-22,-16) rot=0: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] No tiles from full-plan 8 placements
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=7, y=-60, z=-32} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (7,-32) to network
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental chain: 3 placements for 殖民地市政厅
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (12,-32) rot=2: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-3,-46) rot=3: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-25,-39) rot=0: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] No tiles from incremental chain (3 placements)
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=24, y=-60, z=-31} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (24,-31) to network
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental chain: 2 placements for 殖民地市政厅
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (29,-31) rot=2: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (7,-38) rot=0: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] No tiles from incremental chain (2 placements)
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=-31, y=-60, z=-33} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (-31,-33) to network
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental expansion produced no placements for 殖民地市政厅
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=-36, y=-60, z=-11} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (-36,-11) to network
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental chain: 1 placements for 殖民地市政厅
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (-43,-9) rot=0: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] No tiles from incremental chain (1 placements)
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=28, y=-60, z=-31} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (28,-31) to network
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental expansion produced no placements for 殖民地市政厅
+[17:53:47] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=24, y=-60, z=-34} construction complete — now operational
+[17:53:47] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (24,-34) to network
+[17:53:47] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental expansion produced no placements for 殖民地市政厅
 [INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskPool | complete #7 'Road Segment' by NPC 2
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
+[17:53:48] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#300 mcTick=#300 — entities=10 tasks_in_pool=1 pendingAsync=1
 [INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
 [INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
 [INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskPool | complete #6 'Road Segment' by NPC 1
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 4 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskPool | complete #4 'Road Segment' by NPC 4
-[15:45:18] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #20 — pool=1 tasks, buildings_with_work=0, tracked_active=0
-[15:45:18] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#400 mcTick=#400 — entities=7 tasks_in_pool=1 pendingAsync=1
-[15:45:23] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#500 mcTick=#500 — entities=7 tasks_in_pool=1 pendingAsync=1
-[15:45:28] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #30 — pool=1 tasks, buildings_with_work=0, tracked_active=0
-[15:45:28] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#600 mcTick=#600 — entities=7 tasks_in_pool=1 pendingAsync=1
-[15:45:33] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#700 mcTick=#700 — entities=7 tasks_in_pool=1 pendingAsync=1
-[INFO ] CoreBootstrap | createNpc #8 pos=(1,-60,13) mana=100 caps=[] colony=00000000
-[15:45:35] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 482e94dd joined ECS as entity 8 (colony=00000000)
-[INFO ] CoreBootstrap | createNpc #9 pos=(-2,-60,12) mana=100 caps=[] colony=00000000
-[15:45:36] [Server thread/INFO] [co.ws.wa.np.in.EntityComponentBridge/]: NPC 96b962de joined ECS as entity 9 (colony=00000000)
-[15:45:38] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #40 — pool=1 tasks, buildings_with_work=0, tracked_active=0
-[15:45:38] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#800 mcTick=#800 — entities=9 tasks_in_pool=1 pendingAsync=1
-[15:45:41] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] self_teleport: NPC 5 → (5, -59, 10)
-[15:45:41] [Server thread/INFO] [co.ws.wa.en.bo.WandscapeRitualOps/]: [RitualOps] tickAll: 1 completed, 0 remaining
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[15:45:41] [Server thread/INFO] [minecraft/IntegratedServer]: Saving and pausing game...
-[15:45:41] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
-[15:45:41] [Server thread/INFO] [co.ws.wa.en.ro.RoadSavedData/]: [RoadSavedData] saved colony=null buildingCount=4 edges=3
-[15:45:41] [Server thread/INFO] [co.ws.wa.en.TaskPoolSavedData/]: [TaskPoolSavedData] saved 1 tasks (nextId=8)
-[15:45:41] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
-[15:45:41] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[INFO ] TaskExec | NPC 5 �� mana -0.2 �� 99.8/100 (TransformOp)
-[15:45:43] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#900 mcTick=#900 — entities=9 tasks_in_pool=1 pendingAsync=1
-[INFO ] TaskPool | complete #3 'Road Segment' by NPC 5
-[15:45:48] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #50 — pool=0 tasks, buildings_with_work=0, tracked_active=0
-[15:45:48] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#1000 mcTick=#1000 — entities=9 tasks_in_pool=0 pendingAsync=0
-[15:45:53] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#1100 mcTick=#1100 — entities=9 tasks_in_pool=0 pendingAsync=0
-[15:45:58] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #60 — pool=0 tasks, buildings_with_work=0, tracked_active=0
-[15:45:58] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#1200 mcTick=#1200 — entities=9 tasks_in_pool=0 pendingAsync=0
-[15:46:03] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#1300 mcTick=#1300 — entities=9 tasks_in_pool=0 pendingAsync=0
-[15:46:08] [Server thread/INFO] [minecraft/IntegratedServer]: Saving and pausing game...
-[15:46:08] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
-[15:46:08] [Server thread/INFO] [co.ws.wa.en.TaskPoolSavedData/]: [TaskPoolSavedData] saved 0 tasks (nextId=8)
-[15:46:08] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
-[15:46:08] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
-[15:46:31] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #70 — pool=0 tasks, buildings_with_work=0, tracked_active=0
-[15:46:31] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#1400 mcTick=#1400 — entities=9 tasks_in_pool=0 pendingAsync=0
-[15:46:36] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#1500 mcTick=#1500 — entities=9 tasks_in_pool=0 pendingAsync=0
-[15:46:37] [Server thread/INFO] [minecraft/IntegratedServer]: Saving and pausing game...
-[15:46:37] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
-[15:46:37] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
-[15:46:37] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskExec | NPC 1 �� mana -0.2 �� 99.8/100 (TransformOp)
+[INFO ] TaskPool | complete #6 'Clear and Build at (2, -60, 24)' by NPC 1
+[17:53:51] [Server thread/INFO] [co.ws.wa.bu.in.BuildCompleteListener/]: [Building] town_hall at BlockPos{x=2, y=-60, z=24} construction complete — now operational
+[17:53:51] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental: connecting 殖民地市政厅 at (2,24) to network
+[17:53:51] [Server thread/INFO] [co.ws.wa.en.ro.RoadEventListener/]: [Road] Incremental chain: 3 placements for 殖民地市政厅
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=259 samplePalette=EMPTY
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/corner at (7,24) rot=2: total=259 kept=0 nameSkip=259 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-8,10) rot=3: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] parseBlocks: hasPalettes=false hasPalette=true paletteSize=0 blockCount=258 samplePalette=EMPTY
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadTemplatePlacer/]: [RoadTemplatePlacer] wandscape:road/straight at (-16,17) rot=2: total=258 kept=0 nameSkip=258 bldSkip=0 occSkip=0 fluidSkip=0
+[17:53:51] [Server thread/WARN] [co.ws.wa.en.ro.RoadEventListener/]: [Road] No tiles from incremental chain (3 placements)
+[17:53:53] [Server thread/INFO] [co.ws.wa.en.so.BuildingTaskSource/]: [BuildingTaskSource] heartbeat #20 — pool=0 tasks, buildings_with_work=0, tracked_active=0
+[17:53:53] [Server thread/INFO] [co.ws.wa.Wandscape/]: [Engine] engineTick=#400 mcTick=#400 — entities=10 tasks_in_pool=0 pendingAsync=0
+[17:53:56] [Server thread/INFO] [minecraft/IntegratedServer]: Saving and pausing game...
+[17:53:56] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld
+[17:53:56] [Server thread/INFO] [co.ws.wa.en.ro.RoadSavedData/]: [RoadSavedData] saved colony=null buildingCount=10 edges=0
+[17:53:56] [Server thread/INFO] [co.ws.wa.en.TaskPoolSavedData/]: [TaskPoolSavedData] saved 0 tasks (nextId=11)
+[17:53:56] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_nether
+[17:53:56] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:the_end
 
 > Task :runClient FAILED
 8 actionable tasks: 1 executed, 7 up-to-date
@@ -317,6 +469,6 @@ Execution failed for task ':runClient'.
 > Run with --scan to generate a Build Scan (powered by Develocity).
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 2m 1s
-15:46:38: 执行完成 'runClient'。
+BUILD FAILED in 45s
+17:53:58: 执行完成 'runClient'。
 
