@@ -103,5 +103,37 @@ public class Config {
             .comment("Maximum height the road will fill below surface before logging a warning (0 = no limit)")
             .defineInRange("road.maxFillHeight", 6, 0, 64);
 
+    public static final ModConfigSpec.ConfigValue<String> ROAD_SURFACE_PALETTE = BUILDER
+            .comment("Weighted block palette for road surface. Format: \"modid:block=weight,...\""
+                    + " — weights are relative, total need not be 100.")
+            .define("road.surfacePalette",
+                    "minecraft:stone_bricks=50,minecraft:andesite=25,minecraft:stone=25");
+
+    // ---- Road decoration ----
+
+    public static final ModConfigSpec.BooleanValue ROAD_DECORATION_ENABLED = BUILDER
+            .comment("Whether road decoration (lamps, benches) is generated")
+            .define("road.decoration.enabled", true);
+
+    public static final ModConfigSpec.IntValue ROAD_DECORATION_LAMP_SPACING = BUILDER
+            .comment("Distance in blocks between lamps along roads (0 = disabled)")
+            .defineInRange("road.decoration.lampSpacing", 8, 0, 64);
+
+    public static final ModConfigSpec.IntValue ROAD_DECORATION_BENCH_SPACING = BUILDER
+            .comment("Distance in blocks between benches along roads (0 = disabled)")
+            .defineInRange("road.decoration.benchSpacing", 24, 0, 64);
+
+    public static final ModConfigSpec.ConfigValue<String> ROAD_DECORATION_LAMP_POST = BUILDER
+            .comment("Block used for lamp posts")
+            .define("road.decoration.lampPost", "minecraft:oak_fence");
+
+    public static final ModConfigSpec.ConfigValue<String> ROAD_DECORATION_LAMP_LIGHT = BUILDER
+            .comment("Block used for the light source on top of lamp posts")
+            .define("road.decoration.lampLight", "minecraft:lantern");
+
+    public static final ModConfigSpec.ConfigValue<String> ROAD_DECORATION_BENCH_BLOCK = BUILDER
+            .comment("Block used for benches (supports [facing=...] state)")
+            .define("road.decoration.benchBlock", "minecraft:oak_stairs");
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

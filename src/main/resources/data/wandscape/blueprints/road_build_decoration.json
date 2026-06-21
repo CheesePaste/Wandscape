@@ -1,0 +1,32 @@
+{
+  "id": "road:build_decoration",
+  "display_name": "Road Decoration",
+  "description": "Places decorative blocks (lamps, benches) along an existing road edge. Tiles are injected as runtime param.",
+  "params": {
+    "decoration_id": "string",
+    "edge_id": "string"
+  },
+  "steps": [
+    {
+      "type": "for_each",
+      "list": "$tiles",
+      "var": "tile",
+      "steps": [
+        {
+          "type": "place",
+          "at": {"get": ["$tile", "pos"]},
+          "block": {"get": ["$tile", "block"]}
+        }
+      ]
+    },
+    {
+      "type": "emit_event",
+      "event": "decoration_complete",
+      "data": {
+        "decoration_id": "$decoration_id",
+        "edge_id": "$edge_id",
+        "tiles_placed": {"size": "$tiles"}
+      }
+    }
+  ]
+}

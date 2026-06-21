@@ -31,7 +31,8 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  * <ul>
  *   <li>Expands each center-line point to 3-wide</li>
  *   <li>Bridges water with oak planks at water surface level</li>
- *   <li>Applies vanilla-style block variation on land</li>
+ *   <li>Picks surface blocks from a weighted palette with
+ *       position-based deterministic randomness</li>
  *   <li>Excavates 2-block headroom when road is below terrain</li>
  *   <li>Fills support blocks when road is above terrain</li>
  * </ul>
@@ -47,7 +48,8 @@ public final class RoadBuilder {
      *
      * @param level          the server level
      * @param path           3D path points with pre-computed Y
-     * @param tier           road tier name (e.g. "dirt")
+     * @param tier           road tier name (e.g. "dirt") — currently unused;
+     *                       all surfaces use the TOML palette
      * @param buildingBounds building bounding boxes to avoid
      * @param occupiedTiles  mutable set of already-claimed XZ positions;
      *                       updated in-place
@@ -57,7 +59,7 @@ public final class RoadBuilder {
                                         Collection<BoundingBox> buildingBounds,
                                         Set<XZPoint> occupiedTiles) {
         RoadConfig config = RoadConfig.getInstance();
-        String defaultBlock = config.getDefaultBlock(tier);
+        List<RoadConfig.WeightedBlock> palette = config.getSurfacePalette();
         int halfWidth = config.getDefaultWidth() / 2;
         int n = path.size();
 
@@ -67,10 +69,6 @@ public final class RoadBuilder {
         for (int i = 0; i < n; i++) {
             PathPoint p = path.get(i);
             int perpDx = 0, perpDz = 0;
-            int dy = 0;
-            if (i > 0) {
-                dy = p.y() - path.get(i - 1).y();
-            }
 
             if (n == 1) {
                 perpDz = 1;
@@ -113,8 +111,6 @@ public final class RoadBuilder {
                 int terrainY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
 
                 // ── Building boundary check (full affected Y column) ──
-                // The road may excavate above roadY or fill below roadY.
-                // The full affected range is [min(roadY, terrainY), max(roadY+2, terrainY)].
                 int colMinY = Math.min(roadY, terrainY);
                 int colMaxY = Math.max(roadY + 2, terrainY);
                 if (columnIntersectsBuilding(tx, colMinY, colMaxY, tz, buildingBounds)) continue;
@@ -129,10 +125,9 @@ public final class RoadBuilder {
                     int waterSurfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
                     roadPos = new BlockPos(tx, waterSurfaceY, tz);
                     block = "minecraft:oak_planks";
-                } else if (dy != 0) {
-                    block = "minecraft:cobblestone";
                 } else {
-                    block = applyVariation(level, roadPos, defaultBlock);
+                    // Weighted random pick, deterministic per position
+                    block = pickFromPalette(palette, tx, tz);
                 }
                 int actualY = roadPos.getY();
 
@@ -143,7 +138,6 @@ public final class RoadBuilder {
                 tiles.add(makeTile(roadPos, block));
 
                 // Excavation: clear at least 2-block walkable headroom above road.
-                // When road cuts into terrain, clears through the overhanging blocks.
                 int terrainTop = terrainY - 1;
                 if (!isWater && actualY < terrainTop) {
                     int cutDepth = terrainTop - actualY;
@@ -184,8 +178,31 @@ public final class RoadBuilder {
         }
 
         return tiles;
-
     }
+
+    // ---- Block selection ----
+
+    /**
+     * Pick a block from the weighted palette deterministically,
+     * keyed by XZ position so the same coordinate always gets
+     * the same block (no flicker on chunk reload).
+     */
+    static String pickFromPalette(List<RoadConfig.WeightedBlock> palette, int x, int z) {
+        int totalWeight = 0;
+        for (RoadConfig.WeightedBlock wb : palette) {
+            totalWeight += wb.weight();
+        }
+        long h = ((long) x * 31 + z) ^ 0x3A7F;
+        int roll = (int) (Math.abs(h) % totalWeight);
+        int cumulative = 0;
+        for (RoadConfig.WeightedBlock wb : palette) {
+            cumulative += wb.weight();
+            if (roll < cumulative) return wb.blockId();
+        }
+        return palette.get(0).blockId(); // unreachable when totalWeight > 0
+    }
+
+    // ---- JSON helpers ----
 
     private static JsonObject makeTile(BlockPos pos, String block) {
         JsonObject tile = new JsonObject();
@@ -206,43 +223,10 @@ public final class RoadBuilder {
         return result;
     }
 
-    // ---- Vanilla-style block variation ----
-
-    static String applyVariation(Level level, BlockPos roadPos, String blockId) {
-        if (!"minecraft:dirt_path".equals(blockId)) return blockId;
-
-        BlockPos below = roadPos.below();
-        BlockState ground = level.getBlockState(below);
-
-        if (!ground.getFluidState().isEmpty()) {
-            return "minecraft:oak_planks";
-        }
-
-        String groundName = ground.getBlock().builtInRegistryHolder()
-                .key().location().toString();
-
-        if ("minecraft:grass_block".equals(groundName)) {
-            long h = ((long) roadPos.getX() * 31 + roadPos.getZ()) ^ 0x3A7F;
-            if (Math.abs(h % 100) < 15) {
-                return "minecraft:grass_block";
-            }
-        }
-
-        if ("minecraft:stone".equals(groundName)
-                || "minecraft:cobblestone".equals(groundName)) {
-            return "minecraft:cobblestone";
-        }
-
-        return blockId;
-    }
-
     // ---- Helpers ----
 
     /**
      * Check if a vertical column segment intersects any building's 3D volume.
-     * The column spans XZ point {@code (x, z)} from Y={@code yMin} to Y={@code yMax}.
-     *
-     * @return true if any part of the column overlaps a building bounding box
      */
     private static boolean columnIntersectsBuilding(int x, int yMin, int yMax, int z,
                                                     Collection<BoundingBox> boxes) {
