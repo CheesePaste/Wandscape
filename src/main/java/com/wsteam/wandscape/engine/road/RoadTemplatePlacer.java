@@ -97,7 +97,7 @@ public final class RoadTemplatePlacer {
                 int groundY = surfaceY - 1 + entry.y;
                 BlockPos pos = new BlockPos(wx, groundY, wz);
 
-                if (!isPassable(pos, level)) continue;
+                if (shouldSkip(pos, level)) continue;
 
                 occupiedTiles.add(tileXz);
 
@@ -217,10 +217,11 @@ public final class RoadTemplatePlacer {
 
     // ---- Terrain ----
 
-    private static boolean isPassable(BlockPos pos, Level level) {
+    private static boolean shouldSkip(BlockPos pos, Level level) {
         var state = level.getBlockState(pos);
-        return (state.isAir() || state.canBeReplaced())
-                && state.getFluidState().isEmpty();
+        // Only skip if the position has fluid (water/lava). Solid blocks like grass
+        // or dirt are REPLACED by the road, just like vanilla structure placement.
+        return !state.getFluidState().isEmpty();
     }
 
     private static boolean insideAnyBuilding(int x, int z, Collection<BoundingBox> boxes) {
