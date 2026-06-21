@@ -482,101 +482,156 @@ return new BlockPos(x, i + j, z);                    // = 地形高度 - 1 + 0
 | **NPC 执行** | 结构级一次放置（模板内多个方块） | for_each 逐格 place |
 | **自然感** | 高（随机斑驳 + 地形贴合 + 水上桥） | 低（清一色 dirt_path） |
 
-### 12.3 混合方案：保留 MST 规划 + 复用原版放置管道
+### 12.3 V2 设计：保留逐格原子操作 + 引入路面规则系统
 
-**核心思想**：core/road/ 的 MST + PathGenerator 规划不变（确定性强），替换 engine/road/ 的逐格 tile 生成为原版 StructureTemplate 管道（自然感高）。
+> grill-me 8 问全部确认后的最终方案。
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  core/road/ (不变)                                              │
-│  MST → PathGenerator.lShape() → 确定路径 + 方向                  │
-│                                                                 │
-│  输出：模板放置指令序列                                          │
-│    TemplateOp { type: STRAIGHT|CORNER|CROSSROAD|T_JUNCTION,     │
-│                 pos: BlockPos, rotation: Rotation }              │
-└──────────────┬──────────────────────────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────────────────────────────┐
-│  engine/road/ (替换 RoadBuilder.buildTiles)                     │
-│                                                                 │
-│  RoadTemplatePlacer:                                            │
-│    ├─ 根据路径方向序列确定模板类型                                │
-│    ├─ 对齐到 16×16 模板网格                                      │
-│    ├─ 构造 StructurePlaceSettings                               │
-│    │    ├─ GravityProcessor(WORLD_SURFACE, -1) ← 地形贴合        │
-│    │    ├─ RuleProcessor(road_surface_rules)   ← 方块规则        │
-│    │    └─ BlockIgnoreProcessor(STRUCTURE_AND_AIR) ← 跳过脚手架  │
-│    ├─ 调用 StructureTemplate.placeInWorld()                     │
-│    └─ 或生成 "road:place_template" 蓝图供 NPC 执行               │
-│                                                                 │
-│  需要新建的 NBT 模板 (data/wandscape/structure/road/):            │
-│    ├─ straight_3.nbt     (3×16 直道)                            │
-│    ├─ straight_3_short.nbt (3×8 短直道)                          │
-│    ├─ corner_3.nbt       (3×3 转角)                             │
-│    ├─ crossroad_3.nbt    (3×3 十字口)                            │
-│    └─ tjunction_3.nbt    (3×3 T型口)                             │
-│                                                                 │
-│  方块规则 (data/wandscape/road_surface_rules.json):              │
-│    └─ 按地形类型：grass→dirt_path(85%)/grass(15%)                │
-│        water→oak_planks, sand→smooth_sandstone, stone→cobble    │
-└──────────────────────────────────────────────────────────────────┘
-```
+**核心思想**：保持 V1 的 MST 规划 + PathGenerator 逐格路径 + NPC 逐格 place 原子操作不变。引入数据驱动的路面规则系统替换硬编码方块选择。参考原版 RuleProcessor 单条件模式，根据路面下方地面方块类型和水体状态决定输出。
 
-### 12.4 关键技术验证
+**方案决策汇总**：
 
-**StructureTemplate.placeInWorld() 是公开 API**：
+| # | 决策 | 结论 |
+|---|------|------|
+| 1 | NPC 参与 | **A: 保留逐格 place 原子操作**，不引入模板级批量放置 |
+| 2 | 规则条件 | **单条件**：`(groundBlock, isWater) → outputBlock + probability` |
+| 3 | 交叉口 | **B: 同材质**，不换 stone_bricks。保留 IntersectionDetector 数据结构供未来 |
+| 4 | 规则分层 | **core/road/surface/ 纯逻辑 + engine/road/ 读 MC 方块** |
+| 5 | 路宽 | **3 格默认**，TOML 可配 `road.default_width = 3` |
+| 6 | Tier | **保留但简化**：`default_block` + `rules` 引用，删除 `intersection_block` |
+| 7 | buildTiles | 削除 `intersections` 参数，通过 `RoadConfig` 获取规则 |
+| 8 | 匹配算法 | **顺序首条命中**，`chance` 滚动。优先级：水面 → 具体地面 → 通配 → default_block |
+
+#### 12.3.1 core/road/surface/ — 纯逻辑层
+
 ```java
-// StructureTemplate.java:230 — 非 @Nullable，非 @Deprecated
-public boolean placeInWorld(
-    ServerLevelAccessor serverLevel,  // ServerLevel 实现此接口
-    BlockPos offset,                  // 模板内偏移
-    BlockPos pos,                     // 世界放置位置
-    StructurePlaceSettings settings,  // 旋转 + 处理器列表
-    RandomSource random,
-    int flags
+// RoadSurfaceRule.java — 单条规则 record
+public record RoadSurfaceRule(
+    String groundBlock,    // 输入条件：路面下方方块 ID，"*" = 通配
+    boolean isWater,       // 输入条件：路面位置是否水体
+    String outputBlock,    // 输出：用什么方块
+    double chance          // 命中概率，1.0 = 必定
+) {}
+
+// RoadSurfaceRules.java — 规则集 + 匹配算法
+public class RoadSurfaceRules {
+    private final List<RoadSurfaceRule> rules;
+    private final String defaultBlock;
+
+    /**
+     * Match against the rule set.
+     * Priority: water rules → specific ground → wildcard → defaultBlock.
+     *
+     * @param groundBlock the block below the road tile
+     * @param isWater     whether the road position contains water
+     * @param rng         random source for chance rolling
+     * @return the output block ID (never null)
+     */
+    public String match(String groundBlock, boolean isWater, RandomSource rng) {
+        // Phase 1: water rules (highest priority)
+        for (var rule : waterRules) {
+            if (rng.nextDouble() < rule.chance()) return rule.outputBlock();
+        }
+        // Phase 2: specific ground match
+        var groundList = rulesByGround.get(groundBlock);
+        if (groundList != null) {
+            for (var rule : groundList) {
+                if (rng.nextDouble() < rule.chance()) return rule.outputBlock();
+            }
+        }
+        // Phase 3: wildcard (*)
+        for (var rule : wildcardRules) {
+            if (rng.nextDouble() < rule.chance()) return rule.outputBlock();
+        }
+        // Phase 4: fallback
+        return defaultBlock;
+    }
+}
+```
+
+#### 12.3.2 路面规则 JSON
+
+```json
+// data/wandscape/road_rules/dirt.json
+{
+  "default_block": "minecraft:dirt_path",
+  "rules": [
+    { "ground": "minecraft:grass_block", "water": false, "output": "minecraft:dirt_path", "chance": 0.85 },
+    { "ground": "minecraft:grass_block", "water": false, "output": "minecraft:grass_block", "chance": 1.0 },
+    { "ground": "minecraft:sand",        "water": false, "output": "minecraft:dirt_path", "chance": 1.0 },
+    { "ground": "minecraft:stone",       "water": false, "output": "minecraft:cobblestone", "chance": 0.7 },
+    { "ground": "minecraft:stone",       "water": false, "output": "minecraft:stone_bricks", "chance": 1.0 },
+    { "ground": "minecraft:dirt",        "water": false, "output": "minecraft:dirt_path", "chance": 1.0 },
+    { "ground": "*",                     "water": true,  "output": "minecraft:oak_planks", "chance": 1.0 }
+  ]
+}
+```
+
+#### 12.3.3 简化的 road_tiers.json
+
+```json
+// data/wandscape/road_tiers.json
+{
+  "tiers": {
+    "dirt": {
+      "default_block": "minecraft:dirt_path",
+      "rules": "wandscape:road_rules/dirt"
+    }
+  }
+}
+```
+
+`intersection_block` 删除。
+
+#### 12.3.4 RoadBuilder.buildTiles 新签名
+
+```java
+public static JsonArray buildTiles(
+    Level level, List<XZPoint> path, String tier,
+    Collection<BoundingBox> buildingBounds,
+    Set<XZPoint> occupiedTiles
 )
 ```
 
-**在运行时加载模板**（不仅仅在 worldgen）：
+`intersections` 参数削除。每格方块由 `RoadSurfaceRules.match(groundBlock, isWater, rng)` 决定。
+
+#### 12.3.5 RoadConfig 新增方法
+
 ```java
-StructureTemplateManager stm = serverLevel.getStructureManager();
-StructureTemplate template = stm.getOrCreate(
-    ResourceLocation.fromNamespaceAndPath("wandscape", "road/straight_3"));
-// → 自动从 data/wandscape/structure/road/straight_3.nbt 加载
+public int getDefaultWidth() { return Config.ROAD_DEFAULT_WIDTH.get(); }
+public RoadSurfaceRules getSurfaceRules(String tier) { ... }
 ```
 
-**三种模板来源**：
-1. `data/wandscape/structure/road/*.nbt`（资源包，自动加载，推荐）
-2. `fillFromWorld(level, pos, size, ...)`（运行时从世界抓取区域）
-3. `stm.readStructure(CompoundTag)`（手动构造 NBT）
+#### 12.3.6 Config.java 新增
 
-### 12.5 混合方案优缺点
+```toml
+[road]
+default_width = 3     # V2: 默认路宽
+```
 
-**优势**：
-- 道路自然感大幅提升（磨损斑驳、水上桥、地形贴合，与原版村庄一致）
-- 处理器管道可数据驱动配置
-- 结构级放置比逐格 for_each 更快
-- 模板可由美术设计（不需要改代码）
-- 核心规划算法（MST）保留确定性优势
+### 12.4 V1→V2 变更清单
 
-**代价**：
-- 需要维护 5+ 个 NBT 模板文件
-- 模板网格对齐带来复杂度（不像当前逐格计算那么灵活）
-- 跨模板边缘可能有不平整（需要重叠或过渡处理）
-- 蓝图层需要新增模板放置原子操作
+| V1 项 | V2 变更 |
+|-------|--------|
+| `road_tiers.json` `intersection_block` | 删除 |
+| `RoadBuilder.buildTiles` `intersections` 参数 | 删除 |
+| `RoadBuilder.buildTiles` 硬编码 `surfaceBlock` | 改为 `RoadSurfaceRules.match()` |
+| 路宽 2 格硬编码 | TOML `road.default_width = 3` |
+| `IntersectionDetector` 控制方块选择 | 仅保留数据结构（供未来） |
+| 无规则系统 | 新增 `core/road/surface/` + `data/wandscape/road_rules/` |
 
-### 12.6 实施待定
+### 12.5 V2 实施待定
 
-- [ ] 模板 NBT 文件设计（straight/corner/crossroad/t-junction）
-- [ ] 方块规则 JSON schema
-- [ ] `RoadTemplatePlacer`：路径 → 模板序列转换
-- [ ] 蓝图：新增 `road:place_template` 或直接用 API 同步放置
-- [ ] 模板网格对齐策略（MST 生成任意坐标 → 对齐到 16 格模板网格）
-- [ ] 是否符合"NPC 通过法杖执行原子操作"的设计理念？模板放置是批量操作，不符合逐原子操作
+- [ ] `core/road/surface/RoadSurfaceRule.java` + `RoadSurfaceRules.java` + 单元测试
+- [ ] `data/wandscape/road_rules/dirt.json` 默认规则
+- [ ] `engine/road/RoadConfig` 新增 `getSurfaceRules()` + `getDefaultWidth()`
+- [ ] `RoadBuilder.buildTiles` 削除 `intersections` 参数，集成规则匹配
+- [ ] `RoadBuilder` 宽度改为读取 `default_width` 配置
+- [ ] `Config.java` 新增 `ROAD_DEFAULT_WIDTH`
+- [ ] `road_tiers.json` 删除 `intersection_block`，新增 `rules` 引用
 
 ---
 ## 十三、待定问题
 
+- [ ] V2 路面规则系统实施（见 12.5 清单）
 - [ ] 路网可视化（V1 是否需要在管理面板显示道路？优先级低）
 - [ ] 建筑移址时如何处理关联节点（V1 不支持建筑移址，预留即可）
-- [ ] 是否实施 V2 混合方案（模板放路）？（见第十二章）
