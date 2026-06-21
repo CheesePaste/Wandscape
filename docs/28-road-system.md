@@ -46,12 +46,16 @@
 | 29 | NBT nodes 存储 | **不显式序列化 nodes**：加载时从 BuildingSavedData（建筑节点）+ path 交叉检测（路口节点）重建 | 避免冗余和位置不同步 |
 | 30 | 路网重建策略 | **diff**：对比新 MST 与现有路网 → 保留/废弃/新建 | 不拆已建成的路 |
 | 31 | 路宽 | **3 格**（TOML `road.default_width = 3`） | 匹配原版村庄道路宽度 |
-| 32 | 方块选择 | **数据驱动规则**（vanilla-style）：`applyVariation(groundBlock, isWater) → outputBlock` | 水面→planks 桥，草地→磨损斑驳，石头→cobblestone 过渡 |
+| 32 | 方块选择 | **加权随机调色板**：`road.surfacePalette` TOML 字符串，位置哈希确定性随机选取 | 水面→planks 桥；陆地→调色板加权随机（默认石砖50%:安山岩25%:石头25%） |
 | 33 | 地形适应 | **端点推平**：PathGenerator 计算路径 Y（端点间线性插值，|ΔY|≤1），RoadBuilder 执行 — 挖掉高处、填实低处 | 路是两点间最短可行走路径，地形是待改造的障碍 |
 | 34 | 水上桥 | **不跳过水体**：水面位置抬高至水面高度，放置 planks | 路网跨越河流无缺口 |
 | 35 | 建筑对齐 | **Building Y 提示**：路径首/末格使用建筑地板 Y，非地形 Y | 路接建筑入口不断层 |
 | 36 | 切深度限制 | **`road.maxCutDepth`**（TOML，默认 8），超限记 WARN 日志 | V1 不硬阻止，供观察调参 |
 | 37 | 填高度限制 | **`road.maxFillHeight`**（TOML，默认 6），超限记 WARN 日志 | 同上，填方过多可能是端点 Y 差不合理 |
+| 38 | 道路装饰 | **边完成时触发**：edge COMPLETE → DecorationPlanner 扫描路径 → DecorationBuilder 展开多格 → 入池 | 与修路同三阶段流水线（Planner/Builder/蓝图） |
+| 39 | 装饰类型 | **灯 + 长椅**：灯=lampPost+lampLight（2格高），长椅=stairs[facing]（1格） | V1 两种，后期 JSON 模板扩展 |
+| 40 | 装饰位置 | **路肩外侧**：垂直于路径方向，偏移 `halfWidth+1` 格，左右交替 | 不占路面，视觉对称 |
+| 41 | 装饰配置 | **TOML**：`road.decoration.*`（enabled/spacing/blocks） | 全部可调，0=关 |
 
 ---
 
@@ -91,6 +95,11 @@
 │                                                              │
 │  IntersectionDetector:                                        │
 │    └─ detect(pathA, pathB) → List<XZPoint> 交叉点（仅数据结构）│
+│                                                              │
+│  DecorationPlanner:                                           │
+│    ├─ planForEdge(edge, lampStep, benchStep, halfW)           │
+│    │     沿路径采样 → 左右交替 → List<DecorationPoint>         │
+│    └─ facingFromDelta(dx, dz) → cardinal ("north"/"south"/..) │
 └──────────────┬──────────────────────────────────────────────┘
                │ 纯数据传参（RoadBuildingData, XZPoint）
                │ 不引 MC 类
@@ -111,12 +120,11 @@
 │    │     └─ 水面检测 → 抬高到水面 + oak_planks 桥               │
 │    │     └─ 挖方: roadY < terrainTop → 清除 roadY+1..clearTop │
 │    │     └─ 填方: roadY > terrainY → 填 dirt 从 terrainY..roadY-1│
-│    │     └─ 3-wide 方块生成 + applyVariation 美学              │
-│    │          ├─ 水下 → oak_planks (桥)                       │
-│    │          ├─ 草地 → 85% dirt_path + 15% grass (磨损)      │
-│    │          ├─ 石地 → cobblestone (过渡)                     │
-│    │          ├─ 坡道(dy≠0) → cobblestone (视觉引导)           │
-│    │          └─ 默认 → dirt_path                             │
+│    │     └─ 3-wide 方块生成 + 加权随机调色板                          │
+│    │          ├─ 水下 → oak_planks (桥)                             │
+│    │          ├─ pickFromPalette(palette, x, z) 位置哈希确定性随机     │
+│    │          ├─ 格式: "block=weight,..." (TOML road.surfacePalette) │
+│    │          └─ 默认: stone_bricks=50,andesite=25,stone=25         │
 │    └─ extractXZ(tiles) → Set<XZPoint>                         │
 │                                                              │
 │  RoadTaskSource (事件驱动):                                   │
@@ -134,9 +142,18 @@
 │    ├─ getNetwork / getEdges / requestFullRebuild             │
 │    └─ requestIncrementalUpdate                               │
 │                                                              │
+│  DecorationBuilder:                                          │
+│    ├─ buildTiles(points, level, buildingBounds, config)       │
+│    │     └─ 验证地形（solid地面、非水、非建筑）                  │
+│    │     └─ lamp → fence post + lantern（2格）                 │
+│    │     └─ bench → stairs[facing]（1格，面朝道路）             │
+│    └─ columnIntersectsBuilding(x, yMin, yMax, z, boxes)       │
+│                                                              │
 │  RoadConfig:                                                 │
-│    └─ TOML [road] → threshold, segmentMaxLength, defaultWidth │
-│                     maxCutDepth, maxFillHeight                │
+│    ├─ TOML [road] → threshold, segmentMaxLength, defaultWidth │
+│    │                maxCutDepth, maxFillHeight, surfacePalette│
+│    ├─ getSurfacePalette() → List<WeightedBlock>              │
+│    └─ getDecorationConfig() → DecorationConfig record        │
 └──────────────┬──────────────────────────────────────────────┘
                │ RoadApi
 ┌──────────────▼──────────────────────────────────────────────┐
@@ -190,8 +207,16 @@ road_segment_complete 事件
   │
   ▼
 RoadEventListener.onSegmentComplete()
-  └─ 查 RoadSavedData → 找到所属 edge
-      → 标记 edge status = COMPLETE
+  │
+  ├─ 查 RoadSavedData → 找到所属 edge
+  │     ├─ 首次 COMPLETE 转换 → edge.setStatus(COMPLETE)
+  │     └─ 触发装饰 → DecorationPlanner.planForEdge(edge, lampSpacing, benchSpacing, halfW)
+  │           → List<DecorationPoint>
+  │             → DecorationBuilder.buildTiles(points, level, buildingBounds, config)
+  │               → JsonArray[{pos, block}]
+  │                 → RoadTaskSource.enqueueDecoration(...)
+  │                   → road:build_decoration 蓝图
+  │                     → NPC for_each place
 ```
 
 ---
@@ -240,7 +265,52 @@ RoadEventListener.onSegmentComplete()
 ]
 ```
 
-每个 tile 的 `block` 由 `RoadBuilder.applyVariation()` 根据地形规则决定。
+每个 tile 的 `block` 由 `RoadBuilder.pickFromPalette()` 按位置哈希从 TOML 加权调色板中选取。
+
+---
+
+### `road:build_decoration` 蓝图
+
+```json
+{
+  "id": "road:build_decoration",
+  "params": {
+    "decoration_id": "string",
+    "edge_id": "string"
+  },
+  "steps": [
+    {
+      "type": "for_each",
+      "list": "$tiles",
+      "var": "tile",
+      "steps": [
+        {
+          "type": "place",
+          "at": {"get": ["$tile", "pos"]},
+          "block": {"get": ["$tile", "block"]}
+        }
+      ]
+    },
+    {
+      "type": "emit_event",
+      "event": "decoration_complete",
+      "data": {
+        "decoration_id": "$decoration_id",
+        "edge_id": "$edge_id"
+      }
+    }
+  ]
+}
+```
+
+tiles 由 `DecorationBuilder` 生成：
+```json
+[
+  {"pos": [100, 64, 202], "block": "minecraft:oak_fence"},
+  {"pos": [100, 65, 202], "block": "minecraft:lantern"},
+  {"pos": [108, 64, -202], "block": "minecraft:oak_stairs[facing=east]"}
+]
+```
 
 ---
 
@@ -279,8 +349,17 @@ RoadNetworkSavedData (Level SavedData, HJSON copy-on-write)
 building_threshold = 3
 segment_max_length = 16
 default_width = 3
-max_cut_depth = 8      # 超过此值切山体时记 WARN，0=不限制
-max_fill_height = 6    # 超过此值填谷时记 WARN，0=不限制
+max_cut_depth = 8
+max_fill_height = 6
+surfacePalette = "minecraft:stone_bricks=50,minecraft:andesite=25,minecraft:stone=25"
+
+  [road.decoration]
+  enabled = true
+  lampSpacing = 8      # 路灯间距（格），0=不生成
+  benchSpacing = 24    # 长椅间距
+  lampPost = "minecraft:oak_fence"
+  lampLight = "minecraft:lantern"
+  benchBlock = "minecraft:oak_stairs"
 ```
 
 ---
@@ -315,16 +394,18 @@ max_fill_height = 6    # 超过此值填谷时记 WARN，0=不限制
 | `RoadPlannerTest` | 建筑数 < 阈值 → 不生成、= 阈值 → 生成 MST、增量新增建筑连到最近节点、rebuild diff（保留/废弃/新建）、空路网增量首次建筑 |
 | `IntersectionDetectorTest` | 两条边交叉检测、平行不交叉、重合一段、交叉点坐标验证 |
 | `RoadNetworkTest` | findNearestNode 返回正确节点、addEdge/removeEdge、splitIntoSegments（16 格段 + 转角切点）、全边标记 COMPLETE |
+| `DecorationPlannerTest` | 灯间距8→正确位置、长椅无重叠、双关=空、左右交替、面向道路方向、halfWidth偏移、短路径无装饰、facingFromDelta 四方向 |
 
 ### engine/shared 层（集成测试，留待 GameTest 或手动）
 
 | 范围 | 内容 |
 |------|------|
-| RoadBuilder | 端点推平（挖/填/贴）、applyVariation 规则验证（水桥/磨损/石过渡/坡度石）、3-wide 宽度输出 JSON 结构验证 |
+| RoadBuilder | 端点推平（挖/填/贴）、加权调色板随机选取验证、3-wide 宽度输出 JSON 结构验证 |
 | RoadSavedData | NBT 写入→读取 round-trip、nodes 重建（从 BuildingSavedData + intersection）、空路网加载 |
-| RoadConfig | TOML 默认值读取 |
+| RoadConfig | TOML 默认值读取、surfacePalette 解析、decoration 配置读取 |
+| DecorationBuilder | 地形验证（solid/水/建筑）、lamp→2格展开、bench→facing stairs、columnIntersectsBuilding |
 | RoadApiImpl | 端到端：build_complete → RoadEventListener → RoadPlanner → RoadBuilder → TaskRequest → GlobalTaskPool |
-| 命令 | /wandscape road info / rebuild 交互 |
+| 装饰端到端 | road_segment_complete → RoadEventListener → DecorationPlanner → DecorationBuilder → TaskRequest → NPC放置 |
 
 ---
 
@@ -346,7 +427,7 @@ max_fill_height = 6    # 超过此值填谷时记 WARN，0=不限制
 
 | 保留项 | 来源 | 位置 |
 |--------|------|------|
-| `applyVariation()` 方块变化规则 | RoadTemplatePlacer | RoadBuilder |
+| `pickFromPalette()` 加权调色板 | - (新增) | RoadBuilder |
 | `Heightmap.WORLD_SURFACE` 地形参考（水面检测 + 挖填基准） | RoadTemplatePlacer | RoadBuilder |
 | 3 格路宽 | 原版模板宽度 | `RoadConfig.getDefaultWidth()` |
 | `road.default_width` TOML 配置 | V2 设计 | `Config.java` |

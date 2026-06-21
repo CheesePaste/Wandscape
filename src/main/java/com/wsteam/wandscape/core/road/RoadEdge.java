@@ -1,13 +1,19 @@
 package com.wsteam.wandscape.core.road;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * An edge in the road network — a road segment connecting two nodes.
  * The path is stored as 3D points so terrain height is part of the data.
- * Mutable: status and segmentTaskIds change as segments are built.
+ * Mutable: status, pendingSegmentCount, and decorationTaskId change as road is built.
+ *
+ * <p>Segment completion is tracked by count rather than task ID:
+ * {@link #incrementPendingSegments} / {@link #decrementPendingSegments}.
+ * When the count reaches zero, all segments are complete.
  */
 public class RoadEdge {
 
@@ -27,6 +33,9 @@ public class RoadEdge {
     private final List<PathPoint> path;
     private final List<Long> segmentTaskIds;
     private EdgeStatus status;
+    private Long decorationTaskId; // null until decoration enqueued
+    private int pendingSegmentCount;
+    private final Set<UUID> completedSegmentIds = new HashSet<>();
 
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
                     String tier, List<PathPoint> path) {
@@ -61,23 +70,49 @@ public class RoadEdge {
     public List<PathPoint> getPath() { return List.copyOf(path); }
     public List<Long> getSegmentTaskIds() { return List.copyOf(segmentTaskIds); }
     public EdgeStatus getStatus() { return status; }
+    public Long getDecorationTaskId() { return decorationTaskId; }
 
     // ---- Mutators ----
 
     public void setStatus(EdgeStatus status) { this.status = status; }
 
-    public void addSegmentTaskId(long taskId) {
-        segmentTaskIds.add(taskId);
+    public void setDecorationTaskId(long taskId) { this.decorationTaskId = taskId; }
+
+    // ---- Segment completion tracking ----
+
+    /** Called when segments are enqueued. Transitions PLANNED → BUILDING. */
+    public void incrementPendingSegments(int count) {
+        if (count <= 0) return;
+        pendingSegmentCount += count;
         if (status == EdgeStatus.PLANNED) {
             status = EdgeStatus.BUILDING;
         }
     }
 
-    /** Check if all registered segments have been completed. */
-    public boolean allSegmentsCompleted(List<Long> completedTaskIds) {
-        if (segmentTaskIds.isEmpty()) return false;
-        return completedTaskIds.containsAll(segmentTaskIds);
+    /**
+     * Record a segment as complete by its unique segment UUID (not task ID).
+     * Guards against duplicate events for the same segment.
+     *
+     * @return true if this was the last pending segment (edge is now fully built)
+     */
+    public boolean recordSegmentComplete(UUID segmentId) {
+        if (!completedSegmentIds.add(segmentId)) return false; // duplicate
+        pendingSegmentCount = Math.max(0, pendingSegmentCount - 1);
+        return pendingSegmentCount <= 0;
     }
+
+    /**
+     * Decrement the segment counter without dedup (fallback when segment_id is absent).
+     * Safe because duplicate COMPLETE transitions are idempotent.
+     *
+     * @return true if this was the last pending segment
+     */
+    public boolean decrementAndCheckComplete() {
+        pendingSegmentCount = Math.max(0, pendingSegmentCount - 1);
+        return pendingSegmentCount <= 0;
+    }
+
+    public int getPendingSegmentCount() { return pendingSegmentCount; }
 
     @Override
     public String toString() {
