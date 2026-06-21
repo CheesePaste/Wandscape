@@ -49,6 +49,6 @@ public class RoadApiImpl implements RoadApi {
 
     @Override
     public String getRoadBlock(String tier) {
-        return RoadConfig.getInstance().getSurfaceBlock(tier);
+        return RoadConfig.getInstance().getDefaultBlock(tier);
     }
 }
