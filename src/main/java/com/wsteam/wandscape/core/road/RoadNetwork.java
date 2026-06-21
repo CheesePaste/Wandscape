@@ -87,36 +87,26 @@ public class RoadNetwork {
      * @return a reachable PathPoint, or the fallback nearest by XZ
      */
     public PathPoint findNearestWalkablePathPoint(PathPoint target) {
-        PathPoint walkableBest = null;
-        double walkableScore = Double.MAX_VALUE;
-        PathPoint xzNearest = null;
-        int xzBestDist = Integer.MAX_VALUE;
+        PathPoint bestPt = null;
+        double bestScore = Double.MAX_VALUE;
 
         for (RoadEdge edge : edges.values()) {
             for (PathPoint pp : edge.getPath()) {
                 int xzDist = pp.manhattanXZTo(target);
                 int dy = Math.abs(pp.y() - target.y());
-                // Need at least dy XZ steps to climb (1 block per step)
-                boolean walkable = dy <= xzDist;
-
-                if (walkable) {
-                    double score = xzDist + dy * 0.5;
-                    if (score < walkableScore) {
-                        walkableScore = score;
-                        walkableBest = pp;
-                    }
-                }
-
-                if (xzDist < xzBestDist) {
-                    xzBestDist = xzDist;
-                    xzNearest = pp;
+                // Score: XZ distance + Y penalty. Walkable gets bonus.
+                // Never filter — switchback path handles any slope.
+                double score = xzDist + dy * 0.8;
+                // But if Y change can fit within XZ steps (walkable), discount
+                if (dy <= xzDist) score -= 0.4 * xzDist;
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestPt = pp;
                 }
             }
         }
 
-        if (walkableBest != null) return walkableBest;
-        if (xzNearest != null) return xzNearest;
-        // Ultimate fallback
+        if (bestPt != null) return bestPt;
         RoadNode node = findNearestNode(target.xz());
         if (node != null) {
             return new PathPoint(node.pos().x(), node.pos().y(), node.pos().z());

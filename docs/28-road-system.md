@@ -1,7 +1,7 @@
 # 道路系统
 
 文档编号：NEW-28
-版本：3.2 — V1 回退 + V3 美学 + 地形自适应
+版本：3.3 — V1 回退 + V3 美学 + 端点推平
 状态：已实施
 依赖：01-shared-api, core/
 
@@ -23,8 +23,8 @@
 | 6 | 环路/捷径 | **V1 不做**，预留数据结构 | 检测"绕路"并提示的功能后期扩展 |
 | 7 | 路径形状 | **L 形（先 X 后 Z）** | 轴对齐，确定性强 |
 | 8 | 距离度量 | **曼哈顿距离** | 与 L 形路径一致 |
-| 9 | 高度/Y轴 | **地形匹配**：`Heightmap.WORLD_SURFACE - 1` | 路面紧贴地形，不悬空不埋地 |
-| 10 | 障碍处理 | **V1 跳过**：水/岩浆上的格省略，不清理树木 | 土路不用太讲究 |
+| 9 | 高度/Y轴 | **端点线性插值**：PathGenerator 计算两端点间匀速坡度，RoadBuilder 无条件信任路径 Y | 两端一样高 → 推平中间起伏；两端有高差 → 均匀坡道 |
+| 10 | 障碍处理 | **挖+填**：路径 Y 低于地形 → 挖出 2 格净空隧道；路径 Y 高于地形 → 填土方支撑 | 路是工程结构，地形是障碍物 |
 | 11 | 道路 vs 建筑 | **独立系统**，不混入 BuildingState | 路无三数值/维护/队列 |
 | 12 | 模块归属 | **core/road/ + engine/road/** | 不增加独立模块编号 |
 | 13 | 方块配置 | TOML + JSON（默认硬编码可覆盖） | 数据驱动 |
@@ -47,9 +47,11 @@
 | 30 | 路网重建策略 | **diff**：对比新 MST 与现有路网 → 保留/废弃/新建 | 不拆已建成的路 |
 | 31 | 路宽 | **3 格**（TOML `road.default_width = 3`） | 匹配原版村庄道路宽度 |
 | 32 | 方块选择 | **数据驱动规则**（vanilla-style）：`applyVariation(groundBlock, isWater) → outputBlock` | 水面→planks 桥，草地→磨损斑驳，石头→cobblestone 过渡 |
-| 33 | 地形适应 | **双 pass 算法**：Pass1 逐格算 terrainY → Pass2 `smoothY` 限步长 ≤1 | 防止陡坡路面断开 |
+| 33 | 地形适应 | **端点推平**：PathGenerator 计算路径 Y（端点间线性插值，|ΔY|≤1），RoadBuilder 执行 — 挖掉高处、填实低处 | 路是两点间最短可行走路径，地形是待改造的障碍 |
 | 34 | 水上桥 | **不跳过水体**：水面位置抬高至水面高度，放置 planks | 路网跨越河流无缺口 |
 | 35 | 建筑对齐 | **Building Y 提示**：路径首/末格使用建筑地板 Y，非地形 Y | 路接建筑入口不断层 |
+| 36 | 切深度限制 | **`road.maxCutDepth`**（TOML，默认 8），超限记 WARN 日志 | V1 不硬阻止，供观察调参 |
+| 37 | 填高度限制 | **`road.maxFillHeight`**（TOML，默认 6），超限记 WARN 日志 | 同上，填方过多可能是端点 Y 差不合理 |
 
 ---
 
@@ -72,7 +74,7 @@
 │    └─ 纯函数：List<RoadBuildingData> → List<MstEdge>          │
 │                                                              │
 │  PathGenerator:                                              │
-│    ├─ lShape(from, to): List<XZPoint>                        │
+│    ├─ lShape3D(from, to): List<PathPoint>                        │
 │    ├─ turnIndices(path): List<Integer>                       │
 │    └─ 固定先X后Z                                              │
 │                                                              │
@@ -81,11 +83,11 @@
 │    │     每条 MST 边 → PathGenerator.lShape → RoadEdge       │
 │    │     edges 直接带正确的 building UUID                     │
 │    ├─ incrementalAdd(network, newBuilding) → RoadNetwork     │
-│    │     找最近节点 → lShape → RoadEdge                       │
+│    │     找最近节点 → lShape3D → RoadEdge                       │
 │    ├─ rebuild(network, buildings) → NetworkDiff              │
 │    │     新MST vs 现有 → 保留/废弃/新建                        │
-│    ├─ splitIntoSegments(path, maxLen) → List<List<XZPoint>>  │
-│    └─ filterNewPath(path, occupied) → List<XZPoint>          │
+│    ├─ splitIntoSegments(path, maxLen) → List<List<PathPoint>>  │
+│    └─ filterNewPath(path, occupied) → List<PathPoint>          │
 │                                                              │
 │  IntersectionDetector:                                        │
 │    └─ detect(pathA, pathB) → List<XZPoint> 交叉点（仅数据结构）│
@@ -104,17 +106,17 @@
 │                                                              │
 │  RoadBuilder:                                                │
 │    ├─ buildTiles(level, path, tier, buildingBounds,           │
-│    │              occupied, startY, endY) → JsonArray         │
-│    │     └─ Pass 1: 逐格 terrainY = WORLD_SURFACE (水面则=水面Y)│
-│    │     └─ Pass 2: smoothY(terrainY, startY, endY)           │
-│    │          ├─ 前向: |ΔY| ≤ 1 (上坡切入山体，下坡逐级降)     │
-│    │          └─ 反向: endY 回传约束                           │
-│    │     └─ Pass 3: 3-wide 方块生成 + applyVariation 美学     │
+│    │              occupiedTiles) → JsonArray                   │
+│    │     └─ roadY = p.y()（无条件信任 PathGenerator 的 Y）      │
+│    │     └─ 水面检测 → 抬高到水面 + oak_planks 桥               │
+│    │     └─ 挖方: roadY < terrainTop → 清除 roadY+1..clearTop │
+│    │     └─ 填方: roadY > terrainY → 填 dirt 从 terrainY..roadY-1│
+│    │     └─ 3-wide 方块生成 + applyVariation 美学              │
 │    │          ├─ 水下 → oak_planks (桥)                       │
 │    │          ├─ 草地 → 85% dirt_path + 15% grass (磨损)      │
 │    │          ├─ 石地 → cobblestone (过渡)                     │
+│    │          ├─ 坡道(dy≠0) → cobblestone (视觉引导)           │
 │    │          └─ 默认 → dirt_path                             │
-│    ├─ smoothY(terrainY, startY, endY) → int[]                 │
 │    └─ extractXZ(tiles) → Set<XZPoint>                         │
 │                                                              │
 │  RoadTaskSource (事件驱动):                                   │
@@ -134,6 +136,7 @@
 │                                                              │
 │  RoadConfig:                                                 │
 │    └─ TOML [road] → threshold, segmentMaxLength, defaultWidth │
+│                     maxCutDepth, maxFillHeight                │
 └──────────────┬──────────────────────────────────────────────┘
                │ RoadApi
 ┌──────────────▼──────────────────────────────────────────────┐
@@ -163,10 +166,10 @@ RoadEventListener.onBuildComplete()
   ├─ 首次（现有路网为空 + buildingCount ≥ threshold）
   │   └─ RoadPlanner.computeMST(buildings, threshold) → RoadNetwork
   │       └─ 每条 MST 边:
-  │           PathGenerator.lShape(from, to) → List<XZPoint>
+  │           PathGenerator.lShape3D(fromPt, toPt) → List<PathPoint>
   │           → RoadEdge(fromBuildingId, toBuildingId, path)
   │           → splitIntoSegments(path, 16)
-  │             → 每段: RoadBuilder.buildTiles(level, path, tier, buildingBounds, occupied)
+          │                 → roadY = path[i].y（信任 PathGenerator）→ 挖/填/贴 → JsonArray[{pos, block}]
   │                 → JsonArray[{pos, block}]
   │                   → WorkItem("road:build_segment", {segment_id, tiles}, priority=10)
   │                     → GlobalTaskPool.addTask(TaskRequest)
@@ -276,6 +279,8 @@ RoadNetworkSavedData (Level SavedData, HJSON copy-on-write)
 building_threshold = 3
 segment_max_length = 16
 default_width = 3
+max_cut_depth = 8      # 超过此值切山体时记 WARN，0=不限制
+max_fill_height = 6    # 超过此值填谷时记 WARN，0=不限制
 ```
 
 ---
@@ -315,7 +320,7 @@ default_width = 3
 
 | 范围 | 内容 |
 |------|------|
-| RoadBuilder | 地形匹配（平地/坡/悬崖）、applyVariation 规则验证（水桥/磨损/石过渡）、3-wide 宽度输出 JSON 结构验证 |
+| RoadBuilder | 端点推平（挖/填/贴）、applyVariation 规则验证（水桥/磨损/石过渡/坡度石）、3-wide 宽度输出 JSON 结构验证 |
 | RoadSavedData | NBT 写入→读取 round-trip、nodes 重建（从 BuildingSavedData + intersection）、空路网加载 |
 | RoadConfig | TOML 默认值读取 |
 | RoadApiImpl | 端到端：build_complete → RoadEventListener → RoadPlanner → RoadBuilder → TaskRequest → GlobalTaskPool |
@@ -342,7 +347,7 @@ default_width = 3
 | 保留项 | 来源 | 位置 |
 |--------|------|------|
 | `applyVariation()` 方块变化规则 | RoadTemplatePlacer | RoadBuilder |
-| `Heightmap.WORLD_SURFACE` 地形匹配 | RoadTemplatePlacer | RoadBuilder |
+| `Heightmap.WORLD_SURFACE` 地形参考（水面检测 + 挖填基准） | RoadTemplatePlacer | RoadBuilder |
 | 3 格路宽 | 原版模板宽度 | `RoadConfig.getDefaultWidth()` |
 | `road.default_width` TOML 配置 | V2 设计 | `Config.java` |
 

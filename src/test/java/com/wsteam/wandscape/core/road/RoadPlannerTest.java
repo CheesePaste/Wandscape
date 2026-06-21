@@ -403,10 +403,10 @@ class RoadPlannerTest {
 
         RoadEdge edge = network.getEdges().values().iterator().next();
         List<PathPoint> path = edge.getPath();
-        // ΔY=30 over 10 XZ steps → stairs needed → path >= 10
-        assertTrue(path.size() >= 10);
+        // ΔY=30 over 10 XZ steps → switchback extends path
+        assertTrue(path.size() >= 30, "Steep drop needs at least 30 steps for ΔY=30");
 
-        // Every step must be walkable (|ΔY| ≤ 1)
+        // Every step walkable (|ΔY| ≤ 1)
         int prevY = 80;
         for (PathPoint p : path) {
             assertTrue(Math.abs(p.y() - prevY) <= 1,

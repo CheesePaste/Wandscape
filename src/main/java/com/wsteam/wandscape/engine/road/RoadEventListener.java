@@ -78,7 +78,9 @@ public final class RoadEventListener {
 
         List<RoadBuildingData> allBuildings = new ArrayList<>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
-            if (!bs.isStructureIntact() || bs.isShutdown()) continue;
+            // Roads connect to any registered building with a known anchor.
+            // Pattern mismatch doesn't prevent roads — the building exists here.
+            if (bs.getAnchor() == null) continue;
             allBuildings.add(new RoadBuildingData(
                     bs.getBuildingId(), bs.getAnchor().getX(),
                     bs.getAnchor().getY(), bs.getAnchor().getZ()));
@@ -98,7 +100,11 @@ public final class RoadEventListener {
 
         var buildingBounds = new ArrayList<BoundingBox>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
-            if (bs.isStructureIntact()) buildingBounds.add(bs.getBounds());
+            // Collect ALL registered buildings, not just intact ones.
+            // A newly-built building has structureIntact=false until
+            // BuildCompleteListener processes this same event — but its
+            // physical blocks are already placed and must be protected.
+            buildingBounds.add(bs.getBounds());
         }
 
         String anchorStr = event.params().get("anchor");
@@ -229,7 +235,9 @@ public final class RoadEventListener {
 
         List<RoadBuildingData> allBuildings = new ArrayList<>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
-            if (!bs.isStructureIntact() || bs.isShutdown()) continue;
+            // Roads connect to any registered building with a known anchor.
+            // Pattern mismatch doesn't prevent roads — the building exists here.
+            if (bs.getAnchor() == null) continue;
             allBuildings.add(new RoadBuildingData(
                     bs.getBuildingId(), bs.getAnchor().getX(),
                     bs.getAnchor().getY(), bs.getAnchor().getZ()));
@@ -239,7 +247,8 @@ public final class RoadEventListener {
 
         var buildingBounds = new ArrayList<BoundingBox>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
-            if (bs.isStructureIntact()) buildingBounds.add(bs.getBounds());
+            // Collect ALL registered buildings — see onBuildComplete for rationale.
+            buildingBounds.add(bs.getBounds());
         }
 
         NetworkDiff diff = RoadPlanner.rebuild(network, allBuildings);

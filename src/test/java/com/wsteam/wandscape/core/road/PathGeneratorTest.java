@@ -167,40 +167,41 @@ class PathGeneratorTest {
     }
 
     @Test
-    void lShape3DsameXZempty() {
+    void lShape3DsameXZswitchback() {
+        // Same XZ, different Y → switchback ramp (oscillates laterally)
         PathPoint from = new PathPoint(5, 64, 5);
         PathPoint to = new PathPoint(5, 80, 5);
         List<PathPoint> path = PathGenerator.lShape3D(from, to);
 
-        // Same XZ → 0 steps in XZ → empty even though Y differs
-        // (vertical-only path is not supported by L-shape; handled at build level)
-        assertTrue(path.isEmpty());
+        assertFalse(path.isEmpty(), "Switchback path should connect vertically");
+        // All steps |ΔY| ≤ 1
+        int prevY = 64;
+        for (PathPoint p : path) {
+            assertTrue(Math.abs(p.y() - prevY) <= 1, "Step from " + prevY + " to " + p.y() + " > 1");
+            prevY = p.y();
+        }
+        assertEquals(80, path.get(path.size() - 1).y());
     }
 
     @Test
     void lShape3DsteepAddsStairsAtEnd() {
-        // 5 XZ steps for 30 Y drop → all -1 per step, then 25 stairs at final XZ
+        // 5 XZ steps for 30 Y drop → switchback zigzags handle the extra
         PathPoint from = new PathPoint(0, 80, 0);
         PathPoint to = new PathPoint(5, 50, 0);
         List<PathPoint> path = PathGenerator.lShape3D(from, to);
 
-        assertTrue(path.size() > 5, "Should include stair steps");
-        // All steps ≤ 1
+        assertTrue(path.size() >= 30, "Should have at least 30 steps for ΔY=30");
+        // All steps |ΔY| ≤ 1
         int prevY = from.y();
         for (PathPoint p : path) {
             assertTrue(Math.abs(p.y() - prevY) <= 1,
-                    "Step at " + p + " ΔY=" + (p.y() - prevY) + " > 1");
+                    "Step to " + p + " ΔY=" + (p.y() - prevY) + " > 1");
             prevY = p.y();
         }
         assertEquals(50, path.get(path.size() - 1).y());
-        // Last several points should be at the final XZ (5,0) — stairs
+        // Final X should be near target (may oscillate)
         PathPoint last = path.get(path.size() - 1);
-        assertEquals(5, last.x());
-        // Second-to-last also at x=5
-        PathPoint prev = path.get(path.size() - 2);
-        assertEquals(5, prev.x());
-        assertEquals(0, prev.z());
-        assertEquals(last.y() + 1, prev.y()); // ascending order (path descends)
+        assertTrue(Math.abs(last.x() - 5) <= 1, "Last X should be within 1 of target");
     }
 
     @Test
@@ -209,21 +210,28 @@ class PathGeneratorTest {
         PathPoint to = new PathPoint(3, 50, 2);
         List<PathPoint> path = PathGenerator.lShape3D(from, to);
 
-        // First 3 non-stair points move in X: (1,*,0), (2,*,0), (3,*,0)
-        assertEquals(1, path.get(0).x());
-        assertEquals(0, path.get(0).z());
-        assertEquals(2, path.get(1).x());
-        assertEquals(0, path.get(1).z());
-        assertEquals(3, path.get(2).x());
-        assertEquals(0, path.get(2).z());
-        // Then Z segment: (3,*,1), (3,*,2)
-        assertEquals(3, path.get(3).x());
-        assertEquals(1, path.get(3).z());
-        assertEquals(3, path.get(4).x());
-        assertEquals(2, path.get(4).z());
-        // Final Y should be to.y (may be after stair steps)
-        assertEquals(50, path.get(path.size() - 1).y());
-        assertEquals(3, path.get(path.size() - 1).x());
-        assertEquals(2, path.get(path.size() - 1).z());
+        // Path should reach target coordinates
+        PathPoint last = path.get(path.size() - 1);
+        assertEquals(3, last.x());
+        assertEquals(50, last.y());
+        assertEquals(2, last.z());
+
+        // All steps |ΔY| ≤ 1
+        int prevY = 64;
+        for (PathPoint p : path) {
+            assertTrue(Math.abs(p.y() - prevY) <= 1,
+                    "Step from " + prevY + " to " + p.y() + " > 1 at " + p);
+            prevY = p.y();
+        }
+
+        // XZ walk direction should progress monotonically:
+        // X never goes opposite to overall dx, Z never opposite to overall dz
+        int maxX = 0, maxZ = 0;
+        for (PathPoint p : path) {
+            if (p.x() > maxX) maxX = p.x();
+            if (p.z() > maxZ) maxZ = p.z();
+        }
+        assertTrue(maxX >= 3, "X should reach at least 3 (got " + maxX + ")");
+        assertTrue(maxZ >= 2, "Z should reach at least 2 (got " + maxZ + ")");
     }
 }

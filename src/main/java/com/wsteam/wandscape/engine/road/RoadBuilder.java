@@ -25,12 +25,15 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  * Builds road tile data from 3D path coordinates.
  *
  * <p>Each path point carries its own Y (pre-computed by
- * {@code PathGenerator.lShape3D}). The builder:
+ * {@code PathGenerator.lShape3D}). The builder is the
+ * <strong>executor</strong> — it trusts the path Y unconditionally
+ * and reshapes terrain to match:
  * <ul>
  *   <li>Expands each center-line point to 3-wide</li>
  *   <li>Bridges water with oak planks at water surface level</li>
  *   <li>Applies vanilla-style block variation on land</li>
- *   <li>Excavates 2-block headroom when the road is below terrain</li>
+ *   <li>Excavates 2-block headroom when road is below terrain</li>
+ *   <li>Fills support blocks when road is above terrain</li>
  * </ul>
  */
 public final class RoadBuilder {
@@ -59,11 +62,15 @@ public final class RoadBuilder {
         int n = path.size();
 
         JsonArray tiles = new JsonArray();
-        int prevPerpDx = 0, prevPerpDz = 1; // default if first point is stair
+        int prevPerpDx = 0, prevPerpDz = 1;
 
         for (int i = 0; i < n; i++) {
             PathPoint p = path.get(i);
             int perpDx = 0, perpDz = 0;
+            int dy = 0;
+            if (i > 0) {
+                dy = p.y() - path.get(i - 1).y();
+            }
 
             if (n == 1) {
                 perpDz = 1;
@@ -84,7 +91,6 @@ public final class RoadBuilder {
                 } else if (moveZ && !moveX) {
                     perpDx = 1;
                 } else {
-                    // Stair step or corner: carry forward previous perpendicular
                     perpDx = prevPerpDx;
                     perpDz = prevPerpDz;
                 }
@@ -96,49 +102,81 @@ public final class RoadBuilder {
                 int tx = p.x() + perpDx * w;
                 int tz = p.z() + perpDz * w;
 
-                if (insideAnyBuilding(tx, tz, buildingBounds)) continue;
-
                 XZPoint tileXz = new XZPoint(tx, tz);
+                boolean isSameXzStep = i > 0 && path.get(i - 1).xz().equals(p.xz());
 
-                // Stair detection: same XZ as previous path point = vertical step.
-                // These bypass occupancy check (XZ already claimed by first point in column).
-                boolean isStairStep = i > 0 && path.get(i - 1).xz().equals(p.xz());
-
-                if (!isStairStep) {
+                if (!isSameXzStep) {
                     if (occupiedTiles.contains(tileXz)) continue;
                 }
 
                 int roadY = p.y();
+                int terrainY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
+
+                // ── Building boundary check (full affected Y column) ──
+                // The road may excavate above roadY or fill below roadY.
+                // The full affected range is [min(roadY, terrainY), max(roadY+2, terrainY)].
+                int colMinY = Math.min(roadY, terrainY);
+                int colMaxY = Math.max(roadY + 2, terrainY);
+                if (columnIntersectsBuilding(tx, colMinY, colMaxY, tz, buildingBounds)) continue;
+
                 BlockPos roadPos = new BlockPos(tx, roadY, tz);
                 BlockState roadState = level.getBlockState(roadPos);
+                boolean isWater = !roadState.getFluidState().isEmpty();
                 String block;
-                int actualY = roadY;
 
-                if (!roadState.getFluidState().isEmpty()) {
-                    actualY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
-                    roadPos = new BlockPos(tx, actualY, tz);
+                if (isWater) {
+                    // Water: raise to surface + plank bridge
+                    int waterSurfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
+                    roadPos = new BlockPos(tx, waterSurfaceY, tz);
                     block = "minecraft:oak_planks";
+                } else if (dy != 0) {
+                    block = "minecraft:cobblestone";
                 } else {
                     block = applyVariation(level, roadPos, defaultBlock);
                 }
+                int actualY = roadPos.getY();
 
-                if (!isStairStep) {
+                if (!isSameXzStep) {
                     occupiedTiles.add(tileXz);
                 }
 
-                // Road surface tile
                 tiles.add(makeTile(roadPos, block));
 
-                // Excavation: clear 2-block headroom above road
-                int terrainSurface = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
-                for (int hy = actualY + 1; hy <= actualY + 2; hy++) {
+                // Excavation: clear at least 2-block walkable headroom above road.
+                // When road cuts into terrain, clears through the overhanging blocks.
+                int terrainTop = terrainY - 1;
+                if (!isWater && actualY < terrainTop) {
+                    int cutDepth = terrainTop - actualY;
+                    int maxCut = config.getMaxCutDepth();
+                    if (maxCut > 0 && cutDepth > maxCut) {
+                        LOGGER.warn("[Road] Cut depth {} exceeds maxCutDepth {} at ({},{},{})",
+                                cutDepth, maxCut, tx, actualY, tz);
+                    }
+                }
+                int clearTop = Math.max(actualY + 2, terrainY);
+                for (int hy = actualY + 1; hy <= clearTop; hy++) {
                     BlockPos headPos = new BlockPos(tx, hy, tz);
-                    if (hy <= terrainSurface) {
-                        BlockState headState = level.getBlockState(headPos);
-                        if (!headState.isAir()
-                                && headState.getFluidState().isEmpty()
-                                && !headState.is(Blocks.BEDROCK)) {
-                            tiles.add(makeTile(headPos, "minecraft:air"));
+                    BlockState headState = level.getBlockState(headPos);
+                    if (!headState.isAir()
+                            && headState.getFluidState().isEmpty()
+                            && !headState.is(Blocks.BEDROCK)) {
+                        tiles.add(makeTile(headPos, "minecraft:air"));
+                    }
+                }
+
+                // Fill: add support below road when road is above terrain
+                if (!isWater && actualY > terrainY) {
+                    int fillHeight = actualY - terrainY;
+                    int maxFill = config.getMaxFillHeight();
+                    if (maxFill > 0 && fillHeight > maxFill) {
+                        LOGGER.warn("[Road] Fill height {} exceeds maxFillHeight {} at ({},{},{})",
+                                fillHeight, maxFill, tx, actualY, tz);
+                    }
+                    for (int fy = terrainY; fy < actualY; fy++) {
+                        BlockPos fillPos = new BlockPos(tx, fy, tz);
+                        BlockState fillState = level.getBlockState(fillPos);
+                        if (fillState.isAir() || !fillState.getFluidState().isEmpty()) {
+                            tiles.add(makeTile(fillPos, "minecraft:dirt"));
                         }
                     }
                 }
@@ -146,6 +184,7 @@ public final class RoadBuilder {
         }
 
         return tiles;
+
     }
 
     private static JsonObject makeTile(BlockPos pos, String block) {
@@ -199,11 +238,18 @@ public final class RoadBuilder {
 
     // ---- Helpers ----
 
-    private static boolean insideAnyBuilding(int x, int z,
-                                              Collection<BoundingBox> boxes) {
+    /**
+     * Check if a vertical column segment intersects any building's 3D volume.
+     * The column spans XZ point {@code (x, z)} from Y={@code yMin} to Y={@code yMax}.
+     *
+     * @return true if any part of the column overlaps a building bounding box
+     */
+    private static boolean columnIntersectsBuilding(int x, int yMin, int yMax, int z,
+                                                    Collection<BoundingBox> boxes) {
         for (BoundingBox box : boxes) {
             if (x >= box.minX() && x <= box.maxX()
-                    && z >= box.minZ() && z <= box.maxZ()) {
+                    && z >= box.minZ() && z <= box.maxZ()
+                    && yMax >= box.minY() && yMin <= box.maxY()) {
                 return true;
             }
         }

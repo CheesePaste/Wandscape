@@ -33,6 +33,14 @@ public final class RoadConfig {
         return Config.ROAD_DEFAULT_WIDTH.get();
     }
 
+    public int getMaxCutDepth() {
+        return Config.ROAD_MAX_CUT_DEPTH.get();
+    }
+
+    public int getMaxFillHeight() {
+        return Config.ROAD_MAX_FILL_HEIGHT.get();
+    }
+
     // ---- Tier defaults ----
 
     /**

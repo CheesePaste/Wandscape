@@ -95,5 +95,13 @@ public class Config {
             .comment("Default road width in blocks (1-5)")
             .defineInRange("road.defaultWidth", 3, 1, 5);
 
+    public static final ModConfigSpec.IntValue ROAD_MAX_CUT_DEPTH = BUILDER
+            .comment("Maximum depth the road will excavate into terrain before logging a warning (0 = no limit)")
+            .defineInRange("road.maxCutDepth", 8, 0, 64);
+
+    public static final ModConfigSpec.IntValue ROAD_MAX_FILL_HEIGHT = BUILDER
+            .comment("Maximum height the road will fill below surface before logging a warning (0 = no limit)")
+            .defineInRange("road.maxFillHeight", 6, 0, 64);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

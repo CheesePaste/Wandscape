@@ -72,23 +72,25 @@ public final class PathGenerator {
         int dx = to.x() - from.x();
         int dz = to.z() - from.z();
         int totalSteps = Math.abs(dx) + Math.abs(dz);
+        int dy = to.y() - from.y();
+
         if (totalSteps == 0) {
-            return Collections.emptyList();
+            // Same XZ but Y differs — need switchback ramp
+            if (dy == 0) return Collections.emptyList();
+            return switchbackPath(from, to);
         }
 
-        int dy = to.y() - from.y();
         int sx = Integer.signum(dx);
         int sz = Integer.signum(dz);
 
         List<PathPoint> path = new ArrayList<>();
 
-        // Simple Y distribution: change Y by at most 1 per XZ step.
-        // If |ΔY| > totalSteps, the path won't reach the target
-        // during XZ traversal — stair steps are appended at the end.
         int cy = from.y();
         int remainingY = dy;
+        int zigAxis = (Math.abs(dx) >= Math.abs(dz)) ? 'Z' : 'X';
+        int zigDir = 1;
 
-        // Walk X first
+        // Walk X first, with zigzag extension if remainingY is large
         int cx = from.x();
         int cz = from.z();
         for (int i = 0; i < Math.abs(dx); i++) {
@@ -97,33 +99,101 @@ public final class PathGenerator {
             cy += stepY;
             remainingY -= stepY;
             path.add(new PathPoint(cx, cy, cz));
+            // Insert switchback zig if remaining Y >> remaining XZ steps
+            if (Math.abs(remainingY) > (Math.abs(dx) - i - 1) + Math.abs(dz) && remainingY != 0) {
+                if (zigAxis == 'Z') { cz += zigDir; } else { cx += zigDir; }
+                zigDir = -zigDir;
+                stepY = clampStep(remainingY);
+                cy += stepY;
+                remainingY -= stepY;
+                path.add(new PathPoint(cx, cy, cz));
+            }
         }
 
-        // Then walk Z
+        // Walk Z, same logic
         for (int i = 0; i < Math.abs(dz); i++) {
             cz += sz;
             int stepY = clampStep(remainingY);
             cy += stepY;
             remainingY -= stepY;
             path.add(new PathPoint(cx, cy, cz));
+            if (Math.abs(remainingY) > (Math.abs(dz) - i - 1) && remainingY != 0) {
+                if (zigAxis == 'Z') { cz += zigDir; } else { cx += zigDir; }
+                zigDir = -zigDir;
+                stepY = clampStep(remainingY);
+                cy += stepY;
+                remainingY -= stepY;
+                path.add(new PathPoint(cx, cy, cz));
+            }
         }
 
-        // Append stair steps at final XZ if Y hasn't reached target
+        // Zigzag extension for remaining Y — extends sideways to avoid vertical column
         while (remainingY != 0) {
+            if (zigAxis == 'Z') { cz += zigDir; } else { cx += zigDir; }
+            zigDir = -zigDir;
             int stepY = clampStep(remainingY);
             cy += stepY;
             remainingY -= stepY;
             path.add(new PathPoint(cx, cy, cz));
         }
 
-        // Override last point to exact target coordinates
+        // Ensure last step is walkable (override may create gap)
         if (!path.isEmpty()) {
             PathPoint last = path.get(path.size() - 1);
-            path.set(path.size() - 1, new PathPoint(to.x(), to.y(), to.z()));
+            PathPoint target = new PathPoint(to.x(), to.y(), to.z());
+            // Compare XZ — if different, we're extending; if same, it's exact
+            int xzDist = Math.abs(last.x() - to.x()) + Math.abs(last.z() - to.z());
+            int yDist = Math.abs(last.y() - to.y());
+            if (xzDist <= 1 && yDist <= 1) {
+                path.set(path.size() - 1, target);
+            } else if (yDist > 1) {
+                // Insert intermediate steps to bridge the Y gap
+                int stepDir = Integer.signum(to.y() - last.y());
+                int midY = last.y() + stepDir;
+                while (midY != to.y()) {
+                    path.add(new PathPoint(last.x(), midY, last.z()));
+                    midY += stepDir;
+                }
+                path.add(target);
+            } else {
+                path.add(target);
+            }
         }
 
         return path;
+    }
 
+    /**
+     * Build a switchback path when XZ is the same but Y differs.
+     * Creates a compact staircase by oscillating ±1 laterally per Y step.
+     */
+    private static List<PathPoint> switchbackPath(PathPoint from, PathPoint to) {
+        List<PathPoint> path = new ArrayList<>();
+        int cy = from.y();
+        int remainingY = to.y() - from.y();
+        int cx = from.x(), cz = from.z();
+        // Pick an axis that has room (prefer +X, then +Z)
+        int zigAxis = 'X';
+        int zigDir = 1;
+
+        while (remainingY != 0) {
+            if (zigAxis == 'X') { cx += zigDir; } else { cz += zigDir; }
+            zigDir = -zigDir;
+            int stepY = clampStep(remainingY);
+            cy += stepY;
+            remainingY -= stepY;
+            path.add(new PathPoint(cx, cy, cz));
+            // Alternate zigzag axis every 2 steps for better spread
+            if ((Math.abs(cx - from.x()) + Math.abs(cz - from.z())) % 4 == 0) {
+                zigAxis = (zigAxis == 'X') ? 'Z' : 'X';
+            }
+        }
+
+        // Ensure last step is walkable from target
+        if (!path.isEmpty() && Math.abs(path.get(path.size() - 1).y() - to.y()) <= 1) {
+            path.set(path.size() - 1, to);
+        }
+        return path;
     }
 
     /** Clamp Y step to [-1, 1] for walkability. */
