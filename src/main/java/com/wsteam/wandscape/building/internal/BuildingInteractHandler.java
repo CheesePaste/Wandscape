@@ -45,12 +45,8 @@ public final class BuildingInteractHandler {
         if ("storage".equals(state.getCategory())) {
             // Warehouse: open GUI directly from SavedData (no BE)
             UUID colonyId = state.getColonyId();
-            Map<ItemKey, Long> snapshot;
-            if (colonyId != null) {
-                snapshot = ColonyItemBank.get(level).getSnapshot(colonyId);
-            } else {
-                snapshot = Map.of();
-            }
+            if (colonyId == null) colonyId = new UUID(0, 0); // match WarehouseManager.addResource fallback
+            Map<ItemKey, Long> snapshot = ColonyItemBank.get(level).getSnapshot(colonyId);
             if (event.getEntity() instanceof ServerPlayer player) {
                 player.openMenu(WarehouseMenu.createMenuProvider(snapshot));
             }
