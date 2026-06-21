@@ -91,5 +91,9 @@ public class Config {
             .comment("Maximum tiles per road segment")
             .defineInRange("road.segmentMaxLength", 16, 4, 64);
 
+    public static final ModConfigSpec.IntValue ROAD_DEFAULT_WIDTH = BUILDER
+            .comment("Default road width in blocks (1-5)")
+            .defineInRange("road.defaultWidth", 3, 1, 5);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

@@ -1,0 +1,13 @@
+{
+  "id": "wandscape:road/corner",
+  "template": "wandscape:road/corner",
+  "width": 3,
+  "budget_cost": 16,
+  "weight": 2,
+  "entries": [
+    { "dx": 7, "dz": 0, "facing": "south" }
+  ],
+  "exits": [
+    { "dx": 15, "dz": 7, "facing": "east" }
+  ]
+}

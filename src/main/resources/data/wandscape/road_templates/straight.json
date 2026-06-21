@@ -1,0 +1,13 @@
+{
+  "id": "wandscape:road/straight",
+  "template": "wandscape:road/straight",
+  "width": 3,
+  "budget_cost": 16,
+  "weight": 4,
+  "entries": [
+    { "dx": 7, "dz": 0, "facing": "south" }
+  ],
+  "exits": [
+    { "dx": 7, "dz": 15, "facing": "south" }
+  ]
+}

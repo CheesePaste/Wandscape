@@ -1,0 +1,11 @@
+{
+  "default_block": "minecraft:dirt_path",
+  "rules": [
+    { "ground": "minecraft:grass_block", "water": false, "output": "minecraft:dirt_path", "chance": 0.85 },
+    { "ground": "minecraft:grass_block", "water": false, "output": "minecraft:grass_block", "chance": 1.0 },
+    { "ground": "minecraft:sand",        "water": false, "output": "minecraft:dirt_path", "chance": 1.0 },
+    { "ground": "minecraft:stone",       "water": false, "output": "minecraft:cobblestone", "chance": 1.0 },
+    { "ground": "minecraft:dirt",        "water": false, "output": "minecraft:dirt_path", "chance": 1.0 },
+    { "ground": "*",                     "water": true,  "output": "minecraft:oak_planks", "chance": 1.0 }
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "tiers": {
     "dirt": {
-      "surface_block": "minecraft:dirt_path",
-      "intersection_block": "minecraft:stone_bricks"
+      "default_block": "minecraft:dirt_path",
+      "rules": "wandscape:road_rules/dirt"
     }
   }
 }
