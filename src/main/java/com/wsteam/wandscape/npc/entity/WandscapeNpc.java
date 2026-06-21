@@ -143,6 +143,16 @@ public class WandscapeNpc extends PathfinderMob {
      */
     private boolean suppressWandering = false;
 
+    // ── Dirty guards: only sync entity data when values actually change ──
+    private String lastSyncedOpKind = "";
+    private BlockPos lastSyncedTarget = null;
+
+    // ── Fast path: skip ECS polling for idle NPCs ──
+    private int ecsPollCooldown = 0;
+
+    // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
+    public int lastParticleTick = -1;
+
     /** Enable or disable idle wandering AI. Called by NavigationSystem. */
     public void setAiWanderingEnabled(boolean enabled) {
         this.suppressWandering = !enabled;
@@ -235,44 +245,67 @@ public class WandscapeNpc extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide) {
-            boolean casting;
-            if (debugCasting) {
-                casting = true;
-                BlockPos target = Wandscape.debugDiamondTarget;
-                if (target != null) {
+        if (level().isClientSide) return;
+
+        boolean casting;
+        if (debugCasting) {
+            casting = true;
+            BlockPos target = Wandscape.debugDiamondTarget;
+            if (target != null) {
+                faceTarget(target);
+                if (!target.equals(lastSyncedTarget)) {
                     setDebugTarget(target);
+                    lastSyncedTarget = target;
+                }
+            }
+        } else if (ecsPollCooldown > 0 && !isCasting()) {
+            // Fast path: idle NPC, skip ECS query this tick
+            ecsPollCooldown--;
+            return;
+        } else {
+            World ecsWorld = WandscapeEngine.getWorld();
+            if (ecsWorld != null && ecsEntityId > 0) {
+                var exec = ecsWorld.get(ecsEntityId,
+                        com.wsteam.wandscape.core.component.TaskExecutor.class);
+                casting = exec != null
+                        && exec.state == com.wsteam.wandscape.core.task.ExecutorState.ACTIVE
+                        && exec.hasWork();
+                if (casting && exec.currentOpTarget != null) {
+                    var t = exec.currentOpTarget;
+                    BlockPos target = new BlockPos(t.x(), t.y(), t.z());
+                    if (!target.equals(lastSyncedTarget)) {
+                        setDebugTarget(target);
+                        lastSyncedTarget = target;
+                    }
+                    String kind = exec.currentOpKind != null ? exec.currentOpKind : "";
+                    if (!kind.equals(lastSyncedOpKind)) {
+                        setOpKind(exec.currentOpKind);
+                        lastSyncedOpKind = kind;
+                    }
                     faceTarget(target);
+                } else {
+                    if (lastSyncedTarget != null) {
+                        setDebugTarget(null);
+                        lastSyncedTarget = null;
+                    }
+                    if (!lastSyncedOpKind.isEmpty()) {
+                        setOpKind(null);
+                        lastSyncedOpKind = "";
+                    }
                 }
             } else {
-                World ecsWorld = WandscapeEngine.getWorld();
-                if (ecsWorld != null && ecsEntityId > 0) {
-                    var exec = ecsWorld.get(ecsEntityId,
-                            com.wsteam.wandscape.core.component.TaskExecutor.class);
-                    casting = exec != null
-                            && exec.state == com.wsteam.wandscape.core.task.ExecutorState.ACTIVE
-                            && exec.hasWork();
-                    if (casting && exec.currentOpTarget != null) {
-                        var t = exec.currentOpTarget;
-                        BlockPos target = new BlockPos(t.x(), t.y(), t.z());
-                        setDebugTarget(target);
-                        setOpKind(exec.currentOpKind);
-                        faceTarget(target);
-                    } else {
-                        setDebugTarget(null);
-                        setOpKind(null);
-                    }
-                } else {
-                    casting = false;
-                }
+                casting = false;
             }
-            if (casting != isCasting()) {
-                setCasting(casting);
-            }
-            if (isCasting() && !suppressWandering) {
-                getNavigation().stop();
-                setDeltaMovement(Vec3.ZERO);
-            }
+            // Poll every tick while casting, every 20 ticks while idle
+            ecsPollCooldown = casting ? 0 : 20;
+        }
+
+        if (casting != isCasting()) {
+            setCasting(casting);
+        }
+        if (isCasting() && !suppressWandering) {
+            getNavigation().stop();
+            setDeltaMovement(Vec3.ZERO);
         }
     }
 
@@ -326,6 +359,9 @@ public class WandscapeNpc extends PathfinderMob {
             if (getHatColor() == 0) {
                 this.entityData.set(DATA_HAT_COLOR, generateRandomHatColor());
             }
+            // Equip wand on spawn so casting animation shows the item
+            setItemInHand(InteractionHand.MAIN_HAND,
+                    new ItemStack(Wandscape.WAND.get()));
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
             World world = WandscapeEngine.getWorld();

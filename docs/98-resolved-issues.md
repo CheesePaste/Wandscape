@@ -43,6 +43,15 @@
 | 建筑注册无 AABB 重叠检测 | `BuildingSavedData.register()` 使用 MC 原生 `BoundingBox.intersects()` 检测重叠，冲突时抛出 `BuildingOverlapException` | 2026-06-21 |
 | `build_complete` 事件缺乏 anchor 信息 | 在 `build_place_structure.json` 的 `emit_event` data 中增加 `"anchor": "$anchor"` | 2026-06-21 |
 | `BuildingApiImpl.getBuildingsWithPendingWork()` 无区块感知 | 增加 `level.isLoaded(state.anchor)` 检查，未加载区块的建筑跳过 | 2026-06-21 |
+| `RitualOp.channelTicks()` 死代码，self_teleport 瞬间传送 | `WandscapeRitualOps` 改为 V2.5 异步引导：PendingRitual 队列 + tickAll 倒计时 → thenRun 执行。self_teleport 600 ticks 引导后传送 | 2026-06-21 |
+| `SchedulerSystem.score()` 使用静态 `maxRange`，无视 NPC 到任务的距离 | 改为 distance-based：`proximity = 10/(10+水平距离)` ×0.5。距离 = 任务序列首个 target() 到 NPC 位置的水平距离。`extractTaskTarget()` 从序列提取目标 | 2026-06-21 |
+| 魔力不足时私有队列操作导致 NPC 卡住狂挥手臂 | `TaskExecutionSystem` 魔力失败路径：`isPrivate` 时设置 `state=IDLE` + 清除视觉字段。NPC 恢复 AI 漫游，私有操作等待魔力回复后重试 | 2026-06-21 |
+| 退出世界重进后 `BlueprintRegistry` 丢失 DSL 蓝图 | `WandscapeEngine.reset()` 移除 `blueprintConfigLoader = null`。该单例由 `WandscapeDataLoader` 管理，不受引擎生命周期影响 | 2026-06-21 |
+| 退出世界重进后多个 NPC 同时显示施法动画（纯客户端 bug） | `EntityComponentBridge`: reconnection 检查增加 UUID 匹配前置条件 + `clear()` 方法。`Wandscape.onServerStopped()` 调用 clear。防止跨会话 ECS 实体 ID 碰撞导致多 NPC 共享 TaskExecutor | 2026-06-21 |
+| `DATA_OP_KIND` / `DATA_DEBUG_TARGET` 每 tick 无条件 set 导致不必要网络包 | 添加 `lastSyncedOpKind` / `lastSyncedTarget` 脏检查字段。只有值变化时才调用 `entityData.set()` | 2026-06-21 |
+| 闲置 NPC 每 tick 查询 ECS TaskExecutor（无效 HashMap 查询） | `tick()` 添加 `ecsPollCooldown`：施法时每 tick 轮询，闲置时每 20 tick 轮询一次。减少 ~95% 闲置 ECS 查询 | 2026-06-21 |
+| `WandscapeNpcRenderer.render()` 粒子每渲染 pass 重复生成 | 添加 `lastParticleTick` 节流：同一 game tick 内只生成一次粒子，避免多 pass 重复 | 2026-06-21 |
+| 退出世界重进后任务池清空，做到一半的任务全部丢失 | 实现 `TaskPoolSavedData` (SavedData) 跨会话持久化：保存 blueprintId + taskParams + stepIndex + state → NBT。世界重载时从蓝图重新编译、恢复进度。IN_PROGRESS → PENDING_ASSIGN 重新分配 | 2026-06-21 |
 
 ---
 

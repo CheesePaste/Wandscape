@@ -9,13 +9,17 @@ import com.wsteam.wandscape.core.task.GlobalTask;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.types.BehaviourLevel;
 import com.wsteam.wandscape.core.types.BehaviourTag;
+import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.*;
+
+import javax.annotation.Nullable;
 
 /**
  * Assigns global tasks to idle NPCs.
  * Runs every 2 ticks (configurable heartbeat).
- * Scoring: range × 0.5 + (1 - manaEfficiency) × 0.3 + behaviourLevel × 0.2
+ * Scoring: proximity × 0.5 + (1 − manaEfficiency) × 0.3 + behaviourLevel × 0.2,
+ * where proximity = 10 / (10 + horizontalDistance).
  */
 public class SchedulerSystem implements System {
 
@@ -66,9 +70,13 @@ public class SchedulerSystem implements System {
             if (assignable.isEmpty()) continue;
 
             for (GlobalTask task : assignable) {
+                // Extract task target once for distance scoring
+                GridPos taskTarget = extractTaskTarget(task);
+
                 // Find the best NPC for this task
                 long bestNpc = -1;
                 double bestScore = -1;
+                double bestDist = -1;
 
                 for (long npcId : colonyNpcs) {
                     WandCarrier wc = world.get(npcId, WandCarrier.class);
@@ -81,17 +89,29 @@ public class SchedulerSystem implements System {
                     ManaPool mana = world.get(npcId, ManaPool.class);
                     if (mana == null || mana.isEmpty()) continue;
 
-                    double score = score(wc, task.requirements);
+                    // Calculate horizontal distance from NPC to task target
+                    double distance = 0;
+                    if (taskTarget != null) {
+                        Position pos = world.get(npcId, Position.class);
+                        if (pos != null) {
+                            double dx = pos.pos().x() - taskTarget.x();
+                            double dz = pos.pos().z() - taskTarget.z();
+                            distance = Math.sqrt(dx * dx + dz * dz);
+                        }
+                    }
+
+                    double score = score(wc, task.requirements, distance);
                     if (score > bestScore) {
                         bestScore = score;
                         bestNpc = npcId;
+                        bestDist = distance;
                     }
                 }
 
                 if (bestNpc >= 0) {
                     taskPool.assign(task.id, bestNpc, world);
-                    Log.info(TAG, "assigned #%d '%s' → NPC %d (score=%.2f)",
-                            task.id, task.sequence.label(), bestNpc, bestScore);
+                    Log.info(TAG, "assigned #%d '%s' → NPC %d (score=%.2f dist=%.0f)",
+                            task.id, task.sequence.label(), bestNpc, bestScore, bestDist);
                     colonyNpcs.remove(bestNpc); // NPC is now busy
                     if (colonyNpcs.isEmpty()) break;
                 } else {
@@ -107,8 +127,9 @@ public class SchedulerSystem implements System {
     }
 
     /** Score an NPC for a task. Higher is better. */
-    private double score(WandCarrier wc, Map<BehaviourTag, BehaviourLevel> requirements) {
-        double rangeScore = wc.maxRange() * 0.5;
+    private double score(WandCarrier wc, Map<BehaviourTag, BehaviourLevel> requirements, double distance) {
+        // Proximity score: 1.0 at dist=0, ~0.5 at dist=10, ~0.09 at dist=100
+        double rangeScore = (10.0 / (10.0 + distance)) * 0.5;
         double efficiencyScore = (1.0 - wc.bestManaEfficiency()) * 0.3;
 
         // Use the highest behaviour level among required tags
@@ -120,6 +141,16 @@ public class SchedulerSystem implements System {
         double levelScore = bestLevel * 0.2;
 
         return rangeScore + efficiencyScore + levelScore;
+    }
+
+    /** Extract the first world position from a task's operation sequence. */
+    @Nullable
+    private static GridPos extractTaskTarget(GlobalTask task) {
+        for (int i = 0; i < task.sequence.size(); i++) {
+            GridPos t = task.sequence.get(i).target();
+            if (t != null) return t;
+        }
+        return null;
     }
 
     /** Manually trigger a scheduling heartbeat (for testing). */

@@ -15,6 +15,7 @@ import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.FillBuildingCommand;
+import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
@@ -30,6 +31,8 @@ import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.core.component.ManaPool;
+import com.wsteam.wandscape.engine.TaskPoolSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -44,6 +47,8 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
@@ -204,6 +209,17 @@ public class Wandscape {
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
         BuildCompleteListener.register();
+
+        // Load persisted tasks from previous session
+        ServerLevel level = event.getServer().overworld();
+        var world = WandscapeEngine.getWorld();
+        if (world != null && world.taskPool != null) {
+            var saved = TaskPoolSavedData.getOrCreate(level, world.taskPool);
+            WandscapeEngine.setTaskPoolSavedData(saved);
+            // Mark dirty when pool changes so SavedData writes to disk
+            world.taskPool.onChanged = saved::setDirty;
+            LOGGER.info("Task persistence wired — pool has {} active tasks", world.taskPool.size());
+        }
     }
 
     @SubscribeEvent
@@ -211,6 +227,7 @@ public class Wandscape {
         LOGGER.info("Wandscape server stopped — resetting engine.");
         buildingApi.setLevel(null);
         WandscapeEngine.reset();
+        EntityComponentBridge.INSTANCE.clear();
     }
 
     @SubscribeEvent
@@ -230,6 +247,7 @@ public class Wandscape {
         var root = Commands.literal("wandscape")
                 .requires(src -> src.hasPermission(2))
                 .then(FillBuildingCommand.fillNode())
+                .then(ManaCommand.node())
                 .then(NavTestCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
                 .then(StressTestCommand.buildNode());
@@ -269,6 +287,32 @@ public class Wandscape {
                     world.getNextEntityId() - 1,
                     world.taskPool != null ? world.taskPool.size() : 0,
                     world.hasPendingAsyncOps() ? 1 : 0);
+
+            // Mana debug: send NPC mana values to the player who enabled debug
+            if (WandscapeEngine.isManaDebug()) {
+                ServerPlayer target = WandscapeEngine.getManaDebugTarget();
+                if (target != null && !target.isRemoved()) {
+                    var manaEntities = world.query(ManaPool.class);
+                    StringBuilder sb = new StringBuilder("[Wandscape Mana] ");
+                    if (manaEntities.isEmpty()) {
+                        sb.append("no entities");
+                    } else {
+                        for (int i = 0; i < manaEntities.size(); i++) {
+                            long id = manaEntities.get(i);
+                            ManaPool pool = world.get(id, ManaPool.class);
+                            if (pool != null) {
+                                if (i > 0) sb.append(" | ");
+                                sb.append(String.format("NPC-%d: %.0f/%d",
+                                        id, pool.current(), pool.max()));
+                            }
+                        }
+                    }
+                    target.sendSystemMessage(Component.literal(sb.toString()));
+                } else {
+                    WandscapeEngine.setManaDebug(false);
+                    WandscapeEngine.setManaDebugTarget(null);
+                }
+            }
         }
     }
 }

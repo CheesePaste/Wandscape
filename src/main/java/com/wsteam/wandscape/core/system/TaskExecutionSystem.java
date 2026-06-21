@@ -160,15 +160,26 @@ public class TaskExecutionSystem implements System {
                 float actualCost = currentOp.baseManaCost() * wc.bestManaEfficiency();
                 if (mana.current() < actualCost) {
                     // Insufficient mana: release global task back to pool for another NPC.
-                    // Private-queue ops stall (no taskId to release).
                     if (!isPrivate && exec.globalTaskId != null && taskPool != null) {
                         taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
-                        Log.debug(TAG, "NPC %d — mana %.1f < %.1f, released task #%d",
+                        Log.info(TAG, "NPC %d — mana %.1f < %.1f, released task #%d",
                                 npcId, mana.current(), actualCost, exec.globalTaskId);
+                    } else if (isPrivate) {
+                        // Private queue op: stall until mana regens, but reset casting
+                        // state so NPC doesn't freeze with arm-waving animation.
+                        exec.state = ExecutorState.IDLE;
+                        exec.currentOpTarget = null;
+                        exec.currentOpKind = null;
+                        Log.info(TAG, "NPC %d — mana %.1f < %.1f, stalling private op (state→IDLE)",
+                                npcId, mana.current(), actualCost);
                     }
                     return;
                 }
                 mana.consume(actualCost);
+                Log.info(TAG, "NPC %d — mana -%.1f → %.1f/%d (%s)",
+                        npcId, actualCost, mana.current(), mana.max(),
+                        currentOp instanceof AtomicOp.RitualOp r ? r.ritual().id()
+                                : currentOp.getClass().getSimpleName());
             }
 
             // ---- 4.5. Range check (horizontal only) + navigation ----

@@ -69,10 +69,17 @@ public final class EntityComponentBridge {
     /**
      * Register this NPC in the ECS World. Handles both fresh creation and
      * same-session reconnection after chunk reload.
+     *
+     * <p>Uses {@code ecsIdByUuid.containsKey()} to distinguish genuine
+     * same-session reconnection from cross-session ECS entity ID collisions.
+     * After a world reset, all stale mappings are cleared by {@link #clear()}
+     * so every NPC takes the fresh-registration path.
      */
     public void onNpcJoinWorld(WandscapeNpc npc, World world) {
-        // Check for same-session reconnection
-        if (npc.ecsEntityId > 0 && world.has(npc.ecsEntityId, com.wsteam.wandscape.core.component.Position.class)) {
+        // Same-session reconnection: NPC was already registered in THIS session
+        // (chunk unload/reload). Only trust this path if the UUID is still known.
+        if (npc.ecsEntityId > 0 && ecsIdByUuid.containsKey(npc.getUUID())
+                && world.has(npc.ecsEntityId, com.wsteam.wandscape.core.component.Position.class)) {
             LOGGER.debug("NPC {} reconnecting to ECS entity {}", npc.getUUID(), npc.ecsEntityId);
             world.addComponent(npc.ecsEntityId,
                     new com.wsteam.wandscape.core.component.Position(
@@ -82,7 +89,7 @@ public final class EntityComponentBridge {
             return;
         }
 
-        // Fresh registration
+        // Fresh registration (or cross-session: stale ecsEntityId from NBT)
         UUID colony = npc.colonyId != null ? npc.colonyId : PLACEHOLDER_COLONY;
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
@@ -104,6 +111,14 @@ public final class EntityComponentBridge {
         LOGGER.info("NPC {} joined ECS as entity {} (colony={})",
                 npc.getUUID().toString().substring(0, 8), ecsId,
                 colony.toString().substring(0, 8));
+    }
+
+    /** Clear all NPC→ECS mappings. Called on world reset to prevent cross-session collisions. */
+    public void clear() {
+        npcByEcsId.clear();
+        ecsIdByUuid.clear();
+        LOGGER.info("EntityComponentBridge cleared — {} NPCs, {} UUIDs",
+                npcByEcsId.size(), ecsIdByUuid.size());
     }
 
     /**

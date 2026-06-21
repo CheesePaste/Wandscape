@@ -7,6 +7,8 @@ import com.wsteam.wandscape.core.types.ResourceStack;
 
 import java.util.*;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 
 /**
@@ -18,6 +20,10 @@ public class GlobalTask {
     public final TaskSequence sequence;
     public final Map<BehaviourTag, BehaviourLevel> requirements;
     public final int priority;
+
+    /** Blueprint ID used to compile this task. Null for pre-built test tasks. */
+    @Nullable
+    public String blueprintId;
 
     /** Trigger declarations carried from the blueprint (downstream task rules). */
     public final List<TriggerDeclaration> triggers;

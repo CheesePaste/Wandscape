@@ -24,10 +24,24 @@ public final class WandscapeEngine {
     static WandscapeRitualOps ritualOps;
     @Nullable
     static WandscapeBlockInteractExecutor blockInteractExec;
+    static boolean manaDebug;
+    @Nullable
+    static net.minecraft.server.level.ServerPlayer manaDebugTarget;
+
+    public static boolean isManaDebug() { return manaDebug; }
+    public static void setManaDebug(boolean v) { manaDebug = v; }
+
+    @Nullable
+    public static net.minecraft.server.level.ServerPlayer getManaDebugTarget() { return manaDebugTarget; }
+    public static void setManaDebugTarget(@Nullable net.minecraft.server.level.ServerPlayer p) { manaDebugTarget = p; }
+
     @Nullable
     private static WandscapeMovementOps movementOps;
     @Nullable
     private static BlueprintConfigLoader blueprintConfigLoader;
+
+    @Nullable
+    private static TaskPoolSavedData taskPoolSavedData;
 
     private WandscapeEngine() {}
 
@@ -42,7 +56,9 @@ public final class WandscapeEngine {
         world = null;
         asyncExec = null;
         movementOps = null;
-        blueprintConfigLoader = null;
+        // blueprintConfigLoader: intentionally NOT nulled — it's a permanent singleton
+        // whose internal definitions map is managed by WandscapeDataLoader resource reload.
+        // Nulling it would break DSL blueprint registration on world re-entry.
     }
 
     @Nullable
@@ -79,4 +95,8 @@ public final class WandscapeEngine {
     public static BlueprintConfigLoader getBlueprintConfigLoader() {
         return blueprintConfigLoader;
     }
+
+    @Nullable
+    public static TaskPoolSavedData getTaskPoolSavedData() { return taskPoolSavedData; }
+    public static void setTaskPoolSavedData(@Nullable TaskPoolSavedData v) { taskPoolSavedData = v; }
 }

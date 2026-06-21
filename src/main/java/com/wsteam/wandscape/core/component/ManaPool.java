@@ -8,7 +8,7 @@ public class ManaPool {
 
     private float current;
     private final int max;
-    private final float regenPerTick;
+    private float regenPerTick;
 
     public ManaPool(float current, int max, float regenPerTick) {
         this.current = Math.min(current, max);
@@ -19,6 +19,9 @@ public class ManaPool {
     public float current() { return current; }
     public int max() { return max; }
     public float regenPerTick() { return regenPerTick; }
+
+    /** Set regen rate (debug/testing only — not normally changed at runtime). */
+    public void setRegenPerTick(float rate) { this.regenPerTick = rate; }
 
     /** Regenerate mana, capping at max. */
     public void regen() {

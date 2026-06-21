@@ -90,13 +90,14 @@
 |------|------|
 | `ManaRegenSystem.java` | ① 每 tick 恢复所有 ManaPool 实体的魔力 |
 | `TaskSourcePoller.java` | ② 按间隔轮询所有 TaskSource，将 TaskRequest 送入 GlobalTaskPool |
-| `SchedulerSystem.java` | ③ 每 2 tick 为可分配任务匹配最佳空闲 NPC（评分 = range×0.5 + efficiency×0.3 + behaviourLevel×0.2） |
+| `SchedulerSystem.java` | ③ 每 2 tick 为可分配任务匹配最佳空闲 NPC（评分 = proximity×0.5 + efficiency×0.3 + behaviourLevel×0.2，proximity = 10/(10+水平距离)，距离 = 序列首个 target() 到 NPC 位置） |
 | `TaskExecutionSystem.java` | ④ 每 tick 驱动 NPC 执行 AtomicOp：检查 pendingFuture → stance 计算 → mana 检查 → dispatch → 异步等待 / 同步推进 |
 | `NavigationSystem.java` | ⑤ (engine/system/) NPC 移动总控：≤32 寻路（moveTo + 卡死检测 + 超时），>32 或失败 → 向私有队列推入 RitualOp(SELF_TELEPORT)，由 TaskExecutionSystem 统一执行 |
 | `SystemBlueprintSystem.java` | ⑥ 每 tick 驱动系统蓝图（非全局任务池的基础设施任务），批量纯 Op，一个副作用 Op/tick |
 | `TaskSource.java` | 接口：`pollIntervalTicks()` + `poll(World, GlobalTaskPool)` |
 | `BuildingTaskSource.java` | 在 `engine/source/` — 轮询建筑 BE 队列（每 20 tick）。params 为 JsonElement，通过 EnqueueHelper 构造 |
 | `WarehouseSource.java` | V1 stub：监视仓库资源低于阈值时 emit ResourceLow 事件 |
+| `TaskPoolSavedData.java` | 在 `engine/` — 跨会话任务持久化（SavedData）。保存 blueprintId + taskParams + stepIndex + state → NBT。重载时重新编译蓝图恢复进度 |
 | `WorkbenchSource.java` | V1 stub：监视工作站生产队列 |
 | `PlayerManualSource.java` | 玩家手动发布任务（poll 为空，外部 push） |
 | `EventDrivenTaskSource.java` | 订阅 ResourceLow / TaskAwaitingResources / MobNearby / TaskCompleted → 翻译为 gather/defense 任务 |

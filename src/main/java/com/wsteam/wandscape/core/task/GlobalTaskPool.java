@@ -35,6 +35,10 @@ public class GlobalTaskPool {
     private final ColonyResourceAccess colonyResources;
     private long nextTaskId = 1;
 
+    /** Called whenever the task pool is mutated (add/assign/complete/release). */
+    @javax.annotation.Nullable
+    public Runnable onChanged;
+
     public GlobalTaskPool(EventBus eventBus, TaskCompiler compiler, ColonyResourceAccess colonyResources) {
         this.eventBus = eventBus;
         this.compiler = compiler;
@@ -42,6 +46,10 @@ public class GlobalTaskPool {
 
         // Subscribe to resource fulfilled events to wake waiting tasks
         eventBus.subscribe(ResourceFulfilled.class, this::onResourceFulfilled);
+    }
+
+    private void notifyChanged() {
+        if (onChanged != null) onChanged.run();
     }
 
     // ---- Task creation ----
@@ -68,7 +76,9 @@ public class GlobalTaskPool {
                 new HashMap<>(request.params()),
                 initialState, 0, null, null,
                 new ArrayDeque<>(), approval);
+        task.blueprintId = request.blueprintId();
         tasks.put(id, task);
+        notifyChanged();
         Log.info(TAG, "addTask #%d '%s' blueprint=%s state=%s priority=%d steps=%d triggers=%d",
                 id, seq.label(), request.blueprintId(), initialState, request.priority(),
                 seq.size(), compiled.triggers().size());
@@ -87,6 +97,7 @@ public class GlobalTaskPool {
                 task.interruptHistory != null ? new ArrayDeque<>(task.interruptHistory) : new ArrayDeque<>(),
                 task.approval);
         tasks.put(id, t);
+        notifyChanged();
         Log.info(TAG, "addTask #%d '%s' (pre-built) state=%s priority=%d triggers=%d",
                 id, t.sequence.label(), t.state, t.priority, t.triggers.size());
         return id;
@@ -98,6 +109,7 @@ public class GlobalTaskPool {
         GlobalTask task = tasks.get(taskId);
         if (task != null && task.state == TaskState.PENDING_APPROVAL) {
             task.state = TaskState.PENDING_ASSIGN;
+            notifyChanged();
             Log.info(TAG, "approve #%d '%s' → PENDING_ASSIGN", taskId, task.sequence.label());
         }
     }
@@ -106,6 +118,7 @@ public class GlobalTaskPool {
         GlobalTask task = tasks.get(taskId);
         if (task != null && task.state == TaskState.PENDING_APPROVAL) {
             task.state = TaskState.COMPLETED;
+            notifyChanged();
             Log.info(TAG, "reject #%d '%s' → COMPLETED", taskId, task.sequence.label());
         }
     }
@@ -176,6 +189,7 @@ public class GlobalTaskPool {
         task.subscriptions.clear();
 
         eventBus.emit(new TaskCompleted(taskId, npcId));
+        notifyChanged();
         Log.info(TAG, "complete #%d '%s' by NPC %d", taskId, task.sequence.label(), npcId);
     }
 
@@ -195,6 +209,7 @@ public class GlobalTaskPool {
 
         // Emit event so TaskSources can create supply tasks
         eventBus.emit(new TaskAwaitingResources(taskId, needed));
+        notifyChanged();
         Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
     }
 
@@ -220,6 +235,7 @@ public class GlobalTaskPool {
         task.state = TaskState.PENDING_ASSIGN;
         task.assignedNpcId = null;
 
+        notifyChanged();
         Log.info(TAG, "reassign #%d '%s' — NPC %d died, step=%d re-queued",
                 taskId, task.sequence.label(), npcId, task.stepIndex);
     }
@@ -357,6 +373,33 @@ public class GlobalTaskPool {
         if (awakened > 0) {
             Log.info(TAG, "ResourceFulfilled(%s) awakened %d tasks", event.resource(), awakened);
         }
+    }
+
+    // ---- Persistence ----
+
+    /** All non-COMPLETED tasks with a blueprintId (persistable across sessions). */
+    public List<GlobalTask> getPersistableTasks() {
+        List<GlobalTask> result = new ArrayList<>();
+        for (GlobalTask t : tasks.values()) {
+            if (t.state != TaskState.COMPLETED && t.blueprintId != null) {
+                result.add(t);
+            }
+        }
+        return result;
+    }
+
+    public long getNextTaskId() { return nextTaskId; }
+    public void setNextTaskId(long id) { this.nextTaskId = id; }
+
+    /** Add a task loaded from persistence, preserving its original ID. */
+    public void addLoadedTask(GlobalTask task, long originalId) {
+        tasks.put(originalId, task);
+        if (originalId >= nextTaskId) {
+            nextTaskId = originalId + 1;
+        }
+        Log.info(TAG, "loadTask #%d '%s' state=%s step=%d/%d",
+                originalId, task.sequence.label(), task.state,
+                task.stepIndex, task.sequence.size());
     }
 
     // ---- Queries ----

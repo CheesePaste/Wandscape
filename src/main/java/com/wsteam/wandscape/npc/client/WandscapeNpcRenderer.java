@@ -80,11 +80,16 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
     public void render(WandscapeNpc entity, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         if (entity.isCasting()) {
-            String kind = entity.getOpKind();
-            if (kind != null && kind.startsWith("ritual:")) {
-                spawnRitualCircle(entity, kind.substring(7)); // "ritual:self_teleport" → "self_teleport"
-            } else {
-                spawnCastRay(entity);
+            // Throttle to 1×/tick — render() may fire multiple times per frame
+            // (opaque pass, translucent pass, outline pass, etc.)
+            if (entity.tickCount != entity.lastParticleTick) {
+                entity.lastParticleTick = entity.tickCount;
+                String kind = entity.getOpKind();
+                if (kind != null && kind.startsWith("ritual:")) {
+                    spawnRitualCircle(entity, kind.substring(7));
+                } else {
+                    spawnCastRay(entity);
+                }
             }
         }
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);

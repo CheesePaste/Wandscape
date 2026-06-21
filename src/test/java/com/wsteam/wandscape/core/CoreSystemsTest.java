@@ -55,15 +55,15 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            // NPC-A: high range (6), BUILDING:1, mid efficiency (0.9)
-            // Score for BUILDING:1 = 6*0.5 + (1-0.9)*0.3 + 1*0.2 = 3.23
+            // NPC-A: high range (6), BUILDING:1, mid efficiency (0.9), at (1,64,0)
+            // NPC-B: low range (1), BUILDING:3, good efficiency (0.7), at (2,64,0)
+            // Task target at (10,64,0): NPC-B dist=8 < NPC-A dist=9, so NPC-B wins
             Map<BehaviourTag, BehaviourLevel> capsA = Map.of(
                     BehaviourTag.BUILDING, new BehaviourLevel(1));
             WandCarrier wandA = new WandCarrier(capsA, 0.9f, 6);
             npcHighRange = CoreBootstrap.createNpc(world, 1, 64, 0, wandA, colonyId, 100, 5);
 
-            // NPC-B: low range (1), BUILDING:3, good efficiency (0.7)
-            // Score for BUILDING:1 = 1*0.5 + (1-0.7)*0.3 + 1*0.2 = 0.79
+            // NPC-B: closer to task, better efficiency → wins despite lower maxRange
             Map<BehaviourTag, BehaviourLevel> capsB = Map.of(
                     BehaviourTag.BUILDING, new BehaviourLevel(3));
             WandCarrier wandB = new WandCarrier(capsB, 0.7f, 1);
@@ -73,7 +73,7 @@ public class CoreSystemsTest {
         @Test
         void bestScoringNpcWinsAssignment() {
             // Both NPCs qualify for BUILDING:1 task
-            // npcHighRange scores 3.23 > npcHighLevel 0.79 → npcHighRange gets assigned
+            // NPC-B is closer to target + more efficient → gets assigned
             registerSimpleBp("test:best_win",
                     AtomicOp.TransformOp.place(center.add(10, 0, 0), BlockType.STONE));
 
