@@ -204,7 +204,8 @@ public final class RoadEventListener {
                 level, placements, enginePool, buildingBounds, occupiedTiles);
 
         if (allTiles.isEmpty()) {
-            LOGGER.debug("[Road] No tiles generated from {} placements", placements.size());
+            LOGGER.warn("[Road] No tiles generated from {} placements — check NBT loading and terrain",
+                    placements.size());
             return;
         }
 

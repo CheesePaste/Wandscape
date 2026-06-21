@@ -3,7 +3,6 @@ package com.wsteam.wandscape.engine.road;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,15 +23,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Converts template placements from core/road/ into buildable tiles
@@ -132,37 +125,34 @@ public final class RoadTemplatePlacer {
 
     // ---- NBT loading ----
 
-    /** Load and parse a structure NBT file from the resource pack. */
+    /** Load and parse a structure NBT file from classpath (mod jar). */
     private static NbtData loadTemplateNbt(String templateRef) {
         try {
             // templateRef like "wandscape:road/straight" →
-            // file "data/wandscape/structure/road/straight.nbt"
+            // classpath: "data/wandscape/structure/road/straight.nbt"
             String[] parts = templateRef.split(":", 2);
             String namespace = parts.length == 2 ? parts[0] : "wandscape";
             String path = parts.length == 2 ? parts[1] : templateRef;
-            ResourceLocation resLoc = ResourceLocation.fromNamespaceAndPath(
-                    namespace, path);
+            String resourcePath = "data/" + namespace + "/structure/" + path + ".nbt";
 
-            var server = ServerLifecycleHooks.getCurrentServer();
-            if (server == null) return null;
-            var manager = server.getResourceManager();
-            var optResource = manager.getResource(
-                    ResourceLocation.fromNamespaceAndPath(namespace, "structure/" + path + ".nbt"));
-            if (optResource.isEmpty()) {
-                // Try vanilla namespace as fallback
-                optResource = manager.getResource(
-                        ResourceLocation.fromNamespaceAndPath("minecraft", "structure/" + templateRef + ".nbt"));
+            var classLoader = RoadTemplatePlacer.class.getClassLoader();
+            var stream = classLoader.getResourceAsStream(resourcePath);
+            if (stream == null) {
+                LOGGER.warn("[RoadTemplatePlacer] classpath miss: {}", resourcePath);
+                return null;
             }
-            if (optResource.isEmpty()) return null;
 
-            var inputStream = optResource.get().open();
-            CompoundTag tag = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
-            inputStream.close();
+            LOGGER.info("[RoadTemplatePlacer] loaded NBT: {} ({} bytes available)",
+                    resourcePath, stream.available());
+            CompoundTag tag = NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
+            stream.close();
 
-            return parseBlocks(tag);
+            NbtData data = parseBlocks(tag);
+            LOGGER.info("[RoadTemplatePlacer] parsed {} blocks from {}", data.blocks.size(), templateRef);
+            return data;
         } catch (Exception e) {
             LOGGER.warn("[RoadTemplatePlacer] NBT load failed for {}: {}",
-                    templateRef, e.getMessage());
+                    templateRef, e.toString());
             return null;
         }
     }
