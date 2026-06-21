@@ -82,34 +82,55 @@ public final class PathGenerator {
 
         List<PathPoint> path = new ArrayList<>();
 
-        // Distribute Y evenly: each step gets floor(dy/steps) or ceil(dy/steps)
-        // Use error-accumulation to interleave the larger steps
+        // Simple Y distribution: change Y by at most 1 per XZ step.
+        // If |ΔY| > totalSteps, the path won't reach the target
+        // during XZ traversal — stair steps are appended at the end.
         int cy = from.y();
-        int accumulatedY = 0;
+        int remainingY = dy;
 
         // Walk X first
         int cx = from.x();
         int cz = from.z();
         for (int i = 0; i < Math.abs(dx); i++) {
             cx += sx;
-            accumulatedY += dy;
-            int stepY = accumulatedY / totalSteps;
+            int stepY = clampStep(remainingY);
             cy += stepY;
-            accumulatedY -= stepY * totalSteps;
+            remainingY -= stepY;
             path.add(new PathPoint(cx, cy, cz));
         }
 
         // Then walk Z
         for (int i = 0; i < Math.abs(dz); i++) {
             cz += sz;
-            accumulatedY += dy;
-            int stepY = accumulatedY / totalSteps;
+            int stepY = clampStep(remainingY);
             cy += stepY;
-            accumulatedY -= stepY * totalSteps;
+            remainingY -= stepY;
             path.add(new PathPoint(cx, cy, cz));
         }
 
+        // Append stair steps at final XZ if Y hasn't reached target
+        while (remainingY != 0) {
+            int stepY = clampStep(remainingY);
+            cy += stepY;
+            remainingY -= stepY;
+            path.add(new PathPoint(cx, cy, cz));
+        }
+
+        // Override last point to exact target coordinates
+        if (!path.isEmpty()) {
+            PathPoint last = path.get(path.size() - 1);
+            path.set(path.size() - 1, new PathPoint(to.x(), to.y(), to.z()));
+        }
+
         return path;
+
+    }
+
+    /** Clamp Y step to [-1, 1] for walkability. */
+    private static int clampStep(int remaining) {
+        if (remaining > 0) return 1;
+        if (remaining < 0) return -1;
+        return 0;
     }
 
     /**

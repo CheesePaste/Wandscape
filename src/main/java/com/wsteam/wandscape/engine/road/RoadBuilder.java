@@ -59,6 +59,7 @@ public final class RoadBuilder {
         int n = path.size();
 
         JsonArray tiles = new JsonArray();
+        int prevPerpDx = 0, prevPerpDz = 1; // default if first point is stair
 
         for (int i = 0; i < n; i++) {
             PathPoint p = path.get(i);
@@ -82,8 +83,14 @@ public final class RoadBuilder {
                     perpDz = 1;
                 } else if (moveZ && !moveX) {
                     perpDx = 1;
+                } else {
+                    // Stair step or corner: carry forward previous perpendicular
+                    perpDx = prevPerpDx;
+                    perpDz = prevPerpDz;
                 }
             }
+            prevPerpDx = perpDx;
+            prevPerpDz = perpDz;
 
             for (int w = -halfWidth; w <= halfWidth; w++) {
                 int tx = p.x() + perpDx * w;
@@ -92,7 +99,14 @@ public final class RoadBuilder {
                 if (insideAnyBuilding(tx, tz, buildingBounds)) continue;
 
                 XZPoint tileXz = new XZPoint(tx, tz);
-                if (occupiedTiles.contains(tileXz)) continue;
+
+                // Stair detection: same XZ as previous path point = vertical step.
+                // These bypass occupancy check (XZ already claimed by first point in column).
+                boolean isStairStep = i > 0 && path.get(i - 1).xz().equals(p.xz());
+
+                if (!isStairStep) {
+                    if (occupiedTiles.contains(tileXz)) continue;
+                }
 
                 int roadY = p.y();
                 BlockPos roadPos = new BlockPos(tx, roadY, tz);
@@ -101,7 +115,6 @@ public final class RoadBuilder {
                 int actualY = roadY;
 
                 if (!roadState.getFluidState().isEmpty()) {
-                    // Water position: raise to surface + plank bridge
                     actualY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
                     roadPos = new BlockPos(tx, actualY, tz);
                     block = "minecraft:oak_planks";
@@ -109,7 +122,9 @@ public final class RoadBuilder {
                     block = applyVariation(level, roadPos, defaultBlock);
                 }
 
-                occupiedTiles.add(tileXz);
+                if (!isStairStep) {
+                    occupiedTiles.add(tileXz);
+                }
 
                 // Road surface tile
                 tiles.add(makeTile(roadPos, block));

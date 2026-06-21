@@ -85,25 +85,47 @@ public final class RoadPlanner {
                                               RoadBuildingData newBuilding) {
         PathPoint newPt = pathPoint(newBuilding);
 
-        // Find nearest existing node BEFORE adding the new building
-        RoadNode nearest = network.findNearestNode(newPt.xz());
+        if (network.nodeCount() == 0) {
+            network.addNode(new RoadNode(newBuilding.id(),
+                    new GridPos(newBuilding.x(), newBuilding.y(), newBuilding.z()),
+                    RoadNode.NodeType.BUILDING));
+            return network;
+        }
+
+        // Find walkable connection point BEFORE adding self (avoids self-match in fallback)
+        PathPoint nearestPt = network.findNearestWalkablePathPoint(newPt);
+
+        // Find which node owns the connection point
+        UUID connectNodeId = null;
+        for (RoadEdge e : network.getEdges().values()) {
+            for (PathPoint pp : e.getPath()) {
+                if (pp.xz().equals(nearestPt.xz())) {
+                    RoadNode nf = network.getNode(e.getFromNodeId());
+                    RoadNode nt = network.getNode(e.getToNodeId());
+                    int df = (nf != null) ? nf.xz().manhattanTo(newPt.xz()) : Integer.MAX_VALUE;
+                    int dt = (nt != null) ? nt.xz().manhattanTo(newPt.xz()) : Integer.MAX_VALUE;
+                    connectNodeId = (df <= dt) ? e.getFromNodeId() : e.getToNodeId();
+                    break;
+                }
+            }
+        }
+        if (connectNodeId == null) {
+            // Fallback: nearest node (no edges exist yet)
+            RoadNode nn = network.findNearestNode(newPt.xz());
+            if (nn != null && !nn.nodeId().equals(newBuilding.id())) {
+                connectNodeId = nn.nodeId();
+            } else {
+                network.addNode(new RoadNode(newBuilding.id(),
+                        new GridPos(newBuilding.x(), newBuilding.y(), newBuilding.z()),
+                        RoadNode.NodeType.BUILDING));
+                return network;
+            }
+        }
 
         // Add the building node
         network.addNode(new RoadNode(newBuilding.id(),
                 new GridPos(newBuilding.x(), newBuilding.y(), newBuilding.z()),
                 RoadNode.NodeType.BUILDING));
-
-        if (nearest == null) {
-            return network;
-        }
-
-        if (nearest.nodeId().equals(newBuilding.id())) {
-            return network;
-        }
-
-        // Find the nearest path point on any existing edge to this node
-        // so we connect at the correct Y
-        PathPoint nearestPt = network.findNearestPathPoint(nearest.xz());
 
         // Generate 3D path
         List<PathPoint> path = PathGenerator.lShape3D(newPt, nearestPt);
@@ -111,7 +133,7 @@ public final class RoadPlanner {
 
         RoadEdge edge = new RoadEdge(
                 UUID.randomUUID(),
-                newBuilding.id(), nearest.nodeId(),
+                newBuilding.id(), connectNodeId,
                 "dirt", path);
         network.addEdge(edge);
 

@@ -77,35 +77,51 @@ public class RoadNetwork {
     }
 
     /**
-     * Find the nearest existing path point to a target XZ position,
-     * using the actual stored Y from built edges.
+     * Find the nearest existing path point to a target, considering Y reachability.
      *
-     * <p>Used by incrementalAdd to connect a new road at the correct
-     * vertical level where it meets the existing road network.
+     * <p>Filters to only points where the Y difference can be walked with at most
+     * 1 block vertical change per XZ step. Falls back to the absolute nearest
+     * XZ point if no walkable point exists (the builder will insert stairs).
      *
-     * @param targetXz the XZ position to search near
-     * @return a PathPoint from an existing edge closest to targetXz,
-     *         or a fallback using the nearest node's anchor
+     * @param target the position to search near (includes Y)
+     * @return a reachable PathPoint, or the fallback nearest by XZ
      */
-    public PathPoint findNearestPathPoint(XZPoint targetXz) {
-        PathPoint bestPt = null;
-        int bestDist = Integer.MAX_VALUE;
+    public PathPoint findNearestWalkablePathPoint(PathPoint target) {
+        PathPoint walkableBest = null;
+        double walkableScore = Double.MAX_VALUE;
+        PathPoint xzNearest = null;
+        int xzBestDist = Integer.MAX_VALUE;
+
         for (RoadEdge edge : edges.values()) {
             for (PathPoint pp : edge.getPath()) {
-                int dist = pp.xz().manhattanTo(targetXz);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestPt = pp;
+                int xzDist = pp.manhattanXZTo(target);
+                int dy = Math.abs(pp.y() - target.y());
+                // Need at least dy XZ steps to climb (1 block per step)
+                boolean walkable = dy <= xzDist;
+
+                if (walkable) {
+                    double score = xzDist + dy * 0.5;
+                    if (score < walkableScore) {
+                        walkableScore = score;
+                        walkableBest = pp;
+                    }
+                }
+
+                if (xzDist < xzBestDist) {
+                    xzBestDist = xzDist;
+                    xzNearest = pp;
                 }
             }
         }
-        if (bestPt != null) return bestPt;
-        // Fallback: use nearest node anchor with Y=64
-        RoadNode node = findNearestNode(targetXz);
+
+        if (walkableBest != null) return walkableBest;
+        if (xzNearest != null) return xzNearest;
+        // Ultimate fallback
+        RoadNode node = findNearestNode(target.xz());
         if (node != null) {
             return new PathPoint(node.pos().x(), node.pos().y(), node.pos().z());
         }
-        return new PathPoint(targetXz.x(), 64, targetXz.z());
+        return new PathPoint(target.x(), target.y(), target.z());
     }
 
     public boolean isEmpty() {

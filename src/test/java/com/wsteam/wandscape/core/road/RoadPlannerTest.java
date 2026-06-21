@@ -69,12 +69,19 @@ class RoadPlannerTest {
         assertEquals(1, network.edgeCount());
         RoadEdge edge = network.getEdges().values().iterator().next();
         List<PathPoint> path = edge.getPath();
-        assertEquals(10, path.size());
-        // Last point should be at to building's anchor
+        // ΔY=20 over 10 XZ steps → needs stair steps → path >= 10
+        assertTrue(path.size() >= 10, "Path with stairs should have >= 10 points");
         PathPoint last = path.get(path.size() - 1);
         assertEquals(10, last.x());
         assertEquals(50, last.y());
         assertEquals(0, last.z());
+        // Every step must be walkable
+        int prevY = 70; // from building Y
+        for (PathPoint p : path) {
+            assertTrue(Math.abs(p.y() - prevY) <= 1,
+                    "Step from " + prevY + " to " + p.y() + " too steep");
+            prevY = p.y();
+        }
     }
 
     @Test
@@ -128,9 +135,15 @@ class RoadPlannerTest {
         RoadEdge edge = network.getEdges().values().iterator().next();
         List<PathPoint> path = edge.getPath();
         PathPoint last = path.get(path.size() - 1);
-        // Last point should be at existing node's anchor
-        assertEquals(0, last.x());
+        // Last point should reach existing node's Y at any close XZ
         assertEquals(70, last.y());
+        // All steps must be walkable
+        int prevY = 50; // from new building
+        for (PathPoint p : path) {
+            assertTrue(Math.abs(p.y() - prevY) <= 1,
+                    "Step from " + prevY + " to " + p.y() + " too steep");
+            prevY = p.y();
+        }
     }
 
     @Test
@@ -390,14 +403,14 @@ class RoadPlannerTest {
 
         RoadEdge edge = network.getEdges().values().iterator().next();
         List<PathPoint> path = edge.getPath();
-        assertEquals(10, path.size());
+        // ΔY=30 over 10 XZ steps → stairs needed → path >= 10
+        assertTrue(path.size() >= 10);
 
-        // Check that Y monotonic descent from 80 to 50 with max step ≤ 3
+        // Every step must be walkable (|ΔY| ≤ 1)
         int prevY = 80;
         for (PathPoint p : path) {
-            int dy = prevY - p.y();
-            assertTrue(dy >= 0, "Should descend monotonically");
-            assertTrue(dy <= 3, "Step too large: " + dy);
+            assertTrue(Math.abs(p.y() - prevY) <= 1,
+                    "Step from " + prevY + " to " + p.y() + " too large");
             prevY = p.y();
         }
         assertEquals(50, path.get(path.size() - 1).y());
