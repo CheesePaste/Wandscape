@@ -129,12 +129,17 @@ public final class OrganicRoadPlanner {
             return Collections.emptyList();
         }
 
-        // Find nearest existing BUILDING node in the network
+        // Find nearest node (may be BUILDING or INTERSECTION)
         XZPoint newXz = XZPoint.fromBuildData(newBuilding);
         RoadNode nearest = network.findNearestNode(newXz);
         if (nearest == null) return Collections.emptyList();
 
-        // Find the RoadBuildingData for that node
+        // Get the nearest node's world position
+        XZPoint nearestXz = nearest.xz();
+
+        // If nearest is a BUILDING node, compute proper access point.
+        // For INTERSECTION nodes, use the node position directly.
+        XZPoint accessNearest;
         RoadBuildingData nearestBd = null;
         for (RoadBuildingData bd : existingBldgs) {
             if (bd.id().equals(nearest.nodeId())) {
@@ -142,16 +147,20 @@ public final class OrganicRoadPlanner {
                 break;
             }
         }
-        if (nearestBd == null) return Collections.emptyList();
 
-        XZPoint nearestXz = XZPoint.fromBuildData(nearestBd);
         int dx = nearestXz.x() - newXz.x();
         int dz = nearestXz.z() - newXz.z();
         CardinalFacing dirToNearest = CardinalFacing.toward(dx, dz);
-        CardinalFacing dirFromNearest = CardinalFacing.toward(-dx, -dz);
 
         XZPoint accessNew = accessFn.compute(newBuilding, dirToNearest);
-        XZPoint accessNearest = accessFn.compute(nearestBd, dirFromNearest);
+
+        if (nearestBd != null) {
+            CardinalFacing dirFromNearest = CardinalFacing.toward(-dx, -dz);
+            accessNearest = accessFn.compute(nearestBd, dirFromNearest);
+        } else {
+            // INTERSECTION node or orphan — use node position directly
+            accessNearest = nearestXz;
+        }
 
         int manhattanDist = accessNew.manhattanTo(accessNearest);
         int budget = Math.max(MIN_BUDGET, (int) (manhattanDist * BUDGET_MULTIPLIER));
