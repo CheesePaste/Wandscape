@@ -17,7 +17,9 @@ public record RoadNode(UUID nodeId, GridPos pos, NodeType type) {
         /** Node where two road edges cross. */
         INTERSECTION,
         /** Node whose associated building no longer exists. */
-        ORPHAN
+        ORPHAN,
+        /** Node placed by a player for custom road routing. */
+        PLAYER
     }
 
     public XZPoint xz() {

@@ -94,9 +94,11 @@ public final class RoadEditorHandler {
         if (node == null) return;
 
         if (edgeCount == 0) {
-            if (node.type() == RoadNode.NodeType.INTERSECTION) {
+            if (node.type() == RoadNode.NodeType.INTERSECTION
+                    || node.type() == RoadNode.NodeType.PLAYER) {
                 network.removeNode(nodeId);
-                LOGGER.info("[RoadEditor] Removed orphan intersection node {}", nodeId);
+                LOGGER.info("[RoadEditor] Removed orphan {} node {}",
+                        node.type(), nodeId);
             } else if (node.type() == RoadNode.NodeType.BUILDING) {
                 network.updateNodeType(nodeId, RoadNode.NodeType.ORPHAN);
                 LOGGER.info("[RoadEditor] Marked building node {} as ORPHAN (no edges remain)", nodeId);

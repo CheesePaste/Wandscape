@@ -16,6 +16,7 @@ import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadNode;
+import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.road.RoadConfig;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -35,14 +36,14 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Client→Server packet for player-initiated road path planning.
  *
- * <p>Carries two node endpoints, optional intermediate waypoints
- * (for custom route shaping), and a {@code force} flag that
- * skips conflict confirmation when an edge already exists.
+ * <p>Carries two node endpoints (with positions for dumb PLAYER nodes),
+ * optional intermediate waypoints, and a {@code force} flag.
  *
  * <p>Server handler:
  * <ol>
+ *   <li>Creates PLAYER nodes for any endpoint UUIDs not in the network</li>
  *   <li>Checks for existing edge between the two nodes</li>
- *   <li>If conflict and not forced → removes old edge + replaces</li>
+ *   <li>If conflict and forced → removes old edge + replaces</li>
  *   <li>Generates path: from → waypoints → to via {@link PathGenerator#lShape3D}</li>
  *   <li>Adds edge to network + enqueues NPC build tasks</li>
  *   <li>Syncs updated network to all editing players</li>
@@ -50,7 +51,9 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record RoadEdgePlanPacket(
         UUID fromNodeId,
+        BlockPos fromPos,
         UUID toNodeId,
+        BlockPos toPos,
         List<BlockPos> waypoints,
         boolean force) implements CustomPacketPayload {
 
@@ -69,17 +72,21 @@ public record RoadEdgePlanPacket(
 
     // ── Server handler ──
 
-    /** Handle on server: plan path, check conflicts, enqueue NPC build tasks. */
+    /** Handle on server: ensure nodes exist, plan path, enqueue NPC build tasks. */
     public static void handleServer(RoadEdgePlanPacket packet, ServerPlayer player) {
         ServerLevel level = player.serverLevel();
         RoadSavedData roadData = RoadSavedData.getOrCreate(level);
         RoadNetwork network = roadData.getNetwork();
 
+        // ── Phase 0: Auto-create PLAYER nodes for unknown endpoints ──
+        ensureNode(network, packet.fromNodeId, packet.fromPos);
+        ensureNode(network, packet.toNodeId, packet.toPos);
+
         RoadNode fromNode = network.getNode(packet.fromNodeId);
         RoadNode toNode = network.getNode(packet.toNodeId);
 
         if (fromNode == null || toNode == null) {
-            LOGGER.warn("[RoadPlan] Unknown node(s): from={} to={}",
+            LOGGER.warn("[RoadPlan] Node creation failed: from={} to={}",
                     packet.fromNodeId, packet.toNodeId);
             return;
         }
@@ -167,11 +174,27 @@ public record RoadEdgePlanPacket(
                 network.nodeCount(), network.edgeCount());
     }
 
+    /**
+     * Ensure a node exists in the network. If the nodeId is unknown,
+     * create a new PLAYER node at the given position.
+     */
+    private static void ensureNode(RoadNetwork network, UUID nodeId, BlockPos pos) {
+        if (network.getNode(nodeId) != null) return;
+        RoadNode node = new RoadNode(nodeId,
+                new GridPos(pos.getX(), pos.getY(), pos.getZ()),
+                RoadNode.NodeType.PLAYER);
+        network.addNode(node);
+        LOGGER.info("[RoadPlan] Created PLAYER node {} at ({},{},{})",
+                nodeId.toString().substring(0, 8), pos.getX(), pos.getY(), pos.getZ());
+    }
+
     // ── StreamCodec ──
 
     static void write(RegistryFriendlyByteBuf buf, RoadEdgePlanPacket pkt) {
         buf.writeUUID(pkt.fromNodeId);
+        buf.writeBlockPos(pkt.fromPos);
         buf.writeUUID(pkt.toNodeId);
+        buf.writeBlockPos(pkt.toPos);
         buf.writeVarInt(pkt.waypoints.size());
         for (BlockPos wp : pkt.waypoints) {
             buf.writeBlockPos(wp);
@@ -181,13 +204,15 @@ public record RoadEdgePlanPacket(
 
     static RoadEdgePlanPacket read(RegistryFriendlyByteBuf buf) {
         UUID from = buf.readUUID();
+        BlockPos fromPos = buf.readBlockPos();
         UUID to = buf.readUUID();
+        BlockPos toPos = buf.readBlockPos();
         int count = buf.readVarInt();
         List<BlockPos> wps = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             wps.add(buf.readBlockPos());
         }
         boolean force = buf.readBoolean();
-        return new RoadEdgePlanPacket(from, to, wps, force);
+        return new RoadEdgePlanPacket(from, fromPos, to, toPos, wps, force);
     }
 }

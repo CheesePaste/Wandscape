@@ -226,17 +226,34 @@ public final class RoadEditorRenderer {
             UUID endId = RoadEditorClientState.getEndNodeId();
 
             // Build the full preview path: start → waypoints → (end node or player position)
+            // Resolve start position: prefer network node, fall back to stored startNodePos
+            PathPoint startPt = null;
+            if (startNode != null) {
+                startPt = new PathPoint(
+                        startNode.pos().x(), startNode.pos().y(), startNode.pos().z());
+            } else {
+                BlockPos sp = RoadEditorClientState.getStartNodePos();
+                if (sp != null) {
+                    startPt = new PathPoint(sp.getX(), sp.getY(), sp.getZ());
+                }
+            }
+
             PathPoint target;
             if (endId != null) {
                 RoadNode endNode = network.getNode(endId);
-                if (endNode == null) {
-                    target = null; // shouldn't happen
-                } else {
+                if (endNode != null) {
                     target = new PathPoint(endNode.pos().x(), endNode.pos().y(), endNode.pos().z());
+                } else {
+                    // Dumb node might not be in cached network after sync
+                    BlockPos ep = RoadEditorClientState.getEndNodePos();
+                    if (ep != null) {
+                        target = new PathPoint(ep.getX(), ep.getY(), ep.getZ());
+                    } else {
+                        target = null;
+                    }
                 }
             } else {
                 // No end node yet — use player's feet position as preview target
-                // (no raycast needed — always shows preview)
                 if (mc.player != null) {
                     target = new PathPoint(
                             (int) Math.floor(mc.player.getX()),
@@ -247,12 +264,11 @@ public final class RoadEditorRenderer {
                 }
             }
 
-            if (startNode != null && target != null) {
+            if (startPt != null && target != null) {
                 List<PathPoint> previewPath = new java.util.ArrayList<>();
                 int amplitude = Config.ROAD_DEFAULT_WIDTH.get() * 2;
 
-                PathPoint cursor = new PathPoint(
-                        startNode.pos().x(), startNode.pos().y(), startNode.pos().z());
+                PathPoint cursor = startPt;
                 for (BlockPos wp : wps) {
                     PathPoint wpPt = new PathPoint(wp.getX(), wp.getY(), wp.getZ());
                     previewPath.addAll(PathGenerator.lShape3D(cursor, wpPt, amplitude));
@@ -277,18 +293,38 @@ public final class RoadEditorRenderer {
                         0.5f, 255, 220, 50, 200);
             }
             // Start node marker: green 1×1 square
-            drawMarkerSquare(markerVc, poseEntry,
-                    startNode.pos().x() + 0.5f, startNode.pos().y() + PREVIEW_Y_OFFSET,
-                    startNode.pos().z() + 0.5f,
+            BlockPos sPos = RoadEditorClientState.getStartNodePos();
+            float sx, sy, sz;
+            if (startNode != null) {
+                sx = startNode.pos().x() + 0.5f;
+                sy = startNode.pos().y() + PREVIEW_Y_OFFSET;
+                sz = startNode.pos().z() + 0.5f;
+            } else if (sPos != null) {
+                sx = sPos.getX() + 0.5f;
+                sy = sPos.getY() + PREVIEW_Y_OFFSET;
+                sz = sPos.getZ() + 0.5f;
+            } else {
+                sx = sy = sz = 0; // unreachable
+            }
+            drawMarkerSquare(markerVc, poseEntry, sx, sy, sz,
                     0.5f, 50, 255, 50, 200);
             if (endId != null) {
                 RoadNode endNode = network.getNode(endId);
+                BlockPos ePos = RoadEditorClientState.getEndNodePos();
+                float ex, ey, ez;
                 if (endNode != null) {
-                    drawMarkerSquare(markerVc, poseEntry,
-                            endNode.pos().x() + 0.5f, endNode.pos().y() + PREVIEW_Y_OFFSET,
-                            endNode.pos().z() + 0.5f,
-                            0.5f, 255, 50, 50, 200); // red marker for end node
+                    ex = endNode.pos().x() + 0.5f;
+                    ey = endNode.pos().y() + PREVIEW_Y_OFFSET;
+                    ez = endNode.pos().z() + 0.5f;
+                } else if (ePos != null) {
+                    ex = ePos.getX() + 0.5f;
+                    ey = ePos.getY() + PREVIEW_Y_OFFSET;
+                    ez = ePos.getZ() + 0.5f;
+                } else {
+                    ex = ey = ez = 0; // unreachable
                 }
+                drawMarkerSquare(markerVc, poseEntry, ex, ey, ez,
+                        0.5f, 255, 50, 50, 200); // red marker for end node
             }
             bufferSource.endBatch(RenderType.debugQuads());
         }
@@ -305,6 +341,7 @@ public final class RoadEditorRenderer {
                 switch (node.type()) {
                     case BUILDING     -> { cr = 1.0f; cg = 1.0f; cb = 1.0f; }
                     case INTERSECTION -> { cr = 0.6f; cg = 0.1f; cb = 1.0f; }
+                    case PLAYER       -> { cr = 0.7f; cg = 0.3f; cb = 1.0f; } // purple
                     default           -> { cr = 0.5f; cg = 0.5f; cb = 0.5f; }
                 }
             }
@@ -465,10 +502,12 @@ public final class RoadEditorRenderer {
         if (enterClicked) {
             UUID sId = RoadEditorClientState.getStartNodeId();
             UUID eId = RoadEditorClientState.getEndNodeId();
-            if (sId != null && eId != null) {
+            BlockPos sPos = RoadEditorClientState.getStartNodePos();
+            BlockPos ePos = RoadEditorClientState.getEndNodePos();
+            if (sId != null && eId != null && sPos != null && ePos != null) {
                 List<BlockPos> wps = RoadEditorClientState.getWaypoints();
                 PacketDistributor.sendToServer(
-                        new RoadEdgePlanPacket(sId, eId, wps, true)); // force=true: player confirmed
+                        new RoadEdgePlanPacket(sId, sPos, eId, ePos, wps, true));
                 if (mc.player != null) {
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal(
@@ -529,7 +568,7 @@ public final class RoadEditorRenderer {
         }
     }
 
-    /** Handle right-click: start node, waypoint, or pend end node. */
+    /** Handle right-click: start node (real or dumb), waypoint, or end node. */
     private static void onRightClick(Minecraft mc, RoadNetwork network,
                                       Vec3 camPos, Vec3 lookVec) {
         RoadNode nearestNode = findNearestNodeToCrosshair(network, camPos, lookVec);
@@ -537,7 +576,7 @@ public final class RoadEditorRenderer {
         UUID endId = RoadEditorClientState.getEndNodeId();
 
         if (nearestNode != null) {
-            // ── Hit a node ──
+            // ── Hit a real network node ──
             if (startId == null) {
                 // First selection: set as start
                 RoadEditorClientState.setStartNodeId(nearestNode.nodeId());
@@ -545,7 +584,7 @@ public final class RoadEditorRenderer {
                         net.minecraft.network.chat.Component.literal(
                                 "§7[RoadEditor] §aStart node §f"
                                         + nearestNode.nodeId().toString().substring(0, 8)
-                                        + " §aselected — right-click ground for waypoints, another node to finish"),
+                                        + " §aselected — right-click ground for waypoints, another node/ground to finish"),
                         true);
             } else if (startId.equals(nearestNode.nodeId())) {
                 // Same node → cancel
@@ -566,22 +605,53 @@ public final class RoadEditorRenderer {
                                         + " §a[Enter] §6to confirm, §c[Esc] §6to cancel"),
                         true);
             }
-        } else if (startId != null) {
-            // ── Hit ground (not a node): add waypoint ──
-            // If end node was already pended, clear it (player is adjusting the path)
-            if (endId != null) {
-                RoadEditorClientState.setEndNodeId(null);
-            }
+        } else {
+            // ── Hit ground (not a real node) ──
             HitResult hit = mc.hitResult;
+            BlockPos hitPos = null;
             if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
-                BlockPos pos = ((BlockHitResult) hit).getBlockPos();
-                RoadEditorClientState.addWaypoint(pos);
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "§7[RoadEditor] §eWaypoint §f#" +
-                                        RoadEditorClientState.waypointCount() +
-                                        " §eat §f(" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")"),
-                        true);
+                hitPos = ((BlockHitResult) hit).getBlockPos();
+            }
+
+            if (startId == null) {
+                // No start yet → create dumb PLAYER node at clicked ground
+                if (hitPos != null) {
+                    UUID id = RoadEditorClientState.setStartNodeAtPos(hitPos);
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal(
+                                    "§7[RoadEditor] §aDumb start node §f"
+                                            + id.toString().substring(0, 8)
+                                            + " §aat §f(" + hitPos.getX() + ", " + hitPos.getY() + ", " + hitPos.getZ() + ")"
+                                            + " §a— right-click for waypoints, right-click another spot to finish"),
+                            true);
+                }
+            } else if (endId != null) {
+                // Already have start + end → clear end and add waypoint
+                RoadEditorClientState.setEndNodeId(null);
+                RoadEditorClientState.setEndNodePos(null);
+                if (hitPos != null) {
+                    RoadEditorClientState.addWaypoint(hitPos);
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal(
+                                    "§7[RoadEditor] §eWaypoint §f#" +
+                                            RoadEditorClientState.waypointCount() +
+                                            " §eat §f(" + hitPos.getX() + ", " + hitPos.getY() + ", " + hitPos.getZ() + ")"),
+                            true);
+                }
+            } else {
+                // Have start, no end → create dumb PLAYER end node
+                if (hitPos != null) {
+                    UUID id = RoadEditorClientState.setEndNodeAtPos(hitPos);
+                    int wpCount = RoadEditorClientState.waypointCount();
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal(
+                                    "§7[RoadEditor] §6Dumb end node §f"
+                                            + id.toString().substring(0, 8)
+                                            + " §6at §f(" + hitPos.getX() + ", " + hitPos.getY() + ", " + hitPos.getZ() + ")"
+                                            + " §6— §f" + wpCount + " §6waypoints"
+                                            + " §a[Enter] §6to confirm, §c[Esc] §6to cancel"),
+                            true);
+                }
             }
         }
     }
