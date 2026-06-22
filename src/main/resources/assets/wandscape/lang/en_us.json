@@ -13,6 +13,7 @@
   "key.wandscape.demo": "Open UI Demo",
   "key.wandscape.ui_editor": "Open UI Editor",
   "key.wandscape.task_editor": "Open Task Editor",
+  "key.wandscape.projection": "Toggle Soul Projection",
 
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",

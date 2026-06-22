@@ -7,6 +7,13 @@ import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
 import com.wsteam.wandscape.road.client.RoadEditorRenderer;
+import com.wsteam.wandscape.road.client.RoadEditorClientState;
+import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
+import com.wsteam.wandscape.projection.client.ProjectionRenderer;
+import com.wsteam.wandscape.projection.client.ProjectionFlightController;
+import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
+import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.production.client.CraftingStationScreen;
@@ -64,12 +71,22 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping PROJECTION_TOGGLE = new KeyMapping(
+            "key.wandscape.projection",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_V,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         // Register game-bus listeners on the NeoForge EVENT_BUS (not mod bus)
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
         // Road editor renderer (+ tick handler for hover/input)
         RoadEditorRenderer.register();
+        // Soul projection renderer (+ flight controller)
+        ProjectionRenderer.register();
+        ProjectionFlightController.register();
     }
 
     @SubscribeEvent
@@ -121,6 +138,7 @@ public class WandscapeClient {
         event.register(OPEN_DEMO_SCREEN);
         event.register(OPEN_UI_EDITOR);
         event.register(OPEN_TASK_EDITOR);
+        event.register(PROJECTION_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
@@ -133,6 +151,21 @@ public class WandscapeClient {
         while (OPEN_TASK_EDITOR.consumeClick()) {
             PacketDistributor.sendToServer(new TaskEditorOpenPacket());
             Minecraft.getInstance().setScreen(new TaskEditorScreen());
+        }
+        while (PROJECTION_TOGGLE.consumeClick()) {
+            // Cycle: Normal → Projection → Road Editor → Normal
+            if (RoadEditorClientState.isEditing()) {
+                // Road Editor → Normal
+                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
+            } else if (ProjectionClientState.isProjecting()) {
+                // Projection → Road Editor
+                ProjectionClientState.exitProjection();
+                PacketDistributor.sendToServer(new ProjectionExitPacket());
+                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
+            } else {
+                // Normal → Projection
+                PacketDistributor.sendToServer(new ProjectionEnterPacket());
+            }
         }
     }
 

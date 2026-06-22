@@ -142,5 +142,19 @@ public class Config {
             .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
             .define("general.autoApproveTasks", false);
 
+    // ── Soul Projection ──
+
+    public static final ModConfigSpec.DoubleValue PROJECTION_FLYING_SPEED = BUILDER
+            .comment("Flying speed multiplier in projection mode (vanilla creative flight = 0.05)")
+            .defineInRange("projection.flyingSpeed", 0.15, 0.05, 1.0);
+
+    public static final ModConfigSpec.IntValue PROJECTION_MAX_RANGE = BUILDER
+            .comment("Maximum distance in blocks from body anchor before player is pulled back (0 = unlimited)")
+            .defineInRange("projection.maxRange", 256, 0, 1024);
+
+    public static final ModConfigSpec.BooleanValue PROJECTION_REQUIRE_WAND = BUILDER
+            .comment("Whether the player must hold a wand item to enter projection mode")
+            .define("projection.requireWand", true);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

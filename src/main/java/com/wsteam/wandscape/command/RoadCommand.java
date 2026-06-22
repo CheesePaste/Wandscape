@@ -119,8 +119,8 @@ public final class RoadCommand {
                 RoadEditorNetwork.sendSyncToPlayer(player);
                 LOGGER.info("[RoadEditor] toggleEdit: sent sync packet to {}", player.getGameProfile().getName());
                 ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§aRoad edit mode: §2ON §7— edges=green/yellow/blue, "
-                                + "left-click edge to remove"), true);
+                        "§aRoad edit mode: §2ON §7— V key cycles: "
+                                + "Projection → Road Editor → Normal"), true);
             }
         } catch (IllegalStateException e) {
             ctx.getSource().sendFailure(Component.literal(

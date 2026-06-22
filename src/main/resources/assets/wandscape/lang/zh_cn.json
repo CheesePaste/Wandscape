@@ -1,0 +1,13 @@
+{
+  "itemGroup.wandscape": "Wandscape",
+  "item.wandscape.wand": "法杖",
+
+  "entity.wandscape.wandscape_npc": "法师",
+  "item.wandscape.wandscape_npc_spawn_egg": "法师刷怪蛋",
+
+  "key.categories.wandscape": "Wandscape",
+  "key.wandscape.demo": "打开UI演示",
+  "key.wandscape.ui_editor": "打开UI编辑器",
+  "key.wandscape.task_editor": "打开任务编辑器",
+  "key.wandscape.projection": "切换灵魂出窍"
+}

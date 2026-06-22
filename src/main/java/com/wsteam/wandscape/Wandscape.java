@@ -40,6 +40,12 @@ import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
 import com.wsteam.wandscape.road.network.RoadEditorNetwork;
+import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
+import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
+import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
+import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
+import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
+import com.wsteam.wandscape.projection.network.ProjectionNetwork;
 import com.wsteam.wandscape.task.internal.TaskApiImpl;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
@@ -244,6 +250,10 @@ public class Wandscape {
                         RoadEdgePlanPacket.STREAM_CODEC,
                         (packet, ctx) -> RoadEdgePlanPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
+                        RoadEditorTogglePacket.TYPE,
+                        RoadEditorTogglePacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadEditorTogglePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
                         TaskEditorOpenPacket.TYPE,
                         TaskEditorOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> TaskEditorOpenPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
@@ -258,7 +268,27 @@ public class Wandscape {
                 .playToServer(
                         TaskQueueModifyPacket.TYPE,
                         TaskQueueModifyPacket.STREAM_CODEC,
-                        TaskQueueModifyPacket::handleServer);
+                        TaskQueueModifyPacket::handleServer)
+                // ── Soul Projection ──
+                .playToServer(
+                        ProjectionEnterPacket.TYPE,
+                        ProjectionEnterPacket.STREAM_CODEC,
+                        (packet, ctx) -> ProjectionEnterPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        ProjectionEnterResponsePacket.TYPE,
+                        ProjectionEnterResponsePacket.STREAM_CODEC,
+                        (packet, ctx) -> ProjectionEnterResponsePacket.handleClient(packet))
+                .playToServer(
+                        ProjectionExitPacket.TYPE,
+                        ProjectionExitPacket.STREAM_CODEC,
+                        (packet, ctx) -> ProjectionExitPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        ProjectionPlacePacket.TYPE,
+                        ProjectionPlacePacket.STREAM_CODEC,
+                        (packet, ctx) -> ProjectionPlacePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -348,6 +378,7 @@ public class Wandscape {
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
             RoadEditorNetwork.removeByUuid(sp.getUUID());
+            ProjectionNetwork.removeByUuid(sp.getUUID());
         }
     }
 
