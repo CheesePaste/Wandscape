@@ -39,6 +39,20 @@ EntityComponentBridge 使用全零 UUID 作为占位殖民地，注释标记"阶
 ### GlobalTaskPool.onChanged 脆弱模式
 公开 Runnable 字段用于持久化脏标记，外部设置。如果创建 TaskPool 时未设置此字段，持久化静默失败。
 
+## 法杖系统已知局限 (2026-06-22)
+
+### 仓库无法杖时不会自动触发 craft_wand
+WandProvisionSystem 找到匹配法杖→Scheduler 注入 WandEquipOp。但如果仓库中完全没有匹配法杖，当前仅 log 一条 debug，任务保持 PENDING_ASSIGN。理想行为：检测到缺法杖 → 自动 enqueue `production:craft_wand` 蓝图到 GlobalTaskPool，NPC 制作法杖 → 存入仓库 → 下一轮心跳自动分配。
+
+### NPC 默认生成带 WandCarrier.EMPTY
+`EntityComponentBridge.onNpcJoinWorld()` 以 `WandCarrier.EMPTY` 创建 ECS 实体。NPC 通过刷怪蛋生成时无任何法杖能力，必须依赖仓库中的法杖。如果殖民地没有法杖且没有 crafting_station 制作法杖，所有需要法杖的任务（建造/采集/合成/仪式）将无限期停留在 PENDING_ASSIGN。一种解决方案是给初始 NPC（如通过 town_hall 生成的第一个 NPC）默认配备 builder_wand。
+
+### 法杖能力合并是 max-of-max 语义
+如果 NPC 同时装备 builder_wand(BUILDING:1) 和 ritual_wand(RITUAL:2)，WandCarrier 的能力为 {BUILDING:1, RITUAL:2}，是两个法杖的并集。但 WandRequirementDeriver 当前推导的 level 固定为 1（除 RitualOp 外），所以这个限制目前无实际影响。
+
+### 多人模式下法杖物品同步未测试
+WandEquipExecutor 通过 `npc.setItemInHand()` 修改手持，该调用通过 EntityDataAccessor 同步到客户端。但 ColonyItemBank 的 consume/add 操作在服务端直接修改 SavedData，多人模式下的并发安全依赖 ConcurrentHashMap 和 NeoForge 的单线程服务端 tick。法杖从仓库取出→装备→归还的完整流程在多人环境下未经压力测试。
+
 ## Bug 记录：工作站任务重复分配（2026-06-22）
 
 ### 现象

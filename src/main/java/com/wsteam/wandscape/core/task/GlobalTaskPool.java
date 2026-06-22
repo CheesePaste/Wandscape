@@ -11,6 +11,9 @@ import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.event.ResourceFulfilled;
 import com.wsteam.wandscape.core.event.TaskAwaitingResources;
 import com.wsteam.wandscape.core.event.TaskCompleted;
+import com.wsteam.wandscape.core.system.WandRequirementDeriver;
+import com.wsteam.wandscape.core.types.BehaviourLevel;
+import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.*;
@@ -74,7 +77,10 @@ public class GlobalTaskPool {
             initialState = TaskState.PENDING_ASSIGN;
         }
 
-        GlobalTask task = new GlobalTask(id, seq, Collections.emptyMap(),
+        // Derive wand requirements from the compiled op sequence
+        Map<BehaviourTag, BehaviourLevel> requirements = WandRequirementDeriver.derive(seq);
+
+        GlobalTask task = new GlobalTask(id, seq, requirements,
                 request.priority(), compiled.triggers(), new ArrayList<>(),
                 new HashMap<>(request.params()),
                 initialState, 0, null, null,

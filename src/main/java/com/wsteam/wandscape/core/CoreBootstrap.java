@@ -73,7 +73,7 @@ public final class CoreBootstrap {
         world.addSystem(new ManaRegenSystem());
         world.addSystem(new SystemBlueprintSystem(sysBp));
         world.addSystem(new TaskSourcePoller(config.taskSources()));
-        world.addSystem(new SchedulerSystem());
+        world.addSystem(new SchedulerSystem(config.wandProvider()));
         world.addSystem(new TaskExecutionSystem(world.taskPool));
         Log.debug(TAG, "%d systems registered", world.systemCount());
 

@@ -22,8 +22,8 @@
   4. 构建 TaskSource 列表（BuildingTaskSource + WarehouseSource + WorkbenchSource + RoadTaskSource）
   5. 构建边界实现并注入 core
   6. 启动 core → `CoreBootstrap.bootstrap(config)`
-  7. 注册默认 OpExecutor + AsyncTransformExecutor(每方块5tick延迟) + WandscapeBlockInteractExecutor
-  8. 注册 NavigationSystem
+  7. 注册默认 OpExecutor + AsyncTransformExecutor(每方块5tick延迟) + WandscapeBlockInteractExecutor + WandEquipExecutor + WandReturnExecutor
+  8. 注册 NavigationSystem + WandProvisionSystem
 
 ### 边界实现
 
@@ -32,6 +32,8 @@
 - **WandscapeRitualOps** — 异步引导：PendingRitual 队列 + tickAll 倒计时 → thenRun 执行。self_teleport 600tick 引导后传送
 - **AsyncTransformExecutor** — 覆盖 TransformOp 执行器，N-tick 延迟（默认5），实现异步方块放置效果
 - **WandscapeBlockInteractExecutor** — 处理 BlockInteractOp（同步 toggle/activate + 异步 gather/decompose/synthesize）
+- **WandEquipExecutor** — 处理 WandEquipOp：从 ColonyItemBank 消耗 "wandscape:wand" 物品（按 NBT behaviors 匹配preset），合并 WandCarrier 能力（equip），更新 NPC 手持
+- **WandReturnExecutor** — 处理 WandReturnOp：从 WandCarrier unequip，将 "wandscape:wand"（含preset NBT）存回 ColonyItemBank，恢复 NPC 默认手持
 
 ### TaskSource
 
@@ -51,6 +53,10 @@
 - **RoadEditorHandler** — 服务端编辑器操作：removeEdge（清空 placedBlocks→AIR + 移除边 + 节点重验证）
 - **RoadTaskSource** — 轮询发布 pending road segments + decorations 到 GlobalTaskPool
 - **DecorationBuilder** — 执行装饰放置（灯柱+长椅）
+
+### WandProvisionSystem
+
+在 `engine/system/`，实现 core 的 `WandProvider` 接口。`findWand(reqs, colonyId)` 扫描 ColonyItemBank 快照，按 "wandscape:wand" 物品的 NBT "behaviors" 标签匹配需求，返回 preset ID（如 "gatherer_wand"）。
 
 ### NavigationSystem
 

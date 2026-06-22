@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.wsteam.wandscape.core.CoreBootstrap;
+import com.wsteam.wandscape.Wandscape;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -21,12 +22,15 @@ import com.wsteam.wandscape.core.task.BlueprintInterpreter;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.engine.boundary.WandEquipExecutor;
+import com.wsteam.wandscape.engine.boundary.WandReturnExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.system.NavigationSystem;
+import com.wsteam.wandscape.engine.system.WandProvisionSystem;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.road.RoadTaskSource;
@@ -119,6 +123,10 @@ public final class EngineBootstrap {
             LOGGER.info("  ColonyResourceAccess: stub (warehouse not loaded)");
         }
 
+        // 4a. Build wand provider (engine queries warehouse for wand items)
+        WandProvisionSystem wandProvider = new WandProvisionSystem(
+                Wandscape.WAND_PRESET_LOADER);
+
         // 5. Build CoreBootstrapConfig
         CoreBootstrapConfig config = new CoreBootstrapConfig(
                 blockOps,
@@ -129,7 +137,8 @@ public final class EngineBootstrap {
                 taskSources,
                 blueprints,
                 sysBlueprints,
-                com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get()
+                com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get(),
+                wandProvider
         );
 
         // 6. Bootstrap engine
@@ -162,6 +171,13 @@ public final class EngineBootstrap {
         world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
         WandscapeEngine.setBlockInteractExec(blockInteractExec);
         LOGGER.info("  WandscapeBlockInteractExecutor active (sync + async actions)");
+
+        // 9c. Register wand equip/return executors
+        //     NPCs fetch wands from warehouse before executing tasks
+        //     that require specific wand capabilities, and return them after.
+        world.opExecutors.register(new WandEquipExecutor(Wandscape.WAND_PRESET_LOADER));
+        world.opExecutors.register(new WandReturnExecutor(Wandscape.WAND_PRESET_LOADER));
+        LOGGER.info("  WandEquipExecutor + WandReturnExecutor registered");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

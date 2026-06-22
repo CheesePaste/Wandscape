@@ -20,7 +20,7 @@
 |------|---------|
 | Position | GridPos |
 | ManaPool | current/max/regenPerTick + regen()/consume()/add() |
-| WandCarrier | AbilitySet 并集 + level(tag)/satisfies(requirements)/EMPTY哨兵 |
+| WandCarrier | mutable class：capabilities并集 + equippedWandIds列表 + equip(wandId,caps,eff,range)/unequip(wandId,knownWands)/recalculateFull()/EMPTY哨兵 |
 | TaskExecutor | 私有优先队列/当前task/stepIndex/params/stance/pendingFuture/ExecutorState |
 | Inventory | 列表存储 + add/remove/count/hasEnough |
 | NavigationState | mode(IDLE/PATHFINDING/TELEPORT_WAITING/TELEPORT_RITUAL) + target + CompletableFuture + 卡死追踪 |
@@ -29,7 +29,7 @@
 
 ### op/ — 原子操作
 
-- **AtomicOp.java** — sealed interface，7 种变体：TransformOp(place/break/convert) / BlockInteractOp(toggle/activate/open_gui) / EntityInteractOp / RitualOp / ResourceRequestOp / EmitEventOp / IfConditionOp
+- **AtomicOp.java** — sealed interface，9 种变体：TransformOp(place/break/convert) / BlockInteractOp(toggle/activate/open_gui/gather/decompose/synthesize) / EntityInteractOp / RitualOp / ResourceRequestOp / EmitEventOp / IfConditionOp / WandEquipOp / WandReturnOp
 - **OpExecutor\<T\>** — `CompletableFuture<Void> execute(World, long entityId, T op)`，同步返回 completedFuture，异步返回未完成 future
 - **OpExecutorRegistry** — 按 AtomicOp 子类注册 Executor
 - **DefaultOpExecutors** — 注册所有默认同步执行器 + 内置条件求值器
@@ -53,7 +53,7 @@
 | ManaRegenSystem | 每tick | 恢复所有 ManaPool |
 | SystemBlueprintSystem | 每tick | 系统蓝图（基础设施任务），一个副作用op/tick |
 | TaskSourcePoller | 按间隔 | 轮询所有 TaskSource → TaskRequest 入 GlobalTaskPool |
-| SchedulerSystem | 每2tick | 评分匹配：proximity×0.5 + efficiency×0.3 + behaviourLevel×0.2 |
+| SchedulerSystem | 每2tick | 评分匹配：proximity×0.5 + efficiency×0.3 + behaviourLevel×0.2。无合格NPC时通过WandProvider查仓库→注入WandEquipOp+WandReturnOp |
 | TaskExecutionSystem | 每tick | 驱动NPC执行AtomicOp：pendingFuture检查→stance→mana→dispatch→异步等待/同步推进 |
 
 ### road/ — 道路系统（纯逻辑）
@@ -73,9 +73,20 @@ GridPos(x,y,z) / BlockType("mod:id") / ResourceId / ResourceStack / RitualId / E
 
 ### 边界接口 (boundary/)
 
-BlockOps(7方法) / EntityOps / RitualOps(beginRitual返回CompletableFuture) / MovementOps(navigateTo返回CompletableFuture) / ColonyResourceAccess(6方法) / EventBus(emit/subscribe/unsubscribe)
+BlockOps(7方法) / EntityOps / RitualOps(beginRitual返回CompletableFuture) / MovementOps(navigateTo返回CompletableFuture) / ColonyResourceAccess(6方法) / WandProvider(findWand——core层接口，engine层实现) / EventBus(emit/subscribe/unsubscribe)
 
-引擎层实现在 `engine/boundary/`。
+### WandRequirementDeriver
+
+纯函数，扫描 TaskSequence 的所有 AtomicOp 推导 `Map<BehaviourTag, BehaviourLevel>`：
+- TransformOp → BUILDING:1
+- BlockInteractOp(gather) → GATHERING:1
+- BlockInteractOp(decompose/synthesize/craft_wand) → CRAFTING:1
+- RitualOp → RITUAL:N（按仪式类型：warding→1, portal_gate→3）
+- ResourceRequestOp/EmitEvent/IfCondition/WandEquip/WandReturn → 空（不需法杖）
+
+`GlobalTaskPool.addTask()` 自动调用 derive 填入 task.requirements。WandProvider 为 `@FunctionalInterface`，引擎层实现查 ColonyItemBank 匹配。
+
+引擎层实现在 `engine/boundary/` 和 `engine/system/`。
 
 ### 测试覆盖
 

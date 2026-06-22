@@ -2,10 +2,10 @@
 
 ## 关键类
 
-- **WandscapeNpc** (entity/) — MC 实体，继承 PathfinderMob。属性：maxMana/manaRegenRate/spellPower/colonyId。持有 ecsEntityId 用于桥接
+- **WandscapeNpc** (entity/) — MC 实体，继承 PathfinderMob。属性：maxMana/manaRegenRate/spellPower/colonyId。持有 ecsEntityId 用于桥接。NPC 死亡/消失时自动归还装备的法杖到 ColonyItemBank（`returnEquippedWands()`）
 - **EntityComponentBridge** (internal/) — **核心桥接单例**。双向映射 ecsEntityId↔MC实体。三个生命周期回调：
-  - `onNpcJoinWorld` — NPC加入世界→ECS创建组件（同会话重连检测UUID避免ID碰撞）
-  - `onNpcLeaveWorld` — KILLED/DISCARDED→移除ECS组件（chunk卸载保留）
+  - `onNpcJoinWorld` — NPC加入世界→ECS创建组件（WandCarrier.EMPTY 初始无装备法杖）
+  - `onNpcLeaveWorld` — KILLED/DISCARDED→移除ECS组件（chunk卸载保留）。**必须在 returnEquippedWands() 之后调用**
   - `syncPositions` — 每tick MC位置→ECS Position
 - **NpcApiImpl** (internal/) — NpcApi 实现，通过 bridge 查询
 - **NpcDataImpl** (data/) — NpcData 只读视图实现

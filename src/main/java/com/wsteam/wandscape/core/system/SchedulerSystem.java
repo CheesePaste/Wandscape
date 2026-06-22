@@ -4,6 +4,7 @@ import com.wsteam.wandscape.core.Log;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.GlobalTask;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
@@ -27,6 +28,19 @@ public class SchedulerSystem implements System {
     private int tickCounter = 0;
 
     private static final String TAG = "Scheduler";
+
+    @Nullable
+    private final WandProvider wandProvider;
+
+    /** No-arg constructor — scheduler runs without wand provisioning. */
+    public SchedulerSystem() {
+        this.wandProvider = null;
+    }
+
+    /** Constructor with wand provisioning support. */
+    public SchedulerSystem(@Nullable WandProvider wandProvider) {
+        this.wandProvider = wandProvider;
+    }
 
     @Override
     public void update(World world, float delta) {
@@ -114,6 +128,34 @@ public class SchedulerSystem implements System {
                             task.id, task.sequence.label(), bestNpc, bestScore, bestDist);
                     colonyNpcs.remove(bestNpc); // NPC is now busy
                     if (colonyNpcs.isEmpty()) break;
+                } else if (!task.requirements.isEmpty() && wandProvider != null) {
+                    // No NPC has the required wand capabilities.
+                    // Try to provision a wand from the warehouse.
+                    UUID colonyId = entry.getKey();
+                    String wandId = wandProvider.findWand(task.requirements, colonyId);
+                    if (wandId != null) {
+                        // Inject wand equip/return into the first available idle NPC
+                        for (long npcId : colonyNpcs) {
+                            TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+                            WandCarrier wc = world.get(npcId, WandCarrier.class);
+                            if (exec == null || wc == null) continue;
+                            // Skip NPCs that already have this wand
+                            if (wc.equippedWandIds().contains(wandId)) continue;
+
+                            // Push return first (LIFO: return executes last),
+                            // then equip (executes first before task ops).
+                            exec.pushPrivateFront(new AtomicOp.WandReturnOp(wandId));
+                            exec.pushPrivateFront(new AtomicOp.WandEquipOp(wandId));
+                            taskPool.assign(task.id, npcId, world);
+                            Log.info(TAG, "provisioned wand %s for #%d '%s' → NPC %d",
+                                    wandId, task.id, task.sequence.label(), npcId);
+                            colonyNpcs.remove(npcId);
+                            break;
+                        }
+                    } else {
+                        Log.debug(TAG, "no capable NPC for #%d '%s' (no wand in warehouse)",
+                                task.id, task.sequence.label());
+                    }
                 } else {
                     Log.debug(TAG, "no capable NPC for #%d '%s'", task.id, task.sequence.label());
                 }

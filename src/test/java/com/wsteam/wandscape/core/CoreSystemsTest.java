@@ -176,7 +176,8 @@ public class CoreSystemsTest {
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             Map<BehaviourTag, BehaviourLevel> caps = Map.of(
-                    BehaviourTag.RITUAL, new BehaviourLevel(3));
+                    BehaviourTag.RITUAL, new BehaviourLevel(3),
+                    BehaviourTag.BUILDING, new BehaviourLevel(1));
             WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
             npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
         }
@@ -428,7 +429,8 @@ public class CoreSystemsTest {
             // Create NPC and tick
             UUID colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, 0, 64, 0, 50);
-            WandCarrier wand = new WandCarrier(Map.of(), 0.8f, 3);
+            // NPC needs BUILDING capability for the TransformOp in test:any
+            WandCarrier wand = new WandCarrier(Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)), 0.8f, 3);
             CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
 
             tickN(10);

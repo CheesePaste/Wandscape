@@ -11,6 +11,7 @@
 - ✓ 仓库 GUI + ColonyItemBank + 网络同步
 - ✓ 工作站 GUI（decompose/synthesize）+ 制作站 GUI（craft_wand）+ 魔药站骨架
 - ✓ 节点自动采集 → 仓库闭环
+- ✓ 法杖需求接线（任务自动推导 requirements → Scheduler 查仓库 → 注入 WandEquipOp/WandReturnOp）
 - ✓ PosIndex chunkIndex fallback（重进游戏建筑可交互）
 
 ## 已完成的模块
