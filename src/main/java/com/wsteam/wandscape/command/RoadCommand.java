@@ -9,6 +9,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.client.DebugRenderTest;
 import com.wsteam.wandscape.road.network.RoadEditorNetwork;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -43,6 +44,8 @@ public final class RoadCommand {
                         .executes(RoadCommand::rebuild))
                 .then(Commands.literal("edit")
                         .executes(RoadCommand::toggleEdit))
+                .then(Commands.literal("debugrender")
+                        .executes(RoadCommand::debugRender))
                 .build();
     }
 
@@ -125,6 +128,20 @@ public final class RoadCommand {
         } catch (IllegalStateException e) {
             ctx.getSource().sendFailure(Component.literal(
                     "§cRoad system not loaded"));
+        }
+        return 1;
+    }
+
+    private static int debugRender(CommandContext<CommandSourceStack> ctx) {
+        var player = ctx.getSource().getPlayer();
+        if (player == null) return 0;
+        try {
+            var pos = player.position();
+            DebugRenderTest.enable(new net.minecraft.world.phys.Vec3(pos.x, pos.y, pos.z));
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "§a[DebugRender] Cross at your feet — look down!"), false);
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("§cDebugRender failed: " + e.getMessage()));
         }
         return 1;
     }

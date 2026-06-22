@@ -22,8 +22,10 @@ SchedulerSystem 中 `score += 50` 是 magic number。应移至 TOML 全局配置
 ### WandscapeConstants 与 Config 值重复
 `WandscapeConstants.java` 硬编码默认值（SCHEDULER_HEARTBEAT_TICKS=40 等），`Config.java` 定义相同的 TOML 可配值。两者的优先级关系无文档说明。
 
-### 6 个 API 接口无实现
-WandscapeApis 中 TaskApi、ColonyApi、HouseApi、ManaPoolApi、TavernApi、AtomicExecutor 的 getter 永远抛 "not loaded"。要么移除，要么标注为预留。
+### 5 个 API 接口无实现
+WandscapeApis 中 ColonyApi、HouseApi、ManaPoolApi、TavernApi、AtomicExecutor 的 getter 永远抛 "not loaded"。要么移除，要么标注为预留。
+
+~~TaskApi — 已实现 (2026-06-22)，`task/internal/TaskApiImpl` + GUI 任务编辑器。~~
 
 ### PLACEHOLDER_COLONY 零 UUID
 EntityComponentBridge 使用全零 UUID 作为占位殖民地，注释标记"阶段2占位"。殖民地系统完成后需替换。

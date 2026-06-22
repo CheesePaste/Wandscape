@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
+import com.wsteam.wandscape.road.client.DebugRenderTest;
 import com.wsteam.wandscape.road.client.RoadEditorRenderer;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
@@ -71,6 +72,7 @@ public class WandscapeClient {
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
         // Road editor renderer (+ tick handler for hover/input)
         RoadEditorRenderer.register();
+        DebugRenderTest.register();
     }
 
     @SubscribeEvent

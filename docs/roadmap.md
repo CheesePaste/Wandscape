@@ -30,9 +30,11 @@
 
 ## 未实现的 API（在 WandscapeApis 中定义但无实现）
 
-TaskApi / ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op 替代）
+ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op 替代）
 
 对应的模块：殖民地生命周期、房屋分配、魔力池、酒馆招募 — 均为阶段 3-4 内容。
+
+~~TaskApi~~ — 已实现 (2026-06-22)，详见 [GUI 任务编辑器](#gui-任务编辑器)
 
 ## 待完成
 
@@ -45,6 +47,42 @@ TaskApi / ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 
 | 低 | 殖民地系统（创建/删除/边界） | 新模块 |
 | 低 | 魔药站 GUI 实现 | production/client/ |
 | 低 | 多人游戏同步 | 网络包 |
+
+## GUI 任务编辑器
+
+**已完成 (2026-06-22)**。玩家按 `T` 键打开，可视化浏览蓝图、编辑参数、发布任务。
+
+### 数据流
+
+```
+TaskEditorScreen (客户端)
+  │  T 键打开 → 发送 TaskEditorOpenPacket
+  │  服务端回复 BlueprintListResponsePacket → 显示蓝图列表
+  │  用户选择蓝图 → 动态生成参数输入框
+  │  点 [Publish] → 发送 TaskCreatePacket
+  ▼
+TaskApiImpl (服务端防腐层)
+  │  getAvailableBlueprints() → BlueprintConfigLoader.getAll()
+  │  publishTask() → PlayerManualSource.publish(TaskRequest)
+  ▼
+GlobalTaskPool.addTask() → SchedulerSystem → NPC 执行
+```
+
+### 新增文件
+
+| 文件 | 层 | 用途 |
+|------|-----|------|
+| `shared/data/ParamTypeInfo.java` | shared | core ParamType 的枚举镜像 |
+| `shared/data/BlueprintInfo.java` | shared | 蓝图元数据 DTO |
+| `shared/ui/task/TaskEditorClientState.java` | client | 线程安全静态状态 |
+| `shared/ui/task/TaskEditorScreen.java` | client | MedievalScreen 子类 GUI |
+| `task/internal/TaskApiImpl.java` | server | TaskApi 实现，桥接 PlayerManualSource |
+| `task/network/TaskEditorOpenPacket.java` | C→S | 打开编辑器，请求蓝图列表 |
+| `task/network/BlueprintListResponsePacket.java` | S→C | 携带蓝图列表 |
+| `task/network/TaskCreatePacket.java` | C→S | 创建任务 |
+| `task/network/TaskNetworkHandler.java` | server | 网络工具类 |
+
+**零改动**: `core/` 下所有文件（PlayerManualSource、GlobalTaskPool、BlueprintRegistry 等）全部不动。
 
 ## 后续阶段（概览）
 
