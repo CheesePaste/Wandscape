@@ -24,6 +24,15 @@ import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
+import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.production.ProductionRecipeLoader;
+import com.wsteam.wandscape.production.menu.CraftingStationMenu;
+import com.wsteam.wandscape.production.menu.PotionStationMenu;
+import com.wsteam.wandscape.production.menu.WorkstationMenu;
+import com.wsteam.wandscape.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.production.network.PotionStationPacket;
+import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
+import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
@@ -128,6 +137,20 @@ public class Wandscape {
             MENU_TYPES.register("warehouse", () ->
                     new MenuType<>(WarehouseMenu::new, FeatureFlags.VANILLA_SET));
 
+    // ---- 10 production-stations: menus ----
+    public static final DeferredHolder<MenuType<?>, MenuType<WorkstationMenu>> WORKSTATION_MENU =
+            MENU_TYPES.register("workstation", () ->
+                    new MenuType<>(WorkstationMenu::new, FeatureFlags.VANILLA_SET));
+    public static final DeferredHolder<MenuType<?>, MenuType<CraftingStationMenu>> CRAFTING_STATION_MENU =
+            MENU_TYPES.register("crafting_station", () ->
+                    new MenuType<>(CraftingStationMenu::new, FeatureFlags.VANILLA_SET));
+    public static final DeferredHolder<MenuType<?>, MenuType<PotionStationMenu>> POTION_STATION_MENU =
+            MENU_TYPES.register("potion_station", () ->
+                    new MenuType<>(PotionStationMenu::new, FeatureFlags.VANILLA_SET));
+
+    // ---- 10 production-stations: loader ----
+    public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
+
     // ---- 07 npc-system: entity ----
     public static final DeferredHolder<EntityType<?>, EntityType<WandscapeNpc>> WANDSCAPE_NPC =
             ENTITIES.register("wandscape_npc", () ->
@@ -192,6 +215,9 @@ public class Wandscape {
         configLoader.registerWith(DATA_LOADER);
         BLUEPRINT_CONFIG_LOADER.registerWith(DATA_LOADER);
         WandscapeEngine.setBlueprintConfigLoader(BLUEPRINT_CONFIG_LOADER);
+
+        // Production recipe loader
+        PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -215,6 +241,18 @@ public class Wandscape {
                         BlueprintListResponsePacket.TYPE,
                         BlueprintListResponsePacket.STREAM_CODEC,
                         (packet, ctx) -> BlueprintListResponsePacket.handleClient(packet))
+                .playToClient(
+                        WorkstationDataPacket.TYPE,
+                        WorkstationDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> WorkstationDataPacket.handleClient(packet))
+                .playToClient(
+                        CraftingStationPacket.TYPE,
+                        CraftingStationPacket.STREAM_CODEC,
+                        (packet, ctx) -> CraftingStationPacket.handleClient(packet))
+                .playToClient(
+                        PotionStationPacket.TYPE,
+                        PotionStationPacket.STREAM_CODEC,
+                        (packet, ctx) -> PotionStationPacket.handleClient(packet))
                 .playToServer(
                         RoadEdgeRemovePacket.TYPE,
                         RoadEdgeRemovePacket.STREAM_CODEC,
@@ -230,7 +268,11 @@ public class Wandscape {
                 .playToServer(
                         TaskCreatePacket.TYPE,
                         TaskCreatePacket.STREAM_CODEC,
-                        (packet, ctx) -> TaskCreatePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()));
+                        (packet, ctx) -> TaskCreatePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        RequestProductionTaskPacket.TYPE,
+                        RequestProductionTaskPacket.STREAM_CODEC,
+                        RequestProductionTaskPacket::handleServer);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -248,6 +290,10 @@ public class Wandscape {
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
         BuildCompleteListener.register();
+
+        // Wire production loaders to block interact executor
+        WandscapeBlockInteractExecutor.setElementMappingLoader(ELEMENT_MAPPING_LOADER);
+        WandscapeBlockInteractExecutor.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
 
         // ---- Road system ----
         RoadEventListener.register();

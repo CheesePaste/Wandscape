@@ -1,0 +1,25 @@
+{
+  "id": "production:decompose",
+  "display_name": "分解物品",
+  "description": "NPC channels at the workstation to break down items into their elemental components.",
+  "params": {
+    "anchor": "pos",
+    "item_id": "string",
+    "count": "int",
+    "channel_ticks": "int",
+    "mana_cost": "int"
+  },
+  "steps": [
+    {
+      "type": "block_interact",
+      "action": "decompose",
+      "at": "$anchor",
+      "channel_ticks": "$channel_ticks",
+      "mana_cost": "$mana_cost",
+      "params": {
+        "item_id": "$item_id",
+        "count": "$count"
+      }
+    }
+  ]
+}

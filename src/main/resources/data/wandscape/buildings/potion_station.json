@@ -1,0 +1,44 @@
+{
+  "id": "potion_station",
+  "display_name": "魔药站",
+  "category": "potion_station",
+  "pattern": [
+    [0, 0, 0],
+    [-1, 0, 0], [1, 0, 0],
+    [0, 0, -1], [0, 0, 1]
+  ],
+  "block_mapping": {
+    "0,0,0": "minecraft:brewing_stand",
+    "-1,0,0": "minecraft:stone_bricks",
+    "1,0,0": "minecraft:stone_bricks",
+    "0,0,-1": "minecraft:stone_bricks",
+    "0,0,1": "minecraft:stone_bricks"
+  },
+  "comfort": 1,
+  "magic": 5,
+  "wonder": 3,
+  "maintenance_cost": 5,
+  "shutdown_penalty": {
+    "output_reduction": 1.0,
+    "time_multiplier": 2.0
+  },
+  "queue": {
+    "capacity": 10,
+    "task_types": ["crafting"]
+  },
+  "unlock_requirement": {
+    "min_wonder": 10
+  },
+  "boundary": {
+    "min": [-1, 0, -1],
+    "max": [1, 0, 1]
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
+  }
+}

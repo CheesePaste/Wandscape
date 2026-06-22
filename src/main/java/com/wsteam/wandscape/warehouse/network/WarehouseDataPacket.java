@@ -3,11 +3,10 @@ package com.wsteam.wandscape.warehouse.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -69,11 +68,16 @@ public record WarehouseDataPacket(ListTag items) implements CustomPacketPayload 
     /** A single item entry for client rendering. */
     public record ItemEntry(String itemId, @javax.annotation.Nullable CompoundTag nbt, long count) {}
 
-    /** Handle on client: update the open WarehouseScreen with this data. */
+    private static Consumer<WarehouseDataPacket> clientHandler;
+
+    public static void setClientHandler(Consumer<WarehouseDataPacket> handler) {
+        clientHandler = handler;
+    }
+
+    /** Handle on client: dispatched via injected Consumer from WandscapeClient. */
     public static void handleClient(WarehouseDataPacket packet) {
-        var screen = Minecraft.getInstance().screen;
-        if (screen instanceof WarehouseScreen ws) {
-            ws.updateItems(packet);
+        if (clientHandler != null) {
+            clientHandler.accept(packet);
         }
     }
 

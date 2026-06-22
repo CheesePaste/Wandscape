@@ -1,0 +1,11 @@
+{
+  "id": "stone_bricks",
+  "output": {
+    "item": "minecraft:stone_bricks"
+  },
+  "cost": {
+    "earth": 4
+  },
+  "required_level": 1,
+  "unlock_magic_value": 0
+}

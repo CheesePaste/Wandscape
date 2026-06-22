@@ -1,0 +1,18 @@
+{
+  "id": "builder_wand",
+  "output": {
+    "item": "wandscape:wand",
+    "nbt": {
+      "wand_color": "#FFD700",
+      "behaviors": { "building": 1 },
+      "range": 1,
+      "mana_cost_multiplier": 1.0
+    }
+  },
+  "cost": {
+    "earth": 32,
+    "wood": 16
+  },
+  "required_level": 1,
+  "unlock_magic_value": 0
+}
