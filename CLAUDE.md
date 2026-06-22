@@ -15,18 +15,23 @@
 2. **原子化设计**：每个模块只做一件事。模块间通过接口 + 事件通信，不跨模块直接引用类。
 3. **轻度不硬核**：不引入生存难度惩罚。关停是效率降级而非建筑损坏。
 4. **稳定性优先**：所有可能失败的路径必须有兜底。不允许静默失败或崩溃。
-5. **文档即代码**：修改设计同步更新 `docs/`，新增包/注册/事件/JSON 同步更新 `architecture/`。
+5. **文档即代码**：修改结构同步更新 `architecture/packages/`，新增 JSON 格式同步更新 `architecture/data/`，修改设计同步更新 `docs/`。
 6. **引擎是请求层，适配层是实现**：`core/` 禁止引入 MC 类，禁止持有运行时状态。MC 实现放 `engine/` 或各模块 `internal/`。
 
 ## 项目导航
 
 | 目录 | 用途 | 何时查阅 |
 |------|------|---------|
-| `docs/` | 模块设计文档(00-21) + 路线图(17) + 已解决(98) + 待澄清(99) | 写模块代码前 |
-| `architecture/` | 代码结构快照：真实包树、注册表、事件、JSON 格式 | 需要定位代码位置 |
+| `architecture/README.md` | **入口**：包地图 + 数据流 + 依赖规则 | 开始任何工作前 |
+| `architecture/packages/` | 每个包的事实参考（类、职责、依赖） | 需要了解某包时 |
+| `architecture/data/` | JSON 数据格式参考（建筑、蓝图 DSL） | 写/改 JSON 配置时 |
+| `architecture/conventions.md` | 编码规范 + 反模式 | 写代码时 |
+| `docs/decisions.md` | 设计决策日志（非显而易见的选择及其理由） | 需要理解"为什么"时 |
+| `docs/roadmap.md` | 当前阶段 + 下一步 + 未实现 API 列表 | 需要了解进度时 |
+| `docs/gaps.md` | 已知问题 + 代码审查发现 + 后续待办 | 排查问题或规划时 |
 | `src/` | Java 代码 | 实现时 |
 
-**docs/ 和 architecture/ 分工**：docs/ = "应该做成什么样"（设计意图），architecture/ = "现在是什么样"（代码位置、文件用途）。
+**architecture/ = 真相（事实），docs/ = 推理（为什么）。两者不重复。**
 
 ## 子代理使用
 
@@ -39,11 +44,11 @@
 
 **需求澄清前不写代码**：用户提出设计/实现问题时，先用 `grill-me` skill 反复追问直到需求明确、决策树每个分支都敲定，再进入写代码阶段。禁止需求模糊时直接动手写实现。
 
-**写代码前**：读对应 `docs/NN-*.md` → 读 `docs/17` 确认阶段 → 读 `architecture/00` 定位包 → 用 `minecraft-source` skill 查 MC 源码
+**写代码前**：读 `architecture/README.md` → 读对应 `architecture/packages/<package>.md` → 读 `docs/roadmap.md` 确认阶段 → 用 `minecraft-source` skill 查 MC 源码
 
-**写代码时**：新接口 → `shared/api/`，新事件 → `shared/event/` + 登记 `architecture/03`，新注册 → 登记 `architecture/02`，新 JSON → 登记 `architecture/04`，可配置内容走 `data/wandscape/`
+**写代码时**：新接口 → `shared/api/`，新事件 → `shared/event/`，新注册 → 更新对应 package 文件，新 JSON → 登记 `architecture/data/`
 
-**写完后**：改设计 → 更新 `docs/`，改结构 → 更新 `architecture/`，解决问题 → 从 `docs/99` 移到 `docs/98`
+**写完后**：改设计 → 更新 `docs/decisions.md`，改结构 → 更新对应 `architecture/packages/`，发现问题 → 记录到 `docs/gaps.md`
 
 ## MC 源码查阅
 
@@ -52,10 +57,10 @@
 ## 模块依赖规则
 
 ```
-01-shared-api  ←  所有模块依赖
-08-building-core  ←  建筑类模块可选依赖（自身仅依赖 01）
-02-07, 09-16  ←  互不直接引用，通过 WandscapeApis + EventBus 通信
-core/  ←  所有模块可见，纯 Java 21 零 MC 依赖
+shared/  ←  所有包可见（API接口 + 事件 + 数据类型）
+engine/  ←  MC 适配实现，实现 core 边界接口
+building/wand/element/npc/warehouse/production  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
+core/  ←  所有包可见，纯 Java 21 零 MC 依赖。不依赖 shared/
 ```
 
 违反此规则代码不得合并。

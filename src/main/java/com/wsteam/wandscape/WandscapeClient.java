@@ -8,8 +8,13 @@ import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
+import com.wsteam.wandscape.production.client.CraftingStationScreen;
+import com.wsteam.wandscape.production.client.WorkstationScreen;
+import com.wsteam.wandscape.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -57,6 +62,26 @@ public class WandscapeClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
+        // Wire server→client packet handlers to the client-side screens.
+        // All wiring lives here — migrating to custom UI only needs to change these lambdas.
+        WarehouseDataPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof WarehouseScreen ws) {
+                ws.updateItems(packet);
+            }
+        });
+        WorkstationDataPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof WorkstationScreen ws) {
+                ws.updateData(packet);
+            }
+        });
+        CraftingStationPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof CraftingStationScreen cs) {
+                cs.updateData(packet);
+            }
+        });
         Wandscape.LOGGER.info("Wandscape client setup complete");
     }
 
@@ -78,6 +103,8 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
+        event.register(Wandscape.WORKSTATION_MENU.get(), WorkstationScreen::new);
+        event.register(Wandscape.CRAFTING_STATION_MENU.get(), CraftingStationScreen::new);
     }
 
     @SubscribeEvent

@@ -1,0 +1,25 @@
+{
+  "id": "production:brew_potion",
+  "display_name": "炼制魔药",
+  "description": "NPC channels at the potion station to brew potions from elements and items.",
+  "params": {
+    "anchor": "pos",
+    "recipe_id": "string",
+    "count": "int",
+    "channel_ticks": "int",
+    "mana_cost": "int"
+  },
+  "steps": [
+    {
+      "type": "block_interact",
+      "action": "brew_potion",
+      "at": "$anchor",
+      "channel_ticks": "$channel_ticks",
+      "mana_cost": "$mana_cost",
+      "params": {
+        "recipe_id": "$recipe_id",
+        "count": "$count"
+      }
+    }
+  ]
+}

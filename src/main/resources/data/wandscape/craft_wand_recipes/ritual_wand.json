@@ -1,0 +1,18 @@
+{
+  "id": "ritual_wand",
+  "output": {
+    "item": "wandscape:wand",
+    "nbt": {
+      "wand_color": "#8B008B",
+      "behaviors": { "ritual": 1 },
+      "range": 1,
+      "mana_cost_multiplier": 1.0
+    }
+  },
+  "cost": {
+    "gold": 32,
+    "ender": 16
+  },
+  "required_level": 1,
+  "unlock_magic_value": 20
+}

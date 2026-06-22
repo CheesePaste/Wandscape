@@ -1,0 +1,18 @@
+{
+  "id": "gatherer_wand",
+  "output": {
+    "item": "wandscape:wand",
+    "nbt": {
+      "wand_color": "#228B22",
+      "behaviors": { "gathering": 1 },
+      "range": 1,
+      "mana_cost_multiplier": 1.0
+    }
+  },
+  "cost": {
+    "wood": 32,
+    "water": 16
+  },
+  "required_level": 1,
+  "unlock_magic_value": 0
+}

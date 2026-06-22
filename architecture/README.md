@@ -1,46 +1,88 @@
-# architecture/ — 代码结构快照
+# architecture/ — 代码结构事实
 
-按**模块**组织。查 bug 或了解某个模块时，打开对应文件即可看到：源文件用途、注册项、发布/订阅的事件、加载的 JSON 格式。
+本目录是项目代码结构的**唯一真相来源**。docs/ 只放设计推理和路线图。源代码是权威的——这里不重复代码。
 
-## 模块 → 文件
+## 包地图
 
-| 出问题时 | 打开 |
+```
+Wandscape.java        @Mod 入口，注册物品/实体/粒子/菜单，生命周期事件
+Config.java           NeoForge TOML 配置，所有可调参数
+│
+├── core/             ECS 引擎，纯 Java 21，零 MC 依赖
+│   ├── ecs/          World + System + ComponentStore
+│   ├── component/    8 个组件：Position/ManaPool/WandCarrier/TaskExecutor/Inventory/...
+│   ├── boundary/     6 个接口：BlockOps/EntityOps/RitualOps/MovementOps/ColonyResourceAccess/EventBus
+│   ├── op/           AtomicOp(sealed,7种) + OpExecutor + 注册表
+│   ├── task/         任务池 + 蓝图DSL(BlueprintDefinition/Interpreter/ExprNode/StepNode)
+│   ├── system/       Scheduler/TaskExecution/ManaRegen/TaskSourcePoller/...
+│   ├── road/         路网生成(MST+PathGenerator+DecorationPlanner) — 纯逻辑无MC依赖
+│   ├── event/        领域事件(SimpleEventBus) 和类型定义
+│   └── types/        基础record: GridPos/BlockType/ResourceId/BehaviourTag/...
+│
+├── engine/           MC 适配实现（注入 core 边界接口）
+│   ├── bootstrap/    EngineBootstrap — 一次性装配所有边界实现+TaskSource+系统
+│   ├── boundary/     WandscapeBlockOps/MovementOps/RitualOps + AsyncExecutor
+│   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
+│   ├── road/         RoadBuilder/RoadSavedData/RoadEventListener/RoadTaskSource
+│   └── system/       NavigationSystem(NPC移动总控)
+│
+├── shared/           所有包依赖的公共层
+│   ├── api/          12个模块接口 + registry/WandscapeApis.java(静态定位器)
+│   ├── data/         17个record/enum(BehaviorType/AbilitySet/WorkItem/...)
+│   ├── event/        16个NeoForge事件(模块间通信)
+│   └── ui/           中世纪魔法主题组件库(MedievalScreen/Button/ScrollableList/...)
+│
+├── building/         建筑管理(零自定义方块/BE，全部SavedData)
+├── wand/             法杖物品+NBT+预设
+├── element/          方块→元素映射
+├── npc/              NPC实体+ECS桥接(EntityComponentBridge)+渲染
+├── warehouse/        GUI+ColonyItemBank(SavedData)
+├── production/       工作站(GUI/配方/菜单/网络包)
+├── dataconfig/       JSON数据加载框架(WandscapeDataLoader)
+└── command/          调试命令(/wandscape ...)
+```
+
+## 数据流（核心路径）
+
+```
+BuildingConfig JSON → BuildingConfigLoader
+  → EnqueueHelper → WorkItem 入 BuildingState.taskQueue
+  → BuildingTaskSource.poll(每20tick)
+  → TaskRequest → GlobalTaskPool.addTask()
+  → SchedulerSystem(每2tick评分: proximity×0.5 + efficiency×0.3 + behaviourLevel×0.2)
+  → NPC领取 → TaskExecutionSystem
+  → AtomicOp → OpExecutor → WandscapeBlockOps(MC世界实际方块操作)
+  → emit_event → BuildCompleteListener → BuildingSavedData.structureIntact=true
+```
+
+## 依赖规则
+
+```
+shared/          ← 所有包可见（API+事件+数据类）
+core/            ← 所有包可见（纯Java，零MC依赖）
+engine/          ← 实现core边界接口，持有MC引用
+building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨包直接引用
+```
+
+- core/ 禁止 import MC 类，禁止持有运行时状态
+- 模块间通过 `WandscapeApis.getXxxApi()` + NeoForge EventBus 通信
+- 跨模块 new 类是反模式
+- BE 不能直接调引擎 → BuildingTaskSource 是唯一入口
+
+## 各包入口
+
+| 想看什么 | 打开 |
 |---------|------|
-| NPC 不生成 / 不寻路 / ECS 桥接失败 | `06-npc.md` |
-| 法杖 NBT 不对 / 能力并集算错 | `03-wand.md` |
-| 元素映射加载失败 / decompose 结果错 | `04-element.md` |
-| 建筑放置不验证 / BE 不入队 / 配置解析错 | `05-building.md` |
-| JSON 热重载不生效 / 数据加载框架问题 | `07-data-config.md` |
-| 引擎调度不工作 / 任务不分配 / tick 卡死 | `00-core-engine.md` |
-| MC 桥梁（方块操作 / 异步执行 / 传送）| `01-engine-bridge.md` |
-| API 接口缺失 / 事件类找不到 | `02-shared-api.md` |
-| 编码规范 + 反模式 | `08-conventions.md` |
-
-## 问题 → 文件
-
-| 症状 | 先看 |
-|------|------|
-| `Scheduler heartbeat - no idle NPCs` | `06-npc.md` → EntityComponentBridge, `00-core-engine.md` → SchedulerSystem |
-| `Blueprint not found: build:xxx` | `01-engine-bridge.md` → 检查 BuildingConfig JSON 是否加载、是否有 blueprint ref（新 DSL）或无 ref 时的 DataDrivenSteps fallback（遗留） |
-| `Unknown blueprint in call: xxx` | `01-engine-bridge.md` → BlueprintConfigLoader 是否注册了被引用的 DSL 蓝图 |
-| `./gradlew test` 全红 | `00-core-engine.md` → 测试在 `src/test/java/.../core/` |
-| 建筑放了没反应 | `05-building.md` → BlockPlaceHandler, EnqueueHelper, BuildingConfigLoader |
-| NPC 位置不更新 | `06-npc.md` → EntityComponentBridge.syncPositions |
-| 法杖预设加载失败 | `03-wand.md` → WandPresetLoader |
-| 异步 Op 卡住不推进 | `01-engine-bridge.md` → AsyncTransformExecutor, `00-core-engine.md` → TaskExecutionSystem |
-
-## 总览
-
-```
-src/main/java/com/wsteam/wandscape/
-├── core/       (62 文件) → 00-core-engine.md   纯 Java ECS 引擎
-├── engine/     ( 9 文件) → 01-engine-bridge.md MC 桥梁层
-├── shared/     (39 文件) → 02-shared-api.md    接口 + 事件 + 数据类
-├── wand/       ( 5 文件) → 03-wand.md          法杖
-├── element/    ( 3 文件) → 04-element.md       元素映射
-├── building/   (12 文件) → 05-building.md      建筑
-├── npc/        ( 5 文件) → 06-npc.md           NPC
-└── dataconfig/ ( 2 文件) → 07-data-config.md   JSON 加载框架
-```
-
-设计文档在 `docs/`（"应该做成什么样"），架构快照在 `architecture/`（"现在是什么样"）。
+| ECS引擎/任务池/蓝图DSL/调度器 | [packages/core.md](packages/core.md) |
+| MC桥接/异步执行/方块操作/NPC移动 | [packages/engine.md](packages/engine.md) |
+| API接口/事件/数据类型/UI组件 | [packages/shared.md](packages/shared.md) |
+| 建筑管理/SavedData/入队 | [packages/building.md](packages/building.md) |
+| NPC实体/ECS桥接/渲染 | [packages/npc.md](packages/npc.md) |
+| 法杖物品/NBT | [packages/wand.md](packages/wand.md) |
+| 元素映射 | [packages/element.md](packages/element.md) |
+| 仓库GUI/ItemBank | [packages/warehouse.md](packages/warehouse.md) |
+| 工作站/合成 | [packages/production.md](packages/production.md) |
+| JSON加载框架 | [packages/dataconfig.md](packages/dataconfig.md) |
+| 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
+| 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
+| 编码规范和反模式 | [conventions.md](conventions.md) |

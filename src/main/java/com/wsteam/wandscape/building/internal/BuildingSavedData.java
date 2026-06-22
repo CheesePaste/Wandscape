@@ -99,7 +99,25 @@ public class BuildingSavedData extends SavedData {
 
     @Nullable
     public UUID getBuildingIdAt(BlockPos pos) {
-        return posIndex.get(pos);
+        UUID id = posIndex.get(pos);
+        if (id != null) return id;
+
+        // Fallback via chunkIndex: after server restart, posIndex is not rebuilt
+        // (requires BuildingConfig pattern). Walk buildings in the same chunk
+        // and check bounding box containment.
+        ChunkPos cp = new ChunkPos(pos);
+        Set<UUID> chunkIds = chunkIndex.get(cp);
+        if (chunkIds == null) return null;
+
+        for (UUID candidate : chunkIds) {
+            BuildingState state = buildings.get(candidate);
+            if (state != null && state.getBounds().isInside(pos)) {
+                // Cache in posIndex for next lookup
+                posIndex.put(pos, candidate);
+                return candidate;
+            }
+        }
+        return null;
     }
 
     public Collection<BuildingState> getAllBuildings() {
