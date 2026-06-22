@@ -6,7 +6,8 @@
 - ✓ ECS 引擎 + 任务池 + 调度器 + 蓝图 DSL
 - ✓ 法杖物品 + 元素映射 + 建筑管理(SavedData)
 - ✓ NPC 实体 + ECS 桥接 + 渲染
-- ✓ 道路系统（MST + 路网生成 + 装饰）
+- ✓ 道路系统（MST + 路网生成 + 装饰 + 编辑器 + 宽面渲染 + 路径规划 + 预览 + 拆除）
+- ✓ 道路编辑器：右键路径规划 + 路径点 + Enter确认 + Backspace撤销 + 实时预览路面 + 左键拆除
 - ✓ 仓库 GUI + ColonyItemBank + 网络同步
 - ✓ 工作站 GUI（decompose/synthesize）+ 制作站 GUI（craft_wand）+ 魔药站骨架
 - ✓ 节点自动采集 → 仓库闭环
@@ -43,6 +44,7 @@ ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op �
 | ~~高~~ | ~~结构损坏后自动入队修复~~ | ~~building/BuildingBreakHandler~~ ✓ |
 | ~~高~~ | ~~全殖民地自治模式（autoApproveTasks config）~~ | ~~Config + GlobalTaskPool + EngineBootstrap~~ ✓ |
 | 中 | GlobalTaskPool COMPLETED 任务清理（内存泄漏） | core/task/GlobalTaskPool |
+| 中 | 道路拆除改为 NPC 任务执行（当前即时 server-side setBlock→AIR） | road/server/RoadEditorHandler |
 | 中 | 祭坛多方块检测从 tick() 改为事件驱动 | — (模块未构建) |
 | 低 | 连续执行加成从硬编码移至 TOML | Config + SchedulerSystem |
 | 低 | 殖民地系统（创建/删除/边界） | 新模块 |

@@ -58,13 +58,14 @@
 
 ### road/ — 道路系统（纯逻辑）
 
-- **RoadNetwork** — 图网络：RoadNode(建筑/路口) + RoadEdge(路段+状态)
-- **RoadPlanner** — 编排：MST计算→diff→分段→发布road:build_segment蓝图
+- **RoadNetwork** — 图网络：RoadNode(建筑/路口/孤儿) + RoadEdge(路段+状态+已放置方块记录)。查询：findNearestNode、findNearestWalkablePathPoint、findEdgeBetween、findNodeAtXZ
+- **RoadPlanner** — 编排：MST计算→diff→分段→enqueueEdge。支持 incrementalAdd 增量添加新建筑
 - **MstCalculator** — Prim算法，曼哈顿距离，建筑≥阈值触发
-- **PathGenerator** — L形路径(先X后Z)，端点线性插值Y
+- **PathGenerator** — L形路径(先X后Z)，3D Y插值+switchback斜坡，public 方法可被客户端复用做预览计算
 - **NetworkDiff** — 对比新旧MST→保留/废弃/新建
 - **DecorationPlanner** — 路段完成后扫描→灯柱+长椅位置
 - **IntersectionDetector** — 交叉点检测→隐式路口节点
+- **RoadEdge** — 可变 state：status(PLANNED→BUILDING→COMPLETE)、placedBlocks(Set\<PathPoint\>，记录该边所有修改的方块位置)、segmentTaskIds、decorationTaskId
 
 ### 核心类型 (types/)
 

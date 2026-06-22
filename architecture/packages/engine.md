@@ -36,7 +36,7 @@
 ### TaskSource
 
 - **BuildingTaskSource** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。发布后检测到任务落在 PENDING_APPROVAL 时自动 approve（建筑修复是殖民地自治行为，不能卡在玩家审批门后）。这是 BE → 引擎的唯一桥梁
-- **RoadTaskSource** — 监听 build_complete 事件 → 触发生成路网
+- **RoadTaskSource** — 每 20tick 轮询：从 ConcurrentLinkedQueue 批量取出 pending road segments + decorations，发布 build_segment / build_decoration 蓝图到 GlobalTaskPool
 - **WarehouseSource** / **WorkbenchSource** — V1 stub，监视资源/生产队列
 
 ### 持久化
@@ -45,9 +45,11 @@
 
 ### 道路 MC 层
 
-- **RoadBuilder** — 执行路径方块放置：挖+填+水面桥+调色板加权随机选取
-- **RoadSavedData** — 路网持久化（Level SavedData）。NBT nodes 不显式序列化——加载时从 BuildingSavedData 重建
-- **RoadEventListener** — 订阅 build_complete → 触发路网增量更新
+- **RoadBuilder** — 执行路径方块放置：挖+填+水面桥+调色板加权随机选取。产出 JsonArray tiles，不直接操作世界（由 NPC 任务执行）
+- **RoadSavedData** — 路网持久化（Level SavedData）。NBT 序列化 edges + placedBlocks + nodes（节点加载时从 BuildingSavedData 重建）
+- **RoadEventListener** — 订阅 build_complete / road_segment_complete。enqueueEdge() 为 public，供道路编辑器调用
+- **RoadEditorHandler** — 服务端编辑器操作：removeEdge（清空 placedBlocks→AIR + 移除边 + 节点重验证）
+- **RoadTaskSource** — 轮询发布 pending road segments + decorations 到 GlobalTaskPool
 - **DecorationBuilder** — 执行装饰放置（灯柱+长椅）
 
 ### NavigationSystem

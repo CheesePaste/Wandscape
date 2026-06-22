@@ -44,3 +44,4 @@ EntityComponentBridge 使用全零 UUID 作为占位殖民地，注释标记"阶
 - 区块加载保证（NPC 执行任务时确保目标区块已加载）
 - JSON 版本迁移（格式变更时的自动迁移）
 - 进度/指南书（Patchouli 或自定义）
+- **道路拆除 NPC 化**：RoadEditorHandler.removeEdge 当前即时 server-side setBlock(AIR)。应改为发布 demolition 任务到 GlobalTaskPool，让 NPC 逐块拆除。RoadEdge.placedBlocks 已记录所有位置，拆解工作已就绪。
