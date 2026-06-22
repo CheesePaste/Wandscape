@@ -1,10 +1,13 @@
 package com.wsteam.wandscape.core.road;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,14 +57,17 @@ public final class RoadPlanner {
 
         List<MstEdge> mstEdges = MstCalculator.prim(points, XZPoint::manhattanTo);
 
-        // Create RoadEdges with 3D paths
+        // Create RoadEdges with 3D paths.
+        // Edges are added to the network sequentially; each new edge snaps its
+        // shared corridor to any previously-added edge's path (inter-edge merging).
         for (MstEdge me : mstEdges) {
             RoadBuildingData from = buildings.get(me.fromIndex());
             RoadBuildingData to = buildings.get(me.toIndex());
             PathPoint fromPt = pathPoint(from);
             PathPoint toPt = pathPoint(to);
 
-            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude);
+            Map<XZPoint, Integer> existingRoads = collectExistingRoads(network.getEdges().values());
+            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude, existingRoads);
             if (path.isEmpty()) continue;
 
             RoadEdge edge = new RoadEdge(
@@ -131,8 +137,9 @@ public final class RoadPlanner {
                 new GridPos(newBuilding.x(), newBuilding.y(), newBuilding.z()),
                 RoadNode.NodeType.BUILDING));
 
-        // Generate 3D path
-        List<PathPoint> path = PathGenerator.lShape3D(newPt, nearestPt, amplitude);
+        // Generate 3D path with corridor snapping to existing roads
+        Map<XZPoint, Integer> existingRoads = collectExistingRoads(network.getEdges().values());
+        List<PathPoint> path = PathGenerator.lShape3D(newPt, nearestPt, amplitude, existingRoads);
         if (path.isEmpty()) return network;
 
         RoadEdge edge = new RoadEdge(
@@ -184,6 +191,12 @@ public final class RoadPlanner {
             }
         }
 
+        // Build existing-roads map from retained + deprecated (roads in the world)
+        List<RoadEdge> existingWorldEdges = new ArrayList<>();
+        existingWorldEdges.addAll(retained);
+        existingWorldEdges.addAll(deprecated);
+        Map<XZPoint, Integer> existingRoads = collectExistingRoads(existingWorldEdges);
+
         List<RoadEdge> newEdges = new ArrayList<>();
         for (BuildingPair pair : freshPairs) {
             RoadBuildingData fromBd = findBuilding(buildings, pair.a);
@@ -192,7 +205,7 @@ public final class RoadPlanner {
 
             PathPoint fromPt = pathPoint(fromBd);
             PathPoint toPt = pathPoint(toBd);
-            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude);
+            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude, existingRoads);
             if (path.isEmpty()) continue;
 
             RoadEdge edge = new RoadEdge(
@@ -257,6 +270,23 @@ public final class RoadPlanner {
     }
 
     // ---- Helpers ----
+
+    /**
+     * Collect XZ → road-surface-Y from a collection of edges.
+     * Used to feed {@code existingRoads} into {@link PathGenerator#lShape3D}.
+     *
+     * <p>If two existing roads share the same XZ tile, the first one
+     * encountered wins ({@link Map#putIfAbsent}) — typically the older road.
+     */
+    static Map<XZPoint, Integer> collectExistingRoads(Collection<RoadEdge> edges) {
+        Map<XZPoint, Integer> map = new HashMap<>();
+        for (RoadEdge edge : edges) {
+            for (PathPoint pt : edge.getPath()) {
+                map.putIfAbsent(pt.xz(), pt.y());
+            }
+        }
+        return map;
+    }
 
     private static PathPoint pathPoint(RoadBuildingData bd) {
         return new PathPoint(bd.x(), bd.y(), bd.z());

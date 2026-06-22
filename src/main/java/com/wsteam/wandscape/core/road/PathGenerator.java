@@ -3,6 +3,7 @@ package com.wsteam.wandscape.core.road;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Generates path coordinates between two points.
@@ -11,8 +12,10 @@ import java.util.List;
  * <p>2D variant ({@link #lShape}) for topology;
  * 3D variant ({@link #lShape3D}) distributes the height
  * difference evenly across every horizontal step, producing
- * a smooth ramp. Falls back to a square spiral switchback
- * only when the slope exceeds 45°.</p>
+ * a smooth ramp. When an {@code existingRoads} map is provided,
+ * shared-corridor snapping prevents the new path from ramp-climbing
+ * over an older road that occupies the same XZ lane — the new path
+ * copies the existing Y until it diverges onto its own unique XZ.</p>
  */
 public final class PathGenerator {
 
@@ -52,29 +55,45 @@ public final class PathGenerator {
     }
 
     /**
-     * Generate a 3D L-shaped path with <b>smooth ramp</b> elevation
-     * and <b>flat intersection margins</b>.
-     *
-     * <p>Flat margins at both ends keep the road at the intersection
-     * Y-level for the first/last few blocks so it doesn't immediately
-     * ramp into the headroom of the crossing road — the road only
-     * starts climbing/descending once it clears the crossing width.
-     *
-     * <p>The height difference (ΔY) is distributed across the middle
-     * segment, producing a walkable slope.
-     *
-     * <p><b>Fallback:</b> If the slope exceeds 45° (total horizontal
-     * steps &lt; |ΔY|), the path degenerates to a {@link #spiralPath}
-     * switchback to keep the grade walkable.
-     *
-     * <p>Segments:
-     * <ol>
-     *   <li>First {@code margin} steps — flat at {@code from.y()}</li>
-     *   <li>Middle {@code rampSteps} steps — linear Y ramp</li>
-     *   <li>Last {@code margin} steps — flat at {@code to.y()}</li>
-     * </ol>
+     * Convenience overload — generates a 3D path without corridor snapping.
+     * Equivalent to {@code lShape3D(from, to, amplitude, null)}.
      */
     public static List<PathPoint> lShape3D(PathPoint from, PathPoint to, int amplitude) {
+        return lShape3D(from, to, amplitude, null);
+    }
+
+    /**
+     * Generate a 3D L-shaped path with <b>smooth ramp</b> elevation,
+     * <b>flat intersection margins</b>, and optional
+     * <b>shared-corridor snapping</b>.
+     *
+     * <p><b>Snapping:</b> When {@code existingRoads} is non-null and
+     * contains XZ coordinates that lie on the new path's 2D L-shape,
+     * the new path copies the existing Y for every shared tile.
+     * It only begins its own ramp after the first XZ coordinate that
+     * does NOT appear in {@code existingRoads} (the divergence point).
+     * This prevents a branch road from ramping over the trunk road
+     * they share a lane with.
+     *
+     * <p>Segments per path:
+     * <ol>
+     *   <li><b>Shared corridor</b> — Y snapped from {@code existingRoads}</li>
+     *   <li><b>Transition margin</b> — flat at the last shared Y</li>
+     *   <li><b>Ramp</b> — remaining ΔY distributed evenly</li>
+     *   <li><b>Terminal margin</b> — flat at {@code to.y()}</li>
+     * </ol>
+     *
+     * <p><b>Fallback:</b> If the remaining slope after divergence exceeds
+     * 45°, the path degenerates to a {@link #spiralPath} switchback.
+     *
+     * @param from          start position
+     * @param to            target position
+     * @param amplitude     spiral side length (used only on steep-slope fallback)
+     * @param existingRoads map of XZ → road-surface-Y for already-placed roads;
+     *                      {@code null} or empty means no snapping
+     */
+    public static List<PathPoint> lShape3D(PathPoint from, PathPoint to, int amplitude,
+                                            Map<XZPoint, Integer> existingRoads) {
         int dx = to.x() - from.x();
         int dz = to.z() - from.z();
         int dy = to.y() - from.y();
@@ -87,69 +106,98 @@ public final class PathGenerator {
         int absDz = Math.abs(dz);
         int total2DSteps = absDx + absDz;
 
-        List<PathPoint> path = new ArrayList<>();
-
-        // ── Steep slope fallback: spiral switchback ──
-        if (total2DSteps < Math.abs(dy)) {
+        // Same XZ, different Y → pure spiral (no horizontal lane to share)
+        if (total2DSteps == 0) {
+            List<PathPoint> path = new ArrayList<>();
             path.addAll(spiralPath(from, to, amplitude));
-            PathPoint spiralEnd = path.isEmpty() ? from : path.get(path.size() - 1);
-            if (spiralEnd.x() != to.x() || spiralEnd.z() != to.z()) {
-                path.addAll(flatLShape(spiralEnd, new PathPoint(to.x(), to.y(), to.z())));
+            if (path.get(path.size() - 1).y() != to.y()) {
+                path.add(new PathPoint(to.x(), to.y(), to.z()));
             }
             return path;
         }
 
-        // ── Normal case: smooth ramp with flat intersection margins ──
-        int margin = Math.min(3, total2DSteps / 3);
-        int rampSteps = total2DSteps - 2 * margin; // steps actually used for climbing
-
+        // ── Phase 1: generate 2D XZ trajectory ──
+        List<XZPoint> steps2D = new ArrayList<>(total2DSteps);
         int cx = from.x();
         int cz = from.z();
-        int step = 0;
-
         int sx = Integer.signum(dx);
-        int sz = Integer.signum(dz);
-
-        // Walk X first
         for (int i = 0; i < absDx; i++) {
             cx += sx;
-            step++;
-            path.add(new PathPoint(cx, rampY(from.y(), to.y(), dy, step, margin, total2DSteps, rampSteps), cz));
+            steps2D.add(new XZPoint(cx, cz));
         }
-
-        // Then walk Z
+        int sz = Integer.signum(dz);
         for (int i = 0; i < absDz; i++) {
             cz += sz;
-            step++;
-            path.add(new PathPoint(cx, rampY(from.y(), to.y(), dy, step, margin, total2DSteps, rampSteps), cz));
+            steps2D.add(new XZPoint(cx, cz));
+        }
+
+        // ── Phase 2: find divergence point in shared corridor ──
+        int divergeIdx = -1;   // last index (inclusive) that overlaps existing road
+        int currentY = from.y();
+
+        boolean haveExisting = existingRoads != null && !existingRoads.isEmpty();
+        if (haveExisting) {
+            for (int i = 0; i < steps2D.size(); i++) {
+                XZPoint pt = steps2D.get(i);
+                Integer existingY = existingRoads.get(pt);
+                if (existingY != null) {
+                    divergeIdx = i;
+                    currentY = existingY; // snap to existing road height
+                } else {
+                    break; // first tile without an existing road → divergence
+                }
+            }
+        }
+
+        List<PathPoint> path = new ArrayList<>();
+
+        // ── Shared corridor (snapped) ──
+        for (int i = 0; i <= divergeIdx; i++) {
+            XZPoint pt = steps2D.get(i);
+            path.add(new PathPoint(pt.x(), existingRoads.get(pt), pt.z()));
+        }
+
+        // ── Phase 3: independent segment after divergence ──
+        int remainingSteps = total2DSteps - 1 - divergeIdx;
+        int remainingDy = to.y() - currentY;
+
+        if (remainingSteps > 0) {
+            // Spiral fallback if remaining ramp is too steep
+            if (remainingSteps < Math.abs(remainingDy)) {
+                PathPoint spiralStart = path.isEmpty() ? from : path.get(path.size() - 1);
+                path.addAll(spiralPath(spiralStart, to, amplitude));
+                PathPoint spiralEnd = path.get(path.size() - 1);
+                if (spiralEnd.x() != to.x() || spiralEnd.z() != to.z()) {
+                    path.addAll(flatLShape(spiralEnd, new PathPoint(to.x(), to.y(), to.z())));
+                }
+                return path;
+            }
+
+            // Normal smooth ramp with margins on the independent segment
+            int margin = Math.min(3, remainingSteps / 3);
+            int rampSteps = remainingSteps - 2 * margin;
+
+            for (int i = divergeIdx + 1; i < total2DSteps; i++) {
+                int stepInRamp = i - divergeIdx; // 1-based within independent segment
+
+                int cy;
+                if (rampSteps <= 0) {
+                    cy = to.y();
+                } else if (stepInRamp <= margin) {
+                    cy = currentY;          // flat transition off the shared corridor
+                } else if (stepInRamp >= remainingSteps - margin) {
+                    cy = to.y();            // flat approach to destination
+                } else {
+                    float progress = (float) (stepInRamp - margin) / rampSteps;
+                    cy = currentY + Math.round(remainingDy * progress);
+                }
+
+                XZPoint pt = steps2D.get(i);
+                path.add(new PathPoint(pt.x(), cy, pt.z()));
+            }
         }
 
         return path;
-    }
-
-    /**
-     * Compute Y for a single step of the three-segment ramp (flat → ramp → flat).
-     *
-     * @param fromY          start Y
-     * @param toY            target Y
-     * @param dy             total Y delta (to.y - from.y)
-     * @param step           1-based step index
-     * @param margin         flat margin size at each end
-     * @param total2DSteps   total horizontal step count
-     * @param rampSteps      total2DSteps - 2*margin
-     */
-    private static int rampY(int fromY, int toY, int dy,
-                             int step, int margin,
-                             int total2DSteps, int rampSteps) {
-        if (step <= margin) {
-            return fromY;
-        }
-        if (step >= total2DSteps - margin) {
-            return toY;
-        }
-        // Linear interpolation across the middle segment
-        float progress = (float) (step - margin) / rampSteps;
-        return fromY + Math.round(dy * progress);
     }
 
     /**
