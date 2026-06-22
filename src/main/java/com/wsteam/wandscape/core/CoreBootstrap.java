@@ -59,7 +59,8 @@ public final class CoreBootstrap {
         world.blueprintRegistry = config.blueprints();
 
         // 4. Create global task pool
-        world.taskPool = new GlobalTaskPool(world.eventBus, world.blueprintRegistry, world.colonyResources);
+        world.taskPool = new GlobalTaskPool(world.eventBus, world.blueprintRegistry, world.colonyResources,
+                config.autoApproveTasks());
 
         // 5. Register op executors
         world.opExecutors = new OpExecutorRegistry();

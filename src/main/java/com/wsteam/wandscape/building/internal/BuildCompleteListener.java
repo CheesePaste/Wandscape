@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.building.internal;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -73,7 +75,8 @@ public final class BuildCompleteListener {
             return;
         }
 
-        boolean intact = verifyPattern(level, anchor, config);
+        List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config);
+        boolean intact = damaged.isEmpty();
         state.setStructureIntact(intact);
         data.setDirty();
 
@@ -81,8 +84,9 @@ public final class BuildCompleteListener {
             LOGGER.info("[Building] {} at {} construction complete — now operational",
                     state.getBuildingTypeId(), anchor);
         } else {
-            LOGGER.warn("[Building] {} at {} — pattern mismatch after build_complete",
-                    state.getBuildingTypeId(), anchor);
+            LOGGER.warn("[Building] {} at {} — {} blocks still damaged after build_complete, re-enqueuing partial repair",
+                    state.getBuildingTypeId(), anchor, damaged.size());
+            BuildingBreakHandler.enqueueRepairForOffsets(state, config, damaged);
         }
     }
 
@@ -110,10 +114,11 @@ public final class BuildCompleteListener {
     }
 
     /**
-     * Verify all pattern blocks match the expected block IDs and optional state properties.
-     * Supports bracket notation: {@code "minecraft:oak_stairs[facing=east,half=bottom]"}.
+     * Find all pattern blocks that don't match the expected state.
+     * Returns an empty list if the building is fully intact.
      */
-    static boolean verifyPattern(Level level, BlockPos anchor, BuildingConfig config) {
+    static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config) {
+        List<BlockOffset> damaged = new ArrayList<>();
         for (BlockOffset offset : config.pattern()) {
             BlockPos target = anchor.offset(offset.x(), offset.y(), offset.z());
             String expectedKey = offset.toKey();
@@ -122,48 +127,39 @@ public final class BuildCompleteListener {
 
             BlockState actual = level.getBlockState(target);
 
-            // Parse "mod:block[prop=val,...]" format
-            String expectedBlockId = expectedSpec;
-            java.util.Map<String, String> expectedProps = java.util.Collections.emptyMap();
+            if (!blockMatchesSpec(actual, expectedSpec)) {
+                damaged.add(offset);
+            }
+        }
+        return damaged;
+    }
 
-            int bracket = expectedSpec.indexOf('[');
-            if (bracket > 0 && expectedSpec.endsWith("]")) {
-                expectedBlockId = expectedSpec.substring(0, bracket);
-                String propsStr = expectedSpec.substring(bracket + 1, expectedSpec.length() - 1);
-                expectedProps = new LinkedHashMap<>();
-                for (String kv : propsStr.split(",")) {
-                    String[] parts = kv.split("=", 2);
-                    if (parts.length == 2) {
-                        expectedProps.put(parts[0].trim(), parts[1].trim());
-                    }
+    private static boolean blockMatchesSpec(BlockState actual, String expectedSpec) {
+        String expectedBlockId = expectedSpec;
+        java.util.Map<String, String> expectedProps = java.util.Collections.emptyMap();
+
+        int bracket = expectedSpec.indexOf('[');
+        if (bracket > 0 && expectedSpec.endsWith("]")) {
+            expectedBlockId = expectedSpec.substring(0, bracket);
+            String propsStr = expectedSpec.substring(bracket + 1, expectedSpec.length() - 1);
+            expectedProps = new LinkedHashMap<>();
+            for (String kv : propsStr.split(",")) {
+                String[] parts = kv.split("=", 2);
+                if (parts.length == 2) {
+                    expectedProps.put(parts[0].trim(), parts[1].trim());
                 }
             }
+        }
 
-            // Compare block ID
-            String actualId = actual.getBlock().builtInRegistryHolder().key().location().toString();
-            if (!actualId.equals(expectedBlockId)) {
-                LOGGER.debug("[verify] block mismatch at {}: expected {} got {}",
-                        target, expectedBlockId, actualId);
-                return false;
-            }
+        String actualId = actual.getBlock().builtInRegistryHolder().key().location().toString();
+        if (!actualId.equals(expectedBlockId)) return false;
 
-            // Compare state properties (only those specified in the mapping)
-            for (var entry : expectedProps.entrySet()) {
-                net.minecraft.world.level.block.state.properties.Property<?> prop =
-                        actual.getBlock().getStateDefinition().getProperty(entry.getKey());
-                if (prop == null) {
-                    LOGGER.warn("[verify] unknown property '{}' for block {} at {}",
-                            entry.getKey(), expectedBlockId, target);
-                    return false;
-                }
-                String actualValue = getPropertyValue(actual, prop);
-                if (!entry.getValue().equals(actualValue)) {
-                    LOGGER.debug("[verify] state mismatch at {} {}: expected {}={} got {}={}",
-                            target, expectedBlockId, entry.getKey(), entry.getValue(),
-                            entry.getKey(), actualValue);
-                    return false;
-                }
-            }
+        for (var entry : expectedProps.entrySet()) {
+            net.minecraft.world.level.block.state.properties.Property<?> prop =
+                    actual.getBlock().getStateDefinition().getProperty(entry.getKey());
+            if (prop == null) return false;
+            String actualValue = getPropertyValue(actual, prop);
+            if (!entry.getValue().equals(actualValue)) return false;
         }
         return true;
     }

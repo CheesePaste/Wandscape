@@ -129,7 +129,7 @@ public class TaskExecutionNavTest {
 
             CoreBootstrapConfig config = new CoreBootstrapConfig(
                     mock, mock, mock, movOps, mock, List.of(), blueprints,
-                    new SystemBlueprintRegistry());
+                    new SystemBlueprintRegistry(), false);
             world = CoreBootstrap.bootstrap(config);
             movOps.world = world;
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -253,7 +253,7 @@ public class TaskExecutionNavTest {
 
             CoreBootstrapConfig config = new CoreBootstrapConfig(
                     mock, mock, mock, movOps, mock, List.of(), blueprints,
-                    new SystemBlueprintRegistry());
+                    new SystemBlueprintRegistry(), false);
             world = CoreBootstrap.bootstrap(config);
             movOps.world = world;
             DefaultOpExecutors.registerAll(world.opExecutors);
@@ -358,7 +358,7 @@ public class TaskExecutionNavTest {
 
             CoreBootstrapConfig config = new CoreBootstrapConfig(
                     mock, mock, mock, movOps, mock, List.of(), blueprints,
-                    new SystemBlueprintRegistry());
+                    new SystemBlueprintRegistry(), false);
             world = CoreBootstrap.bootstrap(config);
             movOps.world = world;
             DefaultOpExecutors.registerAll(world.opExecutors);

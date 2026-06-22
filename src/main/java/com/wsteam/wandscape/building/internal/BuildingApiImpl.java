@@ -249,7 +249,6 @@ public class BuildingApiImpl implements BuildingApi {
         for (BuildingState state : sd.getAllBuildings()) {
             if (colonyId != null && !colonyId.equals(state.getColonyId())) continue;
             if (state.isShutdown()) continue;
-            if (!state.isStructureIntact()) continue;
             if (currentTasks.containsKey(state.getBuildingId())) continue;
             if (!state.hasWork()) continue;
             if (!serverLevel.isLoaded(state.getAnchor())) continue;

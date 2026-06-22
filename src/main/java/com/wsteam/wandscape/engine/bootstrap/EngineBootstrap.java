@@ -128,7 +128,8 @@ public final class EngineBootstrap {
                 colonyResources,
                 taskSources,
                 blueprints,
-                sysBlueprints
+                sysBlueprints,
+                com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get()
         );
 
         // 6. Bootstrap engine

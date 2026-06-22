@@ -70,7 +70,7 @@ public class BuildingState implements BuildingData {
     public BlockPos getAnchor() { return anchor; }
     public BoundingBox getBounds() { return bounds; }
     @Nullable public UUID getColonyId() { return colonyId; }
-    public boolean isStructureIntact() { return structureIntact; }
+    @Override public boolean isStructureIntact() { return structureIntact; }
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
     public boolean hasWork() { return !taskQueue.isEmpty() && !shutdown; }

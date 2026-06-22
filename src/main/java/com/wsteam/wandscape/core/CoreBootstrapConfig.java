@@ -24,7 +24,8 @@ public record CoreBootstrapConfig(
         ColonyResourceAccess colonyResources,
         List<TaskSource> taskSources,
         BlueprintRegistry blueprints,
-        SystemBlueprintRegistry systemBlueprints
+        SystemBlueprintRegistry systemBlueprints,
+        boolean autoApproveTasks
 ) {
     public CoreBootstrapConfig {
         if (taskSources == null) taskSources = Collections.emptyList();
