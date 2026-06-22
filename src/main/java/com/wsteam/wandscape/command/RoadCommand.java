@@ -6,12 +6,14 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.network.RoadEditorNetwork;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Road system debug commands.
@@ -20,6 +22,7 @@ import net.minecraft.network.chat.Component;
  * <pre>
  *   /wandscape road info     — show road network statistics
  *   /wandscape road rebuild  — trigger full MST rebuild
+ *   /wandscape road edit     — toggle road editor mode
  * </pre>
  */
 public final class RoadCommand {
@@ -33,6 +36,8 @@ public final class RoadCommand {
                 .then(Commands.literal("rebuild")
                         .requires(src -> src.hasPermission(2))
                         .executes(RoadCommand::rebuild))
+                .then(Commands.literal("edit")
+                        .executes(RoadCommand::toggleEdit))
                 .build();
     }
 
@@ -77,6 +82,36 @@ public final class RoadCommand {
             ctx.getSource().sendSuccess(() -> Component.literal(
                     "§aRoad rebuild triggered — computed MST, diff applied, "
                             + "new segments enqueued"), true);
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "§cRoad system not loaded"));
+        }
+        return 1;
+    }
+
+    private static int toggleEdit(CommandContext<CommandSourceStack> ctx) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayer();
+            if (player == null) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "§cThis command can only be used by a player"));
+                return 0;
+            }
+
+            if (RoadEditorNetwork.isEditing(player)) {
+                // Exit edit mode
+                RoadEditorNetwork.removeEditing(player);
+                RoadEditorNetwork.sendExitToPlayer(player);
+                ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§eRoad edit mode: §cOFF"), true);
+            } else {
+                // Enter edit mode
+                RoadEditorNetwork.addEditing(player);
+                RoadEditorNetwork.sendSyncToPlayer(player);
+                ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§aRoad edit mode: §2ON §7— edges=green/yellow/blue, "
+                                + "left-click edge to remove"), true);
+            }
         } catch (IllegalStateException e) {
             ctx.getSource().sendFailure(Component.literal(
                     "§cRoad system not loaded"));

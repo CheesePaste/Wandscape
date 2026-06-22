@@ -29,4 +29,13 @@ public interface RoadApi {
 
     /** Get the block ID used for a given road tier. */
     String getRoadBlock(String tier);
+
+    /**
+     * Remove a road edge from the network and demolish its blocks in-world.
+     * Immediate server-side operation. Used by the road editor tool.
+     *
+     * @param colonyId colony identifier (null for default)
+     * @param edgeId   the edge to remove
+     */
+    void removeEdge(UUID colonyId, UUID edgeId);
 }

@@ -28,6 +28,10 @@ import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
+import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
+import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
+import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
+import com.wsteam.wandscape.road.network.RoadEditorNetwork;
 import com.mojang.brigadier.CommandDispatcher;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -74,6 +78,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -196,7 +201,19 @@ public class Wandscape {
                 .playToClient(
                         WarehouseDataPacket.TYPE,
                         WarehouseDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> WarehouseDataPacket.handleClient(packet));
+                        (packet, ctx) -> WarehouseDataPacket.handleClient(packet))
+                .playToClient(
+                        RoadNetworkSyncPacket.TYPE,
+                        RoadNetworkSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadNetworkSyncPacket.handleClient(packet))
+                .playToServer(
+                        RoadEdgeRemovePacket.TYPE,
+                        RoadEdgeRemovePacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadEdgeRemovePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        RoadEdgePlanPacket.TYPE,
+                        RoadEdgePlanPacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadEdgePlanPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -268,6 +285,13 @@ public class Wandscape {
                 .then(RoadTestCommand.node())
                 .then(StressTestCommand.buildNode());
         dispatcher.register(root);
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            RoadEditorNetwork.removeByUuid(sp.getUUID());
+        }
     }
 
     @SubscribeEvent

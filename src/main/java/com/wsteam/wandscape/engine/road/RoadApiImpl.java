@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.server.RoadEditorHandler;
 import com.wsteam.wandscape.shared.api.RoadApi;
 
 /**
@@ -50,5 +51,15 @@ public class RoadApiImpl implements RoadApi {
     @Override
     public String getRoadBlock(String tier) {
         return RoadConfig.getInstance().getDefaultBlock(tier);
+    }
+
+    @Override
+    public void removeEdge(UUID colonyId, UUID edgeId) {
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        net.minecraft.server.level.ServerLevel level = server.overworld();
+        RoadSavedData roadData = RoadSavedData.getOrCreate(level);
+        RoadEditorHandler.removeEdge(level, roadData.getNetwork(), edgeId);
+        roadData.markChanged();
     }
 }

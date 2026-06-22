@@ -126,6 +126,37 @@ public class RoadNetwork {
         return edges.size();
     }
 
+    // ---- Mutation operations (editor support) ----
+
+    /** Remove an edge by UUID. Returns false if not found. */
+    public boolean removeEdge(UUID edgeId) {
+        return edges.remove(edgeId) != null;
+    }
+
+    /** Remove a node by UUID. Returns false if not found. */
+    public boolean removeNode(UUID nodeId) {
+        return nodes.remove(nodeId) != null;
+    }
+
+    /** Count edges connected to a node (as either endpoint). */
+    public int getEdgeCountForNode(UUID nodeId) {
+        int count = 0;
+        for (RoadEdge edge : edges.values()) {
+            if (edge.getFromNodeId().equals(nodeId) || edge.getToNodeId().equals(nodeId)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** Update a node's type (e.g. BUILDING → ORPHAN after all edges removed). */
+    public void updateNodeType(UUID nodeId, RoadNode.NodeType newType) {
+        RoadNode old = nodes.get(nodeId);
+        if (old != null) {
+            nodes.put(nodeId, new RoadNode(nodeId, old.pos(), newType));
+        }
+    }
+
     @Override
     public String toString() {
         return "RoadNetwork[nodes=" + nodes.size() + " edges=" + edges.size() + "]";
