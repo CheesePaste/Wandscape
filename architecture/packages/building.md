@@ -9,6 +9,7 @@
 - **BuildingState** (internal/) — 可变建筑状态：buildingId/typeId/category/anchor/BoundingBox/colonyId/shutdown/structureIntact/taskQueue/currentTaskId/stats
 - **BuildingSavedData** (internal/) — 3个索引(buildings/posIndex/chunkIndex) + NBT持久化 + AABB重叠检测。register() 检测 intersects()
 - **BuildingApiImpl** (internal/) — BuildingApi 实现：全部通过 BuildingSavedData 读写
+  - 新增：getQueue() / removeFromQueue() / moveUp() / moveDown() — 任务队列查询和调序
 - **EnqueueHelper** (internal/) — 入队：读 BlueprintRef → resolve bind → 硬编码 anchor → 构建 WorkItem
 - **BuildingInteractHandler** (internal/) — RightClickBlock → posIndex(chunkIndex fallback) O(1) → 按 category 分发：storage→仓库GUI / workstation/crafting_station/potion_station→生产站GUI / 其他→信息打印
 - **BuildingBreakHandler** (internal/) — BreakEvent/ExplosionEvent → 收集受损坐标 → structureIntact=false → 构造局部修复 WorkItem（offsets 仅含受损方块，addFirst 插入队首，priority=49）。ExplosionEvent 按建筑分组批量入队，避免对大建筑全量重放蓝图。提供 `enqueueRepairForPositions`（事件侧）和 `enqueueRepairForOffsets`（Listener 侧）两个静态入口
@@ -43,5 +44,7 @@
 - shared/api/BuildingApi, shared/data/BuildingData, shared/data/WorkItem
 - shared/event/BuildingPlacedEvent/BuildingShutdownEvent/BuildingRestartedEvent
 - shared/registry/WandscapeApis
+- shared/ui/component/TaskQueuePanel (UI组件，通过building/network包使用)
+- building/network/TaskQueueModifyPacket, TaskQueueDataPacket
 - dataconfig/WandscapeDataLoader
 - core/event/CustomEvent（BuildCompleteListener 订阅引擎事件）

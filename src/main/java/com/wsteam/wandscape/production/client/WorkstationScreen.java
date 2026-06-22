@@ -3,276 +3,266 @@ package com.wsteam.wandscape.production.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.wsteam.wandscape.production.menu.WorkstationMenu;
+import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
+import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.component.QuantitySlider;
+import com.wsteam.wandscape.shared.ui.component.ScrollableList;
+import com.wsteam.wandscape.shared.ui.component.TabBar;
+import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
+import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class WorkstationScreen extends AbstractContainerScreen<WorkstationMenu> {
+public class WorkstationScreen extends MedievalScreen {
 
-    private static final int TEXTURE_W = 256;
-    private static final int TEXTURE_H = 210;
-    private static final int LIST_X = 8;
-    private static final int LIST_Y = 30;
-    private static final int ROW_HEIGHT = 16;
-    private static final int VISIBLE_ROWS = 7;
-    private static final int PANEL_W = 160;
+    private static final int PW = 400;
+    private static final int PH = 220;
+    private static final int MAX_QTY = 64;
+    // Left panel width (existing content)
+    private static final int LEFT_PW = 240;
+    // Right panel (TaskQueuePanel) — shorter, starts higher
+    private static final int QUEUE_PW = 140;
 
     private BlockPos stationPos = BlockPos.ZERO;
-
-    // Tab state: 0 = decompose, 1 = synthesize
     private int activeTab = 0;
 
-    // Data (set by packet)
     private List<DecomposableEntry> decomposableItems = new ArrayList<>();
     private List<SynthesizeEntry> synthesizeRecipes = new ArrayList<>();
 
-    // Selection
-    private int selectedIndex = -1;
-    private int quantity = 1;
-    private int scrollOffset = 0;
+    private TabBar tabBar;
+    private ScrollableList<?> currentList;
+    private ScrollableList<DecomposableEntry> decomposeList;
+    private ScrollableList<SynthesizeEntry> synthesizeList;
+    private QuantitySlider quantitySlider;
+    private MedievalButton submitBtn;
+    private TaskQueuePanel taskQueuePanel;
 
-    public WorkstationScreen(WorkstationMenu menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title);
-        this.imageWidth = TEXTURE_W;
-        this.imageHeight = TEXTURE_H;
-        this.inventoryLabelY = this.imageHeight - 94;
-        this.inventoryLabelX = 8;
+    public WorkstationScreen() {
+        super(Component.literal("Workstation"), PW, PH);
+        setTitleBar("Workstation");
     }
 
-    /** Called by packet handler to push data. */
     public void updateData(WorkstationDataPacket packet) {
         this.stationPos = packet.stationPos();
         this.decomposableItems = packet.decomposableEntries();
         this.synthesizeRecipes = packet.synthesizeEntries();
-        this.selectedIndex = -1;
-        this.quantity = 1;
+        if (decomposeList != null) decomposeList.setItems(decomposableItems);
+        if (synthesizeList != null) synthesizeList.setItems(synthesizeRecipes);
+        // Reset slider on new data
+        if (quantitySlider != null) {
+            quantitySlider.setMax(1);
+            quantitySlider.setValue(1);
+        }
+        // Request current queue data from server
+        requestQueueRefresh();
     }
 
-    // ════════════════════════════════════════════════════════════
-    //  Render
-    // ════════════════════════════════════════════════════════════
+    /** Called when a TaskQueueDataPacket arrives from the server. */
+    public void updateQueueData(TaskQueueDataPacket packet) {
+        if (packet.stationPos().equals(this.stationPos) && taskQueuePanel != null) {
+            List<TaskQueuePanel.Entry> entries = new ArrayList<>();
+            for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
+                entries.add(new TaskQueuePanel.Entry(
+                        qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
+                        qe.blueprintId(), qe.summary()));
+            }
+            taskQueuePanel.setEntries(entries);
+        }
+    }
+
+    /** Send a REFRESH request to the server to get the current task queue. */
+    private void requestQueueRefresh() {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
+    }
 
     @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        // Background
-        gfx.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF_C0C0C0);
-        gfx.fill(leftPos + 1, topPos + 1, leftPos + imageWidth - 1, topPos + imageHeight - 1, 0xFF_8B8B8B);
+    protected void init() {
+        super.init();
+
+        // Left panel content (existing widgets)
+        int contentX = leftPos + 8;
+        int contentY = topPos + headerHeight + 4;
+        int contentW = LEFT_PW - 16;
 
         // Tab bar
-        drawTab(gfx, 0, "Decompose", leftPos + LIST_X, topPos + 6);
-        drawTab(gfx, 1, "Synthesize", leftPos + LIST_X + 80, topPos + 6);
+        tabBar = new TabBar(contentX, contentY, contentW,
+                List.of("Decompose", "Synthesize"), activeTab, this::onTabChanged);
+        addRenderableWidget(tabBar);
 
-        // Panel background
-        gfx.fill(leftPos + LIST_X, topPos + LIST_Y,
-                leftPos + LIST_X + PANEL_W, topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT,
-                0xFF_404040);
+        // Lists
+        int listY = contentY + 20;
+        int listH = PH - headerHeight - 4 - 20 - 44;
 
-        // Row content
+        decomposeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
+            @Override
+            protected void renderRow(GuiGraphics g, DecomposableEntry item, int x, int y, int index,
+                                     boolean selected, boolean hovered) {
+                boolean canAfford = item.count() > 0;
+                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
+                if (registryItem != null && registryItem != Items.AIR) {
+                    g.renderItem(new ItemStack(registryItem), x, y + 1);
+                }
+                int textColor = !canAfford ? MedievalColors.TEXT_DIM
+                        : selected ? MedievalColors.ACCENT_GOLD
+                        : hovered ? MedievalColors.TEXT_WARM_WHITE
+                        : MedievalColors.TEXT_MUTED;
+                String name = formatItemName(item.itemId());
+                g.drawString(Minecraft.getInstance().font, name, x + 20, y + 2, textColor);
+                String count = "x" + formatCount(item.count());
+                int cw = Minecraft.getInstance().font.width(count);
+                g.drawString(Minecraft.getInstance().font, count,
+                        x + getWidth() - scrollbarWidth - cw - 6, y + 2, MedievalColors.TEXT_DIM);
+            }
+        };
+        decomposeList.setItems(decomposableItems);
+        decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposableItems.get(i)));
+
+        synthesizeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
+            @Override
+            protected void renderRow(GuiGraphics g, SynthesizeEntry item, int x, int y, int index,
+                                     boolean selected, boolean hovered) {
+                boolean canAfford = item.maxAffordable() > 0;
+                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
+                if (registryItem != null && registryItem != Items.AIR) {
+                    g.renderItem(new ItemStack(registryItem), x, y + 1);
+                }
+                int textColor = !canAfford ? MedievalColors.TEXT_DIM
+                        : selected ? MedievalColors.ACCENT_GOLD
+                        : hovered ? MedievalColors.TEXT_WARM_WHITE
+                        : MedievalColors.TEXT_MUTED;
+                g.drawString(Minecraft.getInstance().font, formatItemName(item.outputItem()),
+                        x + 20, y + 1, textColor);
+
+                StringBuilder costStr = new StringBuilder();
+                item.cost().forEach((elem, amt) -> {
+                    if (!costStr.isEmpty()) costStr.append(", ");
+                    costStr.append(elem.name().toLowerCase()).append(":").append(amt);
+                });
+                g.drawString(Minecraft.getInstance().font, costStr.toString(),
+                        x + 20, y + 10, MedievalColors.TEXT_DIM);
+            }
+        };
+        synthesizeList.setItems(synthesizeRecipes);
+        synthesizeList.setOnSelect(i -> updateSliderForSynthesize(synthesizeRecipes.get(i)));
+
+        // Quantity slider + submit
+        int controlY = listY + listH + 6;
+        quantitySlider = new QuantitySlider(contentX, controlY, 120, 1, 1, 1, v -> {});
+        addRenderableWidget(quantitySlider);
+
+        submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
+                Component.literal("Submit"), this::onSubmit);
+        addRenderableWidget(submitBtn);
+
+        // Show active tab
+        showTab(activeTab);
+
+        // ── Right panel: Task Queue ──
+        // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding (was 12px)
+        int queuePh = PH - headerHeight - 8;
+        int queueX = leftPos + LEFT_PW + 4;
+        int queueY = topPos + headerHeight + 4;
+        taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);
+        taskQueuePanel.setOnDelete(this::onQueueDelete);
+        taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
+        taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
+        addRenderableWidget(taskQueuePanel);
+    }
+
+    private void updateSliderForDecompose(DecomposableEntry entry) {
+        if (entry == null) {
+            quantitySlider.setMax(1);
+            quantitySlider.setValue(1);
+            return;
+        }
+        int max = (int) Math.min(entry.count(), MAX_QTY);
+        quantitySlider.setMax(Math.max(1, max));
+        quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
+    }
+
+    private void updateSliderForSynthesize(SynthesizeEntry entry) {
+        if (entry == null) {
+            quantitySlider.setMax(1);
+            quantitySlider.setValue(1);
+            return;
+        }
+        int max = entry.maxAffordable();
+        quantitySlider.setMax(Math.max(1, max));
+        quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
+    }
+
+    private void onTabChanged(int tabIndex) {
+        activeTab = tabIndex;
+        showTab(tabIndex);
+        // Reset slider for new tab
+        quantitySlider.setMax(1);
+        quantitySlider.setValue(1);
+    }
+
+    private void showTab(int tabIndex) {
+        if (currentList != null) {
+            removeWidget(currentList);
+        }
+        currentList = (tabIndex == 0) ? decomposeList : synthesizeList;
+        addRenderableWidget(currentList);
+    }
+
+    private void onSubmit() {
+        int qty = quantitySlider.getValue();
         if (activeTab == 0) {
-            renderDecomposeRows(gfx, mouseX, mouseY);
+            DecomposableEntry sel = decomposeList.getSelected();
+            if (sel == null || sel.count() <= 0) return;
+            PacketDistributor.sendToServer(new RequestProductionTaskPacket(
+                    stationPos, "decompose", sel.itemId(), qty));
         } else {
-            renderSynthesizeRows(gfx, mouseX, mouseY);
+            SynthesizeEntry sel = synthesizeList.getSelected();
+            if (sel == null || sel.maxAffordable() <= 0) return;
+            PacketDistributor.sendToServer(new RequestProductionTaskPacket(
+                    stationPos, "synthesize", sel.recipeId(), qty));
         }
-
-        // Quantity controls
-        int qy = topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT + 6;
-        gfx.drawString(font, "Qty: " + quantity, leftPos + LIST_X, qy, 0xFFFFFF);
-        drawButton(gfx, "-", leftPos + LIST_X + 50, qy - 2, 14, 14, mouseX, mouseY);
-        drawButton(gfx, "+", leftPos + LIST_X + 68, qy - 2, 14, 14, mouseX, mouseY);
-
-        // Submit button
-        drawButton(gfx, "Submit", leftPos + LIST_X + PANEL_W - 50, qy - 2, 46, 14, mouseX, mouseY);
+        // Refresh queue after submitting a new task
+        requestQueueRefresh();
     }
 
-    private void renderDecomposeRows(GuiGraphics gfx, int mouseX, int mouseY) {
-        int maxRows = Math.min(VISIBLE_ROWS, decomposableItems.size() - scrollOffset);
-        for (int i = 0; i < maxRows; i++) {
-            int idx = scrollOffset + i;
-            if (idx >= decomposableItems.size()) break;
-            DecomposableEntry entry = decomposableItems.get(idx);
-            int rowY = topPos + LIST_Y + i * ROW_HEIGHT;
+    // ── Task queue callbacks ──
 
-            boolean hovered = isRowHovered(mouseX, mouseY, i);
-            if (idx == selectedIndex) {
-                gfx.fill(leftPos + LIST_X, rowY, leftPos + LIST_X + PANEL_W, rowY + ROW_HEIGHT, 0x80_FFD700);
-            } else if (hovered) {
-                gfx.fill(leftPos + LIST_X, rowY, leftPos + LIST_X + PANEL_W, rowY + ROW_HEIGHT, 0x40_FFFFFF);
-            }
-
-            var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(entry.itemId()));
-            if (item != null && item != Items.AIR) {
-                gfx.renderItem(new ItemStack(item), leftPos + LIST_X + 2, rowY);
-            }
-            String label = entry.itemId() + "  x" + formatCount(entry.count());
-            gfx.drawString(font, label, leftPos + LIST_X + 20, rowY + 4, 0xFFFFFF);
-        }
+    private void onQueueDelete(int index) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        com.mojang.logging.LogUtils.getLogger().info("[TaskQueue] DELETE index={} pos={}", index, stationPos);
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "delete", index));
     }
 
-    private void renderSynthesizeRows(GuiGraphics gfx, int mouseX, int mouseY) {
-        int maxRows = Math.min(VISIBLE_ROWS, synthesizeRecipes.size() - scrollOffset);
-        for (int i = 0; i < maxRows; i++) {
-            int idx = scrollOffset + i;
-            if (idx >= synthesizeRecipes.size()) break;
-            SynthesizeEntry entry = synthesizeRecipes.get(idx);
-            int rowY = topPos + LIST_Y + i * ROW_HEIGHT;
-
-            boolean hovered = isRowHovered(mouseX, mouseY, i);
-            if (idx == selectedIndex) {
-                gfx.fill(leftPos + LIST_X, rowY, leftPos + LIST_X + PANEL_W, rowY + ROW_HEIGHT, 0x80_FFD700);
-            } else if (hovered) {
-                gfx.fill(leftPos + LIST_X, rowY, leftPos + LIST_X + PANEL_W, rowY + ROW_HEIGHT, 0x40_FFFFFF);
-            }
-
-            var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(entry.outputItem()));
-            if (item != null && item != Items.AIR) {
-                gfx.renderItem(new ItemStack(item), leftPos + LIST_X + 2, rowY);
-            }
-            StringBuilder costStr = new StringBuilder();
-            entry.cost().forEach((elem, amt) -> {
-                if (!costStr.isEmpty()) costStr.append(", ");
-                costStr.append(elem.name().toLowerCase()).append(":").append(amt);
-            });
-            gfx.drawString(font, entry.outputItem(), leftPos + LIST_X + 20, rowY + 1, 0xFFFFFF);
-            gfx.drawString(font, costStr.toString(), leftPos + LIST_X + 20, rowY + 9, 0xA0A0A0);
-        }
+    private void onQueueMoveUp(int index) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        com.mojang.logging.LogUtils.getLogger().info("[TaskQueue] MOVE_UP index={} pos={}", index, stationPos);
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
     }
 
-    private void drawTab(GuiGraphics gfx, int tabIdx, String label, int x, int y) {
-        int color = (activeTab == tabIdx) ? 0xFF_D4A017 : 0xFF_666666;
-        int bgColor = (activeTab == tabIdx) ? 0xFF_505050 : 0xFF_303030;
-        gfx.fill(x, y, x + 76, y + 14, bgColor);
-        gfx.drawString(font, label, x + 4, y + 3, color);
+    private void onQueueMoveDown(int index) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        com.mojang.logging.LogUtils.getLogger().info("[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 
-    private void drawButton(GuiGraphics gfx, String label, int x, int y, int w, int h, int mouseX, int mouseY) {
-        boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
-        int bg = hovered ? 0xFF_707070 : 0xFF_505050;
-        gfx.fill(x, y, x + w, y + h, bg);
-        gfx.fill(x, y, x + w, y + 1, 0xFF_909090);
-        gfx.fill(x, y + h - 1, x + w, y + h, 0xFF_303030);
-        int textW = font.width(label);
-        gfx.drawString(font, label, x + (w - textW) / 2, y + 3, 0xFFFFFF);
-    }
-
-    private boolean isRowHovered(int mouseX, int mouseY, int row) {
-        int rowY = topPos + LIST_Y + row * ROW_HEIGHT;
-        return mouseX >= leftPos + LIST_X && mouseX <= leftPos + LIST_X + PANEL_W
-                && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-        gfx.drawString(font, "Workstation", 8, 6, 0x404040);
-    }
-
-    @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        super.render(gfx, mouseX, mouseY, partialTick);
-        renderTooltip(gfx, mouseX, mouseY);
-    }
-
-    // ════════════════════════════════════════════════════════════
-    //  Input
-    // ════════════════════════════════════════════════════════════
-
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (button != 0) return super.mouseClicked(mx, my, button);
-
-        int mxInt = (int) mx;
-        int myInt = (int) my;
-
-        // Tab clicks
-        if (myInt >= topPos + 6 && myInt < topPos + 20) {
-            if (mxInt >= leftPos + LIST_X && mxInt < leftPos + LIST_X + 76) {
-                activeTab = 0;
-                selectedIndex = -1;
-                scrollOffset = 0;
-                return true;
-            }
-            if (mxInt >= leftPos + LIST_X + 80 && mxInt < leftPos + LIST_X + 156) {
-                activeTab = 1;
-                selectedIndex = -1;
-                scrollOffset = 0;
-                return true;
-            }
-        }
-
-        // Row clicks
-        if (mxInt >= leftPos + LIST_X && mxInt <= leftPos + LIST_X + PANEL_W
-                && myInt >= topPos + LIST_Y && myInt < topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT) {
-            int row = (myInt - topPos - LIST_Y) / ROW_HEIGHT;
-            int idx = scrollOffset + row;
-            int max = (activeTab == 0) ? decomposableItems.size() : synthesizeRecipes.size();
-            if (idx >= 0 && idx < max) {
-                selectedIndex = idx;
-                quantity = 1;
-                return true;
-            }
-        }
-
-        // Quantity / Submit buttons
-        int qy = topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT + 6;
-        if (myInt >= qy - 2 && myInt < qy + 14) {
-            // Minus
-            if (mxInt >= leftPos + LIST_X + 50 && mxInt < leftPos + LIST_X + 64) {
-                if (quantity > 1) quantity--;
-                return true;
-            }
-            // Plus
-            if (mxInt >= leftPos + LIST_X + 68 && mxInt < leftPos + LIST_X + 82) {
-                if (quantity < 64) quantity++;
-                return true;
-            }
-            // Submit
-            if (mxInt >= leftPos + LIST_X + PANEL_W - 50 && mxInt < leftPos + LIST_X + PANEL_W) {
-                submitTask();
-                return true;
-            }
-        }
-
-        return super.mouseClicked(mx, my, button);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int max = (activeTab == 0) ? decomposableItems.size() : synthesizeRecipes.size();
-        int maxScroll = Math.max(0, max - VISIBLE_ROWS);
-        scrollOffset = (int) Math.clamp(scrollOffset - (int) scrollY, 0, maxScroll);
-        return true;
-    }
-
-    private void submitTask() {
-        String action = (activeTab == 0) ? "decompose" : "synthesize";
-        String recipeOrItemId;
-        if (activeTab == 0) {
-            if (selectedIndex < 0 || selectedIndex >= decomposableItems.size()) return;
-            recipeOrItemId = decomposableItems.get(selectedIndex).itemId();
-        } else {
-            if (selectedIndex < 0 || selectedIndex >= synthesizeRecipes.size()) return;
-            recipeOrItemId = synthesizeRecipes.get(selectedIndex).recipeId();
-        }
-
-        PacketDistributor.sendToServer(new RequestProductionTaskPacket(
-                stationPos, action, recipeOrItemId, quantity));
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
+    private static String formatItemName(String itemId) {
+        int colon = itemId.indexOf(':');
+        String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
+        return path.replace('_', ' ');
     }
 
     private static String formatCount(long n) {

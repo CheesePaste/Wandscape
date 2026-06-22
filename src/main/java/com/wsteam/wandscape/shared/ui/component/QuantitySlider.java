@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
 public class QuantitySlider extends AbstractWidget {
 
     private final int minValue;
-    private final int maxValue;
+    private int maxValue;
     private int value;
     private final IntConsumer onValueChanged;
 
@@ -41,6 +41,17 @@ public class QuantitySlider extends AbstractWidget {
 
     public void setValue(int value) {
         this.value = Math.clamp(value, minValue, maxValue);
+    }
+
+    public void setMax(int newMax) {
+        this.maxValue = Math.max(minValue, newMax);
+        if (this.value > this.maxValue) {
+            this.value = this.maxValue;
+        }
+    }
+
+    public int getMax() {
+        return maxValue;
     }
 
     @Override

@@ -2,20 +2,19 @@
 
 ## 关键类
 
-- **WarehouseManager** — 实现 WarehouseApi + ColonyResourceAccess(引擎资源接口)。仓储逻辑
-- **ColonyItemBank** — 物品存储（Level SavedData），独立于方块。方块破坏不丢失物品
-- **WarehouseMenu** — ContainerMenu，仓库 GUI 后端
-- **WarehouseScreen** (client/) — 仓库 GUI 前端
+- **WarehouseManager** — 实现 WarehouseApi + ColonyResourceAccess。元素和物品通过 ColonyItemBank 分开存储
+- **ColonyItemBank** — 物品 + 元素双存储（Level SavedData），独立于方块。方块破坏不丢失数据
+- **WarehouseScreen** (client/) — 仓库 GUI，左 ElementPanel 右物品列表
 - **WarehouseNotificationHandler** — 监听 ResourceInsufficientEvent → 聊天栏通知在线玩家
-- **WarehouseDataPacket** (network/) — 仓库数据同步网络包
-
-## 注册
-
-- 菜单：`wandscape:warehouse` (MenuType)
+- **WarehouseDataPacket** (network/) — 携带物品列表 + 元素快照的网络包
 
 ## 交互流
 
-右键原版方块 → BuildingInteractHandler → posIndex O(1) → category=storage → ColonyItemBank snapshot → WarehouseMenu GUI
+右键原版方块 → BuildingInteractHandler → posIndex O(1) → category=storage → ColonyItemBank snapshot + elementSnapshot → WarehouseDataPacket → 客户端开 WarehouseScreen
+
+## 存储设计
+
+元素存储 (`elementStorage: Map<UUID, Map<ElementType, Long>>`) 与物品存储 (`storage: Map<UUID, Map<ItemKey, Long>>`) 在同一个 SavedData 中，保证事务原子性。
 
 ## 依赖
 

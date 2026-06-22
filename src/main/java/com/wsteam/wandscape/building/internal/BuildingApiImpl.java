@@ -329,6 +329,127 @@ public class BuildingApiImpl implements BuildingApi {
         }
     }
 
+    @Override
+    public List<WorkItem> getQueue(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return List.of();
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return List.of();
+
+        return new ArrayList<>(state.getTaskQueue());
+    }
+
+    @Override
+    public boolean removeFromQueue(UUID buildingId, int index) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) {
+            LOGGER.warn("removeFromQueue: no saved data for {}", buildingId);
+            return false;
+        }
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) {
+            LOGGER.warn("removeFromQueue: building {} not found", buildingId);
+            return false;
+        }
+        if (state.isShutdown()) {
+            LOGGER.warn("removeFromQueue: building {} is shutdown", buildingId);
+            return false;
+        }
+
+        Deque<WorkItem> queue = state.getTaskQueue();
+        if (index < 0 || index >= queue.size()) {
+            LOGGER.warn("removeFromQueue: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            return false;
+        }
+        if (index == 0) {
+            LOGGER.warn("removeFromQueue: refused to remove index 0 (current task) at {}", buildingId);
+            return false;
+        }
+
+        // Convert deque to list, remove, then rebuild deque
+        java.util.List<WorkItem> list = new ArrayList<>(queue);
+        WorkItem removed = list.remove(index);
+        queue.clear();
+        queue.addAll(list);
+        sd.setDirty();
+        LOGGER.info("removeFromQueue: removed [{}] {} from building {}", index, removed.blueprintId(), buildingId);
+        return true;
+    }
+
+    @Override
+    public boolean moveUp(UUID buildingId, int index) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) {
+            LOGGER.warn("moveUp: no saved data for {}", buildingId);
+            return false;
+        }
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) {
+            LOGGER.warn("moveUp: building {} not found", buildingId);
+            return false;
+        }
+        if (state.isShutdown()) {
+            LOGGER.warn("moveUp: building {} is shutdown", buildingId);
+            return false;
+        }
+
+        Deque<WorkItem> queue = state.getTaskQueue();
+        if (index <= 0 || index >= queue.size()) {
+            LOGGER.warn("moveUp: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            return false;
+        }
+
+        java.util.List<WorkItem> list = new ArrayList<>(queue);
+        WorkItem upper = list.get(index - 1);
+        WorkItem lower = list.get(index);
+        java.util.Collections.swap(list, index, index - 1);
+        queue.clear();
+        queue.addAll(list);
+        sd.setDirty();
+        LOGGER.info("moveUp: [{}]{}↔[{}]{} at {}",
+                index - 1, upper.blueprintId(), index, lower.blueprintId(), buildingId);
+        return true;
+    }
+
+    @Override
+    public boolean moveDown(UUID buildingId, int index) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) {
+            LOGGER.warn("moveDown: no saved data for {}", buildingId);
+            return false;
+        }
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) {
+            LOGGER.warn("moveDown: building {} not found", buildingId);
+            return false;
+        }
+        if (state.isShutdown()) {
+            LOGGER.warn("moveDown: building {} is shutdown", buildingId);
+            return false;
+        }
+
+        Deque<WorkItem> queue = state.getTaskQueue();
+        if (index < 0 || index >= queue.size() - 1) {
+            LOGGER.warn("moveDown: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            return false;
+        }
+
+        java.util.List<WorkItem> list = new ArrayList<>(queue);
+        WorkItem upper = list.get(index);
+        WorkItem lower = list.get(index + 1);
+        java.util.Collections.swap(list, index, index + 1);
+        queue.clear();
+        queue.addAll(list);
+        sd.setDirty();
+        LOGGER.info("moveDown: [{}]{}↔[{}]{} at {}",
+                index, upper.blueprintId(), index + 1, lower.blueprintId(), buildingId);
+        return true;
+    }
+
     // ---- Helpers ----
 
     @Nullable

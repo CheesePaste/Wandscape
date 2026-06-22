@@ -396,6 +396,12 @@ public class GlobalTaskPool {
 
     /** Add a task loaded from persistence, preserving its original ID. */
     public void addLoadedTask(GlobalTask task, long originalId) {
+        // Defensive: if a stale entry with the same object already exists under a
+        // different key (e.g. taskFromNbt called addTask first which assigned a
+        // temporary newId, then addLoadedTask adds the same object under originalId),
+        // remove the stale entry so getByState / getAssignableTasks never returns
+        // the same task twice.
+        tasks.values().removeIf(existing -> existing == task && existing.id != originalId);
         tasks.put(originalId, task);
         if (originalId >= nextTaskId) {
             nextTaskId = originalId + 1;

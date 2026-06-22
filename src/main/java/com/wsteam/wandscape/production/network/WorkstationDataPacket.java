@@ -30,6 +30,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
     public static final StreamCodec<RegistryFriendlyByteBuf, WorkstationDataPacket> STREAM_CODEC =
             StreamCodec.of(WorkstationDataPacket::write, WorkstationDataPacket::read);
 
+    private static final int MAX_PER_OPERATION = 64;
+
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
@@ -38,7 +40,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
     public static WorkstationDataPacket from(
             BlockPos stationPos,
             Map<ItemKey, Long> decomposableItems,
-            Collection<SynthesizeRecipe> synthRecipes) {
+            Collection<SynthesizeRecipe> synthRecipes,
+            Map<ElementType, Long> elementMap) {
         ListTag itemList = new ListTag();
         for (var entry : decomposableItems.entrySet()) {
             CompoundTag tag = new CompoundTag();
@@ -52,6 +55,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
 
         ListTag recipeList = new ListTag();
         for (SynthesizeRecipe r : synthRecipes) {
+            int maxAffordable = computeMaxAffordable(r.cost(), elementMap);
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
             tag.putString("output", r.outputItem());
@@ -61,10 +65,22 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             }
             tag.put("cost", costTag);
             tag.putInt("required_level", r.requiredLevel());
+            tag.putInt("max_affordable", maxAffordable);
             recipeList.add(tag);
         }
 
         return new WorkstationDataPacket(stationPos, itemList, recipeList);
+    }
+
+    private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
+        int max = MAX_PER_OPERATION;
+        for (var entry : costPerUnit.entrySet()) {
+            long available = elements.getOrDefault(entry.getKey(), 0L);
+            if (entry.getValue() <= 0) continue;
+            int canAfford = (int) (available / entry.getValue());
+            if (canAfford < max) max = canAfford;
+        }
+        return max;
     }
 
     public List<DecomposableEntry> decomposableEntries() {
@@ -94,14 +110,16 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
                 cost.put(type, costTag.getLong(key));
             }
             int requiredLevel = tag.getInt("required_level");
-            result.add(new SynthesizeEntry(id, output, cost, requiredLevel));
+            int maxAffordable = tag.getInt("max_affordable");
+            result.add(new SynthesizeEntry(id, output, cost, requiredLevel, maxAffordable));
         }
         return result;
     }
 
     public record DecomposableEntry(String itemId, @javax.annotation.Nullable CompoundTag nbt, long count) {}
 
-    public record SynthesizeEntry(String recipeId, String outputItem, Map<ElementType, Long> cost, int requiredLevel) {}
+    public record SynthesizeEntry(String recipeId, String outputItem, Map<ElementType, Long> cost,
+                                  int requiredLevel, int maxAffordable) {}
 
     private static Consumer<WorkstationDataPacket> clientHandler;
 

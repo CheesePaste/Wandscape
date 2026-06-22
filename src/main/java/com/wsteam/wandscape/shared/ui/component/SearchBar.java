@@ -32,7 +32,7 @@ public class SearchBar extends AbstractWidget {
         this.input = new EditBox(font, x + INSET_L, y + 4, width - INSET_L - INSET_R, height - 8, Component.literal(placeholder));
         this.input.setBordered(false);
         this.input.setHint(Component.literal(placeholder));
-        this.input.setTextColor(MedievalColors.ACCENT_GOLD);
+        this.input.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         this.input.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         this.input.setResponder(s -> {
             if (onTextChanged != null) onTextChanged.accept(s);
