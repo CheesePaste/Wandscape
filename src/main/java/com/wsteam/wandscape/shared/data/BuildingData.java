@@ -16,4 +16,5 @@ public interface BuildingData {
     int getWonder();
     int getMaintenanceCost();
     int getQueueCapacity();
+    boolean isStructureIntact();
 }

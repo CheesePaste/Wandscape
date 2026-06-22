@@ -37,7 +37,7 @@ public class WorldEcsTest {
             MockBoundary mock = new MockBoundary();
             CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock,
                     java.util.List.of(), new BlueprintRegistry(),
-                    new SystemBlueprintRegistry());
+                    new SystemBlueprintRegistry(), false);
             world = CoreBootstrap.bootstrap(config);
             entity = world.createEntity();
         }

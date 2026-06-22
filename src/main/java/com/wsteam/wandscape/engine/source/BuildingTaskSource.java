@@ -88,6 +88,7 @@ public class BuildingTaskSource implements TaskSource {
                 long taskId = pool.addTask(request);
                 api.setCurrentTask(buildingId, toTaskUuid(taskId));
                 activeTasks.put(buildingId, taskId);
+
                 LOGGER.info("[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} params={} priority={} building={} pool_size={}",
                         taskId, item.blueprintId(), item.params(), item.priority(),
                         buildingId.toString().substring(0, 8), pool.size());
@@ -123,7 +124,7 @@ public class BuildingTaskSource implements TaskSource {
             if (api.isBuildingOccupied(buildingId)) continue;
 
             BuildingData bd = api.getBuilding(buildingId);
-            if (bd == null || bd.isShutdown()) continue;
+            if (bd == null || bd.isShutdown() || !bd.isStructureIntact()) continue;
 
             BuildingConfig config = configLoader.get(bd.getBuildingTypeId());
             if (config == null) continue;

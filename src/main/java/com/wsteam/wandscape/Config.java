@@ -135,5 +135,12 @@ public class Config {
             .comment("Block used for benches (supports [facing=...] state)")
             .define("road.decoration.benchBlock", "minecraft:oak_stairs");
 
+    // ---- Colony autonomy ----
+
+    public static final ModConfigSpec.BooleanValue AUTO_APPROVE_TASKS = BUILDER
+            .comment("When true, all colony tasks skip the player-approval gate and are assigned automatically.")
+            .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
+            .define("general.autoApproveTasks", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

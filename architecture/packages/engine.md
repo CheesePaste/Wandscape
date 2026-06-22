@@ -35,7 +35,7 @@
 
 ### TaskSource
 
-- **BuildingTaskSource** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。这是 BE → 引擎的唯一桥梁
+- **BuildingTaskSource** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。发布后检测到任务落在 PENDING_APPROVAL 时自动 approve（建筑修复是殖民地自治行为，不能卡在玩家审批门后）。这是 BE → 引擎的唯一桥梁
 - **RoadTaskSource** — 监听 build_complete 事件 → 触发生成路网
 - **WarehouseSource** / **WorkbenchSource** — V1 stub，监视资源/生产队列
 

@@ -17,6 +17,7 @@ class BuildingDataImpl implements BuildingData {
     private final BlockPos position;
     private final UUID colonyId;
     private boolean shutdown;
+    private boolean structureIntact;
     private final int comfort;
     private final int magic;
     private final int wonder;
@@ -40,6 +41,7 @@ class BuildingDataImpl implements BuildingData {
     }
 
     void setShutdown(boolean shutdown) { this.shutdown = shutdown; }
+    void setStructureIntact(boolean intact) { this.structureIntact = intact; }
 
     @Override public UUID getBuildingId() { return buildingId; }
     @Override public String getBuildingTypeId() { return buildingTypeId; }
@@ -50,6 +52,7 @@ class BuildingDataImpl implements BuildingData {
     public UUID getColonyId() { return colonyId; }
 
     @Override public boolean isShutdown() { return shutdown; }
+    @Override public boolean isStructureIntact() { return structureIntact; }
     @Override public int getComfort() { return comfort; }
     @Override public int getMagic() { return magic; }
     @Override public int getWonder() { return wonder; }

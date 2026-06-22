@@ -33,16 +33,18 @@ public class GlobalTaskPool {
     private final EventBus eventBus;
     private final TaskCompiler compiler;
     private final ColonyResourceAccess colonyResources;
+    private final boolean autoApprove;
     private long nextTaskId = 1;
 
     /** Called whenever the task pool is mutated (add/assign/complete/release). */
     @javax.annotation.Nullable
     public Runnable onChanged;
 
-    public GlobalTaskPool(EventBus eventBus, TaskCompiler compiler, ColonyResourceAccess colonyResources) {
+    public GlobalTaskPool(EventBus eventBus, TaskCompiler compiler, ColonyResourceAccess colonyResources, boolean autoApprove) {
         this.eventBus = eventBus;
         this.compiler = compiler;
         this.colonyResources = colonyResources;
+        this.autoApprove = autoApprove;
 
         // Subscribe to resource fulfilled events to wake waiting tasks
         eventBus.subscribe(ResourceFulfilled.class, this::onResourceFulfilled);
@@ -60,10 +62,11 @@ public class GlobalTaskPool {
         TaskSequence seq = compiled.sequence();
         long id = nextTaskId++;
 
-        // Large tasks (priority >= 50) need approval; small tasks skip it.
+        // High-priority tasks (priority >= 50) normally need player approval.
+        // When autoApprove is enabled, skip the gate and go straight to PENDING_ASSIGN.
         TaskState initialState;
         ApprovalInfo approval = null;
-        if (request.priority() >= 50) {
+        if (!autoApprove && request.priority() >= 50) {
             initialState = TaskState.PENDING_APPROVAL;
             GridPos suggestedPos = parseGridPos(request.params());
             approval = new ApprovalInfo(suggestedPos, Long.MAX_VALUE, false);

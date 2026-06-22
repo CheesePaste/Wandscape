@@ -40,7 +40,8 @@ ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op �
 
 | 优先级 | 事项 | 涉及 |
 |--------|------|------|
-| 高 | 结构损坏后自动入队修复 | building/BuildingBreakHandler |
+| ~~高~~ | ~~结构损坏后自动入队修复~~ | ~~building/BuildingBreakHandler~~ ✓ |
+| ~~高~~ | ~~全殖民地自治模式（autoApproveTasks config）~~ | ~~Config + GlobalTaskPool + EngineBootstrap~~ ✓ |
 | 中 | GlobalTaskPool COMPLETED 任务清理（内存泄漏） | core/task/GlobalTaskPool |
 | 中 | 祭坛多方块检测从 tick() 改为事件驱动 | — (模块未构建) |
 | 低 | 连续执行加成从硬编码移至 TOML | Config + SchedulerSystem |
