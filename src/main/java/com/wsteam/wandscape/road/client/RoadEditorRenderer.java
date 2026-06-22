@@ -225,7 +225,7 @@ public final class RoadEditorRenderer {
             List<BlockPos> wps = RoadEditorClientState.getWaypoints();
             UUID endId = RoadEditorClientState.getEndNodeId();
 
-            // Build the full preview path: start → waypoints → (end node or crosshair)
+            // Build the full preview path: start → waypoints → (end node or player position)
             PathPoint target;
             if (endId != null) {
                 RoadNode endNode = network.getNode(endId);
@@ -235,14 +235,13 @@ public final class RoadEditorRenderer {
                     target = new PathPoint(endNode.pos().x(), endNode.pos().y(), endNode.pos().z());
                 }
             } else {
-                // No end node yet — aim at the ground under crosshair
-                HitResult hit = mc.hitResult;
-                if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
-                    Vec3 aim = hit.getLocation();
+                // No end node yet — use player's feet position as preview target
+                // (no raycast needed — always shows preview)
+                if (mc.player != null) {
                     target = new PathPoint(
-                            (int) Math.floor(aim.x),
-                            (int) Math.floor(aim.y),
-                            (int) Math.floor(aim.z));
+                            (int) Math.floor(mc.player.getX()),
+                            (int) Math.floor(mc.player.getY()),
+                            (int) Math.floor(mc.player.getZ()));
                 } else {
                     target = null;
                 }
