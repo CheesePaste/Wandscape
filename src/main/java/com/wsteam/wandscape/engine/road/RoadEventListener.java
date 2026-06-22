@@ -188,7 +188,7 @@ public final class RoadEventListener {
                     List<PathPoint> fresh = RoadPlanner.filterNewPath(seg, occupiedTiles);
                     if (!fresh.isEmpty()) {
                         JsonArray tiles = RoadBuilder.buildTiles(
-                                level, fresh, edge.getTier(), buildingBounds, occupiedTiles);
+                                level, fresh, edge.getTier(), buildingBounds, occupiedTiles, edge.getWidth());
                         if (!tiles.isEmpty()) {
                             segCount += enqueueSegments(edge.getEdgeId(), tiles, config);
                             occupiedTiles.addAll(RoadBuilder.extractPathPoints(tiles));
@@ -298,9 +298,9 @@ public final class RoadEventListener {
         }
 
         RoadConfig.DecorationConfig deco = config.getDecorationConfig();
-        int halfWidth = config.getDefaultWidth() / 2;
-        LOGGER.info("[Deco] edge={}: lampSpacing={} benchSpacing={} halfWidth={}",
-                edgeShort, deco.lampSpacing(), deco.benchSpacing(), halfWidth);
+        int halfWidth = edge.getWidth() / 2;
+        LOGGER.info("[Deco] edge={}: lampSpacing={} benchSpacing={} halfWidth={} (edgeWidth={})",
+                edgeShort, deco.lampSpacing(), deco.benchSpacing(), halfWidth, edge.getWidth());
 
         List<DecorationPoint> points = DecorationPlanner.planForEdge(
                 edge, deco.lampSpacing(), deco.benchSpacing(), halfWidth);
@@ -390,11 +390,12 @@ public final class RoadEventListener {
                                      Set<PathPoint> occupiedTiles) {
         List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(
                 edge.getPath(), config.getSegmentMaxLength());
+        int roadWidth = edge.getWidth();
         int segmentCount = 0;
         Set<PathPoint> allPlaced = new HashSet<>();
         for (List<PathPoint> seg : segments) {
             JsonArray tiles = RoadBuilder.buildTiles(
-                    level, seg, edge.getTier(), buildingBounds, occupiedTiles);
+                    level, seg, edge.getTier(), buildingBounds, occupiedTiles, roadWidth);
             if (!tiles.isEmpty()) {
                 segmentCount += enqueueSegments(edge.getEdgeId(), tiles, config);
                 occupiedTiles.addAll(RoadBuilder.extractPathPoints(tiles));

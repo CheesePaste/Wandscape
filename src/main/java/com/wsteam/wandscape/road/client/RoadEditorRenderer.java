@@ -93,13 +93,13 @@ public final class RoadEditorRenderer {
     // ── Registration ──
 
     public static void register() {
-        LOGGER.info("[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent(Pre+Post)");
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS
-                .addListener(RenderLevelStageEvent.class, RoadEditorRenderer::onRenderLevelStage);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS
-                .addListener(ClientTickEvent.Pre.class, RoadEditorRenderer::onClientTickPre);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS
-                .addListener(ClientTickEvent.Post.class, RoadEditorRenderer::onClientTickPost);
+        LOGGER.info("[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent(Pre+Post) + MouseScrolling");
+        var bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
+        bus.addListener(RenderLevelStageEvent.class, RoadEditorRenderer::onRenderLevelStage);
+        bus.addListener(ClientTickEvent.Pre.class, RoadEditorRenderer::onClientTickPre);
+        bus.addListener(ClientTickEvent.Post.class, RoadEditorRenderer::onClientTickPost);
+        bus.addListener(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent.class,
+                RoadEditorRenderer::onMouseScroll);
         LOGGER.info("[RoadEditor] register() — done");
     }
 
@@ -266,7 +266,7 @@ public final class RoadEditorRenderer {
 
             if (startPt != null && target != null) {
                 List<PathPoint> previewPath = new java.util.ArrayList<>();
-                int amplitude = Config.ROAD_DEFAULT_WIDTH.get() * 2;
+                int amplitude = RoadEditorClientState.getCurrentWidth() * 2;
 
                 PathPoint cursor = startPt;
                 for (BlockPos wp : wps) {
@@ -407,6 +407,21 @@ public final class RoadEditorRenderer {
     // ── Client tick: hover + input ──
     // ═══════════════════════════════════════════════════════════════
 
+    /** Mouse scroll in edit mode: adjust road width. */
+    static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
+        if (!RoadEditorClientState.isEditing()) return;
+        event.setCanceled(true);
+        int delta = event.getScrollDeltaY() > 0 ? 1 : -1;
+        RoadEditorClientState.adjustWidth(delta);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal(
+                            "§7[RoadEditor] Width: §f" + RoadEditorClientState.getCurrentWidth()),
+                    true);
+        }
+    }
+
     /** Pre-tick: consume MC key mappings when hovering an edge / in path-planning mode
      *  so the vanilla attack / use handling doesn't also fire. */
     static void onClientTickPre(ClientTickEvent.Pre event) {
@@ -506,8 +521,9 @@ public final class RoadEditorRenderer {
             BlockPos ePos = RoadEditorClientState.getEndNodePos();
             if (sId != null && eId != null && sPos != null && ePos != null) {
                 List<BlockPos> wps = RoadEditorClientState.getWaypoints();
+                int width = RoadEditorClientState.getCurrentWidth();
                 PacketDistributor.sendToServer(
-                        new RoadEdgePlanPacket(sId, sPos, eId, ePos, wps, true));
+                        new RoadEdgePlanPacket(sId, sPos, eId, ePos, wps, true, width));
                 if (mc.player != null) {
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal(

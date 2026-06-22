@@ -47,6 +47,9 @@ public final class RoadEditorClientState {
     /** If set, the player is being asked to confirm replacing an existing edge. */
     private static volatile UUID pendingReplaceEdgeId = null;
 
+    /** Current road width (scroll-wheel adjustable), block count (odd: 1,3,5,7,9). */
+    private static volatile int currentWidth = 3;
+
     private RoadEditorClientState() {}
 
     // ── Edit mode ──
@@ -79,6 +82,7 @@ public final class RoadEditorClientState {
         LOGGER.info("[RoadEditor] clearSnapshot");
         cachedNetwork = new RoadNetwork();
         hoveredEdgeId = null;
+        currentWidth = 3;
         clearSelection();
     }
 
@@ -210,6 +214,20 @@ public final class RoadEditorClientState {
 
     public static void setPendingReplaceEdgeId(UUID edgeId) {
         pendingReplaceEdgeId = edgeId;
+    }
+
+    // ── Road width ──
+
+    public static int getCurrentWidth() { return currentWidth; }
+
+    /** Adjust width by ±2 (keep odd: 1,3,5,7,9). */
+    public static void adjustWidth(int delta) {
+        int w = currentWidth + delta * 2;
+        w = Math.max(1, Math.min(9, w));
+        if (w % 2 == 0) w += delta > 0 ? 1 : -1; // keep odd
+        w = Math.max(1, Math.min(9, w));
+        currentWidth = w;
+        LOGGER.info("[RoadEditor] Width set to {}", currentWidth);
     }
 
     // ── Clear state ──

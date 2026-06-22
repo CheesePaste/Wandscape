@@ -52,14 +52,16 @@ public final class RoadBuilder {
      * @param buildingBounds building bounding boxes to avoid
      * @param occupiedTiles  mutable set of already-claimed 3D positions;
      *                       updated in-place with all tiles placed by this call
+     * @param roadWidth      road width in blocks (e.g. 3 = 3-wide, halfWidth = 1)
      */
     public static JsonArray buildTiles(Level level, List<PathPoint> path,
                                         String tier,
                                         Collection<BoundingBox> buildingBounds,
-                                        Set<PathPoint> occupiedTiles) {
+                                        Set<PathPoint> occupiedTiles,
+                                        int roadWidth) {
         RoadConfig config = RoadConfig.getInstance();
         List<RoadConfig.WeightedBlock> palette = config.getSurfacePalette();
-        int halfWidth = config.getDefaultWidth() / 2;
+        int halfWidth = roadWidth / 2;
         int n = path.size();
 
         JsonArray tiles = new JsonArray();
@@ -144,7 +146,8 @@ public final class RoadBuilder {
                                 cutDepth, maxCut, tx, actualY, tz);
                     }
                 }
-                int clearTop = Math.max(actualY + 2, terrainY);
+                // Clear at least 2 blocks headroom, at most 3 blocks above road surface.
+                int clearTop = Math.max(actualY + 2, Math.min(terrainY, actualY + 3));
                 for (int hy = actualY + 1; hy <= clearTop; hy++) {
                     PathPoint headPt = new PathPoint(tx, hy, tz);
                     if (occupiedTiles.contains(headPt)) continue; // protect upper road

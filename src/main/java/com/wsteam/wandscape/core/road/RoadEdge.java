@@ -36,6 +36,7 @@ public class RoadEdge {
     private EdgeStatus status;
     private Long decorationTaskId; // null until decoration enqueued
     private int pendingSegmentCount;
+    private int width; // road width in blocks (default 3, editable in road editor)
     private final Set<UUID> completedSegmentIds = new HashSet<>();
     /** All block positions modified by this road edge (surface + fill + excavation + decoration). */
     private final Set<PathPoint> placedBlocks = new HashSet<>();
@@ -49,6 +50,7 @@ public class RoadEdge {
         this.path = new ArrayList<>(path);
         this.segmentTaskIds = new ArrayList<>();
         this.status = EdgeStatus.PLANNED;
+        this.width = 3;
     }
 
     /** Full constructor with status and existing task IDs (used by NBT load). */
@@ -62,6 +64,7 @@ public class RoadEdge {
         this.path = new ArrayList<>(path);
         this.segmentTaskIds = new ArrayList<>(segmentTaskIds);
         this.status = status;
+        this.width = 3;
     }
 
     // ---- Getters ----
@@ -94,6 +97,9 @@ public class RoadEdge {
     public void setStatus(EdgeStatus status) { this.status = status; }
 
     public void setDecorationTaskId(long taskId) { this.decorationTaskId = taskId; }
+
+    public int getWidth() { return width; }
+    public void setWidth(int w) { this.width = w; }
 
     // ---- Segment completion tracking ----
 
@@ -136,6 +142,7 @@ public class RoadEdge {
         return "RoadEdge[id=" + edgeId + " from=" + fromNodeId
                 + " to=" + toNodeId + " tier=" + tier
                 + " status=" + status + " pathLen=" + path.size()
+                + " width=" + width
                 + " segments=" + segmentTaskIds.size() + "]";
     }
 }

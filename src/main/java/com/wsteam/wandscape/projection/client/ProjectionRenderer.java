@@ -1,13 +1,14 @@
 package com.wsteam.wandscape.projection.client;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -16,35 +17,39 @@ import com.wsteam.wandscape.projection.data.BuildingSlot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * World-space rendering for soul projection mode.
  *
  * <p>Renders:
  * <ul>
- *   <li>Ghost building preview — wireframe outline + translucent top-face quads
- *       at the targeted block position, colored green (valid) or red (blocked).</li>
- *   <li>Body anchor meditation beam — translucent vertical pillar at the
+ *   <li>Ghost building preview — actual textured block models rendered
+ *       semi-transparently at the targeted position via
+ *       {@link BlockRenderDispatcher#renderSingleBlock}.</li>
+ *   <li>Body anchor meditation beam — translucent purple pillar at the
  *       position where the player left their body.</li>
+ *   <li>Red wireframe boundary when overlapping an existing building.</li>
  * </ul>
- *
- * <p>Rendering patterns are reused from {@code RoadEditorRenderer}.
  */
 public final class ProjectionRenderer {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** Half-size of wireframe box per block. */
-    private static final float BOX_HALF = 0.5f;
-    /** Y offset above block surface for translucent face quads. */
-    private static final float FACE_Y_OFFSET = 1.02f;
-    /** Alpha values for ghost blocks (0–255). */
-    private static final int GHOST_VALID_ALPHA = 100;
-    private static final int GHOST_INVALID_ALPHA = 120;
-    /** Beam dimensions. */
+    /** Alpha factor for ghost blocks (0.0-1.0). Applied via setColor interception. */
+    private static final float GHOST_ALPHA = 0.40f;
+    /** Full brightness: block=15, sky=15 (LightTexture.pack(15,15)). */
+    private static final int FULL_BRIGHT = 0xF000F0;
+    /** Beam constants. */
     private static final float BEAM_HALF = 0.25f;
     private static final float BEAM_HEIGHT = 3.0f;
     private static final int BEAM_ALPHA_BASE = 80;
@@ -74,77 +79,142 @@ public final class ProjectionRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        // ── Camera-relative transform ──
         Vec3 camPos = event.getCamera().getPosition();
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
-        PoseStack.Pose poseEntry = poseStack.last();
 
-        // 1. Ghost building preview
-        renderGhostPreview(mc, bufferSource, poseEntry);
-
-        // 2. Body anchor beam
-        renderBodyBeam(bufferSource, poseEntry);
+        renderGhostPreview(mc, bufferSource, poseStack);
+        renderBodyBeam(bufferSource, poseStack.last());
 
         poseStack.popPose();
     }
 
-    // ── Ghost preview ──
+    // ── Ghost preview (real block rendering) ──
 
     private static void renderGhostPreview(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
-                                           PoseStack.Pose poseEntry) {
+                                           PoseStack poseStack) {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) return;
 
-        List<BuildingSlot> slots = ProjectionClientState.getBuildingSlots();
-        int index = ProjectionClientState.getSelectedSlotIndex();
-        if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
-
-        BuildingSlot slot = slots.get(index);
-        BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
+        BuildingSlot slot = getSelectedSlot();
+        BuildingConfig config = (slot != null) ? BuildingConfigLoader.getInstance().get(slot.id()) : null;
         if (config == null) return;
 
         boolean overlap = ProjectionClientState.isOverlapDetected();
-        int r, g, b;
-        if (overlap) {
-            r = 255; g = 60; b = 60; // red = invalid
-        } else {
-            r = 0; g = 255; b = 136; // green = valid
+
+        Map<BlockOffset, BlockState> blockStates = resolveBlockStates(config);
+        if (blockStates.isEmpty()) return;
+
+        BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
+
+        // GhostBufferSource: wraps every VertexConsumer returned by bufferSource
+        // to multiply alpha on setColor. All default methods (putBulkData, addVertex
+        // with color/light/overlay) transitively call setColor, so alpha is applied
+        // uniformly to all rendering paths.
+        MultiBufferSource ghostSource = renderType -> {
+            VertexConsumer real = bufferSource.getBuffer(renderType);
+            return new VertexConsumer() {
+                @Override
+                public VertexConsumer addVertex(float x, float y, float z) {
+                    real.addVertex(x, y, z);
+                    return this;
+                }
+
+                @Override
+                public VertexConsumer setColor(int r, int g, int b, int a) {
+                    real.setColor(r, g, b, (int) (a * GHOST_ALPHA));
+                    return this;
+                }
+
+                @Override
+                public VertexConsumer setUv(float u, float v) {
+                    real.setUv(u, v);
+                    return this;
+                }
+
+                @Override
+                public VertexConsumer setUv1(int u, int v) {
+                    real.setUv1(u, v);
+                    return this;
+                }
+
+                @Override
+                public VertexConsumer setUv2(int u, int v) {
+                    real.setUv2(u, v);
+                    return this;
+                }
+
+                @Override
+                public VertexConsumer setNormal(float x, float y, float z) {
+                    real.setNormal(x, y, z);
+                    return this;
+                }
+            };
+        };
+
+        for (var entry : blockStates.entrySet()) {
+            BlockOffset offset = entry.getKey();
+            BlockState state = entry.getValue();
+
+            poseStack.pushPose();
+            poseStack.translate(
+                    ghostPos.getX() + offset.x(),
+                    ghostPos.getY() + offset.y(),
+                    ghostPos.getZ() + offset.z());
+
+            blockRenderer.renderSingleBlock(
+                    state, poseStack, ghostSource,
+                    FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                    ModelData.EMPTY, null);
+
+            poseStack.popPose();
         }
 
-        // 1a. Wireframe boxes for each pattern block
-        VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
-        for (BlockOffset offset : config.pattern()) {
-            float cx = ghostPos.getX() + offset.x() + 0.5f;
-            float cy = ghostPos.getY() + offset.y() + 0.5f;
-            float cz = ghostPos.getZ() + offset.z() + 0.5f;
-            drawWireframeBox(lineVc, poseEntry, cx, cy, cz, BOX_HALF, r, g, b);
-        }
-        bufferSource.endBatch(RenderType.lines());
+        // Flush entity-block render types
+        bufferSource.endBatch(Sheets.cutoutBlockSheet());
+        bufferSource.endBatch(Sheets.translucentCullBlockSheet());
+        bufferSource.endBatch(Sheets.translucentItemSheet());
 
-        // 1b. Translucent top-face quads
-        VertexConsumer quadVc = bufferSource.getBuffer(RenderType.debugQuads());
-        int alpha = overlap ? GHOST_INVALID_ALPHA : GHOST_VALID_ALPHA;
-        for (BlockOffset offset : config.pattern()) {
-            float fx = ghostPos.getX() + offset.x() + 0.5f;
-            float fy = ghostPos.getY() + offset.y() + FACE_Y_OFFSET;
-            float fz = ghostPos.getZ() + offset.z() + 0.5f;
-            drawMarkerSquare(quadVc, poseEntry, fx, fy, fz, BOX_HALF, r, g, b, alpha);
-        }
-        bufferSource.endBatch(RenderType.debugQuads());
-
-        // 1c. Boundary box outline (if building has a boundary)
-        var boundary = config.boundary();
-        if (boundary != null) {
-            VertexConsumer boundVc = bufferSource.getBuffer(RenderType.lines());
-            drawAABBOutline(boundVc, poseEntry, ghostPos,
-                    boundary.min(), boundary.max(),
-                    255, 200, 100); // orange
+        // Overlap = red wireframe boundary
+        if (overlap && config.boundary() != null) {
+            VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+            drawAABBOutline(lineVc, poseStack.last(), ghostPos,
+                    config.boundary().min(), config.boundary().max(), 255, 40, 40);
             bufferSource.endBatch(RenderType.lines());
         }
+    }
+
+    // ── Block mapping resolution ──
+
+    private static Map<BlockOffset, BlockState> resolveBlockStates(BuildingConfig config) {
+        Map<String, String> blockMapping = config.blockMapping();
+        if (blockMapping == null || blockMapping.isEmpty()) return Map.of();
+
+        Map<BlockOffset, BlockState> result = new HashMap<>();
+        for (BlockOffset offset : config.pattern()) {
+            String key = offset.toKey();
+            String blockId = blockMapping.get(key);
+            if (blockId == null) continue;
+            try {
+                var block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
+                if (block != null) {
+                    result.put(offset, block.defaultBlockState());
+                }
+            } catch (Exception e) {
+                LOGGER.trace("[Projection] Bad block '{}' at {}: {}", blockId, key, e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    private static BuildingSlot getSelectedSlot() {
+        List<BuildingSlot> slots = ProjectionClientState.getBuildingSlots();
+        int index = ProjectionClientState.getSelectedSlotIndex();
+        if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
+        return slots.get(index);
     }
 
     // ── Body anchor beam ──
@@ -154,7 +224,6 @@ public final class ProjectionRenderer {
         BlockPos anchor = ProjectionClientState.getBodyAnchor();
         if (anchor == null) return;
 
-        // Pulsing alpha: oscillate based on system time
         long timeMs = System.currentTimeMillis();
         float pulse = (float) Math.sin(timeMs * 0.005) * 0.4f + 0.6f;
         int alpha = (int) (BEAM_ALPHA_BASE * pulse);
@@ -164,13 +233,10 @@ public final class ProjectionRenderer {
         float cz = anchor.getZ() + 0.5f;
         float hw = BEAM_HALF;
         float top = cy + BEAM_HEIGHT;
-
-        // Color: light purple (soul projection theme)
         int r = 170, g = 136, b = 255;
 
         VertexConsumer vc = bufferSource.getBuffer(RenderType.debugQuads());
 
-        // 4 vertical faces
         // Front (+Z)
         vc.addVertex(poseEntry, cx - hw, cy, cz + hw).setColor(r, g, b, alpha);
         vc.addVertex(poseEntry, cx + hw, cy, cz + hw).setColor(r, g, b, alpha);
@@ -191,8 +257,7 @@ public final class ProjectionRenderer {
         vc.addVertex(poseEntry, cx + hw, cy, cz - hw).setColor(r, g, b, alpha);
         vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
         vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-
-        // Top face
+        // Top
         vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
         vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
         vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
@@ -202,52 +267,11 @@ public final class ProjectionRenderer {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ── Drawing helpers (reused from RoadEditorRenderer pattern) ──
+    // ── Boundary wireframe ──
     // ═══════════════════════════════════════════════════════════════
 
-    /** Draw a wireframe box centered at (cx, cy, cz) with half-size. */
-    private static void drawWireframeBox(VertexConsumer vc, PoseStack.Pose poseEntry,
-                                          float cx, float cy, float cz,
-                                          float half, int r, int g, int b) {
-        float x0 = cx - half, x1 = cx + half;
-        float y0 = cy - half, y1 = cy + half;
-        float z0 = cz - half, z1 = cz + half;
-
-        seg(vc, poseEntry, x0, y0, z0, x1, y0, z0, r, g, b);
-        seg(vc, poseEntry, x1, y0, z0, x1, y0, z1, r, g, b);
-        seg(vc, poseEntry, x1, y0, z1, x0, y0, z1, r, g, b);
-        seg(vc, poseEntry, x0, y0, z1, x0, y0, z0, r, g, b);
-        seg(vc, poseEntry, x0, y1, z0, x1, y1, z0, r, g, b);
-        seg(vc, poseEntry, x1, y1, z0, x1, y1, z1, r, g, b);
-        seg(vc, poseEntry, x1, y1, z1, x0, y1, z1, r, g, b);
-        seg(vc, poseEntry, x0, y1, z1, x0, y1, z0, r, g, b);
-        seg(vc, poseEntry, x0, y0, z0, x0, y1, z0, r, g, b);
-        seg(vc, poseEntry, x1, y0, z0, x1, y1, z0, r, g, b);
-        seg(vc, poseEntry, x1, y0, z1, x1, y1, z1, r, g, b);
-        seg(vc, poseEntry, x0, y0, z1, x0, y1, z1, r, g, b);
-    }
-
-    private static void seg(VertexConsumer vc, PoseStack.Pose poseEntry,
-                            float x1, float y1, float z1, float x2, float y2, float z2,
-                            int r, int g, int b) {
-        vc.addVertex(poseEntry, x1, y1, z1).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
-        vc.addVertex(poseEntry, x2, y2, z2).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
-    }
-
-    /** Draw a 1×1 square on the top face of a block. */
-    private static void drawMarkerSquare(VertexConsumer vc, PoseStack.Pose poseEntry,
-                                          float cx, float cy, float cz,
-                                          float half, int r, int g, int b, int a) {
-        vc.addVertex(poseEntry, cx - half, cy, cz - half).setColor(r, g, b, a);
-        vc.addVertex(poseEntry, cx + half, cy, cz - half).setColor(r, g, b, a);
-        vc.addVertex(poseEntry, cx + half, cy, cz + half).setColor(r, g, b, a);
-        vc.addVertex(poseEntry, cx - half, cy, cz + half).setColor(r, g, b, a);
-    }
-
-    /** Draw a wireframe AABB outline around a boundary box relative to an anchor position. */
     private static void drawAABBOutline(VertexConsumer vc, PoseStack.Pose poseEntry,
-                                         BlockPos anchor,
-                                         BlockOffset min, BlockOffset max,
+                                         BlockPos anchor, BlockOffset min, BlockOffset max,
                                          int r, int g, int b) {
         float x0 = anchor.getX() + min.x() + 0.5f;
         float y0 = anchor.getY() + min.y() + 0.5f;
@@ -268,5 +292,12 @@ public final class ProjectionRenderer {
         seg(vc, poseEntry, x1, y0, z0, x1, y1, z0, r, g, b);
         seg(vc, poseEntry, x1, y0, z1, x1, y1, z1, r, g, b);
         seg(vc, poseEntry, x0, y0, z1, x0, y1, z1, r, g, b);
+    }
+
+    private static void seg(VertexConsumer vc, PoseStack.Pose poseEntry,
+                            float x1, float y1, float z1, float x2, float y2, float z2,
+                            int r, int g, int b) {
+        vc.addVertex(poseEntry, x1, y1, z1).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
+        vc.addVertex(poseEntry, x2, y2, z2).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
     }
 }

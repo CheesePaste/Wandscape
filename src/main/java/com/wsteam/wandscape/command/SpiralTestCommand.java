@@ -100,7 +100,7 @@ public final class SpiralTestCommand {
         String tier = "dirt";
         Set<PathPoint> occupied = new HashSet<>();
         JsonArray tiles = RoadBuilder.buildTiles(
-                level, path, tier, List.of(), occupied);
+                level, path, tier, List.of(), occupied, 3);
 
         // ── 4. Directly set blocks (no tasks, no NPCs) ──
         int placed = 0;

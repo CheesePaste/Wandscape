@@ -94,7 +94,9 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
                 String kind = entity.getOpKind();
                 if (kind != null && kind.startsWith("ritual:")) {
                     spawnRitualCircle(entity, kind.substring(7));
-                } else {
+                } else if (entity.getDebugTarget().isPresent()) {
+                    // Only spawn cast ray when there's a target — avoid particles
+                    // during movement when the NPC is active but has no op target.
                     spawnCastRay(entity);
                 }
             }

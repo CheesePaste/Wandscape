@@ -84,6 +84,7 @@ public final class RoadSavedData extends SavedData {
             e.putUUID("toNodeId", edge.getToNodeId());
             e.putString("tier", edge.getTier());
             e.putString("status", edge.getStatus().name());
+            e.putInt("width", edge.getWidth());
 
             // Path: list of {x, y, z} 3D points
             ListTag pathTag = new ListTag();
@@ -169,6 +170,10 @@ public final class RoadSavedData extends SavedData {
 
             RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId,
                     tier, path, taskIds, status);
+
+            if (e.contains("width")) {
+                edge.setWidth(e.getInt("width"));
+            }
 
             // Placed block positions (for clean demolition)
             if (e.contains("placedBlocks")) {

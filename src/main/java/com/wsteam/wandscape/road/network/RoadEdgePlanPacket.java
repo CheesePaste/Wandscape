@@ -55,7 +55,8 @@ public record RoadEdgePlanPacket(
         UUID toNodeId,
         BlockPos toPos,
         List<BlockPos> waypoints,
-        boolean force) implements CustomPacketPayload {
+        boolean force,
+        int width) implements CustomPacketPayload {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -105,7 +106,8 @@ public record RoadEdgePlanPacket(
         }
 
         // ── Phase 2: Build path ──
-        int amplitude = RoadConfig.getInstance().getDefaultWidth() * 2;
+        int edgeWidth = packet.width > 0 ? packet.width : 3;
+        int amplitude = edgeWidth * 2;
         PathPoint cursor = new PathPoint(
                 fromNode.pos().x(), fromNode.pos().y(), fromNode.pos().z());
         List<PathPoint> fullPath = new ArrayList<>();
@@ -143,6 +145,7 @@ public record RoadEdgePlanPacket(
                 UUID.randomUUID(),
                 packet.fromNodeId, packet.toNodeId,
                 "dirt", fullPath);
+        edge.setWidth(edgeWidth);
         network.addEdge(edge);
 
         // Collect building bounds for collision avoidance
@@ -165,7 +168,6 @@ public record RoadEdgePlanPacket(
         RoadEventListener.enqueueEdge(edge, level, RoadConfig.getInstance(),
                 buildingBounds, occupiedTiles);
 
-        edge.incrementPendingSegments(1); // will be refined by enqueueEdge
         roadData.markChanged();
         RoadEditorNetwork.sendSyncToEditing(player.server);
 
@@ -200,6 +202,7 @@ public record RoadEdgePlanPacket(
             buf.writeBlockPos(wp);
         }
         buf.writeBoolean(pkt.force);
+        buf.writeVarInt(pkt.width);
     }
 
     static RoadEdgePlanPacket read(RegistryFriendlyByteBuf buf) {
@@ -213,6 +216,7 @@ public record RoadEdgePlanPacket(
             wps.add(buf.readBlockPos());
         }
         boolean force = buf.readBoolean();
-        return new RoadEdgePlanPacket(from, fromPos, to, toPos, wps, force);
+        int width = buf.readVarInt();
+        return new RoadEdgePlanPacket(from, fromPos, to, toPos, wps, force, width);
     }
 }
