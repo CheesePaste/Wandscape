@@ -11,11 +11,14 @@ import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.shared.ui.task.TaskEditorScreen;
+import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomData;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -50,6 +53,13 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping OPEN_TASK_EDITOR = new KeyMapping(
+            "key.wandscape.task_editor",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_T,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         // Register game-bus listeners on the NeoForge EVENT_BUS (not mod bus)
@@ -67,6 +77,7 @@ public class WandscapeClient {
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_DEMO_SCREEN);
         event.register(OPEN_UI_EDITOR);
+        event.register(OPEN_TASK_EDITOR);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
@@ -75,6 +86,10 @@ public class WandscapeClient {
         }
         while (OPEN_UI_EDITOR.consumeClick()) {
             Minecraft.getInstance().setScreen(new UIEditorScreen());
+        }
+        while (OPEN_TASK_EDITOR.consumeClick()) {
+            PacketDistributor.sendToServer(new TaskEditorOpenPacket());
+            Minecraft.getInstance().setScreen(new TaskEditorScreen());
         }
     }
 

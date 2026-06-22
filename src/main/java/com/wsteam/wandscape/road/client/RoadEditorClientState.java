@@ -2,6 +2,9 @@ package com.wsteam.wandscape.road.client;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+
+import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 
 /**
@@ -9,6 +12,8 @@ import com.wsteam.wandscape.core.road.RoadNetwork;
  * Accessible from both the renderer and the command/packet handlers.
  */
 public final class RoadEditorClientState {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     private static volatile boolean editMode = false;
     private static volatile RoadNetwork cachedNetwork = new RoadNetwork();
@@ -26,6 +31,7 @@ public final class RoadEditorClientState {
     }
 
     public static void setEditMode(boolean editing) {
+        LOGGER.info("[RoadEditor] setEditMode: {} -> {}", editMode, editing);
         editMode = editing;
         if (!editing) {
             clearSnapshot();
@@ -39,10 +45,13 @@ public final class RoadEditorClientState {
     }
 
     public static void setNetworkSnapshot(RoadNetwork network) {
+        LOGGER.info("[RoadEditor] setNetworkSnapshot: nodes={} edges={}",
+                network.nodeCount(), network.edgeCount());
         cachedNetwork = network;
     }
 
     public static void clearSnapshot() {
+        LOGGER.info("[RoadEditor] clearSnapshot");
         cachedNetwork = new RoadNetwork();
         hoveredEdgeId = null;
         selectedFromNodeId = null;

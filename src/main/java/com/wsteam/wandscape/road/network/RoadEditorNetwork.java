@@ -5,6 +5,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+
+import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
 
@@ -18,6 +21,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * and handles syncing network state to them.
  */
 public final class RoadEditorNetwork {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     /** Server-side set of editing player UUIDs. */
     private static final Set<UUID> editingPlayers =
@@ -56,6 +61,9 @@ public final class RoadEditorNetwork {
         RoadNetwork network = roadData.getNetwork();
         RoadNetworkSyncPacket packet = RoadNetworkSyncPacket.from(
                 network, roadData.getColonyId());
+        LOGGER.info("[RoadEditor] sendSyncToPlayer: player={} nodes={} edges={} colonyId={}",
+                player.getGameProfile().getName(), network.nodeCount(),
+                network.edgeCount(), roadData.getColonyId());
         PacketDistributor.sendToPlayer(player, packet);
     }
 
@@ -82,6 +90,7 @@ public final class RoadEditorNetwork {
      * Send exit-edit packet to a specific player.
      */
     public static void sendExitToPlayer(ServerPlayer player) {
+        LOGGER.info("[RoadEditor] sendExitToPlayer: player={}", player.getGameProfile().getName());
         PacketDistributor.sendToPlayer(player, RoadNetworkSyncPacket.exitPacket());
     }
 }

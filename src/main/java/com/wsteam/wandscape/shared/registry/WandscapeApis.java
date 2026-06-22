@@ -42,6 +42,8 @@ public final class WandscapeApis {
         if (taskApi == null) throw new IllegalStateException("Module TaskSystem not loaded");
         return taskApi;
     }
+    @javax.annotation.Nullable
+    public static TaskApi getTaskApiSilently() { return taskApi; }
     public static void setTaskApi(TaskApi api) { taskApi = api; }
 
     public static NpcApi getNpcApi() {

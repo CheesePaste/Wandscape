@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+
+import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -30,6 +33,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPayload {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public static final Type<RoadNetworkSyncPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "road_network_sync"));
 
@@ -46,6 +51,7 @@ public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPay
     /** Build a sync packet from a live RoadNetwork. */
     public static RoadNetworkSyncPacket from(RoadNetwork network, UUID colonyId) {
         CompoundTag root = new CompoundTag();
+        root.putBoolean("enterEdit", true);
         if (colonyId != null) {
             root.putUUID("colonyId", colonyId);
         }
@@ -89,10 +95,10 @@ public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPay
         return new RoadNetworkSyncPacket(root);
     }
 
-    /** Build an exit-edit-mode packet (null colonyId signals exit). */
+    /** Build an exit-edit-mode packet. */
     public static RoadNetworkSyncPacket exitPacket() {
         CompoundTag root = new CompoundTag();
-        // No colonyId → client treats as exit
+        root.putBoolean("enterEdit", false);
         root.put("nodes", new ListTag());
         root.put("edges", new ListTag());
         return new RoadNetworkSyncPacket(root);
@@ -100,9 +106,9 @@ public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPay
 
     // ── Decoding (client-side) ──
 
-    /** Whether this packet signals entering edit mode (has colonyId). */
+    /** Whether this packet signals entering edit mode (explicit boolean flag). */
     public boolean isEnterEdit() {
-        return data.hasUUID("colonyId");
+        return data.getBoolean("enterEdit");
     }
 
     /** Reconstruct a RoadNetwork from the packet data. */
@@ -157,11 +163,16 @@ public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPay
 
     /** Handle on client: update editor state with network data. */
     public static void handleClient(RoadNetworkSyncPacket packet) {
+        LOGGER.info("[RoadEditor] RoadNetworkSyncPacket received: enterEdit={} dataSize={}",
+                packet.isEnterEdit(), packet.data.toString().length());
         if (packet.isEnterEdit()) {
             RoadNetwork network = packet.toNetwork();
+            LOGGER.info("[RoadEditor] handleClient: parsed network nodes={} edges={}",
+                    network.nodeCount(), network.edgeCount());
             RoadEditorClientState.setNetworkSnapshot(network);
             RoadEditorClientState.setEditMode(true);
         } else {
+            LOGGER.info("[RoadEditor] handleClient: exit edit mode");
             RoadEditorClientState.clearSnapshot();
             RoadEditorClientState.setEditMode(false);
         }

@@ -2,6 +2,9 @@ package com.wsteam.wandscape.road.network;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+
+import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -17,6 +20,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record RoadEdgeRemovePacket(UUID edgeId) implements CustomPacketPayload {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public static final Type<RoadEdgeRemovePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "road_edge_remove"));
 
@@ -30,13 +35,19 @@ public record RoadEdgeRemovePacket(UUID edgeId) implements CustomPacketPayload {
 
     /** Handle on server: remove the edge and sync all editing clients. */
     public static void handleServer(RoadEdgeRemovePacket packet, ServerPlayer player) {
+        LOGGER.info("[RoadEditor] RoadEdgeRemovePacket received: edgeId={} player={}",
+                packet.edgeId, player.getGameProfile().getName());
         var roadApi = WandscapeApis.getRoadApi();
-        if (roadApi == null) return;
+        if (roadApi == null) {
+            LOGGER.warn("[RoadEditor] RoadApi is null — cannot remove edge");
+            return;
+        }
 
         roadApi.removeEdge(null, packet.edgeId);
 
         // Sync updated network to all editing players
         RoadEditorNetwork.sendSyncToEditing(player.server);
+        LOGGER.info("[RoadEditor] Edge {} removed, synced to editing players", packet.edgeId);
     }
 
     // ── StreamCodec ──

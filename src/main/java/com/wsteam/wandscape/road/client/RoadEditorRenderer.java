@@ -4,9 +4,11 @@ import java.util.List;
 import java.util.UUID;
 
 import org.joml.Matrix4f;
+import org.slf4j.Logger;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -31,45 +33,76 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class RoadEditorRenderer {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final double HOVER_THRESHOLD = 2.0;
     private static final double NODE_HOVER_THRESHOLD = 3.0;
     private static final float NODE_BOX_HALF = 0.2f;
+
+    /** Set to true after first render call to suppress per-frame log spam. */
+    private static boolean firstRenderLogged = false;
+    private static int frameCounter = 0;
 
     private RoadEditorRenderer() {}
 
     // ── Registration ──
 
     public static void register() {
+        LOGGER.info("[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent");
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(RenderLevelStageEvent.class, RoadEditorRenderer::onRenderLevelStage);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(ClientTickEvent.Post.class, RoadEditorRenderer::onClientTick);
+        LOGGER.info("[RoadEditor] register() — done");
     }
 
     // ── World rendering ──
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (!RoadEditorClientState.isEditing()) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        frameCounter++;
+        boolean editing = RoadEditorClientState.isEditing();
+        boolean isTripwire = event.getStage() == RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS;
+
+        if (frameCounter <= 5) {
+            LOGGER.info("[RoadEditor] onRenderLevelStage frame={} stage={} editing={} isTripwire={}",
+                    frameCounter, event.getStage(), editing, isTripwire);
+        }
+        // Heartbeat every 200 render calls (when editing and on right stage)
+        if (editing && isTripwire && frameCounter % 200 == 0) {
+            LOGGER.info("[RoadEditor] render heartbeat frame={} nodes={} edges={}",
+                    frameCounter,
+                    RoadEditorClientState.getCachedNetwork().nodeCount(),
+                    RoadEditorClientState.getCachedNetwork().edgeCount());
+        }
+
+        if (!editing) return;
+        if (!isTripwire) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         PoseStack poseStack = event.getPoseStack();
-        Camera camera = event.getCamera();
-        Vec3 camPos = camera.getPosition();
+        // Pose stack already has camera transform applied by LevelRenderer.
+        // Do NOT push/translate camera here — vertices are in world space.
 
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
         VertexConsumer vc = bufferSource.getBuffer(RenderType.lines());
 
         poseStack.pushPose();
-        poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
         Matrix4f poseMat = poseStack.last().pose();
         PoseStack.Pose poseEntry = poseStack.last();
 
         RoadNetwork network = RoadEditorClientState.getCachedNetwork();
         UUID hoveredId = RoadEditorClientState.getHoveredEdgeId();
+
+        int nodeCount = network.nodeCount();
+        int edgeCount = network.edgeCount();
+
+        if (!firstRenderLogged) {
+            firstRenderLogged = true;
+            LOGGER.info("[RoadEditor] RENDER START — nodes={} edges={} camPos={}",
+                    nodeCount, edgeCount, mc.gameRenderer.getMainCamera().getPosition());
+        }
 
         // ── Draw edges ──
         for (RoadEdge edge : network.getEdges().values()) {
@@ -149,6 +182,14 @@ public final class RoadEditorRenderer {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
+
+        // Log first tick
+        if (frameCounter == 0) {
+            LOGGER.info("[RoadEditor] FIRST TICK — editing={} network nodes={} edges={}",
+                    RoadEditorClientState.isEditing(),
+                    RoadEditorClientState.getCachedNetwork().nodeCount(),
+                    RoadEditorClientState.getCachedNetwork().edgeCount());
+        }
 
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 camPos = camera.getPosition();

@@ -32,11 +32,16 @@ import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
 import com.wsteam.wandscape.road.network.RoadEditorNetwork;
+import com.wsteam.wandscape.task.internal.TaskApiImpl;
+import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
+import com.wsteam.wandscape.task.network.TaskCreatePacket;
+import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.mojang.brigadier.CommandDispatcher;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
+import com.wsteam.wandscape.core.system.PlayerManualSource;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -206,6 +211,10 @@ public class Wandscape {
                         RoadNetworkSyncPacket.TYPE,
                         RoadNetworkSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> RoadNetworkSyncPacket.handleClient(packet))
+                .playToClient(
+                        BlueprintListResponsePacket.TYPE,
+                        BlueprintListResponsePacket.STREAM_CODEC,
+                        (packet, ctx) -> BlueprintListResponsePacket.handleClient(packet))
                 .playToServer(
                         RoadEdgeRemovePacket.TYPE,
                         RoadEdgeRemovePacket.STREAM_CODEC,
@@ -213,7 +222,15 @@ public class Wandscape {
                 .playToServer(
                         RoadEdgePlanPacket.TYPE,
                         RoadEdgePlanPacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadEdgePlanPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()));
+                        (packet, ctx) -> RoadEdgePlanPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        TaskEditorOpenPacket.TYPE,
+                        TaskEditorOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> TaskEditorOpenPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        TaskCreatePacket.TYPE,
+                        TaskCreatePacket.STREAM_CODEC,
+                        (packet, ctx) -> TaskCreatePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -251,6 +268,13 @@ public class Wandscape {
         WandscapeEngine.setRoadSavedData(roadSaved);
         WandscapeApis.setRoadApi(new RoadApiImpl());
         LOGGER.info("Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
+
+        // TaskApi — wire manual task publishing for GUI
+        if (world != null && world.taskPool != null) {
+            PlayerManualSource playerSource = new PlayerManualSource(world.taskPool);
+            new TaskApiImpl(playerSource, world.blueprintRegistry);
+            LOGGER.info("TaskApi wired — manual task publishing available");
+        }
     }
 
     @SubscribeEvent
