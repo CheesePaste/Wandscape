@@ -126,6 +126,40 @@ public class RoadNetwork {
         return edges.size();
     }
 
+    // ---- Path planning queries ----
+
+    /**
+     * Find the edge connecting two nodes, if one exists.
+     * Checks both directions (from→to and to→from).
+     *
+     * @return the edge ID, or empty if no edge connects them
+     */
+    public Optional<UUID> findEdgeBetween(UUID nodeA, UUID nodeB) {
+        for (RoadEdge e : edges.values()) {
+            UUID from = e.getFromNodeId(), to = e.getToNodeId();
+            if ((from.equals(nodeA) && to.equals(nodeB))
+                    || (from.equals(nodeB) && to.equals(nodeA))) {
+                return Optional.of(e.getEdgeId());
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Find a node at a specific XZ position (ignoring Y).
+     * Useful for checking whether the player clicked on an existing node.
+     *
+     * @return the node, or empty if no node exists at this XZ
+     */
+    public Optional<RoadNode> findNodeAtXZ(int x, int z) {
+        for (RoadNode node : nodes.values()) {
+            if (node.pos().x() == x && node.pos().z() == z) {
+                return Optional.of(node);
+            }
+        }
+        return Optional.empty();
+    }
+
     // ---- Mutation operations (editor support) ----
 
     /** Remove an edge by UUID. Returns false if not found. */

@@ -380,7 +380,11 @@ public final class RoadEventListener {
 
     // ---- Helpers ----
 
-    private static void enqueueEdge(RoadEdge edge, ServerLevel level, RoadConfig config,
+    /**
+     * Enqueue all segments of an edge as NPC build tasks.
+     * Public for use by the road editor path planning system.
+     */
+    public static void enqueueEdge(RoadEdge edge, ServerLevel level, RoadConfig config,
                                      List<BoundingBox> buildingBounds,
                                      Set<XZPoint> occupiedTiles) {
         List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(

@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.core.road.PathGenerator;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -20,6 +21,9 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -29,12 +33,20 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * World-space rendering of the road network for the V1 road editor.
  *
  * <p>Draws edges as wide translucent quads on the road surface (color-coded by
- * status) and nodes as small wireframe boxes.  Performs crosshair-to-edge
- * hover detection on the client tick.
+ * status), nodes as wireframe boxes, and path-planning preview markers.
+ * Performs crosshair-to-edge hover detection and path-planning input handling.
  *
- * <p><b>Coordinate conventions:</b> The pose stack is pushed and translated by
- * negative camera position so world-space vertex coordinates become camera-relative
- * — matching the vanilla entity / block-entity pattern.
+ * <p><b>Controls (in edit mode):</b>
+ * <pre>
+ *   Left-click  — remove hovered edge
+ *   Right-click — path planning: select start node, add waypoints, or select end node
+ *   Backspace   — remove last waypoint
+ *   Escape      — cancel path planning
+ * </pre>
+ *
+ * <p><b>Path planning flow:</b>
+ * Right-click node → start. Right-click ground → waypoint.
+ * Right-click another node → send plan packet. Right-click same node → cancel.
  */
 public final class RoadEditorRenderer {
 
@@ -52,6 +64,8 @@ public final class RoadEditorRenderer {
     private static final float ROAD_FACE_Y_OFFSET = 1.02f;
     /** Y offset for node boxes above the node position. */
     private static final float NODE_Y_OFFSET = 0.5f;
+    /** Y offset for waypoint markers and preview line. */
+    private static final float PREVIEW_Y_OFFSET = 1.05f;
 
     /** Alpha values for road face rendering (0-255). */
     private static final int ALPHA_PLANNED = 100;
@@ -59,10 +73,16 @@ public final class RoadEditorRenderer {
     private static final int ALPHA_COMPLETE = 80;
     private static final int ALPHA_HOVERED = 180;
 
-    // GLFW raw mouse state for click detection (consumeClick is already drained by
-    // Minecraft's main tick by the time ClientTickEvent.Post fires).
+    // ── Raw input state ──
+
+    // Mouse (GLFW raw — consumeClick is already drained by Post)
     private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
+
+    // Keyboard (for Backspace / Escape / Enter)
+    private static boolean wasBackspaceDown = false;
+    private static boolean wasEscapeDown = false;
+    private static boolean wasEnterDown = false;
 
     private static boolean firstRenderLogged = false;
     private static int frameCounter = 0;
@@ -82,7 +102,9 @@ public final class RoadEditorRenderer {
         LOGGER.info("[RoadEditor] register() — done");
     }
 
+    // ═══════════════════════════════════════════════════════════════
     // ── World rendering ──
+    // ═══════════════════════════════════════════════════════════════
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
         frameCounter++;
@@ -107,9 +129,6 @@ public final class RoadEditorRenderer {
         if (mc.level == null) return;
 
         // ── Camera-relative setup ──
-        // The GPU modelView at this stage has camera rotation but NOT translation.
-        // We push the pose stack and translate by -cameraPos so world-space
-        // vertices become camera-relative.
         Vec3 camPos = event.getCamera().getPosition();
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
@@ -136,19 +155,18 @@ public final class RoadEditorRenderer {
             int r, g, b, a;
 
             if (hovered) {
-                r = 255; g = 40; b = 40; a = ALPHA_HOVERED;         // red highlight
+                r = 255; g = 40; b = 40; a = ALPHA_HOVERED;
             } else {
                 switch (edge.getStatus()) {
-                    case COMPLETE -> { r = 30;  g = 200; b = 50;  a = ALPHA_COMPLETE;  } // green
-                    case BUILDING -> { r = 220; g = 180; b = 30;  a = ALPHA_BUILDING; } // amber
-                    default        -> { r = 60;  g = 100; b = 240; a = ALPHA_PLANNED;  } // blue
+                    case COMPLETE -> { r = 30;  g = 200; b = 50;  a = ALPHA_COMPLETE;  }
+                    case BUILDING -> { r = 220; g = 180; b = 30;  a = ALPHA_BUILDING; }
+                    default        -> { r = 60;  g = 100; b = 240; a = ALPHA_PLANNED;  }
                 }
             }
 
             List<PathPoint> path = edge.getPath();
             int n = path.size();
             if (n < 2) {
-                // Single-point edge — draw just a corner square
                 PathPoint p = path.get(0);
                 drawCornerSquare(faceVc, poseEntry,
                         p.x() + 0.5f, p.y() + ROAD_FACE_Y_OFFSET, p.z() + 0.5f,
@@ -157,7 +175,6 @@ public final class RoadEditorRenderer {
             }
 
             int prevPerpDx = 0, prevPerpDz = 1;
-
             for (int i = 0; i < n - 1; i++) {
                 PathPoint p1 = path.get(i);
                 PathPoint p2 = path.get(i + 1);
@@ -169,7 +186,6 @@ public final class RoadEditorRenderer {
                 float by = p2.y() + ROAD_FACE_Y_OFFSET;
                 float bz = p2.z() + 0.5f;
 
-                // Compute perpendicular direction (matches RoadBuilder logic)
                 int perpDx = 0, perpDz = 0;
                 boolean moveX = p1.x() != p2.x();
                 boolean moveZ = p1.z() != p2.z();
@@ -178,13 +194,11 @@ public final class RoadEditorRenderer {
                 } else if (moveZ && !moveX) {
                     perpDx = 1;
                 } else {
-                    // Diagonal or no movement — carry forward previous perpendicular
                     perpDx = prevPerpDx;
                     perpDz = prevPerpDz;
                 }
 
                 float hw = ROAD_HALF_WIDTH;
-                // Quad vertices (QUADS order around the face, counter-clockwise from above)
                 faceVc.addVertex(poseEntry, ax - perpDx * hw, ay, az - perpDz * hw).setColor(r, g, b, a);
                 faceVc.addVertex(poseEntry, ax + perpDx * hw, ay, az + perpDz * hw).setColor(r, g, b, a);
                 faceVc.addVertex(poseEntry, bx + perpDx * hw, by, bz + perpDz * hw).setColor(r, g, b, a);
@@ -194,7 +208,6 @@ public final class RoadEditorRenderer {
                 prevPerpDz = perpDz;
             }
 
-            // Draw corner squares at every path point to fill gaps at turns
             for (PathPoint p : path) {
                 drawCornerSquare(faceVc, poseEntry,
                         p.x() + 0.5f, p.y() + ROAD_FACE_Y_OFFSET, p.z() + 0.5f,
@@ -204,15 +217,95 @@ public final class RoadEditorRenderer {
 
         bufferSource.endBatch(RenderType.debugQuads());
 
+        // ── Preview: planned path rendering ──
+        UUID startId = RoadEditorClientState.getStartNodeId();
+        if (startId != null) {
+            RoadNode startNode = network.getNode(startId);
+            List<BlockPos> wps = RoadEditorClientState.getWaypoints();
+            UUID endId = RoadEditorClientState.getEndNodeId();
+
+            // Build the full preview path: start → waypoints → (end node or crosshair)
+            PathPoint target;
+            if (endId != null) {
+                RoadNode endNode = network.getNode(endId);
+                if (endNode == null) {
+                    target = null; // shouldn't happen
+                } else {
+                    target = new PathPoint(endNode.pos().x(), endNode.pos().y(), endNode.pos().z());
+                }
+            } else {
+                // No end node yet — aim at the ground under crosshair
+                HitResult hit = mc.hitResult;
+                if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
+                    Vec3 aim = hit.getLocation();
+                    target = new PathPoint(
+                            (int) Math.floor(aim.x),
+                            (int) Math.floor(aim.y),
+                            (int) Math.floor(aim.z));
+                } else {
+                    target = null;
+                }
+            }
+
+            if (startNode != null && target != null) {
+                List<PathPoint> previewPath = new java.util.ArrayList<>();
+
+                PathPoint cursor = new PathPoint(
+                        startNode.pos().x(), startNode.pos().y(), startNode.pos().z());
+                for (BlockPos wp : wps) {
+                    PathPoint wpPt = new PathPoint(wp.getX(), wp.getY(), wp.getZ());
+                    previewPath.addAll(PathGenerator.lShape3D(cursor, wpPt));
+                    cursor = wpPt;
+                }
+                previewPath.addAll(PathGenerator.lShape3D(cursor, target));
+
+                if (!previewPath.isEmpty()) {
+                    VertexConsumer previewFc = bufferSource.getBuffer(RenderType.debugQuads());
+                    // Preview color: cyan (0,200,220) with alpha 130
+                    renderPathAsRoadFace(previewFc, poseEntry, previewPath,
+                            0, 200, 220, 130);
+                    bufferSource.endBatch(RenderType.debugQuads());
+                }
+            }
+
+            // Waypoint markers: yellow 1×1 squares
+            VertexConsumer markerVc = bufferSource.getBuffer(RenderType.debugQuads());
+            for (BlockPos wp : wps) {
+                drawMarkerSquare(markerVc, poseEntry,
+                        wp.getX() + 0.5f, wp.getY() + PREVIEW_Y_OFFSET, wp.getZ() + 0.5f,
+                        0.5f, 255, 220, 50, 200);
+            }
+            // Start node marker: green 1×1 square
+            drawMarkerSquare(markerVc, poseEntry,
+                    startNode.pos().x() + 0.5f, startNode.pos().y() + PREVIEW_Y_OFFSET,
+                    startNode.pos().z() + 0.5f,
+                    0.5f, 50, 255, 50, 200);
+            if (endId != null) {
+                RoadNode endNode = network.getNode(endId);
+                if (endNode != null) {
+                    drawMarkerSquare(markerVc, poseEntry,
+                            endNode.pos().x() + 0.5f, endNode.pos().y() + PREVIEW_Y_OFFSET,
+                            endNode.pos().z() + 0.5f,
+                            0.5f, 255, 50, 50, 200); // red marker for end node
+                }
+            }
+            bufferSource.endBatch(RenderType.debugQuads());
+        }
+
         // ── Draw nodes (wireframe boxes) ──
         VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
 
         for (RoadNode node : network.getNodes().values()) {
             float cr, cg, cb;
-            switch (node.type()) {
-                case BUILDING     -> { cr = 1.0f; cg = 1.0f; cb = 1.0f; }
-                case INTERSECTION -> { cr = 0.6f; cg = 0.1f; cb = 1.0f; }
-                default           -> { cr = 0.5f; cg = 0.5f; cb = 0.5f; }
+            boolean isStart = node.nodeId().equals(startId);
+            if (isStart) {
+                cr = 0.2f; cg = 1.0f; cb = 0.2f; // bright green for selected start
+            } else {
+                switch (node.type()) {
+                    case BUILDING     -> { cr = 1.0f; cg = 1.0f; cb = 1.0f; }
+                    case INTERSECTION -> { cr = 0.6f; cg = 0.1f; cb = 1.0f; }
+                    default           -> { cr = 0.5f; cg = 0.5f; cb = 0.5f; }
+                }
             }
             drawNodeBox(lineVc, poseEntry,
                     node.pos().x() + 0.5f, node.pos().y() + NODE_Y_OFFSET, node.pos().z() + 0.5f,
@@ -221,6 +314,16 @@ public final class RoadEditorRenderer {
 
         bufferSource.endBatch(RenderType.lines());
         poseStack.popPose();
+    }
+
+    /** Draw a 1×1 marker square for waypoints and start node. */
+    private static void drawMarkerSquare(VertexConsumer vc, PoseStack.Pose poseEntry,
+                                         float cx, float cy, float cz,
+                                         float half, int r, int g, int b, int a) {
+        vc.addVertex(poseEntry, cx - half, cy, cz - half).setColor(r, g, b, a);
+        vc.addVertex(poseEntry, cx + half, cy, cz - half).setColor(r, g, b, a);
+        vc.addVertex(poseEntry, cx + half, cy, cz + half).setColor(r, g, b, a);
+        vc.addVertex(poseEntry, cx - half, cy, cz + half).setColor(r, g, b, a);
     }
 
     /** Draw a flat square on the road surface at a corner point. */
@@ -262,10 +365,12 @@ public final class RoadEditorRenderer {
         vc.addVertex(poseEntry, x2, y2, z2).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
     }
 
+    // ═══════════════════════════════════════════════════════════════
     // ── Client tick: hover + input ──
+    // ═══════════════════════════════════════════════════════════════
 
-    /** Pre-tick: consume MC key mappings when hovering an edge so the vanilla
-     *  attack / use handling doesn't also fire. */
+    /** Pre-tick: consume MC key mappings when hovering an edge / in path-planning mode
+     *  so the vanilla attack / use handling doesn't also fire. */
     static void onClientTickPre(ClientTickEvent.Pre event) {
         if (!RoadEditorClientState.isEditing()) return;
         Minecraft mc = Minecraft.getInstance();
@@ -273,10 +378,12 @@ public final class RoadEditorRenderer {
 
         UUID hovered = RoadEditorClientState.getHoveredEdgeId();
         if (hovered != null) {
-            // Drain the attack key so MC doesn't break blocks / swing arm
-            while (mc.options.keyAttack.consumeClick()) {
-                // consumed — prevents vanilla processing
-            }
+            while (mc.options.keyAttack.consumeClick()) { /* prevent vanilla attack */ }
+        }
+
+        // Also drain use key when in path-planning mode (prevents vanilla interact)
+        if (RoadEditorClientState.getStartNodeId() != null) {
+            while (mc.options.keyUse.consumeClick()) { /* prevent vanilla interact */ }
         }
     }
 
@@ -321,16 +428,26 @@ public final class RoadEditorRenderer {
         }
         RoadEditorClientState.setHoveredEdgeId(bestEdgeId);
 
-        // ── Raw mouse button rising-edge detection ──
-        // can't use mc.options.keyAttack.consumeClick() here — by ClientTickEvent.Post
-        // Minecraft has already drained the click.  Read GLFW state directly.
+        // ── Raw input: mouse + keyboard ──
         long window = mc.getWindow().getWindow();
         boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean backspaceDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_BACKSPACE) == GLFW.GLFW_PRESS;
+        boolean escapeDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
+        boolean enterDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ENTER) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_ENTER) == GLFW.GLFW_PRESS;
+
         boolean leftClicked = leftDown && !wasLeftDown;
         boolean rightClicked = rightDown && !wasRightDown;
+        boolean backspaceClicked = backspaceDown && !wasBackspaceDown;
+        boolean escapeClicked = escapeDown && !wasEscapeDown;
+        boolean enterClicked = enterDown && !wasEnterDown;
+
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
+        wasBackspaceDown = backspaceDown;
+        wasEscapeDown = escapeDown;
+        wasEnterDown = enterDown;
 
         // ── Left-click: remove hovered edge ──
         if (bestEdgeId != null && leftClicked) {
@@ -338,35 +455,195 @@ public final class RoadEditorRenderer {
             RoadEditorClientState.setHoveredEdgeId(null);
         }
 
-        // ── Right-click: path planning ──
+        // ── Right-click: start node, waypoint, or pend end node ──
         if (rightClicked) {
-            RoadNode nearest = findNearestNodeToCrosshair(network, camPos, lookVec);
-            if (nearest != null) {
-                UUID selected = RoadEditorClientState.getSelectedFromNodeId();
-                if (selected == null) {
-                    RoadEditorClientState.setSelectedFromNodeId(nearest.nodeId());
+            onRightClick(mc, network, camPos, lookVec);
+        }
+
+        // ── Enter: confirm path plan ──
+        if (enterClicked) {
+            UUID sId = RoadEditorClientState.getStartNodeId();
+            UUID eId = RoadEditorClientState.getEndNodeId();
+            if (sId != null && eId != null) {
+                List<BlockPos> wps = RoadEditorClientState.getWaypoints();
+                PacketDistributor.sendToServer(
+                        new RoadEdgePlanPacket(sId, eId, wps, true)); // force=true: player confirmed
+                if (mc.player != null) {
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal(
-                                    "§7[RoadEditor] §eSelected node §f"
-                                            + nearest.nodeId().toString().substring(0, 8)
-                                            + " §e— right-click another node to plan path"),
+                                    "§7[RoadEditor] §aPath confirmed — §f" +
+                                            wps.size() + " §awaypoints, from §f" +
+                                            sId.toString().substring(0, 8) +
+                                            " §ato §f" + eId.toString().substring(0, 8)),
                             true);
-                } else if (!selected.equals(nearest.nodeId())) {
-                    PacketDistributor.sendToServer(
-                            new RoadEdgePlanPacket(selected, nearest.nodeId()));
-                    mc.player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal(
-                                    "§7[RoadEditor] §ePath planning requested between selected nodes"),
-                            true);
-                    RoadEditorClientState.clearSelection();
-                } else {
-                    RoadEditorClientState.clearSelection();
                 }
+                RoadEditorClientState.clearSelection();
+            }
+        }
+
+        // ── Backspace: undo (end node → last waypoint → start node) ──
+        if (backspaceClicked) {
+            UUID sId = RoadEditorClientState.getStartNodeId();
+            if (sId != null) {
+                if (RoadEditorClientState.getEndNodeId() != null) {
+                    // Undo end node selection first
+                    RoadEditorClientState.setEndNodeId(null);
+                    if (mc.player != null) {
+                        mc.player.displayClientMessage(
+                                net.minecraft.network.chat.Component.literal(
+                                        "§7[RoadEditor] §eEnd node deselected — select another node or press Enter"),
+                                true);
+                    }
+                } else if (RoadEditorClientState.waypointCount() > 0) {
+                    RoadEditorClientState.removeLastWaypoint();
+                    if (mc.player != null) {
+                        mc.player.displayClientMessage(
+                                net.minecraft.network.chat.Component.literal(
+                                        "§7[RoadEditor] §eWaypoint removed — §f" +
+                                                RoadEditorClientState.waypointCount() + " §eremaining"),
+                                true);
+                    }
+                } else {
+                    // No waypoints and no end node — cancel entire selection
+                    RoadEditorClientState.clearSelection();
+                    if (mc.player != null) {
+                        mc.player.displayClientMessage(
+                                net.minecraft.network.chat.Component.literal(
+                                        "§7[RoadEditor] §ePath planning cancelled"),
+                                true);
+                    }
+                }
+            }
+        }
+
+        // ── Escape: cancel everything ──
+        if (escapeClicked && RoadEditorClientState.getStartNodeId() != null) {
+            RoadEditorClientState.clearSelection();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "§7[RoadEditor] §ePath planning cancelled"),
+                        true);
             }
         }
     }
 
+    /** Handle right-click: start node, waypoint, or pend end node. */
+    private static void onRightClick(Minecraft mc, RoadNetwork network,
+                                      Vec3 camPos, Vec3 lookVec) {
+        RoadNode nearestNode = findNearestNodeToCrosshair(network, camPos, lookVec);
+        UUID startId = RoadEditorClientState.getStartNodeId();
+        UUID endId = RoadEditorClientState.getEndNodeId();
+
+        if (nearestNode != null) {
+            // ── Hit a node ──
+            if (startId == null) {
+                // First selection: set as start
+                RoadEditorClientState.setStartNodeId(nearestNode.nodeId());
+                mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "§7[RoadEditor] §aStart node §f"
+                                        + nearestNode.nodeId().toString().substring(0, 8)
+                                        + " §aselected — right-click ground for waypoints, another node to finish"),
+                        true);
+            } else if (startId.equals(nearestNode.nodeId())) {
+                // Same node → cancel
+                RoadEditorClientState.clearSelection();
+                mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "§7[RoadEditor] §eSelection cancelled"),
+                        true);
+            } else {
+                // Different node → pend as end node
+                RoadEditorClientState.setEndNodeId(nearestNode.nodeId());
+                int wpCount = RoadEditorClientState.waypointCount();
+                mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "§7[RoadEditor] §6End node §f"
+                                        + nearestNode.nodeId().toString().substring(0, 8)
+                                        + " §6pending — §f" + wpCount + " §6waypoints"
+                                        + " §a[Enter] §6to confirm, §c[Esc] §6to cancel"),
+                        true);
+            }
+        } else if (startId != null) {
+            // ── Hit ground (not a node): add waypoint ──
+            // If end node was already pended, clear it (player is adjusting the path)
+            if (endId != null) {
+                RoadEditorClientState.setEndNodeId(null);
+            }
+            HitResult hit = mc.hitResult;
+            if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
+                BlockPos pos = ((BlockHitResult) hit).getBlockPos();
+                RoadEditorClientState.addWaypoint(pos);
+                mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "§7[RoadEditor] §eWaypoint §f#" +
+                                        RoadEditorClientState.waypointCount() +
+                                        " §eat §f(" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")"),
+                        true);
+            }
+        }
+    }
+
+    /** Render a list of PathPoints as wide road-face quads (same pattern as edge rendering). */
+    private static void renderPathAsRoadFace(VertexConsumer vc, PoseStack.Pose poseEntry,
+                                              List<PathPoint> path,
+                                              int r, int g, int b, int a) {
+        int n = path.size();
+        if (n < 2) {
+            if (n == 1) {
+                PathPoint p = path.get(0);
+                drawCornerSquare(vc, poseEntry,
+                        p.x() + 0.5f, p.y() + PREVIEW_Y_OFFSET, p.z() + 0.5f,
+                        ROAD_HALF_WIDTH, r, g, b, a);
+            }
+            return;
+        }
+
+        int prevPerpDx = 0, prevPerpDz = 1;
+        for (int i = 0; i < n - 1; i++) {
+            PathPoint p1 = path.get(i);
+            PathPoint p2 = path.get(i + 1);
+
+            float ax = p1.x() + 0.5f;
+            float ay = p1.y() + PREVIEW_Y_OFFSET;
+            float az = p1.z() + 0.5f;
+            float bx = p2.x() + 0.5f;
+            float by = p2.y() + PREVIEW_Y_OFFSET;
+            float bz = p2.z() + 0.5f;
+
+            int perpDx = 0, perpDz = 0;
+            boolean moveX = p1.x() != p2.x();
+            boolean moveZ = p1.z() != p2.z();
+            if (moveX && !moveZ) {
+                perpDz = 1;
+            } else if (moveZ && !moveX) {
+                perpDx = 1;
+            } else {
+                perpDx = prevPerpDx;
+                perpDz = prevPerpDz;
+            }
+
+            float hw = ROAD_HALF_WIDTH;
+            vc.addVertex(poseEntry, ax - perpDx * hw, ay, az - perpDz * hw).setColor(r, g, b, a);
+            vc.addVertex(poseEntry, ax + perpDx * hw, ay, az + perpDz * hw).setColor(r, g, b, a);
+            vc.addVertex(poseEntry, bx + perpDx * hw, by, bz + perpDz * hw).setColor(r, g, b, a);
+            vc.addVertex(poseEntry, bx - perpDx * hw, by, bz - perpDz * hw).setColor(r, g, b, a);
+
+            prevPerpDx = perpDx;
+            prevPerpDz = perpDz;
+        }
+
+        for (PathPoint p : path) {
+            drawCornerSquare(vc, poseEntry,
+                    p.x() + 0.5f, p.y() + PREVIEW_Y_OFFSET, p.z() + 0.5f,
+                    ROAD_HALF_WIDTH, r, g, b, a);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // ── Raycasting ──
+    // ═══════════════════════════════════════════════════════════════
 
     private static double rayToSegmentDist(Vec3 rayOrigin, Vec3 rayDir,
                                             Vec3 segA, Vec3 segB) {
