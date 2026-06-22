@@ -104,6 +104,17 @@ public final class RoadSavedData extends SavedData {
             }
             e.putLongArray("segmentTaskIds", arr);
 
+            // Placed block positions (for clean demolition)
+            ListTag placedTag = new ListTag();
+            for (PathPoint bp : edge.getPlacedBlocks()) {
+                CompoundTag bpTag = new CompoundTag();
+                bpTag.putInt("x", bp.x());
+                bpTag.putInt("y", bp.y());
+                bpTag.putInt("z", bp.z());
+                placedTag.add(bpTag);
+            }
+            e.put("placedBlocks", placedTag);
+
             edgeList.add(e);
         }
         tag.put("edges", edgeList);
@@ -158,6 +169,19 @@ public final class RoadSavedData extends SavedData {
 
             RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId,
                     tier, path, taskIds, status);
+
+            // Placed block positions (for clean demolition)
+            if (e.contains("placedBlocks")) {
+                List<PathPoint> placed = new ArrayList<>();
+                ListTag placedTag = e.getList("placedBlocks", Tag.TAG_COMPOUND);
+                for (int j = 0; j < placedTag.size(); j++) {
+                    CompoundTag bpTag = placedTag.getCompound(j);
+                    placed.add(new PathPoint(
+                            bpTag.getInt("x"), bpTag.getInt("y"), bpTag.getInt("z")));
+                }
+                edge.setPlacedBlocks(placed);
+            }
+
             data.network.addEdge(edge);
         }
 

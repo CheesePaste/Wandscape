@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.core.road;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,8 @@ public class RoadEdge {
     private Long decorationTaskId; // null until decoration enqueued
     private int pendingSegmentCount;
     private final Set<UUID> completedSegmentIds = new HashSet<>();
+    /** All block positions modified by this road edge (surface + fill + excavation + decoration). */
+    private final Set<PathPoint> placedBlocks = new HashSet<>();
 
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
                     String tier, List<PathPoint> path) {
@@ -71,6 +74,20 @@ public class RoadEdge {
     public List<Long> getSegmentTaskIds() { return List.copyOf(segmentTaskIds); }
     public EdgeStatus getStatus() { return status; }
     public Long getDecorationTaskId() { return decorationTaskId; }
+
+    /** All block positions modified by this edge. Immutable snapshot. */
+    public Set<PathPoint> getPlacedBlocks() { return Set.copyOf(placedBlocks); }
+
+    /** Add block positions that the road system placed or modified. */
+    public void addPlacedBlocks(Collection<PathPoint> blocks) {
+        placedBlocks.addAll(blocks);
+    }
+
+    /** Clear and replace all placed block positions. Used during NBT load. */
+    public void setPlacedBlocks(Collection<PathPoint> blocks) {
+        placedBlocks.clear();
+        placedBlocks.addAll(blocks);
+    }
 
     // ---- Mutators ----
 

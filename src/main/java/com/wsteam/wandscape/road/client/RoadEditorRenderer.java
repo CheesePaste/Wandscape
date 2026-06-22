@@ -3,7 +3,7 @@ package com.wsteam.wandscape.road.client;
 import java.util.List;
 import java.util.UUID;
 
-import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -28,17 +28,42 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * World-space rendering of the road network for the V1 road editor.
  *
- * <p>Draws edges as colored line segments (status-coded) and nodes as
- * small colored boxes. Performs crosshair-to-edge hover detection.
+ * <p>Draws edges as wide translucent quads on the road surface (color-coded by
+ * status) and nodes as small wireframe boxes.  Performs crosshair-to-edge
+ * hover detection on the client tick.
+ *
+ * <p><b>Coordinate conventions:</b> The pose stack is pushed and translated by
+ * negative camera position so world-space vertex coordinates become camera-relative
+ * — matching the vanilla entity / block-entity pattern.
  */
 public final class RoadEditorRenderer {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final double HOVER_THRESHOLD = 2.0;
-    private static final double NODE_HOVER_THRESHOLD = 3.0;
-    private static final float NODE_BOX_HALF = 0.2f;
 
-    /** Set to true after first render call to suppress per-frame log spam. */
+    /** Ray→segment distance threshold for edge hover (road half-width + margin). */
+    private static final double HOVER_THRESHOLD = 2.8;
+    /** Ray→point distance threshold for node hover. */
+    private static final double NODE_HOVER_THRESHOLD = 3.0;
+    /** Half-size of node wireframe boxes. */
+    private static final float NODE_BOX_HALF = 0.25f;
+    /** Road half-width in blocks (default 3-wide → 1.5 half). */
+    private static final float ROAD_HALF_WIDTH = 1.5f;
+    /** Y offset above the road surface block (block top + epsilon to avoid z-fighting). */
+    private static final float ROAD_FACE_Y_OFFSET = 1.02f;
+    /** Y offset for node boxes above the node position. */
+    private static final float NODE_Y_OFFSET = 0.5f;
+
+    /** Alpha values for road face rendering (0-255). */
+    private static final int ALPHA_PLANNED = 100;
+    private static final int ALPHA_BUILDING = 120;
+    private static final int ALPHA_COMPLETE = 80;
+    private static final int ALPHA_HOVERED = 180;
+
+    // GLFW raw mouse state for click detection (consumeClick is already drained by
+    // Minecraft's main tick by the time ClientTickEvent.Post fires).
+    private static boolean wasLeftDown = false;
+    private static boolean wasRightDown = false;
+
     private static boolean firstRenderLogged = false;
     private static int frameCounter = 0;
 
@@ -47,11 +72,13 @@ public final class RoadEditorRenderer {
     // ── Registration ──
 
     public static void register() {
-        LOGGER.info("[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent");
+        LOGGER.info("[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent(Pre+Post)");
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(RenderLevelStageEvent.class, RoadEditorRenderer::onRenderLevelStage);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
-                .addListener(ClientTickEvent.Post.class, RoadEditorRenderer::onClientTick);
+                .addListener(ClientTickEvent.Pre.class, RoadEditorRenderer::onClientTickPre);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS
+                .addListener(ClientTickEvent.Post.class, RoadEditorRenderer::onClientTickPost);
         LOGGER.info("[RoadEditor] register() — done");
     }
 
@@ -66,7 +93,6 @@ public final class RoadEditorRenderer {
             LOGGER.info("[RoadEditor] onRenderLevelStage frame={} stage={} editing={} isTripwire={}",
                     frameCounter, event.getStage(), editing, isTripwire);
         }
-        // Heartbeat every 200 render calls (when editing and on right stage)
         if (editing && isTripwire && frameCounter % 200 == 0) {
             LOGGER.info("[RoadEditor] render heartbeat frame={} nodes={} edges={}",
                     frameCounter,
@@ -80,56 +106,107 @@ public final class RoadEditorRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
+        // ── Camera-relative setup ──
+        // The GPU modelView at this stage has camera rotation but NOT translation.
+        // We push the pose stack and translate by -cameraPos so world-space
+        // vertices become camera-relative.
+        Vec3 camPos = event.getCamera().getPosition();
         PoseStack poseStack = event.getPoseStack();
-        // Pose stack already has camera transform applied by LevelRenderer.
-        // Do NOT push/translate camera here — vertices are in world space.
-
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.lines());
 
         poseStack.pushPose();
+        poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        Matrix4f poseMat = poseStack.last().pose();
         PoseStack.Pose poseEntry = poseStack.last();
 
         RoadNetwork network = RoadEditorClientState.getCachedNetwork();
         UUID hoveredId = RoadEditorClientState.getHoveredEdgeId();
 
-        int nodeCount = network.nodeCount();
-        int edgeCount = network.edgeCount();
-
         if (!firstRenderLogged) {
             firstRenderLogged = true;
             LOGGER.info("[RoadEditor] RENDER START — nodes={} edges={} camPos={}",
-                    nodeCount, edgeCount, mc.gameRenderer.getMainCamera().getPosition());
+                    network.nodeCount(), network.edgeCount(), camPos);
         }
 
-        // ── Draw edges ──
+        // ── Draw edge faces (wide quads on road surface) ──
+        VertexConsumer faceVc = bufferSource.getBuffer(RenderType.debugQuads());
+
         for (RoadEdge edge : network.getEdges().values()) {
-            float cr, cg, cb;
-            if (edge.getEdgeId().equals(hoveredId)) {
-                cr = 1.0f; cg = 0.2f; cb = 0.2f; // red highlight
+            boolean hovered = edge.getEdgeId().equals(hoveredId);
+            int r, g, b, a;
+
+            if (hovered) {
+                r = 255; g = 40; b = 40; a = ALPHA_HOVERED;         // red highlight
             } else {
                 switch (edge.getStatus()) {
-                    case COMPLETE -> { cr = 0.1f; cg = 0.9f; cb = 0.2f; } // green
-                    case BUILDING -> { cr = 1.0f; cg = 0.8f; cb = 0.1f; } // yellow
-                    default        -> { cr = 0.2f; cg = 0.4f; cb = 1.0f; } // blue PLANNED
+                    case COMPLETE -> { r = 30;  g = 200; b = 50;  a = ALPHA_COMPLETE;  } // green
+                    case BUILDING -> { r = 220; g = 180; b = 30;  a = ALPHA_BUILDING; } // amber
+                    default        -> { r = 60;  g = 100; b = 240; a = ALPHA_PLANNED;  } // blue
                 }
             }
-            int ri = (int)(cr * 255), gi = (int)(cg * 255), bi = (int)(cb * 255);
 
             List<PathPoint> path = edge.getPath();
-            for (int i = 0; i < path.size() - 1; i++) {
+            int n = path.size();
+            if (n < 2) {
+                // Single-point edge — draw just a corner square
+                PathPoint p = path.get(0);
+                drawCornerSquare(faceVc, poseEntry,
+                        p.x() + 0.5f, p.y() + ROAD_FACE_Y_OFFSET, p.z() + 0.5f,
+                        ROAD_HALF_WIDTH, r, g, b, a);
+                continue;
+            }
+
+            int prevPerpDx = 0, prevPerpDz = 1;
+
+            for (int i = 0; i < n - 1; i++) {
                 PathPoint p1 = path.get(i);
                 PathPoint p2 = path.get(i + 1);
-                float ax = p1.x() + 0.5f, ay = p1.y() + 0.55f, az = p1.z() + 0.5f;
-                float bx = p2.x() + 0.5f, by = p2.y() + 0.55f, bz = p2.z() + 0.5f;
-                vc.addVertex(poseMat, ax, ay, az).setColor(ri, gi, bi, 255).setNormal(poseEntry, 0, 1, 0);
-                vc.addVertex(poseMat, bx, by, bz).setColor(ri, gi, bi, 255).setNormal(poseEntry, 0, 1, 0);
+
+                float ax = p1.x() + 0.5f;
+                float ay = p1.y() + ROAD_FACE_Y_OFFSET;
+                float az = p1.z() + 0.5f;
+                float bx = p2.x() + 0.5f;
+                float by = p2.y() + ROAD_FACE_Y_OFFSET;
+                float bz = p2.z() + 0.5f;
+
+                // Compute perpendicular direction (matches RoadBuilder logic)
+                int perpDx = 0, perpDz = 0;
+                boolean moveX = p1.x() != p2.x();
+                boolean moveZ = p1.z() != p2.z();
+                if (moveX && !moveZ) {
+                    perpDz = 1;
+                } else if (moveZ && !moveX) {
+                    perpDx = 1;
+                } else {
+                    // Diagonal or no movement — carry forward previous perpendicular
+                    perpDx = prevPerpDx;
+                    perpDz = prevPerpDz;
+                }
+
+                float hw = ROAD_HALF_WIDTH;
+                // Quad vertices (QUADS order around the face, counter-clockwise from above)
+                faceVc.addVertex(poseEntry, ax - perpDx * hw, ay, az - perpDz * hw).setColor(r, g, b, a);
+                faceVc.addVertex(poseEntry, ax + perpDx * hw, ay, az + perpDz * hw).setColor(r, g, b, a);
+                faceVc.addVertex(poseEntry, bx + perpDx * hw, by, bz + perpDz * hw).setColor(r, g, b, a);
+                faceVc.addVertex(poseEntry, bx - perpDx * hw, by, bz - perpDz * hw).setColor(r, g, b, a);
+
+                prevPerpDx = perpDx;
+                prevPerpDz = perpDz;
+            }
+
+            // Draw corner squares at every path point to fill gaps at turns
+            for (PathPoint p : path) {
+                drawCornerSquare(faceVc, poseEntry,
+                        p.x() + 0.5f, p.y() + ROAD_FACE_Y_OFFSET, p.z() + 0.5f,
+                        ROAD_HALF_WIDTH, r, g, b, a);
             }
         }
 
-        // ── Draw nodes ──
+        bufferSource.endBatch(RenderType.debugQuads());
+
+        // ── Draw nodes (wireframe boxes) ──
+        VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+
         for (RoadNode node : network.getNodes().values()) {
             float cr, cg, cb;
             switch (node.type()) {
@@ -137,53 +214,78 @@ public final class RoadEditorRenderer {
                 case INTERSECTION -> { cr = 0.6f; cg = 0.1f; cb = 1.0f; }
                 default           -> { cr = 0.5f; cg = 0.5f; cb = 0.5f; }
             }
-            drawNodeBox(vc, poseMat, poseEntry,
-                    node.pos().x() + 0.5f, node.pos().y() + 0.5f, node.pos().z() + 0.5f,
-                    NODE_BOX_HALF, (int)(cr * 255), (int)(cg * 255), (int)(cb * 255));
+            drawNodeBox(lineVc, poseEntry,
+                    node.pos().x() + 0.5f, node.pos().y() + NODE_Y_OFFSET, node.pos().z() + 0.5f,
+                    NODE_BOX_HALF, (int) (cr * 255), (int) (cg * 255), (int) (cb * 255));
         }
 
-        poseStack.popPose();
         bufferSource.endBatch(RenderType.lines());
+        poseStack.popPose();
     }
 
-    /** Draw a small wireframe box. */
-    private static void drawNodeBox(VertexConsumer vc, Matrix4f poseMat, PoseStack.Pose poseEntry,
+    /** Draw a flat square on the road surface at a corner point. */
+    private static void drawCornerSquare(VertexConsumer vc, PoseStack.Pose poseEntry,
+                                         float cx, float cy, float cz,
+                                         float half, int r, int g, int b, int a) {
+        vc.addVertex(poseEntry, cx - half, cy, cz - half).setColor(r, g, b, a);
+        vc.addVertex(poseEntry, cx + half, cy, cz - half).setColor(r, g, b, a);
+        vc.addVertex(poseEntry, cx + half, cy, cz + half).setColor(r, g, b, a);
+        vc.addVertex(poseEntry, cx - half, cy, cz + half).setColor(r, g, b, a);
+    }
+
+    /** Draw a small wireframe box for a node. */
+    private static void drawNodeBox(VertexConsumer vc, PoseStack.Pose poseEntry,
                                      float cx, float cy, float cz,
                                      float half, int r, int g, int b) {
         float x0 = cx - half, x1 = cx + half;
         float y0 = cy - half, y1 = cy + half;
         float z0 = cz - half, z1 = cz + half;
 
-        seg(vc, poseMat, poseEntry, x0, y0, z0, x1, y0, z0, r, g, b); // bottom
-        seg(vc, poseMat, poseEntry, x1, y0, z0, x1, y0, z1, r, g, b);
-        seg(vc, poseMat, poseEntry, x1, y0, z1, x0, y0, z1, r, g, b);
-        seg(vc, poseMat, poseEntry, x0, y0, z1, x0, y0, z0, r, g, b);
-        seg(vc, poseMat, poseEntry, x0, y1, z0, x1, y1, z0, r, g, b); // top
-        seg(vc, poseMat, poseEntry, x1, y1, z0, x1, y1, z1, r, g, b);
-        seg(vc, poseMat, poseEntry, x1, y1, z1, x0, y1, z1, r, g, b);
-        seg(vc, poseMat, poseEntry, x0, y1, z1, x0, y1, z0, r, g, b);
-        seg(vc, poseMat, poseEntry, x0, y0, z0, x0, y1, z0, r, g, b); // verticals
-        seg(vc, poseMat, poseEntry, x1, y0, z0, x1, y1, z0, r, g, b);
-        seg(vc, poseMat, poseEntry, x1, y0, z1, x1, y1, z1, r, g, b);
-        seg(vc, poseMat, poseEntry, x0, y0, z1, x0, y1, z1, r, g, b);
+        seg(vc, poseEntry, x0, y0, z0, x1, y0, z0, r, g, b);
+        seg(vc, poseEntry, x1, y0, z0, x1, y0, z1, r, g, b);
+        seg(vc, poseEntry, x1, y0, z1, x0, y0, z1, r, g, b);
+        seg(vc, poseEntry, x0, y0, z1, x0, y0, z0, r, g, b);
+        seg(vc, poseEntry, x0, y1, z0, x1, y1, z0, r, g, b);
+        seg(vc, poseEntry, x1, y1, z0, x1, y1, z1, r, g, b);
+        seg(vc, poseEntry, x1, y1, z1, x0, y1, z1, r, g, b);
+        seg(vc, poseEntry, x0, y1, z1, x0, y1, z0, r, g, b);
+        seg(vc, poseEntry, x0, y0, z0, x0, y1, z0, r, g, b);
+        seg(vc, poseEntry, x1, y0, z0, x1, y1, z0, r, g, b);
+        seg(vc, poseEntry, x1, y0, z1, x1, y1, z1, r, g, b);
+        seg(vc, poseEntry, x0, y0, z1, x0, y1, z1, r, g, b);
     }
 
-    private static void seg(VertexConsumer vc, Matrix4f poseMat, PoseStack.Pose poseEntry,
+    private static void seg(VertexConsumer vc, PoseStack.Pose poseEntry,
                              float x1, float y1, float z1, float x2, float y2, float z2,
                              int r, int g, int b) {
-        vc.addVertex(poseMat, x1, y1, z1).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
-        vc.addVertex(poseMat, x2, y2, z2).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
+        vc.addVertex(poseEntry, x1, y1, z1).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
+        vc.addVertex(poseEntry, x2, y2, z2).setColor(r, g, b, 255).setNormal(poseEntry, 0, 1, 0);
     }
 
     // ── Client tick: hover + input ──
 
-    static void onClientTick(ClientTickEvent.Post event) {
+    /** Pre-tick: consume MC key mappings when hovering an edge so the vanilla
+     *  attack / use handling doesn't also fire. */
+    static void onClientTickPre(ClientTickEvent.Pre event) {
+        if (!RoadEditorClientState.isEditing()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null || mc.screen != null) return;
+
+        UUID hovered = RoadEditorClientState.getHoveredEdgeId();
+        if (hovered != null) {
+            // Drain the attack key so MC doesn't break blocks / swing arm
+            while (mc.options.keyAttack.consumeClick()) {
+                // consumed — prevents vanilla processing
+            }
+        }
+    }
+
+    static void onClientTickPost(ClientTickEvent.Post event) {
         if (!RoadEditorClientState.isEditing()) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) return;
+        if (mc.level == null || mc.player == null || mc.screen != null) return;
 
-        // Log first tick
         if (frameCounter == 0) {
             LOGGER.info("[RoadEditor] FIRST TICK — editing={} network nodes={} edges={}",
                     RoadEditorClientState.isEditing(),
@@ -219,14 +321,25 @@ public final class RoadEditorRenderer {
         }
         RoadEditorClientState.setHoveredEdgeId(bestEdgeId);
 
+        // ── Raw mouse button rising-edge detection ──
+        // can't use mc.options.keyAttack.consumeClick() here — by ClientTickEvent.Post
+        // Minecraft has already drained the click.  Read GLFW state directly.
+        long window = mc.getWindow().getWindow();
+        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean leftClicked = leftDown && !wasLeftDown;
+        boolean rightClicked = rightDown && !wasRightDown;
+        wasLeftDown = leftDown;
+        wasRightDown = rightDown;
+
         // ── Left-click: remove hovered edge ──
-        if (bestEdgeId != null && mc.options.keyAttack.consumeClick()) {
+        if (bestEdgeId != null && leftClicked) {
             PacketDistributor.sendToServer(new RoadEdgeRemovePacket(bestEdgeId));
             RoadEditorClientState.setHoveredEdgeId(null);
         }
 
-        // ── Right-click: path planning stub ──
-        if (mc.options.keyUse.consumeClick()) {
+        // ── Right-click: path planning ──
+        if (rightClicked) {
             RoadNode nearest = findNearestNodeToCrosshair(network, camPos, lookVec);
             if (nearest != null) {
                 UUID selected = RoadEditorClientState.getSelectedFromNodeId();
@@ -243,7 +356,7 @@ public final class RoadEditorRenderer {
                             new RoadEdgePlanPacket(selected, nearest.nodeId()));
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal(
-                                    "§7[RoadEditor] §ePath planning requested §7(not yet implemented)"),
+                                    "§7[RoadEditor] §ePath planning requested between selected nodes"),
                             true);
                     RoadEditorClientState.clearSelection();
                 } else {

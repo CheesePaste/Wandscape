@@ -319,6 +319,9 @@ public final class RoadEventListener {
             return;
         }
 
+        // Record decoration positions for clean demolition
+        edge.addPlacedBlocks(extractPlacedBlocks(tiles));
+
         UUID decoId = UUID.randomUUID();
         RoadTaskSource.enqueueDecoration(
                 new RoadTaskSource.PendingDecoration(decoId, edge.getEdgeId(), tiles));
@@ -383,18 +386,22 @@ public final class RoadEventListener {
         List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(
                 edge.getPath(), config.getSegmentMaxLength());
         int segmentCount = 0;
+        Set<PathPoint> allPlaced = new HashSet<>();
         for (List<PathPoint> seg : segments) {
             JsonArray tiles = RoadBuilder.buildTiles(
                     level, seg, edge.getTier(), buildingBounds, occupiedTiles);
             if (!tiles.isEmpty()) {
                 segmentCount += enqueueSegments(edge.getEdgeId(), tiles, config);
                 occupiedTiles.addAll(RoadBuilder.extractXZ(tiles));
+                allPlaced.addAll(extractPlacedBlocks(tiles));
             }
         }
         if (segmentCount > 0) {
             edge.incrementPendingSegments(segmentCount);
-            LOGGER.info("[Road] enqueueEdge: edge={} segments={} status={}",
-                    edge.getEdgeId().toString().substring(0, 8), segmentCount, edge.getStatus());
+            edge.addPlacedBlocks(allPlaced);
+            LOGGER.info("[Road] enqueueEdge: edge={} segments={} placedBlocks={} status={}",
+                    edge.getEdgeId().toString().substring(0, 8), segmentCount,
+                    edge.getPlacedBlocks().size(), edge.getStatus());
         } else {
             LOGGER.warn("[Road] enqueueEdge: edge={} produced 0 segments! pathLen={}",
                     edge.getEdgeId().toString().substring(0, 8), edge.getPath().size());
@@ -426,6 +433,17 @@ public final class RoadEventListener {
     private static Set<XZPoint> extractXz(List<PathPoint> path) {
         Set<XZPoint> result = new HashSet<>();
         for (PathPoint pp : path) result.add(pp.xz());
+        return result;
+    }
+
+    /** Extract 3D block positions from a JSON tile array for demolition tracking. */
+    private static Set<PathPoint> extractPlacedBlocks(JsonArray tiles) {
+        Set<PathPoint> result = new HashSet<>();
+        for (int i = 0; i < tiles.size(); i++) {
+            var t = tiles.get(i).getAsJsonObject().getAsJsonArray("pos");
+            result.add(new PathPoint(
+                    t.get(0).getAsInt(), t.get(1).getAsInt(), t.get(2).getAsInt()));
+        }
         return result;
     }
 
