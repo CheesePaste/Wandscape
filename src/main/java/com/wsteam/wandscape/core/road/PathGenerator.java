@@ -9,9 +9,10 @@ import java.util.List;
  * Uses L-shaped paths: walk X first, then Z.
  *
  * <p>2D variant ({@link #lShape}) for topology;
- * 3D variant ({@link #lShape3D}) first descends/ascends to
- * the target Y via a square spiral (no 180-degree reversals),
- * then walks a flat L-path horizontally to the target.
+ * 3D variant ({@link #lShape3D}) distributes the height
+ * difference evenly across every horizontal step, producing
+ * a smooth ramp. Falls back to a square spiral switchback
+ * only when the slope exceeds 45°.</p>
  */
 public final class PathGenerator {
 
@@ -51,17 +52,26 @@ public final class PathGenerator {
     }
 
     /**
-     * Generate a 3D path from {@code from} to {@code to} with
-     * vertical-then-horizontal separation.
+     * Generate a 3D L-shaped path with <b>smooth ramp</b> elevation
+     * and <b>flat intersection margins</b>.
      *
-     * <p>Algorithm:
+     * <p>Flat margins at both ends keep the road at the intersection
+     * Y-level for the first/last few blocks so it doesn't immediately
+     * ramp into the headroom of the crossing road — the road only
+     * starts climbing/descending once it clears the crossing width.
+     *
+     * <p>The height difference (ΔY) is distributed across the middle
+     * segment, producing a walkable slope.
+     *
+     * <p><b>Fallback:</b> If the slope exceeds 45° (total horizontal
+     * steps &lt; |ΔY|), the path degenerates to a {@link #spiralPath}
+     * switchback to keep the grade walkable.
+     *
+     * <p>Segments:
      * <ol>
-     *   <li><b>Vertical phase</b> — if ΔY ≠ 0, use a <b>Square Spiral</b>
-     *       around the starting point. It only uses 90-degree turns
-     *       (+X, +Z, -X, -Z) avoiding any 180-degree jagged reversals.
-     *       It stops exactly when target Y is reached.</li>
-     *   <li><b>Horizontal phase</b> — flat L-shaped walk from wherever
-     *       the spiral ended directly to {@code to.xz} at constant {@code to.y}.</li>
+     *   <li>First {@code margin} steps — flat at {@code from.y()}</li>
+     *   <li>Middle {@code rampSteps} steps — linear Y ramp</li>
+     *   <li>Last {@code margin} steps — flat at {@code to.y()}</li>
      * </ol>
      */
     public static List<PathPoint> lShape3D(PathPoint from, PathPoint to, int amplitude) {
@@ -69,29 +79,77 @@ public final class PathGenerator {
         int dz = to.z() - from.z();
         int dy = to.y() - from.y();
 
-        // Same point → empty
         if (dx == 0 && dz == 0 && dy == 0) {
             return Collections.emptyList();
         }
 
+        int absDx = Math.abs(dx);
+        int absDz = Math.abs(dz);
+        int total2DSteps = absDx + absDz;
+
         List<PathPoint> path = new ArrayList<>();
 
-        // ── Phase 1: Vertical — Spiral down/up to target Y ──
-        if (dy != 0) {
+        // ── Steep slope fallback: spiral switchback ──
+        if (total2DSteps < Math.abs(dy)) {
             path.addAll(spiralPath(from, to, amplitude));
+            PathPoint spiralEnd = path.isEmpty() ? from : path.get(path.size() - 1);
+            if (spiralEnd.x() != to.x() || spiralEnd.z() != to.z()) {
+                path.addAll(flatLShape(spiralEnd, new PathPoint(to.x(), to.y(), to.z())));
+            }
+            return path;
         }
 
-        // ── Phase 2: Horizontal — Flat walk to target XZ ──
-        // Continue smoothly from where the spiral ended (or from start if pure flat)
-        PathPoint flatStart = path.isEmpty() ? from : path.get(path.size() - 1);
+        // ── Normal case: smooth ramp with flat intersection margins ──
+        int margin = Math.min(3, total2DSteps / 3);
+        int rampSteps = total2DSteps - 2 * margin; // steps actually used for climbing
 
-        // Only walk if we aren't already at the exact XZ
-        if (flatStart.x() != to.x() || flatStart.z() != to.z()) {
-            PathPoint flatTarget = new PathPoint(to.x(), to.y(), to.z());
-            path.addAll(flatLShape(flatStart, flatTarget));
+        int cx = from.x();
+        int cz = from.z();
+        int step = 0;
+
+        int sx = Integer.signum(dx);
+        int sz = Integer.signum(dz);
+
+        // Walk X first
+        for (int i = 0; i < absDx; i++) {
+            cx += sx;
+            step++;
+            path.add(new PathPoint(cx, rampY(from.y(), to.y(), dy, step, margin, total2DSteps, rampSteps), cz));
+        }
+
+        // Then walk Z
+        for (int i = 0; i < absDz; i++) {
+            cz += sz;
+            step++;
+            path.add(new PathPoint(cx, rampY(from.y(), to.y(), dy, step, margin, total2DSteps, rampSteps), cz));
         }
 
         return path;
+    }
+
+    /**
+     * Compute Y for a single step of the three-segment ramp (flat → ramp → flat).
+     *
+     * @param fromY          start Y
+     * @param toY            target Y
+     * @param dy             total Y delta (to.y - from.y)
+     * @param step           1-based step index
+     * @param margin         flat margin size at each end
+     * @param total2DSteps   total horizontal step count
+     * @param rampSteps      total2DSteps - 2*margin
+     */
+    private static int rampY(int fromY, int toY, int dy,
+                             int step, int margin,
+                             int total2DSteps, int rampSteps) {
+        if (step <= margin) {
+            return fromY;
+        }
+        if (step >= total2DSteps - margin) {
+            return toY;
+        }
+        // Linear interpolation across the middle segment
+        float progress = (float) (step - margin) / rampSteps;
+        return fromY + Math.round(dy * progress);
     }
 
     /**
@@ -119,9 +177,9 @@ public final class PathGenerator {
     }
 
     /**
-     * Build a continuous square spiral ramp to resolve height difference.
-     * Replaces the old 180-degree jagged zig-zag with 90-degree turns.
-     * Walks in a hollow box pattern until target Y is reached.
+     * Build a continuous square spiral ramp as a <b>steep-slope fallback</b>.
+     * Only invoked when |ΔY| exceeds the total horizontal step count (slope &gt; 45°).
+     * Walks in a hollow box pattern with 90-degree turns until target Y is reached.
      */
     private static List<PathPoint> spiralPath(PathPoint from, PathPoint to, int amplitude) {
         List<PathPoint> path = new ArrayList<>();

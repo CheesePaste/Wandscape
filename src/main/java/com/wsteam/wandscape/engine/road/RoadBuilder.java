@@ -28,12 +28,14 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  * <strong>executor</strong> — it trusts the path Y unconditionally
  * and reshapes terrain to match:
  * <ul>
- *   <li>Expands each center-line point to 3-wide</li>
+ *   <li>Expands each center-line point via circular brush
+ *       (overlapping filled circles eliminate corner gaps)</li>
  *   <li>Bridges water with oak planks at water surface level</li>
  *   <li>Picks surface blocks from a weighted palette with
  *       position-based deterministic randomness</li>
  *   <li>Excavates 2-block headroom when road is below terrain</li>
- *   <li>Fill disabled — road floats over air gaps</li>
+ *   <li>Sparse viaduct pillars below elevated road, stopping
+ *       when any lower road's headroom is touched</li>
  * </ul>
  */
 public final class RoadBuilder {
@@ -55,114 +57,134 @@ public final class RoadBuilder {
      * @param roadWidth      road width in blocks (e.g. 3 = 3-wide, halfWidth = 1)
      */
     public static JsonArray buildTiles(Level level, List<PathPoint> path,
-                                        String tier,
-                                        Collection<BoundingBox> buildingBounds,
-                                        Set<PathPoint> occupiedTiles,
-                                        int roadWidth) {
+                                       String tier,
+                                       Collection<BoundingBox> buildingBounds,
+                                       Set<PathPoint> occupiedTiles,
+                                       int roadWidth) {
         RoadConfig config = RoadConfig.getInstance();
         List<RoadConfig.WeightedBlock> palette = config.getSurfacePalette();
-        int halfWidth = roadWidth / 2;
+        int r = roadWidth / 2;
+        int rSq = r * r;
         int n = path.size();
 
         JsonArray tiles = new JsonArray();
-        int prevPerpDx = 0, prevPerpDz = 1;
+        int pillarsPlaced = 0;
 
         for (int i = 0; i < n; i++) {
             PathPoint p = path.get(i);
-            int perpDx = 0, perpDz = 0;
+            int px = p.x();
+            int pz = p.z();
+            boolean isSameXzStep = i > 0 && path.get(i - 1).xz().equals(p.xz());
 
-            if (n == 1) {
-                perpDz = 1;
-            } else {
-                boolean moveX = false, moveZ = false;
-                if (i > 0) {
-                    PathPoint prev = path.get(i - 1);
-                    if (prev.x() != p.x()) moveX = true;
-                    if (prev.z() != p.z()) moveZ = true;
-                }
-                if (i < n - 1) {
-                    PathPoint next = path.get(i + 1);
-                    if (next.x() != p.x()) moveX = true;
-                    if (next.z() != p.z()) moveZ = true;
-                }
-                if (moveX && !moveZ) {
-                    perpDz = 1;
-                } else if (moveZ && !moveX) {
-                    perpDx = 1;
-                } else {
-                    perpDx = prevPerpDx;
-                    perpDz = prevPerpDz;
-                }
-            }
-            prevPerpDx = perpDx;
-            prevPerpDz = perpDz;
+            // 用于记录当前中心点的环境数据，供给循环外的柱子逻辑使用
+            int centerTerrainY = 0;
+            int centerActualY = p.y();
+            boolean centerIsWater = false;
+            boolean centerProcessed = false;
 
-            for (int w = -halfWidth; w <= halfWidth; w++) {
-                int tx = p.x() + perpDx * w;
-                int tz = p.z() + perpDz * w;
+            // 1. 表面铺设与净空挖掘 (Circular brush)
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (dx * dx + dz * dz > rSq + 1) continue;
 
-                boolean isSameXzStep = i > 0 && path.get(i - 1).xz().equals(p.xz());
-                int roadY = p.y();
-                int terrainY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
+                    int tx = px + dx;
+                    int tz = pz + dz;
+                    int roadY = p.y();
+                    int terrainY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
 
-                // ── Building boundary check (full affected Y column) ──
-                int colMinY = Math.min(roadY, terrainY);
-                int colMaxY = Math.max(roadY + 2, terrainY);
-                if (columnIntersectsBuilding(tx, colMinY, colMaxY, tz, buildingBounds)) continue;
+                    // ── 建筑边界检查 ──
+                    int colMinY = Math.min(roadY, terrainY);
+                    int colMaxY = Math.max(roadY + 2, terrainY);
+                    if (columnIntersectsBuilding(tx, colMinY, colMaxY, tz, buildingBounds)) continue;
 
-                BlockPos roadPos = new BlockPos(tx, roadY, tz);
-                BlockState roadState = level.getBlockState(roadPos);
-                boolean isWater = !roadState.getFluidState().isEmpty();
-                String block;
+                    BlockPos roadPos = new BlockPos(tx, roadY, tz);
+                    BlockState roadState = level.getBlockState(roadPos);
+                    boolean isWater = !roadState.getFluidState().isEmpty();
+                    String block;
 
-                if (isWater) {
-                    // Water: raise to surface + plank bridge
-                    int waterSurfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
-                    roadPos = new BlockPos(tx, waterSurfaceY, tz);
-                    block = "minecraft:oak_planks";
-                } else {
-                    // Weighted random pick, deterministic per position
-                    block = pickFromPalette(palette, tx, tz);
-                }
-                int actualY = roadPos.getY();
+                    if (isWater) {
+                        int waterSurfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
+                        roadPos = new BlockPos(tx, waterSurfaceY, tz);
+                        block = "minecraft:oak_planks";
+                    } else {
+                        block = pickFromPalette(palette, tx, tz);
+                    }
+                    int actualY = roadPos.getY();
 
-                // ── 3D occupancy check for surface tile ──
-                if (!isSameXzStep) {
-                    PathPoint surfacePt = new PathPoint(tx, actualY, tz);
-                    if (occupiedTiles.contains(surfacePt)) continue;
-                    occupiedTiles.add(surfacePt);
-                }
+                    // 【记录中心点信息】：避开 continue 的拦截
+                    if (dx == 0 && dz == 0) {
+                        centerTerrainY = terrainY;
+                        centerActualY = actualY;
+                        centerIsWater = isWater;
+                        centerProcessed = true; // 标记中心点未被建筑物阻挡
+                    }
 
-                tiles.add(makeTile(roadPos, block));
+                    // ── 3D occupancy check (去重拦截) ──
+                    if (!isSameXzStep) {
+                        PathPoint surfacePt = new PathPoint(tx, actualY, tz);
+                        // 就是这里的 continue 拦截了原来的柱子逻辑
+                        if (occupiedTiles.contains(surfacePt)) continue;
+                        occupiedTiles.add(surfacePt);
+                    }
 
-                // Excavation: clear at least 2-block walkable headroom above road.
-                // Check 3D occupancy to avoid deleting upper road surfaces.
-                int terrainTop = terrainY - 1;
-                if (!isWater && actualY < terrainTop) {
-                    int cutDepth = terrainTop - actualY;
-                    int maxCut = config.getMaxCutDepth();
-                    if (maxCut > 0 && cutDepth > maxCut) {
-                        LOGGER.warn("[Road] Cut depth {} exceeds maxCutDepth {} at ({},{},{})",
-                                cutDepth, maxCut, tx, actualY, tz);
+                    tiles.add(makeTile(roadPos, block));
+
+                    // ── 挖掘 (Excavation) ──
+                    int terrainTop = terrainY - 1;
+                    if (!isWater && actualY < terrainTop) {
+                        int cutDepth = terrainTop - actualY;
+                        int maxCut = config.getMaxCutDepth();
+                        if (maxCut > 0 && cutDepth > maxCut) {
+                            LOGGER.warn("[Road] Cut depth {} exceeds maxCutDepth {} at ({},{},{})",
+                                    cutDepth, maxCut, tx, actualY, tz);
+                        }
+                    }
+                    int clearTop = Math.max(actualY + 2, Math.min(terrainY, actualY + 3));
+                    for (int hy = actualY + 1; hy <= clearTop; hy++) {
+                        PathPoint headPt = new PathPoint(tx, hy, tz);
+                        if (occupiedTiles.contains(headPt)) continue;
+                        BlockPos headPos = new BlockPos(tx, hy, tz);
+                        BlockState headState = level.getBlockState(headPos);
+                        if (!headState.isAir()
+                                && headState.getFluidState().isEmpty()
+                                && !headState.is(Blocks.BEDROCK)) {
+                            tiles.add(makeTile(headPos, "minecraft:air"));
+                            occupiedTiles.add(headPt);
+                        }
                     }
                 }
-                // Clear at least 2 blocks headroom, at most 3 blocks above road surface.
-                int clearTop = Math.max(actualY + 2, Math.min(terrainY, actualY + 3));
-                for (int hy = actualY + 1; hy <= clearTop; hy++) {
-                    PathPoint headPt = new PathPoint(tx, hy, tz);
-                    if (occupiedTiles.contains(headPt)) continue; // protect upper road
-                    BlockPos headPos = new BlockPos(tx, hy, tz);
-                    BlockState headState = level.getBlockState(headPos);
-                    if (!headState.isAir()
-                            && headState.getFluidState().isEmpty()
-                            && !headState.is(Blocks.BEDROCK)) {
-                        tiles.add(makeTile(headPos, "minecraft:air"));
-                        occupiedTiles.add(headPt);
-                    }
-                }
-
-                // Fill: disabled — road floats above terrain. Only surface + excavation.
             }
+
+            // ========================================================
+            // 2. 桥墩柱子生成 (独立于笔刷外，彻底解决 continue 拦截问题)
+            // ========================================================
+            if (centerProcessed && config.isPillarEnabled() && !centerIsWater && centerActualY > centerTerrainY) {
+                int spacing = config.getPillarSpacing();
+                // 确保 spacing > 0，防止除以零崩溃
+                if (spacing > 0 && (i % spacing == 0) && (i > 1 && i < n - 2)) {
+                    String pillarBlock = config.getPillarBlock();
+                    int placed = 0;
+
+                    // 从道路下方一格开始向下延伸射线
+                    for (int fy = centerActualY - 1; fy >= centerTerrainY; fy--) {
+                        PathPoint pillarPt = new PathPoint(px, fy, pz);
+
+                        // 防冲突核心：如果碰到其他道路（或自己底下的道路），立刻停止！
+                        if (occupiedTiles.contains(pillarPt)) break;
+
+                        BlockPos pillarPos = new BlockPos(px, fy, pz);
+                        tiles.add(makeTile(pillarPos, pillarBlock));
+                        occupiedTiles.add(pillarPt);
+                        placed++;
+                    }
+                    pillarsPlaced += placed;
+                }
+            }
+        }
+
+        if (pillarsPlaced > 0) {
+            LOGGER.info("[Road] buildTiles: {} pillars placed ({} path points, width={})",
+                    pillarsPlaced, n, roadWidth);
         }
 
         return tiles;

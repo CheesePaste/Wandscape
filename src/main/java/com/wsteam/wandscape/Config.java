@@ -109,6 +109,20 @@ public class Config {
             .define("road.surfacePalette",
                     "minecraft:stone_bricks=50,minecraft:andesite=25,minecraft:stone=25");
 
+    // ---- Road pillars ----
+
+    public static final ModConfigSpec.BooleanValue ROAD_PILLAR_ENABLED = BUILDER
+            .comment("Whether viaduct pillars are generated below elevated road segments")
+            .define("road.pillar.enabled", true);
+
+    public static final ModConfigSpec.IntValue ROAD_PILLAR_SPACING = BUILDER
+            .comment("Spacing in path points between pillars (higher = sparser)")
+            .defineInRange("road.pillar.spacing", 4, 2, 16);
+
+    public static final ModConfigSpec.ConfigValue<String> ROAD_PILLAR_BLOCK = BUILDER
+            .comment("Block used for viaduct support pillars under elevated roads")
+            .define("road.pillar.block", "minecraft:stone_bricks");
+
     // ---- Road decoration ----
 
     public static final ModConfigSpec.BooleanValue ROAD_DECORATION_ENABLED = BUILDER

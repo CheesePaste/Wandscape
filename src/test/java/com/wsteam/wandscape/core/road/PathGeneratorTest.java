@@ -135,20 +135,29 @@ class PathGeneratorTest {
 
     @Test
     void lShape3DdescendingEvenly() {
-        // ΔY=-10. Spiral walks a square pattern dropping 1 per step,
-        // then flat L-path to target. Path must reach (5,60,5).
+        // ΔY=-10, 10 horizontal steps. Flat margins keep intersection clear.
+        // Margin=3 → first 3 at Y=70, last 3 at Y=60, middle 4 ramp -10.
         PathPoint from = new PathPoint(0, 70, 0);
         PathPoint to = new PathPoint(5, 60, 5);
         List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
-        assertTrue(path.size() >= 10, "Should have at least 10 points for ΔY=10");
+        assertEquals(10, path.size());
 
-        // All steps |ΔY| ≤ 1
-        int prevY = from.y();
-        for (PathPoint p : path) {
-            assertTrue(Math.abs(p.y() - prevY) <= 1,
-                    "Step from " + prevY + " to " + p.y() + " > 1 at " + p);
-            prevY = p.y();
+        // ── Flat margin at start ──
+        for (int i = 0; i < 3; i++) {
+            assertEquals(70, path.get(i).y(), "Start margin step " + i + " must be flat");
+        }
+
+        // ── Ramp in middle (steps 3..6) — Y strictly descends ──
+        for (int i = 3; i <= 6; i++) {
+            int prevY = path.get(i - 1).y();
+            int curY = path.get(i).y();
+            assertTrue(curY <= prevY, "Ramp must descend at step " + i);
+        }
+
+        // ── Flat margin at end ──
+        for (int i = 7; i < path.size(); i++) {
+            assertEquals(60, path.get(i).y(), "End margin step " + i + " must be flat");
         }
 
         // Last point reaches target

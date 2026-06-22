@@ -50,6 +50,18 @@ public final class RoadConfig {
         return Config.ROAD_MAX_FILL_HEIGHT.get();
     }
 
+    public boolean isPillarEnabled() {
+        return Config.ROAD_PILLAR_ENABLED.get();
+    }
+
+    public int getPillarSpacing() {
+        return Config.ROAD_PILLAR_SPACING.get();
+    }
+
+    public String getPillarBlock() {
+        return Config.ROAD_PILLAR_BLOCK.get();
+    }
+
     // ---- Decoration ----
 
     /**
