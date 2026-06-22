@@ -21,7 +21,6 @@ import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadNode;
 import com.wsteam.wandscape.core.road.RoadPlanner;
-import com.wsteam.wandscape.core.road.XZPoint;
 import com.wsteam.wandscape.core.road.DecorationPoint;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -101,6 +100,7 @@ public final class RoadEventListener {
         }
 
         RoadNetwork network = roadData.getNetwork();
+        int amplitude = config.getDefaultWidth() * 2;
 
         var buildingBounds = new ArrayList<BoundingBox>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
@@ -130,7 +130,7 @@ public final class RoadEventListener {
             LOGGER.info("[Road] First MST plan — {} buildings (threshold={})",
                     buildingCount, threshold);
 
-            RoadNetwork planned = RoadPlanner.computeMST(allBuildings, threshold);
+            RoadNetwork planned = RoadPlanner.computeMST(allBuildings, threshold, amplitude);
             if (planned.getEdges().isEmpty()) {
                 LOGGER.warn("[Road] MST plan produced no edges");
                 roadData.markChanged();
@@ -145,7 +145,7 @@ public final class RoadEventListener {
                         RoadNode.NodeType.BUILDING));
             }
 
-            Set<XZPoint> occupiedTiles = new HashSet<>();
+            Set<PathPoint> occupiedTiles = new HashSet<>();
             for (RoadEdge edge : planned.getEdges().values()) {
                 network.addEdge(edge);
                 enqueueEdge(edge, level, config, buildingBounds, occupiedTiles);
@@ -170,12 +170,12 @@ public final class RoadEventListener {
         LOGGER.info("[Road] Incremental: connecting {} at ({},{}) to network",
                 buildingName, newBuilding.x(), newBuilding.z());
 
-        Set<XZPoint> occupiedTiles = new HashSet<>();
+        Set<PathPoint> occupiedTiles = new HashSet<>();
         for (RoadEdge e : network.getEdges().values()) {
-            occupiedTiles.addAll(extractXz(e.getPath()));
+            occupiedTiles.addAll(e.getPlacedBlocks());
         }
 
-        RoadPlanner.incrementalAdd(network, newBuilding);
+        RoadPlanner.incrementalAdd(network, newBuilding, amplitude);
 
         for (RoadEdge edge : network.getEdges().values()) {
             if (edge.getFromNodeId().equals(newBuilding.id())
@@ -188,10 +188,10 @@ public final class RoadEventListener {
                     List<PathPoint> fresh = RoadPlanner.filterNewPath(seg, occupiedTiles);
                     if (!fresh.isEmpty()) {
                         JsonArray tiles = RoadBuilder.buildTiles(
-                                level, fresh, edge.getTier(), buildingBounds, new HashSet<>());
+                                level, fresh, edge.getTier(), buildingBounds, occupiedTiles);
                         if (!tiles.isEmpty()) {
                             segCount += enqueueSegments(edge.getEdgeId(), tiles, config);
-                            occupiedTiles.addAll(RoadBuilder.extractXZ(tiles));
+                            occupiedTiles.addAll(RoadBuilder.extractPathPoints(tiles));
                         }
                     }
                 }
@@ -354,6 +354,7 @@ public final class RoadEventListener {
         }
 
         RoadNetwork network = roadData.getNetwork();
+        int amplitude = config.getDefaultWidth() * 2;
 
         var buildingBounds = new ArrayList<BoundingBox>();
         for (BuildingState bs : buildingData.getAllBuildings()) {
@@ -361,13 +362,13 @@ public final class RoadEventListener {
             buildingBounds.add(bs.getBounds());
         }
 
-        NetworkDiff diff = RoadPlanner.rebuild(network, allBuildings);
+        NetworkDiff diff = RoadPlanner.rebuild(network, allBuildings, amplitude);
         LOGGER.info("[Road] rebuild: {} retained, {} deprecated, {} new",
                 diff.retained().size(), diff.deprecated().size(), diff.newEdges().size());
 
-        Set<XZPoint> occupiedTiles = new HashSet<>();
-        for (RoadEdge e : diff.retained()) occupiedTiles.addAll(extractXz(e.getPath()));
-        for (RoadEdge e : diff.deprecated()) occupiedTiles.addAll(extractXz(e.getPath()));
+        Set<PathPoint> occupiedTiles = new HashSet<>();
+        for (RoadEdge e : diff.retained()) occupiedTiles.addAll(e.getPlacedBlocks());
+        for (RoadEdge e : diff.deprecated()) occupiedTiles.addAll(e.getPlacedBlocks());
 
         for (RoadEdge edge : diff.newEdges()) {
             network.addEdge(edge);
@@ -386,7 +387,7 @@ public final class RoadEventListener {
      */
     public static void enqueueEdge(RoadEdge edge, ServerLevel level, RoadConfig config,
                                      List<BoundingBox> buildingBounds,
-                                     Set<XZPoint> occupiedTiles) {
+                                     Set<PathPoint> occupiedTiles) {
         List<List<PathPoint>> segments = RoadPlanner.splitIntoSegments(
                 edge.getPath(), config.getSegmentMaxLength());
         int segmentCount = 0;
@@ -396,7 +397,7 @@ public final class RoadEventListener {
                     level, seg, edge.getTier(), buildingBounds, occupiedTiles);
             if (!tiles.isEmpty()) {
                 segmentCount += enqueueSegments(edge.getEdgeId(), tiles, config);
-                occupiedTiles.addAll(RoadBuilder.extractXZ(tiles));
+                occupiedTiles.addAll(RoadBuilder.extractPathPoints(tiles));
                 allPlaced.addAll(extractPlacedBlocks(tiles));
             }
         }
@@ -432,12 +433,6 @@ public final class RoadEventListener {
         LOGGER.info("[Road] edge {}: {} tiles in {} segments",
                 edgeId.toString().substring(0, 8), tileCount, count);
         return count;
-    }
-
-    private static Set<XZPoint> extractXz(List<PathPoint> path) {
-        Set<XZPoint> result = new HashSet<>();
-        for (PathPoint pp : path) result.add(pp.xz());
-        return result;
     }
 
     /** Extract 3D block positions from a JSON tile array for demolition tracking. */

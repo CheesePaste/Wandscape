@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.road.PathGenerator;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
@@ -249,15 +250,16 @@ public final class RoadEditorRenderer {
 
             if (startNode != null && target != null) {
                 List<PathPoint> previewPath = new java.util.ArrayList<>();
+                int amplitude = Config.ROAD_DEFAULT_WIDTH.get() * 2;
 
                 PathPoint cursor = new PathPoint(
                         startNode.pos().x(), startNode.pos().y(), startNode.pos().z());
                 for (BlockPos wp : wps) {
                     PathPoint wpPt = new PathPoint(wp.getX(), wp.getY(), wp.getZ());
-                    previewPath.addAll(PathGenerator.lShape3D(cursor, wpPt));
+                    previewPath.addAll(PathGenerator.lShape3D(cursor, wpPt, amplitude));
                     cursor = wpPt;
                 }
-                previewPath.addAll(PathGenerator.lShape3D(cursor, target));
+                previewPath.addAll(PathGenerator.lShape3D(cursor, target, amplitude));
 
                 if (!previewPath.isEmpty()) {
                     VertexConsumer previewFc = bufferSource.getBuffer(RenderType.debugQuads());

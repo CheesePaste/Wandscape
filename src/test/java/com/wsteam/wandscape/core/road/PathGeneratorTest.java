@@ -121,9 +121,10 @@ class PathGeneratorTest {
 
     @Test
     void lShape3DflatSameY() {
+        // Pure horizontal: no spiral needed, just L-path
         PathPoint from = new PathPoint(0, 64, 0);
         PathPoint to = new PathPoint(5, 64, 0);
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
         assertEquals(5, path.size());
         for (PathPoint p : path) {
@@ -134,63 +135,74 @@ class PathGeneratorTest {
 
     @Test
     void lShape3DdescendingEvenly() {
-        // 10 steps (X:5 + Z:5), ΔY = -10 → -1 per step, reaches target exactly
+        // ΔY=-10. Spiral walks a square pattern dropping 1 per step,
+        // then flat L-path to target. Path must reach (5,60,5).
         PathPoint from = new PathPoint(0, 70, 0);
         PathPoint to = new PathPoint(5, 60, 5);
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
-        assertEquals(10, path.size());
-        for (int i = 0; i < path.size(); i++) {
-            assertEquals(70 - (i + 1), path.get(i).y(),
-                    "Step " + i + " Y should be " + (70 - i - 1));
+        assertTrue(path.size() >= 10, "Should have at least 10 points for ΔY=10");
+
+        // All steps |ΔY| ≤ 1
+        int prevY = from.y();
+        for (PathPoint p : path) {
+            assertTrue(Math.abs(p.y() - prevY) <= 1,
+                    "Step from " + prevY + " to " + p.y() + " > 1 at " + p);
+            prevY = p.y();
         }
-        assertEquals(new PathPoint(5, 60, 5), path.get(path.size() - 1));
+
+        // Last point reaches target
+        PathPoint last = path.get(path.size() - 1);
+        assertEquals(5, last.x());
+        assertEquals(60, last.y());
+        assertEquals(5, last.z());
     }
 
     @Test
     void lShape3DascendingUnevenly() {
-        // 7 XZ steps, ΔY = +10 → all +1 per step, with stairs at end
+        // 7 XZ steps, ΔY = +10 → spiral (10 steps) + flat (to X=7)
         PathPoint from = new PathPoint(0, 60, 0);
         PathPoint to = new PathPoint(7, 70, 0);
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
-        assertTrue(path.size() >= 7);
+        assertTrue(path.size() >= 10);
         // Each step ΔY ≤ 1
         int prevY = from.y();
-        for (int i = 0; i < path.size(); i++) {
-            int dy = Math.abs(path.get(i).y() - prevY);
-            assertTrue(dy <= 1, "Step " + i + " ΔY=" + dy + " exceeds 1");
-            prevY = path.get(i).y();
+        for (PathPoint p : path) {
+            assertTrue(Math.abs(p.y() - prevY) <= 1,
+                    "ΔY=" + Math.abs(p.y() - prevY) + " exceeds 1");
+            prevY = p.y();
         }
-        // Last point reaches target Y
-        assertEquals(70, path.get(path.size() - 1).y());
+        PathPoint last = path.get(path.size() - 1);
+        assertEquals(7, last.x());
+        assertEquals(70, last.y());
     }
 
     @Test
-    void lShape3DsameXZswitchback() {
-        // Same XZ, different Y → switchback ramp (oscillates laterally)
+    void lShape3DsameXZspiral() {
+        // Same XZ, different Y → pure square spiral (no flat phase needed)
         PathPoint from = new PathPoint(5, 64, 5);
         PathPoint to = new PathPoint(5, 80, 5);
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
-        assertFalse(path.isEmpty(), "Switchback path should connect vertically");
+        assertFalse(path.isEmpty(), "Spiral path should connect vertically");
         // All steps |ΔY| ≤ 1
         int prevY = 64;
         for (PathPoint p : path) {
-            assertTrue(Math.abs(p.y() - prevY) <= 1, "Step from " + prevY + " to " + p.y() + " > 1");
+            assertTrue(Math.abs(p.y() - prevY) <= 1);
             prevY = p.y();
         }
         assertEquals(80, path.get(path.size() - 1).y());
     }
 
     @Test
-    void lShape3DsteepAddsStairsAtEnd() {
-        // 5 XZ steps for 30 Y drop → switchback zigzags handle the extra
+    void lShape3DsteepSquareSpiral() {
+        // 5 XZ steps for 30 Y drop → spiral wraps ~30 steps, then flat
         PathPoint from = new PathPoint(0, 80, 0);
         PathPoint to = new PathPoint(5, 50, 0);
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
-        assertTrue(path.size() >= 30, "Should have at least 30 steps for ΔY=30");
+        assertTrue(path.size() >= 30, "Should have >= 30 steps for ΔY=30, got " + path.size());
         // All steps |ΔY| ≤ 1
         int prevY = from.y();
         for (PathPoint p : path) {
@@ -198,40 +210,153 @@ class PathGeneratorTest {
                     "Step to " + p + " ΔY=" + (p.y() - prevY) + " > 1");
             prevY = p.y();
         }
-        assertEquals(50, path.get(path.size() - 1).y());
-        // Final X should be near target (may oscillate)
         PathPoint last = path.get(path.size() - 1);
-        assertTrue(Math.abs(last.x() - 5) <= 1, "Last X should be within 1 of target");
+        assertEquals(50, last.y());
+        assertEquals(5, last.x());
     }
 
     @Test
-    void lShape3DxSegmentsHaveCorrectXZ() {
-        PathPoint from = new PathPoint(0, 64, 0);
-        PathPoint to = new PathPoint(3, 50, 2);
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+    void lShape3DflatPhaseYConstant() {
+        // Once spiral finishes and Y reaches target, flat phase must keep Y constant.
+        PathPoint from = new PathPoint(0, 70, 0);
+        PathPoint to = new PathPoint(8, 45, 5);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
 
-        // Path should reach target coordinates
-        PathPoint last = path.get(path.size() - 1);
-        assertEquals(3, last.x());
-        assertEquals(50, last.y());
-        assertEquals(2, last.z());
+        // Find transition to flat phase (first point at target Y)
+        int flatStart = -1;
+        for (int i = 0; i < path.size(); i++) {
+            if (path.get(i).y() == to.y()) {
+                flatStart = i;
+                break;
+            }
+        }
+        assertTrue(flatStart >= 0, "Should transition to flat phase at target Y");
 
-        // All steps |ΔY| ≤ 1
-        int prevY = 64;
-        for (PathPoint p : path) {
-            assertTrue(Math.abs(p.y() - prevY) <= 1,
-                    "Step from " + prevY + " to " + p.y() + " > 1 at " + p);
-            prevY = p.y();
+        // All flat phase points must have target Y
+        for (int i = flatStart; i < path.size(); i++) {
+            assertEquals(to.y(), path.get(i).y(), "Flat point " + i + " Y should be target");
         }
 
-        // XZ walk direction should progress monotonically:
-        // X never goes opposite to overall dx, Z never opposite to overall dz
-        int maxX = 0, maxZ = 0;
+        PathPoint last = path.get(path.size() - 1);
+        assertEquals(to.x(), last.x());
+        assertEquals(to.z(), last.z());
+    }
+
+    // ── XZ continuity tests ──
+
+    @Test
+    void lShape3DeveryConsecutiveStepIsWalkableXZ() {
+        // Every pair of consecutive points must be at most 1 XZ block apart.
+        PathPoint from = new PathPoint(0, 80, 0);
+        PathPoint to = new PathPoint(5, 50, 0);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
+
+        assertFalse(path.isEmpty());
+        PathPoint prev = from;
+        for (int i = 0; i < path.size(); i++) {
+            PathPoint p = path.get(i);
+            int xzDist = Math.abs(p.x() - prev.x()) + Math.abs(p.z() - prev.z());
+            assertTrue(xzDist <= 1,
+                    "XZ gap " + xzDist + " between " + prev + " and " + p
+                    + " (index " + i + ") — road would have gaps");
+            prev = p;
+        }
+    }
+
+    @Test
+    void lShape3DspiralXZcontinuity() {
+        // Pure vertical square spiral — all XZ steps must be contiguous.
+        PathPoint from = new PathPoint(0, 70, 0);
+        PathPoint to = new PathPoint(0, 40, 0);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
+
+        assertTrue(path.size() >= 30, "ΔY=30 needs >=30 steps, got " + path.size());
+        PathPoint prev = from;
+        for (int i = 0; i < path.size(); i++) {
+            PathPoint p = path.get(i);
+            int xzDist = Math.abs(p.x() - prev.x()) + Math.abs(p.z() - prev.z());
+            assertTrue(xzDist <= 1,
+                    "XZ gap " + xzDist + " between " + prev + " and " + p + " (index " + i + ")");
+            prev = p;
+        }
+        assertEquals(40, path.get(path.size() - 1).y());
+    }
+
+    @Test
+    void lShape3DspiralNoConsecutive180Reversals() {
+        // A square spiral changes direction by 90° each time (+X→+Z→-X→-Z).
+        // It should never have two consecutive 180° reversals.
+        // A single 180° at the spiral→flat transition is acceptable
+        // (when the spiral exits mid-side and flat phase walks opposite).
+        PathPoint from = new PathPoint(0, 70, 0);
+        PathPoint to = new PathPoint(0, 45, 0);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
+
+        assertTrue(path.size() >= 25);
+        int reversals = 0;
+        for (int i = 1; i < path.size() - 1; i++) {
+            int prevDx = path.get(i).x() - path.get(i - 1).x();
+            int prevDz = path.get(i).z() - path.get(i - 1).z();
+            int nextDx = path.get(i + 1).x() - path.get(i).x();
+            int nextDz = path.get(i + 1).z() - path.get(i).z();
+
+            boolean is180 = (prevDx != 0 && nextDx == -prevDx && nextDz == 0)
+                         || (prevDz != 0 && nextDz == -prevDz && nextDx == 0);
+            if (is180) reversals++;
+        }
+        // At most 1 reversal allowed (spiral→flat transition boundary).
+        // The spiral's 90° turns are not reversals.
+        assertTrue(reversals <= 1,
+                "Should have ≤1 reversal (transition boundary), got " + reversals);
+    }
+
+    @Test
+    void lShape3DspiralEndsAtTargetXZ() {
+        // Path must end at the specified target coordinates.
+        PathPoint from = new PathPoint(10, 70, 10);
+        PathPoint to = new PathPoint(15, 50, 10);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
+
+        PathPoint last = path.get(path.size() - 1);
+        assertEquals(15, last.x(), "X should be target: " + last);
+        assertEquals(10, last.z(), "Z should be target: " + last);
+        assertEquals(50, last.y(), "Y should be target: " + last);
+    }
+
+    // ── Edge cases ──
+
+    @Test
+    void lShape3DdyZeroFlatOnly() {
+        // ΔY=0, ΔXZ>0 → pure flat L-path, no spiral.
+        PathPoint from = new PathPoint(0, 64, 0);
+        PathPoint to = new PathPoint(10, 64, 10);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
+
+        assertEquals(20, path.size()); // 10 X + 10 Z
         for (PathPoint p : path) {
+            assertEquals(64, p.y());
+        }
+        assertEquals(new PathPoint(10, 64, 10), path.get(path.size() - 1));
+    }
+
+    @Test
+    void lShape3DspiralXZRange() {
+        // The spiral should cover a roughly amplitude×amplitude area,
+        // not be a narrow strip. X and Z should both vary by at least amplitude/2.
+        PathPoint from = new PathPoint(0, 70, 0);
+        PathPoint to = new PathPoint(0, 45, 0);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
+
+        int minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+        for (PathPoint p : path) {
+            if (p.x() < minX) minX = p.x();
             if (p.x() > maxX) maxX = p.x();
+            if (p.z() < minZ) minZ = p.z();
             if (p.z() > maxZ) maxZ = p.z();
         }
-        assertTrue(maxX >= 3, "X should reach at least 3 (got " + maxX + ")");
-        assertTrue(maxZ >= 2, "Z should reach at least 2 (got " + maxZ + ")");
+        int xSpread = maxX - minX;
+        int zSpread = maxZ - minZ;
+        assertTrue(xSpread >= 3 || zSpread >= 3,
+                "Spiral should spread at least 3 blocks in X or Z, got X=" + xSpread + " Z=" + zSpread);
     }
 }

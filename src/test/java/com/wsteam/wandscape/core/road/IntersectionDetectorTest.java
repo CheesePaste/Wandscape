@@ -111,7 +111,7 @@ class IntersectionDetectorTest {
         RoadEdge edgeB = new RoadEdge(java.util.UUID.randomUUID(),
                 java.util.UUID.randomUUID(), java.util.UUID.randomUUID(),
                 "dirt", PathGenerator.lShape3D(
-                        new PathPoint(2, 64, 0), new PathPoint(10, 64, 10)));
+                        new PathPoint(2, 64, 0), new PathPoint(10, 64, 10), 6));
 
         Set<XZPoint> intersections = IntersectionDetector.detectAll(
                 List.of(edgeA, edgeB));

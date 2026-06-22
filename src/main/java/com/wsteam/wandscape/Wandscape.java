@@ -20,6 +20,7 @@ import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.RoadCommand;
 import com.wsteam.wandscape.command.RoadTestCommand;
+import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
@@ -353,6 +354,7 @@ public class Wandscape {
                 .then(PublishBlueprintCommand.buildNode())
                 .then(RoadCommand.node())
                 .then(RoadTestCommand.node())
+                .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode());
         dispatcher.register(root);
     }

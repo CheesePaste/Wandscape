@@ -29,9 +29,11 @@ public final class RoadPlanner {
      *
      * @param buildings list of all buildings in the colony
      * @param threshold minimum building count to trigger road generation
+     * @param amplitude lateral distance of each switchback zigzag swing
      * @return a new RoadNetwork (empty if threshold not met)
      */
-    public static RoadNetwork computeMST(List<RoadBuildingData> buildings, int threshold) {
+    public static RoadNetwork computeMST(List<RoadBuildingData> buildings,
+                                         int threshold, int amplitude) {
         if (buildings.size() < threshold) {
             return new RoadNetwork();
         }
@@ -59,7 +61,7 @@ public final class RoadPlanner {
             PathPoint fromPt = pathPoint(from);
             PathPoint toPt = pathPoint(to);
 
-            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt);
+            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude);
             if (path.isEmpty()) continue;
 
             RoadEdge edge = new RoadEdge(
@@ -79,10 +81,12 @@ public final class RoadPlanner {
      *
      * @param network     the existing road network (may be empty)
      * @param newBuilding the newly built building
+     * @param amplitude   lateral distance of each switchback zigzag swing
      * @return the same network instance (mutated), or a new network if previously empty
      */
     public static RoadNetwork incrementalAdd(RoadNetwork network,
-                                              RoadBuildingData newBuilding) {
+                                              RoadBuildingData newBuilding,
+                                              int amplitude) {
         PathPoint newPt = pathPoint(newBuilding);
 
         if (network.nodeCount() == 0) {
@@ -128,7 +132,7 @@ public final class RoadPlanner {
                 RoadNode.NodeType.BUILDING));
 
         // Generate 3D path
-        List<PathPoint> path = PathGenerator.lShape3D(newPt, nearestPt);
+        List<PathPoint> path = PathGenerator.lShape3D(newPt, nearestPt, amplitude);
         if (path.isEmpty()) return network;
 
         RoadEdge edge = new RoadEdge(
@@ -143,10 +147,13 @@ public final class RoadPlanner {
     /**
      * Rebuild the road network by computing a fresh MST and diffing
      * against the existing network.
+     *
+     * @param amplitude lateral distance of each switchback zigzag swing
      */
     public static NetworkDiff rebuild(RoadNetwork network,
-                                       List<RoadBuildingData> buildings) {
-        RoadNetwork fresh = computeMST(buildings, 0);
+                                       List<RoadBuildingData> buildings,
+                                       int amplitude) {
+        RoadNetwork fresh = computeMST(buildings, 0, amplitude);
 
         Set<BuildingPair> freshPairs = new HashSet<>();
         for (RoadEdge edge : fresh.getEdges().values()) {
@@ -185,7 +192,7 @@ public final class RoadPlanner {
 
             PathPoint fromPt = pathPoint(fromBd);
             PathPoint toPt = pathPoint(toBd);
-            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt);
+            List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude);
             if (path.isEmpty()) continue;
 
             RoadEdge edge = new RoadEdge(
@@ -236,14 +243,13 @@ public final class RoadPlanner {
 
     /**
      * Remove points from a new path that are already occupied by existing edges.
-     * Filters by XZ only (Y is irrelevant for occupancy — a tile at the same XZ
-     * is occupied regardless of height).
+     * Filters by 3D position — only skip if the exact (x,y,z) is occupied.
      */
-    public static List<PathPoint> filterNewPath(List<PathPoint> path, Set<XZPoint> occupied) {
+    public static List<PathPoint> filterNewPath(List<PathPoint> path, Set<PathPoint> occupied) {
         if (occupied.isEmpty()) return path;
         List<PathPoint> result = new ArrayList<>();
         for (PathPoint p : path) {
-            if (!occupied.contains(p.xz())) {
+            if (!occupied.contains(p)) {
                 result.add(p);
             }
         }

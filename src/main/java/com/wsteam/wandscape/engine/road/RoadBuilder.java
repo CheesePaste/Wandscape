@@ -12,7 +12,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.XZPoint;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -34,7 +33,7 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  *   <li>Picks surface blocks from a weighted palette with
  *       position-based deterministic randomness</li>
  *   <li>Excavates 2-block headroom when road is below terrain</li>
- *   <li>Fills support blocks when road is above terrain</li>
+ *   <li>Fill disabled — road floats over air gaps</li>
  * </ul>
  */
 public final class RoadBuilder {
@@ -51,13 +50,13 @@ public final class RoadBuilder {
      * @param tier           road tier name (e.g. "dirt") — currently unused;
      *                       all surfaces use the TOML palette
      * @param buildingBounds building bounding boxes to avoid
-     * @param occupiedTiles  mutable set of already-claimed XZ positions;
-     *                       updated in-place
+     * @param occupiedTiles  mutable set of already-claimed 3D positions;
+     *                       updated in-place with all tiles placed by this call
      */
     public static JsonArray buildTiles(Level level, List<PathPoint> path,
                                         String tier,
                                         Collection<BoundingBox> buildingBounds,
-                                        Set<XZPoint> occupiedTiles) {
+                                        Set<PathPoint> occupiedTiles) {
         RoadConfig config = RoadConfig.getInstance();
         List<RoadConfig.WeightedBlock> palette = config.getSurfacePalette();
         int halfWidth = config.getDefaultWidth() / 2;
@@ -100,13 +99,7 @@ public final class RoadBuilder {
                 int tx = p.x() + perpDx * w;
                 int tz = p.z() + perpDz * w;
 
-                XZPoint tileXz = new XZPoint(tx, tz);
                 boolean isSameXzStep = i > 0 && path.get(i - 1).xz().equals(p.xz());
-
-                if (!isSameXzStep) {
-                    if (occupiedTiles.contains(tileXz)) continue;
-                }
-
                 int roadY = p.y();
                 int terrainY = level.getHeight(Heightmap.Types.WORLD_SURFACE, tx, tz);
 
@@ -131,13 +124,17 @@ public final class RoadBuilder {
                 }
                 int actualY = roadPos.getY();
 
+                // ── 3D occupancy check for surface tile ──
                 if (!isSameXzStep) {
-                    occupiedTiles.add(tileXz);
+                    PathPoint surfacePt = new PathPoint(tx, actualY, tz);
+                    if (occupiedTiles.contains(surfacePt)) continue;
+                    occupiedTiles.add(surfacePt);
                 }
 
                 tiles.add(makeTile(roadPos, block));
 
                 // Excavation: clear at least 2-block walkable headroom above road.
+                // Check 3D occupancy to avoid deleting upper road surfaces.
                 int terrainTop = terrainY - 1;
                 if (!isWater && actualY < terrainTop) {
                     int cutDepth = terrainTop - actualY;
@@ -149,31 +146,19 @@ public final class RoadBuilder {
                 }
                 int clearTop = Math.max(actualY + 2, terrainY);
                 for (int hy = actualY + 1; hy <= clearTop; hy++) {
+                    PathPoint headPt = new PathPoint(tx, hy, tz);
+                    if (occupiedTiles.contains(headPt)) continue; // protect upper road
                     BlockPos headPos = new BlockPos(tx, hy, tz);
                     BlockState headState = level.getBlockState(headPos);
                     if (!headState.isAir()
                             && headState.getFluidState().isEmpty()
                             && !headState.is(Blocks.BEDROCK)) {
                         tiles.add(makeTile(headPos, "minecraft:air"));
+                        occupiedTiles.add(headPt);
                     }
                 }
 
-                // Fill: add support below road when road is above terrain
-                if (!isWater && actualY > terrainY) {
-                    int fillHeight = actualY - terrainY;
-                    int maxFill = config.getMaxFillHeight();
-                    if (maxFill > 0 && fillHeight > maxFill) {
-                        LOGGER.warn("[Road] Fill height {} exceeds maxFillHeight {} at ({},{},{})",
-                                fillHeight, maxFill, tx, actualY, tz);
-                    }
-                    for (int fy = terrainY; fy < actualY; fy++) {
-                        BlockPos fillPos = new BlockPos(tx, fy, tz);
-                        BlockState fillState = level.getBlockState(fillPos);
-                        if (fillState.isAir() || !fillState.getFluidState().isEmpty()) {
-                            tiles.add(makeTile(fillPos, "minecraft:dirt"));
-                        }
-                    }
-                }
+                // Fill: disabled — road floats above terrain. Only surface + excavation.
             }
         }
 
@@ -217,12 +202,13 @@ public final class RoadBuilder {
         return tile;
     }
 
-    /** Extract XZ points from tile JSON for occupancy tracking. */
-    public static Set<XZPoint> extractXZ(JsonArray tiles) {
-        Set<XZPoint> result = new HashSet<>();
+    /** Extract 3D path points from tile JSON for occupancy tracking. */
+    public static Set<PathPoint> extractPathPoints(JsonArray tiles) {
+        Set<PathPoint> result = new HashSet<>();
         for (int i = 0; i < tiles.size(); i++) {
             var t = tiles.get(i).getAsJsonObject().getAsJsonArray("pos");
-            result.add(new XZPoint(t.get(0).getAsInt(), t.get(2).getAsInt()));
+            result.add(new PathPoint(
+                    t.get(0).getAsInt(), t.get(1).getAsInt(), t.get(2).getAsInt()));
         }
         return result;
     }

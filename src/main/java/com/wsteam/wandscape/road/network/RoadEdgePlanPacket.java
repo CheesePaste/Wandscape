@@ -16,7 +16,6 @@ import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadNode;
-import com.wsteam.wandscape.core.road.XZPoint;
 import com.wsteam.wandscape.engine.road.RoadConfig;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -99,13 +98,14 @@ public record RoadEdgePlanPacket(
         }
 
         // ── Phase 2: Build path ──
+        int amplitude = RoadConfig.getInstance().getDefaultWidth() * 2;
         PathPoint cursor = new PathPoint(
                 fromNode.pos().x(), fromNode.pos().y(), fromNode.pos().z());
         List<PathPoint> fullPath = new ArrayList<>();
 
         for (BlockPos wp : packet.waypoints) {
             PathPoint wpPt = new PathPoint(wp.getX(), wp.getY(), wp.getZ());
-            List<PathPoint> segment = PathGenerator.lShape3D(cursor, wpPt);
+            List<PathPoint> segment = PathGenerator.lShape3D(cursor, wpPt, amplitude);
             if (!segment.isEmpty()) {
                 fullPath.addAll(segment);
             }
@@ -114,7 +114,7 @@ public record RoadEdgePlanPacket(
 
         PathPoint toPt = new PathPoint(
                 toNode.pos().x(), toNode.pos().y(), toNode.pos().z());
-        List<PathPoint> lastSegment = PathGenerator.lShape3D(cursor, toPt);
+        List<PathPoint> lastSegment = PathGenerator.lShape3D(cursor, toPt, amplitude);
         if (!lastSegment.isEmpty()) {
             fullPath.addAll(lastSegment);
         }
@@ -146,11 +146,11 @@ public record RoadEdgePlanPacket(
         }
 
         // Collect already-occupied tiles from other edges
-        Set<XZPoint> occupiedTiles = new HashSet<>();
+        Set<PathPoint> occupiedTiles = new HashSet<>();
         for (RoadEdge e : network.getEdges().values()) {
             if (!e.getEdgeId().equals(edge.getEdgeId())) {
                 for (PathPoint pp : e.getPath()) {
-                    occupiedTiles.add(pp.xz());
+                    occupiedTiles.add(pp);
                 }
             }
         }

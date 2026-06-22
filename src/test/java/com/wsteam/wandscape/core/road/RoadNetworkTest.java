@@ -103,7 +103,7 @@ class RoadNetworkTest {
 
         RoadEdge edge = new RoadEdge(UUID.randomUUID(), nodeA, nodeB,
                 "dirt", PathGenerator.lShape3D(
-                        new PathPoint(0, 64, 0), new PathPoint(5, 64, 0)));
+                        new PathPoint(0, 64, 0), new PathPoint(5, 64, 0), 6));
         network.addEdge(edge);
 
         assertFalse(network.isEmpty());

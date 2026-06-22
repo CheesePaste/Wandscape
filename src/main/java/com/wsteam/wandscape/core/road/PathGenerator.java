@@ -9,8 +9,9 @@ import java.util.List;
  * Uses L-shaped paths: walk X first, then Z.
  *
  * <p>2D variant ({@link #lShape}) for topology;
- * 3D variant ({@link #lShape3D}) distributes Y along the path
- * with at most 1 block vertical change per step.
+ * 3D variant ({@link #lShape3D}) first descends/ascends to
+ * the target Y via a square spiral (no 180-degree reversals),
+ * then walks a flat L-path horizontally to the target.
  */
 public final class PathGenerator {
 
@@ -19,12 +20,6 @@ public final class PathGenerator {
     /**
      * Generate an L-shaped path from {@code from} to {@code to}.
      * The path walks the X axis first, then the Z axis.
-     * The start point is excluded; the end point is included.
-     * If the two points are the same, an empty list is returned.
-     *
-     * @param from start position (exclusive)
-     * @param to   end position (inclusive)
-     * @return ordered list of points along the path
      */
     public static List<XZPoint> lShape(XZPoint from, XZPoint to) {
         if (from.equals(to)) {
@@ -56,143 +51,107 @@ public final class PathGenerator {
     }
 
     /**
-     * Generate a 3D L-shaped path with Y interpolation.
-     * XZ topology is identical to {@link #lShape} (X first, then Z).
-     * The Y delta is distributed evenly across all steps,
-     * with at most 1 block vertical change per step for walkability.
+     * Generate a 3D path from {@code from} to {@code to} with
+     * vertical-then-horizontal separation.
      *
-     * <p>Example: from (0,70,0) to (5,50,3) — N=8 steps, ΔY=-20:
-     * each step drops 2 or 3 blocks so the road smoothly descends.
-     *
-     * @param from start position (exclusive) — typically a building anchor
-     * @param to   end position (inclusive) — typically another building anchor
-     * @return ordered 3D path points (may be empty if same XZ)
+     * <p>Algorithm:
+     * <ol>
+     *   <li><b>Vertical phase</b> — if ΔY ≠ 0, use a <b>Square Spiral</b>
+     *       around the starting point. It only uses 90-degree turns
+     *       (+X, +Z, -X, -Z) avoiding any 180-degree jagged reversals.
+     *       It stops exactly when target Y is reached.</li>
+     *   <li><b>Horizontal phase</b> — flat L-shaped walk from wherever
+     *       the spiral ended directly to {@code to.xz} at constant {@code to.y}.</li>
+     * </ol>
      */
-    public static List<PathPoint> lShape3D(PathPoint from, PathPoint to) {
+    public static List<PathPoint> lShape3D(PathPoint from, PathPoint to, int amplitude) {
         int dx = to.x() - from.x();
         int dz = to.z() - from.z();
-        int totalSteps = Math.abs(dx) + Math.abs(dz);
         int dy = to.y() - from.y();
 
-        if (totalSteps == 0) {
-            // Same XZ but Y differs — need switchback ramp
-            if (dy == 0) return Collections.emptyList();
-            return switchbackPath(from, to);
+        // Same point → empty
+        if (dx == 0 && dz == 0 && dy == 0) {
+            return Collections.emptyList();
         }
-
-        int sx = Integer.signum(dx);
-        int sz = Integer.signum(dz);
 
         List<PathPoint> path = new ArrayList<>();
 
-        int cy = from.y();
-        int remainingY = dy;
-        int zigAxis = (Math.abs(dx) >= Math.abs(dz)) ? 'Z' : 'X';
-        int zigDir = 1;
-
-        // Walk X first, with zigzag extension if remainingY is large
-        int cx = from.x();
-        int cz = from.z();
-        for (int i = 0; i < Math.abs(dx); i++) {
-            cx += sx;
-            int stepY = clampStep(remainingY);
-            cy += stepY;
-            remainingY -= stepY;
-            path.add(new PathPoint(cx, cy, cz));
-            // Insert switchback zig if remaining Y >> remaining XZ steps
-            if (Math.abs(remainingY) > (Math.abs(dx) - i - 1) + Math.abs(dz) && remainingY != 0) {
-                if (zigAxis == 'Z') { cz += zigDir; } else { cx += zigDir; }
-                zigDir = -zigDir;
-                stepY = clampStep(remainingY);
-                cy += stepY;
-                remainingY -= stepY;
-                path.add(new PathPoint(cx, cy, cz));
-            }
+        // ── Phase 1: Vertical — Spiral down/up to target Y ──
+        if (dy != 0) {
+            path.addAll(spiralPath(from, to, amplitude));
         }
 
-        // Walk Z, same logic
-        for (int i = 0; i < Math.abs(dz); i++) {
-            cz += sz;
-            int stepY = clampStep(remainingY);
-            cy += stepY;
-            remainingY -= stepY;
-            path.add(new PathPoint(cx, cy, cz));
-            if (Math.abs(remainingY) > (Math.abs(dz) - i - 1) && remainingY != 0) {
-                if (zigAxis == 'Z') { cz += zigDir; } else { cx += zigDir; }
-                zigDir = -zigDir;
-                stepY = clampStep(remainingY);
-                cy += stepY;
-                remainingY -= stepY;
-                path.add(new PathPoint(cx, cy, cz));
-            }
-        }
+        // ── Phase 2: Horizontal — Flat walk to target XZ ──
+        // Continue smoothly from where the spiral ended (or from start if pure flat)
+        PathPoint flatStart = path.isEmpty() ? from : path.get(path.size() - 1);
 
-        // Zigzag extension for remaining Y — extends sideways to avoid vertical column
-        while (remainingY != 0) {
-            if (zigAxis == 'Z') { cz += zigDir; } else { cx += zigDir; }
-            zigDir = -zigDir;
-            int stepY = clampStep(remainingY);
-            cy += stepY;
-            remainingY -= stepY;
-            path.add(new PathPoint(cx, cy, cz));
-        }
-
-        // Ensure last step is walkable (override may create gap)
-        if (!path.isEmpty()) {
-            PathPoint last = path.get(path.size() - 1);
-            PathPoint target = new PathPoint(to.x(), to.y(), to.z());
-            // Compare XZ — if different, we're extending; if same, it's exact
-            int xzDist = Math.abs(last.x() - to.x()) + Math.abs(last.z() - to.z());
-            int yDist = Math.abs(last.y() - to.y());
-            if (xzDist <= 1 && yDist <= 1) {
-                path.set(path.size() - 1, target);
-            } else if (yDist > 1) {
-                // Insert intermediate steps to bridge the Y gap
-                int stepDir = Integer.signum(to.y() - last.y());
-                int midY = last.y() + stepDir;
-                while (midY != to.y()) {
-                    path.add(new PathPoint(last.x(), midY, last.z()));
-                    midY += stepDir;
-                }
-                path.add(target);
-            } else {
-                path.add(target);
-            }
+        // Only walk if we aren't already at the exact XZ
+        if (flatStart.x() != to.x() || flatStart.z() != to.z()) {
+            PathPoint flatTarget = new PathPoint(to.x(), to.y(), to.z());
+            path.addAll(flatLShape(flatStart, flatTarget));
         }
 
         return path;
     }
 
     /**
-     * Build a switchback path when XZ is the same but Y differs.
-     * Creates a compact staircase by oscillating ±1 laterally per Y step.
+     * Flat L-shaped path (constant Y) — X first, then Z.
      */
-    private static List<PathPoint> switchbackPath(PathPoint from, PathPoint to) {
+    private static List<PathPoint> flatLShape(PathPoint from, PathPoint to) {
         List<PathPoint> path = new ArrayList<>();
-        int cy = from.y();
-        int remainingY = to.y() - from.y();
-        int cx = from.x(), cz = from.z();
-        // Pick an axis that has room (prefer +X, then +Z)
-        int zigAxis = 'X';
-        int zigDir = 1;
+        int dx = to.x() - from.x();
+        int dz = to.z() - from.z();
+        int sx = Integer.signum(dx);
+        int sz = Integer.signum(dz);
+        int cy = to.y(); // all points at target Y
 
-        while (remainingY != 0) {
-            if (zigAxis == 'X') { cx += zigDir; } else { cz += zigDir; }
-            zigDir = -zigDir;
-            int stepY = clampStep(remainingY);
-            cy += stepY;
-            remainingY -= stepY;
+        int cx = from.x();
+        int cz = from.z();
+        for (int i = 0; i < Math.abs(dx); i++) {
+            cx += sx;
             path.add(new PathPoint(cx, cy, cz));
-            // Alternate zigzag axis every 2 steps for better spread
-            if ((Math.abs(cx - from.x()) + Math.abs(cz - from.z())) % 4 == 0) {
-                zigAxis = (zigAxis == 'X') ? 'Z' : 'X';
+        }
+        for (int i = 0; i < Math.abs(dz); i++) {
+            cz += sz;
+            path.add(new PathPoint(cx, cy, cz));
+        }
+        return path;
+    }
+
+    /**
+     * Build a continuous square spiral ramp to resolve height difference.
+     * Replaces the old 180-degree jagged zig-zag with 90-degree turns.
+     * Walks in a hollow box pattern until target Y is reached.
+     */
+    private static List<PathPoint> spiralPath(PathPoint from, PathPoint to, int amplitude) {
+        List<PathPoint> path = new ArrayList<>();
+        int cx = from.x();
+        int cy = from.y();
+        int cz = from.z();
+        int targetY = to.y();
+
+        // 4 directions for a square loop: +X, +Z, -X, -Z
+        int[][] dirs = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+        int dirIndex = 0;
+
+        // Ensure minimum side length to make a proper box
+        int sideLength = Math.max(2, amplitude);
+
+        while (cy != targetY) {
+            int dx = dirs[dirIndex][0];
+            int dz = dirs[dirIndex][1];
+
+            // Walk one side of the spiral
+            for (int s = 0; s < sideLength && cy != targetY; s++) {
+                cx += dx;
+                cz += dz;
+                cy += clampStep(targetY - cy);
+                path.add(new PathPoint(cx, cy, cz));
             }
+            // Turn 90 degrees for the next side
+            dirIndex = (dirIndex + 1) % 4;
         }
 
-        // Ensure last step is walkable from target
-        if (!path.isEmpty() && Math.abs(path.get(path.size() - 1).y() - to.y()) <= 1) {
-            path.set(path.size() - 1, to);
-        }
         return path;
     }
 
@@ -204,20 +163,13 @@ public final class PathGenerator {
     }
 
     /**
-     * Return the turn points in a path — positions where
-     * the direction changes (from X to Z walk).
-     * For an L-shaped path this is exactly the last X-walk point.
-     *
-     * @param path full path list (must be non-empty)
-     * @return indices into the path where turns occur
+     * Return the turn points in a path.
      */
     public static List<Integer> turnIndices(List<XZPoint> path) {
         if (path.size() <= 1) return Collections.emptyList();
 
         List<Integer> turns = new ArrayList<>();
 
-        // Find the index of the last point that differs in X from the previous.
-        // In an X-first L-shaped path, this is the last point of the X segment.
         int lastXIdx = -1;
         for (int i = 1; i < path.size(); i++) {
             if (path.get(i - 1).x() != path.get(i).x()) {
@@ -226,7 +178,6 @@ public final class PathGenerator {
         }
 
         if (lastXIdx > 0 && lastXIdx < path.size() - 1) {
-            // Verify there is also a Z segment after this point
             boolean hasZAfter = false;
             for (int i = lastXIdx + 1; i < path.size(); i++) {
                 if (path.get(i).z() != path.get(lastXIdx).z()) {
@@ -242,26 +193,26 @@ public final class PathGenerator {
         return turns;
     }
 
-    /** Same as {@link #turnIndices(List)} but for 3D paths. */
+    /**
+     * Find turn indices in a 3D path by detecting primary-axis switches.
+     * This will now properly detect every 90-degree turn in the spiral.
+     */
     public static List<Integer> turnIndices3D(List<PathPoint> path) {
-        if (path.size() <= 1) return Collections.emptyList();
+        if (path.size() <= 2) return Collections.emptyList();
 
         List<Integer> turns = new ArrayList<>();
-        int lastXIdx = -1;
-        for (int i = 1; i < path.size(); i++) {
-            if (path.get(i - 1).x() != path.get(i).x()) {
-                lastXIdx = i;
+        int prevDx = path.get(1).x() - path.get(0).x();
+        int prevDz = path.get(1).z() - path.get(0).z();
+        boolean prevIsX = Math.abs(prevDx) > Math.abs(prevDz);
+
+        for (int i = 1; i < path.size() - 1; i++) {
+            int dx = path.get(i + 1).x() - path.get(i).x();
+            int dz = path.get(i + 1).z() - path.get(i).z();
+            boolean isX = Math.abs(dx) > Math.abs(dz);
+            if (isX != prevIsX) {
+                turns.add(i);
             }
-        }
-        if (lastXIdx > 0 && lastXIdx < path.size() - 1) {
-            boolean hasZAfter = false;
-            for (int i = lastXIdx + 1; i < path.size(); i++) {
-                if (path.get(i).z() != path.get(lastXIdx).z()) {
-                    hasZAfter = true;
-                    break;
-                }
-            }
-            if (hasZAfter) turns.add(lastXIdx);
+            prevIsX = isX;
         }
         return turns;
     }

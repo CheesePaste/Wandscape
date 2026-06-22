@@ -16,7 +16,7 @@ class DecorationPlannerTest {
     }
 
     private static RoadEdge edge(PathPoint from, PathPoint to) {
-        List<PathPoint> path = PathGenerator.lShape3D(from, to);
+        List<PathPoint> path = PathGenerator.lShape3D(from, to, 6);
         return new RoadEdge(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 "dirt", path);
     }
