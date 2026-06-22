@@ -8,11 +8,12 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.production.menu.CraftingStationMenu;
-import com.wsteam.wandscape.production.menu.WorkstationMenu;
+import com.wsteam.wandscape.production.network.CraftingStationPacket;
+import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.warehouse.WarehouseMenu;
+import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -22,13 +23,14 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Intercepts right-click on blocks within a building's pattern
  * by looking up {@link BuildingSavedData#posIndex}.
  *
- * <p>Warehouse (category=storage) opens its GUI directly — no BE needed.
- * Other buildings print an info message.
+ * <p>Sends data packets directly to client — no ContainerMenu needed.
+ * The client opens the appropriate MedievalScreen upon receiving the packet.
  */
 public final class BuildingInteractHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -54,13 +56,16 @@ public final class BuildingInteractHandler {
 
         switch (category) {
             case "storage" -> {
-                Map<ItemKey, Long> snapshot = ColonyItemBank.get(level).getSnapshot(colonyId);
                 if (event.getEntity() instanceof ServerPlayer player) {
-                    player.openMenu(WarehouseMenu.createMenuProvider(snapshot));
+                    ColonyItemBank bank = ColonyItemBank.get(level);
+                    Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
+                    Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
+                    var pkt = WarehouseDataPacket.from(snapshot, elemSnapshot);
+                    PacketDistributor.sendToPlayer(player, pkt);
                 }
             }
             case "workstation" -> openWorkstationGui(level, colonyId, event);
-            case "crafting_station" -> openCraftingStationGui(event);
+            case "crafting_station" -> openCraftingStationGui(level, colonyId, event);
             case "potion_station" -> {
                 if (event.getEntity() instanceof ServerPlayer player) {
                     player.displayClientMessage(Component.literal(
@@ -109,19 +114,26 @@ public final class BuildingInteractHandler {
                 : java.util.Collections.<com.wsteam.wandscape.production.data.SynthesizeRecipe>emptyList();
 
         if (event.getEntity() instanceof ServerPlayer player) {
-            player.openMenu(WorkstationMenu.createMenuProvider(
-                    event.getPos(), decomposableItems, synthRecipes));
+            Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
+            var pkt = WorkstationDataPacket.from(event.getPos(), decomposableItems, synthRecipes, elemSnapshot);
+            PacketDistributor.sendToPlayer(player, pkt);
         }
     }
 
-    private static void openCraftingStationGui(PlayerInteractEvent.RightClickBlock event) {
+    private static void openCraftingStationGui(Level level, UUID colonyId,
+                                               PlayerInteractEvent.RightClickBlock event) {
+        ColonyItemBank bank = ColonyItemBank.get(level);
+
         var prodLoader = Wandscape.PRODUCTION_RECIPE_LOADER;
         var wandRecipes = prodLoader != null
                 ? prodLoader.getCraftWandRecipes().getAll().values()
                 : java.util.Collections.<com.wsteam.wandscape.production.data.CraftWandRecipe>emptyList();
 
         if (event.getEntity() instanceof ServerPlayer player) {
-            player.openMenu(CraftingStationMenu.createMenuProvider(event.getPos(), wandRecipes));
+            Map<ElementType, Long> elemSnapshot = bank != null
+                    ? bank.getElementSnapshot(colonyId) : Map.of();
+            var pkt = CraftingStationPacket.from(event.getPos(), wandRecipes, elemSnapshot);
+            PacketDistributor.sendToPlayer(player, pkt);
         }
     }
 }

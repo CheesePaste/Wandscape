@@ -48,6 +48,21 @@ public interface BuildingApi {
     /** Mark the building as having an active task in the engine pool. */
     void setCurrentTask(UUID buildingId, UUID taskId);
 
+    /** Get a snapshot of the current task queue in FIFO order. */
+    List<WorkItem> getQueue(UUID buildingId);
+
+    /** Remove a task from the queue by index. Returns true if removed.
+     *  Index 0 (current task) cannot be removed. */
+    boolean removeFromQueue(UUID buildingId, int index);
+
+    /** Swap the task at index with the one above it. Returns true if swapped.
+     *  Index 0 cannot be moved. */
+    boolean moveUp(UUID buildingId, int index);
+
+    /** Swap the task at index with the one below it. Returns true if swapped.
+     *  Index 0 cannot be moved. */
+    boolean moveDown(UUID buildingId, int index);
+
     /** Clear the active task when it completes or is cancelled. */
     void clearCurrentTask(UUID buildingId);
 }

@@ -18,8 +18,8 @@ public final class MedievalColors {
     // ── Gold family ──
     public static final int BORDER_GOLD_DARK  = 0xFF8B6914;
     public static final int BORDER_GOLD       = 0xFFB8960F;
-    public static final int ACCENT_GOLD       = 0xFFFFD700;
-    public static final int GOLD_HIGHLIGHT    = 0xFFFFE040;
+    public static final int ACCENT_GOLD       = 0xFFBB86FC;
+    public static final int GOLD_HIGHLIGHT    = 0xFFD4AAFF;
 
     // ── Purple family ──
     public static final int PURPLE_BG         = 0xFF2D1050;
@@ -27,9 +27,9 @@ public final class MedievalColors {
     public static final int PURPLE_LIGHT      = 0xFF8B50C0;
 
     // ── Text colors ──
-    public static final int TEXT_WARM_WHITE   = 0xFFFFF8DC;
-    public static final int TEXT_MUTED        = 0xFF9A8A6A;
-    public static final int TEXT_DIM          = 0xFF5A4A3A;
+    public static final int TEXT_WARM_WHITE   = 0xFFFFFFFF;
+    public static final int TEXT_MUTED        = 0xFFB0A090;
+    public static final int TEXT_DIM          = 0xFF7A6A5A;
 
     // ── Functional colors ──
     public static final int DANGER_RED        = 0xFF8B0000;
@@ -51,5 +51,5 @@ public final class MedievalColors {
 
     // ── Panel chrome ──
     public static final int PANEL_TITLE_BG    = 0xFF2D1050;
-    public static final int CORNER_DECORATION = 0xFFFFD700;
+    public static final int CORNER_DECORATION = 0xFFBB86FC;
 }

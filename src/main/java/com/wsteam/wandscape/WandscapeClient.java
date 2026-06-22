@@ -13,8 +13,8 @@ import com.wsteam.wandscape.production.client.CraftingStationScreen;
 import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
-import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.shared.ui.task.TaskEditorScreen;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
@@ -34,7 +34,6 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -75,24 +74,43 @@ public class WandscapeClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Wire server→client packet handlers to the client-side screens.
-        // All wiring lives here — migrating to custom UI only needs to change these lambdas.
+        // Wire server→client packet handlers — open MedievalScreen directly.
         WarehouseDataPacket.setClientHandler(packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof WarehouseScreen ws) {
                 ws.updateItems(packet);
+            } else {
+                var ws = new WarehouseScreen();
+                ws.updateItems(packet);
+                Minecraft.getInstance().setScreen(ws);
             }
         });
         WorkstationDataPacket.setClientHandler(packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof WorkstationScreen ws) {
                 ws.updateData(packet);
+            } else {
+                var ws = new WorkstationScreen();
+                ws.updateData(packet);
+                Minecraft.getInstance().setScreen(ws);
+            }
+        });
+        TaskQueueDataPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof WorkstationScreen ws) {
+                ws.updateQueueData(packet);
+            } else if (screen instanceof CraftingStationScreen cs) {
+                cs.updateQueueData(packet);
             }
         });
         CraftingStationPacket.setClientHandler(packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof CraftingStationScreen cs) {
                 cs.updateData(packet);
+            } else {
+                var cs = new CraftingStationScreen();
+                cs.updateData(packet);
+                Minecraft.getInstance().setScreen(cs);
             }
         });
         Wandscape.LOGGER.info("Wandscape client setup complete");
@@ -118,12 +136,6 @@ public class WandscapeClient {
         }
     }
 
-    @SubscribeEvent
-    static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
-        event.register(Wandscape.WAREHOUSE_MENU.get(), WarehouseScreen::new);
-        event.register(Wandscape.WORKSTATION_MENU.get(), WorkstationScreen::new);
-        event.register(Wandscape.CRAFTING_STATION_MENU.get(), CraftingStationScreen::new);
-    }
 
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {

@@ -67,7 +67,7 @@ public abstract class MedievalScreen extends Screen {
             SkinRender.drawHeader(g, leftPos, topPos, panelWidth, headerHeight);
             g.drawCenteredString(font, titleBarText,
                     leftPos + panelWidth / 2, topPos + (headerHeight - 8) / 2,
-                    0xFFFFD700); // gold text
+                    0xFFFFFFFF); // white text
         }
 
         // Tick animations

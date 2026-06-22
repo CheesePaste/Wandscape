@@ -279,21 +279,18 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
-        // Check and consume elements
+        // Check elements
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
-            ItemKey key = elementToItemKey(entry.getKey());
-            if (key == null || bank.available(colonyId, key) < needed) {
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 LOGGER.warn("synthesize: insufficient {} (need={})", entry.getKey(), needed);
                 return;
             }
         }
 
-        // Consume all elements
+        // Consume elements
         for (var entry : recipe.cost().entrySet()) {
-            long needed = entry.getValue() * count;
-            ItemKey key = elementToItemKey(entry.getKey());
-            if (key != null) bank.consume(colonyId, key, needed);
+            bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
         }
 
         // Add output item
@@ -332,20 +329,17 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
-        // Check and consume elements
+        // Check elements
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
-            ItemKey key = elementToItemKey(entry.getKey());
-            if (key == null || bank.available(colonyId, key) < needed) {
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 LOGGER.warn("craft_wand: insufficient {} (need={})", entry.getKey(), needed);
                 return;
             }
         }
 
         for (var entry : recipe.cost().entrySet()) {
-            long needed = entry.getValue() * count;
-            ItemKey key = elementToItemKey(entry.getKey());
-            if (key != null) bank.consume(colonyId, key, needed);
+            bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
         }
 
         // Add output item with NBT
@@ -399,8 +393,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // Check elements
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
-            ItemKey key = elementToItemKey(entry.getKey());
-            if (key == null || bank.available(colonyId, key) < needed) {
+            if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 LOGGER.warn("brew_potion: insufficient {} (need={})", entry.getKey(), needed);
                 return;
             }
@@ -417,9 +410,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         // Consume elements
         for (var entry : recipe.cost().entrySet()) {
-            long needed = entry.getValue() * count;
-            ItemKey key = elementToItemKey(entry.getKey());
-            if (key != null) bank.consume(colonyId, key, needed);
+            bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
         }
 
         // Consume input items
@@ -486,21 +477,5 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
         return new UUID(0, 0);
-    }
-
-    /** Map element type to its representative ItemKey (matches WarehouseManager mapping). */
-    @Nullable
-    private static ItemKey elementToItemKey(ElementType type) {
-        return switch (type) {
-            case WOOD -> ItemKey.of("minecraft:oak_log", null);
-            case EARTH -> ItemKey.of("minecraft:dirt", null);
-            case WATER -> ItemKey.of("minecraft:water_bucket", null);
-            case FIRE -> ItemKey.of("minecraft:blaze_powder", null);
-            case WIND -> ItemKey.of("minecraft:feather", null);
-            case IRON -> ItemKey.of("minecraft:iron_ingot", null);
-            case GOLD -> ItemKey.of("minecraft:gold_ingot", null);
-            case DIAMOND -> ItemKey.of("minecraft:diamond", null);
-            case ENDER -> ItemKey.of("minecraft:ender_pearl", null);
-        };
     }
 }

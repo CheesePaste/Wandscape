@@ -1,16 +1,17 @@
 package com.wsteam.wandscape.warehouse.network;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -19,10 +20,10 @@ import net.minecraft.resources.ResourceLocation;
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
- * Server→client packet carrying warehouse item data for GUI display.
+ * Server→client packet carrying warehouse item and element data for GUI display.
  * Sent once when the player opens the warehouse screen.
  */
-public record WarehouseDataPacket(ListTag items) implements CustomPacketPayload {
+public record WarehouseDataPacket(ListTag items, ListTag elements) implements CustomPacketPayload {
 
     public static final Type<WarehouseDataPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "warehouse_data"));
@@ -35,23 +36,33 @@ public record WarehouseDataPacket(ListTag items) implements CustomPacketPayload 
         return TYPE;
     }
 
-    /** Build packet from a snapshot of warehouse items. */
-    public static WarehouseDataPacket from(Map<ItemKey, Long> snapshot) {
-        ListTag list = new ListTag();
-        for (var entry : snapshot.entrySet()) {
+    /** Build packet from item and element snapshots. */
+    public static WarehouseDataPacket from(Map<ItemKey, Long> itemSnapshot,
+                                            Map<ElementType, Long> elementSnapshot) {
+        ListTag itemList = new ListTag();
+        for (var entry : itemSnapshot.entrySet()) {
             CompoundTag tag = new CompoundTag();
             tag.putString("key", entry.getKey().itemId());
             if (entry.getKey().nbt() != null) {
                 tag.put("nbt", entry.getKey().nbt());
             }
             tag.putLong("count", entry.getValue());
-            list.add(tag);
+            itemList.add(tag);
         }
-        return new WarehouseDataPacket(list);
+
+        ListTag elemList = new ListTag();
+        for (var entry : elementSnapshot.entrySet()) {
+            CompoundTag tag = new CompoundTag();
+            tag.putString("type", entry.getKey().name());
+            tag.putLong("amount", entry.getValue());
+            elemList.add(tag);
+        }
+
+        return new WarehouseDataPacket(itemList, elemList);
     }
 
-    /** Decode back into a list of item entries (used client-side). */
-    public List<ItemEntry> entries() {
+    /** Decode item list for client rendering. */
+    public List<ItemEntry> itemEntries() {
         List<ItemEntry> result = new ArrayList<>();
         for (int i = 0; i < items.size(); i++) {
             CompoundTag tag = items.getCompound(i);
@@ -60,6 +71,24 @@ public record WarehouseDataPacket(ListTag items) implements CustomPacketPayload 
             long count = tag.getLong("count");
             if (!key.isEmpty() && count > 0) {
                 result.add(new ItemEntry(key, nbt, count));
+            }
+        }
+        return result;
+    }
+
+    /** Decode element map for client rendering. */
+    public Map<ElementType, Long> elementMap() {
+        Map<ElementType, Long> result = new LinkedHashMap<>();
+        for (ElementType type : ElementType.values()) {
+            result.put(type, 0L);
+        }
+        for (int i = 0; i < elements.size(); i++) {
+            CompoundTag tag = elements.getCompound(i);
+            try {
+                ElementType type = ElementType.valueOf(tag.getString("type"));
+                long amount = tag.getLong("amount");
+                if (amount > 0) result.put(type, amount);
+            } catch (IllegalArgumentException ignored) {
             }
         }
         return result;
@@ -85,13 +114,15 @@ public record WarehouseDataPacket(ListTag items) implements CustomPacketPayload 
 
     static void write(RegistryFriendlyByteBuf buf, WarehouseDataPacket pkt) {
         CompoundTag wrapper = new CompoundTag();
-        wrapper.put("items", pkt.items);
+        wrapper.put("itms", pkt.items);
+        wrapper.put("elems", pkt.elements);
         buf.writeNbt(wrapper);
     }
 
     static WarehouseDataPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag wrapper = buf.readNbt();
-        ListTag list = wrapper != null ? wrapper.getList("items", Tag.TAG_COMPOUND) : new ListTag();
-        return new WarehouseDataPacket(list);
+        ListTag items = wrapper != null ? wrapper.getList("itms", Tag.TAG_COMPOUND) : new ListTag();
+        ListTag elems = wrapper != null ? wrapper.getList("elems", Tag.TAG_COMPOUND) : new ListTag();
+        return new WarehouseDataPacket(items, elems);
     }
 }

@@ -3,188 +3,192 @@ package com.wsteam.wandscape.production.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.wsteam.wandscape.production.menu.CraftingStationMenu;
+import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket.RecipeEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
+import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.component.QuantitySlider;
+import com.wsteam.wandscape.shared.ui.component.ScrollableList;
+import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
+import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class CraftingStationScreen extends AbstractContainerScreen<CraftingStationMenu> {
+public class CraftingStationScreen extends MedievalScreen {
 
-    private static final int TEXTURE_W = 256;
-    private static final int TEXTURE_H = 210;
-    private static final int LIST_X = 8;
-    private static final int LIST_Y = 24;
-    private static final int ROW_HEIGHT = 18;
-    private static final int VISIBLE_ROWS = 8;
-    private static final int PANEL_W = 200;
+    private static final int PW = 400;
+    private static final int PH = 220;
+    // Left panel width (existing content)
+    private static final int LEFT_PW = 240;
+    // Right panel (TaskQueuePanel)
+    private static final int QUEUE_PW = 140;
+    private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
 
     private BlockPos stationPos = BlockPos.ZERO;
-
     private List<RecipeEntry> recipes = new ArrayList<>();
-    private int selectedIndex = -1;
-    private int quantity = 1;
-    private int scrollOffset = 0;
 
-    public CraftingStationScreen(CraftingStationMenu menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title);
-        this.imageWidth = TEXTURE_W;
-        this.imageHeight = TEXTURE_H;
-        this.inventoryLabelY = this.imageHeight - 94;
-        this.inventoryLabelX = 8;
+    private ScrollableList<RecipeEntry> recipeList;
+    private QuantitySlider quantitySlider;
+    private TaskQueuePanel taskQueuePanel;
+
+    public CraftingStationScreen() {
+        super(Component.literal("Crafting Station"), PW, PH);
+        setTitleBar("Crafting Station");
     }
 
     public void updateData(CraftingStationPacket packet) {
         this.stationPos = packet.stationPos();
         this.recipes = packet.entries();
-        this.selectedIndex = -1;
-        this.quantity = 1;
-    }
-
-    @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF_C0C0C0);
-        gfx.fill(leftPos + 1, topPos + 1, leftPos + imageWidth - 1, topPos + imageHeight - 1, 0xFF_8B8B8B);
-
-        // Panel
-        gfx.fill(leftPos + LIST_X, topPos + LIST_Y,
-                leftPos + LIST_X + PANEL_W, topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT,
-                0xFF_404040);
-
-        int maxRows = Math.min(VISIBLE_ROWS, recipes.size() - scrollOffset);
-        for (int i = 0; i < maxRows; i++) {
-            int idx = scrollOffset + i;
-            if (idx >= recipes.size()) break;
-            RecipeEntry entry = recipes.get(idx);
-            int rowY = topPos + LIST_Y + i * ROW_HEIGHT;
-
-            boolean hovered = mouseX >= leftPos + LIST_X && mouseX <= leftPos + LIST_X + PANEL_W
-                    && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT;
-
-            if (idx == selectedIndex) {
-                gfx.fill(leftPos + LIST_X, rowY, leftPos + LIST_X + PANEL_W, rowY + ROW_HEIGHT, 0x80_FFD700);
-            } else if (hovered) {
-                gfx.fill(leftPos + LIST_X, rowY, leftPos + LIST_X + PANEL_W, rowY + ROW_HEIGHT, 0x40_FFFFFF);
-            }
-
-            var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(entry.outputItem()));
-            if (item != null && item != Items.AIR) {
-                gfx.renderItem(new ItemStack(item), leftPos + LIST_X + 2, rowY + 1);
-            }
-
-            String name = entry.outputItem();
-            gfx.drawString(font, name, leftPos + LIST_X + 22, rowY + 1, 0xFFFFFF);
-
-            StringBuilder costStr = new StringBuilder();
-            entry.cost().forEach((elem, amt) -> {
-                if (!costStr.isEmpty()) costStr.append(", ");
-                costStr.append(elem.name().toLowerCase()).append(":").append(amt);
-            });
-            gfx.drawString(font, costStr.toString(), leftPos + LIST_X + 22, rowY + 9, 0xA0A0A0);
-
-            if (entry.requiredLevel() > 1) {
-                String lvl = "Lv." + entry.requiredLevel();
-                int lw = font.width(lvl);
-                gfx.drawString(font, lvl, leftPos + LIST_X + PANEL_W - lw - 4, rowY + 1, 0xFFD700);
-            }
+        if (recipeList != null) recipeList.setItems(recipes);
+        if (quantitySlider != null) {
+            quantitySlider.setMax(1);
+            quantitySlider.setValue(1);
         }
-
-        // Quantity
-        int qy = topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT + 6;
-        gfx.drawString(font, "Qty: " + quantity, leftPos + LIST_X, qy, 0xFFFFFF);
-        drawButton(gfx, "-", leftPos + LIST_X + 50, qy - 2, 14, 14, mouseX, mouseY);
-        drawButton(gfx, "+", leftPos + LIST_X + 68, qy - 2, 14, 14, mouseX, mouseY);
-
-        // Submit
-        drawButton(gfx, "Submit", leftPos + LIST_X + PANEL_W - 50, qy - 2, 46, 14, mouseX, mouseY);
+        // Request current queue data from server
+        requestQueueRefresh();
     }
 
-    private void drawButton(GuiGraphics gfx, String label, int x, int y, int w, int h, int mouseX, int mouseY) {
-        boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
-        int bg = hovered ? 0xFF_707070 : 0xFF_505050;
-        gfx.fill(x, y, x + w, y + h, bg);
-        gfx.fill(x, y, x + w, y + 1, 0xFF_909090);
-        gfx.fill(x, y + h - 1, x + w, y + h, 0xFF_303030);
-        int textW = font.width(label);
-        gfx.drawString(font, label, x + (w - textW) / 2, y + 3, 0xFFFFFF);
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-        gfx.drawString(font, "Crafting Station", 8, 6, 0x404040);
-    }
-
-    @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        super.render(gfx, mouseX, mouseY, partialTick);
-        renderTooltip(gfx, mouseX, mouseY);
-    }
-
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (button != 0) return super.mouseClicked(mx, my, button);
-
-        int mxInt = (int) mx;
-        int myInt = (int) my;
-
-        // Row selection
-        if (mxInt >= leftPos + LIST_X && mxInt <= leftPos + LIST_X + PANEL_W
-                && myInt >= topPos + LIST_Y && myInt < topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT) {
-            int row = (myInt - topPos - LIST_Y) / ROW_HEIGHT;
-            int idx = scrollOffset + row;
-            if (idx >= 0 && idx < recipes.size()) {
-                selectedIndex = idx;
-                quantity = 1;
-                return true;
+    /** Called when a TaskQueueDataPacket arrives from the server. */
+    public void updateQueueData(TaskQueueDataPacket packet) {
+        if (packet.stationPos().equals(this.stationPos) && taskQueuePanel != null) {
+            List<TaskQueuePanel.Entry> entries = new ArrayList<>();
+            for (TaskQueueDataPacket.QueueEntry qe : packet.entries()) {
+                entries.add(new TaskQueuePanel.Entry(
+                        qe.index(), qe.category(), qe.itemOrRecipeId(), qe.quantity(),
+                        qe.blueprintId(), qe.summary()));
             }
+            taskQueuePanel.setEntries(entries);
         }
+    }
 
-        // Buttons
-        int qy = topPos + LIST_Y + VISIBLE_ROWS * ROW_HEIGHT + 6;
-        if (myInt >= qy - 2 && myInt < qy + 14) {
-            if (mxInt >= leftPos + LIST_X + 50 && mxInt < leftPos + LIST_X + 64) {
-                if (quantity > 1) quantity--;
-                return true;
-            }
-            if (mxInt >= leftPos + LIST_X + 68 && mxInt < leftPos + LIST_X + 82) {
-                if (quantity < 64) quantity++;
-                return true;
-            }
-            if (mxInt >= leftPos + LIST_X + PANEL_W - 50 && mxInt < leftPos + LIST_X + PANEL_W) {
-                submitTask();
-                return true;
-            }
-        }
-
-        return super.mouseClicked(mx, my, button);
+    /** Send a REFRESH request to the server to get the current task queue. */
+    private void requestQueueRefresh() {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int maxScroll = Math.max(0, recipes.size() - VISIBLE_ROWS);
-        scrollOffset = (int) Math.clamp(scrollOffset - (int) scrollY, 0, maxScroll);
-        return true;
+    protected void init() {
+        super.init();
+
+        // Left panel content (existing widgets)
+        int contentX = leftPos + 8;
+        int contentY = topPos + headerHeight + 4;
+        int contentW = LEFT_PW - 16;
+
+        // Recipe list
+        int listH = PH - headerHeight - 4 - 44;
+        recipeList = new ScrollableList<>(contentX, contentY, contentW, listH, 22) {
+            @Override
+            protected void renderRow(GuiGraphics g, RecipeEntry item, int x, int y, int index,
+                                     boolean selected, boolean hovered) {
+                boolean canAfford = item.maxAffordable() > 0;
+                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
+                if (registryItem != null && registryItem != Items.AIR) {
+                    g.renderItem(new ItemStack(registryItem), x, y + 2);
+                }
+
+                int textColor = !canAfford ? MedievalColors.TEXT_DIM
+                        : selected ? MedievalColors.ACCENT_GOLD
+                        : hovered ? MedievalColors.TEXT_WARM_WHITE
+                        : MedievalColors.TEXT_MUTED;
+                g.drawString(Minecraft.getInstance().font, formatItemName(item.outputItem()),
+                        x + 20, y + 2, textColor);
+
+                StringBuilder costStr = new StringBuilder();
+                item.cost().forEach((elem, amt) -> {
+                    if (!costStr.isEmpty()) costStr.append(", ");
+                    costStr.append(elem.name().toLowerCase()).append(":").append(amt);
+                });
+                g.drawString(Minecraft.getInstance().font, costStr.toString(),
+                        x + 20, y + 12, MedievalColors.TEXT_DIM);
+
+                if (item.requiredLevel() > 1) {
+                    String lvl = "Lv." + item.requiredLevel();
+                    int lw = Minecraft.getInstance().font.width(lvl);
+                    g.drawString(Minecraft.getInstance().font, lvl,
+                            x + getWidth() - scrollbarWidth - lw - 6, y + 2,
+                            MedievalColors.ACCENT_GOLD);
+                }
+            }
+        };
+        recipeList.setItems(recipes);
+        recipeList.setOnSelect(i -> updateSliderForRecipe(recipes.get(i)));
+        addRenderableWidget(recipeList);
+
+        // Quantity slider + submit
+        int controlY = contentY + listH + 6;
+        quantitySlider = new QuantitySlider(contentX, controlY, 120, 1, 1, 1, v -> {});
+        addRenderableWidget(quantitySlider);
+
+        addRenderableWidget(new MedievalButton(
+                contentX + contentW - 70, controlY + 4, 70, 18,
+                Component.literal("Submit"), this::onSubmit));
+
+        // ── Right panel: Task Queue ──
+        // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding
+        int queuePh = PH - headerHeight - 8;
+        int queueX = leftPos + LEFT_PW + 4;
+        int queueY = topPos + headerHeight + 4;
+        taskQueuePanel = new TaskQueuePanel(queueX, queueY, QUEUE_PW, queuePh);
+        taskQueuePanel.setOnDelete(this::onQueueDelete);
+        taskQueuePanel.setOnMoveUp(this::onQueueMoveUp);
+        taskQueuePanel.setOnMoveDown(this::onQueueMoveDown);
+        addRenderableWidget(taskQueuePanel);
     }
 
-    private void submitTask() {
-        if (selectedIndex < 0 || selectedIndex >= recipes.size()) return;
-        RecipeEntry entry = recipes.get(selectedIndex);
+    private void updateSliderForRecipe(RecipeEntry entry) {
+        if (entry == null) {
+            quantitySlider.setMax(1);
+            quantitySlider.setValue(1);
+            return;
+        }
+        int max = entry.maxAffordable();
+        quantitySlider.setMax(Math.max(1, max));
+        quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
+    }
+
+    private void onSubmit() {
+        RecipeEntry sel = recipeList.getSelected();
+        if (sel == null || sel.maxAffordable() <= 0) return;
+        int qty = quantitySlider.getValue();
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
-                stationPos, "craft_wand", entry.recipeId(), quantity));
+                stationPos, "craft_wand", sel.recipeId(), qty));
+        // Refresh queue after submitting a new task
+        requestQueueRefresh();
     }
 
-    @Override
-    public boolean isPauseScreen() {
-        return false;
+    // ── Task queue callbacks ──
+
+    private void onQueueDelete(int index) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "delete", index));
+    }
+
+    private void onQueueMoveUp(int index) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
+    }
+
+    private void onQueueMoveDown(int index) {
+        if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
+        PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+    }
+
+    private static String formatItemName(String itemId) {
+        int colon = itemId.indexOf(':');
+        String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
+        return path.replace('_', ' ');
     }
 }

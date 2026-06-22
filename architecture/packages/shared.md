@@ -64,7 +64,7 @@
 
 中世纪魔法主题。CC0 精灵图(Tiny RPG Mana Soul GUI) + 程序化渲染混合。
 
-**核心组件**: MedievalScreen(9-slice面板) / MedievalButton(精灵图4态) / TabBar / ScrollableList(虚拟滚动) / ElementPanel(9元素储量) / ItemGrid / ProgressIndicator / QuantitySlider / SearchBar
+**核心组件**: MedievalScreen(9-slice面板) / MedievalButton(精灵图4态) / TabBar / ScrollableList(虚拟滚动) / ElementPanel(9元素储量) / ItemGrid / ProgressIndicator / QuantitySlider / SearchBar / TaskQueuePanel(任务队列侧边栏)
 
 **精灵图渲染**: SkinSprite(坐标定义) / SkinRender(9-slice/按钮/p标签/滚动条绘制)
 

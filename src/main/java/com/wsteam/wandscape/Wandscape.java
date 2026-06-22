@@ -26,15 +26,13 @@ import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
-import com.wsteam.wandscape.production.menu.CraftingStationMenu;
-import com.wsteam.wandscape.production.menu.PotionStationMenu;
-import com.wsteam.wandscape.production.menu.WorkstationMenu;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
-import com.wsteam.wandscape.warehouse.WarehouseMenu;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
@@ -75,8 +73,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.flag.FeatureFlags;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -113,8 +109,6 @@ public class Wandscape {
             DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
             DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, MODID);
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -131,22 +125,6 @@ public class Wandscape {
     // ---- 03 element-system ----
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
     public static final ElementApiImpl ELEMENT_API = new ElementApiImpl(ELEMENT_MAPPING_LOADER);
-
-    // ---- 04 warehouse-system: menu ----
-    public static final DeferredHolder<MenuType<?>, MenuType<WarehouseMenu>> WAREHOUSE_MENU =
-            MENU_TYPES.register("warehouse", () ->
-                    new MenuType<>(WarehouseMenu::new, FeatureFlags.VANILLA_SET));
-
-    // ---- 10 production-stations: menus ----
-    public static final DeferredHolder<MenuType<?>, MenuType<WorkstationMenu>> WORKSTATION_MENU =
-            MENU_TYPES.register("workstation", () ->
-                    new MenuType<>(WorkstationMenu::new, FeatureFlags.VANILLA_SET));
-    public static final DeferredHolder<MenuType<?>, MenuType<CraftingStationMenu>> CRAFTING_STATION_MENU =
-            MENU_TYPES.register("crafting_station", () ->
-                    new MenuType<>(CraftingStationMenu::new, FeatureFlags.VANILLA_SET));
-    public static final DeferredHolder<MenuType<?>, MenuType<PotionStationMenu>> POTION_STATION_MENU =
-            MENU_TYPES.register("potion_station", () ->
-                    new MenuType<>(PotionStationMenu::new, FeatureFlags.VANILLA_SET));
 
     // ---- 10 production-stations: loader ----
     public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
@@ -196,7 +174,6 @@ public class Wandscape {
         ITEMS.register(modEventBus);
         ENTITIES.register(modEventBus);
         PARTICLE_TYPES.register(modEventBus);
-        MENU_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
@@ -253,6 +230,10 @@ public class Wandscape {
                         PotionStationPacket.TYPE,
                         PotionStationPacket.STREAM_CODEC,
                         (packet, ctx) -> PotionStationPacket.handleClient(packet))
+                .playToClient(
+                        TaskQueueDataPacket.TYPE,
+                        TaskQueueDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> TaskQueueDataPacket.handleClient(packet))
                 .playToServer(
                         RoadEdgeRemovePacket.TYPE,
                         RoadEdgeRemovePacket.STREAM_CODEC,
@@ -272,7 +253,11 @@ public class Wandscape {
                 .playToServer(
                         RequestProductionTaskPacket.TYPE,
                         RequestProductionTaskPacket.STREAM_CODEC,
-                        RequestProductionTaskPacket::handleServer);
+                        RequestProductionTaskPacket::handleServer)
+                .playToServer(
+                        TaskQueueModifyPacket.TYPE,
+                        TaskQueueModifyPacket.STREAM_CODEC,
+                        TaskQueueModifyPacket::handleServer);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
