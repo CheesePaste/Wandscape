@@ -2,8 +2,10 @@ package com.wsteam.wandscape.production.network;
 
 import java.util.*;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
+import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.core.BlockPos;
@@ -37,9 +39,15 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
 
     public static CraftingStationPacket from(BlockPos stationPos,
                                               Collection<CraftWandRecipe> wandRecipes,
-                                              Map<ElementType, Long> elementMap) {
+                                              Map<ElementType, Long> elementMap,
+                                              @Nullable UUID colonyId) {
         ListTag list = new ListTag();
         for (CraftWandRecipe r : wandRecipes) {
+            // Service-side check only — log but DO NOT filter from the packet.
+            // The client renders locked vs unlocked state locally.
+            // Server-side re-validation in RequestProductionTaskPacket prevents tampering.
+            boolean unlocked = com.wsteam.wandscape.production.internal.RecipeUnlockChecker
+                    .isUnlocked(colonyId, r.unlockRequirement());
             int maxAffordable = computeMaxAffordable(r.cost(), elementMap);
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
@@ -53,7 +61,14 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
             }
             tag.put("cost", costTag);
             tag.putInt("required_level", r.requiredLevel());
-            tag.putInt("max_affordable", maxAffordable);
+            tag.putInt("max_affordable", unlocked ? maxAffordable : 0);
+            if (r.unlockRequirement() != RecipeUnlockRequirement.NONE) {
+                CompoundTag unlockTag = new CompoundTag();
+                unlockTag.putInt("min_comfort", r.unlockRequirement().minComfort());
+                unlockTag.putInt("min_magic",   r.unlockRequirement().minMagic());
+                unlockTag.putInt("min_wonder",  r.unlockRequirement().minWonder());
+                tag.put("unlock_requirement", unlockTag);
+            }
             list.add(tag);
         }
         return new CraftingStationPacket(stationPos, list);
@@ -84,13 +99,39 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
             }
             int requiredLevel = tag.getInt("required_level");
             int maxAffordable = tag.getInt("max_affordable");
-            result.add(new RecipeEntry(id, output, nbt, cost, requiredLevel, maxAffordable));
+            // Read unlock requirement from NBT (serialised by from() on the server)
+            RecipeUnlockRequirement unlockReq = RecipeUnlockRequirement.NONE;
+            if (tag.contains("unlock_requirement")) {
+                CompoundTag urTag = tag.getCompound("unlock_requirement");
+                unlockReq = new RecipeUnlockRequirement(
+                        urTag.getInt("min_comfort"),
+                        urTag.getInt("min_magic"),
+                        urTag.getInt("min_wonder")
+                );
+            }
+            result.add(new RecipeEntry(id, output, nbt, cost, requiredLevel, maxAffordable, unlockReq));
         }
         return result;
     }
 
-    public record RecipeEntry(String recipeId, String outputItem, @javax.annotation.Nullable CompoundTag nbt,
-                              Map<ElementType, Long> cost, int requiredLevel, int maxAffordable) {}
+    /**
+     * @param recipeId          recipe identifier
+     * @param outputItem        output item id
+     * @param nbt               output item NBT (nullable)
+     * @param cost              element cost per unit
+     * @param requiredLevel     minimum NPC behaviour level
+     * @param maxAffordable     maximum quantity affordable with current elements
+     * @param unlockRequirement colony evaluation thresholds required to see this recipe
+     */
+    public record RecipeEntry(
+            String recipeId,
+            String outputItem,
+            @javax.annotation.Nullable CompoundTag nbt,
+            Map<ElementType, Long> cost,
+            int requiredLevel,
+            int maxAffordable,
+            RecipeUnlockRequirement unlockRequirement
+    ) {}
 
     private static Consumer<CraftingStationPacket> clientHandler;
 

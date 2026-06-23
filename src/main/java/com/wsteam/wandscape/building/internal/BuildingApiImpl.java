@@ -146,6 +146,9 @@ public class BuildingApiImpl implements BuildingApi {
                 counts.merge(state.getBuildingTypeId(), -1, Integer::sum);
                 counts.remove(state.getBuildingTypeId(), 0);
             }
+            // Also remove from the contribution registry so evaluation values drop
+            // if this was the last intact building of its type.
+            sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
         }
         currentTasks.remove(state.getBuildingId());
         sd.unregister(state.getBuildingId());
@@ -200,37 +203,23 @@ public class BuildingApiImpl implements BuildingApi {
 
     @Override
     public int getColonyComfort(UUID colonyId) {
-        return computeColonyStat(colonyId, BuildingConfig::comfort);
+        BuildingSavedData sd = getSavedData();
+        return sd != null && colonyId != null
+                ? sd.getContributionRegistry().getSnapshot(colonyId).comfort() : 0;
     }
 
     @Override
     public int getColonyMagic(UUID colonyId) {
-        return computeColonyStat(colonyId, BuildingConfig::magic);
+        BuildingSavedData sd = getSavedData();
+        return sd != null && colonyId != null
+                ? sd.getContributionRegistry().getSnapshot(colonyId).magic() : 0;
     }
 
     @Override
     public int getColonyWonder(UUID colonyId) {
-        return computeColonyStat(colonyId, BuildingConfig::wonder);
-    }
-
-    private int computeColonyStat(UUID colonyId, java.util.function.ToIntFunction<BuildingConfig> extractor) {
-        Set<String> types = colonyUnlockedTypes.get(colonyId);
-        if (types == null || types.isEmpty()) return 0;
-
-        Map<String, Integer> active = colonyActiveCounts.get(colonyId);
-        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
-
-        int total = 0;
-        for (String typeId : types) {
-            int activeCount = active != null ? active.getOrDefault(typeId, 0) : 0;
-            if (activeCount > 0) {
-                BuildingConfig cfg = configLoader.get(typeId);
-                if (cfg != null) {
-                    total += extractor.applyAsInt(cfg);
-                }
-            }
-        }
-        return total;
+        BuildingSavedData sd = getSavedData();
+        return sd != null && colonyId != null
+                ? sd.getContributionRegistry().getSnapshot(colonyId).wonder() : 0;
     }
 
     // ---- Task bridge ----

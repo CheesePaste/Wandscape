@@ -7,6 +7,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.data.BuildingConfig.UnlockRequirement;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 
@@ -44,7 +45,12 @@ class BuildingConfigTest {
         assertNotNull(cfg.queue());
         assertEquals(5, cfg.queue().capacity());
         assertNotNull(cfg.unlockRequirement());
+        assertEquals(0, cfg.unlockRequirement().minComfort());
+        assertEquals(0, cfg.unlockRequirement().minMagic());
+        assertEquals(0, cfg.unlockRequirement().minComfort());
+        assertEquals(0, cfg.unlockRequirement().minMagic());
         assertEquals(0, cfg.unlockRequirement().minWonder());
+        assertSame(UnlockRequirement.NONE, cfg.unlockRequirement());
     }
 
     @Test
@@ -62,7 +68,7 @@ class BuildingConfigTest {
               "maintenance_cost": 12,
               "shutdown_penalty": {"output_reduction": 0.5, "time_multiplier": 2.0},
               "queue": {"capacity": 60, "task_types": ["crafting", "ritual"]},
-              "unlock_requirement": {"min_wonder": 15}
+              "unlock_requirement": {"min_comfort": 0, "min_magic": 0, "min_wonder": 15}
             }
             """;
 
@@ -78,6 +84,8 @@ class BuildingConfigTest {
         assertEquals(60, cfg.queue().capacity());
         assertEquals(List.of("crafting", "ritual"), cfg.queue().taskTypes());
         assertEquals(15, cfg.unlockRequirement().minWonder());
+        assertEquals(0, cfg.unlockRequirement().minComfort());
+        assertEquals(0, cfg.unlockRequirement().minMagic());
 
         // Pattern
         assertEquals(3, cfg.pattern().size());
@@ -157,7 +165,9 @@ class BuildingConfigTest {
             json.addProperty("category", "basic");
 
             BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
-            assertEquals(0, cfg.unlockRequirement().minWonder());
+            assertEquals(0, cfg.unlockRequirement().minComfort());
+        assertEquals(0, cfg.unlockRequirement().minMagic());
+        assertEquals(0, cfg.unlockRequirement().minWonder());
         }
     }
 }

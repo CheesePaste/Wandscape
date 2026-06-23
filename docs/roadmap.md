@@ -51,6 +51,61 @@ ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op �
 | 低 | 殖民地系统（创建/删除/边界） | 新模块 |
 | 低 | 魔药站 GUI 实现 | production/client/ |
 | 低 | 多人游戏同步 | 网络包 |
+| ~~中~~ | ~~殖民地三值评估系统（舒适/魔法/奇观）~~ | ~~building/internal/BuildingContributionRegistry + ColonyEvaluationChangedEvent~~ ✓ |
+| ~~中~~ | ~~生产配方三值解锁~~ | ~~production/data/RecipeUnlockRequirement + RecipeUnlockChecker + BuildingUnlockChecker~~ ✓ |
+
+## 已完成：殖民地三值评估系统 (2026-06-23)
+
+### 评估数据流
+
+```
+建筑首次建造完成(structureIntact=true)
+  → BuildCompleteListener → BuildingSavedData.addBuildingContribution()
+  → BuildingContributionRegistry: intactCount(type) 0→1
+  → 广播 ColonyEvaluationChangedEvent → 三值增加
+
+建筑损毁(structureIntact=false) / 拆除(unregister)
+  → BuildingBreakHandler / BuildingApiImpl.unregisterBuilding
+  → BuildingSavedData.removeBuildingContribution()
+  → BuildingContributionRegistry: intactCount(type) 1→0
+  → 广播 ColonyEvaluationChangedEvent → 三值扣减
+```
+
+### 新增文件
+
+| 文件 | 层 | 用途 |
+|------|-----|------|
+| `shared/event/ColonyEvaluationChangedEvent.java` | shared | NeoForge 事件：colonyId + old/new 三值 |
+| `building/internal/BuildingContributionRegistry.java` | building | per-colony per-type intactCount 缓存 |
+| `building/internal/BuildingUnlockChecker.java` | building | 建筑建造解锁校验 |
+| `production/data/RecipeUnlockRequirement.java` | production | 配方解锁三门槛 record |
+| `production/internal/RecipeUnlockChecker.java` | production | 配方解锁静态工具 |
+| `production/data/RecipeUnlockRequirementTest.java` | test | 配方解锁 JSON 解析测试 |
+
+### 修改文件
+
+- `BuildingSavedData` — 新增 contributionRegistry 字段 + add/removeBuildingContribution() 入口 + load() 后 rebuildFrom()
+- `BuildingApiImpl` — getColonyComfort/Magic/Wonder 通过 registry.getSnapshot() 查询
+- `BuildCompleteListener` — 修复完成调用 addBuildingContribution()
+- `BuildingBreakHandler` — 结构损坏调用 removeBuildingContribution()
+- `BuildingApiImpl.unregisterBuilding` — 建筑拆除调用 removeBuildingContribution()
+- `SynthesizeRecipe/CraftWandRecipe/BrewPotionRecipe` — unlockMagicValue → unlockRequirement 三字段
+- `WorkstationDataPacket/CraftingStationPacket` — from() 过滤 + NBT 序列化 unlockRequirement
+- `RequestProductionTaskPacket` — 服务端二次验证防篡改
+- `BuildingInteractHandler` — 默认右键建筑展示锁因提示
+- `production/client/WorkstationScreen` / `CraftingStationScreen` — 客户端渲染配方解锁状态（待实现，目前 only unfiltered recipes shown）
+
+### 配方解锁规则
+
+配方 JSON 使用 `unlock_requirement` 三字段，无 legacy 兼容分支：
+
+```json
+{
+  "unlock_requirement": { "min_comfort": 0, "min_magic": 10, "min_wonder": 0 }
+}
+```
+
+三值同时满足才解锁；填 0 表示该维度无门槛。
 
 ## GUI 任务编辑器
 

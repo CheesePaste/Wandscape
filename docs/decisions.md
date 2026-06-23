@@ -48,6 +48,17 @@
 
 **为什么 ParamTypeInfo 要重复定义而不是直接引用 core/ParamType？** `core/task/ParamType` 是 sealed interface，出现在 shared/data 会破坏 core 的零 MC 依赖。枚举镜像 `ParamTypeInfo` + `fromCore()` 转换器是干净的防腐层。
 
+## 殖民地三值评估系统
+
+**为什么贡献粒度按建筑类型而非建筑实例？** JSON 配置 `comfort/magic/wonder` 本身就是 per-type 的语义值。同类型第二栋不叠加符合"首次建造加成"的规则描述，且与 `unlock_requirement` 的 per-type 门槛设计保持一致。
+
+**为什么只在 0↔1 边界跨越时广播事件而非每次检查都广播？** 殖民地常有多栋建筑同时运作，每次扫描都广播会触发大量不必要的订阅者执行。0↔1 是唯一真正改变解锁状态的时刻（第一栋建完→解锁，最后一栋损毁→锁定），以此为边界精确控制事件频率。
+
+**为什么注册表放在 BuildingSavedData 而非 BuildingApiImpl？** `BuildingSavedData` 是所有建筑状态的单一真相来源（结构完整性变化、注册/注销都在这里发生），在 state change 同步发生时更新贡献缓存最自然。BuildingApiImpl 只读查询。
+
+**为什么配方解锁用三字段 unlock_requirement 而非 legacy unlock_magic_value 单字段？** 三值（舒适/魔法/奇观）都是 ≥0 的自然数，缺省填 0 表示无要求，不存在歧义。三个 int 的结构清晰可读，不需要额外的 legacy 分支兼容逻辑。JSON 格式统一为 `{"min_comfort": x, "min_magic": y, "min_wonder": z}`，只需其中一个维度填非零值。
+
+
 **为什么 TaskCreatePacket 传字符串参数而非序列化 JsonElement？** 客户端 `EditBox` 产出字符串。在服务端解析为 JsonElement（`PublishBlueprintCommand.parseValue` 同逻辑），避免客户端依赖 Gson。
 
 **为什么两条 EventBus 不互通？** core `SimpleEventBus` 是引擎内部 tick-batch 模式，NeoForge `EVENT_BUS` 是实时模式。两者用途不同：引擎内部事件用于链式任务生成（`ResourceLow → gather`），NeoForge 事件用于跨模块通知（`TaskPublishedEvent → UI 提示`）。`engine/` 层做唯一翻译点。

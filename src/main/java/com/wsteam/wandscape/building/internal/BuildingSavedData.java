@@ -14,6 +14,7 @@ import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.bus.api.IEventBus;
 
 /**
  * Level-attached persistent storage for all building state.
@@ -34,6 +36,12 @@ import net.minecraft.world.level.saveddata.SavedData;
  *   <li>{@code posIndex} — BlockPos → buildingId (O(1) spatial lookup)</li>
  *   <li>{@code chunkIndex} — ChunkPos → Set of buildingIds (block-unload awareness)</li>
  * </ul>
+ *
+ * <p>Also owns a {@link BuildingContributionRegistry} that tracks, per colony,
+ * how many intact buildings exist for each type and fires
+ * {@link ColonyEvaluationChangedEvent} whenever the 0↔1 boundary is crossed
+ * for any type (i.e. the first intact building of a type is placed, or the
+ * last one is destroyed/damaged).
  */
 public class BuildingSavedData extends SavedData {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -69,6 +77,14 @@ public class BuildingSavedData extends SavedData {
     private final Map<UUID, BuildingState> buildings = new ConcurrentHashMap<>();
     private final Map<BlockPos, UUID> posIndex = new ConcurrentHashMap<>();
     private final Map<ChunkPos, Set<UUID>> chunkIndex = new ConcurrentHashMap<>();
+
+    // ── Contribution registry ──
+    /**
+     * Tracks intact-building presence per (colony, type).
+     * Initialised in {@link #load}; accessed via {@link #getContributionRegistry()}.
+     */
+    @Nullable
+    private BuildingContributionRegistry contributionRegistry;
 
     // ── Factory ──
 
@@ -306,6 +322,11 @@ public class BuildingSavedData extends SavedData {
             data.rebuildIndexes(state);
         }
 
+        // Initialise the contribution registry and rebuild from world state
+        IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
+        data.contributionRegistry = new BuildingContributionRegistry(bus);
+        data.contributionRegistry.rebuildFrom(data::getAllBuildings);
+
         LOGGER.info("Loaded {} buildings from saved data", data.buildings.size());
         return data;
     }
@@ -331,6 +352,35 @@ public class BuildingSavedData extends SavedData {
             BlockPos worldPos = state.getAnchor().offset(off.x(), off.y(), off.z());
             posIndex.put(worldPos, state.getBuildingId());
         }
+    }
+
+    // ── Contribution tracking ────────────────────────────────────────────────
+
+    /**
+     * Returns the {@link BuildingContributionRegistry} owned by this data store.
+     */
+    public BuildingContributionRegistry getContributionRegistry() {
+        return contributionRegistry;
+    }
+
+    /**
+     * Record that a building transitioned to intact state.
+     * Called by {@link BuildCompleteListener} after structure verification passes.
+     */
+    public boolean addBuildingContribution(UUID colonyId, String buildingTypeId) {
+        boolean changed = contributionRegistry.recordIntactChange(colonyId, buildingTypeId, true);
+        if (changed) setDirty();
+        return changed;
+    }
+
+    /**
+     * Record that a building transitioned away from intact state (damaged or destroyed).
+     * Called by {@link BuildingBreakHandler}.
+     */
+    public boolean removeBuildingContribution(UUID colonyId, String buildingTypeId) {
+        boolean changed = contributionRegistry.recordIntactChange(colonyId, buildingTypeId, false);
+        if (changed) setDirty();
+        return changed;
     }
 
     // ── Helpers ──

@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket.RecipeEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
@@ -93,24 +94,51 @@ public class CraftingStationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, RecipeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean canAfford = item.maxAffordable() > 0;
+                boolean locked = item.maxAffordable() == 0
+                        && item.unlockRequirement() != RecipeUnlockRequirement.NONE;
+                boolean canAfford = !locked && item.maxAffordable() > 0;
+
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
                 if (registryItem != null && registryItem != Items.AIR) {
                     g.renderItem(new ItemStack(registryItem), x, y + 2);
                 }
 
-                int textColor = !canAfford ? MedievalColors.TEXT_DIM
-                        : selected ? MedievalColors.ACCENT_GOLD
-                        : hovered ? MedievalColors.TEXT_WARM_WHITE
-                        : MedievalColors.TEXT_MUTED;
-                g.drawString(Minecraft.getInstance().font, formatItemName(item.outputItem()),
-                        x + 20, y + 2, textColor);
+                // Name row
+                int nameColor;
+                if (locked) {
+                    nameColor = MedievalColors.TEXT_DIM;
+                } else if (canAfford) {
+                    nameColor = selected ? MedievalColors.ACCENT_GOLD
+                            : hovered ? MedievalColors.TEXT_WARM_WHITE
+                            : MedievalColors.TEXT_MUTED;
+                } else {
+                    // elements insufficient but recipe is unlocked
+                    nameColor = MedievalColors.TEXT_DIM;
+                }
 
+                int textX = x + 20;
+                if (locked) {
+                    // Show 🔒 lock symbol before name
+                    g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
+                    textX += 14;
+                }
+                g.drawString(Minecraft.getInstance().font, formatItemName(item.outputItem()),
+                        textX, y + 1, nameColor);
+
+                // Requirement / cost row
                 StringBuilder costStr = new StringBuilder();
-                item.cost().forEach((elem, amt) -> {
-                    if (!costStr.isEmpty()) costStr.append(", ");
-                    costStr.append(elem.name().toLowerCase()).append(":").append(amt);
-                });
+                if (locked) {
+                    costStr.append("🔒 ");
+                    var req = item.unlockRequirement();
+                    if (req.minComfort() > 0) costStr.append("C>=").append(req.minComfort()).append(" ");
+                    if (req.minMagic()   > 0) costStr.append("M>=").append(req.minMagic()).append(" ");
+                    if (req.minWonder()  > 0) costStr.append("W>=").append(req.minWonder());
+                } else {
+                    item.cost().forEach((elem, amt) -> {
+                        if (!costStr.isEmpty()) costStr.append(", ");
+                        costStr.append(elem.name().toLowerCase()).append(":").append(amt);
+                    });
+                }
                 g.drawString(Minecraft.getInstance().font, costStr.toString(),
                         x + 20, y + 12, MedievalColors.TEXT_DIM);
 
@@ -154,7 +182,10 @@ public class CraftingStationScreen extends MedievalScreen {
             quantitySlider.setValue(1);
             return;
         }
-        int max = entry.maxAffordable();
+        // Locked recipes show max_affordable=0 from server; keep slider at 1
+        boolean locked = entry.unlockRequirement() != RecipeUnlockRequirement.NONE
+                && entry.maxAffordable() == 0;
+        int max = locked ? 1 : entry.maxAffordable();
         quantitySlider.setMax(Math.max(1, max));
         quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
     }

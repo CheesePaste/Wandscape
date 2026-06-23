@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -74,12 +75,20 @@ public final class BuildingInteractHandler {
             }
             default -> {
                 if (event.getEntity() instanceof ServerPlayer player) {
-                    player.displayClientMessage(Component.literal(
-                            "[Wandscape] " + state.getBuildingTypeId()
+                    String status = "[Wandscape] " + state.getBuildingTypeId()
                             + " | intact=" + state.isStructureIntact()
                             + " | shutdown=" + state.isShutdown()
-                            + " | queue=" + state.getTaskQueue().size()),
-                            false);
+                            + " | queue=" + state.getTaskQueue().size();
+                    // Show unlock lock reason if the building is not yet unlocked
+                    BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+                    if (config != null) {
+                        String lockReason = com.wsteam.wandscape.building.internal.BuildingUnlockChecker
+                                .getLockReason(state.getColonyId(), config);
+                        if (lockReason != null) {
+                            status += "\n  [Locked] " + lockReason;
+                        }
+                    }
+                    player.displayClientMessage(Component.literal(status), false);
                 }
                 LOGGER.info("[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
                         state.getBuildingTypeId(), state.getAnchor(),
@@ -115,7 +124,7 @@ public final class BuildingInteractHandler {
 
         if (event.getEntity() instanceof ServerPlayer player) {
             Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-            var pkt = WorkstationDataPacket.from(event.getPos(), decomposableItems, synthRecipes, elemSnapshot);
+            var pkt = WorkstationDataPacket.from(event.getPos(), decomposableItems, synthRecipes, elemSnapshot, colonyId);
             PacketDistributor.sendToPlayer(player, pkt);
         }
     }
@@ -132,7 +141,7 @@ public final class BuildingInteractHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             Map<ElementType, Long> elemSnapshot = bank != null
                     ? bank.getElementSnapshot(colonyId) : Map.of();
-            var pkt = CraftingStationPacket.from(event.getPos(), wandRecipes, elemSnapshot);
+            var pkt = CraftingStationPacket.from(event.getPos(), wandRecipes, elemSnapshot, colonyId);
             PacketDistributor.sendToPlayer(player, pkt);
         }
     }

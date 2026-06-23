@@ -2,7 +2,9 @@ package com.wsteam.wandscape.production.network;
 
 import java.util.*;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
@@ -41,7 +43,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             BlockPos stationPos,
             Map<ItemKey, Long> decomposableItems,
             Collection<SynthesizeRecipe> synthRecipes,
-            Map<ElementType, Long> elementMap) {
+            Map<ElementType, Long> elementMap,
+            @Nullable UUID colonyId) {
         ListTag itemList = new ListTag();
         for (var entry : decomposableItems.entrySet()) {
             CompoundTag tag = new CompoundTag();
@@ -55,6 +58,12 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
 
         ListTag recipeList = new ListTag();
         for (SynthesizeRecipe r : synthRecipes) {
+            // Service-side check only — log but DO NOT filter from the packet.
+            // The client renders locked vs unlocked state locally using the
+            // unlock_requirement NBT.  Server-side re-validation happens in
+            // RequestProductionTaskPacket.handleServer() to prevent tampering.
+            boolean unlocked = com.wsteam.wandscape.production.internal.RecipeUnlockChecker
+                    .isUnlocked(colonyId, r.unlockRequirement());
             int maxAffordable = computeMaxAffordable(r.cost(), elementMap);
             CompoundTag tag = new CompoundTag();
             tag.putString("id", r.id());
@@ -65,7 +74,16 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             }
             tag.put("cost", costTag);
             tag.putInt("required_level", r.requiredLevel());
-            tag.putInt("max_affordable", maxAffordable);
+            // Only send max_affordable for unlocked recipes; locked recipes get 0
+            tag.putInt("max_affordable", unlocked ? maxAffordable : 0);
+            // Always serialise unlock requirement for client-side display
+            if (r.unlockRequirement() != RecipeUnlockRequirement.NONE) {
+                CompoundTag unlockTag = new CompoundTag();
+                unlockTag.putInt("min_comfort", r.unlockRequirement().minComfort());
+                unlockTag.putInt("min_magic",   r.unlockRequirement().minMagic());
+                unlockTag.putInt("min_wonder",  r.unlockRequirement().minWonder());
+                tag.put("unlock_requirement", unlockTag);
+            }
             recipeList.add(tag);
         }
 
@@ -111,15 +129,39 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             }
             int requiredLevel = tag.getInt("required_level");
             int maxAffordable = tag.getInt("max_affordable");
-            result.add(new SynthesizeEntry(id, output, cost, requiredLevel, maxAffordable));
+            // Read unlock requirement from NBT (serialised by from() on the server)
+            RecipeUnlockRequirement unlockReq = RecipeUnlockRequirement.NONE;
+            if (tag.contains("unlock_requirement")) {
+                CompoundTag urTag = tag.getCompound("unlock_requirement");
+                unlockReq = new RecipeUnlockRequirement(
+                        urTag.getInt("min_comfort"),
+                        urTag.getInt("min_magic"),
+                        urTag.getInt("min_wonder")
+                );
+            }
+            result.add(new SynthesizeEntry(id, output, cost, requiredLevel, maxAffordable, unlockReq));
         }
         return result;
     }
 
     public record DecomposableEntry(String itemId, @javax.annotation.Nullable CompoundTag nbt, long count) {}
 
-    public record SynthesizeEntry(String recipeId, String outputItem, Map<ElementType, Long> cost,
-                                  int requiredLevel, int maxAffordable) {}
+    /**
+     * @param recipeId          recipe identifier
+     * @param outputItem        output item id
+     * @param cost              element cost per unit
+     * @param requiredLevel     minimum NPC behaviour level
+     * @param maxAffordable     maximum quantity affordable with current elements
+     * @param unlockRequirement colony evaluation thresholds required to see this recipe
+     */
+    public record SynthesizeEntry(
+            String recipeId,
+            String outputItem,
+            Map<ElementType, Long> cost,
+            int requiredLevel,
+            int maxAffordable,
+            RecipeUnlockRequirement unlockRequirement
+    ) {}
 
     private static Consumer<WorkstationDataPacket> clientHandler;
 

@@ -50,6 +50,14 @@ public final class BuildingBreakHandler {
         if (state == null || !state.isStructureIntact()) return;
 
         state.setStructureIntact(false);
+        UUID colonyId = state.getColonyId();
+        if (colonyId != null) {
+            boolean changed = data.removeBuildingContribution(colonyId, state.getBuildingTypeId());
+            if (changed) {
+                LOGGER.info("[Evaluation] Colony {} lost last contribution from {} — evaluation values decreased",
+                        colonyId.toString().substring(0, 8), state.getBuildingTypeId());
+            }
+        }
         enqueueRepairForPositions(state, List.of(pos));
         data.setDirty();
         LOGGER.info("[Building] Structure damaged: type={} at={} (block at {}) — partial repair enqueued",
@@ -75,6 +83,14 @@ public final class BuildingBreakHandler {
             if (state == null || !state.isStructureIntact()) continue;
 
             state.setStructureIntact(false);
+            UUID colonyId = state.getColonyId();
+            if (colonyId != null) {
+                boolean changed = data.removeBuildingContribution(colonyId, state.getBuildingTypeId());
+                if (changed) {
+                    LOGGER.info("[Evaluation] Colony {} lost last contribution from {} — evaluation values decreased",
+                            colonyId.toString().substring(0, 8), state.getBuildingTypeId());
+                }
+            }
             enqueueRepairForPositions(state, entry.getValue());
             data.setDirty();
             LOGGER.info("[Building] Structure damaged by explosion: type={} at={} ({} blocks) — partial repair enqueued",
