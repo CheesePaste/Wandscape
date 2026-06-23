@@ -22,6 +22,7 @@ import com.wsteam.wandscape.command.RoadCommand;
 import com.wsteam.wandscape.command.RoadTestCommand;
 import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
+import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -370,7 +371,8 @@ public class Wandscape {
                 .then(RoadCommand.node())
                 .then(RoadTestCommand.node())
                 .then(SpiralTestCommand.node())
-                .then(StressTestCommand.buildNode());
+                .then(StressTestCommand.buildNode())
+                .then(TransportCommand.node());
         dispatcher.register(root);
     }
 
@@ -400,6 +402,10 @@ public class Wandscape {
         // ①c Tick async ritual channeling countdowns (self_teleport, etc.)
         var ritualOps = WandscapeEngine.getRitualOps();
         if (ritualOps != null) ritualOps.tickAll();
+
+        // ①d Drive item transport animations (visual item flight warehouse→NPC)
+        var transporter = WandscapeEngine.getTransporter();
+        if (transporter != null) transporter.tickAll();
 
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);

@@ -1,22 +1,25 @@
 package com.wsteam.wandscape.engine.boundary;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
@@ -25,8 +28,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Executes {@link AtomicOp.WandReturnOp}: unequips a wand from the NPC
- * and returns it to the colony warehouse, updating the ECS
- * {@link WandCarrier} component.
+ * and returns it to the colony warehouse via visual transport animation,
+ * updating the ECS {@link WandCarrier} component.
  */
 public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
 
@@ -34,9 +37,11 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
     private static final String WAND_ITEM_ID = "wandscape:wand";
 
     private final WandPresetLoader presetLoader;
+    private final ItemTransportManager transporter;
 
-    public WandReturnExecutor(WandPresetLoader presetLoader) {
+    public WandReturnExecutor(WandPresetLoader presetLoader, ItemTransportManager transporter) {
         this.presetLoader = presetLoader;
+        this.transporter = transporter;
     }
 
     @Override
@@ -46,8 +51,8 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
 
     @Override
     public CompletableFuture<Void> execute(AtomicOp.WandReturnOp op, World world, long npcId) {
-        String presetId = op.wandItemId(); // e.g. "gatherer_wand" (preset ID)
-        LOGGER.info("[WandReturn] ▶ execute called: preset={} npcId={}", presetId, npcId); // diag
+        String presetId = op.wandItemId();
+        LOGGER.info("[WandReturn] ▶ execute called: preset={} npcId={}", presetId, npcId);
 
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) {
@@ -66,22 +71,20 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         // 1. Read current WandCarrier
         WandCarrier current = world.get(npcId, WandCarrier.class);
         if (current == null || !current.equippedWandIds().contains(presetId)) {
-            // Wand not equipped — nothing to do (may have been lost on death)
             LOGGER.debug("[WandReturn] preset {} not equipped on NPC {}, skipping", presetId, npcId);
             return CompletableFuture.completedFuture(null);
         }
 
-        // 2. Find the preset for this wand (needed for NBT to add back to warehouse)
+        // 2. Find the preset for this wand (needed for NBT and visual)
         var preset = presetLoader.getPreset(presetId);
         if (preset == null) {
-            LOGGER.warn("[WandReturn] unknown wand preset: {}", presetId);
-            // Still unequip so NPC can continue working
+            LOGGER.warn("[WandReturn] unknown wand preset: {}, unequipping without visual", presetId);
             current.unequip(presetId, java.util.Map.of());
             world.addComponent(npcId, current);
             return CompletableFuture.completedFuture(null);
         }
 
-        // 3. Unequip from carrier: build knownWands map from remaining equipped IDs
+        // 3. Unequip from carrier immediately — wand is now "in transit"
         java.util.Map<String, WandCarrier.WandCapProvider> knownWands = new java.util.HashMap<>();
         for (String id : current.equippedWandIds()) {
             if (id.equals(presetId)) continue;
@@ -93,29 +96,38 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         current.unequip(presetId, knownWands);
         world.addComponent(npcId, current);
 
-        // 4. Add wand back to warehouse as "wandscape:wand" with preset NBT
+        // 4. Restore NPC default hand item
+        npc.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Wandscape.WAND.get()));
+
+        // 5. Find destination: nearest storage building
+        BlockPos npcPos = npc.blockPosition();
+        BlockPos storagePos = findNearestStorage(colonyId, npcPos);
         ItemKey key = ItemKey.of(WAND_ITEM_ID, preset.nbt().copy());
-        bank.add(colonyId, key, 1);
 
-        // 5. Restore NPC default hand item
-        npc.setItemInHand(InteractionHand.MAIN_HAND,
-                new ItemStack(Wandscape.WAND.get()));
+        // 6. Start visual transport: wand flies from NPC back to warehouse
+        BlockPos destPos = storagePos != null ? storagePos : npcPos;
+        CompletableFuture<Void> transportFuture = transporter.send(
+                key, npcPos, destPos, npc.level(), npcId);
 
-        // 6. Visual feedback
-        if (!npc.level().isClientSide) {
-            for (int i = 0; i < 8; i++) {
-                npc.level().addParticle(ParticleTypes.POOF,
-                        npc.getX() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
-                        npc.getY() + npc.getRandom().nextDouble() * 2.0,
-                        npc.getZ() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
-                        0, 0.05, 0);
+        // 7. On arrival: add to warehouse + visual feedback
+        transportFuture.thenRun(() -> {
+            bank.add(colonyId, key, 1);
+
+            if (!npc.level().isClientSide) {
+                for (int i = 0; i < 8; i++) {
+                    npc.level().addParticle(ParticleTypes.POOF,
+                            npc.getX() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
+                            npc.getY() + npc.getRandom().nextDouble() * 2.0,
+                            npc.getZ() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
+                            0, 0.05, 0);
+                }
             }
-        }
 
-        LOGGER.info("[WandReturn] 📦 NPC #{} 归还 '{}' → 仓库 剩余能力: {}",
-                npcId, presetId, current.capabilities().keySet());
+            LOGGER.info("[WandReturn] 📦 NPC #{} 归还 '{}' → 仓库 剩余能力: {}",
+                    npcId, presetId, current.capabilities().keySet());
+        });
 
-        return CompletableFuture.completedFuture(null);
+        return transportFuture;
     }
 
     /** Parse a WandCapProvider from preset NBT. */
@@ -150,12 +162,33 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         };
     }
 
-    private UUID resolveColonyId(WandscapeNpc npc, World world) {
-        var member = world.get(npc.ecsEntityId,
-                com.wsteam.wandscape.core.component.ColonyMember.class);
+    private static UUID resolveColonyId(WandscapeNpc npc, World world) {
+        var member = world.get(npc.ecsEntityId, ColonyMember.class);
         if (member != null && member.colonyId() != null) {
             return member.colonyId();
         }
         return npc.colonyId != null ? npc.colonyId : new UUID(0, 0);
+    }
+
+    private static BlockPos findNearestStorage(UUID colonyId, BlockPos npcPos) {
+        BuildingApi buildingApi = WandscapeApis.getBuildingApi();
+        if (buildingApi == null) return null;
+
+        var storageIds = buildingApi.getBuildingsByCategory(colonyId, "storage");
+        if (storageIds == null || storageIds.isEmpty()) return null;
+
+        BlockPos nearest = null;
+        double nearestDist = Double.MAX_VALUE;
+        for (UUID id : storageIds) {
+            BuildingData bd = buildingApi.getBuilding(id);
+            if (bd == null || bd.isShutdown()) continue;
+            BlockPos pos = bd.getPosition();
+            double dist = pos.distSqr(npcPos);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = pos;
+            }
+        }
+        return nearest;
     }
 }

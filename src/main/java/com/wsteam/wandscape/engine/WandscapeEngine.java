@@ -44,6 +44,8 @@ public final class WandscapeEngine {
     private static TaskPoolSavedData taskPoolSavedData;
     @Nullable
     private static com.wsteam.wandscape.engine.road.RoadSavedData roadSavedData;
+    @Nullable
+    private static com.wsteam.wandscape.engine.transport.ItemTransportManager transporter;
 
     private WandscapeEngine() {}
 
@@ -106,4 +108,8 @@ public final class WandscapeEngine {
     @Nullable
     public static com.wsteam.wandscape.engine.road.RoadSavedData getRoadSavedData() { return roadSavedData; }
     public static void setRoadSavedData(@Nullable com.wsteam.wandscape.engine.road.RoadSavedData v) { roadSavedData = v; }
+
+    @Nullable
+    public static com.wsteam.wandscape.engine.transport.ItemTransportManager getTransporter() { return transporter; }
+    public static void setTransporter(com.wsteam.wandscape.engine.transport.ItemTransportManager t) { transporter = t; }
 }

@@ -12,6 +12,7 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 
@@ -35,9 +36,11 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
     private static final String WAND_ITEM_ID = "wandscape:wand";
 
     private final WandPresetLoader presetLoader;
+    private final ItemTransportManager transporter;
 
-    public WandEquipExecutor(WandPresetLoader presetLoader) {
+    public WandEquipExecutor(WandPresetLoader presetLoader, ItemTransportManager transporter) {
         this.presetLoader = presetLoader;
+        this.transporter = transporter;
     }
 
     @Override
@@ -98,57 +101,61 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
                     new IllegalStateException("[WandEquip] wand preset=" + presetId + " not in warehouse (colony=" + colonyId + ")"));
         }
 
+        // 4. Consume from warehouse (sync — logical ownership transfer)
         bank.consume(colonyId, foundKey, 1);
+        final ItemKey consumedKey = foundKey; // effectively final for lambda
 
-        // 4. Parse wand capabilities from preset NBT
+        // 5. Start visual transport: wand flies from warehouse to NPC
+        BlockPos npcPos = npc.blockPosition();
+        CompletableFuture<Void> transportFuture = transporter.send(
+                consumedKey, storagePos, npcPos, npc.level(), npcId);
+
+        // 6. On arrival: equip wand capabilities into WandCarrier
         CompoundTag behaviors = preset.nbt().getCompound("behaviors");
         Map<BehaviourTag, BehaviourLevel> wandCaps = parseCapabilities(behaviors);
-
         float manaEff = preset.nbt().contains("mana_cost_multiplier")
                 ? preset.nbt().getFloat("mana_cost_multiplier") : 1.0f;
         int range = preset.nbt().contains("range")
                 ? preset.nbt().getInt("range") : 1;
 
-        // 5. Update WandCarrier
-        WandCarrier current = world.get(npcId, WandCarrier.class);
-        if (current == null) {
-            // Rollback: return consumed wand to warehouse
-            bank.add(colonyId, foundKey, 1);
-            return CompletableFuture.failedFuture(
-                    new IllegalStateException("[WandEquip] NPC " + npcId + " has no WandCarrier component"));
-        }
-
-        // Create a fresh carrier with the new wand merged in
-        WandCarrier updated = new WandCarrier(current);
-        updated.equip(presetId, wandCaps, manaEff, range);
-        world.addComponent(npcId, updated);
-
-        // 6. Update NPC hand item visual (set to the equipped wand)
-        var wandItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.tryParse(WAND_ITEM_ID));
-        if (wandItem != null) {
-            ItemStack wandStack = new ItemStack(wandItem);
-            // Copy full preset NBT (wand_color, behaviors, range, mana_cost_multiplier)
-            wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                    net.minecraft.world.item.component.CustomData.of(preset.nbt().copy()));
-            npc.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, wandStack);
-        }
-
-        // 7. Visual feedback
-        if (!npc.level().isClientSide) {
-            for (int i = 0; i < 10; i++) {
-                npc.level().addParticle(ParticleTypes.ENCHANT,
-                        npc.getX() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
-                        npc.getY() + npc.getRandom().nextDouble() * 2.0,
-                        npc.getZ() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
-                        0, 0, 0);
+        transportFuture.thenRun(() -> {
+            WandCarrier current = world.get(npcId, WandCarrier.class);
+            if (current == null) {
+                LOGGER.warn("[WandEquip] NPC {} lost WandCarrier mid-transport, returning wand to warehouse",
+                        npcId);
+                bank.add(colonyId, consumedKey, 1);
+                return;
             }
-        }
+            WandCarrier updated = new WandCarrier(current);
+            updated.equip(presetId, wandCaps, manaEff, range);
+            world.addComponent(npcId, updated);
 
-        LOGGER.info("[WandEquip] 🪄 NPC #{} 装备 '{}' → 能力: {} 效率: {} 射程: {}",
-                npcId, presetId, wandCaps.keySet(), manaEff, range);
+            // Update NPC hand item visual
+            var wandItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                    .get(net.minecraft.resources.ResourceLocation.tryParse(WAND_ITEM_ID));
+            if (wandItem != null) {
+                ItemStack wandStack = new ItemStack(wandItem);
+                wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.of(preset.nbt().copy()));
+                npc.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, wandStack);
+            }
 
-        return CompletableFuture.completedFuture(null);
+            // Visual feedback
+            if (!npc.level().isClientSide) {
+                for (int i = 0; i < 10; i++) {
+                    npc.level().addParticle(ParticleTypes.ENCHANT,
+                            npc.getX() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
+                            npc.getY() + npc.getRandom().nextDouble() * 2.0,
+                            npc.getZ() + (npc.getRandom().nextDouble() - 0.5) * 1.0,
+                            0, 0, 0);
+                }
+            }
+
+            LOGGER.info("[WandEquip] 🪄 NPC #{} 装备 '{}' → 能力: {} 效率: {} 射程: {}",
+                    npcId, presetId, wandCaps.keySet(), manaEff, range);
+        });
+
+        return transportFuture;
     }
 
     /** Map NBT behavior tags (lowercase strings) to core BehaviourTag enum values. */

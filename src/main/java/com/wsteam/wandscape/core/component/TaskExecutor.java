@@ -79,6 +79,17 @@ public class TaskExecutor {
     @Nullable
     public GridPos stance = null;
 
+    /**
+     * Ticks since this NPC last had work. Incremented each tick while idle.
+     * When this crosses {@code WAND_RETURN_DELAY}, equipped wands are pushed
+     * as WandReturnOps so another NPC can use them.
+     * Reset to 0 when a new task is assigned.
+     */
+    public int wandIdleTicks = 0;
+
+    /** Ticks of idle time before equipped wands are auto-returned to warehouse. */
+    public static final int WAND_RETURN_DELAY_TICKS = 60; // 3 seconds
+
     /** Push an op to the back of the private queue. */
     public void pushPrivate(AtomicOp op) {
         privateQueue.addLast(op);
@@ -121,6 +132,7 @@ public class TaskExecutor {
         currentOpTarget = null;
         currentOpKind = null;
         stance = null;
+        wandIdleTicks = 0;
         state = ExecutorState.IDLE;
     }
 
@@ -135,6 +147,8 @@ public class TaskExecutor {
         currentOpTarget = null;
         currentOpKind = null;
         stance = null;
+        // NOTE: wandIdleTicks is intentionally NOT reset here —
+        // it tracks idle time across task boundaries for wand return delay.
         state = ExecutorState.IDLE;
     }
 }

@@ -11,6 +11,7 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.core.types.ResourceStack;
 
 import com.google.gson.JsonElement;
 
@@ -106,13 +107,40 @@ public final class DefaultOpExecutors {
         }
     }
 
-    /** Fallback: ResourceRequestOp is handled inline by TaskExecutionSystem. */
+    /**
+     * Default ResourceRequestExecutor — sync, no visual transport.
+     * Replaced by engine-layer {@code ResourceRequestExecutor} which adds
+     * visual item flight via {@code ItemTransportManager}.
+     */
     static class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequestOp> {
         @Override public Class<AtomicOp.ResourceRequestOp> opType() { return AtomicOp.ResourceRequestOp.class; }
 
         @Override
         public CompletableFuture<Void> execute(AtomicOp.ResourceRequestOp op, World world, long npcId) {
-            return new CompletableFuture<>(); // never completes — handled inline
+            ColonyResourceAccess resources = world.colonyResources;
+            ResourceStack requested = op.requested();
+
+            // Shortage → signal to engine
+            if (!resources.hasEnough(requested.resource(), requested.amount())) {
+                return CompletableFuture.failedFuture(
+                        new ResourceShortageException(requested));
+            }
+
+            // Reserve → add to inventory → commit
+            if (!resources.reserve(requested.resource(), requested.amount())) {
+                return CompletableFuture.failedFuture(
+                        new ResourceShortageException(requested));
+            }
+
+            Inventory inv = world.get(npcId, Inventory.class);
+            if (inv == null || !inv.add(requested)) {
+                resources.release(requested.resource(), requested.amount());
+                return CompletableFuture.failedFuture(
+                        new IllegalStateException("NPC " + npcId + " has no inventory"));
+            }
+
+            resources.commit(requested.resource(), requested.amount());
+            return CompletableFuture.completedFuture(null);
         }
     }
 

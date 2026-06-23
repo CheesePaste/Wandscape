@@ -28,9 +28,11 @@ import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
+import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.engine.system.WandProvisionSystem;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.road.RoadTaskSource;
@@ -172,12 +174,22 @@ public final class EngineBootstrap {
         WandscapeEngine.setBlockInteractExec(blockInteractExec);
         LOGGER.info("  WandscapeBlockInteractExecutor active (sync + async actions)");
 
-        // 9c. Register wand equip/return executors
+        // 9c. Create shared item transport manager (visual item flight)
+        ItemTransportManager transporter = new ItemTransportManager();
+        WandscapeEngine.setTransporter(transporter);
+
+        // 9d. Register wand equip/return executors
         //     NPCs fetch wands from warehouse before executing tasks
         //     that require specific wand capabilities, and return them after.
-        world.opExecutors.register(new WandEquipExecutor(Wandscape.WAND_PRESET_LOADER));
-        world.opExecutors.register(new WandReturnExecutor(Wandscape.WAND_PRESET_LOADER));
+        //     WandEquipExecutor uses the transporter for visual wand delivery.
+        world.opExecutors.register(new WandEquipExecutor(Wandscape.WAND_PRESET_LOADER, transporter));
+        world.opExecutors.register(new WandReturnExecutor(Wandscape.WAND_PRESET_LOADER, transporter));
         LOGGER.info("  WandEquipExecutor + WandReturnExecutor registered");
+
+        // 9e. Register resource request executor (replaces inline handling)
+        //     Uses the transporter for visual item delivery from warehouse to NPC.
+        world.opExecutors.register(new ResourceRequestExecutor(transporter));
+        LOGGER.info("  ResourceRequestExecutor registered (visual transport)");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

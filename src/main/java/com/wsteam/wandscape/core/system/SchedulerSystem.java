@@ -124,6 +124,9 @@ public class SchedulerSystem implements System {
 
                 if (bestNpc >= 0) {
                     taskPool.assign(task.id, bestNpc, world);
+                    // Reset wand idle timer — NPC is no longer idle
+                    TaskExecutor assignedExec = world.get(bestNpc, TaskExecutor.class);
+                    if (assignedExec != null) assignedExec.wandIdleTicks = 0;
                     Log.info(TAG, "assigned #%d '%s' → NPC %d (score=%.2f dist=%.0f)",
                             task.id, task.sequence.label(), bestNpc, bestScore, bestDist);
                     colonyNpcs.remove(bestNpc); // NPC is now busy
@@ -147,6 +150,7 @@ public class SchedulerSystem implements System {
                             // when the global task completes.
                             exec.pushPrivateFront(new AtomicOp.WandEquipOp(wandId));
                             taskPool.assign(task.id, npcId, world);
+                            exec.wandIdleTicks = 0; // NPC is no longer idle
                             Log.info(TAG, "provisioned wand %s for #%d '%s' → NPC %d",
                                     wandId, task.id, task.sequence.label(), npcId);
                             colonyNpcs.remove(npcId);

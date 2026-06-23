@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.Log;
-import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
@@ -11,7 +10,6 @@ import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.RitualId;
 
 import javax.annotation.Nullable;
@@ -62,6 +60,27 @@ public class TaskExecutionSystem implements System {
             if (exec == null) continue;
 
             if (!exec.hasWork()) {
+                exec.state = ExecutorState.IDLE;
+                exec.currentOpTarget = null;
+                exec.currentOpKind = null;
+                // Cancel any in-flight navigation
+                if (world.movementOps != null && exec.pendingFuture != null) {
+                    world.movementOps.cancelNavigation(npcId);
+                }
+                // Increment idle counter. When it crosses threshold,
+                // push WandReturnOp for each equipped wand.
+                exec.wandIdleTicks++;
+                if (exec.wandIdleTicks >= TaskExecutor.WAND_RETURN_DELAY_TICKS) {
+                    WandCarrier wc = world.get(npcId, WandCarrier.class);
+                    if (wc != null && !wc.equippedWandIds().isEmpty()) {
+                        for (String wandId : new ArrayList<>(wc.equippedWandIds())) {
+                            exec.pushPrivate(new AtomicOp.WandReturnOp(wandId));
+                            Log.info(TAG, "NPC %d — idle %d ticks, pushed WandReturnOp(%s)",
+                                    npcId, exec.wandIdleTicks, wandId);
+                        }
+                        exec.wandIdleTicks = 0;
+                    }
+                }
                 continue;
             }
 
@@ -129,15 +148,6 @@ public class TaskExecutionSystem implements System {
             } else {
                 exec.state = ExecutorState.IDLE;
                 return;
-            }
-
-            // ---- 3. ResourceRequestOp handled inline ----
-            if (currentOp instanceof AtomicOp.ResourceRequestOp resOp) {
-                if (handleResourceRequest(resOp, world, npcId, exec, isPrivate)) {
-                    continue; // fulfilled → next op
-                } else {
-                    return; // waiting → exit NPC processing
-                }
             }
 
             // ---- 3.5. No-op skip: TransformOp where target already has desired block ----
@@ -216,16 +226,36 @@ public class TaskExecutionSystem implements System {
             // ---- 6. Already done? (sync op) ----
             if (future.isDone()) {
                 if (future.isCompletedExceptionally()) {
-                    // Op failed — discard it, log the reason.
-                    // For private-queue ops: pop and release global task
-                    // so another NPC can pick it up (or this one retries later).
-                    // For global-task ops: release for reassign (stepIndex preserved).
+                    // Op failed — classify the cause.
+                    // ResourceShortageException: special signal → AWAITING_RESOURCES
+                    // Everything else: discard op and release task for reassign.
+                    Throwable cause = null;
                     try {
-                        future.get(); // throws ExecutionException with the real cause
+                        future.get();
                     } catch (Exception e) {
+                        cause = e.getCause();
                         Log.warn(TAG, "NPC %d — op %s failed: %s",
                                 npcId, currentOp.getClass().getSimpleName(),
-                                e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+                                cause != null ? cause.getMessage() : e.getMessage());
+                    }
+                    if (cause instanceof ResourceShortageException shortage) {
+                        // Warehouse empty → mark task AWAITING_RESOURCES, release NPC.
+                        // StepIndex is preserved by markAwaitingResources internally.
+                        if (isPrivate) {
+                            // Private-queue resource requests shouldn't happen in
+                            // practice (they're always in global task sequences),
+                            // but pop it anyway so the NPC doesn't stall.
+                            exec.popPrivate();
+                        }
+                        if (exec.globalTaskId != null && taskPool != null) {
+                            taskPool.markAwaitingResources(exec.globalTaskId, npcId,
+                                    shortage.requested(), world);
+                            exec.releaseGlobalTask();
+                        }
+                        exec.state = ExecutorState.IDLE;
+                        exec.currentOpTarget = null;
+                        exec.currentOpKind = null;
+                        return;
                     }
                     if (isPrivate) {
                         exec.popPrivate();
@@ -269,7 +299,6 @@ public class TaskExecutionSystem implements System {
             exec.state = ExecutorState.IDLE;
             exec.currentOpTarget = null;
             exec.currentOpKind = null;
-            // Cancel any in-flight navigation that WE initiated
             if (world.movementOps != null && exec.pendingFuture != null) {
                 world.movementOps.cancelNavigation(npcId);
             }
@@ -280,17 +309,11 @@ public class TaskExecutionSystem implements System {
 
     /**
      * Called when a global task is fully complete (all steps done).
-     * Pushes WandReturnOp for any equipped wands, then completes
-     * the task and releases the NPC from it.
+     * Completes the task and releases the NPC.
+     * Wand return is deferred — wandIdleTicks in TaskExecutor
+     * triggers auto-return only after the NPC has been idle for a while.
      */
     private void finishGlobalTask(TaskExecutor exec, long npcId, World world) {
-        WandCarrier wc = world.get(npcId, WandCarrier.class);
-        if (wc != null) {
-            for (String wandId : new ArrayList<>(wc.equippedWandIds())) {
-                exec.pushPrivate(new AtomicOp.WandReturnOp(wandId));
-                Log.info(TAG, "NPC %d — pushed WandReturnOp(%s) to private queue", npcId, wandId);
-            }
-        }
         taskPool.completeTask(exec.globalTaskId, npcId);
         exec.releaseGlobalTask();
     }
@@ -307,30 +330,6 @@ public class TaskExecutionSystem implements System {
         }
         exec.currentOpTarget = null; // clear visual target after step advances
         exec.currentOpKind = null;
-    }
-
-    private boolean handleResourceRequest(AtomicOp.ResourceRequestOp op, World world,
-                                           long npcId, TaskExecutor exec, boolean isPrivate) {
-        ColonyResourceAccess resources = world.colonyResources;
-        ResourceStack requested = op.requested();
-        int available = resources.available(requested.resource());
-
-        if (resources.hasEnough(requested.resource(), requested.amount())) {
-            if (!resources.reserve(requested.resource(), requested.amount())) return false;
-            Inventory inv = world.get(npcId, Inventory.class);
-            if (inv == null || !inv.add(requested)) {
-                resources.release(requested.resource(), requested.amount());
-                return false;
-            }
-            resources.commit(requested.resource(), requested.amount());
-            advanceStep(exec, npcId, 1, world);
-            exec.state = ExecutorState.ACTIVE;
-            return true;
-        }
-        if (!isPrivate && exec.globalTaskId != null) {
-            taskPool.markAwaitingResources(exec.globalTaskId, npcId, requested, world);
-        }
-        return false;
     }
 
     static boolean isPureOp(AtomicOp op) {

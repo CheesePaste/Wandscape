@@ -524,6 +524,19 @@ public class WandscapeNpc extends PathfinderMob {
                     // Return equipped wands to colony warehouse on death/despawn
                     returnEquippedWands(world);
 
+                    // Orphan recovery: cancel all in-flight transports for this NPC
+                    var transporter = WandscapeEngine.getTransporter();
+                    if (transporter != null) {
+                        var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level());
+                        if (bank != null) {
+                            UUID cid = this.colonyId != null ? this.colonyId : new UUID(0, 0);
+                            var member = world.get(ecsEntityId,
+                                    com.wsteam.wandscape.core.component.ColonyMember.class);
+                            if (member != null && member.colonyId() != null) cid = member.colonyId();
+                            transporter.cancelForNpc(ecsEntityId, bank, cid);
+                        }
+                    }
+
                     EntityComponentBridge.INSTANCE.onNpcLeaveWorld(this, world);
                 }
             }
