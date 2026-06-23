@@ -70,22 +70,33 @@
 ### RoadRouter.plan() 步骤
 
 ```
-1. 计算直接距离 baseline
+1. 计算直接距离 baseline（距离 × 野路速度 = directTicks）
 2. 路网为空 → 返回空列表（调方降级直飞）
 3. 找到 start/end 最近的路网点 PathPoint → entry/exit 点
-4. 绕路太远（viaRoad > direct*2） → 降级直飞
+4. 预估耗时 > 直飞×1.5 → 降级直飞（early exit 避免无用寻路）
 5. 建图（Graph）：
    - 遍历所有 RoadEdge
    - 每个 PathPoint(x,y,z) 是一个图节点
-   - 同一边内相邻点连边，权重 = XZ manhattan 距离
-   - 不同边但 (x,y,z) 完全相同的点 → 自动连通（路口/节点交接处）
-6. Dijkstra 最短路径
-7. 简化路径：去共线中间点（方向和 Y 都没变的删除）
-8. 组装 RouteSegment：
-   - off-road: start → 第一个路点
-   - on-road:  路径内相邻点逐段
-   - off-road: 最后一个路点 → end
+   - 同一边内相邻点连边，权重 = XZ manhattan 距离 × 5 ticks（公路速度）
+   - 间隙弥合（Gap Bridging）：提取每条边的起止端点，与全网所有点比对
+     - 水平距离 ≤6 且高度差 ≤3 → 连边，权重 = 距离 × 10 ticks（野路速度）
+     - 解决：T型路口、道路宽度交错、玩家少铺一格等"视觉通数据不通"问题
+6. Dijkstra 最短路径（自动权衡：跨小断点 vs 绕远公路）
+7. 生成原始 RouteSegment：扫描路径相邻节点 → 跨度 >2 XZ 或 >1 Y 标记为 off-road（断点跳跃）
+8. simplifySegments 合并：同方向 + 同类型（公路/野路）+ 连续的段合并为长线段
+9. 组装最终段：[野路起飞] → [走公路] → [野路跨断点] → [走公路] → [抵达]
 ```
+
+### 间隙弥合（Gap Bridging）原理
+
+旧算法要求两条路的 PathPoint 在 **(x,y,z) 完全相同**才视为连通。但实际路网中：
+- 道路有宽度（默认 3 格），平行路面的 PathPoint 坐标可能差 1-2 格
+- T 型路口可能差一两格没连死
+- 玩家修路时偶尔漏铺一两格
+
+新算法在构建图时将边端点与全网所有点做**空间距离比对**：
+`|dx|+|dz| ≤ 6 && |dy| ≤ 3` → 主动连边（赋予野路权重惩罚）。
+Dijkstra 会自动判断"走过这几格野路断点"和"绕一大圈公路"哪个更快。
 
 ### 特殊情况降级
 
@@ -93,8 +104,9 @@
 |------|------|
 | 无路网 (`network==null` 或空) | 直飞 |
 | 入/出路点 null | 直飞 |
-| 路跨度 ≤2 格 | 直飞 |
-| 绕行 > 直接×2 | 直飞 |
+| 预估耗时 > 直飞×1.5 | 直飞 |
+| 图找不到 start/end 节点 | 直飞 |
+| start==end 在图内 | 直飞 |
 | Dijkstra 找不到路径 | 直飞 |
 | 异常（RoadApi 抛异常） | 直飞（静默） |
 
@@ -231,22 +243,15 @@ onAddedToLevel → World==null → deferJoin(this)
 ```log
 [RoadRouter] ═════ Route planning ═════
   From:  (10,64,5)        To: (120,64,80)
-  Direct XZ distance: 185 blocks
-  Network: 4 nodes, 3 edges, 328 path points
-  Road entry: (12,64,8) (off-road: 5 blocks)
-  Road exit:  (118,64,78) (off-road: 4 blocks)
-  Graph: 312 unique position nodes
-  Dijkstra: visited 187 nodes, path found: true (165 nodes)
-  Simplified: 165 → 42 points
-  Segments: 44 (2 off-road, 42 on-road)
-  Distance: 9 off-road + 176 on-road = 185 blocks
-  Time: 970 ticks (direct would be 1850 ticks, saved 880 = 48%)
+  Segments: 5 (2 off-road, 3 on-road jumps)
+  Time: 925 ticks (direct would be 1850 ticks, saved 50%)
 ═════ Route planned ✓
 ```
+注：日志已简化。详细建图/Dijkstra 统计可通过 FINE 级别 Debug 日志获取。
 
 ## TODO / 后续优化
 
 1. **客户端粒子替代** — ItemEntity 在服务端每 tick 同步位置给客户端，殖民地几十个物品同时飞时会有网络压力。改用自定义网络包 + 客户端 `ItemParticleOption` + `ParticleProvider` 来渲染。
-2. **道路寻路** — 当前公路段是逐 PathPoint 直线走（L-shape），可改为直接沿图边 BFS 更优的路线。
+2. **道路寻路** — ~~已修复：间隙弥合（Gap Bridging）解决了 T 型路口、宽度不等等断点问题。~~ 后续优化：BFS 沿图边而非逐点走可减少段数。
 3. **路网更新** — 公路建造/拆除后当前 in-flight 物品不重新规划（已经发送的继续飞旧路径）。
 4. **断点续传** — NPC 死亡后物品回仓库，任务恢复时从头开始。可改为 stepIndex 级别的进度恢复。
