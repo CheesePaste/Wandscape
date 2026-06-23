@@ -6,6 +6,9 @@ import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
+import com.wsteam.wandscape.core.road.PathPoint;
+import com.wsteam.wandscape.core.road.RoadRouter;
+import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -23,6 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -105,9 +109,11 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         ItemKey key = ItemKey.of(WAND_ITEM_ID, preset.nbt().copy());
 
         // 6. Start visual transport: wand flies from NPC back to warehouse
+        //    Use road network if available.
         BlockPos destPos = storagePos != null ? storagePos : npcPos;
+        List<RouteSegment> route = planRoute(colonyId, npcPos, destPos);
         CompletableFuture<Void> transportFuture = transporter.send(
-                key, npcPos, destPos, npc.level(), npcId);
+                key, npcPos, destPos, npc.level(), npcId, route);
 
         // 7. On arrival: add to warehouse + visual feedback
         transportFuture.thenRun(() -> {
@@ -190,5 +196,19 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
             }
         }
         return nearest;
+    }
+
+    /** Plan a road-assisted route between two positions. Returns empty if no road. */
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
+        try {
+            var roadApi = WandscapeApis.getRoadApi();
+            if (roadApi == null) return List.of();
+            var network = roadApi.getNetwork(colonyId);
+            return RoadRouter.plan(network,
+                    new PathPoint(from.getX(), from.getY(), from.getZ()),
+                    new PathPoint(to.getX(), to.getY(), to.getZ()));
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

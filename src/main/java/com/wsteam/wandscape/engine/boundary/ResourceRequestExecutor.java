@@ -10,6 +10,9 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.op.ResourceShortageException;
 import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.core.road.PathPoint;
+import com.wsteam.wandscape.core.road.RoadRouter;
+import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -22,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -90,13 +94,14 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         int amount = requested.amount();
 
         // 4. Build transport chain: one ItemEntity per item, serial
+        //    Plan the road route once for the whole batch.
         ItemKey itemKey = ItemKey.of(resourceName, null);
+        List<RouteSegment> route = planRoute(colonyId, warehousePos, npcPos);
         CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
 
         for (int i = 0; i < amount; i++) {
-            final int idx = i;
             chain = chain.thenCompose(v ->
-                    transporter.send(itemKey, warehousePos, npcPos, npc.level(), npcId));
+                    transporter.send(itemKey, warehousePos, npcPos, npc.level(), npcId, route));
         }
 
         // 5. On all arrivals: add to inventory + commit
@@ -119,9 +124,8 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     npcId, amount, resourceName);
         });
 
-        LOGGER.info("[ResourceReq] NPC {} requesting {} x {} ({} ticks est.)",
-                npcId, amount, resourceName,
-                amount * ItemTransportManager.DURATION_TICKS);
+        LOGGER.info("[ResourceReq] NPC {} requesting {} x {}",
+                npcId, amount, resourceName);
 
         return chain;
     }
@@ -156,5 +160,19 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
             }
         }
         return nearest;
+    }
+
+    /** Plan a road-assisted route between two positions. Returns empty if no road. */
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
+        try {
+            var roadApi = WandscapeApis.getRoadApi();
+            if (roadApi == null) return List.of();
+            var network = roadApi.getNetwork(colonyId);
+            return RoadRouter.plan(network,
+                    new PathPoint(from.getX(), from.getY(), from.getZ()),
+                    new PathPoint(to.getX(), to.getY(), to.getZ()));
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

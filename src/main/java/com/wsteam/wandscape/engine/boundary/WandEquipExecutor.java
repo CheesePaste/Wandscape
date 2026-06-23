@@ -12,6 +12,9 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.core.road.PathPoint;
+import com.wsteam.wandscape.core.road.RoadRouter;
+import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -106,9 +109,11 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
         final ItemKey consumedKey = foundKey; // effectively final for lambda
 
         // 5. Start visual transport: wand flies from warehouse to NPC
+        //    Use road network if available for faster on-road segments.
         BlockPos npcPos = npc.blockPosition();
+        List<RouteSegment> route = planRoute(colonyId, storagePos, npcPos);
         CompletableFuture<Void> transportFuture = transporter.send(
-                consumedKey, storagePos, npcPos, npc.level(), npcId);
+                consumedKey, storagePos, npcPos, npc.level(), npcId, route);
 
         // 6. On arrival: equip wand capabilities into WandCarrier
         CompoundTag behaviors = preset.nbt().getCompound("behaviors");
@@ -227,5 +232,19 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
             }
         }
         return nearest;
+    }
+
+    /** Plan a road-assisted route between two positions. Returns empty if no road. */
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
+        try {
+            var roadApi = WandscapeApis.getRoadApi();
+            if (roadApi == null) return List.of();
+            var network = roadApi.getNetwork(colonyId);
+            return RoadRouter.plan(network,
+                    new PathPoint(from.getX(), from.getY(), from.getZ()),
+                    new PathPoint(to.getX(), to.getY(), to.getZ()));
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

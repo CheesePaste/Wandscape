@@ -1,10 +1,11 @@
 package com.wsteam.wandscape.engine.transport;
 
+import com.wsteam.wandscape.core.road.RoadRouter;
+import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -19,57 +20,70 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Manages in-flight item transport animations between warehouse and NPC.
  *
- * <p>Each transport spawns a temporary {@link ItemEntity} that lerps
- * from a start position to a target position over a fixed duration.
- * The returned {@link CompletableFuture} completes when the item arrives.
+ * <p>Supports road network routing:
+ * <ul>
+ *   <li>Off-road: direct line, gentle arc, 20 ticks/block (1 block/sec)</li>
+ *   <li>On-road: follows road PathPoints, flat (follows terrain Y), 10 ticks/block (2 blocks/sec)</li>
+ * </ul>
  *
- * <p>Call {@link #tickAll()} every MC tick to drive position updates.
- *
- * <p>Orphan recovery via {@link #cancelForNpc(long, ColonyItemBank, UUID)}
- * returns in-flight items to the warehouse when an NPC dies or despawns.
+ * <p>When no road network is available, falls back to direct transport.
  */
 public class ItemTransportManager {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    /** Duration in MC ticks for a single item to traverse from start to end. */
-    public static final int DURATION_TICKS = 30; // ~1.5 seconds
 
     private final List<ActiveTransport> active = new ArrayList<>();
 
     // ── Public API ──
 
     /**
-     * Send an item from {@code from} to {@code to}, returning a future
-     * that completes when the visual transport finishes.
+     * Send an item along a pre-planned route, or direct if route is empty.
      *
-     * @param key      the item to transport
-     * @param from     start position (warehouse / storage building)
-     * @param to       destination (NPC position or build target)
-     * @param level    the server level to spawn the visual entity in
-     * @param ownerNpcId ECS entity ID of the requesting NPC (for orphan recovery)
-     * @return future that completes when the item reaches {@code to}
+     * @param key        the item to transport
+     * @param from       logical start position (for logging)
+     * @param to         logical end position (for logging)
+     * @param level      the server level to spawn the visual entity in
+     * @param ownerNpcId ECS entity ID (for orphan recovery)
+     * @param route      pre-planned route from {@link RoadRouter#plan}, or null/empty
+     * @return future that completes when the item reaches its destination
      */
     public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
-                                        Level level, long ownerNpcId) {
+                                        Level level, long ownerNpcId,
+                                        @Nullable List<RouteSegment> route) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         ItemEntity entity = spawnVisual(key, from, level);
         if (entity == null) {
             future.complete(null);
             return future;
         }
+
+        List<Leg> legs;
+        if (route != null && !route.isEmpty()) {
+            legs = buildLegs(route);
+        } else {
+            // Direct fallback
+            legs = List.of(new Leg(Vec3.atCenterOf(from), Vec3.atCenterOf(to),
+                    false /* arc ON for direct path */));
+        }
+
         ActiveTransport t = new ActiveTransport(future, entity, key,
-                Vec3.atCenterOf(from), Vec3.atCenterOf(to),
-                ownerNpcId, 0, DURATION_TICKS);
+                ownerNpcId, legs, 0, 0);
         active.add(t);
-        LOGGER.debug("[Transport] send {} {} → {} (npc={}, {} ticks)",
-                key.itemId(), from, to, ownerNpcId, DURATION_TICKS);
+
+        LOGGER.debug("[Transport] send {} {}→{} legs={} npc={}",
+                key.itemId(), from.toShortString(), to.toShortString(),
+                legs.size(), ownerNpcId);
         return future;
+    }
+
+    /** Convenience overload — direct path without route. */
+    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
+                                        Level level, long ownerNpcId) {
+        return send(key, from, to, level, ownerNpcId, null);
     }
 
     /**
      * Cancel all in-flight transports for the given NPC.
-     * Items are returned to the warehouse, entities are discarded,
-     * and futures are cancelled.
      */
     public void cancelForNpc(long npcId,
                              com.wsteam.wandscape.warehouse.ColonyItemBank bank,
@@ -83,14 +97,13 @@ public class ItemTransportManager {
             t.entity.discard();
             t.future.cancel(false);
             active.remove(t);
-            LOGGER.info("[Transport] orphan recovery: {} returned to warehouse (npc={})",
+            LOGGER.info("[Transport] orphan recovery: {} returned (npc={})",
                     t.itemKey.itemId(), npcId);
         }
     }
 
     /**
      * Drive all active transports forward by one tick.
-     * Call every MC tick from {@code onServerTick}.
      */
     public void tickAll() {
         if (active.isEmpty()) return;
@@ -98,45 +111,36 @@ public class ItemTransportManager {
         var arrived = new ArrayList<ActiveTransport>();
 
         for (ActiveTransport t : active) {
-            // ── Neutralize ItemEntity.tick() interference ──
-            // Entity tick runs BEFORE tickAll each frame. It overwrites:
-            //   noPhysics  (→ collision)
-            //   xo/yo/zo   (→ lerp base)
-            //   deltaMovement (→ accumulates gravity/friction/drag)
-            //   age        (→ lifespan expiry / merging)
-            // We must re-apply ALL physics disablers every frame.
-            t.entity.noPhysics = true;
-            t.entity.setNoGravity(true);
-            t.entity.setDeltaMovement(Vec3.ZERO);
-            t.entity.setUnlimitedLifetime();  // age = -32768, prevents expiry + merge
-            t.entity.setPickUpDelay(Short.MAX_VALUE);
+            neutralizeEntityPhysics(t.entity);
 
             t.elapsed++;
-            if (t.elapsed >= t.duration) {
-                arrived.add(t);
+            Leg leg = t.legs.get(t.legIndex);
+            int segElapsed = t.segmentElapsed + 1;
+
+            if (segElapsed >= leg.duration) {
+                // This leg complete → advance to next leg
+                t.segmentElapsed = 0;
+                t.legIndex++;
+
+                if (t.legIndex >= t.legs.size()) {
+                    // All legs done
+                    arrived.add(t);
+                    continue;
+                }
+
+                // Start next leg
+                Leg next = t.legs.get(t.legIndex);
+                tickLeg(t.entity, next, 0);
             } else {
-                double progress = (double) t.elapsed / t.duration;
-                Vec3 pos = lerp(t.from, t.to, progress);
-
-                // Capture old position BEFORE moving — client interpolates xo→x
-                t.entity.xo = t.entity.getX();
-                t.entity.yo = t.entity.getY();
-                t.entity.zo = t.entity.getZ();
-                t.entity.xOld = t.entity.getX();
-                t.entity.yOld = t.entity.getY();
-                t.entity.zOld = t.entity.getZ();
-
-                // Force entity tracker to send a position update this tick.
-                // Without this, a zero-velocity entity gets sparse teleport packets.
-                t.entity.hasImpulse = true;
-
-                t.entity.setPos(pos.x, pos.y, pos.z);
+                t.segmentElapsed = segElapsed;
+                tickLeg(t.entity, leg, segElapsed);
             }
         }
 
         for (ActiveTransport t : arrived) {
-            // Snap to final position, discard, and signal completion
-            t.entity.setPos(t.to.x, t.to.y, t.to.z);
+            t.entity.setPos(t.legs.get(t.legs.size() - 1).to.x,
+                    t.legs.get(t.legs.size() - 1).to.y,
+                    t.legs.get(t.legs.size() - 1).to.z);
             t.entity.discard();
             t.future.complete(null);
             active.remove(t);
@@ -147,9 +151,67 @@ public class ItemTransportManager {
         return active.size();
     }
 
-    // ── Internal ──
+    // ── Leg helpers ──
 
-    /** Spawn a no-pickup, no-physics, no-gravity ItemEntity for visual only. */
+    /** Move the entity to its position at tick {@code elapsed} of the given leg. */
+    private static void tickLeg(ItemEntity entity, Leg leg, int elapsed) {
+        double t = (double) elapsed / leg.duration;
+
+        double x = leg.from.x + (leg.to.x - leg.from.x) * t;
+        double z = leg.from.z + (leg.to.z - leg.from.z) * t;
+
+        double y;
+        if (leg.flatY) {
+            // On-road: linear Y interpolation (follow terrain)
+            y = leg.from.y + (leg.to.y - leg.from.y) * t;
+        } else {
+            // Off-road: arc
+            y = leg.from.y + (leg.to.y - leg.from.y) * t + Math.sin(t * Math.PI) * 1.5;
+        }
+
+        Vec3 pos = new Vec3(x, y, z);
+
+        entity.xo = entity.getX();
+        entity.yo = entity.getY();
+        entity.zo = entity.getZ();
+        entity.xOld = entity.getX();
+        entity.yOld = entity.getY();
+        entity.zOld = entity.getZ();
+
+        entity.hasImpulse = true;
+        entity.setPos(pos.x, pos.y, pos.z);
+    }
+
+    /** Convert RouteSegments (core-friendly) to engine Legs. */
+    private static List<Leg> buildLegs(List<RouteSegment> route) {
+        List<Leg> legs = new ArrayList<>();
+        for (RouteSegment seg : route) {
+            Vec3 from = new Vec3(seg.fromX(), seg.fromY(), seg.fromZ()).add(0.5, 0.5, 0.5);
+            Vec3 to = new Vec3(seg.toX(), seg.toY(), seg.toZ()).add(0.5, 0.5, 0.5);
+            int xzDist = (int) Math.max(1,
+                    Math.abs(seg.toX() - seg.fromX()) + Math.abs(seg.toZ() - seg.fromZ()));
+            int ticksPerBlock = seg.onRoad()
+                    ? RoadRouter.TICKS_PER_BLOCK_ON_ROAD
+                    : RoadRouter.TICKS_PER_BLOCK_OFF_ROAD;
+            int duration = xzDist * ticksPerBlock;
+            // On-road: flat (no arc), follow terrain Y. Off-road: gentle arc.
+            legs.add(new Leg(from, to, seg.onRoad()));
+        }
+        return legs;
+    }
+
+    /** Reset all physics fields that ItemEntity.tick() may have overwritten. */
+    private static void neutralizeEntityPhysics(ItemEntity entity) {
+        entity.noPhysics = true;
+        entity.setNoGravity(true);
+        entity.setDeltaMovement(Vec3.ZERO);
+        entity.setUnlimitedLifetime();
+        entity.setPickUpDelay(Short.MAX_VALUE);
+    }
+
+    // ── Visual spawn ──
+
+    /** Spawn a no-pickup, no-physics ItemEntity for visual only. */
     @Nullable
     private static ItemEntity spawnVisual(ItemKey key, BlockPos pos, Level level) {
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(key.itemId()));
@@ -173,36 +235,48 @@ public class ItemTransportManager {
         return entity;
     }
 
-    /** Linear interpolation with a gentle arc. */
-    private static Vec3 lerp(Vec3 from, Vec3 to, double t) {
-        double x = from.x + (to.x - from.x) * t;
-        double y = from.y + (to.y - from.y) * t + Math.sin(t * Math.PI) * 1.5;
-        double z = from.z + (to.z - from.z) * t;
-        return new Vec3(x, y, z);
-    }
+    // ── Internal types ──
 
-    // ── Record ──
+    /** A single straight-line leg of a transport. */
+    private static class Leg {
+        final Vec3 from, to;
+        final int duration;
+        final boolean flatY; // true = on-road, no arc
+
+        Leg(Vec3 from, Vec3 to, boolean flatY) {
+            this.from = from;
+            this.to = to;
+            this.flatY = flatY;
+            // Fallback: ensure at least 1 tick per leg
+            int xzDist = Math.max(1,
+                    (int) (Math.abs(to.x - from.x) + Math.abs(to.z - from.z)));
+            int ticksPerBlock = flatY
+                    ? RoadRouter.TICKS_PER_BLOCK_ON_ROAD
+                    : RoadRouter.TICKS_PER_BLOCK_OFF_ROAD;
+            this.duration = Math.max(1, xzDist * ticksPerBlock);
+        }
+    }
 
     private static class ActiveTransport {
         final CompletableFuture<Void> future;
         final ItemEntity entity;
         final ItemKey itemKey;
-        final Vec3 from, to;
         final long ownerNpcId;
+        final List<Leg> legs;
+        int legIndex;
+        int segmentElapsed;
         int elapsed;
-        final int duration;
 
         ActiveTransport(CompletableFuture<Void> future, ItemEntity entity,
-                       ItemKey itemKey, Vec3 from, Vec3 to,
-                       long ownerNpcId, int elapsed, int duration) {
+                       ItemKey itemKey, long ownerNpcId,
+                       List<Leg> legs, int legIndex, int segmentElapsed) {
             this.future = future;
             this.entity = entity;
             this.itemKey = itemKey;
-            this.from = from;
-            this.to = to;
             this.ownerNpcId = ownerNpcId;
-            this.elapsed = elapsed;
-            this.duration = duration;
+            this.legs = legs;
+            this.legIndex = legIndex;
+            this.segmentElapsed = segmentElapsed;
         }
     }
 }
