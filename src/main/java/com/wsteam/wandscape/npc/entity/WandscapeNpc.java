@@ -484,6 +484,12 @@ public class WandscapeNpc extends PathfinderMob {
             World world = WandscapeEngine.getWorld();
             if (world != null) {
                 EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
+            } else {
+                // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
+                // Defer registration until the next tick.
+                LOGGER.warn("NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
+                        getUUID().toString().substring(0, 8));
+                EntityComponentBridge.INSTANCE.deferJoin(this);
             }
         }
     }

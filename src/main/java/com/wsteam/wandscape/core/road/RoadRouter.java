@@ -28,11 +28,11 @@ public final class RoadRouter {
 
     private static final String TAG = "RoadRouter";
 
-    /** Ticks per block of XZ distance for off-road transport (1 block/sec). */
-    public static final int TICKS_PER_BLOCK_OFF_ROAD = 20;
+    /** Ticks per block of XZ distance for off-road transport (2 blocks/sec). */
+    public static final int TICKS_PER_BLOCK_OFF_ROAD = 10;
 
-    /** Ticks per block of XZ distance for on-road transport (2 blocks/sec). */
-    public static final int TICKS_PER_BLOCK_ON_ROAD = 10;
+    /** Ticks per block of XZ distance for on-road transport (4 blocks/sec). */
+    public static final int TICKS_PER_BLOCK_ON_ROAD = 5;
 
     private RoadRouter() {}
 
@@ -297,7 +297,7 @@ public final class RoadRouter {
             for (int i = 0; i < pts.size(); i++) {
                 PathPoint p = pts.get(i);
                 NodeKey key = new NodeKey(p.x(), p.y(), p.z());
-                graph.nodes.put(key, new HashMap<>());
+                graph.nodes.putIfAbsent(key, new HashMap<>());
                 pointToEdges.computeIfAbsent(key, k -> new HashSet<>()).add(edge.getEdgeId());
 
                 // Within-edge link: connect to next point

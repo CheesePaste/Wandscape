@@ -410,6 +410,9 @@ public class Wandscape {
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 
+        // ②b Flush any NPCs that loaded before the engine was ready
+        EntityComponentBridge.INSTANCE.flushDeferredJoins(world);
+
         // ③ Engine logic tick (incl. NavigationSystem which drives movement)
         engineTickCount++;
         world.tick(1.0f);
