@@ -4,13 +4,19 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.event.CustomEvent;
+import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.wand.internal.WandPresetLoader;
+import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -83,6 +89,11 @@ public final class BuildCompleteListener {
         if (intact) {
             LOGGER.info("[Building] {} at {} construction complete — now operational",
                     state.getBuildingTypeId(), anchor);
+
+            // Seed new storage buildings with a builder wand for testing
+            if ("storage".equals(state.getCategory())) {
+                seedBuilderWand(level, state.getColonyId());
+            }
         } else {
             LOGGER.warn("[Building] {} at {} — {} blocks still damaged after build_complete, re-enqueuing partial repair",
                     state.getBuildingTypeId(), anchor, damaged.size());
@@ -169,6 +180,37 @@ public final class BuildCompleteListener {
                                             net.minecraft.world.level.block.state.properties.Property<?> prop) {
         Comparable<?> value = state.getValue((net.minecraft.world.level.block.state.properties.Property) prop);
         return value != null ? value.toString() : "";
+    }
+
+    /**
+     * Seed a newly-constructed storage building with one builder_wand
+     * so the colony can start building without a pre-existing wand supply.
+     */
+    private static void seedBuilderWand(Level level, UUID colonyId) {
+        if (colonyId == null) colonyId = new UUID(0, 0);
+        WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
+        if (preset == null) {
+            LOGGER.warn("[Building] seedBuilderWand: builder_wand preset not found");
+            return;
+        }
+
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) {
+            LOGGER.warn("[Building] seedBuilderWand: ColonyItemBank not available");
+            return;
+        }
+
+        // All wands use "wandscape:wand" with NBT from the preset
+        ItemKey key = ItemKey.of("wandscape:wand", preset.nbt().copy());
+        long existing = bank.count(colonyId, key);
+        if (existing > 0) {
+            LOGGER.debug("[Building] warehouse already has builder_wand ({}), skipping seed", existing);
+            return;
+        }
+
+        bank.add(colonyId, key, 1);
+        LOGGER.info("[Building] seeded builder_wand into new warehouse (colony={})",
+                colonyId.toString().substring(0, 8));
     }
 
     private static Level getServerLevel() {

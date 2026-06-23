@@ -47,17 +47,18 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
     @Override
     public CompletableFuture<Void> execute(AtomicOp.WandReturnOp op, World world, long npcId) {
         String presetId = op.wandItemId(); // e.g. "gatherer_wand" (preset ID)
+        LOGGER.info("[WandReturn] ▶ execute called: preset={} npcId={}", presetId, npcId); // diag
 
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) {
-            LOGGER.warn("[WandReturn] NPC {} not found in entity bridge", npcId);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandReturn] NPC " + npcId + " not found in entity bridge"));
         }
 
         ColonyItemBank bank = ColonyItemBank.get(npc.level());
         if (bank == null) {
-            LOGGER.warn("[WandReturn] ColonyItemBank not available");
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandReturn] ColonyItemBank not available"));
         }
 
         UUID colonyId = resolveColonyId(npc, world);
@@ -111,7 +112,7 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
             }
         }
 
-        LOGGER.info("[WandReturn] NPC {} returned preset={} to warehouse (remaining caps={})",
+        LOGGER.info("[WandReturn] 📦 NPC #{} 归还 '{}' → 仓库 剩余能力: {}",
                 npcId, presetId, current.capabilities().keySet());
 
         return CompletableFuture.completedFuture(null);

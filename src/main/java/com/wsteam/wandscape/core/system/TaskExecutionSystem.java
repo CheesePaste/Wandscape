@@ -107,7 +107,7 @@ public class TaskExecutionSystem implements System {
                 if (!exec.pendingFutureIsNav) {
                     // Op future (e.g. AsyncTransformExecutor delay) —
                     // the op already executed via future's thenRun callback.
-                    advanceStep(exec, npcId, 1);
+                    advanceStep(exec, npcId, 1, world);
                 }
                 // Nav future → do NOT advance. Continue to re-check
                 // range (now in-range) and execute the operation.
@@ -122,8 +122,7 @@ public class TaskExecutionSystem implements System {
                 currentOp = exec.peekPrivate();
             } else if (exec.globalTaskId != null && exec.currentSequence != null) {
                 if (exec.currentSequence.isComplete(exec.stepIndex)) {
-                    taskPool.completeTask(exec.globalTaskId, npcId);
-                    exec.releaseGlobalTask();
+                    finishGlobalTask(exec, npcId, world);
                     return;
                 }
                 currentOp = exec.currentSequence.get(exec.stepIndex);
@@ -144,7 +143,7 @@ public class TaskExecutionSystem implements System {
             // ---- 3.5. No-op skip: TransformOp where target already has desired block ----
             if (currentOp instanceof AtomicOp.TransformOp top && world.blockOps != null) {
                 if (world.blockOps.getBlock(top.target()).equals(top.to())) {
-                    advanceStep(exec, npcId, 1);
+                    advanceStep(exec, npcId, 1, world);
                     exec.state = ExecutorState.ACTIVE;
                     continue; // skip → next op (batch through consecutive no-ops)
                 }
@@ -216,9 +215,33 @@ public class TaskExecutionSystem implements System {
 
             // ---- 6. Already done? (sync op) ----
             if (future.isDone()) {
+                if (future.isCompletedExceptionally()) {
+                    // Op failed — discard it, log the reason.
+                    // For private-queue ops: pop and release global task
+                    // so another NPC can pick it up (or this one retries later).
+                    // For global-task ops: release for reassign (stepIndex preserved).
+                    try {
+                        future.get(); // throws ExecutionException with the real cause
+                    } catch (Exception e) {
+                        Log.warn(TAG, "NPC %d — op %s failed: %s",
+                                npcId, currentOp.getClass().getSimpleName(),
+                                e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+                    }
+                    if (isPrivate) {
+                        exec.popPrivate();
+                    }
+                    if (exec.globalTaskId != null && taskPool != null) {
+                        taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
+                        exec.releaseGlobalTask();
+                    }
+                    exec.state = ExecutorState.IDLE;
+                    exec.currentOpTarget = null;
+                    exec.currentOpKind = null;
+                    return;
+                }
                 if (!isPure) {
                     // Side-effect op: mana already consumed, advance stepIndex
-                    advanceStep(exec, npcId, 1);
+                    advanceStep(exec, npcId, 1, world);
                     exec.state = ExecutorState.ACTIVE;
 
                     // Same-target batching: if next op shares the same target,
@@ -255,15 +278,31 @@ public class TaskExecutionSystem implements System {
 
     // ---- Helpers ----
 
-    private void advanceStep(TaskExecutor exec, long npcId, int delta) {
+    /**
+     * Called when a global task is fully complete (all steps done).
+     * Pushes WandReturnOp for any equipped wands, then completes
+     * the task and releases the NPC from it.
+     */
+    private void finishGlobalTask(TaskExecutor exec, long npcId, World world) {
+        WandCarrier wc = world.get(npcId, WandCarrier.class);
+        if (wc != null) {
+            for (String wandId : new ArrayList<>(wc.equippedWandIds())) {
+                exec.pushPrivate(new AtomicOp.WandReturnOp(wandId));
+                Log.info(TAG, "NPC %d — pushed WandReturnOp(%s) to private queue", npcId, wandId);
+            }
+        }
+        taskPool.completeTask(exec.globalTaskId, npcId);
+        exec.releaseGlobalTask();
+    }
+
+    private void advanceStep(TaskExecutor exec, long npcId, int delta, World world) {
         if (!exec.isPrivateQueueEmpty()) {
             exec.popPrivate();
         } else if (exec.globalTaskId != null) {
             exec.stepIndex += delta;
             taskPool.advanceStep(exec.globalTaskId, exec.stepIndex);
             if (exec.currentSequence != null && exec.currentSequence.isComplete(exec.stepIndex)) {
-                taskPool.completeTask(exec.globalTaskId, npcId);
-                exec.releaseGlobalTask();
+                finishGlobalTask(exec, npcId, world);
             }
         }
         exec.currentOpTarget = null; // clear visual target after step advances
@@ -284,7 +323,7 @@ public class TaskExecutionSystem implements System {
                 return false;
             }
             resources.commit(requested.resource(), requested.amount());
-            advanceStep(exec, npcId, 1);
+            advanceStep(exec, npcId, 1, world);
             exec.state = ExecutorState.ACTIVE;
             return true;
         }

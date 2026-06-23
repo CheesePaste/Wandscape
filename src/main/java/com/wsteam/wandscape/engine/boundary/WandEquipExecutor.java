@@ -47,34 +47,35 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
 
     @Override
     public CompletableFuture<Void> execute(AtomicOp.WandEquipOp op, World world, long npcId) {
-        String presetId = op.wandItemId(); // e.g. "gatherer_wand" (preset ID from WandProvider)
+       String presetId = op.wandItemId(); // e.g. "gatherer_wand" (preset ID from WandProvider)
+        LOGGER.info("[WandEquip] ▶ execute called: preset={} npcId={}", presetId, npcId); // diag
 
         // 1. Find the preset for this wand
         var preset = presetLoader.getPreset(presetId);
         if (preset == null) {
-            LOGGER.warn("[WandEquip] unknown wand preset: {}", presetId);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandEquip] unknown wand preset: " + presetId));
         }
 
         // 2. Find colony and nearest storage building
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) {
-            LOGGER.warn("[WandEquip] NPC {} not found in entity bridge", npcId);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandEquip] NPC " + npcId + " not found in entity bridge"));
         }
 
         UUID colonyId = resolveColonyId(npc, world);
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         if (storagePos == null) {
-            LOGGER.warn("[WandEquip] no storage building found for colony {}", colonyId);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandEquip] no storage building for colony " + colonyId));
         }
 
         // 3. Find the actual wand item in warehouse (wandscape:wand with matching NBT)
         ColonyItemBank bank = ColonyItemBank.get(npc.level());
         if (bank == null) {
-            LOGGER.warn("[WandEquip] ColonyItemBank not available");
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandEquip] ColonyItemBank not available"));
         }
 
         String wandColor = preset.nbt().getString("wand_color");
@@ -93,8 +94,8 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
         }
 
         if (foundKey == null) {
-            LOGGER.warn("[WandEquip] wand preset={} not in warehouse (colony={})", presetId, colonyId);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandEquip] wand preset=" + presetId + " not in warehouse (colony=" + colonyId + ")"));
         }
 
         bank.consume(colonyId, foundKey, 1);
@@ -111,10 +112,10 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
         // 5. Update WandCarrier
         WandCarrier current = world.get(npcId, WandCarrier.class);
         if (current == null) {
-            LOGGER.warn("[WandEquip] NPC {} has no WandCarrier component", npcId);
-            // Return wand to warehouse
+            // Rollback: return consumed wand to warehouse
             bank.add(colonyId, foundKey, 1);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("[WandEquip] NPC " + npcId + " has no WandCarrier component"));
         }
 
         // Create a fresh carrier with the new wand merged in
@@ -144,7 +145,7 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
             }
         }
 
-        LOGGER.info("[WandEquip] NPC {} equipped preset={} (caps={}, eff={}, range={})",
+        LOGGER.info("[WandEquip] 🪄 NPC #{} 装备 '{}' → 能力: {} 效率: {} 射程: {}",
                 npcId, presetId, wandCaps.keySet(), manaEff, range);
 
         return CompletableFuture.completedFuture(null);

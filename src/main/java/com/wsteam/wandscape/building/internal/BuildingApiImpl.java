@@ -295,7 +295,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         List<UUID> result = new ArrayList<>();
         for (BuildingState state : sd.getAllBuildings()) {
-            if (colonyId != null && !colonyId.equals(state.getColonyId())) continue;
+            if (colonyId != null && !colonyId.equals(state.getColonyId())&&(state.getColonyId()!=null)) continue;
             if (category.equals(state.getCategory())) {
                 result.add(state.getBuildingId());
             }

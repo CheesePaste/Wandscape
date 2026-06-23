@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
+import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
 import com.wsteam.wandscape.core.demo.MockBoundary;
 
@@ -674,6 +675,167 @@ public class CoreSystemsTest {
                     "StepIndex preserved after interrupt (resume from where left off)");
             assertEquals(1, task.interruptHistory.size());
             assertEquals(1, task.interruptHistory.peekFirst().atStepIndex());
+        }
+    }
+
+    // ===================================================================
+    // 8. WandEquipOp / WandReturnOp lifecycle
+    // ===================================================================
+
+    @Nested
+    class WandLifecycleTests {
+        private MockBoundary mock;
+        private World world;
+        private UUID colonyId;
+        private long npc;
+        private java.util.concurrent.atomic.AtomicBoolean wandReturnExecuted;
+        private java.util.concurrent.atomic.AtomicBoolean wandEquipExecuted;
+
+        @BeforeEach
+        void setUp() {
+            mock = new MockBoundary();
+            mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
+            BlueprintRegistry blueprints = new BlueprintRegistry();
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
+                    new SystemBlueprintRegistry(), false);
+            world = CoreBootstrap.bootstrap(config);
+            DefaultOpExecutors.registerAll(world.opExecutors);
+
+            // Register mock WandEquip/WandReturn executors that just set a flag.
+            // The real executors (engine-boundary) require MC classes; these
+            // light-weight mocks let us verify the ECS lifecycle in isolation.
+            wandReturnExecuted = new java.util.concurrent.atomic.AtomicBoolean(false);
+            wandEquipExecuted = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+            world.opExecutors.register(new OpExecutor<AtomicOp.WandReturnOp>() {
+                @Override public Class<AtomicOp.WandReturnOp> opType() {
+                    return AtomicOp.WandReturnOp.class;
+                }
+                @Override
+                public java.util.concurrent.CompletableFuture<Void> execute(
+                        AtomicOp.WandReturnOp op, World world, long npcId) {
+                    wandReturnExecuted.set(true);
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+            });
+
+            world.opExecutors.register(new OpExecutor<AtomicOp.WandEquipOp>() {
+                @Override public Class<AtomicOp.WandEquipOp> opType() {
+                    return AtomicOp.WandEquipOp.class;
+                }
+                @Override
+                public java.util.concurrent.CompletableFuture<Void> execute(
+                        AtomicOp.WandEquipOp op, World world, long npcId) {
+                    wandEquipExecuted.set(true);
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+            });
+
+            GridPos center = new GridPos(0, 64, 0);
+            colonyId = UUID.randomUUID();
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
+
+            // NPC starts with builder_wand in equippedWandIds —
+            // exactly what our EntityComponentBridge fix does.
+            WandCarrier wand = new WandCarrier(
+                    Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)),
+                    1.0f, 1,
+                    List.of("builder_wand"));
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        }
+
+        @Test
+        void equippedWandIds_areSetOnStartup() {
+            WandCarrier wc = world.get(npc, WandCarrier.class);
+            assertNotNull(wc);
+            assertEquals(List.of("builder_wand"), wc.equippedWandIds(),
+                    "NPC starts with builder_wand tracked");
+        }
+
+        @Test
+        void taskCompletion_pushesWandReturnOp_toPrivateQueue() {
+            // Register single-TransformOp blueprint
+            registerSimpleBp("test:wand_return",
+                    AtomicOp.TransformOp.place(new GridPos(10, 64, 0), BlockType.STONE));
+
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:wand_return", new GridPos(0, 64, 0), 10));
+            tickN(10);
+
+            GlobalTask task = world.taskPool.get(taskId);
+            assertEquals(TaskState.COMPLETED, task.state,
+                    "Task should complete");
+            assertFalse(mock.isAir(new GridPos(10, 64, 0)),
+                    "Block placed");
+
+            // After completion: WandReturnOp should have been pushed to
+            // private queue and then executed. Now verify the executor was called.
+            assertTrue(wandReturnExecuted.get(),
+                    "WandReturnExecutor should have been called after task completion");
+        }
+
+        @Test
+        void npcWithEmptyEquippedWandIds_doesNotReturnUponTaskComplete() {
+            // Replace first NPC with one that has NO equipped wands
+            long npcEmpty = CoreBootstrap.createNpc(world, 1, 64, 0,
+                    new WandCarrier(
+                            Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)),
+                            1.0f, 1, List.of()),
+                    colonyId, 100, 5);
+
+            registerSimpleBp("test:no_wand_return",
+                    AtomicOp.TransformOp.place(new GridPos(20, 64, 0), BlockType.STONE));
+
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:no_wand_return", new GridPos(0, 64, 0), 10));
+            tickN(10);
+
+            GlobalTask task = world.taskPool.get(taskId);
+            assertEquals(TaskState.COMPLETED, task.state);
+            assertFalse(mock.isAir(new GridPos(20, 64, 0)),
+                    "Block placed");
+
+            // private queue for empty-wand NPC should be empty
+            TaskExecutor exec = world.get(npcEmpty, TaskExecutor.class);
+            assertTrue(exec.isPrivateQueueEmpty(),
+                    "Private queue should be empty when no wand equipped");
+        }
+
+        @Test
+        void wandReturnOp_isExecuted_andClearedFromPrivateQueue() {
+            registerSimpleBp("test:clear_return",
+                    AtomicOp.TransformOp.place(new GridPos(30, 64, 0), BlockType.STONE));
+
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:clear_return", new GridPos(0, 64, 0), 10));
+            tickN(10);
+
+            assertTrue(wandReturnExecuted.get(),
+                    "WandReturnExecutor was called");
+
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+            assertTrue(exec.isPrivateQueueEmpty(),
+                    "Private queue should be drained after return op executes");
+            assertEquals(ExecutorState.IDLE, exec.state,
+                    "NPC back to IDLE after return op");
+        }
+
+        // ---- helpers ----
+        private void registerSimpleBp(String id, AtomicOp... steps) {
+            world.blueprintRegistry.register(id, new Blueprint(id,
+                    (BlueprintSteps) p -> new TaskSequence(List.of(steps), id)));
+        }
+
+        private TaskRequest makeRequest(String blueprintId, GridPos pos, int priority) {
+            Map<String, JsonElement> params = new HashMap<>();
+            params.put("x", new JsonPrimitive(pos.x()));
+            params.put("y", new JsonPrimitive(pos.y()));
+            params.put("z", new JsonPrimitive(pos.z()));
+            return new TaskRequest(blueprintId, params, priority);
+        }
+
+        private void tickN(int n) {
+            for (int i = 0; i < n; i++) world.tick(1.0f);
         }
     }
 }

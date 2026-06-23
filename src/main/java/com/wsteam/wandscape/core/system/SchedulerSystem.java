@@ -139,12 +139,12 @@ public class SchedulerSystem implements System {
                             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
                             WandCarrier wc = world.get(npcId, WandCarrier.class);
                             if (exec == null || wc == null) continue;
-                            // Skip NPCs that already have this wand
-                            if (wc.equippedWandIds().contains(wandId)) continue;
+//                            // Skip NPCs that already have this wand
+//                            if (wc.equippedWandIds().contains(wandId)) continue; //never
 
-                            // Push return first (LIFO: return executes last),
-                            // then equip (executes first before task ops).
-                            exec.pushPrivateFront(new AtomicOp.WandReturnOp(wandId));
+                            // Equip runs first (before task ops). Return is deferred
+                            // to TaskExecutionSystem — it pushes WandReturnOp
+                            // when the global task completes.
                             exec.pushPrivateFront(new AtomicOp.WandEquipOp(wandId));
                             taskPool.assign(task.id, npcId, world);
                             Log.info(TAG, "provisioned wand %s for #%d '%s' → NPC %d",

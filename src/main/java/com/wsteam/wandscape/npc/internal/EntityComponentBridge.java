@@ -91,9 +91,24 @@ public final class EntityComponentBridge {
 
         // Fresh registration (or cross-session: stale ecsEntityId from NBT)
         UUID colony = npc.colonyId != null ? npc.colonyId : PLACEHOLDER_COLONY;
+
+        // Default capability: all NPCs can build at level 1.
+        // This breaks the cold-start deadlock: NPC needs building capability
+        // to construct the warehouse, but wands are produced at the warehouse.
+        // The default builder_wand capability represents the NPC's innate
+        // "bare hands" building ability — enough to bootstrap the colony.
+        // Cold-start wand: NPCs start with builder_wand capabilities.
+        // Must track the wand ID so it gets returned to warehouse on task completion
+        // and re-equipped via the normal wand provision flow for subsequent tasks.
+        WandCarrier defaultCarrier = new WandCarrier(
+                Map.of(com.wsteam.wandscape.core.types.BehaviourTag.BUILDING,
+                        com.wsteam.wandscape.core.types.BehaviourLevel.of(1)),
+                1.0f, 1,
+                java.util.List.of("builder_wand"));
+
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                WandCarrier.EMPTY, colony, npc.maxMana, npc.manaRegenRate);
+                defaultCarrier, colony, npc.maxMana, npc.manaRegenRate);
 
         // Apply current mana from NBT if it was consumed before save
         ManaPool mana = world.get(ecsId, ManaPool.class);
