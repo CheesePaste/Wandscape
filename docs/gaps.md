@@ -2,6 +2,14 @@
 
 ## 已完成的特性（2026-06-23）
 
+### 数据驱动法杖需求 + 立即失败 ✅
+- **统一 `wand_level` JSON 字段**：节点 `node_config.wand_level` 和配方 `wand_level` 共用 `{"gathering": 1, "building": 0}` 格式。缺省=deriver 默认值，0=移除需求，≥1=覆盖等级。
+- **传递链**：JSON → NodeConfig/Recipe.wandLevel (Map<String,Integer>) → BehaviourTag.fromKey() → WorkItem.wandRequirementOverrides → TaskRequest → GlobalTaskPool.mergeOverrides() → GlobalTask.requirements。
+- **TaskState.FAILED**：新增终态。SchedulerSystem 在无 NPC 满足且仓库无法杖时调用 `taskPool.failTask()`。FAILED 与 COMPLETED 同等对待（isActive=false、不计入 persistable/size）。
+- **BehaviourTag.fromKey()**：JSON key ↔ enum 双向映射，与 WandProvisionSystem.mapToNbtKey() 互为逆映射。
+- **TaskFailureReason**：sealed interface，`WandRequirementUnmet(requirements)` 记录携带失败的结构化原因，供分析器读取。
+- **FailureAnalyzerSystem**：每 20 tick 扫描 FAILED 任务，对 `WandRequirementUnmet` 自动查找匹配法杖预设 → 在殖民地 crafting_station 排队 craft_wand。去重逻辑：同一任务不重复处理，同一法杖预设已在制作中不重复排队。
+
 ### 殖民地三值评估系统 ✅
 - **BuildingContributionRegistry**：per-colony per-buildingType 的 intactCount 缓存。0↔1 边界跨越时广播 `ColonyEvaluationChangedEvent`。
 - **BuildingSavedData.add/removeBuildingContribution**：build complete → `addBuildingContribution` → 0→1 广播事件；结构损坏/拆除 → `removeBuildingContribution` → 1→0 广播事件。load() 后 rebuildFrom() 全量重建兼容旧存档。
@@ -27,6 +35,20 @@ tasks Map 不清理 COMPLETED 任务。100+ 任务后内存持续增长。建议
 
 ### 连续执行加成硬编码
 SchedulerSystem 中 `score += 50` 是 magic number。应移至 TOML 全局配置（Config.java 已有 `sameBuildingContinuationBonus` 但代码未使用）。
+
+### BuildingApiImpl null 安全 bug（已修复 2026-06-23）
+`getBuildingsWithPendingWork()` 和 `getBuildingsByCategory()` 使用 `colonyId.equals(state.getColonyId())`，当 `state.getColonyId()` 为 null 时抛 NPE，导致建筑任务轮询静默返回空列表，`buildings_with_work=0` 永久卡死。修复：改用 `java.util.Objects.equals(colonyId, state.getColonyId())`。
+
+### 殖民地冷启动能力死锁（已修复 2026-06-23）
+默认 NPC 仅有 `BUILDING: 1` 能力。修复方案不是发布前能力检查 + 聊天通知，而是从根源消除死锁：
+1. `WandRequirementDeriver.deriveFromAction("craft_wand")` → `Map.of()`（法杖制作不需要法杖能力）
+2. `WandRequirementDeriver.deriveFromAction("gather")` → `Map.of()`（基础节点采集不需要法杖能力）
+3. 这些 level 0 任务通过 `satisfies()` 时 `requirements.isEmpty()` → `true`，任何 NPC 均可接取
+4. 更高级的操作（decompose/synthesize/brew_potion/ritual）仍保留法杖需求，调度器在 NPC 能力不足时保持 PENDING_ASSIGN 等待玩家制作法杖
+
+
+### 法杖制作完成后无反馈（待补）
+`craft_wand` / `synthesize` 完成后不发送任何事件或通知。玩家不知道法杖已进入仓库或物品已产出。建议：完成时发送 `ProductionCompleteEvent`，GUI 可显示 Toast 提示。
 
 ### 殖民地删除未实现
 殖民地系统未构建。删除时需清理：BuildingSavedData(建筑记录) + RoadSavedData(路网) + ColonyItemBank(物品) + NPC的ColonyMember组件。世界中方块为原版方块（stone_bricks等），无需特殊处理——它们就是普通方块。注意：项目已无自定义建筑 BE，不要引入 BE 方案。

@@ -5,10 +5,8 @@
   },
   "cost": {
     "earth": 64,
-    "magic": 32,
-    "wonder": 16
+    "diamond": 32
   },
-  "required_level": 5,
   "unlock_requirement": {
     "min_comfort": 50,
     "min_magic": 100,

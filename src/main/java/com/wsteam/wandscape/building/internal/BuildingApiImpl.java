@@ -67,7 +67,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return List.of();
         List<BuildingData> result = new ArrayList<>();
         for (BuildingState state : sd.getAllBuildings()) {
-            if (colonyId == null || colonyId.equals(state.getColonyId())) {
+            if (colonyId == null || java.util.Objects.equals(colonyId, state.getColonyId())) {
                 result.add(state);
             }
         }
@@ -236,13 +236,38 @@ public class BuildingApiImpl implements BuildingApi {
 
         List<UUID> result = new ArrayList<>();
         for (BuildingState state : sd.getAllBuildings()) {
-            if (colonyId != null && !colonyId.equals(state.getColonyId())) continue;
-            if (state.isShutdown()) continue;
-            if (currentTasks.containsKey(state.getBuildingId())) continue;
-            if (!state.hasWork()) continue;
-            if (!serverLevel.isLoaded(state.getAnchor())) continue;
+            String id8 = state.getBuildingId().toString().substring(0, 8);
+            if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())) {
+                LOGGER.debug("[BldgAPI] skip {} colony mismatch: filter={} state={}",
+                        id8,
+                        colonyId != null ? colonyId.toString().substring(0, 8) : "null",
+                        state.getColonyId() != null ? state.getColonyId().toString().substring(0, 8) : "null");
+                continue;
+            }
+            if (state.isShutdown()) {
+                LOGGER.debug("[BldgAPI] skip {} isShutdown=true", id8);
+                continue;
+            }
+            if (currentTasks.containsKey(state.getBuildingId())) {
+                LOGGER.debug("[BldgAPI] skip {} has active task", id8);
+                continue;
+            }
+            if (!state.hasWork()) {
+                LOGGER.debug("[BldgAPI] skip {} queue={} shutdown={} noWork=true",
+                        id8, state.getTaskQueue().size(), state.isShutdown());
+                continue;
+            }
+            if (!serverLevel.isLoaded(state.getAnchor())) {
+                LOGGER.debug("[BldgAPI] skip {} anchor={} not loaded",
+                        id8, state.getAnchor());
+                continue;
+            }
             result.add(state.getBuildingId());
         }
+        LOGGER.info("[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
+                colonyId != null ? colonyId.toString().substring(0, 8) : "null",
+                result.size(),
+                result.stream().map(u -> u.toString().substring(0, 8)).toList());
         return result;
     }
 
@@ -283,12 +308,22 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return List.of();
 
         List<UUID> result = new ArrayList<>();
+        int total = 0, skippedColony = 0, skippedCat = 0;
         for (BuildingState state : sd.getAllBuildings()) {
-            if (colonyId != null && !colonyId.equals(state.getColonyId())&&(state.getColonyId()!=null)) continue;
-            if (category.equals(state.getCategory())) {
-                result.add(state.getBuildingId());
+            total++;
+            if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())) {
+                skippedColony++;
+                continue;
             }
+            if (!category.equals(state.getCategory())) {
+                skippedCat++;
+                continue;
+            }
+            result.add(state.getBuildingId());
         }
+        LOGGER.debug("[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
+                colonyId != null ? colonyId.toString().substring(0, 8) : "null",
+                category, result.size(), total, skippedColony, skippedCat);
         return result;
     }
 

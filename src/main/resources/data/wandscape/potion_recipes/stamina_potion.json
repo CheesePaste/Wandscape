@@ -1,14 +1,18 @@
 {
-  "id": "mana_potion",
+  "id": "stamina_potion",
   "output": {
     "item": "wandscape:mana_potion"
   },
   "cost": {
-    "water": 16,
-    "wood": 4
+    "water": 32,
+    "wood": 8,
+    "fire": 4
   },
   "input_items": ["minecraft:glass_bottle"],
   "unlock_requirement": {
     "min_magic": 0
+  },
+  "wand_level": {
+    "crafting": 1
   }
 }

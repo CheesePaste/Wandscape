@@ -13,7 +13,6 @@
     "fire": 32,
     "iron": 16
   },
-  "required_level": 1,
   "unlock_requirement": {
     "min_magic": 10
   }

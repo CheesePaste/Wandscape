@@ -1,0 +1,23 @@
+{
+  "id": "journeyman_builder_wand",
+  "output": {
+    "item": "wandscape:wand",
+    "nbt": {
+      "wand_color": "#CD853F",
+      "behaviors": { "building": 2, "gathering": 1 },
+      "range": 2,
+      "mana_cost_multiplier": 0.9
+    }
+  },
+  "cost": {
+    "earth": 64,
+    "wood": 32,
+    "iron": 16
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  },
+  "wand_level": {
+    "building": 2
+  }
+}

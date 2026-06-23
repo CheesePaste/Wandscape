@@ -43,8 +43,8 @@ public class WandProvisionSystem implements WandProvider {
 
     /**
      * Find a wand in the colony warehouse that satisfies all given requirements.
-     * Returns the wand's preset ID (e.g. "gatherer_wand") — the executor
-     * resolves it back to "wandscape:wand" with matching NBT.
+     * Returns the wand's preset ID with the lowest total behavior level sum
+     * among all matching candidates, to avoid over-provisioning higher-tier wands.
      */
     @Override
     @Nullable
@@ -56,7 +56,10 @@ public class WandProvisionSystem implements WandProvider {
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return null;
 
-        // Scan warehouse for wand items matching requirements
+        // Scan warehouse for the lowest-level wand that satisfies requirements
+        String bestPreset = null;
+        int bestSum = Integer.MAX_VALUE;
+
         Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
         for (var entry : snapshot.entrySet()) {
             ItemKey key = entry.getKey();
@@ -65,19 +68,35 @@ public class WandProvisionSystem implements WandProvider {
             if (key.nbt() == null || key.nbt().isEmpty()) continue;
 
             // Check if this wand's NBT satisfies requirements
-            if (wandNbtSatisfies(key.nbt(), reqs)) {
-                // Match the preset by comparing behaviors tag
-                String presetId = matchPreset(key.nbt());
-                if (presetId != null) {
-                    LOGGER.info("[WandProvision] found {} x{} (preset={}) for reqs={}",
-                            WAND_ITEM_ID, entry.getValue(), presetId, reqs);
-                    return presetId;
-                }
+            if (!wandNbtSatisfies(key.nbt(), reqs)) continue;
+
+            // Match the preset by comparing behaviors tag
+            String presetId = matchPreset(key.nbt());
+            if (presetId == null) continue;
+
+            int sum = behaviorsSum(key.nbt().getCompound("behaviors"));
+            if (sum < bestSum) {
+                bestSum = sum;
+                bestPreset = presetId;
             }
         }
 
-        LOGGER.debug("[WandProvision] no wand in warehouse for reqs={}", reqs);
-        return null;
+        if (bestPreset != null) {
+            LOGGER.info("[WandProvision] selected {} (total_level={}) for reqs={}",
+                    bestPreset, bestSum, reqs);
+        } else {
+            LOGGER.debug("[WandProvision] no wand in warehouse for reqs={}", reqs);
+        }
+        return bestPreset;
+    }
+
+    /** Sum all behavior level values in a wand's behaviors tag. */
+    private static int behaviorsSum(CompoundTag behaviors) {
+        int sum = 0;
+        for (String key : behaviors.getAllKeys()) {
+            sum += behaviors.getInt(key);
+        }
+        return sum;
     }
 
     /**

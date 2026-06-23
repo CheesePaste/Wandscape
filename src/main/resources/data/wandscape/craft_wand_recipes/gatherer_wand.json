@@ -13,7 +13,6 @@
     "wood": 32,
     "water": 16
   },
-  "required_level": 1,
   "unlock_requirement": {
     "min_magic": 0
   }

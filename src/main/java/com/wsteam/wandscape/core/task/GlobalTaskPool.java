@@ -79,6 +79,7 @@ public class GlobalTaskPool {
 
         // Derive wand requirements from the compiled op sequence
         Map<BehaviourTag, BehaviourLevel> requirements = WandRequirementDeriver.derive(seq);
+        requirements = mergeOverrides(requirements, request.wandRequirementOverrides());
 
         GlobalTask task = new GlobalTask(id, seq, requirements,
                 request.priority(), compiled.triggers(), new ArrayList<>(),
@@ -329,7 +330,7 @@ public class GlobalTaskPool {
     private boolean isDuplicate(String blueprintId, String dedupKey, String dedupValue) {
         String labelPrefix = resolvedToLabelPrefix(blueprintId);
         for (GlobalTask t : all()) {
-            if (t.state == TaskState.COMPLETED) continue;
+            if (t.state == TaskState.COMPLETED || t.state == TaskState.FAILED) continue;
             String label = t.sequence.label();
             // Heuristic 1: label starts with conventional prefix (e.g. "Gather stone_bricks")
             // Heuristic 2: label equals the blueprintId directly
@@ -386,11 +387,40 @@ public class GlobalTaskPool {
 
     // ---- Persistence ----
 
-    /** All non-COMPLETED tasks with a blueprintId (persistable across sessions). */
+    /** Merge JSON wand_level overrides into derived requirements. 0=remove, ≥1=override. */
+    static Map<BehaviourTag, BehaviourLevel> mergeOverrides(
+            Map<BehaviourTag, BehaviourLevel> derived,
+            Map<BehaviourTag, Integer> overrides) {
+        if (overrides.isEmpty()) return derived;
+        var merged = new HashMap<>(derived);
+        for (var e : overrides.entrySet()) {
+            if (e.getValue() == 0) merged.remove(e.getKey());
+            else merged.put(e.getKey(), BehaviourLevel.of(e.getValue()));
+        }
+        return merged;
+    }
+
+    /** Mark a task as permanently failed with a reason for later analysis. */
+    public void failTask(long taskId, TaskFailureReason reason) {
+        GlobalTask task = tasks.get(taskId);
+        if (task == null) return;
+        task.state = TaskState.FAILED;
+        task.assignedNpcId = null;
+        task.failureReason = reason;
+        for (var sub : task.subscriptions) {
+            eventBus.unsubscribe(sub);
+        }
+        task.subscriptions.clear();
+        notifyChanged();
+        Log.info(TAG, "fail #%d '%s' reason=%s reqs=%s", taskId, task.sequence.label(),
+                reason, task.requirements);
+    }
+
+    /** All non-COMPLETED and non-FAILED tasks with a blueprintId (persistable across sessions). */
     public List<GlobalTask> getPersistableTasks() {
         List<GlobalTask> result = new ArrayList<>();
         for (GlobalTask t : tasks.values()) {
-            if (t.state != TaskState.COMPLETED && t.blueprintId != null) {
+            if (t.state != TaskState.COMPLETED && t.state != TaskState.FAILED && t.blueprintId != null) {
                 result.add(t);
             }
         }
@@ -444,15 +474,15 @@ public class GlobalTaskPool {
         // but should not inflate the pool size metric.
         int count = 0;
         for (GlobalTask t : tasks.values()) {
-            if (t.state != TaskState.COMPLETED) count++;
+            if (t.state != TaskState.COMPLETED && t.state != TaskState.FAILED) count++;
         }
         return count;
     }
 
-    /** Check whether a task is still active (exists and not COMPLETED). */
+    /** Check whether a task is still active (exists and not COMPLETED/FAILED). */
     public boolean isActive(long taskId) {
         GlobalTask t = tasks.get(taskId);
-        return t != null && t.state != TaskState.COMPLETED;
+        return t != null && t.state != TaskState.COMPLETED && t.state != TaskState.FAILED;
     }
 
     public Collection<GlobalTask> all() {

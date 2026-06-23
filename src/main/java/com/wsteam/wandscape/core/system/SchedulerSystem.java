@@ -8,6 +8,7 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.GlobalTask;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.task.TaskFailureReason;
 import com.wsteam.wandscape.core.types.BehaviourLevel;
 import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -63,16 +64,28 @@ public class SchedulerSystem implements System {
             return;
         }
 
-        Log.debug(TAG, "heartbeat - %d idle NPCs, %d assignable tasks",
-                idleNpcs.size(), world.taskPool.getAssignableTasks().size());
-
-        // 2. Group NPCs by colony
+        // 2. Group NPCs by colony (needed for per-colony logging below)
         Map<UUID, List<Long>> npcsByColony = new HashMap<>();
         for (long npcId : idleNpcs) {
             ColonyMember member = world.get(npcId, ColonyMember.class);
             if (member != null) {
                 npcsByColony.computeIfAbsent(member.colonyId(), k -> new ArrayList<>()).add(npcId);
             }
+        }
+
+        Log.info(TAG, "heartbeat - colony_count=%d idle_npcs=%d assignable_tasks=%d",
+                npcsByColony.size(),
+                idleNpcs.size(), world.taskPool.getAssignableTasks().size());
+        for (long eid : idleNpcs) {
+            WandCarrier wc = world.get(eid, WandCarrier.class);
+            ManaPool mp = world.get(eid, ManaPool.class);
+            ColonyMember cm = world.get(eid, ColonyMember.class);
+            Log.debug(TAG, "  idle NPC %d colony=%s caps=%s mana=%.1f/%d",
+                    eid,
+                    cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
+                    wc != null ? wc.capabilities().toString() : "null",
+                    mp != null ? mp.current() : -1,
+                    mp != null ? mp.max() : -1);
         }
 
         GlobalTaskPool taskPool = world.taskPool;
@@ -131,9 +144,12 @@ public class SchedulerSystem implements System {
                             task.id, task.sequence.label(), bestNpc, bestScore, bestDist);
                     colonyNpcs.remove(bestNpc); // NPC is now busy
                     if (colonyNpcs.isEmpty()) break;
-                } else if (!task.requirements.isEmpty() && wandProvider != null) {
-                    // No NPC has the required wand capabilities.
-                    // Try to provision a wand from the warehouse.
+                    continue; // next task
+                }
+
+                // No NPC satisfies the task requirements.
+                // Try warehouse wand provisioning first.
+                if (!task.requirements.isEmpty() && wandProvider != null) {
                     UUID colonyId = entry.getKey();
                     String wandId = wandProvider.findWand(task.requirements, colonyId);
                     if (wandId != null) {
@@ -156,12 +172,17 @@ public class SchedulerSystem implements System {
                             colonyNpcs.remove(npcId);
                             break;
                         }
-                    } else {
-                        Log.debug(TAG, "no capable NPC for #%d '%s' (no wand in warehouse)",
-                                task.id, task.sequence.label());
+                        if (!colonyNpcs.isEmpty()) continue; // assigned via wand, next task
                     }
-                } else {
-                    Log.debug(TAG, "no capable NPC for #%d '%s'", task.id, task.sequence.label());
+                }
+
+                // No NPC satisfies the task requirements and no wand in warehouse.
+                // Fail immediately — this task can never be fulfilled.
+                if (!task.requirements.isEmpty()) {
+                    var reason = new TaskFailureReason.WandRequirementUnmet(task.requirements);
+                    taskPool.failTask(task.id, reason);
+                    Log.warn(TAG, "failed #%d '%s' reason=%s reqs=%s (no capable NPC or wand)",
+                            task.id, task.sequence.label(), reason, task.requirements);
                 }
             }
         }

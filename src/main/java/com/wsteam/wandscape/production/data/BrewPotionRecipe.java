@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -14,21 +16,27 @@ public record BrewPotionRecipe(
     String outputItem,
     Map<ElementType, Long> cost,
     List<String> inputItems,
-    int requiredLevel,
-    RecipeUnlockRequirement unlockRequirement
+    RecipeUnlockRequirement unlockRequirement,
+    @Nullable Map<String, Integer> wandLevel
 ) {
     public static BrewPotionRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
         String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
         List<String> inputItems = parseInputItems(obj);
-        int requiredLevel = obj.has("required_level") ? obj.get("required_level").getAsInt() : 1;
 
         RecipeUnlockRequirement req = obj.has("unlock_requirement")
                 ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                 : RecipeUnlockRequirement.NONE;
 
-        return new BrewPotionRecipe(id, outputItem, cost, inputItems, requiredLevel, req);
+        Map<String, Integer> wandLevel = null;
+        if (obj.has("wand_level")) {
+            JsonObject wl = obj.getAsJsonObject("wand_level");
+            wandLevel = new HashMap<>();
+            for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
+        }
+
+        return new BrewPotionRecipe(id, outputItem, cost, inputItems, req, wandLevel);
     }
 
     private static List<String> parseInputItems(JsonObject obj) {

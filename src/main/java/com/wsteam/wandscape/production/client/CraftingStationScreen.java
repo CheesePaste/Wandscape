@@ -35,7 +35,6 @@ public class CraftingStationScreen extends MedievalScreen {
     // Right panel (TaskQueuePanel)
     private static final int QUEUE_PW = 140;
     private static final int QUEUE_PH = PH - 28; // headerHeight (20) + padding (8)
-
     private BlockPos stationPos = BlockPos.ZERO;
     private List<RecipeEntry> recipes = new ArrayList<>();
 
@@ -94,9 +93,8 @@ public class CraftingStationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, RecipeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean locked = item.maxAffordable() == 0
-                        && item.unlockRequirement() != RecipeUnlockRequirement.NONE;
-                boolean canAfford = !locked && item.maxAffordable() > 0;
+                boolean isLocked = !"unlocked".equals(item.lockedReason());
+                boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
                 if (registryItem != null && registryItem != Items.AIR) {
@@ -105,7 +103,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
                 // Name row
                 int nameColor;
-                if (locked) {
+                if (isLocked) {
                     nameColor = MedievalColors.TEXT_DIM;
                 } else if (canAfford) {
                     nameColor = selected ? MedievalColors.ACCENT_GOLD
@@ -117,8 +115,7 @@ public class CraftingStationScreen extends MedievalScreen {
                 }
 
                 int textX = x + 20;
-                if (locked) {
-                    // Show 🔒 lock symbol before name
+                if (isLocked) {
                     g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
                     textX += 14;
                 }
@@ -127,12 +124,21 @@ public class CraftingStationScreen extends MedievalScreen {
 
                 // Requirement / cost row
                 StringBuilder costStr = new StringBuilder();
-                if (locked) {
+                String reason = item.lockedReason();
+                if ("colony".equals(reason)) {
                     costStr.append("🔒 ");
                     var req = item.unlockRequirement();
                     if (req.minComfort() > 0) costStr.append("C>=").append(req.minComfort()).append(" ");
                     if (req.minMagic()   > 0) costStr.append("M>=").append(req.minMagic()).append(" ");
                     if (req.minWonder()  > 0) costStr.append("W>=").append(req.minWonder());
+                } else if ("wand_level".equals(reason)) {
+                    costStr.append("🔒 ");
+                    if (item.wandLevel() != null) {
+                        for (var e : item.wandLevel().entrySet()) {
+                            if (!costStr.isEmpty() && costStr.charAt(costStr.length() - 1) != ' ') costStr.append(" ");
+                            costStr.append(e.getKey().toUpperCase()).append(":").append(e.getValue());
+                        }
+                    }
                 } else {
                     item.cost().forEach((elem, amt) -> {
                         if (!costStr.isEmpty()) costStr.append(", ");
@@ -141,14 +147,6 @@ public class CraftingStationScreen extends MedievalScreen {
                 }
                 g.drawString(Minecraft.getInstance().font, costStr.toString(),
                         x + 20, y + 12, MedievalColors.TEXT_DIM);
-
-                if (item.requiredLevel() > 1) {
-                    String lvl = "Lv." + item.requiredLevel();
-                    int lw = Minecraft.getInstance().font.width(lvl);
-                    g.drawString(Minecraft.getInstance().font, lvl,
-                            x + getWidth() - scrollbarWidth - lw - 6, y + 2,
-                            MedievalColors.ACCENT_GOLD);
-                }
             }
         };
         recipeList.setItems(recipes);
@@ -182,9 +180,8 @@ public class CraftingStationScreen extends MedievalScreen {
             quantitySlider.setValue(1);
             return;
         }
-        // Locked recipes show max_affordable=0 from server; keep slider at 1
-        boolean locked = entry.unlockRequirement() != RecipeUnlockRequirement.NONE
-                && entry.maxAffordable() == 0;
+        // Locked recipes (colony / elements / wand_level) show max_affordable=0; keep slider at 1
+        boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
         quantitySlider.setMax(Math.max(1, max));
         quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
@@ -192,7 +189,8 @@ public class CraftingStationScreen extends MedievalScreen {
 
     private void onSubmit() {
         RecipeEntry sel = recipeList.getSelected();
-        if (sel == null || sel.maxAffordable() <= 0) return;
+        // Block submission when recipe is locked (colony / elements / wand_level)
+        if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
         int qty = quantitySlider.getValue();
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                 stationPos, "craft_wand", sel.recipeId(), qty));

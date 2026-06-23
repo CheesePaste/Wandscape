@@ -24,17 +24,18 @@ class WandRequirementDeriverTest {
     }
 
     @Test
-    void gatherBlockInteractRequiresGathering() {
+    void gatherBlockInteractRequiresNoWand() {
+        // Basic node gathering needs no wand — level 0
         TaskSequence seq = TaskSequence.of("test",
                 new AtomicOp.BlockInteractOp(new GridPos(0, 0, 0),
                         new InteractAction("gather")));
         Map<BehaviourTag, BehaviourLevel> reqs = WandRequirementDeriver.derive(seq);
-        assertEquals(Map.of(GATHERING, BehaviourLevel.of(1)), reqs);
+        assertTrue(reqs.isEmpty(), "gather should not require any wand capability");
     }
 
     @Test
-    void craftingActionsRequireCrafting() {
-        for (String action : List.of("decompose", "synthesize", "craft_wand", "brew_potion")) {
+    void decomposeAndBrewPotionRequireCrafting() {
+        for (String action : List.of("decompose", "brew_potion")) {
             TaskSequence seq = TaskSequence.of("test",
                     new AtomicOp.BlockInteractOp(new GridPos(0, 0, 0),
                             new InteractAction(action)));
@@ -42,6 +43,28 @@ class WandRequirementDeriverTest {
             assertEquals(Map.of(CRAFTING, BehaviourLevel.of(1)),
                     reqs, "action=" + action);
         }
+    }
+
+    @Test
+    void synthesizeRequiresNoWandByDefault() {
+        // synthesize wand-level is recipe-driven (wand_level in JSON).
+        // No wand_level → empty requirements → any NPC can attempt.
+        // wand_level {"crafting": 1} → CRAFTING=1 via overrides merge.
+        TaskSequence seq = TaskSequence.of("test",
+                new AtomicOp.BlockInteractOp(new GridPos(0, 0, 0),
+                        new InteractAction("synthesize")));
+        Map<BehaviourTag, BehaviourLevel> reqs = WandRequirementDeriver.derive(seq);
+        assertTrue(reqs.isEmpty(), "synthesize should have no default wand requirement; recipe wand_level controls access");
+    }
+
+    @Test
+    void craftWandRequiresNoWand() {
+        // craft_wand creates a wand — requiring CRAFTING creates cold-start deadlock
+        TaskSequence seq = TaskSequence.of("test",
+                new AtomicOp.BlockInteractOp(new GridPos(0, 0, 0),
+                        new InteractAction("craft_wand")));
+        Map<BehaviourTag, BehaviourLevel> reqs = WandRequirementDeriver.derive(seq);
+        assertTrue(reqs.isEmpty(), "craft_wand should not require any wand capability");
     }
 
     @Test
@@ -99,11 +122,11 @@ class WandRequirementDeriverTest {
         TaskSequence seq = TaskSequence.of("test",
                 AtomicOp.TransformOp.place(new GridPos(1, 2, 3), BlockType.STONE),
                 new AtomicOp.BlockInteractOp(new GridPos(4, 5, 6),
-                        new InteractAction("gather")));
+                        new InteractAction("decompose")));
         Map<BehaviourTag, BehaviourLevel> reqs = WandRequirementDeriver.derive(seq);
         assertEquals(2, reqs.size());
         assertEquals(BehaviourLevel.of(1), reqs.get(BUILDING));
-        assertEquals(BehaviourLevel.of(1), reqs.get(GATHERING));
+        assertEquals(BehaviourLevel.of(1), reqs.get(CRAFTING));
     }
 
     @Test

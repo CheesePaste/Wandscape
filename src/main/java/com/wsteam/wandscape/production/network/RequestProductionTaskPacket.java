@@ -1,8 +1,12 @@
 package com.wsteam.wandscape.production.network;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
@@ -10,10 +14,8 @@ import com.google.gson.JsonPrimitive;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
-import com.wsteam.wandscape.production.data.SynthesizeRecipe;
-import com.wsteam.wandscape.production.data.CraftWandRecipe;
-import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -121,6 +123,27 @@ public record RequestProductionTaskPacket(
                 }
             }
 
+            // Extract per-recipe wand_level overrides (null → empty map)
+            Map<String, Integer> wandLevel = null;
+            if (!"decompose".equals(pkt.action)) {
+                var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+                wandLevel = switch (pkt.action) {
+                    case "synthesize" -> {
+                        var r = loader != null ? loader.getSynthesizeRecipes().get(pkt.recipeOrItemId) : null;
+                        yield r != null ? r.wandLevel() : null;
+                    }
+                    case "craft_wand" -> {
+                        var r = loader != null ? loader.getCraftWandRecipes().get(pkt.recipeOrItemId) : null;
+                        yield r != null ? r.wandLevel() : null;
+                    }
+                    case "brew_potion" -> {
+                        var r = loader != null ? loader.getPotionRecipes().get(pkt.recipeOrItemId) : null;
+                        yield r != null ? r.wandLevel() : null;
+                    }
+                    default -> null;
+                };
+            }
+
             // Build WorkItem params
             Map<String, com.google.gson.JsonElement> params = new LinkedHashMap<>();
             params.put("anchor", posToJsonArray(pkt.stationPos));
@@ -133,15 +156,32 @@ public record RequestProductionTaskPacket(
             params.put("channel_ticks", new JsonPrimitive(1200)); // 60s
             params.put("mana_cost", new JsonPrimitive(5));
 
-            WorkItem work = new WorkItem(blueprintId, params, 10);
+            Map<BehaviourTag, Integer> overrides = convertWandLevel(wandLevel);
+            WorkItem work = new WorkItem(blueprintId, params, 10, overrides);
 
             BuildingApi api = WandscapeApis.getBuildingApi();
             api.enqueueWork(buildingId, work);
 
-            LOGGER.info("Production task enqueued: {} {} x{} at building {} (blueprint={})",
+            int queueSize = state.getTaskQueue().size();
+            LOGGER.info("[ProdTask] enqueued action={} recipe={} x{} at building {} "
+                            + "(colony={} blueprint={} queue_size_after={})",
                     pkt.action, pkt.recipeOrItemId, pkt.quantity,
-                    buildingId.toString().substring(0, 8), blueprintId);
+                    buildingId.toString().substring(0, 8),
+                    state.getColonyId() != null
+                            ? state.getColonyId().toString().substring(0, 8) : "null",
+                    blueprintId, queueSize);
         });
+    }
+
+    /** Convert JSON wand_level string-key map to BehaviourTag-keyed overrides. */
+    private static Map<BehaviourTag, Integer> convertWandLevel(@Nullable Map<String, Integer> wandLevel) {
+        if (wandLevel == null || wandLevel.isEmpty()) return Collections.emptyMap();
+        Map<BehaviourTag, Integer> overrides = new HashMap<>();
+        for (var e : wandLevel.entrySet()) {
+            BehaviourTag tag = BehaviourTag.fromKey(e.getKey());
+            if (tag != null) overrides.put(tag, e.getValue());
+        }
+        return overrides;
     }
 
     private static com.google.gson.JsonArray posToJsonArray(BlockPos pos) {

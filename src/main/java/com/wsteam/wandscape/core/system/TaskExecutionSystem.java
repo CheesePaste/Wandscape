@@ -90,6 +90,20 @@ public class TaskExecutionSystem implements System {
 
     private void processNpc(World world, long npcId, TaskExecutor exec,
                             OpExecutorRegistry registry) {
+        ColonyMember cm = world.get(npcId, ColonyMember.class);
+        WandCarrier wc = world.get(npcId, WandCarrier.class);
+        ManaPool mp = world.get(npcId, ManaPool.class);
+        Log.debug(TAG, "processNpc %d colony=%s state=%s globalTask=%s step=%d/%d caps=%s mana=%.1f/%d",
+                npcId,
+                cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
+                exec.state,
+                exec.globalTaskId != null ? "#" + exec.globalTaskId : "null",
+                exec.stepIndex,
+                exec.currentSequence != null ? exec.currentSequence.size() : 0,
+                wc != null ? wc.capabilities().toString() : "?",
+                mp != null ? mp.current() : -1,
+                mp != null ? mp.max() : -1);
+
         // ---- 0. Compute task stance (once per task, from op targets' bounding box) ----
         if (exec.stance == null && exec.currentSequence != null) {
             exec.stance = computeTaskStance(exec.currentSequence);
@@ -139,12 +153,17 @@ public class TaskExecutionSystem implements System {
 
             if (isPrivate) {
                 currentOp = exec.peekPrivate();
+                Log.debug(TAG, "NPC %d — private op: %s", npcId, currentOp.getClass().getSimpleName());
             } else if (exec.globalTaskId != null && exec.currentSequence != null) {
                 if (exec.currentSequence.isComplete(exec.stepIndex)) {
                     finishGlobalTask(exec, npcId, world);
                     return;
                 }
                 currentOp = exec.currentSequence.get(exec.stepIndex);
+                Log.debug(TAG, "NPC %d — global task #%d step %d/%d: %s",
+                        npcId, exec.globalTaskId, exec.stepIndex,
+                        exec.currentSequence.size() - 1,
+                        currentOp.getClass().getSimpleName());
             } else {
                 exec.state = ExecutorState.IDLE;
                 return;
@@ -163,7 +182,6 @@ public class TaskExecutionSystem implements System {
             boolean isPure = isPureOp(currentOp);
             if (!isPure) {
                 ManaPool mana = world.get(npcId, ManaPool.class);
-                WandCarrier wc = world.get(npcId, WandCarrier.class);
                 if (mana == null || wc == null) return;
 
                 float actualCost = currentOp.baseManaCost() * wc.bestManaEfficiency();

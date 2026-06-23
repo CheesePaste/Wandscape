@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
@@ -136,23 +137,17 @@ public class WorkstationScreen extends MedievalScreen {
             @Override
             protected void renderRow(GuiGraphics g, SynthesizeEntry item, int x, int y, int index,
                                      boolean selected, boolean hovered) {
-                boolean locked = item.maxAffordable() == 0
-                        && item.unlockRequirement() != com.wsteam.wandscape.production.data.RecipeUnlockRequirement.NONE;
-                boolean canAfford = !locked && item.maxAffordable() > 0;
+                boolean isLocked = !"unlocked".equals(item.lockedReason());
+                boolean canAfford = !isLocked && item.maxAffordable() > 0;
 
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.outputItem()));
                 if (registryItem != null && registryItem != Items.AIR) {
-                    if (locked) {
-                        // Dim the item icon for locked recipes
-                        g.renderItem(new ItemStack(registryItem), x, y + 1);
-                    } else {
-                        g.renderItem(new ItemStack(registryItem), x, y + 1);
-                    }
+                    g.renderItem(new ItemStack(registryItem), x, y + 1);
                 }
 
                 // Name row
                 int nameColor;
-                if (locked) {
+                if (isLocked) {
                     nameColor = MedievalColors.TEXT_DIM;
                 } else if (canAfford) {
                     nameColor = selected ? MedievalColors.ACCENT_GOLD
@@ -164,8 +159,7 @@ public class WorkstationScreen extends MedievalScreen {
                 }
 
                 int textX = x + 20;
-                if (locked) {
-                    // Show 🔒 lock symbol before name
+                if (isLocked) {
                     g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
                     textX += 14;
                 }
@@ -174,12 +168,21 @@ public class WorkstationScreen extends MedievalScreen {
 
                 // Requirement / cost row
                 StringBuilder costStr = new StringBuilder();
-                if (locked) {
+                String reason = item.lockedReason();
+                if ("colony".equals(reason)) {
                     costStr.append("🔒 ");
                     var req = item.unlockRequirement();
                     if (req.minComfort() > 0) costStr.append("C>=").append(req.minComfort()).append(" ");
                     if (req.minMagic()   > 0) costStr.append("M>=").append(req.minMagic()).append(" ");
                     if (req.minWonder()  > 0) costStr.append("W>=").append(req.minWonder());
+                } else if ("wand_level".equals(reason)) {
+                    costStr.append("🔒 ");
+                    if (item.wandLevel() != null) {
+                        for (var e : item.wandLevel().entrySet()) {
+                            if (!costStr.isEmpty() && costStr.charAt(costStr.length() - 1) != ' ') costStr.append(" ");
+                            costStr.append(e.getKey().toUpperCase()).append(":").append(e.getValue());
+                        }
+                    }
                 } else {
                     item.cost().forEach((elem, amt) -> {
                         if (!costStr.isEmpty()) costStr.append(", ");
@@ -234,9 +237,8 @@ public class WorkstationScreen extends MedievalScreen {
             quantitySlider.setValue(1);
             return;
         }
-        // Locked recipes show max_affordable=0 from server; keep slider at 1
-        boolean locked = entry.unlockRequirement() != com.wsteam.wandscape.production.data.RecipeUnlockRequirement.NONE
-                && entry.maxAffordable() == 0;
+        // Locked recipes (colony / elements / wand_level) show max_affordable=0; keep slider at 1
+        boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
         quantitySlider.setMax(Math.max(1, max));
         quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
@@ -267,7 +269,8 @@ public class WorkstationScreen extends MedievalScreen {
                     stationPos, "decompose", sel.itemId(), qty));
         } else {
             SynthesizeEntry sel = synthesizeList.getSelected();
-            if (sel == null || sel.maxAffordable() <= 0) return;
+            // Block submission when recipe is locked (colony / elements / wand_level)
+            if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
             PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                     stationPos, "synthesize", sel.recipeId(), qty));
         }

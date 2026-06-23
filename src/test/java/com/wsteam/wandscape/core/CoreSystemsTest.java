@@ -90,9 +90,9 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void npcWithoutMatchingRequirements_notAssigned() {
+        void npcWithoutMatchingRequirements_failsImmediately() {
             // Task requires RITUAL:3 — npcHighRange has no RITUAL, npcHighLevel has BUILDING only
-            // → no NPC qualifies → task stays PENDING_ASSIGN
+            // → no NPC qualifies and no wand in warehouse → task fails immediately
             registerSimpleBp("test:ritual_req",
                     new AtomicOp.RitualOp(RitualId.WARDING, center));
 
@@ -106,9 +106,14 @@ public class CoreSystemsTest {
             tickN(10);
 
             GlobalTask t = world.taskPool.get(taskId);
-            assertEquals(TaskState.PENDING_ASSIGN, t.state,
-                    "No NPC has RITUAL:3 → task stays unassigned");
+            assertEquals(TaskState.FAILED, t.state,
+                    "No NPC has RITUAL:3 and no wand in warehouse → task fails");
             assertEquals(0, t.stepIndex, "StepIndex must not advance");
+            assertNotNull(t.failureReason, "failureReason must be set");
+            assertInstanceOf(TaskFailureReason.WandRequirementUnmet.class, t.failureReason);
+            var wr = (TaskFailureReason.WandRequirementUnmet) t.failureReason;
+            assertEquals(Map.of(BehaviourTag.RITUAL, new BehaviourLevel(3)),
+                    wr.requirements());
         }
 
         @Test

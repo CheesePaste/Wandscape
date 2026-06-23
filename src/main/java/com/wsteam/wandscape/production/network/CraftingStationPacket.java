@@ -60,18 +60,49 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
                 costTag.putLong(e.getKey().name().toLowerCase(), e.getValue());
             }
             tag.put("cost", costTag);
-            tag.putInt("required_level", r.requiredLevel());
-            tag.putInt("max_affordable", unlocked ? maxAffordable : 0);
-            if (r.unlockRequirement() != RecipeUnlockRequirement.NONE) {
+
+            // Determine locked reason before setting max_affordable
+            String lockedReason;
+            if (!unlocked) {
+                lockedReason = "colony";
+                maxAffordable = 0;
+            } else if (maxAffordable == 0 && hasNonZeroWandLevel(r.wandLevel())) {
+                lockedReason = "wand_level";
+            } else if (maxAffordable == 0) {
+                lockedReason = "elements";
+            } else {
+                lockedReason = "unlocked";
+            }
+            tag.putInt("max_affordable", maxAffordable);
+            tag.putString("locked_reason", lockedReason);
+
+            // Serialise colony unlock requirement when not yet satisfied
+            if (!r.unlockRequirement().equals(RecipeUnlockRequirement.NONE)) {
                 CompoundTag unlockTag = new CompoundTag();
                 unlockTag.putInt("min_comfort", r.unlockRequirement().minComfort());
                 unlockTag.putInt("min_magic",   r.unlockRequirement().minMagic());
                 unlockTag.putInt("min_wonder",  r.unlockRequirement().minWonder());
                 tag.put("unlock_requirement", unlockTag);
             }
+            // Serialise wand_level only when it is the locking reason
+            if ("wand_level".equals(lockedReason) && r.wandLevel() != null) {
+                CompoundTag wlTag = new CompoundTag();
+                for (var e : r.wandLevel().entrySet()) {
+                    wlTag.putInt(e.getKey(), e.getValue());
+                }
+                tag.put("wand_level", wlTag);
+            }
             list.add(tag);
         }
         return new CraftingStationPacket(stationPos, list);
+    }
+
+    private static boolean hasNonZeroWandLevel(@Nullable Map<String, Integer> wandLevel) {
+        if (wandLevel == null) return false;
+        for (int v : wandLevel.values()) {
+            if (v > 0) return true;
+        }
+        return false;
     }
 
     private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
@@ -97,8 +128,8 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
             for (String key : costTag.getAllKeys()) {
                 cost.put(ElementType.valueOf(key.toUpperCase()), costTag.getLong(key));
             }
-            int requiredLevel = tag.getInt("required_level");
             int maxAffordable = tag.getInt("max_affordable");
+            String lockedReason = tag.getString("locked_reason");
             // Read unlock requirement from NBT (serialised by from() on the server)
             RecipeUnlockRequirement unlockReq = RecipeUnlockRequirement.NONE;
             if (tag.contains("unlock_requirement")) {
@@ -109,7 +140,16 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
                         urTag.getInt("min_wonder")
                 );
             }
-            result.add(new RecipeEntry(id, output, nbt, cost, requiredLevel, maxAffordable, unlockReq));
+            // Read wand_level NBT (serialised by from() when locked_reason == "wand_level")
+            Map<String, Integer> wandLevel = null;
+            if ("wand_level".equals(lockedReason) && tag.contains("wand_level")) {
+                CompoundTag wlTag = tag.getCompound("wand_level");
+                wandLevel = new LinkedHashMap<>();
+                for (String key : wlTag.getAllKeys()) {
+                    wandLevel.put(key, wlTag.getInt(key));
+                }
+            }
+            result.add(new RecipeEntry(id, output, nbt, cost, maxAffordable, lockedReason, unlockReq, wandLevel));
         }
         return result;
     }
@@ -119,18 +159,20 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
      * @param outputItem        output item id
      * @param nbt               output item NBT (nullable)
      * @param cost              element cost per unit
-     * @param requiredLevel     minimum NPC behaviour level
-     * @param maxAffordable     maximum quantity affordable with current elements
-     * @param unlockRequirement colony evaluation thresholds required to see this recipe
+     * @param maxAffordable     maximum quantity affordable with current elements (0 when locked)
+     * @param lockedReason      "unlocked" / "colony" / "elements" / "wand_level" — client uses this to pick lock hint
+     * @param unlockRequirement colony evaluation thresholds (only meaningful when lockedReason=colony)
+     * @param wandLevel         wand ability overrides from recipe JSON (only when lockedReason=wand_level)
      */
     public record RecipeEntry(
             String recipeId,
             String outputItem,
             @javax.annotation.Nullable CompoundTag nbt,
             Map<ElementType, Long> cost,
-            int requiredLevel,
             int maxAffordable,
-            RecipeUnlockRequirement unlockRequirement
+            String lockedReason,
+            RecipeUnlockRequirement unlockRequirement,
+            @javax.annotation.Nullable Map<String, Integer> wandLevel
     ) {}
 
     private static Consumer<CraftingStationPacket> clientHandler;

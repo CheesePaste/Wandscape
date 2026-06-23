@@ -14,7 +14,6 @@
     "ender": 32,
     "fire": 16
   },
-  "required_level": 5,
   "unlock_requirement": {
     "min_comfort": 50,
     "min_magic": 100,

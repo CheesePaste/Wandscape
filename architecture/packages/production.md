@@ -7,9 +7,9 @@
 **配方数据 (data/)**
 - **RecipeUnlockRequirement** — 配方解锁门槛：minComfort / minMagic / minWonder。三者同时满足才解锁，任一维度填 0 表示无要求
 - **RecipeUnlockChecker** — 静态工具：传入 colonyId + unlockRequirement → 查询 BuildingApi 三值 → 返回布尔值/锁因字符串
-- **SynthesizeRecipe** — 合成配方 record：outputItem + cost(Map<ElementType,Long>) + requiredLevel + unlockRequirement
-- **CraftWandRecipe** — 法杖制作配方 record：outputItem + outputNbt(CompoundTag) + cost + requiredLevel + unlockRequirement
-- **BrewPotionRecipe** — 魔药配方 record：outputItem + cost + inputItems(List<String>) + requiredLevel + unlockRequirement
+- **SynthesizeRecipe** — 合成配方 record：outputItem + cost(Map<ElementType,Long>) + unlockRequirement
+- **CraftWandRecipe** — 法杖制作配方 record：outputItem + outputNbt(CompoundTag) + cost + unlockRequirement
+- **BrewPotionRecipe** — 魔药配方 record：outputItem + cost + inputItems(List<String>) + unlockRequirement
 - 均含 `fromJson(String id, JsonElement json)` 静态工厂，支持 `unlock_requirement`（新三字段格式）和 `unlock_magic_value`（遗留单值，已迁移）
 
 **加载器**
@@ -20,8 +20,8 @@
 - **CraftingStationScreen** — 法杖配方列表+数量+提交按钮，右侧 TaskQueuePanel
 
 **网络包 (network/)**
-- **WorkstationDataPacket** — server→client：BlockPos + 可分解物品 + 合成配方
-- **CraftingStationPacket** — server→client：BlockPos + 法杖配方
+- **WorkstationDataPacket** — server→client：BlockPos + 可分解物品 + 合成配方（含 `locked_reason` / `wand_level` NBT）
+- **CraftingStationPacket** — server→client：BlockPos + 法杖配方（含 `cost`, `locked_reason`, `unlock_requirement`, `wand_level` NBT）
 - **PotionStationPacket** — server→client：魔药配方（桩）
 - **RequestProductionTaskPacket** — client→server：stationPos/action/recipeOrItemId/quantity
 - **TaskQueueModifyPacket** — client→server：stationPos/action("refresh"/"delete"/"move_up"/"move_down")/index
@@ -63,9 +63,9 @@
 
 | 目录 | 数量 | 说明 |
 |------|------|------|
-| `data/wandscape/synthesize_recipes/` | 1 | stone_bricks |
-| `data/wandscape/craft_wand_recipes/` | 4 | builder/gatherer/crafter/ritual_wand |
-| `data/wandscape/potion_recipes/` | 1 | mana_potion（桩） |
+| `data/wandscape/synthesize_recipes/` | 4 | stone_bricks / reinforced_stone(0) / tier2_bricks(1) / crystal_block |
+| `data/wandscape/craft_wand_recipes/` | 7 | builder/gatherer/crafter/ritual/archmage/legendary/journeyman_builder_wand |
+| `data/wandscape/potion_recipes/` | 2 | mana_potion / stamina_potion(1) |
 
 ## 蓝图
 
@@ -83,3 +83,83 @@
 - warehouse/ColonyItemBank + WarehouseManager
 - engine/boundary/WandscapeBlockInteractExecutor
 - core/task（蓝图执行）
+
+## Craft Wand 配方 JSON 格式
+
+位置：`data/wandscape/craft_wand_recipes/*.json`
+
+```json
+{
+  "id": "builder_wand",
+  "output": {
+    "item": "wandscape:wand",
+    "nbt": {
+      "wand_color": "#FFD700",
+      "behaviors": { "building": 0 },
+      "range": 1,
+      "mana_cost_multiplier": 1.0
+    }
+  },
+  "cost": {
+    "earth": 32,
+    "wood": 16
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 配方唯一标识 |
+| output.item | string | 产出物品 ID（全部法杖共用 "wandscape:wand"） |
+| output.nbt | object | 产出物品 NBT（含 wand_color/behaviors/range/mana_cost_multiplier） |
+| output.nbt.behaviors | {"tag": level} | 法杖能力映射（如 `{"building": 0}`）。level 0 表示基础即可使用 |
+| cost | {element: amount} | 制作消耗的元素量 |
+| unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛，三维满足才显示 |
+| wand_level | {"building"/"crafting"/…: N}（可选） | 覆盖默认 wand 需求。缺省或全为 0 → 任何 NPC 可制作；`{"building": 2}` → 需要 BUILDING≥2 法杖才能执行此配方 |
+
+**注意**：`behaviors` 中的 level 为 0 时，任何 BUILDING 能力 ≥ 0 的 NPC 均可制作。法杖实际能力等级由 output.nbt 决定，制作完成后可通过 `ColonyItemBank` 装备给 NPC。
+
+## Synthesize 配方 JSON 格式
+
+位置：`data/wandscape/synthesize_recipes/*.json`
+
+```json
+{
+  "id": "stone_bricks",
+  "output": {
+    "item": "minecraft:stone_bricks"
+  },
+  "cost": {
+    "earth": 4
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 配方唯一标识 |
+| output.item | string | 产出物品 ID |
+| cost | {element: amount} | 每单位消耗的元素量 |
+| unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛 |
+| wand_level | {"crafting": N}（可选） | 覆盖默认 wand 需求。缺省或 `{"crafting": 0}` → 无 CRAFTING 要求，任何 NPC 可制作；`{"crafting": 1}` → 需要 CRAFTING≥1 法杖 |
+
+`wand_level` 在 `RequestProductionTaskPacket.handleServer()` 中提取，通过 `GlobalTaskPool.mergeOverrides()` 合并进任务 requirements（0=删除、≥1=覆盖）。默认（无此字段）等同于 `{"crafting": 0}`，与 `craft_wand` 行为一致。
+
+### `locked_reason` 字段（数据包 NBT）
+
+服务端根据配方状态写入 `locked_reason`，客户端据此选择渲染提示：
+
+| `locked_reason` | 条件 | 客户端显示 |
+|---|---|---|
+| `"unlocked"` | 三维满足 + 元素足够 | 正常显示成本 |
+| `"colony"` | 三维不满足 | 🔒 + C/M/W 门槛 |
+| `"elements"` | 三维满足 + 元素不足 + 无 wand_level | 灰色 + 成本（元素不足） |
+| `"wand_level"` | 三维满足 + 元素不足 + wand_level>0 | 🔒 + TAG:LEVEL（如 `CRAFTING:1`） |
+
+`wand_level` CompoundTag 仅当 `locked_reason = "wand_level"` 时随 NBT 下发。

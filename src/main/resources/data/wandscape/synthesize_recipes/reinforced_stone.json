@@ -1,5 +1,5 @@
 {
-  "id": "stone_bricks",
+  "id": "reinforced_stone",
   "output": {
     "item": "minecraft:stone_bricks"
   },
@@ -8,5 +8,8 @@
   },
   "unlock_requirement": {
     "min_magic": 0
+  },
+  "wand_level": {
+    "crafting": 0
   }
 }

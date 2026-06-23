@@ -30,6 +30,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
+import com.wsteam.wandscape.engine.system.FailureAnalyzerSystem;
 import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.engine.system.WandProvisionSystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
@@ -155,6 +156,12 @@ public final class EngineBootstrap {
         // 8. Register NavigationSystem (drives all NPC movement via NavigationState)
         NavigationSystem navSystem = new NavigationSystem();
         world.addSystem(navSystem);
+
+        // 8b. Register FailureAnalyzerSystem (monitors FAILED tasks, auto-recovers)
+        FailureAnalyzerSystem failureAnalyzer = new FailureAnalyzerSystem(
+                Wandscape.WAND_PRESET_LOADER);
+        world.addSystem(failureAnalyzer);
+        LOGGER.info("  FailureAnalyzerSystem registered");
 
         // 9. Override TransformOp executor with async version (V2.5 gating demo)
         //    Set to 0 for sync (no gating), >0 for N-tick delay per block.

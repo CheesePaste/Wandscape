@@ -3,6 +3,8 @@ package com.wsteam.wandscape.production.data;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -11,20 +13,26 @@ public record SynthesizeRecipe(
     String id,
     String outputItem,
     Map<ElementType, Long> cost,
-    int requiredLevel,
-    RecipeUnlockRequirement unlockRequirement
+    RecipeUnlockRequirement unlockRequirement,
+    @Nullable Map<String, Integer> wandLevel
 ) {
     public static SynthesizeRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
         String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
-        int requiredLevel = obj.has("required_level") ? obj.get("required_level").getAsInt() : 1;
 
         RecipeUnlockRequirement req = obj.has("unlock_requirement")
                 ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                 : RecipeUnlockRequirement.NONE;
 
-        return new SynthesizeRecipe(id, outputItem, cost, requiredLevel, req);
+        Map<String, Integer> wandLevel = null;
+        if (obj.has("wand_level")) {
+            JsonObject wl = obj.getAsJsonObject("wand_level");
+            wandLevel = new HashMap<>();
+            for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
+        }
+
+        return new SynthesizeRecipe(id, outputItem, cost, req, wandLevel);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {

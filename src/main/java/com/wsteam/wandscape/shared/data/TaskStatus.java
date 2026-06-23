@@ -6,5 +6,6 @@ public enum TaskStatus {
     IN_PROGRESS,
     AWAITING_MATERIALS,
     INTERRUPTED,
-    COMPLETED
+    COMPLETED,
+    FAILED
 }

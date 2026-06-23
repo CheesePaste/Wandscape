@@ -41,6 +41,7 @@ public final class TypeBridge {
             case AWAITING_MATERIALS -> TaskState.AWAITING_RESOURCES;
             case INTERRUPTED -> TaskState.INTERRUPTED;
             case COMPLETED -> TaskState.COMPLETED;
+            case FAILED -> TaskState.FAILED;
         };
     }
 
@@ -52,6 +53,7 @@ public final class TypeBridge {
             case AWAITING_RESOURCES -> TaskStatus.AWAITING_MATERIALS;
             case INTERRUPTED -> TaskStatus.INTERRUPTED;
             case COMPLETED -> TaskStatus.COMPLETED;
+            case FAILED -> TaskStatus.FAILED;
         };
     }
 

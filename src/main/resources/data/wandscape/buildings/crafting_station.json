@@ -29,7 +29,7 @@
   "unlock_requirement": {
     "min_comfort": 0,
     "min_magic": 0,
-    "min_wonder": 5
+    "min_wonder": 0
   },
   "boundary": {
     "min": [-1, 0, -1],

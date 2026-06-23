@@ -61,9 +61,14 @@ public final class WandRequirementDeriver {
 
     private static Map<BehaviourTag, BehaviourLevel> deriveFromAction(String action) {
         return switch (action) {
-            case "gather" -> Map.of(GATHERING, BehaviourLevel.of(1));
-            case "decompose", "synthesize", "craft_wand", "brew_potion"
+            case "gather" -> Map.of(); // basic gathering needs no wand — level 0
+            case "decompose", "brew_potion"
                     -> Map.of(CRAFTING, BehaviourLevel.of(1));
+            // synthesize and craft_wand: wand-level is recipe-driven, not action-driven.
+            // A synthesize recipe with wand_level {"crafting": 0} means any NPC can attempt;
+            // wand_level {"crafting": 1} requires a crafting wand.  The per-recipe wand_level
+            // override (passed via WorkItem overrides) takes priority over this default.
+            case "synthesize", "craft_wand" -> Map.of();
             default -> Map.of(); // toggle, activate, open_gui — no wand needed
         };
     }

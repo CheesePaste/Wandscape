@@ -3,6 +3,8 @@ package com.wsteam.wandscape.production.data;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -14,8 +16,8 @@ public record CraftWandRecipe(
     String outputItem,
     CompoundTag outputNbt,
     Map<ElementType, Long> cost,
-    int requiredLevel,
-    RecipeUnlockRequirement unlockRequirement
+    RecipeUnlockRequirement unlockRequirement,
+    @Nullable Map<String, Integer> wandLevel
 ) {
     public static CraftWandRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
@@ -23,13 +25,19 @@ public record CraftWandRecipe(
         String outputItem = output.get("item").getAsString();
         CompoundTag nbt = parseNbt(output);
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
-        int requiredLevel = obj.has("required_level") ? obj.get("required_level").getAsInt() : 1;
 
         RecipeUnlockRequirement req = obj.has("unlock_requirement")
                 ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                 : RecipeUnlockRequirement.NONE;
 
-        return new CraftWandRecipe(id, outputItem, nbt, cost, requiredLevel, req);
+        Map<String, Integer> wandLevel = null;
+        if (obj.has("wand_level")) {
+            JsonObject wl = obj.getAsJsonObject("wand_level");
+            wandLevel = new HashMap<>();
+            for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
+        }
+
+        return new CraftWandRecipe(id, outputItem, nbt, cost, req, wandLevel);
     }
 
     private static CompoundTag parseNbt(JsonObject output) {

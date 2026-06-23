@@ -68,10 +68,12 @@ public record BuildingConfig(
             String element,
             @SerializedName("amount_per_harvest") int amountPerHarvest,
             @SerializedName("channel_ticks") int channelTicks,
-            @SerializedName("mana_cost") int manaCost
+            @SerializedName("mana_cost") int manaCost,
+            @SerializedName("wand_level") Map<String, Integer> wandLevel
     ) {
         public NodeConfig {
             if (manaCost <= 0) manaCost = 5; // default 5 mana
+            if (wandLevel == null) wandLevel = Collections.emptyMap();
         }
     }
 

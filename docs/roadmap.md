@@ -47,6 +47,8 @@ ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op �
 | 中 | GlobalTaskPool COMPLETED 任务清理（内存泄漏） | core/task/GlobalTaskPool |
 | 中 | 道路拆除改为 NPC 任务执行（当前即时 server-side setBlock→AIR） | road/server/RoadEditorHandler |
 | 中 | 祭坛多方块检测从 tick() 改为事件驱动 | — (模块未构建) |
+| 中 | **失败分析器扩展：建造元素不足 → 自动入队节点采集** | FailureAnalyzerSystem + BuildingBreakHandler/BuildCompleteListener |
+| 中 | **失败分析器扩展：设施维护消耗元素不足 → 自动入队节点采集** | FailureAnalyzerSystem + 维护系统 |
 | 低 | 连续执行加成从硬编码移至 TOML | Config + SchedulerSystem |
 | 低 | 殖民地系统（创建/删除/边界） | 新模块 |
 | 低 | 魔药站 GUI 实现 | production/client/ |
@@ -106,6 +108,68 @@ ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op �
 ```
 
 三值同时满足才解锁；填 0 表示该维度无门槛。
+
+## 已完成：失败分析器 (2026-06-23)
+
+### 当前覆盖
+
+**法杖能力不足 → 自动制作法杖**。当任务因 `WandRequirementUnmet` 失败时，FailureAnalyzerSystem 自动：
+1. 从任务 requirements（如 `{GATHERING:1}`）反查匹配的法杖预设
+2. 通过任务 anchor 定位殖民地
+3. 在殖民地 crafting_station 入队 `craft_wand` 任务
+4. 去重：同一任务不重复处理，同一法杖已在制作中不重复入队
+
+法杖制作完成后存入仓库 → 下一轮节点采集/合成任务正常分配。
+
+### 数据流
+
+```
+SchedulerSystem
+  │  无 NPC 满足 + 仓库无法杖
+  │  → taskPool.failTask(id, new WandRequirementUnmet(reqs))
+  ▼
+GlobalTaskPool  →  task.state = FAILED, task.failureReason = reason
+  │
+  ▼
+FailureAnalyzerSystem (20tick 心跳)
+  │  1. taskPool.getByState(FAILED)
+  │  2. 匹配 failureReason instanceof WandRequirementUnmet
+  │  3. 遍历 WandPresetLoader → 找覆盖所有 reqs 的预设
+  │  4. taskParams.anchor → BuildingSavedData → colonyId
+  │  5. BuildingApi.getBuildingsByCategory(colonyId, "crafting_station")
+  │  6. api.enqueueWork(stationId, craft_wand WorkItem)
+  ▼
+BuildingTaskSource.poll() → TaskRequest → GlobalTaskPool → SchedulerSystem → NPC 制作法杖
+```
+
+### 规划：建造/维护元素不足 → 自动节点采集
+
+**`ResourceUnavailable`** 失败原因（待实现）：
+
+```
+建造建筑
+  │  ColonyItemBank 检查元素不足
+  │  → failTask(id, new ResourceUnavailable(missingElements: Map<ElementType, Long>))
+  ▼
+FailureAnalyzerSystem
+  │  1. 匹配 failureReason instanceof ResourceUnavailable
+  │  2. missingElements 映射到对应 node 类型（earth→earth节点, wood→wood节点...）
+  │  3. 在殖民地查找匹配的 node 建筑（BuildingApi.getBuildingsByCategory(colonyId, "node")）
+  │  4. 对每个缺失元素，入队 gather WorkItem（如有对应 node 建筑）
+  ▼
+节点自动采集 → 元素入仓 → 建造重试
+```
+
+**设施维护**（待实现）同理：维护消耗后若元素池枯竭，触发的 `ResourceUnavailable` 由同一个 FailureAnalyzerSystem 处理。
+
+### 涉及的新增/修改
+
+| 文件 | 变更 |
+|------|------|
+| `core/task/TaskFailureReason.java` | + `ResourceUnavailable(Map<ElementType, Long> missingElements)` |
+| `engine/system/FailureAnalyzerSystem.java` | + `handleResourceUnavailable()` 分支 |
+| `building/internal/BuildCompleteListener.java` 或建造执行路径 | 建造前检查元素 → 不足则 failTask |
+| 设施维护系统（待构建） | 维护后检查元素池 → 不足则 failTask |
 
 ## GUI 任务编辑器
 

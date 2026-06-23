@@ -15,7 +15,6 @@
     "fire": 32,
     "ice": 16
   },
-  "required_level": 10,
   "unlock_requirement": {
     "min_comfort": 80,
     "min_magic": 150,

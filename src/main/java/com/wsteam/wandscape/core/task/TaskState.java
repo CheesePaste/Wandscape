@@ -20,5 +20,8 @@ public enum TaskState {
     INTERRUPTED,
 
     /** Task finished successfully. */
-    COMPLETED
+    COMPLETED,
+
+    /** Task cannot be fulfilled — no NPC or wand satisfies requirements. Terminal. */
+    FAILED
 }

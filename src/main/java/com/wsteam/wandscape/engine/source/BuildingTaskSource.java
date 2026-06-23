@@ -15,6 +15,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.system.TaskSource;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.TaskRequest;
+import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -81,9 +82,11 @@ public class BuildingTaskSource implements TaskSource {
             TaskRequest request = new TaskRequest(
                     item.blueprintId(),
                     item.params(),
-                    item.priority()
+                    item.priority(),
+                    item.wandRequirementOverrides()
             );
 
+            // ── Publish to task pool ──
             try {
                 long taskId = pool.addTask(request);
                 api.setCurrentTask(buildingId, toTaskUuid(taskId));
@@ -116,8 +119,12 @@ public class BuildingTaskSource implements TaskSource {
 
         // Buildings that already have queued work (will be published in Phase 3)
         Set<UUID> hasWork = new HashSet<>(api.getBuildingsWithPendingWork(null));
+        LOGGER.info("[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
 
-        for (UUID buildingId : api.getBuildingsByCategory(null, "node")) {
+        List<UUID> nodeBuildings = api.getBuildingsByCategory(null, "node");
+        LOGGER.info("[TaskSrc] node supply: found {} node buildings total", nodeBuildings.size());
+
+        for (UUID buildingId : nodeBuildings) {
             // Already has queued work → skip
             if (hasWork.contains(buildingId)) continue;
             // Already running a task → skip
@@ -141,12 +148,19 @@ public class BuildingTaskSource implements TaskSource {
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
             params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
 
-            WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15);
+            // Convert JSON wand_level string keys to BehaviourTag overrides
+            Map<BehaviourTag, Integer> overrides = new HashMap<>();
+            for (var e : nodeConfig.wandLevel().entrySet()) {
+                BehaviourTag tag = BehaviourTag.fromKey(e.getKey());
+                if (tag != null) overrides.put(tag, e.getValue());
+            }
+
+            WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15, overrides);
             api.enqueueWork(buildingId, work);
-            LOGGER.info("[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana)",
+            LOGGER.info("[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana) wandLevel={}",
                     buildingId.toString().substring(0, 8),
                     nodeConfig.element(), nodeConfig.amountPerHarvest(),
-                    nodeConfig.channelTicks(), nodeConfig.manaCost());
+                    nodeConfig.channelTicks(), nodeConfig.manaCost(), overrides);
         }
     }
 
@@ -163,4 +177,5 @@ public class BuildingTaskSource implements TaskSource {
     private static UUID toTaskUuid(long taskId) {
         return new UUID(taskId, 0);
     }
+
 }
