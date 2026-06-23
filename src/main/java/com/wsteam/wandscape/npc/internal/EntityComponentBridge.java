@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.npc.internal;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +52,9 @@ public final class EntityComponentBridge {
     // MC entity UUID → ecsEntityId
     private final Map<UUID, Long> ecsIdByUuid = new ConcurrentHashMap<>();
 
+    /** NPCs that loaded before the engine was bootstrapped — flush on next tick. */
+    private final List<WandscapeNpc> deferredJoins = new ArrayList<>();
+
     /** ECS component types that make up an NPC. */
     private static final Class<?>[] NPC_COMPONENTS = {
             com.wsteam.wandscape.core.component.Position.class,
@@ -61,6 +66,39 @@ public final class EntityComponentBridge {
     };
 
     private EntityComponentBridge() {}
+
+    // ================================================================
+    // Deferred join (for NPCs loaded before engine bootstrap)
+    // ================================================================
+
+    /**
+     * Queue an NPC for ECS registration once the engine is ready.
+     * Called from {@code WandscapeNpc.onAddedToLevel} when
+     * {@code WandscapeEngine.getWorld()} returns null.
+     */
+    public void deferJoin(WandscapeNpc npc) {
+        synchronized (deferredJoins) {
+            deferredJoins.add(npc);
+        }
+    }
+
+    /**
+     * Flush all deferred NPC registrations.
+     * Called from the engine tick once per frame when the world is live.
+     */
+    public void flushDeferredJoins(World world) {
+        List<WandscapeNpc> pending;
+        synchronized (deferredJoins) {
+            if (deferredJoins.isEmpty()) return;
+            pending = new ArrayList<>(deferredJoins);
+            deferredJoins.clear();
+        }
+        for (WandscapeNpc npc : pending) {
+            if (npc.isRemoved()) continue;
+            LOGGER.info("Deferred NPC {} now joining ECS", npc.getUUID().toString().substring(0, 8));
+            onNpcJoinWorld(npc, world);
+        }
+    }
 
     // ================================================================
     // Lifecycle

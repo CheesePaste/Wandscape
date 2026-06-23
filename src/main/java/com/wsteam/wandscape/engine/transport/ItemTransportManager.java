@@ -186,8 +186,9 @@ public class ItemTransportManager {
     private static List<Leg> buildLegs(List<RouteSegment> route) {
         List<Leg> legs = new ArrayList<>();
         for (RouteSegment seg : route) {
-            Vec3 from = new Vec3(seg.fromX(), seg.fromY(), seg.fromZ()).add(0.5, 0.5, 0.5);
-            Vec3 to = new Vec3(seg.toX(), seg.toY(), seg.toZ()).add(0.5, 0.5, 0.5);
+            double yOff = seg.onRoad() ? 1.0 : 0.5; // on-road: float above surface
+            Vec3 from = new Vec3(seg.fromX() + 0.5, seg.fromY() + yOff, seg.fromZ() + 0.5);
+            Vec3 to = new Vec3(seg.toX() + 0.5, seg.toY() + yOff, seg.toZ() + 0.5);
             int xzDist = (int) Math.max(1,
                     Math.abs(seg.toX() - seg.fromX()) + Math.abs(seg.toZ() - seg.fromZ()));
             int ticksPerBlock = seg.onRoad()
