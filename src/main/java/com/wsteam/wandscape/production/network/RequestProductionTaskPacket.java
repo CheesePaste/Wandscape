@@ -10,9 +10,14 @@ import com.google.gson.JsonPrimitive;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
+import com.wsteam.wandscape.production.data.SynthesizeRecipe;
+import com.wsteam.wandscape.production.data.CraftWandRecipe;
+import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.Wandscape;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -80,6 +85,41 @@ public record RequestProductionTaskPacket(
             };
 
             if (blueprintId == null) return;
+
+            // Server-side unlock check: guard against client tampering
+            UUID colonyId = state.getColonyId();
+            if (colonyId == null) colonyId = new UUID(0, 0);
+            if (!"decompose".equals(pkt.action)) {
+                var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
+                if (loader == null) {
+                    LOGGER.warn("RequestProductionTask: PRODUCTION_RECIPE_LOADER not available");
+                    return;
+                }
+                boolean unlocked = switch (pkt.action) {
+                    case "synthesize" -> {
+                        var recipe = loader.getSynthesizeRecipes().get(pkt.recipeOrItemId);
+                        yield recipe != null
+                                && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
+                    }
+                    case "craft_wand" -> {
+                        var recipe = loader.getCraftWandRecipes().get(pkt.recipeOrItemId);
+                        yield recipe != null
+                                && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
+                    }
+                    case "brew_potion" -> {
+                        var recipe = loader.getPotionRecipes().get(pkt.recipeOrItemId);
+                        yield recipe != null
+                                && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
+                    }
+                    default -> true;
+                };
+                if (!unlocked) {
+                    LOGGER.warn("RequestProductionTask: recipe '{}' action={} is not unlocked for colony={} — rejected",
+                            pkt.recipeOrItemId, pkt.action,
+                            colonyId.toString().substring(0, 8));
+                    return;
+                }
+            }
 
             // Build WorkItem params
             Map<String, com.google.gson.JsonElement> params = new LinkedHashMap<>();

@@ -15,7 +15,7 @@ public record BrewPotionRecipe(
     Map<ElementType, Long> cost,
     List<String> inputItems,
     int requiredLevel,
-    int unlockMagicValue
+    RecipeUnlockRequirement unlockRequirement
 ) {
     public static BrewPotionRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
@@ -23,8 +23,12 @@ public record BrewPotionRecipe(
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
         List<String> inputItems = parseInputItems(obj);
         int requiredLevel = obj.has("required_level") ? obj.get("required_level").getAsInt() : 1;
-        int unlockMagicValue = obj.has("unlock_magic_value") ? obj.get("unlock_magic_value").getAsInt() : 0;
-        return new BrewPotionRecipe(id, outputItem, cost, inputItems, requiredLevel, unlockMagicValue);
+
+        RecipeUnlockRequirement req = obj.has("unlock_requirement")
+                ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
+                : RecipeUnlockRequirement.NONE;
+
+        return new BrewPotionRecipe(id, outputItem, cost, inputItems, requiredLevel, req);
     }
 
     private static List<String> parseInputItems(JsonObject obj) {

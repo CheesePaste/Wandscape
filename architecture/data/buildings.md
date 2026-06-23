@@ -53,13 +53,14 @@
 | category | string | basic/node/storage/workstation/crafting_station/potion_station/special |
 | pattern | [x,y,z][] | 相对 anchor 的偏移列表。单方块建筑写 `[[0,0,0]]` |
 | block_mapping | {"x,y,z":"mod:block"} | pattern 中每个偏移→原版方块 ID |
-| comfort/magic/wonder | int | 首次建造贡献的三数值 |
+| comfort/magic/wonder | int | 首次建造贡献的三数值。每种建筑类型在殖民地中**仅计一次**：同类型第二栋及以后的建筑不叠加贡献。值在建筑首次修复完成（structureIntact=true）时计入，建筑损毁（last intact building destroyed/damaged）时扣除，修复完成后重新计入。修复期间（structureIntact=false）该类型对三值的贡献归零 |
 | maintenance_cost | int | 每维护周期消耗的木元素量 |
 | shutdown_penalty | {output_reduction, time_multiplier} | 关停惩罚：产出减半+耗时加倍 |
 | queue.capacity | int | 建筑内部队列容量 |
 | boundary | {min:[x,y,z], max:[x,y,z]} | 建筑 AABB（相对 anchor）。用于重叠检测 |
 | blueprint | {id, bind} | **新 DSL** 模式。id="build:xxx"，bind 的 $field 引用上方 JSON 字段 |
 | blueprint (可选) | — | 无此字段时 fallback 到 DataDrivenSteps 遗留路径 |
+| unlock_requirement | {min_comfort, min_magic, min_wonder} | 建造此建筑需要殖民地三值达到的门槛。全部填 0 表示无条件解锁。三维门槛同时满足才允许建造，任一维度填 0 表示该维度不限制。建筑被破坏/拆除期间该建筑类型的三值贡献归零，可能重新触发锁状态 |
 
 ## 节点建筑额外字段
 

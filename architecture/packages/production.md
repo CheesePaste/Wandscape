@@ -5,10 +5,12 @@
 ## 关键类
 
 **配方数据 (data/)**
-- **SynthesizeRecipe** — 合成配方 record：outputItem + cost(Map<ElementType,Long>) + requiredLevel
-- **CraftWandRecipe** — 法杖制作配方 record：outputItem + outputNbt(CompoundTag) + cost + requiredLevel
-- **BrewPotionRecipe** — 魔药配方 record：outputItem + cost + inputItems(List<String>) + requiredLevel
-- 均含 `fromJson(String id, JsonElement json)` 静态工厂
+- **RecipeUnlockRequirement** — 配方解锁门槛：minComfort / minMagic / minWonder。三者同时满足才解锁，任一维度填 0 表示无要求
+- **RecipeUnlockChecker** — 静态工具：传入 colonyId + unlockRequirement → 查询 BuildingApi 三值 → 返回布尔值/锁因字符串
+- **SynthesizeRecipe** — 合成配方 record：outputItem + cost(Map<ElementType,Long>) + requiredLevel + unlockRequirement
+- **CraftWandRecipe** — 法杖制作配方 record：outputItem + outputNbt(CompoundTag) + cost + requiredLevel + unlockRequirement
+- **BrewPotionRecipe** — 魔药配方 record：outputItem + cost + inputItems(List<String>) + requiredLevel + unlockRequirement
+- 均含 `fromJson(String id, JsonElement json)` 静态工厂，支持 `unlock_requirement`（新三字段格式）和 `unlock_magic_value`（遗留单值，已迁移）
 
 **加载器**
 - **ProductionRecipeLoader** — 注册 3 种配方类型到 WandscapeDataLoader（synthesize_recipes / craft_wand_recipes / potion_recipes）
@@ -31,10 +33,11 @@
 玩家右键 workstation 方块
   → BuildingInteractHandler 检测 category="workstation"
   → ColonyItemBank 查可分解物品 + ProductionRecipeLoader 查合成配方
-  → WorkstationDataPacket → 客户端
-  → WorkstationScreen 渲染
+  → RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement) 过滤配方
+  → WorkstationDataPacket（仅含已解锁配方 + unlockRequirement NBT）→ 客户端
+  → WorkstationScreen 渲染（已解锁正常显示，已过滤的配方不出现）
   → 玩家选择+数量+提交 → RequestProductionTaskPacket → 服务器
-  → BuildingApi.enqueueWork(buildingId, WorkItem{blueprint, params})
+  → RecipeUnlockChecker 二次验证（防篡改）→ BuildingApi.enqueueWork(buildingId, WorkItem{blueprint, params})
   → BuildingTaskSource → GlobalTaskPool
   → NPC 领取 → 执行 blueprint → block_interact("decompose"/"synthesize"/"craft_wand")
   → WandscapeBlockInteractExecutor 倒计时 → executeAsyncAction()

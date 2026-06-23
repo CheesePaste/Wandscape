@@ -1,0 +1,17 @@
+{
+  "id": "crystal_block",
+  "output": {
+    "item": "minecraft:amethyst_block"
+  },
+  "cost": {
+    "earth": 64,
+    "magic": 32,
+    "wonder": 16
+  },
+  "required_level": 5,
+  "unlock_requirement": {
+    "min_comfort": 50,
+    "min_magic": 100,
+    "min_wonder": 30
+  }
+}

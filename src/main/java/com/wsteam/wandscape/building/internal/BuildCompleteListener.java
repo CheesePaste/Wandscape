@@ -94,6 +94,20 @@ public final class BuildCompleteListener {
             if ("storage".equals(state.getCategory())) {
                 seedBuilderWand(level, state.getColonyId());
             }
+
+            // Record contribution: only fires ColonyEvaluationChangedEvent when this
+            // building type transitions from 0→1 intact buildings in the colony.
+            UUID colonyId = state.getColonyId();
+            if (colonyId != null) {
+                boolean changed = data.addBuildingContribution(
+                        colonyId, state.getBuildingTypeId());
+                if (changed) {
+                    LOGGER.info("[Evaluation] Colony {} gained +{} from first {}",
+                            colonyId.toString().substring(0, 8),
+                            data.getContributionRegistry().getSnapshot(colonyId),
+                            state.getBuildingTypeId());
+                }
+            }
         } else {
             LOGGER.warn("[Building] {} at {} — {} blocks still damaged after build_complete, re-enqueuing partial repair",
                     state.getBuildingTypeId(), anchor, damaged.size());

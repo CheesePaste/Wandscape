@@ -12,15 +12,19 @@ public record SynthesizeRecipe(
     String outputItem,
     Map<ElementType, Long> cost,
     int requiredLevel,
-    int unlockMagicValue
+    RecipeUnlockRequirement unlockRequirement
 ) {
     public static SynthesizeRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
         String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
         int requiredLevel = obj.has("required_level") ? obj.get("required_level").getAsInt() : 1;
-        int unlockMagicValue = obj.has("unlock_magic_value") ? obj.get("unlock_magic_value").getAsInt() : 0;
-        return new SynthesizeRecipe(id, outputItem, cost, requiredLevel, unlockMagicValue);
+
+        RecipeUnlockRequirement req = obj.has("unlock_requirement")
+                ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
+                : RecipeUnlockRequirement.NONE;
+
+        return new SynthesizeRecipe(id, outputItem, cost, requiredLevel, req);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {

@@ -1248,6 +1248,8 @@
     ]
   },
   "unlock_requirement": {
+    "min_comfort": 0,
+    "min_magic": 0,
     "min_wonder": 5
   },
   "boundary": {

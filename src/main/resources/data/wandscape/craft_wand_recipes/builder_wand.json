@@ -14,5 +14,7 @@
     "wood": 16
   },
   "required_level": 1,
-  "unlock_magic_value": 0
+  "unlock_requirement": {
+    "min_magic": 0
+  }
 }

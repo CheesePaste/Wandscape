@@ -1,0 +1,24 @@
+{
+  "id": "legendary_wand",
+  "output": {
+    "item": "wandscape:wand",
+    "nbt": {
+      "wand_color": "#FFD700",
+      "behaviors": { "ritual": 3, "build": 2, "gather": 1 },
+      "range": 3,
+      "mana_cost_multiplier": 0.6
+    }
+  },
+  "cost": {
+    "gold": 128,
+    "ender": 64,
+    "fire": 32,
+    "ice": 16
+  },
+  "required_level": 10,
+  "unlock_requirement": {
+    "min_comfort": 80,
+    "min_magic": 150,
+    "min_wonder": 50
+  }
+}

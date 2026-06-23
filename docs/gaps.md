@@ -1,5 +1,22 @@
 # 已知问题与待澄清
 
+## 已完成的特性（2026-06-23）
+
+### 殖民地三值评估系统 ✅
+- **BuildingContributionRegistry**：per-colony per-buildingType 的 intactCount 缓存。0↔1 边界跨越时广播 `ColonyEvaluationChangedEvent`。
+- **BuildingSavedData.add/removeBuildingContribution**：build complete → `addBuildingContribution` → 0→1 广播事件；结构损坏/拆除 → `removeBuildingContribution` → 1→0 广播事件。load() 后 rebuildFrom() 全量重建兼容旧存档。
+- **BuildingApi.getColonyComfort/Magic/Wonder**：修复原实现的两个 bug——（1）按 `structureIntact=true` 而非 `shutdown=false` 过滤，损毁后贡献正确扣减；（2）per-type 二进制贡献，同类型多栋不叠加。
+- 事件流：`ColonyEvaluationChangedEvent(colonyId, oldC, newC, oldM, newM, oldW, newW)` → 订阅者可据此触发建筑解锁、酒馆任务属性调整、新法杖道具解锁等。
+
+### 生产配方三值解锁 ✅
+- **RecipeUnlockRequirement**：三字段（minComfort/minMagic/minWonder）。填 0 表示无要求，统一格式，无 legacy 分支。
+- **RecipeUnlockChecker.isUnlocked(colonyId, req)**：查询 BuildingApi 三值 → 全满足返回 true。服务端二次验证防篡改。
+- **SynthesizeRecipe / CraftWandRecipe / BrewPotionRecipe**：`unlockMagicValue` 字段已迁移为 `unlock_requirement`（JSON 格式统一）。
+- **WorkstationDataPacket / CraftingStationPacket**：`from()` 内过滤未解锁配方，不发送到客户端。`unlock_requirement` NBT 随配方下发供客户端锁因展示。
+- **RequestProductionTaskPacket**：服务端二次检查，客户端篡改 recipeOrItemId 会被拒绝。
+- **BuildingUnlockChecker**：建筑右键提示展示锁因，`default` 分支显示解锁需求。
+
+
 ## 设计缺陷
 
 ### GlobalTaskPool 内存泄漏
@@ -126,4 +143,22 @@ WandEquipExecutor 通过 `npc.setItemInHand()` 修改手持，该调用通过 En
 - 无任务导入/导出功能
 - 队列刷新依赖玩家打开 Screen 时请求，非实时推送
 - BuildingApiImpl 服务端无 INFO 级别日志，调试时只能靠 LOGGER.warn，已补充详细日志
+
+### 投影模式建筑解锁 UI (2026-06-23 尝试中，未完成)
+
+投影模式（按 V 键进入灵魂出窍）玩家用鼠标滚轮切换可选建筑类型，在世界中放置虚影方块。
+
+**现状：Lock UI 未实现，退回原样**
+
+尝试向 `BuildingSlot` record 加入 `minComfort/minMagic/minWonder` 三个 int 字段并走网络下发，在投影模式 HUD 覆盖层（`ProjectionHudOverlay`）渲染锁因。遇到以下问题后放弃本轮实现，回退所有 projection 客户端文件到原样：
+
+1. **`RenderLevelStageEvent` 没有 `getGuiGraphics()`**：该事件暴露 `getPoseStack()`（`PoseStack`）和 `getCamera()`，没有 `GuiGraphics` 实例。要做 2D HUD 文字渲染需要自行构造正交投影 + 直接调用 `Font.drawInBatch`，`PoseStack` 也没有 `ortho()` 方法（只有 `mulPose(Matrix4f)`），需要手动构建一个 `Matrix4f.ortho()`，但实际编译报错 `PoseStack.ortho()` 不存在。
+
+2. **`Font.drawInBatch` 参数类型严格**：实际方法签名为 `drawInBatch(Component, float, float, int, boolean, Matrix4f, MultiBufferSource, DisplayMode, int, int)`，`PoseStack` 不能直接传给 `Matrix4f` 参数，需要 `pose.last().pose()` 单独取 Matrix4f。但实际编译报错参数类型不匹配。
+
+3. **HUD 覆盖层未被注册**：`ProjectionHudOverlay` 的注册调用写入 `WandscapeClient` 后，编译未通过，未能验证其实际渲染效果。
+
+**结论**：这轮需要实现 `ProjectionHudOverlay`，并用 `RenderLevelStageEvent.getPoseStack().pushPose()/popPose()` + 手动正交投影 + `Font.drawInBatch(Component, float, float, int, boolean, Matrix4f, ...)` 完成 2D 文字渲染，但在没 IDE 实时类型检查、纯文本编辑条件下，逐个试错 MC API 签名代价过高。
+
+**保留的服务端改动**：`BuildingSlot` record 仍保持三字段未回退（服务端 `ProjectionNetwork.getAvailableBuildings()` 调用 `BuildingSlot.fromConfig()` 仍编译），客户端相关改动已全部回退。若下次实现 HUD，服务端已就绪。
 

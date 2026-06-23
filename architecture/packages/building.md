@@ -12,8 +12,10 @@
   - 新增：getQueue() / removeFromQueue() / moveUp() / moveDown() — 任务队列查询和调序
 - **EnqueueHelper** (internal/) — 入队：读 BlueprintRef → resolve bind → 硬编码 anchor → 构建 WorkItem
 - **BuildingInteractHandler** (internal/) — RightClickBlock → posIndex(chunkIndex fallback) O(1) → 按 category 分发：storage→仓库GUI / workstation/crafting_station/potion_station→生产站GUI / 其他→信息打印
-- **BuildingBreakHandler** (internal/) — BreakEvent/ExplosionEvent → 收集受损坐标 → structureIntact=false → 构造局部修复 WorkItem（offsets 仅含受损方块，addFirst 插入队首，priority=49）。ExplosionEvent 按建筑分组批量入队，避免对大建筑全量重放蓝图。提供 `enqueueRepairForPositions`（事件侧）和 `enqueueRepairForOffsets`（Listener 侧）两个静态入口
-- **BuildCompleteListener** (internal/) — 订阅引擎 build_complete CustomEvent → `findDamagedBlocks` 扫描世界检测剩余损坏方块 → `structureIntact=true` / `enqueueRepairForOffsets(局部)`（修复中再次损坏则只修复新增部分）
+- **BuildingBreakHandler** (internal/) — BreakEvent/ExplosionEvent → 收集受损坐标 → structureIntact=false → 调用 `BuildingSavedData.removeBuildingContribution()`（1→0 边界跨越时广播 `ColonyEvaluationChangedEvent`）→ 构造局部修复 WorkItem（offsets 仅含受损方块，addFirst 插入队首，priority=49）。ExplosionEvent 按建筑分组批量入队，避免对大建筑全量重放蓝图。提供 `enqueueRepairForPositions`（事件侧）和 `enqueueRepairForOffsets`（Listener 侧）两个静态入口
+- **BuildCompleteListener** (internal/) — 订阅引擎 build_complete CustomEvent → `findDamagedBlocks` 扫描 → `structureIntact=true` → 调用 `BuildingSavedData.addBuildingContribution()`（0→1 边界跨越时广播 `ColonyEvaluationChangedEvent`）→ `/ 仍有损坏 → enqueueRepairForOffsets(局部重试)`
+- **BuildingContributionRegistry** (internal/) — 殖民地区三值聚合缓存：per-colony per-type 的 intactCount。只在 0↔1 边界跨越时广播 `ColonyEvaluationChangedEvent`。`BuildingSavedData.load()` 后调用 `rebuildFrom()` 做一次性全量重建，兼容旧存档
+- **BuildingUnlockChecker** (internal/) — 静态工具：传入 colonyId + BuildingConfig → 查询 BuildingApi 三值 vs unlockRequirement → 返回是否解锁 + 锁因字符串。用于建筑右键提示和 GUI 展示
 
 ## 数据流
 
@@ -23,16 +25,20 @@
   → WorkItem → GlobalTaskPool
   → NPC领取 → 执行蓝图 → 放置原版方块
   → emit_event("build_complete")
-  → BuildCompleteListener → structureIntact=true
+  → BuildCompleteListener → findDamagedBlocks 扫描
+  → 全部修复 → structureIntact=true
+  → BuildingSavedData.addBuildingContribution()
+  → BuildingContributionRegistry: intactCount(type) 0→1
+  → 广播 ColonyEvaluationChangedEvent
 
-结构损坏修复
-  → BreakEvent/ExplosionEvent
-  → BuildingBreakHandler → 收集受损世界坐标 → 转为 pattern 偏移 → structureIntact=false
-  → 构造局部 WorkItem（offsets=仅受损偏移，params=offsets+blocks+anchor）→ addFirst
-  → BuildingTaskSource.poll() → TaskRequest → GlobalTaskPool
-  → NPC领取 → 执行 build:place_structure 局部蓝图（仅放置受损偏移的方块）
-  → BuildCompleteListener → findDamagedBlocks 扫描 → 全部修复 → structureIntact=true
-  → 仍有损坏（修复中再次受损）→ enqueueRepairForOffsets(剩余部分) → 局部重试
+建筑受损（Break/Explosion）
+  → BuildingBreakHandler → 收集受损坐标 → structureIntact=false
+  → BuildingSavedData.removeBuildingContribution()
+  → BuildingContributionRegistry: intactCount(type) 1→0
+  → 广播 ColonyEvaluationChangedEvent
+  → 构造局部 WorkItem（offsets=仅受损偏移）→ addFirst 队首
+  → NPC修复 → BuildCompleteListener 再次扫描 → 全部修复 → structureIntact=true
+  → BuildingSavedData.addBuildingContribution() → intactCount 0→1 → 广播事件
 ```
 
 ## JSON
@@ -42,7 +48,7 @@
 ## 依赖
 
 - shared/api/BuildingApi, shared/data/BuildingData, shared/data/WorkItem
-- shared/event/BuildingPlacedEvent/BuildingShutdownEvent/BuildingRestartedEvent
+- shared/event/BuildingPlacedEvent/BuildingShutdownEvent/BuildingRestartedEvent/**ColonyEvaluationChangedEvent**
 - shared/registry/WandscapeApis
 - shared/ui/component/TaskQueuePanel (UI组件，通过building/network包使用)
 - building/network/TaskQueueModifyPacket, TaskQueueDataPacket
