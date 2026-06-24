@@ -7,7 +7,9 @@
     "offsets": "list<pos>",
     "blocks": "map<string,string>",
     "name": "string",
-    "anchor": "pos"
+    "anchor": "pos",
+    "material_list": "list<string>",
+    "material_counts": "map<string,string>"
   },
   "steps": [
     {
@@ -39,7 +41,9 @@
         "offsets": "$offsets",
         "blocks": "$blocks",
         "name": "$name",
-        "anchor": "$anchor"
+        "anchor": "$anchor",
+        "material_list": "$material_list",
+        "material_counts": "$material_counts"
       }
     }
   ]

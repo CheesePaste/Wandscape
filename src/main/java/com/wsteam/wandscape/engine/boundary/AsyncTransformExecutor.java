@@ -8,9 +8,11 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.BlockOps;
+import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
+import com.wsteam.wandscape.core.op.ResourceShortageException;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
@@ -24,6 +26,11 @@ import net.minecraft.core.BlockPos;
  * re-invoke execute(). When the future completes, the engine advances stepIndex.
  *
  * <p>The actual block placement happens via the future's {@code thenRun} callback.
+ *
+ * <p>When the op carries a {@link AtomicOp.TransformOp#consumable()}, the item is
+ * removed from NPC inventory before the delay countdown starts. On shortage, a
+ * {@link ResourceShortageException} is thrown — the engine marks the task
+ * AWAITING_RESOURCES and releases the NPC.
  */
 public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> {
 
@@ -47,6 +54,20 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
 
     @Override
     public CompletableFuture<Void> execute(AtomicOp.TransformOp op, World world, long npcId) {
+        // ── Consumable check: remove from NPC inventory before delay countdown ──
+        if (op.consumable() != null) {
+            Inventory inv = world.get(npcId, Inventory.class);
+            if (inv == null || !inv.hasEnough(op.consumable().resource(),
+                    op.consumable().amount())) {
+                return CompletableFuture.failedFuture(
+                        new ResourceShortageException(op.consumable()));
+            }
+            inv.remove(op.consumable().resource(), op.consumable().amount());
+            LOGGER.debug("TransformOp consumable: -{} x{} from NPC {}",
+                    op.consumable().resource().id(), op.consumable().amount(), npcId);
+        }
+
+        // ── Placement (existing delay-tick mechanism, shared by both paths) ──
         if (delayTicks <= 0) {
             BlockOps blockOps = world.blockOps;
             if (blockOps != null) {

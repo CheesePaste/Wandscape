@@ -311,7 +311,7 @@ public class BuildingApiImpl implements BuildingApi {
         int total = 0, skippedColony = 0, skippedCat = 0;
         for (BuildingState state : sd.getAllBuildings()) {
             total++;
-            if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())) {
+            if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())&&(state.getColonyId()!=null)) {
                 skippedColony++;
                 continue;
             }

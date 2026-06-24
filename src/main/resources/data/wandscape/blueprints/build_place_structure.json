@@ -6,9 +6,23 @@
     "offsets": "list<pos>",
     "blocks": "map<string,string>",
     "name": "string",
-    "anchor": "pos"
+    "anchor": "pos",
+    "material_list": "list<string>",
+    "material_counts": "map<string,string>"
   },
   "steps": [
+    {
+      "type": "for_each",
+      "list": "$material_list",
+      "var": "mat",
+      "steps": [
+        {
+          "type": "request_resource",
+          "resource": "$mat",
+          "amount": {"get": ["$material_counts", "$mat"]}
+        }
+      ]
+    },
     {
       "type": "for_each",
       "list": "$offsets",
@@ -17,7 +31,8 @@
         {
           "type": "place",
           "at": {"+": ["$anchor", "$off"]},
-          "block": {"get": ["$blocks", {"keyof": "$off"}]}
+          "block": {"get": ["$blocks", {"keyof": "$off"}]},
+          "consumable": {"get": ["$blocks", {"keyof": "$off"}]}
         }
       ]
     },

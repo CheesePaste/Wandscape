@@ -120,11 +120,16 @@ enqueuer 吃掉世界 A，吐出世界 B 的参数池。解释器只看到世界
 {
   "type": "place",
   "at": "<表达式 → pos>",
-  "block": "<表达式 → string>"
+  "block": "<表达式 → string>",
+  "consumable": "<表达式 → string (optional)>"
 }
 ```
 
-→ 生成 `TransformOp.place(at, block)`
+→ 生成 `TransformOp.place(at, block, consumable)`
+
+`consumable` 为可选字段。指定时，执行前从 NPC 背包扣除 1 个对应物品；背包不足则抛 `ResourceShortageException`，任务进入 `AWAITING_RESOURCES`。省略时免费放置（向后兼容）。
+
+> **与物流系统的关系**：`consumable` 只做本地背包扣除，不触发物流动画。物品从仓库→NPC背包的视觉飞行由 `request_resource` 步骤（`ResourceRequestExecutor` + `ItemTransportManager`）负责。
 
 ### 2.2 `remove` — 拆除方块
 
@@ -389,6 +394,52 @@ enqueuer 吃掉世界 A，吐出世界 B 的参数池。解释器只看到世界
   ]
 }
 ```
+
+### 4.1b 带消耗的建筑蓝图 `build:place_with_consumables`
+
+```json
+{
+  "id": "build:place_with_consumables",
+  "type": "blueprint",
+  "params": {
+    "offsets": "list<pos>",
+    "blocks": "map<string,string>",
+    "name": "string",
+    "anchor": "pos",
+    "material": "string"
+  },
+  "steps": [
+    {
+      "type": "request_resource",
+      "resource": "$material",
+      "amount": {"size": "$offsets"}
+    },
+    {
+      "type": "for_each",
+      "list": "$offsets",
+      "var": "off",
+      "steps": [
+        {
+          "type": "place",
+          "at": {"+": ["$anchor", "$off"]},
+          "block": {"get": ["$blocks", {"keyof": "$off"}]},
+          "consumable": "$material"
+        }
+      ]
+    },
+    {
+      "type": "emit_event",
+      "event": "build_complete",
+      "data": {
+        "building_name": "$name",
+        "blocks_placed": {"size": "$offsets"}
+      }
+    }
+  ]
+}
+```
+
+> `request_resource` 从仓库调度物品到 NPC 背包（触发 `ItemTransportManager` 物流动画），`place` 的 `consumable` 从背包扣除并放置方块。两阶段分离：物流归物流，消耗归消耗。
 
 ### 4.2 建筑 JSON 引用蓝图
 

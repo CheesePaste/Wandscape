@@ -2,30 +2,47 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
+import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import org.slf4j.Logger;
+import com.mojang.logging.LogUtils;
 
 /**
  * Shared logic for building WorkItems from building configs.
  */
 public final class EnqueueHelper {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    /** Guard: seed warehouse only once per session. */
+    private static boolean warehouseSeeded = false;
+
     private EnqueueHelper() {}
 
     /**
      * Register a building with {@link BuildingApi} if it hasn't been registered yet.
+     * On the first-ever registration, seeds the colony warehouse with starter items.
      *
      * @param pos            the anchor position
      * @param config         the building config
@@ -60,6 +77,13 @@ public final class EnqueueHelper {
                     config.queue().capacity()
             );
             api.registerBuilding(state);
+
+            // First building registered → seed warehouse so it has materials to build itself
+            if (!warehouseSeeded) {
+                warehouseSeeded = true;
+                seedBuilderWand(state.getColonyId());
+            }
+
             return true;
         } catch (IllegalStateException e) {
             return false;
@@ -93,6 +117,14 @@ public final class EnqueueHelper {
             if (config.boundary() != null) {
                 params.put("clear_offsets", computeClearOffsets(config));
             }
+            // material_list + material_counts: auto-computed from pattern → block_mapping
+            if (!params.containsKey("material_list")) {
+                var materialData = computeMaterialData(config);
+                if (materialData != null) {
+                    params.put("material_list", materialData.list());
+                    params.put("material_counts", materialData.counts());
+                }
+            }
         } else {
             blueprintId = "build:" + buildingTypeId;
             params.put("x", new JsonPrimitive(pos.getX()));
@@ -118,6 +150,29 @@ public final class EnqueueHelper {
             default -> null;
         };
     }
+
+    /**
+     * Compute deduped material_list + material_counts from pattern → block_mapping.
+     * Skips air blocks. Returns a record with list (unique types) and counts (type→total).
+     */
+    private static MaterialData computeMaterialData(BuildingConfig config) {
+        var counts = new java.util.LinkedHashMap<String, Integer>();
+        for (var offset : config.pattern()) {
+            String blockId = config.blockMapping().get(offset.toKey());
+            if (blockId == null || "minecraft:air".equals(blockId)) continue;
+            counts.merge(blockId, 1, Integer::sum);
+        }
+        if (counts.isEmpty()) return null;
+        JsonArray list = new JsonArray();
+        JsonObject map = new JsonObject();
+        for (var entry : counts.entrySet()) {
+            list.add(new JsonPrimitive(entry.getKey()));
+            map.addProperty(entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        return new MaterialData(list, map);
+    }
+
+    private record MaterialData(JsonArray list, JsonObject counts) {}
 
     private static JsonElement patternToJson(BuildingConfig config) {
         JsonArray arr = new JsonArray();
@@ -173,5 +228,53 @@ public final class EnqueueHelper {
         arr.add(pos.getY());
         arr.add(pos.getZ());
         return arr;
+    }
+
+    // ──────────────── Warehouse seed ────────────────
+
+    /**
+     * Seed the colony warehouse on first building registration.
+     * 1x builder_wand + 64 of every non-air block used by any building config.
+     */
+    private static void seedBuilderWand(UUID colonyId) {
+        if (colonyId == null) colonyId = new UUID(0, 0);
+        Level level = getServerLevel();
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) {
+            LOGGER.warn("[Enqueue] seedBuilderWand: ColonyItemBank not available");
+            return;
+        }
+
+        // 1x builder_wand
+        WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
+        if (preset != null) {
+            ItemKey wandKey = ItemKey.of("wandscape:wand", preset.nbt().copy());
+            if (bank.count(colonyId, wandKey) == 0) {
+                bank.add(colonyId, wandKey, 1);
+                LOGGER.info("[Enqueue] seeded builder_wand (colony={})",
+                        colonyId.toString().substring(0, 8));
+            }
+        }
+
+        // 64x of every unique non-air block across ALL building configs
+        Set<String> seen = new java.util.LinkedHashSet<>();
+        for (BuildingConfig cfg : BuildingConfigLoader.getInstance().getAll().values()) {
+            for (String blockId : cfg.blockMapping().values()) {
+                if ("minecraft:air".equals(blockId)) continue;
+                seen.add(blockId);
+            }
+        }
+        for (String blockId : seen) {
+            bank.add(colonyId, ItemKey.of(blockId, null), 64);
+        }
+
+        LOGGER.info("[Enqueue] seeded warehouse: builder_wand + 64x{} unique materials (colony={})",
+                seen.size(), colonyId.toString().substring(0, 8));
+    }
+
+    private static Level getServerLevel() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server != null ? server.overworld() : null;
     }
 }

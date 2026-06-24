@@ -89,7 +89,12 @@ public final class BlueprintInterpreter {
             case StepNode.PlaceStep s -> {
                 GridPos at = evalPos(s.at(), context, "place.at");
                 BlockType block = new BlockType(evalString(s.block(), context, "place.block"));
-                yield List.of(AtomicOp.TransformOp.place(at, block));
+                ResourceStack consumable = null;
+                if (s.consumable() != null) {
+                    String resourceId = evalString(s.consumable(), context, "place.consumable");
+                    consumable = new ResourceStack(new ResourceId(resourceId), 1);
+                }
+                yield List.of(AtomicOp.TransformOp.place(at, block, consumable));
             }
             case StepNode.RemoveStep s -> {
                 GridPos at = evalPos(s.at(), context, "remove.at");

@@ -16,8 +16,17 @@ public sealed interface StepNode {
     /**
      * Place a block. JSON type: {@code "place"}.
      * → {@link com.wsteam.wandscape.core.op.AtomicOp.TransformOp#place}
+     *
+     * @param consumable optional expression evaluating to the resource to consume
+     *                   from NPC inventory (e.g. "minecraft:stone_bricks").
+     *                   {@code null} means free placement (no consumption).
      */
-    record PlaceStep(ExprNode at, ExprNode block) implements StepNode {}
+    record PlaceStep(ExprNode at, ExprNode block, @javax.annotation.Nullable ExprNode consumable) implements StepNode {
+        /** Backward-compat: place without consumable. */
+        public PlaceStep(ExprNode at, ExprNode block) {
+            this(at, block, null);
+        }
+    }
 
     /**
      * Remove/break a block. JSON type: {@code "remove"}.
