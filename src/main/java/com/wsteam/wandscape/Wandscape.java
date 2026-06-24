@@ -14,6 +14,7 @@ import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
@@ -384,6 +385,7 @@ public class Wandscape {
                 .then(FillBuildingCommand.fillNode())
                 .then(ManaCommand.node())
                 .then(NavTestCommand.node())
+                .then(ColonyCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
                 .then(RoadCommand.node())
                 .then(RoadTestCommand.node())

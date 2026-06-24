@@ -87,7 +87,7 @@ public class SchedulerSystem implements System {
             WandCarrier wc = world.get(eid, WandCarrier.class);
             ManaPool mp = world.get(eid, ManaPool.class);
             ColonyMember cm = world.get(eid, ColonyMember.class);
-            Log.debug(TAG, "  idle NPC %d colony=%s caps=%s mana=%.1f/%d",
+            Log.info(TAG, "  idle NPC %d colony=%s caps=%s mana=%.1f/%d",
                     eid,
                     cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
                     wc != null ? wc.capabilities().toString() : "null",
@@ -153,6 +153,22 @@ public class SchedulerSystem implements System {
                     colonyNpcs.remove(bestNpc); // NPC is now busy
                     if (colonyNpcs.isEmpty()) break;
                     continue; // next task
+                }
+
+                // No NPC matched — log why
+                if (!task.requirements.isEmpty() && !colonyNpcs.isEmpty()) {
+                    for (long npcId : colonyNpcs) {
+                        WandCarrier wc = world.get(npcId, WandCarrier.class);
+                        ManaPool mp = world.get(npcId, ManaPool.class);
+                        ColonyMember cm = world.get(npcId, ColonyMember.class);
+                        Log.warn(TAG, "  NO_MATCH task #%d '%s' reqs=%s npc=%d colony=%s caps=%s mana=%.1f/%d isEmpty=%b",
+                                task.id, task.sequence.label(), task.requirements, npcId,
+                                cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
+                                wc != null ? wc.capabilities().toString() : "null",
+                                mp != null ? mp.current() : -1,
+                                mp != null ? mp.max() : -1,
+                                mp != null ? mp.isEmpty() : true);
+                    }
                 }
 
                 // No NPC satisfies the task requirements.

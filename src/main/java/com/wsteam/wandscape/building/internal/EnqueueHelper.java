@@ -84,8 +84,12 @@ public final class EnqueueHelper {
 
             // First building registered → seed warehouse so it has materials to build itself
             if (!warehouseSeeded) {
-                warehouseSeeded = true;
-                seedBuilderWand(state.getColonyId());
+                boolean ok = seedBuilderWand(state.getColonyId());
+                if (ok) {
+                    warehouseSeeded = true;
+                } else {
+                    LOGGER.warn("[Enqueue] warehouse seed failed — will retry on next registration");
+                }
             }
 
             return true;
@@ -240,14 +244,14 @@ public final class EnqueueHelper {
      * Seed the colony warehouse on first building registration.
      * 1x builder_wand + 64 of every non-air block used by any building config.
      */
-    private static void seedBuilderWand(UUID colonyId) {
+    private static boolean seedBuilderWand(UUID colonyId) {
         if (colonyId == null) colonyId = new UUID(0, 0);
         Level level = getServerLevel();
-        if (level == null) return;
+        if (level == null) return false;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) {
             LOGGER.warn("[Enqueue] seedBuilderWand: ColonyItemBank not available");
-            return;
+            return false;
         }
 
         // 1x builder_wand
@@ -275,6 +279,7 @@ public final class EnqueueHelper {
 
         LOGGER.info("[Enqueue] seeded warehouse: builder_wand + 64x{} unique materials (colony={})",
                 seen.size(), colonyId.toString().substring(0, 8));
+        return true;
     }
 
     private static Level getServerLevel() {

@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.CoreBootstrap;
+import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.ecs.World;
@@ -55,6 +56,9 @@ public final class EntityComponentBridge {
     /** NPCs that loaded before the engine was bootstrapped — flush on next tick. */
     private final List<WandscapeNpc> deferredJoins = new ArrayList<>();
 
+    /** Inventory items to fill after ECS join (keyed by NPC UUID). */
+    private final Map<UUID, java.util.List<com.wsteam.wandscape.core.types.ResourceStack>> deferredInventory = new ConcurrentHashMap<>();
+
     /** ECS component types that make up an NPC. */
     private static final Class<?>[] NPC_COMPONENTS = {
             com.wsteam.wandscape.core.component.Position.class,
@@ -66,6 +70,18 @@ public final class EntityComponentBridge {
     };
 
     private EntityComponentBridge() {}
+
+    /**
+     * Schedule inventory items to be filled into the NPC's ECS Inventory
+     * after it joins the ECS world.
+     *
+     * <p>Used by {@code ColonyCommand} to give the builder NPC its starter
+     * materials at colony creation time.
+     */
+    public void scheduleInventoryFill(UUID npcUuid, UUID colonyId,
+                                      java.util.List<com.wsteam.wandscape.core.types.ResourceStack> items) {
+        deferredInventory.put(npcUuid, items);
+    }
 
     // ================================================================
     // Deferred join (for NPCs loaded before engine bootstrap)
@@ -124,11 +140,27 @@ public final class EntityComponentBridge {
                             new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));
             npcByEcsId.put(npc.ecsEntityId, npc);
             ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
+            fillDeferredInventory(npc, world);
             return;
         }
 
         // Fresh registration (or cross-session: stale ecsEntityId from NBT)
         UUID colony = npc.colonyId != null ? npc.colonyId : PLACEHOLDER_COLONY;
+
+        // Auto-detect colony for spawn-egg NPCs that still have the default
+        if (PLACEHOLDER_COLONY.equals(colony)) {
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            if (colonyApi != null) {
+                UUID detected = colonyApi.getColonyId(npc.blockPosition());
+                if (detected != null) {
+                    colony = detected;
+                    npc.colonyId = detected;
+                    LOGGER.info("NPC {} auto-assigned to colony {} (spawn-egg detection)",
+                            npc.getUUID().toString().substring(0, 8),
+                            detected.toString().substring(0, 8));
+                }
+            }
+        }
 
         // Default capability: all NPCs can build at level 1.
         // This breaks the cold-start deadlock: NPC needs building capability
@@ -164,12 +196,41 @@ public final class EntityComponentBridge {
         LOGGER.info("NPC {} joined ECS as entity {} (colony={})",
                 npc.getUUID().toString().substring(0, 8), ecsId,
                 colony.toString().substring(0, 8));
+
+        // Fill deferred inventory items (e.g. from colony creation command)
+        fillDeferredInventory(npc, world);
+    }
+
+    /** Fill inventory items that were scheduled before ECS registration. */
+    private void fillDeferredInventory(WandscapeNpc npc, World world) {
+        java.util.List<com.wsteam.wandscape.core.types.ResourceStack> items =
+                deferredInventory.remove(npc.getUUID());
+        if (items == null || items.isEmpty()) return;
+
+        Long ecsId = ecsIdByUuid.get(npc.getUUID());
+        if (ecsId == null) return;
+
+        Inventory inv = world.get(ecsId, Inventory.class);
+        if (inv == null) {
+            LOGGER.warn("[Bridge] Cannot fill inventory — NPC {} has no Inventory component",
+                    npc.getUUID().toString().substring(0, 8));
+            return;
+        }
+
+        int added = 0;
+        for (com.wsteam.wandscape.core.types.ResourceStack stack : items) {
+            if (inv.add(stack)) added++;
+        }
+        LOGGER.info("[Bridge] Filled NPC {} inventory with {} stacks (colony={})",
+                npc.getUUID().toString().substring(0, 8), added,
+                npc.colonyId != null ? npc.colonyId.toString().substring(0, 8) : "?");
     }
 
     /** Clear all NPC→ECS mappings. Called on world reset to prevent cross-session collisions. */
     public void clear() {
         npcByEcsId.clear();
         ecsIdByUuid.clear();
+        deferredInventory.clear();
         LOGGER.info("EntityComponentBridge cleared — {} NPCs, {} UUIDs",
                 npcByEcsId.size(), ecsIdByUuid.size());
     }

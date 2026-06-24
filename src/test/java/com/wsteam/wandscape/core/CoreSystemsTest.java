@@ -751,7 +751,7 @@ public class CoreSystemsTest {
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
             // NPC starts with builder_wand in equippedWandIds —
-            // exactly what our EntityComponentBridge fix does.
+            // exactly what our EntityComponentBridge does.
             WandCarrier wand = new WandCarrier(
                     Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)),
                     1.0f, 1,

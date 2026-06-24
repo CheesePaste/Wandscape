@@ -130,26 +130,32 @@ public final class DefaultOpExecutors {
             ColonyResourceAccess resources = world.colonyResources;
             ResourceStack requested = op.requested();
 
-            // Shortage → signal to engine
-            if (!resources.hasEnough(requested.resource(), requested.amount())) {
-                return CompletableFuture.failedFuture(
-                        new ResourceShortageException(requested));
-            }
-
-            // Reserve → add to inventory → commit
-            if (!resources.reserve(requested.resource(), requested.amount())) {
-                return CompletableFuture.failedFuture(
-                        new ResourceShortageException(requested));
-            }
-
+            // Check NPC inventory first — only request shortfall from warehouse
             Inventory inv = world.get(npcId, Inventory.class);
-            if (inv == null || !inv.add(requested)) {
-                resources.release(requested.resource(), requested.amount());
+            int alreadyHas = inv != null ? inv.count(requested.resource()) : 0;
+            int shortfall = requested.amount() - alreadyHas;
+
+            if (shortfall <= 0) {
+                return CompletableFuture.completedFuture(null);
+            }
+
+            ResourceStack need = requested.withAmount(shortfall);
+            if (!resources.hasEnough(need.resource(), need.amount())) {
+                return CompletableFuture.failedFuture(
+                        new ResourceShortageException(requested));
+            }
+            if (!resources.reserve(need.resource(), need.amount())) {
+                return CompletableFuture.failedFuture(
+                        new ResourceShortageException(requested));
+            }
+
+            if (inv == null || !inv.add(need)) {
+                resources.release(need.resource(), need.amount());
                 return CompletableFuture.failedFuture(
                         new IllegalStateException("NPC " + npcId + " has no inventory"));
             }
 
-            resources.commit(requested.resource(), requested.amount());
+            resources.commit(need.resource(), need.amount());
             return CompletableFuture.completedFuture(null);
         }
     }
