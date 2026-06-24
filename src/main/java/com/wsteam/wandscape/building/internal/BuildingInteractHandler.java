@@ -61,7 +61,7 @@ public final class BuildingInteractHandler {
                     ColonyItemBank bank = ColonyItemBank.get(level);
                     Map<ItemKey, Long> snapshot = bank.getSnapshot(colonyId);
                     Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-                    var pkt = WarehouseDataPacket.from(snapshot, elemSnapshot);
+                    var pkt = WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot);
                     PacketDistributor.sendToPlayer(player, pkt);
                 }
             }

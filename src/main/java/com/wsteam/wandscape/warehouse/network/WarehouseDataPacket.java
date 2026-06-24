@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -23,7 +25,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet carrying warehouse item and element data for GUI display.
  * Sent once when the player opens the warehouse screen.
  */
-public record WarehouseDataPacket(ListTag items, ListTag elements) implements CustomPacketPayload {
+public record WarehouseDataPacket(BlockPos buildingPos, UUID colonyId,
+                                   ListTag items, ListTag elements) implements CustomPacketPayload {
 
     public static final Type<WarehouseDataPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "warehouse_data"));
@@ -36,8 +39,9 @@ public record WarehouseDataPacket(ListTag items, ListTag elements) implements Cu
         return TYPE;
     }
 
-    /** Build packet from item and element snapshots. */
-    public static WarehouseDataPacket from(Map<ItemKey, Long> itemSnapshot,
+    /** Build packet from position, colony, and item/element snapshots. */
+    public static WarehouseDataPacket from(BlockPos buildingPos, UUID colonyId,
+                                            Map<ItemKey, Long> itemSnapshot,
                                             Map<ElementType, Long> elementSnapshot) {
         ListTag itemList = new ListTag();
         for (var entry : itemSnapshot.entrySet()) {
@@ -58,7 +62,7 @@ public record WarehouseDataPacket(ListTag items, ListTag elements) implements Cu
             elemList.add(tag);
         }
 
-        return new WarehouseDataPacket(itemList, elemList);
+        return new WarehouseDataPacket(buildingPos, colonyId, itemList, elemList);
     }
 
     /** Decode item list for client rendering. */
@@ -114,6 +118,8 @@ public record WarehouseDataPacket(ListTag items, ListTag elements) implements Cu
 
     static void write(RegistryFriendlyByteBuf buf, WarehouseDataPacket pkt) {
         CompoundTag wrapper = new CompoundTag();
+        wrapper.putLong("pos", pkt.buildingPos.asLong());
+        wrapper.putUUID("colony", pkt.colonyId);
         wrapper.put("itms", pkt.items);
         wrapper.put("elems", pkt.elements);
         buf.writeNbt(wrapper);
@@ -121,8 +127,14 @@ public record WarehouseDataPacket(ListTag items, ListTag elements) implements Cu
 
     static WarehouseDataPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag wrapper = buf.readNbt();
-        ListTag items = wrapper != null ? wrapper.getList("itms", Tag.TAG_COMPOUND) : new ListTag();
-        ListTag elems = wrapper != null ? wrapper.getList("elems", Tag.TAG_COMPOUND) : new ListTag();
-        return new WarehouseDataPacket(items, elems);
+        if (wrapper == null) {
+            return new WarehouseDataPacket(BlockPos.ZERO, new UUID(0, 0),
+                    new ListTag(), new ListTag());
+        }
+        BlockPos buildingPos = BlockPos.of(wrapper.getLong("pos"));
+        UUID colonyId = wrapper.contains("colony") ? wrapper.getUUID("colony") : new UUID(0, 0);
+        ListTag items = wrapper.getList("itms", Tag.TAG_COMPOUND);
+        ListTag elems = wrapper.getList("elems", Tag.TAG_COMPOUND);
+        return new WarehouseDataPacket(buildingPos, colonyId, items, elems);
     }
 }

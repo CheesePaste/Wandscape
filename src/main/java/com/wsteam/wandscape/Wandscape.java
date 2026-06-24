@@ -37,6 +37,7 @@ import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
+import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
@@ -274,6 +275,10 @@ public class Wandscape {
                         TaskQueueModifyPacket.TYPE,
                         TaskQueueModifyPacket.STREAM_CODEC,
                         TaskQueueModifyPacket::handleServer)
+                .playToServer(
+                        WarehouseActionPacket.TYPE,
+                        WarehouseActionPacket.STREAM_CODEC,
+                        WarehouseActionPacket::handleServer)
                 // ── Soul Projection ──
                 .playToServer(
                         ProjectionEnterPacket.TYPE,
