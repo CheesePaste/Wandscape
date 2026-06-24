@@ -34,8 +34,8 @@ import java.util.concurrent.CompletableFuture;
  * chain from the colony warehouse to the NPC.
  *
  * <p>Each item flies visually via {@link ItemTransportManager}.
- * All transports are chained serially; the returned future completes
- * when the last item arrives and is added to the NPC's inventory.
+ * All transports are started in parallel; the returned future completes
+ * when all items have arrived and are added to the NPC's inventory.
  *
  * <p>On resource shortage throws {@link ResourceShortageException}
  * (wrapped in a failed future), which the engine recognizes and
@@ -93,19 +93,18 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         String resourceName = requested.resource().id();
         int amount = requested.amount();
 
-        // 4. Build transport chain: one ItemEntity per item, serial
-        //    Plan the road route once for the whole batch.
+        // 4. Start all transports in parallel — one route, N item entities
         ItemKey itemKey = ItemKey.of(resourceName, null);
         List<RouteSegment> route = planRoute(colonyId, warehousePos, npcPos);
-        CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
-
+        @SuppressWarnings("unchecked")
+        CompletableFuture<Void>[] futures = new CompletableFuture[amount];
         for (int i = 0; i < amount; i++) {
-            chain = chain.thenCompose(v ->
-                    transporter.send(itemKey, warehousePos, npcPos, npc.level(), npcId, route));
+            futures[i] = transporter.send(itemKey, warehousePos, npcPos, npc.level(), npcId, route);
         }
+        CompletableFuture<Void> allArrived = CompletableFuture.allOf(futures);
 
         // 5. On all arrivals: add to inventory + commit
-        chain = chain.thenRun(() -> {
+        allArrived.thenRun(() -> {
             Inventory inv = world.get(npcId, Inventory.class);
             if (inv == null || !inv.add(requested)) {
                 // Inventory full — items lost (NPC should have been checked earlier)
@@ -127,7 +126,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         LOGGER.info("[ResourceReq] NPC {} requesting {} x {}",
                 npcId, amount, resourceName);
 
-        return chain;
+        return allArrived;
     }
 
     // ── Helpers (shared logic with WandEquipExecutor) ──
