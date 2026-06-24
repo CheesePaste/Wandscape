@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 
@@ -21,68 +22,70 @@ public final class ColonyApiImpl implements ColonyApi {
     private static final int MAX_COLONY_RANGE = 256;
     private static volatile ColonyApiImpl instance;
 
-    private final Map<BlockPos, UUID> townHalls = new ConcurrentHashMap<>();
-    private final Map<UUID, BlockPos> colonyToHall = new ConcurrentHashMap<>();
+    /** Colony origin → colony UUID (spatial index). */
+    private final Map<BlockPos, UUID> colonyOrigins = new ConcurrentHashMap<>();
+
+    /** Colony UUID → origin position (reverse lookup). */
+    private final Map<UUID, BlockPos> colonyToOrigin = new ConcurrentHashMap<>();
 
     private ColonyApiImpl() {}
 
-    // ── Query ───────────────────────────────────────────────────────────────
+    // ── Lifecycle ──────────────────────────────────────────────────────────
 
     @Override
-    public UUID createColony(BlockPos townHallPos) {
-        UUID existing = townHalls.get(townHallPos);
+    public UUID createColony(BlockPos origin) {
+        UUID existing = colonyOrigins.get(origin);
         if (existing != null) return existing;
 
         UUID colonyId = UUID.randomUUID();
-        townHalls.put(townHallPos, colonyId);
-        colonyToHall.put(colonyId, townHallPos);
-        LOGGER.info("[Colony] Created colony {} at town_hall {}",
-                colonyId.toString().substring(0, 8), townHallPos);
+        colonyOrigins.put(origin, colonyId);
+        colonyToOrigin.put(colonyId, origin);
+        LOGGER.info("[Colony] Created colony {} at origin {}",
+                colonyId.toString().substring(0, 8), origin);
         return colonyId;
     }
+
+    @Override
+    public void deleteColony(UUID colonyId) {
+        BlockPos origin = colonyToOrigin.remove(colonyId);
+        if (origin != null) {
+            colonyOrigins.remove(origin);
+            LOGGER.info("[Colony] Deleted colony {} (origin {})",
+                    colonyId.toString().substring(0, 8), origin);
+            BuildingSavedData sd = getSavedData();
+            if (sd != null) {
+                for (BuildingData bd : sd.getAllBuildings()) {
+                    if (colonyId.equals(bd.getColonyId())) {
+                        setColonyId(bd, null);
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Spatial lookup ────────────────────────────────────────────────────
 
     @Override
     @Nullable
     public UUID getColonyId(BlockPos pos) {
         BlockPos nearest = null;
         double nearestDist = Double.MAX_VALUE;
-        for (BlockPos hall : townHalls.keySet()) {
-            double d = Math.sqrt(pos.distSqr(hall));
+        for (BlockPos origin : colonyOrigins.keySet()) {
+            double d = Math.sqrt(pos.distSqr(origin));
             if (d < nearestDist && d <= MAX_COLONY_RANGE) {
                 nearestDist = d;
-                nearest = hall;
+                nearest = origin;
             }
         }
-        return nearest != null ? townHalls.get(nearest) : null;
+        return nearest != null ? colonyOrigins.get(nearest) : null;
     }
 
     @Override
-    public boolean isColonyBlock(BlockPos pos) {
-        return townHalls.containsKey(pos);
+    public boolean isColonyOrigin(BlockPos pos) {
+        return colonyOrigins.containsKey(pos);
     }
 
-    @Override
-    public void deleteColony(UUID colonyId) {
-        BlockPos hall = colonyToHall.remove(colonyId);
-        if (hall != null) {
-            townHalls.remove(hall);
-            LOGGER.info("[Colony] Deleted colony {} (was at town_hall {})",
-                    colonyId.toString().substring(0, 8), hall);
-            BuildingSavedData sd = getSavedData();
-            if (sd != null) {
-                boolean dirty = false;
-                for (BuildingData bd : sd.getAllBuildings()) {
-                    if (colonyId.equals(bd.getColonyId())) {
-                        setColonyId(bd.getPosition(), null);
-                        dirty = true;
-                    }
-                }
-                if (dirty) sd.setDirty();
-            }
-        }
-    }
-
-    // ── Event hooks ─────────────────────────────────────────────────────────
+    // ── Event hooks ───────────────────────────────────────────────────────
 
     @Override
     @Nullable
@@ -93,10 +96,10 @@ public final class ColonyApiImpl implements ColonyApi {
             // it's an orphan — refuse to assign it.
             UUID existing = getColonyId(data.getPosition());
             if (existing != null) {
-                townHalls.put(data.getPosition(), existing);
-                colonyToHall.put(existing, data.getPosition());
-                setColonyId(data.getPosition(), existing);
-                LOGGER.info("[Colony] Town hall at {} linked to existing colony {}",
+                colonyOrigins.put(data.getPosition(), existing);
+                colonyToOrigin.put(existing, data.getPosition());
+                setColonyId(data, existing);
+                LOGGER.info("[Colony] Town hall at {} linked to colony {}",
                         data.getPosition(), existing.toString().substring(0, 8));
                 return existing;
             }
@@ -107,7 +110,7 @@ public final class ColonyApiImpl implements ColonyApi {
         }
         UUID colonyId = getColonyId(data.getPosition());
         if (colonyId != null) {
-            setColonyId(data.getPosition(), colonyId);
+            setColonyId(data, colonyId);
             LOGGER.info("[Colony] Assigned {} at {} to colony {}",
                     data.getBuildingTypeId(), data.getPosition(),
                     colonyId.toString().substring(0, 8));
@@ -128,28 +131,28 @@ public final class ColonyApiImpl implements ColonyApi {
         if (data.getColonyId() != null) return;
         UUID colonyId = getColonyId(data.getPosition());
         if (colonyId != null) {
-            setColonyId(data.getPosition(), colonyId);
+            setColonyId(data, colonyId);
         }
     }
 
     @Override
     public void rebuildFromSavedData() {
-        townHalls.clear();
-        colonyToHall.clear();
+        colonyOrigins.clear();
+        colonyToOrigin.clear();
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;
         for (BuildingData bd : sd.getAllBuildings()) {
             if ("town_hall".equals(bd.getBuildingTypeId())
                     && bd.isStructureIntact()
                     && bd.getColonyId() != null) {
-                townHalls.put(bd.getPosition(), bd.getColonyId());
-                colonyToHall.put(bd.getColonyId(), bd.getPosition());
+                colonyOrigins.put(bd.getPosition(), bd.getColonyId());
+                colonyToOrigin.put(bd.getColonyId(), bd.getPosition());
             }
         }
-        LOGGER.info("[Colony] Rebuilt index: {} colonies from saved data", townHalls.size());
+        LOGGER.info("[Colony] Rebuilt index: {} colonies from saved data", colonyOrigins.size());
     }
 
-    // ── Singleton ───────────────────────────────────────────────────────────
+    // ── Singleton ─────────────────────────────────────────────────────────
 
     public static ColonyApiImpl get() {
         if (instance == null) {
@@ -160,7 +163,7 @@ public final class ColonyApiImpl implements ColonyApi {
         return instance;
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────
 
     @Nullable
     private static BuildingSavedData getSavedData() {
@@ -169,13 +172,21 @@ public final class ColonyApiImpl implements ColonyApi {
         return BuildingSavedData.get(server.overworld());
     }
 
-    private void setColonyId(BlockPos pos, @Nullable UUID colonyId) {
-        BuildingSavedData sd = getSavedData();
-        if (sd == null) return;
-        BuildingData bd = sd.getBuildingAt(pos);
-        if (bd instanceof com.wsteam.wandscape.building.internal.BuildingState bs) {
+    /**
+     * Set colonyId directly on a {@link BuildingState} reference.
+     *
+     * <p><b>IMPORTANT:</b> Do NOT use {@code getBuildingAt(pos)} for this — the
+     * positional lookup relies on {@code posIndex} (only rebuilt from
+     * BuildingConfig patterns, empty after server restart) and
+     * {@code chunkIndex → bounds.isInside(anchor)} (only works when the anchor
+     * lies inside the bounding box).  The caller already holds the live
+     * {@link BuildingState} reference, so use it directly.
+     */
+    private void setColonyId(BuildingData data, @Nullable UUID colonyId) {
+        if (data instanceof BuildingState bs) {
             bs.setColonyId(colonyId);
-            sd.setDirty();
+            BuildingSavedData sd = getSavedData();
+            if (sd != null) sd.setDirty();
         }
     }
 }

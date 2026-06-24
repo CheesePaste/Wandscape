@@ -5,10 +5,17 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 
 public interface ColonyApi {
-    UUID createColony(BlockPos townHallPos);
+    /** Register a new colony at the given origin. Returns its UUID. */
+    UUID createColony(BlockPos origin);
+
+    /** Find the nearest colony UUID within 256 blocks of pos, or null. */
     UUID getColonyId(BlockPos pos);
+
+    /** Remove a colony and clear its building associations. */
     void deleteColony(UUID colonyId);
-    boolean isColonyBlock(BlockPos pos);
+
+    /** True if pos is a registered colony origin. */
+    boolean isColonyOrigin(BlockPos pos);
 
     // Called by BuildCompleteListener when a building becomes intact.
     // Returns the colonyId assigned, or null if none found.

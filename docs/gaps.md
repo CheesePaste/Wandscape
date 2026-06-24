@@ -142,6 +142,71 @@ WandEquipExecutor 通过 `npc.setItemInHand()` 修改手持，该调用通过 En
 2. 用 debug 日志跟踪 `BuildingTaskSource.poll()` 发布时机与 Scheduler 心跳的对应关系，确认 Layer 3 是否真的被 Layer 1 修复"顺便"覆盖
 3. 如果 Layer 2/3 问题确实还存在，需要更细粒度的修复（如仅在 BuildingTaskSource 发布路径加独占，而不是全面拦截）
 
+## Bug 记录：`setColonyId` 静默吞失败 —— 殖民地分配的幽灵bug（2026-06-24）
+
+### 现象
+
+- `create` 后 `fill town_hall` → 建筑建成，`colonyId = null`
+- 同位置第二次建 warehouse → `colonyId` 突然正常
+- 第三次及之后 → 全都正常
+- 退出世界重进 → 再次建造 → `colonyId = null`，回到解放前
+- **无任何日志、无任何异常、无任何警告。** 纯纯的静默失败，像你那个从来不回消息的前任。
+
+### 根因
+
+`ColonyApiImpl.setColonyId()` 原实现是他妈的绝世烂活：
+
+```java
+// 旧代码 —— 别学，这是反面教材
+private void setColonyId(BlockPos pos, @Nullable UUID colonyId) {
+    BuildingSavedData sd = getSavedData();
+    if (sd == null) return;
+    BuildingData bd = sd.getBuildingAt(pos);  // ← 罪魁祸首
+    if (bd instanceof BuildingState bs) {
+        bs.setColonyId(colonyId);              // ← 永远走不到这行
+        sd.setDirty();
+    }
+}
+```
+
+`getBuildingAt(pos)` 的查找链是个三层漏斗，每一层都能把你坑死：
+
+1. **`posIndex.get(pos)`** — 这个 Map 只存 **anchor + pattern偏移** 的方块位置。anchor 本身？不存。除非你 pattern 里恰好有个 `(0,0,0)` 的方块，否则 anchor 坐标永远不在 posIndex 里。**第一层漏斗：90% 的建筑直接掉下去。**
+
+2. **chunkIndex fallback** — 遍历同 chunk 的建筑，检查 `bounds.isInside(pos)`。但 anchor 不一定在 boundary 里面！boundary = `[anchor+min, anchor+max]`，如果 min 不是 `(0,0,0)`，anchor 在 boundary 外面。**第二层漏斗：你又掉下去了。**
+
+3. **服务器重启后 posIndex 为空** — `BuildingSavedData.load()` 只重建 chunkIndex，不重建 posIndex（需要 BuildingConfig pattern，加载时没有）。**第三层漏斗：重启后你连第一层都没得掉，直接摔死。**
+
+三层全穿 → `getBuildingAt(anchor)` 返回 `null` → `bd instanceof BuildingState` 是 `false` → **整个 `setColonyId` 方法体被跳过，colonyId 永远写不进去。** 而且没有任何日志。调用方 `assignColonyIfPossible` 和 `onBuildingIntact` 里的 `getColonyId()` 明明**查到了正确的 UUID**，但就是写不回去——查到了，塞不进，就像你明明记得密码但输入框被 disabled 了一样操蛋。
+
+为什么 warehouse 反而正常？因为它的 anchor 碰巧落在 boundary 内部，`isInside` 返回 true。纯属撞大运，不是设计正确。
+
+### 修复
+
+`setColonyId` 改签名为 `setColonyId(BuildingData data, UUID colonyId)`，**直接 cast 写引用。** 调用方本来就他妈持有 `BuildingState` 引用（`assignColonyIfPossible(BuildingData data)`、`onBuildingIntact(BuildingData data)`），兜一个大圈通过 BlockPos 反查纯属脱裤子放屁。
+
+```java
+// 新代码
+private void setColonyId(BuildingData data, @Nullable UUID colonyId) {
+    if (data instanceof BuildingState bs) {
+        bs.setColonyId(colonyId);
+        BuildingSavedData sd = getSavedData();
+        if (sd != null) sd.setDirty();
+    }
+}
+```
+
+### 教训
+
+1. **有对象引用就别反查。** 通过坐标回查存储层等同于你拿着钥匙还去撬锁——傻逼且不可靠。
+2. **静默失败是最大的恶。** 如果 `getBuildingAt` 返回 null 时打一行 `LOGGER.warn`，这 bug 分分钟抓到。不记日志的 fallback 不是防御性编程，是埋地雷。
+3. **变量名是文档。** `townHalls` 里存的是殖民地原点不是 town_hall 建筑，命名诈骗协助隐藏了这个问题。已重命名为 `colonyOrigins`。
+
+### 连带修复
+
+- `ColonyCommand.createColony()` 删除了预注册 town_hall 的逻辑（Step 6）——那是个永远不会被建造的僵尸 BuildingState，create 只负责注册殖民地 UUID + 生成 NPC，建筑由 `fill` 命令独立触发。
+- `townHalls` → `colonyOrigins`，`colonyToHall` → `colonyToOrigin`，`isColonyBlock` → `isColonyOrigin`，`townHallPos` → `origin`。
+
 ## 后续待办
 - 多人游戏同步（底层模型已兼容，需网络包+权限UI）
 - 性能压测（100+ NPC、50+ 建筑场景）

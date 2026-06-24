@@ -18,7 +18,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.EnqueueHelper;
+
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.ResourceId;
@@ -164,17 +164,10 @@ public final class ColonyCommand {
             }
         }
 
-        // ── Step 6: pre-register town_hall building ─────────────────────────
-        try {
-            EnqueueHelper.registerIfAbsent(origin, townHallConfig, "town_hall");
-        } catch (Exception e) {
-            LOGGER.warn("[Colony] Could not pre-register town_hall: {}", e.getMessage());
-        }
-
-        // ── Step 7: fire event ──────────────────────────────────────────────
+        // ── Step 6: fire event ──────────────────────────────────────────────
         NeoForge.EVENT_BUS.post(new ColonyCreatedEvent(colonyId, origin));
 
-        // ── Step 8: reply ───────────────────────────────────────────────────
+        // ── Step 7: reply ───────────────────────────────────────────────────
         int materialTypes = computeUniqueBlockTypes(townHallConfig);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "[Wandscape] Colony '" + name + "' created!\n" +
