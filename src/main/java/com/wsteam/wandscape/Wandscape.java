@@ -47,6 +47,8 @@ import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.projection.network.ProjectionNetwork;
+import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
+import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.task.internal.TaskApiImpl;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
@@ -289,7 +291,16 @@ public class Wandscape {
                         ProjectionPlacePacket.TYPE,
                         ProjectionPlacePacket.STREAM_CODEC,
                         (packet, ctx) -> ProjectionPlacePacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()));
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        BuildingDebugRequestPacket.TYPE,
+                        BuildingDebugRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingDebugRequestPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        BuildingDebugResponsePacket.TYPE,
+                        BuildingDebugResponsePacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingDebugResponsePacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

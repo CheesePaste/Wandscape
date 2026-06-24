@@ -12,6 +12,8 @@ import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
+import com.wsteam.wandscape.projection.client.BuildingDebugController;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
@@ -29,6 +31,7 @@ import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.api.distmarker.Dist;
@@ -78,15 +81,20 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping DEBUG_TOGGLE = new KeyMapping(
+            "key.wandscape.debug",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_G,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
-        // Register game-bus listeners on the NeoForge EVENT_BUS (not mod bus)
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
-        // Road editor renderer (+ tick handler for hover/input)
         RoadEditorRenderer.register();
-        // Soul projection renderer (+ flight controller)
         ProjectionRenderer.register();
         ProjectionFlightController.register();
+        BuildingDebugController.register();
     }
 
     @SubscribeEvent
@@ -139,6 +147,7 @@ public class WandscapeClient {
         event.register(OPEN_UI_EDITOR);
         event.register(OPEN_TASK_EDITOR);
         event.register(PROJECTION_TOGGLE);
+        event.register(DEBUG_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
@@ -166,6 +175,9 @@ public class WandscapeClient {
                 // Normal → Projection
                 PacketDistributor.sendToServer(new ProjectionEnterPacket());
             }
+        }
+        while (DEBUG_TOGGLE.consumeClick()) {
+            BuildingDebugController.toggle();
         }
     }
 
