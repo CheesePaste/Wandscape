@@ -90,9 +90,10 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void npcWithoutMatchingRequirements_failsImmediately() {
-            // Task requires RITUAL:3 — npcHighRange has no RITUAL, npcHighLevel has BUILDING only
-            // → no NPC qualifies and no wand in warehouse → task fails immediately
+        void npcWithoutMatchingRequirements_retriesBeforeFail() {
+            // Task requires RITUAL:3 — no NPC qualifies and no wand in warehouse.
+            // Scheduler no longer fails immediately; it retries for ~3s (30 heartbeats)
+            // before failing, so wand return transport has time to complete.
             registerSimpleBp("test:ritual_req",
                     new AtomicOp.RitualOp(RitualId.WARDING, center));
 
@@ -103,12 +104,21 @@ public class CoreSystemsTest {
                     10, List.of(), Map.of());
             long taskId = world.taskPool.addTask(task);
 
+            // After a few heartbeats: still retrying, not failed yet
             tickN(10);
 
             GlobalTask t = world.taskPool.get(taskId);
+            assertEquals(TaskState.PENDING_ASSIGN, t.state,
+                    "After 10 ticks (5 heartbeats) task should still be PENDING_ASSIGN");
+            assertTrue(t.schedulerRetryCount > 0, "Retry counter should have incremented");
+
+            // After enough heartbeats to exceed MAX_RETRIES: task fails
+            int ticksToFail = 2 * 31; // MAX_RETRIES=30 + 1 margin, 2 ticks/heartbeat
+            tickN(ticksToFail);
+
+            t = world.taskPool.get(taskId);
             assertEquals(TaskState.FAILED, t.state,
-                    "No NPC has RITUAL:3 and no wand in warehouse → task fails");
-            assertEquals(0, t.stepIndex, "StepIndex must not advance");
+                    "After exceeding MAX_RETRIES, task should be FAILED");
             assertNotNull(t.failureReason, "failureReason must be set");
             assertInstanceOf(TaskFailureReason.WandRequirementUnmet.class, t.failureReason);
             var wr = (TaskFailureReason.WandRequirementUnmet) t.failureReason;

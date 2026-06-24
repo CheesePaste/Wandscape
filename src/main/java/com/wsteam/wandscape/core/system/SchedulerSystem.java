@@ -28,6 +28,13 @@ public class SchedulerSystem implements System {
     private static final int HEARTBEAT_INTERVAL = 2; // ticks between scheduling runs
     private int tickCounter = 0;
 
+    /**
+     * Maximum scheduler heartbeats a task stays in PENDING_ASSIGN without a
+     * matching NPC/wand before being failed so FailureAnalyzer can recover.
+     * 30 × 2 ticks = 60 ticks ≈ 3 seconds. Covers wand return transport window.
+     */
+    private static final int MAX_RETRIES = 30;
+
     private static final String TAG = "Scheduler";
 
     @Nullable
@@ -136,6 +143,7 @@ public class SchedulerSystem implements System {
                 }
 
                 if (bestNpc >= 0) {
+                    task.schedulerRetryCount = 0; // reset retries on successful match
                     taskPool.assign(task.id, bestNpc, world);
                     // Reset wand idle timer — NPC is no longer idle
                     TaskExecutor assignedExec = world.get(bestNpc, TaskExecutor.class);
@@ -177,12 +185,21 @@ public class SchedulerSystem implements System {
                 }
 
                 // No NPC satisfies the task requirements and no wand in warehouse.
-                // Fail immediately — this task can never be fulfilled.
+                // Don't fail immediately — a wand may be in transit (WandReturn).
+                // Retry up to MAX_RETRIES heartbeats (~3s), then let FailureAnalyzer recover.
                 if (!task.requirements.isEmpty()) {
-                    var reason = new TaskFailureReason.WandRequirementUnmet(task.requirements);
-                    taskPool.failTask(task.id, reason);
-                    Log.warn(TAG, "failed #%d '%s' reason=%s reqs=%s (no capable NPC or wand)",
-                            task.id, task.sequence.label(), reason, task.requirements);
+                    task.schedulerRetryCount++;
+                    if (task.schedulerRetryCount >= MAX_RETRIES) {
+                        var reason = new TaskFailureReason.WandRequirementUnmet(task.requirements);
+                        taskPool.failTask(task.id, reason);
+                        Log.warn(TAG, "failed #%d '%s' reason=%s reqs=%s after %d retries",
+                                task.id, task.sequence.label(), reason, task.requirements,
+                                task.schedulerRetryCount);
+                    } else {
+                        Log.debug(TAG, "no match for #%d '%s' reqs=%s (retry %d/%d)",
+                                task.id, task.sequence.label(), task.requirements,
+                                task.schedulerRetryCount, MAX_RETRIES);
+                    }
                 }
             }
         }

@@ -45,6 +45,13 @@ public class GlobalTask {
     @Nullable
     public TaskFailureReason failureReason;
 
+    /**
+     * How many times the Scheduler has seen this task with no matching NPC/wand.
+     * Reset on assignment. When this exceeds a threshold, the task is failed
+     * so FailureAnalyzer can attempt recovery (e.g. crafting a wand).
+     */
+    public int schedulerRetryCount;
+
     public GlobalTask(
             long id,
             TaskSequence sequence,

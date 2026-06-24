@@ -107,6 +107,7 @@ public class FailureAnalyzerSystem implements System {
             if (available >= task.awaitingResource.amount()) {
                 task.state = TaskState.PENDING_ASSIGN;
                 task.awaitingResource = null;
+                task.schedulerRetryCount = 0;
                 awakened++;
             }
         }
@@ -139,6 +140,7 @@ public class FailureAnalyzerSystem implements System {
             task.state = TaskState.PENDING_ASSIGN;
             task.assignedNpcId = null;
             task.failureReason = null;
+            task.schedulerRetryCount = 0;
             LOGGER.info("[FailureAnalyzer] wand for reqs={} found in warehouse → task #{} → PENDING_ASSIGN",
                     reqs, task.id);
             return;
