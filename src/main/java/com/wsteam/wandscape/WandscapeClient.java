@@ -22,6 +22,8 @@ import com.wsteam.wandscape.production.client.CraftingStationScreen;
 import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.shared.ui.task.TaskEditorScreen;
@@ -137,6 +139,10 @@ public class WandscapeClient {
                 cs.updateData(packet);
                 Minecraft.getInstance().setScreen(cs);
             }
+        });
+        TavernOpenPacket.setClientHandler(packet -> {
+            Minecraft.getInstance().setScreen(
+                    new TavernScreen(packet.buildingPos(), packet.colonyId()));
         });
         Wandscape.LOGGER.info("Wandscape client setup complete");
     }

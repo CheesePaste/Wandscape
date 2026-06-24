@@ -33,6 +33,8 @@ import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.network.TavernOpenPacket;
+import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
@@ -240,6 +242,10 @@ public class Wandscape {
                         CraftingStationPacket.STREAM_CODEC,
                         (packet, ctx) -> CraftingStationPacket.handleClient(packet))
                 .playToClient(
+                        TavernOpenPacket.TYPE,
+                        TavernOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> TavernOpenPacket.handleClient(packet))
+                .playToClient(
                         PotionStationPacket.TYPE,
                         PotionStationPacket.STREAM_CODEC,
                         (packet, ctx) -> PotionStationPacket.handleClient(packet))
@@ -279,6 +285,10 @@ public class Wandscape {
                         WarehouseActionPacket.TYPE,
                         WarehouseActionPacket.STREAM_CODEC,
                         WarehouseActionPacket::handleServer)
+                .playToServer(
+                        TavernRecruitPacket.TYPE,
+                        TavernRecruitPacket.STREAM_CODEC,
+                        TavernRecruitPacket::handleServer)
                 // ── Soul Projection ──
                 .playToServer(
                         ProjectionEnterPacket.TYPE,

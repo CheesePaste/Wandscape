@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -67,6 +68,12 @@ public final class BuildingInteractHandler {
             }
             case "workstation" -> openWorkstationGui(level, colonyId, event);
             case "crafting_station" -> openCraftingStationGui(level, colonyId, event);
+            case "tavern" -> {
+                if (event.getEntity() instanceof ServerPlayer player) {
+                    var pkt = new TavernOpenPacket(pos, colonyId);
+                    PacketDistributor.sendToPlayer(player, pkt);
+                }
+            }
             case "potion_station" -> {
                 if (event.getEntity() instanceof ServerPlayer player) {
                     player.displayClientMessage(Component.literal(
