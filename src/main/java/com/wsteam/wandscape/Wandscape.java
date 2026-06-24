@@ -407,6 +407,10 @@ public class Wandscape {
         var transporter = WandscapeEngine.getTransporter();
         if (transporter != null) transporter.tickAll();
 
+        // ①e Drive resource request staggered launches (1 item/tick from warehouse)
+        var resourceReqExec = WandscapeEngine.getResourceRequestExec();
+        if (resourceReqExec != null) resourceReqExec.tickAll();
+
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 

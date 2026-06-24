@@ -195,8 +195,10 @@ public final class EngineBootstrap {
 
         // 9e. Register resource request executor (replaces inline handling)
         //     Uses the transporter for visual item delivery from warehouse to NPC.
-        world.opExecutors.register(new ResourceRequestExecutor(transporter));
-        LOGGER.info("  ResourceRequestExecutor registered (visual transport)");
+        ResourceRequestExecutor resourceReqExec = new ResourceRequestExecutor(transporter);
+        world.opExecutors.register(resourceReqExec);
+        WandscapeEngine.setResourceRequestExec(resourceReqExec);
+        LOGGER.info("  ResourceRequestExecutor registered (visual transport, staggered)");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

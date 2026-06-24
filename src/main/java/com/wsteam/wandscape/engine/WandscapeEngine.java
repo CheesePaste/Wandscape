@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
+import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
@@ -46,6 +47,8 @@ public final class WandscapeEngine {
     private static com.wsteam.wandscape.engine.road.RoadSavedData roadSavedData;
     @Nullable
     private static com.wsteam.wandscape.engine.transport.ItemTransportManager transporter;
+    @Nullable
+    private static ResourceRequestExecutor resourceRequestExec;
 
     private WandscapeEngine() {}
 
@@ -112,4 +115,8 @@ public final class WandscapeEngine {
     @Nullable
     public static com.wsteam.wandscape.engine.transport.ItemTransportManager getTransporter() { return transporter; }
     public static void setTransporter(com.wsteam.wandscape.engine.transport.ItemTransportManager t) { transporter = t; }
+
+    @Nullable
+    public static ResourceRequestExecutor getResourceRequestExec() { return resourceRequestExec; }
+    public static void setResourceRequestExec(@Nullable ResourceRequestExecutor e) { resourceRequestExec = e; }
 }
