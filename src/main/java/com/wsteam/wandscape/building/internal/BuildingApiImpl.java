@@ -2,6 +2,7 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -321,7 +322,8 @@ public class BuildingApiImpl implements BuildingApi {
             }
             result.add(state.getBuildingId());
         }
-        LOGGER.debug("[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
+
+        LOGGER.info("[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
                 colonyId != null ? colonyId.toString().substring(0, 8) : "null",
                 category, result.size(), total, skippedColony, skippedCat);
         return result;

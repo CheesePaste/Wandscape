@@ -251,7 +251,7 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
         BuildingApi buildingApi = WandscapeApis.getBuildingApi();
         if (buildingApi == null) return null;
 
-        List<UUID> storageIds = buildingApi.getBuildingsByCategory(colonyId, "storage");
+       List<UUID> storageIds = buildingApi.getBuildingsByCategory(colonyId, "storage");
         if (storageIds == null || storageIds.isEmpty()) return null;
 
         BlockPos nearest = null;

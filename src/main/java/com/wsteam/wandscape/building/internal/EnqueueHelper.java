@@ -83,7 +83,7 @@ public final class EnqueueHelper {
             ColonyApiImpl.get().assignColonyIfPossible(state);
 
             // First building registered → seed warehouse so it has materials to build itself
-            if (!warehouseSeeded) {
+            if (!warehouseSeeded && state.getColonyId() != null) {
                 boolean ok = seedBuilderWand(state.getColonyId());
                 if (ok) {
                     warehouseSeeded = true;

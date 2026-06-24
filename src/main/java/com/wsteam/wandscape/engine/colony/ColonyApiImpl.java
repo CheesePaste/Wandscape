@@ -88,7 +88,22 @@ public final class ColonyApiImpl implements ColonyApi {
     @Nullable
     public UUID onBuildingIntact(BuildingData data) {
         if ("town_hall".equals(data.getBuildingTypeId())) {
-            return createColony(data.getPosition());
+            // NEVER auto-create colonies. Only /wandscape colony create does that.
+            // If a town_hall is built outside any existing colony range,
+            // it's an orphan — refuse to assign it.
+            UUID existing = getColonyId(data.getPosition());
+            if (existing != null) {
+                townHalls.put(data.getPosition(), existing);
+                colonyToHall.put(existing, data.getPosition());
+                setColonyId(data.getPosition(), existing);
+                LOGGER.info("[Colony] Town hall at {} linked to existing colony {}",
+                        data.getPosition(), existing.toString().substring(0, 8));
+                return existing;
+            }
+            LOGGER.error("[Colony] Town hall built at {} but NO colony nearby! "
+                    + "Use '/wandscape colony create <name>' first, then build within 256 blocks.",
+                    data.getPosition());
+            return null;
         }
         UUID colonyId = getColonyId(data.getPosition());
         if (colonyId != null) {
