@@ -149,6 +149,7 @@ public final class BlueprintConfigLoader {
             case "for_each" -> parseForEach(obj);
             case "if" -> parseIf(obj);
             case "call" -> parseCall(obj);
+            case "parallel" -> parseParallel(obj);
             case "log" -> parseLog(obj);
             default -> {
                 Log.warn(TAG, "Unknown step type '%s', skipping step", type);
@@ -269,6 +270,11 @@ public final class BlueprintConfigLoader {
             }
         }
         return new StepNode.CallStep(blueprintId, with);
+    }
+
+    private StepNode parseParallel(JsonObject obj) {
+        List<StepNode> bodySteps = parseSteps(obj.getAsJsonArray("steps"));
+        return new StepNode.ParallelStep(bodySteps);
     }
 
     private StepNode parseLog(JsonObject obj) {

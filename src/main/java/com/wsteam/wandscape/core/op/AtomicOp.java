@@ -23,7 +23,8 @@ public sealed interface AtomicOp
                 AtomicOp.EmitEventOp,
                 AtomicOp.IfConditionOp,
                 AtomicOp.WandEquipOp,
-                AtomicOp.WandReturnOp {
+                AtomicOp.WandReturnOp,
+                AtomicOp.ParallelOp {
 
     /** Base mana cost for this operation (before wand efficiency). */
     float baseManaCost();
@@ -255,6 +256,33 @@ public sealed interface AtomicOp
         @Override
         public GridPos target() {
             return null; // executor resolves nearest storage building
+        }
+    }
+
+    /**
+     * Execute multiple sub-ops concurrently and await all results.
+     *
+     * <p>The engine launches every sub-op in parallel (matching executor per type),
+     * consumes the aggregate mana upfront, and advances the step counter by 1
+     * (past the entire group) once all sub-futures resolve.
+     *
+     * <p>Use in blueprints via {@code "type": "parallel"} with nested {@code steps}.
+     * Typical use-case: requesting multiple resource types simultaneously so
+     * all transport ItemEntities fly at once rather than one-by-one.
+     */
+    record ParallelOp(List<AtomicOp> steps) implements AtomicOp {
+        public ParallelOp {
+            steps = List.copyOf(steps);
+        }
+
+        @Override
+        public float baseManaCost() {
+            return 0; // each sub-op carries its own mana cost
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // positionless meta-op
         }
     }
 }

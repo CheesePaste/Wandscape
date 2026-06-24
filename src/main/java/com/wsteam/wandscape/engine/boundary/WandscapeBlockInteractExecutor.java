@@ -13,18 +13,27 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.event.ResourceFulfilled;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
+import com.wsteam.wandscape.core.road.PathPoint;
+import com.wsteam.wandscape.core.road.RoadRouter;
+import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
@@ -51,6 +60,7 @@ import net.minecraft.world.level.Level;
 public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.BlockInteractOp> {
 
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final int TRANSPORT_VISUAL_COUNT = 3; // max ItemEntities per action
 
     @Nullable
     private static ElementMappingLoader elementMappingLoader;
@@ -58,12 +68,18 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
     @Nullable
     private static ProductionRecipeLoader productionRecipeLoader;
 
+    private final ItemTransportManager transporter;
+
     public static void setElementMappingLoader(ElementMappingLoader loader) {
         elementMappingLoader = loader;
     }
 
     public static void setProductionRecipeLoader(ProductionRecipeLoader loader) {
         productionRecipeLoader = loader;
+    }
+
+    public WandscapeBlockInteractExecutor(ItemTransportManager transporter) {
+        this.transporter = transporter;
     }
 
     record Pending(CompletableFuture<Void> future, AtomicOp.BlockInteractOp op,
@@ -170,18 +186,17 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
         resources.addResource(new ResourceId(element), amount);
 
-        // Visual feedback on the NPC
-        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc != null && !npc.isRemoved()) {
-            for (int i = 0; i < 15; i++) {
-                double ox = (npc.getRandom().nextDouble() - 0.5) * 1.0;
-                double oy = npc.getRandom().nextDouble() * 2.0;
-                double oz = (npc.getRandom().nextDouble() - 0.5) * 1.0;
-                npc.level().addParticle(ParticleTypes.HAPPY_VILLAGER,
-                        npc.getX() + ox, npc.getY() + oy, npc.getZ() + oz,
-                        0, 0, 0);
-            }
+        // ── Transport visualization: elements fly NPC → warehouse ──
+        launchElementTransport(element, amount, world, npcId);
+
+        // ── Wake up any tasks waiting on this resource ──
+        if (world.eventBus != null) {
+            world.eventBus.emit(new ResourceFulfilled(new ResourceId(element), amount));
         }
+
+        // Completion sparkle
+        spawnCompletionParticles(npcId);
+
         LOGGER.info("block_interact gather complete: {} x{} → colony warehouse", element, amount);
     }
 
@@ -207,18 +222,15 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) return;
 
-        // Find colony ID from any storage building
         UUID colonyId = findStorageColonyId();
         ItemKey key = ItemKey.of(itemId, null);
 
-        // Check warehouse has enough items
         long available = bank.count(colonyId, key);
         if (available < count) {
             LOGGER.warn("decompose: insufficient items. need={} have={} item={}", count, available, itemId);
             return;
         }
 
-        // Get decompose yield from element mapping
         var blockState = BuiltInRegistries.BLOCK.get(ResourceLocation.tryParse(itemId));
         Map<ElementType, Long> yield = (blockState != null)
                 ? mappings.getDecomposeYield(blockState.defaultBlockState())
@@ -229,14 +241,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             return;
         }
 
-        // Consume items from warehouse
         bank.consume(colonyId, key, count);
 
-        // Add elements to warehouse
         ColonyResourceAccess resources = world.colonyResources;
         if (resources == null) {
             LOGGER.warn("decompose: colonyResources is null");
-            // Rollback: return items
             bank.add(colonyId, key, count);
             return;
         }
@@ -248,7 +257,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                     entry.getKey().name().toLowerCase(), total);
         }
 
-        spawnParticles(npcId);
+        spawnCompletionParticles(npcId);
     }
 
     private void executeSynthesize(Map<String, String> params, World world, long npcId) {
@@ -279,7 +288,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
-        // Check elements
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
@@ -288,17 +296,18 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
 
-        // Consume elements
         for (var entry : recipe.cost().entrySet()) {
             bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
         }
 
-        // Add output item
         ItemKey outputKey = ItemKey.of(recipe.outputItem(), null);
         bank.add(colonyId, outputKey, count);
 
+        // ── Transport visualization: crafted item flies NPC → warehouse ──
+        launchItemTransport(outputKey, count, world, npcId);
+
         LOGGER.info("synthesize: {} x{} → warehouse", recipe.outputItem(), count);
-        spawnParticles(npcId);
+        spawnCompletionParticles(npcId);
     }
 
     private void executeCraftWand(Map<String, String> params, World world, long npcId) {
@@ -329,7 +338,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
-        // Check elements
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
@@ -342,24 +350,24 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
         }
 
-        // Add output item with NBT
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(recipe.outputItem()));
         if (item == null) {
             LOGGER.warn("craft_wand: output item not found: {}", recipe.outputItem());
             return;
         }
 
-        // Create ItemStack with NBT via CustomData component
         ItemStack stack = new ItemStack(item, count);
         if (recipe.outputNbt() != null && !recipe.outputNbt().isEmpty()) {
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(recipe.outputNbt().copy()));
         }
 
-        // Insert into warehouse
         bank.add(colonyId, ItemKey.of(recipe.outputItem(), recipe.outputNbt().copy()), count);
 
+        // ── Transport visualization: wand flies NPC → warehouse ──
+        launchItemTransport(ItemKey.of(recipe.outputItem(), recipe.outputNbt().copy()), count, world, npcId);
+
         LOGGER.info("craft_wand: {} x{} → warehouse", recipe.outputItem(), count);
-        spawnParticles(npcId);
+        spawnCompletionParticles(npcId);
     }
 
     private void executeBrewPotion(Map<String, String> params, World world, long npcId) {
@@ -390,7 +398,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         UUID colonyId = findStorageColonyId();
 
-        // Check elements
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
@@ -399,7 +406,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
 
-        // Check input items
         for (String inputItemId : recipe.inputItems()) {
             ItemKey key = ItemKey.of(inputItemId, null);
             if (bank.available(colonyId, key) < count) {
@@ -408,21 +414,85 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
 
-        // Consume elements
         for (var entry : recipe.cost().entrySet()) {
             bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
         }
 
-        // Consume input items
         for (String inputItemId : recipe.inputItems()) {
             bank.consume(colonyId, ItemKey.of(inputItemId, null), count);
         }
 
-        // Add output
         bank.add(colonyId, ItemKey.of(recipe.outputItem(), null), count);
 
+        // ── Transport visualization: potion flies NPC → warehouse ──
+        launchItemTransport(ItemKey.of(recipe.outputItem(), null), count, world, npcId);
+
         LOGGER.info("brew_potion: {} x{} → warehouse", recipe.outputItem(), count);
-        spawnParticles(npcId);
+        spawnCompletionParticles(npcId);
+    }
+
+    // ── Transport helpers ──────────────────────────────────────────────────
+
+    /**
+     * Launch transport animation for gathered elements.
+     * Elements are abstract — map to a representative block for the visual ItemEntity.
+     */
+    private void launchElementTransport(String elementName, int amount, World world, long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        if (npc == null || npc.isRemoved()) return;
+
+        String itemId = resolveElementItem(elementName);
+        if (itemId == null) {
+            LOGGER.debug("gather transport: no visual item for element '{}', skipping", elementName);
+            return;
+        }
+
+        UUID colonyId = resolveColonyId(npc, world);
+        BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
+        BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
+        BlockPos from = npc.blockPosition();
+        List<RouteSegment> route = planRoute(colonyId, from, to);
+
+        ItemKey key = ItemKey.of(itemId, null);
+        int visualCount = Math.min(amount, TRANSPORT_VISUAL_COUNT);
+        for (int i = 0; i < visualCount; i++) {
+            transporter.send(key, from, to, npc.level(), npcId, route);
+        }
+        LOGGER.debug("gather transport: {} x{}({}) NPC→warehouse visual={}x{}",
+                elementName, amount, itemId, visualCount, itemId);
+    }
+
+    /** Launch transport animation for produced items (synthesize/craft_wand/brew_potion). */
+    private void launchItemTransport(ItemKey outputKey, int count, World world, long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        if (npc == null || npc.isRemoved()) return;
+
+        UUID colonyId = resolveColonyId(npc, world);
+        BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
+        BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
+        BlockPos from = npc.blockPosition();
+        List<RouteSegment> route = planRoute(colonyId, from, to);
+
+        int visualCount = Math.min(count, TRANSPORT_VISUAL_COUNT);
+        for (int i = 0; i < visualCount; i++) {
+            transporter.send(outputKey, from, to, npc.level(), npcId, route);
+        }
+        LOGGER.debug("production transport: {} x{}(visual={}) NPC→warehouse",
+                outputKey.itemId(), count, visualCount);
+    }
+
+    /** Map an element name to a representative MC block ID for visual transport. */
+    @Nullable
+    private static String resolveElementItem(String elementName) {
+        ElementType type;
+        try {
+            type = ElementType.valueOf(elementName.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        ElementMappingLoader mappings = elementMappingLoader;
+        if (mappings == null) return null;
+        return mappings.getRepresentativeBlock(type);
     }
 
     // ── Helpers ──
@@ -453,10 +523,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         return npc != null ? npc.level() : null;
     }
 
-    private void spawnParticles(long npcId) {
+    /** Brief sparkle particles on action completion. Transport handles the main visual. */
+    private void spawnCompletionParticles(long npcId) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc != null && !npc.isRemoved()) {
-            for (int i = 0; i < 15; i++) {
+            for (int i = 0; i < 5; i++) {
                 double ox = (npc.getRandom().nextDouble() - 0.5) * 1.0;
                 double oy = npc.getRandom().nextDouble() * 2.0;
                 double oz = (npc.getRandom().nextDouble() - 0.5) * 1.0;
@@ -469,7 +540,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
     /** Find the first storage building's colony ID, or fallback to default. */
     private static UUID findStorageColonyId() {
-        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+        var api = WandscapeApis.getBuildingApi();
         for (var bd : api.getColonyBuildings(null)) {
             if ("storage".equals(bd.getCategory()) && !bd.isShutdown()) {
                 UUID cid = bd.getColonyId();
@@ -477,5 +548,41 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         }
         return new UUID(0, 0);
+    }
+
+    private static UUID resolveColonyId(WandscapeNpc npc, World world) {
+        var member = world.get(npc.ecsEntityId, ColonyMember.class);
+        if (member != null && member.colonyId() != null) return member.colonyId();
+        return npc.colonyId != null ? npc.colonyId : new UUID(0, 0);
+    }
+
+    @Nullable
+    private static BlockPos findNearestStorage(UUID colonyId, BlockPos npcPos) {
+        BuildingApi api = WandscapeApis.getBuildingApi();
+        if (api == null) return null;
+        var ids = api.getBuildingsByCategory(colonyId, "storage");
+        if (ids == null || ids.isEmpty()) return null;
+        BlockPos nearest = null;
+        double best = Double.MAX_VALUE;
+        for (UUID id : ids) {
+            BuildingData bd = api.getBuilding(id);
+            if (bd == null || bd.isShutdown()) continue;
+            BlockPos p = bd.getPosition();
+            double d = p.distSqr(npcPos);
+            if (d < best) { best = d; nearest = p; }
+        }
+        return nearest;
+    }
+
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
+        try {
+            var roadApi = WandscapeApis.getRoadApi();
+            if (roadApi == null) return List.of();
+            return RoadRouter.plan(roadApi.getNetwork(colonyId),
+                    new PathPoint(from.getX(), from.getY(), from.getZ()),
+                    new PathPoint(to.getX(), to.getY(), to.getZ()));
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

@@ -173,17 +173,18 @@ public final class EngineBootstrap {
             LOGGER.info("  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 
-        // 9b. Override BlockInteractOp executor with async version.
-        //     Handles both sync actions (toggle/activate/open_gui) and
-        //     async actions (gather/decompose/synthesize) with configurable timing/mana.
-        WandscapeBlockInteractExecutor blockInteractExec = new WandscapeBlockInteractExecutor();
-        world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
-        WandscapeEngine.setBlockInteractExec(blockInteractExec);
-        LOGGER.info("  WandscapeBlockInteractExecutor active (sync + async actions)");
-
-        // 9c. Create shared item transport manager (visual item flight)
+        // 9b. Create shared item transport manager (visual item flight)
         ItemTransportManager transporter = new ItemTransportManager();
         WandscapeEngine.setTransporter(transporter);
+
+        // 9c. Override BlockInteractOp executor with async version.
+        //     Handles both sync actions (toggle/activate/open_gui) and
+        //     async actions (gather/decompose/synthesize) with configurable timing/mana.
+        //     Receives transporter for visual NPC→warehouse transport on production complete.
+        WandscapeBlockInteractExecutor blockInteractExec = new WandscapeBlockInteractExecutor(transporter);
+        world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
+        WandscapeEngine.setBlockInteractExec(blockInteractExec);
+        LOGGER.info("  WandscapeBlockInteractExecutor active (sync + async actions + transport)");
 
         // 9d. Register wand equip/return executors
         //     NPCs fetch wands from warehouse before executing tasks

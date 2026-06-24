@@ -178,6 +178,12 @@ public class TaskExecutionSystem implements System {
                 }
             }
 
+            // ---- 3.6. ParallelOp: launch all sub-ops concurrently via allOf ----
+            if (currentOp instanceof AtomicOp.ParallelOp par) {
+                executeParallel(par, world, npcId, exec, wc, registry);
+                return;
+            }
+
             // ---- 4. Mana check + consume (before execution, for both sync and async) ----
             boolean isPure = isPureOp(currentOp);
             if (!isPure) {
@@ -336,6 +342,75 @@ public class TaskExecutionSystem implements System {
         exec.releaseGlobalTask();
     }
 
+    /**
+     * Execute all sub-ops of a {@link AtomicOp.ParallelOp} concurrently.
+     * Mana is consumed for the sum of all sub-op costs upfront, then every
+     * sub-op is launched via its registered executor. The NPC waits on a
+     * single {@code allOf} future; when it resolves the step counter advances
+     * by 1 (past the whole group).
+     */
+    @SuppressWarnings("unchecked")
+    private void executeParallel(AtomicOp.ParallelOp par, World world, long npcId,
+                                 TaskExecutor exec, @Nullable WandCarrier wc,
+                                 OpExecutorRegistry registry) {
+        List<AtomicOp> subs = par.steps();
+        if (subs.isEmpty()) {
+            advanceStep(exec, npcId, 1, world);
+            exec.state = ExecutorState.ACTIVE;
+            return;
+        }
+
+        // ── Sum mana costs ──
+        float totalCost = 0;
+        for (AtomicOp sub : subs) {
+            if (!isPureOp(sub)) totalCost += sub.baseManaCost();
+        }
+
+        boolean isPrivate = !exec.isPrivateQueueEmpty();
+
+        // ── Mana check ──
+        if (!isPrivate && totalCost > 0) {
+            ManaPool mana = world.get(npcId, ManaPool.class);
+            if (mana == null || wc == null) return;
+            float actualCost = totalCost * wc.bestManaEfficiency();
+            if (mana.current() < actualCost) {
+                if (exec.globalTaskId != null && taskPool != null) {
+                    taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
+                    Log.info(TAG, "NPC %d — mana %.1f < %.1f total for %d parallel ops, released task",
+                            npcId, mana.current(), actualCost, subs.size());
+                }
+                exec.state = ExecutorState.IDLE;
+                exec.currentOpTarget = null;
+                exec.currentOpKind = null;
+                return;
+            }
+            mana.consume(actualCost);
+            Log.info(TAG, "NPC %d — mana -%.1f → %.1f/%d (parallel x%d)",
+                    npcId, actualCost, mana.current(), mana.max(), subs.size());
+        }
+
+        // ── Launch all sub-ops ──
+        CompletableFuture<Void>[] futures = new CompletableFuture[subs.size()];
+        for (int i = 0; i < subs.size(); i++) {
+            AtomicOp sub = subs.get(i);
+            OpExecutor<AtomicOp> subExec = (OpExecutor<AtomicOp>) (Object) registry.get(sub.getClass());
+            if (subExec != null) {
+                futures[i] = subExec.execute(sub, world, npcId);
+            } else {
+                Log.warn(TAG, "NPC %d — no executor for parallel sub-op %s",
+                        npcId, sub.getClass().getSimpleName());
+                futures[i] = CompletableFuture.completedFuture(null);
+            }
+        }
+
+        exec.pendingFuture = CompletableFuture.allOf(futures);
+        exec.pendingFutureIsNav = false;
+        exec.state = ExecutorState.ACTIVE;
+        exec.currentOpTarget = null;
+        exec.currentOpKind = "parallel";
+        Log.debug(TAG, "NPC %d — launched %d parallel ops, waiting for allOf", npcId, subs.size());
+    }
+
     private void advanceStep(TaskExecutor exec, long npcId, int delta, World world) {
         if (!exec.isPrivateQueueEmpty()) {
             exec.popPrivate();
@@ -361,6 +436,7 @@ public class TaskExecutionSystem implements System {
             case AtomicOp.RitualOp r      -> "ritual:" + r.ritual().id();
             case AtomicOp.BlockInteractOp b -> "block_interact:" + b.action().id();
             case AtomicOp.TransformOp t   -> "transform";
+            case AtomicOp.ParallelOp p    -> "parallel";
             default                       -> null;
         };
     }
@@ -389,23 +465,31 @@ public class TaskExecutionSystem implements System {
      */
     @Nullable
     static GridPos computeTaskStance(TaskSequence seq) {
-        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
-        boolean hasTarget = false;
+        int[] box = { Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE };
+        // box[0]=minX, box[1]=maxX, box[2]=minY, box[3]=minZ, box[4]=maxZ
+        boolean[] hasTarget = { false };
 
         for (int i = 0; i < seq.size(); i++) {
-            GridPos t = seq.get(i).target();
-            if (t != null) {
-                hasTarget = true;
-                if (t.x() < minX) minX = t.x();
-                if (t.x() > maxX) maxX = t.x();
-                if (t.y() < minY) minY = t.y();
-                if (t.z() < minZ) minZ = t.z();
-                if (t.z() > maxZ) maxZ = t.z();
+            collectTargets(seq.get(i), box, hasTarget);
+        }
+        if (!hasTarget[0]) return null;
+        return new GridPos(box[0] - 2, box[2] + 1, (box[3] + box[4]) / 2);
+    }
+
+    private static void collectTargets(AtomicOp op, int[] box, boolean[] hasTarget) {
+        GridPos t = op.target();
+        if (t != null) {
+            hasTarget[0] = true;
+            if (t.x() < box[0]) box[0] = t.x();
+            if (t.x() > box[1]) box[1] = t.x();
+            if (t.y() < box[2]) box[2] = t.y();
+            if (t.z() < box[3]) box[3] = t.z();
+            if (t.z() > box[4]) box[4] = t.z();
+        }
+        if (op instanceof AtomicOp.ParallelOp par) {
+            for (AtomicOp sub : par.steps()) {
+                collectTargets(sub, box, hasTarget);
             }
         }
-        if (!hasTarget) return null;
-        return new GridPos(minX - 2, minY + 1, (minZ + maxZ) / 2);
     }
 }

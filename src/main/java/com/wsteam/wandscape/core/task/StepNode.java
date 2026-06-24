@@ -124,6 +124,16 @@ public sealed interface StepNode {
     record CallStep(ExprNode blueprintId, Map<String, ExprNode> with) implements StepNode {}
 
     /**
+     * Execute multiple steps in parallel. JSON type: {@code "parallel"}.
+     * Expands each child step, wraps all resulting AtomicOps in a single ParallelOp.
+     * All sub-ops launch concurrently; the engine waits for all to complete.
+     *
+     * <p>Use for concurrent resource requests: request stone + wood + iron in one tick
+     * rather than serially, so all ItemEntity transports fly simultaneously.
+     */
+    record ParallelStep(List<StepNode> steps) implements StepNode {}
+
+    /**
      * Log a message. JSON type: {@code "log"}.
      * Does not generate an AtomicOp — executed immediately at interpret time.
      */

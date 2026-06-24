@@ -33,6 +33,17 @@ public class ElementMappingLoader {
         return config != null ? config.decomposeYield() : Map.of();
     }
 
+    /** Find a representative block ID for an element type (for visual transport). */
+    @javax.annotation.Nullable
+    public String getRepresentativeBlock(ElementType element) {
+        for (ElementMappingConfig config : registry.getAll().values()) {
+            if (config.decomposeYield().containsKey(element)) {
+                return config.blockId();
+            }
+        }
+        return null;
+    }
+
     public boolean isDecomposable(BlockState state) {
         ElementMappingConfig config = findConfig(state);
         return config != null && config.decomposable();

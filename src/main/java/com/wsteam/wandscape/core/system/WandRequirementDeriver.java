@@ -56,6 +56,18 @@ public final class WandRequirementDeriver {
             case AtomicOp.IfConditionOp i     -> Map.of();
             case AtomicOp.WandEquipOp w       -> Map.of();
             case AtomicOp.WandReturnOp w      -> Map.of();
+            case AtomicOp.ParallelOp p       -> {
+                Map<BehaviourTag, BehaviourLevel> merged = new HashMap<>();
+                for (AtomicOp sub : p.steps()) {
+                    for (var entry : deriveFromOp(sub).entrySet()) {
+                        BehaviourLevel existing = merged.get(entry.getKey());
+                        if (existing == null || entry.getValue().value() > existing.value()) {
+                            merged.put(entry.getKey(), entry.getValue());
+                        }
+                    }
+                }
+                yield merged;
+            }
         };
     }
 

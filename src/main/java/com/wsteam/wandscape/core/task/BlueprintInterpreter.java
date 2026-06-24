@@ -155,6 +155,10 @@ public final class BlueprintInterpreter {
             case StepNode.ForEachStep s -> expandForEach(s, context, callStack);
             case StepNode.IfStep s -> expandIf(s, context, callStack);
             case StepNode.CallStep s -> expandCall(s, context, callStack);
+            case StepNode.ParallelStep s -> {
+                List<AtomicOp> subOps = expandSteps(s.steps(), context, callStack);
+                yield List.of(new AtomicOp.ParallelOp(subOps));
+            }
             case StepNode.LogStep s -> {
                 String text = evalString(s.text(), context, "log.text");
                 String level = s.level();
