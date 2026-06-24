@@ -69,11 +69,15 @@ public class FailureAnalyzerSystem implements System {
         tickCounter++;
         if (tickCounter % HEARTBEAT != 0) return;
 
-        List<GlobalTask> failedTasks = world.taskPool.getByState(TaskState.FAILED);
-        if (failedTasks.isEmpty()) return;
-
         ServerLevel level = getServerLevel();
         if (level == null) return;
+
+        // ── 1. Re-check AWAITING_RESOURCES: wake if warehouse has enough ──
+        checkAwaitingResources(world);
+
+        // ── 2. Handle FAILED tasks (wand requirements, evaluation) ──
+        List<GlobalTask> failedTasks = world.taskPool.getByState(TaskState.FAILED);
+        if (failedTasks.isEmpty()) return;
 
         BuildingApi api = getBuildingApi();
         if (api == null) return;
@@ -88,6 +92,29 @@ public class FailureAnalyzerSystem implements System {
         }
     }
 
+    /**
+     * Poll all AWAITING_RESOURCES tasks and transition back to PENDING_ASSIGN
+     * when the warehouse has enough of the needed resource.
+     */
+    private void checkAwaitingResources(World world) {
+        List<GlobalTask> waiting = world.taskPool.getByState(TaskState.AWAITING_RESOURCES);
+        if (waiting.isEmpty()) return;
+
+        int awakened = 0;
+        for (GlobalTask task : waiting) {
+            if (task.awaitingResource == null) continue;
+            int available = world.colonyResources.available(task.awaitingResource.resource());
+            if (available >= task.awaitingResource.amount()) {
+                task.state = TaskState.PENDING_ASSIGN;
+                task.awaitingResource = null;
+                awakened++;
+            }
+        }
+        if (awakened > 0) {
+            LOGGER.info("[FailureAnalyzer] awakened {} AWAITING_RESOURCES tasks", awakened);
+        }
+    }
+
     private void handleWandRequirementUnmet(GlobalTask task,
                                             TaskFailureReason.WandRequirementUnmet reason,
                                             ServerLevel level,
@@ -99,26 +126,7 @@ public class FailureAnalyzerSystem implements System {
 
         com.wsteam.wandscape.core.task.GlobalTaskPool taskPool = world.taskPool;
 
-        // 1. Find a wand preset that satisfies the requirements
-        String presetId = findPresetForRequirements(reqs);
-        if (presetId == null) {
-            LOGGER.warn("[FailureAnalyzer] no wand preset satisfies reqs={} for task #{}",
-                    reqs, task.id);
-            recoveringTasks.add(task.id); // don't retry
-            return;
-        }
-
-        // 2. Check if craft recipe exists and look up its unlockRequirement
-        if (Wandscape.PRODUCTION_RECIPE_LOADER == null
-                || !Wandscape.PRODUCTION_RECIPE_LOADER.getCraftWandRecipes().contains(presetId)) {
-            LOGGER.warn("[FailureAnalyzer] no craft recipe for preset={} (task #{})",
-                    presetId, task.id);
-            recoveringTasks.add(task.id);
-            return;
-        }
-        var recipe = Wandscape.PRODUCTION_RECIPE_LOADER.getCraftWandRecipes().get(presetId);
-
-        // 3. Determine colony from task anchor
+        // ── Step 0: Check if a suitable wand already exists in the warehouse ──
         UUID colonyId = extractColonyFromTask(task, level);
         if (colonyId == null) {
             LOGGER.warn("[FailureAnalyzer] cannot determine colony for task #{} '{}'",
@@ -127,7 +135,35 @@ public class FailureAnalyzerSystem implements System {
             return;
         }
 
-        // 4. Check colony C/M/W against the preset's unlockRequirement
+        if (wandExistsInWarehouse(colonyId, reqs, level)) {
+            task.state = TaskState.PENDING_ASSIGN;
+            task.assignedNpcId = null;
+            task.failureReason = null;
+            LOGGER.info("[FailureAnalyzer] wand for reqs={} found in warehouse → task #{} → PENDING_ASSIGN",
+                    reqs, task.id);
+            return;
+        }
+
+        // ── Step 1: Find a wand preset that satisfies the requirements ──
+        String presetId = findPresetForRequirements(reqs);
+        if (presetId == null) {
+            LOGGER.warn("[FailureAnalyzer] no wand preset satisfies reqs={} for task #{}",
+                    reqs, task.id);
+            recoveringTasks.add(task.id); // permanent: no preset can satisfy this
+            return;
+        }
+
+        // ── Step 2: Check if craft recipe exists ──
+        if (Wandscape.PRODUCTION_RECIPE_LOADER == null
+                || !Wandscape.PRODUCTION_RECIPE_LOADER.getCraftWandRecipes().contains(presetId)) {
+            LOGGER.warn("[FailureAnalyzer] no craft recipe for preset={} (task #{})",
+                    presetId, task.id);
+            recoveringTasks.add(task.id); // permanent: recipe doesn't exist
+            return;
+        }
+        var recipe = Wandscape.PRODUCTION_RECIPE_LOADER.getCraftWandRecipes().get(presetId);
+
+        // ── Step 3: Check colony C/M/W against the preset's unlockRequirement ──
         if (!com.wsteam.wandscape.production.internal.RecipeUnlockChecker
                 .isUnlocked(colonyId, recipe.unlockRequirement())) {
             var unlock = recipe.unlockRequirement();
@@ -147,33 +183,31 @@ public class FailureAnalyzerSystem implements System {
                     presetId,
                     unlock.minComfort(), unlock.minMagic(), unlock.minWonder(),
                     task.id);
-            recoveringTasks.add(task.id);
+            recoveringTasks.add(task.id); // permanent: need more C/M/W buildings
             return;
         }
 
-        // 6. Check if a craft_wand for this preset is already in-flight
+        // ── Step 4: Check if craft_wand for this preset is already in-flight ──
         if (isCraftWandInFlight(presetId, world)) {
-            LOGGER.info("[FailureAnalyzer] craft_wand for {} already in-flight, skip task #{}",
+            LOGGER.debug("[FailureAnalyzer] craft_wand for {} already in-flight, will retry task #{} next heartbeat",
                     presetId, task.id);
-            recoveringTasks.add(task.id);
+            // Don't add to recoveringTasks — next heartbeat step 0 will retry
             return;
         }
 
-        // 7. Find a crafting station in the same colony (existence check only)
+        // ── Step 5: Find a crafting station in the same colony ──
         List<UUID> stations = api.getBuildingsByCategory(colonyId, "crafting_station");
         if (stations.isEmpty()) {
             LOGGER.warn("[FailureAnalyzer] no crafting station in colony={} for task #{}",
                     colonyId.toString().substring(0, 8), task.id);
-            recoveringTasks.add(task.id);
+            recoveringTasks.add(task.id); // permanent: no crafting station to make wands
             return;
         }
 
-        // 8. Pick the first registered crafting station (no structural/shutdown check)
         UUID stationId = stations.get(0);
-
         BlockPos stationPos = api.getBuilding(stationId).getPosition();
 
-        // 9. Enqueue craft_wand production task
+        // ── Step 6: Enqueue craft_wand production task ──
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("anchor", posToJsonArray(stationPos));
         params.put("recipe_id", new JsonPrimitive(presetId));
@@ -181,10 +215,9 @@ public class FailureAnalyzerSystem implements System {
         params.put("channel_ticks", new JsonPrimitive(1200));
         params.put("mana_cost", new JsonPrimitive(5));
 
-        // craft_wand has no wand requirement (cold-start prevention), so no overrides needed
         WorkItem work = new WorkItem("production:craft_wand", params, 10);
         api.enqueueWork(stationId, work);
-        recoveringTasks.add(task.id);
+        // Don't add to recoveringTasks — next heartbeat step 0 finds wand in warehouse
 
         LOGGER.info("[FailureAnalyzer] enqueued craft_wand:{} at station {} colony={} "
                         + "to resolve task #{} '{}' reqs={}",
@@ -265,6 +298,27 @@ public class FailureAnalyzerSystem implements System {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Check if the colony warehouse already contains a wand whose behaviors
+     * cover the given requirements.
+     */
+    private boolean wandExistsInWarehouse(UUID colonyId,
+                                                  Map<BehaviourTag, BehaviourLevel> reqs,
+                                                  ServerLevel level) {
+        var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level);
+        if (bank == null) return false;
+        for (var entry : bank.getSnapshot(colonyId).entrySet()) {
+            if (!"wandscape:wand".equals(entry.getKey().itemId())) continue;
+            if (entry.getValue() <= 0) continue;
+            CompoundTag nbt = entry.getKey().nbt();
+            if (nbt == null) continue;
+            CompoundTag behaviors = nbt.getCompound("behaviors");
+            if (behaviors.isEmpty()) continue;
+            if (behaviorsCover(behaviors, reqs)) return true;
+        }
+        return false;
     }
 
     /** Check if a craft_wand task for the given preset is already active in the pool. */
