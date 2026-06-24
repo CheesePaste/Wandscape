@@ -85,6 +85,20 @@ public final class BuildCompleteListener {
             LOGGER.info("[Building] {} at {} construction complete — now operational",
                     state.getBuildingTypeId(), anchor);
 
+            // Assign colony via ColonyApi
+            com.wsteam.wandscape.shared.api.ColonyApi colonyApi =
+                    com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            if (colonyApi != null) {
+                UUID assignedColonyId = colonyApi.onBuildingIntact(state);
+                if (assignedColonyId != null && !assignedColonyId.equals(state.getColonyId())) {
+                    // Colony was newly created or newly assigned
+                    data.setDirty();
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                            new com.wsteam.wandscape.shared.event.BuildingPlacedEvent(
+                                    state.getBuildingId(), assignedColonyId, state.getBuildingTypeId()));
+                }
+            }
+
             // Record contribution: only fires ColonyEvaluationChangedEvent when this
             // building type transitions from 0→1 intact buildings in the colony.
             UUID colonyId = state.getColonyId();

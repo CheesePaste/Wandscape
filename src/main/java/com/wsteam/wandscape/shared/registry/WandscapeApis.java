@@ -80,6 +80,8 @@ public final class WandscapeApis {
         if (colonyApi == null) throw new IllegalStateException("Module ColonyLifecycle not loaded");
         return colonyApi;
     }
+    @javax.annotation.Nullable
+    public static ColonyApi getColonyApiSilently() { return colonyApi; }
     public static void setColonyApi(ColonyApi api) { colonyApi = api; }
 
     public static ManaPoolApi getManaPoolApi() {

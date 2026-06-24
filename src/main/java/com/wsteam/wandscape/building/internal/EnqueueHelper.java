@@ -12,6 +12,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.engine.colony.ColonyApiImpl;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -77,6 +78,9 @@ public final class EnqueueHelper {
                     config.queue().capacity()
             );
             api.registerBuilding(state);
+
+            // Assign colony if one exists nearby
+            ColonyApiImpl.get().assignColonyIfPossible(state);
 
             // First building registered → seed warehouse so it has materials to build itself
             if (!warehouseSeeded) {

@@ -58,6 +58,13 @@ public final class BuildingBreakHandler {
                         colonyId.toString().substring(0, 8), state.getBuildingTypeId());
             }
         }
+
+        // If town_hall destroyed, delete the colony
+        com.wsteam.wandscape.shared.api.ColonyApi colonyApi =
+                com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) {
+            colonyApi.onBuildingDestroyed(state);
+        }
         enqueueRepairForPositions(state, List.of(pos));
         data.setDirty();
         LOGGER.info("[Building] Structure damaged: type={} at={} (block at {}) — partial repair enqueued",

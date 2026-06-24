@@ -197,6 +197,7 @@ public class Wandscape {
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
         WandscapeApis.setWarehouseApi(new WarehouseManager());
+        WandscapeApis.setColonyApi(com.wsteam.wandscape.engine.colony.ColonyApiImpl.get());
 
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
@@ -318,6 +319,11 @@ public class Wandscape {
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
         BuildCompleteListener.register();
+        // Rebuild colony spatial index from saved data
+        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (colonyApi instanceof com.wsteam.wandscape.engine.colony.ColonyApiImpl impl) {
+            impl.rebuildFromSavedData();
+        }
 
         // Wire production loaders to block interact executor
         WandscapeBlockInteractExecutor.setElementMappingLoader(ELEMENT_MAPPING_LOADER);

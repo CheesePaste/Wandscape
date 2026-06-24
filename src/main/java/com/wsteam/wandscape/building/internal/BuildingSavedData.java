@@ -368,6 +368,11 @@ public class BuildingSavedData extends SavedData {
      * Called by {@link BuildCompleteListener} after structure verification passes.
      */
     public boolean addBuildingContribution(UUID colonyId, String buildingTypeId) {
+        if (contributionRegistry == null) {
+            IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
+            contributionRegistry = new BuildingContributionRegistry(bus);
+            contributionRegistry.rebuildFrom(this::getAllBuildings);
+        }
         boolean changed = contributionRegistry.recordIntactChange(colonyId, buildingTypeId, true);
         if (changed) setDirty();
         return changed;
@@ -378,6 +383,11 @@ public class BuildingSavedData extends SavedData {
      * Called by {@link BuildingBreakHandler}.
      */
     public boolean removeBuildingContribution(UUID colonyId, String buildingTypeId) {
+        if (contributionRegistry == null) {
+            IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
+            contributionRegistry = new BuildingContributionRegistry(bus);
+            contributionRegistry.rebuildFrom(this::getAllBuildings);
+        }
         boolean changed = contributionRegistry.recordIntactChange(colonyId, buildingTypeId, false);
         if (changed) setDirty();
         return changed;
