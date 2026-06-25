@@ -214,6 +214,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
+        CitizenManager.getInstance().register();
         WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);

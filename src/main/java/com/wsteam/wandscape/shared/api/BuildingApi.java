@@ -65,4 +65,11 @@ public interface BuildingApi {
 
     /** Clear the active task when it completes or is cancelled. */
     void clearCurrentTask(UUID buildingId);
+
+    /**
+     * Scan the building's boundary AABB for bed blocks.
+     * Returns world-coordinate positions of every bed block found.
+     * Each bed (two halves) produces two entries.
+     */
+    List<BlockPos> findBeds(UUID buildingId);
 }
