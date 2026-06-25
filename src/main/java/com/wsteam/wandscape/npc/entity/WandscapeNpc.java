@@ -530,6 +530,14 @@ public class WandscapeNpc extends PathfinderMob {
                     // Return equipped wands to colony warehouse on death/despawn
                     returnEquippedWands(world);
 
+                    // Release resource reservations from pending transports.
+                    // Items were reserved but never consumed — just dropping the
+                    // reservation is correct (no items need to be returned to bank).
+                    var resourceReqExec = WandscapeEngine.getResourceRequestExec();
+                    if (resourceReqExec != null) {
+                        resourceReqExec.cancelForNpc(ecsEntityId);
+                    }
+
                     // Orphan recovery: cancel all in-flight transports for this NPC
                     var transporter = WandscapeEngine.getTransporter();
                     if (transporter != null) {

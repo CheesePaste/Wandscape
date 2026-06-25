@@ -50,6 +50,26 @@ public class ItemTransportManager {
     public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
                                         Level level, long ownerNpcId,
                                         @Nullable List<RouteSegment> route) {
+        return send(key, from, to, level, ownerNpcId, route, false);
+    }
+
+    /** Convenience overload — direct path without route. */
+    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
+                                        Level level, long ownerNpcId) {
+        return send(key, from, to, level, ownerNpcId, null, false);
+    }
+
+    /**
+     * Full send with ownership tracking.
+     *
+     * @param ownsItem  if true, the item was <em>consumed</em> from the colony bank
+     *                  and MUST be returned on {@link #cancelForNpc}. If false,
+     *                  the item was only reserved or is purely visual — no return.
+     */
+    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
+                                        Level level, long ownerNpcId,
+                                        @Nullable List<RouteSegment> route,
+                                        boolean ownsItem) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         ItemEntity entity = spawnVisual(key, from, level);
         if (entity == null) {
@@ -67,23 +87,20 @@ public class ItemTransportManager {
         }
 
         ActiveTransport t = new ActiveTransport(future, entity, key,
-                ownerNpcId, legs, 0, 0);
+                ownerNpcId, legs, 0, 0, ownsItem);
         active.add(t);
 
-        LOGGER.debug("[Transport] send {} {}→{} legs={} npc={}",
+        LOGGER.debug("[Transport] send {} {}→{} legs={} npc={} ownsItem={}",
                 key.itemId(), from.toShortString(), to.toShortString(),
-                legs.size(), ownerNpcId);
+                legs.size(), ownerNpcId, ownsItem);
         return future;
-    }
-
-    /** Convenience overload — direct path without route. */
-    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
-                                        Level level, long ownerNpcId) {
-        return send(key, from, to, level, ownerNpcId, null);
     }
 
     /**
      * Cancel all in-flight transports for the given NPC.
+     * Only returns items that were <em>consumed</em> from the bank
+     * (ownsItem=true). Reserved-but-not-consumed items are handled
+     * separately by {@code ResourceRequestExecutor.cancelForNpc}.
      */
     public void cancelForNpc(long npcId,
                              com.wsteam.wandscape.warehouse.ColonyItemBank bank,
@@ -93,12 +110,14 @@ public class ItemTransportManager {
             if (t.ownerNpcId == npcId) toCancel.add(t);
         }
         for (ActiveTransport t : toCancel) {
-            bank.add(colonyId, t.itemKey, 1);
+            if (t.ownsItem) {
+                bank.add(colonyId, t.itemKey, 1);
+            }
             t.entity.discard();
             t.future.cancel(false);
             active.remove(t);
-            LOGGER.info("[Transport] orphan recovery: {} returned (npc={})",
-                    t.itemKey.itemId(), npcId);
+            LOGGER.info("[Transport] orphan recovery: {} {} (npc={})",
+                    t.itemKey.itemId(), t.ownsItem ? "returned" : "discarded", npcId);
         }
     }
 
@@ -267,10 +286,12 @@ public class ItemTransportManager {
         int legIndex;
         int segmentElapsed;
         int elapsed;
+        final boolean ownsItem;
 
         ActiveTransport(CompletableFuture<Void> future, ItemEntity entity,
                        ItemKey itemKey, long ownerNpcId,
-                       List<Leg> legs, int legIndex, int segmentElapsed) {
+                       List<Leg> legs, int legIndex, int segmentElapsed,
+                       boolean ownsItem) {
             this.future = future;
             this.entity = entity;
             this.itemKey = itemKey;
@@ -278,6 +299,7 @@ public class ItemTransportManager {
             this.legs = legs;
             this.legIndex = legIndex;
             this.segmentElapsed = segmentElapsed;
+            this.ownsItem = ownsItem;
         }
     }
 }

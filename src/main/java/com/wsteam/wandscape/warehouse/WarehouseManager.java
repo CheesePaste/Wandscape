@@ -131,6 +131,12 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     // ════════════════════════════════════════════════════════════
 
     @Override
+    public boolean hasColonies() {
+        ColonyItemBank bank = getBank();
+        return bank != null && !bank.getColonyIds().isEmpty();
+    }
+
+    @Override
     public boolean hasEnough(ResourceId resource, int amount) {
         ColonyItemBank bank = getBank();
         if (bank == null) return false;

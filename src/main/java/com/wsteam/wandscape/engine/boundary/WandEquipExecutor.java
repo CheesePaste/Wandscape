@@ -139,7 +139,8 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
         BlockPos npcPos = npc.blockPosition();
         List<RouteSegment> route = planRoute(colonyId, storagePos, npcPos);
         CompletableFuture<Void> transportFuture = transporter.send(
-                consumedKey, storagePos, npcPos, npc.level(), npcId, route);
+                consumedKey, storagePos, npcPos, npc.level(), npcId, route,
+                true /* ownsItem: wand was consumed from bank, must return on cancel */);
 
         // 6. On arrival: equip wand capabilities into WandCarrier
         transportFuture.thenRun(() -> equipWandDirectly(world, npcId, presetId, preset, npc));

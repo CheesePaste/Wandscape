@@ -119,7 +119,8 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         BlockPos destPos = storagePos != null ? storagePos : npcPos;
         List<RouteSegment> route = planRoute(colonyId, npcPos, destPos);
         CompletableFuture<Void> transportFuture = transporter.send(
-                key, npcPos, destPos, npc.level(), npcId, route);
+                key, npcPos, destPos, npc.level(), npcId, route,
+                true /* ownsItem: wand was unequipped, must return on cancel */);
 
         // 7. On arrival: add to warehouse + visual feedback
         transportFuture.thenRun(() -> {

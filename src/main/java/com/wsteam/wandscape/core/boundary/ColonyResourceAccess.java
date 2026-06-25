@@ -25,4 +25,7 @@ public interface ColonyResourceAccess {
 
     /** Add resources directly to the colony warehouse (e.g. from node gathering). */
     void addResource(ResourceId resource, int amount);
+
+    /** Whether at least one colony has been created. Default true (backward compat for stubs). */
+    default boolean hasColonies() { return true; }
 }

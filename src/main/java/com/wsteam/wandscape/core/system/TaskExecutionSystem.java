@@ -100,6 +100,7 @@ public class TaskExecutionSystem implements System {
         NpcTaskPackage pkg = queue.currentPackage();
 
         // ── 2. Pending async future from previous tick? ──
+        boolean navJustResolved = false;
         if (exec.pendingFuture != null) {
             if (!exec.pendingFuture.isDone()) {
                 Log.debug(TAG, "NPC %d — waiting on future (nav=%s)", npcId, exec.pendingFutureIsNav);
@@ -114,13 +115,11 @@ public class TaskExecutionSystem implements System {
             } else {
                 Log.info(TAG, "NPC %d — nav resolved, continuing to execute op", npcId);
                 exec.pendingFutureIsNav = false;
+                navJustResolved = true;
             }
             if (queue.isCurrentPackageDone()) {
                 finishOrReleaseCurrentPackage(exec, queue, npcId, world);
                 return;
-            }
-            if (exec.pendingFutureIsNav) {
-                // Nav resolved — continue to execute the op (don't advance)
             }
         }
 
@@ -134,7 +133,10 @@ public class TaskExecutionSystem implements System {
         }
 
         // ── 3. Navigate to package stance if far away ──
-        if (pkg.stance() != null && exec.pendingFuture == null
+        // Skip when the nav just resolved — NavigationSystem already confirmed arrival.
+        // The per-op range check in step 4d is the fallback if the NPC is somehow still
+        // out of position.
+        if (!navJustResolved && pkg.stance() != null && exec.pendingFuture == null
                 && !exec.pendingFutureIsNav && world.movementOps != null) {
             Position pos = world.get(npcId, Position.class);
             if (pos != null) {

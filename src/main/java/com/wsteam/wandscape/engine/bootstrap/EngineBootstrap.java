@@ -111,7 +111,13 @@ public final class EngineBootstrap {
         // 3. Build task sources
         List<TaskSource> taskSources = new ArrayList<>();
         taskSources.add(new BuildingTaskSource());
-        taskSources.add(new WarehouseSource());
+        taskSources.add(new WarehouseSource(() -> {
+            // Only emit ResourceLow when at least one colony has a storage building.
+            // Without storage, gathered resources have nowhere to go — skip entirely.
+            BuildingApi buildingApi = WandscapeApis.getBuildingApi();
+            if (buildingApi == null) return false;
+            return !buildingApi.getBuildingsByCategory(null, "storage").isEmpty();
+        }));
         taskSources.add(new WorkbenchSource());
         taskSources.add(new RoadTaskSource());
 

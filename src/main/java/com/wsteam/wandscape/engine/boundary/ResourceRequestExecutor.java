@@ -186,6 +186,30 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
     public boolean hasPendingBatches() { return !batches.isEmpty(); }
 
+    /**
+     * Cancel all pending batches for a dead/despawned NPC and release their
+     * warehouse reservations. Items were reserved but never consumed, so
+     * just releasing is correct — no items need to be returned to the bank.
+     */
+    public void cancelForNpc(long npcId) {
+        var toRemove = new ArrayList<PendingBatch>();
+        for (PendingBatch b : batches) {
+            if (b.npcId() == npcId) toRemove.add(b);
+        }
+        if (toRemove.isEmpty()) return;
+
+        for (PendingBatch b : toRemove) {
+            b.resources().release(b.requested().resource(), b.shortfall());
+            for (CompletableFuture<Void> f : b.inFlight()) {
+                f.cancel(false);
+            }
+            b.doneFuture().cancel(false);
+            LOGGER.info("[ResourceReq] cancelForNpc npc={} — released reservation {} x{}",
+                    npcId, b.requested().resource().id(), b.shortfall());
+        }
+        batches.removeAll(toRemove);
+    }
+
     private void finish(CompletableFuture<Void> doneFuture, ResourceStack requested,
                         ColonyResourceAccess resources, World world, long npcId) {
         // Only credit the shortfall (requested may be the full task amount
