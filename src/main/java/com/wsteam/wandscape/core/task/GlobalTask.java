@@ -45,7 +45,9 @@ public class GlobalTask {
     public TaskState state;
     public int stepIndex;
     public Long assignedNpcId;
-    public ResourceStack awaitingResource;
+    /** Resources this task is waiting for (null or empty = not waiting). */
+    @Nullable
+    public List<ResourceStack> awaitingResource;
     public final Deque<InterruptRecord> interruptHistory;
     public final ApprovalInfo approval;
 
@@ -72,7 +74,7 @@ public class GlobalTask {
             TaskState state,
             int stepIndex,
             Long assignedNpcId,
-            ResourceStack awaitingResource,
+            @Nullable List<ResourceStack> awaitingResource,
             Deque<InterruptRecord> interruptHistory,
             ApprovalInfo approval
     ) {
@@ -87,7 +89,7 @@ public class GlobalTask {
         this.state = state;
         this.stepIndex = stepIndex;
         this.assignedNpcId = assignedNpcId;
-        this.awaitingResource = awaitingResource;
+        this.awaitingResource = awaitingResource != null ? List.copyOf(awaitingResource) : null;
         this.interruptHistory = interruptHistory != null ? interruptHistory : new ArrayDeque<>();
         this.approval = approval;
     }

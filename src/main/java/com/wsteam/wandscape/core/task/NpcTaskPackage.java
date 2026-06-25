@@ -25,6 +25,13 @@ public record NpcTaskPackage(
         return new NpcTaskPackage(source, sequence, stance, priority, 0);
     }
 
+    /** Create a package that resumes execution from a saved stepIndex. */
+    public static NpcTaskPackage resumeFrom(String source, TaskSequence sequence,
+                                            @Nullable GridPos stance, int priority,
+                                            int startStepIndex) {
+        return new NpcTaskPackage(source, sequence, stance, priority, startStepIndex);
+    }
+
     /** Create a single-op system package (wand equip, teleport, etc.). */
     public static NpcTaskPackage system(String source, AtomicOp op,
                                         @Nullable GridPos stance, int priority) {

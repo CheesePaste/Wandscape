@@ -169,6 +169,16 @@ public class NpcTaskQueue {
         startNextPending();
     }
 
+    /**
+     * Clear the current package WITHOUT resuming or starting the next one.
+     * Used when the NPC is released from its current task
+     * (mana depletion, resource shortage) and should go idle.
+     */
+    public void clearCurrentWithoutResume() {
+        currentPackage = null;
+        stepIndex = 0;
+    }
+
     /** Move the next pending or suspended package into current. */
     public void startNextPending() {
         // Resume suspended first (LIFO)

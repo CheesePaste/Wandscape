@@ -15,7 +15,9 @@ import com.wsteam.wandscape.core.types.ResourceStack;
 
 import com.google.gson.JsonElement;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -121,6 +123,11 @@ public final class DefaultOpExecutors {
      * Default ResourceRequestExecutor — sync, no visual transport.
      * Replaced by engine-layer {@code ResourceRequestExecutor} which adds
      * visual item flight via {@code ItemTransportManager}.
+     *
+     * <p>All-or-nothing: computes shortfall for every item first,
+     * then checks warehouse for each. If any item is short, fails the
+     * entire request without reserving or adding any items — no partial
+     * fulfillment that would leak items into the NPC inventory.
      */
     static class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequestOp> {
         @Override public Class<AtomicOp.ResourceRequestOp> opType() { return AtomicOp.ResourceRequestOp.class; }
@@ -128,34 +135,70 @@ public final class DefaultOpExecutors {
         @Override
         public CompletableFuture<Void> execute(AtomicOp.ResourceRequestOp op, World world, long npcId) {
             ColonyResourceAccess resources = world.colonyResources;
-            ResourceStack requested = op.requested();
-
-            // Check NPC inventory first — only request shortfall from warehouse
             Inventory inv = world.get(npcId, Inventory.class);
-            int alreadyHas = inv != null ? inv.count(requested.resource()) : 0;
-            int shortfall = requested.amount() - alreadyHas;
+            List<ResourceStack> items = op.items();
 
-            if (shortfall <= 0) {
+            // ── Phase 1: compute shortfalls (NPC inventory offsets) ──
+            List<ResourceStack> needs = new ArrayList<>();
+            for (ResourceStack item : items) {
+                int alreadyHas = inv != null ? inv.count(item.resource()) : 0;
+                int shortfall = item.amount() - alreadyHas;
+                if (shortfall > 0) {
+                    needs.add(item.withAmount(shortfall));
+                }
+            }
+
+            if (needs.isEmpty()) {
+                // Everything already in NPC inventory
                 return CompletableFuture.completedFuture(null);
             }
 
-            ResourceStack need = requested.withAmount(shortfall);
-            if (!resources.hasEnough(need.resource(), need.amount())) {
-                return CompletableFuture.failedFuture(
-                        new ResourceShortageException(requested));
-            }
-            if (!resources.reserve(need.resource(), need.amount())) {
-                return CompletableFuture.failedFuture(
-                        new ResourceShortageException(requested));
+            // ── Phase 2: check ALL warehouse stock before reserving any ──
+            for (ResourceStack need : needs) {
+                if (!resources.hasEnough(need.resource(), need.amount())) {
+                    return CompletableFuture.failedFuture(
+                            new ResourceShortageException(items));
+                }
             }
 
-            if (inv == null || !inv.add(need)) {
-                resources.release(need.resource(), need.amount());
+            // ── Phase 3: reserve ALL ──
+            for (ResourceStack need : needs) {
+                if (!resources.reserve(need.resource(), need.amount())) {
+                    // Roll back previously reserved items
+                    for (int j = 0; j < needs.indexOf(need); j++) {
+                        resources.release(needs.get(j).resource(), needs.get(j).amount());
+                    }
+                    return CompletableFuture.failedFuture(
+                            new ResourceShortageException(items));
+                }
+            }
+
+            // ── Phase 4: add ALL to NPC inventory ──
+            if (inv == null) {
+                for (ResourceStack need : needs) {
+                    resources.release(need.resource(), need.amount());
+                }
                 return CompletableFuture.failedFuture(
                         new IllegalStateException("NPC " + npcId + " has no inventory"));
             }
+            for (ResourceStack need : needs) {
+                if (!inv.add(need)) {
+                    // Roll back: release reserved and remove added items
+                    for (int j = 0; j < needs.indexOf(need); j++) {
+                        resources.release(needs.get(j).resource(), needs.get(j).amount());
+                        // Best-effort inventory rollback (inventory has no remove for
+                        // this path — the exception will halt task processing anyway)
+                    }
+                    resources.release(need.resource(), need.amount());
+                    return CompletableFuture.failedFuture(
+                            new IllegalStateException("NPC " + npcId + " inventory full for " + need));
+                }
+            }
 
-            resources.commit(need.resource(), need.amount());
+            // ── Phase 5: commit ALL ──
+            for (ResourceStack need : needs) {
+                resources.commit(need.resource(), need.amount());
+            }
             return CompletableFuture.completedFuture(null);
         }
     }

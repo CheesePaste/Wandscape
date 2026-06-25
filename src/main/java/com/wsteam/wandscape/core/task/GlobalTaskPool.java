@@ -247,14 +247,14 @@ public class GlobalTaskPool {
 
     /** Called when an op returns WAITING due to resource shortage. */
     public void markAwaitingResources(long taskId, long npcId,
-                                       ResourceStack needed,
+                                       List<ResourceStack> needed,
                                        World world) {
         GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
 
         removeFromAssignable(task);
         task.state = TaskState.AWAITING_RESOURCES;
-        task.awaitingResource = needed;
+        task.awaitingResource = List.copyOf(needed);
         task.stepIndex = world.get(npcId, TaskExecutor.class).stepIndex;
 
         releaseNpc(taskId, npcId, world);
@@ -262,6 +262,13 @@ public class GlobalTaskPool {
         eventBus.emit(new TaskAwaitingResources(taskId, needed));
         notifyChanged();
         Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
+    }
+
+    /** Backward-compat for single-resource shortages. */
+    public void markAwaitingResources(long taskId, long npcId,
+                                       ResourceStack needed,
+                                       World world) {
+        markAwaitingResources(taskId, npcId, List.of(needed), world);
     }
 
     /**
@@ -389,20 +396,38 @@ public class GlobalTaskPool {
     // ── Resource fulfillment wake-up ──
 
     private void onResourceFulfilled(ResourceFulfilled event) {
+        int totalWaiting = 0;
+        int relevant = 0;
         int awakened = 0;
         for (GlobalTask task : tasksById.values()) {
-            if (task.state == TaskState.AWAITING_RESOURCES
-                    && task.awaitingResource != null
-                    && task.awaitingResource.resource().equals(event.resource())) {
-                int available = colonyResources.available(event.resource());
-                if (available >= task.awaitingResource.amount()) {
-                    transitionToPendingAssign(task);
-                    awakened++;
+            if (task.state != TaskState.AWAITING_RESOURCES
+                    || task.awaitingResource == null || task.awaitingResource.isEmpty()) {
+                continue;
+            }
+            totalWaiting++;
+
+            // Check if the fulfilled resource is relevant to this task
+            boolean matches = task.awaitingResource.stream()
+                    .anyMatch(r -> r.resource().equals(event.resource()));
+            if (!matches) continue;
+            relevant++;
+
+            // All-or-nothing: ALL needed resources must be available
+            boolean allAvailable = true;
+            for (ResourceStack need : task.awaitingResource) {
+                if (colonyResources.available(need.resource()) < need.amount()) {
+                    allAvailable = false;
+                    break;
                 }
             }
+            if (allAvailable) {
+                transitionToPendingAssign(task);
+                awakened++;
+            }
         }
+        Log.info(TAG, "ResourceFulfilled(%s) waiting=%d relevant=%d awakened=%d",
+                event.resource(), totalWaiting, relevant, awakened);
         if (awakened > 0) {
-            Log.info(TAG, "ResourceFulfilled(%s) awakened %d tasks", event.resource(), awakened);
             notifyChanged();
         }
     }

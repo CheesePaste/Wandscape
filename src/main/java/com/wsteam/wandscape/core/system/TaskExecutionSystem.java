@@ -243,10 +243,10 @@ public class TaskExecutionSystem implements System {
                     if (cause instanceof ResourceShortageException shortage) {
                         if (exec.globalTaskId != null && taskPool != null) {
                             taskPool.markAwaitingResources(exec.globalTaskId, npcId,
-                                    shortage.requested(), world);
+                                    shortage.requestedItems(), world);
                             exec.releaseGlobalTask();
                         }
-                        queue.finishCurrentPackage();
+                        queue.clearCurrentWithoutResume();
                     } else {
                         releaseToGlobalPool(exec, queue, npcId, world);
                     }
@@ -360,7 +360,7 @@ public class TaskExecutionSystem implements System {
             taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
             exec.releaseGlobalTask();
         }
-        queue.finishCurrentPackage();
+        queue.clearCurrentWithoutResume();
         exec.state = ExecutorState.IDLE;
         exec.currentOpTarget = null;
         exec.currentOpKind = null;

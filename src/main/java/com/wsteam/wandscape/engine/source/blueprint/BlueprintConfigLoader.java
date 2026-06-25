@@ -219,6 +219,25 @@ public final class BlueprintConfigLoader {
     }
 
     private StepNode parseRequestResource(JsonObject obj) {
+        if (obj.has("items")) {
+            JsonElement itemsEl = obj.get("items");
+            if (itemsEl.isJsonObject()) {
+                // Dynamic: {"map_to_items": {...}} expression
+                ExprNode dynamicItems = parseExpr(itemsEl);
+                return new StepNode.RequestResourceStep(List.of(), dynamicItems);
+            }
+            // Static format: list of {resource, amount} pairs — all-or-nothing atomic request
+            JsonArray itemsArr = itemsEl.getAsJsonArray();
+            List<StepNode.RequestResourceStep.ResourceEntry> entries = new ArrayList<>();
+            for (JsonElement el : itemsArr) {
+                JsonObject itemObj = el.getAsJsonObject();
+                ExprNode resource = parseExpr(itemObj.get("resource"));
+                ExprNode amount = parseExpr(itemObj.get("amount"));
+                entries.add(new StepNode.RequestResourceStep.ResourceEntry(resource, amount));
+            }
+            return new StepNode.RequestResourceStep(entries);
+        }
+        // Old format: single resource + amount (backward-compat)
         ExprNode resource = parseExpr(obj.get("resource"));
         ExprNode amount = parseExpr(obj.get("amount"));
         return new StepNode.RequestResourceStep(resource, amount);
@@ -426,6 +445,16 @@ public final class BlueprintConfigLoader {
 
             // KeyOf: {"keyof": "$pos_var"}
             case "keyof" -> new ExprNode.KeyOf(parseExpr(operand));
+
+            // MapItems: {"map_to_items": {"list": ..., "as": "v", "resource": ..., "amount": ...}}
+            case "map_to_items" -> {
+                JsonObject mapObj = operand.getAsJsonObject();
+                ExprNode list = parseExpr(mapObj.get("list"));
+                String as = mapObj.get("as").getAsString();
+                ExprNode resource = parseExpr(mapObj.get("resource"));
+                ExprNode amount = parseExpr(mapObj.get("amount"));
+                yield new ExprNode.MapItems(list, as, resource, amount);
+            }
 
             // Format: {"format": ["template {}", "$arg1", "$arg2"]}
             case "format" -> {

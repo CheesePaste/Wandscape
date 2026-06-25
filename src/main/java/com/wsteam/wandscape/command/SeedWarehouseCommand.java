@@ -14,6 +14,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -81,9 +82,13 @@ public final class SeedWarehouseCommand {
             return 0;
         }
 
+        // WarehouseManager implements both WarehouseApi and ColonyResourceAccess
+        var warehouseApi = WandscapeApis.getWarehouseApiSilently();
+        ColonyResourceAccess resources = (warehouseApi instanceof ColonyResourceAccess cra) ? cra : null;
+
         int seeded = 0;
 
-        // 2. Builder wand
+        // 2. Builder wand (has NBT — only goes through bank)
         WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
         if (preset != null) {
             ItemKey wandKey = ItemKey.of("wandscape:wand", preset.nbt().copy());
@@ -100,17 +105,25 @@ public final class SeedWarehouseCommand {
             }
         }
         for (String blockId : seen) {
-            bank.add(colonyId, ItemKey.of(blockId, null), 64);
+            if (resources != null) {
+                resources.addResource(new ResourceId(blockId), 64);
+            } else {
+                bank.add(colonyId, ItemKey.of(blockId, null), 64);
+            }
             seeded++;
         }
 
-        // 4. 128x of threshold-tracked resources (matching WarehouseSource defaults)
+        // 4. 128x of threshold-tracked resources
         ResourceId[] thresholdResources = {
                 ResourceId.WOOD, ResourceId.STONE, ResourceId.STONE_BRICKS,
                 ResourceId.GLASS, ResourceId.IRON_INGOT
         };
         for (ResourceId rid : thresholdResources) {
-            bank.add(colonyId, ItemKey.of(rid.id(), null), 128);
+            if (resources != null) {
+                resources.addResource(rid, 128);
+            } else {
+                bank.add(colonyId, ItemKey.of(rid.id(), null), 128);
+            }
             seeded++;
         }
 

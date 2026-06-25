@@ -161,8 +161,37 @@ public sealed interface AtomicOp
         }
     }
 
-    /** Request resources from the colony warehouse. The executor resolves this inline. */
-    record ResourceRequestOp(ResourceStack requested) implements AtomicOp {
+    /**
+     * Request resources from the colony warehouse. The executor resolves this inline.
+     *
+     * <p>All-or-nothing semantics: the executor checks every item against the warehouse
+     * before sending any. If any item is short, the entire request fails with a
+     * {@link ResourceShortageException} — no partial items leak into the NPC inventory.
+     *
+     * <p>Blueprint authors should group all needed resources into a single
+     * {@code ResourceRequestOp} rather than using multiple ops or {@code ParallelOp},
+     * to guarantee atomic fulfillment.
+     *
+     * @param items one or more resource stacks to request (must not be empty)
+     */
+    record ResourceRequestOp(List<ResourceStack> items) implements AtomicOp {
+        public ResourceRequestOp {
+            items = List.copyOf(items);
+            if (items.isEmpty()) {
+                throw new IllegalArgumentException("ResourceRequestOp items must not be empty");
+            }
+        }
+
+        /** Convenience constructor for a single resource (backward-compat). */
+        public ResourceRequestOp(ResourceStack single) {
+            this(List.of(single));
+        }
+
+        /** Backward-compat accessor for single-item requests. */
+        public ResourceStack requested() {
+            return items.get(0);
+        }
+
         @Override
         public float baseManaCost() {
             return 0.0f; // Teleportation cost handled by the ritual inserted into private queue

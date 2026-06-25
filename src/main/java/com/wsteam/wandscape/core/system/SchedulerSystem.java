@@ -162,8 +162,9 @@ public class SchedulerSystem implements System {
                     TaskExecutor bestExec = world.get(bestNpc, TaskExecutor.class);
                     if (bestExec != null) {
                         GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
-                        NpcTaskPackage pkg = NpcTaskPackage.of(
-                                "global:" + task.id, task.sequence, stance, task.priority);
+                        NpcTaskPackage pkg = NpcTaskPackage.resumeFrom(
+                                "global:" + task.id, task.sequence, stance, task.priority,
+                                task.stepIndex);
                         bestExec.npcQueue.enqueueNormal(pkg);
                     }
                     taskPool.assignLight(task.id, bestNpc, world);
@@ -211,8 +212,9 @@ public class SchedulerSystem implements System {
                                     "system:wand_equip",
                                     new AtomicOp.WandEquipOp(wandId), null, 70));
                             GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
-                            NpcTaskPackage pkg = NpcTaskPackage.of(
-                                    "global:" + task.id, task.sequence, stance, task.priority);
+                            NpcTaskPackage pkg = NpcTaskPackage.resumeFrom(
+                                    "global:" + task.id, task.sequence, stance, task.priority,
+                                    task.stepIndex);
                             exec.npcQueue.enqueueNormal(pkg);
                             taskPool.assignLight(task.id, npcId, world);
                             Log.info(TAG, "provisioned wand %s for #%d '%s' → NPC %d",

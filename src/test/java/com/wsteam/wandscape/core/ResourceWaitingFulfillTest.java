@@ -81,8 +81,9 @@ public class ResourceWaitingFulfillTest {
         assertEquals(TaskState.AWAITING_RESOURCES, task.state,
                 "Task should enter AWAITING_RESOURCES when warehouse has insufficient stock");
         assertNotNull(task.awaitingResource, "Task should record which resource it needs");
-        assertEquals(ResourceId.STONE_BRICKS, task.awaitingResource.resource());
-        assertEquals(10, task.awaitingResource.amount());
+        assertFalse(task.awaitingResource.isEmpty());
+        assertEquals(ResourceId.STONE_BRICKS, task.awaitingResource.get(0).resource());
+        assertEquals(10, task.awaitingResource.get(0).amount());
         assertEquals(0, task.stepIndex,
                 "stepIndex preserved at ResourceRequestOp position (step 0)");
 

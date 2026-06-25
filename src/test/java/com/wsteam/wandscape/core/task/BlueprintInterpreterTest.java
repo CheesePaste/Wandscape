@@ -256,8 +256,112 @@ class BlueprintInterpreterTest {
             assertEquals(1, seq.size());
             assertTrue(seq.get(0) instanceof AtomicOp.ResourceRequestOp);
             AtomicOp.ResourceRequestOp op = (AtomicOp.ResourceRequestOp) seq.get(0);
+            assertEquals(1, op.items().size());
+            assertEquals("wood", op.items().get(0).resource().id());
+            assertEquals(10, op.items().get(0).amount());
+
+            // Backward-compat accessor
             assertEquals("wood", op.requested().resource().id());
             assertEquals(10, op.requested().amount());
+        }
+
+        @Test
+        @DisplayName("request_resource with items list generates ResourceRequestOp with multiple items")
+        void requestResourceMultiItemStep() {
+            BlueprintDefinition def = new BlueprintDefinition("test:req_multi", Collections.emptyMap(),
+                    List.of(new StepNode.RequestResourceStep(List.of(
+                            new StepNode.RequestResourceStep.ResourceEntry(
+                                    new ExprNode.LiteralString("stone"), new ExprNode.LiteralInt(64)),
+                            new StepNode.RequestResourceStep.ResourceEntry(
+                                    new ExprNode.LiteralString("wood"), new ExprNode.LiteralInt(32))))));
+
+            TaskSequence seq = interpreter.interpret(def, Collections.emptyMap());
+            assertEquals(1, seq.size());
+            assertTrue(seq.get(0) instanceof AtomicOp.ResourceRequestOp);
+            AtomicOp.ResourceRequestOp op = (AtomicOp.ResourceRequestOp) seq.get(0);
+            assertEquals(2, op.items().size());
+            assertEquals("stone", op.items().get(0).resource().id());
+            assertEquals(64, op.items().get(0).amount());
+            assertEquals("wood", op.items().get(1).resource().id());
+            assertEquals(32, op.items().get(1).amount());
+        }
+
+        @Test
+        @DisplayName("request_resource with empty items throws")
+        void requestResourceEmptyItemsThrows() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    new AtomicOp.ResourceRequestOp(List.of()));
+        }
+
+        @Test
+        @DisplayName("map_to_items generates ResourceRequestOp from dynamic list")
+        void mapToItemsDynamicRequest() {
+            // Simulate build_place_structure scenario:
+            //   material_list = ["stone", "oak_planks"], material_counts = {"stone": 64, "oak_planks": 32}
+            ExprNode mapToItems = new ExprNode.MapItems(
+                    new ExprNode.LiteralListString(List.of("stone", "oak_planks")),
+                    "mat",
+                    new ExprNode.Var("mat"),
+                    new ExprNode.MapGet(new ExprNode.Var("counts"), new ExprNode.Var("mat"))
+            );
+
+            Map<String, JsonElement> params = new HashMap<>();
+            JsonObject countsMap = new JsonObject();
+            countsMap.addProperty("stone", 64);
+            countsMap.addProperty("oak_planks", 32);
+            params.put("counts", countsMap);
+
+            // Evaluate the MapItems expression directly
+            JsonElement result = interpreter.evaluate(mapToItems, params);
+            assertTrue(result.isJsonArray());
+            JsonArray arr = result.getAsJsonArray();
+            assertEquals(2, arr.size());
+
+            JsonObject first = arr.get(0).getAsJsonObject();
+            assertEquals("stone", first.get("resource").getAsString());
+            assertEquals(64, first.get("amount").getAsInt());
+
+            JsonObject second = arr.get(1).getAsJsonObject();
+            assertEquals("oak_planks", second.get("resource").getAsString());
+            assertEquals(32, second.get("amount").getAsInt());
+        }
+
+        @Test
+        @DisplayName("request_resource with dynamicItems produces multi-item ResourceRequestOp")
+        void requestResourceDynamicItemsStep() {
+            // Dynamic items expression: map_to_items
+            ExprNode mapToItems = new ExprNode.MapItems(
+                    new ExprNode.LiteralListString(List.of("stone", "wood")),
+                    "m",
+                    new ExprNode.Var("m"),
+                    new ExprNode.LiteralInt(10)
+            );
+
+            StepNode.RequestResourceStep step = new StepNode.RequestResourceStep(
+                    List.of(), mapToItems);
+            BlueprintDefinition def = new BlueprintDefinition("test:dyn_req", Map.of(), List.of(step));
+
+            TaskSequence seq = interpreter.interpret(def, Map.of());
+            assertEquals(1, seq.size());
+            assertTrue(seq.get(0) instanceof AtomicOp.ResourceRequestOp);
+            AtomicOp.ResourceRequestOp op = (AtomicOp.ResourceRequestOp) seq.get(0);
+            assertEquals(2, op.items().size());
+            assertEquals("stone", op.items().get(0).resource().id());
+            assertEquals(10, op.items().get(0).amount());
+            assertEquals("wood", op.items().get(1).resource().id());
+            assertEquals(10, op.items().get(1).amount());
+        }
+
+        @Test
+        @DisplayName("request_resource dynamicItems with non-array throws")
+        void requestResourceDynamicItemsBadType() {
+            // A literal string is not an array — should fail
+            StepNode.RequestResourceStep step = new StepNode.RequestResourceStep(
+                    List.of(), new ExprNode.LiteralString("not_an_array"));
+            BlueprintDefinition def = new BlueprintDefinition("test:bad_dyn", Map.of(), List.of(step));
+
+            assertThrows(BlueprintInterpreter.BlueprintInterpretException.class, () ->
+                    interpreter.interpret(def, Map.of()));
         }
 
         @Test

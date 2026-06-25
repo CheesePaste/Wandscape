@@ -16,7 +16,6 @@ import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.event.ResourceFulfilled;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.op.ResourceShortageException;
@@ -130,7 +129,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 var exec = world.get(npcId, TaskExecutor.class);
                 if (exec != null && exec.globalTaskId != null) {
                     world.taskPool.markAwaitingResources(
-                            exec.globalTaskId, npcId, e.requested(), world);
+                            exec.globalTaskId, npcId, e.requestedItems(), world);
                     exec.releaseGlobalTask();
                 }
             }
@@ -199,14 +198,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             return;
         }
         resources.addResource(new ResourceId(element), amount);
+        // addResource() now emits ResourceFulfilled internally via WarehouseManager
 
         // ── Transport visualization: elements fly NPC → warehouse ──
         launchElementTransport(element, amount, world, npcId);
-
-        // ── Wake up any tasks waiting on this resource ──
-        if (world.eventBus != null) {
-            world.eventBus.emit(new ResourceFulfilled(new ResourceId(element), amount));
-        }
 
         // Completion sparkle
         spawnCompletionParticles(npcId);

@@ -12,21 +12,13 @@
   },
   "steps": [
     {
-      "type": "parallel",
-      "steps": [
-        {
-          "type": "for_each",
-          "list": "$material_list",
-          "var": "mat",
-          "steps": [
-            {
-              "type": "request_resource",
-              "resource": "$mat",
-              "amount": {"get": ["$material_counts", "$mat"]}
-            }
-          ]
-        }
-      ]
+      "type": "request_resource",
+      "items": {"map_to_items": {
+        "list": "$material_list",
+        "as": "mat",
+        "resource": "$mat",
+        "amount": {"get": ["$material_counts", "$mat"]}
+      }}
     },
     {
       "type": "for_each",

@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.engine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -94,12 +96,16 @@ public final class TaskPoolSavedData extends SavedData {
             tag.put("params", params);
         }
 
-        // awaitingResource
-        if (task.awaitingResource != null) {
-            CompoundTag res = new CompoundTag();
-            res.putString("id", task.awaitingResource.resource().id());
-            res.putInt("amt", task.awaitingResource.amount());
-            tag.put("await", res);
+        // awaitingResource (now a list, persisted as ListTag of CompoundTags)
+        if (task.awaitingResource != null && !task.awaitingResource.isEmpty()) {
+            ListTag awaitList = new ListTag();
+            for (ResourceStack rs : task.awaitingResource) {
+                CompoundTag res = new CompoundTag();
+                res.putString("id", rs.resource().id());
+                res.putInt("amt", rs.amount());
+                awaitList.add(res);
+            }
+            tag.put("await", awaitList);
         }
 
         // approval info (for PENDING_APPROVAL tasks)
@@ -186,14 +192,28 @@ public final class TaskPoolSavedData extends SavedData {
                 task.state = state;
                 task.stepIndex = stepIndex;
 
-                // Restore awaitingResource
+                // Restore awaitingResource (new format: ListTag; old format: CompoundTag)
                 if (tag.contains("await")) {
-                    CompoundTag resTag = tag.getCompound("await");
-                    String resId = resTag.getString("id");
-                    int amt = resTag.getInt("amt");
-                    if (!resId.isEmpty() && amt > 0) {
-                        task.awaitingResource = new ResourceStack(new ResourceId(resId), amt);
+                    List<ResourceStack> awaitList = new ArrayList<>();
+                    Tag awaitTag = tag.get("await");
+                    if (awaitTag instanceof ListTag listTag) {
+                        for (int j = 0; j < listTag.size(); j++) {
+                            CompoundTag entryTag = listTag.getCompound(j);
+                            String resId = entryTag.getString("id");
+                            int amt = entryTag.getInt("amt");
+                            if (!resId.isEmpty() && amt > 0) {
+                                awaitList.add(new ResourceStack(new ResourceId(resId), amt));
+                            }
+                        }
+                    } else if (awaitTag instanceof CompoundTag resTag) {
+                        // Backward-compat: old single-resource format
+                        String resId = resTag.getString("id");
+                        int amt = resTag.getInt("amt");
+                        if (!resId.isEmpty() && amt > 0) {
+                            awaitList.add(new ResourceStack(new ResourceId(resId), amt));
+                        }
                     }
+                    task.awaitingResource = awaitList.isEmpty() ? null : awaitList;
                 }
 
                 return task;
