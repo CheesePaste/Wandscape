@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
@@ -12,6 +13,7 @@ import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import com.wsteam.wandscape.core.task.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.types.RitualId;
 
 import javax.annotation.Nullable;
@@ -352,11 +354,22 @@ public class TaskExecutionSystem implements System {
         }
     }
 
-    /** Release the current package back to the global pool with preserved progress. */
+    /**
+     * Release the current package back to the global pool with preserved progress.
+     *
+     * <p>Before releasing, returns items from NPC inventory that were fetched by
+     * already-executed {@link AtomicOp.ResourceRequestOp}s back to the warehouse,
+     * and resets stepIndex to the first such request. This is critical because
+     * stepIndex is a global progress cursor, but fetched items live in per-NPC
+     * inventory. Without the refund+reset, the next NPC starts past the
+     * ResourceRequestOp with an empty inventory and hits consumable shortages
+     * on the first TransformOp.
+     */
     private void releaseToGlobalPool(TaskExecutor exec, NpcTaskQueue queue,
                                       long npcId, World world) {
         if (exec.globalTaskId != null && taskPool != null) {
             syncStepToPool(exec, queue); // preserve progress before releasing
+            returnAndReset(exec, npcId, world);
             taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
             exec.releaseGlobalTask();
         }
@@ -364,6 +377,49 @@ public class TaskExecutionSystem implements System {
         exec.state = ExecutorState.IDLE;
         exec.currentOpTarget = null;
         exec.currentOpKind = null;
+    }
+
+    /**
+     * Return items fetched by executed ResourceRequestOps back to the colony
+     * warehouse, and reset stepIndex to the first request so the next NPC
+     * re-fetches them. TransformOps that were already executed will no-op
+     * (target already matches desired block), so re-fetch is safe.
+     */
+    private void returnAndReset(TaskExecutor exec, long npcId, World world) {
+        long taskId = exec.globalTaskId;
+        GlobalTask task = taskPool.get(taskId);
+        if (task == null) return;
+
+        int currentStep = exec.stepIndex;
+        if (currentStep <= 0) return; // nothing past ResourceRequestOp
+
+        Inventory inv = world.get(npcId, Inventory.class);
+        ColonyResourceAccess colony = world.colonyResources;
+        if (inv == null || colony == null) return;
+
+        int firstReqIdx = -1;
+
+        for (int i = 0; i < task.sequence.size() && i < currentStep; i++) {
+            if (task.sequence.get(i) instanceof AtomicOp.ResourceRequestOp req) {
+                for (ResourceStack item : req.items()) {
+                    int count = inv.count(item.resource());
+                    if (count > 0) {
+                        inv.remove(item.resource(), count);
+                        colony.addResource(item.resource(), count);
+                        Log.info(TAG, "NPC %d — returned %d x %s to warehouse on release",
+                                npcId, count, item.resource().id());
+                    }
+                }
+                if (firstReqIdx < 0) {
+                    firstReqIdx = i;
+                }
+            }
+        }
+
+        if (firstReqIdx >= 0) {
+            exec.stepIndex = firstReqIdx;
+            taskPool.advanceStep(taskId, firstReqIdx);
+        }
     }
 
     /** Bind a global task to the executor when a global package starts. */

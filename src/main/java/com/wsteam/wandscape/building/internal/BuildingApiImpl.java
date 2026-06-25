@@ -13,10 +13,14 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
@@ -130,6 +134,12 @@ public class BuildingApiImpl implements BuildingApi {
         }
         LOGGER.debug("registered building {} type={} at {}",
                 state.getBuildingId(), state.getBuildingTypeId(), state.getAnchor());
+
+        // Notify downstream systems (e.g. citizen spawner, colony evaluation)
+        // so they react to building registration regardless of whether an NPC
+        // built it or it was placed via command / admin tools.
+        NeoForge.EVENT_BUS.post(new BuildingPlacedEvent(
+                state.getBuildingId(), colonyId, state.getBuildingTypeId()));
     }
 
     @Override
@@ -494,6 +504,82 @@ public class BuildingApiImpl implements BuildingApi {
     }
 
     // ---- Helpers ----
+
+    @Override
+    public List<BlockPos> findBeds(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return List.of();
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return List.of();
+
+        Level level = this.serverLevel;
+        if (level == null) level = getServerLevel();
+        if (level == null) return List.of();
+
+        BoundingBox bounds = state.getBounds();
+        List<BlockPos> beds = new ArrayList<>();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int total = 0, found = 0;
+
+        for (int x = bounds.minX(); x <= bounds.maxX(); x++) {
+            for (int y = bounds.minY(); y <= bounds.maxY(); y++) {
+                for (int z = bounds.minZ(); z <= bounds.maxZ(); z++) {
+                    total++;
+                    pos.set(x, y, z);
+                    if (level.getBlockState(pos).is(BlockTags.BEDS)) {
+                        beds.add(pos.immutable());
+                        found++;
+                    }
+                }
+            }
+        }
+        LOGGER.debug("[BldgAPI] findBeds({}) → {}/{} blocks in boundary", buildingId, found, total);
+        return beds;
+    }
+
+    @Override
+    public List<BlockPos> sampleWalkableGround(UUID buildingId, int count) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return List.of();
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return List.of();
+
+        Level level = this.serverLevel;
+        if (level == null) level = getServerLevel();
+        if (level == null) return List.of();
+
+        BoundingBox bounds = state.getBounds();
+        int bx = bounds.maxX() - bounds.minX();
+        int by = bounds.maxY() - bounds.minY();
+        int bz = bounds.maxZ() - bounds.minZ();
+
+        if (bx < 1) bx = 1; if (bz < 1) bz = 1;
+        if (by < 1) by = 1;
+
+        Random rng = new Random();
+        List<BlockPos> result = new ArrayList<>();
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+
+        for (int attempt = 0; attempt < count * 6 && result.size() < count; attempt++) {
+            int x = bounds.minX() + rng.nextInt(bx + 1);
+            int z = bounds.minZ() + rng.nextInt(bz + 1);
+            int y = bounds.minY() + rng.nextInt(by + 1);
+
+            // Walkable = solid block at y-1, air at y
+            mp.set(x, y, z);
+            if (level.getBlockState(mp).isAir()
+                    && level.getBlockState(mp.below()).isSolid()
+                    && !level.getBlockState(mp.below()).is(BlockTags.BEDS)) {
+                if (result.stream().noneMatch(p -> p.distSqr(mp) < 4)) {
+                    result.add(mp.immutable());
+                }
+            }
+        }
+        LOGGER.debug("[BldgAPI] sampleWalkableGround({}) → {} samples", buildingId, result.size());
+        return result;
+    }
 
     @Nullable
     private static Level getServerLevel() {

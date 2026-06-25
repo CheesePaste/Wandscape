@@ -65,4 +65,20 @@ public interface BuildingApi {
 
     /** Clear the active task when it completes or is cancelled. */
     void clearCurrentTask(UUID buildingId);
+
+    /**
+     * Scan the building's boundary AABB for bed blocks.
+     * Returns world-coordinate positions of every bed block found.
+     * Each bed (two halves) produces two entries.
+     */
+    List<BlockPos> findBeds(UUID buildingId);
+
+    /**
+     * Sample random walkable ground positions within the building's
+     * boundary AABB. Each returned position has a solid block under it
+     * and air above. Used by citizen AI for LEISURE POI wandering.
+     *
+     * @param count number of positions to sample
+     */
+    List<BlockPos> sampleWalkableGround(UUID buildingId, int count);
 }

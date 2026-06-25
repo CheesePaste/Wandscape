@@ -27,6 +27,7 @@ import com.wsteam.wandscape.command.SeedWarehouseCommand;
 import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
+import com.wsteam.wandscape.command.CitizenCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -75,6 +76,8 @@ import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.citizen.CitizenEntity;
+import com.wsteam.wandscape.citizen.CitizenManager;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -106,6 +109,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -166,6 +170,23 @@ public class Wandscape {
                             0xFFD700,  // gold highlight
                             new Item.Properties()));
 
+    // ---- citizen-system: entity ----
+    public static final DeferredHolder<EntityType<?>, EntityType<CitizenEntity>> CITIZEN =
+            ENTITIES.register("citizen", () ->
+                    EntityType.Builder.of(CitizenEntity::new, MobCategory.CREATURE)
+                            .sized(0.6f, 1.95f)
+                            .clientTrackingRange(10)
+                            .build("citizen"));
+
+    // ---- citizen-system: spawn egg ----
+    public static final DeferredItem<Item> CITIZEN_SPAWN_EGG =
+            ITEMS.register("citizen_spawn_egg", () ->
+                    new DeferredSpawnEggItem(
+                            () -> (EntityType<? extends Mob>) (EntityType<?>) CITIZEN.get(),
+                            0xFFAA00,  // orange background
+                            0xFFFFFF,  // white highlight
+                            new Item.Properties()));
+
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =
             CREATIVE_MODE_TABS.register("wandscape_tab", () -> CreativeModeTab.builder()
@@ -174,6 +195,7 @@ public class Wandscape {
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
+                        output.accept(CITIZEN_SPAWN_EGG.get());
                     })
                     .build());
 
@@ -195,6 +217,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
+        CitizenManager.getInstance().register();
         WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -324,6 +347,7 @@ public class Wandscape {
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(WANDSCAPE_NPC.get(), WandscapeNpc.createAttributes().build());
+        event.put(CITIZEN.get(), CitizenEntity.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -336,6 +360,11 @@ public class Wandscape {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
+        // Safety sweep: kill any citizen entities that survived a dirty shutdown
+        // (requiresCustomPersistence should prevent save, but belt-and-suspenders)
+        CitizenManager.killAllStrayCitizens(event.getServer().overworld());
+        // Spawn initial citizen NPCs
+        CitizenManager.getInstance().spawnInitial(event.getServer().overworld());
         BuildCompleteListener.register();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
@@ -375,9 +404,16 @@ public class Wandscape {
         }
     }
 
+    /** Discard all citizen entities BEFORE world saves to disk. */
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        CitizenManager.getInstance().onServerStopping();
+    }
+
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         LOGGER.info("Wandscape server stopped — resetting engine.");
+        CitizenManager.getInstance().onServerStopped();
         buildingApi.setLevel(null);
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
@@ -411,7 +447,8 @@ public class Wandscape {
                 .then(SeedWarehouseCommand.node())
                 .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
-                .then(TransportCommand.node());
+                .then(TransportCommand.node())
+                .then(CitizenCommand.node());
         dispatcher.register(root);
     }
 
@@ -429,6 +466,9 @@ public class Wandscape {
         if (world == null) return;
 
         mcTickCount++;
+
+        // ⓪ Citizen NPC tick
+        CitizenManager.getInstance().tick(event.getServer().overworld());
 
         // ① Tick async executor countdowns
         var asyncExec = WandscapeEngine.getAsyncExecutor();
