@@ -60,8 +60,17 @@ public class EventDrivenTaskSource implements TaskSource {
     @Nullable
     private ResourceShortageHandler resourceHandler;
 
+    /** V1 dedup cooldown map, keyed by resource. */
     private final Map<ResourceId, Long> lastGatherRequest = new HashMap<>();
     private static final long DUPLICATE_COOLDOWN_MS = 10_000;
+
+    /**
+     * Whether automatic gather task creation is enabled.
+     * Set to {@code false} to suppress all gather blueprints (e.g. for manual-scavenge-only worlds).
+     * Default {@code true} for backward compat; engine bootstrap should set to {@code false}
+     * during early-access when the production pipeline isn't ready.
+     */
+    private volatile boolean gatherEnabled = true;
 
     /**
      * Create and wire subscriptions.
@@ -89,6 +98,12 @@ public class EventDrivenTaskSource implements TaskSource {
         this.resourceHandler = handler;
     }
 
+    /** Enable / disable automatic gather task creation. Call from engine bootstrap. */
+    public void setGatherEnabled(boolean enabled) {
+        this.gatherEnabled = enabled;
+        Log.info(TAG, "gatherEnabled = %s", enabled);
+    }
+
     // ======================== TaskSource contract ========================
 
     @Override
@@ -104,6 +119,10 @@ public class EventDrivenTaskSource implements TaskSource {
     // ======================== Event → TaskRequest translators ========================
 
     private void onResourceLow(ResourceLow e) {
+        if (!gatherEnabled) {
+            Log.debug(TAG, "gather disabled — skip ResourceLow(%s)", e.resource());
+            return;
+        }
         // Try engine-layer handler first (e.g. synthesize instead of gather)
         if (resourceHandler != null
                 && resourceHandler.handle(e.resource(), e.threshold() - e.current(), defaultLocation.get())) {
@@ -117,6 +136,10 @@ public class EventDrivenTaskSource implements TaskSource {
     }
 
     private void onTaskAwaitingResources(TaskAwaitingResources e) {
+        if (!gatherEnabled) {
+            Log.debug(TAG, "gather disabled — skip TaskAwaitingResources(#%d)", e.taskId());
+            return;
+        }
         List<ResourceStack> needed = e.needed();
         if (needed.isEmpty()) return;
         // Use the first needed resource as the primary target for gather

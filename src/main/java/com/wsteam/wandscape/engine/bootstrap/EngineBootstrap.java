@@ -183,7 +183,8 @@ public final class EngineBootstrap {
         EventDrivenTaskSource eventSource = new EventDrivenTaskSource(
                 world.taskPool, world.eventBus, () -> GridPos.ORIGIN);
         eventSource.setResourceShortageHandler(createShortageHandler(world));
-        LOGGER.info("  EventDrivenTaskSource wired with synthesize handler");
+        eventSource.setGatherEnabled(false); // gather tasks disabled for early-access
+        LOGGER.info("  EventDrivenTaskSource wired (gather=OFF)");
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
