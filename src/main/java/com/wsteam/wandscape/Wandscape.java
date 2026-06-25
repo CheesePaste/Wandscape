@@ -22,6 +22,7 @@ import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.RecoveryCommand;
 import com.wsteam.wandscape.command.RoadCommand;
 import com.wsteam.wandscape.command.RoadTestCommand;
+import com.wsteam.wandscape.command.SeedWarehouseCommand;
 import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
@@ -405,6 +406,7 @@ public class Wandscape {
                 .then(RecoveryCommand.node())
                 .then(RoadCommand.node())
                 .then(RoadTestCommand.node())
+                .then(SeedWarehouseCommand.node())
                 .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
                 .then(TransportCommand.node());

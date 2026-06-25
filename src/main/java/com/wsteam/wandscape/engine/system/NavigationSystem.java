@@ -1,19 +1,18 @@
 package com.wsteam.wandscape.engine.system;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
-import com.wsteam.wandscape.core.component.SuspensionContext;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.op.AtomicOp;
-import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -168,43 +167,53 @@ public class NavigationSystem implements System {
         switchToRitualTeleport(nav, npcId, world);
     }
 
-    // ---- Ritual teleport via private queue ----
+    // ---- Ritual teleport (direct, no package queue) ----
 
     /**
-     * Push a {@code RitualOp(SELF_TELEPORT)} to the NPC's private queue.
-     * TaskExecutionSystem picks it up, executes via {@code RitualOps.beginRitual()},
-     * and the NPC arrives at the target.
-     * <p>
-     * The nav future is NOT completed here. Instead it chains to the ritual
-     * future, so TaskExecutionSystem blocks until the ritual actually finishes
-     * and the NPC is at the destination. This prevents the re-navigation loop
-     * that occurred when the future was completed before the teleport happened.
+     * Fire a {@code SELF_TELEPORT} ritual directly via {@code world.ritualOps}
+     * instead of going through the NPC package queue.
+     *
+     * <p>The ritual's future replaces the failed nav future in
+     * {@code TaskExecutor.pendingFuture} so TaskExec waits for the teleport
+     * to complete before advancing. No packages are suspended or enqueued —
+     * the current package stays in place and continues from its current step
+     * once the NPC arrives at the target.
      */
     private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        GridPos target = nav.target;
 
-        // Suspend the current package so the urgent teleport can run next
-        if (exec != null && exec.npcQueue.currentPackage() != null) {
-            SuspensionContext ctx = exec.npcQueue.suspendCurrent(worldTick(world));
-            LOGGER.info("[NavSys] NPC {} — suspended current pkg for teleport (ctx={})",
-                    npcId, ctx != null ? "ok" : "null");
+        // ── Clear the failed nav future from TaskExecutor ──
+        if (exec != null) {
             exec.pendingFuture = null;
             exec.pendingFutureIsNav = false;
         }
+
+        // ── Cancel pathfinding (clears nav state) ──
         if (exec != null && world.movementOps != null) {
             world.movementOps.cancelNavigation(npcId);
         }
 
-        GridPos target = nav.target;
-        exec.npcQueue.enqueueUrgent(NpcTaskPackage.system("system:stuck_teleport",
-                new AtomicOp.RitualOp(RitualId.SELF_TELEPORT, target), null, 80));
-        nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
-        nav.stuckChecks = 0;
-        nav.repathCount = 0;
+        // ── Restore nav state after cancelNavigation reset it ──
+        nav.target = target;
+        nav.startTick = tickCounter;
 
-        if (target != null) {
-            LOGGER.info("[NavSys] NPC {} — self_teleport ritual queued → ({},{},{})",
+        // ── Direct ritual teleport — NO package queue manipulation ──
+        if (world.ritualOps != null && target != null) {
+            CompletableFuture<Void> ritualFuture = world.ritualOps.beginRitual(
+                    RitualId.SELF_TELEPORT, target, world, npcId, Map.of());
+            if (exec != null) {
+                exec.pendingFuture = ritualFuture;
+                exec.pendingFutureIsNav = true;
+            }
+            nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
+            nav.stuckChecks = 0;
+            nav.repathCount = 0;
+            LOGGER.info("[NavSys] NPC {} — self_teleport ritual fired → ({},{},{})",
                     npcId, target.x(), target.y(), target.z());
+        } else {
+            LOGGER.warn("[NavSys] NPC {} — cannot teleport: ritualOps={} target={}",
+                    npcId, world.ritualOps != null, target != null);
         }
     }
 

@@ -47,6 +47,9 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
     private final ItemTransportManager transporter;
 
+    /** Ticks between staggered item launches (visual stream spacing). */
+    private static final int STAGGER_TICKS = 5;
+
     /** Pending staggered launches — one per tick. */
     private final List<PendingBatch> batches = new ArrayList<>();
 
@@ -127,7 +130,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         int remaining = shortfall - 1;
         if (remaining > 0) {
             batches.add(new PendingBatch(doneFuture,
-                    1 /* next launch in 1 tick */,
+                    STAGGER_TICKS,
                     remaining, inFlight,
                     requested, shortfall, resources, npcId, world,
                     warehousePos, npcPos, npc.level(), route));
@@ -159,7 +162,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                 int newRemaining = b.itemsRemaining() - 1;
                 if (newRemaining > 0) {
                     batches.set(i, new PendingBatch(b.doneFuture(),
-                            1 /* next in 1 tick */, newRemaining,
+                            STAGGER_TICKS, newRemaining,
                             b.inFlight(), b.requested(), b.shortfall(),
                             b.resources(), b.npcId(), b.world(), b.from(), b.to(),
                             b.level(), b.route()));
