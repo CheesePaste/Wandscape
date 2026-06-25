@@ -26,6 +26,7 @@ import com.wsteam.wandscape.command.SeedWarehouseCommand;
 import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
+import com.wsteam.wandscape.command.CitizenCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -107,6 +108,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -357,6 +359,9 @@ public class Wandscape {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
+        // Safety sweep: kill any citizen entities that survived a dirty shutdown
+        // (requiresCustomPersistence should prevent save, but belt-and-suspenders)
+        CitizenManager.killAllStrayCitizens(event.getServer().overworld());
         // Spawn initial citizen NPCs
         CitizenManager.getInstance().spawnInitial(event.getServer().overworld());
         BuildCompleteListener.register();
@@ -398,6 +403,12 @@ public class Wandscape {
         }
     }
 
+    /** Discard all citizen entities BEFORE world saves to disk. */
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        CitizenManager.getInstance().onServerStopping();
+    }
+
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         LOGGER.info("Wandscape server stopped — resetting engine.");
@@ -434,7 +445,8 @@ public class Wandscape {
                 .then(SeedWarehouseCommand.node())
                 .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
-                .then(TransportCommand.node());
+                .then(TransportCommand.node())
+                .then(CitizenCommand.node());
         dispatcher.register(root);
     }
 

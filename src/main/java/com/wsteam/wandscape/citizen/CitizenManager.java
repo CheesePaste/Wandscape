@@ -19,14 +19,21 @@ import java.util.stream.Collectors;
 /**
  * Singleton manager for citizen NPC lifecycle.
  *
- * <p>Subscribes to {@link BuildingPlacedEvent} via NeoForge to reactively
- * spawn citizens when new buildings are completed. At server start (before
- * any buildings exist), {@link #spawnInitial} is called once — it scans
- * pre-existing buildings restored from SavedData.
+ * <h3>Visibility rule</h3>
+ * Citizens only exist as spawned entities during visible states
+ * ({@link CitizenState#COMMUTING}, {@link CitizenState#LEISURE},
+ * {@link CitizenState#IDLE}). During {@link CitizenState#WORKING} and
+ * {@link CitizenState#SLEEPING} they are discarded and held as
+ * {@link StoredCitizen} data — no entity exists in the world.
  *
- * <p>Population = total bed count in all "residence" buildings, capped at
- * {@link #HARD_CAP}. Each profession maps to a building category (see
- * {@link #PROFESSION_CATEGORIES}).
+ * <h3>Daily schedule</h3>
+ * <pre>
+ *   06:00  SLEEPING → respawn → COMMUTING(→workplace)
+ *   06:30  arrived → WORKING (despawn)
+ *   17:30  WORKING → respawn → COMMUTING(→home)
+ *   18:00  arrived → LEISURE (city wandering, rendered)
+ *   22:00  LEISURE → SLEEPING (despawn)
+ * </pre>
  */
 public class CitizenManager {
 
@@ -34,63 +41,68 @@ public class CitizenManager {
     private static final CitizenManager INSTANCE = new CitizenManager();
 
     private CitizenManager() {}
+    public static CitizenManager getInstance() { return INSTANCE; }
 
-    public static CitizenManager getInstance() {
-        return INSTANCE;
-    }
+    // ──────────────────────── Schedule ────────────────────────
 
-    // ──────────────────────── Configuration ────────────────────────
-
-    /** Hard cap regardless of bed count (safety). */
     private static final int HARD_CAP = 15;
+
+    /** MC dayTime (0–24000). 0 = 6:00 AM. */
+    static final long T_WAKE_UP      =    0; //  6:00
+    static final long T_WORK_START   =  500; //  6:30
+    static final long T_HOME_COMMUTE = 11500; // 17:30
+    static final long T_LEISURE      = 12000; // 18:00
+    static final long T_SLEEP        = 14000; // 22:00
 
     // ──────────────────────── Profession → building category ────────────────────────
 
-    private static final Map<Profession, List<String>> PROFESSION_CATEGORIES = Map.of(
+    private static final Map<Profession, List<String>> PROF_CATS = Map.of(
             Profession.FARMER,   List.of("farm"),
             Profession.MERCHANT, List.of("market", "storage"),
             Profession.SCHOLAR,  List.of("library", "academy"),
             Profession.ARTISAN,  List.of("workshop", "production", "crafting_station"),
             Profession.GUARD,    List.of("garrison", "wall")
-            // IDLER: remaining slots (no building category)
     );
 
     // ──────────────────────── Name pool ────────────────────────
 
     private static final String[] SURNAMES = {
-            "李", "王", "张", "刘", "陈", "杨", "赵", "黄", "周", "吴",
-            "徐", "孙", "马", "胡", "朱", "郭", "何", "罗", "高", "林",
-            "郑", "梁", "谢", "宋", "唐", "许", "韩", "冯", "邓", "曹",
-            "彭", "曾", "萧", "田", "董", "潘", "袁", "蔡", "蒋", "余",
-            "于", "杜", "叶", "程", "苏", "魏", "吕", "丁", "任", "沈"
+            "李","王","张","刘","陈","杨","赵","黄","周","吴",
+            "徐","孙","马","胡","朱","郭","何","罗","高","林",
+            "郑","梁","谢","宋","唐","许","韩","冯","邓","曹",
+            "彭","曾","萧","田","董","潘","袁","蔡","蒋","余",
+            "于","杜","叶","程","苏","魏","吕","丁","任","沈"
+    };
+    private static final String[] GIVENS = {
+            "明","华","文","伟","芳","秀英","丽","强","勇","静",
+            "慧","敏","俊","杰","兰","玲","超","平","刚","涛",
+            "斌","霞","红","建国","海燕","宁","磊","洋","辉","鑫",
+            "怡","珊","君","佳","晨","宇","涵","浩","博","瑞",
+            "思远","晓","雨","梦","毅","恒","淑珍","志强","雪","云"
     };
 
-    private static final String[] GIVENS = {
-            "明", "华", "文", "伟", "芳", "秀英", "丽", "强", "勇", "静",
-            "慧", "敏", "俊", "杰", "兰", "玲", "超", "平", "刚", "涛",
-            "斌", "霞", "红", "建国", "海燕", "宁", "磊", "洋", "辉", "鑫",
-            "怡", "珊", "君", "佳", "晨", "宇", "涵", "浩", "博", "瑞",
-            "思远", "晓", "雨", "梦", "毅", "恒", "淑珍", "志强", "雪", "云"
-    };
+    // ──────────────────────── Stored citizen (despawned state) ────────────────────────
 
     // ──────────────────────── Runtime state ────────────────────────
 
-    private final Map<UUID, CitizenEntity> activeCitizens = new HashMap<>();
+    /** Currently spawned entities. */
+    private final Map<UUID, CitizenEntity> active = new HashMap<>();
+    /** Despawned citizens (WORKING or SLEEPING). */
+    private final Map<UUID, StoredCitizen> stored = new LinkedHashMap<>();
     private final Set<String> usedNames = new HashSet<>();
-
-    /** citizenId → assigned bed world position */
     private final Map<UUID, BlockPos> bedAssignments = new HashMap<>();
+    private final Map<UUID, BlockPos> workplaceAssignments = new HashMap<>();
+    private final Map<UUID, BlockPos> homeAssignments = new HashMap<>();
+
+    /** Cached list of all building anchors (for LEISURE POIs). */
+    private List<BlockPos> cachedPoiList = List.of();
 
     private final Random random = new Random();
     private boolean registered = false;
     private ServerLevel lastLevel = null;
 
-    // ──────────────────────── NeoForge registration ────────────────────────
+    // ──────────────────────── NeoForge ────────────────────────
 
-    /**
-     * Register this singleton on the NeoForge event bus for
-     * {@link BuildingPlacedEvent}. Idempotent.
-     */
     public void register() {
         if (registered) return;
         NeoForge.EVENT_BUS.register(this);
@@ -100,302 +112,560 @@ public class CitizenManager {
 
     // ──────────────────────── Tick ────────────────────────
 
-    /**
-     * Called every server tick. Cleans up dead citizens, releases their beds.
-     * (Future phases: drives schedule transitions.)
-     */
     public void tick(ServerLevel level) {
         this.lastLevel = level;
-        for (Iterator<Map.Entry<UUID, CitizenEntity>> it = activeCitizens.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<UUID, CitizenEntity> entry = it.next();
-            CitizenEntity citizen = entry.getValue();
-            if (citizen.isRemoved()) {
-                UUID id = entry.getKey();
-                it.remove();
-                usedNames.remove(citizen.getCitizenName());
-                bedAssignments.remove(id);
-                LOGGER.debug("[Citizen] {} removed, bed released", citizen.getCitizenName());
+        long dayTime = level.getDayTime() % 24000;
+
+        // ── 1. Stored citizens: check if any should respawn ──
+        for (var it = stored.entrySet().iterator(); it.hasNext(); ) {
+            var e = it.next();
+            UUID id = e.getKey();
+            StoredCitizen sc = e.getValue();
+
+            BlockPos spawnAt = null;
+            BlockPos commuteTo = null;
+
+            if (sc.storedState() == CitizenState.SLEEPING
+                    && dayTime >= T_WAKE_UP && dayTime < T_WORK_START) {
+                // Morning: spawn at home/bed, commute to workplace
+                spawnAt = sc.home() != null ? sc.home() : sc.bed();
+                commuteTo = sc.workplace() != null ? sc.workplace() : spawnAt;
             }
+            if (sc.storedState() == CitizenState.WORKING
+                    && dayTime >= T_HOME_COMMUTE && dayTime < T_LEISURE) {
+                // Evening: spawn at workplace, commute home
+                spawnAt = sc.workplace();
+                commuteTo = sc.home() != null ? sc.home() : sc.bed();
+            }
+
+            if (spawnAt != null && commuteTo != null) {
+                BlockPos ground = findGround(level, spawnAt.offset(
+                        random.nextInt(4) - 2, 0, random.nextInt(4) - 2));
+                CitizenEntity c = spawnEntity(level, ground, sc);
+                if (c != null) {
+                    UUID newId = c.getUUID();
+                    transferAssignments(id, newId, sc);
+                    c.applyState(CitizenState.COMMUTING);
+                    c.setCommuteTarget(commuteTo);
+                    it.remove();
+                    LOGGER.info("[Citizen] {} respawned ({}→COMMUTING, target={})",
+                            sc.name(), sc.storedState().getDisplayName(), commuteTo);
+                }
+            }
+        }
+
+        // ── 2. Active citizens: state machine (snapshot — storeAndDespawn may modify active)
+        for (var e : List.copyOf(active.entrySet())) {
+            UUID id = e.getKey();
+            CitizenEntity c = e.getValue();
+            if (c.isRemoved() || !active.containsKey(id)) {
+                cleanup(id, c.getCitizenName());
+                continue;
+            }
+            driveActive(id, c, dayTime);
+        }
+    }
+
+    // ──────────────────────── Active citizen state machine ────────────────────────
+
+    private void driveActive(UUID id, CitizenEntity c, long dayTime) {
+        CitizenState cur = c.getCurrentState();
+
+        // ── Commute arrived → transition to destination ──
+        if (cur == CitizenState.COMMUTING && c.isCommuteArrived()) {
+            c.setCommuteArrived(false);
+
+            // Evening leisure (18:00-22:00): arrived home → wander city
+            if (dayTime >= T_LEISURE && dayTime < T_SLEEP) {
+                transitionTo(id, c, CitizenState.LEISURE);
+                return;
+            }
+            // Night: arrived home → sleep
+            if (dayTime >= T_SLEEP || dayTime < T_WAKE_UP) {
+                storeAndDespawn(id, c, CitizenState.SLEEPING);
+                return;
+            }
+            // Morning (06:00-06:30): arrived at workplace → work
+            if (dayTime >= T_WAKE_UP && dayTime < T_WORK_START) {
+                storeAndDespawn(id, c, CitizenState.WORKING);
+                return;
+            }
+            // Workday hours: if arrived and has workplace → work
+            if (workplaceAssignments.containsKey(id)) {
+                storeAndDespawn(id, c, CitizenState.WORKING);
+                return;
+            }
+            // Evening commute (17:30-18:00): arrived home → leisure
+            if (dayTime >= T_HOME_COMMUTE && dayTime < T_LEISURE) {
+                transitionTo(id, c, CitizenState.LEISURE);
+                return;
+            }
+            // Fallback
+            transitionTo(id, c, CitizenState.IDLE);
+            return;
+        }
+
+        // ── Morning: wake → commute to work ──
+        if (dayTime >= T_WAKE_UP && dayTime < T_WORK_START) {
+            if (cur == CitizenState.COMMUTING) return;
+            if (cur == CitizenState.LEISURE || cur == CitizenState.IDLE) {
+                transitionTo(id, c, CitizenState.COMMUTING);
+                c.setCommuteTarget(workplaceAssignments.get(id));
+            }
+            return;
+        }
+
+        // ── Workday ──
+        if (dayTime >= T_WORK_START && dayTime < T_HOME_COMMUTE) {
+            if (cur == CitizenState.COMMUTING) return; // en route
+            // Citizens with a workplace → store as WORKING (despawn)
+            if (workplaceAssignments.containsKey(id)) {
+                storeAndDespawn(id, c, CitizenState.WORKING);
+                return;
+            }
+            // No workplace = IDLER → stay visible (IDLE/LEISURE = fine)
+            return;
+        }
+
+        // ── Evening commute home ──
+        if (dayTime >= T_HOME_COMMUTE && dayTime < T_LEISURE) {
+            if (cur == CitizenState.COMMUTING) return;
+            if (cur == CitizenState.LEISURE) return;
+            transitionTo(id, c, CitizenState.COMMUTING);
+            BlockPos home = homeAssignments.get(id);
+            if (home == null) home = bedAssignments.get(id);
+            c.setCommuteTarget(home);
+            return;
+        }
+
+        // ── Evening leisure ──
+        if (dayTime >= T_LEISURE && dayTime < T_SLEEP) {
+            if (cur == CitizenState.COMMUTING) return; // en route
+            if (cur != CitizenState.LEISURE) {
+                transitionTo(id, c, CitizenState.LEISURE);
+            }
+            return;
+        }
+
+        // ── Night: sleep ──
+        if (dayTime >= T_SLEEP || dayTime < T_WAKE_UP) {
+            if (cur == CitizenState.COMMUTING) return;
+            if (cur != CitizenState.SLEEPING) {
+                storeAndDespawn(id, c, CitizenState.SLEEPING);
+            }
+        }
+    }
+
+    // ──────────────────────── Store / despawn / respawn ────────────────────────
+
+    /** Discard the entity and store its data for later respawn. */
+    private void storeAndDespawn(UUID id, CitizenEntity c, CitizenState newState) {
+        stored.put(id, new StoredCitizen(
+                c.getCitizenName(), c.getProfession(), c.getMood(),
+                workplaceAssignments.get(id), homeAssignments.get(id),
+                bedAssignments.get(id), newState));
+        active.remove(id);
+        // Keep name in usedNames so it doesn't get reused
+        c.discard();
+        LOGGER.debug("[Citizen] {} stored as {} (active={}, stored={})",
+                stored.get(id).name(), newState.getDisplayName(),
+                active.size(), stored.size());
+    }
+
+    /** Transfer assignment maps from old UUID to new UUID after respawn. */
+    private void transferAssignments(UUID oldId, UUID newId, StoredCitizen sc) {
+        if (sc.workplace() != null) workplaceAssignments.put(newId, sc.workplace());
+        if (sc.home() != null) homeAssignments.put(newId, sc.home());
+        if (sc.bed() != null) bedAssignments.put(newId, sc.bed());
+    }
+
+    /** Clean up all maps for a removed citizen. */
+    private void cleanup(UUID id, String name) {
+        usedNames.remove(name);
+        bedAssignments.remove(id);
+        workplaceAssignments.remove(id);
+        homeAssignments.remove(id);
+    }
+
+    // ──────────────────────── State transition ────────────────────────
+
+    private void transitionTo(UUID id, CitizenEntity c, CitizenState newState) {
+        CitizenState old = c.getCurrentState();
+        c.applyState(newState);
+
+        switch (newState) {
+            case LEISURE -> {
+                BlockPos home = homeAssignments.get(id);
+                if (home == null) home = bedAssignments.get(id);
+                c.setWanderAnchor(home);
+                c.setWanderRadius(12);
+                c.setPoiList(cachedPoiList);
+            }
+            case IDLE -> {
+                BlockPos home = homeAssignments.get(id);
+                if (home == null) home = bedAssignments.get(id);
+                c.setWanderAnchor(home);
+                c.setWanderRadius(10);
+            }
+            case COMMUTING -> c.setCommuteArrived(false);
         }
     }
 
     // ──────────────────────── Event-driven spawn ────────────────────────
 
-    /**
-     * Called when any building completes construction.
-     * Re-evaluates beds + profession allocation and spawns any missing citizens.
-     */
     @SubscribeEvent
     public void onBuildingPlaced(BuildingPlacedEvent event) {
-        if (lastLevel == null) {
-            LOGGER.debug("[Citizen] BuildingPlaced({}) — no server level yet, deferring", event.getBuildingTypeId());
-            return;
-        }
+        if (lastLevel == null) return;
         BuildingApi api = getBuildingApi();
         if (api == null) return;
-
-        BuildingData building = api.getBuilding(event.getBuildingId());
-        if (building == null) {
-            LOGGER.debug("[Citizen] BuildingPlaced({}) — building not found in registry yet", event.getBuildingTypeId());
-            return;
-        }
-
-        String category = building.getCategory();
-        LOGGER.info("[Citizen] BuildingPlaced: {} (category={}, colony={})",
-                event.getBuildingTypeId(), category,
-                event.getColonyId() != null ? event.getColonyId().toString().substring(0, 8) : "null");
-
-        // Re-evaluate — only spawns up to current bed count, never overspawns
+        BuildingData b = api.getBuilding(event.getBuildingId());
+        if (b == null) return;
+        LOGGER.info("[Citizen] BuildingPlaced: {} (cat={})", event.getBuildingTypeId(), b.getCategory());
         evaluateAndSpawn(lastLevel);
     }
 
-    // ──────────────────────── Scan + spawn logic (shared) ────────────────────────
-
-    /**
-     * One-shot scan of all buildings in the colony. Called at server start
-     * for buildings that survived a restart. After this, new buildings are
-     * handled reactively by {@link #onBuildingPlaced}.
-     */
     public void spawnInitial(ServerLevel level) {
         this.lastLevel = level;
-        BuildingApi api = getBuildingApi();
-        if (api == null) {
-            LOGGER.warn("[Citizen] BuildingApi not available — citizen spawn deferred");
-            return;
-        }
         evaluateAndSpawn(level);
     }
 
-    /**
-     * Scan all buildings, compute bed cap + profession allocation,
-     * and spawn any citizens below the current cap. Idempotent —
-     * only spawns the difference between current count and target.
-     */
+    // ──────────────────────── Evaluate & spawn ────────────────────────
+
     private void evaluateAndSpawn(ServerLevel level) {
         BuildingApi api = getBuildingApi();
         if (api == null) return;
 
-        List<BuildingData> allBuildings = api.getColonyBuildings(null);
-        if (allBuildings.isEmpty()) {
-            LOGGER.debug("[Citizen] no buildings in colony — nothing to evaluate");
-            return;
-        }
+        List<BuildingData> all = api.getColonyBuildings(null);
+        if (all.isEmpty()) { LOGGER.debug("[Citizen] no buildings"); return; }
 
-        // ── 1. Index by category ──
-        Map<String, List<BuildingData>> byCategory = new HashMap<>();
-        for (BuildingData b : allBuildings) {
-            byCategory.computeIfAbsent(b.getCategory(), k -> new ArrayList<>()).add(b);
-        }
+        // Index
+        Map<String, List<BuildingData>> byCat = new HashMap<>();
+        for (BuildingData b : all) byCat.computeIfAbsent(b.getCategory(), k -> new ArrayList<>()).add(b);
 
-        // ── 2. Scan all residences for beds ──
+        // Update POI cache: sample walkable ground within each building's boundary.
+        // 3 samples per building gives variety for LEISURE city wandering.
+        List<BlockPos> pois = new ArrayList<>();
+        for (BuildingData b : all) {
+            List<BlockPos> samples = api.sampleWalkableGround(b.getBuildingId(), 3);
+            pois.addAll(samples);
+        }
+        if (pois.isEmpty()) {
+            // Fallback: use building anchors
+            pois = all.stream().map(BuildingData::getPosition).collect(Collectors.toList());
+        }
+        cachedPoiList = List.copyOf(pois);
+
+        // Beds
         List<BlockPos> allBeds = new ArrayList<>();
-        List<BuildingData> residences = byCategory.getOrDefault("residence", List.of());
-        for (BuildingData res : residences) {
+        Map<UUID, BlockPos> resAnchors = new LinkedHashMap<>();
+        for (BuildingData res : byCat.getOrDefault("residence", List.of())) {
             List<BlockPos> beds = api.findBeds(res.getBuildingId());
             allBeds.addAll(beds);
-            LOGGER.info("[Citizen] residence '{}' → {} beds",
-                    res.getBuildingTypeId(), beds.size());
+            resAnchors.put(res.getBuildingId(), res.getPosition());
+            LOGGER.info("[Citizen] residence {} → {} beds", res.getBuildingTypeId(), beds.size());
         }
 
         int totalBeds = allBeds.size();
-        int targetCount = Math.min(totalBeds, HARD_CAP);
-        int currentCount = activeCitizens.size();
-        int deficit = targetCount - currentCount;
+        int totalPopulation = active.size() + stored.size();
+        int target = Math.min(totalBeds, HARD_CAP);
+        int deficit = target - totalPopulation;
 
-        LOGGER.info("[Citizen] beds={} target={} active={} deficit={}",
-                totalBeds, targetCount, currentCount, deficit);
+        LOGGER.info("[Citizen] beds={} target={} active={} stored={} deficit={}",
+                totalBeds, target, active.size(), stored.size(), deficit);
 
         if (deficit <= 0) {
-            LOGGER.info("[Citizen] population at capacity ({}/{}), nothing to spawn", currentCount, targetCount);
+            LOGGER.info("[Citizen] population at capacity ({}/{}), nothing to spawn", totalPopulation, target);
             return;
         }
 
-        // ── 3. Profession allocation for the deficit ──
-        List<Profession> allocation = buildAllocation(byCategory, deficit, residences);
+        List<Profession> allocation = buildAllocation(byCat, deficit);
+        List<BlockPos> bedPool = new ArrayList<>(allBeds);
+        List<BlockPos> resAnchorPool = new ArrayList<>(resAnchors.values());
 
-        LOGGER.info("[Citizen] spawning {} new citizens: {}", deficit,
-                allocation.stream().map(Profession::getDisplayName).collect(Collectors.joining(", ")));
-
-        // ── 4. Spawn each new citizen ──
-        int spawned = 0;
-        int usedBeds = (int) bedAssignments.values().stream().filter(p -> !p.equals(BlockPos.ZERO)).count();
         for (Profession profession : allocation) {
-            // Pick spawn position near a building of matching category
-            BlockPos anchor = pickSpawnAnchor(byCategory, profession, residences, allBuildings);
-            BlockPos ground = findGround(level, anchor.offset(
+            BlockPos workplace = findWorkplace(byCat, profession);
+            BlockPos home = !resAnchorPool.isEmpty()
+                    ? resAnchorPool.get(random.nextInt(resAnchorPool.size())) : null;
+            BlockPos spawnAnchor = workplace != null ? workplace
+                    : home != null ? home : all.get(0).getPosition();
+
+            BlockPos ground = findGround(level, spawnAnchor.offset(
                     random.nextInt(6) - 3, 0, random.nextInt(6) - 3));
 
-            CitizenEntity citizen = spawnCitizen(level, ground, profession);
-            if (citizen != null) {
-                // Assign a bed
-                if (!allBeds.isEmpty()) {
-                    // Prefer unassigned beds
-                    BlockPos bed = findUnassignedBed(allBeds);
-                    if (bed != null) {
-                        bedAssignments.put(citizen.getUUID(), bed);
-                    }
+            CitizenEntity c = spawnEntity(level, ground,
+                    generateUniqueName(), profession, 40 + random.nextInt(41));
+            if (c != null) {
+                UUID cid = c.getUUID();
+                if (workplace != null) workplaceAssignments.put(cid, workplace);
+                if (home != null) homeAssignments.put(cid, home);
+
+                if (!bedPool.isEmpty()) {
+                    BlockPos bed = findUnassignedBed(bedPool, allBeds);
+                    if (bed != null) bedAssignments.put(cid, bed);
                 }
-                spawned++;
+
+                // ── Initial state: always visible (IDLE). Tick loop transitions
+                //     according to schedule next frame. No immediate storeAndDespawn. ──
+                long dayTime = level.getDayTime() % 24000;
+                if (dayTime >= T_SLEEP || dayTime < T_WAKE_UP) {
+                    // Night → spawn as COMMUTING toward bed so they walk home first
+                    c.applyState(CitizenState.COMMUTING);
+                    c.setCommuteTarget(home != null ? home : bedAssignments.get(cid));
+                } else if (dayTime >= T_HOME_COMMUTE && dayTime < T_LEISURE) {
+                    // Evening commute window → COMMUTING home
+                    c.applyState(CitizenState.COMMUTING);
+                    c.setCommuteTarget(home != null ? home : bedAssignments.get(cid));
+                } else {
+                    // Daytime: always IDLE/LEISURE visible. Tick loop will store
+                    // to WORKING once commute arrives (or immediately for IDLERs).
+                    BlockPos anchor = home != null ? home : bedAssignments.get(cid);
+                    c.applyState(CitizenState.IDLE);
+                    c.setWanderAnchor(anchor);
+                    c.setWanderRadius(10);
+                }
             }
 
-            if (spawned >= deficit) break;
+            if (active.size() + stored.size() >= target) break;
         }
 
-        LOGGER.info("[Citizen] evaluate complete: {} spawned, now {}/{} citizens, {} beds assigned",
-                spawned, activeCitizens.size(), targetCount, bedAssignments.size());
+        LOGGER.info("[Citizen] evaluate done: {}+{} stored / {} beds / {} workplaces / {} homes",
+                active.size(), stored.size(), bedAssignments.size(),
+                workplaceAssignments.size(), homeAssignments.size());
     }
 
-    /** Build a profession allocation list for {@code count} new citizens. */
-    private List<Profession> buildAllocation(Map<String, List<BuildingData>> byCategory,
-                                             int count, List<BuildingData> residences) {
-        List<Profession> allocation = new ArrayList<>();
-
-        // Prioritize non-IDLER professions based on building presence
-        for (Map.Entry<Profession, List<String>> e : PROFESSION_CATEGORIES.entrySet()) {
-            if (allocation.size() >= count) break;
+    private List<Profession> buildAllocation(Map<String, List<BuildingData>> byCat, int count) {
+        List<Profession> a = new ArrayList<>();
+        for (var e : PROF_CATS.entrySet()) {
+            if (a.size() >= count) break;
             for (String cat : e.getValue()) {
-                List<BuildingData> buildings = byCategory.get(cat);
-                if (buildings != null && !buildings.isEmpty()) {
-                    allocation.add(e.getKey());
-                    break;
-                }
+                if (byCat.containsKey(cat)) { a.add(e.getKey()); break; }
             }
         }
-
-        // Fill remaining with IDLERs
-        while (allocation.size() < count) {
-            allocation.add(Profession.IDLER);
-        }
-
-        return allocation;
+        while (a.size() < count) a.add(Profession.IDLER);
+        return a;
     }
 
-    /** Pick a plausible spawn anchor for a given profession. */
-    private BlockPos pickSpawnAnchor(Map<String, List<BuildingData>> byCategory,
-                                     Profession profession,
-                                     List<BuildingData> residences,
-                                     List<BuildingData> allBuildings) {
-        // Non-IDLER: use the profession's building
-        List<String> cats = PROFESSION_CATEGORIES.get(profession);
-        if (cats != null) {
-            for (String cat : cats) {
-                List<BuildingData> buildings = byCategory.get(cat);
-                if (buildings != null && !buildings.isEmpty()) {
-                    return buildings.get(random.nextInt(buildings.size())).getPosition();
-                }
-            }
-        }
-        // IDLER or fallback: prefer residence, then any building
-        if (!residences.isEmpty()) {
-            return residences.get(random.nextInt(residences.size())).getPosition();
-        }
-        return allBuildings.get(random.nextInt(allBuildings.size())).getPosition();
-    }
-
-    /** Find a bed position that is not already assigned. */
     @Nullable
-    private BlockPos findUnassignedBed(List<BlockPos> allBeds) {
-        Set<BlockPos> assigned = new HashSet<>(bedAssignments.values());
-        // Shuffle to avoid concentrating beds in one spot
-        List<BlockPos> free = new ArrayList<>();
-        for (BlockPos bed : allBeds) {
-            if (!assigned.contains(bed)) free.add(bed);
+    private BlockPos findWorkplace(Map<String, List<BuildingData>> byCat, Profession p) {
+        List<String> cats = PROF_CATS.get(p);
+        if (cats == null) return null;
+        for (String cat : cats) {
+            List<BuildingData> blds = byCat.get(cat);
+            if (blds != null && !blds.isEmpty())
+                return blds.get(random.nextInt(blds.size())).getPosition();
         }
-        if (free.isEmpty()) return null;
-        return free.get(random.nextInt(free.size()));
+        return null;
     }
 
-    // ──────────────────────── Spawn single citizen ────────────────────────
+    @Nullable
+    private BlockPos findUnassignedBed(List<BlockPos> pool, List<BlockPos> all) {
+        Set<BlockPos> assigned = new HashSet<>(bedAssignments.values());
+        for (BlockPos b : all) if (!assigned.contains(b)) return b;
+        return null;
+    }
 
-    /**
-     * Spawn a single citizen with a specific profession at the given position.
-     *
-     * @return the new entity, or null if the hard cap is reached
-     */
-    public CitizenEntity spawnCitizen(ServerLevel level, BlockPos pos, Profession profession) {
-        if (activeCitizens.size() >= HARD_CAP) {
-            LOGGER.debug("[Citizen] spawn skipped — hard cap {} reached", HARD_CAP);
-            return null;
-        }
+    // ──────────────────────── Entity factory ────────────────────────
 
-        String name = generateUniqueName();
+    private CitizenEntity spawnEntity(ServerLevel level, BlockPos pos, String name,
+                                       Profession profession, int mood) {
+        CitizenEntity c = new CitizenEntity(
+                com.wsteam.wandscape.Wandscape.CITIZEN.get(), level);
+        c.setCitizenName(name);
+        c.setProfession(profession);
+        c.setMood(mood);
+        c.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        level.addFreshEntity(c);
+        active.put(c.getUUID(), c);
+        return c;
+    }
 
-        CitizenEntity citizen = new CitizenEntity(
-                com.wsteam.wandscape.Wandscape.CITIZEN.get(),
-                level);
-        citizen.setCitizenName(name);
-        citizen.setProfession(profession);
-        citizen.setMood(40 + random.nextInt(41)); // 40–80
-        citizen.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-
-        level.addFreshEntity(citizen);
-        activeCitizens.put(citizen.getUUID(), citizen);
-
-        LOGGER.info("[Citizen] spawned {} ({}), total={}",
-                name, profession.getDisplayName(), activeCitizens.size());
-        return citizen;
+    /** Spawn from stored data (respawn). */
+    private CitizenEntity spawnEntity(ServerLevel level, BlockPos pos, StoredCitizen sc) {
+        return spawnEntity(level, pos, sc.name(), sc.profession(), sc.mood());
     }
 
     // ──────────────────────── Despawn ────────────────────────
 
     public void despawnCitizen(UUID id) {
-        CitizenEntity citizen = activeCitizens.remove(id);
-        if (citizen != null) {
-            usedNames.remove(citizen.getCitizenName());
-            bedAssignments.remove(id);
-            citizen.discard();
-            LOGGER.info("[Citizen] despawned {}", citizen.getCitizenName());
+        CitizenEntity c = active.remove(id);
+        if (c != null) { cleanup(id, c.getCitizenName()); c.discard(); }
+        stored.remove(id);
+    }
+
+    // ──────────────────────── Persistence guard ────────────────────────
+
+    /**
+     * Discard all spawned citizens BEFORE the world saves to disk.
+     * Called from {@code ServerStoppingEvent} — guarantees no citizen
+     * entities in the save.
+     */
+    public void onServerStopping() {
+        LOGGER.info("[Citizen] ServerStopping — discarding {} active entities", active.size());
+        for (CitizenEntity c : active.values()) c.discard();
+        active.clear();
+        // Don't clear stored/assignments — onServerStopped does full reset
+    }
+
+    /**
+     * Safety sweep: kill any citizen entities still in the world.
+     * Called on server start before spawning new ones. Handles the
+     * edge case where a dirty shutdown left entities behind.
+     */
+    public static void killAllStrayCitizens(ServerLevel level) {
+        List<CitizenEntity> strays = new ArrayList<>();
+        for (var e : level.getAllEntities()) {
+            if (e instanceof CitizenEntity) strays.add((CitizenEntity) e);
+        }
+        if (!strays.isEmpty()) {
+            for (CitizenEntity c : strays) c.discard();
+            LOGGER.warn("[Citizen] killed {} stray citizen entities from previous session", strays.size());
         }
     }
 
-    /** Discard all citizens. Called on server stop. */
     public void onServerStopped() {
-        LOGGER.info("[Citizen] stopping — discarding {} citizens", activeCitizens.size());
-        for (CitizenEntity citizen : activeCitizens.values()) {
-            citizen.discard();
-        }
-        activeCitizens.clear();
+        LOGGER.info("[Citizen] stopping — discarding {} active + {} stored",
+                active.size(), stored.size());
+        for (CitizenEntity c : active.values()) c.discard();
+        active.clear();
+        stored.clear();
         usedNames.clear();
         bedAssignments.clear();
+        workplaceAssignments.clear();
+        homeAssignments.clear();
+        cachedPoiList = List.of();
         registered = false;
         lastLevel = null;
     }
 
     // ──────────────────────── Queries ────────────────────────
 
-    public int countActive() {
-        return activeCitizens.size();
+    public int countActive() { return active.size(); }
+    public int countStored() { return stored.size(); }
+    public int countTotal() { return active.size() + stored.size(); }
+    public Set<UUID> getActiveIds() { return Set.copyOf(active.keySet()); }
+    public Collection<CitizenEntity> getActiveCitizens() { return List.copyOf(active.values()); }
+    public Map<UUID, StoredCitizen> getStoredCitizens() { return Map.copyOf(stored); }
+
+    // ──────────────────────── Debug: force state transition ────────────────────────
+
+    /** Spawn a stored citizen or force-transition an active one for testing. */
+    public String debugForceState(String filter, CitizenState targetState, ServerLevel level) {
+        // ── Filter "all" ──
+        if ("all".equalsIgnoreCase(filter)) {
+            // Phase 1: spawn all stored → temp list (avoid CME when
+            //          setupStateParams calls storeAndDespawn mid-iteration)
+            List<CitizenEntity> justSpawned = new ArrayList<>();
+            List<UUID> toRemove = new ArrayList<>();
+            for (var e : stored.entrySet()) {
+                UUID id = e.getKey();
+                StoredCitizen sc = e.getValue();
+                BlockPos spawnAt = sc.workplace() != null ? sc.workplace()
+                        : sc.home() != null ? sc.home() : sc.bed();
+                if (spawnAt == null) spawnAt = level.getSharedSpawnPos();
+                BlockPos ground = findGround(level, spawnAt.offset(
+                        random.nextInt(4) - 2, 0, random.nextInt(4) - 2));
+                CitizenEntity c = spawnEntity(level, ground, sc);
+                if (c != null) {
+                    transferAssignments(id, c.getUUID(), sc);
+                    toRemove.add(id);
+                    justSpawned.add(c);
+                }
+            }
+            for (UUID id : toRemove) stored.remove(id);
+            int totalN = active.size() + stored.size();
+
+            // Phase 2: apply target state. Snapshot IDs first because
+            //          setupStateParams may call storeAndDespawn which modifies maps.
+            List<CitizenEntity> allActive = new ArrayList<>(active.values());
+            for (CitizenEntity c : justSpawned) {
+                c.applyState(targetState);
+                setupStateParams(c.getUUID(), c, targetState);
+            }
+            for (CitizenEntity c : allActive) {
+                c.applyState(targetState);
+                setupStateParams(c.getUUID(), c, targetState);
+            }
+            // Ensure any WORKING/SLEEPING stored during setupStateParams are also counted
+            int storedFromTransition = stored.size();
+            return "All " + totalN + " citizens → " + targetState.getDisplayName()
+                    + " (" + storedFromTransition + " now stored)";
+        }
+
+        // ── Filter by name prefix ──
+        // Snapshot active before iterating — setupStateParams may modify it.
+        for (var e : List.copyOf(active.entrySet())) {
+            CitizenEntity c = e.getValue();
+            if (c.getCitizenName().startsWith(filter)) {
+                c.applyState(targetState);
+                setupStateParams(e.getKey(), c, targetState);
+                return c.getCitizenName() + " → " + targetState.getDisplayName();
+            }
+        }
+        // Check stored — snapshot keys to avoid CME on removal.
+        UUID foundId = null;
+        StoredCitizen foundSc = null;
+        for (var e : stored.entrySet()) {
+            StoredCitizen sc = e.getValue();
+            if (sc.name().startsWith(filter)) { foundId = e.getKey(); foundSc = sc; break; }
+        }
+        if (foundSc != null) {
+            BlockPos spawnAt = foundSc.workplace() != null ? foundSc.workplace()
+                    : foundSc.home() != null ? foundSc.home() : foundSc.bed();
+            if (spawnAt == null && lastLevel != null) spawnAt = lastLevel.getSharedSpawnPos();
+            if (spawnAt != null && level != null) {
+                BlockPos ground = findGround(level, spawnAt.offset(
+                        random.nextInt(4) - 2, 0, random.nextInt(4) - 2));
+                CitizenEntity c = spawnEntity(level, ground, foundSc);
+                if (c != null) {
+                    transferAssignments(foundId, c.getUUID(), foundSc);
+                    stored.remove(foundId);
+                    c.applyState(targetState);
+                    setupStateParams(c.getUUID(), c, targetState);
+                    return foundSc.name() + " (stored) → " + targetState.getDisplayName();
+                }
+            }
+        }
+        return "No citizen matching '" + filter + "'";
     }
 
-    public Set<UUID> getActiveIds() {
-        return Set.copyOf(activeCitizens.keySet());
+    private void setupStateParams(UUID id, CitizenEntity c, CitizenState state) {
+        switch (state) {
+            case COMMUTING -> {
+                c.setCommuteTarget(workplaceAssignments.get(id));
+                c.setCommuteArrived(false);
+            }
+            case LEISURE -> {
+                BlockPos home = homeAssignments.get(id);
+                c.setWanderAnchor(home != null ? home : bedAssignments.get(id));
+                c.setWanderRadius(12);
+                c.setPoiList(cachedPoiList);
+            }
+            case IDLE -> {
+                BlockPos home = homeAssignments.get(id);
+                c.setWanderAnchor(home != null ? home : bedAssignments.get(id));
+                c.setWanderRadius(10);
+            }
+            case WORKING -> {
+                if (c.isAlive()) storeAndDespawn(id, c, CitizenState.WORKING);
+            }
+            case SLEEPING -> {
+                if (c.isAlive()) storeAndDespawn(id, c, CitizenState.SLEEPING);
+            }
+        }
     }
 
-    @Nullable
-    public BlockPos getBedFor(UUID citizenId) {
-        return bedAssignments.get(citizenId);
-    }
-
-    // ──────────────────────── Name generation ────────────────────────
+    // ──────────────────────── Name gen ────────────────────────
 
     private String generateUniqueName() {
         for (int attempt = 0; attempt < 100; attempt++) {
-            String surname = SURNAMES[random.nextInt(SURNAMES.length)];
-            String given = GIVENS[random.nextInt(GIVENS.length)];
-            String candidate = surname + given;
-            if (!usedNames.contains(candidate)) {
-                usedNames.add(candidate);
-                return candidate;
-            }
+            String c = SURNAMES[random.nextInt(SURNAMES.length)]
+                    + GIVENS[random.nextInt(GIVENS.length)];
+            if (!usedNames.contains(c)) { usedNames.add(c); return c; }
         }
         for (int i = 2; ; i++) {
-            String surname = SURNAMES[random.nextInt(SURNAMES.length)];
-            String given = GIVENS[random.nextInt(GIVENS.length)];
-            String candidate = surname + given + i;
-            if (!usedNames.contains(candidate)) {
-                usedNames.add(candidate);
-                return candidate;
-            }
+            String c = SURNAMES[random.nextInt(SURNAMES.length)]
+                    + GIVENS[random.nextInt(GIVENS.length)] + i;
+            if (!usedNames.contains(c)) { usedNames.add(c); return c; }
         }
     }
 
@@ -403,21 +673,18 @@ public class CitizenManager {
 
     @Nullable
     private static BuildingApi getBuildingApi() {
-        try {
-            return WandscapeApis.getBuildingApi();
-        } catch (IllegalStateException e) {
-            return null;
-        }
+        try { return WandscapeApis.getBuildingApi(); }
+        catch (IllegalStateException e) { return null; }
     }
 
     private static BlockPos findGround(ServerLevel level, BlockPos pos) {
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(pos.getX(), pos.getY(), pos.getZ());
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
+                pos.getX(), pos.getY(), pos.getZ());
         mp.setY(Math.min(level.getMaxBuildHeight(), 120));
         while (mp.getY() > level.getMinBuildHeight()) {
             if (!level.getBlockState(mp).isAir()
-                    && level.getBlockState(mp.above()).isAir()) {
+                    && level.getBlockState(mp.above()).isAir())
                 return mp.above().immutable();
-            }
             mp.move(0, -1, 0);
         }
         return pos;

@@ -72,4 +72,13 @@ public interface BuildingApi {
      * Each bed (two halves) produces two entries.
      */
     List<BlockPos> findBeds(UUID buildingId);
+
+    /**
+     * Sample random walkable ground positions within the building's
+     * boundary AABB. Each returned position has a solid block under it
+     * and air above. Used by citizen AI for LEISURE POI wandering.
+     *
+     * @param count number of positions to sample
+     */
+    List<BlockPos> sampleWalkableGround(UUID buildingId, int count);
 }
