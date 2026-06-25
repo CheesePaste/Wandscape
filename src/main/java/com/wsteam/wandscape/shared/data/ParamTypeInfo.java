@@ -7,7 +7,7 @@ package com.wsteam.wandscape.shared.data;
  * <p>Cannot reference core types directly from shared/data, so this enum
  * replicates the six {@code ParamType} sealed variants. The
  * {@link #fromCore(com.wsteam.wandscape.core.task.ParamType)} converter
- * is server-only and called exclusively from {@code TaskApiImpl}.
+ * is server-only and called exclusively from {@code TaskNetworkHandler}.
  */
 public enum ParamTypeInfo {
     STRING,
@@ -19,7 +19,7 @@ public enum ParamTypeInfo {
 
     /**
      * Convert a core {@code ParamType} to its shared mirror.
-     * Only called server-side from {@code TaskApiImpl}.
+     * Only called server-side from {@code TaskNetworkHandler}.
      */
     public static ParamTypeInfo fromCore(com.wsteam.wandscape.core.task.ParamType coreType) {
         if (coreType instanceof com.wsteam.wandscape.core.task.ParamType.StringType) return STRING;

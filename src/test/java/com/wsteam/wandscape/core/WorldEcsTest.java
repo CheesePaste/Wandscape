@@ -147,13 +147,15 @@ public class WorldEcsTest {
                     new WandCarrier(Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)), 1.0f, 8),
                     java.util.UUID.randomUUID(), 100, 5);
 
-            world.taskPool.assign(t1, npc1, world);
+            world.taskPool.assignLight(t1, npc1, world);
+            // Simulate what TaskExecutionSystem.startNextPending would do
+            TaskExecutor exec1 = world.get(npc1, TaskExecutor.class);
+            exec1.state = com.wsteam.wandscape.core.task.ExecutorState.ACTIVE;
 
             GlobalTask task1 = world.taskPool.get(t1);
             assertEquals(TaskState.IN_PROGRESS, task1.state);
             assertEquals(npc1, task1.assignedNpcId);
 
-            TaskExecutor exec1 = world.get(npc1, TaskExecutor.class);
             assertEquals(com.wsteam.wandscape.core.task.ExecutorState.ACTIVE, exec1.state);
 
             // ── Act ──

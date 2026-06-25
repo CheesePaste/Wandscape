@@ -54,7 +54,6 @@ import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.projection.network.ProjectionNetwork;
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
-import com.wsteam.wandscape.task.internal.TaskApiImpl;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
@@ -366,11 +365,11 @@ public class Wandscape {
         WandscapeApis.setRoadApi(new RoadApiImpl());
         LOGGER.info("Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
 
-        // TaskApi — wire manual task publishing for GUI
+        // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
         if (world != null && world.taskPool != null) {
             PlayerManualSource playerSource = new PlayerManualSource(world.taskPool);
-            new TaskApiImpl(playerSource, world.blueprintRegistry);
-            LOGGER.info("TaskApi wired — manual task publishing available");
+            WandscapeEngine.setPlayerManualSource(playerSource);
+            LOGGER.info("PlayerManualSource wired — manual task publishing available");
         }
     }
 

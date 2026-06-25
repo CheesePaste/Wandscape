@@ -218,6 +218,16 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
 
         LOGGER.info("[WandEquip] 🪄 NPC #{} equipped '{}' → caps: {} eff: {} range: {}",
                 npcId, presetId, wandCaps.keySet(), manaEff, range);
+
+        // Notify WandLifecycle: wand is now equipped on this NPC
+        var lifecycle = world.wandLifecycle;
+        if (lifecycle != null) {
+            var cm = world.get(npcId, com.wsteam.wandscape.core.component.ColonyMember.class);
+            UUID colonyId = cm != null && cm.colonyId() != null ? cm.colonyId() : npc.colonyId;
+            if (colonyId != null) {
+                lifecycle.confirmEquip(colonyId, presetId);
+            }
+        }
     }
 
     /** Extract CUSTOM_DATA NBT from an ItemStack, or null if absent. */

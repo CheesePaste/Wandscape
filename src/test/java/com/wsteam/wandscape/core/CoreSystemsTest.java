@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.system.TaskExecutionSystem;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
@@ -289,8 +290,8 @@ public class CoreSystemsTest {
         @Test
         void privateQueue_executesBeforeGlobalTask() {
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
-            exec.pushPrivate(
-                    AtomicOp.TransformOp.place(new GridPos(1, 64, 0), BlockType.STONE));
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.system("system:legacy",
+                    AtomicOp.TransformOp.place(new GridPos(1, 64, 0), BlockType.STONE), null, 0));
 
             // Global task — won't be assigned until private queue drains,
             // because Scheduler skips NPCs with non-empty private queue
@@ -312,16 +313,16 @@ public class CoreSystemsTest {
         void privateQueue_drainsBeforeSchedulerAssignsGlobal() {
             // Private queue with op → scheduler skips this NPC → private drains → NPC idle → assigned
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
-            exec.pushPrivate(
-                    AtomicOp.TransformOp.place(new GridPos(3, 64, 0), BlockType.STONE));
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.system("system:legacy",
+                    AtomicOp.TransformOp.place(new GridPos(3, 64, 0), BlockType.STONE), null, 0));
 
             // Before any ticks: private queue is non-empty
-            assertFalse(exec.isPrivateQueueEmpty());
+            assertFalse(exec.npcQueue.isIdle());
 
             // Tick once: TaskExec processes private op → DONE → pop
             world.tick(1.0f);
 
-            assertTrue(exec.isPrivateQueueEmpty(),
+            assertTrue(exec.npcQueue.isIdle(),
                     "Private queue should be drained after one tick");
             assertEquals(ExecutorState.IDLE, exec.state,
                     "NPC should be IDLE after private queue drained");
@@ -333,11 +334,13 @@ public class CoreSystemsTest {
             // NPC has no diamond → condition false → elseSkip triggers → advance by 2
             // → pops IfConditionOp + EmitEventOp → TransformOp remains
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
-            exec.pushPrivate(new AtomicOp.IfConditionOp("inventory_has",
-                    Map.of("resource", "diamond"), 1, true));
-            exec.pushPrivate(new AtomicOp.EmitEventOp("to_skip", Map.of()));
-            exec.pushPrivate(AtomicOp.TransformOp.place(
-                    new GridPos(5, 64, 0), BlockType.STONE));
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.system("system:legacy",
+                    new AtomicOp.IfConditionOp("inventory_has",
+                            Map.of("resource", "diamond"), 1, true), null, 0));
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.system("system:legacy",
+                    new AtomicOp.EmitEventOp("to_skip", Map.of()), null, 0));
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.system("system:legacy",
+                    AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.STONE), null, 0));
 
             // Push a dummy global task so NPC has work after private queue drains
             registerSimpleBp("test:dummy_pq",
@@ -649,7 +652,10 @@ public class CoreSystemsTest {
                     Map.of(), 10, List.of(), Map.of());
 
             long taskId = world.taskPool.addTask(task);
-            world.taskPool.assign(taskId, npc, world);
+            world.taskPool.assignLight(taskId, npc, world);
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+            GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.of("global:" + taskId, task.sequence, stance, task.priority));
 
             assertEquals(TaskState.IN_PROGRESS, world.taskPool.get(taskId).state);
             assertEquals(npc, (long) world.taskPool.get(taskId).assignedNpcId);
@@ -665,7 +671,6 @@ public class CoreSystemsTest {
             assertEquals(npc, rec.npcId());
             assertEquals(now, rec.timestamp());
 
-            TaskExecutor exec = world.get(npc, TaskExecutor.class);
             exec.releaseGlobalTask();
             assertEquals(ExecutorState.IDLE, exec.state);
         }
@@ -681,7 +686,10 @@ public class CoreSystemsTest {
                     Map.of(), 10, List.of(), Map.of());
 
             world.taskPool.addTask(task);
-            world.taskPool.assign(task.id, npc, world);
+            world.taskPool.assignLight(task.id, npc, world);
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+            GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+            exec.npcQueue.enqueueNormal(NpcTaskPackage.of("global:" + task.id, task.sequence, stance, task.priority));
             // Advance to step 1 manually
             task.stepIndex = 1;
 
@@ -776,7 +784,7 @@ public class CoreSystemsTest {
 
             long taskId = world.taskPool.addTask(
                     makeRequest("test:wand_idle_return", new GridPos(0, 64, 0), 10));
-            tickN(10 + TaskExecutor.WAND_RETURN_DELAY_TICKS + 5);
+            tickN(10 + 60 /* old WAND_RETURN_DELAY_TICKS */ + 5);
 
             GlobalTask task = world.taskPool.get(taskId);
             assertEquals(TaskState.COMPLETED, task.state);
@@ -801,14 +809,14 @@ public class CoreSystemsTest {
 
             long taskId = world.taskPool.addTask(
                     makeRequest("test:no_wand_idle", new GridPos(0, 64, 0), 10));
-            tickN(10 + TaskExecutor.WAND_RETURN_DELAY_TICKS + 5);
+            tickN(10 + 60 /* old WAND_RETURN_DELAY_TICKS */ + 5);
 
             assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state);
             assertFalse(mock.isAir(new GridPos(20, 64, 0)), "Block placed");
 
             // No wand equipped → no WandReturnOp should be pushed
             TaskExecutor exec = world.get(npcEmpty, TaskExecutor.class);
-            assertTrue(exec.isPrivateQueueEmpty(),
+            assertTrue(exec.npcQueue.isIdle(),
                     "Private queue stays empty when no wand equipped");
             assertEquals(ExecutorState.IDLE, exec.state);
         }

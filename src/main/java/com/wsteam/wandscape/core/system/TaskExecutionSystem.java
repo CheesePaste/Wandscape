@@ -91,25 +91,10 @@ public class TaskExecutionSystem implements System {
         // ── 1. No current package → start the next one ──
         if (queue.currentPackage() == null && queue.hasPending()) {
             queue.startNextPending();
-        }
-
-        // ── 1a. Compat bridge: global task assigned by old SchedulerSystem ──
-        // TODO: remove after Phase 6 (SchedulerSystem creates NpcTaskPackage directly)
-        if (queue.currentPackage() == null
-                && exec.globalTaskId != null
-                && exec.currentSequence != null) {
-            // Compute stance from task targets (once per task)
-            if (exec.stance == null) {
-                exec.stance = computeTaskStance(exec.currentSequence);
+            NpcTaskPackage pkg = queue.currentPackage();
+            if (pkg != null && pkg.source().startsWith("global:") && exec.globalTaskId == null) {
+                bindGlobalTaskToExecutor(exec, pkg);
             }
-            NpcTaskPackage pkg = new NpcTaskPackage(
-                    "global:" + exec.globalTaskId,
-                    exec.currentSequence,
-                    exec.stance,
-                    0,
-                    exec.stepIndex);
-            queue.enqueueNormal(pkg);
-            queue.startNextPending();
         }
 
         NpcTaskPackage pkg = queue.currentPackage();
@@ -331,6 +316,10 @@ public class TaskExecutionSystem implements System {
             syncStepToPool(exec, queue);
             taskPool.completeTask(exec.globalTaskId, npcId);
             Log.info(TAG, "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
+
+            // Inject WandReturnOp for provisioned wands
+            injectWandReturnIfNeeded(world, npcId, queue);
+
             exec.releaseGlobalTask();
         }
 
@@ -384,6 +373,7 @@ public class TaskExecutionSystem implements System {
             exec.globalTaskId = taskId;
             exec.currentSequence = pkg.sequence();
             exec.stepIndex = pkg.startStepIndex();
+            exec.stance = pkg.stance();
         } catch (NumberFormatException e) {
             Log.warn(TAG, "Invalid global task source: %s", source);
         }
@@ -476,7 +466,7 @@ public class TaskExecutionSystem implements System {
      * position-bearing ops in the sequence. Returns null if no ops have targets.
      */
     @Nullable
-    static GridPos computeTaskStance(TaskSequence seq) {
+    public static GridPos computeTaskStance(TaskSequence seq) {
         int[] box = { Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE };
         boolean[] hasTarget = { false };
 
@@ -500,6 +490,26 @@ public class TaskExecutionSystem implements System {
         if (op instanceof AtomicOp.ParallelOp par) {
             for (AtomicOp sub : par.steps()) {
                 collectTargets(sub, box, hasTarget);
+            }
+        }
+    }
+
+    /**
+     * After a global task completes, check if the NPC has any provisioned wand
+     * still equipped. If so, enqueue WandReturnOp to send it back to the warehouse.
+     */
+    private static void injectWandReturnIfNeeded(World world, long npcId, NpcTaskQueue queue) {
+        WandCarrier wc = world.get(npcId, WandCarrier.class);
+        ColonyMember cm = world.get(npcId, ColonyMember.class);
+        var lifecycle = world.wandLifecycle;
+        if (wc == null || cm == null || lifecycle == null) return;
+
+        for (String wandId : wc.equippedWandIds()) {
+            if (lifecycle.isEquipped(cm.colonyId(), wandId)) {
+                queue.enqueueUrgent(NpcTaskPackage.system(
+                        "system:wand_return",
+                        new AtomicOp.WandReturnOp(wandId), null, 5));
+                Log.info(TAG, "NPC %d — inject WandReturnOp for %s after task complete", npcId, wandId);
             }
         }
     }

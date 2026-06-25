@@ -171,9 +171,7 @@ public final class TaskPoolSavedData extends SavedData {
         if (state == TaskState.IN_PROGRESS) {
             state = TaskState.PENDING_ASSIGN;
         }
-        if (state == TaskState.INTERRUPTED) {
-            state = TaskState.PENDING_ASSIGN;
-        }
+        // Old INTERRUPTED state (removed) — caught by catch block above, maps to PENDING_ASSIGN
 
         int stepIndex = tag.getInt("step");
         int priority = tag.getInt("priority");

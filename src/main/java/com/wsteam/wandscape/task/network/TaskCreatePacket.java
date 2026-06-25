@@ -3,7 +3,8 @@ package com.wsteam.wandscape.task.network;
 import java.util.Map;
 import java.util.UUID;
 
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.core.task.TaskRequest;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -35,8 +36,8 @@ public record TaskCreatePacket(
 
     /** Handle on server: validate and publish the task. */
     public static void handleServer(TaskCreatePacket packet, ServerPlayer player) {
-        var taskApi = WandscapeApis.getTaskApiSilently();
-        if (taskApi == null) {
+        var playerSource = WandscapeEngine.getPlayerManualSource();
+        if (playerSource == null) {
             return;
         }
 
@@ -50,11 +51,11 @@ public record TaskCreatePacket(
                 }
             }
 
-            UUID taskId = taskApi.publishTask(packet.blueprintId(), jsonParams, packet.priority());
+            long taskId = playerSource.publish(new TaskRequest(packet.blueprintId(), jsonParams, packet.priority()));
 
             player.sendSystemMessage(
                     net.minecraft.network.chat.Component.literal(
-                            "[Wandscape] Task created: #" + taskId
+                            "[Wandscape] Task created: #" + new UUID(taskId, 0)
                                     + " '" + packet.blueprintId() + "'"), true);
 
         } catch (Exception e) {

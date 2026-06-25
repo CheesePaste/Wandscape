@@ -12,7 +12,6 @@
 | NpcApi | ✓ 已实现 | npc/internal/NpcApiImpl |
 | WarehouseApi | ✓ 已实现 | warehouse/WarehouseManager |
 | RoadApi | ✓ 已实现 | engine/road/RoadApiImpl |
-| TaskApi | ✗ 未实现 | — |
 | AtomicExecutor | ✗ 未实现（被core/op替代）| — |
 | ColonyApi | ✗ 未实现 | — |
 | HouseApi | ✗ 未实现 | — |

@@ -290,7 +290,7 @@ public class WandscapeNpc extends PathfinderMob {
                         com.wsteam.wandscape.core.component.TaskExecutor.class);
                 casting = exec != null
                         && exec.state == com.wsteam.wandscape.core.task.ExecutorState.ACTIVE
-                        && exec.hasWork();
+                        && (exec.npcQueue.hasWork() || exec.globalTaskId != null);
                 if (casting && exec.currentOpTarget != null) {
                     var t = exec.currentOpTarget;
                     BlockPos target = new BlockPos(t.x(), t.y(), t.z());
@@ -375,7 +375,7 @@ public class WandscapeNpc extends PathfinderMob {
         }
 
         // 2. No task executor or no work → idle
-        if (exec == null || !exec.hasWork() || exec.state == ExecutorState.IDLE) return "空闲";
+        if (exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null) || exec.state == ExecutorState.IDLE) return "空闲";
 
         // 3. Pending async future (navigation or channeled op)
         if (exec.pendingFuture != null && !exec.pendingFuture.isDone()) {
@@ -643,7 +643,7 @@ public class WandscapeNpc extends PathfinderMob {
         World world = WandscapeEngine.getWorld();
         if (world == null) return true;
         var exec = world.get(ecsEntityId, com.wsteam.wandscape.core.component.TaskExecutor.class);
-        return exec == null || !exec.hasWork();
+        return exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null);
     }
 
     @Nullable

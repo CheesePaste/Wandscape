@@ -3,6 +3,7 @@ package com.wsteam.wandscape.engine;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.system.PlayerManualSource;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
@@ -49,6 +50,8 @@ public final class WandscapeEngine {
     private static com.wsteam.wandscape.engine.transport.ItemTransportManager transporter;
     @Nullable
     private static ResourceRequestExecutor resourceRequestExec;
+    @Nullable
+    private static PlayerManualSource playerManualSource;
 
     private WandscapeEngine() {}
 
@@ -64,6 +67,7 @@ public final class WandscapeEngine {
         asyncExec = null;
         movementOps = null;
         roadSavedData = null;
+        playerManualSource = null;
         // blueprintConfigLoader: intentionally NOT nulled — it's a permanent singleton
         // whose internal definitions map is managed by WandscapeDataLoader resource reload.
         // Nulling it would break DSL blueprint registration on world re-entry.
@@ -119,4 +123,8 @@ public final class WandscapeEngine {
     @Nullable
     public static ResourceRequestExecutor getResourceRequestExec() { return resourceRequestExec; }
     public static void setResourceRequestExec(@Nullable ResourceRequestExecutor e) { resourceRequestExec = e; }
+
+    @Nullable
+    public static PlayerManualSource getPlayerManualSource() { return playerManualSource; }
+    public static void setPlayerManualSource(@Nullable PlayerManualSource s) { playerManualSource = s; }
 }

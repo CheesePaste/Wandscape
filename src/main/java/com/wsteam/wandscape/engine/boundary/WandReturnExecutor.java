@@ -88,7 +88,13 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
             return CompletableFuture.completedFuture(null);
         }
 
-        // 3. Unequip from carrier immediately — wand is now "in transit"
+        // 3. Notify WandLifecycle: wand is in transit back to warehouse
+        var lifecycle = world.wandLifecycle;
+        if (lifecycle != null) {
+            lifecycle.startReturn(colonyId, presetId);
+        }
+
+        // 4. Unequip from carrier immediately — wand is now "in transit"
         java.util.Map<String, WandCarrier.WandCapProvider> knownWands = new java.util.HashMap<>();
         for (String id : current.equippedWandIds()) {
             if (id.equals(presetId)) continue;
@@ -131,6 +137,11 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
 
             LOGGER.info("[WandReturn] 📦 NPC #{} 归还 '{}' → 仓库 剩余能力: {}",
                     npcId, presetId, current.capabilities().keySet());
+
+            // Notify WandLifecycle: wand has arrived at warehouse
+            if (lifecycle != null) {
+                lifecycle.confirmReturn(colonyId, presetId);
+            }
         });
 
         return transportFuture;

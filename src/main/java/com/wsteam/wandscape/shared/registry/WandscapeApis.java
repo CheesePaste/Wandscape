@@ -6,7 +6,6 @@ public final class WandscapeApis {
     private static WandApi wandApi;
     private static ElementApi elementApi;
     private static WarehouseApi warehouseApi;
-    private static TaskApi taskApi;
     private static NpcApi npcApi;
     private static BuildingApi buildingApi;
     private static HouseApi houseApi;
@@ -37,14 +36,6 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static WarehouseApi getWarehouseApiSilently() { return warehouseApi; }
     public static void setWarehouseApi(WarehouseApi api) { warehouseApi = api; }
-
-    public static TaskApi getTaskApi() {
-        if (taskApi == null) throw new IllegalStateException("Module TaskSystem not loaded");
-        return taskApi;
-    }
-    @javax.annotation.Nullable
-    public static TaskApi getTaskApiSilently() { return taskApi; }
-    public static void setTaskApi(TaskApi api) { taskApi = api; }
 
     public static NpcApi getNpcApi() {
         if (npcApi == null) throw new IllegalStateException("Module NpcSystem not loaded");

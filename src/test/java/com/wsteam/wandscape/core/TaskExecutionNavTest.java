@@ -7,6 +7,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
+import com.wsteam.wandscape.core.system.TaskExecutionSystem;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -108,6 +109,14 @@ public class TaskExecutionNavTest {
         return CoreBootstrap.createNpc(world, x, y, z, wand, colonyId, 200, 10);
     }
 
+    /** Assign a task to an NPC using the Phase 6 package-driven model. */
+    private static void assignTaskToNpc(long taskId, long npcId, TaskSequence seq, int priority, World world) {
+        world.taskPool.assignLight(taskId, npcId, world);
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        GridPos stance = TaskExecutionSystem.computeTaskStance(seq);
+        exec.npcQueue.enqueueNormal(NpcTaskPackage.of("global:" + taskId, seq, stance, priority));
+    }
+
     // ===================================================================
     // 1. Nav vs op future — step advancement
     // ===================================================================
@@ -145,7 +154,7 @@ public class TaskExecutionNavTest {
             // NPC at (0,64,0), target at (10,64,0): dx²+dz²=100 > 6.25 → navigate
             TaskSequence seq = buildSeq("far", new GridPos(10, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:far", seq, world);
-            world.taskPool.assign(taskId, npc, world);
+            assignTaskToNpc(taskId, npc, seq, 10, world);
 
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
             assertEquals(0, exec.stepIndex);
@@ -172,7 +181,7 @@ public class TaskExecutionNavTest {
             // NPC at (0,64,0), target also at (0,64,0): in range → no nav
             TaskSequence seq = buildSeq("near", new GridPos(0, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:near", seq, world);
-            world.taskPool.assign(taskId, npc, world);
+            assignTaskToNpc(taskId, npc, seq, 10, world);
 
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
             assertEquals(0, exec.stepIndex);
@@ -181,14 +190,14 @@ public class TaskExecutionNavTest {
             world.tick(1.0f);
             assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
                     "sync op executes and completes in one tick");
-            assertFalse(exec.hasWork(), "executor idle after task complete");
+            assertFalse(exec.npcQueue.hasWork() || exec.globalTaskId != null, "executor idle after task complete");
         }
 
         @Test
         void fullNavThenOpCycle_twoPositions() {
             TaskSequence seq = buildSeq("two", new GridPos(10, 64, 0), new GridPos(20, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:two", seq, world);
-            world.taskPool.assign(taskId, npc, world);
+            assignTaskToNpc(taskId, npc, seq, 10, world);
 
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
 
@@ -219,7 +228,7 @@ public class TaskExecutionNavTest {
         void pendingFutureIsNav_clearedOnTaskRelease() {
             TaskSequence seq = buildSeq("far", new GridPos(10, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:far2", seq, world);
-            world.taskPool.assign(taskId, npc, world);
+            assignTaskToNpc(taskId, npc, seq, 10, world);
 
             TaskExecutor exec = world.get(npc, TaskExecutor.class);
             world.tick(1.0f);
@@ -271,8 +280,8 @@ public class TaskExecutionNavTest {
             TaskSequence nearSeq = buildSeq("nearB", new GridPos(0, 64, 0));
             long taskA = addTaskFromSeq(blueprints, "test:farA", farSeq, world);
             long taskB = addTaskFromSeq(blueprints, "test:nearB", nearSeq, world);
-            world.taskPool.assign(taskA, npcA, world);
-            world.taskPool.assign(taskB, npcB, world);
+            assignTaskToNpc(taskA, npcA, farSeq, 10, world);
+            assignTaskToNpc(taskB, npcB, nearSeq, 10, world);
 
             world.tick(1.0f);
 
@@ -291,8 +300,8 @@ public class TaskExecutionNavTest {
             TaskSequence seqB = buildSeq("seqB", new GridPos(20, 64, 0));
             long taskA = addTaskFromSeq(blueprints, "test:a10", seqA, world);
             long taskB = addTaskFromSeq(blueprints, "test:b20", seqB, world);
-            world.taskPool.assign(taskA, npcA, world);
-            world.taskPool.assign(taskB, npcB, world);
+            assignTaskToNpc(taskA, npcA, seqA, 10, world);
+            assignTaskToNpc(taskB, npcB, seqB, 10, world);
 
             // Both navigate
             world.tick(1.0f);
@@ -318,7 +327,7 @@ public class TaskExecutionNavTest {
         void releaseGlobalTaskResetsExecutorState() {
             TaskSequence seq = buildSeq("idle", new GridPos(10, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:idle", seq, world);
-            world.taskPool.assign(taskId, npcA, world);
+            assignTaskToNpc(taskId, npcA, seq, 10, world);
 
             world.tick(1.0f);
             TaskExecutor exec = world.get(npcA, TaskExecutor.class);
@@ -375,7 +384,7 @@ public class TaskExecutionNavTest {
             GridPos shared = new GridPos(10, 64, 0);
             TaskSequence seq = buildSeq("batched", shared, shared);
             long taskId = addTaskFromSeq(blueprints, "test:batch", seq, world);
-            world.taskPool.assign(taskId, npc, world);
+            assignTaskToNpc(taskId, npc, seq, 10, world);
 
             // Nav to (10,64,0)
             world.tick(1.0f);
@@ -397,7 +406,7 @@ public class TaskExecutionNavTest {
             TaskSequence seq = buildSeq("separate",
                     new GridPos(10, 64, 0), new GridPos(16, 64, 0));
             long taskId = addTaskFromSeq(blueprints, "test:sep", seq, world);
-            world.taskPool.assign(taskId, npc, world);
+            assignTaskToNpc(taskId, npc, seq, 10, world);
 
             // Stance: bbox (10..16, 0..0) → stance = (8, 64, 0)
             // Nav to stance

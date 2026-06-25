@@ -183,9 +183,11 @@ public class GlobalTaskPool {
     // ── Assignment ──
 
     /**
-     * Assign a task to an NPC. Subscribes triggers, sets taskParams on executor.
+     * Mark a task as assigned and subscribe triggers. Does NOT touch
+     * TaskExecutor fields — the caller (SchedulerSystem) creates the
+     * NpcTaskPackage and enqueues it into the NPC's NpcTaskQueue directly.
      */
-    public void assign(long taskId, long npcId, World world) {
+    public void assignLight(long taskId, long npcId, World world) {
         GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
 
@@ -196,10 +198,6 @@ public class GlobalTaskPool {
         task.state = TaskState.IN_PROGRESS;
         task.assignedNpcId = npcId;
         task.schedulerRetryCount = 0;
-        exec.globalTaskId = taskId;
-        exec.currentSequence = task.sequence;
-        exec.stepIndex = task.stepIndex;
-        exec.state = ExecutorState.ACTIVE;
         exec.taskParams = new HashMap<>(task.taskParams);
 
         if (task.subscriptions.isEmpty()) {
@@ -210,9 +208,8 @@ public class GlobalTaskPool {
             }
         }
 
-        Log.info(TAG, "assign #%d '%s' → NPC %d (step=%d/%d triggers=%d)",
-                taskId, task.sequence.label(), npcId, exec.stepIndex,
-                task.sequence.size(), task.triggers.size());
+        Log.info(TAG, "assignLight #%d '%s' → NPC %d (triggers=%d)",
+                taskId, task.sequence.label(), npcId, task.triggers.size());
     }
 
     /** Release an NPC from its current task. */

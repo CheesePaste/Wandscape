@@ -64,7 +64,7 @@ public class SchedulerSystem implements System {
                 WandCarrier.class, Inventory.class, ColonyMember.class)) {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
-                    && exec.isPrivateQueueEmpty() && exec.globalTaskId == null) {
+                    && exec.npcQueue.isIdle() && exec.globalTaskId == null) {
                 idleNpcs.add(entity);
             }
         }
@@ -159,11 +159,15 @@ public class SchedulerSystem implements System {
 
                 if (bestNpc >= 0) {
                     task.schedulerRetryCount = 0; // reset retries on successful match
-                    taskPool.assign(task.id, bestNpc, world);
+                    TaskExecutor bestExec = world.get(bestNpc, TaskExecutor.class);
+                    if (bestExec != null) {
+                        GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+                        NpcTaskPackage pkg = NpcTaskPackage.of(
+                                "global:" + task.id, task.sequence, stance, task.priority);
+                        bestExec.npcQueue.enqueueNormal(pkg);
+                    }
+                    taskPool.assignLight(task.id, bestNpc, world);
                     occupiedTargets.add(taskTarget); // mark target as occupied
-                    // Reset wand idle timer — NPC is no longer idle
-                    TaskExecutor assignedExec = world.get(bestNpc, TaskExecutor.class);
-                    if (assignedExec != null) assignedExec.wandIdleTicks = 0;
                     Log.info(TAG, "assigned #%d '%s' → NPC %d (score=%.2f dist=%.0f)",
                             task.id, task.sequence.label(), bestNpc, bestScore, bestDist);
                     colonyNpcs.remove(bestNpc); // NPC is now busy
@@ -206,11 +210,19 @@ public class SchedulerSystem implements System {
                             exec.npcQueue.enqueueUrgent(NpcTaskPackage.system(
                                     "system:wand_equip",
                                     new AtomicOp.WandEquipOp(wandId), null, 70));
-                            taskPool.assign(task.id, npcId, world);
+                            GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+                            NpcTaskPackage pkg = NpcTaskPackage.of(
+                                    "global:" + task.id, task.sequence, stance, task.priority);
+                            exec.npcQueue.enqueueNormal(pkg);
+                            taskPool.assignLight(task.id, npcId, world);
                             Log.info(TAG, "provisioned wand %s for #%d '%s' → NPC %d",
                                     wandId, task.id, task.sequence.label(), npcId);
                             colonyNpcs.remove(npcId);
                             break;
+                        }
+                        // reserve succeeded but no NPC usable → release wand reservation
+                        if (colonyNpcs.isEmpty() && wandLifecycle != null) {
+                            wandLifecycle.release(colonyId, wandId);
                         }
                         if (!colonyNpcs.isEmpty()) continue;
                     }
