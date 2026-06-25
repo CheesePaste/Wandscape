@@ -74,6 +74,8 @@ import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.citizen.CitizenEntity;
+import com.wsteam.wandscape.citizen.CitizenManager;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -165,6 +167,23 @@ public class Wandscape {
                             0xFFD700,  // gold highlight
                             new Item.Properties()));
 
+    // ---- citizen-system: entity ----
+    public static final DeferredHolder<EntityType<?>, EntityType<CitizenEntity>> CITIZEN =
+            ENTITIES.register("citizen", () ->
+                    EntityType.Builder.of(CitizenEntity::new, MobCategory.CREATURE)
+                            .sized(0.6f, 1.95f)
+                            .clientTrackingRange(10)
+                            .build("citizen"));
+
+    // ---- citizen-system: spawn egg ----
+    public static final DeferredItem<Item> CITIZEN_SPAWN_EGG =
+            ITEMS.register("citizen_spawn_egg", () ->
+                    new DeferredSpawnEggItem(
+                            () -> (EntityType<? extends Mob>) (EntityType<?>) CITIZEN.get(),
+                            0xFFAA00,  // orange background
+                            0xFFFFFF,  // white highlight
+                            new Item.Properties()));
+
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =
             CREATIVE_MODE_TABS.register("wandscape_tab", () -> CreativeModeTab.builder()
@@ -173,6 +192,7 @@ public class Wandscape {
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
+                        output.accept(CITIZEN_SPAWN_EGG.get());
                     })
                     .build());
 
@@ -323,6 +343,7 @@ public class Wandscape {
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(WANDSCAPE_NPC.get(), WandscapeNpc.createAttributes().build());
+        event.put(CITIZEN.get(), CitizenEntity.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -335,6 +356,8 @@ public class Wandscape {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
+        // Spawn initial citizen NPCs
+        CitizenManager.getInstance().spawnInitial(event.getServer().overworld());
         BuildCompleteListener.register();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
@@ -377,6 +400,7 @@ public class Wandscape {
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         LOGGER.info("Wandscape server stopped — resetting engine.");
+        CitizenManager.getInstance().onServerStopped();
         buildingApi.setLevel(null);
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
@@ -427,6 +451,9 @@ public class Wandscape {
         if (world == null) return;
 
         mcTickCount++;
+
+        // ⓪ Citizen NPC tick
+        CitizenManager.getInstance().tick(event.getServer().overworld());
 
         // ① Tick async executor countdowns
         var asyncExec = WandscapeEngine.getAsyncExecutor();

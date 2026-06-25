@@ -30,6 +30,7 @@ import com.wsteam.wandscape.shared.ui.task.TaskEditorScreen;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
+import net.minecraft.client.renderer.entity.VillagerRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
@@ -191,6 +192,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
+        event.registerEntityRenderer(Wandscape.CITIZEN.get(), VillagerRenderer::new);
     }
 
     @SubscribeEvent
