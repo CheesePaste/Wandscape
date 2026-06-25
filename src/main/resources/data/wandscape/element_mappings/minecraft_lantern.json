@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:lantern",
+  "build_cost": {
+    "iron": 8,
+    "wood": 1,
+    "fire": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,13 @@
+{
+  "block": "minecraft:powered_rail",
+  "build_cost": {
+    "wood": 1,
+    "gold": 20,
+    "ender": 1,
+    "fire": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

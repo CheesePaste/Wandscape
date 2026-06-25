@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:granite_stairs",
+  "build_cost": {
+    "earth": 6,
+    "ender": 15,
+    "fire": 24
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

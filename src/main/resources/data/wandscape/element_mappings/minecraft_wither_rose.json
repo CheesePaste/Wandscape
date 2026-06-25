@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:wither_rose",
+  "build_cost": {
+    "wood": 3,
+    "fire": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:coarse_dirt",
+  "build_cost": {
+    "earth": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:tuff",
+  "build_cost": {
+    "earth": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

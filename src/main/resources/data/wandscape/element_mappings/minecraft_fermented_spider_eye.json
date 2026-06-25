@@ -1,0 +1,13 @@
+{
+  "item": "minecraft:fermented_spider_eye",
+  "build_cost": {
+    "wood": 3,
+    "earth": 1,
+    "water": 3,
+    "fire": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

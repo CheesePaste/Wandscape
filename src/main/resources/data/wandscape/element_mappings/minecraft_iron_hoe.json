@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:iron_hoe",
+  "build_cost": {
+    "iron": 30,
+    "wood": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

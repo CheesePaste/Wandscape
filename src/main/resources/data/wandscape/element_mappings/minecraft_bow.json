@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:bow",
+  "build_cost": {
+    "wood": 15
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

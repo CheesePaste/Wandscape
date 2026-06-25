@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:mojang_banner_pattern",
+  "build_cost": {
+    "gold": 9999,
+    "wood": 7,
+    "water": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

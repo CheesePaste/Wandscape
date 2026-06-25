@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:golden_helmet",
+  "build_cost": {
+    "gold": 100
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

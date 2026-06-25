@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:rail",
+  "build_cost": {
+    "iron": 5,
+    "wood": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

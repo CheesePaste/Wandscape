@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:furnace",
+  "build_cost": {
+    "earth": 32
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

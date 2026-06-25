@@ -16,6 +16,7 @@ import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
+import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
 import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
@@ -210,7 +211,7 @@ public class Wandscape {
         WandscapeEngine.setBlueprintConfigLoader(BLUEPRINT_CONFIG_LOADER);
 
         // Production recipe loader
-        PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER);
+        PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER, ELEMENT_MAPPING_LOADER);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -398,6 +399,7 @@ public class Wandscape {
         var dispatcher = event.getDispatcher();
         var root = Commands.literal("wandscape")
                 .requires(src -> src.hasPermission(2))
+                .then(GenerateElementMappingsCommand.node())
                 .then(FillBuildingCommand.fillNode())
                 .then(ManaCommand.node())
                 .then(NavTestCommand.node())

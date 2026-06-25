@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:conduit",
+  "build_cost": {
+    "earth": 160,
+    "ender": 80,
+    "water": 500
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

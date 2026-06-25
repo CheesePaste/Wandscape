@@ -291,7 +291,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             return;
         }
 
-        SynthesizeRecipe recipe = recipes.getSynthesizeRecipes().get(recipeId);
+        SynthesizeRecipe recipe = recipes.getSynthesizeRecipe(recipeId);
         if (recipe == null) {
             LOGGER.warn("synthesize: recipe not found: {}", recipeId);
             return;

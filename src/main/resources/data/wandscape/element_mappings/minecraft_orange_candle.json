@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:orange_candle",
+  "build_cost": {
+    "wood": 11,
+    "fire": 1,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

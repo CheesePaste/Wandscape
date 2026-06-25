@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:shulker_shell",
+  "build_cost": {
+    "ender": 80,
+    "earth": 40
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:warped_hyphae",
+  "build_cost": {
+    "wood": 10,
+    "ender": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:amethyst_block",
+  "build_cost": {
+    "wind": 24,
+    "ender": 32
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

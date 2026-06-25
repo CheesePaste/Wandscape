@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:iron_axe",
+  "build_cost": {
+    "iron": 45,
+    "wood": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

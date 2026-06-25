@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:wolf_armor",
+  "build_cost": {
+    "earth": 36
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

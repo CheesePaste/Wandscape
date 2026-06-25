@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:trapped_chest",
+  "build_cost": {
+    "iron": 7,
+    "wood": 18
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

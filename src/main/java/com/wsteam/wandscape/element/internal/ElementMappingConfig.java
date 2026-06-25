@@ -3,25 +3,36 @@ package com.wsteam.wandscape.element.internal;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.data.ElementType;
 
-record ElementMappingConfig(
-    String blockId,
+public record ElementMappingConfig(
+    @Nullable String blockId,
+    @Nullable String itemId,
     Map<ElementType, Long> buildCost,
     Map<ElementType, Long> decomposeYield,
-    boolean decomposable
+    boolean decomposable,
+    @Nullable SynthesizeMeta synthesize
 ) {
     static ElementMappingConfig fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
-        String blockId = obj.get("block").getAsString();
+        String blockId = obj.has("block") ? obj.get("block").getAsString() : null;
+        String itemId = obj.has("item") ? obj.get("item").getAsString() : null;
 
         Map<ElementType, Long> buildCost = parseElementMap(obj, "build_cost");
         Map<ElementType, Long> decomposeYield = parseElementMap(obj, "decompose_yield");
         boolean decomposable = obj.has("decomposable") && obj.get("decomposable").getAsBoolean();
 
-        return new ElementMappingConfig(blockId, buildCost, decomposeYield, decomposable);
+        SynthesizeMeta synthesize = null;
+        if (obj.has("synthesize")) {
+            synthesize = SynthesizeMeta.fromJson(obj.getAsJsonObject("synthesize"));
+        }
+
+        return new ElementMappingConfig(blockId, itemId, buildCost, decomposeYield, decomposable, synthesize);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {
@@ -33,5 +44,25 @@ record ElementMappingConfig(
             map.put(type, entry.getValue().getAsLong());
         }
         return map;
+    }
+
+    public record SynthesizeMeta(
+        RecipeUnlockRequirement unlockRequirement,
+        @Nullable Map<String, Integer> wandLevel
+    ) {
+        public static SynthesizeMeta fromJson(JsonObject obj) {
+            RecipeUnlockRequirement req = obj.has("unlock_requirement")
+                    ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
+                    : RecipeUnlockRequirement.NONE;
+
+            Map<String, Integer> wandLevel = null;
+            if (obj.has("wand_level")) {
+                JsonObject wl = obj.getAsJsonObject("wand_level");
+                wandLevel = new HashMap<>();
+                for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
+            }
+
+            return new SynthesizeMeta(req, wandLevel);
+        }
     }
 }

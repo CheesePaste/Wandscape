@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:flint_and_steel",
+  "build_cost": {
+    "iron": 15,
+    "earth": 2,
+    "fire": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

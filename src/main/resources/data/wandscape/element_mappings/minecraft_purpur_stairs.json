@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:purpur_stairs",
+  "build_cost": {
+    "ender": 7
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

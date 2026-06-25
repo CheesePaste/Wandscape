@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:heart_of_the_sea",
+  "build_cost": {
+    "water": 100,
+    "ender": 80
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

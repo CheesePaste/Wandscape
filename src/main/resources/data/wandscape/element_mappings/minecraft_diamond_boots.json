@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:diamond_boots",
+  "build_cost": {
+    "diamond": 80
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:redstone_block",
+  "build_cost": {
+    "ender": 45,
+    "fire": 72
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:cooked_beef",
+  "build_cost": {
+    "wood": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

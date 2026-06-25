@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:iron_sword",
+  "build_cost": {
+    "iron": 30,
+    "wood": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

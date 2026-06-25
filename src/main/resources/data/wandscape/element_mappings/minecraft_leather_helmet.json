@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:leather_helmet",
+  "build_cost": {
+    "earth": 25
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

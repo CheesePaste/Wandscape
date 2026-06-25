@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:blackstone_stairs",
+  "build_cost": {
+    "earth": 9,
+    "fire": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

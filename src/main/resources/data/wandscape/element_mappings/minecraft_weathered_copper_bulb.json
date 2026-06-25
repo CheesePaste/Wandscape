@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:weathered_copper_bulb",
+  "build_cost": {
+    "iron": 54,
+    "ender": 1,
+    "fire": 9
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

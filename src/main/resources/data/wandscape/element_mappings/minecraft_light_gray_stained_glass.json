@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:light_gray_stained_glass",
+  "build_cost": {
+    "wood": 1,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

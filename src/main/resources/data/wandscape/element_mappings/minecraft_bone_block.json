@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:bone_block",
+  "build_cost": {
+    "earth": 9
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

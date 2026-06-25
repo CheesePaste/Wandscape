@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:redstone_lamp",
+  "build_cost": {
+    "ender": 40,
+    "fire": 64
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

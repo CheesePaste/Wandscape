@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:bamboo_hanging_sign",
+  "build_cost": {
+    "iron": 5,
+    "wood": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

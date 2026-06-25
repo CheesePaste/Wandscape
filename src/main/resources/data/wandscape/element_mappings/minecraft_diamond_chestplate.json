@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:diamond_chestplate",
+  "build_cost": {
+    "diamond": 160
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

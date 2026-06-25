@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:calcite",
+  "build_cost": {
+    "earth": 3,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

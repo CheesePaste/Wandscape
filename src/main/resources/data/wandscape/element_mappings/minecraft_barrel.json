@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:barrel",
+  "build_cost": {
+    "wood": 14,
+    "ender": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:shield",
+  "build_cost": {
+    "iron": 15,
+    "wood": 12
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

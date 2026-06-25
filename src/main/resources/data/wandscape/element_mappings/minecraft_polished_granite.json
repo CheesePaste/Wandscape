@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:polished_granite",
+  "build_cost": {
+    "earth": 4,
+    "ender": 10,
+    "fire": 16
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

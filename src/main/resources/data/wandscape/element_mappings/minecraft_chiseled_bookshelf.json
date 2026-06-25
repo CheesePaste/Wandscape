@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:chiseled_bookshelf",
+  "build_cost": {
+    "wood": 15,
+    "ender": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

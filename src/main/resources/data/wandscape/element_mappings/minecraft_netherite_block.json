@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:netherite_block",
+  "build_cost": {
+    "gold": 6120,
+    "fire": 3600
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

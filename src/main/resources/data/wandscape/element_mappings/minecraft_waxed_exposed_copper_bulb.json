@@ -1,0 +1,14 @@
+{
+  "block": "minecraft:waxed_exposed_copper_bulb",
+  "build_cost": {
+    "iron": 54,
+    "wood": 5,
+    "water": 2,
+    "fire": 9,
+    "ender": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:stripped_crimson_hyphae",
+  "build_cost": {
+    "wood": 10,
+    "fire": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

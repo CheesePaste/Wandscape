@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:oxidized_copper_trapdoor",
+  "build_cost": {
+    "iron": 32
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

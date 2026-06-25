@@ -99,7 +99,7 @@ public record RequestProductionTaskPacket(
                 }
                 boolean unlocked = switch (pkt.action) {
                     case "synthesize" -> {
-                        var recipe = loader.getSynthesizeRecipes().get(pkt.recipeOrItemId);
+                        var recipe = loader.getSynthesizeRecipe(pkt.recipeOrItemId);
                         yield recipe != null
                                 && RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement());
                     }
@@ -129,7 +129,7 @@ public record RequestProductionTaskPacket(
                 var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
                 wandLevel = switch (pkt.action) {
                     case "synthesize" -> {
-                        var r = loader != null ? loader.getSynthesizeRecipes().get(pkt.recipeOrItemId) : null;
+                        var r = loader != null ? loader.getSynthesizeRecipe(pkt.recipeOrItemId) : null;
                         yield r != null ? r.wandLevel() : null;
                     }
                     case "craft_wand" -> {

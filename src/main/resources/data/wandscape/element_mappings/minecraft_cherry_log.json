@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:cherry_log",
+  "build_cost": {
+    "wood": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

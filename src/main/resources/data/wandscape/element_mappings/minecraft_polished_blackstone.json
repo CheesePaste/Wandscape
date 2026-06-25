@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:polished_blackstone",
+  "build_cost": {
+    "earth": 6,
+    "fire": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

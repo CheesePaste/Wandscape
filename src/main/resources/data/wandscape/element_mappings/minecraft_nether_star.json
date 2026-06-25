@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:nether_star",
+  "build_cost": {
+    "fire": 2500,
+    "ender": 1000,
+    "diamond": 1500
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

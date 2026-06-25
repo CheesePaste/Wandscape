@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:diamond_block",
+  "build_cost": {
+    "diamond": 180
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

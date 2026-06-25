@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:ink_sac",
+  "build_cost": {
+    "water": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

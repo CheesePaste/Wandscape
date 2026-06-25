@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:netherite_ingot",
+  "build_cost": {
+    "gold": 680,
+    "fire": 400
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

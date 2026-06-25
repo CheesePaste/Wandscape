@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:chiseled_quartz_block",
+  "build_cost": {
+    "fire": 32,
+    "ender": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

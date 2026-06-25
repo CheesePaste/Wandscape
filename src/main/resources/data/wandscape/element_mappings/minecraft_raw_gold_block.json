@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:raw_gold_block",
+  "build_cost": {
+    "gold": 180
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

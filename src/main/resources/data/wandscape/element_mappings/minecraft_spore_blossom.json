@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:spore_blossom",
+  "build_cost": {
+    "wood": 4,
+    "water": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

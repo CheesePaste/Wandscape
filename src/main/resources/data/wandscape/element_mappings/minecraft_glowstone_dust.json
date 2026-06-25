@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:glowstone_dust",
+  "build_cost": {
+    "fire": 8,
+    "ender": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:wither_skeleton_skull",
+  "build_cost": {
+    "fire": 40,
+    "ender": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

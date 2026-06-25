@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:rabbit_foot",
+  "build_cost": {
+    "wind": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

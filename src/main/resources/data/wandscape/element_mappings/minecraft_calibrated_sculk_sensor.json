@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:calibrated_sculk_sensor",
+  "build_cost": {
+    "wind": 18,
+    "ender": 54
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

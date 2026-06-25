@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:golden_chestplate",
+  "build_cost": {
+    "gold": 160
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

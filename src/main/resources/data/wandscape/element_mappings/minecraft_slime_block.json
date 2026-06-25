@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:slime_block",
+  "build_cost": {
+    "earth": 18,
+    "water": 54
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:emerald_block",
+  "build_cost": {
+    "diamond": 135
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

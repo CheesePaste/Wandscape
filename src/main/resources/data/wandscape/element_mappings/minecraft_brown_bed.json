@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:brown_bed",
+  "build_cost": {
+    "wood": 48
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

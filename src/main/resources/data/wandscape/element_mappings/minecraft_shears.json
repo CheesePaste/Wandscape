@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:shears",
+  "build_cost": {
+    "iron": 30
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

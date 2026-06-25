@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:chicken",
+  "build_cost": {
+    "wood": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

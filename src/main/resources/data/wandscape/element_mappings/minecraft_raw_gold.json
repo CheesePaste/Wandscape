@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:raw_gold",
+  "build_cost": {
+    "gold": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

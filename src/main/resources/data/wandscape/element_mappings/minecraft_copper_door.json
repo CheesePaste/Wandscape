@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:copper_door",
+  "build_cost": {
+    "iron": 16
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

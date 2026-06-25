@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:warped_fungus_on_a_stick",
+  "build_cost": {
+    "wood": 15,
+    "ender": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

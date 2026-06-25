@@ -1,0 +1,14 @@
+{
+  "item": "minecraft:map",
+  "build_cost": {
+    "iron": 60,
+    "wood": 16,
+    "fire": 8,
+    "ender": 5,
+    "water": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -7,6 +7,7 @@ import java.util.Map;
 import com.wsteam.wandscape.shared.api.ElementApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class ElementApiImpl implements ElementApi {
@@ -51,5 +52,21 @@ public class ElementApiImpl implements ElementApi {
     @Override
     public boolean isDecomposable(BlockState block) {
         return mappingLoader.isDecomposable(block);
+    }
+
+    @Override
+    public Map<ElementType, Long> getBuildCost(ItemStack stack) {
+        return mappingLoader.getItemBuildCost(stack.getItem());
+    }
+
+    @Override
+    public Map<ElementType, Long> getDecomposeYield(ItemStack stack) {
+        return mappingLoader.getItemDecomposeYield(stack.getItem());
+    }
+
+    @Override
+    public boolean isDecomposable(ItemStack stack) {
+        var yield = mappingLoader.getItemDecomposeYield(stack.getItem());
+        return !yield.isEmpty();
     }
 }

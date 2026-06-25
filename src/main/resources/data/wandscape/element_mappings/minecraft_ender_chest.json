@@ -1,0 +1,13 @@
+{
+  "block": "minecraft:ender_chest",
+  "build_cost": {
+    "earth": 96,
+    "ender": 20,
+    "water": 40,
+    "fire": 79
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

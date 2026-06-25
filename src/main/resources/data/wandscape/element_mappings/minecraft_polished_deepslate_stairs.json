@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:polished_deepslate_stairs",
+  "build_cost": {
+    "earth": 7
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

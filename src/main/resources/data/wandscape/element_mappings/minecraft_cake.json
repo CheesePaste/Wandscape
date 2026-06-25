@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:cake",
+  "build_cost": {
+    "iron": 108,
+    "wood": 21,
+    "water": 17
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

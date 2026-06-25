@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.element.internal;
 
+import java.util.Collection;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class ElementMappingLoader {
@@ -49,12 +51,50 @@ public class ElementMappingLoader {
         return config != null && config.decomposable();
     }
 
+    public Map<ElementType, Long> getItemDecomposeYield(Item item) {
+        ElementMappingConfig config = findConfigByItem(item);
+        return config != null ? config.decomposeYield() : Map.of();
+    }
+
+    public Map<ElementType, Long> getItemBuildCost(Item item) {
+        ElementMappingConfig config = findConfigByItem(item);
+        return config != null ? config.buildCost() : Map.of();
+    }
+
     private ElementMappingConfig findConfig(BlockState state) {
         ResourceLocation key = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        String id = key.toString();
+        String blockId = key.toString();
         for (ElementMappingConfig config : registry.getAll().values()) {
-            if (config.blockId().equals(id)) return config;
+            if (blockId.equals(config.blockId())) return config;
+        }
+        // Fallback: check if an item mapping exists for this block's item form
+        String itemId = blockId; // blocks and their items share the same ID
+        return findConfigByItemId(itemId);
+    }
+
+    private ElementMappingConfig findConfigByItem(Item item) {
+        String id = BuiltInRegistries.ITEM.getKey(item).toString();
+        return findConfigByItemId(id);
+    }
+
+    private ElementMappingConfig findConfigByItemId(String itemId) {
+        for (ElementMappingConfig config : registry.getAll().values()) {
+            if (itemId.equals(config.itemId())) return config;
         }
         return null;
+    }
+
+    public Map<ElementType, Long> getBuildCostByItemId(String itemId) {
+        ElementMappingConfig config = findConfigByItemId(itemId);
+        if (config != null) return config.buildCost();
+        // Try block ID match too
+        for (ElementMappingConfig c : registry.getAll().values()) {
+            if (itemId.equals(c.blockId())) return c.buildCost();
+        }
+        return Map.of();
+    }
+
+    public Collection<ElementMappingConfig> getAllConfigs() {
+        return registry.getAll().values();
     }
 }

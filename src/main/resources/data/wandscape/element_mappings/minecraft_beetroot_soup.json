@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:beetroot_soup",
+  "build_cost": {
+    "wood": 13
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

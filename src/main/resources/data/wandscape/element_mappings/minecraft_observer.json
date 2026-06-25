@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:observer",
+  "build_cost": {
+    "earth": 24,
+    "ender": 15,
+    "fire": 24
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

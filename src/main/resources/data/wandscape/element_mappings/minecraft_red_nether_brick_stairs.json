@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:red_nether_brick_stairs",
+  "build_cost": {
+    "earth": 9,
+    "fire": 33
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

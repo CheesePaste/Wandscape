@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 public record SynthesizeRecipe(
@@ -16,6 +17,20 @@ public record SynthesizeRecipe(
     RecipeUnlockRequirement unlockRequirement,
     @Nullable Map<String, Integer> wandLevel
 ) {
+    /** Build a SynthesizeRecipe from an ElementMappingConfig that has synthesize metadata. */
+    public static SynthesizeRecipe fromElementMapping(ElementMappingConfig config) {
+        String id = config.itemId() != null ? config.itemId() : config.blockId();
+        String outputItem = config.itemId() != null ? config.itemId() : config.blockId();
+        var meta = config.synthesize();
+        return new SynthesizeRecipe(
+            id,
+            outputItem,
+            config.buildCost(),
+            meta != null ? meta.unlockRequirement() : RecipeUnlockRequirement.NONE,
+            meta != null ? meta.wandLevel() : null
+        );
+    }
+
     public static SynthesizeRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
         String outputItem = obj.getAsJsonObject("output").get("item").getAsString();

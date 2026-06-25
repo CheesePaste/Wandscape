@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:prismarine_stairs",
+  "build_cost": {
+    "earth": 24,
+    "water": 48
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

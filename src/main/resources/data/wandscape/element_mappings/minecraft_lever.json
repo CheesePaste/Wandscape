@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:lever",
+  "build_cost": {
+    "wood": 2,
+    "earth": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

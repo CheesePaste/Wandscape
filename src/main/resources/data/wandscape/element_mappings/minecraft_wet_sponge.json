@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:wet_sponge",
+  "build_cost": {
+    "water": 15
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

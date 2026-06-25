@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:quartz_stairs",
+  "build_cost": {
+    "ender": 30,
+    "fire": 48
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

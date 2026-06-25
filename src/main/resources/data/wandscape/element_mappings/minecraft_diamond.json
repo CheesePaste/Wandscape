@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:diamond",
+  "build_cost": {
+    "diamond": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

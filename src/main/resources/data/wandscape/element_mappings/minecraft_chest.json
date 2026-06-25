@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:chest",
+  "build_cost": {
+    "wood": 16
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

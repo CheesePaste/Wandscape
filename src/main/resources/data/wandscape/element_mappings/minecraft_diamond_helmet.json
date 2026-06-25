@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:diamond_helmet",
+  "build_cost": {
+    "diamond": 100
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

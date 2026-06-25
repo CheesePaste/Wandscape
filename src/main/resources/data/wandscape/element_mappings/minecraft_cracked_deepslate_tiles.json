@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:cracked_deepslate_tiles",
+  "build_cost": {
+    "earth": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:blast_furnace",
+  "build_cost": {
+    "iron": 75,
+    "earth": 44
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

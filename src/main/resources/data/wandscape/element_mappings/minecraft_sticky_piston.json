@@ -1,0 +1,15 @@
+{
+  "block": "minecraft:sticky_piston",
+  "build_cost": {
+    "iron": 15,
+    "wood": 6,
+    "earth": 18,
+    "fire": 8,
+    "ender": 5,
+    "water": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

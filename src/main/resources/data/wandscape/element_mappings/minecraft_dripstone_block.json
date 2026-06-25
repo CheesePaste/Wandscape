@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:dripstone_block",
+  "build_cost": {
+    "earth": 4,
+    "water": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

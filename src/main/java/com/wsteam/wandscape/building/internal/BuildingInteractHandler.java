@@ -126,7 +126,7 @@ public final class BuildingInteractHandler {
 
         var prodLoader = Wandscape.PRODUCTION_RECIPE_LOADER;
         var synthRecipes = prodLoader != null
-                ? prodLoader.getSynthesizeRecipes().getAll().values()
+                ? prodLoader.getAllSynthesizeRecipes()
                 : java.util.Collections.<com.wsteam.wandscape.production.data.SynthesizeRecipe>emptyList();
 
         if (event.getEntity() instanceof ServerPlayer player) {

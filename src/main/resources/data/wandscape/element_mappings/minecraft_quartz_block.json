@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:quartz_block",
+  "build_cost": {
+    "ender": 20,
+    "fire": 32
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

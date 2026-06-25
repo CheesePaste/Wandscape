@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:nautilus_shell",
+  "build_cost": {
+    "water": 50,
+    "earth": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

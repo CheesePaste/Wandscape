@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:breeze_rod",
+  "build_cost": {
+    "wind": 25
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

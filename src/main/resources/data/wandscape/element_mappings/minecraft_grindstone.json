@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:grindstone",
+  "build_cost": {
+    "wood": 8,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

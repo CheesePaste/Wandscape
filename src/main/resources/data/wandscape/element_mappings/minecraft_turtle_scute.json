@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:turtle_scute",
+  "build_cost": {
+    "water": 6,
+    "earth": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

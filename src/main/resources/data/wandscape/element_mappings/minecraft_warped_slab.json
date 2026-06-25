@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:warped_slab",
+  "build_cost": {
+    "wood": 1,
+    "ender": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:dark_prismarine_slab",
+  "build_cost": {
+    "earth": 16,
+    "water": 34
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

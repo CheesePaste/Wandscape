@@ -1,0 +1,13 @@
+{
+  "item": "minecraft:recovery_compass",
+  "build_cost": {
+    "iron": 60,
+    "fire": 8,
+    "wind": 640,
+    "ender": 1205
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

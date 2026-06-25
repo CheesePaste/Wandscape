@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:green_bed",
+  "build_cost": {
+    "wood": 47,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:prismarine_crystals",
+  "build_cost": {
+    "water": 10,
+    "fire": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

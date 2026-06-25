@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:lime_wool",
+  "build_cost": {
+    "wood": 13,
+    "water": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

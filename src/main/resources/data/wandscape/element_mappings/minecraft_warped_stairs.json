@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:warped_stairs",
+  "build_cost": {
+    "wood": 3,
+    "ender": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:polished_diorite",
+  "build_cost": {
+    "earth": 4,
+    "fire": 8,
+    "ender": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

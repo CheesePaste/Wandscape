@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:prismarine_bricks",
+  "build_cost": {
+    "earth": 36,
+    "water": 72
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

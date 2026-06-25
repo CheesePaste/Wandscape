@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:light_weighted_pressure_plate",
+  "build_cost": {
+    "gold": 40
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

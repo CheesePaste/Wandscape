@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:leather_boots",
+  "build_cost": {
+    "earth": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

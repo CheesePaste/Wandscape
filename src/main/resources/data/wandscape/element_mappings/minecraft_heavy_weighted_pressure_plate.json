@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:heavy_weighted_pressure_plate",
+  "build_cost": {
+    "iron": 30
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

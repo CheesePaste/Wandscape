@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:nether_bricks",
+  "build_cost": {
+    "earth": 12,
+    "fire": 12
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

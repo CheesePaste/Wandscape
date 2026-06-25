@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:end_rod",
+  "build_cost": {
+    "ender": 1,
+    "fire": 7
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

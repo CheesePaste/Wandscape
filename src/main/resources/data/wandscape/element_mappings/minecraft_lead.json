@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:lead",
+  "build_cost": {
+    "wood": 6,
+    "earth": 1,
+    "water": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

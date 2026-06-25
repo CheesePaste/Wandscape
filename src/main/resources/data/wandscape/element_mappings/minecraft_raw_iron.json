@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:raw_iron",
+  "build_cost": {
+    "iron": 15
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:soul_torch",
+  "build_cost": {
+    "wood": 1,
+    "ender": 1,
+    "fire": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

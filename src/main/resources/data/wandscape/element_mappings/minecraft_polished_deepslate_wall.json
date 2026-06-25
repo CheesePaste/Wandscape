@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:polished_deepslate_wall",
+  "build_cost": {
+    "earth": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

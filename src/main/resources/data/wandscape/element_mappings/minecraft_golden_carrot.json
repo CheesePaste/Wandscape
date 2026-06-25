@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:golden_carrot",
+  "build_cost": {
+    "wood": 2,
+    "gold": 16
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

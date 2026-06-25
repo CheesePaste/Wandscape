@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:end_stone_brick_stairs",
+  "build_cost": {
+    "earth": 8,
+    "ender": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

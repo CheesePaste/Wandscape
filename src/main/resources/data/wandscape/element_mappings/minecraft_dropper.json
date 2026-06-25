@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:dropper",
+  "build_cost": {
+    "earth": 28,
+    "ender": 5,
+    "fire": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

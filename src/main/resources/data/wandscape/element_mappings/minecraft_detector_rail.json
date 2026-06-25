@@ -1,0 +1,13 @@
+{
+  "block": "minecraft:detector_rail",
+  "build_cost": {
+    "iron": 15,
+    "earth": 1,
+    "ender": 1,
+    "fire": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

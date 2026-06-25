@@ -13,7 +13,7 @@
 - 均含 `fromJson(String id, JsonElement json)` 静态工厂，支持 `unlock_requirement`（新三字段格式）和 `unlock_magic_value`（遗留单值，已迁移）
 
 **加载器**
-- **ProductionRecipeLoader** — 注册 3 种配方类型到 WandscapeDataLoader（synthesize_recipes / craft_wand_recipes / potion_recipes）
+- **ProductionRecipeLoader** — 从 ElementMappingLoader 派生合成配方（筛选有 synthesize 块的条目），加载法杖和药水配方
 
 **GUI (client/) — 仅客户端**
 - **WorkstationScreen** — 双标签页（分解/合成），右侧 TaskQueuePanel，发送 RequestProductionTaskPacket
@@ -32,7 +32,7 @@
 ```
 玩家右键 workstation 方块
   → BuildingInteractHandler 检测 category="workstation"
-  → ColonyItemBank 查可分解物品 + ProductionRecipeLoader 查合成配方
+  → ColonyItemBank 查可分解物品 + ProductionRecipeLoader 从 element_mappings 派生合成配方
   → RecipeUnlockChecker.isUnlocked(colonyId, recipe.unlockRequirement) 过滤配方
   → WorkstationDataPacket（仅含已解锁配方 + unlockRequirement NBT）→ 客户端
   → WorkstationScreen 渲染（已解锁正常显示，已过滤的配方不出现）
@@ -55,7 +55,7 @@
 
 **WandscapeBlockInteractExecutor** 中 4 个异步动作：
 - `executeDecompose()` — 消耗物品 → 查 ElementMappingLoader 取 decompose_yield → bank.addElement() 注入元素
-- `executeSynthesize()` — 查 ProductionRecipeLoader → bank.consumeElement() 扣除元素 → bank.add() 注入产物
+- `executeSynthesize()` — 查 ProductionRecipeLoader（从 element_mappings 派生）→ bank.consumeElement() 扣除元素 → bank.add() 注入产物
 - `executeCraftWand()` — 同 synthesize，产物带 NBT
 - `executeBrewPotion()` — 同 synthesize，额外消耗 input_items
 
@@ -63,7 +63,7 @@
 
 | 目录 | 数量 | 说明 |
 |------|------|------|
-| `data/wandscape/synthesize_recipes/` | 4 | stone_bricks / reinforced_stone(0) / tier2_bricks(1) / crystal_block |
+| `data/wandscape/element_mappings/` | 9 | 合并了原 synthesize_recipes，synthesize 块存在即表示可合成 |
 | `data/wandscape/craft_wand_recipes/` | 7 | builder/gatherer/crafter/ritual/archmage/legendary/journeyman_builder_wand |
 | `data/wandscape/potion_recipes/` | 2 | mana_potion / stamina_potion(1) |
 
@@ -122,32 +122,29 @@
 
 **注意**：`behaviors` 中的 level 为 0 时，任何 BUILDING 能力 ≥ 0 的 NPC 均可制作。法杖实际能力等级由 output.nbt 决定，制作完成后可通过 `ColonyItemBank` 装备给 NPC。
 
-## Synthesize 配方 JSON 格式
+## Synthesize 配方（已合并到 element_mappings）
 
-位置：`data/wandscape/synthesize_recipes/*.json`
+位置：`data/wandscape/element_mappings/*.json`（与方块元素映射同一文件）
 
 ```json
 {
-  "id": "stone_bricks",
-  "output": {
-    "item": "minecraft:stone_bricks"
-  },
-  "cost": {
-    "earth": 4
-  },
-  "unlock_requirement": {
-    "min_magic": 0
+  "block": "minecraft:stone_bricks",
+  "build_cost": { "earth": 4 },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {
+    "unlock_requirement": { "min_magic": 0 },
+    "wand_level": {}
   }
 }
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | string | 配方唯一标识 |
-| output.item | string | 产出物品 ID |
-| cost | {element: amount} | 每单位消耗的元素量 |
-| unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛 |
-| wand_level | {"crafting": N}（可选） | 覆盖默认 wand 需求。缺省或 `{"crafting": 0}` → 无 CRAFTING 要求，任何 NPC 可制作；`{"crafting": 1}` → 需要 CRAFTING≥1 法杖 |
+| build_cost | {element: amount} | 合成消耗（合并了原 synthesize_recipes 的 cost） |
+| synthesize | object | 存在即表示可合成，空对象 `{}` 表示禁用 |
+| synthesize.unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛 |
+| synthesize.wand_level | {"crafting": N}（可选） | 覆盖默认 wand 需求 |
 
 `wand_level` 在 `RequestProductionTaskPacket.handleServer()` 中提取，通过 `GlobalTaskPool.mergeOverrides()` 合并进任务 requirements（0=删除、≥1=覆盖）。默认（无此字段）等同于 `{"crafting": 0}`，与 `craft_wand` 行为一致。
 

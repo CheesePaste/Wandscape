@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:compass",
+  "build_cost": {
+    "iron": 60,
+    "ender": 5,
+    "fire": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

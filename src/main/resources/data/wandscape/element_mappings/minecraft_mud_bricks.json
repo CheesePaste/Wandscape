@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:mud_bricks",
+  "build_cost": {
+    "wood": 2,
+    "earth": 2,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

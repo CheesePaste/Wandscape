@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:enchanted_golden_apple",
+  "build_cost": {
+    "gold": 9999,
+    "wood": 5
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

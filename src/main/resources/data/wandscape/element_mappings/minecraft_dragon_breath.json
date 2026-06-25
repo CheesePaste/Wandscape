@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:dragon_breath",
+  "build_cost": {
+    "ender": 150,
+    "wind": 100
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

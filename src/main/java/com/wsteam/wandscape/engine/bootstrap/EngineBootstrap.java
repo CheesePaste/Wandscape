@@ -251,7 +251,7 @@ public final class EngineBootstrap {
             var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
             if (recipes == null) return false;
             String recipeKey = stripMcPrefix(resource.id());
-            var recipe = recipes.getSynthesizeRecipes().get(recipeKey);
+            var recipe = recipes.getSynthesizeRecipe(recipeKey);
             if (recipe == null) return false;
 
             // 2. Check if a synthesize task for this recipe is already in-flight

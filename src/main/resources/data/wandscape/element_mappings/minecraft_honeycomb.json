@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:honeycomb",
+  "build_cost": {
+    "wood": 5,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

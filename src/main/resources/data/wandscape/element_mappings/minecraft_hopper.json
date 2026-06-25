@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:hopper",
+  "build_cost": {
+    "iron": 75,
+    "wood": 16
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

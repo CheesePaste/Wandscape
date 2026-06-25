@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:crying_obsidian",
+  "build_cost": {
+    "earth": 12,
+    "fire": 8,
+    "ender": 10
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

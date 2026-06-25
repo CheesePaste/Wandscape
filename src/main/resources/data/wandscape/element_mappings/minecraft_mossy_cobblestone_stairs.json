@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:mossy_cobblestone_stairs",
+  "build_cost": {
+    "wood": 1,
+    "earth": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

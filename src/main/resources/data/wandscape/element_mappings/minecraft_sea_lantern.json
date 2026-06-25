@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:sea_lantern",
+  "build_cost": {
+    "earth": 16,
+    "fire": 25,
+    "water": 82
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

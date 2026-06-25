@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:waxed_weathered_chiseled_copper",
+  "build_cost": {
+    "iron": 18,
+    "wood": 1,
+    "water": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:music_disc_5",
+  "build_cost": {
+    "ender": 135
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

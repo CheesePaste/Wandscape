@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:gold_ingot",
+  "build_cost": {
+    "gold": 20
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:golden_leggings",
+  "build_cost": {
+    "gold": 140
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

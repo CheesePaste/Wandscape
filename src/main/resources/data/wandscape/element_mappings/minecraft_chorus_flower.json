@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:chorus_flower",
+  "build_cost": {
+    "ender": 10
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:oak_hanging_sign",
+  "build_cost": {
+    "iron": 5,
+    "wood": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

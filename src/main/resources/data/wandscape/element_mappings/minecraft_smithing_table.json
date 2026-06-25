@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:smithing_table",
+  "build_cost": {
+    "iron": 30,
+    "wood": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

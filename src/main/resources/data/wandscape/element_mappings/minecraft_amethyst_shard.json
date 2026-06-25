@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:amethyst_shard",
+  "build_cost": {
+    "ender": 8,
+    "wind": 6
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

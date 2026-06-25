@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:polished_blackstone_pressure_plate",
+  "build_cost": {
+    "earth": 12,
+    "fire": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

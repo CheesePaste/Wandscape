@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:heavy_core",
+  "build_cost": {
+    "iron": 200
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

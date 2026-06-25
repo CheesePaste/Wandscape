@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:tnt",
+  "build_cost": {
+    "earth": 8,
+    "fire": 40
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:lapis_lazuli",
+  "build_cost": {
+    "water": 8,
+    "ender": 12
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

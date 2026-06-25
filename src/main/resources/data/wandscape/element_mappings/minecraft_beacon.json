@@ -1,0 +1,14 @@
+{
+  "block": "minecraft:beacon",
+  "build_cost": {
+    "diamond": 1500,
+    "earth": 46,
+    "water": 15,
+    "ender": 1000,
+    "fire": 2524
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

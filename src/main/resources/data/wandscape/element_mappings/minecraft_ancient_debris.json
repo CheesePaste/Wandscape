@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:ancient_debris",
+  "build_cost": {
+    "gold": 150,
+    "fire": 100
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

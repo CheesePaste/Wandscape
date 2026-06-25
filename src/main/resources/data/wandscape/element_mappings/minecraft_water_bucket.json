@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:water_bucket",
+  "build_cost": {
+    "water": 4,
+    "iron": 36
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

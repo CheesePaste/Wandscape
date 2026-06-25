@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:disc_fragment_5",
+  "build_cost": {
+    "ender": 15
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

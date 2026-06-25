@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:smooth_basalt",
+  "build_cost": {
+    "earth": 5,
+    "fire": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:respawn_anchor",
+  "build_cost": {
+    "earth": 72,
+    "ender": 120,
+    "fire": 144
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

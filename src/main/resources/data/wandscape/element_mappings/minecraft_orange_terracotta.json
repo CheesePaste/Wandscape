@@ -1,0 +1,13 @@
+{
+  "block": "minecraft:orange_terracotta",
+  "build_cost": {
+    "wood": 1,
+    "earth": 8,
+    "fire": 1,
+    "water": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

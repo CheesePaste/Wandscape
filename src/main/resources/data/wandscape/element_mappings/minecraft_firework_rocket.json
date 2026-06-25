@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:firework_rocket",
+  "build_cost": {
+    "wood": 1,
+    "water": 1,
+    "fire": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

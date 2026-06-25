@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:anvil",
+  "build_cost": {
+    "iron": 465
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

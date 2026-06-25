@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:waxed_copper_door",
+  "build_cost": {
+    "iron": 16,
+    "wood": 5,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

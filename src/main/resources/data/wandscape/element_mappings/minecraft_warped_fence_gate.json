@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:warped_fence_gate",
+  "build_cost": {
+    "wood": 12,
+    "ender": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:tripwire_hook",
+  "build_cost": {
+    "iron": 7,
+    "wood": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

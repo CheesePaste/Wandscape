@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:leather_horse_armor",
+  "build_cost": {
+    "earth": 35
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

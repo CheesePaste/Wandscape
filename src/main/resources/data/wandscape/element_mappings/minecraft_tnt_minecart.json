@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:tnt_minecart",
+  "build_cost": {
+    "iron": 75,
+    "earth": 8,
+    "fire": 40
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

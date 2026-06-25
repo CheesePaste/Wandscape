@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:waxed_exposed_cut_copper_slab",
+  "build_cost": {
+    "iron": 9,
+    "wood": 5,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

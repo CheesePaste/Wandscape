@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:warped_fungus",
+  "build_cost": {
+    "ender": 6,
+    "wood": 3
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

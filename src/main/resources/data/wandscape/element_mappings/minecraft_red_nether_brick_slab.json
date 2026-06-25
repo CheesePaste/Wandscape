@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:red_nether_brick_slab",
+  "build_cost": {
+    "earth": 3,
+    "fire": 11
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

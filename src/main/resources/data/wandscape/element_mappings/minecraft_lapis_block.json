@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:lapis_block",
+  "build_cost": {
+    "ender": 108,
+    "water": 72
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

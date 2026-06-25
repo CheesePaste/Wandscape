@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:cauldron",
+  "build_cost": {
+    "iron": 105
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

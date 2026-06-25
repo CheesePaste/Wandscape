@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:clock",
+  "build_cost": {
+    "gold": 80,
+    "ender": 5,
+    "fire": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

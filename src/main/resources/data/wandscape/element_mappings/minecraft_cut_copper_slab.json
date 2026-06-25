@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:cut_copper_slab",
+  "build_cost": {
+    "iron": 36
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

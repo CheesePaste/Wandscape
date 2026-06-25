@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:mace",
+  "build_cost": {
+    "iron": 200,
+    "wind": 25
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

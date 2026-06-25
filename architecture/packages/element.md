@@ -2,15 +2,32 @@
 
 ## 关键类
 
-- **ElementApiImpl** (internal/) — ElementApi 实现：BlockState→build_cost/decompose_yield 查询
-- **ElementMappingLoader** (internal/) — 从 `data/wandscape/element_mappings/*.json` 加载映射
-- **ElementMappingConfig** (internal/) — 映射配置 record
+- **ElementApiImpl** (internal/) — ElementApi 实现：BlockState/ItemStack→build_cost/decompose_yield 查询
+- **ElementMappingLoader** (internal/) — 从 `data/wandscape/element_mappings/*.json` 加载映射，支持方块和物品查询
+- **ElementMappingConfig** (internal/) — 映射配置 record，含可选 `SynthesizeMeta`（合成解锁条件+法杖等级）
+- **ElementValueGenerator** (internal/) — 元素价值自动生成器（从原版配方推导）
+- **SynthesizeMeta** (ElementMappingConfig 内) — 合成元数据：unlockRequirement + wandLevel
 
 ## JSON
 
-位置：`data/wandscape/element_mappings/*.json`。5 个映射：cobblestone/dirt/oak_log/stone/stone_bricks
+位置：`data/wandscape/element_mappings/*.json`。9 个映射。
 
-标签过滤：`data/wandscape/tags/block/decomposable.json` 定义可分解方块
+已将原 `synthesize_recipes/` 合并进来：`build_cost` 同时是合成消耗，`synthesize` 块存在即表示可合成。
+
+格式：
+```json
+{
+  "block": "minecraft:stone_bricks",
+  "build_cost": { "earth": 4 },
+  "decompose_yield": {},
+  "decomposable": false,
+  "source": "auto_generated",
+  "synthesize": {
+    "unlock_requirement": { "min_magic": 0 },
+    "wand_level": {}
+  }
+}
+```
 
 ## 共享类型
 
@@ -21,3 +38,4 @@
 - shared/api/ElementApi, shared/data/ElementType
 - shared/registry/WandscapeApis
 - dataconfig/WandscapeDataLoader
+- production/data/RecipeUnlockRequirement（用于 SynthesizeMeta）
