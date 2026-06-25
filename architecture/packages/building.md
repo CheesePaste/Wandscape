@@ -22,7 +22,8 @@
 ```
 玩家/GUI 提交建造
   → EnqueueHelper → BuildingSavedData(structureIntact=false)
-  → WorkItem → GlobalTaskPool
+  → WorkItem → BuildingTaskSource.poll() → BuildingTaskPool (仅head入全局池)
+  → GlobalTaskPool → SchedulerSystem(NPC匹配) → NpcTaskPackage
   → NPC领取 → 执行蓝图 → 放置原版方块
   → emit_event("build_complete")
   → BuildCompleteListener → findDamagedBlocks 扫描

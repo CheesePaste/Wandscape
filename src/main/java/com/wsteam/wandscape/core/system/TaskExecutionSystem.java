@@ -7,7 +7,9 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.*;
 import com.wsteam.wandscape.core.task.ExecutorState;
+import com.wsteam.wandscape.core.task.GlobalTask;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import com.wsteam.wandscape.core.task.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
@@ -19,26 +21,25 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Drives NPC task execution — one engine logic tick.
+ * Drives NPC task execution from {@link NpcTaskQueue}.
  *
- * <p>V2.5 async model:
+ * <p>Each NPC has a queue of {@link NpcTaskPackage}s. This system drives the
+ * current package's op sequence, handles async futures, and releases packages
+ * back to the global pool on mana depletion or resource shortage.
+ *
+ * <p>V3 package-driven model:
  * <ol>
- *   <li>For each NPC, check if a pending async future exists:
- *       <ul><li>Done → advance stepIndex, clear pending, continue to next op</li>
- *           <li>Not done → skip this NPC (still in-flight)</li></ul></li>
- *   <li>No pending → determine current op → call {@code executor.execute()} → future</li>
- *   <li>Future already done (sync) → advance stepIndex (pure ops batch-continue)</li>
- *   <li>Future not done (async) → store as pending → break (side-effect boundary)</li>
+ *   <li>No work → IDLE</li>
+ *   <li>Pending async future → wait or advance</li>
+ *   <li>No current package → start next from queue</li>
+ *   <li>Navigate to package stance if out of range</li>
+ *   <li>Execute current op → handle mana, resources, async</li>
  * </ol>
- *
- * <p>An op is NEVER re-invoked. Async ops return an incomplete future;
- * the engine waits (via {@link World#hasPendingAsyncOps() gate}) and
- * advances the stepIndex when the future completes.
  */
 public class TaskExecutionSystem implements System {
 
     private static final String TAG = "TaskExec";
-    private static final double NAV_RANGE_SQ = 25.0; // 5² — horizontal operating range
+    private static final double NAV_RANGE_SQ = 25.0;
     private static final RitualId ITEM_TELEPORT = new RitualId("item_teleport");
 
     private final GlobalTaskPool taskPool;
@@ -59,132 +60,136 @@ public class TaskExecutionSystem implements System {
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
             if (exec == null) continue;
 
-            if (!exec.hasWork()) {
+            NpcTaskQueue queue = exec.npcQueue;
+
+            // ── 0. No work → idle ──
+            if (!queue.hasWork() && exec.globalTaskId == null) {
+                if (exec.state != ExecutorState.IDLE) {
+                    Log.debug(TAG, "NPC %d → IDLE (no work, was=%s pendingFuture=%s nav=%s)",
+                            npcId, exec.state,
+                            exec.pendingFuture != null && !exec.pendingFuture.isDone(),
+                            exec.pendingFutureIsNav);
+                }
                 exec.state = ExecutorState.IDLE;
                 exec.currentOpTarget = null;
                 exec.currentOpKind = null;
-                // Cancel any in-flight navigation
                 if (world.movementOps != null && exec.pendingFuture != null) {
                     world.movementOps.cancelNavigation(npcId);
-                }
-                // Increment idle counter. When it crosses threshold,
-                // push WandReturnOp for each equipped wand.
-                exec.wandIdleTicks++;
-                if (exec.wandIdleTicks >= TaskExecutor.WAND_RETURN_DELAY_TICKS) {
-                    WandCarrier wc = world.get(npcId, WandCarrier.class);
-                    if (wc != null && !wc.equippedWandIds().isEmpty()) {
-                        for (String wandId : new ArrayList<>(wc.equippedWandIds())) {
-                            exec.pushPrivate(new AtomicOp.WandReturnOp(wandId));
-                            Log.info(TAG, "NPC %d — idle %d ticks, pushed WandReturnOp(%s)",
-                                    npcId, exec.wandIdleTicks, wandId);
-                        }
-                        exec.wandIdleTicks = 0;
-                    }
+                    exec.pendingFuture = null;
+                    exec.pendingFutureIsNav = false;
                 }
                 continue;
             }
 
-            processNpc(world, npcId, exec, registry);
+            processNpc(world, npcId, exec, queue, registry);
         }
     }
 
     private void processNpc(World world, long npcId, TaskExecutor exec,
-                            OpExecutorRegistry registry) {
-        ColonyMember cm = world.get(npcId, ColonyMember.class);
-        WandCarrier wc = world.get(npcId, WandCarrier.class);
-        ManaPool mp = world.get(npcId, ManaPool.class);
-        Log.debug(TAG, "processNpc %d colony=%s state=%s globalTask=%s step=%d/%d caps=%s mana=%.1f/%d",
-                npcId,
-                cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
-                exec.state,
-                exec.globalTaskId != null ? "#" + exec.globalTaskId : "null",
-                exec.stepIndex,
-                exec.currentSequence != null ? exec.currentSequence.size() : 0,
-                wc != null ? wc.capabilities().toString() : "?",
-                mp != null ? mp.current() : -1,
-                mp != null ? mp.max() : -1);
+                            NpcTaskQueue queue, OpExecutorRegistry registry) {
 
-        // ---- 0. Compute task stance (once per task, from op targets' bounding box) ----
-        if (exec.stance == null && exec.currentSequence != null) {
-            exec.stance = computeTaskStance(exec.currentSequence);
+        // ── 1. No current package → start the next one ──
+        if (queue.currentPackage() == null && queue.hasPending()) {
+            queue.startNextPending();
         }
 
-        // ---- 0.5 Navigate to stance if far away ----
-        if (exec.stance != null && exec.pendingFuture == null) {
+        // ── 1a. Compat bridge: global task assigned by old SchedulerSystem ──
+        // TODO: remove after Phase 6 (SchedulerSystem creates NpcTaskPackage directly)
+        if (queue.currentPackage() == null
+                && exec.globalTaskId != null
+                && exec.currentSequence != null) {
+            // Compute stance from task targets (once per task)
+            if (exec.stance == null) {
+                exec.stance = computeTaskStance(exec.currentSequence);
+            }
+            NpcTaskPackage pkg = new NpcTaskPackage(
+                    "global:" + exec.globalTaskId,
+                    exec.currentSequence,
+                    exec.stance,
+                    0,
+                    exec.stepIndex);
+            queue.enqueueNormal(pkg);
+            queue.startNextPending();
+        }
+
+        NpcTaskPackage pkg = queue.currentPackage();
+
+        // ── 2. Pending async future from previous tick? ──
+        if (exec.pendingFuture != null) {
+            if (!exec.pendingFuture.isDone()) {
+                Log.debug(TAG, "NPC %d — waiting on future (nav=%s)", npcId, exec.pendingFutureIsNav);
+                return; // still waiting
+            }
+            Log.info(TAG, "NPC %d — future resolved (wasNav=%s)", npcId, exec.pendingFutureIsNav);
+            exec.pendingFuture = null;
+            if (!exec.pendingFutureIsNav) {
+                queue.advanceStep();
+                syncStepToPool(exec, queue);
+                exec.lastWorkTick = worldTick(world);
+            } else {
+                Log.info(TAG, "NPC %d — nav resolved, continuing to execute op", npcId);
+                exec.pendingFutureIsNav = false;
+            }
+            if (queue.isCurrentPackageDone()) {
+                finishOrReleaseCurrentPackage(exec, queue, npcId, world);
+                return;
+            }
+            if (exec.pendingFutureIsNav) {
+                // Nav resolved — continue to execute the op (don't advance)
+            }
+        }
+
+        // Refresh pkg after future handling (might have changed)
+        pkg = queue.currentPackage();
+        if (pkg == null) {
+            exec.state = ExecutorState.IDLE;
+            exec.currentOpTarget = null;
+            exec.currentOpKind = null;
+            return;
+        }
+
+        // ── 3. Navigate to package stance if far away ──
+        if (pkg.stance() != null && exec.pendingFuture == null
+                && !exec.pendingFutureIsNav && world.movementOps != null) {
             Position pos = world.get(npcId, Position.class);
             if (pos != null) {
-                double dx = pos.pos().x() - exec.stance.x();
-                double dz = pos.pos().z() - exec.stance.z();
-                if (dx * dx + dz * dz > NAV_RANGE_SQ && world.movementOps != null) {
+                double dx = pos.pos().x() - pkg.stance().x();
+                double dz = pos.pos().z() - pkg.stance().z();
+                if (dx * dx + dz * dz > NAV_RANGE_SQ) {
                     MovementOps mov = world.movementOps;
                     CompletableFuture<Void> navFuture = mov.navigateTo(
-                            npcId, exec.stance.x(), exec.stance.y(), exec.stance.z());
+                            npcId, pkg.stance().x(), pkg.stance().y(), pkg.stance().z());
                     exec.pendingFuture = navFuture;
                     exec.pendingFutureIsNav = true;
-                    Log.debug(TAG, "NPC %d — navigating to stance %s", npcId, exec.stance);
+                    Log.debug(TAG, "NPC %d — navigating to pkg stance %s", npcId, pkg.stance());
+                    exec.state = ExecutorState.ACTIVE;
                     return;
                 }
             }
         }
 
-        while (exec.hasWork()) {
+        // ── 4. Execute op loop (batch pure ops, one side-effect per tick) ──
+        WandCarrier wc = world.get(npcId, WandCarrier.class);
+        while (queue.peekCurrentOp() != null) {
+            AtomicOp currentOp = queue.peekCurrentOp();
 
-            // ---- 1. Pending async future from previous tick? ----
-            if (exec.pendingFuture != null) {
-                if (!exec.pendingFuture.isDone()) {
-                    return; // still waiting — skip this NPC
-                }
-                // Future resolved
-                Log.debug(TAG, "NPC %d — future resolved (wasNav=%b)", npcId, exec.pendingFutureIsNav);
-                exec.pendingFuture = null;
-                if (!exec.pendingFutureIsNav) {
-                    // Op future (e.g. AsyncTransformExecutor delay) —
-                    // the op already executed via future's thenRun callback.
-                    advanceStep(exec, npcId, 1, world);
-                }
-                // Nav future → do NOT advance. Continue to re-check
-                // range (now in-range) and execute the operation.
-                continue; // process next op (or re-process same op after nav)
-            }
-
-            // ---- 2. Determine current AtomicOp ----
-            boolean isPrivate = !exec.isPrivateQueueEmpty();
-            AtomicOp currentOp;
-
-            if (isPrivate) {
-                currentOp = exec.peekPrivate();
-                Log.debug(TAG, "NPC %d — private op: %s", npcId, currentOp.getClass().getSimpleName());
-            } else if (exec.globalTaskId != null && exec.currentSequence != null) {
-                if (exec.currentSequence.isComplete(exec.stepIndex)) {
-                    finishGlobalTask(exec, npcId, world);
-                    return;
-                }
-                currentOp = exec.currentSequence.get(exec.stepIndex);
-                Log.debug(TAG, "NPC %d — global task #%d step %d/%d: %s",
-                        npcId, exec.globalTaskId, exec.stepIndex,
-                        exec.currentSequence.size() - 1,
-                        currentOp.getClass().getSimpleName());
-            } else {
-                exec.state = ExecutorState.IDLE;
-                return;
-            }
-
-            // ---- 3.5. No-op skip: TransformOp where target already has desired block ----
+            // ── 4a. No-op skip: TransformOp where target already has desired block ──
             if (currentOp instanceof AtomicOp.TransformOp top && world.blockOps != null) {
                 if (world.blockOps.getBlock(top.target()).equals(top.to())) {
-                    advanceStep(exec, npcId, 1, world);
+                    queue.advanceStep();
+                    exec.lastWorkTick = worldTick(world);
                     exec.state = ExecutorState.ACTIVE;
-                    continue; // skip → next op (batch through consecutive no-ops)
+                    continue;
                 }
             }
 
-            // ---- 3.6. ParallelOp: launch all sub-ops concurrently via allOf ----
+            // ── 4b. ParallelOp: launch all sub-ops concurrently ──
             if (currentOp instanceof AtomicOp.ParallelOp par) {
-                executeParallel(par, world, npcId, exec, wc, registry);
+                executeParallel(par, world, npcId, exec, queue, registry);
                 return;
             }
 
-            // ---- 4. Mana check + consume (before execution, for both sync and async) ----
+            // ── 4c. Mana check + consume ──
             boolean isPure = isPureOp(currentOp);
             if (!isPure) {
                 ManaPool mana = world.get(npcId, ManaPool.class);
@@ -192,20 +197,9 @@ public class TaskExecutionSystem implements System {
 
                 float actualCost = currentOp.baseManaCost() * wc.bestManaEfficiency();
                 if (mana.current() < actualCost) {
-                    // Insufficient mana: release global task back to pool for another NPC.
-                    if (!isPrivate && exec.globalTaskId != null && taskPool != null) {
-                        taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
-                        Log.info(TAG, "NPC %d — mana %.1f < %.1f, released task #%d",
-                                npcId, mana.current(), actualCost, exec.globalTaskId);
-                    } else if (isPrivate) {
-                        // Private queue op: stall until mana regens, but reset casting
-                        // state so NPC doesn't freeze with arm-waving animation.
-                        exec.state = ExecutorState.IDLE;
-                        exec.currentOpTarget = null;
-                        exec.currentOpKind = null;
-                        Log.info(TAG, "NPC %d — mana %.1f < %.1f, stalling private op (state→IDLE)",
-                                npcId, mana.current(), actualCost);
-                    }
+                    releaseToGlobalPool(exec, queue, npcId, world);
+                    Log.info(TAG, "NPC %d — mana %.1f < %.1f, released pkg to pool",
+                            npcId, mana.current(), actualCost);
                     return;
                 }
                 mana.consume(actualCost);
@@ -215,10 +209,9 @@ public class TaskExecutionSystem implements System {
                                 : currentOp.getClass().getSimpleName());
             }
 
-            // ---- 4.5. Range check (horizontal only) + navigation ----
-            // RitualOp works at any distance (self_teleport, etc.) — skip nav
+            // ── 4d. Range check (for per-op nav, when no stance is set) ──
             GridPos target = currentOp.target();
-            if (target != null && world.movementOps != null && exec.stance == null
+            if (target != null && world.movementOps != null && pkg.stance() == null
                     && !(currentOp instanceof AtomicOp.RitualOp)) {
                 Position pos = world.get(npcId, Position.class);
                 if (pos != null) {
@@ -230,29 +223,27 @@ public class TaskExecutionSystem implements System {
                                 npcId, target.x(), target.y(), target.z());
                         exec.pendingFuture = navFuture;
                         exec.pendingFutureIsNav = true;
-                        Log.debug(TAG, "NPC %d — navigating to %s", npcId, target);
-                        return; // wait for nav to resolve
+                        exec.state = ExecutorState.ACTIVE;
+                        Log.debug(TAG, "NPC %d — navigating to op target %s", npcId, target);
+                        return;
                     }
                 }
             }
 
-            // ---- 4.6. Visual feedback: tell NPC where to aim its wand beam + op kind ----
+            // ── 4e. Visual feedback ──
             exec.currentOpTarget = currentOp.target();
             exec.currentOpKind = opKind(currentOp);
 
-            // ---- 5. Execute → get future ----
+            // ── 4f. Execute → get future ──
             @SuppressWarnings("unchecked")
             OpExecutor<AtomicOp> executor = (OpExecutor<AtomicOp>) (Object) registry.get(currentOp.getClass());
             if (executor == null) return;
 
             CompletableFuture<Void> future = executor.execute(currentOp, world, npcId);
 
-            // ---- 6. Already done? (sync op) ----
+            // ── 4g. Already done? (sync op) ──
             if (future.isDone()) {
                 if (future.isCompletedExceptionally()) {
-                    // Op failed — classify the cause.
-                    // ResourceShortageException: special signal → AWAITING_RESOURCES
-                    // Everything else: discard op and release task for reassign.
                     Throwable cause = null;
                     try {
                         future.get();
@@ -263,30 +254,14 @@ public class TaskExecutionSystem implements System {
                                 cause != null ? cause.getMessage() : e.getMessage());
                     }
                     if (cause instanceof ResourceShortageException shortage) {
-                        // Warehouse empty → mark task AWAITING_RESOURCES, release NPC.
-                        // StepIndex is preserved by markAwaitingResources internally.
-                        if (isPrivate) {
-                            // Private-queue resource requests shouldn't happen in
-                            // practice (they're always in global task sequences),
-                            // but pop it anyway so the NPC doesn't stall.
-                            exec.popPrivate();
-                        }
                         if (exec.globalTaskId != null && taskPool != null) {
                             taskPool.markAwaitingResources(exec.globalTaskId, npcId,
                                     shortage.requested(), world);
                             exec.releaseGlobalTask();
                         }
-                        exec.state = ExecutorState.IDLE;
-                        exec.currentOpTarget = null;
-                        exec.currentOpKind = null;
-                        return;
-                    }
-                    if (isPrivate) {
-                        exec.popPrivate();
-                    }
-                    if (exec.globalTaskId != null && taskPool != null) {
-                        taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
-                        exec.releaseGlobalTask();
+                        queue.finishCurrentPackage();
+                    } else {
+                        releaseToGlobalPool(exec, queue, npcId, world);
                     }
                     exec.state = ExecutorState.IDLE;
                     exec.currentOpTarget = null;
@@ -294,94 +269,154 @@ public class TaskExecutionSystem implements System {
                     return;
                 }
                 if (!isPure) {
-                    // Side-effect op: mana already consumed, advance stepIndex
-                    advanceStep(exec, npcId, 1, world);
+                    queue.advanceStep();
+                    syncStepToPool(exec, queue);
+                    exec.lastWorkTick = worldTick(world);
                     exec.state = ExecutorState.ACTIVE;
 
-                    // Same-target batching: if next op shares the same target,
-                    // stay in the loop to avoid redundant re-navigation.
+                    // Same-target batching: if next op shares target, continue
                     GridPos doneTarget = currentOp.target();
-                    AtomicOp nextOp = peekNextOp(exec);
+                    AtomicOp nextOp = queue.peekCurrentOp();
                     if (nextOp != null && sameTarget(doneTarget, nextOp.target())) {
-                        continue; // batch: process next op without breaking
+                        continue;
                     }
-                    break; // one side-effect per tick (normal flow)
+                    // One side-effect per tick
+                    break;
                 }
-                // Pure op: already self-advanced inside execute() — continue batch
+                // Pure op: executor may have already finished the package via advanceAfterPureOp
+                if (queue.isCurrentPackageDone() || queue.currentPackage() != pkg) {
+                    finishOrReleaseCurrentPackage(exec, queue, npcId, world);
+                    return;
+                }
+                if (queue.peekCurrentOp() == null) {
+                    finishOrReleaseCurrentPackage(exec, queue, npcId, world);
+                    return;
+                }
                 continue;
             }
 
-            // ---- 7. Not done (async op) — store and wait (mana already consumed) ----
+            // ── 4h. Async op — store future and wait ──
             exec.pendingFuture = future;
             exec.pendingFutureIsNav = false;
+            exec.state = ExecutorState.ACTIVE;
             Log.debug(TAG, "NPC %d - async op in-flight, waiting", npcId);
-            return; // don't have exec.state=WAITING — the future IS the state
+            return;
         }
 
-        // No more work
-        if (!exec.hasWork()) {
+        // No more ops in current package
+        if (queue.peekCurrentOp() == null && queue.currentPackage() != null) {
+            finishOrReleaseCurrentPackage(exec, queue, npcId, world);
+        }
+    }
+
+    // ── Package lifecycle ──
+
+    /**
+     * Finish the current package. If it's a global task package, complete the task.
+     * Then start the next pending/resumed package.
+     */
+    private void finishOrReleaseCurrentPackage(TaskExecutor exec, NpcTaskQueue queue,
+                                                long npcId, World world) {
+        NpcTaskPackage pkg = queue.currentPackage();
+        if (pkg == null) return;
+
+        String source = pkg.source();
+        Log.info(TAG, "NPC %d — finish pkg source=%s state=%s pendingFuture=%s nav=%s globalTaskId=%s",
+                npcId, source, exec.state,
+                exec.pendingFuture != null && !exec.pendingFuture.isDone(),
+                exec.pendingFutureIsNav,
+                exec.globalTaskId);
+
+        if (source.startsWith("global:") && exec.globalTaskId != null) {
+            syncStepToPool(exec, queue);
+            taskPool.completeTask(exec.globalTaskId, npcId);
+            Log.info(TAG, "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
+            exec.releaseGlobalTask();
+        }
+
+        queue.finishCurrentPackage();
+        exec.lastWorkTick = worldTick(world);
+
+        // Start the next package if one is waiting
+        if (queue.currentPackage() == null && queue.hasPending()) {
+            queue.startNextPending();
+            NpcTaskPackage nextPkg = queue.currentPackage();
+            if (nextPkg != null && nextPkg.source().startsWith("global:")) {
+                bindGlobalTaskToExecutor(exec, nextPkg);
+            }
+        }
+
+        if (queue.currentPackage() == null) {
             exec.state = ExecutorState.IDLE;
             exec.currentOpTarget = null;
             exec.currentOpKind = null;
-            if (world.movementOps != null && exec.pendingFuture != null) {
-                world.movementOps.cancelNavigation(npcId);
-            }
         }
     }
 
-    // ---- Helpers ----
-
-    /**
-     * Called when a global task is fully complete (all steps done).
-     * Completes the task and releases the NPC.
-     * Wand return is deferred — wandIdleTicks in TaskExecutor
-     * triggers auto-return only after the NPC has been idle for a while.
-     */
-    private void finishGlobalTask(TaskExecutor exec, long npcId, World world) {
-        taskPool.completeTask(exec.globalTaskId, npcId);
-        exec.releaseGlobalTask();
+    /** Sync stepIndex from the queue to both exec and the global task pool. */
+    private void syncStepToPool(TaskExecutor exec, NpcTaskQueue queue) {
+        exec.stepIndex = queue.stepIndex();
+        if (exec.globalTaskId != null && taskPool != null) {
+            taskPool.advanceStep(exec.globalTaskId, queue.stepIndex());
+        }
     }
 
-    /**
-     * Execute all sub-ops of a {@link AtomicOp.ParallelOp} concurrently.
-     * Mana is consumed for the sum of all sub-op costs upfront, then every
-     * sub-op is launched via its registered executor. The NPC waits on a
-     * single {@code allOf} future; when it resolves the step counter advances
-     * by 1 (past the whole group).
-     */
+    /** Release the current package back to the global pool with preserved progress. */
+    private void releaseToGlobalPool(TaskExecutor exec, NpcTaskQueue queue,
+                                      long npcId, World world) {
+        if (exec.globalTaskId != null && taskPool != null) {
+            syncStepToPool(exec, queue); // preserve progress before releasing
+            taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
+            exec.releaseGlobalTask();
+        }
+        queue.finishCurrentPackage();
+        exec.state = ExecutorState.IDLE;
+        exec.currentOpTarget = null;
+        exec.currentOpKind = null;
+    }
+
+    /** Bind a global task to the executor when a global package starts. */
+    private void bindGlobalTaskToExecutor(TaskExecutor exec, NpcTaskPackage pkg) {
+        String source = pkg.source();
+        if (!source.startsWith("global:")) return;
+        try {
+            long taskId = Long.parseLong(source.substring("global:".length()));
+            exec.globalTaskId = taskId;
+            exec.currentSequence = pkg.sequence();
+            exec.stepIndex = pkg.startStepIndex();
+        } catch (NumberFormatException e) {
+            Log.warn(TAG, "Invalid global task source: %s", source);
+        }
+    }
+
+    // ── ParallelOp execution ──
+
     @SuppressWarnings("unchecked")
     private void executeParallel(AtomicOp.ParallelOp par, World world, long npcId,
-                                 TaskExecutor exec, @Nullable WandCarrier wc,
-                                 OpExecutorRegistry registry) {
+                                  TaskExecutor exec, NpcTaskQueue queue,
+                                  OpExecutorRegistry registry) {
         List<AtomicOp> subs = par.steps();
         if (subs.isEmpty()) {
-            advanceStep(exec, npcId, 1, world);
+            queue.advanceStep();
+            exec.lastWorkTick = worldTick(world);
             exec.state = ExecutorState.ACTIVE;
             return;
         }
 
-        // ── Sum mana costs ──
         float totalCost = 0;
         for (AtomicOp sub : subs) {
             if (!isPureOp(sub)) totalCost += sub.baseManaCost();
         }
 
-        boolean isPrivate = !exec.isPrivateQueueEmpty();
-
-        // ── Mana check ──
-        if (!isPrivate && totalCost > 0) {
+        if (totalCost > 0) {
             ManaPool mana = world.get(npcId, ManaPool.class);
+            WandCarrier wc = world.get(npcId, WandCarrier.class);
             if (mana == null || wc == null) return;
             float actualCost = totalCost * wc.bestManaEfficiency();
             if (mana.current() < actualCost) {
-                if (exec.globalTaskId != null && taskPool != null) {
-                    taskPool.releaseTaskForReassign(exec.globalTaskId, npcId, world);
-                    Log.info(TAG, "NPC %d — mana %.1f < %.1f total for %d parallel ops, released task",
-                            npcId, mana.current(), actualCost, subs.size());
-                }
-                exec.state = ExecutorState.IDLE;
-                exec.currentOpTarget = null;
-                exec.currentOpKind = null;
+                releaseToGlobalPool(exec, queue, npcId, world);
+                Log.info(TAG, "NPC %d — mana %.1f < %.1f total for %d parallel ops, released",
+                        npcId, mana.current(), actualCost, subs.size());
                 return;
             }
             mana.consume(actualCost);
@@ -389,7 +424,6 @@ public class TaskExecutionSystem implements System {
                     npcId, actualCost, mana.current(), mana.max(), subs.size());
         }
 
-        // ── Launch all sub-ops ──
         CompletableFuture<Void>[] futures = new CompletableFuture[subs.size()];
         for (int i = 0; i < subs.size(); i++) {
             AtomicOp sub = subs.get(i);
@@ -411,25 +445,12 @@ public class TaskExecutionSystem implements System {
         Log.debug(TAG, "NPC %d — launched %d parallel ops, waiting for allOf", npcId, subs.size());
     }
 
-    private void advanceStep(TaskExecutor exec, long npcId, int delta, World world) {
-        if (!exec.isPrivateQueueEmpty()) {
-            exec.popPrivate();
-        } else if (exec.globalTaskId != null) {
-            exec.stepIndex += delta;
-            taskPool.advanceStep(exec.globalTaskId, exec.stepIndex);
-            if (exec.currentSequence != null && exec.currentSequence.isComplete(exec.stepIndex)) {
-                finishGlobalTask(exec, npcId, world);
-            }
-        }
-        exec.currentOpTarget = null; // clear visual target after step advances
-        exec.currentOpKind = null;
-    }
+    // ── Helpers ──
 
     static boolean isPureOp(AtomicOp op) {
         return op instanceof AtomicOp.EmitEventOp || op instanceof AtomicOp.IfConditionOp;
     }
 
-    /** Derive a visual-effect kind string from the op type, for client-side rendering. */
     @Nullable
     private static String opKind(AtomicOp op) {
         return switch (op) {
@@ -441,22 +462,13 @@ public class TaskExecutionSystem implements System {
         };
     }
 
-    /** Peek at the next op without consuming it. Returns null if none. */
-    @Nullable
-    private static AtomicOp peekNextOp(TaskExecutor exec) {
-        if (!exec.isPrivateQueueEmpty()) {
-            return exec.peekPrivate();
-        }
-        if (exec.globalTaskId != null && exec.currentSequence != null
-                && !exec.currentSequence.isComplete(exec.stepIndex)) {
-            return exec.currentSequence.get(exec.stepIndex);
-        }
-        return null;
-    }
-
-    /** True when both targets are non-null and equal. */
     private static boolean sameTarget(@Nullable GridPos a, @Nullable GridPos b) {
         return a != null && b != null && a.equals(b);
+    }
+
+    /** Approximate tick counter from system time (for lastWorkTick tracking). */
+    private static long worldTick(World world) {
+        return java.lang.System.currentTimeMillis() / 50;
     }
 
     /**
@@ -466,7 +478,6 @@ public class TaskExecutionSystem implements System {
     @Nullable
     static GridPos computeTaskStance(TaskSequence seq) {
         int[] box = { Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE };
-        // box[0]=minX, box[1]=maxX, box[2]=minY, box[3]=minZ, box[4]=maxZ
         boolean[] hasTarget = { false };
 
         for (int i = 0; i < seq.size(); i++) {

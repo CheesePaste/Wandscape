@@ -31,7 +31,6 @@ public record BuildingDebugResponsePacket(
         int comfort,
         int magic,
         int wonder,
-        int maintenanceCost,
         int queueCapacity,
         List<WorkItem> queue,
         UUID currentTaskId
@@ -79,7 +78,6 @@ public record BuildingDebugResponsePacket(
         buf.writeInt(pkt.comfort());
         buf.writeInt(pkt.magic());
         buf.writeInt(pkt.wonder());
-        buf.writeInt(pkt.maintenanceCost());
         buf.writeInt(pkt.queueCapacity());
 
         // Queue
@@ -110,7 +108,6 @@ public record BuildingDebugResponsePacket(
         int comfort = buf.readInt();
         int magic = buf.readInt();
         int wonder = buf.readInt();
-        int maintCost = buf.readInt();
         int queueCap = buf.readInt();
 
         int qSize = buf.readInt();
@@ -126,7 +123,7 @@ public record BuildingDebugResponsePacket(
 
         return new BuildingDebugResponsePacket(
                 buildingId, typeId, category, colonyId, anchor,
-                intact, shutdown, comfort, magic, wonder, maintCost, queueCap,
+                intact, shutdown, comfort, magic, wonder, queueCap,
                 queue, currentTaskId);
     }
 }

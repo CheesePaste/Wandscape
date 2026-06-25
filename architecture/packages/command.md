@@ -8,6 +8,8 @@
 | mana | NPC 魔力调试开关 |
 | navTest | 导航测试 |
 | publishBlueprint | 手动发布蓝图任务 |
+| recover clear | 清空所有任务 + 建筑队列 + 重置 NPC（恢复用） |
+| recover status | 显示任务池状态统计 |
 | road info | 路网统计（节点数/边数/状态/总长度） |
 | road rebuild | 触发全量 MST 重建（权限 2） |
 | road edit | 切换道路编辑器模式（客户端渲染+交互） |

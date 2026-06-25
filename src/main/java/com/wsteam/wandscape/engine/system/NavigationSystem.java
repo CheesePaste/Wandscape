@@ -5,6 +5,7 @@ import java.util.List;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.core.component.SuspensionContext;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
@@ -12,12 +13,11 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
-
-import net.minecraft.core.particles.ParticleTypes;
 
 /**
  * Single driver of all NPC movement.
@@ -175,37 +175,44 @@ public class NavigationSystem implements System {
      * TaskExecutionSystem picks it up, executes via {@code RitualOps.beginRitual()},
      * and the NPC arrives at the target.
      * <p>
-     * The nav future is completed immediately — TaskExec unblocks, finds the
-     * RitualOp in the private queue (which takes priority over global task steps),
-     * and executes it (range check is skipped for RitualOp).
+     * The nav future is NOT completed here. Instead it chains to the ritual
+     * future, so TaskExecutionSystem blocks until the ritual actually finishes
+     * and the NPC is at the destination. This prevents the re-navigation loop
+     * that occurred when the future was completed before the teleport happened.
      */
     private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
-        if (exec == null) {
-            // No TaskExecutor — fallback: complete nav future so caller unblocks
-            if (nav.future != null && !nav.future.isDone()) {
-                nav.future.complete(null);
-            }
-            nav.reset();
-            return;
+
+        // Suspend the current package so the urgent teleport can run next
+        if (exec != null && exec.npcQueue.currentPackage() != null) {
+            SuspensionContext ctx = exec.npcQueue.suspendCurrent(worldTick(world));
+            LOGGER.info("[NavSys] NPC {} — suspended current pkg for teleport (ctx={})",
+                    npcId, ctx != null ? "ok" : "null");
+            exec.pendingFuture = null;
+            exec.pendingFutureIsNav = false;
+        }
+        if (exec != null && world.movementOps != null) {
+            world.movementOps.cancelNavigation(npcId);
         }
 
         GridPos target = nav.target;
-        exec.pushPrivateFront(new AtomicOp.RitualOp(RitualId.SELF_TELEPORT, target));
+        exec.npcQueue.enqueueUrgent(NpcTaskPackage.system("system:stuck_teleport",
+                new AtomicOp.RitualOp(RitualId.SELF_TELEPORT, target), null, 80));
         nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
         nav.stuckChecks = 0;
         nav.repathCount = 0;
 
-        // Unblock TaskExec — it will find the RitualOp in private queue next iteration
-        if (nav.future != null && !nav.future.isDone()) {
-            nav.future.complete(null);
+        if (target != null) {
+            LOGGER.info("[NavSys] NPC {} — self_teleport ritual queued → ({},{},{})",
+                    npcId, target.x(), target.y(), target.z());
         }
-
-        LOGGER.info("[NavSys] NPC {} — self_teleport ritual queued → ({},{},{})",
-                npcId, target.x(), target.y(), target.z());
     }
 
     // ---- Internal ----
+
+    private static long worldTick(World world) {
+        return java.lang.System.currentTimeMillis() / 50;
+    }
 
     private void arrive(NavigationState nav, WandscapeNpc npc) {
         npc.setAiWanderingEnabled(true);

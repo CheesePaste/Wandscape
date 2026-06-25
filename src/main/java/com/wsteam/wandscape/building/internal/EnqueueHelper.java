@@ -74,7 +74,6 @@ public final class EnqueueHelper {
                     config.comfort(),
                     config.magic(),
                     config.wonder(),
-                    config.maintenanceCost(),
                     config.queue().capacity()
             );
             api.registerBuilding(state);
@@ -153,7 +152,6 @@ public final class EnqueueHelper {
             case "comfort" -> new JsonPrimitive(config.comfort());
             case "magic" -> new JsonPrimitive(config.magic());
             case "wonder" -> new JsonPrimitive(config.wonder());
-            case "maintenance_cost" -> new JsonPrimitive(config.maintenanceCost());
             case "boundary" -> boundaryToJson(config);
             default -> null;
         };

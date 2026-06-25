@@ -23,7 +23,15 @@ import com.google.gson.JsonPrimitive;
 
 /**
  * Central container for all global tasks. Manages task lifecycle and assignment.
- * Subscribes to ResourceFulfilledEvent to wake AWAITING_RESOURCES tasks.
+ *
+ * <p>Ordering: assignable tasks are kept in a TreeSet ordered by
+ * {@code priority desc → createdAt asc → id asc}, ensuring older tasks
+ * win ties and deterministic ordering.
+ *
+ * <p>State-to-queue mapping:
+ * <ul><li>{@link TaskState#PENDING_ASSIGN} → in assignableSet</li>
+ *     <li>{@link TaskState#AWAITING_RESOURCES} → dormancy (not in set)</li>
+ *     <li>All other states → not in set</li></ul>
  *
  * <p>Trigger lifecycle: when a task is assigned, its {@link TriggerDeclaration}s are
  * subscribed to the event bus. When the task completes, they are unsubscribed.
@@ -32,7 +40,14 @@ public class GlobalTaskPool {
 
     private static final String TAG = "TaskPool";
 
-    private final Map<Long, GlobalTask> tasks = new LinkedHashMap<>();
+    /** Assignable-task ordering: priority desc → createdAt asc → id asc. */
+    private static final Comparator<GlobalTask> ASSIGNABLE_ORDER =
+            Comparator.<GlobalTask>comparingInt(t -> t.priority).reversed()
+                    .thenComparingLong(t -> t.createdAt)
+                    .thenComparingLong(t -> t.id);
+
+    private final Map<Long, GlobalTask> tasksById = new HashMap<>();
+    private final TreeSet<GlobalTask> assignableSet = new TreeSet<>(ASSIGNABLE_ORDER);
     private final EventBus eventBus;
     private final TaskCompiler compiler;
     private final ColonyResourceAccess colonyResources;
@@ -49,15 +64,32 @@ public class GlobalTaskPool {
         this.colonyResources = colonyResources;
         this.autoApprove = autoApprove;
 
-        // Subscribe to resource fulfilled events to wake waiting tasks
         eventBus.subscribe(ResourceFulfilled.class, this::onResourceFulfilled);
+    }
+
+    // ── Queue maintenance ──
+
+    private void addToAssignable(GlobalTask task) {
+        if (task.state == TaskState.PENDING_ASSIGN) {
+            assignableSet.add(task);
+        }
+    }
+
+    private void removeFromAssignable(GlobalTask task) {
+        assignableSet.remove(task);
+    }
+
+    private void transitionToPendingAssign(GlobalTask task) {
+        task.state = TaskState.PENDING_ASSIGN;
+        task.awaitingResource = null;
+        assignableSet.add(task);
     }
 
     private void notifyChanged() {
         if (onChanged != null) onChanged.run();
     }
 
-    // ---- Task creation ----
+    // ── Task creation ──
 
     /** Add a task from a request. Automatically determines if approval is needed. */
     public long addTask(TaskRequest request) {
@@ -65,8 +97,6 @@ public class GlobalTaskPool {
         TaskSequence seq = compiled.sequence();
         long id = nextTaskId++;
 
-        // High-priority tasks (priority >= 50) normally need player approval.
-        // When autoApprove is enabled, skip the gate and go straight to PENDING_ASSIGN.
         TaskState initialState;
         ApprovalInfo approval = null;
         if (!autoApprove && request.priority() >= 50) {
@@ -77,17 +107,19 @@ public class GlobalTaskPool {
             initialState = TaskState.PENDING_ASSIGN;
         }
 
-        // Derive wand requirements from the compiled op sequence
         Map<BehaviourTag, BehaviourLevel> requirements = WandRequirementDeriver.derive(seq);
         requirements = mergeOverrides(requirements, request.wandRequirementOverrides());
 
+        long createdAt = System.currentTimeMillis();
         GlobalTask task = new GlobalTask(id, seq, requirements,
-                request.priority(), compiled.triggers(), new ArrayList<>(),
+                request.priority(), createdAt,
+                compiled.triggers(), new ArrayList<>(),
                 new HashMap<>(request.params()),
                 initialState, 0, null, null,
                 new ArrayDeque<>(), approval);
         task.blueprintId = request.blueprintId();
-        tasks.put(id, task);
+        tasksById.put(id, task);
+        addToAssignable(task);
         notifyChanged();
         Log.info(TAG, "addTask #%d '%s' blueprint=%s state=%s priority=%d steps=%d triggers=%d",
                 id, seq.label(), request.blueprintId(), initialState, request.priority(),
@@ -95,37 +127,52 @@ public class GlobalTaskPool {
         return id;
     }
 
-    /** Add a pre-built task directly (used by systems). Triggers are deep-copied. */
+    /** Add a pre-built task directly (used by systems). */
     public long addTask(GlobalTask task) {
         long id = nextTaskId++;
-        // Don't copy subscriptions — the new task starts fresh
         GlobalTask t = new GlobalTask(id, task.sequence, task.requirements,
-                task.priority, new ArrayList<>(task.triggers), new ArrayList<>(),
+                task.priority, task.createdAt,
+                new ArrayList<>(task.triggers), new ArrayList<>(),
                 new HashMap<>(task.taskParams),
                 task.state, task.stepIndex, null,
                 task.awaitingResource,
                 task.interruptHistory != null ? new ArrayDeque<>(task.interruptHistory) : new ArrayDeque<>(),
                 task.approval);
-        tasks.put(id, t);
+        tasksById.put(id, t);
+        addToAssignable(t);
         notifyChanged();
         Log.info(TAG, "addTask #%d '%s' (pre-built) state=%s priority=%d triggers=%d",
                 id, t.sequence.label(), t.state, t.priority, t.triggers.size());
         return id;
     }
 
-    // ---- Approval ----
+    /**
+     * Add a task that is the head of a building's queue.
+     * Marks the task with building ownership so completion can trigger promotion.
+     */
+    public long addTaskFromBuilding(TaskRequest request, UUID buildingId) {
+        long taskId = addTask(request);
+        GlobalTask task = get(taskId);
+        if (task != null) {
+            task.buildingId = buildingId;
+            task.isBuildingHead = true;
+        }
+        return taskId;
+    }
+
+    // ── Approval ──
 
     public void approve(long taskId) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task != null && task.state == TaskState.PENDING_APPROVAL) {
-            task.state = TaskState.PENDING_ASSIGN;
+            transitionToPendingAssign(task);
             notifyChanged();
             Log.info(TAG, "approve #%d '%s' → PENDING_ASSIGN", taskId, task.sequence.label());
         }
     }
 
     public void reject(long taskId) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task != null && task.state == TaskState.PENDING_APPROVAL) {
             task.state = TaskState.COMPLETED;
             notifyChanged();
@@ -133,29 +180,28 @@ public class GlobalTaskPool {
         }
     }
 
-    // ---- Assignment ----
+    // ── Assignment ──
 
     /**
      * Assign a task to an NPC. Subscribes triggers, sets taskParams on executor.
      */
     public void assign(long taskId, long npcId, World world) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
 
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         if (exec == null) return;
 
+        removeFromAssignable(task);
         task.state = TaskState.IN_PROGRESS;
         task.assignedNpcId = npcId;
+        task.schedulerRetryCount = 0;
         exec.globalTaskId = taskId;
         exec.currentSequence = task.sequence;
         exec.stepIndex = task.stepIndex;
         exec.state = ExecutorState.ACTIVE;
-
-        // Copy original task params to executor for EmitEventOp template resolution
         exec.taskParams = new HashMap<>(task.taskParams);
 
-        // Subscribe triggers (only on first assign — they persist across release/reassign)
         if (task.subscriptions.isEmpty()) {
             for (TriggerDeclaration trigger : task.triggers) {
                 var sub = eventBus.subscribe(CustomEvent.class,
@@ -169,9 +215,9 @@ public class GlobalTaskPool {
                 task.sequence.size(), task.triggers.size());
     }
 
-    /** Release an NPC from its current task (e.g., resource waiting). */
+    /** Release an NPC from its current task. */
     public void releaseNpc(long taskId, long npcId, World world) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
 
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
@@ -182,17 +228,16 @@ public class GlobalTaskPool {
         Log.debug(TAG, "releaseNpc #%d ← NPC %d", taskId, npcId);
     }
 
-    // ---- State transitions (called by TaskExecutionSystem) ----
+    // ── State transitions ──
 
     /** Called when a step completes and the task is done. */
     public void completeTask(long taskId, long npcId) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
+        removeFromAssignable(task);
         task.state = TaskState.COMPLETED;
         task.assignedNpcId = null;
 
-        // Unsubscribe all triggers (deferred — handlers still fire for
-        // events emitted in this tick before dispatch)
         for (var sub : task.subscriptions) {
             eventBus.unsubscribe(sub);
         }
@@ -207,84 +252,72 @@ public class GlobalTaskPool {
     public void markAwaitingResources(long taskId, long npcId,
                                        ResourceStack needed,
                                        World world) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
 
+        removeFromAssignable(task);
         task.state = TaskState.AWAITING_RESOURCES;
         task.awaitingResource = needed;
-        task.stepIndex = world.get(npcId, TaskExecutor.class).stepIndex; // preserve progress
+        task.stepIndex = world.get(npcId, TaskExecutor.class).stepIndex;
 
-        // Release NPC
         releaseNpc(taskId, npcId, world);
 
-        // Emit event so TaskSources can create supply tasks
         eventBus.emit(new TaskAwaitingResources(taskId, needed));
         notifyChanged();
         Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
     }
 
     /**
-     * Called when an NPC dies while holding a global task.
-     * Preserves stepIndex so another NPC can resume where the dead one left off.
-     * Private queue is discarded (per user decision).
+     * Called when an NPC dies or can't continue. Preserves stepIndex for resume.
      */
     public void releaseTaskForReassign(long taskId, long npcId, World world) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task == null) return;
 
-        // Preserve progress
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         if (exec != null) {
             task.stepIndex = exec.stepIndex;
         }
 
-        // Detach NPC
         releaseNpc(taskId, npcId, world);
-
-        // Re-queue
-        task.state = TaskState.PENDING_ASSIGN;
-        task.assignedNpcId = null;
+        transitionToPendingAssign(task);
 
         notifyChanged();
-        Log.info(TAG, "reassign #%d '%s' — NPC %d died, step=%d re-queued",
+        Log.info(TAG, "reassign #%d '%s' — NPC %d released, step=%d re-queued",
                 taskId, task.sequence.label(), npcId, task.stepIndex);
     }
 
-    /** Advance stepIndex on the global task (called after DONE). */
+    /** Advance stepIndex on the global task. */
     public void advanceStep(long taskId, int newStepIndex) {
-        GlobalTask task = tasks.get(taskId);
+        GlobalTask task = tasksById.get(taskId);
         if (task != null) {
             task.stepIndex = newStepIndex;
             Log.debug(TAG, "advanceStep #%d → %d/%d", taskId, newStepIndex, task.sequence.size());
         }
     }
 
-    // ---- Trigger event handler ----
+    // ── Trigger event handler ──
 
     private void onTriggerEvent(TriggerDeclaration trigger, CustomEvent event) {
         if (!trigger.eventName().equals(event.name())) return;
 
-        // Filter check: event params must contain all filter entries
         if (!matchesFilter(trigger.paramFilter(), event.params())) {
             Log.debug(TAG, "trigger %s → filter mismatch for event %s", trigger.eventName(), event);
             return;
         }
 
-        // Resolve sourceBlueprintId template with event params
         Map<String, String> templateVars = new HashMap<>();
         for (var entry : event.params().entrySet()) {
             templateVars.put("event." + entry.getKey(), entry.getValue());
         }
         String resolvedBpId = TemplateResolver.resolve(trigger.sourceBlueprintId(), templateVars);
 
-        // Apply paramMapping (key rename) and wrap values as JsonPrimitive
         Map<String, String> rawParams = applyMapping(trigger.paramMapping(), event.params());
         Map<String, JsonElement> taskParams = new HashMap<>();
         for (var entry : rawParams.entrySet()) {
             taskParams.put(entry.getKey(), new JsonPrimitive(entry.getValue()));
         }
 
-        // Dedup check
         if (trigger.dedupKey() != null) {
             String dedupValue = event.params().get(trigger.dedupKey());
             if (dedupValue != null && isDuplicate(resolvedBpId, trigger.dedupKey(), dedupValue)) {
@@ -299,7 +332,6 @@ public class GlobalTaskPool {
                 trigger.eventName(), newTaskId, resolvedBpId, trigger.priority());
     }
 
-    /** Check if event params contain all filter entries (subset match). */
     private static boolean matchesFilter(Map<String, String> filter, Map<String, String> eventParams) {
         if (filter.isEmpty()) return true;
         for (var entry : filter.entrySet()) {
@@ -310,10 +342,8 @@ public class GlobalTaskPool {
         return true;
     }
 
-    /** Apply key-rename mapping from event params to task params. */
     private static Map<String, String> applyMapping(Map<String, String> mapping, Map<String, String> eventParams) {
         if (mapping.isEmpty()) {
-            // Passthrough: copy all event params
             return new HashMap<>(eventParams);
         }
         Map<String, String> result = new HashMap<>();
@@ -326,17 +356,13 @@ public class GlobalTaskPool {
         return result;
     }
 
-    /** Check whether a task with the given blueprint+dedupKey is already in-flight. */
     private boolean isDuplicate(String blueprintId, String dedupKey, String dedupValue) {
         String labelPrefix = resolvedToLabelPrefix(blueprintId);
         for (GlobalTask t : all()) {
             if (t.state == TaskState.COMPLETED || t.state == TaskState.FAILED) continue;
             String label = t.sequence.label();
-            // Heuristic 1: label starts with conventional prefix (e.g. "Gather stone_bricks")
-            // Heuristic 2: label equals the blueprintId directly
             boolean labelMatch = label.startsWith(labelPrefix) || label.equals(blueprintId);
             if (labelMatch) {
-                // dedupValue appears in label, taskParams, or label==blueprintId
                 if (label.equals(blueprintId) || label.contains(dedupValue)) {
                     return true;
                 }
@@ -350,7 +376,6 @@ public class GlobalTaskPool {
         return false;
     }
 
-    /** Convert a blueprint ID like "gather:stone_bricks" to a label prefix "Gather stone_bricks". */
     private static String resolvedToLabelPrefix(String blueprintId) {
         String[] parts = blueprintId.split(":", 2);
         if (parts.length == 2) {
@@ -364,28 +389,47 @@ public class GlobalTaskPool {
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
-    // ---- Resource fulfillment wake-up ----
+    // ── Resource fulfillment wake-up ──
 
     private void onResourceFulfilled(ResourceFulfilled event) {
         int awakened = 0;
-        for (GlobalTask task : tasks.values()) {
+        for (GlobalTask task : tasksById.values()) {
             if (task.state == TaskState.AWAITING_RESOURCES
                     && task.awaitingResource != null
                     && task.awaitingResource.resource().equals(event.resource())) {
                 int available = colonyResources.available(event.resource());
                 if (available >= task.awaitingResource.amount()) {
-                    task.state = TaskState.PENDING_ASSIGN;
-                    task.awaitingResource = null;
+                    transitionToPendingAssign(task);
                     awakened++;
                 }
             }
         }
         if (awakened > 0) {
             Log.info(TAG, "ResourceFulfilled(%s) awakened %d tasks", event.resource(), awakened);
+            notifyChanged();
         }
     }
 
-    // ---- Persistence ----
+    // ── Failure ──
+
+    /** Mark a task as permanently failed. */
+    public void failTask(long taskId, TaskFailureReason reason) {
+        GlobalTask task = tasksById.get(taskId);
+        if (task == null) return;
+        removeFromAssignable(task);
+        task.state = TaskState.FAILED;
+        task.assignedNpcId = null;
+        task.failureReason = reason;
+        for (var sub : task.subscriptions) {
+            eventBus.unsubscribe(sub);
+        }
+        task.subscriptions.clear();
+        notifyChanged();
+        Log.info(TAG, "fail #%d '%s' reason=%s reqs=%s", taskId, task.sequence.label(),
+                reason, task.requirements);
+    }
+
+    // ── Persistence ──
 
     /** Merge JSON wand_level overrides into derived requirements. 0=remove, ≥1=override. */
     static Map<BehaviourTag, BehaviourLevel> mergeOverrides(
@@ -400,26 +444,10 @@ public class GlobalTaskPool {
         return merged;
     }
 
-    /** Mark a task as permanently failed with a reason for later analysis. */
-    public void failTask(long taskId, TaskFailureReason reason) {
-        GlobalTask task = tasks.get(taskId);
-        if (task == null) return;
-        task.state = TaskState.FAILED;
-        task.assignedNpcId = null;
-        task.failureReason = reason;
-        for (var sub : task.subscriptions) {
-            eventBus.unsubscribe(sub);
-        }
-        task.subscriptions.clear();
-        notifyChanged();
-        Log.info(TAG, "fail #%d '%s' reason=%s reqs=%s", taskId, task.sequence.label(),
-                reason, task.requirements);
-    }
-
-    /** All non-COMPLETED and non-FAILED tasks with a blueprintId (persistable across sessions). */
+    /** All non-COMPLETED and non-FAILED tasks with a blueprintId. */
     public List<GlobalTask> getPersistableTasks() {
         List<GlobalTask> result = new ArrayList<>();
-        for (GlobalTask t : tasks.values()) {
+        for (GlobalTask t : tasksById.values()) {
             if (t.state != TaskState.COMPLETED && t.state != TaskState.FAILED && t.blueprintId != null) {
                 result.add(t);
             }
@@ -432,64 +460,78 @@ public class GlobalTaskPool {
 
     /** Add a task loaded from persistence, preserving its original ID. */
     public void addLoadedTask(GlobalTask task, long originalId) {
-        // Defensive: if a stale entry with the same object already exists under a
-        // different key (e.g. taskFromNbt called addTask first which assigned a
-        // temporary newId, then addLoadedTask adds the same object under originalId),
-        // remove the stale entry so getByState / getAssignableTasks never returns
-        // the same task twice.
-        tasks.values().removeIf(existing -> existing == task && existing.id != originalId);
-        tasks.put(originalId, task);
+        tasksById.values().removeIf(existing -> existing == task && existing.id != originalId);
+        tasksById.put(originalId, task);
         if (originalId >= nextTaskId) {
             nextTaskId = originalId + 1;
         }
+        addToAssignable(task);
         Log.info(TAG, "loadTask #%d '%s' state=%s step=%d/%d",
                 originalId, task.sequence.label(), task.state,
                 task.stepIndex, task.sequence.size());
     }
 
-    // ---- Queries ----
+    // ── Queries ──
 
     /** Get all tasks in a given state. */
     public List<GlobalTask> getByState(TaskState state) {
         List<GlobalTask> result = new ArrayList<>();
-        for (GlobalTask t : tasks.values()) {
+        for (GlobalTask t : tasksById.values()) {
             if (t.state == state) result.add(t);
         }
         return result;
     }
 
-    /** All PENDING_ASSIGN tasks, sorted by priority descending. */
+    /** All PENDING_ASSIGN tasks, sorted by priority desc → createdAt asc → id asc. */
     public List<GlobalTask> getAssignableTasks() {
-        List<GlobalTask> pending = getByState(TaskState.PENDING_ASSIGN);
-        pending.sort((a, b) -> Integer.compare(b.priority, a.priority));
-        return pending;
+        List<GlobalTask> result = new ArrayList<>(assignableSet);
+        result.sort(ASSIGNABLE_ORDER);
+        return result;
+    }
+
+    /** Number of assignable tasks currently in the queue. */
+    public int assignableCount() {
+        return assignableSet.size();
     }
 
     public GlobalTask get(long taskId) {
-        return tasks.get(taskId);
+        return tasksById.get(taskId);
     }
 
     public int size() {
-        // Only count active tasks — COMPLETED tasks are kept for history
-        // but should not inflate the pool size metric.
         int count = 0;
-        for (GlobalTask t : tasks.values()) {
+        for (GlobalTask t : tasksById.values()) {
             if (t.state != TaskState.COMPLETED && t.state != TaskState.FAILED) count++;
         }
         return count;
     }
 
-    /** Check whether a task is still active (exists and not COMPLETED/FAILED). */
     public boolean isActive(long taskId) {
-        GlobalTask t = tasks.get(taskId);
+        GlobalTask t = tasksById.get(taskId);
         return t != null && t.state != TaskState.COMPLETED && t.state != TaskState.FAILED;
     }
 
     public Collection<GlobalTask> all() {
-        return Collections.unmodifiableCollection(tasks.values());
+        return Collections.unmodifiableCollection(tasksById.values());
     }
 
-    // ---- Helpers ----
+    /** Clear all tasks, unsubscribe triggers, and reset ID counter. */
+    public void clearAll() {
+        int count = tasksById.size();
+        for (GlobalTask task : tasksById.values()) {
+            for (var sub : task.subscriptions) {
+                eventBus.unsubscribe(sub);
+            }
+            task.subscriptions.clear();
+        }
+        tasksById.clear();
+        assignableSet.clear();
+        nextTaskId = 1;
+        notifyChanged();
+        Log.info(TAG, "clearAll — %d tasks removed", count);
+    }
+
+    // ── Helpers ──
 
     private static GridPos parseGridPos(Map<String, JsonElement> params) {
         if (params == null) return null;

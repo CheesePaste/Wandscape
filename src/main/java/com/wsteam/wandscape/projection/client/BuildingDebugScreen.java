@@ -70,7 +70,6 @@ public class BuildingDebugScreen extends MedievalScreen {
         drawKV(g, y, "comfort",   String.valueOf(data.comfort()));      y += ROW_H;
         drawKV(g, y, "magic",     String.valueOf(data.magic()));        y += ROW_H;
         drawKV(g, y, "wonder",    String.valueOf(data.wonder()));       y += ROW_H;
-        drawKV(g, y, "maintCost", String.valueOf(data.maintenanceCost())); y += ROW_H;
         drawKV(g, y, "queueCap",  String.valueOf(data.queueCapacity())); y += ROW_H;
         y += 4;
         g.fill(leftPos + COL_X1, y, leftPos + panelWidth - COL_X1, y + 1, 0x664422);

@@ -2,6 +2,7 @@ package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.Log;
 import com.wsteam.wandscape.core.boundary.EventBus;
+import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.MobNearby;
 import com.wsteam.wandscape.core.event.ResourceLow;
@@ -10,6 +11,8 @@ import com.wsteam.wandscape.core.event.TaskCompleted;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
+
+import javax.annotation.Nullable;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -54,6 +57,9 @@ public class EventDrivenTaskSource implements TaskSource {
      * 1. Time-based cooldown per resource (suppress bursts)
      * 2. Already-pending check: skip if any non-COMPLETED gather task for this resource exists
      */
+    @Nullable
+    private ResourceShortageHandler resourceHandler;
+
     private final Map<ResourceId, Long> lastGatherRequest = new HashMap<>();
     private static final long DUPLICATE_COOLDOWN_MS = 10_000;
 
@@ -78,6 +84,11 @@ public class EventDrivenTaskSource implements TaskSource {
         Log.info(TAG, "subscribed to ResourceLow, TaskAwaitingResources, MobNearby, TaskCompleted");
     }
 
+    /** Set an optional handler for resource shortages (e.g. synthesize instead of gather). */
+    public void setResourceShortageHandler(@Nullable ResourceShortageHandler handler) {
+        this.resourceHandler = handler;
+    }
+
     // ======================== TaskSource contract ========================
 
     @Override
@@ -93,6 +104,11 @@ public class EventDrivenTaskSource implements TaskSource {
     // ======================== Event → TaskRequest translators ========================
 
     private void onResourceLow(ResourceLow e) {
+        // Try engine-layer handler first (e.g. synthesize instead of gather)
+        if (resourceHandler != null
+                && resourceHandler.handle(e.resource(), e.threshold() - e.current(), defaultLocation.get())) {
+            return;
+        }
         int shortfall = e.threshold() - e.current();
         int amount = Math.max(shortfall, 16);
         String blueprintId = "gather:" + e.resource().id();
@@ -103,6 +119,11 @@ public class EventDrivenTaskSource implements TaskSource {
     private void onTaskAwaitingResources(TaskAwaitingResources e) {
         ResourceId resource = e.needed().resource();
         int amount = e.needed().amount();
+        // Try engine-layer handler first (e.g. synthesize instead of gather)
+        if (resourceHandler != null
+                && resourceHandler.handle(resource, amount, defaultLocation.get())) {
+            return;
+        }
         String blueprintId = "gather:" + resource.id();
         tryCreateGather(resource, blueprintId, amount, amount, 40,
                 "TaskAwaitingResources#" + e.taskId());
@@ -163,9 +184,14 @@ public class EventDrivenTaskSource implements TaskSource {
         params.put("y", new JsonPrimitive(loc.y()));
         params.put("z", new JsonPrimitive(loc.z()));
 
-        long taskId = taskPool.addTask(new TaskRequest(blueprintId, params, priority));
-        Log.info(TAG, "%s → task #%d gather:%s amount=%d inFlight=%d gap=%d pri=%d",
-                source, taskId, resource, finalAmount, inFlight, gap, priority);
+        try {
+            long taskId = taskPool.addTask(new TaskRequest(blueprintId, params, priority));
+            Log.info(TAG, "%s → task #%d gather:%s amount=%d inFlight=%d gap=%d pri=%d",
+                    source, taskId, resource, finalAmount, inFlight, gap, priority);
+        } catch (IllegalArgumentException e) {
+            Log.warn(TAG, "skip gather:%s — unknown blueprint, cannot auto-create (%s)",
+                    resource, source);
+        }
     }
 
     private void onMobNearby(MobNearby e) {

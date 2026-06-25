@@ -1,0 +1,13 @@
+{
+  "id": "fletching_table",
+  "output": {
+    "item": "minecraft:fletching_table"
+  },
+  "cost": {
+    "wood": 4,
+    "earth": 4
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  }
+}

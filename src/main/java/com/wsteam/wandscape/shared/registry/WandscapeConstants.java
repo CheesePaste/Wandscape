@@ -4,7 +4,6 @@ public final class WandscapeConstants {
     private WandscapeConstants() {}
 
     public static final int SCHEDULER_HEARTBEAT_TICKS = 40;
-    public static final int MAINTENANCE_INTERVAL_TICKS = 20 * 60 * 20;
 
     public static final int DEFAULT_NPC_MAX_HEALTH = 40;
     public static final int DEFAULT_NPC_MAX_MANA = 100;

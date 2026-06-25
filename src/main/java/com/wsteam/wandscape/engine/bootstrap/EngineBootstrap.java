@@ -1,7 +1,10 @@
 package com.wsteam.wandscape.engine.bootstrap;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.Wandscape;
@@ -10,6 +13,9 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
@@ -20,6 +26,8 @@ import com.wsteam.wandscape.core.system.WarehouseSource;
 import com.wsteam.wandscape.core.system.WorkbenchSource;
 import com.wsteam.wandscape.core.task.BlueprintInterpreter;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
+import com.wsteam.wandscape.core.task.BuildingTaskPool;
+import com.wsteam.wandscape.core.task.TaskState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandEquipExecutor;
@@ -40,7 +48,14 @@ import com.wsteam.wandscape.engine.road.RoadTaskSource;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.WorkItem;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+
+import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
 /**
@@ -141,7 +156,9 @@ public final class EngineBootstrap {
                 blueprints,
                 sysBlueprints,
                 com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get(),
-                wandProvider
+                wandProvider,
+                new com.wsteam.wandscape.core.task.WandLifecycle(),
+                new BuildingTaskPool()
         );
 
         // 6. Bootstrap engine
@@ -149,6 +166,12 @@ public final class EngineBootstrap {
 
         // 6a. Wire ritualOps into the world (after bootstrap so world exists)
         world.ritualOps = ritualOps;
+
+        // 6b. Create EventDrivenTaskSource (event → gather tasks) with synthesize handler
+        EventDrivenTaskSource eventSource = new EventDrivenTaskSource(
+                world.taskPool, world.eventBus, () -> GridPos.ORIGIN);
+        eventSource.setResourceShortageHandler(createShortageHandler(world));
+        LOGGER.info("  EventDrivenTaskSource wired with synthesize handler");
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
@@ -210,5 +233,83 @@ public final class EngineBootstrap {
         LOGGER.info("CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
                 world.systemCount(), taskSources.size(), blueprints);
         return world;
+    }
+
+    /**
+     * Build the engine-layer {@link ResourceShortageHandler} that checks
+     * synthesize recipes before falling back to gather tasks.
+     */
+    private static ResourceShortageHandler createShortageHandler(World world) {
+        return (resource, amount, location) -> {
+            // 1. Check if a synthesize recipe exists for this resource
+            var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
+            if (recipes == null) return false;
+            String recipeKey = stripMcPrefix(resource.id());
+            var recipe = recipes.getSynthesizeRecipes().get(recipeKey);
+            if (recipe == null) return false;
+
+            // 2. Check if a synthesize task for this recipe is already in-flight
+            if (isSynthesizeInFlight(recipeKey, world)) return false;
+
+            // 3. Find a crafting station
+            BuildingApi api;
+            try {
+                api = WandscapeApis.getBuildingApi();
+            } catch (IllegalStateException e) {
+                return false;
+            }
+            List<UUID> stations = api.getBuildingsByCategory(null, "crafting_station");
+            if (stations.isEmpty()) return false;
+
+            UUID stationId = stations.get(0);
+            var building = api.getBuilding(stationId);
+            if (building == null) return false;
+            BlockPos stationPos = building.getPosition();
+
+            // 4. Enqueue synthesize work
+            Map<String, JsonElement> params = new LinkedHashMap<>();
+            params.put("anchor", posToJsonArray(stationPos));
+            params.put("recipe_id", new JsonPrimitive(recipeKey));
+            params.put("count", new JsonPrimitive(amount));
+            params.put("channel_ticks", new JsonPrimitive(200));
+            params.put("mana_cost", new JsonPrimitive(5));
+
+            WorkItem work = new WorkItem("production:synthesize", params, 40);
+            api.enqueueWork(stationId, work);
+
+            LOGGER.info("[EngineBootstrap] shortage {} x{} → enqueued synthesize:{} at station {}",
+                    resource, amount, recipeKey, stationId.toString().substring(0, 8));
+            return true;
+        };
+    }
+
+    /** Check if a synthesize task for the given recipe is already active in the pool. */
+    private static boolean isSynthesizeInFlight(String recipeId, World world) {
+        for (var t : world.taskPool.all()) {
+            if (t.state == TaskState.COMPLETED || t.state == TaskState.FAILED) continue;
+            if (!"production:synthesize".equals(t.blueprintId)) continue;
+            var recipeParam = t.taskParams.get("recipe_id");
+            if (recipeParam != null && recipeParam.isJsonPrimitive()
+                    && recipeId.equals(recipeParam.getAsString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static JsonArray posToJsonArray(BlockPos pos) {
+        JsonArray arr = new JsonArray();
+        arr.add(pos.getX());
+        arr.add(pos.getY());
+        arr.add(pos.getZ());
+        return arr;
+    }
+
+    /** Strip "minecraft:" prefix from a resource ID for recipe key matching. */
+    private static String stripMcPrefix(String id) {
+        if (id.startsWith("minecraft:")) {
+            return id.substring("minecraft:".length());
+        }
+        return id;
     }
 }

@@ -1,0 +1,13 @@
+{
+  "id": "brewing_stand",
+  "output": {
+    "item": "minecraft:brewing_stand"
+  },
+  "cost": {
+    "fire": 3,
+    "earth": 6
+  },
+  "unlock_requirement": {
+    "min_magic": 5
+  }
+}

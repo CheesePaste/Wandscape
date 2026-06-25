@@ -21,13 +21,12 @@ class BuildingDataImpl implements BuildingData {
     private final int comfort;
     private final int magic;
     private final int wonder;
-    private final int maintenanceCost;
     private final int queueCapacity;
 
     BuildingDataImpl(UUID buildingId, String buildingTypeId, String category,
                      BlockPos position, UUID colonyId,
                      int comfort, int magic, int wonder,
-                     int maintenanceCost, int queueCapacity) {
+                     int queueCapacity) {
         this.buildingId = buildingId;
         this.buildingTypeId = buildingTypeId;
         this.category = category;
@@ -36,7 +35,6 @@ class BuildingDataImpl implements BuildingData {
         this.comfort = comfort;
         this.magic = magic;
         this.wonder = wonder;
-        this.maintenanceCost = maintenanceCost;
         this.queueCapacity = queueCapacity;
     }
 
@@ -56,7 +54,6 @@ class BuildingDataImpl implements BuildingData {
     @Override public int getComfort() { return comfort; }
     @Override public int getMagic() { return magic; }
     @Override public int getWonder() { return wonder; }
-    @Override public int getMaintenanceCost() { return maintenanceCost; }
     @Override public int getQueueCapacity() { return queueCapacity; }
 
     @Override

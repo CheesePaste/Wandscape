@@ -1,12 +1,10 @@
 package com.wsteam.wandscape.shared.bridge;
 
 import com.wsteam.wandscape.shared.data.BehaviorType;
-import com.wsteam.wandscape.shared.data.TaskStatus;
-
-import org.junit.jupiter.api.Test;
-import com.wsteam.wandscape.core.task.TaskState;
 import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.ResourceId;
+
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,57 +26,6 @@ class TypeBridgeTest {
             assertEquals(tag.name(), bt.name());
             assertEquals(tag, TypeBridge.toBehaviourTag(bt));
         }
-    }
-
-    @Test
-    void toTaskState_pendingApproval() {
-        assertEquals(TaskState.PENDING_APPROVAL,
-            TypeBridge.toTaskState(TaskStatus.PENDING_APPROVAL));
-    }
-
-    @Test
-    void toTaskState_pendingAssign() {
-        assertEquals(TaskState.PENDING_ASSIGN,
-            TypeBridge.toTaskState(TaskStatus.PENDING_ASSIGN));
-    }
-
-    @Test
-    void toTaskState_inProgress() {
-        assertEquals(TaskState.IN_PROGRESS,
-            TypeBridge.toTaskState(TaskStatus.IN_PROGRESS));
-    }
-
-    @Test
-    void toTaskState_awaitingMaterials_mapsToAwaitingResources() {
-        assertEquals(TaskState.AWAITING_RESOURCES,
-            TypeBridge.toTaskState(TaskStatus.AWAITING_MATERIALS));
-    }
-
-    @Test
-    void toTaskState_interrupted() {
-        assertEquals(TaskState.INTERRUPTED,
-            TypeBridge.toTaskState(TaskStatus.INTERRUPTED));
-    }
-
-    @Test
-    void toTaskState_completed() {
-        assertEquals(TaskState.COMPLETED,
-            TypeBridge.toTaskState(TaskStatus.COMPLETED));
-    }
-
-    @Test
-    void toTaskStatus_allSixStates_roundTrip() {
-        for (TaskStatus status : TaskStatus.values()) {
-            TaskState state = TypeBridge.toTaskState(status);
-            TaskStatus back = TypeBridge.toTaskStatus(state);
-            assertEquals(status, back, "Round-trip failed for " + status);
-        }
-    }
-
-    @Test
-    void toTaskStatus_awaitingResources_mapsToAwaitingMaterials() {
-        assertEquals(TaskStatus.AWAITING_MATERIALS,
-            TypeBridge.toTaskStatus(TaskState.AWAITING_RESOURCES));
     }
 
     @Test

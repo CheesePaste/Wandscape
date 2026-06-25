@@ -55,7 +55,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
                 state.getColonyId(), state.getAnchor(),
                 state.isStructureIntact(), state.isShutdown(),
                 state.getComfort(), state.getMagic(), state.getWonder(),
-                state.getMaintenanceCost(), state.getQueueCapacity(),
+                state.getQueueCapacity(),
                 queueSnapshot, state.getCurrentTaskId()
         );
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);

@@ -1,5 +1,17 @@
 # 已知问题与待澄清
 
+## 已完成的特性（2026-06-25）
+
+### 智能资源调度级联 ✅
+- **问题**：建筑建造时缺少方块 → 仅创建 gather 任务（如 `gather:stone_bricks`），但合成品无法被采集，建筑任务永久卡在 `AWAITING_RESOURCES`。
+- **方案**：三级调度级联——建筑缺方块 → 发布合成任务 → 合成缺元素 → 发布采集任务。
+- **实现**：
+  1. 新建 `core/boundary/ResourceShortageHandler` 函数式接口，引擎层注入合成判断逻辑。
+  2. `EventDrivenTaskSource.onTaskAwaitingResources()` 先调 handler，handler 返回 true（已创建合成任务）则跳过 gather。
+  3. `EngineBootstrap` 生产环境实例化 `EventDrivenTaskSource` + 注入 handler（查 synthesize recipe → 找 crafting station → enqueue WorkItem）。
+  4. `WandscapeBlockInteractExecutor` 中 synthesize/craft_wand/brew_potion/decompose 的元素/物品不足时抛 `ResourceShortageException`，thenRun 中捕获后转换任务为 `AWAITING_RESOURCES`，触发级联。
+- **相关文件**：`ResourceShortageHandler.java`, `EventDrivenTaskSource.java`, `EngineBootstrap.java`, `WandscapeBlockInteractExecutor.java`
+
 ## 已完成的特性（2026-06-23）
 
 ### 数据驱动法杖需求 + 立即失败 ✅
@@ -125,22 +137,28 @@ WandEquipExecutor 通过 `npc.setItemInHand()` 修改手持，该调用通过 En
 | `taskFromNbt()` 跳过已完成 | TaskPoolSavedData.java | 已完成的不要在加载时恢复 | 部分已完成任务的进度丢失 | ❌ 已回退 |
 | `BuildingTaskSource` 建筑独占 | BuildingTaskSource.java | Layer 3：建筑有活跃任务则不发布新任务 | **新任务发布后也无人接取**：正常游戏流程被阻断 | ❌ 已回退 |
 | `SchedulerSystem` 位置隔离 | SchedulerSystem.java | 同位置任务一次心跳只分配一次 | 目标位置为 null 的任务全部被跳过；多个不同建筑但位置相近的任务被错误合并 | ❌ 已回退 |
+| `SchedulerSystem` 目标位置去重 | SchedulerSystem.java | 目标位置已被 IN_PROGRESS 任务占用时，跳过 PENDING_ASSIGN 任务 | 无 | ✅ 2026-06-25 |
 
 ### 当前状态
 
-**有所缓解但未修复。**
+**全部三层已修复（2026-06-25 任务系统重构）。**
 
-保留的 `addLoadedTask()` 去重逻辑修复了 Layer 1（世界重进时同一任务不会出现两次），游戏内新发布任务暂未出现多人共用一个工作站的明显现象。但 Layer 2/3 的根因未解决，以下问题仍可能存在：
+- **Layer 1**：`addLoadedTask()` 去重（双键问题）。
+- **Layer 2**：`SchedulerSystem` 目标位置去重 + TreeSet-backed assignableSet 保证同一任务只出现一次。
+- **Layer 3**：`BuildingTaskPool` 建筑独占——每建筑只有 head task 进入 GlobalTaskPool。`BuildingTaskSource.poll()` 在建筑有 head 时跳过该建筑，head 完成后 `onHeadCompleted` 自动 promote 下一个 WorkItem。彻底消除一建筑多任务同时竞争的问题。
 
-1. 世界重进后，若工作站队列中有**多个不同任务**，仍会在加载后的一轮心跳内全部分配给不同 NPC
-2. `BuildingTaskSource.poll()` 未修复，正常游戏中如果 poll 间隔与 Scheduler 心跳配合不当，理论上仍可能同时发布多个任务
-3. `SchedulerSystem` 循环内的快照竞争问题仍存在，可能导致同一任务被分配给多个 NPC（其他触发路径，如 EventDrivenTaskSource）
+### 任务系统重构 v2（2026-06-25 完成）
 
-### 后续排查方向
+8 个阶段的重构已完成：
 
-1. 加测试验证 `addLoadedTask()` 去重是否真的消除了双键问题
-2. 用 debug 日志跟踪 `BuildingTaskSource.poll()` 发布时机与 Scheduler 心跳的对应关系，确认 Layer 3 是否真的被 Layer 1 修复"顺便"覆盖
-3. 如果 Layer 2/3 问题确实还存在，需要更细粒度的修复（如仅在 BuildingTaskSource 发布路径加独占，而不是全面拦截）
+1. **NpcTaskPackage + NpcTaskQueue**：NPC 队列存储自包含任务包（source + sequence + stance + priority），不再存储裸 AtomicOp。支持挂起/恢复（紧急任务打断→suspensionStack）。
+2. **GlobalTaskPool → TreeSet 优先级队列**：ordering=priority desc→createdAt asc→id asc。状态变更时维护 assignableSet。
+3. **WandLifecycle 状态机**：IN_WAREHOUSE→RESERVED→IN_TRANSIT_TO_NPC→EQUIPPED→IN_TRANSIT_TO_WAREHOUSE。法杖预留先于装配，消除借还循环。
+4. **TaskExecutionSystem 重写**：驱动 NpcTaskQueue。while 循环执行纯操作→包完成/释放。compat bridge 兼容旧 SchedulerSystem。
+5. **SchedulerSystem WandLifecycle 集成**：法杖装配前检查 WandLifecycle 可用性并预留。
+6. **BuildingTaskPool + BuildingTaskSource 集成**：每建筑只暴露 head task 到全局池。source.poll() 在建筑有 head 时跳过。
+7. **大量删除死代码**：TaskData/TaskStatus/TaskTemplate/TaskPublishedEvent/TaskAssignedEvent/TaskInterruptedEvent 等旧类型。
+8. **文档更新**：architecture/packages/core.md 和 building.md 反映新架构。
 
 ## Bug 记录：`setColonyId` 静默吞失败 —— 殖民地分配的幽灵bug（2026-06-24）
 

@@ -1,6 +1,6 @@
 {
   "id": "grand_tower",
-  "display_name": "\u5b8f\u4f1f\u6cd5\u5e08\u5854",
+  "display_name": "宏伟法师塔",
   "category": "basic",
   "pattern": [
     [
@@ -1235,11 +1235,6 @@
   "comfort": 10,
   "magic": 12,
   "wonder": 8,
-  "maintenance_cost": 8,
-  "shutdown_penalty": {
-    "output_reduction": 0.6,
-    "time_multiplier": 2.5
-  },
   "queue": {
     "capacity": 10,
     "task_types": [

@@ -6,7 +6,9 @@ import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.core.op.OpExecutorRegistry;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
+import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.task.WandLifecycle;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -49,6 +51,8 @@ public class World {
     public EventBus eventBus;
     public BlueprintRegistry blueprintRegistry;
     public GlobalTaskPool taskPool;
+    public WandLifecycle wandLifecycle;
+    public BuildingTaskPool buildingTaskPool;
     public OpExecutorRegistry opExecutors;
 
     // ---- Async op tracking (event-driven tick gating, V2.5) ----
@@ -174,6 +178,25 @@ public class World {
 
     public void addSystem(System sys) {
         systems.add(sys);
+    }
+
+    /** Full task recovery: clear global pool, building queues, and reset all NPC executors. */
+    public void clearAllTasks() {
+        if (taskPool != null) {
+            taskPool.clearAll();
+        }
+        if (buildingTaskPool != null) {
+            buildingTaskPool.clear();
+        }
+        for (long entity : query(com.wsteam.wandscape.core.component.TaskExecutor.class)) {
+            com.wsteam.wandscape.core.component.TaskExecutor exec = get(entity, com.wsteam.wandscape.core.component.TaskExecutor.class);
+            if (exec != null) {
+                if (movementOps != null) {
+                    movementOps.cancelNavigation(entity);
+                }
+                exec.reset();
+            }
+        }
     }
 
     /** Execute all systems in registration order. */

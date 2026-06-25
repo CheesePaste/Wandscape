@@ -14,14 +14,17 @@ import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.ResourceFulfilled;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.OpExecutor;
+import com.wsteam.wandscape.core.op.ResourceShortageException;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -120,7 +123,18 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 "block_interact_" + action + "_" + op.target());
         pending.add(new Pending(future, op, world, npcId, op.channelTicks()));
 
-        future.thenRun(() -> executeAsyncAction(op, world, npcId));
+        future.thenRun(() -> {
+            try {
+                executeAsyncAction(op, world, npcId);
+            } catch (ResourceShortageException e) {
+                var exec = world.get(npcId, TaskExecutor.class);
+                if (exec != null && exec.globalTaskId != null) {
+                    world.taskPool.markAwaitingResources(
+                            exec.globalTaskId, npcId, e.requested(), world);
+                    exec.releaseGlobalTask();
+                }
+            }
+        });
 
         LOGGER.debug("block_interact {}: NPC {} channeling at {} ({} ticks)",
                 action, npcId, op.target(), op.channelTicks());
@@ -228,7 +242,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         long available = bank.count(colonyId, key);
         if (available < count) {
             LOGGER.warn("decompose: insufficient items. need={} have={} item={}", count, available, itemId);
-            return;
+            int colonIdx = itemId.lastIndexOf(':');
+            String shortId = colonIdx >= 0 ? itemId.substring(colonIdx + 1) : itemId;
+            throw new ResourceShortageException(
+                    new ResourceStack(new ResourceId(shortId), count));
         }
 
         var blockState = BuiltInRegistries.BLOCK.get(ResourceLocation.tryParse(itemId));
@@ -291,8 +308,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
                 LOGGER.warn("synthesize: insufficient {} (need={})", entry.getKey(), needed);
-                return;
+                throw new ResourceShortageException(
+                        new ResourceStack(new ResourceId(elementId), (int) needed));
             }
         }
 
@@ -341,8 +360,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
                 LOGGER.warn("craft_wand: insufficient {} (need={})", entry.getKey(), needed);
-                return;
+                throw new ResourceShortageException(
+                        new ResourceStack(new ResourceId(elementId), (int) needed));
             }
         }
 
@@ -401,16 +422,21 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (var entry : recipe.cost().entrySet()) {
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
+                String elementId = entry.getKey().name().toLowerCase();
                 LOGGER.warn("brew_potion: insufficient {} (need={})", entry.getKey(), needed);
-                return;
+                throw new ResourceShortageException(
+                        new ResourceStack(new ResourceId(elementId), (int) needed));
             }
         }
 
         for (String inputItemId : recipe.inputItems()) {
             ItemKey key = ItemKey.of(inputItemId, null);
             if (bank.available(colonyId, key) < count) {
+                int colonIdx = inputItemId.lastIndexOf(':');
+                String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
                 LOGGER.warn("brew_potion: insufficient input item {} (need={})", inputItemId, count);
-                return;
+                throw new ResourceShortageException(
+                        new ResourceStack(new ResourceId(shortId), count));
             }
         }
 

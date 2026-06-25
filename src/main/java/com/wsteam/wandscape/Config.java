@@ -9,10 +9,6 @@ public class Config {
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);
 
-    public static final ModConfigSpec.IntValue MAINTENANCE_INTERVAL_MINUTES = BUILDER
-            .comment("Interval in minutes between maintenance cost deductions")
-            .defineInRange("general.maintenanceIntervalMinutes", 20, 1, 120);
-
     public static final ModConfigSpec.IntValue WAREHOUSE_SAVE_INTERVAL_MINUTES = BUILDER
             .comment("Interval in minutes between warehouse auto-saves")
             .defineInRange("general.warehouseSaveIntervalMinutes", 5, 1, 60);

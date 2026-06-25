@@ -222,9 +222,12 @@ public final class DefaultOpExecutors {
     private static void advanceAfterPureOp(World world, long npcId, int advance) {
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         if (exec == null) return;
-        if (!exec.isPrivateQueueEmpty()) {
-            exec.popPrivate();
-            for (int i = 1; i < advance && !exec.isPrivateQueueEmpty(); i++) exec.popPrivate();
+        var queue = exec.npcQueue;
+        if (queue.currentPackage() != null) {
+            for (int i = 0; i < advance; i++) {
+                queue.advanceStep();
+                if (queue.isCurrentPackageDone()) break;
+            }
         } else if (exec.globalTaskId != null) {
             exec.stepIndex += advance;
         }

@@ -2,11 +2,10 @@ package com.wsteam.wandscape.core.component;
 
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.ExecutorState;
+import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import com.wsteam.wandscape.core.task.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -20,8 +19,8 @@ import com.google.gson.JsonElement;
  */
 public class TaskExecutor {
 
-    /** High-priority private task queue (FIFO). */
-    public final Deque<AtomicOp> privateQueue = new ArrayDeque<>();
+    /** Per-NPC task queue — stores {@link NpcTaskPackage}s instead of bare ops. */
+    public final NpcTaskQueue npcQueue = new NpcTaskQueue();
 
     /** Currently assigned global task ID, or null. */
     public Long globalTaskId = null;
@@ -79,50 +78,77 @@ public class TaskExecutor {
     @Nullable
     public GridPos stance = null;
 
-    /**
-     * Ticks since this NPC last had work. Incremented each tick while idle.
-     * When this crosses {@code WAND_RETURN_DELAY}, equipped wands are pushed
-     * as WandReturnOps so another NPC can use them.
-     * Reset to 0 when a new task is assigned.
-     */
+    /** Tick when this NPC last performed work. Used for idle detection. */
+    public long lastWorkTick = 0;
+
+    // ── Backward-compat wrappers (delegate to NpcTaskQueue) ──
+
+    /** Ensure a pending package is started if we have work but no current package. */
+    private void ensureCurrentPackage() {
+        if (npcQueue.currentPackage() == null && npcQueue.hasPending()) {
+            npcQueue.startNextPending();
+        }
+    }
+
+    /** @deprecated use {@link #npcQueue}.enqueueNormal() */
+    @Deprecated
+    public void pushPrivate(AtomicOp op) {
+        var pkg = NpcTaskPackage.system("system:legacy", op, null, 0);
+        npcQueue.enqueueNormal(pkg);
+        if (npcQueue.currentPackage() == null) {
+            npcQueue.startNextPending();
+        }
+    }
+
+    /** @deprecated use {@link #npcQueue}.enqueueUrgent() */
+    @Deprecated
+    public void pushPrivateFront(AtomicOp op) {
+        var pkg = NpcTaskPackage.system("system:legacy_urgent", op, null, 99);
+        npcQueue.enqueueUrgent(pkg);
+    }
+
+    /** @deprecated use {@link #npcQueue}.peekCurrentOp() */
+    @Deprecated
+    public AtomicOp peekPrivate() {
+        ensureCurrentPackage();
+        return npcQueue.peekCurrentOp();
+    }
+
+    /** @deprecated use {@link #npcQueue}.advanceStep() */
+    @Deprecated
+    public AtomicOp popPrivate() {
+        ensureCurrentPackage();
+        AtomicOp op = npcQueue.peekCurrentOp();
+        npcQueue.advanceStep();
+        if (npcQueue.isCurrentPackageDone()) {
+            npcQueue.finishCurrentPackage();
+        }
+        return op;
+    }
+
+    /** @deprecated use {@link #npcQueue}.hasPending() */
+    @Deprecated
+    public boolean isPrivateQueueEmpty() {
+        return npcQueue.isIdle();
+    }
+
+    /** @deprecated wand lifecycle now managed by WandLifecycle */
+    @Deprecated
     public int wandIdleTicks = 0;
 
-    /** Ticks of idle time before equipped wands are auto-returned to warehouse. */
-    public static final int WAND_RETURN_DELAY_TICKS = 60; // 3 seconds
+    /** @deprecated wand lifecycle now managed by WandLifecycle */
+    @Deprecated
+    public static final int WAND_RETURN_DELAY_TICKS = 60;
 
-    /** Push an op to the back of the private queue. */
-    public void pushPrivate(AtomicOp op) {
-        privateQueue.addLast(op);
-    }
-
-    /** Push an op to the front of the private queue (for priority insertion). */
-    public void pushPrivateFront(AtomicOp op) {
-        privateQueue.addFirst(op);
-    }
-
-    /** Peek at the next private op without removing it. */
-    public AtomicOp peekPrivate() {
-        return privateQueue.peekFirst();
-    }
-
-    /** Pop the next private op. */
-    public AtomicOp popPrivate() {
-        return privateQueue.pollFirst();
-    }
-
-    /** Check if the private queue is empty. */
-    public boolean isPrivateQueueEmpty() {
-        return privateQueue.isEmpty();
-    }
-
-    /** Whether this executor has any work to do. */
+    /** @deprecated use {@link #npcQueue}.hasWork() */
+    @Deprecated
     public boolean hasWork() {
-        return !privateQueue.isEmpty() || globalTaskId != null;
+        return npcQueue.hasWork() || globalTaskId != null;
     }
 
     /** Reset all state. */
     public void reset() {
-        privateQueue.clear();
+        npcQueue.clear();
         globalTaskId = null;
         currentSequence = null;
         stepIndex = 0;
@@ -132,7 +158,7 @@ public class TaskExecutor {
         currentOpTarget = null;
         currentOpKind = null;
         stance = null;
-        wandIdleTicks = 0;
+        lastWorkTick = 0;
         state = ExecutorState.IDLE;
     }
 
@@ -147,8 +173,6 @@ public class TaskExecutor {
         currentOpTarget = null;
         currentOpKind = null;
         stance = null;
-        // NOTE: wandIdleTicks is intentionally NOT reset here —
-        // it tracks idle time across task boundaries for wand return delay.
         state = ExecutorState.IDLE;
     }
 }

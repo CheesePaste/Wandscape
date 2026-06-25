@@ -103,7 +103,7 @@ public class BuildingApiImpl implements BuildingApi {
                     data.getBuildingId(), data.getBuildingTypeId(), data.getCategory(),
                     anchor, bounds,
                     data.getComfort(), data.getMagic(), data.getWonder(),
-                    data.getMaintenanceCost(), data.getQueueCapacity());
+                    data.getQueueCapacity());
         }
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
@@ -286,6 +286,9 @@ public class BuildingApiImpl implements BuildingApi {
         return item;
     }
 
+    /** Colony-wide capacity for construction/repair tasks (per building). */
+    private static final int CONSTRUCTION_CAPACITY = 5;
+
     @Override
     public void enqueueWork(UUID buildingId, WorkItem work) {
         BuildingSavedData sd = getSavedData();
@@ -294,11 +297,25 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null || state.isShutdown()) return;
 
-        if (state.getTaskQueue().size() >= state.getQueueCapacity()) {
-            LOGGER.warn("enqueueWork: building {} queue full (capacity={})",
-                    buildingId, state.getQueueCapacity());
-            return;
+        boolean isConstruction = work.blueprintId().startsWith("build:");
+
+        if (isConstruction) {
+            long buildCount = state.getTaskQueue().stream()
+                    .filter(w -> w.blueprintId().startsWith("build:"))
+                    .count();
+            if (buildCount >= CONSTRUCTION_CAPACITY) {
+                LOGGER.warn("enqueueWork: building {} construction queue full (capacity={})",
+                        buildingId, CONSTRUCTION_CAPACITY);
+                return;
+            }
+        } else {
+            if (state.getTaskQueue().size() >= state.getQueueCapacity()) {
+                LOGGER.warn("enqueueWork: building {} queue full (capacity={})",
+                        buildingId, state.getQueueCapacity());
+                return;
+            }
         }
+
         state.getTaskQueue().addLast(work);
         sd.setDirty();
     }

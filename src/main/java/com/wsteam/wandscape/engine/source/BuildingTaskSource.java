@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.engine.source;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 
@@ -13,6 +12,7 @@ import com.wsteam.wandscape.building.data.BuildingConfig.NodeConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.system.TaskSource;
+import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.TaskRequest;
 import com.wsteam.wandscape.core.types.BehaviourTag;
@@ -27,8 +27,11 @@ import net.minecraft.core.BlockPos;
  * {@link TaskSource} that polls building block entities and translates
  * queued {@link WorkItem}s into engine {@link TaskRequest}s.
  *
+ * <p>Uses {@link BuildingTaskPool} to ensure only one head task per building
+ * enters the {@link GlobalTaskPool} at a time. When the head completes, the
+ * next pending WorkItem is promoted.
+ *
  * <p>This is the ONLY bridge between building BEs and the engine task pool.
- * BEs store queue data; this source pulls it into the engine on a fixed interval.
  */
 public class BuildingTaskSource implements TaskSource {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -39,9 +42,6 @@ public class BuildingTaskSource implements TaskSource {
     // Log heartbeat every N polls to avoid spam
     private int pollCount = 0;
     private static final int HEARTBEAT_INTERVAL = 10; // every ~10 seconds
-
-    /** Tracks buildingId → engine taskId for active tasks. */
-    private final Map<UUID, Long> activeTasks = new ConcurrentHashMap<>();
 
     @Override
     public int pollIntervalTicks() {
@@ -55,46 +55,59 @@ public class BuildingTaskSource implements TaskSource {
 
         pollCount++;
 
-        // ── 1. Cleanup: clear completed/stale tasks ──
-        for (Iterator<Map.Entry<UUID, Long>> it = activeTasks.entrySet().iterator(); it.hasNext(); ) {
-            var entry = it.next();
-            if (!pool.isActive(entry.getValue())) {
-                api.clearCurrentTask(entry.getKey());
-                it.remove();
+        BuildingTaskPool btp = world.buildingTaskPool;
+
+        // ── 1. Cleanup: detect completed building head tasks, promote next ──
+        if (btp != null) {
+            for (var entry : btp.getAll().entrySet()) {
+                UUID buildingId = entry.getKey();
+                Long headId = entry.getValue().getHeadTaskId();
+                if (headId != null && !pool.isActive(headId)) {
+                    btp.onHeadCompleted(buildingId, pool);
+                    api.clearCurrentTask(buildingId);
+                    LOGGER.info("[BuildingTaskSource] cleanup building {} head #{} completed",
+                            buildingId.toString().substring(0, 8), headId);
+                }
             }
         }
 
         // ── 2. Node auto-supply: enqueue gather work for idle node buildings ──
-        supplyNodeBuildings(api);
+        supplyNodeBuildings(api, btp);
 
-        // ── 3. Publish new work ──
+        // ── 3. Publish new work — only for buildings without a head task ──
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
-            LOGGER.info("[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, tracked_active={}",
-                    pollCount, pool.size(), buildingIds.size(), activeTasks.size());
+            LOGGER.info("[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
+                    pollCount, pool.size(), buildingIds.size(),
+                    btp != null ? btp.totalBuildings() : 0);
         }
 
         for (UUID buildingId : buildingIds) {
+            // Skip if building already has an active head
+            if (btp != null && btp.hasHead(buildingId)) continue;
+
             WorkItem item = api.dequeueWork(buildingId);
             if (item == null) continue;
 
-            TaskRequest request = new TaskRequest(
-                    item.blueprintId(),
-                    item.params(),
-                    item.priority(),
-                    item.wandRequirementOverrides()
-            );
-
-            // ── Publish to task pool ──
             try {
-                long taskId = pool.addTask(request);
-                api.setCurrentTask(buildingId, toTaskUuid(taskId));
-                activeTasks.put(buildingId, taskId);
+                long taskId;
+                if (btp != null) {
+                    taskId = btp.enqueue(buildingId, item, pool);
+                } else {
+                    // Fallback: direct publish (no BuildingTaskPool)
+                    TaskRequest request = new TaskRequest(
+                            item.blueprintId(), item.params(), item.priority(),
+                            item.wandRequirementOverrides());
+                    taskId = pool.addTask(request);
+                }
 
-                LOGGER.info("[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} params={} priority={} building={} pool_size={}",
-                        taskId, item.blueprintId(), item.params(), item.priority(),
-                        buildingId.toString().substring(0, 8), pool.size());
+                if (taskId >= 0) {
+                    api.setCurrentTask(buildingId, toTaskUuid(taskId));
+                    LOGGER.info("[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} building={} pool_size={}",
+                            taskId, item.blueprintId(),
+                            buildingId.toString().substring(0, 8), pool.size());
+                }
             } catch (Exception e) {
                 LOGGER.warn("[BuildingTaskSource] FAILED: blueprint={} building={} error={}",
                         item.blueprintId(), buildingId, e.getMessage());
@@ -111,13 +124,13 @@ public class BuildingTaskSource implements TaskSource {
     }
 
     /**
-     * Phase 2: For every idle node building (no current task, no queued work,
+     * For every idle node building (no current task, no queued work,
      * operational), auto-enqueue a gather WorkItem.
      */
-    private void supplyNodeBuildings(BuildingApi api) {
+    private void supplyNodeBuildings(BuildingApi api, @javax.annotation.Nullable BuildingTaskPool btp) {
         BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
 
-        // Buildings that already have queued work (will be published in Phase 3)
+        // Buildings that already have queued work (will be published in step 3)
         Set<UUID> hasWork = new HashSet<>(api.getBuildingsWithPendingWork(null));
         LOGGER.info("[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
 
@@ -129,6 +142,8 @@ public class BuildingTaskSource implements TaskSource {
             if (hasWork.contains(buildingId)) continue;
             // Already running a task → skip
             if (api.isBuildingOccupied(buildingId)) continue;
+            // Already has a head in building task pool → skip
+            if (btp != null && btp.hasHead(buildingId)) continue;
 
             BuildingData bd = api.getBuilding(buildingId);
             if (bd == null || bd.isShutdown() || !bd.isStructureIntact()) continue;
@@ -177,5 +192,4 @@ public class BuildingTaskSource implements TaskSource {
     private static UUID toTaskUuid(long taskId) {
         return new UUID(taskId, 0);
     }
-
 }

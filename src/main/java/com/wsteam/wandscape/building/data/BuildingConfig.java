@@ -30,21 +30,12 @@ public record BuildingConfig(
         int comfort,
         int magic,
         int wonder,
-        @SerializedName("maintenance_cost") int maintenanceCost,
-        @SerializedName("shutdown_penalty") ShutdownPenalty shutdownPenalty,
         QueueDef queue,
         @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement,
         @Nullable BoundaryBox boundary,
         @Nullable BlueprintRef blueprint,
         @Nullable NodeConfig nodeConfig
 ) {
-    public record ShutdownPenalty(
-            @SerializedName("output_reduction") double outputReduction,
-            @SerializedName("time_multiplier") double timeMultiplier
-    ) {
-        public static final ShutdownPenalty DEFAULT = new ShutdownPenalty(0.5, 2.0);
-    }
-
     public record QueueDef(
             int capacity,
             @SerializedName("task_types") List<String> taskTypes
@@ -157,13 +148,6 @@ public record BuildingConfig(
             int comfort = getInt(obj, "comfort", 0);
             int magic = getInt(obj, "magic", 0);
             int wonder = getInt(obj, "wonder", 0);
-            int maintenanceCost = getInt(obj, "maintenance_cost", 0);
-
-            ShutdownPenalty shutdownPenalty = ShutdownPenalty.DEFAULT;
-            if (obj.has("shutdown_penalty")) {
-                shutdownPenalty = context.deserialize(
-                        obj.get("shutdown_penalty"), ShutdownPenalty.class);
-            }
 
             QueueDef queue = QueueDef.DEFAULT;
             if (obj.has("queue")) {
@@ -211,8 +195,8 @@ public record BuildingConfig(
 
             return new BuildingConfig(id, displayName, category,
                     pattern, blockMapping,
-                    comfort, magic, wonder, maintenanceCost,
-                    shutdownPenalty, queue, unlockRequirement, boundary, blueprint, nodeConfig);
+                    comfort, magic, wonder,
+                    queue, unlockRequirement, boundary, blueprint, nodeConfig);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

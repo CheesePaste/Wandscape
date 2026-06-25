@@ -10,22 +10,24 @@
 
 ### ecs/ — ECS 框架
 
-- **World.java** — 中央容器：持有 ComponentStore Map + System 列表 + 边界服务引用。`createEntity()` / `addComponent()` / `query(A,B,C)` 交集查询 / `tick(delta)` 按序执行所有系统。异步门控通过 `startAsyncOp()` → `hasPendingAsyncOps()` 实现 tick 阻塞
+- **World.java** — 中央容器：持有 ComponentStore Map + System 列表 + 边界服务引用。`createEntity()` / `addComponent()` / `query(A,B,C)` 交集查询 / `tick(delta)` 按序执行所有系统。`clearAllTasks()` 紧急恢复：清空任务池 + 建筑队列 + 重置所有NPC。异步门控通过 `startAsyncOp()` → `hasPendingAsyncOps()` 实现 tick 阻塞
 - **System.java** — `@FunctionalInterface`：`void update(World, float delta)`
 - **HashMapComponentStore\<T\>.java** — HashMap 存储 + 排序实体列表缓存（交集查询用）
 
-### component/ — 8 个 ECS 组件
+### component/ — 10 个 ECS 组件
 
 | 组件 | 关键字段 |
 |------|---------|
 | Position | GridPos |
 | ManaPool | current/max/regenPerTick + regen()/consume()/add() |
 | WandCarrier | mutable class：capabilities并集 + equippedWandIds列表 + equip(wandId,caps,eff,range)/unequip(wandId,knownWands)/recalculateFull()/EMPTY哨兵 |
-| TaskExecutor | 私有优先队列/当前task/stepIndex/params/stance/pendingFuture/ExecutorState |
+| TaskExecutor | globalTaskId/currentSequence/stepIndex/params/stance/pendingFuture/ExecutorState + npcQueue(NpcTaskQueue) |
+| NpcTaskQueue | pending deque + currentPackage + suspensionStack(max 3) + 包驱动方法(startPackage/enqueueNormal/enqueueUrgent/suspendCurrent/resumeLatest/releaseCurrent) |
 | Inventory | 列表存储 + add/remove/count/hasEnough |
 | NavigationState | mode(IDLE/PATHFINDING/TELEPORT_WAITING/TELEPORT_RITUAL) + target + CompletableFuture + 卡死追踪 |
 | ColonyMember | colonyId(UUID) |
 | ColonyMetadata | center/territoryRadius/prosperity/contains(pos) |
+| SuspensionContext | 挂起包快照(pkg/stepIndex/suspendedAtTick) — NPC被紧急任务打断时保存上下文 |
 
 ### op/ — 原子操作
 
@@ -36,8 +38,13 @@
 
 ### task/ — 任务系统 + 蓝图 DSL
 
-- **GlobalTaskPool** — 中央任务池：创建/审批/分配/推进/完成/资源等待/事件→任务翻译
-- **GlobalTask** — 任务生命周期：PENDING_APPROVAL→PENDING_ASSIGN→IN_PROGRESS→COMPLETED
+- **GlobalTaskPool** — 中央任务池：TreeSet 排序(PENDING_ASSIGN优先级 desc→createdAt asc→id asc)。创建/审批/分配/推进/完成/资源等待。AWAITING_RESOURCES休眠队列 → ResourceFulfilled事件唤醒。`clearAll()` 清空所有任务并取消事件订阅
+- **GlobalTask** — 任务生命周期：PENDING_APPROVAL→PENDING_ASSIGN→IN_PROGRESS→COMPLETED/FAILED。字段：buildingId/isBuildingHead/createdAt/stepIndex
+- **NpcTaskPackage** — NPC自包含工作单元：source("global:42"/"system:wand_equip") + TaskSequence + stance(GridPos) + priority + startStepIndex
+- **BuildingTaskPool** — 建筑→队列映射：只有head task进入全局池。enqueue/publish→onHeadCompleted/promote。纯数据结构，零MC依赖
+- **BuildingTaskQueue** — 单建筑运行时队列：Deque\<WorkItem\> + headTaskId
+- **WandLifecycle** — 法杖状态机：IN_WAREHOUSE→RESERVED→IN_TRANSIT_TO_NPC→EQUIPPED→IN_TRANSIT_TO_WAREHOUSE→IN_WAREHOUSE。per-colony追踪，纯逻辑
+- **WandLifecycleState** — 法杖5态枚举
 - **TaskSequence** — 不可变 AtomicOp 列表 + label
 - **BlueprintRegistry** — 蓝图注册表 + TaskCompiler 实现（TaskRequest → CompiledBlueprint）
 - **BlueprintDefinition** — DSL AST 根 record：id + params + steps + displayName
@@ -53,8 +60,8 @@
 | ManaRegenSystem | 每tick | 恢复所有 ManaPool |
 | SystemBlueprintSystem | 每tick | 系统蓝图（基础设施任务），一个副作用op/tick |
 | TaskSourcePoller | 按间隔 | 轮询所有 TaskSource → TaskRequest 入 GlobalTaskPool |
-| SchedulerSystem | 每2tick | 评分匹配：proximity×0.5 + efficiency×0.3 + behaviourLevel×0.2。无合格NPC时通过WandProvider查仓库→注入WandEquipOp+WandReturnOp |
-| TaskExecutionSystem | 每tick | 驱动NPC执行AtomicOp：pendingFuture检查→stance→mana→dispatch→异步等待/同步推进 |
+| SchedulerSystem | 每2tick | NPC→task反向匹配：NPC优先，为每个空闲NPC找最佳任务。评分=proximity×0.5 + efficiency×0.3 + behaviourLevel×0.2。法杖预留通过WandLifecycle |
+| TaskExecutionSystem | 每tick | 驱动NpcTaskQueue：检查currentPackage→姿态导航→while循环执行纯操作→异步等待→包完成/释放 |
 
 ### road/ — 道路系统（纯逻辑）
 

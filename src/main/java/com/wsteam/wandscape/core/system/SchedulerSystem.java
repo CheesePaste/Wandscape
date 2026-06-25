@@ -8,7 +8,10 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.ExecutorState;
 import com.wsteam.wandscape.core.task.GlobalTask;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import com.wsteam.wandscape.core.task.TaskFailureReason;
+import com.wsteam.wandscape.core.task.TaskState;
+import com.wsteam.wandscape.core.task.WandLifecycle;
 import com.wsteam.wandscape.core.types.BehaviourLevel;
 import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -103,9 +106,21 @@ public class SchedulerSystem implements System {
             List<GlobalTask> assignable = taskPool.getAssignableTasks();
             if (assignable.isEmpty()) continue;
 
+            // Collect target positions already occupied by IN_PROGRESS tasks
+            Set<GridPos> occupiedTargets = new HashSet<>();
+            for (GlobalTask t : taskPool.getByState(TaskState.IN_PROGRESS)) {
+                GridPos target = extractTaskTarget(t);
+                if (target != null) occupiedTargets.add(target);
+            }
+
             for (GlobalTask task : assignable) {
-                // Extract task target once for distance scoring
+                // Skip if another NPC is already working on the same target position
                 GridPos taskTarget = extractTaskTarget(task);
+                if (taskTarget != null && occupiedTargets.contains(taskTarget)) {
+                    Log.debug(TAG, "skip #%d '%s' — target %s already occupied",
+                            task.id, task.sequence.label(), taskTarget);
+                    continue;
+                }
 
                 // Find the best NPC for this task
                 long bestNpc = -1;
@@ -145,6 +160,7 @@ public class SchedulerSystem implements System {
                 if (bestNpc >= 0) {
                     task.schedulerRetryCount = 0; // reset retries on successful match
                     taskPool.assign(task.id, bestNpc, world);
+                    occupiedTargets.add(taskTarget); // mark target as occupied
                     // Reset wand idle timer — NPC is no longer idle
                     TaskExecutor assignedExec = world.get(bestNpc, TaskExecutor.class);
                     if (assignedExec != null) assignedExec.wandIdleTicks = 0;
@@ -172,31 +188,31 @@ public class SchedulerSystem implements System {
                 }
 
                 // No NPC satisfies the task requirements.
-                // Try warehouse wand provisioning first.
+                // Try warehouse wand provisioning with lifecycle reservation.
                 if (!task.requirements.isEmpty() && wandProvider != null) {
                     UUID colonyId = entry.getKey();
+                    WandLifecycle wandLifecycle = world.wandLifecycle;
                     String wandId = wandProvider.findWand(task.requirements, colonyId);
-                    if (wandId != null) {
-                        // Inject wand equip/return into the first available idle NPC
+                    if (wandId != null
+                            && wandLifecycle != null
+                            && wandLifecycle.isAvailable(colonyId, wandId)
+                            && wandLifecycle.reserve(colonyId, wandId)) {
+                        // Inject wand equip as urgent package before task
                         for (long npcId : colonyNpcs) {
                             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
                             WandCarrier wc = world.get(npcId, WandCarrier.class);
                             if (exec == null || wc == null) continue;
-//                            // Skip NPCs that already have this wand
-//                            if (wc.equippedWandIds().contains(wandId)) continue; //never
 
-                            // Equip runs first (before task ops). Return is deferred
-                            // to TaskExecutionSystem — it pushes WandReturnOp
-                            // when the global task completes.
-                            exec.pushPrivateFront(new AtomicOp.WandEquipOp(wandId));
+                            exec.npcQueue.enqueueUrgent(NpcTaskPackage.system(
+                                    "system:wand_equip",
+                                    new AtomicOp.WandEquipOp(wandId), null, 70));
                             taskPool.assign(task.id, npcId, world);
-                            exec.wandIdleTicks = 0; // NPC is no longer idle
                             Log.info(TAG, "provisioned wand %s for #%d '%s' → NPC %d",
                                     wandId, task.id, task.sequence.label(), npcId);
                             colonyNpcs.remove(npcId);
                             break;
                         }
-                        if (!colonyNpcs.isEmpty()) continue; // assigned via wand, next task
+                        if (!colonyNpcs.isEmpty()) continue;
                     }
                 }
 

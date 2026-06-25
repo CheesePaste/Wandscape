@@ -768,24 +768,24 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void equippedWand_returnedAfterIdleTimeout() {
-            // Task completes → NPC goes idle → after WAND_RETURN_DELAY_TICKS,
-            // WandReturnOp is pushed to private queue → executed.
+        void taskCompletes_npcGoesIdle_keepsWandEquipped() {
+            // Task completes → NPC goes idle. Wand lifecycle is now managed by
+            // WandLifecycle (Phase 3), not by idle timeout auto-return.
             registerSimpleBp("test:wand_idle_return",
                     AtomicOp.TransformOp.place(new GridPos(10, 64, 0), BlockType.STONE));
 
             long taskId = world.taskPool.addTask(
                     makeRequest("test:wand_idle_return", new GridPos(0, 64, 0), 10));
-            // Tick enough for task completion + idle timeout
             tickN(10 + TaskExecutor.WAND_RETURN_DELAY_TICKS + 5);
 
             GlobalTask task = world.taskPool.get(taskId);
             assertEquals(TaskState.COMPLETED, task.state);
             assertFalse(mock.isAir(new GridPos(10, 64, 0)), "Block placed");
 
-            // WandReturnExecutor should have been called after idle timeout
-            assertTrue(wandReturnExecuted.get(),
-                    "WandReturnExecutor should be called after idle timeout");
+            // NPC should be idle — wand stays equipped (no auto-return)
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+            assertEquals(ExecutorState.IDLE, exec.state,
+                    "NPC should be IDLE after task completion");
         }
 
         @Test
@@ -814,9 +814,9 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void newTaskAssignment_resetsWandIdleTimer() {
-            // NPC completes task, gets a new one assigned before idle timeout
-            // → wand should NOT be returned
+        void consecutiveTasks_npcKeepsWand() {
+            // NPC completes task, gets a new one assigned quickly.
+            // Wand stays equipped across both tasks (no auto-return).
             registerSimpleBp("test:double_assign",
                     AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.STONE));
             registerSimpleBp("test:second",
@@ -825,11 +825,9 @@ public class CoreSystemsTest {
             long task1Id = world.taskPool.addTask(
                     makeRequest("test:double_assign", new GridPos(0, 64, 0), 10));
 
-            // Tick just enough for task1 to complete, then add task2 before idle timeout
             tickN(10); // task1 completed
             assertEquals(TaskState.COMPLETED, world.taskPool.get(task1Id).state);
 
-            // Add task2 immediately — Scheduler should pick it up in next heartbeat
             long task2Id = world.taskPool.addTask(
                     makeRequest("test:second", new GridPos(0, 64, 0), 10));
             tickN(20); // task2 assigned and completed
@@ -837,10 +835,6 @@ public class CoreSystemsTest {
             assertEquals(TaskState.COMPLETED, world.taskPool.get(task2Id).state);
             assertFalse(mock.isAir(new GridPos(5, 64, 0)), "Task1 block placed");
             assertFalse(mock.isAir(new GridPos(6, 64, 0)), "Task2 block placed");
-
-            // Wand was never returned — both tasks used the same equipped wand
-            assertFalse(wandReturnExecuted.get(),
-                    "WandReturnOp should NOT be called when new task came before idle timeout");
         }
 
         // ---- helpers ----

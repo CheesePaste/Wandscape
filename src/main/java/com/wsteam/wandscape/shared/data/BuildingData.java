@@ -14,7 +14,6 @@ public interface BuildingData {
     int getComfort();
     int getMagic();
     int getWonder();
-    int getMaintenanceCost();
     int getQueueCapacity();
     boolean isStructureIntact();
 }

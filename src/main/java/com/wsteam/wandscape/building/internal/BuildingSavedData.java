@@ -63,7 +63,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_COMFORT = "comfort";
     private static final String TAG_MAGIC = "magic";
     private static final String TAG_WONDER = "wonder";
-    private static final String TAG_MAINTENANCE = "maintenance";
     private static final String TAG_CAPACITY = "capacity";
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
@@ -240,7 +239,6 @@ public class BuildingSavedData extends SavedData {
             entry.putInt(TAG_COMFORT, state.getComfort());
             entry.putInt(TAG_MAGIC, state.getMagic());
             entry.putInt(TAG_WONDER, state.getWonder());
-            entry.putInt(TAG_MAINTENANCE, state.getMaintenanceCost());
             entry.putInt(TAG_CAPACITY, state.getQueueCapacity());
             if (state.getCurrentTaskId() != null) {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
@@ -286,11 +284,10 @@ public class BuildingSavedData extends SavedData {
             int comfort = entry.getInt(TAG_COMFORT);
             int magic = entry.getInt(TAG_MAGIC);
             int wonder = entry.getInt(TAG_WONDER);
-            int maintenance = entry.getInt(TAG_MAINTENANCE);
             int capacity = entry.getInt(TAG_CAPACITY);
 
             BuildingState state = new BuildingState(id, type, category, anchor, bounds,
-                    comfort, magic, wonder, maintenance, capacity);
+                    comfort, magic, wonder, capacity);
 
             if (entry.hasUUID(TAG_COLONY)) {
                 state.setColonyId(entry.getUUID(TAG_COLONY));

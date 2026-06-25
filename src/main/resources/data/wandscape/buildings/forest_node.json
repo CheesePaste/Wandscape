@@ -3,7 +3,11 @@
   "display_name": "森林节点",
   "category": "node",
   "pattern": [
-    [0, 0, 0]
+    [
+      0,
+      0,
+      0
+    ]
   ],
   "block_mapping": {
     "0,0,0": "minecraft:moss_block"
@@ -11,14 +15,11 @@
   "comfort": 1,
   "magic": 2,
   "wonder": 0,
-  "maintenance_cost": 2,
-  "shutdown_penalty": {
-    "output_reduction": 0.5,
-    "time_multiplier": 2.0
-  },
   "queue": {
     "capacity": 10,
-    "task_types": ["gathering"]
+    "task_types": [
+      "gathering"
+    ]
   },
   "unlock_requirement": {
     "min_wonder": 0
@@ -31,8 +32,16 @@
     "mana_cost": 3
   },
   "boundary": {
-    "min": [-1, -1, -1],
-    "max": [1, 2, 1]
+    "min": [
+      -1,
+      -1,
+      -1
+    ],
+    "max": [
+      1,
+      2,
+      1
+    ]
   },
   "blueprint": {
     "id": "build:clear_and_build",

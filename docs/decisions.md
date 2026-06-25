@@ -125,6 +125,26 @@
 
 **为什么失败分析器用任务 anchor 推断殖民地而非在任务中存 colonyId？** anchor 是任务参数中已存在的位置信息，从 anchor 反向查 BuildingSavedData 可获取殖民地。不修改 TaskRequest/WorkItem 数据模型，零侵入。对于无 anchor 的任务（如 EventDrivenTaskSource 的触发任务），分析器跳过恢复并记录警告。
 
----
+## 任务系统重构 v2（2026-06-25）
 
-维护规则：新增决策追加到对应分类末尾。推翻的决策不删除，在行末标注"(已推翻: 日期 — 原因)"。
+**为什么 NPC 队列存 NpcTaskPackage 而非裸 AtomicOp？** 裸 op 没有立场位置（stance）。NPC 执行到一半被紧急任务打断后，手里只剩一串不知道属于哪个位置的 op，无法正确导航回原位。NpcTaskPackage 是自包含工作单元：source + sequence + stance + priority，包切换时 NPC 自动导航到新 stance。
+
+**为什么用包挂起栈 (suspensionStack) 而非简单抢占？** 紧急任务（法杖装配/传送）可能嵌套——NPC 在执行任务包时被卡住传送打断，传送完成后应恢复原任务包继续。挂起栈保存 (package, stepIndex, timestamp)，紧急任务完成后 resumeLatest() 恢复。
+
+**为什么 BuildingTaskPool 只暴露 head task 到全局池？** 之前 BuildingTaskSource.poll() 每 20 tick 遍历建筑列表，对每个建筑取出一个 WorkItem 直接发布到 GlobalTaskPool，不检查建筑是否已有活跃任务。导致一个工作站队列中的 N 个任务同时进入全局池，多个 NPC 同时前往同一建筑。BuildingTaskPool 确保每建筑只有一个 head task 竞争，head 完成后 onHeadCompleted 才 promote 下一个。
+
+**为什么法杖生命周期用显式状态机而非 idle timer？** 旧方案：TaskExecutionSystem 中 60 tick 空闲超时自动归还法杖。问题：NPC 可能在等待资源/魔力恢复，超时误归还法杖导致任务中断。WandLifecycle 显式状态机由 SchedulerSystem 在分配时预留法杖(WandLifecycle.reserve)，任务完成或失败时释放，消除借还循环。
+
+**为什么 GlobalTaskPool 用 TreeSet 而非简单的 List + sort？** TreeSet 维护 assignableSet 的恒定排序（priority desc → createdAt asc → id asc）。状态变更时 add/remove 是 O(log n)，无需每次全量排序。优先旧任务打破平局，保证确定性。
+
+**为什么 SchedulerSystem 从 task→NPC 贪心改为 NPC→task 反向匹配？** 旧方案：遍历 assignable 任务，每个任务找最佳 NPC，第一个匹配的任务就分配——导致高优先级任务"抢"走所有 NPC。新方案：遍历 idle NPC，每个 NPC 找最佳任务——NPC 优先，消除任务间竞争。
+
+## 智能资源调度级联（2026-06-25）
+
+**为什么资源短缺时不直接创建 gather 任务，而是先尝试 synthesize？** 并非所有资源都能直接采集。`stone_bricks` 等合成品只能通过 `production:synthesize` 生产。直接创建 `gather:stone_bricks` 任务会因仓库永远无此物品而永久卡在 AWAITING_RESOURCES。先检查合成配方→有则创建 synthesize 任务→合成缺元素时再由 synthesize executor 抛出 ResourceShortageException→自动级联创建 gather 任务。三级调度链（建筑→合成→采集）让殖民地全自动运作。
+
+**为什么 ResourceShortageHandler 用 @FunctionalInterface 注入而非在 EventDrivenTaskSource 硬编码？** EventDrivenTaskSource 在 core/ 层，不能引用 production 模块的合成配方数据。FunctionalInterface 将合成判断逻辑推迟到 engine 层注入，core 只负责调用，不关心实现细节。EngineBootstrap 在 bootstrap 时设置 handler，形成干净的依赖方向。
+
+**为什么 EventDrivenTaskSource 之前只在测试中实例化？** 早期开发阶段，事件驱动任务生成（ResourceLow→gather, TaskAwaitingResources→gather）仅用于单元测试验证逻辑。生产环境中 BuildingTaskSource 的主动轮询（supplyNodeBuildings）覆盖了节点采集，但资源短缺的被动响应被遗漏。2026-06-25 在 EngineBootstrap 中实例化并注入 handler，补齐生产环境的被动响应链。
+
+**为什么 synthesize/decompose/craft_wand/brew_potion 的 thenRun 中捕 ResourceShortageException 而非让 TaskExecutionSystem 处理？** 这四个操作是异步的（有 channel_ticks 倒计时），实际执行在 `tickAll()` 的 thenRun 回调中，与 TaskExecutionSystem 不在同一调用栈。thenRun 中捕获异常后直接调 `world.taskPool.markAwaitingResources()` 并释放 NPC，层级比 TaskExecutionSystem 更低但逻辑等价——任务进入 AWAITING_RESOURCES 后由 EventDrivenTaskSource 级联创建供应任务。

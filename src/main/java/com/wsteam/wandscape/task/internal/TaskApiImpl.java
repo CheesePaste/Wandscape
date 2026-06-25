@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 
 import com.google.gson.JsonElement;
@@ -17,16 +15,11 @@ import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.system.PlayerManualSource;
 import com.wsteam.wandscape.core.task.TaskRequest;
-import com.wsteam.wandscape.core.task.TaskState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.shared.api.TaskApi;
-import com.wsteam.wandscape.shared.bridge.TypeBridge;
 import com.wsteam.wandscape.shared.data.BlueprintInfo;
 import com.wsteam.wandscape.shared.data.ParamTypeInfo;
-import com.wsteam.wandscape.shared.data.TaskData;
-import com.wsteam.wandscape.shared.data.TaskStatus;
-import com.wsteam.wandscape.shared.data.TaskTemplate;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 /**
@@ -36,9 +29,9 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
  * into the shared API layer. Registered into {@link WandscapeApis}
  * at server startup.
  *
- * <p>Note: core engine uses {@code long} IDs internally; the shared API
- * uses {@link UUID}. This impl converts at the boundary.
+ * @deprecated Use {@link GlobalTaskPool} and {@link PlayerManualSource} directly.
  */
+@Deprecated
 public class TaskApiImpl implements TaskApi {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -52,23 +45,10 @@ public class TaskApiImpl implements TaskApi {
         WandscapeApis.setTaskApi(this);
     }
 
-    // ── Helpers ──
-
-    @Nullable
     private GlobalTaskPool getPool() {
         var world = WandscapeEngine.getWorld();
         return world != null ? world.taskPool : null;
     }
-
-    private static long toLongId(UUID uuid) {
-        return uuid != null ? uuid.getMostSignificantBits() : 0L;
-    }
-
-    private static UUID toUuid(long id) {
-        return new UUID(id, 0);
-    }
-
-    // ── GUI-driven task creation ──
 
     @Override
     public List<BlueprintInfo> getAvailableBlueprints() {
@@ -112,138 +92,6 @@ public class TaskApiImpl implements TaskApi {
         LOGGER.info("[TaskApi] published '{}' → task #{} (priority={}, params={})",
                 blueprintId, taskId, priority, safeParams.size());
 
-        return toUuid(taskId);
-    }
-
-    // ── Existing API implementations (delegate to GlobalTaskPool) ──
-
-    @Override
-    public UUID publishTask(TaskTemplate template, UUID colonyId) {
-        throw new UnsupportedOperationException(
-                "Legacy TaskTemplate publish not yet wired. Use publishTask(String, Map, int) instead.");
-    }
-
-    @Override
-    public boolean approveTask(UUID taskId) {
-        GlobalTaskPool pool = getPool();
-        if (pool == null) return false;
-        pool.approve(toLongId(taskId));
-        return true;
-    }
-
-    @Override
-    public boolean cancelTask(UUID taskId) {
-        GlobalTaskPool pool = getPool();
-        if (pool == null) return false;
-        if (pool.get(toLongId(taskId)) == null) return false;
-        pool.reject(toLongId(taskId));
-        return true;
-    }
-
-    @Override
-    public boolean suspendTask(UUID taskId) {
-        throw new UnsupportedOperationException("Task suspension not yet implemented");
-    }
-
-    @Override
-    public List<TaskData> getTasksByStatus(UUID colonyId, TaskStatus status) {
-        GlobalTaskPool pool = getPool();
-        if (pool == null) return List.of();
-
-        TaskState coreStatus = status != null ? TypeBridge.toTaskState(status) : null;
-        List<com.wsteam.wandscape.core.task.GlobalTask> coreTasks =
-                coreStatus != null ? pool.getByState(coreStatus) : new ArrayList<>(pool.all());
-
-        List<TaskData> result = new ArrayList<>();
-        for (com.wsteam.wandscape.core.task.GlobalTask t : coreTasks) {
-            result.add(fromGlobalTask(t));
-        }
-        return Collections.unmodifiableList(result);
-    }
-
-    @Override
-    public TaskData getTask(UUID taskId) {
-        GlobalTaskPool pool = getPool();
-        if (pool == null) return null;
-        com.wsteam.wandscape.core.task.GlobalTask task = pool.get(toLongId(taskId));
-        return task != null ? fromGlobalTask(task) : null;
-    }
-
-    @Override
-    public UUID enqueueBuildingTask(UUID buildingId, TaskTemplate template) {
-        throw new UnsupportedOperationException(
-                "Building task enqueue not yet wired to TaskApi");
-    }
-
-    @Override
-    public List<UUID> getBuildingQueue(UUID buildingId) {
-        throw new UnsupportedOperationException(
-                "Building queue query not yet wired to TaskApi");
-    }
-
-    @Override
-    public boolean reorderBuildingQueue(UUID buildingId, int fromIndex, int toIndex) {
-        throw new UnsupportedOperationException(
-                "Building queue reorder not yet wired to TaskApi");
-    }
-
-    // ── Internal type bridge ──
-
-    /**
-     * Bridges between core task types and shared data types.
-     */
-    private static TaskData fromGlobalTask(com.wsteam.wandscape.core.task.GlobalTask task) {
-        return new TaskData() {
-            @Override
-            public UUID getTaskId() {
-                return toUuid(task.id);
-            }
-
-            @Override
-            public TaskStatus getStatus() {
-                return TypeBridge.toTaskStatus(task.state);
-            }
-
-            @Override
-            public int getPriority() {
-                return task.priority;
-            }
-
-            @Override
-            public com.wsteam.wandscape.shared.data.BehaviorType getRequiredBehavior() {
-                return com.wsteam.wandscape.shared.data.BehaviorType.BUILDING;
-            }
-
-            @Override
-            public int getRequiredLevel() {
-                return 1;
-            }
-
-            @Override
-            public java.util.List<com.wsteam.wandscape.shared.data.AtomicStep> getSteps() {
-                return List.of();
-            }
-
-            @Override
-            public int getCurrentStepIndex() {
-                return task.stepIndex;
-            }
-
-            @Override
-            public UUID getAssignedNpcId() {
-                return task.assignedNpcId != null ? toUuid(task.assignedNpcId) : null;
-            }
-
-            @Override
-            public UUID getOwnerBuildingId() {
-                return null;
-            }
-
-            @Override
-            public java.util.List<com.wsteam.wandscape.shared.data.InterruptRecord>
-            getInterruptHistory() {
-                return List.of();
-            }
-        };
+        return new UUID(taskId, 0);
     }
 }

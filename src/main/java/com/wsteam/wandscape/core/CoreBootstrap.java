@@ -7,7 +7,9 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.core.op.OpExecutorRegistry;
 import com.wsteam.wandscape.core.system.*;
+import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.core.task.WandLifecycle;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.UUID;
@@ -61,6 +63,12 @@ public final class CoreBootstrap {
         // 4. Create global task pool
         world.taskPool = new GlobalTaskPool(world.eventBus, world.blueprintRegistry, world.colonyResources,
                 config.autoApproveTasks());
+
+        // 4.5 Wand lifecycle tracker
+        world.wandLifecycle = config.wandLifecycle() != null ? config.wandLifecycle() : new WandLifecycle();
+
+        // 4.6 Building task pool (per-building head tracking)
+        world.buildingTaskPool = config.buildingTaskPool() != null ? config.buildingTaskPool() : new BuildingTaskPool();
 
         // 5. Register op executors
         world.opExecutors = new OpExecutorRegistry();

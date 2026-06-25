@@ -45,8 +45,7 @@ class DataDrivenStepsTest {
                 "earth_node", "大地节点", "node",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:lodestone"),
-                1, 2, 0, 2,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                1, 2, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
@@ -79,8 +78,7 @@ class DataDrivenStepsTest {
                         "1,0,0", "minecraft:oak_planks",
                         "0,1,0", "minecraft:glass"
                 ),
-                1, 0, 1, 3,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                1, 0, 1,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
@@ -118,8 +116,7 @@ class DataDrivenStepsTest {
                 "test_missing", "Test Missing", "basic",
                 List.of(off(0, 0, 0), off(1, 0, 0)),
                 Map.of("1,0,0", "minecraft:stone"), // "0,0,0" intentionally missing
-                1, 0, 0, 1,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
@@ -145,8 +142,7 @@ class DataDrivenStepsTest {
                 "test_empty", "Test Empty", "basic",
                 List.of(),
                 Map.of(),
-                0, 0, 0, 0,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                0, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
@@ -231,8 +227,7 @@ class DataDrivenStepsTest {
         BuildingConfig cfg = new BuildingConfig(
                 "test_stairs", "Stairs Test", "basic",
                 List.of(off), mapping,
-                1, 0, 0, 1,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null, null, null  // no boundary, no blueprint ref, no nodeConfig
@@ -256,8 +251,7 @@ class DataDrivenStepsTest {
                 "test_pane", "Pane Test", "basic",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:glass_pane[north=true,south=true,east=false,west=false]"),
-                1, 0, 0, 1,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null, null, null  // no boundary, no blueprint ref, no nodeConfig
@@ -280,8 +274,7 @@ class DataDrivenStepsTest {
                 "test_single", "Test Single", "basic",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:stone"),
-                1, 0, 0, 1,
-                BuildingConfig.ShutdownPenalty.DEFAULT,
+                1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary

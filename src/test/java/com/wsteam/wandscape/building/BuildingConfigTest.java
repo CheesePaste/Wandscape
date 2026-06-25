@@ -26,7 +26,7 @@ class BuildingConfigTest {
         json.addProperty("id", "town_hall");
         json.addProperty("display_name", "Town Hall");
         json.addProperty("category", "basic");
-        // No pattern, block_mapping, shutdown_penalty, queue, unlock_requirement
+        // No pattern, block_mapping, queue, unlock_requirement
 
         BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
 
@@ -38,10 +38,6 @@ class BuildingConfigTest {
         assertEquals(0, cfg.comfort());
         assertEquals(0, cfg.magic());
         assertEquals(0, cfg.wonder());
-        assertEquals(0, cfg.maintenanceCost());
-        assertNotNull(cfg.shutdownPenalty());
-        assertEquals(0.5, cfg.shutdownPenalty().outputReduction());
-        assertEquals(2.0, cfg.shutdownPenalty().timeMultiplier());
         assertNotNull(cfg.queue());
         assertEquals(5, cfg.queue().capacity());
         assertNotNull(cfg.unlockRequirement());
@@ -65,8 +61,6 @@ class BuildingConfigTest {
               "comfort": 2,
               "magic": 3,
               "wonder": 5,
-              "maintenance_cost": 12,
-              "shutdown_penalty": {"output_reduction": 0.5, "time_multiplier": 2.0},
               "queue": {"capacity": 60, "task_types": ["crafting", "ritual"]},
               "unlock_requirement": {"min_comfort": 0, "min_magic": 0, "min_wonder": 15}
             }
@@ -80,7 +74,6 @@ class BuildingConfigTest {
         assertEquals(2, cfg.comfort());
         assertEquals(3, cfg.magic());
         assertEquals(5, cfg.wonder());
-        assertEquals(12, cfg.maintenanceCost());
         assertEquals(60, cfg.queue().capacity());
         assertEquals(List.of("crafting", "ritual"), cfg.queue().taskTypes());
         assertEquals(15, cfg.unlockRequirement().minWonder());
@@ -133,18 +126,6 @@ class BuildingConfigTest {
 
     @Nested
     class DefaultValues {
-        @Test
-        void missingShutdownPenaltyUsesDefault() {
-            JsonObject json = new JsonObject();
-            json.addProperty("id", "test");
-            json.addProperty("display_name", "Test");
-            json.addProperty("category", "basic");
-
-            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
-            assertEquals(0.5, cfg.shutdownPenalty().outputReduction());
-            assertEquals(2.0, cfg.shutdownPenalty().timeMultiplier());
-        }
-
         @Test
         void missingQueueUsesDefault() {
             JsonObject json = new JsonObject();
