@@ -18,9 +18,6 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 import java.util.*;
 
-/**
- * State-driven movement goal for citizen NPCs.
- */
 public class CitizenMoveGoal extends Goal {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -33,14 +30,12 @@ public class CitizenMoveGoal extends Goal {
     private BlockPos[] waypoints;
     private int wpIndex;
     private int stuckTicks;
-
-    // ── Whether the current movement goes via road network ──
     private boolean usingRoad;
 
-    // ── Leisure POI cooldown ──
+    // ── Leisure ──
     private int poiPauseTicks;
 
-    // ── Wander cooldown (IDLE) ──
+    // ── IDLE ──
     private int wanderCooldown;
 
     public CitizenMoveGoal(CitizenEntity citizen, double commuteSpeed, double wanderSpeed) {
@@ -49,8 +44,6 @@ public class CitizenMoveGoal extends Goal {
         this.wanderSpeed = wanderSpeed;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
-
-    // ── Goal contract ──
 
     @Override public boolean canUse() { return citizen.getCurrentState() != null; }
     @Override public boolean canContinueToUse() { return citizen.getCurrentState() != null; }
@@ -75,7 +68,7 @@ public class CitizenMoveGoal extends Goal {
         }
     }
 
-    // ──────────────────────── COMMUTING ────────────────────────
+    // ── COMMUTING ──
 
     private void startCommute() {
         BlockPos target = citizen.getCommuteTarget();
@@ -85,7 +78,8 @@ public class CitizenMoveGoal extends Goal {
 
         usingRoad = planRoute(target);
         logNav("COMMUTING", target);
-        moveToCurrentWaypointOr(target, commuteSpeed);
+        wpIndex = 1;                           // skip wp[0] (= start pos)
+        moveToNext(commuteSpeed, target);
     }
 
     private void tickCommute() {
@@ -94,24 +88,24 @@ public class CitizenMoveGoal extends Goal {
 
         PathNavigation nav = citizen.getNavigation();
         BlockPos pos = citizen.blockPosition();
-        BlockPos currentWp = getCurrentWaypointOr(target);
+        BlockPos wp = currentTarget();
 
-        if (pos.distSqr(currentWp) < 2.25) {
+        // Arrived at current waypoint?
+        if (wp != null && pos.distSqr(wp) < 2.25) {
+            wpIndex++;
             if (waypoints != null && wpIndex < waypoints.length) {
-                wpIndex++;
-                if (wpIndex >= waypoints.length) { onCommuteArrived(); return; }
-                moveToCurrentWaypointOr(target, commuteSpeed);
-                stuckTicks = 0;
-            } else { onCommuteArrived(); return; }
+                moveToNext(commuteSpeed, target);
+                stuckTicks = 0; return;
+            }
+            onCommuteArrived(); return;
         }
 
         if (nav.isDone()) {
             if (++stuckTicks > 40) {
-                stuckTicks = 0; usingRoad = planRoute(target);
-                // Log on replan
+                stuckTicks = 0; usingRoad = planRoute(target); wpIndex = 1;
                 logNav("COMMUTING*", target);
             }
-            moveToCurrentWaypointOr(target, commuteSpeed);
+            moveToNext(commuteSpeed, target);
         } else { stuckTicks = Math.max(0, stuckTicks - 1); }
     }
 
@@ -121,7 +115,7 @@ public class CitizenMoveGoal extends Goal {
         waypoints = null; wpIndex = 0;
     }
 
-    // ──────────────────────── LEISURE ────────────────────────
+    // ── LEISURE ──
 
     private void startLeisure() {
         waypoints = null; wpIndex = 0; stuckTicks = 0; poiPauseTicks = 0;
@@ -134,29 +128,30 @@ public class CitizenMoveGoal extends Goal {
 
         if (poiPauseTicks > 0) { poiPauseTicks--; nav.stop(); return; }
 
-        BlockPos currentWp = getCurrentWaypointOr(null);
-        if (currentWp == null) { pickNextPoiAndGo(); return; }
+        BlockPos wp = currentTarget();
+        if (wp == null) { pickNextPoiAndGo(); return; }
 
-        if (pos.distSqr(currentWp) < 3.0) {
+        // ── Waypoint advancement ──
+        if (pos.distSqr(wp) < 2.25) {
+            if (waypoints != null && wpIndex < waypoints.length) {
+                wpIndex++;
+                if (wpIndex < waypoints.length) {
+                    moveToNext(wanderSpeed, wp);
+                    stuckTicks = 0; return;
+                }
+            }
+            // End of waypoint chain → arrived at POI
             nav.stop(); waypoints = null; wpIndex = 0;
             poiPauseTicks = 100 + citizen.getRandom().nextInt(200);
             return;
         }
 
-        if (waypoints != null && wpIndex < waypoints.length && pos.distSqr(currentWp) < 2.25) {
-            wpIndex++;
-            if (wpIndex >= waypoints.length) {
-                nav.stop(); waypoints = null; wpIndex = 0;
-                poiPauseTicks = 100 + citizen.getRandom().nextInt(200);
-                return;
-            }
-            moveToCurrentWaypointOr(currentWp, wanderSpeed);
-            stuckTicks = 0;
-        }
-
+        // ── Stuck recovery ──
         if (nav.isDone()) {
-            if (++stuckTicks > 60) { stuckTicks = 0; pickNextPoiAndGo(); return; }
-            moveToCurrentWaypointOr(currentWp, wanderSpeed);
+            if (++stuckTicks > 60) {
+                stuckTicks = 0; pickNextPoiAndGo(); return;
+            }
+            moveToNext(wanderSpeed, wp);
         } else { stuckTicks = Math.max(0, stuckTicks - 1); }
     }
 
@@ -188,10 +183,11 @@ public class CitizenMoveGoal extends Goal {
 
         usingRoad = planRoute(target);
         logNav("LEISURE", target);
-        moveToCurrentWaypointOr(target, wanderSpeed);
+        wpIndex = 1;                           // skip wp[0] (= start pos)
+        moveToNext(wanderSpeed, target);
     }
 
-    // ──────────────────────── IDLE ────────────────────────
+    // ── IDLE ──
 
     private void startWander() { wanderCooldown = 0; }
 
@@ -218,13 +214,11 @@ public class CitizenMoveGoal extends Goal {
         }
     }
 
-    // ──────────────────────── Road routing ────────────────────────
+    // ── Road routing ──
 
-    /** Try to plan a road-network waypoint chain. Returns true if successful. */
     private boolean planRoute(BlockPos target) {
         RoadApi roadApi = getRoadApiSilently();
         if (roadApi == null) return false;
-
         RoadNetwork network = roadApi.getNetwork(null);
         if (network == null || network.isEmpty()) return false;
 
@@ -233,7 +227,6 @@ public class CitizenMoveGoal extends Goal {
                 network,
                 new PathPoint(from.getX(), from.getY(), from.getZ()),
                 new PathPoint(target.getX(), target.getY(), target.getZ()));
-
         if (segments.isEmpty()) return false;
 
         List<BlockPos> wps = new ArrayList<>();
@@ -245,13 +238,35 @@ public class CitizenMoveGoal extends Goal {
         return true;
     }
 
-    // ──────────────────────── Logging ────────────────────────
+    // ── Nav helpers ──
+
+    /** Start navigating toward next waypoint (or fallback). Only called on transition. */
+    private void moveToNext(double speed, BlockPos fallback) {
+        BlockPos wp = currentTarget(fallback);
+        BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
+        if (ground != null) wp = ground;
+        citizen.getNavigation().moveTo(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5, speed);
+    }
+
+    /** The current or next waypoint, or the fallback. */
+    @Nullable
+    private BlockPos currentTarget() {
+        if (waypoints != null && wpIndex < waypoints.length) return waypoints[wpIndex];
+        return null;
+    }
+
+    private BlockPos currentTarget(BlockPos fallback) {
+        BlockPos wp = currentTarget();
+        return wp != null ? wp : fallback;
+    }
+
+    // ── Logging ──
 
     private void logNav(String label, BlockPos target) {
         String name = citizen.getCitizenName();
         BlockPos from = citizen.blockPosition();
         if (usingRoad && waypoints != null) {
-            LOGGER.info("[Citizen] {} {} ROAD → {} ({} waypoints, {}→{})",
+            LOGGER.info("[Citizen] {} {} ROAD → {} ({} wps, {}→{})",
                     name, label, target.toShortString(), waypoints.length,
                     from.toShortString(), target.toShortString());
         } else {
@@ -261,22 +276,7 @@ public class CitizenMoveGoal extends Goal {
         }
     }
 
-    // ──────────────────────── Helpers ────────────────────────
-
-    private void moveToCurrentWaypointOr(BlockPos fallback, double speed) {
-        BlockPos wp = getCurrentWaypointOr(fallback);
-        // Road waypoints use road-surface Y. Vanilla PathNavigation expects
-        // a walkable block-top (solid under, air above). Snap if needed.
-        BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
-        if (ground != null) wp = ground;
-        citizen.getNavigation().moveTo(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5, speed);
-    }
-
-    @Nullable
-    private BlockPos getCurrentWaypointOr(@Nullable BlockPos fallback) {
-        if (waypoints != null && wpIndex < waypoints.length) return waypoints[wpIndex];
-        return fallback;
-    }
+    // ── Helpers ──
 
     @Nullable private static RoadApi getRoadApiSilently() {
         try { return WandscapeApis.getRoadApi(); }
