@@ -127,29 +127,39 @@ public class CitizenManager {
 
             if (sc.storedState() == CitizenState.SLEEPING
                     && dayTime >= T_WAKE_UP && dayTime < T_WORK_START) {
-                // Morning: spawn at home/bed, commute to workplace
                 spawnAt = sc.home() != null ? sc.home() : sc.bed();
                 commuteTo = sc.workplace() != null ? sc.workplace() : spawnAt;
             }
             if (sc.storedState() == CitizenState.WORKING
                     && dayTime >= T_HOME_COMMUTE && dayTime < T_LEISURE) {
-                // Evening: spawn at workplace, commute home
                 spawnAt = sc.workplace();
                 commuteTo = sc.home() != null ? sc.home() : sc.bed();
             }
+            if (sc.storedState() == CitizenState.IDLE
+                    && dayTime >= T_LEISURE && dayTime < T_SLEEP) {
+                // IDLER out for evening leisure
+                spawnAt = sc.home() != null ? sc.home() : sc.bed();
+                commuteTo = null; // leisure, no commute target
+            }
 
-            if (spawnAt != null && commuteTo != null) {
+            if (spawnAt != null) {
                 BlockPos ground = findGround(level, spawnAt.offset(
                         random.nextInt(4) - 2, 0, random.nextInt(4) - 2));
                 CitizenEntity c = spawnEntity(level, ground, sc);
                 if (c != null) {
                     UUID newId = c.getUUID();
                     transferAssignments(id, newId, sc);
-                    c.applyState(CitizenState.COMMUTING);
-                    c.setCommuteTarget(commuteTo);
+                    if (commuteTo != null) {
+                        c.applyState(CitizenState.COMMUTING);
+                        c.setCommuteTarget(commuteTo);
+                        LOGGER.info("[Citizen] {} respawned ({}→COMMUTING, target={})",
+                                sc.name(), sc.storedState().getDisplayName(), commuteTo);
+                    } else {
+                        transitionTo(newId, c, CitizenState.LEISURE);
+                        LOGGER.info("[Citizen] {} respawned ({}→LEISURE)",
+                                sc.name(), sc.storedState().getDisplayName());
+                    }
                     it.remove();
-                    LOGGER.info("[Citizen] {} respawned ({}→COMMUTING, target={})",
-                            sc.name(), sc.storedState().getDisplayName(), commuteTo);
                 }
             }
         }
@@ -218,12 +228,11 @@ public class CitizenManager {
         // ── Workday ──
         if (dayTime >= T_WORK_START && dayTime < T_HOME_COMMUTE) {
             if (cur == CitizenState.COMMUTING) return; // en route
-            // Citizens with a workplace → store as WORKING (despawn)
             if (workplaceAssignments.containsKey(id)) {
                 storeAndDespawn(id, c, CitizenState.WORKING);
-                return;
+            } else {
+                storeAndDespawn(id, c, CitizenState.IDLE);
             }
-            // No workplace = IDLER → stay visible (IDLE/LEISURE = fine)
             return;
         }
 
@@ -404,24 +413,22 @@ public class CitizenManager {
                     if (bed != null) bedAssignments.put(cid, bed);
                 }
 
-                // ── Initial state: always visible (IDLE). Tick loop transitions
-                //     according to schedule next frame. No immediate storeAndDespawn. ──
+                // ── Always store immediately. Tick loop respawns at the right
+                //     schedule window. Only COMMUTING/LEISURE are visible. ──
                 long dayTime = level.getDayTime() % 24000;
-                if (dayTime >= T_SLEEP || dayTime < T_WAKE_UP) {
-                    // Night → spawn as COMMUTING toward bed so they walk home first
-                    c.applyState(CitizenState.COMMUTING);
-                    c.setCommuteTarget(home != null ? home : bedAssignments.get(cid));
-                } else if (dayTime >= T_HOME_COMMUTE && dayTime < T_LEISURE) {
-                    // Evening commute window → COMMUTING home
-                    c.applyState(CitizenState.COMMUTING);
-                    c.setCommuteTarget(home != null ? home : bedAssignments.get(cid));
-                } else {
-                    // Daytime: always IDLE/LEISURE visible. Tick loop will store
-                    // to WORKING once commute arrives (or immediately for IDLERs).
+                if (dayTime >= T_LEISURE && dayTime < T_SLEEP) {
+                    // Right in the visible window → spawn as LEISURE
                     BlockPos anchor = home != null ? home : bedAssignments.get(cid);
-                    c.applyState(CitizenState.IDLE);
+                    c.applyState(CitizenState.LEISURE);
                     c.setWanderAnchor(anchor);
-                    c.setWanderRadius(10);
+                    c.setWanderRadius(12);
+                    c.setPoiList(cachedPoiList);
+                } else if (dayTime >= T_SLEEP || dayTime < T_WAKE_UP) {
+                    storeAndDespawn(cid, c, CitizenState.SLEEPING);
+                } else if (workplace != null) {
+                    storeAndDespawn(cid, c, CitizenState.WORKING);
+                } else {
+                    storeAndDespawn(cid, c, CitizenState.IDLE);
                 }
             }
 

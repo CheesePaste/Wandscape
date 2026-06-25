@@ -231,11 +231,19 @@ public class CitizenMoveGoal extends Goal {
 
         List<BlockPos> wps = new ArrayList<>();
         RouteSegment first = segments.get(0);
-        wps.add(new BlockPos((int) first.fromX(), (int) first.fromY(), (int) first.fromZ()));
+        wps.add(jitter(new BlockPos((int) first.fromX(), (int) first.fromY(), (int) first.fromZ())));
         for (RouteSegment seg : segments)
-            wps.add(new BlockPos((int) seg.toX(), (int) seg.toY(), (int) seg.toZ()));
+            wps.add(jitter(new BlockPos((int) seg.toX(), (int) seg.toY(), (int) seg.toZ())));
         waypoints = wps.toArray(new BlockPos[0]);
         return true;
+    }
+
+    /** Deterministic ±0–1 XZ offset so citizens don't walk on exactly the same path. */
+    private BlockPos jitter(BlockPos raw) {
+        long seed = citizen.getUUID().hashCode() + raw.hashCode();
+        int dx = (int) ((seed & 3) - 1);         // -1, 0, or +1
+        int dz = (int) (((seed >> 16) & 3) - 1); // -1, 0, or +1
+        return raw.offset(dx, 0, dz);
     }
 
     // ── Nav helpers ──
