@@ -117,8 +117,12 @@ public class EventDrivenTaskSource implements TaskSource {
     }
 
     private void onTaskAwaitingResources(TaskAwaitingResources e) {
-        ResourceId resource = e.needed().resource();
-        int amount = e.needed().amount();
+        List<ResourceStack> needed = e.needed();
+        if (needed.isEmpty()) return;
+        // Use the first needed resource as the primary target for gather
+        ResourceStack primary = needed.get(0);
+        ResourceId resource = primary.resource();
+        int amount = primary.amount();
         // Try engine-layer handler first (e.g. synthesize instead of gather)
         if (resourceHandler != null
                 && resourceHandler.handle(resource, amount, defaultLocation.get())) {
@@ -158,9 +162,12 @@ public class EventDrivenTaskSource implements TaskSource {
             if (t.state != TaskState.COMPLETED
                     && t.sequence.label().startsWith(labelPrefix)) {
                 for (var op : t.sequence.steps()) {
-                    if (op instanceof AtomicOp.ResourceRequestOp req
-                            && req.requested().resource().equals(resource)) {
-                        inFlight += req.requested().amount();
+                    if (op instanceof AtomicOp.ResourceRequestOp req) {
+                        for (var item : req.items()) {
+                            if (item.resource().equals(resource)) {
+                                inFlight += item.amount();
+                            }
+                        }
                     }
                 }
             }

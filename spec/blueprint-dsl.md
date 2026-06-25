@@ -197,6 +197,8 @@ enqueuer 吃掉世界 A，吐出世界 B 的参数池。解释器只看到世界
 
 ### 2.7 `request_resource` — 请求资源
 
+**单物品格式（向后兼容）：**
+
 ```json
 {
   "type": "request_resource",
@@ -205,7 +207,39 @@ enqueuer 吃掉世界 A，吐出世界 B 的参数池。解释器只看到世界
 }
 ```
 
-→ 生成 `ResourceRequestOp(resource, amount)`
+→ 生成 `ResourceRequestOp([ResourceStack(resource, amount)])`
+
+**多物品格式（推荐，全有或全无原子性）：**
+
+```json
+{
+  "type": "request_resource",
+  "items": [
+    {"resource": "<表达式 → string>", "amount": "<表达式 → int>"},
+    {"resource": "<表达式 → string>", "amount": "<表达式 → int>"}
+  ]
+}
+```
+
+→ 生成 `ResourceRequestOp([ResourceStack(r1, a1), ResourceStack(r2, a2)])`
+
+**动态列表格式（`map_to_items` 表达式，推荐用于动态材料列表）：**
+
+```json
+{
+  "type": "request_resource",
+  "items": {"map_to_items": {
+    "list": "$material_list",
+    "as": "mat",
+    "resource": "$mat",
+    "amount": {"get": ["$material_counts", "$mat"]}
+  }}
+}
+```
+
+→ 运行时对 `$material_list` 的每个元素绑定循环变量 `mat`，分别求值 `resource` 和 `amount`，生成 `ResourceRequestOp([...])`
+
+> **全有或全无语义**：executor 先检查所有物品的仓库库存，全部满足时才统一 reserve → send → commit。任一物品不足则整体失败，不会出现部分物品已发到 NPC 背包的情况。蓝图作者应将所有需要的资源放在一个 `request_resource` 中，而非使用 `parallel` 包裹多个独立的 `request_resource`。
 
 ### 2.8 `emit_event` — 发出事件
 
@@ -606,6 +640,7 @@ public sealed interface ExprNode {
     record Size(ExprNode target) implements ExprNode {}  // list<pos> / list<string> → int
     record Format(ExprNode template, List<ExprNode> args) implements ExprNode {}
     record KeyOf(ExprNode target) implements ExprNode {}  // pos→string via toKey()
+    record MapItems(ExprNode list, String loopVar, ExprNode resource, ExprNode amount) implements ExprNode {}
 }
 ```
 

@@ -124,4 +124,12 @@ public sealed interface ExprNode {
      * {@code {"keyof": "$pos_var"}}
      */
     record KeyOf(ExprNode target) implements ExprNode {}
+
+    /**
+     * Map a list to resource+amount items. JSON:
+     * {@code {"map_to_items": {"list": "$mat_list", "as": "m", "resource": "$m", "amount": {"get": ["$counts", "$m"]}}}}
+     * Evaluates the inner {@code resource} and {@code amount} expressions once
+     * per list element, binding the loop variable ({@code as}).
+     */
+    record MapItems(ExprNode list, String loopVar, ExprNode resource, ExprNode amount) implements ExprNode {}
 }

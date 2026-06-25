@@ -170,7 +170,13 @@ public final class EngineBootstrap {
         // 6. Bootstrap engine
         World world = CoreBootstrap.bootstrap(config);
 
-        // 6a. Wire ritualOps into the world (after bootstrap so world exists)
+        // 6a. Inject core EventBus into WarehouseManager so addResource() emits ResourceFulfilled
+        if (colonyResources instanceof com.wsteam.wandscape.warehouse.WarehouseManager wm) {
+            wm.setEventBus(world.eventBus);
+            LOGGER.info("  WarehouseManager EventBus injected");
+        }
+
+        // 6b. Wire ritualOps into the world (after bootstrap so world exists)
         world.ritualOps = ritualOps;
 
         // 6b. Create EventDrivenTaskSource (event → gather tasks) with synthesize handler

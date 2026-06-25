@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.warehouse;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -10,6 +12,8 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
+import com.wsteam.wandscape.core.boundary.EventBus;
+import com.wsteam.wandscape.core.event.ResourceFulfilled;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -36,8 +40,17 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    /** Core event bus — set by EngineBootstrap after world creation. */
+    @Nullable
+    private EventBus eventBus;
+
     private final Map<ResourceId, Long> lastShortageNotify = new java.util.HashMap<>();
     private static final long SHORTAGE_NOTIFY_COOLDOWN_MS = 10_000;
+
+    /** Set the core event bus (called by EngineBootstrap). */
+    public void setEventBus(EventBus eventBus) {
+        this.eventBus = eventBus;
+    }
 
     // ════════════════════════════════════════════════════════════
     //  WarehouseApi — element operations
@@ -116,6 +129,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     public void insertItems(UUID colonyId, List<ItemStack> stacks) {
         ColonyItemBank bank = getBank();
         if (bank == null) return;
+        Set<String> emitted = new HashSet<>();
         for (ItemStack stack : stacks) {
             if (stack.isEmpty()) continue;
             var rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
@@ -123,6 +137,10 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             CompoundTag nbt = extractNbt(stack);
             ItemKey key = ItemKey.of(rl.toString(), nbt);
             bank.add(colonyId, key, stack.getCount());
+            // Emit ResourceFulfilled once per unique resource type
+            if (eventBus != null && emitted.add(rl.toString())) {
+                eventBus.emit(new ResourceFulfilled(new ResourceId(rl.toString()), stack.getCount()));
+            }
         }
     }
 
@@ -255,14 +273,18 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             bank.addElement(colonyId, elem, amount);
             LOGGER.info("addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.countElement(colonyId, elem));
-            return;
+        } else {
+            ItemKey key = ItemKey.of(resource.id(), null);
+            UUID colonyId = findStorageColony();
+            bank.add(colonyId, key, amount);
+            LOGGER.info("addResource: {} x{} → colony {} warehouse ({} total)",
+                    resource.id(), amount, colonyId, bank.count(colonyId, key));
         }
 
-        ItemKey key = ItemKey.of(resource.id(), null);
-        UUID colonyId = findStorageColony();
-        bank.add(colonyId, key, amount);
-        LOGGER.info("addResource: {} x{} → colony {} warehouse ({} total)",
-                resource.id(), amount, colonyId, bank.count(colonyId, key));
+        // Emit ResourceFulfilled to wake any AWAITING_RESOURCES tasks
+        if (eventBus != null) {
+            eventBus.emit(new ResourceFulfilled(resource, amount));
+        }
     }
 
     // ════════════════════════════════════════════════════════════

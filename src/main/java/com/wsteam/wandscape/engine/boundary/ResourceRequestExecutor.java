@@ -21,6 +21,7 @@ import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
@@ -33,8 +34,13 @@ import java.util.concurrent.CompletableFuture;
  * Executes {@link AtomicOp.ResourceRequestOp} by starting item transport
  * from the colony warehouse to the NPC.
  *
- * <p>Items are launched 1 per tick (staggered) for a visual stream effect.
- * The returned future completes when ALL items have arrived and inventory
+ * <p><b>All-or-nothing semantics:</b> every item in the request is checked
+ * against the warehouse before any is reserved. If any item is short, the
+ * entire request fails — no partial items leak into the NPC inventory.
+ *
+ * <p><b>Staggered launch:</b> the first item launches immediately; subsequent
+ * items launch one per {@link #STAGGER_TICKS} ticks for a visual stream effect.
+ * The returned future completes when ALL transports have arrived and inventory
  * has been credited.
  *
  * <p>On resource shortage throws {@link ResourceShortageException}
@@ -50,20 +56,42 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
     /** Ticks between staggered item launches (visual stream spacing). */
     private static final int STAGGER_TICKS = 5;
 
-    /** Pending staggered launches — one per tick. */
+    /** Pending batches — driven by {@link #tickAll} each MC tick. */
     private final List<PendingBatch> batches = new ArrayList<>();
 
-    private record PendingBatch(CompletableFuture<Void> doneFuture,
-                                int launchCountdown, // ticks until next send()
-                                int itemsRemaining,  // how many yet to launch
-                                List<CompletableFuture<Void>> inFlight, // completed send() futures
-                                ResourceStack requested,
-                                int shortfall,      // amount being transported (may be < requested.amount())
-                                ColonyResourceAccess resources,
-                                long npcId, World world,
-                                BlockPos from, BlockPos to,
-                                net.minecraft.world.level.Level level,
-                                List<RouteSegment> route) {}
+    /**
+     * A single item-entity to launch in the staggered sequence.
+     * Each resource stack of N items becomes N individual launch entries.
+     */
+    private record LaunchEntry(ItemKey key, BlockPos from, BlockPos to,
+                               Level level, long npcId, List<RouteSegment> route) {}
+
+    private static final class PendingBatch {
+        final CompletableFuture<Void> doneFuture;
+        int launchCountdown;
+        final List<LaunchEntry> remaining;   // items yet to launch
+        final List<CompletableFuture<Void>> inFlight; // send() futures
+        final List<ResourceStack> needs;     // reserved resources (for rollback)
+        final ColonyResourceAccess resources;
+        final long npcId;
+        final World world;
+        final int totalItems;                // total items in this batch (for logging)
+
+        PendingBatch(CompletableFuture<Void> doneFuture, int launchCountdown,
+                     List<LaunchEntry> remaining, List<CompletableFuture<Void>> inFlight,
+                     List<ResourceStack> needs, ColonyResourceAccess resources,
+                     long npcId, World world, int totalItems) {
+            this.doneFuture = doneFuture;
+            this.launchCountdown = launchCountdown;
+            this.remaining = remaining;
+            this.inFlight = inFlight;
+            this.needs = needs;
+            this.resources = resources;
+            this.npcId = npcId;
+            this.world = world;
+            this.totalItems = totalItems;
+        }
+    }
 
     public ResourceRequestExecutor(ItemTransportManager transporter) {
         this.transporter = transporter;
@@ -76,113 +104,129 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
     @Override
     public CompletableFuture<Void> execute(AtomicOp.ResourceRequestOp op, World world, long npcId) {
-        ResourceStack requested = op.requested();
+        List<ResourceStack> items = op.items();
         ColonyResourceAccess resources = world.colonyResources;
 
-        // ── 1. Check NPC inventory first — only request shortfall from warehouse ──
+        // ── 1. Compute shortfalls (NPC inventory offsets) ──
         Inventory inv = world.get(npcId, Inventory.class);
-        int alreadyHas = inv != null ? inv.count(requested.resource()) : 0;
-        int shortfall = requested.amount() - alreadyHas;
+        List<ResourceStack> needs = new ArrayList<>();
+        for (ResourceStack item : items) {
+            int alreadyHas = inv != null ? inv.count(item.resource()) : 0;
+            int shortfall = item.amount() - alreadyHas;
+            if (shortfall > 0) {
+                needs.add(item.withAmount(shortfall));
+            }
+        }
 
-        if (shortfall <= 0) {
-            // Inventory already satisfies the request — nothing to do
-            LOGGER.debug("[ResourceReq] NPC {} already has {} x{} (requested {}), skipping warehouse",
-                    npcId, alreadyHas, requested.resource().id(), requested.amount());
+        if (needs.isEmpty()) {
+            LOGGER.debug("[ResourceReq] NPC {} already has all {} items, skipping warehouse",
+                    npcId, items.size());
             return CompletableFuture.completedFuture(null);
         }
 
-        ResourceStack warehouseRequest = requested.withAmount(shortfall);
-
-        // ── 2. Check warehouse stock & reserve the shortfall ──
-        if (!resources.hasEnough(warehouseRequest.resource(), warehouseRequest.amount())) {
-            return CompletableFuture.failedFuture(new ResourceShortageException(requested));
-        }
-        if (!resources.reserve(warehouseRequest.resource(), warehouseRequest.amount())) {
-            return CompletableFuture.failedFuture(new ResourceShortageException(requested));
+        // ── 2. All-or-nothing check: verify ALL warehouse stock before reserving any ──
+        for (ResourceStack need : needs) {
+            if (!resources.hasEnough(need.resource(), need.amount())) {
+                return CompletableFuture.failedFuture(new ResourceShortageException(items));
+            }
         }
 
-        // ── 2. Resolve positions ──
+        // ── 3. Reserve ALL ──
+        for (ResourceStack need : needs) {
+            if (!resources.reserve(need.resource(), need.amount())) {
+                for (int j = 0; j < needs.indexOf(need); j++) {
+                    resources.release(needs.get(j).resource(), needs.get(j).amount());
+                }
+                return CompletableFuture.failedFuture(new ResourceShortageException(items));
+            }
+        }
+
+        // ── 4. Resolve positions ──
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) {
-            resources.release(warehouseRequest.resource(), warehouseRequest.amount());
+            for (ResourceStack need : needs) {
+                resources.release(need.resource(), need.amount());
+            }
             return CompletableFuture.failedFuture(
                     new IllegalStateException("[ResourceReq] NPC " + npcId + " not found"));
         }
         UUID colonyId = resolveColonyId(npc, world);
         BlockPos warehousePos = findNearestStorage(colonyId, npc.blockPosition());
         if (warehousePos == null) {
-            resources.release(warehouseRequest.resource(), warehouseRequest.amount());
+            for (ResourceStack need : needs) {
+                resources.release(need.resource(), need.amount());
+            }
             return CompletableFuture.failedFuture(
                     new IllegalStateException("[ResourceReq] no storage for colony " + colonyId));
         }
 
         BlockPos npcPos = npc.blockPosition();
+        Level level = npc.level();
         List<RouteSegment> route = planRoute(colonyId, warehousePos, npcPos);
 
-        // ── 3. Launch items with stagger (shortfall count, not full task amount) ──
+        // ── 5. Build flat launch entry list (one entry per item-entity) ──
+        List<LaunchEntry> entries = new ArrayList<>();
+        for (ResourceStack need : needs) {
+            ItemKey key = ItemKey.of(need.resource().id(), null);
+            for (int i = 0; i < need.amount(); i++) {
+                entries.add(new LaunchEntry(key, warehousePos, npcPos, level, npcId, route));
+            }
+        }
+
+        int totalItems = entries.size();
         CompletableFuture<Void> doneFuture = new CompletableFuture<>();
         List<CompletableFuture<Void>> inFlight = new ArrayList<>();
 
-        String itemId = requested.resource().id();
-        ItemKey key = ItemKey.of(itemId, null);
-        inFlight.add(transporter.send(key, warehousePos, npcPos, npc.level(), npcId, route));
+        // ── 6. Launch first item immediately ──
+        LaunchEntry first = entries.remove(0);
+        inFlight.add(launch(first));
 
-        int remaining = shortfall - 1;
-        if (remaining > 0) {
-            batches.add(new PendingBatch(doneFuture,
-                    STAGGER_TICKS,
-                    remaining, inFlight,
-                    requested, shortfall, resources, npcId, world,
-                    warehousePos, npcPos, npc.level(), route));
+        // ── 7. Queue remaining for staggered launch ──
+        int remainingCount = entries.size();
+        if (remainingCount > 0) {
+            batches.add(new PendingBatch(doneFuture, STAGGER_TICKS,
+                    entries, inFlight, List.copyOf(needs),
+                    resources, npcId, world, totalItems));
         } else {
-            // Only 1 item — no staggering needed, complete when it arrives
-            inFlight.get(0).thenRun(() -> finish(doneFuture, requested, resources, world, npcId));
+            // Only 1 item — complete when it arrives
+            inFlight.get(0).thenRun(() ->
+                    finish(doneFuture, needs, resources, world, npcId));
         }
 
-        LOGGER.info("[ResourceReq] NPC {} requesting {} x {} ({} staggered, {} already in inv)",
-                npcId, shortfall, itemId, remaining, alreadyHas);
+        LOGGER.info("[ResourceReq] NPC {} requesting {} items ({} types, {} of {} staggered)",
+                npcId, totalItems, needs.size(),
+                remainingCount, totalItems);
         return doneFuture;
     }
 
-    /** Called every MC tick. Decrements counters, launches items, checks completion. */
+    /** Called every MC tick. Decrements counters, launches next item, checks completion. */
     public void tickAll() {
         if (batches.isEmpty()) return;
 
         for (int i = 0; i < batches.size(); i++) {
             PendingBatch b = batches.get(i);
-            int cd = b.launchCountdown() - 1;
+            int cd = b.launchCountdown - 1;
 
-            if (cd <= 0 && b.itemsRemaining() > 0) {
-                // Launch one more item now
-                String itemId = b.requested().resource().id();
-                ItemKey key = ItemKey.of(itemId, null);
-                b.inFlight().add(transporter.send(
-                        key, b.from(), b.to(), b.level(), -1, b.route()));
+            if (cd <= 0 && !b.remaining.isEmpty()) {
+                // Launch next item
+                LaunchEntry next = b.remaining.remove(0);
+                b.inFlight.add(launch(next));
 
-                int newRemaining = b.itemsRemaining() - 1;
-                if (newRemaining > 0) {
-                    batches.set(i, new PendingBatch(b.doneFuture(),
-                            STAGGER_TICKS, newRemaining,
-                            b.inFlight(), b.requested(), b.shortfall(),
-                            b.resources(), b.npcId(), b.world(), b.from(), b.to(),
-                            b.level(), b.route()));
+                int left = b.remaining.size();
+                if (left > 0) {
+                    b.launchCountdown = STAGGER_TICKS;
                 } else {
-                    // All items launched — wait for all to arrive
+                    // All launched — wait for all to arrive
                     batches.remove(i);
                     i--;
-                    CompletableFuture.allOf(b.inFlight().toArray(new CompletableFuture[0]))
-                            .thenRun(() -> finish(b.doneFuture(), b.requested(),
-                                    b.resources(), b.world(), b.npcId()));
+                    CompletableFuture.allOf(b.inFlight.toArray(new CompletableFuture[0]))
+                            .thenRun(() -> finish(b.doneFuture, b.needs,
+                                    b.resources, b.world, b.npcId));
                     LOGGER.debug("[ResourceReq] all {} items launched, awaiting arrivals",
-                            b.inFlight().size());
+                            b.totalItems);
                 }
-            } else if (b.itemsRemaining() > 0) {
-                // Still counting down
-                batches.set(i, new PendingBatch(b.doneFuture(),
-                        cd, b.itemsRemaining(), b.inFlight(),
-                        b.requested(), b.shortfall(),
-                        b.resources(), b.npcId(), b.world(),
-                        b.from(), b.to(), b.level(), b.route()));
+            } else if (!b.remaining.isEmpty()) {
+                b.launchCountdown = cd;
             }
         }
     }
@@ -190,56 +234,62 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
     public boolean hasPendingBatches() { return !batches.isEmpty(); }
 
     /**
-     * Cancel all pending batches for a dead/despawned NPC and release their
-     * warehouse reservations. Items were reserved but never consumed, so
-     * just releasing is correct — no items need to be returned to the bank.
+     * Cancel pending batches for a dead/despawned NPC and release
+     * warehouse reservations. Items were reserved but never consumed,
+     * so just releasing is correct.
      */
     public void cancelForNpc(long npcId) {
         var toRemove = new ArrayList<PendingBatch>();
         for (PendingBatch b : batches) {
-            if (b.npcId() == npcId) toRemove.add(b);
+            if (b.npcId == npcId) toRemove.add(b);
         }
         if (toRemove.isEmpty()) return;
 
         for (PendingBatch b : toRemove) {
-            b.resources().release(b.requested().resource(), b.shortfall());
-            for (CompletableFuture<Void> f : b.inFlight()) {
+            for (ResourceStack rs : b.needs) {
+                b.resources.release(rs.resource(), rs.amount());
+            }
+            for (CompletableFuture<Void> f : b.inFlight) {
                 f.cancel(false);
             }
-            b.doneFuture().cancel(false);
-            LOGGER.info("[ResourceReq] cancelForNpc npc={} — released reservation {} x{}",
-                    npcId, b.requested().resource().id(), b.shortfall());
+            b.doneFuture.cancel(false);
+            LOGGER.info("[ResourceReq] cancelForNpc npc={} — released {} resource reservations",
+                    npcId, b.needs.size());
         }
         batches.removeAll(toRemove);
     }
 
-    private void finish(CompletableFuture<Void> doneFuture, ResourceStack requested,
+    private void finish(CompletableFuture<Void> doneFuture, List<ResourceStack> needs,
                         ColonyResourceAccess resources, World world, long npcId) {
-        // Only credit the shortfall (requested may be the full task amount
-        // but the warehouse only reserved the difference)
         Inventory inv = world.get(npcId, Inventory.class);
-        int alreadyHas = inv != null ? inv.count(requested.resource()) : 0;
-        int toAdd = requested.amount() - alreadyHas;
-        if (toAdd <= 0) {
-            resources.commit(requested.resource(), 0);
-            doneFuture.complete(null);
-            return;
+        for (ResourceStack need : needs) {
+            int alreadyHas = inv != null ? inv.count(need.resource()) : 0;
+            int toAdd = need.amount() - alreadyHas;
+            if (toAdd <= 0) {
+                resources.commit(need.resource(), 0);
+                continue;
+            }
+            ResourceStack shortfallStack = need.withAmount(toAdd);
+            if (inv == null || !inv.add(shortfallStack)) {
+                resources.release(shortfallStack.resource(), shortfallStack.amount());
+                LOGGER.warn("[ResourceReq] NPC {} inventory full for {}, released {}",
+                        npcId, need.resource().id(), shortfallStack.amount());
+            } else {
+                resources.commit(shortfallStack.resource(), shortfallStack.amount());
+                LOGGER.debug("[ResourceReq] NPC {} received {} (had {} before)",
+                        npcId, shortfallStack, alreadyHas);
+            }
         }
-        ResourceStack shortfallStack = requested.withAmount(toAdd);
-        if (inv == null || !inv.add(shortfallStack)) {
-            resources.release(shortfallStack.resource(), shortfallStack.amount());
-            LOGGER.warn("[ResourceReq] NPC {} inventory full, released {}",
-                    npcId, shortfallStack);
-        } else {
-            resources.commit(shortfallStack.resource(), shortfallStack.amount());
-        }
+
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         if (exec != null) {
             exec.state = com.wsteam.wandscape.core.task.ExecutorState.ACTIVE;
         }
-        LOGGER.debug("[ResourceReq] NPC {} received {} x{} (had {} before)",
-                npcId, shortfallStack.amount(), requested.resource().id(), alreadyHas);
         doneFuture.complete(null);
+    }
+
+    private CompletableFuture<Void> launch(LaunchEntry e) {
+        return transporter.send(e.key(), e.from(), e.to(), e.level(), e.npcId(), e.route());
     }
 
     // ── Helpers ──

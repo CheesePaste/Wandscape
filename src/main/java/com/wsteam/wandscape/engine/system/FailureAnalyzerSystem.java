@@ -10,6 +10,7 @@ import com.wsteam.wandscape.core.task.TaskFailureReason;
 import com.wsteam.wandscape.core.task.TaskState;
 import com.wsteam.wandscape.core.types.BehaviourLevel;
 import com.wsteam.wandscape.core.types.BehaviourTag;
+import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -102,9 +103,16 @@ public class FailureAnalyzerSystem implements System {
 
         int awakened = 0;
         for (GlobalTask task : waiting) {
-            if (task.awaitingResource == null) continue;
-            int available = world.colonyResources.available(task.awaitingResource.resource());
-            if (available >= task.awaitingResource.amount()) {
+            if (task.awaitingResource == null || task.awaitingResource.isEmpty()) continue;
+            // All-or-nothing: ALL needed resources must be available
+            boolean allAvailable = true;
+            for (ResourceStack need : task.awaitingResource) {
+                if (world.colonyResources.available(need.resource()) < need.amount()) {
+                    allAvailable = false;
+                    break;
+                }
+            }
+            if (allAvailable) {
                 task.state = TaskState.PENDING_ASSIGN;
                 task.awaitingResource = null;
                 task.schedulerRetryCount = 0;

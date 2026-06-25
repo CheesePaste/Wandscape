@@ -89,8 +89,33 @@ public sealed interface StepNode {
     /**
      * Request resources from colony warehouse. JSON type: {@code "request_resource"}.
      * → {@link com.wsteam.wandscape.core.op.AtomicOp.ResourceRequestOp}
+     *
+     * @param items        static resource+amount entries (may be empty if dynamicItems is set)
+     * @param dynamicItems expression that evaluates to {@code [{resource, amount}, ...]} at interpret time;
+     *                     mutually exclusive with non-empty items
      */
-    record RequestResourceStep(ExprNode resource, ExprNode amount) implements StepNode {}
+    record RequestResourceStep(List<ResourceEntry> items,
+                               @javax.annotation.Nullable ExprNode dynamicItems) implements StepNode {
+        public RequestResourceStep {
+            if (items == null) items = List.of();
+            if (items.isEmpty() && dynamicItems == null) {
+                throw new IllegalArgumentException("RequestResourceStep must have items or dynamicItems");
+            }
+        }
+
+        /** Static items convenience (no dynamic expression). */
+        public RequestResourceStep(List<ResourceEntry> items) {
+            this(items, null);
+        }
+
+        /** Backward-compat: single resource + amount. */
+        public RequestResourceStep(ExprNode resource, ExprNode amount) {
+            this(List.of(new ResourceEntry(resource, amount)), null);
+        }
+
+        /** A single resource+amount entry within a request_resource step. */
+        public record ResourceEntry(ExprNode resource, ExprNode amount) {}
+    }
 
     /**
      * Emit a named event with data. JSON type: {@code "emit_event"}.

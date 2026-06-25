@@ -138,10 +138,31 @@ public final class BlueprintInterpreter {
                 yield List.of(new AtomicOp.RitualOp(ritual, at, params));
             }
             case StepNode.RequestResourceStep s -> {
-                String resource = evalString(s.resource(), context, "request_resource.resource");
-                int amount = evalInt(s.amount(), context, "request_resource.amount");
-                yield List.of(new AtomicOp.ResourceRequestOp(
-                        new ResourceStack(new ResourceId(resource), amount)));
+                List<ResourceStack> stacks;
+                if (s.dynamicItems() != null) {
+                    // Dynamic: evaluate expression → [{resource, amount}, ...]
+                    JsonElement result = evaluate(s.dynamicItems(), context);
+                    if (!result.isJsonArray()) {
+                        throw new BlueprintInterpretException(
+                                "request_resource dynamic items must evaluate to an array, got: " + result);
+                    }
+                    stacks = new ArrayList<>();
+                    for (JsonElement el : result.getAsJsonArray()) {
+                        JsonObject itemObj = el.getAsJsonObject();
+                        String res = itemObj.get("resource").getAsString();
+                        int amt = itemObj.get("amount").getAsInt();
+                        stacks.add(new ResourceStack(new ResourceId(res), amt));
+                    }
+                } else {
+                    // Static items path
+                    stacks = new ArrayList<>();
+                    for (var entry : s.items()) {
+                        String resource = evalString(entry.resource(), context, "request_resource.resource");
+                        int amount = evalInt(entry.amount(), context, "request_resource.amount");
+                        stacks.add(new ResourceStack(new ResourceId(resource), amount));
+                    }
+                }
+                yield List.of(new AtomicOp.ResourceRequestOp(stacks));
             }
             case StepNode.EmitEventStep s -> {
                 String event = evalString(s.event(), context, "emit_event.event");
@@ -370,6 +391,26 @@ public final class BlueprintInterpreter {
             case ExprNode.KeyOf k -> {
                 GridPos pos = evalPos(k.target(), context, "keyof");
                 yield new JsonPrimitive(pos.x() + "," + pos.y() + "," + pos.z());
+            }
+            case ExprNode.MapItems mi -> {
+                JsonElement listEl = evaluate(mi.list(), context);
+                if (!listEl.isJsonArray()) {
+                    throw new BlueprintInterpretException(
+                            "map_to_items: list must evaluate to an array, got: " + listEl);
+                }
+                JsonArray input = listEl.getAsJsonArray();
+                JsonArray output = new JsonArray();
+                for (JsonElement element : input) {
+                    Map<String, JsonElement> inner = new HashMap<>(context);
+                    inner.put(mi.loopVar(), element);
+                    JsonElement resVal = evaluate(mi.resource(), inner);
+                    JsonElement amtVal = evaluate(mi.amount(), inner);
+                    JsonObject item = new JsonObject();
+                    item.add("resource", resVal);
+                    item.add("amount", amtVal);
+                    output.add(item);
+                }
+                yield output;
             }
         };
     }
