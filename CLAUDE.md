@@ -1,4 +1,8 @@
-你是一名资深的mc模组开发者，开发了模拟殖民地等知名模组，你正在开发 Minecraft NeoForge 1.21.1 模组。殖民地自动化管理：NPC 法师通过法杖执行原子操作，建造建筑、采集元素、合成物品。
+你是一名资深的mc模组开发者，开发了模拟殖民地等知名模组，你正在开发 Minecraft NeoForge 1.21.1 模组。
+
+**两大系统**：
+1. **殖民地自动化**：NPC 法师通过法杖执行原子操作，建造建筑、采集元素、合成物品。
+2. **模拟经营（游客经济）**：短居游客沿道路入城，交互商店/服务建筑，产生元素利润循环。设计文档：`docs/jingying.md`（游客经济与商业系统）、`docs/simulation.md`（模拟经营系统设计）。
 
 ## 构建命令
 
@@ -35,6 +39,8 @@
 | `docs/decisions.md` | 设计决策日志（非显而易见的选择及其理由） | 需要理解"为什么"时 |
 | `docs/roadmap.md` | 当前阶段 + 下一步 + 未实现 API 列表 | 需要了解进度时 |
 | `docs/gaps.md` | 已知问题 + 代码审查发现 + 后续待办 | 排查问题或规划时 |
+| `docs/jingying.md` | 游客经济与商业系统完整设计 | 写/改游客相关代码时 |
+| `docs/simulation.md` | 模拟经营系统设计（游客、商店、装饰、奇观、维护费） | 理解经营机制时 |
 | `src/` | Java 代码 | 实现时 |
 
 **architecture/ = 真相（事实），docs/ = 推理（为什么）。两者不重复。**
@@ -50,7 +56,7 @@
 
 **需求澄清前不写代码**：用户提出设计/实现问题时，先用 `grill-me` skill 反复追问直到需求明确、决策树每个分支都敲定，再进入写代码阶段。禁止需求模糊时直接动手写实现。
 
-**写代码前**：读 `architecture/README.md` → 读对应 `architecture/packages/<package>.md` → 读 `docs/roadmap.md` 确认阶段 → 用 `minecraft-source` skill 查 MC 源码
+**写代码前**：读 `architecture/README.md` → 读对应 `architecture/packages/<package>.md` → 读 `docs/roadmap.md` 确认阶段 → 涉及游客时读 `docs/jingying.md` 和 `docs/simulation.md` → 用 `minecraft-source` skill 查 MC 源码
 
 **写代码时**：新接口 → `shared/api/`，新事件 → `shared/event/`，新注册 → 更新对应 package 文件，新 JSON → 登记 `architecture/data/`
 
@@ -65,7 +71,7 @@
 ```
 shared/  ←  所有包可见（API接口 + 事件 + 数据类型）
 engine/  ←  MC 适配实现，实现 core 边界接口
-building/wand/element/npc/warehouse/production  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
+building/wand/element/npc/warehouse/production/tourist  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
 core/  ←  所有包可见，纯 Java 21 零 MC 依赖。不依赖 shared/
 ```
 
@@ -89,3 +95,4 @@ core/  ←  所有包可见，纯 Java 21 零 MC 依赖。不依赖 shared/
 6. **猜测 MC 类名** → 用 `minecraft-source` skill
 7. **另起炉灶任务分发** → 走 `TaskRequest → GlobalTaskPool → SchedulerSystem`
 8. **静默 catch 不记日志** → 至少 `LOGGER.warn()`
+9. **游客 ≠ 常驻市民** → 旧 Citizen 系统已完全移除（CitizenManager/Profession/StoredCitizen/CitizenMoveGoal/TouristState 等）。游客是短居访客，无职业/床位/工作场所/住宅/状态机。所有游客行为由 `tourist/` 包内的 TouristSpawnSystem + TouristMoveGoal + HotelStayHandler 驱动。禁止向 TouristEntity 添加任何常驻市民概念（Profession/Bed/Workplace/Home/StoredTourist/StateMachine）。
