@@ -13,6 +13,7 @@ import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadNode;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.road.client.RoadEditorClientState;
+import com.wsteam.wandscape.road.client.RoadProjectionClientState;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -161,8 +162,26 @@ public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPay
 
     // ── Client handler ──
 
-    /** Handle on client: update editor state with network data. */
+    /** Handle on client: update editor state with network data.
+     *  Routes to RoadProjectionClientState if the client is expecting a road projection sync
+     *  (flag set by V-key handler before sending RoadEditorTogglePacket). */
     public static void handleClient(RoadNetworkSyncPacket packet) {
+        // ── Road projection routing ──
+        if (RoadProjectionClientState.isExpectingSync()) {
+            RoadProjectionClientState.setExpectingSync(false);
+            if (packet.isEnterEdit()) {
+                RoadNetwork network = packet.toNetwork();
+                LOGGER.info("[RoadProjection] Sync received: enterEdit=true, nodes={} edges={}",
+                        network.nodeCount(), network.edgeCount());
+                RoadProjectionClientState.enterProjection(network);
+            } else {
+                LOGGER.info("[RoadProjection] Sync received: enterEdit=false — exit");
+                RoadProjectionClientState.exitProjection();
+            }
+            return;
+        }
+
+        // ── Original road editor path ──
         LOGGER.info("[RoadEditor] RoadNetworkSyncPacket received: enterEdit={} dataSize={}",
                 packet.isEnterEdit(), packet.data.toString().length());
         if (packet.isEnterEdit()) {

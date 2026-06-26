@@ -57,6 +57,7 @@ import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
 import com.wsteam.wandscape.road.network.RoadEditorNetwork;
+import com.wsteam.wandscape.road.network.RoadBatchPublishPacket;
 import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
@@ -330,6 +331,10 @@ public class Wandscape {
                         RoadEditorTogglePacket.TYPE,
                         RoadEditorTogglePacket.STREAM_CODEC,
                         (packet, ctx) -> RoadEditorTogglePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        RoadBatchPublishPacket.TYPE,
+                        RoadBatchPublishPacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadBatchPublishPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         TaskEditorOpenPacket.TYPE,
                         TaskEditorOpenPacket.STREAM_CODEC,
