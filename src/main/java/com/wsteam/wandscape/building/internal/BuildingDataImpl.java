@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.internal;
 import java.util.UUID;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 
 import net.minecraft.core.BlockPos;
 
@@ -55,6 +56,10 @@ class BuildingDataImpl implements BuildingData {
     @Override public int getMagic() { return magic; }
     @Override public int getWonder() { return wonder; }
     @Override public int getQueueCapacity() { return queueCapacity; }
+
+    @Override public MaintenanceCostConfig getMaintenanceCost() { return MaintenanceCostConfig.NONE; }
+    @Override public long getLastMaintenanceTick() { return 0; }
+    @Override public boolean isMaintenancePaid() { return true; }
 
     @Override
     public String toString() {

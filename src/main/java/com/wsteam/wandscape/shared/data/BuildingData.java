@@ -16,4 +16,13 @@ public interface BuildingData {
     int getWonder();
     int getQueueCapacity();
     boolean isStructureIntact();
+
+    /** Snapshot of the building's maintenance cost config. */
+    MaintenanceCostConfig getMaintenanceCost();
+
+    /** Last game tick when maintenance was processed. */
+    long getLastMaintenanceTick();
+
+    /** Whether the last maintenance cycle was paid in full. */
+    boolean isMaintenancePaid();
 }

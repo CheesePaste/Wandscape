@@ -14,6 +14,8 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
+import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -178,11 +180,15 @@ public class BuildingApiImpl implements BuildingApi {
         if (!state.isShutdown()) {
             state.setShutdown(true);
             UUID cid = state.getColonyId();
+            String category = state.getCategory();
             if (cid != null) {
                 Map<String, Integer> counts = colonyActiveCounts.get(cid);
                 if (counts != null) {
                     counts.merge(state.getBuildingTypeId(), -1, Integer::sum);
                 }
+                // Apply category-specific graded shutdown penalties
+                applyShutdownPenalties(sd, state, cid, category);
+                NeoForge.EVENT_BUS.post(new BuildingShutdownEvent(buildingId));
             }
             sd.setDirty();
         }
@@ -204,10 +210,49 @@ public class BuildingApiImpl implements BuildingApi {
                 colonyActiveCounts
                         .computeIfAbsent(cid, k -> new ConcurrentHashMap<>())
                         .merge(state.getBuildingTypeId(), 1, Integer::sum);
+                // Restore contributions that were zeroed on shutdown
+                if (state.isStructureIntact()) {
+                    sd.addBuildingContribution(cid, state.getBuildingTypeId());
+                }
+                NeoForge.EVENT_BUS.post(new BuildingRestartedEvent(buildingId));
             }
             sd.setDirty();
         }
         return true;
+    }
+
+    /**
+     * Apply category-specific penalties when a building is shut down.
+     * Categories that lose their three-value contribution: shop, basic, storage, tavern.
+     * Other categories: effects are handled by their respective systems (C2-C4).
+     */
+    private void applyShutdownPenalties(BuildingSavedData sd, BuildingState state,
+                                        UUID colonyId, String category) {
+        switch (category) {
+            case "shop", "basic", "storage", "tavern":
+                sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
+                LOGGER.info("[Shutdown] {} '{}': contribution zeroed",
+                        category, state.getBuildingId().toString().substring(0, 8));
+                break;
+            case "decoration":
+                // Radiation zeroed — DecorationBonusSystem checks isShutdown()
+                break;
+            case "wonder":
+                // Global effects paused — WonderEffectApplier checks isShutdown()
+                break;
+            case "service":
+                // Still usable but output halved — production module checks
+                break;
+            case "workstation", "node":
+                // Work time +100%, output -50% — production/scheduler checks
+                break;
+            default:
+                // Safe default: zero contribution for unknown categories
+                sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
+                LOGGER.warn("[Shutdown] Unknown category '{}': contribution zeroed",
+                        category);
+                break;
+        }
     }
 
     // ---- Colony stats (three-value system) ----
@@ -579,6 +624,19 @@ public class BuildingApiImpl implements BuildingApi {
         }
         LOGGER.debug("[BldgAPI] sampleWalkableGround({}) → {} samples", buildingId, result.size());
         return result;
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getInteractionTarget(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return null;
+
+        Level level = this.serverLevel;
+        if (level == null) level = getServerLevel();
+        if (level == null) return null;
+
+        return sd.getInteractionTarget(buildingId, level);
     }
 
     @Nullable

@@ -1,10 +1,15 @@
 package com.wsteam.wandscape.building.network;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import com.wsteam.wandscape.shared.data.MageResume;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -13,9 +18,10 @@ import net.minecraft.resources.ResourceLocation;
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
- * Server→client packet: opens the Tavern GUI with building context.
+ * Server→client packet: opens the Tavern GUI with recruitment data.
  */
-public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId)
+public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
+                                List<MageResume> mageResumes)
         implements CustomPacketPayload {
 
     public static final Type<TavernOpenPacket> TYPE =
@@ -49,16 +55,43 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId)
         CompoundTag tag = new CompoundTag();
         tag.putLong("pos", pkt.buildingPos.asLong());
         tag.putUUID("colony", pkt.colonyId);
+        ListTag resumesTag = new ListTag();
+        for (MageResume r : pkt.mageResumes) {
+            CompoundTag rt = new CompoundTag();
+            rt.putString("name", r.touristName());
+            rt.putInt("level", r.level());
+            rt.putInt("maxMana", r.maxMana());
+            rt.putInt("manaRegen", r.manaRegenRate());
+            rt.putInt("spellPower", r.spellPower());
+            rt.putInt("skinVariant", r.skinVariant());
+            rt.putLong("timestamp", r.timestamp());
+            resumesTag.add(rt);
+        }
+        tag.put("resumes", resumesTag);
         buf.writeNbt(tag);
     }
 
     static TavernOpenPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag tag = buf.readNbt();
         if (tag == null) {
-            return new TavernOpenPacket(BlockPos.ZERO, new UUID(0, 0));
+            return new TavernOpenPacket(BlockPos.ZERO, new UUID(0, 0), List.of());
+        }
+        List<MageResume> resumes = new ArrayList<>();
+        ListTag list = tag.getList("resumes", ListTag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag rt = list.getCompound(i);
+            resumes.add(new MageResume(
+                    rt.getString("name"),
+                    rt.getInt("level"),
+                    rt.getInt("maxMana"),
+                    rt.getInt("manaRegen"),
+                    rt.getInt("spellPower"),
+                    rt.getInt("skinVariant"),
+                    rt.getLong("timestamp")));
         }
         return new TavernOpenPacket(
                 BlockPos.of(tag.getLong("pos")),
-                tag.getUUID("colony"));
+                tag.getUUID("colony"),
+                resumes);
     }
 }

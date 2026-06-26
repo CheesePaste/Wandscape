@@ -81,4 +81,13 @@ public interface BuildingApi {
      * @param count number of positions to sample
      */
     List<BlockPos> sampleWalkableGround(UUID buildingId, int count);
+
+    /**
+     * Get the interaction target position for tourist AI navigation.
+     * Returns a walkable ground position inside the building's bounding box.
+     * Tourists navigate here to interact with the building (shop, service, etc.).
+     * Returns the building anchor position as fallback if no walkable ground found.
+     */
+    @Nullable
+    BlockPos getInteractionTarget(UUID buildingId);
 }

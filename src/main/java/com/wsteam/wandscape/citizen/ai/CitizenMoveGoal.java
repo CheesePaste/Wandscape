@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.citizen.ai;
 
 import com.mojang.logging.LogUtils;
-import com.wsteam.wandscape.citizen.CitizenEntity;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.citizen.CitizenState;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -22,7 +22,7 @@ public class CitizenMoveGoal extends Goal {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final CitizenEntity citizen;
+    private final TouristEntity tourist;
     private final double commuteSpeed;
     private final double wanderSpeed;
 
@@ -38,30 +38,30 @@ public class CitizenMoveGoal extends Goal {
     // ── IDLE ──
     private int wanderCooldown;
 
-    public CitizenMoveGoal(CitizenEntity citizen, double commuteSpeed, double wanderSpeed) {
-        this.citizen = citizen;
+    public CitizenMoveGoal(TouristEntity tourist, double commuteSpeed, double wanderSpeed) {
+        this.tourist = tourist;
         this.commuteSpeed = commuteSpeed;
         this.wanderSpeed = wanderSpeed;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
-    @Override public boolean canUse() { return citizen.getCurrentState() != null; }
-    @Override public boolean canContinueToUse() { return citizen.getCurrentState() != null; }
+    @Override public boolean canUse() { return !tourist.isTouristMode() && tourist.getCurrentState() != null; }
+    @Override public boolean canContinueToUse() { return !tourist.isTouristMode() && tourist.getCurrentState() != null; }
 
     @Override
     public void start() {
-        switch (citizen.getCurrentState()) {
+        switch (tourist.getCurrentState()) {
             case COMMUTING -> startCommute();
             case LEISURE -> startLeisure();
             default -> startWander();
         }
     }
 
-    @Override public void stop() { citizen.getNavigation().stop(); waypoints = null; wpIndex = 0; }
+    @Override public void stop() { tourist.getNavigation().stop(); waypoints = null; wpIndex = 0; }
 
     @Override
     public void tick() {
-        switch (citizen.getCurrentState()) {
+        switch (tourist.getCurrentState()) {
             case COMMUTING -> tickCommute();
             case LEISURE -> tickLeisure();
             default -> tickWander();
@@ -71,10 +71,10 @@ public class CitizenMoveGoal extends Goal {
     // ── COMMUTING ──
 
     private void startCommute() {
-        BlockPos target = citizen.getCommuteTarget();
-        if (target == null) { citizen.setCommuteArrived(true); return; }
+        BlockPos target = tourist.getCommuteTarget();
+        if (target == null) { tourist.setCommuteArrived(true); return; }
         waypoints = null; wpIndex = 0; stuckTicks = 0;
-        citizen.setCommuteArrived(false);
+        tourist.setCommuteArrived(false);
 
         usingRoad = planRoute(target);
         logNav("COMMUTING", target);
@@ -83,11 +83,11 @@ public class CitizenMoveGoal extends Goal {
     }
 
     private void tickCommute() {
-        BlockPos target = citizen.getCommuteTarget();
-        if (target == null) { citizen.setCommuteArrived(true); return; }
+        BlockPos target = tourist.getCommuteTarget();
+        if (target == null) { tourist.setCommuteArrived(true); return; }
 
-        PathNavigation nav = citizen.getNavigation();
-        BlockPos pos = citizen.blockPosition();
+        PathNavigation nav = tourist.getNavigation();
+        BlockPos pos = tourist.blockPosition();
         BlockPos wp = currentTarget();
 
         // Arrived at current waypoint?
@@ -110,8 +110,8 @@ public class CitizenMoveGoal extends Goal {
     }
 
     private void onCommuteArrived() {
-        citizen.getNavigation().stop();
-        citizen.setCommuteArrived(true);
+        tourist.getNavigation().stop();
+        tourist.setCommuteArrived(true);
         waypoints = null; wpIndex = 0;
     }
 
@@ -123,8 +123,8 @@ public class CitizenMoveGoal extends Goal {
     }
 
     private void tickLeisure() {
-        PathNavigation nav = citizen.getNavigation();
-        BlockPos pos = citizen.blockPosition();
+        PathNavigation nav = tourist.getNavigation();
+        BlockPos pos = tourist.blockPosition();
 
         if (poiPauseTicks > 0) { poiPauseTicks--; nav.stop(); return; }
 
@@ -142,7 +142,7 @@ public class CitizenMoveGoal extends Goal {
             }
             // End of waypoint chain → arrived at POI
             nav.stop(); waypoints = null; wpIndex = 0;
-            poiPauseTicks = 100 + citizen.getRandom().nextInt(200);
+            poiPauseTicks = 100 + tourist.getRandom().nextInt(200);
             return;
         }
 
@@ -156,24 +156,24 @@ public class CitizenMoveGoal extends Goal {
     }
 
     private void pickNextPoiAndGo() {
-        List<BlockPos> pois = citizen.getPoiList();
+        List<BlockPos> pois = tourist.getPoiList();
         BlockPos rawTarget = null;
 
         if (!pois.isEmpty()) {
-            BlockPos here = citizen.blockPosition();
+            BlockPos here = tourist.blockPosition();
             List<BlockPos> far = new ArrayList<>();
             for (BlockPos p : pois) if (p.distSqr(here) > 25) far.add(p);
             rawTarget = !far.isEmpty()
-                    ? far.get(citizen.getRandom().nextInt(far.size()))
-                    : pois.get(citizen.getRandom().nextInt(pois.size()));
+                    ? far.get(tourist.getRandom().nextInt(far.size()))
+                    : pois.get(tourist.getRandom().nextInt(pois.size()));
         }
         if (rawTarget == null) {
-            BlockPos anchor = citizen.getWanderAnchor();
+            BlockPos anchor = tourist.getWanderAnchor();
             if (anchor != null) {
-                int r = citizen.getWanderRadius();
+                int r = tourist.getWanderRadius();
                 rawTarget = anchor.offset(
-                        citizen.getRandom().nextInt(r * 2 + 1) - r, 0,
-                        citizen.getRandom().nextInt(r * 2 + 1) - r);
+                        tourist.getRandom().nextInt(r * 2 + 1) - r, 0,
+                        tourist.getRandom().nextInt(r * 2 + 1) - r);
             }
         }
         if (rawTarget == null) return;
@@ -192,12 +192,12 @@ public class CitizenMoveGoal extends Goal {
     private void startWander() { wanderCooldown = 0; }
 
     private void tickWander() {
-        BlockPos anchor = citizen.getWanderAnchor();
+        BlockPos anchor = tourist.getWanderAnchor();
         if (anchor == null) return;
-        int radius = citizen.getWanderRadius();
-        BlockPos pos = citizen.blockPosition();
+        int radius = tourist.getWanderRadius();
+        BlockPos pos = tourist.blockPosition();
         int manDist = Math.abs(pos.getX() - anchor.getX()) + Math.abs(pos.getZ() - anchor.getZ());
-        PathNavigation nav = citizen.getNavigation();
+        PathNavigation nav = tourist.getNavigation();
 
         if (manDist > radius + 3) {
             if (nav.isDone())
@@ -205,12 +205,12 @@ public class CitizenMoveGoal extends Goal {
             return;
         }
         if (--wanderCooldown <= 0) {
-            int tx = anchor.getX() + citizen.getRandom().nextInt(radius * 2 + 1) - radius;
-            int tz = anchor.getZ() + citizen.getRandom().nextInt(radius * 2 + 1) - radius;
+            int tx = anchor.getX() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
+            int tz = anchor.getZ() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
             BlockPos g = findGround(tx, anchor.getY(), tz);
             if (g != null)
                 nav.moveTo(g.getX() + 0.5, g.getY(), g.getZ() + 0.5, wanderSpeed);
-            wanderCooldown = 60 + citizen.getRandom().nextInt(120);
+            wanderCooldown = 60 + tourist.getRandom().nextInt(120);
         }
     }
 
@@ -222,7 +222,7 @@ public class CitizenMoveGoal extends Goal {
         RoadNetwork network = roadApi.getNetwork(null);
         if (network == null || network.isEmpty()) return false;
 
-        BlockPos from = citizen.blockPosition();
+        BlockPos from = tourist.blockPosition();
         List<RouteSegment> segments = RoadRouter.plan(
                 network,
                 new PathPoint(from.getX(), from.getY(), from.getZ()),
@@ -240,7 +240,7 @@ public class CitizenMoveGoal extends Goal {
 
     /** Deterministic ±0–1 XZ offset so citizens don't walk on exactly the same path. */
     private BlockPos jitter(BlockPos raw) {
-        long seed = citizen.getUUID().hashCode() + raw.hashCode();
+        long seed = tourist.getUUID().hashCode() + raw.hashCode();
         int dx = (int) ((seed & 3) - 1);         // -1, 0, or +1
         int dz = (int) (((seed >> 16) & 3) - 1); // -1, 0, or +1
         return raw.offset(dx, 0, dz);
@@ -253,7 +253,7 @@ public class CitizenMoveGoal extends Goal {
         BlockPos wp = currentTarget(fallback);
         BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
         if (ground != null) wp = ground;
-        citizen.getNavigation().moveTo(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5, speed);
+        tourist.getNavigation().moveTo(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5, speed);
     }
 
     /** The current or next waypoint, or the fallback. */
@@ -271,8 +271,8 @@ public class CitizenMoveGoal extends Goal {
     // ── Logging ──
 
     private void logNav(String label, BlockPos target) {
-        String name = citizen.getCitizenName();
-        BlockPos from = citizen.blockPosition();
+        String name = tourist.getTouristName();
+        BlockPos from = tourist.blockPosition();
         if (usingRoad && waypoints != null) {
             LOGGER.info("[Citizen] {} {} ROAD → {} ({} wps, {}→{})",
                     name, label, target.toShortString(), waypoints.length,
@@ -293,7 +293,7 @@ public class CitizenMoveGoal extends Goal {
 
     @Nullable
     private BlockPos findGround(int x, int baseY, int z) {
-        var lvl = citizen.level();
+        var lvl = tourist.level();
         BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
                 x, Math.min(lvl.getMaxBuildHeight() - 1, baseY + 5), z);
         while (mp.getY() > lvl.getMinBuildHeight()) {

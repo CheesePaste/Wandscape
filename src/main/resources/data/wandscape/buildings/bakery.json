@@ -1,0 +1,77 @@
+{
+  "id": "bakery",
+  "display_name": "面包店",
+  "category": "shop",
+  "pattern": [
+    [-1,0,-1], [0,0,-1], [1,0,-1],
+    [-1,0, 0], [0,0, 0], [1,0, 0],
+    [-1,0, 1], [0,0, 1], [1,0, 1],
+    [-1,1,-1], [1,1,-1], [-1,1,1], [1,1,1],
+    [-1,1, 0], [1,1, 0],
+    [-1,2,-1], [0,2,-1], [1,2,-1],
+    [-1,2, 0], [0,2, 0], [1,2, 0],
+    [-1,2, 1], [0,2, 1], [1,2, 1]
+  ],
+  "block_mapping": {
+    "0,0,0": "minecraft:barrel",
+    "-1,0,-1": "minecraft:bricks",
+    "0,0,-1": "minecraft:bricks",
+    "1,0,-1": "minecraft:bricks",
+    "-1,0,0": "minecraft:oak_planks",
+    "1,0,0": "minecraft:oak_planks",
+    "-1,0,1": "minecraft:bricks",
+    "0,0,1": "minecraft:bricks",
+    "1,0,1": "minecraft:bricks",
+    "-1,1,-1": "minecraft:oak_log",
+    "1,1,-1": "minecraft:oak_log",
+    "-1,1,1": "minecraft:oak_log",
+    "1,1,1": "minecraft:oak_log",
+    "-1,1,0": "minecraft:oak_planks",
+    "1,1,0": "minecraft:oak_planks",
+    "-1,2,-1": "minecraft:oak_planks",
+    "0,2,-1": "minecraft:oak_planks",
+    "1,2,-1": "minecraft:oak_planks",
+    "-1,2,0": "minecraft:oak_planks",
+    "0,2,0": "minecraft:lantern",
+    "1,2,0": "minecraft:oak_planks",
+    "-1,2,1": "minecraft:oak_planks",
+    "0,2,1": "minecraft:oak_planks",
+    "1,2,1": "minecraft:oak_planks"
+  },
+  "comfort": 2,
+  "magic": 0,
+  "wonder": 1,
+  "maintenance_cost": {
+    "interval_ticks": 12000,
+    "costs": { "earth": 2, "fire": 1 }
+  },
+  "shop": {
+    "goods": [
+      { "item_id": "minecraft:bread", "comfort": 1, "magic": 0, "wonder": 0 },
+      { "item_id": "minecraft:cake", "comfort": 2, "magic": 0, "wonder": 1 }
+    ],
+    "profit_rate": 0.2
+  },
+  "queue": {
+    "capacity": 0,
+    "task_types": []
+  },
+  "interaction_radius": 4,
+  "unlock_requirement": {
+    "min_comfort": 0,
+    "min_magic": 0,
+    "min_wonder": 0
+  },
+  "boundary": {
+    "min": [-1, 0, -1],
+    "max": [1, 2, 1]
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
+  }
+}

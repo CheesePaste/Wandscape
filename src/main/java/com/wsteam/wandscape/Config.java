@@ -166,5 +166,95 @@ public class Config {
             .comment("Whether the player must hold a wand item to enter projection mode")
             .define("projection.requireWand", true);
 
+    // ---- Tourist system ----
+
+    public static final ModConfigSpec.IntValue TOURIST_SPAWN_INTERVAL_TICKS = BUILDER
+            .comment("Interval in ticks between tourist spawn attempts (24000 ticks = 1 MC day)")
+            .defineInRange("tourist.spawnIntervalTicks", 24000, 6000, 72000);
+
+    public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER
+            .comment("Maximum simultaneous tourists per colony")
+            .defineInRange("tourist.maxPerColony", 20, 5, 100);
+
+    public static final ModConfigSpec.IntValue TOURIST_SATISFACTION_THRESHOLD = BUILDER
+            .comment("Satisfaction value at which a tourist leaves satisfied (100 = fully satisfied)")
+            .defineInRange("tourist.satisfactionThreshold", 80, 10, 100);
+
+    public static final ModConfigSpec.IntValue TOURIST_DESPAWN_TIMEOUT_TICKS = BUILDER
+            .comment("Ticks before an idle tourist despawns (36000 ticks = 30 minutes)")
+            .defineInRange("tourist.despawnTimeoutTicks", 36000, 12000, 72000);
+
+    public static final ModConfigSpec.IntValue TOURIST_BASE_SPAWN_COUNT = BUILDER
+            .comment("Base number of tourists spawned each morning")
+            .defineInRange("tourist.baseSpawnCount", 3, 1, 20);
+
+    public static final ModConfigSpec.IntValue TOURIST_EVAL_SCORE_DIVISOR = BUILDER
+            .comment("Colony three-value total divided by this gives extra tourists")
+            .defineInRange("tourist.evalScoreDivisor", 10, 1, 100);
+
+    // ---- Decoration system ----
+
+    public static final ModConfigSpec.DoubleValue DECORATION_BONUS_CAP = BUILDER
+            .comment("Max decoration bonus as fraction of a building's base stat (1.0 = 100%)")
+            .defineInRange("decoration.bonusCap", 1.0, 0.0, 5.0);
+
+    public static final ModConfigSpec.IntValue DECORATION_SCAN_INTERVAL_TICKS = BUILDER
+            .comment("Interval in ticks between decoration radiation recalculations")
+            .defineInRange("decoration.scanIntervalTicks", 200, 40, 1200);
+
+    // ---- Maintenance system ----
+
+    public static final ModConfigSpec.IntValue MAINTENANCE_GRACE_PERIOD_TICKS = BUILDER
+            .comment("Grace period in ticks after building placement before maintenance costs begin")
+            .defineInRange("maintenance.gracePeriodTicks", 24000, 0, 240000);
+
+    public static final ModConfigSpec.IntValue MAINTENANCE_HEARTBEAT_TICKS = BUILDER
+            .comment("Interval in ticks between maintenance system heartbeat scans")
+            .defineInRange("maintenance.heartbeatTicks", 1200, 200, 72000);
+
+    // ---- Shop system ----
+
+    public static final ModConfigSpec.IntValue SHOP_RESTOCH_INTERVAL_TICKS = BUILDER
+            .comment("Interval in ticks between shop restock cycles (24000 ticks = 1 MC day)")
+            .defineInRange("shop.restockIntervalTicks", 24000, 6000, 72000);
+
+    public static final ModConfigSpec.BooleanValue SHOP_CLEAR_UNSOLD_ON_RESTOCH = BUILDER
+            .comment("Whether unsold goods are cleared when shops restock")
+            .define("shop.clearUnsoldOnRestock", true);
+
+    // ---- Service system ----
+
+    public static final ModConfigSpec.IntValue SERVICE_COOLDOWN_TICKS = BUILDER
+            .comment("Cooldown in ticks before a tourist can use the same service building again")
+            .defineInRange("service.cooldownTicks", 6000, 1200, 72000);
+
+    // ---- Hotel system ----
+
+    public static final ModConfigSpec.IntValue HOTEL_ENERGY_PER_TICK = BUILDER
+            .comment("Energy recovered per tick while a tourist is checked into a hotel")
+            .defineInRange("hotel.energyPerTick", 1, 0, 10);
+
+    public static final ModConfigSpec.IntValue HOTEL_SATISFACTION_PER_NIGHT = BUILDER
+            .comment("Satisfaction gained for a full night's stay at a hotel")
+            .defineInRange("hotel.satisfactionPerNight", 30, 0, 100);
+
+    public static final ModConfigSpec.IntValue TOURIST_SATISFACTION_REWARD_DIVISOR = BUILDER
+            .comment("Reserved: tourist satisfaction divided by this yields colony element reward on departure (future use)")
+            .defineInRange("tourist.satisfactionRewardDivisor", 10, 1, 100);
+
+    public static final ModConfigSpec.IntValue TOURIST_LEVEL_SATISFACTION_THRESHOLD = BUILDER
+            .comment("Per-level three-value threshold. A building's three-value sum must be "
+                    + ">= tourist.level × this to grant any satisfaction. Below = 0 gain.")
+            .defineInRange("tourist.levelSatisfactionThreshold", 3, 1, 10);
+
+    public static final ModConfigSpec.IntValue TOURIST_MAX_SATISFACTION_PER_VISIT = BUILDER
+            .comment("Maximum satisfaction a tourist can gain from a single building visit")
+            .defineInRange("tourist.maxSatisfactionPerVisit", 25, 10, 50);
+
+    public static final ModConfigSpec.IntValue TOURIST_PREFERENCE_DECAY = BUILDER
+            .comment("How much a tourist's preference for a building type decreases "
+                    + "after visiting it.")
+            .defineInRange("tourist.preferenceDecay", 15, 0, 30);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

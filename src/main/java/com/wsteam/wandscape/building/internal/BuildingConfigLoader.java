@@ -13,6 +13,7 @@ import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.shared.data.WonderEffect;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 /**
@@ -27,6 +28,7 @@ public final class BuildingConfigLoader {
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(BlockOffset.class, new BlockOffset.Deserializer())
             .registerTypeAdapter(BuildingConfig.class, new BuildingConfig.Deserializer())
+            .registerTypeAdapter(WonderEffect.class, new WonderEffect.Deserializer())
             .create();
 
     private static BuildingConfigLoader INSTANCE;

@@ -13,7 +13,7 @@
     "gold": 128,
     "ender": 64,
     "fire": 32,
-    "ice": 16
+    "water": 16
   },
   "unlock_requirement": {
     "min_comfort": 80,

@@ -9,6 +9,12 @@
 ./gradlew runGameTestServer  # 运行 GameTest
 ```
 
+**首次运行或 runClient 报错 `clientRunVmArgs.txt` 不存在时**，先执行：
+
+```bash
+./gradlew neoForgeIdeSync   # 生成 IDE 运行配置文件（含 VmArgs）
+```
+
 ## 核心原则
 
 1. **高兼容性**：不修改原版行为，不硬编码方块/物品引用。功能通过 JSON 数据驱动，方块映射用标签。

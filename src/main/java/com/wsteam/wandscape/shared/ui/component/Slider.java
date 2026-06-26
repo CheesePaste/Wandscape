@@ -12,23 +12,22 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 
 /**
- * Integer quantity slider with themed gold track and handle.
- * Range: [min, max]. Displays current value above the track.
+ * Minimal integer slider — solid track with pure-blue fill, no handle, no highlights.
+ * Range: [min, max]. Value label centered above the track.
  */
-public class QuantitySlider extends AbstractWidget {
+public class Slider extends AbstractWidget {
 
     private final int minValue;
     private int maxValue;
     private int value;
     private final IntConsumer onValueChanged;
 
-    private static final int HANDLE_WIDTH = 8;
-    private static final int TRACK_HEIGHT = 6;
-    private static final int LABEL_HEIGHT = 10;
+    private static final int TRACK_H = 8;
+    private static final int LABEL_H = 10;
 
-    public QuantitySlider(int x, int y, int width, int minValue, int maxValue,
-                          int initialValue, IntConsumer onValueChanged) {
-        super(x, y, width, LABEL_HEIGHT + TRACK_HEIGHT + 4, Component.empty());
+    public Slider(int x, int y, int width, int minValue, int maxValue,
+                  int initialValue, IntConsumer onValueChanged) {
+        super(x, y, width, LABEL_H + TRACK_H + 4, Component.empty());
         this.minValue = minValue;
         this.maxValue = maxValue;
         this.value = initialValue;
@@ -54,37 +53,32 @@ public class QuantitySlider extends AbstractWidget {
         return maxValue;
     }
 
+    // ── render ──
+
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         if (!visible) return;
 
         var font = Minecraft.getInstance().font;
-        int trackY = getY() + LABEL_HEIGHT + 2;
-        int trackWidth = width - HANDLE_WIDTH;
+        int trackY = getY() + LABEL_H + 2;
 
         // Value label centered above track
-        String label = String.valueOf(value);
-        g.drawCenteredString(font, label, getX() + width / 2, getY(), MedievalColors.TEXT_WARM_WHITE);
+        g.drawCenteredString(font, String.valueOf(value),
+                getX() + width / 2, getY(), MedievalColors.TEXT_WARM_WHITE);
 
-        // Track background
-        g.fill(getX() + HANDLE_WIDTH / 2, trackY,
-                getX() + width - HANDLE_WIDTH / 2, trackY + TRACK_HEIGHT,
-                MedievalColors.SLIDER_TRACK);
+        // Track — dark blue-black
+        g.fill(getX(), trackY, getX() + width, trackY + TRACK_H, MedievalColors.SLIDER_TRACK);
 
-        // Filled portion
-        double ratio = (double) (value - minValue) / (maxValue - minValue);
-        int fillWidth = (int) (trackWidth * ratio);
-        if (fillWidth > 0) {
-            g.fill(getX() + HANDLE_WIDTH / 2, trackY,
-                    getX() + HANDLE_WIDTH / 2 + fillWidth, trackY + TRACK_HEIGHT,
-                    MedievalColors.SLIDER_FILL);
+        // Fill — pure blue, proportional to value
+        double ratio = maxValue > minValue
+                ? (double) (value - minValue) / (maxValue - minValue) : 0;
+        int fillW = (int) (width * ratio);
+        if (fillW > 0) {
+            g.fill(getX(), trackY, getX() + fillW, trackY + TRACK_H, MedievalColors.SLIDER_FILL);
         }
-
-        // Handle
-        int handleX = getX() + HANDLE_WIDTH / 2 + (int) (trackWidth * ratio) - HANDLE_WIDTH / 2;
-        g.fill(handleX, trackY - 1, handleX + HANDLE_WIDTH, trackY + TRACK_HEIGHT + 1,
-                isHoveredOrFocused() ? MedievalColors.ACCENT_GOLD : MedievalColors.BORDER_GOLD);
     }
+
+    // ── input ──
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -117,7 +111,7 @@ public class QuantitySlider extends AbstractWidget {
     }
 
     private void updateValueFromMouse(double mouseX) {
-        double ratio = (mouseX - getX() - HANDLE_WIDTH / 2.0) / (double) (width - HANDLE_WIDTH);
+        double ratio = (mouseX - getX()) / (double) width;
         int newValue = minValue + (int) Math.round(ratio * (maxValue - minValue));
         newValue = Math.clamp(newValue, minValue, maxValue);
         if (newValue != value) {

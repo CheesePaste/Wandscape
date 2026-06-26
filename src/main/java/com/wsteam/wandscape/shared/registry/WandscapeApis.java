@@ -14,6 +14,7 @@ public final class WandscapeApis {
     private static ColonyApi colonyApi;
     private static ManaPoolApi manaPoolApi;
     private static RoadApi roadApi;
+    private static TouristApi touristApi;
 
     private WandscapeApis() {}
 
@@ -86,4 +87,10 @@ public final class WandscapeApis {
         return roadApi;
     }
     public static void setRoadApi(RoadApi api) { roadApi = api; }
+
+    public static TouristApi getTouristApi() {
+        if (touristApi == null) throw new IllegalStateException("Module TouristSystem not loaded");
+        return touristApi;
+    }
+    public static void setTouristApi(TouristApi api) { touristApi = api; }
 }

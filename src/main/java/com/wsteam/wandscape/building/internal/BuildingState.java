@@ -7,6 +7,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
@@ -26,6 +27,11 @@ public class BuildingState implements BuildingData {
     private final int magic;
     private final int wonder;
     private final int queueCapacity;
+
+    // ── Maintenance tracking ──
+    private MaintenanceCostConfig maintenanceCost = MaintenanceCostConfig.NONE;
+    private long lastMaintenanceTick;
+    private boolean maintenancePaid;
 
     @Nullable
     private UUID colonyId;
@@ -72,10 +78,22 @@ public class BuildingState implements BuildingData {
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
     public boolean hasWork() { return !taskQueue.isEmpty() && !shutdown; }
 
+    // ── Maintenance getters ──
+
+    public MaintenanceCostConfig getMaintenanceCost() { return maintenanceCost; }
+    public long getLastMaintenanceTick() { return lastMaintenanceTick; }
+    public boolean isMaintenancePaid() { return maintenancePaid; }
+
     // ── Setters ──
 
     public void setColonyId(@Nullable UUID colonyId) { this.colonyId = colonyId; }
     public void setShutdown(boolean shutdown) { this.shutdown = shutdown; }
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
+
+    // ── Maintenance setters ──
+
+    public void setMaintenanceCost(MaintenanceCostConfig cost) { this.maintenanceCost = cost; }
+    public void setLastMaintenanceTick(long tick) { this.lastMaintenanceTick = tick; }
+    public void setMaintenancePaid(boolean paid) { this.maintenancePaid = paid; }
 }

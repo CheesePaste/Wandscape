@@ -14,6 +14,11 @@ import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.DecorationBonusSystem;
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.building.internal.MaintenanceSystem;
+import com.wsteam.wandscape.building.internal.ShopStockManager;
+import com.wsteam.wandscape.building.internal.WonderEffectApplier;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
@@ -37,6 +42,9 @@ import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
+import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
@@ -76,7 +84,12 @@ import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
-import com.wsteam.wandscape.citizen.CitizenEntity;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
+import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
+import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
+import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
+import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.citizen.CitizenManager;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
@@ -170,19 +183,19 @@ public class Wandscape {
                             0xFFD700,  // gold highlight
                             new Item.Properties()));
 
-    // ---- citizen-system: entity ----
-    public static final DeferredHolder<EntityType<?>, EntityType<CitizenEntity>> CITIZEN =
-            ENTITIES.register("citizen", () ->
-                    EntityType.Builder.of(CitizenEntity::new, MobCategory.CREATURE)
+    // ---- tourist-system: entity ----
+    public static final DeferredHolder<EntityType<?>, EntityType<TouristEntity>> TOURIST =
+            ENTITIES.register("tourist", () ->
+                    EntityType.Builder.of(TouristEntity::new, MobCategory.CREATURE)
                             .sized(0.6f, 1.95f)
                             .clientTrackingRange(10)
-                            .build("citizen"));
+                            .build("tourist"));
 
-    // ---- citizen-system: spawn egg ----
-    public static final DeferredItem<Item> CITIZEN_SPAWN_EGG =
-            ITEMS.register("citizen_spawn_egg", () ->
+    // ---- tourist-system: spawn egg ----
+    public static final DeferredItem<Item> TOURIST_SPAWN_EGG =
+            ITEMS.register("tourist_spawn_egg", () ->
                     new DeferredSpawnEggItem(
-                            () -> (EntityType<? extends Mob>) (EntityType<?>) CITIZEN.get(),
+                            () -> (EntityType<? extends Mob>) (EntityType<?>) TOURIST.get(),
                             0xFFAA00,  // orange background
                             0xFFFFFF,  // white highlight
                             new Item.Properties()));
@@ -195,7 +208,7 @@ public class Wandscape {
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
-                        output.accept(CITIZEN_SPAWN_EGG.get());
+                        output.accept(TOURIST_SPAWN_EGG.get());
                     })
                     .build());
 
@@ -203,6 +216,10 @@ public class Wandscape {
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();
     private final BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
     public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
+    private DecorationBonusSystem decorationBonusSystem;
+    private ShopStockManager shopStockManager;
+    private WonderEffectApplier wonderEffectApplier;
+    private TavernApiImpl tavernApi;
 
     public Wandscape(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
@@ -217,7 +234,14 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
+        MaintenanceSystem.register();
+        decorationBonusSystem = DecorationBonusSystem.register();
+        shopStockManager = ShopStockManager.register();
+        wonderEffectApplier = WonderEffectApplier.register();
+        BuildingInteractHandler.setShopStockManager(shopStockManager);
         CitizenManager.getInstance().register();
+        TouristSpawnSystem.register();
+        HotelStayHandler.register();
         WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -227,6 +251,9 @@ public class Wandscape {
         WandscapeApis.setNpcApi(new NpcApiImpl());
         WandscapeApis.setWarehouseApi(new WarehouseManager());
         WandscapeApis.setColonyApi(com.wsteam.wandscape.engine.colony.ColonyApiImpl.get());
+        WandscapeApis.setTouristApi(new TouristApiImpl());
+        tavernApi = new TavernApiImpl();
+        WandscapeApis.setTavernApi(tavernApi);
 
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
@@ -267,9 +294,22 @@ public class Wandscape {
                         CraftingStationPacket.STREAM_CODEC,
                         (packet, ctx) -> CraftingStationPacket.handleClient(packet))
                 .playToClient(
+                        ShopOpenPacket.TYPE,
+                        ShopOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> ShopOpenPacket.handleClient(packet))
+                .playToServer(
+                        ShopMaxStockPacket.TYPE,
+                        ShopMaxStockPacket.STREAM_CODEC,
+                        (packet, ctx) -> ShopMaxStockPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
                         TavernOpenPacket.TYPE,
                         TavernOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> TavernOpenPacket.handleClient(packet))
+                .playToClient(
+                        HotelOpenPacket.TYPE,
+                        HotelOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> HotelOpenPacket.handleClient(packet))
                 .playToClient(
                         PotionStationPacket.TYPE,
                         PotionStationPacket.STREAM_CODEC,
@@ -347,7 +387,7 @@ public class Wandscape {
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(WANDSCAPE_NPC.get(), WandscapeNpc.createAttributes().build());
-        event.put(CITIZEN.get(), CitizenEntity.createAttributes().build());
+        event.put(TOURIST.get(), TouristEntity.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -370,6 +410,15 @@ public class Wandscape {
         var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
         if (colonyApi instanceof com.wsteam.wandscape.engine.colony.ColonyApiImpl impl) {
             impl.rebuildFromSavedData();
+        }
+
+        // Wire decoration bonus cache to contribution registry
+        if (decorationBonusSystem != null) {
+            var savedData = BuildingSavedData.get(event.getServer().overworld());
+            if (savedData != null && savedData.getContributionRegistry() != null) {
+                savedData.getContributionRegistry()
+                        .setDecorationBonusCache(decorationBonusSystem.getCache());
+            }
         }
 
         // Wire production loaders to block interact executor
@@ -395,6 +444,11 @@ public class Wandscape {
         WandscapeEngine.setRoadSavedData(roadSaved);
         WandscapeApis.setRoadApi(new RoadApiImpl());
         LOGGER.info("Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
+
+        // Tavern recruit storage
+        var recruitStorage = TavernRecruitStorage.getOrCreate(level);
+        tavernApi.setStorage(recruitStorage);
+        LOGGER.info("Tavern recruit storage wired");
 
         // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
         if (world != null && world.taskPool != null) {

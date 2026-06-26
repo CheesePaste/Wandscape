@@ -109,7 +109,7 @@ public class UIEditorScreen extends MedievalScreen {
         addEntry("icon_close", "IconButton", new IconButton(canvasX + 110, canvasY + 5, 22, "X",
                 MedievalColors.DANGER_RED, Component.literal("Close"), () -> {}, SkinSprite.CLOSE_BTN));
         addEntry("search_bar", "SearchBar", new SearchBar(canvasX + 10, canvasY + 35, canvasW - 24, 14, "Search...", s -> {}));
-        addEntry("slider", "QuantitySlider", new QuantitySlider(canvasX + 10, canvasY + 58, 140, 1, 64, 32, v -> {}));
+        addEntry("slider", "Slider", new Slider(canvasX + 10, canvasY + 58, 140, 1, 64, 32, v -> {}));
         addEntry("progress", "ProgressIndicator", new ProgressIndicator(canvasX + 10, canvasY + 85, 140, 14, 0.65f));
 
         // ── Side panel: Palette (widget buttons, top of side panel) ──
@@ -213,8 +213,8 @@ public class UIEditorScreen extends MedievalScreen {
                 () -> new RightArrowButton(0, 0, () -> {})));
         paletteDefs.add(new PaletteEntry("SearchBar", "+Search",
                 () -> new SearchBar(0, 0, 160, 16, "Search...", s -> {})));
-        paletteDefs.add(new PaletteEntry("QuantitySlider", "+Slider",
-                () -> new QuantitySlider(0, 0, 160, 1, 64, 32, v -> {})));
+        paletteDefs.add(new PaletteEntry("Slider", "+Slider",
+                () -> new Slider(0, 0, 160, 1, 64, 32, v -> {})));
         paletteDefs.add(new PaletteEntry("ProgressIndicator", "+Progress",
                 () -> {
                     var p = new ProgressIndicator(0, 0, 160, 16, 0.5f);
@@ -567,7 +567,7 @@ public class UIEditorScreen extends MedievalScreen {
         if (base.contains("left")) return new LeftArrowButton(0, 0, () -> {});
         if (base.contains("right")) return new RightArrowButton(0, 0, () -> {});
         if (base.contains("search")) return new SearchBar(0, 0, 160, 16, "Search...", s -> {});
-        if (base.contains("slider")) return new QuantitySlider(0, 0, 160, 1, 64, 32, v -> {});
+        if (base.contains("slider")) return new Slider(0, 0, 160, 1, 64, 32, v -> {});
         if (base.contains("progress")) { var p = new ProgressIndicator(0, 0, 160, 16, 0.5f); p.setLabel("50%"); return p; }
         if (base.contains("element")) { var ep = new ElementPanel(0, 0, 160); Map<ElementType, Long> s = new LinkedHashMap<>(); for (ElementType et : ElementType.values()) s.put(et, 0L); ep.setElements(s); return ep; }
         return null;

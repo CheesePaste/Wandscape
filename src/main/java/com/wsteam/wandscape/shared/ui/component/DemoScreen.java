@@ -44,7 +44,7 @@ public class DemoScreen extends MedievalScreen {
 
     // Tab 3: Inputs
     private SearchBar searchBar;
-    private QuantitySlider slider;
+    private Slider slider;
 
     // Tab 4: Progress
     private ProgressIndicator progressBar;
@@ -125,7 +125,7 @@ public class DemoScreen extends MedievalScreen {
         // ── Tab 3: Inputs ──
         searchBar = new SearchBar(contentX + 5, tabContentY + 5, 200, 16,
                 "Search items...", s -> {});
-        slider = new QuantitySlider(contentX + 5, tabContentY + 30, 200,
+        slider = new Slider(contentX + 5, tabContentY + 30, 200,
                 1, 64, 32, v -> {});
 
         // ── Tab 4: Progress ──

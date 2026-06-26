@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 
@@ -17,9 +18,8 @@ import net.neoforged.bus.api.IEventBus;
 /**
  * Tracks, per colony, how many <em>intact</em> buildings exist for each building type.
  *
- * <p>A building type contributes its {@link BuildingConfig} comfort / magic / wonder
- * values to the colony if and only if {@code intactCount > 0} for that type.
- * Multiple buildings of the same type do not stack — presence is binary.
+ * <p>Each intact building instance contributes its {@link BuildingConfig} comfort / magic / wonder
+ * values to the colony. Multiple buildings of the same type stack.
  *
  * <p>Owned and called from {@link BuildingSavedData}.  All mutations must go through
  * {@link #recordIntactChange} so that the evaluation change event is fired exactly
@@ -37,8 +37,50 @@ public final class BuildingContributionRegistry {
     @Nullable
     private final IEventBus eventBus;
 
+    @Nullable
+    private volatile DecorationBonusCache decorationBonusCache;
+
+    @Nullable
+    private volatile BuildSource buildSource;
+
     BuildingContributionRegistry(@Nullable IEventBus eventBus) {
         this.eventBus = eventBus;
+    }
+
+    /** Set the decoration bonus cache for merging radiation into colony totals. */
+    public void setDecorationBonusCache(@Nullable DecorationBonusCache cache) {
+        this.decorationBonusCache = cache;
+    }
+
+    /** Store the build source for per-building bonus queries in getSnapshot. */
+    public void setBuildSource(@Nullable BuildSource source) {
+        this.buildSource = source;
+    }
+
+    /** Per-buildingId stock state. */
+    private final Map<UUID, Boolean> shopHasStock = new ConcurrentHashMap<>();
+    /** buildingTypeId → count of shop buildings of this type that currently have stock. */
+    private final Map<String, Integer> shopTypesWithStock = new ConcurrentHashMap<>();
+
+    /**
+     * Called by {@link ShopStockManager} when a shop's stock state changes.
+     * Shop types with at least one stocked building contribute normally;
+     * types with no stocked buildings have zero contribution.
+     */
+    public void setShopHasStock(UUID buildingId, String buildingTypeId,
+                                UUID colonyId, boolean hasStock) {
+        Boolean prev = shopHasStock.put(buildingId, hasStock);
+        boolean wasStocked = Boolean.TRUE.equals(prev);
+        if (wasStocked != hasStock) {
+            if (hasStock) {
+                shopTypesWithStock.merge(buildingTypeId, 1, Integer::sum);
+            } else {
+                shopTypesWithStock.compute(buildingTypeId,
+                        (k, v) -> v == null || v <= 1 ? null : v - 1);
+            }
+        }
+        LOGGER.debug("[Registry] Shop stock changed: building={} type={} hasStock={}",
+                buildingId.toString().substring(0, 8), buildingTypeId, hasStock);
     }
 
     // ── Mutation (called from BuildingSavedData) ──────────────────────────────
@@ -52,6 +94,8 @@ public final class BuildingContributionRegistry {
     boolean recordIntactChange(UUID colonyId, String buildingTypeId, boolean nowIntact) {
         if (colonyId == null || buildingTypeId == null) return false;
 
+        ColonySnapshot before = getSnapshot(colonyId);
+
         Map<String, Integer> typeMap = intactCounts.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>());
         int prev = typeMap.getOrDefault(buildingTypeId, 0);
         int next = nowIntact ? prev + 1 : Math.max(0, prev - 1);
@@ -62,12 +106,15 @@ public final class BuildingContributionRegistry {
             typeMap.put(buildingTypeId, next);
         }
 
-        // A change to evaluation values only happens at the 0↔1 boundary
-        boolean crossedBoundary = (prev == 0 && next == 1) || (prev == 1 && next == 0);
-        if (crossedBoundary && eventBus != null) {
-            fireChangeEvent(colonyId, typeMap);
+        ColonySnapshot after = getSnapshot(colonyId);
+        if (!before.equals(after) && eventBus != null) {
+            eventBus.post(new ColonyEvaluationChangedEvent(
+                    colonyId,
+                    before.comfort(), after.comfort(),
+                    before.magic(), after.magic(),
+                    before.wonder(), after.wonder()));
         }
-        return crossedBoundary;
+        return !before.equals(after);
     }
 
     /**
@@ -79,6 +126,8 @@ public final class BuildingContributionRegistry {
     boolean recordUnregistered(UUID colonyId, String buildingTypeId) {
         if (colonyId == null || buildingTypeId == null) return false;
 
+        ColonySnapshot before = getSnapshot(colonyId);
+
         Map<String, Integer> typeMap = intactCounts.get(colonyId);
         if (typeMap == null) return false;
 
@@ -89,11 +138,15 @@ public final class BuildingContributionRegistry {
             typeMap.put(buildingTypeId, prev - 1);
         }
 
-        boolean crossedBoundary = prev == 1;
-        if (crossedBoundary && eventBus != null) {
-            fireChangeEvent(colonyId, intactCounts.get(colonyId));
+        ColonySnapshot after = getSnapshot(colonyId);
+        if (!before.equals(after) && eventBus != null) {
+            eventBus.post(new ColonyEvaluationChangedEvent(
+                    colonyId,
+                    before.comfort(), after.comfort(),
+                    before.magic(), after.magic(),
+                    before.wonder(), after.wonder()));
         }
-        return crossedBoundary;
+        return !before.equals(after);
     }
 
     /**
@@ -135,49 +188,96 @@ public final class BuildingContributionRegistry {
     }
 
     /**
-     * Computes the colony's three evaluation values from the current registry state.
-     * Each building type contributes its config values at most once (binary presence).
+     * Computes the colony's three evaluation values by iterating every building
+     * instance. Each intact, non-shutdown building contributes individually —
+     * same-type buildings stack. Decoration buildings radiate instead of
+     * contributing directly. Shops only contribute if the individual shop has stock.
      */
     public ColonySnapshot getSnapshot(UUID colonyId) {
-        Map<String, Integer> typeMap = intactCounts.get(colonyId);
-        if (typeMap == null || typeMap.isEmpty()) {
-            return ColonySnapshot.EMPTY;
-        }
-
         BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
         int comfort = 0, magic = 0, wonder = 0;
-        for (Map.Entry<String, Integer> entry : typeMap.entrySet()) {
-            if (entry.getValue() <= 0) continue;
-            BuildingConfig cfg = configLoader.get(entry.getKey());
-            if (cfg != null) {
-                comfort += cfg.comfort();
-                magic   += cfg.magic();
-                wonder  += cfg.wonder();
+
+        BuildSource source = this.buildSource;
+        if (source != null) {
+            // Per-building-instance contribution
+            for (BuildingState state : source.allBuildings()) {
+                if (!colonyId.equals(state.getColonyId())) continue;
+                if (!state.isStructureIntact() || state.isShutdown()) continue;
+
+                BuildingConfig cfg = configLoader.get(state.getBuildingTypeId());
+                if (cfg == null) continue;
+
+                String cat = cfg.category();
+                if ("decoration".equals(cat)) continue; // radiate, no direct contribution
+
+                if ("shop".equals(cat)) {
+                    // Individual shop must have stock to contribute
+                    if (!Boolean.TRUE.equals(shopHasStock.get(state.getBuildingId()))) continue;
+
+                    comfort += cfg.comfort();
+                    magic   += cfg.magic();
+                    wonder  += cfg.wonder();
+
+                    // Add three-values from in-stock goods
+                    ShopStockManager stockMgr = ShopStockManager.getActive();
+                    if (stockMgr != null) {
+                        comfort += stockMgr.getGoodsBonusComfort(state.getBuildingId());
+                        magic   += stockMgr.getGoodsBonusMagic(state.getBuildingId());
+                        wonder  += stockMgr.getGoodsBonusWonder(state.getBuildingId());
+                    }
+                } else {
+                    comfort += cfg.comfort();
+                    magic   += cfg.magic();
+                    wonder  += cfg.wonder();
+                }
+            }
+        } else {
+            // Fallback: type-count based (no BuildSource available)
+            Map<String, Integer> typeMap = intactCounts.get(colonyId);
+            if (typeMap != null && !typeMap.isEmpty()) {
+                for (Map.Entry<String, Integer> entry : typeMap.entrySet()) {
+                    if (entry.getValue() <= 0) continue;
+                    BuildingConfig cfg = configLoader.get(entry.getKey());
+                    if (cfg == null) continue;
+                    if ("decoration".equals(cfg.category())) continue;
+
+                    int contributing;
+                    if ("shop".equals(cfg.category())) {
+                        contributing = shopTypesWithStock.getOrDefault(entry.getKey(), 0);
+                        if (contributing <= 0) continue;
+                    } else {
+                        contributing = entry.getValue();
+                    }
+                    comfort += cfg.comfort() * contributing;
+                    magic   += cfg.magic()   * contributing;
+                    wonder  += cfg.wonder()  * contributing;
+                }
             }
         }
+
+        // Merge decoration radiation bonuses for individual functional buildings
+        DecorationBonusCache cache = this.decorationBonusCache;
+        if (cache != null && source != null) {
+            double cap = Config.DECORATION_BONUS_CAP.get();
+            for (BuildingState state : source.allBuildings()) {
+                if (!colonyId.equals(state.getColonyId())) continue;
+                if (state.isShutdown() || !state.isStructureIntact()) continue;
+                String cat = state.getCategory();
+                if ("decoration".equals(cat) || "wonder".equals(cat)) continue;
+
+                int[] bonus = cache.get(state.getBuildingId());
+                if (bonus == null) continue;
+
+                BuildingConfig cfg = configLoader.get(state.getBuildingTypeId());
+                if (cfg != null) {
+                    comfort += (int) Math.min(bonus[0], cfg.comfort() * cap);
+                    magic   += (int) Math.min(bonus[1], cfg.magic() * cap);
+                    wonder  += (int) Math.min(bonus[2], cfg.wonder() * cap);
+                }
+            }
+        }
+
         return new ColonySnapshot(comfort, magic, wonder);
-    }
-
-    // ── Internal ──────────────────────────────────────────────────────────────
-
-    private void fireChangeEvent(UUID colonyId, @Nullable Map<String, Integer> typeMap) {
-        ColonySnapshot snapshot = getSnapshot(colonyId);
-        ColonyEvaluationChangedEvent event = new ColonyEvaluationChangedEvent(
-                colonyId,
-                snapshot.comfort() - 1,   // old = new - delta (at most 1 type contributes per call)
-                snapshot.comfort(),
-                snapshot.magic()   - 1,
-                snapshot.magic(),
-                snapshot.wonder()  - 1,
-                snapshot.wonder()
-        );
-        // The delta fields above are upper-bounded estimates; the actual delta
-        // may be less if a different type is affected.  Subscribers should read
-        // the full before/after values, not the delta.
-        eventBus.post(event);
-        LOGGER.debug("ColonyEvaluationChangedEvent posted for colony={} → C={} M={} W={}",
-                colonyId.toString().substring(0, 8),
-                snapshot.comfort(), snapshot.magic(), snapshot.wonder());
     }
 
     // ── Simple snapshot record ────────────────────────────────────────────────

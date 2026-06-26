@@ -75,10 +75,16 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 2. Find spawn position near the tavern
+            // 2. Handle recruit_mage action
+            if (pkt.action.startsWith("recruit_mage:")) {
+                handleRecruitMage(sp, level, buildingId, colonyId, pkt);
+                return;
+            }
+
+            // 3. Find spawn position near the tavern
             BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
 
-            // 3. Spawn NPC
+            // 4. Spawn NPC
             var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
             if (npc == null) {
                 sp.displayClientMessage(
@@ -89,7 +95,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
 
-            // 4. Fix ECS state (spawn() already triggered onNpcJoinWorld)
+            // 5. Fix ECS state (spawn() already triggered onNpcJoinWorld)
             fixEcsAfterSpawn(npc, colonyId);
 
             LOGGER.info("[Tavern] Recruited NPC {} for colony {} at {}",
@@ -101,6 +107,67 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                     Component.literal("[Wandscape] NPC recruited! " + spawnPos.toShortString()),
                     false);
         });
+    }
+
+    private static void handleRecruitMage(ServerPlayer sp, ServerLevel level,
+                                           UUID buildingId, UUID colonyId,
+                                           TavernRecruitPacket pkt) {
+        int index;
+        try {
+            index = Integer.parseInt(pkt.action.substring("recruit_mage:".length()));
+        } catch (NumberFormatException e) {
+            LOGGER.warn("[Tavern] Invalid recruit_mage action: {}", pkt.action);
+            return;
+        }
+
+        com.wsteam.wandscape.shared.data.MageResume resume;
+        try {
+            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            resume = tavernApi.recruitMage(buildingId, colonyId, index);
+        } catch (IllegalStateException e) {
+            sp.displayClientMessage(
+                    Component.literal("[Wandscape] Tavern system not available."),
+                    false);
+            return;
+        }
+
+        if (resume == null) {
+            sp.displayClientMessage(
+                    Component.literal("[Wandscape] Invalid mage selection."),
+                    false);
+            return;
+        }
+
+        BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
+        var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
+        if (npc == null) {
+            sp.displayClientMessage(
+                    Component.literal("[Wandscape] Failed to recruit mage."),
+                    false);
+            return;
+        }
+        npc.setPersistenceRequired();
+        npc.colonyId = colonyId;
+
+        // Apply mage stats from resume
+        npc.setCustomName(Component.literal(resume.touristName()));
+        npc.setCustomNameVisible(true);
+        // Mage-specific attributes are applied via NPC stat system on spawn
+        // The resume stats (maxMana, spellPower, etc.) will be used by the NPC system
+
+        fixEcsAfterSpawn(npc, colonyId);
+
+        LOGGER.info("[Tavern] Recruited mage {} (Lv.{}) from resume for colony {} at {}",
+                resume.touristName(), resume.level(),
+                colonyId.toString().substring(0, 8),
+                spawnPos.toShortString());
+
+        sp.displayClientMessage(
+                Component.literal("[Wandscape] Mage " + resume.touristName()
+                        + " recruited! Lv." + resume.level()
+                        + " MP:" + resume.maxMana()
+                        + " SP:" + resume.spellPower()),
+                false);
     }
 
     /** Find a valid spawn position near the tavern. */

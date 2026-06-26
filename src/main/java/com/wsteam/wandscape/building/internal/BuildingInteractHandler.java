@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.building.internal;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -9,6 +10,8 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
@@ -39,6 +42,13 @@ public final class BuildingInteractHandler {
 
     private BuildingInteractHandler() {}
 
+    private static volatile ShopStockManager shopStockManager;
+
+    /** Set by Wandscape after ShopStockManager is registered. */
+    public static void setShopStockManager(ShopStockManager manager) {
+        shopStockManager = manager;
+    }
+
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         Level level = event.getLevel();
@@ -46,7 +56,16 @@ public final class BuildingInteractHandler {
 
         var pos = event.getPos();
         BuildingSavedData data = BuildingSavedData.get(level);
+
+        // 1. Exact block match (clicked on building pattern block)
         UUID buildingId = data.getBuildingIdAt(pos);
+
+        // 2. Interaction zone fallback: buildings with interaction_radius > 0
+        //    can be interacted with from nearby blocks (e.g. shops)
+        if (buildingId == null) {
+            buildingId = data.getBuildingIdInInteractionZone(pos);
+        }
+
         if (buildingId == null) return;
 
         BuildingState state = data.getBuilding(buildingId);
@@ -55,6 +74,26 @@ public final class BuildingInteractHandler {
         String category = state.getCategory();
         UUID colonyId = state.getColonyId();
         if (colonyId == null) colonyId = new UUID(0, 0);
+
+        BuildingConfig bldConfig = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+
+        // Hotel buildings: service with maxOccupancy > 0
+        if ("service".equals(category) && bldConfig != null && bldConfig.service() != null
+                && bldConfig.service().maxOccupancy() > 0) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                var hotel = com.wsteam.wandscape.tourist.internal.HotelStayHandler.getActive();
+                int occupancy = hotel != null ? hotel.getOccupancy(buildingId) : 0;
+                int maxOcc = bldConfig.service().maxOccupancy();
+                var guestNames = hotel != null
+                        ? hotel.getGuestNames(buildingId, event.getLevel())
+                        : java.util.List.<String>of();
+                var pkt = new HotelOpenPacket(pos, colonyId, buildingId, maxOcc, occupancy, guestNames);
+                PacketDistributor.sendToPlayer(player, pkt);
+            }
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            event.setCanceled(true);
+            return;
+        }
 
         switch (category) {
             case "storage" -> {
@@ -68,9 +107,27 @@ public final class BuildingInteractHandler {
             }
             case "workstation" -> openWorkstationGui(level, colonyId, event);
             case "crafting_station" -> openCraftingStationGui(level, colonyId, event);
+            case "shop" -> {
+                if (event.getEntity() instanceof ServerPlayer player) {
+                    if (shopStockManager != null) {
+                        shopStockManager.ensureStockInitialized(buildingId);
+                    }
+                    Map<String, Integer> stock = shopStockManager != null
+                            ? shopStockManager.getStock(buildingId) : Map.of();
+                    Map<String, Integer> maxStocks = shopStockManager != null
+                            ? shopStockManager.getAllMaxStocks(buildingId) : Map.of();
+                    var pkt = new ShopOpenPacket(pos, colonyId, buildingId, stock, maxStocks);
+                    PacketDistributor.sendToPlayer(player, pkt);
+                }
+            }
             case "tavern" -> {
                 if (event.getEntity() instanceof ServerPlayer player) {
-                    var pkt = new TavernOpenPacket(pos, colonyId);
+                    List<com.wsteam.wandscape.shared.data.MageResume> mageResumes = List.of();
+                    try {
+                        var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+                        mageResumes = tavernApi.getMageResumes(colonyId);
+                    } catch (IllegalStateException ignored) {}
+                    var pkt = new TavernOpenPacket(pos, colonyId, mageResumes);
                     PacketDistributor.sendToPlayer(player, pkt);
                 }
             }
@@ -86,7 +143,6 @@ public final class BuildingInteractHandler {
                             + " | intact=" + state.isStructureIntact()
                             + " | shutdown=" + state.isShutdown()
                             + " | queue=" + state.getTaskQueue().size();
-                    // Show unlock lock reason if the building is not yet unlocked
                     BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
                     if (config != null) {
                         String lockReason = com.wsteam.wandscape.building.internal.BuildingUnlockChecker

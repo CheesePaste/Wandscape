@@ -1,0 +1,72 @@
+package com.wsteam.wandscape.tourist.client;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
+
+import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
+
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.fml.ModList;
+
+public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, HumanoidModel<TouristEntity>> {
+
+    private static final ResourceLocation[] CITIZEN_TEXTURES = detectTextures(
+            "textures/entity/citizen");
+    private static final ResourceLocation[] WIZARD_TEXTURES = detectTextures(
+            "textures/entity/wizard");
+
+    private static ResourceLocation[] detectTextures(String subPath) {
+        try {
+            Path dir = ModList.get().getModFileById(Wandscape.MODID).getFile()
+                    .findResource("assets", "wandscape", subPath);
+            try (Stream<Path> files = Files.list(dir)) {
+                List<String> names = files
+                        .map(p -> p.getFileName().toString())
+                        .filter(n -> n.endsWith(".png"))
+                        .sorted()
+                        .toList();
+                if (!names.isEmpty()) {
+                    ResourceLocation[] arr = new ResourceLocation[names.size()];
+                    for (int i = 0; i < names.size(); i++) {
+                        arr[i] = ResourceLocation.fromNamespaceAndPath("wandscape",
+                                subPath + "/" + names.get(i));
+                    }
+                    return arr;
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {}
+        return new ResourceLocation[] {
+            ResourceLocation.fromNamespaceAndPath("wandscape", subPath + "/fallback.png")
+        };
+    }
+
+    public TouristRenderer(EntityRendererProvider.Context ctx) {
+        super(ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+    }
+
+    @Override
+    public ResourceLocation getTextureLocation(TouristEntity entity) {
+        int variant = entity.getSkinVariant();
+        boolean isMage = entity.isMage();
+
+        if (isMage) {
+            if (variant >= 0 && variant < WIZARD_TEXTURES.length) {
+                return WIZARD_TEXTURES[variant];
+            }
+            return WIZARD_TEXTURES[0];
+        }
+
+        if (variant >= 0 && variant < CITIZEN_TEXTURES.length) {
+            return CITIZEN_TEXTURES[variant];
+        }
+        return CITIZEN_TEXTURES[0];
+    }
+}

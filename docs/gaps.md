@@ -73,10 +73,11 @@ SchedulerSystem 中 `score += 50` 是 magic number。应移至 TOML 全局配置
 ### WandscapeConstants 与 Config 值重复
 `WandscapeConstants.java` 硬编码默认值（SCHEDULER_HEARTBEAT_TICKS=40 等），`Config.java` 定义相同的 TOML 可配值。两者的优先级关系无文档说明。
 
-### 5 个 API 接口无实现
-WandscapeApis 中 ColonyApi、HouseApi、ManaPoolApi、TavernApi、AtomicExecutor 的 getter 永远抛 "not loaded"。要么移除，要么标注为预留。
+### 4 个 API 接口无实现
+WandscapeApis 中 ColonyApi、HouseApi、ManaPoolApi、AtomicExecutor 的 getter 永远抛 "not loaded"。要么移除，要么标注为预留。
 
-~~TaskApi — 已实现 (2026-06-22)，`task/internal/TaskApiImpl` + GUI 任务编辑器。~~
+~~TaskApi — 已实现 (2026-06-22)~~
+~~TavernApi — 部分实现 (2026-06-26)：mage resume 相关方法已可用；3 个 NPC 招募方法仍为占位~~
 
 ### PLACEHOLDER_COLONY 零 UUID
 EntityComponentBridge 使用全零 UUID 作为占位殖民地，注释标记"阶段2占位"。殖民地系统完成后需替换。
@@ -226,6 +227,14 @@ private void setColonyId(BuildingData data, @Nullable UUID colonyId) {
 - `townHalls` → `colonyOrigins`，`colonyToHall` → `colonyToOrigin`，`isColonyBlock` → `isColonyOrigin`，`townHallPos` → `origin`。
 
 ## 后续待办
+
+### 游客经济剩余项 (2026-06-26 核验)
+- **奇观→满意度加成**：WonderEffectApplier 计算 satisfaction bonus，TouristMoveGoal 查询并应用
+- **游客离开动画**：当前直接 discard()，应改为走出殖民地边界后移除
+- **商店 max_stock 调整 GUI**：ShopScreen 当前仅查看库存，需增加每种货物 max_stock 的可编辑输入框
+- **TavernApi NPC 招募**：3 个占位方法需实现
+
+### 原有待办
 - 多人游戏同步（底层模型已兼容，需网络包+权限UI）
 - 性能压测（100+ NPC、50+ 建筑场景）
 - 区块加载保证（NPC 执行任务时确保目标区块已加载）

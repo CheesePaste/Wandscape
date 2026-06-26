@@ -16,6 +16,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
+import com.wsteam.wandscape.shared.data.DecorationConfig;
+import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.ServiceConfig;
+import com.wsteam.wandscape.shared.data.ShopConfig;
+import com.wsteam.wandscape.shared.data.WonderConfig;
 
 /**
  * Parsed from {@code data/wandscape/buildings/<id>.json}.
@@ -34,7 +40,13 @@ public record BuildingConfig(
         @SerializedName("unlock_requirement") UnlockRequirement unlockRequirement,
         @Nullable BoundaryBox boundary,
         @Nullable BlueprintRef blueprint,
-        @Nullable NodeConfig nodeConfig
+        @Nullable NodeConfig nodeConfig,
+        @SerializedName("maintenance_cost") MaintenanceCostConfig maintenanceCost,
+        DecorationConfig decoration,
+        @SerializedName("wonder_config") WonderConfig wonderConfig,
+        ShopConfig shop,
+        ServiceConfig service,
+        @SerializedName("interaction_radius") int interactionRadius
 ) {
     public record QueueDef(
             int capacity,
@@ -193,10 +205,55 @@ public record BuildingConfig(
                 nodeConfig = context.deserialize(obj.get("node_config"), NodeConfig.class);
             }
 
+            // Maintenance cost (all buildings, defaults to NONE)
+            MaintenanceCostConfig maintenanceCost = MaintenanceCostConfig.NONE;
+            if (obj.has("maintenance_cost")) {
+                JsonObject mcObj = obj.getAsJsonObject("maintenance_cost");
+                int interval = getInt(mcObj, "interval_ticks", MaintenanceCostConfig.DEFAULT_INTERVAL_TICKS);
+                Map<ElementType, Integer> costs = new HashMap<>();
+                if (mcObj.has("costs")) {
+                    JsonObject costsObj = mcObj.getAsJsonObject("costs");
+                    for (var entry : costsObj.entrySet()) {
+                        costs.put(ElementType.fromId(entry.getKey()), entry.getValue().getAsInt());
+                    }
+                }
+                maintenanceCost = new MaintenanceCostConfig(interval, Map.copyOf(costs));
+            }
+
+            // Decoration config (only for category=decoration)
+            DecorationConfig decoration = null;
+            if (obj.has("decoration")) {
+                decoration = context.deserialize(obj.get("decoration"), DecorationConfig.class);
+            }
+
+            // Wonder config (only for category=wonder)
+            WonderConfig wonderConfig = WonderConfig.NONE;
+            if (obj.has("wonder_config")) {
+                wonderConfig = context.deserialize(obj.get("wonder_config"), WonderConfig.class);
+            }
+
+            // Shop config (only for category=shop)
+            ShopConfig shop = ShopConfig.NONE;
+            if (obj.has("shop")) {
+                shop = context.deserialize(obj.get("shop"), ShopConfig.class);
+            }
+
+            // Service config (only for category=service)
+            ServiceConfig service = ServiceConfig.NONE;
+            if (obj.has("service")) {
+                service = context.deserialize(obj.get("service"), ServiceConfig.class);
+            }
+
+            // Interaction radius: blocks from building boundary within which interaction is allowed.
+            // 0 = must click building blocks directly (or be inside building boundary).
+            int interactionRadius = getInt(obj, "interaction_radius", 0);
+
             return new BuildingConfig(id, displayName, category,
                     pattern, blockMapping,
                     comfort, magic, wonder,
-                    queue, unlockRequirement, boundary, blueprint, nodeConfig);
+                    queue, unlockRequirement, boundary, blueprint, nodeConfig,
+                    maintenanceCost, decoration, wonderConfig, shop, service,
+                    interactionRadius);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

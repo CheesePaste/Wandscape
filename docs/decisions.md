@@ -56,9 +56,9 @@
 
 ## 殖民地三值评估系统
 
-**为什么贡献粒度按建筑类型而非建筑实例？** JSON 配置 `comfort/magic/wonder` 本身就是 per-type 的语义值。同类型第二栋不叠加符合"首次建造加成"的规则描述，且与 `unlock_requirement` 的 per-type 门槛设计保持一致。
+**为什么贡献粒度从按建筑类型改为按建筑实例（2026-06-26 修正）？** 装饰辐射、shutdown 状态、商店货物库存都是每建筑实例独立变化的。同类建筑按 count × config 值计算无法区分"两栋都正常"和"一栋正常一栋 shutdown"。改为遍历 BuildSource.allBuildings()，每栋独立检查 isStructureIntact()/isShutdown()/shopHasStock/货物三值，精确反映每栋建筑的实际贡献。
 
-**为什么只在 0↔1 边界跨越时广播事件而非每次检查都广播？** 殖民地常有多栋建筑同时运作，每次扫描都广播会触发大量不必要的订阅者执行。0↔1 是唯一真正改变解锁状态的时刻（第一栋建完→解锁，最后一栋损毁→锁定），以此为边界精确控制事件频率。
+**为什么事件广播从 0↔1 边界改为任意 snapshot 变化？** 改为每实例独立贡献后，1→2 也改变殖民地三值（从 1×config 变为 2×config），需要广播事件。改为 before/after snapshot 比较，仅在不相等时广播。
 
 **为什么注册表放在 BuildingSavedData 而非 BuildingApiImpl？** `BuildingSavedData` 是所有建筑状态的单一真相来源（结构完整性变化、注册/注销都在这里发生），在 state change 同步发生时更新贡献缓存最自然。BuildingApiImpl 只读查询。
 
@@ -148,3 +148,25 @@
 **为什么 EventDrivenTaskSource 之前只在测试中实例化？** 早期开发阶段，事件驱动任务生成（ResourceLow→gather, TaskAwaitingResources→gather）仅用于单元测试验证逻辑。生产环境中 BuildingTaskSource 的主动轮询（supplyNodeBuildings）覆盖了节点采集，但资源短缺的被动响应被遗漏。2026-06-25 在 EngineBootstrap 中实例化并注入 handler，补齐生产环境的被动响应链。
 
 **为什么 synthesize/decompose/craft_wand/brew_potion 的 thenRun 中捕 ResourceShortageException 而非让 TaskExecutionSystem 处理？** 这四个操作是异步的（有 channel_ticks 倒计时），实际执行在 `tickAll()` 的 thenRun 回调中，与 TaskExecutionSystem 不在同一调用栈。thenRun 中捕获异常后直接调 `world.taskPool.markAwaitingResources()` 并释放 NPC，层级比 TaskExecutionSystem 更低但逻辑等价——任务进入 AWAITING_RESOURCES 后由 EventDrivenTaskSource 级联创建供应任务。
+
+## 交互区设计修正（2026-06-26）
+
+**为什么 interaction_radius 从"向外扩展范围"改为"包围盒内部作为游客AI寻路目标"？** 原始设计将 interaction_radius 理解为右击检测的扩展范围——interaction_radius>0 时从包围盒外也可交互。但用户实际意图是建筑的包围盒内部区域本身就是交互区，游客 AI 应导航到包围盒内的可步行位置与建筑交互。interaction_radius 的正确语义是：0=必须在包围盒内部交互（默认），>0=可从包围盒外额外扩展N格交互。
+
+**为什么 getInteractionTarget() 放 BuildingSavedData 而非 BuildingApiImpl？** BuildingSavedData 持有所有建筑索引和包围盒数据，计算交互目标(包围盒中心螺旋搜索可步行位置)是纯建筑数据的查询，不依赖 Level（Level 作为参数传入仅用于方块状态检查）。API 层仅做薄委托。
+
+## 游客偏好与满意度系统（2026-06-26）
+
+**为什么游客偏好从三维度（舒适/魔法/奇观）改为按建筑类型（buildingTypeId）？** 三维度偏好对玩家不可见，衰减逻辑（降低主导维度平分到另两个）难以理解。按建筑类型偏好更直观：游客用过体育馆 → 对体育馆偏好降低 → 下次更倾向选图书馆/商店等其他类型。偏好同时驱动建筑选择（加权随机）和满意度获取（matchScore = typePref × threeValueSum），一个值驱动两个行为。
+
+**为什么满意度使用截断+平方根+硬上限公式？** 原始公式 `typePref × threeSum / divisor` 在默认值下可产生 120 点满意度，一次交互即拉满 100，level 完全不参与计算。新公式引入三层约束：(1) 截断——建筑三值和 < level × 3 时 Δsat=0，高级游客需要高品质建筑；(2) 平方根——递减收益，避免一次拉满；(3) 硬上限 25——保证至少 4 次不同建筑交互才满。这使满意度成为有梯度的长线追求。
+
+**为什么建筑三值贡献从同类建筑二值（有/无）改为每实例独立计算？** 装饰辐射、shutdown 状态、商店货物库存都是每建筑实例独立变化的。同类建筑按 count × config 值计算无法区分"两栋都正常"和"一栋正常一栋 shutdown"。改为遍历 BuildSource.allBuildings()，每栋独立检查 isStructureIntact()/isShutdown()/shopHasStock/货物三值，精确反映每栋建筑的实际贡献。intactCounts 保留用于 isTypeContributing()/getIntactCount() 查询。
+
+**为什么商店货物增加 comfort/magic/wonder 字段？** 商店的三值不再仅是建筑基础值，而是基础值 + 所有有货 goods 的三值合计。货物品类越多，商店三值越高，对殖民地总体贡献越大，游客满意度也越高。这使货物管理成为经营决策：玩家需要在"多进货提高三值"和"控制进货成本"之间权衡。
+
+**为什么满意度 100% 后不立即离开（回归 jingying.md 原始设计）？** 立即离开会让满意游客瞬间消失，玩家失去看到"满意游客在殖民地中漫步"的视觉反馈。改为：满意度首次达到 100% 时法师简历即时存入酒馆，游客继续留在殖民地直到精力耗尽/夜间/超时后自然离开。100% 满意度游客不会入住宾馆（已无需继续消费），避免占用宾馆资源。
+
+**为什么增加空闲超时作为第三离开条件（与 jingying.md 的两条件模型偏离）？** jingying.md 只有精力耗尽和夜幕两个离开条件。实际游戏中存在"游客在街上持续 idle 但不触发离开"的边界情况：建筑无货/无空位导致 planNextBuilding 返回空，游客无限期 idle。空闲超时（TOURIST_DESPAWN_TIMEOUT_TICKS）兜底清理这些僵尸游客，防止内存泄漏和世界实体堆积。
+
+**为什么货物种类由 JSON 固定而非玩家自由设定？** jingying.md 原始设计是"玩家设定进货清单"，但拖拽式进货清单需要物品浏览器+搜索+NBT匹配的完整 GUI，远超出 MVP 范围。JSON 固定货物种类实现商店类型差异化（面包店 vs 药水店由不同 JSON 定义），新增商店类型只需加 JSON 文件。玩家仍可通过 GUI 调整每种货物的 max_stock（库存深度决策），但不增减货物种类。

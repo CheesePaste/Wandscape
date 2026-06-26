@@ -22,7 +22,11 @@ import com.wsteam.wandscape.production.client.CraftingStationScreen;
 import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.client.HotelScreen;
+import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
@@ -30,7 +34,7 @@ import com.wsteam.wandscape.shared.ui.task.TaskEditorScreen;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
-import net.minecraft.client.renderer.entity.VillagerRenderer;
+import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
@@ -143,7 +147,23 @@ public class WandscapeClient {
         });
         TavernOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(
-                    new TavernScreen(packet.buildingPos(), packet.colonyId()));
+                    new TavernScreen(packet.buildingPos(), packet.colonyId(),
+                            packet.mageResumes()));
+        });
+        HotelOpenPacket.setClientHandler(packet -> {
+            Minecraft.getInstance().setScreen(new HotelScreen(
+                    packet.buildingPos(), packet.colonyId(), packet.buildingId(),
+                    packet.maxOccupancy(), packet.currentOccupancy(),
+                    packet.guestNames()));
+        });
+        ShopOpenPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof ShopScreen existing) {
+                existing.updateFrom(packet.stock(), packet.maxStocks());
+            } else {
+                mc.setScreen(new ShopScreen(packet.buildingPos(), packet.colonyId(),
+                        packet.buildingId(), packet.stock(), packet.maxStocks()));
+            }
         });
         Wandscape.LOGGER.info("Wandscape client setup complete");
     }
@@ -192,7 +212,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
-        event.registerEntityRenderer(Wandscape.CITIZEN.get(), VillagerRenderer::new);
+        event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
     }
 
     @SubscribeEvent

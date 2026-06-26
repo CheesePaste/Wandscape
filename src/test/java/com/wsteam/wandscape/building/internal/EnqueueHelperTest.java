@@ -10,6 +10,10 @@ import com.google.gson.JsonElement;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
+import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.ShopConfig;
+import com.wsteam.wandscape.shared.data.WonderConfig;
+import com.wsteam.wandscape.shared.data.ServiceConfig;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,7 +62,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
                 null,
-                null  // nodeConfig
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -93,7 +97,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,
-                null  // nodeConfig
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -114,7 +118,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, -1, -1), off(1, 1, 1)),
                 null,
-                null  // nodeConfig
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);

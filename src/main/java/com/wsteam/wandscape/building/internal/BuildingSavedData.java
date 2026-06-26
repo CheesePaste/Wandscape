@@ -13,6 +13,8 @@ import com.google.gson.reflect.TypeToken;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 
@@ -67,6 +69,10 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
+    private static final String TAG_MAINTENANCE_INTERVAL = "maint_interval";
+    private static final String TAG_MAINTENANCE_COSTS = "maint_costs";
+    private static final String TAG_LAST_MAINTENANCE_TICK = "last_maint_tick";
+    private static final String TAG_MAINTENANCE_PAID = "maint_paid";
 
     private static final Gson PARAMS_GSON = new Gson();
     private static final java.lang.reflect.Type PARAMS_TYPE =
@@ -133,6 +139,100 @@ public class BuildingSavedData extends SavedData {
             }
         }
         return null;
+    }
+
+    /**
+     * Finds a building whose interaction zone covers the given position.
+     * <p>
+     * The interaction zone is the building's bounding box interior. Clicking
+     * inside any building's bounding box (not just on pattern blocks) counts
+     * as interacting. Buildings with {@code interaction_radius > 0} additionally
+     * extend the zone outward by that many blocks.
+     *
+     * @return buildingId if pos is within interaction zone of an intact non-shutdown building
+     */
+    @Nullable
+    public UUID getBuildingIdInInteractionZone(BlockPos pos) {
+        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
+        ChunkPos cp = new ChunkPos(pos);
+        Set<UUID> chunkIds = chunkIndex.get(cp);
+        if (chunkIds == null) return null;
+
+        UUID bestMatch = null;
+        int bestRadius = -1;
+
+        for (UUID candidate : chunkIds) {
+            BuildingState state = buildings.get(candidate);
+            if (state == null || state.isShutdown() || !state.isStructureIntact()) continue;
+
+            var bb = state.getBounds();
+            BuildingConfig config = configLoader.get(state.getBuildingTypeId());
+            int radius = config != null ? config.interactionRadius() : 0;
+
+            // Check bounding box interior (always checked) + expanded area if radius > 0
+            if (pos.getX() >= bb.minX() - radius
+                    && pos.getX() <= bb.maxX() + radius
+                    && pos.getY() >= bb.minY() - radius
+                    && pos.getY() <= bb.maxY() + radius
+                    && pos.getZ() >= bb.minZ() - radius
+                    && pos.getZ() <= bb.maxZ() + radius) {
+                // Prefer the building with the smallest expansion (tighter match)
+                if (radius > bestRadius) {
+                    bestRadius = radius;
+                    bestMatch = candidate;
+                }
+            }
+        }
+        return bestMatch;
+    }
+
+    /**
+     * Computes the navigation target position for tourist AI to interact
+     * with a building. Returns a walkable position inside the building's
+     * bounding box — the tourist navigates here, then the interaction triggers.
+     *
+     * @param buildingId the building to target
+     * @param level      the world level (for block-state queries)
+     * @return a walkable BlockPos inside the bounding box, or the anchor as fallback
+     */
+    @Nullable
+    public BlockPos getInteractionTarget(UUID buildingId, Level level) {
+        BuildingState state = buildings.get(buildingId);
+        if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
+
+        BoundingBox bounds = state.getBounds();
+        int bx = bounds.maxX() - bounds.minX();
+        int bz = bounds.maxZ() - bounds.minZ();
+        if (bx < 1) bx = 1;
+        if (bz < 1) bz = 1;
+
+        int cx = (bounds.minX() + bounds.maxX()) / 2;
+        int cz = (bounds.minZ() + bounds.maxZ()) / 2;
+        int maxR = Math.max(bx, bz) + 1;
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+
+        // Spiral outward from center, scanning Y for walkable ground
+        for (int r = 0; r <= maxR; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.abs(dx) != r && Math.abs(dz) != r) continue;
+                    int x = cx + dx;
+                    int z = cz + dz;
+                    if (x < bounds.minX() || x > bounds.maxX()
+                            || z < bounds.minZ() || z > bounds.maxZ()) continue;
+
+                    for (int y = bounds.maxY(); y >= bounds.minY(); y--) {
+                        mp.set(x, y, z);
+                        if (level.getBlockState(mp).isAir()
+                                && level.getBlockState(mp.below()).isSolid()) {
+                            return mp.immutable();
+                        }
+                    }
+                }
+            }
+        }
+
+        return state.getAnchor();
     }
 
     public Collection<BuildingState> getAllBuildings() {
@@ -244,6 +344,16 @@ public class BuildingSavedData extends SavedData {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
             }
 
+            // Maintenance tracking
+            entry.putInt(TAG_MAINTENANCE_INTERVAL, state.getMaintenanceCost().intervalTicks());
+            CompoundTag costsTag = new CompoundTag();
+            for (var costEntry : state.getMaintenanceCost().costs().entrySet()) {
+                costsTag.putInt(costEntry.getKey().name(), costEntry.getValue());
+            }
+            entry.put(TAG_MAINTENANCE_COSTS, costsTag);
+            entry.putLong(TAG_LAST_MAINTENANCE_TICK, state.getLastMaintenanceTick());
+            entry.putBoolean(TAG_MAINTENANCE_PAID, state.isMaintenancePaid());
+
             // Task queue
             ListTag queueTag = new ListTag();
             for (WorkItem item : state.getTaskQueue()) {
@@ -314,6 +424,23 @@ public class BuildingSavedData extends SavedData {
                 state.getTaskQueue().addLast(new WorkItem(blueprint, params, priority));
             }
 
+            // Maintenance tracking
+            if (entry.contains(TAG_MAINTENANCE_INTERVAL)) {
+                int interval = entry.getInt(TAG_MAINTENANCE_INTERVAL);
+                Map<ElementType, Integer> costsMap = new HashMap<>();
+                if (entry.contains(TAG_MAINTENANCE_COSTS)) {
+                    CompoundTag costsTag = entry.getCompound(TAG_MAINTENANCE_COSTS);
+                    for (String key : costsTag.getAllKeys()) {
+                        costsMap.put(ElementType.valueOf(key), costsTag.getInt(key));
+                    }
+                }
+                state.setMaintenanceCost(new MaintenanceCostConfig(interval, costsMap));
+            }
+            state.setLastMaintenanceTick(entry.getLong(TAG_LAST_MAINTENANCE_TICK));
+            if (entry.contains(TAG_MAINTENANCE_PAID)) {
+                state.setMaintenancePaid(entry.getBoolean(TAG_MAINTENANCE_PAID));
+            }
+
             // Register into indexes (no overlap check needed on load)
             data.buildings.put(id, state);
             data.rebuildIndexes(state);
@@ -322,6 +449,7 @@ public class BuildingSavedData extends SavedData {
         // Initialise the contribution registry and rebuild from world state
         IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
         data.contributionRegistry = new BuildingContributionRegistry(bus);
+        data.contributionRegistry.setBuildSource(data::getAllBuildings);
         data.contributionRegistry.rebuildFrom(data::getAllBuildings);
 
         LOGGER.info("Loaded {} buildings from saved data", data.buildings.size());
@@ -368,6 +496,7 @@ public class BuildingSavedData extends SavedData {
         if (contributionRegistry == null) {
             IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
             contributionRegistry = new BuildingContributionRegistry(bus);
+            contributionRegistry.setBuildSource(this::getAllBuildings);
             contributionRegistry.rebuildFrom(this::getAllBuildings);
         }
         boolean changed = contributionRegistry.recordIntactChange(colonyId, buildingTypeId, true);
@@ -383,6 +512,7 @@ public class BuildingSavedData extends SavedData {
         if (contributionRegistry == null) {
             IEventBus bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
             contributionRegistry = new BuildingContributionRegistry(bus);
+            contributionRegistry.setBuildSource(this::getAllBuildings);
             contributionRegistry.rebuildFrom(this::getAllBuildings);
         }
         boolean changed = contributionRegistry.recordIntactChange(colonyId, buildingTypeId, false);

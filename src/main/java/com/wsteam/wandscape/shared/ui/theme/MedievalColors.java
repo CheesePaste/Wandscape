@@ -44,10 +44,11 @@ public final class MedievalColors {
     public static final int BUTTON_BG         = 0xFF2D1050;
     public static final int BUTTON_BG_HOVER   = 0xFF3D2060;
     public static final int BUTTON_BG_DISABLED = 0xFF2A2A2A;
-    public static final int SLIDER_TRACK      = 0xFF1A0E04;
-    public static final int SLIDER_FILL       = 0xFFB8960F;
-    public static final int PROGRESS_BG       = 0xFF1A0E04;
-    public static final int PROGRESS_FILL     = 0xFFB8960F;
+    // ── Slider (blue/black, minimal) ──
+    public static final int SLIDER_TRACK      = 0xFF0A0A1A;
+    public static final int SLIDER_FILL       = 0xFF3355AA;
+    public static final int PROGRESS_BG       = 0xFF0A0A1A;
+    public static final int PROGRESS_FILL     = 0xFF3355AA;
 
     // ── Panel chrome ──
     public static final int PANEL_TITLE_BG    = 0xFF2D1050;

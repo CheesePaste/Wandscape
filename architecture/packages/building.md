@@ -2,20 +2,58 @@
 
 零自定义方块/BE。建筑状态全部通过 `BuildingSavedData` (Level SavedData) 管理。所有建筑使用原版方块，NPC 通过蓝图放置。
 
+## 建筑类别 (category)
+
+| 类别 | 说明 | 新增/现有 |
+|------|------|----------|
+| basic | 基础建筑（市政厅等） | 现有 |
+| node | 节点建筑（元素采集） | 现有 |
+| storage | 仓库建筑 | 现有 |
+| workstation | 工作站（分解/合成） | 现有 |
+| crafting_station | 制作站（法杖制作） | 现有 |
+| potion_station | 魔药站 | 现有 |
+| tavern | 酒馆（招募） | 现有 |
+| **shop** | 商店（游客购物，带交互区） | **新增** |
+| **service** | 服务建筑（游客交互，需进入建筑） | **新增** |
+| **decoration** | 装饰建筑（范围辐射加成） | **新增** |
+| **wonder** | 奇观（全局效果） | **新增** |
+
 ## 关键类
 
-- **BuildingConfig** (data/) — record：id/display_name/category/pattern/block_mapping/comfort/magic/wonder/maintenance/queue/blueprint+bind。block_mapping 值全为原版方块 ID
+### 数据类 (data/)
+
+- **BuildingConfig** (data/) — record：id/display_name/category/pattern/block_mapping/comfort/magic/wonder/queue/blueprint+bind。**新增字段**: `maintenanceCost`(MaintenanceCostConfig)/`decoration`(DecorationConfig)/`wonder`(WonderConfig)/`shop`(ShopConfig)/`service`(ServiceConfig)
 - **BlockOffset** (data/) — [x,y,z] 相对偏移，含 toKey() 和 Gson Deserializer
-- **BuildingState** (internal/) — 可变建筑状态：buildingId/typeId/category/anchor/BoundingBox/colonyId/shutdown/structureIntact/taskQueue/currentTaskId/stats
-- **BuildingSavedData** (internal/) — 3个索引(buildings/posIndex/chunkIndex) + NBT持久化 + AABB重叠检测。register() 检测 intersects()
-- **BuildingApiImpl** (internal/) — BuildingApi 实现：全部通过 BuildingSavedData 读写
-  - 新增：getQueue() / removeFromQueue() / moveUp() / moveDown() — 任务队列查询和调序
+- **MaintenanceCostConfig** (data/) — record: `intervalTicks`/`costs: Map<ElementType, Long>`
+- **DecorationConfig** (data/) — record: `radius`(int, 曼哈顿辐射半径)
+- **WonderConfig** (data/) — record: `effects: List<WonderEffect>` (sealed interface)
+- **ShopConfig** (data/) — record: `goods: List<ShopGoodDef>`(itemId/comfort/magic/wonder/restockCost可选) + `profitRate`
+- **ServiceConfig** (data/) — record: `energyPerUse`/`satisfactionPerUse`(保留字段，游客满意度由偏好+三值推导)/`elementOutput: Map<ElementType, Long>`/`maxOccupancy`
+- **ShopGoodDef** (data/) — record: `itemId: String`/`comfort: int`/`magic: int`/`wonder: int`/`restockCost: Map<ElementType, Integer>`(可选，默认反查 element_mappings 的 decompose_yield)。maxStock **不在 JSON 中**，由 ShopStockManager 按建筑按商品管理，玩家通过 GUI 滑动条 0–64 调整（默认 0，需玩家主动拉滑动条才补货）
+
+### 状态管理 (internal/)
+
+- **BuildingState** (internal/) — 可变建筑状态：buildingId/typeId/category/anchor/BoundingBox/colonyId/shutdown/structureIntact/taskQueue/currentTaskId/stats。**新增**: `maintenanceCost`(快照)/`lastMaintenanceTick`/`maintenancePaid`
+- **BuildingSavedData** (internal/) — 3个索引(buildings/posIndex/chunkIndex) + NBT持久化 + AABB重叠检测。register() 检测 intersects()。**新增**: `getInteractionTarget(buildingId, level)` 返回包围盒内可步行位置供游客AI导航；`getBuildingIdInInteractionZone()` 改为检查所有建筑包围盒内部(不仅interaction_radius>0的建筑)
+- **BuildingApiImpl** (internal/) — BuildingApi 实现：全部通过 BuildingSavedData 读写。**新增**: `getInteractionTarget(buildingId)` 委托给 BuildingSavedData.getInteractionTarget()
 - **EnqueueHelper** (internal/) — 入队：读 BlueprintRef → resolve bind → 硬编码 anchor → 构建 WorkItem
-- **BuildingInteractHandler** (internal/) — RightClickBlock → posIndex(chunkIndex fallback) O(1) → 按 category 分发：storage→仓库GUI / workstation/crafting_station/potion_station→生产站GUI / 其他→信息打印
-- **BuildingBreakHandler** (internal/) — BreakEvent/ExplosionEvent → 收集受损坐标 → structureIntact=false → 调用 `BuildingSavedData.removeBuildingContribution()`（1→0 边界跨越时广播 `ColonyEvaluationChangedEvent`）→ 构造局部修复 WorkItem（offsets 仅含受损方块，addFirst 插入队首，priority=49）。ExplosionEvent 按建筑分组批量入队，避免对大建筑全量重放蓝图。提供 `enqueueRepairForPositions`（事件侧）和 `enqueueRepairForOffsets`（Listener 侧）两个静态入口
-- **BuildCompleteListener** (internal/) — 订阅引擎 build_complete CustomEvent → `findDamagedBlocks` 扫描 → `structureIntact=true` → 调用 `BuildingSavedData.addBuildingContribution()`（0→1 边界跨越时广播 `ColonyEvaluationChangedEvent`）→ `/ 仍有损坏 → enqueueRepairForOffsets(局部重试)`
-- **BuildingContributionRegistry** (internal/) — 殖民地区三值聚合缓存：per-colony per-type 的 intactCount。只在 0↔1 边界跨越时广播 `ColonyEvaluationChangedEvent`。`BuildingSavedData.load()` 后调用 `rebuildFrom()` 做一次性全量重建，兼容旧存档
-- **BuildingUnlockChecker** (internal/) — 静态工具：传入 colonyId + BuildingConfig → 查询 BuildingApi 三值 vs unlockRequirement → 返回是否解锁 + 锁因字符串。用于建筑右键提示和 GUI 展示
+- **BuildingInteractHandler** (internal/) — RightClickBlock → posIndex(chunkIndex fallback) O(1) → interaction zone 扩展(interaction_radius>0 时范围交互) → 按 category 分发：storage→仓库GUI / workstation/crafting_station/potion_station→生产站GUI / shop→商店GUI(ShopOpenPacket, ShopMaxStockPacket→调整maxStock) / service→服务GUI / tavern→酒馆GUI / 其他→信息打印
+- **BuildingBreakHandler** (internal/) — BreakEvent/ExplosionEvent → 收集受损坐标 → structureIntact=false → 移除三值贡献 → 构造局部修复 WorkItem
+- **BuildCompleteListener** (internal/) — 订阅引擎 build_complete CustomEvent → 扫描 → structureIntact=true → 添加三值贡献 → 仍有损坏 → 局部重试
+
+### 三值评估
+
+- **BuildingContributionRegistry** (internal/) — 殖民地区三值聚合。**改为每建筑实例独立计算**：遍历 BuildSource.allBuildings()，每栋检查 isStructureIntact/isShutdown/category/shopHasStock。shop 三值 = 建筑基础值 + 所有有货 goods 的 comfort/magic/wonder 合计。any snapshot 变化广播 `ColonyEvaluationChangedEvent`
+- **BuildingUnlockChecker** (internal/) — 静态工具：传入 colonyId + BuildingConfig → 查询 BuildingApi 三值 vs unlockRequirement → 返回是否解锁 + 锁因字符串
+
+### 模拟经营系统 (internal/)
+
+- **MaintenanceSystem** (internal/) — 周期心跳(可配置间隔) → 遍历殖民地建筑 → 从 ColonyItemBank 扣元素(按 maintenanceCost.costs) → 不够则 shutdown。shutdown 建筑跳过扣费。宽限期内新建筑跳过。恢复检查：元素足够则自动 restart
+- **DecorationBonusSystem** (internal/) — 心跳扫描 → 遍历非decoration/wonder功能建筑 → 曼哈顿距离 ≤ decoration.radius 的装饰加成累加 → cap(建筑自身基础值 × Config.decorationBonusCap) → 缓存 → BuildingContributionRegistry 查询时合并
+- **DecorationBonusCache** (internal/) — 缓存每个功能建筑的当前装饰加成值，建筑变更时(注册/注销/shutdown/restart)失效重算
+- **ShopStockManager** (internal/) — 管理商店库存：per-building stock (Map<UUID, Map<String,Integer>>) + per-building maxStock 设定(Map<UUID, Map<String,Integer>>, 默认16, 玩家GUI调0–64)。心跳驱动 restock 周期 → restock_cost 优先用 JSON 显式值，未指定则反查 `Wandscape.ELEMENT_MAPPING_LOADER.getItemDecomposeYield()` 自动推断。ensureStockInitialized() 首次打开立即补货。setMaxStock() 调整上限后触发即时补货。purchase() 游客购物消耗货品 → 殖民地获得 (1+profitRate)× 元素。clearUnsold() 清空未售出。stock 状态变化 → BuildingContributionRegistry.setShopHasStock() 开关三值。getGoodsBonusComfort/Magic/Wonder() 查询有货 goods 的三值合计
+- **ShopInteractionHandler** (internal/) — 静态方法 interact()：游客 AI 调用 → 从 ShopStockManager 获取库存 → 选有货商品 → purchase
+- **WonderEffectApplier** (internal/) — 订阅 BuildingShutdownEvent + BuildingRestartedEvent + ColonyEvaluationChangedEvent → 遍历 category=wonder 建筑 → 收集 intact+非shutdown 的 effects → StatMod 聚合 statCache / PriceMod 聚合 priceCache / RuleUnlock 写入 unlockedRules → 发 WonderEffectChangedEvent。提供 getStatMod/getPriceMod/isRuleUnlocked 静态查询
 
 ## 数据流
 
@@ -40,18 +78,37 @@
   → 构造局部 WorkItem（offsets=仅受损偏移）→ addFirst 队首
   → NPC修复 → BuildCompleteListener 再次扫描 → 全部修复 → structureIntact=true
   → BuildingSavedData.addBuildingContribution() → intactCount 0→1 → 广播事件
+
+维护费循环
+  → MaintenanceSystem 心跳 → 遍历建筑
+  → shutdown → 跳过
+  → 宽限期内 → 跳过
+  → ColonyItemBank.consumeElements(maintenanceCost.costs)
+  → 足够 → maintenancePaid=true
+  → 不足 → shutdown(buildingId) → 按category分级惩罚 → BuildingShutdownEvent
+
+商店运作
+  → ShopStockManager.restock() → ColonyItemBank扣元素 → 填充goodSlots
+  → 游客交互 → 消耗货品 → ColonyItemBank入元素(利润)
+  → 有货/缺货 → 三值贡献开关
+
+装饰辐射
+  → DecorationBonusSystem → 功能建筑查曼哈顿距离内装饰
+  → 累加 + cap → 缓存 → BuildingContributionRegistry计入三值
 ```
 
 ## JSON
 
-位置：`data/wandscape/buildings/*.json`，8 个文件：town_hall/forest_node/earth_node/grand_tower/warehouse/workstation/crafting_station/potion_station。格式参见 [data/buildings.md](../data/buildings.md)。
+位置：`data/wandscape/buildings/*.json`，8 个现有建筑。格式参见 [data/buildings.md](../data/buildings.md)。
 
 ## 依赖
 
 - shared/api/BuildingApi, shared/data/BuildingData, shared/data/WorkItem
-- shared/event/BuildingPlacedEvent/BuildingShutdownEvent/BuildingRestartedEvent/**ColonyEvaluationChangedEvent**
+- shared/data/MaintenanceCost, shared/data/DecorationConfig, shared/data/WonderConfig, shared/data/WonderEffect, shared/data/ShopConfig, shared/data/ServiceConfig
+- shared/event/BuildingPlacedEvent/BuildingShutdownEvent/BuildingRestartedEvent/ColonyEvaluationChangedEvent
+- building/network/ShopMaxStockPacket (client→server, 调整maxStock, 服务器回复刷新ShopOpenPacket)
+- shared/event/MaintenanceDueEvent/ShopRestockedEvent/WonderEffectChangedEvent
 - shared/registry/WandscapeApis
-- shared/ui/component/TaskQueuePanel (UI组件，通过building/network包使用)
-- building/network/TaskQueueModifyPacket, TaskQueueDataPacket
+- warehouse/ColonyItemBank (维护费扣元素 + 商店进货)
 - dataconfig/WandscapeDataLoader
 - core/event/CustomEvent（BuildCompleteListener 订阅引擎事件）

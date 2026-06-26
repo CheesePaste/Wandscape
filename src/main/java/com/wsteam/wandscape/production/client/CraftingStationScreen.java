@@ -5,13 +5,12 @@ import java.util.List;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket.RecipeEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.component.QuantitySlider;
+import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -39,7 +38,7 @@ public class CraftingStationScreen extends MedievalScreen {
     private List<RecipeEntry> recipes = new ArrayList<>();
 
     private ScrollableList<RecipeEntry> recipeList;
-    private QuantitySlider quantitySlider;
+    private Slider slider;
     private TaskQueuePanel taskQueuePanel;
 
     public CraftingStationScreen() {
@@ -51,9 +50,9 @@ public class CraftingStationScreen extends MedievalScreen {
         this.stationPos = packet.stationPos();
         this.recipes = packet.entries();
         if (recipeList != null) recipeList.setItems(recipes);
-        if (quantitySlider != null) {
-            quantitySlider.setMax(1);
-            quantitySlider.setValue(1);
+        if (slider != null) {
+            slider.setMax(1);
+            slider.setValue(1);
         }
         // Request current queue data from server
         requestQueueRefresh();
@@ -155,8 +154,8 @@ public class CraftingStationScreen extends MedievalScreen {
 
         // Quantity slider + submit
         int controlY = contentY + listH + 6;
-        quantitySlider = new QuantitySlider(contentX, controlY, 120, 1, 1, 1, v -> {});
-        addRenderableWidget(quantitySlider);
+        slider = new Slider(contentX, controlY, 120, 1, 1, 1, v -> {});
+        addRenderableWidget(slider);
 
         addRenderableWidget(new MedievalButton(
                 contentX + contentW - 70, controlY + 4, 70, 18,
@@ -176,22 +175,22 @@ public class CraftingStationScreen extends MedievalScreen {
 
     private void updateSliderForRecipe(RecipeEntry entry) {
         if (entry == null) {
-            quantitySlider.setMax(1);
-            quantitySlider.setValue(1);
+            slider.setMax(1);
+            slider.setValue(1);
             return;
         }
         // Locked recipes (colony / elements / wand_level) show max_affordable=0; keep slider at 1
         boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
-        quantitySlider.setMax(Math.max(1, max));
-        quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
+        slider.setMax(Math.max(1, max));
+        slider.setValue(Math.min(slider.getValue(), max));
     }
 
     private void onSubmit() {
         RecipeEntry sel = recipeList.getSelected();
         // Block submission when recipe is locked (colony / elements / wand_level)
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
-        int qty = quantitySlider.getValue();
+        int qty = slider.getValue();
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(
                 stationPos, "craft_wand", sel.recipeId(), qty));
         // Refresh queue after submitting a new task

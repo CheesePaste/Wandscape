@@ -9,6 +9,10 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.op.AtomicOp;
+import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.ShopConfig;
+import com.wsteam.wandscape.shared.data.WonderConfig;
+import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.core.task.BlueprintSteps;
 import com.wsteam.wandscape.core.task.TaskSequence;
 import com.wsteam.wandscape.core.types.BlockType;
@@ -50,7 +54,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
                 null,  // no blueprint ref
-                null   // no nodeConfig
+                null,  // no nodeConfig
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -83,7 +88,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
                 null,  // no blueprint ref
-                null   // no nodeConfig
+                null,  // no nodeConfig
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -121,7 +127,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
                 null,  // no blueprint ref
-                null   // no nodeConfig
+                null,  // no nodeConfig
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -147,7 +154,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
                 null,  // no blueprint ref
-                null   // no nodeConfig
+                null,  // no nodeConfig
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -230,7 +238,7 @@ class DataDrivenStepsTest {
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null, null, null  // no boundary, no blueprint ref, no nodeConfig
+                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0  // no boundary, no blueprint ref, no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -254,7 +262,7 @@ class DataDrivenStepsTest {
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null, null, null  // no boundary, no blueprint ref, no nodeConfig
+                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0  // no boundary, no blueprint ref, no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -279,7 +287,8 @@ class DataDrivenStepsTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 null,  // no boundary
                 null,  // no blueprint ref
-                null   // no nodeConfig
+                null,  // no nodeConfig
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0
         );
     }
 }

@@ -1,18 +1,17 @@
 # 开发路线图
 
-## 当前阶段：阶段 3 — 经济循环
+## 当前阶段：阶段 3 — 经济循环 ✅
 
-采集→存储→消耗 完整经济链已实现：
+采集→存储→消耗 完整经济链 + 游客经济系统已实现：
 - ✓ ECS 引擎 + 任务池 + 调度器 + 蓝图 DSL
 - ✓ 法杖物品 + 元素映射 + 建筑管理(SavedData)
 - ✓ NPC 实体 + ECS 桥接 + 渲染
 - ✓ 道路系统（MST + 路网生成 + 装饰 + 编辑器 + 宽面渲染 + 路径规划 + 预览 + 拆除）
-- ✓ 道路编辑器：右键路径规划 + 路径点 + Enter确认 + Backspace撤销 + 实时预览路面 + 左键拆除
 - ✓ 仓库 GUI + ColonyItemBank + 网络同步
-- ✓ 工作站 GUI（decompose/synthesize）+ 制作站 GUI（craft_wand）+ 魔药站骨架
-- ✓ 节点自动采集 → 仓库闭环
-- ✓ 法杖需求接线（任务自动推导 requirements → Scheduler 查仓库 → 注入 WandEquipOp/WandReturnOp）
-- ✓ PosIndex chunkIndex fallback（重进游戏建筑可交互）
+- ✓ 工作站 GUI + 制作站 GUI + 节点自动采集 → 仓库闭环
+- ✓ 法杖需求接线 + 失败分析器 + 智能资源调度级联
+- ✓ 殖民地三值评估 + 配方解锁
+- **✓ 游客经济全系统**：维护费 + 装饰辐射 + 商店 + 奇观 + 游客(生成/移动/交互/离开) + 宾馆 + 酒馆招募
 
 ## 已完成的模块
 
@@ -30,31 +29,29 @@
 | dataconfig/ | 功能完整 |
 | command/ | 调试命令集 |
 
-## 未实现的 API（在 WandscapeApis 中定义但无实现）
+## 未实现的 API
 
-ColonyApi / HouseApi / ManaPoolApi / TavernApi / AtomicExecutor（被 core/op 替代）
+ColonyApi / HouseApi / ManaPoolApi / AtomicExecutor（被 core/op 替代）
 
-对应的模块：殖民地生命周期、房屋分配、魔力池、酒馆招募 — 均为阶段 3-4 内容。
+~~TaskApi~~ — 已实现 (2026-06-22)
+~~TavernApi~~ — 部分实现 (2026-06-26)：mage resume 存储/查询/招募已可用；3 个 NPC 招募方法仍为占位
 
-~~TaskApi~~ — 已实现 (2026-06-22)，详见 [GUI 任务编辑器](#gui-任务编辑器)
+对应的模块：殖民地生命周期、房屋分配、魔力池 — 均为阶段 4 内容。
 
 ## 待完成
 
 | 优先级 | 事项 | 涉及 |
 |--------|------|------|
-| ~~高~~ | ~~结构损坏后自动入队修复~~ | ~~building/BuildingBreakHandler~~ ✓ |
-| ~~高~~ | ~~全殖民地自治模式（autoApproveTasks config）~~ | ~~Config + GlobalTaskPool + EngineBootstrap~~ ✓ |
 | 中 | GlobalTaskPool COMPLETED 任务清理（内存泄漏） | core/task/GlobalTaskPool |
-| 中 | 道路拆除改为 NPC 任务执行（当前即时 server-side setBlock→AIR） | road/server/RoadEditorHandler |
-| 中 | 祭坛多方块检测从 tick() 改为事件驱动 | — (模块未构建) |
-| 中 | **失败分析器扩展：建造元素不足 → 自动入队节点采集** | FailureAnalyzerSystem + BuildingBreakHandler/BuildCompleteListener |
-| 中 | **失败分析器扩展：设施维护消耗元素不足 → 自动入队节点采集** | FailureAnalyzerSystem + 维护系统 |
+| 中 | 道路拆除改为 NPC 任务执行 | road/server/RoadEditorHandler |
+| 中 | 奇观效果影响游客满意度 | WonderEffectApplier → TouristMoveGoal |
+| 中 | 游客离开动画（走出边界后移除） | TouristSpawnSystem |
+| 中 | 商店 max_stock 调整 GUI | building/client/ShopScreen |
 | 低 | 连续执行加成从硬编码移至 TOML | Config + SchedulerSystem |
 | 低 | 殖民地系统（创建/删除/边界） | 新模块 |
 | 低 | 魔药站 GUI 实现 | production/client/ |
 | 低 | 多人游戏同步 | 网络包 |
-| ~~中~~ | ~~殖民地三值评估系统（舒适/魔法/奇观）~~ | ~~building/internal/BuildingContributionRegistry + ColonyEvaluationChangedEvent~~ ✓ |
-| ~~中~~ | ~~生产配方三值解锁~~ | ~~production/data/RecipeUnlockRequirement + RecipeUnlockChecker + BuildingUnlockChecker~~ ✓ |
+| 低 | TavernApi NPC 招募方法实现 | tavern/internal/ | |
 
 ## 已完成：殖民地三值评估系统 (2026-06-23)
 
@@ -209,6 +206,5 @@ GlobalTaskPool.addTask() → SchedulerSystem → NPC 执行
 
 ## 后续阶段（概览）
 
-- **阶段 3**：殖民地生命周期 + 房屋 + 魔力池 + 酒馆招募
-- **阶段 4**：节点建筑自动供给 + 祭坛 + 管理面板
+- **阶段 4**：殖民地生命周期 + 房屋 + 魔力池 + 祭坛 + 管理面板
 - **阶段 5**：性能压测 + 多人游戏 + 指南书

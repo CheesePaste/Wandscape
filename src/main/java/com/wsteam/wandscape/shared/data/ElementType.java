@@ -1,15 +1,17 @@
 package com.wsteam.wandscape.shared.data;
 
+import com.google.gson.annotations.SerializedName;
+
 public enum ElementType {
-    EARTH("earth", 1),
-    WOOD("wood", 1),
-    WATER("water", 1),
-    FIRE("fire", 2),
-    IRON("iron", 2),
-    WIND("wind", 2),
-    GOLD("gold", 3),
-    DIAMOND("diamond", 3),
-    ENDER("ender", 3);
+    @SerializedName("earth") EARTH("earth", 1),
+    @SerializedName("wood") WOOD("wood", 1),
+    @SerializedName("water") WATER("water", 1),
+    @SerializedName("fire") FIRE("fire", 2),
+    @SerializedName("iron") IRON("iron", 2),
+    @SerializedName("wind") WIND("wind", 2),
+    @SerializedName("gold") GOLD("gold", 3),
+    @SerializedName("diamond") DIAMOND("diamond", 3),
+    @SerializedName("ender") ENDER("ender", 3);
 
     private final String id;
     private final int tier;
@@ -25,5 +27,12 @@ public enum ElementType {
 
     public int getTier() {
         return tier;
+    }
+
+    public static ElementType fromId(String id) {
+        for (ElementType type : values()) {
+            if (type.id.equals(id)) return type;
+        }
+        throw new IllegalArgumentException("Unknown element type: " + id);
     }
 }

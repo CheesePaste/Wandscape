@@ -5,14 +5,13 @@ import java.util.List;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.component.QuantitySlider;
+import com.wsteam.wandscape.shared.ui.component.Slider;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.component.TabBar;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
@@ -48,7 +47,7 @@ public class WorkstationScreen extends MedievalScreen {
     private ScrollableList<?> currentList;
     private ScrollableList<DecomposableEntry> decomposeList;
     private ScrollableList<SynthesizeEntry> synthesizeList;
-    private QuantitySlider quantitySlider;
+    private Slider slider;
     private MedievalButton submitBtn;
     private TaskQueuePanel taskQueuePanel;
 
@@ -64,9 +63,9 @@ public class WorkstationScreen extends MedievalScreen {
         if (decomposeList != null) decomposeList.setItems(decomposableItems);
         if (synthesizeList != null) synthesizeList.setItems(synthesizeRecipes);
         // Reset slider on new data
-        if (quantitySlider != null) {
-            quantitySlider.setMax(1);
-            quantitySlider.setValue(1);
+        if (slider != null) {
+            slider.setMax(1);
+            slider.setValue(1);
         }
         // Request current queue data from server
         requestQueueRefresh();
@@ -198,8 +197,8 @@ public class WorkstationScreen extends MedievalScreen {
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
-        quantitySlider = new QuantitySlider(contentX, controlY, 120, 1, 1, 1, v -> {});
-        addRenderableWidget(quantitySlider);
+        slider = new Slider(contentX, controlY, 120, 1, 1, 1, v -> {});
+        addRenderableWidget(slider);
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
                 Component.literal("Submit"), this::onSubmit);
@@ -222,34 +221,34 @@ public class WorkstationScreen extends MedievalScreen {
 
     private void updateSliderForDecompose(DecomposableEntry entry) {
         if (entry == null) {
-            quantitySlider.setMax(1);
-            quantitySlider.setValue(1);
+            slider.setMax(1);
+            slider.setValue(1);
             return;
         }
         int max = (int) Math.min(entry.count(), MAX_QTY);
-        quantitySlider.setMax(Math.max(1, max));
-        quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
+        slider.setMax(Math.max(1, max));
+        slider.setValue(Math.min(slider.getValue(), max));
     }
 
     private void updateSliderForSynthesize(SynthesizeEntry entry) {
         if (entry == null) {
-            quantitySlider.setMax(1);
-            quantitySlider.setValue(1);
+            slider.setMax(1);
+            slider.setValue(1);
             return;
         }
         // Locked recipes (colony / elements / wand_level) show max_affordable=0; keep slider at 1
         boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
-        quantitySlider.setMax(Math.max(1, max));
-        quantitySlider.setValue(Math.min(quantitySlider.getValue(), max));
+        slider.setMax(Math.max(1, max));
+        slider.setValue(Math.min(slider.getValue(), max));
     }
 
     private void onTabChanged(int tabIndex) {
         activeTab = tabIndex;
         showTab(tabIndex);
         // Reset slider for new tab
-        quantitySlider.setMax(1);
-        quantitySlider.setValue(1);
+        slider.setMax(1);
+        slider.setValue(1);
     }
 
     private void showTab(int tabIndex) {
@@ -261,7 +260,7 @@ public class WorkstationScreen extends MedievalScreen {
     }
 
     private void onSubmit() {
-        int qty = quantitySlider.getValue();
+        int qty = slider.getValue();
         if (activeTab == 0) {
             DecomposableEntry sel = decomposeList.getSelected();
             if (sel == null || sel.count() <= 0) return;
