@@ -8,6 +8,9 @@ import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
 import com.wsteam.wandscape.road.client.RoadEditorRenderer;
 import com.wsteam.wandscape.road.client.RoadEditorClientState;
+import com.wsteam.wandscape.road.client.RoadProjectionController;
+import com.wsteam.wandscape.road.client.RoadProjectionRenderer;
+import com.wsteam.wandscape.road.client.RoadProjectionClientState;
 import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
@@ -95,6 +98,8 @@ public class WandscapeClient {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
         RoadEditorRenderer.register();
+        RoadProjectionRenderer.register();
+        RoadProjectionController.register();
         ProjectionRenderer.register();
         ProjectionFlightController.register();
         BuildingDebugController.register();
@@ -169,14 +174,19 @@ public class WandscapeClient {
             Minecraft.getInstance().setScreen(new TaskEditorScreen());
         }
         while (PROJECTION_TOGGLE.consumeClick()) {
-            // Cycle: Normal → Projection → Road Editor → Normal
-            if (RoadEditorClientState.isEditing()) {
-                // Road Editor → Normal
+            // Cycle: Normal → Projection (buildings) → Road Projection → Normal
+            if (RoadProjectionClientState.isProjecting()) {
+                // Road Projection → Normal
+                RoadProjectionClientState.exitProjection();
+                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
+            } else if (RoadEditorClientState.isEditing()) {
+                // Old Road Editor → Normal (fallback if entered via /wandscape road edit)
                 PacketDistributor.sendToServer(new RoadEditorTogglePacket());
             } else if (ProjectionClientState.isProjecting()) {
-                // Projection → Road Editor
+                // Projection → Road Projection
                 ProjectionClientState.exitProjection();
                 PacketDistributor.sendToServer(new ProjectionExitPacket());
+                RoadProjectionClientState.setExpectingSync(true);
                 PacketDistributor.sendToServer(new RoadEditorTogglePacket());
             } else {
                 // Normal → Projection
