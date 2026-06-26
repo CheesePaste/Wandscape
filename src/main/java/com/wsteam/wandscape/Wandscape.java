@@ -32,7 +32,6 @@ import com.wsteam.wandscape.command.SeedWarehouseCommand;
 import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
-import com.wsteam.wandscape.command.CitizenCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -91,7 +90,6 @@ import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
 import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
-import com.wsteam.wandscape.citizen.CitizenManager;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -240,7 +238,6 @@ public class Wandscape {
         shopStockManager = ShopStockManager.register();
         wonderEffectApplier = WonderEffectApplier.register();
         BuildingInteractHandler.setShopStockManager(shopStockManager);
-        CitizenManager.getInstance().register();
         TouristSpawnSystem.register();
         HotelStayHandler.register();
         WarehouseNotificationHandler.register();
@@ -405,11 +402,6 @@ public class Wandscape {
         LOGGER.info("Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
-        // Safety sweep: kill any citizen entities that survived a dirty shutdown
-        // (requiresCustomPersistence should prevent save, but belt-and-suspenders)
-        CitizenManager.killAllStrayCitizens(event.getServer().overworld());
-        // Spawn initial citizen NPCs
-        CitizenManager.getInstance().spawnInitial(event.getServer().overworld());
         BuildCompleteListener.register();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
@@ -463,16 +455,9 @@ public class Wandscape {
         }
     }
 
-    /** Discard all citizen entities BEFORE world saves to disk. */
-    @SubscribeEvent
-    public void onServerStopping(ServerStoppingEvent event) {
-        CitizenManager.getInstance().onServerStopping();
-    }
-
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         LOGGER.info("Wandscape server stopped — resetting engine.");
-        CitizenManager.getInstance().onServerStopped();
         buildingApi.setLevel(null);
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
@@ -506,8 +491,7 @@ public class Wandscape {
                 .then(SeedWarehouseCommand.node())
                 .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
-                .then(TransportCommand.node())
-                .then(CitizenCommand.node());
+                .then(TransportCommand.node());
         dispatcher.register(root);
     }
 
@@ -525,9 +509,6 @@ public class Wandscape {
         if (world == null) return;
 
         mcTickCount++;
-
-        // ⓪ Citizen NPC tick
-        CitizenManager.getInstance().tick(event.getServer().overworld());
 
         // ① Tick async executor countdowns
         var asyncExec = WandscapeEngine.getAsyncExecutor();

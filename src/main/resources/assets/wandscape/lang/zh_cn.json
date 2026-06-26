@@ -4,8 +4,8 @@
 
   "entity.wandscape.wandscape_npc": "法师",
   "item.wandscape.wandscape_npc_spawn_egg": "法师刷怪蛋",
-  "entity.wandscape.citizen": "市民",
-  "item.wandscape.citizen_spawn_egg": "市民刷怪蛋",
+  "entity.wandscape.tourist": "游客",
+  "item.wandscape.tourist_spawn_egg": "游客刷怪蛋",
 
   "key.categories.wandscape": "Wandscape",
   "key.wandscape.demo": "打开UI演示",

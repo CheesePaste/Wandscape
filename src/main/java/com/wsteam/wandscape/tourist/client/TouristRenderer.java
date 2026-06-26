@@ -18,7 +18,7 @@ import net.neoforged.fml.ModList;
 
 public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, HumanoidModel<TouristEntity>> {
 
-    private static final ResourceLocation[] CITIZEN_TEXTURES = detectTextures(
+    private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(
             "textures/entity/citizen");
     private static final ResourceLocation[] WIZARD_TEXTURES = detectTextures(
             "textures/entity/wizard");
@@ -64,9 +64,9 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, Humanoid
             return WIZARD_TEXTURES[0];
         }
 
-        if (variant >= 0 && variant < CITIZEN_TEXTURES.length) {
-            return CITIZEN_TEXTURES[variant];
+        if (variant >= 0 && variant < TOURIST_TEXTURES.length) {
+            return TOURIST_TEXTURES[variant];
         }
-        return CITIZEN_TEXTURES[0];
+        return TOURIST_TEXTURES[0];
     }
 }

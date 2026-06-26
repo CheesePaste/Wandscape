@@ -76,7 +76,7 @@ public interface BuildingApi {
     /**
      * Sample random walkable ground positions within the building's
      * boundary AABB. Each returned position has a solid block under it
-     * and air above. Used by citizen AI for LEISURE POI wandering.
+     * and air above. Used by tourist AI for LEISURE POI wandering.
      *
      * @param count number of positions to sample
      */

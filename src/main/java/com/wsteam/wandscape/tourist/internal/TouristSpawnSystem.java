@@ -132,8 +132,6 @@ public final class TouristSpawnSystem {
             tourist.setTargetBuildingCategory(target.getCategory());
             tourist.setColonyId(target.getColonyId());
             tourist.setCommuteTarget(interactionTarget);
-            // Tourist is always in COMMUTING state (moving to building)
-            tourist.applyState(com.wsteam.wandscape.citizen.CitizenState.COMMUTING);
             level.addFreshEntity(tourist);
 
             LOGGER.info("[TouristSpawn] {} heading to {} '{}' at {}",

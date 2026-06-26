@@ -137,7 +137,7 @@ public class BuildingApiImpl implements BuildingApi {
         LOGGER.debug("registered building {} type={} at {}",
                 state.getBuildingId(), state.getBuildingTypeId(), state.getAnchor());
 
-        // Notify downstream systems (e.g. citizen spawner, colony evaluation)
+        // Notify downstream systems (e.g. tourist spawner, colony evaluation)
         // so they react to building registration regardless of whether an NPC
         // built it or it was placed via command / admin tools.
         NeoForge.EVENT_BUS.post(new BuildingPlacedEvent(

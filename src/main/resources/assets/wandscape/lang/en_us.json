@@ -8,8 +8,8 @@
   "block.wandscape.grand_tower": "Grand Mage Tower",
   "entity.wandscape.wandscape_npc": "Wizard",
   "item.wandscape.wandscape_npc_spawn_egg": "Wizard Spawn Egg",
-  "entity.wandscape.citizen": "Citizen",
-  "item.wandscape.citizen_spawn_egg": "Citizen Spawn Egg",
+  "entity.wandscape.tourist": "Tourist",
+  "item.wandscape.tourist_spawn_egg": "Tourist Spawn Egg",
 
   "key.categories.wandscape": "Wandscape",
   "key.wandscape.demo": "Open UI Demo",

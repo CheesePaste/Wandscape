@@ -100,7 +100,7 @@ public final class BuildCompleteListener {
 
             // Always notify downstream systems when a building becomes intact.
             // Colony assignment may be null for the very first building;
-            // downstream handlers (e.g. CitizenManager) check the registry anyway.
+            // downstream handlers (e.g. tourist spawner) check the registry anyway.
             NeoForge.EVENT_BUS.post(new BuildingPlacedEvent(
                     state.getBuildingId(), state.getColonyId(), state.getBuildingTypeId()));
 
