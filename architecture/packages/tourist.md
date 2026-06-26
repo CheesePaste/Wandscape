@@ -27,16 +27,19 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
   1. 计算 targetCount = Config.baseSpawnCount + (comfort+magic+wonder) / Config.evalScoreDivisor
   2. 查询 RoadSavedData 获取道路边缘位置作为生成点（回退到建筑位置）
   3. 在道路上生成 TouristEntity，指定目标建筑（shop/service），类型偏好 lazy-default 为 40
-  4. 设置 touristMode=true + commuteTarget=建筑交互目标位置
+  4. 设置 commuteTarget=建筑交互目标位置
   5. cleanupTourists()：精力耗尽/夜幕/tick超时 → discard
 
-- **TouristMoveGoal** ✅ — AI Goal（仅 touristMode=true 时激活），多站行程：
-  - 沿道路网络寻路到 commuteTarget（BuildingApi.getInteractionTarget()）
-  - 到达交互范围内触发 onArrived() → shop→ShopInteractionHandler / service→满意度+精力消耗 / hotel→checkIn
-  - **加权建筑选择**：planNextBuilding() 按 typePreference × threeValueSum 加权随机选下一站，夜间优先宾馆
+- **TouristMoveGoal** ✅ — 统一移动 AI（优先级 1），`canUse()` = `isAlive()`：
+  - **内部 MoveMode 状态机**（不依赖 CitizenState 驱动移动）：
+    - VISITING_BUILDING：planNextBuilding() 加权选建筑 → 导航到交互点 → 交互（购物/服务/入住）
+    - EXPLORING_POI：poiList 随机远 POI → 导航 → 停留 5-15 秒
+    - WANDERING：wanderAnchor 半径内随机漫步 → 每 300 tick 概率重评估
+  - 状态转移概率：BUILDING 后 60%/25%/15%，POI 后 50%/30%/20%，WANDER 后 40%/30%/30%
+  - **建筑交互保留**：shop→ShopInteractionHandler / service→满意度+精力消耗+元素产出 / hotel→checkIn
   - **偏好驱动满意度**：Δsat = min(√(typePref × (threeSum - level×threshold + 1)), maxPerVisit)，低于阈值→0增益
   - **偏好衰减**：每次交互后该建筑类型偏好 -15（TOURIST_PREFERENCE_DECAY），最低保底 5
-  - 交互后设 commuteTarget=null → 短时 idle → planNextBuilding 或 cleanupTourists 移除
+  - 路网寻路：`RoadRouter.plan()` → waypoint 链 + `jitter()` 偏移 + stuck 恢复
 
 - **HotelStayHandler** ✅ — 宾馆入住/退房/精力恢复心跳
   - Map<UUID, Set<UUID>> 每建筑入住游客集合
@@ -106,4 +109,4 @@ else → Δsat = min(√(typePref × (threeSum - threshold + 1)), maxPerVisit (�
 - building/internal/BuildingConfigLoader（建筑三值查询）
 - Config（TOURIST_PREFERENCE_DECAY, TOURIST_LEVEL_SATISFACTION_THRESHOLD, TOURIST_MAX_SATISFACTION_PER_VISIT 等）
 - tavern/internal/TavernRecruitStorage（法师满意度100% → 酒馆）
-- citizen/ （皮肤纹理复用）
+- citizen/CitizenState（citizen 模式状态机）

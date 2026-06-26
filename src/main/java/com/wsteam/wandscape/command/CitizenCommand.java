@@ -44,21 +44,14 @@ public final class CitizenCommand {
         CitizenManager mgr = CitizenManager.getInstance();
 
         List<String> lines = new ArrayList<>();
-        lines.add("=== Tourists: " + mgr.countActive() + " active + "
-                + mgr.countStored() + " stored = " + mgr.countTotal() + " total ===");
+        lines.add("=== Tourists: " + mgr.countActive() + " active ===");
 
         for (TouristEntity t : mgr.getActiveCitizens()) {
             String appearance = t.isMage() ? "法师" : "市民";
-            lines.add(String.format("  [ACTIVE] %s | %s | %s | Lv.%d | 精力%d | 满意%d%%",
+            lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | 满意%d%%",
                     t.getTouristName(), appearance,
                     t.getCurrentState().getDisplayName(),
                     t.getLevel(), t.getEnergy(), t.getSatisfaction()));
-        }
-
-        for (var e : mgr.getStoredCitizens().entrySet()) {
-            var sc = e.getValue();
-            lines.add(String.format("  [STORED] %s | %s",
-                    sc.name(), sc.storedState().getDisplayName()));
         }
 
         String msg = String.join("\n", lines);
@@ -76,22 +69,22 @@ public final class CitizenCommand {
             targetState = CitizenState.valueOf(stateName.toUpperCase());
         } catch (IllegalArgumentException e) {
             src.sendFailure(Component.literal("Unknown state: " + stateName
-                    + ". Valid: commuting, working, leisure, idle, sleeping"));
+                    + ". Valid: visiting, exploring, wandering, idle, sleeping"));
             return 0;
         }
 
         ServerLevel level = src.getLevel();
         String result = CitizenManager.getInstance().debugForceState(name, targetState, level);
-        src.sendSuccess(() -> Component.literal("[Tourist] " + result), false);
+        src.sendSuccess(() -> Component.literal("[Citizen] " + result), false);
         return Command.SINGLE_SUCCESS;
     }
 
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestStates(
             CommandContext<CommandSourceStack> ctx,
             com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
-        builder.suggest("commuting");
-        builder.suggest("working");
-        builder.suggest("leisure");
+        builder.suggest("visiting");
+        builder.suggest("exploring");
+        builder.suggest("wandering");
         builder.suggest("idle");
         builder.suggest("sleeping");
         return builder.buildFuture();

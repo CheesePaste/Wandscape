@@ -28,62 +28,94 @@ import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
- * Tourist-specific movement AI. Navigates tourists along roads to a target
- * building's interaction position, triggers the interaction on arrival,
- * then picks the next building or leaves.
+ * Unified movement AI for {@link TouristEntity}.
  *
- * <p>Supports multi-stop itineraries: shop → service → hotel (if night) → depart.
- * While checked into a hotel, the tourist stays in place and recovers energy.
+ * <p>Self-manages an internal {@link MoveMode} state machine independent of
+ * {@link com.wsteam.wandscape.citizen.CitizenState}:
+ *
+ * <ul>
+ *   <li>{@code VISITING_BUILDING} — navigate to a shop/service/hotel,
+ *       interact on arrival, then probabilistically pick next mode</li>
+ *   <li>{@code EXPLORING_POI} — navigate to a POI, pause, then pick next mode</li>
+ *   <li>{@code WANDERING} — random walk within an anchor radius, periodically
+ *       re-evaluate mode</li>
+ * </ul>
+ *
+ * <p>While checked into a hotel, all movement stops until checkout.
  */
 public class TouristMoveGoal extends Goal {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final TouristEntity tourist;
-    private final double speed;
+    // ── Internal movement mode ──
 
+    enum MoveMode {
+        /** Heading to a building (shop/service/hotel) for interaction. */
+        VISITING_BUILDING,
+        /** Heading to a POI for sightseeing. */
+        EXPLORING_POI,
+        /** Random walk near an anchor point. */
+        WANDERING
+    }
+
+    private final TouristEntity tourist;
+    private final double touristSpeed;
+    private final double wanderSpeed;
+
+    private MoveMode currentMode = MoveMode.WANDERING;
+
+    // ── Shared navigation ──
     private BlockPos[] waypoints;
     private int wpIndex;
     private boolean usingRoad;
     private int stuckTicks;
+
+    // ── Building-visit state ──
     private int idleTicks;
-    /** Ticks spent idle after finishing all destinations, before cleanup removes the tourist. */
     private static final int POST_TOUR_IDLE_TICKS = 200;
 
-    public TouristMoveGoal(TouristEntity tourist, double speed) {
+    // ── POI state ──
+    private int poiPauseTicks;
+
+    // ── Wander state ──
+    private int wanderCooldown;
+    private int wanderEvaluateTick;
+
+    public TouristMoveGoal(TouristEntity tourist, double touristSpeed, double wanderSpeed) {
         this.tourist = tourist;
-        this.speed = speed;
+        this.touristSpeed = touristSpeed;
+        this.wanderSpeed = wanderSpeed;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
+    // ── Activation ──
+
     @Override
     public boolean canUse() {
-        return tourist.isTouristMode() && tourist.isAlive();
+        return tourist.isAlive();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return tourist.isTouristMode() && tourist.isAlive();
+        return tourist.isAlive();
     }
+
+    // ── Entry / exit ──
 
     @Override
     public void start() {
-        // If checked into a hotel, stay put — heartbeat handles energy recovery
-        if (tourist.getCheckedInBuildingId() != null) {
-            return;
+        // Only bypass probability when spawner explicitly assigned a building target
+        if (tourist.getCommuteTarget() != null && tourist.getTargetBuildingId() != null) {
+            currentMode = MoveMode.VISITING_BUILDING;
+        } else {
+            currentMode = decideNextMode(null);
         }
-        // If no commute target, try to plan one
-        if (tourist.getCommuteTarget() == null) {
-            planNextBuilding();
-        }
-        if (tourist.getCommuteTarget() == null) {
-            idleTicks = 0;
-            return;
-        }
-        beginNavigation(tourist.getCommuteTarget());
+        dispatchStart();
     }
 
     @Override
@@ -101,15 +133,55 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        switch (currentMode) {
+            case VISITING_BUILDING -> tickBuildingVisit();
+            case EXPLORING_POI -> tickPoiExplore();
+            case WANDERING -> tickWander();
+        }
+    }
+
+    // ── Mode dispatch (start) ──
+
+    private void dispatchStart() {
+        switch (currentMode) {
+            case VISITING_BUILDING -> startBuildingVisit();
+            case EXPLORING_POI -> startPoiExplore();
+            case WANDERING -> startWander();
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // VISITING_BUILDING
+    // ════════════════════════════════════════════════════════════════
+
+    private void startBuildingVisit() {
+        // If no commute target, try to plan one
+        if (tourist.getCommuteTarget() == null) {
+            planNextBuilding();
+        }
+        if (tourist.getCommuteTarget() == null) {
+            // No buildings available → fall back to wandering
+            idleTicks = 0;
+            switchMode(MoveMode.WANDERING);
+            startWander();
+            return;
+        }
+        beginNavigation(tourist.getCommuteTarget(), touristSpeed);
+    }
+
+    private void tickBuildingVisit() {
         BlockPos target = tourist.getCommuteTarget();
         if (target == null) {
             idleTicks++;
-            // After idling a while post-tour, try planning next destination
             if (idleTicks > POST_TOUR_IDLE_TICKS) {
                 planNextBuilding();
                 if (tourist.getCommuteTarget() != null) {
                     idleTicks = 0;
-                    beginNavigation(tourist.getCommuteTarget());
+                    beginNavigation(tourist.getCommuteTarget(), touristSpeed);
+                } else {
+                    // Still nothing → wander
+                    switchMode(MoveMode.WANDERING);
+                    startWander();
                 }
             }
             return;
@@ -122,7 +194,7 @@ public class TouristMoveGoal extends Goal {
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
         if (distSqr < interactionRange * interactionRange) {
-            onArrived();
+            onBuildingArrived();
             return;
         }
 
@@ -131,7 +203,7 @@ public class TouristMoveGoal extends Goal {
         if (wp != null && pos.distSqr(wp) < 2.25) {
             wpIndex++;
             if (waypoints != null && wpIndex < waypoints.length) {
-                moveToNext(speed, target);
+                moveToNext(touristSpeed, target);
                 stuckTicks = 0;
                 return;
             }
@@ -144,15 +216,13 @@ public class TouristMoveGoal extends Goal {
                 usingRoad = planRoute(target);
                 wpIndex = 1;
             }
-            moveToNext(speed, target);
+            moveToNext(touristSpeed, target);
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
         }
     }
 
-    // ── Arrival handling ──
-
-    private void onArrived() {
+    private void onBuildingArrived() {
         tourist.getNavigation().stop();
         waypoints = null;
         wpIndex = 0;
@@ -160,15 +230,15 @@ public class TouristMoveGoal extends Goal {
 
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId == null) {
-            finishStop();
+            finishBuildingStop();
             return;
         }
 
         String category = tourist.getTargetBuildingCategory();
+        String bldType = getBuildingTypeId(buildingId);
         boolean isHotel = isHotelBuilding(buildingId);
 
         if (isHotel) {
-            // Check into hotel
             HotelStayHandler hotel = HotelStayHandler.getActive();
             UUID colonyId = tourist.getColonyId();
             if (hotel != null && colonyId != null && hotel.checkIn(tourist, buildingId, colonyId)) {
@@ -177,13 +247,11 @@ public class TouristMoveGoal extends Goal {
                 tourist.setCommuteTarget(null);
                 tourist.setTargetBuildingId(null);
                 tourist.setTargetBuildingCategory(null);
-                LOGGER.debug("[TouristMove] {} checked into hotel {}", tourist.getTouristName(), shortId(buildingId));
+                showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
                 return;
             }
-            // Hotel full or check-in failed — treat as regular service
         }
 
-        // Interact based on category
         if ("shop".equals(category)) {
             interactWithShop(buildingId);
         } else if ("service".equals(category)) {
@@ -191,30 +259,295 @@ public class TouristMoveGoal extends Goal {
         }
 
         tourist.addVisitedBuilding(buildingId);
-
-        // Plan next stop
-        finishStop();
+        finishBuildingStop();
     }
 
-    /** Mark current stop complete and plan the next one. */
-    private void finishStop() {
+    private void finishBuildingStop() {
         tourist.setCommuteTarget(null);
         tourist.setTargetBuildingId(null);
         tourist.setTargetBuildingCategory(null);
         idleTicks = 0;
-        planNextBuilding();
-        if (tourist.getCommuteTarget() != null) {
-            beginNavigation(tourist.getCommuteTarget());
+
+        // Probability-based next mode
+        switchMode(decideNextMode(MoveMode.VISITING_BUILDING));
+        dispatchStart();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // EXPLORING_POI
+    // ════════════════════════════════════════════════════════════════
+
+    private void startPoiExplore() {
+        waypoints = null;
+        wpIndex = 0;
+        stuckTicks = 0;
+        poiPauseTicks = 0;
+        pickNextPoiAndGo();
+    }
+
+    private void tickPoiExplore() {
+        var nav = tourist.getNavigation();
+        BlockPos pos = tourist.blockPosition();
+
+        if (poiPauseTicks > 0) {
+            poiPauseTicks--;
+            nav.stop();
+            if (poiPauseTicks <= 0) {
+                // POI pause ended — re-evaluate mode (may switch to building or wander)
+                MoveMode next = decideNextMode(MoveMode.EXPLORING_POI);
+                if (next != currentMode) {
+                    switchMode(next);
+                    dispatchStart();
+                    return;
+                }
+                // Stay in EXPLORING_POI — fall through to pick next POI below
+            } else {
+                return;
+            }
+        }
+
+        BlockPos wp = currentTarget();
+        if (wp == null) {
+            // No waypoints — pick another POI, or wander fallback
+            if (!pickNextPoiAndGo()) {
+                switchMode(MoveMode.WANDERING);
+                startWander();
+            }
+            return;
+        }
+
+        // Waypoint advancement
+        if (pos.distSqr(wp) < 2.25) {
+            if (waypoints != null && wpIndex < waypoints.length) {
+                wpIndex++;
+                if (wpIndex < waypoints.length) {
+                    moveToNext(wanderSpeed, wp);
+                    stuckTicks = 0;
+                    return;
+                }
+            }
+            // End of waypoint chain → arrived at POI
+            nav.stop();
+            waypoints = null;
+            wpIndex = 0;
+            poiPauseTicks = 100 + tourist.getRandom().nextInt(200);
+            return;
+        }
+
+        // Stuck recovery
+        if (nav.isDone()) {
+            if (++stuckTicks > 60) {
+                stuckTicks = 0;
+                if (!pickNextPoiAndGo()) {
+                    switchMode(MoveMode.WANDERING);
+                    startWander();
+                }
+                return;
+            }
+            moveToNext(wanderSpeed, wp);
+        } else {
+            stuckTicks = Math.max(0, stuckTicks - 1);
         }
     }
 
-    // ── Next-destination planning ──
+    /**
+     * Pick a random far POI (or wander-anchor offset) and start navigating.
+     * @return true if a target was set
+     */
+    private boolean pickNextPoiAndGo() {
+        List<BlockPos> pois = tourist.getPoiList();
+        BlockPos rawTarget = null;
+
+        if (!pois.isEmpty()) {
+            BlockPos here = tourist.blockPosition();
+            List<BlockPos> far = new ArrayList<>();
+            for (BlockPos p : pois) {
+                if (p.distSqr(here) > 25) far.add(p);
+            }
+            rawTarget = !far.isEmpty()
+                    ? far.get(tourist.getRandom().nextInt(far.size()))
+                    : pois.get(tourist.getRandom().nextInt(pois.size()));
+        }
+        if (rawTarget == null) {
+            BlockPos anchor = tourist.getWanderAnchor();
+            if (anchor != null) {
+                int r = tourist.getWanderRadius();
+                rawTarget = anchor.offset(
+                        tourist.getRandom().nextInt(r * 2 + 1) - r, 0,
+                        tourist.getRandom().nextInt(r * 2 + 1) - r);
+            }
+        }
+        if (rawTarget == null) return false;
+
+        BlockPos target = findGround(rawTarget.getX(), rawTarget.getY(), rawTarget.getZ());
+        if (target == null) target = rawTarget;
+
+        usingRoad = planRoute(target);
+        logNav("POI", target);
+        wpIndex = 1; // skip wp[0] (= start pos)
+        moveToNext(wanderSpeed, target);
+        return true;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // WANDERING
+    // ════════════════════════════════════════════════════════════════
+
+    private void startWander() {
+        wanderCooldown = 0;
+        wanderEvaluateTick = 300 + tourist.getRandom().nextInt(200);
+    }
+
+    private void tickWander() {
+        BlockPos anchor = tourist.getWanderAnchor();
+        // If no anchor, use current position
+        if (anchor == null) {
+            anchor = tourist.blockPosition();
+            tourist.setWanderAnchor(anchor);
+            tourist.setWanderRadius(8);
+        }
+        int radius = tourist.getWanderRadius();
+        if (radius <= 0) radius = 8;
+        BlockPos pos = tourist.blockPosition();
+        int manDist = Math.abs(pos.getX() - anchor.getX()) + Math.abs(pos.getZ() - anchor.getZ());
+        var nav = tourist.getNavigation();
+
+        // Too far from anchor → head back
+        if (manDist > radius + 3) {
+            if (nav.isDone())
+                nav.moveTo(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5, wanderSpeed);
+            tickWanderEvaluate();
+            return;
+        }
+
+        // Periodic mode re-evaluation
+        if (tickWanderEvaluate()) return;
+
+        // Random step within radius
+        if (--wanderCooldown <= 0) {
+            int tx = anchor.getX() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
+            int tz = anchor.getZ() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
+            BlockPos g = findGround(tx, anchor.getY(), tz);
+            if (g != null)
+                nav.moveTo(g.getX() + 0.5, g.getY(), g.getZ() + 0.5, wanderSpeed);
+            wanderCooldown = 60 + tourist.getRandom().nextInt(120);
+        }
+    }
+
+    /** @return true if mode was switched (caller should return immediately) */
+    private boolean tickWanderEvaluate() {
+        if (--wanderEvaluateTick > 0) return false;
+
+        MoveMode next = decideNextMode(MoveMode.WANDERING);
+        if (next != currentMode) {
+            switchMode(next);
+            dispatchStart();
+            return true;
+        }
+        // Stay in WANDERING, reset timer
+        wanderEvaluateTick = 300 + tourist.getRandom().nextInt(200);
+        return false;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Mode transitions
+    // ════════════════════════════════════════════════════════════════
 
     /**
-     * Picks the tourist's next destination from available buildings in the colony.
-     * Sets commuteTarget, targetBuildingId, and targetBuildingCategory on the tourist.
-     * If no buildings are available, leaves them null (tourist will eventually despawn).
+     * Probability-based next mode selection.
+     *
+     * <table>
+     *   <tr><th>From</th><th>BUILDING</th><th>POI</th><th>WANDER</th></tr>
+     *   <tr><td>VISITING_BUILDING</td><td>60%</td><td>25%</td><td>15%</td></tr>
+     *   <tr><td>EXPLORING_POI</td><td>50%</td><td>30%</td><td>20%</td></tr>
+     *   <tr><td>WANDERING</td><td>40%</td><td>30%</td><td>30%</td></tr>
+     *   <tr><td>(initial)</td><td>50%</td><td>25%</td><td>25%</td></tr>
+     * </table>
+     *
+     * <p>If BUILDING is selected but no colony buildings are available,
+     * falls back to POI (or WANDER if no POIs).
      */
+    private MoveMode decideNextMode(@Nullable MoveMode from) {
+        double roll = tourist.getRandom().nextDouble();
+        double bProb, pProb; // building, poi probabilities
+
+        if (from == null) {
+            bProb = 0.50; pProb = 0.25;
+        } else {
+            switch (from) {
+                case VISITING_BUILDING -> { bProb = 0.60; pProb = 0.25; }
+                case EXPLORING_POI ->     { bProb = 0.50; pProb = 0.30; }
+                default ->                { bProb = 0.40; pProb = 0.30; }
+            }
+        }
+
+        if (roll < bProb) {
+            // Check if there are actually buildings to visit
+            if (hasBuildingsAvailable()) return MoveMode.VISITING_BUILDING;
+            // Fall through to POI check
+            roll = bProb + pProb + 0.01; // force skip to POI check below
+        }
+        if (roll < bProb + pProb) {
+            if (!tourist.getPoiList().isEmpty()) return MoveMode.EXPLORING_POI;
+            // No POIs → wander
+        }
+        return MoveMode.WANDERING;
+    }
+
+    /** Quick check whether any valid building targets exist. */
+    private boolean hasBuildingsAvailable() {
+        UUID colonyId = tourist.getColonyId();
+        if (colonyId == null) return false;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        List<BuildingData> all = api.getColonyBuildings(colonyId);
+        if (all.isEmpty()) return false;
+        for (BuildingData b : all) {
+            String cat = b.getCategory();
+            if (!"shop".equals(cat) && !"service".equals(cat)) continue;
+            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (tourist.hasVisitedBuilding(b.getBuildingId())) continue;
+            return true;
+        }
+        return false;
+    }
+
+    private void switchMode(MoveMode next) {
+        if (currentMode != next) {
+            LOGGER.debug("[Citizen] {} mode {} → {}",
+                    tourist.getTouristName(), currentMode, next);
+        }
+        currentMode = next;
+        waypoints = null;
+        wpIndex = 0;
+        tourist.getNavigation().stop();
+        // Sync display state with actual movement
+        tourist.applyState(mapModeToState(next));
+    }
+
+    private static com.wsteam.wandscape.citizen.CitizenState mapModeToState(MoveMode mode) {
+        return switch (mode) {
+            case VISITING_BUILDING -> com.wsteam.wandscape.citizen.CitizenState.VISITING;
+            case EXPLORING_POI -> com.wsteam.wandscape.citizen.CitizenState.EXPLORING;
+            case WANDERING -> com.wsteam.wandscape.citizen.CitizenState.WANDERING;
+        };
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Building-visit: planning & interaction
+    // (unchanged from original tourist logic)
+    // ════════════════════════════════════════════════════════════════
+
+    private void showActionBar(String msg) {
+        if (tourist.level().isClientSide) return;
+        Component comp = Component.literal(msg);
+        for (ServerPlayer p : tourist.level().getEntitiesOfClass(
+                ServerPlayer.class,
+                tourist.getBoundingBox().inflate(32))) {
+            p.sendSystemMessage(comp, true);
+        }
+    }
+
     private void planNextBuilding() {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
@@ -231,7 +564,6 @@ public class TouristMoveGoal extends Goal {
         long dayTime = level.getDayTime() % 24000;
         boolean isNight = dayTime >= 13000;
 
-        // Collect candidates: shop + service buildings that are intact, not shutdown, and not visited
         List<BuildingState> shopTargets = new ArrayList<>();
         List<BuildingState> serviceTargets = new ArrayList<>();
         List<BuildingState> hotelTargets = new ArrayList<>();
@@ -247,7 +579,6 @@ public class TouristMoveGoal extends Goal {
             if (b.isShutdown() || !b.isStructureIntact()) continue;
             if (tourist.hasVisitedBuilding(b.getBuildingId())) continue;
 
-            // Skip service buildings on per-building cooldown
             if ("service".equals(cat) && tourist.getServiceCooldown(b.getBuildingId()) > tourist.tickCount)
                 continue;
 
@@ -255,13 +586,11 @@ public class TouristMoveGoal extends Goal {
             if (state == null) continue;
 
             if ("shop".equals(cat)) {
-                // Only target shops that have stock
                 ShopStockManager stock = ShopStockManager.getActive();
                 if (stock != null && stock.hasStock(b.getBuildingId())) {
                     shopTargets.add(state);
                 }
             } else {
-                // Skip all service buildings during global cooldown
                 if (inServiceCooldown) continue;
 
                 if (isHotelBuilding(b.getBuildingId())) {
@@ -275,8 +604,6 @@ public class TouristMoveGoal extends Goal {
             }
         }
 
-        // Pick target with priority: hotel (if night + sat 70-99) > shop > service
-        // Tourists with sat < 70 or >= 100 should not seek hotels
         int sat = tourist.getSatisfaction();
         boolean canUseHotel = sat >= 70 && sat < 100;
 
@@ -292,7 +619,50 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (chosen == null) {
-            LOGGER.debug("[TouristMove] {} has no more buildings to visit", tourist.getTouristName());
+            StringBuilder report = new StringBuilder();
+            report.append(String.format(
+                    "[Citizen] %s | NO BUILDING | colony=%s | phase=%s | sat=%d | night=%s | visited=%d | cooldown=%s",
+                    tourist.getTouristName(), tourist.getColonyId(),
+                    isNight ? "night" : "day", sat, isNight,
+                    tourist.getVisitedBuildings().size(),
+                    inServiceCooldown ? "YES" : "no"));
+
+            int total = allBuildings.size();
+            int noShopService = 0, shutdown = 0, notIntact = 0, alreadyVisited = 0;
+            int svcCooldown = 0, noStock = 0, hotelFull = 0, noState = 0;
+
+            for (BuildingData b : allBuildings) {
+                String cat = b.getCategory();
+                if (!"shop".equals(cat) && !"service".equals(cat)) { noShopService++; continue; }
+                if (b.isShutdown()) { shutdown++; continue; }
+                if (!b.isStructureIntact()) { notIntact++; continue; }
+                if (tourist.hasVisitedBuilding(b.getBuildingId())) { alreadyVisited++; continue; }
+                if ("service".equals(cat) && tourist.getServiceCooldown(b.getBuildingId()) > tourist.tickCount) { svcCooldown++; continue; }
+
+                BuildingState state = savedData.getBuilding(b.getBuildingId());
+                if (state == null) { noState++; continue; }
+
+                if ("shop".equals(cat)) {
+                    ShopStockManager stockMgr = ShopStockManager.getActive();
+                    if (stockMgr != null && !stockMgr.hasStock(b.getBuildingId())) { noStock++; }
+                } else {
+                    if (inServiceCooldown) { svcCooldown++; continue; }
+                    if (isHotelBuilding(b.getBuildingId())) {
+                        HotelStayHandler hotel = HotelStayHandler.getActive();
+                        if (hotel != null && !hotel.hasVacancy(b.getBuildingId())) { hotelFull++; }
+                    }
+                }
+            }
+
+            report.append(String.format(
+                    "\n  ALL=%d | shop+service=%d | shutdown=%d | not_intact=%d | visited=%d | svc_cooldown=%d | no_stock=%d | hotel_full=%d | no_state=%d",
+                    total, total - noShopService,
+                    shutdown, notIntact, alreadyVisited, svcCooldown, noStock, hotelFull, noState));
+            report.append(String.format(
+                    "\n  hotel_targets=%d | shop_targets=%d | service_targets=%d | canUseHotel=%s",
+                    hotelTargets.size(), shopTargets.size(), serviceTargets.size(), canUseHotel));
+
+            LOGGER.info(report.toString());
             return;
         }
 
@@ -302,12 +672,10 @@ public class TouristMoveGoal extends Goal {
         tourist.setTargetBuildingId(chosen.getBuildingId());
         tourist.setTargetBuildingCategory(chosen.getCategory());
         tourist.setCommuteTarget(interactionTarget);
-        LOGGER.debug("[TouristMove] {} next stop: {} '{}' at {}",
+        LOGGER.debug("[Citizen] {} next stop: {} '{}' at {}",
                 tourist.getTouristName(), chosen.getCategory(),
                 chosen.getBuildingTypeId(), interactionTarget.toShortString());
     }
-
-    // ── Interactions ──
 
     private void interactWithShop(UUID buildingId) {
         ShopStockManager stockManager = ShopStockManager.getActive();
@@ -323,8 +691,10 @@ public class TouristMoveGoal extends Goal {
             tourist.setSatisfaction(tourist.getSatisfaction() + gain);
             tourist.setEnergy(tourist.getEnergy() - 20);
             applyPreferenceDecay(buildingId);
-            LOGGER.debug("[TouristMove] {} purchased {} from shop {} — satisfaction +{}",
-                    tourist.getTouristName(), purchased, shortId(buildingId), gain);
+            String bldType = getBuildingTypeId(buildingId);
+            showActionBar("🛒 " + tourist.getTouristName() + " 从 "
+                    + (bldType != null ? bldType : "商店") + " 购买了 " + purchased
+                    + " | 满意+" + gain + " 精力-20");
         }
     }
 
@@ -338,7 +708,6 @@ public class TouristMoveGoal extends Goal {
         tourist.setSatisfaction(tourist.getSatisfaction() + gain);
         applyPreferenceDecay(buildingId);
 
-        // Apply service cooldown — tourist wanders streets before next facility visit
         int cooldownTicks = Config.SERVICE_COOLDOWN_TICKS.get();
         if (cooldownTicks > 0) {
             int endTick = tourist.tickCount + cooldownTicks;
@@ -346,7 +715,6 @@ public class TouristMoveGoal extends Goal {
             tourist.setServiceCooldownEndTick(endTick);
         }
 
-        // Deposit elementOutput to colony bank
         UUID colonyId = tourist.getColonyId();
         if (colonyId != null && !svc.elementOutput().isEmpty()) {
             ServerLevel level = getServerLevel();
@@ -358,7 +726,7 @@ public class TouristMoveGoal extends Goal {
                             var elementType = com.wsteam.wandscape.shared.data.ElementType.fromId(entry.getKey());
                             bank.addElement(colonyId, elementType, entry.getValue());
                         } catch (IllegalArgumentException e) {
-                            LOGGER.warn("[TouristMove] Unknown element type '{}' in service {} elementOutput",
+                            LOGGER.warn("[Citizen] Unknown element type '{}' in service {} elementOutput",
                                     entry.getKey(), shortId(buildingId));
                         }
                     }
@@ -366,17 +734,14 @@ public class TouristMoveGoal extends Goal {
             }
         }
 
-        LOGGER.debug("[TouristMove] {} used service {} — energy={} satisfaction={} cooldown={}",
-                tourist.getTouristName(), shortId(buildingId),
-                tourist.getEnergy(), tourist.getSatisfaction(), cooldownTicks);
+        String bldType = getBuildingTypeId(buildingId);
+        showActionBar("🔧 " + tourist.getTouristName() + " 使用了 "
+                + (bldType != null ? bldType : "服务建筑")
+                + " | 满意+" + gain + " 精力-" + svc.energyPerUse());
     }
 
-    // ── Preference-based satisfaction ──
+    // ── Preference / satisfaction ──
 
-    /**
-     * Returns the effective three-values for a building, including in-stock goods
-     * bonus for shops.
-     */
     private int[] getEffectiveValues(@Nullable UUID buildingId) {
         var config = BuildingConfigLoader.getInstance().get(getBuildingTypeId(buildingId));
         if (config == null) return new int[]{0, 0, 0};
@@ -394,16 +759,11 @@ public class TouristMoveGoal extends Goal {
         return new int[]{c, m, w};
     }
 
-    /** Three-value sum for a building (including goods bonus). */
     private int threeValueSum(@Nullable UUID buildingId) {
         int[] v = getEffectiveValues(buildingId);
         return v[0] + v[1] + v[2];
     }
 
-    /**
-     * Match score = tourist's type preference × building's three-value sum.
-     * Drives both building selection (weightedPick) and satisfaction gain.
-     */
     private int computeMatchScore(@Nullable UUID buildingId) {
         String typeId = getBuildingTypeId(buildingId);
         if (typeId == null) return 0;
@@ -412,13 +772,6 @@ public class TouristMoveGoal extends Goal {
         return typePref * sum;
     }
 
-    /**
-     * Compute satisfaction gain with level-scaled cutoff and diminishing returns.
-     *
-     * <p>If the building's three-value sum is below {@code level × thresholdPerLevel},
-     * the building is too basic for this tourist — zero gain.
-     * Above the threshold, gain = min(sqrt(typePref × (threeSum - threshold + 1)), maxPerVisit).
-     */
     private int computeSatisfactionGain(@Nullable UUID buildingId) {
         int threeSum = threeValueSum(buildingId);
         int threshold = tourist.getLevel() * Config.TOURIST_LEVEL_SATISFACTION_THRESHOLD.get();
@@ -431,23 +784,16 @@ public class TouristMoveGoal extends Goal {
         return Math.min(gain, Config.TOURIST_MAX_SATISFACTION_PER_VISIT.get());
     }
 
-    /**
-     * Reduce the tourist's preference for the specific building type just visited.
-     * This prevents tourists from farming a single building type.
-     */
     private void applyPreferenceDecay(UUID buildingId) {
         int decay = Config.TOURIST_PREFERENCE_DECAY.get();
         if (decay <= 0) return;
         String typeId = getBuildingTypeId(buildingId);
         if (typeId == null) return;
         tourist.adjustTypePreference(typeId, -decay);
-        LOGGER.debug("[TouristMove] {} decay preference for {} → {}",
+        LOGGER.debug("[Citizen] {} decay preference for {} → {}",
                 tourist.getTouristName(), typeId, tourist.getTypePreference(typeId));
     }
 
-    // ── Weighted random building selection ──
-
-    /** Pick a building weighted by preference-match score. Minimum weight is 1. */
     @Nullable
     private BuildingState weightedPick(List<BuildingState> candidates) {
         if (candidates.isEmpty()) return null;
@@ -469,9 +815,11 @@ public class TouristMoveGoal extends Goal {
         return candidates.get(candidates.size() - 1);
     }
 
-    // ── Road routing ──
+    // ════════════════════════════════════════════════════════════════
+    // Shared navigation
+    // ════════════════════════════════════════════════════════════════
 
-    private void beginNavigation(BlockPos target) {
+    private void beginNavigation(BlockPos target, double speed) {
         waypoints = null;
         wpIndex = 0;
         stuckTicks = 0;
@@ -479,7 +827,7 @@ public class TouristMoveGoal extends Goal {
         usingRoad = planRoute(target);
         wpIndex = 1;
         moveToNext(speed, target);
-        LOGGER.debug("[TouristMove] {} heading to {} via {}",
+        LOGGER.debug("[Citizen] {} heading to {} via {}",
                 tourist.getTouristName(), target.toShortString(),
                 usingRoad ? "road" : "direct");
     }
@@ -499,12 +847,20 @@ public class TouristMoveGoal extends Goal {
 
         List<BlockPos> wps = new ArrayList<>();
         RouteSegment first = segments.get(0);
-        wps.add(new BlockPos((int) first.fromX(), (int) first.fromY(), (int) first.fromZ()));
+        wps.add(jitter(new BlockPos((int) first.fromX(), (int) first.fromY(), (int) first.fromZ())));
         for (RouteSegment seg : segments) {
-            wps.add(new BlockPos((int) seg.toX(), (int) seg.toY(), (int) seg.toZ()));
+            wps.add(jitter(new BlockPos((int) seg.toX(), (int) seg.toY(), (int) seg.toZ())));
         }
         waypoints = wps.toArray(new BlockPos[0]);
         return true;
+    }
+
+    /** Deterministic ±0–1 XZ offset so entities don't walk on exactly the same path. */
+    private BlockPos jitter(BlockPos raw) {
+        long seed = tourist.getUUID().hashCode() + raw.hashCode();
+        int dx = (int) ((seed & 3) - 1);         // -1, 0, or +1
+        int dz = (int) (((seed >> 16) & 3) - 1); // -1, 0, or +1
+        return raw.offset(dx, 0, dz);
     }
 
     private void moveToNext(double spd, BlockPos fallback) {
@@ -515,25 +871,35 @@ public class TouristMoveGoal extends Goal {
     }
 
     @Nullable
-    private BlockPos currentTarget(BlockPos fallback) {
+    private BlockPos currentTarget() {
         if (waypoints != null && wpIndex < waypoints.length) return waypoints[wpIndex];
-        return fallback;
+        return null;
     }
 
-    private int getInteractionRange() {
-        UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId == null) return 3;
-        BuildingApi api = getBuildingApi();
-        if (api == null) return 3;
-        var data = api.getBuilding(buildingId);
-        if (data == null) return 3;
-        var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
-        if (config == null) return 3;
-        int r = config.interactionRadius();
-        return r > 0 ? r : 3;
+    private BlockPos currentTarget(BlockPos fallback) {
+        BlockPos wp = currentTarget();
+        return wp != null ? wp : fallback;
     }
 
-    // ── Hotel detection ──
+    // ── Logging ──
+
+    private void logNav(String label, BlockPos target) {
+        String name = tourist.getTouristName();
+        BlockPos from = tourist.blockPosition();
+        if (usingRoad && waypoints != null) {
+            LOGGER.info("[Citizen] {} {} ROAD → {} ({} wps, {}→{})",
+                    name, label, target.toShortString(), waypoints.length,
+                    from.toShortString(), target.toShortString());
+        } else {
+            LOGGER.info("[Citizen] {} {} VANILLA → {} ({}→{})",
+                    name, label, target.toShortString(),
+                    from.toShortString(), target.toShortString());
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Helpers
+    // ════════════════════════════════════════════════════════════════
 
     private boolean isHotelBuilding(UUID buildingId) {
         var config = BuildingConfigLoader.getInstance().get(getBuildingTypeId(buildingId));
@@ -548,7 +914,18 @@ public class TouristMoveGoal extends Goal {
         return data != null ? data.getBuildingTypeId() : null;
     }
 
-    // ── Helpers ──
+    private int getInteractionRange() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId == null) return 3;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return 3;
+        var data = api.getBuilding(buildingId);
+        if (data == null) return 3;
+        var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
+        if (config == null) return 3;
+        int r = config.interactionRadius();
+        return r > 0 ? r : 3;
+    }
 
     @Nullable
     private BlockPos findGround(int x, int baseY, int z) {

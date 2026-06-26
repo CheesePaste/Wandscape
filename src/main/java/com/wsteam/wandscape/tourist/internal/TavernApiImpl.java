@@ -64,7 +64,7 @@ public class TavernApiImpl implements TavernApi {
         MageResume resume = new MageResume(touristName, level, maxMana,
                 manaRegenRate, spellPower, skinVariant, System.currentTimeMillis());
         s.addResume(colonyId, resume);
-        LOGGER.info("[TavernApi] Received mage resume: {} (Lv.{}) for colony {}",
+        LOGGER.info("[Citizen] Received mage resume: {} (Lv.{}) for colony {}",
                 touristName, level, colonyId.toString().substring(0, 8));
     }
 
@@ -86,7 +86,7 @@ public class TavernApiImpl implements TavernApi {
         java.util.Collections.reverse(resumes);
         if (index < 0 || index >= resumes.size()) return null;
         MageResume resume = s.takeResume(colonyId, resumes.size() - 1 - index);
-        LOGGER.info("[TavernApi] Recruited mage {} from colony {}",
+        LOGGER.info("[Citizen] Recruited mage {} from colony {}",
                 resume != null ? resume.touristName() : "null",
                 colonyId.toString().substring(0, 8));
         return resume;

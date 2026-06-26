@@ -17,7 +17,6 @@ import com.mojang.logging.LogUtils;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.citizen.CitizenState;
-import com.wsteam.wandscape.citizen.ai.CitizenMoveGoal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -44,7 +43,7 @@ import net.neoforged.fml.ModList;
  *
  * <p>Extends {@link PathfinderMob} to use player-model rendering with custom skins.
  * Managed by {@code CitizenManager} (time-scheduled spawn/despawn).
- * Uses {@link CitizenMoveGoal} for road-based movement.
+ * Uses {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal} for unified movement (tourist + citizen modes).
  *
  * <p>95% citizen appearance (skins from {@code textures/entity/citizen}),
  * 5% mage appearance (skins from {@code textures/entity/wizard}).
@@ -133,9 +132,6 @@ public class TouristEntity extends PathfinderMob {
     @Nullable
     private UUID colonyId;
 
-    /** True when this entity is a short-term tourist (not a long-term citizen). */
-    private boolean touristMode;
-
     /** Target building ID the tourist is currently navigating to. */
     @Nullable
     private UUID targetBuildingId;
@@ -193,8 +189,7 @@ public class TouristEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new CitizenMoveGoal(this, 0.55, 0.35));
-        this.goalSelector.addGoal(1, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5));
+        this.goalSelector.addGoal(1, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5, 0.35));
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
     }
 
@@ -341,9 +336,6 @@ public class TouristEntity extends PathfinderMob {
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }
-
-    public boolean isTouristMode() { return touristMode; }
-    public void setTouristMode(boolean mode) { this.touristMode = mode; }
 
     @Nullable public UUID getTargetBuildingId() { return targetBuildingId; }
     public void setTargetBuildingId(@Nullable UUID id) { this.targetBuildingId = id; }

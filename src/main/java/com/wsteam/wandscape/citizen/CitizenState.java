@@ -1,24 +1,24 @@
 package com.wsteam.wandscape.citizen;
 
 /**
- * Citizen behavioural state for the state machine.
- * Used by {@link CitizenManager} to determine what the citizen
- * should be doing each tick, and by the AI goal to pick behaviour.
+ * Movement state label for tourist entities.
+ * Updated by {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal}
+ * to reflect actual movement destination.
  */
 public enum CitizenState {
-    /** Standing around, occasional slow wandering. Fallback state. */
+    /** Heading to a building for interaction. */
+    VISITING("前往建筑"),
+
+    /** Heading to a POI for sightseeing. */
+    EXPLORING("游览中"),
+
+    /** Random walk near home. */
+    WANDERING("闲逛中"),
+
+    /** Standing still. */
     IDLE("空闲"),
 
-    /** Walking to a target (workplace, home, bed) using road network. */
-    COMMUTING("通勤中"),
-
-    /** At workplace, slow wander near building. */
-    WORKING("工作中"),
-
-    /** Free time, wandering near home or plaza. */
-    LEISURE("休闲中"),
-
-    /** In bed, not moving, sleeping pose. */
+    /** In bed, sleeping pose. */
     SLEEPING("睡眠中");
 
     private final String displayName;
