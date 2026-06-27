@@ -102,7 +102,7 @@ public final class TouristSpawnSystem {
             if (state != null) touristTargets.add(state);
         }
         if (touristTargets.isEmpty()) {
-            LOGGER.debug("[Citizen] No shop/service buildings — skipping spawn");
+            LOGGER.debug("[Tourist] No shop/service buildings — skipping spawn");
             return;
         }
 
@@ -132,10 +132,10 @@ public final class TouristSpawnSystem {
             tourist.setColonyId(target.getColonyId());
             tourist.setCommuteTarget(interactionTarget);
             // Goal will override this in start() since building target is preset
-            tourist.applyState(com.wsteam.wandscape.citizen.CitizenState.VISITING);
+            tourist.applyState(TouristState.VISITING);
             level.addFreshEntity(tourist);
 
-            LOGGER.info("[Citizen] {} heading to {} '{}' at {}",
+            LOGGER.info("[Tourist] {} heading to {} '{}' at {}",
                     tourist.getTouristName(), target.getCategory(),
                     target.getBuildingTypeId(), interactionTarget.toShortString());
         }
@@ -284,9 +284,9 @@ public final class TouristSpawnSystem {
             tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
                     t.getMaxMana(), t.getManaRegenRate(), t.getSpellPower(),
                     t.getSkinVariant());
-            LOGGER.info("[Citizen] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
+            LOGGER.info("[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
         } catch (IllegalStateException e) {
-            LOGGER.warn("[Citizen] TavernApi not available — mage resume lost: {}",
+            LOGGER.warn("[Tourist] TavernApi not available — mage resume lost: {}",
                     t.getTouristName());
         }
     }
@@ -324,7 +324,7 @@ public final class TouristSpawnSystem {
             t.setTargetBuildingId(b.getBuildingId());
             t.setTargetBuildingCategory("service");
             t.setCommuteTarget(target);
-            LOGGER.info("[Citizen] {} routed to hotel {} (sat={} energy={})",
+            LOGGER.info("[Tourist] {} routed to hotel {} (sat={} energy={})",
                     t.getTouristName(), b.getBuildingId().toString().substring(0, 8),
                     t.getSatisfaction(), t.getEnergy());
             return true;
@@ -364,7 +364,7 @@ public final class TouristSpawnSystem {
             storeMageResume(t);
         }
 
-        LOGGER.debug("[Citizen] {} departed (energy={} satisfaction={} mage={})",
+        LOGGER.debug("[Tourist] {} departed (energy={} satisfaction={} mage={})",
                 t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
     }
 

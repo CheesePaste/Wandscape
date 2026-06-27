@@ -46,10 +46,10 @@ public class TavernRecruitStorage extends SavedData {
         list.add(resume);
         while (list.size() > MAX_PER_COLONY) {
             MageResume removed = list.remove(0);
-            LOGGER.debug("[Citizen] Evicted oldest resume: {}", removed.touristName());
+            LOGGER.debug("[Tourist] Evicted oldest resume: {}", removed.touristName());
         }
         setDirty();
-        LOGGER.info("[Citizen] Mage resume stored for colony {}: {} (Lv.{})",
+        LOGGER.info("[Tourist] Mage resume stored for colony {}: {} (Lv.{})",
                 shortId(colonyId), resume.touristName(), resume.level());
     }
 
@@ -114,7 +114,7 @@ public class TavernRecruitStorage extends SavedData {
             }
             storage.colonyResumes.put(colonyId, resumes);
         }
-        LOGGER.debug("[Citizen] Loaded {} colonies from disk", storage.colonyResumes.size());
+        LOGGER.debug("[Tourist] Loaded {} colonies from disk", storage.colonyResumes.size());
         return storage;
     }
 

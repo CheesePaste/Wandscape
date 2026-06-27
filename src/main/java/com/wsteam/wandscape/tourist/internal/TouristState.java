@@ -1,11 +1,10 @@
-package com.wsteam.wandscape.citizen;
+package com.wsteam.wandscape.tourist.internal;
 
 /**
  * Movement state label for tourist entities.
- * Updated by {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal}
- * to reflect actual movement destination.
+ * Updated by {@link TouristMoveGoal} to reflect actual movement destination.
  */
-public enum CitizenState {
+public enum TouristState {
     /** Heading to a building for interaction. */
     VISITING("前往建筑"),
 
@@ -23,7 +22,7 @@ public enum CitizenState {
 
     private final String displayName;
 
-    CitizenState(String displayName) {
+    TouristState(String displayName) {
         this.displayName = displayName;
     }
 

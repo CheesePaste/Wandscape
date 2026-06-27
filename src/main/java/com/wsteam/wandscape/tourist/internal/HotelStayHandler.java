@@ -78,7 +78,7 @@ public final class HotelStayHandler {
 
         Set<UUID> guests = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
         if (guests.size() >= maxOccupancy) {
-            LOGGER.debug("[Citizen] Check-in failed: building {} full ({}/{})",
+            LOGGER.debug("[Tourist] Check-in failed: building {} full ({}/{})",
                     shortId(buildingId), guests.size(), maxOccupancy);
             return false;
         }
@@ -88,7 +88,7 @@ public final class HotelStayHandler {
         tourist.setCheckedInBuildingId(buildingId);
         tourist.setHotelCheckinTime(tourist.tickCount);
 
-        LOGGER.info("[Citizen] {} checked into {} (occupancy {}/{})",
+        LOGGER.info("[Tourist] {} checked into {} (occupancy {}/{})",
                 tourist.getTouristName(), shortId(buildingId), guests.size(), maxOccupancy);
         return true;
     }
@@ -114,7 +114,7 @@ public final class HotelStayHandler {
         tourist.setEnergy(tourist.getEnergy() + energyRecovery);
         tourist.setSatisfaction(tourist.getSatisfaction() + Config.HOTEL_SATISFACTION_PER_NIGHT.get());
 
-        LOGGER.info("[Citizen] {} checked out of {} (energy +{} satisfaction +{})",
+        LOGGER.info("[Tourist] {} checked out of {} (energy +{} satisfaction +{})",
                 tourist.getTouristName(), shortId(buildingId),
                 energyRecovery, Config.HOTEL_SATISFACTION_PER_NIGHT.get());
     }

@@ -32,6 +32,7 @@ import com.wsteam.wandscape.command.SeedWarehouseCommand;
 import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
+import com.wsteam.wandscape.command.TouristCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -491,6 +492,7 @@ public class Wandscape {
                 .then(SeedWarehouseCommand.node())
                 .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
+                .then(TouristCommand.node())
                 .then(TransportCommand.node());
         dispatcher.register(root);
     }

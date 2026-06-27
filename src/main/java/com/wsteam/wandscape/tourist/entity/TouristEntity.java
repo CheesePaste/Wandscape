@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.citizen.CitizenState;
+import com.wsteam.wandscape.tourist.internal.TouristState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -42,10 +42,10 @@ import net.neoforged.fml.ModList;
  * A tourist NPC that visits the colony to interact with shops and service buildings.
  *
  * <p>Extends {@link PathfinderMob} to use player-model rendering with custom skins.
- * Managed by {@code CitizenManager} (time-scheduled spawn/despawn).
- * Uses {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal} for unified movement (tourist + citizen modes).
+ * Managed by {@link com.wsteam.wandscape.tourist.internal.TouristSpawnSystem} (time-scheduled spawn/despawn).
+ * Uses {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal} for unified movement.
  *
- * <p>95% citizen appearance (skins from {@code textures/entity/citizen}),
+ * <p>95% tourist appearance (skins from {@code textures/entity/tourist}),
  * 5% mage appearance (skins from {@code textures/entity/wizard}).
  * Mage tourists carry mana/spell-power stats; when their satisfaction reaches 100%,
  * their data is stored in the tavern as a recruitment resume.
@@ -57,7 +57,7 @@ public class TouristEntity extends PathfinderMob {
     // ── Appearance ──
 
     public enum Appearance {
-        CITIZEN,
+        TOURIST,
         MAGE
     }
 
@@ -77,15 +77,15 @@ public class TouristEntity extends PathfinderMob {
         return 1;
     }
 
-    public static final int CITIZEN_SKIN_COUNT = detectSkinCount("textures/entity/citizen");
+    public static final int TOURIST_SKIN_COUNT = detectSkinCount("textures/entity/tourist");
     public static final int WIZARD_SKIN_COUNT  = detectSkinCount("textures/entity/wizard");
 
     // ── Synched data keys ──
 
-    /** Skin variant — index within the appearance-specific pool (citizen or wizard). */
+    /** Skin variant — index within the appearance-specific pool (tourist or wizard). */
     private static final EntityDataAccessor<Integer> DATA_SKIN_VARIANT =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
-    /** 0 = CITIZEN, 1 = MAGE. */
+    /** 0 = TOURIST, 1 = MAGE. */
     private static final EntityDataAccessor<Byte> DATA_APPEARANCE =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BYTE);
 
@@ -93,9 +93,9 @@ public class TouristEntity extends PathfinderMob {
 
     private String touristName = "";
 
-    // ── State machine (set by CitizenManager) ──
+    // ── State label (synced by TouristMoveGoal) ──
 
-    private CitizenState currentState = CitizenState.IDLE;
+    private TouristState currentState = TouristState.IDLE;
 
     @Nullable
     private BlockPos commuteTarget;
@@ -177,7 +177,7 @@ public class TouristEntity extends PathfinderMob {
     }
 
     public Appearance getAppearance() {
-        return entityData.get(DATA_APPEARANCE) == 1 ? Appearance.MAGE : Appearance.CITIZEN;
+        return entityData.get(DATA_APPEARANCE) == 1 ? Appearance.MAGE : Appearance.TOURIST;
     }
 
     public boolean isMage() {
@@ -237,7 +237,7 @@ public class TouristEntity extends PathfinderMob {
                 spellPower = 1 + random.nextInt(4);        // 1–4
                 level = 1 + random.nextInt(5);             // 1–5
             } else {
-                variant = random.nextInt(CITIZEN_SKIN_COUNT);
+                variant = random.nextInt(TOURIST_SKIN_COUNT);
             }
 
             entityData.set(DATA_SKIN_VARIANT, variant);
@@ -268,10 +268,10 @@ public class TouristEntity extends PathfinderMob {
 
     // ──────────────────────── State helpers ────────────────────────
 
-    public void applyState(CitizenState state) {
+    public void applyState(TouristState state) {
         if (this.currentState != state) {
             this.currentState = state;
-            if (state == CitizenState.SLEEPING) setPose(Pose.SLEEPING);
+            if (state == TouristState.SLEEPING) setPose(Pose.SLEEPING);
             else if (getPose() == Pose.SLEEPING) setPose(Pose.STANDING);
         }
     }
@@ -281,7 +281,7 @@ public class TouristEntity extends PathfinderMob {
     public String getTouristName() { return touristName; }
     public void setTouristName(String name) { this.touristName = name; syncName(); }
 
-    public CitizenState getCurrentState() { return currentState; }
+    public TouristState getCurrentState() { return currentState; }
 
     @Nullable public BlockPos getCommuteTarget() { return commuteTarget; }
     public void setCommuteTarget(@Nullable BlockPos t) { this.commuteTarget = t; }

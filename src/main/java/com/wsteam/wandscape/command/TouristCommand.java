@@ -3,9 +3,8 @@ package com.wsteam.wandscape.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import com.wsteam.wandscape.citizen.CitizenManager;
-import com.wsteam.wandscape.citizen.CitizenState;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.internal.TouristState;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -19,34 +18,35 @@ import java.util.List;
  * Debug commands for tourist NPC testing.
  *
  * <pre>
- * /wandscape citizen list
- * /wandscape citizen state &lt;name|all&gt; &lt;state&gt;
+ * /wandscape tourist list
+ * /wandscape tourist state &lt;name|all&gt; &lt;state&gt;
  * </pre>
  */
-public final class CitizenCommand {
+public final class TouristCommand {
 
-    private CitizenCommand() {}
+    private TouristCommand() {}
 
     public static com.mojang.brigadier.tree.CommandNode<CommandSourceStack> node() {
-        return Commands.literal("citizen")
+        return Commands.literal("tourist")
                 .then(Commands.literal("list")
-                        .executes(CitizenCommand::list))
+                        .executes(TouristCommand::list))
                 .then(Commands.literal("state")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .then(Commands.argument("state", StringArgumentType.word())
-                                        .suggests(CitizenCommand::suggestStates)
-                                        .executes(CitizenCommand::forceState))))
+                                        .suggests(TouristCommand::suggestStates)
+                                        .executes(TouristCommand::forceState))))
                 .build();
     }
 
     private static int list(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        CitizenManager mgr = CitizenManager.getInstance();
+        ServerLevel level = src.getLevel();
 
+        List<TouristEntity> tourists = findTourists(level);
         List<String> lines = new ArrayList<>();
-        lines.add("=== Tourists: " + mgr.countActive() + " active ===");
+        lines.add("=== Tourists: " + tourists.size() + " active ===");
 
-        for (TouristEntity t : mgr.getActiveCitizens()) {
+        for (TouristEntity t : tourists) {
             String appearance = t.isMage() ? "法师" : "市民";
             lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | 满意%d%%",
                     t.getTouristName(), appearance,
@@ -64,9 +64,9 @@ public final class CitizenCommand {
         String name = StringArgumentType.getString(ctx, "name");
         String stateName = StringArgumentType.getString(ctx, "state");
 
-        CitizenState targetState;
+        TouristState targetState;
         try {
-            targetState = CitizenState.valueOf(stateName.toUpperCase());
+            targetState = TouristState.valueOf(stateName.toUpperCase());
         } catch (IllegalArgumentException e) {
             src.sendFailure(Component.literal("Unknown state: " + stateName
                     + ". Valid: visiting, exploring, wandering, idle, sleeping"));
@@ -74,9 +74,37 @@ public final class CitizenCommand {
         }
 
         ServerLevel level = src.getLevel();
-        String result = CitizenManager.getInstance().debugForceState(name, targetState, level);
-        src.sendSuccess(() -> Component.literal("[Citizen] " + result), false);
-        return Command.SINGLE_SUCCESS;
+        List<TouristEntity> tourists = findTourists(level);
+
+        if ("all".equalsIgnoreCase(name)) {
+            for (TouristEntity t : tourists) {
+                t.applyState(targetState);
+            }
+            src.sendSuccess(() -> Component.literal(
+                    "[Tourist] All " + tourists.size() + " tourists → " + targetState.getDisplayName()), false);
+            return Command.SINGLE_SUCCESS;
+        }
+
+        for (TouristEntity t : tourists) {
+            if (t.getTouristName().startsWith(name)) {
+                t.applyState(targetState);
+                src.sendSuccess(() -> Component.literal(
+                        "[Tourist] " + t.getTouristName() + " → " + targetState.getDisplayName()), false);
+                return Command.SINGLE_SUCCESS;
+            }
+        }
+        src.sendFailure(Component.literal("No tourist matching '" + name + "'"));
+        return 0;
+    }
+
+    private static List<TouristEntity> findTourists(ServerLevel level) {
+        List<TouristEntity> result = new ArrayList<>();
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof TouristEntity t && t.isAlive()) {
+                result.add(t);
+            }
+        }
+        return result;
     }
 
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestStates(

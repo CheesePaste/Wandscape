@@ -59,12 +59,12 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             BuildingSavedData data = BuildingSavedData.get(level);
             UUID buildingId = data.getBuildingIdAt(pkt.buildingPos);
             if (buildingId == null) {
-                LOGGER.warn("[Citizen] No building at {}", pkt.buildingPos);
+                LOGGER.warn("[Tourist] No building at {}", pkt.buildingPos);
                 return;
             }
             BuildingState state = data.getBuilding(buildingId);
             if (state == null || !"tavern".equals(state.getCategory())) {
-                LOGGER.warn("[Citizen] Building {} is not a tavern", buildingId);
+                LOGGER.warn("[Tourist] Building {} is not a tavern", buildingId);
                 return;
             }
             UUID colonyId = state.getColonyId();
@@ -98,7 +98,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             // 5. Fix ECS state (spawn() already triggered onNpcJoinWorld)
             fixEcsAfterSpawn(npc, colonyId);
 
-            LOGGER.info("[Citizen] Recruited NPC {} for colony {} at {}",
+            LOGGER.info("[Tourist] Recruited NPC {} for colony {} at {}",
                     npc.getUUID().toString().substring(0, 8),
                     colonyId.toString().substring(0, 8),
                     spawnPos.toShortString());
@@ -116,7 +116,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         try {
             index = Integer.parseInt(pkt.action.substring("recruit_mage:".length()));
         } catch (NumberFormatException e) {
-            LOGGER.warn("[Citizen] Invalid recruit_mage action: {}", pkt.action);
+            LOGGER.warn("[Tourist] Invalid recruit_mage action: {}", pkt.action);
             return;
         }
 
@@ -157,7 +157,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
         fixEcsAfterSpawn(npc, colonyId);
 
-        LOGGER.info("[Citizen] Recruited mage {} (Lv.{}) from resume for colony {} at {}",
+        LOGGER.info("[Tourist] Recruited mage {} (Lv.{}) from resume for colony {} at {}",
                 resume.touristName(), resume.level(),
                 colonyId.toString().substring(0, 8),
                 spawnPos.toShortString());
@@ -212,7 +212,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         if (member != null && !colonyId.equals(member.colonyId())) {
             ecsWorld.addComponent(ecsId,
                     new com.wsteam.wandscape.core.component.ColonyMember(colonyId));
-            LOGGER.info("[Citizen] Fixed NPC {} colony {} → {}",
+            LOGGER.info("[Tourist] Fixed NPC {} colony {} → {}",
                     ecsId,
                     member.colonyId().toString().substring(0, 8),
                     colonyId.toString().substring(0, 8));

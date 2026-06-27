@@ -19,7 +19,7 @@ import net.neoforged.fml.ModList;
 public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, HumanoidModel<TouristEntity>> {
 
     private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(
-            "textures/entity/citizen");
+            "textures/entity/tourist");
     private static final ResourceLocation[] WIZARD_TEXTURES = detectTextures(
             "textures/entity/wizard");
 

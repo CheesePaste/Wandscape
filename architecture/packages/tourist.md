@@ -14,7 +14,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 
 ### 数据
 
-- **TouristAttributes** (data/) — record: level(int)/energy(int)/satisfaction(int, 0-100)/appearance(Appearance: CITIZEN/MAGE)
+- **TouristAttributes** (data/) — record: level(int)/energy(int)/satisfaction(int, 0-100)/appearance(Appearance: TOURIST/MAGE)
 
 ### API
 
@@ -31,7 +31,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
   5. cleanupTourists()：精力耗尽/夜幕/tick超时 → discard
 
 - **TouristMoveGoal** ✅ — 统一移动 AI（优先级 1），`canUse()` = `isAlive()`：
-  - **内部 MoveMode 状态机**（不依赖 CitizenState 驱动移动）：
+  - **内部 MoveMode 状态机**（不依赖 TouristState 驱动移动）：
     - VISITING_BUILDING：planNextBuilding() 加权选建筑 → 导航到交互点 → 交互（购物/服务/入住）
     - EXPLORING_POI：poiList 随机远 POI → 导航 → 停留 5-15 秒
     - WANDERING：wanderAnchor 半径内随机漫步 → 每 300 tick 概率重评估
@@ -109,4 +109,4 @@ else → Δsat = min(√(typePref × (threeSum - threshold + 1)), maxPerVisit (�
 - building/internal/BuildingConfigLoader（建筑三值查询）
 - Config（TOURIST_PREFERENCE_DECAY, TOURIST_LEVEL_SATISFACTION_THRESHOLD, TOURIST_MAX_SATISFACTION_PER_VISIT 等）
 - tavern/internal/TavernRecruitStorage（法师满意度100% → 酒馆）
-- citizen/CitizenState（citizen 模式状态机）
+- tourist/internal/TouristState（游客状态标签）
