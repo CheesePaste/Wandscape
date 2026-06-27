@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.citizen.CitizenState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -27,6 +29,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -39,10 +42,10 @@ import net.neoforged.fml.ModList;
  * A tourist NPC that visits the colony to interact with shops and service buildings.
  *
  * <p>Extends {@link PathfinderMob} to use player-model rendering with custom skins.
- * Short-term visitors spawned by {@code TouristSpawnSystem}; movement driven by
- * {@code TouristMoveGoal}.
+ * Managed by {@code CitizenManager} (time-scheduled spawn/despawn).
+ * Uses {@link com.wsteam.wandscape.tourist.internal.TouristMoveGoal} for unified movement (tourist + citizen modes).
  *
- * <p>95% civilian appearance (skins from {@code textures/entity/citizen}),
+ * <p>95% citizen appearance (skins from {@code textures/entity/citizen}),
  * 5% mage appearance (skins from {@code textures/entity/wizard}).
  * Mage tourists carry mana/spell-power stats; when their satisfaction reaches 100%,
  * their data is stored in the tavern as a recruitment resume.
@@ -54,7 +57,7 @@ public class TouristEntity extends PathfinderMob {
     // ── Appearance ──
 
     public enum Appearance {
-        CIVILIAN,
+        CITIZEN,
         MAGE
     }
 
@@ -74,15 +77,15 @@ public class TouristEntity extends PathfinderMob {
         return 1;
     }
 
-    public static final int CIVILIAN_SKIN_COUNT = detectSkinCount("textures/entity/citizen");
-    public static final int WIZARD_SKIN_COUNT   = detectSkinCount("textures/entity/wizard");
+    public static final int CITIZEN_SKIN_COUNT = detectSkinCount("textures/entity/citizen");
+    public static final int WIZARD_SKIN_COUNT  = detectSkinCount("textures/entity/wizard");
 
     // ── Synched data keys ──
 
-    /** Skin variant — index within the appearance-specific pool. */
+    /** Skin variant — index within the appearance-specific pool (citizen or wizard). */
     private static final EntityDataAccessor<Integer> DATA_SKIN_VARIANT =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
-    /** 0 = CIVILIAN, 1 = MAGE. */
+    /** 0 = CITIZEN, 1 = MAGE. */
     private static final EntityDataAccessor<Byte> DATA_APPEARANCE =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BYTE);
 
@@ -90,10 +93,19 @@ public class TouristEntity extends PathfinderMob {
 
     private String touristName = "";
 
-    // ── Movement ──
+    // ── State machine (set by CitizenManager) ──
+
+    private CitizenState currentState = CitizenState.IDLE;
 
     @Nullable
     private BlockPos commuteTarget;
+    private boolean commuteArrived;
+
+    @Nullable
+    private BlockPos wanderAnchor;
+    private int wanderRadius = 8;
+
+    private List<BlockPos> poiList = List.of();
 
     // ── Tourist attributes ──
 
@@ -101,7 +113,7 @@ public class TouristEntity extends PathfinderMob {
     private int satisfaction;
     private int level = 1;
 
-    // ── Per-building-type preference (buildingTypeId → 5..100, default 40) ──
+    // ── Per-building-type preference (buildingTypeId → 5..100, default 50) ──
 
     private final Map<String, Integer> typePreferences = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int DEFAULT_TYPE_PREFERENCE = 40;
@@ -119,9 +131,6 @@ public class TouristEntity extends PathfinderMob {
 
     @Nullable
     private UUID colonyId;
-
-    /** True when this entity is a short-term tourist (not a long-term resident). */
-    private boolean touristMode;
 
     /** Target building ID the tourist is currently navigating to. */
     @Nullable
@@ -144,7 +153,7 @@ public class TouristEntity extends PathfinderMob {
     /** Per-service-building cooldown end ticks (buildingId → game tick when cooldown expires). */
     private final Map<UUID, Integer> serviceCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Global cooldown end tick after using any service building. */
+    /** Global cooldown end tick after using any service building. During this, tourist wanders streets. */
     private int serviceCooldownEndTick;
 
     public TouristEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -162,12 +171,13 @@ public class TouristEntity extends PathfinderMob {
         builder.define(DATA_APPEARANCE, (byte) 0);
     }
 
+    /** Skin variant — index within the appearance-specific pool. */
     public int getSkinVariant() {
         return entityData.get(DATA_SKIN_VARIANT);
     }
 
     public Appearance getAppearance() {
-        return entityData.get(DATA_APPEARANCE) == 1 ? Appearance.MAGE : Appearance.CIVILIAN;
+        return entityData.get(DATA_APPEARANCE) == 1 ? Appearance.MAGE : Appearance.CITIZEN;
     }
 
     public boolean isMage() {
@@ -179,7 +189,7 @@ public class TouristEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5));
+        this.goalSelector.addGoal(1, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5, 0.35));
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
     }
 
@@ -200,6 +210,7 @@ public class TouristEntity extends PathfinderMob {
                 sb.append(" - 魔力 ").append(maxMana)
                         .append(" - 法术 ").append(spellPower);
             }
+            sb.append(" (").append(currentState.getDisplayName()).append(")");
             player.sendSystemMessage(Component.literal(sb.toString()));
         }
         return InteractionResult.sidedSuccess(level().isClientSide);
@@ -214,17 +225,19 @@ public class TouristEntity extends PathfinderMob {
         syncName();
 
         if (getSkinVariant() < 0) {
+            // Step 1: roll appearance (5% mage)
             boolean mage = random.nextDouble() < MAGE_CHANCE;
             int variant;
 
             if (mage) {
                 variant = random.nextInt(WIZARD_SKIN_COUNT);
+                // Roll mage-specific stats — these get stored in the tavern resume
                 maxMana = 80 + random.nextInt(121);       // 80–200
                 manaRegenRate = 1 + random.nextInt(5);    // 1–5
                 spellPower = 1 + random.nextInt(4);        // 1–4
                 level = 1 + random.nextInt(5);             // 1–5
             } else {
-                variant = random.nextInt(CIVILIAN_SKIN_COUNT);
+                variant = random.nextInt(CITIZEN_SKIN_COUNT);
             }
 
             entityData.set(DATA_SKIN_VARIANT, variant);
@@ -253,13 +266,37 @@ public class TouristEntity extends PathfinderMob {
                 .add(Attributes.MAX_HEALTH, 20.0);
     }
 
+    // ──────────────────────── State helpers ────────────────────────
+
+    public void applyState(CitizenState state) {
+        if (this.currentState != state) {
+            this.currentState = state;
+            if (state == CitizenState.SLEEPING) setPose(Pose.SLEEPING);
+            else if (getPose() == Pose.SLEEPING) setPose(Pose.STANDING);
+        }
+    }
+
     // ──────────────────────── Getters / Setters ────────────────────────
 
     public String getTouristName() { return touristName; }
     public void setTouristName(String name) { this.touristName = name; syncName(); }
 
+    public CitizenState getCurrentState() { return currentState; }
+
     @Nullable public BlockPos getCommuteTarget() { return commuteTarget; }
     public void setCommuteTarget(@Nullable BlockPos t) { this.commuteTarget = t; }
+
+    public boolean isCommuteArrived() { return commuteArrived; }
+    public void setCommuteArrived(boolean a) { this.commuteArrived = a; }
+
+    @Nullable public BlockPos getWanderAnchor() { return wanderAnchor; }
+    public void setWanderAnchor(@Nullable BlockPos a) { this.wanderAnchor = a; }
+
+    public int getWanderRadius() { return wanderRadius; }
+    public void setWanderRadius(int r) { this.wanderRadius = r; }
+
+    public List<BlockPos> getPoiList() { return poiList; }
+    public void setPoiList(List<BlockPos> pois) { this.poiList = List.copyOf(pois); }
 
     public int getEnergy() { return energy; }
     public void setEnergy(int e) { this.energy = Math.clamp(e, 0, 200); }
@@ -275,15 +312,17 @@ public class TouristEntity extends PathfinderMob {
 
     // ── Preferences ──
 
+    /** Returns this tourist's preference for a building type (5–100, default 50). */
     public int getTypePreference(String buildingTypeId) {
         return typePreferences.getOrDefault(buildingTypeId, DEFAULT_TYPE_PREFERENCE);
     }
 
+    /** Adjust preference for a building type by delta (clamped to 5–100). */
     public void adjustTypePreference(String buildingTypeId, int delta) {
         int current = getTypePreference(buildingTypeId);
         int next = Math.clamp(current + delta, MIN_TYPE_PREFERENCE, MAX_TYPE_PREFERENCE);
         if (next == DEFAULT_TYPE_PREFERENCE) {
-            typePreferences.remove(buildingTypeId);
+            typePreferences.remove(buildingTypeId); // keep map small
         } else {
             typePreferences.put(buildingTypeId, next);
         }
@@ -297,9 +336,6 @@ public class TouristEntity extends PathfinderMob {
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }
-
-    public boolean isTouristMode() { return touristMode; }
-    public void setTouristMode(boolean mode) { this.touristMode = mode; }
 
     @Nullable public UUID getTargetBuildingId() { return targetBuildingId; }
     public void setTargetBuildingId(@Nullable UUID id) { this.targetBuildingId = id; }
@@ -319,18 +355,22 @@ public class TouristEntity extends PathfinderMob {
 
     // ── Service cooldown ──
 
+    /** Returns the tick when the cooldown for a specific service building expires, or 0. */
     public int getServiceCooldown(UUID buildingId) {
         return serviceCooldowns.getOrDefault(buildingId, 0);
     }
 
+    /** Set a cooldown for a specific service building until the given tick. */
     public void setServiceCooldown(UUID buildingId, int endTick) {
         serviceCooldowns.put(buildingId, endTick);
     }
 
+    /** Returns the global service cooldown end tick (0 = no cooldown). */
     public int getServiceCooldownEndTick() {
         return serviceCooldownEndTick;
     }
 
+    /** Set the global service cooldown end tick. */
     public void setServiceCooldownEndTick(int endTick) {
         this.serviceCooldownEndTick = endTick;
     }

@@ -102,7 +102,7 @@ public final class TouristSpawnSystem {
             if (state != null) touristTargets.add(state);
         }
         if (touristTargets.isEmpty()) {
-            LOGGER.debug("[TouristSpawn] No shop/service buildings — skipping spawn");
+            LOGGER.debug("[Citizen] No shop/service buildings — skipping spawn");
             return;
         }
 
@@ -126,15 +126,16 @@ public final class TouristSpawnSystem {
             TouristEntity tourist = new TouristEntity(
                     com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
             tourist.setTouristName(generateTouristName());
-            tourist.setTouristMode(true);
             tourist.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
             tourist.setTargetBuildingId(target.getBuildingId());
             tourist.setTargetBuildingCategory(target.getCategory());
             tourist.setColonyId(target.getColonyId());
             tourist.setCommuteTarget(interactionTarget);
+            // Goal will override this in start() since building target is preset
+            tourist.applyState(com.wsteam.wandscape.citizen.CitizenState.VISITING);
             level.addFreshEntity(tourist);
 
-            LOGGER.info("[TouristSpawn] {} heading to {} '{}' at {}",
+            LOGGER.info("[Citizen] {} heading to {} '{}' at {}",
                     tourist.getTouristName(), target.getCategory(),
                     target.getBuildingTypeId(), interactionTarget.toShortString());
         }
@@ -154,7 +155,7 @@ public final class TouristSpawnSystem {
     private int countExistingTourists(ServerLevel level) {
         int count = 0;
         for (var entity : level.getAllEntities()) {
-            if (entity instanceof TouristEntity t && t.isTouristMode() && t.isAlive()) {
+            if (entity instanceof TouristEntity t && t.isAlive()) {
                 count++;
             }
         }
@@ -236,7 +237,7 @@ public final class TouristSpawnSystem {
 
         for (var entity : level.getAllEntities()) {
             if (!(entity instanceof TouristEntity t)) continue;
-            if (!t.isTouristMode() || !t.isAlive()) continue;
+            if (!t.isAlive()) continue;
 
             // Checked into hotel — safe, HotelStayHandler heartbeat manages them
             if (t.getCheckedInBuildingId() != null) continue;
@@ -283,9 +284,9 @@ public final class TouristSpawnSystem {
             tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
                     t.getMaxMana(), t.getManaRegenRate(), t.getSpellPower(),
                     t.getSkinVariant());
-            LOGGER.info("[TouristSpawn] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
+            LOGGER.info("[Citizen] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
         } catch (IllegalStateException e) {
-            LOGGER.warn("[TouristSpawn] TavernApi not available — mage resume lost: {}",
+            LOGGER.warn("[Citizen] TavernApi not available — mage resume lost: {}",
                     t.getTouristName());
         }
     }
@@ -323,7 +324,7 @@ public final class TouristSpawnSystem {
             t.setTargetBuildingId(b.getBuildingId());
             t.setTargetBuildingCategory("service");
             t.setCommuteTarget(target);
-            LOGGER.info("[TouristSpawn] {} routed to hotel {} (sat={} energy={})",
+            LOGGER.info("[Citizen] {} routed to hotel {} (sat={} energy={})",
                     t.getTouristName(), b.getBuildingId().toString().substring(0, 8),
                     t.getSatisfaction(), t.getEnergy());
             return true;
@@ -363,7 +364,7 @@ public final class TouristSpawnSystem {
             storeMageResume(t);
         }
 
-        LOGGER.debug("[TouristSpawn] {} departed (energy={} satisfaction={} mage={})",
+        LOGGER.debug("[Citizen] {} departed (energy={} satisfaction={} mage={})",
                 t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
     }
 
