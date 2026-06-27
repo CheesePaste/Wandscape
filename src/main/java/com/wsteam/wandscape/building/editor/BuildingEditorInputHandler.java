@@ -189,6 +189,7 @@ public final class BuildingEditorInputHandler {
 
     // 拖拽状态记录
     private static double dragStartAxisValue = 0; // 鼠标按下时，射线在 3D 轴上的精确投影位置
+    private static Vec3 dragStartAxisOrigin = null; // 拖拽开始时的轴原点（固定不变，防止原点随 AABB 变化漂移）
     private static BlockOffset dragSavedMin = null;
     private static BlockOffset dragSavedMax = null;
 
@@ -219,10 +220,10 @@ public final class BuildingEditorInputHandler {
         BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
         if (worldAnchor == null) return false;
 
-        // 获取拖拽基准点
+        // NEG axes at min corner, POS axes at max corner
         BlockPos basePos = (hovered.name().endsWith("_POS"))
-                ? (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor)
-                : BuildingEditorClientState.getWorldMax();
+                ? BuildingEditorClientState.getWorldMax()
+                : (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor);
         if (basePos == null) return false;
 
         Vec3 axisOrigin = new Vec3(basePos.getX() + 0.5, basePos.getY() + 0.5, basePos.getZ() + 0.5);
@@ -231,7 +232,8 @@ public final class BuildingEditorInputHandler {
         Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 camDir = getMouseWorldRay(mc);
 
-        // 计算初始按下的精确位置
+        // 计算初始按下的精确位置（固定原点，拖拽全程不变）
+        dragStartAxisOrigin = axisOrigin;
         dragStartAxisValue = getClosestPointOnAxis(camPos, camDir, axisOrigin, axisDir);
 
         BlockOffset curMin = BuildingEditorClientState.getEditMin();
@@ -249,22 +251,15 @@ public final class BuildingEditorInputHandler {
     private static void continueAxisDrag(Minecraft mc) {
         BuildingEditorClientState.AxisDrag axis = BuildingEditorClientState.getDraggingAxis();
         if (axis == null || dragSavedMin == null || dragSavedMax == null) return;
+        if (dragStartAxisOrigin == null) return;
 
-        BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
-        if (worldAnchor == null) return;
-
-        BlockPos basePos = (axis.name().endsWith("_POS"))
-                ? (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor)
-                : BuildingEditorClientState.getWorldMax();
-
-        Vec3 axisOrigin = new Vec3(basePos.getX() + 0.5, basePos.getY() + 0.5, basePos.getZ() + 0.5);
         Vec3 axisDir = getAxisWorldDir(axis);
 
         Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 camDir = getMouseWorldRay(mc);
 
-        // 计算当前鼠标对应在轴上的位置
-        double currentAxisValue = getClosestPointOnAxis(camPos, camDir, axisOrigin, axisDir);
+        // 计算当前鼠标对应在轴上的位置（使用拖拽开始时固定的原点）
+        double currentAxisValue = getClosestPointOnAxis(camPos, camDir, dragStartAxisOrigin, axisDir);
 
         // 相对位移量（四舍五入到整格）
         int delta = (int) Math.round(currentAxisValue - dragStartAxisValue);
@@ -292,6 +287,7 @@ public final class BuildingEditorInputHandler {
 
     private static void finishAxisDrag() {
         BuildingEditorClientState.setDraggingAxis(null);
+        dragStartAxisOrigin = null;
         dragSavedMin = null;
         dragSavedMax = null;
     }

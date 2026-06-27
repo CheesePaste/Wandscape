@@ -65,23 +65,22 @@ public final class BuildingEditorAxisRenderer {
         VertexConsumer vc = buf.getBuffer(HandleRenderType.XRAY_QUADS);
         PoseStack.Pose pose = poseStack.last();
 
-        BlockPos corner = BuildingEditorClientState.getWorldMin();
-        if (corner == null) corner = worldAnchor;
+        BlockPos minCorner = BuildingEditorClientState.getWorldMin();
+        if (minCorner == null) minCorner = worldAnchor;
+        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
+        if (maxCorner == null) maxCorner = minCorner;
 
         BuildingEditorClientState.AxisDrag hovering = BuildingEditorClientState.getHoveredAxis();
 
-        // 渲染正方向 (扩展)
-        draw3DArrow(vc, pose, corner, 1, 0, 0, COL_X, hovering == BuildingEditorClientState.AxisDrag.X_POS);
-        draw3DArrow(vc, pose, corner, 0, 1, 0, COL_Y, hovering == BuildingEditorClientState.AxisDrag.Y_POS);
-        draw3DArrow(vc, pose, corner, 0, 0, 1, COL_Z, hovering == BuildingEditorClientState.AxisDrag.Z_POS);
+        // NEG arrows at MIN corner — drag to extend box in negative direction
+        draw3DArrow(vc, pose, minCorner, -1, 0, 0, COL_XN, hovering == BuildingEditorClientState.AxisDrag.X_NEG);
+        draw3DArrow(vc, pose, minCorner, 0, -1, 0, COL_YN, hovering == BuildingEditorClientState.AxisDrag.Y_NEG);
+        draw3DArrow(vc, pose, minCorner, 0, 0, -1, COL_ZN, hovering == BuildingEditorClientState.AxisDrag.Z_NEG);
 
-        // 渲染负方向 (收缩)
-        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
-        if (maxCorner != null) {
-            draw3DArrow(vc, pose, maxCorner, -1, 0, 0, COL_XN, hovering == BuildingEditorClientState.AxisDrag.X_NEG);
-            draw3DArrow(vc, pose, maxCorner, 0, -1, 0, COL_YN, hovering == BuildingEditorClientState.AxisDrag.Y_NEG);
-            draw3DArrow(vc, pose, maxCorner, 0, 0, -1, COL_ZN, hovering == BuildingEditorClientState.AxisDrag.Z_NEG);
-        }
+        // POS arrows at MAX corner — drag to extend box in positive direction
+        draw3DArrow(vc, pose, maxCorner, 1, 0, 0, COL_X, hovering == BuildingEditorClientState.AxisDrag.X_POS);
+        draw3DArrow(vc, pose, maxCorner, 0, 1, 0, COL_Y, hovering == BuildingEditorClientState.AxisDrag.Y_POS);
+        draw3DArrow(vc, pose, maxCorner, 0, 0, 1, COL_Z, hovering == BuildingEditorClientState.AxisDrag.Z_POS);
 
         buf.endBatch(HandleRenderType.XRAY_QUADS);
         poseStack.popPose();
@@ -132,45 +131,31 @@ public final class BuildingEditorAxisRenderer {
      * 极其精准的视线碰撞检测：直接检测射线与箭头 AABB 的交点。
      */
     public static BuildingEditorClientState.AxisDrag hitTestAxis(Vec3 rayOrigin, Vec3 rayDir) {
-        BlockPos corner = BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : BuildingEditorClientState.getWorldAnchor();
-        if (corner == null) return null;
+        BlockPos minCorner = BuildingEditorClientState.getWorldMin();
+        if (minCorner == null) minCorner = BuildingEditorClientState.getWorldAnchor();
+        if (minCorner == null) return null;
+        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
+        if (maxCorner == null) maxCorner = minCorner;
 
-        Vec3 rayEnd = rayOrigin.add(rayDir.scale(100.0)); // 射线投射 100 格
+        Vec3 rayEnd = rayOrigin.add(rayDir.scale(100.0));
         BuildingEditorClientState.AxisDrag bestAxis = null;
         double bestDist = Double.MAX_VALUE;
 
-        // 测试正方向 (包含 Shaft 和 Head 的联合碰撞箱)
-        bestDist = checkHit(bestDist, rayOrigin, rayEnd, corner, 1, 0, 0, BuildingEditorClientState.AxisDrag.X_POS, bestAxis);
-        if (bestDist < Double.MAX_VALUE) bestAxis = BuildingEditorClientState.AxisDrag.X_POS;
-        bestDist = checkHit(bestDist, rayOrigin, rayEnd, corner, 0, 1, 0, BuildingEditorClientState.AxisDrag.Y_POS, bestAxis);
-        if (bestDist < Double.MAX_VALUE && bestAxis != BuildingEditorClientState.AxisDrag.X_POS) bestAxis = BuildingEditorClientState.AxisDrag.Y_POS;
-        bestDist = checkHit(bestDist, rayOrigin, rayEnd, corner, 0, 0, 1, BuildingEditorClientState.AxisDrag.Z_POS, bestAxis);
-        if (bestDist < Double.MAX_VALUE && bestAxis != BuildingEditorClientState.AxisDrag.Y_POS && bestAxis != BuildingEditorClientState.AxisDrag.X_POS) bestAxis = BuildingEditorClientState.AxisDrag.Z_POS;
+        // NEG arrows at MIN corner (pointing -X/-Y/-Z)
+        double dist = getHitDist(rayOrigin, rayEnd, minCorner, -1, 0, 0);
+        if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.X_NEG; }
+        dist = getHitDist(rayOrigin, rayEnd, minCorner, 0, -1, 0);
+        if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Y_NEG; }
+        dist = getHitDist(rayOrigin, rayEnd, minCorner, 0, 0, -1);
+        if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Z_NEG; }
 
-        // 重新进行一次干净的遍历测试，寻找最近的 Hit
-        bestAxis = null;
-        bestDist = Double.MAX_VALUE;
-
-        // X_POS
-        double dist = getHitDist(rayOrigin, rayEnd, corner, 1, 0, 0);
+        // POS arrows at MAX corner (pointing +X/+Y/+Z)
+        dist = getHitDist(rayOrigin, rayEnd, maxCorner, 1, 0, 0);
         if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.X_POS; }
-        // Y_POS
-        dist = getHitDist(rayOrigin, rayEnd, corner, 0, 1, 0);
+        dist = getHitDist(rayOrigin, rayEnd, maxCorner, 0, 1, 0);
         if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Y_POS; }
-        // Z_POS
-        dist = getHitDist(rayOrigin, rayEnd, corner, 0, 0, 1);
+        dist = getHitDist(rayOrigin, rayEnd, maxCorner, 0, 0, 1);
         if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Z_POS; }
-
-        // 测试负方向
-        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
-        if (maxCorner != null) {
-            dist = getHitDist(rayOrigin, rayEnd, maxCorner, -1, 0, 0);
-            if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.X_NEG; }
-            dist = getHitDist(rayOrigin, rayEnd, maxCorner, 0, -1, 0);
-            if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Y_NEG; }
-            dist = getHitDist(rayOrigin, rayEnd, maxCorner, 0, 0, -1);
-            if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Z_NEG; }
-        }
 
         return bestAxis;
     }
