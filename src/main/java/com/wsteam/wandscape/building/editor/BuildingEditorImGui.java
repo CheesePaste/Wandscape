@@ -1,12 +1,8 @@
 package com.wsteam.wandscape.building.editor;
 
 import java.util.List;
-import java.util.Map;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.shared.data.ElementType;
-
-import net.minecraft.client.Minecraft;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
@@ -15,17 +11,12 @@ import imgui.type.ImInt;
 import imgui.type.ImString;
 
 /**
- * ImGui-based editor panel for the building editor.
- * Rendered each frame via {@code ImGuiManager} when the editor is active.
- *
- * <p>ImGui handles all panel input (mouse, keyboard, text, buttons).
- * World interaction (AABB drag handles, block clicking) uses GLFW
- * raw polling in {@link BuildingEditorInputHandler} when ImGui
- * does not capture the mouse.
+ * ImGui editor panel. Compact two-column layout. All collapsing
+ * sections default to closed so the essential buttons always show.
  */
 public final class BuildingEditorImGui {
 
-    // Mutable int wrappers for ImGui inputInt
+    // ── Widget wrappers ──
     private static final ImInt comfort = new ImInt();
     private static final ImInt magic = new ImInt();
     private static final ImInt wonder = new ImInt();
@@ -44,7 +35,6 @@ public final class BuildingEditorImGui {
     private static final ImInt nodeManaCost = new ImInt();
     private static final ImInt shopProfitPct = new ImInt();
 
-    // String buffers for inputText (ImString is mutable)
     private static final ImString idBuf = new ImString(64);
     private static final ImString nameBuf = new ImString(128);
     private static final ImString blueprintBuf = new ImString(128);
@@ -60,16 +50,13 @@ public final class BuildingEditorImGui {
     };
     private static final ImInt categoryIdx = new ImInt(0);
 
-    // Flags for collapsing headers
-    private static final int HEADER_FLAGS = 0;
-
-    /** Panel left edge in screen coordinates (set each frame). */
+    /** Panel left edge for hit-test gating. */
     public static float panelLeftEdge = Float.MAX_VALUE;
 
     private BuildingEditorImGui() {}
 
     // ═══════════════════════════════════════════════════════════════
-    // ── Render entry point ──
+    // ── Render ──
     // ═══════════════════════════════════════════════════════════════
 
     public static void render() {
@@ -79,123 +66,138 @@ public final class BuildingEditorImGui {
                 | ImGuiWindowFlags.NoResize;
 
         var io = ImGui.getIO();
-        float winW = 260;
-        float x = io.getDisplaySizeX() - winW - 10;
-        panelLeftEdge = x;  // exposed for hit-test gating in Controller
+        float winW = 220;
+        float x = io.getDisplaySizeX() - winW - 8;
         float y = 8;
+        panelLeftEdge = x;
         ImGui.setNextWindowPos(x, y, ImGuiCond.Always);
         ImGui.setNextWindowSize(winW, io.getDisplaySizeY() - 16, ImGuiCond.Always);
 
         if (ImGui.begin("Building Editor", flags)) {
-            // ── Basic info ──
-            if (ImGui.collapsingHeader("Basic", HEADER_FLAGS)) {
-                ImGui.pushItemWidth(-1);
-                ImGui.inputText("ID", idBuf);
-                ImGui.inputText("Name", nameBuf);
-                ImGui.popItemWidth();
 
-                ImGui.combo("Category", categoryIdx, CATEGORIES);
-
-                ImGui.pushItemWidth(-1);
-                ImGui.inputText("Blueprint", blueprintBuf);
-                ImGui.popItemWidth();
-            }
-
-            // ── Three values ──
-            if (ImGui.collapsingHeader("Three Values", HEADER_FLAGS)) {
-                ImGui.pushItemWidth(100);
-                ImGui.inputInt("Comfort", comfort);
-                ImGui.sameLine();
-                ImGui.inputInt("Magic", magic);
-                ImGui.sameLine();
-                ImGui.inputInt("Wonder", wonder);
-                ImGui.popItemWidth();
-            }
-
-            // ── Unlock ──
-            if (ImGui.collapsingHeader("Unlock Req.", HEADER_FLAGS)) {
-                ImGui.pushItemWidth(80);
-                ImGui.inputInt("minC", unlockComfort);
-                ImGui.sameLine();
-                ImGui.inputInt("minM", unlockMagic);
-                ImGui.sameLine();
-                ImGui.inputInt("minW", unlockWonder);
-                ImGui.popItemWidth();
-            }
-
-            // ── Queue & Interaction ──
-            if (ImGui.collapsingHeader("Queue & Range", HEADER_FLAGS)) {
-                ImGui.pushItemWidth(80);
-                ImGui.inputInt("Queue cap", queueCapacity);
-                ImGui.sameLine();
-                ImGui.inputInt("Interact R", interactionRadius);
-                ImGui.popItemWidth();
-            }
-
-            // ── Maintenance ──
-            if (ImGui.collapsingHeader("Maintenance", HEADER_FLAGS)) {
-                ImGui.pushItemWidth(100);
-                ImGui.inputInt("Interval (ticks)", maintInterval);
-                ImGui.popItemWidth();
-            }
-
-            // ── Category-specific ──
-            String cat = CATEGORIES[categoryIdx.get()];
-            switch (cat) {
-                case "shop" -> renderShopSection();
-                case "service" -> renderServiceSection();
-                case "decoration" -> renderDecorationSection();
-                case "wonder" -> renderWonderSection();
-                case "node" -> renderNodeSection();
-                default -> {}
-            }
-
-            // ── AABB info ──
-            if (ImGui.collapsingHeader("AABB", HEADER_FLAGS)) {
-                if (BuildingEditorClientState.hasAABB()) {
-                    BlockOffset min = BuildingEditorClientState.getEditMin();
-                    BlockOffset max = BuildingEditorClientState.getEditMax();
-                    ImGui.text(String.format("Min: [%d,%d,%d]", min.x(), min.y(), min.z()));
-                    ImGui.text(String.format("Max: [%d,%d,%d]", max.x(), max.y(), max.z()));
-                    ImGui.text(BuildingEditorClientState.getPattern().size() + " blocks");
-                } else {
-                    ImGui.textColored(1.0f, 0.7f, 0.3f, 1.0f, "No AABB set");
-                }
-                if (ImGui.button("Set Anchor (crosshair)")) {
-                    BuildingEditorInputHandler.setAnchorAtCrosshair();
-                }
-                if (BuildingEditorClientState.getWorldAnchor() != null) {
-                    ImGui.sameLine();
-                    if (ImGui.button("Snap Max (crosshair)")) {
-                        BuildingEditorInputHandler.snapMax();
-                    }
-                }
-                if (BuildingEditorClientState.getWorldAnchor() != null) {
-                    ImGui.sameLine();
-                    if (ImGui.button("Scan")) {
-                        BuildingEditorInputHandler.scanNow();
-                    }
-                }
-                ImGui.textDisabled("L-click=Anchor  Drag axes=AABB  M-click=+/-block  R-hold=camera");
-            }
+            // ═══ CRITICAL: always-visible controls (top) ═══
+            ImGui.pushItemWidth(-1);
+            ImGui.inputText("ID", idBuf);
+            ImGui.inputText("Name", nameBuf);
+            ImGui.popItemWidth();
+            ImGui.combo("Category", categoryIdx, CATEGORIES);
 
             ImGui.separator();
 
-            // ── Buttons ──
-            if (ImGui.button("Export JSON")) {
-                BuildingEditorController.doExport();
-            }
+            // ── Three Values ──
+            ImGui.pushItemWidth(60);
+            ImGui.inputInt("Comfort", comfort);
             ImGui.sameLine();
-            if (ImGui.button("Preview")) {
-                showPreview = !showPreview;
-                if (showPreview) {
-                    previewJson = BuildingEditorClientState.buildExportJson();
+            ImGui.inputInt("Magic", magic);
+            ImGui.sameLine();
+            ImGui.inputInt("Wonder", wonder);
+            ImGui.popItemWidth();
+
+            // ── Unlock ──
+            ImGui.pushItemWidth(60);
+            ImGui.inputInt("Unlock C", unlockComfort);
+            ImGui.sameLine();
+            ImGui.inputInt("U M", unlockMagic);
+            ImGui.sameLine();
+            ImGui.inputInt("U W", unlockWonder);
+            ImGui.popItemWidth();
+
+            // ── Queue + Radius + Maint ──
+            ImGui.pushItemWidth(60);
+            ImGui.inputInt("QueueCap", queueCapacity);
+            ImGui.sameLine();
+            ImGui.inputInt("Radius", interactionRadius);
+            ImGui.sameLine();
+            ImGui.inputInt("MaintTick", maintInterval);
+            ImGui.popItemWidth();
+
+            ImGui.pushItemWidth(-1);
+            ImGui.inputText("Blueprint", blueprintBuf);
+            ImGui.popItemWidth();
+
+            // ── Category-specific (collapsed) ──
+            String cat = CATEGORIES[categoryIdx.get()];
+            if ("shop".equals(cat)) {
+                if (ImGui.collapsingHeader("Shop Config", 0)) {
+                    ImGui.pushItemWidth(60);
+                    ImGui.inputInt("Profit%", shopProfitPct);
+                    ImGui.popItemWidth();
+                    var gs = BuildingEditorClientState.getShopGoods();
+                    ImGui.text(gs.size() + " goods");
+                }
+            } else if ("service".equals(cat)) {
+                if (ImGui.collapsingHeader("Service Config", 0)) {
+                    ImGui.pushItemWidth(80);
+                    ImGui.inputInt("Energy", serviceEnergy);
+                    ImGui.sameLine();
+                    ImGui.inputInt("Satis", serviceSatisfaction);
+                    ImGui.inputInt("MaxOcc", serviceMaxOccupancy);
+                    ImGui.popItemWidth();
+                }
+            } else if ("decoration".equals(cat)) {
+                if (ImGui.collapsingHeader("Decoration", 0)) {
+                    ImGui.pushItemWidth(80);
+                    ImGui.inputInt("Radius", decorationRadius);
+                    ImGui.popItemWidth();
+                }
+            } else if ("wonder".equals(cat)) {
+                if (ImGui.collapsingHeader("Wonder", 0)) {
+                    ImGui.text(BuildingEditorClientState.getWonderEffects().size() + " effects");
+                }
+            } else if ("node".equals(cat)) {
+                if (ImGui.collapsingHeader("Node Config", 0)) {
+                    ImGui.pushItemWidth(-1);
+                    ImGui.inputText("Element", nodeElementBuf);
+                    ImGui.inputText("Node BP", nodeBlueprintBuf);
+                    ImGui.popItemWidth();
+                    ImGui.pushItemWidth(80);
+                    ImGui.inputInt("Amt/harv", nodeAmount);
+                    ImGui.sameLine();
+                    ImGui.inputInt("ChTick", nodeChannel);
+                    ImGui.sameLine();
+                    ImGui.inputInt("Mana", nodeManaCost);
+                    ImGui.popItemWidth();
                 }
             }
-            ImGui.sameLine();
-            if (ImGui.button("Exit")) {
+
+            // ═══ AABB status + action buttons (always visible) ═══
+            ImGui.separator();
+            ImGui.textColored(0.6f, 0.9f, 0.4f, 1.0f, "AABB SELECTION");
+            if (BuildingEditorClientState.hasAABB()) {
+                BlockOffset mn = BuildingEditorClientState.getEditMin();
+                BlockOffset mx = BuildingEditorClientState.getEditMax();
+                ImGui.text(String.format("[%d,%d,%d] -> [%d,%d,%d]", mn.x(), mn.y(), mn.z(), mx.x(), mx.y(), mx.z()));
+                ImGui.text(BuildingEditorClientState.getPattern().size() + " blocks");
+            } else {
+                ImGui.textDisabled("No AABB yet");
+            }
+
+            // Buttons — stacked vertically
+            float btnW = winW - 20;
+            if (ImGui.button("Set Anchor (crosshair)", btnW, 24)) {
+                BuildingEditorInputHandler.setAnchorAtCrosshair();
+            }
+            if (ImGui.button("Snap Max (crosshair)", btnW, 24)) {
+                BuildingEditorInputHandler.snapMax();
+            }
+            if (ImGui.button("Scan Blocks", btnW, 24)) {
+                BuildingEditorInputHandler.scanNow();
+            }
+
+            ImGui.separator();
+            if (ImGui.button("Export JSON", btnW, 28)) {
+                BuildingEditorController.doExport();
+            }
+            if (ImGui.button("Preview JSON", btnW, 22)) {
+                showPreview = !showPreview;
+                if (showPreview) previewJson = BuildingEditorClientState.buildExportJson();
+            }
+            if (ImGui.button("Exit Editor", btnW, 28)) {
                 BuildingEditorController.doExit();
             }
+
+            ImGui.textDisabled("L-click axis arrow = drag");
+            ImGui.textDisabled("R-hold = look  M-click = pattern");
         }
         ImGui.end();
 
@@ -205,82 +207,16 @@ public final class BuildingEditorImGui {
             ImGui.setNextWindowSize(600, 400, ImGuiCond.FirstUseEver);
             if (ImGui.begin("JSON Preview", ImGuiWindowFlags.NoCollapse)) {
                 ImGui.beginChild("##jsonScroll", 0, -35, true);
-                String[] lines = previewJson.split("\n");
-                for (String line : lines) {
+                for (String line : previewJson.split("\n")) {
                     ImGui.text(line);
                 }
                 ImGui.endChild();
-                if (ImGui.button("Close")) {
-                    showPreview = false;
-                }
+                if (ImGui.button("Close")) showPreview = false;
             }
             ImGui.end();
         }
 
         syncToState();
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ── Category sections ──
-    // ═══════════════════════════════════════════════════════════════
-
-    private static void renderShopSection() {
-        if (ImGui.collapsingHeader("Shop Config", HEADER_FLAGS)) {
-            ImGui.pushItemWidth(80);
-            ImGui.inputInt("Profit %", shopProfitPct);
-            ImGui.popItemWidth();
-            var goods = BuildingEditorClientState.getShopGoods();
-            ImGui.text(goods.size() + " goods defined");
-            if (!goods.isEmpty()) {
-                ImGui.beginChild("##shopGoods", 0, 80, true);
-                for (var g : goods) {
-                    ImGui.text("  " + g.itemId());
-                }
-                ImGui.endChild();
-            }
-        }
-    }
-
-    private static void renderServiceSection() {
-        if (ImGui.collapsingHeader("Service Config", HEADER_FLAGS)) {
-            ImGui.pushItemWidth(100);
-            ImGui.inputInt("Energy/use", serviceEnergy);
-            ImGui.inputInt("Satisfaction", serviceSatisfaction);
-            ImGui.inputInt("Max Occupancy", serviceMaxOccupancy);
-            ImGui.popItemWidth();
-        }
-    }
-
-    private static void renderDecorationSection() {
-        if (ImGui.collapsingHeader("Decoration Config", HEADER_FLAGS)) {
-            ImGui.pushItemWidth(100);
-            ImGui.inputInt("Radius", decorationRadius);
-            ImGui.popItemWidth();
-        }
-    }
-
-    private static void renderWonderSection() {
-        if (ImGui.collapsingHeader("Wonder Config", HEADER_FLAGS)) {
-            var effects = BuildingEditorClientState.getWonderEffects();
-            ImGui.text(effects.size() + " effects");
-            for (var e : effects) {
-                ImGui.textDisabled("  " + e.toString());
-            }
-        }
-    }
-
-    private static void renderNodeSection() {
-        if (ImGui.collapsingHeader("Node Config", HEADER_FLAGS)) {
-            ImGui.pushItemWidth(-1);
-            ImGui.inputText("Element", nodeElementBuf);
-            ImGui.inputText("Node BP", nodeBlueprintBuf);
-            ImGui.popItemWidth();
-            ImGui.pushItemWidth(100);
-            ImGui.inputInt("Amount/harvest", nodeAmount);
-            ImGui.inputInt("Channel ticks", nodeChannel);
-            ImGui.inputInt("Mana cost", nodeManaCost);
-            ImGui.popItemWidth();
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -312,14 +248,12 @@ public final class BuildingEditorImGui {
         serviceEnergy.set(BuildingEditorClientState.getServiceEnergyPerUse());
         serviceSatisfaction.set(BuildingEditorClientState.getServiceSatisfactionPerUse());
         serviceMaxOccupancy.set(BuildingEditorClientState.getServiceMaxOccupancy());
-
         decorationRadius.set(BuildingEditorClientState.getDecorationRadius());
+        shopProfitPct.set((int) (BuildingEditorClientState.getShopProfitRate() * 100));
 
         nodeAmount.set(BuildingEditorClientState.getNodeAmountPerHarvest());
         nodeChannel.set(BuildingEditorClientState.getNodeChannelTicks());
         nodeManaCost.set(BuildingEditorClientState.getNodeManaCost());
-
-        shopProfitPct.set((int) (BuildingEditorClientState.getShopProfitRate() * 100));
     }
 
     private static void syncToState() {
@@ -336,25 +270,19 @@ public final class BuildingEditorImGui {
         BuildingEditorClientState.setComfort(comfort.get());
         BuildingEditorClientState.setMagic(magic.get());
         BuildingEditorClientState.setWonder(wonder.get());
-
         BuildingEditorClientState.setUnlockMinComfort(unlockComfort.get());
         BuildingEditorClientState.setUnlockMinMagic(unlockMagic.get());
         BuildingEditorClientState.setUnlockMinWonder(unlockWonder.get());
-
         BuildingEditorClientState.setQueueCapacity(queueCapacity.get());
         BuildingEditorClientState.setInteractionRadius(interactionRadius.get());
         BuildingEditorClientState.setMaintenanceIntervalTicks(maintInterval.get());
-
         BuildingEditorClientState.setServiceEnergyPerUse(serviceEnergy.get());
         BuildingEditorClientState.setServiceSatisfactionPerUse(serviceSatisfaction.get());
         BuildingEditorClientState.setServiceMaxOccupancy(serviceMaxOccupancy.get());
-
         BuildingEditorClientState.setDecorationRadius(decorationRadius.get());
-
+        BuildingEditorClientState.setShopProfitRate(shopProfitPct.get() / 100.0);
         BuildingEditorClientState.setNodeAmountPerHarvest(nodeAmount.get());
         BuildingEditorClientState.setNodeChannelTicks(nodeChannel.get());
         BuildingEditorClientState.setNodeManaCost(nodeManaCost.get());
-
-        BuildingEditorClientState.setShopProfitRate(shopProfitPct.get() / 100.0);
     }
 }

@@ -129,16 +129,18 @@ public final class BuildingEditorInputHandler {
 
     private static Vec3 getMouseWorldRay(Minecraft mc) {
         long window = mc.getWindow().getWindow();
+        // GLFW gives physical pixels; must account for GUI scale factor to get framebuffer-relative NDC
+        double guiScale = mc.getWindow().getGuiScale();
         double[] mx = new double[1], my = new double[1];
         GLFW.glfwGetCursorPos(window, mx, my);
-        int w = mc.getWindow().getWidth();
-        int h = mc.getWindow().getHeight();
+        int w = (int) (mc.getWindow().getWidth());
+        int h = (int) (mc.getWindow().getHeight());
 
+        // NDC using framebuffer (pixel) coords — no GUI scale factor here
         double ndcX = (2.0 * mx[0] / w - 1.0);
         double ndcY = (1.0 - 2.0 * my[0] / h);
 
         Camera cam = mc.gameRenderer.getMainCamera();
-        // Camera returns JOML Vector3f — convert to MC Vec3
         org.joml.Vector3f jLook = cam.getLookVector();
         org.joml.Vector3f jUp   = cam.getUpVector();
         org.joml.Vector3f jLeft = cam.getLeftVector();
@@ -275,11 +277,11 @@ public final class BuildingEditorInputHandler {
 
         switch (axis) {
             case X_POS -> mx = Math.max(0, dragSavedMax.x() + delta);
-            case X_NEG -> x = Math.min(0, dragSavedMin.x() - delta);  // X_NEG: dragging +X shrinks min
+            case X_NEG -> x = Math.min(0, dragSavedMin.x() - delta);
             case Y_POS -> my = Math.max(0, dragSavedMax.y() + delta);
             case Y_NEG -> y = Math.min(0, dragSavedMin.y() - delta);
-            case Z_POS -> mz = Math.max(0, dragSavedMax.z() + delta);
-            case Z_NEG -> z = Math.min(0, dragSavedMin.z() - delta);
+            case Z_POS -> mz = Math.max(0, dragSavedMax.z() - delta); // screen-x maps to world-z inverted
+            case Z_NEG -> z = Math.min(0, dragSavedMin.z() + delta);
         }
 
         LOGGER.info("[BuildEditor] DRAG: axis={} delta={} mouseDelta=({},{},{}) min=({},{},{}) max=({},{},{})",
