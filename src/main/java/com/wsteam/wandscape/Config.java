@@ -226,7 +226,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue SERVICE_COOLDOWN_TICKS = BUILDER
             .comment("Cooldown in ticks before a tourist can use the same service building again")
-            .defineInRange("service.cooldownTicks", 6000, 1200, 72000);
+            .defineInRange("service.cooldownTicks", 1200, 1200, 72000);
 
     // ---- Hotel system ----
 

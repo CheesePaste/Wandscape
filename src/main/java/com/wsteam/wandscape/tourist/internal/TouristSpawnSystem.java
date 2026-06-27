@@ -54,10 +54,25 @@ public final class TouristSpawnSystem {
 
     private TouristSpawnSystem() {}
 
+    /** Registered singleton, used by debug commands. */
+    private static TouristSpawnSystem instance;
+
     public static TouristSpawnSystem register() {
-        var instance = new TouristSpawnSystem();
+        instance = new TouristSpawnSystem();
         NeoForge.EVENT_BUS.register(instance);
         return instance;
+    }
+
+    /**
+     * Immediately trigger a spawn cycle regardless of game-time gates.
+     * Intended for debug/command use.
+     */
+    public static void forceSpawn(ServerLevel level) {
+        if (instance == null) {
+            LOGGER.warn("[Tourist] SpawnSystem not registered — cannot force spawn");
+            return;
+        }
+        instance.spawnTourists(level);
     }
 
     @SubscribeEvent

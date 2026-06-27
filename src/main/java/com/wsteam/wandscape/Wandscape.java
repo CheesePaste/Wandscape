@@ -19,6 +19,8 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.MaintenanceSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
+import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
+import com.wsteam.wandscape.command.BuildEditorCommand;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
@@ -49,6 +51,11 @@ import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
+import com.wsteam.wandscape.building.network.BuildingEditorEnterResponsePacket;
+import com.wsteam.wandscape.building.network.BuildingEditorExitPacket;
+import com.wsteam.wandscape.building.network.BuildingEditorExportPacket;
+import com.wsteam.wandscape.building.network.BuildingEditorExportResultPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
@@ -385,7 +392,31 @@ public class Wandscape {
                 .playToClient(
                         BuildingDebugResponsePacket.TYPE,
                         BuildingDebugResponsePacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingDebugResponsePacket.handleClient(packet));
+                        (packet, ctx) -> BuildingDebugResponsePacket.handleClient(packet))
+                // ── Building Editor ──
+                .playToServer(
+                        BuildingEditorEnterPacket.TYPE,
+                        BuildingEditorEnterPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingEditorEnterPacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()))
+                .playToClient(
+                        BuildingEditorEnterResponsePacket.TYPE,
+                        BuildingEditorEnterResponsePacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingEditorEnterResponsePacket.handleClient(packet))
+                .playToServer(
+                        BuildingEditorExitPacket.TYPE,
+                        BuildingEditorExitPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingEditorExitPacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()))
+                .playToServer(
+                        BuildingEditorExportPacket.TYPE,
+                        BuildingEditorExportPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingEditorExportPacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()))
+                .playToClient(
+                        BuildingEditorExportResultPacket.TYPE,
+                        BuildingEditorExportResultPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingEditorExportResultPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -489,6 +520,7 @@ public class Wandscape {
                 .then(RecoveryCommand.node())
                 .then(RoadCommand.node())
                 .then(RoadTestCommand.node())
+                .then(BuildEditorCommand.node())
                 .then(SeedWarehouseCommand.node())
                 .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
@@ -502,6 +534,7 @@ public class Wandscape {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
             RoadEditorNetwork.removeByUuid(sp.getUUID());
             ProjectionNetwork.removeByUuid(sp.getUUID());
+            BuildingEditorNetwork.removeByUuid(sp.getUUID());
         }
     }
 

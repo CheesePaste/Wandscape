@@ -28,6 +28,12 @@ import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.editor.BuildingEditorController;
+import com.wsteam.wandscape.building.editor.BuildingEditorInputHandler;
+import com.wsteam.wandscape.building.editor.BuildingEditorOverlay;
+import com.wsteam.wandscape.building.editor.BuildingEditorRenderer;
+import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
+import com.wsteam.wandscape.building.network.BuildingEditorEnterResponsePacket;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
@@ -107,6 +113,10 @@ public class WandscapeClient {
         ProjectionRenderer.register();
         ProjectionFlightController.register();
         BuildingDebugController.register();
+        BuildingEditorController.register();
+        BuildingEditorRenderer.register();
+        BuildingEditorInputHandler.register();
+        BuildingEditorOverlay.register();
     }
 
     @SubscribeEvent

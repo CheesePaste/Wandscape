@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -19,6 +20,7 @@ import java.util.List;
  *
  * <pre>
  * /wandscape tourist list
+ * /wandscape tourist spawn
  * /wandscape tourist state &lt;name|all&gt; &lt;state&gt;
  * </pre>
  */
@@ -30,6 +32,8 @@ public final class TouristCommand {
         return Commands.literal("tourist")
                 .then(Commands.literal("list")
                         .executes(TouristCommand::list))
+                .then(Commands.literal("spawn")
+                        .executes(TouristCommand::forceSpawn))
                 .then(Commands.literal("state")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .then(Commands.argument("state", StringArgumentType.word())
@@ -57,6 +61,32 @@ public final class TouristCommand {
         String msg = String.join("\n", lines);
         src.sendSuccess(() -> Component.literal(msg), false);
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static int forceSpawn(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        ServerLevel level = src.getLevel();
+
+        int before = countTourists(level);
+        TouristSpawnSystem.forceSpawn(level);
+        // forceSpawn is sync, count after
+        int after = countTourists(level);
+        int spawned = after - before;
+
+        src.sendSuccess(() -> Component.literal(
+                "[Tourist] Spawn triggered. Before=" + before
+                        + ", After=" + after + ", New=" + spawned), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int countTourists(ServerLevel level) {
+        int count = 0;
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof TouristEntity t && t.isAlive()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static int forceState(CommandContext<CommandSourceStack> ctx) {
