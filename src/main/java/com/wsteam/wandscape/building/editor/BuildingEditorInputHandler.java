@@ -23,6 +23,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 public final class BuildingEditorInputHandler {
 
+
+
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final double EDITOR_REACH = 128.0;
 
@@ -129,35 +131,36 @@ public final class BuildingEditorInputHandler {
 
     private static Vec3 getMouseWorldRay(Minecraft mc) {
         long window = mc.getWindow().getWindow();
-        // GLFW gives physical pixels; must account for GUI scale factor to get framebuffer-relative NDC
-        double guiScale = mc.getWindow().getGuiScale();
         double[] mx = new double[1], my = new double[1];
         GLFW.glfwGetCursorPos(window, mx, my);
-        int w = (int) (mc.getWindow().getWidth());
-        int h = (int) (mc.getWindow().getHeight());
+        int w = mc.getWindow().getWidth();
+        int h = mc.getWindow().getHeight();
 
-        // NDC using framebuffer (pixel) coords — no GUI scale factor here
-        double ndcX = (2.0 * mx[0] / w - 1.0);
-        double ndcY = (1.0 - 2.0 * my[0] / h);
+        // 将鼠标坐标转换为标准化设备坐标 (NDC) [-1, 1]
+        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
 
         Camera cam = mc.gameRenderer.getMainCamera();
+
+        // 【关键修复 1】：获取当前帧真实的动态 FOV（考虑了疾跑、飞行等视角形变）
+        float fov = (float) mc.options.fov().get();
+        float fovRad = (float) Math.toRadians(fov);
+        float aspect = (float) w / Math.max(h, 1);
+        float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
+
+        // 获取摄像机空间的三个正交基底向量
         org.joml.Vector3f jLook = cam.getLookVector();
         org.joml.Vector3f jUp   = cam.getUpVector();
         org.joml.Vector3f jLeft = cam.getLeftVector();
+
         Vec3 forward = new Vec3(jLook.x, jLook.y, jLook.z);
-        Vec3 camUp   = new Vec3(jUp.x,   jUp.y,   jUp.z);
-        Vec3 camLeft = new Vec3(jLeft.x, jLeft.y, jLeft.z);
+        Vec3 up      = new Vec3(jUp.x,   jUp.y,   jUp.z);
+        Vec3 right   = new Vec3(jLeft.x, jLeft.y, jLeft.z).scale(-1.0); // 右向量是左向量的相反数
 
-        double fovDeg = mc.options.fov().get();
-        double fovRad = Math.toRadians(fovDeg);
-        double aspect = (double) w / Math.max(h, 1);
-        double tanHalfFov = Math.tan(fovRad * 0.5);
-        double hExtent = tanHalfFov * aspect;
-        double vExtent = tanHalfFov;
-
+        // 构建完美的 3D 世界射线：前向 + 右向拉伸 + 上向拉伸
         return forward
-                .add(camLeft.scale(ndcX * hExtent))
-                .add(camUp.scale(ndcY * vExtent))
+                .add(right.scale(ndcX * tanHalfFov * aspect))
+                .add(up.scale(ndcY * tanHalfFov))
                 .normalize();
     }
 
@@ -184,82 +187,117 @@ public final class BuildingEditorInputHandler {
     // ── Axis drag ──
     // ═══════════════════════════════════════════════════════════════
 
-    // Drag state
-    private static Vec3 dragSavedHitCamPlane = null; // first mouse→plane hit in world-space
+    // 拖拽状态记录
+    private static double dragStartAxisValue = 0; // 鼠标按下时，射线在 3D 轴上的精确投影位置
     private static BlockOffset dragSavedMin = null;
     private static BlockOffset dragSavedMax = null;
 
-    /** Project a screen ray onto a plane through 'planeOrigin' that faces the camera. */
-    private static Vec3 hitCameraPlane(Vec3 camPos, Vec3 camDir, Vec3 rayD, Vec3 planeOrigin) {
-        double denom = rayD.dot(camDir);
-        if (Math.abs(denom) < 1e-6) return null;
-        double t = planeOrigin.subtract(camPos).dot(camDir) / denom;
-        if (t < 0) return null;
-        return camPos.add(rayD.scale(t));
+    /**
+     * 数学核心：求 鼠标射线(rayOrigin + t*rayDir) 与 拖拽轴(axisOrigin + u*axisDir) 的最近点。
+     * 返回的值是在拖拽轴上的位置 (u)。
+     */
+    private static double getClosestPointOnAxis(Vec3 rayOrigin, Vec3 rayDir, Vec3 axisOrigin, Vec3 axisDir) {
+        Vec3 w0 = rayOrigin.subtract(axisOrigin);
+        double a = axisDir.dot(axisDir); // 理论上是 1
+        double b = axisDir.dot(rayDir);
+        double c = rayDir.dot(rayDir);   // 理论上是 1
+        double d = axisDir.dot(w0);
+        double e = rayDir.dot(w0);
+
+        double denom = a * c - b * b;
+        if (Math.abs(denom) < 1e-6) {
+            return 0; // 视线与轴完全平行，无法计算
+        }
+        // 返回在 axisDir 轴上的坐标投影值
+        return (b * e - c * d) / denom;
     }
 
     private static boolean startAxisDragIfHovered(Minecraft mc) {
         BuildingEditorClientState.AxisDrag hovered = BuildingEditorClientState.getHoveredAxis();
         if (hovered == null) return false;
-        BlockPos anchor = BuildingEditorClientState.getWorldAnchor();
-        if (anchor == null) return false;
+
+        BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
+        if (worldAnchor == null) return false;
+
+        // 获取拖拽基准点
+        BlockPos basePos = (hovered.name().endsWith("_POS"))
+                ? (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor)
+                : BuildingEditorClientState.getWorldMax();
+        if (basePos == null) return false;
+
+        Vec3 axisOrigin = new Vec3(basePos.getX() + 0.5, basePos.getY() + 0.5, basePos.getZ() + 0.5);
+        Vec3 axisDir = getAxisWorldDir(hovered);
+
+        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 camDir = getMouseWorldRay(mc);
+
+        // 计算初始按下的精确位置
+        dragStartAxisValue = getClosestPointOnAxis(camPos, camDir, axisOrigin, axisDir);
 
         BlockOffset curMin = BuildingEditorClientState.getEditMin();
         BlockOffset curMax = BuildingEditorClientState.getEditMax();
         if (curMin == null) curMin = BlockOffset.of(0, 0, 0);
         if (curMax == null) curMax = BlockOffset.of(0, 0, 0);
 
-        // Plane through AABB corner that faces the camera
-        BlockPos worldMin = BuildingEditorClientState.getWorldMin();
-        if (worldMin == null) worldMin = anchor;
-        Vec3 planeOrigin = new Vec3(worldMin.getX() + 0.5, worldMin.getY() + 0.5, worldMin.getZ() + 0.5);
-
-        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
-        Vec3 camDir = getMouseWorldRay(mc);
-        Vec3 camForward = new Vec3(
-                mc.gameRenderer.getMainCamera().getLookVector().x,
-                mc.gameRenderer.getMainCamera().getLookVector().y,
-                mc.gameRenderer.getMainCamera().getLookVector().z);
-
-        Vec3 hitWorld = hitCameraPlane(camPos, camForward, camDir, planeOrigin);
-        if (hitWorld == null) return false;
-
-        BuildingEditorClientState.setDraggingAxis(hovered);
-        dragSavedHitCamPlane = hitWorld;
         dragSavedMin = curMin;
         dragSavedMax = curMax;
-        LOGGER.info("[BuildEditor] DRAG START: axis={} savedHit=({},{},{}) min=({},{},{}) max=({},{},{})",
-                hovered, hitWorld.x, hitWorld.y, hitWorld.z,
-                curMin.x(), curMin.y(), curMin.z(),
-                curMax.x(), curMax.y(), curMax.z());
+        BuildingEditorClientState.setDraggingAxis(hovered);
+
         return true;
     }
 
     private static void continueAxisDrag(Minecraft mc) {
         BuildingEditorClientState.AxisDrag axis = BuildingEditorClientState.getDraggingAxis();
-        if (axis == null || dragSavedHitCamPlane == null || dragSavedMin == null || dragSavedMax == null) return;
+        if (axis == null || dragSavedMin == null || dragSavedMax == null) return;
 
-        BlockPos worldMin = BuildingEditorClientState.getWorldMin();
-        BlockPos anchor = BuildingEditorClientState.getWorldAnchor();
-        if (anchor == null) return;
-        if (worldMin == null) worldMin = anchor;
-        Vec3 planeOrigin = new Vec3(worldMin.getX() + 0.5, worldMin.getY() + 0.5, worldMin.getZ() + 0.5);
+        BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
+        if (worldAnchor == null) return;
+
+        BlockPos basePos = (axis.name().endsWith("_POS"))
+                ? (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor)
+                : BuildingEditorClientState.getWorldMax();
+
+        Vec3 axisOrigin = new Vec3(basePos.getX() + 0.5, basePos.getY() + 0.5, basePos.getZ() + 0.5);
+        Vec3 axisDir = getAxisWorldDir(axis);
 
         Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 camDir = getMouseWorldRay(mc);
-        Vec3 camForward = new Vec3(
-                mc.gameRenderer.getMainCamera().getLookVector().x,
-                mc.gameRenderer.getMainCamera().getLookVector().y,
-                mc.gameRenderer.getMainCamera().getLookVector().z);
 
-        Vec3 nowHit = hitCameraPlane(camPos, camForward, camDir, planeOrigin);
-        if (nowHit == null) return;
+        // 计算当前鼠标对应在轴上的位置
+        double currentAxisValue = getClosestPointOnAxis(camPos, camDir, axisOrigin, axisDir);
 
-        // How much has the mouse moved in world space on the camera plane?
-        Vec3 mouseDelta = nowHit.subtract(dragSavedHitCamPlane);
+        // 相对位移量（四舍五入到整格）
+        int delta = (int) Math.round(currentAxisValue - dragStartAxisValue);
+        if (delta == 0) return;
 
-        // Project onto the dragged axis's world direction
-        Vec3 axisWorldDir = switch (axis) {
+        int x = dragSavedMin.x(), y = dragSavedMin.y(), z = dragSavedMin.z();
+        int mx = dragSavedMax.x(), my = dragSavedMax.y(), mz = dragSavedMax.z();
+
+        // 逻辑更新：不允许 Min > Max
+        switch (axis) {
+            case X_POS -> mx = Math.max(x, dragSavedMax.x() + delta);
+            case X_NEG -> x = Math.min(mx, dragSavedMin.x() - delta); // 注意方向：鼠标沿着 X_NEG(-1,0,0) 移动了 delta，所以坐标减去 delta
+            case Y_POS -> my = Math.max(y, dragSavedMax.y() + delta);
+            case Y_NEG -> y = Math.min(my, dragSavedMin.y() - delta);
+            case Z_POS -> mz = Math.max(z, dragSavedMax.z() + delta);
+            case Z_NEG -> z = Math.min(mz, dragSavedMin.z() - delta);
+        }
+
+        BuildingEditorClientState.setEditMin(BlockOffset.of(x, y, z));
+        BuildingEditorClientState.setEditMax(BlockOffset.of(mx, my, mz));
+
+        // 可选：为了性能，拖拽时可以先不 scanBlocks，松开时再 scan。但如果方块不多，实时 scan 也行。
+        scanBlocks(mc);
+    }
+
+    private static void finishAxisDrag() {
+        BuildingEditorClientState.setDraggingAxis(null);
+        dragSavedMin = null;
+        dragSavedMax = null;
+    }
+
+    private static Vec3 getAxisWorldDir(BuildingEditorClientState.AxisDrag axis) {
+        return switch (axis) {
             case X_POS -> new Vec3( 1, 0, 0);
             case X_NEG -> new Vec3(-1, 0, 0);
             case Y_POS -> new Vec3( 0, 1, 0);
@@ -267,49 +305,6 @@ public final class BuildingEditorInputHandler {
             case Z_POS -> new Vec3( 0, 0, 1);
             case Z_NEG -> new Vec3( 0, 0,-1);
         };
-        double proj = mouseDelta.dot(axisWorldDir);
-        int delta = (int) Math.round(proj);
-
-        if (delta == 0) return;
-
-        int x = dragSavedMin.x(), y = dragSavedMin.y(), z = dragSavedMin.z();
-        int mx = dragSavedMax.x(), my = dragSavedMax.y(), mz = dragSavedMax.z();
-
-        switch (axis) {
-            case X_POS -> mx = Math.max(0, dragSavedMax.x() + delta);
-            case X_NEG -> x = Math.min(0, dragSavedMin.x() - delta);
-            case Y_POS -> my = Math.max(0, dragSavedMax.y() + delta);
-            case Y_NEG -> y = Math.min(0, dragSavedMin.y() - delta);
-            case Z_POS -> mz = Math.max(0, dragSavedMax.z() - delta); // screen-x maps to world-z inverted
-            case Z_NEG -> z = Math.min(0, dragSavedMin.z() + delta);
-        }
-
-        LOGGER.info("[BuildEditor] DRAG: axis={} delta={} mouseDelta=({},{},{}) min=({},{},{}) max=({},{},{})",
-                axis, delta, mouseDelta.x, mouseDelta.y, mouseDelta.z, x, y, z, mx, my, mz);
-        BuildingEditorClientState.setEditMin(BlockOffset.of(x, y, z));
-        BuildingEditorClientState.setEditMax(BlockOffset.of(mx, my, mz));
-        scanBlocks(mc);
-    }
-
-    private static void finishAxisDrag() {
-        BuildingEditorClientState.AxisDrag axis = BuildingEditorClientState.getDraggingAxis();
-        BlockOffset min = BuildingEditorClientState.getEditMin();
-        BlockOffset max = BuildingEditorClientState.getEditMax();
-        if (min != null && max != null) {
-            LOGGER.info("[BuildEditor] DRAG END: axis={} final min=({},{},{}) max=({},{},{})",
-                    axis, min.x(), min.y(), min.z(), max.x(), max.y(), max.z());
-        }
-        BuildingEditorClientState.setDraggingAxis(null);
-        dragSavedHitCamPlane = null;
-        dragSavedMin = null;
-        dragSavedMax = null;
-
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && min != null && max != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("[BuildEditor] §6AABB: §f[" +
-                            min.toKey() + "] -> [" + max.toKey() + "]"), true);
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════

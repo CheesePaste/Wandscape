@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.building.editor;
 
 import org.slf4j.Logger;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
@@ -10,39 +9,30 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
-/**
- * Renders 3D coordinate axes (red +X, green +Y, blue +Z) as drag handles
- * at the AABB anchor and max corners in world space.
- *
- * <p>Each axis is a colored arrow: shaft line + arrowhead (4 lines).
- * The axis at anchor points outward (expand direction).
- * The axis at max points inward (shrink direction).
- *
- * <p>Uses Minecraft's {@code BufferBuilder} + {@code RenderType.lines()}
- * with JOML vectors for geometry.
- */
+import java.util.Optional;
+
 public final class BuildingEditorAxisRenderer {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final float ARROW_LEN = 4.0f;   // 4-block shaft — easy to see & hit
+    // 调整为实体方块的尺寸
+    private static final float SHAFT_LEN = 3.5f;
+    private static final float SHAFT_THICKNESS = 0.15f; // 杆的粗细
     private static final float HEAD_LEN = 0.6f;
-    private static final float HEAD_W = 0.25f;
+    private static final float HEAD_THICKNESS = 0.35f;  // 箭头的粗细
 
-    // Bright axis colors (positive direction)
-    private static final int[] COL_X = {255, 50, 50, 230};   // red
-    private static final int[] COL_Y = {50, 220, 50, 230};   // green
-    private static final int[] COL_Z = {50, 100, 255, 230};  // blue
-    // Dim axis colors (negative direction)
-    private static final int[] COL_XN = {120, 30, 30, 160};
-    private static final int[] COL_YN = {30, 120, 30, 160};
-    private static final int[] COL_ZN = {30, 50, 120, 160};
-
-    // Hovered axis highlight multiplier
-    private static final float HOVER_BRIGHT = 0.4f;
+    // 明亮的轴颜色
+    private static final int[] COL_X = {255, 50, 50, 200};
+    private static final int[] COL_Y = {50, 220, 50, 200};
+    private static final int[] COL_Z = {50, 100, 255, 200};
+    // 负方向暗色
+    private static final int[] COL_XN = {150, 50, 50, 160};
+    private static final int[] COL_YN = {50, 150, 50, 160};
+    private static final int[] COL_ZN = {50, 70, 150, 160};
 
     private static boolean registered = false;
 
@@ -51,9 +41,7 @@ public final class BuildingEditorAxisRenderer {
     public static void register() {
         if (registered) return;
         registered = true;
-        var bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
-        bus.addListener(RenderLevelStageEvent.class, BuildingEditorAxisRenderer::onRenderLevelStage);
-        LOGGER.info("[BuildEditor] Axis renderer registered");
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, BuildingEditorAxisRenderer::onRenderLevelStage);
     }
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
@@ -73,197 +61,173 @@ public final class BuildingEditorAxisRenderer {
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        VertexConsumer vc = buf.getBuffer(RenderType.lines());
+        // 使用实心半透明材质渲染，而不是线条
+        VertexConsumer vc = buf.getBuffer(HandleRenderType.XRAY_QUADS);
+        PoseStack.Pose pose = poseStack.last();
 
-        // At the first-set corner (worldAnchor adjusted by editMin):
-        // draw positive-direction arrows
         BlockPos corner = BuildingEditorClientState.getWorldMin();
-        // If no AABB yet, use the anchor itself as the corner for +X/+Y/+Z arrows
         if (corner == null) corner = worldAnchor;
 
-        Vec3 hovered = BuildingEditorClientState.getHoveredAxisWorld();
         BuildingEditorClientState.AxisDrag hovering = BuildingEditorClientState.getHoveredAxis();
-        drawArrow(vc, poseStack, corner, 1, 0, 0, COL_X, hovering, BuildingEditorClientState.AxisDrag.X_POS, hovered);
-        drawArrow(vc, poseStack, corner, 0, 1, 0, COL_Y, hovering, BuildingEditorClientState.AxisDrag.Y_POS, hovered);
-        drawArrow(vc, poseStack, corner, 0, 0, 1, COL_Z, hovering, BuildingEditorClientState.AxisDrag.Z_POS, hovered);
 
-        // At the max corner: draw negative-direction arrows (shrink handles)
+        // 渲染正方向 (扩展)
+        draw3DArrow(vc, pose, corner, 1, 0, 0, COL_X, hovering == BuildingEditorClientState.AxisDrag.X_POS);
+        draw3DArrow(vc, pose, corner, 0, 1, 0, COL_Y, hovering == BuildingEditorClientState.AxisDrag.Y_POS);
+        draw3DArrow(vc, pose, corner, 0, 0, 1, COL_Z, hovering == BuildingEditorClientState.AxisDrag.Z_POS);
+
+        // 渲染负方向 (收缩)
         BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
         if (maxCorner != null) {
-            drawArrow(vc, poseStack, maxCorner, -1, 0, 0, COL_XN, hovering, BuildingEditorClientState.AxisDrag.X_NEG, hovered);
-            drawArrow(vc, poseStack, maxCorner, 0, -1, 0, COL_YN, hovering, BuildingEditorClientState.AxisDrag.Y_NEG, hovered);
-            drawArrow(vc, poseStack, maxCorner, 0, 0, -1, COL_ZN, hovering, BuildingEditorClientState.AxisDrag.Z_NEG, hovered);
+            draw3DArrow(vc, pose, maxCorner, -1, 0, 0, COL_XN, hovering == BuildingEditorClientState.AxisDrag.X_NEG);
+            draw3DArrow(vc, pose, maxCorner, 0, -1, 0, COL_YN, hovering == BuildingEditorClientState.AxisDrag.Y_NEG);
+            draw3DArrow(vc, pose, maxCorner, 0, 0, -1, COL_ZN, hovering == BuildingEditorClientState.AxisDrag.Z_NEG);
         }
 
-        buf.endBatch(RenderType.lines());
+        buf.endBatch(HandleRenderType.XRAY_QUADS);
         poseStack.popPose();
     }
 
-    // ── Arrow drawing ──
-
-    private static void drawArrow(VertexConsumer vc, PoseStack poseStack,
-                                   BlockPos base, int dx, int dy, int dz,
-                                   int[] col, BuildingEditorClientState.AxisDrag hovering, BuildingEditorClientState.AxisDrag myAxis, Vec3 hoveredPos) {
+    /** 绘制实体的 3D 箭头 */
+    private static void draw3DArrow(VertexConsumer vc, PoseStack.Pose pose, BlockPos base, int dx, int dy, int dz, int[] col, boolean isHovered) {
         float bx = base.getX() + 0.5f;
         float by = base.getY() + 0.5f;
         float bz = base.getZ() + 0.5f;
 
-        float tipX = bx + dx * ARROW_LEN;
-        float tipY = by + dy * ARROW_LEN;
-        float tipZ = bz + dz * ARROW_LEN;
-
-        boolean hovered = (hovering == myAxis);
-        float bright = hovered ? 1.0f + HOVER_BRIGHT : 1.0f;
+        float bright = isHovered ? 1.3f : 1.0f;
         int r = Math.min(255, (int)(col[0] * bright));
         int g = Math.min(255, (int)(col[1] * bright));
         int b = Math.min(255, (int)(col[2] * bright));
-        int a = hovered ? 255 : col[3];
+        int a = isHovered ? 255 : col[3];
 
-        PoseStack.Pose pose = poseStack.last();
+        // 1. 绘制长条形杆子 (Shaft)
+        AABB shaft = getAxisAABB(bx, by, bz, dx, dy, dz, SHAFT_LEN, SHAFT_THICKNESS);
+        fillAABB(vc, pose, shaft, r, g, b, a);
 
-        // Shaft
-        line(vc, pose, bx, by, bz, tipX, tipY, tipZ, r, g, b, a);
-
-        // Arrowhead: 4 lines from tip back and out perpendicular
-        // Compute two perpendicular vectors to the shaft direction
-        float perp1X, perp1Y, perp1Z;
-        float perp2X, perp2Y, perp2Z;
-
-        if (dx != 0) {
-            // Shaft along X → perp1 = Y, perp2 = Z
-            perp1X = 0; perp1Y = 1; perp1Z = 0;
-            perp2X = 0; perp2Y = 0; perp2Z = 1;
-        } else if (dy != 0) {
-            // Shaft along Y → perp1 = X, perp2 = Z
-            perp1X = 1; perp1Y = 0; perp1Z = 0;
-            perp2X = 0; perp2Y = 0; perp2Z = 1;
-        } else {
-            // Shaft along Z → perp1 = X, perp2 = Y
-            perp1X = 1; perp1Y = 0; perp1Z = 0;
-            perp2X = 0; perp2Y = 1; perp2Z = 0;
-        }
-
-        float hx = tipX - dx * HEAD_LEN;
-        float hy = tipY - dy * HEAD_LEN;
-        float hz = tipZ - dz * HEAD_LEN;
-
-        // Four arrowhead lines
-        float hw = HEAD_W;
-        line(vc, pose, tipX, tipY, tipZ, hx + perp1X * hw, hy + perp1Y * hw, hz + perp1Z * hw, r, g, b, a);
-        line(vc, pose, tipX, tipY, tipZ, hx - perp1X * hw, hy - perp1Y * hw, hz - perp1Z * hw, r, g, b, a);
-        line(vc, pose, tipX, tipY, tipZ, hx + perp2X * hw, hy + perp2Y * hw, hz + perp2Z * hw, r, g, b, a);
-        line(vc, pose, tipX, tipY, tipZ, hx - perp2X * hw, hy - perp2Y * hw, hz - perp2Z * hw, r, g, b, a);
+        // 2. 绘制方块头部 (Head)
+        float headStart = SHAFT_LEN;
+        float headEnd = SHAFT_LEN + HEAD_LEN;
+        AABB head = getAxisAABB(
+                bx + dx * headStart, by + dy * headStart, bz + dz * headStart,
+                dx, dy, dz, HEAD_LEN, HEAD_THICKNESS
+        );
+        fillAABB(vc, pose, head, r, g, b, a);
     }
 
-    // ── Hit-testing: which axis arrow is closest to the camera ray ──
+    /** 生成轴的物理碰撞箱（用于渲染和精准鼠标检测） */
+    private static AABB getAxisAABB(float x, float y, float z, int dx, int dy, int dz, float length, float thickness) {
+        float minX = x - thickness, minY = y - thickness, minZ = z - thickness;
+        float maxX = x + thickness, maxY = y + thickness, maxZ = z + thickness;
 
-    private static int hitLogTick = 0;
+        if (dx > 0) maxX = x + length;
+        if (dx < 0) minX = x - length;
+        if (dy > 0) maxY = y + length;
+        if (dy < 0) minY = y - length;
+        if (dz > 0) maxZ = z + length;
+        if (dz < 0) minZ = z - length;
 
+        return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    /**
+     * 极其精准的视线碰撞检测：直接检测射线与箭头 AABB 的交点。
+     */
     public static BuildingEditorClientState.AxisDrag hitTestAxis(Vec3 rayOrigin, Vec3 rayDir) {
-        // Base corner: use worldMin if AABB exists, else worldAnchor
-        BlockPos worldMin = BuildingEditorClientState.getWorldMin();
-        BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
-        BlockPos corner = worldMin != null ? worldMin : worldAnchor;
+        BlockPos corner = BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : BuildingEditorClientState.getWorldAnchor();
         if (corner == null) return null;
 
-        BuildingEditorClientState.AxisDrag best = null;
-        double bestDist = 2.0;  // generous — 2 block capture radius
+        Vec3 rayEnd = rayOrigin.add(rayDir.scale(100.0)); // 射线投射 100 格
+        BuildingEditorClientState.AxisDrag bestAxis = null;
+        double bestDist = Double.MAX_VALUE;
 
-        hitLogTick++;
-        boolean log = (hitLogTick % 40 == 0);
+        // 测试正方向 (包含 Shaft 和 Head 的联合碰撞箱)
+        bestDist = checkHit(bestDist, rayOrigin, rayEnd, corner, 1, 0, 0, BuildingEditorClientState.AxisDrag.X_POS, bestAxis);
+        if (bestDist < Double.MAX_VALUE) bestAxis = BuildingEditorClientState.AxisDrag.X_POS;
+        bestDist = checkHit(bestDist, rayOrigin, rayEnd, corner, 0, 1, 0, BuildingEditorClientState.AxisDrag.Y_POS, bestAxis);
+        if (bestDist < Double.MAX_VALUE && bestAxis != BuildingEditorClientState.AxisDrag.X_POS) bestAxis = BuildingEditorClientState.AxisDrag.Y_POS;
+        bestDist = checkHit(bestDist, rayOrigin, rayEnd, corner, 0, 0, 1, BuildingEditorClientState.AxisDrag.Z_POS, bestAxis);
+        if (bestDist < Double.MAX_VALUE && bestAxis != BuildingEditorClientState.AxisDrag.Y_POS && bestAxis != BuildingEditorClientState.AxisDrag.X_POS) bestAxis = BuildingEditorClientState.AxisDrag.Z_POS;
 
-        // Test positive arrows from corner
-        for (var entry : AXIS_DIRS.entrySet()) {
-            BuildingEditorClientState.AxisDrag axis = entry.getKey();
-            int[] dir = entry.getValue();
-            double dist = rayToArrowDist(rayOrigin, rayDir, corner, dir[0], dir[1], dir[2]);
-            if (log) LOGGER.debug("[BuildEditor] hitTest +{}: dist={}", axis, dist);
-            if (dist < bestDist) { bestDist = dist; best = axis; }
+        // 重新进行一次干净的遍历测试，寻找最近的 Hit
+        bestAxis = null;
+        bestDist = Double.MAX_VALUE;
+
+        // X_POS
+        double dist = getHitDist(rayOrigin, rayEnd, corner, 1, 0, 0);
+        if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.X_POS; }
+        // Y_POS
+        dist = getHitDist(rayOrigin, rayEnd, corner, 0, 1, 0);
+        if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Y_POS; }
+        // Z_POS
+        dist = getHitDist(rayOrigin, rayEnd, corner, 0, 0, 1);
+        if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Z_POS; }
+
+        // 测试负方向
+        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
+        if (maxCorner != null) {
+            dist = getHitDist(rayOrigin, rayEnd, maxCorner, -1, 0, 0);
+            if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.X_NEG; }
+            dist = getHitDist(rayOrigin, rayEnd, maxCorner, 0, -1, 0);
+            if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Y_NEG; }
+            dist = getHitDist(rayOrigin, rayEnd, maxCorner, 0, 0, -1);
+            if (dist < bestDist) { bestDist = dist; bestAxis = BuildingEditorClientState.AxisDrag.Z_NEG; }
         }
 
-        // Test negative arrows from max corner (if AABB exists)
-        BlockPos worldMax = BuildingEditorClientState.getWorldMax();
-        if (worldMax != null) {
-            for (var entry : NEG_AXIS_DIRS.entrySet()) {
-                BuildingEditorClientState.AxisDrag axis = entry.getKey();
-                int[] dir = entry.getValue();
-                double dist = rayToArrowDist(rayOrigin, rayDir, worldMax, dir[0], dir[1], dir[2]);
-                if (log) LOGGER.debug("[BuildEditor] hitTest -{}: dist={}", axis, dist);
-                if (dist < bestDist) { bestDist = dist; best = axis; }
-            }
+        return bestAxis;
+    }
+
+    private static double checkHit(double currentBest, Vec3 start, Vec3 end, BlockPos base, int dx, int dy, int dz, BuildingEditorClientState.AxisDrag axis, BuildingEditorClientState.AxisDrag bestAxisOut) {
+        return getHitDist(start, end, base, dx, dy, dz);
+    }
+
+    private static double getHitDist(Vec3 rayOrigin, Vec3 rayEnd, BlockPos base, int dx, int dy, int dz) {
+        float bx = base.getX() + 0.5f; float by = base.getY() + 0.5f; float bz = base.getZ() + 0.5f;
+        // 把杆子和箭头的判定框合并（加粗一点方便选中）
+        AABB hitBox = getAxisAABB(bx, by, bz, dx, dy, dz, SHAFT_LEN + HEAD_LEN, HEAD_THICKNESS + 0.1f);
+        Optional<Vec3> hit = hitBox.clip(rayOrigin, rayEnd);
+        return hit.map(vec3 -> vec3.distanceToSqr(rayOrigin)).orElse(Double.MAX_VALUE);
+    }
+
+    // --- 绘制 3D 长方体的底层工具 ---
+    private static void fillAABB(VertexConsumer vc, PoseStack.Pose pose, AABB box, int r, int g, int b, int a) {
+        float x0 = (float)box.minX, y0 = (float)box.minY, z0 = (float)box.minZ;
+        float x1 = (float)box.maxX, y1 = (float)box.maxY, z1 = (float)box.maxZ;
+        quad(vc, pose, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, r, g, b, a); // bottom
+        quad(vc, pose, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, r, g, b, a); // top
+        quad(vc, pose, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, r, g, b, a); // back
+        quad(vc, pose, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, r, g, b, a); // right
+        quad(vc, pose, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, r, g, b, a); // front
+        quad(vc, pose, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, r, g, b, a); // left
+    }
+
+    private static void quad(VertexConsumer vc, PoseStack.Pose pose, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, int r, int g, int b, int a) {
+        vc.addVertex(pose, x1,y1,z1).setColor(r,g,b,a);
+        vc.addVertex(pose, x2,y2,z2).setColor(r,g,b,a);
+        vc.addVertex(pose, x3,y3,z3).setColor(r,g,b,a);
+        vc.addVertex(pose, x4,y4,z4).setColor(r,g,b,a);
+    }
+    // ═══════════════════════════════════════════════════════════════
+    // ── X-Ray 穿透渲染类型 ──
+    // ═══════════════════════════════════════════════════════════════
+
+    private static abstract class HandleRenderType extends RenderType {
+        private HandleRenderType(String name, com.mojang.blaze3d.vertex.VertexFormat format, com.mojang.blaze3d.vertex.VertexFormat.Mode mode, int bufSize, boolean affectsCrumbling, boolean sortOnUpload, Runnable setupState, Runnable clearState) {
+            super(name, format, mode, bufSize, affectsCrumbling, sortOnUpload, setupState, clearState);
         }
 
-        if (log && best != null) LOGGER.info("[BuildEditor] hitTest BEST: {} dist={}", best, bestDist);
-        return best;
-    }
-
-    private static double rayToArrowDist(Vec3 rayOrigin, Vec3 rayDir,
-                                          BlockPos base, int dx, int dy, int dz) {
-        float bx = base.getX() + 0.5f;
-        float by = base.getY() + 0.5f;
-        float bz = base.getZ() + 0.5f;
-        float tx = bx + dx * ARROW_LEN;
-        float ty = by + dy * ARROW_LEN;
-        float tz = bz + dz * ARROW_LEN;
-
-        return rayToSegmentDist(rayOrigin, rayDir,
-                new Vec3(bx, by, bz), new Vec3(tx, ty, tz));
-    }
-
-    /** Compute shortest distance from ray to line segment AB. */
-    public static double rayToSegmentDist(Vec3 rayO, Vec3 rayD, Vec3 a, Vec3 b) {
-        Vec3 ab = b.subtract(a);
-        double abLenSq = ab.lengthSqr();
-        if (abLenSq < 1e-12) return rayToPointDist(rayO, rayD, a);
-
-        Vec3 ao = rayO.subtract(a);
-        double raydotray = rayD.dot(rayD);
-        double raydotab = rayD.dot(ab);
-        double abdotab = ab.dot(ab);
-        double raydotao = rayD.dot(ao);
-        double abdotao = ab.dot(ao);
-
-        double denom = raydotray * abdotab - raydotab * raydotab;
-        if (Math.abs(denom) < 1e-12) {
-            double tSeg = Math.max(0, Math.min(1, -abdotao / abdotab));
-            Vec3 segPt = a.add(ab.scale(tSeg));
-            return rayToPointDist(rayO, rayD, segPt);
-        }
-
-        double t = Math.max(0, (raydotab * abdotao - abdotab * raydotao) / denom);
-        double u = Math.max(0, Math.min(1, (raydotray * abdotao - raydotab * raydotao) / denom));
-        Vec3 rayPt = rayO.add(rayD.scale(t));
-        Vec3 segPt = a.add(ab.scale(u));
-        return rayPt.distanceTo(segPt);
-    }
-
-    private static double rayToPointDist(Vec3 rayO, Vec3 rayD, Vec3 pt) {
-        Vec3 toPt = pt.subtract(rayO);
-        double t = toPt.dot(rayD);
-        if (t <= 0) return rayO.distanceTo(pt);
-        return rayO.add(rayD.scale(t)).distanceTo(pt);
-    }
-
-    // ── Axis direction lookup ──
-
-    private static final java.util.Map<BuildingEditorClientState.AxisDrag, int[]> AXIS_DIRS = java.util.Map.of(
-            BuildingEditorClientState.AxisDrag.X_POS, new int[]{1, 0, 0},
-            BuildingEditorClientState.AxisDrag.Y_POS, new int[]{0, 1, 0},
-            BuildingEditorClientState.AxisDrag.Z_POS, new int[]{0, 0, 1}
-    );
-
-    private static final java.util.Map<BuildingEditorClientState.AxisDrag, int[]> NEG_AXIS_DIRS = java.util.Map.of(
-            BuildingEditorClientState.AxisDrag.X_NEG, new int[]{-1, 0, 0},
-            BuildingEditorClientState.AxisDrag.Y_NEG, new int[]{0, -1, 0},
-            BuildingEditorClientState.AxisDrag.Z_NEG, new int[]{0, 0, -1}
-    );
-
-    // ── Utility ──
-
-    private static void line(VertexConsumer vc, com.mojang.blaze3d.vertex.PoseStack.Pose pose,
-                              float x1, float y1, float z1, float x2, float y2, float z2,
-                              int r, int g, int b, int a) {
-        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
-        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setNormal(pose, 0, 1, 0);
+        // 创建一个无视深度的自定义渲染材质
+        public static final RenderType XRAY_QUADS = create(
+                "build_editor_handle",
+                com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+                com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                256,
+                false,
+                false,
+                RenderType.CompositeState.builder()
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY) // 允许半透明
+                        .setDepthTestState(NO_DEPTH_TEST)               // <--- 核心魔法：关闭深度测试，无视遮挡！
+                        .setCullState(NO_CULL)                          // 禁用背面剔除，无论什么角度都能看到
+                        .createCompositeState(false)
+        );
     }
 }
