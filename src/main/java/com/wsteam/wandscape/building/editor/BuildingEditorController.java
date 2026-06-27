@@ -40,6 +40,7 @@ public final class BuildingEditorController {
     // Right-click camera state
     private static boolean cameraActive = false;
 
+    private static int tickCount = 0;
     private static boolean registered = false;
 
     private BuildingEditorController() {}
@@ -92,7 +93,17 @@ public final class BuildingEditorController {
             double[] mx = new double[1], my = new double[1];
             GLFW.glfwGetCursorPos(window, mx, my);
             float guiScale = (float) mc.getWindow().getGuiScale();
-            if (mx[0] / guiScale < BuildingEditorImGui.panelLeftEdge) {
+            float mouseGuiX = (float) (mx[0] / guiScale);
+            boolean overPanel = mouseGuiX >= BuildingEditorImGui.panelLeftEdge;
+
+            tickCount++;
+            if (tickCount % 40 == 0) {
+                LOGGER.info("[BuildEditor] Controller heartbeat: tick={} cameraActive={} overPanel={} mouseX={} panelEdge={} editing={}",
+                        tickCount, cameraActive, overPanel, (int)mouseGuiX, (int)BuildingEditorImGui.panelLeftEdge,
+                        BuildingEditorClientState.isEditing());
+            }
+
+            if (!overPanel) {
                 BuildingEditorInputHandler.handleClicks(mc, window);
             }
         }

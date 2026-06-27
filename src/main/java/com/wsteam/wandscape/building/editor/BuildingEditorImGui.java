@@ -76,7 +76,7 @@ public final class BuildingEditorImGui {
         syncFromState();
 
         int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove
-                | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.AlwaysAutoResize;
+                | ImGuiWindowFlags.NoResize;
 
         var io = ImGui.getIO();
         float winW = 260;
@@ -173,8 +173,7 @@ public final class BuildingEditorImGui {
                 if (BuildingEditorClientState.getWorldAnchor() != null) {
                     ImGui.sameLine();
                     if (ImGui.button("Scan")) {
-                        BuildingEditorInputHandler.scanBlocks(
-                                Minecraft.getInstance());
+                        BuildingEditorInputHandler.scanNow();
                     }
                 }
                 ImGui.textDisabled("L-click=Anchor  Drag axes=AABB  M-click=+/-block  R-hold=camera");

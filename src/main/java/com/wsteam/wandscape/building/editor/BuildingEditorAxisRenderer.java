@@ -28,9 +28,9 @@ public final class BuildingEditorAxisRenderer {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final float ARROW_LEN = 1.5f;
-    private static final float HEAD_LEN = 0.35f;
-    private static final float HEAD_W = 0.15f;
+    private static final float ARROW_LEN = 4.0f;   // 4-block shaft — easy to see & hit
+    private static final float HEAD_LEN = 0.6f;
+    private static final float HEAD_W = 0.25f;
 
     // Bright axis colors (positive direction)
     private static final int[] COL_X = {255, 50, 50, 230};   // red
@@ -78,20 +78,18 @@ public final class BuildingEditorAxisRenderer {
         // At the first-set corner (worldAnchor adjusted by editMin):
         // draw positive-direction arrows
         BlockPos corner = BuildingEditorClientState.getWorldMin();
-        if (corner != null) {
-            Vec3 hovered = BuildingEditorClientState.getHoveredAxisWorld();
-            BuildingEditorClientState.AxisDrag hovering = BuildingEditorClientState.getHoveredAxis();
-            drawArrow(vc, poseStack, corner, 1, 0, 0, COL_X, hovering, BuildingEditorClientState.AxisDrag.X_POS, hovered);
-            drawArrow(vc, poseStack, corner, 0, 1, 0, COL_Y, hovering, BuildingEditorClientState.AxisDrag.Y_POS, hovered);
-            drawArrow(vc, poseStack, corner, 0, 0, 1, COL_Z, hovering, BuildingEditorClientState.AxisDrag.Z_POS, hovered);
-        }
+        // If no AABB yet, use the anchor itself as the corner for +X/+Y/+Z arrows
+        if (corner == null) corner = worldAnchor;
+
+        Vec3 hovered = BuildingEditorClientState.getHoveredAxisWorld();
+        BuildingEditorClientState.AxisDrag hovering = BuildingEditorClientState.getHoveredAxis();
+        drawArrow(vc, poseStack, corner, 1, 0, 0, COL_X, hovering, BuildingEditorClientState.AxisDrag.X_POS, hovered);
+        drawArrow(vc, poseStack, corner, 0, 1, 0, COL_Y, hovering, BuildingEditorClientState.AxisDrag.Y_POS, hovered);
+        drawArrow(vc, poseStack, corner, 0, 0, 1, COL_Z, hovering, BuildingEditorClientState.AxisDrag.Z_POS, hovered);
 
         // At the max corner: draw negative-direction arrows (shrink handles)
         BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
         if (maxCorner != null) {
-            // Offset to the max face — draw arrows pointing IN from the next block
-            Vec3 hovered = BuildingEditorClientState.getHoveredAxisWorld();
-            BuildingEditorClientState.AxisDrag hovering = BuildingEditorClientState.getHoveredAxis();
             drawArrow(vc, poseStack, maxCorner, -1, 0, 0, COL_XN, hovering, BuildingEditorClientState.AxisDrag.X_NEG, hovered);
             drawArrow(vc, poseStack, maxCorner, 0, -1, 0, COL_YN, hovering, BuildingEditorClientState.AxisDrag.Y_NEG, hovered);
             drawArrow(vc, poseStack, maxCorner, 0, 0, -1, COL_ZN, hovering, BuildingEditorClientState.AxisDrag.Z_NEG, hovered);
@@ -159,36 +157,43 @@ public final class BuildingEditorAxisRenderer {
 
     // ── Hit-testing: which axis arrow is closest to the camera ray ──
 
+    private static int hitLogTick = 0;
+
     public static BuildingEditorClientState.AxisDrag hitTestAxis(Vec3 rayOrigin, Vec3 rayDir) {
+        // Base corner: use worldMin if AABB exists, else worldAnchor
         BlockPos worldMin = BuildingEditorClientState.getWorldMin();
-        if (worldMin == null) return null;
+        BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
+        BlockPos corner = worldMin != null ? worldMin : worldAnchor;
+        if (corner == null) return null;
 
         BuildingEditorClientState.AxisDrag best = null;
-        double bestDist = Double.MAX_VALUE;
+        double bestDist = 2.0;  // generous — 2 block capture radius
 
-        // Test positive arrows from min corner
+        hitLogTick++;
+        boolean log = (hitLogTick % 40 == 0);
+
+        // Test positive arrows from corner
         for (var entry : AXIS_DIRS.entrySet()) {
             BuildingEditorClientState.AxisDrag axis = entry.getKey();
             int[] dir = entry.getValue();
-            BlockPos base = worldMin;
-            double dist = rayToArrowDist(rayOrigin, rayDir, base,
-                    dir[0], dir[1], dir[2]);
-            if (dist < 0.6 && dist < bestDist) { bestDist = dist; best = axis; }
+            double dist = rayToArrowDist(rayOrigin, rayDir, corner, dir[0], dir[1], dir[2]);
+            if (log) LOGGER.debug("[BuildEditor] hitTest +{}: dist={}", axis, dist);
+            if (dist < bestDist) { bestDist = dist; best = axis; }
         }
 
-        // Test negative arrows from max corner
+        // Test negative arrows from max corner (if AABB exists)
         BlockPos worldMax = BuildingEditorClientState.getWorldMax();
         if (worldMax != null) {
             for (var entry : NEG_AXIS_DIRS.entrySet()) {
                 BuildingEditorClientState.AxisDrag axis = entry.getKey();
                 int[] dir = entry.getValue();
-                BlockPos base = worldMax;
-                double dist = rayToArrowDist(rayOrigin, rayDir, base,
-                        dir[0], dir[1], dir[2]);
-                if (dist < 0.6 && dist < bestDist) { bestDist = dist; best = axis; }
+                double dist = rayToArrowDist(rayOrigin, rayDir, worldMax, dir[0], dir[1], dir[2]);
+                if (log) LOGGER.debug("[BuildEditor] hitTest -{}: dist={}", axis, dist);
+                if (dist < bestDist) { bestDist = dist; best = axis; }
             }
         }
 
+        if (log && best != null) LOGGER.info("[BuildEditor] hitTest BEST: {} dist={}", best, bestDist);
         return best;
     }
 
