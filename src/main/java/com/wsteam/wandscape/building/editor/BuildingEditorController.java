@@ -6,7 +6,9 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.network.BuildingEditorExitPacket;
 import com.wsteam.wandscape.building.network.BuildingEditorExportPacket;
+import com.wsteam.wandscape.imgui.ImGuiManager;
 
+import imgui.ImGui;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -15,23 +17,28 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Per-tick lifecycle controller for the building editor.
- * Flight movement (WASD), keyboard shortcuts, text input focused fields.
- * No Screen — the overlay renders via {@link BuildingEditorOverlay}.
+ * Per-tick lifecycle for the building editor.
+ *
+ * <p>Mouse model:
+ * <ul>
+ *   <li>Cursor always visible (ImGui releases mouse)</li>
+ *   <li><b>Right-click held</b> → camera rotation (MC-style)</li>
+ *   <li><b>Otherwise</b> → WASD flight + left-click world interaction</li>
+ * </ul>
+ *
+ * <p>The panel is rendered via ImGui ({@link BuildingEditorImGui}).
  */
 public final class BuildingEditorController {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-
     private static volatile float flyingSpeed = 0.15f;
 
-    // Keyboard edge detection
+    // Keyboard edge
     private static boolean wasEscapeDown = false;
-    private static boolean wasEDown = false;
     private static boolean wasEnterDown = false;
 
-    // Key edge tracking for text input (one-shot per key)
-    private static final boolean[] wasKeyDown = new boolean[GLFW.GLFW_KEY_LAST + 1];
+    // Right-click camera state
+    private static boolean cameraActive = false;
 
     private static boolean registered = false;
 
@@ -47,39 +54,56 @@ public final class BuildingEditorController {
         LOGGER.info("[BuildEditor] Controller registered");
     }
 
-    // ── Client tick ──
-
     static void onClientTickPost(ClientTickEvent.Post event) {
         if (!BuildingEditorClientState.isEditing()) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        // Note: no Screen object exists — we always run
 
         long window = mc.getWindow().getWindow();
-        int mods = getModifiers(window);
+        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean imguiReady = ImGuiManager.isInitialized();
+        boolean imguiWantsKb = imguiReady && ImGui.getIO().getWantCaptureKeyboard();
 
-        // 1. Flight movement (WASD/Space/Shift) — only when no field is focused
-        if (BuildingEditorClientState.getFocusedField() == null) {
-            handleFlightMovement(mc, window);
-        } else {
+        // ── Right-click camera rotation ──
+        if (!cameraActive && rightDown) {
+            // Start: let MC grab the mouse (its own internal cursor state)
+            cameraActive = true;
+            mc.mouseHandler.grabMouse();
+        } else if (cameraActive && !rightDown) {
+            // End: release back to visible cursor
+            cameraActive = false;
+            mc.mouseHandler.releaseMouse();
+        }
+
+        if (cameraActive) {
+            // MC handles the look input natively when mouse is grabbed.
+            // We just need to zero out our custom flight movement.
             mc.player.setDeltaMovement(Vec3.ZERO);
+        } else {
+            // ── Flight (only when ImGui doesn't want keyboard) ──
+            if (!imguiWantsKb) {
+                handleFlightMovement(mc, window);
+            } else {
+                mc.player.setDeltaMovement(Vec3.ZERO);
+            }
+
+            // ── World clicks (skip if mouse is over ImGui panel) ──
+            double[] mx = new double[1], my = new double[1];
+            GLFW.glfwGetCursorPos(window, mx, my);
+            float guiScale = (float) mc.getWindow().getGuiScale();
+            if (mx[0] / guiScale < BuildingEditorImGui.panelLeftEdge) {
+                BuildingEditorInputHandler.handleClicks(mc, window);
+            }
         }
 
-        // 2. Mouse clicks (AABB selection, dragging, pattern editing, panel interaction)
-        BuildingEditorInputHandler.handleClicks(mc, window);
+        // ── Keyboard shortcuts (only when not camera rotating) ──
+        handleKeyboard(mc, window, imguiWantsKb);
 
-        // 3. Text input for focused field
-        String focused = BuildingEditorClientState.getFocusedField();
-        if (focused != null) {
-            handleTextInput(window, mods);
+        // ── Drain vanilla keyboard (mouse blocked by ImGuiManager event cancel) ──
+        if (!imguiWantsKb) {
+            drainVanillaInput(mc);
         }
-
-        // 4. Keyboard shortcuts (global — work even when field is focused)
-        handleKeyboard(mc, window, mods);
-
-        // 5. Drain vanilla input
-        drainVanillaInput(mc);
     }
 
     // ── Flight ──
@@ -124,71 +148,26 @@ public final class BuildingEditorController {
         }
     }
 
-    // ── Text input ──
-
-    private static void handleTextInput(long window, int mods) {
-        for (int key = GLFW.GLFW_KEY_A; key <= GLFW.GLFW_KEY_Z; key++) {
-            tryKey(window, key, mods);
-        }
-        for (int key = GLFW.GLFW_KEY_0; key <= GLFW.GLFW_KEY_9; key++) {
-            tryKey(window, key, mods);
-        }
-        tryKey(window, GLFW.GLFW_KEY_MINUS, mods);
-        tryKey(window, GLFW.GLFW_KEY_SPACE, mods);
-        tryKey(window, GLFW.GLFW_KEY_PERIOD, mods);
-        tryKey(window, GLFW.GLFW_KEY_SLASH, mods);
-        tryKey(window, GLFW.GLFW_KEY_COMMA, mods);
-        tryKey(window, GLFW.GLFW_KEY_SEMICOLON, mods);
-        tryKey(window, GLFW.GLFW_KEY_BACKSPACE, mods);
-        tryKey(window, GLFW.GLFW_KEY_ENTER, mods);
-        tryKey(window, GLFW.GLFW_KEY_KP_ENTER, mods);
-        tryKey(window, GLFW.GLFW_KEY_ESCAPE, mods);
-    }
-
-    private static void tryKey(long window, int key, int mods) {
-        boolean down = GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS;
-        boolean clicked = down && !wasKeyDown[key];
-        wasKeyDown[key] = down;
-        if (clicked) {
-            BuildingEditorInputHandler.handleKeyPress(key, mods);
-        }
-    }
-
     // ── Keyboard shortcuts ──
 
-    private static void handleKeyboard(Minecraft mc, long window, int mods) {
+    private static void handleKeyboard(Minecraft mc, long window, boolean imguiWantsKb) {
         boolean escapeDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
-        boolean eDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_E) == GLFW.GLFW_PRESS;
         boolean enterDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ENTER) == GLFW.GLFW_PRESS
                 || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_ENTER) == GLFW.GLFW_PRESS;
 
         boolean escapeClicked = escapeDown && !wasEscapeDown;
-        boolean eClicked = eDown && !wasEDown;
         boolean enterClicked = enterDown && !wasEnterDown;
 
         wasEscapeDown = escapeDown;
-        wasEDown = eDown;
         wasEnterDown = enterDown;
 
-        // Escape: if field focused → defocus. else → exit editor
-        if (escapeClicked) {
-            if (BuildingEditorClientState.getFocusedField() != null) {
-                BuildingEditorClientState.setFocusedField(null);
-            } else {
-                doExit();
-            }
+        // Escape: exit editor (only when ImGui doesn't own keyboard)
+        if (escapeClicked && !imguiWantsKb) {
+            doExit();
         }
 
-        // E: toggle panel visibility
-        if (eClicked) {
-            boolean visible = !BuildingEditorClientState.isScreenVisible();
-            BuildingEditorClientState.setScreenVisible(visible);
-            mc.player.displayClientMessage(
-                    Component.literal("[BuildEditor] Panel: " + (visible ? "§ashown" : "§chidden")), true);
-        }
-
-        // Enter: export (only when no field focused, to avoid conflict with defocus)
-        if (enterClicked && BuildingEditorClientState.getFocusedField() == null) {
+        // Enter: export (only when ImGui doesn't own keyboard)
+        if (enterClicked && !imguiWantsKb) {
             doExport();
         }
     }
@@ -197,22 +176,26 @@ public final class BuildingEditorController {
 
     static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
         if (!BuildingEditorClientState.isEditing()) return;
+        if (ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureMouse()) return;
         event.setCanceled(true);
     }
 
-    // ── Exit ──
+    // ── Exit / Export ──
 
     public static void doExit() {
         PacketDistributor.sendToServer(new BuildingEditorExitPacket());
         BuildingEditorClientState.exitEditMode();
+        ImGuiManager.setVisible(false);
+        if (cameraActive) {
+            cameraActive = false;
+            Minecraft.getInstance().mouseHandler.releaseMouse();
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(
                     Component.literal("[BuildEditor] §eExited editor mode"), true);
         }
     }
-
-    // ── Export ──
 
     public static void doExport() {
         String json = BuildingEditorClientState.buildExportJson();
@@ -237,23 +220,7 @@ public final class BuildingEditorController {
         while (mc.options.keyInventory.consumeClick()) {}
         while (mc.options.keyDrop.consumeClick()) {}
         while (mc.options.keySprint.consumeClick()) {}
-        // Don't drain sneaking — it's used for anchor selection (Shift+click)
-        // Letters are consumed by flight logic above
-    }
-
-    // ── Modifiers ──
-
-    private static int getModifiers(long window) {
-        int mods = 0;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS)
-            mods |= GLFW.GLFW_MOD_SHIFT;
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS)
-            mods |= GLFW.GLFW_MOD_CONTROL;
-        return mods;
     }
 
     public static float getFlyingSpeed() { return flyingSpeed; }
-    public static void setFlyingSpeed(float speed) { flyingSpeed = speed; }
 }

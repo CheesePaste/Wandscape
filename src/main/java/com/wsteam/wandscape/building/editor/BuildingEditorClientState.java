@@ -20,6 +20,7 @@ import com.wsteam.wandscape.shared.data.WonderEffect;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Client-side static state for the building editor.
@@ -119,28 +120,26 @@ public final class BuildingEditorClientState {
 
     private static volatile BlockPos bodyAnchor = null;
 
-    // ── Drag state ──
+    // ── Axis drag state ──
 
-    /** Which handle is being dragged (null = none). */
-    private static volatile DragHandle activeDragHandle = null;
-    /** The world position where the drag started. */
-    private static volatile BlockPos dragStartPos = null;
+    /** Axis currently hovered by the crosshair (null = none). */
+    private static volatile AxisDrag hoveredAxis = null;
+    /** World-space point on the hovered axis (for rendering). */
+    private static volatile Vec3 hoveredAxisWorld = null;
+    /** Axis currently being dragged (null = idle). */
+    private static volatile AxisDrag draggingAxis = null;
+    /** World position where the drag started. */
+    private static volatile BlockPos dragStartWorld = null;
+    /** The relative min/max state at drag start (used for restoring on cancel). */
+    private static volatile BlockOffset dragStartMin = null;
+    private static volatile BlockOffset dragStartMax = null;
 
     // ── Other UI state ──
 
-    /** Whether the GUI panel is visible. */
-    private static volatile boolean screenVisible = true;
-
-    /** Which text field has keyboard focus (null = none). */
-    private static volatile String focusedField = null;
-
-    /** Which button is hovered by mouse (null = none). */
-    private static volatile String hoveredButton = null;
-
-    /** Whether JSON preview is toggled on. */
+    /** Whether JSON preview is toggled on (used by ImGui panel). */
     private static volatile boolean showPreview = false;
 
-    /** Cached JSON preview text. */
+    /** Cached JSON preview text (used by ImGui panel). */
     private static volatile String previewJson = "";
 
     /** Snapshot of player abilities before editor (for restore on exit). */
@@ -186,8 +185,8 @@ public final class BuildingEditorClientState {
             mc.player.onUpdateAbilities();
         }
 
-        // Panel is auto-visible via overlay (no Screen)
-        screenVisible = true;
+        // Auto-show ImGui (releases mouse)
+        com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
 
         LOGGER.info("[BuildEditor] Entered edit mode. worldAnchor={}, min={}, max={}, id={}",
                 worldAnchor, editMin, editMax, buildingId);
@@ -236,10 +235,9 @@ public final class BuildingEditorClientState {
         wonderEffects.clear();
         nodeElement = ""; nodeAmountPerHarvest = 5; nodeChannelTicks = 100; nodeManaCost = 10;
         nodeBlueprint = "node:gather";
-        activeDragHandle = null; dragStartPos = null;
-        screenVisible = true;
-        focusedField = null;
-        hoveredButton = null;
+        hoveredAxis = null; hoveredAxisWorld = null;
+        draggingAxis = null; dragStartWorld = null;
+        dragStartMin = null; dragStartMax = null;
         showPreview = false;
         previewJson = "";
         savedAbilities = null;
@@ -423,25 +421,24 @@ public final class BuildingEditorClientState {
 
     public static BlockPos getBodyAnchor() { return bodyAnchor; }
 
-    // ── Drag state ──
+    // ── Axis hover/drag ──
 
-    public static DragHandle getActiveDragHandle() { return activeDragHandle; }
-    public static void setActiveDragHandle(DragHandle handle) { activeDragHandle = handle; }
-    public static BlockPos getDragStartPos() { return dragStartPos; }
-    public static void setDragStartPos(BlockPos pos) { dragStartPos = pos; }
-    public static boolean isDragging() { return activeDragHandle != null; }
+    public static AxisDrag getHoveredAxis() { return hoveredAxis; }
+    public static void setHoveredAxis(AxisDrag axis) { hoveredAxis = axis; }
+    public static Vec3 getHoveredAxisWorld() { return hoveredAxisWorld; }
+    public static void setHoveredAxisWorld(Vec3 pos) { hoveredAxisWorld = pos; }
+    public static AxisDrag getDraggingAxis() { return draggingAxis; }
+    public static void setDraggingAxis(AxisDrag axis) { draggingAxis = axis; }
+    public static BlockPos getDragStartWorld() { return dragStartWorld; }
+    public static void setDragStartWorld(BlockPos pos) { dragStartWorld = pos; }
+    public static BlockOffset getDragStartMin() { return dragStartMin; }
+    public static void setDragStartMin(BlockOffset off) { dragStartMin = off; }
+    public static BlockOffset getDragStartMax() { return dragStartMax; }
+    public static void setDragStartMax(BlockOffset off) { dragStartMax = off; }
+    public static boolean isDragging() { return draggingAxis != null; }
 
-    // ── Screen visibility ──
+    // ── Preview (used by ImGui panel) ──
 
-    public static boolean isScreenVisible() { return screenVisible; }
-    public static void setScreenVisible(boolean v) { screenVisible = v; }
-
-    // ── Focus / hover / preview ──
-
-    public static String getFocusedField() { return focusedField; }
-    public static void setFocusedField(String field) { focusedField = field; }
-    public static String getHoveredButton() { return hoveredButton; }
-    public static void setHoveredButton(String btn) { hoveredButton = btn; }
     public static boolean isShowPreview() { return showPreview; }
     public static void setShowPreview(boolean v) { showPreview = v; }
     public static String getPreviewJson() { return previewJson; }
@@ -675,17 +672,9 @@ public final class BuildingEditorClientState {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * Identifies which handle on the AABB is being dragged.
+     * Identifies which axis arrow is being hovered/dragged.
      */
-    public enum DragHandle {
-        /** 8 corner handles. */
-        CORNER_NNN, CORNER_PNN, CORNER_NPN, CORNER_PPN,
-        CORNER_NNP, CORNER_PNP, CORNER_NPP, CORNER_PPP,
-        /** 6 face center handles. */
-        FACE_NX, FACE_PX,
-        FACE_NY, FACE_PY,
-        FACE_NZ, FACE_PZ,
-        /** The anchor marker. */
-        ANCHOR
+    public enum AxisDrag {
+        X_POS, X_NEG, Y_POS, Y_NEG, Z_POS, Z_NEG
     }
 }

@@ -3,6 +3,7 @@ package com.wsteam.wandscape;
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
@@ -28,9 +29,9 @@ import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.editor.BuildingEditorAxisRenderer;
 import com.wsteam.wandscape.building.editor.BuildingEditorController;
 import com.wsteam.wandscape.building.editor.BuildingEditorInputHandler;
-import com.wsteam.wandscape.building.editor.BuildingEditorOverlay;
 import com.wsteam.wandscape.building.editor.BuildingEditorRenderer;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterResponsePacket;
@@ -58,9 +59,11 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
@@ -104,6 +107,13 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping IMGUI_TOGGLE = new KeyMapping(
+            "key.wandscape.imgui",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F12,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
@@ -115,8 +125,11 @@ public class WandscapeClient {
         BuildingDebugController.register();
         BuildingEditorController.register();
         BuildingEditorRenderer.register();
+        BuildingEditorAxisRenderer.register();
         BuildingEditorInputHandler.register();
-        BuildingEditorOverlay.register();
+
+        // ImGui: register static event handlers on ImGuiManager
+        NeoForge.EVENT_BUS.register(ImGuiManager.class);
     }
 
     @SubscribeEvent
@@ -180,6 +193,10 @@ public class WandscapeClient {
                         packet.buildingId(), packet.stock(), packet.maxStocks()));
             }
         });
+
+        // ImGui init is deferred to first render frame (when GL context is active)
+        // see ImGuiManager.ensureInit() called in onRenderFramePost
+
         Wandscape.LOGGER.info("Wandscape client setup complete");
     }
 
@@ -190,6 +207,7 @@ public class WandscapeClient {
         event.register(OPEN_TASK_EDITOR);
         event.register(PROJECTION_TOGGLE);
         event.register(DEBUG_TOGGLE);
+        event.register(IMGUI_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
@@ -225,6 +243,9 @@ public class WandscapeClient {
         }
         while (DEBUG_TOGGLE.consumeClick()) {
             BuildingDebugController.toggle();
+        }
+        while (IMGUI_TOGGLE.consumeClick()) {
+            ImGuiManager.toggle();
         }
     }
 
