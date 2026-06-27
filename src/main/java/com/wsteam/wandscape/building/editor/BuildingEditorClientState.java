@@ -535,16 +535,22 @@ public final class BuildingEditorClientState {
             sb.append("  \"blueprint\": {\n");
             sb.append("    \"id\": \"").append(escapeJson(blueprintId)).append("\"");
             Map<String, String> bb = getBlueprintBind();
-            if (!bb.isEmpty()) {
-                sb.append(",\n    \"bind\": {");
-                List<String> bbKeys = new ArrayList<>(bb.keySet());
-                for (int i = 0; i < bbKeys.size(); i++) {
-                    String k = bbKeys.get(i);
-                    sb.append("\"").append(escapeJson(k)).append("\": \"").append(escapeJson(bb.get(k))).append("\"");
-                    if (i < bbKeys.size() - 1) sb.append(", ");
-                }
-                sb.append("}");
+            // Default bind when none set — matches standard building conventions
+            if (bb.isEmpty()) {
+                bb = Map.of(
+                    "offsets", "$pattern",
+                    "blocks", "$block_mapping",
+                    "name", "$display_name"
+                );
             }
+            sb.append(",\n    \"bind\": {");
+            List<String> bbKeys = new ArrayList<>(bb.keySet());
+            for (int i = 0; i < bbKeys.size(); i++) {
+                String k = bbKeys.get(i);
+                sb.append("\"").append(escapeJson(k)).append("\": \"").append(escapeJson(bb.get(k))).append("\"");
+                if (i < bbKeys.size() - 1) sb.append(", ");
+            }
+            sb.append("}");
             sb.append("\n  },\n");
         }
 

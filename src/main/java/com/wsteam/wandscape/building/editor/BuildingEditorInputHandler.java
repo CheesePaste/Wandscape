@@ -220,7 +220,7 @@ public final class BuildingEditorInputHandler {
         BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
         if (worldAnchor == null) return false;
 
-        // NEG axes at min corner, POS axes at max corner
+        // POS arrows at max corner, NEG arrows at min corner
         BlockPos basePos = (hovered.name().endsWith("_POS"))
                 ? BuildingEditorClientState.getWorldMax()
                 : (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor);
@@ -264,6 +264,8 @@ public final class BuildingEditorInputHandler {
         // 相对位移量（四舍五入到整格）
         int delta = (int) Math.round(currentAxisValue - dragStartAxisValue);
         if (delta == 0) return;
+
+        delta = -delta; // 方向修正：原点从 min↔max 交换后符号反转
 
         int x = dragSavedMin.x(), y = dragSavedMin.y(), z = dragSavedMin.z();
         int mx = dragSavedMax.x(), my = dragSavedMax.y(), mz = dragSavedMax.z();
