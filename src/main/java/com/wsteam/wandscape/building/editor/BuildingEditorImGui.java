@@ -7,6 +7,7 @@ import com.wsteam.wandscape.building.data.BlockOffset;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImBoolean;
 import imgui.type.ImInt;
 import imgui.type.ImString;
 
@@ -34,6 +35,8 @@ public final class BuildingEditorImGui {
     private static final ImInt nodeChannel = new ImInt();
     private static final ImInt nodeManaCost = new ImInt();
     private static final ImInt shopProfitPct = new ImInt();
+
+    private static final ImBoolean autoAnchor = new ImBoolean(true);
 
     private static final ImString idBuf = new ImString(64);
     private static final ImString nameBuf = new ImString(128);
@@ -66,7 +69,7 @@ public final class BuildingEditorImGui {
                 | ImGuiWindowFlags.NoResize;
 
         var io = ImGui.getIO();
-        float winW = 220;
+        float winW = 300;
         float x = io.getDisplaySizeX() - winW - 8;
         float y = 8;
         panelLeftEdge = x;
@@ -172,6 +175,10 @@ public final class BuildingEditorImGui {
                 ImGui.textDisabled("No AABB yet");
             }
 
+            ImGui.checkbox("Auto Anchor (bottom-center)", autoAnchor);
+            BuildingEditorClientState.setAutoAnchorEnabled(autoAnchor.get());
+            if (autoAnchor.get()) BuildingEditorClientState.recalculateAnchor();
+
             // Buttons — stacked vertically
             float btnW = winW - 20;
             if (ImGui.button("Set Anchor (crosshair)", btnW, 24)) {
@@ -254,6 +261,8 @@ public final class BuildingEditorImGui {
         nodeAmount.set(BuildingEditorClientState.getNodeAmountPerHarvest());
         nodeChannel.set(BuildingEditorClientState.getNodeChannelTicks());
         nodeManaCost.set(BuildingEditorClientState.getNodeManaCost());
+
+        autoAnchor.set(BuildingEditorClientState.isAutoAnchorEnabled());
     }
 
     private static void syncToState() {

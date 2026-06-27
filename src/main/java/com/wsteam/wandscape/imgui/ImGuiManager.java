@@ -42,6 +42,9 @@ public class ImGuiManager {
 
         ImGui.createContext();
 
+        // Larger font for readability
+        ImGui.getIO().setFontGlobalScale(1.6f);
+
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");
 

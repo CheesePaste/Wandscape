@@ -1,289 +1,214 @@
-# 建筑编辑器 — 设计文档
+# building/editor/ — 建筑编辑器
 
-玩家灵魂出窍，通过 AABB 包围盒选区和 GUI 面板编辑建筑 JSON，一键导出到 `data/wandscape/buildings/`。
+游戏内可视化建筑编辑工具。玩家在飞行模式下框选世界中的建筑结构，编辑元数据，一键导出为标准 BuildingConfig JSON。
 
-**灵感**: Axiom Mod 的建筑编辑模式 + 本 mod 已有的 Soul Projection 系统。
+## 进入/退出
 
-## 已确认设计决策
+- 通过命令 `/wandscape editor` 进入编辑模式
+- 进入时自动开启创造飞行（退出时恢复原有能力）
+- 退出时向服务端发送 `BuildingEditorExitPacket`
 
-| # | 决策 | 结论 |
-|---|------|------|
-| A | 相机模式 | 自由飞行（复用 ProjectionFlightController） |
-| B | 扫描时机 | 实时扫描（AABB 变化即时更新 pattern/block_mapping） |
-| C | block_mapping | 相同方块自动合并去重 |
-| D | 导出行为 | 新建 + 覆盖警告 |
-| E | 加载已有 | 支持（命令带 building_id） |
-| F | 撤销/重做 | v1 不做 |
-| G | Anchor | 默认=min，用户可拖拽调整 |
-| H | GUI | MedievalScreen 右侧面板 |
-| I | 方块操作 | 编辑器内不放置/破坏方块 |
-| J | Pattern 编辑 | 支持手动 Add/Remove 偏移（热键） |
-| K | 并发 | 单人单建筑 |
-| L | 验证失败 | 警告但允许导出 |
-| M | JSON 格式 | Pretty-print |
-| N | 世界时间 | 继续，不暂停 |
-| O | 扫描已有结构 | 支持（从世界中一键生成配置） |
-
-## 入口命令
-
-```bash
-/wandscape build edit                 # 新建模式：空 AABB，无预填数据
-/wandscape build edit <building_id>   # 编辑模式：加载已有建筑 JSON
-/wandscape build done                 # 退出编辑器
-/wandscape build scan                 # 从当前 AABB 扫描方块生成配置
-```
-
-权限: OP level 2。
-
-## 架构
+## 架构概览
 
 ```
-building/editor/
-  ├── BuildingEditorClientState.java       — 客户端静态状态
-  ├── BuildingEditorScreen.java           — MedievalScreen 右侧面板
-  ├── BuildingEditorRenderer.java         — AABB 线框 + 方块高亮 + 手柄
-  ├── BuildingEditorInputHandler.java     — 鼠标拦截 + 拖拽 + 热键
-  ├── BuildingEditorController.java       — 生命周期管理 + tick
-  └── BuildingEditorExportService.java    — JSON 序列化 + 写入（服务端）
-
-building/network/
-  ├── BuildingEditorEnterPacket.java      (C→S: 请求进入编辑)
-  ├── BuildingEditorEnterResponsePacket.java (S→C: 进入确认 + 加载数据)
-  ├── BuildingEditorExitPacket.java       (C→S: 退出编辑)
-  ├── BuildingEditorExportPacket.java     (C→S: 携带 BuildingConfig JSON)
-  ├── BuildingEditorExportResultPacket.java (S→C: 导出结果)
-  ├── BuildingEditorSyncPacket.java       (S→C: 同步编辑状态给其他玩家)
-  └── BuildingEditorNetwork.java          — 服务端玩家追踪
+Client                                 Server
+┌─────────────────────────┐            ┌──────────────────────┐
+│ Controller (tick)       │            │ EditorNetwork        │
+│  ├── InputHandler       │  packet →  │  ├── player tracking │
+│  └── ImGui panel        │            │  └── validateEntry() │
+│                         │            │                      │
+│ Renderer (world)        │  export →  │ ExportService        │
+│  ├── AABB wireframe     │            │  ├── parse → validate│
+│  ├── pattern highlights │            │  └── write JSON file │
+│  └── anchor marker      │            │                      │
+│                         │            │ ConfigLoader         │
+│ AxisRenderer            │            │  (reload on export)  │
+│  ├── 3D arrow rendering │            └──────────────────────┘
+│  └── hitTestAxis()      │
+│                         │
+│ ClientState (shared)    │
+│  ├── editMin/editMax    │
+│  ├── worldAnchor        │
+│  ├── pattern/blockMap   │
+│  └── all metadata       │
+└─────────────────────────┘
 ```
 
-### 数据流
+## 关键类
+
+### 控制器层
+
+| 类 | 职责 |
+|---|---|
+| `BuildingEditorController` | 每 tick 生命周期：飞行、右击旋转、委托 InputHandler |
+| `BuildingEditorInputHandler` | 鼠标交互：轴拖拽、中键增删 pattern、射线追踪 |
+| `BuildingEditorClientState` | 客户端唯一状态：AABB/pattern/metadata/拖拽状态。全 volatile |
+
+### 渲染层
+
+| 类 | 职责 |
+|---|---|
+| `BuildingEditorRenderer` | AABB 半透明面+线框、pattern 方块高亮边框、anchor 十字标记 |
+| `BuildingEditorAxisRenderer` | 6 个 3D 实体箭头（+X/-X/+Y/-Y/+Z/-Z）；X-ray 渲染无视遮挡；`hitTestAxis()` 射线命中检测 |
+
+### UI 层
+
+| 类 | 职责 |
+|---|---|
+| `BuildingEditorImGui` | ImGui 面板：输入字段、分类折叠区、AABB 状态、操作按钮、导出/预览 |
+| `ImGuiManager` (imgui/) | ImGui 生命周期：初始化、帧渲染、输入拦截、字体缩放 1.6x |
+
+### 网络层
+
+| 类 | 职责 |
+|---|---|
+| `BuildingEditorNetwork` | 服务端追踪编辑中的玩家（UUID set）；校验入口条件 |
+| `BuildingEditorExportService` | 解析/校验/格式化写入 JSON 到 `data/wandscape/buildings/` |
+
+## 坐标系
 
 ```
-玩家输入 /wandscape build edit [id]
-  → BuildingEditorEnterPacket (C→S)
-  → BuildingEditorNetwork.addEditing(player)
-  → 如有 building_id: 从 BuildingConfigLoader 加载 → BuildingEditorEnterResponsePacket (S→C)
-  → 如无: 空状态 BuildingEditorEnterResponsePacket (S→C)
-  → 客户端: BuildingEditorClientState.enterEditMode(data)
-  → 客户端: 注册 Renderer + InputHandler + Screen
+worldAnchor (世界绝对坐标)
+    │
+    ├── editMin (相对偏移) → worldMin = worldAnchor + editMin
+    └── editMax (相对偏移) → worldMax = worldAnchor + editMax
 
-玩家在编辑器中操作:
-  → InputHandler 处理点击/拖拽 → 更新 ClientState (AABB/pattern/anchor)
-  → Renderer 每帧读取 ClientState → 渲染线框/高亮/手柄
-  → Screen 读取 ClientState → 刷新 GUI 字段
-  → AABB 变化 → 触发世界扫描 → 更新 pattern + block_mapping
-
-玩家点击"导出":
-  → BuildingEditorExportPacket (C→S: 完整 BuildingConfig JSON string)
-  → BuildingEditorExportService:
-      1. 反序列化验证
-      2. 必填字段检查
-      3. 重叠检测 (可选)
-      4. 写入 data/wandscape/buildings/{id}.json
-      5. 返回 BuildingEditorExportResultPacket (success|failure + messages)
-
-玩家 ESC:
-  → BuildingEditorExitPacket (C→S)
-  → 恢复游戏模式/位置
-  → 卸载 Renderer/Screen/InputHandler
+pattern[i] = 相对于 worldAnchor 的 BlockOffset
+anchorOffset = worldMin 到 worldAnchor 的偏移（auto-anchor 使用）
 ```
 
-## 客户端状态 (BuildingEditorClientState)
+- `worldAnchor` 是 pattern 坐标的原点
+- `editMin` / `editMax` 定义 AABB，扫描时取该范围内的非空气方块
+- **Auto Anchor**：勾选后，`worldAnchor` 自动移到 AABB 底部中心（Y 最低、XZ 中心），editMin/editMax/anchorOffset 同步重算
 
-```java
-// 编辑模式
-boolean editMode
-// AABB (相对于 anchor)
-BlockOffset min, max  // 拖拽可变
-BlockOffset anchor    // 默认 = min，可拖拽
-// 世界坐标 (anchor 在世界中的位置)
-BlockPos worldAnchor
-// 扫描结果
-List<BlockOffset> pattern
-Map<String, String> blockMapping  // "x,y,z" → "mod:block_id"
-// 建筑元数据
-String buildingId, displayName, category
-int comfort, magic, wonder
-int interactionRadius
-// 队列
-int queueCapacity
-List<String> taskTypes
-// 解锁
-int unlockMinComfort, unlockMinMagic, unlockMinWonder
-// 维护费
-int maintenanceIntervalTicks
-Map<ElementType, Integer> maintenanceCosts
-// 蓝图引用
-String blueprintId
-Map<String, String> blueprintBind
-// 分类特定
-// shop: List<ShopGoodDef>, profitRate
-// service: ...
-// decoration: radius
-// wonder: List<WonderEffect>
-// node: NodeConfig
-```
+## 鼠标模型
 
-## 渲染 (BuildingEditorRenderer)
+| 操作 | 行为 |
+|---|---|
+| 左键点击轴箭头 | 开始拖拽该角落 |
+| 左键拖拽 | 缩放 AABB（实时扫描方块） |
+| 左键松开 | 结束拖拽，触发 auto-anchor 重算 |
+| 中键点击方块 | 方块加入 pattern + block_mapping |
+| Shift+中键 | 从 pattern 移除该方块 |
+| 右键按住 | MC 原生视角旋转 |
+| WASD/Space/Shift | 飞行移动（Ctrl 加速） |
+| Escape | 退出编辑器 |
+| Enter | 导出 JSON |
 
-注册到 `RenderLevelStageEvent.AFTER_TRIPWIRE_BLOCKS` (与 RoadEditorRenderer 一致)。
+## 轴拖拽逻辑
 
-### AABB 线框
-- 渲染半透明面 + 线框
-- 绿色: 合法（无重叠，非空）
-- 红色: 与已有建筑重叠
-- Y 轴偏移: +0.02 防 Z-fighting
+### 箭头位置
 
-### 方块高亮
-- Pattern 内方块: 青色线框
-- 非 pattern 方块 (在 AABB 内但不在 pattern 中): 灰色半透明
-- 空气方块: 不渲染
+| 箭头 | 渲染位置 | 拖拽修改 |
+|---|---|---|
+| +X/+Y/+Z (POS) | **max** 角落 | max |
+| -X/-Y/-Z (NEG) | **min** 角落 | min |
 
-### 可拖拽手柄
-- 8 个角 + 6 个面中心 = 14 个手柄
-- 小方框渲染 (0.2×0.2)
-- 颜色: 金色 (角) / 银色 (面)
-- 悬停高亮: 白色
-
-### Anchor 标记
-- 金色星形/菱形标记在 anchor 位置
-- 可拖拽
-
-## 输入处理 (BuildingEditorInputHandler)
-
-注册到 `ClientTickEvent.Post`。
+### 拖拽状态机
 
 ```
-鼠标:
-  左键点击  → 设置 min（对着地面/方块）
-  右键点击  → 设置 max（对着地面/方块）
-  Shift+左键 → 设置 anchor
-  左键拖拽  → 拖拽手柄（调整 min/max/anchor）
-  中键点击  → 对准的方块: 从 pattern 中移除
-  中键+Shift → 对准的方块: 添加到 pattern
-  滚轮      → 调整 GUI 焦点字段值
-
-键盘:
-  WASD/Space/Shift → 飞行（复用 ProjectionFlightController）
-  E               → 开关 GUI 面板
-  Enter           → 导出（等同点击导出按钮）
-  Escape          → 退出编辑模式
-  Ctrl+Z          → (v2) 撤销
+hover → 每帧 hitTestAxis(射线) → setHoveredAxis
+  │
+  ├── 左键按下 (hovered != null) → startDrag
+  │     ├── 记录 dragStartAxisOrigin (固定！拖拽全程不变)
+  │     ├── 记录 dragStartAxisValue (射线在轴上的投影 u)
+  │     └── 快照 dragSavedMin / dragSavedMax
+  │
+  ├── 拖拽中 (dragging != null && leftDown)
+  │     ├── getClosestPointOnAxis(cam, camDir, dragStartAxisOrigin, axisDir)
+  │     ├── delta = round(current - start)
+  │     ├── delta = -delta  ← 原点交换后的符号修正
+  │     └── 更新 editMin/Max (不允许 Min > Max)
+  │
+  └── 松开 → finishDrag → recalculateAnchor()
 ```
 
-## GUI 面板 (BuildingEditorScreen)
+**注意：** 拖拽中不可重算 anchor（有 `isDragging()` 守卫），否则坐标系突变导致 delta 飞掉。
 
-屏幕右侧，宽 180px，高自适应（最大到屏幕高度）。MedievalScreen 子类。
+### 数学
 
-### 布局 (从上到下)
+`getClosestPointOnAxis(rayOrigin, rayDir, axisOrigin, axisDir)` — 求射线与无限长轴线的最近点，返回在轴上的参数 u。两次调用（start vs current）的 u 差值即为鼠标在轴上的移动量。
+
+## Auto Anchor
+
+- 默认开启，可在面板中切换
+- `recalculateAnchor()` 被调用时机：
+  - 拖拽松手后（`finishAxisDrag`）
+  - Snap Max 后
+  - 面板中重新勾选时
+- 计算：`newAnchor = (worldMin.xz 中心, worldMin.y)` → 更新 anchor + 重算 editMin/editMax/anchorOffset
+- 拖拽期间不触发（防止坐标系突变）
+
+## ImGui 面板布局
 
 ```
-┌─────────────────────────────┐
-│ 🏛 建筑编辑器               │  ← 标题栏
-│─────────────────────────────│
-│ ID:        [_____________]  │
-│ 名称:      [_____________]  │
-│ Category:  [basic      ▼]  │  ← 下拉
-│─────────────────────────────│
-│ 📐 三值                     │
-│   Comfort: [-] [5] [+]     │
-│   Magic:   [-] [3] [+]     │
-│   Wonder:  [-] [1] [+]     │
-│─────────────────────────────│
-│ 🔧 维护费                   │
-│   间隔: [12000] ticks      │
-│   [+添加元素]               │
-│─────────────────────────────│
-│ 📋 [Category 特定配置]      │  ← 动态显示
-│─────────────────────────────│
-│ 🔓 解锁条件                 │
-│   [0] [0] [0]              │
-│─────────────────────────────│
-│ 📦 队列                     │
-│   cap: [5]                 │
-│ 🔄 交互半径: [0]            │
-│─────────────────────────────│
-│ [  导出  ] [  验证  ]      │
-│ [  预览  ] [  退出  ]      │
-└─────────────────────────────┘
+┌─────────────────────────┐
+│ ID / Name / Category    │  ← 文本框+下拉
+│ Comfort / Magic / Wonder│  ← 三字段横排 (60px)
+│ Unlock C / U M / U W    │
+│ QueueCap / Radius / ... │
+│ Blueprint               │
+│ [分类折叠区]            │  ← 按 category 显示对应字段
+├─────────────────────────┤
+│ AABB SELECTION          │
+│ [min] -> [max]          │
+│ N blocks                │
+│ ☑ Auto Anchor (bottom-center)│
+│ [Set Anchor]            │  ← 按钮
+│ [Snap Max]              │
+│ [Scan Blocks]           │
+├─────────────────────────┤
+│ [Export JSON]           │
+│ [Preview JSON]          │
+│ [Exit Editor]           │
+└─────────────────────────┘
+宽度: 300px, 字体缩放: 1.6x
 ```
 
-### Category 特定子面板
+## 数据流：导出
 
-| Category | 显示字段 |
-|----------|---------|
-| shop | goods 列表 (item_id/restock_cost/comfort/magic/wonder), profit_rate |
-| service | energy_per_use, satisfaction_per_use, element_output map, max_occupancy |
-| decoration | radius |
-| wonder | effects 列表编辑器 (+type/+target/+value) |
-| node | element, amount_per_harvest, channel_ticks, mana_cost |
-
-## 网络包详情
-
-### BuildingEditorEnterPacket (C→S)
 ```
-空 payload。服务端: 验证权限 → BuildingEditorNetwork.addEditing() → 加载已有数据 (如提供id) → 响应。
+ImGui "Export JSON" → Controller.doExport()
+  → ClientState.buildExportJson()  ← 手写 JSON 构建
+  → PacketDistributor.sendToServer(ExportPacket)
+    → Server: ExportService.export()
+      ├── Gson 反序列化为 BuildingConfig
+      ├── validate() — id/name/category/pattern 必填校验
+      ├── validateBlockMapping() — pattern ↔ mapping 交叉校验
+      ├── validateCategoryConfig() — 分类特有字段警告
+      └── 写入 data/wandscape/buildings/{id}.json (pretty print)
 ```
 
-### BuildingEditorEnterResponsePacket (S→C)
-```
-boolean success
-String errorMessage (if !success)
-String buildingId (空=新建)
-String buildingJson (已有建筑的完整 JSON string，新建为空)
-BlockPos bodyAnchor
-List<BuildingSlot> existingBuildings (用于重叠检测)
-```
+### JSON 构建注意事项
 
-### BuildingEditorExportPacket (C→S)
-```
-String buildingJson  — 完整 BuildingConfig JSON string
-boolean overwrite    — 是否确认覆盖
-```
+- **blueprint bind 默认值**：当 `blueprintBind` 为空时，自动填入：
+  ```json
+  "bind": {
+    "offsets": "$pattern",
+    "blocks": "$block_mapping",
+    "name": "$display_name"
+  }
+  ```
+  否则蓝图 `build:clear_and_build` 缺少必要参数会报错
+- 尾部逗号需清理
+- `block_mapping` key 按字母序输出（可重复性）
 
-### BuildingEditorExportResultPacket (S→C)
-```
-boolean success
-String message       — 成功: "Exported to data/wandscape/buildings/xxx.json"
-                     — 失败: 错误列表 (每行一个)
-List<String> warnings — 警告 (可恢复问题，如"shop has no goods")
-```
+## 注册
 
-### BuildingEditorSyncPacket (S→C) [v2]
-```
-UUID editingPlayer
-BlockOffset min, max
-BlockPos worldAnchor
-String buildingId
-// 广播给其他玩家以渲染包围盒
-```
+所有类通过 `Wandscape.initEditor()` 注册：
 
-## 导出服务 (BuildingEditorExportService)
+| 类 | 注册到 | 时机 |
+|---|---|---|
+| Controller | NeoForge EVENT_BUS (ClientTick.Post + MouseScroll) | 模组初始化 |
+| InputHandler | NeoForge EVENT_BUS (ClientTick.Pre) | 模组初始化 |
+| Renderer | NeoForge EVENT_BUS (RenderLevelStage) | 模组初始化 |
+| AxisRenderer | NeoForge EVENT_BUS (RenderLevelStage) | 模组初始化 |
+| Network | 无（被动调用） | 数据包到达时 |
 
-服务端执行：
+## 调试
 
-```java
-public ExportResult export(String buildingJson, boolean overwrite) {
-    // 1. 解析 JSON → BuildingConfig
-    // 2. 验证必填字段: id, display_name, category, pattern (非空), block_mapping
-    // 3. 验证 block_mapping 覆盖所有 pattern 偏移
-    // 4. 去重 block_mapping (相同 block ID 不重复)
-    // 5. 检查 category 合法值
-    // 6. 如已有文件且非 overwrite → 返回警告
-    // 7. 写入 data/wandscape/buildings/{id}.json (pretty-print)
-    // 8. 返回成功 + 路径
-}
-```
-
-## 实现顺序
-
-1. **BuildingEditorClientState** — 纯状态 holder
-2. **BuildingEditorNetwork** — 服务端玩家追踪 + 数据源
-3. **网络包** — Enter/EnterResponse/Exit/Export/ExportResult
-4. **BuildingEditorController** — 生命周期: 进入/退出/视角切换
-5. **BuildingEditorRenderer** — 世界渲染: AABB + 高亮 + 手柄
-6. **BuildingEditorInputHandler** — 输入: 点击/拖拽/热键/飞行
-7. **BuildingEditorScreen** — GUI 面板
-8. **BuildingEditorExportService** — 导出 + 验证
-9. **Wandscape.java 注册** — 包注册 + 命令 + 事件
-10. **命令** — `/wandscape build edit/done/scan`
+- Controller 每 40 tick 输出心跳日志：`[BuildEditor] Controller heartbeat: tick=...`
+- InputHandler 每 20 tick 输出 hover 状态变更日志
+- 拖拽状态变更每 10 tick 记录一次
+- 所有日志前缀 `[BuildEditor]`，`grep` 即可过滤
+- `/wandscape editor` 命令进入编辑模式开始测试

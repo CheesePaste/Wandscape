@@ -145,6 +145,9 @@ public final class BuildingEditorClientState {
     /** Snapshot of player abilities before editor (for restore on exit). */
     private static volatile AbilitySnapshot savedAbilities = null;
 
+    /** Auto-place anchor at bottom-center of AABB (lowest Y, center XZ). */
+    private static volatile boolean autoAnchorEnabled = true;
+
     private BuildingEditorClientState() {}
 
     /** Snapshot of player abilities for restoration on exit. */
@@ -241,6 +244,7 @@ public final class BuildingEditorClientState {
         showPreview = false;
         previewJson = "";
         savedAbilities = null;
+        autoAnchorEnabled = true;
         LOGGER.info("[BuildEditor] Exited edit mode");
     }
 
@@ -253,6 +257,43 @@ public final class BuildingEditorClientState {
 
     public static BlockOffset getAnchorOffset() { return anchorOffset; }
     public static void setAnchorOffset(BlockOffset offset) { anchorOffset = offset; }
+
+    // ── Auto-anchor ──
+
+    public static boolean isAutoAnchorEnabled() { return autoAnchorEnabled; }
+    public static void setAutoAnchorEnabled(boolean v) { autoAnchorEnabled = v; }
+
+    /** Recalculate anchor to bottom-center of AABB (lowest Y, center XZ). */
+    public static void recalculateAnchor() {
+        if (!autoAnchorEnabled) return;
+        if (isDragging()) return; // don't move anchor during active drag
+        BlockPos wMin = getWorldMin();
+        BlockPos wMax = getWorldMax();
+        if (wMin == null || wMax == null || worldAnchor == null) return;
+
+        int newAnchorX = (wMin.getX() + wMax.getX()) / 2;
+        int newAnchorY = wMin.getY();
+        int newAnchorZ = (wMin.getZ() + wMax.getZ()) / 2;
+        BlockPos newAnchor = new BlockPos(newAnchorX, newAnchorY, newAnchorZ);
+        if (newAnchor.equals(worldAnchor)) return; // no change
+
+        BlockOffset newMin = BlockOffset.of(
+                wMin.getX() - newAnchorX,
+                wMin.getY() - newAnchorY,
+                wMin.getZ() - newAnchorZ);
+        BlockOffset newMax = BlockOffset.of(
+                wMax.getX() - newAnchorX,
+                wMax.getY() - newAnchorY,
+                wMax.getZ() - newAnchorZ);
+        BlockOffset newAnchorOffset = BlockOffset.of(
+                newAnchorX - wMin.getX(), 0, newAnchorZ - wMin.getZ());
+
+        worldAnchor = newAnchor;
+        editMin = newMin;
+        editMax = newMax;
+        anchorOffset = newAnchorOffset;
+        LOGGER.info("[BuildEditor] Auto-anchor recalculated to {}", newAnchor);
+    }
 
     // ── AABB ──
 

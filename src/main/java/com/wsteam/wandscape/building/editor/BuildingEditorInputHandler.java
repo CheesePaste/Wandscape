@@ -265,7 +265,7 @@ public final class BuildingEditorInputHandler {
         int delta = (int) Math.round(currentAxisValue - dragStartAxisValue);
         if (delta == 0) return;
 
-        delta = -delta; // 方向修正：原点从 min↔max 交换后符号反转
+        delta = -delta; // 原点从 min↔max 交换后符号反转
 
         int x = dragSavedMin.x(), y = dragSavedMin.y(), z = dragSavedMin.z();
         int mx = dragSavedMax.x(), my = dragSavedMax.y(), mz = dragSavedMax.z();
@@ -292,6 +292,7 @@ public final class BuildingEditorInputHandler {
         dragStartAxisOrigin = null;
         dragSavedMin = null;
         dragSavedMax = null;
+        BuildingEditorClientState.recalculateAnchor();
     }
 
     private static Vec3 getAxisWorldDir(BuildingEditorClientState.AxisDrag axis) {
@@ -342,6 +343,7 @@ public final class BuildingEditorInputHandler {
         int mz = Math.max(curMax != null ? curMax.z() : 0, rel.z());
         BuildingEditorClientState.setEditMax(BlockOffset.of(mx, my, mz));
         scanBlocks(mc);
+        BuildingEditorClientState.recalculateAnchor();
     }
 
     public static void scanNow() {
