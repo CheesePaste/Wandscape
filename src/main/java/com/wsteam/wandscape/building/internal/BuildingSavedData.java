@@ -15,6 +15,7 @@ import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.ShopGoodDef;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 
@@ -74,6 +75,10 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_LAST_MAINTENANCE_TICK = "last_maint_tick";
     private static final String TAG_MAINTENANCE_PAID = "maint_paid";
 
+    // NBT keys for shop inventory persistence
+    private static final String TAG_SHOP_STOCK = "shop_stock";
+    private static final String TAG_SHOP_MAX_STOCK = "shop_max_stock";
+
     private static final Gson PARAMS_GSON = new Gson();
     private static final java.lang.reflect.Type PARAMS_TYPE =
             new TypeToken<Map<String, JsonElement>>(){}.getType();
@@ -90,6 +95,12 @@ public class BuildingSavedData extends SavedData {
      */
     @Nullable
     private BuildingContributionRegistry contributionRegistry;
+
+    // ── Shop inventory persistence ──
+    /** buildingId → (itemId → current stock). Only for shop-category buildings. */
+    private final Map<UUID, Map<String, Integer>> shopStock = new ConcurrentHashMap<>();
+    /** buildingId → (itemId → max stock). Player-configured max stock settings. */
+    private final Map<UUID, Map<String, Integer>> shopMaxStock = new ConcurrentHashMap<>();
 
     // ── Factory ──
 
@@ -368,6 +379,28 @@ public class BuildingSavedData extends SavedData {
             list.add(entry);
         }
         tag.put(TAG_BUILDINGS, list);
+
+        // ── Shop inventory persistence ──
+        CompoundTag stockTag = new CompoundTag();
+        for (var entry : shopStock.entrySet()) {
+            CompoundTag itemsTag = new CompoundTag();
+            for (var item : entry.getValue().entrySet()) {
+                itemsTag.putInt(item.getKey(), item.getValue());
+            }
+            stockTag.put(entry.getKey().toString(), itemsTag);
+        }
+        tag.put(TAG_SHOP_STOCK, stockTag);
+
+        CompoundTag maxStockTag = new CompoundTag();
+        for (var entry : shopMaxStock.entrySet()) {
+            CompoundTag itemsTag = new CompoundTag();
+            for (var item : entry.getValue().entrySet()) {
+                itemsTag.putInt(item.getKey(), item.getValue());
+            }
+            maxStockTag.put(entry.getKey().toString(), itemsTag);
+        }
+        tag.put(TAG_SHOP_MAX_STOCK, maxStockTag);
+
         return tag;
     }
 
@@ -453,6 +486,41 @@ public class BuildingSavedData extends SavedData {
         data.contributionRegistry.rebuildFrom(data::getAllBuildings);
 
         LOGGER.info("Loaded {} buildings from saved data", data.buildings.size());
+
+        // ── Load shop inventory persistence ──
+        if (tag.contains(TAG_SHOP_STOCK)) {
+            CompoundTag stockTag = tag.getCompound(TAG_SHOP_STOCK);
+            for (String key : stockTag.getAllKeys()) {
+                try {
+                    UUID buildingId = UUID.fromString(key);
+                    CompoundTag itemsTag = stockTag.getCompound(key);
+                    Map<String, Integer> items = new HashMap<>();
+                    for (String itemId : itemsTag.getAllKeys()) {
+                        items.put(itemId, itemsTag.getInt(itemId));
+                    }
+                    data.shopStock.put(buildingId, items);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.warn("Invalid building UUID in shop stock: {}", key);
+                }
+            }
+        }
+        if (tag.contains(TAG_SHOP_MAX_STOCK)) {
+            CompoundTag maxStockTag = tag.getCompound(TAG_SHOP_MAX_STOCK);
+            for (String key : maxStockTag.getAllKeys()) {
+                try {
+                    UUID buildingId = UUID.fromString(key);
+                    CompoundTag itemsTag = maxStockTag.getCompound(key);
+                    Map<String, Integer> items = new HashMap<>();
+                    for (String itemId : itemsTag.getAllKeys()) {
+                        items.put(itemId, itemsTag.getInt(itemId));
+                    }
+                    data.shopMaxStock.put(buildingId, items);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.warn("Invalid building UUID in shop max stock: {}", key);
+                }
+            }
+        }
+
         return data;
     }
 
@@ -486,6 +554,79 @@ public class BuildingSavedData extends SavedData {
      */
     public BuildingContributionRegistry getContributionRegistry() {
         return contributionRegistry;
+    }
+
+    // ── Shop inventory persistence ──
+
+    /**
+     * Returns a snapshot of the shop's current stock (itemId → count).
+     * Returns an empty map if this building has no stock data.
+     */
+    public Map<String, Integer> getShopStock(UUID buildingId) {
+        Map<String, Integer> s = shopStock.get(buildingId);
+        return s != null ? Map.copyOf(s) : Map.of();
+    }
+
+    /**
+     * Returns the mutable stock map for a shop building.
+     * Creates an empty map if none exists. Used internally by ShopStockManager.
+     */
+    Map<String, Integer> getOrCreateShopStock(UUID buildingId) {
+        return shopStock.computeIfAbsent(buildingId, k -> new ConcurrentHashMap<>());
+    }
+
+    /** Returns true if the shop has any item with stock > 0. */
+    public boolean hasShopStock(UUID buildingId) {
+        Map<String, Integer> s = shopStock.get(buildingId);
+        return s != null && s.values().stream().anyMatch(v -> v > 0);
+    }
+
+    /**
+     * Returns the max stock for a specific good.
+     * Returns the default (0) if no player-configured setting exists.
+     */
+    public int getShopMaxStock(UUID buildingId, String itemId) {
+        Map<String, Integer> perBuilding = shopMaxStock.get(buildingId);
+        if (perBuilding != null) {
+            Integer v = perBuilding.get(itemId);
+            if (v != null) return v;
+        }
+        return ShopGoodDef.DEFAULT_MAX_STOCK;
+    }
+
+    /**
+     * Returns all max stock settings for a shop (itemId → maxStock).
+     * Only includes goods in the building's config, with defaults for unset ones.
+     */
+    public Map<String, Integer> getAllShopMaxStocks(UUID buildingId) {
+        Map<String, Integer> perBuilding = shopMaxStock.get(buildingId);
+        // If no settings at all, return empty — caller handles defaults
+        if (perBuilding == null || perBuilding.isEmpty()) return Map.of();
+        return Map.copyOf(perBuilding);
+    }
+
+    /** Returns the raw max-stock map for internal mutation. */
+    Map<String, Integer> getOrCreateShopMaxStock(UUID buildingId) {
+        return shopMaxStock.computeIfAbsent(buildingId, k -> new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Sets the max stock for a specific good in a shop. Clamped to 0–64.
+     * Marks the data as dirty for persistence.
+     */
+    public void setShopMaxStock(UUID buildingId, String itemId, int newMax) {
+        newMax = Math.clamp(newMax, 0, 64);
+        Map<String, Integer> perBuilding = shopMaxStock.computeIfAbsent(
+                buildingId, k -> new ConcurrentHashMap<>());
+        perBuilding.put(itemId, newMax);
+        setDirty();
+    }
+
+    /** Removes all stock data for a building (used when a shop building is removed). */
+    public void removeShopData(UUID buildingId) {
+        shopStock.remove(buildingId);
+        shopMaxStock.remove(buildingId);
+        setDirty();
     }
 
     /**

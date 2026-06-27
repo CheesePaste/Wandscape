@@ -112,6 +112,7 @@ public class ColonyItemBank extends SavedData {
         elementStorage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(type, amount, Long::sum);
         setDirty();
+        LOGGER.info("[BANK] AddElement:%s".formatted(type.name()));
     }
 
     /** Consume amount of element type. Returns false if insufficient. */
@@ -128,6 +129,7 @@ public class ColonyItemBank extends SavedData {
             map.put(type, remaining);
         }
         setDirty();
+        LOGGER.info("[BANK] consumeElement:%s".formatted(type.name()));
         return true;
     }
 
@@ -159,6 +161,7 @@ public class ColonyItemBank extends SavedData {
 
     public boolean reserve(UUID colonyId, ItemKey key, long amount) {
         if (available(colonyId, key) < amount) return false;
+        LOGGER.info("[BANK] reserve:%s".formatted(key.itemId()));
         reservations.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(key, amount, Long::sum);
         return true;
@@ -174,6 +177,7 @@ public class ColonyItemBank extends SavedData {
             if (newRes <= 0) res.remove(key);
             else res.put(key, newRes);
         }
+        LOGGER.info("[BANK] commit:%s".formatted(key.itemId()));
         return ok;
     }
 
@@ -273,7 +277,7 @@ public class ColonyItemBank extends SavedData {
                 bank.elementStorage.put(colonyId, elements);
             }
         }
-        LOGGER.info("Loaded {} colony item banks", bank.storage.size());
+        LOGGER.info("[BANK] Loaded {} colony item banks", bank.storage.size());
         return bank;
     }
 }

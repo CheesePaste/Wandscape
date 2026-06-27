@@ -39,9 +39,44 @@ public final class RoadRouter {
     /** Maximum allowed gap to bridge between disconnected roads (in blocks). */
     private static final int MAX_GAP_XZ = 6;
     private static final int MAX_GAP_Y = 3;
+    private static final int NPC_MAX_Y_STEP = 1;
 
     private RoadRouter() {}
 
+    /**
+     * Plan a route for an NPC walker.
+     *
+     * <p>Same as {@link #plan(RoadNetwork, PathPoint, PathPoint)} but rejects
+     * any off-road segment whose |dy| &gt; 1 — NPCs can't fly or climb sheer
+     * walls like item transport can. On-road segments are always safe
+     * (roads are flat).
+     *
+     * <p>If the route is rejected, the caller should fall back to searching
+     * for a different walkable destination near the building.
+     *
+     * @param network  the colony's road network (may be empty)
+     * @param start    world position the NPC starts from
+     * @param end      world position the NPC wants to reach
+     * @return ordered list of segments (empty = unreachable for NPC)
+     */
+    public static List<RouteSegment> planNpc(@Nullable RoadNetwork network,
+                                             PathPoint start, PathPoint end) {
+        List<RouteSegment> segments = plan(network, start, end);
+        if (segments.isEmpty()) return segments;
+
+        for (RouteSegment seg : segments) {
+            if (seg.onRoad()) continue; // road segments are flat, always safe
+            int dy = Math.abs((int) seg.toY() - (int) seg.fromY());
+            if (dy > NPC_MAX_Y_STEP) {
+                Log.info(TAG, "NPC: rejected — off-road dy=%d > %d at (%.0f,%.0f,%.0f)→(%.0f,%.0f,%.0f)",
+                        dy, NPC_MAX_Y_STEP,
+                        seg.fromX(), seg.fromY(), seg.fromZ(),
+                        seg.toX(), seg.toY(), seg.toZ());
+                return List.of();
+            }
+        }
+        return segments;
+    }
     /**
      * Plan a route using the road network.
      *

@@ -32,17 +32,16 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * from the colony bank and fills goods to their maxStock. Purchases by tourists
  * consume stock and deposit profit elements into the bank.
  *
+ * <p>Stock data is persisted through {@link BuildingSavedData} so that inventory
+ * and player-configured max-stock settings survive server restarts.
+ *
  * <p>Stock state changes trigger contribution toggling via
  * {@link BuildingContributionRegistry#setShopHasStock(UUID, boolean)}.
  */
 public final class ShopStockManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** buildingId → (itemId → currentStock) */
-    private final Map<UUID, Map<String, Integer>> stock = new ConcurrentHashMap<>();
-    /** buildingId → (itemId → maxStock). Default is ShopGoodDef.DEFAULT_MAX_STOCK (16). */
-    private final Map<UUID, Map<String, Integer>> maxStockSettings = new ConcurrentHashMap<>();
-    /** buildingId → whether the shop currently has any stock */
+    /** buildingId → whether the shop currently has any stock (performance cache) */
     private final Map<UUID, Boolean> hasStockCache = new ConcurrentHashMap<>();
 
     private int tickCounter;
@@ -68,8 +67,8 @@ public final class ShopStockManager {
 
     /** Returns a snapshot of the shop's current stock (itemId → count). */
     public Map<String, Integer> getStock(UUID buildingId) {
-        Map<String, Integer> s = stock.get(buildingId);
-        return s != null ? Map.copyOf(s) : Map.of();
+        BuildingSavedData savedData = getSavedData();
+        return savedData != null ? savedData.getShopStock(buildingId) : Map.of();
     }
 
     /**
@@ -78,12 +77,12 @@ public final class ShopStockManager {
      * next tick interval.
      */
     public void ensureStockInitialized(UUID buildingId) {
-        if (stock.containsKey(buildingId)) return; // already initialized
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        if (savedData.hasShopStock(buildingId)) return; // already has stock
 
         ServerLevel level = getServerLevel();
         if (level == null) return;
-        BuildingSavedData savedData = BuildingSavedData.get(level);
-        if (savedData == null) return;
         BuildingState state = savedData.getBuilding(buildingId);
         if (state == null || state.isShutdown() || !state.isStructureIntact()) return;
 
@@ -103,22 +102,23 @@ public final class ShopStockManager {
 
     /** Returns the current stock count for a specific item. */
     public int getStockCount(UUID buildingId, String itemId) {
-        Map<String, Integer> s = stock.get(buildingId);
-        return s != null ? s.getOrDefault(itemId, 0) : 0;
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return 0;
+        Map<String, Integer> s = savedData.getShopStock(buildingId);
+        return s.getOrDefault(itemId, 0);
     }
 
-    /** Returns the max stock for a specific good (0–64). Defaults to 16. */
+    /** Returns the max stock for a specific good (0–64). Defaults to 0. */
     public int getMaxStock(UUID buildingId, String itemId) {
-        Map<String, Integer> perBuilding = maxStockSettings.get(buildingId);
-        if (perBuilding != null) {
-            Integer v = perBuilding.get(itemId);
-            if (v != null) return v;
-        }
-        return ShopGoodDef.DEFAULT_MAX_STOCK;
+        BuildingSavedData savedData = getSavedData();
+        return savedData != null ? savedData.getShopMaxStock(buildingId, itemId) : ShopGoodDef.DEFAULT_MAX_STOCK;
     }
 
     /** Returns all max stocks for a building's configured goods (itemId → maxStock). */
     public Map<String, Integer> getAllMaxStocks(UUID buildingId) {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return Map.of();
+
         // Collect goods from config + populate with stored settings or defaults
         BuildingState state = getBuildingState(buildingId);
         if (state == null) return Map.of();
@@ -126,13 +126,10 @@ public final class ShopStockManager {
                 .get(state.getBuildingTypeId());
         if (config == null || config.shop() == null) return Map.of();
 
-        Map<String, Integer> perBuilding = maxStockSettings.get(buildingId);
         Map<String, Integer> result = new java.util.LinkedHashMap<>();
         for (ShopGoodDef good : config.shop().goods()) {
             String itemId = good.itemId();
-            int max = (perBuilding != null && perBuilding.containsKey(itemId))
-                    ? perBuilding.get(itemId)
-                    : ShopGoodDef.DEFAULT_MAX_STOCK;
+            int max = savedData.getShopMaxStock(buildingId, itemId);
             result.put(itemId, max);
         }
         return result;
@@ -141,12 +138,14 @@ public final class ShopStockManager {
     /**
      * Adjusts max stock for a specific good (clamped to 0–64).
      * If the new max is higher than current, triggers an immediate restock attempt.
+     * Changes are persisted via BuildingSavedData.
      */
     public void setMaxStock(UUID buildingId, String itemId, int newMax) {
         newMax = Math.clamp(newMax, 0, 64);
-        Map<String, Integer> perBuilding = maxStockSettings.computeIfAbsent(
-                buildingId, k -> new ConcurrentHashMap<>());
-        perBuilding.put(itemId, newMax);
+
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        savedData.setShopMaxStock(buildingId, itemId, newMax);
 
         // Trigger restock if max was increased
         ServerLevel level = getServerLevel();
@@ -193,8 +192,10 @@ public final class ShopStockManager {
     }
 
     private int sumGoodsStat(UUID buildingId, GoodStatAccessor accessor) {
-        Map<String, Integer> s = stock.get(buildingId);
-        if (s == null) return 0;
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return 0;
+        Map<String, Integer> s = savedData.getShopStock(buildingId);
+        if (s.isEmpty()) return 0;
         BuildingState state = getBuildingState(buildingId);
         if (state == null) return 0;
         BuildingConfig config = BuildingConfigLoader.getInstance()
@@ -226,16 +227,15 @@ public final class ShopStockManager {
      * @return true if purchase succeeded (stock was available)
      */
     public boolean purchase(UUID buildingId, String itemId, UUID colonyId) {
-        Map<String, Integer> s = stock.get(buildingId);
-        if (s == null) return false;
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return false;
 
+        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
         int current = s.getOrDefault(itemId, 0);
         if (current <= 0) return false;
 
         ServerLevel level = getServerLevel();
         if (level == null) return false;
-        BuildingSavedData savedData = BuildingSavedData.get(level);
-        if (savedData == null) return false;
         BuildingState state = savedData.getBuilding(buildingId);
         if (state == null) return false;
 
@@ -247,6 +247,7 @@ public final class ShopStockManager {
         if (good == null) return false;
 
         s.put(itemId, current - 1);
+        savedData.setDirty();
         updateHasStock(buildingId, s);
 
         // Deposit profit elements into colony bank
@@ -307,8 +308,10 @@ public final class ShopStockManager {
 
     private void restock(UUID buildingId, ShopConfig shopConfig,
                          UUID colonyId, ColonyItemBank bank) {
-        Map<String, Integer> s = stock.computeIfAbsent(buildingId,
-                k -> new ConcurrentHashMap<>());
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
+        boolean changed = false;
 
         for (ShopGoodDef good : shopConfig.goods()) {
             int current = s.getOrDefault(good.itemId(), 0);
@@ -340,12 +343,15 @@ public final class ShopStockManager {
                         entry.getValue() * canAfford);
             }
             s.put(good.itemId(), current + canAfford);
+            changed = true;
         }
 
-        updateHasStock(buildingId, s);
-
-        NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
-        LOGGER.debug("[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
+        if (changed) {
+            savedData.setDirty();
+            updateHasStock(buildingId, s);
+            NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
+            LOGGER.debug("[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
+        }
     }
 
     /** Look up an item's element value from element_mappings and convert to restock cost. */
@@ -369,9 +375,12 @@ public final class ShopStockManager {
     }
 
     private void clearUnsold(UUID buildingId) {
-        Map<String, Integer> s = stock.get(buildingId);
-        if (s != null) {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
+        if (!s.isEmpty()) {
             s.clear();
+            savedData.setDirty();
             updateHasStock(buildingId, s);
         }
     }
@@ -386,9 +395,7 @@ public final class ShopStockManager {
     }
 
     private void onStockStateChanged(UUID buildingId, boolean hasStock) {
-        ServerLevel level = getServerLevel();
-        if (level == null) return;
-        BuildingSavedData savedData = BuildingSavedData.get(level);
+        BuildingSavedData savedData = getSavedData();
         if (savedData == null) return;
         BuildingState state = savedData.getBuilding(buildingId);
         if (state == null) return;
@@ -408,6 +415,12 @@ public final class ShopStockManager {
             if (good.itemId().equals(itemId)) return good;
         }
         return null;
+    }
+
+    @Nullable
+    private static BuildingSavedData getSavedData() {
+        ServerLevel level = getServerLevel();
+        return level != null ? BuildingSavedData.get(level) : null;
     }
 
     @Nullable

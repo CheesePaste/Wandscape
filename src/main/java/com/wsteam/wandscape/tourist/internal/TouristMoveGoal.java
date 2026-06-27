@@ -840,7 +840,7 @@ public class TouristMoveGoal extends Goal {
         if (network == null || network.isEmpty()) return false;
 
         BlockPos from = tourist.blockPosition();
-        List<RouteSegment> segments = RoadRouter.plan(
+        List<RouteSegment> segments = RoadRouter.planNpc(
                 network,
                 new PathPoint(from.getX(), from.getY(), from.getZ()),
                 new PathPoint(target.getX(), target.getY(), target.getZ()));
