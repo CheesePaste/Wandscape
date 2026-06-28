@@ -79,7 +79,7 @@ public class ElementMappingLoader {
 
     private ElementMappingConfig findConfigByItemId(String itemId) {
         for (ElementMappingConfig config : registry.getAll().values()) {
-            if (itemId.equals(config.itemId())) return config;
+            if (itemId.equals(config.itemId())||itemId.equals(config.blockId())) return config;
         }
         return null;
     }
