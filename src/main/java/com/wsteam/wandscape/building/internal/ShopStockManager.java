@@ -1,19 +1,31 @@
 package com.wsteam.wandscape.building.internal;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.core.road.PathPoint;
+import com.wsteam.wandscape.core.road.RoadRouter;
+import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.ShopGoodDef;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.event.ShopRestockedEvent;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -308,10 +320,33 @@ public final class ShopStockManager {
                          UUID colonyId, ColonyItemBank bank) {
         BuildingSavedData savedData = getSavedData();
         if (savedData == null) return;
-        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+
+        ItemTransportManager transporter = WandscapeEngine.getTransporter();
+        boolean hasTransport = transporter != null && findNearestWarehouse(colonyId) != null;
+
+        // Find warehouse position and plan route once for this restock cycle
+        BlockPos warehousePos = null;
+        List<RouteSegment> route = null;
+        if (hasTransport) {
+            warehousePos = findNearestWarehouse(colonyId);
+            if (warehousePos == null) {
+                hasTransport = false;
+            } else {
+                BuildingState shopState = savedData.getBuilding(buildingId);
+                if (shopState != null && !shopState.isShutdown()) {
+                    route = planRestockRoute(colonyId, warehousePos, shopState.getAnchor());
+                } else {
+                    hasTransport = false;
+                }
+            }
+        }
+
         boolean changed = false;
 
         for (ShopGoodDef good : shopConfig.goods()) {
+            Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
             int current = s.getOrDefault(good.itemId(), 0);
             int max = getMaxStock(buildingId, good.itemId());
             int needed = max - current;
@@ -335,20 +370,161 @@ public final class ShopStockManager {
             }
             if (canAfford <= 0) continue;
 
-            // Deduct costs and add stock
-            for (var entry : costPerItem.entrySet()) {
-                bank.consumeElement(colonyId, entry.getKey(),
-                        entry.getValue() * canAfford);
+            if (hasTransport && warehousePos != null) {
+                // Launch async transport visualization from warehouse to shop.
+                // Elements are deducted only when transport arrives (deferred deduction).
+                BuildingState shopState = savedData.getBuilding(buildingId);
+                if (shopState != null && !shopState.isShutdown()) {
+                    launchRestockTransport(buildingId, good.itemId(), canAfford,
+                            costPerItem, colonyId, level,
+                            warehousePos, shopState.getAnchor(), route);
+                    changed = true;
+                }
+            } else {
+                // No transport available — deduct and add stock instantly (fallback)
+                for (var entry : costPerItem.entrySet()) {
+                    bank.consumeElement(colonyId, entry.getKey(),
+                            entry.getValue() * canAfford);
+                }
+                Map<String, Integer> stock = savedData.getOrCreateShopStock(buildingId);
+                stock.put(good.itemId(), stock.getOrDefault(good.itemId(), 0) + canAfford);
+                changed = true;
             }
-            s.put(good.itemId(), current + canAfford);
-            changed = true;
         }
 
         if (changed) {
             savedData.setDirty();
-            updateHasStock(buildingId, s);
+            Map<String, Integer> finalStock = savedData.getOrCreateShopStock(buildingId);
+            updateHasStock(buildingId, finalStock);
             NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
             Log.debug(TAG, "[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
+        }
+    }
+
+    /**
+     * Launch visual item transport from warehouse to shop for restocked goods.
+     * Each unit becomes one flying ItemEntity. When the transport arrives,
+     * element costs are deducted from the bank and stock is added to the shop.
+     * If the building is destroyed mid-transport, no elements were deducted
+     * so no refund is needed.
+     */
+    private void launchRestockTransport(UUID buildingId, String itemId, int amount,
+                                        Map<ElementType, Integer> costPerItem,
+                                        UUID colonyId, ServerLevel level,
+                                        BlockPos warehousePos, BlockPos shopPos,
+                                        @Nullable List<RouteSegment> route) {
+        ItemTransportManager transporter = WandscapeEngine.getTransporter();
+        if (transporter == null) return;
+
+        AtomicInteger pending = new AtomicInteger(amount);
+        ItemKey key = ItemKey.of(itemId, null);
+
+        for (int i = 0; i < amount; i++) {
+            transporter.send(key, warehousePos, shopPos, level, 0, route, false)
+                .thenRun(() -> {
+                    int left = pending.decrementAndGet();
+                    // Deduct elements and add 1 unit to shop stock on arrival
+                    addStockOnTransportArrival(buildingId, itemId, colonyId,
+                            costPerItem, left == 0 /* fire event only for last unit */);
+                });
+        }
+
+        Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} segs)",
+                amount, itemId, warehousePos.toShortString(),
+                shopPos.toShortString(),
+                route != null ? route.size() : 0);
+    }
+
+    /**
+     * Called when a single transport unit arrives at the shop.
+     * Deducts one unit's element cost from the colony bank and adds one
+     * unit of stock. If the building no longer exists, skips silently
+     * (no elements were deducted yet — safe).
+     */
+    private void addStockOnTransportArrival(UUID buildingId, String itemId,
+                                            UUID colonyId,
+                                            Map<ElementType, Integer> costPerItem,
+                                            boolean fireEvent) {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+
+        // Check if building still exists
+        BuildingState state = savedData.getBuilding(buildingId);
+        if (state == null || state.isShutdown()) {
+            Log.warn(TAG, "[Shop] Transport arrived but building {} gone — discarding 1 × {}",
+                    buildingId.toString().substring(0, 8), itemId);
+            return;
+        }
+
+        // Deduct element cost for this unit (deferred deduction)
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+        for (var entry : costPerItem.entrySet()) {
+            if (!bank.consumeElement(colonyId, entry.getKey(), entry.getValue())) {
+                // Bank ran out mid-transport — skip this unit
+                Log.warn(TAG, "[Shop] Cannot afford {} for restock of {} at {} — skipping",
+                        entry.getKey(), itemId, buildingId.toString().substring(0, 8));
+                return;
+            }
+        }
+
+        // Add 1 unit of stock
+        Map<String, Integer> stock = savedData.getOrCreateShopStock(buildingId);
+        stock.put(itemId, stock.getOrDefault(itemId, 0) + 1);
+        savedData.setDirty();
+        updateHasStock(buildingId, stock);
+
+        if (fireEvent) {
+            NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
+        }
+
+        Log.debug(TAG, "[Shop] Transport arrived: {} × 1 → {} (total={})",
+                itemId, buildingId.toString().substring(0, 8),
+                stock.getOrDefault(itemId, 0));
+    }
+
+    /**
+     * Find the nearest storage building (warehouse) for a colony.
+     * Returns the anchor position, or null if none found.
+     */
+    @Nullable
+    private static BlockPos findNearestWarehouse(UUID colonyId) {
+        BuildingApi api = getBuildingApiSilently();
+        if (api == null) return null;
+        var ids = api.getBuildingsByCategory(colonyId, "storage");
+        if (ids == null || ids.isEmpty()) return null;
+        // Return the first warehouse's position (don't need nearest for restock)
+        BuildingData bd = api.getBuilding(ids.get(0));
+        return bd != null && !bd.isShutdown() ? bd.getPosition() : null;
+    }
+
+    /**
+     * Get the BuildingApi silently (returns null if not loaded yet).
+     */
+    @Nullable
+    private static BuildingApi getBuildingApiSilently() {
+        try {
+            return WandscapeApis.getBuildingApi();
+        } catch (IllegalStateException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Plan a transport route from warehouse to shop using the road network.
+     * Returns empty list if no road network — caller falls back to direct transport.
+     */
+    private static List<RouteSegment> planRestockRoute(UUID colonyId,
+                                                        BlockPos from, BlockPos to) {
+        try {
+            var roadApi = WandscapeApis.getRoadApi();
+            return RoadRouter.plan(roadApi.getNetwork(colonyId),
+                    new PathPoint(from.getX(), from.getY(), from.getZ()),
+                    new PathPoint(to.getX(), to.getY(), to.getZ()));
+        } catch (IllegalStateException | NullPointerException e) {
+            return List.of();
         }
     }
 
