@@ -40,6 +40,9 @@ public class ColonyItemBank extends SavedData {
     private static final String TAG_ELEMENTS = "elements";
     private static final String TAG_ELEMENT_TYPE = "type";
     private static final String TAG_ELEMENT_AMOUNT = "amount";
+    private static final String TAG_THRESHOLDS = "thresholds";
+    private static final String TAG_THRESHOLD_RESOURCE = "resource";
+    private static final String TAG_THRESHOLD_VALUE = "value";
 
     // colonyId → items
     private final Map<UUID, Map<ItemKey, Long>> storage = new ConcurrentHashMap<>();
@@ -47,6 +50,8 @@ public class ColonyItemBank extends SavedData {
     private final Map<UUID, Map<ElementType, Long>> elementStorage = new ConcurrentHashMap<>();
     // In-memory reservations (not persisted)
     private final Map<UUID, Map<ItemKey, Long>> reservations = new ConcurrentHashMap<>();
+    // colonyId → (resourceId → threshold). 0 = disabled (no auto-production).
+    private final Map<UUID, Map<String, Long>> thresholds = new ConcurrentHashMap<>();
 
     // ── Factory ──
 
@@ -100,6 +105,36 @@ public class ColonyItemBank extends SavedData {
     public Map<ElementType, Long> getElementSnapshot(UUID colonyId) {
         Map<ElementType, Long> map = elementStorage.get(colonyId);
         return map != null ? Map.copyOf(map) : Map.of();
+    }
+
+    // ── Threshold query ──
+
+    /** Returns the auto-production threshold for a resource (0 = disabled). */
+    public long getThreshold(UUID colonyId, String resourceId) {
+        Map<String, Long> map = thresholds.get(colonyId);
+        return map != null ? map.getOrDefault(resourceId, 0L) : 0L;
+    }
+
+    /** Returns all thresholds for a colony (resourceId → value). */
+    public Map<String, Long> getAllThresholds(UUID colonyId) {
+        Map<String, Long> map = thresholds.get(colonyId);
+        return map != null ? Map.copyOf(map) : Map.of();
+    }
+
+    /** Sets the auto-production threshold for a resource. */
+    public void setThreshold(UUID colonyId, String resourceId, long value) {
+        if (value <= 0) {
+            // Remove entry to keep storage clean (0 = disabled)
+            Map<String, Long> map = thresholds.get(colonyId);
+            if (map != null) {
+                map.remove(resourceId);
+                if (map.isEmpty()) thresholds.remove(colonyId);
+            }
+        } else {
+            thresholds.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
+                    .put(resourceId, value);
+        }
+        setDirty();
     }
 
     // ════════════════════════════════════════════════════════════
@@ -236,6 +271,19 @@ public class ColonyItemBank extends SavedData {
                 colonyTag.put(TAG_ELEMENTS, elementsTag);
             }
 
+            // Thresholds
+            Map<String, Long> colonyThresholds = thresholds.get(colonyId);
+            if (colonyThresholds != null && !colonyThresholds.isEmpty()) {
+                ListTag thresholdsTag = new ListTag();
+                for (var thresholdEntry : colonyThresholds.entrySet()) {
+                    CompoundTag tTag = new CompoundTag();
+                    tTag.putString(TAG_THRESHOLD_RESOURCE, thresholdEntry.getKey());
+                    tTag.putLong(TAG_THRESHOLD_VALUE, thresholdEntry.getValue());
+                    thresholdsTag.add(tTag);
+                }
+                colonyTag.put(TAG_THRESHOLDS, thresholdsTag);
+            }
+
             coloniesTag.add(colonyTag);
         }
         tag.put(TAG_COLONIES, coloniesTag);
@@ -275,6 +323,19 @@ public class ColonyItemBank extends SavedData {
                     elements.put(type, amount);
                 }
                 bank.elementStorage.put(colonyId, elements);
+            }
+
+            // Thresholds
+            if (colonyTag.contains(TAG_THRESHOLDS)) {
+                Map<String, Long> colonyThresholds = new ConcurrentHashMap<>();
+                ListTag thresholdsTag = colonyTag.getList(TAG_THRESHOLDS, Tag.TAG_COMPOUND);
+                for (int j = 0; j < thresholdsTag.size(); j++) {
+                    CompoundTag tTag = thresholdsTag.getCompound(j);
+                    colonyThresholds.put(
+                            tTag.getString(TAG_THRESHOLD_RESOURCE),
+                            tTag.getLong(TAG_THRESHOLD_VALUE));
+                }
+                bank.thresholds.put(colonyId, colonyThresholds);
             }
         }
         LOGGER.info("[BANK] Loaded {} colony item banks", bank.storage.size());
