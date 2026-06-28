@@ -34,17 +34,8 @@ public class ImGuiManager {
     // ── Blueprint editor ──
     private static NodeEditorContext blueprintContext = null;
 
-    /**
-     * Lazy-init the node editor context AFTER ImGui.createContext() has been called.
-     * Critical: if we create it in a static initializer, the native side binds to a
-     * wrong/null ImGui context and the canvas renders transparent.
-     */
-    private static NodeEditorContext getBlueprintContext() {
-        if (blueprintContext == null) {
-            NodeEditorConfig config = new NodeEditorConfig();
-            config.setSettingsFile(null);
-            blueprintContext = NodeEditor.createEditor(config);
-        }
+    // 不再使用懒加载，直接返回已经初始化好的上下文
+    public static NodeEditorContext getBlueprintContext() {
         return blueprintContext;
     }
 
@@ -53,21 +44,14 @@ public class ImGuiManager {
     }
 
     // ── Deferred toggle ──
-    // Commands run on the server thread which has no OpenGL context.
-    // We set a pending flag and the actual init+mode switch happens
-    // on the next render frame (render thread has the GL context).
-
     private static volatile boolean pendingBlueprintToggle = false;
     private static volatile boolean pendingShowGui = false;
 
-    /** Toggle the blueprint node editor. Returns the new state (true = active). */
     public static boolean toggleBlueprintEditor() {
         if (BlueprintEditorClientState.isEditing()) {
             BlueprintEditorClientState.exitEditMode();
-            // Mouse re-grabbed via Close button in BlueprintEditorImGui
             return false;
         }
-        // Defer to render thread — server thread has no GL context
         pendingBlueprintToggle = true;
         pendingShowGui = true;
         return true;
@@ -83,7 +67,7 @@ public class ImGuiManager {
 
     public static void setVisible(boolean visible) {
         if (showGui == visible) return;
-        ensureInit(); // must init before toggle so Controller can call ImGui.getIO()
+        ensureInit();
         toggle();
     }
 
@@ -97,6 +81,12 @@ public class ImGuiManager {
 
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");
+
+        // 【修复点】：在这里直接创建 NodeEditor 上下文！
+        // 此时 ImGui 环境已就绪，但尚未开始渲染第一帧 (newFrame 还没被调用)
+        NodeEditorConfig config = new NodeEditorConfig();
+        config.setSettingsFile(null); // 禁用生成外部配置文件
+        blueprintContext = NodeEditor.createEditor(config);
 
         // Forward window handle to blueprint editor for keyboard shortcuts
         com.wsteam.wandscape.blueprint.editor.BlueprintEditorImGui.setWindowHandle(windowHandle);
@@ -137,10 +127,6 @@ public class ImGuiManager {
     }
 
     // ── Input blocking ──
-    // When the editor is active, ALL mouse events are blocked.
-    // Only right-click passes through (for camera rotation in Controller).
-    // Keyboard is also blocked — Controller reads raw GLFW for WASD.
-
     private static boolean anyEditorActive() {
         return BuildingEditorClientState.isEditing() || BlueprintEditorClientState.isEditing();
     }
@@ -150,8 +136,6 @@ public class ImGuiManager {
         if (!showGui || !initialized) return;
         if (!anyEditorActive()) return;
 
-        // In editor mode: block everything except right-click (button 1)
-        // Right-click passes through for camera rotation
         int btn = event.getButton();
         if (btn != GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             event.setCanceled(true);
@@ -162,17 +146,14 @@ public class ImGuiManager {
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!showGui || !initialized) return;
         if (!anyEditorActive()) return;
-        // Block scroll from MC hotbar cycling
         if (!ImGui.getIO().getWantCaptureMouse()) {
             event.setCanceled(true);
         }
     }
 
     // ── Render ──
-
     @SubscribeEvent
     public static void onRenderFramePost(RenderFrameEvent.Post event) {
-        // Process deferred toggles (commands fire on server thread, need GL context here)
         if (pendingBlueprintToggle) {
             pendingBlueprintToggle = false;
             ensureInit();
@@ -196,7 +177,7 @@ public class ImGuiManager {
         if (BuildingEditorClientState.isEditing()) {
             BuildingEditorImGui.render();
         } else if (BlueprintEditorClientState.isEditing()) {
-            BlueprintEditorImGui.render(getBlueprintContext());
+            BlueprintEditorImGui.render(getBlueprintContext()); // 这里现在一定是非 null 的
         } else {
             drawDebugGui();
         }
@@ -236,10 +217,16 @@ public class ImGuiManager {
     }
 
     // ── Lifecycle ──
-
     public static void shutdown() {
         if (!initialized) return;
         showGui = false;
+
+        // 【修复点】：优雅销毁 NodeEditorContext 避免内存泄漏
+        if (blueprintContext != null) {
+            NodeEditor.destroyEditor(blueprintContext);
+            blueprintContext = null;
+        }
+
         imGuiGl3.dispose();
         imGuiGlfw.dispose();
         ImGui.destroyContext();
