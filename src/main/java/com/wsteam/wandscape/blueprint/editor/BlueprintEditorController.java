@@ -64,11 +64,12 @@ public final class BlueprintEditorController {
     /** Exit the blueprint editor. Prompts to save if dirty. */
     public static void doExit() {
         if (BlueprintEditorClientState.isDirty()) {
-            Log.info(TAG, "Exiting with unsaved changes");
             // Auto-save on exit for safety
             doSave();
         }
         BlueprintEditorClientState.exitEditMode();
+        // Re-grab mouse for Minecraft
+        com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
     }
 
     /** Handle a successful save response from the server. */

@@ -64,6 +64,7 @@ public class ImGuiManager {
     public static boolean toggleBlueprintEditor() {
         if (BlueprintEditorClientState.isEditing()) {
             BlueprintEditorClientState.exitEditMode();
+            // Mouse re-grabbed via Close button in BlueprintEditorImGui
             return false;
         }
         // Defer to render thread — server thread has no GL context
@@ -111,13 +112,24 @@ public class ImGuiManager {
 
     public static void toggle() {
         showGui = !showGui;
+        if (showGui) {
+            releaseMouse();
+        } else {
+            grabMouse();
+        }
+    }
+
+    private static void releaseMouse() {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.mouseHandler != null) {
-            if (showGui) {
-                mc.mouseHandler.releaseMouse();
-            } else {
-                mc.mouseHandler.grabMouse();
-            }
+            mc.mouseHandler.releaseMouse();
+        }
+    }
+
+    private static void grabMouse() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.mouseHandler != null) {
+            mc.mouseHandler.grabMouse();
         }
     }
 
@@ -126,23 +138,27 @@ public class ImGuiManager {
     // Only right-click passes through (for camera rotation in Controller).
     // Keyboard is also blocked — Controller reads raw GLFW for WASD.
 
+    private static boolean anyEditorActive() {
+        return BuildingEditorClientState.isEditing() || BlueprintEditorClientState.isEditing();
+    }
+
     @SubscribeEvent
     public static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!showGui || !initialized) return;
-        if (!BuildingEditorClientState.isEditing()) return;
+        if (!anyEditorActive()) return;
 
         // In editor mode: block everything except right-click (button 1)
+        // Right-click passes through for camera rotation
         int btn = event.getButton();
         if (btn != GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             event.setCanceled(true);
         }
-        // Right-click (button 1) passes through to MC for camera rotation
     }
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!showGui || !initialized) return;
-        if (!BuildingEditorClientState.isEditing()) return;
+        if (!anyEditorActive()) return;
         // Block scroll from MC hotbar cycling
         if (!ImGui.getIO().getWantCaptureMouse()) {
             event.setCanceled(true);
@@ -158,12 +174,14 @@ public class ImGuiManager {
             pendingBlueprintToggle = false;
             ensureInit();
             showGui = true;
+            releaseMouse();
             BlueprintEditorClientState.enterEditMode();
         }
         if (pendingShowGui) {
             pendingShowGui = false;
             ensureInit();
             showGui = true;
+            releaseMouse();
         }
 
         if (!showGui) return;
