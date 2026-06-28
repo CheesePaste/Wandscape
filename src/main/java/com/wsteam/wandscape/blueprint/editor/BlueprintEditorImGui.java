@@ -339,7 +339,7 @@ public final class BlueprintEditorImGui {
         // Render input pins (left side) — exec first, then data
         List<BlueprintNodeDefinition.PinDef> inputPins = getInputPins(def, node);
         for (BlueprintNodeDefinition.PinDef pin : inputPins) {
-            NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, pin.id())),
+            NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, pin.id())),
                     mapPinKind(pin));
             int pinCol = pinColorForType(pin.typeKey());
             ImGui.pushStyleColor(ImGuiCol.Text, pinCol);
@@ -358,7 +358,7 @@ public final class BlueprintEditorImGui {
                 // Push to the right
                 ImGui.setCursorPosX(ImGui.getCursorPosX() + 80);
             }
-            NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, pin.id())),
+            NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, pin.id())),
                     mapPinKind(pin));
             int pinCol = pinColorForType(pin.typeKey());
             ImGui.pushStyleColor(ImGuiCol.Text, pinCol);
@@ -386,7 +386,7 @@ public final class BlueprintEditorImGui {
 
         if (!inputPins.isEmpty()) {
             for (BlueprintNodeDefinition.PinDef pin : inputPins) {
-                NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, pin.id())),
+                NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, pin.id())),
                         mapPinKind(pin));
                 int pinCol = pinColorForType(pin.typeKey());
                 ImGui.pushStyleColor(ImGuiCol.Text, pinCol);
@@ -410,7 +410,7 @@ public final class BlueprintEditorImGui {
         if (!outputPins.isEmpty()) {
             ImGui.sameLine();
             for (BlueprintNodeDefinition.PinDef pin : outputPins) {
-                NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, pin.id())),
+                NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, pin.id())),
                         mapPinKind(pin));
                 int pinCol = pinColorForType(pin.typeKey());
                 ImGui.pushStyleColor(ImGuiCol.Text, pinCol);
@@ -431,7 +431,7 @@ public final class BlueprintEditorImGui {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) {
                 ImGui.sameLine();
                 ImGui.setCursorPosX(ImGui.getCursorPosX() + 60);
-                NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, pin.id())),
+                NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, pin.id())),
                         NodeEditorPinKind.Output);
                 ImGui.pushStyleColor(ImGuiCol.Text, 0xFFFFFFFF);
                 ImGui.text(">");
@@ -448,7 +448,7 @@ public final class BlueprintEditorImGui {
         ImGui.textDisabled(paramType);
 
         // Single output pin
-        NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, "value")),
+        NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, "value")),
                 NodeEditorPinKind.Output);
         int pinCol = pinColorForType(paramType);
         ImGui.pushStyleColor(ImGuiCol.Text, pinCol);
@@ -974,14 +974,8 @@ public final class BlueprintEditorImGui {
         return result;
     }
 
-    /** Get the 0-based pin index for a named pin on a node. */
-    static int pinIndexOf(CanvasNode node, String pinId) {
-        BlueprintNodeDefinition.NodeDef def = BlueprintNodeDefinition.get(node.typeId);
-        if (def == null) return 0;
-        return pinIndexOf(def, pinId);
-    }
-
-    static int pinIndexOf(BlueprintNodeDefinition.NodeDef def, String pinId) {
+    /** Get the 0-based pin index for a named pin on a node. Includes dynamic pin offsets. */
+    static int pinIndexOf(BlueprintNodeDefinition.NodeDef def, CanvasNode node, String pinId) {
         int idx = 0;
         // Exec inputs
         for (var pin : def.execPins()) {
@@ -990,10 +984,21 @@ public final class BlueprintEditorImGui {
                 idx++;
             }
         }
-        // Data inputs
+        // Data inputs (with dynamic pin detection)
         for (var pin : def.dataPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
-                if (pin.id().equals(pinId)) return idx;
+                if (pin.dynamic()) {
+                    // Dynamic pin: base "arg" matches at idx, "arg_1" at idx+1, "arg_2" at idx+2, etc.
+                    if (pin.id().equals(pinId)) return idx;
+                    if (pinId.startsWith(pin.id() + "_")) {
+                        try {
+                            int offset = Integer.parseInt(pinId.substring(pin.id().length() + 1));
+                            return idx + offset;
+                        } catch (NumberFormatException ignored) {}
+                    }
+                } else {
+                    if (pin.id().equals(pinId)) return idx;
+                }
                 idx++;
             }
         }
@@ -1014,6 +1019,13 @@ public final class BlueprintEditorImGui {
         return -1;
     }
 
+    /** Quick entry: get pin index with node context. */
+    static int pinIndexOf(CanvasNode node, String pinId) {
+        BlueprintNodeDefinition.NodeDef def = BlueprintNodeDefinition.get(node.typeId);
+        if (def == null) return 0;
+        return pinIndexOf(def, node, pinId);
+    }
+
     /** Get pin type key for a named pin. */
     private static String pinTypeKey(CanvasNode node, String pinId) {
         BlueprintNodeDefinition.NodeDef def = BlueprintNodeDefinition.get(node.typeId);
@@ -1027,28 +1039,45 @@ public final class BlueprintEditorImGui {
         return "any";
     }
 
-    /** Get pin by index. */
+    /** Get pin by index (includes dynamic pins). */
     static BlueprintNodeDefinition.PinDef pinByIndex(
             BlueprintNodeDefinition.NodeDef def, CanvasNode node, int index) {
         int idx = 0;
+        // Exec inputs (no dynamic)
         for (var pin : def.execPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
                 if (idx == index) return pin;
                 idx++;
             }
         }
+        // Data inputs (with dynamic pin expansion)
         for (var pin : def.dataPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
                 if (idx == index) return pin;
                 idx++;
+                if (pin.dynamic()) {
+                    int extra = node.dynamicPinCounts.getOrDefault(pin.id(), 0);
+                    for (int i = 1; i <= extra; i++) {
+                        if (idx == index) return new BlueprintNodeDefinition.PinDef(
+                                pin.id() + "_" + i,
+                                pin.label() + " " + (i + 1),
+                                pin.typeKey(),
+                                BlueprintNodeDefinition.PinDir.INPUT,
+                                BlueprintNodeDefinition.PinKind.DATA,
+                                false);
+                        idx++;
+                    }
+                }
             }
         }
+        // Exec outputs (no dynamic)
         for (var pin : def.execPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) {
                 if (idx == index) return pin;
                 idx++;
             }
         }
+        // Data outputs (no dynamic)
         for (var pin : def.dataPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) {
                 if (idx == index) return pin;
