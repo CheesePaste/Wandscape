@@ -178,3 +178,17 @@
 **为什么建筑右键门控放服务端而非客户端取消事件？** BuildingInteractHandler 是服务端类，客户端取消 `RightClickBlock` 事件不可靠（服务端仍可能收到）。改为服务端维护 `PanelStateTracker.panelOpenPlayers` 集合，面板打开时 C→S 通知服务器，右键处理前检查该集合。面板关闭时移除，玩家断线自动清理。
 
 **为什么 V 键从三态循环改为面板开关？** 原三态循环（Normal→Projection→Road→Normal）选择不直观，无法直接跳到目标模式。面板底部页签可任意切换模式，V 键简化为面板开关单一职责。旧版 V 键循环逻辑移至 WandscapePanelState.enterSubMode()/exitCurrentSubMode()。
+
+## 蓝图节点编辑器（Blueprint Node Editor）
+
+**为什么表达式也是节点（ExprNode as Canvas Node，方案 D）而非内联文本编辑？** 方案 B（分层构建器）和 C（悬停编辑+mini-builder）将表达式编辑隐藏在下拉菜单和弹窗中，用户无法看到完整的数据流图。方案 D 将所有 ExprNode 变体作为一等画布节点，数据引脚间通过连线传递值——这是 Unreal Engine Blueprints 的原生范式，开发者看到节点图即可理解数据从何而来、经过哪些变换。简单 `$var` 字面量节点虽然只输出一个变量名，但它们在画布上的存在让参数来源可追溯、可拖线替换。
+
+**为什么选 B（Loop Body 连线 DFS 收集子步骤）而非子图容器？** v1 不做嵌套子图（方案 C 的开发量约为 B 的 3×）。方案 B 通过 ForEach 节点的 Loop Body exec out 引脚连线到第一个子步骤，子步骤串行连线，DFS 沿 exec 边收集步骤列表——序列化时自动还原为 `for_each.steps` 数组。这保持了画布扁平、连线统一，同时不丢失控制流语义。
+
+**为什么节点定义用 descriptor 注册表（NodeDefinitionRegistry）而非每种节点写死渲染代码？** 14 种 StepNode + 22 种 ExprNode + Input 节点 = 37 种节点类型。为每种在 renderBlueprintEditor() 中写死 if-else 分支会导致渲染函数膨胀到 500+ 行且添加新节点类型需改渲染逻辑。Descriptor 模式让每种节点声明自己的引脚列表（exec + data + 类型 + 颜色），渲染函数遍历引脚列表统一渲染。新增节点只需注册一个 descriptor。
+
+**为什么 CanvasGraph → BlueprintDefinition JSON 序列化时简单 Var 节点输出糖语法 `"$var"` 而非显式对象 `{"$": "var"}`？** 保持 JSON 可读性。DSL 设计初衷是 JSON 可手工编辑，糖语法是默认表示法。反序列化时两种格式都支持读入，但写出时优先糖语法——与现有 `data/wandscape/blueprints/*.json` 风格一致，不破坏已有蓝图文件。
+
+**为什么字面量/Var 表达式节点值内联编辑（inlineValues map）而非也走连线？** 字面量（LiteralString/LiteralInt/LiteralPos）是表达式树的叶子节点，值为单一常量。为 `"42"` 这个 int 画一个独立节点并连线到 Add.left 虽然纯正，但会导致画布上出现大量无意义的"常量盒子"。折中：字面量/Var 节点仍渲染为小菱形节点（保留 D 路线的可追溯性），但其值直接内联编辑（点击节点在 Inspector 改值），输出为单根数据引脚——连线到消费节点即可。
+
+**为什么蓝图编辑器仿照 building/editor/ 模式独立为 blueprint/editor/ 包？** 复用已验证的架构：ClientState（volatile 静态状态）+ ImGui（渲染）+ Controller（逻辑）+ Network（网络包）。ImGuiManager 只负责调度，不持有编辑器逻辑——与 BuildingEditorImGui 的委托关系一致。BlueprintEditorCommand 作为入口，toggle 时激活编辑器状态。

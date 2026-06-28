@@ -1,13 +1,20 @@
 package com.wsteam.wandscape.imgui;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.blueprint.editor.BlueprintEditorClientState;
+import com.wsteam.wandscape.blueprint.editor.BlueprintEditorImGui;
 import com.wsteam.wandscape.building.editor.BuildingEditorClientState;
 import com.wsteam.wandscape.building.editor.BuildingEditorImGui;
 
 import imgui.ImGui;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiWindowFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import imgui.extension.nodeditor.NodeEditor;
+import imgui.extension.nodeditor.NodeEditorConfig;
+import imgui.extension.nodeditor.NodeEditorContext;
 
 import net.minecraft.client.Minecraft;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -23,6 +30,39 @@ public class ImGuiManager {
 
     private static boolean initialized = false;
     private static volatile boolean showGui = false;
+
+    // ── Blueprint editor ──
+    private static NodeEditorContext blueprintContext = null;
+
+    /**
+     * Lazy-init the node editor context AFTER ImGui.createContext() has been called.
+     * Critical: if we create it in a static initializer, the native side binds to a
+     * wrong/null ImGui context and the canvas renders transparent.
+     */
+    private static NodeEditorContext getBlueprintContext() {
+        if (blueprintContext == null) {
+            NodeEditorConfig config = new NodeEditorConfig();
+            config.setSettingsFile(null);
+            blueprintContext = NodeEditor.createEditor(config);
+        }
+        return blueprintContext;
+    }
+
+    public static boolean isBlueprintEditorActive() {
+        return BlueprintEditorClientState.isEditing();
+    }
+
+    /** Toggle the blueprint node editor. Returns the new state (true = active). */
+    public static boolean toggleBlueprintEditor() {
+        if (BlueprintEditorClientState.isEditing()) {
+            BlueprintEditorClientState.exitEditMode();
+            return false;
+        }
+        ensureInit(); // must init before entering edit mode (mirrors toggle()/setVisible())
+        showGui = true;
+        BlueprintEditorClientState.enterEditMode();
+        return true;
+    }
 
     public static boolean isVisible() {
         return showGui;
@@ -113,6 +153,8 @@ public class ImGuiManager {
 
         if (BuildingEditorClientState.isEditing()) {
             BuildingEditorImGui.render();
+        } else if (BlueprintEditorClientState.isEditing()) {
+            BlueprintEditorImGui.render(getBlueprintContext());
         } else {
             drawDebugGui();
         }

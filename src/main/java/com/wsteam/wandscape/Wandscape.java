@@ -33,6 +33,7 @@ import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
+import com.wsteam.wandscape.command.BlueprintEditorCommand;
 import com.wsteam.wandscape.engine.road.RoadApiImpl;
 import com.wsteam.wandscape.engine.road.RoadEventListener;
 import com.wsteam.wandscape.engine.road.RoadSavedData;
@@ -543,6 +544,7 @@ public class Wandscape {
                 .then(RoadCommand.node())
                 .then(RoadTestCommand.node())
                 .then(BuildEditorCommand.node())
+                .then(BlueprintEditorCommand.node())
                 .then(SeedWarehouseCommand.node())
                 .then(ConsumeWarehouseCommand.node())
                 .then(SpiralTestCommand.node())

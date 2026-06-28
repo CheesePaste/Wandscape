@@ -49,7 +49,9 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── warehouse/        GUI+ColonyItemBank(SavedData)
 ├── production/       工作站(GUI/配方/菜单/网络包)
 ├── dataconfig/       JSON数据加载框架(WandscapeDataLoader)
-└── command/          调试命令(/wandscape ...)
+├── command/          调试命令(/wandscape ...)
+└── blueprint/        蓝图节点编辑器
+    └── editor/       BlueprintEditorClientState/Canvas/ImGui/Controller/Network
 ```
 
 ## 数据流（核心路径）
@@ -120,6 +122,7 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 仓库GUI/ItemBank | [packages/warehouse.md](packages/warehouse.md) |
 | 工作站/合成 | [packages/production.md](packages/production.md) |
 | JSON加载框架 | [packages/dataconfig.md](packages/dataconfig.md) |
+| 蓝图编辑器 | [packages/blueprint_editor.md](packages/blueprint_editor.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
 | 模拟经营设计推理 | [../docs/simulation.md](../docs/simulation.md) |
