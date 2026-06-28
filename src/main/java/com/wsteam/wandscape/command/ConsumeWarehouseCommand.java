@@ -2,9 +2,8 @@ package com.wsteam.wandscape.command;
 
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
 import com.mojang.brigadier.Command;
+import com.wsteam.wandscape.shared.log.Log;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 
@@ -31,7 +30,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class ConsumeWarehouseCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ConsumeWarehouseCommand";
 
     private ConsumeWarehouseCommand() {}
 
@@ -97,7 +96,7 @@ public final class ConsumeWarehouseCommand {
         }
 
         String colonyIdShort = colonyId.toString().substring(0, 8);
-        LOGGER.info("[ConsumeWarehouse] colony={} cleared {} item types ({} total), {} element types ({} total)",
+        Log.info(TAG, "[ConsumeWarehouse] colony={} cleared {} item types ({} total), {} element types ({} total)",
                 colonyIdShort, itemTypesBefore, totalItemsBefore, elemTypesBefore, totalElementsBefore);
 
         src.sendSuccess(() -> Component.literal(

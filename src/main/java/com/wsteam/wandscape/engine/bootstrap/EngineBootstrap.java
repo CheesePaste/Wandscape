@@ -199,7 +199,7 @@ public final class EngineBootstrap {
                                 entry.getValue().intValue());
                     }
                 }
-                LOGGER.info("  Loaded {} colony thresholds into WarehouseSource", bank.getColonyIds().size());
+                Log.info(TAG,"  Loaded {} colony thresholds into WarehouseSource", bank.getColonyIds().size());
             }
         }
 

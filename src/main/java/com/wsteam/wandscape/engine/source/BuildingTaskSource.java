@@ -160,7 +160,7 @@ public class BuildingTaskSource implements TaskSource {
                 var resourceId = new com.wsteam.wandscape.core.types.ResourceId(nodeConfig.element());
                 int threshold = ws.getThreshold(resourceId);
                 if (threshold <= 0) {
-                    LOGGER.debug("[TaskSrc] node {} ({}) skipped: threshold=0 (disabled)",
+                    Log.debug(TAG,"[TaskSrc] node {} ({}) skipped: threshold=0 (disabled)",
                             buildingId.toString().substring(0, 8), resourceId.id());
                     continue; // auto-gather disabled for this resource
                 }
@@ -176,14 +176,14 @@ public class BuildingTaskSource implements TaskSource {
                             var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(server.overworld());
                             long currentStock = bank.countElement(colonyId, elementType);
                             if (currentStock >= threshold) {
-                                LOGGER.debug("[TaskSrc] node {} ({}) skipped: stock={} >= threshold={}",
+                                Log.debug(TAG,"[TaskSrc] node {} ({}) skipped: stock={} >= threshold={}",
                                         buildingId.toString().substring(0, 8),
                                         resourceId.id(), currentStock, threshold);
                                 continue;
                             }
                         }
                     } catch (IllegalArgumentException e) {
-                        LOGGER.debug("[TaskSrc] node {}: unknown element '{}', proceeding anyway",
+                        Log.debug(TAG,"[TaskSrc] node {}: unknown element '{}', proceeding anyway",
                                 buildingId.toString().substring(0, 8), nodeConfig.element());
                     }
                 }
