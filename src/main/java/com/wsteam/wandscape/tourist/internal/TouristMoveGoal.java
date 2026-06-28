@@ -16,6 +16,7 @@ import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -838,10 +839,8 @@ public class TouristMoveGoal extends Goal {
         if (network == null || network.isEmpty()) return false;
 
         BlockPos from = tourist.blockPosition();
-        List<RouteSegment> segments = RoadRouter.planNpc(
-                network,
-                new PathPoint(from.getX(), from.getY(), from.getZ()),
-                new PathPoint(target.getX(), target.getY(), target.getZ()));
+        List<RouteSegment> segments = RoadRoutingHelper.planNpcWithRoads(
+                roadApi, tourist.level(), null, from, target);
         if (segments.isEmpty()) return false;
 
         List<BlockPos> wps = new ArrayList<>();

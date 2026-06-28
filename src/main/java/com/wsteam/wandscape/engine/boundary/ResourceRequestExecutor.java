@@ -12,6 +12,7 @@ import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -160,7 +161,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
         BlockPos npcPos = npc.blockPosition();
         Level level = npc.level();
-        List<RouteSegment> route = planRoute(colonyId, warehousePos, npcPos);
+        List<RouteSegment> route = planRoute(colonyId, warehousePos, npcPos, level);
 
         // ── 5. Build flat launch entry list (one entry per item-entity) ──
         List<LaunchEntry> entries = new ArrayList<>();
@@ -315,15 +316,9 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         return nearest;
     }
 
-    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
-        try {
-            var roadApi = WandscapeApis.getRoadApi();
-            if (roadApi == null) return List.of();
-            return RoadRouter.plan(roadApi.getNetwork(colonyId),
-                    new PathPoint(from.getX(), from.getY(), from.getZ()),
-                    new PathPoint(to.getX(), to.getY(), to.getZ()));
-        } catch (Exception e) {
-            return List.of();
-        }
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to,
+                                                 net.minecraft.world.level.Level level) {
+        return RoadRoutingHelper.planWithRoads(
+                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 }

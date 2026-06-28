@@ -9,6 +9,7 @@ import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -115,7 +116,7 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         // 6. Start visual transport: wand flies from NPC back to warehouse
         //    Use road network if available.
         BlockPos destPos = storagePos != null ? storagePos : npcPos;
-        List<RouteSegment> route = planRoute(colonyId, npcPos, destPos);
+        List<RouteSegment> route = planRoute(colonyId, npcPos, destPos, npc.level());
         CompletableFuture<Void> transportFuture = transporter.send(
                 key, npcPos, destPos, npc.level(), npcId, route,
                 true /* ownsItem: wand was unequipped, must return on cancel */);
@@ -209,16 +210,9 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
     }
 
     /** Plan a road-assisted route between two positions. Returns empty if no road. */
-    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
-        try {
-            var roadApi = WandscapeApis.getRoadApi();
-            if (roadApi == null) return List.of();
-            var network = roadApi.getNetwork(colonyId);
-            return RoadRouter.plan(network,
-                    new PathPoint(from.getX(), from.getY(), from.getZ()),
-                    new PathPoint(to.getX(), to.getY(), to.getZ()));
-        } catch (Exception e) {
-            return List.of();
-        }
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to,
+                                                 net.minecraft.world.level.Level level) {
+        return RoadRoutingHelper.planWithRoads(
+                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 }

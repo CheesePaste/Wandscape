@@ -11,6 +11,10 @@ import java.util.*;
  * <p>Supports gap bridging: seamlessly handles T-junctions, road width variations,
  * and small broken gaps by allowing off-road "jumps" between disconnected edges.
  *
+ * <p>Also supports lazy player-road blobs: contiguous player-built surfaces
+ * discovered by BFS and cached in {@link RoadBlobCache}. Blob boundaries are
+ * injected as "虫洞" nodes — NPCs can traverse them at on-road speed.
+ *
  * <p>Pure core — zero MC dependencies. Takes a {@link RoadNetwork} and
  * start/end {@link PathPoint}s, returns a list of {@link RouteSegment}s.
  *
@@ -19,11 +23,11 @@ import java.util.*;
  *
  * <h3>Algorithm</h3>
  * <ol>
- *   <li>Find nearest {@link PathPoint} on any edge to start and end.</li>
+ *   <li>Find nearest {@link PathPoint} on any edge or cached blob to start and end.</li>
  *   <li>Build graph: within-edge consecutive points + cross-edge gap bridging
- *       (nearby disconnected points linked with off-road penalty weight).</li>
+ *       + blob centroid虫洞 connections. Each edge records whether it's on-road.</li>
  *   <li>Dijkstra shortest-path (weight = estimated ticks).</li>
- *   <li>Build segments: detect jumps as off-road, merge colinear same-type segments.</li>
+ *   <li>Build segments: use edge onRoad flag from graph, merge colinear same-type segments.</li>
  * </ol>
  */
 public final class RoadRouter {
@@ -43,6 +47,8 @@ public final class RoadRouter {
 
     private RoadRouter() {}
 
+    // ── Public API ────────────────────────────────────────────────
+
     /**
      * Plan a route for an NPC walker.
      *
@@ -61,11 +67,26 @@ public final class RoadRouter {
      */
     public static List<RouteSegment> planNpc(@Nullable RoadNetwork network,
                                              PathPoint start, PathPoint end) {
-        List<RouteSegment> segments = plan(network, start, end);
+        return planNpc(network, null, start, end);
+    }
+
+    /**
+     * Plan a route for an NPC walker, with lazy player-road blob support.
+     *
+     * @param network   the colony's road network (may be empty)
+     * @param blobCache cached player-built road blobs (nullable)
+     * @param start     world position the NPC starts from
+     * @param end       world position the NPC wants to reach
+     * @return ordered list of segments (empty = unreachable for NPC)
+     */
+    public static List<RouteSegment> planNpc(@Nullable RoadNetwork network,
+                                              @Nullable RoadBlobCache blobCache,
+                                              PathPoint start, PathPoint end) {
+        List<RouteSegment> segments = plan(network, blobCache, start, end);
         if (segments.isEmpty()) return segments;
 
         for (RouteSegment seg : segments) {
-            if (seg.onRoad()) continue; // road segments are flat, always safe
+            if (seg.onRoad()) continue;
             int dy = Math.abs((int) seg.toY() - (int) seg.fromY());
             if (dy > NPC_MAX_Y_STEP) {
                 Log.info(TAG, "NPC: rejected — off-road dy=%d > %d at (%.0f,%.0f,%.0f)→(%.0f,%.0f,%.0f)",
@@ -77,6 +98,7 @@ public final class RoadRouter {
         }
         return segments;
     }
+
     /**
      * Plan a route using the road network.
      *
@@ -87,22 +109,57 @@ public final class RoadRouter {
      */
     public static List<RouteSegment> plan(@Nullable RoadNetwork network,
                                           PathPoint start, PathPoint end) {
+        return plan(network, null, start, end);
+    }
+
+    /**
+     * Plan a route using the road network and lazy player-road blob cache.
+     *
+     * @param network   the colony's road network (may be empty)
+     * @param blobCache cached player-built road blobs (nullable)
+     * @param start     world position to start from
+     * @param end       world position to deliver to
+     * @return ordered list of segments (empty = no road available, use direct)
+     */
+    public static List<RouteSegment> plan(@Nullable RoadNetwork network,
+                                           @Nullable RoadBlobCache blobCache,
+                                           PathPoint start, PathPoint end) {
         // ── 0. Direct distance baseline ──
         int directDist = start.manhattanXZTo(end);
         int directTicks = directDist * TICKS_PER_BLOCK_OFF_ROAD;
 
-        if (network == null || network.isEmpty()) {
-            Log.info(TAG, "No road network — direct fly %d blocks", directDist);
+        boolean hasNetwork = network != null && !network.isEmpty();
+        boolean hasBlobs = blobCache != null && !blobCache.isEmpty();
+
+        if (!hasNetwork && !hasBlobs) {
+            Log.info(TAG, "No road network and no blobs — direct fly %d blocks", directDist);
             return List.of();
         }
 
         Log.info(TAG, "═════ Route planning ═════");
         Log.info(TAG, "  From:  %s", start);
         Log.info(TAG, "  To:    %s", end);
+        if (blobCache != null && blobCache.blobCount() > 0) {
+            Log.info(TAG, "  Blobs: %d cached (%d blocks total)",
+                    blobCache.blobCount(), blobCache.totalBlockCount());
+        }
 
         // ── 1. Nearest road entry/exit ──
-        PathPoint roadStart = network.findNearestWalkablePathPoint(start);
-        PathPoint roadEnd = network.findNearestWalkablePathPoint(end);
+        PathPoint roadStart = null;
+        PathPoint roadEnd = null;
+
+        if (hasNetwork) {
+            roadStart = network.findNearestWalkablePathPoint(start);
+            roadEnd = network.findNearestWalkablePathPoint(end);
+        }
+
+        // Also check blob cache for possibly nearer entry/exit points
+        if (blobCache != null) {
+            PathPoint blobStart = blobCache.findNearestBlobPoint(start);
+            PathPoint blobEnd = blobCache.findNearestBlobPoint(end);
+            roadStart = betterSnap(roadStart, blobStart, start);
+            roadEnd = betterSnap(roadEnd, blobEnd, end);
+        }
 
         if (roadStart == null || roadEnd == null) {
             Log.info(TAG, "  No reachable road point found → direct fly");
@@ -113,8 +170,7 @@ public final class RoadRouter {
         int exitDist = end.manhattanXZTo(roadEnd);
         int roadDist = roadStart.manhattanXZTo(roadEnd);
 
-        // Smart early exit: if routing to the road + straight line road + routing to end
-        // is ALREADY significantly slower than direct fly, skip planning.
+        // Smart early exit
         int estimatedTicks = (entryDist + exitDist) * TICKS_PER_BLOCK_OFF_ROAD
                 + roadDist * TICKS_PER_BLOCK_ON_ROAD;
         if (estimatedTicks > directTicks * 1.5) {
@@ -123,8 +179,8 @@ public final class RoadRouter {
             return List.of();
         }
 
-        // ── 2. Build graph (with gap bridging) ──
-        Graph graph = buildGraph(network);
+        // ── 2. Build graph ──
+        Graph graph = buildGraph(network, blobCache);
 
         // ── 3. Dijkstra ──
         NodeKey startKey = new NodeKey(roadStart.x(), roadStart.y(), roadStart.z());
@@ -145,35 +201,39 @@ public final class RoadRouter {
             return List.of();
         }
 
-        // ── 4. Build & Simplify Segments ──
+        // ── 4. Build segments using graph edge onRoad metadata ──
         List<RouteSegment> rawSegments = new ArrayList<>();
 
-        // 4a. Start -> first graph node (Off-road)
+        // 4a. Start -> first graph node (always off-road)
         PathPoint firstRoad = dij.path.get(0);
         if (start.manhattanXZTo(firstRoad) > 0 || start.y() != firstRoad.y()) {
             rawSegments.add(new RouteSegment(start.x(), start.y(), start.z(),
                     firstRoad.x(), firstRoad.y(), firstRoad.z(), false));
         }
 
-        // 4b. Path internally (Detect jumps)
+        // 4b. Path internally: look up each edge in the graph for its onRoad flag
         for (int i = 0; i < dij.path.size() - 1; i++) {
             PathPoint a = dij.path.get(i);
             PathPoint b = dij.path.get(i + 1);
-            int distXZ = a.manhattanXZTo(b);
-            int distY = Math.abs(a.y() - b.y());
+            NodeKey aKey = new NodeKey(a.x(), a.y(), a.z());
+            NodeKey bKey = new NodeKey(b.x(), b.y(), b.z());
 
-            // If nodes are far apart, it's a bridged gap (off-road).
-            // Normal consecutive road points are max 2 XZ (diagonal) and 1 Y apart.
-            boolean isJump = distXZ > 2 || distY > 1;
-            rawSegments.add(new RouteSegment(a.x(), a.y(), a.z(), b.x(), b.y(), b.z(), !isJump));
+            // Query the graph: is the a→b edge on-road?
+            boolean onRoad = graph.isOnRoad(aKey, bKey);
+
+            rawSegments.add(new RouteSegment(a.x(), a.y(), a.z(),
+                    b.x(), b.y(), b.z(), onRoad));
         }
 
-        // 4c. Last graph node -> End (Off-road)
+        // 4c. Last graph node -> End (always off-road)
         PathPoint lastRoad = dij.path.get(dij.path.size() - 1);
         if (end.manhattanXZTo(lastRoad) > 0 || end.y() != lastRoad.y()) {
             rawSegments.add(new RouteSegment(lastRoad.x(), lastRoad.y(), lastRoad.z(),
                     end.x(), end.y(), end.z(), false));
         }
+
+        // ── [RoadPlan] Detailed point-by-point log ──
+        logRoadPlan(start, end, dij.path, rawSegments);
 
         // 4d. Simplify colinear segments
         List<RouteSegment> segments = simplifySegments(rawSegments);
@@ -194,7 +254,7 @@ public final class RoadRouter {
         }
 
         int saved = directTicks - totalTicks;
-        Log.info(TAG, "  Segments: %d (%d off-road, %d on-road jumps)",
+        Log.info(TAG, "  Segments: %d (%d off-road, %d on-road)",
                 segments.size(),
                 (int) segments.stream().filter(s -> !s.onRoad()).count(),
                 (int) segments.stream().filter(RouteSegment::onRoad).count());
@@ -206,57 +266,138 @@ public final class RoadRouter {
         return segments;
     }
 
-    // ── Graph building ──
+    // ── [RoadPlan] logging ────────────────────────────────────────
 
-    private static Graph buildGraph(RoadNetwork network) {
+    private static void logRoadPlan(PathPoint start, PathPoint end,
+                                     List<PathPoint> dijkstraPath,
+                                     List<RouteSegment> rawSegments) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("[RoadPlan] %d raw segments | Start= %s → End= %s",
+                rawSegments.size(), start, end));
+
+        for (int i = 0; i < rawSegments.size(); i++) {
+            RouteSegment seg = rawSegments.get(i);
+            int xzDist = (int) (Math.abs(seg.toX() - seg.fromX())
+                    + Math.abs(seg.toZ() - seg.fromZ()));
+            int dy = Math.abs((int) (seg.toY() - seg.fromY()));
+            String type = seg.onRoad() ? "ROAD" : "OFF_ROAD";
+            int speed = seg.onRoad() ? TICKS_PER_BLOCK_ON_ROAD : TICKS_PER_BLOCK_OFF_ROAD;
+
+            sb.append(String.format("\n[RoadPlan]   #%d %s xz=%d dy=%d speed=%dt/b (%d ticks)  (%.0f,%.0f,%.0f)→(%.0f,%.0f,%.0f)",
+                    i, type, xzDist, dy, speed, xzDist * speed,
+                    seg.fromX(), seg.fromY(), seg.fromZ(),
+                    seg.toX(), seg.toY(), seg.toZ()));
+        }
+
+        // Show full Dijkstra path as a compact coordinate trail
+        sb.append("\n[RoadPlan]   Dijkstra path (").append(dijkstraPath.size()).append(" nodes):");
+        for (int i = 0; i < dijkstraPath.size(); i++) {
+            PathPoint p = dijkstraPath.get(i);
+            if (i % 4 == 0) sb.append("\n[RoadPlan]     ");
+            sb.append(String.format("(%d,%d,%d)", p.x(), p.y(), p.z()));
+            if (i < dijkstraPath.size() - 1) sb.append(" → ");
+        }
+
+        Log.info(TAG, sb.toString());
+    }
+
+    // ── Snap helper ───────────────────────────────────────────────
+
+    @Nullable
+    private static PathPoint betterSnap(@Nullable PathPoint a, @Nullable PathPoint b,
+                                         PathPoint target) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return scoreSnap(a, target) <= scoreSnap(b, target) ? a : b;
+    }
+
+    private static double scoreSnap(PathPoint pp, PathPoint target) {
+        int xzDist = pp.manhattanXZTo(target);
+        int dy = Math.abs(pp.y() - target.y());
+        double score = xzDist + dy * 0.8;
+        if (dy <= xzDist) score -= 0.4 * xzDist;
+        return score;
+    }
+
+    // ── Graph building ────────────────────────────────────────────
+
+    private static Graph buildGraph(@Nullable RoadNetwork network,
+                                    @Nullable RoadBlobCache blobCache) {
         Graph graph = new Graph();
         Set<NodeKey> allPoints = new HashSet<>();
         List<NodeKey> edgeEndpoints = new ArrayList<>();
 
-        for (RoadEdge edge : network.getEdges().values()) {
-            List<PathPoint> pts = edge.getPath();
-            if (pts.isEmpty()) continue;
+        // Phase 1: Network edges (all on-road)
+        if (network != null) {
+            for (RoadEdge edge : network.getEdges().values()) {
+                List<PathPoint> pts = edge.getPath();
+                if (pts.isEmpty()) continue;
 
-            for (int i = 0; i < pts.size(); i++) {
-                PathPoint p = pts.get(i);
-                NodeKey key = new NodeKey(p.x(), p.y(), p.z());
-                allPoints.add(key);
+                for (int i = 0; i < pts.size(); i++) {
+                    PathPoint p = pts.get(i);
+                    NodeKey key = new NodeKey(p.x(), p.y(), p.z());
+                    allPoints.add(key);
 
-                // Collect endpoints for gap bridging (T-junctions and gaps occur at edge ends)
-                if (i == 0 || i == pts.size() - 1) {
-                    edgeEndpoints.add(key);
-                }
+                    if (i == 0 || i == pts.size() - 1) {
+                        edgeEndpoints.add(key);
+                    }
 
-                // Within-edge link
-                if (i < pts.size() - 1) {
-                    PathPoint next = pts.get(i + 1);
-                    NodeKey nextKey = new NodeKey(next.x(), next.y(), next.z());
-
-                    int distXZ = p.manhattanXZTo(next);
-                    // Weight is time (ticks). Ensure min 1 so Y-only changes aren't 0 weight.
-                    int weight = Math.max(1, distXZ) * TICKS_PER_BLOCK_ON_ROAD;
-                    graph.addEdge(key, nextKey, weight);
+                    if (i < pts.size() - 1) {
+                        PathPoint next = pts.get(i + 1);
+                        NodeKey nextKey = new NodeKey(next.x(), next.y(), next.z());
+                        int distXZ = p.manhattanXZTo(next);
+                        int weight = Math.max(1, distXZ) * TICKS_PER_BLOCK_ON_ROAD;
+                        graph.addEdge(key, nextKey, weight, true /* onRoad */);
+                    }
                 }
             }
         }
 
-        // Cross-edge Gap Bridging (The Magic Fix)
-        // Check every edge endpoint against EVERY point in the network.
-        // If they are physically close, connect them with an OFF_ROAD penalty weight.
-        for (NodeKey ep : edgeEndpoints) {
+        // Phase 2: Blob虫洞 (all on-road)
+        List<NodeKey> blobBoundaryNodes = new ArrayList<>();
+        if (blobCache != null && !blobCache.isEmpty()) {
+            for (Map.Entry<UUID, Set<PathPoint>> entry : blobCache.getAllBlobs().entrySet()) {
+                UUID blobId = entry.getKey();
+                Set<PathPoint> boundaries = blobCache.getBoundaryPoints(blobId);
+
+                if (boundaries.size() < 2) continue;
+
+                List<NodeKey> bNodes = new ArrayList<>();
+                for (PathPoint bp : boundaries) {
+                    NodeKey key = new NodeKey(bp.x(), bp.y(), bp.z());
+                    bNodes.add(key);
+                    allPoints.add(key);
+                    blobBoundaryNodes.add(key);
+                }
+
+                NodeKey centroid = computeCentroid(bNodes);
+
+                // Connect each boundary point to centroid — onRoad
+                for (NodeKey bn : bNodes) {
+                    int dxz = Math.abs(bn.x() - centroid.x()) + Math.abs(bn.z() - centroid.z());
+                    int weight = Math.max(1, dxz) * TICKS_PER_BLOCK_ON_ROAD;
+                    graph.addEdge(bn, centroid, weight, true /* onRoad */);
+                }
+            }
+        }
+
+        // Phase 3: Gap bridging (all off-road)
+        List<NodeKey> allEndpoints = new ArrayList<>(edgeEndpoints);
+        allEndpoints.addAll(blobBoundaryNodes);
+
+        for (NodeKey ep : allEndpoints) {
             for (NodeKey pt : allPoints) {
                 if (ep.equals(pt)) continue;
+                if (graph.neighbors(ep).containsKey(pt)) continue;
 
                 int dx = Math.abs(ep.x() - pt.x());
                 int dz = Math.abs(ep.z() - pt.z());
                 int dy = Math.abs(ep.y() - pt.y());
 
-                // If within max gap distance
                 if (dx + dz <= MAX_GAP_XZ && dy <= MAX_GAP_Y) {
                     int distXZ = dx + dz;
-                    // Penalty weight: treat gap as off-road travel
                     int weight = Math.max(1, distXZ) * TICKS_PER_BLOCK_OFF_ROAD;
-                    graph.addEdge(ep, pt, weight);
+                    graph.addEdge(ep, pt, weight, false /* offRoad */);
                 }
             }
         }
@@ -264,7 +405,38 @@ public final class RoadRouter {
         return graph;
     }
 
-    // ── Dijkstra ──
+    private static NodeKey computeCentroid(List<NodeKey> nodes) {
+        int n = nodes.size();
+        int[] xs = new int[n];
+        int[] zs = new int[n];
+
+        for (int i = 0; i < n; i++) {
+            xs[i] = nodes.get(i).x();
+            zs[i] = nodes.get(i).z();
+        }
+        Arrays.sort(xs);
+        Arrays.sort(zs);
+
+        int cx = xs[n / 2];
+        int cz = zs[n / 2];
+
+        Map<Integer, Integer> yCounts = new HashMap<>();
+        for (NodeKey nk : nodes) {
+            yCounts.merge(nk.y(), 1, Integer::sum);
+        }
+        int cy = nodes.get(0).y();
+        int bestCount = 0;
+        for (var entry : yCounts.entrySet()) {
+            if (entry.getValue() > bestCount) {
+                bestCount = entry.getValue();
+                cy = entry.getKey();
+            }
+        }
+
+        return new NodeKey(cx, cy, cz);
+    }
+
+    // ── Dijkstra ──────────────────────────────────────────────────
 
     private static DijkstraResult dijkstra(Graph graph, NodeKey start, NodeKey end) {
         Map<NodeKey, Integer> dist = new HashMap<>();
@@ -283,7 +455,7 @@ public final class RoadRouter {
 
             for (var entry : graph.neighbors(cur.key).entrySet()) {
                 NodeKey nb = entry.getKey();
-                int newDist = cur.dist + entry.getValue();
+                int newDist = cur.dist + entry.getValue().weight;
                 if (newDist < dist.getOrDefault(nb, Integer.MAX_VALUE)) {
                     dist.put(nb, newDist);
                     prev.put(nb, cur.key);
@@ -309,12 +481,8 @@ public final class RoadRouter {
 
     record DijkstraResult(int visited, @Nullable List<PathPoint> path) {}
 
-    // ── Simplification ──
+    // ── Simplification ────────────────────────────────────────────
 
-    /**
-     * Merges colinear, consecutive segments of the same type (road/off-road)
-     * to keep the final segment count low.
-     */
     private static List<RouteSegment> simplifySegments(List<RouteSegment> raw) {
         if (raw.isEmpty()) return raw;
 
@@ -324,7 +492,6 @@ public final class RoadRouter {
         for (int i = 1; i < raw.size(); i++) {
             RouteSegment next = raw.get(i);
 
-            // Merge condition: same road state & continuous
             if (current.onRoad() == next.onRoad() &&
                     current.toX() == next.fromX() &&
                     current.toY() == next.fromY() &&
@@ -338,14 +505,10 @@ public final class RoadRouter {
                 double dy2 = next.toY() - next.fromY();
                 double dz2 = next.toZ() - next.fromZ();
 
-                // Cross-product check for 3D colinearity
                 if (dx1 * dy2 == dx2 * dy1 && dx1 * dz2 == dx2 * dz1 && dy1 * dz2 == dy2 * dz1) {
-                    // Check signs to ensure they go the exact same direction
                     if (Integer.signum((int) dx1) == Integer.signum((int) dx2) &&
                             Integer.signum((int) dy1) == Integer.signum((int) dy2) &&
                             Integer.signum((int) dz1) == Integer.signum((int) dz2)) {
-
-                        // Merge them
                         current = new RouteSegment(
                                 current.fromX(), current.fromY(), current.fromZ(),
                                 next.toX(), next.toY(), next.toZ(),
@@ -356,7 +519,6 @@ public final class RoadRouter {
                 }
             }
 
-            // Cannot merge, save current and start new
             result.add(current);
             current = next;
         }
@@ -364,22 +526,37 @@ public final class RoadRouter {
         return result;
     }
 
-    // ── Internal types ──
+    // ── Internal types ────────────────────────────────────────────
 
     record NodeKey(int x, int y, int z) {}
 
     private record DistNode(NodeKey key, int dist) {}
 
-    private static class Graph {
-        final Map<NodeKey, Map<NodeKey, Integer>> nodes = new HashMap<>();
+    /** Per-edge metadata: travel weight (ticks) + whether it's on-road. */
+    private record EdgeInfo(int weight, boolean onRoad) {}
 
-        void addEdge(NodeKey n1, NodeKey n2, int weight) {
-            nodes.computeIfAbsent(n1, k -> new HashMap<>()).merge(n2, weight, Math::min);
-            nodes.computeIfAbsent(n2, k -> new HashMap<>()).merge(n1, weight, Math::min);
+    private static class Graph {
+        final Map<NodeKey, Map<NodeKey, EdgeInfo>> nodes = new HashMap<>();
+
+        void addEdge(NodeKey n1, NodeKey n2, int weight, boolean onRoad) {
+            EdgeInfo info = new EdgeInfo(weight, onRoad);
+            nodes.computeIfAbsent(n1, k -> new HashMap<>()).merge(n2, info,
+                    (old, neu) -> old.weight <= neu.weight ? old : neu);
+            nodes.computeIfAbsent(n2, k -> new HashMap<>()).merge(n1, info,
+                    (old, neu) -> old.weight <= neu.weight ? old : neu);
         }
 
-        Map<NodeKey, Integer> neighbors(NodeKey n) {
+        Map<NodeKey, EdgeInfo> neighbors(NodeKey n) {
             return nodes.getOrDefault(n, Map.of());
+        }
+
+        /**
+         * Query whether the edge n1→n2 is on-road.
+         * Returns false if the edge doesn't exist (shouldn't happen for Dijkstra path).
+         */
+        boolean isOnRoad(NodeKey n1, NodeKey n2) {
+            EdgeInfo info = nodes.getOrDefault(n1, Map.of()).get(n2);
+            return info != null && info.onRoad;
         }
 
         @Nullable

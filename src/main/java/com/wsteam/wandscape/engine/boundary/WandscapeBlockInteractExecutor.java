@@ -19,6 +19,7 @@ import com.wsteam.wandscape.core.op.ResourceShortageException;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -470,7 +471,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
         BlockPos from = npc.blockPosition();
-        List<RouteSegment> route = planRoute(colonyId, from, to);
+        List<RouteSegment> route = planRoute(colonyId, from, to, npc.level());
 
         ItemKey key = ItemKey.of(itemId, null);
         int visualCount = Math.min(amount, TRANSPORT_VISUAL_COUNT);
@@ -490,7 +491,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
         BlockPos from = npc.blockPosition();
-        List<RouteSegment> route = planRoute(colonyId, from, to);
+        List<RouteSegment> route = planRoute(colonyId, from, to, npc.level());
 
         int visualCount = Math.min(count, TRANSPORT_VISUAL_COUNT);
         for (int i = 0; i < visualCount; i++) {
@@ -593,15 +594,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         return nearest;
     }
 
-    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to) {
-        try {
-            var roadApi = WandscapeApis.getRoadApi();
-            if (roadApi == null) return List.of();
-            return RoadRouter.plan(roadApi.getNetwork(colonyId),
-                    new PathPoint(from.getX(), from.getY(), from.getZ()),
-                    new PathPoint(to.getX(), to.getY(), to.getZ()));
-        } catch (Exception e) {
-            return List.of();
-        }
+    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to,
+                                                 net.minecraft.world.level.Level level) {
+        return RoadRoutingHelper.planWithRoads(
+                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 }

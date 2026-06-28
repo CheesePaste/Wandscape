@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:purpur_block",
+    "minecraft:nether_bricks",
+    "minecraft:dark_prismarine"
+  ]
+}

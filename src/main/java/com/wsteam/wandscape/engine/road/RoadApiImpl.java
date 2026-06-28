@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.core.road.RoadBlobCache;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.road.server.RoadEditorHandler;
@@ -50,6 +51,18 @@ public class RoadApiImpl implements RoadApi {
     @Override
     public String getRoadBlock(String tier) {
         return RoadConfig.getInstance().getDefaultBlock(tier);
+    }
+
+    @Override
+    public RoadBlobCache getBlobCache(UUID colonyId) {
+        try {
+            return RoadSavedData.getOrCreate(
+                    net.neoforged.neoforge.server.ServerLifecycleHooks
+                            .getCurrentServer().overworld())
+                    .getBlobCache();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override

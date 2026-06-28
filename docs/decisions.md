@@ -192,3 +192,17 @@
 **为什么字面量/Var 表达式节点值内联编辑（inlineValues map）而非也走连线？** 字面量（LiteralString/LiteralInt/LiteralPos）是表达式树的叶子节点，值为单一常量。为 `"42"` 这个 int 画一个独立节点并连线到 Add.left 虽然纯正，但会导致画布上出现大量无意义的"常量盒子"。折中：字面量/Var 节点仍渲染为小菱形节点（保留 D 路线的可追溯性），但其值直接内联编辑（点击节点在 Inspector 改值），输出为单根数据引脚——连线到消费节点即可。
 
 **为什么蓝图编辑器仿照 building/editor/ 模式独立为 blueprint/editor/ 包？** 复用已验证的架构：ClientState（volatile 静态状态）+ ImGui（渲染）+ Controller（逻辑）+ Network（网络包）。ImGuiManager 只负责调度，不持有编辑器逻辑——与 BuildingEditorImGui 的委托关系一致。BlueprintEditorCommand 作为入口，toggle 时激活编辑器状态。
+
+## 懒加载道路斑块（Lazy Road Blob）系统（2026-06-28）
+
+**为什么要加入玩家自定义道路寻路？** 当前 RoadRouter 只在系统 RoadNetwork（MST 生成的道路 edges）上寻路。玩家手动铺设的 cobblestone/stone_bricks 等方块不被识别为道路——NPC 走到玩家铺的路上不会获得 on-road 加速。自定义道路让玩家可以用铺路代替编辑器，玩法更自由。
+
+**为什么选 BFS 懒发现 + 编号缓存而非监听 BlockPlace 事件？** 监听放置事件在玩家铺路时持续增加服务器负担（每方块触发一次事件），而 BFS 懒加载只在 NPC 需要寻路时才扫描。铺路时 0 开销，寻路时代价是一次性的（缓存后同区域后续寻路 O(1) 命中）。这符合 Minecraft 的性能优化哲学——"不见兔子不撒鹰"。
+
+**为什么斑块用 centroid 虚拟节点作为虫洞而非 O(n²) 全网状连接？** 每个斑块可能有数百个边界点。若所有边界点互相连接（O(n²) edges），图会爆炸。改用 centroid 虚拟节点作为星型中心——每个边界点连接到 centroid（O(n) edges），路径 = entry→centroid→exit。代价是对非凸形状的高估（经过 centroid 绕路），但实践中玩家铺的道路多为矩形或直线，误差可接受。
+
+**为什么不持久化 RoadBlobCache 到 NBT？** 斑块数据可从世界方块完全推导（BFS 扫描），不需要跨会话持久化。每次世界加载后首次寻路时重新扫描即可。避免 NBT 膨胀和脏数据漂移（块卸载/重加载导致部分方块不可见时缓存不完整）。
+
+**为什么边界只在 XZ 平面检查（不检查 Y±1）？** 楼梯/斜坡的每个台阶天然是边界——NPC 可以在任意台阶上/下道路。检查 Y±1 会让平坦道路的内部方块也成为边界（因为上方无方块），失去"内部 vs 边界"的区分意义。Y 变体通过 centroid 虫洞自动处理——BFS 已经将楼梯的所有台阶纳入同一个斑块。
+
+**为什么核心数据结构和引擎扫描分开为 core/RoadBlobCache + engine/RoadBlobExplorer？** 遵循 core/ 零 MC 依赖规则。RoadBlobCache 是纯 Java 集合操作（Map/Set/BFS），可在单元测试中验证。RoadBlobExplorer 需要 Level/BlockState/TagKey，放在 engine/。RoadRouter.buildGraph() 只读 RoadBlobCache，是纯核心逻辑。

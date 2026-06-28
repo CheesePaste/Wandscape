@@ -13,6 +13,7 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -336,7 +337,7 @@ public final class ShopStockManager {
             } else {
                 BuildingState shopState = savedData.getBuilding(buildingId);
                 if (shopState != null && !shopState.isShutdown()) {
-                    route = planRestockRoute(colonyId, warehousePos, shopState.getAnchor());
+                    route = planRestockRoute(colonyId, warehousePos, shopState.getAnchor(), level);
                 } else {
                     hasTransport = false;
                 }
@@ -517,15 +518,10 @@ public final class ShopStockManager {
      * Returns empty list if no road network — caller falls back to direct transport.
      */
     private static List<RouteSegment> planRestockRoute(UUID colonyId,
-                                                        BlockPos from, BlockPos to) {
-        try {
-            var roadApi = WandscapeApis.getRoadApi();
-            return RoadRouter.plan(roadApi.getNetwork(colonyId),
-                    new PathPoint(from.getX(), from.getY(), from.getZ()),
-                    new PathPoint(to.getX(), to.getY(), to.getZ()));
-        } catch (IllegalStateException | NullPointerException e) {
-            return List.of();
-        }
+                                                        BlockPos from, BlockPos to,
+                                                        net.minecraft.world.level.Level level) {
+        return RoadRoutingHelper.planWithRoads(
+                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 
     /** Look up an item's element value from element_mappings and convert to restock cost. */

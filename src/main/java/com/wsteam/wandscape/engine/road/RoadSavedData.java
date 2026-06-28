@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.core.road.RoadBlobCache;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.PathPoint;
@@ -28,11 +29,13 @@ public final class RoadSavedData extends SavedData {
     private static final String DATA_NAME = "wandscape_roads";
 
     private final RoadNetwork network;
+    private final RoadBlobCache blobCache;
     private UUID colonyId;
     private int buildingCount;
 
     private RoadSavedData() {
         this.network = new RoadNetwork();
+        this.blobCache = new RoadBlobCache();
     }
 
     // ---- Factory ----
@@ -46,6 +49,7 @@ public final class RoadSavedData extends SavedData {
     // ---- Accessors ----
 
     public RoadNetwork getNetwork() { return network; }
+    public RoadBlobCache getBlobCache() { return blobCache; }
 
     public UUID getColonyId() { return colonyId; }
     public void setColonyId(UUID colonyId) {
