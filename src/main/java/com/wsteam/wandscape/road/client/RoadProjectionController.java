@@ -14,6 +14,7 @@ import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.road.network.RoadBatchPublishPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -92,6 +93,8 @@ public final class RoadProjectionController {
 
     static void onMouseButton(InputEvent.MouseButton.Pre event) {
         if (!RoadProjectionClientState.isProjecting()) return;
+        // Skip clicks when panel cursor is lifted (UI mode)
+        if (WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted()) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -124,6 +127,11 @@ public final class RoadProjectionController {
      */
     static void onKey(InputEvent.Key event) {
         if (!RoadProjectionClientState.isProjecting()) return;
+        // Skip most keys when panel cursor is lifted (UI mode)
+        // but let Escape through to close panel
+        if (WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted()) {
+            return;
+        }
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -159,9 +167,11 @@ public final class RoadProjectionController {
                 handleUndo(mc);
             }
 
-            // ── Escape: exit ──
+            // ── Escape: exit (only when panel is NOT open — panel controller handles it)
             case GLFW.GLFW_KEY_ESCAPE -> {
-                doExit();
+                if (!WandscapePanelState.isPanelOpen()) {
+                    doExit();
+                }
             }
         }
     }

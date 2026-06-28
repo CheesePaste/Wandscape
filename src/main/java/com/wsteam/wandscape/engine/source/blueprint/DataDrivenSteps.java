@@ -7,7 +7,7 @@ import java.util.Map;
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.task.BlueprintSteps;
 import com.wsteam.wandscape.core.task.TaskSequence;

@@ -10,6 +10,7 @@ import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -46,7 +47,6 @@ public final class ProjectionFlightController {
     private static final double PROJECTION_REACH = 64.0;
 
     // ── Input edge detection state ──
-    private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
     private static boolean wasEscapeDown = false;
 
@@ -74,18 +74,29 @@ public final class ProjectionFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        // Allow projection mode with screen open? No — screen blocks input
         if (mc.screen != null) return;
+
+        boolean buildingBarOpen = WandscapePanelState.isBuildingBarOpen();
+        boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
 
         long window = mc.getWindow().getWindow();
 
-        // ── 1. Flight movement ──
+        // ── 1. Flight movement (always works) ──
         handleFlightMovement(mc, window);
 
-        // ── 2. Scroll wheel building selection ──
-        handleScroll(mc);
+        // ── Building bar mode: no ghost, flight only; clicks/scroll handled by bar ──
+        if (buildingBarOpen) {
+            drainVanillaInput(mc);
+            checkRange(mc);
+            return;
+        }
 
-        // ── 3. Ghost position update ──
+        if (cursorLifted) {
+            drainVanillaInput(mc);
+            return;
+        }
+
+        // ── 2. Ghost position update ──
         updateGhostPosition(mc);
 
         // ── 4. Click handling ──
@@ -152,37 +163,10 @@ public final class ProjectionFlightController {
      *  Accumulates delta in client state; the tick handler processes it. */
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
-        // Cancel vanilla processing (prevents hotbar cycling)
         event.setCanceled(true);
-        ProjectionClientState.addScrollDelta(event.getScrollDeltaY());
-    }
 
-    private static void handleScroll(Minecraft mc) {
-        double scrollDelta = ProjectionClientState.getAccumulatedScroll();
-        if (Math.abs(scrollDelta) < 1.0) return;
-
-        ProjectionClientState.resetScroll();
-
-        var slots = ProjectionClientState.getBuildingSlots();
-        int size = slots.size();
-        if (size == 0) return;
-
-        int current = ProjectionClientState.getSelectedSlotIndex();
-        int next;
-        if (scrollDelta > 0) {
-            next = (current + 1) % size;
-        } else {
-            next = Math.floorMod(current - 1, size);
-        }
-        ProjectionClientState.setSelectedSlotIndex(next);
-
-        if (next < slots.size()) {
-            BuildingSlot slot = slots.get(next);
-            mc.player.displayClientMessage(
-                    Component.literal("[§d" + (next + 1) + "/" + size + "§f] " +
-                            slot.displayName() + " §7(" + slot.category() + ")"),
-                    true);
-        }
+        // Building bar open — scroll does NOT cycle building selection (removed per user request)
+        // No scroll-to-switch outside bar — selection is bar-only
     }
 
     // ── Ghost position ──
@@ -222,23 +206,14 @@ public final class ProjectionFlightController {
     // ── Click handling ──
 
     private static void handleClicks(Minecraft mc, long window) {
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
 
-        boolean leftClicked = leftDown && !wasLeftDown;
         boolean rightClicked = rightDown && !wasRightDown;
-
-        wasLeftDown = leftDown;
         wasRightDown = rightDown;
 
-        // Left-click: place building
-        if (leftClicked) {
-            handlePlace(mc);
-        }
-
-        // Right-click: exit projection
+        // Right-click: place building
         if (rightClicked) {
-            doExit();
+            handlePlace(mc);
         }
     }
 
@@ -270,9 +245,13 @@ public final class ProjectionFlightController {
         boolean escapeClicked = escapeDown && !wasEscapeDown;
         wasEscapeDown = escapeDown;
 
-        if (escapeClicked) {
+        if (!escapeClicked) return;
+
+        // Panel not open → exit projection entirely
+        if (!WandscapePanelState.isPanelOpen()) {
             doExit();
         }
+        // When panel is open, ESC handled by WandscapePanelController via ScreenEvent.Opening
     }
 
     // ── Exit ──

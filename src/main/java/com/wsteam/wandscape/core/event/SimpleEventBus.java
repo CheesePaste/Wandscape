@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.event;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.EventBus;
 
 import java.util.*;

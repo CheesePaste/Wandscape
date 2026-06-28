@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.task;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import javax.annotation.Nullable;

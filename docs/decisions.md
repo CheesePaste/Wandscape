@@ -170,3 +170,11 @@
 **为什么增加空闲超时作为第三离开条件（与 jingying.md 的两条件模型偏离）？** jingying.md 只有精力耗尽和夜幕两个离开条件。实际游戏中存在"游客在街上持续 idle 但不触发离开"的边界情况：建筑无货/无空位导致 planNextBuilding 返回空，游客无限期 idle。空闲超时（TOURIST_DESPAWN_TIMEOUT_TICKS）兜底清理这些僵尸游客，防止内存泄漏和世界实体堆积。
 
 **为什么货物种类由 JSON 固定而非玩家自由设定？** jingying.md 原始设计是"玩家设定进货清单"，但拖拽式进货清单需要物品浏览器+搜索+NBT匹配的完整 GUI，远超出 MVP 范围。JSON 固定货物种类实现商店类型差异化（面包店 vs 药水店由不同 JSON 定义），新增商店类型只需加 JSON 文件。玩家仍可通过 GUI 调整每种货物的 max_stock（库存深度决策），但不增减货物种类。
+
+## 综合面板 (WandscapePanel)
+
+**为什么面板用 Overlay 渲染（RenderGuiEvent.Post）而非 Screen？** Screen 方案会隐藏准心、使投影控制器 `mc.screen != null` 提前返回导致所有子模式失效。Overlay 方案渲染在游戏 GUI 之上，不干扰世界渲染和输入系统，准心保留。Cursor 通过 C 键手动控制 MouseHandler.releaseMouse()/grabMouse() 实现 UI 交互切换。
+
+**为什么建筑右键门控放服务端而非客户端取消事件？** BuildingInteractHandler 是服务端类，客户端取消 `RightClickBlock` 事件不可靠（服务端仍可能收到）。改为服务端维护 `PanelStateTracker.panelOpenPlayers` 集合，面板打开时 C→S 通知服务器，右键处理前检查该集合。面板关闭时移除，玩家断线自动清理。
+
+**为什么 V 键从三态循环改为面板开关？** 原三态循环（Normal→Projection→Road→Normal）选择不直观，无法直接跳到目标模式。面板底部页签可任意切换模式，V 键简化为面板开关单一职责。旧版 V 键循环逻辑移至 WandscapePanelState.enterSubMode()/exitCurrentSubMode()。

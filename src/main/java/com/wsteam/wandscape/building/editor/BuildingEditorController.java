@@ -7,6 +7,7 @@ import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.network.BuildingEditorExitPacket;
 import com.wsteam.wandscape.building.network.BuildingEditorExportPacket;
 import com.wsteam.wandscape.imgui.ImGuiManager;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import imgui.ImGui;
 import net.minecraft.client.Camera;
@@ -77,6 +78,9 @@ public final class BuildingEditorController {
             mc.mouseHandler.releaseMouse();
         }
 
+        // When panel cursor is lifted, skip world clicks but still allow camera rotation
+        boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
+
         if (cameraActive) {
             // MC handles the look input natively when mouse is grabbed.
             // We just need to zero out our custom flight movement.
@@ -103,7 +107,7 @@ public final class BuildingEditorController {
                         BuildingEditorClientState.isEditing());
             }
 
-            if (!overPanel) {
+            if (!overPanel && !cursorLifted) {
                 BuildingEditorInputHandler.handleClicks(mc, window);
             }
         }
@@ -172,8 +176,8 @@ public final class BuildingEditorController {
         wasEscapeDown = escapeDown;
         wasEnterDown = enterDown;
 
-        // Escape: exit editor (only when ImGui doesn't own keyboard)
-        if (escapeClicked && !imguiWantsKb) {
+        // Escape: exit editor (only when ImGui doesn't own keyboard AND panel is not open)
+        if (escapeClicked && !imguiWantsKb && !WandscapePanelState.isPanelOpen()) {
             doExit();
         }
 

@@ -8,18 +8,12 @@ import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
 import com.wsteam.wandscape.road.client.RoadEditorRenderer;
-import com.wsteam.wandscape.road.client.RoadEditorClientState;
 import com.wsteam.wandscape.road.client.RoadProjectionController;
 import com.wsteam.wandscape.road.client.RoadProjectionRenderer;
-import com.wsteam.wandscape.road.client.RoadProjectionClientState;
-import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
-import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.client.BuildingDebugController;
-import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
-import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.production.client.CraftingStationScreen;
@@ -45,6 +39,9 @@ import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseThresholdDataPacket;
 
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -62,6 +59,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -115,6 +113,13 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping PANEL_CURSOR_TOGGLE = new KeyMapping(
+            "key.wandscape.panel_cursor",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_C,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
@@ -128,6 +133,10 @@ public class WandscapeClient {
         BuildingEditorRenderer.register();
         BuildingEditorAxisRenderer.register();
         BuildingEditorInputHandler.register();
+
+        // Wandscape Panel
+        WandscapePanelController.register();
+        WandscapePanelOverlay.register();
 
         // ImGui: register static event handlers on ImGuiManager
         NeoForge.EVENT_BUS.register(ImGuiManager.class);
@@ -219,6 +228,7 @@ public class WandscapeClient {
         event.register(PROJECTION_TOGGLE);
         event.register(DEBUG_TOGGLE);
         event.register(IMGUI_TOGGLE);
+        event.register(PANEL_CURSOR_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
@@ -233,23 +243,17 @@ public class WandscapeClient {
             Minecraft.getInstance().setScreen(new TaskEditorScreen());
         }
         while (PROJECTION_TOGGLE.consumeClick()) {
-            // Cycle: Normal → Projection (buildings) → Road Projection → Normal
-            if (RoadProjectionClientState.isProjecting()) {
-                // Road Projection → Normal
-                RoadProjectionClientState.exitProjection();
-                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
-            } else if (RoadEditorClientState.isEditing()) {
-                // Old Road Editor → Normal (fallback if entered via /wandscape road edit)
-                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
-            } else if (ProjectionClientState.isProjecting()) {
-                // Projection → Road Projection
-                ProjectionClientState.exitProjection();
-                PacketDistributor.sendToServer(new ProjectionExitPacket());
-                RoadProjectionClientState.setExpectingSync(true);
-                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
+            // V key: toggle Wandscape panel open/close
+            if (WandscapePanelState.isPanelOpen()) {
+                WandscapePanelState.closePanel();
             } else {
-                // Normal → Projection
-                PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                WandscapePanelState.openPanel();
+            }
+        }
+        while (PANEL_CURSOR_TOGGLE.consumeClick()) {
+            // C key: lift/release cursor within the panel
+            if (WandscapePanelState.isPanelOpen()) {
+                WandscapePanelState.toggleCursor();
             }
         }
         while (DEBUG_TOGGLE.consumeClick()) {
@@ -294,5 +298,10 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(Wandscape.CAST_BOLT.get(), CastBoltParticle.Provider::new);
+    }
+
+    @SubscribeEvent
+    static void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(Wandscape.DATA_LOADER);
     }
 }

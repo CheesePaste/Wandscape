@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -47,18 +48,22 @@ public record ProjectionEnterResponsePacket(
         if (mc.player == null) return;
 
         if (packet.granted) {
-            // Enter projection mode
             ProjectionClientState.enterProjection(packet.bodyAnchor, packet.buildingSlots);
+            // Auto-open building selection bar
+            WandscapePanelState.openBuildingBar();
             mc.player.displayClientMessage(
-                    Component.literal("[Projection] §aSoul projection active — §f" +
-                            packet.buildingSlots.size() + " §abuildings available. " +
-                            "§7[V] §ato exit"),
+                    Component.literal("[Build] §a" + packet.buildingSlots.size()
+                            + " buildings available — double-click to select"),
                     true);
         } else {
-            // Exit projection mode
             ProjectionClientState.exitProjection();
+            WandscapePanelState.closeBuildingBar();
+            if (WandscapePanelState.isPanelOpen()) {
+                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
+                WandscapePanelState.closeBuildingBar();
+            }
             mc.player.displayClientMessage(
-                    Component.literal("[Projection] §eProjection ended — returned to body"),
+                    Component.literal("[Projection] §eCannot enter projection mode"),
                     true);
         }
     }

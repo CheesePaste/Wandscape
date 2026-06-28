@@ -24,6 +24,7 @@ import com.wsteam.wandscape.command.BuildEditorCommand;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
+import com.wsteam.wandscape.command.LogFilterCommand;
 import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
@@ -244,6 +245,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
         MaintenanceSystem.register();
         decorationBonusSystem = DecorationBonusSystem.register();
         shopStockManager = ShopStockManager.register();
@@ -277,6 +279,7 @@ public class Wandscape {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
         LOGGER.info("Wandscape common setup — wand, element, buildings, npc ready");
+        com.wsteam.wandscape.shared.log.LogFilterBootstrap.install();
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
@@ -427,7 +430,18 @@ public class Wandscape {
                 .playToClient(
                         BuildingEditorExportResultPacket.TYPE,
                         BuildingEditorExportResultPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingEditorExportResultPacket.handleClient(packet));
+                        (packet, ctx) -> BuildingEditorExportResultPacket.handleClient(packet))
+                // ── Wandscape Panel ──
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.PanelStateTogglePacket.TYPE,
+                        com.wsteam.wandscape.shared.network.PanelStateTogglePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.PanelStateTogglePacket
+                                .handleServer(packet, (ServerPlayer) ctx.player()))
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket
+                                .handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -523,6 +537,7 @@ public class Wandscape {
         var root = Commands.literal("wandscape")
                 .requires(src -> src.hasPermission(2))
                 .then(GenerateElementMappingsCommand.node())
+                .then(LogFilterCommand.node())
                 .then(FillBuildingCommand.fillNode())
                 .then(ManaCommand.node())
                 .then(NavTestCommand.node())

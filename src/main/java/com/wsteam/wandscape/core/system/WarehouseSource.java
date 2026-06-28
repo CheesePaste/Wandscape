@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.system;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.ResourceLow;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
