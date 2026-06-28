@@ -16,6 +16,7 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.extension.nodeditor.NodeEditor;
 import imgui.extension.nodeditor.NodeEditorContext;
 import imgui.extension.nodeditor.flag.NodeEditorPinKind;
+import imgui.extension.nodeditor.flag.NodeEditorStyleColor;
 import imgui.type.ImLong;
 import imgui.type.ImString;
 import imgui.type.ImInt;
@@ -84,43 +85,65 @@ public final class BlueprintEditorImGui {
     // ═══════════════════════════════════════════════════════════════
 
     public static void render(NodeEditorContext ctx) {
-        if (!BlueprintEditorClientState.isEditing()) return;
+    System.out.println("render.0 isEditing=" + BlueprintEditorClientState.isEditing());
 
-        BlueprintEditorCanvas graph = BlueprintEditorClientState.getCanvas();
-        if (graph == null) return;
+    if (!BlueprintEditorClientState.isEditing()) return;
 
-        var io = ImGui.getIO();
-        float winW = io.getDisplaySizeX() - INSPECTOR_WIDTH;
-        float winH = io.getDisplaySizeY();
+    System.out.println("render.1 getCanvas");
+    BlueprintEditorCanvas graph = BlueprintEditorClientState.getCanvas();
+    if (graph == null) return;
+    System.out.println("render.2 nodes=" + graph.nodes.size());
 
-        // ── Full-window canvas ──
-        ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
-        ImGui.setNextWindowSize(winW, winH, ImGuiCond.Always);
-        int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove
-                | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoTitleBar
-                | ImGuiWindowFlags.NoBringToFrontOnFocus;
+    var io = ImGui.getIO();
+    System.out.println("render.3 displaySize=" + io.getDisplaySizeX() + "x" + io.getDisplaySizeY());
 
-        if (ImGui.begin("Blueprint Canvas", flags)) {
-            renderTopBar(graph);
-            renderNodeCanvas(graph, ctx);
-        }
-        ImGui.end();
+    float winW = io.getDisplaySizeX() - INSPECTOR_WIDTH;
+    float winH = io.getDisplaySizeY();
+    System.out.println("render.4 winSize=" + winW + "x" + winH);
 
-        // ── Inspector panel (right side) ──
-        if (BlueprintEditorClientState.isInspectorVisible()) {
-            renderInspector(graph);
-        }
+    ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+    ImGui.setNextWindowSize(winW, winH, ImGuiCond.Always);
+    System.out.println("render.5 setNextWindow done");
 
-        // ── Search palette (modal popup) ──
-        if (BlueprintEditorClientState.isSearchPaletteOpen()) {
-            renderSearchPalette(graph);
-        }
+    int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove
+            | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoTitleBar
+            | ImGuiWindowFlags.NoBringToFrontOnFocus;
 
-        // ── Load popup ──
-        if (loadPopupOpen) {
-            renderLoadPopup(graph);
-        }
+    System.out.println("render.6 before begin");
+    if (ImGui.begin("Blueprint Canvas", flags)) {
+        System.out.println("render.7 begin ok");
+
+        // 在这里进一步细分
+        renderTopBar(graph);
+        System.out.println("render.8 topBar done");
+
+        renderNodeCanvas(graph, ctx);
+        System.out.println("render.9 nodeCanvas done");
     }
+    System.out.println("render.10 before end");
+    ImGui.end();
+    System.out.println("render.11 end done");
+
+    if (BlueprintEditorClientState.isInspectorVisible()) {
+        System.out.println("render.12 before inspector");
+        renderInspector(graph);
+        System.out.println("render.13 inspector done");
+    }
+
+    if (BlueprintEditorClientState.isSearchPaletteOpen()) {
+        System.out.println("render.14 before search");
+        renderSearchPalette(graph);
+        System.out.println("render.15 search done");
+    }
+
+    if (loadPopupOpen) {
+        System.out.println("render.16 before loadPopup");
+        renderLoadPopup(graph);
+        System.out.println("render.17 loadPopup done");
+    }
+
+    System.out.println("render.18 ALL DONE");
+}
 
     // ═══════════════════════════════════════════════════════════════
     // Top bar
@@ -249,13 +272,14 @@ public final class BlueprintEditorImGui {
                 int fromIdx = pinIndexOf(from, de.fromPinId());
                 int toIdx = pinIndexOf(to, de.toPinId());
                 if (fromIdx >= 0 && toIdx >= 0) {
-                    // Color data links by type
+                    // Color data links by type using NodeEditor pushStyleColor
                     String typeKey = pinTypeKey(to, de.toPinId());
-                    int color = pinColorForType(typeKey);
-                    ImGui.pushStyleColor(ImGuiCol.Border, color);
+                    float[] rgba = pinColorRGBA(typeKey);
+                    NodeEditor.pushStyleColor(NodeEditorStyleColor.Flow,
+                            rgba[0], rgba[1], rgba[2], rgba[3]);
                     NodeEditor.link(uniqueLinkId++, pinId(from.nodeId, fromIdx),
                             pinId(to.nodeId, toIdx));
-                    ImGui.popStyleColor();
+                    NodeEditor.popStyleColor(1);
                 }
             }
         }
@@ -281,6 +305,20 @@ public final class BlueprintEditorImGui {
         NodeEditor.resume();
         NodeEditor.end();
         ImGui.popStyleColor();
+
+        // Selection: sync native node-editor selection state (standard click-to-select)
+        // MUST be called after End() — native backend finalizes click events there
+        long[] selectedNodes = new long[1];
+        if (NodeEditor.getSelectedNodes(selectedNodes, 1) > 0) {
+            // A node is selected in the native editor — sync to our ClientState
+            BlueprintEditorClientState.setSelectedNodeId(selectedNodes[0]);
+        } else {
+            // Background clicked? Clear native selection too
+            if (NodeEditor.isBackgroundClicked()) {
+                NodeEditor.clearSelection();
+            }
+            BlueprintEditorClientState.clearSelection();
+        }
 
         // Handle keyboard shortcuts (outside suspend/resume)
         handleShortcuts(graph);
@@ -854,6 +892,14 @@ public final class BlueprintEditorImGui {
     // Keyboard shortcuts
     // ═══════════════════════════════════════════════════════════════
 
+    // ── GLFW window handle (set by host: ImGuiManager or standalone) ──
+    private static long glfwWindow;
+
+    /** Set the GLFW window handle for raw keyboard input. Called by the host at init time. */
+    public static void setWindowHandle(long window) {
+        glfwWindow = window;
+    }
+
     // Track previous key states for edge detection (GLFW raw keys)
     private static final boolean[] prevKeyDown = new boolean[512];
 
@@ -925,8 +971,8 @@ public final class BlueprintEditorImGui {
 
     /** Rising-edge detection for a GLFW key. */
     private static boolean isGlfwKeyJustPressed(int glfwKey) {
-        long window = net.minecraft.client.Minecraft.getInstance().getWindow().getWindow();
-        boolean down = org.lwjgl.glfw.GLFW.glfwGetKey(window, glfwKey) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        if (glfwWindow == 0) return false;
+        boolean down = org.lwjgl.glfw.GLFW.glfwGetKey(glfwWindow, glfwKey) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
         boolean prev = prevKeyDown[glfwKey];
         prevKeyDown[glfwKey] = down;
         return down && !prev;
@@ -974,42 +1020,63 @@ public final class BlueprintEditorImGui {
         return result;
     }
 
+    /** Compute total pin count (static + dynamic expansion) up to output pins. */
+    private static int totalPinsBefore(BlueprintNodeDefinition.NodeDef def, CanvasNode node, BlueprintNodeDefinition.PinDir side) {
+        int count = 0;
+        for (var pin : def.execPins()) {
+            if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) count++;
+        }
+        for (var pin : def.dataPins()) {
+            if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
+                count++;
+                if (pin.dynamic()) {
+                    count += node.dynamicPinCounts.getOrDefault(pin.id(), 0);
+                }
+            }
+        }
+        if (side == BlueprintNodeDefinition.PinDir.OUTPUT) {
+            for (var pin : def.execPins()) {
+                if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) count++;
+            }
+        }
+        return count;
+    }
+
     /** Get the 0-based pin index for a named pin on a node. Includes dynamic pin offsets. */
     static int pinIndexOf(BlueprintNodeDefinition.NodeDef def, CanvasNode node, String pinId) {
         int idx = 0;
-        // Exec inputs
+        // Exec inputs (no dynamic)
         for (var pin : def.execPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
                 if (pin.id().equals(pinId)) return idx;
                 idx++;
             }
         }
-        // Data inputs (with dynamic pin detection)
+        // Data inputs (with dynamic pin expansion accounting)
         for (var pin : def.dataPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
                 if (pin.dynamic()) {
-                    // Dynamic pin: base "arg" matches at idx, "arg_1" at idx+1, "arg_2" at idx+2, etc.
                     if (pin.id().equals(pinId)) return idx;
-                    if (pinId.startsWith(pin.id() + "_")) {
-                        try {
-                            int offset = Integer.parseInt(pinId.substring(pin.id().length() + 1));
-                            return idx + offset;
-                        } catch (NumberFormatException ignored) {}
+                    int extra = node.dynamicPinCounts.getOrDefault(pin.id(), 0);
+                    for (int i = 1; i <= extra; i++) {
+                        String dynId = pin.id() + "_" + i;
+                        if (dynId.equals(pinId)) return idx + i;
                     }
+                    idx += 1 + extra; // base + all dynamic instances consume slots
                 } else {
                     if (pin.id().equals(pinId)) return idx;
+                    idx++;
                 }
-                idx++;
             }
         }
-        // Exec outputs
+        // Exec outputs (no dynamic)
         for (var pin : def.execPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) {
                 if (pin.id().equals(pinId)) return idx;
                 idx++;
             }
         }
-        // Data outputs
+        // Data outputs (no dynamic)
         for (var pin : def.dataPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) {
                 if (pin.id().equals(pinId)) return idx;
@@ -1039,7 +1106,7 @@ public final class BlueprintEditorImGui {
         return "any";
     }
 
-    /** Get pin by index (includes dynamic pins). */
+    /** Get pin by index (includes dynamic pins). Must match pinIndexOf accounting. */
     static BlueprintNodeDefinition.PinDef pinByIndex(
             BlueprintNodeDefinition.NodeDef def, CanvasNode node, int index) {
         int idx = 0;
@@ -1050,7 +1117,7 @@ public final class BlueprintEditorImGui {
                 idx++;
             }
         }
-        // Data inputs (with dynamic pin expansion)
+        // Data inputs (with dynamic pin expansion — consumes 1+extra slots per dynamic base)
         for (var pin : def.dataPins()) {
             if (pin.dir() == BlueprintNodeDefinition.PinDir.INPUT) {
                 if (idx == index) return pin;
@@ -1108,6 +1175,20 @@ public final class BlueprintEditorImGui {
             case "bool" -> 0xFF2DC0FB;        // dark yellow
             case "exec" -> 0xFFFFFFFF;        // white
             default -> 0xFFAAAAAA;            // gray
+        };
+    }
+
+    /** Get RGBA float[4] for a type key (used for NodeEditor link coloring). */
+    static float[] pinColorRGBA(String typeKey) {
+        return switch (typeKey) {
+            case "string" -> new float[]{0.357f, 0.553f, 1.0f, 1.0f};
+            case "int" -> new float[]{0.298f, 0.875f, 1.0f, 1.0f};
+            case "pos" -> new float[]{0.333f, 0.882f, 0.392f, 1.0f};
+            case "list<pos>", "list<string>", "list<any>", "list<item>" -> new float[]{0.933f, 0.635f, 0.0f, 1.0f};
+            case "map<string,string>" -> new float[]{0.686f, 0.412f, 0.933f, 1.0f};
+            case "bool" -> new float[]{0.176f, 0.753f, 0.984f, 1.0f};
+            case "exec" -> new float[]{1.0f, 1.0f, 1.0f, 1.0f};
+            default -> new float[]{0.6f, 0.6f, 0.6f, 1.0f};
         };
     }
 

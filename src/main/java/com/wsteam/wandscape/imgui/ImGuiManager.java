@@ -98,6 +98,9 @@ public class ImGuiManager {
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");
 
+        // Forward window handle to blueprint editor for keyboard shortcuts
+        com.wsteam.wandscape.blueprint.editor.BlueprintEditorImGui.setWindowHandle(windowHandle);
+
         initialized = true;
         Log.info("Wandscape", "ImGui initialized successfully");
     }

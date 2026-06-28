@@ -198,6 +198,22 @@ publishing {
     }
 }
 
+// ── Standalone blueprint editor (no Minecraft) ──
+tasks.register('runEditor', JavaExec) {
+    group = 'wandscape'
+    description = 'Run blueprint editor standalone (no MC) for rapid UI dev'
+
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.wsteam.wandscape.standalone.EditorStandalone'
+
+    jvmArgs '-Xmx512M', '-Dorg.lwjgl.util.Debug=false'
+
+    // Forward optional extra args (e.g. --args="other_blueprint.json")
+    if (project.hasProperty('editorArgs')) {
+        args project.editorArgs.split()
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
