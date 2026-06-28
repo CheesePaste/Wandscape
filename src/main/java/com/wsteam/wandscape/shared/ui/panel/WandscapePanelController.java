@@ -8,10 +8,8 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Input controller for the Wandscape comprehensive panel.
@@ -20,7 +18,7 @@ import com.wsteam.wandscape.projection.client.ProjectionClientState;
  */
 public final class WandscapePanelController {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapePanelController";
 
     // Tab layout constants — keep in sync with WandscapePanelOverlay
     public static final int TAB_W = 80;
@@ -41,7 +39,7 @@ public final class WandscapePanelController {
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
         bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpen);
-        LOGGER.info("[Panel] Controller registered");
+        Log.info(TAG, "[Panel] Controller registered");
     }
 
     static void onClientTickPost(ClientTickEvent.Post event) {
@@ -147,7 +145,7 @@ public final class WandscapePanelController {
         }
 
         WandscapePanelState.enterSubMode(targetMode);
-        LOGGER.info("[Panel] Tab {} clicked → SubMode {}", tabIndex, targetMode);
+        Log.info(TAG, "[Panel] Tab {} clicked → SubMode {}", tabIndex, targetMode);
     }
 
     // ── Building selection bar handlers ──

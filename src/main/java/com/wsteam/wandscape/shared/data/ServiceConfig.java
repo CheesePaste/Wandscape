@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.data;
 import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
-
 /**
  * Service building configuration.
  * maxOccupancy of 0 means unlimited (only relevant for inn-type services).

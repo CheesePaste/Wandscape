@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.op;
 import com.wsteam.wandscape.core.ecs.World;
 
 import java.util.concurrent.CompletableFuture;
-
 /**
  * Strategy for executing one type of AtomicOp.
  * Registered in OpExecutorRegistry and called by TaskExecutionSystem.

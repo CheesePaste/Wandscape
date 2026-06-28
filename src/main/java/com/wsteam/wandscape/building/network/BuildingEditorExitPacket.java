@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.building.network;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -13,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player exits building editor mode.
@@ -20,7 +18,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record BuildingEditorExitPacket() implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorExitPacket";
 
     public static final Type<BuildingEditorExitPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "build_editor_exit"));
@@ -39,7 +37,7 @@ public record BuildingEditorExitPacket() implements CustomPacketPayload {
         BuildingEditorNetwork.removeEditing(player);
         player.displayClientMessage(
                 Component.literal("[BuildEditor] Exited editor mode"), false);
-        LOGGER.info("[BuildEditor] Player {} exited editor", player.getGameProfile().getName());
+        Log.info(TAG, "[BuildEditor] Player {} exited editor", player.getGameProfile().getName());
     }
 
     // ── StreamCodec ──

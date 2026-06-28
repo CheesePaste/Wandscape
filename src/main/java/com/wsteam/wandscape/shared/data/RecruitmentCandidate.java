@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.data;
 
 import java.util.List;
-
 public record RecruitmentCandidate(
     int level,
     int maxHealth,

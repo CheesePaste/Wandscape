@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.boundary;
 
 import java.util.concurrent.CompletableFuture;
-
 /**
  * Core-layer boundary for NPC movement and navigation.
  * Implemented by the Minecraft adapter layer using PathfinderMob navigation.

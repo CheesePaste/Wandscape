@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.data;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 public record AbilitySet(Map<BehaviorType, Integer> abilities) {
     public AbilitySet {
         abilities = Map.copyOf(abilities);

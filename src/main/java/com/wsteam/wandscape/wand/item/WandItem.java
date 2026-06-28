@@ -14,7 +14,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-
 public class WandItem extends Item {
 
     private static final int CAST_COOLDOWN_TICKS = 8;

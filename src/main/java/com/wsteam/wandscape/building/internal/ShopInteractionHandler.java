@@ -2,10 +2,7 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.Map;
 import java.util.UUID;
-
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Handles tourist interaction with shop buildings.
@@ -15,7 +12,7 @@ import com.mojang.logging.LogUtils;
  * This is programmatic — the player-facing shop management GUI is separate.
  */
 public final class ShopInteractionHandler {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ShopInteractionHandler";
 
     private ShopInteractionHandler() {}
 
@@ -32,7 +29,7 @@ public final class ShopInteractionHandler {
                                   UUID touristId, UUID buildingId, UUID colonyId) {
         Map<String, Integer> stock = stockManager.getStock(buildingId);
         if (stock.isEmpty()) {
-            LOGGER.debug("[ShopInteract] Tourist {} tried shop {} — out of stock",
+            Log.debug(TAG, "[ShopInteract] Tourist {} tried shop {} — out of stock",
                     shortId(touristId), shortId(buildingId));
             return null;
         }
@@ -49,7 +46,7 @@ public final class ShopInteractionHandler {
 
         boolean success = stockManager.purchase(buildingId, chosenItem, colonyId);
         if (success) {
-            LOGGER.debug("[ShopInteract] Tourist {} bought {} from shop {}",
+            Log.debug(TAG, "[ShopInteract] Tourist {} bought {} from shop {}",
                     shortId(touristId), chosenItem, shortId(buildingId));
             return chosenItem;
         }

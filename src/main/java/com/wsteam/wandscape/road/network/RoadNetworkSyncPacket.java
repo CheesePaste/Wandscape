@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -25,6 +22,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→Client packet carrying the full road network state.
@@ -34,7 +32,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadNetworkSyncPacket";
 
     public static final Type<RoadNetworkSyncPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "road_network_sync"));
@@ -171,27 +169,27 @@ public record RoadNetworkSyncPacket(CompoundTag data) implements CustomPacketPay
             RoadProjectionClientState.setExpectingSync(false);
             if (packet.isEnterEdit()) {
                 RoadNetwork network = packet.toNetwork();
-                LOGGER.info("[RoadProjection] Sync received: enterEdit=true, nodes={} edges={}",
+                Log.info(TAG, "[RoadProjection] Sync received: enterEdit=true, nodes={} edges={}",
                         network.nodeCount(), network.edgeCount());
                 RoadProjectionClientState.enterProjection(network);
             } else {
-                LOGGER.info("[RoadProjection] Sync received: enterEdit=false — exit");
+                Log.info(TAG, "[RoadProjection] Sync received: enterEdit=false — exit");
                 RoadProjectionClientState.exitProjection();
             }
             return;
         }
 
         // ── Original road editor path ──
-        LOGGER.info("[RoadEditor] RoadNetworkSyncPacket received: enterEdit={} dataSize={}",
+        Log.info(TAG, "[RoadEditor] RoadNetworkSyncPacket received: enterEdit={} dataSize={}",
                 packet.isEnterEdit(), packet.data.toString().length());
         if (packet.isEnterEdit()) {
             RoadNetwork network = packet.toNetwork();
-            LOGGER.info("[RoadEditor] handleClient: parsed network nodes={} edges={}",
+            Log.info(TAG, "[RoadEditor] handleClient: parsed network nodes={} edges={}",
                     network.nodeCount(), network.edgeCount());
             RoadEditorClientState.setNetworkSnapshot(network);
             RoadEditorClientState.setEditMode(true);
         } else {
-            LOGGER.info("[RoadEditor] handleClient: exit edit mode");
+            Log.info(TAG, "[RoadEditor] handleClient: exit edit mode");
             RoadEditorClientState.clearSnapshot();
             RoadEditorClientState.setEditMode(false);
         }

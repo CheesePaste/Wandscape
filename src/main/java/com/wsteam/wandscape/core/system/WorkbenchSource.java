@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
-
 /**
  * V1 stub: monitors arcane workbench production queues and creates crafting tasks.
  * Full implementation requires workbench component integration.

@@ -8,7 +8,6 @@ import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
-
 /**
  * Option (gear/cog) button using the options_button sprite sheet.
  * Default native size is 30×32.

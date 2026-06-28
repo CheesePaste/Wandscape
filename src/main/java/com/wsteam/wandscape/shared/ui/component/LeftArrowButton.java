@@ -7,7 +7,6 @@ import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
-
 /**
  * Left arrow button using the left_arrow sprite sheet.
  * Default native size is 20×14.

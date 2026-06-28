@@ -10,7 +10,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Server→Client: Syncs colony evaluation values (comfort/magic/wonder) to the panel.
  */

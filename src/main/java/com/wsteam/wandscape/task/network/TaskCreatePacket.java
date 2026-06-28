@@ -13,7 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Client→Server packet requesting to create a new task from a blueprint.
  */

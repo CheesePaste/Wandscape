@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.PathPoint;
@@ -17,6 +14,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Persists the road network across world sessions via Minecraft {@link SavedData}.
@@ -26,7 +24,7 @@ import net.minecraft.world.level.saveddata.SavedData;
  */
 public final class RoadSavedData extends SavedData {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadSavedData";
     private static final String DATA_NAME = "wandscape_roads";
 
     private final RoadNetwork network;
@@ -120,7 +118,7 @@ public final class RoadSavedData extends SavedData {
         }
         tag.put("edges", edgeList);
 
-        LOGGER.info("[RoadSavedData] saved colony={} buildingCount={} edges={}",
+        Log.info(TAG, "[RoadSavedData] saved colony={} buildingCount={} edges={}",
                 colonyId, buildingCount, edgeList.size());
         return tag;
     }
@@ -190,7 +188,7 @@ public final class RoadSavedData extends SavedData {
             data.network.addEdge(edge);
         }
 
-        LOGGER.info("[RoadSavedData] loaded colony={} buildingCount={} edges={}",
+        Log.info(TAG, "[RoadSavedData] loaded colony={} buildingCount={} edges={}",
                 data.colonyId, data.buildingCount, edgeList.size());
         return data;
     }

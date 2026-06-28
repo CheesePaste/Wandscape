@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.data;
 
 import java.util.Map;
-
 /**
  * Client-safe DTO for blueprint metadata.
  * Constructed server-side from {@link com.wsteam.wandscape.core.task.BlueprintDefinition},

@@ -7,7 +7,6 @@ import com.wsteam.wandscape.core.types.RitualId;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
 /**
  * Core-layer boundary for ritual execution.
  *

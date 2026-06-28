@@ -7,7 +7,6 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-
 /**
  * Sealed interface for wonder building global effects.
  * Applied when the wonder is intact and not shutdown; paused otherwise.

@@ -3,9 +3,6 @@ package com.wsteam.wandscape.element.internal;
 import java.util.Collection;
 import java.util.Map;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
@@ -14,9 +11,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
-
 public class ElementMappingLoader {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ElementMappingLoader";
     private static final String CATEGORY = "element_mappings";
 
     private final WandscapeDataRegistry<ElementMappingConfig> registry;

@@ -5,7 +5,6 @@ import java.util.UUID;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 
 import net.neoforged.bus.api.Event;
-
 /** Fired when a building's maintenance cost is due for payment. */
 public class MaintenanceDueEvent extends Event {
     private final UUID buildingId;

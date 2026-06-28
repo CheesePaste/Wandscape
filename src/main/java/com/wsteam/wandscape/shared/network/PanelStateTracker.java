@@ -15,7 +15,6 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * Server-side tracker of which players have the Wandscape panel open.
  * Used by {@link com.wsteam.wandscape.building.internal.BuildingInteractHandler}

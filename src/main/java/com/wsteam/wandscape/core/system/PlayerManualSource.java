@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.system;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.TaskRequest;
-
 /**
  * Adapter-facing API for player-created tasks.
  * Not a polling source - the adapter calls {@link #publish(TaskRequest)} directly.

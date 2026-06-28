@@ -4,18 +4,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import org.slf4j.Logger;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Scans {@code data/wandscape/<category>/*.json} for each registered category.
@@ -26,7 +24,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
  * {@code data/wandscape/<category>/}, not {@code data/wandscape/} directly.
  */
 public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapeDataLoader";
     private static final Gson GSON = new GsonBuilder().create();
 
     private final Map<String, SimpleDataRegistry<?>> registries = new HashMap<>();
@@ -91,10 +89,10 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
                 registry.loadEntry(id, entry.getValue());
                 loaded++;
             } catch (Exception e) {
-                LOGGER.warn("Failed to parse config '{}': {}", loc, e.getMessage());
+                Log.warn(TAG, "Failed to parse config '{}': {}", loc, e.getMessage());
             }
         }
-        LOGGER.info("WandscapeDataLoader reloaded: {} files across {} categories",
+        Log.info(TAG, "WandscapeDataLoader reloaded: {} files across {} categories",
                 loaded, registries.size());
     }
 }

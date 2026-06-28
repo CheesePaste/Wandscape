@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.road;
 
 import java.util.UUID;
-
 /**
  * Minimal snapshot of a building used as input to road planning.
  * Engine layer extracts this from {@code BuildingSavedData}.

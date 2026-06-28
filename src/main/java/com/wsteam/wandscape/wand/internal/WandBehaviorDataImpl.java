@@ -6,7 +6,6 @@ import java.util.Map;
 
 import com.wsteam.wandscape.shared.data.BehaviorType;
 import com.wsteam.wandscape.shared.data.WandBehaviorData;
-
 record WandBehaviorDataImpl(
     String wandColor,
     Map<BehaviorType, Integer> behaviors,

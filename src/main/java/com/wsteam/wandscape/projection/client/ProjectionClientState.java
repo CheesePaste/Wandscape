@@ -4,15 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Abilities;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client-side static state holder for soul projection mode.
@@ -21,7 +19,7 @@ import net.minecraft.world.entity.player.Abilities;
  */
 public final class ProjectionClientState {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ProjectionClientState";
 
     /** Whether the player is currently in projection mode. */
     private static volatile boolean projecting = false;
@@ -98,7 +96,7 @@ public final class ProjectionClientState {
 
         projecting = true;
 
-        LOGGER.info("[Projection] Entered projection mode. Body at {}, {} buildings, flySpeed={}",
+        Log.info(TAG, "[Projection] Entered projection mode. Body at {}, {} buildings, flySpeed={}",
                 anchor, slots.size(), flyingSpeed);
     }
 
@@ -142,7 +140,7 @@ public final class ProjectionClientState {
             buildingSlots.clear();
         }
 
-        LOGGER.info("[Projection] Exited projection mode");
+        Log.info(TAG, "[Projection] Exited projection mode");
     }
 
     // ── Body anchor ──

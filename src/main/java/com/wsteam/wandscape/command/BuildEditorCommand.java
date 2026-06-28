@@ -1,11 +1,8 @@
 package com.wsteam.wandscape.command;
 
-import org.slf4j.Logger;
-
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterResponsePacket;
@@ -15,6 +12,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Building editor commands.
@@ -28,7 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class BuildEditorCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildEditorCommand";
 
     private BuildEditorCommand() {}
 
@@ -95,7 +93,7 @@ public final class BuildEditorCommand {
 
         BuildingEditorNetwork.removeEditing(player);
         ctx.getSource().sendSuccess(() -> Component.literal("§eExited building editor"), true);
-        LOGGER.info("[BuildEditor] Player {} exited via /wandscape build done",
+        Log.info(TAG, "[BuildEditor] Player {} exited via /wandscape build done",
                 player.getGameProfile().getName());
         return 1;
     }

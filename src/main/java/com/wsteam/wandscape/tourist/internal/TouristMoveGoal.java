@@ -7,9 +7,6 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
@@ -32,6 +29,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Unified movement AI for {@link TouristEntity}.
@@ -50,7 +48,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * <p>While checked into a hotel, all movement stops until checkout.
  */
 public class TouristMoveGoal extends Goal {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TouristMoveGoal";
 
     // ── Internal movement mode ──
 
@@ -394,7 +392,7 @@ public class TouristMoveGoal extends Goal {
     // ════════════════════════════════════════════════════════════════
 
     private void startWander() {
-        LOGGER.info("[Citizen] %s startWander".formatted(tourist.getTouristName()));
+        Log.info(TAG, "[Citizen] %s startWander".formatted(tourist.getTouristName()));
         wanderCooldown = 0;
         wanderEvaluateTick = 300 + tourist.getRandom().nextInt(200);
     }
@@ -515,7 +513,7 @@ public class TouristMoveGoal extends Goal {
 
     private void switchMode(MoveMode next) {
         if (currentMode != next) {
-            LOGGER.debug("[Tourist] {} mode {} → {}",
+            Log.debug(TAG, "[Tourist] {} mode {} → {}",
                     tourist.getTouristName(), currentMode, next);
         }
         currentMode = next;
@@ -663,7 +661,7 @@ public class TouristMoveGoal extends Goal {
                     "\n  hotel_targets=%d | shop_targets=%d | service_targets=%d | canUseHotel=%s",
                     hotelTargets.size(), shopTargets.size(), serviceTargets.size(), canUseHotel));
 
-            LOGGER.info(report.toString());
+            Log.info(TAG, report.toString());
             return;
         }
 
@@ -673,7 +671,7 @@ public class TouristMoveGoal extends Goal {
         tourist.setTargetBuildingId(chosen.getBuildingId());
         tourist.setTargetBuildingCategory(chosen.getCategory());
         tourist.setCommuteTarget(interactionTarget);
-        LOGGER.debug("[Tourist] {} next stop: {} '{}' at {}",
+        Log.debug(TAG, "[Tourist] {} next stop: {} '{}' at {}",
                 tourist.getTouristName(), chosen.getCategory(),
                 chosen.getBuildingTypeId(), interactionTarget.toShortString());
     }
@@ -727,7 +725,7 @@ public class TouristMoveGoal extends Goal {
                             var elementType = com.wsteam.wandscape.shared.data.ElementType.fromId(entry.getKey());
                             bank.addElement(colonyId, elementType, entry.getValue());
                         } catch (IllegalArgumentException e) {
-                            LOGGER.warn("[Tourist] Unknown element type '{}' in service {} elementOutput",
+                            Log.warn(TAG, "[Tourist] Unknown element type '{}' in service {} elementOutput",
                                     entry.getKey(), shortId(buildingId));
                         }
                     }
@@ -791,7 +789,7 @@ public class TouristMoveGoal extends Goal {
         String typeId = getBuildingTypeId(buildingId);
         if (typeId == null) return;
         tourist.adjustTypePreference(typeId, -decay);
-        LOGGER.debug("[Tourist] {} decay preference for {} → {}",
+        Log.debug(TAG, "[Tourist] {} decay preference for {} → {}",
                 tourist.getTouristName(), typeId, tourist.getTypePreference(typeId));
     }
 
@@ -828,7 +826,7 @@ public class TouristMoveGoal extends Goal {
         usingRoad = planRoute(target);
         wpIndex = 1;
         moveToNext(speed, target);
-        LOGGER.debug("[Tourist] {} heading to {} via {}",
+        Log.debug(TAG, "[Tourist] {} heading to {} via {}",
                 tourist.getTouristName(), target.toShortString(),
                 usingRoad ? "road" : "direct");
     }
@@ -888,11 +886,11 @@ public class TouristMoveGoal extends Goal {
         String name = tourist.getTouristName();
         BlockPos from = tourist.blockPosition();
         if (usingRoad && waypoints != null) {
-            LOGGER.info("[Tourist] {} {} ROAD → {} ({} wps, {}→{})",
+            Log.info(TAG, "[Tourist] {} {} ROAD → {} ({} wps, {}→{})",
                     name, label, target.toShortString(), waypoints.length,
                     from.toShortString(), target.toShortString());
         } else {
-            LOGGER.info("[Tourist] {} {} VANILLA → {} ({}→{})",
+            Log.info(TAG, "[Tourist] {} {} VANILLA → {} ({}→{})",
                     name, label, target.toShortString(),
                     from.toShortString(), target.toShortString());
         }

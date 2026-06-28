@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.RitualOps;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -16,6 +13,7 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
 import net.minecraft.core.particles.ParticleTypes;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * MC implementation of {@link RitualOps} with async channeling.
@@ -33,7 +31,7 @@ import net.minecraft.core.particles.ParticleTypes;
  */
 public class WandscapeRitualOps implements RitualOps {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapeRitualOps";
 
     record PendingRitual(CompletableFuture<Void> future, RitualId ritual, GridPos target,
                          World world, long casterId, int remainingTicks) {}
@@ -56,7 +54,7 @@ public class WandscapeRitualOps implements RitualOps {
 
         future.thenRun(() -> executeRitual(ritual, target, world, casterId));
 
-        LOGGER.info("[RitualOps] NPC {} — {} channeling {} ticks at {}",
+        Log.info(TAG, "[RitualOps] NPC {} — {} channeling {} ticks at {}",
                 casterId, ritual.id(), ticks, target);
         return future;
     }
@@ -85,7 +83,7 @@ public class WandscapeRitualOps implements RitualOps {
         pending.removeIf(p -> p.future().isDone());
 
         if (!toComplete.isEmpty()) {
-            LOGGER.info("[RitualOps] tickAll: {} completed, {} remaining",
+            Log.info(TAG, "[RitualOps] tickAll: {} completed, {} remaining",
                     toComplete.size(), pending.size());
         }
     }
@@ -122,13 +120,13 @@ public class WandscapeRitualOps implements RitualOps {
                             npc.getX() + ox, npc.getY() + oy, npc.getZ() + oz,
                             0, 0, 0);
                 }
-                LOGGER.info("[RitualOps] self_teleport: NPC {} → {}", casterId, target);
+                Log.info(TAG, "[RitualOps] self_teleport: NPC {} → {}", casterId, target);
             } else {
-                LOGGER.warn("[RitualOps] self_teleport: NPC not found for casterId {}", casterId);
+                Log.warn(TAG, "[RitualOps] self_teleport: NPC not found for casterId {}", casterId);
             }
             return;
         }
 
-        LOGGER.warn("[RitualOps] Unknown ritual '{}' at {} — no-op", ritual.id(), target);
+        Log.warn(TAG, "[RitualOps] Unknown ritual '{}' at {} — no-op", ritual.id(), target);
     }
 }

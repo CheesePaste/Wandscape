@@ -4,9 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
@@ -26,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Per-tick input handler for road projection mode.
@@ -63,7 +61,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class RoadProjectionController {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadProjectionController";
 
     /** Extended reach distance in projection mode (blocks). */
     private static final double PROJECTION_REACH = 64.0;
@@ -84,7 +82,7 @@ public final class RoadProjectionController {
         bus.addListener(InputEvent.MouseScrollingEvent.class, RoadProjectionController::onMouseScroll);
         // Per-tick: continuous flight, raycasting, hover, range check
         bus.addListener(ClientTickEvent.Post.class, RoadProjectionController::onClientTickPost);
-        LOGGER.info("[RoadProjection] Flight controller registered");
+        Log.info(TAG, "[RoadProjection] Flight controller registered");
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -363,7 +361,7 @@ public final class RoadProjectionController {
                         " — NPCs will begin construction"),
                 false);
 
-        LOGGER.info("[RoadProjection] Published {} road segments", count);
+        Log.info(TAG, "[RoadProjection] Published {} road segments", count);
     }
 
     // ── Undo ──

@@ -9,9 +9,6 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
@@ -43,6 +40,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * A colony NPC — the MC-layer shell for an ECS-driven task executor.
@@ -57,7 +55,7 @@ import net.neoforged.fml.ModList;
  */
 public class WandscapeNpc extends PathfinderMob {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapeNpc";
 
     // ============================================================
     // Engine bridge (public for same-module cross-package access)
@@ -487,7 +485,7 @@ public class WandscapeNpc extends PathfinderMob {
             } else {
                 // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
                 // Defer registration until the next tick.
-                LOGGER.warn("NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
+                Log.warn(TAG, "NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
                         getUUID().toString().substring(0, 8));
                 EntityComponentBridge.INSTANCE.deferJoin(this);
             }
@@ -585,13 +583,13 @@ public class WandscapeNpc extends PathfinderMob {
             // All wands are stored as "wandscape:wand" with NBT from the preset
             var preset = Wandscape.WAND_PRESET_LOADER.getPreset(presetId);
             if (preset == null) {
-                LOGGER.warn("[NPC-death] unknown wand preset {}, cannot return", presetId);
+                Log.warn(TAG, "[NPC-death] unknown wand preset {}, cannot return", presetId);
                 continue;
             }
             var key = com.wsteam.wandscape.shared.data.ItemKey.of(
                     "wandscape:wand", preset.nbt().copy());
             bank.add(cid, key, 1);
-            LOGGER.info("[NPC-death] returned {} to warehouse (colony={})", presetId, cid);
+            Log.info(TAG, "[NPC-death] returned {} to warehouse (colony={})", presetId, cid);
         }
     }
 

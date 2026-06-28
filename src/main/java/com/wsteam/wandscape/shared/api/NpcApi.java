@@ -7,7 +7,6 @@ import net.minecraft.core.BlockPos;
 
 import com.wsteam.wandscape.shared.data.NpcData;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
-
 public interface NpcApi {
     List<NpcData> getColonyNpcs(UUID colonyId);
     List<NpcData> getIdleNpcs(UUID colonyId);

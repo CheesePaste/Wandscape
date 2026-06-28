@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.building.editor;
 
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.network.BuildingEditorExitPacket;
 import com.wsteam.wandscape.building.network.BuildingEditorExportPacket;
 import com.wsteam.wandscape.imgui.ImGuiManager;
@@ -16,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Per-tick lifecycle for the building editor.
@@ -31,7 +29,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class BuildingEditorController {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorController";
     private static volatile float flyingSpeed = 0.15f;
 
     // Keyboard edge
@@ -53,7 +51,7 @@ public final class BuildingEditorController {
         bus.addListener(ClientTickEvent.Post.class, BuildingEditorController::onClientTickPost);
         bus.addListener(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent.class,
                 BuildingEditorController::onMouseScroll);
-        LOGGER.info("[BuildEditor] Controller registered");
+        Log.info(TAG, "[BuildEditor] Controller registered");
     }
 
     static void onClientTickPost(ClientTickEvent.Post event) {
@@ -102,7 +100,7 @@ public final class BuildingEditorController {
 
             tickCount++;
             if (tickCount % 40 == 0) {
-                LOGGER.info("[BuildEditor] Controller heartbeat: tick={} cameraActive={} overPanel={} mouseX={} panelEdge={} editing={}",
+                Log.info(TAG, "[BuildEditor] Controller heartbeat: tick={} cameraActive={} overPanel={} mouseX={} panelEdge={} editing={}",
                         tickCount, cameraActive, overPanel, (int)mouseGuiX, (int)BuildingEditorImGui.panelLeftEdge,
                         BuildingEditorClientState.isEditing());
             }
@@ -223,7 +221,7 @@ public final class BuildingEditorController {
             return;
         }
         PacketDistributor.sendToServer(new BuildingEditorExportPacket(json, true));
-        LOGGER.info("[BuildEditor] Export packet sent ({} chars)", json.length());
+        Log.info(TAG, "[BuildEditor] Export packet sent ({} chars)", json.length());
     }
 
     // ── Vanilla drain ──

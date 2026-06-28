@@ -27,10 +27,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import javax.annotation.Nullable;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Monitors {@link TaskState#FAILED} tasks and attempts automated recovery.
@@ -49,7 +47,7 @@ import javax.annotation.Nullable;
  */
 public class FailureAnalyzerSystem implements System {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "FailureAnalyzerSystem";
     private static final int HEARTBEAT = 20;
 
     private final WandPresetLoader presetLoader;
@@ -120,7 +118,7 @@ public class FailureAnalyzerSystem implements System {
             }
         }
         if (awakened > 0) {
-            LOGGER.info("[FailureAnalyzer] awakened {} AWAITING_RESOURCES tasks", awakened);
+            Log.info(TAG, "[FailureAnalyzer] awakened {} AWAITING_RESOURCES tasks", awakened);
         }
     }
 
@@ -138,7 +136,7 @@ public class FailureAnalyzerSystem implements System {
         // ── Step 0: Check if a suitable wand already exists in the warehouse ──
         UUID colonyId = extractColonyFromTask(task, level);
         if (colonyId == null) {
-            LOGGER.warn("[FailureAnalyzer] cannot determine colony for task #{} '{}'",
+            Log.warn(TAG, "[FailureAnalyzer] cannot determine colony for task #{} '{}'",
                     task.id, task.sequence.label());
             recoveringTasks.add(task.id);
             return;
@@ -149,7 +147,7 @@ public class FailureAnalyzerSystem implements System {
             task.assignedNpcId = null;
             task.failureReason = null;
             task.schedulerRetryCount = 0;
-            LOGGER.info("[FailureAnalyzer] wand for reqs={} found in warehouse → task #{} → PENDING_ASSIGN",
+            Log.info(TAG, "[FailureAnalyzer] wand for reqs={} found in warehouse → task #{} → PENDING_ASSIGN",
                     reqs, task.id);
             return;
         }
@@ -157,7 +155,7 @@ public class FailureAnalyzerSystem implements System {
         // ── Step 1: Find a wand preset that satisfies the requirements ──
         String presetId = findPresetForRequirements(reqs);
         if (presetId == null) {
-            LOGGER.warn("[FailureAnalyzer] no wand preset satisfies reqs={} for task #{}",
+            Log.warn(TAG, "[FailureAnalyzer] no wand preset satisfies reqs={} for task #{}",
                     reqs, task.id);
             recoveringTasks.add(task.id); // permanent: no preset can satisfy this
             return;
@@ -166,7 +164,7 @@ public class FailureAnalyzerSystem implements System {
         // ── Step 2: Check if craft recipe exists ──
         if (Wandscape.PRODUCTION_RECIPE_LOADER == null
                 || !Wandscape.PRODUCTION_RECIPE_LOADER.getCraftWandRecipes().contains(presetId)) {
-            LOGGER.warn("[FailureAnalyzer] no craft recipe for preset={} (task #{})",
+            Log.warn(TAG, "[FailureAnalyzer] no craft recipe for preset={} (task #{})",
                     presetId, task.id);
             recoveringTasks.add(task.id); // permanent: recipe doesn't exist
             return;
@@ -184,7 +182,7 @@ public class FailureAnalyzerSystem implements System {
                             api.getColonyComfort(colonyId),
                             api.getColonyMagic(colonyId),
                             api.getColonyWonder(colonyId)));
-            LOGGER.warn("[FailureAnalyzer] colony {} C/M/W={}/{}/{} too low for {} "
+            Log.warn(TAG, "[FailureAnalyzer] colony {} C/M/W={}/{}/{} too low for {} "
                             + "(requires {}/{}/{}) — stopped, task #{}",
                     colonyId.toString().substring(0, 8),
                     api.getColonyComfort(colonyId),
@@ -199,7 +197,7 @@ public class FailureAnalyzerSystem implements System {
 
         // ── Step 4: Check if craft_wand for this preset is already in-flight ──
         if (isCraftWandInFlight(presetId, world)) {
-            LOGGER.debug("[FailureAnalyzer] craft_wand for {} already in-flight, will retry task #{} next heartbeat",
+            Log.debug(TAG, "[FailureAnalyzer] craft_wand for {} already in-flight, will retry task #{} next heartbeat",
                     presetId, task.id);
             // Don't add to recoveringTasks — next heartbeat step 0 will retry
             return;
@@ -208,7 +206,7 @@ public class FailureAnalyzerSystem implements System {
         // ── Step 5: Find a crafting station in the same colony ──
         List<UUID> stations = api.getBuildingsByCategory(colonyId, "crafting_station");
         if (stations.isEmpty()) {
-            LOGGER.warn("[FailureAnalyzer] no crafting station in colony={} for task #{}",
+            Log.warn(TAG, "[FailureAnalyzer] no crafting station in colony={} for task #{}",
                     colonyId.toString().substring(0, 8), task.id);
             recoveringTasks.add(task.id); // permanent: no crafting station to make wands
             return;
@@ -229,7 +227,7 @@ public class FailureAnalyzerSystem implements System {
         api.enqueueWork(stationId, work);
         // Don't add to recoveringTasks — next heartbeat step 0 finds wand in warehouse
 
-        LOGGER.info("[FailureAnalyzer] enqueued craft_wand:{} at station {} colony={} "
+        Log.info(TAG, "[FailureAnalyzer] enqueued craft_wand:{} at station {} colony={} "
                         + "to resolve task #{} '{}' reqs={}",
                 presetId, stationId.toString().substring(0, 8),
                 colonyId.toString().substring(0, 8),
@@ -263,7 +261,7 @@ public class FailureAnalyzerSystem implements System {
         }
 
         if (bestId != null) {
-            LOGGER.info("[FailureAnalyzer] selected {} (total_level={}) for reqs={}",
+            Log.info(TAG, "[FailureAnalyzer] selected {} (total_level={}) for reqs={}",
                     bestId, bestSum, reqs);
         }
         return bestId;

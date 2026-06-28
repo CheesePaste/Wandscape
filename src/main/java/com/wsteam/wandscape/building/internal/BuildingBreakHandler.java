@@ -6,13 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -22,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Listens for block break and explosion events.
@@ -29,7 +27,7 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
  * partial repair WorkItem targeting only the damaged positions.
  */
 public final class BuildingBreakHandler {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingBreakHandler";
     // 49 = below the PENDING_APPROVAL gate (>= 50) but above node supply (15).
     // addFirst in the building queue guarantees repair tasks are dequeued first.
     static final int REPAIR_PRIORITY = 49;
@@ -54,7 +52,7 @@ public final class BuildingBreakHandler {
         if (colonyId != null) {
             boolean changed = data.removeBuildingContribution(colonyId, state.getBuildingTypeId());
             if (changed) {
-                LOGGER.info("[Evaluation] Colony {} lost last contribution from {} — evaluation values decreased",
+                Log.info(TAG, "[Evaluation] Colony {} lost last contribution from {} — evaluation values decreased",
                         colonyId.toString().substring(0, 8), state.getBuildingTypeId());
             }
         }
@@ -67,7 +65,7 @@ public final class BuildingBreakHandler {
         }
         enqueueRepairForPositions(state, List.of(pos));
         data.setDirty();
-        LOGGER.info("[Building] Structure damaged: type={} at={} (block at {}) — partial repair enqueued",
+        Log.info(TAG, "[Building] Structure damaged: type={} at={} (block at {}) — partial repair enqueued",
                 state.getBuildingTypeId(), state.getAnchor(), pos);
     }
 
@@ -94,13 +92,13 @@ public final class BuildingBreakHandler {
             if (colonyId != null) {
                 boolean changed = data.removeBuildingContribution(colonyId, state.getBuildingTypeId());
                 if (changed) {
-                    LOGGER.info("[Evaluation] Colony {} lost last contribution from {} — evaluation values decreased",
+                    Log.info(TAG, "[Evaluation] Colony {} lost last contribution from {} — evaluation values decreased",
                             colonyId.toString().substring(0, 8), state.getBuildingTypeId());
                 }
             }
             enqueueRepairForPositions(state, entry.getValue());
             data.setDirty();
-            LOGGER.info("[Building] Structure damaged by explosion: type={} at={} ({} blocks) — partial repair enqueued",
+            Log.info(TAG, "[Building] Structure damaged by explosion: type={} at={} ({} blocks) — partial repair enqueued",
                     state.getBuildingTypeId(), state.getAnchor(), entry.getValue().size());
         }
     }
@@ -112,7 +110,7 @@ public final class BuildingBreakHandler {
     static void enqueueRepairForPositions(BuildingState state, List<BlockPos> damagedWorldPositions) {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) {
-            LOGGER.warn("[Building] Cannot enqueue repair — config not found: {}", state.getBuildingTypeId());
+            Log.warn(TAG, "[Building] Cannot enqueue repair — config not found: {}", state.getBuildingTypeId());
             return;
         }
 

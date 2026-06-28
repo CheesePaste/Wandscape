@@ -16,7 +16,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Client→server packet: adjusts max stock for one good in a shop.
  * Server responds with a refreshed {@link ShopOpenPacket} so the GUI stays in sync.

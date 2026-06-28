@@ -16,6 +16,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.MobSpawnType;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Stress-test command: spawn N NPCs and create M town_hall building tasks at once.
@@ -108,7 +109,7 @@ public final class StressTestCommand {
                         new TaskRequest(workItem.blueprintId(), workItem.params(), workItem.priority()));
                 created++;
             } catch (Exception e) {
-                Wandscape.LOGGER.warn("[StressTest] Task #{} failed: {}", i, e.getMessage());
+                Log.warn("Wandscape", "[StressTest] Task #{} failed: {}", i, e.getMessage());
             }
         }
 
@@ -125,7 +126,7 @@ public final class StressTestCommand {
                 + " (" + taskElapsedMs + "ms)"),
                 true);
 
-        Wandscape.LOGGER.info("[StressTest] NPCs={}/{} ({}ms) tasks={}/{} ({}ms) poolSize={}",
+        Log.info("Wandscape", "[StressTest] NPCs={}/{} ({}ms) tasks={}/{} ({}ms) poolSize={}",
                 finalSpawned, npcCount, npcElapsedMs,
                 finalCreated, taskCount, taskElapsedMs,
                 world.taskPool.size());

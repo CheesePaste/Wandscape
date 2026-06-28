@@ -2,13 +2,10 @@ package com.wsteam.wandscape.command;
 
 import java.util.Random;
 
-import org.slf4j.Logger;
-
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
@@ -24,7 +21,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-
 /**
  * End-to-end test command for building + road pipeline.
  *
@@ -46,7 +42,7 @@ import net.minecraft.server.level.ServerLevel;
  */
 public final class RoadTestCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadTestCommand";
 
     private RoadTestCommand() {}
 

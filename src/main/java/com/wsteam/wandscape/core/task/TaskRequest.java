@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.types.BehaviourTag;
-
 /**
  * Request to create a global task from a blueprint.
  * Published by TaskSources and compiled by BlueprintRegistry.

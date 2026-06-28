@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.boundary;
 
 import java.util.function.Consumer;
-
 /**
  * Event bus for domain events.
  * Events are queued during tick and dispatched at tick end

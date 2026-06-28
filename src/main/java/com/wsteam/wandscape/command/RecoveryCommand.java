@@ -11,7 +11,6 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-
 /**
  * Recovery commands: emergency task pool reset and status inspection.
  *

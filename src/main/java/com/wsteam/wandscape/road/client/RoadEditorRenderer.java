@@ -4,11 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.road.PathGenerator;
 import com.wsteam.wandscape.core.road.PathPoint;
@@ -29,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * World-space rendering of the road network for the V1 road editor.
@@ -51,7 +49,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class RoadEditorRenderer {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadEditorRenderer";
 
     /** Ray→segment distance threshold for edge hover (road half-width + margin). */
     private static final double HOVER_THRESHOLD = 2.8;
@@ -93,14 +91,14 @@ public final class RoadEditorRenderer {
     // ── Registration ──
 
     public static void register() {
-        LOGGER.info("[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent(Pre+Post) + MouseScrolling");
+        Log.info(TAG, "[RoadEditor] register() — hooking RenderLevelStageEvent + ClientTickEvent(Pre+Post) + MouseScrolling");
         var bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
         bus.addListener(RenderLevelStageEvent.class, RoadEditorRenderer::onRenderLevelStage);
         bus.addListener(ClientTickEvent.Pre.class, RoadEditorRenderer::onClientTickPre);
         bus.addListener(ClientTickEvent.Post.class, RoadEditorRenderer::onClientTickPost);
         bus.addListener(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent.class,
                 RoadEditorRenderer::onMouseScroll);
-        LOGGER.info("[RoadEditor] register() — done");
+        Log.info(TAG, "[RoadEditor] register() — done");
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -113,11 +111,11 @@ public final class RoadEditorRenderer {
         boolean isTripwire = event.getStage() == RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS;
 
         if (frameCounter <= 5) {
-            LOGGER.info("[RoadEditor] onRenderLevelStage frame={} stage={} editing={} isTripwire={}",
+            Log.info(TAG, "[RoadEditor] onRenderLevelStage frame={} stage={} editing={} isTripwire={}",
                     frameCounter, event.getStage(), editing, isTripwire);
         }
         if (editing && isTripwire && frameCounter % 200 == 0) {
-            LOGGER.info("[RoadEditor] render heartbeat frame={} nodes={} edges={}",
+            Log.info(TAG, "[RoadEditor] render heartbeat frame={} nodes={} edges={}",
                     frameCounter,
                     RoadEditorClientState.getCachedNetwork().nodeCount(),
                     RoadEditorClientState.getCachedNetwork().edgeCount());
@@ -144,7 +142,7 @@ public final class RoadEditorRenderer {
 
         if (!firstRenderLogged) {
             firstRenderLogged = true;
-            LOGGER.info("[RoadEditor] RENDER START — nodes={} edges={} camPos={}",
+            Log.info(TAG, "[RoadEditor] RENDER START — nodes={} edges={} camPos={}",
                     network.nodeCount(), network.edgeCount(), camPos);
         }
 
@@ -447,7 +445,7 @@ public final class RoadEditorRenderer {
         if (mc.level == null || mc.player == null || mc.screen != null) return;
 
         if (frameCounter == 0) {
-            LOGGER.info("[RoadEditor] FIRST TICK — editing={} network nodes={} edges={}",
+            Log.info(TAG, "[RoadEditor] FIRST TICK — editing={} network nodes={} edges={}",
                     RoadEditorClientState.isEditing(),
                     RoadEditorClientState.getCachedNetwork().nodeCount(),
                     RoadEditorClientState.getCachedNetwork().edgeCount());

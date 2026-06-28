@@ -12,7 +12,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.google.gson.JsonElement;
-
 /**
  * NPC-side task execution state.
  * Holds the private queue (high priority) and current global task progress.

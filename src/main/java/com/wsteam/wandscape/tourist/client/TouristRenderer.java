@@ -15,7 +15,6 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModList;
-
 public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, HumanoidModel<TouristEntity>> {
 
     private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(

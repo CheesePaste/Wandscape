@@ -5,15 +5,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathGenerator;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.engine.road.RoadBuilder;
@@ -30,6 +27,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * DIRECT block placement test for spiral/switchback road.
@@ -50,7 +48,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class SpiralTestCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "SpiralTestCommand";
 
     private SpiralTestCommand() {}
 
@@ -122,7 +120,7 @@ public final class SpiralTestCommand {
                 Block block = BuiltInRegistries.BLOCK.get(
                         ResourceLocation.parse(blockId));
                 if (block == Blocks.AIR && !"minecraft:air".equals(blockId)) {
-                    LOGGER.warn("[SpiralTest] Unknown block '{}' at {}", blockId, pos);
+                    Log.warn(TAG, "[SpiralTest] Unknown block '{}' at {}", blockId, pos);
                     errored++;
                     continue;
                 }
@@ -152,7 +150,7 @@ public final class SpiralTestCommand {
                 amplitude, config.getDefaultWidth());
 
         src.sendSuccess(() -> Component.literal("§a" + msg), false);
-        LOGGER.info("[SpiralTest] A={} B={} dy={} pathLen={} tiles={} placed={}",
+        Log.info(TAG, "[SpiralTest] A={} B={} dy={} pathLen={} tiles={} placed={}",
                 anchorA, anchorB, dy, path.size(), tiles.size(), placed);
 
         return Command.SINGLE_SUCCESS;

@@ -7,7 +7,6 @@ import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
-
 /**
  * Bidirectional type mapping between core engine (com.wsteam.wandscape.core)
  * and wandscape MC layer (com.wsteam.wandscape).

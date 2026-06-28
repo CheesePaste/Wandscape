@@ -8,10 +8,7 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonPrimitive;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.types.BehaviourTag;
@@ -30,6 +27,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→server packet requesting creation of a production task
@@ -42,7 +40,7 @@ public record RequestProductionTaskPacket(
     int quantity
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RequestProductionTaskPacket";
 
     public static final Type<RequestProductionTaskPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "request_production_task"));
@@ -64,13 +62,13 @@ public record RequestProductionTaskPacket(
             BuildingSavedData data = BuildingSavedData.get(level);
             UUID buildingId = data.getBuildingIdAt(pkt.stationPos);
             if (buildingId == null) {
-                LOGGER.warn("RequestProductionTask: no building at {}", pkt.stationPos);
+                Log.warn(TAG, "RequestProductionTask: no building at {}", pkt.stationPos);
                 return;
             }
 
             BuildingState state = data.getBuilding(buildingId);
             if (state == null) {
-                LOGGER.warn("RequestProductionTask: building state null for {}", buildingId);
+                Log.warn(TAG, "RequestProductionTask: building state null for {}", buildingId);
                 return;
             }
 
@@ -81,7 +79,7 @@ public record RequestProductionTaskPacket(
                 case "craft_wand" -> "production:craft_wand";
                 case "brew_potion" -> "production:brew_potion";
                 default -> {
-                    LOGGER.warn("RequestProductionTask: unknown action {}", pkt.action);
+                    Log.warn(TAG, "RequestProductionTask: unknown action {}", pkt.action);
                     yield null;
                 }
             };
@@ -94,7 +92,7 @@ public record RequestProductionTaskPacket(
             if (!"decompose".equals(pkt.action)) {
                 var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
                 if (loader == null) {
-                    LOGGER.warn("RequestProductionTask: PRODUCTION_RECIPE_LOADER not available");
+                    Log.warn(TAG, "RequestProductionTask: PRODUCTION_RECIPE_LOADER not available");
                     return;
                 }
                 boolean unlocked = switch (pkt.action) {
@@ -116,7 +114,7 @@ public record RequestProductionTaskPacket(
                     default -> true;
                 };
                 if (!unlocked) {
-                    LOGGER.warn("RequestProductionTask: recipe '{}' action={} is not unlocked for colony={} — rejected",
+                    Log.warn(TAG, "RequestProductionTask: recipe '{}' action={} is not unlocked for colony={} — rejected",
                             pkt.recipeOrItemId, pkt.action,
                             colonyId.toString().substring(0, 8));
                     return;
@@ -163,7 +161,7 @@ public record RequestProductionTaskPacket(
             api.enqueueWork(buildingId, work);
 
             int queueSize = state.getTaskQueue().size();
-            LOGGER.info("[ProdTask] enqueued action={} recipe={} x{} at building {} "
+            Log.info(TAG, "[ProdTask] enqueued action={} recipe={} x{} at building {} "
                             + "(colony={} blueprint={} queue_size_after={})",
                     pkt.action, pkt.recipeOrItemId, pkt.quantity,
                     buildingId.toString().substring(0, 8),

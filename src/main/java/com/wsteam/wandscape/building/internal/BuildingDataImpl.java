@@ -6,7 +6,6 @@ import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 
 import net.minecraft.core.BlockPos;
-
 /**
  * Package-private mutable implementation of {@link BuildingData}.
  * Only BuildingApiImpl creates these.

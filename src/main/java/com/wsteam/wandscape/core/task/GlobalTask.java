@@ -10,7 +10,6 @@ import java.util.*;
 import javax.annotation.Nullable;
 
 import com.google.gson.JsonElement;
-
 /**
  * A task in the global pool. Tracks its lifecycle state, assigned NPC, and progress.
  */

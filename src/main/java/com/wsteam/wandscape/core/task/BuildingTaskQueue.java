@@ -5,7 +5,6 @@ import com.wsteam.wandscape.shared.data.WorkItem;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
-
 /**
  * Per-building runtime task queue.
  * Only the head task enters the global pool; subsequent WorkItems wait here

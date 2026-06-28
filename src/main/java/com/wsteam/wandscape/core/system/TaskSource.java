@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.system;
 
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
-
 /**
  * A source of tasks that periodically polls the world state
  * and pushes new tasks into the global pool.

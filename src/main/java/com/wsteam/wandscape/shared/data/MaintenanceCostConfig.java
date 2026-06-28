@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.data;
 import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
-
 /**
  * Per-building maintenance cost configuration. Costs are keyed by {@link ElementType}.
  * Interval is in ticks.

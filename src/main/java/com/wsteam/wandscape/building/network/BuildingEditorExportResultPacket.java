@@ -3,10 +3,6 @@ package com.wsteam.wandscape.building.network;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -15,6 +11,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→Client: Result of building JSON export.
@@ -26,7 +23,7 @@ public record BuildingEditorExportResultPacket(
         List<String> warnings
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorExportResultPacket";
 
     public static final Type<BuildingEditorExportResultPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "build_editor_export_result"));
@@ -58,7 +55,7 @@ public record BuildingEditorExportResultPacket(
             }
         }
 
-        LOGGER.info("[BuildEditor] Export result: {} — {}", packet.success, packet.message);
+        Log.info(TAG, "[BuildEditor] Export result: {} — {}", packet.success, packet.message);
     }
 
     // ── StreamCodec ──

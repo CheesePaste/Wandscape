@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
-
 /**
  * Public API for the tourist simulation system.
  * Implemented by {@code tourist/internal/TouristApiImpl.java}.

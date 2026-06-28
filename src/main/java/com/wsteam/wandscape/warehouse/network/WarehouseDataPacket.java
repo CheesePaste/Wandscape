@@ -20,7 +20,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Server→client packet carrying warehouse item and element data for GUI display.
  * Sent once when the player opens the warehouse screen.

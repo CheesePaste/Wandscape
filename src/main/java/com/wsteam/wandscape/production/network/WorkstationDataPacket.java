@@ -19,7 +19,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Server→client packet carrying workstation GUI data:
  * decomposable items in warehouse + available synthesize recipes.

@@ -18,7 +18,6 @@ import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-
 /**
  * Publish a blueprint as a global task.
  *

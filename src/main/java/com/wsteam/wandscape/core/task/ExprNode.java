@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.wsteam.wandscape.core.types.GridPos;
-
 /**
  * Expression AST node used in blueprint DSL step fields.
  *

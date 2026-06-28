@@ -8,7 +8,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
-
 /**
  * Medieval-themed button using sprite-sheet textures.
  * Falls back to programmatic rendering if skin assets are unavailable.

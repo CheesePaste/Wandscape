@@ -7,7 +7,6 @@ import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-
 public interface ElementApi {
     ElementType fromId(String id);
     int getTier(ElementType type);

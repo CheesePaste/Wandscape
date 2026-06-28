@@ -22,7 +22,6 @@ import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
-
 /**
  * Parsed from {@code data/wandscape/buildings/<id>.json}.
  * Immutable — created once at JSON load time.

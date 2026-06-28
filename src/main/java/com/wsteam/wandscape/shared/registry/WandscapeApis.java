@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.registry;
 
 import com.wsteam.wandscape.shared.api.*;
-
 public final class WandscapeApis {
     private static WandApi wandApi;
     private static ElementApi elementApi;

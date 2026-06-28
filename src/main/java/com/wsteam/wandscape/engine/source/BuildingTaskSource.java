@@ -2,11 +2,8 @@ package com.wsteam.wandscape.engine.source;
 
 import java.util.*;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BuildingConfig.NodeConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -22,6 +19,7 @@ import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * {@link TaskSource} that polls building block entities and translates
@@ -34,7 +32,7 @@ import net.minecraft.core.BlockPos;
  * <p>This is the ONLY bridge between building BEs and the engine task pool.
  */
 public class BuildingTaskSource implements TaskSource {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingTaskSource";
 
     // Poll every 1 second (20 ticks)
     private static final int POLL_INTERVAL_TICKS = 20;
@@ -65,7 +63,7 @@ public class BuildingTaskSource implements TaskSource {
                 if (headId != null && !pool.isActive(headId)) {
                     btp.onHeadCompleted(buildingId, pool);
                     api.clearCurrentTask(buildingId);
-                    LOGGER.info("[BuildingTaskSource] cleanup building {} head #{} completed",
+                    Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
                             buildingId.toString().substring(0, 8), headId);
                 }
             }
@@ -78,7 +76,7 @@ public class BuildingTaskSource implements TaskSource {
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
-            LOGGER.info("[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
+            Log.info(TAG, "[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
                     pollCount, pool.size(), buildingIds.size(),
                     btp != null ? btp.totalBuildings() : 0);
         }
@@ -104,12 +102,12 @@ public class BuildingTaskSource implements TaskSource {
 
                 if (taskId >= 0) {
                     api.setCurrentTask(buildingId, toTaskUuid(taskId));
-                    LOGGER.info("[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} building={} pool_size={}",
+                    Log.info(TAG, "[BuildingTaskSource] >>> TASK PUBLISHED: id=#{} blueprint={} building={} pool_size={}",
                             taskId, item.blueprintId(),
                             buildingId.toString().substring(0, 8), pool.size());
                 }
             } catch (Exception e) {
-                LOGGER.warn("[BuildingTaskSource] FAILED: blueprint={} building={} error={}",
+                Log.warn(TAG, "[BuildingTaskSource] FAILED: blueprint={} building={} error={}",
                         item.blueprintId(), buildingId, e.getMessage());
             }
         }
@@ -132,10 +130,10 @@ public class BuildingTaskSource implements TaskSource {
 
         // Buildings that already have queued work (will be published in step 3)
         Set<UUID> hasWork = new HashSet<>(api.getBuildingsWithPendingWork(null));
-        LOGGER.info("[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
+        Log.info(TAG, "[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
 
         List<UUID> nodeBuildings = api.getBuildingsByCategory(null, "node");
-        LOGGER.info("[TaskSrc] node supply: found {} node buildings total", nodeBuildings.size());
+        Log.info(TAG, "[TaskSrc] node supply: found {} node buildings total", nodeBuildings.size());
 
         for (UUID buildingId : nodeBuildings) {
             // Already has queued work → skip
@@ -172,7 +170,7 @@ public class BuildingTaskSource implements TaskSource {
 
             WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15, overrides);
             api.enqueueWork(buildingId, work);
-            LOGGER.info("[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana) wandLevel={}",
+            Log.info(TAG, "[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana) wandLevel={}",
                     buildingId.toString().substring(0, 8),
                     nodeConfig.element(), nodeConfig.amountPerHarvest(),
                     nodeConfig.channelTicks(), nodeConfig.manaCost(), overrides);

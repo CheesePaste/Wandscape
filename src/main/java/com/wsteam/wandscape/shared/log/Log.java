@@ -57,15 +57,42 @@ public final class Log {
         logger.warning(format(msg, args));
     }
 
+    public static void warn(String tag, String msg, Throwable t) {
+        Logger logger = get(tag);
+        logger.log(Level.WARNING, msg, t);
+    }
+
     public static void error(String tag, String msg, Object... args) {
         Logger logger = get(tag);
         logger.severe(format(msg, args));
     }
 
+    public static void error(String tag, String msg, Throwable t) {
+        Logger logger = get(tag);
+        logger.log(Level.SEVERE, msg, t);
+    }
+
     // ----
 
     private static String format(String msg, Object... args) {
-        return args.length == 0 ? msg : String.format(msg, args);
+        if (args.length == 0) return msg;
+        if (msg.contains("{}")) return formatBrace(msg, args);
+        return String.format(msg, args);
+    }
+
+    /** SLF4J-style {} substitution. */
+    private static String formatBrace(String msg, Object... args) {
+        StringBuilder sb = new StringBuilder();
+        int argIdx = 0;
+        int pos = 0;
+        int placeholder;
+        while ((placeholder = msg.indexOf("{}", pos)) >= 0 && argIdx < args.length) {
+            sb.append(msg, pos, placeholder);
+            sb.append(args[argIdx++]);
+            pos = placeholder + 2;
+        }
+        sb.append(msg.substring(pos));
+        return sb.toString();
     }
 
     /** Compact formatter: [LEVEL] tag | message */

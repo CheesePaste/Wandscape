@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.boundary;
 import com.wsteam.wandscape.core.types.EffectId;
 import com.wsteam.wandscape.core.types.EntityId;
 import com.wsteam.wandscape.core.types.GridPos;
-
 /**
  * Core-layer boundary for entity-level operations.
  * Implemented by the Minecraft adapter layer.

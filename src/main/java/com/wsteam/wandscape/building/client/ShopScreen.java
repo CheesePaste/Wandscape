@@ -18,7 +18,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
-
 /**
  * Shop GUI — per-good max-stock slider (0–64) with −/+ buttons.
  * Uses the shared {@link Slider} component with blue/black theme.

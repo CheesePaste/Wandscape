@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
-
 /**
  * Per-colony wand lifecycle tracker.
  * Ensures wands are never double-assigned and provides a single source of truth

@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.event;
 
 import java.util.Collections;
 import java.util.Map;
-
 /**
  * Single custom event type for all blueprint-emitted events.
  * Distinguished by {@link #name}; carries a string-to-string payload.

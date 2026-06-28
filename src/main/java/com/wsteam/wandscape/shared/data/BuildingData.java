@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.data;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
-
 public interface BuildingData {
     UUID getBuildingId();
     UUID getColonyId();

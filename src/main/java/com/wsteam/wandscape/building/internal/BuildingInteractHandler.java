@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
@@ -29,6 +26,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Intercepts right-click on blocks within a building's pattern
@@ -38,7 +36,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * The client opens the appropriate MedievalScreen upon receiving the packet.
  */
 public final class BuildingInteractHandler {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingInteractHandler";
 
     private BuildingInteractHandler() {}
 
@@ -160,7 +158,7 @@ public final class BuildingInteractHandler {
                     }
                     player.displayClientMessage(Component.literal(status), false);
                 }
-                LOGGER.info("[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
+                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
                         state.getBuildingTypeId(), state.getAnchor(),
                         state.isStructureIntact(), state.isShutdown(),
                         state.getTaskQueue().size());

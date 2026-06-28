@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.road.network;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -12,6 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player toggles road editor mode.
@@ -22,7 +19,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record RoadEditorTogglePacket() implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadEditorTogglePacket";
 
     public static final Type<RoadEditorTogglePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "road_editor_toggle"));
@@ -44,14 +41,14 @@ public record RoadEditorTogglePacket() implements CustomPacketPayload {
             RoadEditorNetwork.sendExitToPlayer(player);
             player.displayClientMessage(
                     Component.literal("§eRoad edit mode: §cOFF"), true);
-            LOGGER.info("[RoadEditor] Toggle: exit for {}", player.getGameProfile().getName());
+            Log.info(TAG, "[RoadEditor] Toggle: exit for {}", player.getGameProfile().getName());
         } else {
             // Enter edit mode
             RoadEditorNetwork.addEditing(player);
             RoadEditorNetwork.sendSyncToPlayer(player);
             player.displayClientMessage(
                     Component.literal("§aRoad edit mode: §2ON"), true);
-            LOGGER.info("[RoadEditor] Toggle: enter for {}", player.getGameProfile().getName());
+            Log.info(TAG, "[RoadEditor] Toggle: enter for {}", player.getGameProfile().getName());
         }
     }
 

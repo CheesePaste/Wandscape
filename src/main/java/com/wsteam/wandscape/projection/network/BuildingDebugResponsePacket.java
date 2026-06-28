@@ -4,9 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
@@ -16,6 +13,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→Client: debug data snapshot for a building.
@@ -36,7 +34,7 @@ public record BuildingDebugResponsePacket(
         UUID currentTaskId
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingDebugResponsePacket";
 
     public static final Type<BuildingDebugResponsePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "building_debug_response"));
@@ -52,7 +50,7 @@ public record BuildingDebugResponsePacket(
     // ── Client handler ──
 
     public static void handleClient(BuildingDebugResponsePacket packet) {
-        LOGGER.info("[Debug] Received debug response for '{}' at {}",
+        Log.info(TAG, "[Debug] Received debug response for '{}' at {}",
                 packet.buildingTypeId(), packet.anchor());
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
             var screen = new com.wsteam.wandscape.projection.client.BuildingDebugScreen(packet);

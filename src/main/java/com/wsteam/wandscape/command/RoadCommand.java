@@ -2,9 +2,6 @@ package com.wsteam.wandscape.command;
 
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
 import com.wsteam.wandscape.core.road.RoadEdge;
@@ -17,6 +14,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Road system debug commands.
@@ -30,7 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class RoadCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadCommand";
 
     private RoadCommand() {}
 
@@ -103,21 +101,21 @@ public final class RoadCommand {
                 return 0;
             }
 
-            LOGGER.info("[RoadEditor] toggleEdit: player={} currentlyEditing={}",
+            Log.info(TAG, "[RoadEditor] toggleEdit: player={} currentlyEditing={}",
                     player.getGameProfile().getName(), RoadEditorNetwork.isEditing(player));
 
             if (RoadEditorNetwork.isEditing(player)) {
                 // Exit edit mode
                 RoadEditorNetwork.removeEditing(player);
                 RoadEditorNetwork.sendExitToPlayer(player);
-                LOGGER.info("[RoadEditor] toggleEdit: sent exit packet to {}", player.getGameProfile().getName());
+                Log.info(TAG, "[RoadEditor] toggleEdit: sent exit packet to {}", player.getGameProfile().getName());
                 ctx.getSource().sendSuccess(() -> Component.literal(
                         "§eRoad edit mode: §cOFF"), true);
             } else {
                 // Enter edit mode
                 RoadEditorNetwork.addEditing(player);
                 RoadEditorNetwork.sendSyncToPlayer(player);
-                LOGGER.info("[RoadEditor] toggleEdit: sent sync packet to {}", player.getGameProfile().getName());
+                Log.info(TAG, "[RoadEditor] toggleEdit: sent sync packet to {}", player.getGameProfile().getName());
                 ctx.getSource().sendSuccess(() -> Component.literal(
                         "§aRoad edit mode: §2ON §7— V key cycles: "
                                 + "Projection → Road Editor → Normal"), true);

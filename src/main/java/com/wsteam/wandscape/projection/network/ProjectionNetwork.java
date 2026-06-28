@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.data.BuildingConfig;
@@ -16,6 +13,7 @@ import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.server.level.ServerPlayer;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Manages the set of players currently in soul projection mode.
@@ -23,7 +21,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class ProjectionNetwork {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ProjectionNetwork";
 
     /** Server-side set of projecting player UUIDs. */
     private static final Set<UUID> projectingPlayers =
@@ -35,13 +33,13 @@ public final class ProjectionNetwork {
 
     public static void addProjecting(ServerPlayer player) {
         projectingPlayers.add(player.getUUID());
-        LOGGER.info("[Projection] Player {} entered projection mode. Total: {}",
+        Log.info(TAG, "[Projection] Player {} entered projection mode. Total: {}",
                 player.getGameProfile().getName(), projectingPlayers.size());
     }
 
     public static void removeProjecting(ServerPlayer player) {
         projectingPlayers.remove(player.getUUID());
-        LOGGER.info("[Projection] Player {} exited projection mode. Total: {}",
+        Log.info(TAG, "[Projection] Player {} exited projection mode. Total: {}",
                 player.getGameProfile().getName(), projectingPlayers.size());
     }
 
@@ -52,7 +50,7 @@ public final class ProjectionNetwork {
     /** Remove a player by UUID (for disconnect cleanup). */
     public static void removeByUuid(UUID playerId) {
         projectingPlayers.remove(playerId);
-        LOGGER.info("[Projection] Removed disconnected player. Total: {}",
+        Log.info(TAG, "[Projection] Removed disconnected player. Total: {}",
                 projectingPlayers.size());
     }
 

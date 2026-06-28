@@ -18,7 +18,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Server→client packet carrying craft_wand recipe data for the crafting station GUI.
  */

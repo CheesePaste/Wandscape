@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 
 import net.minecraft.client.Camera;
@@ -20,12 +17,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import com.wsteam.wandscape.shared.log.Log;
 
 public final class BuildingEditorInputHandler {
 
-
-
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorInputHandler";
     private static final double EDITOR_REACH = 128.0;
 
     private static boolean wasLeftDown = false;
@@ -44,7 +40,7 @@ public final class BuildingEditorInputHandler {
         registered = true;
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(ClientTickEvent.Pre.class, BuildingEditorInputHandler::onClientTickPre);
-        LOGGER.info("[BuildEditor] InputHandler registered");
+        Log.info(TAG, "[BuildEditor] InputHandler registered");
     }
 
     static void onClientTickPre(ClientTickEvent.Pre event) {
@@ -76,7 +72,7 @@ public final class BuildingEditorInputHandler {
         boolean currentlyDragging = BuildingEditorClientState.isDragging();
 
         if (heartbeat) {
-            LOGGER.info("[BuildEditor] tick={} left={} dragging={} hovered={} anchor={}",
+            Log.info(TAG, "[BuildEditor] tick={} left={} dragging={} hovered={} anchor={}",
                     tickCounter, leftDown, currentlyDragging,
                     BuildingEditorClientState.getHoveredAxis(),
                     BuildingEditorClientState.getWorldAnchor());
@@ -85,7 +81,7 @@ public final class BuildingEditorInputHandler {
         // ── Middle click: pattern ──
         boolean middleClicked = middleDown && !wasMiddleDown;
         if (middleClicked) {
-            LOGGER.info("[BuildEditor] MIDDLE CLICK");
+            Log.info(TAG, "[BuildEditor] MIDDLE CLICK");
             boolean shiftDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
                     || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
             if (shiftDown) addBlockToPattern(mc);
@@ -97,18 +93,18 @@ public final class BuildingEditorInputHandler {
 
         // ── Left clicked: start drag if hovering an axis ──
         if (leftClicked) {
-            LOGGER.info("[BuildEditor] LEFT CLICK — hovered={} anchor={}",
+            Log.info(TAG, "[BuildEditor] LEFT CLICK — hovered={} anchor={}",
                     BuildingEditorClientState.getHoveredAxis(),
                     BuildingEditorClientState.getWorldAnchor());
             if (!startAxisDragIfHovered(mc)) {
-                LOGGER.info("[BuildEditor] LEFT CLICK — no hovered axis, ignoring");
+                Log.info(TAG, "[BuildEditor] LEFT CLICK — no hovered axis, ignoring");
             }
         }
 
         // ── Continue drag ──
         if (currentlyDragging && leftDown) {
             if (tickCounter - lastDragLog > 10) {
-                LOGGER.info("[BuildEditor] DRAG tick={} axis={}", tickCounter,
+                Log.info(TAG, "[BuildEditor] DRAG tick={} axis={}", tickCounter,
                         BuildingEditorClientState.getDraggingAxis());
                 lastDragLog = tickCounter;
             }
@@ -117,7 +113,7 @@ public final class BuildingEditorInputHandler {
 
         // ── Drag release ──
         if (leftReleased && currentlyDragging) {
-            LOGGER.info("[BuildEditor] LEFT RELEASE — finishing drag");
+            Log.info(TAG, "[BuildEditor] LEFT RELEASE — finishing drag");
             finishAxisDrag();
         }
 
@@ -178,7 +174,7 @@ public final class BuildingEditorInputHandler {
         BuildingEditorClientState.setHoveredAxis(hovered);
 
         if (hovered != prev && tickCounter - lastHoverLog > 20) {
-            LOGGER.info("[BuildEditor] HOVER: {} -> {}", prev, hovered);
+            Log.info(TAG, "[BuildEditor] HOVER: {} -> {}", prev, hovered);
             lastHoverLog = tickCounter;
         }
     }
@@ -322,7 +318,7 @@ public final class BuildingEditorInputHandler {
         BuildingEditorClientState.setAnchorOffset(BlockOffset.of(0, 0, 0));
         BuildingEditorClientState.setEditMin(BlockOffset.of(0, 0, 0));
         BuildingEditorClientState.setEditMax(BlockOffset.of(0, 0, 0));
-        LOGGER.info("[BuildEditor] ANCHOR SET at {}", hit);
+        Log.info(TAG, "[BuildEditor] ANCHOR SET at {}", hit);
     }
 
     public static void snapMax() {
@@ -398,7 +394,7 @@ public final class BuildingEditorInputHandler {
         BlockPos worldMax = BuildingEditorClientState.getWorldMax();
         BlockPos anchor = BuildingEditorClientState.getWorldAnchor();
         if (worldMin == null || worldMax == null || anchor == null) {
-            LOGGER.info("[BuildEditor] scanBlocks: SKIP wMin={} wMax={} anchor={}", worldMin, worldMax, anchor);
+            Log.info(TAG, "[BuildEditor] scanBlocks: SKIP wMin={} wMax={} anchor={}", worldMin, worldMax, anchor);
             return;
         }
 
@@ -427,7 +423,7 @@ public final class BuildingEditorInputHandler {
         }
         BuildingEditorClientState.setPattern(pattern);
         BuildingEditorClientState.setBlockMapping(mapping);
-        LOGGER.info("[BuildEditor] scanBlocks: {} blocks, {} types", pattern.size(),
+        Log.info(TAG, "[BuildEditor] scanBlocks: {} blocks, {} types", pattern.size(),
                 mapping.values().stream().distinct().count());
     }
 

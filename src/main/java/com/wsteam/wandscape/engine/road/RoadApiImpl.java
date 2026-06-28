@@ -8,7 +8,6 @@ import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.road.server.RoadEditorHandler;
 import com.wsteam.wandscape.shared.api.RoadApi;
-
 /**
  * Default implementation of {@link RoadApi}.
  * Delegates to {@link RoadSavedData} and {@link RoadConfig}.

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.wsteam.wandscape.shared.data.BlueprintInfo;
-
 /**
  * Client-side state holder for the task editor GUI.
  * Accessible from the screen renderer and packet handlers.

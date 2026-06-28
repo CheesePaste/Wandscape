@@ -12,12 +12,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.UUID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Engine-layer {@link WandProvider} that queries the colony warehouse
@@ -32,7 +30,7 @@ import java.util.UUID;
  */
 public class WandProvisionSystem implements WandProvider {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandProvisionSystem";
     private static final String WAND_ITEM_ID = "wandscape:wand";
 
     private final WandPresetLoader presetLoader;
@@ -82,10 +80,10 @@ public class WandProvisionSystem implements WandProvider {
         }
 
         if (bestPreset != null) {
-            LOGGER.info("[WandProvision] selected {} (total_level={}) for reqs={}",
+            Log.info(TAG, "[WandProvision] selected {} (total_level={}) for reqs={}",
                     bestPreset, bestSum, reqs);
         } else {
-            LOGGER.debug("[WandProvision] no wand in warehouse for reqs={}", reqs);
+            Log.debug(TAG, "[WandProvision] no wand in warehouse for reqs={}", reqs);
         }
         return bestPreset;
     }

@@ -12,7 +12,6 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
-
 /**
  * Displays all 9 element types with icon, name, and formatted quantity.
  * Each row is 18px tall (icon 16x16 + 2px spacing).

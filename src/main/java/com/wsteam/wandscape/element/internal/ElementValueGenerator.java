@@ -5,15 +5,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-import org.slf4j.Logger;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.core.HolderLookup;
@@ -24,9 +21,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
+import com.wsteam.wandscape.shared.log.Log;
 
 public class ElementValueGenerator {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ElementValueGenerator";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final double CRAFTING_EFFICIENCY = 1.0;
@@ -400,7 +398,7 @@ public class ElementValueGenerator {
 
         Files.createDirectories(filePath.getParent());
         Files.writeString(filePath, sb.toString());
-        LOGGER.info("Root causes written to {} ({} missing seeds)", filePath, sorted.size());
+        Log.info(TAG, "Root causes written to {} ({} missing seeds)", filePath, sorted.size());
     }
 
     // ── Orchestrator ──

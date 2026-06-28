@@ -8,7 +8,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.LogicalSide;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-
 /**
  * Subscribes to Wandscape game-layer events on {@code NeoForge.EVENT_BUS}
  * and sends player-facing notifications.

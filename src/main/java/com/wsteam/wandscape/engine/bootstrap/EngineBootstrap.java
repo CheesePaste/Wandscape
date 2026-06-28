@@ -8,9 +8,6 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.Wandscape;
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
@@ -57,13 +54,14 @@ import com.google.gson.JsonPrimitive;
 
 import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Bootstraps the engine integration layer.
  * Call from {@link ServerStartingEvent} handler.
  */
 public final class EngineBootstrap {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "EngineBootstrap";
 
     private EngineBootstrap() {}
 
@@ -72,7 +70,7 @@ public final class EngineBootstrap {
      * Must be called once on server start, after all modules are initialized.
      */
     public static World bootstrap() {
-        LOGGER.info("CoreBootstrap bootstrap starting...");
+        Log.info(TAG, "CoreBootstrap bootstrap starting...");
 
         // 1. Build blueprint registry
         BlueprintRegistry blueprints = new BlueprintRegistry();
@@ -83,7 +81,7 @@ public final class EngineBootstrap {
         if (bpConfigLoader != null) {
             BlueprintInterpreter interpreter = new BlueprintInterpreter(blueprints);
             bpConfigLoader.registerIn(blueprints, interpreter);
-            LOGGER.info("  registered {} DSL blueprints from JSON",
+            Log.info(TAG, "  registered {} DSL blueprints from JSON",
                     bpConfigLoader.getAll().size());
         }
 
@@ -99,7 +97,7 @@ public final class EngineBootstrap {
             }
         }
         if (legacyCount > 0) {
-            LOGGER.info("  registered {} legacy build blueprints from BuildingConfig JSON (no blueprint ref)",
+            Log.info(TAG, "  registered {} legacy build blueprints from BuildingConfig JSON (no blueprint ref)",
                     legacyCount);
         }
 
@@ -134,7 +132,7 @@ public final class EngineBootstrap {
         var warehouseApi = WandscapeApis.getWarehouseApiSilently();
         if (warehouseApi instanceof ColonyResourceAccess cra) {
             colonyResources = cra;
-            LOGGER.info("  ColonyResourceAccess: WarehouseManager (live)");
+            Log.info(TAG, "  ColonyResourceAccess: WarehouseManager (live)");
         } else {
             colonyResources = new ColonyResourceAccess() {
                 @Override public boolean hasEnough(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
@@ -144,7 +142,7 @@ public final class EngineBootstrap {
                 @Override public int available(com.wsteam.wandscape.core.types.ResourceId r) { return Integer.MAX_VALUE; }
                 @Override public void addResource(com.wsteam.wandscape.core.types.ResourceId r, int a) {}
             };
-            LOGGER.info("  ColonyResourceAccess: stub (warehouse not loaded)");
+            Log.info(TAG, "  ColonyResourceAccess: stub (warehouse not loaded)");
         }
 
         // 4a. Build wand provider (engine queries warehouse for wand items)
@@ -173,7 +171,7 @@ public final class EngineBootstrap {
         // 6a. Inject core EventBus into WarehouseManager so addResource() emits ResourceFulfilled
         if (colonyResources instanceof com.wsteam.wandscape.warehouse.WarehouseManager wm) {
             wm.setEventBus(world.eventBus);
-            LOGGER.info("  WarehouseManager EventBus injected");
+            Log.info(TAG, "  WarehouseManager EventBus injected");
         }
 
         // 6b. Wire ritualOps into the world (after bootstrap so world exists)
@@ -184,7 +182,7 @@ public final class EngineBootstrap {
                 world.taskPool, world.eventBus, () -> GridPos.ORIGIN);
         eventSource.setResourceShortageHandler(createShortageHandler(world));
         eventSource.setGatherEnabled(false); // gather tasks disabled for early-access
-        LOGGER.info("  EventDrivenTaskSource wired (gather=OFF)");
+        Log.info(TAG, "  EventDrivenTaskSource wired (gather=OFF)");
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
@@ -197,7 +195,7 @@ public final class EngineBootstrap {
         FailureAnalyzerSystem failureAnalyzer = new FailureAnalyzerSystem(
                 Wandscape.WAND_PRESET_LOADER);
         world.addSystem(failureAnalyzer);
-        LOGGER.info("  FailureAnalyzerSystem registered");
+        Log.info(TAG, "  FailureAnalyzerSystem registered");
 
         // 9. Override TransformOp executor with async version (V2.5 gating demo)
         //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
@@ -206,7 +204,7 @@ public final class EngineBootstrap {
             AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
             WandscapeEngine.setAsyncExecutor(asyncExec);
-            LOGGER.info("  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
+            Log.info(TAG, "  AsyncTransformExecutor active: {} tick delay per block", asyncDelay);
         }
 
         // 9b. Create shared item transport manager (visual item flight)
@@ -220,7 +218,7 @@ public final class EngineBootstrap {
         WandscapeBlockInteractExecutor blockInteractExec = new WandscapeBlockInteractExecutor(transporter);
         world.opExecutors.register(blockInteractExec); // overwrites default BlockInteractExecutor
         WandscapeEngine.setBlockInteractExec(blockInteractExec);
-        LOGGER.info("  WandscapeBlockInteractExecutor active (sync + async actions + transport)");
+        Log.info(TAG, "  WandscapeBlockInteractExecutor active (sync + async actions + transport)");
 
         // 9d. Register wand equip/return executors
         //     NPCs fetch wands from warehouse before executing tasks
@@ -228,14 +226,14 @@ public final class EngineBootstrap {
         //     WandEquipExecutor uses the transporter for visual wand delivery.
         world.opExecutors.register(new WandEquipExecutor(Wandscape.WAND_PRESET_LOADER, transporter));
         world.opExecutors.register(new WandReturnExecutor(Wandscape.WAND_PRESET_LOADER, transporter));
-        LOGGER.info("  WandEquipExecutor + WandReturnExecutor registered");
+        Log.info(TAG, "  WandEquipExecutor + WandReturnExecutor registered");
 
         // 9e. Register resource request executor (replaces inline handling)
         //     Uses the transporter for visual item delivery from warehouse to NPC.
         ResourceRequestExecutor resourceReqExec = new ResourceRequestExecutor(transporter);
         world.opExecutors.register(resourceReqExec);
         WandscapeEngine.setResourceRequestExec(resourceReqExec);
-        LOGGER.info("  ResourceRequestExecutor registered (visual transport, staggered)");
+        Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);
@@ -243,7 +241,7 @@ public final class EngineBootstrap {
         // 11. Store world in singleton
         WandscapeEngine.setWorld(world);
 
-        LOGGER.info("CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
+        Log.info(TAG, "CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
                 world.systemCount(), taskSources.size(), blueprints);
         return world;
     }
@@ -290,7 +288,7 @@ public final class EngineBootstrap {
             WorkItem work = new WorkItem("production:synthesize", params, 40);
             api.enqueueWork(stationId, work);
 
-            LOGGER.info("[EngineBootstrap] shortage {} x{} → enqueued synthesize:{} at station {}",
+            Log.info(TAG, "[EngineBootstrap] shortage {} x{} → enqueued synthesize:{} at station {}",
                     resource, amount, recipeKey, stationId.toString().substring(0, 8));
             return true;
         };

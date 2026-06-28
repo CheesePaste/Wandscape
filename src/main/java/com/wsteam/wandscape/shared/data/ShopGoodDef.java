@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.data;
 import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
-
 /** A single good type sold by a shop building. maxStock is managed per-shop in ShopStockManager. */
 public record ShopGoodDef(
         @SerializedName("item_id") String itemId,

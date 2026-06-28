@@ -5,9 +5,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
@@ -17,6 +14,7 @@ import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Compact building selection bar shown during Build projection mode BAR phase.
@@ -55,7 +53,7 @@ public final class BuildingSelectionOverlay {
     private static final int TEXT_WHITE = 0xFFFFFFFF;
     private static final int TEXT_DIM = 0xFF999999;
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingSelectionOverlay";
     private static boolean registered = false;
 
     private BuildingSelectionOverlay() {}
@@ -79,7 +77,7 @@ public final class BuildingSelectionOverlay {
     public static void render(GuiGraphics g, Font font, int screenW, int screenH,
                                double mouseX, double mouseY) {
         if (!isActive()) {
-            LOGGER.debug("[Bar] NOT active: panel={} projecting={} subMode={} barOpen={}",
+            Log.debug(TAG, "[Bar] NOT active: panel={} projecting={} subMode={} barOpen={}",
                     WandscapePanelState.isPanelOpen(),
                     ProjectionClientState.isProjecting(),
                     WandscapePanelState.getActiveSubMode(),
@@ -87,7 +85,7 @@ public final class BuildingSelectionOverlay {
             return;
         }
 
-        LOGGER.debug("[Bar] ACTIVE: slots={} filtered={}", getSlotsSize(), getFilteredSlots().size());
+        Log.debug(TAG, "[Bar] ACTIVE: slots={} filtered={}", getSlotsSize(), getFilteredSlots().size());
         int barY = screenH - WandscapePanelController.BOTTOM_BAR_HEIGHT - BAR_HEIGHT;
 
         // Background
@@ -266,11 +264,11 @@ public final class BuildingSelectionOverlay {
                 int py = cellY + PREVIEW_PAD;
                 int pw = CELL_W - PREVIEW_PAD * 2;
                 int ph = CELL_H - NAME_H - PREVIEW_PAD;
-                LOGGER.debug("[Bar] Calling renderPreview for slot '{}' at ({},{},{},{})",
+                Log.debug(TAG, "[Bar] Calling renderPreview for slot '{}' at ({},{},{},{})",
                         slot.id(), px, py, pw, ph);
                 BuildingPreviewRenderer.renderPreview(g, config, px, py, pw, ph);
             } else {
-                LOGGER.warn("[Bar] Config not found for slot '{}'", slot.id());
+                Log.warn(TAG, "[Bar] Config not found for slot '{}'", slot.id());
                 g.drawCenteredString(font, "?", cellX + CELL_W / 2, cellY + (CELL_H - NAME_H) / 2 - 4, 0xFF666666);
             }
 

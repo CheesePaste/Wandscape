@@ -14,7 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.List;
-
 /**
  * Debug command: query mana, adjust regen rate, toggle mana chat feedback.
  *

@@ -6,9 +6,6 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
@@ -31,6 +28,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→server packet for warehouse deposit/withdraw actions.
@@ -47,7 +45,7 @@ public record WarehouseActionPacket(
         int quantity
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WarehouseActionPacket";
 
     public static final Type<WarehouseActionPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "warehouse_action"));
@@ -69,33 +67,33 @@ public record WarehouseActionPacket(
             BuildingSavedData data = BuildingSavedData.get(level);
             UUID buildingId = data.getBuildingIdAt(pkt.buildingPos);
             if (buildingId == null) {
-                LOGGER.warn("[WarehouseAction] no building at {}", pkt.buildingPos);
+                Log.warn(TAG, "[WarehouseAction] no building at {}", pkt.buildingPos);
                 return;
             }
 
             BuildingState state = data.getBuilding(buildingId);
             if (state == null || !"storage".equals(state.getCategory())) {
-                LOGGER.warn("[WarehouseAction] building {} is not a storage (category={})",
+                Log.warn(TAG, "[WarehouseAction] building {} is not a storage (category={})",
                         buildingId, state != null ? state.getCategory() : "null");
                 return;
             }
 
             UUID colonyId = state.getColonyId();
             if (colonyId == null) {
-                LOGGER.warn("[WarehouseAction] storage building {} has no colony", buildingId);
+                Log.warn(TAG, "[WarehouseAction] storage building {} has no colony", buildingId);
                 return;
             }
 
             WarehouseApi api = WandscapeApis.getWarehouseApiSilently();
             if (api == null) {
-                LOGGER.error("[WarehouseAction] WarehouseApi not available");
+                Log.error(TAG, "[WarehouseAction] WarehouseApi not available");
                 return;
             }
 
             switch (pkt.action) {
                 case "withdraw" -> handleWithdraw(api, colonyId, pkt, sp);
                 case "deposit" -> handleDeposit(api, colonyId, pkt, sp);
-                default -> LOGGER.warn("[WarehouseAction] unknown action: {}", pkt.action);
+                default -> Log.warn(TAG, "[WarehouseAction] unknown action: {}", pkt.action);
             }
         });
     }
@@ -119,7 +117,7 @@ public record WarehouseActionPacket(
         }
 
         if (totalTaken > 0) {
-            LOGGER.info("[WarehouseAction] withdraw {}x {} for player {} (colony={})",
+            Log.info(TAG, "[WarehouseAction] withdraw {}x {} for player {} (colony={})",
                     totalTaken, pkt.itemId, sp.getName().getString(),
                     colonyId.toString().substring(0, 8));
         }
@@ -150,7 +148,7 @@ public record WarehouseActionPacket(
         // Remove deposited items from player's hand
         handStack.shrink(toDeposit);
 
-        LOGGER.info("[WarehouseAction] deposit {}x {} from player {} (colony={})",
+        Log.info(TAG, "[WarehouseAction] deposit {}x {} from player {} (colony={})",
                 toDeposit, rl, sp.getName().getString(),
                 colonyId.toString().substring(0, 8));
 

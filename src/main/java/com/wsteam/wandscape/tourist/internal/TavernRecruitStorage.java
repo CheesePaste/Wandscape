@@ -8,9 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.data.MageResume;
 
 import net.minecraft.core.HolderLookup;
@@ -19,6 +16,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Persists mage tourist resumes that reached 100% satisfaction.
@@ -27,7 +25,7 @@ import net.minecraft.world.level.saveddata.SavedData;
  * <p>Stored as world SavedData under "wandscape_tavern_recruits".
  */
 public class TavernRecruitStorage extends SavedData {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TavernRecruitStorage";
     private static final String DATA_NAME = "wandscape_tavern_recruits";
     private static final int MAX_PER_COLONY = 5;
 
@@ -46,10 +44,10 @@ public class TavernRecruitStorage extends SavedData {
         list.add(resume);
         while (list.size() > MAX_PER_COLONY) {
             MageResume removed = list.remove(0);
-            LOGGER.debug("[Tourist] Evicted oldest resume: {}", removed.touristName());
+            Log.debug(TAG, "[Tourist] Evicted oldest resume: {}", removed.touristName());
         }
         setDirty();
-        LOGGER.info("[Tourist] Mage resume stored for colony {}: {} (Lv.{})",
+        Log.info(TAG, "[Tourist] Mage resume stored for colony {}: {} (Lv.{})",
                 shortId(colonyId), resume.touristName(), resume.level());
     }
 
@@ -114,7 +112,7 @@ public class TavernRecruitStorage extends SavedData {
             }
             storage.colonyResumes.put(colonyId, resumes);
         }
-        LOGGER.debug("[Tourist] Loaded {} colonies from disk", storage.colonyResumes.size());
+        Log.debug(TAG, "[Tourist] Loaded {} colonies from disk", storage.colonyResumes.size());
         return storage;
     }
 

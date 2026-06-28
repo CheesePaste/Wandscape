@@ -15,6 +15,7 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 
 import org.lwjgl.glfw.GLFW;
+import com.wsteam.wandscape.shared.log.Log;
 
 public class ImGuiManager {
     private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
@@ -49,7 +50,7 @@ public class ImGuiManager {
         imGuiGl3.init("#version 150");
 
         initialized = true;
-        Wandscape.LOGGER.info("ImGui initialized successfully");
+        Log.info("Wandscape", "ImGui initialized successfully");
     }
 
     private static void ensureInit() {

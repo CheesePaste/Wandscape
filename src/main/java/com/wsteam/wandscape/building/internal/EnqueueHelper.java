@@ -25,16 +25,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Shared logic for building WorkItems from building configs.
  */
 public final class EnqueueHelper {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "EnqueueHelper";
 
     /** Guard: seed warehouse only once per session. */
     private static boolean warehouseSeeded = false;
@@ -87,7 +85,7 @@ public final class EnqueueHelper {
                 if (ok) {
                     warehouseSeeded = true;
                 } else {
-                    LOGGER.warn("[Enqueue] warehouse seed failed — will retry on next registration");
+                    Log.warn(TAG, "[Enqueue] warehouse seed failed — will retry on next registration");
                 }
             }
 
@@ -248,7 +246,7 @@ public final class EnqueueHelper {
         if (level == null) return false;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) {
-            LOGGER.warn("[Enqueue] seedBuilderWand: ColonyItemBank not available");
+            Log.warn(TAG, "[Enqueue] seedBuilderWand: ColonyItemBank not available");
             return false;
         }
 
@@ -258,7 +256,7 @@ public final class EnqueueHelper {
             ItemKey wandKey = ItemKey.of("wandscape:wand", preset.nbt().copy());
             if (bank.count(colonyId, wandKey) == 0) {
                 bank.add(colonyId, wandKey, 1);
-                LOGGER.info("[Enqueue] seeded builder_wand (colony={})",
+                Log.info(TAG, "[Enqueue] seeded builder_wand (colony={})",
                         colonyId.toString().substring(0, 8));
             }
         }
@@ -275,7 +273,7 @@ public final class EnqueueHelper {
             bank.add(colonyId, ItemKey.of(blockId, null), 64);
         }
 
-        LOGGER.info("[Enqueue] seeded warehouse: builder_wand + 64x{} unique materials (colony={})",
+        Log.info(TAG, "[Enqueue] seeded warehouse: builder_wand + 64x{} unique materials (colony={})",
                 seen.size(), colonyId.toString().substring(0, 8));
         return true;
     }

@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.types;
 
 import javax.annotation.Nullable;
-
 /**
  * Behaviour tags that define what a wand can do.
  * Used as keys in WandCarrier capability maps and task requirements.

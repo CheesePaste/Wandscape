@@ -12,9 +12,6 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
@@ -37,7 +34,6 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.fml.ModList;
-
 /**
  * A tourist NPC that visits the colony to interact with shops and service buildings.
  *
@@ -52,7 +48,7 @@ import net.neoforged.fml.ModList;
  */
 public class TouristEntity extends PathfinderMob {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TouristEntity";
 
     // ── Appearance ──
 

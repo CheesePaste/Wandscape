@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.types.BehaviourLevel;
 import com.wsteam.wandscape.core.types.BehaviourTag;
 
 import java.util.Map;
-
 /**
  * Encodes why a task entered {@link TaskState#FAILED}.
  * Extensible via sealed interface — add new permitted subtypes for new failure modes.

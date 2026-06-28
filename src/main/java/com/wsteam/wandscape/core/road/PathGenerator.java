@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 /**
  * Generates path coordinates between two points.
  * Uses L-shaped paths: walk X first, then Z.

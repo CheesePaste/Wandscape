@@ -2,9 +2,6 @@ package com.wsteam.wandscape.building.network;
 
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
@@ -26,6 +23,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→server packet: player clicks "Recruit NPC" in the tavern GUI.
@@ -36,7 +34,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 public record TavernRecruitPacket(BlockPos buildingPos, String action)
         implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TavernRecruitPacket";
 
     public static final Type<TavernRecruitPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "tavern_recruit"));
@@ -59,12 +57,12 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             BuildingSavedData data = BuildingSavedData.get(level);
             UUID buildingId = data.getBuildingIdAt(pkt.buildingPos);
             if (buildingId == null) {
-                LOGGER.warn("[Tourist] No building at {}", pkt.buildingPos);
+                Log.warn(TAG, "[Tourist] No building at {}", pkt.buildingPos);
                 return;
             }
             BuildingState state = data.getBuilding(buildingId);
             if (state == null || !"tavern".equals(state.getCategory())) {
-                LOGGER.warn("[Tourist] Building {} is not a tavern", buildingId);
+                Log.warn(TAG, "[Tourist] Building {} is not a tavern", buildingId);
                 return;
             }
             UUID colonyId = state.getColonyId();
@@ -98,7 +96,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             // 5. Fix ECS state (spawn() already triggered onNpcJoinWorld)
             fixEcsAfterSpawn(npc, colonyId);
 
-            LOGGER.info("[Tourist] Recruited NPC {} for colony {} at {}",
+            Log.info(TAG, "[Tourist] Recruited NPC {} for colony {} at {}",
                     npc.getUUID().toString().substring(0, 8),
                     colonyId.toString().substring(0, 8),
                     spawnPos.toShortString());
@@ -116,7 +114,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         try {
             index = Integer.parseInt(pkt.action.substring("recruit_mage:".length()));
         } catch (NumberFormatException e) {
-            LOGGER.warn("[Tourist] Invalid recruit_mage action: {}", pkt.action);
+            Log.warn(TAG, "[Tourist] Invalid recruit_mage action: {}", pkt.action);
             return;
         }
 
@@ -157,7 +155,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
         fixEcsAfterSpawn(npc, colonyId);
 
-        LOGGER.info("[Tourist] Recruited mage {} (Lv.{}) from resume for colony {} at {}",
+        Log.info(TAG, "[Tourist] Recruited mage {} (Lv.{}) from resume for colony {} at {}",
                 resume.touristName(), resume.level(),
                 colonyId.toString().substring(0, 8),
                 spawnPos.toShortString());
@@ -212,7 +210,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         if (member != null && !colonyId.equals(member.colonyId())) {
             ecsWorld.addComponent(ecsId,
                     new com.wsteam.wandscape.core.component.ColonyMember(colonyId));
-            LOGGER.info("[Tourist] Fixed NPC {} colony {} → {}",
+            Log.info(TAG, "[Tourist] Fixed NPC {} colony {} → {}",
                     ecsId,
                     member.colonyId().toString().substring(0, 8),
                     colonyId.toString().substring(0, 8));

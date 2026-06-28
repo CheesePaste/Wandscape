@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.api;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
-
 public interface ColonyApi {
     /** Register a new colony at the given origin. Returns its UUID. */
     UUID createColony(BlockPos origin);

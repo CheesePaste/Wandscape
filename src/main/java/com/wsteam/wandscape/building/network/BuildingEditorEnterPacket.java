@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.building.network;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
@@ -16,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player requests entry into building editor mode.
@@ -26,7 +24,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record BuildingEditorEnterPacket(String buildingId) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorEnterPacket";
 
     public static final Type<BuildingEditorEnterPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "build_editor_enter"));
@@ -81,7 +79,7 @@ public record BuildingEditorEnterPacket(String buildingId) implements CustomPack
                 return;
             }
             existingJson = toJsonString(config);
-            LOGGER.info("[BuildEditor] Loaded existing building '{}' for editing by {}",
+            Log.info(TAG, "[BuildEditor] Loaded existing building '{}' for editing by {}",
                     buildingId, player.getGameProfile().getName());
         }
 
@@ -92,7 +90,7 @@ public record BuildingEditorEnterPacket(String buildingId) implements CustomPack
                 true, null, buildingId, existingJson, worldAnchor);
         sendResponse(player, response);
 
-        LOGGER.info("[BuildEditor] Player {} entered build editor. buildingId={}, bodyAt={}",
+        Log.info(TAG, "[BuildEditor] Player {} entered build editor. buildingId={}, bodyAt={}",
                 player.getGameProfile().getName(),
                 buildingId != null && !buildingId.isEmpty() ? buildingId : "(new)",
                 worldAnchor);
@@ -113,7 +111,7 @@ public record BuildingEditorEnterPacket(String buildingId) implements CustomPack
             // We use a simple approach: serialize the record fields manually via a helper
             return new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(config);
         } catch (Exception e) {
-            LOGGER.error("[BuildEditor] Failed to serialize existing config", e);
+            Log.error(TAG, "[BuildEditor] Failed to serialize existing config", e);
             return null;
         }
     }

@@ -8,7 +8,6 @@ import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 import net.minecraft.nbt.CompoundTag;
-
 public class WandPresetLoader {
     private static final String CATEGORY = "wands";
 

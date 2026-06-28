@@ -12,7 +12,6 @@ import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-
 /**
  * Mutable building state — replaces all {@code AbstractWandscapeBE} fields.
  * Implements {@link BuildingData} for read-only access.

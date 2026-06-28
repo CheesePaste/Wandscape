@@ -1,10 +1,7 @@
 package com.wsteam.wandscape.building.editor;
 
-import org.slf4j.Logger;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -14,10 +11,9 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import java.util.Optional;
-
 public final class BuildingEditorAxisRenderer {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorAxisRenderer";
 
     // 调整为实体方块的尺寸
     private static final float SHAFT_LEN = 3.5f;

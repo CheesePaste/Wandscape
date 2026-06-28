@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
 /**
  * Default OpExecutor implementations — all synchronous (return completed futures).
  * Async executors (e.g. AsyncTransformExecutor) replace these at bootstrap.

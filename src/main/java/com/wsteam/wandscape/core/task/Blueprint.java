@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
-
 /**
  * A named blueprint that defines:
  * <ul>

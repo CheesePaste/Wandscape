@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack;
 
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
-
 public interface WarehouseApi {
     long getElement(UUID colonyId, ElementType type);
     Map<ElementType, Long> getAllElements(UUID colonyId);

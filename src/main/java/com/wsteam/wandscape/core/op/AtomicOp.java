@@ -9,7 +9,6 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.types.GridPos;
-
 /**
  * Sealed hierarchy of atomic operations that NPCs can perform.
  * Each variant carries the data needed by its corresponding OpExecutor.

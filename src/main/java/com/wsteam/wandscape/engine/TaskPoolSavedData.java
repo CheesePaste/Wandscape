@@ -7,9 +7,6 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.core.task.GlobalTask;
@@ -23,6 +20,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.saveddata.SavedData;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Persists the {@link GlobalTaskPool} across world sessions via Minecraft {@link SavedData}.
@@ -36,7 +34,7 @@ import net.minecraft.world.level.saveddata.SavedData;
  */
 public final class TaskPoolSavedData extends SavedData {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TaskPoolSavedData";
     private static final String DATA_NAME = "wandscape_tasks";
 
     private final GlobalTaskPool pool;
@@ -74,7 +72,7 @@ public final class TaskPoolSavedData extends SavedData {
         }
         tag.put("tasks", list);
         tag.putLong("nextId", pool.getNextTaskId());
-        LOGGER.info("[TaskPoolSavedData] saved {} tasks (nextId={})", list.size(), pool.getNextTaskId());
+        Log.info(TAG, "[TaskPoolSavedData] saved {} tasks (nextId={})", list.size(), pool.getNextTaskId());
         return tag;
     }
 
@@ -145,7 +143,7 @@ public final class TaskPoolSavedData extends SavedData {
                 pool.setNextTaskId(savedNextId);
             }
         }
-        LOGGER.info("[TaskPoolSavedData] loaded {} tasks (nextId={})", loaded, pool.getNextTaskId());
+        Log.info(TAG, "[TaskPoolSavedData] loaded {} tasks (nextId={})", loaded, pool.getNextTaskId());
         return new TaskPoolSavedData(pool);
     }
 
@@ -219,7 +217,7 @@ public final class TaskPoolSavedData extends SavedData {
                 return task;
             }
         } catch (Exception e) {
-            LOGGER.warn("[TaskPoolSavedData] failed to recompile blueprint '{}': {}",
+            Log.warn(TAG, "[TaskPoolSavedData] failed to recompile blueprint '{}': {}",
                     blueprintId, e.getMessage());
         }
         return null;

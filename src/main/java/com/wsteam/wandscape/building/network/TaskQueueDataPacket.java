@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.data.WorkItem;
-import org.slf4j.Logger;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -15,6 +12,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→client packet carrying the current task queue for a building.
@@ -28,7 +26,7 @@ public record TaskQueueDataPacket(
     List<QueueEntry> entries
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TaskQueueDataPacket";
 
     public static final Type<TaskQueueDataPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "task_queue_data"));
@@ -70,7 +68,7 @@ public record TaskQueueDataPacket(
         if (clientHandler != null) {
             clientHandler.accept(packet);
         } else {
-            LOGGER.warn("TaskQueueDataPacket: no client handler registered");
+            Log.warn(TAG, "TaskQueueDataPacket: no client handler registered");
         }
     }
 

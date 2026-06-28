@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.component;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.UUID;
-
 /**
  * Colony-level metadata attached to the colony entity.
  * Defines the colony's identity, center, and territory radius.

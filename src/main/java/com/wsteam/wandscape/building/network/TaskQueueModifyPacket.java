@@ -8,11 +8,8 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -29,6 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→server packet to modify a building's task queue:
@@ -40,7 +38,7 @@ public record TaskQueueModifyPacket(
     int index
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TaskQueueModifyPacket";
 
     public static final Type<TaskQueueModifyPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "task_queue_modify"));
@@ -58,23 +56,23 @@ public record TaskQueueModifyPacket(
         if (!(ctx.player() instanceof ServerPlayer sp)) return;
 
         sp.getServer().execute(() -> {
-            LOGGER.info("TaskQueueModify: received {} action index={} pos={} from player {}",
+            Log.info(TAG, "TaskQueueModify: received {} action index={} pos={} from player {}",
                     pkt.action, pkt.index, pkt.stationPos, sp.getName().getString());
 
             BuildingSavedData data = BuildingSavedData.get(sp.serverLevel());
             if (data == null) {
-                LOGGER.warn("TaskQueueModify: no BuildingSavedData — action={} index={} pos={}",
+                Log.warn(TAG, "TaskQueueModify: no BuildingSavedData — action={} index={} pos={}",
                         pkt.action, pkt.index, pkt.stationPos);
                 return;
             }
 
             UUID buildingId = data.getBuildingIdAt(pkt.stationPos);
             if (buildingId == null) {
-                LOGGER.warn("TaskQueueModify: no building at pos={} — action={} index={}",
+                Log.warn(TAG, "TaskQueueModify: no building at pos={} — action={} index={}",
                         pkt.stationPos, pkt.action, pkt.index);
                 return;
             }
-            LOGGER.info("TaskQueueModify: buildingId={} action={} index={}",
+            Log.info(TAG, "TaskQueueModify: buildingId={} action={} index={}",
                     buildingId.toString().substring(0, 8), pkt.action, pkt.index);
 
             BuildingApi api = WandscapeApis.getBuildingApi();
@@ -82,7 +80,7 @@ public record TaskQueueModifyPacket(
 
             switch (pkt.action) {
                 case "refresh" -> {
-                    LOGGER.info("TaskQueueModify: refresh requested for building {}", buildingId.toString().substring(0, 8));
+                    Log.info(TAG, "TaskQueueModify: refresh requested for building {}", buildingId.toString().substring(0, 8));
                     changed = true;
                 }
                 case "delete" -> {
@@ -97,7 +95,7 @@ public record TaskQueueModifyPacket(
                     boolean ok = api.moveDown(buildingId, pkt.index);
                     changed = ok;
                 }
-                default -> LOGGER.warn("TaskQueueModify: unknown action '{}' index={} pos={}",
+                default -> Log.warn(TAG, "TaskQueueModify: unknown action '{}' index={} pos={}",
                         pkt.action, pkt.index, pkt.stationPos);
             }
 

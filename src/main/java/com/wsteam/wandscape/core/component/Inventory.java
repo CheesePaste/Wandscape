@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 
 import java.util.*;
-
 /**
  * NPC inventory managed by the core layer.
  * Simple list-based storage with capacity limit.

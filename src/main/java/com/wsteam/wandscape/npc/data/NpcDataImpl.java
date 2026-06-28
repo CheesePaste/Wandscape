@@ -7,7 +7,6 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.data.AbilitySet;
 import com.wsteam.wandscape.shared.data.NpcData;
-
 /**
  * Implementation of {@link NpcData} wrapping a {@link WandscapeNpc}.
  */

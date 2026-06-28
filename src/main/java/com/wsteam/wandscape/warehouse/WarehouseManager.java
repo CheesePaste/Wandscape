@@ -8,9 +8,6 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EventBus;
 import com.wsteam.wandscape.core.event.ResourceFulfilled;
@@ -29,6 +26,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Implements both {@link WarehouseApi} and {@link ColonyResourceAccess}.
@@ -38,7 +36,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  */
 public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WarehouseManager";
 
     /** Core event bus — set by EngineBootstrap after world creation. */
     @Nullable
@@ -263,7 +261,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
     public void addResource(ResourceId resource, int amount) {
         ColonyItemBank bank = getBank();
         if (bank == null) {
-            LOGGER.warn("addResource({}, {}): ColonyItemBank not available", resource, amount);
+            Log.warn(TAG, "addResource({}, {}): ColonyItemBank not available", resource, amount);
             return;
         }
 
@@ -271,13 +269,13 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         if (elem != null) {
             UUID colonyId = findStorageColony();
             bank.addElement(colonyId, elem, amount);
-            LOGGER.info("addResource: {} x{} → colony {} warehouse ({} total)",
+            Log.info(TAG, "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.countElement(colonyId, elem));
         } else {
             ItemKey key = ItemKey.of(resource.id(), null);
             UUID colonyId = findStorageColony();
             bank.add(colonyId, key, amount);
-            LOGGER.info("addResource: {} x{} → colony {} warehouse ({} total)",
+            Log.info(TAG, "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.count(colonyId, key));
         }
 

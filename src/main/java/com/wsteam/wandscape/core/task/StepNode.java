@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.task;
 
 import java.util.List;
 import java.util.Map;
-
 /**
  * One step in a {@link BlueprintDefinition}'s {@code steps} array.
  * Each variant corresponds to a JSON step type.

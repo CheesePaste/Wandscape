@@ -2,7 +2,6 @@ package com.wsteam.wandscape.wand.internal;
 
 import com.wsteam.wandscape.shared.data.BehaviorType;
 import net.minecraft.nbt.CompoundTag;
-
 public final class WandDataValidator {
     private WandDataValidator() {}
 

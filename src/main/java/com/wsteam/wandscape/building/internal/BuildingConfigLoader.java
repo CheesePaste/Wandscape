@@ -5,16 +5,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WonderEffect;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Singleton loader that parses {@link BuildingConfig} from JSON
@@ -24,7 +22,7 @@ import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
  * via {@link com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader}.
  */
 public final class BuildingConfigLoader {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingConfigLoader";
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(BlockOffset.class, new BlockOffset.Deserializer())
             .registerTypeAdapter(BuildingConfig.class, new BuildingConfig.Deserializer())
@@ -74,11 +72,11 @@ public final class BuildingConfigLoader {
     private synchronized BuildingConfig parseConfig(JsonElement json) {
         BuildingConfig config = GSON.fromJson(json, BuildingConfig.class);
         if (config.id() == null || config.id().isEmpty()) {
-            LOGGER.warn("BuildingConfig missing id, skipping");
+            Log.warn(TAG, "BuildingConfig missing id, skipping");
             return null;
         }
         configs.put(config.id(), config);
-        LOGGER.info("loaded BuildingConfig: {} (category={}, blocks={})", config.id(), config.category(), config.pattern().size());
+        Log.info(TAG, "loaded BuildingConfig: {} (category={}, blocks={})", config.id(), config.category(), config.pattern().size());
         return config;
     }
 }

@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.road;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 /**
  * Plans decoration placements along completed road edges.
  *

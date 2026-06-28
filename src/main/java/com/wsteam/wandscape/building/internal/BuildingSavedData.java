@@ -5,12 +5,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -29,6 +26,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.neoforged.bus.api.IEventBus;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Level-attached persistent storage for all building state.
@@ -47,7 +45,7 @@ import net.neoforged.bus.api.IEventBus;
  * last one is destroyed/damaged).
  */
 public class BuildingSavedData extends SavedData {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingSavedData";
     private static final String DATA_NAME = "wandscape_buildings";
 
     // NBT keys
@@ -295,7 +293,7 @@ public class BuildingSavedData extends SavedData {
         });
 
         setDirty();
-        LOGGER.debug("registered building {} type={} at {} posIndexSize={}",
+        Log.debug(TAG, "registered building {} type={} at {} posIndexSize={}",
                 state.getBuildingId().toString().substring(0, 8),
                 state.getBuildingTypeId(), state.getAnchor(), posIndex.size());
     }
@@ -320,7 +318,7 @@ public class BuildingSavedData extends SavedData {
         }
 
         setDirty();
-        LOGGER.debug("unregistered building {} type={} at {}",
+        Log.debug(TAG, "unregistered building {} type={} at {}",
                 buildingId.toString().substring(0, 8),
                 state.getBuildingTypeId(), state.getAnchor());
         return state;
@@ -485,7 +483,7 @@ public class BuildingSavedData extends SavedData {
         data.contributionRegistry.setBuildSource(data::getAllBuildings);
         data.contributionRegistry.rebuildFrom(data::getAllBuildings);
 
-        LOGGER.info("Loaded {} buildings from saved data", data.buildings.size());
+        Log.info(TAG, "Loaded {} buildings from saved data", data.buildings.size());
 
         // ── Load shop inventory persistence ──
         if (tag.contains(TAG_SHOP_STOCK)) {
@@ -500,7 +498,7 @@ public class BuildingSavedData extends SavedData {
                     }
                     data.shopStock.put(buildingId, items);
                 } catch (IllegalArgumentException e) {
-                    LOGGER.warn("Invalid building UUID in shop stock: {}", key);
+                    Log.warn(TAG, "Invalid building UUID in shop stock: {}", key);
                 }
             }
         }
@@ -516,7 +514,7 @@ public class BuildingSavedData extends SavedData {
                     }
                     data.shopMaxStock.put(buildingId, items);
                 } catch (IllegalArgumentException e) {
-                    LOGGER.warn("Invalid building UUID in shop max stock: {}", key);
+                    Log.warn(TAG, "Invalid building UUID in shop max stock: {}", key);
                 }
             }
         }

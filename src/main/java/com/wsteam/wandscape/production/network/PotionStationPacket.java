@@ -14,7 +14,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Server→client packet carrying potion recipe data for the potion station GUI.
  * MVP stub — no client screen yet.

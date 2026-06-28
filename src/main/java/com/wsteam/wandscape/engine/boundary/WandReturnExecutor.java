@@ -23,12 +23,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Executes {@link AtomicOp.WandReturnOp}: unequips a wand from the NPC
@@ -37,7 +35,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandReturnExecutor";
     private static final String WAND_ITEM_ID = "wandscape:wand";
 
     private final WandPresetLoader presetLoader;
@@ -56,7 +54,7 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
     @Override
     public CompletableFuture<Void> execute(AtomicOp.WandReturnOp op, World world, long npcId) {
         String presetId = op.wandItemId();
-        LOGGER.info("[WandReturn] ▶ execute called: preset={} npcId={}", presetId, npcId);
+        Log.info(TAG, "[WandReturn] ▶ execute called: preset={} npcId={}", presetId, npcId);
 
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) {
@@ -75,14 +73,14 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
         // 1. Read current WandCarrier
         WandCarrier current = world.get(npcId, WandCarrier.class);
         if (current == null || !current.equippedWandIds().contains(presetId)) {
-            LOGGER.debug("[WandReturn] preset {} not equipped on NPC {}, skipping", presetId, npcId);
+            Log.debug(TAG, "[WandReturn] preset {} not equipped on NPC {}, skipping", presetId, npcId);
             return CompletableFuture.completedFuture(null);
         }
 
         // 2. Find the preset for this wand (needed for NBT and visual)
         var preset = presetLoader.getPreset(presetId);
         if (preset == null) {
-            LOGGER.warn("[WandReturn] unknown wand preset: {}, unequipping without visual", presetId);
+            Log.warn(TAG, "[WandReturn] unknown wand preset: {}, unequipping without visual", presetId);
             current.unequip(presetId, java.util.Map.of());
             world.addComponent(npcId, current);
             return CompletableFuture.completedFuture(null);
@@ -136,7 +134,7 @@ public class WandReturnExecutor implements OpExecutor<AtomicOp.WandReturnOp> {
                 }
             }
 
-            LOGGER.info("[WandReturn] 📦 NPC #{} 归还 '{}' → 仓库 剩余能力: {}",
+            Log.info(TAG, "[WandReturn] 📦 NPC #{} 归还 '{}' → 仓库 剩余能力: {}",
                     npcId, presetId, current.capabilities().keySet());
 
             // Notify WandLifecycle: wand has arrived at warehouse

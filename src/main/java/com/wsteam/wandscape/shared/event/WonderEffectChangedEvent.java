@@ -6,7 +6,6 @@ import java.util.UUID;
 import com.wsteam.wandscape.shared.data.WonderEffect;
 
 import net.neoforged.bus.api.Event;
-
 /** Fired when a wonder's effects change (activated, paused, or modified). */
 public class WonderEffectChangedEvent extends Event {
     private final UUID buildingId;

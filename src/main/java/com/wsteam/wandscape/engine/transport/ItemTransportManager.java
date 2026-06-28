@@ -10,12 +10,10 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Manages in-flight item transport animations between warehouse and NPC.
@@ -30,7 +28,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ItemTransportManager {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ItemTransportManager";
 
     private final List<ActiveTransport> active = new ArrayList<>();
 
@@ -90,7 +88,7 @@ public class ItemTransportManager {
                 ownerNpcId, legs, 0, 0, ownsItem);
         active.add(t);
 
-        LOGGER.debug("[Transport] send {} {}→{} legs={} npc={} ownsItem={}",
+        Log.debug(TAG, "[Transport] send {} {}→{} legs={} npc={} ownsItem={}",
                 key.itemId(), from.toShortString(), to.toShortString(),
                 legs.size(), ownerNpcId, ownsItem);
         return future;
@@ -116,7 +114,7 @@ public class ItemTransportManager {
             t.entity.discard();
             t.future.cancel(false);
             active.remove(t);
-            LOGGER.info("[Transport] orphan recovery: {} {} (npc={})",
+            Log.info(TAG, "[Transport] orphan recovery: {} {} (npc={})",
                     t.itemKey.itemId(), t.ownsItem ? "returned" : "discarded", npcId);
         }
     }
@@ -236,7 +234,7 @@ public class ItemTransportManager {
     private static ItemEntity spawnVisual(ItemKey key, BlockPos pos, Level level) {
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(key.itemId()));
         if (item == null) {
-            LOGGER.warn("[Transport] unknown item: {}", key.itemId());
+            Log.warn(TAG, "[Transport] unknown item: {}", key.itemId());
             return null;
         }
         ItemStack stack = new ItemStack(item, 1);

@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
@@ -17,6 +14,7 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
 import net.minecraft.core.BlockPos;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Async TransformOp executor — exercises V2.5 CompletableFuture model.
@@ -34,7 +32,7 @@ import net.minecraft.core.BlockPos;
  */
 public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "AsyncTransformExecutor";
     private final int delayTicks;
 
     record Pending(CompletableFuture<Void> future, AtomicOp.TransformOp op, World world,
@@ -44,7 +42,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
 
     public AsyncTransformExecutor(int delayTicks) {
         this.delayTicks = delayTicks;
-        LOGGER.info("AsyncTransformExecutor delay={} ticks", delayTicks);
+        Log.info(TAG, "AsyncTransformExecutor delay={} ticks", delayTicks);
     }
 
     @Override
@@ -63,7 +61,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                         new ResourceShortageException(op.consumable()));
             }
             inv.remove(op.consumable().resource(), op.consumable().amount());
-            LOGGER.debug("TransformOp consumable: -{} x{} from NPC {}",
+            Log.debug(TAG, "TransformOp consumable: -{} x{} from NPC {}",
                     op.consumable().resource().id(), op.consumable().amount(), npcId);
         }
 
@@ -100,11 +98,11 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                 npc.doWorkAnimation(new BlockPos(
                         p.op.target().x(), p.op.target().y(), p.op.target().z()));
             }
-            LOGGER.debug("async TransformOp placed: {}→{} at {}",
+            Log.debug(TAG, "async TransformOp placed: {}→{} at {}",
                     p.op.from().id(), p.op.to().id(), p.op.target());
         });
 
-        LOGGER.debug("async TransformOp: {}→{} at {} ({} tick delay)",
+        Log.debug(TAG, "async TransformOp: {}→{} at {} ({} tick delay)",
                 op.from().id(), op.to().id(), op.target(), delayTicks);
         return future;
     }
@@ -132,7 +130,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         }
 
         if (!toComplete.isEmpty()) {
-            LOGGER.debug("async tickAll: {} completed, {} remaining",
+            Log.debug(TAG, "async tickAll: {} completed, {} remaining",
                     toComplete.size(), pending.size());
         }
     }

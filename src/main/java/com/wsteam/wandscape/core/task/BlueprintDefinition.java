@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.task;
 
 import java.util.List;
 import java.util.Map;
-
 /**
  * The parsed AST of a blueprint JSON file.
  * This is the "blueprint as data" — a {@link BlueprintInterpreter} turns it into

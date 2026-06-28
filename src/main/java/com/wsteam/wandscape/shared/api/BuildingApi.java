@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
-
 public interface BuildingApi {
     // ---- Query ----
     BuildingData getBuilding(UUID buildingId);

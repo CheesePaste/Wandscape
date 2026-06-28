@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.op;
 import com.wsteam.wandscape.core.types.ResourceStack;
 
 import java.util.List;
-
 /**
  * Thrown by {@link OpExecutor}s when a resource-dependent operation
  * cannot proceed because the colony warehouse lacks sufficient stock.

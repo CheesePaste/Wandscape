@@ -10,7 +10,6 @@ import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
-
 /**
  * Stationary bright star particle — marks the wand's beam path.
  * Brightness matches end_rod via getLightColor() = max light.

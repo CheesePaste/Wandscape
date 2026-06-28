@@ -13,7 +13,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
-
 /**
  * Search text input with custom medieval styling.
  * Wraps an {@link EditBox} with no vanilla border, drawing a themed background instead.

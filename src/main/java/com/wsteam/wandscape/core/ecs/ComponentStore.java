@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.ecs;
 
 import java.util.List;
-
 /**
  * Storage contract for one component type T.
  * Each component type gets its own store in World.

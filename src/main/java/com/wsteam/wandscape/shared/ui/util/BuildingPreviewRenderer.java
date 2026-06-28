@@ -7,12 +7,9 @@ import java.util.Map;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.opengl.GL11;
-import org.slf4j.Logger;
-
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 
@@ -27,6 +24,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Standalone 3D building preview renderer.
@@ -40,7 +38,7 @@ import net.minecraft.world.level.block.state.properties.Property;
  */
 public final class BuildingPreviewRenderer {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingPreviewRenderer";
     private static final int FULL_BRIGHT = LightTexture.FULL_BRIGHT;
     private static final float VIEW_FOV = 25f;
     private static final float TILT_RAD = 0.55f;
@@ -66,13 +64,13 @@ public final class BuildingPreviewRenderer {
         long ts = System.currentTimeMillis();
         if (ts - lastEntryLogMs > 1000) {
             lastEntryLogMs = ts;
-            LOGGER.info("[Preview] renderPreview ENTRY id={} patternSize={} mappingSize={} rect=({},{},{},{})",
+            Log.info(TAG, "[Preview] renderPreview ENTRY id={} patternSize={} mappingSize={} rect=({},{},{},{})",
                     config.id(), config.pattern().size(), config.blockMapping().size(), x, y, w, h);
         }
         List<BlockOffset> pattern = config.pattern();
         Map<String, String> blockMapping = config.blockMapping();
         if (pattern.isEmpty() || blockMapping.isEmpty()) {
-            LOGGER.warn("[Preview] Empty pattern or mapping for '{}'", config.id());
+            Log.warn(TAG, "[Preview] Empty pattern or mapping for '{}'", config.id());
             drawDebugRect(g, x, y, w, h, 0xFFFF0000);
             return;
         }
@@ -111,7 +109,7 @@ public final class BuildingPreviewRenderer {
             entries.add(new BlockEntry(off, state));
         }
         if (entries.isEmpty()) {
-            LOGGER.warn("[Preview] No entries resolved for '{}' (pattern={}, mappingKeys={})",
+            Log.warn(TAG, "[Preview] No entries resolved for '{}' (pattern={}, mappingKeys={})",
                     config.id(), pattern.size(), blockMapping.size());
             drawDebugRect(g, x, y, w, h, 0xFFFF0000);
             return;
@@ -142,7 +140,7 @@ public final class BuildingPreviewRenderer {
         long renderStart = System.currentTimeMillis();
         if (renderStart - lastDebugLogMs > 5000) {
             lastDebugLogMs = renderStart;
-            LOGGER.info("[Preview] id={} resolved={} rect=({},{},{},{}) cx={:.1f} cy={:.1f} cz={:.1f} "
+            Log.info(TAG, "[Preview] id={} resolved={} rect=({},{},{},{}) cx={:.1f} cy={:.1f} cz={:.1f} "
                     + "extent={:.1f} scale={:.3f} camDist={:.1f} rotY={:.2f}",
                     config.id(), entries.size(), x, y, w, h, cx, cy, cz,
                     extent, scale, camDist, rotY);
@@ -151,7 +149,7 @@ public final class BuildingPreviewRenderer {
         int guiScale = (int) mc.getWindow().getGuiScale();
         int winH = mc.getWindow().getHeight();
 
-        LOGGER.debug("[Preview] Projection set: fov={} aspect={} viewport=({},{},{},{}) guiScale={} winH={}",
+        Log.debug(TAG, "[Preview] Projection set: fov={} aspect={} viewport=({},{},{},{}) guiScale={} winH={}",
                 VIEW_FOV, String.format("%.3f", (float)w/Math.max(h,1)),
                 (int)(x*guiScale), winH-(int)((y+h)*guiScale),
                 (int)(w*guiScale), (int)(h*guiScale), guiScale, winH);
@@ -179,7 +177,7 @@ public final class BuildingPreviewRenderer {
             pose.popPose();
         }
 
-        LOGGER.debug("[Preview] Rendered {} blocks, flushing all batches", entries.size());
+        Log.debug(TAG, "[Preview] Rendered {} blocks, flushing all batches", entries.size());
         bufferSource.endBatch();
 
         pose.popPose();
@@ -188,11 +186,11 @@ public final class BuildingPreviewRenderer {
         RenderSystem.disableDepthTest();
         RenderSystem.viewport(0, 0, mc.getWindow().getWidth(), winH);
 
-        LOGGER.debug("[Preview] Cleanup complete for '{}'", config.id());
+        Log.debug(TAG, "[Preview] Cleanup complete for '{}'", config.id());
 
         long elapsed = System.currentTimeMillis() - renderStart;
         if (elapsed > 16) {
-            LOGGER.warn("[Preview] SLOW render for '{}': {}ms for {} blocks", config.id(), elapsed, entries.size());
+            Log.warn(TAG, "[Preview] SLOW render for '{}': {}ms for {} blocks", config.id(), elapsed, entries.size());
         }
     }
 
@@ -216,13 +214,13 @@ public final class BuildingPreviewRenderer {
         try {
             rl = ResourceLocation.parse(baseId);
         } catch (Exception e) {
-            LOGGER.trace("[Preview] Bad block id '{}': {}", rawId, e.getMessage());
+            Log.debug(TAG,"[Preview] Bad block id '{}': {}", rawId, e.getMessage());
             return null;
         }
 
         Block block = BuiltInRegistries.BLOCK.get(rl);
         if (block == null) {
-            LOGGER.trace("[Preview] Unknown block '{}'", baseId);
+            Log.debug(TAG,"[Preview] Unknown block '{}'", baseId);
             return null;
         }
 

@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import javax.annotation.Nullable;
-
 /**
  * A self-contained unit of work for an NPC.
  * Carries its own execution position (stance) so the NPC can navigate

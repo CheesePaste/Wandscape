@@ -3,11 +3,8 @@ package com.wsteam.wandscape.road.client;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathGenerator;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
@@ -20,6 +17,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * World-space rendering for road projection mode.
@@ -36,7 +34,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
  */
 public final class RoadProjectionRenderer {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadProjectionRenderer";
 
     /** Road half-width constants. */
     private static final float ROAD_HALF_WIDTH_BASE = 1.5f;
@@ -72,7 +70,7 @@ public final class RoadProjectionRenderer {
         registered = true;
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(RenderLevelStageEvent.class, RoadProjectionRenderer::onRenderLevelStage);
-        LOGGER.info("[RoadProjection] Renderer registered");
+        Log.info(TAG, "[RoadProjection] Renderer registered");
     }
 
     // ═══════════════════════════════════════════════════════════════

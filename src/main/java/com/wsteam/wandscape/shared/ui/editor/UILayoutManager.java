@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Saves and loads UI layout presets to/from config/wandscape/ui_layouts/.
@@ -28,9 +29,9 @@ public final class UILayoutManager {
         try {
             Files.createDirectories(LAYOUT_DIR);
             Files.writeString(layoutPath(layout.name()), layout.toJson());
-            Wandscape.LOGGER.info("Saved UI layout: {}", layout.name());
+            Log.info("Wandscape", "Saved UI layout: {}", layout.name());
         } catch (IOException e) {
-            Wandscape.LOGGER.error("Failed to save UI layout: {}", layout.name(), e);
+            Log.error("Wandscape", "Failed to save UI layout: {}", layout.name(), e);
         }
     }
 
@@ -41,7 +42,7 @@ public final class UILayoutManager {
             String json = Files.readString(path);
             return WidgetLayout.ScreenLayout.fromJson(json);
         } catch (IOException e) {
-            Wandscape.LOGGER.error("Failed to load UI layout: {}", name, e);
+            Log.error("Wandscape", "Failed to load UI layout: {}", name, e);
             return null;
         }
     }
@@ -57,7 +58,7 @@ public final class UILayoutManager {
                      .forEach(names::add);
             }
         } catch (IOException e) {
-            Wandscape.LOGGER.warn("Failed to list UI layouts", e);
+            Log.warn("Wandscape", "Failed to list UI layouts", e);
         }
         return names;
     }

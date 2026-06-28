@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.data;
 
 import com.google.gson.annotations.SerializedName;
-
 public enum ElementType {
     @SerializedName("earth") EARTH("earth", 1),
     @SerializedName("wood") WOOD("wood", 1),

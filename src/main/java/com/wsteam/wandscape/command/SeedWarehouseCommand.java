@@ -2,8 +2,6 @@ package com.wsteam.wandscape.command;
 
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
@@ -25,6 +23,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.phys.Vec3;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Debug command: seed 9999 of every registered Minecraft item into the colony warehouse.
@@ -35,7 +34,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class SeedWarehouseCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "SeedWarehouseCommand";
     private static final int DEBUG_COUNT = 9999;
 
     private SeedWarehouseCommand() {}
@@ -98,7 +97,7 @@ public final class SeedWarehouseCommand {
         }
 
         String colonyIdShort = colonyId.toString().substring(0, 8);
-        LOGGER.info("[SeedWarehouse] colony={} seeded {} item types x{}", colonyIdShort, seeded, DEBUG_COUNT);
+        Log.info(TAG, "[SeedWarehouse] colony={} seeded {} item types x{}", colonyIdShort, seeded, DEBUG_COUNT);
 
         int totalSeeded = seeded;
         src.sendSuccess(() -> Component.literal(

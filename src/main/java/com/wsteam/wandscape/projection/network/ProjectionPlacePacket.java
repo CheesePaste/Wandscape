@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.projection.network;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -20,6 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player confirms building placement from projection mode.
@@ -36,7 +34,7 @@ public record ProjectionPlacePacket(
         String buildingTypeId,
         BlockPos anchorPos) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ProjectionPlacePacket";
 
     public static final Type<ProjectionPlacePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "projection_place"));
@@ -58,7 +56,7 @@ public record ProjectionPlacePacket(
             player.displayClientMessage(
                     Component.literal("[Projection] §cUnknown building type: " + packet.buildingTypeId),
                     false);
-            LOGGER.warn("[Projection] Unknown building type '{}' from player {}",
+            Log.warn(TAG, "[Projection] Unknown building type '{}' from player {}",
                     packet.buildingTypeId, player.getGameProfile().getName());
             return;
         }
@@ -108,10 +106,10 @@ public record ProjectionPlacePacket(
                             packet.anchorPos.getZ() + ") — §aNPC will construct"),
                     false);
 
-            LOGGER.info("[Projection] Building '{}' placed at {} by player {}. WorkItem enqueued.",
+            Log.info(TAG, "[Projection] Building '{}' placed at {} by player {}. WorkItem enqueued.",
                     config.displayName(), packet.anchorPos, player.getGameProfile().getName());
         } else {
-            LOGGER.warn("[Projection] Building registered but getBuildingAt returned null at {}",
+            Log.warn(TAG, "[Projection] Building registered but getBuildingAt returned null at {}",
                     packet.anchorPos);
         }
     }

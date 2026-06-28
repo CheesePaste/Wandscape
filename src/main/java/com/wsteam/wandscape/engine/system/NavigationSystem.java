@@ -4,9 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
@@ -17,6 +14,7 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Single driver of all NPC movement.
@@ -32,7 +30,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
  */
 public class NavigationSystem implements System {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "NavigationSystem";
 
     static final double STOP_RANGE_SQ = 25.0; // 5²
     private static final int PATHFIND_MAX_RANGE = 32;
@@ -89,10 +87,10 @@ public class NavigationSystem implements System {
                 if (nav.mode == NavigationState.Mode.PATHFINDING) {
                     boolean ok = npc.getNavigation().moveTo(
                             nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
-                    LOGGER.info("[NavSys] NPC {} pathfinding → ({},{},{}) hDistSq={} ok={}",
+                    Log.info(TAG, "[NavSys] NPC {} pathfinding → ({},{},{}) hDistSq={} ok={}",
                             npcId, nav.target.x(), nav.target.y(), nav.target.z(), (int) hDistSq, ok);
                     if (!ok) {
-                        LOGGER.info("[NavSys] NPC {} — moveTo failed immediately, switching to teleport", npcId);
+                        Log.info(TAG, "[NavSys] NPC {} — moveTo failed immediately, switching to teleport", npcId);
                         switchToRitualTeleport(nav, npcId, world);
                     }
                     continue;
@@ -118,21 +116,21 @@ public class NavigationSystem implements System {
                 nav.repathCount++;
                 boolean ok = npc.getNavigation().moveTo(
                         nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
-                LOGGER.info("[NavSys] NPC {} re-path #{}, elapsed={} ok={}",
+                Log.info(TAG, "[NavSys] NPC {} re-path #{}, elapsed={} ok={}",
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
-                    LOGGER.info("[NavSys] NPC {} — re-path failed, switching to teleport", npcId);
+                    Log.info(TAG, "[NavSys] NPC {} — re-path failed, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                 }
             } else {
-                LOGGER.info("[NavSys] NPC {} — re-paths exhausted, switching to teleport", npcId);
+                Log.info(TAG, "[NavSys] NPC {} — re-paths exhausted, switching to teleport", npcId);
                 switchToRitualTeleport(nav, npcId, world);
             }
             return;
         }
 
         if (elapsed > PATHFIND_TIMEOUT) {
-            LOGGER.info("[NavSys] NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
+            Log.info(TAG, "[NavSys] NPC {} — timeout {} ticks, switching to teleport", npcId, elapsed);
             switchToRitualTeleport(nav, npcId, world);
             return;
         }
@@ -143,10 +141,10 @@ public class NavigationSystem implements System {
                     + Math.abs(npc.getZ() - nav.lastCheckZ);
             if (progress < STUCK_MIN_PROGRESS) {
                 nav.stuckChecks++;
-                LOGGER.info("[NavSys] NPC {} — stuck check #{}, progress={}",
+                Log.info(TAG, "[NavSys] NPC {} — stuck check #{}, progress={}",
                         npcId, nav.stuckChecks, String.format("%.2f", progress));
                 if (nav.stuckChecks >= MAX_STUCK_CHECKS) {
-                    LOGGER.info("[NavSys] NPC {} — stuck, switching to teleport", npcId);
+                    Log.info(TAG, "[NavSys] NPC {} — stuck, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                     return;
                 }
@@ -209,10 +207,10 @@ public class NavigationSystem implements System {
             nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
             nav.stuckChecks = 0;
             nav.repathCount = 0;
-            LOGGER.info("[NavSys] NPC {} — self_teleport ritual fired → ({},{},{})",
+            Log.info(TAG, "[NavSys] NPC {} — self_teleport ritual fired → ({},{},{})",
                     npcId, target.x(), target.y(), target.z());
         } else {
-            LOGGER.warn("[NavSys] NPC {} — cannot teleport: ritualOps={} target={}",
+            Log.warn(TAG, "[NavSys] NPC {} — cannot teleport: ritualOps={} target={}",
                     npcId, world.ritualOps != null, target != null);
         }
     }

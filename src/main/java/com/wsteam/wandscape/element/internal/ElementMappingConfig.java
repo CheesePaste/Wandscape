@@ -9,7 +9,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.data.ElementType;
-
 public record ElementMappingConfig(
     @Nullable String blockId,
     @Nullable String itemId,

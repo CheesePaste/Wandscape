@@ -2,7 +2,6 @@ package com.wsteam.wandscape.shared.ui.skin;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-
 /**
  * Renders UI sprites from skin sheets via {@link GuiGraphics#blit}.
  * All coordinates are in screen pixels; UVs come from {@link SkinSprite}.

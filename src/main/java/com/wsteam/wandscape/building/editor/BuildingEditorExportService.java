@@ -7,16 +7,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WonderEffect;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server-side service for validating and exporting building editor JSON.
@@ -24,7 +22,7 @@ import com.wsteam.wandscape.shared.data.WonderEffect;
  */
 public final class BuildingEditorExportService {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorExportService";
 
     private static final Gson PRETTY_GSON = new GsonBuilder()
             .setPrettyPrinting()
@@ -51,7 +49,7 @@ public final class BuildingEditorExportService {
         try {
             config = PRETTY_GSON.fromJson(buildingJson, BuildingConfig.class);
         } catch (Exception e) {
-            LOGGER.error("[BuildEditor] Failed to parse building JSON", e);
+            Log.error(TAG, "[BuildEditor] Failed to parse building JSON", e);
             return ExportResult.failure("JSON parse error: " + e.getMessage());
         }
 
@@ -87,9 +85,9 @@ public final class BuildingEditorExportService {
             JsonElement element = JsonParser.parseString(buildingJson);
             String prettyJson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(element);
             Files.writeString(outputFile, prettyJson);
-            LOGGER.info("[BuildEditor] Exported building '{}' to {}", config.id(), outputFile.toAbsolutePath());
+            Log.info(TAG, "[BuildEditor] Exported building '{}' to {}", config.id(), outputFile.toAbsolutePath());
         } catch (IOException e) {
-            LOGGER.error("[BuildEditor] Failed to write building JSON", e);
+            Log.error(TAG, "[BuildEditor] Failed to write building JSON", e);
             return ExportResult.failure("Failed to write file: " + e.getMessage());
         }
 

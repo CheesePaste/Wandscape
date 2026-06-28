@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.boundary;
 
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
-
 /**
  * Core-layer boundary for block-level world operations.
  * Implemented by the Minecraft adapter layer.

@@ -11,7 +11,6 @@ import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-
 /**
  * Small square icon button. Supports both sprite-sheet icons (via
  * {@link SkinRender}) and character-based icons (e.g. "X") with

@@ -4,15 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Abilities;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client-side static state holder for road projection mode.
@@ -37,7 +35,7 @@ import net.minecraft.world.entity.player.Abilities;
  */
 public final class RoadProjectionClientState {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadProjectionClientState";
 
     /** Whether the player is currently in road projection mode. */
     private static volatile boolean projecting = false;
@@ -125,7 +123,7 @@ public final class RoadProjectionClientState {
 
         projecting = true;
 
-        LOGGER.info("[RoadProjection] Entered road projection mode. Body at {}, network: {} nodes, {} edges",
+        Log.info(TAG, "[RoadProjection] Entered road projection mode. Body at {}, network: {} nodes, {} edges",
                 bodyAnchor, network.nodeCount(), network.edgeCount());
     }
 
@@ -171,7 +169,7 @@ public final class RoadProjectionClientState {
         cachedNetwork = new RoadNetwork();
         expectingSync = false;
 
-        LOGGER.info("[RoadProjection] Exited road projection mode");
+        Log.info(TAG, "[RoadProjection] Exited road projection mode");
     }
 
     // ── Body anchor ──
@@ -200,7 +198,7 @@ public final class RoadProjectionClientState {
     /** Set the first point, entering PLANNING state. */
     public static void setActiveStartPos(BlockPos pos) {
         activeStartPos = pos;
-        LOGGER.info("[RoadProjection] Start point set at ({}, {}, {})",
+        Log.info(TAG, "[RoadProjection] Start point set at ({}, {}, {})",
                 pos.getX(), pos.getY(), pos.getZ());
     }
 
@@ -224,7 +222,7 @@ public final class RoadProjectionClientState {
         synchronized (pendingSegments) {
             pendingSegments.add(new PendingSegment(start, end, width));
         }
-        LOGGER.info("[RoadProjection] Segment queued: ({},{},{}) → ({},{},{}) width={}, total={}",
+        Log.info(TAG, "[RoadProjection] Segment queued: ({},{},{}) → ({},{},{}) width={}, total={}",
                 start.getX(), start.getY(), start.getZ(),
                 end.getX(), end.getY(), end.getZ(),
                 width, pendingSegments.size());
@@ -235,7 +233,7 @@ public final class RoadProjectionClientState {
         synchronized (pendingSegments) {
             if (pendingSegments.isEmpty()) return null;
             PendingSegment removed = pendingSegments.remove(pendingSegments.size() - 1);
-            LOGGER.info("[RoadProjection] Removed last segment: ({},{},{}) → ({},{},{}), remaining={}",
+            Log.info(TAG, "[RoadProjection] Removed last segment: ({},{},{}) → ({},{},{}), remaining={}",
                     removed.start.getX(), removed.start.getY(), removed.start.getZ(),
                     removed.end.getX(), removed.end.getY(), removed.end.getZ(),
                     pendingSegments.size());
@@ -275,7 +273,7 @@ public final class RoadProjectionClientState {
         if (w % 2 == 0) w += delta > 0 ? 1 : -1;
         w = Math.max(1, Math.min(9, w));
         currentWidth = w;
-        LOGGER.info("[RoadProjection] Width set to {}", currentWidth);
+        Log.info(TAG, "[RoadProjection] Width set to {}", currentWidth);
     }
 
     // ── Y offset ──
@@ -287,7 +285,7 @@ public final class RoadProjectionClientState {
     /** Adjust height offset by ±1. Clamped to [-32, 32]. */
     public static void adjustYOffset(int delta) {
         currentYOffset = Math.max(-32, Math.min(32, currentYOffset + delta));
-        LOGGER.info("[RoadProjection] Y offset set to {}", currentYOffset);
+        Log.info(TAG, "[RoadProjection] Y offset set to {}", currentYOffset);
     }
 
     /**

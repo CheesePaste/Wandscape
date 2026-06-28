@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.ecs;
 
 import java.util.*;
-
 /**
  * Map-backed implementation of ComponentStore.
  * Cache-friendly: entities() result is cached and invalidated on writes.

@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.ecs.World;
 
 import java.util.HashMap;
 import java.util.Map;
-
 /**
  * Registry of task blueprints. Acts as the TaskCompiler for the engine.
  */

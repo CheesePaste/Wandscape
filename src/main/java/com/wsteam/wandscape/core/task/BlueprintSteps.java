@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.task;
 import java.util.Map;
 
 import com.google.gson.JsonElement;
-
 /**
  * Functional interface that generates a {@link TaskSequence} from task parameters.
  * This is the "generator" half of a {@link Blueprint} — the other half is the

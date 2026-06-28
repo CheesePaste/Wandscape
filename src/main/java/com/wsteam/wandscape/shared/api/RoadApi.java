@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
-
 /**
  * API for the road system. Provides access to road network state
  * and operations for triggering road construction.

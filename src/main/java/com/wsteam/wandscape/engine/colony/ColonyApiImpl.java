@@ -6,19 +6,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 
 import net.minecraft.core.BlockPos;
+import com.wsteam.wandscape.shared.log.Log;
 
 public final class ColonyApiImpl implements ColonyApi {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ColonyApiImpl";
     private static final int MAX_COLONY_RANGE = 256;
     private static volatile ColonyApiImpl instance;
 
@@ -40,7 +38,7 @@ public final class ColonyApiImpl implements ColonyApi {
         UUID colonyId = UUID.randomUUID();
         colonyOrigins.put(origin, colonyId);
         colonyToOrigin.put(colonyId, origin);
-        LOGGER.info("[Colony] Created colony {} at origin {}",
+        Log.info(TAG, "[Colony] Created colony {} at origin {}",
                 colonyId.toString().substring(0, 8), origin);
         return colonyId;
     }
@@ -50,7 +48,7 @@ public final class ColonyApiImpl implements ColonyApi {
         BlockPos origin = colonyToOrigin.remove(colonyId);
         if (origin != null) {
             colonyOrigins.remove(origin);
-            LOGGER.info("[Colony] Deleted colony {} (origin {})",
+            Log.info(TAG, "[Colony] Deleted colony {} (origin {})",
                     colonyId.toString().substring(0, 8), origin);
             BuildingSavedData sd = getSavedData();
             if (sd != null) {
@@ -99,11 +97,11 @@ public final class ColonyApiImpl implements ColonyApi {
                 colonyOrigins.put(data.getPosition(), existing);
                 colonyToOrigin.put(existing, data.getPosition());
                 setColonyId(data, existing);
-                LOGGER.info("[Colony] Town hall at {} linked to colony {}",
+                Log.info(TAG, "[Colony] Town hall at {} linked to colony {}",
                         data.getPosition(), existing.toString().substring(0, 8));
                 return existing;
             }
-            LOGGER.error("[Colony] Town hall built at {} but NO colony nearby! "
+            Log.error(TAG, "[Colony] Town hall built at {} but NO colony nearby! "
                     + "Use '/wandscape colony create <name>' first, then build within 256 blocks.",
                     data.getPosition());
             return null;
@@ -111,7 +109,7 @@ public final class ColonyApiImpl implements ColonyApi {
         UUID colonyId = getColonyId(data.getPosition());
         if (colonyId != null) {
             setColonyId(data, colonyId);
-            LOGGER.info("[Colony] Assigned {} at {} to colony {}",
+            Log.info(TAG, "[Colony] Assigned {} at {} to colony {}",
                     data.getBuildingTypeId(), data.getPosition(),
                     colonyId.toString().substring(0, 8));
         }
@@ -149,7 +147,7 @@ public final class ColonyApiImpl implements ColonyApi {
                 colonyToOrigin.put(bd.getColonyId(), bd.getPosition());
             }
         }
-        LOGGER.info("[Colony] Rebuilt index: {} colonies from saved data", colonyOrigins.size());
+        Log.info(TAG, "[Colony] Rebuilt index: {} colonies from saved data", colonyOrigins.size());
     }
 
     // ── Singleton ─────────────────────────────────────────────────────────

@@ -13,7 +13,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Server→client packet: opens the Shop GUI with current stock, max stock per good,
  * and building context.

@@ -4,7 +4,6 @@ import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
 /**
  * Unlock requirement for a production recipe, expressed as minimum thresholds
  * for the three colony evaluation values.

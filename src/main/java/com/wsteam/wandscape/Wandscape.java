@@ -2,10 +2,6 @@ package com.wsteam.wandscape;
 
 import java.util.Set;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -136,11 +132,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import com.wsteam.wandscape.shared.log.Log;
 
 @Mod(Wandscape.MODID)
 public class Wandscape {
     public static final String MODID = "wandscape";
-    public static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "Wandscape";
 
     // ---- DeferredRegisters ----
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
@@ -275,8 +272,7 @@ public class Wandscape {
     private void commonSetup(FMLCommonSetupEvent event) {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
-        LOGGER.info("Wandscape common setup — wand, element, buildings, npc ready");
-        com.wsteam.wandscape.shared.log.LogFilterBootstrap.install();
+        Log.info(TAG, "Wandscape common setup — wand, element, buildings, npc ready");
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
@@ -445,7 +441,7 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        LOGGER.info("Wandscape server starting — bootstrapping engine...");
+        Log.info(TAG, "Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
         BuildCompleteListener.register();
@@ -479,31 +475,31 @@ public class Wandscape {
             WandscapeEngine.setTaskPoolSavedData(saved);
             // Mark dirty when pool changes so SavedData writes to disk
             world.taskPool.onChanged = saved::setDirty;
-            LOGGER.info("Task persistence wired — pool has {} active tasks", world.taskPool.size());
+            Log.info(TAG, "Task persistence wired — pool has {} active tasks", world.taskPool.size());
         }
 
         // Road persistence + API
         var roadSaved = RoadSavedData.getOrCreate(level);
         WandscapeEngine.setRoadSavedData(roadSaved);
         WandscapeApis.setRoadApi(new RoadApiImpl());
-        LOGGER.info("Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
+        Log.info(TAG, "Road system wired — {} edges persisted", roadSaved.getNetwork().edgeCount());
 
         // Tavern recruit storage
         var recruitStorage = TavernRecruitStorage.getOrCreate(level);
         tavernApi.setStorage(recruitStorage);
-        LOGGER.info("Tavern recruit storage wired");
+        Log.info(TAG, "Tavern recruit storage wired");
 
         // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
         if (world != null && world.taskPool != null) {
             PlayerManualSource playerSource = new PlayerManualSource(world.taskPool);
             WandscapeEngine.setPlayerManualSource(playerSource);
-            LOGGER.info("PlayerManualSource wired — manual task publishing available");
+            Log.info(TAG, "PlayerManualSource wired — manual task publishing available");
         }
     }
 
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
-        LOGGER.info("Wandscape server stopped — resetting engine.");
+        Log.info(TAG, "Wandscape server stopped — resetting engine.");
         buildingApi.setLevel(null);
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
@@ -513,7 +509,7 @@ public class Wandscape {
     public void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
         if (event.getState().is(Blocks.DIAMOND_BLOCK)) {
             debugDiamondTarget = event.getPos();
-            LOGGER.info("[Debug] Diamond block placed at {}", debugDiamondTarget);
+            Log.info(TAG, "[Debug] Diamond block placed at {}", debugDiamondTarget);
         }
     }
 
@@ -592,7 +588,7 @@ public class Wandscape {
 
         // Heartbeat every ~5 seconds (100 MC ticks)
         if (mcTickCount % 100 == 0) {
-            LOGGER.info("[Engine] engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
+            Log.info(TAG, "[Engine] engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
                     engineTickCount, mcTickCount,
                     world.getNextEntityId() - 1,
                     world.taskPool != null ? world.taskPool.size() : 0,

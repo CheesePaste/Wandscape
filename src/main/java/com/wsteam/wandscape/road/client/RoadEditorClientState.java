@@ -5,14 +5,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadNode;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import net.minecraft.core.BlockPos;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client-side state holder for the road editor.
@@ -20,7 +18,7 @@ import net.minecraft.core.BlockPos;
  */
 public final class RoadEditorClientState {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadEditorClientState";
 
     private static volatile boolean editMode = false;
     private static volatile RoadNetwork cachedNetwork = new RoadNetwork();
@@ -59,7 +57,7 @@ public final class RoadEditorClientState {
     }
 
     public static void setEditMode(boolean editing) {
-        LOGGER.info("[RoadEditor] setEditMode: {} -> {}", editMode, editing);
+        Log.info(TAG, "[RoadEditor] setEditMode: {} -> {}", editMode, editing);
         editMode = editing;
         if (!editing) {
             clearSnapshot();
@@ -73,13 +71,13 @@ public final class RoadEditorClientState {
     }
 
     public static void setNetworkSnapshot(RoadNetwork network) {
-        LOGGER.info("[RoadEditor] setNetworkSnapshot: nodes={} edges={}",
+        Log.info(TAG, "[RoadEditor] setNetworkSnapshot: nodes={} edges={}",
                 network.nodeCount(), network.edgeCount());
         cachedNetwork = network;
     }
 
     public static void clearSnapshot() {
-        LOGGER.info("[RoadEditor] clearSnapshot");
+        Log.info(TAG, "[RoadEditor] clearSnapshot");
         cachedNetwork = new RoadNetwork();
         hoveredEdgeId = null;
         currentWidth = 3;
@@ -123,7 +121,7 @@ public final class RoadEditorClientState {
         cachedNetwork.addNode(new RoadNode(id,
                 new GridPos(pos.getX(), pos.getY(), pos.getZ()),
                 RoadNode.NodeType.PLAYER));
-        LOGGER.info("[RoadEditor] Dumb start node created at {} (id={})", pos, id.toString().substring(0, 8));
+        Log.info(TAG, "[RoadEditor] Dumb start node created at {} (id={})", pos, id.toString().substring(0, 8));
         return id;
     }
 
@@ -150,14 +148,14 @@ public final class RoadEditorClientState {
         synchronized (waypoints) {
             waypoints.add(pos);
         }
-        LOGGER.info("[RoadEditor] waypoint added: {} (total: {})", pos, waypoints.size());
+        Log.info(TAG, "[RoadEditor] waypoint added: {} (total: {})", pos, waypoints.size());
     }
 
     public static void removeLastWaypoint() {
         synchronized (waypoints) {
             if (!waypoints.isEmpty()) {
                 BlockPos removed = waypoints.remove(waypoints.size() - 1);
-                LOGGER.info("[RoadEditor] waypoint removed: {} (remaining: {})", removed, waypoints.size());
+                Log.info(TAG, "[RoadEditor] waypoint removed: {} (remaining: {})", removed, waypoints.size());
             }
         }
     }
@@ -192,7 +190,7 @@ public final class RoadEditorClientState {
         cachedNetwork.addNode(new RoadNode(id,
                 new GridPos(pos.getX(), pos.getY(), pos.getZ()),
                 RoadNode.NodeType.PLAYER));
-        LOGGER.info("[RoadEditor] Dumb end node created at {} (id={})", pos, id.toString().substring(0, 8));
+        Log.info(TAG, "[RoadEditor] Dumb end node created at {} (id={})", pos, id.toString().substring(0, 8));
         return id;
     }
 
@@ -227,7 +225,7 @@ public final class RoadEditorClientState {
         if (w % 2 == 0) w += delta > 0 ? 1 : -1; // keep odd
         w = Math.max(1, Math.min(9, w));
         currentWidth = w;
-        LOGGER.info("[RoadEditor] Width set to {}", currentWidth);
+        Log.info(TAG, "[RoadEditor] Width set to {}", currentWidth);
     }
 
     // ── Clear state ──

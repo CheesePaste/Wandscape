@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.event;
 import com.wsteam.wandscape.core.types.ResourceId;
 
 import net.neoforged.bus.api.Event;
-
 /**
  * Posted to {@code NeoForge.EVENT_BUS} when a {@code ResourceRequestOp}
  * finds insufficient resources in the colony warehouse.

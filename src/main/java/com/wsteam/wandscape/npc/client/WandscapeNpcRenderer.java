@@ -29,7 +29,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.fml.ModList;
 import org.joml.Matrix4f;
-
 public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
 
     public static final ModelLayerLocation WIZARD_HAT_LAYER =

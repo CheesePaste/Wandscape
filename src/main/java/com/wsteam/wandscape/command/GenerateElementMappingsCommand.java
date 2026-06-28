@@ -6,12 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.slf4j.Logger;
-
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.element.internal.ElementValueGenerator;
 import com.wsteam.wandscape.element.internal.ElementValueGenerator.GenerationReport;
 
@@ -19,9 +16,10 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import com.wsteam.wandscape.shared.log.Log;
 
 public final class GenerateElementMappingsCommand {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "GenerateElementMappingsCommand";
     private static final String SEEDS_RESOURCE = "data/wandscape/element_seeds.json";
 
     private GenerateElementMappingsCommand() {}
@@ -110,11 +108,11 @@ public final class GenerateElementMappingsCommand {
             }
 
             String msg = sb.toString();
-            LOGGER.info("[Wandscape]\n{}", msg);
+            Log.info(TAG, "[Wandscape]\n{}", msg);
             src.sendSuccess(() -> Component.literal(msg.trim()), true);
 
         } catch (Exception e) {
-            LOGGER.error("[Wandscape] Generation failed", e);
+            Log.error(TAG, "[Wandscape] Generation failed", e);
             src.sendFailure(Component.literal("[Wandscape] Generation failed: " + e.getMessage()));
             return 0;
         }

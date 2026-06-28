@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
 /**
  * The road network for a colony — a graph of nodes and edges.
  *

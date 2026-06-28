@@ -10,7 +10,6 @@ import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.nbt.CompoundTag;
-
 public record CraftWandRecipe(
     String id,
     String outputItem,

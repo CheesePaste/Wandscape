@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.boundary;
 
 import com.wsteam.wandscape.core.types.ResourceId;
-
 /**
  * Core-layer boundary for colony warehouse resource access.
  * Core only issues requests - the adapter layer owns the actual storage.

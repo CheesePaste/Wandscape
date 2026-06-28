@@ -6,9 +6,6 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -19,6 +16,7 @@ import com.wsteam.wandscape.shared.data.NpcData;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 
 import net.minecraft.core.BlockPos;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Implementation of {@link NpcApi} that queries the ECS World via
@@ -34,7 +32,7 @@ import net.minecraft.core.BlockPos;
  */
 public class NpcApiImpl implements NpcApi {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "NpcApiImpl";
 
     @Override
     public List<NpcData> getColonyNpcs(UUID colonyId) {
@@ -81,7 +79,7 @@ public class NpcApiImpl implements NpcApi {
     public UUID spawnNpc(UUID colonyId, BlockPos pos, RecruitmentCandidate candidate) {
         // Stage 4: create WandscapeNpc entity programmatically
         // For now, NPCs are created exclusively via spawn egg
-        LOGGER.warn("spawnNpc not implemented — use spawn egg for stage 2 testing");
+        Log.warn(TAG, "spawnNpc not implemented — use spawn egg for stage 2 testing");
         return null;
     }
 }

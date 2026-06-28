@@ -6,7 +6,6 @@ import java.util.function.BiFunction;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
-
 class SimpleDataRegistry<T> implements WandscapeDataRegistry<T> {
     private final Map<String, T> entries = new HashMap<>();
     private final BiFunction<String, JsonElement, T> parser;

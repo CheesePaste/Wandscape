@@ -6,14 +6,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.server.level.ServerPlayer;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server-side player tracking for the building editor.
@@ -21,7 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class BuildingEditorNetwork {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorNetwork";
 
     /** Server-side set of players currently in building editor mode. */
     private static final Set<UUID> editingPlayers =
@@ -33,13 +31,13 @@ public final class BuildingEditorNetwork {
 
     public static void addEditing(ServerPlayer player) {
         editingPlayers.add(player.getUUID());
-        LOGGER.info("[BuildEditor] Player {} entered editor. Total: {}",
+        Log.info(TAG, "[BuildEditor] Player {} entered editor. Total: {}",
                 player.getGameProfile().getName(), editingPlayers.size());
     }
 
     public static void removeEditing(ServerPlayer player) {
         editingPlayers.remove(player.getUUID());
-        LOGGER.info("[BuildEditor] Player {} exited editor. Total: {}",
+        Log.info(TAG, "[BuildEditor] Player {} exited editor. Total: {}",
                 player.getGameProfile().getName(), editingPlayers.size());
     }
 
@@ -50,7 +48,7 @@ public final class BuildingEditorNetwork {
     /** Remove a player by UUID (for disconnect cleanup). */
     public static void removeByUuid(UUID playerId) {
         editingPlayers.remove(playerId);
-        LOGGER.info("[BuildEditor] Removed disconnected player. Total: {}", editingPlayers.size());
+        Log.info(TAG, "[BuildEditor] Removed disconnected player. Total: {}", editingPlayers.size());
     }
 
     /**

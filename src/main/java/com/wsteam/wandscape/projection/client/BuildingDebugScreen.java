@@ -11,7 +11,6 @@ import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-
 public class BuildingDebugScreen extends MedievalScreen {
 
     private static final int ROW_H = 14;

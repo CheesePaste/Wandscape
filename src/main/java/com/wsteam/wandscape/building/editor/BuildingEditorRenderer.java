@@ -2,11 +2,8 @@ package com.wsteam.wandscape.building.editor;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 
 import net.minecraft.client.Minecraft;
@@ -15,6 +12,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * World-space renderer for the building editor AABB wireframe
@@ -24,7 +22,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
  */
 public final class BuildingEditorRenderer {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorRenderer";
 
     // AABB face + line colors
     private static final int AABB_FACE_R = 0, AABB_FACE_G = 220, AABB_FACE_B = 80, AABB_FACE_A = 70;
@@ -43,7 +41,7 @@ public final class BuildingEditorRenderer {
         registered = true;
         var bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
         bus.addListener(RenderLevelStageEvent.class, BuildingEditorRenderer::onRenderLevelStage);
-        LOGGER.info("[BuildEditor] Renderer registered");
+        Log.info(TAG, "[BuildEditor] Renderer registered");
     }
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {

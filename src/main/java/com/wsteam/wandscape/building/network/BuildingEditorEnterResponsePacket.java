@@ -1,8 +1,5 @@
 package com.wsteam.wandscape.building.network;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.editor.BuildingEditorClientState;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
@@ -15,6 +12,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→Client: Response to {@link BuildingEditorEnterPacket}.
@@ -28,7 +26,7 @@ public record BuildingEditorEnterResponsePacket(
         BlockPos bodyAnchor
 ) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorEnterResponsePacket";
 
     public static final Type<BuildingEditorEnterResponsePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "build_editor_enter_response"));
@@ -74,7 +72,7 @@ public record BuildingEditorEnterResponsePacket(
             );
         }
 
-        LOGGER.info("[BuildEditor] Client entered editor. buildingId={} bodyAt={}",
+        Log.info(TAG, "[BuildEditor] Client entered editor. buildingId={} bodyAt={}",
                 packet.buildingId, packet.bodyAnchor);
     }
 
@@ -167,10 +165,10 @@ public record BuildingEditorEnterResponsePacket(
                 BuildingEditorClientState.setNodeBlueprint(config.nodeConfig().blueprint());
             }
 
-            LOGGER.info("[BuildEditor] Loaded existing config: id={} category={} patternSize={}",
+            Log.info(TAG, "[BuildEditor] Loaded existing config: id={} category={} patternSize={}",
                     config.id(), config.category(), config.pattern().size());
         } catch (Exception e) {
-            LOGGER.error("[BuildEditor] Failed to parse existing building JSON", e);
+            Log.error(TAG, "[BuildEditor] Failed to parse existing building JSON", e);
             // Fall back to new mode
             BlockPos anchor = packet.bodyAnchor != null ? packet.bodyAnchor : BlockPos.ZERO;
             BuildingEditorClientState.enterEditMode(

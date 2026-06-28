@@ -15,7 +15,6 @@ import com.wsteam.wandscape.core.task.WandLifecycle;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-
 /**
  * Configuration bundle for bootstrapping the engine.
  * All boundary services are injected here; the core owns no Minecraft code.

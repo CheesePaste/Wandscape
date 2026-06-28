@@ -3,9 +3,6 @@ package com.wsteam.wandscape.projection.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
 
 import org.lwjgl.glfw.GLFW;
@@ -22,6 +19,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.common.NeoForge;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Standalone debug-inspect mode controller.
@@ -39,7 +37,7 @@ import net.neoforged.neoforge.common.NeoForge;
  */
 public final class BuildingDebugController {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingDebugController";
     private static final double DEBUG_REACH = 64.0;
 
     private static boolean wasLeftDown = false;
@@ -60,7 +58,7 @@ public final class BuildingDebugController {
                 BuildingDebugController::onMouseButtonPre);
         // Post-tick: handle exit keys and consume vanilla clicks
         bus.addListener(ClientTickEvent.Post.class, BuildingDebugController::onClientTickPost);
-        LOGGER.info("[Debug] Controller registered (pre-event interception)");
+        Log.info(TAG, "[Debug] Controller registered (pre-event interception)");
     }
 
     public static void toggle() {
@@ -94,7 +92,7 @@ public final class BuildingDebugController {
                 waitingForResponse = true;
                 requestTime = System.currentTimeMillis();
                 PacketDistributor.sendToServer(new BuildingDebugRequestPacket(hitPos));
-                LOGGER.info("[Debug] Sent request for pos={}", hitPos);
+                Log.info(TAG, "[Debug] Sent request for pos={}", hitPos);
             }
         }
     }

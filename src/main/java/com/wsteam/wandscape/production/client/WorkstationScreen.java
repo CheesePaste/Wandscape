@@ -16,6 +16,7 @@ import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.component.TabBar;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -26,8 +27,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
-
 public class WorkstationScreen extends MedievalScreen {
+
+    private static final String TAG = "WorkstationScreen";
 
     private static final int PW = 400;
     private static final int PH = 220;
@@ -281,19 +283,19 @@ public class WorkstationScreen extends MedievalScreen {
 
     private void onQueueDelete(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        com.mojang.logging.LogUtils.getLogger().info("[TaskQueue] DELETE index={} pos={}", index, stationPos);
+        Log.info(TAG,"[TaskQueue] DELETE index={} pos={}", index, stationPos);
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "delete", index));
     }
 
     private void onQueueMoveUp(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        com.mojang.logging.LogUtils.getLogger().info("[TaskQueue] MOVE_UP index={} pos={}", index, stationPos);
+        Log.info(TAG,"[TaskQueue] MOVE_UP index={} pos={}", index, stationPos);
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_up", index));
     }
 
     private void onQueueMoveDown(int index) {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
-        com.mojang.logging.LogUtils.getLogger().info("[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
+        Log.info(TAG,"[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
     }
 

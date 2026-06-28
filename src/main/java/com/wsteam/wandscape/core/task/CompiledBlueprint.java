@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.task;
 
 import java.util.Collections;
 import java.util.List;
-
 /**
  * Compilation product of a {@link Blueprint}.
  * Holds the executable sequence and the trigger declarations that

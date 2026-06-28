@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.core.types.BehaviourTag;
-
 /**
  * A queued work item inside a building's internal FIFO queue.
  * Contains enough information to construct a {@code TaskRequest} when

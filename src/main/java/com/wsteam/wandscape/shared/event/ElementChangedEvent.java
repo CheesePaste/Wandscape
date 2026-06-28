@@ -5,7 +5,6 @@ import java.util.UUID;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.neoforged.bus.api.Event;
-
 public class ElementChangedEvent extends Event {
     private final UUID colonyId;
     private final ElementType type;

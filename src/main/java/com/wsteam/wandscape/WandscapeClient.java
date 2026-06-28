@@ -65,6 +65,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
+import com.wsteam.wandscape.shared.log.Log;
 
 @Mod(value = Wandscape.MODID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = Wandscape.MODID, value = Dist.CLIENT)
@@ -206,7 +207,7 @@ public class WandscapeClient {
         // ImGui init is deferred to first render frame (when GL context is active)
         // see ImGuiManager.ensureInit() called in onRenderFramePost
 
-        Wandscape.LOGGER.info("Wandscape client setup complete");
+        Log.info("Wandscape", "Wandscape client setup complete");
     }
 
     @SubscribeEvent
@@ -252,7 +253,6 @@ public class WandscapeClient {
             ImGuiManager.toggle();
         }
     }
-
 
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {

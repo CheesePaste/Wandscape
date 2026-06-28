@@ -7,10 +7,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
-
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Renders the Wandscape panel overlay on top of the game HUD.
@@ -24,7 +21,7 @@ import com.mojang.logging.LogUtils;
  */
 public final class WandscapePanelOverlay {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapePanelOverlay";
 
     private static final int BAR_BG = 0xCC000000;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
@@ -52,7 +49,7 @@ public final class WandscapePanelOverlay {
         if (registered) return;
         registered = true;
         NeoForge.EVENT_BUS.register(WandscapePanelOverlay.class);
-        LOGGER.info("[Panel] Overlay registered");
+        Log.info(TAG, "[Panel] Overlay registered");
     }
 
     @SubscribeEvent

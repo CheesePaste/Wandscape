@@ -4,7 +4,6 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
-
 public class WandscapeNpcModel extends HumanoidModel<WandscapeNpc> {
 
     public WandscapeNpcModel(ModelPart root) {

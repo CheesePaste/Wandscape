@@ -11,7 +11,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 import java.util.Set;
-
 /**
  * Debug command: runtime log tag whitelist filter.
  *

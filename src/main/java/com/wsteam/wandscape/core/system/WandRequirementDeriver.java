@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.wsteam.wandscape.core.types.BehaviourTag.*;
-
 /**
  * Derives {@link BehaviourTag} requirements from a {@link TaskSequence}.
  *

@@ -20,7 +20,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
-
 /**
  * Task editor GUI — allows players to browse blueprints, edit parameters,
  * and publish tasks to the colony.

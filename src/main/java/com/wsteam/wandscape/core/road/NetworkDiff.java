@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core.road;
 
 import java.util.List;
-
 /**
  * Result of comparing a freshly computed MST against
  * the existing road network during a rebuild.

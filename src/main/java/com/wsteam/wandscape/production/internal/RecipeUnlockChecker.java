@@ -7,7 +7,6 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.production.data.RecipeUnlockRequirement;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 /**
  * Utility for checking whether a production recipe is unlocked for a given colony.
  *

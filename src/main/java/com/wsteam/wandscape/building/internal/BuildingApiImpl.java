@@ -6,9 +6,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -24,12 +21,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Implementation of {@link BuildingApi} backed by {@link BuildingSavedData}.
  */
 public class BuildingApiImpl implements BuildingApi {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingApiImpl";
 
     // Task tracking (engine taskId → buildingId)
     private final Map<UUID, UUID> currentTasks = new ConcurrentHashMap<>(); // buildingId → taskId
@@ -87,7 +85,7 @@ public class BuildingApiImpl implements BuildingApi {
     public void registerBuilding(BuildingData data) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
-            LOGGER.warn("Cannot register building — no server level available");
+            Log.warn(TAG, "Cannot register building — no server level available");
             return;
         }
 
@@ -114,14 +112,14 @@ public class BuildingApiImpl implements BuildingApi {
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) {
-            LOGGER.warn("Cannot register building — unknown type '{}'", state.getBuildingTypeId());
+            Log.warn(TAG, "Cannot register building — unknown type '{}'", state.getBuildingTypeId());
             return;
         }
 
         try {
             sd.register(state, config);
         } catch (BuildingOverlapException e) {
-            LOGGER.warn(e.getMessage());
+            Log.warn(TAG, e.getMessage());
             throw e;
         }
 
@@ -134,7 +132,7 @@ public class BuildingApiImpl implements BuildingApi {
                     .computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                     .merge(state.getBuildingTypeId(), 1, Integer::sum);
         }
-        LOGGER.debug("registered building {} type={} at {}",
+        Log.debug(TAG, "registered building {} type={} at {}",
                 state.getBuildingId(), state.getBuildingTypeId(), state.getAnchor());
 
         // Notify downstream systems (e.g. tourist spawner, colony evaluation)
@@ -231,7 +229,7 @@ public class BuildingApiImpl implements BuildingApi {
         switch (category) {
             case "shop", "basic", "storage", "tavern":
                 sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
-                LOGGER.info("[Shutdown] {} '{}': contribution zeroed",
+                Log.info(TAG, "[Shutdown] {} '{}': contribution zeroed",
                         category, state.getBuildingId().toString().substring(0, 8));
                 break;
             case "decoration":
@@ -249,7 +247,7 @@ public class BuildingApiImpl implements BuildingApi {
             default:
                 // Safe default: zero contribution for unknown categories
                 sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
-                LOGGER.warn("[Shutdown] Unknown category '{}': contribution zeroed",
+                Log.warn(TAG, "[Shutdown] Unknown category '{}': contribution zeroed",
                         category);
                 break;
         }
@@ -294,33 +292,33 @@ public class BuildingApiImpl implements BuildingApi {
         for (BuildingState state : sd.getAllBuildings()) {
             String id8 = state.getBuildingId().toString().substring(0, 8);
             if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())) {
-                LOGGER.debug("[BldgAPI] skip {} colony mismatch: filter={} state={}",
+                Log.debug(TAG, "[BldgAPI] skip {} colony mismatch: filter={} state={}",
                         id8,
                         colonyId != null ? colonyId.toString().substring(0, 8) : "null",
                         state.getColonyId() != null ? state.getColonyId().toString().substring(0, 8) : "null");
                 continue;
             }
             if (state.isShutdown()) {
-                LOGGER.debug("[BldgAPI] skip {} isShutdown=true", id8);
+                Log.debug(TAG, "[BldgAPI] skip {} isShutdown=true", id8);
                 continue;
             }
             if (currentTasks.containsKey(state.getBuildingId())) {
-                LOGGER.debug("[BldgAPI] skip {} has active task", id8);
+                Log.debug(TAG, "[BldgAPI] skip {} has active task", id8);
                 continue;
             }
             if (!state.hasWork()) {
-                LOGGER.debug("[BldgAPI] skip {} queue={} shutdown={} noWork=true",
+                Log.debug(TAG, "[BldgAPI] skip {} queue={} shutdown={} noWork=true",
                         id8, state.getTaskQueue().size(), state.isShutdown());
                 continue;
             }
             if (!serverLevel.isLoaded(state.getAnchor())) {
-                LOGGER.debug("[BldgAPI] skip {} anchor={} not loaded",
+                Log.debug(TAG, "[BldgAPI] skip {} anchor={} not loaded",
                         id8, state.getAnchor());
                 continue;
             }
             result.add(state.getBuildingId());
         }
-        LOGGER.info("[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
+        Log.info(TAG, "[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
                 colonyId != null ? colonyId.toString().substring(0, 8) : "null",
                 result.size(),
                 result.stream().map(u -> u.toString().substring(0, 8)).toList());
@@ -359,13 +357,13 @@ public class BuildingApiImpl implements BuildingApi {
                     .filter(w -> w.blueprintId().startsWith("build:"))
                     .count();
             if (buildCount >= CONSTRUCTION_CAPACITY) {
-                LOGGER.warn("enqueueWork: building {} construction queue full (capacity={})",
+                Log.warn(TAG, "enqueueWork: building {} construction queue full (capacity={})",
                         buildingId, CONSTRUCTION_CAPACITY);
                 return;
             }
         } else {
             if (state.getTaskQueue().size() >= state.getQueueCapacity()) {
-                LOGGER.warn("enqueueWork: building {} queue full (capacity={})",
+                Log.warn(TAG, "enqueueWork: building {} queue full (capacity={})",
                         buildingId, state.getQueueCapacity());
                 return;
             }
@@ -395,7 +393,7 @@ public class BuildingApiImpl implements BuildingApi {
             result.add(state.getBuildingId());
         }
 
-        LOGGER.info("[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
+        Log.info(TAG, "[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
                 colonyId != null ? colonyId.toString().substring(0, 8) : "null",
                 category, result.size(), total, skippedColony, skippedCat);
         return result;
@@ -442,27 +440,27 @@ public class BuildingApiImpl implements BuildingApi {
     public boolean removeFromQueue(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
-            LOGGER.warn("removeFromQueue: no saved data for {}", buildingId);
+            Log.warn(TAG, "removeFromQueue: no saved data for {}", buildingId);
             return false;
         }
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
-            LOGGER.warn("removeFromQueue: building {} not found", buildingId);
+            Log.warn(TAG, "removeFromQueue: building {} not found", buildingId);
             return false;
         }
         if (state.isShutdown()) {
-            LOGGER.warn("removeFromQueue: building {} is shutdown", buildingId);
+            Log.warn(TAG, "removeFromQueue: building {} is shutdown", buildingId);
             return false;
         }
 
         Deque<WorkItem> queue = state.getTaskQueue();
         if (index < 0 || index >= queue.size()) {
-            LOGGER.warn("removeFromQueue: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            Log.warn(TAG, "removeFromQueue: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
         }
         if (index == 0) {
-            LOGGER.warn("removeFromQueue: refused to remove index 0 (current task) at {}", buildingId);
+            Log.warn(TAG, "removeFromQueue: refused to remove index 0 (current task) at {}", buildingId);
             return false;
         }
 
@@ -472,7 +470,7 @@ public class BuildingApiImpl implements BuildingApi {
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        LOGGER.info("removeFromQueue: removed [{}] {} from building {}", index, removed.blueprintId(), buildingId);
+        Log.info(TAG, "removeFromQueue: removed [{}] {} from building {}", index, removed.blueprintId(), buildingId);
         return true;
     }
 
@@ -480,23 +478,23 @@ public class BuildingApiImpl implements BuildingApi {
     public boolean moveUp(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
-            LOGGER.warn("moveUp: no saved data for {}", buildingId);
+            Log.warn(TAG, "moveUp: no saved data for {}", buildingId);
             return false;
         }
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
-            LOGGER.warn("moveUp: building {} not found", buildingId);
+            Log.warn(TAG, "moveUp: building {} not found", buildingId);
             return false;
         }
         if (state.isShutdown()) {
-            LOGGER.warn("moveUp: building {} is shutdown", buildingId);
+            Log.warn(TAG, "moveUp: building {} is shutdown", buildingId);
             return false;
         }
 
         Deque<WorkItem> queue = state.getTaskQueue();
         if (index <= 0 || index >= queue.size()) {
-            LOGGER.warn("moveUp: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            Log.warn(TAG, "moveUp: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
         }
 
@@ -507,7 +505,7 @@ public class BuildingApiImpl implements BuildingApi {
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        LOGGER.info("moveUp: [{}]{}↔[{}]{} at {}",
+        Log.info(TAG, "moveUp: [{}]{}↔[{}]{} at {}",
                 index - 1, upper.blueprintId(), index, lower.blueprintId(), buildingId);
         return true;
     }
@@ -516,23 +514,23 @@ public class BuildingApiImpl implements BuildingApi {
     public boolean moveDown(UUID buildingId, int index) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) {
-            LOGGER.warn("moveDown: no saved data for {}", buildingId);
+            Log.warn(TAG, "moveDown: no saved data for {}", buildingId);
             return false;
         }
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null) {
-            LOGGER.warn("moveDown: building {} not found", buildingId);
+            Log.warn(TAG, "moveDown: building {} not found", buildingId);
             return false;
         }
         if (state.isShutdown()) {
-            LOGGER.warn("moveDown: building {} is shutdown", buildingId);
+            Log.warn(TAG, "moveDown: building {} is shutdown", buildingId);
             return false;
         }
 
         Deque<WorkItem> queue = state.getTaskQueue();
         if (index < 0 || index >= queue.size() - 1) {
-            LOGGER.warn("moveDown: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
+            Log.warn(TAG, "moveDown: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
         }
 
@@ -543,7 +541,7 @@ public class BuildingApiImpl implements BuildingApi {
         queue.clear();
         queue.addAll(list);
         sd.setDirty();
-        LOGGER.info("moveDown: [{}]{}↔[{}]{} at {}",
+        Log.info(TAG, "moveDown: [{}]{}↔[{}]{} at {}",
                 index, upper.blueprintId(), index + 1, lower.blueprintId(), buildingId);
         return true;
     }
@@ -579,7 +577,7 @@ public class BuildingApiImpl implements BuildingApi {
                 }
             }
         }
-        LOGGER.debug("[BldgAPI] findBeds({}) → {}/{} blocks in boundary", buildingId, found, total);
+        Log.debug(TAG, "[BldgAPI] findBeds({}) → {}/{} blocks in boundary", buildingId, found, total);
         return beds;
     }
 
@@ -622,7 +620,7 @@ public class BuildingApiImpl implements BuildingApi {
                 }
             }
         }
-        LOGGER.debug("[BldgAPI] sampleWalkableGround({}) → {} samples", buildingId, result.size());
+        Log.debug(TAG, "[BldgAPI] sampleWalkableGround({}) → {} samples", buildingId, result.size());
         return result;
     }
 

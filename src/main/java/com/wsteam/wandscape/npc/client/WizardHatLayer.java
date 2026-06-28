@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.resources.ResourceLocation;
-
 public class WizardHatLayer extends RenderLayer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
 
     private static final ResourceLocation HAT_TEXTURE =

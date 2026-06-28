@@ -1,9 +1,6 @@
 package com.wsteam.wandscape.projection.client;
 
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
@@ -22,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Per-tick input handler for soul projection mode.
@@ -41,7 +39,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class ProjectionFlightController {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ProjectionFlightController";
 
     /** Extended reach distance in projection mode (blocks). */
     private static final double PROJECTION_REACH = 64.0;
@@ -62,7 +60,7 @@ public final class ProjectionFlightController {
         var bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
         bus.addListener(ClientTickEvent.Post.class, ProjectionFlightController::onClientTickPost);
         bus.addListener(InputEvent.MouseScrollingEvent.class, ProjectionFlightController::onMouseScroll);
-        LOGGER.info("[Projection] Flight controller registered");
+        Log.info(TAG, "[Projection] Flight controller registered");
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -235,7 +233,7 @@ public final class ProjectionFlightController {
         BuildingSlot slot = slots.get(index);
         PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos));
 
-        LOGGER.info("[Projection] Placed '{}' at {}", slot.displayName(), ghostPos);
+        Log.info(TAG, "[Projection] Placed '{}' at {}", slot.displayName(), ghostPos);
     }
 
     // ── Escape ──

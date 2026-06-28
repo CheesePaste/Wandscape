@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.boundary;
 
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
-
 /**
  * Core-layer boundary for handling resource shortages with module-specific strategies.
  *

@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.road.PathGenerator;
@@ -32,6 +29,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server packet for player-initiated road path planning.
@@ -58,7 +56,7 @@ public record RoadEdgePlanPacket(
         boolean force,
         int width) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadEdgePlanPacket";
 
     public static final Type<RoadEdgePlanPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "road_edge_plan"));
@@ -87,12 +85,12 @@ public record RoadEdgePlanPacket(
         RoadNode toNode = network.getNode(packet.toNodeId);
 
         if (fromNode == null || toNode == null) {
-            LOGGER.warn("[RoadPlan] Node creation failed: from={} to={}",
+            Log.warn(TAG, "[RoadPlan] Node creation failed: from={} to={}",
                     packet.fromNodeId, packet.toNodeId);
             return;
         }
 
-        LOGGER.info("[RoadPlan] Request: {}→{} waypoints={} force={}",
+        Log.info(TAG, "[RoadPlan] Request: {}→{} waypoints={} force={}",
                 packet.fromNodeId.toString().substring(0, 8),
                 packet.toNodeId.toString().substring(0, 8),
                 packet.waypoints.size(), packet.force);
@@ -101,7 +99,7 @@ public record RoadEdgePlanPacket(
         var existing = network.findEdgeBetween(packet.fromNodeId, packet.toNodeId);
         if (existing.isPresent()) {
             UUID oldEdgeId = existing.get();
-            LOGGER.info("[RoadPlan] Edge already exists: {} — removing old edge", oldEdgeId);
+            Log.info(TAG, "[RoadPlan] Edge already exists: {} — removing old edge", oldEdgeId);
             RoadEditorHandler.removeEdge(level, network, oldEdgeId);
         }
 
@@ -129,12 +127,12 @@ public record RoadEdgePlanPacket(
         }
 
         if (fullPath.isEmpty()) {
-            LOGGER.warn("[RoadPlan] Generated empty path for {}→{}",
+            Log.warn(TAG, "[RoadPlan] Generated empty path for {}→{}",
                     packet.fromNodeId, packet.toNodeId);
             return;
         }
 
-        LOGGER.info("[RoadPlan] Path generated: {} points ({}→{} via {} waypoints)",
+        Log.info(TAG, "[RoadPlan] Path generated: {} points ({}→{} via {} waypoints)",
                 fullPath.size(),
                 packet.fromNodeId.toString().substring(0, 8),
                 packet.toNodeId.toString().substring(0, 8),
@@ -171,7 +169,7 @@ public record RoadEdgePlanPacket(
         roadData.markChanged();
         RoadEditorNetwork.sendSyncToEditing(player.server);
 
-        LOGGER.info("[RoadPlan] Edge {} enqueued. Network: {} nodes, {} edges",
+        Log.info(TAG, "[RoadPlan] Edge {} enqueued. Network: {} nodes, {} edges",
                 edge.getEdgeId().toString().substring(0, 8),
                 network.nodeCount(), network.edgeCount());
     }
@@ -186,7 +184,7 @@ public record RoadEdgePlanPacket(
                 new GridPos(pos.getX(), pos.getY(), pos.getZ()),
                 RoadNode.NodeType.PLAYER);
         network.addNode(node);
-        LOGGER.info("[RoadPlan] Created PLAYER node {} at ({},{},{})",
+        Log.info(TAG, "[RoadPlan] Created PLAYER node {} at ({},{},{})",
                 nodeId.toString().substring(0, 8), pos.getX(), pos.getY(), pos.getZ());
     }
 

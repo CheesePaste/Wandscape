@@ -4,17 +4,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.DecorationPoint;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Converts {@link DecorationPoint}s into tile JSON for the
@@ -31,7 +29,7 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  */
 public final class DecorationBuilder {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "DecorationBuilder";
 
     private DecorationBuilder() {}
 
@@ -61,7 +59,7 @@ public final class DecorationBuilder {
             BlockPos roadSurface = new BlockPos(pt.x(), roadY, pt.z());
             BlockState surfaceState = level.getBlockState(roadSurface);
             if (!surfaceState.isSolid() || !surfaceState.getFluidState().isEmpty()) {
-                LOGGER.debug("[Deco] road surface missing or water at ({},{},{}) — skip",
+                Log.debug(TAG, "[Deco] road surface missing or water at ({},{},{}) — skip",
                         pt.x(), roadY, pt.z());
                 continue;
             }
@@ -78,7 +76,7 @@ public final class DecorationBuilder {
                     String faced = deco.benchBlock() + "[facing=" + pt.facing() + "]";
                     tiles.add(makeTile(pt.x(), roadY + 1, pt.z(), faced));
                 }
-                default -> LOGGER.warn("[Deco] unknown decoration type '{}' at ({},{},{})",
+                default -> Log.warn(TAG, "[Deco] unknown decoration type '{}' at ({},{},{})",
                         pt.type(), pt.x(), roadY, pt.z());
             }
         }

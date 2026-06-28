@@ -5,7 +5,6 @@ import com.wsteam.wandscape.core.types.GridPos;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
-
 /**
  * Single source of truth for NPC movement.
  *

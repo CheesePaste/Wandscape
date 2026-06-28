@@ -7,7 +7,6 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-
 /**
  * A relative offset in a building's structure pattern.
  * Serialized as {@code [x, y, z]} in JSON.

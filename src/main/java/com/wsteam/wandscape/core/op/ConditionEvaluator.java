@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.op;
 import com.wsteam.wandscape.core.ecs.World;
 
 import java.util.Map;
-
 /**
  * Evaluates a named condition for {@link AtomicOp.IfConditionOp}.
  * Each evaluator is registered by name in {@link OpExecutorRegistry#registerCondition(String, ConditionEvaluator)}.

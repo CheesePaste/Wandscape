@@ -6,9 +6,6 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.api.TavernApi;
 import com.wsteam.wandscape.shared.data.MageResume;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
@@ -16,13 +13,14 @@ import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Implementation of {@link TavernApi}.
  * Delegates mage resume storage to {@link TavernRecruitStorage} (SavedData).
  */
 public class TavernApiImpl implements TavernApi {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TavernApiImpl";
 
     @Nullable
     private TavernRecruitStorage storage;
@@ -64,7 +62,7 @@ public class TavernApiImpl implements TavernApi {
         MageResume resume = new MageResume(touristName, level, maxMana,
                 manaRegenRate, spellPower, skinVariant, System.currentTimeMillis());
         s.addResume(colonyId, resume);
-        LOGGER.info("[Tourist] Received mage resume: {} (Lv.{}) for colony {}",
+        Log.info(TAG, "[Tourist] Received mage resume: {} (Lv.{}) for colony {}",
                 touristName, level, colonyId.toString().substring(0, 8));
     }
 
@@ -86,7 +84,7 @@ public class TavernApiImpl implements TavernApi {
         java.util.Collections.reverse(resumes);
         if (index < 0 || index >= resumes.size()) return null;
         MageResume resume = s.takeResume(colonyId, resumes.size() - 1 - index);
-        LOGGER.info("[Tourist] Recruited mage {} from colony {}",
+        Log.info(TAG, "[Tourist] Recruited mage {} from colony {}",
                 resume != null ? resume.touristName() : "null",
                 colonyId.toString().substring(0, 8));
         return resume;

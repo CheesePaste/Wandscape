@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
@@ -28,6 +25,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Spawns short-term tourist entities that visit shops and service buildings.
@@ -37,7 +35,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * random shop or service building as their first destination.
  */
 public final class TouristSpawnSystem {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "TouristSpawnSystem";
 
     /** Tick interval between spawn checks. */
     private static final int SPAWN_CHECK_INTERVAL = 1200;
@@ -69,7 +67,7 @@ public final class TouristSpawnSystem {
      */
     public static void forceSpawn(ServerLevel level) {
         if (instance == null) {
-            LOGGER.warn("[Tourist] SpawnSystem not registered — cannot force spawn");
+            Log.warn(TAG, "[Tourist] SpawnSystem not registered — cannot force spawn");
             return;
         }
         instance.spawnTourists(level);
@@ -117,7 +115,7 @@ public final class TouristSpawnSystem {
             if (state != null) touristTargets.add(state);
         }
         if (touristTargets.isEmpty()) {
-            LOGGER.debug("[Tourist] No shop/service buildings — skipping spawn");
+            Log.debug(TAG, "[Tourist] No shop/service buildings — skipping spawn");
             return;
         }
 
@@ -150,7 +148,7 @@ public final class TouristSpawnSystem {
             tourist.applyState(TouristState.VISITING);
             level.addFreshEntity(tourist);
 
-            LOGGER.info("[Tourist] {} heading to {} '{}' at {}",
+            Log.info(TAG, "[Tourist] {} heading to {} '{}' at {}",
                     tourist.getTouristName(), target.getCategory(),
                     target.getBuildingTypeId(), interactionTarget.toShortString());
         }
@@ -299,9 +297,9 @@ public final class TouristSpawnSystem {
             tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
                     t.getMaxMana(), t.getManaRegenRate(), t.getSpellPower(),
                     t.getSkinVariant());
-            LOGGER.info("[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
+            Log.info(TAG, "[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
         } catch (IllegalStateException e) {
-            LOGGER.warn("[Tourist] TavernApi not available — mage resume lost: {}",
+            Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}",
                     t.getTouristName());
         }
     }
@@ -339,7 +337,7 @@ public final class TouristSpawnSystem {
             t.setTargetBuildingId(b.getBuildingId());
             t.setTargetBuildingCategory("service");
             t.setCommuteTarget(target);
-            LOGGER.info("[Tourist] {} routed to hotel {} (sat={} energy={})",
+            Log.info(TAG, "[Tourist] {} routed to hotel {} (sat={} energy={})",
                     t.getTouristName(), b.getBuildingId().toString().substring(0, 8),
                     t.getSatisfaction(), t.getEnergy());
             return true;
@@ -379,7 +377,7 @@ public final class TouristSpawnSystem {
             storeMageResume(t);
         }
 
-        LOGGER.debug("[Tourist] {} departed (energy={} satisfaction={} mage={})",
+        Log.debug(TAG, "[Tourist] {} departed (energy={} satisfaction={} mage={})",
                 t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
     }
 

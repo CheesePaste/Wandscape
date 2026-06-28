@@ -10,7 +10,6 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImInt;
 import imgui.type.ImString;
-
 /**
  * ImGui editor panel. Compact two-column layout. All collapsing
  * sections default to closed so the essential buttons always show.

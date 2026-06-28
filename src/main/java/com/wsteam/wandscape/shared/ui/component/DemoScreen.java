@@ -12,7 +12,6 @@ import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-
 /**
  * Demo screen showing all Wandscape UI components.
  * Press M in-game to open. For development/testing only.

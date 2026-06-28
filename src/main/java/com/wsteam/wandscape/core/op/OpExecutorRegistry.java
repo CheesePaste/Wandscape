@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.op;
 
 import java.util.HashMap;
 import java.util.Map;
-
 /**
  * Registry mapping AtomicOp subclasses to their OpExecutor, and
  * condition names to their {@link ConditionEvaluator}.

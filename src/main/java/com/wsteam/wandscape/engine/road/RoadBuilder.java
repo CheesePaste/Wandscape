@@ -6,11 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.road.PathPoint;
 
 import net.minecraft.core.BlockPos;
@@ -19,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Builds road tile data from 3D path coordinates.
@@ -40,7 +38,7 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  */
 public final class RoadBuilder {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadBuilder";
 
     private RoadBuilder() {}
 
@@ -135,7 +133,7 @@ public final class RoadBuilder {
                         int cutDepth = terrainTop - actualY;
                         int maxCut = config.getMaxCutDepth();
                         if (maxCut > 0 && cutDepth > maxCut) {
-                            LOGGER.warn("[Road] Cut depth {} exceeds maxCutDepth {} at ({},{},{})",
+                            Log.warn(TAG, "[Road] Cut depth {} exceeds maxCutDepth {} at ({},{},{})",
                                     cutDepth, maxCut, tx, actualY, tz);
                         }
                     }
@@ -183,7 +181,7 @@ public final class RoadBuilder {
         }
 
         if (pillarsPlaced > 0) {
-            LOGGER.info("[Road] buildTiles: {} pillars placed ({} path points, width={})",
+            Log.info(TAG, "[Road] buildTiles: {} pillars placed ({} path points, width={})",
                     pillarsPlaced, n, roadWidth);
         }
 

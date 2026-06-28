@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.road.PathGenerator;
@@ -31,6 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Batch publish all queued road segments from road projection mode.
@@ -43,7 +41,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record RoadBatchPublishPacket(List<SegmentData> segments) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadBatchPublishPacket";
 
     public static final Type<RoadBatchPublishPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "road_batch_publish"));
@@ -96,7 +94,7 @@ public record RoadBatchPublishPacket(List<SegmentData> segments) implements Cust
             // Check for existing edge between these nodes
             var existing = network.findEdgeBetween(fromId, toId);
             if (existing.isPresent()) {
-                LOGGER.info("[RoadBatch] Skipping {}→{} — edge already exists",
+                Log.info(TAG, "[RoadBatch] Skipping {}→{} — edge already exists",
                         fromId.toString().substring(0, 8), toId.toString().substring(0, 8));
                 continue;
             }
@@ -109,7 +107,7 @@ public record RoadBatchPublishPacket(List<SegmentData> segments) implements Cust
             List<PathPoint> path = PathGenerator.lShape3D(startPt, endPt, amplitude);
 
             if (path.isEmpty()) {
-                LOGGER.warn("[RoadBatch] Empty path for {}→{} — skipping",
+                Log.warn(TAG, "[RoadBatch] Empty path for {}→{} — skipping",
                         fromId.toString().substring(0, 8), toId.toString().substring(0, 8));
                 continue;
             }
@@ -128,7 +126,7 @@ public record RoadBatchPublishPacket(List<SegmentData> segments) implements Cust
             occupiedTiles.addAll(path);
 
             createdCount++;
-            LOGGER.info("[RoadBatch] Created edge {} ({}→{}, {} pts, width={})",
+            Log.info(TAG, "[RoadBatch] Created edge {} ({}→{}, {} pts, width={})",
                     edge.getEdgeId().toString().substring(0, 8),
                     fromId.toString().substring(0, 8),
                     toId.toString().substring(0, 8),
@@ -138,7 +136,7 @@ public record RoadBatchPublishPacket(List<SegmentData> segments) implements Cust
         roadData.markChanged();
         RoadEditorNetwork.sendSyncToEditing(player.server);
 
-        LOGGER.info("[RoadBatch] Published {} road segments from {}. Network: {} nodes, {} edges",
+        Log.info(TAG, "[RoadBatch] Published {} road segments from {}. Network: {} nodes, {} edges",
                 createdCount, player.getGameProfile().getName(),
                 network.nodeCount(), network.edgeCount());
     }
@@ -162,7 +160,7 @@ public record RoadBatchPublishPacket(List<SegmentData> segments) implements Cust
                 new GridPos(pos.getX(), pos.getY(), pos.getZ()),
                 RoadNode.NodeType.PLAYER);
         network.addNode(node);
-        LOGGER.info("[RoadBatch] Created PLAYER node {} at ({},{},{})",
+        Log.info(TAG, "[RoadBatch] Created PLAYER node {} at ({},{},{})",
                 id.toString().substring(0, 8), pos.getX(), pos.getY(), pos.getZ());
         return id;
     }

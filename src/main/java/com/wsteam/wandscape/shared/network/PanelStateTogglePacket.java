@@ -14,7 +14,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Client→Server: Notifies server that the player opened or closed the Wandscape panel.
  * Server stores this state to gate building right-click interactions.

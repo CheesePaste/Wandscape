@@ -1,9 +1,5 @@
 package com.wsteam.wandscape.projection.network;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
-
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -11,6 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player exits soul projection mode.
@@ -18,7 +15,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  */
 public record ProjectionExitPacket() implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ProjectionExitPacket";
 
     public static final Type<ProjectionExitPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "projection_exit"));
@@ -35,7 +32,7 @@ public record ProjectionExitPacket() implements CustomPacketPayload {
 
     public static void handleServer(ProjectionExitPacket packet, ServerPlayer player) {
         ProjectionNetwork.removeProjecting(player);
-        LOGGER.info("[Projection] Player {} exited projection mode",
+        Log.info(TAG, "[Projection] Player {} exited projection mode",
                 player.getGameProfile().getName());
     }
 

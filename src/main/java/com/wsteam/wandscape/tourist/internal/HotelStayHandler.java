@@ -8,9 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -25,6 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Manages hotel/inn stays for tourists.
@@ -37,7 +35,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * On morning (dayTime &lt; 200), tourists are automatically checked out.
  */
 public final class HotelStayHandler {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "HotelStayHandler";
 
     /** buildingId → set of checked-in tourist UUIDs */
     private final Map<UUID, Set<UUID>> occupancy = new ConcurrentHashMap<>();
@@ -78,7 +76,7 @@ public final class HotelStayHandler {
 
         Set<UUID> guests = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
         if (guests.size() >= maxOccupancy) {
-            LOGGER.debug("[Tourist] Check-in failed: building {} full ({}/{})",
+            Log.debug(TAG, "[Tourist] Check-in failed: building {} full ({}/{})",
                     shortId(buildingId), guests.size(), maxOccupancy);
             return false;
         }
@@ -88,7 +86,7 @@ public final class HotelStayHandler {
         tourist.setCheckedInBuildingId(buildingId);
         tourist.setHotelCheckinTime(tourist.tickCount);
 
-        LOGGER.info("[Tourist] {} checked into {} (occupancy {}/{})",
+        Log.info(TAG, "[Tourist] {} checked into {} (occupancy {}/{})",
                 tourist.getTouristName(), shortId(buildingId), guests.size(), maxOccupancy);
         return true;
     }
@@ -114,7 +112,7 @@ public final class HotelStayHandler {
         tourist.setEnergy(tourist.getEnergy() + energyRecovery);
         tourist.setSatisfaction(tourist.getSatisfaction() + Config.HOTEL_SATISFACTION_PER_NIGHT.get());
 
-        LOGGER.info("[Tourist] {} checked out of {} (energy +{} satisfaction +{})",
+        Log.info(TAG, "[Tourist] {} checked out of {} (energy +{} satisfaction +{})",
                 tourist.getTouristName(), shortId(buildingId),
                 energyRecovery, Config.HOTEL_SATISFACTION_PER_NIGHT.get());
     }

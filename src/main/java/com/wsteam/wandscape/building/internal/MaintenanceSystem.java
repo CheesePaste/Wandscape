@@ -2,9 +2,6 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
@@ -18,6 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Periodic maintenance cost system.
@@ -28,7 +26,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * with category-specific graded penalties.
  */
 public final class MaintenanceSystem {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "MaintenanceSystem";
 
     private int tickCounter;
 
@@ -99,10 +97,10 @@ public final class MaintenanceSystem {
                 state.setMaintenancePaid(true);
                 state.setLastMaintenanceTick(currentTick);
                 savedData.setDirty();
-                LOGGER.debug("[Maintenance] Building {} paid maintenance: {}",
+                Log.debug(TAG, "[Maintenance] Building {} paid maintenance: {}",
                         buildingId.toString().substring(0, 8), cost.costs());
             } else {
-                LOGGER.warn("[Maintenance] Building {} cannot pay maintenance — shutting down",
+                Log.warn(TAG, "[Maintenance] Building {} cannot pay maintenance — shutting down",
                         buildingId.toString().substring(0, 8));
                 // Delegate shutdown to BuildingApi so graded penalties are applied
                 com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi()

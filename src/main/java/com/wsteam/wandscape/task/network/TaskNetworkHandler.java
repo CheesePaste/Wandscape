@@ -13,7 +13,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-
 /**
  * Static helper for task editor network communication.
  * Mirrors the pattern of {@link com.wsteam.wandscape.road.network.RoadEditorNetwork}.

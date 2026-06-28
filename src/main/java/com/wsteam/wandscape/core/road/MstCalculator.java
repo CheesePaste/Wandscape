@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.function.ToIntBiFunction;
-
 /**
  * Computes a Minimum Spanning Tree using Prim's algorithm.
  * The MST guarantees all buildings are connected with minimum total path length.

@@ -13,7 +13,6 @@ import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
-
 public class ProductionRecipeLoader {
     private final WandscapeDataRegistry<CraftWandRecipe> craftWandRecipes;
     private final WandscapeDataRegistry<BrewPotionRecipe> potionRecipes;

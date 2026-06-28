@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.event.CustomEvent;
@@ -20,6 +17,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Subscribes to the engine-internal {@code EventBus} for {@code build_complete} events.
@@ -27,7 +25,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * verifies structure integrity and marks the building operational.
  */
 public final class BuildCompleteListener {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildCompleteListener";
 
     private BuildCompleteListener() {}
 
@@ -38,12 +36,12 @@ public final class BuildCompleteListener {
     public static void register() {
         var world = com.wsteam.wandscape.engine.WandscapeEngine.getWorld();
         if (world == null || world.eventBus == null) {
-            LOGGER.warn("Cannot register BuildCompleteListener — engine not bootstrapped");
+            Log.warn(TAG, "Cannot register BuildCompleteListener — engine not bootstrapped");
             return;
         }
 
         world.eventBus.subscribe(CustomEvent.class, BuildCompleteListener::onBuildComplete);
-        LOGGER.info("BuildCompleteListener registered on engine EventBus");
+        Log.info(TAG, "BuildCompleteListener registered on engine EventBus");
     }
 
     private static void onBuildComplete(CustomEvent event) {
@@ -54,7 +52,7 @@ public final class BuildCompleteListener {
         String buildingName = params.get("building_name");
 
         if (anchorStr == null) {
-            LOGGER.warn("build_complete event missing anchor — cannot verify building");
+            Log.warn(TAG, "build_complete event missing anchor — cannot verify building");
             return;
         }
 
@@ -67,14 +65,14 @@ public final class BuildCompleteListener {
         BuildingSavedData data = BuildingSavedData.get(level);
         BuildingState state = findByAnchor(data, anchor);
         if (state == null) {
-            LOGGER.debug("build_complete for unknown building at {} (name={}) — may be unregistered",
+            Log.debug(TAG, "build_complete for unknown building at {} (name={}) — may be unregistered",
                     anchor, buildingName);
             return;
         }
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) {
-            LOGGER.warn("build_complete for {} — config not found", state.getBuildingTypeId());
+            Log.warn(TAG, "build_complete for {} — config not found", state.getBuildingTypeId());
             return;
         }
 
@@ -84,7 +82,7 @@ public final class BuildCompleteListener {
         data.setDirty();
 
         if (intact) {
-            LOGGER.info("[Building] {} at {} construction complete — now operational",
+            Log.info(TAG, "[Building] {} at {} construction complete — now operational",
                     state.getBuildingTypeId(), anchor);
 
             // Assign colony via ColonyApi
@@ -111,14 +109,14 @@ public final class BuildCompleteListener {
                 boolean changed = data.addBuildingContribution(
                         colonyId, state.getBuildingTypeId());
                 if (changed) {
-                    LOGGER.info("[Evaluation] Colony {} gained +{} from first {}",
+                    Log.info(TAG, "[Evaluation] Colony {} gained +{} from first {}",
                             colonyId.toString().substring(0, 8),
                             data.getContributionRegistry().getSnapshot(colonyId),
                             state.getBuildingTypeId());
                 }
             }
         } else {
-            LOGGER.warn("[Building] {} at {} — {} blocks still damaged after build_complete, re-enqueuing partial repair",
+            Log.warn(TAG, "[Building] {} at {} — {} blocks still damaged after build_complete, re-enqueuing partial repair",
                     state.getBuildingTypeId(), anchor, damaged.size());
             BuildingBreakHandler.enqueueRepairForOffsets(state, config, damaged);
         }
@@ -134,7 +132,7 @@ public final class BuildCompleteListener {
                     Integer.parseInt(parts[1]),
                     Integer.parseInt(parts[2]));
         } catch (NumberFormatException e) {
-            LOGGER.warn("Invalid anchor format: {}", s);
+            Log.warn(TAG, "Invalid anchor format: {}", s);
             return null;
         }
     }

@@ -5,9 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.shared.data.DecorationConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -21,6 +18,7 @@ import com.wsteam.wandscape.shared.data.WonderEffect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client-side static state for the building editor.
@@ -32,7 +30,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class BuildingEditorClientState {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingEditorClientState";
 
     // ── Edit mode ──
 
@@ -191,7 +189,7 @@ public final class BuildingEditorClientState {
         // Auto-show ImGui (releases mouse)
         com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
 
-        LOGGER.info("[BuildEditor] Entered edit mode. worldAnchor={}, min={}, max={}, id={}",
+        Log.info(TAG, "[BuildEditor] Entered edit mode. worldAnchor={}, min={}, max={}, id={}",
                 worldAnchor, editMin, editMax, buildingId);
     }
 
@@ -245,7 +243,7 @@ public final class BuildingEditorClientState {
         previewJson = "";
         savedAbilities = null;
         autoAnchorEnabled = true;
-        LOGGER.info("[BuildEditor] Exited edit mode");
+        Log.info(TAG, "[BuildEditor] Exited edit mode");
     }
 
     // ── World anchor ──
@@ -292,7 +290,7 @@ public final class BuildingEditorClientState {
         editMin = newMin;
         editMax = newMax;
         anchorOffset = newAnchorOffset;
-        LOGGER.info("[BuildEditor] Auto-anchor recalculated to {}", newAnchor);
+        Log.info(TAG, "[BuildEditor] Auto-anchor recalculated to {}", newAnchor);
     }
 
     // ── AABB ──

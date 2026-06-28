@@ -10,7 +10,6 @@ import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-
 public class ElementApiImpl implements ElementApi {
 
     private final ElementMappingLoader mappingLoader;

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 /**
  * Resolves {@code {{variable}}} placeholders in template strings.
  * Variables without a matching value are left as-is (no exception).

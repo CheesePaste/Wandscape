@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.ui.animation;
 
 import net.minecraft.client.gui.GuiGraphics;
-
 /**
  * Animation interface for future effects (particles, glow, transitions).
  * No implementations yet — reserved for phase 4-5.

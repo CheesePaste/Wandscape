@@ -10,7 +10,6 @@ import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
 import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
 
 import net.neoforged.neoforge.common.NeoForge;
-
 /**
  * Implementation of {@link TouristApi}.
  * Tracks tourist presence and satisfaction per colony in memory.

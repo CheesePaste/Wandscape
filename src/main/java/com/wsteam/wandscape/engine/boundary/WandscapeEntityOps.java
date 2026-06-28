@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.boundary.EntityOps;
 import com.wsteam.wandscape.core.types.EffectId;
 import com.wsteam.wandscape.core.types.EntityId;
 import com.wsteam.wandscape.core.types.GridPos;
-
 /**
  * MC implementation of {@link EntityOps}.
  *

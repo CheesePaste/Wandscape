@@ -4,15 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-
-import org.slf4j.Logger;
-
 /**
  * Standalone debug-inspect mode (G key) — completely independent of
  * soul projection (V key).
@@ -22,7 +18,7 @@ import org.slf4j.Logger;
  */
 public final class BuildingDebugClientState {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingDebugClientState";
 
     private static volatile boolean active = false;
 

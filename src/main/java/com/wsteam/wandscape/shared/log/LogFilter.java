@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.log;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-
 /**
  * Runtime log tag whitelist. Lives in shared/log so all modules can reach it.
  *
@@ -45,10 +44,10 @@ public final class LogFilter {
     public static void presetPreviewDebug() {
         enabled = true;
         whitelist.clear();
-        // core.Log tags (java.util.logging) + SLF4J class names
+        // tags used by Log class (class simple names)
         whitelist.add("Scheduler");
         whitelist.add("SchedulerSystem");
-        // Preview system: BuildingPreviewRenderer (SLF4J) + BuildingSelectionOverlay
+        // Preview system
         whitelist.add("Preview");
         whitelist.add("BuildingPreviewRenderer");
         whitelist.add("BuildingSelectionOverlay");

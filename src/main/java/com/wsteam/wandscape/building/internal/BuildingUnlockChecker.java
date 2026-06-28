@@ -7,7 +7,6 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
 /**
  * Utility for checking whether a building type is unlocked for a given colony.
  *

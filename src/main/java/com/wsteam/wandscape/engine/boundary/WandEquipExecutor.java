@@ -23,11 +23,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Executes {@link AtomicOp.WandEquipOp}: consumes a wand from the colony warehouse
@@ -35,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandEquipExecutor";
     private static final String WAND_ITEM_ID = "wandscape:wand";
 
     private final WandPresetLoader presetLoader;
@@ -54,7 +52,7 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
     @Override
     public CompletableFuture<Void> execute(AtomicOp.WandEquipOp op, World world, long npcId) {
        String presetId = op.wandItemId(); // e.g. "gatherer_wand" (preset ID from WandProvider)
-        LOGGER.info("[WandEquip] ▶ execute called: preset={} npcId={}", presetId, npcId); // diag
+        Log.info(TAG, "[WandEquip] ▶ execute called: preset={} npcId={}", presetId, npcId); // diag
 
         // 1. Find the preset for this wand
         var preset = presetLoader.getPreset(presetId);
@@ -90,7 +88,7 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
                     // Found in NPC inventory — consume and equip directly
                     stack.shrink(1);
                     equipWandDirectly(world, npcId, presetId, preset, npc);
-                    LOGGER.info("[WandEquip] 🪄 NPC #{} equipped '{}' from own inventory (shortfill)",
+                    Log.info(TAG, "[WandEquip] 🪄 NPC #{} equipped '{}' from own inventory (shortfill)",
                             npcId, presetId);
                     return CompletableFuture.completedFuture(null);
                 }
@@ -189,7 +187,7 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
 
         WandCarrier current = world.get(npcId, WandCarrier.class);
         if (current == null) {
-            LOGGER.warn("[WandEquip] NPC {} lost WandCarrier, cannot equip", npcId);
+            Log.warn(TAG, "[WandEquip] NPC {} lost WandCarrier, cannot equip", npcId);
             return;
         }
         WandCarrier updated = new WandCarrier(current);
@@ -217,7 +215,7 @@ public class WandEquipExecutor implements OpExecutor<AtomicOp.WandEquipOp> {
             }
         }
 
-        LOGGER.info("[WandEquip] 🪄 NPC #{} equipped '{}' → caps: {} eff: {} range: {}",
+        Log.info(TAG, "[WandEquip] 🪄 NPC #{} equipped '{}' → caps: {} eff: {} range: {}",
                 npcId, presetId, wandCaps.keySet(), manaEff, range);
 
         // Notify WandLifecycle: wand is now equipped on this NPC

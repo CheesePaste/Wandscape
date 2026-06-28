@@ -14,7 +14,6 @@ import net.minecraft.server.level.ServerLevel;
 
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  * Debug commands for tourist NPC testing.
  *

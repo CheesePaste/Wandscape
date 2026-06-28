@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.event;
 import java.util.UUID;
 
 import net.neoforged.bus.api.Event;
-
 /** Fired when a shop building completes its daily restock cycle. */
 public class ShopRestockedEvent extends Event {
     private final UUID buildingId;

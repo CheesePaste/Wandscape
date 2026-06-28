@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.event;
 import java.util.UUID;
 
 import net.neoforged.bus.api.Event;
-
 public class NpcResurrectedEvent extends Event {
     private final UUID npcId;
     private final UUID altarId;

@@ -6,9 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -24,6 +21,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Manages shop inventory: daily restock, tourist purchases, unsold clearing.
@@ -39,7 +37,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * {@link BuildingContributionRegistry#setShopHasStock(UUID, boolean)}.
  */
 public final class ShopStockManager {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ShopStockManager";
 
     /** buildingId → whether the shop currently has any stock (performance cache) */
     private final Map<UUID, Boolean> hasStockCache = new ConcurrentHashMap<>();
@@ -97,7 +95,7 @@ public final class ShopStockManager {
         if (bank == null) return;
 
         restock(buildingId, config.shop(), colonyId, bank);
-        LOGGER.info("[Shop] Initial restock for building={}", buildingId.toString().substring(0, 8));
+        Log.info(TAG, "[Shop] Initial restock for building={}", buildingId.toString().substring(0, 8));
     }
 
     /** Returns the current stock count for a specific item. */
@@ -260,7 +258,7 @@ public final class ShopStockManager {
             }
         }
 
-        LOGGER.debug("[Shop] Purchase: building={} item={} remaining={}",
+        Log.debug(TAG, "[Shop] Purchase: building={} item={} remaining={}",
                 buildingId.toString().substring(0, 8), itemId, current - 1);
         return true;
     }
@@ -350,7 +348,7 @@ public final class ShopStockManager {
             savedData.setDirty();
             updateHasStock(buildingId, s);
             NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
-            LOGGER.debug("[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
+            Log.debug(TAG, "[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
         }
     }
 

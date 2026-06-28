@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.wsteam.wandscape.core.types.GridPos;
-
 /**
  * Orchestrates road network planning.
  * All methods are stateless pure functions taking data records as input.

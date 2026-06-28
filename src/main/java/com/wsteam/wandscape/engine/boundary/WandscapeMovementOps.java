@@ -2,9 +2,6 @@ package com.wsteam.wandscape.engine.boundary;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
@@ -12,6 +9,7 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Stateless MC adapter for {@link MovementOps}.
@@ -22,13 +20,13 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
  */
 public class WandscapeMovementOps implements MovementOps {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapeMovementOps";
 
     @Override
     public CompletableFuture<Void> navigateTo(long npcId, int x, int y, int z) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         if (npc == null || npc.isRemoved()) {
-            LOGGER.warn("[MovementOps] navigateTo: unknown or removed NPC {}", npcId);
+            Log.warn(TAG, "[MovementOps] navigateTo: unknown or removed NPC {}", npcId);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -44,7 +42,7 @@ public class WandscapeMovementOps implements MovementOps {
         double dz = npc.getZ() - (z + 0.5);
         double hDistSq = dx * dx + dz * dz;
 
-        LOGGER.info("[MovementOps] navigateTo npc={} → ({},{},{}) hDist={}",
+        Log.info(TAG, "[MovementOps] navigateTo npc={} → ({},{},{}) hDist={}",
                 npcId, x, y, z, (int) Math.sqrt(hDistSq));
 
         // Write NavigationState — NavigationSystem picks this up (always, even when in-range)
@@ -59,7 +57,7 @@ public class WandscapeMovementOps implements MovementOps {
         nav.target = new GridPos(x, y, z);
         nav.future = future;
 
-        LOGGER.info("[MovementOps] nav queued for NPC {} — NavigationSystem will drive it", npcId);
+        Log.info(TAG, "[MovementOps] nav queued for NPC {} — NavigationSystem will drive it", npcId);
         return future;
     }
 

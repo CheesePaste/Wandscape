@@ -5,9 +5,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 
@@ -17,6 +14,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Per-level persistent item bank shared by all colonies.
@@ -27,7 +25,7 @@ import net.minecraft.world.level.saveddata.SavedData;
  * <p>Reservations are in-memory only (not persisted across restart).
  */
 public class ColonyItemBank extends SavedData {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ColonyItemBank";
     private static final String DATA_NAME = "wandscape_colony_items";
 
     // NBT keys
@@ -112,7 +110,7 @@ public class ColonyItemBank extends SavedData {
         elementStorage.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(type, amount, Long::sum);
         setDirty();
-        LOGGER.info("[BANK] AddElement:%s".formatted(type.name()));
+        Log.info(TAG, "[BANK] AddElement:%s".formatted(type.name()));
     }
 
     /** Consume amount of element type. Returns false if insufficient. */
@@ -129,7 +127,7 @@ public class ColonyItemBank extends SavedData {
             map.put(type, remaining);
         }
         setDirty();
-        LOGGER.info("[BANK] consumeElement:%s".formatted(type.name()));
+        Log.info(TAG, "[BANK] consumeElement:%s".formatted(type.name()));
         return true;
     }
 
@@ -161,7 +159,7 @@ public class ColonyItemBank extends SavedData {
 
     public boolean reserve(UUID colonyId, ItemKey key, long amount) {
         if (available(colonyId, key) < amount) return false;
-        LOGGER.info("[BANK] reserve:%s".formatted(key.itemId()));
+        Log.info(TAG, "[BANK] reserve:%s".formatted(key.itemId()));
         reservations.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .merge(key, amount, Long::sum);
         return true;
@@ -177,7 +175,7 @@ public class ColonyItemBank extends SavedData {
             if (newRes <= 0) res.remove(key);
             else res.put(key, newRes);
         }
-        LOGGER.info("[BANK] commit:%s".formatted(key.itemId()));
+        Log.info(TAG, "[BANK] commit:%s".formatted(key.itemId()));
         return ok;
     }
 
@@ -277,7 +275,7 @@ public class ColonyItemBank extends SavedData {
                 bank.elementStorage.put(colonyId, elements);
             }
         }
-        LOGGER.info("[BANK] Loaded {} colony item banks", bank.storage.size());
+        Log.info(TAG, "[BANK] Loaded {} colony item banks", bank.storage.size());
         return bank;
     }
 }

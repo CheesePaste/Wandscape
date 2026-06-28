@@ -10,7 +10,6 @@ import javax.annotation.Nullable;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
-
 public record BrewPotionRecipe(
     String id,
     String outputItem,

@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
@@ -17,13 +14,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: request debug data for the building at the given position.
  */
 public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPayload {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingDebugRequestPacket";
 
     public static final Type<BuildingDebugRequestPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "building_debug_request"));
@@ -39,13 +37,13 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
     public static void handleServer(BuildingDebugRequestPacket packet, ServerPlayer player) {
         var sd = com.wsteam.wandscape.building.internal.BuildingSavedData.get(player.level());
         if (sd == null) {
-            LOGGER.warn("[Debug] No BuildingSavedData for player {}", player.getGameProfile().getName());
+            Log.warn(TAG, "[Debug] No BuildingSavedData for player {}", player.getGameProfile().getName());
             return;
         }
 
         var state = sd.getBuildingAt(packet.pos());
         if (state == null) {
-            LOGGER.info("[Debug] No building at {} for player {}", packet.pos(), player.getGameProfile().getName());
+            Log.info(TAG, "[Debug] No building at {} for player {}", packet.pos(), player.getGameProfile().getName());
             return;
         }
 
@@ -60,7 +58,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
         );
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, response);
 
-        LOGGER.info("[Debug] Sent debug data for '{}' at {} to {}",
+        Log.info(TAG, "[Debug] Sent debug data for '{}' at {} to {}",
                 state.getBuildingTypeId(), packet.pos(), player.getGameProfile().getName());
     }
 

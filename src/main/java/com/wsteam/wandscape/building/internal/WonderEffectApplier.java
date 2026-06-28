@@ -8,9 +8,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
 import com.wsteam.wandscape.shared.data.WonderEffect;
@@ -24,6 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Collects and applies wonder building global effects.
@@ -39,7 +37,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * </ul>
  */
 public final class WonderEffectApplier {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WonderEffectApplier";
 
     // Active effects indexed by buildingId
     private final Map<UUID, List<WonderEffect>> activeEffectsByBuilding = new ConcurrentHashMap<>();
@@ -133,7 +131,7 @@ public final class WonderEffectApplier {
             applyEffects(wonderConfig.effects(), state.getBuildingId(), state.getColonyId());
         }
 
-        LOGGER.info("[Wonder] Recalculated: {} wonders active, stats={} prices={} rules={}",
+        Log.info(TAG, "[Wonder] Recalculated: {} wonders active, stats={} prices={} rules={}",
                 activeEffectsByBuilding.size(), statCache, priceCache, unlockedRules);
     }
 
@@ -158,7 +156,7 @@ public final class WonderEffectApplier {
             NeoForge.EVENT_BUS.post(new WonderEffectChangedEvent(
                     buildingId, colonyId, List.of(), false));
             recalculateAll();
-            LOGGER.info("[Wonder] Effects removed for building={}",
+            Log.info(TAG, "[Wonder] Effects removed for building={}",
                     buildingId.toString().substring(0, 8));
         }
     }

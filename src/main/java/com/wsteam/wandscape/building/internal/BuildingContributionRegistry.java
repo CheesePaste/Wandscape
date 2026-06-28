@@ -6,14 +6,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 
 import net.neoforged.bus.api.IEventBus;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Tracks, per colony, how many <em>intact</em> buildings exist for each building type.
@@ -26,7 +24,7 @@ import net.neoforged.bus.api.IEventBus;
  * once per transition.
  */
 public final class BuildingContributionRegistry {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "BuildingContributionRegistry";
 
     /**
      * ColonyId → (buildingTypeId → number of currently intact buildings of this type).
@@ -79,7 +77,7 @@ public final class BuildingContributionRegistry {
                         (k, v) -> v == null || v <= 1 ? null : v - 1);
             }
         }
-        LOGGER.debug("[Registry] Shop stock changed: building={} type={} hasStock={}",
+        Log.debug(TAG, "[Registry] Shop stock changed: building={} type={} hasStock={}",
                 buildingId.toString().substring(0, 8), buildingTypeId, hasStock);
     }
 
@@ -163,7 +161,7 @@ public final class BuildingContributionRegistry {
                     .computeIfAbsent(state.getColonyId(), k -> new ConcurrentHashMap<>());
             typeMap.merge(state.getBuildingTypeId(), 1, Integer::sum);
         }
-        LOGGER.info("BuildingContributionRegistry rebuilt — {} colonies tracked", intactCounts.size());
+        Log.info(TAG, "BuildingContributionRegistry rebuilt — {} colonies tracked", intactCounts.size());
     }
 
     // ── Query ─────────────────────────────────────────────────────────────────

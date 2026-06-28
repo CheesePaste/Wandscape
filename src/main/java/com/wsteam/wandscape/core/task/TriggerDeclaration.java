@@ -4,7 +4,6 @@ import com.wsteam.wandscape.core.event.CustomEvent;
 
 import java.util.Collections;
 import java.util.Map;
-
 /**
  * Producer-side trigger declaration.
  * When event X with matching params occurs, source blueprint Y as a new task.

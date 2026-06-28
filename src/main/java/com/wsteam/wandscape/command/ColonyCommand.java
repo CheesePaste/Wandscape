@@ -8,8 +8,6 @@ import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -39,6 +37,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Colony lifecycle commands.
@@ -53,7 +52,7 @@ import net.neoforged.neoforge.common.NeoForge;
  */
 public final class ColonyCommand {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ColonyCommand";
     private static final int WAND_RANGE = 8;
 
     private ColonyCommand() {}
@@ -101,7 +100,7 @@ public final class ColonyCommand {
         // ── Step 2: create colonyId ─────────────────────────────────────────
         ColonyApi colonyApi = ColonyApiImpl.get();
         UUID colonyId = colonyApi.createColony(origin);
-        LOGGER.info("[Colony] Creating colony '{}' id={} at {}", name,
+        Log.info(TAG, "[Colony] Creating colony '{}' id={} at {}", name,
                 colonyId.toString().substring(0, 8), origin);
 
         // ── Step 3: create ECS colony entity ────────────────────────────────
@@ -114,7 +113,7 @@ public final class ColonyCommand {
                             64);
             long colonyEntity = world.createEntity();
             world.addComponent(colonyEntity, meta);
-            LOGGER.info("[Colony] ECS colony entity #{} created", colonyEntity);
+            Log.info(TAG, "[Colony] ECS colony entity #{} created", colonyEntity);
         }
 
         // ── Step 4: spawn builder NPC ───────────────────────────────────────
@@ -135,7 +134,7 @@ public final class ColonyCommand {
         npc.setPersistenceRequired();
         npc.colonyId = colonyId;
 
-        LOGGER.info("[Colony] Spawned builder NPC at {} for colony {}",
+        Log.info(TAG, "[Colony] Spawned builder NPC at {} for colony {}",
                 spawnPos, colonyId.toString().substring(0, 8));
 
         // ── Step 5: fix ECS state + fill inventory ─────────────────────────
@@ -160,7 +159,7 @@ public final class ColonyCommand {
                 wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                         net.minecraft.world.item.component.CustomData.of(wandPreset.nbt().copy()));
                 npc.inventory.addItem(wandStack);
-                LOGGER.info("[Colony] Seeded builder_wand into NPC inventory");
+                Log.info(TAG, "[Colony] Seeded builder_wand into NPC inventory");
             }
         }
 
@@ -209,7 +208,7 @@ public final class ColonyCommand {
         if (member != null && !colonyId.equals(member.colonyId())) {
             ecsWorld.addComponent(ecsId,
                     new com.wsteam.wandscape.core.component.ColonyMember(colonyId));
-            LOGGER.info("[Colony] Fixed NPC {} ECS colony {} → {}",
+            Log.info(TAG, "[Colony] Fixed NPC {} ECS colony {} → {}",
                     npc.getUUID().toString().substring(0, 8),
                     member.colonyId().toString().substring(0, 8),
                     colonyId.toString().substring(0, 8));
@@ -223,7 +222,7 @@ public final class ColonyCommand {
                 if (inv.add(stack)) added++;
             }
             if (added > 0) {
-                LOGGER.info("[Colony] Filled NPC {} ECS inventory with {} stacks",
+                Log.info(TAG, "[Colony] Filled NPC {} ECS inventory with {} stacks",
                         npc.getUUID().toString().substring(0, 8), added);
             }
         }

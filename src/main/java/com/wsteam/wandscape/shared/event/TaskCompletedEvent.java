@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.event;
 import java.util.UUID;
 
 import net.neoforged.bus.api.Event;
-
 public class TaskCompletedEvent extends Event {
     private final UUID taskId;
     private final UUID npcId;

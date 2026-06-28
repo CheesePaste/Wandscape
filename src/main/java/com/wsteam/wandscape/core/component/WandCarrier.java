@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 /**
  * Pre-computed capability union of all wands an NPC carries.
  * Recalculated when wands are equipped/unequipped.

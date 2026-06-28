@@ -4,11 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -26,6 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * World-space rendering for soul projection mode.
@@ -42,7 +40,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
  */
 public final class ProjectionRenderer {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ProjectionRenderer";
 
     /** Alpha factor for ghost blocks (0.0-1.0). Applied via setColor interception. */
     private static final float GHOST_ALPHA = 0.40f;
@@ -64,7 +62,7 @@ public final class ProjectionRenderer {
         registered = true;
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(RenderLevelStageEvent.class, ProjectionRenderer::onRenderLevelStage);
-        LOGGER.info("[Projection] Renderer registered");
+        Log.info(TAG, "[Projection] Renderer registered");
     }
 
     // ═══════════════════════════════════════════════════════════════

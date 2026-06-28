@@ -7,9 +7,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -31,6 +28,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * MC implementation of {@link BlockOps}.
@@ -38,7 +36,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  */
 public class WandscapeBlockOps implements BlockOps {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapeBlockOps";
 
     /** Tried in order when finding an adjacent air block for the redstone pulse. */
     private static final Direction[] PULSE_DIRS = {
@@ -127,7 +125,7 @@ public class WandscapeBlockOps implements BlockOps {
         try {
             state.useWithoutItem(level, null, hit);
         } catch (Exception e) {
-            LOGGER.warn("toggle failed at {} (block={}): {}", bp, state.getBlock(), e.toString());
+            Log.warn(TAG, "toggle failed at {} (block={}): {}", bp, state.getBlock(), e.toString());
         }
     }
 
@@ -161,7 +159,7 @@ public class WandscapeBlockOps implements BlockOps {
                 return; // Block handled it
             }
         } catch (Exception e) {
-            LOGGER.warn("activate useWithoutItem failed at {} (block={}): {}",
+            Log.warn(TAG, "activate useWithoutItem failed at {} (block={}): {}",
                     bp, state.getBlock(), e.toString());
         }
 
@@ -177,7 +175,7 @@ public class WandscapeBlockOps implements BlockOps {
     private void redstonePulse(Level level, BlockPos target) {
         BlockPos adj = findAdjacentAir(level, target);
         if (adj == null) {
-            LOGGER.debug("activate redstone fallback: no adjacent air at {}", target);
+            Log.debug(TAG, "activate redstone fallback: no adjacent air at {}", target);
             return;
         }
         level.setBlock(adj, Blocks.REDSTONE_BLOCK.defaultBlockState(),
@@ -219,12 +217,12 @@ public class WandscapeBlockOps implements BlockOps {
         try {
             level.blockEvent(bp, block, 1, 0);
         } catch (Exception e) {
-            LOGGER.warn("openGui blockEvent(open) failed at {}: {}", bp, e.toString());
+            Log.warn(TAG, "openGui blockEvent(open) failed at {}: {}", bp, e.toString());
         }
 
         // Container access for future item manipulation
         if (blockEntity instanceof Container container) {
-            LOGGER.debug("openGui: container at {} has {} slots",
+            Log.debug(TAG, "openGui: container at {} has {} slots",
                     bp, container.getContainerSize());
             // Stage 3+: NPC reads/writes items via Container interface
         }
@@ -233,7 +231,7 @@ public class WandscapeBlockOps implements BlockOps {
         try {
             level.blockEvent(bp, block, 0, 0);
         } catch (Exception e) {
-            LOGGER.warn("openGui blockEvent(close) failed at {}: {}", bp, e.toString());
+            Log.warn(TAG, "openGui blockEvent(close) failed at {}: {}", bp, e.toString());
         }
     }
 
@@ -291,7 +289,7 @@ public class WandscapeBlockOps implements BlockOps {
         net.minecraft.world.level.block.state.properties.Property<?> prop =
                 state.getBlock().getStateDefinition().getProperty(key);
         if (prop == null) {
-            LOGGER.warn("Unknown blockstate property '{}' for block {}, ignoring", key, state.getBlock());
+            Log.warn(TAG, "Unknown blockstate property '{}' for block {}, ignoring", key, state.getBlock());
             return state;
         }
         return setPropertyValue(state, (net.minecraft.world.level.block.state.properties.Property) prop, value);

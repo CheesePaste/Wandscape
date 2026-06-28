@@ -12,7 +12,6 @@ import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-
 /**
  * Grid of item slots with virtual scrolling (by row).
  * Each cell shows an ItemStack icon + optional count text.

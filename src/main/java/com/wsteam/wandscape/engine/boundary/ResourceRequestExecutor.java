@@ -22,13 +22,11 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Executes {@link AtomicOp.ResourceRequestOp} by starting item transport
@@ -49,7 +47,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequestOp> {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "ResourceRequestExecutor";
 
     private final ItemTransportManager transporter;
 
@@ -119,7 +117,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         }
 
         if (needs.isEmpty()) {
-            LOGGER.debug("[ResourceReq] NPC {} already has all {} items, skipping warehouse",
+            Log.debug(TAG, "[ResourceReq] NPC {} already has all {} items, skipping warehouse",
                     npcId, items.size());
             return CompletableFuture.completedFuture(null);
         }
@@ -193,7 +191,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     finish(doneFuture, needs, resources, world, npcId));
         }
 
-        LOGGER.info("[ResourceReq] NPC {} requesting {} items ({} types, {} of {} staggered)",
+        Log.info(TAG, "[ResourceReq] NPC {} requesting {} items ({} types, {} of {} staggered)",
                 npcId, totalItems, needs.size(),
                 remainingCount, totalItems);
         return doneFuture;
@@ -222,7 +220,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     CompletableFuture.allOf(b.inFlight.toArray(new CompletableFuture[0]))
                             .thenRun(() -> finish(b.doneFuture, b.needs,
                                     b.resources, b.world, b.npcId));
-                    LOGGER.debug("[ResourceReq] all {} items launched, awaiting arrivals",
+                    Log.debug(TAG, "[ResourceReq] all {} items launched, awaiting arrivals",
                             b.totalItems);
                 }
             } else if (!b.remaining.isEmpty()) {
@@ -253,7 +251,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                 f.cancel(false);
             }
             b.doneFuture.cancel(false);
-            LOGGER.info("[ResourceReq] cancelForNpc npc={} — released {} resource reservations",
+            Log.info(TAG, "[ResourceReq] cancelForNpc npc={} — released {} resource reservations",
                     npcId, b.needs.size());
         }
         batches.removeAll(toRemove);
@@ -272,11 +270,11 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
             ResourceStack shortfallStack = need.withAmount(toAdd);
             if (inv == null || !inv.add(shortfallStack)) {
                 resources.release(shortfallStack.resource(), shortfallStack.amount());
-                LOGGER.warn("[ResourceReq] NPC {} inventory full for {}, released {}",
+                Log.warn(TAG, "[ResourceReq] NPC {} inventory full for {}, released {}",
                         npcId, need.resource().id(), shortfallStack.amount());
             } else {
                 resources.commit(shortfallStack.resource(), shortfallStack.amount());
-                LOGGER.debug("[ResourceReq] NPC {} received {} (had {} before)",
+                Log.debug(TAG, "[ResourceReq] NPC {} received {} (had {} before)",
                         npcId, shortfallStack, alreadyHas);
             }
         }

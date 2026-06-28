@@ -16,7 +16,6 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
-
 /**
  * Client-side static state holder for the Wandscape comprehensive panel.
  */

@@ -4,10 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Configuration holder for the road system.
@@ -15,7 +13,7 @@ import com.wsteam.wandscape.Config;
  */
 public final class RoadConfig {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadConfig";
     private static final RoadConfig INSTANCE = new RoadConfig();
 
     // Cached parsed palette; cleared when TOML reloads (call invalidatePalette).
@@ -139,7 +137,7 @@ public final class RoadConfig {
 
     private static List<WeightedBlock> parsePalette(String raw) {
         if (raw == null || raw.isBlank()) {
-            LOGGER.warn("[Road] surfacePalette is empty — using dirt_path fallback");
+            Log.warn(TAG, "[Road] surfacePalette is empty — using dirt_path fallback");
             return List.of(new WeightedBlock("minecraft:dirt_path", 1));
         }
 
@@ -150,7 +148,7 @@ public final class RoadConfig {
 
             int eq = trimmed.lastIndexOf('=');
             if (eq < 1 || eq == trimmed.length() - 1) {
-                LOGGER.warn("[Road] invalid palette entry '{}' — expected block=weight", trimmed);
+                Log.warn(TAG, "[Road] invalid palette entry '{}' — expected block=weight", trimmed);
                 continue;
             }
 
@@ -159,12 +157,12 @@ public final class RoadConfig {
             try {
                 weight = Integer.parseInt(trimmed.substring(eq + 1).trim());
             } catch (NumberFormatException e) {
-                LOGGER.warn("[Road] invalid weight in '{}'", trimmed);
+                Log.warn(TAG, "[Road] invalid weight in '{}'", trimmed);
                 continue;
             }
 
             if (weight <= 0) {
-                LOGGER.warn("[Road] non-positive weight {} in '{}' — skipped", weight, trimmed);
+                Log.warn(TAG, "[Road] non-positive weight {} in '{}' — skipped", weight, trimmed);
                 continue;
             }
 
@@ -172,7 +170,7 @@ public final class RoadConfig {
         }
 
         if (result.isEmpty()) {
-            LOGGER.warn("[Road] no valid palette entries — using dirt_path fallback");
+            Log.warn(TAG, "[Road] no valid palette entries — using dirt_path fallback");
             return List.of(new WeightedBlock("minecraft:dirt_path", 1));
         }
 

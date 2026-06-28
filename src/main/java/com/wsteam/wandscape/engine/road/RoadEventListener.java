@@ -6,10 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import com.google.gson.JsonArray;
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.CustomEvent;
@@ -30,6 +27,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Listens for engine {@link CustomEvent}s related to road planning.
@@ -46,22 +44,22 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  */
 public final class RoadEventListener {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "RoadEventListener";
 
     private RoadEventListener() {}
 
     public static void register() {
         var world = WandscapeEngine.getWorld();
         if (world == null || world.eventBus == null) {
-            LOGGER.warn("Cannot register RoadEventListener — engine not bootstrapped");
+            Log.warn(TAG, "Cannot register RoadEventListener — engine not bootstrapped");
             return;
         }
         world.eventBus.subscribe(CustomEvent.class, RoadEventListener::onEvent);
-        LOGGER.info("RoadEventListener registered on engine EventBus");
+        Log.info(TAG, "RoadEventListener registered on engine EventBus");
     }
 
     private static void onEvent(CustomEvent event) {
-        LOGGER.debug("[Road] event received: {} params={}", event.name(), event.params().keySet());
+        Log.debug(TAG, "[Road] event received: {} params={}", event.name(), event.params().keySet());
         switch (event.name()) {
             case "build_complete" -> onBuildComplete(event);
             case "road_segment_complete" -> onSegmentComplete(event);
@@ -94,7 +92,7 @@ public final class RoadEventListener {
         roadData.setBuildingCount(buildingCount);
 
         if (buildingCount < threshold) {
-            LOGGER.debug("[Road] Skipping — {} buildings < threshold {}", buildingCount, threshold);
+            Log.debug(TAG, "[Road] Skipping — {} buildings < threshold {}", buildingCount, threshold);
             roadData.markChanged();
             return;
         }
@@ -127,17 +125,17 @@ public final class RoadEventListener {
 
         // ── First-time full plan ──
         if (network.isEmpty()) {
-            LOGGER.info("[Road] First MST plan — {} buildings (threshold={})",
+            Log.info(TAG, "[Road] First MST plan — {} buildings (threshold={})",
                     buildingCount, threshold);
 
             RoadNetwork planned = RoadPlanner.computeMST(allBuildings, threshold, amplitude);
             if (planned.getEdges().isEmpty()) {
-                LOGGER.warn("[Road] MST plan produced no edges");
+                Log.warn(TAG, "[Road] MST plan produced no edges");
                 roadData.markChanged();
                 return;
             }
 
-            LOGGER.info("[Road] Full plan: {} edges", planned.getEdges().size());
+            Log.info(TAG, "[Road] Full plan: {} edges", planned.getEdges().size());
 
             for (RoadBuildingData bd : allBuildings) {
                 network.addNode(new RoadNode(bd.id(),
@@ -156,18 +154,18 @@ public final class RoadEventListener {
 
         // ── Incremental ──
         if (newBuilding == null) {
-            LOGGER.debug("[Road] No new building parsed — skipping incremental");
+            Log.debug(TAG, "[Road] No new building parsed — skipping incremental");
             roadData.markChanged();
             return;
         }
 
         if (network.getBuildingNode(newBuilding.id()).isPresent()) {
-            LOGGER.debug("[Road] Building {} already in network — skipping", buildingName);
+            Log.debug(TAG, "[Road] Building {} already in network — skipping", buildingName);
             roadData.markChanged();
             return;
         }
 
-        LOGGER.info("[Road] Incremental: connecting {} at ({},{}) to network",
+        Log.info(TAG, "[Road] Incremental: connecting {} at ({},{}) to network",
                 buildingName, newBuilding.x(), newBuilding.z());
 
         Set<PathPoint> occupiedTiles = new HashSet<>();
@@ -197,7 +195,7 @@ public final class RoadEventListener {
                 }
                 if (segCount > 0) {
                     edge.incrementPendingSegments(segCount);
-                    LOGGER.info("[Road] incremental edge {}: {} segments enqueued",
+                    Log.info(TAG, "[Road] incremental edge {}: {} segments enqueued",
                             edge.getEdgeId().toString().substring(0, 8), segCount);
                 }
                 break;
@@ -212,17 +210,17 @@ public final class RoadEventListener {
     private static void onSegmentComplete(CustomEvent event) {
         ServerLevel level = getServerLevel();
         if (level == null) {
-            LOGGER.warn("[Road] onSegmentComplete: no server level");
+            Log.warn(TAG, "[Road] onSegmentComplete: no server level");
             return;
         }
 
         String edgeIdStr = event.params().get("edge_id");
         String segIdStr = event.params().get("segment_id");
-        LOGGER.debug("[Road] segment_complete event: edge_id={} segment_id={} params={}",
+        Log.debug(TAG, "[Road] segment_complete event: edge_id={} segment_id={} params={}",
                 edgeIdStr, segIdStr, event.params().keySet());
 
         if (edgeIdStr == null) {
-            LOGGER.warn("[Road] segment_complete event missing edge_id — params={}",
+            Log.warn(TAG, "[Road] segment_complete event missing edge_id — params={}",
                     event.params().keySet());
             return;
         }
@@ -231,14 +229,14 @@ public final class RoadEventListener {
         try {
             edgeId = UUID.fromString(edgeIdStr);
         } catch (IllegalArgumentException e) {
-            LOGGER.warn("[Road] invalid edge_id in segment_complete: '{}'", edgeIdStr);
+            Log.warn(TAG, "[Road] invalid edge_id in segment_complete: '{}'", edgeIdStr);
             return;
         }
 
         RoadSavedData roadData = RoadSavedData.getOrCreate(level);
         RoadEdge edge = roadData.getNetwork().getEdge(edgeId);
         if (edge == null) {
-            LOGGER.warn("[Road] segment_complete for unknown edge {} (network has {} edges)",
+            Log.warn(TAG, "[Road] segment_complete for unknown edge {} (network has {} edges)",
                     edgeIdStr, roadData.getNetwork().edgeCount());
             return;
         }
@@ -249,7 +247,7 @@ public final class RoadEventListener {
             try {
                 segmentId = UUID.fromString(segIdStr);
             } catch (IllegalArgumentException e) {
-                LOGGER.warn("[Road] invalid segment_id in event: '{}' — will count anyway", segIdStr);
+                Log.warn(TAG, "[Road] invalid segment_id in event: '{}' — will count anyway", segIdStr);
             }
         }
 
@@ -262,14 +260,14 @@ public final class RoadEventListener {
         }
 
         int remaining = edge.getPendingSegmentCount();
-        LOGGER.info("[Road] segment_complete: edge={} status={} remaining={} allDone={}",
+        Log.info(TAG, "[Road] segment_complete: edge={} status={} remaining={} allDone={}",
                 edgeIdStr, edge.getStatus(), remaining, allDone);
 
         if (!allDone) return;
 
         edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
         roadData.markChanged();
-        LOGGER.info("[Road] edge {} → COMPLETE — triggering decoration", edgeIdStr);
+        Log.info(TAG, "[Road] edge {} → COMPLETE — triggering decoration", edgeIdStr);
 
         triggerDecorationForEdge(edge, level, roadData);
     }
@@ -280,16 +278,16 @@ public final class RoadEventListener {
         RoadConfig config = RoadConfig.getInstance();
 
         if (!config.isDecorationEnabled()) {
-            LOGGER.info("[Deco] edge={}: disabled in config", edgeShort);
+            Log.info(TAG, "[Deco] edge={}: disabled in config", edgeShort);
             return;
         }
         if (edge.getDecorationTaskId() != null) {
-            LOGGER.info("[Deco] edge={}: already enqueued (decoTaskId={})",
+            Log.info(TAG, "[Deco] edge={}: already enqueued (decoTaskId={})",
                     edgeShort, edge.getDecorationTaskId());
             return;
         }
 
-        LOGGER.info("[Deco] edge={}: planning decorations...", edgeShort);
+        Log.info(TAG, "[Deco] edge={}: planning decorations...", edgeShort);
 
         BuildingSavedData buildingData = BuildingSavedData.get(level);
         var buildingBounds = new ArrayList<BoundingBox>();
@@ -299,22 +297,22 @@ public final class RoadEventListener {
 
         RoadConfig.DecorationConfig deco = config.getDecorationConfig();
         int halfWidth = edge.getWidth() / 2;
-        LOGGER.info("[Deco] edge={}: lampSpacing={} benchSpacing={} halfWidth={} (edgeWidth={})",
+        Log.info(TAG, "[Deco] edge={}: lampSpacing={} benchSpacing={} halfWidth={} (edgeWidth={})",
                 edgeShort, deco.lampSpacing(), deco.benchSpacing(), halfWidth, edge.getWidth());
 
         List<DecorationPoint> points = DecorationPlanner.planForEdge(
                 edge, deco.lampSpacing(), deco.benchSpacing(), halfWidth);
 
         if (points.isEmpty()) {
-            LOGGER.info("[Deco] edge={}: planner produced 0 points (pathLen={})",
+            Log.info(TAG, "[Deco] edge={}: planner produced 0 points (pathLen={})",
                     edgeShort, edge.getPath().size());
             return;
         }
-        LOGGER.info("[Deco] edge={}: {} decoration points planned", edgeShort, points.size());
+        Log.info(TAG, "[Deco] edge={}: {} decoration points planned", edgeShort, points.size());
 
         JsonArray tiles = DecorationBuilder.buildTiles(points, level, buildingBounds, config);
         if (tiles.isEmpty()) {
-            LOGGER.info("[Deco] edge={}: builder produced 0 tiles ({} points dropped by terrain/building checks)",
+            Log.info(TAG, "[Deco] edge={}: builder produced 0 tiles ({} points dropped by terrain/building checks)",
                     edgeShort, points.size());
             return;
         }
@@ -328,7 +326,7 @@ public final class RoadEventListener {
         edge.setDecorationTaskId(1L);
         roadData.markChanged();
 
-        LOGGER.info("[Deco] edge={}: ENQUEUED {} decoration tiles ({} points → {} tiles → taskId={})",
+        Log.info(TAG, "[Deco] edge={}: ENQUEUED {} decoration tiles ({} points → {} tiles → taskId={})",
                 edgeShort, tiles.size(), points.size(), tiles.size(),
                 decoId.toString().substring(0, 8));
     }
@@ -363,7 +361,7 @@ public final class RoadEventListener {
         }
 
         NetworkDiff diff = RoadPlanner.rebuild(network, allBuildings, amplitude);
-        LOGGER.info("[Road] rebuild: {} retained, {} deprecated, {} new",
+        Log.info(TAG, "[Road] rebuild: {} retained, {} deprecated, {} new",
                 diff.retained().size(), diff.deprecated().size(), diff.newEdges().size());
 
         Set<PathPoint> occupiedTiles = new HashSet<>();
@@ -405,11 +403,11 @@ public final class RoadEventListener {
         if (segmentCount > 0) {
             edge.incrementPendingSegments(segmentCount);
             edge.addPlacedBlocks(allPlaced);
-            LOGGER.info("[Road] enqueueEdge: edge={} segments={} placedBlocks={} status={}",
+            Log.info(TAG, "[Road] enqueueEdge: edge={} segments={} placedBlocks={} status={}",
                     edge.getEdgeId().toString().substring(0, 8), segmentCount,
                     edge.getPlacedBlocks().size(), edge.getStatus());
         } else {
-            LOGGER.warn("[Road] enqueueEdge: edge={} produced 0 segments! pathLen={}",
+            Log.warn(TAG, "[Road] enqueueEdge: edge={} produced 0 segments! pathLen={}",
                     edge.getEdgeId().toString().substring(0, 8), edge.getPath().size());
         }
     }
@@ -431,7 +429,7 @@ public final class RoadEventListener {
                     new RoadTaskSource.PendingSegment(segId, edgeId, segTiles));
             count++;
         }
-        LOGGER.info("[Road] edge {}: {} tiles in {} segments",
+        Log.info(TAG, "[Road] edge {}: {} tiles in {} segments",
                 edgeId.toString().substring(0, 8), tileCount, count);
         return count;
     }

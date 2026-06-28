@@ -8,9 +8,6 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
@@ -46,6 +43,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * MC implementation of {@link OpExecutor} for {@link AtomicOp.BlockInteractOp}.
@@ -61,7 +59,7 @@ import net.minecraft.world.level.Level;
  */
 public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.BlockInteractOp> {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "WandscapeBlockInteractExecutor";
     private static final int TRANSPORT_VISUAL_COUNT = 3; // max ItemEntities per action
 
     @Nullable
@@ -135,7 +133,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         });
 
-        LOGGER.debug("block_interact {}: NPC {} channeling at {} ({} ticks)",
+        Log.debug(TAG, "block_interact {}: NPC {} channeling at {} ({} ticks)",
                 action, npcId, op.target(), op.channelTicks());
         return future;
     }
@@ -163,7 +161,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         pending.removeIf(p -> p.future().isDone());
 
         if (!toComplete.isEmpty()) {
-            LOGGER.debug("block_interact tickAll: {} completed, {} remaining",
+            Log.debug(TAG, "block_interact tickAll: {} completed, {} remaining",
                     toComplete.size(), pending.size());
         }
     }
@@ -184,7 +182,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             case "synthesize" -> executeSynthesize(params, world, npcId);
             case "craft_wand" -> executeCraftWand(params, world, npcId);
             case "brew_potion" -> executeBrewPotion(params, world, npcId);
-            default -> LOGGER.warn("Unknown async block_interact action: {}", action);
+            default -> Log.warn(TAG, "Unknown async block_interact action: {}", action);
         }
     }
 
@@ -194,7 +192,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         ColonyResourceAccess resources = world.colonyResources;
         if (resources == null) {
-            LOGGER.warn("block_interact gather: colonyResources is null, cannot inject {}", element);
+            Log.warn(TAG, "block_interact gather: colonyResources is null, cannot inject {}", element);
             return;
         }
         resources.addResource(new ResourceId(element), amount);
@@ -206,7 +204,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // Completion sparkle
         spawnCompletionParticles(npcId);
 
-        LOGGER.info("block_interact gather complete: {} x{} → colony warehouse", element, amount);
+        Log.info(TAG, "block_interact gather complete: {} x{} → colony warehouse", element, amount);
     }
 
     // ── Production action implementations ──
@@ -215,13 +213,13 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         String itemId = params.get("item_id");
         int count = parseCount(params);
         if (itemId == null || count <= 0) {
-            LOGGER.warn("decompose: invalid params item_id={} count={}", itemId, count);
+            Log.warn(TAG, "decompose: invalid params item_id={} count={}", itemId, count);
             return;
         }
 
         ElementMappingLoader mappings = elementMappingLoader;
         if (mappings == null) {
-            LOGGER.warn("decompose: ElementMappingLoader not set");
+            Log.warn(TAG, "decompose: ElementMappingLoader not set");
             return;
         }
 
@@ -236,7 +234,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         long available = bank.count(colonyId, key);
         if (available < count) {
-            LOGGER.warn("decompose: insufficient items. need={} have={} item={}", count, available, itemId);
+            Log.warn(TAG, "decompose: insufficient items. need={} have={} item={}", count, available, itemId);
             int colonIdx = itemId.lastIndexOf(':');
             String shortId = colonIdx >= 0 ? itemId.substring(colonIdx + 1) : itemId;
             throw new ResourceShortageException(
@@ -249,7 +247,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 : Map.of();
 
         if (yield.isEmpty()) {
-            LOGGER.warn("decompose: no decompose yield for {}", itemId);
+            Log.warn(TAG, "decompose: no decompose yield for {}", itemId);
             return;
         }
 
@@ -257,7 +255,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         ColonyResourceAccess resources = world.colonyResources;
         if (resources == null) {
-            LOGGER.warn("decompose: colonyResources is null");
+            Log.warn(TAG, "decompose: colonyResources is null");
             bank.add(colonyId, key, count);
             return;
         }
@@ -265,7 +263,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (var entry : yield.entrySet()) {
             long total = entry.getValue() * count;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
-            LOGGER.info("decompose: {} x{} → {} x{}", itemId, count,
+            Log.info(TAG, "decompose: {} x{} → {} x{}", itemId, count,
                     entry.getKey().name().toLowerCase(), total);
         }
 
@@ -276,19 +274,19 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0) {
-            LOGGER.warn("synthesize: invalid params recipe_id={} count={}", recipeId, count);
+            Log.warn(TAG, "synthesize: invalid params recipe_id={} count={}", recipeId, count);
             return;
         }
 
         ProductionRecipeLoader recipes = productionRecipeLoader;
         if (recipes == null) {
-            LOGGER.warn("synthesize: ProductionRecipeLoader not set");
+            Log.warn(TAG, "synthesize: ProductionRecipeLoader not set");
             return;
         }
 
         SynthesizeRecipe recipe = recipes.getSynthesizeRecipe(recipeId);
         if (recipe == null) {
-            LOGGER.warn("synthesize: recipe not found: {}", recipeId);
+            Log.warn(TAG, "synthesize: recipe not found: {}", recipeId);
             return;
         }
 
@@ -304,7 +302,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                LOGGER.warn("synthesize: insufficient {} (need={})", entry.getKey(), needed);
+                Log.warn(TAG, "synthesize: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
                         new ResourceStack(new ResourceId(elementId), (int) needed));
             }
@@ -320,7 +318,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // ── Transport visualization: crafted item flies NPC → warehouse ──
         launchItemTransport(outputKey, count, world, npcId);
 
-        LOGGER.info("synthesize: {} x{} → warehouse", recipe.outputItem(), count);
+        Log.info(TAG, "synthesize: {} x{} → warehouse", recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 
@@ -328,19 +326,19 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0) {
-            LOGGER.warn("craft_wand: invalid params recipe_id={} count={}", recipeId, count);
+            Log.warn(TAG, "craft_wand: invalid params recipe_id={} count={}", recipeId, count);
             return;
         }
 
         ProductionRecipeLoader recipes = productionRecipeLoader;
         if (recipes == null) {
-            LOGGER.warn("craft_wand: ProductionRecipeLoader not set");
+            Log.warn(TAG, "craft_wand: ProductionRecipeLoader not set");
             return;
         }
 
         CraftWandRecipe recipe = recipes.getCraftWandRecipes().get(recipeId);
         if (recipe == null) {
-            LOGGER.warn("craft_wand: recipe not found: {}", recipeId);
+            Log.warn(TAG, "craft_wand: recipe not found: {}", recipeId);
             return;
         }
 
@@ -356,7 +354,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                LOGGER.warn("craft_wand: insufficient {} (need={})", entry.getKey(), needed);
+                Log.warn(TAG, "craft_wand: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
                         new ResourceStack(new ResourceId(elementId), (int) needed));
             }
@@ -368,7 +366,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(recipe.outputItem()));
         if (item == null) {
-            LOGGER.warn("craft_wand: output item not found: {}", recipe.outputItem());
+            Log.warn(TAG, "craft_wand: output item not found: {}", recipe.outputItem());
             return;
         }
 
@@ -382,7 +380,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // ── Transport visualization: wand flies NPC → warehouse ──
         launchItemTransport(ItemKey.of(recipe.outputItem(), recipe.outputNbt().copy()), count, world, npcId);
 
-        LOGGER.info("craft_wand: {} x{} → warehouse", recipe.outputItem(), count);
+        Log.info(TAG, "craft_wand: {} x{} → warehouse", recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 
@@ -390,19 +388,19 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         String recipeId = params.get("recipe_id");
         int count = parseCount(params);
         if (recipeId == null || count <= 0) {
-            LOGGER.warn("brew_potion: invalid params recipe_id={} count={}", recipeId, count);
+            Log.warn(TAG, "brew_potion: invalid params recipe_id={} count={}", recipeId, count);
             return;
         }
 
         ProductionRecipeLoader recipes = productionRecipeLoader;
         if (recipes == null) {
-            LOGGER.warn("brew_potion: ProductionRecipeLoader not set");
+            Log.warn(TAG, "brew_potion: ProductionRecipeLoader not set");
             return;
         }
 
         var recipe = recipes.getPotionRecipes().get(recipeId);
         if (recipe == null) {
-            LOGGER.warn("brew_potion: recipe not found: {}", recipeId);
+            Log.warn(TAG, "brew_potion: recipe not found: {}", recipeId);
             return;
         }
 
@@ -418,7 +416,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             long needed = entry.getValue() * count;
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
-                LOGGER.warn("brew_potion: insufficient {} (need={})", entry.getKey(), needed);
+                Log.warn(TAG, "brew_potion: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
                         new ResourceStack(new ResourceId(elementId), (int) needed));
             }
@@ -429,7 +427,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (bank.available(colonyId, key) < count) {
                 int colonIdx = inputItemId.lastIndexOf(':');
                 String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
-                LOGGER.warn("brew_potion: insufficient input item {} (need={})", inputItemId, count);
+                Log.warn(TAG, "brew_potion: insufficient input item {} (need={})", inputItemId, count);
                 throw new ResourceShortageException(
                         new ResourceStack(new ResourceId(shortId), count));
             }
@@ -448,7 +446,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         // ── Transport visualization: potion flies NPC → warehouse ──
         launchItemTransport(ItemKey.of(recipe.outputItem(), null), count, world, npcId);
 
-        LOGGER.info("brew_potion: {} x{} → warehouse", recipe.outputItem(), count);
+        Log.info(TAG, "brew_potion: {} x{} → warehouse", recipe.outputItem(), count);
         spawnCompletionParticles(npcId);
     }
 
@@ -464,7 +462,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         String itemId = resolveElementItem(elementName);
         if (itemId == null) {
-            LOGGER.debug("gather transport: no visual item for element '{}', skipping", elementName);
+            Log.debug(TAG, "gather transport: no visual item for element '{}', skipping", elementName);
             return;
         }
 
@@ -479,7 +477,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (int i = 0; i < visualCount; i++) {
             transporter.send(key, from, to, npc.level(), npcId, route);
         }
-        LOGGER.debug("gather transport: {} x{}({}) NPC→warehouse visual={}x{}",
+        Log.debug(TAG, "gather transport: {} x{}({}) NPC→warehouse visual={}x{}",
                 elementName, amount, itemId, visualCount, itemId);
     }
 
@@ -498,7 +496,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         for (int i = 0; i < visualCount; i++) {
             transporter.send(outputKey, from, to, npc.level(), npcId, route);
         }
-        LOGGER.debug("production transport: {} x{}(visual={}) NPC→warehouse",
+        Log.debug(TAG, "production transport: {} x{}(visual={}) NPC→warehouse",
                 outputKey.itemId(), count, visualCount);
     }
 

@@ -9,7 +9,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-
 /**
  * Client→Server packet signaling that a player opened the task editor.
  * The server responds with {@link BlueprintListResponsePacket}.

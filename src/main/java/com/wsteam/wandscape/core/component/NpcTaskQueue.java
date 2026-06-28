@@ -6,7 +6,6 @@ import com.wsteam.wandscape.core.task.NpcTaskPackage;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
-
 /**
  * Per-NPC task queue that stores {@link NpcTaskPackage}s instead of bare {@link AtomicOp}s.
  * Each package is a self-contained unit with its own stance position,

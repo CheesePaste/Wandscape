@@ -5,7 +5,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
-
 /**
  * Cache for decoration radiation bonuses applied to functional buildings.
  *

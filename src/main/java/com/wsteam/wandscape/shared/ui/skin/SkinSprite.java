@@ -2,7 +2,6 @@ package com.wsteam.wandscape.shared.ui.skin;
 
 import net.minecraft.resources.ResourceLocation;
 import com.wsteam.wandscape.Wandscape;
-
 /**
  * Sprite coordinate within a sprite sheet.
  *

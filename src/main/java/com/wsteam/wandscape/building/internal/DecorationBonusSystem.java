@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 
@@ -17,6 +14,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Periodically computes decoration radiation: decoration buildings radiate
@@ -28,7 +26,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * Decoration buildings' own stats do not directly count toward colony totals.
  */
 public final class DecorationBonusSystem {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String TAG = "DecorationBonusSystem";
 
     private int tickCounter;
     private final DecorationBonusCache cache = new DecorationBonusCache();
@@ -113,7 +111,7 @@ public final class DecorationBonusSystem {
             cache.update(target.getBuildingId(), bonusComfort, bonusMagic, bonusWonder);
         }
 
-        LOGGER.debug("[Decoration] Scan complete: {} sources → {} targets",
+        Log.debug(TAG, "[Decoration] Scan complete: {} sources → {} targets",
                 sources.size(), targets.size());
     }
 }

@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.data;
 
 import java.util.UUID;
-
 public interface NpcData {
     UUID getNpcId();
     String getName();

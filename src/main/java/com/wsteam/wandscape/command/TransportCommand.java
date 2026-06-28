@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Debug command: test item transport animation.
  *
