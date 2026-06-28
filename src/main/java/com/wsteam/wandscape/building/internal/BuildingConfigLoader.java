@@ -78,7 +78,7 @@ public final class BuildingConfigLoader {
             return null;
         }
         configs.put(config.id(), config);
-        LOGGER.debug("loaded BuildingConfig: {} (category={})", config.id(), config.category());
+        LOGGER.info("loaded BuildingConfig: {} (category={}, blocks={})", config.id(), config.category(), config.pattern().size());
         return config;
     }
 }

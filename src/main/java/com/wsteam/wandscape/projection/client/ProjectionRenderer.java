@@ -13,6 +13,7 @@ import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -21,8 +22,6 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -198,13 +197,9 @@ public final class ProjectionRenderer {
             String key = offset.toKey();
             String blockId = blockMapping.get(key);
             if (blockId == null) continue;
-            try {
-                var block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId));
-                if (block != null) {
-                    result.put(offset, block.defaultBlockState());
-                }
-            } catch (Exception e) {
-                LOGGER.trace("[Projection] Bad block '{}' at {}: {}", blockId, key, e.getMessage());
+            BlockState state = BuildingPreviewRenderer.resolveBlockState(blockId);
+            if (state != null) {
+                result.put(offset, state);
             }
         }
         return result;

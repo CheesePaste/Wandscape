@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.core.task;
 
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EventBus;

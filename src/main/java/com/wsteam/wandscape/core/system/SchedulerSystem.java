@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.system;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;

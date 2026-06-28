@@ -1,8 +1,7 @@
 package com.wsteam.wandscape.core.ecs;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.*;
-import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.core.op.OpExecutorRegistry;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;

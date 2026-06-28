@@ -11,6 +11,7 @@ import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.WandLifecycle;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.shared.log.Log;
 
 import java.util.UUID;
 

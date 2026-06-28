@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.demo;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EntityOps;

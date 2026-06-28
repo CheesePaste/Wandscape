@@ -54,6 +54,13 @@ public final class BuildingInteractHandler {
         Level level = event.getLevel();
         if (level.isClientSide()) return;
 
+        // Only intercept when player has the Wandscape panel open
+        if (event.getEntity() instanceof ServerPlayer player) {
+            if (!com.wsteam.wandscape.shared.network.PanelStateTracker.isPanelOpen(player)) {
+                return;
+            }
+        }
+
         var pos = event.getPos();
         BuildingSavedData data = BuildingSavedData.get(level);
 

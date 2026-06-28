@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.core.road;
 
-import com.wsteam.wandscape.core.Log;
+import com.wsteam.wandscape.shared.log.Log;
 
 import javax.annotation.Nullable;
 import java.util.*;

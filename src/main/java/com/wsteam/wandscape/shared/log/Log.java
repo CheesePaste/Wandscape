@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.core;
+package com.wsteam.wandscape.shared.log;
 
 import java.util.logging.*;
 
@@ -37,6 +37,7 @@ public final class Log {
     }
 
     public static void debug(String tag, String msg, Object... args) {
+        if (!LogFilter.allows(tag)) return;
         Logger logger = get(tag);
         if (logger.isLoggable(Level.FINE)) {
             logger.fine(format(msg, args));
@@ -44,6 +45,7 @@ public final class Log {
     }
 
     public static void info(String tag, String msg, Object... args) {
+        if (!LogFilter.allows(tag)) return;
         Logger logger = get(tag);
         if (logger.isLoggable(Level.INFO)) {
             logger.info(format(msg, args));
