@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import org.lwjgl.opengl.GL11;
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexSorting;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 
@@ -28,24 +26,22 @@ import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Standalone 3D building preview renderer.
- * Renders a miniature 3D view of any {@link BuildingConfig} into a GUI rectangle.
+ * Renders a miniature 3D isometric view of any {@link BuildingConfig} into a GUI rectangle.
  *
  * <p>Not coupled to any specific UI — call {@link #renderPreview} from any
  * overlay or screen with a {@link GuiGraphics} context.
  *
- * <p>Uses {@link BlockRenderDispatcher#renderSingleBlock} with a temporary
- * perspective projection. Blocks are sorted back-to-front for correct occlusion.
+ * <p>Uses {@link BlockRenderDispatcher#renderSingleBlock} with the GUI's native
+ * orthographic projection (PoseStack transforms only — no viewport or projection
+ * matrix hacks). Hardware depth test handles occlusion, replacing manual sorting.
  */
 public final class BuildingPreviewRenderer {
 
     private static final String TAG = "BuildingPreviewRenderer";
     private static final int FULL_BRIGHT = LightTexture.FULL_BRIGHT;
-    private static final float VIEW_FOV = 25f;
-    private static final float TILT_RAD = 0.55f;
-    private static final float NEAR = 0.05f;
-    private static final float FAR = 500f;
-    private static long lastDebugLogMs = 0;
-    private static long lastEntryLogMs = 0;
+
+    // Fixed isometric tilt angle (standard 30 degrees)
+    private static final float TILT_RAD = (float) Math.toRadians(30);
 
     private BuildingPreviewRenderer() {}
 
@@ -61,12 +57,6 @@ public final class BuildingPreviewRenderer {
      */
     public static void renderPreview(GuiGraphics g, BuildingConfig config,
                                       int x, int y, int w, int h) {
-        long ts = System.currentTimeMillis();
-        if (ts - lastEntryLogMs > 1000) {
-            lastEntryLogMs = ts;
-            Log.info(TAG, "[Preview] renderPreview ENTRY id={} patternSize={} mappingSize={} rect=({},{},{},{})",
-                    config.id(), config.pattern().size(), config.blockMapping().size(), x, y, w, h);
-        }
         List<BlockOffset> pattern = config.pattern();
         Map<String, String> blockMapping = config.blockMapping();
         if (pattern.isEmpty() || blockMapping.isEmpty()) {
@@ -75,7 +65,7 @@ public final class BuildingPreviewRenderer {
             return;
         }
 
-        // ── Compute building bounds ──
+        // ── 1. Compute building bounds and center ──
         int minX = 0, minY = 0, minZ = 0, maxX = 0, maxY = 0, maxZ = 0;
         boolean first = true;
         for (BlockOffset off : pattern) {
@@ -89,15 +79,19 @@ public final class BuildingPreviewRenderer {
             }
         }
 
-        float cx = (minX + maxX) / 2f + 0.5f;
-        float cy = (minY + maxY) / 2f + 0.5f;
-        float cz = (minZ + maxZ) / 2f + 0.5f;
-        float extent = Math.max(maxX - minX + 1, Math.max(maxY - minY + 1, maxZ - minZ + 1));
-        float camDist = extent * 4f + 2f;
-        float visibleVertical = 2f * camDist * (float) Math.tan(Math.toRadians(VIEW_FOV / 2f));
-        float scale = (visibleVertical * 0.55f) / Math.max(extent, 1f);
+        float cx = (minX + maxX) / 2f;
+        float cy = (minY + maxY) / 2f;
+        float cz = (minZ + maxZ) / 2f;
 
-        // ── Resolve block states (sorted back-to-front by camera distance) ──
+        float extentX = maxX - minX + 1;
+        float extentY = maxY - minY + 1;
+        float extentZ = maxZ - minZ + 1;
+        float maxExtent = Math.max(extentX, Math.max(extentY, extentZ));
+
+        // Scale so the building fits in the UI rect with padding (0.55f margin)
+        float scale = Math.min(w, h) / maxExtent * 0.55f;
+
+        // ── 2. Resolve block states (no sorting needed — depth test handles it) ──
         record BlockEntry(BlockOffset offset, BlockState state) {}
         List<BlockEntry> entries = new ArrayList<>();
         for (BlockOffset off : pattern) {
@@ -115,83 +109,66 @@ public final class BuildingPreviewRenderer {
             return;
         }
 
-        // Auto-rotation angle
-        float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
-
-        // Sort back-to-front relative to rotated camera
-        float sinY = (float) Math.sin(rotY);
-        float cosY = (float) Math.cos(rotY);
-        float sinX = (float) Math.sin(TILT_RAD);
-        float cosX = (float) Math.cos(TILT_RAD);
-        entries.sort((a, b) -> {
-            float az = (a.offset().x() - cx) * sinY + (a.offset().z() - cz) * cosY;
-            float bz = (b.offset().x() - cx) * sinY + (b.offset().z() - cz) * cosY;
-            float ay = (a.offset().y() - cy) * cosX - az * sinX;
-            float by = (b.offset().y() - cy) * cosX - bz * sinX;
-            return Float.compare(ay, by);
-        });
-
-        // ── Set up 3D rendering ──
+        // ── 3. Set up isometric rendering ──
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
         MultiBufferSource.BufferSource bufferSource = g.bufferSource();
         PoseStack pose = g.pose();
 
-        long renderStart = System.currentTimeMillis();
-        if (renderStart - lastDebugLogMs > 5000) {
-            lastDebugLogMs = renderStart;
-            Log.info(TAG, "[Preview] id={} resolved={} rect=({},{},{},{}) cx={:.1f} cy={:.1f} cz={:.1f} "
-                    + "extent={:.1f} scale={:.3f} camDist={:.1f} rotY={:.2f}",
-                    config.id(), entries.size(), x, y, w, h, cx, cy, cz,
-                    extent, scale, camDist, rotY);
-        }
+        // Auto-rotation angle (full rotation every 8 seconds)
+        float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
 
-        int guiScale = (int) mc.getWindow().getGuiScale();
-        int winH = mc.getWindow().getHeight();
-
-        Log.debug(TAG, "[Preview] Projection set: fov={} aspect={} viewport=({},{},{},{}) guiScale={} winH={}",
-                VIEW_FOV, String.format("%.3f", (float)w/Math.max(h,1)),
-                (int)(x*guiScale), winH-(int)((y+h)*guiScale),
-                (int)(w*guiScale), (int)(h*guiScale), guiScale, winH);
-
-        RenderSystem.viewport(
-                (int) (x * guiScale),
-                winH - (int) ((y + h) * guiScale),
-                (int) (w * guiScale),
-                (int) (h * guiScale));
+        // Flush any pending GUI batches to avoid state interference
+        g.flush();
 
         pose.pushPose();
-        pose.setIdentity();
-        pose.translate(0, 0, -camDist);
-        pose.mulPose(new Quaternionf().rotateY(rotY));
-        pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
-        pose.scale(scale, scale, scale);
-        pose.translate(-cx, -cy, -cz);
 
+        // Move to the center of the UI rectangle; push Z forward so the model
+        // renders in front of the GUI background (200 is a safe depth).
+        pose.translate(x + w / 2f, y + h / 2f, 200);
+
+        // 【CRITICAL】GUI Y-axis points downward; 3D world Y-axis points upward.
+        // Negate Y scale to flip the coordinate system.
+        pose.scale(scale, -scale, scale);
+
+        // Isometric rotation: first tilt down, then rotate horizontally
+        pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
+        pose.mulPose(new Quaternionf().rotateY(rotY));
+
+        // Offset so the building rotates around its own center.
+        // The -0.5f shifts from block-corner to block-center anchoring.
+        pose.translate(-cx - 0.5f, -cy - 0.5f, -cz - 0.5f);
+
+        // Enable hardware depth test for correct occlusion (replaces CPU sorting)
+        RenderSystem.enableDepthTest();
+
+        // Use GUI 3D lighting so blocks appear立体感 rather than flat/dark
+        Lighting.setupFor3DItems();
+
+        // ── 4. Render blocks ──
         for (BlockEntry entry : entries) {
             BlockOffset off = entry.offset();
             pose.pushPose();
             pose.translate(off.x(), off.y(), off.z());
-            blockRenderer.renderSingleBlock(entry.state(), pose, bufferSource,
-                    FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            blockRenderer.renderSingleBlock(
+                entry.state(),
+                pose,
+                bufferSource,
+                FULL_BRIGHT,
+                OverlayTexture.NO_OVERLAY
+            );
             pose.popPose();
         }
 
-        Log.debug(TAG, "[Preview] Rendered {} blocks, flushing all batches", entries.size());
+        // Must flush batches BEFORE disabling depth test!
         bufferSource.endBatch();
 
+        // ── 5. Restore state ──
         pose.popPose();
 
-        RenderSystem.restoreProjectionMatrix();
+        // Restore flat GUI lighting and disable depth test
+        Lighting.setupForFlatItems();
         RenderSystem.disableDepthTest();
-        RenderSystem.viewport(0, 0, mc.getWindow().getWidth(), winH);
-
-        Log.debug(TAG, "[Preview] Cleanup complete for '{}'", config.id());
-
-        long elapsed = System.currentTimeMillis() - renderStart;
-        if (elapsed > 16) {
-            Log.warn(TAG, "[Preview] SLOW render for '{}': {}ms for {} blocks", config.id(), elapsed, entries.size());
-        }
     }
 
     /**
