@@ -165,34 +165,34 @@ public final class EditorStandalone {
     float[] clearColor = {0.15f, 0.15f, 0.18f, 1.0f};
 
     while (!GLFW.glfwWindowShouldClose(window)) {
-        System.out.println("A" + tst);
+//        System.out.println("A" + tst);
 
         GLFW.glfwPollEvents();
-        System.out.println("B" + tst);
+//        System.out.println("B" + tst);
 
         imGuiGlfw.newFrame();
-        System.out.println("C" + tst);
+//        System.out.println("C" + tst);
 
         ImGui.newFrame();
-        System.out.println("D" + tst);
+//        System.out.println("D" + tst);
 
         // Render blueprint editor
         BlueprintEditorImGui.render(nodeEditorCtx);
-        System.out.println("E" + tst);
+//        System.out.println("E" + tst);
 
         // Render
         ImGui.render();
-        System.out.println("F" + tst);
+//        System.out.println("F" + tst);
 
         GL11.glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-        System.out.println("G" + tst);
+//        System.out.println("G" + tst);
 
         imGuiGl3.renderDrawData(ImGui.getDrawData());
-        System.out.println("H" + tst);
+//        System.out.println("H" + tst);
 
         GLFW.glfwSwapBuffers(window);
-        System.out.println("I" + tst);
+//        System.out.println("I" + tst);
 
         tst++;
     }

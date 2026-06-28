@@ -155,6 +155,7 @@ public final class BlueprintEditorImGui {
         if (ImGui.button("Layout (L)")) {
             pendingAutoLayout = true;
         }
+        ImGui.sameLine();
         if (ImGui.button("Inspector")) {
             BlueprintEditorClientState.toggleInspector();
         }
@@ -414,10 +415,14 @@ public final class BlueprintEditorImGui {
         }
 
         if (node.inlineValues.containsKey("var_name")) {
-            ImGui.textDisabled("var: " + node.inlineValues.get("var_name"));
+            ImGui.pushStyleColor(ImGuiCol.Text, 0xFFFFC864);
+            ImGui.text("[iter: $" + node.inlineValues.get("var_name") + "]");
+            ImGui.popStyleColor();
         }
         if (node.inlineValues.containsKey("action")) {
-            ImGui.textDisabled("action: " + node.inlineValues.get("action"));
+            ImGui.pushStyleColor(ImGuiCol.Text, 0xFF64B4FF);
+            ImGui.text("[action: " + node.inlineValues.get("action") + "]");
+            ImGui.popStyleColor();
         }
     }
 
@@ -481,9 +486,17 @@ public final class BlueprintEditorImGui {
     private static void renderInputNode(CanvasNode node, BlueprintNodeDefinition.NodeDef def, BlueprintEditorCanvas graph) {
         String paramName = node.inlineValues.getOrDefault("name", "???");
         String paramType = node.inlineValues.getOrDefault("type", "string");
-        ImGui.textColored(pinColorForType(paramType) | 0xFF000000, "Input " + paramName);
+        int color = pinColorForType(paramType) | 0xFF000000;
+
+        // Plain text label — just show the param name, editing is in Inspector
+        if (paramName.isEmpty()) {
+            ImGui.textColored(0xFF888888, "(unset)");
+        } else {
+            ImGui.textColored(color, "$" + paramName);
+        }
         ImGui.textDisabled(paramType);
 
+        // Output pin
         ImGui.sameLine();
         NodeEditor.beginPin(pinId(node.nodeId, pinIndexOf(def, node, "value")), NodeEditorPinKind.Output);
         boolean connected = isPinConnected(graph, node, def.dataPins().get(0));
@@ -674,25 +687,34 @@ public final class BlueprintEditorImGui {
         ImGui.text("Parameters");
 
         List<String> toRemove = new ArrayList<>();
-        for (var entry : graph.params.entrySet()) {
-            ImGui.bulletText(entry.getKey() + " : " + paramTypeToString(entry.getValue()));
-            ImGui.sameLine();
-            if (ImGui.smallButton("X##" + entry.getKey())) toRemove.add(entry.getKey());
+        if (graph.params.isEmpty()) {
+            ImGui.textDisabled("  No parameters yet — add one below");
+        } else {
+            for (var entry : graph.params.entrySet()) {
+                ImGui.bulletText(entry.getKey() + " : " + paramTypeToString(entry.getValue()));
+                ImGui.sameLine();
+                if (ImGui.smallButton("X##" + entry.getKey())) toRemove.add(entry.getKey());
+            }
         }
         for (String key : toRemove) BlueprintEditorClientState.removeParam(key);
 
-        ImGui.pushItemWidth(120);
+        // Add new param — stacked layout (vertical fit within 260px panel)
+        ImGui.pushItemWidth(-1);
         ImGui.inputText("##newParamName", paramNameBuf);
-        ImGui.sameLine();
+        boolean nameFieldFocused = ImGui.isItemFocused();
         ImGui.combo("##newParamType", paramTypeIdx, PARAM_TYPES);
-        ImGui.sameLine();
-        if (ImGui.smallButton("+ Add") || (ImGui.isItemFocused() && ImGui.isKeyPressed(ImGuiKey.Enter))) {
-            if (!paramNameBuf.get().isEmpty() && ParamType.parse(PARAM_TYPES[paramTypeIdx.get()]) != null) {
-                BlueprintEditorClientState.addParam(paramNameBuf.get(), ParamType.parse(PARAM_TYPES[paramTypeIdx.get()]));
-                paramNameBuf.set("");
+        ImGui.popItemWidth();
+        boolean enterPressed = nameFieldFocused && ImGui.isKeyPressed(ImGuiKey.Enter, false);
+        if (ImGui.button("+ Add Param", -1, 0) || enterPressed) {
+            String pn = paramNameBuf.get().trim();
+            if (!pn.isEmpty()) {
+                ParamType pt = ParamType.parse(PARAM_TYPES[paramTypeIdx.get()]);
+                if (pt != null) {
+                    BlueprintEditorClientState.addParam(pn, pt);
+                    paramNameBuf.set("");
+                }
             }
         }
-        ImGui.popItemWidth();
     }
 
     private static void renderNodeInspector(CanvasNode node, BlueprintEditorCanvas graph) {
@@ -736,6 +758,62 @@ public final class BlueprintEditorImGui {
                     node.inlineValues.put("name", entry.getKey());
                     BlueprintEditorClientState.markDirty();
                 }
+            }
+        }
+
+        if ("input".equals(node.typeId)) {
+            String curName = node.inlineValues.getOrDefault("name", "");
+            String curType = node.inlineValues.getOrDefault("type", "string");
+
+            ImGui.text("Parameter Name:");
+            inlineValBuf.set(curName);
+            ImGui.pushItemWidth(-1);
+            if (ImGui.inputText("##inputParamName", inlineValBuf)) {
+                node.inlineValues.put("name", inlineValBuf.get());
+                BlueprintEditorClientState.markDirty();
+            }
+            ImGui.popItemWidth();
+
+            ImGui.text("Type:");
+            int typeIdx = java.util.Arrays.asList(PARAM_TYPES).indexOf(curType);
+            if (typeIdx < 0) typeIdx = 0;
+            ImInt ti = new ImInt(typeIdx);
+            ImGui.combo("##inputParamType", ti, PARAM_TYPES);
+            if (ti.get() != typeIdx) {
+                node.inlineValues.put("type", PARAM_TYPES[ti.get()]);
+                BlueprintEditorClientState.markDirty();
+            }
+
+            // Quick-select from existing params
+            if (!graph.params.isEmpty()) {
+                ImGui.textDisabled("Or pick from declared params:");
+                for (var entry : graph.params.entrySet()) {
+                    String label = entry.getKey() + " (" + paramTypeToString(entry.getValue()) + ")";
+                    if (ImGui.selectable("  " + label)) {
+                        node.inlineValues.put("name", entry.getKey());
+                        node.inlineValues.put("type", paramTypeToString(entry.getValue()));
+                        BlueprintEditorClientState.markDirty();
+                    }
+                }
+            }
+        }
+
+        if ("for_each".equals(node.typeId)) {
+            ImGui.text("Loop variable (iter):");
+            inlineValBuf.set(node.inlineValues.getOrDefault("var_name", "it"));
+            ImGui.pushItemWidth(-1);
+            if (ImGui.inputText("##forEachVar", inlineValBuf)) {
+                node.inlineValues.put("var_name", inlineValBuf.get());
+                BlueprintEditorClientState.markDirty();
+            }
+            ImGui.popItemWidth();
+        }
+
+        if ("if".equals(node.typeId)) {
+            boolean elseInvert = "true".equals(node.inlineValues.get("else_invert"));
+            if (ImGui.checkbox("elseInvert (swap branches)", elseInvert)) {
+                node.inlineValues.put("else_invert", elseInvert ? "false" : "true");
+                BlueprintEditorClientState.markDirty();
             }
         }
     }
