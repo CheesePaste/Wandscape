@@ -361,11 +361,16 @@ public final class ShopStockManager {
         if (rl == null) return Map.of();
 
         var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
-        Map<ElementType, Long> decomposeYield = loader.getItemDecomposeYield(item);
-        if (decomposeYield.isEmpty()) return Map.of();
+
+        // Prefer decompose_yield (what you get back when decomposing); fall back to build_cost
+        Map<ElementType, Long> source = loader.getItemDecomposeYield(item);
+        if (source.isEmpty()) {
+            source = loader.getItemBuildCost(item);
+        }
+        if (source.isEmpty()) return Map.of();
 
         Map<ElementType, Integer> cost = new java.util.HashMap<>();
-        for (var entry : decomposeYield.entrySet()) {
+        for (var entry : source.entrySet()) {
             long v = entry.getValue();
             if (v > 0) cost.put(entry.getKey(), (int) v);
         }

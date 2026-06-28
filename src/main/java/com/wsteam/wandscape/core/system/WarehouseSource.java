@@ -14,6 +14,10 @@ import java.util.function.BooleanSupplier;
  * Watches colony warehouse resource levels and publishes gathering tasks
  * when a resource drops below its threshold.
  *
+ * <p>Default threshold for every resource is 0 (disabled). Thresholds are
+ * set externally (e.g. from player-configured warehouse GUI) via
+ * {@link #setThreshold(ResourceId, int)}.
+ *
  * <p>Guards: skips entirely when no colonies exist or no storage building is
  * present — avoids spurious gather tasks before the colony is bootstrapped.
  */
@@ -22,7 +26,11 @@ public class WarehouseSource implements TaskSource {
     private static final String TAG = "WarehouseSrc";
     private static final int POLL_INTERVAL = 20; // ticks
 
-    // Default thresholds for key resources
+    /** Singleton instance for external setThreshold access. */
+    @Nullable
+    private static WarehouseSource activeInstance;
+
+    // Dynamic thresholds (default 0 = disabled). Populated via setThreshold().
     private final Map<ResourceId, Integer> thresholds = new HashMap<>();
 
     /**
@@ -38,11 +46,13 @@ public class WarehouseSource implements TaskSource {
 
     public WarehouseSource(@Nullable BooleanSupplier storageCheck) {
         this.storageCheck = storageCheck;
-        thresholds.put(ResourceId.STONE_BRICKS, 128);
-        thresholds.put(ResourceId.GLASS, 64);
-        thresholds.put(ResourceId.IRON_INGOT, 64);
-        thresholds.put(ResourceId.WOOD, 128);
-        thresholds.put(ResourceId.STONE, 128);
+        activeInstance = this;
+    }
+
+    /** Returns the singleton instance, or null if not yet created. */
+    @Nullable
+    public static WarehouseSource getActive() {
+        return activeInstance;
     }
 
     @Override
@@ -52,6 +62,9 @@ public class WarehouseSource implements TaskSource {
 
     @Override
     public void poll(GlobalTaskPool pool, World world) {
+        // Guard 0: no thresholds configured → nothing to check
+        if (thresholds.isEmpty()) return;
+
         // Guard 1: no colonies yet → nothing to supply
         if (world.colonyResources == null || !world.colonyResources.hasColonies()) {
             return;
@@ -77,6 +90,20 @@ public class WarehouseSource implements TaskSource {
 
     /** Set a threshold for a specific resource. */
     public void setThreshold(ResourceId resource, int threshold) {
-        thresholds.put(resource, threshold);
+        if (threshold <= 0) {
+            thresholds.remove(resource);
+        } else {
+            thresholds.put(resource, threshold);
+        }
+    }
+
+    /** Returns the threshold for a resource (0 = disabled). */
+    public int getThreshold(ResourceId resource) {
+        return thresholds.getOrDefault(resource, 0);
+    }
+
+    /** Returns an immutable snapshot of all thresholds. */
+    public Map<ResourceId, Integer> getAllThresholds() {
+        return Map.copyOf(thresholds);
     }
 }

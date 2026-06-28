@@ -53,6 +53,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
 import net.minecraft.core.BlockPos;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -183,6 +184,24 @@ public final class EngineBootstrap {
         eventSource.setResourceShortageHandler(createShortageHandler(world));
         eventSource.setGatherEnabled(false); // gather tasks disabled for early-access
         Log.info(TAG, "  EventDrivenTaskSource wired (gather=OFF)");
+
+        // 6c. Load persisted thresholds from ColonyItemBank into WarehouseSource
+        WarehouseSource warehouseSource = WarehouseSource.getActive();
+        if (warehouseSource != null && colonyResources instanceof com.wsteam.wandscape.warehouse.WarehouseManager wm) {
+            var server = ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(server.overworld());
+                for (UUID colonyId : bank.getColonyIds()) {
+                    var thresh = bank.getAllThresholds(colonyId);
+                    for (var entry : thresh.entrySet()) {
+                        warehouseSource.setThreshold(
+                                new com.wsteam.wandscape.core.types.ResourceId(entry.getKey()),
+                                entry.getValue().intValue());
+                    }
+                }
+                LOGGER.info("  Loaded {} colony thresholds into WarehouseSource", bank.getColonyIds().size());
+            }
+        }
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
