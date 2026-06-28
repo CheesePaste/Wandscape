@@ -52,15 +52,23 @@ public class ImGuiManager {
         return BlueprintEditorClientState.isEditing();
     }
 
+    // ── Deferred toggle ──
+    // Commands run on the server thread which has no OpenGL context.
+    // We set a pending flag and the actual init+mode switch happens
+    // on the next render frame (render thread has the GL context).
+
+    private static volatile boolean pendingBlueprintToggle = false;
+    private static volatile boolean pendingShowGui = false;
+
     /** Toggle the blueprint node editor. Returns the new state (true = active). */
     public static boolean toggleBlueprintEditor() {
         if (BlueprintEditorClientState.isEditing()) {
             BlueprintEditorClientState.exitEditMode();
             return false;
         }
-        ensureInit(); // must init before entering edit mode (mirrors toggle()/setVisible())
-        showGui = true;
-        BlueprintEditorClientState.enterEditMode();
+        // Defer to render thread — server thread has no GL context
+        pendingBlueprintToggle = true;
+        pendingShowGui = true;
         return true;
     }
 
@@ -145,6 +153,19 @@ public class ImGuiManager {
 
     @SubscribeEvent
     public static void onRenderFramePost(RenderFrameEvent.Post event) {
+        // Process deferred toggles (commands fire on server thread, need GL context here)
+        if (pendingBlueprintToggle) {
+            pendingBlueprintToggle = false;
+            ensureInit();
+            showGui = true;
+            BlueprintEditorClientState.enterEditMode();
+        }
+        if (pendingShowGui) {
+            pendingShowGui = false;
+            ensureInit();
+            showGui = true;
+        }
+
         if (!showGui) return;
         ensureInit();
 
