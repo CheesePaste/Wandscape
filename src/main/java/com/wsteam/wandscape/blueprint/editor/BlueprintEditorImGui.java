@@ -22,6 +22,7 @@ import imgui.type.ImInt;
 
 public final class BlueprintEditorImGui {
 
+    private static boolean pendingAutoLayout = false;
     private static final String TAG = "BlueprintEditorImGui";
     private static final float INSPECTOR_WIDTH = 260f;
     private static final float TOP_BAR_HEIGHT = 48f;
@@ -151,6 +152,9 @@ public final class BlueprintEditorImGui {
             loadJsonBuf.set("");
         }
         ImGui.sameLine();
+        if (ImGui.button("Layout (L)")) {
+            pendingAutoLayout = true;
+        }
         if (ImGui.button("Inspector")) {
             BlueprintEditorClientState.toggleInspector();
         }
@@ -172,6 +176,20 @@ public final class BlueprintEditorImGui {
 
         NodeEditor.setCurrentEditor(ctx);
         NodeEditor.begin("BlueprintNodeCanvas");
+        // 处理刚加载时的初始坐标同步和视角居中
+        if (BlueprintEditorClientState.consumeJustLoaded()) {
+            for (CanvasNode n : graph.nodes.values()) {
+                NodeEditor.setNodePosition(n.nodeId, n.posX, n.posY);
+            }
+            NodeEditor.navigateToContent(0.0f); // 瞬间居中
+        }
+
+// 处理一键自动排版 (按 L 键或点击按钮)
+        if (pendingAutoLayout) {
+            pendingAutoLayout = false;
+            doAutoLayout(graph);
+            NodeEditor.navigateToContent(0.5f); // 0.5秒动画居中平滑过渡
+        }
 
         List<CanvasNode> sortedNodes = new ArrayList<>(graph.nodes.values());
         sortedNodes.sort((a, b) -> Integer.compare(nodeCategoryOrder(a), nodeCategoryOrder(b)));
@@ -742,6 +760,9 @@ public final class BlueprintEditorImGui {
     private static void handleShortcuts(BlueprintEditorCanvas graph) {
         var io = ImGui.getIO();
         boolean ctrl = io.getKeyCtrl();
+        if (!ctrl && isGlfwKeyJustPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_L)) {
+            pendingAutoLayout = true;
+        }
         if (ImGui.isKeyPressed(ImGuiKey.Delete, false)) {
             long selId = BlueprintEditorClientState.getSelectedNodeId();
             if (selId >= 0) {
@@ -897,5 +918,107 @@ public final class BlueprintEditorImGui {
         if (type instanceof ParamType.ListStringType) return "list<string>";
         if (type instanceof ParamType.MapStringStringType) return "map<string,string>";
         return "string";
+    }
+    // ═══════════════════════════════════════════════════════════════
+    // Auto Layout Algorithm
+    // ═══════════════════════════════════════════════════════════════
+
+    private static void doAutoLayout(BlueprintEditorCanvas graph) {
+        java.util.Set<Long> placed = new java.util.HashSet<>();
+
+        // 1. 优先排版 Input 参数节点（固定在最左边区域）
+        float inputY = 0;
+        for (CanvasNode n : graph.nodes.values()) {
+            if ("input".equals(n.typeId)) {
+                setNodePos(n, -400, inputY);
+                placed.add(n.nodeId);
+                inputY += 120;
+            }
+        }
+
+        // 2. 从 Begin 节点开始，沿着执行流向右铺开
+        CanvasNode begin = graph.findBeginNode();
+        if (begin != null) {
+            layoutExecChain(begin, 0, 0, graph, placed);
+        }
+
+        // 3. 处理游离节点 (没连线的孤儿节点)，放在主逻辑下方
+        float orphanX = 0;
+        float orphanY = 800;
+        for (CanvasNode n : graph.nodes.values()) {
+            if (!placed.contains(n.nodeId)) {
+                setNodePos(n, orphanX, orphanY);
+                placed.add(n.nodeId);
+                orphanX += 250;
+                if (orphanX > 1500) { orphanX = 0; orphanY += 150; } // 换行
+            }
+        }
+    }
+
+    private static float layoutExecChain(CanvasNode node, float x, float y, BlueprintEditorCanvas graph, java.util.Set<Long> placed) {
+        if (placed.contains(node.nodeId)) return y; // 防止死循环
+
+        setNodePos(node, x, y);
+        placed.add(node.nodeId);
+
+        // 将给此节点提供数据的 Expression 节点排在它的左边
+        layoutDataInputs(node, x - 250, y, graph, placed);
+
+        BlueprintNodeDefinition.NodeDef def = BlueprintNodeDefinition.get(node.typeId);
+        if (def == null) return y;
+
+        // 收集所有执行流输出引脚
+        List<String> outPins = new ArrayList<>();
+        for (var pin : def.execPins()) {
+            if (pin.dir() == BlueprintNodeDefinition.PinDir.OUTPUT) outPins.add(pin.id());
+        }
+
+        if (outPins.isEmpty()) return y;
+
+        if (outPins.size() == 1) {
+            // 单分支，直接向右推进
+            CanvasNode target = graph.findExecTarget(node.nodeId, outPins.get(0));
+            if (target != null) {
+                return layoutExecChain(target, x + 280, y, graph, placed);
+            }
+            return y;
+        } else {
+            // 多分支 (If / Parallel 等)，垂直向下排开
+            float currentY = y;
+            for (String pinId : outPins) {
+                CanvasNode target = graph.findExecTarget(node.nodeId, pinId);
+                if (target != null) {
+                    currentY = layoutExecChain(target, x + 300, currentY, graph, placed);
+                    currentY += 160; // 增加分支之间的间距
+                }
+            }
+            return currentY;
+        }
+    }
+
+    private static float layoutDataInputs(CanvasNode node, float x, float startY, BlueprintEditorCanvas graph, java.util.Set<Long> placed) {
+        float currentY = startY;
+        for (BlueprintEditorCanvas.DataEdge edge : graph.dataEdges) {
+            if (edge.toNodeId() == node.nodeId) {
+                CanvasNode source = graph.nodes.get(edge.fromNodeId());
+                if (source != null && !placed.contains(source.nodeId)) {
+                    setNodePos(source, x, currentY);
+                    placed.add(source.nodeId);
+
+                    // 递归将其依赖的变量/表达式推到更左边
+                    layoutDataInputs(source, x - 220, currentY, graph, placed);
+
+                    currentY += 100;
+                }
+            }
+        }
+        return currentY;
+    }
+
+    private static void setNodePos(CanvasNode node, float x, float y) {
+        node.posX = x;
+        node.posY = y;
+        // 同步给底层的 ImGui Node Editor
+        NodeEditor.setNodePosition(node.nodeId, x, y);
     }
 }

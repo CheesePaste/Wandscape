@@ -11,6 +11,16 @@ import com.wsteam.wandscape.shared.log.Log;
  * single source of truth for the current edit session.
  */
 public final class BlueprintEditorClientState {
+    // ── Layout flags ──
+    private static volatile boolean justLoaded = false;
+
+    public static boolean consumeJustLoaded() {
+        if (justLoaded) {
+            justLoaded = false;
+            return true;
+        }
+        return false;
+    }
 
     private static final String TAG = "BlueprintEditorClientState";
 
@@ -101,6 +111,7 @@ public final class BlueprintEditorClientState {
         canvas = newCanvas;
         selectedNodeId = -1;
         dirty = false;
+        justLoaded = true; // 新增：通知 UI 进行初始坐标同步和视角居中
     }
 
     // ═══════════════════════════════════════════════════════════════
