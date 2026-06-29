@@ -33,7 +33,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.fml.ModList;
@@ -243,11 +243,6 @@ public class TouristEntity extends PathfinderMob {
         setInvulnerable(true);
         syncName();
 
-        // Enable door opening for indoor micro-navigation
-        if (getNavigation() instanceof GroundPathNavigation groundNav) {
-            groundNav.setCanOpenDoors(true);
-        }
-
         if (getSkinVariant() < 0) {
             // Step 1: roll appearance (5% mage)
             boolean mage = random.nextDouble() < MAGE_CHANCE;
@@ -267,6 +262,11 @@ public class TouristEntity extends PathfinderMob {
             entityData.set(DATA_SKIN_VARIANT, variant);
             entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
         }
+    }
+
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return new TouristNavigation(this, level);
     }
 
     @Override
