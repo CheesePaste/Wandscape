@@ -637,6 +637,32 @@ public class BuildingApiImpl implements BuildingApi {
         return sd.getInteractionTarget(buildingId, level);
     }
 
+    @Override
+    @Nullable
+    public BlockPos getEntryPoint(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return null;
+
+        Level level = this.serverLevel;
+        if (level == null) level = getServerLevel();
+        if (level == null) return null;
+
+        return sd.getEntryPoint(buildingId, level);
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getInteractPoint(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return null;
+
+        Level level = this.serverLevel;
+        if (level == null) level = getServerLevel();
+        if (level == null) return null;
+
+        return sd.getInteractPoint(buildingId, level);
+    }
+
     @Nullable
     private static Level getServerLevel() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();

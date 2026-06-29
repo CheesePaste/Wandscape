@@ -223,6 +223,12 @@ public class Config {
 
     // ---- Service system ----
 
+    public static final ModConfigSpec.IntValue MICRO_NAV_SWITCH_DISTANCE = BUILDER
+            .comment("Distance in blocks from a building's bounding box at which tourists " +
+                     "switch from road-based macro navigation to indoor micro-navigation. " +
+                     "Micro-navigation supports opening doors and walking around furniture.")
+            .defineInRange("tourist.microNavSwitchDistance", 5, 2, 16);
+
     public static final ModConfigSpec.IntValue SERVICE_COOLDOWN_TICKS = BUILDER
             .comment("Cooldown in ticks before a tourist can use the same service building again")
             .defineInRange("service.cooldownTicks", 1200, 1200, 72000);

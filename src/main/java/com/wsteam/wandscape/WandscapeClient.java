@@ -42,6 +42,7 @@ import com.wsteam.wandscape.warehouse.network.WarehouseThresholdDataPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
+import com.wsteam.wandscape.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -134,6 +135,7 @@ public class WandscapeClient {
         BuildingEditorRenderer.register();
         BuildingEditorAxisRenderer.register();
         BuildingEditorInputHandler.register();
+        TouristDebugRenderer.register();
 
         // Wandscape Panel
         WandscapePanelController.register();
@@ -259,6 +261,7 @@ public class WandscapeClient {
         }
         while (DEBUG_TOGGLE.consumeClick()) {
             BuildingDebugController.toggle();
+            TouristDebugRenderer.toggle();
         }
         while (IMGUI_TOGGLE.consumeClick()) {
             ImGuiManager.toggle();

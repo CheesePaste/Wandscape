@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -30,7 +31,9 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.fml.ModList;
@@ -84,6 +87,21 @@ public class TouristEntity extends PathfinderMob {
     /** 0 = TOURIST, 1 = MAGE. */
     private static final EntityDataAccessor<Byte> DATA_APPEARANCE =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BYTE);
+
+    // ── Debug synched data (for TouristDebugRenderer) ──
+
+    /** Current commute target (where the tourist is navigating to). */
+    private static final EntityDataAccessor<Optional<BlockPos>> DEBUG_COMMUTE_TARGET =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    /** Entry point for current building visit (macro nav destination). */
+    private static final EntityDataAccessor<Optional<BlockPos>> DEBUG_ENTRY_POINT =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    /** Interact point for current building visit (micro nav destination). */
+    private static final EntityDataAccessor<Optional<BlockPos>> DEBUG_INTERACT_POINT =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    /** Whether tourist is in indoor micro-navigation phase. */
+    private static final EntityDataAccessor<Boolean> DEBUG_INDOOR_PHASE =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     // ── Identity ──
 
@@ -165,6 +183,10 @@ public class TouristEntity extends PathfinderMob {
         super.defineSynchedData(builder);
         builder.define(DATA_SKIN_VARIANT, -1);
         builder.define(DATA_APPEARANCE, (byte) 0);
+        builder.define(DEBUG_COMMUTE_TARGET, Optional.empty());
+        builder.define(DEBUG_ENTRY_POINT, Optional.empty());
+        builder.define(DEBUG_INTERACT_POINT, Optional.empty());
+        builder.define(DEBUG_INDOOR_PHASE, false);
     }
 
     /** Skin variant — index within the appearance-specific pool. */
@@ -185,7 +207,8 @@ public class TouristEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5, 0.35));
+        this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(2, new com.wsteam.wandscape.tourist.internal.TouristMoveGoal(this, 0.5, 0.35));
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
     }
 
@@ -219,6 +242,11 @@ public class TouristEntity extends PathfinderMob {
         super.onAddedToLevel();
         setInvulnerable(true);
         syncName();
+
+        // Enable door opening for indoor micro-navigation
+        if (getNavigation() instanceof GroundPathNavigation groundNav) {
+            groundNav.setCanOpenDoors(true);
+        }
 
         if (getSkinVariant() < 0) {
             // Step 1: roll appearance (5% mage)
@@ -280,7 +308,10 @@ public class TouristEntity extends PathfinderMob {
     public TouristState getCurrentState() { return currentState; }
 
     @Nullable public BlockPos getCommuteTarget() { return commuteTarget; }
-    public void setCommuteTarget(@Nullable BlockPos t) { this.commuteTarget = t; }
+    public void setCommuteTarget(@Nullable BlockPos t) {
+        this.commuteTarget = t;
+        entityData.set(DEBUG_COMMUTE_TARGET, Optional.ofNullable(t));
+    }
 
     public boolean isCommuteArrived() { return commuteArrived; }
     public void setCommuteArrived(boolean a) { this.commuteArrived = a; }
@@ -369,6 +400,39 @@ public class TouristEntity extends PathfinderMob {
     /** Set the global service cooldown end tick. */
     public void setServiceCooldownEndTick(int endTick) {
         this.serviceCooldownEndTick = endTick;
+    }
+
+    // ── Debug synced data (for TouristDebugRenderer) ──
+
+    @Nullable
+    public BlockPos getDebugCommuteTarget() {
+        return entityData.get(DEBUG_COMMUTE_TARGET).orElse(null);
+    }
+
+    @Nullable
+    public BlockPos getDebugEntryPoint() {
+        return entityData.get(DEBUG_ENTRY_POINT).orElse(null);
+    }
+
+    public void setDebugEntryPoint(@Nullable BlockPos pos) {
+        entityData.set(DEBUG_ENTRY_POINT, Optional.ofNullable(pos));
+    }
+
+    @Nullable
+    public BlockPos getDebugInteractPoint() {
+        return entityData.get(DEBUG_INTERACT_POINT).orElse(null);
+    }
+
+    public void setDebugInteractPoint(@Nullable BlockPos pos) {
+        entityData.set(DEBUG_INTERACT_POINT, Optional.ofNullable(pos));
+    }
+
+    public boolean isDebugIndoorPhase() {
+        return entityData.get(DEBUG_INDOOR_PHASE);
+    }
+
+    public void setDebugIndoorPhase(boolean indoor) {
+        entityData.set(DEBUG_INDOOR_PHASE, indoor);
     }
 
     private void syncName() { setCustomName(Component.literal(touristName)); }

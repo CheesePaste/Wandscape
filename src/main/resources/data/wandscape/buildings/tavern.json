@@ -173,6 +173,8 @@
       1
     ]
   },
+  "door_offset": [0, 0, -1],
+  "interact_offset": [0, 1, 0],
   "blueprint": {
     "id": "build:clear_and_build",
     "bind": {

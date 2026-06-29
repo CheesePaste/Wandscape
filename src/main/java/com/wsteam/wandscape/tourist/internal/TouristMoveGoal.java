@@ -8,6 +8,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
@@ -84,6 +85,25 @@ public class TouristMoveGoal extends Goal {
     // ── Wander state ──
     private int wanderCooldown;
     private int wanderEvaluateTick;
+
+    // ── Indoor / outdoor navigation phases ──
+    /** True when the tourist is inside a building (micro-navigation phase). */
+    private boolean indoorPhase;
+    /** True when the tourist has finished interacting and is exiting the building. */
+    private boolean exitingPhase;
+    /** The building entry point — macro navigation destination, fallback for micro exit. */
+    @Nullable
+    private BlockPos entryPoint;
+    /** The precise interaction point inside the building. */
+    @Nullable
+    private BlockPos interactPoint;
+
+    /** Push current debug state to entity synched data for client-side renderer. */
+    private void syncDebugData() {
+        tourist.setDebugEntryPoint(entryPoint);
+        tourist.setDebugInteractPoint(interactPoint);
+        tourist.setDebugIndoorPhase(indoorPhase);
+    }
 
     public TouristMoveGoal(TouristEntity tourist, double touristSpeed, double wanderSpeed) {
         this.tourist = tourist;
@@ -169,6 +189,15 @@ public class TouristMoveGoal extends Goal {
     }
 
     private void tickBuildingVisit() {
+        if (indoorPhase) {
+            tickIndoorNav();
+        } else {
+            tickOutdoorNav();
+        }
+    }
+
+    /** Macro-navigation phase: approach building entry point via road network. */
+    private void tickOutdoorNav() {
         BlockPos target = tourist.getCommuteTarget();
         if (target == null) {
             idleTicks++;
@@ -178,7 +207,6 @@ public class TouristMoveGoal extends Goal {
                     idleTicks = 0;
                     beginNavigation(tourist.getCommuteTarget(), touristSpeed);
                 } else {
-                    // Still nothing → wander
                     switchMode(MoveMode.WANDERING);
                     startWander();
                 }
@@ -186,14 +214,22 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        // Check if we're close enough to the building to switch to indoor micro-nav
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId != null && isWithinDistanceOfBbox(buildingId, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
+            switchToIndoorNav();
+            return;
+        }
+
         var nav = tourist.getNavigation();
         BlockPos pos = tourist.blockPosition();
 
-        // Check arrival: within interaction range of the target
+        // Check arrival at entry point (fallback if proximity check doesn't fire)
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
         if (distSqr < interactionRange * interactionRange) {
-            onBuildingArrived();
+            // Reached entry point — switch to indoor micro-nav
+            switchToIndoorNav();
             return;
         }
 
@@ -221,7 +257,159 @@ public class TouristMoveGoal extends Goal {
         }
     }
 
+    /** Micro-navigation phase: inside building, navigate to interact point then exit. */
+    private void tickIndoorNav() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId == null) {
+            finishBuildingStop();
+            return;
+        }
+
+        var nav = tourist.getNavigation();
+        BlockPos pos = tourist.blockPosition();
+
+        if (exitingPhase) {
+            // Heading back to entry point after interaction
+            BlockPos exitTarget = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
+            if (exitTarget == null) {
+                finishBuildingStop();
+                return;
+            }
+
+            BlockPos ground = findGround(exitTarget.getX(), exitTarget.getY(), exitTarget.getZ());
+            if (ground != null) exitTarget = ground;
+
+            double distSqr = pos.distSqr(exitTarget);
+            if (distSqr < 4.0 || !isInsideBuilding(buildingId)) {
+                // Reached exit point or left building → back to macro
+                Log.debug(TAG, "[Tourist] {} exited building, switching to macro nav",
+                        tourist.getTouristName());
+                finishBuildingStop();
+                return;
+            }
+
+            // Stuck recovery
+            if (nav.isDone()) {
+                if (++stuckTicks > 40) {
+                    stuckTicks = 0;
+                }
+                nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
+            } else {
+                stuckTicks = Math.max(0, stuckTicks - 1);
+            }
+            return;
+        }
+
+        // Navigating to interact point
+        BlockPos target = interactPoint;
+        if (target == null) {
+            // Fallback: use commute target
+            target = tourist.getCommuteTarget();
+        }
+        if (target == null) {
+            finishBuildingStop();
+            return;
+        }
+
+        BlockPos ground = findGround(target.getX(), target.getY(), target.getZ());
+        if (ground != null) target = ground;
+
+        double distSqr = pos.distSqr(target);
+        int interactionRange = getInteractionRange();
+        if (distSqr < interactionRange * interactionRange) {
+            // Arrived at interact point → perform interaction
+            boolean hotelStayed = performBuildingInteraction();
+            if (hotelStayed) {
+                return; // Hotel check-in handled everything
+            }
+            // After interaction, start exiting
+            if (entryPoint != null && isInsideBuilding(buildingId)) {
+                exitingPhase = true;
+                stuckTicks = 0;
+                BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
+                BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
+                nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
+                Log.debug(TAG, "[Tourist] {} interaction done, exiting to {}",
+                        tourist.getTouristName(), entryPoint.toShortString());
+            } else {
+                // Not inside building or no entry point → finish directly
+                finishBuildingStop();
+            }
+            return;
+        }
+
+        // Stuck recovery for indoor navigation
+        if (nav.isDone()) {
+            if (++stuckTicks > 40) {
+                stuckTicks = 0;
+            }
+            nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+        } else {
+            stuckTicks = Math.max(0, stuckTicks - 1);
+        }
+    }
+
+    /** Switch from outdoor macro-nav to indoor micro-nav. */
+    private void switchToIndoorNav() {
+        indoorPhase = true;
+        exitingPhase = false;
+        syncDebugData();
+        waypoints = null;
+        wpIndex = 0;
+        stuckTicks = 0;
+        usingRoad = false;
+        BlockPos target = interactPoint;
+        if (target == null) target = tourist.getCommuteTarget();
+        if (target != null) {
+            BlockPos ground = findGround(target.getX(), target.getY(), target.getZ());
+            if (ground != null) target = ground;
+            tourist.getNavigation().moveTo(
+                    target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+            Log.debug(TAG, "[Tourist] {} switching to indoor micro-nav → {}",
+                    tourist.getTouristName(), target.toShortString());
+        }
+    }
+
+    /** Check if the tourist is within {@code dist} blocks of a building's bounding box. */
+    private boolean isWithinDistanceOfBbox(UUID buildingId, int dist) {
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        var data = api.getBuilding(buildingId);
+        if (!(data instanceof BuildingState state)) return false;
+        net.minecraft.world.level.levelgen.structure.BoundingBox bbox = state.getBounds();
+        if (bbox == null) return false;
+        BlockPos pos = tourist.blockPosition();
+        return pos.getX() >= bbox.minX() - dist && pos.getX() <= bbox.maxX() + dist
+                && pos.getZ() >= bbox.minZ() - dist && pos.getZ() <= bbox.maxZ() + dist
+                && pos.getY() >= bbox.minY() - 1 && pos.getY() <= bbox.maxY() + 1;
+    }
+
+    /** Check if the tourist is inside a building's bounding box. */
+    private boolean isInsideBuilding(UUID buildingId) {
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        var data = api.getBuilding(buildingId);
+        if (!(data instanceof BuildingState state)) return false;
+        net.minecraft.world.level.levelgen.structure.BoundingBox bbox = state.getBounds();
+        if (bbox == null) return false;
+        return bbox.isInside(tourist.blockPosition());
+    }
+
     private void onBuildingArrived() {
+        boolean hotelStayed = performBuildingInteraction();
+        if (!hotelStayed) {
+            finishBuildingStop();
+        }
+    }
+
+    /**
+     * Execute the building interaction (shop, service, or hotel check-in).
+     * Does NOT handle navigation cleanup or mode switching — callers must
+     * handle that themselves.
+     *
+     * @return true if the tourist checked into a hotel (caller should stop navigation)
+     */
+    private boolean performBuildingInteraction() {
         tourist.getNavigation().stop();
         waypoints = null;
         wpIndex = 0;
@@ -229,8 +417,7 @@ public class TouristMoveGoal extends Goal {
 
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId == null) {
-            finishBuildingStop();
-            return;
+            return false;
         }
 
         String category = tourist.getTargetBuildingCategory();
@@ -246,8 +433,11 @@ public class TouristMoveGoal extends Goal {
                 tourist.setCommuteTarget(null);
                 tourist.setTargetBuildingId(null);
                 tourist.setTargetBuildingCategory(null);
+                indoorPhase = false;
+                exitingPhase = false;
+                syncDebugData();
                 showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
-                return;
+                return true;
             }
         }
 
@@ -258,7 +448,7 @@ public class TouristMoveGoal extends Goal {
         }
 
         tourist.addVisitedBuilding(buildingId);
-        finishBuildingStop();
+        return false;
     }
 
     private void finishBuildingStop() {
@@ -266,6 +456,11 @@ public class TouristMoveGoal extends Goal {
         tourist.setTargetBuildingId(null);
         tourist.setTargetBuildingCategory(null);
         idleTicks = 0;
+        indoorPhase = false;
+        exitingPhase = false;
+        entryPoint = null;
+        interactPoint = null;
+        syncDebugData();
 
         // Probability-based next mode
         switchMode(decideNextMode(MoveMode.VISITING_BUILDING));
@@ -520,6 +715,11 @@ public class TouristMoveGoal extends Goal {
         currentMode = next;
         waypoints = null;
         wpIndex = 0;
+        indoorPhase = false;
+        exitingPhase = false;
+        entryPoint = null;
+        interactPoint = null;
+        syncDebugData();
         tourist.getNavigation().stop();
         // Sync display state with actual movement
         tourist.applyState(mapModeToState(next));
@@ -666,15 +866,23 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        BlockPos interactionTarget = api.getInteractionTarget(chosen.getBuildingId());
-        if (interactionTarget == null) interactionTarget = chosen.getAnchor();
+        // Resolve entry point (macro nav destination) and interact point (micro nav destination)
+        entryPoint = api.getEntryPoint(chosen.getBuildingId());
+        if (entryPoint == null) entryPoint = chosen.getAnchor();
+        interactPoint = api.getInteractPoint(chosen.getBuildingId());
+        if (interactPoint == null) interactPoint = chosen.getAnchor();
+        indoorPhase = false;
+        exitingPhase = false;
+        syncDebugData();
 
         tourist.setTargetBuildingId(chosen.getBuildingId());
         tourist.setTargetBuildingCategory(chosen.getCategory());
-        tourist.setCommuteTarget(interactionTarget);
-        Log.debug(TAG, "[Tourist] {} next stop: {} '{}' at {}",
+        // Macro navigation starts toward the entry point
+        tourist.setCommuteTarget(entryPoint);
+        Log.debug(TAG, "[Tourist] {} next stop: {} '{}' entry={} interact={}",
                 tourist.getTouristName(), chosen.getCategory(),
-                chosen.getBuildingTypeId(), interactionTarget.toShortString());
+                chosen.getBuildingTypeId(),
+                entryPoint.toShortString(), interactPoint.toShortString());
     }
 
     private void interactWithShop(UUID buildingId) {

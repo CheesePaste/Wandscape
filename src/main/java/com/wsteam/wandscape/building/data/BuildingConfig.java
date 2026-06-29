@@ -45,7 +45,9 @@ public record BuildingConfig(
         @SerializedName("wonder_config") WonderConfig wonderConfig,
         ShopConfig shop,
         ServiceConfig service,
-        @SerializedName("interaction_radius") int interactionRadius
+        @SerializedName("interaction_radius") int interactionRadius,
+        @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
+        @SerializedName("interact_offset") @Nullable BlockOffset interactOffset
 ) {
     public record QueueDef(
             int capacity,
@@ -247,12 +249,28 @@ public record BuildingConfig(
             // 0 = must click building blocks directly (or be inside building boundary).
             int interactionRadius = getInt(obj, "interaction_radius", 0);
 
+            // Door offset: position of the building door relative to anchor.
+            // When not specified, entry point is computed via heuristic spiral scan.
+            BlockOffset doorOffset = null;
+            if (obj.has("door_offset")) {
+                doorOffset = new BlockOffset.Deserializer().deserialize(
+                        obj.get("door_offset"), BlockOffset.class, context);
+            }
+
+            // Interact offset: precise interaction position relative to anchor.
+            // When not specified, interaction point is computed via spiral scan inside bounding box.
+            BlockOffset interactOffset = null;
+            if (obj.has("interact_offset")) {
+                interactOffset = new BlockOffset.Deserializer().deserialize(
+                        obj.get("interact_offset"), BlockOffset.class, context);
+            }
+
             return new BuildingConfig(id, displayName, category,
                     pattern, blockMapping,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,
-                    interactionRadius);
+                    interactionRadius, doorOffset, interactOffset);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

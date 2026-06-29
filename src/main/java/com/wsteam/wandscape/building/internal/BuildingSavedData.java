@@ -17,6 +17,7 @@ import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -196,9 +197,9 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Computes the navigation target position for tourist AI to interact
-     * with a building. Returns a walkable position inside the building's
-     * bounding box — the tourist navigates here, then the interaction triggers.
+     * Computes the interaction target position for tourist AI.
+     * Uses {@code interact_offset} from building config if defined;
+     * otherwise falls back to spiral scan for walkable ground inside the bounding box.
      *
      * @param buildingId the building to target
      * @param level      the world level (for block-state queries)
@@ -206,10 +207,99 @@ public class BuildingSavedData extends SavedData {
      */
     @Nullable
     public BlockPos getInteractionTarget(UUID buildingId, Level level) {
+        return getInteractPoint(buildingId, level);
+    }
+
+    /**
+     * Computes the precise interaction position within the building.
+     * Uses {@code interact_offset} from building config if defined;
+     * otherwise spiral-scans for walkable ground inside the bounding box.
+     */
+    @Nullable
+    public BlockPos getInteractPoint(UUID buildingId, Level level) {
         BuildingState state = buildings.get(buildingId);
         if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
 
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+
+        // 1. Use interact_offset if defined
+        if (config != null && config.interactOffset() != null) {
+            BlockPos anchor = state.getAnchor();
+            BlockOffset off = config.interactOffset();
+            BlockPos worldPos = anchor.offset(off.x(), off.y(), off.z());
+            BlockPos ground = findGroundAt(worldPos, level);
+            if (ground != null) return ground;
+        }
+
+        // 2. Fallback: spiral scan inside bounding box
         BoundingBox bounds = state.getBounds();
+        BlockPos spiralResult = spiralScanWalkable(bounds, level, /* inside= */ true);
+        if (spiralResult != null) return spiralResult;
+
+        return state.getAnchor();
+    }
+
+    /**
+     * Computes the entry point for tourists to enter the building.
+     * This is a walkable ground position OUTSIDE the building, suitable as
+     * the macro-navigation destination before switching to indoor micro-navigation.
+     *
+     * <p>Uses {@code door_offset} from building config if defined — the door's
+     * world position is computed, then the adjacent outside walkable block is returned.
+     * Otherwise falls back to heuristic spiral scan around the outside of the bounding box.
+     *
+     * @param buildingId the building to enter
+     * @param level      the world level (for block-state queries)
+     * @return a walkable BlockPos outside the building, or the anchor as fallback
+     */
+    @Nullable
+    public BlockPos getEntryPoint(UUID buildingId, Level level) {
+        BuildingState state = buildings.get(buildingId);
+        if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
+
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        BoundingBox bounds = state.getBounds();
+        BlockPos anchor = state.getAnchor();
+
+        // 1. Use door_offset if defined
+        if (config != null && config.doorOffset() != null) {
+            BlockOffset off = config.doorOffset();
+            BlockPos doorWorld = anchor.offset(off.x(), off.y(), off.z());
+
+            // Check all 4 horizontal neighbors; prefer one outside the building
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                BlockPos candidate = doorWorld.relative(dir);
+                if (!bounds.isInside(candidate)) {
+                    BlockPos ground = findGroundAt(candidate, level);
+                    if (ground != null && !bounds.isInside(ground)) {
+                        return ground;
+                    }
+                }
+            }
+            // If no outside neighbor is walkable, try any walkable neighbor
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                BlockPos candidate = doorWorld.relative(dir);
+                BlockPos ground = findGroundAt(candidate, level);
+                if (ground != null) return ground;
+            }
+        }
+
+        // 2. Fallback: heuristic spiral scan OUTSIDE bounding box (expanded by 1)
+        BoundingBox expanded = new BoundingBox(
+                bounds.minX() - 1, bounds.minY(), bounds.minZ() - 1,
+                bounds.maxX() + 1, bounds.maxY(), bounds.maxZ() + 1);
+        BlockPos outsideResult = spiralScanWalkableOutside(expanded, bounds, level);
+        if (outsideResult != null) return outsideResult;
+
+        return anchor;
+    }
+
+    /**
+     * Spiral-scans for walkable ground (air above solid) within the given bounding box.
+     * @param inside if true, only returns positions inside bounds; if false, only outside
+     */
+    @Nullable
+    private BlockPos spiralScanWalkable(BoundingBox bounds, Level level, boolean inside) {
         int bx = bounds.maxX() - bounds.minX();
         int bz = bounds.maxZ() - bounds.minZ();
         if (bx < 1) bx = 1;
@@ -220,15 +310,15 @@ public class BuildingSavedData extends SavedData {
         int maxR = Math.max(bx, bz) + 1;
         BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
 
-        // Spiral outward from center, scanning Y for walkable ground
         for (int r = 0; r <= maxR; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     if (Math.abs(dx) != r && Math.abs(dz) != r) continue;
                     int x = cx + dx;
                     int z = cz + dz;
-                    if (x < bounds.minX() || x > bounds.maxX()
-                            || z < bounds.minZ() || z > bounds.maxZ()) continue;
+                    boolean inBounds = x >= bounds.minX() && x <= bounds.maxX()
+                            && z >= bounds.minZ() && z <= bounds.maxZ();
+                    if (inside != inBounds) continue;
 
                     for (int y = bounds.maxY(); y >= bounds.minY(); y--) {
                         mp.set(x, y, z);
@@ -240,8 +330,63 @@ public class BuildingSavedData extends SavedData {
                 }
             }
         }
+        return null;
+    }
 
-        return state.getAnchor();
+    /**
+     * Spiral-scans for walkable ground in the outer shell of {@code expanded}
+     * (positions in expanded but NOT in inner).
+     */
+    @Nullable
+    private BlockPos spiralScanWalkableOutside(BoundingBox expanded, BoundingBox inner, Level level) {
+        int bx = expanded.maxX() - expanded.minX();
+        int bz = expanded.maxZ() - expanded.minZ();
+        if (bx < 1) bx = 1;
+        if (bz < 1) bz = 1;
+
+        int cx = (expanded.minX() + expanded.maxX()) / 2;
+        int cz = (expanded.minZ() + expanded.maxZ()) / 2;
+        int maxR = Math.max(bx, bz) + 1;
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+
+        for (int r = 0; r <= maxR; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.abs(dx) != r && Math.abs(dz) != r) continue;
+                    int x = cx + dx;
+                    int z = cz + dz;
+                    // Must be in expanded but NOT in inner
+                    if (inner.isInside(new BlockPos(x, inner.minY(), z))) continue;
+                    if (x < expanded.minX() || x > expanded.maxX()
+                            || z < expanded.minZ() || z > expanded.maxZ()) continue;
+
+                    for (int y = expanded.maxY(); y >= expanded.minY(); y--) {
+                        mp.set(x, y, z);
+                        if (level.getBlockState(mp).isAir()
+                                && level.getBlockState(mp.below()).isSolid()) {
+                            return mp.immutable();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Find walkable ground at or near the given position (air above solid). */
+    @Nullable
+    private static BlockPos findGroundAt(BlockPos pos, Level level) {
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        int topY = Math.min(level.getMaxBuildHeight() - 1, pos.getY() + 3);
+        mp.set(pos.getX(), topY, pos.getZ());
+        while (mp.getY() > level.getMinBuildHeight()) {
+            if (level.getBlockState(mp).isAir()
+                    && level.getBlockState(mp.below()).isSolid()) {
+                return mp.immutable();
+            }
+            mp.move(0, -1, 0);
+        }
+        return null;
     }
 
     public Collection<BuildingState> getAllBuildings() {
