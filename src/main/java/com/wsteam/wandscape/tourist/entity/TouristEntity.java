@@ -3,6 +3,7 @@ package com.wsteam.wandscape.tourist.entity;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+
+import com.wsteam.wandscape.shared.data.VisitMemory;
 
 import javax.annotation.Nullable;
 
@@ -169,6 +172,14 @@ public class TouristEntity extends PathfinderMob {
 
     /** Global cooldown end tick after using any service building. During this, tourist wanders streets. */
     private int serviceCooldownEndTick;
+
+    // ── Narrative memory (journey diary) ──
+
+    /** Visit memories for the current journey (max 24, FIFO, not persisted). */
+    private final List<VisitMemory> recentVisits = new ArrayList<>();
+    private static final int MAX_VISIT_MEMORIES = 24;
+    /** Game tick when the tourist arrived at the colony. */
+    private long arrivalTime;
 
     public TouristEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -401,6 +412,22 @@ public class TouristEntity extends PathfinderMob {
     public void setServiceCooldownEndTick(int endTick) {
         this.serviceCooldownEndTick = endTick;
     }
+
+    // ── Narrative memory (journey diary) ──
+
+    public void addVisitMemory(VisitMemory memory) {
+        if (recentVisits.size() >= MAX_VISIT_MEMORIES) {
+            recentVisits.remove(0); // Remove oldest
+        }
+        recentVisits.add(memory);
+    }
+
+    public List<VisitMemory> getRecentVisits() {
+        return List.copyOf(recentVisits);
+    }
+
+    public long getArrivalTime() { return arrivalTime; }
+    public void setArrivalTime(long t) { this.arrivalTime = t; }
 
     // ── Debug synced data (for TouristDebugRenderer) ──
 

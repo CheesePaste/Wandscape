@@ -13,6 +13,8 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
+import com.wsteam.wandscape.shared.data.NarrativeEvent;
+import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 import com.wsteam.wandscape.core.road.RoadRouter;
@@ -185,6 +187,17 @@ public class TouristMoveGoal extends Goal {
             startWander();
             return;
         }
+
+        // Show arrival narrative on first building visit (journey start)
+        if (tourist.getRecentVisits().isEmpty()) {
+            long dayTime = tourist.level().getDayTime() % 24000;
+            String dayPhase = dayTime < 6000 ? "morning"
+                    : dayTime < 13000 ? "afternoon" : "night";
+            NarrativeEvent arrival = NarrativeGenerator.generateArrival(
+                    tourist.getTouristName(), dayPhase, tourist.level().getGameTime());
+            showActionBar(arrival.text());
+        }
+
         beginNavigation(tourist.getCommuteTarget(), touristSpeed);
     }
 
@@ -895,14 +908,28 @@ public class TouristMoveGoal extends Goal {
         String purchased = com.wsteam.wandscape.building.internal.ShopInteractionHandler.interact(
                 stockManager, tourist.getUUID(), buildingId, colonyId);
         if (purchased != null) {
+            int satBefore = tourist.getSatisfaction();
             int gain = computeSatisfactionGain(buildingId);
-            tourist.setSatisfaction(tourist.getSatisfaction() + gain);
+            tourist.setSatisfaction(satBefore + gain);
             tourist.setEnergy(tourist.getEnergy() - 20);
             applyPreferenceDecay(buildingId);
+
             String bldType = getBuildingTypeId(buildingId);
-            showActionBar("🛒 " + tourist.getTouristName() + " 从 "
-                    + (bldType != null ? bldType : "商店") + " 购买了 " + purchased
-                    + " | 满意+" + gain + " 精力-20");
+            String bldName = getBuildingDisplayName(buildingId, bldType);
+            VisitMemory memory = new VisitMemory.Builder()
+                    .buildingTypeId(bldType != null ? bldType : "unknown")
+                    .buildingDisplayName(bldName)
+                    .category("shop")
+                    .gameTime(tourist.level().getGameTime())
+                    .satisfactionBefore(satBefore)
+                    .satisfactionDelta(gain)
+                    .energyDelta(-20)
+                    .whatHappened(purchased)
+                    .build();
+            tourist.addVisitMemory(memory);
+
+            String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
+            showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20");
         }
     }
 
@@ -911,9 +938,11 @@ public class TouristMoveGoal extends Goal {
         if (config == null || config.service() == null) return;
 
         var svc = config.service();
-        tourist.setEnergy(tourist.getEnergy() - svc.energyPerUse());
+        int satBefore = tourist.getSatisfaction();
+        int energyCost = svc.energyPerUse();
+        tourist.setEnergy(tourist.getEnergy() - energyCost);
         int gain = computeSatisfactionGain(buildingId);
-        tourist.setSatisfaction(tourist.getSatisfaction() + gain);
+        tourist.setSatisfaction(satBefore + gain);
         applyPreferenceDecay(buildingId);
 
         int cooldownTicks = Config.SERVICE_COOLDOWN_TICKS.get();
@@ -943,9 +972,21 @@ public class TouristMoveGoal extends Goal {
         }
 
         String bldType = getBuildingTypeId(buildingId);
-        showActionBar("🔧 " + tourist.getTouristName() + " 使用了 "
-                + (bldType != null ? bldType : "服务建筑")
-                + " | 满意+" + gain + " 精力-" + svc.energyPerUse());
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        VisitMemory memory = new VisitMemory.Builder()
+                .buildingTypeId(bldType != null ? bldType : "unknown")
+                .buildingDisplayName(bldName)
+                .category("service")
+                .gameTime(tourist.level().getGameTime())
+                .satisfactionBefore(satBefore)
+                .satisfactionDelta(gain)
+                .energyDelta(-energyCost)
+                .whatHappened("服务")
+                .build();
+        tourist.addVisitMemory(memory);
+
+        String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
+        showActionBar("🔧 " + narrative + " | 满意+" + gain + " 精力-" + energyCost);
     }
 
     // ── Preference / satisfaction ──
@@ -1118,6 +1159,15 @@ public class TouristMoveGoal extends Goal {
         if (api == null) return null;
         var data = api.getBuilding(buildingId);
         return data != null ? data.getBuildingTypeId() : null;
+    }
+
+    /** Get the display name for a building, falling back to its type id. */
+    private String getBuildingDisplayName(UUID buildingId, @javax.annotation.Nullable String typeId) {
+        var config = BuildingConfigLoader.getInstance().get(typeId);
+        if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
+            return config.displayName();
+        }
+        return typeId != null ? typeId : "建筑";
     }
 
     private int getInteractionRange() {

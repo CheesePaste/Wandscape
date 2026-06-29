@@ -1,0 +1,10 @@
+{
+  "building_id": "service_hall",
+  "templates": {
+    "visit": [
+      "{name} 走进{building}的大厅，在柜台前办理了业务，{emotion_adj}",
+      "{name} 在{building}宽敞的大厅里环顾四周，玻璃窗透进明亮的光，{emotion_adj}",
+      "服务大厅的职员微笑着接待了{name}，{emotion_adj}"
+    ]
+  }
+}

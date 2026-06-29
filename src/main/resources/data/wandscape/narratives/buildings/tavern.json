@@ -1,0 +1,11 @@
+{
+  "building_id": "tavern",
+  "templates": {
+    "visit": [
+      "{name} 在{building}的木桌旁坐下，喝了一大杯麦芽酒，{emotion_adj}",
+      "{name} 推开{building}的橡木门，酒馆里飘着烤肉的香气，{emotion_adj}",
+      "{name} 在{building}的吧台前和旅人闲聊了几句，{emotion_adj}",
+      "壁炉的火噼啪作响，{name} 在{building}的角落坐下，{emotion_adj}"
+    ]
+  }
+}

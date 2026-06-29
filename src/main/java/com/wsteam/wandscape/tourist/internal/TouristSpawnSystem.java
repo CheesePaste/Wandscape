@@ -19,8 +19,10 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -144,6 +146,7 @@ public final class TouristSpawnSystem {
             tourist.setTargetBuildingCategory(target.getCategory());
             tourist.setColonyId(target.getColonyId());
             tourist.setCommuteTarget(interactionTarget);
+            tourist.setArrivalTime(level.getGameTime());
             // Goal will override this in start() since building target is preset
             tourist.applyState(TouristState.VISITING);
             level.addFreshEntity(tourist);
@@ -377,8 +380,25 @@ public final class TouristSpawnSystem {
             storeMageResume(t);
         }
 
+        // Generate departure narrative and broadcast to nearby players
+        int visitCount = t.getRecentVisits().size();
+        String departureText = NarrativeGenerator.generateDepartureSummary(
+                t.getTouristName(), satisfaction, visitCount);
+        showNearbyActionBar(t, departureText, level);
+
         Log.debug(TAG, "[Tourist] {} departed (energy={} satisfaction={} mage={})",
                 t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
+    }
+
+    /** Send an action-bar message to players near a tourist. */
+    private static void showNearbyActionBar(TouristEntity t, String msg, ServerLevel level) {
+        if (level.isClientSide) return;
+        Component comp = Component.literal(msg);
+        for (ServerPlayer p : level.getEntitiesOfClass(
+                ServerPlayer.class,
+                t.getBoundingBox().inflate(32))) {
+            p.sendSystemMessage(comp, true);
+        }
     }
 
     // ── Name generation ──

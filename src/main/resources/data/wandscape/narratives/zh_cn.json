@@ -1,0 +1,92 @@
+{
+  "locale": "zh_cn",
+
+  "_comment": "── 全局类别模板 —— 当建筑没有专属模板时，按 category 匹配 ──",
+
+  "category_templates": {
+    "shop": {
+      "visit": [
+        "{name} 从{building}购买了{item}，{emotion_adj}",
+        "{name} 在{building}的货架前驻足，最终买下了{item}，{emotion_adj}",
+        "{name} 在{building}淘到了心仪的{item}，{emotion_adj}地离开了",
+        "{name} 逛完{building}后入手了{item}，{emotion_adj}"
+      ]
+    },
+    "service": {
+      "visit": [
+        "{name} 在{building}享受了服务，觉得{emotion_adj}",
+        "{name} 体验了{building}的设施，{emotion_adj}",
+        "{name} 在{building}度过了一段时光，{emotion_adj}"
+      ]
+    },
+    "hotel": {
+      "checkin": [
+        "✨ {name} 入住了{building}，关上房门准备休息",
+        "✨ {name} 在{building}安顿下来，期待着明天的旅程",
+        "✨ 夜幕降临，{name} 走进了{building}"
+      ],
+      "wakeup": [
+        "{name} 在{building}醒来，精力充沛",
+        "清晨的阳光照进{building}，{name} 伸了个懒腰"
+      ]
+    }
+  },
+
+  "_comment2": "── 通用模板 —— 不依赖建筑类别 ──",
+
+  "generic": {
+    "arrival_morning": [
+      "{name} 在清晨抵达了殖民地，踏着晨光开始了新旅程",
+      "{name} 迎着朝阳走进了殖民地，精神饱满",
+      "晨雾中，{name} 沿着道路来到了殖民地"
+    ],
+    "arrival_afternoon": [
+      "{name} 在午后来到了殖民地，打算四处逛逛",
+      "{name} 在午后的阳光下走进了殖民地",
+      "午后时分，{name} 踏入了殖民地的街道"
+    ],
+    "arrival_night": [
+      "夜色中，{name} 来到了殖民地，四周灯火通明",
+      "{name} 在夜晚抵达了殖民地，抬头望了望星空"
+    ],
+    "departure_delighted": [
+      "{name} 心满意足地离开了殖民地，觉得不虚此行",
+      "{name} 满载着美好的回忆离开了殖民地",
+      "\"{visit_count}个地方，每一个都很满意\" —— {name} 笑着离开了"
+    ],
+    "departure_pleased": [
+      "{name} 满意地离开了殖民地，下次还来",
+      "{name} 结束了旅程，觉得这趟很值得",
+      "旅程结束，{name} 挥了挥手告别了殖民地"
+    ],
+    "departure_neutral": [
+      "{name} 结束了这次旅程，平淡地离开了殖民地",
+      "{name} 逛了{visit_count}个地方后离开了殖民地"
+    ],
+    "departure_unsatisfied": [
+      "{name} 有些失望地离开了殖民地",
+      "{name} 叹了口气，离开了殖民地，下次争取更好",
+      "{name} 不太满意这趟旅程，默默地离开了"
+    ],
+    "satisfaction_milestone_50": [
+      "{name} 的满意度达到了一半！旅程渐入佳境"
+    ],
+    "satisfaction_milestone_70": [
+      "{name} 对这趟旅程越来越满意了"
+    ],
+    "satisfaction_milestone_100": [
+      "🎉 {name} 的满意度达到了满点！完美的旅程！"
+    ]
+  },
+
+  "_comment3": "── 情感形容词池 —— {emotion_adj} 占位符随机从中选取 ──",
+
+  "emotion_adjectives": {
+    "DELIGHTED":    ["欣喜若狂","心满意足","激动不已","非常开心","高兴极了"],
+    "PLEASED":      ["开心","愉快","挺满意","高兴","心情不错"],
+    "SATISFIED":    ["还行","凑合","勉强满意","还算可以","基本满意"],
+    "NEUTRAL":      ["面无表情","没什么感觉","平静","毫无波澜"],
+    "DISAPPOINTED": ["有点失望","不太满意","有些遗憾","略微沮丧"],
+    "UPSET":        ["非常生气","愤愤不平","气坏了","失望透顶"]
+  }
+}
