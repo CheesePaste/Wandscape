@@ -114,7 +114,6 @@ public record BuildingEditorEnterResponsePacket(
             BuildingEditorClientState.setUnlockMinWonder(config.unlockRequirement().minWonder());
 
             if (config.maintenanceCost() != null) {
-                BuildingEditorClientState.setMaintenanceIntervalTicks(config.maintenanceCost().intervalTicks());
                 if (config.maintenanceCost().costs() != null) {
                     BuildingEditorClientState.setMaintenanceCosts(
                             config.maintenanceCost().costs().entrySet().stream()

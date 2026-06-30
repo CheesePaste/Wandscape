@@ -25,7 +25,6 @@ public final class BuildingEditorImGui {
     private static final ImInt unlockWonder = new ImInt();
     private static final ImInt queueCapacity = new ImInt();
     private static final ImInt interactionRadius = new ImInt();
-    private static final ImInt maintInterval = new ImInt();
     private static final ImInt serviceEnergy = new ImInt();
     private static final ImInt serviceMaxOccupancy = new ImInt();
     private static final ImInt decorationRadius = new ImInt();
@@ -108,8 +107,6 @@ public final class BuildingEditorImGui {
             ImGui.inputInt("QueueCap", queueCapacity);
             ImGui.sameLine();
             ImGui.inputInt("Radius", interactionRadius);
-            ImGui.sameLine();
-            ImGui.inputInt("MaintTick", maintInterval);
             ImGui.popItemWidth();
 
             ImGui.pushItemWidth(-1);
@@ -246,7 +243,6 @@ public final class BuildingEditorImGui {
 
         queueCapacity.set(BuildingEditorClientState.getQueueCapacity());
         interactionRadius.set(BuildingEditorClientState.getInteractionRadius());
-        maintInterval.set(BuildingEditorClientState.getMaintenanceIntervalTicks());
 
         serviceEnergy.set(BuildingEditorClientState.getServiceEnergyPerUse());
         serviceMaxOccupancy.set(BuildingEditorClientState.getServiceMaxOccupancy());
@@ -279,7 +275,6 @@ public final class BuildingEditorImGui {
         BuildingEditorClientState.setUnlockMinWonder(unlockWonder.get());
         BuildingEditorClientState.setQueueCapacity(queueCapacity.get());
         BuildingEditorClientState.setInteractionRadius(interactionRadius.get());
-        BuildingEditorClientState.setMaintenanceIntervalTicks(maintInterval.get());
         BuildingEditorClientState.setServiceEnergyPerUse(serviceEnergy.get());
         BuildingEditorClientState.setServiceMaxOccupancy(serviceMaxOccupancy.get());
         BuildingEditorClientState.setDecorationRadius(decorationRadius.get());

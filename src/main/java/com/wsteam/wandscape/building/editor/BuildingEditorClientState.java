@@ -77,7 +77,6 @@ public final class BuildingEditorClientState {
 
     // ── Maintenance cost ──
 
-    private static volatile int maintenanceIntervalTicks = MaintenanceCostConfig.DEFAULT_INTERVAL_TICKS;
     private static final Map<ElementType, Long> maintenanceCosts = new HashMap<>();
 
     // ── Blueprint reference ──
@@ -222,7 +221,6 @@ public final class BuildingEditorClientState {
         queueCapacity = 5;
         taskTypes.clear(); taskTypes.add("building");
         unlockMinComfort = 0; unlockMinMagic = 0; unlockMinWonder = 0;
-        maintenanceIntervalTicks = MaintenanceCostConfig.DEFAULT_INTERVAL_TICKS;
         maintenanceCosts.clear();
         blueprintId = "build:clear_and_build";
         blueprintBind.clear();
@@ -365,8 +363,6 @@ public final class BuildingEditorClientState {
 
     // ── Maintenance ──
 
-    public static int getMaintenanceIntervalTicks() { return maintenanceIntervalTicks; }
-    public static void setMaintenanceIntervalTicks(int v) { maintenanceIntervalTicks = v; }
     public static Map<ElementType, Long> getMaintenanceCosts() {
         synchronized (maintenanceCosts) { return Map.copyOf(maintenanceCosts); }
     }
@@ -555,7 +551,6 @@ public final class BuildingEditorClientState {
         Map<ElementType, Long> mc = getMaintenanceCosts();
         if (!mc.isEmpty()) {
             sb.append("  \"maintenance_cost\": {\n");
-            sb.append("    \"interval_ticks\": ").append(maintenanceIntervalTicks).append(",\n");
             sb.append("    \"costs\": {");
             List<ElementType> mcKeys = new ArrayList<>(mc.keySet());
             for (int i = 0; i < mcKeys.size(); i++) {

@@ -69,7 +69,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
-    private static final String TAG_MAINTENANCE_INTERVAL = "maint_interval";
     private static final String TAG_MAINTENANCE_COSTS = "maint_costs";
     private static final String TAG_LAST_MAINTENANCE_TICK = "last_maint_tick";
     private static final String TAG_MAINTENANCE_PAID = "maint_paid";
@@ -501,7 +500,6 @@ public class BuildingSavedData extends SavedData {
             }
 
             // Maintenance tracking
-            entry.putInt(TAG_MAINTENANCE_INTERVAL, state.getMaintenanceCost().intervalTicks());
             CompoundTag costsTag = new CompoundTag();
             for (var costEntry : state.getMaintenanceCost().costs().entrySet()) {
                 costsTag.putInt(costEntry.getKey().name(), costEntry.getValue());
@@ -607,17 +605,14 @@ public class BuildingSavedData extends SavedData {
                 state.getTaskQueue().addLast(new WorkItem(blueprint, params, priority));
             }
 
-            // Maintenance tracking
-            if (entry.contains(TAG_MAINTENANCE_INTERVAL)) {
-                int interval = entry.getInt(TAG_MAINTENANCE_INTERVAL);
+            // Maintenance tracking (interval_ticks removed — costs are now daily)
+            if (entry.contains(TAG_MAINTENANCE_COSTS)) {
                 Map<ElementType, Integer> costsMap = new HashMap<>();
-                if (entry.contains(TAG_MAINTENANCE_COSTS)) {
-                    CompoundTag costsTag = entry.getCompound(TAG_MAINTENANCE_COSTS);
-                    for (String key : costsTag.getAllKeys()) {
-                        costsMap.put(ElementType.valueOf(key), costsTag.getInt(key));
-                    }
+                CompoundTag costsTag = entry.getCompound(TAG_MAINTENANCE_COSTS);
+                for (String key : costsTag.getAllKeys()) {
+                    costsMap.put(ElementType.valueOf(key), costsTag.getInt(key));
                 }
-                state.setMaintenanceCost(new MaintenanceCostConfig(interval, costsMap));
+                state.setMaintenanceCost(new MaintenanceCostConfig(costsMap));
             }
             state.setLastMaintenanceTick(entry.getLong(TAG_LAST_MAINTENANCE_TICK));
             if (entry.contains(TAG_MAINTENANCE_PAID)) {

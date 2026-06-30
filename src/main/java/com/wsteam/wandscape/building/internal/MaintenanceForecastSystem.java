@@ -101,12 +101,8 @@ public final class MaintenanceForecastSystem {
 
             var dailyMap = colonyDailyCost.computeIfAbsent(colonyId, k -> new HashMap<>());
             for (var entry : cost.entrySet()) {
-                // Cost per day = (cost per interval * standard interval) / 24000
-                // Since cost.intervalTicks is the cycle, if it's 12000 (half day),
-                // daily cost = 2x the per-cycle cost. We normalize to 24000 ticks.
-                int intervalTicks = state.getMaintenanceCost().intervalTicks();
-                long dailyAmount = (long) entry.getValue() * 24000L / Math.max(intervalTicks, 1);
-                dailyMap.merge(entry.getKey(), dailyAmount, Long::sum);
+                // Costs are daily values now — each settlement deducts once per day.
+                dailyMap.merge(entry.getKey(), (long) entry.getValue(), Long::sum);
             }
         }
 
