@@ -23,9 +23,6 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Debug command: consume (clear) all items and elements from the colony warehouse.
  *
- * <p>Useful for testing auto-production thresholds — after clearing everything,
- * WarehouseSource will detect low resources and trigger synthesis tasks.
- *
  * <p>Usage: {@code /wandscape consume_warehouse}
  */
 public final class ConsumeWarehouseCommand {

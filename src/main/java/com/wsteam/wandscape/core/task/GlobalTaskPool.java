@@ -1,20 +1,16 @@
 package com.wsteam.wandscape.core.task;
 
-import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.core.types.*;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EventBus;
+import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
-import com.wsteam.wandscape.core.event.ResourceFulfilled;
-import com.wsteam.wandscape.core.event.TaskAwaitingResources;
 import com.wsteam.wandscape.core.event.TaskCompleted;
 import com.wsteam.wandscape.core.system.WandRequirementDeriver;
-import com.wsteam.wandscape.core.types.BehaviourLevel;
-import com.wsteam.wandscape.core.types.BehaviourTag;
-import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.*;
 
@@ -54,6 +50,14 @@ public class GlobalTaskPool {
     private final boolean autoApprove;
     private long nextTaskId = 1;
 
+    /** Optional handler for resource shortages (synthesize / gather). */
+    @javax.annotation.Nullable
+    private ResourceShortageHandler resourceShortageHandler;
+
+    public void setResourceShortageHandler(@javax.annotation.Nullable ResourceShortageHandler handler) {
+        this.resourceShortageHandler = handler;
+    }
+
     /** Called whenever the task pool is mutated (add/assign/complete/release). */
     @javax.annotation.Nullable
     public Runnable onChanged;
@@ -64,7 +68,6 @@ public class GlobalTaskPool {
         this.colonyResources = colonyResources;
         this.autoApprove = autoApprove;
 
-        eventBus.subscribe(ResourceFulfilled.class, this::onResourceFulfilled);
     }
 
     // ── Queue maintenance ──
@@ -259,7 +262,12 @@ public class GlobalTaskPool {
 
         releaseNpc(taskId, npcId, world);
 
-        eventBus.emit(new TaskAwaitingResources(taskId, needed));
+        // Auto-recovery: try to create production tasks for the needed resources
+        if (resourceShortageHandler != null && !needed.isEmpty()) {
+            ResourceStack primary = needed.get(0);
+            resourceShortageHandler.handle(primary.resource(), primary.amount(), GridPos.ORIGIN);
+        }
+
         notifyChanged();
         Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
     }
@@ -395,7 +403,8 @@ public class GlobalTaskPool {
 
     // ── Resource fulfillment wake-up ──
 
-    private void onResourceFulfilled(ResourceFulfilled event) {
+    /** Called when a resource is added to the warehouse. Wakes any AWAITING_RESOURCES tasks. */
+    public void onResourceAdded(ResourceId resource, int amount) {
         int totalWaiting = 0;
         int relevant = 0;
         int awakened = 0;
@@ -406,13 +415,11 @@ public class GlobalTaskPool {
             }
             totalWaiting++;
 
-            // Check if the fulfilled resource is relevant to this task
             boolean matches = task.awaitingResource.stream()
-                    .anyMatch(r -> r.resource().equals(event.resource()));
+                    .anyMatch(r -> r.resource().equals(resource));
             if (!matches) continue;
             relevant++;
 
-            // All-or-nothing: ALL needed resources must be available
             boolean allAvailable = true;
             for (ResourceStack need : task.awaitingResource) {
                 if (colonyResources.available(need.resource()) < need.amount()) {
@@ -425,8 +432,8 @@ public class GlobalTaskPool {
                 awakened++;
             }
         }
-        Log.info(TAG, "ResourceFulfilled(%s) waiting=%d relevant=%d awakened=%d",
-                event.resource(), totalWaiting, relevant, awakened);
+        Log.info(TAG, "onResourceAdded(%s +%d) waiting=%d relevant=%d awakened=%d",
+                resource, amount, totalWaiting, relevant, awakened);
         if (awakened > 0) {
             notifyChanged();
         }

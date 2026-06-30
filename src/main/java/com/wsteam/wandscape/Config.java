@@ -211,16 +211,6 @@ public class Config {
             .comment("Interval in ticks between maintenance system heartbeat scans")
             .defineInRange("maintenance.heartbeatTicks", 1200, 200, 72000);
 
-    // ---- Shop system ----
-
-    public static final ModConfigSpec.IntValue SHOP_RESTOCH_INTERVAL_TICKS = BUILDER
-            .comment("Interval in ticks between shop restock cycles (24000 ticks = 1 MC day)")
-            .defineInRange("shop.restockIntervalTicks", 24000, 6000, 72000);
-
-    public static final ModConfigSpec.BooleanValue SHOP_CLEAR_UNSOLD_ON_RESTOCH = BUILDER
-            .comment("Whether unsold goods are cleared when shops restock")
-            .define("shop.clearUnsoldOnRestock", true);
-
     // ---- Service system ----
 
     public static final ModConfigSpec.IntValue MICRO_NAV_SWITCH_DISTANCE = BUILDER

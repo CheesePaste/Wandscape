@@ -1,8 +1,8 @@
 {
+  "type": "potion",
+  "craft_station": "potion_station",
   "id": "mana_potion",
-  "output": {
-    "item": "wandscape:mana_potion"
-  },
+  "output": { "item": "wandscape:mana_potion" },
   "cost": {
     "water": 16,
     "wood": 4

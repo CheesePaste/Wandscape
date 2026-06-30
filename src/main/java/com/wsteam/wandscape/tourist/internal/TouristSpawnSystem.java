@@ -11,10 +11,13 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
@@ -386,6 +389,10 @@ public final class TouristSpawnSystem {
                 t.getTouristName(), satisfaction, visitCount);
         showNearbyActionBar(t, departureText, level);
 
+        NarrativeEvent departureEvent = NarrativeGenerator.generateDeparture(
+                t.getTouristName(), satisfaction, visitCount, t.level().getGameTime());
+        emitNarrativeEvent(departureEvent);
+
         Log.debug(TAG, "[Tourist] {} departed (energy={} satisfaction={} mage={})",
                 t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
     }
@@ -436,5 +443,12 @@ public final class TouristSpawnSystem {
     private static TouristApi getTouristApi() {
         try { return WandscapeApis.getTouristApi(); }
         catch (IllegalStateException e) { return null; }
+    }
+
+    private static void emitNarrativeEvent(NarrativeEvent ne) {
+        var world = WandscapeEngine.getWorld();
+        if (world != null && world.eventBus != null) {
+            world.eventBus.emit(new NarrativeEventTriggered(ne));
+        }
     }
 }

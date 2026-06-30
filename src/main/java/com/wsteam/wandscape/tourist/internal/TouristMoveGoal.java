@@ -13,6 +13,8 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
+import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.core.road.PathPoint;
@@ -198,6 +200,7 @@ public class TouristMoveGoal extends Goal {
             NarrativeEvent arrival = NarrativeGenerator.generateArrival(
                     tourist.getTouristName(), dayPhase, tourist.level().getGameTime());
             showActionBar(arrival.text());
+            emitNarrativeEvent(arrival);
         }
 
         beginNavigation(tourist.getCommuteTarget(), touristSpeed);
@@ -956,6 +959,9 @@ public class TouristMoveGoal extends Goal {
                     .build();
             tourist.addVisitMemory(memory);
 
+            NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
+            emitNarrativeEvent(shopEvent);
+
             String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
             showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20");
         }
@@ -1012,6 +1018,9 @@ public class TouristMoveGoal extends Goal {
                 .whatHappened("服务")
                 .build();
         tourist.addVisitMemory(memory);
+
+        NarrativeEvent serviceEvent = NarrativeGenerator.generateVisit(memory);
+        emitNarrativeEvent(serviceEvent);
 
         String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
         showActionBar("🔧 " + narrative + " | 满意+" + gain + " 精力-" + energyCost);
@@ -1268,5 +1277,12 @@ public class TouristMoveGoal extends Goal {
     private static ServerLevel getServerLevel() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server != null ? server.overworld() : null;
+    }
+
+    private static void emitNarrativeEvent(NarrativeEvent ne) {
+        var world = WandscapeEngine.getWorld();
+        if (world != null && world.eventBus != null) {
+            world.eventBus.emit(new NarrativeEventTriggered(ne));
+        }
     }
 }

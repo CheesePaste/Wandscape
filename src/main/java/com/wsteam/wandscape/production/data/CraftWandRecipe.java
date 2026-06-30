@@ -12,6 +12,8 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import net.minecraft.nbt.CompoundTag;
 public record CraftWandRecipe(
     String id,
+    String craftStation,
+    String displayName,
     String outputItem,
     CompoundTag outputNbt,
     Map<ElementType, Long> cost,
@@ -20,9 +22,33 @@ public record CraftWandRecipe(
 ) {
     public static CraftWandRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
-        JsonObject output = obj.getAsJsonObject("output");
-        String outputItem = output.get("item").getAsString();
-        CompoundTag nbt = parseNbt(output);
+
+        String craftStation = obj.has("craft_station")
+                ? obj.get("craft_station").getAsString() : "crafting_station";
+        String displayName = obj.has("display_name")
+                ? obj.get("display_name").getAsString() : id;
+
+        String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
+
+        CompoundTag nbt = new CompoundTag();
+        if (obj.has("wand_color")) {
+            nbt.putString("wand_color", obj.get("wand_color").getAsString());
+        }
+        if (obj.has("behaviors")) {
+            CompoundTag behaviors = new CompoundTag();
+            JsonObject btObj = obj.getAsJsonObject("behaviors");
+            for (var entry : btObj.entrySet()) {
+                behaviors.putInt(entry.getKey(), entry.getValue().getAsInt());
+            }
+            nbt.put("behaviors", behaviors);
+        }
+        if (obj.has("range")) {
+            nbt.putInt("range", obj.get("range").getAsInt());
+        }
+        if (obj.has("mana_cost_multiplier")) {
+            nbt.putFloat("mana_cost_multiplier", obj.get("mana_cost_multiplier").getAsFloat());
+        }
+
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
 
         RecipeUnlockRequirement req = obj.has("unlock_requirement")
@@ -36,54 +62,7 @@ public record CraftWandRecipe(
             for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
         }
 
-        return new CraftWandRecipe(id, outputItem, nbt, cost, req, wandLevel);
-    }
-
-    private static CompoundTag parseNbt(JsonObject output) {
-        CompoundTag tag = new CompoundTag();
-        if (!output.has("nbt")) return tag;
-        JsonObject nbtObj = output.getAsJsonObject("nbt");
-        for (var entry : nbtObj.entrySet()) {
-            String key = entry.getKey();
-            JsonElement value = entry.getValue();
-            if (value.isJsonPrimitive()) {
-                var prim = value.getAsJsonPrimitive();
-                if (prim.isString()) {
-                    tag.putString(key, prim.getAsString());
-                } else if (prim.isNumber()) {
-                    Number num = prim.getAsNumber();
-                    if (num.doubleValue() == num.longValue()) {
-                        tag.putLong(key, num.longValue());
-                    } else {
-                        tag.putDouble(key, num.doubleValue());
-                    }
-                } else if (prim.isBoolean()) {
-                    tag.putBoolean(key, prim.getAsBoolean());
-                }
-            } else if (value.isJsonObject()) {
-                tag.put(key, parseNbtObject(value.getAsJsonObject()));
-            }
-        }
-        return tag;
-    }
-
-    private static CompoundTag parseNbtObject(JsonObject obj) {
-        CompoundTag tag = new CompoundTag();
-        for (var entry : obj.entrySet()) {
-            String key = entry.getKey();
-            JsonElement value = entry.getValue();
-            if (value.isJsonPrimitive()) {
-                var prim = value.getAsJsonPrimitive();
-                if (prim.isNumber()) {
-                    tag.putInt(key, prim.getAsInt());
-                } else if (prim.isString()) {
-                    tag.putString(key, prim.getAsString());
-                }
-            } else if (value.isJsonObject()) {
-                tag.put(key, parseNbtObject(value.getAsJsonObject()));
-            }
-        }
-        return tag;
+        return new CraftWandRecipe(id, craftStation, displayName, outputItem, nbt, cost, req, wandLevel);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {

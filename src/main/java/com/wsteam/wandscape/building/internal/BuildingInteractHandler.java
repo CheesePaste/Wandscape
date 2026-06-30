@@ -16,7 +16,6 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseThresholdDataPacket;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -109,11 +108,6 @@ public final class BuildingInteractHandler {
                     Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
                     var pkt = WarehouseDataPacket.from(pos, colonyId, snapshot, elemSnapshot);
                     PacketDistributor.sendToPlayer(player, pkt);
-
-                    // Also send threshold data
-                    Map<String, Long> thresholds = bank.getAllThresholds(colonyId);
-                    var threshPkt = WarehouseThresholdDataPacket.from(pos, colonyId, thresholds);
-                    PacketDistributor.sendToPlayer(player, threshPkt);
                 }
             }
             case "workstation" -> openWorkstationGui(level, colonyId, event);

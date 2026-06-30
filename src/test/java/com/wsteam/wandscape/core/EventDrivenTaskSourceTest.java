@@ -8,10 +8,6 @@ import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.event.MobNearby;
-import com.wsteam.wandscape.core.event.ResourceFulfilled;
-import com.wsteam.wandscape.core.event.ResourceLow;
-import com.wsteam.wandscape.core.event.TaskAwaitingResources;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
@@ -51,7 +47,7 @@ public class EventDrivenTaskSourceTest {
         DefaultOpExecutors.registerAll(world.opExecutors);
 
         GridPos colonyCenter = new GridPos(0, 64, 0);
-        new EventDrivenTaskSource(world.taskPool, world.eventBus, () -> colonyCenter);
+        new EventDrivenTaskSource(world.taskPool, world.eventBus);
 
         colonyId = UUID.randomUUID();
         CoreBootstrap.createColony(world, colonyCenter.x(), colonyCenter.y(), colonyCenter.z(), 50);
@@ -61,65 +57,6 @@ public class EventDrivenTaskSourceTest {
                 BehaviourTag.RITUAL, new BehaviourLevel(1));
         WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
         npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
-    }
-
-    // ======================== ResourceLow → gather ========================
-
-    @Test
-    void resourceLow_createsGatherTask() {
-        world.eventBus.emit(new ResourceLow(ResourceId.STONE, 30, 128));
-        tickN(10);
-
-        GlobalTask gatherTask = findGatherTask(ResourceId.STONE);
-        assertNotNull(gatherTask, "EventDrivenTaskSource should create gather:stone on ResourceLow");
-        assertTrue(
-                gatherTask.state == TaskState.COMPLETED
-                        || gatherTask.state == TaskState.PENDING_ASSIGN
-                        || gatherTask.state == TaskState.IN_PROGRESS
-                        || gatherTask.state == TaskState.AWAITING_RESOURCES,
-                "Gather task exists, actual state=" + gatherTask.state);
-    }
-
-    @Test
-    void resourceLow_suppressesDuplicateWithinCooldown() {
-        world.eventBus.emit(new ResourceLow(ResourceId.STONE, 30, 128));
-        tickN(1); // dispatch
-        int before = countGatherTasks(ResourceId.STONE);
-        assertTrue(before > 0, "First ResourceLow should create at least one gather task");
-
-        // Second emit within cooldown → suppressed
-        world.eventBus.emit(new ResourceLow(ResourceId.STONE, 30, 128));
-        tickN(3);
-
-        assertEquals(before, countGatherTasks(ResourceId.STONE),
-                "Duplicate ResourceLow within cooldown should be suppressed");
-    }
-
-    // ======================== TaskAwaitingResources → high-prio gather ========================
-
-    @Test
-    void taskAwaitingResources_createsHighPriorityGather() {
-        world.eventBus.emit(new TaskAwaitingResources(999,
-                new ResourceStack(ResourceId.STONE_BRICKS, 64)));
-        tickN(5);
-
-        GlobalTask found = findGatherTask(ResourceId.STONE_BRICKS);
-        assertNotNull(found, "Should create gather:stone_bricks on TaskAwaitingResources");
-        assertEquals(40, found.priority,
-                "TaskAwaitingResources should create priority=40 gather, was " + found.priority);
-    }
-
-    // ======================== MobNearby → ritual:defense ========================
-
-    @Test
-    void mobNearby_createsDefenseRitual() {
-        world.eventBus.emit(new MobNearby(new GridPos(10, 64, 10), 3));
-        tickN(5);
-
-        GlobalTask ritualTask = findByLabel("Defense Warding");
-        assertNotNull(ritualTask, "MobNearby should create ritual:defense");
-        assertTrue(ritualTask.priority >= 53,
-                "priority=" + ritualTask.priority + " expected >= 53 (50 + mobCount)");
     }
 
     // ======================== Full restock chain ========================
@@ -145,17 +82,13 @@ public class EventDrivenTaskSourceTest {
         assertEquals(TaskState.AWAITING_RESOURCES, world.taskPool.get(taskId).state,
                 "Heavy task should AWAIT (30 < 100)");
 
-        // Emit ResourceLow → EventDrivenTaskSource creates gather:stone
-        world.eventBus.emit(new ResourceLow(ResourceId.STONE, 30, 128));
-        tickN(5);
-
-        // Simulate real gathering: seed + fulfill.
+        // Simulate warehouse restock to wake the AWAITING_RESOURCES task
         mock.seedWarehouse(ResourceId.STONE, 200);
-        world.eventBus.emit(new ResourceFulfilled(ResourceId.STONE, 200));
+        world.taskPool.onResourceAdded(ResourceId.STONE, 200);
         tickN(12);
 
         assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
-                "Heavy task should complete after ResourceFulfilled");
+                "Heavy task should complete after resource added");
     }
 
     // ---- helpers ----
@@ -174,15 +107,6 @@ public class EventDrivenTaskSourceTest {
             if (t.sequence.label().contains(substring)) return t;
         }
         return null;
-    }
-
-    private int countGatherTasks(ResourceId resource) {
-        String prefix = "Gather " + resource.id();
-        int count = 0;
-        for (GlobalTask t : world.taskPool.all()) {
-            if (t.sequence.label().contains(prefix)) count++;
-        }
-        return count;
     }
 
     private static GridPos parseLocation(Map<String, JsonElement> params) {

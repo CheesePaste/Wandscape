@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.dataconfig.internal;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -27,7 +29,7 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
     private static final String TAG = "WandscapeDataLoader";
     private static final Gson GSON = new GsonBuilder().create();
 
-    private final Map<String, SimpleDataRegistry<?>> registries = new HashMap<>();
+    private final Map<String, List<SimpleDataRegistry<?>>> registries = new HashMap<>();
 
     /**
      * Directory passed to super is unused because we override
@@ -39,7 +41,7 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
 
     public <T> WandscapeDataRegistry<T> register(String category, BiFunction<String, JsonElement, T> parser) {
         SimpleDataRegistry<T> registry = new SimpleDataRegistry<>(parser);
-        registries.put(category, registry);
+        registries.computeIfAbsent(category, k -> new ArrayList<>()).add(registry);
         return registry;
     }
 
@@ -68,8 +70,10 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager manager, ProfilerFiller profiler) {
-        for (SimpleDataRegistry<?> registry : registries.values()) {
-            registry.clear();
+        for (List<SimpleDataRegistry<?>> list : registries.values()) {
+            for (SimpleDataRegistry<?> registry : list) {
+                registry.clear();
+            }
         }
 
         int loaded = 0;
@@ -82,14 +86,16 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
             String category = path.substring(0, slashIdx);
             String id = path.substring(slashIdx + 1).replace(".json", "");
 
-            SimpleDataRegistry<?> registry = registries.get(category);
-            if (registry == null) continue;
+            List<SimpleDataRegistry<?>> list = registries.get(category);
+            if (list == null) continue;
 
-            try {
-                registry.loadEntry(id, entry.getValue());
-                loaded++;
-            } catch (Exception e) {
-                Log.warn(TAG, "Failed to parse config '{}': {}", loc, e.getMessage());
+            for (SimpleDataRegistry<?> registry : list) {
+                try {
+                    registry.loadEntry(id, entry.getValue());
+                    loaded++;
+                } catch (Exception e) {
+                    Log.warn(TAG, "Failed to parse config '{}': {}", loc, e.getMessage());
+                }
             }
         }
         Log.info(TAG, "WandscapeDataLoader reloaded: {} files across {} categories",

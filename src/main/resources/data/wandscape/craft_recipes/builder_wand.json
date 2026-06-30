@@ -1,0 +1,18 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "builder_wand",
+  "display_name": "Builder's Wand",
+  "wand_color": "#FFD700",
+  "behaviors": { "building": 1 },
+  "range": 1,
+  "mana_cost_multiplier": 1.0,
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "earth": 32,
+    "wood": 16
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  }
+}

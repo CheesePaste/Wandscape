@@ -2,16 +2,14 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadRouter;
 import com.wsteam.wandscape.core.road.RouteSegment;
 import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -30,18 +28,16 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Manages shop inventory: daily restock, tourist purchases, unsold clearing.
+ * Manages shop inventory: dynamic restock on low stock, tourist purchases.
  *
- * <p>Each shop building has its own stock map. Restock deducts element costs
- * from the colony bank and fills goods to their maxStock. Purchases by tourists
- * consume stock and deposit profit elements into the bank.
+ * <p>Each shop building has its own stock map. When a purchase drops an item's
+ * stock below maxStock/3, an automatic restock is triggered that fills goods
+ * to their maxStock by deducting element costs from the colony bank.
  *
  * <p>Stock data is persisted through {@link BuildingSavedData} so that inventory
  * and player-configured max-stock settings survive server restarts.
@@ -55,7 +51,8 @@ public final class ShopStockManager {
     /** buildingId → whether the shop currently has any stock (performance cache) */
     private final Map<UUID, Boolean> hasStockCache = new ConcurrentHashMap<>();
 
-    private int tickCounter;
+    /** Buildings currently being restocked (prevents duplicate concurrent restocks). */
+    private final Set<UUID> restockingInProgress = ConcurrentHashMap.newKeySet();
 
     @javax.annotation.Nullable
     private static ShopStockManager active;
@@ -66,11 +63,10 @@ public final class ShopStockManager {
     @javax.annotation.Nullable
     public static ShopStockManager getActive() { return active; }
 
-    /** Register with the NeoForge event bus. Returns the instance for external access. */
+    /** Initialize the singleton. */
     public static ShopStockManager register() {
         var instance = new ShopStockManager();
         active = instance;
-        NeoForge.EVENT_BUS.register(instance);
         return instance;
     }
 
@@ -257,7 +253,8 @@ public final class ShopStockManager {
         ShopGoodDef good = findGood(config.shop(), itemId);
         if (good == null) return false;
 
-        s.put(itemId, current - 1);
+        int newStock = current - 1;
+        s.put(itemId, newStock);
         savedData.setDirty();
         updateHasStock(buildingId, s);
 
@@ -271,48 +268,19 @@ public final class ShopStockManager {
             }
         }
 
-        Log.debug(TAG, "[Shop] Purchase: building={} item={} remaining={}",
-                buildingId.toString().substring(0, 8), itemId, current - 1);
-        return true;
-    }
-
-    // ── Heartbeat ──
-
-    @SubscribeEvent
-    public void onServerTick(ServerTickEvent.Post event) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        ServerLevel level = server.overworld();
-        if (level == null) return;
-
-        tickCounter++;
-        int interval = Config.SHOP_RESTOCH_INTERVAL_TICKS.get();
-        if (tickCounter % interval != 0) return;
-
-        BuildingSavedData savedData = BuildingSavedData.get(level);
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
-
-        boolean clearUnsold = Config.SHOP_CLEAR_UNSOLD_ON_RESTOCH.get();
-
-        for (BuildingState state : savedData.getAllBuildings()) {
-            if (state.isShutdown() || !state.isStructureIntact()) continue;
-            if (!"shop".equals(state.getCategory())) continue;
-
-            UUID buildingId = state.getBuildingId();
-            UUID colonyId = state.getColonyId();
-            if (colonyId == null) continue;
-
-            BuildingConfig config = configLoader.get(state.getBuildingTypeId());
-            if (config == null || config.shop() == null) continue;
-            ShopConfig shopConfig = config.shop();
-
-            if (clearUnsold) {
-                clearUnsold(buildingId);
+        // Dynamic restock: if stock dropped below 1/3 of max, trigger auto-restock
+        int maxStock = getMaxStock(buildingId, itemId);
+        if (maxStock > 0 && newStock < maxStock / 3) {
+            ColonyItemBank bank = ColonyItemBank.get(level);
+            if (bank != null && restockingInProgress.add(buildingId)) {
+                restock(buildingId, config.shop(), colonyId, bank);
+                restockingInProgress.remove(buildingId);
             }
-
-            restock(buildingId, shopConfig, colonyId, bank);
         }
+
+        Log.debug(TAG, "[Shop] Purchase: building={} item={} remaining={}",
+                buildingId.toString().substring(0, 8), itemId, newStock);
+        return true;
     }
 
     // ── Internal ──
@@ -547,17 +515,6 @@ public final class ShopStockManager {
             if (v > 0) cost.put(entry.getKey(), (int) v);
         }
         return cost;
-    }
-
-    private void clearUnsold(UUID buildingId) {
-        BuildingSavedData savedData = getSavedData();
-        if (savedData == null) return;
-        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
-        if (!s.isEmpty()) {
-            s.clear();
-            savedData.setDirty();
-            updateHasStock(buildingId, s);
-        }
     }
 
     private void updateHasStock(UUID buildingId, Map<String, Integer> s) {

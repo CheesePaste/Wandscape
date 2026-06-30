@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import com.wsteam.wandscape.shared.data.ElementType;
 public record BrewPotionRecipe(
     String id,
+    String craftStation,
     String outputItem,
     Map<ElementType, Long> cost,
     List<String> inputItems,
@@ -20,6 +21,10 @@ public record BrewPotionRecipe(
 ) {
     public static BrewPotionRecipe fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
+
+        String craftStation = obj.has("craft_station")
+                ? obj.get("craft_station").getAsString() : "potion_station";
+
         String outputItem = obj.getAsJsonObject("output").get("item").getAsString();
         Map<ElementType, Long> cost = parseElementMap(obj, "cost");
         List<String> inputItems = parseInputItems(obj);
@@ -35,7 +40,7 @@ public record BrewPotionRecipe(
             for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
         }
 
-        return new BrewPotionRecipe(id, outputItem, cost, inputItems, req, wandLevel);
+        return new BrewPotionRecipe(id, craftStation, outputItem, cost, inputItems, req, wandLevel);
     }
 
     private static List<String> parseInputItems(JsonObject obj) {

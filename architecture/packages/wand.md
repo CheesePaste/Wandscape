@@ -4,7 +4,7 @@
 
 - **WandItem** (item/) — 法杖物品，永不损坏。NBT 存储行为标签和等级。所有法杖共用同一物品 ID `wandscape:wand`，通过 NBT "behaviors" 标签区分类型
 - **WandApiImpl** (internal/) — WandApi 实现：NBT 读取 + AbilitySet 并集计算
-- **WandPresetLoader** (internal/) — 从 `data/wandscape/wands/*.json` 加载法杖预设。WandPreset 记录：id + displayName + defaultColor + nbt(behaviors/range/mana_cost_multiplier/wand_color)。engine 层 WandProvisionSystem 和 WandEquipExecutor 依赖此加载器
+- **WandPresetLoader** (internal/) — 从 `data/wandscape/craft_recipes/*.json`（过滤 type="wand"）加载法杖预设。WandPreset 记录：id + displayName + defaultColor + nbt(behaviors/range/mana_cost_multiplier/wand_color)。engine 层 WandProvisionSystem 和 WandEquipExecutor 依赖此加载器
 - **WandDataValidator** (internal/) — NBT 数据校验
 - **WandBehaviorDataImpl** (internal/) — WandBehaviorData 只读视图实现
 
@@ -26,7 +26,7 @@
 
 ## JSON
 
-位置：`data/wandscape/wands/*.json`。4 个预设：builder_wand(BUILDING:1)/gatherer_wand(GATHERING:1)/crafter_wand(CRAFTING:1)/ritual_wand(RITUAL:2)
+位置：`data/wandscape/craft_recipes/*.json`（type="wand"）。7 个法杖配方（含预设信息）：builder_wand / gatherer_wand / crafter_wand / ritual_wand / archmage_wand / legendary_wand / journeyman_builder_wand
 
 ## 注册
 

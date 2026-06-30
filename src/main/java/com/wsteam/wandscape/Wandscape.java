@@ -59,8 +59,6 @@ import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseThresholdDataPacket;
-import com.wsteam.wandscape.warehouse.network.SetWarehouseThresholdPacket;
 import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
@@ -287,10 +285,6 @@ public class Wandscape {
                         WarehouseDataPacket.STREAM_CODEC,
                         (packet, ctx) -> WarehouseDataPacket.handleClient(packet))
                 .playToClient(
-                        WarehouseThresholdDataPacket.TYPE,
-                        WarehouseThresholdDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> WarehouseThresholdDataPacket.handleClient(packet))
-                .playToClient(
                         RoadNetworkSyncPacket.TYPE,
                         RoadNetworkSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> RoadNetworkSyncPacket.handleClient(packet))
@@ -367,10 +361,6 @@ public class Wandscape {
                         WarehouseActionPacket.TYPE,
                         WarehouseActionPacket.STREAM_CODEC,
                         WarehouseActionPacket::handleServer)
-                .playToServer(
-                        SetWarehouseThresholdPacket.TYPE,
-                        SetWarehouseThresholdPacket.STREAM_CODEC,
-                        SetWarehouseThresholdPacket::handleServer)
                 .playToServer(
                         TavernRecruitPacket.TYPE,
                         TavernRecruitPacket.STREAM_CODEC,
