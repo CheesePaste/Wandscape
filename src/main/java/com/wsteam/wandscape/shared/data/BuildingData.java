@@ -24,4 +24,10 @@ public interface BuildingData {
 
     /** Whether the last maintenance cycle was paid in full. */
     boolean isMaintenancePaid();
+
+    /** Reason for shutdown, or empty string if not shut down. */
+    default String getShutdownReason() { return ""; }
+
+    /** Last game day when daily settlement processed this building. */
+    default long getLastSettlementDay() { return 0; }
 }

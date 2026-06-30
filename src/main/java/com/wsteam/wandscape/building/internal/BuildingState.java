@@ -31,6 +31,8 @@ public class BuildingState implements BuildingData {
     private MaintenanceCostConfig maintenanceCost = MaintenanceCostConfig.NONE;
     private long lastMaintenanceTick;
     private boolean maintenancePaid;
+    private long lastSettlementDay;
+    private String shutdownReason = "";
 
     @Nullable
     private UUID colonyId;
@@ -82,6 +84,8 @@ public class BuildingState implements BuildingData {
     public MaintenanceCostConfig getMaintenanceCost() { return maintenanceCost; }
     public long getLastMaintenanceTick() { return lastMaintenanceTick; }
     public boolean isMaintenancePaid() { return maintenancePaid; }
+    @Override public long getLastSettlementDay() { return lastSettlementDay; }
+    @Override public String getShutdownReason() { return shutdownReason; }
 
     // ── Setters ──
 
@@ -95,4 +99,6 @@ public class BuildingState implements BuildingData {
     public void setMaintenanceCost(MaintenanceCostConfig cost) { this.maintenanceCost = cost; }
     public void setLastMaintenanceTick(long tick) { this.lastMaintenanceTick = tick; }
     public void setMaintenancePaid(boolean paid) { this.maintenancePaid = paid; }
+    public void setLastSettlementDay(long day) { this.lastSettlementDay = day; }
+    public void setShutdownReason(String reason) { this.shutdownReason = reason; }
 }

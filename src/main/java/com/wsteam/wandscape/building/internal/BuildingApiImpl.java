@@ -169,6 +169,11 @@ public class BuildingApiImpl implements BuildingApi {
 
     @Override
     public boolean shutdown(UUID buildingId) {
+        return shutdown(buildingId, "manual");
+    }
+
+    @Override
+    public boolean shutdown(UUID buildingId, String reason) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return false;
 
@@ -177,6 +182,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         if (!state.isShutdown()) {
             state.setShutdown(true);
+            state.setShutdownReason(reason);
             UUID cid = state.getColonyId();
             String category = state.getCategory();
             if (cid != null) {
@@ -186,8 +192,9 @@ public class BuildingApiImpl implements BuildingApi {
                 }
                 // Apply category-specific graded shutdown penalties
                 applyShutdownPenalties(sd, state, cid, category);
-                NeoForge.EVENT_BUS.post(new BuildingShutdownEvent(buildingId));
+                NeoForge.EVENT_BUS.post(new BuildingShutdownEvent(buildingId, cid, reason));
             }
+
             sd.setDirty();
         }
         return true;
@@ -203,6 +210,7 @@ public class BuildingApiImpl implements BuildingApi {
 
         if (state.isShutdown()) {
             state.setShutdown(false);
+            state.setShutdownReason("");
             UUID cid = state.getColonyId();
             if (cid != null) {
                 colonyActiveCounts
@@ -212,7 +220,7 @@ public class BuildingApiImpl implements BuildingApi {
                 if (state.isStructureIntact()) {
                     sd.addBuildingContribution(cid, state.getBuildingTypeId());
                 }
-                NeoForge.EVENT_BUS.post(new BuildingRestartedEvent(buildingId));
+                NeoForge.EVENT_BUS.post(new BuildingRestartedEvent(buildingId, cid));
             }
             sd.setDirty();
         }

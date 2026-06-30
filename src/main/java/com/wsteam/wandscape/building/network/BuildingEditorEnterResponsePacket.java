@@ -142,7 +142,6 @@ public record BuildingEditorEnterResponsePacket(
             if (config.service() != null && !config.service().equals(
                     com.wsteam.wandscape.shared.data.ServiceConfig.NONE)) {
                 BuildingEditorClientState.setServiceEnergyPerUse(config.service().energyPerUse());
-                BuildingEditorClientState.setServiceSatisfactionPerUse(config.service().satisfactionPerUse());
                 BuildingEditorClientState.setServiceElementOutput(
                         config.service().elementOutput().entrySet().stream()
                                 .collect(java.util.stream.Collectors.toMap(

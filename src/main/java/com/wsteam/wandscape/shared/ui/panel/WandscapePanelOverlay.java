@@ -1,5 +1,10 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
+import java.util.Map;
+import java.util.UUID;
+
+import com.wsteam.wandscape.shared.data.ElementType;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -34,7 +39,7 @@ public final class WandscapePanelOverlay {
     private static final int MAGIC_COLOR = 0xFF42A5F5;
     private static final int WONDER_COLOR = 0xFFC8A040;
 
-    private static final String[] TAB_LABELS = { "Build", "Road", "Editor" };
+    private static final String[] TAB_LABELS = { "Build", "Road", "Editor", "Stats" };
     private static final int TAB_W = WandscapePanelController.TAB_W;
     private static final int TAB_GAP = WandscapePanelController.TAB_GAP;
     private static final int TAB_COUNT = WandscapePanelController.TAB_COUNT;
@@ -141,6 +146,11 @@ public final class WandscapePanelOverlay {
         x += font.width(magicText) + 24;
         drawText(g, font, wonderText, x, topY, WONDER_COLOR);
 
+        // Stats content (center area when Stats tab is active)
+        if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.STATS) {
+            renderStatsContent(g, font, screenW, screenH);
+        }
+
         // Bottom bar
         int barY = screenH - BOTTOM_BAR_H;
         int totalTabsW = TAB_COUNT * TAB_W + (TAB_COUNT - 1) * TAB_GAP;
@@ -162,6 +172,68 @@ public final class WandscapePanelOverlay {
         int hintW = font.width(hint);
         drawText(g, font, hint, screenW - hintW - 8,
                 barY + (BOTTOM_BAR_H - font.lineHeight) / 2, TEXT_DIM);
+    }
+
+    // ── Stats content ──
+
+    private static void renderStatsContent(GuiGraphics g, Font font, int screenW, int screenH) {
+        var stats = WandscapePanelState.getStatsSummary();
+        int leftX = 12;
+        int y = TOP_BAR_H + 8;
+        int lineH = font.lineHeight + 3;
+
+        if (stats == null || stats.snapshotCount() == 0) {
+            drawText(g, font, "No statistics available yet. Data will appear after the next daily settlement.",
+                    leftX, y, TEXT_DIM);
+            return;
+        }
+
+        // Header: day
+        String header = "=== Colony Statistics ===  Day " + stats.currentDay();
+        drawText(g, font, header, leftX, y, TEXT_WHITE);
+        y += lineH + 4;
+
+        // Maintenance line
+        String maint = "Maintenance:  " + stats.buildingsPaid() + " paid  |  "
+                + stats.buildingsShutdown() + " shutdown  |  "
+                + stats.buildingsRestarted() + " restarted";
+        drawText(g, font, maint, leftX, y, TEXT_DIM);
+        y += lineH;
+
+        // Tourism line
+        String tourist = "Tourists:     " + stats.touristsArrived() + " arrived  |  "
+                + stats.touristsDeparted() + " departed  |  Ø " + stats.avgSatisfaction() + "% satisfaction";
+        drawText(g, font, tourist, leftX, y, TEXT_DIM);
+        y += lineH + 4;
+
+        // Element consumption (3 per row)
+        if (!stats.totalElementsConsumed().isEmpty()) {
+            drawText(g, font, "Elements consumed (30d):", leftX, y, TEXT_WHITE);
+            y += lineH;
+
+            var elements = stats.totalElementsConsumed();
+            ElementType[] types = ElementType.values();
+            StringBuilder line = new StringBuilder();
+            for (int i = 0; i < types.length; i++) {
+                long amount = elements.getOrDefault(types[i], 0L);
+                if (i > 0 && i % 3 == 0) {
+                    drawText(g, font, line.toString(), leftX + 8, y, TEXT_DIM);
+                    line = new StringBuilder();
+                    y += lineH;
+                }
+                if (line.length() > 0) line.append("    ");
+                line.append(String.format("%-8s: %d", types[i].getId(), amount));
+            }
+            if (!line.isEmpty()) {
+                drawText(g, font, line.toString(), leftX + 8, y, TEXT_DIM);
+                y += lineH;
+            }
+        }
+
+        // Coverage info
+        y += 4;
+        String coverage = "Based on " + stats.snapshotCount() + " day(s) of data (max 30)";
+        drawText(g, font, coverage, leftX, y, TEXT_DIM);
     }
 
     // ── Text helpers (SEE_THROUGH = NO_DEPTH_TEST) ──
@@ -190,6 +262,7 @@ public final class WandscapePanelOverlay {
             case 0 -> activeMode == WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> activeMode == WandscapePanelState.SubMode.ROAD_PROJECTION;
             case 2 -> activeMode == WandscapePanelState.SubMode.BUILD_EDITOR;
+            case 3 -> activeMode == WandscapePanelState.SubMode.STATS;
             default -> false;
         };
     }

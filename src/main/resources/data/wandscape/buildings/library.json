@@ -41,13 +41,9 @@
   "comfort": 3,
   "magic": 5,
   "wonder": 2,
-  "maintenance_cost": {
-    "interval_ticks": 12000,
-    "costs": { "earth": 2, "water": 1 }
-  },
+  "maintenance_cost": { "costs": { "earth": 2, "water": 1 } },
   "service": {
     "energy_per_use": 20,
-    "satisfaction_per_use": 15,
     "element_output": { "earth": 1, "water": 2 },
     "max_occupancy": 0
   },

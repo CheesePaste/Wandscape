@@ -25,6 +25,7 @@
   "comfort": 2,
   "magic": 0,
   "wonder": 1,
+  "maintenance_cost": {  "costs": { "earth": 2, "wood": 1, "water": 1 } },
   "queue": { "capacity": 0, "task_types": [] },
   "unlock_requirement": { "min_wonder": 0 },
   "boundary": { "min": [-2, 0, -3], "max": [2, 1, 3] },

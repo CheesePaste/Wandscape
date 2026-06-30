@@ -119,7 +119,6 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
   "category": "service",
   "service": {
     "energy_per_use": 20,
-    "satisfaction_per_use": 15,
     "element_output": { "earth": 2, "wood": 1 }
   }
 }

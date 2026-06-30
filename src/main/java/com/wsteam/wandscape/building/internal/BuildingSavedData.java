@@ -73,6 +73,8 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_MAINTENANCE_COSTS = "maint_costs";
     private static final String TAG_LAST_MAINTENANCE_TICK = "last_maint_tick";
     private static final String TAG_MAINTENANCE_PAID = "maint_paid";
+    private static final String TAG_LAST_SETTLEMENT_DAY = "last_settlement_day";
+    private static final String TAG_SHUTDOWN_REASON = "shutdown_reason";
 
     // NBT keys for shop inventory persistence
     private static final String TAG_SHOP_STOCK = "shop_stock";
@@ -507,6 +509,11 @@ public class BuildingSavedData extends SavedData {
             entry.put(TAG_MAINTENANCE_COSTS, costsTag);
             entry.putLong(TAG_LAST_MAINTENANCE_TICK, state.getLastMaintenanceTick());
             entry.putBoolean(TAG_MAINTENANCE_PAID, state.isMaintenancePaid());
+            entry.putLong(TAG_LAST_SETTLEMENT_DAY, state.getLastSettlementDay());
+            String reason = state.getShutdownReason();
+            if (!reason.isEmpty()) {
+                entry.putString(TAG_SHUTDOWN_REASON, reason);
+            }
 
             // Task queue
             ListTag queueTag = new ListTag();
@@ -615,6 +622,10 @@ public class BuildingSavedData extends SavedData {
             state.setLastMaintenanceTick(entry.getLong(TAG_LAST_MAINTENANCE_TICK));
             if (entry.contains(TAG_MAINTENANCE_PAID)) {
                 state.setMaintenancePaid(entry.getBoolean(TAG_MAINTENANCE_PAID));
+            }
+            state.setLastSettlementDay(entry.getLong(TAG_LAST_SETTLEMENT_DAY));
+            if (entry.contains(TAG_SHUTDOWN_REASON)) {
+                state.setShutdownReason(entry.getString(TAG_SHUTDOWN_REASON));
             }
 
             // Register into indexes (no overlap check needed on load)

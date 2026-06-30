@@ -23,7 +23,7 @@ public final class WandscapePanelController {
     // Tab layout constants — keep in sync with WandscapePanelOverlay
     public static final int TAB_W = 80;
     public static final int TAB_GAP = 6;
-    public static final int TAB_COUNT = 3;
+    public static final int TAB_COUNT = 4;
     public static final int BOTTOM_BAR_HEIGHT = 40;
     public static final int TOP_BAR_HEIGHT = 32;
 
@@ -131,6 +131,7 @@ public final class WandscapePanelController {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
             case 2 -> WandscapePanelState.SubMode.BUILD_EDITOR;
+            case 3 -> WandscapePanelState.SubMode.STATS;
             default -> null;
         };
 

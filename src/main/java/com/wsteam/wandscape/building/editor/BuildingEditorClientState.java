@@ -97,7 +97,6 @@ public final class BuildingEditorClientState {
 
     /** service: config. Null if not a service. */
     private static volatile int serviceEnergyPerUse = 20;
-    private static volatile int serviceSatisfactionPerUse = 15;
     private static final Map<ElementType, Long> serviceElementOutput = new HashMap<>();
     private static volatile int serviceMaxOccupancy = 0;
 
@@ -230,7 +229,7 @@ public final class BuildingEditorClientState {
         interactionRadius = 0;
         shopGoods.clear();
         shopProfitRate = 0.2;
-        serviceEnergyPerUse = 20; serviceSatisfactionPerUse = 15;
+        serviceEnergyPerUse = 20;
         serviceElementOutput.clear(); serviceMaxOccupancy = 0;
         decorationRadius = 0;
         wonderEffects.clear();
@@ -418,8 +417,6 @@ public final class BuildingEditorClientState {
 
     public static int getServiceEnergyPerUse() { return serviceEnergyPerUse; }
     public static void setServiceEnergyPerUse(int v) { serviceEnergyPerUse = v; }
-    public static int getServiceSatisfactionPerUse() { return serviceSatisfactionPerUse; }
-    public static void setServiceSatisfactionPerUse(int v) { serviceSatisfactionPerUse = v; }
     public static Map<ElementType, Long> getServiceElementOutput() {
         synchronized (serviceElementOutput) { return Map.copyOf(serviceElementOutput); }
     }
@@ -633,7 +630,6 @@ public final class BuildingEditorClientState {
             case "service" -> {
                 sb.append("  \"service\": {\n");
                 sb.append("    \"energy_per_use\": ").append(serviceEnergyPerUse).append(",\n");
-                sb.append("    \"satisfaction_per_use\": ").append(serviceSatisfactionPerUse).append(",\n");
                 sb.append("    \"element_output\": {");
                 Map<ElementType, Long> seo = getServiceElementOutput();
                 List<ElementType> seoKeys = new ArrayList<>(seo.keySet());

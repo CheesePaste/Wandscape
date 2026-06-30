@@ -28,7 +28,7 @@
 - **DecorationConfig** (data/) — record: `radius`(int, 曼哈顿辐射半径)
 - **WonderConfig** (data/) — record: `effects: List<WonderEffect>` (sealed interface)
 - **ShopConfig** (data/) — record: `goods: List<ShopGoodDef>`(itemId/comfort/magic/wonder/restockCost可选) + `profitRate`
-- **ServiceConfig** (data/) — record: `energyPerUse`/`satisfactionPerUse`(保留字段，游客满意度由偏好+三值推导)/`elementOutput: Map<ElementType, Long>`/`maxOccupancy`
+- **ServiceConfig** (data/) — record: `energyPerUse`/`elementOutput: Map<ElementType, Long>`/`maxOccupancy`
 - **ShopGoodDef** (data/) — record: `itemId: String`/`comfort: int`/`magic: int`/`wonder: int`/`restockCost: Map<ElementType, Integer>`(可选，默认反查 element_mappings 的 decompose_yield)。maxStock **不在 JSON 中**，由 ShopStockManager 按建筑按商品管理，玩家通过 GUI 滑动条 0–64 调整（默认 0，需玩家主动拉滑动条才补货）
 
 ### 状态管理 (internal/)
@@ -48,7 +48,8 @@
 
 ### 模拟经营系统 (internal/)
 
-- **MaintenanceSystem** (internal/) — 周期心跳(可配置间隔) → 遍历殖民地建筑 → 从 ColonyItemBank 扣元素(按 maintenanceCost.costs) → 不够则 shutdown。shutdown 建筑跳过扣费。宽限期内新建筑跳过。恢复检查：元素足够则自动 restart
+- **DailySettlementSystem** (internal/) — 取代旧的 MaintenanceSystem。每游戏日 0:00 (time-of-day 0) 触发一次。按优先级分组（CRITICAL→HIGH→NORMAL→LOW）依次从 ColonyItemBank 扣建筑维护费元素。不够则 shutdown。宽限期内新建筑跳过。结算后有剩余元素则自动重启因维护费 shutdown 的建筑。发布 `DailySettlementEvent` / `MaintenanceShortfallEvent`。
+- **MaintenanceForecastSystem** (internal/) — 每 6000 tick（1/4 天）扫描一次。预测殖民地未来维护费需求，当元素存量低于 `reserveDays` 阈值时，自动为闲置 node 建筑发布高优先级采集任务。发布 `MaintenanceForecastWarningEvent`。
 - **DecorationBonusSystem** (internal/) — 心跳扫描 → 遍历非decoration/wonder功能建筑 → 曼哈顿距离 ≤ decoration.radius 的装饰加成累加 → cap(建筑自身基础值 × Config.decorationBonusCap) → 缓存 → BuildingContributionRegistry 查询时合并
 - **DecorationBonusCache** (internal/) — 缓存每个功能建筑的当前装饰加成值，建筑变更时(注册/注销/shutdown/restart)失效重算
 - **ShopStockManager** (internal/) — 管理商店库存：per-building stock (Map<UUID, Map<String,Integer>>) + per-building maxStock 设定(Map<UUID, Map<String,Integer>>, 默认16, 玩家GUI调0–64)。心跳驱动 restock 周期 → restock_cost 优先用 JSON 显式值，未指定则反查 `Wandscape.ELEMENT_MAPPING_LOADER.getItemDecomposeYield()` 自动推断。ensureStockInitialized() 首次打开立即补货。setMaxStock() 调整上限后触发即时补货。purchase() 游客购物消耗货品 → 殖民地获得 (1+profitRate)× 元素。clearUnsold() 清空未售出。stock 状态变化 → BuildingContributionRegistry.setShopHasStock() 开关三值。getGoodsBonusComfort/Magic/Wonder() 查询有货 goods 的三值合计
@@ -80,12 +81,20 @@
   → BuildingSavedData.addBuildingContribution() → intactCount 0→1 → 广播事件
 
 维护费循环
-  → MaintenanceSystem 心跳 → 遍历建筑
-  → shutdown → 跳过
-  → 宽限期内 → 跳过
+  → DailySettlementSystem 每游戏日0:00触发
+  → 按优先级分组：CRITICAL(node/basic/storage) → HIGH(production) → NORMAL(shop/tavern) → LOW(service/decoration)
+  → 逐组逐建筑：shutdown跳过 → 宽限期内跳过
   → ColonyItemBank.consumeElements(maintenanceCost.costs)
   → 足够 → maintenancePaid=true
-  → 不足 → shutdown(buildingId) → 按category分级惩罚 → BuildingShutdownEvent
+  → 不足 → shutdown(reason="maintenance") → 按category分级惩罚 → MaintenanceShortfallEvent
+  → 剩余元素 → 自动重启已 shutdown 的 maintenance 建筑（同优先级顺序）
+
+元素储量预警
+  → MaintenanceForecastSystem 每6000tick扫描
+  → 计算各殖民地每日维护费总需求
+  → 当前存量 < reserveDays × 日需求 → 标记短缩元素
+  → 查找对应 node 建筑 → 闲置则发布高优先级采集 WorkItem
+  → 发布 MaintenanceForecastWarningEvent
 
 商店运作
   → ShopStockManager.restock() → ColonyItemBank扣元素 → 填充goodSlots

@@ -207,9 +207,23 @@ public class Config {
             .comment("Grace period in ticks after building placement before maintenance costs begin")
             .defineInRange("maintenance.gracePeriodTicks", 24000, 0, 240000);
 
-    public static final ModConfigSpec.IntValue MAINTENANCE_HEARTBEAT_TICKS = BUILDER
-            .comment("Interval in ticks between maintenance system heartbeat scans")
-            .defineInRange("maintenance.heartbeatTicks", 1200, 200, 72000);
+    /** Daily settlement happens when timeOfDay ≤ this threshold. */
+    public static final ModConfigSpec.IntValue SETTLEMENT_WINDOW_TICKS = BUILDER
+            .comment("Settlement window: time-of-day ticks within which daily settlement triggers (0 = exact 0:00 only)")
+            .defineInRange("maintenance.settlementWindowTicks", 10, 0, 100);
+
+    public static final ModConfigSpec.IntValue MAINTENANCE_RESERVE_DAYS = BUILDER
+            .comment("How many days of maintenance to keep as reserve. " +
+                     "If reserves fall below this, the forecast system triggers proactive gathering.")
+            .defineInRange("maintenance.reserveDays", 2, 1, 14);
+
+    public static final ModConfigSpec.BooleanValue AUTO_RESTART_SHUTDOWN = BUILDER
+            .comment("Whether to automatically restart maintenance-shutdown buildings when surplus elements become available")
+            .define("maintenance.autoRestart", true);
+
+    public static final ModConfigSpec.IntValue FORECAST_INTERVAL_TICKS = BUILDER
+            .comment("Interval in ticks between maintenance forecast scans (6000 ticks = 1/4 MC day)")
+            .defineInRange("maintenance.forecastIntervalTicks", 6000, 1200, 24000);
 
     // ---- Service system ----
 

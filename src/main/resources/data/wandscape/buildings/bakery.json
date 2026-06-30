@@ -41,10 +41,7 @@
   "comfort": 2,
   "magic": 0,
   "wonder": 1,
-  "maintenance_cost": {
-    "interval_ticks": 12000,
-    "costs": { "earth": 2, "fire": 1 }
-  },
+  "maintenance_cost": { "costs": { "earth": 2, "fire": 1 } },
   "shop": {
     "goods": [
       { "item_id": "minecraft:bread", "comfort": 1, "magic": 0, "wonder": 0 },

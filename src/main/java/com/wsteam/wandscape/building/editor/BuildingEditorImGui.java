@@ -27,7 +27,6 @@ public final class BuildingEditorImGui {
     private static final ImInt interactionRadius = new ImInt();
     private static final ImInt maintInterval = new ImInt();
     private static final ImInt serviceEnergy = new ImInt();
-    private static final ImInt serviceSatisfaction = new ImInt();
     private static final ImInt serviceMaxOccupancy = new ImInt();
     private static final ImInt decorationRadius = new ImInt();
     private static final ImInt nodeAmount = new ImInt();
@@ -131,8 +130,6 @@ public final class BuildingEditorImGui {
                 if (ImGui.collapsingHeader("Service Config", 0)) {
                     ImGui.pushItemWidth(80);
                     ImGui.inputInt("Energy", serviceEnergy);
-                    ImGui.sameLine();
-                    ImGui.inputInt("Satis", serviceSatisfaction);
                     ImGui.inputInt("MaxOcc", serviceMaxOccupancy);
                     ImGui.popItemWidth();
                 }
@@ -252,7 +249,6 @@ public final class BuildingEditorImGui {
         maintInterval.set(BuildingEditorClientState.getMaintenanceIntervalTicks());
 
         serviceEnergy.set(BuildingEditorClientState.getServiceEnergyPerUse());
-        serviceSatisfaction.set(BuildingEditorClientState.getServiceSatisfactionPerUse());
         serviceMaxOccupancy.set(BuildingEditorClientState.getServiceMaxOccupancy());
         decorationRadius.set(BuildingEditorClientState.getDecorationRadius());
         shopProfitPct.set((int) (BuildingEditorClientState.getShopProfitRate() * 100));
@@ -285,7 +281,6 @@ public final class BuildingEditorImGui {
         BuildingEditorClientState.setInteractionRadius(interactionRadius.get());
         BuildingEditorClientState.setMaintenanceIntervalTicks(maintInterval.get());
         BuildingEditorClientState.setServiceEnergyPerUse(serviceEnergy.get());
-        BuildingEditorClientState.setServiceSatisfactionPerUse(serviceSatisfaction.get());
         BuildingEditorClientState.setServiceMaxOccupancy(serviceMaxOccupancy.get());
         BuildingEditorClientState.setDecorationRadius(decorationRadius.get());
         BuildingEditorClientState.setShopProfitRate(shopProfitPct.get() / 100.0);

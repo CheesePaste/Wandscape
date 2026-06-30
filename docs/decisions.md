@@ -81,6 +81,22 @@
 
 **为什么任务的 TriggerDeclaration 在完成时取消订阅？** 防止内存泄漏。已完成任务不应继续响应事件。
 
+## 维护费系统重构（2026-06-30）
+
+**为什么从周期心跳改为每日结算？** 原 `MaintenanceSystem` 每 1200 tick（60秒）扫描一次，与游戏内"每天"的概念脱节。玩家无法直观理解"每60秒扣一次元素"——每天日出结算更符合殖民地模拟的直觉，也与其他每日事件（游客生成、商店进货、酒店退房）对齐。
+
+**为什么按建筑类别分组优先级？** 不加优先级的均匀扣费会在元素不足时导致**所有**建筑同时 shutdown，包括正在产元素的 node 建筑。分组优先级（CRITICAL→HIGH→NORMAL→LOW）确保减产时先缩减非核心服务（装饰、服务类），保留元素生产（node）和生产加工（workstation）的运转。
+
+**为什么在结算时保证 CRITICAL 优先？** node 和 basic 是殖民地的元素产出和结构基石。如果它们因元素不足 shutdown，殖民地将彻底丧失恢复能力——即使玩家补充元素也无 node 可采集。让 CRITICAL 优先扣费保证最后的火力始终在产元素的核心建筑上。
+
+**为什么引入 MaintenanceForecastSystem 提前准备？** 原系统被动等待结算→元素不足→shutdown。玩家事后手动补元素已为时已晚。Forecast 系统在元素储备低于 N 天预期消耗时就触发节点采集，留给玩家足够的缓冲时间。这个系统不依赖玩家指令，全自动运作。
+
+**为什么 Forecast 不直接调用 GlobalTaskPool，而是通过 BuildingApi.enqueueWork() 发给 Node 建筑？** 遵循现有架构模式。BuildingTaskSource 是建筑→任务的唯一桥接点，Forecast 在其上游注入高优先级 WorkItem。这样做的好处：(1) BuildingTaskPool 自动保证每建筑仅一个 head task；(2) 任务经正常调度器分配，NPC 按能力接取；(3) 排队机制天然防重复。直接调 GlobalTaskPool 会绕过建筑队列机制。
+
+**为什么优先级分组写在 Java 而非 Config TOML？** 类别→优先级的映射通常不需要服务器管理员调整。硬编码在 Java switch 中代码简洁、零配置负担。如果未来出现需要自定义优先级的场景，可迁移到 Config TOML，当前阶段不增加不必要的配置复杂度。
+
+**为什么 shutdown 建筑需要 shutdownReason 字段？** 区分"因维护费不足自动下线"和"手动 shutdown"。在结算时自动重启只针对 `reason="maintenance"` 的建筑，避免因玩家手动下线（如装饰建筑要改造）而被突然重启。
+
 ## 任务队列 UI（Task Queue UI）
 
 **为什么 QueueEntry 从纯文本 summary 扩充为 6 字段？** 纯文本 "Synthesize minecraft:stone_bricks x64" 超长且容易被截断。服务端结构化分类（category + itemOrRecipeId + quantity）让客户端能渲染为 `[icon] [Category] ×N` 三列，最长标签不超过 10 字符（"Synthesize"），彻底消除截断问题。

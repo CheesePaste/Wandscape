@@ -41,8 +41,8 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── building/         建筑管理(零自定义方块/BE，全部SavedData)。
 │                     category: basic/node/storage/workstation/crafting_station/
 │                               potion_station/shop/service/decoration/wonder/tavern
-│                     系统: 维护费(MaintenanceSystem) + 装饰辐射(DecorationBonusSystem)
-│                           + 商店库存(ShopStockManager) + 奇观效果(WonderEffectApplier)
+│                     系统: 每日结算(DailySettlementSystem) + 维护费预测(MaintenanceForecastSystem)
+│                           + 装饰辐射(DecorationBonusSystem) + 商店库存(ShopStockManager) + 奇观效果(WonderEffectApplier)
 ├── wand/             法杖物品+NBT+预设
 ├── element/          方块→元素映射
 ├── npc/              NPC实体+ECS桥接(EntityComponentBridge)+渲染
@@ -84,8 +84,9 @@ BuildingConfig JSON → BuildingConfigLoader
   DecorationBonusSystem → 遍历功能建筑 → 曼哈顿距离内装饰累加
   → cap(建筑自身×100%) → BuildingContributionRegistry.getSnapshot()计入
 
-维护费 (每12000tick):
-  MaintenanceSystem → 遍历建筑 → ColonyItemBank扣元素
+维护费:
+  DailySettlementSystem → 每日0:00按优先级结算 → ColonyItemBank扣元素
+  MaintenanceForecastSystem → 元素低于阈值 → 节点建筑高优采集(WorkItem)
   → 不足 → shutdown(分级效果) → BuildingShutdownEvent
 
 奇观效果:

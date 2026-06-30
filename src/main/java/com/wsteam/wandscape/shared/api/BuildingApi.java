@@ -21,6 +21,7 @@ public interface BuildingApi {
 
     // ---- Shutdown/Restart ----
     boolean shutdown(UUID buildingId);
+    boolean shutdown(UUID buildingId, String reason);
     boolean restart(UUID buildingId);
 
     // ---- Colony stats ----

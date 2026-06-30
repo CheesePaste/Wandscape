@@ -63,7 +63,7 @@
 | decoration | {radius} | **仅 category=decoration**。曼哈顿辐射半径 |
 | wonder_config | {effects: [...]} | **仅 category=wonder**。全局效果列表(见下方)。JSON key 为 wonder_config 以避免与 int wonder 字段冲突 |
 | shop | {goods: [...], profit_rate} | **仅 category=shop**。货物定义 + 利润率 |
-| service | {energy_per_use, satisfaction_per_use, element_output, max_occupancy} | **仅 category=service**。交互参数 |
+| service | {energy_per_use, element_output, max_occupancy} | **仅 category=service**。交互参数 |
 | node_config | {...} | **仅 category=node**。节点采集配置 |
 | interaction_radius | int | 交互区半径（方块数，默认为 0）。>0 时玩家可从建筑边界外此范围内交互（如商店）；=0 时需点击建筑方块或进入建筑内部（如宾馆、体育场） |
 
@@ -119,7 +119,6 @@
   "wonder": 2,
   "service": {
     "energy_per_use": 20,
-    "satisfaction_per_use": 15,
     "element_output": { "earth": 1, "wood": 2 },
     "max_occupancy": 0
   }

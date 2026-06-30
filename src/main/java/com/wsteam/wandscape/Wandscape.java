@@ -10,9 +10,11 @@ import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.DailySettlementSystem;
+import com.wsteam.wandscape.stats.internal.StatisticsCollector;
 import com.wsteam.wandscape.building.internal.DecorationBonusSystem;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.MaintenanceSystem;
+import com.wsteam.wandscape.building.internal.MaintenanceForecastSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
 import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
@@ -242,7 +244,9 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
-        MaintenanceSystem.register();
+        DailySettlementSystem.register();
+        MaintenanceForecastSystem.register();
+        StatisticsCollector.register();
         decorationBonusSystem = DecorationBonusSystem.register();
         shopStockManager = ShopStockManager.register();
         wonderEffectApplier = WonderEffectApplier.register();
@@ -428,6 +432,12 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.TYPE,
                         com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket
+                                .handleClient(packet))
+                // ── Stats ──
+                .playToClient(
+                        com.wsteam.wandscape.stats.network.StatsSyncPacket.TYPE,
+                        com.wsteam.wandscape.stats.network.StatsSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.stats.network.StatsSyncPacket
                                 .handleClient(packet));
     }
 

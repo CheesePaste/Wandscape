@@ -121,6 +121,7 @@
   "comfort": 4,
   "magic": 3,
   "wonder": 2,
+  "maintenance_cost": {  "costs": { "earth": 3, "wood": 2 } },
   "queue": {
     "capacity": 8,
     "task_types": ["service"]
@@ -138,7 +139,6 @@
   "interaction_radius": 2,
   "service": {
     "energy_per_use": 15,
-    "satisfaction_per_use": 10,
     "element_output": {
       "fire": 3,
       "earth": 2,

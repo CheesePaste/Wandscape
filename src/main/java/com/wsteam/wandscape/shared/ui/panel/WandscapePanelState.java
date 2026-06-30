@@ -1,5 +1,8 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
+import java.util.Map;
+import java.util.UUID;
+
 import com.wsteam.wandscape.building.editor.BuildingEditorClientState;
 import com.wsteam.wandscape.building.editor.BuildingEditorController;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
@@ -9,19 +12,18 @@ import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.road.client.RoadProjectionClientState;
 import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
-
-import java.util.UUID;
 /**
  * Client-side static state holder for the Wandscape comprehensive panel.
  */
 public final class WandscapePanelState {
 
-    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, BUILD_EDITOR }
+    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, BUILD_EDITOR, STATS }
 
     /** Build projection phase: BAR = selecting building (UI, no ghost), PLACING = in-world placement (ghost visible). */
     public enum BuildPhase { BAR, PLACING }
@@ -33,6 +35,28 @@ public final class WandscapePanelState {
     private static volatile int comfort = 0;
     private static volatile int magic = 0;
     private static volatile int wonder = 0;
+
+    // ── Stats tab data (set from StatsSyncPacket) ──
+
+    public record StatsSummary(
+            long currentDay,
+            int buildingsPaid,
+            int buildingsShutdown,
+            int buildingsRestarted,
+            int touristsArrived,
+            int touristsDeparted,
+            int avgSatisfaction,
+            int comfort,
+            int magic,
+            int wonder,
+            Map<ElementType, Long> totalElementsConsumed,
+            int snapshotCount
+    ) {
+        public static final StatsSummary EMPTY = new StatsSummary(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
+    }
+
+    private static volatile StatsSummary statsSummary = StatsSummary.EMPTY;
 
     // ── Building selection bar ──
     private static volatile boolean buildingBarOpen = false;
@@ -53,6 +77,9 @@ public final class WandscapePanelState {
     public static int getComfort() { return comfort; }
     public static int getMagic() { return magic; }
     public static int getWonder() { return wonder; }
+
+    public static WandscapePanelState.StatsSummary getStatsSummary() { return statsSummary; }
+    public static void setStatsSummary(WandscapePanelState.StatsSummary summary) { statsSummary = summary; }
 
     public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder) {
         WandscapePanelState.colonyId = colonyId;
