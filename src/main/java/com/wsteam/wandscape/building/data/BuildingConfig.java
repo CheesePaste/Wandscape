@@ -210,7 +210,6 @@ public record BuildingConfig(
             MaintenanceCostConfig maintenanceCost = MaintenanceCostConfig.NONE;
             if (obj.has("maintenance_cost")) {
                 JsonObject mcObj = obj.getAsJsonObject("maintenance_cost");
-                int interval = getInt(mcObj, "interval_ticks", MaintenanceCostConfig.DEFAULT_INTERVAL_TICKS);
                 Map<ElementType, Integer> costs = new HashMap<>();
                 if (mcObj.has("costs")) {
                     JsonObject costsObj = mcObj.getAsJsonObject("costs");
@@ -218,7 +217,7 @@ public record BuildingConfig(
                         costs.put(ElementType.fromId(entry.getKey()), entry.getValue().getAsInt());
                     }
                 }
-                maintenanceCost = new MaintenanceCostConfig(interval, Map.copyOf(costs));
+                maintenanceCost = new MaintenanceCostConfig(Map.copyOf(costs));
             }
 
             // Decoration config (only for category=decoration)
