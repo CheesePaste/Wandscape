@@ -29,7 +29,7 @@ Event 存在只有一个理由：**一个事件触发多个响应**。
 |------|--------|--------|---------|------|
 | `TaskCompleted` | `GlobalTaskPool.completeTask()` | `EventDrivenTaskSource`（stub） | 1 | 扩展点预留 |
 | `CustomEvent` | 蓝图 `EmitEventOp` | 4 个订阅者 | **4** | ✅ 典型 1:N |
-| `NarrativeEventTriggered` | `TouristMoveGoal` / `TouristSpawnSystem` | `ChronicleSystem` / `StatsSystem` / `AchievementSystem` | **3** | ✅ 典型 1:N |
+| `NarrativeEventTriggered` | `TouristMoveGoal` / `TouristSpawnSystem` | `StatsSystem` / `AchievementSystem` | **2** | ✅ 典型 1:N |
 
 注意：`TaskCompleted` 目前也是 1:1（stub），但它作为蓝图链式反应的扩展点是合理的预留。未来 `TriggerDeclaration` 可能订阅它。
 

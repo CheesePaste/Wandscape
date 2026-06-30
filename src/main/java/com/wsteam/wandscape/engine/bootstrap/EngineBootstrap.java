@@ -225,11 +225,10 @@ public final class EngineBootstrap {
         WandscapeEngine.setResourceRequestExec(resourceReqExec);
         Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
 
-        // 9f. Register narrative event subscribers (chronicle, stats, achievements)
-        com.wsteam.wandscape.engine.system.ChronicleSystem.register();
+        // 9f. Register narrative event subscribers (stats, achievements)
         com.wsteam.wandscape.engine.system.StatsSystem.register();
         com.wsteam.wandscape.engine.system.AchievementSystem.register();
-        Log.info(TAG, "  ChronicleSystem / StatsSystem / AchievementSystem registered");
+        Log.info(TAG, "  StatsSystem / AchievementSystem registered");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

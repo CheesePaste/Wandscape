@@ -64,8 +64,7 @@
 
 ### 叙事事件订阅者（engine/system/）
 
-三个系统订阅 `NarrativeEventTriggered`：
+两个系统订阅 `NarrativeEventTriggered`：
 
-- **ChronicleSystem** — 筛选 chronicleWorthy 事件，存储编年史（骨架，未来实现）
 - **StatsSystem** — 记录游客统计（骨架，未来实现）
 - **AchievementSystem** — 评估成就触发条件（骨架，未来实现）
