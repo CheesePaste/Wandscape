@@ -53,8 +53,14 @@ public record BuildingDebugResponsePacket(
         Log.info(TAG, "[Debug] Received debug response for '{}' at {}",
                 packet.buildingTypeId(), packet.anchor());
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
-            var screen = new com.wsteam.wandscape.projection.client.BuildingDebugScreen(packet);
-            net.minecraft.client.Minecraft.getInstance().setScreen(screen);
+            boolean active = com.wsteam.wandscape.projection.client.BuildingDebugClientState.isActive();
+            boolean hasPos = com.wsteam.wandscape.projection.client.BuildingDebugClientState.getLastRequestedPos() != null;
+            if (active && hasPos) {
+                com.wsteam.wandscape.projection.client.BuildingDebugClientState.setCachedData(packet);
+                Log.info(TAG, "[Debug] Response cached: type={} id={}", packet.buildingTypeId(), packet.buildingId());
+            } else {
+                Log.warn(TAG, "[Debug] Response dropped: active={} hasPos={} type={}", active, hasPos, packet.buildingTypeId());
+            }
         });
     }
 

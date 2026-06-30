@@ -114,6 +114,14 @@ public class TouristEntity extends PathfinderMob {
 
     private TouristState currentState = TouristState.IDLE;
 
+    /**
+     * Non-null when a command forces a specific MoveMode.
+     * Checked and consumed by {@link TouristMoveGoal} each tick.
+     * Setting this to null (or an invalid value) clears the override.
+     */
+    @javax.annotation.Nullable
+    private TouristState forcedMoveMode = null;
+
     @Nullable
     private BlockPos commuteTarget;
     private boolean commuteArrived;
@@ -311,6 +319,26 @@ public class TouristEntity extends PathfinderMob {
         }
     }
 
+    /**
+     * Force the TouristMoveGoal to switch to a specific MoveMode on the next tick.
+     * Called by commands. Set to null to clear.
+     *
+     * <p>This is separate from {@link #applyState} because TouristState is normally
+     * a one-way mirror of MoveMode — this method reverses the direction.
+     */
+    public void forceMoveMode(@javax.annotation.Nullable TouristState mode) {
+        this.forcedMoveMode = mode;
+        // Also update the display label immediately so the command response is consistent
+        if (mode != null) {
+            this.currentState = mode;
+        }
+    }
+
+    @javax.annotation.Nullable
+    public TouristState getForcedMoveMode() {
+        return forcedMoveMode;
+    }
+
     // ──────────────────────── Getters / Setters ────────────────────────
 
     public String getTouristName() { return touristName; }
@@ -388,28 +416,38 @@ public class TouristEntity extends PathfinderMob {
     public void setHotelCheckinTime(int time) { this.hotelCheckinTime = time; }
 
     public Set<UUID> getVisitedBuildings() { return visitedBuildings; }
-    public void addVisitedBuilding(UUID buildingId) { visitedBuildings.add(buildingId); }
-    public boolean hasVisitedBuilding(UUID buildingId) { return visitedBuildings.contains(buildingId); }
+    public void addVisitedBuilding(UUID buildingId) {
+        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return;
+        visitedBuildings.add(buildingId);
+    }
+    public boolean hasVisitedBuilding(UUID buildingId) {
+        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return false;
+        return visitedBuildings.contains(buildingId);
+    }
 
     // ── Service cooldown ──
 
     /** Returns the tick when the cooldown for a specific service building expires, or 0. */
     public int getServiceCooldown(UUID buildingId) {
+        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return 0;
         return serviceCooldowns.getOrDefault(buildingId, 0);
     }
 
     /** Set a cooldown for a specific service building until the given tick. */
     public void setServiceCooldown(UUID buildingId, int endTick) {
+        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
         serviceCooldowns.put(buildingId, endTick);
     }
 
     /** Returns the global service cooldown end tick (0 = no cooldown). */
     public int getServiceCooldownEndTick() {
+        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return 0;
         return serviceCooldownEndTick;
     }
 
     /** Set the global service cooldown end tick. */
     public void setServiceCooldownEndTick(int endTick) {
+        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
         this.serviceCooldownEndTick = endTick;
     }
 

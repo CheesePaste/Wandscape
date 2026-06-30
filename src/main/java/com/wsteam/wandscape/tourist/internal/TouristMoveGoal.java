@@ -82,6 +82,8 @@ public class TouristMoveGoal extends Goal {
     // ── Building-visit state ──
     private int idleTicks;
     private static final int POST_TOUR_IDLE_TICKS = 200;
+    /** Remaining ticks of standing-still interaction before effects trigger. */
+    private int interactionRemainingTicks;
 
     // ── POI state ──
     private int poiPauseTicks;
@@ -154,6 +156,19 @@ public class TouristMoveGoal extends Goal {
         if (tourist.getCheckedInBuildingId() != null) {
             tourist.getNavigation().stop();
             return;
+        }
+
+        // ── Forced move mode (command override) ──
+        TouristState forced = tourist.getForcedMoveMode();
+        if (forced != null) {
+            MoveMode mapped = mapStateToMoveMode(forced);
+            if (mapped != null && mapped != currentMode) {
+                Log.info(TAG, "[Tourist] {} forced mode {} (command override)",
+                        tourist.getTouristName(), mapped);
+                switchMode(mapped);
+                dispatchStart(); // plan target + begin navigation
+            }
+            tourist.forceMoveMode(null); // consume the override
         }
 
         switch (currentMode) {
@@ -332,8 +347,32 @@ public class TouristMoveGoal extends Goal {
 
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
-        if (distSqr < interactionRange * interactionRange) {
-            // Arrived at interact point → perform interaction
+        if (distSqr <= interactionRange * interactionRange) {
+            // Arrived at interact point
+            tourist.getNavigation().stop();
+
+            // Interaction duration phase: stand still before effects trigger
+            if (interactionRemainingTicks > 0) {
+                // Still counting down
+                interactionRemainingTicks--;
+                if (interactionRemainingTicks > 0) {
+                    return;
+                }
+                // Duration elapsed → perform interaction now
+            } else if (!exitingPhase) {
+                // First tick at arrival — check if this building has an interaction duration
+                UUID bldIdCheck = buildingId;
+                if (bldIdCheck != null) {
+                    int duration = getInteractionDuration(bldIdCheck);
+                    if (duration > 0) {
+                        interactionRemainingTicks = duration;
+                        showActionBar("⏳ " + tourist.getTouristName() + " 正在互动...");
+                        return;
+                    }
+                }
+            }
+
+            // Perform the interaction (either no duration, or duration just elapsed)
             boolean hotelStayed = performBuildingInteraction();
             if (hotelStayed) {
                 return; // Hotel check-in handled everything
@@ -476,6 +515,7 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
+        interactionRemainingTicks = 0;
         syncDebugData();
 
         // Probability-based next mode
@@ -735,6 +775,7 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
+        interactionRemainingTicks = 0;
         syncDebugData();
         tourist.getNavigation().stop();
         // Sync display state with actual movement
@@ -746,6 +787,17 @@ public class TouristMoveGoal extends Goal {
             case VISITING_BUILDING -> TouristState.VISITING;
             case EXPLORING_POI -> TouristState.EXPLORING;
             case WANDERING -> TouristState.WANDERING;
+        };
+    }
+
+    /** Reverse of {@link #mapModeToState}. Returns null for IDLE/SLEEPING (no MoveMode equivalent). */
+    @javax.annotation.Nullable
+    private static MoveMode mapStateToMoveMode(TouristState state) {
+        return switch (state) {
+            case VISITING -> MoveMode.VISITING_BUILDING;
+            case EXPLORING -> MoveMode.EXPLORING_POI;
+            case WANDERING -> MoveMode.WANDERING;
+            case IDLE, SLEEPING -> null;
         };
     }
 
@@ -1043,6 +1095,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private void applyPreferenceDecay(UUID buildingId) {
+        if (TouristCooldownDebug.skipPreferenceDecay) return;
         int decay = Config.TOURIST_PREFERENCE_DECAY.get();
         if (decay <= 0) return;
         String typeId = getBuildingTypeId(buildingId);
@@ -1181,15 +1234,38 @@ public class TouristMoveGoal extends Goal {
 
     private int getInteractionRange() {
         UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId == null) return 3;
+        if (buildingId == null) return Config.ARRIVAL_RADIUS.get();
         BuildingApi api = getBuildingApi();
-        if (api == null) return 3;
+        if (api == null) return Config.ARRIVAL_RADIUS.get();
         var data = api.getBuilding(buildingId);
-        if (data == null) return 3;
+        if (data == null) return Config.ARRIVAL_RADIUS.get();
         var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
-        if (config == null) return 3;
+        if (config == null) return Config.ARRIVAL_RADIUS.get();
         int r = config.interactionRadius();
-        return r > 0 ? r : 3;
+        return r > 0 ? r : Config.ARRIVAL_RADIUS.get();
+    }
+
+    /**
+     * Get the interaction duration (in ticks) for the current building.
+     * Tourist will stand still at the interact point for this duration
+     * before the interaction effects are applied.
+     */
+    private int getInteractionDuration(UUID buildingId) {
+        if (buildingId == null) return 0;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return 0;
+        var data = api.getBuilding(buildingId);
+        if (data == null) return 0;
+        var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
+        if (config == null) return 0;
+        String cat = config.category();
+        if ("shop".equals(cat) && config.shop() != null) {
+            return config.shop().interactionDurationTicks();
+        }
+        if ("service".equals(cat) && config.service() != null) {
+            return config.service().interactionDurationTicks();
+        }
+        return 0;
     }
 
     @Nullable

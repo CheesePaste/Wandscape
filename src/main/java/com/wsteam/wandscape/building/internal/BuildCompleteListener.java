@@ -27,6 +27,17 @@ import com.wsteam.wandscape.shared.log.Log;
 public final class BuildCompleteListener {
     private static final String TAG = "BuildCompleteListener";
 
+    /**
+     * Fraction of pattern blocks that must be damaged before a building is
+     * considered broken. For example, 3 means 1/3 or more.
+     */
+    static final int DAMAGE_THRESHOLD_DENOMINATOR = 3;
+
+    static boolean isBroken(int damagedCount, int totalPatternBlocks) {
+        if (totalPatternBlocks <= 0) return false;
+        return damagedCount * DAMAGE_THRESHOLD_DENOMINATOR >= totalPatternBlocks;
+    }
+
     private BuildCompleteListener() {}
 
     /**
@@ -77,13 +88,19 @@ public final class BuildCompleteListener {
         }
 
         List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config);
-        boolean intact = damaged.isEmpty();
+        boolean broken = isBroken(damaged.size(), config.pattern().size());
+        boolean intact = !broken;
         state.setStructureIntact(intact);
         data.setDirty();
 
         if (intact) {
-            Log.info(TAG, "[Building] {} at {} construction complete — now operational",
-                    state.getBuildingTypeId(), anchor);
+            if (damaged.isEmpty()) {
+                Log.info(TAG, "[Building] {} at {} construction complete — now operational",
+                        state.getBuildingTypeId(), anchor);
+            } else {
+                Log.info(TAG, "[Building] {} at {} — {}/{} blocks damaged (< 1/3), still operational",
+                        state.getBuildingTypeId(), anchor, damaged.size(), config.pattern().size());
+            }
 
             // Assign colony via ColonyApi
             com.wsteam.wandscape.shared.api.ColonyApi colonyApi =
@@ -116,8 +133,8 @@ public final class BuildCompleteListener {
                 }
             }
         } else {
-            Log.warn(TAG, "[Building] {} at {} — {} blocks still damaged after build_complete, re-enqueuing partial repair",
-                    state.getBuildingTypeId(), anchor, damaged.size());
+            Log.warn(TAG, "[Building] {} at {} — {}/{} blocks damaged (>= 1/3) BROKEN, enqueuing repair",
+                    state.getBuildingTypeId(), anchor, damaged.size(), config.pattern().size());
             BuildingBreakHandler.enqueueRepairForOffsets(state, config, damaged);
         }
     }

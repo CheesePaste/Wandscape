@@ -14,6 +14,7 @@ import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.client.BuildingDebugController;
+import com.wsteam.wandscape.projection.client.BuildingDebugOverlay;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.production.client.CraftingStationScreen;
@@ -130,6 +131,7 @@ public class WandscapeClient {
         ProjectionRenderer.register();
         ProjectionFlightController.register();
         BuildingDebugController.register();
+        BuildingDebugOverlay.register();
         BuildingEditorController.register();
         BuildingEditorRenderer.register();
         BuildingEditorAxisRenderer.register();

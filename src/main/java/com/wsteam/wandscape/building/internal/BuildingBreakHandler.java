@@ -45,9 +45,32 @@ public final class BuildingBreakHandler {
         if (buildingId == null) return;
 
         BuildingState state = data.getBuilding(buildingId);
-        if (state == null || !state.isStructureIntact()) return;
+        if (state == null) return;
+
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null) return;
+
+        // Re-verify entire building after break
+        List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config);
+        if (damaged.isEmpty()) return; // broken block wasn't part of pattern
+
+        boolean broken = BuildCompleteListener.isBroken(damaged.size(), config.pattern().size());
+        if (!broken) {
+            // Minor damage — still operational, no repair yet
+            if (!state.isStructureIntact()) {
+                // Building was already broken, ignore (no change)
+            }
+            Log.info(TAG, "[Building] {} minor damage: {}/{} blocks (< 1/3), still operational",
+                    state.getBuildingTypeId(), damaged.size(), config.pattern().size());
+            return;
+        }
+
+        if (!state.isStructureIntact()) return; // already broken
 
         state.setStructureIntact(false);
+        data.setDirty();
+
+        // Remove contribution
         UUID colonyId = state.getColonyId();
         if (colonyId != null) {
             boolean changed = data.removeBuildingContribution(colonyId, state.getBuildingTypeId());
@@ -63,10 +86,10 @@ public final class BuildingBreakHandler {
         if (colonyApi != null) {
             colonyApi.onBuildingDestroyed(state);
         }
-        enqueueRepairForPositions(state, List.of(pos));
-        data.setDirty();
-        Log.info(TAG, "[Building] Structure damaged: type={} at={} (block at {}) — partial repair enqueued",
-                state.getBuildingTypeId(), state.getAnchor(), pos);
+
+        enqueueRepairForOffsets(state, config, damaged);
+        Log.info(TAG, "[Building] {} BROKEN at {} — {}/{} blocks damaged (>= 1/3), repair enqueued",
+                state.getBuildingTypeId(), state.getAnchor(), damaged.size(), config.pattern().size());
     }
 
     @SubscribeEvent
@@ -87,7 +110,24 @@ public final class BuildingBreakHandler {
             BuildingState state = data.getBuilding(entry.getKey());
             if (state == null || !state.isStructureIntact()) continue;
 
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+            if (config == null) continue;
+
+            // Re-verify entire building after explosion
+            List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config);
+            if (damaged.isEmpty()) continue;
+
+            boolean broken = BuildCompleteListener.isBroken(damaged.size(), config.pattern().size());
+            if (!broken) {
+                Log.info(TAG, "[Building] {} minor explosion damage: {}/{} blocks (< 1/3), still operational",
+                        state.getBuildingTypeId(), damaged.size(), config.pattern().size());
+                continue;
+            }
+
             state.setStructureIntact(false);
+            data.setDirty();
+
+            // Remove contribution
             UUID colonyId = state.getColonyId();
             if (colonyId != null) {
                 boolean changed = data.removeBuildingContribution(colonyId, state.getBuildingTypeId());
@@ -96,10 +136,10 @@ public final class BuildingBreakHandler {
                             colonyId.toString().substring(0, 8), state.getBuildingTypeId());
                 }
             }
-            enqueueRepairForPositions(state, entry.getValue());
-            data.setDirty();
-            Log.info(TAG, "[Building] Structure damaged by explosion: type={} at={} ({} blocks) — partial repair enqueued",
-                    state.getBuildingTypeId(), state.getAnchor(), entry.getValue().size());
+
+            enqueueRepairForOffsets(state, config, damaged);
+            Log.info(TAG, "[Building] {} BROKEN by explosion at {} — {}/{} blocks damaged (>= 1/3), repair enqueued",
+                    state.getBuildingTypeId(), state.getAnchor(), damaged.size(), config.pattern().size());
         }
     }
 

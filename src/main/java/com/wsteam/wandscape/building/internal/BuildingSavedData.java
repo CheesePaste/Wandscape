@@ -125,8 +125,28 @@ public class BuildingSavedData extends SavedData {
 
     @Nullable
     public BuildingState getBuildingAt(BlockPos pos) {
+        // 1. Fast path: posIndex (populated from config.pattern() on register())
         UUID id = posIndex.get(pos);
-        return id != null ? buildings.get(id) : null;
+        if (id != null) {
+            BuildingState state = buildings.get(id);
+            if (state != null) return state;
+        }
+
+        // 2. Fallback: chunkIndex + bounding box containment.
+        // Needed after server restart (posIndex not persisted) or when
+        // raycast hits a block inside the bounding box that isn't in the
+        // pattern list.
+        UUID fallbackId = getBuildingIdAt(pos);
+        if (fallbackId != null) {
+            BuildingState state = buildings.get(fallbackId);
+            Log.debug(TAG, "[Debug] getBuildingAt fallback hit: pos={} buildingId={} type={}",
+                    pos, fallbackId.toString().substring(0, 8), state != null ? state.getBuildingTypeId() : "?");
+            return state;
+        }
+
+        Log.debug(TAG, "[Debug] getBuildingAt miss: pos={} posIndexSize={} chunkIndexSize={}",
+                pos, posIndex.size(), chunkIndex.size());
+        return null;
     }
 
     @Nullable

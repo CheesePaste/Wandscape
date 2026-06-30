@@ -136,7 +136,7 @@
   },
   "door_offset": [0, 0, -3],
   "interact_offset": [0, 1, 0],
-  "interaction_radius": 2,
+  "interaction_radius": 5,
   "service": {
     "energy_per_use": 15,
     "element_output": {
