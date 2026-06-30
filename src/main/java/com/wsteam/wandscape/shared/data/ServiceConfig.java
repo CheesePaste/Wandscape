@@ -11,14 +11,16 @@ public record ServiceConfig(
         @SerializedName("energy_per_use") int energyPerUse,
         @SerializedName("satisfaction_per_use") int satisfactionPerUse,
         @SerializedName("element_output") Map<String, Integer> elementOutput,
-        @SerializedName("max_occupancy") int maxOccupancy
+        @SerializedName("max_occupancy") int maxOccupancy,
+        @SerializedName("interaction_duration_ticks") int interactionDurationTicks
 ) {
-    public static final ServiceConfig NONE = new ServiceConfig(0, 0, Map.of(), 0);
+    public static final ServiceConfig NONE = new ServiceConfig(0, 0, Map.of(), 0, 0);
 
     public ServiceConfig {
         if (elementOutput == null) elementOutput = Map.of();
         if (energyPerUse < 0) energyPerUse = 0;
         if (satisfactionPerUse < 0) satisfactionPerUse = 0;
         if (maxOccupancy < 0) maxOccupancy = 0;
+        if (interactionDurationTicks < 0) interactionDurationTicks = 0;
     }
 }
