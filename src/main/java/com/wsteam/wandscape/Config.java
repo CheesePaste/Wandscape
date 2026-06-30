@@ -213,6 +213,12 @@ public class Config {
 
     // ---- Service system ----
 
+    public static final ModConfigSpec.IntValue ARRIVAL_RADIUS = BUILDER
+            .comment("Distance in blocks at which a tourist is considered to have arrived " +
+                     "at a building's interact point or entry point. Building-specific " +
+                     "interactionRadius overrides this when > 0.")
+            .defineInRange("tourist.arrivalRadius", 3, 1, 16);
+
     public static final ModConfigSpec.IntValue MICRO_NAV_SWITCH_DISTANCE = BUILDER
             .comment("Distance in blocks from a building's bounding box at which tourists " +
                      "switch from road-based macro navigation to indoor micro-navigation. " +

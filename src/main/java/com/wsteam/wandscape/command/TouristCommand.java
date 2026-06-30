@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.internal.TouristCooldownDebug;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
@@ -21,6 +22,7 @@ import java.util.List;
  * /wandscape tourist list
  * /wandscape tourist spawn
  * /wandscape tourist state &lt;name|all&gt; &lt;state&gt;
+ * /wandscape tourist cooldown &lt;service|visited|preference|all&gt; &lt;on|off&gt;
  * </pre>
  */
 public final class TouristCommand {
@@ -38,8 +40,16 @@ public final class TouristCommand {
                                 .then(Commands.argument("state", StringArgumentType.word())
                                         .suggests(TouristCommand::suggestStates)
                                         .executes(TouristCommand::forceState))))
+                .then(Commands.literal("cooldown")
+                        .then(Commands.argument("layer", StringArgumentType.word())
+                                .suggests(TouristCommand::suggestLayers)
+                                .then(Commands.argument("toggle", StringArgumentType.word())
+                                        .suggests(TouristCommand::suggestToggle)
+                                        .executes(TouristCommand::cooldownToggle))))
                 .build();
     }
+
+    // ── list / spawn / state ──
 
     private static int list(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
@@ -57,6 +67,13 @@ public final class TouristCommand {
                     t.getLevel(), t.getEnergy(), t.getSatisfaction()));
         }
 
+        // Show debug flag state
+        lines.add("");
+        lines.add("--- Cooldown Debug ---");
+        lines.add("  service : " + (TouristCooldownDebug.skipServiceCooldown ? "DISABLED (skip)" : "ENABLED (normal)"));
+        lines.add("  visited : " + (TouristCooldownDebug.skipVisitedBuildings ? "DISABLED (skip)" : "ENABLED (normal)"));
+        lines.add("  pref    : " + (TouristCooldownDebug.skipPreferenceDecay ? "DISABLED (skip)" : "ENABLED (normal)"));
+
         String msg = String.join("\n", lines);
         src.sendSuccess(() -> Component.literal(msg), false);
         return Command.SINGLE_SUCCESS;
@@ -68,7 +85,6 @@ public final class TouristCommand {
 
         int before = countTourists(level);
         TouristSpawnSystem.forceSpawn(level);
-        // forceSpawn is sync, count after
         int after = countTourists(level);
         int spawned = after - before;
 
@@ -107,7 +123,7 @@ public final class TouristCommand {
 
         if ("all".equalsIgnoreCase(name)) {
             for (TouristEntity t : tourists) {
-                t.applyState(targetState);
+                t.forceMoveMode(targetState);
             }
             src.sendSuccess(() -> Component.literal(
                     "[Tourist] All " + tourists.size() + " tourists → " + targetState.getDisplayName()), false);
@@ -116,7 +132,7 @@ public final class TouristCommand {
 
         for (TouristEntity t : tourists) {
             if (t.getTouristName().startsWith(name)) {
-                t.applyState(targetState);
+                t.forceMoveMode(targetState);
                 src.sendSuccess(() -> Component.literal(
                         "[Tourist] " + t.getTouristName() + " → " + targetState.getDisplayName()), false);
                 return Command.SINGLE_SUCCESS;
@@ -126,15 +142,59 @@ public final class TouristCommand {
         return 0;
     }
 
-    private static List<TouristEntity> findTourists(ServerLevel level) {
-        List<TouristEntity> result = new ArrayList<>();
-        for (var entity : level.getAllEntities()) {
-            if (entity instanceof TouristEntity t && t.isAlive()) {
-                result.add(t);
+    // ── cooldown toggle ──
+
+    private static int cooldownToggle(CommandContext<CommandSourceStack> ctx) {
+        String layer = StringArgumentType.getString(ctx, "layer").toLowerCase();
+        String toggle = StringArgumentType.getString(ctx, "toggle").toLowerCase();
+
+        boolean enable;
+        if ("on".equals(toggle)) {
+            enable = true;
+        } else if ("off".equals(toggle)) {
+            enable = false;
+        } else {
+            ctx.getSource().sendFailure(Component.literal(
+                    "Expected 'on' or 'off', got '" + toggle + "'"));
+            return 0;
+        }
+
+        switch (layer) {
+            case "service" -> {
+                TouristCooldownDebug.skipServiceCooldown = !enable;
+            }
+            case "visited" -> {
+                TouristCooldownDebug.skipVisitedBuildings = !enable;
+            }
+            case "preference", "pref" -> {
+                TouristCooldownDebug.skipPreferenceDecay = !enable;
+            }
+            case "all" -> {
+                if (enable) {
+                    TouristCooldownDebug.enableAll();
+                } else {
+                    TouristCooldownDebug.disableAll();
+                }
+            }
+            default -> {
+                ctx.getSource().sendFailure(Component.literal(
+                        "Unknown layer: '" + layer + "'. Valid: service, visited, preference, all"));
+                return 0;
             }
         }
-        return result;
+
+        String state = enable ? "ENABLED (normal)" : "DISABLED (debug skip)";
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "[Tourist] Cooldown '" + layer + "' -> " + state), true);
+
+        // Also log to server console for traceability
+        com.wsteam.wandscape.shared.log.Log.info("TouristCommand",
+                "[Debug] Cooldown '{}' set to {}", layer, enable ? "on" : "off");
+
+        return Command.SINGLE_SUCCESS;
     }
+
+    // ── Suggestions ──
 
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestStates(
             CommandContext<CommandSourceStack> ctx,
@@ -145,5 +205,35 @@ public final class TouristCommand {
         builder.suggest("idle");
         builder.suggest("sleeping");
         return builder.buildFuture();
+    }
+
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestLayers(
+            CommandContext<CommandSourceStack> ctx,
+            com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+        builder.suggest("service");
+        builder.suggest("visited");
+        builder.suggest("preference");
+        builder.suggest("all");
+        return builder.buildFuture();
+    }
+
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestToggle(
+            CommandContext<CommandSourceStack> ctx,
+            com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+        builder.suggest("on");
+        builder.suggest("off");
+        return builder.buildFuture();
+    }
+
+    // ── Helpers ──
+
+    private static List<TouristEntity> findTourists(ServerLevel level) {
+        List<TouristEntity> result = new ArrayList<>();
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof TouristEntity t && t.isAlive()) {
+                result.add(t);
+            }
+        }
+        return result;
     }
 }

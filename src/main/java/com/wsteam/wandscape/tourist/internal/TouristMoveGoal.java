@@ -158,6 +158,19 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        // ── Forced move mode (command override) ──
+        TouristState forced = tourist.getForcedMoveMode();
+        if (forced != null) {
+            MoveMode mapped = mapStateToMoveMode(forced);
+            if (mapped != null && mapped != currentMode) {
+                Log.info(TAG, "[Tourist] {} forced mode {} (command override)",
+                        tourist.getTouristName(), mapped);
+                switchMode(mapped);
+                dispatchStart(); // plan target + begin navigation
+            }
+            tourist.forceMoveMode(null); // consume the override
+        }
+
         switch (currentMode) {
             case VISITING_BUILDING -> tickBuildingVisit();
             case EXPLORING_POI -> tickPoiExplore();
@@ -334,7 +347,7 @@ public class TouristMoveGoal extends Goal {
 
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
-        if (distSqr < interactionRange * interactionRange) {
+        if (distSqr <= interactionRange * interactionRange) {
             // Arrived at interact point
             tourist.getNavigation().stop();
 
@@ -777,6 +790,17 @@ public class TouristMoveGoal extends Goal {
         };
     }
 
+    /** Reverse of {@link #mapModeToState}. Returns null for IDLE/SLEEPING (no MoveMode equivalent). */
+    @javax.annotation.Nullable
+    private static MoveMode mapStateToMoveMode(TouristState state) {
+        return switch (state) {
+            case VISITING -> MoveMode.VISITING_BUILDING;
+            case EXPLORING -> MoveMode.EXPLORING_POI;
+            case WANDERING -> MoveMode.WANDERING;
+            case IDLE, SLEEPING -> null;
+        };
+    }
+
     // ════════════════════════════════════════════════════════════════
     // Building-visit: planning & interaction
     // (unchanged from original tourist logic)
@@ -1071,6 +1095,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private void applyPreferenceDecay(UUID buildingId) {
+        if (TouristCooldownDebug.skipPreferenceDecay) return;
         int decay = Config.TOURIST_PREFERENCE_DECAY.get();
         if (decay <= 0) return;
         String typeId = getBuildingTypeId(buildingId);
@@ -1209,15 +1234,15 @@ public class TouristMoveGoal extends Goal {
 
     private int getInteractionRange() {
         UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId == null) return 3;
+        if (buildingId == null) return Config.ARRIVAL_RADIUS.get();
         BuildingApi api = getBuildingApi();
-        if (api == null) return 3;
+        if (api == null) return Config.ARRIVAL_RADIUS.get();
         var data = api.getBuilding(buildingId);
-        if (data == null) return 3;
+        if (data == null) return Config.ARRIVAL_RADIUS.get();
         var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
-        if (config == null) return 3;
+        if (config == null) return Config.ARRIVAL_RADIUS.get();
         int r = config.interactionRadius();
-        return r > 0 ? r : 3;
+        return r > 0 ? r : Config.ARRIVAL_RADIUS.get();
     }
 
     /**
