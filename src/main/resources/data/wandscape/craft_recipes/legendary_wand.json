@@ -1,0 +1,22 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "legendary_wand",
+  "display_name": "Legendary Wand",
+  "wand_color": "#FFD700",
+  "behaviors": { "ritual": 3, "build": 2, "gather": 1 },
+  "range": 3,
+  "mana_cost_multiplier": 0.6,
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "gold": 128,
+    "ender": 64,
+    "fire": 32,
+    "water": 16
+  },
+  "unlock_requirement": {
+    "min_comfort": 80,
+    "min_magic": 150,
+    "min_wonder": 50
+  }
+}

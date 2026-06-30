@@ -9,7 +9,7 @@ import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 import net.minecraft.nbt.CompoundTag;
 public class WandPresetLoader {
-    private static final String CATEGORY = "wands";
+    private static final String CATEGORY = "craft_recipes";
 
     private final WandscapeDataRegistry<WandPreset> registry;
 
@@ -33,24 +33,34 @@ public class WandPresetLoader {
     ) {
         static WandPreset fromJson(String id, JsonElement json) {
             JsonObject obj = json.getAsJsonObject();
-            String displayName = obj.get("display_name").getAsString();
-            String defaultColor = obj.get("default_color").getAsString();
+
+            // Only process wand-type entries; skip potions and other types
+            if (obj.has("type") && !"wand".equals(obj.get("type").getAsString())) {
+                return null;
+            }
+
+            String displayName = obj.has("display_name")
+                    ? obj.get("display_name").getAsString() : id;
+            String defaultColor = obj.has("wand_color")
+                    ? obj.get("wand_color").getAsString() : "#FFFFFF";
 
             CompoundTag nbt = new CompoundTag();
             nbt.putString("wand_color", defaultColor);
 
-            CompoundTag behaviors = new CompoundTag();
-            JsonObject btObj = obj.getAsJsonObject("behaviors");
-            for (var entry : btObj.entrySet()) {
-                behaviors.putInt(entry.getKey(), entry.getValue().getAsInt());
+            if (obj.has("behaviors")) {
+                CompoundTag behaviors = new CompoundTag();
+                JsonObject btObj = obj.getAsJsonObject("behaviors");
+                for (var entry : btObj.entrySet()) {
+                    behaviors.putInt(entry.getKey(), entry.getValue().getAsInt());
+                }
+                nbt.put("behaviors", behaviors);
             }
-            nbt.put("behaviors", behaviors);
 
-            if (obj.has("default_range")) {
-                nbt.putInt("range", obj.get("default_range").getAsInt());
+            if (obj.has("range")) {
+                nbt.putInt("range", obj.get("range").getAsInt());
             }
-            if (obj.has("default_mana_cost_multiplier")) {
-                nbt.putFloat("mana_cost_multiplier", obj.get("default_mana_cost_multiplier").getAsFloat());
+            if (obj.has("mana_cost_multiplier")) {
+                nbt.putFloat("mana_cost_multiplier", obj.get("mana_cost_multiplier").getAsFloat());
             }
 
             return new WandPreset(id, displayName, defaultColor, nbt);

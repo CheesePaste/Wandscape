@@ -61,3 +61,11 @@
 ### NavigationSystem
 
 在 `engine/system/`（非 core/system/），因为依赖 MC Pathfinder。NPC 移动总控：≤64格寻路 + 卡死检测(每60tick/3次→传送) + 超时→传送。超距或失败时向私有队列推入 RitualOp(SELF_TELEPORT)，由 TaskExecutionSystem 统一执行而非直接操作 MC 实体。
+
+### 叙事事件订阅者（engine/system/）
+
+三个系统订阅 `NarrativeEventTriggered`：
+
+- **ChronicleSystem** — 筛选 chronicleWorthy 事件，存储编年史（骨架，未来实现）
+- **StatsSystem** — 记录游客统计（骨架，未来实现）
+- **AchievementSystem** — 评估成就触发条件（骨架，未来实现）

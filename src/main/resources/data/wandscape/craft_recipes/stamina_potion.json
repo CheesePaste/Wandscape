@@ -1,8 +1,8 @@
 {
+  "type": "potion",
+  "craft_station": "potion_station",
   "id": "stamina_potion",
-  "output": {
-    "item": "wandscape:mana_potion"
-  },
+  "output": { "item": "wandscape:mana_potion" },
   "cost": {
     "water": 32,
     "wood": 8,

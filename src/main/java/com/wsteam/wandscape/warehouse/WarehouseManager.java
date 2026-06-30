@@ -9,8 +9,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
-import com.wsteam.wandscape.core.boundary.EventBus;
-import com.wsteam.wandscape.core.event.ResourceFulfilled;
+import com.wsteam.wandscape.core.boundary.ResourceAddedListener;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -38,16 +37,16 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
 
     private static final String TAG = "WarehouseManager";
 
-    /** Core event bus — set by EngineBootstrap after world creation. */
+    /** Callback invoked when resources are added to the warehouse. */
     @Nullable
-    private EventBus eventBus;
+    private ResourceAddedListener resourceAddedListener;
 
     private final Map<ResourceId, Long> lastShortageNotify = new java.util.HashMap<>();
     private static final long SHORTAGE_NOTIFY_COOLDOWN_MS = 10_000;
 
-    /** Set the core event bus (called by EngineBootstrap). */
-    public void setEventBus(EventBus eventBus) {
-        this.eventBus = eventBus;
+    /** Set by EngineBootstrap. */
+    public void setResourceAddedListener(@Nullable ResourceAddedListener listener) {
+        this.resourceAddedListener = listener;
     }
 
     // ════════════════════════════════════════════════════════════
@@ -135,9 +134,9 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             CompoundTag nbt = extractNbt(stack);
             ItemKey key = ItemKey.of(rl.toString(), nbt);
             bank.add(colonyId, key, stack.getCount());
-            // Emit ResourceFulfilled once per unique resource type
-            if (eventBus != null && emitted.add(rl.toString())) {
-                eventBus.emit(new ResourceFulfilled(new ResourceId(rl.toString()), stack.getCount()));
+            // Notify listener once per unique resource type
+            if (resourceAddedListener != null && emitted.add(rl.toString())) {
+                resourceAddedListener.onResourceAdded(new ResourceId(rl.toString()), stack.getCount());
             }
         }
     }
@@ -279,9 +278,9 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
                     resource.id(), amount, colonyId, bank.count(colonyId, key));
         }
 
-        // Emit ResourceFulfilled to wake any AWAITING_RESOURCES tasks
-        if (eventBus != null) {
-            eventBus.emit(new ResourceFulfilled(resource, amount));
+        // Notify listener to wake any AWAITING_RESOURCES tasks
+        if (resourceAddedListener != null) {
+            resourceAddedListener.onResourceAdded(resource, amount);
         }
     }
 

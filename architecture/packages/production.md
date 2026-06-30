@@ -64,8 +64,7 @@
 | 目录 | 数量 | 说明 |
 |------|------|------|
 | `data/wandscape/element_mappings/` | 9 | 合并了原 synthesize_recipes，synthesize 块存在即表示可合成 |
-| `data/wandscape/craft_wand_recipes/` | 7 | builder/gatherer/crafter/ritual/archmage/legendary/journeyman_builder_wand |
-| `data/wandscape/potion_recipes/` | 2 | mana_potion / stamina_potion(1) |
+| `data/wandscape/craft_recipes/` | 9 | 法杖×7 + 魔药×2，type 字段区分，craft_station 指定工作站 |
 
 ## 蓝图
 
@@ -86,20 +85,19 @@
 
 ## Craft Wand 配方 JSON 格式
 
-位置：`data/wandscape/craft_wand_recipes/*.json`
+位置：`data/wandscape/craft_recipes/*.json`
 
 ```json
 {
+  "type": "wand",
+  "craft_station": "crafting_station",
   "id": "builder_wand",
-  "output": {
-    "item": "wandscape:wand",
-    "nbt": {
-      "wand_color": "#FFD700",
-      "behaviors": { "building": 0 },
-      "range": 1,
-      "mana_cost_multiplier": 1.0
-    }
-  },
+  "display_name": "Builder's Wand",
+  "wand_color": "#FFD700",
+  "behaviors": { "building": 1 },
+  "range": 1,
+  "mana_cost_multiplier": 1.0,
+  "output": { "item": "wandscape:wand" },
   "cost": {
     "earth": 32,
     "wood": 16
@@ -112,13 +110,21 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| type | string | 配方类型：`"wand"` / `"potion"`，未来可扩展 `"alchemy"` 等 |
+| craft_station | string | 制作工作站：`"crafting_station"` / `"potion_station"` |
 | id | string | 配方唯一标识 |
+| display_name | string | 法杖显示名称（WandPreset 使用） |
+| wand_color | string | 法杖颜色（hex），同时作为 output NBT 和预设颜色 |
+| behaviors | {"tag": level} | 法杖能力映射。level 0 表示基础即可使用 |
+| range | int | 法杖范围 |
+| mana_cost_multiplier | float | 法力消耗倍率 |
 | output.item | string | 产出物品 ID（全部法杖共用 "wandscape:wand"） |
-| output.nbt | object | 产出物品 NBT（含 wand_color/behaviors/range/mana_cost_multiplier） |
-| output.nbt.behaviors | {"tag": level} | 法杖能力映射（如 `{"building": 0}`）。level 0 表示基础即可使用 |
 | cost | {element: amount} | 制作消耗的元素量 |
 | unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛，三维满足才显示 |
-| wand_level | {"building"/"crafting"/…: N}（可选） | 覆盖默认 wand 需求。缺省或全为 0 → 任何 NPC 可制作；`{"building": 2}` → 需要 BUILDING≥2 法杖才能执行此配方 |
+| wand_level | {"building"/"crafting"/…: N}（可选） | 覆盖默认 wand 需求。缺省或全为 0 → 任何 NPC 可制作 |
+| input_items | [string]（仅 type=potion） | 魔药额外消耗物品列表 |
+
+**注意**：法杖的 NBT 属性（`wand_color`/`behaviors`/`range`/`mana_cost_multiplier`）定义在 JSON 顶层，`CraftWandRecipe` 和 `WandPreset` 均从同一字段读取，消除重复。`output.nbt` 不再嵌套——由 `CraftWandRecipe.fromJson` 自动构建。
 
 **注意**：`behaviors` 中的 level 为 0 时，任何 BUILDING 能力 ≥ 0 的 NPC 均可制作。法杖实际能力等级由 output.nbt 决定，制作完成后可通过 `ColonyItemBank` 装备给 NPC。
 

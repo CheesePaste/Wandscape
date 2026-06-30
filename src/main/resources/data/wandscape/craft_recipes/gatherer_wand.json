@@ -1,0 +1,18 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "gatherer_wand",
+  "display_name": "Gatherer's Wand",
+  "wand_color": "#228B22",
+  "behaviors": { "gathering": 1 },
+  "range": 1,
+  "mana_cost_multiplier": 1.0,
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "wood": 32,
+    "water": 16
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  }
+}

@@ -82,6 +82,16 @@ GridPos(x,y,z) / BlockType("mod:id") / ResourceId / ResourceStack / RitualId / E
 
 BlockOps(7方法) / EntityOps / RitualOps(beginRitual返回CompletableFuture) / MovementOps(navigateTo返回CompletableFuture) / ColonyResourceAccess(6方法) / WandProvider(findWand——core层接口，engine层实现) / EventBus(emit/subscribe/unsubscribe)
 
+### event/ — 事件定义
+
+| 事件 | 用途 | 订阅者数 |
+|------|------|---------|
+| `TaskCompleted` | 全局任务完成 | 1（扩展预留） |
+| `CustomEvent` | 蓝图 emit 的自定义事件 | 4 |
+| `NarrativeEventTriggered` | 叙事事件（游客行为） | 3 |
+
+事件通过 `SimpleEventBus` 在 tick 末批量派发。1:N 场景使用事件，1:1 场景使用 `core/boundary/` 接口注入。
+
 ### WandRequirementDeriver
 
 纯函数，扫描 TaskSequence 的所有 AtomicOp 推导 `Map<BehaviourTag, BehaviourLevel>`：

@@ -30,7 +30,10 @@ class SimpleDataRegistry<T> implements WandscapeDataRegistry<T> {
     }
 
     void loadEntry(String id, JsonElement json) {
-        entries.put(id, parser.apply(id, json));
+        T result = parser.apply(id, json);
+        if (result != null) {
+            entries.put(id, result);
+        }
     }
 
     void clear() {

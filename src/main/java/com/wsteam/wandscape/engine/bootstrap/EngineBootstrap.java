@@ -19,7 +19,6 @@ import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
 import com.wsteam.wandscape.core.system.TaskSource;
-import com.wsteam.wandscape.core.system.WarehouseSource;
 import com.wsteam.wandscape.core.system.WorkbenchSource;
 import com.wsteam.wandscape.core.task.BlueprintInterpreter;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
@@ -110,13 +109,6 @@ public final class EngineBootstrap {
         // 3. Build task sources
         List<TaskSource> taskSources = new ArrayList<>();
         taskSources.add(new BuildingTaskSource());
-        taskSources.add(new WarehouseSource(() -> {
-            // Only emit ResourceLow when at least one colony has a storage building.
-            // Without storage, gathered resources have nowhere to go — skip entirely.
-            BuildingApi buildingApi = WandscapeApis.getBuildingApi();
-            if (buildingApi == null) return false;
-            return !buildingApi.getBuildingsByCategory(null, "storage").isEmpty();
-        }));
         taskSources.add(new WorkbenchSource());
         taskSources.add(new RoadTaskSource());
 
@@ -169,39 +161,18 @@ public final class EngineBootstrap {
         // 6. Bootstrap engine
         World world = CoreBootstrap.bootstrap(config);
 
-        // 6a. Inject core EventBus into WarehouseManager so addResource() emits ResourceFulfilled
+        // 6a. Wire resource-added callback so warehouse additions wake AWAITING_RESOURCES tasks
         if (colonyResources instanceof com.wsteam.wandscape.warehouse.WarehouseManager wm) {
-            wm.setEventBus(world.eventBus);
-            Log.info(TAG, "  WarehouseManager EventBus injected");
+            wm.setResourceAddedListener(world.taskPool::onResourceAdded);
+            Log.info(TAG, "  WarehouseManager ResourceAddedListener wired");
         }
 
         // 6b. Wire ritualOps into the world (after bootstrap so world exists)
         world.ritualOps = ritualOps;
 
-        // 6b. Create EventDrivenTaskSource (event → gather tasks) with synthesize handler
-        EventDrivenTaskSource eventSource = new EventDrivenTaskSource(
-                world.taskPool, world.eventBus, () -> GridPos.ORIGIN);
-        eventSource.setResourceShortageHandler(createShortageHandler(world));
-        eventSource.setGatherEnabled(false); // gather tasks disabled for early-access
-        Log.info(TAG, "  EventDrivenTaskSource wired (gather=OFF)");
-
-        // 6c. Load persisted thresholds from ColonyItemBank into WarehouseSource
-        WarehouseSource warehouseSource = WarehouseSource.getActive();
-        if (warehouseSource != null && colonyResources instanceof com.wsteam.wandscape.warehouse.WarehouseManager wm) {
-            var server = ServerLifecycleHooks.getCurrentServer();
-            if (server != null) {
-                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(server.overworld());
-                for (UUID colonyId : bank.getColonyIds()) {
-                    var thresh = bank.getAllThresholds(colonyId);
-                    for (var entry : thresh.entrySet()) {
-                        warehouseSource.setThreshold(
-                                new com.wsteam.wandscape.core.types.ResourceId(entry.getKey()),
-                                entry.getValue().intValue());
-                    }
-                }
-                Log.info(TAG,"  Loaded {} colony thresholds into WarehouseSource", bank.getColonyIds().size());
-            }
-        }
+        // 6b. Wire resource shortage handler directly into task pool
+        world.taskPool.setResourceShortageHandler(createShortageHandler(world));
+        Log.info(TAG, "  ResourceShortageHandler → GlobalTaskPool wired");
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
@@ -253,6 +224,12 @@ public final class EngineBootstrap {
         world.opExecutors.register(resourceReqExec);
         WandscapeEngine.setResourceRequestExec(resourceReqExec);
         Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
+
+        // 9f. Register narrative event subscribers (chronicle, stats, achievements)
+        com.wsteam.wandscape.engine.system.ChronicleSystem.register();
+        com.wsteam.wandscape.engine.system.StatsSystem.register();
+        com.wsteam.wandscape.engine.system.AchievementSystem.register();
+        Log.info(TAG, "  ChronicleSystem / StatsSystem / AchievementSystem registered");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

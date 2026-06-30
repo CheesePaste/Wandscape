@@ -6,6 +6,8 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementMappingConfig;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -13,15 +15,30 @@ import com.wsteam.wandscape.production.data.BrewPotionRecipe;
 import com.wsteam.wandscape.production.data.CraftWandRecipe;
 import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
+import com.wsteam.wandscape.shared.log.Log;
 public class ProductionRecipeLoader {
+    private static final String TAG = "ProductionRecipeLoader";
+    private static final String CATEGORY = "craft_recipes";
+
     private final WandscapeDataRegistry<CraftWandRecipe> craftWandRecipes;
     private final WandscapeDataRegistry<BrewPotionRecipe> potionRecipes;
     private final ElementMappingLoader elementMappingLoader;
 
     public ProductionRecipeLoader(WandscapeDataLoader dataLoader, ElementMappingLoader elementMappingLoader) {
-        this.craftWandRecipes = dataLoader.register("craft_wand_recipes", CraftWandRecipe::fromJson);
-        this.potionRecipes = dataLoader.register("potion_recipes", BrewPotionRecipe::fromJson);
+        this.craftWandRecipes = dataLoader.register(CATEGORY, (id, json) -> {
+            String type = getType(json);
+            return "wand".equals(type) ? CraftWandRecipe.fromJson(id, json) : null;
+        });
+        this.potionRecipes = dataLoader.register(CATEGORY, (id, json) -> {
+            String type = getType(json);
+            return "potion".equals(type) ? BrewPotionRecipe.fromJson(id, json) : null;
+        });
         this.elementMappingLoader = elementMappingLoader;
+    }
+
+    private static String getType(JsonElement json) {
+        JsonObject obj = json.getAsJsonObject();
+        return obj.has("type") ? obj.get("type").getAsString() : "wand";
     }
 
     /** Returns a synthesize recipe derived from element_mappings, or null if not synthesizable. */

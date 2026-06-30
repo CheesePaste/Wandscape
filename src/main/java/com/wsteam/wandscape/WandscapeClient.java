@@ -37,7 +37,6 @@ import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.shared.ui.task.TaskEditorScreen;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.warehouse.network.WarehouseThresholdDataPacket;
 
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
@@ -155,16 +154,6 @@ public class WandscapeClient {
             } else {
                 var ws = new WarehouseScreen();
                 ws.updateItems(packet);
-                Minecraft.getInstance().setScreen(ws);
-            }
-        });
-        WarehouseThresholdDataPacket.setClientHandler(packet -> {
-            var screen = Minecraft.getInstance().screen;
-            if (screen instanceof WarehouseScreen ws) {
-                ws.updateThresholds(packet);
-            } else {
-                var ws = new WarehouseScreen();
-                ws.updateThresholds(packet);
                 Minecraft.getInstance().setScreen(ws);
             }
         });

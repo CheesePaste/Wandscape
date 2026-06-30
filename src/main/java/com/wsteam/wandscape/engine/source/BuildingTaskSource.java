@@ -128,9 +128,6 @@ public class BuildingTaskSource implements TaskSource {
     private void supplyNodeBuildings(BuildingApi api, @javax.annotation.Nullable BuildingTaskPool btp) {
         BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
 
-        // Check WarehouseSource thresholds — if it's active, respect its per-resource settings
-        var ws = com.wsteam.wandscape.core.system.WarehouseSource.getActive();
-
         // Buildings that already have queued work (will be published in step 3)
         Set<UUID> hasWork = new HashSet<>(api.getBuildingsWithPendingWork(null));
         Log.info(TAG, "[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
@@ -154,40 +151,6 @@ public class BuildingTaskSource implements TaskSource {
 
             NodeConfig nodeConfig = config.nodeConfig();
             if (nodeConfig == null) continue;
-
-            // ── Check WarehouseSource threshold for this node's element ──
-            if (ws != null) {
-                var resourceId = new com.wsteam.wandscape.core.types.ResourceId(nodeConfig.element());
-                int threshold = ws.getThreshold(resourceId);
-                if (threshold <= 0) {
-                    Log.debug(TAG,"[TaskSrc] node {} ({}) skipped: threshold=0 (disabled)",
-                            buildingId.toString().substring(0, 8), resourceId.id());
-                    continue; // auto-gather disabled for this resource
-                }
-
-                // Compare against current colony stock — only gather if stock < threshold
-                UUID colonyId = bd.getColonyId();
-                if (colonyId != null) {
-                    try {
-                        var elementType = com.wsteam.wandscape.shared.data.ElementType.valueOf(
-                                nodeConfig.element().toUpperCase());
-                        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-                        if (server != null) {
-                            var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(server.overworld());
-                            long currentStock = bank.countElement(colonyId, elementType);
-                            if (currentStock >= threshold) {
-                                Log.debug(TAG,"[TaskSrc] node {} ({}) skipped: stock={} >= threshold={}",
-                                        buildingId.toString().substring(0, 8),
-                                        resourceId.id(), currentStock, threshold);
-                                continue;
-                            }
-                        }
-                    } catch (IllegalArgumentException e) {
-                        Log.debug(TAG,"[TaskSrc] node {}: unknown element '{}', proceeding anyway",
-                                buildingId.toString().substring(0, 8), nodeConfig.element());
-                    }
-                }
-            }
 
             // Build WorkItem params
             Map<String, JsonElement> params = new LinkedHashMap<>();

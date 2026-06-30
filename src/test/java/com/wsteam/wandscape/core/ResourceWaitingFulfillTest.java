@@ -10,7 +10,6 @@ import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.event.ResourceFulfilled;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.PlayerManualSource;
@@ -24,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests the full "resource shortage → AWAITING_RESOURCES →
- * ResourceFulfilled wake-up → resume and complete" cycle.
+ * resource added wake-up → resume and complete" cycle.
  */
 public class ResourceWaitingFulfillTest {
 
@@ -111,11 +110,11 @@ public class ResourceWaitingFulfillTest {
         assertEquals(TaskState.AWAITING_RESOURCES, task.state);
 
         mock.seedWarehouse(ResourceId.STONE_BRICKS, 50);
-        world.eventBus.emit(new ResourceFulfilled(ResourceId.STONE_BRICKS, 50));
+        world.taskPool.onResourceAdded(ResourceId.STONE_BRICKS, 50);
 
-        world.tick(1.0f);
+        // Wake-up is synchronous — no tick needed
         assertEquals(TaskState.PENDING_ASSIGN, task.state,
-                "Task should wake to PENDING_ASSIGN after resource fulfilled");
+                "Task should wake to PENDING_ASSIGN after resource added");
         assertNull(task.awaitingResource, "awaitingResource should be cleared on wake");
 
         tickN(10);
@@ -159,16 +158,14 @@ public class ResourceWaitingFulfillTest {
 
         // Partial fulfillment: +3 → total 8, still below 10
         mock.seedWarehouse(ResourceId.STONE_BRICKS, 3);
-        world.eventBus.emit(new ResourceFulfilled(ResourceId.STONE_BRICKS, 3));
-        world.tick(1.0f);
+        world.taskPool.onResourceAdded(ResourceId.STONE_BRICKS, 3);
 
         assertEquals(TaskState.AWAITING_RESOURCES, task.state,
                 "Task should stay AWAITING_RESOURCES when partial fill is insufficient");
 
         // Full fulfillment: +20 → total 28, well above 10
         mock.seedWarehouse(ResourceId.STONE_BRICKS, 20);
-        world.eventBus.emit(new ResourceFulfilled(ResourceId.STONE_BRICKS, 20));
-        world.tick(1.0f);
+        world.taskPool.onResourceAdded(ResourceId.STONE_BRICKS, 20);
 
         assertEquals(TaskState.PENDING_ASSIGN, task.state,
                 "Task should wake once sufficient resources available");
