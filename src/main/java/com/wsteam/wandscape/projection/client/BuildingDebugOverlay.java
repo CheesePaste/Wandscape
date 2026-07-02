@@ -3,6 +3,7 @@ package com.wsteam.wandscape.projection.client;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
@@ -12,17 +13,20 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.wsteam.wandscape.shared.log.Log;
 
+import org.lwjgl.glfw.GLFW;
+
 /**
- * Renders a small translucent building-info overlay when the debug
- * inspect mode (G key) is active and the player is looking at a
+ * Renders a small translucent building-info overlay when debug inspect mode
+ * is active (now tied to V panel open/close) and the player is looking at a
  * building.
  *
- * <p>No style template / MedievalScreen — just compact text on a
- * transparent dark background.
+ * <p>Includes shutdown/restart and destroy action buttons below the info box.
  */
 public final class BuildingDebugOverlay {
 
@@ -42,6 +46,20 @@ public final class BuildingDebugOverlay {
     private static final int GAP = 6;
     private static final int LINE_H = 10;
 
+    // Button colors
+    private static final int BTN_SHUTDOWN_BG = 0xCC8B4513;
+    private static final int BTN_RESTART_BG = 0xCC2E7D32;
+    private static final int BTN_DESTROY_BG = 0xCC8B0000;
+    private static final int BTN_HOVER_BRIGHTEN = 0x33333333;
+    private static final int BTN_TEXT = 0xFFFFFFFF;
+    private static final int BTN_HEIGHT = 16;
+    private static final int BTN_GAP = 4;
+
+    // Button bounds — set each frame, read by mouse handler
+    private static volatile int btnShutdownX, btnShutdownY, btnShutdownW;
+    private static volatile int btnDestroyX, btnDestroyY, btnDestroyW;
+    private static volatile boolean buttonsVisible = false;
+
     private static boolean registered = false;
 
     private BuildingDebugOverlay() {}
@@ -55,23 +73,17 @@ public final class BuildingDebugOverlay {
 
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
-        if (!BuildingDebugClientState.isActive()) {
-            return; // too noisy to log every frame
-        }
+        if (!BuildingDebugClientState.isActive()) return;
 
         BuildingDebugResponsePacket data = BuildingDebugClientState.getCachedData();
         if (data == null) {
-            // active but no data — logged once per state change in the controller
+            buttonsVisible = false;
             return;
         }
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        if (mc.screen != null) {
-            Log.info(TAG, "[Debug] Overlay skipped — screen is open (class={})",
-                    mc.screen.getClass().getSimpleName());
-            return;
-        }
+        if (mc.screen != null) return;
 
         GuiGraphics g = event.getGuiGraphics();
         Font font = mc.font;
@@ -113,14 +125,6 @@ public final class BuildingDebugOverlay {
         int boxY = 4;
         float yBase = boxY + PAD_Y;
 
-        Log.info(TAG, "[Debug] Rendering overlay — type={} category={} status={} box=({},{})-({},{})",
-                l1, l1cat, l1status, boxX, boxY, boxX + boxW, boxY + boxH);
-        Log.info(TAG, "[Debug]   stats={} id={} colony={} anchor={}",
-                l2stats, shortUuid(data.buildingId()),
-                data.colonyId() != null ? shortUuid(data.colonyId()) : "-",
-                l3anchor);
-        Log.info(TAG, "[Debug]   queue={} task={}", l4queue, l4task);
-
         // ── Background ──
         g.fill(RenderType.guiOverlay(), boxX, boxY, boxX + boxW, boxY + boxH, 0, BG_COLOR);
         g.fill(RenderType.guiOverlay(), boxX, boxY + boxH - 1, boxX + boxW, boxY + boxH, 0, BORDER_COLOR);
@@ -150,6 +154,85 @@ public final class BuildingDebugOverlay {
         drawText(g, font, l4queue, x4, yBase + LINE_H * 3, TEXT_DIM);
         x4 += font.width(l4queue) + GAP;
         drawText(g, font, l4task, x4, yBase + LINE_H * 3, data.currentTaskId() != null ? TEXT_YELLOW : TEXT_DIM);
+
+        // ── Buttons ──
+        int btnY = boxY + boxH + 2;
+        String leftLabel = data.shutdown() ? "Restart" : "Shutdown";
+        int leftBg = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
+
+        // Measure button widths from labels
+        int leftLabelW = font.width(leftLabel);
+        int rightLabelW = font.width("Destroy");
+        int btnTotalW = leftLabelW + rightLabelW + PAD_X * 4 + BTN_GAP + 8;
+        int btnAreaW = Math.max(btnTotalW, boxW);
+        int btnStartX = boxX + (boxW - btnAreaW) / 2;
+
+        int leftW = leftLabelW + PAD_X * 2 + 4;
+        int rightW = rightLabelW + PAD_X * 2 + 4;
+        int leftX = btnStartX + (btnAreaW - leftW - rightW - BTN_GAP) / 2;
+        int rightX = leftX + leftW + BTN_GAP;
+
+        // Hover state
+        double guiScale = mc.getWindow().getGuiScale();
+        double mx = mc.mouseHandler.xpos() / guiScale;
+        double my = mc.mouseHandler.ypos() / guiScale;
+        boolean hoverLeft = mx >= leftX && mx <= leftX + leftW && my >= btnY && my <= btnY + BTN_HEIGHT;
+        boolean hoverRight = mx >= rightX && mx <= rightX + rightW && my >= btnY && my <= btnY + BTN_HEIGHT;
+
+        // Left button (shutdown / restart)
+        int leftColor = hoverLeft ? brighten(leftBg) : leftBg;
+        g.fill(RenderType.guiOverlay(), leftX, btnY, leftX + leftW, btnY + BTN_HEIGHT, 0, leftColor);
+        drawCenteredText(g, font, leftLabel, leftX + leftW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, BTN_TEXT);
+
+        // Right button (destroy)
+        int rightColor = hoverRight ? brighten(BTN_DESTROY_BG) : BTN_DESTROY_BG;
+        g.fill(RenderType.guiOverlay(), rightX, btnY, rightX + rightW, btnY + BTN_HEIGHT, 0, rightColor);
+        drawCenteredText(g, font, "Destroy", rightX + rightW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, BTN_TEXT);
+
+        g.bufferSource().endBatch(RenderType.guiOverlay());
+
+        // Store bounds for mouse handler
+        btnShutdownX = leftX;
+        btnShutdownY = btnY;
+        btnShutdownW = leftW;
+        btnDestroyX = rightX;
+        btnDestroyY = btnY;
+        btnDestroyW = rightW;
+        buttonsVisible = true;
+    }
+
+    // ── Mouse click handler ──
+
+    @SubscribeEvent
+    public static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
+        if (!buttonsVisible) return;
+        if (event.getAction() != GLFW.GLFW_PRESS) return;
+
+        BuildingDebugResponsePacket data = BuildingDebugClientState.getCachedData();
+        if (data == null) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        double guiScale = mc.getWindow().getGuiScale();
+        double mx = mc.mouseHandler.xpos() / guiScale;
+        double my = mc.mouseHandler.ypos() / guiScale;
+
+        // Check left button (shutdown / restart)
+        if (mx >= btnShutdownX && mx <= btnShutdownX + btnShutdownW
+                && my >= btnShutdownY && my <= btnShutdownY + BTN_HEIGHT) {
+            event.setCanceled(true);
+            String action = data.shutdown() ? "restart" : "shutdown";
+            PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), action));
+            Log.info(TAG, "[Debug] Button click: {} on building {}", action, shortUuid(data.buildingId()));
+            return;
+        }
+
+        // Check right button (destroy)
+        if (mx >= btnDestroyX && mx <= btnDestroyX + btnDestroyW
+                && my >= btnDestroyY && my <= btnDestroyY + BTN_HEIGHT) {
+            event.setCanceled(true);
+            PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "destroy"));
+            Log.info(TAG, "[Debug] Button click: destroy on building {}", shortUuid(data.buildingId()));
+        }
     }
 
     // ── Status helpers ──
@@ -177,11 +260,23 @@ public final class BuildingDebugOverlay {
         return pos.getX() + "," + pos.getY() + "," + pos.getZ();
     }
 
-    // ── Text helper (SEE_THROUGH = NO_DEPTH_TEST) ──
+    private static int brighten(int color) {
+        int a = (color >> 24) & 0xFF;
+        int r = Math.min(0xFF, ((color >> 16) & 0xFF) + 0x30);
+        int g = Math.min(0xFF, ((color >> 8) & 0xFF) + 0x30);
+        int b = Math.min(0xFF, (color & 0xFF) + 0x30);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    // ── Text helpers ──
 
     private static void drawText(GuiGraphics g, Font font, String text, float x, float y, int color) {
         font.drawInBatch(text, x, y, color, false,
                 g.pose().last().pose(), g.bufferSource(),
                 Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+    }
+
+    private static void drawCenteredText(GuiGraphics g, Font font, String text, int x, float y, int color) {
+        drawText(g, font, text, x - font.width(text) / 2f, y, color);
     }
 }

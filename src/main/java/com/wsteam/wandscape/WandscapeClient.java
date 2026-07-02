@@ -12,7 +12,6 @@ import com.wsteam.wandscape.road.client.RoadProjectionController;
 import com.wsteam.wandscape.road.client.RoadProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
-import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.client.BuildingDebugController;
 import com.wsteam.wandscape.projection.client.BuildingDebugOverlay;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
@@ -98,13 +97,6 @@ public class WandscapeClient {
             "key.wandscape.projection",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_V,
-            "key.categories.wandscape"
-    );
-
-    public static final KeyMapping DEBUG_TOGGLE = new KeyMapping(
-            "key.wandscape.debug",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_G,
             "key.categories.wandscape"
     );
 
@@ -220,7 +212,6 @@ public class WandscapeClient {
         event.register(OPEN_UI_EDITOR);
         event.register(OPEN_TASK_EDITOR);
         event.register(PROJECTION_TOGGLE);
-        event.register(DEBUG_TOGGLE);
         event.register(IMGUI_TOGGLE);
         event.register(PANEL_CURSOR_TOGGLE);
     }
@@ -249,10 +240,6 @@ public class WandscapeClient {
             if (WandscapePanelState.isPanelOpen()) {
                 WandscapePanelState.toggleCursor();
             }
-        }
-        while (DEBUG_TOGGLE.consumeClick()) {
-            BuildingDebugController.toggle();
-            TouristDebugRenderer.toggle();
         }
         while (IMGUI_TOGGLE.consumeClick()) {
             ImGuiManager.toggle();

@@ -24,6 +24,10 @@ public interface BuildingApi {
     boolean shutdown(UUID buildingId, String reason);
     boolean restart(UUID buildingId);
 
+    // ---- Demolish ----
+    void demolishBuilding(UUID buildingId);
+    boolean isDemolishing(UUID buildingId);
+
     // ---- Colony stats ----
     int getColonyComfort(UUID colonyId);
     int getColonyMagic(UUID colonyId);

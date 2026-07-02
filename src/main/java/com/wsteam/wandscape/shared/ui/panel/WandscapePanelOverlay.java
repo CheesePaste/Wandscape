@@ -3,6 +3,7 @@ package com.wsteam.wandscape.shared.ui.panel;
 import java.util.Map;
 import java.util.UUID;
 
+import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.client.Minecraft;
@@ -89,8 +90,12 @@ public final class WandscapePanelOverlay {
     // ── Fills (guiOverlay — NO_DEPTH_TEST, covers hotbar) ──
 
     private static void renderFills(GuiGraphics g, Font font, int screenW, int screenH) {
-        // Top bar
-        g.fill(RenderType.guiOverlay(), 0, 0, screenW, TOP_BAR_H, 0, BAR_BG);
+        boolean lookingAtBuilding = BuildingDebugClientState.getCachedData() != null;
+
+        // Top bar – hidden when debug overlay is showing building info
+        if (!lookingAtBuilding) {
+            g.fill(RenderType.guiOverlay(), 0, 0, screenW, TOP_BAR_H, 0, BAR_BG);
+        }
 
         // Bottom bar
         int barY = screenH - BOTTOM_BAR_H;
@@ -122,29 +127,33 @@ public final class WandscapePanelOverlay {
     // ── Text (SEE_THROUGH — NO_DEPTH_TEST, always visible) ──
 
     private static void renderTexts(GuiGraphics g, Font font, int screenW, int screenH) {
-        // Top bar
-        int topY = (TOP_BAR_H - font.lineHeight) / 2;
+        boolean lookingAtBuilding = BuildingDebugClientState.getCachedData() != null;
 
-        String colonyText;
-        java.util.UUID cid = WandscapePanelState.getColonyId();
-        if (cid != null) {
-            colonyText = "Colony: " + cid.toString().substring(0, 8);
-        } else {
-            colonyText = "Colony: ---";
+        // Top bar – hidden when debug overlay is showing building info
+        if (!lookingAtBuilding) {
+            int topY = (TOP_BAR_H - font.lineHeight) / 2;
+
+            String colonyText;
+            java.util.UUID cid = WandscapePanelState.getColonyId();
+            if (cid != null) {
+                colonyText = "Colony: " + cid.toString().substring(0, 8);
+            } else {
+                colonyText = "Colony: ---";
+            }
+
+            String comfortText = "Comfort: " + WandscapePanelState.getComfort();
+            String magicText = "Magic: " + WandscapePanelState.getMagic();
+            String wonderText = "Wonder: " + WandscapePanelState.getWonder();
+
+            int x = 8;
+            drawText(g, font, colonyText, x, topY, TEXT_DIM);
+            x += font.width(colonyText) + 24;
+            drawText(g, font, comfortText, x, topY, COMFORT_COLOR);
+            x += font.width(comfortText) + 24;
+            drawText(g, font, magicText, x, topY, MAGIC_COLOR);
+            x += font.width(magicText) + 24;
+            drawText(g, font, wonderText, x, topY, WONDER_COLOR);
         }
-
-        String comfortText = "Comfort: " + WandscapePanelState.getComfort();
-        String magicText = "Magic: " + WandscapePanelState.getMagic();
-        String wonderText = "Wonder: " + WandscapePanelState.getWonder();
-
-        int x = 8;
-        drawText(g, font, colonyText, x, topY, TEXT_DIM);
-        x += font.width(colonyText) + 24;
-        drawText(g, font, comfortText, x, topY, COMFORT_COLOR);
-        x += font.width(comfortText) + 24;
-        drawText(g, font, magicText, x, topY, MAGIC_COLOR);
-        x += font.width(magicText) + 24;
-        drawText(g, font, wonderText, x, topY, WONDER_COLOR);
 
         // Stats content (center area when Stats tab is active)
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.STATS) {
@@ -168,10 +177,6 @@ public final class WandscapePanelOverlay {
                     tx + TAB_W / 2, tabY + (tabH - font.lineHeight) / 2, textColor);
         }
 
-        String hint = "C: Lift  V: Close";
-        int hintW = font.width(hint);
-        drawText(g, font, hint, screenW - hintW - 8,
-                barY + (BOTTOM_BAR_H - font.lineHeight) / 2, TEXT_DIM);
     }
 
     // ── Stats content ──

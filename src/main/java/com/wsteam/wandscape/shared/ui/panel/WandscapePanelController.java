@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -35,11 +36,32 @@ public final class WandscapePanelController {
         if (registered) return;
         registered = true;
         var bus = NeoForge.EVENT_BUS;
+        bus.addListener(MovementInputUpdateEvent.class, WandscapePanelController::onMovementInputUpdate);
         bus.addListener(ClientTickEvent.Post.class, WandscapePanelController::onClientTickPost);
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
         bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpen);
         Log.info(TAG, "[Panel] Controller registered");
+    }
+
+    /**
+     * Global: when cursor is lifted, zero out movement input so the player cannot move.
+     * Uses {@link MovementInputUpdateEvent} which fires after {@code Input.tick()} reads
+     * GLFW key states but before the values are applied to player movement.
+     */
+    static void onMovementInputUpdate(MovementInputUpdateEvent event) {
+        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!WandscapePanelState.isCursorLifted()) return;
+
+        var input = event.getInput();
+        input.forwardImpulse = 0;
+        input.leftImpulse = 0;
+        input.up = false;
+        input.down = false;
+        input.left = false;
+        input.right = false;
+        input.jumping = false;
+        input.shiftKeyDown = false;
     }
 
     static void onClientTickPost(ClientTickEvent.Post event) {

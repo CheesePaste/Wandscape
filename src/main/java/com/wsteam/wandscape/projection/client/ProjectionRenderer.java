@@ -46,10 +46,6 @@ public final class ProjectionRenderer {
     private static final float GHOST_ALPHA = 0.40f;
     /** Full brightness: block=15, sky=15 (LightTexture.pack(15,15)). */
     private static final int FULL_BRIGHT = 0xF000F0;
-    /** Beam constants. */
-    private static final float BEAM_HALF = 0.25f;
-    private static final float BEAM_HEIGHT = 3.0f;
-    private static final int BEAM_ALPHA_BASE = 80;
 
     private static boolean registered = false;
 
@@ -84,7 +80,6 @@ public final class ProjectionRenderer {
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
         renderGhostPreview(mc, bufferSource, poseStack);
-        renderBodyBeam(bufferSource, poseStack.last());
 
         poseStack.popPose();
     }
@@ -208,55 +203,6 @@ public final class ProjectionRenderer {
         int index = ProjectionClientState.getSelectedSlotIndex();
         if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
         return slots.get(index);
-    }
-
-    // ── Body anchor beam ──
-
-    private static void renderBodyBeam(MultiBufferSource.BufferSource bufferSource,
-                                       PoseStack.Pose poseEntry) {
-        BlockPos anchor = ProjectionClientState.getBodyAnchor();
-        if (anchor == null) return;
-
-        long timeMs = System.currentTimeMillis();
-        float pulse = (float) Math.sin(timeMs * 0.005) * 0.4f + 0.6f;
-        int alpha = (int) (BEAM_ALPHA_BASE * pulse);
-
-        float cx = anchor.getX() + 0.5f;
-        float cy = anchor.getY() + 0.1f;
-        float cz = anchor.getZ() + 0.5f;
-        float hw = BEAM_HALF;
-        float top = cy + BEAM_HEIGHT;
-        int r = 170, g = 136, b = 255;
-
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.debugQuads());
-
-        // Front (+Z)
-        vc.addVertex(poseEntry, cx - hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz + hw).setColor(r, g, b, alpha);
-        // Back (-Z)
-        vc.addVertex(poseEntry, cx + hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
-        // Left (-X)
-        vc.addVertex(poseEntry, cx - hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
-        // Right (+X)
-        vc.addVertex(poseEntry, cx + hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-        // Top
-        vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz + hw).setColor(r, g, b, alpha);
-
-        bufferSource.endBatch(RenderType.debugQuads());
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.wsteam.wandscape.building.editor.BuildingEditorClientState;
 import com.wsteam.wandscape.building.editor.BuildingEditorController;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
+import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
@@ -90,6 +91,7 @@ public final class WandscapePanelState {
 
     public static void openPanel() {
         panelOpen = true;
+        BuildingDebugClientState.setActive(true);
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
@@ -107,6 +109,7 @@ public final class WandscapePanelState {
             releaseCursor();
         }
         panelOpen = false;
+        BuildingDebugClientState.setActive(false);
         cursorLifted = false;
         activeSubMode = SubMode.NONE;
         buildPhase = BuildPhase.BAR;

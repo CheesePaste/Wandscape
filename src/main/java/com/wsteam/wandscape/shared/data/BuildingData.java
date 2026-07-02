@@ -16,6 +16,9 @@ public interface BuildingData {
     int getQueueCapacity();
     boolean isStructureIntact();
 
+    /** Whether the building is being demolished by an NPC task. */
+    default boolean isDemolishing() { return false; }
+
     /** Snapshot of the building's maintenance cost config. */
     MaintenanceCostConfig getMaintenanceCost();
 

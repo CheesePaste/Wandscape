@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.lwjgl.glfw.GLFW;
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.road.PathPoint;
 import com.wsteam.wandscape.core.road.RoadEdge;
 import com.wsteam.wandscape.core.road.RoadNetwork;
@@ -26,38 +25,23 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Per-tick input handler for road projection mode.
+ * Per-tick input handler for ground-based road planning mode.
  *
- * <p>Flight mechanics mirror {@code ProjectionFlightController} exactly.
- * Left-click is repurposed for Cities: Skylines-style path point placement
- * instead of building placement.
+ * <p>Player walks to the road site normally. Left-click places path points.
+ * Movement is blocked globally by WandscapePanelController when the cursor is lifted.
  *
  * <h3>Controls</h3>
  * <pre>
- *   WASD / Space / Shift — free flight movement
- *   Ctrl                — sprint (2x speed)
+ *   WASD                — normal walking
  *   Mouse scroll        — adjust road width (1-9, odd)
  *   Left-click          — add path point (first click = start, second click = end → queues segment)
  *   Right-click         — remove hovered road edge (if any), or exit
  *   Enter               — publish all queued road segments to server
  *   Backspace           — undo last point / last queued segment
- *   Esc                 — exit road projection mode
+ *   Esc                 — exit road planning mode
  *   PageUp/Keypad+      — raise height offset by 1
  *   PageDown/Keypad-    — lower height offset by 1
  * </pre>
- *
- * <h3>Input interception strategy</h3>
- * <p>Mouse clicks and discrete keystrokes are handled via NeoForge
- * {@link InputEvent.MouseButton.Pre} and {@link InputEvent.Key} with
- * {@code event.setCanceled(true)} — this prevents vanilla from ever
- * seeing the event, so no block-breaking or block-placing passthrough.
- *
- * <p>Continuous flight movement (WASD) still uses raw GLFW polling in
- * {@link ClientTickEvent.Post} — held keys are not discrete events.
- *
- * <p>Vanilla-held-key side effects (jump/sneak/sprint/inventory) are
- * drained at the end of each Post tick, same pattern as
- * {@code ProjectionFlightController}.
  */
 public final class RoadProjectionController {
 
@@ -82,7 +66,7 @@ public final class RoadProjectionController {
         bus.addListener(InputEvent.MouseScrollingEvent.class, RoadProjectionController::onMouseScroll);
         // Per-tick: continuous flight, raycasting, hover, range check
         bus.addListener(ClientTickEvent.Post.class, RoadProjectionController::onClientTickPost);
-        Log.info(TAG, "[RoadProjection] Flight controller registered");
+        Log.info(TAG, "[RoadProjection] Road planning controller registered");
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -185,65 +169,19 @@ public final class RoadProjectionController {
         if (mc.level == null || mc.player == null) return;
         if (mc.screen != null) return;
 
-        long window = mc.getWindow().getWindow();
+        boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
 
-        // 1. Held-key flight movement
-        handleFlightMovement(mc, window);
-
-        // 2. Ghost position (ground target under crosshair)
+        // 1. Ghost position (ground target under crosshair)
         updateGhostPosition(mc);
 
-        // 3. Edge hover detection
+        // 2. Edge hover detection
         updateEdgeHover(mc);
 
-        // 4. Drain vanilla key effects (jump/sneak/sprint/inventory) that
-        //    would otherwise fire from held keys between Key events
-        drainVanillaInput(mc);
-
-        // 5. Range check
-        checkRange(mc);
-    }
-
-    // ── Flight movement (GLFW polling for continuous held-key input) ──
-
-    private static void handleFlightMovement(Minecraft mc, long window) {
-        boolean wDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
-        boolean aDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
-        boolean sDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
-        boolean dDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
-        boolean spaceDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS;
-        boolean shiftDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
-        boolean sprintDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-
-        if (!wDown && !aDown && !sDown && !dDown && !spaceDown && !shiftDown) {
-            mc.player.setDeltaMovement(Vec3.ZERO);
-            return;
-        }
-
-        Camera camera = mc.gameRenderer.getMainCamera();
-        Vec3 forward = new Vec3(camera.getLookVector().x(),
-                camera.getLookVector().y(),
-                camera.getLookVector().z());
-        Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
-        Vec3 up = new Vec3(0, 1, 0);
-
-        Vec3 moveDir = Vec3.ZERO;
-        if (wDown) moveDir = moveDir.add(forward);
-        if (sDown) moveDir = moveDir.subtract(forward);
-        if (aDown) moveDir = moveDir.subtract(right);
-        if (dDown) moveDir = moveDir.add(right);
-        if (spaceDown) moveDir = moveDir.add(up);
-        if (shiftDown) moveDir = moveDir.subtract(up);
-
-        if (moveDir.lengthSqr() > 1e-6) {
-            moveDir = moveDir.normalize();
-            float speed = RoadProjectionClientState.getFlyingSpeed();
-            if (sprintDown) speed *= 2.0f;
-            mc.player.setDeltaMovement(moveDir.scale(speed * 20.0));
+        // 3. Drain vanilla input: only attack/use when walking, all when cursor lifted
+        if (cursorLifted) {
+            drainVanillaInput(mc);
         } else {
-            mc.player.setDeltaMovement(Vec3.ZERO);
+            drainAttackUse(mc);
         }
     }
 
@@ -265,8 +203,10 @@ public final class RoadProjectionController {
         BlockHitResult hit = mc.level.clip(clipCtx);
 
         if (hit.getType() == HitResult.Type.BLOCK) {
-            // Road path points sit ON the ground block (not above it).
-            RoadProjectionClientState.setGhostPos(hit.getBlockPos());
+            // X/Z from raycast hit, Y from player foot level minus 1 (road sits on surface below feet)
+            BlockPos hitPos = hit.getBlockPos();
+            BlockPos ghostPos = new BlockPos(hitPos.getX(), mc.player.blockPosition().getY() - 1, hitPos.getZ());
+            RoadProjectionClientState.setGhostPos(ghostPos);
         } else {
             RoadProjectionClientState.setGhostPos(null);
         }
@@ -428,12 +368,12 @@ public final class RoadProjectionController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(
-                    Component.literal("§7[Road] §eRoad projection ended — returned to body"),
+                    Component.literal("§7[Road] §eRoad planning ended"),
                     true);
         }
     }
 
-    // ── Vanilla input drain ──
+    // ── Input draining ──
 
     private static void drainVanillaInput(Minecraft mc) {
         while (mc.options.keyAttack.consumeClick()) {}
@@ -443,6 +383,13 @@ public final class RoadProjectionController {
         while (mc.options.keyInventory.consumeClick()) {}
         while (mc.options.keyDrop.consumeClick()) {}
         while (mc.options.keySprint.consumeClick()) {}
+    }
+
+    /** Drain only attack/use/inventory — player can walk normally. */
+    private static void drainAttackUse(Minecraft mc) {
+        while (mc.options.keyAttack.consumeClick()) {}
+        while (mc.options.keyUse.consumeClick()) {}
+        while (mc.options.keyInventory.consumeClick()) {}
     }
 
     // ── Edge hover detection ──
@@ -520,22 +467,4 @@ public final class RoadProjectionController {
         return rayOrigin.add(rayDir.scale(t)).distanceTo(point);
     }
 
-    // ── Range check ──
-
-    private static void checkRange(Minecraft mc) {
-        BlockPos anchor = RoadProjectionClientState.getBodyAnchor();
-        if (anchor == null || mc.player == null) return;
-
-        int maxRange = Config.PROJECTION_MAX_RANGE.get();
-        if (maxRange <= 0) return;
-
-        double dist = Math.sqrt(anchor.distSqr(mc.player.blockPosition()));
-        if (dist > maxRange) {
-            mc.player.displayClientMessage(
-                    Component.literal("§7[Road] §eExceeded max projection range (" +
-                            maxRange + " blocks) — returning to body"),
-                    false);
-            doExit();
-        }
-    }
 }

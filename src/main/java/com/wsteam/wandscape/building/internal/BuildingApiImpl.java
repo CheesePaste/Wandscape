@@ -6,6 +6,9 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -284,6 +287,64 @@ public class BuildingApiImpl implements BuildingApi {
                 ? sd.getContributionRegistry().getSnapshot(colonyId).wonder() : 0;
     }
 
+    // ---- Demolish ----
+
+    private static final int DEMOLISH_PRIORITY = 49;
+
+    @Override
+    public void demolishBuilding(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return;
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return;
+
+        if (state.isDemolishing()) {
+            Log.debug(TAG, "demolishBuilding: {} already being demolished", buildingId);
+            return;
+        }
+
+        // Mark building for demolition and clear any pending work
+        state.setDemolishing(true);
+        state.getTaskQueue().clear();
+
+        // Build the demolish WorkItem — iterate all pattern offsets, place air
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null) {
+            Log.error(TAG, "demolishBuilding: config not found for {} ({})", state.getBuildingTypeId(), buildingId);
+            return;
+        }
+
+        Map<String, JsonElement> params = new HashMap<>();
+        params.put("anchor", posToJsonArray(state.getAnchor()));
+        params.put("building_id", new JsonPrimitive(buildingId.toString()));
+
+        JsonArray offsets = new JsonArray();
+        for (var offset : config.pattern()) {
+            JsonArray arr = new JsonArray();
+            arr.add(offset.x());
+            arr.add(offset.y());
+            arr.add(offset.z());
+            offsets.add(arr);
+        }
+        params.put("offsets", offsets);
+
+        WorkItem demolishWork = new WorkItem("build:demolish_structure", params, DEMOLISH_PRIORITY);
+        state.getTaskQueue().addLast(demolishWork);
+        sd.setDirty();
+
+        Log.info(TAG, "[Demolish] Building {} ({}) at {} — demolition enqueued",
+                state.getBuildingTypeId(), buildingId, state.getAnchor());
+    }
+
+    @Override
+    public boolean isDemolishing(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return false;
+        BuildingState state = sd.getBuilding(buildingId);
+        return state != null && state.isDemolishing();
+    }
+
     // ---- Task bridge ----
 
     @Override
@@ -356,7 +417,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return;
 
         BuildingState state = sd.getBuilding(buildingId);
-        if (state == null || state.isShutdown()) return;
+        if (state == null || state.isShutdown() || state.isDemolishing()) return;
 
         boolean isConstruction = work.blueprintId().startsWith("build:");
 
@@ -676,5 +737,13 @@ public class BuildingApiImpl implements BuildingApi {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return null;
         return server.overworld();
+    }
+
+    private static JsonArray posToJsonArray(BlockPos pos) {
+        JsonArray arr = new JsonArray();
+        arr.add(pos.getX());
+        arr.add(pos.getY());
+        arr.add(pos.getZ());
+        return arr;
     }
 }

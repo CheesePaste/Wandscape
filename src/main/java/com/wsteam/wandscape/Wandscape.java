@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import com.wsteam.wandscape.building.internal.BuildCompleteListener;
+import com.wsteam.wandscape.building.internal.DemolishCompleteListener;
 import com.wsteam.wandscape.building.internal.BuildingApiImpl;
 import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingInteractHandler;
@@ -74,6 +75,7 @@ import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.projection.network.ProjectionNetwork;
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
+import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
@@ -398,6 +400,11 @@ public class Wandscape {
                         BuildingDebugResponsePacket.TYPE,
                         BuildingDebugResponsePacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingDebugResponsePacket.handleClient(packet))
+                .playToServer(
+                        BuildingActionPacket.TYPE,
+                        BuildingActionPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingActionPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Building Editor ──
                 .playToServer(
                         BuildingEditorEnterPacket.TYPE,
@@ -457,6 +464,7 @@ public class Wandscape {
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
         BuildCompleteListener.register();
+        DemolishCompleteListener.register();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
         if (colonyApi instanceof com.wsteam.wandscape.engine.colony.ColonyApiImpl impl) {

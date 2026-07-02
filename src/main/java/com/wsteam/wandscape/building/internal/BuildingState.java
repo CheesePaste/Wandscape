@@ -38,6 +38,7 @@ public class BuildingState implements BuildingData {
     private UUID colonyId;
     private boolean shutdown;
     private boolean structureIntact;
+    private boolean demolishing;
     private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
     @Nullable
     private UUID currentTaskId;
@@ -64,6 +65,7 @@ public class BuildingState implements BuildingData {
     @Override public String getCategory() { return category; }
     @Override public BlockPos getPosition() { return anchor; }
     @Override public boolean isShutdown() { return shutdown; }
+    @Override public boolean isDemolishing() { return demolishing; }
     @Override public int getComfort() { return comfort; }
     @Override public int getMagic() { return magic; }
     @Override public int getWonder() { return wonder; }
@@ -92,6 +94,7 @@ public class BuildingState implements BuildingData {
     public void setColonyId(@Nullable UUID colonyId) { this.colonyId = colonyId; }
     public void setShutdown(boolean shutdown) { this.shutdown = shutdown; }
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
+    public void setDemolishing(boolean demolishing) { this.demolishing = demolishing; }
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
 
     // ── Maintenance setters ──

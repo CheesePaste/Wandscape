@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.projection.client;
 
 import org.lwjgl.glfw.GLFW;
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
@@ -22,20 +21,11 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Per-tick input handler for soul projection mode.
+ * Per-tick input handler for ground-based building placement mode.
  *
- * <p>Handles:
- * <ul>
- *   <li>WASD / Space / Shift — free flight movement in camera direction</li>
- *   <li>Ctrl — sprint (2x speed)</li>
- *   <li>Mouse scroll — cycle building selection</li>
- *   <li>Left-click — place selected building at ghost position</li>
- *   <li>Right-click / Escape — exit projection mode</li>
- *   <li>Ghost position raycasting — update crosshair target</li>
- * </ul>
- *
- * <p>Raw GLFW input polling follows the {@code RoadEditorRenderer} pattern.
- * All vanilla clicks are consumed to prevent block interaction or inventory opens.
+ * <p>Player walks to the build site normally. Ghost preview raycasts from
+ * the camera position. Right-click places the selected building.
+ * Movement is blocked globally by WandscapePanelController when the cursor is lifted.
  */
 public final class ProjectionFlightController {
 
@@ -79,13 +69,9 @@ public final class ProjectionFlightController {
 
         long window = mc.getWindow().getWindow();
 
-        // ── 1. Flight movement (always works) ──
-        handleFlightMovement(mc, window);
-
-        // ── Building bar mode: no ghost, flight only; clicks/scroll handled by bar ──
+        // ── Building bar mode: no ghost, drain all input ──
         if (buildingBarOpen) {
             drainVanillaInput(mc);
-            checkRange(mc);
             return;
         }
 
@@ -94,65 +80,11 @@ public final class ProjectionFlightController {
             return;
         }
 
-        // ── 2. Ghost position update ──
+        // ── Walking mode: ghost preview, handle clicks, drain only attack/use ──
         updateGhostPosition(mc);
-
-        // ── 4. Click handling ──
         handleClicks(mc, window);
-
-        // ── 5. Escape key ──
         handleEscape(mc, window);
-
-        // ── 6. Drain all vanilla clicks ──
-        drainVanillaInput(mc);
-
-        // ── 7. Range check ──
-        checkRange(mc);
-    }
-
-    // ── Flight movement ──
-
-    private static void handleFlightMovement(Minecraft mc, long window) {
-        boolean wDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
-        boolean aDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
-        boolean sDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
-        boolean dDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
-        boolean spaceDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS;
-        boolean shiftDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
-        boolean sprintDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-
-        if (!wDown && !aDown && !sDown && !dDown && !spaceDown && !shiftDown) {
-            mc.player.setDeltaMovement(Vec3.ZERO);
-            return;
-        }
-
-        Camera camera = mc.gameRenderer.getMainCamera();
-        Vec3 forward = new Vec3(camera.getLookVector().x(),
-                camera.getLookVector().y(),
-                camera.getLookVector().z());
-        // Right = forward × world up
-        Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
-        Vec3 up = new Vec3(0, 1, 0);
-
-        Vec3 moveDir = Vec3.ZERO;
-        if (wDown) moveDir = moveDir.add(forward);
-        if (sDown) moveDir = moveDir.subtract(forward);
-        if (aDown) moveDir = moveDir.subtract(right);
-        if (dDown) moveDir = moveDir.add(right);
-        if (spaceDown) moveDir = moveDir.add(up);
-        if (shiftDown) moveDir = moveDir.subtract(up);
-
-        if (moveDir.lengthSqr() > 1e-6) {
-            moveDir = moveDir.normalize();
-            float speed = ProjectionClientState.getFlyingSpeed();
-            if (sprintDown) speed *= 2.0f;
-            // Scale by 20 to convert per-tick speed to per-second velocity
-            mc.player.setDeltaMovement(moveDir.scale(speed * 20.0));
-        } else {
-            mc.player.setDeltaMovement(Vec3.ZERO);
-        }
+        drainAttackUse(mc);
     }
 
     // ── Scroll wheel ──
@@ -255,48 +187,34 @@ public final class ProjectionFlightController {
     // ── Exit ──
 
     private static void doExit() {
-        // Send exit packet BEFORE changing client state
         PacketDistributor.sendToServer(new ProjectionExitPacket());
         ProjectionClientState.exitProjection();
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(
-                    Component.literal("[Projection] §eSoul returned to body"),
+                    Component.literal("[Projection] §eExited building placement mode"),
                     true);
         }
     }
 
-    // ── Vanilla input drain ──
+    // ── Input draining ──
 
+    /** Drain all vanilla input — used when bar is open or cursor is lifted. */
     private static void drainVanillaInput(Minecraft mc) {
-        // Consume all vanilla click inputs (same pattern as RoadEditor lines 419-425)
         while (mc.options.keyAttack.consumeClick()) {}
         while (mc.options.keyUse.consumeClick()) {}
         while (mc.options.keyJump.consumeClick()) {}
         while (mc.options.keyShift.consumeClick()) {}
-        // Also block inventory, drop, etc.
         while (mc.options.keyInventory.consumeClick()) {}
         while (mc.options.keyDrop.consumeClick()) {}
-        // Block sprint toggle (vanilla sprint via Ctrl)
         while (mc.options.keySprint.consumeClick()) {}
     }
 
-    // ── Range check ──
-
-    private static void checkRange(Minecraft mc) {
-        BlockPos anchor = ProjectionClientState.getBodyAnchor();
-        if (anchor == null || mc.player == null) return;
-
-        int maxRange = Config.PROJECTION_MAX_RANGE.get();
-        if (maxRange <= 0) return; // 0 = no limit
-
-        double dist = Math.sqrt(anchor.distSqr(mc.player.blockPosition()));
-        if (dist > maxRange) {
-            mc.player.displayClientMessage(
-                    Component.literal("[Projection] §eExceeded max projection range (" + maxRange + " blocks) — returning to body"),
-                    false);
-            doExit();
-        }
+    /** Drain only attack/use/inventory — player can walk normally. */
+    private static void drainAttackUse(Minecraft mc) {
+        while (mc.options.keyAttack.consumeClick()) {}
+        while (mc.options.keyUse.consumeClick()) {}
+        while (mc.options.keyInventory.consumeClick()) {}
     }
 }

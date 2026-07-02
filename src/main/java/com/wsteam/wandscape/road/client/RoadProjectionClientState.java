@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.road.RoadNetwork;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Abilities;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -40,14 +38,8 @@ public final class RoadProjectionClientState {
     /** Whether the player is currently in road projection mode. */
     private static volatile boolean projecting = false;
 
-    /** World position where the player's body is anchored. */
+    /** World position where the player's body is anchored (used for beam rendering). */
     private static volatile BlockPos bodyAnchor = null;
-
-    /** Snapshot of player abilities before projection (for restore on exit). */
-    private static volatile AbilitySnapshot savedAbilities = null;
-
-    /** Flying speed in road projection mode (from config). */
-    private static volatile float flyingSpeed = 0.15f;
 
     /** Current crosshair ground target (null = no valid target). */
     private static volatile BlockPos ghostPos = null;
@@ -93,23 +85,6 @@ public final class RoadProjectionClientState {
         if (mc.player == null) return;
 
         bodyAnchor = mc.player.blockPosition();
-        flyingSpeed = Config.PROJECTION_FLYING_SPEED.get().floatValue();
-
-        // Save abilities snapshot for restore
-        Abilities abilities = mc.player.getAbilities();
-        savedAbilities = new AbilitySnapshot(
-                abilities.mayfly,
-                abilities.flying,
-                abilities.instabuild,
-                abilities.mayBuild,
-                abilities.getFlyingSpeed(),
-                abilities.getWalkingSpeed());
-
-        // Enable creative flight
-        abilities.mayfly = true;
-        abilities.flying = true;
-        abilities.setFlyingSpeed(flyingSpeed);
-        mc.player.onUpdateAbilities();
 
         // Store network
         cachedNetwork = network;
@@ -132,33 +107,10 @@ public final class RoadProjectionClientState {
      * teleports to body anchor, clears state.
      */
     public static void exitProjection() {
-        Minecraft mc = Minecraft.getInstance();
         projecting = false;
-
-        if (mc.player != null) {
-            // Restore abilities
-            if (savedAbilities != null) {
-                Abilities abilities = mc.player.getAbilities();
-                abilities.mayfly = savedAbilities.mayfly;
-                abilities.flying = savedAbilities.flying;
-                abilities.instabuild = savedAbilities.instabuild;
-                abilities.mayBuild = savedAbilities.mayBuild;
-                abilities.setFlyingSpeed(savedAbilities.flyingSpeed);
-                abilities.setWalkingSpeed(savedAbilities.walkingSpeed);
-                mc.player.onUpdateAbilities();
-            }
-
-            // Teleport back to body anchor
-            if (bodyAnchor != null) {
-                mc.player.setPos(bodyAnchor.getX() + 0.5,
-                        bodyAnchor.getY(),
-                        bodyAnchor.getZ() + 0.5);
-            }
-        }
 
         // Clear state
         bodyAnchor = null;
-        savedAbilities = null;
         activeStartPos = null;
         ghostPos = null;
         currentWidth = 3;
@@ -319,12 +271,6 @@ public final class RoadProjectionClientState {
         return expectingSync;
     }
 
-    // ── Flying speed ──
-
-    public static float getFlyingSpeed() {
-        return flyingSpeed;
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // ── Inner types ──
     // ═══════════════════════════════════════════════════════════════
@@ -334,16 +280,4 @@ public final class RoadProjectionClientState {
      * Stored client-side until the player publishes.
      */
     public record PendingSegment(BlockPos start, BlockPos end, int width) {}
-
-    /**
-     * Snapshot of player abilities for restoration on exit.
-     */
-    private record AbilitySnapshot(
-            boolean mayfly,
-            boolean flying,
-            boolean instabuild,
-            boolean mayBuild,
-            float flyingSpeed,
-            float walkingSpeed
-    ) {}
 }

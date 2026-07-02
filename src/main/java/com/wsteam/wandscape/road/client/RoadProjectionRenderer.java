@@ -48,11 +48,6 @@ public final class RoadProjectionRenderer {
     private static final int ALPHA_BUILDING = 120;
     private static final int ALPHA_COMPLETE = 80;
 
-    /** Beam constants. */
-    private static final float BEAM_HALF = 0.25f;
-    private static final float BEAM_HEIGHT = 3.0f;
-    private static final int BEAM_ALPHA_BASE = 80;
-
     /** Pending segment preview color: warm orange. */
     private static final int PENDING_R = 255, PENDING_G = 160, PENDING_B = 40, PENDING_A = 140;
 
@@ -105,9 +100,6 @@ public final class RoadProjectionRenderer {
 
         // ── 4. Active preview line ──
         renderActivePreview(bufferSource, poseEntry, mc);
-
-        // ── 5. Body anchor beam ──
-        renderBodyBeam(bufferSource, poseEntry);
 
         poseStack.popPose();
     }
@@ -228,56 +220,6 @@ public final class RoadProjectionRenderer {
         drawCornerSquare(vc, poseEntry,
                 ghostPos.getX() + 0.5f, ghostPos.getY() + PREVIEW_Y_OFFSET, ghostPos.getZ() + 0.5f,
                 0.5f, 255, 220, 50, 220);
-
-        bufferSource.endBatch(RenderType.debugQuads());
-    }
-
-    // ── Body anchor beam (same pattern as ProjectionRenderer) ──
-
-    private static void renderBodyBeam(MultiBufferSource.BufferSource bufferSource,
-                                       PoseStack.Pose poseEntry) {
-        BlockPos anchor = RoadProjectionClientState.getBodyAnchor();
-        if (anchor == null) return;
-
-        long timeMs = System.currentTimeMillis();
-        float pulse = (float) Math.sin(timeMs * 0.005) * 0.4f + 0.6f;
-        int alpha = (int) (BEAM_ALPHA_BASE * pulse);
-
-        float cx = anchor.getX() + 0.5f;
-        float cy = anchor.getY() + 0.1f;
-        float cz = anchor.getZ() + 0.5f;
-        float hw = BEAM_HALF;
-        float top = cy + BEAM_HEIGHT;
-        // Warm amber beam for road projection (vs purple for building projection)
-        int r = 255, g = 180, b = 60;
-
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.debugQuads());
-
-        // Front (+Z)
-        vc.addVertex(poseEntry, cx - hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz + hw).setColor(r, g, b, alpha);
-        // Back (-Z)
-        vc.addVertex(poseEntry, cx + hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
-        // Left (-X)
-        vc.addVertex(poseEntry, cx - hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
-        // Right (+X)
-        vc.addVertex(poseEntry, cx + hw, cy, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, cy, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-        // Top
-        vc.addVertex(poseEntry, cx - hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz - hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx + hw, top, cz + hw).setColor(r, g, b, alpha);
-        vc.addVertex(poseEntry, cx - hw, top, cz + hw).setColor(r, g, b, alpha);
 
         bufferSource.endBatch(RenderType.debugQuads());
     }
