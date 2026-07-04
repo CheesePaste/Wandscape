@@ -71,9 +71,12 @@
 ```
 shared/  ←  所有包可见（API接口 + 事件 + 数据类型）
 engine/  ←  MC 适配实现，实现 core 边界接口
-building/wand/element/npc/warehouse/production/tourist  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
+building/wand/element/npc/warehouse/production/tourist/
+projection/road/stats/task/standalone/imgui  ←  通过 WandscapeApis + EventBus 通信，互不直接引用
 core/  ←  所有包可见，纯 Java 21 零 MC 依赖。不依赖 shared/
 ```
+
+**注意：** `equipment` 是 cross-cutting 关注点（核心类型在 `core/types/` + `core/component/`，桥接在 `npc/internal/`），非独立包。`road/` 有配套 `core/road/`（纯数据）和 `engine/road/`（MC 实现）。
 
 违反此规则代码不得合并。
 
@@ -95,4 +98,4 @@ core/  ←  所有包可见，纯 Java 21 零 MC 依赖。不依赖 shared/
 6. **猜测 MC 类名** → 用 `minecraft-source` skill
 7. **另起炉灶任务分发** → 走 `TaskRequest → GlobalTaskPool → SchedulerSystem`
 8. **静默 catch 不记日志** → 至少 `LOGGER.warn()`
-9. **游客 ≠ 常驻市民** → 旧 Citizen 系统已完全移除（CitizenManager/Profession/StoredCitizen/CitizenMoveGoal/TouristState 等）。游客是短居访客，无职业/床位/工作场所/住宅/状态机。所有游客行为由 `tourist/` 包内的 TouristSpawnSystem + TouristMoveGoal + HotelStayHandler 驱动。禁止向 TouristEntity 添加任何常驻市民概念（Profession/Bed/Workplace/Home/StoredTourist/StateMachine）。
+9. **游客 ≠ 常驻市民** → 旧 Citizen 系统已完全移除（CitizenManager/Profession/StoredCitizen/CitizenMoveGoal 等）。游客是短居访客，无职业/床位/工作场所/住宅/状态机。所有游客行为由 `tourist/` 包内的 TouristSpawnSystem + TouristMoveGoal + HotelStayHandler 驱动。`TouristState`（枚举：VISITING/EXPLORING/WANDERING/IDLE/SLEEPING）是当前游客系统内的移动状态标记，不是状态机——禁止扩展为带迁移逻辑的复杂状态机。禁止向 TouristEntity 添加任何常驻市民概念（Profession/Bed/Workplace/Home/StoredCitizen/ComplexStateMachine）。

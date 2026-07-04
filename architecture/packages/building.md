@@ -46,9 +46,46 @@
 - **BuildingContributionRegistry** (internal/) — 殖民地区三值聚合。**改为每建筑实例独立计算**：遍历 BuildSource.allBuildings()，每栋检查 isStructureIntact/isShutdown/category/shopHasStock。shop 三值 = 建筑基础值 + 所有有货 goods 的 comfort/magic/wonder 合计。any snapshot 变化广播 `ColonyEvaluationChangedEvent`
 - **BuildingUnlockChecker** (internal/) — 静态工具：传入 colonyId + BuildingConfig → 查询 BuildingApi 三值 vs unlockRequirement → 返回是否解锁 + 锁因字符串
 
+### 客户端 GUI (client/)
+
+- **HotelScreen** — 宾馆入住/退房 GUI，显示房间容量和入住游客列表
+- **ShopScreen** — 商店购物 GUI，显示商品列表+价格+存量
+- **TavernScreen** — 酒馆交互 GUI
+
+### 建筑编辑器 (editor/)
+
+客户端侧的编辑器全套（与 `blueprint/editor/` 分开）：
+
+- **BuildingEditorClientState** — 编辑器客户端静态状态持有者（锚点/AABB/方块图案/元数据/轴拖拽状态）
+- **BuildingEditorController** — 每 tick 生命周期控制器（飞行移动/相机旋转/输入委托/快捷键）
+- **BuildingEditorInputHandler** — 鼠标输入处理
+- **BuildingEditorImGui** — ImGui 属性编辑面板（紧凑双列布局：ID/名称/分类/三值/队列/交互半径/Export/Preview）
+- **BuildingEditorRenderer** — 世界空间渲染（选中方块高亮/AABB 线框/锚点标记）
+- **BuildingEditorAxisRenderer** — 轴辅助渲染
+- **BuildingEditorNetwork** — 编辑器网络通信
+- **BuildingEditorExportService** — JSON 导出服务
+
+### 网络包 (network/) — 12 个文件
+
+| 包 | 方向 | 用途 |
+|----|------|------|
+| BuildingEditorEnterPacket | C→S | 请求进入建筑编辑模式 |
+| BuildingEditorEnterResponsePacket | S→C | 服务端确认进入编辑器 |
+| BuildingEditorExitPacket | C→S | 退出编辑模式 |
+| BuildingEditorExportPacket | C→S | 导出当前编辑建筑配置 |
+| BuildingEditorExportResultPacket | S→C | 导出结果反馈 |
+| ShopOpenPacket | S→C | 打开商店 GUI 并传商品数据 |
+| ShopMaxStockPacket | C→S | 调整商品最大库存量 |
+| HotelOpenPacket | S→C | 打开宾馆 GUI |
+| TavernOpenPacket | S→C | 打开酒馆 GUI |
+| TavernRecruitPacket | C→S | 酒馆招募请求 |
+| TaskQueueDataPacket | S→C | 任务队列数据同步 |
+| TaskQueueModifyPacket | C→S | 任务队列修改（refresh/delete/move_up/move_down） |
+
 ### 模拟经营系统 (internal/)
 
 - **DailySettlementSystem** (internal/) — 取代旧的 MaintenanceSystem。每游戏日 0:00 (time-of-day 0) 触发一次。按优先级分组（CRITICAL→HIGH→NORMAL→LOW）依次从 ColonyItemBank 扣建筑维护费元素。不够则 shutdown。宽限期内新建筑跳过。结算后有剩余元素则自动重启因维护费 shutdown 的建筑。发布 `DailySettlementEvent` / `MaintenanceShortfallEvent`。
+- **DemolishCompleteListener** (internal/) — 订阅建筑拆除完成事件，清理 BuildingSavedData 中对应状态
 - **MaintenanceForecastSystem** (internal/) — 每 6000 tick（1/4 天）扫描一次。预测殖民地未来维护费需求，当元素存量低于 `reserveDays` 阈值时，自动为闲置 node 建筑发布高优先级采集任务。发布 `MaintenanceForecastWarningEvent`。
 - **DecorationBonusSystem** (internal/) — 心跳扫描 → 遍历非decoration/wonder功能建筑 → 曼哈顿距离 ≤ decoration.radius 的装饰加成累加 → cap(建筑自身基础值 × Config.decorationBonusCap) → 缓存 → BuildingContributionRegistry 查询时合并
 - **DecorationBonusCache** (internal/) — 缓存每个功能建筑的当前装饰加成值，建筑变更时(注册/注销/shutdown/restart)失效重算

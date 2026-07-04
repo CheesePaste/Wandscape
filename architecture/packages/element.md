@@ -4,9 +4,9 @@
 
 - **ElementApiImpl** (internal/) — ElementApi 实现：BlockState/ItemStack→build_cost/decompose_yield 查询
 - **ElementMappingLoader** (internal/) — 从 `data/wandscape/element_mappings/*.json` 加载映射，支持方块和物品查询
-- **ElementMappingConfig** (internal/) — 映射配置 record，含可选 `SynthesizeMeta`（合成解锁条件+法杖等级）
+- **ElementMappingConfig** (internal/) — 映射配置 record，含可选 `SynthesizeMeta`（合成解锁条件）
 - **ElementValueGenerator** (internal/) — 元素价值自动生成器（从原版配方推导）
-- **SynthesizeMeta** (ElementMappingConfig 内) — 合成元数据：unlockRequirement + wandLevel
+- **SynthesizeMeta** (ElementMappingConfig 内) — 合成元数据：unlockRequirement（wandLevel 已删除）
 
 ## JSON
 
@@ -23,8 +23,7 @@
   "decomposable": false,
   "source": "auto_generated",
   "synthesize": {
-    "unlock_requirement": { "min_magic": 0 },
-    "wand_level": {}
+    "unlock_requirement": { "min_magic": 0 }
   }
 }
 ```

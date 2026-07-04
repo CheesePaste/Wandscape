@@ -10,7 +10,7 @@
 
 ### 引擎持有者
 
-- **WandscapeEngine.java** — 单例持有：World + AsyncTransformExecutor + WandscapeRitualOps + WandscapeBlockInteractExecutor + WandscapeMovementOps + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData
+- **WandscapeEngine.java** — 单例持有：World + AsyncTransformExecutor + WandscapeRitualOps + WandscapeBlockInteractExecutor + WandscapeMovementOps + WandscapeEntityOps + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager
 - `reset()` 在 `ServerStoppedEvent` 调用，清除所有静态状态。注意：`blueprintConfigLoader` 故意不清空——由 `WandscapeDataLoader` 管理
 
 ### 引导
@@ -19,11 +19,11 @@
   1. 注册 DSL 蓝图层（BlueprintConfigLoader → BlueprintInterpreter → BlueprintRegistry）
   2. 注册遗留建筑蓝图（无 blueprint ref → DataDrivenSteps fallback）
   3. 注册系统蓝图（EventDrivenTaskSource）
-  4. 构建 TaskSource 列表（BuildingTaskSource + WarehouseSource + WorkbenchSource + RoadTaskSource）
+  4. 构建 TaskSource 列表（BuildingTaskSource + WarehouseSource + WorkbenchSource + RoadTaskSource + PlayerManualSource）
   5. 构建边界实现并注入 core
   6. 启动 core → `CoreBootstrap.bootstrap(config)`
-  7. 注册默认 OpExecutor + AsyncTransformExecutor(每方块5tick延迟) + WandscapeBlockInteractExecutor + WandEquipExecutor + WandReturnExecutor
-  8. 注册 NavigationSystem + WandProvisionSystem
+  7. 注册默认 OpExecutor + AsyncTransformExecutor(每方块5tick延迟) + WandscapeBlockInteractExecutor + WandscapeEntityOps + ResourceRequestExecutor
+  8. 注册 NavigationSystem + 其他引擎系统
 
 ### 边界实现
 
@@ -32,14 +32,15 @@
 - **WandscapeRitualOps** — 异步引导：PendingRitual 队列 + tickAll 倒计时 → thenRun 执行。self_teleport 600tick 引导后传送
 - **AsyncTransformExecutor** — 覆盖 TransformOp 执行器，N-tick 延迟（默认5），实现异步方块放置效果
 - **WandscapeBlockInteractExecutor** — 处理 BlockInteractOp（同步 toggle/activate + 异步 gather/decompose/synthesize）
-- **WandEquipExecutor** — 处理 WandEquipOp：从 ColonyItemBank 消耗 "wandscape:wand" 物品（按 NBT behaviors 匹配preset），合并 WandCarrier 能力（equip），更新 NPC 手持
-- **WandReturnExecutor** — 处理 WandReturnOp：从 WandCarrier unequip，将 "wandscape:wand"（含preset NBT）存回 ColonyItemBank，恢复 NPC 默认手持
+- **WandscapeEntityOps** — `EntityOps` 实现：NPC 间实体交互/检查
+- **ResourceRequestExecutor** — 处理 ResourceRequestOp：从 ColonyItemBank 提取/存入资源
 
 ### TaskSource
 
 - **BuildingTaskSource** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。发布后检测到任务落在 PENDING_APPROVAL 时自动 approve（建筑修复是殖民地自治行为，不能卡在玩家审批门后）。这是 BE → 引擎的唯一桥梁
 - **RoadTaskSource** — 每 20tick 轮询：从 ConcurrentLinkedQueue 批量取出 pending road segments + decorations，发布 build_segment / build_decoration 蓝图到 GlobalTaskPool
 - **WarehouseSource** / **WorkbenchSource** — V1 stub，监视资源/生产队列
+- **PlayerManualSource** — 玩家手动通过任务编辑器提交的任务源
 
 ### 持久化
 
@@ -53,10 +54,18 @@
 - **RoadEditorHandler** — 服务端编辑器操作：removeEdge（清空 placedBlocks→AIR + 移除边 + 节点重验证）
 - **RoadTaskSource** — 轮询发布 pending road segments + decorations 到 GlobalTaskPool
 - **DecorationBuilder** — 执行装饰放置（灯柱+长椅）
+- **RoadRoutingHelper** — 路由辅助工具，包装 RoadBlobCache + RoadNetwork 完成寻路
+- **RoadConfig** — 道路系统配置（读取 road_rules JSON）
+- **WandscapeTags** — Minecraft 标签（TagKey）定义，用于道路方块识别
+- **RoadBlobExplorer** — 探索世界中建筑区块，为道路规划提供输入数据
 
-### WandProvisionSystem
+### 物品运输
 
-在 `engine/system/`，实现 core 的 `WandProvider` 接口。`findWand(reqs, colonyId)` 扫描 ColonyItemBank 快照，按 "wandscape:wand" 物品的 NBT "behaviors" 标签匹配需求，返回 preset ID（如 "gatherer_wand"）。
+- **ItemTransportManager** — 物品运输管理器，处理 NPC 与仓库之间的物品流转
+
+### FailureAnalyzerSystem
+
+在 `engine/system/`，任务失败分析系统。分析 AtomicOp 执行失败原因（资源不足/寻路失败/魔力不足等），记录失败原因供调度器重新分配任务。
 
 ### NavigationSystem
 

@@ -2,22 +2,22 @@
 
 所有包的公共层。50+ 文件。无实现代码，只有接口/数据/事件/UI组件。
 
-## api/ — 12 个模块接口
+## api/ — 10 个模块接口
 
 | 接口 | 状态 | 实现在 |
 |------|------|--------|
-| WandApi | ✓ 已实现 | wand/internal/WandApiImpl |
+| WandApi | ✓ 已实现 | wand/internal/WandApiImpl（无 behaviors 方法） |
 | ElementApi | ✓ 已实现 | element/internal/ElementApiImpl |
 | BuildingApi | ✓ 已实现 | building/internal/BuildingApiImpl |
 | NpcApi | ✓ 已实现 | npc/internal/NpcApiImpl |
 | WarehouseApi | ✓ 已实现 | warehouse/WarehouseManager |
 | RoadApi | ✓ 已实现 | engine/road/RoadApiImpl |
-| AtomicExecutor | ✗ 未实现（被core/op替代）| — |
 | ColonyApi | ✓ 已实现 | engine/colony/ColonyApiImpl |
-| HouseApi | ✗ 未实现 | — |
-| ManaPoolApi | ✗ 未实现 | — |
 | TavernApi | ✓ 部分实现 | building/internal/TavernApiImpl |
 | TouristApi | ✓ 已实现 | tourist/internal/TouristApiImpl |
+| StatsApi | ✓ 已实现 | stats/internal/StatisticsCollector |
+
+**已删除的旧桩（不再维护）：** AtomicExecutor、HouseApi、ManaPoolApi（未实现桩已移除）
 
 ## registry/ — 全局注册
 
@@ -27,54 +27,55 @@
 
 ## data/ — 共享数据类型
 
-**枚举**: BehaviorType(8行为领域) / ElementType(9元素3层) / TaskStatus(6状态)
+**枚举**: ElementType(9元素3层) / TaskStatus(6状态) / Emotion / NarrativeEventType / MaintenancePriority
 
-**Record**: AbilitySet(不可变能力并集) / WorkItem(blueprintId+params+priority) / BuildingData / NpcData / WandBehaviorData / WarehouseEntry / TaskTemplate / ItemKey / ExecutionResult / RecruitmentCandidate / InterruptRecord
+**Record**: WorkItem(blueprintId+params+priority, 无 wandRequirementOverrides) / BuildingData / NpcData / TaskTemplate / ItemKey / ExecutionResult / RecruitmentCandidate / BlueprintInfo / MageResume / NarrativeEvent / ParamTypeInfo / VisitMemory / MaintenanceCost / InterruptRecord
 
-**Sealed**: AtomicStep(4变体：OperationA/B/C/D) — 注意：这是旧设计，引擎实际用 core/op/AtomicOp(7变体)
-
-## event/ — 16 个 NeoForge 事件
+## event/ — 12 个保留的事件
 
 全部在 shared/event/，继承 `net.neoforged.bus.api.Event`。模块间通过发布/订阅通信。
 
 | 事件 | 发布者 | 触发时机 |
 |------|--------|---------|
-| TaskPublishedEvent | engine | 任务入全局池 |
-| TaskAssignedEvent | engine | NPC领取任务 |
-| TaskCompletedEvent | engine | 任务完成 |
-| TaskInterruptedEvent | engine | 任务中断 |
-| TaskAwaitingMaterialsEvent | engine | 资源不足 |
+| ColonyCreatedEvent | engine | 殖民地创建 |
+| DailySettlementEvent | building | 每日维护结算 |
+| MaintenanceForecastWarningEvent | building | 维护费预警（元素不足） |
+| ShopRestockedEvent | building | 商店补货 |
+| TouristArrivedEvent | tourist | 游客到达 |
+| TouristDepartedEvent | tourist | 游客离开 |
+| WonderEffectChangedEvent | building | 奇观效果变化 |
 | BuildingPlacedEvent | building | 建筑验证通过 |
 | BuildingShutdownEvent | building | 建筑关停 |
 | BuildingRestartedEvent | building | 建筑重启 |
-| MaintenanceTickEvent | building | 维护结算 |
-| ElementChangedEvent | warehouse | 元素储量变化 |
 | ResourceInsufficientEvent | warehouse | 资源不足(10s冷却) |
-| NpcDiedEvent | npc | NPC死亡 |
-| NpcRecruitedEvent | — | 未实现 |
-| NpcResurrectedEvent | — | 未实现 |
 | ColonyEvaluationChangedEvent | building | 殖民地三值变化 |
-| PanelStateTogglePacket | panel | 面板开关 |
 
-## bridge/ — 类型桥接
+**已删除事件（从未 fire）：** TaskPublishedEvent、TaskAssignedEvent、TaskCompletedEvent、TaskInterruptedEvent、TaskAwaitingMaterialsEvent、MaintenanceTickEvent、ElementChangedEvent、NpcDiedEvent、NpcRecruitedEvent、NpcResurrectedEvent
 
-**TypeBridge.java** — core 类型 ↔ shared 类型双向映射：BehaviourTag↔BehaviorType / TaskState↔TaskStatus / GridPos↔BlockPos / ResourceId↔String
-
-## network/ — 共享网络包 (2 文件)
+## network/ — 共享网络包 (3 文件)
 
 跨模块使用的数据包：
+
 - **PanelStateTogglePacket.java** — C→S，通知服务器面板开关状态
-- **ColonyStatsSyncPacket.java** — S→C，同步殖民地三值到面板
+- **ColonyStatsSyncPacket.java** — S→C，同步殖民地评估值（舒适度/魔力/奇观）到面板，客户端处理器更新 WandscapePanelState
 - **PanelStateTracker.java** — 服务端追踪哪些玩家面板打开，监听 ColonyEvaluationChangedEvent 推送更新
 
-## ui/ — UI 组件库（33 文件）
+## log/ — 日志工具
+
+- **Log.java** — 集中式日志工具类，封装 `java.util.logging`。提供 debug/info/warn/error 静态便捷方法，支持 `String.format` 和 SLF4J 两种占位符格式。包含紧凑的 BriefFormatter 输出 `[LEVEL] tag | message`
+- **LogFilter.java** — 运行时日志标签白名单过滤器（CopyOnWriteArraySet 线程安全）。启用时仅白名单标签通过。预设 dev/debug 标签集（Scheduler/Preview/BuildEditor/Projection/Panel 等）
+
+## ui/ — UI 组件库（40+ 文件，8 个子包）
 
 中世纪魔法主题。CC0 精灵图(Tiny RPG Mana Soul GUI) + 程序化渲染混合。
 
-**核心组件**: MedievalScreen(9-slice面板) / MedievalButton(精灵图4态) / TabBar / ScrollableList(虚拟滚动) / ElementPanel(9元素储量) / ItemGrid / ProgressIndicator / QuantitySlider / SearchBar / TaskQueuePanel(任务队列侧边栏)
-
-**面板系统 (ui/panel/)**: WandscapePanelState(客户端静态状态+BuildPhase(BAR/PLACING)状态机) / WandscapePanelController(V/C/Escape键+鼠标页签点击+建筑栏键盘搜索+双击选择) / WandscapePanelOverlay(顶部三值栏+底部模式页签, RenderGuiEvent.Post渲染) / BuildingSelectionOverlay(进入Build模式自动弹出：种类分区+搜索框+建筑图标网格，双击选择建筑进入PLACING阶段，ESC从PLACING返回选栏)
-
-**精灵图渲染**: SkinSprite(坐标定义) / SkinRender(9-slice/按钮/p标签/滚动条绘制)
-
-**主题**: MedievalColors(羊皮纸/金色系/紫色系/功能色)
+| 子包 | 内容 |
+|------|------|
+| **component/** | MedievalScreen(9-slice面板) / MedievalButton(精灵图4态) / TabBar / ScrollableList(虚拟滚动) / ElementPanel(9元素储量) / ProgressIndicator / SearchBar / TaskQueuePanel(任务队列侧边栏) / Slider / DemoScreen / HelpButton / IconButton / 方向按钮等 |
+| **panel/** | WandscapePanelState(客户端静态状态+BuildPhase状态机) / WandscapePanelController / WandscapePanelOverlay(顶部三值栏+底部模式页签) / BuildingSelectionOverlay |
+| **task/** | TaskEditorClientState(客户端任务编辑器状态) / TaskEditorScreen(蓝图列表+参数编辑+提交) |
+| **editor/** | UIEditorScreen / UILayoutManager / WidgetLayout |
+| **util/** | BuildingPreviewRenderer(独立3D等轴测建筑缩略图渲染器) |
+| **animation/** | MedievalAnimation（动画辅助） |
+| **skin/** | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/p标签/滚动条绘制) |
+| **theme/** | MedievalColors(羊皮纸/金色系/紫色系/功能色) |

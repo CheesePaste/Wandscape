@@ -4,7 +4,8 @@
 
 - **WarehouseManager** — 实现 WarehouseApi + ColonyResourceAccess。元素和物品通过 ColonyItemBank 分开存储
 - **ColonyItemBank** — 物品 + 元素双存储（Level SavedData），独立于方块。方块破坏不丢失数据
-- **WarehouseScreen** (client/) — 仓库 GUI，左 ElementPanel 右物品列表
+- **WarehouseScreen** (client/) — 仓库 GUI，双标签页 Overview（元素储量+物品列表）+ Exchange（物品兑换），支持 `deposit_from_slot` 操作
+- **WarehouseActionPacket** (network/) — C→S 仓库操作，新增 `slotIndex` / `deposit_from_slot` 字段
 - **WarehouseNotificationHandler** — 监听 ResourceInsufficientEvent → 聊天栏通知在线玩家
 - **WarehouseDataPacket** (network/) — 携带物品列表 + 元素快照的网络包
 

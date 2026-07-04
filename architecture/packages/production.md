@@ -19,9 +19,9 @@
 - **WorkstationScreen** — 双标签页（分解/合成），右侧 TaskQueuePanel，发送 RequestProductionTaskPacket
 - **CraftingStationScreen** — 法杖配方列表+数量+提交按钮，右侧 TaskQueuePanel
 
-**网络包 (network/)**
-- **WorkstationDataPacket** — server→client：BlockPos + 可分解物品 + 合成配方（含 `locked_reason` / `wand_level` NBT）
-- **CraftingStationPacket** — server→client：BlockPos + 法杖配方（含 `cost`, `locked_reason`, `unlock_requirement`, `wand_level` NBT）
+**网络包 (network/) — wand_level 相关字段已全部删除**
+- **WorkstationDataPacket** — server→client：BlockPos + 可分解物品 + 合成配方（含 `locked_reason`）
+- **CraftingStationPacket** — server→client：BlockPos + 法杖配方（含 `cost`, `locked_reason`, `unlock_requirement`）
 - **PotionStationPacket** — server→client：魔药配方（桩）
 - **RequestProductionTaskPacket** — client→server：stationPos/action/recipeOrItemId/quantity
 - **TaskQueueModifyPacket** — client→server：stationPos/action("refresh"/"delete"/"move_up"/"move_down")/index
@@ -63,8 +63,8 @@
 
 | 目录 | 数量 | 说明 |
 |------|------|------|
-| `data/wandscape/element_mappings/` | 9 | 合并了原 synthesize_recipes，synthesize 块存在即表示可合成 |
-| `data/wandscape/craft_recipes/` | 9 | 法杖×7 + 魔药×2，type 字段区分，craft_station 指定工作站 |
+| `data/wandscape/element_mappings/` | 9 | 合并了原 synthesize_recipes，synthesize 块存在即表示可合成（wandLevel 已删除） |
+| `data/wandscape/craft_recipes/` | 5 | 法杖×3 + 魔药×2，type 字段区分，craft_station 指定工作站 |
 
 ## 蓝图
 
@@ -110,23 +110,20 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| type | string | 配方类型：`"wand"` / `"potion"`，未来可扩展 `"alchemy"` 等 |
+| type | string | 配方类型：`"wand"` / `"potion"`，未来可扩展 |
 | craft_station | string | 制作工作站：`"crafting_station"` / `"potion_station"` |
 | id | string | 配方唯一标识 |
 | display_name | string | 法杖显示名称（WandPreset 使用） |
 | wand_color | string | 法杖颜色（hex），同时作为 output NBT 和预设颜色 |
-| behaviors | {"tag": level} | 法杖能力映射。level 0 表示基础即可使用 |
+| behaviors | {"tag": level} | 法杖能力映射（旧格式）。新 attributes[] 格式参见 [wand.md](wand.md) |
 | range | int | 法杖范围 |
 | mana_cost_multiplier | float | 法力消耗倍率 |
 | output.item | string | 产出物品 ID（全部法杖共用 "wandscape:wand"） |
 | cost | {element: amount} | 制作消耗的元素量 |
 | unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛，三维满足才显示 |
-| wand_level | {"building"/"crafting"/…: N}（可选） | 覆盖默认 wand 需求。缺省或全为 0 → 任何 NPC 可制作 |
 | input_items | [string]（仅 type=potion） | 魔药额外消耗物品列表 |
 
-**注意**：法杖的 NBT 属性（`wand_color`/`behaviors`/`range`/`mana_cost_multiplier`）定义在 JSON 顶层，`CraftWandRecipe` 和 `WandPreset` 均从同一字段读取，消除重复。`output.nbt` 不再嵌套——由 `CraftWandRecipe.fromJson` 自动构建。
-
-**注意**：`behaviors` 中的 level 为 0 时，任何 BUILDING 能力 ≥ 0 的 NPC 均可制作。法杖实际能力等级由 output.nbt 决定，制作完成后可通过 `ColonyItemBank` 装备给 NPC。
+**注意**：新 wand 系统使用 attributes[] 格式（参见 [wand.md](wand.md)），旧 behaviors 格式仍被 CraftWandRecipe 兼容读取但逐渐废弃。
 
 ## Synthesize 配方（已合并到 element_mappings）
 
@@ -139,8 +136,7 @@
   "decompose_yield": {},
   "decomposable": false,
   "synthesize": {
-    "unlock_requirement": { "min_magic": 0 },
-    "wand_level": {}
+    "unlock_requirement": { "min_magic": 0 }
   }
 }
 ```
@@ -150,9 +146,8 @@
 | build_cost | {element: amount} | 合成消耗（合并了原 synthesize_recipes 的 cost） |
 | synthesize | object | 存在即表示可合成，空对象 `{}` 表示禁用 |
 | synthesize.unlock_requirement | {min_comfort/min_magic/min_wonder} | 配方可见性门槛 |
-| synthesize.wand_level | {"crafting": N}（可选） | 覆盖默认 wand 需求 |
 
-`wand_level` 在 `RequestProductionTaskPacket.handleServer()` 中提取，通过 `GlobalTaskPool.mergeOverrides()` 合并进任务 requirements（0=删除、≥1=覆盖）。默认（无此字段）等同于 `{"crafting": 0}`，与 `craft_wand` 行为一致。
+**wand_level 已从 synthesize 块中删除。** 旧版数据中的 wand_level 字段不再读取或使用。
 
 ### `locked_reason` 字段（数据包 NBT）
 
@@ -162,7 +157,6 @@
 |---|---|---|
 | `"unlocked"` | 三维满足 + 元素足够 | 正常显示成本 |
 | `"colony"` | 三维不满足 | 🔒 + C/M/W 门槛 |
-| `"elements"` | 三维满足 + 元素不足 + 无 wand_level | 灰色 + 成本（元素不足） |
-| `"wand_level"` | 三维满足 + 元素不足 + wand_level>0 | 🔒 + TAG:LEVEL（如 `CRAFTING:1`） |
+| `"elements"` | 三维满足 + 元素不足 | 灰色 + 成本（元素不足） |
 
-`wand_level` CompoundTag 仅当 `locked_reason = "wand_level"` 时随 NBT 下发。
+**`"wand_level"` 锁因已删除**（wand_level 系统已整体移除）。
