@@ -6,7 +6,7 @@ import java.util.Map;
 
 import com.wsteam.wandscape.shared.data.BlueprintInfo;
 import com.wsteam.wandscape.shared.data.ParamTypeInfo;
-import com.wsteam.wandscape.shared.ui.task.TaskEditorClientState;
+import com.wsteam.wandscape.task.client.TaskEditorClientState;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

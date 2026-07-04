@@ -9,10 +9,10 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.wsteam.wandscape.core.task.BlueprintDefinition;
-import com.wsteam.wandscape.core.task.ExprNode;
-import com.wsteam.wandscape.core.task.ParamType;
-import com.wsteam.wandscape.core.task.StepNode;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintDefinition;
+import com.wsteam.wandscape.task.engine.dsl.ExprNode;
+import com.wsteam.wandscape.task.engine.dsl.ParamType;
+import com.wsteam.wandscape.task.engine.dsl.StepNode;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.shared.log.Log;
 

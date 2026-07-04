@@ -9,10 +9,10 @@ import javax.annotation.Nullable;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.core.task.GlobalTask;
-import com.wsteam.wandscape.core.task.GlobalTaskPool;
-import com.wsteam.wandscape.core.task.TaskRequest;
-import com.wsteam.wandscape.core.task.TaskState;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
+import com.wsteam.wandscape.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 

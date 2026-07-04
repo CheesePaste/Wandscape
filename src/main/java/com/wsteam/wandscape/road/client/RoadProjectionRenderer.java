@@ -1,15 +1,14 @@
 package com.wsteam.wandscape.road.client;
 
 import java.util.List;
-import java.util.UUID;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.core.road.PathGenerator;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
-import com.wsteam.wandscape.core.road.RoadNode;
+import com.wsteam.wandscape.road.algorithm.PathGenerator;
+import com.wsteam.wandscape.road.core.PathPoint;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadNode;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;

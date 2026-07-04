@@ -1,12 +1,13 @@
 package com.wsteam.wandscape.core.ecs;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.*;
+import com.wsteam.wandscape.core.component.TaskExecutor;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
-import com.wsteam.wandscape.core.op.OpExecutorRegistry;
-import com.wsteam.wandscape.core.task.BlueprintRegistry;
-import com.wsteam.wandscape.core.task.BuildingTaskPool;
-import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -185,8 +186,8 @@ public class World {
         if (buildingTaskPool != null) {
             buildingTaskPool.clear();
         }
-        for (long entity : query(com.wsteam.wandscape.core.component.TaskExecutor.class)) {
-            com.wsteam.wandscape.core.component.TaskExecutor exec = get(entity, com.wsteam.wandscape.core.component.TaskExecutor.class);
+        for (long entity : query(TaskExecutor.class)) {
+            TaskExecutor exec = get(entity, TaskExecutor.class);
             if (exec != null) {
                 if (movementOps != null) {
                     movementOps.cancelNavigation(entity);

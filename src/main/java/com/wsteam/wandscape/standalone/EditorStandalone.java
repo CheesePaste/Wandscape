@@ -16,10 +16,9 @@ import org.lwjgl.system.MemoryUtil;
 
 import com.wsteam.wandscape.blueprint.editor.BlueprintEditorCanvas;
 import com.wsteam.wandscape.blueprint.editor.BlueprintEditorClientState;
-import com.wsteam.wandscape.blueprint.editor.BlueprintEditorController;
 import com.wsteam.wandscape.blueprint.editor.BlueprintEditorImGui;
 import com.wsteam.wandscape.blueprint.editor.BlueprintEditorNetwork;
-import com.wsteam.wandscape.core.task.BlueprintDefinition;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintDefinition;
 import com.wsteam.wandscape.shared.log.Log;
 
 import java.io.InputStream;

@@ -3,7 +3,7 @@ package com.wsteam.wandscape.task.network;
 import java.util.Map;
 import java.util.UUID;
 
-import com.wsteam.wandscape.core.task.TaskRequest;
+import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;

@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.command;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,10 +10,10 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.core.road.PathGenerator;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.engine.road.RoadBuilder;
-import com.wsteam.wandscape.engine.road.RoadConfig;
+import com.wsteam.wandscape.road.algorithm.PathGenerator;
+import com.wsteam.wandscape.road.core.PathPoint;
+import com.wsteam.wandscape.road.engine.RoadBuilder;
+import com.wsteam.wandscape.road.engine.RoadConfig;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;

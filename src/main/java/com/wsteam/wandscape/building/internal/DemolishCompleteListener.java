@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.internal;
 import java.util.Map;
 
 import com.wsteam.wandscape.core.event.CustomEvent;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
@@ -27,7 +28,7 @@ public final class DemolishCompleteListener {
      * Call after engine bootstrap in {@code onServerStarting}.
      */
     public static void register() {
-        var world = com.wsteam.wandscape.engine.WandscapeEngine.getWorld();
+        var world = WandscapeEngine.getWorld();
         if (world == null || world.eventBus == null) {
             Log.warn(TAG, "Cannot register DemolishCompleteListener — engine not bootstrapped");
             return;

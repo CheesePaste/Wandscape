@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.engine.transport;
 
-import com.wsteam.wandscape.core.road.RoadRouter;
-import com.wsteam.wandscape.core.road.RouteSegment;
+import com.wsteam.wandscape.road.algorithm.RoadRouter;
+import com.wsteam.wandscape.road.core.RouteSegment;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;

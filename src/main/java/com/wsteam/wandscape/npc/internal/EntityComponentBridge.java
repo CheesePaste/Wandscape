@@ -8,9 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.core.component.*;
+import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.core.CoreBootstrap;
-import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -54,16 +54,16 @@ public final class EntityComponentBridge {
     private final List<WandscapeNpc> deferredJoins = new ArrayList<>();
 
     /** Inventory items to fill after ECS join (keyed by NPC UUID). */
-    private final Map<UUID, java.util.List<com.wsteam.wandscape.core.types.ResourceStack>> deferredInventory = new ConcurrentHashMap<>();
+    private final Map<UUID, java.util.List<ResourceStack>> deferredInventory = new ConcurrentHashMap<>();
 
     /** ECS component types that make up an NPC. */
     private static final Class<?>[] NPC_COMPONENTS = {
-            com.wsteam.wandscape.core.component.Position.class,
+            Position.class,
             ManaPool.class,
-            com.wsteam.wandscape.core.component.TaskExecutor.class,
-            com.wsteam.wandscape.core.component.EquipmentComponent.class,
-            com.wsteam.wandscape.core.component.Inventory.class,
-            com.wsteam.wandscape.core.component.ColonyMember.class,
+            TaskExecutor.class,
+            EquipmentComponent.class,
+            Inventory.class,
+            ColonyMember.class,
     };
 
     private EntityComponentBridge() {}
@@ -76,7 +76,7 @@ public final class EntityComponentBridge {
      * materials at colony creation time.
      */
     public void scheduleInventoryFill(UUID npcUuid, UUID colonyId,
-                                      java.util.List<com.wsteam.wandscape.core.types.ResourceStack> items) {
+                                      java.util.List<ResourceStack> items) {
         deferredInventory.put(npcUuid, items);
     }
 
@@ -130,10 +130,10 @@ public final class EntityComponentBridge {
         // Same-session reconnection: NPC was already registered in THIS session
         // (chunk unload/reload). Only trust this path if the UUID is still known.
         if (npc.ecsEntityId > 0 && ecsIdByUuid.containsKey(npc.getUUID())
-                && world.has(npc.ecsEntityId, com.wsteam.wandscape.core.component.Position.class)) {
+                && world.has(npc.ecsEntityId, Position.class)) {
             Log.debug(TAG, "NPC {} reconnecting to ECS entity {}", npc.getUUID(), npc.ecsEntityId);
             world.addComponent(npc.ecsEntityId,
-                    new com.wsteam.wandscape.core.component.Position(
+                    new Position(
                             new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));
             npcByEcsId.put(npc.ecsEntityId, npc);
             ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
@@ -186,7 +186,7 @@ public final class EntityComponentBridge {
 
     /** Fill inventory items that were scheduled before ECS registration. */
     private void fillDeferredInventory(WandscapeNpc npc, World world) {
-        java.util.List<com.wsteam.wandscape.core.types.ResourceStack> items =
+        java.util.List<ResourceStack> items =
                 deferredInventory.remove(npc.getUUID());
         if (items == null || items.isEmpty()) return;
 
@@ -201,7 +201,7 @@ public final class EntityComponentBridge {
         }
 
         int added = 0;
-        for (com.wsteam.wandscape.core.types.ResourceStack stack : items) {
+        for (ResourceStack stack : items) {
             if (inv.add(stack)) added++;
         }
         Log.info(TAG, "[Bridge] Filled NPC {} inventory with {} stacks (colony={})",
@@ -247,7 +247,7 @@ public final class EntityComponentBridge {
             WandscapeNpc npc = entry.getValue();
             if (npc != null && !npc.isRemoved()) {
                 world.addComponent(entry.getKey(),
-                        new com.wsteam.wandscape.core.component.Position(
+                        new Position(
                                 new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));
             }
         }

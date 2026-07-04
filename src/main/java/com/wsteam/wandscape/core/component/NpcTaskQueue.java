@@ -1,7 +1,7 @@
 package com.wsteam.wandscape.core.component;
 
-import com.wsteam.wandscape.core.op.AtomicOp;
-import com.wsteam.wandscape.core.task.NpcTaskPackage;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;

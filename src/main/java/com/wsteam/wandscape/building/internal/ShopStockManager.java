@@ -10,8 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.core.road.RouteSegment;
-import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
+import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;

@@ -12,14 +12,13 @@ import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.TaskExecutor;
+import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.op.AtomicOp;
-import com.wsteam.wandscape.core.op.OpExecutor;
-import com.wsteam.wandscape.core.op.ResourceShortageException;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadRouter;
-import com.wsteam.wandscape.core.road.RouteSegment;
-import com.wsteam.wandscape.engine.road.RoadRoutingHelper;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.op.executor.OpExecutor;
+import com.wsteam.wandscape.op.executor.ResourceShortageException;
+import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -52,7 +51,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p>Sync actions (toggle/activate/open_gui) execute immediately via {@link BlockOps}.
  *
  * <p>Async actions (gather/decompose/synthesize) use a countdown + thenRun callback.
- * Mana is consumed by {@link com.wsteam.wandscape.core.system.TaskExecutionSystem}
+ * Mana is consumed by {@link TaskExecutionSystem}
  * BEFORE execution — this executor only handles the timing and side effects.
  *
  * <p>Registered in {@code EngineBootstrap} and ticked via {@link #tickAll()} from

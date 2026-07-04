@@ -2,13 +2,11 @@ package com.wsteam.wandscape.core.component;
 
 import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
-import com.wsteam.wandscape.core.types.EquipmentPreset;
 import com.wsteam.wandscape.core.types.EquipmentSlot;
 import com.wsteam.wandscape.core.types.ModifierOperation;
 
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

@@ -3,7 +3,10 @@ package com.wsteam.wandscape.engine;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.system.PlayerManualSource;
+import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
+import com.wsteam.wandscape.engine.transport.ItemTransportManager;
+import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
@@ -12,7 +15,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 /**
  * Singleton holder for the engine {@link World} instance.
- * Bootstrap happens once in {@link com.wsteam.wandscape.engine.bootstrap.EngineBootstrap}.
+ * Bootstrap happens once in {@link EngineBootstrap}.
  *
  * <p>All MC-side modules access the engine world through this class.
  * None of them call {@code CoreBootstrap.bootstrap()} directly.
@@ -44,9 +47,9 @@ public final class WandscapeEngine {
     @Nullable
     private static TaskPoolSavedData taskPoolSavedData;
     @Nullable
-    private static com.wsteam.wandscape.engine.road.RoadSavedData roadSavedData;
+    private static RoadSavedData roadSavedData;
     @Nullable
-    private static com.wsteam.wandscape.engine.transport.ItemTransportManager transporter;
+    private static ItemTransportManager transporter;
     @Nullable
     private static ResourceRequestExecutor resourceRequestExec;
     @Nullable
@@ -112,12 +115,12 @@ public final class WandscapeEngine {
     public static void setTaskPoolSavedData(@Nullable TaskPoolSavedData v) { taskPoolSavedData = v; }
 
     @Nullable
-    public static com.wsteam.wandscape.engine.road.RoadSavedData getRoadSavedData() { return roadSavedData; }
-    public static void setRoadSavedData(@Nullable com.wsteam.wandscape.engine.road.RoadSavedData v) { roadSavedData = v; }
+    public static RoadSavedData getRoadSavedData() { return roadSavedData; }
+    public static void setRoadSavedData(@Nullable RoadSavedData v) { roadSavedData = v; }
 
     @Nullable
-    public static com.wsteam.wandscape.engine.transport.ItemTransportManager getTransporter() { return transporter; }
-    public static void setTransporter(com.wsteam.wandscape.engine.transport.ItemTransportManager t) { transporter = t; }
+    public static ItemTransportManager getTransporter() { return transporter; }
+    public static void setTransporter(ItemTransportManager t) { transporter = t; }
 
     @Nullable
     public static ResourceRequestExecutor getResourceRequestExec() { return resourceRequestExec; }

@@ -2,6 +2,8 @@
 
 实现 core 边界接口，连接 ECS 引擎与 Minecraft 世界。
 
+**重构后**：road/colony 子包已移出（road/ → `road/engine/`，ColonyApiImpl → engine 根包）。system/ 拆分为 system/（ECS System）+ service/（事件订阅者）。
+
 ## 核心流程
 
 `Wandscape.onServerStarting()` → `EngineBootstrap.bootstrap()` → `Wandscape.onServerTick()` → `world.tick(1.0f)`
@@ -10,12 +12,12 @@
 
 ### 引擎持有者
 
-- **WandscapeEngine.java** — 单例持有：World + AsyncTransformExecutor + WandscapeRitualOps + WandscapeBlockInteractExecutor + WandscapeMovementOps + WandscapeEntityOps + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager
-- `reset()` 在 `ServerStoppedEvent` 调用，清除所有静态状态。注意：`blueprintConfigLoader` 故意不清空——由 `WandscapeDataLoader` 管理
+- **`WandscapeEngine.java`** — 单例持有：World + AsyncTransformExecutor + WandscapeRitualOps + WandscapeBlockInteractExecutor + WandscapeMovementOps + WandscapeEntityOps + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager
+- `reset()` 在 `ServerStoppedEvent` 调用，清除所有静态状态。`blueprintConfigLoader` 故意不清空——由 `WandscapeDataLoader` 管理
 
 ### 引导
 
-- **EngineBootstrap.bootstrap()** — 一次性装配：
+- **`EngineBootstrap.bootstrap()`** — 一次性装配：
   1. 注册 DSL 蓝图层（BlueprintConfigLoader → BlueprintInterpreter → BlueprintRegistry）
   2. 注册遗留建筑蓝图（无 blueprint ref → DataDrivenSteps fallback）
   3. 注册系统蓝图（EventDrivenTaskSource）
@@ -23,57 +25,47 @@
   5. 构建边界实现并注入 core
   6. 启动 core → `CoreBootstrap.bootstrap(config)`
   7. 注册默认 OpExecutor + AsyncTransformExecutor(每方块5tick延迟) + WandscapeBlockInteractExecutor + WandscapeEntityOps + ResourceRequestExecutor
-  8. 注册 NavigationSystem + 其他引擎系统
+  8. 注册 NavigationSystem + FailureAnalyzerSystem 到 World
+  9. 注册 StatsRecorder + AchievementService 到 EventBus
 
-### 边界实现
+### 边界实现 (boundary/)
 
-- **WandscapeBlockOps** — `BlockOps` 实现：setBlock/getBlock/isAir/toggle/activate/openGui。支持 bracket 语法 `"mod:block[prop=val]"`。activate 采用两级策略：useWithoutItem → redstone pulse fallback
-- **WandscapeMovementOps** — NPC 移动，无状态适配器写入 NavigationState
-- **WandscapeRitualOps** — 异步引导：PendingRitual 队列 + tickAll 倒计时 → thenRun 执行。self_teleport 600tick 引导后传送
-- **AsyncTransformExecutor** — 覆盖 TransformOp 执行器，N-tick 延迟（默认5），实现异步方块放置效果
-- **WandscapeBlockInteractExecutor** — 处理 BlockInteractOp（同步 toggle/activate + 异步 gather/decompose/synthesize）
-- **WandscapeEntityOps** — `EntityOps` 实现：NPC 间实体交互/检查
-- **ResourceRequestExecutor** — 处理 ResourceRequestOp：从 ColonyItemBank 提取/存入资源
+- **`WandscapeBlockOps`** — `BlockOps` 实现：setBlock/getBlock/isAir/toggle/activate/openGui。支持 bracket 语法 `"mod:block[prop=val]"`。activate 采用两级策略：useWithoutItem → redstone pulse fallback
+- **`WandscapeMovementOps`** — NPC 移动，无状态适配器写入 NavigationState
+- **`WandscapeRitualOps`** — 异步引导：PendingRitual 队列 + tickAll 倒计时 → thenRun 执行。self_teleport 600tick 引导后传送
+- **`AsyncTransformExecutor`** — 覆盖 TransformOp 执行器，N-tick 延迟（默认5），实现异步方块放置效果
+- **`WandscapeBlockInteractExecutor`** — 处理 BlockInteractOp（同步 toggle/activate + 异步 gather/decompose/synthesize）
+- **`WandscapeEntityOps`** — `EntityOps` 实现：NPC 间实体交互/检查
+- **`ResourceRequestExecutor`** — 处理 ResourceRequestOp：从 ColonyItemBank 提取/存入资源
 
-### TaskSource
+### TaskSource 实现 (source/)
 
-- **BuildingTaskSource** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。发布后检测到任务落在 PENDING_APPROVAL 时自动 approve（建筑修复是殖民地自治行为，不能卡在玩家审批门后）。这是 BE → 引擎的唯一桥梁
-- **RoadTaskSource** — 每 20tick 轮询：从 ConcurrentLinkedQueue 批量取出 pending road segments + decorations，发布 build_segment / build_decoration 蓝图到 GlobalTaskPool
-- **WarehouseSource** / **WorkbenchSource** — V1 stub，监视资源/生产队列
-- **PlayerManualSource** — 玩家手动通过任务编辑器提交的任务源
+- **`BuildingTaskSource`** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。这是 BE → 引擎的唯一桥梁
+- **`BlueprintConfigLoader`** — JSON 蓝图配置加载器（在 source/blueprint/ 子包）
+- **`DataDrivenSteps`** — 遗留建筑蓝图 fallback（在 source/blueprint/ 子包）
+
+**注意：** 纯 core 的 TaskSource（TaskSourcePoller、EventDrivenTaskSource、PlayerManualSource、WorkbenchSource）在 `task/source/`，RoadTaskSource 在 `road/engine/`。
 
 ### 持久化
 
-- **TaskPoolSavedData** — 跨会话任务持久化（Level SavedData）。保存 blueprintId + taskParams + stepIndex + state → NBT。重载时从蓝图重新编译恢复进度
+- **`TaskPoolSavedData`** — 跨会话任务持久化（Level SavedData）。保存 blueprintId + taskParams + stepIndex + state → NBT。重载时从蓝图重新编译恢复进度
 
-### 道路 MC 层
+### ECS 系统 (system/) — 注册到 World.tick()
 
-- **RoadBuilder** — 执行路径方块放置：挖+填+水面桥+调色板加权随机选取。产出 JsonArray tiles，不直接操作世界（由 NPC 任务执行）
-- **RoadSavedData** — 路网持久化（Level SavedData）。NBT 序列化 edges + placedBlocks + nodes（节点加载时从 BuildingSavedData 重建）
-- **RoadEventListener** — 订阅 build_complete / road_segment_complete。enqueueEdge() 为 public，供道路编辑器调用
-- **RoadEditorHandler** — 服务端编辑器操作：removeEdge（清空 placedBlocks→AIR + 移除边 + 节点重验证）
-- **RoadTaskSource** — 轮询发布 pending road segments + decorations 到 GlobalTaskPool
-- **DecorationBuilder** — 执行装饰放置（灯柱+长椅）
-- **RoadRoutingHelper** — 路由辅助工具，包装 RoadBlobCache + RoadNetwork 完成寻路
-- **RoadConfig** — 道路系统配置（读取 road_rules JSON）
-- **WandscapeTags** — Minecraft 标签（TagKey）定义，用于道路方块识别
-- **RoadBlobExplorer** — 探索世界中建筑区块，为道路规划提供输入数据
+- **`NavigationSystem`** — NPC 移动总控：≤64格寻路 + 卡死检测(每60tick/3次→传送) + 超时→传送。依赖 MC Pathfinder。`implements System`
+- **`FailureAnalyzerSystem`** — 每 20tick 心跳分析 FAILED 任务。当前覆盖法杖能力不足 → 自动制作法杖。`implements System`
 
-### 物品运输
+### 后台服务 (service/) — EventBus 订阅者
 
-- **ItemTransportManager** — 物品运输管理器，处理 NPC 与仓库之间的物品流转
+非 ECS System，通过 `world.eventBus.subscribe()` 注册到核心 EventBus。
 
-### FailureAnalyzerSystem
+- **`StatsService`** — 原 `StatsSystem`。订阅 `NarrativeEventTriggered`，记录每殖民地统计数据（骨架，未来实现）
+- **`AchievementService`** — 原 `AchievementSystem`。订阅 `NarrativeEventTriggered`，评估成就触发条件（骨架，未来实现）
 
-在 `engine/system/`，任务失败分析系统。分析 AtomicOp 执行失败原因（资源不足/寻路失败/魔力不足等），记录失败原因供调度器重新分配任务。
+### 物品运输 (transport/)
 
-### NavigationSystem
+- **`ItemTransportManager`** — 物品运输管理器，处理 NPC 与仓库之间的物品流转
 
-在 `engine/system/`（非 core/system/），因为依赖 MC Pathfinder。NPC 移动总控：≤64格寻路 + 卡死检测(每60tick/3次→传送) + 超时→传送。超距或失败时向私有队列推入 RitualOp(SELF_TELEPORT)，由 TaskExecutionSystem 统一执行而非直接操作 MC 实体。
+### ColonyApiImpl（engine 根包）
 
-### 叙事事件订阅者（engine/system/）
-
-两个系统订阅 `NarrativeEventTriggered`：
-
-- **StatsSystem** — 记录游客统计（骨架，未来实现）
-- **AchievementSystem** — 评估成就触发条件（骨架，未来实现）
+- **`ColonyApiImpl`** — ColonyApi 实现（原在 engine/colony/）。桥接 BuildingSavedData 查询殖民地信息。

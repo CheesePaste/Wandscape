@@ -1,16 +1,20 @@
 package com.wsteam.wandscape.core;
 
-import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.*;
+import com.wsteam.wandscape.core.component.ManaRegenSystem;
 import com.wsteam.wandscape.core.ecs.HashMapComponentStore;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
-import com.wsteam.wandscape.core.op.OpExecutorRegistry;
-import com.wsteam.wandscape.core.system.*;
-import com.wsteam.wandscape.core.task.BuildingTaskPool;
-import com.wsteam.wandscape.core.task.GlobalTaskPool;
+import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
+import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.task.scheduler.SchedulerSystem;
+import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.task.scheduler.SystemBlueprintSystem;
+import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
+import com.wsteam.wandscape.task.source.TaskSourcePoller;
 
 import java.util.UUID;
 

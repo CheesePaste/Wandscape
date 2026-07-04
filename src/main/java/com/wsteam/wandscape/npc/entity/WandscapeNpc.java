@@ -10,10 +10,12 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
+import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.task.ExecutorState;
+import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
@@ -35,7 +37,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -285,9 +286,9 @@ public class WandscapeNpc extends PathfinderMob {
             World ecsWorld = WandscapeEngine.getWorld();
             if (ecsWorld != null && ecsEntityId > 0) {
                 var exec = ecsWorld.get(ecsEntityId,
-                        com.wsteam.wandscape.core.component.TaskExecutor.class);
+                        TaskExecutor.class);
                 casting = exec != null
-                        && exec.state == com.wsteam.wandscape.core.task.ExecutorState.ACTIVE
+                        && exec.state == ExecutorState.ACTIVE
                         && (exec.npcQueue.hasWork() || exec.globalTaskId != null);
                 if (casting && exec.currentOpTarget != null) {
                     var t = exec.currentOpTarget;
@@ -360,7 +361,7 @@ public class WandscapeNpc extends PathfinderMob {
     private String computeStatusText(World ecsWorld) {
         if (ecsWorld == null || ecsEntityId < 0) return "";
 
-        var exec = ecsWorld.get(ecsEntityId, com.wsteam.wandscape.core.component.TaskExecutor.class);
+        var exec = ecsWorld.get(ecsEntityId, TaskExecutor.class);
         var nav = ecsWorld.get(ecsEntityId, NavigationState.class);
 
         // 1. Navigation states (visible even if idle task-wise)
@@ -519,7 +520,7 @@ public class WandscapeNpc extends PathfinderMob {
             if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
                 if (world != null && ecsEntityId > 0) {
                     var exec = world.get(ecsEntityId,
-                            com.wsteam.wandscape.core.component.TaskExecutor.class);
+                            TaskExecutor.class);
                     if (exec != null && exec.globalTaskId != null) {
                         world.taskPool.releaseTaskForReassign(
                                 exec.globalTaskId, ecsEntityId, world);
@@ -540,7 +541,7 @@ public class WandscapeNpc extends PathfinderMob {
                         if (bank != null) {
                             UUID cid = this.colonyId != null ? this.colonyId : new UUID(0, 0);
                             var member = world.get(ecsEntityId,
-                                    com.wsteam.wandscape.core.component.ColonyMember.class);
+                                    ColonyMember.class);
                             if (member != null && member.colonyId() != null) cid = member.colonyId();
                             transporter.cancelForNpc(ecsEntityId, bank, cid);
                         }
@@ -611,7 +612,7 @@ public class WandscapeNpc extends PathfinderMob {
         if (ecsEntityId < 0) return true;
         World world = WandscapeEngine.getWorld();
         if (world == null) return true;
-        var exec = world.get(ecsEntityId, com.wsteam.wandscape.core.component.TaskExecutor.class);
+        var exec = world.get(ecsEntityId, TaskExecutor.class);
         return exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null);
     }
 
@@ -620,7 +621,7 @@ public class WandscapeNpc extends PathfinderMob {
         if (ecsEntityId < 0) return null;
         World world = WandscapeEngine.getWorld();
         if (world == null) return null;
-        var exec = world.get(ecsEntityId, com.wsteam.wandscape.core.component.TaskExecutor.class);
+        var exec = world.get(ecsEntityId, TaskExecutor.class);
         return exec != null && exec.globalTaskId != null
                 ? new UUID(0, exec.globalTaskId) : null;
     }

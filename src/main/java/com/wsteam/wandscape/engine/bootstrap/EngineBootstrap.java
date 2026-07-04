@@ -6,24 +6,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.ResourceShortageHandler;
-import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.core.types.ResourceId;
+import com.wsteam.wandscape.engine.service.AchievementService;
+import com.wsteam.wandscape.engine.service.StatsService;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.op.DefaultOpExecutors;
-import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
-import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
-import com.wsteam.wandscape.core.system.TaskSource;
-import com.wsteam.wandscape.core.system.WorkbenchSource;
-import com.wsteam.wandscape.core.task.BlueprintInterpreter;
-import com.wsteam.wandscape.core.task.BlueprintRegistry;
-import com.wsteam.wandscape.core.task.BuildingTaskPool;
-import com.wsteam.wandscape.core.task.TaskState;
+import com.wsteam.wandscape.op.executor.DefaultOpExecutors;
+import com.wsteam.wandscape.task.source.EventDrivenTaskSource;
+import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.task.source.TaskSource;
+import com.wsteam.wandscape.task.source.WorkbenchSource;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintInterpreter;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
@@ -37,7 +38,7 @@ import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.engine.road.RoadTaskSource;
+import com.wsteam.wandscape.road.engine.RoadTaskSource;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
@@ -49,7 +50,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
 import net.minecraft.core.BlockPos;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -125,12 +125,12 @@ public final class EngineBootstrap {
             Log.info(TAG, "  ColonyResourceAccess: WarehouseManager (live)");
         } else {
             colonyResources = new ColonyResourceAccess() {
-                @Override public boolean hasEnough(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
-                @Override public boolean reserve(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
-                @Override public boolean commit(com.wsteam.wandscape.core.types.ResourceId r, int a) { return true; }
-                @Override public void release(com.wsteam.wandscape.core.types.ResourceId r, int a) {}
-                @Override public int available(com.wsteam.wandscape.core.types.ResourceId r) { return Integer.MAX_VALUE; }
-                @Override public void addResource(com.wsteam.wandscape.core.types.ResourceId r, int a) {}
+                @Override public boolean hasEnough(ResourceId r, int a) { return true; }
+                @Override public boolean reserve(ResourceId r, int a) { return true; }
+                @Override public boolean commit(ResourceId r, int a) { return true; }
+                @Override public void release(ResourceId r, int a) {}
+                @Override public int available(ResourceId r) { return Integer.MAX_VALUE; }
+                @Override public void addResource(ResourceId r, int a) {}
             };
             Log.info(TAG, "  ColonyResourceAccess: stub (warehouse not loaded)");
         }
@@ -208,9 +208,9 @@ public final class EngineBootstrap {
         Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
 
         // 9f. Register narrative event subscribers (stats, achievements)
-        com.wsteam.wandscape.engine.system.StatsSystem.register();
-        com.wsteam.wandscape.engine.system.AchievementSystem.register();
-        Log.info(TAG, "  StatsSystem / AchievementSystem registered");
+        StatsService.register();
+        AchievementService.register();
+        Log.info(TAG, "  StatsService / AchievementService registered");
 
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);

@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.lwjgl.glfw.GLFW;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.core.PathPoint;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.road.network.RoadBatchPublishPacket;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;

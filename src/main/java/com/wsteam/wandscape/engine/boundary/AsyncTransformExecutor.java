@@ -7,9 +7,9 @@ import java.util.concurrent.CompletableFuture;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.op.AtomicOp;
-import com.wsteam.wandscape.core.op.OpExecutor;
-import com.wsteam.wandscape.core.op.ResourceShortageException;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.op.executor.OpExecutor;
+import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 

@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.blueprint.editor;
 
-import com.wsteam.wandscape.core.task.BlueprintDefinition;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintDefinition;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**

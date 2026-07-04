@@ -222,3 +222,26 @@
 **为什么边界只在 XZ 平面检查（不检查 Y±1）？** 楼梯/斜坡的每个台阶天然是边界——NPC 可以在任意台阶上/下道路。检查 Y±1 会让平坦道路的内部方块也成为边界（因为上方无方块），失去"内部 vs 边界"的区分意义。Y 变体通过 centroid 虫洞自动处理——BFS 已经将楼梯的所有台阶纳入同一个斑块。
 
 **为什么核心数据结构和引擎扫描分开为 core/RoadBlobCache + engine/RoadBlobExplorer？** 遵循 core/ 零 MC 依赖规则。RoadBlobCache 是纯 Java 集合操作（Map/Set/BFS），可在单元测试中验证。RoadBlobExplorer 需要 Level/BlockState/TagKey，放在 engine/。RoadRouter.buildGraph() 只读 RoadBlobCache，是纯核心逻辑。
+
+## 包重构（2026-07-04）
+
+**为什么把 core/ 拆分为 core/ + op/ + task/ + road/？** 原 `core/` 承载了 5 个无关子系统（ECS、原子操作、任务引擎、路网算法、调度系统），77 个文件混杂在一起。每个子系统有独立的演化速度和变更理由，放在同一包中导致：
+- 开发者修改任务系统时不得不浏览路网代码
+- 新增原子操作类型需要了解整个 ECS 框架
+- 单元测试边界模糊（task 测试和 road 测试混在 core 测试文件夹）
+
+拆分为独立顶级包后，每个包有清晰的职责边界和独立的变更范围。
+
+**为什么 engine/road/ 移到 road/engine/，engine/colony/ 并入 engine 根？** 道路的 MC 实现（RoadBuilder、RoadSavedData）和纯核心算法（MstCalculator、RoadNetwork）属于同一子系统，不应因"一个零 MC 一个依赖 MC"就拆到两个顶级包。road/engine/ 作为 road/ 包内的实现层，自然保持与 core/ 同级的情理距离。ColonyApiImpl 只有 1 个文件，不值得独立子包。
+
+**为什么 task/network/ 和 shared/ui/task/ 也并入 task/？** 任务的网络层（4 个 packet）和客户端 GUI（TaskEditorScreen、TaskEditorClientState）是任务系统的横向切片，与引擎层的 dsl/pool/scheduler 属同一子系统。放在 task/client/ 和 task/network/ 后，开发者只需要了解 task/ 一个顶级包就掌握了任务系统的全貌。网络包仍保持 C→S/S→C 的通信模式不变。
+
+**为什么不把所有包统一成 api/internal 结构？** core/、op/、task/ 的 engine/dsl/scheduler 属于纯 Java 基础设施层，被多个 MC 模块引用但自身不引用 MC——它们是框架代码而非模块。road/algorith/、engine/boundary/、task/network/ 等仍是模块的标准 api/internal/client 模式。两套模式并行，取决于包的角色是"基础设施"还是"游戏模块"。
+
+## 包重构第二轮：System 归属整理（2026-07-04）
+
+**为什么 ManaRegenSystem 从 core/ecs/ 移到 core/component/？** `core/ecs/` 是 ECS 框架包（World、System 接口、ComponentStore），应只放抽象和基础设施。`ManaRegenSystem` 是具体实现——它做的事情就是遍历所有 ManaPool 并调用 `pool.regen()`，与 ManaPool 紧耦合。把实现和框架混在一起会模糊包的职责边界。放在 `core/component/` 后，开发者看到 ManaPool 就能在同一包找到其配套处理器，搜索成本更低。
+
+**为什么 engine/system/ 拆分为 system/ + service/？** `engine/system/` 里混了两类完全不同的事物：(1) 实现 `core/ecs/System` 接口、注册到 `World.tick()` 的真正 ECS System；(2) 通过 `world.eventBus.subscribe()` 注册的纯事件订阅者。前者是 ECS 调度的组成部分，后者是旁路服务。混在一起让开发者无法从包名判断"这个 System 是 tick 驱动的还是事件驱动的"。拆分后 `engine/system/` 只放 ECS System，`engine/service/` 只放事件订阅者，各自职责单一。
+
+**为什么 StatsSystem/AchievementSystem 改名？** 叫 "System" 意味着它跟 NavigationSystem 和 FailureAnalyzerSystem 是同类事物——但实际上它既不实现 `core/ecs/System`，也不被 tick 驱动。命名误导比命名不统一更糟糕，因为会让新开发者花费无意义的精力去理解它们之间的异同。`StatsService` 和 `AchievementService` 准确表达了它们的实际角色：记录数据、提供服务。

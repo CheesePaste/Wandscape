@@ -1,9 +1,8 @@
 package com.wsteam.wandscape.core.component;
 
-import com.wsteam.wandscape.core.op.AtomicOp;
-import com.wsteam.wandscape.core.task.ExecutorState;
-import com.wsteam.wandscape.core.task.NpcTaskPackage;
-import com.wsteam.wandscape.core.task.TaskSequence;
+import com.wsteam.wandscape.task.runtime.ExecutorState;
+import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import java.util.Map;

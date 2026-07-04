@@ -6,12 +6,11 @@ import java.util.UUID;
 import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.core.road.PathGenerator;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
-import com.wsteam.wandscape.core.road.RoadNode;
+import com.wsteam.wandscape.road.algorithm.PathGenerator;
+import com.wsteam.wandscape.road.core.PathPoint;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadNode;
 import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
 import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
 

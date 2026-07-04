@@ -12,7 +12,7 @@ import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.engine.colony.ColonyApiImpl;
+import com.wsteam.wandscape.engine.ColonyApiImpl;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;

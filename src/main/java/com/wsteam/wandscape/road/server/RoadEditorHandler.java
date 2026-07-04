@@ -3,10 +3,10 @@ package com.wsteam.wandscape.road.server;
 import java.util.Set;
 import java.util.UUID;
 
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
-import com.wsteam.wandscape.core.road.RoadNode;
+import com.wsteam.wandscape.road.core.PathPoint;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadNode;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;

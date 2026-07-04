@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.wsteam.wandscape.core.task.BlueprintDefinition;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintDefinition;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.BlueprintInfo;
 import com.wsteam.wandscape.shared.data.ParamTypeInfo;

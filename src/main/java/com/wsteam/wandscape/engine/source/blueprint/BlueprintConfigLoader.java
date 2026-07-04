@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 
 import com.google.gson.*;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.core.task.*;
+import com.wsteam.wandscape.task.engine.dsl.*;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 

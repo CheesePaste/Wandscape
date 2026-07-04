@@ -5,10 +5,10 @@ import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EntityOps;
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.boundary.RitualOps;
-import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
-import com.wsteam.wandscape.core.system.TaskSource;
-import com.wsteam.wandscape.core.task.BlueprintRegistry;
-import com.wsteam.wandscape.core.task.BuildingTaskPool;
+import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
+import com.wsteam.wandscape.task.source.TaskSource;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
 
 import javax.annotation.Nullable;
 import java.util.Collections;

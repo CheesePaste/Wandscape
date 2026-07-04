@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.wsteam.wandscape.blueprint.editor.BlueprintEditorCanvas.CanvasNode;
-import com.wsteam.wandscape.core.task.ParamType;
+import com.wsteam.wandscape.task.engine.dsl.ParamType;
 
 import imgui.ImGui;
 import imgui.ImVec2;

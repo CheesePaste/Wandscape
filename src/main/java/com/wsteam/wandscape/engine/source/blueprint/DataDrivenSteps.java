@@ -8,9 +8,9 @@ import com.google.gson.JsonElement;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.log.Log;
-import com.wsteam.wandscape.core.op.AtomicOp;
-import com.wsteam.wandscape.core.task.BlueprintSteps;
-import com.wsteam.wandscape.core.task.TaskSequence;
+import com.wsteam.wandscape.op.api.AtomicOp;
+import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
+import com.wsteam.wandscape.task.runtime.TaskSequence;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 

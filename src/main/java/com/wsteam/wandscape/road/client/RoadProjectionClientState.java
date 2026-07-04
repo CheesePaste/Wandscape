@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadNetwork;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;

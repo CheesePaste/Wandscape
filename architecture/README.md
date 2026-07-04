@@ -14,24 +14,41 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── api/          TouristApi
 │   └── internal/     TouristSpawnSystem/TouristMoveGoal/TouristInteractGoal/...
 │
-├── core/             ECS 引擎，纯 Java 21，零 MC 依赖
-│   ├── ecs/          World + System + ComponentStore
-│   ├── component/    10 个组件：Position/ManaPool/EquipmentComponent/TaskExecutor/Inventory/...
+├── core/             ECS 核心框架（精简），纯 Java 21，零 MC 依赖
+│   ├── ecs/          World + System + ComponentStore + CoreBootstrap
+│   ├── component/    10 组件 + ManaRegenSystem(与ManaPool紧耦合): Position/ManaPool/EquipmentComponent/...
 │   ├── boundary/     8 个接口：BlockOps/EntityOps/RitualOps/MovementOps/ColonyResourceAccess/EventBus/ResourceAddedListener/ResourceShortageHandler
-│   ├── op/           AtomicOp(sealed,8种) + OpExecutor + 注册表 + ConditionEvaluator
-│   ├── task/         任务池 + 蓝图DSL(BlueprintDefinition/Interpreter/ExprNode/StepNode) + TaskCompiler + ApprovalInfo + CompiledBlueprint + ExecutorState
-│   ├── system/       Scheduler/TaskExecution/ManaRegen/TaskSourcePoller/PlayerManualSource/WorkbenchSource/EventDrivenTaskSource
-│   ├── road/         路网生成(MST+PathGenerator+DecorationPlanner+RoadRouter) — 纯逻辑无MC依赖
-│   ├── event/        领域事件(SimpleEventBus) 和类型定义
+│   ├── event/        领域事件(SimpleEventBus) + TaskCompleted/CustomEvent/NarrativeEventTriggered
 │   └── types/        基础record: GridPos/BlockType/ResourceId/EffectId/InteractAction/AttributeType/EquipmentSlot/EquipmentPreset/...
 │
-├── engine/           MC 适配实现（注入 core 边界接口）
+├── op/               原子操作系统（独立，原 core/op/）
+│   ├── api/          AtomicOp sealed interface + ConditionEvaluator
+│   └── executor/     OpExecutor 框架 + 注册表 + DefaultOpExecutors
+│
+├── task/             任务系统（整合原 core/task/ + core/system/调度 + task/network/ + shared/ui/task/）
+│   ├── engine/dsl/   蓝图 DSL AST（BlueprintDefinition/ExprNode/StepNode/ParamType）
+│   ├── engine/pool/  任务池（GlobalTaskPool/BuildingTaskPool）
+│   ├── runtime/      运行时状态（ExecutorState/NpcTaskQueue/TaskSequence）
+│   ├── scheduler/    调度系统（SchedulerSystem/TaskExecutionSystem）
+│   ├── source/       TaskSource 接口 + 核心实现（TaskSourcePoller/EventDrivenTaskSource/PlayerManualSource/WorkbenchSource）
+│   ├── client/       任务编辑器 GUI + 状态（原 shared/ui/task/）
+│   └── network/      任务编辑器网络包（原 task/network/）
+│
+├── road/             道路系统（整合原 core/road/ + engine/road/ + road/）
+│   ├── core/         纯数据模型（RoadNetwork/RoadNode/RoadEdge/RoadBlobCache...）
+│   ├── algorithm/    算法（MstCalculator/PathGenerator/RoadPlanner/RoadRouter...）
+│   ├── engine/       MC 实现（RoadBuilder/RoadSavedData/RoadApiImpl/RoadTaskSource...）
+│   ├── client/       编辑器客户端（原）
+│   ├── network/      网络包（原）
+│   └── server/       编辑器服务端（原）
+│
+├── engine/           MC 适配层（精简，road/ 移入 road/engine/）
 │   ├── bootstrap/    EngineBootstrap — 一次性装配所有边界实现+TaskSource+系统
 │   ├── boundary/     WandscapeBlockOps/WandscapeMovementOps/WandscapeRitualOps/WandscapeEntityOps + AsyncTransformExecutor + ResourceRequestExecutor
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
-│   ├── road/         RoadBuilder/RoadSavedData/RoadEventListener/RoadTaskSource/RoadConfig/WandscapeTags/RoadRoutingHelper/RoadBlobExplorer
-│   ├── transport/    ItemTransportManager
-│   └── system/       NavigationSystem(NPC移动总控) + StatsSystem + AchievementSystem
+│   ├── system/       ECS System（注册到World.tick()）NavigationSystem + FailureAnalyzerSystem
+│   ├── service/      非ECS服务（EventBus订阅者）StatsService + AchievementService
+│   └── transport/    ItemTransportManager
 │
 ├── shared/           所有包依赖的公共层
 │   ├── api/          12 个模块接口(不含AtomixExecutor/HouseApi/ManaPoolApi桩) + registry/WandscapeApis.java(静态定位器)
@@ -59,15 +76,9 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── data/         ColonyDailySnapshot/ColonyStatsSummary
 │   ├── internal/     StatisticsCollector/StatisticsData(SavedData)
 │   └── network/      StatsSyncPacket
-├── task/             任务编辑器网络层
-│   └── network/      TaskEditorOpenPacket/TaskCreatePacket/BlueprintListResponsePacket/TaskNetworkHandler
 ├── projection/       建筑投影/灵魂出窍模式+调试检查
 │   ├── client/       ProjectionClientState/ProjectionFlightController/ProjectionRenderer + BuildingDebug*
 │   └── network/      ProjectionEnter*/Exit/Place + BuildingAction/DebugRequest/DebugResponse
-├── road/             道路编辑器客户端/网络/服务端
-│   ├── client/       RoadEditorClientState/RoadEditorRenderer + RoadProjection*
-│   ├── network/      RoadBatchPublish/RoadEdgePlan/Remove/EditorToggle/NetworkSync
-│   └── server/       RoadEditorHandler
 ├── imgui/            ImGui 管理器 + 渲染调度
 ├── standalone/       独立编辑器启动器(无需MC, 纯GLFW+ImGui)
 ├── equipment/        装备系统(EquipmentSlot/AttributeType/EquipmentPreset/EquipmentComponent)
@@ -81,10 +92,10 @@ Config.java           NeoForge TOML 配置，所有可调参数
 BuildingConfig JSON → BuildingConfigLoader
   → EnqueueHelper → WorkItem 入 BuildingState.taskQueue
   → BuildingTaskSource.poll(每20tick)
-  → TaskRequest → GlobalTaskPool.addTask()
-  → SchedulerSystem(每2tick评分: proximity×0.5 + efficiency×0.3 + attributes×0.2)
-  → NPC领取 → TaskExecutionSystem
-  → AtomicOp → OpExecutor → WandscapeBlockOps(MC世界实际方块操作)
+  → TaskRequest → task/engine/pool/GlobalTaskPool.addTask()
+  → task/scheduler/SchedulerSystem(每2tick评分: proximity×0.5 + efficiency×0.3 + attributes×0.2)
+  → NPC领取 → task/scheduler/TaskExecutionSystem
+  → AtomicOp → op/executor/OpExecutor → engine/boundary/WandscapeBlockOps(MC世界实际方块操作)
   → emit_event → BuildCompleteListener → BuildingSavedData.structureIntact=true
 ```
 
@@ -120,6 +131,8 @@ BuildingConfig JSON → BuildingConfigLoader
 ```
 shared/          ← 所有包可见（API+事件+数据类）
 core/            ← 所有包可见（纯Java，零MC依赖）
+op/              ← 所有包可见（纯Java，零MC依赖，原子操作定义）
+task/            ← 所有包可见（纯Java，零MC依赖，任务引擎/调度）
 engine/          ← 实现core边界接口，持有MC引用
 building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨包直接引用
 ```
@@ -133,8 +146,10 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 
 | 想看什么 | 打开 |
 |---------|------|
-| ECS引擎/任务池/蓝图DSL/调度器 | [packages/core.md](packages/core.md) |
-| MC桥接/异步执行/方块操作/NPC移动 | [packages/engine.md](packages/engine.md) |
+| ECS核心框架（组件/边界/事件/类型） | [packages/core.md](packages/core.md) |
+| 原子操作（8种 AtomicOp + 执行框架） | [packages/op.md](packages/op.md) |
+| 任务系统（引擎/调度/源/编辑器网络） | [packages/task.md](packages/task.md) |
+| MC桥接/异步执行/方块操作/导航 | [packages/engine.md](packages/engine.md) |
 | API接口/事件/数据类型/UI组件 | [packages/shared.md](packages/shared.md) |
 | 建筑管理/SavedData/维护费/商店/装饰/奇观 | [packages/building.md](packages/building.md) |
 | 游客实体/生成/移动/交互/离开 | [packages/tourist.md](packages/tourist.md) |
@@ -146,9 +161,8 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | JSON加载框架 | [packages/dataconfig.md](packages/dataconfig.md) |
 | 蓝图编辑器 | [packages/blueprint_editor.md](packages/blueprint_editor.md) |
 | 建筑预览/投影系统 | [packages/projection.md](packages/projection.md) |
-| 道路编辑器/路网 | [packages/road.md](packages/road.md) |
+| 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
-| 任务编辑器网络层 | [packages/task.md](packages/task.md) |
 | ImGui管理器 | [packages/imgui.md](packages/imgui.md) |
 | 独立编辑器启动器 | [packages/standalone.md](packages/standalone.md) |
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |

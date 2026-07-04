@@ -12,6 +12,7 @@ import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
+import com.wsteam.wandscape.op.api.AtomicOp;
 import net.minecraft.core.particles.ParticleTypes;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -27,7 +28,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * future — backward-compat with existing callers.
  *
  * <p>Channeling durations are hardcoded per ritual type, matching
- * {@link com.wsteam.wandscape.core.op.AtomicOp.RitualOp#channelTicks()}.
+ * {@link AtomicOp.RitualOp#channelTicks()}.
  */
 public class WandscapeRitualOps implements RitualOps {
 

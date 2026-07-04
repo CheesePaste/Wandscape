@@ -11,7 +11,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.wsteam.wandscape.core.task.TaskRequest;
+import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 

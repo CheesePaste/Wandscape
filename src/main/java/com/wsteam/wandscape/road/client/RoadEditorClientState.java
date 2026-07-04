@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import com.wsteam.wandscape.core.road.RoadNetwork;
-import com.wsteam.wandscape.core.road.RoadNode;
+import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadNode;
 import com.wsteam.wandscape.core.types.GridPos;
 
 import net.minecraft.core.BlockPos;

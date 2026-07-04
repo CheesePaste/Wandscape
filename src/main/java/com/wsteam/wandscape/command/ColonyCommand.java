@@ -1,8 +1,6 @@
 package com.wsteam.wandscape.command;
 
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
@@ -17,12 +15,15 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 
+import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.ColonyMetadata;
 import com.wsteam.wandscape.core.component.Inventory;
+import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.colony.ColonyApiImpl;
+import com.wsteam.wandscape.engine.ColonyApiImpl;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.ColonyApi;
@@ -106,9 +107,9 @@ public final class ColonyCommand {
         // ── Step 3: create ECS colony entity ────────────────────────────────
         World world = WandscapeEngine.getWorld();
         if (world != null) {
-            com.wsteam.wandscape.core.component.ColonyMetadata meta =
-                    com.wsteam.wandscape.core.component.ColonyMetadata.create(
-                            new com.wsteam.wandscape.core.types.GridPos(
+            ColonyMetadata meta =
+                    ColonyMetadata.create(
+                            new GridPos(
                                     origin.getX(), origin.getY(), origin.getZ()),
                             64);
             long colonyEntity = world.createEntity();
@@ -203,11 +204,11 @@ public final class ColonyCommand {
         if (ecsId == null) return;
 
         // Fix ColonyMember: onNpcJoinWorld used PLACEHOLDER_COLONY
-        com.wsteam.wandscape.core.component.ColonyMember member =
-                ecsWorld.get(ecsId, com.wsteam.wandscape.core.component.ColonyMember.class);
+        ColonyMember member =
+                ecsWorld.get(ecsId, ColonyMember.class);
         if (member != null && !colonyId.equals(member.colonyId())) {
             ecsWorld.addComponent(ecsId,
-                    new com.wsteam.wandscape.core.component.ColonyMember(colonyId));
+                    new ColonyMember(colonyId));
             Log.info(TAG, "[Colony] Fixed NPC {} ECS colony {} → {}",
                     npc.getUUID().toString().substring(0, 8),
                     member.colonyId().toString().substring(0, 8),

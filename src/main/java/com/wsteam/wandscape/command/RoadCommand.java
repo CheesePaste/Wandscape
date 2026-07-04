@@ -1,11 +1,9 @@
 package com.wsteam.wandscape.command;
 
-import java.util.UUID;
-
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.road.network.RoadEditorNetwork;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;

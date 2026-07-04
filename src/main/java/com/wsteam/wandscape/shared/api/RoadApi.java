@@ -5,9 +5,9 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.core.road.RoadBlobCache;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadBlobCache;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
 /**
  * API for the road system. Provides access to road network state
  * and operations for triggering road construction.

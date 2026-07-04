@@ -8,7 +8,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.EnqueueHelper;
-import com.wsteam.wandscape.core.task.TaskRequest;
+import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 
 import net.minecraft.commands.CommandSourceStack;

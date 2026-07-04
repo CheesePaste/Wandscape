@@ -8,15 +8,15 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.core.road.PathGenerator;
-import com.wsteam.wandscape.core.road.PathPoint;
-import com.wsteam.wandscape.core.road.RoadEdge;
-import com.wsteam.wandscape.core.road.RoadNetwork;
-import com.wsteam.wandscape.core.road.RoadNode;
+import com.wsteam.wandscape.road.algorithm.PathGenerator;
+import com.wsteam.wandscape.road.core.PathPoint;
+import com.wsteam.wandscape.road.core.RoadEdge;
+import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.road.core.RoadNode;
 import com.wsteam.wandscape.core.types.GridPos;
-import com.wsteam.wandscape.engine.road.RoadConfig;
-import com.wsteam.wandscape.engine.road.RoadEventListener;
-import com.wsteam.wandscape.engine.road.RoadSavedData;
+import com.wsteam.wandscape.road.engine.RoadConfig;
+import com.wsteam.wandscape.road.engine.RoadEventListener;
+import com.wsteam.wandscape.road.engine.RoadSavedData;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;

@@ -9,6 +9,7 @@ import java.util.UUID;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.event.CustomEvent;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 
 import net.minecraft.core.BlockPos;
@@ -45,7 +46,7 @@ public final class BuildCompleteListener {
      * Call after engine bootstrap in {@code onServerStarting}.
      */
     public static void register() {
-        var world = com.wsteam.wandscape.engine.WandscapeEngine.getWorld();
+        var world = WandscapeEngine.getWorld();
         if (world == null || world.eventBus == null) {
             Log.warn(TAG, "Cannot register BuildCompleteListener — engine not bootstrapped");
             return;

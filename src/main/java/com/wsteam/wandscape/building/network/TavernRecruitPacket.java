@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -19,7 +20,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MobSpawnType;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
@@ -206,10 +206,10 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         if (ecsId == null) return;
 
         var member = ecsWorld.get(ecsId,
-                com.wsteam.wandscape.core.component.ColonyMember.class);
+                ColonyMember.class);
         if (member != null && !colonyId.equals(member.colonyId())) {
             ecsWorld.addComponent(ecsId,
-                    new com.wsteam.wandscape.core.component.ColonyMember(colonyId));
+                    new ColonyMember(colonyId));
             Log.info(TAG, "[Tourist] Fixed NPC {} colony {} → {}",
                     ecsId,
                     member.colonyId().toString().substring(0, 8),

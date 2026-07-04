@@ -1,7 +1,6 @@
 package com.wsteam.wandscape;
 
-import java.util.Set;
-
+import com.wsteam.wandscape.engine.ColonyApiImpl;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -37,9 +36,9 @@ import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
 import com.wsteam.wandscape.command.BlueprintEditorCommand;
-import com.wsteam.wandscape.engine.road.RoadApiImpl;
-import com.wsteam.wandscape.engine.road.RoadEventListener;
-import com.wsteam.wandscape.engine.road.RoadSavedData;
+import com.wsteam.wandscape.road.engine.RoadApiImpl;
+import com.wsteam.wandscape.road.engine.RoadEventListener;
+import com.wsteam.wandscape.road.engine.RoadSavedData;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
@@ -79,12 +78,10 @@ import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
-import com.mojang.brigadier.CommandDispatcher;
 
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
-import com.wsteam.wandscape.core.system.PlayerManualSource;
+import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -132,7 +129,6 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -263,7 +259,7 @@ public class Wandscape {
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
         WandscapeApis.setWarehouseApi(new WarehouseManager());
-        WandscapeApis.setColonyApi(com.wsteam.wandscape.engine.colony.ColonyApiImpl.get());
+        WandscapeApis.setColonyApi(ColonyApiImpl.get());
         WandscapeApis.setTouristApi(new TouristApiImpl());
         tavernApi = new TavernApiImpl();
         WandscapeApis.setTavernApi(tavernApi);
@@ -467,7 +463,7 @@ public class Wandscape {
         DemolishCompleteListener.register();
         // Rebuild colony spatial index from saved data
         var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
-        if (colonyApi instanceof com.wsteam.wandscape.engine.colony.ColonyApiImpl impl) {
+        if (colonyApi instanceof ColonyApiImpl impl) {
             impl.rebuildFromSavedData();
         }
 

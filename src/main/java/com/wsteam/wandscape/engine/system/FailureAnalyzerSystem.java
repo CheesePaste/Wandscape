@@ -4,13 +4,9 @@ import java.util.*;
 
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.core.task.GlobalTask;
-import com.wsteam.wandscape.core.task.TaskState;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.core.types.ResourceStack;
-
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import com.wsteam.wandscape.shared.log.Log;
 
