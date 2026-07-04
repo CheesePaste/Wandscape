@@ -10,38 +10,39 @@ import static org.junit.jupiter.api.Assertions.*;
 class ElementTypeTest {
 
     @Test
-    void values_countIsNine() {
-        assertEquals(9, ElementType.values().length);
+    void values_countIsSeven() {
+        assertEquals(7, ElementType.values().length);
     }
 
     @Test
-    void tier1_containsEarthWoodWater() {
-        List<ElementType> tier1 = Arrays.stream(ElementType.values())
-            .filter(e -> e.getTier() == 1).toList();
-        assertEquals(3, tier1.size());
-        assertTrue(tier1.contains(ElementType.EARTH));
-        assertTrue(tier1.contains(ElementType.WOOD));
-        assertTrue(tier1.contains(ElementType.WATER));
+    void containsEarthWoodWater() {
+        List<ElementType> all = Arrays.asList(ElementType.values());
+        assertTrue(all.contains(ElementType.EARTH));
+        assertTrue(all.contains(ElementType.WOOD));
+        assertTrue(all.contains(ElementType.WATER));
     }
 
     @Test
-    void tier2_containsFireIronWind() {
-        List<ElementType> tier2 = Arrays.stream(ElementType.values())
-            .filter(e -> e.getTier() == 2).toList();
-        assertEquals(3, tier2.size());
-        assertTrue(tier2.contains(ElementType.FIRE));
-        assertTrue(tier2.contains(ElementType.IRON));
-        assertTrue(tier2.contains(ElementType.WIND));
+    void containsFireMetalWind() {
+        List<ElementType> all = Arrays.asList(ElementType.values());
+        assertTrue(all.contains(ElementType.FIRE));
+        assertTrue(all.contains(ElementType.METAL));
+        assertTrue(all.contains(ElementType.WIND));
     }
 
     @Test
-    void tier3_containsGoldDiamondEnder() {
-        List<ElementType> tier3 = Arrays.stream(ElementType.values())
-            .filter(e -> e.getTier() == 3).toList();
-        assertEquals(3, tier3.size());
-        assertTrue(tier3.contains(ElementType.GOLD));
-        assertTrue(tier3.contains(ElementType.DIAMOND));
-        assertTrue(tier3.contains(ElementType.ENDER));
+    void containsDark() {
+        List<ElementType> all = Arrays.asList(ElementType.values());
+        assertTrue(all.contains(ElementType.DARK));
+    }
+
+    @Test
+    void noGoldDiamondOrEnder() {
+        List<String> names = Arrays.stream(ElementType.values())
+            .map(e -> e.name()).toList();
+        assertFalse(names.contains("GOLD"), "GOLD has been removed");
+        assertFalse(names.contains("DIAMOND"), "DIAMOND has been removed");
+        assertFalse(names.contains("ENDER"), "ENDER has been renamed to DARK");
     }
 
     @Test
@@ -58,36 +59,13 @@ class ElementTypeTest {
     }
 
     @Test
-    void getTier_earth_returnsOne() {
-        assertEquals(1, ElementType.EARTH.getTier());
+    void getId_metal_returnsMetal() {
+        assertEquals("metal", ElementType.METAL.getId());
     }
 
     @Test
-    void getTier_fire_returnsTwo() {
-        assertEquals(2, ElementType.FIRE.getTier());
-    }
-
-    @Test
-    void getTier_gold_returnsThree() {
-        assertEquals(3, ElementType.GOLD.getTier());
-    }
-
-    @Test
-    void allTiersAreValid() {
-        for (ElementType e : ElementType.values()) {
-            assertTrue(e.getTier() >= 1 && e.getTier() <= 3,
-                e.name() + " has invalid tier: " + e.getTier());
-        }
-    }
-
-    @Test
-    void tierDistribution_threePerTier() {
-        for (int tier = 1; tier <= 3; tier++) {
-            int finalTier = tier;
-            long count = Arrays.stream(ElementType.values())
-                .filter(e -> e.getTier() == finalTier).count();
-            assertEquals(3, count, "Tier " + tier + " should have exactly 3 elements");
-        }
+    void getId_dark_returnsDark() {
+        assertEquals("dark", ElementType.DARK.getId());
     }
 
     @Test

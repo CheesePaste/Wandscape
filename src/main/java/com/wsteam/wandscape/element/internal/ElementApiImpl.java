@@ -1,10 +1,7 @@
 package com.wsteam.wandscape.element.internal;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
-import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.shared.api.ElementApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 
@@ -19,24 +16,17 @@ public class ElementApiImpl implements ElementApi {
     }
 
     @Override
+    public boolean hasElementMapping(String blockOrItemId) {
+        return mappingLoader.hasMapping(blockOrItemId);
+    }
+
+    @Override
     public ElementType fromId(String id) {
         try {
             return ElementType.valueOf(id.toUpperCase());
         } catch (IllegalArgumentException e) {
             return null;
         }
-    }
-
-    @Override
-    public int getTier(ElementType type) {
-        return type.getTier();
-    }
-
-    @Override
-    public List<ElementType> getByTier(int tier) {
-        return Arrays.stream(ElementType.values())
-            .filter(e -> e.getTier() == tier)
-            .toList();
     }
 
     @Override

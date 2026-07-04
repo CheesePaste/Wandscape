@@ -1,10 +1,9 @@
 {
   "item": "minecraft:arrow",
   "build_cost": {
+    "wind": 4,
     "wood": 1,
-    "earth": 1,
-    "wind": 1,
-    "fire": 1
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

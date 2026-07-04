@@ -1,9 +1,9 @@
 {
   "item": "minecraft:spyglass",
   "build_cost": {
-    "iron": 16,
-    "wind": 6,
-    "ender": 8
+    "wind": 32,
+    "metal": 16,
+    "earth": 32
   },
   "decompose_yield": {},
   "decomposable": false,

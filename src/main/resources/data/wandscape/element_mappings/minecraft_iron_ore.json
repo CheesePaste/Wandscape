@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:iron_ore",
+  "build_cost": {
+    "metal": 32,
+    "earth": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

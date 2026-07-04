@@ -1,7 +1,7 @@
 {
   "item": "minecraft:bone_meal",
   "build_cost": {
-    "earth": 1
+    "dark": 1
   },
   "decompose_yield": {},
   "decomposable": false,

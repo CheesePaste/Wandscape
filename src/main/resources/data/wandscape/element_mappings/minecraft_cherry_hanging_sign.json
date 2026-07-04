@@ -1,7 +1,7 @@
 {
   "block": "minecraft:cherry_hanging_sign",
   "build_cost": {
-    "iron": 5,
+    "metal": 26,
     "wood": 8
   },
   "decompose_yield": {},

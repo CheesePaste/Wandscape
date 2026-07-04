@@ -1,7 +1,7 @@
 {
   "block": "minecraft:iron_door",
   "build_cost": {
-    "iron": 30
+    "metal": 128
   },
   "decompose_yield": {},
   "decomposable": false,

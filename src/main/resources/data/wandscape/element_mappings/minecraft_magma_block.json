@@ -1,8 +1,8 @@
 {
   "block": "minecraft:magma_block",
   "build_cost": {
-    "earth": 16,
-    "fire": 32
+    "fire": 64,
+    "earth": 64
   },
   "decompose_yield": {},
   "decomposable": false,

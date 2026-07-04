@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:crimson_nylium",
+  "build_cost": {
+    "earth": 1,
+    "fire": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

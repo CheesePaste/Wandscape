@@ -1,8 +1,9 @@
 {
   "block": "minecraft:prismarine_wall",
   "build_cost": {
-    "earth": 16,
-    "water": 32
+    "dark": 64,
+    "water": 64,
+    "earth": 64
   },
   "decompose_yield": {},
   "decomposable": false,

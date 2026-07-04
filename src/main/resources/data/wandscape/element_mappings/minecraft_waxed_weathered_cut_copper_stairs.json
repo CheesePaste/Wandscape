@@ -1,9 +1,8 @@
 {
   "block": "minecraft:waxed_weathered_cut_copper_stairs",
   "build_cost": {
-    "iron": 108,
-    "wood": 7,
-    "water": 3
+    "metal": 108,
+    "wood": 48
   },
   "decompose_yield": {},
   "decomposable": false,

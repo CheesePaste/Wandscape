@@ -1,8 +1,8 @@
 {
   "block": "minecraft:warped_button",
   "build_cost": {
-    "wood": 2,
-    "ender": 1
+    "dark": 1,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

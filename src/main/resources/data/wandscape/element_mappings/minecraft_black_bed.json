@@ -1,8 +1,9 @@
 {
   "block": "minecraft:black_bed",
   "build_cost": {
-    "wood": 45,
-    "water": 4
+    "dark": 24,
+    "wind": 32,
+    "wood": 38
   },
   "decompose_yield": {},
   "decomposable": false,

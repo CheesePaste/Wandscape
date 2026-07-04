@@ -1,8 +1,8 @@
 {
   "block": "minecraft:quartz_block",
   "build_cost": {
-    "ender": 20,
-    "fire": 32
+    "fire": 32,
+    "wind": 32
   },
   "decompose_yield": {},
   "decomposable": false,

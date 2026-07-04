@@ -17,9 +17,7 @@ import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
@@ -177,10 +175,8 @@ public final class BuildingInteractHandler {
         var elemLoader = Wandscape.ELEMENT_MAPPING_LOADER;
         Map<ItemKey, Long> decomposableItems = new LinkedHashMap<>();
         for (var entry : bank.getSnapshot(colonyId).entrySet()) {
-            ResourceLocation rl = ResourceLocation.tryParse(entry.getKey().itemId());
-            if (rl == null) continue;
-            var block = BuiltInRegistries.BLOCK.get(rl);
-            if (block != null && elemLoader.isDecomposable(block.defaultBlockState())) {
+            String itemId = entry.getKey().itemId();
+            if (elemLoader.hasSeedValue(itemId)) {
                 decomposableItems.put(entry.getKey(), entry.getValue());
             }
         }

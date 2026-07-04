@@ -13,7 +13,7 @@ import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 /**
- * Displays all 9 element types with icon, name, and formatted quantity.
+ * Displays all 7 element types with icon, name, and formatted quantity.
  * Each row is 18px tall (icon 16x16 + 2px spacing).
  *
  * <p>Icons are rendered programmatically as colored circles with a letter glyph.
@@ -29,34 +29,30 @@ public class ElementPanel extends AbstractWidget {
     /** Map from ElementType to stored amount. */
     private Map<ElementType, Long> elements = new LinkedHashMap<>();
 
-    /** Element → display color (background circle). */
+    /** Element -> display color (background circle). */
     private static final Map<ElementType, Integer> ICON_COLORS = Map.of(
             ElementType.EARTH,   0xFF8B6914,
             ElementType.WOOD,    0xFF2E8B57,
             ElementType.WATER,   0xFF4A90D9,
             ElementType.FIRE,    0xFFB22222,
-            ElementType.IRON,    0xFF808080,
+            ElementType.METAL,   0xFF808080,
             ElementType.WIND,    0xFF87CEEB,
-            ElementType.GOLD,    0xFFFFD700,
-            ElementType.DIAMOND, 0xFF00CED1,
-            ElementType.ENDER,   0xFF4B0082
+            ElementType.DARK,    0xFF4B0082
     );
 
-    /** Element → display name color. */
+    /** Element -> display name color. */
     private static final Map<ElementType, Integer> NAME_COLORS = Map.of(
             ElementType.EARTH,   0xFFC4A44A,
             ElementType.WOOD,    0xFF5CB878,
             ElementType.WATER,   0xFF7AB8F0,
             ElementType.FIRE,    0xFFD04444,
-            ElementType.IRON,    0xFFB0B0B0,
+            ElementType.METAL,   0xFFB0B0B0,
             ElementType.WIND,    0xFFA0E0F0,
-            ElementType.GOLD,    0xFFFFE040,
-            ElementType.DIAMOND, 0xFF40E0E0,
-            ElementType.ENDER,   0xFFA060D0
+            ElementType.DARK,    0xFFA060D0
     );
 
     public ElementPanel(int x, int y, int width) {
-        super(x, y, width, 9 * ROW_HEIGHT, Component.empty());
+        super(x, y, width, 7 * ROW_HEIGHT, Component.empty());
     }
 
     /** Update displayed element amounts. */

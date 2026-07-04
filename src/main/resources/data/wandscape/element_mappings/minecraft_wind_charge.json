@@ -1,7 +1,8 @@
 {
   "item": "minecraft:wind_charge",
   "build_cost": {
-    "wind": 6
+    "dark": 16,
+    "wind": 16
   },
   "decompose_yield": {},
   "decomposable": false,

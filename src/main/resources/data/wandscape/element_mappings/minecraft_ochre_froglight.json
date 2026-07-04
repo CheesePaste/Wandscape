@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:ochre_froglight",
+  "build_cost": {
+    "fire": 128,
+    "wood": 128
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

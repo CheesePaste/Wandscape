@@ -21,6 +21,7 @@ import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
 import com.wsteam.wandscape.command.BuildEditorCommand;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
+import com.wsteam.wandscape.command.AuditElementsCommand;
 import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
 import com.wsteam.wandscape.command.LogFilterCommand;
 import com.wsteam.wandscape.command.ManaCommand;
@@ -135,6 +136,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import com.wsteam.wandscape.shared.log.Log;
+import java.nio.charset.StandardCharsets;
 
 @Mod(Wandscape.MODID)
 public class Wandscape {
@@ -480,6 +482,23 @@ public class Wandscape {
         WandscapeBlockInteractExecutor.setElementMappingLoader(ELEMENT_MAPPING_LOADER);
         WandscapeBlockInteractExecutor.setProductionRecipeLoader(PRODUCTION_RECIPE_LOADER);
 
+        // Load element seeds for Workstation decomposition
+        try {
+            var cl = Wandscape.class.getClassLoader();
+            var is = cl.getResourceAsStream("data/wandscape/element_seeds.json");
+            if (is != null) {
+                String seedJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                is.close();
+                ELEMENT_MAPPING_LOADER.loadSeedValues(seedJson);
+                Log.info(TAG, "Loaded {} element seeds for decomposition",
+                        ELEMENT_MAPPING_LOADER.getSeedCount());
+            } else {
+                Log.warn(TAG, "element_seeds.json not found on classpath");
+            }
+        } catch (Exception e) {
+            Log.warn(TAG, "Failed to load element_seeds.json: {}", e.getMessage());
+        }
+
         // ---- Road system ----
         RoadEventListener.register();
 
@@ -538,6 +557,7 @@ public class Wandscape {
         var root = Commands.literal("wandscape")
                 .requires(src -> src.hasPermission(2))
                 .then(GenerateElementMappingsCommand.node())
+                .then(AuditElementsCommand.node())
                 .then(LogFilterCommand.node())
                 .then(FillBuildingCommand.fillNode())
                 .then(ManaCommand.node())

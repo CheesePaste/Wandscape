@@ -1,8 +1,8 @@
 {
   "item": "minecraft:prismarine_crystals",
   "build_cost": {
-    "water": 10,
-    "fire": 5
+    "water": 32,
+    "fire": 16
   },
   "decompose_yield": {},
   "decomposable": false,

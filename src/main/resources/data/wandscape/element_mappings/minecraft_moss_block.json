@@ -1,8 +1,8 @@
 {
   "block": "minecraft:moss_block",
   "build_cost": {
-    "wood": 3,
-    "earth": 2
+    "wood": 4,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

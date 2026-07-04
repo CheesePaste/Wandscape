@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:amethyst_cluster",
+  "build_cost": {
+    "earth": 32,
+    "wind": 32
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

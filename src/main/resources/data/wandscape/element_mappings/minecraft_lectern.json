@@ -1,9 +1,8 @@
 {
   "block": "minecraft:lectern",
   "build_cost": {
-    "wood": 34,
-    "earth": 15,
-    "water": 9
+    "earth": 24,
+    "wood": 100
   },
   "decompose_yield": {},
   "decomposable": false,

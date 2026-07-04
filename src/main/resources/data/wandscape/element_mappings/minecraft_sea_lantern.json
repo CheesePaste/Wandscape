@@ -1,9 +1,10 @@
 {
   "block": "minecraft:sea_lantern",
   "build_cost": {
-    "earth": 16,
-    "fire": 25,
-    "water": 82
+    "fire": 80,
+    "dark": 64,
+    "water": 224,
+    "earth": 64
   },
   "decompose_yield": {},
   "decomposable": false,

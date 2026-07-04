@@ -74,7 +74,7 @@ public class DemoScreen extends MedievalScreen {
         int tabContentY = contentY + 18;
         int tabContentH = PH - headerHeight - 2 - 18 - 10;
 
-        // ── Tab 0: Buttons ──
+        // -- Tab 0: Buttons --
         normalBtn = new MedievalButton(contentX + 5, tabContentY + 5, 140, 20,
                 Component.literal("Normal Button"), () -> {});
         disabledBtn = new MedievalButton(contentX + 5, tabContentY + 30, 140, 20,
@@ -90,7 +90,7 @@ public class DemoScreen extends MedievalScreen {
         leftArrowBtn = new LeftArrowButton(contentX + 75, tabContentY + 60, () -> {});
         rightArrowBtn = new RightArrowButton(contentX + 101, tabContentY + 60, () -> {});
 
-        // ── Tab 1: Lists ──
+        // -- Tab 1: Lists --
         stringList = new ScrollableList<>(contentX + 5, tabContentY, contentW - 10, tabContentH, 18) {
             @Override
             protected void renderRow(GuiGraphics g, String item, int x, int y, int index,
@@ -107,27 +107,25 @@ public class DemoScreen extends MedievalScreen {
         }
         stringList.setItems(sampleItems);
 
-        // ── Tab 2: Elements ──
+        // -- Tab 2: Elements --
         elementPanel = new ElementPanel(contentX + 5, tabContentY + 5, 160);
         Map<ElementType, Long> sampleElements = new LinkedHashMap<>();
         sampleElements.put(ElementType.EARTH, 128000L);
         sampleElements.put(ElementType.WOOD, 52000L);
         sampleElements.put(ElementType.WATER, 8000L);
         sampleElements.put(ElementType.FIRE, 1200L);
-        sampleElements.put(ElementType.IRON, 450L);
+        sampleElements.put(ElementType.METAL, 450L);
         sampleElements.put(ElementType.WIND, 3200L);
-        sampleElements.put(ElementType.GOLD, 64L);
-        sampleElements.put(ElementType.DIAMOND, 8L);
-        sampleElements.put(ElementType.ENDER, 0L);
+        sampleElements.put(ElementType.DARK, 64L);
         elementPanel.setElements(sampleElements);
 
-        // ── Tab 3: Inputs ──
+        // -- Tab 3: Inputs --
         searchBar = new SearchBar(contentX + 5, tabContentY + 5, 200, 16,
                 "Search items...", s -> {});
         slider = new Slider(contentX + 5, tabContentY + 30, 200,
                 1, 64, 32, v -> {});
 
-        // ── Tab 4: Progress ──
+        // -- Tab 4: Progress --
         progressBar = new ProgressIndicator(contentX + 5, tabContentY + 5, 200, 16, 0.65f);
         progressBar.setLabel("65%");
 

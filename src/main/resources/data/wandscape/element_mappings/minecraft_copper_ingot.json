@@ -1,7 +1,7 @@
 {
   "item": "minecraft:copper_ingot",
   "build_cost": {
-    "iron": 8
+    "metal": 8
   },
   "decompose_yield": {},
   "decomposable": false,

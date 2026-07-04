@@ -1,8 +1,7 @@
 {
   "block": "minecraft:cartography_table",
   "build_cost": {
-    "wood": 12,
-    "water": 2
+    "wood": 16
   },
   "decompose_yield": {},
   "decomposable": false,

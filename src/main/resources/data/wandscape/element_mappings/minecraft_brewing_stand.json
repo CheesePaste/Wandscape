@@ -1,8 +1,8 @@
 {
   "block": "minecraft:brewing_stand",
   "build_cost": {
-    "earth": 12,
-    "fire": 30
+    "fire": 64,
+    "earth": 3
   },
   "decompose_yield": {},
   "decomposable": false,

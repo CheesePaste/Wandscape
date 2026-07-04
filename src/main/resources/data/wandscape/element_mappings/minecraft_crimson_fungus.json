@@ -1,8 +1,8 @@
 {
   "block": "minecraft:crimson_fungus",
   "build_cost": {
-    "fire": 6,
-    "wood": 3
+    "fire": 4,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

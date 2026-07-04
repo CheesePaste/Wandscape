@@ -1,7 +1,7 @@
 {
   "block": "minecraft:purpur_pillar",
   "build_cost": {
-    "ender": 4
+    "dark": 4
   },
   "decompose_yield": {},
   "decomposable": false,

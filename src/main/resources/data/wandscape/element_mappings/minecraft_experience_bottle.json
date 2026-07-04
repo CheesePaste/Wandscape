@@ -1,7 +1,7 @@
 {
   "item": "minecraft:experience_bottle",
   "build_cost": {
-    "ender": 15
+    "dark": 32
   },
   "decompose_yield": {},
   "decomposable": false,

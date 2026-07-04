@@ -1,7 +1,7 @@
 {
   "block": "minecraft:chain",
   "build_cost": {
-    "iron": 17
+    "metal": 78
   },
   "decompose_yield": {},
   "decomposable": false,

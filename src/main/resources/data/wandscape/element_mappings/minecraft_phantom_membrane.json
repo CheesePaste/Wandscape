@@ -1,7 +1,7 @@
 {
   "item": "minecraft:phantom_membrane",
   "build_cost": {
-    "wind": 12
+    "wind": 256
   },
   "decompose_yield": {},
   "decomposable": false,

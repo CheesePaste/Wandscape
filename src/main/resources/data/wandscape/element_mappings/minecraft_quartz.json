@@ -2,7 +2,7 @@
   "item": "minecraft:quartz",
   "build_cost": {
     "fire": 8,
-    "ender": 5
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

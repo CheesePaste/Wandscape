@@ -1,8 +1,7 @@
 {
   "block": "minecraft:decorated_pot",
   "build_cost": {
-    "earth": 8,
-    "water": 8
+    "earth": 4
   },
   "decompose_yield": {},
   "decomposable": false,

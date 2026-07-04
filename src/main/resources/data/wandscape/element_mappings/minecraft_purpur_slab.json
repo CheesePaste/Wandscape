@@ -1,7 +1,7 @@
 {
   "block": "minecraft:purpur_slab",
   "build_cost": {
-    "ender": 2
+    "dark": 2
   },
   "decompose_yield": {},
   "decomposable": false,

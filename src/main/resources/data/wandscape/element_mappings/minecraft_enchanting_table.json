@@ -1,11 +1,11 @@
 {
   "block": "minecraft:enchanting_table",
   "build_cost": {
-    "wood": 6,
-    "diamond": 40,
-    "earth": 53,
-    "fire": 32,
-    "water": 23
+    "fire": 128,
+    "water": 128,
+    "metal": 2048,
+    "wood": 28,
+    "earth": 8
   },
   "decompose_yield": {},
   "decomposable": false,

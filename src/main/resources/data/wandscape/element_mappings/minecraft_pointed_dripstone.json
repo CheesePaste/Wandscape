@@ -1,8 +1,7 @@
 {
   "block": "minecraft:pointed_dripstone",
   "build_cost": {
-    "earth": 2,
-    "water": 1
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

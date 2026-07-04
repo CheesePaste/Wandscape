@@ -1,9 +1,8 @@
 {
   "item": "minecraft:clock",
   "build_cost": {
-    "gold": 80,
-    "ender": 5,
-    "fire": 8
+    "fire": 4,
+    "metal": 1032
   },
   "decompose_yield": {},
   "decomposable": false,

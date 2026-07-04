@@ -1,8 +1,8 @@
 {
   "block": "minecraft:brown_mushroom",
   "build_cost": {
-    "wood": 1,
-    "earth": 1
+    "wood": 4,
+    "earth": 4
   },
   "decompose_yield": {},
   "decomposable": false,

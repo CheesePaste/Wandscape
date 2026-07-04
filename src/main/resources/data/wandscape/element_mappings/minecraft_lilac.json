@@ -1,7 +1,8 @@
 {
   "block": "minecraft:lilac",
   "build_cost": {
-    "wood": 2
+    "wood": 16,
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

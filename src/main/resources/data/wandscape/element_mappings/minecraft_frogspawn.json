@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:frogspawn",
+  "build_cost": {
+    "water": 2,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

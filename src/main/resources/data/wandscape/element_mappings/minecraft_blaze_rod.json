@@ -1,7 +1,7 @@
 {
   "item": "minecraft:blaze_rod",
   "build_cost": {
-    "fire": 30
+    "fire": 64
   },
   "decompose_yield": {},
   "decomposable": false,

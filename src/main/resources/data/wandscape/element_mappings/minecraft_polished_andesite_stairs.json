@@ -1,9 +1,9 @@
 {
   "block": "minecraft:polished_andesite_stairs",
   "build_cost": {
-    "earth": 6,
     "fire": 6,
-    "ender": 3
+    "wind": 6,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

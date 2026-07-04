@@ -1,9 +1,8 @@
 {
   "block": "minecraft:mud_brick_slab",
   "build_cost": {
-    "wood": 1,
-    "earth": 1,
-    "water": 1
+    "wood": 2,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

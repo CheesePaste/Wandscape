@@ -1,8 +1,8 @@
 {
   "block": "minecraft:end_rod",
   "build_cost": {
-    "ender": 1,
-    "fire": 7
+    "dark": 1,
+    "fire": 16
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,7 +1,7 @@
 {
   "block": "minecraft:exposed_chiseled_copper",
   "build_cost": {
-    "iron": 18
+    "metal": 18
   },
   "decompose_yield": {},
   "decomposable": false,

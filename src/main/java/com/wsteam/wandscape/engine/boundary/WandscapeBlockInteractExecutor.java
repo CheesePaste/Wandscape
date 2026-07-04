@@ -241,13 +241,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                     new ResourceStack(new ResourceId(shortId), count));
         }
 
-        var blockState = BuiltInRegistries.BLOCK.get(ResourceLocation.tryParse(itemId));
-        Map<ElementType, Long> yield = (blockState != null)
-                ? mappings.getDecomposeYield(blockState.defaultBlockState())
-                : Map.of();
+        Map<ElementType, Long> yield = mappings.getSeedValues(itemId);
 
         if (yield.isEmpty()) {
-            Log.warn(TAG, "decompose: no decompose yield for {}", itemId);
+            Log.warn(TAG, "decompose: no seed values for {}", itemId);
             return;
         }
 

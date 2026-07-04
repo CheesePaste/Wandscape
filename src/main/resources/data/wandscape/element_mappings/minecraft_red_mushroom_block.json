@@ -1,8 +1,8 @@
 {
   "block": "minecraft:red_mushroom_block",
   "build_cost": {
-    "wood": 5,
-    "fire": 3
+    "wood": 4,
+    "earth": 4
   },
   "decompose_yield": {},
   "decomposable": false,

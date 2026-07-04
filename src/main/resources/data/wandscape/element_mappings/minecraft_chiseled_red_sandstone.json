@@ -1,7 +1,7 @@
 {
   "block": "minecraft:chiseled_red_sandstone",
   "build_cost": {
-    "earth": 4
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

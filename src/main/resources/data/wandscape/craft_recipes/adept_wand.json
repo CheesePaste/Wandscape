@@ -12,7 +12,7 @@
   "output": { "item": "wandscape:wand" },
   "cost": {
     "earth": 32,
-    "iron": 16
+    "metal": 16
   },
   "unlock_requirement": {
     "min_magic": 50

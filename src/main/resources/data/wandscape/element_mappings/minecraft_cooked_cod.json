@@ -1,8 +1,8 @@
 {
   "item": "minecraft:cooked_cod",
   "build_cost": {
-    "wood": 1,
-    "water": 3
+    "water": 8,
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

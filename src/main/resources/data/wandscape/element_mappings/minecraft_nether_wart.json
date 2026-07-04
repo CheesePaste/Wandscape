@@ -1,7 +1,7 @@
 {
   "block": "minecraft:nether_wart",
   "build_cost": {
-    "fire": 8
+    "fire": 16
   },
   "decompose_yield": {},
   "decomposable": false,

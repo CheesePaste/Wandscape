@@ -1,9 +1,8 @@
 {
   "item": "minecraft:milk_bucket",
   "build_cost": {
-    "water": 5,
-    "wood": 3,
-    "iron": 36
+    "water": 4,
+    "metal": 192
   },
   "decompose_yield": {},
   "decomposable": false,

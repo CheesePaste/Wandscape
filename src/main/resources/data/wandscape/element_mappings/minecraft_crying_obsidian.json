@@ -1,9 +1,9 @@
 {
   "block": "minecraft:crying_obsidian",
   "build_cost": {
-    "earth": 12,
-    "fire": 8,
-    "ender": 10
+    "water": 32,
+    "fire": 32,
+    "dark": 64
   },
   "decompose_yield": {},
   "decomposable": false,

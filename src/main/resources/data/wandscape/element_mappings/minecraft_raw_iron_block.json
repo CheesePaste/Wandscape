@@ -1,7 +1,7 @@
 {
   "block": "minecraft:raw_iron_block",
   "build_cost": {
-    "iron": 135
+    "metal": 576
   },
   "decompose_yield": {},
   "decomposable": false,

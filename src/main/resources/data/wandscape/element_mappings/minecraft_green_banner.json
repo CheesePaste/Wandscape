@@ -1,8 +1,9 @@
 {
   "block": "minecraft:green_banner",
   "build_cost": {
-    "wood": 86,
-    "earth": 12
+    "dark": 48,
+    "wind": 48,
+    "wood": 50
   },
   "decompose_yield": {},
   "decomposable": false,

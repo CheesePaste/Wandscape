@@ -1,7 +1,7 @@
 {
   "block": "minecraft:furnace",
   "build_cost": {
-    "earth": 32
+    "earth": 8
   },
   "decompose_yield": {},
   "decomposable": false,

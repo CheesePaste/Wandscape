@@ -1,7 +1,7 @@
 {
   "block": "minecraft:emerald_block",
   "build_cost": {
-    "diamond": 135
+    "metal": 2304
   },
   "decompose_yield": {},
   "decomposable": false,

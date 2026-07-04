@@ -1,8 +1,9 @@
 {
   "block": "minecraft:orange_banner",
   "build_cost": {
-    "wood": 92,
-    "fire": 6
+    "dark": 48,
+    "wind": 48,
+    "wood": 50
   },
   "decompose_yield": {},
   "decomposable": false,

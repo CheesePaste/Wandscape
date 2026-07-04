@@ -1,7 +1,7 @@
 {
   "block": "minecraft:stone_pressure_plate",
   "build_cost": {
-    "earth": 8
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

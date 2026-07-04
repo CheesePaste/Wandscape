@@ -1,9 +1,9 @@
 {
   "block": "minecraft:granite",
   "build_cost": {
-    "earth": 4,
     "fire": 16,
-    "ender": 10
+    "wind": 16,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

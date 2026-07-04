@@ -1,7 +1,8 @@
 {
   "item": "minecraft:wolf_armor",
   "build_cost": {
-    "earth": 36
+    "wood": 48,
+    "earth": 48
   },
   "decompose_yield": {},
   "decomposable": false,

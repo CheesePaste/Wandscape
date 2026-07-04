@@ -1,8 +1,8 @@
 {
   "block": "minecraft:wither_skeleton_skull",
   "build_cost": {
-    "fire": 40,
-    "ender": 20
+    "fire": 2048,
+    "dark": 2048
   },
   "decompose_yield": {},
   "decomposable": false,

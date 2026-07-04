@@ -1,7 +1,7 @@
 {
   "block": "minecraft:oxidized_cut_copper_slab",
   "build_cost": {
-    "iron": 9
+    "metal": 9
   },
   "decompose_yield": {},
   "decomposable": false,

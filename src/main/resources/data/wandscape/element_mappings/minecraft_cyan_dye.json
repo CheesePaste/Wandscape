@@ -1,7 +1,8 @@
 {
   "item": "minecraft:cyan_dye",
   "build_cost": {
-    "wood": 3
+    "wood": 8,
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

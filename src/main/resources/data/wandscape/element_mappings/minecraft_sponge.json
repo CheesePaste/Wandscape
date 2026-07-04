@@ -1,7 +1,7 @@
 {
   "block": "minecraft:sponge",
   "build_cost": {
-    "water": 15
+    "water": 256
   },
   "decompose_yield": {},
   "decomposable": false,

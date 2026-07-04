@@ -1,8 +1,8 @@
 {
   "item": "minecraft:glow_ink_sac",
   "build_cost": {
-    "water": 6,
-    "fire": 3
+    "water": 8,
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

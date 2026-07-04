@@ -1,7 +1,7 @@
 {
   "block": "minecraft:polished_tuff",
   "build_cost": {
-    "earth": 3
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

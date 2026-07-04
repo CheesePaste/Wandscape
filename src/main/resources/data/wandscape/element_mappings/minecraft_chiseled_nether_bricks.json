@@ -1,8 +1,8 @@
 {
   "block": "minecraft:chiseled_nether_bricks",
   "build_cost": {
-    "earth": 12,
-    "fire": 12
+    "fire": 4,
+    "earth": 4
   },
   "decompose_yield": {},
   "decomposable": false,

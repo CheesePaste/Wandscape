@@ -1,9 +1,9 @@
 {
   "item": "minecraft:brush",
   "build_cost": {
-    "iron": 8,
-    "wood": 2,
-    "wind": 5
+    "wind": 16,
+    "metal": 8,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

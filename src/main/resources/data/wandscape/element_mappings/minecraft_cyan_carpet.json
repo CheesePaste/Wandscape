@@ -1,7 +1,9 @@
 {
   "block": "minecraft:cyan_carpet",
   "build_cost": {
-    "wood": 10
+    "dark": 5,
+    "wind": 5,
+    "wood": 5
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,7 @@
 {
   "item": "minecraft:turtle_helmet",
   "build_cost": {
-    "earth": 20,
-    "water": 30
+    "water": 320
   },
   "decompose_yield": {},
   "decomposable": false,

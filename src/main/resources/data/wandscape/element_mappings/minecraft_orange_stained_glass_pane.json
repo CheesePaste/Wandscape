@@ -1,9 +1,9 @@
 {
   "block": "minecraft:orange_stained_glass_pane",
   "build_cost": {
-    "wood": 1,
+    "wind": 1,
     "earth": 1,
-    "fire": 1
+    "wood": 1
   },
   "decompose_yield": {},
   "decomposable": false,

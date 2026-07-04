@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:player_head",
+  "build_cost": {
+    "fire": 2048,
+    "dark": 2048
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

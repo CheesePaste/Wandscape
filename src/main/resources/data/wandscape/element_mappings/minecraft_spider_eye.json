@@ -1,8 +1,8 @@
 {
   "item": "minecraft:spider_eye",
   "build_cost": {
-    "fire": 4,
-    "water": 2
+    "dark": 2,
+    "fire": 2
   },
   "decompose_yield": {},
   "decomposable": false,

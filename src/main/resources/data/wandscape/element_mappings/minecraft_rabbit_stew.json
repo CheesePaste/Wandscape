@@ -1,8 +1,8 @@
 {
   "item": "minecraft:rabbit_stew",
   "build_cost": {
-    "wood": 8,
-    "earth": 1
+    "earth": 4,
+    "wood": 21
   },
   "decompose_yield": {},
   "decomposable": false,

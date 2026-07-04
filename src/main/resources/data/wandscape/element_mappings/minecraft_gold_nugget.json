@@ -1,7 +1,7 @@
 {
   "item": "minecraft:gold_nugget",
   "build_cost": {
-    "gold": 2
+    "metal": 28
   },
   "decompose_yield": {},
   "decomposable": false,

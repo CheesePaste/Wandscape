@@ -1,8 +1,8 @@
 {
   "block": "minecraft:sea_pickle",
   "build_cost": {
-    "water": 4,
-    "wood": 1
+    "wood": 8,
+    "water": 16
   },
   "decompose_yield": {},
   "decomposable": false,

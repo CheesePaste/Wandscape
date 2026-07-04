@@ -1,8 +1,9 @@
 {
   "block": "minecraft:wither_rose",
   "build_cost": {
-    "wood": 3,
-    "fire": 6
+    "wood": 8,
+    "fire": 64,
+    "dark": 64
   },
   "decompose_yield": {},
   "decomposable": false,

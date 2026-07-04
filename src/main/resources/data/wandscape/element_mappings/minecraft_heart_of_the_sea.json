@@ -1,8 +1,7 @@
 {
   "item": "minecraft:heart_of_the_sea",
   "build_cost": {
-    "water": 100,
-    "ender": 80
+    "water": 8192
   },
   "decompose_yield": {},
   "decomposable": false,

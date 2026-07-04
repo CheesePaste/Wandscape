@@ -1,8 +1,8 @@
 {
   "block": "minecraft:stonecutter",
   "build_cost": {
-    "iron": 15,
-    "earth": 12
+    "metal": 64,
+    "earth": 3
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,7 @@
 {
   "block": "minecraft:twisting_vines",
   "build_cost": {
-    "ender": 3,
-    "wood": 1
+    "dark": 4
   },
   "decompose_yield": {},
   "decomposable": false,

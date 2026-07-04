@@ -1,7 +1,7 @@
 {
   "block": "minecraft:diamond_block",
   "build_cost": {
-    "diamond": 180
+    "metal": 9216
   },
   "decompose_yield": {},
   "decomposable": false,

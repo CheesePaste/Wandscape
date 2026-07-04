@@ -1,9 +1,9 @@
 {
   "block": "minecraft:lodestone",
   "build_cost": {
-    "gold": 680,
-    "earth": 32,
-    "fire": 400
+    "fire": 16384,
+    "metal": 33792,
+    "earth": 8
   },
   "decompose_yield": {},
   "decomposable": false,

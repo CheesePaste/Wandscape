@@ -1,7 +1,8 @@
 {
   "item": "minecraft:bow",
   "build_cost": {
-    "wood": 15
+    "dark": 6,
+    "wood": 6
   },
   "decompose_yield": {},
   "decomposable": false,

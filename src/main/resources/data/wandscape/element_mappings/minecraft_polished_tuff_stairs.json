@@ -1,7 +1,7 @@
 {
   "block": "minecraft:polished_tuff_stairs",
   "build_cost": {
-    "earth": 4
+    "earth": 3
   },
   "decompose_yield": {},
   "decomposable": false,

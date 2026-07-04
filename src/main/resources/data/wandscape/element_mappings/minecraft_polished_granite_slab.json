@@ -1,9 +1,9 @@
 {
   "block": "minecraft:polished_granite_slab",
   "build_cost": {
-    "earth": 2,
     "fire": 8,
-    "ender": 5
+    "wind": 8,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

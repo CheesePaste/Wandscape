@@ -2,7 +2,7 @@
   "block": "minecraft:warped_stem",
   "build_cost": {
     "wood": 8,
-    "ender": 5
+    "dark": 4
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -2,7 +2,7 @@
   "block": "minecraft:crimson_stem",
   "build_cost": {
     "wood": 8,
-    "fire": 5
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

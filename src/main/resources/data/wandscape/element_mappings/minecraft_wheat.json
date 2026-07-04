@@ -1,7 +1,7 @@
 {
   "block": "minecraft:wheat",
   "build_cost": {
-    "wood": 2
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

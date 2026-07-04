@@ -1,9 +1,8 @@
 {
   "item": "minecraft:book",
   "build_cost": {
-    "wood": 6,
-    "earth": 5,
-    "water": 3
+    "earth": 8,
+    "wood": 28
   },
   "decompose_yield": {},
   "decomposable": false,

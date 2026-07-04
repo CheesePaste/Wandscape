@@ -1,8 +1,11 @@
 {
   "block": "minecraft:dark_prismarine",
   "build_cost": {
-    "earth": 32,
-    "water": 68
+    "dark": 128,
+    "water": 128,
+    "wind": 8,
+    "wood": 8,
+    "earth": 128
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,7 +1,7 @@
 {
   "item": "minecraft:bone",
   "build_cost": {
-    "earth": 4
+    "dark": 4
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "item": "minecraft:echo_shard",
   "build_cost": {
-    "ender": 150,
-    "wind": 80
+    "dark": 512,
+    "wind": 256
   },
   "decompose_yield": {},
   "decomposable": false,

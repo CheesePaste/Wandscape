@@ -1,8 +1,8 @@
 {
   "item": "minecraft:magma_cream",
   "build_cost": {
-    "fire": 8,
-    "earth": 4
+    "fire": 16,
+    "earth": 16
   },
   "decompose_yield": {},
   "decomposable": false,

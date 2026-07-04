@@ -1,6 +1,7 @@
 {
   "block": "minecraft:brown_stained_glass_pane",
   "build_cost": {
+    "wind": 1,
     "wood": 1,
     "earth": 1
   },

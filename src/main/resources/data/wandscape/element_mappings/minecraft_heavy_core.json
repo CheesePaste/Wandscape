@@ -1,7 +1,9 @@
 {
   "block": "minecraft:heavy_core",
   "build_cost": {
-    "iron": 200
+    "metal": 32768,
+    "dark": 32768,
+    "earth": 65536
   },
   "decompose_yield": {},
   "decomposable": false,

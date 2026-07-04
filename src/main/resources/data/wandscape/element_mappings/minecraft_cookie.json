@@ -1,7 +1,7 @@
 {
   "item": "minecraft:cookie",
   "build_cost": {
-    "wood": 1
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

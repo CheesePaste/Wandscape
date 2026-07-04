@@ -1,7 +1,7 @@
 {
   "item": "minecraft:iron_hoe",
   "build_cost": {
-    "iron": 30,
+    "metal": 128,
     "wood": 4
   },
   "decompose_yield": {},

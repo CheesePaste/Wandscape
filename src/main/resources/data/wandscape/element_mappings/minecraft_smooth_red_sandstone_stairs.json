@@ -1,7 +1,7 @@
 {
   "block": "minecraft:smooth_red_sandstone_stairs",
   "build_cost": {
-    "earth": 7
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

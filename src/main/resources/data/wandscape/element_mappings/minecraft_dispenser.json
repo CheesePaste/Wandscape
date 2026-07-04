@@ -1,10 +1,11 @@
 {
   "block": "minecraft:dispenser",
   "build_cost": {
-    "wood": 15,
-    "earth": 28,
-    "ender": 5,
-    "fire": 8
+    "fire": 4,
+    "dark": 6,
+    "metal": 8,
+    "wood": 6,
+    "earth": 7
   },
   "decompose_yield": {},
   "decomposable": false,

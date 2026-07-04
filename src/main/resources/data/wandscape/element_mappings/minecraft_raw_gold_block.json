@@ -1,7 +1,7 @@
 {
   "block": "minecraft:raw_gold_block",
   "build_cost": {
-    "gold": 180
+    "metal": 2304
   },
   "decompose_yield": {},
   "decomposable": false,

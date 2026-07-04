@@ -1,7 +1,7 @@
 {
   "item": "minecraft:hopper_minecart",
   "build_cost": {
-    "iron": 150,
+    "metal": 640,
     "wood": 16
   },
   "decompose_yield": {},

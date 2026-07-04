@@ -180,9 +180,13 @@ public final class EnqueueHelper {
      */
     private static MaterialData computeMaterialData(BuildingConfig config) {
         var counts = new java.util.LinkedHashMap<String, Integer>();
+        var elementApi = WandscapeApis.getElementApi();
         for (var offset : config.pattern()) {
             String blockId = config.blockMapping().get(offset.toKey());
             if (blockId == null || "minecraft:air".equals(blockId)) continue;
+            // Blocks without element mappings are considered "free" materials
+            // and should not be requested from the warehouse.
+            if (!elementApi.hasElementMapping(blockId)) continue;
             counts.merge(blockId, 1, Integer::sum);
         }
         if (counts.isEmpty()) return null;

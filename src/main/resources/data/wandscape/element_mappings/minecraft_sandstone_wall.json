@@ -1,7 +1,7 @@
 {
   "block": "minecraft:sandstone_wall",
   "build_cost": {
-    "earth": 5
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

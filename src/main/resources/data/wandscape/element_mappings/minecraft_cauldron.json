@@ -1,7 +1,7 @@
 {
   "block": "minecraft:cauldron",
   "build_cost": {
-    "iron": 105
+    "metal": 448
   },
   "decompose_yield": {},
   "decomposable": false,

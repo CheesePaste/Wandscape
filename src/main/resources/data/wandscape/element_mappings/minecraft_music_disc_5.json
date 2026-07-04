@@ -1,7 +1,7 @@
 {
   "item": "minecraft:music_disc_5",
   "build_cost": {
-    "ender": 135
+    "dark": 9216
   },
   "decompose_yield": {},
   "decomposable": false,

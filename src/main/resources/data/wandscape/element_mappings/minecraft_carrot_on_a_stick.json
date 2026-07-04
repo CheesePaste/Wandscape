@@ -1,7 +1,8 @@
 {
   "item": "minecraft:carrot_on_a_stick",
   "build_cost": {
-    "wood": 14
+    "dark": 4,
+    "wood": 10
   },
   "decompose_yield": {},
   "decomposable": false,

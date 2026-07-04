@@ -1,8 +1,8 @@
 {
   "item": "minecraft:amethyst_shard",
   "build_cost": {
-    "ender": 8,
-    "wind": 6
+    "earth": 32,
+    "wind": 32
   },
   "decompose_yield": {},
   "decomposable": false,

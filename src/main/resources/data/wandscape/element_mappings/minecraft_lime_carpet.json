@@ -1,8 +1,9 @@
 {
   "block": "minecraft:lime_carpet",
   "build_cost": {
-    "wood": 8,
-    "water": 2
+    "dark": 5,
+    "wind": 5,
+    "wood": 5
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:honey_block",
+  "build_cost": {
+    "wood": 128
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

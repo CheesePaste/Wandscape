@@ -1,8 +1,8 @@
 {
   "block": "minecraft:amethyst_block",
   "build_cost": {
-    "wind": 24,
-    "ender": 32
+    "wind": 128,
+    "earth": 128
   },
   "decompose_yield": {},
   "decomposable": false,

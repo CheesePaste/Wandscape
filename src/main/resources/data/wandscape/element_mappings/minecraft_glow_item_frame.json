@@ -1,10 +1,10 @@
 {
   "item": "minecraft:glow_item_frame",
   "build_cost": {
-    "wood": 16,
-    "earth": 5,
-    "fire": 3,
-    "water": 6
+    "fire": 4,
+    "water": 8,
+    "wood": 32,
+    "earth": 8
   },
   "decompose_yield": {},
   "decomposable": false,

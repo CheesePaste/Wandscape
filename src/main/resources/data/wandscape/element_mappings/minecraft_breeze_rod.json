@@ -1,7 +1,8 @@
 {
   "item": "minecraft:breeze_rod",
   "build_cost": {
-    "wind": 25
+    "wind": 64,
+    "dark": 64
   },
   "decompose_yield": {},
   "decomposable": false,

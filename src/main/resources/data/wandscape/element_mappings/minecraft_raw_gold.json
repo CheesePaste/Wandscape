@@ -1,7 +1,7 @@
 {
   "item": "minecraft:raw_gold",
   "build_cost": {
-    "gold": 20
+    "metal": 256
   },
   "decompose_yield": {},
   "decomposable": false,

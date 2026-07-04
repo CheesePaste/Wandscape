@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:shroomlight",
+  "build_cost": {
+    "fire": 8,
+    "wood": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

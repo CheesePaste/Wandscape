@@ -1,7 +1,7 @@
 {
   "item": "minecraft:cooked_rabbit",
   "build_cost": {
-    "wood": 2
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

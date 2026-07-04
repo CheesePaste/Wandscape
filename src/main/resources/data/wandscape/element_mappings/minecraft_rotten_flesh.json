@@ -1,7 +1,7 @@
 {
   "item": "minecraft:rotten_flesh",
   "build_cost": {
-    "earth": 1
+    "dark": 2
   },
   "decompose_yield": {},
   "decomposable": false,

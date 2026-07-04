@@ -1,7 +1,7 @@
 {
   "block": "minecraft:oxidized_copper_door",
   "build_cost": {
-    "iron": 48
+    "metal": 48
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -84,6 +84,7 @@ public final class WandscapePanelController {
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();
         double guiScale = mc.getWindow().getGuiScale();
@@ -211,6 +212,9 @@ public final class WandscapePanelController {
     static void onKey(InputEvent.Key event) {
         if (!BuildingSelectionOverlay.isActive()) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
 
         int key = event.getKey();
         int mods = event.getModifiers();

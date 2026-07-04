@@ -1,7 +1,7 @@
 {
   "block": "minecraft:warped_roots",
   "build_cost": {
-    "ender": 3
+    "dark": 4
   },
   "decompose_yield": {},
   "decomposable": false,

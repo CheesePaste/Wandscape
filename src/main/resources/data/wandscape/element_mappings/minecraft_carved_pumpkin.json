@@ -1,7 +1,7 @@
 {
   "block": "minecraft:carved_pumpkin",
   "build_cost": {
-    "wood": 3
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

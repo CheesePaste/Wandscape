@@ -1,8 +1,7 @@
 {
   "item": "minecraft:clay_ball",
   "build_cost": {
-    "earth": 2,
-    "water": 2
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

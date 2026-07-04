@@ -1,7 +1,7 @@
 {
   "item": "minecraft:glass_bottle",
   "build_cost": {
-    "earth": 2
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

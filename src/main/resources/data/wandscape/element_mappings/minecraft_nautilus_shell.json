@@ -1,8 +1,8 @@
 {
   "item": "minecraft:nautilus_shell",
   "build_cost": {
-    "water": 50,
-    "earth": 20
+    "wind": 128,
+    "water": 64
   },
   "decompose_yield": {},
   "decomposable": false,

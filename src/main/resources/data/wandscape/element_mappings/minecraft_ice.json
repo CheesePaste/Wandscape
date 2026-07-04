@@ -1,7 +1,7 @@
 {
   "block": "minecraft:ice",
   "build_cost": {
-    "water": 4
+    "water": 8
   },
   "decompose_yield": {},
   "decomposable": false,

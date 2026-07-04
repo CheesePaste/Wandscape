@@ -1,7 +1,7 @@
 {
   "block": "minecraft:purpur_stairs",
   "build_cost": {
-    "ender": 7
+    "dark": 6
   },
   "decompose_yield": {},
   "decomposable": false,

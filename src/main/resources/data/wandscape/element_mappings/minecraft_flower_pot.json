@@ -1,8 +1,7 @@
 {
   "block": "minecraft:flower_pot",
   "build_cost": {
-    "earth": 6,
-    "water": 6
+    "earth": 3
   },
   "decompose_yield": {},
   "decomposable": false,

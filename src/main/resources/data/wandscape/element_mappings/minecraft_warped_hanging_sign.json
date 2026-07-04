@@ -1,9 +1,9 @@
 {
   "block": "minecraft:warped_hanging_sign",
   "build_cost": {
-    "iron": 5,
-    "wood": 8,
-    "ender": 5
+    "dark": 4,
+    "metal": 26,
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

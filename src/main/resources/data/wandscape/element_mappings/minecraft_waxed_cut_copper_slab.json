@@ -1,9 +1,8 @@
 {
   "block": "minecraft:waxed_cut_copper_slab",
   "build_cost": {
-    "iron": 36,
-    "wood": 2,
-    "water": 1
+    "metal": 36,
+    "wood": 16
   },
   "decompose_yield": {},
   "decomposable": false,

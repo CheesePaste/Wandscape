@@ -1,7 +1,7 @@
 {
   "item": "minecraft:iron_nugget",
   "build_cost": {
-    "iron": 1
+    "metal": 7
   },
   "decompose_yield": {},
   "decomposable": false,

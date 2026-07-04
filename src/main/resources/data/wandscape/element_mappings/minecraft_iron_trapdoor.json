@@ -1,7 +1,7 @@
 {
   "block": "minecraft:iron_trapdoor",
   "build_cost": {
-    "iron": 60
+    "metal": 256
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,9 +1,9 @@
 {
   "block": "minecraft:shulker_box",
   "build_cost": {
-    "wood": 16,
-    "earth": 80,
-    "ender": 160
+    "dark": 64,
+    "earth": 32,
+    "wood": 16
   },
   "decompose_yield": {},
   "decomposable": false,

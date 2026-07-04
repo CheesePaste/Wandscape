@@ -1,8 +1,8 @@
 {
   "item": "minecraft:netherite_scrap",
   "build_cost": {
-    "gold": 150,
-    "fire": 100
+    "metal": 8192,
+    "fire": 4096
   },
   "decompose_yield": {},
   "decomposable": false,

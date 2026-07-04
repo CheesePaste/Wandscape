@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:bubble_coral_fan",
+  "build_cost": {
+    "water": 2,
+    "fire": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

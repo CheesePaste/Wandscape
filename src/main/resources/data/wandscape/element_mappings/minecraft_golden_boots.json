@@ -1,7 +1,7 @@
 {
   "item": "minecraft:golden_boots",
   "build_cost": {
-    "gold": 80
+    "metal": 1024
   },
   "decompose_yield": {},
   "decomposable": false,

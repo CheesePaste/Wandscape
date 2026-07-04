@@ -1,9 +1,9 @@
 {
   "block": "minecraft:polished_andesite",
   "build_cost": {
-    "earth": 4,
-    "ender": 2,
-    "fire": 4
+    "fire": 4,
+    "wind": 4,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

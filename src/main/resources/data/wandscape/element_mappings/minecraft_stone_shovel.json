@@ -2,7 +2,7 @@
   "item": "minecraft:stone_shovel",
   "build_cost": {
     "wood": 4,
-    "earth": 4
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

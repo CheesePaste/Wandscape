@@ -1,9 +1,8 @@
 {
   "block": "minecraft:waxed_oxidized_copper",
   "build_cost": {
-    "iron": 72,
-    "wood": 5,
-    "water": 2
+    "metal": 72,
+    "wood": 32
   },
   "decompose_yield": {},
   "decomposable": false,

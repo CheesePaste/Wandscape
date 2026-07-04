@@ -1,7 +1,8 @@
 {
   "block": "minecraft:mushroom_stem",
   "build_cost": {
-    "wood": 4
+    "wood": 4,
+    "earth": 4
   },
   "decompose_yield": {},
   "decomposable": false,

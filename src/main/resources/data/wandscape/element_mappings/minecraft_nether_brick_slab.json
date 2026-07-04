@@ -1,8 +1,8 @@
 {
   "block": "minecraft:nether_brick_slab",
   "build_cost": {
-    "earth": 6,
-    "fire": 6
+    "fire": 2,
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

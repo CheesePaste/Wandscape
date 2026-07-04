@@ -1,7 +1,8 @@
 {
   "block": "minecraft:pitcher_plant",
   "build_cost": {
-    "wood": 6
+    "wood": 32,
+    "dark": 32
   },
   "decompose_yield": {},
   "decomposable": false,

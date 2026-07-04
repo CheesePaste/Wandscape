@@ -1,9 +1,8 @@
 {
   "block": "minecraft:tinted_glass",
   "build_cost": {
-    "earth": 1,
-    "wind": 12,
-    "ender": 16
+    "wind": 64,
+    "earth": 64
   },
   "decompose_yield": {},
   "decomposable": false,

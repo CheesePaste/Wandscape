@@ -1,7 +1,7 @@
 {
   "block": "minecraft:packed_ice",
   "build_cost": {
-    "water": 36
+    "water": 72
   },
   "decompose_yield": {},
   "decomposable": false,

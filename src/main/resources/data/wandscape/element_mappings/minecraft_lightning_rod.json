@@ -1,7 +1,7 @@
 {
   "block": "minecraft:lightning_rod",
   "build_cost": {
-    "iron": 24
+    "metal": 24
   },
   "decompose_yield": {},
   "decomposable": false,

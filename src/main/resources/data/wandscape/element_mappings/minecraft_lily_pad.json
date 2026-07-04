@@ -1,8 +1,8 @@
 {
   "block": "minecraft:lily_pad",
   "build_cost": {
-    "wood": 1,
-    "water": 2
+    "wood": 4,
+    "water": 8
   },
   "decompose_yield": {},
   "decomposable": false,

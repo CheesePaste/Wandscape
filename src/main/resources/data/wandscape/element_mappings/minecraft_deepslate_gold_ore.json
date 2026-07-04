@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:deepslate_gold_ore",
+  "build_cost": {
+    "metal": 128,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

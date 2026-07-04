@@ -1,10 +1,10 @@
 {
   "block": "minecraft:daylight_detector",
   "build_cost": {
+    "fire": 24,
+    "wind": 24,
     "wood": 3,
-    "earth": 6,
-    "ender": 15,
-    "fire": 24
+    "earth": 3
   },
   "decompose_yield": {},
   "decomposable": false,

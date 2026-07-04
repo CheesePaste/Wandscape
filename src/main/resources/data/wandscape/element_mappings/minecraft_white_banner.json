@@ -1,7 +1,8 @@
 {
   "block": "minecraft:white_banner",
   "build_cost": {
-    "wood": 74
+    "dark": 48,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

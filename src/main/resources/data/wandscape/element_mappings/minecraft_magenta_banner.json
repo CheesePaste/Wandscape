@@ -1,7 +1,9 @@
 {
   "block": "minecraft:magenta_banner",
   "build_cost": {
-    "wood": 80
+    "dark": 48,
+    "wind": 48,
+    "wood": 50
   },
   "decompose_yield": {},
   "decomposable": false,

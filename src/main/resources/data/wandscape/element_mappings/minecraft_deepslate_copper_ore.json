@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:deepslate_copper_ore",
+  "build_cost": {
+    "metal": 16,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

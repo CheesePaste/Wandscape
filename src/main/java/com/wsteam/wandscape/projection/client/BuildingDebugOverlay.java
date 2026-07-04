@@ -83,7 +83,10 @@ public final class BuildingDebugOverlay {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        if (mc.screen != null) return;
+        if (mc.screen != null) {
+            buttonsVisible = false;
+            return;
+        }
 
         GuiGraphics g = event.getGuiGraphics();
         Font font = mc.font;
@@ -208,10 +211,11 @@ public final class BuildingDebugOverlay {
         if (!buttonsVisible) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+
         BuildingDebugResponsePacket data = BuildingDebugClientState.getCachedData();
         if (data == null) return;
-
-        Minecraft mc = Minecraft.getInstance();
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;

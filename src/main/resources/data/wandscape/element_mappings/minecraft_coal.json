@@ -1,7 +1,7 @@
 {
   "item": "minecraft:coal",
   "build_cost": {
-    "fire": 10
+    "fire": 8
   },
   "decompose_yield": {},
   "decomposable": false,

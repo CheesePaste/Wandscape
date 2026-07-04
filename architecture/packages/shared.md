@@ -27,7 +27,7 @@
 
 ## data/ — 共享数据类型
 
-**枚举**: ElementType(9元素3层) / TaskStatus(6状态) / Emotion / NarrativeEventType / MaintenancePriority
+**枚举**: ElementType(7元素: Earth/Wood/Water/Fire/Metal/Wind/Dark) / TaskStatus(6状态) / Emotion / NarrativeEventType / MaintenancePriority
 
 **Record**: WorkItem(blueprintId+params+priority, 无 wandRequirementOverrides) / BuildingData / NpcData / TaskTemplate / ItemKey / ExecutionResult / RecruitmentCandidate / BlueprintInfo / MageResume / NarrativeEvent / ParamTypeInfo / VisitMemory / MaintenanceCost / InterruptRecord
 

@@ -1,0 +1,11 @@
+{
+  "block": "minecraft:dead_horn_coral",
+  "build_cost": {
+    "water": 1,
+    "earth": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

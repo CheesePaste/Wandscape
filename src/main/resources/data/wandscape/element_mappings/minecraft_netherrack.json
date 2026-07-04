@@ -1,8 +1,8 @@
 {
   "block": "minecraft:netherrack",
   "build_cost": {
-    "earth": 3,
-    "fire": 3
+    "earth": 1,
+    "fire": 1
   },
   "decompose_yield": {},
   "decomposable": false,

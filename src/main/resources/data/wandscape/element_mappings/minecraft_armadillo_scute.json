@@ -1,7 +1,8 @@
 {
   "item": "minecraft:armadillo_scute",
   "build_cost": {
-    "earth": 6
+    "earth": 8,
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

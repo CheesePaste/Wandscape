@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:redstone_ore",
+  "build_cost": {
+    "fire": 8,
+    "metal": 16,
+    "earth": 1
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

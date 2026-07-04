@@ -1,8 +1,8 @@
 {
   "block": "minecraft:polished_blackstone_slab",
   "build_cost": {
-    "earth": 3,
-    "fire": 2
+    "fire": 1,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,9 @@
 {
   "item": "minecraft:prismarine_shard",
   "build_cost": {
-    "water": 8,
-    "earth": 4
+    "water": 16,
+    "earth": 16,
+    "dark": 16
   },
   "decompose_yield": {},
   "decomposable": false,

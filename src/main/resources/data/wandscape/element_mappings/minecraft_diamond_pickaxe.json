@@ -1,8 +1,8 @@
 {
   "item": "minecraft:diamond_pickaxe",
   "build_cost": {
-    "wood": 4,
-    "diamond": 60
+    "metal": 3072,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

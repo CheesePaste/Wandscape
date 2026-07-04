@@ -1,10 +1,11 @@
 {
   "block": "minecraft:soul_lantern",
   "build_cost": {
-    "iron": 8,
+    "fire": 2,
+    "dark": 1,
+    "metal": 56,
     "wood": 1,
-    "fire": 3,
-    "ender": 1
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

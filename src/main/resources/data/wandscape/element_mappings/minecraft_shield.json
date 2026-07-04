@@ -1,7 +1,7 @@
 {
   "item": "minecraft:shield",
   "build_cost": {
-    "iron": 15,
+    "metal": 64,
     "wood": 12
   },
   "decompose_yield": {},

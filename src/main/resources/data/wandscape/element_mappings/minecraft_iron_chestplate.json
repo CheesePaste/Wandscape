@@ -1,7 +1,7 @@
 {
   "item": "minecraft:iron_chestplate",
   "build_cost": {
-    "iron": 120
+    "metal": 512
   },
   "decompose_yield": {},
   "decomposable": false,

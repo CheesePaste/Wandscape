@@ -1,6 +1,7 @@
 {
   "block": "minecraft:scaffolding",
   "build_cost": {
+    "dark": 1,
     "wood": 1
   },
   "decompose_yield": {},

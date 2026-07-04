@@ -74,6 +74,13 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        elementAudit {
+            type = "server"
+            programArgument '--nogui'
+            // 服务器启动后自动运行元素审计并关闭。详见 ElementAuditRunner
+            systemProperty 'wandscape.runAudit', 'true'
+        }
+
         data {
             data()
 

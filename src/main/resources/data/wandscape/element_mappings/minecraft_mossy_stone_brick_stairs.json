@@ -1,8 +1,8 @@
 {
   "block": "minecraft:mossy_stone_brick_stairs",
   "build_cost": {
-    "wood": 1,
-    "earth": 6
+    "earth": 1,
+    "wood": 12
   },
   "decompose_yield": {},
   "decomposable": false,

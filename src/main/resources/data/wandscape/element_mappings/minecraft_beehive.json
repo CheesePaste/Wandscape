@@ -1,8 +1,7 @@
 {
   "block": "minecraft:beehive",
   "build_cost": {
-    "wood": 27,
-    "water": 6
+    "wood": 108
   },
   "decompose_yield": {},
   "decomposable": false,

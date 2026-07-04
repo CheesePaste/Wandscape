@@ -1,7 +1,7 @@
 {
   "block": "minecraft:blue_ice",
   "build_cost": {
-    "water": 324
+    "water": 648
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,9 @@
 {
   "block": "minecraft:soul_sand",
   "build_cost": {
-    "fire": 6,
-    "ender": 5
+    "fire": 1,
+    "earth": 1,
+    "dark": 1
   },
   "decompose_yield": {},
   "decomposable": false,

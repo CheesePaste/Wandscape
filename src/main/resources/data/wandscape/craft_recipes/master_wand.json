@@ -11,8 +11,8 @@
   ],
   "output": { "item": "wandscape:wand" },
   "cost": {
-    "gold": 64,
-    "ender": 32
+    "metal": 64,
+    "dark": 32
   },
   "unlock_requirement": {
     "min_magic": 150

@@ -1,8 +1,7 @@
 {
   "block": "minecraft:brick_slab",
   "build_cost": {
-    "earth": 4,
-    "water": 4
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

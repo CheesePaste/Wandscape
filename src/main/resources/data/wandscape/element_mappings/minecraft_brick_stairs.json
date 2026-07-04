@@ -1,8 +1,7 @@
 {
   "block": "minecraft:brick_stairs",
   "build_cost": {
-    "earth": 12,
-    "water": 12
+    "earth": 6
   },
   "decompose_yield": {},
   "decomposable": false,

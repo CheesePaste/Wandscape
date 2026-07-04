@@ -1,8 +1,8 @@
 {
   "block": "minecraft:end_stone_brick_slab",
   "build_cost": {
-    "earth": 4,
-    "ender": 4
+    "dark": 1,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

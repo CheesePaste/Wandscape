@@ -1,8 +1,8 @@
 {
   "block": "minecraft:torchflower",
   "build_cost": {
-    "wood": 3,
-    "fire": 1
+    "wood": 32,
+    "fire": 32
   },
   "decompose_yield": {},
   "decomposable": false,

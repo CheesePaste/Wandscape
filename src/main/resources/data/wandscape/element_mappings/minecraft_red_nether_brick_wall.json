@@ -1,8 +1,8 @@
 {
   "block": "minecraft:red_nether_brick_wall",
   "build_cost": {
-    "earth": 6,
-    "fire": 22
+    "fire": 34,
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

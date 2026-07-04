@@ -1,7 +1,8 @@
 {
   "item": "minecraft:fishing_rod",
   "build_cost": {
-    "wood": 12
+    "dark": 4,
+    "wood": 6
   },
   "decompose_yield": {},
   "decomposable": false,

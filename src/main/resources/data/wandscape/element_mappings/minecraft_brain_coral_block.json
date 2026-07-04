@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:brain_coral_block",
+  "build_cost": {
+    "water": 8,
+    "earth": 4,
+    "fire": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

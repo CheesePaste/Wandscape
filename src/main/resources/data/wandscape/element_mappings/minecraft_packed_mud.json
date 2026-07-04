@@ -1,9 +1,8 @@
 {
   "block": "minecraft:packed_mud",
   "build_cost": {
-    "wood": 2,
-    "earth": 2,
-    "water": 2
+    "wood": 4,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:deepslate_lapis_ore",
+  "build_cost": {
+    "water": 8,
+    "metal": 16,
+    "earth": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

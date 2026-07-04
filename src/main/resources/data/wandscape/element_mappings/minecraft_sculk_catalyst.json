@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:sculk_catalyst",
+  "build_cost": {
+    "dark": 32
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

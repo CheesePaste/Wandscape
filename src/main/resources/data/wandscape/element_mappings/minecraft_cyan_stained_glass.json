@@ -1,8 +1,9 @@
 {
   "block": "minecraft:cyan_stained_glass",
   "build_cost": {
+    "wind": 1,
     "wood": 1,
-    "earth": 2
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

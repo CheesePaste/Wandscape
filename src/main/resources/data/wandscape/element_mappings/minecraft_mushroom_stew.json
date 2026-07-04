@@ -1,9 +1,8 @@
 {
   "item": "minecraft:mushroom_stew",
   "build_cost": {
-    "wood": 3,
-    "earth": 1,
-    "fire": 1
+    "earth": 8,
+    "wood": 9
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "item": "minecraft:ghast_tear",
   "build_cost": {
-    "fire": 50,
-    "wind": 20
+    "fire": 128,
+    "wind": 128
   },
   "decompose_yield": {},
   "decomposable": false,

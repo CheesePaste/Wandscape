@@ -84,13 +84,13 @@ public record BuildingDebugResponsePacket(
         buf.writeInt(pkt.wonder());
         buf.writeInt(pkt.queueCapacity());
 
-        // Queue
+        // Queue — params are not sent (client ignores them anyway)
         int qSize = pkt.queue() != null ? pkt.queue().size() : 0;
         buf.writeInt(qSize);
         for (WorkItem item : pkt.queue()) {
             buf.writeUtf(item.blueprintId(), 256);
             buf.writeInt(item.priority());
-            buf.writeUtf(item.params() != null ? item.params().toString() : "", 2048);
+            buf.writeUtf("", 0);
         }
 
         if (pkt.currentTaskId() != null) {

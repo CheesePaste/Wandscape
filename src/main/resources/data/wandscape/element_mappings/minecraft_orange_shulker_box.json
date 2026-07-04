@@ -1,0 +1,12 @@
+{
+  "block": "minecraft:orange_shulker_box",
+  "build_cost": {
+    "dark": 64,
+    "earth": 32,
+    "wood": 16
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}
