@@ -79,6 +79,9 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_SHOP_STOCK = "shop_stock";
     private static final String TAG_SHOP_MAX_STOCK = "shop_max_stock";
 
+    // NBT key for pattern positions (precise overlap detection)
+    private static final String TAG_PATTERN_POSITIONS = "pattern_pos";
+
     private static final Gson PARAMS_GSON = new Gson();
     private static final java.lang.reflect.Type PARAMS_TYPE =
             new TypeToken<Map<String, JsonElement>>(){}.getType();
@@ -429,14 +432,23 @@ public class BuildingSavedData extends SavedData {
     // ── Register / Unregister ──
 
     /**
-     * Register a new building. Builds all indexes, checks AABB overlap.
+     * Register a new building. Builds all indexes, checks overlap using
+     * precise pattern positions (falls back to AABB for legacy buildings
+     * without pattern positions).
      *
-     * @throws BuildingOverlapException if the building's world AABB overlaps an existing one
+     * @throws BuildingOverlapException if the building overlaps an existing one
      */
     public void register(BuildingState state, BuildingConfig config) {
-        // AABB overlap check
+        // Build pattern positions from config
+        Set<BlockPos> newPattern = new HashSet<>();
+        for (BlockOffset off : config.pattern()) {
+            newPattern.add(state.getAnchor().offset(off.x(), off.y(), off.z()));
+        }
+        state.setPatternPositions(Collections.unmodifiableSet(newPattern));
+
+        // Precise overlap check: pattern vs pattern (or AABB fallback for legacy)
         for (BuildingState existing : buildings.values()) {
-            if (state.getBounds().intersects(existing.getBounds())) {
+            if (overlapsPattern(newPattern, existing)) {
                 throw new BuildingOverlapException(
                         "Building " + state.getBuildingTypeId() + " at " + state.getAnchor()
                         + " overlaps with " + existing.getBuildingTypeId()
@@ -459,9 +471,53 @@ public class BuildingSavedData extends SavedData {
         });
 
         setDirty();
-        Log.debug(TAG, "registered building {} type={} at {} posIndexSize={}",
+        Log.debug(TAG, "registered building {} type={} at {} patternSize={} posIndexSize={}",
                 state.getBuildingId().toString().substring(0, 8),
-                state.getBuildingTypeId(), state.getAnchor(), posIndex.size());
+                state.getBuildingTypeId(), state.getAnchor(), newPattern.size(), posIndex.size());
+    }
+
+    /**
+     * Check whether a set of world positions overlaps an existing building's
+     * occupied blocks. Uses pattern positions when available (precise), falls
+     * back to AABB for legacy buildings.
+     */
+    private static boolean overlapsPattern(Set<BlockPos> newPattern, BuildingState existing) {
+        Set<BlockPos> existingPattern = existing.getPatternPositions();
+        if (existingPattern != null) {
+            // Precise: check if any new position matches an existing pattern block
+            // Iterate the smaller set for efficiency
+            if (newPattern.size() <= existingPattern.size()) {
+                for (BlockPos pos : newPattern) {
+                    if (existingPattern.contains(pos)) return true;
+                }
+            } else {
+                for (BlockPos pos : existingPattern) {
+                    if (newPattern.contains(pos)) return true;
+                }
+            }
+        } else {
+            // Legacy fallback: AABB intersection — conservative, prevents damage
+            BoundingBox newBounds = computeWorldBoxFromPattern(newPattern);
+            if (newBounds.intersects(existing.getBounds())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Compute a world-space AABB from a set of pattern positions.
+     */
+    private static BoundingBox computeWorldBoxFromPattern(Set<BlockPos> pattern) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (BlockPos p : pattern) {
+            if (p.getX() < minX) minX = p.getX();
+            if (p.getY() < minY) minY = p.getY();
+            if (p.getZ() < minZ) minZ = p.getZ();
+            if (p.getX() > maxX) maxX = p.getX();
+            if (p.getY() > maxY) maxY = p.getY();
+            if (p.getZ() > maxZ) maxZ = p.getZ();
+        }
+        return new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     /**
@@ -543,6 +599,13 @@ public class BuildingSavedData extends SavedData {
                 queueTag.add(itemTag);
             }
             entry.put(TAG_QUEUE, queueTag);
+
+            // Pattern positions (for precise overlap detection)
+            Set<BlockPos> patternPos = state.getPatternPositions();
+            if (patternPos != null && !patternPos.isEmpty()) {
+                long[] arr = patternPos.stream().mapToLong(BlockPos::asLong).toArray();
+                entry.putLongArray(TAG_PATTERN_POSITIONS, arr);
+            }
 
             list.add(entry);
         }
@@ -641,6 +704,28 @@ public class BuildingSavedData extends SavedData {
             state.setLastSettlementDay(entry.getLong(TAG_LAST_SETTLEMENT_DAY));
             if (entry.contains(TAG_SHUTDOWN_REASON)) {
                 state.setShutdownReason(entry.getString(TAG_SHUTDOWN_REASON));
+            }
+
+            // Pattern positions (precise overlap detection)
+            if (entry.contains(TAG_PATTERN_POSITIONS)) {
+                long[] arr = entry.getLongArray(TAG_PATTERN_POSITIONS);
+                if (arr != null && arr.length > 0) {
+                    Set<BlockPos> positions = new HashSet<>(arr.length);
+                    for (long l : arr) {
+                        positions.add(BlockPos.of(l));
+                    }
+                    state.setPatternPositions(Collections.unmodifiableSet(positions));
+                }
+            } else {
+                // Legacy save: try to rebuild from config
+                BuildingConfig cfg = BuildingConfigLoader.getInstance().get(type);
+                if (cfg != null) {
+                    Set<BlockPos> positions = new HashSet<>();
+                    for (BlockOffset off : cfg.pattern()) {
+                        positions.add(anchor.offset(off.x(), off.y(), off.z()));
+                    }
+                    state.setPatternPositions(Collections.unmodifiableSet(positions));
+                }
             }
 
             // Register into indexes (no overlap check needed on load)
@@ -841,5 +926,27 @@ public class BuildingSavedData extends SavedData {
                 anchor.getX() + boundary.max().x(),
                 anchor.getY() + boundary.max().y(),
                 anchor.getZ() + boundary.max().z());
+    }
+
+    /**
+     * Check if a world position is occupied by any building that is NOT the
+     * excluded one. Uses pattern positions when available (precise), falls
+     * back to AABB for legacy buildings.
+     *
+     * @param pos              world position to check
+     * @param excludeBuildingId building to skip (the one being placed)
+     * @return true if occupied by another building
+     */
+    public boolean isPositionOccupiedByOtherBuilding(BlockPos pos, UUID excludeBuildingId) {
+        for (BuildingState existing : buildings.values()) {
+            if (existing.getBuildingId().equals(excludeBuildingId)) continue;
+            Set<BlockPos> existingPattern = existing.getPatternPositions();
+            if (existingPattern != null) {
+                if (existingPattern.contains(pos)) return true;
+            } else {
+                if (existing.getBounds().isInside(pos)) return true;
+            }
+        }
+        return false;
     }
 }

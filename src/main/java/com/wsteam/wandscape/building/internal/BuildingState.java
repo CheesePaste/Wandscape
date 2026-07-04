@@ -2,6 +2,8 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -40,6 +42,8 @@ public class BuildingState implements BuildingData {
     private boolean structureIntact;
     private boolean demolishing;
     private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
+    @Nullable
+    private Set<BlockPos> patternPositions;
     @Nullable
     private UUID currentTaskId;
 
@@ -88,6 +92,14 @@ public class BuildingState implements BuildingData {
     public boolean isMaintenancePaid() { return maintenancePaid; }
     @Override public long getLastSettlementDay() { return lastSettlementDay; }
     @Override public String getShutdownReason() { return shutdownReason; }
+
+    // ── Pattern positions getter/setter ──
+
+    /** World-space pattern block positions for precise overlap detection. */
+    @Nullable
+    public Set<BlockPos> getPatternPositions() { return patternPositions; }
+
+    public void setPatternPositions(@Nullable Set<BlockPos> positions) { this.patternPositions = positions; }
 
     // ── Setters ──
 

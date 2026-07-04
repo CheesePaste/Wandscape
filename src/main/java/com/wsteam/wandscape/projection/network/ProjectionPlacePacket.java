@@ -3,6 +3,7 @@ package com.wsteam.wandscape.projection.network;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -91,11 +92,13 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 4. Enqueue build work item
+        // 4. Enqueue build work item (filtered clear_offsets — skip other buildings' blocks)
         var buildingData = api.getBuildingAt(packet.anchorPos);
         if (buildingData != null) {
+            BuildingSavedData sd = BuildingSavedData.get(player.serverLevel());
             WorkItem workItem = EnqueueHelper.buildWorkItem(
-                    config, packet.anchorPos, packet.buildingTypeId, 0);
+                    config, packet.anchorPos, packet.buildingTypeId, 0,
+                    sd, buildingData.getBuildingId());
             api.enqueueWork(buildingData.getBuildingId(), workItem);
 
             player.displayClientMessage(

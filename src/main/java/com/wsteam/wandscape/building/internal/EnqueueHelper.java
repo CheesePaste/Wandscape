@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -99,9 +101,22 @@ public final class EnqueueHelper {
 
     /**
      * Build a WorkItem for the given building at the given position.
+     * Clear-offsets are unfiltered (may include other buildings' blocks).
      */
     public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
                                           String buildingTypeId, int priority) {
+        return buildWorkItem(config, pos, buildingTypeId, priority, null, null);
+    }
+
+    /**
+     * Build a WorkItem with optional other-building filtering for clear_offsets.
+     * When sd and buildingId are provided, positions belonging to other buildings
+     * are excluded from the clear list (prevents damaging nearby structures).
+     */
+    public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
+                                          String buildingTypeId, int priority,
+                                          @Nullable BuildingSavedData sd,
+                                          @Nullable UUID buildingId) {
         Map<String, JsonElement> params = new HashMap<>();
 
         params.put("anchor", posToJsonArray(pos));
@@ -120,7 +135,11 @@ public final class EnqueueHelper {
                 }
             }
             if (config.boundary() != null) {
-                params.put("clear_offsets", computeClearOffsets(config));
+                if (sd != null && buildingId != null) {
+                    params.put("clear_offsets", computeClearOffsetsFiltered(config, sd, pos, buildingId));
+                } else {
+                    params.put("clear_offsets", computeClearOffsets(config));
+                }
             }
             // material_list + material_counts: auto-computed from pattern → block_mapping
             if (!params.containsKey("material_list")) {
@@ -216,6 +235,34 @@ public final class EnqueueHelper {
             arr.add(offsetToJson(off));
         }
         return arr;
+    }
+
+    /**
+     * Compute clear offsets but exclude positions that are occupied by other
+     * buildings' pattern blocks (or AABB for legacy buildings without pattern).
+     * Prevents the clear step from damaging nearby structures.
+     *
+     * @param config         the building being placed
+     * @param sd             the building saved data (for querying other buildings)
+     * @param anchor         world anchor of the building being placed
+     * @param selfBuildingId UUID of the building being placed (to exclude from checks)
+     * @return a JSON array of offset positions safe to clear
+     */
+    static JsonElement computeClearOffsetsFiltered(BuildingConfig config, BuildingSavedData sd,
+                                                    BlockPos anchor, UUID selfBuildingId) {
+        JsonArray arr = computeClearOffsets(config).getAsJsonArray();
+        JsonArray filtered = new JsonArray();
+        for (int i = 0; i < arr.size(); i++) {
+            JsonArray posArr = arr.get(i).getAsJsonArray();
+            BlockPos worldPos = anchor.offset(
+                    posArr.get(0).getAsInt(),
+                    posArr.get(1).getAsInt(),
+                    posArr.get(2).getAsInt());
+            if (!sd.isPositionOccupiedByOtherBuilding(worldPos, selfBuildingId)) {
+                filtered.add(arr.get(i));
+            }
+        }
+        return filtered;
     }
 
     private static JsonArray offsetToJson(BlockOffset off) {
