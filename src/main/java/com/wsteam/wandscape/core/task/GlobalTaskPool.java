@@ -10,7 +10,6 @@ import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.core.event.TaskCompleted;
-import com.wsteam.wandscape.core.system.WandRequirementDeriver;
 
 import java.util.*;
 
@@ -110,11 +109,8 @@ public class GlobalTaskPool {
             initialState = TaskState.PENDING_ASSIGN;
         }
 
-        Map<BehaviourTag, BehaviourLevel> requirements = WandRequirementDeriver.derive(seq);
-        requirements = mergeOverrides(requirements, request.wandRequirementOverrides());
-
         long createdAt = System.currentTimeMillis();
-        GlobalTask task = new GlobalTask(id, seq, requirements,
+        GlobalTask task = new GlobalTask(id, seq,
                 request.priority(), createdAt,
                 compiled.triggers(), new ArrayList<>(),
                 new HashMap<>(request.params()),
@@ -133,7 +129,7 @@ public class GlobalTaskPool {
     /** Add a pre-built task directly (used by systems). */
     public long addTask(GlobalTask task) {
         long id = nextTaskId++;
-        GlobalTask t = new GlobalTask(id, task.sequence, task.requirements,
+        GlobalTask t = new GlobalTask(id, task.sequence,
                 task.priority, task.createdAt,
                 new ArrayList<>(task.triggers), new ArrayList<>(),
                 new HashMap<>(task.taskParams),
@@ -200,7 +196,6 @@ public class GlobalTaskPool {
         removeFromAssignable(task);
         task.state = TaskState.IN_PROGRESS;
         task.assignedNpcId = npcId;
-        task.schedulerRetryCount = 0;
         exec.taskParams = new HashMap<>(task.taskParams);
 
         if (task.subscriptions.isEmpty()) {
@@ -454,24 +449,11 @@ public class GlobalTaskPool {
         }
         task.subscriptions.clear();
         notifyChanged();
-        Log.info(TAG, "fail #%d '%s' reason=%s reqs=%s", taskId, task.sequence.label(),
-                reason, task.requirements);
+        Log.info(TAG, "fail #%d '%s' reason=%s", taskId, task.sequence.label(),
+                reason);
     }
 
     // ── Persistence ──
-
-    /** Merge JSON wand_level overrides into derived requirements. 0=remove, ≥1=override. */
-    static Map<BehaviourTag, BehaviourLevel> mergeOverrides(
-            Map<BehaviourTag, BehaviourLevel> derived,
-            Map<BehaviourTag, Integer> overrides) {
-        if (overrides.isEmpty()) return derived;
-        var merged = new HashMap<>(derived);
-        for (var e : overrides.entrySet()) {
-            if (e.getValue() == 0) merged.remove(e.getKey());
-            else merged.put(e.getKey(), BehaviourLevel.of(e.getValue()));
-        }
-        return merged;
-    }
 
     /** All non-COMPLETED and non-FAILED tasks with a blueprintId. */
     public List<GlobalTask> getPersistableTasks() {

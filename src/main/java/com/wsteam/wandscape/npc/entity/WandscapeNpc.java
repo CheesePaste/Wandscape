@@ -525,9 +525,6 @@ public class WandscapeNpc extends PathfinderMob {
                                 exec.globalTaskId, ecsEntityId, world);
                     }
 
-                    // Return equipped wands to colony warehouse on death/despawn
-                    returnEquippedWands(world);
-
                     // Release resource reservations from pending transports.
                     // Items were reserved but never consumed — just dropping the
                     // reservation is correct (no items need to be returned to bank).
@@ -557,40 +554,6 @@ public class WandscapeNpc extends PathfinderMob {
             // for reconnection when the chunk/player returns.
         }
         super.onRemovedFromLevel();
-    }
-
-    /**
-     * Return any equipped wands to the colony warehouse on death/despawn.
-     * Must be called BEFORE {@link EntityComponentBridge#onNpcLeaveWorld}
-     * since that destroys the ECS components.
-     */
-    private void returnEquippedWands(World world) {
-        if (ecsEntityId < 0) return;
-        var wc = world.get(ecsEntityId, com.wsteam.wandscape.core.component.WandCarrier.class);
-        if (wc == null || wc.equippedWandIds().isEmpty()) return;
-
-        var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level());
-        if (bank == null) return;
-
-        UUID cid = this.colonyId != null ? this.colonyId : new UUID(0, 0);
-        var member = world.get(ecsEntityId,
-                com.wsteam.wandscape.core.component.ColonyMember.class);
-        if (member != null && member.colonyId() != null) {
-            cid = member.colonyId();
-        }
-
-        for (String presetId : wc.equippedWandIds()) {
-            // All wands are stored as "wandscape:wand" with NBT from the preset
-            var preset = Wandscape.WAND_PRESET_LOADER.getPreset(presetId);
-            if (preset == null) {
-                Log.warn(TAG, "[NPC-death] unknown wand preset {}, cannot return", presetId);
-                continue;
-            }
-            var key = com.wsteam.wandscape.shared.data.ItemKey.of(
-                    "wandscape:wand", preset.nbt().copy());
-            bank.add(cid, key, 1);
-            Log.info(TAG, "[NPC-death] returned {} to warehouse (colony={})", presetId, cid);
-        }
     }
 
     // ============================================================

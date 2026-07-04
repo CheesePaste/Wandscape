@@ -46,22 +46,14 @@ public record ElementMappingConfig(
     }
 
     public record SynthesizeMeta(
-        RecipeUnlockRequirement unlockRequirement,
-        @Nullable Map<String, Integer> wandLevel
+        RecipeUnlockRequirement unlockRequirement
     ) {
         public static SynthesizeMeta fromJson(JsonObject obj) {
             RecipeUnlockRequirement req = obj.has("unlock_requirement")
                     ? RecipeUnlockRequirement.fromJson(obj.getAsJsonObject("unlock_requirement"))
                     : RecipeUnlockRequirement.NONE;
 
-            Map<String, Integer> wandLevel = null;
-            if (obj.has("wand_level")) {
-                JsonObject wl = obj.getAsJsonObject("wand_level");
-                wandLevel = new HashMap<>();
-                for (var e : wl.entrySet()) wandLevel.put(e.getKey(), e.getValue().getAsInt());
-            }
-
-            return new SynthesizeMeta(req, wandLevel);
+            return new SynthesizeMeta(req);
         }
     }
 }

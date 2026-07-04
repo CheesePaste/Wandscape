@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core;
 
 import com.wsteam.wandscape.core.component.Inventory;
-import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.core.system.SystemBlueprintSystem;
 import com.wsteam.wandscape.core.task.*;
@@ -16,7 +15,6 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.PlayerManualSource;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
-import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -73,11 +71,7 @@ public class BlueprintEventSystemTest {
         colonyId = UUID.randomUUID();
         CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-        Map<BehaviourTag, BehaviourLevel> caps = Map.of(
-                BehaviourTag.BUILDING, new BehaviourLevel(2),
-                BehaviourTag.RITUAL, new BehaviourLevel(1));
-        WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-        npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
     }
 
     // ===================================================================

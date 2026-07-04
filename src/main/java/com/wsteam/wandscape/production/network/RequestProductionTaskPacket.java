@@ -1,17 +1,12 @@
 package com.wsteam.wandscape.production.network;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -121,27 +116,6 @@ public record RequestProductionTaskPacket(
                 }
             }
 
-            // Extract per-recipe wand_level overrides (null → empty map)
-            Map<String, Integer> wandLevel = null;
-            if (!"decompose".equals(pkt.action)) {
-                var loader = Wandscape.PRODUCTION_RECIPE_LOADER;
-                wandLevel = switch (pkt.action) {
-                    case "synthesize" -> {
-                        var r = loader != null ? loader.getSynthesizeRecipe(pkt.recipeOrItemId) : null;
-                        yield r != null ? r.wandLevel() : null;
-                    }
-                    case "craft_wand" -> {
-                        var r = loader != null ? loader.getCraftWandRecipes().get(pkt.recipeOrItemId) : null;
-                        yield r != null ? r.wandLevel() : null;
-                    }
-                    case "brew_potion" -> {
-                        var r = loader != null ? loader.getPotionRecipes().get(pkt.recipeOrItemId) : null;
-                        yield r != null ? r.wandLevel() : null;
-                    }
-                    default -> null;
-                };
-            }
-
             // Build WorkItem params
             Map<String, com.google.gson.JsonElement> params = new LinkedHashMap<>();
             params.put("anchor", posToJsonArray(pkt.stationPos));
@@ -154,8 +128,7 @@ public record RequestProductionTaskPacket(
             params.put("channel_ticks", new JsonPrimitive(1200)); // 60s
             params.put("mana_cost", new JsonPrimitive(5));
 
-            Map<BehaviourTag, Integer> overrides = convertWandLevel(wandLevel);
-            WorkItem work = new WorkItem(blueprintId, params, 10, overrides);
+            WorkItem work = new WorkItem(blueprintId, params, 10);
 
             BuildingApi api = WandscapeApis.getBuildingApi();
             api.enqueueWork(buildingId, work);
@@ -169,17 +142,6 @@ public record RequestProductionTaskPacket(
                             ? state.getColonyId().toString().substring(0, 8) : "null",
                     blueprintId, queueSize);
         });
-    }
-
-    /** Convert JSON wand_level string-key map to BehaviourTag-keyed overrides. */
-    private static Map<BehaviourTag, Integer> convertWandLevel(@Nullable Map<String, Integer> wandLevel) {
-        if (wandLevel == null || wandLevel.isEmpty()) return Collections.emptyMap();
-        Map<BehaviourTag, Integer> overrides = new HashMap<>();
-        for (var e : wandLevel.entrySet()) {
-            BehaviourTag tag = BehaviourTag.fromKey(e.getKey());
-            if (tag != null) overrides.put(tag, e.getValue());
-        }
-        return overrides;
     }
 
     private static com.google.gson.JsonArray posToJsonArray(BlockPos pos) {

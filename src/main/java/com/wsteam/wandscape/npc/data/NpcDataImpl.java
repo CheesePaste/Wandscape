@@ -5,7 +5,6 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.data.AbilitySet;
 import com.wsteam.wandscape.shared.data.NpcData;
 /**
  * Implementation of {@link NpcData} wrapping a {@link WandscapeNpc}.
@@ -20,7 +19,6 @@ public class NpcDataImpl implements NpcData {
     private final int currentMana;
     private final int spellPower;
     private final int manaRegenRate;
-    private final AbilitySet abilities;
     private final boolean isIdle;
     @Nullable private final UUID assignedHouseId;
     @Nullable private final UUID currentTaskId;
@@ -29,7 +27,7 @@ public class NpcDataImpl implements NpcData {
 
     NpcDataImpl(UUID npcId, String name, int maxHealth, int currentHealth,
                 int maxMana, int currentMana, int spellPower, int manaRegenRate,
-                AbilitySet abilities, boolean isIdle,
+                boolean isIdle,
                 @Nullable UUID assignedHouseId, @Nullable UUID currentTaskId,
                 boolean isDead, @Nullable UUID graveBlockEntityId) {
         this.npcId = npcId;
@@ -40,7 +38,6 @@ public class NpcDataImpl implements NpcData {
         this.currentMana = currentMana;
         this.spellPower = spellPower;
         this.manaRegenRate = manaRegenRate;
-        this.abilities = abilities;
         this.isIdle = isIdle;
         this.assignedHouseId = assignedHouseId;
         this.currentTaskId = currentTaskId;
@@ -59,7 +56,6 @@ public class NpcDataImpl implements NpcData {
                 npc.currentMana,
                 npc.spellPower,
                 npc.manaRegenRate,
-                AbilitySet.EMPTY, // stage 3+: compute from inventory wands
                 npc.isEngineIdle(),
                 null,            // stage 4+: house binding
                 npc.getCurrentTaskId(),
@@ -78,7 +74,6 @@ public class NpcDataImpl implements NpcData {
     @Override public int getCurrentMana() { return currentMana; }
     @Override public int getSpellPower() { return spellPower; }
     @Override public int getManaRegenRate() { return manaRegenRate; }
-    @Override public AbilitySet getAbilities() { return abilities; }
     @Override public boolean isIdle() { return isIdle; }
     @Override @Nullable public UUID getAssignedHouseId() { return assignedHouseId; }
     @Override @Nullable public UUID getCurrentTaskId() { return currentTaskId; }

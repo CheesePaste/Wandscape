@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core;
 
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
 import com.google.gson.JsonElement;
@@ -15,7 +14,6 @@ import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.PlayerManualSource;
 import com.wsteam.wandscape.core.system.SchedulerSystem;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
-import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.*;
 
@@ -60,11 +58,7 @@ public class ResourceWaitingFulfillTest {
         GridPos center = new GridPos(0, 64, 0);
         CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-        Map<BehaviourTag, BehaviourLevel> caps = Map.of(
-                BehaviourTag.BUILDING, new BehaviourLevel(2)
-        );
-        WandCarrier wand = new WandCarrier(caps, 0.8f, 2);
-        builderNpc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        builderNpc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
     }
 
     @Test

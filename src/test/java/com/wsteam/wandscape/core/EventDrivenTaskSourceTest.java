@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.core;
 
-import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
 import com.google.gson.JsonElement;
@@ -12,7 +11,6 @@ import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
 import com.wsteam.wandscape.core.system.EventDrivenTaskSource;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
-import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.HashMap;
 import java.util.List;
@@ -52,11 +50,7 @@ public class EventDrivenTaskSourceTest {
         colonyId = UUID.randomUUID();
         CoreBootstrap.createColony(world, colonyCenter.x(), colonyCenter.y(), colonyCenter.z(), 50);
 
-        Map<BehaviourTag, BehaviourLevel> caps = Map.of(
-                BehaviourTag.BUILDING, new BehaviourLevel(2),
-                BehaviourTag.RITUAL, new BehaviourLevel(1));
-        WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-        npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+        npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
     }
 
     // ======================== Full restock chain ========================

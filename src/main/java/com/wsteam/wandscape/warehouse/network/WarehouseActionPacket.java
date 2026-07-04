@@ -39,10 +39,11 @@ import com.wsteam.wandscape.shared.log.Log;
  */
 public record WarehouseActionPacket(
         BlockPos buildingPos,
-        String action,       // "withdraw" or "deposit"
+        String action,       // "withdraw", "deposit", or "deposit_from_slot"
         String itemId,       // registry key of the item (informational for deposit)
         @Nullable CompoundTag nbt,
-        int quantity
+        int quantity,
+        int slotIndex        // inventory slot index for deposit_from_slot; -1 otherwise
 ) implements CustomPacketPayload {
 
     private static final String TAG = "WarehouseActionPacket";
@@ -93,6 +94,7 @@ public record WarehouseActionPacket(
             switch (pkt.action) {
                 case "withdraw" -> handleWithdraw(api, colonyId, pkt, sp);
                 case "deposit" -> handleDeposit(api, colonyId, pkt, sp);
+                case "deposit_from_slot" -> handleDepositFromSlot(api, colonyId, pkt, sp);
                 default -> Log.warn(TAG, "[WarehouseAction] unknown action: {}", pkt.action);
             }
         });
@@ -155,6 +157,30 @@ public record WarehouseActionPacket(
         sendRefresh(api, colonyId, pkt.buildingPos, sp);
     }
 
+    // ── Deposit from inventory slot ────────────────────────────────────────
+
+    /** Deposit items from a specific inventory slot (used by Exchange tab). */
+    private static void handleDepositFromSlot(WarehouseApi api, UUID colonyId,
+                                               WarehouseActionPacket pkt, ServerPlayer sp) {
+        int slot = pkt.slotIndex();
+        // Only allow hotbar (0-8) and main inventory (9-35)
+        if (slot < 0 || slot > 35) return;
+
+        ItemStack slotStack = sp.getInventory().getItem(slot);
+        if (slotStack.isEmpty()) return;
+
+        int toDeposit = Math.min(slotStack.getCount(), Math.max(1, pkt.quantity()));
+        ItemStack depositStack = slotStack.copyWithCount(toDeposit);
+        api.insertItems(colonyId, List.of(depositStack));
+        slotStack.shrink(toDeposit);
+
+        Log.info(TAG, "[WarehouseAction] deposit_from_slot {}x {} from slot {} (colony={})",
+                toDeposit, pkt.itemId(), slot,
+                colonyId.toString().substring(0, 8));
+
+        sendRefresh(api, colonyId, pkt.buildingPos, sp);
+    }
+
     // ── Refresh ───────────────────────────────────────────────────────────
 
     /** Send a fresh WarehouseDataPacket to the player so the GUI updates. */
@@ -185,6 +211,7 @@ public record WarehouseActionPacket(
         buf.writeUtf(pkt.itemId);
         buf.writeNbt(pkt.nbt); // nullable
         buf.writeVarInt(pkt.quantity);
+        buf.writeVarInt(pkt.slotIndex);
     }
 
     static WarehouseActionPacket read(RegistryFriendlyByteBuf buf) {
@@ -193,6 +220,7 @@ public record WarehouseActionPacket(
                 buf.readUtf(),
                 buf.readUtf(),
                 buf.readNbt(),
+                buf.readVarInt(),
                 buf.readVarInt()
         );
     }

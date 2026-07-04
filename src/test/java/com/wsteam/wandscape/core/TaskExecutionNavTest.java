@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core;
 
 import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.core.demo.MockBoundary;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
@@ -11,8 +10,6 @@ import com.wsteam.wandscape.core.system.TaskExecutionSystem;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -105,8 +102,7 @@ public class TaskExecutionNavTest {
 
     /** Create a standard NPC with full mana and a basic wand. */
     private static long createNpc(World world, int x, int y, int z, UUID colonyId) {
-        WandCarrier wand = new WandCarrier(Map.of(), 1.0f, 5);
-        return CoreBootstrap.createNpc(world, x, y, z, wand, colonyId, 200, 10);
+        return CoreBootstrap.createNpc(world, x, y, z, colonyId, 200, 10);
     }
 
     /** Assign a task to an NPC using the Phase 6 package-driven model. */

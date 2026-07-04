@@ -1,0 +1,20 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "master_wand",
+  "display_name": "大师法杖",
+  "slot": "wand",
+  "wand_color": "#FF4500",
+  "attributes": [
+    { "type": "range", "operation": "addition", "amount": 2 },
+    { "type": "mana_cost_multiplier", "operation": "addition", "amount": -0.4 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "gold": 64,
+    "ender": 32
+  },
+  "unlock_requirement": {
+    "min_magic": 150
+  }
+}

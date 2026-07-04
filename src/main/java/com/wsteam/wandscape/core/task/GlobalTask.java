@@ -1,8 +1,6 @@
 package com.wsteam.wandscape.core.task;
 
 import com.wsteam.wandscape.core.boundary.EventBus;
-import com.wsteam.wandscape.core.types.BehaviourLevel;
-import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.ResourceStack;
 
 import java.util.*;
@@ -17,7 +15,6 @@ public class GlobalTask {
 
     public final long id;
     public final TaskSequence sequence;
-    public final Map<BehaviourTag, BehaviourLevel> requirements;
     public final int priority;
     public final long createdAt;
 
@@ -54,17 +51,9 @@ public class GlobalTask {
     @Nullable
     public TaskFailureReason failureReason;
 
-    /**
-     * How many times the Scheduler has seen this task with no matching NPC/wand.
-     * Reset on assignment. When this exceeds a threshold, the task is failed
-     * so FailureAnalyzer can attempt recovery (e.g. crafting a wand).
-     */
-    public int schedulerRetryCount;
-
     public GlobalTask(
             long id,
             TaskSequence sequence,
-            Map<BehaviourTag, BehaviourLevel> requirements,
             int priority,
             long createdAt,
             List<TriggerDeclaration> triggers,
@@ -79,7 +68,6 @@ public class GlobalTask {
     ) {
         this.id = id;
         this.sequence = sequence;
-        this.requirements = requirements != null ? new HashMap<>(requirements) : Collections.emptyMap();
         this.priority = priority;
         this.createdAt = createdAt;
         this.triggers = triggers != null ? new ArrayList<>(triggers) : Collections.emptyList();
@@ -96,12 +84,11 @@ public class GlobalTask {
     // Convenience constructors
 
     public static GlobalTask create(long id, TaskSequence sequence,
-                                     Map<BehaviourTag, BehaviourLevel> requirements,
                                      int priority, List<TriggerDeclaration> triggers,
                                      Map<String, JsonElement> taskParams,
                                      TaskState initialState,
                                      ApprovalInfo approval) {
-        return new GlobalTask(id, sequence, requirements, priority,
+        return new GlobalTask(id, sequence, priority,
                 System.currentTimeMillis(),
                 triggers, new ArrayList<>(), taskParams,
                 initialState, 0, null, null,
@@ -110,10 +97,9 @@ public class GlobalTask {
 
     /** Create a small task that skips approval. */
     public static GlobalTask createSmall(long id, TaskSequence sequence,
-                                          Map<BehaviourTag, BehaviourLevel> requirements,
                                           int priority, List<TriggerDeclaration> triggers,
                                           Map<String, JsonElement> taskParams) {
-        return new GlobalTask(id, sequence, requirements, priority,
+        return new GlobalTask(id, sequence, priority,
                 System.currentTimeMillis(),
                 triggers, new ArrayList<>(), taskParams,
                 TaskState.PENDING_ASSIGN, 0, null, null,

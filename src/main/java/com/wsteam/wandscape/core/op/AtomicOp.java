@@ -21,8 +21,6 @@ public sealed interface AtomicOp
                 AtomicOp.ResourceRequestOp,
                 AtomicOp.EmitEventOp,
                 AtomicOp.IfConditionOp,
-                AtomicOp.WandEquipOp,
-                AtomicOp.WandReturnOp,
                 AtomicOp.ParallelOp {
 
     /** Base mana cost for this operation (before wand efficiency). */
@@ -250,40 +248,6 @@ public sealed interface AtomicOp
         @Override
         public GridPos target() {
             return null; // conditional logic, no world position
-        }
-    }
-
-    /**
-     * Fetch a wand from the colony warehouse and equip it on the NPC.
-     * The executor resolves the nearest storage building.
-     * Zero mana cost — this is a preparatory step, not spellcasting.
-     */
-    record WandEquipOp(String wandItemId) implements AtomicOp {
-        @Override
-        public float baseManaCost() {
-            return 0;
-        }
-
-        @Override
-        public GridPos target() {
-            return null; // executor resolves nearest storage building
-        }
-    }
-
-    /**
-     * Return an equipped wand to the colony warehouse.
-     * The executor resolves the nearest storage building.
-     * Zero mana cost — this is cleanup, not spellcasting.
-     */
-    record WandReturnOp(String wandItemId) implements AtomicOp {
-        @Override
-        public float baseManaCost() {
-            return 0;
-        }
-
-        @Override
-        public GridPos target() {
-            return null; // executor resolves nearest storage building
         }
     }
 

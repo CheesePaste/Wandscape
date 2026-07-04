@@ -65,7 +65,7 @@ public abstract class ScrollableList<T> extends AbstractWidget {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!visible || !active || button != 0) return false;
+        if (!visible || !active) return false;
 
         int sbX = getX() + width - scrollbarWidth;
         int totalHeight = items.size() * rowHeight;
@@ -88,6 +88,7 @@ public abstract class ScrollableList<T> extends AbstractWidget {
         if (mouseX < getX() || mouseX >= contentRight) return false;
 
         int relY = (int) mouseY - getY();
+        if (relY < 0 || relY >= height) return false;
         int row = (relY / rowHeight) + (scrollOffset / rowHeight);
         if (row >= 0 && row < items.size()) {
             int prevSelected = selectedIndex;

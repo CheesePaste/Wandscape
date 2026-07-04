@@ -78,8 +78,6 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             if (!unlocked) {
                 lockedReason = "colony";
                 maxAffordable = 0;
-            } else if (maxAffordable == 0 && hasNonZeroWandLevel(r.wandLevel())) {
-                lockedReason = "wand_level";
             } else if (maxAffordable == 0) {
                 lockedReason = "elements";
             } else {
@@ -96,26 +94,10 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
                 unlockTag.putInt("min_wonder",  r.unlockRequirement().minWonder());
                 tag.put("unlock_requirement", unlockTag);
             }
-            // Serialise wand_level only when it is the locking reason
-            if ("wand_level".equals(lockedReason) && r.wandLevel() != null) {
-                CompoundTag wlTag = new CompoundTag();
-                for (var e : r.wandLevel().entrySet()) {
-                    wlTag.putInt(e.getKey(), e.getValue());
-                }
-                tag.put("wand_level", wlTag);
-            }
             recipeList.add(tag);
         }
 
         return new WorkstationDataPacket(stationPos, itemList, recipeList);
-    }
-
-    private static boolean hasNonZeroWandLevel(@Nullable Map<String, Integer> wandLevel) {
-        if (wandLevel == null) return false;
-        for (int v : wandLevel.values()) {
-            if (v > 0) return true;
-        }
-        return false;
     }
 
     private static int computeMaxAffordable(Map<ElementType, Long> costPerUnit, Map<ElementType, Long> elements) {
@@ -167,16 +149,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
                         urTag.getInt("min_wonder")
                 );
             }
-            // Read wand_level NBT (serialised by from() when locked_reason == "wand_level")
-            Map<String, Integer> wandLevel = null;
-            if ("wand_level".equals(lockedReason) && tag.contains("wand_level")) {
-                CompoundTag wlTag = tag.getCompound("wand_level");
-                wandLevel = new LinkedHashMap<>();
-                for (String key : wlTag.getAllKeys()) {
-                    wandLevel.put(key, wlTag.getInt(key));
-                }
-            }
-            result.add(new SynthesizeEntry(id, output, cost, maxAffordable, lockedReason, unlockReq, wandLevel));
+            result.add(new SynthesizeEntry(id, output, cost, maxAffordable, lockedReason, unlockReq));
         }
         return result;
     }
@@ -188,9 +161,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
      * @param outputItem        output item id
      * @param cost              element cost per unit
      * @param maxAffordable     maximum quantity affordable with current elements (0 when locked)
-     * @param lockedReason      "unlocked" / "colony" / "elements" / "wand_level" — client uses this to pick lock hint
+     * @param lockedReason      "unlocked" / "colony" / "elements" — client uses this to pick lock hint
      * @param unlockRequirement colony evaluation thresholds (only meaningful when lockedReason=colony)
-     * @param wandLevel         wand ability overrides from recipe JSON (only when lockedReason=wand_level)
      */
     public record SynthesizeEntry(
             String recipeId,
@@ -198,8 +170,7 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             Map<ElementType, Long> cost,
             int maxAffordable,
             String lockedReason,
-            RecipeUnlockRequirement unlockRequirement,
-            @javax.annotation.Nullable Map<String, Integer> wandLevel
+            RecipeUnlockRequirement unlockRequirement
     ) {}
 
     private static Consumer<WorkstationDataPacket> clientHandler;

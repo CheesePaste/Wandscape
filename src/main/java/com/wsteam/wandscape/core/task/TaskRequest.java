@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.Map;
 
 import com.google.gson.JsonElement;
-import com.wsteam.wandscape.core.types.BehaviourTag;
 /**
  * Request to create a global task from a blueprint.
  * Published by TaskSources and compiled by BlueprintRegistry.
@@ -14,19 +13,13 @@ import com.wsteam.wandscape.core.types.BehaviourTag;
 public record TaskRequest(
         String blueprintId,
         Map<String, JsonElement> params,
-        int priority,
-        Map<BehaviourTag, Integer> wandRequirementOverrides
+        int priority
 ) {
     public TaskRequest {
         if (params == null) params = Collections.emptyMap();
-        if (wandRequirementOverrides == null) wandRequirementOverrides = Collections.emptyMap();
-    }
-
-    public TaskRequest(String blueprintId, Map<String, JsonElement> params, int priority) {
-        this(blueprintId, params, priority, Collections.emptyMap());
     }
 
     public TaskRequest(String blueprintId, int priority) {
-        this(blueprintId, Collections.emptyMap(), priority, Collections.emptyMap());
+        this(blueprintId, Collections.emptyMap(), priority);
     }
 }

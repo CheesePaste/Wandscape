@@ -3,8 +3,6 @@ package com.wsteam.wandscape.core;
 import com.wsteam.wandscape.core.component.Position;
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.core.component.WandCarrier;
-import com.wsteam.wandscape.core.demo.MockBoundary;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
@@ -12,10 +10,7 @@ import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.core.task.GlobalTask;
 import com.wsteam.wandscape.core.task.TaskRequest;
 import com.wsteam.wandscape.core.task.TaskState;
-import com.wsteam.wandscape.core.types.BehaviourLevel;
-import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.core.types.GridPos;
-import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -141,10 +136,8 @@ public class WorldEcsTest {
 
             // Create 2 NPCs with TaskExecutors, assign one task
             long npc1 = CoreBootstrap.createNpc(world, 0, 64, 0,
-                    new WandCarrier(Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)), 1.0f, 8),
                     java.util.UUID.randomUUID(), 100, 5);
             long npc2 = CoreBootstrap.createNpc(world, 5, 64, 0,
-                    new WandCarrier(Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)), 1.0f, 8),
                     java.util.UUID.randomUUID(), 100, 5);
 
             world.taskPool.assignLight(t1, npc1, world);

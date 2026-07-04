@@ -129,14 +129,6 @@ public class CraftingStationScreen extends MedievalScreen {
                     if (req.minComfort() > 0) costStr.append("C>=").append(req.minComfort()).append(" ");
                     if (req.minMagic()   > 0) costStr.append("M>=").append(req.minMagic()).append(" ");
                     if (req.minWonder()  > 0) costStr.append("W>=").append(req.minWonder());
-                } else if ("wand_level".equals(reason)) {
-                    costStr.append("🔒 ");
-                    if (item.wandLevel() != null) {
-                        for (var e : item.wandLevel().entrySet()) {
-                            if (!costStr.isEmpty() && costStr.charAt(costStr.length() - 1) != ' ') costStr.append(" ");
-                            costStr.append(e.getKey().toUpperCase()).append(":").append(e.getValue());
-                        }
-                    }
                 } else {
                     item.cost().forEach((elem, amt) -> {
                         if (!costStr.isEmpty()) costStr.append(", ");
@@ -178,7 +170,7 @@ public class CraftingStationScreen extends MedievalScreen {
             slider.setValue(1);
             return;
         }
-        // Locked recipes (colony / elements / wand_level) show max_affordable=0; keep slider at 1
+        // Locked recipes (colony / elements) show max_affordable=0; keep slider at 1
         boolean locked = !"unlocked".equals(entry.lockedReason());
         int max = locked ? 1 : entry.maxAffordable();
         slider.setMax(Math.max(1, max));
@@ -187,7 +179,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
     private void onSubmit() {
         RecipeEntry sel = recipeList.getSelected();
-        // Block submission when recipe is locked (colony / elements / wand_level)
+        // Block submission when recipe is locked (colony / elements)
         if (sel == null || !"unlocked".equals(sel.lockedReason())) return;
         int qty = slider.getValue();
         PacketDistributor.sendToServer(new RequestProductionTaskPacket(

@@ -7,10 +7,8 @@ import com.wsteam.wandscape.core.boundary.MovementOps;
 import com.wsteam.wandscape.core.boundary.RitualOps;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
 import com.wsteam.wandscape.core.system.TaskSource;
-import com.wsteam.wandscape.core.system.WandProvider;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.core.task.BuildingTaskPool;
-import com.wsteam.wandscape.core.task.WandLifecycle;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -29,8 +27,6 @@ public record CoreBootstrapConfig(
         BlueprintRegistry blueprints,
         SystemBlueprintRegistry systemBlueprints,
         boolean autoApproveTasks,
-        @Nullable WandProvider wandProvider,
-        @Nullable WandLifecycle wandLifecycle,
         @Nullable BuildingTaskPool buildingTaskPool
 ) {
     public CoreBootstrapConfig {
@@ -39,7 +35,7 @@ public record CoreBootstrapConfig(
         if (systemBlueprints == null) systemBlueprints = new SystemBlueprintRegistry();
     }
 
-    /** Backward-compat constructor without WandProvider. */
+    /** Convenience constructor without BuildingTaskPool. */
     public CoreBootstrapConfig(
             BlockOps blockOps,
             EntityOps entityOps,
@@ -51,6 +47,6 @@ public record CoreBootstrapConfig(
             SystemBlueprintRegistry systemBlueprints,
             boolean autoApproveTasks) {
         this(blockOps, entityOps, ritualOps, movementOps, colonyResources,
-                taskSources, blueprints, systemBlueprints, autoApproveTasks, null, new WandLifecycle(), null);
+                taskSources, blueprints, systemBlueprints, autoApproveTasks, null);
     }
 }

@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.component.ManaPool;
-import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -62,7 +61,7 @@ public final class EntityComponentBridge {
             com.wsteam.wandscape.core.component.Position.class,
             ManaPool.class,
             com.wsteam.wandscape.core.component.TaskExecutor.class,
-            WandCarrier.class,
+            com.wsteam.wandscape.core.component.EquipmentComponent.class,
             com.wsteam.wandscape.core.component.Inventory.class,
             com.wsteam.wandscape.core.component.ColonyMember.class,
     };
@@ -160,23 +159,9 @@ public final class EntityComponentBridge {
             }
         }
 
-        // Default capability: all NPCs can build at level 1.
-        // This breaks the cold-start deadlock: NPC needs building capability
-        // to construct the warehouse, but wands are produced at the warehouse.
-        // The default builder_wand capability represents the NPC's innate
-        // "bare hands" building ability — enough to bootstrap the colony.
-        // Cold-start wand: NPCs start with builder_wand capabilities.
-        // Must track the wand ID so it gets returned to warehouse on task completion
-        // and re-equipped via the normal wand provision flow for subsequent tasks.
-        WandCarrier defaultCarrier = new WandCarrier(
-                Map.of(com.wsteam.wandscape.core.types.BehaviourTag.BUILDING,
-                        com.wsteam.wandscape.core.types.BehaviourLevel.of(1)),
-                1.0f, 1,
-                java.util.List.of("builder_wand"));
-
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                defaultCarrier, colony, npc.maxMana, npc.manaRegenRate);
+                colony, npc.maxMana, npc.manaRegenRate);
 
         // Apply current mana from NBT if it was consumed before save
         ManaPool mana = world.get(ecsId, ManaPool.class);

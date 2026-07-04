@@ -26,8 +26,6 @@ import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.TaskState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
-import com.wsteam.wandscape.engine.boundary.WandEquipExecutor;
-import com.wsteam.wandscape.engine.boundary.WandReturnExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeEntityOps;
@@ -36,7 +34,6 @@ import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.system.FailureAnalyzerSystem;
 import com.wsteam.wandscape.engine.system.NavigationSystem;
-import com.wsteam.wandscape.engine.system.WandProvisionSystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -138,10 +135,6 @@ public final class EngineBootstrap {
             Log.info(TAG, "  ColonyResourceAccess: stub (warehouse not loaded)");
         }
 
-        // 4a. Build wand provider (engine queries warehouse for wand items)
-        WandProvisionSystem wandProvider = new WandProvisionSystem(
-                Wandscape.WAND_PRESET_LOADER);
-
         // 5. Build CoreBootstrapConfig
         CoreBootstrapConfig config = new CoreBootstrapConfig(
                 blockOps,
@@ -153,8 +146,6 @@ public final class EngineBootstrap {
                 blueprints,
                 sysBlueprints,
                 com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get(),
-                wandProvider,
-                new com.wsteam.wandscape.core.task.WandLifecycle(),
                 new BuildingTaskPool()
         );
 
@@ -182,8 +173,7 @@ public final class EngineBootstrap {
         world.addSystem(navSystem);
 
         // 8b. Register FailureAnalyzerSystem (monitors FAILED tasks, auto-recovers)
-        FailureAnalyzerSystem failureAnalyzer = new FailureAnalyzerSystem(
-                Wandscape.WAND_PRESET_LOADER);
+        FailureAnalyzerSystem failureAnalyzer = new FailureAnalyzerSystem();
         world.addSystem(failureAnalyzer);
         Log.info(TAG, "  FailureAnalyzerSystem registered");
 
@@ -210,15 +200,7 @@ public final class EngineBootstrap {
         WandscapeEngine.setBlockInteractExec(blockInteractExec);
         Log.info(TAG, "  WandscapeBlockInteractExecutor active (sync + async actions + transport)");
 
-        // 9d. Register wand equip/return executors
-        //     NPCs fetch wands from warehouse before executing tasks
-        //     that require specific wand capabilities, and return them after.
-        //     WandEquipExecutor uses the transporter for visual wand delivery.
-        world.opExecutors.register(new WandEquipExecutor(Wandscape.WAND_PRESET_LOADER, transporter));
-        world.opExecutors.register(new WandReturnExecutor(Wandscape.WAND_PRESET_LOADER, transporter));
-        Log.info(TAG, "  WandEquipExecutor + WandReturnExecutor registered");
-
-        // 9e. Register resource request executor (replaces inline handling)
+        // 9d. Register resource request executor (replaces inline handling)
         //     Uses the transporter for visual item delivery from warehouse to NPC.
         ResourceRequestExecutor resourceReqExec = new ResourceRequestExecutor(transporter);
         world.opExecutors.register(resourceReqExec);

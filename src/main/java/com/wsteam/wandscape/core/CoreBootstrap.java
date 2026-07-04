@@ -9,7 +9,6 @@ import com.wsteam.wandscape.core.op.OpExecutorRegistry;
 import com.wsteam.wandscape.core.system.*;
 import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
-import com.wsteam.wandscape.core.task.WandLifecycle;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -51,12 +50,12 @@ public final class CoreBootstrap {
         // 2. Register component stores
         world.registerComponent(Position.class, new HashMapComponentStore<>());
         world.registerComponent(ManaPool.class, new HashMapComponentStore<>());
-        world.registerComponent(WandCarrier.class, new HashMapComponentStore<>());
         world.registerComponent(TaskExecutor.class, new HashMapComponentStore<>());
         world.registerComponent(Inventory.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMember.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMetadata.class, new HashMapComponentStore<>());
         world.registerComponent(NavigationState.class, new HashMapComponentStore<>());
+        world.registerComponent(EquipmentComponent.class, new HashMapComponentStore<>());
 
         // 3. Set up task compiler
         world.blueprintRegistry = config.blueprints();
@@ -65,10 +64,7 @@ public final class CoreBootstrap {
         world.taskPool = new GlobalTaskPool(world.eventBus, world.blueprintRegistry, world.colonyResources,
                 config.autoApproveTasks());
 
-        // 4.5 Wand lifecycle tracker
-        world.wandLifecycle = config.wandLifecycle() != null ? config.wandLifecycle() : new WandLifecycle();
-
-        // 4.6 Building task pool (per-building head tracking)
+        // 4.5 Building task pool (per-building head tracking)
         world.buildingTaskPool = config.buildingTaskPool() != null ? config.buildingTaskPool() : new BuildingTaskPool();
 
         // 5. Register op executors
@@ -82,7 +78,7 @@ public final class CoreBootstrap {
         world.addSystem(new ManaRegenSystem());
         world.addSystem(new SystemBlueprintSystem(sysBp));
         world.addSystem(new TaskSourcePoller(config.taskSources()));
-        world.addSystem(new SchedulerSystem(config.wandProvider()));
+        world.addSystem(new SchedulerSystem());
         world.addSystem(new TaskExecutionSystem(world.taskPool));
         Log.debug(TAG, "%d systems registered", world.systemCount());
 
@@ -97,17 +93,19 @@ public final class CoreBootstrap {
      * Create an NPC entity with all required components for task execution.
      */
     public static long createNpc(World world, int x, int y, int z,
-                                  WandCarrier wand, UUID colonyId,
+                                  UUID colonyId,
                                   int manaMax, int manaRegen) {
         long entity = world.createEntity();
         world.addComponent(entity, new Position(new GridPos(x, y, z)));
         world.addComponent(entity, new ManaPool(manaMax, manaMax, manaRegen));
-        world.addComponent(entity, wand != null ? wand : WandCarrier.EMPTY);
+        EquipmentComponent eq = new EquipmentComponent();
+        eq.equipDefaultWand();
+        world.addComponent(entity, eq);
         world.addComponent(entity, new TaskExecutor());
         world.addComponent(entity, new Inventory(27)); // standard 27-slot inventory
         world.addComponent(entity, new ColonyMember(colonyId));
-        Log.info(TAG, "createNpc #%d pos=(%d,%d,%d) mana=%d caps=%s colony=%s",
-                entity, x, y, z, manaMax, wand != null ? wand.capabilities().keySet() : "none",
+        Log.info(TAG, "createNpc #%d pos=(%d,%d,%d) mana=%d colony=%s",
+                entity, x, y, z, manaMax,
                 colonyId.toString().substring(0, 8));
         return entity;
     }

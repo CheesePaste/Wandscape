@@ -9,7 +9,6 @@ public final class WandscapeApis {
     private static BuildingApi buildingApi;
     private static HouseApi houseApi;
     private static TavernApi tavernApi;
-    private static AtomicExecutor atomicExecutor;
     private static ColonyApi colonyApi;
     private static ManaPoolApi manaPoolApi;
     private static RoadApi roadApi;
@@ -60,12 +59,6 @@ public final class WandscapeApis {
         return tavernApi;
     }
     public static void setTavernApi(TavernApi api) { tavernApi = api; }
-
-    public static AtomicExecutor getAtomicExecutor() {
-        if (atomicExecutor == null) throw new IllegalStateException("Module AtomicOperations not loaded");
-        return atomicExecutor;
-    }
-    public static void setAtomicExecutor(AtomicExecutor executor) { atomicExecutor = executor; }
 
     public static ColonyApi getColonyApi() {
         if (colonyApi == null) throw new IllegalStateException("Module ColonyLifecycle not loaded");

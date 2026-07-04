@@ -37,8 +37,7 @@ public class BuildingTaskPool {
 
         if (!queue.hasHead()) {
             TaskRequest request = new TaskRequest(
-                    item.blueprintId(), item.params(), item.priority(),
-                    item.wandRequirementOverrides());
+                    item.blueprintId(), item.params(), item.priority());
             long taskId = pool.addTaskFromBuilding(request, buildingId);
             queue.setHeadTaskId(taskId);
             Log.debug(TAG, "building {} head published #{} blueprint={}",
@@ -65,8 +64,7 @@ public class BuildingTaskPool {
         WorkItem next = queue.dequeueNext();
         if (next != null) {
             TaskRequest request = new TaskRequest(
-                    next.blueprintId(), next.params(), next.priority(),
-                    next.wandRequirementOverrides());
+                    next.blueprintId(), next.params(), next.priority());
             long taskId = pool.addTaskFromBuilding(request, buildingId);
             queue.setHeadTaskId(taskId);
             Log.info(TAG, "building {} promoted next #{} blueprint={} pending={}",

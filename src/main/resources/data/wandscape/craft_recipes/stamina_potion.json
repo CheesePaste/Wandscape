@@ -11,8 +11,5 @@
   "input_items": ["minecraft:glass_bottle"],
   "unlock_requirement": {
     "min_magic": 0
-  },
-  "wand_level": {
-    "crafting": 1
   }
 }

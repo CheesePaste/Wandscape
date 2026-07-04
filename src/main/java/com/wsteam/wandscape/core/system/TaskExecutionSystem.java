@@ -55,7 +55,7 @@ public class TaskExecutionSystem implements System {
         if (registry == null) return;
 
         List<Long> npcs = world.query(Position.class, ManaPool.class, TaskExecutor.class,
-                WandCarrier.class, Inventory.class);
+                EquipmentComponent.class, Inventory.class);
 
         for (long npcId : npcs) {
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
@@ -157,7 +157,7 @@ public class TaskExecutionSystem implements System {
         }
 
         // ── 4. Execute op loop (batch pure ops, one side-effect per tick) ──
-        WandCarrier wc = world.get(npcId, WandCarrier.class);
+        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
         while (queue.peekCurrentOp() != null) {
             AtomicOp currentOp = queue.peekCurrentOp();
 
@@ -181,9 +181,9 @@ public class TaskExecutionSystem implements System {
             boolean isPure = isPureOp(currentOp);
             if (!isPure) {
                 ManaPool mana = world.get(npcId, ManaPool.class);
-                if (mana == null || wc == null) return;
+                if (mana == null || eq == null) return;
 
-                float actualCost = currentOp.baseManaCost() * wc.bestManaEfficiency();
+                float actualCost = currentOp.baseManaCost() * eq.getAttribute(com.wsteam.wandscape.core.types.AttributeType.MANA_COST_MULTIPLIER);
                 if (mana.current() < actualCost) {
                     releaseToGlobalPool(exec, queue, npcId, world);
                     Log.info(TAG, "NPC %d — mana %.1f < %.1f, released pkg to pool",
@@ -320,8 +320,6 @@ public class TaskExecutionSystem implements System {
             taskPool.completeTask(exec.globalTaskId, npcId);
             Log.info(TAG, "NPC %d — completed global task #%d", npcId, exec.globalTaskId);
 
-            // Inject WandReturnOp for provisioned wands
-            injectWandReturnIfNeeded(world, npcId, queue);
 
             exec.releaseGlobalTask();
         }
@@ -457,9 +455,9 @@ public class TaskExecutionSystem implements System {
 
         if (totalCost > 0) {
             ManaPool mana = world.get(npcId, ManaPool.class);
-            WandCarrier wc = world.get(npcId, WandCarrier.class);
-            if (mana == null || wc == null) return;
-            float actualCost = totalCost * wc.bestManaEfficiency();
+            EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
+            if (mana == null || eq == null) return;
+            float actualCost = totalCost * eq.getAttribute(com.wsteam.wandscape.core.types.AttributeType.MANA_COST_MULTIPLIER);
             if (mana.current() < actualCost) {
                 releaseToGlobalPool(exec, queue, npcId, world);
                 Log.info(TAG, "NPC %d — mana %.1f < %.1f total for %d parallel ops, released",
@@ -551,23 +549,4 @@ public class TaskExecutionSystem implements System {
         }
     }
 
-    /**
-     * After a global task completes, check if the NPC has any provisioned wand
-     * still equipped. If so, enqueue WandReturnOp to send it back to the warehouse.
-     */
-    private static void injectWandReturnIfNeeded(World world, long npcId, NpcTaskQueue queue) {
-        WandCarrier wc = world.get(npcId, WandCarrier.class);
-        ColonyMember cm = world.get(npcId, ColonyMember.class);
-        var lifecycle = world.wandLifecycle;
-        if (wc == null || cm == null || lifecycle == null) return;
-
-        for (String wandId : wc.equippedWandIds()) {
-            if (lifecycle.isEquipped(cm.colonyId(), wandId)) {
-                queue.enqueueUrgent(NpcTaskPackage.system(
-                        "system:wand_return",
-                        new AtomicOp.WandReturnOp(wandId), null, 5));
-                Log.info(TAG, "NPC %d — inject WandReturnOp for %s after task complete", npcId, wandId);
-            }
-        }
-    }
 }

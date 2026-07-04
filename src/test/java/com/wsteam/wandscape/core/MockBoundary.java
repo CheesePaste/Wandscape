@@ -1,4 +1,4 @@
-package com.wsteam.wandscape.core.demo;
+package com.wsteam.wandscape.core;
 
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.BlockOps;

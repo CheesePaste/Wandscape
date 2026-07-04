@@ -10,7 +10,6 @@ public interface NpcData {
     int getCurrentMana();
     int getSpellPower();
     int getManaRegenRate();
-    AbilitySet getAbilities();
     boolean isIdle();
     UUID getAssignedHouseId();
     UUID getCurrentTaskId();

@@ -3,8 +3,6 @@ package com.wsteam.wandscape.wand.internal;
 import com.google.gson.JsonParser;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 
-import net.minecraft.nbt.CompoundTag;
-
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,32 +15,32 @@ class WandPresetLoaderTest {
             {
               "type": "wand",
               "display_name": "Test Wand",
-              "wand_color": "#123456",
-              "behaviors": { "mining": 2 }
+              "wand_color": "#123456"
             }""";
         WandPreset preset = WandPreset.fromJson("test", JsonParser.parseString(json));
         assertEquals("test", preset.id());
         assertEquals("Test Wand", preset.displayName());
         assertEquals("#123456", preset.defaultColor());
+        assertEquals("test", preset.nbt().getString("preset_id"));
         assertEquals("#123456", preset.nbt().getString("wand_color"));
-        CompoundTag bt = preset.nbt().getCompound("behaviors");
-        assertEquals(2, bt.getInt("mining"));
     }
 
     @Test
-    void fromJson_validFull_allOptionalFields() {
+    void fromJson_validFull_parsesAttributes() {
         String json = """
             {
               "type": "wand",
               "display_name": "Full Wand",
               "wand_color": "#ABCDEF",
-              "behaviors": { "crafting": 4 },
-              "range": 3,
-              "mana_cost_multiplier": 0.5
+              "attributes": [
+                { "type": "range", "operation": "addition", "amount": 1 },
+                { "type": "mana_cost_multiplier", "operation": "addition", "amount": -0.2 }
+              ]
             }""";
         WandPreset preset = WandPreset.fromJson("full", JsonParser.parseString(json));
-        assertEquals(3, preset.nbt().getInt("range"));
-        assertEquals(0.5f, preset.nbt().getFloat("mana_cost_multiplier"), 0.001f);
+        assertEquals(2, preset.attributes().size());
+        assertEquals("range", preset.attributes().get(0).type().name().toLowerCase());
+        assertEquals(-0.2f, preset.attributes().get(1).amount(), 0.001f);
     }
 
     @Test
@@ -50,8 +48,7 @@ class WandPresetLoaderTest {
         String json = """
             {
               "type": "wand",
-              "wand_color": "#FFFFFF",
-              "behaviors": { "ritual": 1 }
+              "wand_color": "#FFFFFF"
             }""";
         WandPreset preset = WandPreset.fromJson("my_id", JsonParser.parseString(json));
         assertEquals("my_id", preset.displayName());
@@ -62,53 +59,22 @@ class WandPresetLoaderTest {
         String json = """
             {
               "type": "wand",
-              "display_name": "No Color",
-              "behaviors": { "ritual": 1 }
+              "display_name": "No Color"
             }""";
         WandPreset preset = WandPreset.fromJson("nocolor", JsonParser.parseString(json));
         assertEquals("#FFFFFF", preset.defaultColor());
     }
 
     @Test
-    void fromJson_optionalRangeAbsent_notInNbt() {
+    void fromJson_noAttributes_returnsEmptyList() {
         String json = """
             {
               "type": "wand",
-              "display_name": "No Range",
-              "wand_color": "#000000",
-              "behaviors": { "gathering": 1 }
+              "display_name": "No Attrs",
+              "wand_color": "#000000"
             }""";
-        WandPreset preset = WandPreset.fromJson("norange", JsonParser.parseString(json));
-        assertFalse(preset.nbt().contains("range"));
-    }
-
-    @Test
-    void fromJson_optionalManaCostAbsent_notInNbt() {
-        String json = """
-            {
-              "type": "wand",
-              "display_name": "No Mana",
-              "wand_color": "#000000",
-              "behaviors": { "gathering": 1 }
-            }""";
-        WandPreset preset = WandPreset.fromJson("nomana", JsonParser.parseString(json));
-        assertFalse(preset.nbt().contains("mana_cost_multiplier"));
-    }
-
-    @Test
-    void fromJson_behaviorsMultipleEntries_allInNbt() {
-        String json = """
-            {
-              "type": "wand",
-              "display_name": "Multi",
-              "wand_color": "#000000",
-              "behaviors": { "building": 5, "farming": 2, "mining": 1 }
-            }""";
-        WandPreset preset = WandPreset.fromJson("multi", JsonParser.parseString(json));
-        CompoundTag bt = preset.nbt().getCompound("behaviors");
-        assertEquals(5, bt.getInt("building"));
-        assertEquals(2, bt.getInt("farming"));
-        assertEquals(1, bt.getInt("mining"));
+        WandPreset preset = WandPreset.fromJson("noattrs", JsonParser.parseString(json));
+        assertTrue(preset.attributes().isEmpty());
     }
 
     @Test
@@ -117,11 +83,22 @@ class WandPresetLoaderTest {
             {
               "type": "wand",
               "display_name": "Color Check",
-              "wand_color": "#FF00FF",
-              "behaviors": { "ritual": 2 }
+              "wand_color": "#FF00FF"
             }""";
         WandPreset preset = WandPreset.fromJson("color", JsonParser.parseString(json));
         assertEquals("#FF00FF", preset.nbt().getString("wand_color"));
+    }
+
+    @Test
+    void fromJson_presetIdInNbt() {
+        String json = """
+            {
+              "type": "wand",
+              "display_name": "ID Check",
+              "wand_color": "#000000"
+            }""";
+        WandPreset preset = WandPreset.fromJson("my_preset", JsonParser.parseString(json));
+        assertEquals("my_preset", preset.nbt().getString("preset_id"));
     }
 
     @Test
@@ -130,8 +107,7 @@ class WandPresetLoaderTest {
             {
               "type": "wand",
               "display_name": "Builder Wand",
-              "wand_color": "#00FF00",
-              "behaviors": { "building": 3 }
+              "wand_color": "#00FF00"
             }""";
         WandPreset preset = WandPreset.fromJson("builder", JsonParser.parseString(json));
         assertEquals("Builder Wand", preset.displayName());
@@ -143,8 +119,7 @@ class WandPresetLoaderTest {
             {
               "type": "potion",
               "display_name": "Not A Wand",
-              "wand_color": "#000000",
-              "behaviors": { "ritual": 1 }
+              "wand_color": "#000000"
             }""";
         WandPreset preset = WandPreset.fromJson("potion", JsonParser.parseString(json));
         assertNull(preset);
@@ -155,8 +130,7 @@ class WandPresetLoaderTest {
         String json = """
             {
               "display_name": "Legacy Wand",
-              "wand_color": "#AAAAAA",
-              "behaviors": { "mining": 1 }
+              "wand_color": "#AAAAAA"
             }""";
         WandPreset preset = WandPreset.fromJson("legacy", JsonParser.parseString(json));
         assertNotNull(preset);

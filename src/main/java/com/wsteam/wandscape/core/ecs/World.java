@@ -7,7 +7,6 @@ import com.wsteam.wandscape.core.op.OpExecutorRegistry;
 import com.wsteam.wandscape.core.task.BlueprintRegistry;
 import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
-import com.wsteam.wandscape.core.task.WandLifecycle;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -50,7 +49,6 @@ public class World {
     public EventBus eventBus;
     public BlueprintRegistry blueprintRegistry;
     public GlobalTaskPool taskPool;
-    public WandLifecycle wandLifecycle;
     public BuildingTaskPool buildingTaskPool;
     public OpExecutorRegistry opExecutors;
 

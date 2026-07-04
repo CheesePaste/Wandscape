@@ -1,0 +1,19 @@
+{
+  "type": "wand",
+  "craft_station": "crafting_station",
+  "id": "basic_wand",
+  "display_name": "基础法杖",
+  "slot": "wand",
+  "wand_color": "#FFD700",
+  "attributes": [
+    { "type": "range", "operation": "addition", "amount": 0 },
+    { "type": "mana_cost_multiplier", "operation": "addition", "amount": 0.0 }
+  ],
+  "output": { "item": "wandscape:wand" },
+  "cost": {
+    "earth": 16
+  },
+  "unlock_requirement": {
+    "min_magic": 0
+  }
+}

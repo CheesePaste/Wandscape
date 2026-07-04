@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core;
 
 import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.TaskExecutor;
-import com.wsteam.wandscape.core.component.WandCarrier;
 import com.wsteam.wandscape.core.task.*;
 import com.wsteam.wandscape.core.types.*;
 import com.google.gson.JsonElement;
@@ -14,9 +13,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.op.AtomicOp;
 import com.wsteam.wandscape.core.system.TaskExecutionSystem;
 import com.wsteam.wandscape.core.op.DefaultOpExecutors;
-import com.wsteam.wandscape.core.op.OpExecutor;
 import com.wsteam.wandscape.core.system.SystemBlueprintRegistry;
-import com.wsteam.wandscape.core.demo.MockBoundary;
 
 import java.util.*;
 
@@ -60,16 +57,8 @@ public class CoreSystemsTest {
             // NPC-A: high range (6), BUILDING:1, mid efficiency (0.9), at (1,64,0)
             // NPC-B: low range (1), BUILDING:3, good efficiency (0.7), at (2,64,0)
             // Task target at (10,64,0): NPC-B dist=8 < NPC-A dist=9, so NPC-B wins
-            Map<BehaviourTag, BehaviourLevel> capsA = Map.of(
-                    BehaviourTag.BUILDING, new BehaviourLevel(1));
-            WandCarrier wandA = new WandCarrier(capsA, 0.9f, 6);
-            npcHighRange = CoreBootstrap.createNpc(world, 1, 64, 0, wandA, colonyId, 100, 5);
-
-            // NPC-B: closer to task, better efficiency → wins despite lower maxRange
-            Map<BehaviourTag, BehaviourLevel> capsB = Map.of(
-                    BehaviourTag.BUILDING, new BehaviourLevel(3));
-            WandCarrier wandB = new WandCarrier(capsB, 0.7f, 1);
-            npcHighLevel = CoreBootstrap.createNpc(world, 2, 64, 0, wandB, colonyId, 100, 5);
+            npcHighRange = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, 100, 5);
+            npcHighLevel = CoreBootstrap.createNpc(world, 2, 64, 0, colonyId, 100, 5);
         }
 
         @Test
@@ -91,40 +80,24 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void npcWithoutMatchingRequirements_retriesBeforeFail() {
-            // Task requires RITUAL:3 — no NPC qualifies and no wand in warehouse.
-            // Scheduler no longer fails immediately; it retries for ~3s (30 heartbeats)
-            // before failing, so wand return transport has time to complete.
+        void npcWithoutMatchingRequirements_taskStaysPending() {
+            // Scheduler no longer checks requirements — any NPC with mana can pick up any task.
+            // This tests that the scheduler doesn't crash when task has requirements set.
             registerSimpleBp("test:ritual_req",
                     new AtomicOp.RitualOp(RitualId.WARDING, center));
 
             GlobalTask task = GlobalTask.createSmall(0,
                     TaskSequence.of("Ritual Task",
                             new AtomicOp.RitualOp(RitualId.WARDING, center)),
-                    Map.of(BehaviourTag.RITUAL, new BehaviourLevel(3)),
                     10, List.of(), Map.of());
             long taskId = world.taskPool.addTask(task);
 
-            // After a few heartbeats: still retrying, not failed yet
-            tickN(10);
+            // Without requirement gating, NPC picks up the task and completes it
+            tickN(62);
 
             GlobalTask t = world.taskPool.get(taskId);
-            assertEquals(TaskState.PENDING_ASSIGN, t.state,
-                    "After 10 ticks (5 heartbeats) task should still be PENDING_ASSIGN");
-            assertTrue(t.schedulerRetryCount > 0, "Retry counter should have incremented");
-
-            // After enough heartbeats to exceed MAX_RETRIES: task fails
-            int ticksToFail = 2 * 31; // MAX_RETRIES=30 + 1 margin, 2 ticks/heartbeat
-            tickN(ticksToFail);
-
-            t = world.taskPool.get(taskId);
-            assertEquals(TaskState.FAILED, t.state,
-                    "After exceeding MAX_RETRIES, task should be FAILED");
-            assertNotNull(t.failureReason, "failureReason must be set");
-            assertInstanceOf(TaskFailureReason.WandRequirementUnmet.class, t.failureReason);
-            var wr = (TaskFailureReason.WandRequirementUnmet) t.failureReason;
-            assertEquals(Map.of(BehaviourTag.RITUAL, new BehaviourLevel(3)),
-                    wr.requirements());
+            assertEquals(TaskState.COMPLETED, t.state,
+                    "Without requirement check, task gets completed by any NPC");
         }
 
         @Test
@@ -192,11 +165,7 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            Map<BehaviourTag, BehaviourLevel> caps = Map.of(
-                    BehaviourTag.RITUAL, new BehaviourLevel(3),
-                    BehaviourTag.BUILDING, new BehaviourLevel(1));
-            WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
         }
 
         @Test
@@ -281,10 +250,7 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            Map<BehaviourTag, BehaviourLevel> caps = Map.of(
-                    BehaviourTag.BUILDING, new BehaviourLevel(2));
-            WandCarrier wand = new WandCarrier(caps, 0.8f, 3);
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
         }
 
         @Test
@@ -448,9 +414,7 @@ public class CoreSystemsTest {
             // Create NPC and tick
             UUID colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, 0, 64, 0, 50);
-            // NPC needs BUILDING capability for the TransformOp in test:any
-            WandCarrier wand = new WandCarrier(Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)), 0.8f, 3);
-            CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
 
             tickN(10);
 
@@ -577,9 +541,8 @@ public class CoreSystemsTest {
             UUID colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            WandCarrier wand = new WandCarrier(Map.of(), 0.8f, 3);
             // max=100, starts full at 100, consume to 50, then regen has room
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
         }
 
         @Test
@@ -639,8 +602,7 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            WandCarrier wand = new WandCarrier(Map.of(), 0.8f, 3);
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
         }
 
         @Test
@@ -649,7 +611,7 @@ public class CoreSystemsTest {
                     TaskSequence.of("Interruptible",
                             AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.STONE),
                             AtomicOp.TransformOp.place(new GridPos(5, 65, 0), BlockType.STONE)),
-                    Map.of(), 10, List.of(), Map.of());
+                    10, List.of(), Map.of());
 
             long taskId = world.taskPool.addTask(task);
             world.taskPool.assignLight(taskId, npc, world);
@@ -683,7 +645,7 @@ public class CoreSystemsTest {
                             AtomicOp.TransformOp.place(new GridPos(10, 64, 0), BlockType.STONE),
                             AtomicOp.TransformOp.place(new GridPos(10, 65, 0), BlockType.STONE),
                             AtomicOp.TransformOp.place(new GridPos(10, 66, 0), BlockType.GLASS)),
-                    Map.of(), 10, List.of(), Map.of());
+                    10, List.of(), Map.of());
 
             world.taskPool.addTask(task);
             world.taskPool.assignLight(task.id, npc, world);
@@ -701,166 +663,4 @@ public class CoreSystemsTest {
         }
     }
 
-    // ===================================================================
-    // 8. WandEquipOp / WandReturnOp lifecycle
-    // ===================================================================
-
-    @Nested
-    class WandLifecycleTests {
-        private MockBoundary mock;
-        private World world;
-        private UUID colonyId;
-        private long npc;
-        private java.util.concurrent.atomic.AtomicBoolean wandReturnExecuted;
-        private java.util.concurrent.atomic.AtomicBoolean wandEquipExecuted;
-
-        @BeforeEach
-        void setUp() {
-            mock = new MockBoundary();
-            mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
-            BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
-                    new SystemBlueprintRegistry(), false);
-            world = CoreBootstrap.bootstrap(config);
-            DefaultOpExecutors.registerAll(world.opExecutors);
-
-            // Register mock WandEquip/WandReturn executors that just set a flag.
-            // The real executors (engine-boundary) require MC classes; these
-            // light-weight mocks let us verify the ECS lifecycle in isolation.
-            wandReturnExecuted = new java.util.concurrent.atomic.AtomicBoolean(false);
-            wandEquipExecuted = new java.util.concurrent.atomic.AtomicBoolean(false);
-
-            world.opExecutors.register(new OpExecutor<AtomicOp.WandReturnOp>() {
-                @Override public Class<AtomicOp.WandReturnOp> opType() {
-                    return AtomicOp.WandReturnOp.class;
-                }
-                @Override
-                public java.util.concurrent.CompletableFuture<Void> execute(
-                        AtomicOp.WandReturnOp op, World world, long npcId) {
-                    wandReturnExecuted.set(true);
-                    return java.util.concurrent.CompletableFuture.completedFuture(null);
-                }
-            });
-
-            world.opExecutors.register(new OpExecutor<AtomicOp.WandEquipOp>() {
-                @Override public Class<AtomicOp.WandEquipOp> opType() {
-                    return AtomicOp.WandEquipOp.class;
-                }
-                @Override
-                public java.util.concurrent.CompletableFuture<Void> execute(
-                        AtomicOp.WandEquipOp op, World world, long npcId) {
-                    wandEquipExecuted.set(true);
-                    return java.util.concurrent.CompletableFuture.completedFuture(null);
-                }
-            });
-
-            GridPos center = new GridPos(0, 64, 0);
-            colonyId = UUID.randomUUID();
-            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
-
-            // NPC starts with builder_wand in equippedWandIds —
-            // exactly what our EntityComponentBridge does.
-            WandCarrier wand = new WandCarrier(
-                    Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)),
-                    1.0f, 1,
-                    List.of("builder_wand"));
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, wand, colonyId, 100, 5);
-        }
-
-        @Test
-        void equippedWandIds_areSetOnStartup() {
-            WandCarrier wc = world.get(npc, WandCarrier.class);
-            assertNotNull(wc);
-            assertEquals(List.of("builder_wand"), wc.equippedWandIds(),
-                    "NPC starts with builder_wand tracked");
-        }
-
-        @Test
-        void taskCompletes_npcGoesIdle_keepsWandEquipped() {
-            // Task completes → NPC goes idle. Wand lifecycle is now managed by
-            // WandLifecycle (Phase 3), not by idle timeout auto-return.
-            registerSimpleBp("test:wand_idle_return",
-                    AtomicOp.TransformOp.place(new GridPos(10, 64, 0), BlockType.STONE));
-
-            long taskId = world.taskPool.addTask(
-                    makeRequest("test:wand_idle_return", new GridPos(0, 64, 0), 10));
-            tickN(10 + 60 /* old WAND_RETURN_DELAY_TICKS */ + 5);
-
-            GlobalTask task = world.taskPool.get(taskId);
-            assertEquals(TaskState.COMPLETED, task.state);
-            assertFalse(mock.isAir(new GridPos(10, 64, 0)), "Block placed");
-
-            // NPC should be idle — wand stays equipped (no auto-return)
-            TaskExecutor exec = world.get(npc, TaskExecutor.class);
-            assertEquals(ExecutorState.IDLE, exec.state,
-                    "NPC should be IDLE after task completion");
-        }
-
-        @Test
-        void npcWithEmptyEquippedWandIds_noReturnAfterIdle() {
-            long npcEmpty = CoreBootstrap.createNpc(world, 1, 64, 0,
-                    new WandCarrier(
-                            Map.of(BehaviourTag.BUILDING, BehaviourLevel.of(1)),
-                            1.0f, 1, List.of()),
-                    colonyId, 100, 5);
-
-            registerSimpleBp("test:no_wand_idle",
-                    AtomicOp.TransformOp.place(new GridPos(20, 64, 0), BlockType.STONE));
-
-            long taskId = world.taskPool.addTask(
-                    makeRequest("test:no_wand_idle", new GridPos(0, 64, 0), 10));
-            tickN(10 + 60 /* old WAND_RETURN_DELAY_TICKS */ + 5);
-
-            assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state);
-            assertFalse(mock.isAir(new GridPos(20, 64, 0)), "Block placed");
-
-            // No wand equipped → no WandReturnOp should be pushed
-            TaskExecutor exec = world.get(npcEmpty, TaskExecutor.class);
-            assertTrue(exec.npcQueue.isIdle(),
-                    "Private queue stays empty when no wand equipped");
-            assertEquals(ExecutorState.IDLE, exec.state);
-        }
-
-        @Test
-        void consecutiveTasks_npcKeepsWand() {
-            // NPC completes task, gets a new one assigned quickly.
-            // Wand stays equipped across both tasks (no auto-return).
-            registerSimpleBp("test:double_assign",
-                    AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.STONE));
-            registerSimpleBp("test:second",
-                    AtomicOp.TransformOp.place(new GridPos(6, 64, 0), BlockType.GLASS));
-
-            long task1Id = world.taskPool.addTask(
-                    makeRequest("test:double_assign", new GridPos(0, 64, 0), 10));
-
-            tickN(10); // task1 completed
-            assertEquals(TaskState.COMPLETED, world.taskPool.get(task1Id).state);
-
-            long task2Id = world.taskPool.addTask(
-                    makeRequest("test:second", new GridPos(0, 64, 0), 10));
-            tickN(20); // task2 assigned and completed
-
-            assertEquals(TaskState.COMPLETED, world.taskPool.get(task2Id).state);
-            assertFalse(mock.isAir(new GridPos(5, 64, 0)), "Task1 block placed");
-            assertFalse(mock.isAir(new GridPos(6, 64, 0)), "Task2 block placed");
-        }
-
-        // ---- helpers ----
-        private void registerSimpleBp(String id, AtomicOp... steps) {
-            world.blueprintRegistry.register(id, new Blueprint(id,
-                    (BlueprintSteps) p -> new TaskSequence(List.of(steps), id)));
-        }
-
-        private TaskRequest makeRequest(String blueprintId, GridPos pos, int priority) {
-            Map<String, JsonElement> params = new HashMap<>();
-            params.put("x", new JsonPrimitive(pos.x()));
-            params.put("y", new JsonPrimitive(pos.y()));
-            params.put("z", new JsonPrimitive(pos.z()));
-            return new TaskRequest(blueprintId, params, priority);
-        }
-
-        private void tickN(int n) {
-            for (int i = 0; i < n; i++) world.tick(1.0f);
-        }
-    }
 }

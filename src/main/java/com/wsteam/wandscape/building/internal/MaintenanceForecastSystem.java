@@ -13,7 +13,6 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BuildingConfig.NodeConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -178,14 +177,8 @@ public final class MaintenanceForecastSystem {
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
             params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
 
-            Map<BehaviourTag, Integer> overrides = new HashMap<>();
-            for (var e : nodeConfig.wandLevel().entrySet()) {
-                BehaviourTag tag = BehaviourTag.fromKey(e.getKey());
-                if (tag != null) overrides.put(tag, e.getValue());
-            }
-
             WorkItem work = new WorkItem(nodeConfig.blueprint(), params,
-                    FORECAST_GATHER_PRIORITY, overrides);
+                    FORECAST_GATHER_PRIORITY);
             buildingApi.enqueueWork(buildingId, work);
 
             Log.info(TAG, "[Forecast] Enqueued high-priority gather on {} for {} (shortfall: {})",

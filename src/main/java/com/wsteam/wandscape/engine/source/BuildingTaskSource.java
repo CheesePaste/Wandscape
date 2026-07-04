@@ -12,7 +12,6 @@ import com.wsteam.wandscape.core.system.TaskSource;
 import com.wsteam.wandscape.core.task.BuildingTaskPool;
 import com.wsteam.wandscape.core.task.GlobalTaskPool;
 import com.wsteam.wandscape.core.task.TaskRequest;
-import com.wsteam.wandscape.core.types.BehaviourTag;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -95,8 +94,7 @@ public class BuildingTaskSource implements TaskSource {
                 } else {
                     // Fallback: direct publish (no BuildingTaskPool)
                     TaskRequest request = new TaskRequest(
-                            item.blueprintId(), item.params(), item.priority(),
-                            item.wandRequirementOverrides());
+                            item.blueprintId(), item.params(), item.priority());
                     taskId = pool.addTask(request);
                 }
 
@@ -161,19 +159,12 @@ public class BuildingTaskSource implements TaskSource {
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
             params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
 
-            // Convert JSON wand_level string keys to BehaviourTag overrides
-            Map<BehaviourTag, Integer> overrides = new HashMap<>();
-            for (var e : nodeConfig.wandLevel().entrySet()) {
-                BehaviourTag tag = BehaviourTag.fromKey(e.getKey());
-                if (tag != null) overrides.put(tag, e.getValue());
-            }
-
-            WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15, overrides);
+            WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15);
             api.enqueueWork(buildingId, work);
-            Log.info(TAG, "[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana) wandLevel={}",
+            Log.info(TAG, "[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana)",
                     buildingId.toString().substring(0, 8),
                     nodeConfig.element(), nodeConfig.amountPerHarvest(),
-                    nodeConfig.channelTicks(), nodeConfig.manaCost(), overrides);
+                    nodeConfig.channelTicks(), nodeConfig.manaCost());
         }
     }
 

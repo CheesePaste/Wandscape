@@ -1,9 +1,15 @@
 package com.wsteam.wandscape.wand.internal;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.wsteam.wandscape.core.types.AttributeModifier;
+import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
@@ -29,7 +35,8 @@ public class WandPresetLoader {
         String id,
         String displayName,
         String defaultColor,
-        CompoundTag nbt
+        CompoundTag nbt,
+        List<AttributeModifier> attributes
     ) {
         static WandPreset fromJson(String id, JsonElement json) {
             JsonObject obj = json.getAsJsonObject();
@@ -44,26 +51,27 @@ public class WandPresetLoader {
             String defaultColor = obj.has("wand_color")
                     ? obj.get("wand_color").getAsString() : "#FFFFFF";
 
+            // New NBT: only preset_id and wand_color
             CompoundTag nbt = new CompoundTag();
+            nbt.putString("preset_id", id);
             nbt.putString("wand_color", defaultColor);
 
-            if (obj.has("behaviors")) {
-                CompoundTag behaviors = new CompoundTag();
-                JsonObject btObj = obj.getAsJsonObject("behaviors");
-                for (var entry : btObj.entrySet()) {
-                    behaviors.putInt(entry.getKey(), entry.getValue().getAsInt());
+            // Parse attributes array
+            List<AttributeModifier> attributes = new ArrayList<>();
+            if (obj.has("attributes")) {
+                JsonArray attrs = obj.getAsJsonArray("attributes");
+                for (JsonElement attrEl : attrs) {
+                    JsonObject attrObj = attrEl.getAsJsonObject();
+                    AttributeType type = AttributeType.valueOf(
+                            attrObj.get("type").getAsString().toUpperCase());
+                    ModifierOperation op = ModifierOperation.valueOf(
+                            attrObj.get("operation").getAsString().toUpperCase());
+                    float amount = attrObj.get("amount").getAsFloat();
+                    attributes.add(new AttributeModifier(type, amount, op));
                 }
-                nbt.put("behaviors", behaviors);
             }
 
-            if (obj.has("range")) {
-                nbt.putInt("range", obj.get("range").getAsInt());
-            }
-            if (obj.has("mana_cost_multiplier")) {
-                nbt.putFloat("mana_cost_multiplier", obj.get("mana_cost_multiplier").getAsFloat());
-            }
-
-            return new WandPreset(id, displayName, defaultColor, nbt);
+            return new WandPreset(id, displayName, defaultColor, nbt, attributes);
         }
     }
 }
