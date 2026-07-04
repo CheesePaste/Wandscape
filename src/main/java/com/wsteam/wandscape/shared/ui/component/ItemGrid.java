@@ -24,6 +24,9 @@ public class ItemGrid extends AbstractWidget {
     private List<ItemStack> items = List.of();
     private int selectedIndex = -1;
     private int scrollOffset;
+    private boolean scrollbarDragging;
+    private double dragStartMouseY;
+    private int dragStartScrollOffset;
 
     public ItemGrid(int x, int y, int width, int height, int columns, int cellSize) {
         super(x, y, width, height, Component.empty());
@@ -46,6 +49,23 @@ public class ItemGrid extends AbstractWidget {
         if (!visible || !active || button != 0) return false;
 
         int contentRight = getX() + width - scrollbarWidth;
+        int sbX = getX() + width - scrollbarWidth;
+
+        // Check scrollbar thumb hit
+        int totalRows = (items.size() + columns - 1) / columns;
+        int totalHeight = totalRows * cellSize;
+        if (totalHeight > height && mouseX >= sbX && mouseX < getX() + width) {
+            int thumbHeight = Math.max(8, height * height / totalHeight);
+            int maxScroll = totalHeight - height;
+            int thumbY = getY() + (maxScroll == 0 ? 0 : scrollOffset * (height - thumbHeight) / maxScroll);
+            if (mouseY >= thumbY && mouseY < thumbY + thumbHeight) {
+                scrollbarDragging = true;
+                dragStartMouseY = mouseY;
+                dragStartScrollOffset = scrollOffset;
+                return true;
+            }
+        }
+
         if (mouseX < getX() || mouseX >= contentRight) return false;
 
         int col = (int) (mouseX - getX()) / cellSize;
@@ -57,6 +77,29 @@ public class ItemGrid extends AbstractWidget {
             return true;
         }
         return false;
+    }
+
+    @Override
+    protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
+        if (!scrollbarDragging) return;
+        int totalRows = (items.size() + columns - 1) / columns;
+        int totalHeight = totalRows * cellSize;
+        int maxScroll = Math.max(0, totalHeight - height);
+        int thumbHeight = Math.max(8, height * height / totalHeight);
+        int trackHeight = height - thumbHeight;
+        double deltaY = mouseY - dragStartMouseY;
+        scrollOffset = (int) Math.clamp(
+                dragStartScrollOffset + deltaY * maxScroll / trackHeight,
+                0, maxScroll);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (scrollbarDragging) {
+            scrollbarDragging = false;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override

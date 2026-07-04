@@ -123,31 +123,16 @@ public class WarehouseScreen extends MedievalScreen {
                     g.drawString(Minecraft.getInstance().font, hint, x + 20, y + 14, 0xFFAAAAAA);
                 }
             }
-
-            @Override
-            public boolean mouseClicked(double mouseX, double mouseY, int button) {
-                if (!visible || !active) return false;
-                int contentRight = getX() + width - scrollbarWidth;
-                if (mouseX < getX() || mouseX >= contentRight) return false;
-                int relY = (int) mouseY - getY();
-                int row = (relY / rowHeight) + (scrollOffset / rowHeight);
-                if (row >= 0 && row < items.size()) {
-                    selectedIndex = row;
-                    ItemEntry entry = items.get(row);
-                    if (button == 0 && entry.count() > 0) {
-                        PacketDistributor.sendToServer(new WarehouseActionPacket(
-                                buildingPos, "withdraw", entry.itemId(), entry.nbt(), 1));
-                    } else if (button == 1 && entry.count() > 0) {
-                        int take = (int) Math.min(entry.count(), MAX_QTY);
-                        PacketDistributor.sendToServer(new WarehouseActionPacket(
-                                buildingPos, "withdraw", entry.itemId(), entry.nbt(), take));
-                    }
-                    return true;
-                }
-                return false;
-            }
         };
         itemList.setItems(filteredItems);
+        itemList.setOnRowClick((entry, index, button) -> {
+            if (entry.count() <= 0) return;
+            int take = button == 1
+                    ? (int) Math.min(entry.count(), MAX_QTY)
+                    : 1;
+            PacketDistributor.sendToServer(new WarehouseActionPacket(
+                    buildingPos, "withdraw", entry.itemId(), entry.nbt(), take));
+        });
         addRenderableWidget(itemList);
 
         // Control row
