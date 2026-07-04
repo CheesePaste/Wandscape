@@ -167,7 +167,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         }
 
         // Item resource
-        ItemKey key = ItemKey.of(resource.id(), null);
+        ItemKey key = ItemKey.of(resource.getFuckPureResourceId_NotContainFuckedNBT().id(), null);
         for (UUID colonyId : bank.getColonyIds()) {
             if (bank.available(colonyId, key) >= amount) return true;
         }
@@ -189,7 +189,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             return false;
         }
 
-        ItemKey key = ItemKey.of(resource.id(), null);
+        ItemKey key = ItemKey.of(resource.getFuckPureResourceId_NotContainFuckedNBT().id(), null);
         for (UUID colonyId : bank.getColonyIds()) {
             if (bank.available(colonyId, key) >= amount) {
                 return bank.reserve(colonyId, key, amount);
@@ -213,7 +213,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             return false;
         }
 
-        ItemKey key = ItemKey.of(resource.id(), null);
+        ItemKey key = ItemKey.of(resource.getFuckPureResourceId_NotContainFuckedNBT().id(), null);
         for (UUID colonyId : bank.getColonyIds()) {
             if (bank.commit(colonyId, key, amount)) return true;
         }
@@ -228,7 +228,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
         // Elements: no reservations, no-op
         if (tryParseElement(resource) != null) return;
 
-        ItemKey key = ItemKey.of(resource.id(), null);
+        ItemKey key = ItemKey.of(resource.getFuckPureResourceId_NotContainFuckedNBT().id(), null);
         for (UUID colonyId : bank.getColonyIds()) {
             bank.release(colonyId, key, amount);
         }
@@ -248,7 +248,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             return (int) total;
         }
 
-        ItemKey key = ItemKey.of(resource.id(), null);
+        ItemKey key = ItemKey.of(resource.getFuckPureResourceId_NotContainFuckedNBT().id(), null);
         long total = 0;
         for (UUID colonyId : bank.getColonyIds()) {
             total += bank.available(colonyId, key);
@@ -271,7 +271,7 @@ public class WarehouseManager implements WarehouseApi, ColonyResourceAccess {
             Log.info(TAG, "addResource: {} x{} → colony {} warehouse ({} total)",
                     resource.id(), amount, colonyId, bank.countElement(colonyId, elem));
         } else {
-            ItemKey key = ItemKey.of(resource.id(), null);
+            ItemKey key = ItemKey.of(resource.getFuckPureResourceId_NotContainFuckedNBT().id(), null);
             UUID colonyId = findStorageColony();
             bank.add(colonyId, key, amount);
             Log.info(TAG, "addResource: {} x{} → colony {} warehouse ({} total)",

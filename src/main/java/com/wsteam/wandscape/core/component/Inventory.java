@@ -70,7 +70,7 @@ public class Inventory {
     public int count(ResourceId resource) {
         int total = 0;
         for (ResourceStack stack : items) {
-            if (stack.resource().equals(resource)) {
+            if (stack.resource().equals(resource)||stack.resource().equals(resource.getFuckPureResourceId_NotContainFuckedNBT())) {
                 total += stack.amount();
             }
         }

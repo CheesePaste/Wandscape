@@ -20,4 +20,8 @@ public record ResourceId(String id) {
     public String toString() {
         return id;
     }
+
+    public ResourceId getFuckPureResourceId_NotContainFuckedNBT() {
+        return new ResourceId(id.replaceAll("\\[.*?\\]", "").trim());
+    }
 }
