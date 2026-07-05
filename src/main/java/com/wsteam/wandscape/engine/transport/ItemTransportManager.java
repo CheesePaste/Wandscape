@@ -243,7 +243,7 @@ public class ItemTransportManager {
                     net.minecraft.world.item.component.CustomData.of(key.nbt().copy()));
         }
         Vec3 center = Vec3.atCenterOf(pos);
-        ItemEntity entity = new ItemEntity(level, center.x, center.y + 0.5, center.z, stack);
+        TransportItemEntity entity = new TransportItemEntity(level, center.x, center.y + 0.5, center.z, stack);
         entity.setPickUpDelay(Short.MAX_VALUE);
         entity.setUnlimitedLifetime();
         entity.setNoGravity(true);
