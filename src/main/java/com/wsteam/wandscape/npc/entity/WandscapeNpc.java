@@ -15,6 +15,7 @@ import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -22,10 +23,10 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
@@ -41,6 +42,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.network.PacketDistributor;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -153,8 +155,11 @@ public class WandscapeNpc extends PathfinderMob {
         this.entityData.set(DATA_STATUS_TEXT, text != null ? text : "");
     }
 
-    /** Debug flag — when true, skips ECS polling and forces casting state. */
-    private boolean debugCasting = false;
+    /**
+     * When true, the NPC is holding the default spawned wand and the wand slot
+     * in the mage screen should appear empty to prevent players from taking it.
+     */
+    private boolean hasDefaultWand = true;
 
     /**
      * When true, {@link RandomStrollGoal} is suppressed so
@@ -268,17 +273,7 @@ public class WandscapeNpc extends PathfinderMob {
         if (level().isClientSide) return;
 
         boolean casting;
-        if (debugCasting) {
-            casting = true;
-            BlockPos target = Wandscape.debugDiamondTarget;
-            if (target != null) {
-                faceTarget(target);
-                if (!target.equals(lastSyncedTarget)) {
-                    setDebugTarget(target);
-                    lastSyncedTarget = target;
-                }
-            }
-        } else if (ecsPollCooldown > 0 && !isCasting()) {
+        if (ecsPollCooldown > 0 && !isCasting()) {
             // Fast path: idle NPC, skip ECS query this tick
             ecsPollCooldown--;
             return;
@@ -444,25 +439,22 @@ public class WandscapeNpc extends PathfinderMob {
         if (level().isClientSide) {
             return InteractionResult.SUCCESS;
         }
-        debugCasting = !debugCasting;
-        if (debugCasting) {
-            setItemInHand(InteractionHand.MAIN_HAND,
-                    new ItemStack(Wandscape.WAND.get()));
-            BlockPos target = Wandscape.debugDiamondTarget;
-            setDebugTarget(target);
-            if (target != null) {
-                player.sendSystemMessage(Component.literal(
-                        "[Wandscape Debug] NPC casting ON — targeting " + target));
-            } else {
-                player.sendSystemMessage(Component.literal(
-                        "[Wandscape Debug] NPC casting ON — no diamond target set"));
-            }
-        } else {
-            setDebugTarget(null);
-            player.sendSystemMessage(Component.literal(
-                    "[Wandscape Debug] NPC casting OFF"));
+        // Send NPC data to the player to open the info/equipment screen
+        if (player instanceof ServerPlayer sp) {
+            PacketDistributor.sendToPlayer(sp, NpcDataPacket.from(this));
         }
-        return InteractionResult.sidedSuccess(level().isClientSide);
+        return InteractionResult.CONSUME;
+    }
+
+    // ── Default wand tracking ──
+
+    /** Whether the NPC still has the default spawned wand (prevent player from taking it). */
+    public boolean hasDefaultWand() {
+        return hasDefaultWand;
+    }
+
+    public void setHasDefaultWand(boolean value) {
+        this.hasDefaultWand = value;
     }
 
     @Override
@@ -578,6 +570,7 @@ public class WandscapeNpc extends PathfinderMob {
         tag.putInt("maxMana", maxMana);
         tag.putInt("manaRegenRate", manaRegenRate);
         tag.putInt("spellPower", spellPower);
+        tag.putBoolean("hasDefaultWand", hasDefaultWand);
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
         }
@@ -598,6 +591,7 @@ public class WandscapeNpc extends PathfinderMob {
         maxMana = tag.getInt("maxMana");
         manaRegenRate = tag.getInt("manaRegenRate");
         spellPower = tag.getInt("spellPower");
+        hasDefaultWand = tag.getBoolean("hasDefaultWand");
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");
         }

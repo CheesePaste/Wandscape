@@ -44,6 +44,10 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.server.level.ServerPlayer;
+
+import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 /**
  * A tourist NPC that visits the colony to interact with shops and service buildings.
  *
@@ -241,21 +245,14 @@ public class TouristEntity extends PathfinderMob {
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!this.isAlive()) return super.mobInteract(player, hand);
 
-        if (!level().isClientSide) {
-            String appearance = isMage() ? "法师" : "市民";
-            StringBuilder sb = new StringBuilder();
-            sb.append(touristName).append(" - ").append(appearance)
-                    .append(" - Lv.").append(level)
-                    .append(" - 精力 ").append(energy)
-                    .append(" - 满意 ").append(satisfaction).append("%");
-            if (isMage()) {
-                sb.append(" - 魔力 ").append(maxMana)
-                        .append(" - 法术 ").append(spellPower);
-            }
-            sb.append(" (").append(currentState.getDisplayName()).append(")");
-            player.sendSystemMessage(Component.literal(sb.toString()));
+        if (level().isClientSide) {
+            return InteractionResult.SUCCESS;
         }
-        return InteractionResult.sidedSuccess(level().isClientSide);
+        // Send tourist data to the player to open the info screen
+        if (player instanceof ServerPlayer sp) {
+            PacketDistributor.sendToPlayer(sp, TouristDataPacket.from(this));
+        }
+        return InteractionResult.CONSUME;
     }
 
     // ──────────────────────── Lifecycle ────────────────────────
