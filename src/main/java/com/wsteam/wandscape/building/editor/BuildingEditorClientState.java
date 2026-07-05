@@ -92,8 +92,8 @@ public final class BuildingEditorClientState {
 
     /** When true, the building AABB becomes semi-transparent and a small axis appears for editing the interact zone instead. */
     private static volatile boolean editInteractZone = false;
-    private static volatile BlockOffset interactMin = null;
-    private static volatile BlockOffset interactMax = null;
+    private static volatile BlockOffset interactMin = BlockOffset.of(-1, -1, -1);
+    private static volatile BlockOffset interactMax = BlockOffset.of(1, 1, 1);
     private static final java.util.List<com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox> interactAabbList = new java.util.ArrayList<>();
 
     // ── Category-specific configs ──
@@ -234,8 +234,8 @@ public final class BuildingEditorClientState {
         blueprintBind.clear();
         interactionRadius = 0;
         editInteractZone = false;
-        interactMin = null;
-        interactMax = null;
+        interactMin = BlockOffset.of(-1, -1, -1);
+        interactMax = BlockOffset.of(1, 1, 1);
         interactAabbList.clear();
         shopGoods.clear();
         shopProfitRate = 0.2;
