@@ -8,7 +8,6 @@
 
 ```bash
 ./gradlew build          # 编译
-./gradlew runClient      # 启动测试客户端
 ./gradlew test           # 运行单元测试
 ./gradlew runGameTestServer  # 运行 GameTest
 ```
@@ -28,7 +27,7 @@
 5. **文档即代码**：修改结构同步更新 `architecture/packages/`，新增 JSON 格式同步更新 `architecture/data/`，修改设计同步更新 `docs/`。
 6. **引擎是请求层，适配层是实现**：`core/` 禁止引入 MC 类，禁止持有运行时状态。MC 实现放 `engine/` 或各模块 `internal/`。
 7. **使用模组的Log**：使用shared/log/Log.java，方便后面批量隐藏。
-
+8. **禁止使用**: ./gradlew runClient
 ## 项目导航
 
 | 目录 | 用途 | 何时查阅 |

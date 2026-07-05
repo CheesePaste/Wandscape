@@ -264,7 +264,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_SATISFACTION_PER_VISIT = BUILDER
             .comment("Maximum satisfaction a tourist can gain from a single building visit")
-            .defineInRange("tourist.maxSatisfactionPerVisit", 25, 10, 50);
+            .defineInRange("tourist.maxSatisfactionPerVisit", 30, 10, 50);
 
     public static final ModConfigSpec.IntValue TOURIST_PREFERENCE_DECAY = BUILDER
             .comment("How much a tourist's preference for a building type decreases "

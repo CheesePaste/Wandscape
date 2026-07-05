@@ -6,11 +6,16 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
+import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
+import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
+
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.resources.ResourceLocation;
@@ -49,6 +54,14 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, Humanoid
 
     public TouristRenderer(EntityRendererProvider.Context ctx) {
         super(ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+    }
+
+    @Override
+    public void render(TouristEntity entity, float entityYaw, float partialTicks,
+                       PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+        super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+        SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
+                AmbientTextPools::getTouristText);
     }
 
     @Override

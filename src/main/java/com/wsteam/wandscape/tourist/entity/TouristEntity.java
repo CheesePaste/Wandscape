@@ -12,7 +12,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 
 import javax.annotation.Nullable;
 
@@ -21,6 +23,8 @@ import com.wsteam.wandscape.tourist.internal.TouristState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -281,6 +285,18 @@ public class TouristEntity extends PathfinderMob {
             entityData.set(DATA_SKIN_VARIANT, variant);
             entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
         }
+
+        // Re-establish hotel check-in when entity is loaded from disk
+        if (checkedInBuildingId != null && !level().isClientSide) {
+            HotelStayHandler hotel = HotelStayHandler.getActive();
+            if (hotel != null && colonyId != null && hotel.checkIn(this, checkedInBuildingId, colonyId)) {
+                hotelCheckinTime = tickCount;
+            } else {
+                // Hotel no longer available — clear check-in state
+                checkedInBuildingId = null;
+                hotelCheckinTime = 0;
+            }
+        }
     }
 
     @Override
@@ -289,16 +305,199 @@ public class TouristEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean shouldBeSaved() { return false; }
+    public boolean shouldBeSaved() { return true; }
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {}
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putString("touristName", touristName);
+        tag.putString("currentState", currentState.name());
+
+        // Save skin variant and appearance (SynchedEntityData is NOT auto-saved)
+        tag.putInt("skinVariant", entityData.get(DATA_SKIN_VARIANT));
+        tag.putByte("appearance", entityData.get(DATA_APPEARANCE));
+
+        if (commuteTarget != null) {
+            tag.putLong("commuteTarget", commuteTarget.asLong());
+        }
+        if (wanderAnchor != null) {
+            tag.putLong("wanderAnchor", wanderAnchor.asLong());
+        }
+        tag.putInt("wanderRadius", wanderRadius);
+        tag.putInt("energy", energy);
+        tag.putInt("satisfaction", satisfaction);
+        tag.putInt("level", level);
+
+        // Save per-building-type preferences as a flat compound
+        CompoundTag prefs = new CompoundTag();
+        for (var entry : typePreferences.entrySet()) {
+            prefs.putInt(entry.getKey(), entry.getValue());
+        }
+        tag.put("typePreferences", prefs);
+
+        tag.putInt("maxMana", maxMana);
+        tag.putInt("manaRegenRate", manaRegenRate);
+        tag.putInt("spellPower", spellPower);
+        tag.putBoolean("mageResumeStored", mageResumeStored);
+
+        if (colonyId != null) tag.putUUID("colonyId", colonyId);
+        if (targetBuildingId != null) tag.putUUID("targetBuildingId", targetBuildingId);
+        if (targetBuildingCategory != null) tag.putString("targetBuildingCategory", targetBuildingCategory);
+        if (checkedInBuildingId != null) tag.putUUID("checkedInBuildingId", checkedInBuildingId);
+
+        // Save visited building IDs
+        ListTag visitedList = new ListTag();
+        for (UUID id : visitedBuildings) {
+            CompoundTag entry = new CompoundTag();
+            entry.putUUID("id", id);
+            visitedList.add(entry);
+        }
+        tag.put("visitedBuildings", visitedList);
+
+        // Save service cooldowns as remaining ticks (absolute tickCount values are not portable)
+        ListTag cooldownList = new ListTag();
+        for (var entry : serviceCooldowns.entrySet()) {
+            int remaining = entry.getValue() - this.tickCount;
+            if (remaining > 0) {
+                CompoundTag entryTag = new CompoundTag();
+                entryTag.putUUID("buildingId", entry.getKey());
+                entryTag.putInt("remaining", remaining);
+                cooldownList.add(entryTag);
+            }
+        }
+        tag.put("serviceCooldowns", cooldownList);
+        int remainingGlobal = serviceCooldownEndTick - this.tickCount;
+        if (remainingGlobal > 0) {
+            tag.putInt("serviceCooldownRemaining", remainingGlobal);
+        }
+
+        // Save visit memories (journey diary)
+        ListTag visitsList = new ListTag();
+        for (VisitMemory v : recentVisits) {
+            CompoundTag vt = new CompoundTag();
+            vt.putString("buildingTypeId", v.buildingTypeId());
+            vt.putString("buildingDisplayName", v.buildingDisplayName());
+            vt.putString("category", v.category());
+            vt.putLong("gameTime", v.gameTime());
+            vt.putInt("satisfactionBefore", v.satisfactionBefore());
+            vt.putInt("satisfactionDelta", v.satisfactionDelta());
+            vt.putInt("energyDelta", v.energyDelta());
+            vt.putString("whatHappened", v.whatHappened());
+            visitsList.add(vt);
+        }
+        tag.put("recentVisits", visitsList);
+
+        tag.putLong("arrivalTime", arrivalTime);
+    }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {}
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.touristName = tag.getString("touristName");
+
+        if (tag.contains("currentState")) {
+            try {
+                this.currentState = TouristState.valueOf(tag.getString("currentState"));
+            } catch (IllegalArgumentException e) {
+                this.currentState = TouristState.IDLE;
+            }
+        }
+
+        // Restore skin variant and appearance (SynchedEntityData is NOT auto-loaded)
+        if (tag.contains("skinVariant")) {
+            entityData.set(DATA_SKIN_VARIANT, tag.getInt("skinVariant"));
+        }
+        if (tag.contains("appearance")) {
+            entityData.set(DATA_APPEARANCE, tag.getByte("appearance"));
+        }
+
+        this.commuteTarget = tag.contains("commuteTarget") ? BlockPos.of(tag.getLong("commuteTarget")) : null;
+        this.wanderAnchor = tag.contains("wanderAnchor") ? BlockPos.of(tag.getLong("wanderAnchor")) : null;
+        this.wanderRadius = tag.getInt("wanderRadius");
+        // Clamp values in case of corrupted data
+        this.energy = Math.clamp(tag.getInt("energy"), 0, 200);
+        this.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
+        this.level = Math.max(1, tag.getInt("level"));
+
+        // Restore per-building-type preferences
+        this.typePreferences.clear();
+        if (tag.contains("typePreferences")) {
+            CompoundTag prefs = tag.getCompound("typePreferences");
+            for (String key : prefs.getAllKeys()) {
+                this.typePreferences.put(key, prefs.getInt(key));
+            }
+        }
+
+        this.maxMana = tag.getInt("maxMana");
+        this.manaRegenRate = tag.getInt("manaRegenRate");
+        this.spellPower = tag.getInt("spellPower");
+        this.mageResumeStored = tag.getBoolean("mageResumeStored");
+
+        this.colonyId = tag.hasUUID("colonyId") ? tag.getUUID("colonyId") : null;
+        this.targetBuildingId = tag.hasUUID("targetBuildingId") ? tag.getUUID("targetBuildingId") : null;
+        this.targetBuildingCategory = tag.contains("targetBuildingCategory") ? tag.getString("targetBuildingCategory") : null;
+        this.checkedInBuildingId = tag.hasUUID("checkedInBuildingId") ? tag.getUUID("checkedInBuildingId") : null;
+
+        // Restore visited building IDs
+        this.visitedBuildings.clear();
+        if (tag.contains("visitedBuildings")) {
+            ListTag visitedList = tag.getList("visitedBuildings", Tag.TAG_COMPOUND);
+            for (int i = 0; i < visitedList.size(); i++) {
+                CompoundTag entry = visitedList.getCompound(i);
+                if (entry.hasUUID("id")) {
+                    this.visitedBuildings.add(entry.getUUID("id"));
+                }
+            }
+        }
+
+        // Restore service cooldowns from remaining ticks (reconstruct absolute endTick for current session)
+        this.serviceCooldowns.clear();
+        if (tag.contains("serviceCooldowns")) {
+            ListTag cooldownList = tag.getList("serviceCooldowns", Tag.TAG_COMPOUND);
+            for (int i = 0; i < cooldownList.size(); i++) {
+                CompoundTag entry = cooldownList.getCompound(i);
+                if (entry.hasUUID("buildingId")) {
+                    int remaining = entry.getInt("remaining");
+                    if (remaining > 0) {
+                        this.serviceCooldowns.put(entry.getUUID("buildingId"), this.tickCount + remaining);
+                    }
+                }
+            }
+        }
+        this.serviceCooldownEndTick = tag.contains("serviceCooldownRemaining")
+                ? this.tickCount + tag.getInt("serviceCooldownRemaining")
+                : 0;
+
+        // Restore visit memories
+        this.recentVisits.clear();
+        if (tag.contains("recentVisits")) {
+            ListTag visitsList = tag.getList("recentVisits", Tag.TAG_COMPOUND);
+            for (int i = 0; i < visitsList.size(); i++) {
+                CompoundTag vt = visitsList.getCompound(i);
+                this.recentVisits.add(new VisitMemory(
+                        vt.getString("buildingTypeId"),
+                        vt.getString("buildingDisplayName"),
+                        vt.getString("category"),
+                        vt.getLong("gameTime"),
+                        vt.getInt("satisfactionBefore"),
+                        vt.getInt("satisfactionDelta"),
+                        vt.getInt("energyDelta"),
+                        vt.getString("whatHappened"),
+                        Emotion.fromDelta(vt.getInt("satisfactionDelta"))
+                ));
+            }
+        }
+
+        this.arrivalTime = tag.getLong("arrivalTime");
+
+        // Reset transient state that should not survive reload
+        this.forcedMoveMode = null;
+        this.commuteArrived = false;
+        // hotelCheckinTime is reset by onAddedToLevel re-checkin logic
+    }
 
     // ──────────────────────── Attributes ────────────────────────
 

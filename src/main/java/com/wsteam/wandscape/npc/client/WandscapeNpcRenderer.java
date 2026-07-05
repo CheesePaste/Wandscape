@@ -10,6 +10,8 @@ import java.util.stream.Stream;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
+import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -68,6 +70,7 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         super(ctx, new WandscapeNpcModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
         this.addLayer(new WizardHatLayer(this,
                 new WizardHatModel(ctx.bakeLayer(WIZARD_HAT_LAYER))));
+        // Speech bubble added inline in render() instead of as RenderLayer
     }
 
     @Override
@@ -101,6 +104,9 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
             }
         }
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+
+        SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
+                AmbientTextPools::getNpcText);
 
         // Render status text above NPC head
         String status = entity.getStatusText();

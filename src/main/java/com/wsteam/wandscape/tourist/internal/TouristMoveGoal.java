@@ -1090,10 +1090,17 @@ public class TouristMoveGoal extends Goal {
     private int computeSatisfactionGain(@Nullable UUID buildingId) {
         int threeSum = threeValueSum(buildingId);
         int threshold = tourist.getLevel() * Config.TOURIST_LEVEL_SATISFACTION_THRESHOLD.get();
-        if (threeSum < threshold) return 0;
-
         String typeId = getBuildingTypeId(buildingId);
         int typePref = typeId != null ? tourist.getTypePreference(typeId) : 50;
+
+        if (threeSum < threshold) {
+            // Below threshold → negative satisfaction (diminishing sqrt, same as positive side)
+            int deficit = threshold - threeSum;
+            int baseScore = typePref * (deficit + 1);
+            int penalty = -(int) Math.sqrt(baseScore);
+            return Math.max(penalty, -15);
+        }
+
         int baseScore = typePref * (threeSum - threshold + 1);
         int gain = (int) Math.sqrt(baseScore);
         return Math.min(gain, Config.TOURIST_MAX_SATISFACTION_PER_VISIT.get());
