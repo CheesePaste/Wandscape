@@ -11,6 +11,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.shared.log.Log;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Input controller for the Wandscape comprehensive panel.
@@ -180,6 +181,14 @@ public final class WandscapePanelController {
             // Clicking the active tab: deactivate (exit sub-mode, stay in panel)
             WandscapePanelState.exitCurrentSubMode();
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
+            return;
+        }
+
+        // BUILD_EDITOR: close V-panel first, then open building editor directly
+        if (targetMode == WandscapePanelState.SubMode.BUILD_EDITOR) {
+            WandscapePanelState.closePanel();
+            PacketDistributor.sendToServer(
+                    com.wsteam.wandscape.building.network.BuildingEditorEnterPacket.createNew());
             return;
         }
 
