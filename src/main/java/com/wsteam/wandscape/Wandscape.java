@@ -93,12 +93,15 @@ import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
+import com.wsteam.wandscape.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.npc.network.NpcEquipPacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
 import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
+import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -449,7 +452,22 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.TYPE,
                         com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket
-                                .handleClient(packet));
+                                .handleClient(packet))
+                // ── NPC info screen ──
+                .playToClient(
+                        NpcDataPacket.TYPE,
+                        NpcDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcDataPacket.handleClient(packet))
+                .playToServer(
+                        NpcEquipPacket.TYPE,
+                        NpcEquipPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcEquipPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Tourist info screen ──
+                .playToClient(
+                        TouristDataPacket.TYPE,
+                        TouristDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> TouristDataPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

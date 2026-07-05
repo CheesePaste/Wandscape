@@ -32,6 +32,10 @@ import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.npc.client.NpcScreen;
+import com.wsteam.wandscape.npc.network.NpcDataPacket;
+import com.wsteam.wandscape.tourist.client.TouristScreen;
+import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
 import com.wsteam.wandscape.task.client.TaskEditorScreen;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
@@ -186,6 +190,22 @@ public class WandscapeClient {
                     packet.buildingPos(), packet.colonyId(), packet.buildingId(),
                     packet.maxOccupancy(), packet.currentOccupancy(),
                     packet.guestNames()));
+        });
+        NpcDataPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof NpcScreen existing) {
+                existing.apply(packet);
+            } else {
+                mc.setScreen(new NpcScreen(packet));
+            }
+        });
+        TouristDataPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof TouristScreen existing) {
+                existing.apply(packet);
+            } else {
+                mc.setScreen(new TouristScreen(packet));
+            }
         });
         ShopOpenPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();

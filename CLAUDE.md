@@ -28,6 +28,7 @@
 6. **引擎是请求层，适配层是实现**：`core/` 禁止引入 MC 类，禁止持有运行时状态。MC 实现放 `engine/` 或各模块 `internal/`。
 7. **使用模组的Log**：使用shared/log/Log.java，方便后面批量隐藏。
 8. **禁止使用**: ./gradlew runClient
+9. **做事情必须先阅读**: architecture/README.md，可以便于知道功能在哪一块
 ## 项目导航
 
 | 目录 | 用途 | 何时查阅 |
