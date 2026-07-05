@@ -190,6 +190,8 @@ public final class BuildingEditorClientState {
             abilities.flying = true;
             abilities.setFlyingSpeed(BuildingEditorController.getFlyingSpeed());
             mc.player.onUpdateAbilities();
+            // No-clip flight: pass through blocks
+            mc.player.noPhysics = true;
         }
 
         // Auto-show ImGui (releases mouse)
@@ -213,6 +215,8 @@ public final class BuildingEditorClientState {
             abilities.setFlyingSpeed(savedAbilities.flyingSpeed);
             abilities.setWalkingSpeed(savedAbilities.walkingSpeed);
             mc.player.onUpdateAbilities();
+            // Restore collision
+            mc.player.noPhysics = false;
         }
 
         bodyAnchor = null;
