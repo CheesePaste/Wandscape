@@ -216,10 +216,21 @@ public final class BuildingEditorInputHandler {
         BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
         if (worldAnchor == null) return false;
 
-        // POS arrows at max corner, NEG arrows at min corner
-        BlockPos basePos = (hovered.name().endsWith("_POS"))
-                ? BuildingEditorClientState.getWorldMax()
-                : (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor);
+        boolean izMode = BuildingEditorClientState.isEditInteractZone();
+        BlockPos basePos;
+
+        if (izMode && BuildingEditorClientState.hasInteractAABB()) {
+            BlockOffset izMin = BuildingEditorClientState.getInteractMin();
+            BlockOffset izMax = BuildingEditorClientState.getInteractMax();
+            if (izMin == null || izMax == null) return false;
+            basePos = (hovered.name().endsWith("_POS"))
+                    ? worldAnchor.offset(izMax.x(), izMax.y(), izMax.z())
+                    : worldAnchor.offset(izMin.x(), izMin.y(), izMin.z());
+        } else {
+            basePos = (hovered.name().endsWith("_POS"))
+                    ? BuildingEditorClientState.getWorldMax()
+                    : (BuildingEditorClientState.getWorldMin() != null ? BuildingEditorClientState.getWorldMin() : worldAnchor);
+        }
         if (basePos == null) return false;
 
         Vec3 axisOrigin = new Vec3(basePos.getX() + 0.5, basePos.getY() + 0.5, basePos.getZ() + 0.5);
@@ -228,17 +239,22 @@ public final class BuildingEditorInputHandler {
         Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 camDir = getMouseWorldRay(mc);
 
-        // 计算初始按下的精确位置（固定原点，拖拽全程不变）
         dragStartAxisOrigin = axisOrigin;
         dragStartAxisValue = getClosestPointOnAxis(camPos, camDir, axisOrigin, axisDir);
 
-        BlockOffset curMin = BuildingEditorClientState.getEditMin();
-        BlockOffset curMax = BuildingEditorClientState.getEditMax();
-        if (curMin == null) curMin = BlockOffset.of(0, 0, 0);
-        if (curMax == null) curMax = BlockOffset.of(0, 0, 0);
+        // Save current state (building AABB or interact zone depending on mode)
+        if (izMode) {
+            BlockOffset imn = BuildingEditorClientState.getInteractMin();
+            BlockOffset imx = BuildingEditorClientState.getInteractMax();
+            dragSavedMin = (imn != null) ? imn : BlockOffset.of(0, 0, 0);
+            dragSavedMax = (imx != null) ? imx : BlockOffset.of(0, 0, 0);
+        } else {
+            BlockOffset curMin = BuildingEditorClientState.getEditMin();
+            BlockOffset curMax = BuildingEditorClientState.getEditMax();
+            dragSavedMin = (curMin != null) ? curMin : BlockOffset.of(0, 0, 0);
+            dragSavedMax = (curMax != null) ? curMax : BlockOffset.of(0, 0, 0);
+        }
 
-        dragSavedMin = curMin;
-        dragSavedMax = curMax;
         BuildingEditorClientState.setDraggingAxis(hovered);
 
         return true;
@@ -276,11 +292,17 @@ public final class BuildingEditorInputHandler {
             case Z_NEG -> z = Math.min(mz, dragSavedMin.z() - delta);
         }
 
-        BuildingEditorClientState.setEditMin(BlockOffset.of(x, y, z));
-        BuildingEditorClientState.setEditMax(BlockOffset.of(mx, my, mz));
+        boolean izMode = BuildingEditorClientState.isEditInteractZone();
+        if (izMode) {
+            BuildingEditorClientState.setInteractMin(BlockOffset.of(x, y, z));
+            BuildingEditorClientState.setInteractMax(BlockOffset.of(mx, my, mz));
+        } else {
+            BuildingEditorClientState.setEditMin(BlockOffset.of(x, y, z));
+            BuildingEditorClientState.setEditMax(BlockOffset.of(mx, my, mz));
 
         // 可选：为了性能，拖拽时可以先不 scanBlocks，松开时再 scan。但如果方块不多，实时 scan 也行。
         scanBlocks(mc);
+        }
     }
 
     private static void finishAxisDrag() {

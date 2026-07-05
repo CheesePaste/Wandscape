@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import java.util.Optional;
+import com.wsteam.wandscape.building.data.BlockOffset;
 public final class BuildingEditorAxisRenderer {
 
     private static final String TAG = "BuildingEditorAxisRenderer";
@@ -57,29 +58,47 @@ public final class BuildingEditorAxisRenderer {
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        // 使用实心半透明材质渲染，而不是线条
         VertexConsumer vc = buf.getBuffer(HandleRenderType.XRAY_QUADS);
         PoseStack.Pose pose = poseStack.last();
 
-        BlockPos minCorner = BuildingEditorClientState.getWorldMin();
-        if (minCorner == null) minCorner = worldAnchor;
-        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
-        if (maxCorner == null) maxCorner = minCorner;
+        boolean izMode = BuildingEditorClientState.isEditInteractZone();
 
+        if (izMode && BuildingEditorClientState.hasInteractAABB()) {
+            // Interact zone editing: show axes on the interact zone AABB
+            BlockOffset izMin = BuildingEditorClientState.getInteractMin();
+            BlockOffset izMax = BuildingEditorClientState.getInteractMax();
+            if (izMin != null && izMax != null) {
+                BlockPos minCorner = worldAnchor.offset(izMin.x(), izMin.y(), izMin.z());
+                BlockPos maxCorner = worldAnchor.offset(izMax.x(), izMax.y(), izMax.z());
+                drawZoneAxes(vc, pose, minCorner, maxCorner);
+            }
+        } else {
+            // Normal mode: axes on the building AABB
+            BlockPos minCorner = BuildingEditorClientState.getWorldMin();
+            if (minCorner == null) minCorner = worldAnchor;
+            BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
+            if (maxCorner == null) maxCorner = minCorner;
+            drawZoneAxes(vc, pose, minCorner, maxCorner);
+        }
+
+        buf.endBatch(HandleRenderType.XRAY_QUADS);
+        poseStack.popPose();
+    }
+
+    /** Draw axis arrows at the two corners of a zone. */
+    private static void drawZoneAxes(VertexConsumer vc, PoseStack.Pose pose,
+                                      BlockPos minCorner, BlockPos maxCorner) {
         BuildingEditorClientState.AxisDrag hovering = BuildingEditorClientState.getHoveredAxis();
 
-        // NEG arrows at MIN corner — drag to extend box in negative direction
+        // NEG arrows at MIN corner
         draw3DArrow(vc, pose, minCorner, -1, 0, 0, COL_XN, hovering == BuildingEditorClientState.AxisDrag.X_NEG);
         draw3DArrow(vc, pose, minCorner, 0, -1, 0, COL_YN, hovering == BuildingEditorClientState.AxisDrag.Y_NEG);
         draw3DArrow(vc, pose, minCorner, 0, 0, -1, COL_ZN, hovering == BuildingEditorClientState.AxisDrag.Z_NEG);
 
-        // POS arrows at MAX corner — drag to extend box in positive direction
+        // POS arrows at MAX corner
         draw3DArrow(vc, pose, maxCorner, 1, 0, 0, COL_X, hovering == BuildingEditorClientState.AxisDrag.X_POS);
         draw3DArrow(vc, pose, maxCorner, 0, 1, 0, COL_Y, hovering == BuildingEditorClientState.AxisDrag.Y_POS);
         draw3DArrow(vc, pose, maxCorner, 0, 0, 1, COL_Z, hovering == BuildingEditorClientState.AxisDrag.Z_POS);
-
-        buf.endBatch(HandleRenderType.XRAY_QUADS);
-        poseStack.popPose();
     }
 
     /** 绘制实体的 3D 箭头 */
@@ -127,11 +146,24 @@ public final class BuildingEditorAxisRenderer {
      * 极其精准的视线碰撞检测：直接检测射线与箭头 AABB 的交点。
      */
     public static BuildingEditorClientState.AxisDrag hitTestAxis(Vec3 rayOrigin, Vec3 rayDir) {
-        BlockPos minCorner = BuildingEditorClientState.getWorldMin();
-        if (minCorner == null) minCorner = BuildingEditorClientState.getWorldAnchor();
-        if (minCorner == null) return null;
-        BlockPos maxCorner = BuildingEditorClientState.getWorldMax();
-        if (maxCorner == null) maxCorner = minCorner;
+        BlockPos worldAnchor = BuildingEditorClientState.getWorldAnchor();
+        if (worldAnchor == null) return null;
+
+        boolean izMode = BuildingEditorClientState.isEditInteractZone();
+        BlockPos minCorner, maxCorner;
+
+        if (izMode && BuildingEditorClientState.hasInteractAABB()) {
+            BlockOffset izMin = BuildingEditorClientState.getInteractMin();
+            BlockOffset izMax = BuildingEditorClientState.getInteractMax();
+            if (izMin == null || izMax == null) return null;
+            minCorner = worldAnchor.offset(izMin.x(), izMin.y(), izMin.z());
+            maxCorner = worldAnchor.offset(izMax.x(), izMax.y(), izMax.z());
+        } else {
+            minCorner = BuildingEditorClientState.getWorldMin();
+            if (minCorner == null) minCorner = worldAnchor;
+            maxCorner = BuildingEditorClientState.getWorldMax();
+            if (maxCorner == null) maxCorner = minCorner;
+        }
 
         Vec3 rayEnd = rayOrigin.add(rayDir.scale(100.0));
         BuildingEditorClientState.AxisDrag bestAxis = null;

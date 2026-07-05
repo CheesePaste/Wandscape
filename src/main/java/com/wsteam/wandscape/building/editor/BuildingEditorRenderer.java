@@ -59,11 +59,32 @@ public final class BuildingEditorRenderer {
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
         PoseStack.Pose pose = poseStack.last();
 
-        // 1. AABB wireframe
+        boolean izMode = BuildingEditorClientState.isEditInteractZone();
+
+        // 1. AABB wireframe (semi-transparent in interact-zone editing mode)
         BlockPos wMin = BuildingEditorClientState.getWorldMin();
         BlockPos wMax = BuildingEditorClientState.getWorldMax();
         if (wMin != null && wMax != null) {
-            renderAABB(buf, pose, wMin, wMax);
+            if (izMode) {
+                // Semi-transparent building AABB — no full faces, just faint lines
+                renderAABBFaint(buf, pose, wMin, wMax);
+            } else {
+                renderAABB(buf, pose, wMin, wMax);
+            }
+        }
+
+        // 2. Interact zone AABB (when in interact-zone editing mode)
+        if (izMode && BuildingEditorClientState.hasInteractAABB()) {
+            BlockPos anchor = BuildingEditorClientState.getWorldAnchor();
+            if (anchor != null) {
+                BlockOffset izMin = BuildingEditorClientState.getInteractMin();
+                BlockOffset izMax = BuildingEditorClientState.getInteractMax();
+                if (izMin != null && izMax != null) {
+                    BlockPos izWorldMin = anchor.offset(izMin.x(), izMin.y(), izMin.z());
+                    BlockPos izWorldMax = anchor.offset(izMax.x(), izMax.y(), izMax.z());
+                    renderInteractAABB(buf, pose, izWorldMin, izWorldMax);
+                }
+            }
         }
 
         // 2. Pattern block highlights
@@ -98,6 +119,39 @@ public final class BuildingEditorRenderer {
         VertexConsumer lvc = buf.getBuffer(RenderType.lines());
         r = AABB_LINE_R; g = AABB_LINE_G; b = AABB_LINE_B; a = AABB_LINE_A;
         boxEdges(lvc, pose, x0, y0, z0, x1, y1, z1, r, g, b, a);
+        buf.endBatch(RenderType.lines());
+    }
+
+    /** Faint AABB — used when interact-zone editing is active; no faces, dimmer lines. */
+    private static void renderAABBFaint(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
+                                         BlockPos min, BlockPos max) {
+        float x0 = min.getX(), y0 = min.getY(), z0 = min.getZ();
+        float x1 = max.getX() + 1f, y1 = max.getY() + 1f, z1 = max.getZ() + 1f;
+        VertexConsumer lvc = buf.getBuffer(RenderType.lines());
+        boxEdges(lvc, pose, x0, y0, z0, x1, y1, z1,
+                AABB_LINE_R, AABB_LINE_G, AABB_LINE_B, 60);
+        buf.endBatch(RenderType.lines());
+    }
+
+    /** Render the interact zone AABB with a distinct blue color. */
+    private static void renderInteractAABB(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
+                                            BlockPos min, BlockPos max) {
+        float x0 = min.getX(), y0 = min.getY(), z0 = min.getZ();
+        float x1 = max.getX() + 1f, y1 = max.getY() + 1f, z1 = max.getZ() + 1f;
+
+        // Faint blue faces
+        VertexConsumer fvc = buf.getBuffer(RenderType.debugQuads());
+        quad(fvc, pose, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, 60, 120, 255, 50);
+        quad(fvc, pose, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, 60, 120, 255, 50);
+        quad(fvc, pose, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, 60, 120, 255, 50);
+        quad(fvc, pose, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, 60, 120, 255, 50);
+        quad(fvc, pose, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, 60, 120, 255, 50);
+        quad(fvc, pose, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, 60, 120, 255, 50);
+        buf.endBatch(RenderType.debugQuads());
+
+        // Blue edges
+        VertexConsumer lvc = buf.getBuffer(RenderType.lines());
+        boxEdges(lvc, pose, x0, y0, z0, x1, y1, z1, 100, 180, 255, 200);
         buf.endBatch(RenderType.lines());
     }
 
