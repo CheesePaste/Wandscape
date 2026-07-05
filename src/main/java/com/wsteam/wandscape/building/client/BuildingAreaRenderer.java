@@ -3,7 +3,6 @@ package com.wsteam.wandscape.building.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.data.InteractionRadius;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
@@ -13,20 +12,22 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * World-space renderer that visualizes tourist interaction areas for all buildings
- * when the Wandscape panel is open.
+ * World-space renderer that visualizes building boundaries and indoor interaction
+ * zones when the Wandscape panel is open.
  *
- * <p>Interaction area = building boundary expanded by {@code interactionRadius}
- * in all directions. Rendered as a semi-transparent orange box so players can
- * diagnose whether NPCs get stuck due to undersized interaction zones.
+ * <p>Interaction zone = {@code interact_aabb} entries from building config,
+ * rendered as semi-transparent orange boxes. These are the areas where tourists
+ * navigate indoors to interact with the building.
  *
- * <p>Activated when {@link WandscapePanelState#isPanelOpen()} is true.
+ * <p>Building boundary = green wireframe from {@code boundary}.
+ *
+ * <p>Activated when {@link WandscapePanelState#isPanelOpen()} and B key toggles
+ * {@link WandscapePanelState#isShowBuildingAreas()}.
  */
 public final class BuildingAreaRenderer {
 
@@ -85,7 +86,6 @@ public final class BuildingAreaRenderer {
             if (config == null || config.boundary() == null) continue;
 
             BlockPos anchor = entry.anchor();
-            InteractionRadius ir = config.interactionRadius();
 
             BuildingConfig.BoundaryBox boundary = config.boundary();
             float bx0 = anchor.getX() + boundary.min().x();
@@ -95,24 +95,16 @@ public final class BuildingAreaRenderer {
             float by1 = anchor.getY() + boundary.max().y() + 1f;
             float bz1 = anchor.getZ() + boundary.max().z() + 1f;
 
-            // Compute interaction bounds via InteractionRadius
-            BoundingBox buildingBounds = new BoundingBox(
-                    anchor.getX() + boundary.min().x(),
-                    anchor.getY() + boundary.min().y(),
-                    anchor.getZ() + boundary.min().z(),
-                    anchor.getX() + boundary.max().x(),
-                    anchor.getY() + boundary.max().y(),
-                    anchor.getZ() + boundary.max().z());
-            BoundingBox zoneBox = ir.computeInteractionBounds(buildingBounds, anchor);
-            float zx0 = zoneBox.minX();
-            float zy0 = zoneBox.minY();
-            float zz0 = zoneBox.minZ();
-            float zx1 = zoneBox.maxX() + 1f;
-            float zy1 = zoneBox.maxY() + 1f;
-            float zz1 = zoneBox.maxZ() + 1f;
-
-            // Render interaction zone (orange)
-            renderZone(buf, pose, zx0, zy0, zz0, zx1, zy1, zz1);
+            // Render interact_aabb zones (orange)
+            for (BuildingConfig.BoundaryBox zone : config.interactAabb()) {
+                float zx0 = anchor.getX() + zone.min().x();
+                float zy0 = anchor.getY() + zone.min().y();
+                float zz0 = anchor.getZ() + zone.min().z();
+                float zx1 = anchor.getX() + zone.max().x() + 1f;
+                float zy1 = anchor.getY() + zone.max().y() + 1f;
+                float zz1 = anchor.getZ() + zone.max().z() + 1f;
+                renderZone(buf, pose, zx0, zy0, zz0, zx1, zy1, zz1);
+            }
 
             // Render building boundary reference (subtle green)
             renderBoundary(buf, pose, bx0, by0, bz0, bx1, by1, bz1);

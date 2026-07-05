@@ -47,7 +47,7 @@ public record BuildingConfig(
         ServiceConfig service,
         @SerializedName("interaction_radius") InteractionRadius interactionRadius,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
-        @SerializedName("interact_offset") @Nullable BlockOffset interactOffset
+        @SerializedName("interact_aabb") List<BoundaryBox> interactAabb
 ) {
     public record QueueDef(
             int capacity,
@@ -257,12 +257,21 @@ public record BuildingConfig(
                         obj.get("door_offset"), BlockOffset.class, context);
             }
 
-            // Interact offset: precise interaction position relative to anchor.
-            // When not specified, interaction point is computed via spiral scan inside bounding box.
-            BlockOffset interactOffset = null;
-            if (obj.has("interact_offset")) {
-                interactOffset = new BlockOffset.Deserializer().deserialize(
-                        obj.get("interact_offset"), BlockOffset.class, context);
+            // Interact AABB list: multiple interaction zones relative to anchor.
+            // Each zone is spiral-scanned for walkable ground.
+            // When not specified, interaction point is computed via spiral scan inside building boundary.
+            List<BoundaryBox> interactAabb = List.of();
+            if (obj.has("interact_aabb")) {
+                JsonArray zonesArr = obj.getAsJsonArray("interact_aabb");
+                List<BoundaryBox> zones = new ArrayList<>();
+                BlockOffset.Deserializer offsetDs3 = new BlockOffset.Deserializer();
+                for (JsonElement zoneEl : zonesArr) {
+                    JsonObject zoneObj = zoneEl.getAsJsonObject();
+                    BlockOffset zMin = offsetDs3.deserialize(zoneObj.get("min"), BlockOffset.class, context);
+                    BlockOffset zMax = offsetDs3.deserialize(zoneObj.get("max"), BlockOffset.class, context);
+                    zones.add(new BoundaryBox(zMin, zMax));
+                }
+                interactAabb = List.copyOf(zones);
             }
 
             return new BuildingConfig(id, displayName, category,
@@ -270,7 +279,7 @@ public record BuildingConfig(
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,
-                    interactionRadius, doorOffset, interactOffset);
+                    interactionRadius, doorOffset, interactAabb);
         }
 
         private static String getString(JsonObject obj, String key, String def) {
