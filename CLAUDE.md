@@ -27,6 +27,7 @@
 4. **稳定性优先**：所有可能失败的路径必须有兜底。不允许静默失败或崩溃。
 5. **文档即代码**：修改结构同步更新 `architecture/packages/`，新增 JSON 格式同步更新 `architecture/data/`，修改设计同步更新 `docs/`。
 6. **引擎是请求层，适配层是实现**：`core/` 禁止引入 MC 类，禁止持有运行时状态。MC 实现放 `engine/` 或各模块 `internal/`。
+7. **使用模组的Log**：使用shared/log/Log.java，方便后面批量隐藏。
 
 ## 项目导航
 

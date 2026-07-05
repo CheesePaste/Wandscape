@@ -184,9 +184,12 @@ public final class EnqueueHelper {
         for (var offset : config.pattern()) {
             String blockId = config.blockMapping().get(offset.toKey());
             if (blockId == null || "minecraft:air".equals(blockId)) continue;
+            // Strip blockstate properties (e.g. "[facing=south]") before checking
+            // element mappings — mappings are registered for bare block IDs only.
+            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
             // Blocks without element mappings are considered "free" materials
             // and should not be requested from the warehouse.
-            if (!elementApi.hasElementMapping(blockId)) continue;
+            if (!elementApi.hasElementMapping(pureId)) continue;
             counts.merge(blockId, 1, Integer::sum);
         }
         if (counts.isEmpty()) return null;

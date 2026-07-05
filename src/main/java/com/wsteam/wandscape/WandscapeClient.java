@@ -23,6 +23,7 @@ import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
 import com.wsteam.wandscape.building.editor.BuildingEditorAxisRenderer;
 import com.wsteam.wandscape.building.editor.BuildingEditorController;
 import com.wsteam.wandscape.building.editor.BuildingEditorInputHandler;
@@ -124,6 +125,7 @@ public class WandscapeClient {
         BuildingEditorAxisRenderer.register();
         BuildingEditorInputHandler.register();
         TouristDebugRenderer.register();
+        BuildingAreaRenderer.register();
 
         // Wandscape Panel
         WandscapePanelController.register();

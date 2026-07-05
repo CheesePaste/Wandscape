@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
@@ -43,6 +44,15 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     int w = buildingApi.getColonyWonder(colonyId);
                     PacketDistributor.sendToPlayer(player,
                             new ColonyStatsSyncPacket(colonyId, c, m, w));
+
+                    // Sync building interaction areas for overlay rendering
+                    List<BuildingAreaSyncPacket.BuildingEntry> entries =
+                            buildingApi.getColonyBuildings(colonyId).stream()
+                                    .map(b -> new BuildingAreaSyncPacket.BuildingEntry(
+                                            b.getPosition(), b.getBuildingTypeId()))
+                                    .toList();
+                    PacketDistributor.sendToPlayer(player,
+                            new BuildingAreaSyncPacket(entries));
                 }
             }
         } else {

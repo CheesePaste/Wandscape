@@ -12,6 +12,7 @@ import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
@@ -54,15 +55,24 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
     public CompletableFuture<Void> execute(AtomicOp.TransformOp op, World world, long npcId) {
         // ── Consumable check: remove from NPC inventory before delay countdown ──
         if (op.consumable() != null) {
-            Inventory inv = world.get(npcId, Inventory.class);
-            if (inv == null || !inv.hasEnough(op.consumable().resource(),
-                    op.consumable().amount())) {
-                return CompletableFuture.failedFuture(
-                        new ResourceShortageException(op.consumable()));
+            // Strip blockstate to check element mapping. Blocks without element
+            // mappings are "free" materials — skip inventory consumption and place
+            // directly (they were excluded from warehouse transport by computeMaterialData).
+            String pureId = op.consumable().resource().id().replaceAll("\\[.*?\\]", "").trim();
+            if (WandscapeApis.getElementApi().hasElementMapping(pureId)) {
+                Inventory inv = world.get(npcId, Inventory.class);
+                if (inv == null || !inv.hasEnough(op.consumable().resource(),
+                        op.consumable().amount())) {
+                    return CompletableFuture.failedFuture(
+                            new ResourceShortageException(op.consumable()));
+                }
+                inv.remove(op.consumable().resource(), op.consumable().amount());
+                Log.debug(TAG, "TransformOp consumable: -{} x{} from NPC {}",
+                        op.consumable().resource().id(), op.consumable().amount(), npcId);
+            } else {
+                Log.debug(TAG, "TransformOp free block (no element mapping): {} — placing directly",
+                        op.consumable().resource().id());
             }
-            inv.remove(op.consumable().resource(), op.consumable().amount());
-            Log.debug(TAG, "TransformOp consumable: -{} x{} from NPC {}",
-                    op.consumable().resource().id(), op.consumable().amount(), npcId);
         }
 
         // ── Placement (existing delay-tick mechanism, shared by both paths) ──

@@ -130,7 +130,7 @@ public record BuildingEditorEnterResponsePacket(
                 }
             }
 
-            BuildingEditorClientState.setInteractionRadius(config.interactionRadius());
+            BuildingEditorClientState.setInteractionRadius(config.interactionRadius().uniform());
 
             // Category-specific
             if (config.shop() != null && !config.shop().equals(

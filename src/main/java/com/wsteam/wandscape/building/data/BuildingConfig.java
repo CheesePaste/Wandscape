@@ -45,7 +45,7 @@ public record BuildingConfig(
         @SerializedName("wonder_config") WonderConfig wonderConfig,
         ShopConfig shop,
         ServiceConfig service,
-        @SerializedName("interaction_radius") int interactionRadius,
+        @SerializedName("interaction_radius") InteractionRadius interactionRadius,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
         @SerializedName("interact_offset") @Nullable BlockOffset interactOffset
 ) {
@@ -242,9 +242,12 @@ public record BuildingConfig(
                 service = context.deserialize(obj.get("service"), ServiceConfig.class);
             }
 
-            // Interaction radius: blocks from building boundary within which interaction is allowed.
-            // 0 = must click building blocks directly (or be inside building boundary).
-            int interactionRadius = getInt(obj, "interaction_radius", 0);
+            // Interaction radius: can be int (uniform), {x,y,z} (per-axis), or {min,max} (explicit box)
+            InteractionRadius interactionRadius = InteractionRadius.NONE;
+            if (obj.has("interaction_radius")) {
+                interactionRadius = new InteractionRadius.Deserializer().deserialize(
+                        obj.get("interaction_radius"), InteractionRadius.class, context);
+            }
 
             // Door offset: position of the building door relative to anchor.
             // When not specified, entry point is computed via heuristic spiral scan.

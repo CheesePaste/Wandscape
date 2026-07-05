@@ -39,6 +39,7 @@ public final class WandscapePanelController {
         bus.addListener(MovementInputUpdateEvent.class, WandscapePanelController::onMovementInputUpdate);
         bus.addListener(ClientTickEvent.Post.class, WandscapePanelController::onClientTickPost);
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
+        bus.addListener(InputEvent.MouseScrollingEvent.class, WandscapePanelController::onMouseScroll);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
         bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpen);
         Log.info(TAG, "[Panel] Controller registered");
@@ -93,6 +94,20 @@ public final class WandscapePanelController {
 
         // ── Building selection bar handling ──
         if (BuildingSelectionOverlay.isActive()) {
+            // Scrollbar click — jump to position
+            if (BuildingSelectionOverlay.isOverScrollbar(mouseX, screenW)) {
+                int barY = BuildingSelectionOverlay.getBarY(screenH);
+                int gridY = barY + BuildingSelectionOverlay.GRID_TOP_OFFSET;
+                int gridH = BuildingSelectionOverlay.BAR_HEIGHT - BuildingSelectionOverlay.GRID_TOP_OFFSET;
+                int maxScroll = BuildingSelectionOverlay.getMaxScrollOffset();
+                if (maxScroll > 0 && mouseY > gridY) {
+                    float ratio = Math.min(1f, (float) (mouseY - gridY) / gridH);
+                    int targetScroll = Math.round(ratio * maxScroll);
+                    WandscapePanelState.setBuildingBarScrollOffset(targetScroll);
+                }
+                event.setCanceled(true);
+                return;
+            }
             // Category tab click
             int catIdx = BuildingSelectionOverlay.getCategoryAt(mouseX, mouseY, screenW, screenH);
             if (catIdx >= 0) {
@@ -210,13 +225,26 @@ public final class WandscapePanelController {
     // ── Keyboard handler (search bar input) ──
 
     static void onKey(InputEvent.Key event) {
-        if (!BuildingSelectionOverlay.isActive()) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
 
         int key = event.getKey();
+
+        // B key: toggle interaction area overlay (works whenever panel is open)
+        if (key == GLFW.GLFW_KEY_B && WandscapePanelState.isPanelOpen()) {
+            WandscapePanelState.toggleBuildingAreas();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "[Panel] Building areas: " + (WandscapePanelState.isShowBuildingAreas() ? "§aON" : "§7OFF")),
+                        true);
+            }
+            return;
+        }
+
+        if (!BuildingSelectionOverlay.isActive()) return;
         int mods = event.getModifiers();
         boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
 
@@ -237,6 +265,25 @@ public final class WandscapePanelController {
                 WandscapePanelState.setBuildingBarSearch(current + ch);
             }
         }
+    }
+
+    // ── Mouse scroll (building selection bar) ──
+
+    static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        if (!BuildingSelectionOverlay.isActive()) return;
+
+        int maxScroll = BuildingSelectionOverlay.getMaxScrollOffset();
+        if (maxScroll <= 0) return;
+
+        int current = WandscapePanelState.getBuildingBarScrollOffset();
+        double delta = event.getScrollDeltaY();
+        if (delta > 0) {
+            current = Math.max(0, current - 1);
+        } else {
+            current = Math.min(maxScroll, current + 1);
+        }
+        WandscapePanelState.setBuildingBarScrollOffset(current);
+        event.setCanceled(true);
     }
 
     // ── Suppress pause menu when in build mode ──
@@ -263,6 +310,11 @@ public final class WandscapePanelController {
                     net.minecraft.network.chat.Component.literal("[Build] §7Select another building or ESC to cancel"),
                     true);
         }
+    }
+
+    /** Compute number of building grid columns for the current screen width. */
+    private static int getCols(int screenW) {
+        return Math.max(1, (screenW - BuildingSelectionOverlay.GRID_PAD_X * 2 - BuildingSelectionOverlay.SCROLLBAR_W) / BuildingSelectionOverlay.CELL_W);
     }
 
     private static String keyToChar(int key, boolean shift) {

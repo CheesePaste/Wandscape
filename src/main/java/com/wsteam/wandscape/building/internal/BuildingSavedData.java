@@ -201,16 +201,16 @@ public class BuildingSavedData extends SavedData {
 
             var bb = state.getBounds();
             BuildingConfig config = configLoader.get(state.getBuildingTypeId());
-            int radius = config != null ? config.interactionRadius() : 0;
 
-            // Check bounding box interior (always checked) + expanded area if radius > 0
-            if (pos.getX() >= bb.minX() - radius
-                    && pos.getX() <= bb.maxX() + radius
-                    && pos.getY() >= bb.minY() - radius
-                    && pos.getY() <= bb.maxY() + radius
-                    && pos.getZ() >= bb.minZ() - radius
-                    && pos.getZ() <= bb.maxZ() + radius) {
+            // Compute interaction zone (uniform / per-axis / explicit box)
+            var ir = config != null ? config.interactionRadius() : com.wsteam.wandscape.building.data.InteractionRadius.NONE;
+            var zone = ir.computeInteractionBounds(bb, state.getAnchor());
+
+            if (pos.getX() >= zone.minX() && pos.getX() <= zone.maxX()
+                    && pos.getY() >= zone.minY() && pos.getY() <= zone.maxY()
+                    && pos.getZ() >= zone.minZ() && pos.getZ() <= zone.maxZ()) {
                 // Prefer the building with the smallest expansion (tighter match)
+                int radius = ir.getEffectiveRange();
                 if (radius > bestRadius) {
                     bestRadius = radius;
                     bestMatch = candidate;

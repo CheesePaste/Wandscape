@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.data.InteractionRadius;
 import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
@@ -55,7 +56,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -89,7 +90,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -128,7 +129,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -155,7 +156,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -238,7 +239,7 @@ class DataDrivenStepsTest {
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null  // no boundary, no blueprint ref, no nodeConfig
+                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null  // no boundary, no blueprint ref, no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -262,7 +263,7 @@ class DataDrivenStepsTest {
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null  // no boundary, no blueprint ref, no nodeConfig
+                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null  // no boundary, no blueprint ref, no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -288,7 +289,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, 0, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
         );
     }
 }

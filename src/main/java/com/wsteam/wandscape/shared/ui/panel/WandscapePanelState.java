@@ -59,11 +59,18 @@ public final class WandscapePanelState {
 
     private static volatile StatsSummary statsSummary = StatsSummary.EMPTY;
 
+    // ── Interaction area overlay (B key toggle) ──
+    private static volatile boolean showBuildingAreas = false;
+
+    public static boolean isShowBuildingAreas() { return showBuildingAreas; }
+    public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
+
     // ── Building selection bar ──
     private static volatile boolean buildingBarOpen = false;
     private static volatile String buildingBarCategory = "All";
     private static volatile String buildingBarSearch = "";
     private static volatile int buildingBarSelectedIndex = -1;
+    private static volatile int buildingBarScrollOffset = 0;
     private static volatile BuildPhase buildPhase = BuildPhase.BAR;
     private static volatile long lastClickTime = 0;
     private static volatile int lastClickIndex = -1;
@@ -91,6 +98,7 @@ public final class WandscapePanelState {
 
     public static void openPanel() {
         panelOpen = true;
+        showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
         Minecraft mc = Minecraft.getInstance();
@@ -109,6 +117,7 @@ public final class WandscapePanelState {
             releaseCursor();
         }
         panelOpen = false;
+        showBuildingAreas = false;
         BuildingDebugClientState.setActive(false);
         cursorLifted = false;
         activeSubMode = SubMode.NONE;
@@ -160,6 +169,7 @@ public final class WandscapePanelState {
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = ProjectionClientState.getSelectedSlotIndex();
+        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
@@ -176,6 +186,7 @@ public final class WandscapePanelState {
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = -1;
+        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         if (cursorLifted) {
@@ -197,13 +208,22 @@ public final class WandscapePanelState {
     }
 
     public static String getBuildingBarCategory() { return buildingBarCategory; }
-    public static void setBuildingBarCategory(String cat) { buildingBarCategory = cat; }
+    public static void setBuildingBarCategory(String cat) {
+        buildingBarCategory = cat;
+        buildingBarScrollOffset = 0;
+    }
 
     public static String getBuildingBarSearch() { return buildingBarSearch; }
-    public static void setBuildingBarSearch(String search) { buildingBarSearch = search; }
+    public static void setBuildingBarSearch(String search) {
+        buildingBarSearch = search;
+        buildingBarScrollOffset = 0;
+    }
 
     public static int getBuildingBarSelectedIndex() { return buildingBarSelectedIndex; }
     public static void setBuildingBarSelectedIndex(int idx) { buildingBarSelectedIndex = idx; }
+
+    public static int getBuildingBarScrollOffset() { return buildingBarScrollOffset; }
+    public static void setBuildingBarScrollOffset(int offset) { buildingBarScrollOffset = Math.max(0, offset); }
 
     /** @return true if double-click (selects building, enters PLACING phase). */
     public static boolean handleBuildingSlotClick(int index) {

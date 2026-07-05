@@ -11,6 +11,7 @@ import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 
+import com.wsteam.wandscape.shared.data.NarrativeEventType;
 import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
 

@@ -443,6 +443,12 @@ public class Wandscape {
                         com.wsteam.wandscape.stats.network.StatsSyncPacket.TYPE,
                         com.wsteam.wandscape.stats.network.StatsSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.stats.network.StatsSyncPacket
+                                .handleClient(packet))
+                // ── Building interaction area overlay ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket
                                 .handleClient(packet));
     }
 

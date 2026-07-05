@@ -1,7 +1,7 @@
 {
   "item": "minecraft:scute",
   "decompose_yield": {
-    "ender": 4,
+    "dark": 4,
     "water": 2
   },
   "decomposable": true,
