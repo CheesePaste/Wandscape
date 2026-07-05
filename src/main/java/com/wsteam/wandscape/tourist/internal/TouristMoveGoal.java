@@ -476,7 +476,7 @@ public class TouristMoveGoal extends Goal {
         String bldType = getBuildingTypeId(buildingId);
         boolean isHotel = isHotelBuilding(buildingId);
 
-        if (isHotel) {
+        if (isHotel && tourist.getSatisfaction() > 50) {
             HotelStayHandler hotel = HotelStayHandler.getActive();
             UUID colonyId = tourist.getColonyId();
             if (hotel != null && colonyId != null && hotel.checkIn(tourist, buildingId, colonyId)) {
@@ -489,6 +489,14 @@ public class TouristMoveGoal extends Goal {
                 exitingPhase = false;
                 syncDebugData();
                 showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
+
+                // Emit HOTEL_CHECKIN narrative
+                long gameTime = tourist.level().getGameTime();
+                String bldName = getBuildingDisplayName(buildingId, bldType);
+                NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
+                        tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
+                emitNarrativeEvent(checkinEvent);
+
                 return true;
             }
         }
@@ -1238,7 +1246,7 @@ public class TouristMoveGoal extends Goal {
         if (data == null) return Config.ARRIVAL_RADIUS.get();
         var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
         if (config == null) return Config.ARRIVAL_RADIUS.get();
-        int r = config.interactionRadius();
+        int r = config.interactionRadius().getEffectiveRange();
         return r > 0 ? r : Config.ARRIVAL_RADIUS.get();
     }
 
