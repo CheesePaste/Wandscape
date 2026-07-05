@@ -65,7 +65,8 @@
 | shop | {goods: [...], profit_rate} | **仅 category=shop**。货物定义 + 利润率 |
 | service | {energy_per_use, element_output, max_occupancy} | **仅 category=service**。交互参数 |
 | node_config | {...} | **仅 category=node**。节点采集配置 |
-| interaction_radius | int | 交互区半径（方块数，默认为 0）。>0 时玩家可从建筑边界外此范围内交互（如商店）；=0 时需点击建筑方块或进入建筑内部（如宾馆、体育场） |
+| interaction_radius | int/{x,y,z}/{min,max} | 右键交互区扩展（默认 0）。>0 时玩家可从建筑边界外此范围内右键交互。支持三种格式：uniform int、per-axis {x,y,z}、explicit box {min,max} |
+| interact_aabb | [{min:[x,y,z], max:[x,y,z]}] | **替代旧字段 interact_offset**。室内游客导航目标区域列表（相对于 anchor）。游客 AI 遍历列表，对每个 AABB 螺旋扫描可步行地面，使用第一个找到的位置。未指定时回退到建筑 boundary 包围盒内扫描 |
 
 ## 三值计入规则
 
@@ -226,7 +227,9 @@
 
 ## 交互区
 
-`interaction_radius` 控制建筑的可交互范围：
+### 右键交互区 (interaction_radius)
+
+`interaction_radius` 控制玩家右键打开建筑 GUI 的范围：
 
 | interaction_radius | 行为 | 适用建筑 |
 |--------------------|------|----------|
@@ -234,6 +237,21 @@
 | > 0 | 从建筑包围盒向外扩展 N 格范围内均可交互 | 商店（建议 4-6）、装饰建筑、奇观 |
 
 交互区检查在 `BuildingInteractHandler` 中：先精确匹配 posIndex，未命中时通过 chunkIndex 查找附近建筑的交互区。
+
+### 室内导航目标 (interact_aabb)
+
+`interact_aabb` 定义建筑内部游客应该前往的交互区域列表，替代旧字段 `interact_offset`（单个偏移坐标）：
+
+```json
+"interact_aabb": [
+  { "min": [-2, 0, -2], "max": [2, 0, 2] }
+]
+```
+
+- 每个 AABB 的 `min`/`max` 是相对于建筑 anchor 的偏移坐标
+- 游客 AI 遍历列表，对每个 AABB 计算世界坐标包围盒，螺旋扫描可步行地面（空气在上、实心在下）
+- 使用第一个找到的有效位置作为室内导航目标
+- 未指定时回退到建筑 `boundary` 包围盒内螺旋扫描
 
 ## 现有建筑
 

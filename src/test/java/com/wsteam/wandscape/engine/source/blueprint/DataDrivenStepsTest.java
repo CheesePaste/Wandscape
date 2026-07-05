@@ -56,7 +56,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -90,7 +90,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -129,7 +129,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -156,7 +156,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -239,7 +239,7 @@ class DataDrivenStepsTest {
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null  // no boundary, no blueprint ref, no nodeConfig
+                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()  // no boundary, no blueprint ref, no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -263,7 +263,7 @@ class DataDrivenStepsTest {
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
-                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null  // no boundary, no blueprint ref, no nodeConfig
+                null, null, null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()  // no boundary, no blueprint ref, no nodeConfig
         );
 
         BlueprintSteps steps = DataDrivenSteps.fromConfig(cfg);
@@ -289,7 +289,7 @@ class DataDrivenStepsTest {
                 null,  // no boundary
                 null,  // no blueprint ref
                 null,  // no nodeConfig
-                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, null
+                MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()
         );
     }
 }

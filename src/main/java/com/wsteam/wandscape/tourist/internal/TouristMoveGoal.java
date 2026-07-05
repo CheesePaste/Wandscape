@@ -8,6 +8,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
@@ -30,6 +31,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
@@ -100,6 +102,8 @@ public class TouristMoveGoal extends Goal {
     /** The precise interaction point inside the building. */
     @Nullable
     private BlockPos interactPoint;
+    /** World-space interact AABB zones for indoor arrival detection (Y-expanded for entity height). */
+    private List<BoundingBox> interactZones = List.of();
 
     /** Push current debug state to entity synched data for client-side renderer. */
     private void syncDebugData() {
@@ -342,9 +346,23 @@ public class TouristMoveGoal extends Goal {
         BlockPos ground = findGround(target.getX(), target.getY(), target.getZ());
         if (ground != null) target = ground;
 
-        double distSqr = pos.distSqr(target);
-        int interactionRange = getInteractionRange();
-        if (distSqr <= interactionRange * interactionRange) {
+        // Arrival check: if interact_zones exist, check AABB containment (Y ±2 for entity height);
+        // otherwise fall back to distance check
+        boolean arrived;
+        if (!interactZones.isEmpty()) {
+            arrived = false;
+            for (BoundingBox zone : interactZones) {
+                if (zone.isInside(pos)) {
+                    arrived = true;
+                    break;
+                }
+            }
+        } else {
+            double distSqr = pos.distSqr(target);
+            arrived = distSqr <= 4.0;
+        }
+
+        if (arrived) {
             // Arrived at interact point
             tourist.getNavigation().stop();
 
@@ -520,6 +538,7 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
+        interactZones = List.of();
         interactionRemainingTicks = 0;
         syncDebugData();
 
@@ -780,6 +799,7 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
+        interactZones = List.of();
         interactionRemainingTicks = 0;
         syncDebugData();
         tourist.getNavigation().stop();
@@ -944,6 +964,27 @@ public class TouristMoveGoal extends Goal {
         if (entryPoint == null) entryPoint = chosen.getAnchor();
         interactPoint = api.getInteractPoint(chosen.getBuildingId());
         if (interactPoint == null) interactPoint = chosen.getAnchor();
+
+        // Compute world-space interact zones for indoor arrival detection
+        BuildingConfig chosenConfig = BuildingConfigLoader.getInstance().get(chosen.getBuildingTypeId());
+        BlockPos chosenAnchor = chosen.getAnchor();
+        if (chosenConfig != null && !chosenConfig.interactAabb().isEmpty()) {
+            List<BoundingBox> zones = new ArrayList<>();
+            for (BuildingConfig.BoundaryBox zone : chosenConfig.interactAabb()) {
+                int yMin = chosenAnchor.getY() + zone.min().y() - 2; // 2 below for character feet
+                int yMax = chosenAnchor.getY() + zone.max().y() + 2; // 2 above for character head
+                zones.add(new BoundingBox(
+                        chosenAnchor.getX() + zone.min().x(),
+                        yMin,
+                        chosenAnchor.getZ() + zone.min().z(),
+                        chosenAnchor.getX() + zone.max().x(),
+                        yMax,
+                        chosenAnchor.getZ() + zone.max().z()));
+            }
+            interactZones = List.copyOf(zones);
+        } else {
+            interactZones = List.of();
+        }
         indoorPhase = false;
         exitingPhase = false;
         syncDebugData();

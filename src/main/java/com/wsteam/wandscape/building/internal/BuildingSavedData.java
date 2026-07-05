@@ -222,8 +222,9 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Computes the interaction target position for tourist AI.
-     * Uses {@code interact_offset} from building config if defined;
-     * otherwise falls back to spiral scan for walkable ground inside the bounding box.
+     * Iterates {@code interact_aabb} from building config if defined,
+     * spiral-scanning each zone for walkable ground.
+     * Falls back to spiral scan inside the building's bounding box.
      *
      * @param buildingId the building to target
      * @param level      the world level (for block-state queries)
@@ -236,8 +237,9 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Computes the precise interaction position within the building.
-     * Uses {@code interact_offset} from building config if defined;
-     * otherwise spiral-scans for walkable ground inside the bounding box.
+     * Iterates {@code interact_aabb} from building config if defined,
+     * spiral-scanning each zone for walkable ground.
+     * Falls back to spiral scan inside the building's bounding box.
      */
     @Nullable
     public BlockPos getInteractPoint(UUID buildingId, Level level) {
@@ -246,16 +248,17 @@ public class BuildingSavedData extends SavedData {
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
 
-        // 1. Use interact_offset if defined
-        if (config != null && config.interactOffset() != null) {
+        // 1. Iterate interact_aabb entries: for each, compute world-space AABB and spiral-scan
+        if (config != null && !config.interactAabb().isEmpty()) {
             BlockPos anchor = state.getAnchor();
-            BlockOffset off = config.interactOffset();
-            BlockPos worldPos = anchor.offset(off.x(), off.y(), off.z());
-            BlockPos ground = findGroundAt(worldPos, level);
-            if (ground != null) return ground;
+            for (BuildingConfig.BoundaryBox zone : config.interactAabb()) {
+                BoundingBox worldZone = computeWorldBox(anchor, zone);
+                BlockPos result = spiralScanWalkable(worldZone, level, /* inside= */ true);
+                if (result != null) return result;
+            }
         }
 
-        // 2. Fallback: spiral scan inside bounding box
+        // 2. Fallback: spiral scan inside building boundary
         BoundingBox bounds = state.getBounds();
         BlockPos spiralResult = spiralScanWalkable(bounds, level, /* inside= */ true);
         if (spiralResult != null) return spiralResult;

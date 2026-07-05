@@ -107,8 +107,9 @@ public interface BuildingApi {
 
     /**
      * Get the precise interaction point inside the building.
-     * Uses {@code interact_offset} from building config if defined, otherwise
-     * spiral scan for walkable ground inside the bounding box.
+     * Iterates {@code interact_aabb} from building config if defined, spiral-scanning
+     * each zone for walkable ground. Falls back to spiral scan inside the building's
+     * bounding box.
      */
     @Nullable
     BlockPos getInteractPoint(UUID buildingId);
