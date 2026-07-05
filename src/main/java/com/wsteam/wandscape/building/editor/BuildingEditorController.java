@@ -80,16 +80,15 @@ public final class BuildingEditorController {
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
 
         if (cameraActive) {
-            // MC handles the look input natively when mouse is grabbed.
-            // We just need to zero out our custom flight movement.
-            mc.player.setDeltaMovement(Vec3.ZERO);
-        } else {
-            // ── Flight (only when ImGui doesn't want keyboard) ──
+            // Right-click held: WASD flight + camera rotation
             if (!imguiWantsKb) {
                 handleFlightMovement(mc, window);
             } else {
                 mc.player.setDeltaMovement(Vec3.ZERO);
             }
+        } else {
+            // No right-click: no flight, allow world interaction
+            mc.player.setDeltaMovement(Vec3.ZERO);
 
             // ── World clicks (skip if mouse is over ImGui panel) ──
             double[] mx = new double[1], my = new double[1];
@@ -191,6 +190,21 @@ public final class BuildingEditorController {
         if (!BuildingEditorClientState.isEditing()) return;
         if (ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureMouse()) return;
         event.setCanceled(true);
+
+        // Right-click held → adjust flying speed
+        if (cameraActive) {
+            double delta = event.getScrollDeltaY();
+            if (delta != 0) {
+                // ~1.3x per step, invert so scroll-up = faster
+                float factor = (float) Math.pow(1.3, delta);
+                flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(
+                            Component.literal(String.format("[BuildEditor] §eSpeed: %.2f", flyingSpeed)), true);
+                }
+            }
+        }
     }
 
     // ── Exit / Export ──

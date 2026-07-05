@@ -88,6 +88,14 @@ public final class BuildingEditorClientState {
 
     private static volatile int interactionRadius = 0;
 
+    // ── Interact AABB zone editing ──
+
+    /** When true, the building AABB becomes semi-transparent and a small axis appears for editing the interact zone instead. */
+    private static volatile boolean editInteractZone = false;
+    private static volatile BlockOffset interactMin = BlockOffset.of(-1, -1, -1);
+    private static volatile BlockOffset interactMax = BlockOffset.of(1, 1, 1);
+    private static final java.util.List<com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox> interactAabbList = new java.util.ArrayList<>();
+
     // ── Category-specific configs ──
 
     /** shop: goods list + profit rate. Null if not a shop. */
@@ -182,6 +190,8 @@ public final class BuildingEditorClientState {
             abilities.flying = true;
             abilities.setFlyingSpeed(BuildingEditorController.getFlyingSpeed());
             mc.player.onUpdateAbilities();
+            // No-clip flight: pass through blocks
+            mc.player.noPhysics = true;
         }
 
         // Auto-show ImGui (releases mouse)
@@ -205,6 +215,8 @@ public final class BuildingEditorClientState {
             abilities.setFlyingSpeed(savedAbilities.flyingSpeed);
             abilities.setWalkingSpeed(savedAbilities.walkingSpeed);
             mc.player.onUpdateAbilities();
+            // Restore collision
+            mc.player.noPhysics = false;
         }
 
         bodyAnchor = null;
@@ -225,6 +237,10 @@ public final class BuildingEditorClientState {
         blueprintId = "build:clear_and_build";
         blueprintBind.clear();
         interactionRadius = 0;
+        editInteractZone = false;
+        interactMin = BlockOffset.of(-1, -1, -1);
+        interactMax = BlockOffset.of(1, 1, 1);
+        interactAabbList.clear();
         shopGoods.clear();
         shopProfitRate = 0.2;
         serviceEnergyPerUse = 20;
@@ -449,6 +465,35 @@ public final class BuildingEditorClientState {
     public static String getNodeBlueprint() { return nodeBlueprint; }
     public static void setNodeBlueprint(String v) { nodeBlueprint = v; }
 
+    // ── Interact AABB zone ──
+
+    public static boolean isEditInteractZone() { return editInteractZone; }
+    public static void setEditInteractZone(boolean v) { editInteractZone = v; }
+
+    public static BlockOffset getInteractMin() { return interactMin; }
+    public static void setInteractMin(BlockOffset min) { interactMin = min; }
+
+    public static BlockOffset getInteractMax() { return interactMax; }
+    public static void setInteractMax(BlockOffset max) { interactMax = max; }
+
+    public static boolean hasInteractAABB() { return interactMin != null && interactMax != null; }
+
+    public static java.util.List<com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox> getInteractAabbList() {
+        synchronized (interactAabbList) { return List.copyOf(interactAabbList); }
+    }
+    public static void setInteractAabbList(java.util.List<com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox> list) {
+        synchronized (interactAabbList) {
+            interactAabbList.clear();
+            interactAabbList.addAll(list);
+            // Sync the first entry as edit targets
+            if (!list.isEmpty()) {
+                var first = list.get(0);
+                interactMin = first.min();
+                interactMax = first.max();
+            }
+        }
+    }
+
     // ── Body anchor ──
 
     public static BlockPos getBodyAnchor() { return bodyAnchor; }
@@ -588,6 +633,14 @@ public final class BuildingEditorClientState {
         // Interaction radius
         if (interactionRadius > 0) {
             sb.append("  \"interaction_radius\": ").append(interactionRadius).append(",\n");
+        }
+
+        // Interact AABB zone
+        if (hasInteractAABB()) {
+            sb.append("  \"interact_aabb\": [\n");
+            sb.append("    { \"min\": [").append(interactMin.x()).append(", ").append(interactMin.y()).append(", ").append(interactMin.z()).append("],\n");
+            sb.append("      \"max\": [").append(interactMax.x()).append(", ").append(interactMax.y()).append(", ").append(interactMax.z()).append("] }\n");
+            sb.append("  ],\n");
         }
 
         // Category-specific configs

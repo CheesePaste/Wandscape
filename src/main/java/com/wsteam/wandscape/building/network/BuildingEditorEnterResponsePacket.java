@@ -132,6 +132,11 @@ public record BuildingEditorEnterResponsePacket(
 
             BuildingEditorClientState.setInteractionRadius(config.interactionRadius().uniform());
 
+            // Interact AABB zone
+            if (config.interactAabb() != null && !config.interactAabb().isEmpty()) {
+                BuildingEditorClientState.setInteractAabbList(config.interactAabb());
+            }
+
             // Category-specific
             if (config.shop() != null && !config.shop().equals(
                     com.wsteam.wandscape.shared.data.ShopConfig.NONE)) {

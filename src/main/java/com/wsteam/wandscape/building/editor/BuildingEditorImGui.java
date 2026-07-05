@@ -62,18 +62,20 @@ public final class BuildingEditorImGui {
     public static void render() {
         syncFromState();
 
-        int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove
-                | ImGuiWindowFlags.NoResize;
+        // NoResize intentionally omitted — user can drag the left edge to resize width
+        int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove;
 
         var io = ImGui.getIO();
-        float winW = 300;
-        float x = io.getDisplaySizeX() - winW - 8;
         float y = 8;
-        panelLeftEdge = x;
-        ImGui.setNextWindowPos(x, y, ImGuiCond.Always);
-        ImGui.setNextWindowSize(winW, io.getDisplaySizeY() - 16, ImGuiCond.Always);
+
+        // Set initial position/size only once; after that ImGui remembers user resize
+        ImGui.setNextWindowPos(io.getDisplaySizeX() - 308, y, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(308, io.getDisplaySizeY() - 16, ImGuiCond.FirstUseEver);
 
         if (ImGui.begin("Building Editor", flags)) {
+            // Read actual dimensions — may differ from initial 308 after user resize
+            float winW = ImGui.getWindowWidth();
+            panelLeftEdge = ImGui.getWindowPosX();
 
             // ═══ CRITICAL: always-visible controls (top) ═══
             ImGui.pushItemWidth(-1);
@@ -172,7 +174,22 @@ public final class BuildingEditorImGui {
             BuildingEditorClientState.setAutoAnchorEnabled(autoAnchor.get());
             if (autoAnchor.get()) BuildingEditorClientState.recalculateAnchor();
 
-            // Buttons — stacked vertically
+            // ── Edit InteractZone toggle ──
+            boolean izMode = BuildingEditorClientState.isEditInteractZone();
+            if (ImGui.checkbox("Edit InteractZone", izMode)) {
+                BuildingEditorClientState.setEditInteractZone(!izMode);
+            }
+            if (izMode) {
+                ImGui.textColored(0.4f, 0.8f, 1.0f, 1.0f, "  Dragging axis = resize zone");
+                if (BuildingEditorClientState.hasInteractAABB()) {
+                    BlockOffset imn = BuildingEditorClientState.getInteractMin();
+                    BlockOffset imx = BuildingEditorClientState.getInteractMax();
+                    ImGui.textDisabled(String.format("  zone [%d,%d,%d]→[%d,%d,%d]",
+                            imn.x(), imn.y(), imn.z(), imx.x(), imx.y(), imx.z()));
+                }
+            }
+
+            // Buttons — stacked vertically (width follows panel)
             float btnW = winW - 20;
             if (ImGui.button("Set Anchor (crosshair)", btnW, 24)) {
                 BuildingEditorInputHandler.setAnchorAtCrosshair();
