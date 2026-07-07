@@ -1,0 +1,351 @@
+package com.wsteam.wandscape.overview.client;
+
+import java.util.UUID;
+
+import org.joml.Vector3f;
+import org.lwjgl.glfw.GLFW;
+
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
+import com.wsteam.wandscape.projection.client.ProjectionClientState;
+import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.road.client.RoadPlacementState;
+import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.shared.log.Log;
+
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+/**
+ * Per-frame controller for overview (bird's eye) mode.
+ *
+ * <p>Handles WASD movement (in render event for smooth frame-rate-independent motion),
+ * mouse look, raycasting, and right-click building interaction.
+ * Camera position/rotation is overridden by {@code MixinOverviewCamera}'s TAIL inject into
+ * {@link Camera#setup}.</p>
+ */
+public final class OverviewFlightController {
+
+    private static final String TAG = "OverviewFlightController";
+    private static final double REACH = 64.0;
+    private static final double MOVE_SPEED_BPS = 10.0;     // blocks per second
+    private static final double SCROLL_SPEED = 4.0;
+    private static final float MOUSE_SENSITIVITY = 0.15f;
+
+    private static boolean registered = false;
+
+    // ── Input edge detection ──
+    private static boolean wasRightDown = false;
+
+    // ── Frame-time tracking for smooth movement ──
+    private static long lastFrameNanos = 0;
+
+    private OverviewFlightController() {}
+
+    // ── Registration ──
+
+    public static void register() {
+        if (registered) return;
+        registered = true;
+
+        var bus = NeoForge.EVENT_BUS;
+        bus.addListener(RenderLevelStageEvent.class, OverviewFlightController::onRenderLevelStage);
+        bus.addListener(ClientTickEvent.Post.class, OverviewFlightController::onClientTickPost);
+        bus.addListener(MovementInputUpdateEvent.class, OverviewFlightController::onMovementInputUpdate);
+        bus.addListener(InputEvent.MouseScrollingEvent.class, OverviewFlightController::onMouseScroll);
+        bus.addListener(InputEvent.MouseButton.Pre.class, OverviewFlightController::onMouseButtonPre);
+        Log.info(TAG, "Overview flight controller registered");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Activation / Deactivation ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    public static void enter() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        OverviewClientState.enterOverview(
+                mc.player.getX(), mc.player.getY(), mc.player.getZ(),
+                mc.player.getYRot(), mc.player.getXRot());
+        // Initialize last mouse position to current cursor
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        OverviewClientState.lastMouseX = mx[0];
+        OverviewClientState.lastMouseY = my[0];
+        lastFrameNanos = System.nanoTime();
+    }
+
+    public static void exit() {
+        OverviewClientState.exitOverview();
+        lastFrameNanos = 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Render-Level Stage: camera movement + mouse look ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (!OverviewClientState.isActive()) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        long window = mc.getWindow().getWindow();
+
+        // ── Frame-time delta (capped to prevent jumps when tabbing back) ──
+        long now = System.nanoTime();
+        double elapsed = (now - lastFrameNanos) / 1_000_000_000.0;
+        lastFrameNanos = now;
+        if (elapsed > 0.05) elapsed = 0.05;
+
+        // ── Mouse look ──
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        double dx = mx[0] - OverviewClientState.lastMouseX;
+        double dy = my[0] - OverviewClientState.lastMouseY;
+
+        // Only rotate when no screen open and cursor not lifted to panel
+        if (mc.screen == null) {
+            boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
+                    && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+            if (!cursorLifted) {
+                OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
+            }
+        }
+
+        OverviewClientState.lastMouseX = mx[0];
+        OverviewClientState.lastMouseY = my[0];
+
+        // ── WASD movement (frame-rate independent, render-smooth) ──
+        float forward = 0, strafe = 0;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) strafe -= 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) strafe += 1;
+
+        if (forward != 0 || strafe != 0) {
+            Vec3 fwd = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw());
+            Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
+            double move = MOVE_SPEED_BPS * elapsed;
+            double moveX = (fwd.x * forward + right.x * strafe) * move;
+            double moveZ = (fwd.z * forward + right.z * strafe) * move;
+            OverviewClientState.setCamPosition(
+                    OverviewClientState.getCamX() + moveX,
+                    OverviewClientState.getCamY(),
+                    OverviewClientState.getCamZ() + moveZ);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Client Tick: raycast + right-click + input drain ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    static void onClientTickPost(ClientTickEvent.Post event) {
+        if (!OverviewClientState.isActive()) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        if (mc.screen != null) return;
+
+        long window = mc.getWindow().getWindow();
+
+        // ── Raycast from camera (also syncs ghost position when build is projecting) ──
+        performRaycast(mc);
+
+        // ── Right click handling (skip when road mode is active — road controller handles it) ──
+        if (!RoadPlacementState.isProjecting()) {
+            boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            boolean rightClicked = rightDown && !wasRightDown;
+            wasRightDown = rightDown;
+
+            if (rightClicked) {
+                handleRightClick(mc);
+            }
+        }
+
+        // ── Drain all vanilla actions ──
+        drainVanillaInput(mc);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Input arbitration ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Prevent player movement — camera is independent. */
+    static void onMovementInputUpdate(MovementInputUpdateEvent event) {
+        if (!OverviewClientState.isActive()) return;
+        var input = event.getInput();
+        input.forwardImpulse = 0;
+        input.leftImpulse = 0;
+        input.up = false;
+        input.down = false;
+        input.left = false;
+        input.right = false;
+        input.jumping = false;
+        input.shiftKeyDown = false;
+    }
+
+    /** Scroll → move camera along look direction (or let road mode handle width change). */
+    static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        if (!OverviewClientState.isActive()) return;
+        Minecraft mc = Minecraft.getInstance();
+        // Don't block scroll when a screen is open (allow UI scrolling)
+        if (mc.screen != null) return;
+
+        Vec3 dir = Vec3.directionFromRotation(
+                OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
+        double move = event.getScrollDeltaY() * SCROLL_SPEED;
+        OverviewClientState.setCamPosition(
+                OverviewClientState.getCamX() + dir.x * move,
+                OverviewClientState.getCamY() + dir.y * move,
+                OverviewClientState.getCamZ() + dir.z * move);
+        event.setCanceled(true);
+    }
+
+    /** Intercept mouse buttons — but only when no screen is open. */
+    static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
+        if (!OverviewClientState.isActive()) return;
+        Minecraft mc = Minecraft.getInstance();
+        // Don't block mouse clicks when a screen is open (allow UI interaction)
+        if (mc.screen != null) return;
+        // Cancel all mouse buttons in overview mode
+        // Right-click is handled in ClientTickEvent.Post instead
+        event.setCanceled(true);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Raycast ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void performRaycast(Minecraft mc) {
+        Camera camera = mc.gameRenderer.getMainCamera();
+        Vec3 origin = camera.getPosition();
+        Vector3f look = camera.getLookVector();
+        Vec3 lookVec = new Vec3(look.x(), look.y(), look.z());
+
+        ClipContext ctx = new ClipContext(
+                origin, origin.add(lookVec.scale(REACH)),
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
+        BlockHitResult hit = mc.level.clip(ctx);
+
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            BlockPos hitPos = hit.getBlockPos();
+            UUID buildingId = findBuildingAt(hitPos);
+            OverviewClientState.setTarget(hitPos, buildingId);
+
+            // When build mode is projecting in overview, sync ghost from the same raycast
+            if (ProjectionClientState.isProjecting()) {
+                BlockPos placePos = hitPos.relative(hit.getDirection());
+                ProjectionClientState.setGhostPos(placePos);
+                var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                boolean overlap = api != null && api.getBuildingAt(placePos) != null;
+                ProjectionClientState.setOverlapDetected(overlap);
+            }
+        } else {
+            OverviewClientState.clearTarget();
+            if (ProjectionClientState.isProjecting()) {
+                ProjectionClientState.setGhostPos(null);
+                ProjectionClientState.setOverlapDetected(false);
+            }
+        }
+    }
+
+    /**
+     * Find which building (if any) contains the given block position.
+     * Uses cached building area data from {@link BuildingAreaSyncPacket}.
+     */
+    private static UUID findBuildingAt(BlockPos pos) {
+        var buildings = BuildingAreaSyncPacket.getCached();
+        for (var entry : buildings) {
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
+            if (config == null || config.boundary() == null) continue;
+
+            BlockPos anchor = entry.anchor();
+            int x = pos.getX(), y = pos.getY(), z = pos.getZ();
+            int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
+
+            if (x >= ax + config.boundary().min().x() && x <= ax + config.boundary().max().x()
+                    && y >= ay + config.boundary().min().y() && y <= ay + config.boundary().max().y()
+                    && z >= az + config.boundary().min().z() && z <= az + config.boundary().max().z()) {
+                // Generate a deterministic UUID from position combination
+                return UUID.nameUUIDFromBytes((
+                        entry.buildingTypeId() + "@" + anchor).getBytes());
+            }
+        }
+        return null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Right-click handling ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void handleRightClick(Minecraft mc) {
+        // Branch 1: Building selected via Build bar → place building
+        if (ProjectionClientState.isProjecting()) {
+            handlePlace(mc);
+            return;
+        }
+
+        // Branch 2: No building selected, ray hits building → interact
+        BlockPos target = OverviewClientState.getTargetBlockPos();
+        if (target != null && OverviewClientState.getTargetBuildingId() != null) {
+            PacketDistributor.sendToServer(new OverviewInteractPacket(target));
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Overview] Interacting with building..."), true);
+            }
+        }
+    }
+
+    /** Place the selected building at the ghost position from overview raycast. */
+    private static void handlePlace(Minecraft mc) {
+        BlockPos ghostPos = ProjectionClientState.getGhostPos();
+        if (ghostPos == null) return;
+
+        if (ProjectionClientState.isOverlapDetected()) {
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Overview] §cCannot place here — overlapping building"), true);
+            }
+            return;
+        }
+
+        var slots = ProjectionClientState.getBuildingSlots();
+        int index = ProjectionClientState.getSelectedSlotIndex();
+        if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
+
+        BuildingSlot slot = slots.get(index);
+        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos));
+        Log.info(TAG, "[Overview] Placed '{}' at {}", slot.displayName(), ghostPos);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Input draining ──
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void drainVanillaInput(Minecraft mc) {
+        while (mc.options.keyAttack.consumeClick()) {}
+        while (mc.options.keyUse.consumeClick()) {}
+        while (mc.options.keyJump.consumeClick()) {}
+        while (mc.options.keyShift.consumeClick()) {}
+        while (mc.options.keyInventory.consumeClick()) {}
+        while (mc.options.keyDrop.consumeClick()) {}
+        while (mc.options.keySprint.consumeClick()) {}
+    }
+}

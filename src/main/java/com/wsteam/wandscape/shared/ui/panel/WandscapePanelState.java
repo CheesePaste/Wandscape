@@ -11,8 +11,7 @@ import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
-import com.wsteam.wandscape.road.client.RoadProjectionClientState;
-import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
+import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 
@@ -24,7 +23,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class WandscapePanelState {
 
-    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, BUILD_EDITOR, STATS }
+    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, BUILD_EDITOR, STATS, OVERVIEW }
 
     /** Build projection phase: BAR = selecting building (UI, no ghost), PLACING = in-world placement (ghost visible). */
     public enum BuildPhase { BAR, PLACING }
@@ -101,15 +100,21 @@ public final class WandscapePanelState {
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
+        // Default to overview mode
+        enterSubMode(SubMode.OVERVIEW);
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(
-                    Component.literal("[Panel] Opened — V: close"), true);
+                    Component.literal("[Panel] Opened — V: close, G: switch mode"), true);
         }
     }
 
     public static void closePanel() {
         exitCurrentSubMode();
+        // Ensure overview is properly exited on panel close
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+            com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        }
         if (buildingBarOpen) {
             closeBuildingBar();
         }
@@ -129,6 +134,24 @@ public final class WandscapePanelState {
         }
     }
 
+    // ── Cursor helpers (shared by BUILD and ROAD modes) ──
+
+    /** Lift cursor: release mouse for UI interaction (preset selection overlay). */
+    public static void liftCursorForUI() {
+        if (!cursorLifted) {
+            cursorLifted = true;
+            Minecraft.getInstance().mouseHandler.releaseMouse();
+        }
+    }
+
+    /** Release cursor to game: grab mouse for in-world interaction. */
+    public static void releaseCursorToGame() {
+        if (cursorLifted) {
+            cursorLifted = false;
+            Minecraft.getInstance().mouseHandler.grabMouse();
+        }
+    }
+
     public static void toggleCursor() {
         if (!panelOpen) return;
 
@@ -138,6 +161,20 @@ public final class WandscapePanelState {
                 closeBuildingBar();
             } else {
                 openBuildingBar();
+            }
+            return;
+        }
+
+        // Road projection mode: C toggles BAR ↔ PLACING
+        if (activeSubMode == SubMode.ROAD_PROJECTION) {
+            if (RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
+                // BAR → PLACING
+                RoadPlacementState.enterPlacing();
+                releaseCursorToGame();
+            } else {
+                // PLACING → BAR
+                RoadPlacementState.enterBar();
+                liftCursorForUI();
             }
             return;
         }
@@ -250,19 +287,41 @@ public final class WandscapePanelState {
     }
 
     public static void enterSubMode(SubMode mode) {
+        SubMode prev = activeSubMode;
+
+        // OVERVIEW → BUILD_PROJECTION or ROAD_PROJECTION: keep overview camera active
+        if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION)) {
+            activeSubMode = mode;
+            switch (mode) {
+                case BUILD_PROJECTION -> {
+                    buildPhase = BuildPhase.BAR;
+                    PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                    if (!buildingBarOpen) {
+                        openBuildingBar();
+                    }
+                }
+                case ROAD_PROJECTION -> {
+                    RoadPlacementState.enterProjection();
+                    liftCursorForUI();
+                }
+            }
+            return;
+        }
+
+        // Normal: exit current, enter new
         exitCurrentSubMode();
         activeSubMode = mode;
         switch (mode) {
             case BUILD_PROJECTION -> {
                 buildPhase = BuildPhase.BAR;
                 PacketDistributor.sendToServer(new ProjectionEnterPacket());
-                // Bar opens reactively when server grants projection
             }
             case ROAD_PROJECTION -> {
-                RoadProjectionClientState.setExpectingSync(true);
-                PacketDistributor.sendToServer(new RoadEditorTogglePacket());
+                RoadPlacementState.enterProjection();
+                liftCursorForUI();
             }
             case BUILD_EDITOR -> PacketDistributor.sendToServer(BuildingEditorEnterPacket.createNew());
+            case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
         }
     }
 
@@ -277,17 +336,30 @@ public final class WandscapePanelState {
                     PacketDistributor.sendToServer(new ProjectionExitPacket());
                     ProjectionClientState.exitProjection();
                 }
+                // If entered from overview, go back to pure overview
+                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                    activeSubMode = SubMode.OVERVIEW;
+                    return;
+                }
             }
             case ROAD_PROJECTION -> {
-                if (RoadProjectionClientState.isProjecting()) {
-                    RoadProjectionClientState.exitProjection();
-                    PacketDistributor.sendToServer(new RoadEditorTogglePacket());
+                if (RoadPlacementState.isProjecting()) {
+                    RoadPlacementState.exitProjection();
+                    releaseCursorToGame();
+                }
+                // If entered from overview, go back to pure overview
+                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                    activeSubMode = SubMode.OVERVIEW;
+                    return;
                 }
             }
             case BUILD_EDITOR -> {
                 if (BuildingEditorClientState.isEditing()) {
                     BuildingEditorController.doExit();
                 }
+            }
+            case OVERVIEW -> {
+                com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
             }
         }
     }

@@ -242,6 +242,41 @@ private void setColonyId(BuildingData data, @Nullable UUID colonyId) {
 - 进度/指南书（Patchouli 或自定义）
 - **道路拆除 NPC 化**：RoadEditorHandler.removeEdge 当前即时 server-side setBlock(AIR)。应改为发布 demolition 任务到 GlobalTaskPool，让 NPC 逐块拆除。RoadEdge.placedBlocks 已记录所有位置，拆解工作已就绪。
 
+## Overview 模式已知问题（2026-07-07）
+
+### ✅ Build/Road 标签在俯瞰模式中可用（已修复 2026-07-07）
+点击 Build/Road 标签时不再退出俯瞰模式返回地面，而是保持俯瞰摄像机运行的同时激活 Build/Road 子系统。
+
+**状态管理**（`WandscapePanelState`）：
+- `enterSubMode`：OVERVIEW→BUILD_PROJECTION/ROAD_PROJECTION 时保留俯瞰摄像机
+- `exitCurrentSubMode`：BUILD_PROJECTION/ROAD_PROJECTION 退出时回到纯俯瞰
+- `closePanel`：确保关闭面板时正确退出俯瞰摄像机
+
+**Build 模式在俯瞰中**：
+- `OverviewFlightController.performRaycast`：当 Build 投影激活时，同步更新 `ProjectionClientState` 的 ghost 位置和 overlap 状态
+- `OverviewFlightController.handlePlace`：使用 ghost 位置（与 ProjectionRenderer 一致）发送放置包
+- `ProjectionRenderer`：使用 `event.getCamera().getPosition()` 做平移，俯瞰摄像机 override 自动适配
+
+**Road 模式在俯瞰中**：
+- `RoadProjectionController.updateGhostPosition`：俯瞰模式下 ghost Y 使用射线命中位置而非玩家脚部
+- `OverviewFlightController.onClientTickPost`：Road 激活时跳过右键处理（由 Road 控制器负责）
+- `OverviewFlightController.onMouseScroll`：Road 激活时放行滚轮（Road 控制器处理宽度切换）
+
+### ✅ 建筑高亮改为全包围箱 + 白色（已修复 2026-07-07）
+`OverviewRenderer` 原实现仅渲染建筑包围盒顶部 1/3 线框环（橙色），已改为：
+- 渲染整个包围盒的全部 12 条边（白色 #FFFFFFFF）
+- 移除顶部 1/3 限制，移除颜色语义（金色/绿色/红色）
+
+### ✅ ESC/建筑 UI 交互修复（已修复 2026-07-07）
+原因为 `OverviewFlightController.onMouseButtonPre` 无条件拦截所有鼠标按钮事件，即使屏幕打开时也阻断交互。修复：
+- `onMouseButtonPre`：有屏幕打开时放行，不调用 `setCanceled`
+- `onMouseScroll`：有屏幕打开时放行，不拦截滚动
+
+屏幕打开时（PauseScreen、建筑 UI 等），鼠标点击和滚动正常传递到屏幕层。
+
+### ✅ WASD 移动流畅化（已修复 2026-07-07）
+WASD 移动已从 `ClientTickEvent.Post`（20Hz tick）迁移至 `RenderLevelStageEvent.AFTER_SKY`（渲染帧率），并引入 `System.nanoTime()` 帧间隔计时实现帧率无关移动（`MOVE_SPEED_BPS=10.0` blocks/sec），消除因 tick 间隔跳跃导致的卡顿。
+
 ### 任务队列 UI (2026-06-22 已实现)
 
 **已实现**

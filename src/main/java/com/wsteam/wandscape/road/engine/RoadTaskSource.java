@@ -17,12 +17,11 @@ import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Poll-based TaskSource that publishes pending road segments and
- * decorations to the engine task pool.
+ * Poll-based TaskSource that publishes pending road segments to the
+ * engine task pool.
  *
  * <p>Segments are enqueued by {@link RoadEventListener} after road
- * network planning; decorations are enqueued when an edge transitions
- * to COMPLETE.
+ * network planning.
  *
  * <p>Poll interval: 20 ticks (1 second). Priority: 10 (lowest).
  */
@@ -37,26 +36,13 @@ public class RoadTaskSource implements TaskSource {
     /** A road segment waiting to be published as a task. */
     public record PendingSegment(UUID segmentId, UUID edgeId, JsonArray tiles) {}
 
-    /** A decoration batch waiting to be published as a task. */
-    public record PendingDecoration(UUID decorationId, UUID edgeId, JsonArray tiles) {}
-
     private static final ConcurrentLinkedQueue<PendingSegment> pendingSegments =
-            new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<PendingDecoration> pendingDecorations =
             new ConcurrentLinkedQueue<>();
 
     // ---- Enqueue (called from RoadEventListener) ----
 
     public static void enqueueSegment(PendingSegment seg) {
         pendingSegments.offer(seg);
-    }
-
-    public static void enqueueDecoration(PendingDecoration deco) {
-        pendingDecorations.offer(deco);
-        Log.info(TAG, "[RoadTaskSource] decoration enqueued: decoId={} edge={} tiles={} queueSize={}",
-                deco.decorationId().toString().substring(0, 8),
-                deco.edgeId().toString().substring(0, 8),
-                deco.tiles().size(), pendingDecorations.size());
     }
 
     // ---- TaskSource implementation ----
@@ -68,10 +54,9 @@ public class RoadTaskSource implements TaskSource {
 
     @Override
     public void poll(GlobalTaskPool pool, World world) {
-        Log.debug(TAG, "[RoadTaskSource] poll: {} segments, {} decorations pending",
-                pendingSegments.size(), pendingDecorations.size());
+        Log.debug(TAG, "[RoadTaskSource] poll: {} segments pending",
+                pendingSegments.size());
         publishSegments(pool);
-        publishDecorations(pool);
     }
 
     private static void publishSegments(GlobalTaskPool pool) {
@@ -93,29 +78,6 @@ public class RoadTaskSource implements TaskSource {
             } catch (Exception e) {
                 Log.warn(TAG, "[RoadTaskSource] failed to publish segment {}: {}",
                         s.segmentId(), e.getMessage());
-            }
-        }
-    }
-
-    private static void publishDecorations(GlobalTaskPool pool) {
-        List<PendingDecoration> batch = drain(pendingDecorations);
-        if (batch.isEmpty()) return;
-
-        Log.info(TAG, "[RoadTaskSource] publishing {} decoration batches", batch.size());
-        for (PendingDecoration d : batch) {
-            Map<String, JsonElement> params = new HashMap<>();
-            params.put("decoration_id", new JsonPrimitive(d.decorationId().toString()));
-            params.put("edge_id", new JsonPrimitive(d.edgeId().toString()));
-            params.put("tiles", d.tiles());
-
-            try {
-                long taskId = pool.addTask(new TaskRequest(
-                        "road:build_decoration", params, ROAD_PRIORITY));
-                Log.info(TAG, "[RoadTaskSource] decoration task #{} edge={} tiles={}",
-                        taskId, d.edgeId().toString().substring(0, 8), d.tiles().size());
-            } catch (Exception e) {
-                Log.warn(TAG, "[RoadTaskSource] failed to publish decoration {}: {}",
-                        d.decorationId(), e.getMessage());
             }
         }
     }

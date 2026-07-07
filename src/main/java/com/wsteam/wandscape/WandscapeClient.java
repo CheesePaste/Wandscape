@@ -7,13 +7,14 @@ import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
-import com.wsteam.wandscape.road.client.RoadEditorRenderer;
-import com.wsteam.wandscape.road.client.RoadProjectionController;
-import com.wsteam.wandscape.road.client.RoadProjectionRenderer;
+import com.wsteam.wandscape.road.client.RoadPlacementController;
+import com.wsteam.wandscape.road.client.RoadPlacementRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.projection.client.BuildingDebugController;
 import com.wsteam.wandscape.projection.client.BuildingDebugOverlay;
+import com.wsteam.wandscape.overview.client.OverviewFlightController;
+import com.wsteam.wandscape.overview.client.OverviewRenderer;
 import com.wsteam.wandscape.shared.ui.component.DemoScreen;
 import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.production.client.CraftingStationScreen;
@@ -117,9 +118,8 @@ public class WandscapeClient {
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
-        RoadEditorRenderer.register();
-        RoadProjectionRenderer.register();
-        RoadProjectionController.register();
+        RoadPlacementController.register();
+        RoadPlacementRenderer.register();
         ProjectionRenderer.register();
         ProjectionFlightController.register();
         BuildingDebugController.register();
@@ -134,6 +134,10 @@ public class WandscapeClient {
         // Wandscape Panel
         WandscapePanelController.register();
         WandscapePanelOverlay.register();
+
+        // Overview mode
+        OverviewFlightController.register();
+        OverviewRenderer.register();
 
         // ImGui: register static event handlers on ImGuiManager
         NeoForge.EVENT_BUS.register(ImGuiManager.class);

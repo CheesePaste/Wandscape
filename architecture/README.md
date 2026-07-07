@@ -76,9 +76,12 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── data/         ColonyDailySnapshot/ColonyStatsSummary
 │   ├── internal/     StatisticsCollector/StatisticsData(SavedData)
 │   └── network/      StatsSyncPacket
-├── projection/       建筑投影/灵魂出窍模式+调试检查
+├── projection/       建筑投影/地面放置模式+调试检查
 │   ├── client/       ProjectionClientState/ProjectionFlightController/ProjectionRenderer + BuildingDebug*
 │   └── network/      ProjectionEnter*/Exit/Place + BuildingAction/DebugRequest/DebugResponse
+├── overview/         俯瞰（鸟瞰）视角模式，V 打开面板默认进入
+│   ├── client/       OverviewClientState/OverviewFlightController/OverviewRenderer
+│   └── network/      OverviewInteractPacket
 ├── imgui/            ImGui 管理器 + 渲染调度
 ├── standalone/       独立编辑器启动器(无需MC, 纯GLFW+ImGui)
 ├── equipment/        装备系统(EquipmentSlot/AttributeType/EquipmentPreset/EquipmentComponent)
@@ -161,6 +164,7 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | JSON加载框架 | [packages/dataconfig.md](packages/dataconfig.md) |
 | 蓝图编辑器 | [packages/blueprint_editor.md](packages/blueprint_editor.md) |
 | 建筑预览/投影系统 | [packages/projection.md](packages/projection.md) |
+| 俯瞰视角模式 | [packages/overview.md](packages/overview.md) |
 | 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
 | ImGui管理器 | [packages/imgui.md](packages/imgui.md) |

@@ -60,6 +60,9 @@ public final class ProjectionFlightController {
     static void onClientTickPost(ClientTickEvent.Post event) {
         if (!ProjectionClientState.isProjecting()) return;
 
+        // Skip when overview mode is active — OverviewFlightController handles all input
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) return;
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         if (mc.screen != null) return;
@@ -93,6 +96,8 @@ public final class ProjectionFlightController {
      *  Accumulates delta in client state; the tick handler processes it. */
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
+        // Let overview mode handle its own scroll
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) return;
         event.setCanceled(true);
 
         // Building bar open — scroll does NOT cycle building selection (removed per user request)

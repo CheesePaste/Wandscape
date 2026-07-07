@@ -28,11 +28,8 @@ import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.RecoveryCommand;
-import com.wsteam.wandscape.command.RoadCommand;
-import com.wsteam.wandscape.command.RoadTestCommand;
 import com.wsteam.wandscape.command.SeedWarehouseCommand;
 import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
-import com.wsteam.wandscape.command.SpiralTestCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
@@ -62,12 +59,7 @@ import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
-import com.wsteam.wandscape.road.network.RoadNetworkSyncPacket;
-import com.wsteam.wandscape.road.network.RoadEdgeRemovePacket;
-import com.wsteam.wandscape.road.network.RoadEdgePlanPacket;
-import com.wsteam.wandscape.road.network.RoadEditorNetwork;
-import com.wsteam.wandscape.road.network.RoadBatchPublishPacket;
-import com.wsteam.wandscape.road.network.RoadEditorTogglePacket;
+import com.wsteam.wandscape.road.network.RoadPlacePacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
@@ -76,6 +68,7 @@ import com.wsteam.wandscape.projection.network.ProjectionNetwork;
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
+import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
 import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
@@ -292,10 +285,6 @@ public class Wandscape {
                         WarehouseDataPacket.STREAM_CODEC,
                         (packet, ctx) -> WarehouseDataPacket.handleClient(packet))
                 .playToClient(
-                        RoadNetworkSyncPacket.TYPE,
-                        RoadNetworkSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadNetworkSyncPacket.handleClient(packet))
-                .playToClient(
                         BlueprintListResponsePacket.TYPE,
                         BlueprintListResponsePacket.STREAM_CODEC,
                         (packet, ctx) -> BlueprintListResponsePacket.handleClient(packet))
@@ -333,21 +322,9 @@ public class Wandscape {
                         TaskQueueDataPacket.STREAM_CODEC,
                         (packet, ctx) -> TaskQueueDataPacket.handleClient(packet))
                 .playToServer(
-                        RoadEdgeRemovePacket.TYPE,
-                        RoadEdgeRemovePacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadEdgeRemovePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        RoadEdgePlanPacket.TYPE,
-                        RoadEdgePlanPacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadEdgePlanPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        RoadEditorTogglePacket.TYPE,
-                        RoadEditorTogglePacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadEditorTogglePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        RoadBatchPublishPacket.TYPE,
-                        RoadBatchPublishPacket.STREAM_CODEC,
-                        (packet, ctx) -> RoadBatchPublishPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                        RoadPlacePacket.TYPE,
+                        RoadPlacePacket.STREAM_CODEC,
+                        (packet, ctx) -> RoadPlacePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         TaskEditorOpenPacket.TYPE,
                         TaskEditorOpenPacket.STREAM_CODEC,
@@ -391,6 +368,12 @@ public class Wandscape {
                         ProjectionPlacePacket.TYPE,
                         ProjectionPlacePacket.STREAM_CODEC,
                         (packet, ctx) -> ProjectionPlacePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Overview ──
+                .playToServer(
+                        OverviewInteractPacket.TYPE,
+                        OverviewInteractPacket.STREAM_CODEC,
+                        (packet, ctx) -> OverviewInteractPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         BuildingDebugRequestPacket.TYPE,
@@ -589,13 +572,10 @@ public class Wandscape {
                 .then(ColonyCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
                 .then(RecoveryCommand.node())
-                .then(RoadCommand.node())
-                .then(RoadTestCommand.node())
                 .then(BuildEditorCommand.node())
                 .then(BlueprintEditorCommand.node())
                 .then(SeedWarehouseCommand.node())
                 .then(ConsumeWarehouseCommand.node())
-                .then(SpiralTestCommand.node())
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
                 .then(TransportCommand.node());
@@ -605,7 +585,6 @@ public class Wandscape {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
-            RoadEditorNetwork.removeByUuid(sp.getUUID());
             ProjectionNetwork.removeByUuid(sp.getUUID());
             BuildingEditorNetwork.removeByUuid(sp.getUUID());
         }

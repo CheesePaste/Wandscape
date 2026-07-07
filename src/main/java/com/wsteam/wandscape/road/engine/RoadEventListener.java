@@ -10,7 +10,6 @@ import com.google.gson.JsonArray;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.CustomEvent;
-import com.wsteam.wandscape.road.algorithm.DecorationPlanner;
 import com.wsteam.wandscape.road.algorithm.NetworkDiff;
 import com.wsteam.wandscape.road.core.PathPoint;
 import com.wsteam.wandscape.road.core.RoadBuildingData;
@@ -18,7 +17,6 @@ import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.road.core.RoadNode;
 import com.wsteam.wandscape.road.algorithm.RoadPlanner;
-import com.wsteam.wandscape.road.core.DecorationPoint;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 
@@ -35,12 +33,11 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p>Handles:
  * <ul>
  *   <li>{@code build_complete} — triggers MST or incremental road planning</li>
- *   <li>{@code road_segment_complete} — updates edge build progress;
- *       when the last segment finishes, triggers decoration generation</li>
+ *   <li>{@code road_segment_complete} — updates edge build progress</li>
  * </ul>
  *
- * <p>Uses V1 L-shape paths with 3D coordinates (Y interpolated),
- * weighted palette surface, and edge-completion-driven decoration.
+ * <p>Uses V1 L-shape paths with 3D coordinates (Y interpolated)
+ * and weighted palette surface.
  */
 public final class RoadEventListener {
 
@@ -267,68 +264,7 @@ public final class RoadEventListener {
 
         edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
         roadData.markChanged();
-        Log.info(TAG, "[Road] edge {} → COMPLETE — triggering decoration", edgeIdStr);
-
-        triggerDecorationForEdge(edge, level, roadData);
-    }
-
-    private static void triggerDecorationForEdge(RoadEdge edge, ServerLevel level,
-                                                  RoadSavedData roadData) {
-        String edgeShort = edge.getEdgeId().toString().substring(0, 8);
-        RoadConfig config = RoadConfig.getInstance();
-
-        if (!config.isDecorationEnabled()) {
-            Log.info(TAG, "[Deco] edge={}: disabled in config", edgeShort);
-            return;
-        }
-        if (edge.getDecorationTaskId() != null) {
-            Log.info(TAG, "[Deco] edge={}: already enqueued (decoTaskId={})",
-                    edgeShort, edge.getDecorationTaskId());
-            return;
-        }
-
-        Log.info(TAG, "[Deco] edge={}: planning decorations...", edgeShort);
-
-        BuildingSavedData buildingData = BuildingSavedData.get(level);
-        var buildingBounds = new ArrayList<BoundingBox>();
-        for (BuildingState bs : buildingData.getAllBuildings()) {
-            buildingBounds.add(bs.getBounds());
-        }
-
-        RoadConfig.DecorationConfig deco = config.getDecorationConfig();
-        int halfWidth = edge.getWidth() / 2;
-        Log.info(TAG, "[Deco] edge={}: lampSpacing={} benchSpacing={} halfWidth={} (edgeWidth={})",
-                edgeShort, deco.lampSpacing(), deco.benchSpacing(), halfWidth, edge.getWidth());
-
-        List<DecorationPoint> points = DecorationPlanner.planForEdge(
-                edge, deco.lampSpacing(), deco.benchSpacing(), halfWidth);
-
-        if (points.isEmpty()) {
-            Log.info(TAG, "[Deco] edge={}: planner produced 0 points (pathLen={})",
-                    edgeShort, edge.getPath().size());
-            return;
-        }
-        Log.info(TAG, "[Deco] edge={}: {} decoration points planned", edgeShort, points.size());
-
-        JsonArray tiles = DecorationBuilder.buildTiles(points, level, buildingBounds, config);
-        if (tiles.isEmpty()) {
-            Log.info(TAG, "[Deco] edge={}: builder produced 0 tiles ({} points dropped by terrain/building checks)",
-                    edgeShort, points.size());
-            return;
-        }
-
-        // Record decoration positions for clean demolition
-        edge.addPlacedBlocks(extractPlacedBlocks(tiles));
-
-        UUID decoId = UUID.randomUUID();
-        RoadTaskSource.enqueueDecoration(
-                new RoadTaskSource.PendingDecoration(decoId, edge.getEdgeId(), tiles));
-        edge.setDecorationTaskId(1L);
-        roadData.markChanged();
-
-        Log.info(TAG, "[Deco] edge={}: ENQUEUED {} decoration tiles ({} points → {} tiles → taskId={})",
-                edgeShort, tiles.size(), points.size(), tiles.size(),
-                decoId.toString().substring(0, 8));
+        Log.info(TAG, "[Road] edge {} → COMPLETE", edgeIdStr);
     }
 
     // ---- Rebuild ----

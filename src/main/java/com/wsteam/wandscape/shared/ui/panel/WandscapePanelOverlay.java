@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
+import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
+import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
 
 import net.minecraft.client.Minecraft;
@@ -77,6 +79,13 @@ public final class WandscapePanelOverlay {
 
         // Building selection bar (above bottom bar when active)
         BuildingSelectionOverlay.render(g, mc.font, screenW, screenH, mx, my);
+
+        // Road placement preset bar (when road mode is in BAR phase — cursor lifted)
+        if (WandscapePanelState.isCursorLifted()
+                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
+                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
+            RoadPlacementOverlay.render(g, mc.font, screenW, screenH, mx, my);
+        }
 
         renderFills(g, mc.font, screenW, screenH);
 
@@ -158,6 +167,26 @@ public final class WandscapePanelOverlay {
         // Stats content (center area when Stats tab is active)
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.STATS) {
             renderStatsContent(g, font, screenW, screenH);
+        }
+
+        // Overview mode status text (show whenever overview camera is active, even with build/road)
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+            var subMode = WandscapePanelState.getActiveSubMode();
+            String overviewHint;
+            if (subMode == WandscapePanelState.SubMode.BUILD_PROJECTION) {
+                overviewHint = "§6Overview + Build §7| §fWASD §7move | §fScroll §7zoom | §fRight-click §7place | §fG §7ground";
+            } else if (subMode == WandscapePanelState.SubMode.ROAD_PROJECTION) {
+                overviewHint = "§6Overview + Road §7| §fWASD §7move | §fRight-click §7start | §fLeft-click §7end | §fEnter §7submit | §fG §7ground";
+            } else {
+                overviewHint = "§6Overview §7| §fWASD §7move | §fScroll §7forward/back | §fC §7panel | §fG §7ground";
+            }
+            drawCenteredText(g, font, overviewHint, screenW / 2, screenH - BOTTOM_BAR_H - font.lineHeight - 4, TEXT_DIM);
+
+            var targetPos = com.wsteam.wandscape.overview.client.OverviewClientState.getTargetBlockPos();
+            if (targetPos != null) {
+                String targetInfo = "§eTarget: " + targetPos.getX() + ", " + targetPos.getY() + ", " + targetPos.getZ();
+                drawText(g, font, targetInfo, 8, screenH - BOTTOM_BAR_H - font.lineHeight * 2 - 8, TEXT_WHITE);
+            }
         }
 
         // Bottom bar
