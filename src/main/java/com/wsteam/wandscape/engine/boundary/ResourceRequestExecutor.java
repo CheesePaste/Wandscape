@@ -59,9 +59,9 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
     /**
      * A single item-entity to launch in the staggered sequence.
-     * Each resource stack of N items becomes N individual launch entries.
+     * Each resource stack of N items becomes 1 launch entry with a count.
      */
-    private record LaunchEntry(ItemKey key, BlockPos from, BlockPos to,
+    private record LaunchEntry(ItemKey key, int count, BlockPos from, BlockPos to,
                                Level level, long npcId, List<RouteSegment> route) {}
 
     private static final class PendingBatch {
@@ -166,9 +166,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         List<LaunchEntry> entries = new ArrayList<>();
         for (ResourceStack need : needs) {
             ItemKey key = ItemKey.of(need.resource().id(), null);
-            for (int i = 0; i < need.amount(); i++) {
-                entries.add(new LaunchEntry(key, warehousePos, npcPos, level, npcId, route));
-            }
+            entries.add(new LaunchEntry(key, need.amount(), warehousePos, npcPos, level, npcId, route));
         }
 
         int totalItems = entries.size();
@@ -287,7 +285,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
     }
 
     private CompletableFuture<Void> launch(LaunchEntry e) {
-        return transporter.send(e.key(), e.from(), e.to(), e.level(), e.npcId(), e.route());
+        return transporter.send(e.key(), e.count(), e.from(), e.to(), e.level(), e.npcId(), e.route());
     }
 
     // ── Helpers ──

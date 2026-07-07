@@ -86,10 +86,10 @@ public final class TransportCommand {
         CommandSourceStack src = ctx.getSource();
 
         ItemKey key = ItemKey.of(itemId, null);
-        t.send(key, from, to, player.level(), -1).thenAccept(v -> {
+        t.send(key, 1, from, to, player.level(), -1).thenAccept(v -> {
             src.sendSuccess(() -> Component.literal(
                     "[Transport] " + itemId + " arrived! Returning..."), false);
-            t.send(key, to, from, player.level(), -1).thenAccept(v2 -> {
+            t.send(key, 1, to, from, player.level(), -1).thenAccept(v2 -> {
                 src.sendSuccess(() -> Component.literal(
                         "[Transport] Round-trip complete! ✓"), false);
             });
@@ -116,7 +116,7 @@ public final class TransportCommand {
         CommandSourceStack src = ctx.getSource();
 
         ItemKey key = ItemKey.of(itemId, null);
-        t.send(key, from, to, player.level(), -1).thenAccept(v -> {
+        t.send(key, 1, from, to, player.level(), -1).thenAccept(v -> {
             src.sendSuccess(() -> Component.literal(
                     "[Transport] " + itemId + " arrived at " + to.toShortString()), false);
         });
@@ -150,7 +150,7 @@ public final class TransportCommand {
             final int idx = i;
             chain = chain.thenCompose(v -> {
                 arrived.incrementAndGet();
-                return t.send(key, from, to, player.level(), -1);
+                return t.send(key, 1, from, to, player.level(), -1);
             });
         }
         chain.thenAccept(v -> {
