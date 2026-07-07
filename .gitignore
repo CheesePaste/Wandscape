@@ -39,3 +39,5 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+.agents
+AGENT.md
