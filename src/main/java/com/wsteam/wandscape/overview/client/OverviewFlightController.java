@@ -7,6 +7,7 @@ import org.lwjgl.glfw.GLFW;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
@@ -20,6 +21,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -50,6 +52,13 @@ public final class OverviewFlightController {
 
     // ── Input edge detection ──
     private static boolean wasRightDown = false;
+    /**
+     * Tracks whether the cursor was in "grabbed" state last frame.
+     * Cursor is "free" when a Screen is open or the panel cursor is lifted.
+     * When transitioning from free → grabbed, grabMouse() re-centers the
+     * cursor, so the mouse baseline must be reset to prevent a camera jump.
+     */
+    private static boolean wasGrabbed = false;
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
@@ -88,11 +97,13 @@ public final class OverviewFlightController {
         OverviewClientState.lastMouseX = mx[0];
         OverviewClientState.lastMouseY = my[0];
         lastFrameNanos = System.nanoTime();
+        wasGrabbed = false;
     }
 
     public static void exit() {
         OverviewClientState.exitOverview();
         lastFrameNanos = 0;
+        wasGrabbed = false;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -124,30 +135,51 @@ public final class OverviewFlightController {
         if (mc.screen == null) {
             boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
                     && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
-            if (!cursorLifted) {
+            boolean grabbed = !cursorLifted;
+
+            // Detect cursor transition: free → grabbed. The cursor is "free"
+            // whenever a Screen is open or the panel cursor is lifted.
+            // grabMouse() re-centers the cursor on re-grab; without resetting
+            // the baseline the delta from the old free position to center
+            // causes a sudden camera rotation.
+            if (!wasGrabbed && grabbed) {
+                OverviewClientState.lastMouseX = mx[0];
+                OverviewClientState.lastMouseY = my[0];
+                dx = 0;
+                dy = 0;
+            }
+            wasGrabbed = grabbed;
+
+            if (grabbed) {
                 OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
             }
+        } else {
+            // Screen is open → cursor is free
+            wasGrabbed = false;
         }
 
         OverviewClientState.lastMouseX = mx[0];
         OverviewClientState.lastMouseY = my[0];
 
-        // ── WASD movement (frame-rate independent, render-smooth) ──
-        float forward = 0, strafe = 0;
+        // ── WASD + Shift/Space movement (frame-rate independent, render-smooth) ──
+        float forward = 0, strafe = 0, vertical = 0;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) strafe -= 1;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) strafe += 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) vertical += 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
 
-        if (forward != 0 || strafe != 0) {
+        if (forward != 0 || strafe != 0 || vertical != 0) {
             Vec3 fwd = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
             double move = MOVE_SPEED_BPS * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
+            double moveY = vertical * move;
             OverviewClientState.setCamPosition(
                     OverviewClientState.getCamX() + moveX,
-                    OverviewClientState.getCamY(),
+                    OverviewClientState.getCamY() + moveY,
                     OverviewClientState.getCamZ() + moveZ);
         }
     }
@@ -238,20 +270,53 @@ public final class OverviewFlightController {
         Vec3 origin = camera.getPosition();
         Vector3f look = camera.getLookVector();
         Vec3 lookVec = new Vec3(look.x(), look.y(), look.z());
+        Vec3 end = origin.add(lookVec.scale(REACH));
 
+        // ── Block raycast ──
         ClipContext ctx = new ClipContext(
-                origin, origin.add(lookVec.scale(REACH)),
+                origin, end,
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
-        BlockHitResult hit = mc.level.clip(ctx);
+        BlockHitResult blockHit = mc.level.clip(ctx);
+        double blockDist = blockHit.getType() == HitResult.Type.BLOCK
+                ? blockHit.getLocation().distanceToSqr(origin) : Double.MAX_VALUE;
 
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            BlockPos hitPos = hit.getBlockPos();
+        // ── Entity raycast (NPC: mage + tourist) ──
+        AABB searchBox = new AABB(origin, end).inflate(2.0);
+        java.util.List<net.minecraft.world.entity.Entity> entities = mc.level.getEntities(
+                mc.player, searchBox,
+                e -> (e instanceof com.wsteam.wandscape.npc.entity.WandscapeNpc
+                        || e instanceof com.wsteam.wandscape.tourist.entity.TouristEntity)
+                        && e.isAlive());
+
+        double entityDist = Double.MAX_VALUE;
+        int hitEntityId = -1;
+        for (net.minecraft.world.entity.Entity entity : entities) {
+            AABB bb = entity.getBoundingBox().inflate(0.3);
+            java.util.Optional<Vec3> hitPos = bb.clip(origin, end);
+            if (hitPos.isPresent()) {
+                double dist = hitPos.get().distanceToSqr(origin);
+                if (dist < entityDist) {
+                    entityDist = dist;
+                    hitEntityId = entity.getId();
+                }
+            }
+        }
+
+        // ── Pick closer target ──
+        if (entityDist < blockDist && hitEntityId >= 0) {
+            OverviewClientState.setTargetEntity(hitEntityId);
+            if (ProjectionClientState.isProjecting()) {
+                ProjectionClientState.setGhostPos(null);
+                ProjectionClientState.setOverlapDetected(false);
+            }
+        } else if (blockHit.getType() == HitResult.Type.BLOCK) {
+            BlockPos hitPos = blockHit.getBlockPos();
             UUID buildingId = findBuildingAt(hitPos);
             OverviewClientState.setTarget(hitPos, buildingId);
 
             // When build mode is projecting in overview, sync ghost from the same raycast
             if (ProjectionClientState.isProjecting()) {
-                BlockPos placePos = hitPos.relative(hit.getDirection());
+                BlockPos placePos = hitPos.relative(blockHit.getDirection());
                 ProjectionClientState.setGhostPos(placePos);
                 var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
                 boolean overlap = api != null && api.getBuildingAt(placePos) != null;
@@ -259,6 +324,7 @@ public final class OverviewFlightController {
             }
         } else {
             OverviewClientState.clearTarget();
+            OverviewClientState.clearTargetEntity();
             if (ProjectionClientState.isProjecting()) {
                 ProjectionClientState.setGhostPos(null);
                 ProjectionClientState.setOverlapDetected(false);
@@ -302,7 +368,18 @@ public final class OverviewFlightController {
             return;
         }
 
-        // Branch 2: No building selected, ray hits building → interact
+        // Branch 2: Entity under crosshair → interact (NPC / tourist)
+        int entityId = OverviewClientState.getTargetEntityId();
+        if (entityId >= 0) {
+            PacketDistributor.sendToServer(new OverviewEntityInteractPacket(entityId));
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Overview] Interacting with entity..."), true);
+            }
+            return;
+        }
+
+        // Branch 3: No building selected, ray hits building → interact
         BlockPos target = OverviewClientState.getTargetBlockPos();
         if (target != null && OverviewClientState.getTargetBuildingId() != null) {
             PacketDistributor.sendToServer(new OverviewInteractPacket(target));

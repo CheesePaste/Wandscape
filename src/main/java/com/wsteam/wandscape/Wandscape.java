@@ -68,6 +68,7 @@ import com.wsteam.wandscape.projection.network.ProjectionNetwork;
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
+import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
 import com.wsteam.wandscape.task.network.TaskCreatePacket;
@@ -374,6 +375,11 @@ public class Wandscape {
                         OverviewInteractPacket.TYPE,
                         OverviewInteractPacket.STREAM_CODEC,
                         (packet, ctx) -> OverviewInteractPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        OverviewEntityInteractPacket.TYPE,
+                        OverviewEntityInteractPacket.STREAM_CODEC,
+                        (packet, ctx) -> OverviewEntityInteractPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         BuildingDebugRequestPacket.TYPE,

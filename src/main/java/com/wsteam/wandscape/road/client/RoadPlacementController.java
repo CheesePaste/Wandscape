@@ -259,18 +259,17 @@ public final class RoadPlacementController {
         wasEscapeDown = escapeDown;
         if (!escapeClicked) return;
 
-        // Only handle BAR phase here — PLACING phase relies on ScreenEvent.Opening
-        if (RoadPlacementState.getRoadPhase() != RoadPlacementState.RoadPhase.PLACING) {
-            // BAR phase: exit road placement mode entirely (matching BUILD BAR → ESC behavior)
+        // Panel not open → exit road placement mode entirely
+        if (!WandscapePanelState.isPanelOpen()
+                && RoadPlacementState.getRoadPhase() != RoadPlacementState.RoadPhase.PLACING) {
             WandscapePanelState.exitCurrentSubMode();
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            // Consume keyPause / ESC so the vanilla KeyboardHandler doesn't open PauseScreen
-            for (int i = 0; i < 10; i++) { while (mc.options.keyUse.consumeClick()) {} } // no-op to fill the line
             if (mc.player != null) {
                 mc.player.displayClientMessage(
                         Component.literal("[Road] §eExited road placement mode"), true);
             }
         }
+        // When panel is open, ESC handled by WandscapePanelController via ScreenEvent.Opening
     }
 
     // ── Input draining ──

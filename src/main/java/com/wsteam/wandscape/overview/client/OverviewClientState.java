@@ -27,6 +27,9 @@ public final class OverviewClientState {
     /** Mouse state for rotation delta tracking. */
     static double lastMouseX, lastMouseY;
 
+    /** Entity ID currently under the crosshair (-1 = none). */
+    private static volatile int targetEntityId = -1;
+
     private OverviewClientState() {}
 
     // ── Activation ──
@@ -58,6 +61,7 @@ public final class OverviewClientState {
         camYaw = camPitch = 0;
         targetBlockPos = null;
         targetBuildingId = null;
+        targetEntityId = -1;
     }
 
     // ── Camera ──
@@ -79,7 +83,7 @@ public final class OverviewClientState {
         if (camPitch < -90) camPitch = -90;
     }
 
-    // ── Target ──
+    // ── Target (building) ──
 
     public static BlockPos getTargetBlockPos() { return targetBlockPos; }
     public static UUID getTargetBuildingId() { return targetBuildingId; }
@@ -87,10 +91,27 @@ public final class OverviewClientState {
     public static void setTarget(BlockPos pos, UUID buildingId) {
         targetBlockPos = pos;
         targetBuildingId = buildingId;
+        // Building target takes priority — clear entity target
+        targetEntityId = -1;
     }
 
     public static void clearTarget() {
         targetBlockPos = null;
         targetBuildingId = null;
+    }
+
+    // ── Target (entity) ──
+
+    public static int getTargetEntityId() { return targetEntityId; }
+
+    public static void setTargetEntity(int entityId) {
+        targetEntityId = entityId;
+        // Entity target takes priority — clear building target
+        targetBlockPos = null;
+        targetBuildingId = null;
+    }
+
+    public static void clearTargetEntity() {
+        targetEntityId = -1;
     }
 }
