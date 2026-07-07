@@ -64,7 +64,10 @@
 
 ### 物品运输 (transport/)
 
-- **`ItemTransportManager`** — 物品运输管理器，处理 NPC 与仓库之间的物品流转
+- **`ItemTransportManager`** — 物品运输管理器，处理 NPC 与仓库之间的物品流转。
+  - **单实体合并视觉表现**：在处理大批物品运输时，系统不再为每个物品创建单独的 `ItemEntity`，而是将同类物品合并为一个 `TransportItemEntity`（自定义实体类型 `wandscape:transport_item`）作为视觉效果，有效降低渲染开销。
+  - **自定义客户端渲染 (`TransportItemEntityRenderer`)**：针对 `TransportItemEntity` 编写了专属渲染器。当传输的物品数量大于0时，会在物品上方渲染一个定制的**中性金边暗灰底胶囊气泡**。
+    - 该气泡使用 `debugQuads` 进行底层多层渲染。气泡外框（金色）、主体（暗灰）与文字（暖白）采用微小 Z 轴偏置（Z-Offset Layering）以防止深度冲突（Z-Fighting）导致画面闪烁。
 
 ### ColonyApiImpl（engine 根包）
 
