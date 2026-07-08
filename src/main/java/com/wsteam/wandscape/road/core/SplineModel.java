@@ -137,7 +137,6 @@ public class SplineModel {
             return samples;
         }
 
-        double dt = 0.02; // Fine-grained subdivision within each segment
         CurveSample lastSample = null;
 
         for (int i = 0; i < segCount; i++) {
@@ -146,6 +145,23 @@ public class SplineModel {
                 lastSample = evaluate(0.0);
                 samples.add(lastSample);
             }
+
+            SplinePoint p0 = points.get(i);
+            SplinePoint p1 = (i + 1 < points.size()) ? points.get(i + 1) : points.get(0);
+
+            double d0 = p0.getAnchor().subtract(p0.getControlNext()).length();
+            double d1 = p0.getControlNext().subtract(p1.getControlPrev()).length();
+            double d2 = p1.getControlPrev().subtract(p1.getAnchor()).length();
+            double approxLength = d0 + d1 + d2;
+            if (approxLength < 0.1) approxLength = 0.1;
+
+            // Compute dt to advance by a small physical fraction to ensure we don't skip over stepDistance
+            double physicalStep = Math.min(0.05, stepDistance / 4.0);
+            double dt = physicalStep / approxLength;
+            
+            // Clamp dt to reasonable bounds (between 10 and ~5000 steps per segment)
+            if (dt < 0.0002) dt = 0.0002;
+            if (dt > 0.1) dt = 0.1;
 
             for (double t = dt; t <= 1.0; t += dt) {
                 double u = i + t;
