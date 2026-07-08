@@ -145,9 +145,10 @@ public final class WandscapePanelOverlay {
             String colonyText;
             java.util.UUID cid = WandscapePanelState.getColonyId();
             if (cid != null) {
-                colonyText = "Colony: " + cid.toString().substring(0, 8);
+                int lvl = WandscapePanelState.getColonyLevel();
+                String name = WandscapePanelState.getColonyName(); if (name == null || name.isEmpty()) name = cid.toString().substring(0, 8); colonyText = name + " §eLv." + lvl;
             } else {
-                colonyText = "Colony: ---";
+                colonyText = "殖民地: ---";
             }
 
             String comfortText = "Comfort: " + WandscapePanelState.getComfort();

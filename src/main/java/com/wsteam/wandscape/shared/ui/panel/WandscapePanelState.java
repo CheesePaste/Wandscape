@@ -35,6 +35,9 @@ public final class WandscapePanelState {
     private static volatile int comfort = 0;
     private static volatile int magic = 0;
     private static volatile int wonder = 0;
+    private static volatile String colonyName = "";
+    private static volatile int colonyLevel = 1;
+    private static volatile int colonyExperience = 0;
 
     // ── Stats tab data (set from StatsSyncPacket) ──
 
@@ -84,15 +87,22 @@ public final class WandscapePanelState {
     public static int getComfort() { return comfort; }
     public static int getMagic() { return magic; }
     public static int getWonder() { return wonder; }
+    public static String getColonyName() { return colonyName; }
+    public static int getColonyLevel() { return colonyLevel; }
+    public static int getColonyExperience() { return colonyExperience; }
 
     public static WandscapePanelState.StatsSummary getStatsSummary() { return statsSummary; }
     public static void setStatsSummary(WandscapePanelState.StatsSummary summary) { statsSummary = summary; }
 
-    public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder) {
+    public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder,
+                                      String name, int level, int experience) {
         WandscapePanelState.colonyId = colonyId;
         WandscapePanelState.comfort = comfort;
         WandscapePanelState.magic = magic;
         WandscapePanelState.wonder = wonder;
+        WandscapePanelState.colonyName = name;
+        WandscapePanelState.colonyLevel = level;
+        WandscapePanelState.colonyExperience = experience;
     }
 
     public static void openPanel() {

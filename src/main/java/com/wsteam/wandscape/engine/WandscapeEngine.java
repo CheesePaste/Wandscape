@@ -12,6 +12,7 @@ import com.wsteam.wandscape.engine.boundary.ResourceRequestExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeMovementOps;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
+import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 /**
  * Singleton holder for the engine {@link World} instance.
@@ -70,6 +71,7 @@ public final class WandscapeEngine {
         movementOps = null;
         roadSavedData = null;
         playerManualSource = null;
+        colonyLevelManager = null;
         // blueprintConfigLoader: intentionally NOT nulled — it's a permanent singleton
         // whose internal definitions map is managed by WandscapeDataLoader resource reload.
         // Nulling it would break DSL blueprint registration on world re-entry.
@@ -129,4 +131,11 @@ public final class WandscapeEngine {
     @Nullable
     public static PlayerManualSource getPlayerManualSource() { return playerManualSource; }
     public static void setPlayerManualSource(@Nullable PlayerManualSource s) { playerManualSource = s; }
+
+    @Nullable
+    private static ColonyLevelManager colonyLevelManager;
+
+    @Nullable
+    public static ColonyLevelManager getColonyLevelManager() { return colonyLevelManager; }
+    public static void setColonyLevelManager(@Nullable ColonyLevelManager mgr) { colonyLevelManager = mgr; }
 }

@@ -66,8 +66,13 @@ public final class PanelStateTracker {
             if (player == null) continue;
             UUID playerColony = colonyApi.getColonyId(player.blockPosition());
             if (colonyId.equals(playerColony)) {
+                // Include colony level in sync
+                var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
+                int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
+                int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
+                String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
                 PacketDistributor.sendToPlayer(player,
-                        new ColonyStatsSyncPacket(colonyId, newComfort, newMagic, newWonder));
+                        new ColonyStatsSyncPacket(colonyId, newComfort, newMagic, newWonder, name, lvl, exp));
             }
         }
     }

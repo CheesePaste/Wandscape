@@ -185,7 +185,43 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_BASE_SPAWN_COUNT = BUILDER
             .comment("Base number of tourists spawned each morning")
-            .defineInRange("tourist.baseSpawnCount", 3, 1, 20);
+            .defineInRange("tourist.baseSpawnCount", 6, 1, 50);
+
+    public static final ModConfigSpec.IntValue TOURIST_LEVEL_SPAWN_BONUS = BUILDER
+            .comment("Additional tourists per colony level")
+            .defineInRange("tourist.levelSpawnBonus", 3, 1, 20);
+
+    public static final ModConfigSpec.IntValue TOURIST_SPAWN_WINDOW_START = BUILDER
+            .comment("Spawn window start (game time tick)")
+            .defineInRange("tourist.spawnWindowStart", 1000, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_SPAWN_WINDOW_END = BUILDER
+            .comment("Spawn window end (game time tick) — no new spawns after this")
+            .defineInRange("tourist.spawnWindowEnd", 13000, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_DEPARTURE_WINDOW_START = BUILDER
+            .comment("Night departure window start (game time tick)")
+            .defineInRange("tourist.departureWindowStart", 18000, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_DEPARTURE_WINDOW_END = BUILDER
+            .comment("Night departure window end (game time tick)")
+            .defineInRange("tourist.departureWindowEnd", 24000, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_NIGHT_DEPARTURE_THRESHOLD = BUILDER
+            .comment("Satisfaction below this → night departure; 50-99 → hotel")
+            .defineInRange("tourist.nightDepartureThreshold", 50, 0, 100);
+
+    public static final ModConfigSpec.IntValue TOURIST_DEPARTURE_DELAY_MAX_TICKS = BUILDER
+            .comment("Max random delay ticks before night departure (0-this)")
+            .defineInRange("tourist.departureDelayMaxTicks", 1500, 0, 6000);
+
+    public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
+            .comment("Experience granted when tourist level == colony level (at 100% satisfaction)")
+            .defineInRange("colony.expEqualLevel", 100, 0, 10000);
+
+    public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
+            .comment("Experience granted when tourist level > colony level")
+            .defineInRange("colony.expAboveLevel", 500, 0, 10000);
 
     public static final ModConfigSpec.IntValue TOURIST_EVAL_SCORE_DIVISOR = BUILDER
             .comment("Colony three-value total divided by this gives extra tourists")

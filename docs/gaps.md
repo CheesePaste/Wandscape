@@ -1,5 +1,13 @@
 # 已知问题与待澄清
 
+## 已完成的特性（2026-07-08）
+
+### 市政厅殖民地名称 + Overview 交互统一 ✅
+- **Overview 模式点击市政厅走 default**：`OverviewInteractPacket` 原先自己维护了一套重复的 `interactWithBuilding()` 分发逻辑，缺少 town_hall 的 typeId 检查。每新增建筑类型两个地方都要同步改。
+- **修复——统一交互分发**：`BuildingInteractHandler` 抽取 `handleInteraction(ServerPlayer, Level, BlockPos, BuildingState)` 公共静态方法，包含所有建筑类型的分类逻辑。`onRightClickBlock`（普通模式）和 `OverviewInteractPacket`（俯瞰模式）都调用同一个方法。新增建筑类型只需改一处。
+- **殖民地命名**：`ColonyLevelData.Record` 新增 `name` 字段（String），NBT 持久化。面板顶栏显示殖民地名称而非 UUID。`TownHallScreen` 增加名称编辑框（EditBox），修改即发送 `ColonyNameUpdatePacket`（C→S）持久化。
+- **相关文件**：`BuildingInteractHandler.java`, `OverviewInteractPacket.java`, `ColonyLevelData.java`, `ColonyLevelManager.java`, `ColonyNameUpdatePacket.java`（新建）, `TownHallOpenPacket.java`, `TownHallScreen.java`, `ColonyStatsSyncPacket.java`, `WandscapePanelState.java`, `WandscapePanelOverlay.java`, `PanelStateTogglePacket.java`, `PanelStateTracker.java`, `WandscapeClient.java`, `Wandscape.java`
+
 ## 已完成的特性（2026-06-25）
 
 ### 智能资源调度级联 ✅
@@ -225,6 +233,22 @@ private void setColonyId(BuildingData data, @Nullable UUID colonyId) {
 
 - `ColonyCommand.createColony()` 删除了预注册 town_hall 的逻辑（Step 6）——那是个永远不会被建造的僵尸 BuildingState，create 只负责注册殖民地 UUID + 生成 NPC，建筑由 `fill` 命令独立触发。
 - `townHalls` → `colonyOrigins`，`colonyToHall` → `colonyToOrigin`，`isColonyBlock` → `isColonyOrigin`，`townHallPos` → `origin`。
+
+## 已完成的特性（2026-07-08）
+
+### 游客等级与殖民地经验系统 ✅
+- **问题**：游客等级随机分配（1-5），与殖民地发展脱钩；殖民地无经验/等级概念，无法驱动渐进式解锁；游客生成无周期管理。
+- **方案**：三级联动——殖民地等级 → 游客等级分布 → 法师数值缩放 + 殖民地经验反哺升级。
+- **殖民等级**：`ColonyLevelManager` 管理每殖民地的 level/exp，`expToNext(lvl) = (lvl+1) × 1000`。升级溢出经验继承。仅在 100% 满意度游客离开时获得经验。
+- **经验贡献**：游客等级 < 殖民地等级 → 0 exp；游客等级 = 殖民地等级 → 100 exp；游客等级 > 殖民地等级 → 500 exp（Config 可配）。
+- **游客等级分布**：40% colonyLevel-1，40% colonyLevel，20% colonyLevel+1。`rollTouristLevel()` 实现，下限 1。
+- **生成公式**：`base(6) + colonyLevel × bonus(3)`，每日 ×0.8~1.2 随机浮动。
+- **三阶段日周期**：
+  - 清晨（0-1000）：重置调度。从 `onServerTick` 重构为在 0-1000 窗口内条件性清除 `scheduleDay` 标志。
+  - 生成窗口（1000-13000）：`createSchedule()` 预计算当日游客数量（含等级、生成位置、目标建筑的 `PendingSpawn` 列表），`flushPendingSpawns()` 按 tick 到达逐个生成。
+  - 夜晚离城（18000-24000）：满意度 <50 或 =100 → 0-1500 tick 随机延迟后离城；50-99 → 引导至旅馆。
+- **法师缩放**：`TouristEntity.onAddedToLevel()` 中 `scale = 0.8 + level × 0.2`，maxMana/manaRegen/spellPower 乘以 scale。
+- **相关文件**：`ColonyLevelData.java`, `ColonyLevelManager.java`, `TouristSpawnSystem.java`, `TouristEntity.java`, `Config.java`, `ColonyStatsSyncPacket.java`, `PanelStateTogglePacket.java`, `PanelStateTracker.java`, `TownHallOpenPacket.java`, `TownHallScreen.java`, `BuildingInteractHandler.java`, `WandscapeEngine.java`, `WandscapeClient.java`, `Wandscape.java`
 
 ## 后续待办
 

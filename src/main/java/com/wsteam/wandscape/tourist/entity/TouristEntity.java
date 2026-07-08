@@ -270,11 +270,11 @@ public class TouristEntity extends PathfinderMob {
 
             if (mage) {
                 variant = random.nextInt(WIZARD_SKIN_COUNT);
-                // Roll mage-specific stats — these get stored in the tavern resume
-                maxMana = 80 + random.nextInt(121);       // 80–200
-                manaRegenRate = 1 + random.nextInt(5);    // 1–5
-                spellPower = 1 + random.nextInt(4);        // 1–4
-                level = 1 + random.nextInt(5);             // 1–5
+                // Scale mage stats by level (spawn system pre-sets level based on colony level)
+                double scale = 0.8 + this.level * 0.2;
+                maxMana = (int) Math.round((80 + random.nextInt(121)) * scale);     // 80–200 × scale
+                manaRegenRate = Math.max(1, (int) Math.round((1 + random.nextInt(5)) * scale));   // 1–5 × scale
+                spellPower = Math.max(1, (int) Math.round((1 + random.nextInt(4)) * scale));      // 1–4 × scale
             } else {
                 variant = random.nextInt(TOURIST_SKIN_COUNT);
             }
