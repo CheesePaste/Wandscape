@@ -79,6 +79,50 @@ public class ImGuiManager {
         // Larger font for readability
         ImGui.getIO().setFontGlobalScale(1.6f);
 
+        // Apply modern dark theme
+        imgui.ImGuiStyle style = ImGui.getStyle();
+        style.setWindowRounding(8.0f);
+        style.setFrameRounding(4.0f);
+        style.setPopupRounding(4.0f);
+        style.setScrollbarRounding(4.0f);
+        style.setGrabRounding(4.0f);
+        style.setTabRounding(4.0f);
+
+        style.setWindowPadding(12.0f, 12.0f);
+        style.setFramePadding(8.0f, 4.0f);
+        style.setItemSpacing(8.0f, 8.0f);
+
+        style.setColor(ImGuiCol.Text, 0.95f, 0.96f, 0.98f, 1.00f);
+        style.setColor(ImGuiCol.TextDisabled, 0.50f, 0.55f, 0.60f, 1.00f);
+        style.setColor(ImGuiCol.WindowBg, 0.08f, 0.09f, 0.11f, 0.95f);
+        style.setColor(ImGuiCol.ChildBg, 0.12f, 0.13f, 0.15f, 1.00f);
+        style.setColor(ImGuiCol.PopupBg, 0.10f, 0.11f, 0.13f, 0.98f);
+        style.setColor(ImGuiCol.Border, 0.20f, 0.22f, 0.25f, 1.00f);
+        style.setColor(ImGuiCol.BorderShadow, 0.00f, 0.00f, 0.00f, 0.00f);
+        style.setColor(ImGuiCol.FrameBg, 0.15f, 0.16f, 0.19f, 1.00f);
+        style.setColor(ImGuiCol.FrameBgHovered, 0.20f, 0.22f, 0.26f, 1.00f);
+        style.setColor(ImGuiCol.FrameBgActive, 0.25f, 0.27f, 0.32f, 1.00f);
+        style.setColor(ImGuiCol.TitleBg, 0.10f, 0.11f, 0.13f, 1.00f);
+        style.setColor(ImGuiCol.TitleBgActive, 0.15f, 0.17f, 0.20f, 1.00f);
+        style.setColor(ImGuiCol.TitleBgCollapsed, 0.08f, 0.09f, 0.11f, 1.00f);
+        style.setColor(ImGuiCol.MenuBarBg, 0.10f, 0.11f, 0.13f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarBg, 0.10f, 0.11f, 0.13f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarGrab, 0.20f, 0.22f, 0.25f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarGrabHovered, 0.25f, 0.27f, 0.30f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarGrabActive, 0.30f, 0.32f, 0.35f, 1.00f);
+        style.setColor(ImGuiCol.CheckMark, 0.40f, 0.70f, 1.00f, 1.00f);
+        style.setColor(ImGuiCol.SliderGrab, 0.40f, 0.70f, 1.00f, 1.00f);
+        style.setColor(ImGuiCol.SliderGrabActive, 0.50f, 0.80f, 1.00f, 1.00f);
+        style.setColor(ImGuiCol.Button, 0.15f, 0.40f, 0.80f, 1.00f);
+        style.setColor(ImGuiCol.ButtonHovered, 0.20f, 0.50f, 0.90f, 1.00f);
+        style.setColor(ImGuiCol.ButtonActive, 0.25f, 0.60f, 1.00f, 1.00f);
+        style.setColor(ImGuiCol.Header, 0.20f, 0.25f, 0.30f, 1.00f);
+        style.setColor(ImGuiCol.HeaderHovered, 0.25f, 0.30f, 0.35f, 1.00f);
+        style.setColor(ImGuiCol.HeaderActive, 0.30f, 0.35f, 0.40f, 1.00f);
+        style.setColor(ImGuiCol.Separator, 0.20f, 0.22f, 0.25f, 1.00f);
+        style.setColor(ImGuiCol.SeparatorHovered, 0.30f, 0.32f, 0.35f, 1.00f);
+        style.setColor(ImGuiCol.SeparatorActive, 0.40f, 0.42f, 0.45f, 1.00f);
+
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");
 
