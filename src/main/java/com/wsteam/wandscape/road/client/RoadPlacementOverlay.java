@@ -64,13 +64,15 @@ public final class RoadPlacementOverlay {
         if (presets.isEmpty()) return;
 
         // Grid layout — auto-cols by screen width
-        int cols = Math.max(1, (screenW - GRID_PAD_X * 2) / (CELL_W + CELL_GAP));
+        int toolsWidth = 120;
+        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + gridH + 10;
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 90) + 10; // Ensure enough height for 2 buttons
         int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
-        int gridX = (screenW - gridW) / 2;
+        int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
 
         // Panel background + top border
@@ -95,6 +97,28 @@ public final class RoadPlacementOverlay {
                         cellX + CELL_W, cellY + CELL_H, 0, 0xFFC8A040);
             }
         }
+
+        // Draw left side tool buttons
+        int toolsStartX = GRID_PAD_X;
+        int toolsStartY = gridStartY;
+        int btnW = 100;
+        int btnH = 40;
+
+        // Button 1: Square Fill (Active)
+        boolean btn1Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= toolsStartY && my <= toolsStartY + btnH;
+        int btn1Bg = btn1Hover ? CELL_HOVER_BG : CELL_SELECTED_BG;
+        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY, toolsStartX + btnW, toolsStartY + btnH, 0, btn1Bg);
+        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, 0xFFC8A040);
+        font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 15, TEXT_WHITE, false,
+                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
+
+        // Button 2: Spline Pen
+        int btn2Y = toolsStartY + btnH + 10;
+        boolean btn2Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn2Y && my <= btn2Y + btnH;
+        int btn2Bg = btn2Hover ? CELL_HOVER_BG : CELL_BG;
+        g.fill(RenderType.guiOverlay(), toolsStartX, btn2Y, toolsStartX + btnW, btn2Y + btnH, 0, btn2Bg);
+        font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 15, TEXT_DIM, false,
+                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
         // Flush backgrounds before 3D preview
         g.bufferSource().endBatch(RenderType.guiOverlay());
@@ -191,20 +215,44 @@ public final class RoadPlacementOverlay {
         List<RoadPreset> presets = RoadPlacementState.getPresets();
         if (presets.isEmpty()) return -1;
 
-        int cols = Math.max(1, (screenW - GRID_PAD_X * 2) / (CELL_W + CELL_GAP));
+        int toolsWidth = 120;
+        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + gridH + 10;
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 90) + 10;
         int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
-        int gridX = (screenW - gridW) / 2;
+        int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
 
         if (my < gridStartY || my > gridStartY + gridH) return -1;
         int col = (int) ((mx - gridX) / (CELL_W + CELL_GAP));
         int row = (int) ((my - gridStartY) / (CELL_H + CELL_GAP));
+        if (mx < gridX || mx > gridX + gridW) return -1;
         int idx = row * cols + col;
         if (idx >= 0 && idx < presets.size()) return idx;
         return -1;
+    }
+
+    public static boolean isSplinePenClicked(double mx, double my, int screenW, int screenH) {
+        if (!RoadPlacementState.isProjecting()) return false;
+
+        List<RoadPreset> presets = RoadPlacementState.getPresets();
+        if (presets.isEmpty()) return false;
+
+        int toolsWidth = 120;
+        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
+        int rows = (presets.size() + cols - 1) / cols;
+        int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 90) + 10;
+        int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
+
+        int toolsStartX = GRID_PAD_X;
+        int toolsStartY = panelY + GRID_PAD_TOP;
+        int btn2Y = toolsStartY + 40 + 10;
+        
+        return mx >= toolsStartX && mx <= toolsStartX + 100 && my >= btn2Y && my <= btn2Y + 40;
     }
 }

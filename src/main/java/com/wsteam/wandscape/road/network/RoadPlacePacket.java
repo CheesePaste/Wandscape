@@ -84,6 +84,9 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             return;
         }
 
+        java.util.Map<String, Integer> materials = new java.util.LinkedHashMap<>();
+        var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
                 int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
@@ -94,8 +97,16 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
                 posArr.add(surfaceY);
                 posArr.add(z);
                 tile.add("pos", posArr);
-                tile.addProperty("block", preset.pickBlock(x, z));
+                String blockId = preset.pickBlock(x, z);
+                tile.addProperty("block", blockId);
                 tiles.add(tile);
+                
+                if (blockId != null && !"minecraft:air".equals(blockId)) {
+                    String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
+                    if (elementApi.hasElementMapping(pureId)) {
+                        materials.merge(blockId, 1, Integer::sum);
+                    }
+                }
             }
         }
 
@@ -112,6 +123,15 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
         params.put("tiles", tiles);
         params.put("segment_id", new JsonPrimitive(UUID.randomUUID().toString()));
         params.put("edge_id", new JsonPrimitive(UUID.randomUUID().toString()));
+        
+        JsonArray list = new JsonArray();
+        JsonObject counts = new JsonObject();
+        for (var entry : materials.entrySet()) {
+            list.add(new JsonPrimitive(entry.getKey()));
+            counts.addProperty(entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        params.put("material_list", list);
+        params.put("material_counts", counts);
 
         try {
             long taskId = source.publish(new TaskRequest("road:build_segment", params, 10));

@@ -138,6 +138,15 @@ public final class WandscapePanelController {
         if (RoadPlacementState.isProjecting()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
                 && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
+            
+            if (RoadPlacementOverlay.isSplinePenClicked(mouseX, mouseY, screenW, screenH)) {
+                WandscapePanelState.closePanel();
+                com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
+                com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
+                event.setCanceled(true);
+                return;
+            }
+
             int presetIdx = RoadPlacementOverlay.getPresetAt(mouseX, mouseY, screenW, screenH);
             if (presetIdx >= 0) {
                 boolean doubleClicked = RoadPlacementState.handlePresetDoubleClick(presetIdx);

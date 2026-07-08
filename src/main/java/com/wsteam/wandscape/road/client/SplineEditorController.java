@@ -170,7 +170,7 @@ public final class SplineEditorController {
         java.util.List<com.wsteam.wandscape.road.core.CurveSample> samples = model.tessellate(stepDistance);
         if (samples.isEmpty()) return;
 
-        com.google.gson.JsonArray tiles = new com.google.gson.JsonArray();
+        java.util.Map<net.minecraft.core.BlockPos, String> uniqueTiles = new java.util.LinkedHashMap<>();
 
         for (com.wsteam.wandscape.road.core.CurveSample sample : samples) {
             SplineVec3 pos = sample.position();
@@ -207,15 +207,21 @@ public final class SplineEditorController {
                 int wy = (int) Math.floor(localPos.y);
                 int wz = (int) Math.floor(localPos.z);
 
-                com.google.gson.JsonObject tile = new com.google.gson.JsonObject();
-                com.google.gson.JsonArray posArr = new com.google.gson.JsonArray();
-                posArr.add(wx);
-                posArr.add(wy);
-                posArr.add(wz);
-                tile.add("pos", posArr);
-                tile.addProperty("block", b.blockState());
-                tiles.add(tile);
+                uniqueTiles.put(new net.minecraft.core.BlockPos(wx, wy, wz), b.blockState());
             }
+        }
+
+        com.google.gson.JsonArray tiles = new com.google.gson.JsonArray();
+        for (java.util.Map.Entry<net.minecraft.core.BlockPos, String> entry : uniqueTiles.entrySet()) {
+            net.minecraft.core.BlockPos bp = entry.getKey();
+            com.google.gson.JsonObject tile = new com.google.gson.JsonObject();
+            com.google.gson.JsonArray posArr = new com.google.gson.JsonArray();
+            posArr.add(bp.getX());
+            posArr.add(bp.getY());
+            posArr.add(bp.getZ());
+            tile.add("pos", posArr);
+            tile.addProperty("block", entry.getValue());
+            tiles.add(tile);
         }
         
         if (tiles.isEmpty()) return;

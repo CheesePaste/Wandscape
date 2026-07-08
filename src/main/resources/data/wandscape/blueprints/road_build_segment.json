@@ -4,9 +4,20 @@
   "description": "Places road tiles along a pre-generated path segment. Tiles are injected as runtime param.",
   "params": {
     "segment_id": "string",
-    "edge_id": "string"
+    "edge_id": "string",
+    "material_list": "list<string>",
+    "material_counts": "map<string,string>"
   },
   "steps": [
+    {
+      "type": "request_resource",
+      "items": {"map_to_items": {
+        "list": "$material_list",
+        "as": "mat",
+        "resource": "$mat",
+        "amount": {"get": ["$material_counts", "$mat"]}
+      }}
+    },
     {
       "type": "for_each",
       "list": "$tiles",
@@ -15,7 +26,8 @@
         {
           "type": "place",
           "at": {"get": ["$tile", "pos"]},
-          "block": {"get": ["$tile", "block"]}
+          "block": {"get": ["$tile", "block"]},
+          "consumable": {"get": ["$tile", "block"]}
         }
       ]
     },

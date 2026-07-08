@@ -164,6 +164,8 @@ public final class SplineEditorRenderer {
         int light = 0xF000F0; // FULL_BRIGHT
         int overlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
 
+        java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> uniqueBlocks = new java.util.HashMap<>();
+
         for (CurveSample sample : samples) {
             SplineVec3 pos = sample.position();
             SplineVec3 tan = sample.tangent();
@@ -203,12 +205,17 @@ public final class SplineEditorRenderer {
                     com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer.resolveBlockState(block.blockState());
                 
                 if (state != null) {
-                    poseStack.pushPose();
-                    poseStack.translate(bx, by, bz);
-                    blockRenderer.renderSingleBlock(state, poseStack, buf, light, overlay);
-                    poseStack.popPose();
+                    uniqueBlocks.put(new net.minecraft.core.BlockPos(bx, by, bz), state);
                 }
             }
+        }
+
+        for (java.util.Map.Entry<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> entry : uniqueBlocks.entrySet()) {
+            net.minecraft.core.BlockPos bp = entry.getKey();
+            poseStack.pushPose();
+            poseStack.translate(bp.getX(), bp.getY(), bp.getZ());
+            blockRenderer.renderSingleBlock(entry.getValue(), poseStack, buf, light, overlay);
+            poseStack.popPose();
         }
     }
 
