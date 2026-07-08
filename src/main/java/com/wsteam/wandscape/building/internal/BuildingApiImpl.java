@@ -92,26 +92,7 @@ public class BuildingApiImpl implements BuildingApi {
             return;
         }
 
-        BuildingState state;
-        if (data instanceof BuildingState bs) {
-            state = bs;
-        } else {
-            // Legacy path: wrap BuildingData into BuildingState
-            BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
-            BuildingConfig config = configLoader.get(data.getBuildingTypeId());
-            BlockPos anchor = data.getPosition();
-            net.minecraft.world.level.levelgen.structure.BoundingBox bounds;
-            if (config != null && config.boundary() != null) {
-                bounds = BuildingSavedData.computeWorldBox(anchor, config.boundary());
-            } else {
-                bounds = new net.minecraft.world.level.levelgen.structure.BoundingBox(anchor);
-            }
-            state = new BuildingState(
-                    data.getBuildingId(), data.getBuildingTypeId(), data.getCategory(),
-                    anchor, bounds,
-                    data.getComfort(), data.getMagic(), data.getWonder(),
-                    data.getQueueCapacity());
-        }
+        BuildingState state = (BuildingState) data;
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) {

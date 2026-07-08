@@ -263,9 +263,8 @@ class BlueprintInterpreterTest {
             assertEquals("wood", op.items().get(0).resource().id());
             assertEquals(10, op.items().get(0).amount());
 
-            // Backward-compat accessor
-            assertEquals("wood", op.requested().resource().id());
-            assertEquals(10, op.requested().amount());
+            assertEquals("wood", op.items().get(0).resource().id());
+            assertEquals(10, op.items().get(0).amount());
         }
 
         @Test

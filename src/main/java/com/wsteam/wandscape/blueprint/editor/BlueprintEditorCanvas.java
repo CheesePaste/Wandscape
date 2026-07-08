@@ -344,9 +344,7 @@ public final class BlueprintEditorCanvas {
                 ExprNode at = resolveDataInput(node.nodeId, "at");
                 ExprNode block = resolveDataInput(node.nodeId, "block");
                 ExprNode consumable = resolveDataInputOpt(node.nodeId, "consumable");
-                yield consumable != null
-                        ? new StepNode.PlaceStep(at, block, consumable)
-                        : new StepNode.PlaceStep(at, block);
+                yield new StepNode.PlaceStep(at, block, consumable);
             }
             case "remove" -> {
                 ExprNode at = resolveDataInput(node.nodeId, "at");

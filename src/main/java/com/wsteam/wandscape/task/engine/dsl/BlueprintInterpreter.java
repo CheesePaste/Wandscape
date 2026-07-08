@@ -293,7 +293,7 @@ public final class BlueprintInterpreter {
         BlueprintDefinition calleeDef = calleeBp.definition();
         if (calleeDef == null) {
             throw new BlueprintInterpretException(
-                    "Cannot macro-expand legacy lambda blueprint: " + calleeId
+                    "Cannot macro-expand lambda blueprint without definition: " + calleeId
                     + ". Only DSL blueprints (with BlueprintDefinition) support call.");
         }
 
@@ -623,15 +623,38 @@ public final class BlueprintInterpreter {
 
     /**
      * Parse a string entity identifier to a long for {@link EntityId}.
-     * Tries UUID parsing first, then hash of the string.
-     * TODO: proper entity resolution by name/type when entity system is built.
+     *
+     * <p>Resolution order:
+     * <ol>
+     *   <li>Try as UUID (most significant bits)</li>
+     *   <li>Try as numeric long string (direct ECS entity ID)</li>
+     *   <li>Fallback: deterministic 64-bit hash (FNV-1a) of the name string</li>
+     * </ol>
+     *
+     * <p>TODO: replace hash fallback with proper entity registry lookup
+     * (ECS name index or player name→UUID resolution) when entity system
+     * supports name-to-ID resolution at blueprint interpretation time.
+     * The interpreter currently has no access to the ECS World.
      */
     private static long parseEntityId(String str) {
+        // 1. Try UUID string
         try {
             return java.util.UUID.fromString(str).getMostSignificantBits();
-        } catch (IllegalArgumentException e) {
-            return str.hashCode(); // Fallback: use string hash as entity ID
+        } catch (IllegalArgumentException ignored) {}
+
+        // 2. Try numeric entity ID
+        try {
+            return Long.parseLong(str);
+        } catch (NumberFormatException ignored) {}
+
+        // 3. Fallback: deterministic 64-bit non-negative hash (FNV-1a)
+        Log.debug(TAG, "parseEntityId: hash fallback for '{}' (not a UUID or numeric ID)", str);
+        long hash = 0xCBF29CE484222325L;
+        for (int i = 0; i < str.length(); i++) {
+            hash ^= str.charAt(i);
+            hash *= 0x100000001B3L;
         }
+        return hash;
     }
 
     // ─────────────────────────────────────────────────────────────────

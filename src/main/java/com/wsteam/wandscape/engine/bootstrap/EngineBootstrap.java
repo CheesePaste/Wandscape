@@ -41,7 +41,6 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.road.engine.RoadTaskSource;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
-import com.wsteam.wandscape.engine.source.blueprint.DataDrivenSteps;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
@@ -80,22 +79,6 @@ public final class EngineBootstrap {
             bpConfigLoader.registerIn(blueprints, interpreter);
             Log.info(TAG, "  registered {} DSL blueprints from JSON",
                     bpConfigLoader.getAll().size());
-        }
-
-        // 1b. Legacy fallback: for buildings WITHOUT a blueprint ref,
-        //     register the old DataDrivenSteps version under "build:<id>".
-        BuildingConfigLoader buildingConfigs = BuildingConfigLoader.getInstance();
-        int legacyCount = 0;
-        for (BuildingConfig config : buildingConfigs.getAll().values()) {
-            if (config.blueprint() == null) {
-                // No blueprint ref → use legacy DataDrivenSteps
-                blueprints.register("build:" + config.id(), DataDrivenSteps.fromConfig(config));
-                legacyCount++;
-            }
-        }
-        if (legacyCount > 0) {
-            Log.info(TAG, "  registered {} legacy build blueprints from BuildingConfig JSON (no blueprint ref)",
-                    legacyCount);
         }
 
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);

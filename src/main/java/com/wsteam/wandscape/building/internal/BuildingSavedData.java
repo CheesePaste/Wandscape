@@ -436,8 +436,7 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Register a new building. Builds all indexes, checks overlap using
-     * precise pattern positions (falls back to AABB for legacy buildings
-     * without pattern positions).
+     * precise pattern positions.
      *
      * @throws BuildingOverlapException if the building overlaps an existing one
      */
@@ -481,27 +480,19 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Check whether a set of world positions overlaps an existing building's
-     * occupied blocks. Uses pattern positions when available (precise), falls
-     * back to AABB for legacy buildings.
+     * occupied blocks. Uses pattern positions for precise detection.
      */
     private static boolean overlapsPattern(Set<BlockPos> newPattern, BuildingState existing) {
         Set<BlockPos> existingPattern = existing.getPatternPositions();
-        if (existingPattern != null) {
-            // Precise: check if any new position matches an existing pattern block
-            // Iterate the smaller set for efficiency
-            if (newPattern.size() <= existingPattern.size()) {
-                for (BlockPos pos : newPattern) {
-                    if (existingPattern.contains(pos)) return true;
-                }
-            } else {
-                for (BlockPos pos : existingPattern) {
-                    if (newPattern.contains(pos)) return true;
-                }
+        // Iterate the smaller set for efficiency
+        if (newPattern.size() <= existingPattern.size()) {
+            for (BlockPos pos : newPattern) {
+                if (existingPattern.contains(pos)) return true;
             }
         } else {
-            // Legacy fallback: AABB intersection — conservative, prevents damage
-            BoundingBox newBounds = computeWorldBoxFromPattern(newPattern);
-            if (newBounds.intersects(existing.getBounds())) return true;
+            for (BlockPos pos : existingPattern) {
+                if (newPattern.contains(pos)) return true;
+            }
         }
         return false;
     }
@@ -719,16 +710,6 @@ public class BuildingSavedData extends SavedData {
                     }
                     state.setPatternPositions(Collections.unmodifiableSet(positions));
                 }
-            } else {
-                // Legacy save: try to rebuild from config
-                BuildingConfig cfg = BuildingConfigLoader.getInstance().get(type);
-                if (cfg != null) {
-                    Set<BlockPos> positions = new HashSet<>();
-                    for (BlockOffset off : cfg.pattern()) {
-                        positions.add(anchor.offset(off.x(), off.y(), off.z()));
-                    }
-                    state.setPatternPositions(Collections.unmodifiableSet(positions));
-                }
             }
 
             // Register into indexes (no overlap check needed on load)
@@ -933,8 +914,7 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Check if a world position is occupied by any building that is NOT the
-     * excluded one. Uses pattern positions when available (precise), falls
-     * back to AABB for legacy buildings.
+     * excluded one. Uses pattern positions for precise detection.
      *
      * @param pos              world position to check
      * @param excludeBuildingId building to skip (the one being placed)
@@ -943,12 +923,7 @@ public class BuildingSavedData extends SavedData {
     public boolean isPositionOccupiedByOtherBuilding(BlockPos pos, UUID excludeBuildingId) {
         for (BuildingState existing : buildings.values()) {
             if (existing.getBuildingId().equals(excludeBuildingId)) continue;
-            Set<BlockPos> existingPattern = existing.getPatternPositions();
-            if (existingPattern != null) {
-                if (existingPattern.contains(pos)) return true;
-            } else {
-                if (existing.getBounds().isInside(pos)) return true;
-            }
+            if (existing.getPatternPositions().contains(pos)) return true;
         }
         return false;
     }

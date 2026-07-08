@@ -190,7 +190,7 @@ public final class TaskPoolSavedData extends SavedData {
                 task.state = state;
                 task.stepIndex = stepIndex;
 
-                // Restore awaitingResource (new format: ListTag; old format: CompoundTag)
+                // Restore awaitingResource
                 if (tag.contains("await")) {
                     List<ResourceStack> awaitList = new ArrayList<>();
                     Tag awaitTag = tag.get("await");
@@ -202,13 +202,6 @@ public final class TaskPoolSavedData extends SavedData {
                             if (!resId.isEmpty() && amt > 0) {
                                 awaitList.add(new ResourceStack(new ResourceId(resId), amt));
                             }
-                        }
-                    } else if (awaitTag instanceof CompoundTag resTag) {
-                        // Backward-compat: old single-resource format
-                        String resId = resTag.getString("id");
-                        int amt = resTag.getInt("amt");
-                        if (!resId.isEmpty() && amt > 0) {
-                            awaitList.add(new ResourceStack(new ResourceId(resId), amt));
                         }
                     }
                     task.awaitingResource = awaitList.isEmpty() ? null : awaitList;
