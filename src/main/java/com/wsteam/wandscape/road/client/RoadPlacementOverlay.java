@@ -28,18 +28,18 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class RoadPlacementOverlay {
 
-    private static final int PANEL_H = 112;
-    static final int CELL_W = 52;
-    static final int CELL_H = 52;
+    private static final int PANEL_H = 100;
+    static final int CELL_W = 44;
+    static final int CELL_H = 44;
     static final int CELL_GAP = 4;
     private static final int GRID_PAD_X = 12;
     private static final int GRID_PAD_TOP = 10;
 
-    private static final int PANEL_BG = 0xDD1A0E08;
-    private static final int PANEL_BORDER = 0xFF4A3020;
-    private static final int CELL_BG = 0xFF1E1208;
-    private static final int CELL_SELECTED_BG = 0xFF3D2060;
-    private static final int CELL_HOVER_BG = 0xFF332010;
+    private static final int PANEL_BG = 0xEE14161C;
+    private static final int PANEL_BORDER = 0xFF3A3E47;
+    private static final int CELL_BG = 0xFF1C1F26;
+    private static final int CELL_SELECTED_BG = 0xFF2B62C8;
+    private static final int CELL_HOVER_BG = 0xFF282C34;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
     private static final int TEXT_DIM = 0xFFAAAAAA;
 
@@ -64,13 +64,13 @@ public final class RoadPlacementOverlay {
         if (presets.isEmpty()) return;
 
         // Grid layout — auto-cols by screen width
-        int toolsWidth = 120;
+        int toolsWidth = 100;
         int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 90) + 10; // Ensure enough height for 2 buttons
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10; // Ensure enough height for 2 buttons
         int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
         int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
@@ -101,15 +101,15 @@ public final class RoadPlacementOverlay {
         // Draw left side tool buttons
         int toolsStartX = GRID_PAD_X;
         int toolsStartY = gridStartY;
-        int btnW = 100;
-        int btnH = 40;
+        int btnW = 84;
+        int btnH = 32;
 
         // Button 1: Square Fill (Active)
         boolean btn1Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= toolsStartY && my <= toolsStartY + btnH;
         int btn1Bg = btn1Hover ? CELL_HOVER_BG : CELL_SELECTED_BG;
         g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY, toolsStartX + btnW, toolsStartY + btnH, 0, btn1Bg);
-        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, 0xFFC8A040);
-        font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 15, TEXT_WHITE, false,
+        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, 0xFF4FA0FF);
+        font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 12, TEXT_WHITE, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
         // Button 2: Spline Pen
@@ -117,7 +117,7 @@ public final class RoadPlacementOverlay {
         boolean btn2Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn2Y && my <= btn2Y + btnH;
         int btn2Bg = btn2Hover ? CELL_HOVER_BG : CELL_BG;
         g.fill(RenderType.guiOverlay(), toolsStartX, btn2Y, toolsStartX + btnW, btn2Y + btnH, 0, btn2Bg);
-        font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 15, TEXT_DIM, false,
+        font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 12, TEXT_DIM, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
         // Flush backgrounds before 3D preview
@@ -215,13 +215,13 @@ public final class RoadPlacementOverlay {
         List<RoadPreset> presets = RoadPlacementState.getPresets();
         if (presets.isEmpty()) return -1;
 
-        int toolsWidth = 120;
+        int toolsWidth = 100;
         int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 90) + 10;
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
         int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
         int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
@@ -241,18 +241,18 @@ public final class RoadPlacementOverlay {
         List<RoadPreset> presets = RoadPlacementState.getPresets();
         if (presets.isEmpty()) return false;
 
-        int toolsWidth = 120;
+        int toolsWidth = 100;
         int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 90) + 10;
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
         int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
 
         int toolsStartX = GRID_PAD_X;
         int toolsStartY = panelY + GRID_PAD_TOP;
-        int btn2Y = toolsStartY + 40 + 10;
+        int btn2Y = toolsStartY + 32 + 10;
         
-        return mx >= toolsStartX && mx <= toolsStartX + 100 && my >= btn2Y && my <= btn2Y + 40;
+        return mx >= toolsStartX && mx <= toolsStartX + 84 && my >= btn2Y && my <= btn2Y + 32;
     }
 }

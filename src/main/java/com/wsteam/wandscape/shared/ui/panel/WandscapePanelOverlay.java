@@ -31,13 +31,13 @@ public final class WandscapePanelOverlay {
 
     private static final String TAG = "WandscapePanelOverlay";
 
-    private static final int BAR_BG = 0xCC000000;
+    private static final int BAR_BG = 0xEE14161C;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
     private static final int TEXT_DIM = 0xFFAAAAAA;
-    private static final int TAB_INACTIVE_BG = 0xFF2A1A0A;
-    private static final int TAB_HOVER_BG = 0xFF3D2A10;
-    private static final int TAB_ACTIVE_BG = 0xFF3D2060;
-    private static final int TAB_ACTIVE_BORDER = 0xFFC8A040;
+    private static final int TAB_INACTIVE_BG = 0xFF15181C;
+    private static final int TAB_HOVER_BG = 0xFF282C34;
+    private static final int TAB_ACTIVE_BG = 0xFF2B62C8;
+    private static final int TAB_ACTIVE_BORDER = 0xFF4FA0FF;
     private static final int COMFORT_COLOR = 0xFF4CAF50;
     private static final int MAGIC_COLOR = 0xFF42A5F5;
     private static final int WONDER_COLOR = 0xFFC8A040;
