@@ -31,13 +31,13 @@ import com.wsteam.wandscape.shared.log.Log;
  */
 public final class BuildingSelectionOverlay {
 
-    static final int BAR_HEIGHT = 140;
+    static final int BAR_HEIGHT = 120;
     static final int CATEGORY_ROW_H = 16;
     static final int GRID_TOP_OFFSET = CATEGORY_ROW_H + 2;
-    static final int CELL_W = 48;
-    static final int CELL_H = 40;
-    static final int PREVIEW_PAD = 3;  // margin inside cell for 3D preview
-    static final int NAME_H = 11;      // reserved height for building name
+    static final int CELL_W = 42;
+    static final int CELL_H = 36;
+    static final int PREVIEW_PAD = 2;  // margin inside cell for 3D preview
+    static final int NAME_H = 10;      // reserved height for building name
     static final int GRID_PAD_X = 4;
     static final int SEARCH_W = 80;
     static final int SEARCH_H = 12;
@@ -45,16 +45,16 @@ public final class BuildingSelectionOverlay {
 
     private static final int VISIBLE_ROWS = (BAR_HEIGHT - GRID_TOP_OFFSET) / CELL_H;
 
-    private static final int BAR_BG = 0xDD1A0E08;
-    private static final int BAR_BORDER = 0xFF4A3020;
-    private static final int CAT_SELECTED_BG = 0xFF3D2060;
-    private static final int CAT_HOVER_BG = 0xFF3D2A10;
-    private static final int CAT_INACTIVE_BG = 0xFF2A1A0A;
-    private static final int CAT_TEXT_SELECTED = 0xFFFFE0A0;
+    private static final int BAR_BG = 0xEE14161C;
+    private static final int BAR_BORDER = 0xFF3A3E47;
+    private static final int CAT_SELECTED_BG = 0xFF2B62C8;
+    private static final int CAT_HOVER_BG = 0xFF282C34;
+    private static final int CAT_INACTIVE_BG = 0xFF15181C;
+    private static final int CAT_TEXT_SELECTED = 0xFFFFFFFF;
     private static final int CAT_TEXT_NORMAL = 0xFFAAAAAA;
-    private static final int CELL_BG = 0xFF1E1208;
-    private static final int CELL_SELECTED_BG = 0xFF3D2060;
-    private static final int CELL_HOVER_BG = 0xFF332010;
+    private static final int CELL_BG = 0xFF1C1F26;
+    private static final int CELL_SELECTED_BG = 0xFF2B62C8;
+    private static final int CELL_HOVER_BG = 0xFF282C34;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
     private static final int TEXT_DIM = 0xFF999999;
     private static final int SCROLLBAR_TRACK = 0x33000000;

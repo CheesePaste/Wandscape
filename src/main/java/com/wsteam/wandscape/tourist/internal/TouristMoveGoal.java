@@ -78,6 +78,11 @@ public class TouristMoveGoal extends Goal {
     private boolean usingRoad;
     private int stuckTicks;
 
+    // ── Real stuck detection ──
+    private BlockPos lastPos;
+    private int noMoveTicks;
+    private int totalNavTicks;
+
     // ── Building-visit state ──
     private int idleTicks;
     private static final int POST_TOUR_IDLE_TICKS = 200;
@@ -256,6 +261,27 @@ public class TouristMoveGoal extends Goal {
         var nav = tourist.getNavigation();
         BlockPos pos = tourist.blockPosition();
 
+        // ── Real stuck detection & hard fallback ──
+        totalNavTicks++;
+        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+            noMoveTicks++;
+        } else {
+            noMoveTicks = 0;
+            lastPos = pos;
+        }
+
+        if (noMoveTicks > 100 || totalNavTicks > 600) {
+            Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting near {}", tourist.getTouristName(), target.toShortString());
+            BlockPos tpTarget = currentTarget(target);
+            if (tpTarget != null) {
+                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
+                if (ground != null) tpTarget = ground;
+                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
+                noMoveTicks = 0;
+            }
+            return;
+        }
+
         // Check arrival at entry point (fallback if proximity check doesn't fire)
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
@@ -299,6 +325,30 @@ public class TouristMoveGoal extends Goal {
 
         var nav = tourist.getNavigation();
         BlockPos pos = tourist.blockPosition();
+
+        // ── Real stuck detection & hard fallback ──
+        totalNavTicks++;
+        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+            noMoveTicks++;
+        } else {
+            noMoveTicks = 0;
+            lastPos = pos;
+        }
+
+        if (noMoveTicks > 100 || totalNavTicks > 400) {
+            BlockPos tpTarget = exitingPhase ? (entryPoint != null ? entryPoint : tourist.getCommuteTarget()) : interactPoint;
+            if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
+            if (tpTarget != null) {
+                Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
+                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
+                if (ground != null) tpTarget = ground;
+                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
+                noMoveTicks = 0;
+            } else {
+                finishBuildingStop();
+            }
+            return;
+        }
 
         if (exitingPhase) {
             // Heading back to entry point after interaction
@@ -427,6 +477,9 @@ public class TouristMoveGoal extends Goal {
         waypoints = null;
         wpIndex = 0;
         stuckTicks = 0;
+        lastPos = null;
+        noMoveTicks = 0;
+        totalNavTicks = 0;
         usingRoad = false;
         BlockPos target = interactPoint;
         if (target == null) target = tourist.getCommuteTarget();
@@ -556,12 +609,38 @@ public class TouristMoveGoal extends Goal {
         wpIndex = 0;
         stuckTicks = 0;
         poiPauseTicks = 0;
+        lastPos = null;
+        noMoveTicks = 0;
+        totalNavTicks = 0;
         pickNextPoiAndGo();
     }
 
     private void tickPoiExplore() {
         var nav = tourist.getNavigation();
         BlockPos pos = tourist.blockPosition();
+
+        // ── Real stuck detection & hard fallback ──
+        if (poiPauseTicks <= 0) {
+            totalNavTicks++;
+            if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+                noMoveTicks++;
+            } else {
+                noMoveTicks = 0;
+                lastPos = pos;
+            }
+
+            if (noMoveTicks > 100 || totalNavTicks > 400) {
+                BlockPos wp = currentTarget();
+                if (wp != null) {
+                    Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), wp.toShortString());
+                    BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
+                    if (ground != null) wp = ground;
+                    tourist.setPos(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5);
+                    noMoveTicks = 0;
+                }
+                return;
+            }
+        }
 
         if (poiPauseTicks > 0) {
             poiPauseTicks--;
@@ -659,6 +738,9 @@ public class TouristMoveGoal extends Goal {
         usingRoad = planRoute(target);
         logNav("POI", target);
         wpIndex = 1; // skip wp[0] (= start pos)
+        lastPos = null;
+        noMoveTicks = 0;
+        totalNavTicks = 0;
         moveToNext(wanderSpeed, target);
         return true;
     }
@@ -1188,6 +1270,9 @@ public class TouristMoveGoal extends Goal {
         wpIndex = 0;
         stuckTicks = 0;
         idleTicks = 0;
+        lastPos = null;
+        noMoveTicks = 0;
+        totalNavTicks = 0;
         usingRoad = planRoute(target);
         wpIndex = 1;
         moveToNext(speed, target);

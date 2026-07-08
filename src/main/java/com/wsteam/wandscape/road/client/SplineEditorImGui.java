@@ -43,53 +43,57 @@ public final class SplineEditorImGui {
         var io = ImGui.getIO();
         float y = 0;
 
-        ImGui.setNextWindowPos(io.getDisplaySizeX() - 320, y, ImGuiCond.FirstUseEver);
-        ImGui.setNextWindowSize(320, io.getDisplaySizeY(), ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowPos(io.getDisplaySizeX() - 340, y, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(340, io.getDisplaySizeY(), ImGuiCond.FirstUseEver);
 
         int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove;
 
         if (ImGui.begin("Spline Editor Panel", flags)) {
             panelLeftEdge = ImGui.getWindowPosX();
-            ImGui.textColored(255, 215, 0, 255, "=== SPLINE ROAD EDITOR ===");
+            ImGui.textColored(1.0f, 0.84f, 0.0f, 1.0f, "=== SPLINE ROAD EDITOR ===");
             ImGui.separator();
+            ImGui.spacing();
 
             SplineModel model = SplineEditorClientState.getModel();
 
             // ── Mode selection ──
-            ImGui.text("Editor Mode:");
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "EDITOR MODE");
+            ImGui.separator();
+            ImGui.spacing();
             boolean isAdd = SplineEditorClientState.getEditMode() == SplineEditorClientState.EditMode.ADD;
-            if (ImGui.radioButton("Add Point Mode (Left-Click Surface)", isAdd)) {
+            if (ImGui.radioButton("Add Point (Left-Click Surface)", isAdd)) {
                 SplineEditorClientState.setEditMode(SplineEditorClientState.EditMode.ADD);
             }
-            if (ImGui.radioButton("Select & Edit Mode (Drag Handles)", !isAdd)) {
+            if (ImGui.radioButton("Select & Edit (Drag Handles)", !isAdd)) {
                 SplineEditorClientState.setEditMode(SplineEditorClientState.EditMode.EDIT);
             }
 
             ImGui.spacing();
-            ImGui.separator();
+            ImGui.spacing();
 
-            // ── Spline global properties ──
-            ImGui.text("Curve Configuration:");
+            // ── Global Transformation ──
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "CURVE CONFIGURATION");
+            ImGui.separator();
+            ImGui.spacing();
+            
             ImBoolean closed = new ImBoolean(model.isClosed());
             if (ImGui.checkbox("Closed Loop", closed)) {
                 model.setClosed(closed.get());
             }
-
             ImGui.spacing();
-            ImGui.separator();
 
-            // ── Global Transformation ──
             ImGui.text("Global Translation:");
             ImGui.alignTextToFramePadding();
             ImGui.pushItemWidth(60);
-            ImGui.inputDouble("##ShiftX", globalShiftX, 0.1, 1.0, "%.1f");
+            ImGui.inputDouble("##ShiftX", globalShiftX, 0.0, 0.0, "%.1f");
             ImGui.sameLine();
-            ImGui.inputDouble("##ShiftY", globalShiftY, 0.1, 1.0, "%.1f");
+            ImGui.inputDouble("##ShiftY", globalShiftY, 0.0, 0.0, "%.1f");
             ImGui.sameLine();
-            ImGui.inputDouble("##ShiftZ", globalShiftZ, 0.1, 1.0, "%.1f");
+            ImGui.inputDouble("##ShiftZ", globalShiftZ, 0.0, 0.0, "%.1f");
             ImGui.popItemWidth();
             
             ImGui.sameLine();
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.2f, 0.3f, 0.4f, 1.0f);
             if (ImGui.button("Shift All")) {
                 SplineVec3 delta = new SplineVec3(globalShiftX.get(), globalShiftY.get(), globalShiftZ.get());
                 model.translateAll(delta);
@@ -98,12 +102,15 @@ public final class SplineEditorImGui {
                 globalShiftZ.set(0.0);
                 Log.info(TAG, "[SplineEditor] Translated all points by {}", delta);
             }
+            imgui.ImGui.popStyleColor();
 
             ImGui.spacing();
-            ImGui.separator();
+            ImGui.spacing();
 
             // ── List of points ──
-            ImGui.text("Point List (Total: " + model.getPoints().size() + "):");
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "POINT LIST (Total: " + model.getPoints().size() + ")");
+            ImGui.separator();
+            ImGui.spacing();
             if (ImGui.beginChild("PointsList", 0, 150, true)) {
                 for (int i = 0; i < model.getPoints().size(); i++) {
                     SplinePoint pt = model.getPoints().get(i);
@@ -126,7 +133,9 @@ public final class SplineEditorImGui {
             if (selectedIdx != -1 && selectedIdx < model.getPoints().size()) {
                 SplinePoint pt = model.getPoints().get(selectedIdx);
                 ImGui.spacing();
-                ImGui.textColored(100, 200, 255, 255, "Selected Point #" + selectedIdx);
+                ImGui.textColored(0.4f, 0.8f, 1.0f, 1.0f, "SELECTED POINT #" + selectedIdx);
+                ImGui.separator();
+                ImGui.spacing();
                 
                 // Show/toggle sub-selections
                 ImGui.text("Active Handle:");
@@ -134,11 +143,11 @@ public final class SplineEditorImGui {
                     SplineEditorClientState.setSelectedPoint(selectedIdx, SplineEditorClientState.SelectionType.ANCHOR);
                 }
                 ImGui.sameLine();
-                if (ImGui.radioButton("Prev Handle", selectedType == SplineEditorClientState.SelectionType.CONTROL_PREV)) {
+                if (ImGui.radioButton("Prev", selectedType == SplineEditorClientState.SelectionType.CONTROL_PREV)) {
                     SplineEditorClientState.setSelectedPoint(selectedIdx, SplineEditorClientState.SelectionType.CONTROL_PREV);
                 }
                 ImGui.sameLine();
-                if (ImGui.radioButton("Next Handle", selectedType == SplineEditorClientState.SelectionType.CONTROL_NEXT)) {
+                if (ImGui.radioButton("Next", selectedType == SplineEditorClientState.SelectionType.CONTROL_NEXT)) {
                     SplineEditorClientState.setSelectedPoint(selectedIdx, SplineEditorClientState.SelectionType.CONTROL_NEXT);
                 }
 
@@ -186,17 +195,21 @@ public final class SplineEditorImGui {
                 }
 
                 ImGui.spacing();
+                imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.6f, 0.2f, 0.2f, 1.0f);
                 if (ImGui.button("Delete Selected Point")) {
                     model.removePoint(selectedIdx);
                     SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
                 }
+                imgui.ImGui.popStyleColor();
             }
 
             ImGui.spacing();
-            ImGui.separator();
+            ImGui.spacing();
 
             // ── Array Generation Config ──
-            ImGui.textColored(100, 255, 100, 255, "Array Generation:");
+            ImGui.textColored(0.4f, 1.0f, 0.4f, 1.0f, "ARRAY GENERATION");
+            ImGui.separator();
+            ImGui.spacing();
             
             java.util.List<String> templateIds = SplineEditorClientState.getAvailableTemplateIds();
             if (!templateIds.isEmpty()) {
@@ -244,27 +257,41 @@ public final class SplineEditorImGui {
                 }
                 
                 ImGui.spacing();
-                if (ImGui.button("Build Array Task", -1, 28)) {
+                imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.2f, 0.5f, 0.2f, 1.0f);
+                imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonHovered, 0.3f, 0.6f, 0.3f, 1.0f);
+                imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonActive, 0.4f, 0.7f, 0.4f, 1.0f);
+                if (ImGui.button("Build Array Task", -1, 30)) {
                     SplineEditorController.doBuildArray();
                 }
+                imgui.ImGui.popStyleColor(3);
             }
 
             ImGui.spacing();
-            ImGui.separator();
+            ImGui.spacing();
 
             // ── Save and Load Templates ──
-            ImGui.text("Save/Load Templates:");
-            ImGui.inputText("Name", templateNameInput);
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "TEMPLATES");
+            ImGui.separator();
+            ImGui.spacing();
+
+            ImGui.pushItemWidth(-1);
+            ImGui.inputTextWithHint("##Name", "Template Name", templateNameInput);
+            ImGui.popItemWidth();
+            ImGui.spacing();
             
-            if (ImGui.button("Save To JSON")) {
+            float halfW = (ImGui.getWindowWidth() - 24) / 2.0f;
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.1f, 0.4f, 0.7f, 1.0f);
+            if (ImGui.button("Save To JSON", halfW, 26)) {
                 String name = templateNameInput.get().trim();
                 if (!name.isEmpty()) {
                     SplineEditorClientState.saveTemplate(name);
                 }
             }
+            imgui.ImGui.popStyleColor();
 
             ImGui.sameLine();
-            if (ImGui.button("Load From JSON")) {
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.2f, 0.4f, 0.6f, 1.0f);
+            if (ImGui.button("Load JSON", halfW, 26)) {
                 String name = templateNameInput.get().trim();
                 if (!name.isEmpty()) {
                     Vec3 pos = mc.player.position();
@@ -272,20 +299,28 @@ public final class SplineEditorImGui {
                     SplineEditorClientState.loadTemplate(name, placementOrigin);
                 }
             }
+            imgui.ImGui.popStyleColor();
 
             ImGui.spacing();
+            ImGui.spacing();
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "ACTIONS");
             ImGui.separator();
+            ImGui.spacing();
             
-            if (ImGui.button("Clear Canvas")) {
+            if (ImGui.button("Clear Canvas", halfW, 28)) {
                 model.clear();
                 SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
             }
 
             ImGui.sameLine();
-            if (ImGui.button("Close Editor")) {
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.6f, 0.2f, 0.2f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonHovered, 0.7f, 0.3f, 0.3f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonActive, 0.8f, 0.4f, 0.4f, 1.0f);
+            if (ImGui.button("Close Editor", halfW, 28)) {
                 SplineEditorClientState.exitEditMode();
                 ImGuiManager.toggle();
             }
+            imgui.ImGui.popStyleColor(3);
         }
         ImGui.end();
     }

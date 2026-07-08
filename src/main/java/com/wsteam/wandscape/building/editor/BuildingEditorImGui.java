@@ -62,58 +62,68 @@ public final class BuildingEditorImGui {
     public static void render() {
         syncFromState();
 
-        // NoResize intentionally omitted — user can drag the left edge to resize width
         int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove;
 
         var io = ImGui.getIO();
         float y = 8;
 
-        // Set initial position/size only once; after that ImGui remembers user resize
-        ImGui.setNextWindowPos(io.getDisplaySizeX() - 308, y, ImGuiCond.FirstUseEver);
-        ImGui.setNextWindowSize(308, io.getDisplaySizeY() - 16, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowPos(io.getDisplaySizeX() - 340, y, ImGuiCond.FirstUseEver);
+        ImGui.setNextWindowSize(340, io.getDisplaySizeY() - 16, ImGuiCond.FirstUseEver);
 
         if (ImGui.begin("Building Editor", flags)) {
-            // Read actual dimensions — may differ from initial 308 after user resize
             float winW = ImGui.getWindowWidth();
             panelLeftEdge = ImGui.getWindowPosX();
 
-            // ═══ CRITICAL: always-visible controls (top) ═══
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "GENERAL CONFIGURATION");
+            ImGui.separator();
+            ImGui.spacing();
+
             ImGui.pushItemWidth(-1);
-            ImGui.inputText("ID", idBuf);
-            ImGui.inputText("Name", nameBuf);
+            ImGui.inputTextWithHint("##ID", "Building ID", idBuf);
+            ImGui.inputTextWithHint("##Name", "Display Name", nameBuf);
             ImGui.popItemWidth();
+            ImGui.spacing();
             ImGui.combo("Category", categoryIdx, CATEGORIES);
 
+            ImGui.spacing();
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "STATS & ATTRIBUTES");
             ImGui.separator();
+            ImGui.spacing();
 
-            // ── Three Values ──
             ImGui.pushItemWidth(60);
-            ImGui.inputInt("Comfort", comfort);
+            ImGui.text("Base:");
+            ImGui.sameLine(60);
+            ImGui.inputInt("C##Comfort", comfort);
             ImGui.sameLine();
-            ImGui.inputInt("Magic", magic);
+            ImGui.inputInt("M##Magic", magic);
             ImGui.sameLine();
-            ImGui.inputInt("Wonder", wonder);
+            ImGui.inputInt("W##Wonder", wonder);
+            
+            ImGui.text("Unlock:");
+            ImGui.sameLine(60);
+            ImGui.inputInt("C##UnlockC", unlockComfort);
+            ImGui.sameLine();
+            ImGui.inputInt("M##UnlockM", unlockMagic);
+            ImGui.sameLine();
+            ImGui.inputInt("W##UnlockW", unlockWonder);
             ImGui.popItemWidth();
 
-            // ── Unlock ──
-            ImGui.pushItemWidth(60);
-            ImGui.inputInt("Unlock C", unlockComfort);
-            ImGui.sameLine();
-            ImGui.inputInt("U M", unlockMagic);
-            ImGui.sameLine();
-            ImGui.inputInt("U W", unlockWonder);
-            ImGui.popItemWidth();
+            ImGui.spacing();
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "PROPERTIES");
+            ImGui.separator();
+            ImGui.spacing();
 
-            // ── Queue + Radius + Maint ──
-            ImGui.pushItemWidth(60);
-            ImGui.inputInt("QueueCap", queueCapacity);
+            ImGui.pushItemWidth(80);
+            ImGui.inputInt("Queue Cap", queueCapacity);
             ImGui.sameLine();
             ImGui.inputInt("Radius", interactionRadius);
             ImGui.popItemWidth();
+            ImGui.spacing();
 
             ImGui.pushItemWidth(-1);
-            ImGui.inputText("Blueprint", blueprintBuf);
+            ImGui.inputTextWithHint("##Blueprint", "Blueprint path", blueprintBuf);
             ImGui.popItemWidth();
+            ImGui.spacing();
 
             // ── Category-specific (collapsed) ──
             String cat = CATEGORIES[categoryIdx.get()];
@@ -158,17 +168,20 @@ public final class BuildingEditorImGui {
                 }
             }
 
-            // ═══ AABB status + action buttons (always visible) ═══
+            ImGui.spacing();
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "AABB SELECTION");
             ImGui.separator();
-            ImGui.textColored(0.6f, 0.9f, 0.4f, 1.0f, "AABB SELECTION");
+            ImGui.spacing();
+            
             if (BuildingEditorClientState.hasAABB()) {
                 BlockOffset mn = BuildingEditorClientState.getEditMin();
                 BlockOffset mx = BuildingEditorClientState.getEditMax();
-                ImGui.text(String.format("[%d,%d,%d] -> [%d,%d,%d]", mn.x(), mn.y(), mn.z(), mx.x(), mx.y(), mx.z()));
-                ImGui.text(BuildingEditorClientState.getPattern().size() + " blocks");
+                ImGui.text(String.format("Bounds: [%d, %d, %d] -> [%d, %d, %d]", mn.x(), mn.y(), mn.z(), mx.x(), mx.y(), mx.z()));
+                ImGui.textColored(0.6f, 0.9f, 0.4f, 1.0f, "Blocks: " + BuildingEditorClientState.getPattern().size());
             } else {
-                ImGui.textDisabled("No AABB yet");
+                ImGui.textDisabled("No AABB defined");
             }
+            ImGui.spacing();
 
             ImGui.checkbox("Auto Anchor (bottom-center)", autoAnchor);
             BuildingEditorClientState.setAutoAnchorEnabled(autoAnchor.get());
@@ -189,33 +202,60 @@ public final class BuildingEditorImGui {
                 }
             }
 
-            // Buttons — stacked vertically (width follows panel)
-            float btnW = winW - 20;
-            if (ImGui.button("Set Anchor (crosshair)", btnW, 24)) {
+            ImGui.spacing();
+            ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "ACTIONS");
+            ImGui.separator();
+            ImGui.spacing();
+
+            float btnW = winW - 24;
+            
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.2f, 0.3f, 0.4f, 1.0f);
+            if (ImGui.button("Set Anchor (crosshair)", btnW, 26)) {
                 BuildingEditorInputHandler.setAnchorAtCrosshair();
             }
-            if (ImGui.button("Snap Max (crosshair)", btnW, 24)) {
+            if (ImGui.button("Snap Max (crosshair)", btnW, 26)) {
                 BuildingEditorInputHandler.snapMax();
             }
-            if (ImGui.button("Scan Blocks", btnW, 24)) {
+            imgui.ImGui.popStyleColor();
+            
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.2f, 0.5f, 0.2f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonHovered, 0.3f, 0.6f, 0.3f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonActive, 0.4f, 0.7f, 0.4f, 1.0f);
+            if (ImGui.button("Scan Blocks", btnW, 30)) {
                 BuildingEditorInputHandler.scanNow();
             }
+            imgui.ImGui.popStyleColor(3);
 
+            ImGui.spacing();
             ImGui.separator();
-            if (ImGui.button("Export JSON", btnW, 28)) {
+            ImGui.spacing();
+
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.1f, 0.4f, 0.7f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonHovered, 0.2f, 0.5f, 0.8f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonActive, 0.3f, 0.6f, 0.9f, 1.0f);
+            if (ImGui.button("Export JSON", btnW, 32)) {
                 BuildingEditorController.doExport();
             }
-            if (ImGui.button("Export Road Template", btnW, 24)) {
+            imgui.ImGui.popStyleColor(3);
+            
+            if (ImGui.button("Export Road Template", btnW, 26)) {
                 BuildingEditorController.doExportRoadTemplate();
             }
-            if (ImGui.button("Preview JSON", btnW, 22)) {
+            if (ImGui.button("Preview JSON", btnW, 26)) {
                 showPreview = !showPreview;
                 if (showPreview) previewJson = BuildingEditorClientState.buildExportJson();
             }
-            if (ImGui.button("Exit Editor", btnW, 28)) {
+            
+            ImGui.spacing();
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.6f, 0.2f, 0.2f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonHovered, 0.7f, 0.3f, 0.3f, 1.0f);
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonActive, 0.8f, 0.4f, 0.4f, 1.0f);
+            if (ImGui.button("Exit Editor", btnW, 32)) {
                 BuildingEditorController.doExit();
             }
+            imgui.ImGui.popStyleColor(3);
 
+            ImGui.spacing();
             ImGui.textDisabled("L-click axis arrow = drag");
             ImGui.textDisabled("R-hold = look  M-click = pattern");
         }
