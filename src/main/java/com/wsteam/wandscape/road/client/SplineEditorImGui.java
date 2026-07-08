@@ -242,6 +242,11 @@ public final class SplineEditorImGui {
                     SplineEditorClientState.setArrayOffsetPitch(uiOffsetPitch[0]);
                     SplineEditorClientState.setArrayOffsetYaw(uiOffsetYaw[0]);
                 }
+                
+                ImGui.spacing();
+                if (ImGui.button("Build Array Task", -1, 28)) {
+                    SplineEditorController.doBuildArray();
+                }
             }
 
             ImGui.spacing();

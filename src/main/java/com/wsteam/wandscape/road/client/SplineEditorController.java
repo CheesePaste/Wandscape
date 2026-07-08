@@ -153,4 +153,78 @@ public final class SplineEditorController {
         while (mc.options.keyAttack.consumeClick()) {}
         while (mc.options.keyUse.consumeClick()) {}
     }
+
+    public static void doBuildArray() {
+        com.wsteam.wandscape.road.core.SplineModel model = SplineEditorClientState.getModel();
+        com.wsteam.wandscape.road.core.RoadTemplate activeTemplate = SplineEditorClientState.getActiveTemplate();
+        double stepDistance = SplineEditorClientState.getArrayStepDistance();
+
+        if (model.getPoints().isEmpty() || activeTemplate == null || activeTemplate.getBlocks().isEmpty()) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cCannot build: empty model or template"), true);
+            }
+            return;
+        }
+
+        java.util.List<com.wsteam.wandscape.road.core.CurveSample> samples = model.tessellate(stepDistance);
+        if (samples.isEmpty()) return;
+
+        com.google.gson.JsonArray tiles = new com.google.gson.JsonArray();
+
+        for (com.wsteam.wandscape.road.core.CurveSample sample : samples) {
+            SplineVec3 pos = sample.position();
+            SplineVec3 tan = sample.tangent();
+            org.joml.Vector3f forward = new org.joml.Vector3f((float)tan.x(), (float)tan.y(), (float)tan.z()).normalize();
+            org.joml.Vector3f right = new org.joml.Vector3f(0, 1, 0).cross(forward);
+            if (right.lengthSquared() < 0.0001f) {
+                right.set(1, 0, 0).cross(forward);
+            }
+            right.normalize();
+            org.joml.Vector3f up = new org.joml.Vector3f(forward).cross(right).normalize();
+
+            org.joml.Matrix4f m = new org.joml.Matrix4f();
+            m.set(
+                    right.x, right.y, right.z, 0f,
+                    up.x,    up.y,    up.z,    0f,
+                    forward.x, forward.y, forward.z, 0f,
+                    (float)pos.x(),   (float)pos.y(),   (float)pos.z(),   1f
+            );
+
+            float roll = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetRoll());
+            float pitch = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetPitch());
+            float yaw = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetYaw());
+
+            if (roll != 0) m.rotateLocalZ(roll);
+            if (pitch != 0) m.rotateLocalX(pitch);
+            if (yaw != 0) m.rotateLocalY(yaw);
+
+            for (com.wsteam.wandscape.road.core.RoadTemplate.RoadTemplateBlock b : activeTemplate.getBlocks()) {
+                org.joml.Vector4f localPos = new org.joml.Vector4f((float)b.x() + 0.5f, (float)b.y(), (float)b.z() + 0.5f, 1.0f);
+                localPos.mul(m);
+
+                int wx = (int) Math.floor(localPos.x);
+                int wy = (int) Math.floor(localPos.y);
+                int wz = (int) Math.floor(localPos.z);
+
+                com.google.gson.JsonObject tile = new com.google.gson.JsonObject();
+                com.google.gson.JsonArray posArr = new com.google.gson.JsonArray();
+                posArr.add(wx);
+                posArr.add(wy);
+                posArr.add(wz);
+                tile.add("pos", posArr);
+                tile.addProperty("block", b.blockState());
+                tiles.add(tile);
+            }
+        }
+        
+        if (tiles.isEmpty()) return;
+
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.SplineBuildPacket(tiles.toString()));
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aSent build task with " + tiles.size() + " blocks!"), true);
+        }
+    }
 }
