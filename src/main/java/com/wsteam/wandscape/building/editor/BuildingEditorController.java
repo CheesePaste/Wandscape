@@ -238,6 +238,42 @@ public final class BuildingEditorController {
         Log.info(TAG, "[BuildEditor] Export packet sent ({} chars)", json.length());
     }
 
+    public static void doExportRoadTemplate() {
+        if (!BuildingEditorClientState.hasAABB()) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[BuildEditor] §cNothing to export — set an AABB first"), true);
+            }
+            return;
+        }
+
+        String id = BuildingEditorClientState.getBuildingId();
+        if (id == null || id.isEmpty()) {
+            id = "custom_road_" + (System.currentTimeMillis() % 10000);
+        }
+
+        com.wsteam.wandscape.road.core.RoadTemplate t = new com.wsteam.wandscape.road.core.RoadTemplate(id);
+
+        java.util.List<com.wsteam.wandscape.building.data.BlockOffset> pat = BuildingEditorClientState.getPattern();
+        java.util.Map<String, String> bm = BuildingEditorClientState.getBlockMapping();
+
+        for (com.wsteam.wandscape.building.data.BlockOffset off : pat) {
+            String stateStr = bm.get(off.toKey());
+            if (stateStr != null) {
+                t.addBlock(off.x(), off.y(), off.z(), stateStr);
+            }
+        }
+
+        com.wsteam.wandscape.road.client.SplineEditorClientState.registerTemplate(t);
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.displayClientMessage(
+                    Component.literal("[BuildEditor] §aExported & registered road template: " + id), true);
+        }
+    }
+
     // ── Vanilla drain ──
 
     private static void drainVanillaInput(Minecraft mc) {

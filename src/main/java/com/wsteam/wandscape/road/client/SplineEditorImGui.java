@@ -197,7 +197,21 @@ public final class SplineEditorImGui {
 
             // ── Array Generation Config ──
             ImGui.textColored(100, 255, 100, 255, "Array Generation:");
-            ImGui.text("Active Blueprint: " + SplineEditorClientState.getActiveTemplate().getId());
+            
+            java.util.List<String> templateIds = SplineEditorClientState.getAvailableTemplateIds();
+            if (!templateIds.isEmpty()) {
+                String currentId = SplineEditorClientState.getActiveTemplateId();
+                int idx = templateIds.indexOf(currentId);
+                if (idx < 0) idx = 0;
+                
+                imgui.type.ImInt activeTemplateIdx = new imgui.type.ImInt(idx);
+                String[] templateArray = templateIds.toArray(new String[0]);
+                if (ImGui.combo("Blueprint", activeTemplateIdx, templateArray)) {
+                    SplineEditorClientState.setActiveTemplateId(templateArray[activeTemplateIdx.get()]);
+                }
+            } else {
+                ImGui.textDisabled("No blueprints available.");
+            }
             
             uiArrayPreview.set(SplineEditorClientState.isArrayPreview());
             if (ImGui.checkbox("Enable Array Preview", uiArrayPreview)) {

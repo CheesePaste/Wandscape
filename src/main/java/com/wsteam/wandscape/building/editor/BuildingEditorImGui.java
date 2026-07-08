@@ -205,6 +205,9 @@ public final class BuildingEditorImGui {
             if (ImGui.button("Export JSON", btnW, 28)) {
                 BuildingEditorController.doExport();
             }
+            if (ImGui.button("Export Road Template", btnW, 24)) {
+                BuildingEditorController.doExportRoadTemplate();
+            }
             if (ImGui.button("Preview JSON", btnW, 22)) {
                 showPreview = !showPreview;
                 if (showPreview) previewJson = BuildingEditorClientState.buildExportJson();

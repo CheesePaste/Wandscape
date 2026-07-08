@@ -53,14 +53,18 @@ public final class SplineEditorClientState {
     private static volatile double arrayOffsetPitch = 0.0;
     private static volatile double arrayOffsetYaw = 0.0;
     
-    private static final com.wsteam.wandscape.road.core.RoadTemplate testTemplate;
+    // Registry of loaded/exported road templates
+    private static final java.util.Map<String, com.wsteam.wandscape.road.core.RoadTemplate> templateRegistry = new java.util.LinkedHashMap<>();
+    private static volatile String activeTemplateId = "test_road_5x1";
+
     static {
-        testTemplate = new com.wsteam.wandscape.road.core.RoadTemplate("test_road_5x1");
+        com.wsteam.wandscape.road.core.RoadTemplate testTemplate = new com.wsteam.wandscape.road.core.RoadTemplate("test_road_5x1");
         testTemplate.addBlock(-2, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock(-1, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock( 0, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock( 1, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock( 2, 0, 0, "minecraft:stone_bricks");
+        templateRegistry.put(testTemplate.getId(), testTemplate);
     }
 
     private SplineEditorClientState() {}
@@ -154,7 +158,26 @@ public final class SplineEditorClientState {
     public static void setArrayOffsetYaw(double yaw) { arrayOffsetYaw = yaw; }
 
     public static com.wsteam.wandscape.road.core.RoadTemplate getActiveTemplate() {
-        return testTemplate;
+        return templateRegistry.get(activeTemplateId);
+    }
+
+    public static String getActiveTemplateId() {
+        return activeTemplateId;
+    }
+
+    public static void setActiveTemplateId(String id) {
+        if (templateRegistry.containsKey(id)) {
+            activeTemplateId = id;
+        }
+    }
+
+    public static void registerTemplate(com.wsteam.wandscape.road.core.RoadTemplate template) {
+        templateRegistry.put(template.getId(), template);
+        activeTemplateId = template.getId();
+    }
+
+    public static List<String> getAvailableTemplateIds() {
+        return new ArrayList<>(templateRegistry.keySet());
     }
 
     // ── Serialization DTOs ──
