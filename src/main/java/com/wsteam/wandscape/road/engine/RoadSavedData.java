@@ -151,13 +151,13 @@ public final class RoadSavedData extends SavedData {
                 status = RoadEdge.EdgeStatus.PLANNED;
             }
 
-            // Path (3D: x/y/z — backward compat: y defaults to 64 if missing)
+            // Path (3D: x/y/z)
             List<PathPoint> path = new ArrayList<>();
             ListTag pathTag = e.getList("path", Tag.TAG_COMPOUND);
             for (int j = 0; j < pathTag.size(); j++) {
                 CompoundTag pt = pathTag.getCompound(j);
                 int px = pt.getInt("x");
-                int py = pt.contains("y") ? pt.getInt("y") : 64;
+                int py = pt.getInt("y");
                 int pz = pt.getInt("z");
                 path.add(new PathPoint(px, py, pz));
             }

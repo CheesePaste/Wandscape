@@ -27,8 +27,8 @@ import java.util.Map;
  * matching the format described in {@code architecture/data/blueprints.md}.
  * The JSON is sent to the server for writing to {@code data/wandscape/blueprints/}.
  *
- * <p>TODO: Implement actual NeoForge network packet when the server-side
- * handler is ready. Currently logs the JSON to console.
+ * <p>Sends the JSON to the server via {@link BlueprintSavePacket} for writing
+ * to {@code <world_save>/wandscape/blueprints/<id>.json}.
  */
 public final class BlueprintEditorNetwork {
 
@@ -128,12 +128,11 @@ public final class BlueprintEditorNetwork {
 
     /**
      * Send a save request to the server.
-     * TODO: Replace with actual NeoForge network packet once server handler exists.
+     * Serializes the blueprint JSON and sends it via {@link BlueprintSavePacket}.
      */
     public static void sendSaveToServer(BlueprintDefinition def, String json) {
-        Log.info(TAG, "=== Blueprint JSON ===\n{}\n=== End Blueprint ===", json);
-        // TODO: Create BlueprintSavePacket and send via PacketDistributor
-        // PacketDistributor.sendToServer(new BlueprintSavePacket(def, json));
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                new BlueprintSavePacket(def.id(), json));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -430,9 +429,7 @@ public final class BlueprintEditorNetwork {
                 ExprNode block = exprFromJson(obj.get("block"));
                 ExprNode consumable = obj.has("consumable")
                         ? exprFromJson(obj.get("consumable")) : null;
-                yield consumable != null
-                        ? new StepNode.PlaceStep(at, block, consumable)
-                        : new StepNode.PlaceStep(at, block);
+                yield new StepNode.PlaceStep(at, block, consumable);
             }
             case "remove" -> new StepNode.RemoveStep(
                     exprFromJson(obj.get("at")),

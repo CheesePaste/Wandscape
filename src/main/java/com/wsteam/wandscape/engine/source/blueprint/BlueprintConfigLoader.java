@@ -237,10 +237,8 @@ public final class BlueprintConfigLoader {
             }
             return new StepNode.RequestResourceStep(entries);
         }
-        // Old format: single resource + amount (backward-compat)
-        ExprNode resource = parseExpr(obj.get("resource"));
-        ExprNode amount = parseExpr(obj.get("amount"));
-        return new StepNode.RequestResourceStep(resource, amount);
+        // Items key is required for request_resource steps
+        throw new JsonParseException("request_resource step must have an 'items' array");
     }
 
     private StepNode parseEmitEvent(JsonObject obj) {

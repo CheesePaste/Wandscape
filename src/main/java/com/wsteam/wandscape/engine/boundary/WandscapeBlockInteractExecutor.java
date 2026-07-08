@@ -426,7 +426,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 String shortId = colonIdx >= 0 ? inputItemId.substring(colonIdx + 1) : inputItemId;
                 Log.warn(TAG, "brew_potion: insufficient input item {} (need={})", inputItemId, count);
                 throw new ResourceShortageException(
-                        new ResourceStack(new ResourceId(shortId), count));
+                        List.of(new ResourceStack(new ResourceId(shortId), count)));
             }
         }
 

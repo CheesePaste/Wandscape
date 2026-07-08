@@ -96,6 +96,7 @@ import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
+import com.wsteam.wandscape.blueprint.editor.BlueprintSavePacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -456,7 +457,13 @@ public class Wandscape {
                 .playToClient(
                         TouristDataPacket.TYPE,
                         TouristDataPacket.STREAM_CODEC,
-                        (packet, ctx) -> TouristDataPacket.handleClient(packet));
+                        (packet, ctx) -> TouristDataPacket.handleClient(packet))
+                // ── Blueprint editor ──
+                .playToServer(
+                        BlueprintSavePacket.TYPE,
+                        BlueprintSavePacket.STREAM_CODEC,
+                        (packet, ctx) -> BlueprintSavePacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
