@@ -206,6 +206,19 @@ public class TouristEntity extends PathfinderMob {
     // ──────────────────────── Synched data ────────────────────────
 
     @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    protected void doPush(net.minecraft.world.entity.Entity entity) {
+        if (entity instanceof TouristEntity) {
+            return;
+        }
+        super.doPush(entity);
+    }
+
+    @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_SKIN_VARIANT, -1);
