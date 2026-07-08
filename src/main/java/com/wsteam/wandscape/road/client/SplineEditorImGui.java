@@ -29,6 +29,13 @@ public final class SplineEditorImGui {
     private static final ImDouble globalShiftY = new ImDouble(0.0);
     private static final ImDouble globalShiftZ = new ImDouble(0.0);
 
+    // Array Generation UI binding
+    private static final ImBoolean uiArrayPreview = new ImBoolean(false);
+    private static final ImDouble uiStepDistance = new ImDouble(2.0);
+    private static final float[] uiOffsetRoll = new float[]{0.0f};
+    private static final float[] uiOffsetPitch = new float[]{0.0f};
+    private static final float[] uiOffsetYaw = new float[]{0.0f};
+
     private SplineEditorImGui() {}
 
     public static void render() {
@@ -182,6 +189,44 @@ public final class SplineEditorImGui {
                 if (ImGui.button("Delete Selected Point")) {
                     model.removePoint(selectedIdx);
                     SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                }
+            }
+
+            ImGui.spacing();
+            ImGui.separator();
+
+            // ── Array Generation Config ──
+            ImGui.textColored(100, 255, 100, 255, "Array Generation:");
+            ImGui.text("Active Blueprint: " + SplineEditorClientState.getActiveTemplate().getId());
+            
+            uiArrayPreview.set(SplineEditorClientState.isArrayPreview());
+            if (ImGui.checkbox("Enable Array Preview", uiArrayPreview)) {
+                SplineEditorClientState.setArrayPreview(uiArrayPreview.get());
+            }
+
+            if (SplineEditorClientState.isArrayPreview()) {
+                uiStepDistance.set(SplineEditorClientState.getArrayStepDistance());
+                ImGui.pushItemWidth(100);
+                if (ImGui.inputDouble("Step Distance", uiStepDistance, 0.5, 2.0, "%.2f")) {
+                    SplineEditorClientState.setArrayStepDistance(Math.max(0.1, uiStepDistance.get()));
+                }
+                ImGui.popItemWidth();
+
+                uiOffsetRoll[0] = (float) SplineEditorClientState.getArrayOffsetRoll();
+                uiOffsetPitch[0] = (float) SplineEditorClientState.getArrayOffsetPitch();
+                uiOffsetYaw[0] = (float) SplineEditorClientState.getArrayOffsetYaw();
+
+                boolean rotChanged = false;
+                ImGui.pushItemWidth(150);
+                rotChanged |= ImGui.sliderFloat("Roll", uiOffsetRoll, -180.0f, 180.0f, "%.1f deg");
+                rotChanged |= ImGui.sliderFloat("Pitch", uiOffsetPitch, -180.0f, 180.0f, "%.1f deg");
+                rotChanged |= ImGui.sliderFloat("Yaw", uiOffsetYaw, -180.0f, 180.0f, "%.1f deg");
+                ImGui.popItemWidth();
+
+                if (rotChanged) {
+                    SplineEditorClientState.setArrayOffsetRoll(uiOffsetRoll[0]);
+                    SplineEditorClientState.setArrayOffsetPitch(uiOffsetPitch[0]);
+                    SplineEditorClientState.setArrayOffsetYaw(uiOffsetYaw[0]);
                 }
             }
 

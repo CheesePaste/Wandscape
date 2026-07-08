@@ -46,6 +46,23 @@ public final class SplineEditorClientState {
     private static volatile AxisDrag hoveredAxis = AxisDrag.NONE;
     private static volatile AxisDrag draggingAxis = AxisDrag.NONE;
 
+    // Array Generation / Preview state
+    private static volatile boolean arrayPreview = false;
+    private static volatile double arrayStepDistance = 2.0;
+    private static volatile double arrayOffsetRoll = 0.0;
+    private static volatile double arrayOffsetPitch = 0.0;
+    private static volatile double arrayOffsetYaw = 0.0;
+    
+    private static final com.wsteam.wandscape.road.core.RoadTemplate testTemplate;
+    static {
+        testTemplate = new com.wsteam.wandscape.road.core.RoadTemplate("test_road_5x1");
+        testTemplate.addBlock(-2, 0, 0, "minecraft:stone_bricks");
+        testTemplate.addBlock(-1, 0, 0, "minecraft:stone_bricks");
+        testTemplate.addBlock( 0, 0, 0, "minecraft:stone_bricks");
+        testTemplate.addBlock( 1, 0, 0, "minecraft:stone_bricks");
+        testTemplate.addBlock( 2, 0, 0, "minecraft:stone_bricks");
+    }
+
     private SplineEditorClientState() {}
 
     public static boolean isEditing() {
@@ -117,6 +134,27 @@ public final class SplineEditorClientState {
 
     public static boolean isDragging() {
         return draggingAxis != AxisDrag.NONE;
+    }
+
+    // ── Array Generation Getters/Setters ──
+
+    public static boolean isArrayPreview() { return arrayPreview; }
+    public static void setArrayPreview(boolean preview) { arrayPreview = preview; }
+
+    public static double getArrayStepDistance() { return arrayStepDistance; }
+    public static void setArrayStepDistance(double dist) { arrayStepDistance = dist; }
+
+    public static double getArrayOffsetRoll() { return arrayOffsetRoll; }
+    public static void setArrayOffsetRoll(double roll) { arrayOffsetRoll = roll; }
+
+    public static double getArrayOffsetPitch() { return arrayOffsetPitch; }
+    public static void setArrayOffsetPitch(double pitch) { arrayOffsetPitch = pitch; }
+
+    public static double getArrayOffsetYaw() { return arrayOffsetYaw; }
+    public static void setArrayOffsetYaw(double yaw) { arrayOffsetYaw = yaw; }
+
+    public static com.wsteam.wandscape.road.core.RoadTemplate getActiveTemplate() {
+        return testTemplate;
     }
 
     // ── Serialization DTOs ──

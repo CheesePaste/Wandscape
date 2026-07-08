@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wsteam.wandscape.road.core.CurveSample;
+import com.wsteam.wandscape.road.core.RoadTemplate;
 import com.wsteam.wandscape.road.core.SplineModel;
 import com.wsteam.wandscape.road.core.SplinePoint;
 import com.wsteam.wandscape.road.core.SplineVec3;
@@ -72,6 +73,7 @@ public final class SplineEditorRenderer {
         VertexConsumer vcQuads = buf.getBuffer(SplineRenderType.XRAY_QUADS);
         drawSplinePointsQuads(vcQuads, pose, model);
         drawAxisGizmo(vcQuads, pose, model);
+        drawArrayPreview(vcQuads, pose, model);
         buf.endBatch(SplineRenderType.XRAY_QUADS);
 
         // Pass 2: Render all debug LINES
@@ -135,6 +137,64 @@ public final class SplineEditorRenderer {
                 int[] nextCol = nextSelected ? new int[]{255, 180, 0, 255} : new int[]{0, 220, 220, 160};
                 AABB nextBox = getPointBox(pt.getControlNext(), 0.08);
                 fillAABB(vcQuads, pose, nextBox, nextCol[0], nextCol[1], nextCol[2], nextCol[3]);
+            }
+        }
+    }
+
+    private static void drawArrayPreview(VertexConsumer vcQuads, PoseStack.Pose pose, SplineModel model) {
+        if (!SplineEditorClientState.isArrayPreview()) return;
+
+        double stepDist = SplineEditorClientState.getArrayStepDistance();
+        List<CurveSample> samples = model.tessellate(stepDist);
+        if (samples.isEmpty()) return;
+
+        RoadTemplate template = SplineEditorClientState.getActiveTemplate();
+        if (template == null || template.getBlocks().isEmpty()) return;
+
+        float roll = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetRoll());
+        float pitch = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetPitch());
+        float yaw = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetYaw());
+
+        org.joml.Vector3f globalUp = new org.joml.Vector3f(0, 1, 0);
+
+        for (CurveSample sample : samples) {
+            SplineVec3 pos = sample.position();
+            SplineVec3 tan = sample.tangent();
+
+            org.joml.Vector3f forward = new org.joml.Vector3f((float)tan.x(), (float)tan.y(), (float)tan.z()).normalize();
+            org.joml.Vector3f right = new org.joml.Vector3f(globalUp).cross(forward);
+            if (right.lengthSquared() < 0.0001f) {
+                right.set(1, 0, 0).cross(forward);
+            }
+            right.normalize();
+            org.joml.Vector3f up = new org.joml.Vector3f(forward).cross(right).normalize();
+
+            // Build rotation matrix from basis vectors (column-major order)
+            org.joml.Matrix4f rot = new org.joml.Matrix4f(
+                right.x, right.y, right.z, 0,
+                up.x, up.y, up.z, 0,
+                forward.x, forward.y, forward.z, 0,
+                0, 0, 0, 1
+            );
+
+            org.joml.Matrix4f transform = new org.joml.Matrix4f()
+                .translate((float)pos.x(), (float)pos.y(), (float)pos.z())
+                .mul(rot)
+                .rotateY(yaw)
+                .rotateX(pitch)
+                .rotateZ(roll);
+
+            for (RoadTemplate.RoadTemplateBlock block : template.getBlocks()) {
+                org.joml.Vector3f local = new org.joml.Vector3f(block.x(), block.y(), block.z());
+                org.joml.Vector3f worldPos = transform.transformPosition(local);
+
+                int bx = (int) Math.floor(worldPos.x);
+                int by = (int) Math.floor(worldPos.y);
+                int bz = (int) Math.floor(worldPos.z);
+
+                // Draw a semi-transparent purple box to represent arrayed block
+                AABB box = new AABB(bx, by, bz, bx + 1, by + 1, bz + 1).inflate(-0.02);
+                fillAABB(vcQuads, pose, box, 180, 50, 255, 120);
             }
         }
     }
