@@ -32,6 +32,7 @@ import com.wsteam.wandscape.building.editor.BuildingEditorRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
+import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.npc.client.NpcScreen;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
@@ -221,6 +222,14 @@ public class WandscapeClient {
                 mc.setScreen(new ShopScreen(packet.buildingPos(), packet.colonyId(),
                         packet.buildingId(), packet.stock(), packet.maxStocks()));
             }
+        });
+
+        // Town hall screen
+        TownHallOpenPacket.setClientHandler(packet -> {
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new com.wsteam.wandscape.building.client.TownHallScreen(
+                            packet.buildingPos(), packet.colonyId(),
+                            packet.colonyName(), packet.level(), packet.experience(), packet.expToNext()));
         });
 
         // ImGui init is deferred to first render frame (when GL context is active)

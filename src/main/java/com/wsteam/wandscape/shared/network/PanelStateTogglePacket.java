@@ -42,8 +42,14 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     int c = buildingApi.getColonyComfort(colonyId);
                     int m = buildingApi.getColonyMagic(colonyId);
                     int w = buildingApi.getColonyWonder(colonyId);
+
+                    // Include colony level
+                    var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
+                    int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
+                    int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
+                    String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
                     PacketDistributor.sendToPlayer(player,
-                            new ColonyStatsSyncPacket(colonyId, c, m, w));
+                            new ColonyStatsSyncPacket(colonyId, c, m, w, name, lvl, exp));
 
                     // Sync building interaction areas for overlay rendering
                     List<BuildingAreaSyncPacket.BuildingEntry> entries =

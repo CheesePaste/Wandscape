@@ -1,6 +1,8 @@
 package com.wsteam.wandscape;
 
 import com.wsteam.wandscape.engine.ColonyApiImpl;
+import com.wsteam.wandscape.engine.colony.ColonyLevelData;
+import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -49,6 +51,7 @@ import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
+import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
@@ -325,6 +328,10 @@ public class Wandscape {
                         HotelOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> HotelOpenPacket.handleClient(packet))
                 .playToClient(
+                        TownHallOpenPacket.TYPE,
+                        TownHallOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> TownHallOpenPacket.handleClient(packet))
+                .playToClient(
                         PotionStationPacket.TYPE,
                         PotionStationPacket.STREAM_CODEC,
                         (packet, ctx) -> PotionStationPacket.handleClient(packet))
@@ -475,6 +482,12 @@ public class Wandscape {
                         TouristDataPacket.TYPE,
                         TouristDataPacket.STREAM_CODEC,
                         (packet, ctx) -> TouristDataPacket.handleClient(packet))
+                // ── Colony name update ──
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Blueprint editor ──
                 .playToServer(
                         BlueprintSavePacket.TYPE,
@@ -560,6 +573,13 @@ public class Wandscape {
         var recruitStorage = TavernRecruitStorage.getOrCreate(level);
         tavernApi.setStorage(recruitStorage);
         Log.info(TAG, "Tavern recruit storage wired");
+
+        // Colony level data
+        var colonyLevelData = ColonyLevelData.getOrCreate(level);
+        var colonyLevelManager = new ColonyLevelManager(colonyLevelData);
+        WandscapeEngine.setColonyLevelManager(colonyLevelManager);
+        TouristSpawnSystem.setLevelManager(colonyLevelManager);
+        Log.info(TAG, "Colony level system wired");
 
         // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
         if (world != null && world.taskPool != null) {

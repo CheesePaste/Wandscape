@@ -11,9 +11,10 @@ import java.util.UUID;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
- * Server→Client: Syncs colony evaluation values (comfort/magic/wonder) to the panel.
+ * Server→Client: Syncs colony evaluation values (comfort/magic/wonder) + name/level/exp to the panel.
  */
-public record ColonyStatsSyncPacket(UUID colonyId, int comfort, int magic, int wonder)
+public record ColonyStatsSyncPacket(UUID colonyId, int comfort, int magic, int wonder,
+                                    String colonyName, int colonyLevel, int colonyExperience)
         implements CustomPacketPayload {
 
     public static final Type<ColonyStatsSyncPacket> TYPE =
@@ -27,7 +28,8 @@ public record ColonyStatsSyncPacket(UUID colonyId, int comfort, int magic, int w
 
     public static void handleClient(ColonyStatsSyncPacket packet) {
         WandscapePanelState.setColonyStats(
-                packet.colonyId, packet.comfort, packet.magic, packet.wonder);
+                packet.colonyId, packet.comfort, packet.magic, packet.wonder,
+                packet.colonyName, packet.colonyLevel, packet.colonyExperience);
     }
 
     static void write(RegistryFriendlyByteBuf buf, ColonyStatsSyncPacket pkt) {
@@ -35,10 +37,14 @@ public record ColonyStatsSyncPacket(UUID colonyId, int comfort, int magic, int w
         buf.writeVarInt(pkt.comfort);
         buf.writeVarInt(pkt.magic);
         buf.writeVarInt(pkt.wonder);
+        buf.writeUtf(pkt.colonyName != null ? pkt.colonyName : "");
+        buf.writeVarInt(pkt.colonyLevel);
+        buf.writeVarInt(pkt.colonyExperience);
     }
 
     static ColonyStatsSyncPacket read(RegistryFriendlyByteBuf buf) {
         return new ColonyStatsSyncPacket(
-                buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+                buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                buf.readUtf(), buf.readVarInt(), buf.readVarInt());
     }
 }
