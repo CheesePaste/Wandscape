@@ -48,7 +48,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
 │   ├── system/       ECS System（注册到World.tick()）NavigationSystem + FailureAnalyzerSystem
 │   ├── service/      非ECS服务（EventBus订阅者）StatsService + AchievementService
-│   └── transport/    ItemTransportManager
+│   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │
 ├── shared/           所有包依赖的公共层
 │   ├── api/          12 个模块接口(不含AtomixExecutor/HouseApi/ManaPoolApi桩) + registry/WandscapeApis.java(静态定位器)

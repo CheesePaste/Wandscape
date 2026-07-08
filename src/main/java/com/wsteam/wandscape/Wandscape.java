@@ -101,6 +101,7 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 import com.wsteam.wandscape.wand.item.WandItem;
+import com.wsteam.wandscape.engine.transport.TransportItemEntity;
 
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -147,6 +148,13 @@ public class Wandscape {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     public static final DeferredRegister<EntityType<?>> ENTITIES =
             DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
+    public static final DeferredHolder<EntityType<?>, EntityType<TransportItemEntity>> TRANSPORT_ITEM =
+            ENTITIES.register("transport_item", () ->
+                    EntityType.Builder.<TransportItemEntity>of(TransportItemEntity::new, MobCategory.MISC)
+                            .sized(0.25f, 0.25f)
+                            .clientTrackingRange(10)
+                            .updateInterval(20)
+                            .build("transport_item"));
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
             DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
 

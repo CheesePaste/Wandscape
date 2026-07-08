@@ -271,6 +271,7 @@ public class WandscapeClient {
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
+        event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
     }
 
     @SubscribeEvent

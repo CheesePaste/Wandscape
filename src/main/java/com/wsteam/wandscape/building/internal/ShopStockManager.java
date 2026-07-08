@@ -385,18 +385,16 @@ public final class ShopStockManager {
         ItemTransportManager transporter = WandscapeEngine.getTransporter();
         if (transporter == null) return;
 
-        AtomicInteger pending = new AtomicInteger(amount);
         ItemKey key = ItemKey.of(itemId, null);
 
-        for (int i = 0; i < amount; i++) {
-            transporter.send(key, warehousePos, shopPos, level, 0, route, false)
-                .thenRun(() -> {
-                    int left = pending.decrementAndGet();
+        transporter.send(key, amount, warehousePos, shopPos, level, 0, route, false)
+            .thenRun(() -> {
+                for (int i = 0; i < amount; i++) {
                     // Deduct elements and add 1 unit to shop stock on arrival
                     addStockOnTransportArrival(buildingId, itemId, colonyId,
-                            costPerItem, left == 0 /* fire event only for last unit */);
-                });
-        }
+                            costPerItem, i == amount - 1 /* fire event only for last unit */);
+                }
+            });
 
         Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} segs)",
                 amount, itemId, warehousePos.toShortString(),

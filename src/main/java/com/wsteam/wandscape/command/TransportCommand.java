@@ -13,6 +13,9 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import com.wsteam.wandscape.engine.transport.TransportItemEntity;
 
 import java.util.concurrent.atomic.AtomicInteger;
 /**
@@ -69,9 +72,48 @@ public final class TransportCommand {
         var nodeFx = Commands.argument("fx", IntegerArgumentType.integer());
         nodeFx.then(nodeFy);
 
+        // Spawn subcommand: /wandscape transport spawn [item] [count]
+        var nodeCountSpawn = Commands.argument("count", IntegerArgumentType.integer(1, 100))
+                .executes(ctx -> spawnDebug(ctx,
+                        StringArgumentType.getString(ctx, "item"),
+                        IntegerArgumentType.getInteger(ctx, "count")));
+
+        var nodeItemSpawn = Commands.argument("item", StringArgumentType.word())
+                .executes(ctx -> spawnDebug(ctx, StringArgumentType.getString(ctx, "item"), 1));
+        nodeItemSpawn.then(nodeCountSpawn);
+
+        var nodeSpawn = Commands.literal("spawn")
+                .executes(ctx -> spawnDebug(ctx, "minecraft:stone", 5))
+                .then(nodeItemSpawn);
+
         return Commands.literal("transport")
+                .then(nodeSpawn)
                 .then(nodeFx)
                 .build();
+    }
+
+    private static int spawnDebug(CommandContext<CommandSourceStack> ctx, String itemId, int count) {
+        ServerPlayer player = getPlayer(ctx);
+        if (player == null) return 0;
+
+        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(itemId));
+        if (item == null) {
+            ctx.getSource().sendFailure(Component.literal("[Transport] Unknown item: " + itemId));
+            return 0;
+        }
+
+        ItemStack stack = new ItemStack(item, count);
+        TransportItemEntity entity = new TransportItemEntity(player.level(), player.getX(), player.getY() + 0.5, player.getZ(), stack);
+        entity.setNoGravity(true);
+        entity.setPickUpDelay(32767);
+        entity.setUnlimitedLifetime();
+        entity.noPhysics = true;
+        entity.hasImpulse = true;
+
+        player.level().addFreshEntity(entity);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "[Transport] Spawned static debug TransportItemEntity: " + itemId + " x" + count), true);
+        return 1;
     }
 
     /** Round-trip: from → player → back to from */
@@ -86,10 +128,10 @@ public final class TransportCommand {
         CommandSourceStack src = ctx.getSource();
 
         ItemKey key = ItemKey.of(itemId, null);
-        t.send(key, from, to, player.level(), -1).thenAccept(v -> {
+        t.send(key, 1, from, to, player.level(), -1).thenAccept(v -> {
             src.sendSuccess(() -> Component.literal(
                     "[Transport] " + itemId + " arrived! Returning..."), false);
-            t.send(key, to, from, player.level(), -1).thenAccept(v2 -> {
+            t.send(key, 1, to, from, player.level(), -1).thenAccept(v2 -> {
                 src.sendSuccess(() -> Component.literal(
                         "[Transport] Round-trip complete! ✓"), false);
             });
@@ -116,7 +158,7 @@ public final class TransportCommand {
         CommandSourceStack src = ctx.getSource();
 
         ItemKey key = ItemKey.of(itemId, null);
-        t.send(key, from, to, player.level(), -1).thenAccept(v -> {
+        t.send(key, 1, from, to, player.level(), -1).thenAccept(v -> {
             src.sendSuccess(() -> Component.literal(
                     "[Transport] " + itemId + " arrived at " + to.toShortString()), false);
         });
@@ -150,7 +192,7 @@ public final class TransportCommand {
             final int idx = i;
             chain = chain.thenCompose(v -> {
                 arrived.incrementAndGet();
-                return t.send(key, from, to, player.level(), -1);
+                return t.send(key, 1, from, to, player.level(), -1);
             });
         }
         chain.thenAccept(v -> {

@@ -60,7 +60,6 @@ import com.wsteam.wandscape.shared.log.Log;
 public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.BlockInteractOp> {
 
     private static final String TAG = "WandscapeBlockInteractExecutor";
-    private static final int TRANSPORT_VISUAL_COUNT = 3; // max ItemEntities per action
 
     @Nullable
     private static ElementMappingLoader elementMappingLoader;
@@ -470,12 +469,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         List<RouteSegment> route = planRoute(colonyId, from, to, npc.level());
 
         ItemKey key = ItemKey.of(itemId, null);
-        int visualCount = Math.min(amount, TRANSPORT_VISUAL_COUNT);
-        for (int i = 0; i < visualCount; i++) {
-            transporter.send(key, from, to, npc.level(), npcId, route);
-        }
-        Log.debug(TAG, "gather transport: {} x{}({}) NPC→warehouse visual={}x{}",
-                elementName, amount, itemId, visualCount, itemId);
+        transporter.send(key, amount, from, to, npc.level(), npcId, route);
+        Log.debug(TAG, "gather transport: {} x{}({}) NPC→warehouse",
+                elementName, amount, itemId);
     }
 
     /** Launch transport animation for produced items (synthesize/craft_wand/brew_potion). */
@@ -489,12 +485,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos from = npc.blockPosition();
         List<RouteSegment> route = planRoute(colonyId, from, to, npc.level());
 
-        int visualCount = Math.min(count, TRANSPORT_VISUAL_COUNT);
-        for (int i = 0; i < visualCount; i++) {
-            transporter.send(outputKey, from, to, npc.level(), npcId, route);
-        }
-        Log.debug(TAG, "production transport: {} x{}(visual={}) NPC→warehouse",
-                outputKey.itemId(), count, visualCount);
+        transporter.send(outputKey, count, from, to, npc.level(), npcId, route);
+        Log.debug(TAG, "production transport: {} x{} NPC→warehouse",
+                outputKey.itemId(), count);
     }
 
     /** Map an element name to a representative MC block ID for visual transport. */

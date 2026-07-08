@@ -45,16 +45,16 @@ public class ItemTransportManager {
      * @param route      pre-planned route from {@link RoadRouter#plan}, or null/empty
      * @return future that completes when the item reaches its destination
      */
-    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
+    public CompletableFuture<Void> send(ItemKey key, int count, BlockPos from, BlockPos to,
                                         Level level, long ownerNpcId,
                                         @Nullable List<RouteSegment> route) {
-        return send(key, from, to, level, ownerNpcId, route, false);
+        return send(key, count, from, to, level, ownerNpcId, route, false);
     }
 
     /** Convenience overload — direct path without route. */
-    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
+    public CompletableFuture<Void> send(ItemKey key, int count, BlockPos from, BlockPos to,
                                         Level level, long ownerNpcId) {
-        return send(key, from, to, level, ownerNpcId, null, false);
+        return send(key, count, from, to, level, ownerNpcId, null, false);
     }
 
     /**
@@ -64,12 +64,12 @@ public class ItemTransportManager {
      *                  and MUST be returned on {@link #cancelForNpc}. If false,
      *                  the item was only reserved or is purely visual — no return.
      */
-    public CompletableFuture<Void> send(ItemKey key, BlockPos from, BlockPos to,
+    public CompletableFuture<Void> send(ItemKey key, int count, BlockPos from, BlockPos to,
                                         Level level, long ownerNpcId,
                                         @Nullable List<RouteSegment> route,
                                         boolean ownsItem) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        ItemEntity entity = spawnVisual(key, from, level);
+        ItemEntity entity = spawnVisual(key, count, from, level);
         if (entity == null) {
             future.complete(null);
             return future;
@@ -84,7 +84,7 @@ public class ItemTransportManager {
                     false /* arc ON for direct path */));
         }
 
-        ActiveTransport t = new ActiveTransport(future, entity, key,
+        ActiveTransport t = new ActiveTransport(future, entity, key, count,
                 ownerNpcId, legs, 0, 0, ownsItem);
         active.add(t);
 
@@ -109,7 +109,7 @@ public class ItemTransportManager {
         }
         for (ActiveTransport t : toCancel) {
             if (t.ownsItem) {
-                bank.add(colonyId, t.itemKey, 1);
+                bank.add(colonyId, t.itemKey, t.count);
             }
             t.entity.discard();
             t.future.cancel(false);
@@ -231,13 +231,13 @@ public class ItemTransportManager {
 
     /** Spawn a no-pickup, no-physics ItemEntity for visual only. */
     @Nullable
-    private static ItemEntity spawnVisual(ItemKey key, BlockPos pos, Level level) {
+    private static ItemEntity spawnVisual(ItemKey key, int count, BlockPos pos, Level level) {
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(key.itemId()));
         if (item == null) {
             Log.warn(TAG, "[Transport] unknown item: {}", key.itemId());
             return null;
         }
-        ItemStack stack = new ItemStack(item, 1);
+        ItemStack stack = new ItemStack(item, count);
         if (key.nbt() != null && !key.nbt().isEmpty()) {
             stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                     net.minecraft.world.item.component.CustomData.of(key.nbt().copy()));
@@ -279,6 +279,7 @@ public class ItemTransportManager {
         final CompletableFuture<Void> future;
         final ItemEntity entity;
         final ItemKey itemKey;
+        final int count;
         final long ownerNpcId;
         final List<Leg> legs;
         int legIndex;
@@ -287,12 +288,13 @@ public class ItemTransportManager {
         final boolean ownsItem;
 
         ActiveTransport(CompletableFuture<Void> future, ItemEntity entity,
-                       ItemKey itemKey, long ownerNpcId,
+                       ItemKey itemKey, int count, long ownerNpcId,
                        List<Leg> legs, int legIndex, int segmentElapsed,
                        boolean ownsItem) {
             this.future = future;
             this.entity = entity;
             this.itemKey = itemKey;
+            this.count = count;
             this.ownerNpcId = ownerNpcId;
             this.legs = legs;
             this.legIndex = legIndex;
