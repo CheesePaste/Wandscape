@@ -245,3 +245,10 @@
 **为什么 engine/system/ 拆分为 system/ + service/？** `engine/system/` 里混了两类完全不同的事物：(1) 实现 `core/ecs/System` 接口、注册到 `World.tick()` 的真正 ECS System；(2) 通过 `world.eventBus.subscribe()` 注册的纯事件订阅者。前者是 ECS 调度的组成部分，后者是旁路服务。混在一起让开发者无法从包名判断"这个 System 是 tick 驱动的还是事件驱动的"。拆分后 `engine/system/` 只放 ECS System，`engine/service/` 只放事件订阅者，各自职责单一。
 
 **为什么 StatsSystem/AchievementSystem 改名？** 叫 "System" 意味着它跟 NavigationSystem 和 FailureAnalyzerSystem 是同类事物——但实际上它既不实现 `core/ecs/System`，也不被 tick 驱动。命名误导比命名不统一更糟糕，因为会让新开发者花费无意义的精力去理解它们之间的异同。`StatsService` 和 `AchievementService` 准确表达了它们的实际角色：记录数据、提供服务。
+
+## 样条线模型编辑器 (Spline Model Editor) (2026-07-08)
+
+**为什么样条线编辑器是独立几何模型编辑器而非直接接入 road/ 铺设？** 用户希望样条线专注于纯几何线段（类似 Houdini 风格的 Curve 节点），让其上的宽度、方块材质或高级平铺（Sweep/Array）完全由后续的蓝图阵列系统读取样条线来自由决定。这极大地解耦了“路径几何”与“物理平铺物”，提供极高的扩展性。
+
+**为什么采用绝对世界坐标编辑，相对第一个点保存？** 在 3D 世界中直接用绝对坐标能够让玩家直观地在场景中通过 Gizmo 轴在任意坐标拉伸曲线。而在序列化为 JSON 模板时，通过以第一个锚点为 $(0, 0, 0)$ 原点计算所有点和控制柄的偏移，实现了模板的局部化导出。这使得同一条曲线可以随意应用（平铺）到任意世界原点，消除了绝对坐标的耦合。
+

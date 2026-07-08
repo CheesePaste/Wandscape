@@ -26,6 +26,10 @@
 - **`PathPoint.java`** — 三维路径点
 - **`RouteSegment.java`** — 运输路线直线段（from→to）
 - **`XZPoint.java`** — 二维 XZ 平面点
+- **`SplineVec3.java`** — 纯 Java 3D 浮点向量数学类
+- **`CurveSample.java`** — 样条线插值采样（含位置与切线方向）
+- **`SplinePoint.java`** — 样条线控制点（含锚点、两个控制手柄及对称锁）
+- **`SplineModel.java`** — 三次贝塞尔样条曲线模型（含插值与细分算法）
 
 ## algorithm/ — 算法（纯 Java）
 
@@ -57,6 +61,11 @@
 - **RoadProjectionClientState** — 道路投影模式状态（IDLE/PLANNING 双态机，路径点队列）
 - **RoadProjectionController** — 每 tick 输入处理器（左键放置路径点/后退删除/回车提交）
 - **RoadProjectionRenderer** — 世界空间渲染（路网边按状态着色/节点/锚点光束/路径点标记）
+- **SplineEditorClientState** — 样条线编辑器客户端状态管理，提供相对坐标模板 JSON 导入/导出
+- **SplineEditorController** — tick 循环接管，WASD 飞行控制，右键旋转分流
+- **SplineEditorInputHandler** — 3D 世界鼠标射线交互，锚点/控制点 AABB 拾取，Gizmo 轴拖曳计算
+- **SplineEditorRenderer** — X-Ray 穿透世界深度渲染，绘制发光曲线段、控制柄虚线、高亮锚点与 3D Gizmo
+- **SplineEditorImGui** — ImGui 侧面板（微调坐标、模板读写、点列表、对称/平移控件）
 
 ## 网络包 (network/) — 6 个文件
 
@@ -68,6 +77,7 @@
 | RoadEditorTogglePacket | C→S | 切换道路编辑器模式 |
 | RoadNetworkSyncPacket | S→C | 同步道路网络数据 |
 | RoadEditorNetwork | — | 道路编辑器网络通信管理 |
+| SplineEditorEnterPacket | S→C | 控制客户端进入/退出样条线编辑器 |
 
 ## 服务端 (server/)
 

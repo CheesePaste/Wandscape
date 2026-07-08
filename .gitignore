@@ -40,4 +40,4 @@ run/
 repo/
 !**/src/**/repo/
 .agents
-AGENT.md
+AGENTS.md

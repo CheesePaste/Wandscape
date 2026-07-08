@@ -126,6 +126,8 @@ public class WandscapeClient {
         BuildingDebugOverlay.register();
         BuildingEditorController.register();
         BuildingEditorRenderer.register();
+        com.wsteam.wandscape.road.client.SplineEditorController.register();
+        com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
         BuildingEditorAxisRenderer.register();
         BuildingEditorInputHandler.register();
         TouristDebugRenderer.register();

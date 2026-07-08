@@ -34,6 +34,7 @@ import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
 import com.wsteam.wandscape.command.BlueprintEditorCommand;
+import com.wsteam.wandscape.command.SplineEditorCommand;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
@@ -427,6 +428,10 @@ public class Wandscape {
                         BuildingEditorExportResultPacket.TYPE,
                         BuildingEditorExportResultPacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingEditorExportResultPacket.handleClient(packet))
+                .playToClient(
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.road.network.SplineEditorEnterPacket.handleClient(packet, ctx))
                 // ── Wandscape Panel ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.PanelStateTogglePacket.TYPE,
@@ -588,6 +593,7 @@ public class Wandscape {
                 .then(RecoveryCommand.node())
                 .then(BuildEditorCommand.node())
                 .then(BlueprintEditorCommand.node())
+                .then(SplineEditorCommand.node())
                 .then(SeedWarehouseCommand.node())
                 .then(ConsumeWarehouseCommand.node())
                 .then(StressTestCommand.buildNode())

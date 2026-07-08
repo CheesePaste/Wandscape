@@ -128,7 +128,7 @@ public class ImGuiManager {
 
     // ── Input blocking ──
     private static boolean anyEditorActive() {
-        return BuildingEditorClientState.isEditing() || BlueprintEditorClientState.isEditing();
+        return BuildingEditorClientState.isEditing() || BlueprintEditorClientState.isEditing() || com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing();
     }
 
     @SubscribeEvent
@@ -178,6 +178,8 @@ public class ImGuiManager {
             BuildingEditorImGui.render();
         } else if (BlueprintEditorClientState.isEditing()) {
             BlueprintEditorImGui.render(getBlueprintContext()); // 这里现在一定是非 null 的
+        } else if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorImGui.render();
         } else {
             drawDebugGui();
         }
