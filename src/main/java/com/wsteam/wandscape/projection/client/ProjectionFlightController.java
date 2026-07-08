@@ -35,6 +35,7 @@ public final class ProjectionFlightController {
     private static final double PROJECTION_REACH = 64.0;
 
     // ── Input edge detection state ──
+    private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
     private static boolean wasEscapeDown = false;
 
@@ -141,10 +142,28 @@ public final class ProjectionFlightController {
     // ── Click handling ──
 
     private static void handleClicks(Minecraft mc, long window) {
+        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
 
+        boolean leftClicked = leftDown && !wasLeftDown;
         boolean rightClicked = rightDown && !wasRightDown;
+        wasLeftDown = leftDown;
         wasRightDown = rightDown;
+
+        // Left-click: rotate building 90° CCW
+        if (leftClicked) {
+            ProjectionClientState.rotate();
+            int steps = ProjectionClientState.getRotationSteps();
+            String direction = switch (steps) {
+                case 1 -> "§e90°";
+                case 2 -> "§e180°";
+                case 3 -> "§e270°";
+                default -> "§e0°";
+            };
+            mc.player.displayClientMessage(
+                    Component.literal("[Projection] §fRotation: " + direction),
+                    true);
+        }
 
         // Right-click: place building
         if (rightClicked) {
@@ -168,9 +187,10 @@ public final class ProjectionFlightController {
         if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
 
         BuildingSlot slot = slots.get(index);
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos));
+        int rotationSteps = ProjectionClientState.getRotationSteps();
+        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos, rotationSteps));
 
-        Log.info(TAG, "[Projection] Placed '{}' at {}", slot.displayName(), ghostPos);
+        Log.info(TAG, "[Projection] Placed '{}' at {} rotation={}", slot.displayName(), ghostPos, rotationSteps);
     }
 
     // ── Escape ──

@@ -38,6 +38,9 @@ public final class ProjectionClientState {
     private static final List<BuildingSlot> buildingSlots =
             Collections.synchronizedList(new ArrayList<>());
 
+    /** Number of 90° counter-clockwise rotations (0-3). 0 = original orientation. */
+    private static volatile int rotationSteps = 0;
+
     private ProjectionClientState() {}
 
     // ── Projection mode ──
@@ -64,6 +67,7 @@ public final class ProjectionClientState {
         selectedSlotIndex = 0;
         ghostPos = null;
         overlapDetected = false;
+        rotationSteps = 0;
 
         projecting = true;
 
@@ -83,6 +87,7 @@ public final class ProjectionClientState {
         selectedSlotIndex = 0;
         ghostPos = null;
         overlapDetected = false;
+        rotationSteps = 0;
         synchronized (buildingSlots) {
             buildingSlots.clear();
         }
@@ -130,6 +135,23 @@ public final class ProjectionClientState {
 
     public static void setOverlapDetected(boolean overlapped) {
         overlapDetected = overlapped;
+    }
+
+    // ── Rotation ──
+
+    /** Current rotation steps (0-3, each = 90° CCW). */
+    public static int getRotationSteps() {
+        return rotationSteps;
+    }
+
+    /** Increment rotation by one step (90° CCW), wrapping at 4. */
+    public static void rotate() {
+        rotationSteps = (rotationSteps + 1) & 3;
+    }
+
+    /** Reset rotation to 0 (original orientation). */
+    public static void resetRotation() {
+        rotationSteps = 0;
     }
 
 }

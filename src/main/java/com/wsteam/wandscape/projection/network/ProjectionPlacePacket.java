@@ -28,12 +28,14 @@ import com.wsteam.wandscape.shared.log.Log;
  *   <li>Validates the building type exists in config</li>
  *   <li>Checks position is not overlapping an existing building</li>
  *   <li>Registers the building via {@link EnqueueHelper#registerIfAbsent}</li>
- *   <li>Creates and enqueues a {@link WorkItem} for NPC construction</li>
+ *   <li>Creates and enqueues a {@link WorkItem} for NPC construction with
+ *       the specified rotation</li>
  * </ol>
  */
 public record ProjectionPlacePacket(
         String buildingTypeId,
-        BlockPos anchorPos) implements CustomPacketPayload {
+        BlockPos anchorPos,
+        int rotationSteps) implements CustomPacketPayload {
 
     private static final String TAG = "ProjectionPlacePacket";
 
@@ -80,7 +82,7 @@ public record ProjectionPlacePacket(
 
         // 3. Register building
         boolean registered = EnqueueHelper.registerIfAbsent(
-                packet.anchorPos, config, packet.buildingTypeId);
+                packet.anchorPos, config, packet.buildingTypeId, packet.rotationSteps);
 
         if (!registered) {
             player.displayClientMessage(
@@ -98,7 +100,7 @@ public record ProjectionPlacePacket(
             BuildingSavedData sd = BuildingSavedData.get(player.serverLevel());
             WorkItem workItem = EnqueueHelper.buildWorkItem(
                     config, packet.anchorPos, packet.buildingTypeId, 0,
-                    sd, buildingData.getBuildingId());
+                    sd, buildingData.getBuildingId(), packet.rotationSteps);
             api.enqueueWork(buildingData.getBuildingId(), workItem);
 
             player.displayClientMessage(
@@ -122,9 +124,10 @@ public record ProjectionPlacePacket(
     static void write(RegistryFriendlyByteBuf buf, ProjectionPlacePacket pkt) {
         buf.writeUtf(pkt.buildingTypeId);
         buf.writeBlockPos(pkt.anchorPos);
+        buf.writeVarInt(pkt.rotationSteps & 3);
     }
 
     static ProjectionPlacePacket read(RegistryFriendlyByteBuf buf) {
-        return new ProjectionPlacePacket(buf.readUtf(), buf.readBlockPos());
+        return new ProjectionPlacePacket(buf.readUtf(), buf.readBlockPos(), buf.readVarInt());
     }
 }

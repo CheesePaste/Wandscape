@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 
@@ -19,6 +20,7 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -147,18 +149,26 @@ public final class ProjectionRenderer {
             };
         };
 
+        int rotationSteps = ProjectionClientState.getRotationSteps();
+
         for (var entry : blockStates.entrySet()) {
-            BlockOffset offset = entry.getKey();
-            BlockState state = entry.getValue();
+            BlockOffset originalOffset = entry.getKey();
+            BlockState originalState = entry.getValue();
+
+            BlockOffset rotatedOffset = BuildingRotation.rotateOffset(originalOffset, rotationSteps);
+            BlockState rotatedState = originalState;
+            for (int i = 0; i < rotationSteps; i++) {
+                rotatedState = rotatedState.rotate(Rotation.COUNTERCLOCKWISE_90);
+            }
 
             poseStack.pushPose();
             poseStack.translate(
-                    ghostPos.getX() + offset.x(),
-                    ghostPos.getY() + offset.y(),
-                    ghostPos.getZ() + offset.z());
+                    ghostPos.getX() + rotatedOffset.x(),
+                    ghostPos.getY() + rotatedOffset.y(),
+                    ghostPos.getZ() + rotatedOffset.z());
 
             blockRenderer.renderSingleBlock(
-                    state, poseStack, ghostSource,
+                    rotatedState, poseStack, ghostSource,
                     FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                     ModelData.EMPTY, null);
 

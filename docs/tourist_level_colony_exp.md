@@ -232,20 +232,20 @@ exp_above_level = 500
 | TownHallScreen.java | `building/client/TownHallScreen.java` | 市政厅客户端 Screen |
 
 ### 8.2 修改文件
-
-| 文件 | 修改内容 |
-|------|---------|
-| TouristEntity.java | `onAddedToLevel()` 法师数值乘以 `(0.8 + level × 0.2)` |
-| TouristSpawnSystem.java | 重写生成逻辑（三段式分散生成）；重写 cleanup（夜间离开窗口 50 阈值 + 0-1500 tick 随机延迟）；生成时查 ColonyLevelData 获取等级分布和 targetCount |
+2
+| 文件 | 修改内容                                                                                                                                                                                                     |
+|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| TouristEntity.java | `onAddedToLevel()` 法师数值乘以 `(0.8 + level × 0.2)`                                                                                                                                                          |
+| TouristSpawnSystem.java | 重写生成逻辑（三段式分散生成）；重写 cleanup（夜间离开窗口cl 50 阈值 + 0-1500 tick 随机延迟）；生成时查 ColonyLevelData 获取等级分布和 targetCount                                                                                                   |
 | Config.java | 新增 `base_spawn_count`、`level_spawn_bonus`、`spawn_window_start/end`、`departure_window_start/end`、`night_departure_satisfaction_threshold`、`departure_delay_max_ticks`、`exp_equal_level`、`exp_above_level` |
-| Wandscape.java | 注册 TownHallOpenPacket，初始化 ColonyLevelManager |
-| WandscapePanelOverlay.java | 顶栏显示金色等级 |
-| WandscapePanelState.java | 新增 `colonyLevel` 和 `colonyExperience` 字段 |
-| WandscapeEngine.java | 新增 `ColonyLevelManager` 静态持有 |
-| BuildingInteractHandler.java | `town_hall` 分支改为发送 TownHallOpenPacket |
-| ColonyStatsSyncPacket / PanelStateTracker | 携带殖民地等级数据 |
-| WandscapeClient.java | 注册 TownHallOpenPacket 客户端 handler |
-| docs/gaps.md | 记录新系统状态 |
+| Wandscape.java | 注册 TownHallOpenPacket，初始化 ColonyLevelManager                                                                                                                                                             |
+| WandscapePanelOverlay.java | 顶栏显示金色等级                                                                                                                                                                                                 |
+| WandscapePanelState.java | 新增 `colonyLevel` 和 `colonyExperience` 字段                                                                                                                                                                 |
+| WandscapeEngine.java | 新增 `ColonyLevelManager` 静态持有                                                                                                                                                                             |
+| BuildingInteractHandler.java | `town_hall` 分支改为发送 TownHallOpenPacket                                                                                                                                                                    |
+| ColonyStatsSyncPacket / PanelStateTracker | 携带殖民地等级数据                                                                                                                                                                                                |
+| WandscapeClient.java | 注册 TownHallOpenPacket 客户端 handler                                                                                                                                                                        |
+| docs/gaps.md | 记录新系统状态                                                                                                                                                                                                  |
 
 ## 九、不做的事
 

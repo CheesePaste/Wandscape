@@ -51,6 +51,7 @@ public final class OverviewFlightController {
     private static boolean registered = false;
 
     // ── Input edge detection ──
+    private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
     /**
      * Tracks whether the cursor was in "grabbed" state last frame.
@@ -200,11 +201,29 @@ public final class OverviewFlightController {
         // ── Raycast from camera (also syncs ghost position when build is projecting) ──
         performRaycast(mc);
 
-        // ── Right click handling (skip when road mode is active — road controller handles it) ──
+        // ── Click handling (skip when road mode is active — road controller handles it) ──
         if (!RoadPlacementState.isProjecting()) {
+            boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
             boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+
+            boolean leftClicked = leftDown && !wasLeftDown;
             boolean rightClicked = rightDown && !wasRightDown;
+            wasLeftDown = leftDown;
             wasRightDown = rightDown;
+
+            // Left-click: rotate building 90° CCW (only when build mode is active)
+            if (leftClicked && ProjectionClientState.isProjecting()) {
+                ProjectionClientState.rotate();
+                int steps = ProjectionClientState.getRotationSteps();
+                String direction = switch (steps) {
+                    case 1 -> "§e90°";
+                    case 2 -> "§e180°";
+                    case 3 -> "§e270°";
+                    default -> "§70°";
+                };
+                mc.player.displayClientMessage(
+                        Component.literal("[Overview] §fRotation: " + direction), true);
+            }
 
             if (rightClicked) {
                 handleRightClick(mc);
@@ -408,8 +427,9 @@ public final class OverviewFlightController {
         if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
 
         BuildingSlot slot = slots.get(index);
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos));
-        Log.info(TAG, "[Overview] Placed '{}' at {}", slot.displayName(), ghostPos);
+        int rotationSteps = ProjectionClientState.getRotationSteps();
+        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos, rotationSteps));
+        Log.info(TAG, "[Overview] Placed '{}' at {} rotation={}", slot.displayName(), ghostPos, rotationSteps);
     }
 
     // ═══════════════════════════════════════════════════════════════════

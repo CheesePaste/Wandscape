@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.building.internal;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
+import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -51,6 +53,19 @@ public final class EnqueueHelper {
      * @return true if newly registered, false if already registered
      */
     public static boolean registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId) {
+        return registerIfAbsent(pos, config, buildingTypeId, 0);
+    }
+
+    /**
+     * Register a building with optional rotation.
+     *
+     * @param pos            the anchor position
+     * @param config         the building config
+     * @param buildingTypeId building type identifier
+     * @param rotationSteps  number of 90° CCW rotations (0-3)
+     * @return true if newly registered, false if already registered
+     */
+    public static boolean registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps) {
         try {
             BuildingApi api = WandscapeApis.getBuildingApi();
             if (api.getBuildingAt(pos) != null) {
@@ -60,7 +75,8 @@ public final class EnqueueHelper {
             UUID buildingId = UUID.randomUUID();
             BoundingBox bounds;
             if (config.boundary() != null) {
-                bounds = BuildingSavedData.computeWorldBox(pos, config.boundary());
+                BuildingConfig.BoundaryBox rotatedBoundary = BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
+                bounds = BuildingSavedData.computeWorldBox(pos, rotatedBoundary);
             } else {
                 bounds = new BoundingBox(pos);
             }
@@ -77,6 +93,16 @@ public final class EnqueueHelper {
                     config.queue().capacity()
             );
             api.registerBuilding(state);
+
+            // Apply rotation to pattern positions (overwrite the unrotated set from register())
+            if (rotationSteps != 0 && config.pattern() != null && !config.pattern().isEmpty()) {
+                Set<BlockPos> rotatedPattern = new HashSet<>();
+                for (BlockOffset off : config.pattern()) {
+                    BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, rotationSteps);
+                    rotatedPattern.add(pos.offset(rotatedOff.x(), rotatedOff.y(), rotatedOff.z()));
+                }
+                state.setPatternPositions(java.util.Collections.unmodifiableSet(rotatedPattern));
+            }
 
             // Assign colony if one exists nearby
             ColonyApiImpl.get().assignColonyIfPossible(state);
@@ -117,6 +143,19 @@ public final class EnqueueHelper {
                                           String buildingTypeId, int priority,
                                           @Nullable BuildingSavedData sd,
                                           @Nullable UUID buildingId) {
+        return buildWorkItem(config, pos, buildingTypeId, priority, sd, buildingId, 0);
+    }
+
+    /**
+     * Build a WorkItem with rotation support. When {@code rotationSteps > 0},
+     * the pattern offsets, block_mapping keys and values, and clear_offsets are
+     * all rotated 90° CCW around the Y axis by the specified number of steps.
+     */
+    public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
+                                          String buildingTypeId, int priority,
+                                          @Nullable BuildingSavedData sd,
+                                          @Nullable UUID buildingId,
+                                          int rotationSteps) {
         Map<String, JsonElement> params = new HashMap<>();
 
         params.put("anchor", posToJsonArray(pos));
@@ -147,6 +186,26 @@ public final class EnqueueHelper {
                 if (materialData != null) {
                     params.put("material_list", materialData.list());
                     params.put("material_counts", materialData.counts());
+                }
+            }
+
+            // ── Apply rotation to params if needed ──
+            if (rotationSteps != 0) {
+                rotationSteps = rotationSteps & 3;
+                // Rotate pattern (offsets)
+                if (params.containsKey("offsets")) {
+                    params.put("offsets", rotatePatternJson(
+                            params.get("offsets").getAsJsonArray(), rotationSteps));
+                }
+                // Rotate block_mapping (keys and block state values)
+                if (params.containsKey("blocks")) {
+                    params.put("blocks", rotateBlockMappingJson(
+                            params.get("blocks").getAsJsonObject(), rotationSteps));
+                }
+                // Rotate clear_offsets
+                if (params.containsKey("clear_offsets")) {
+                    params.put("clear_offsets", rotateOffsetsJson(
+                            params.get("clear_offsets").getAsJsonArray(), rotationSteps));
                 }
             }
         } else {
@@ -335,5 +394,62 @@ public final class EnqueueHelper {
     private static Level getServerLevel() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server != null ? server.overworld() : null;
+    }
+
+    // ──────────────── Rotation helpers ────────────────
+
+    /** Rotate a JSON array of [x,y,z] offset arrays by {@code steps} 90° CCW. */
+    private static JsonArray rotatePatternJson(JsonArray pattern, int steps) {
+        JsonArray result = new JsonArray();
+        for (int i = 0; i < pattern.size(); i++) {
+            JsonArray pos = pattern.get(i).getAsJsonArray();
+            BlockOffset off = new BlockOffset(pos.get(0).getAsInt(), pos.get(1).getAsInt(), pos.get(2).getAsInt());
+            BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
+            JsonArray newPos = new JsonArray();
+            newPos.add(rotated.x());
+            newPos.add(rotated.y());
+            newPos.add(rotated.z());
+            result.add(newPos);
+        }
+        return result;
+    }
+
+    /** Rotate a JSON block_mapping object (keys and block state values). */
+    private static JsonObject rotateBlockMappingJson(JsonObject mapping, int steps) {
+        JsonObject result = new JsonObject();
+        for (var entry : mapping.entrySet()) {
+            BlockOffset off = parseKey(entry.getKey());
+            if (off == null) continue;
+            BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
+            String rotatedBlock = BuildingRotation.rotateBlockStateString(entry.getValue().getAsString(), steps);
+            result.addProperty(rotatedOff.toKey(), rotatedBlock);
+        }
+        return result;
+    }
+
+    /** Rotate a JSON array of [x,y,z] clear offsets. */
+    private static JsonArray rotateOffsetsJson(JsonArray offsets, int steps) {
+        JsonArray result = new JsonArray();
+        for (int i = 0; i < offsets.size(); i++) {
+            JsonArray pos = offsets.get(i).getAsJsonArray();
+            BlockOffset off = new BlockOffset(pos.get(0).getAsInt(), pos.get(1).getAsInt(), pos.get(2).getAsInt());
+            BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
+            result.add(offsetToJson(rotated));
+        }
+        return result;
+    }
+
+    /** Parse a "x,y,z" key string into a BlockOffset. */
+    private static BlockOffset parseKey(String key) {
+        String[] parts = key.split(",");
+        if (parts.length != 3) return null;
+        try {
+            return new BlockOffset(
+                    Integer.parseInt(parts[0]),
+                    Integer.parseInt(parts[1]),
+                    Integer.parseInt(parts[2]));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
