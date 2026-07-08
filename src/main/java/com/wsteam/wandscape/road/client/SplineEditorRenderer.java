@@ -73,10 +73,12 @@ public final class SplineEditorRenderer {
         VertexConsumer vcQuads = buf.getBuffer(SplineRenderType.XRAY_QUADS);
         drawSplinePointsQuads(vcQuads, pose, model);
         drawAxisGizmo(vcQuads, pose, model);
-        drawArrayPreview(vcQuads, pose, model);
         buf.endBatch(SplineRenderType.XRAY_QUADS);
 
-        // Pass 2: Render all debug LINES
+        // Pass 2: Array Generation preview (Actual Block Models)
+        drawArrayPreview(buf, poseStack, model);
+
+        // Pass 3: Render all debug LINES
         VertexConsumer vcLines = buf.getBuffer(SplineRenderType.XRAY_LINES);
         drawSplineCurve(vcLines, pose, model);
         drawSplinePointsLines(vcLines, pose, model);
@@ -141,7 +143,7 @@ public final class SplineEditorRenderer {
         }
     }
 
-    private static void drawArrayPreview(VertexConsumer vcQuads, PoseStack.Pose pose, SplineModel model) {
+    private static void drawArrayPreview(MultiBufferSource buf, PoseStack poseStack, SplineModel model) {
         if (!SplineEditorClientState.isArrayPreview()) return;
 
         double stepDist = SplineEditorClientState.getArrayStepDistance();
@@ -156,6 +158,11 @@ public final class SplineEditorRenderer {
         float yaw = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetYaw());
 
         org.joml.Vector3f globalUp = new org.joml.Vector3f(0, 1, 0);
+
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.client.renderer.block.BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
+        int light = 0xF000F0; // FULL_BRIGHT
+        int overlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
 
         for (CurveSample sample : samples) {
             SplineVec3 pos = sample.position();
@@ -192,9 +199,15 @@ public final class SplineEditorRenderer {
                 int by = (int) Math.floor(worldPos.y);
                 int bz = (int) Math.floor(worldPos.z);
 
-                // Draw a semi-transparent purple box to represent arrayed block
-                AABB box = new AABB(bx, by, bz, bx + 1, by + 1, bz + 1).inflate(-0.02);
-                fillAABB(vcQuads, pose, box, 180, 50, 255, 120);
+                net.minecraft.world.level.block.state.BlockState state = 
+                    com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer.resolveBlockState(block.blockState());
+                
+                if (state != null) {
+                    poseStack.pushPose();
+                    poseStack.translate(bx, by, bz);
+                    blockRenderer.renderSingleBlock(state, poseStack, buf, light, overlay);
+                    poseStack.popPose();
+                }
             }
         }
     }
