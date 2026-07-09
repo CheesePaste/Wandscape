@@ -204,6 +204,14 @@ GlobalTaskPool.addTask() → SchedulerSystem → NPC 执行
 
 **零改动**: `core/` 下所有文件（PlayerManualSource、GlobalTaskPool、BlueprintRegistry 等）全部不动。
 
+## 已完成：道路样条线物流与客户端插值 (2026-07-09)
+
+### 当前覆盖
+
+- **物资丝滑运输**：原 `ItemTransportManager` 的服务端实时计算已被重构。现在在运输开始时通过 `TransportStartPacket` 发送完整的路径（包含 `SplineLeg`），由客户端实体 `TransportItemEntity` 自主负责按照 60 FPS 进行高平滑度插值计算。
+- **真弧长采样计算**：替换了之前基于欧几里得距离计算耗时的粗糙算法。现在的 `SplineLeg` 能够对路径点曲线进行细致的微小线段距离累加（Tessellation approximation），有效防止了弯道“瞬移”和物资飞行动画超速的问题，严格遵循道路加成设定。
+- **资源分配扣除修复**：修复了 `ResourceRequestExecutor` 深层的重复扣除 (double-subtraction) Bug，消除了由于中断或者多次分配引发的僵尸建造节点导致的物资阻塞情况。
+
 ## 后续阶段（概览）
 
 - **阶段 4**：殖民地生命周期 + 房屋 + 魔力池 + 祭坛 + 管理面板

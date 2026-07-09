@@ -29,6 +29,7 @@
 - **`SplineVec3.java`** — 纯 Java 3D 浮点向量数学类
 - **`CurveSample.java`** — 样条线插值采样（含位置与切线方向）
 - **`SplinePoint.java`** — 样条线控制点（含锚点、两个控制手柄及对称锁）
+- **`SplineLeg.java`** — 样条线路由腿段，包含起终点参数 `u` 及真弧长采样计算 `getApproxLength()`
 - **`SplineModel.java`** — 三次贝塞尔样条曲线模型（含插值与细分算法）
 
 ## algorithm/ — 算法（纯 Java）
@@ -78,6 +79,7 @@
 | RoadNetworkSyncPacket | S→C | 同步道路网络数据 |
 | RoadEditorNetwork | — | 道路编辑器网络通信管理 |
 | SplineEditorEnterPacket | S→C | 控制客户端进入/退出样条线编辑器 |
+| SplineBuildPacket | C→S | 提交样条线编辑结果以触发物理方块放置任务 |
 
 ## 服务端 (server/)
 
