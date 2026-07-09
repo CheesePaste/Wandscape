@@ -68,10 +68,10 @@ public class SplineModel {
         int segCount = getSegmentsCount();
         if (segCount == 0) {
             if (points.isEmpty()) {
-                return new CurveSample(SplineVec3.ZERO, new SplineVec3(1, 0, 0));
+                return new CurveSample(SplineVec3.ZERO, new SplineVec3(1, 0, 0), u);
             }
             SplineVec3 p = points.get(0).getAnchor();
-            return new CurveSample(p, new SplineVec3(1, 0, 0));
+            return new CurveSample(p, new SplineVec3(1, 0, 0), u);
         }
 
         // Clamp parameter
@@ -120,7 +120,7 @@ public class SplineModel {
             tan = pt3.subtract(pt0);
         }
 
-        return new CurveSample(pos, tan.normalize());
+        return new CurveSample(pos, tan.normalize(), u);
     }
 
     /**
@@ -132,7 +132,7 @@ public class SplineModel {
         int segCount = getSegmentsCount();
         if (segCount == 0) {
             if (!points.isEmpty()) {
-                samples.add(new CurveSample(points.get(0).getAnchor(), new SplineVec3(1, 0, 0)));
+                samples.add(new CurveSample(points.get(0).getAnchor(), new SplineVec3(1, 0, 0), 0.0));
             }
             return samples;
         }

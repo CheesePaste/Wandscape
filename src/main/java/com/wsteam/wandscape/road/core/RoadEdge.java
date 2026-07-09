@@ -30,7 +30,9 @@ public class RoadEdge {
     private final UUID fromNodeId;
     private final UUID toNodeId;
     private final String tier;
-    private final List<PathPoint> path;
+    private final SplineModel spline;
+    private final List<PathPoint> cachedPath;
+    private final List<SplinePointCache> detailedPathCache;
     private final List<Long> segmentTaskIds;
     private EdgeStatus status;
     private Long decorationTaskId; // null until decoration enqueued
@@ -41,12 +43,14 @@ public class RoadEdge {
     private final Set<PathPoint> placedBlocks = new HashSet<>();
 
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
-                    String tier, List<PathPoint> path) {
+                    String tier, SplineModel spline) {
         this.edgeId = edgeId;
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
         this.tier = tier;
-        this.path = new ArrayList<>(path);
+        this.spline = spline;
+        this.detailedPathCache = generateDetailedPathCache(spline);
+        this.cachedPath = generatePathCache(this.detailedPathCache);
         this.segmentTaskIds = new ArrayList<>();
         this.status = EdgeStatus.PLANNED;
         this.width = 3;
@@ -54,16 +58,38 @@ public class RoadEdge {
 
     /** Full constructor with status and existing task IDs (used by NBT load). */
     public RoadEdge(UUID edgeId, UUID fromNodeId, UUID toNodeId,
-                    String tier, List<PathPoint> path,
+                    String tier, SplineModel spline,
                     List<Long> segmentTaskIds, EdgeStatus status) {
         this.edgeId = edgeId;
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
         this.tier = tier;
-        this.path = new ArrayList<>(path);
+        this.spline = spline;
+        this.detailedPathCache = generateDetailedPathCache(spline);
+        this.cachedPath = generatePathCache(this.detailedPathCache);
         this.segmentTaskIds = new ArrayList<>(segmentTaskIds);
         this.status = status;
         this.width = 3;
+    }
+
+    private static List<SplinePointCache> generateDetailedPathCache(SplineModel spline) {
+        List<SplinePointCache> list = new ArrayList<>();
+        if (spline != null && !spline.getPoints().isEmpty()) {
+            for (CurveSample sample : spline.tessellate(0.5)) {
+                SplineVec3 pos = sample.position();
+                PathPoint pt = new PathPoint((int) Math.floor(pos.x()), (int) Math.floor(pos.y()), (int) Math.floor(pos.z()));
+                list.add(new SplinePointCache(pt, sample.u()));
+            }
+        }
+        return list;
+    }
+
+    private static List<PathPoint> generatePathCache(List<SplinePointCache> detailed) {
+        Set<PathPoint> unique = new java.util.LinkedHashSet<>();
+        for (SplinePointCache cache : detailed) {
+            unique.add(cache.point());
+        }
+        return new ArrayList<>(unique);
     }
 
     // ---- Getters ----
@@ -72,7 +98,9 @@ public class RoadEdge {
     public UUID getFromNodeId() { return fromNodeId; }
     public UUID getToNodeId() { return toNodeId; }
     public String getTier() { return tier; }
-    public List<PathPoint> getPath() { return List.copyOf(path); }
+    public SplineModel getSpline() { return spline; }
+    public List<PathPoint> getPath() { return List.copyOf(cachedPath); }
+    public List<SplinePointCache> getDetailedPathCache() { return List.copyOf(detailedPathCache); }
     public List<Long> getSegmentTaskIds() { return List.copyOf(segmentTaskIds); }
     public EdgeStatus getStatus() { return status; }
     public Long getDecorationTaskId() { return decorationTaskId; }
@@ -140,7 +168,7 @@ public class RoadEdge {
     public String toString() {
         return "RoadEdge[id=" + edgeId + " from=" + fromNodeId
                 + " to=" + toNodeId + " tier=" + tier
-                + " status=" + status + " pathLen=" + path.size()
+                + " status=" + status + " pathLen=" + cachedPath.size()
                 + " width=" + width
                 + " segments=" + segmentTaskIds.size() + "]";
     }

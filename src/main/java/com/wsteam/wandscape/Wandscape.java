@@ -106,6 +106,7 @@ import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 import com.wsteam.wandscape.wand.item.WandItem;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
+import com.wsteam.wandscape.engine.transport.TransportStartPacket;
 
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -493,7 +494,11 @@ public class Wandscape {
                         BlueprintSavePacket.TYPE,
                         BlueprintSavePacket.STREAM_CODEC,
                         (packet, ctx) -> BlueprintSavePacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()));
+                                (ServerPlayer) ctx.player()))
+                .playToClient(
+                        TransportStartPacket.TYPE,
+                        TransportStartPacket.STREAM_CODEC,
+                        (packet, ctx) -> TransportStartPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

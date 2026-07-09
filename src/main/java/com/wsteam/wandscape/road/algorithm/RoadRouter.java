@@ -66,7 +66,7 @@ public final class RoadRouter {
      * @param end      world position the NPC wants to reach
      * @return ordered list of segments (empty = unreachable for NPC)
      */
-    public static List<RouteSegment> planNpc(@Nullable RoadNetwork network,
+    public static TransportRoute planNpc(@Nullable RoadNetwork network,
                                              PathPoint start, PathPoint end) {
         return planNpc(network, null, start, end);
     }
@@ -80,24 +80,23 @@ public final class RoadRouter {
      * @param end       world position the NPC wants to reach
      * @return ordered list of segments (empty = unreachable for NPC)
      */
-    public static List<RouteSegment> planNpc(@Nullable RoadNetwork network,
+    public static TransportRoute planNpc(@Nullable RoadNetwork network,
                                               @Nullable RoadBlobCache blobCache,
                                               PathPoint start, PathPoint end) {
-        List<RouteSegment> segments = plan(network, blobCache, start, end);
-        if (segments.isEmpty()) return segments;
+        TransportRoute route = plan(network, blobCache, start, end);
+        if (route.isEmpty()) return route;
 
-        for (RouteSegment seg : segments) {
-            if (seg.onRoad()) continue;
-            int dy = Math.abs((int) seg.toY() - (int) seg.fromY());
+        for (SplineLeg seg : route.legs()) {
+            if (!seg.offRoad()) continue;
+            SplineVec3 startPos = seg.spline().evaluate(seg.uStart()).position();
+            SplineVec3 endPos = seg.spline().evaluate(seg.uEnd()).position();
+            int dy = Math.abs((int) endPos.y() - (int) startPos.y());
             if (dy > NPC_MAX_Y_STEP) {
-                Log.info(TAG, "NPC: rejected — off-road dy=%d > %d at (%.0f,%.0f,%.0f)→(%.0f,%.0f,%.0f)",
-                        dy, NPC_MAX_Y_STEP,
-                        seg.fromX(), seg.fromY(), seg.fromZ(),
-                        seg.toX(), seg.toY(), seg.toZ());
-                return List.of();
+                Log.info(TAG, "NPC: rejected — off-road dy=%d > %d", dy, NPC_MAX_Y_STEP);
+                return new TransportRoute(List.of());
             }
         }
-        return segments;
+        return route;
     }
 
     /**
@@ -108,7 +107,7 @@ public final class RoadRouter {
      * @param end      world position to deliver to
      * @return ordered list of segments (empty = no road available, use direct)
      */
-    public static List<RouteSegment> plan(@Nullable RoadNetwork network,
+    public static TransportRoute plan(@Nullable RoadNetwork network,
                                           PathPoint start, PathPoint end) {
         return plan(network, null, start, end);
     }
@@ -122,7 +121,7 @@ public final class RoadRouter {
      * @param end       world position to deliver to
      * @return ordered list of segments (empty = no road available, use direct)
      */
-    public static List<RouteSegment> plan(@Nullable RoadNetwork network,
+    public static TransportRoute plan(@Nullable RoadNetwork network,
                                            @Nullable RoadBlobCache blobCache,
                                            PathPoint start, PathPoint end) {
         // ── 0. Direct distance baseline ──
@@ -134,7 +133,7 @@ public final class RoadRouter {
 
         if (!hasNetwork && !hasBlobs) {
             Log.info(TAG, "No road network and no blobs — direct fly %d blocks", directDist);
-            return List.of();
+            return new TransportRoute(List.of());
         }
 
         Log.info(TAG, "═════ Route planning ═════");
@@ -164,7 +163,7 @@ public final class RoadRouter {
 
         if (roadStart == null || roadEnd == null) {
             Log.info(TAG, "  No reachable road point found → direct fly");
-            return List.of();
+            return new TransportRoute(List.of());
         }
 
         int entryDist = start.manhattanXZTo(roadStart);
@@ -177,7 +176,7 @@ public final class RoadRouter {
         if (estimatedTicks > directTicks * 1.5) {
             Log.info(TAG, "  Estimated network time too high (%d ticks > %d * 1.5) → direct fly",
                     estimatedTicks, directTicks);
-            return List.of();
+            return new TransportRoute(List.of());
         }
 
         // ── 2. Build graph ──
@@ -192,24 +191,28 @@ public final class RoadRouter {
 
         if (startKey == null || endKey == null || startKey.equals(endKey)) {
             Log.info(TAG, "  Points invalid or equal in graph → direct fly");
-            return List.of();
+            return new TransportRoute(List.of());
         }
 
         DijkstraResult dij = dijkstra(graph, startKey, endKey);
 
         if (dij.path == null || dij.path.isEmpty()) {
             Log.warn(TAG, "  No road path found → direct fly");
-            return List.of();
+            return new TransportRoute(List.of());
         }
 
         // ── 4. Build segments using graph edge onRoad metadata ──
-        List<RouteSegment> rawSegments = new ArrayList<>();
+        List<SplineLeg> rawLegs = new ArrayList<>();
 
         // 4a. Start -> first graph node (always off-road)
         PathPoint firstRoad = dij.path.get(0);
         if (start.manhattanXZTo(firstRoad) > 0 || start.y() != firstRoad.y()) {
-            rawSegments.add(new RouteSegment(start.x(), start.y(), start.z(),
-                    firstRoad.x(), firstRoad.y(), firstRoad.z(), false));
+            SplineModel gap = new SplineModel();
+            SplineVec3 pA = new SplineVec3(start.x() + 0.5, start.y() + 0.5, start.z() + 0.5);
+            SplineVec3 pB = new SplineVec3(firstRoad.x() + 0.5, firstRoad.y() + 1.0, firstRoad.z() + 0.5);
+            gap.getPoints().add(new SplinePoint(pA, pA, pA, true));
+            gap.getPoints().add(new SplinePoint(pB, pB, pB, true));
+            rawLegs.add(new SplineLeg(gap, 0, 1, true));
         }
 
         // 4b. Path internally: look up each edge in the graph for its onRoad flag
@@ -219,33 +222,42 @@ public final class RoadRouter {
             NodeKey aKey = new NodeKey(a.x(), a.y(), a.z());
             NodeKey bKey = new NodeKey(b.x(), b.y(), b.z());
 
-            // Query the graph: is the a→b edge on-road?
-            boolean onRoad = graph.isOnRoad(aKey, bKey);
-
-            rawSegments.add(new RouteSegment(a.x(), a.y(), a.z(),
-                    b.x(), b.y(), b.z(), onRoad));
+            EdgeInfo info = graph.getEdgeInfo(aKey, bKey);
+            if (info == null) continue; // Should never happen
+            
+            if (info.roadEdge != null) {
+                rawLegs.add(new SplineLeg(info.roadEdge.getSpline(), info.uStart, info.uEnd, !info.onRoad));
+            } else {
+                SplineModel gap = new SplineModel();
+                SplineVec3 pA = new SplineVec3(a.x() + 0.5, a.y() + (info.onRoad ? 1.0 : 0.5), a.z() + 0.5);
+                SplineVec3 pB = new SplineVec3(b.x() + 0.5, b.y() + (info.onRoad ? 1.0 : 0.5), b.z() + 0.5);
+                gap.getPoints().add(new SplinePoint(pA, pA, pA, true));
+                gap.getPoints().add(new SplinePoint(pB, pB, pB, true));
+                rawLegs.add(new SplineLeg(gap, 0, 1, !info.onRoad));
+            }
         }
 
         // 4c. Last graph node -> End (always off-road)
         PathPoint lastRoad = dij.path.get(dij.path.size() - 1);
         if (end.manhattanXZTo(lastRoad) > 0 || end.y() != lastRoad.y()) {
-            rawSegments.add(new RouteSegment(lastRoad.x(), lastRoad.y(), lastRoad.z(),
-                    end.x(), end.y(), end.z(), false));
+            SplineModel gap = new SplineModel();
+            SplineVec3 pA = new SplineVec3(lastRoad.x() + 0.5, lastRoad.y() + 1.0, lastRoad.z() + 0.5);
+            SplineVec3 pB = new SplineVec3(end.x() + 0.5, end.y() + 0.5, end.z() + 0.5);
+            gap.getPoints().add(new SplinePoint(pA, pA, pA, true));
+            gap.getPoints().add(new SplinePoint(pB, pB, pB, true));
+            rawLegs.add(new SplineLeg(gap, 0, 1, true));
         }
 
-        // ── [RoadPlan] Detailed point-by-point log ──
-        logRoadPlan(start, end, dij.path, rawSegments);
-
-        // 4d. Simplify colinear segments
-        List<RouteSegment> segments = simplifySegments(rawSegments);
+        // 4d. Simplify colinear/adjacent segments
+        List<SplineLeg> legs = simplifyLegs(rawLegs);
 
         // ── 5. Summary ──
         int totalTicks = 0;
         int offRoadBlocks = 0, onRoadBlocks = 0;
 
-        for (RouteSegment seg : segments) {
-            int dist = (int) (Math.abs(seg.toX() - seg.fromX()) + Math.abs(seg.toZ() - seg.fromZ()));
-            if (seg.onRoad()) {
+        for (SplineLeg leg : legs) {
+            int dist = (int) leg.getApproxLength();
+            if (!leg.offRoad()) {
                 onRoadBlocks += dist;
                 totalTicks += dist * TICKS_PER_BLOCK_ON_ROAD;
             } else {
@@ -255,52 +267,21 @@ public final class RoadRouter {
         }
 
         int saved = directTicks - totalTicks;
-        Log.info(TAG, "  Segments: %d (%d off-road, %d on-road)",
-                segments.size(),
-                (int) segments.stream().filter(s -> !s.onRoad()).count(),
-                (int) segments.stream().filter(RouteSegment::onRoad).count());
+        Log.info(TAG, "  Legs: %d (%d off-road, %d on-road)",
+                legs.size(),
+                (int) legs.stream().filter(SplineLeg::offRoad).count(),
+                (int) legs.stream().filter(l -> !l.offRoad()).count());
         Log.info(TAG, "  Time: %d ticks (direct would be %d ticks, saved %.0f%%)",
                 totalTicks, directTicks,
                 directTicks > 0 ? (double) saved / directTicks * 100 : 0);
         Log.info(TAG, "═════ Route planned ✓");
 
-        return segments;
+        return new TransportRoute(legs);
     }
 
     // ── [RoadPlan] logging ────────────────────────────────────────
 
-    private static void logRoadPlan(PathPoint start, PathPoint end,
-                                     List<PathPoint> dijkstraPath,
-                                     List<RouteSegment> rawSegments) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("[RoadPlan] %d raw segments | Start= %s → End= %s",
-                rawSegments.size(), start, end));
-
-        for (int i = 0; i < rawSegments.size(); i++) {
-            RouteSegment seg = rawSegments.get(i);
-            int xzDist = (int) (Math.abs(seg.toX() - seg.fromX())
-                    + Math.abs(seg.toZ() - seg.fromZ()));
-            int dy = Math.abs((int) (seg.toY() - seg.fromY()));
-            String type = seg.onRoad() ? "ROAD" : "OFF_ROAD";
-            int speed = seg.onRoad() ? TICKS_PER_BLOCK_ON_ROAD : TICKS_PER_BLOCK_OFF_ROAD;
-
-            sb.append(String.format("\n[RoadPlan]   #%d %s xz=%d dy=%d speed=%dt/b (%d ticks)  (%.0f,%.0f,%.0f)→(%.0f,%.0f,%.0f)",
-                    i, type, xzDist, dy, speed, xzDist * speed,
-                    seg.fromX(), seg.fromY(), seg.fromZ(),
-                    seg.toX(), seg.toY(), seg.toZ()));
-        }
-
-        // Show full Dijkstra path as a compact coordinate trail
-        sb.append("\n[RoadPlan]   Dijkstra path (").append(dijkstraPath.size()).append(" nodes):");
-        for (int i = 0; i < dijkstraPath.size(); i++) {
-            PathPoint p = dijkstraPath.get(i);
-            if (i % 4 == 0) sb.append("\n[RoadPlan]     ");
-            sb.append(String.format("(%d,%d,%d)", p.x(), p.y(), p.z()));
-            if (i < dijkstraPath.size() - 1) sb.append(" → ");
-        }
-
-        Log.info(TAG, sb.toString());
-    }
+    // Removed logRoadPlan
 
     // ── Snap helper ───────────────────────────────────────────────
 
@@ -332,11 +313,11 @@ public final class RoadRouter {
         if (network != null) {
             for (RoadEdge edge : network.getEdges().values()) {
                 if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
-                List<PathPoint> pts = edge.getPath();
+                List<SplinePointCache> pts = edge.getDetailedPathCache();
                 if (pts.isEmpty()) continue;
 
                 for (int i = 0; i < pts.size(); i++) {
-                    PathPoint p = pts.get(i);
+                    PathPoint p = pts.get(i).point();
                     NodeKey key = new NodeKey(p.x(), p.y(), p.z());
                     allPoints.add(key);
 
@@ -345,11 +326,11 @@ public final class RoadRouter {
                     }
 
                     if (i < pts.size() - 1) {
-                        PathPoint next = pts.get(i + 1);
-                        NodeKey nextKey = new NodeKey(next.x(), next.y(), next.z());
-                        int distXZ = p.manhattanXZTo(next);
+                        SplinePointCache next = pts.get(i + 1);
+                        NodeKey nextKey = new NodeKey(next.point().x(), next.point().y(), next.point().z());
+                        int distXZ = p.manhattanXZTo(next.point());
                         int weight = Math.max(1, distXZ) * TICKS_PER_BLOCK_ON_ROAD;
-                        graph.addEdge(key, nextKey, weight, true /* onRoad */);
+                        graph.addEdge(key, nextKey, weight, true /* onRoad */, edge, pts.get(i).u(), next.u());
                     }
                 }
             }
@@ -378,7 +359,7 @@ public final class RoadRouter {
                 for (NodeKey bn : bNodes) {
                     int dxz = Math.abs(bn.x() - centroid.x()) + Math.abs(bn.z() - centroid.z());
                     int weight = Math.max(1, dxz) * TICKS_PER_BLOCK_ON_ROAD;
-                    graph.addEdge(bn, centroid, weight, true /* onRoad */);
+                    graph.addEdge(bn, centroid, weight, true /* onRoad */, null, 0, 0);
                 }
             }
         }
@@ -399,7 +380,7 @@ public final class RoadRouter {
                 if (dx + dz <= MAX_GAP_XZ && dy <= MAX_GAP_Y) {
                     int distXZ = dx + dz;
                     int weight = Math.max(1, distXZ) * TICKS_PER_BLOCK_OFF_ROAD;
-                    graph.addEdge(ep, pt, weight, false /* offRoad */);
+                    graph.addEdge(ep, pt, weight, false /* offRoad */, null, 0, 0);
                 }
             }
         }
@@ -485,44 +466,22 @@ public final class RoadRouter {
 
     // ── Simplification ────────────────────────────────────────────
 
-    private static List<RouteSegment> simplifySegments(List<RouteSegment> raw) {
+    private static List<SplineLeg> simplifyLegs(List<SplineLeg> raw) {
         if (raw.isEmpty()) return raw;
 
-        List<RouteSegment> result = new ArrayList<>();
-        RouteSegment current = raw.get(0);
+        List<SplineLeg> result = new ArrayList<>();
+        SplineLeg current = raw.get(0);
 
         for (int i = 1; i < raw.size(); i++) {
-            RouteSegment next = raw.get(i);
+            SplineLeg next = raw.get(i);
 
-            if (current.onRoad() == next.onRoad() &&
-                    current.toX() == next.fromX() &&
-                    current.toY() == next.fromY() &&
-                    current.toZ() == next.fromZ()) {
-
-                double dx1 = current.toX() - current.fromX();
-                double dy1 = current.toY() - current.fromY();
-                double dz1 = current.toZ() - current.fromZ();
-
-                double dx2 = next.toX() - next.fromX();
-                double dy2 = next.toY() - next.fromY();
-                double dz2 = next.toZ() - next.fromZ();
-
-                if (dx1 * dy2 == dx2 * dy1 && dx1 * dz2 == dx2 * dz1 && dy1 * dz2 == dy2 * dz1) {
-                    if (Integer.signum((int) dx1) == Integer.signum((int) dx2) &&
-                            Integer.signum((int) dy1) == Integer.signum((int) dy2) &&
-                            Integer.signum((int) dz1) == Integer.signum((int) dz2)) {
-                        current = new RouteSegment(
-                                current.fromX(), current.fromY(), current.fromZ(),
-                                next.toX(), next.toY(), next.toZ(),
-                                current.onRoad()
-                        );
-                        continue;
-                    }
-                }
+            // Merge if they share the same spline and the endpoint matches the next startpoint perfectly
+            if (current.spline() == next.spline() && current.offRoad() == next.offRoad() && current.uEnd() == next.uStart()) {
+                current = new SplineLeg(current.spline(), current.uStart(), next.uEnd(), current.offRoad());
+            } else {
+                result.add(current);
+                current = next;
             }
-
-            result.add(current);
-            current = next;
         }
         result.add(current);
         return result;
@@ -534,17 +493,19 @@ public final class RoadRouter {
 
     private record DistNode(NodeKey key, int dist) {}
 
-    /** Per-edge metadata: travel weight (ticks) + whether it's on-road. */
-    private record EdgeInfo(int weight, boolean onRoad) {}
+    /** Per-edge metadata: travel weight (ticks) + whether it's on-road + Spline tracing data. */
+    private record EdgeInfo(int weight, boolean onRoad, @Nullable RoadEdge roadEdge, double uStart, double uEnd) {}
 
     private static class Graph {
         final Map<NodeKey, Map<NodeKey, EdgeInfo>> nodes = new HashMap<>();
 
-        void addEdge(NodeKey n1, NodeKey n2, int weight, boolean onRoad) {
-            EdgeInfo info = new EdgeInfo(weight, onRoad);
+        void addEdge(NodeKey n1, NodeKey n2, int weight, boolean onRoad, @Nullable RoadEdge roadEdge, double uStart, double uEnd) {
+            EdgeInfo info = new EdgeInfo(weight, onRoad, roadEdge, uStart, uEnd);
             nodes.computeIfAbsent(n1, k -> new HashMap<>()).merge(n2, info,
                     (old, neu) -> old.weight <= neu.weight ? old : neu);
-            nodes.computeIfAbsent(n2, k -> new HashMap<>()).merge(n1, info,
+            
+            EdgeInfo reverseInfo = new EdgeInfo(weight, onRoad, roadEdge, uEnd, uStart);
+            nodes.computeIfAbsent(n2, k -> new HashMap<>()).merge(n1, reverseInfo,
                     (old, neu) -> old.weight <= neu.weight ? old : neu);
         }
 
@@ -559,6 +520,10 @@ public final class RoadRouter {
         boolean isOnRoad(NodeKey n1, NodeKey n2) {
             EdgeInfo info = nodes.getOrDefault(n1, Map.of()).get(n2);
             return info != null && info.onRoad;
+        }
+
+        EdgeInfo getEdgeInfo(NodeKey n1, NodeKey n2) {
+            return nodes.getOrDefault(n1, Map.of()).get(n2);
         }
 
         @Nullable

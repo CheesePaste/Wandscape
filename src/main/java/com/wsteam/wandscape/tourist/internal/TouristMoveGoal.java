@@ -18,7 +18,9 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.road.core.RoadNetwork;
-import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.core.TransportRoute;
+import com.wsteam.wandscape.road.core.SplineLeg;
+import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
@@ -1288,15 +1290,17 @@ public class TouristMoveGoal extends Goal {
         if (network == null || network.isEmpty()) return false;
 
         BlockPos from = tourist.blockPosition();
-        List<RouteSegment> segments = RoadRoutingHelper.planNpcWithRoads(
+        TransportRoute route = RoadRoutingHelper.planNpcWithRoads(
                 roadApi, tourist.level(), null, from, target);
-        if (segments.isEmpty()) return false;
+        if (route.isEmpty()) return false;
 
         List<BlockPos> wps = new ArrayList<>();
-        RouteSegment first = segments.get(0);
-        wps.add(jitter(new BlockPos((int) first.fromX(), (int) first.fromY(), (int) first.fromZ())));
-        for (RouteSegment seg : segments) {
-            wps.add(jitter(new BlockPos((int) seg.toX(), (int) seg.toY(), (int) seg.toZ())));
+        SplineLeg first = route.legs().get(0);
+        SplineVec3 startPos = first.spline().evaluate(first.uStart()).position();
+        wps.add(jitter(new BlockPos((int) startPos.x(), (int) startPos.y(), (int) startPos.z())));
+        for (SplineLeg leg : route.legs()) {
+            SplineVec3 endPos = leg.spline().evaluate(leg.uEnd()).position();
+            wps.add(jitter(new BlockPos((int) endPos.x(), (int) endPos.y(), (int) endPos.z())));
         }
         waypoints = wps.toArray(new BlockPos[0]);
         return true;

@@ -30,7 +30,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
-public record SplineBuildPacket(String tilesJson, String centerlineJson) implements CustomPacketPayload {
+public record SplineBuildPacket(String tilesJson, String splineJson) implements CustomPacketPayload {
     private static final String TAG = "SplineBuildPacket";
 
     public static final Type<SplineBuildPacket> TYPE =
@@ -53,18 +53,28 @@ public record SplineBuildPacket(String tilesJson, String centerlineJson) impleme
             JsonArray tiles = parsed.getAsJsonArray();
             if (tiles.isEmpty()) return;
 
-            JsonElement centerParsed = JsonParser.parseString(packet.centerlineJson());
-            List<PathPoint> path = new ArrayList<>();
-            if (centerParsed.isJsonArray()) {
-                JsonArray centerArr = centerParsed.getAsJsonArray();
-                for (JsonElement e : centerArr) {
-                    JsonArray pt = e.getAsJsonArray();
-                    path.add(new PathPoint(pt.get(0).getAsInt(), pt.get(1).getAsInt(), pt.get(2).getAsInt()));
+            JsonElement splineParsed = JsonParser.parseString(packet.splineJson());
+            com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
+            
+            if (splineParsed.isJsonArray()) {
+                JsonArray splineArr = splineParsed.getAsJsonArray();
+                for (JsonElement e : splineArr) {
+                    JsonObject obj = e.getAsJsonObject();
+                    JsonArray aArr = obj.getAsJsonArray("a");
+                    JsonArray pArr = obj.getAsJsonArray("p");
+                    JsonArray nArr = obj.getAsJsonArray("n");
+                    boolean locked = obj.has("l") && obj.get("l").getAsBoolean();
+                    
+                    com.wsteam.wandscape.road.core.SplineVec3 a = new com.wsteam.wandscape.road.core.SplineVec3(aArr.get(0).getAsDouble(), aArr.get(1).getAsDouble(), aArr.get(2).getAsDouble());
+                    com.wsteam.wandscape.road.core.SplineVec3 p = new com.wsteam.wandscape.road.core.SplineVec3(pArr.get(0).getAsDouble(), pArr.get(1).getAsDouble(), pArr.get(2).getAsDouble());
+                    com.wsteam.wandscape.road.core.SplineVec3 n = new com.wsteam.wandscape.road.core.SplineVec3(nArr.get(0).getAsDouble(), nArr.get(1).getAsDouble(), nArr.get(2).getAsDouble());
+                    
+                    model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(a, p, n, locked));
                 }
             }
 
-            if (path.isEmpty()) {
-                Log.warn(TAG, "[Spline] Centerline is empty, cannot create RoadEdge");
+            if (model.getPoints().isEmpty()) {
+                Log.warn(TAG, "[Spline] Spline data is empty, cannot create RoadEdge");
                 return;
             }
 
@@ -78,8 +88,10 @@ public record SplineBuildPacket(String tilesJson, String centerlineJson) impleme
             RoadSavedData savedData = RoadSavedData.getOrCreate(player.serverLevel());
             RoadNetwork network = savedData.getNetwork();
 
-            PathPoint startPt = path.get(0);
-            PathPoint endPt = path.get(path.size() - 1);
+            com.wsteam.wandscape.road.core.SplineVec3 sPos = model.evaluate(0.0).position();
+            PathPoint startPt = new PathPoint((int) Math.floor(sPos.x()), (int) Math.floor(sPos.y()), (int) Math.floor(sPos.z()));
+            com.wsteam.wandscape.road.core.SplineVec3 ePos = model.evaluate(model.getSegmentsCount()).position();
+            PathPoint endPt = new PathPoint((int) Math.floor(ePos.x()), (int) Math.floor(ePos.y()), (int) Math.floor(ePos.z()));
 
             UUID fromNodeId = null;
             UUID toNodeId = null;
@@ -102,7 +114,7 @@ public record SplineBuildPacket(String tilesJson, String centerlineJson) impleme
             }
 
             UUID edgeId = UUID.randomUUID();
-            RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId, "dirt", path);
+            RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId, "dirt", model);
             edge.setStatus(RoadEdge.EdgeStatus.BUILDING);
             
             // Register placed blocks footprint
@@ -153,7 +165,7 @@ public record SplineBuildPacket(String tilesJson, String centerlineJson) impleme
             edge.incrementPendingSegments(1);
             savedData.setDirty();
 
-            Log.info(TAG, "[Spline] Published task #{} for RoadEdge {}: tiles={}, path={}", taskId, edgeId, tiles.size(), path.size());
+            Log.info(TAG, "[Spline] Published task #{} for RoadEdge {}: tiles={}, spline nodes={}", taskId, edgeId, tiles.size(), model.getPoints().size());
         } catch (Exception e) {
             Log.warn(TAG, "[Spline] Failed to publish spline road task: {}", e.getMessage());
             e.printStackTrace();
@@ -161,9 +173,8 @@ public record SplineBuildPacket(String tilesJson, String centerlineJson) impleme
     }
 
     static void write(RegistryFriendlyByteBuf buf, SplineBuildPacket pkt) {
-        // String limit allows very large payloads (up to 4MB string)
         buf.writeUtf(pkt.tilesJson(), 4 * 1024 * 1024);
-        buf.writeUtf(pkt.centerlineJson(), 1024 * 1024);
+        buf.writeUtf(pkt.splineJson(), 1024 * 1024);
     }
 
     static SplineBuildPacket read(RegistryFriendlyByteBuf buf) {

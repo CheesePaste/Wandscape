@@ -87,16 +87,36 @@ public final class RoadSavedData extends SavedData {
             e.putString("status", edge.getStatus().name());
             e.putInt("width", edge.getWidth());
 
-            // Path: list of {x, y, z} 3D points
-            ListTag pathTag = new ListTag();
-            for (PathPoint p : edge.getPath()) {
-                CompoundTag pt = new CompoundTag();
-                pt.putInt("x", p.x());
-                pt.putInt("y", p.y());
-                pt.putInt("z", p.z());
-                pathTag.add(pt);
+            // SplineModel: list of {a: [x,y,z], p: [x,y,z], n: [x,y,z], l: bool}
+            ListTag splineTag = new ListTag();
+            com.wsteam.wandscape.road.core.SplineModel spline = edge.getSpline();
+            if (spline != null) {
+                for (com.wsteam.wandscape.road.core.SplinePoint sp : spline.getPoints()) {
+                    CompoundTag spt = new CompoundTag();
+                    
+                    ListTag aTag = new ListTag();
+                    aTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getAnchor().x()));
+                    aTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getAnchor().y()));
+                    aTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getAnchor().z()));
+                    spt.put("a", aTag);
+                    
+                    ListTag pTag = new ListTag();
+                    pTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getControlPrev().x()));
+                    pTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getControlPrev().y()));
+                    pTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getControlPrev().z()));
+                    spt.put("p", pTag);
+                    
+                    ListTag nTag = new ListTag();
+                    nTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getControlNext().x()));
+                    nTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getControlNext().y()));
+                    nTag.add(net.minecraft.nbt.DoubleTag.valueOf(sp.getControlNext().z()));
+                    spt.put("n", nTag);
+                    
+                    spt.putBoolean("l", sp.isLocked());
+                    splineTag.add(spt);
+                }
             }
-            e.put("path", pathTag);
+            e.put("spline", splineTag);
 
             // Segment task IDs
             List<Long> taskIds = edge.getSegmentTaskIds();
@@ -151,15 +171,34 @@ public final class RoadSavedData extends SavedData {
                 status = RoadEdge.EdgeStatus.PLANNED;
             }
 
-            // Path (3D: x/y/z)
-            List<PathPoint> path = new ArrayList<>();
-            ListTag pathTag = e.getList("path", Tag.TAG_COMPOUND);
-            for (int j = 0; j < pathTag.size(); j++) {
-                CompoundTag pt = pathTag.getCompound(j);
-                int px = pt.getInt("x");
-                int py = pt.getInt("y");
-                int pz = pt.getInt("z");
-                path.add(new PathPoint(px, py, pz));
+            // SplineModel
+            com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
+            if (e.contains("spline", Tag.TAG_LIST)) {
+                ListTag splineTag = e.getList("spline", Tag.TAG_COMPOUND);
+                for (int j = 0; j < splineTag.size(); j++) {
+                    CompoundTag spt = splineTag.getCompound(j);
+                    ListTag aTag = spt.getList("a", Tag.TAG_DOUBLE);
+                    ListTag pTag = spt.getList("p", Tag.TAG_DOUBLE);
+                    ListTag nTag = spt.getList("n", Tag.TAG_DOUBLE);
+                    boolean locked = spt.getBoolean("l");
+                    
+                    com.wsteam.wandscape.road.core.SplineVec3 a = new com.wsteam.wandscape.road.core.SplineVec3(aTag.getDouble(0), aTag.getDouble(1), aTag.getDouble(2));
+                    com.wsteam.wandscape.road.core.SplineVec3 p = new com.wsteam.wandscape.road.core.SplineVec3(pTag.getDouble(0), pTag.getDouble(1), pTag.getDouble(2));
+                    com.wsteam.wandscape.road.core.SplineVec3 n = new com.wsteam.wandscape.road.core.SplineVec3(nTag.getDouble(0), nTag.getDouble(1), nTag.getDouble(2));
+                    
+                    model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(a, p, n, locked));
+                }
+            } else if (e.contains("path", Tag.TAG_LIST)) {
+                // Fallback for legacy worlds (convert PathPoints to a linear spline)
+                ListTag pathTag = e.getList("path", Tag.TAG_COMPOUND);
+                for (int j = 0; j < pathTag.size(); j++) {
+                    CompoundTag pt = pathTag.getCompound(j);
+                    double px = pt.getInt("x") + 0.5;
+                    double py = pt.getInt("y");
+                    double pz = pt.getInt("z") + 0.5;
+                    com.wsteam.wandscape.road.core.SplineVec3 v = new com.wsteam.wandscape.road.core.SplineVec3(px, py, pz);
+                    model.getPoints().add(new com.wsteam.wandscape.road.core.SplinePoint(v, v, v, true));
+                }
             }
 
             // Segment task IDs
@@ -170,7 +209,7 @@ public final class RoadSavedData extends SavedData {
             }
 
             RoadEdge edge = new RoadEdge(edgeId, fromNodeId, toNodeId,
-                    tier, path, taskIds, status);
+                    tier, model, taskIds, status);
 
             if (e.contains("width")) {
                 edge.setWidth(e.getInt("width"));

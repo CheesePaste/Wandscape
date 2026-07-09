@@ -71,10 +71,11 @@ public final class RoadPlanner {
             List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude, existingRoads);
             if (path.isEmpty()) continue;
 
+            com.wsteam.wandscape.road.core.SplineModel spline = pathToSpline(path);
             RoadEdge edge = new RoadEdge(
                     UUID.randomUUID(),
                     from.id(), to.id(),
-                    "dirt", path);
+                    "dirt", spline);
             network.addEdge(edge);
         }
 
@@ -143,10 +144,11 @@ public final class RoadPlanner {
         List<PathPoint> path = PathGenerator.lShape3D(newPt, nearestPt, amplitude, existingRoads);
         if (path.isEmpty()) return network;
 
+        com.wsteam.wandscape.road.core.SplineModel spline = pathToSpline(path);
         RoadEdge edge = new RoadEdge(
                 UUID.randomUUID(),
                 newBuilding.id(), connectNodeId,
-                "dirt", path);
+                "dirt", spline);
         network.addEdge(edge);
 
         return network;
@@ -209,14 +211,33 @@ public final class RoadPlanner {
             List<PathPoint> path = PathGenerator.lShape3D(fromPt, toPt, amplitude, existingRoads);
             if (path.isEmpty()) continue;
 
+            com.wsteam.wandscape.road.core.SplineModel spline = pathToSpline(path);
             RoadEdge edge = new RoadEdge(
                     UUID.randomUUID(),
                     pair.a, pair.b,
-                    "dirt", path);
+                    "dirt", spline);
             newEdges.add(edge);
         }
 
         return new NetworkDiff(retained, deprecated, newEdges);
+    }
+
+    private static com.wsteam.wandscape.road.core.SplineModel pathToSpline(List<PathPoint> path) {
+        com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
+        if (path == null || path.isEmpty()) return model;
+        
+        List<Integer> corners = PathGenerator.turnIndices3D(path);
+        Set<Integer> keyIndices = new LinkedHashSet<>();
+        keyIndices.add(0);
+        keyIndices.addAll(corners);
+        keyIndices.add(path.size() - 1);
+        
+        for (int idx : keyIndices) {
+            PathPoint p = path.get(idx);
+            SplineVec3 v = new SplineVec3(p.x() + 0.5, p.y(), p.z() + 0.5);
+            model.getPoints().add(new SplinePoint(v, v, v, true));
+        }
+        return model;
     }
 
     /**

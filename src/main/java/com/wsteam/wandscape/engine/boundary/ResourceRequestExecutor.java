@@ -10,7 +10,7 @@ import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -62,7 +62,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
      * Each resource stack of N items becomes 1 launch entry with a count.
      */
     private record LaunchEntry(ItemKey key, int count, BlockPos from, BlockPos to,
-                               Level level, long npcId, List<RouteSegment> route) {}
+                               Level level, long npcId, TransportRoute route) {}
 
     private static final class PendingBatch {
         final CompletableFuture<Void> doneFuture;
@@ -160,7 +160,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
         BlockPos npcPos = npc.blockPosition();
         Level level = npc.level();
-        List<RouteSegment> route = planRoute(colonyId, warehousePos, npcPos, level);
+        TransportRoute route = planRoute(colonyId, warehousePos, npcPos, level);
 
         // ── 5. Build flat launch entry list (one entry per item-entity) ──
         List<LaunchEntry> entries = new ArrayList<>();
@@ -313,7 +313,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         return nearest;
     }
 
-    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to,
+    private static TransportRoute planRoute(UUID colonyId, BlockPos from, BlockPos to,
                                                  net.minecraft.world.level.Level level) {
         return RoadRoutingHelper.planWithRoads(
                 WandscapeApis.getRoadApi(), level, colonyId, from, to);

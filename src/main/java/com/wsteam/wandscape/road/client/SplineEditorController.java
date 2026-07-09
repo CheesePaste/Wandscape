@@ -172,19 +172,25 @@ public final class SplineEditorController {
 
         java.util.Map<net.minecraft.core.BlockPos, String> uniqueTiles = new java.util.LinkedHashMap<>();
 
-        com.google.gson.JsonArray centerline = new com.google.gson.JsonArray();
-        java.util.Set<net.minecraft.core.BlockPos> uniqueCenters = new java.util.LinkedHashSet<>();
+        com.google.gson.JsonArray splineJson = new com.google.gson.JsonArray();
+        for (com.wsteam.wandscape.road.core.SplinePoint pt : model.getPoints()) {
+            com.google.gson.JsonObject ptObj = new com.google.gson.JsonObject();
+            com.google.gson.JsonArray a = new com.google.gson.JsonArray();
+            a.add(pt.getAnchor().x()); a.add(pt.getAnchor().y()); a.add(pt.getAnchor().z());
+            com.google.gson.JsonArray p = new com.google.gson.JsonArray();
+            p.add(pt.getControlPrev().x()); p.add(pt.getControlPrev().y()); p.add(pt.getControlPrev().z());
+            com.google.gson.JsonArray n = new com.google.gson.JsonArray();
+            n.add(pt.getControlNext().x()); n.add(pt.getControlNext().y()); n.add(pt.getControlNext().z());
+            
+            ptObj.add("a", a);
+            ptObj.add("p", p);
+            ptObj.add("n", n);
+            ptObj.addProperty("l", pt.isLocked());
+            splineJson.add(ptObj);
+        }
 
         for (com.wsteam.wandscape.road.core.CurveSample sample : samples) {
             SplineVec3 pos = sample.position();
-            net.minecraft.core.BlockPos bp = new net.minecraft.core.BlockPos((int) Math.floor(pos.x()), (int) Math.floor(pos.y()), (int) Math.floor(pos.z()));
-            if (uniqueCenters.add(bp)) {
-                com.google.gson.JsonArray posArr = new com.google.gson.JsonArray();
-                posArr.add(bp.getX());
-                posArr.add(bp.getY());
-                posArr.add(bp.getZ());
-                centerline.add(posArr);
-            }
             
             SplineVec3 tan = sample.tangent();
             org.joml.Vector3f forward = new org.joml.Vector3f((float)tan.x(), (float)tan.y(), (float)tan.z()).normalize();
@@ -238,11 +244,11 @@ public final class SplineEditorController {
         
         if (tiles.isEmpty()) return;
 
-        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.SplineBuildPacket(tiles.toString(), centerline.toString()));
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.SplineBuildPacket(tiles.toString(), splineJson.toString()));
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aSent build task with " + tiles.size() + " blocks and " + centerline.size() + " path points!"), true);
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aSent build task with " + tiles.size() + " blocks and " + splineJson.size() + " spline points!"), true);
         }
     }
 }

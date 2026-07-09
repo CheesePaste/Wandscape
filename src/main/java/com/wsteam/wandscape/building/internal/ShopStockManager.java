@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
@@ -297,7 +297,7 @@ public final class ShopStockManager {
 
         // Find warehouse position and plan route once for this restock cycle
         BlockPos warehousePos = null;
-        List<RouteSegment> route = null;
+        TransportRoute route = null;
         if (hasTransport) {
             warehousePos = findNearestWarehouse(colonyId);
             if (warehousePos == null) {
@@ -381,7 +381,7 @@ public final class ShopStockManager {
                                         Map<ElementType, Integer> costPerItem,
                                         UUID colonyId, ServerLevel level,
                                         BlockPos warehousePos, BlockPos shopPos,
-                                        @Nullable List<RouteSegment> route) {
+                                        @Nullable TransportRoute route) {
         ItemTransportManager transporter = WandscapeEngine.getTransporter();
         if (transporter == null) return;
 
@@ -396,10 +396,10 @@ public final class ShopStockManager {
                 }
             });
 
-        Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} segs)",
+        Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} legs)",
                 amount, itemId, warehousePos.toShortString(),
                 shopPos.toShortString(),
-                route != null ? route.size() : 0);
+                route != null ? route.legs().size() : 0);
     }
 
     /**
@@ -483,7 +483,7 @@ public final class ShopStockManager {
      * Plan a transport route from warehouse to shop using the road network.
      * Returns empty list if no road network — caller falls back to direct transport.
      */
-    private static List<RouteSegment> planRestockRoute(UUID colonyId,
+    private static TransportRoute planRestockRoute(UUID colonyId,
                                                         BlockPos from, BlockPos to,
                                                         net.minecraft.world.level.Level level) {
         return RoadRoutingHelper.planWithRoads(

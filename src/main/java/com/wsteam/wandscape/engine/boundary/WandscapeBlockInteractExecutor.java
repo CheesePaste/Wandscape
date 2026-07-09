@@ -17,7 +17,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
-import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
@@ -466,7 +466,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
         BlockPos from = npc.blockPosition();
-        List<RouteSegment> route = planRoute(colonyId, from, to, npc.level());
+        TransportRoute route = planRoute(colonyId, from, to, npc.level());
 
         ItemKey key = ItemKey.of(itemId, null);
         transporter.send(key, amount, from, to, npc.level(), npcId, route);
@@ -483,7 +483,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
         BlockPos from = npc.blockPosition();
-        List<RouteSegment> route = planRoute(colonyId, from, to, npc.level());
+        TransportRoute route = planRoute(colonyId, from, to, npc.level());
 
         transporter.send(outputKey, count, from, to, npc.level(), npcId, route);
         Log.debug(TAG, "production transport: {} x{} NPC→warehouse",
@@ -583,7 +583,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         return nearest;
     }
 
-    private static List<RouteSegment> planRoute(UUID colonyId, BlockPos from, BlockPos to,
+    private static TransportRoute planRoute(UUID colonyId, BlockPos from, BlockPos to,
                                                  net.minecraft.world.level.Level level) {
         return RoadRoutingHelper.planWithRoads(
                 WandscapeApis.getRoadApi(), level, colonyId, from, to);

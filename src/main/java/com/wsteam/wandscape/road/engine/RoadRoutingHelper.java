@@ -4,7 +4,7 @@ import com.wsteam.wandscape.road.core.PathPoint;
 import com.wsteam.wandscape.road.core.RoadBlobCache;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.road.algorithm.RoadRouter;
-import com.wsteam.wandscape.road.core.RouteSegment;
+import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.shared.api.RoadApi;
 
 import net.minecraft.core.BlockPos;
@@ -41,11 +41,11 @@ public final class RoadRoutingHelper {
      * @param to         destination position
      * @return ordered route segments, or empty list if no road available
      */
-    public static List<RouteSegment> planWithRoads(@Nullable RoadApi roadApi,
+    public static TransportRoute planWithRoads(@Nullable RoadApi roadApi,
                                                     @Nullable Level level,
                                                     @Nullable java.util.UUID colonyId,
                                                     BlockPos from, BlockPos to) {
-        if (roadApi == null) return List.of();
+        if (roadApi == null) return new TransportRoute(List.of());
 
         try {
             RoadNetwork network = roadApi.getNetwork(colonyId);
@@ -62,7 +62,7 @@ public final class RoadRoutingHelper {
                     new PathPoint(to.getX(), to.getY(), to.getZ()));
 
         } catch (Exception e) {
-            return List.of();
+            return new TransportRoute(List.of());
         }
     }
 
@@ -76,11 +76,11 @@ public final class RoadRoutingHelper {
      * @param to         destination position
      * @return ordered route segments, or empty list if no road available or NPC-incompatible
      */
-    public static List<RouteSegment> planNpcWithRoads(@Nullable RoadApi roadApi,
+    public static TransportRoute planNpcWithRoads(@Nullable RoadApi roadApi,
                                                        @Nullable Level level,
                                                        @Nullable java.util.UUID colonyId,
                                                        BlockPos from, BlockPos to) {
-        if (roadApi == null) return List.of();
+        if (roadApi == null) return new TransportRoute(List.of());
 
         try {
             RoadNetwork network = roadApi.getNetwork(colonyId);
@@ -96,7 +96,7 @@ public final class RoadRoutingHelper {
                     new PathPoint(to.getX(), to.getY(), to.getZ()));
 
         } catch (Exception e) {
-            return List.of();
+            return new TransportRoute(List.of());
         }
     }
 }
