@@ -9,17 +9,17 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.component.ElementPanel;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
-import com.wsteam.wandscape.shared.ui.component.SearchBar;
-import com.wsteam.wandscape.shared.ui.component.TabBar;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.ItemEntry;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -29,23 +29,27 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
+
 /**
- * Warehouse GUI with two tabs.
+ * Warehouse GUI with two tabs. Uses {@link WandscapeTheme} RTS HUD style
+ * to match the V-panel overlay and TownHallScreen.
  *
- * <p><b>Overview tab:</b> Read-only display of elements and items — browse only, no interaction.
- * <br><b>Exchange tab:</b> Two-panel layout: warehouse items (click to withdraw) above
- * player inventory (click to deposit). Resembles a vanilla container interaction.
+ * <p><b>Overview tab:</b> Element display + searchable item list (read-only).
+ * <br><b>Exchange tab:</b> Warehouse items (click to withdraw) + player inventory (click to deposit).
  */
-public class WarehouseScreen extends MedievalScreen {
+public class WarehouseScreen extends Screen {
 
     private static final int PW = 380;
-    private static final int PH = 248;
+    private static final int PH = 250;
+    private static final int HEADER_H = 22;
+    private static final int TAB_H = 18;
     private static final int MAX_QTY = 64;
     private static final int SLOT_SIZE = 18;
+    private static final int SCROLLBAR_W = 6;
 
     private BlockPos buildingPos = BlockPos.ZERO;
     private UUID colonyId = new UUID(0, 0);
-    private int activeTab = 0;
+    private int activeTab;
 
     // Data
     private List<ItemEntry> allItems = new ArrayList<>();
@@ -53,18 +57,21 @@ public class WarehouseScreen extends MedievalScreen {
     private List<ItemEntry> exchangeFilteredItems = new ArrayList<>();
     private Map<ElementType, Long> elements = new LinkedHashMap<>();
 
+    // Layout (computed in init)
+    private int leftPos;
+    private int topPos;
+
     // ── Tab 0: Overview widgets ──
-    private SearchBar searchBar;
+    private EditBox searchInput;
     private ElementPanel elementPanel;
     private ScrollableList<ItemEntry> overviewList;
 
     // ── Tab 1: Exchange widgets ──
     private ScrollableList<ItemEntry> exchangeList;
-    private SearchBar exchangeSearchBar;
+    private EditBox exchangeSearchInput;
 
     public WarehouseScreen() {
-        super(Component.literal("Colony Warehouse"), PW, PH);
-        setTitleBar("Colony Warehouse");
+        super(Component.literal("Colony Warehouse"));
     }
 
     // ── Data updates from server ──
@@ -72,122 +79,70 @@ public class WarehouseScreen extends MedievalScreen {
     public void updateItems(WarehouseDataPacket packet) {
         this.buildingPos = packet.buildingPos();
         this.colonyId = packet.colonyId();
-        this.allItems = packet.itemEntries();
+        this.allItems = new ArrayList<>(packet.itemEntries());
         this.allItems.sort(Comparator.comparing(ItemEntry::itemId));
-        this.elements = packet.elementMap();
-        applyFilter(searchBar != null ? searchBar.getValue() : "");
-        applyExchangeFilter(exchangeSearchBar != null ? exchangeSearchBar.getValue() : "");
+        this.elements = new LinkedHashMap<>(packet.elementMap());
+        applyFilter(searchInput != null ? searchInput.getValue() : "");
+        applyExchangeFilter(exchangeSearchInput != null ? exchangeSearchInput.getValue() : "");
     }
 
     // ── Init ──
 
     @Override
     protected void init() {
-        super.init();
+        this.leftPos = (this.width - PW) / 2;
+        this.topPos = (this.height - PH) / 2;
 
         int contentX = leftPos + 8;
-        int contentY = topPos + headerHeight + 4;
+        int tabContentY = topPos + HEADER_H + 2 + TAB_H + 5;
 
-        // Tab bar
-        var tabBar = new TabBar(contentX, contentY, PW - 16,
-                List.of("Overview", "Exchange"), activeTab, this::onTabChanged);
-        addRenderableWidget(tabBar);
-
-        // Build both tabs
-        buildOverviewTab(contentX, contentY);
-        buildExchangeTab(contentX, contentY);
-
-        // Show active tab
+        buildOverviewTab(contentX, tabContentY);
+        buildExchangeTab(contentX, tabContentY);
         showTab(activeTab);
-
     }
 
     // ── Tab 0: Overview (read-only) ──
 
-    private void buildOverviewTab(int contentX, int contentY) {
-        int tabY = contentY + 20; // below tab bar
-        int tabH = PH - headerHeight - 4 - 20;
+    private void buildOverviewTab(int contentX, int tabY) {
+        int tabH = topPos + PH - tabY - 6;
         int elementPanelW = 130;
 
         // Left: Element panel
         elementPanel = new ElementPanel(contentX, tabY, elementPanelW);
         elementPanel.setElements(elements);
 
-        // Right: Search bar + item list (read-only)
+        // Right: Search + item list
         int rightX = contentX + elementPanelW + 6;
         int rightW = PW - 16 - elementPanelW - 6;
+        int searchH = font.lineHeight + 6;
 
-        searchBar = new SearchBar(rightX, tabY, rightW, 14,
-                "Search items...", this::applyFilter);
+        searchInput = new EditBox(font, rightX + 1, tabY + 2, rightW - 2, font.lineHeight,
+                Component.literal("Search items..."));
+        searchInput.setBordered(false);
+        searchInput.setTextColor(WandscapeTheme.COLOR_TEXT_NORMAL);
+        searchInput.setTextColorUneditable(WandscapeTheme.COLOR_TEXT_DIM);
+        searchInput.setHint(Component.literal("Search items..."));
+        searchInput.setCanLoseFocus(true);
+        searchInput.setResponder(this::applyFilter);
 
-        int listY = tabY + 18;
-        int listH = tabH - 18 - 8;
-        overviewList = new ScrollableList<>(rightX, listY, rightW, listH, 20) {
-            @Override
-            protected void renderRow(GuiGraphics g, ItemEntry item, int x, int y, int index,
-                                     boolean selected, boolean hovered) {
-                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
-                if (registryItem != null && registryItem != Items.AIR) {
-                    ItemStack icon = new ItemStack(registryItem);
-                    if (item.nbt() != null && !item.nbt().isEmpty()) {
-                        icon.set(DataComponents.CUSTOM_DATA,
-                                net.minecraft.world.item.component.CustomData.of(item.nbt().copy()));
-                    }
-                    g.renderItem(icon, x, y + 2);
-                }
-                String name = formatItemName(item.itemId());
-                int textColor = selected ? MedievalColors.ACCENT_GOLD
-                        : hovered ? 0xFFFFEEAA : MedievalColors.TEXT_WARM_WHITE;
-                g.drawString(Minecraft.getInstance().font, name, x + 20, y + 3, textColor);
-                String count = formatCount(item.count());
-                int countW = Minecraft.getInstance().font.width(count);
-                g.drawString(Minecraft.getInstance().font, count,
-                        x + getWidth() - scrollbarWidth - countW - 8, y + 3, MedievalColors.TEXT_DIM);
-            }
-        };
+        int listY = tabY + searchH + 4;
+        int listH = tabH - searchH - 4;
+        overviewList = buildItemList(rightX, listY, rightW, listH, false);
         overviewList.setItems(filteredItems);
-        // No row click handler — read-only tab
     }
 
-    // ── Tab 1: Exchange (warehouse ↔ player inventory interaction) ──
+    // ── Tab 1: Exchange (warehouse ↔ player inventory) ──
 
-    private void buildExchangeTab(int contentX, int contentY) {
-        int tabY = contentY + 20; // below tab bar
-        int tabH = PH - headerHeight - 4 - 20;
+    private void buildExchangeTab(int contentX, int tabY) {
+        int tabH = topPos + PH - tabY - 6;
         int rightW = PW - 16;
+        int searchH = font.lineHeight + 6;
 
-        // Player inventory section height: label (10px) + 4 rows of slots (4 * SLOT_SIZE)
         int invSectionH = 10 + SLOT_SIZE * 4;
-        int listH = tabH - invSectionH - 4; // remaining space minus gap
+        int listH = tabH - searchH - 4 - invSectionH - 4;
 
-        // Top: warehouse items list
-        exchangeList = new ScrollableList<>(contentX, tabY, rightW, listH, 20) {
-            @Override
-            protected void renderRow(GuiGraphics g, ItemEntry item, int x, int y, int index,
-                                     boolean selected, boolean hovered) {
-                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
-                if (registryItem != null && registryItem != Items.AIR) {
-                    ItemStack icon = new ItemStack(registryItem);
-                    if (item.nbt() != null && !item.nbt().isEmpty()) {
-                        icon.set(DataComponents.CUSTOM_DATA,
-                                net.minecraft.world.item.component.CustomData.of(item.nbt().copy()));
-                    }
-                    g.renderItem(icon, x, y + 2);
-                }
-                String name = formatItemName(item.itemId());
-                int textColor = selected ? MedievalColors.ACCENT_GOLD
-                        : hovered ? 0xFFFFEEAA : MedievalColors.TEXT_WARM_WHITE;
-                g.drawString(Minecraft.getInstance().font, name, x + 20, y + 3, textColor);
-                String count = formatCount(item.count());
-                int countW = Minecraft.getInstance().font.width(count);
-                g.drawString(Minecraft.getInstance().font, count,
-                        x + getWidth() - scrollbarWidth - countW - 8, y + 3, MedievalColors.TEXT_DIM);
-                if (hovered) {
-                    String hint = "L-click: withdraw 1  |  R-click: withdraw " + MAX_QTY;
-                    g.drawString(Minecraft.getInstance().font, hint, x + 20, y + 14, 0xFFAAAAAA);
-                }
-            }
-        };
+        // Warehouse items list
+        exchangeList = buildItemList(contentX, tabY + searchH + 4, rightW, listH, true);
         exchangeList.setItems(exchangeFilteredItems);
         exchangeList.setOnRowClick((entry, index, button) -> {
             if (entry.count() <= 0) return;
@@ -198,44 +153,81 @@ public class WarehouseScreen extends MedievalScreen {
                     buildingPos, "withdraw", entry.itemId(), entry.nbt(), take, -1));
         });
 
-        // Bottom-right: Search bar next to player inventory slots
-        int invSlotsW = 9 * SLOT_SIZE;
-        int sbX = leftPos + 8 + invSlotsW + 8;
-        int sbY = getInventoryY();
-        int sbW = (leftPos + PW - 16) - sbX;
-        exchangeSearchBar = new SearchBar(sbX, sbY, sbW, 14,
-                "Search items...", this::applyExchangeFilter);
+        // Search bar (below list, above inventory)
+        int sbY = getInventoryY() - searchH - 4;
+        exchangeSearchInput = new EditBox(font, contentX + 1, sbY + 2, rightW - 2, font.lineHeight,
+                Component.literal("Search items..."));
+        exchangeSearchInput.setBordered(false);
+        exchangeSearchInput.setTextColor(WandscapeTheme.COLOR_TEXT_NORMAL);
+        exchangeSearchInput.setTextColorUneditable(WandscapeTheme.COLOR_TEXT_DIM);
+        exchangeSearchInput.setHint(Component.literal("Search items..."));
+        exchangeSearchInput.setCanLoseFocus(true);
+        exchangeSearchInput.setResponder(this::applyExchangeFilter);
     }
 
-    /** Y-position of the player inventory label (exchange tab). */
+    /** Build a scrollable item list with RTS-colored row rendering. */
+    private ScrollableList<ItemEntry> buildItemList(int x, int y, int w, int h, boolean showHint) {
+        return new ScrollableList<>(x, y, w, h, 20) {
+            @Override
+            protected void renderRow(GuiGraphics g, ItemEntry item, int rx, int ry, int index,
+                                     boolean selected, boolean hovered) {
+                // Item icon
+                var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
+                if (registryItem != null && registryItem != Items.AIR) {
+                    ItemStack icon = new ItemStack(registryItem);
+                    if (item.nbt() != null && !item.nbt().isEmpty()) {
+                        icon.set(DataComponents.CUSTOM_DATA,
+                                net.minecraft.world.item.component.CustomData.of(item.nbt().copy()));
+                    }
+                    g.renderItem(icon, rx, ry + 2);
+                }
+
+                // Name
+                String name = formatItemName(item.itemId());
+                int textColor = selected ? WandscapeTheme.COLOR_TEXT_ACTIVE
+                        : hovered ? WandscapeTheme.COLOR_TEXT_NORMAL
+                        : WandscapeTheme.COLOR_TEXT_DIM;
+                g.drawString(Minecraft.getInstance().font, name, rx + 20, ry + 3, textColor);
+
+                // Count (right-aligned)
+                String count = formatCount(item.count());
+                int countW = Minecraft.getInstance().font.width(count);
+                g.drawString(Minecraft.getInstance().font, count,
+                        rx + getWidth() - SCROLLBAR_W - countW - 8, ry + 3,
+                        WandscapeTheme.COLOR_TEXT_DIM);
+
+                // Exchange tab: hint on hover
+                if (showHint && hovered) {
+                    String hint = "L-click: withdraw 1  |  R-click: withdraw " + MAX_QTY;
+                    g.drawString(Minecraft.getInstance().font, hint, rx + 20, ry + 14,
+                            WandscapeTheme.COLOR_TEXT_DIM);
+                }
+            }
+        };
+    }
+
+    /** Y-position of the "Player Inventory" label (exchange tab). */
     private int getInventoryY() {
-        int contentY = topPos + headerHeight + 4;
-        int tabY = contentY + 20;
-        int tabH = PH - headerHeight - 4 - 20;
-        return tabY + tabH - (10 + SLOT_SIZE * 4);
+        return topPos + PH - 10 - SLOT_SIZE * 4 - 6;
     }
 
     // ── Tab switching ──
 
-    private void onTabChanged(int tabIndex) {
-        activeTab = tabIndex;
-        showTab(tabIndex);
-    }
-
     private void showTab(int tabIndex) {
-        removeWidget(elementPanel);
-        removeWidget(searchBar);
-        removeWidget(overviewList);
-        removeWidget(exchangeList);
-        removeWidget(exchangeSearchBar);
+        // Remove all tab-specific widgets
+        if (elementPanel != null) removeWidget(elementPanel);
+        if (searchInput != null) removeWidget(searchInput);
+        if (overviewList != null) removeWidget(overviewList);
+        if (exchangeList != null) removeWidget(exchangeList);
+        if (exchangeSearchInput != null) removeWidget(exchangeSearchInput);
 
         if (tabIndex == 0) {
-            addRenderableWidget(elementPanel);
-            addRenderableWidget(searchBar);
-            addRenderableWidget(overviewList);
+            if (elementPanel != null) addRenderableWidget(elementPanel);
+            if (searchInput != null) addRenderableWidget(searchInput);
+            if (overviewList != null) addRenderableWidget(overviewList);
         } else {
-            addRenderableWidget(exchangeList);
-            addRenderableWidget(exchangeSearchBar);
+            if (exchangeList != null) addRenderableWidget(exchangeList);
+            if (exchangeSearchInput != null) addRenderableWidget(exchangeSearchInput);
         }
     }
 
@@ -243,36 +235,144 @@ public class WarehouseScreen extends MedievalScreen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+        // 1. Panel background
+        renderBackground(g, mouseX, mouseY, partialTick);
+
+        // 2. Header bar
+        renderHeader(g, mouseX, mouseY);
+
+        // 3. Tab bar
+        renderTabs(g, mouseX, mouseY);
+
+        // 4. Search field backgrounds + separator line (behind widgets)
+        renderDecorations(g);
+
+        // 5. Widgets (EditBox, ElementPanel, ScrollableList)
+        for (Renderable r : this.renderables) {
+            r.render(g, mouseX, mouseY, partialTick);
+        }
+
+        // 6. Exchange tab: player inventory (after widgets)
         if (activeTab == 1) {
             renderPlayerInventory(g, mouseX, mouseY);
         }
     }
 
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderTransparentBackground(g);
+        WandscapeTheme.drawRtsBox(g, leftPos, topPos, PW, PH, false, false);
+    }
+
+    // ── Header ──
+
+    private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
+        int hx = leftPos + 1;
+        int hy = topPos + 1;
+        int hw = PW - 2;
+
+        // Header background
+        g.fill(hx, hy, hx + hw, hy + HEADER_H, WandscapeTheme.COLOR_BG_HOVER);
+        // Bottom separator
+        g.fill(hx, hy + HEADER_H, hx + hw, hy + HEADER_H + 1, WandscapeTheme.COLOR_BORDER_NORMAL);
+        // Green accent bar on left edge
+        g.fill(hx, hy, hx + 3, hy + HEADER_H, WandscapeTheme.COLOR_BORDER_ACTIVE);
+        // Title
+        g.drawString(font, "Colony Warehouse", hx + 10,
+                hy + (HEADER_H - font.lineHeight) / 2, WandscapeTheme.COLOR_TEXT_NORMAL);
+        // Close button
+        renderCloseBtn(g, mouseX, mouseY);
+    }
+
+    private void renderCloseBtn(GuiGraphics g, int mouseX, int mouseY) {
+        int bw = 20, bh = 16;
+        int bx = leftPos + PW - bw - 5;
+        int by = topPos + (HEADER_H - bh) / 2 + 1;
+
+        boolean hovered = isInRect(mouseX, mouseY, bx, by, bw, bh);
+        if (hovered) {
+            g.fill(bx, by, bx + bw, by + bh, 0x33FFFFFF);
+        }
+        g.drawString(font, "✕",
+                bx + (bw - font.width("✕")) / 2,
+                by + (bh - font.lineHeight) / 2,
+                hovered ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_DIM);
+    }
+
+    // ── Tabs ──
+
+    private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
+        String[] tabs = { "Overview", "Exchange" };
+        int ty = topPos + HEADER_H + 2;
+        int tx = leftPos + 8;
+        int padH = 10;
+
+        for (int i = 0; i < tabs.length; i++) {
+            int tw = font.width(tabs[i]) + padH * 2;
+            boolean active = i == activeTab;
+            boolean hovered = !active && isInRect(mouseX, mouseY, tx, ty, tw, TAB_H);
+
+            WandscapeTheme.drawRtsBox(g, tx, ty, tw, TAB_H, active, hovered);
+
+            int textColor = active ? WandscapeTheme.COLOR_TEXT_ACTIVE
+                    : hovered ? WandscapeTheme.COLOR_TEXT_NORMAL
+                    : WandscapeTheme.COLOR_TEXT_DIM;
+            g.drawString(font, tabs[i],
+                    tx + (tw - font.width(tabs[i])) / 2,
+                    ty + (TAB_H - font.lineHeight) / 2,
+                    textColor);
+            tx += tw + 4;
+        }
+    }
+
+    // ── Decorations (search backgrounds, separator) ──
+
+    private void renderDecorations(GuiGraphics g) {
+        if (activeTab == 0 && searchInput != null) {
+            drawInsetField(g, searchInput.getX() - 1, searchInput.getY() - 2,
+                    searchInput.getWidth() + 2, searchInput.getHeight() + 4);
+        } else if (activeTab == 1 && exchangeSearchInput != null) {
+            drawInsetField(g, exchangeSearchInput.getX() - 1, exchangeSearchInput.getY() - 2,
+                    exchangeSearchInput.getWidth() + 2, exchangeSearchInput.getHeight() + 4);
+
+            // Separator line above player inventory
+            int invY = getInventoryY();
+            int invX = leftPos + 8;
+            g.fill(invX, invY - 2, invX + 9 * SLOT_SIZE, invY - 1,
+                    WandscapeTheme.COLOR_BORDER_NORMAL);
+            g.drawString(font, "Player Inventory", invX, invY,
+                    WandscapeTheme.COLOR_TEXT_DIM);
+        }
+    }
+
+    /** Dark inset field background with 1px border (for search inputs). */
+    private static void drawInsetField(GuiGraphics g, int x, int y, int w, int h) {
+        g.fill(x, y, x + w, y + h, 0x28000000);
+        int border = WandscapeTheme.COLOR_BORDER_NORMAL;
+        g.fill(x, y, x + w, y + 1, border);
+        g.fill(x, y + h - 1, x + w, y + h, border);
+        g.fill(x, y, x + 1, y + h, border);
+        g.fill(x + w - 1, y, x + w, y + h, border);
+    }
+
+    // ── Player inventory (Exchange tab) ──
+
     private void renderPlayerInventory(GuiGraphics g, int mouseX, int mouseY) {
-        int invY = getInventoryY();
+        int invY = getInventoryY() + 10;
         int invX = leftPos + 8;
-
-        // Separator line
-        g.fill(invX, invY - 2, invX + 9 * SLOT_SIZE, invY - 1, MedievalColors.BORDER_GOLD_DARK);
-
-        // Label
-        g.drawString(font, "Player Inventory", invX, invY, MedievalColors.TEXT_MUTED);
-        invY += 10;
 
         var player = Minecraft.getInstance().player;
         if (player == null) return;
         var inventory = player.getInventory();
 
-        // Main inventory (slots 9-35, 3 rows of 9)
+        // Main inventory (slots 9-35, 3 rows)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 int slot = 9 + row * 9 + col;
                 int sx = invX + col * SLOT_SIZE;
                 int sy = invY + row * SLOT_SIZE;
-                boolean hovered = mouseX >= sx && mouseX < sx + SLOT_SIZE
-                        && mouseY >= sy && mouseY < sy + SLOT_SIZE;
-                renderSlot(g, inventory.getItem(slot), sx, sy, hovered);
+                renderSlot(g, inventory.getItem(slot), sx, sy,
+                        isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE));
             }
         }
 
@@ -280,21 +380,23 @@ public class WarehouseScreen extends MedievalScreen {
         for (int col = 0; col < 9; col++) {
             int sx = invX + col * SLOT_SIZE;
             int sy = invY + 3 * SLOT_SIZE;
-            boolean hovered = mouseX >= sx && mouseX < sx + SLOT_SIZE
-                    && mouseY >= sy && mouseY < sy + SLOT_SIZE;
-            renderSlot(g, inventory.getItem(col), sx, sy, hovered);
+            renderSlot(g, inventory.getItem(col), sx, sy,
+                    isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE));
         }
 
-        // Hover tooltip
         renderInventoryTooltip(g, mouseX, mouseY, invX, invY);
     }
 
     private void renderSlot(GuiGraphics g, ItemStack stack, int x, int y, boolean hovered) {
-        // Slot background
-        g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE,
-                hovered ? MedievalColors.PARCHMENT_LIGHT : MedievalColors.PARCHMENT_DEEPEST);
-        g.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1,
-                hovered ? MedievalColors.PARCHMENT_MID : MedievalColors.PARCHMENT_DARK);
+        int bg = hovered ? WandscapeTheme.COLOR_BG_HOVER : 0xFF15181C;
+        int border = hovered ? WandscapeTheme.COLOR_BORDER_ACTIVE : WandscapeTheme.COLOR_BORDER_NORMAL;
+
+        g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, bg);
+        // 1px border
+        g.fill(x, y, x + SLOT_SIZE, y + 1, border);
+        g.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, border);
+        g.fill(x, y, x + 1, y + SLOT_SIZE, border);
+        g.fill(x + SLOT_SIZE - 1, y, x + SLOT_SIZE, y + SLOT_SIZE, border);
 
         if (!stack.isEmpty()) {
             g.renderItem(stack, x + 1, y + 1);
@@ -312,7 +414,7 @@ public class WarehouseScreen extends MedievalScreen {
                 int slot = 9 + row * 9 + col;
                 int sx = invX + col * SLOT_SIZE;
                 int sy = invY + row * SLOT_SIZE;
-                if (hitTest(mouseX, mouseY, sx, sy)) {
+                if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
                     showHoverText(g, inventory.getItem(slot), mouseX, mouseY);
                     return;
                 }
@@ -321,37 +423,72 @@ public class WarehouseScreen extends MedievalScreen {
         for (int col = 0; col < 9; col++) {
             int sx = invX + col * SLOT_SIZE;
             int sy = invY + 3 * SLOT_SIZE;
-            if (hitTest(mouseX, mouseY, sx, sy)) {
+            if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
                 showHoverText(g, inventory.getItem(col), mouseX, mouseY);
                 return;
             }
         }
     }
 
-    private static boolean hitTest(double mx, double my, int x, int y) {
-        return mx >= x && mx < x + SLOT_SIZE && my >= y && my < y + SLOT_SIZE;
-    }
-
-    private static void showHoverText(GuiGraphics g, ItemStack stack, int mx, int my) {
+    private void showHoverText(GuiGraphics g, ItemStack stack, int mx, int my) {
         if (!stack.isEmpty()) {
             g.drawString(Minecraft.getInstance().font, stack.getHoverName().getString(),
-                    mx + 8, my - 12, MedievalColors.TEXT_WARM_WHITE);
+                    mx + 8, my - 12, WandscapeTheme.COLOR_TEXT_NORMAL);
         }
     }
 
-    // ── Mouse input ──
+    // ── Input ──
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Try player inventory click first (exchange tab only)
+        // Close button
+        if (button == 0 && isCloseHit(mouseX, mouseY)) {
+            this.onClose();
+            return true;
+        }
+
+        // Tab clicks
+        if (button == 0) {
+            int tabIdx = getTabAt(mouseX, mouseY);
+            if (tabIdx >= 0 && tabIdx != activeTab) {
+                activeTab = tabIdx;
+                showTab(activeTab);
+                return true;
+            }
+        }
+
+        // Player inventory (exchange tab)
         if (activeTab == 1 && isOverInventoryArea(mouseX, mouseY)) {
             if (handleInventoryClick((int) mouseX, (int) mouseY, button)) return true;
         }
+
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    private boolean isCloseHit(double mouseX, double mouseY) {
+        int bw = 20, bh = 16;
+        int bx = leftPos + PW - bw - 5;
+        int by = topPos + (HEADER_H - bh) / 2 + 1;
+        return isInRect(mouseX, mouseY, bx, by, bw, bh);
+    }
+
+    private int getTabAt(double mouseX, double mouseY) {
+        String[] tabs = { "Overview", "Exchange" };
+        int ty = topPos + HEADER_H + 2;
+        int tx = leftPos + 8;
+        int padH = 10;
+        for (int i = 0; i < tabs.length; i++) {
+            int tw = font.width(tabs[i]) + padH * 2;
+            if (isInRect(mouseX, mouseY, tx, ty, tw, TAB_H)) {
+                return i;
+            }
+            tx += tw + 4;
+        }
+        return -1;
+    }
+
     private boolean isOverInventoryArea(double mouseX, double mouseY) {
-        int invY = getInventoryY() + 10; // after label
+        int invY = getInventoryY() + 10;
         int invX = leftPos + 8;
         return mouseX >= invX && mouseX < invX + 9 * SLOT_SIZE
                 && mouseY >= invY && mouseY < invY + 4 * SLOT_SIZE;
@@ -370,22 +507,20 @@ public class WarehouseScreen extends MedievalScreen {
                 int slot = 9 + row * 9 + col;
                 int sx = invX + col * SLOT_SIZE;
                 int sy = invY + row * SLOT_SIZE;
-                if (hitTest(mouseX, mouseY, sx, sy)) {
+                if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
                     return depositFromSlot(slot, button);
                 }
             }
         }
-
         // Hotbar (slots 0-8)
         for (int col = 0; col < 9; col++) {
             int slot = col;
             int sx = invX + col * SLOT_SIZE;
             int sy = invY + 3 * SLOT_SIZE;
-            if (hitTest(mouseX, mouseY, sx, sy)) {
+            if (isInRect(mouseX, mouseY, sx, sy, SLOT_SIZE, SLOT_SIZE)) {
                 return depositFromSlot(slot, button);
             }
         }
-
         return false;
     }
 
@@ -410,44 +545,41 @@ public class WarehouseScreen extends MedievalScreen {
         return true;
     }
 
-    // ── Filter ──
+    // ── Filters ──
 
     private void applyFilter(String query) {
-        if (query == null || query.isEmpty()) {
-            filteredItems = new ArrayList<>(allItems);
-        } else {
-            String lower = query.toLowerCase();
-            filteredItems = new ArrayList<>();
-            for (ItemEntry item : allItems) {
-                if (item.itemId().toLowerCase().contains(lower)) {
-                    filteredItems.add(item);
-                }
-            }
-        }
+        filteredItems = filterItems(query);
         if (overviewList != null) {
             overviewList.setItems(filteredItems);
         }
     }
 
-    /** Filter the exchange tab's warehouse item list by query. */
     private void applyExchangeFilter(String query) {
-        if (query == null || query.isEmpty()) {
-            exchangeFilteredItems = new ArrayList<>(allItems);
-        } else {
-            String lower = query.toLowerCase();
-            exchangeFilteredItems = new ArrayList<>();
-            for (ItemEntry item : allItems) {
-                if (item.itemId().toLowerCase().contains(lower)) {
-                    exchangeFilteredItems.add(item);
-                }
-            }
-        }
+        exchangeFilteredItems = filterItems(query);
         if (exchangeList != null) {
             exchangeList.setItems(exchangeFilteredItems);
         }
     }
 
-    // ── Formatting helpers ──
+    private List<ItemEntry> filterItems(String query) {
+        if (query == null || query.isEmpty()) {
+            return new ArrayList<>(allItems);
+        }
+        String lower = query.toLowerCase();
+        List<ItemEntry> result = new ArrayList<>();
+        for (ItemEntry item : allItems) {
+            if (item.itemId().toLowerCase().contains(lower)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    // ── Helpers ──
+
+    private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
 
     private static String formatItemName(String itemId) {
         int colon = itemId.indexOf(':');
@@ -459,5 +591,10 @@ public class WarehouseScreen extends MedievalScreen {
         if (n < 1000) return String.valueOf(n);
         if (n < 1_000_000) return String.format("%.1fK", n / 1000.0);
         return String.format("%.1fM", n / 1_000_000.0);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }
