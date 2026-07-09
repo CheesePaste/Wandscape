@@ -95,9 +95,9 @@ public final class BuildingSelectionOverlay {
         Log.debug(TAG, "[Bar] ACTIVE: slots={} filtered={}", getSlotsSize(), getFilteredSlots().size());
         int barY = screenH - WandscapePanelController.BOTTOM_BAR_HEIGHT - BAR_HEIGHT;
 
-        // Background
-        g.fill(0, barY, screenW, barY + BAR_HEIGHT, BAR_BG);
-        g.fill(0, barY, screenW, barY + 1, BAR_BORDER);
+        // Background (Use new theme)
+        int bgW = screenW; // or maybe center it? For now full width is okay, or we could leave it 
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, 0, barY, screenW, BAR_HEIGHT, false, false);
 
         List<BuildingSlot> filtered = getFilteredSlots();
 

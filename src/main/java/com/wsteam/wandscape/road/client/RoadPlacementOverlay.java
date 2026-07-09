@@ -75,9 +75,8 @@ public final class RoadPlacementOverlay {
         int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
 
-        // Panel background + top border
-        g.fill(RenderType.guiOverlay(), 0, panelY, screenW, panelY + panelH, 0, PANEL_BG);
-        g.fill(RenderType.guiOverlay(), 0, panelY, screenW, panelY + 1, 0, PANEL_BORDER);
+        // Panel background + top border (Use new theme)
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, 0, panelY, screenW, panelH, false, false);
 
         // Pass 1: cell backgrounds
         for (int i = 0; i < presets.size(); i++) {

@@ -41,3 +41,5 @@ repo/
 !**/src/**/repo/
 .agents
 AGENTS.md
+ref
+node_modules

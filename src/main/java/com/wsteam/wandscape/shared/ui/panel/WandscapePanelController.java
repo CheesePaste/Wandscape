@@ -25,10 +25,10 @@ public final class WandscapePanelController {
     private static final String TAG = "WandscapePanelController";
 
     // Tab layout constants — keep in sync with WandscapePanelOverlay
-    public static final int TAB_W = 72;
-    public static final int TAB_GAP = 8;
+    public static final int TAB_W = 24;
+    public static final int TAB_GAP = 4;
     public static final int TAB_COUNT = 4;
-    public static final int BOTTOM_BAR_HEIGHT = 32;
+    public static final int BOTTOM_BAR_HEIGHT = 48; // Space from bottom of screen
     public static final int TOP_BAR_HEIGHT = 26;
 
     private static boolean registered = false;
@@ -170,7 +170,7 @@ public final class WandscapePanelController {
 
         // ── Bottom bar tabs ──
         if (mouseY >= screenH - BOTTOM_BAR_HEIGHT) {
-            int tabIndex = getTabAt(mouseX, screenW);
+            int tabIndex = getTabAt(mouseX, mouseY, screenW, screenH);
             if (tabIndex >= 0) {
                 handleTabClick(tabIndex);
                 event.setCanceled(true);
@@ -180,7 +180,10 @@ public final class WandscapePanelController {
 
     // ── Hit detection ──
 
-    public static int getTabAt(double mouseX, int screenW) {
+    public static int getTabAt(double mouseX, double mouseY, int screenW, int screenH) {
+        int barY = screenH - BOTTOM_BAR_HEIGHT;
+        if (mouseY < barY || mouseY > barY + TAB_W) return -1;
+
         int totalTabsW = TAB_COUNT * TAB_W + (TAB_COUNT - 1) * TAB_GAP;
         int tabStartX = (screenW - totalTabsW) / 2;
         for (int i = 0; i < TAB_COUNT; i++) {
@@ -193,7 +196,7 @@ public final class WandscapePanelController {
     }
 
     public static boolean isInTopBar(double mouseY, int screenH) {
-        return mouseY < TOP_BAR_HEIGHT;
+        return mouseY < 30; // approx height of new top-left box
     }
 
     public static boolean isInBottomBar(double mouseY, int screenH) {

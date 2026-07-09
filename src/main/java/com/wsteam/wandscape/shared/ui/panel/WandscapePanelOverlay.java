@@ -101,35 +101,48 @@ public final class WandscapePanelOverlay {
     private static void renderFills(GuiGraphics g, Font font, int screenW, int screenH) {
         boolean lookingAtBuilding = BuildingDebugClientState.getCachedData() != null;
 
-        // Top bar – hidden when debug overlay is showing building info
+        // 1. Top-Left Colony Info Widget (Hidden if looking at building debug info)
         if (!lookingAtBuilding) {
-            g.fill(RenderType.guiOverlay(), 0, 0, screenW, TOP_BAR_H, 0, BAR_BG);
+            java.util.UUID cid = WandscapePanelState.getColonyId();
+            if (cid != null) {
+                // Determine text sizes
+                int lvl = WandscapePanelState.getColonyLevel();
+                String name = WandscapePanelState.getColonyName();
+                if (name == null || name.isEmpty()) name = cid.toString().substring(0, 8);
+                String colonyText = name + " Lv." + lvl;
+
+                int cx = 10, cy = 10;
+                int iconS = 12;
+                int gap = 8;
+                
+                int comfortW = font.width(String.valueOf(WandscapePanelState.getComfort()));
+                int magicW = font.width(String.valueOf(WandscapePanelState.getMagic()));
+                int wonderW = font.width(String.valueOf(WandscapePanelState.getWonder()));
+                
+                int totalW = 4 + iconS + 4 + font.width(colonyText) + gap 
+                           + iconS + 2 + comfortW + gap 
+                           + iconS + 2 + magicW + gap 
+                           + iconS + 2 + wonderW + 4;
+
+                int boxH = 18;
+                com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, cx, cy, totalW, boxH, false, false);
+            }
         }
 
-        // Bottom bar
+        // 2. Bottom Main Command Bar (Tabs)
         int barY = screenH - BOTTOM_BAR_H;
-        g.fill(RenderType.guiOverlay(), 0, barY, screenW, screenH, 0, BAR_BG);
-
-        // Tabs
         int totalTabsW = TAB_COUNT * TAB_W + (TAB_COUNT - 1) * TAB_GAP;
         int tabStartX = (screenW - totalTabsW) / 2;
-        int tabY = barY + 8;
-        int tabH = BOTTOM_BAR_H - 16;
 
         WandscapePanelState.SubMode activeMode = WandscapePanelState.getActiveSubMode();
-        int hoveredTab = getHoveredTab(screenW);
+        int hoveredTab = getHoveredTab(screenW, screenH);
 
         for (int i = 0; i < TAB_COUNT; i++) {
             int tx = tabStartX + i * (TAB_W + TAB_GAP);
             boolean active = isTabActive(i, activeMode);
             boolean hovered = (i == hoveredTab);
-            int bgColor = active ? TAB_ACTIVE_BG : (hovered ? TAB_HOVER_BG : TAB_INACTIVE_BG);
-
-            g.fill(RenderType.guiOverlay(), tx, tabY, tx + TAB_W, tabY + tabH, 0, bgColor);
-            if (active) {
-                g.fill(RenderType.guiOverlay(), tx, tabY + tabH - 2, tx + TAB_W, tabY + tabH, 0,
-                        TAB_ACTIVE_BORDER);
-            }
+            
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, tx, barY, TAB_W, TAB_W, active, hovered);
         }
     }
 
@@ -138,91 +151,126 @@ public final class WandscapePanelOverlay {
     private static void renderTexts(GuiGraphics g, Font font, int screenW, int screenH) {
         boolean lookingAtBuilding = BuildingDebugClientState.getCachedData() != null;
 
-        // Top bar – hidden when debug overlay is showing building info
+        // 1. Top-Left Colony Info Text & Icons
         if (!lookingAtBuilding) {
-            int topY = (TOP_BAR_H - font.lineHeight) / 2;
-
-            String colonyText;
             java.util.UUID cid = WandscapePanelState.getColonyId();
             if (cid != null) {
                 int lvl = WandscapePanelState.getColonyLevel();
-                String name = WandscapePanelState.getColonyName(); if (name == null || name.isEmpty()) name = cid.toString().substring(0, 8); colonyText = name + " §eLv." + lvl;
-            } else {
-                colonyText = "殖民地: ---";
+                String name = WandscapePanelState.getColonyName();
+                if (name == null || name.isEmpty()) name = cid.toString().substring(0, 8);
+                String colonyText = name + " Lv." + lvl;
+
+                int x = 14;
+                int y = 11;
+                int iconS = 12;
+                int textY = y + 2;
+
+                com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_COLONY, x, y, iconS, iconS, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+                x += iconS + 4;
+                drawText(g, font, colonyText, x, textY, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+                x += font.width(colonyText) + 8;
+                
+                com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_COMFORT, x, y, iconS, iconS, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
+                x += iconS + 2;
+                String comfortStr = String.valueOf(WandscapePanelState.getComfort());
+                drawText(g, font, comfortStr, x, textY, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+                x += font.width(comfortStr) + 8;
+
+                com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_MAGIC, x, y, iconS, iconS, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_MAGIC);
+                x += iconS + 2;
+                String magicStr = String.valueOf(WandscapePanelState.getMagic());
+                drawText(g, font, magicStr, x, textY, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+                x += font.width(magicStr) + 8;
+
+                com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_WONDER, x, y, iconS, iconS, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
+                x += iconS + 2;
+                drawText(g, font, String.valueOf(WandscapePanelState.getWonder()), x, textY, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
             }
-
-            String comfortText = "Comfort: " + WandscapePanelState.getComfort();
-            String magicText = "Magic: " + WandscapePanelState.getMagic();
-            String wonderText = "Wonder: " + WandscapePanelState.getWonder();
-
-            int x = 8;
-            drawText(g, font, colonyText, x, topY, TEXT_DIM);
-            x += font.width(colonyText) + 24;
-            drawText(g, font, comfortText, x, topY, COMFORT_COLOR);
-            x += font.width(comfortText) + 24;
-            drawText(g, font, magicText, x, topY, MAGIC_COLOR);
-            x += font.width(magicText) + 24;
-            drawText(g, font, wonderText, x, topY, WONDER_COLOR);
         }
 
-        // Stats content (center area when Stats tab is active)
+        // 2. Stats content (if active)
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.STATS) {
             renderStatsContent(g, font, screenW, screenH);
         }
-        // Bottom bar
+
+        // 3. Bottom Main Command Bar Icons & Status Text
         int barY = screenH - BOTTOM_BAR_H;
         int totalTabsW = TAB_COUNT * TAB_W + (TAB_COUNT - 1) * TAB_GAP;
         int tabStartX = (screenW - totalTabsW) / 2;
-        int tabY = barY + 8;
-        int tabH = BOTTOM_BAR_H - 16;
 
         WandscapePanelState.SubMode activeMode = WandscapePanelState.getActiveSubMode();
+        int hoveredTab = getHoveredTab(screenW, screenH);
+
+        net.minecraft.resources.ResourceLocation[] ICONS = {
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_TAB_BUILD,
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_TAB_ROAD,
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_TAB_EDITOR,
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_TAB_STATS
+        };
 
         for (int i = 0; i < TAB_COUNT; i++) {
             int tx = tabStartX + i * (TAB_W + TAB_GAP);
             boolean active = isTabActive(i, activeMode);
-            int textColor = active ? TEXT_WHITE : TEXT_DIM;
-            drawCenteredText(g, font, TAB_LABELS[i],
-                    tx + TAB_W / 2, tabY + (tabH - font.lineHeight) / 2, textColor);
+            boolean hovered = (i == hoveredTab);
+            
+            int iconColor = active ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_ACTIVE : (hovered ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+            // Draw 16x16 icon centered in 24x24 box
+            int iconS = 16;
+            int offset = (TAB_W - iconS) / 2;
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, ICONS[i], tx + offset, barY + offset, iconS, iconS, iconColor);
         }
 
+        // Status Bar (Mode Name / Help Text) below tabs
+        if (activeMode != WandscapePanelState.SubMode.NONE || hoveredTab >= 0) {
+            int idx = hoveredTab >= 0 ? hoveredTab : getTabIndex(activeMode);
+            if (idx >= 0) {
+                String helpText = switch (idx) {
+                    case 0 -> "Mode: Build  (LMB: Place/Select, RMB: Cancel)";
+                    case 1 -> "Mode: Road  (LMB: Point, RMB: Confirm)";
+                    case 2 -> "Mode: Editor";
+                    case 3 -> "Mode: Stats  (Overview)";
+                    default -> "";
+                };
+                drawCenteredText(g, font, helpText, screenW / 2, barY + TAB_W + 4, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_ACTIVE);
+            }
+        }
     }
 
     // ── Stats content ──
 
     private static void renderStatsContent(GuiGraphics g, Font font, int screenW, int screenH) {
         var stats = WandscapePanelState.getStatsSummary();
-        int leftX = 12;
-        int y = TOP_BAR_H + 8;
+        
+        // Draw a slim floating window on the left side
+        int boxW = 280;
+        int boxH = 140;
+        int leftX = 10;
+        int topY = 40;
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, leftX, topY, boxW, boxH, true, false);
+
+        int textX = leftX + 10;
+        int y = topY + 10;
         int lineH = font.lineHeight + 3;
 
         if (stats == null || stats.snapshotCount() == 0) {
-            drawText(g, font, "No statistics available yet. Data will appear after the next daily settlement.",
-                    leftX, y, TEXT_DIM);
+            drawText(g, font, "No statistics available yet.", textX, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
             return;
         }
 
-        // Header: day
-        String header = "=== Colony Statistics ===  Day " + stats.currentDay();
-        drawText(g, font, header, leftX, y, TEXT_WHITE);
+        String header = "Colony Statistics  |  Day " + stats.currentDay();
+        drawText(g, font, header, textX, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
         y += lineH + 4;
 
-        // Maintenance line
-        String maint = "Maintenance:  " + stats.buildingsPaid() + " paid  |  "
-                + stats.buildingsShutdown() + " shutdown  |  "
-                + stats.buildingsRestarted() + " restarted";
-        drawText(g, font, maint, leftX, y, TEXT_DIM);
+        String maint = "Maintenance: " + stats.buildingsPaid() + " paid | " + stats.buildingsShutdown() + " shut";
+        drawText(g, font, maint, textX, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
 
-        // Tourism line
-        String tourist = "Tourists:     " + stats.touristsArrived() + " arrived  |  "
-                + stats.touristsDeparted() + " departed  |  Ø " + stats.avgSatisfaction() + "% satisfaction";
-        drawText(g, font, tourist, leftX, y, TEXT_DIM);
+        String tourist = "Tourists: " + stats.touristsArrived() + " in | " + stats.touristsDeparted() + " out | " + stats.avgSatisfaction() + "% ok";
+        drawText(g, font, tourist, textX, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH + 4;
 
-        // Element consumption (3 per row)
         if (!stats.totalElementsConsumed().isEmpty()) {
-            drawText(g, font, "Elements consumed (30d):", leftX, y, TEXT_WHITE);
+            drawText(g, font, "Elements consumed (30d):", textX, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
             y += lineH;
 
             var elements = stats.totalElementsConsumed();
@@ -231,23 +279,18 @@ public final class WandscapePanelOverlay {
             for (int i = 0; i < types.length; i++) {
                 long amount = elements.getOrDefault(types[i], 0L);
                 if (i > 0 && i % 3 == 0) {
-                    drawText(g, font, line.toString(), leftX + 8, y, TEXT_DIM);
+                    drawText(g, font, line.toString(), textX + 4, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
                     line = new StringBuilder();
                     y += lineH;
                 }
-                if (line.length() > 0) line.append("    ");
-                line.append(String.format("%-8s: %d", types[i].getId(), amount));
+                if (line.length() > 0) line.append("   ");
+                line.append(String.format("%-6s: %d", types[i].getId(), amount));
             }
             if (!line.isEmpty()) {
-                drawText(g, font, line.toString(), leftX + 8, y, TEXT_DIM);
+                drawText(g, font, line.toString(), textX + 4, y, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
                 y += lineH;
             }
         }
-
-        // Coverage info
-        y += 4;
-        String coverage = "Based on " + stats.snapshotCount() + " day(s) of data (max 30)";
-        drawText(g, font, coverage, leftX, y, TEXT_DIM);
     }
 
     // ── Text helpers (SEE_THROUGH = NO_DEPTH_TEST) ──
@@ -264,11 +307,12 @@ public final class WandscapePanelOverlay {
 
     // ── Helpers ──
 
-    private static int getHoveredTab(int screenW) {
+    private static int getHoveredTab(int screenW, int screenH) {
         if (!WandscapePanelState.isCursorLifted()) return -1;
         double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
         double mx = Minecraft.getInstance().mouseHandler.xpos() / guiScale;
-        return WandscapePanelController.getTabAt(mx, screenW);
+        double my = Minecraft.getInstance().mouseHandler.ypos() / guiScale;
+        return WandscapePanelController.getTabAt(mx, my, screenW, screenH);
     }
 
     private static boolean isTabActive(int tabIndex, WandscapePanelState.SubMode activeMode) {
@@ -279,5 +323,13 @@ public final class WandscapePanelOverlay {
             case 3 -> activeMode == WandscapePanelState.SubMode.STATS;
             default -> false;
         };
+    }
+    
+    private static int getTabIndex(WandscapePanelState.SubMode activeMode) {
+        if (activeMode == WandscapePanelState.SubMode.BUILD_PROJECTION) return 0;
+        if (activeMode == WandscapePanelState.SubMode.ROAD_PROJECTION) return 1;
+        if (activeMode == WandscapePanelState.SubMode.BUILD_EDITOR) return 2;
+        if (activeMode == WandscapePanelState.SubMode.STATS) return 3;
+        return -1;
     }
 }
