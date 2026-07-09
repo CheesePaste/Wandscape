@@ -38,6 +38,23 @@ public final class SplineEditorClientState {
     private static volatile EditMode editMode = EditMode.ADD;
     private static final SplineModel model = new SplineModel();
 
+    // ── Freecam Camera State ──
+    private static double camX, camY, camZ;
+    private static float camYaw, camPitch;
+
+    public static double getCamX() { return camX; }
+    public static double getCamY() { return camY; }
+    public static double getCamZ() { return camZ; }
+    public static float getCamYaw() { return camYaw; }
+    public static float getCamPitch() { return camPitch; }
+    public static void setCamPosition(double x, double y, double z) {
+        camX = x; camY = y; camZ = z;
+    }
+    public static void setCamRotation(float yaw, float pitch) {
+        camYaw = yaw;
+        camPitch = pitch;
+    }
+
     // Selection
     private static volatile int selectedPointIndex = -1;
     private static volatile SelectionType selectedType = SelectionType.NONE;
@@ -80,6 +97,16 @@ public final class SplineEditorClientState {
         selectedType = SelectionType.NONE;
         hoveredAxis = AxisDrag.NONE;
         draggingAxis = AxisDrag.NONE;
+        
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            camX = mc.player.getX();
+            camY = mc.player.getEyeY(); // better to start at eye level
+            camZ = mc.player.getZ();
+            camYaw = mc.player.getYRot();
+            camPitch = mc.player.getXRot();
+        }
+        
         Log.info(TAG, "[SplineEditor] Entered edit mode");
     }
 

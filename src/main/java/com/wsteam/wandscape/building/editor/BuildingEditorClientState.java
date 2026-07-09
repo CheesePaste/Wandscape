@@ -42,6 +42,29 @@ public final class BuildingEditorClientState {
     /** The relative offset within the AABB that is the "anchor" for pattern coordinates. */
     private static volatile BlockOffset anchorOffset = null;
 
+    // ── Freecam Camera State ──
+    private static double camX, camY, camZ;
+    private static float camYaw, camPitch;
+
+    public static double getCamX() { return camX; }
+    public static double getCamY() { return camY; }
+    public static double getCamZ() { return camZ; }
+    public static float getCamYaw() { return camYaw; }
+    public static float getCamPitch() { return camPitch; }
+    public static void setCamPosition(double x, double y, double z) {
+        camX = x; camY = y; camZ = z;
+    }
+    public static void setCamRotation(float yaw, float pitch) {
+        camYaw = yaw;
+        camPitch = pitch;
+    }
+    public static void addCamRotation(float yawDelta, float pitchDelta) {
+        camYaw += yawDelta;
+        camPitch += pitchDelta;
+        if (camPitch > 90) camPitch = 90;
+        if (camPitch < -90) camPitch = -90;
+    }
+
     // ── AABB (relative to worldAnchor) ──
 
     private static volatile BlockOffset editMin = null;  // null = not set yet
@@ -192,6 +215,13 @@ public final class BuildingEditorClientState {
             mc.player.onUpdateAbilities();
             // No-clip flight: pass through blocks
             mc.player.noPhysics = true;
+
+            // Initialize freecam state
+            camX = mc.player.getX();
+            camY = mc.player.getY();
+            camZ = mc.player.getZ();
+            camYaw = mc.player.getYRot();
+            camPitch = mc.player.getXRot();
         }
 
         // Auto-show ImGui (releases mouse)

@@ -49,6 +49,7 @@ public final class BuildingEditorController {
         registered = true;
         var bus = net.neoforged.neoforge.common.NeoForge.EVENT_BUS;
         bus.addListener(ClientTickEvent.Post.class, BuildingEditorController::onClientTickPost);
+        bus.addListener(net.neoforged.neoforge.client.event.RenderLevelStageEvent.class, BuildingEditorController::onRenderLevelStage);
         bus.addListener(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent.class,
                 BuildingEditorController::onMouseScroll);
         Log.info(TAG, "[BuildEditor] Controller registered");
@@ -80,10 +81,8 @@ public final class BuildingEditorController {
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
 
         if (cameraActive) {
-            // Right-click held: WASD flight + camera rotation
-            if (!imguiWantsKb) {
-                handleFlightMovement(mc, window);
-            } else {
+            // Flight movement while holding right-click
+            if (imguiWantsKb) {
                 mc.player.setDeltaMovement(Vec3.ZERO);
             }
         } else {
@@ -120,45 +119,64 @@ public final class BuildingEditorController {
 
     // ── Flight ──
 
-    private static void handleFlightMovement(Minecraft mc, long window) {
-        boolean wDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
-        boolean aDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
-        boolean sDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
-        boolean dDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
-        boolean spaceDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS;
-        boolean shiftDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
-        boolean sprintDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+    // ── Flight & Camera Sync (Per Frame) ──
+    private static long lastFrameNanos = 0;
 
-        if (!wDown && !aDown && !sDown && !dDown && !spaceDown && !shiftDown) {
-            mc.player.setDeltaMovement(Vec3.ZERO);
-            return;
-        }
+    static void onRenderLevelStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+        if (!BuildingEditorClientState.isEditing()) return;
+        if (event.getStage() != net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) return;
 
-        Camera camera = mc.gameRenderer.getMainCamera();
-        Vec3 forward = new Vec3(camera.getLookVector().x(),
-                camera.getLookVector().y(), camera.getLookVector().z());
-        Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
-        Vec3 up = new Vec3(0, 1, 0);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        
+        // Sync rotation natively from player every frame
+        BuildingEditorClientState.setCamRotation(mc.player.getYRot(), mc.player.getXRot());
 
-        Vec3 moveDir = Vec3.ZERO;
-        if (wDown) moveDir = moveDir.add(forward);
-        if (sDown) moveDir = moveDir.subtract(forward);
-        if (aDown) moveDir = moveDir.subtract(right);
-        if (dDown) moveDir = moveDir.add(right);
-        if (spaceDown) moveDir = moveDir.add(up);
-        if (shiftDown) moveDir = moveDir.subtract(up);
+        // Frame-time delta
+        long now = System.nanoTime();
+        if (lastFrameNanos == 0) lastFrameNanos = now;
+        double elapsed = (now - lastFrameNanos) / 1_000_000_000.0;
+        lastFrameNanos = now;
+        if (elapsed > 0.05) elapsed = 0.05;
 
-        if (moveDir.lengthSqr() > 1e-6) {
-            moveDir = moveDir.normalize();
-            float speed = flyingSpeed;
+        // If not holding right-click or if ImGui is capturing input, don't fly
+        boolean imguiReady = ImGuiManager.isInitialized();
+        boolean imguiWantsKb = imguiReady && ImGui.getIO().getWantCaptureKeyboard();
+        if (!cameraActive || imguiWantsKb) return;
+
+        long window = mc.getWindow().getWindow();
+        float forward = 0, strafe = 0, vertical = 0;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) strafe -= 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) strafe += 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) vertical += 1;
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
+
+        if (forward != 0 || strafe != 0 || vertical != 0) {
+            boolean sprintDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                    || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+            
+            Vec3 fwd = Vec3.directionFromRotation(0, BuildingEditorClientState.getCamYaw());
+            Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
+            
+            float speed = flyingSpeed * 20.0f; // Scale it to be comparable to previous logic (BPS)
             if (sprintDown) speed *= 2.0f;
-            mc.player.setDeltaMovement(moveDir.scale(speed * 20.0));
-        } else {
-            mc.player.setDeltaMovement(Vec3.ZERO);
+            
+            double move = speed * elapsed;
+            double moveX = (fwd.x * forward + right.x * strafe) * move;
+            double moveZ = (fwd.z * forward + right.z * strafe) * move;
+            double moveY = vertical * move;
+            
+            BuildingEditorClientState.setCamPosition(
+                    BuildingEditorClientState.getCamX() + moveX,
+                    BuildingEditorClientState.getCamY() + moveY,
+                    BuildingEditorClientState.getCamZ() + moveZ
+            );
         }
     }
+
 
     // ── Keyboard shortcuts ──
 
@@ -189,21 +207,39 @@ public final class BuildingEditorController {
     static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
         if (!BuildingEditorClientState.isEditing()) return;
         if (ImGuiManager.isInitialized() && ImGui.getIO().getWantCaptureMouse()) return;
-        event.setCanceled(true);
 
-        // Right-click held → adjust flying speed
-        if (cameraActive) {
-            double delta = event.getScrollDeltaY();
-            if (delta != 0) {
-                // ~1.3x per step, invert so scroll-up = faster
-                float factor = (float) Math.pow(1.3, delta);
-                flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.player != null) {
-                    mc.player.displayClientMessage(
-                            Component.literal(String.format("[BuildEditor] §eSpeed: %.2f", flyingSpeed)), true);
-                }
+        // Only handle scroll when right-click is held (camera is active)
+        if (!cameraActive) {
+            return; // let vanilla handle it (e.g. hotbar)
+        }
+        
+        event.setCanceled(true);
+        double delta = event.getScrollDeltaY();
+        if (delta == 0) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        long window = mc.getWindow().getWindow();
+        boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+
+        if (ctrlDown) {
+            // Ctrl + Scroll -> adjust flying speed
+            float factor = (float) Math.pow(1.3, delta);
+            flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal(String.format("[BuildEditor] §eSpeed: %.2f", flyingSpeed)), true);
             }
+        } else {
+            // Scroll -> move camera forward/backward
+            Vec3 dir = Vec3.directionFromRotation(
+                    BuildingEditorClientState.getCamPitch(), BuildingEditorClientState.getCamYaw());
+            double move = delta * 4.0; // SCROLL_SPEED
+            BuildingEditorClientState.setCamPosition(
+                    BuildingEditorClientState.getCamX() + dir.x * move,
+                    BuildingEditorClientState.getCamY() + dir.y * move,
+                    BuildingEditorClientState.getCamZ() + dir.z * move
+            );
         }
     }
 

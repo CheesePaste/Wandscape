@@ -44,7 +44,7 @@ public final class OverviewFlightController {
 
     private static final String TAG = "OverviewFlightController";
     private static final double REACH = 64.0;
-    private static final double MOVE_SPEED_BPS = 10.0;     // blocks per second
+    private static double flyingSpeed = 10.0;     // blocks per second
     private static final double SCROLL_SPEED = 4.0;
     private static final float MOUSE_SENSITIVITY = 0.15f;
 
@@ -174,7 +174,7 @@ public final class OverviewFlightController {
         if (forward != 0 || strafe != 0 || vertical != 0) {
             Vec3 fwd = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
-            double move = MOVE_SPEED_BPS * elapsed;
+            double move = flyingSpeed * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
             double moveY = vertical * move;
@@ -258,15 +258,31 @@ public final class OverviewFlightController {
         Minecraft mc = Minecraft.getInstance();
         // Don't block scroll when a screen is open (allow UI scrolling)
         if (mc.screen != null) return;
-
-        Vec3 dir = Vec3.directionFromRotation(
-                OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
-        double move = event.getScrollDeltaY() * SCROLL_SPEED;
-        OverviewClientState.setCamPosition(
-                OverviewClientState.getCamX() + dir.x * move,
-                OverviewClientState.getCamY() + dir.y * move,
-                OverviewClientState.getCamZ() + dir.z * move);
+        
         event.setCanceled(true);
+        double delta = event.getScrollDeltaY();
+        if (delta == 0) return;
+
+        long window = mc.getWindow().getWindow();
+        boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+
+        if (ctrlDown) {
+            float factor = (float) Math.pow(1.3, delta);
+            flyingSpeed = Math.max(1.0, Math.min(100.0, flyingSpeed * factor));
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal(String.format("[Overview] §eSpeed: %.1f", flyingSpeed)), true);
+            }
+        } else {
+            Vec3 dir = Vec3.directionFromRotation(
+                    OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
+            double move = delta * SCROLL_SPEED;
+            OverviewClientState.setCamPosition(
+                    OverviewClientState.getCamX() + dir.x * move,
+                    OverviewClientState.getCamY() + dir.y * move,
+                    OverviewClientState.getCamZ() + dir.z * move);
+        }
     }
 
     /** Intercept mouse buttons — but only when no screen is open. */
