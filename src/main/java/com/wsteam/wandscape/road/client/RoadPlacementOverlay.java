@@ -89,11 +89,10 @@ public final class RoadPlacementOverlay {
             boolean hovered = mx >= cellX && mx <= cellX + CELL_W
                     && my >= cellY && my <= cellY + CELL_H;
 
-            int bg = selected ? CELL_SELECTED_BG : (hovered ? CELL_HOVER_BG : CELL_BG);
-            g.fill(RenderType.guiOverlay(), cellX, cellY, cellX + CELL_W, cellY + CELL_H, 0, bg);
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, cellX, cellY, CELL_W, CELL_H, selected, hovered);
             if (selected) {
                 g.fill(RenderType.guiOverlay(), cellX, cellY + CELL_H - 2,
-                        cellX + CELL_W, cellY + CELL_H, 0, 0xFFC8A040);
+                        cellX + CELL_W, cellY + CELL_H, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
             }
         }
 
@@ -105,18 +104,16 @@ public final class RoadPlacementOverlay {
 
         // Button 1: Square Fill (Active)
         boolean btn1Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= toolsStartY && my <= toolsStartY + btnH;
-        int btn1Bg = btn1Hover ? CELL_HOVER_BG : CELL_SELECTED_BG;
-        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY, toolsStartX + btnW, toolsStartY + btnH, 0, btn1Bg);
-        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, 0xFF4FA0FF);
-        font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 12, TEXT_WHITE, false,
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, toolsStartY, btnW, btnH, true, btn1Hover);
+        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
+        font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
         // Button 2: Spline Pen
         int btn2Y = toolsStartY + btnH + 10;
         boolean btn2Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn2Y && my <= btn2Y + btnH;
-        int btn2Bg = btn2Hover ? CELL_HOVER_BG : CELL_BG;
-        g.fill(RenderType.guiOverlay(), toolsStartX, btn2Y, toolsStartX + btnW, btn2Y + btnH, 0, btn2Bg);
-        font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 12, TEXT_DIM, false,
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, btn2Y, btnW, btnH, false, btn2Hover);
+        font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
         // Flush backgrounds before 3D preview
@@ -141,17 +138,16 @@ public final class RoadPlacementOverlay {
             // Label
             String name = preset.displayName();
             int nameW = font.width(name);
-            if (nameW > CELL_W - 4) {
+            if (font.width(name) > CELL_W - 4) {
                 while (font.width(name + ".") > CELL_W - 8 && name.length() > 1) {
                     name = name.substring(0, name.length() - 1);
                 }
                 name = name + ".";
             }
-            int nameX = cellX + (CELL_W - font.width(name)) / 2;
-            int nameY = cellY + CELL_H - 11;
-            font.drawInBatch(name, nameX, nameY, selected ? TEXT_WHITE : TEXT_DIM, false,
-                    g.pose().last().pose(), g.bufferSource(),
-                    Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+            boolean hovered = mx >= cellX && mx <= cellX + CELL_W && my >= cellY && my <= cellY + CELL_H;
+            int nameColor = selected ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : (hovered ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+            font.drawInBatch(name, cellX + (CELL_W - font.width(name)) / 2f, cellY + CELL_H - 12, nameColor, false,
+                    g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
         }
     }
 

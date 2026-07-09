@@ -216,10 +216,8 @@ public final class BuildingSelectionOverlay {
             boolean hovered = mouseY >= barY && mouseY < barY + CATEGORY_ROW_H
                     && mouseX >= x && mouseX < x + w;
 
-            int bg = active ? CAT_SELECTED_BG : (hovered ? CAT_HOVER_BG : CAT_INACTIVE_BG);
-            int textColor = active ? CAT_TEXT_SELECTED : CAT_TEXT_NORMAL;
-
-            g.fill(x, y, x + w, y + CATEGORY_ROW_H - 2, bg);
+            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, w, CATEGORY_ROW_H - 2, active, hovered);
+            int textColor = active ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM;
             g.drawString(font, cat, x + 5, y + 2, textColor);
             x += w + 2;
         }
@@ -229,7 +227,7 @@ public final class BuildingSelectionOverlay {
 
     private static void renderSearchBar(GuiGraphics g, Font font, int x, int y,
                                          double mouseX, double mouseY) {
-        g.fill(x, y, x + SEARCH_W, y + SEARCH_H, 0xFF2A1A0A);
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, SEARCH_W, SEARCH_H, false, false);
 
         String text = WandscapePanelState.getBuildingBarSearch();
         String display = text.isEmpty() ? "Search" : text;
@@ -271,8 +269,11 @@ public final class BuildingSelectionOverlay {
                 boolean hovered = mouseX >= cellX && mouseX < cellX + CELL_W
                         && mouseY >= cellY && mouseY < cellY + CELL_H;
 
-                int bg = selected ? CELL_SELECTED_BG : (hovered ? CELL_HOVER_BG : CELL_BG);
-                g.fill(cellX, cellY, cellX + CELL_W - 2, cellY + CELL_H - 2, bg);
+                com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, cellX, cellY, CELL_W - 2, CELL_H - 2, selected, hovered);
+                if (selected) {
+                    g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), cellX, cellY + CELL_H - 4,
+                            cellX + CELL_W - 2, cellY + CELL_H - 2, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
+                }
             }
         }
 
@@ -315,7 +316,10 @@ public final class BuildingSelectionOverlay {
                 }
                 int nameX = cellX + (CELL_W - nameW) / 2;
                 int nameY = cellY + CELL_H - 12;
-                g.drawString(font, name, nameX, nameY, selected ? TEXT_WHITE : TEXT_DIM);
+                boolean hovered = mouseX >= cellX && mouseX < cellX + CELL_W
+                        && mouseY >= cellY && mouseY < cellY + CELL_H;
+                int nameColor = selected ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : (hovered ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+                g.drawString(font, name, nameX, nameY, nameColor);
             }
         }
     }
@@ -333,12 +337,12 @@ public final class BuildingSelectionOverlay {
         int scrollbarX = screenW - GRID_PAD_X - SCROLLBAR_W;
 
         // Track
-        g.fill(scrollbarX, gridY, scrollbarX + SCROLLBAR_W, gridY + gridH, SCROLLBAR_TRACK);
+        g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), scrollbarX, gridY, scrollbarX + SCROLLBAR_W, gridY + gridH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BG_MAIN);
 
         // Thumb
         int thumbH = Math.max(12, gridH * VISIBLE_ROWS / totalRows);
         int thumbY = gridY + (int) ((gridH - thumbH) * ratio);
-        g.fill(scrollbarX + 1, thumbY, scrollbarX + SCROLLBAR_W - 1, thumbY + thumbH, SCROLLBAR_THUMB);
+        g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), scrollbarX + 1, thumbY, scrollbarX + SCROLLBAR_W - 1, thumbY + thumbH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_NORMAL);
     }
 
 }
