@@ -195,6 +195,18 @@ public class ItemTransportManager {
         entity.yOld = entity.getY();
         entity.zOld = entity.getZ();
 
+        // Calculate and set velocity for client-side interpolation/prediction
+        double nextT = (double) (elapsed + 1) / leg.duration;
+        double nx = leg.from.x + (leg.to.x - leg.from.x) * nextT;
+        double nz = leg.from.z + (leg.to.z - leg.from.z) * nextT;
+        double ny;
+        if (leg.flatY) {
+            ny = leg.from.y + (leg.to.y - leg.from.y) * nextT;
+        } else {
+            ny = leg.from.y + (leg.to.y - leg.from.y) * nextT + Math.sin(nextT * Math.PI) * 1.5;
+        }
+        entity.setDeltaMovement(nx - x, ny - y, nz - z);
+
         entity.hasImpulse = true;
         entity.setPos(pos.x, pos.y, pos.z);
     }
@@ -240,8 +252,41 @@ public class ItemTransportManager {
             smoothedNodes.add(nodes.get(nodes.size() - 1)); // Keep exact end
         }
 
+        // Apply path decimation/simplification to merge short segments where possible
+        // This prevents the entity from changing legs every single block
+        List<Vec3> decimatedNodes = new ArrayList<>();
+        List<Boolean> decimatedOnRoad = new ArrayList<>();
+        
+        decimatedNodes.add(smoothedNodes.get(0));
+        
         for (int i = 0; i < route.size(); i++) {
-            legs.add(new Leg(smoothedNodes.get(i), smoothedNodes.get(i + 1), route.get(i).onRoad()));
+            boolean onRoad = route.get(i).onRoad();
+            Vec3 nextNode = smoothedNodes.get(i + 1);
+            
+            // If we have at least 2 nodes in decimated list, check if we can skip the intermediate one
+            if (decimatedNodes.size() >= 2) {
+                Vec3 prevNode = decimatedNodes.get(decimatedNodes.size() - 2);
+                Vec3 currNode = decimatedNodes.get(decimatedNodes.size() - 1);
+                boolean prevOnRoad = decimatedOnRoad.get(decimatedOnRoad.size() - 1);
+                
+                // If same type and colinear, replace current with next
+                if (prevOnRoad == onRoad) {
+                    Vec3 v1 = currNode.subtract(prevNode).normalize();
+                    Vec3 v2 = nextNode.subtract(currNode).normalize();
+                    
+                    if (v1.distanceTo(v2) < 0.05) { // highly colinear
+                        decimatedNodes.set(decimatedNodes.size() - 1, nextNode);
+                        continue; // Skip adding a new leg, just extended the previous one
+                    }
+                }
+            }
+            
+            decimatedNodes.add(nextNode);
+            decimatedOnRoad.add(onRoad);
+        }
+
+        for (int i = 0; i < decimatedOnRoad.size(); i++) {
+            legs.add(new Leg(decimatedNodes.get(i), decimatedNodes.get(i + 1), decimatedOnRoad.get(i)));
         }
         return legs;
     }
@@ -250,7 +295,7 @@ public class ItemTransportManager {
     private static void neutralizeEntityPhysics(ItemEntity entity) {
         entity.noPhysics = true;
         entity.setNoGravity(true);
-        entity.setDeltaMovement(Vec3.ZERO);
+        // Do NOT setDeltaMovement(Vec3.ZERO) here, tickLeg manages the velocity!
         entity.setUnlimitedLifetime();
         entity.setPickUpDelay(Short.MAX_VALUE);
     }
