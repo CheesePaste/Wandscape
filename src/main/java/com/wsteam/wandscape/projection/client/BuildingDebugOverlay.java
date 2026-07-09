@@ -129,39 +129,37 @@ public final class BuildingDebugOverlay {
         float yBase = boxY + PAD_Y;
 
         // ── Background ──
-        g.fill(RenderType.guiOverlay(), boxX, boxY, boxX + boxW, boxY + boxH, 0, BG_COLOR);
-        g.fill(RenderType.guiOverlay(), boxX, boxY + boxH - 1, boxX + boxW, boxY + boxH, 0, BORDER_COLOR);
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, boxX, boxY, boxW, boxH, false, false);
         g.bufferSource().endBatch(RenderType.guiOverlay());
 
         // ── Line 1: typeId | category | status ──
         float x = boxX + PAD_X;
-        drawText(g, font, l1, x, yBase, TEXT_WHITE);
+        drawText(g, font, l1, x, yBase, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
         x += font.width(l1) + GAP;
-        drawText(g, font, l1cat, x, yBase, TEXT_GRAY);
+        drawText(g, font, l1cat, x, yBase, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         x += font.width(l1cat) + GAP;
         drawText(g, font, l1status, x, yBase, l1statusColor);
 
         // ── Line 2: stats ──
-        drawText(g, font, l2stats, boxX + PAD_X, yBase + LINE_H, TEXT_STAT);
+        drawText(g, font, l2stats, boxX + PAD_X, yBase + LINE_H, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
 
         // ── Line 3: id | colonyId | anchor ──
         float x3 = boxX + PAD_X;
-        drawText(g, font, l3id, x3, yBase + LINE_H * 2, TEXT_DIM);
+        drawText(g, font, l3id, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         x3 += font.width(l3id) + GAP;
-        drawText(g, font, l3cid, x3, yBase + LINE_H * 2, TEXT_DIM);
+        drawText(g, font, l3cid, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         x3 += font.width(l3cid) + GAP;
-        drawText(g, font, l3anchor, x3, yBase + LINE_H * 2, TEXT_GRAY);
+        drawText(g, font, l3anchor, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Line 4: queue count | current task ──
         float x4 = boxX + PAD_X;
-        drawText(g, font, l4queue, x4, yBase + LINE_H * 3, TEXT_DIM);
+        drawText(g, font, l4queue, x4, yBase + LINE_H * 3, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         x4 += font.width(l4queue) + GAP;
-        drawText(g, font, l4task, x4, yBase + LINE_H * 3, data.currentTaskId() != null ? TEXT_YELLOW : TEXT_DIM);
+        drawText(g, font, l4task, x4, yBase + LINE_H * 3, data.currentTaskId() != null ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Buttons ──
         int btnY = boxY + boxH + 2;
         String leftLabel = data.shutdown() ? "Restart" : "Shutdown";
-        int leftBg = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
 
         // Measure button widths from labels
         int leftLabelW = font.width(leftLabel);
@@ -183,14 +181,16 @@ public final class BuildingDebugOverlay {
         boolean hoverRight = mx >= rightX && mx <= rightX + rightW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
         // Left button (shutdown / restart)
-        int leftColor = hoverLeft ? brighten(leftBg) : leftBg;
-        g.fill(RenderType.guiOverlay(), leftX, btnY, leftX + leftW, btnY + BTN_HEIGHT, 0, leftColor);
-        drawCenteredText(g, font, leftLabel, leftX + leftW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, BTN_TEXT);
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, leftX, btnY, leftW, BTN_HEIGHT, false, hoverLeft);
+        // Draw a small colored rect to indicate action color (orange/green)
+        int leftAccent = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
+        g.fill(RenderType.guiOverlay(), leftX, btnY + BTN_HEIGHT - 2, leftX + leftW, btnY + BTN_HEIGHT, 0, leftAccent);
+        drawCenteredText(g, font, leftLabel, leftX + leftW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
         // Right button (destroy)
-        int rightColor = hoverRight ? brighten(BTN_DESTROY_BG) : BTN_DESTROY_BG;
-        g.fill(RenderType.guiOverlay(), rightX, btnY, rightX + rightW, btnY + BTN_HEIGHT, 0, rightColor);
-        drawCenteredText(g, font, "Destroy", rightX + rightW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, BTN_TEXT);
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, rightX, btnY, rightW, BTN_HEIGHT, false, hoverRight);
+        g.fill(RenderType.guiOverlay(), rightX, btnY + BTN_HEIGHT - 2, rightX + rightW, btnY + BTN_HEIGHT, 0, BTN_DESTROY_BG);
+        drawCenteredText(g, font, "Destroy", rightX + rightW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
         g.bufferSource().endBatch(RenderType.guiOverlay());
 

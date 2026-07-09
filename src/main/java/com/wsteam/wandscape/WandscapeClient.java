@@ -137,6 +137,7 @@ public class WandscapeClient {
         // Wandscape Panel
         WandscapePanelController.register();
         WandscapePanelOverlay.register();
+        com.wsteam.wandscape.shared.ui.util.WandscapeHighlightRenderer.register();
 
         // Overview mode
         OverviewFlightController.register();
