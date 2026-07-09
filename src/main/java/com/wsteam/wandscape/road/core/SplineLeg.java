@@ -14,8 +14,26 @@ public record SplineLeg(SplineModel spline, double uStart, double uEnd, boolean 
      */
     public double getApproxLength() {
         if (spline == null) return 0;
-        SplineVec3 startPos = spline.evaluate(uStart).position();
-        SplineVec3 endPos = spline.evaluate(uEnd).position();
-        return startPos.subtract(endPos).length();
+        
+        // Fast path for off-road (which are straight lines between two points)
+        if (offRoad) {
+            SplineVec3 startPos = spline.evaluate(uStart).position();
+            SplineVec3 endPos = spline.evaluate(uEnd).position();
+            return startPos.subtract(endPos).length();
+        }
+
+        // For on-road splines, sample the curve to get a better arc length estimate
+        double length = 0;
+        int steps = Math.max(5, (int)(Math.abs(uEnd - uStart) * 10)); // 10 samples per segment
+        double dt = (uEnd - uStart) / steps;
+        
+        SplineVec3 lastPos = spline.evaluate(uStart).position();
+        for (int i = 1; i <= steps; i++) {
+            double u = uStart + i * dt;
+            SplineVec3 pos = spline.evaluate(u).position();
+            length += lastPos.subtract(pos).length();
+            lastPos = pos;
+        }
+        return length;
     }
 }
