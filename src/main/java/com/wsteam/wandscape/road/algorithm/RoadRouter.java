@@ -331,6 +331,7 @@ public final class RoadRouter {
         // Phase 1: Network edges (all on-road)
         if (network != null) {
             for (RoadEdge edge : network.getEdges().values()) {
+                if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
                 List<PathPoint> pts = edge.getPath();
                 if (pts.isEmpty()) continue;
 

@@ -593,6 +593,7 @@ public final class TouristSpawnSystem {
             RoadNetwork network = roadApi.getNetwork(null);
             if (network != null && !network.isEmpty()) {
                 for (RoadEdge edge : network.getEdges().values()) {
+                    if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
                     var path = edge.getPath();
                     if (path.size() >= 2) {
                         positions.add(new BlockPos(
