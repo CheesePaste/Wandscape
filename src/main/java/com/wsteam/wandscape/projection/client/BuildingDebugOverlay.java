@@ -98,9 +98,11 @@ public final class BuildingDebugOverlay {
         String l1status = getStatusText(data);
         int l1statusColor = getStatusColor(data);
 
-        String l2stats = "C:" + data.comfort() + "  M:" + data.magic()
-                + "  W:" + data.wonder() + "  Q:" + data.queueCapacity();
-
+        // We will render stats with icons manually.
+        String comfortStr = String.valueOf(data.comfort());
+        String magicStr = String.valueOf(data.magic());
+        String wonderStr = String.valueOf(data.wonder());
+        String queueStr = String.valueOf(data.queueCapacity());
         String l3id = "id:" + shortUuid(data.buildingId());
         String l3cid = data.colonyId() != null ? "cid:" + shortUuid(data.colonyId()) : "no colony";
         String l3anchor = posStr(data.anchor());
@@ -113,16 +115,22 @@ public final class BuildingDebugOverlay {
                 : "no task";
 
         // ── Measure ──
+        int iconW = 9;
+        int statsW = (iconW + 2 + font.width(comfortStr))
+                   + 10 + (iconW + 2 + font.width(magicStr))
+                   + 10 + (iconW + 2 + font.width(wonderStr))
+                   + 10 + (font.width("Q:") + 2 + font.width(queueStr));
+
         int[] widths = {
                 font.width(l1) + GAP + font.width(l1cat) + GAP + font.width(l1status),
-                font.width(l2stats),
+                statsW,
                 font.width(l3id) + GAP + font.width(l3cid) + GAP + font.width(l3anchor),
                 font.width(l4queue) + GAP + font.width(l4task)
         };
         int maxW = 0;
         for (int w : widths) if (w > maxW) maxW = w;
 
-        int boxW = maxW + PAD_X * 2;
+        int boxW = maxW + PAD_X * 2 + 24; // Extra padding to make the box wider
         int boxH = font.lineHeight * 4 + PAD_Y * 2 + 3;
         int boxX = (screenW - boxW) / 2;
         int boxY = 4;
@@ -141,7 +149,27 @@ public final class BuildingDebugOverlay {
         drawText(g, font, l1status, x, yBase, l1statusColor);
 
         // ── Line 2: stats ──
-        drawText(g, font, l2stats, boxX + PAD_X, yBase + LINE_H, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
+        float x2 = boxX + PAD_X;
+        float y2 = yBase + LINE_H;
+        
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_COMFORT, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
+        x2 += 11;
+        drawText(g, font, comfortStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_COMFORT);
+        x2 += font.width(comfortStr) + 10;
+        
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_MAGIC, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_MAGIC);
+        x2 += 11;
+        drawText(g, font, magicStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_MAGIC);
+        x2 += font.width(magicStr) + 10;
+        
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(g, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_WONDER, (int)x2, (int)y2 - 1, 9, 9, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
+        x2 += 11;
+        drawText(g, font, wonderStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER);
+        x2 += font.width(wonderStr) + 10;
+        
+        drawText(g, font, "Q:", x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+        x2 += font.width("Q:") + 2;
+        drawText(g, font, queueStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
         // ── Line 3: id | colonyId | anchor ──
         float x3 = boxX + PAD_X;

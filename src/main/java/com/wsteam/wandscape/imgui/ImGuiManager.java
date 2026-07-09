@@ -76,12 +76,37 @@ public class ImGuiManager {
 
         ImGui.createContext();
 
-        // Larger font for readability
-        ImGui.getIO().setFontGlobalScale(1.6f);
+        // ── Fonts ──
+        imgui.ImFontConfig fontConfig = new imgui.ImFontConfig();
+        fontConfig.setOversampleH(2);
+        fontConfig.setOversampleV(2);
 
-        // Apply modern dark theme
+        byte[] robotoBytes = loadFontBytes("fonts/Roboto-Regular.ttf");
+        if (robotoBytes != null) {
+            ImGui.getIO().getFonts().addFontFromMemoryTTF(robotoBytes, 18.0f, fontConfig);
+        } else {
+            ImGui.getIO().getFonts().addFontDefault();
+            ImGui.getIO().setFontGlobalScale(1.4f);
+        }
+
+        byte[] faBytes = loadFontBytes("fonts/fa-solid-900.ttf");
+        if (faBytes != null) {
+            imgui.ImFontConfig iconConfig = new imgui.ImFontConfig();
+            iconConfig.setMergeMode(true);
+            iconConfig.setPixelSnapH(true);
+            iconConfig.setOversampleH(2);
+            iconConfig.setOversampleV(2);
+            short[] iconRanges = new short[]{ (short)0xe000, (short)0xf8ff, 0 };
+            ImGui.getIO().getFonts().addFontFromMemoryTTF(faBytes, 16.0f, iconConfig, iconRanges);
+            iconConfig.destroy();
+        }
+
+        fontConfig.destroy();
+        ImGui.getIO().getFonts().build();
+
+        // ── Apply modern dark theme ──
         imgui.ImGuiStyle style = ImGui.getStyle();
-        style.setWindowRounding(8.0f);
+        style.setWindowRounding(6.0f);
         style.setFrameRounding(4.0f);
         style.setPopupRounding(4.0f);
         style.setScrollbarRounding(4.0f);
@@ -91,37 +116,47 @@ public class ImGuiManager {
         style.setWindowPadding(12.0f, 12.0f);
         style.setFramePadding(8.0f, 4.0f);
         style.setItemSpacing(8.0f, 8.0f);
+        style.setWindowBorderSize(0.0f);
+        style.setFrameBorderSize(0.0f);
 
         style.setColor(ImGuiCol.Text, 0.95f, 0.96f, 0.98f, 1.00f);
         style.setColor(ImGuiCol.TextDisabled, 0.50f, 0.55f, 0.60f, 1.00f);
-        style.setColor(ImGuiCol.WindowBg, 0.08f, 0.09f, 0.11f, 0.95f);
-        style.setColor(ImGuiCol.ChildBg, 0.12f, 0.13f, 0.15f, 1.00f);
-        style.setColor(ImGuiCol.PopupBg, 0.10f, 0.11f, 0.13f, 0.98f);
-        style.setColor(ImGuiCol.Border, 0.20f, 0.22f, 0.25f, 1.00f);
+        style.setColor(ImGuiCol.WindowBg, 0.07f, 0.07f, 0.08f, 0.90f); // 0xCC111214 approx
+        style.setColor(ImGuiCol.ChildBg, 0.10f, 0.10f, 0.12f, 0.80f);
+        style.setColor(ImGuiCol.PopupBg, 0.07f, 0.07f, 0.08f, 0.95f);
+        style.setColor(ImGuiCol.Border, 0.23f, 0.24f, 0.29f, 0.50f);
         style.setColor(ImGuiCol.BorderShadow, 0.00f, 0.00f, 0.00f, 0.00f);
-        style.setColor(ImGuiCol.FrameBg, 0.15f, 0.16f, 0.19f, 1.00f);
-        style.setColor(ImGuiCol.FrameBgHovered, 0.20f, 0.22f, 0.26f, 1.00f);
-        style.setColor(ImGuiCol.FrameBgActive, 0.25f, 0.27f, 0.32f, 1.00f);
-        style.setColor(ImGuiCol.TitleBg, 0.10f, 0.11f, 0.13f, 1.00f);
-        style.setColor(ImGuiCol.TitleBgActive, 0.15f, 0.17f, 0.20f, 1.00f);
-        style.setColor(ImGuiCol.TitleBgCollapsed, 0.08f, 0.09f, 0.11f, 1.00f);
-        style.setColor(ImGuiCol.MenuBarBg, 0.10f, 0.11f, 0.13f, 1.00f);
-        style.setColor(ImGuiCol.ScrollbarBg, 0.10f, 0.11f, 0.13f, 1.00f);
-        style.setColor(ImGuiCol.ScrollbarGrab, 0.20f, 0.22f, 0.25f, 1.00f);
-        style.setColor(ImGuiCol.ScrollbarGrabHovered, 0.25f, 0.27f, 0.30f, 1.00f);
-        style.setColor(ImGuiCol.ScrollbarGrabActive, 0.30f, 0.32f, 0.35f, 1.00f);
-        style.setColor(ImGuiCol.CheckMark, 0.40f, 0.70f, 1.00f, 1.00f);
-        style.setColor(ImGuiCol.SliderGrab, 0.40f, 0.70f, 1.00f, 1.00f);
-        style.setColor(ImGuiCol.SliderGrabActive, 0.50f, 0.80f, 1.00f, 1.00f);
-        style.setColor(ImGuiCol.Button, 0.15f, 0.40f, 0.80f, 1.00f);
-        style.setColor(ImGuiCol.ButtonHovered, 0.20f, 0.50f, 0.90f, 1.00f);
-        style.setColor(ImGuiCol.ButtonActive, 0.25f, 0.60f, 1.00f, 1.00f);
-        style.setColor(ImGuiCol.Header, 0.20f, 0.25f, 0.30f, 1.00f);
-        style.setColor(ImGuiCol.HeaderHovered, 0.25f, 0.30f, 0.35f, 1.00f);
-        style.setColor(ImGuiCol.HeaderActive, 0.30f, 0.35f, 0.40f, 1.00f);
-        style.setColor(ImGuiCol.Separator, 0.20f, 0.22f, 0.25f, 1.00f);
-        style.setColor(ImGuiCol.SeparatorHovered, 0.30f, 0.32f, 0.35f, 1.00f);
-        style.setColor(ImGuiCol.SeparatorActive, 0.40f, 0.42f, 0.45f, 1.00f);
+        
+        style.setColor(ImGuiCol.FrameBg, 0.13f, 0.14f, 0.16f, 1.00f);
+        style.setColor(ImGuiCol.FrameBgHovered, 0.16f, 0.18f, 0.21f, 1.00f);
+        style.setColor(ImGuiCol.FrameBgActive, 0.19f, 0.21f, 0.25f, 1.00f);
+        
+        style.setColor(ImGuiCol.TitleBg, 0.07f, 0.07f, 0.08f, 1.00f);
+        style.setColor(ImGuiCol.TitleBgActive, 0.10f, 0.10f, 0.12f, 1.00f);
+        style.setColor(ImGuiCol.TitleBgCollapsed, 0.05f, 0.05f, 0.06f, 1.00f);
+        style.setColor(ImGuiCol.MenuBarBg, 0.07f, 0.07f, 0.08f, 1.00f);
+        
+        style.setColor(ImGuiCol.ScrollbarBg, 0.07f, 0.07f, 0.08f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarGrab, 0.23f, 0.24f, 0.29f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarGrabHovered, 0.28f, 0.30f, 0.35f, 1.00f);
+        style.setColor(ImGuiCol.ScrollbarGrabActive, 0.47f, 0.65f, 0.39f, 1.00f);
+        
+        style.setColor(ImGuiCol.CheckMark, 0.47f, 0.65f, 0.39f, 1.00f); // RTS Accent (Pale Green)
+        style.setColor(ImGuiCol.SliderGrab, 0.47f, 0.65f, 0.39f, 1.00f);
+        style.setColor(ImGuiCol.SliderGrabActive, 0.55f, 0.75f, 0.45f, 1.00f);
+        
+        style.setColor(ImGuiCol.Button, 0.47f, 0.65f, 0.39f, 0.80f); // RTS Accent (Pale Green)
+        style.setColor(ImGuiCol.ButtonHovered, 0.47f, 0.65f, 0.39f, 1.00f);
+        style.setColor(ImGuiCol.ButtonActive, 0.35f, 0.50f, 0.28f, 1.00f);
+        
+        style.setColor(ImGuiCol.Header, 0.47f, 0.65f, 0.39f, 0.50f);
+        style.setColor(ImGuiCol.HeaderHovered, 0.47f, 0.65f, 0.39f, 0.70f);
+        style.setColor(ImGuiCol.HeaderActive, 0.47f, 0.65f, 0.39f, 0.90f);
+        
+        style.setColor(ImGuiCol.Separator, 0.23f, 0.24f, 0.29f, 1.00f);
+        style.setColor(ImGuiCol.SeparatorHovered, 0.47f, 0.65f, 0.39f, 0.50f);
+        style.setColor(ImGuiCol.SeparatorActive, 0.47f, 0.65f, 0.39f, 1.00f);
+
 
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");
@@ -137,6 +172,21 @@ public class ImGuiManager {
 
         initialized = true;
         Log.info("Wandscape", "ImGui initialized successfully");
+    }
+
+    private static byte[] loadFontBytes(String path) {
+        try {
+            var resource = net.minecraft.client.Minecraft.getInstance().getResourceManager()
+                    .getResource(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.wsteam.wandscape.Wandscape.MODID, path));
+            if (resource.isPresent()) {
+                try (java.io.InputStream is = resource.get().open()) {
+                    return is.readAllBytes();
+                }
+            }
+        } catch (Exception e) {
+            com.wsteam.wandscape.shared.log.Log.error("ImGui", "Failed to load font " + path, e);
+        }
+        return null;
     }
 
     private static void ensureInit() {
