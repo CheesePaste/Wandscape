@@ -90,6 +90,7 @@ public class RoadNetwork {
         double bestScore = Double.MAX_VALUE;
 
         for (RoadEdge edge : edges.values()) {
+            if (edge.getStatus() != RoadEdge.EdgeStatus.COMPLETE) continue;
             for (PathPoint pp : edge.getPath()) {
                 int xzDist = pp.manhattanXZTo(target);
                 int dy = Math.abs(pp.y() - target.y());

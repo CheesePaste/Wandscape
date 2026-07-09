@@ -199,21 +199,49 @@ public class ItemTransportManager {
         entity.setPos(pos.x, pos.y, pos.z);
     }
 
-    /** Convert RouteSegments (core-friendly) to engine Legs. */
+    /** Convert RouteSegments (core-friendly) to engine Legs, applying Y-smoothing. */
     private static List<Leg> buildLegs(List<RouteSegment> route) {
         List<Leg> legs = new ArrayList<>();
-        for (RouteSegment seg : route) {
-            double yOff = seg.onRoad() ? 1.0 : 0.5; // on-road: float above surface
-            Vec3 from = new Vec3(seg.fromX() + 0.5, seg.fromY() + yOff, seg.fromZ() + 0.5);
-            Vec3 to = new Vec3(seg.toX() + 0.5, seg.toY() + yOff, seg.toZ() + 0.5);
-            int xzDist = (int) Math.max(1,
-                    Math.abs(seg.toX() - seg.fromX()) + Math.abs(seg.toZ() - seg.fromZ()));
-            int ticksPerBlock = seg.onRoad()
-                    ? RoadRouter.TICKS_PER_BLOCK_ON_ROAD
-                    : RoadRouter.TICKS_PER_BLOCK_OFF_ROAD;
-            int duration = xzDist * ticksPerBlock;
-            // On-road: flat (no arc), follow terrain Y. Off-road: gentle arc.
-            legs.add(new Leg(from, to, seg.onRoad()));
+        if (route.isEmpty()) return legs;
+
+        List<Vec3> nodes = new ArrayList<>();
+        for (int i = 0; i < route.size(); i++) {
+            RouteSegment seg = route.get(i);
+            double yOff = seg.onRoad() ? 1.0 : 0.5;
+            if (i == 0) {
+                nodes.add(new Vec3(seg.fromX() + 0.5, seg.fromY() + yOff, seg.fromZ() + 0.5));
+            }
+            nodes.add(new Vec3(seg.toX() + 0.5, seg.toY() + yOff, seg.toZ() + 0.5));
+        }
+
+        List<Vec3> smoothedNodes = new ArrayList<>(nodes.size());
+        smoothedNodes.add(nodes.get(0)); // Keep exact start
+
+        int window = 2; // Smooth over 5 blocks
+        for (int i = 1; i < nodes.size() - 1; i++) {
+            boolean prevOnRoad = route.get(i - 1).onRoad();
+            boolean nextOnRoad = route.get(i).onRoad();
+            
+            // Only smooth road-related nodes
+            if (prevOnRoad || nextOnRoad) {
+                double sumY = 0;
+                int count = 0;
+                for (int j = Math.max(1, i - window); j <= Math.min(nodes.size() - 2, i + window); j++) {
+                    sumY += nodes.get(j).y;
+                    count++;
+                }
+                smoothedNodes.add(new Vec3(nodes.get(i).x, sumY / count, nodes.get(i).z));
+            } else {
+                smoothedNodes.add(nodes.get(i));
+            }
+        }
+
+        if (nodes.size() > 1) {
+            smoothedNodes.add(nodes.get(nodes.size() - 1)); // Keep exact end
+        }
+
+        for (int i = 0; i < route.size(); i++) {
+            legs.add(new Leg(smoothedNodes.get(i), smoothedNodes.get(i + 1), route.get(i).onRoad()));
         }
         return legs;
     }
