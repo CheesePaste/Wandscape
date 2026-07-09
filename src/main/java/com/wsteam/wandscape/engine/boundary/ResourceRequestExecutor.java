@@ -259,21 +259,13 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                         ColonyResourceAccess resources, World world, long npcId) {
         Inventory inv = world.get(npcId, Inventory.class);
         for (ResourceStack need : needs) {
-            int alreadyHas = inv != null ? inv.count(need.resource()) : 0;
-            int toAdd = need.amount() - alreadyHas;
-            if (toAdd <= 0) {
-                resources.commit(need.resource(), 0);
-                continue;
-            }
-            ResourceStack shortfallStack = need.withAmount(toAdd);
-            if (inv == null || !inv.add(shortfallStack)) {
-                resources.release(shortfallStack.resource(), shortfallStack.amount());
+            if (inv == null || !inv.add(need)) {
+                resources.release(need.resource(), need.amount());
                 Log.warn(TAG, "[ResourceReq] NPC {} inventory full for {}, released {}",
-                        npcId, need.resource().id(), shortfallStack.amount());
+                        npcId, need.resource().id(), need.amount());
             } else {
-                resources.commit(shortfallStack.resource(), shortfallStack.amount());
-                Log.debug(TAG, "[ResourceReq] NPC {} received {} (had {} before)",
-                        npcId, shortfallStack, alreadyHas);
+                resources.commit(need.resource(), need.amount());
+                Log.debug(TAG, "[ResourceReq] NPC {} received {}", npcId, need);
             }
         }
 
