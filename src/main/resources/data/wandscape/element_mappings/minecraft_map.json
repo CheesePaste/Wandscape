@@ -1,9 +1,9 @@
 {
   "item": "minecraft:map",
   "build_cost": {
-    "fire": 4,
+    "wood": 32,
     "metal": 264,
-    "wood": 32
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,10 +1,10 @@
 {
   "block": "minecraft:soul_torch",
   "build_cost": {
-    "dark": 1,
-    "fire": 2,
     "earth": 1,
-    "wood": 1
+    "wood": 1,
+    "fire": 2,
+    "dark": 1
   },
   "decompose_yield": {},
   "decomposable": false,

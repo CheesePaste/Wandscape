@@ -1,9 +1,9 @@
 {
   "block": "minecraft:magenta_carpet",
   "build_cost": {
-    "dark": 5,
+    "wood": 5,
     "wind": 5,
-    "wood": 5
+    "dark": 5
   },
   "decompose_yield": {},
   "decomposable": false,

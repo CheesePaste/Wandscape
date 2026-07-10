@@ -1,8 +1,8 @@
 {
   "block": "minecraft:waxed_exposed_copper_trapdoor",
   "build_cost": {
-    "metal": 32,
-    "wood": 32
+    "wood": 32,
+    "metal": 32
   },
   "decompose_yield": {},
   "decomposable": false,

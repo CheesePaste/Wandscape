@@ -1,9 +1,9 @@
 {
   "block": "minecraft:calibrated_sculk_sensor",
   "build_cost": {
-    "dark": 32,
+    "earth": 96,
     "wind": 96,
-    "earth": 96
+    "dark": 32
   },
   "decompose_yield": {},
   "decomposable": false,

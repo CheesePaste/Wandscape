@@ -1,8 +1,8 @@
 {
   "block": "minecraft:nether_brick_fence",
   "build_cost": {
-    "fire": 3,
-    "earth": 3
+    "earth": 3,
+    "fire": 3
   },
   "decompose_yield": {},
   "decomposable": false,

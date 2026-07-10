@@ -1,8 +1,8 @@
 {
   "item": "minecraft:golden_hoe",
   "build_cost": {
-    "metal": 512,
-    "wood": 4
+    "wood": 4,
+    "metal": 512
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,11 +1,11 @@
 {
   "block": "minecraft:cake",
   "build_cost": {
-    "water": 12,
-    "wind": 1,
-    "metal": 576,
     "earth": 1,
-    "wood": 20
+    "wood": 20,
+    "metal": 576,
+    "wind": 1,
+    "water": 12
   },
   "decompose_yield": {},
   "decomposable": false,

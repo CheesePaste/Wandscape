@@ -1,8 +1,8 @@
 {
   "item": "minecraft:flower_banner_pattern",
   "build_cost": {
-    "wind": 8,
-    "wood": 12
+    "wood": 12,
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

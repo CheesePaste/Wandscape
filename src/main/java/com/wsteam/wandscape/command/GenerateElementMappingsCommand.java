@@ -63,11 +63,12 @@ public final class GenerateElementMappingsCommand {
             return 0;
         }
 
-        // Output directory
+        // Write directly to src/main/resources so files are immediately available
+        // (this is a dev-only command; in production the bundled resources are read-only)
         Path gameDir = src.getServer().getServerDirectory().toAbsolutePath();
-        Path outputDir = gameDir.resolve("wandscape_generated").resolve("data").resolve("wandscape").resolve("element_mappings");
-        Path manualDir = gameDir.resolve("..").resolve("src").resolve("main").resolve("resources")
-                .resolve("data").resolve("wandscape").resolve("element_mappings").normalize();
+        Path srcDir = gameDir.resolve("..").resolve("src").resolve("main").resolve("resources").normalize();
+        Path outputDir = srcDir.resolve("data").resolve("wandscape").resolve("element_mappings");
+        Path manualDir = outputDir; // same dir for scanning existing files
 
         src.sendSystemMessage(Component.literal("[Wandscape] Generating element mappings..."));
         src.sendSystemMessage(Component.literal("  dry-run: " + dryRun + "  force: " + force));

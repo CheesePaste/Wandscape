@@ -1,9 +1,9 @@
 {
   "block": "minecraft:purple_terracotta",
   "build_cost": {
-    "wind": 1,
+    "earth": 4,
     "wood": 1,
-    "earth": 4
+    "wind": 1
   },
   "decompose_yield": {},
   "decomposable": false,

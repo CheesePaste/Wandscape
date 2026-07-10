@@ -1,11 +1,11 @@
 {
   "block": "minecraft:comparator",
   "build_cost": {
-    "fire": 20,
-    "wind": 8,
-    "metal": 24,
     "earth": 3,
-    "wood": 6
+    "wood": 6,
+    "fire": 20,
+    "metal": 24,
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

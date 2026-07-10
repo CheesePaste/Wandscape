@@ -1,8 +1,8 @@
 {
   "block": "minecraft:stripped_warped_hyphae",
   "build_cost": {
-    "dark": 5,
-    "wood": 10
+    "wood": 10,
+    "dark": 5
   },
   "decompose_yield": {},
   "decomposable": false,

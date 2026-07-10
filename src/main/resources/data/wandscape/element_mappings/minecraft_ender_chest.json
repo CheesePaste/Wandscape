@@ -1,9 +1,9 @@
 {
   "block": "minecraft:ender_chest",
   "build_cost": {
-    "dark": 64,
     "fire": 288,
-    "water": 256
+    "water": 256,
+    "dark": 64
   },
   "decompose_yield": {},
   "decomposable": false,

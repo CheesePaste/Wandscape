@@ -1,8 +1,8 @@
 {
   "block": "minecraft:candle",
   "build_cost": {
-    "dark": 2,
-    "wood": 32
+    "wood": 32,
+    "dark": 2
   },
   "decompose_yield": {},
   "decomposable": false,

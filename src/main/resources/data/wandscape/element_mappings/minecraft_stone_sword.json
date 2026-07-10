@@ -1,8 +1,8 @@
 {
   "item": "minecraft:stone_sword",
   "build_cost": {
-    "wood": 2,
-    "earth": 2
+    "earth": 2,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

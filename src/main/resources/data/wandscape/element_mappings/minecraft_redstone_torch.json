@@ -1,9 +1,9 @@
 {
   "block": "minecraft:redstone_torch",
   "build_cost": {
-    "fire": 4,
+    "wood": 2,
     "metal": 8,
-    "wood": 2
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

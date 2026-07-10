@@ -136,13 +136,13 @@ public class WarehouseScreen extends Screen {
     private void buildExchangeTab(int contentX, int tabY) {
         int tabH = topPos + PH - tabY - 6;
         int rightW = PW - 16;
-        int searchH = font.lineHeight + 6;
 
-        int invSectionH = 10 + SLOT_SIZE * 4;
-        int listH = tabH - searchH - 4 - invSectionH - 4;
+        int invSectionH = 10 + SLOT_SIZE * 4; // label + 4 slot rows
+        int bottomY = tabY + tabH - invSectionH;
 
-        // Warehouse items list
-        exchangeList = buildItemList(contentX, tabY + searchH + 4, rightW, listH, true);
+        // Warehouse items list — fills from top to the bottom section
+        int listH = bottomY - tabY - 2;
+        exchangeList = buildItemList(contentX, tabY, rightW, listH, true);
         exchangeList.setItems(exchangeFilteredItems);
         exchangeList.setOnRowClick((entry, index, button) -> {
             if (entry.count() <= 0) return;
@@ -153,9 +153,12 @@ public class WarehouseScreen extends Screen {
                     buildingPos, "withdraw", entry.itemId(), entry.nbt(), take, -1));
         });
 
-        // Search bar (below list, above inventory)
-        int sbY = getInventoryY() - searchH - 4;
-        exchangeSearchInput = new EditBox(font, contentX + 1, sbY + 2, rightW - 2, font.lineHeight,
+        // Search bar — to the right of player inventory, aligned with label row
+        int invRight = leftPos + 8 + 9 * SLOT_SIZE;
+        int sbX = invRight + 6;
+        int sbW = (leftPos + PW - 8) - sbX;
+        int sbY = getInventoryY();
+        exchangeSearchInput = new EditBox(font, sbX + 1, sbY + 1, sbW - 2, font.lineHeight,
                 Component.literal("Search items..."));
         exchangeSearchInput.setBordered(false);
         exchangeSearchInput.setTextColor(WandscapeTheme.COLOR_TEXT_NORMAL);
@@ -335,12 +338,11 @@ public class WarehouseScreen extends Screen {
             drawInsetField(g, exchangeSearchInput.getX() - 1, exchangeSearchInput.getY() - 2,
                     exchangeSearchInput.getWidth() + 2, exchangeSearchInput.getHeight() + 4);
 
-            // Separator line above player inventory
+            // Separator line above bottom section (full width)
             int invY = getInventoryY();
-            int invX = leftPos + 8;
-            g.fill(invX, invY - 2, invX + 9 * SLOT_SIZE, invY - 1,
+            g.fill(leftPos + 8, invY - 2, leftPos + PW - 8, invY - 1,
                     WandscapeTheme.COLOR_BORDER_NORMAL);
-            g.drawString(font, "Player Inventory", invX, invY,
+            g.drawString(font, "Player Inventory", leftPos + 8, invY,
                     WandscapeTheme.COLOR_TEXT_DIM);
         }
     }

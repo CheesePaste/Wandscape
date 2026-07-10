@@ -1,9 +1,9 @@
 {
   "block": "minecraft:muddy_mangrove_roots",
   "build_cost": {
-    "water": 2,
+    "earth": 1,
     "wood": 4,
-    "earth": 1
+    "water": 2
   },
   "decompose_yield": {},
   "decomposable": false,

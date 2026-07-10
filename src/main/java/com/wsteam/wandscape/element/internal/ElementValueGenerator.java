@@ -53,11 +53,21 @@ public class ElementValueGenerator {
     private int filesWritten;
     private int filesSkipped;
 
+    record IngredientSlot(
+        List<String> itemOptions,
+        List<String> remainingOptions
+    ) {
+        IngredientSlot {
+            if (itemOptions.size() != remainingOptions.size())
+                throw new IllegalArgumentException("itemOptions/remainingOptions size mismatch");
+        }
+    }
+
     record RecipeNode(
         String outputId,
         int outputCount,
         RecipeType<?> recipeType,
-        List<List<String>> ingredientOptions
+        List<IngredientSlot> slots
     ) {}
 
     public record GenerationReport(
@@ -125,21 +135,29 @@ public class ElementValueGenerator {
                 NonNullList<Ingredient> ingredients = recipe.getIngredients();
                 if (ingredients.isEmpty()) continue;
 
-                List<List<String>> ingredientOptions = new ArrayList<>();
+                List<IngredientSlot> slots = new ArrayList<>();
                 boolean allKnown = true;
                 for (Ingredient ing : ingredients) {
                     if (ing == Ingredient.EMPTY) continue;
                     ItemStack[] items = ing.getItems();
                     if (items.length == 0) { allKnown = false; break; }
-                    List<String> opts = new ArrayList<>();
+                    List<String> itemOpts = new ArrayList<>();
+                    List<String> remainOpts = new ArrayList<>();
                     for (ItemStack is : items) {
-                        opts.add(BuiltInRegistries.ITEM.getKey(is.getItem()).toString());
+                        Item item = is.getItem();
+                        itemOpts.add(BuiltInRegistries.ITEM.getKey(item).toString());
+                        Item remaining = item.getCraftingRemainingItem();
+                        if (remaining != null) {
+                            remainOpts.add(BuiltInRegistries.ITEM.getKey(remaining).toString());
+                        } else {
+                            remainOpts.add("");
+                        }
                     }
-                    ingredientOptions.add(opts);
+                    slots.add(new IngredientSlot(itemOpts, remainOpts));
                 }
-                if (!allKnown || ingredientOptions.isEmpty()) continue;
+                if (!allKnown || slots.isEmpty()) continue;
 
-                RecipeNode node = new RecipeNode(outputId, outputCount, type, ingredientOptions);
+                RecipeNode node = new RecipeNode(outputId, outputCount, type, slots);
                 recipeIndex.computeIfAbsent(outputId, k -> new ArrayList<>()).add(node);
                 recipesProcessed++;
             }
@@ -196,14 +214,25 @@ public class ElementValueGenerator {
     private Map<ElementType, Long> computeFromNode(RecipeNode node) {
         Map<ElementType, Long> total = new HashMap<>();
 
-        for (List<String> opts : node.ingredientOptions) {
-            Map<ElementType, Long> best = null;
-            for (String itemId : opts) {
+        for (IngredientSlot slot : node.slots) {
+            Map<ElementType, Long> best = null;  // net value (ingredient - remaining)
+            for (int i = 0; i < slot.itemOptions().size(); i++) {
+                String itemId = slot.itemOptions().get(i);
                 Map<ElementType, Long> val = knownValues.get(itemId);
-                if (val != null) {
-                    if (best == null || totalValue(val) < totalValue(best)) {
-                        best = val;
+                if (val == null) continue;
+
+                // Net cost = ingredient value minus remaining item value (e.g. milk bucket - bucket)
+                Map<ElementType, Long> net = new HashMap<>(val);
+                String remainingId = slot.remainingOptions().get(i);
+                if (!remainingId.isEmpty()) {
+                    Map<ElementType, Long> remVal = knownValues.get(remainingId);
+                    if (remVal != null) {
+                        subtractFrom(net, remVal);
                     }
+                }
+
+                if (best == null || totalValue(net) < totalValue(best)) {
+                    best = net;
                 }
             }
             if (best == null) return null; // not all ingredients resolved yet
@@ -237,6 +266,20 @@ public class ElementValueGenerator {
     private static void addTo(Map<ElementType, Long> target, Map<ElementType, Long> source) {
         for (var entry : source.entrySet()) {
             target.merge(entry.getKey(), entry.getValue(), Long::sum);
+        }
+    }
+
+    /** Subtract source values from target, removing any element that reaches <= 0. */
+    private static void subtractFrom(Map<ElementType, Long> target, Map<ElementType, Long> source) {
+        for (var entry : source.entrySet()) {
+            Long current = target.get(entry.getKey());
+            if (current == null) continue;
+            long newVal = current - entry.getValue();
+            if (newVal <= 0) {
+                target.remove(entry.getKey());
+            } else {
+                target.put(entry.getKey(), newVal);
+            }
         }
     }
 
@@ -363,10 +406,10 @@ public class ElementValueGenerator {
 
         // This item has a recipe — trace into its unresolved ingredients
         for (RecipeNode node : nodes) {
-            for (List<String> opts : node.ingredientOptions) {
+            for (IngredientSlot slot : node.slots) {
                 // Skip if any option in this slot already has a known value
-                if (opts.stream().anyMatch(knownValues::containsKey)) continue;
-                for (String ingId : opts) {
+                if (slot.itemOptions().stream().anyMatch(knownValues::containsKey)) continue;
+                for (String ingId : slot.itemOptions()) {
                     if (!knownValues.containsKey(ingId)) {
                         traceBackwards(ingId, roots, visited);
                     }

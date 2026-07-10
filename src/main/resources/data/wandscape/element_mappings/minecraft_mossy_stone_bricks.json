@@ -1,8 +1,8 @@
 {
   "block": "minecraft:mossy_stone_bricks",
   "build_cost": {
-    "wood": 8,
-    "earth": 1
+    "earth": 1,
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

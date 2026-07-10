@@ -1,8 +1,8 @@
 {
   "block": "minecraft:mud_brick_stairs",
   "build_cost": {
-    "wood": 6,
-    "earth": 1
+    "earth": 1,
+    "wood": 6
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,10 +1,10 @@
 {
   "block": "minecraft:respawn_anchor",
   "build_cost": {
-    "dark": 384,
     "fire": 288,
+    "wind": 96,
     "water": 192,
-    "wind": 96
+    "dark": 384
   },
   "decompose_yield": {},
   "decomposable": false,

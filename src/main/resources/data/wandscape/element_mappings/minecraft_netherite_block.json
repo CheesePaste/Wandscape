@@ -1,8 +1,8 @@
 {
   "block": "minecraft:netherite_block",
   "build_cost": {
-    "fire": 147456,
-    "metal": 304128
+    "metal": 304128,
+    "fire": 147456
   },
   "decompose_yield": {},
   "decomposable": false,

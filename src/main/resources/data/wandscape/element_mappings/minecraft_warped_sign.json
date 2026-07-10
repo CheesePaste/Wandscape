@@ -1,8 +1,8 @@
 {
   "block": "minecraft:warped_sign",
   "build_cost": {
-    "dark": 2,
-    "wood": 4
+    "wood": 4,
+    "dark": 2
   },
   "decompose_yield": {},
   "decomposable": false,

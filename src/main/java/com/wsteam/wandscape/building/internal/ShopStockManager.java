@@ -20,6 +20,7 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.ShopGoodDef;
 import com.wsteam.wandscape.shared.data.ShopConfig;
+import com.wsteam.wandscape.shared.event.DailySettlementEvent;
 import com.wsteam.wandscape.shared.event.ShopRestockedEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
@@ -28,6 +29,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
@@ -63,9 +65,10 @@ public final class ShopStockManager {
     @javax.annotation.Nullable
     public static ShopStockManager getActive() { return active; }
 
-    /** Initialize the singleton. */
+    /** Initialize the singleton and register event handlers. */
     public static ShopStockManager register() {
         var instance = new ShopStockManager();
+        NeoForge.EVENT_BUS.register(instance);
         active = instance;
         return instance;
     }
@@ -258,11 +261,12 @@ public final class ShopStockManager {
         savedData.setDirty();
         updateHasStock(buildingId, s);
 
-        // Deposit profit elements into colony bank
+        // Deposit profit elements into colony bank (based on item's element mapping value)
         if (colonyId != null) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             double profitRate = config.shop().profitRate();
-            for (var entry : good.restockCost().entrySet()) {
+            Map<ElementType, Long> elementValue = getItemElementValue(itemId);
+            for (var entry : elementValue.entrySet()) {
                 long profit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
                 bank.addElement(colonyId, entry.getKey(), profit);
             }
@@ -321,40 +325,30 @@ public final class ShopStockManager {
             int needed = max - current;
             if (needed <= 0) continue;
 
-            // Use explicit restock_cost if specified, otherwise infer from element_mappings
-            Map<ElementType, Integer> costPerItem = good.restockCost();
-            if (costPerItem.isEmpty()) {
-                costPerItem = inferRestockCostFromMappings(good.itemId());
-            }
-            if (costPerItem.isEmpty()) continue;
-
-            // Check if bank can afford the restock cost per item
-            int canAfford = needed;
-            for (var entry : costPerItem.entrySet()) {
-                long available = bank.countElement(colonyId, entry.getKey());
-                int perItem = entry.getValue();
-                if (perItem > 0) {
-                    canAfford = (int) Math.min(canAfford, available / perItem);
-                }
-            }
+            // Check item availability in warehouse (not elements)
+            ItemKey itemKey = ItemKey.of(good.itemId(), null);
+            long availableInWarehouse = bank.available(colonyId, itemKey);
+            int canAfford = (int) Math.min(needed, availableInWarehouse);
             if (canAfford <= 0) continue;
+
+            // Consume items from warehouse immediately (they are in transit)
+            bank.consume(colonyId, itemKey, canAfford);
 
             if (hasTransport && warehousePos != null) {
                 // Launch async transport visualization from warehouse to shop.
-                // Elements are deducted only when transport arrives (deferred deduction).
+                // Stock is added immediately to prevent compound over-stocking
+                // from repeated daily restocks before previous transports arrive.
                 BuildingState shopState = savedData.getBuilding(buildingId);
                 if (shopState != null && !shopState.isShutdown()) {
+                    Map<String, Integer> stock = savedData.getOrCreateShopStock(buildingId);
+                    stock.put(good.itemId(), stock.getOrDefault(good.itemId(), 0) + canAfford);
                     launchRestockTransport(buildingId, good.itemId(), canAfford,
-                            costPerItem, colonyId, level,
+                            level,
                             warehousePos, shopState.getAnchor(), route);
                     changed = true;
                 }
             } else {
-                // No transport available — deduct and add stock instantly (fallback)
-                for (var entry : costPerItem.entrySet()) {
-                    bank.consumeElement(colonyId, entry.getKey(),
-                            entry.getValue() * canAfford);
-                }
+                // No transport available — add stock instantly
                 Map<String, Integer> stock = savedData.getOrCreateShopStock(buildingId);
                 stock.put(good.itemId(), stock.getOrDefault(good.itemId(), 0) + canAfford);
                 changed = true;
@@ -372,14 +366,12 @@ public final class ShopStockManager {
 
     /**
      * Launch visual item transport from warehouse to shop for restocked goods.
-     * Each unit becomes one flying ItemEntity. When the transport arrives,
-     * element costs are deducted from the bank and stock is added to the shop.
-     * If the building is destroyed mid-transport, no elements were deducted
-     * so no refund is needed.
+     * Items and stock are handled at restock time; this is purely cosmetic.
+     * If the building is destroyed mid-transport, items are already consumed
+     * from the bank (realistic supply-loss risk).
      */
     private void launchRestockTransport(UUID buildingId, String itemId, int amount,
-                                        Map<ElementType, Integer> costPerItem,
-                                        UUID colonyId, ServerLevel level,
+                                        ServerLevel level,
                                         BlockPos warehousePos, BlockPos shopPos,
                                         @Nullable TransportRoute route) {
         ItemTransportManager transporter = WandscapeEngine.getTransporter();
@@ -388,13 +380,7 @@ public final class ShopStockManager {
         ItemKey key = ItemKey.of(itemId, null);
 
         transporter.send(key, amount, warehousePos, shopPos, level, 0, route, false)
-            .thenRun(() -> {
-                for (int i = 0; i < amount; i++) {
-                    // Deduct elements and add 1 unit to shop stock on arrival
-                    addStockOnTransportArrival(buildingId, itemId, colonyId,
-                            costPerItem, i == amount - 1 /* fire event only for last unit */);
-                }
-            });
+            .thenRun(() -> onTransportArrived(buildingId, itemId, amount));
 
         Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} legs)",
                 amount, itemId, warehousePos.toShortString(),
@@ -402,54 +388,18 @@ public final class ShopStockManager {
                 route != null ? route.legs().size() : 0);
     }
 
-    /**
-     * Called when a single transport unit arrives at the shop.
-     * Deducts one unit's element cost from the colony bank and adds one
-     * unit of stock. If the building no longer exists, skips silently
-     * (no elements were deducted yet — safe).
-     */
-    private void addStockOnTransportArrival(UUID buildingId, String itemId,
-                                            UUID colonyId,
-                                            Map<ElementType, Integer> costPerItem,
-                                            boolean fireEvent) {
+    /** Called when all transport units arrive — just logs. Stock already added at restock time. */
+    private void onTransportArrived(UUID buildingId, String itemId, int amount) {
         BuildingSavedData savedData = getSavedData();
         if (savedData == null) return;
-        ServerLevel level = getServerLevel();
-        if (level == null) return;
-
-        // Check if building still exists
         BuildingState state = savedData.getBuilding(buildingId);
         if (state == null || state.isShutdown()) {
-            Log.warn(TAG, "[Shop] Transport arrived but building {} gone — discarding 1 × {}",
-                    buildingId.toString().substring(0, 8), itemId);
+            Log.warn(TAG, "[Shop] Transport arrived but building {} gone — lost {} × {}",
+                    buildingId.toString().substring(0, 8), amount, itemId);
             return;
         }
-
-        // Deduct element cost for this unit (deferred deduction)
-        ColonyItemBank bank = ColonyItemBank.get(level);
-        if (bank == null) return;
-        for (var entry : costPerItem.entrySet()) {
-            if (!bank.consumeElement(colonyId, entry.getKey(), entry.getValue())) {
-                // Bank ran out mid-transport — skip this unit
-                Log.warn(TAG, "[Shop] Cannot afford {} for restock of {} at {} — skipping",
-                        entry.getKey(), itemId, buildingId.toString().substring(0, 8));
-                return;
-            }
-        }
-
-        // Add 1 unit of stock
-        Map<String, Integer> stock = savedData.getOrCreateShopStock(buildingId);
-        stock.put(itemId, stock.getOrDefault(itemId, 0) + 1);
-        savedData.setDirty();
-        updateHasStock(buildingId, stock);
-
-        if (fireEvent) {
-            NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
-        }
-
-        Log.debug(TAG, "[Shop] Transport arrived: {} × 1 → {} (total={})",
-                itemId, buildingId.toString().substring(0, 8),
-                stock.getOrDefault(itemId, 0));
+        Log.debug(TAG, "[Shop] Transport arrived: {} × {} at {}",
+                amount, itemId, buildingId.toString().substring(0, 8));
     }
 
     /**
@@ -490,8 +440,11 @@ public final class ShopStockManager {
                 WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 
-    /** Look up an item's element value from element_mappings and convert to restock cost. */
-    private static Map<ElementType, Integer> inferRestockCostFromMappings(String itemId) {
+    /**
+     * Look up an item's element value from element_mappings.
+     * Used for profit calculation on sale.
+     */
+    private static Map<ElementType, Long> getItemElementValue(String itemId) {
         var loader = com.wsteam.wandscape.Wandscape.ELEMENT_MAPPING_LOADER;
         if (loader == null) return Map.of();
 
@@ -505,14 +458,33 @@ public final class ShopStockManager {
         if (source.isEmpty()) {
             source = loader.getItemBuildCost(item);
         }
-        if (source.isEmpty()) return Map.of();
+        return source;
+    }
 
-        Map<ElementType, Integer> cost = new java.util.HashMap<>();
-        for (var entry : source.entrySet()) {
-            long v = entry.getValue();
-            if (v > 0) cost.put(entry.getKey(), (int) v);
+    // ── Daily restock ──
+
+    /** Restock all active shop buildings in the colony after daily settlement. */
+    @SubscribeEvent
+    public void onDailySettlement(DailySettlementEvent event) {
+        UUID colonyId = event.getReport().colonyId();
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+
+        for (BuildingState state : savedData.getAllBuildings()) {
+            if (!colonyId.equals(state.getColonyId())) continue;
+            if (!"shop".equals(state.getCategory())) continue;
+            if (state.isShutdown() || !state.isStructureIntact()) continue;
+
+            BuildingConfig config = BuildingConfigLoader.getInstance()
+                    .get(state.getBuildingTypeId());
+            if (config == null || config.shop() == null) continue;
+
+            restock(state.getBuildingId(), config.shop(), colonyId, bank);
         }
-        return cost;
     }
 
     private void updateHasStock(UUID buildingId, Map<String, Integer> s) {

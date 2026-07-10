@@ -1,9 +1,9 @@
 {
   "block": "minecraft:brown_bed",
   "build_cost": {
-    "dark": 24,
+    "wood": 30,
     "wind": 24,
-    "wood": 30
+    "dark": 24
   },
   "decompose_yield": {},
   "decomposable": false,

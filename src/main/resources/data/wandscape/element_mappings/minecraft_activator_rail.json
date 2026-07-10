@@ -1,9 +1,9 @@
 {
   "block": "minecraft:activator_rail",
   "build_cost": {
+    "wood": 1,
     "fire": 1,
-    "metal": 65,
-    "wood": 1
+    "metal": 65
   },
   "decompose_yield": {},
   "decomposable": false,

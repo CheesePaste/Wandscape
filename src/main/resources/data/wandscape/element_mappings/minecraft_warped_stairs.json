@@ -1,8 +1,8 @@
 {
   "block": "minecraft:warped_stairs",
   "build_cost": {
-    "dark": 1,
-    "wood": 3
+    "wood": 3,
+    "dark": 1
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,9 +1,9 @@
 {
   "block": "minecraft:black_concrete_powder",
   "build_cost": {
-    "wind": 1,
     "earth": 1,
-    "wood": 1
+    "wood": 1,
+    "wind": 1
   },
   "decompose_yield": {},
   "decomposable": false,

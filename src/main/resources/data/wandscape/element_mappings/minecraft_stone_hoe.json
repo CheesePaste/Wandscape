@@ -1,8 +1,8 @@
 {
   "item": "minecraft:stone_hoe",
   "build_cost": {
-    "wood": 4,
-    "earth": 2
+    "earth": 2,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

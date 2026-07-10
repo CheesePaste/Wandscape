@@ -1,8 +1,8 @@
 {
   "block": "minecraft:rail",
   "build_cost": {
-    "metal": 24,
-    "wood": 1
+    "wood": 1,
+    "metal": 24
   },
   "decompose_yield": {},
   "decomposable": false,

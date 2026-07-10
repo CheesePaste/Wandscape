@@ -32,18 +32,26 @@ public class Inventory {
     public boolean add(ResourceStack stack) {
         if (stack.isEmpty()) return true;
 
+        // Normalize: strip block state properties so that
+        // oak_door[facing=north] and oak_door[facing=south] merge into one stack.
+        ResourceStack toAdd = stack;
+        ResourceId cleanId = stack.resource().getFuckPureResourceId_NotContainFuckedNBT();
+        if (!cleanId.equals(stack.resource())) {
+            toAdd = new ResourceStack(cleanId, stack.amount());
+        }
+
         // Try to merge into an existing stack
         for (int i = 0; i < items.size(); i++) {
             ResourceStack existing = items.get(i);
-            if (existing.resource().equals(stack.resource())) {
-                items.set(i, existing.add(stack.amount()));
+            if (existing.resource().equals(toAdd.resource())) {
+                items.set(i, existing.add(toAdd.amount()));
                 return true;
             }
         }
 
         // Need a new slot
         if (items.size() >= capacity) return false;
-        items.add(stack);
+        items.add(toAdd);
         return true;
     }
 
@@ -53,7 +61,7 @@ public class Inventory {
         Iterator<ResourceStack> iter = items.iterator();
         while (iter.hasNext() && remaining > 0) {
             ResourceStack stack = iter.next();
-            if (stack.resource().equals(resource)) {
+            if (stack.resource().equals(resource) || stack.resource().equals(resource.getFuckPureResourceId_NotContainFuckedNBT())) {
                 if (stack.amount() <= remaining) {
                     remaining -= stack.amount();
                     iter.remove();

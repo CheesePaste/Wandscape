@@ -1,9 +1,9 @@
 {
   "block": "minecraft:redstone_lamp",
   "build_cost": {
+    "metal": 32,
     "fire": 48,
-    "wind": 32,
-    "metal": 32
+    "wind": 32
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -249,7 +249,7 @@ public final class EnqueueHelper {
             // Blocks without element mappings are considered "free" materials
             // and should not be requested from the warehouse.
             if (!elementApi.hasElementMapping(pureId)) continue;
-            counts.merge(blockId, 1, Integer::sum);
+            counts.merge(pureId, 1, Integer::sum);
         }
         if (counts.isEmpty()) return null;
         JsonArray list = new JsonArray();
@@ -378,8 +378,9 @@ public final class EnqueueHelper {
         Set<String> seen = new java.util.LinkedHashSet<>();
         for (BuildingConfig cfg : BuildingConfigLoader.getInstance().getAll().values()) {
             for (String blockId : cfg.blockMapping().values()) {
-                if ("minecraft:air".equals(blockId)) continue;
-                seen.add(blockId);
+                String cleanId = blockId.replaceAll("\\[.*?\\]", "").trim();
+                if ("minecraft:air".equals(cleanId)) continue;
+                seen.add(cleanId);
             }
         }
         for (String blockId : seen) {

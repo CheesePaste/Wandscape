@@ -1,8 +1,8 @@
 {
   "item": "minecraft:dried_kelp",
   "build_cost": {
-    "water": 2,
-    "wood": 2
+    "wood": 2,
+    "water": 2
   },
   "decompose_yield": {},
   "decomposable": false,

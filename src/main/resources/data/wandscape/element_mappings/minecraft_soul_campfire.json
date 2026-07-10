@@ -1,10 +1,10 @@
 {
   "block": "minecraft:soul_campfire",
   "build_cost": {
-    "dark": 1,
-    "fire": 1,
     "earth": 1,
-    "wood": 30
+    "wood": 30,
+    "fire": 1,
+    "dark": 1
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "block": "minecraft:waxed_exposed_copper_door",
   "build_cost": {
-    "metal": 48,
-    "wood": 32
+    "wood": 32,
+    "metal": 48
   },
   "decompose_yield": {},
   "decomposable": false,

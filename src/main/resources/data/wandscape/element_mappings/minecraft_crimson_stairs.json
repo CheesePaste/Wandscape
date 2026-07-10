@@ -1,8 +1,8 @@
 {
   "block": "minecraft:crimson_stairs",
   "build_cost": {
-    "fire": 1,
-    "wood": 3
+    "wood": 3,
+    "fire": 1
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -246,7 +246,8 @@ public final class ColonyCommand {
         for (BlockOffset offset : config.pattern()) {
             String blockId = config.blockMapping().get(offset.toKey());
             if (blockId == null || "minecraft:air".equals(blockId)) continue;
-            seen.add(blockId);
+            String cleanId = blockId.replaceAll("\\[.*?\\]", "").trim();
+            seen.add(cleanId);
         }
         List<ResourceStack> stacks = new ArrayList<>();
         for (String blockId : seen) {

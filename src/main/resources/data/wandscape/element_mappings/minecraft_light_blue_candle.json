@@ -1,9 +1,9 @@
 {
   "block": "minecraft:light_blue_candle",
   "build_cost": {
-    "dark": 2,
+    "wood": 40,
     "wind": 8,
-    "wood": 40
+    "dark": 2
   },
   "decompose_yield": {},
   "decomposable": false,
