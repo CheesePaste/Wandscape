@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.shared.api;
 
+import java.util.Collection;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -25,6 +26,9 @@ public interface ColonyApi {
 
     // Try to assign a colony to a newly registered building.
     void assignColonyIfPossible(com.wsteam.wandscape.shared.data.BuildingData building);
+
+    /** Returns all registered colony UUIDs. Empty if no colonies exist. */
+    Collection<UUID> getAllColonyIds();
 
     // Rebuild spatial index from saved data (called on server start).
     void rebuildFromSavedData();

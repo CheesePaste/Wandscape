@@ -102,10 +102,13 @@ public final class RoadPlacementOverlay {
         int btnW = 84;
         int btnH = 32;
 
-        // Button 1: Square Fill (Active)
+        // Button 1: Square Fill
+        boolean isSf = RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SQUARE_FILL;
         boolean btn1Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= toolsStartY && my <= toolsStartY + btnH;
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, toolsStartY, btnW, btnH, true, btn1Hover);
-        g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, toolsStartY, btnW, btnH, isSf, btn1Hover);
+        if (isSf) {
+            g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
+        }
         font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
@@ -114,6 +117,17 @@ public final class RoadPlacementOverlay {
         boolean btn2Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn2Y && my <= btn2Y + btnH;
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, btn2Y, btnW, btnH, false, btn2Hover);
         font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM, false,
+                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
+
+        // Button 3: Destroy/Fill
+        int btn3Y = btn2Y + btnH + 10;
+        boolean isDf = RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL;
+        boolean btn3Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn3Y && my <= btn3Y + btnH;
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, btn3Y, btnW, btnH, isDf, btn3Hover);
+        if (isDf) {
+            g.fill(RenderType.guiOverlay(), toolsStartX, btn3Y + btnH - 2, toolsStartX + btnW, btn3Y + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
+        }
+        font.drawInBatch("Destroy/Fill", toolsStartX + (btnW - font.width("Destroy/Fill")) / 2f, btn3Y + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
         // Flush backgrounds before 3D preview
@@ -247,7 +261,28 @@ public final class RoadPlacementOverlay {
         int toolsStartX = GRID_PAD_X;
         int toolsStartY = panelY + GRID_PAD_TOP;
         int btn2Y = toolsStartY + 32 + 10;
-        
+
         return mx >= toolsStartX && mx <= toolsStartX + 84 && my >= btn2Y && my <= btn2Y + 32;
+    }
+
+    public static boolean isDestroyFillClicked(double mx, double my, int screenW, int screenH) {
+        if (!RoadPlacementState.isProjecting()) return false;
+
+        List<RoadPreset> presets = RoadPlacementState.getPresets();
+        if (presets.isEmpty()) return false;
+
+        int toolsWidth = 100;
+        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
+        int rows = (presets.size() + cols - 1) / cols;
+        int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
+        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
+        int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
+
+        int toolsStartX = GRID_PAD_X;
+        int toolsStartY = panelY + GRID_PAD_TOP;
+        int btn3Y = toolsStartY + (32 + 10) * 2;
+
+        return mx >= toolsStartX && mx <= toolsStartX + 84 && my >= btn3Y && my <= btn3Y + 32;
     }
 }

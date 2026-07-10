@@ -146,16 +146,23 @@ public final class RoadPlacementRenderer {
         // Translucent fill at each surface block position
         renderSurfaceFill(bufferSource, poseStack, level, minX, minZ, maxX, maxZ);
 
-        // Perimeter outline at the min-corner surface level
-        int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, minX, minZ) - 1;
-        float y = surfaceY + 0.02f;
+        // Perimeter outline — sample surface height at each of the four corners
+        // so the outline follows the terrain, avoiding buried segments on slopes.
+        float yMinZMinX = surfaceHeight(level, minX, minZ) + 0.02f;
+        float yMinZMaxX = surfaceHeight(level, maxX, minZ) + 0.02f;
+        float yMaxZMinX = surfaceHeight(level, minX, maxZ) + 0.02f;
+        float yMaxZMaxX = surfaceHeight(level, maxX, maxZ) + 0.02f;
 
         VertexConsumer vc = bufferSource.getBuffer(RenderType.lines());
         var pose = poseStack.last();
-        line(vc, pose, minX, y, minZ, maxX + 1, y, minZ, 255, 255, 80);
-        line(vc, pose, maxX + 1, y, minZ, maxX + 1, y, maxZ + 1, 255, 255, 80);
-        line(vc, pose, maxX + 1, y, maxZ + 1, minX, y, maxZ + 1, 255, 255, 80);
-        line(vc, pose, minX, y, maxZ + 1, minX, y, minZ, 255, 255, 80);
+        // Edge along Z=minZ
+        line(vc, pose, minX, yMinZMinX, minZ, maxX + 1, yMinZMaxX, minZ, 255, 255, 80);
+        // Edge along X=maxX+1
+        line(vc, pose, maxX + 1, yMinZMaxX, minZ, maxX + 1, yMaxZMaxX, maxZ + 1, 255, 255, 80);
+        // Edge along Z=maxZ+1
+        line(vc, pose, maxX + 1, yMaxZMaxX, maxZ + 1, minX, yMaxZMinX, maxZ + 1, 255, 255, 80);
+        // Edge along X=minX
+        line(vc, pose, minX, yMaxZMinX, maxZ + 1, minX, yMinZMinX, minZ, 255, 255, 80);
     }
 
     /**
@@ -170,8 +177,7 @@ public final class RoadPlacementRenderer {
 
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
-                float y = surfaceY + 0.02f;
+                float y = surfaceHeight(level, x, z) + 0.02f;
                 float x1 = x, x2 = x + 1f, z1 = z, z2 = z + 1f;
 
                 vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
@@ -182,5 +188,10 @@ public final class RoadPlacementRenderer {
                 vc.addVertex(pose, x1, y, z1).setColor(255, 255, 80, 48).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
             }
         }
+    }
+
+    /** Sample the MOTION_BLOCKING surface height at (x, z). */
+    private static float surfaceHeight(Level level, int x, int z) {
+        return (float)level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
     }
 }

@@ -8,11 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
+import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
@@ -28,11 +30,15 @@ import com.wsteam.wandscape.shared.log.Log;
  * Manages hotel/inn stays for tourists.
  *
  * <p>Hotels are service buildings with {@link ServiceConfig#maxOccupancy()} &gt; 0.
- * Tourists check in at night to recover energy and gain satisfaction.
- * Checked-in tourists are stored in a per-building occupancy set.
+ * Tourists check in at night (when satisfaction &ge; 50, energy &le; 0) and
+ * stay until morning checkout at dayTime=1000, when energy is restored to 100.
  *
- * <p>Heartbeat recovers energy each tick for all checked-in tourists.
- * On morning (dayTime &lt; 200), tourists are automatically checked out.
+ * <p>During the day, hotels behave as regular service buildings —
+ * satisfaction comes from the normal service interaction, not from sleeping.
+ *
+ * <p>Checked-in tourists are stored in a per-building occupancy set.
+ * On morning (dayTime 1000-1200), all guests are automatically checked out
+ * with full energy restoration.
  */
 public final class HotelStayHandler {
     private static final String TAG = "HotelStayHandler";
@@ -92,9 +98,9 @@ public final class HotelStayHandler {
     }
 
     /**
-     * Check a tourist out of their hotel. Recovers energy and boosts satisfaction.
+     * Check a tourist out of their hotel. Restores energy to 100.
      */
-    public void checkOut(TouristEntity tourist) {
+    public void checkOut(TouristEntity tourist, ServerLevel level) {
         UUID buildingId = touristToHotel.remove(tourist.getUUID());
         if (buildingId == null) return;
 
@@ -106,15 +112,18 @@ public final class HotelStayHandler {
 
         tourist.setCheckedInBuildingId(null);
         tourist.setHotelCheckinTime(0);
+        tourist.setEnergy(100);
 
-        int energyRecovery = Config.HOTEL_ENERGY_PER_TICK.get()
-                * Math.max(1, tourist.tickCount - tourist.getHotelCheckinTime());
-        tourist.setEnergy(tourist.getEnergy() + energyRecovery);
-        tourist.setSatisfaction(tourist.getSatisfaction() + Config.HOTEL_SATISFACTION_PER_NIGHT.get());
+        // Emit HOTEL_WAKEUP narrative
+        String bldType = getBuildingTypeId(buildingId);
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(
+                tourist.getTouristName(), bldType != null ? bldType : "inn",
+                bldName, level.getGameTime());
+        emitNarrativeEvent(wakeupEvent);
 
-        Log.info(TAG, "[Tourist] {} checked out of {} (energy +{} satisfaction +{})",
-                tourist.getTouristName(), shortId(buildingId),
-                energyRecovery, Config.HOTEL_SATISFACTION_PER_NIGHT.get());
+        Log.info(TAG, "[Tourist] {} checked out of {} (energy → 100)",
+                tourist.getTouristName(), shortId(buildingId));
     }
 
     // ── Query ──
@@ -174,10 +183,8 @@ public final class HotelStayHandler {
         if (level == null) return;
 
         long dayTime = level.getDayTime() % 24000;
-        boolean isMorning = dayTime >= 0 && dayTime < 200;
-
-        int energyPerTick = Config.HOTEL_ENERGY_PER_TICK.get();
-        int energyPerSecond = energyPerTick * 20; // per-tick config × 20 ticks/sec heartbeat
+        // Morning checkout window: 1000-1200 (清晨退房，精力回满)
+        boolean isMorning = dayTime >= 1000 && dayTime < 1200;
 
         for (var entry : touristToHotel.entrySet()) {
             UUID touristId = entry.getKey();
@@ -187,14 +194,13 @@ public final class HotelStayHandler {
                 continue;
             }
 
-            // Auto check-out at morning
+            // Morning checkout: energy → 100
             if (isMorning) {
-                checkOut(tourist);
+                checkOut(tourist, level);
                 continue;
             }
 
-            // Tick energy recovery
-            tourist.setEnergy(tourist.getEnergy() + energyPerSecond);
+            // No gradual energy recovery — energy restored to 100 at checkout only
         }
     }
 
@@ -240,5 +246,28 @@ public final class HotelStayHandler {
 
     private static String shortId(UUID id) {
         return id.toString().substring(0, 8);
+    }
+
+    // ── Narrative helpers ──
+
+    @Nullable
+    private String getBuildingTypeId(UUID buildingId) {
+        BuildingConfig config = getBuildingConfig(buildingId);
+        return config != null ? config.id() : null;
+    }
+
+    private String getBuildingDisplayName(UUID buildingId, @Nullable String typeId) {
+        var config = BuildingConfigLoader.getInstance().get(typeId);
+        if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
+            return config.displayName();
+        }
+        return typeId != null ? typeId : "旅馆";
+    }
+
+    private static void emitNarrativeEvent(NarrativeEvent ne) {
+        var world = WandscapeEngine.getWorld();
+        if (world != null && world.eventBus != null) {
+            world.eventBus.emit(new NarrativeEventTriggered(ne));
+        }
     }
 }

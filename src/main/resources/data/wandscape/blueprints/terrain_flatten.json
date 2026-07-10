@@ -1,0 +1,48 @@
+{
+  "id": "terrain:flatten",
+  "display_name": "Terrain Flatten",
+  "description": "Flattens terrain within a rectangle: breaks blocks above target height, fills with reference block below.",
+  "params": {
+    "tiles_break": "list<pos>",
+    "fill_block": "string",
+    "fill_count": "int"
+  },
+  "steps": [
+    {
+      "type": "request_resource",
+      "items": [
+        {"resource": "$fill_block", "amount": "$fill_count"}
+      ]
+    },
+    {
+      "type": "for_each",
+      "list": "$tiles_break",
+      "var": "pos",
+      "steps": [
+        {"type": "remove", "at": "$pos"}
+      ]
+    },
+    {
+      "type": "for_each",
+      "list": "$tiles_fill",
+      "var": "tile",
+      "steps": [
+        {
+          "type": "place",
+          "at": {"get": ["$tile", "pos"]},
+          "block": {"get": ["$tile", "block"]},
+          "consumable": {"get": ["$tile", "block"]}
+        }
+      ]
+    },
+    {
+      "type": "emit_event",
+      "event": "terrain_flatten_complete",
+      "data": {
+        "blocks_removed": {"size": "$tiles_break"},
+        "blocks_placed": {"size": "$tiles_fill"},
+        "fill_block": "$fill_block"
+      }
+    }
+  ]
+}

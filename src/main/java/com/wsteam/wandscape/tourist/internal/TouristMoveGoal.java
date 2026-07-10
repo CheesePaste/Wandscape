@@ -549,29 +549,37 @@ public class TouristMoveGoal extends Goal {
         String bldType = getBuildingTypeId(buildingId);
         boolean isHotel = isHotelBuilding(buildingId);
 
-        if (isHotel && tourist.getSatisfaction() > 50) {
-            HotelStayHandler hotel = HotelStayHandler.getActive();
-            UUID colonyId = tourist.getColonyId();
-            if (hotel != null && colonyId != null && hotel.checkIn(tourist, buildingId, colonyId)) {
-                tourist.addVisitedBuilding(buildingId);
-                applyPreferenceDecay(buildingId);
-                tourist.setCommuteTarget(null);
-                tourist.setTargetBuildingId(null);
-                tourist.setTargetBuildingCategory(null);
-                indoorPhase = false;
-                exitingPhase = false;
-                syncDebugData();
-                showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
+        if (isHotel) {
+            long dayTime = tourist.level().getDayTime() % 24000;
+            boolean isNight = dayTime >= 13000;
+            int sat = tourist.getSatisfaction();
+            boolean energyDepleted = tourist.getEnergy() <= 0;
+            // 入住条件: 满意度 >= 50 且 < 100, 同时 到了夜晚 或 精力耗尽
+            if (sat >= 50 && sat < 100 && (isNight || energyDepleted)) {
+                HotelStayHandler hotel = HotelStayHandler.getActive();
+                UUID colonyId = tourist.getColonyId();
+                if (hotel != null && colonyId != null && hotel.checkIn(tourist, buildingId, colonyId)) {
+                    tourist.addVisitedBuilding(buildingId);
+                    applyPreferenceDecay(buildingId);
+                    tourist.setCommuteTarget(null);
+                    tourist.setTargetBuildingId(null);
+                    tourist.setTargetBuildingCategory(null);
+                    indoorPhase = false;
+                    exitingPhase = false;
+                    syncDebugData();
+                    showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
 
-                // Emit HOTEL_CHECKIN narrative
-                long gameTime = tourist.level().getGameTime();
-                String bldName = getBuildingDisplayName(buildingId, bldType);
-                NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
-                        tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
-                emitNarrativeEvent(checkinEvent);
+                    // Emit HOTEL_CHECKIN narrative
+                    long gameTime = tourist.level().getGameTime();
+                    String bldName = getBuildingDisplayName(buildingId, bldType);
+                    NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
+                            tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
+                    emitNarrativeEvent(checkinEvent);
 
-                return true;
+                    return true;
+                }
             }
+            // Daytime or conditions not met: fall through to regular service interaction
         }
 
         if ("shop".equals(category)) {
@@ -971,9 +979,15 @@ public class TouristMoveGoal extends Goal {
                 if (inServiceCooldown) continue;
 
                 if (isHotelBuilding(b.getBuildingId())) {
-                    HotelStayHandler hotel = HotelStayHandler.getActive();
-                    if (hotel != null && hotel.hasVacancy(b.getBuildingId())) {
-                        hotelTargets.add(state);
+                    if (isNight) {
+                        // Night: hotel is a check-in target
+                        HotelStayHandler hotel = HotelStayHandler.getActive();
+                        if (hotel != null && hotel.hasVacancy(b.getBuildingId())) {
+                            hotelTargets.add(state);
+                        }
+                    } else {
+                        // Daytime: hotel acts as a regular service building
+                        serviceTargets.add(state);
                     }
                 } else {
                     serviceTargets.add(state);
@@ -982,17 +996,14 @@ public class TouristMoveGoal extends Goal {
         }
 
         int sat = tourist.getSatisfaction();
-        boolean canUseHotel = sat >= 70 && sat < 100;
 
         BuildingState chosen = null;
-        if (isNight && canUseHotel && !hotelTargets.isEmpty()) {
+        if (isNight && sat >= 50 && sat < 100 && !hotelTargets.isEmpty()) {
             chosen = weightedPick(hotelTargets);
         } else if (!shopTargets.isEmpty()) {
             chosen = weightedPick(shopTargets);
         } else if (!serviceTargets.isEmpty()) {
             chosen = weightedPick(serviceTargets);
-        } else if (canUseHotel && !hotelTargets.isEmpty()) {
-            chosen = weightedPick(hotelTargets);
         }
 
         if (chosen == null) {
@@ -1036,8 +1047,8 @@ public class TouristMoveGoal extends Goal {
                     total, total - noShopService,
                     shutdown, notIntact, alreadyVisited, svcCooldown, noStock, hotelFull, noState));
             report.append(String.format(
-                    "\n  hotel_targets=%d | shop_targets=%d | service_targets=%d | canUseHotel=%s",
-                    hotelTargets.size(), shopTargets.size(), serviceTargets.size(), canUseHotel));
+                    "\n  hotel_targets=%d | shop_targets=%d | service_targets=%d",
+                    hotelTargets.size(), shopTargets.size(), serviceTargets.size()));
 
             Log.info(TAG, report.toString());
             return;

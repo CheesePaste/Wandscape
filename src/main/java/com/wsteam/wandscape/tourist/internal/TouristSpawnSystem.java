@@ -185,18 +185,33 @@ public final class TouristSpawnSystem {
         pendingSpawns.clear();
 
         BuildingApi buildingApi = getBuildingApi();
-        if (buildingApi == null) return;
+        if (buildingApi == null) {
+            Log.warn(TAG, "[Tourist] BuildingApi not available — cannot create spawn schedule");
+            return;
+        }
 
         List<BuildingData> allBuildings = buildingApi.getColonyBuildings(null);
-        if (allBuildings.isEmpty()) return;
+        if (allBuildings.isEmpty()) {
+            Log.warn(TAG, "[Tourist] No buildings found in colony — cannot spawn tourists. "
+                    + "Build a town hall and register a colony first.");
+            return;
+        }
 
         // Collect valid shop/service targets
         List<BuildingState> touristTargets = getTouristTargets(level, allBuildings);
-        if (touristTargets.isEmpty()) return;
+        if (touristTargets.isEmpty()) {
+            Log.warn(TAG, "[Tourist] No intact shop/service buildings available — "
+                    + "tourists have no targets. Build shops or service buildings to attract tourists.");
+            return;
+        }
 
-        // Get colony ID (first colony for now, same as existing logic)
+        // Get colony ID to query colony level
         UUID colonyId = getColonyId();
-        if (colonyId == null) return;
+        if (colonyId == null) {
+            Log.warn(TAG, "[Tourist] No colony registered — tourists cannot spawn. "
+                    + "Use '/wandscape colony create' to create a colony, then build a town hall within range.");
+            return;
+        }
 
         // Count existing tourists
         int existing = countExistingTourists(level);
@@ -338,17 +353,23 @@ public final class TouristSpawnSystem {
             long dayTime = level.getDayTime() % 24000;
             boolean isNight = dayTime >= 13000;
 
-            if (sat < 70 || sat >= 100) {
+            if (sat >= 100) {
+                // 满意度已满 → 离开
                 if (energyDepleted || (isNight && isIdle) || idleTimeout) {
                     toRemove.add(t);
                 }
-            } else {
-                // 70-99: seek hotel when energy low or at night
+            } else if (sat >= 50) {
+                // 50-99: 精力耗尽或夜晚 → 引导去酒店
                 if (energyDepleted || isNight) {
                     if (!tryRouteToHotel(t, level)) {
                         toRemove.add(t);
                     }
                 } else if (idleTimeout) {
+                    toRemove.add(t);
+                }
+            } else {
+                // sat < 50: 满意度不足 → 离开
+                if (energyDepleted || (isNight && isIdle) || idleTimeout) {
                     toRemove.add(t);
                 }
             }
@@ -366,7 +387,7 @@ public final class TouristSpawnSystem {
      * <ul>
      *   <li>Satisfaction &lt; 50: leave (with 0-1500 tick random delay)</li>
      *   <li>Satisfaction = 100: leave (with delay, resume already stored)</li>
-     *   <li>Satisfaction 50-99: route to hotel (no delay, instant if vacant)</li>
+     *   <li>Satisfaction 50-99: route to hotel (no delay), no vacancy → leave</li>
      * </ul>
      */
     private void processNightDepartures(ServerLevel level) {
@@ -401,12 +422,10 @@ public final class TouristSpawnSystem {
                     pendingDepartures.remove(t.getUUID());
                 }
             } else if (sat >= 50) {
-                // 50-99: route to hotel
+                // 50-99: route to hotel, no vacancy → leave
                 pendingDepartures.remove(t.getUUID());
                 if (!tryRouteToHotel(t, level)) {
-                    // No vacancy — tourist stays on streets, re-evaluated next cycle
-                    Log.debug(TAG, "[Tourist] {} sat={} wants hotel but no vacancy, waiting...",
-                            t.getTouristName(), sat);
+                    toRemove.add(t);
                 }
             }
         }
@@ -462,7 +481,7 @@ public final class TouristSpawnSystem {
         // Check out of hotel if still checked in
         HotelStayHandler hotel = HotelStayHandler.getActive();
         if (hotel != null && hotel.isCheckedIn(t.getUUID())) {
-            hotel.checkOut(t);
+            hotel.checkOut(t, level);
         }
 
         UUID colonyId = t.getColonyId();
@@ -668,8 +687,10 @@ public final class TouristSpawnSystem {
     private static UUID getColonyId() {
         ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) return null;
-        // Return first colony ID (simplification for MVP)
-        return null; // null = default colony for now, same as existing code
+        var ids = colonyApi.getAllColonyIds();
+        if (ids.isEmpty()) return null;
+        // Single-colony MVP: return the first colony UUID
+        return ids.iterator().next();
     }
 
     // ── API helpers ──

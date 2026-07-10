@@ -25,12 +25,18 @@ public final class RoadPlacementState {
     /** Road placement phase: BAR (preset selection UI) or PLACING (in-world placement). */
     public enum RoadPhase { BAR, PLACING }
 
+    public enum ToolMode { SQUARE_FILL, DESTROY_FILL }
+
     private static volatile boolean projecting = false;
     private static volatile RoadPhase roadPhase = RoadPhase.BAR;
+    private static volatile ToolMode activeTool = ToolMode.SQUARE_FILL;
     private static volatile int selectedPresetIndex = 0;
     private static volatile BlockPos startPos = null;
     private static volatile BlockPos endPos = null;
     private static volatile BlockPos ghostPos = null;
+
+    /** The block ID right-clicked as reference in DESTROY_FILL mode. */
+    private static volatile String refBlockId = "";
 
     private static final List<RoadPreset> presets = RoadPreset.DEFAULT_PRESETS;
 
@@ -57,9 +63,11 @@ public final class RoadPlacementState {
     public static void exitProjection() {
         projecting = false;
         roadPhase = RoadPhase.BAR;
+        activeTool = ToolMode.SQUARE_FILL;
         startPos = null;
         endPos = null;
         ghostPos = null;
+        refBlockId = "";
         Log.info(TAG, "[RoadPlacement] Exited placement mode");
     }
 
@@ -70,8 +78,10 @@ public final class RoadPlacementState {
     /** Enter BAR phase: clear positions, cursor lifted for preset selection overlay. */
     public static void enterBar() {
         roadPhase = RoadPhase.BAR;
+        activeTool = ToolMode.SQUARE_FILL;
         clearAll();
         ghostPos = null;
+        refBlockId = "";
         Log.info(TAG, "[RoadPlacement] Entered BAR phase");
     }
 
@@ -82,6 +92,22 @@ public final class RoadPlacementState {
         ghostPos = null;
         Log.info(TAG, "[RoadPlacement] Entered PLACING phase");
     }
+
+    // ── Tool mode ──
+
+    public static ToolMode getActiveTool() { return activeTool; }
+
+    public static void setActiveTool(ToolMode mode) {
+        activeTool = mode;
+        refBlockId = "";
+        Log.info(TAG, "[RoadPlacement] Tool mode → {}", mode);
+    }
+
+    public static boolean isDestroyFill() { return activeTool == ToolMode.DESTROY_FILL; }
+
+    public static String getRefBlockId() { return refBlockId; }
+
+    public static void setRefBlockId(String id) { refBlockId = id != null ? id : ""; }
 
     /**
      * Single-click → select. Double-click (same index within 400ms) → return true,

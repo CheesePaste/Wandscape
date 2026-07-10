@@ -2,13 +2,16 @@ package com.wsteam.wandscape.road.client;
 
 import org.lwjgl.glfw.GLFW;
 
+import com.wsteam.wandscape.road.network.DestroyFillPacket;
 import com.wsteam.wandscape.road.network.RoadPlacePacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -151,6 +154,19 @@ public final class RoadPlacementController {
                 mc.player.displayClientMessage(
                         Component.literal("[Road] §eCleared — right-click to set new start"), true);
             }
+        } else if (RoadPlacementState.isDestroyFill()) {
+            // Destroy/Fill: capture reference block + position
+            RoadPlacementState.setStartPos(ghostPos);
+            BlockState state = mc.level != null ? mc.level.getBlockState(ghostPos) : null;
+            String blockName = state != null
+                    ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
+                    : "unknown";
+            RoadPlacementState.setRefBlockId(blockName);
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Destroy/Fill] §aRef block: " + blockName + " at Y=" + ghostPos.getY()
+                                + " §7— left-click to set area, right-click to move ref"), true);
+            }
         } else {
             // IDLE or PLAN_START → right-click: set / overwrite startPos
             RoadPlacementState.setStartPos(ghostPos);
@@ -171,8 +187,9 @@ public final class RoadPlacementController {
         // PLAN_START or PLAN_END → set / overwrite endPos
         RoadPlacementState.setEndPos(ghostPos);
         if (mc.player != null) {
+            String tag = RoadPlacementState.isDestroyFill() ? "[Destroy/Fill]" : "[Road]";
             mc.player.displayClientMessage(
-                    Component.literal("[Road] §aEnd point set at " + ghostPos.toShortString()
+                    Component.literal(tag + " §aEnd point set at " + ghostPos.toShortString()
                             + " §7— Enter to publish, right-click to clear, Backspace to undo end"), true);
         }
     }
@@ -200,24 +217,32 @@ public final class RoadPlacementController {
     private static void handleEnter(Minecraft mc) {
         if (!RoadPlacementState.isReady()) {
             if (mc.player != null) {
+                String tag = RoadPlacementState.isDestroyFill() ? "[Destroy/Fill]" : "[Road]";
                 mc.player.displayClientMessage(
-                        Component.literal("[Road] §eSet both start and end points first"), true);
+                        Component.literal(tag + " §eSet both start and end points first"), true);
             }
             return;
         }
 
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
-        String presetId = RoadPlacementState.getSelectedPreset().id();
 
-        PacketDistributor.sendToServer(new RoadPlacePacket(presetId, start, end));
-
-        Log.info(TAG, "[Road] Published road: preset={} from={} to={}",
-                presetId, start.toShortString(), end.toShortString());
-
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("[Road] §aRoad task submitted! NPC will pave the path."), true);
+        if (RoadPlacementState.isDestroyFill()) {
+            PacketDistributor.sendToServer(new DestroyFillPacket(start, end));
+            Log.info(TAG, "[DestroyFill] Published: ref={} to={}", start.toShortString(), end.toShortString());
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Destroy/Fill] §aTerrain flatten task submitted! NPC will flatten the area."), true);
+            }
+        } else {
+            String presetId = RoadPlacementState.getSelectedPreset().id();
+            PacketDistributor.sendToServer(new RoadPlacePacket(presetId, start, end));
+            Log.info(TAG, "[Road] Published road: preset={} from={} to={}",
+                    presetId, start.toShortString(), end.toShortString());
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Road] §aRoad task submitted! NPC will pave the path."), true);
+            }
         }
 
         // Return to IDLE

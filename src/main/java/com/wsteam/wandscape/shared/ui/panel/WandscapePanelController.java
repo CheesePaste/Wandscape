@@ -147,6 +147,20 @@ public final class WandscapePanelController {
                 return;
             }
 
+            if (RoadPlacementOverlay.isDestroyFillClicked(mouseX, mouseY, screenW, screenH)) {
+                RoadPlacementState.setActiveTool(RoadPlacementState.ToolMode.DESTROY_FILL);
+                RoadPlacementState.enterPlacing();
+                WandscapePanelState.releaseCursorToGame();
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal(
+                                    "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit"),
+                            true);
+                }
+                event.setCanceled(true);
+                return;
+            }
+
             int presetIdx = RoadPlacementOverlay.getPresetAt(mouseX, mouseY, screenW, screenH);
             if (presetIdx >= 0) {
                 boolean doubleClicked = RoadPlacementState.handlePresetDoubleClick(presetIdx);

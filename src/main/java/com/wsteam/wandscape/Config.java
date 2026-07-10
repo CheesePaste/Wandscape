@@ -8,10 +8,6 @@ public class Config {
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);
 
-    public static final ModConfigSpec.IntValue WAREHOUSE_SAVE_INTERVAL_MINUTES = BUILDER
-            .comment("Interval in minutes between warehouse auto-saves")
-            .defineInRange("general.warehouseSaveIntervalMinutes", 5, 1, 60);
-
     public static final ModConfigSpec.IntValue SCHEDULER_HEARTBEAT_TICKS = BUILDER
             .comment("Scheduler heartbeat interval in ticks (40 ticks = 2 seconds)")
             .defineInRange("scheduler.heartbeatTicks", 40, 10, 200);
@@ -19,10 +15,6 @@ public class Config {
     public static final ModConfigSpec.DoubleValue SAME_BUILDING_CONTINUATION_BONUS = BUILDER
             .comment("Score bonus for NPC continuing tasks on the same building")
             .defineInRange("scheduler.sameBuildingContinuationBonus", 50.0, 0.0, 500.0);
-
-    public static final ModConfigSpec.IntValue TASK_INTERRUPT_COOLDOWN_TICKS = BUILDER
-            .comment("Cooldown in ticks before an interrupted task can be re-assigned (6000 ticks = 5 minutes)")
-            .defineInRange("scheduler.taskInterruptCooldownTicks", 6000, 0, 72000);
 
     public static final ModConfigSpec.IntValue STUCK_CHECK_INTERVAL_TICKS = BUILDER
             .comment("Interval in ticks between NPC stuck checks (60 ticks = 3 seconds)")
@@ -151,33 +143,11 @@ public class Config {
             .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
             .define("general.autoApproveTasks", false);
 
-    // ── Soul Projection ──
-
-    public static final ModConfigSpec.DoubleValue PROJECTION_FLYING_SPEED = BUILDER
-            .comment("Flying speed multiplier in projection mode (vanilla creative flight = 0.05)")
-            .defineInRange("projection.flyingSpeed", 0.15, 0.05, 1.0);
-
-    public static final ModConfigSpec.IntValue PROJECTION_MAX_RANGE = BUILDER
-            .comment("Maximum distance in blocks from body anchor before player is pulled back (0 = unlimited)")
-            .defineInRange("projection.maxRange", 256, 0, 1024);
-
-    public static final ModConfigSpec.BooleanValue PROJECTION_REQUIRE_WAND = BUILDER
-            .comment("Whether the player must hold a wand item to enter projection mode")
-            .define("projection.requireWand", true);
-
     // ---- Tourist system ----
-
-    public static final ModConfigSpec.IntValue TOURIST_SPAWN_INTERVAL_TICKS = BUILDER
-            .comment("Interval in ticks between tourist spawn attempts (24000 ticks = 1 MC day)")
-            .defineInRange("tourist.spawnIntervalTicks", 24000, 6000, 72000);
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER
             .comment("Maximum simultaneous tourists per colony")
             .defineInRange("tourist.maxPerColony", 20, 5, 100);
-
-    public static final ModConfigSpec.IntValue TOURIST_SATISFACTION_THRESHOLD = BUILDER
-            .comment("Satisfaction value at which a tourist leaves satisfied (100 = fully satisfied)")
-            .defineInRange("tourist.satisfactionThreshold", 80, 10, 100);
 
     public static final ModConfigSpec.IntValue TOURIST_DESPAWN_TIMEOUT_TICKS = BUILDER
             .comment("Ticks before an idle tourist despawns (36000 ticks = 30 minutes)")
@@ -207,10 +177,6 @@ public class Config {
             .comment("Night departure window end (game time tick)")
             .defineInRange("tourist.departureWindowEnd", 24000, 0, 24000);
 
-    public static final ModConfigSpec.IntValue TOURIST_NIGHT_DEPARTURE_THRESHOLD = BUILDER
-            .comment("Satisfaction below this → night departure; 50-99 → hotel")
-            .defineInRange("tourist.nightDepartureThreshold", 50, 0, 100);
-
     public static final ModConfigSpec.IntValue TOURIST_DEPARTURE_DELAY_MAX_TICKS = BUILDER
             .comment("Max random delay ticks before night departure (0-this)")
             .defineInRange("tourist.departureDelayMaxTicks", 1500, 0, 6000);
@@ -222,10 +188,6 @@ public class Config {
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
             .comment("Experience granted when tourist level > colony level")
             .defineInRange("colony.expAboveLevel", 500, 0, 10000);
-
-    public static final ModConfigSpec.IntValue TOURIST_EVAL_SCORE_DIVISOR = BUILDER
-            .comment("Colony three-value total divided by this gives extra tourists")
-            .defineInRange("tourist.evalScoreDivisor", 10, 1, 100);
 
     // ---- Decoration system ----
 
@@ -278,20 +240,6 @@ public class Config {
     public static final ModConfigSpec.IntValue SERVICE_COOLDOWN_TICKS = BUILDER
             .comment("Cooldown in ticks before a tourist can use the same service building again")
             .defineInRange("service.cooldownTicks", 1200, 1200, 72000);
-
-    // ---- Hotel system ----
-
-    public static final ModConfigSpec.IntValue HOTEL_ENERGY_PER_TICK = BUILDER
-            .comment("Energy recovered per tick while a tourist is checked into a hotel")
-            .defineInRange("hotel.energyPerTick", 1, 0, 10);
-
-    public static final ModConfigSpec.IntValue HOTEL_SATISFACTION_PER_NIGHT = BUILDER
-            .comment("Satisfaction gained for a full night's stay at a hotel")
-            .defineInRange("hotel.satisfactionPerNight", 30, 0, 100);
-
-    public static final ModConfigSpec.IntValue TOURIST_SATISFACTION_REWARD_DIVISOR = BUILDER
-            .comment("Reserved: tourist satisfaction divided by this yields colony element reward on departure (future use)")
-            .defineInRange("tourist.satisfactionRewardDivisor", 10, 1, 100);
 
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SATISFACTION_THRESHOLD = BUILDER
             .comment("Per-level three-value threshold. A building's three-value sum must be "

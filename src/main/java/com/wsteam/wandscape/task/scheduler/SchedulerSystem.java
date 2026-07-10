@@ -66,14 +66,14 @@ public class SchedulerSystem implements System {
             }
         }
 
-        Log.info(TAG, "heartbeat - colony_count=%d idle_npcs=%d assignable_tasks=%d",
+        Log.debug(TAG, "heartbeat - colony_count=%d idle_npcs=%d assignable_tasks=%d",
                 npcsByColony.size(),
                 idleNpcs.size(), world.taskPool.getAssignableTasks().size());
         for (long eid : idleNpcs) {
             EquipmentComponent eq = world.get(eid, EquipmentComponent.class);
             ManaPool mp = world.get(eid, ManaPool.class);
             ColonyMember cm = world.get(eid, ColonyMember.class);
-            Log.info(TAG, "  idle NPC %d colony=%s equipped=%s mana=%.1f/%d",
+            Log.debug(TAG, "  idle NPC %d colony=%s equipped=%s mana=%.1f/%d",
                     eid,
                     cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
                     eq != null ? String.valueOf(eq.getEquippedPreset(EquipmentSlot.WAND)) : "none",

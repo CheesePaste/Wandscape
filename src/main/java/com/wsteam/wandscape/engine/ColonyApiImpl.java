@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.engine;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -132,6 +133,11 @@ public final class ColonyApiImpl implements ColonyApi {
         if (colonyId != null) {
             setColonyId(data, colonyId);
         }
+    }
+
+    @Override
+    public Collection<UUID> getAllColonyIds() {
+        return colonyToOrigin.keySet();
     }
 
     @Override

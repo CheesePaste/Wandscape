@@ -75,7 +75,7 @@ public class BuildingTaskSource implements TaskSource {
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
-            Log.info(TAG, "[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
+            Log.debug(TAG, "[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
                     pollCount, pool.size(), buildingIds.size(),
                     btp != null ? btp.totalBuildings() : 0);
         }
@@ -128,10 +128,10 @@ public class BuildingTaskSource implements TaskSource {
 
         // Buildings that already have queued work (will be published in step 3)
         Set<UUID> hasWork = new HashSet<>(api.getBuildingsWithPendingWork(null));
-        Log.info(TAG, "[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
+        Log.debug(TAG, "[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
 
         List<UUID> nodeBuildings = api.getBuildingsByCategory(null, "node");
-        Log.info(TAG, "[TaskSrc] node supply: found {} node buildings total", nodeBuildings.size());
+        Log.debug(TAG, "[TaskSrc] node supply: found {} node buildings total", nodeBuildings.size());
 
         for (UUID buildingId : nodeBuildings) {
             // Already has queued work → skip

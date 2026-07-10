@@ -368,7 +368,7 @@ public class BuildingApiImpl implements BuildingApi {
             }
             result.add(state.getBuildingId());
         }
-        Log.info(TAG, "[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
+        Log.debug(TAG, "[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
                 colonyId != null ? colonyId.toString().substring(0, 8) : "null",
                 result.size(),
                 result.stream().map(u -> u.toString().substring(0, 8)).toList());
@@ -443,7 +443,7 @@ public class BuildingApiImpl implements BuildingApi {
             result.add(state.getBuildingId());
         }
 
-        Log.info(TAG, "[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
+        Log.debug(TAG, "[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
                 colonyId != null ? colonyId.toString().substring(0, 8) : "null",
                 category, result.size(), total, skippedColony, skippedCat);
         return result;
