@@ -10,7 +10,6 @@ import com.google.gson.JsonElement;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
-import com.wsteam.wandscape.building.data.InteractionRadius;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
@@ -63,7 +62,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()  // nodeConfig
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, null, List.of()  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -98,7 +97,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()  // nodeConfig
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, null, List.of()  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -119,7 +118,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, -1, -1), off(1, 1, 1)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, InteractionRadius.NONE, null, List.of()  // nodeConfig
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, null, List.of()  // nodeConfig
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);

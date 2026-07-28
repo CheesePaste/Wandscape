@@ -19,6 +19,8 @@ public class TouristApiImpl implements TouristApi {
 
     // colonyId → set of tourist entity UUIDs
     private final Map<UUID, Map<UUID, Integer>> colonyTourists = new ConcurrentHashMap<>();
+    // colonyId → count of tourists who stayed overnight (checked into hotel)
+    private final Map<UUID, Integer> colonyOvernightCounts = new ConcurrentHashMap<>();
 
     @Override
     public int getTouristCount(UUID colonyId) {
@@ -66,6 +68,17 @@ public class TouristApiImpl implements TouristApi {
             }
         }
         NeoForge.EVENT_BUS.post(new TouristDepartedEvent(touristId, colonyId, satisfaction));
+    }
+
+    @Override
+    public int getOvernightStayerCount(UUID colonyId) {
+        return colonyOvernightCounts.getOrDefault(colonyId, 0);
+    }
+
+    /** Set the count of overnight stayers for a colony. Called by TouristSpawnSystem during morning phase. */
+    public void setOvernightStayerCount(UUID colonyId, int count) {
+        if (count <= 0) colonyOvernightCounts.remove(colonyId);
+        else colonyOvernightCounts.put(colonyId, count);
     }
 
     /** Update a tourist's satisfaction value (called by interaction handlers). */

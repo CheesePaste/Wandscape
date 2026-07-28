@@ -45,7 +45,6 @@ public record BuildingConfig(
         @SerializedName("wonder_config") WonderConfig wonderConfig,
         ShopConfig shop,
         ServiceConfig service,
-        @SerializedName("interaction_radius") InteractionRadius interactionRadius,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
         @SerializedName("interact_aabb") List<BoundaryBox> interactAabb
 ) {
@@ -242,13 +241,6 @@ public record BuildingConfig(
                 service = context.deserialize(obj.get("service"), ServiceConfig.class);
             }
 
-            // Interaction radius: can be int (uniform), {x,y,z} (per-axis), or {min,max} (explicit box)
-            InteractionRadius interactionRadius = InteractionRadius.NONE;
-            if (obj.has("interaction_radius")) {
-                interactionRadius = new InteractionRadius.Deserializer().deserialize(
-                        obj.get("interaction_radius"), InteractionRadius.class, context);
-            }
-
             // Door offset: position of the building door relative to anchor.
             // When not specified, entry point is computed via heuristic spiral scan.
             BlockOffset doorOffset = null;
@@ -279,7 +271,7 @@ public record BuildingConfig(
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,
-                    interactionRadius, doorOffset, interactAabb);
+                    doorOffset, interactAabb);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

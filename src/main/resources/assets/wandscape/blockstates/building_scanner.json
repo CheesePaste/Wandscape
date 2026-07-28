@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "wandscape:block/building_scanner"
+    }
+  }
+}

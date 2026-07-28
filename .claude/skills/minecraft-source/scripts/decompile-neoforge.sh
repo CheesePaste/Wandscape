@@ -49,7 +49,7 @@ if [[ ! -d "$ARTIFACTS_DIR" ]]; then
     exit 1
 fi
 
-NEO_VERSION=$(grep -E '^neo_version=' "$PROJECT_ROOT/gradle.properties" | cut -d= -f2 | tr -d '[:space:]')
+NEO_VERSION=$(grep -E '^neo_version=' "$PROJECT_ROOT/gradle.properties" | cut -d= -f2 | tr -d '[:space:]' || true)
 
 SOURCES_JAR="$ARTIFACTS_DIR/neoforge-${NEO_VERSION}-sources.jar"
 MERGED_JAR="$ARTIFACTS_DIR/neoforge-${NEO_VERSION}-merged.jar"
@@ -80,10 +80,18 @@ fi
 class_in_jar() {
     local jar="$1"
     local path="$2"
-    # grep without -q: -q exits on first match, causing SIGPIPE (exit 141) to
-    # the unzip process. With pipefail that masks a successful match as failure.
-    unzip -Z1 "$jar" 2>/dev/null | grep -xF "$path" >/dev/null && return 0
-    unzip -Z1 "$jar" 2>/dev/null | grep -xi "^${path}$" >/dev/null && return 0
+    local rc
+    # pipefail + SIGPIPE: when grep finds a match and exits, unzip gets SIGPIPE
+    # (exit 141). With pipefail the pipeline fails despite grep succeeding.
+    # Disable pipefail so grep exit 0 = pipeline success, grep exit 1 = not found.
+    set +o pipefail
+    unzip -Z1 "$jar" 2>/dev/null | grep -xF "$path" >/dev/null
+    rc=$?
+    if [[ $rc -eq 0 ]]; then set -o pipefail; return 0; fi
+    unzip -Z1 "$jar" 2>/dev/null | grep -xi "^${path}$" >/dev/null
+    rc=$?
+    set -o pipefail
+    if [[ $rc -eq 0 ]]; then return 0; fi
     return 1
 }
 
@@ -103,9 +111,90 @@ find_file_in_jars() {
 # Convert class name → file path
 class_to_path() {
     local name="$1"
+    # Strip $Inner notation
     name="${name%%\$*}"
+    # Strip .Inner notation: if the last dot-separated component starts with
+    # uppercase and there are no other dots before it (i.e., it's
+    # "Outer.Inner" not "pkg.Outer"), treat it as an inner class reference.
+    local before="${name%.*}"
+    local after="${name##*.}"
+    if [[ "$before" != *.* ]] && [[ "$after" != "$name" ]] && [[ "${after:0:1}" == [[:upper:]] ]]; then
+        name="$before"
+    fi
     name="${name//.//}"
     echo "${name}.java"
+}
+
+# ---------- 3b. Project source search ----------
+find_in_project_src() {
+    local path="$1"
+    local full
+    full=$(find "$PROJECT_ROOT/src" -path "*/$path" 2>/dev/null | head -1 || true)
+    if [[ -n "$full" && -f "$full" ]]; then
+        echo "$full"
+        return 0
+    fi
+    # Try short name: just the basename
+    local basename="${path##*/}"
+    if [[ "$basename" != "$path" ]]; then
+        full=$(find "$PROJECT_ROOT/src" -name "$basename" 2>/dev/null | head -1 || true)
+        if [[ -n "$full" && -f "$full" ]]; then
+            echo "$full"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# ---------- 3c. Source caching ----------
+CACHE_DIR="$(cd "$(dirname "$0")" && pwd)/cache"
+mkdir -p "$CACHE_DIR"
+MAX_CACHE_FILES=50
+
+cache_key() {
+    local input="$1"
+    if command -v md5sum &>/dev/null; then
+        echo -n "$input" | md5sum | cut -d' ' -f1
+    elif command -v md5 &>/dev/null; then
+        echo -n "$input" | md5 -r | cut -d' ' -f1
+    else
+        echo "$input" | sha256sum | cut -d' ' -f1
+    fi
+}
+
+cache_get() {
+    local key="$1"
+    local cache_file="$CACHE_DIR/${key}.java"
+    if [[ -f "$cache_file" ]]; then
+        # Touch to update LRU time
+        touch "$cache_file" 2>/dev/null || true
+        cat "$cache_file"
+        return 0
+    fi
+    return 1
+}
+
+cache_put() {
+    local key="$1"
+    local content="$2"
+    # Enforce limit
+    local count
+    count=$(ls -1 "$CACHE_DIR" 2>/dev/null | wc -l || true)
+    if [[ "$count" -ge "$MAX_CACHE_FILES" ]]; then
+        # Remove oldest files
+        ls -t "$CACHE_DIR" | tail -n +"$((MAX_CACHE_FILES / 2))" | while read -r f; do
+            rm -f "$CACHE_DIR/$f"
+        done 2>/dev/null
+    fi
+    echo "$content" > "$CACHE_DIR/${key}.java"
+}
+
+# ---------- 3d. Fuzzy name suggestion ----------
+suggest_similar_classes() {
+    local jar="$1"
+    local name="$2"
+    local basename="${name%.java}"
+    unzip -l "$jar" 2>/dev/null | grep -i "/${basename}" | head -10 | awk '{$1=$2=$3=""; print substr($0,4)}' || true
 }
 
 find_in_jar() {
@@ -131,7 +220,7 @@ pick_primary_jar() {
     if [[ "$class_name" == net.neoforged* ]] || [[ "$class_name" == net/neoforged* ]]; then
         # Try Gradle cache jars first (best source quality for NeoForge libs)
         local found
-        found=$(find_file_in_jars "$file_path" "${GRADLE_NEOFORGE_JARS[@]}")
+        found=$(find_file_in_jars "$file_path" "${GRADLE_NEOFORGE_JARS[@]}") || true
         if [[ -n "$found" ]]; then
             echo "gradle:$found"
             return 0
@@ -161,6 +250,19 @@ pick_primary_jar() {
 }
 
 # ---------- 5. Resolve file path ----------
+# Fast path: check project source first
+PROJECT_FILE=$(find_in_project_src "$(class_to_path "$CLASS_INPUT")") || true
+if [[ -z "$PROJECT_FILE" ]]; then
+    PROJECT_FILE=$(find_in_project_src "$CLASS_INPUT") || true
+fi
+if [[ -n "$PROJECT_FILE" ]]; then
+    FILE_PATH=$(class_to_path "$CLASS_INPUT")
+    echo "--- Project source ---"
+    echo "Source:  ${FILE_PATH}"
+    echo ""
+    cat "$PROJECT_FILE"
+    exit 0
+fi
 # Build initial candidate path
 if [[ "$CLASS_INPUT" != *"."* && "$CLASS_INPUT" != *"/"* && "$CLASS_INPUT" != *'$'* ]]; then
     # Short name search — try all jars
@@ -255,7 +357,7 @@ else
     fi
 
     # Use the smart jar picker for full path resolution
-    JAR_SELECTION=$(pick_primary_jar "$CLASS_INPUT" "$FILE_PATH")
+    JAR_SELECTION=$(pick_primary_jar "$CLASS_INPUT" "$FILE_PATH") || true
     if [[ -z "$JAR_SELECTION" ]]; then
         # pick_primary_jar failed — try exhaustive search across all jars
         ALL_JARS=()
@@ -263,7 +365,7 @@ else
         [[ -f "$MERGED_JAR" ]] && ALL_JARS+=("$MERGED_JAR")
         ALL_JARS+=("${GRADLE_NEOFORGE_JARS[@]}")
 
-        FOUND_JAR=$(find_file_in_jars "$FILE_PATH" "${ALL_JARS[@]}")
+        FOUND_JAR=$(find_file_in_jars "$FILE_PATH" "${ALL_JARS[@]}") || true
         if [[ -z "$FOUND_JAR" ]]; then
             # Last resort: fuzzy search in all jars
             BASE_NAME="${CLASS_INPUT##*.}"
@@ -291,7 +393,7 @@ else
 fi
 
 # ---------- 6. Extract and print ----------
-MC_VERSION=$(grep -E '^minecraft_version=' "$PROJECT_ROOT/gradle.properties" | cut -d= -f2 | tr -d '[:space:]')
+MC_VERSION=$(grep -E '^minecraft_version=' "$PROJECT_ROOT/gradle.properties" | cut -d= -f2 | tr -d '[:space:]' || true)
 
 # Determine display label for the jar
 JAR_DISPLAY=$(basename "$USE_JAR")
@@ -303,11 +405,11 @@ if [[ "$USE_JAR" == "$SOURCES_JAR" ]]; then
     fi
 elif [[ "$USE_JAR" == "$MERGED_JAR" ]]; then
     JAR_LABEL="merged (MC + NeoForge patches)"
-elif echo "$USE_JAR" | grep -q "bus"; then
+elif [[ "$USE_JAR" == *bus* ]]; then
     JAR_LABEL="NeoForge Event Bus"
-elif echo "$USE_JAR" | grep -q "/neoforge/"; then
+elif [[ "$USE_JAR" == */neoforge/* ]]; then
     JAR_LABEL="NeoForge SDK"
-elif echo "$USE_JAR" | grep -q "gradle"; then
+elif [[ "$USE_JAR" == *gradle* ]]; then
     JAR_LABEL="NeoForge (Gradle cache)"
 else
     JAR_LABEL="$JAR_DISPLAY"
@@ -318,7 +420,25 @@ echo "Source:  ${FILE_PATH}"
 echo "Jar:     ${JAR_DISPLAY} (${JAR_LABEL})"
 echo ""
 
-unzip -p "$USE_JAR" "$FILE_PATH" 2>/dev/null || {
-    echo "ERROR: Failed to extract ${FILE_PATH} from $(basename "$USE_JAR")." >&2
-    exit 1
-}
+CACHE_KEY=$(cache_key "${USE_JAR}:${FILE_PATH}")
+CACHED=$(cache_get "$CACHE_KEY") || true
+if [[ -n "$CACHED" ]]; then
+    echo "$CACHED"
+else
+    CONTENT=$(unzip -p "$USE_JAR" "$FILE_PATH" 2>/dev/null) || {
+        _basename="${FILE_PATH##*/}"
+        _basename="${_basename%.java}"
+        echo "ERROR: Failed to extract ${FILE_PATH} from $(basename "$USE_JAR")." >&2
+        echo "" >&2
+        _candidates=$(suggest_similar_classes "$USE_JAR" "$_basename")
+        if [[ -n "$_candidates" ]]; then
+            echo "Did you mean one of these?" >&2
+            echo "$_candidates" | while read -r line; do
+                echo "  $line" >&2
+            done
+        fi
+        exit 1
+    }
+    cache_put "$CACHE_KEY" "$CONTENT"
+    echo "$CONTENT"
+fi

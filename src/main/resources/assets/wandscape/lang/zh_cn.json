@@ -6,6 +6,7 @@
   "item.wandscape.wandscape_npc_spawn_egg": "法师刷怪蛋",
   "entity.wandscape.tourist": "游客",
   "item.wandscape.tourist_spawn_egg": "游客刷怪蛋",
+  "block.wandscape.building_scanner": "建筑扫描器",
 
   "key.categories.wandscape": "Wandscape",
   "key.wandscape.demo": "打开UI演示",

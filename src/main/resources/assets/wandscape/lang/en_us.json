@@ -6,6 +6,7 @@
   "block.wandscape.forest_node": "Forest Node",
   "block.wandscape.earth_node": "Earth Node",
   "block.wandscape.grand_tower": "Grand Mage Tower",
+  "block.wandscape.building_scanner": "Building Scanner",
   "entity.wandscape.wandscape_npc": "Wizard",
   "item.wandscape.wandscape_npc_spawn_egg": "Wizard Spawn Egg",
   "entity.wandscape.tourist": "Tourist",

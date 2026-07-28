@@ -2,6 +2,7 @@ package com.wsteam.wandscape.shared.network;
 
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.ColonyApi;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -43,13 +44,58 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     int m = buildingApi.getColonyMagic(colonyId);
                     int w = buildingApi.getColonyWonder(colonyId);
 
-                    // Include colony level
                     var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
                     int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
                     int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
                     String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
+
+                    // ── Collect HUD data (try-catch: modules may not be loaded) ──
+                    int touristCount = 0;
+                    var touristApi = WandscapeApis.getTouristApiSilently();
+                    if (touristApi != null) touristCount = touristApi.getTouristCount(colonyId);
+
+                    int overnightStayerCount = 0;
+                    if (touristApi != null) overnightStayerCount = touristApi.getOvernightStayerCount(colonyId);
+
+                    int shutdownCount = 0;
+                    List<String> shutdownBuildingNames = List.of();
+                    try {
+                        var buildings = buildingApi.getColonyBuildings(colonyId);
+                        var shutdownBuildings = buildings.stream().filter(b -> b.isShutdown()).toList();
+                        shutdownCount = shutdownBuildings.size();
+                        shutdownBuildingNames = shutdownBuildings.stream().map(b -> b.getBuildingTypeId()).toList();
+                    } catch (Exception ignored) {}
+
+                    int npcIdleCount = 0, npcTotalCount = 0;
+                    try {
+                        var npcApi = WandscapeApis.getNpcApi();
+                        npcIdleCount = npcApi.getIdleNpcs(colonyId).size();
+                        npcTotalCount = npcApi.getColonyNpcs(colonyId).size();
+                    } catch (Exception ignored) {}
+
+                    int earthAmount = 0, woodAmount = 0, waterAmount = 0, fireAmount = 0, windAmount = 0;
+                    int metalAmount = 0, darkAmount = 0;
+                    try {
+                        var warehouseApi = WandscapeApis.getWarehouseApiSilently();
+                        if (warehouseApi != null) {
+                            var elements = warehouseApi.getAllElements(colonyId);
+                            earthAmount = elements.getOrDefault(ElementType.EARTH, 0L).intValue();
+                            woodAmount = elements.getOrDefault(ElementType.WOOD, 0L).intValue();
+                            waterAmount = elements.getOrDefault(ElementType.WATER, 0L).intValue();
+                            fireAmount = elements.getOrDefault(ElementType.FIRE, 0L).intValue();
+                            windAmount = elements.getOrDefault(ElementType.WIND, 0L).intValue();
+                            metalAmount = elements.getOrDefault(ElementType.METAL, 0L).intValue();
+                            darkAmount = elements.getOrDefault(ElementType.DARK, 0L).intValue();
+                        }
+                    } catch (Exception ignored) {}
+
                     PacketDistributor.sendToPlayer(player,
-                            new ColonyStatsSyncPacket(colonyId, c, m, w, name, lvl, exp));
+                            new ColonyStatsSyncPacket(colonyId, c, m, w, name, lvl, exp,
+                                    touristCount, overnightStayerCount, shutdownCount,
+                                    npcIdleCount, npcTotalCount,
+                                    earthAmount, woodAmount, waterAmount, fireAmount, windAmount,
+                                    metalAmount, darkAmount,
+                                    shutdownBuildingNames));
 
                     // Sync building interaction areas for overlay rendering
                     List<BuildingAreaSyncPacket.BuildingEntry> entries =

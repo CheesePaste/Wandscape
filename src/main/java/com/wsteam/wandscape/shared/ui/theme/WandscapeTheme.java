@@ -36,7 +36,36 @@ public final class WandscapeTheme {
     public static final ResourceLocation ICON_MAGIC = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_magic.png");
     public static final ResourceLocation ICON_WONDER = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_wonder.png");
 
+    // Element icons (12x12)
+    public static final ResourceLocation ICON_ELEMENT_EARTH = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_earth.png");
+    public static final ResourceLocation ICON_ELEMENT_WOOD = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_wood.png");
+    public static final ResourceLocation ICON_ELEMENT_WATER = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_water.png");
+    public static final ResourceLocation ICON_ELEMENT_FIRE = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_fire.png");
+    public static final ResourceLocation ICON_ELEMENT_WIND = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_wind.png");
+    public static final ResourceLocation ICON_ELEMENT_METAL = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_metal.png");
+    public static final ResourceLocation ICON_ELEMENT_DARK = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/element_dark.png");
+
+    // UI icons (16x16)
+    public static final ResourceLocation ICON_TOURIST = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_tourist.png");
+    public static final ResourceLocation ICON_WARNING = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_warning.png");
+
     private WandscapeTheme() {}
+
+    /**
+     * Map element type ID to its icon ResourceLocation.
+     */
+    public static ResourceLocation elementIcon(String elementId) {
+        return switch (elementId) {
+            case "earth" -> ICON_ELEMENT_EARTH;
+            case "wood" -> ICON_ELEMENT_WOOD;
+            case "water" -> ICON_ELEMENT_WATER;
+            case "fire" -> ICON_ELEMENT_FIRE;
+            case "wind" -> ICON_ELEMENT_WIND;
+            case "metal" -> ICON_ELEMENT_METAL;
+            case "dark" -> ICON_ELEMENT_DARK;
+            default -> ICON_ELEMENT_EARTH;
+        };
+    }
 
     /**
      * Draws a crisp RTS-style box with a translucent background and 1px border.

@@ -123,6 +123,12 @@ public final class TouristSpawnSystem {
             tourist.setArrivalTime(level.getGameTime());
             tourist.applyState(TouristState.VISITING);
             level.addFreshEntity(tourist);
+
+            // Register arrival
+            var touristApi = getTouristApi();
+            if (touristApi != null) {
+                touristApi.registerArrival(tourist.getUUID(), ps.target.getColonyId());
+            }
         }
     }
 
@@ -139,11 +145,12 @@ public final class TouristSpawnSystem {
         long dayTime = level.getDayTime() % 24000;
         long day = level.getDayTime() / 24000;
 
-        // ── Morning: reset schedule flag (once per day) ──
+        // ── Morning: reset schedule flag + count overnight stayers ──
         if (dayTime < 1000 && scheduleDay != day) {
             scheduleCreated = false;
             pendingSpawns.clear();
             scheduleDay = -1;
+            countOvernightStayers(level);
         }
 
         // ── Spawn window (1000-13000) ──
@@ -281,6 +288,12 @@ public final class TouristSpawnSystem {
                 tourist.setArrivalTime(level.getGameTime());
                 tourist.applyState(TouristState.VISITING);
                 level.addFreshEntity(tourist);
+
+                // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
+                var touristApi = getTouristApi();
+                if (touristApi != null) {
+                    touristApi.registerArrival(tourist.getUUID(), ps.target.getColonyId());
+                }
 
                 Log.info(TAG, "[Tourist] {} (Lv.{}) spawned, heading to {} '{}' at {}",
                         tourist.getTouristName(), ps.level, ps.target.getCategory(),
@@ -603,6 +616,24 @@ public final class TouristSpawnSystem {
             }
         }
         return count;
+    }
+
+    /** Count tourists currently checked into hotels per colony and store as overnight stayers. */
+    private void countOvernightStayers(ServerLevel level) {
+        java.util.Map<UUID, Integer> overnightCounts = new java.util.HashMap<>();
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof TouristEntity t && t.isAlive() && t.getCheckedInBuildingId() != null) {
+                UUID colonyId = t.getColonyId();
+                if (colonyId != null) overnightCounts.merge(colonyId, 1, Integer::sum);
+            }
+        }
+        var touristApi = getTouristApi();
+        if (touristApi instanceof TouristApiImpl impl) {
+            for (var entry : overnightCounts.entrySet()) {
+                impl.setOvernightStayerCount(entry.getKey(), entry.getValue());
+            }
+            Log.info(TAG, "[Tourist] Overnight stayers counted: {}", overnightCounts);
+        }
     }
 
     private List<BlockPos> collectSpawnPositions(ServerLevel level, List<BuildingData> buildings) {

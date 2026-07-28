@@ -223,12 +223,18 @@ public class Config {
             .comment("Interval in ticks between maintenance forecast scans (6000 ticks = 1/4 MC day)")
             .defineInRange("maintenance.forecastIntervalTicks", 6000, 1200, 24000);
 
+    // ---- ImGui developer tools ----
+
+    public static final ModConfigSpec.BooleanValue IMGUI_ENABLED = BUILDER
+            .comment("Enable ImGui developer tools (F12 debug GUI). Disable to prevent accidental F12 toggles.")
+            .define("client.imguiEnabled", false);
+
     // ---- Service system ----
 
     public static final ModConfigSpec.IntValue ARRIVAL_RADIUS = BUILDER
             .comment("Distance in blocks at which a tourist is considered to have arrived " +
-                     "at a building's interact point or entry point. Building-specific " +
-                     "interactionRadius overrides this when > 0.")
+                     "at a building's interact point or entry point. " +
+                     "ARRIVAL_RADIUS controls the arrival distance for tourist navigation.")
             .defineInRange("tourist.arrivalRadius", 3, 1, 16);
 
     public static final ModConfigSpec.IntValue MICRO_NAV_SWITCH_DISTANCE = BUILDER

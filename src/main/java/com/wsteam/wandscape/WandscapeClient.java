@@ -25,10 +25,7 @@ import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
-import com.wsteam.wandscape.building.editor.BuildingEditorAxisRenderer;
-import com.wsteam.wandscape.building.editor.BuildingEditorController;
-import com.wsteam.wandscape.building.editor.BuildingEditorInputHandler;
-import com.wsteam.wandscape.building.editor.BuildingEditorRenderer;
+import com.wsteam.wandscape.building.scanner.client.BuildingScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
@@ -125,12 +122,8 @@ public class WandscapeClient {
         ProjectionFlightController.register();
         BuildingDebugController.register();
         BuildingDebugOverlay.register();
-        BuildingEditorController.register();
-        BuildingEditorRenderer.register();
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
-        BuildingEditorAxisRenderer.register();
-        BuildingEditorInputHandler.register();
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
 
@@ -275,7 +268,9 @@ public class WandscapeClient {
             }
         }
         while (IMGUI_TOGGLE.consumeClick()) {
-            ImGuiManager.toggle();
+            if (Config.IMGUI_ENABLED.get()) {
+                ImGuiManager.toggle();
+            }
         }
     }
 
@@ -284,6 +279,7 @@ public class WandscapeClient {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
         event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
+        event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
     }
 
     @SubscribeEvent

@@ -130,8 +130,6 @@ public record BuildingEditorEnterResponsePacket(
                 }
             }
 
-            BuildingEditorClientState.setInteractionRadius(config.interactionRadius().uniform());
-
             // Interact AABB zone
             if (config.interactAabb() != null && !config.interactAabb().isEmpty()) {
                 BuildingEditorClientState.setInteractAabbList(config.interactAabb());

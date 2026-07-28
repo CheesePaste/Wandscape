@@ -176,48 +176,27 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Finds a building whose interaction zone covers the given position.
-     * <p>
-     * The interaction zone is the building's bounding box interior. Clicking
-     * inside any building's bounding box (not just on pattern blocks) counts
-     * as interacting. Buildings with {@code interaction_radius > 0} additionally
-     * extend the zone outward by that many blocks.
+     * Finds a building whose boundary box covers the given position.
+     * Clicking inside any building's bounding box (not just on pattern blocks)
+     * counts as interacting with that building.
      *
-     * @return buildingId if pos is within interaction zone of an intact non-shutdown building
+     * @return buildingId if pos is within boundary of an intact non-shutdown building
      */
     @Nullable
     public UUID getBuildingIdInInteractionZone(BlockPos pos) {
-        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
         ChunkPos cp = new ChunkPos(pos);
         Set<UUID> chunkIds = chunkIndex.get(cp);
         if (chunkIds == null) return null;
-
-        UUID bestMatch = null;
-        int bestRadius = -1;
 
         for (UUID candidate : chunkIds) {
             BuildingState state = buildings.get(candidate);
             if (state == null || state.isShutdown() || !state.isStructureIntact()) continue;
 
-            var bb = state.getBounds();
-            BuildingConfig config = configLoader.get(state.getBuildingTypeId());
-
-            // Compute interaction zone (uniform / per-axis / explicit box)
-            var ir = config != null ? config.interactionRadius() : com.wsteam.wandscape.building.data.InteractionRadius.NONE;
-            var zone = ir.computeInteractionBounds(bb, state.getAnchor());
-
-            if (pos.getX() >= zone.minX() && pos.getX() <= zone.maxX()
-                    && pos.getY() >= zone.minY() && pos.getY() <= zone.maxY()
-                    && pos.getZ() >= zone.minZ() && pos.getZ() <= zone.maxZ()) {
-                // Prefer the building with the smallest expansion (tighter match)
-                int radius = ir.getEffectiveRange();
-                if (radius > bestRadius) {
-                    bestRadius = radius;
-                    bestMatch = candidate;
-                }
+            if (state.getBounds().isInside(pos)) {
+                return candidate;
             }
         }
-        return bestMatch;
+        return null;
     }
 
     /**

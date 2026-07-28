@@ -4,7 +4,10 @@ import com.wsteam.wandscape.engine.ColonyApiImpl;
 import com.wsteam.wandscape.engine.colony.ColonyLevelData;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import com.wsteam.wandscape.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.building.internal.DemolishCompleteListener;
@@ -20,6 +23,9 @@ import com.wsteam.wandscape.building.internal.MaintenanceForecastSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
 import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
+import com.wsteam.wandscape.building.scanner.BuildingScannerBlock;
+import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
 import com.wsteam.wandscape.command.BuildEditorCommand;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
@@ -113,11 +119,13 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -142,6 +150,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import com.wsteam.wandscape.shared.log.Log;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Supplier;
 
 @Mod(Wandscape.MODID)
 public class Wandscape {
@@ -221,6 +230,35 @@ public class Wandscape {
                             0xFFFFFF,  // white highlight
                             new Item.Properties()));
 
+    // ---- building-scanner block ----
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.createBlocks(MODID);
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
+            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
+
+    // Forward reference: wired in BUILDING_SCANNER_BE's supplier below
+    private static Supplier<BlockEntityType<BuildingScannerBlockEntity>> beTypeRef = () -> {
+        Log.warn(TAG, "beTypeRef called before initialization — falling back to registry lookup");
+        var rl = ResourceLocation.fromNamespaceAndPath(MODID, "building_scanner");
+        var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
+        return (BlockEntityType<BuildingScannerBlockEntity>) reg.get(rl);
+    };
+
+    public static final DeferredHolder<Block, Block> BUILDING_SCANNER = BLOCKS.register("building_scanner",
+            () -> (Block) new BuildingScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+                    beTypeRef));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BuildingScannerBlockEntity>> BUILDING_SCANNER_BE =
+            BLOCK_ENTITY_TYPES.register("building_scanner",
+                    () -> {
+                        BlockEntityType<BuildingScannerBlockEntity> type = BlockEntityType.Builder.of(
+                                (pos, state) -> new BuildingScannerBlockEntity(beTypeRef.get(), pos, state),
+                                BUILDING_SCANNER.get()).build(null);
+                        beTypeRef = () -> type;
+                        return type;
+                    });
+
+    public static final DeferredItem<Item> BUILDING_SCANNER_ITEM =
+            ITEMS.register("building_scanner", () -> new BlockItem(BUILDING_SCANNER.get(), new Item.Properties()));
+
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =
             CREATIVE_MODE_TABS.register("wandscape_tab", () -> CreativeModeTab.builder()
@@ -230,6 +268,7 @@ public class Wandscape {
                         output.accept(WAND.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
                         output.accept(TOURIST_SPAWN_EGG.get());
+                        output.accept(BUILDING_SCANNER_ITEM.get());
                     })
                     .build());
 
@@ -251,6 +290,8 @@ public class Wandscape {
         ENTITIES.register(modEventBus);
         PARTICLE_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+        BLOCKS.register(modEventBus);
+        BLOCK_ENTITY_TYPES.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
@@ -442,6 +483,12 @@ public class Wandscape {
                         BuildingEditorExportResultPacket.TYPE,
                         BuildingEditorExportResultPacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingEditorExportResultPacket.handleClient(packet))
+                // ── Building Scanner ──
+                .playToServer(
+                        BuildingScannerSyncPacket.TYPE,
+                        BuildingScannerSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingScannerSyncPacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()))
                 .playToClient(
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,

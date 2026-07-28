@@ -107,10 +107,6 @@ public final class BuildingEditorClientState {
     private static volatile String blueprintId = "build:clear_and_build";
     private static final Map<String, String> blueprintBind = new HashMap<>();
 
-    // ── Interaction radius ──
-
-    private static volatile int interactionRadius = 0;
-
     // ── Interact AABB zone editing ──
 
     /** When true, the building AABB becomes semi-transparent and a small axis appears for editing the interact zone instead. */
@@ -266,8 +262,7 @@ public final class BuildingEditorClientState {
         maintenanceCosts.clear();
         blueprintId = "build:clear_and_build";
         blueprintBind.clear();
-        interactionRadius = 0;
-        editInteractZone = false;
+        // Interact AABB zone
         interactMin = BlockOffset.of(-1, -1, -1);
         interactMax = BlockOffset.of(1, 1, 1);
         interactAabbList.clear();
@@ -432,11 +427,6 @@ public final class BuildingEditorClientState {
     public static void setBlueprintBind(Map<String, String> bind) {
         synchronized (blueprintBind) { blueprintBind.clear(); blueprintBind.putAll(bind); }
     }
-
-    // ── Interaction radius ──
-
-    public static int getInteractionRadius() { return interactionRadius; }
-    public static void setInteractionRadius(int v) { interactionRadius = v; }
 
     // ── Shop ──
 
@@ -658,11 +648,6 @@ public final class BuildingEditorClientState {
             }
             sb.append("}");
             sb.append("\n  },\n");
-        }
-
-        // Interaction radius
-        if (interactionRadius > 0) {
-            sb.append("  \"interaction_radius\": ").append(interactionRadius).append(",\n");
         }
 
         // Interact AABB zone

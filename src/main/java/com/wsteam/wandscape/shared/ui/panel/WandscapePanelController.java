@@ -13,7 +13,7 @@ import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.log.Log;
-import net.neoforged.neoforge.network.PacketDistributor;
+
 
 /**
  * Input controller for the Wandscape comprehensive panel.
@@ -27,7 +27,7 @@ public final class WandscapePanelController {
     // Tab layout constants — keep in sync with WandscapePanelOverlay
     public static final int TAB_W = 24;
     public static final int TAB_GAP = 4;
-    public static final int TAB_COUNT = 4;
+    public static final int TAB_COUNT = 3;
     public static final int BOTTOM_BAR_HEIGHT = 48; // Space from bottom of screen
     public static final int TOP_BAR_HEIGHT = 26;
 
@@ -182,12 +182,17 @@ public final class WandscapePanelController {
             }
         }
 
-        // ── Bottom bar tabs ──
-        if (mouseY >= screenH - BOTTOM_BAR_HEIGHT) {
-            int tabIndex = getTabAt(mouseX, mouseY, screenW, screenH);
-            if (tabIndex >= 0) {
-                handleTabClick(tabIndex);
+        // ── Sidebar tabs ──
+        if (mouseX <= WandscapePanelOverlay.SIDEBAR_W && mouseY >= WandscapePanelOverlay.TOP_BAR_H) {
+            int sidebarIconIndex = getSidebarIconAt(mouseX, mouseY, screenW, screenH);
+            if (sidebarIconIndex >= 0 && sidebarIconIndex < 3) {
+                handleTabClick(sidebarIconIndex);
                 event.setCanceled(true);
+                return;
+            } else if (sidebarIconIndex == 3) {
+                WandscapePanelState.toggleWarningOverlay();
+                event.setCanceled(true);
+                return;
             }
         }
     }
@@ -210,7 +215,31 @@ public final class WandscapePanelController {
     }
 
     public static boolean isInTopBar(double mouseY, int screenH) {
-        return mouseY < 30; // approx height of new top-left box
+        return mouseY < WandscapePanelOverlay.TOP_BAR_H;
+    }
+
+    public static boolean isInSidebar(double mouseX, double mouseY, int screenH) {
+        return mouseX < WandscapePanelOverlay.SIDEBAR_W && mouseY > WandscapePanelOverlay.TOP_BAR_H;
+    }
+
+    public static int getSidebarIconAt(double mouseX, double mouseY, int screenW, int screenH) {
+        if (mouseX < 0 || mouseX > WandscapePanelOverlay.SIDEBAR_W) return -1;
+        if (mouseY < WandscapePanelOverlay.TOP_BAR_H) return -1;
+
+        int startY = WandscapePanelOverlay.TOP_BAR_H + 8;
+        int totalH = WandscapePanelOverlay.SIDEBAR_ICON_S + WandscapePanelOverlay.SIDEBAR_GAP;
+
+        // Tabs 0–2 (Build, Road, Stats)
+        for (int i = 0; i < 3; i++) {
+            int iy = startY + i * totalH;
+            if (mouseY >= iy && mouseY <= iy + WandscapePanelOverlay.SIDEBAR_ICON_S) return i;
+        }
+
+        // Warning icon (index 3)
+        int warnY = startY + 3 * totalH + 12;
+        if (mouseY >= warnY && mouseY <= warnY + WandscapePanelOverlay.SIDEBAR_ICON_S) return 3;
+
+        return -1;
     }
 
     public static boolean isInBottomBar(double mouseY, int screenH) {
@@ -223,8 +252,7 @@ public final class WandscapePanelController {
         WandscapePanelState.SubMode targetMode = switch (tabIndex) {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
-            case 2 -> WandscapePanelState.SubMode.BUILD_EDITOR;
-            case 3 -> WandscapePanelState.SubMode.STATS;
+            case 2 -> WandscapePanelState.SubMode.STATS;
             default -> null;
         };
 
@@ -238,14 +266,6 @@ public final class WandscapePanelController {
             if (WandscapePanelState.getActiveSubMode() != WandscapePanelState.SubMode.OVERVIEW) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
             }
-            return;
-        }
-
-        // BUILD_EDITOR: close V-panel first, then open building editor directly
-        if (targetMode == WandscapePanelState.SubMode.BUILD_EDITOR) {
-            WandscapePanelState.closePanel();
-            PacketDistributor.sendToServer(
-                    com.wsteam.wandscape.building.network.BuildingEditorEnterPacket.createNew());
             return;
         }
 

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,6 +39,24 @@ public final class WandscapePanelState {
     private static volatile String colonyName = "";
     private static volatile int colonyLevel = 1;
     private static volatile int colonyExperience = 0;
+
+    // ── HUD fields (synced from ColonyStatsSyncPacket) ──
+    private static volatile int touristCount = 0;
+    private static volatile int overnightStayerCount = 0;
+    private static volatile int shutdownCount = 0;
+    private static volatile int npcIdleCount = 0;
+    private static volatile int npcTotalCount = 0;
+    private static volatile int earthAmount = 0;
+    private static volatile int woodAmount = 0;
+    private static volatile int waterAmount = 0;
+    private static volatile int fireAmount = 0;
+    private static volatile int windAmount = 0;
+    private static volatile int metalAmount = 0;
+    private static volatile int darkAmount = 0;
+    private static volatile List<String> shutdownBuildingNames = List.of();
+
+    // ── Sidebar warning overlay toggle ──
+    private static volatile boolean warningOverlayActive = false;
 
     // ── Stats tab data (set from StatsSyncPacket) ──
 
@@ -91,6 +110,25 @@ public final class WandscapePanelState {
     public static int getColonyLevel() { return colonyLevel; }
     public static int getColonyExperience() { return colonyExperience; }
 
+    // ── HUD field getters ──
+    public static int getTouristCount() { return touristCount; }
+    public static int getOvernightStayerCount() { return overnightStayerCount; }
+    public static int getShutdownCount() { return shutdownCount; }
+    public static int getNpcIdleCount() { return npcIdleCount; }
+    public static int getNpcTotalCount() { return npcTotalCount; }
+    public static int getEarthAmount() { return earthAmount; }
+    public static int getWoodAmount() { return woodAmount; }
+    public static int getWaterAmount() { return waterAmount; }
+    public static int getFireAmount() { return fireAmount; }
+    public static int getWindAmount() { return windAmount; }
+    public static int getMetalAmount() { return metalAmount; }
+    public static int getDarkAmount() { return darkAmount; }
+    public static List<String> getShutdownBuildingNames() { return shutdownBuildingNames; }
+
+    // ── Warning overlay ──
+    public static boolean isWarningOverlayActive() { return warningOverlayActive; }
+    public static void toggleWarningOverlay() { warningOverlayActive = !warningOverlayActive; }
+
     public static WandscapePanelState.StatsSummary getStatsSummary() { return statsSummary; }
     public static void setStatsSummary(WandscapePanelState.StatsSummary summary) { statsSummary = summary; }
 
@@ -103,6 +141,29 @@ public final class WandscapePanelState {
         WandscapePanelState.colonyName = name;
         WandscapePanelState.colonyLevel = level;
         WandscapePanelState.colonyExperience = experience;
+    }
+
+    public static void setColonyStats(UUID colonyId, int comfort, int magic, int wonder,
+                                      String name, int level, int experience,
+                                      int touristCount, int overnightStayerCount, int shutdownCount,
+                                      int npcIdleCount, int npcTotalCount,
+                                      int earth, int wood, int water, int fire, int wind,
+                                      int metal, int dark,
+                                      List<String> shutdownNames) {
+        setColonyStats(colonyId, comfort, magic, wonder, name, level, experience);
+        WandscapePanelState.touristCount = touristCount;
+        WandscapePanelState.overnightStayerCount = overnightStayerCount;
+        WandscapePanelState.shutdownCount = shutdownCount;
+        WandscapePanelState.npcIdleCount = npcIdleCount;
+        WandscapePanelState.npcTotalCount = npcTotalCount;
+        WandscapePanelState.earthAmount = earth;
+        WandscapePanelState.woodAmount = wood;
+        WandscapePanelState.waterAmount = water;
+        WandscapePanelState.fireAmount = fire;
+        WandscapePanelState.windAmount = wind;
+        WandscapePanelState.metalAmount = metal;
+        WandscapePanelState.darkAmount = dark;
+        WandscapePanelState.shutdownBuildingNames = shutdownNames != null ? shutdownNames : List.of();
     }
 
     public static void openPanel() {
@@ -137,6 +198,7 @@ public final class WandscapePanelState {
         cursorLifted = false;
         activeSubMode = SubMode.NONE;
         buildPhase = BuildPhase.BAR;
+        warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {

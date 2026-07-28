@@ -84,5 +84,7 @@ public final class WandscapeApis {
         if (touristApi == null) throw new IllegalStateException("Module TouristSystem not loaded");
         return touristApi;
     }
+    @javax.annotation.Nullable
+    public static TouristApi getTouristApiSilently() { return touristApi; }
     public static void setTouristApi(TouristApi api) { touristApi = api; }
 }

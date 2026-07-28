@@ -2,73 +2,30 @@
 
 实现 core 边界接口，连接 ECS 引擎与 Minecraft 世界。
 
-**重构后**：road/colony 子包已移出（road/ → `road/engine/`，ColonyApiImpl → engine 根包）。system/ 拆分为 system/（ECS System）+ service/（事件订阅者）。
-
 ## 核心流程
 
 `Wandscape.onServerStarting()` → `EngineBootstrap.bootstrap()` → `Wandscape.onServerTick()` → `world.tick(1.0f)`
 
-## 关键类
+## 引擎持有者
 
-### 引擎持有者
+WandscapeEngine 单例持有：World + AsyncTransformExecutor + 各边界实现 + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager。`reset()` 在 ServerStoppedEvent 清空静态状态。
 
-- **`WandscapeEngine.java`** — 单例持有：World + AsyncTransformExecutor + WandscapeRitualOps + WandscapeBlockInteractExecutor + WandscapeMovementOps + WandscapeEntityOps + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager
-- `reset()` 在 `ServerStoppedEvent` 调用，清除所有静态状态。`blueprintConfigLoader` 故意不清空——由 `WandscapeDataLoader` 管理
+## TaskSource 实现 (source/)
 
-### 引导
+BuildingTaskSource（每 20tick 轮询：清理完成 → 节点供给 → 发布 WorkItem → TaskRequest 入池，是 BE→引擎的唯一桥梁）/ BlueprintConfigLoader / DataDrivenSteps（遗留 fallback）。纯 core 的 TaskSource 在 `task/source/`，RoadTaskSource 在 `road/engine/`。
 
-- **`EngineBootstrap.bootstrap()`** — 一次性装配：
-  1. 注册 DSL 蓝图层（BlueprintConfigLoader → BlueprintInterpreter → BlueprintRegistry）
-  2. 注册遗留建筑蓝图（无 blueprint ref → DataDrivenSteps fallback）
-  3. 注册系统蓝图（EventDrivenTaskSource）
-  4. 构建 TaskSource 列表（BuildingTaskSource + WarehouseSource + WorkbenchSource + RoadTaskSource + PlayerManualSource）
-  5. 构建边界实现并注入 core
-  6. 启动 core → `CoreBootstrap.bootstrap(config)`
-  7. 注册默认 OpExecutor + AsyncTransformExecutor(每方块5tick延迟) + WandscapeBlockInteractExecutor + WandscapeEntityOps + ResourceRequestExecutor
-  8. 注册 NavigationSystem + FailureAnalyzerSystem 到 World
-  9. 注册 StatsRecorder + AchievementService 到 EventBus
+## 持久化
 
-### 边界实现 (boundary/)
+TaskPoolSavedData（跨会话，保存 blueprintId + params + stepIndex → NBT，重载时从蓝图重新编译恢复进度）
 
-- **`WandscapeBlockOps`** — `BlockOps` 实现：setBlock/getBlock/isAir/toggle/activate/openGui。支持 bracket 语法 `"mod:block[prop=val]"`。activate 采用两级策略：useWithoutItem → redstone pulse fallback
-- **`WandscapeMovementOps`** — NPC 移动，无状态适配器写入 NavigationState
-- **`WandscapeRitualOps`** — 异步引导：PendingRitual 队列 + tickAll 倒计时 → thenRun 执行。self_teleport 600tick 引导后传送
-- **`AsyncTransformExecutor`** — 覆盖 TransformOp 执行器，N-tick 延迟（默认5），实现异步方块放置效果
-- **`WandscapeBlockInteractExecutor`** — 处理 BlockInteractOp（同步 toggle/activate + 异步 gather/decompose/synthesize）
-- **`WandscapeEntityOps`** — `EntityOps` 实现：NPC 间实体交互/检查
-- **`ResourceRequestExecutor`** — 处理 ResourceRequestOp：从 ColonyItemBank 提取/存入资源
+## ECS 系统 (system/)
 
-### TaskSource 实现 (source/)
+NavigationSystem（≤64格寻路 + 卡死检测每60tick/3次→传送）/ FailureAnalyzerSystem（每20tick分析 FAILED 任务，自动制作法杖）。均 `implements System`，注册到 World.tick()。
 
-- **`BuildingTaskSource`** — 每 20tick 轮询：清理已完成任务 → 节点自动供给 → 发布新 WorkItem → TaskRequest 入池。这是 BE → 引擎的唯一桥梁
-- **`BlueprintConfigLoader`** — JSON 蓝图配置加载器（在 source/blueprint/ 子包）
-- **`DataDrivenSteps`** — 遗留建筑蓝图 fallback（在 source/blueprint/ 子包）
+## 物品运输 (transport/)
 
-**注意：** 纯 core 的 TaskSource（TaskSourcePoller、EventDrivenTaskSource、PlayerManualSource、WorkbenchSource）在 `task/source/`，RoadTaskSource 在 `road/engine/`。
+ItemTransportManager：样条线数据发客户端（TransportRoute + SplineLeg 列表），服务器仅 elapsed 倒计时判定到达。客户端真插值（TransportItemEntity 用 tickLeg 执行样条线，60FPS 帧率平滑）。自定义渲染胶囊气泡（中性金边暗灰底）。
 
-### 持久化
+## ColonyApiImpl（engine 根包）
 
-- **`TaskPoolSavedData`** — 跨会话任务持久化（Level SavedData）。保存 blueprintId + taskParams + stepIndex + state → NBT。重载时从蓝图重新编译恢复进度
-
-### ECS 系统 (system/) — 注册到 World.tick()
-
-- **`NavigationSystem`** — NPC 移动总控：≤64格寻路 + 卡死检测(每60tick/3次→传送) + 超时→传送。依赖 MC Pathfinder。`implements System`
-- **`FailureAnalyzerSystem`** — 每 20tick 心跳分析 FAILED 任务。当前覆盖法杖能力不足 → 自动制作法杖。`implements System`
-
-### 后台服务 (service/) — EventBus 订阅者
-
-非 ECS System，通过 `world.eventBus.subscribe()` 注册到核心 EventBus。
-
-- **`StatsService`** — 原 `StatsSystem`。订阅 `NarrativeEventTriggered`，记录每殖民地统计数据（骨架，未来实现）
-- **`AchievementService`** — 原 `AchievementSystem`。订阅 `NarrativeEventTriggered`，评估成就触发条件（骨架，未来实现）
-
-### 物品运输 (transport/)
-
-- **`ItemTransportManager`** — 物品运输管理器，处理 NPC、建筑与仓库之间的资源流转。负责发包与超时完成管理。
-  - **网络与服务端管理**：使用 `TransportStartPacket` 发送带有样条线数据（`SplineLeg` 列表）的 `TransportRoute`。服务器不进行物理更新，仅通过 `elapsed` 倒计时判定到达目标。
-  - **客户端真插值 (`TransportItemEntity`)**：通过 `tickLeg` 循环执行样条线。在客户端根据目标经过的 ticks 进行帧率平滑插值（60 FPS）。
-  - **自定义客户端渲染 (`TransportItemEntityRenderer`)**：针对 `TransportItemEntity` 编写了专属渲染器。当传输的物品数量大于0时，会在物品上方渲染一个定制的**中性金边暗灰底胶囊气泡**。
-
-### ColonyApiImpl（engine 根包）
-
-- **`ColonyApiImpl`** — ColonyApi 实现（原在 engine/colony/）。桥接 BuildingSavedData 查询殖民地信息。
+ColonyApi 实现，桥接 BuildingSavedData 查询殖民地信息。

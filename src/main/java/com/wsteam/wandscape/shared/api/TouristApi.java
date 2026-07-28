@@ -27,4 +27,7 @@ public interface TouristApi {
 
     /** Register a tourist departure, firing {@code TouristDepartedEvent}. */
     void registerDeparture(UUID touristId, UUID colonyId, int satisfaction);
+
+    /** Number of tourists who stayed overnight (checked into hotel) in a colony. */
+    int getOvernightStayerCount(UUID colonyId);
 }

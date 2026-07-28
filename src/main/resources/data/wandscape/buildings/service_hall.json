@@ -138,7 +138,6 @@
   "interact_aabb": [
     { "min": [-2, 0, -2], "max": [2, 0, 2] }
   ],
-  "interaction_radius": 5,
   "service": {
     "energy_per_use": 15,
     "element_output": {

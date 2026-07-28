@@ -212,6 +212,15 @@ GlobalTaskPool.addTask() → SchedulerSystem → NPC 执行
 - **真弧长采样计算**：替换了之前基于欧几里得距离计算耗时的粗糙算法。现在的 `SplineLeg` 能够对路径点曲线进行细致的微小线段距离累加（Tessellation approximation），有效防止了弯道“瞬移”和物资飞行动画超速的问题，严格遵循道路加成设定。
 - **资源分配扣除修复**：修复了 `ResourceRequestExecutor` 深层的重复扣除 (double-subtraction) Bug，消除了由于中断或者多次分配引发的僵尸建造节点导致的物资阻塞情况。
 
+## 已完成：面板 UI 重构 (2026-07-28)
+
+- 底部模式页签 → 左侧竖排侧边栏（Build / Road / Stats / Warning 图标）
+- 顶部殖民地信息栏扩展为全宽 HUD：殖民地名称等级 + 三值 + 天数 + 游客数 + NPC idle/total + 停摆数 + 5 元素(地木水火风)数量
+- 新增停摆建筑警告浮层（侧边栏 Warning 图标点击弹出，列出关停建筑名称）
+- 新增 `WandscapeTheme.elementIcon()` 映射 7 种元素到对应图标
+- 服务端 HUD 数据采集（游客/NPC/元素/关停）通过 `PanelStateTracker` + `PanelStateTogglePacket` 推送到客户端
+- 新增 7 种元素图标（earth/wood/water/fire/metal/wind/dark），白通道 64×64 PNG
+
 ## 后续阶段（概览）
 
 - **阶段 4**：殖民地生命周期 + 房屋 + 魔力池 + 祭坛 + 管理面板

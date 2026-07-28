@@ -54,7 +54,6 @@
     "capacity": 0,
     "task_types": []
   },
-  "interaction_radius": 4,
   "unlock_requirement": {
     "min_comfort": 0,
     "min_magic": 0,

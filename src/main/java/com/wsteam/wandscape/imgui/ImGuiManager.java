@@ -198,6 +198,7 @@ public class ImGuiManager {
     }
 
     public static void toggle() {
+        if (!showGui && !com.wsteam.wandscape.Config.IMGUI_ENABLED.get()) return;
         showGui = !showGui;
         if (showGui) {
             releaseMouse();

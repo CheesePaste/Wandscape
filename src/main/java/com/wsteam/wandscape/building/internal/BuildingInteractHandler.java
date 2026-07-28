@@ -166,7 +166,7 @@ public final class BuildingInteractHandler {
         // 1. Exact block match (clicked on building pattern block)
         UUID buildingId = data.getBuildingIdAt(pos);
 
-        // 2. Interaction zone fallback: buildings with interaction_radius > 0
+        // 2. Interaction zone fallback: check building boundary
         if (buildingId == null) {
             buildingId = data.getBuildingIdInInteractionZone(pos);
         }

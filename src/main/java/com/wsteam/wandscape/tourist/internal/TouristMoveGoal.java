@@ -1386,16 +1386,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private int getInteractionRange() {
-        UUID buildingId = tourist.getTargetBuildingId();
-        if (buildingId == null) return Config.ARRIVAL_RADIUS.get();
-        BuildingApi api = getBuildingApi();
-        if (api == null) return Config.ARRIVAL_RADIUS.get();
-        var data = api.getBuilding(buildingId);
-        if (data == null) return Config.ARRIVAL_RADIUS.get();
-        var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
-        if (config == null) return Config.ARRIVAL_RADIUS.get();
-        int r = config.interactionRadius().getEffectiveRange();
-        return r > 0 ? r : Config.ARRIVAL_RADIUS.get();
+        return Config.ARRIVAL_RADIUS.get();
     }
 
     /**
