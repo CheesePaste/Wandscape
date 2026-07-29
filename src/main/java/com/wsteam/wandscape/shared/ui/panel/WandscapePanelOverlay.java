@@ -224,9 +224,9 @@ public final class WandscapePanelOverlay {
         Minecraft mc = Minecraft.getInstance();
 
         // ── Row 1: colony info + stats + day + tourists + NPC ──
-        int y1 = 2;
+        int y1 = 3;
         int iconS1 = 12;
-        int textY1 = y1 + 3;
+        int textY1 = 5;
         int x = 4;
         int rightMargin = 8;
 
@@ -289,9 +289,9 @@ public final class WandscapePanelOverlay {
         }
 
         // ── Row 2: element icons + amounts ──
-        int y2 = 16;
+        int y2 = 17;
         int s2 = 9;
-        int textY2 = y2 + 3;
+        int textY2 = 19;
         renderElementIcons(g, font, 4, y2, textY2, s2);
     }
 

@@ -21,6 +21,15 @@ T = (0, 0, 0, 0)
 
 def finalize(img, name):
     small = img.resize((FS, FS), Image.LANCZOS)
+    # Snap alpha: eliminate semi-transparent edge pixels that cause visible gaps
+    pixels = small.load()
+    for py in range(FS):
+        for px in range(FS):
+            r, g, b, a = pixels[px, py]
+            if a < 200:
+                pixels[px, py] = (0, 0, 0, 0)
+            else:
+                pixels[px, py] = (r, g, b, 255)
     small.save(os.path.join(OUT, name))
     print(f"  {name}: {os.path.getsize(os.path.join(OUT, name))} bytes")
 

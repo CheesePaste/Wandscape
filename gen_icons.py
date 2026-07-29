@@ -19,8 +19,17 @@ G2 = (155, 155, 155, 255)   # dark gray (right face of 3D blocks)
 
 
 def finalize(img, name):
-    """Lanczos downscale and save."""
+    """Lanczos downscale, alpha cleanup, and save."""
     small = img.resize((F, F), Image.LANCZOS)
+    # Snap alpha: eliminate semi-transparent edge pixels that cause visible gaps
+    pixels = small.load()
+    for py in range(F):
+        for px in range(F):
+            r, g, b, a = pixels[px, py]
+            if a < 200:
+                pixels[px, py] = (0, 0, 0, 0)
+            else:
+                pixels[px, py] = (r, g, b, 255)
     path = os.path.join(OUT, name)
     small.save(path)
     print(f"  {name}: {os.path.getsize(path)} bytes")
@@ -202,10 +211,10 @@ def wind():
     img = Image.new("RGBA", (S, S), T)
     d = ImageDraw.Draw(img)
 
-    # Three stacked swoosh arcs — top → bottom
-    d.arc([(16, 28), (240, 120)], 180, 270, fill=W, width=18)
-    d.arc([(16, 80), (240, 172)], 180, 258, fill=W, width=18)
-    d.arc([(32, 136), (208, 224)], 190, 272, fill=W, width=14)
+    # Three swoosh arcs — gap between arc 1 and arc 2 increased
+    d.arc([(4, 8), (252, 156)], 155, 302, fill=W, width=24)
+    d.arc([(12, 94), (244, 236)], 162, 288, fill=W, width=20)
+    d.arc([(34, 150), (222, 254)], 172, 276, fill=W, width=14)
 
     finalize(img, "element_wind.png")
 
