@@ -84,7 +84,7 @@ public class ShopScreen extends MedievalScreen {
     // ── Y‑coordinate ──
 
     private int firstRowY() {
-        return topPos + headerHeight + 28;
+        return topPos + headerHeight + 8;
     }
 
     private int rowCenterY(int index) {
@@ -137,12 +137,6 @@ public class ShopScreen extends MedievalScreen {
 
         var font = Minecraft.getInstance().font;
         int x = leftPos + 16;
-        int hy = topPos + headerHeight + 6;
-
-        g.drawString(font, "Goods (drag slider or click −/+ to adjust max)", x, hy,
-                MedievalColors.ACCENT_GOLD);
-        hy += 14;
-        g.drawString(font, "──────────────────────────────────────", x, hy, MedievalColors.TEXT_DIM);
 
         if (itemIds.length == 0) {
             g.drawString(font, "No goods configured.", x, firstRowY() + 4, MedievalColors.TEXT_MUTED);

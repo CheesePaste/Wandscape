@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
@@ -43,6 +45,7 @@ public final class BuildingSelectionOverlay {
     static final int SEARCH_H = 12;
     static final int SCROLLBAR_W = 6;
 
+    private static final int GRID_LEFT = WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X; // Clear sidebar
     private static final int VISIBLE_ROWS = (BAR_HEIGHT - GRID_TOP_OFFSET) / CELL_H;
 
     private static final int BAR_BG = 0xEE14161C;
@@ -93,10 +96,9 @@ public final class BuildingSelectionOverlay {
         }
 
         Log.debug(TAG, "[Bar] ACTIVE: slots={} filtered={}", getSlotsSize(), getFilteredSlots().size());
-        int barY = screenH - WandscapePanelController.BOTTOM_BAR_HEIGHT - BAR_HEIGHT;
+        int barY = screenH - BAR_HEIGHT;
 
-        // Background (Use new theme)
-        int bgW = screenW; // or maybe center it? For now full width is okay, or we could leave it 
+        // Background
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, 0, barY, screenW, BAR_HEIGHT, false, false);
 
         List<BuildingSlot> filtered = getFilteredSlots();
@@ -108,8 +110,8 @@ public final class BuildingSelectionOverlay {
 
         // Scrollable multi-row building grid
         int gridY = barY + GRID_TOP_OFFSET;
-        int cols = Math.max(1, (screenW - GRID_PAD_X * 2 - SCROLLBAR_W) / CELL_W);
-        renderBuildingGrid(g, font, filtered, GRID_PAD_X, gridY, cols, screenW, mouseX, mouseY);
+        int cols = Math.max(1, (screenW - GRID_LEFT - GRID_PAD_X - SCROLLBAR_W) / CELL_W);
+        renderBuildingGrid(g, font, filtered, GRID_LEFT, gridY, cols, screenW, mouseX, mouseY);
         renderScrollbar(g, filtered, cols, screenW, barY, gridY);
     }
 
@@ -118,7 +120,15 @@ public final class BuildingSelectionOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     public static int getBarY(int screenH) {
-        return screenH - WandscapePanelController.BOTTOM_BAR_HEIGHT - BAR_HEIGHT;
+        return screenH - BAR_HEIGHT;
+    }
+
+    /** Check if the given slot's building type is unlocked for the current colony. */
+    private static boolean isSlotUnlocked(BuildingSlot slot) {
+        UUID colonyId = WandscapePanelState.getColonyId();
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
+        if (config == null) return false;
+        return BuildingUnlockChecker.isUnlocked(colonyId, config);
     }
 
     public static int getSlotAt(double mouseX, double mouseY, int screenW, int screenH) {
@@ -128,9 +138,9 @@ public final class BuildingSelectionOverlay {
         if (mouseY < gridY || mouseY >= barY + BAR_HEIGHT) return -1;
 
         List<BuildingSlot> filtered = getFilteredSlots();
-        int cols = Math.max(1, (screenW - GRID_PAD_X * 2 - SCROLLBAR_W) / CELL_W);
+        int cols = Math.max(1, (screenW - GRID_LEFT - GRID_PAD_X - SCROLLBAR_W) / CELL_W);
         int scrollOffset = WandscapePanelState.getBuildingBarScrollOffset();
-        int col = (int) ((mouseX - GRID_PAD_X) / CELL_W);
+        int col = (int) ((mouseX - GRID_LEFT) / CELL_W);
         int row = (int) ((mouseY - gridY) / CELL_H);
         if (col < 0 || col >= cols || row < 0 || row >= VISIBLE_ROWS) return -1;
 
@@ -138,6 +148,8 @@ public final class BuildingSelectionOverlay {
         if (index < 0 || index >= filtered.size()) return -1;
 
         BuildingSlot slot = filtered.get(index);
+        if (!isSlotUnlocked(slot)) return -1;
+
         List<BuildingSlot> all = ProjectionClientState.getBuildingSlots();
         for (int i = 0; i < all.size(); i++) {
             if (all.get(i).id().equals(slot.id())) return i;
@@ -151,7 +163,7 @@ public final class BuildingSelectionOverlay {
         if (mouseY < barY || mouseY >= barY + CATEGORY_ROW_H) return -1;
 
         List<String> cats = getCategories();
-        int x = GRID_PAD_X;
+        int x = GRID_LEFT;
         Font font = Minecraft.getInstance().font;
         int searchX = screenW - GRID_PAD_X - SEARCH_W;
         for (int i = 0; i < cats.size(); i++) {
@@ -169,7 +181,7 @@ public final class BuildingSelectionOverlay {
         if (filtered.isEmpty()) return 0;
         Minecraft mc = Minecraft.getInstance();
         int screenW = mc.getWindow().getGuiScaledWidth();
-        int cols = Math.max(1, (screenW - GRID_PAD_X * 2 - SCROLLBAR_W) / CELL_W);
+        int cols = Math.max(1, (screenW - GRID_LEFT - GRID_PAD_X - SCROLLBAR_W) / CELL_W);
         int totalRows = (filtered.size() + cols - 1) / cols;
         return Math.max(0, totalRows - VISIBLE_ROWS);
     }
@@ -204,7 +216,7 @@ public final class BuildingSelectionOverlay {
 
     private static int renderCategoryTabs(GuiGraphics g, Font font, List<String> cats,
                                            int barY, int screenW, double mouseX, double mouseY) {
-        int x = GRID_PAD_X;
+        int x = GRID_LEFT;
         int y = barY + 1;
         int searchX = screenW - GRID_PAD_X - SEARCH_W;
         String activeCat = WandscapePanelState.getBuildingBarCategory();
@@ -265,7 +277,8 @@ public final class BuildingSelectionOverlay {
                 int cellY = gridY + (row - startRow) * CELL_H;
 
                 BuildingSlot slot = slots.get(i);
-                boolean selected = slot.id().equals(selectedId);
+                boolean locked = !isSlotUnlocked(slot);
+                boolean selected = slot.id().equals(selectedId) && !locked;
                 boolean hovered = mouseX >= cellX && mouseX < cellX + CELL_W
                         && mouseY >= cellY && mouseY < cellY + CELL_H;
 
@@ -290,18 +303,42 @@ public final class BuildingSelectionOverlay {
                 int cellY = gridY + (row - startRow) * CELL_H;
 
                 BuildingSlot slot = slots.get(i);
-                boolean selected = slot.id().equals(selectedId);
+                boolean locked = !isSlotUnlocked(slot);
+                boolean selected = slot.id().equals(selectedId) && !locked;
 
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
-                if (config != null) {
+                if (config != null && !locked) {
                     int px = cellX + PREVIEW_PAD;
                     int py = cellY + PREVIEW_PAD;
                     int pw = CELL_W - PREVIEW_PAD * 2;
                     int ph = CELL_H - NAME_H - PREVIEW_PAD;
                     BuildingPreviewRenderer.renderPreview(g, config, px, py, pw, ph);
-                } else {
+                } else if (config == null) {
                     Log.warn(TAG, "[Bar] Config not found for slot '{}'", slot.id());
                     g.drawCenteredString(font, "?", cellX + CELL_W / 2, cellY + (CELL_H - NAME_H) / 2 - 4, 0xFF666666);
+                }
+
+                // Locked overlay: darken cell + show lock icon + level requirement
+                if (locked) {
+                    g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                            cellX, cellY, cellX + CELL_W - 2, cellY + CELL_H - 2,
+                            0, 0x88000000);
+                    int lockS = 10;
+                    int lockX = cellX + CELL_W - lockS - 5;
+                    int lockY = cellY + 4;
+                    com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawIcon(
+                            g,
+                            com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.ICON_LOCK,
+                            lockX, lockY, lockS, lockS,
+                            0xFFFFFFFF);
+                    // Required level text centered below the lock icon
+                    if (config != null && config.unlockRequirement() != BuildingConfig.UnlockRequirement.NONE) {
+                        String lvlText = "Lv." + config.unlockRequirement().minColonyLevel();
+                        g.drawCenteredString(font, lvlText,
+                                cellX + CELL_W / 2,
+                                cellY + (CELL_H - NAME_H) / 2 + 2,
+                                0xFFAAAAAA);
+                    }
                 }
 
                 // Truncated name
@@ -318,7 +355,12 @@ public final class BuildingSelectionOverlay {
                 int nameY = cellY + CELL_H - 12;
                 boolean hovered = mouseX >= cellX && mouseX < cellX + CELL_W
                         && mouseY >= cellY && mouseY < cellY + CELL_H;
-                int nameColor = selected ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : (hovered ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+                int nameColor;
+                if (locked) {
+                    nameColor = 0xFF666666;
+                } else {
+                    nameColor = selected ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : (hovered ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
+                }
                 g.drawString(font, name, nameX, nameY, nameColor);
             }
         }

@@ -16,15 +16,13 @@ public final class MedievalColors {
     public static final int PARCHMENT_LIGHT   = 0xFF4D3A20;
 
     // ── Gold family ──
-    public static final int BORDER_GOLD_DARK  = 0xFF8B6914;
-    public static final int BORDER_GOLD       = 0xFFB8960F;
+    public static final int BORDER_GOLD_DARK  = 0xFF9A7A40;
+    public static final int BORDER_GOLD       = 0xFFC8A040;
     public static final int ACCENT_GOLD       = 0xFFBB86FC;
-    public static final int GOLD_HIGHLIGHT    = 0xFFD4AAFF;
 
     // ── Purple family ──
     public static final int PURPLE_BG         = 0xFF2D1050;
     public static final int PURPLE_BORDER     = 0xFF6B30A0;
-    public static final int PURPLE_LIGHT      = 0xFF8B50C0;
 
     // ── Text colors ──
     public static final int TEXT_WARM_WHITE   = 0xFFFFFFFF;
@@ -41,7 +39,6 @@ public final class MedievalColors {
     public static final int SCROLLBAR_THUMB   = 0xFFB8960F;
 
     // ── Widget states ──
-    public static final int BUTTON_BG         = 0xFF2D1050;
     public static final int BUTTON_BG_HOVER   = 0xFF3D2060;
     public static final int BUTTON_BG_DISABLED = 0xFF2A2A2A;
     // ── Slider (blue/black, minimal) ──

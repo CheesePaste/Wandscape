@@ -51,9 +51,7 @@ public final class LogFilter {
         whitelist.add("Preview");
         whitelist.add("BuildingPreviewRenderer");
         whitelist.add("BuildingSelectionOverlay");
-        // Build editor
-        whitelist.add("BuildEditor");
-        whitelist.add("BuildingEditorController");
+        // Build editor (removed)
         // Projection / placement
         whitelist.add("Projection");
         whitelist.add("ProjectionRenderer");

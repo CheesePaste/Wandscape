@@ -40,16 +40,14 @@
   "magic": 4,
   "wonder": 2,
   "maintenance_cost": {  "costs": { "earth": 2, "wood": 3, "fire": 1 } },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
   "queue": {
     "capacity": 60,
     "task_types": [
       "crafting"
     ]
-  },
-  "unlock_requirement": {
-    "min_comfort": 0,
-    "min_magic": 0,
-    "min_wonder": 0
   },
   "boundary": {
     "min": [

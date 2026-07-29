@@ -9,6 +9,6 @@
   },
   "input_items": ["minecraft:glass_bottle"],
   "unlock_requirement": {
-    "min_magic": 0
+    "min_colony_level": 1
   }
 }

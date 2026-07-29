@@ -223,12 +223,6 @@ public class Config {
             .comment("Interval in ticks between maintenance forecast scans (6000 ticks = 1/4 MC day)")
             .defineInRange("maintenance.forecastIntervalTicks", 6000, 1200, 24000);
 
-    // ---- ImGui developer tools ----
-
-    public static final ModConfigSpec.BooleanValue IMGUI_ENABLED = BUILDER
-            .comment("Enable ImGui developer tools (F12 debug GUI). Disable to prevent accidental F12 toggles.")
-            .define("client.imguiEnabled", false);
-
     // ---- Service system ----
 
     public static final ModConfigSpec.IntValue ARRIVAL_RADIUS = BUILDER

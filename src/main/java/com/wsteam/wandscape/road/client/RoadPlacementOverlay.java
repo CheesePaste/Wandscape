@@ -65,14 +65,15 @@ public final class RoadPlacementOverlay {
 
         // Grid layout — auto-cols by screen width
         int toolsWidth = 100;
-        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int toolsStartX = com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X;
+        int gridAreaW = screenW - toolsStartX - GRID_PAD_X - toolsWidth;
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
         int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10; // Ensure enough height for 2 buttons
-        int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
-        int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
+        int panelY = screenH - panelH;
+        int gridX = toolsStartX + toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
 
         // Panel background + top border (Use new theme)
@@ -97,7 +98,6 @@ public final class RoadPlacementOverlay {
         }
 
         // Draw left side tool buttons
-        int toolsStartX = GRID_PAD_X;
         int toolsStartY = gridStartY;
         int btnW = 84;
         int btnH = 32;
@@ -112,15 +112,8 @@ public final class RoadPlacementOverlay {
         font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
                 g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
 
-        // Button 2: Spline Pen
-        int btn2Y = toolsStartY + btnH + 10;
-        boolean btn2Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn2Y && my <= btn2Y + btnH;
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, btn2Y, btnW, btnH, false, btn2Hover);
-        font.drawInBatch("Spline Pen", toolsStartX + (btnW - font.width("Spline Pen")) / 2f, btn2Y + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM, false,
-                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
-
-        // Button 3: Destroy/Fill
-        int btn3Y = btn2Y + btnH + 10;
+        // Button 2: Destroy/Fill
+        int btn3Y = toolsStartY + btnH + 10;
         boolean isDf = RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL;
         boolean btn3Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn3Y && my <= btn3Y + btnH;
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, btn3Y, btnW, btnH, isDf, btn3Hover);
@@ -225,14 +218,15 @@ public final class RoadPlacementOverlay {
         if (presets.isEmpty()) return -1;
 
         int toolsWidth = 100;
-        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int toolsStartX = com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X;
+        int gridAreaW = screenW - toolsStartX - GRID_PAD_X - toolsWidth;
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
         int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
-        int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
-        int gridX = toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
+        int panelY = screenH - panelH;
+        int gridX = toolsStartX + toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
 
         if (my < gridStartY || my > gridStartY + gridH) return -1;
@@ -244,27 +238,6 @@ public final class RoadPlacementOverlay {
         return -1;
     }
 
-    public static boolean isSplinePenClicked(double mx, double my, int screenW, int screenH) {
-        if (!RoadPlacementState.isProjecting()) return false;
-
-        List<RoadPreset> presets = RoadPlacementState.getPresets();
-        if (presets.isEmpty()) return false;
-
-        int toolsWidth = 100;
-        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
-        int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
-        int rows = (presets.size() + cols - 1) / cols;
-        int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
-        int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
-
-        int toolsStartX = GRID_PAD_X;
-        int toolsStartY = panelY + GRID_PAD_TOP;
-        int btn2Y = toolsStartY + 32 + 10;
-
-        return mx >= toolsStartX && mx <= toolsStartX + 84 && my >= btn2Y && my <= btn2Y + 32;
-    }
-
     public static boolean isDestroyFillClicked(double mx, double my, int screenW, int screenH) {
         if (!RoadPlacementState.isProjecting()) return false;
 
@@ -272,14 +245,14 @@ public final class RoadPlacementOverlay {
         if (presets.isEmpty()) return false;
 
         int toolsWidth = 100;
-        int gridAreaW = screenW - GRID_PAD_X * 2 - toolsWidth;
+        int toolsStartX = com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X;
+        int gridAreaW = screenW - toolsStartX - GRID_PAD_X - toolsWidth;
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
         int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
-        int panelY = screenH - com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.BOTTOM_BAR_HEIGHT - panelH;
+        int panelY = screenH - panelH;
 
-        int toolsStartX = GRID_PAD_X;
         int toolsStartY = panelY + GRID_PAD_TOP;
         int btn3Y = toolsStartY + (32 + 10) * 2;
 

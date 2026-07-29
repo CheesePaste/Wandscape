@@ -9,6 +9,9 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import org.lwjgl.glfw.GLFW;
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
@@ -28,7 +31,6 @@ public final class WandscapePanelController {
     public static final int TAB_W = 24;
     public static final int TAB_GAP = 4;
     public static final int TAB_COUNT = 3;
-    public static final int BOTTOM_BAR_HEIGHT = 48; // Space from bottom of screen
     public static final int TOP_BAR_HEIGHT = 26;
 
     private static boolean registered = false;
@@ -139,14 +141,6 @@ public final class WandscapePanelController {
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
                 && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
             
-            if (RoadPlacementOverlay.isSplinePenClicked(mouseX, mouseY, screenW, screenH)) {
-                WandscapePanelState.closePanel();
-                com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
-                event.setCanceled(true);
-                return;
-            }
-
             if (RoadPlacementOverlay.isDestroyFillClicked(mouseX, mouseY, screenW, screenH)) {
                 RoadPlacementState.setActiveTool(RoadPlacementState.ToolMode.DESTROY_FILL);
                 RoadPlacementState.enterPlacing();
@@ -190,7 +184,7 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             } else if (sidebarIconIndex == 3) {
-                WandscapePanelState.toggleWarningOverlay();
+                Minecraft.getInstance().setScreen(new AnomalyScreen());
                 event.setCanceled(true);
                 return;
             }
@@ -198,21 +192,6 @@ public final class WandscapePanelController {
     }
 
     // ── Hit detection ──
-
-    public static int getTabAt(double mouseX, double mouseY, int screenW, int screenH) {
-        int barY = screenH - BOTTOM_BAR_HEIGHT;
-        if (mouseY < barY || mouseY > barY + TAB_W) return -1;
-
-        int totalTabsW = TAB_COUNT * TAB_W + (TAB_COUNT - 1) * TAB_GAP;
-        int tabStartX = (screenW - totalTabsW) / 2;
-        for (int i = 0; i < TAB_COUNT; i++) {
-            int tabX = tabStartX + i * (TAB_W + TAB_GAP);
-            if (mouseX >= tabX && mouseX <= tabX + TAB_W) {
-                return i;
-            }
-        }
-        return -1;
-    }
 
     public static boolean isInTopBar(double mouseY, int screenH) {
         return mouseY < WandscapePanelOverlay.TOP_BAR_H;
@@ -240,10 +219,6 @@ public final class WandscapePanelController {
         if (mouseY >= warnY && mouseY <= warnY + WandscapePanelOverlay.SIDEBAR_ICON_S) return 3;
 
         return -1;
-    }
-
-    public static boolean isInBottomBar(double mouseY, int screenH) {
-        return mouseY > screenH - BOTTOM_BAR_HEIGHT;
     }
 
     // ── Tab click → sub-mode switch ──
@@ -291,6 +266,12 @@ public final class WandscapePanelController {
     }
 
     private static void handleBuildingSlotClick(int slotIndex) {
+        // Safety: ignore clicks on locked buildings
+        var slots = ProjectionClientState.getBuildingSlots();
+        if (slotIndex >= 0 && slotIndex < slots.size()) {
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(slots.get(slotIndex).id());
+            if (config == null || !BuildingUnlockChecker.isUnlocked(WandscapePanelState.getColonyId(), config)) return;
+        }
         boolean doubleClicked = WandscapePanelState.handleBuildingSlotClick(slotIndex);
         if (doubleClicked) {
             // Select building, close bar, enter PLACING phase (cursor in game, ghost visible)
@@ -298,7 +279,6 @@ public final class WandscapePanelController {
             WandscapePanelState.enterPlacingPhase();
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
-                var slots = ProjectionClientState.getBuildingSlots();
                 String name = (slotIndex >= 0 && slotIndex < slots.size())
                         ? slots.get(slotIndex).displayName() : "???";
                 mc.player.displayClientMessage(

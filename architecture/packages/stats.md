@@ -17,6 +17,10 @@ ColonyEvaluationChangedEvent
   → colonyStatsSyncPacket 独立推送评估值（更细粒度）
 ```
 
+## 关系
+
+`ColonyMetricsService`（engine/service/）与 stats/ 互补：stats/ 聚焦历史日快照和滚动摘要，ColonyMetricsService 聚焦实时全量指标聚合，两者不互相调用。
+
 ## 依赖
 
 - shared/event/DailySettlementEvent/TouristArrivedEvent/TouristDepartedEvent/ColonyEvaluationChangedEvent

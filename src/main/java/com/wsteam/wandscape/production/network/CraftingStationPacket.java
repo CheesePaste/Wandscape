@@ -76,9 +76,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
             // Serialise colony unlock requirement when not yet satisfied
             if (!r.unlockRequirement().equals(RecipeUnlockRequirement.NONE)) {
                 CompoundTag unlockTag = new CompoundTag();
-                unlockTag.putInt("min_comfort", r.unlockRequirement().minComfort());
-                unlockTag.putInt("min_magic",   r.unlockRequirement().minMagic());
-                unlockTag.putInt("min_wonder",  r.unlockRequirement().minWonder());
+                unlockTag.putInt("min_colony_level", r.unlockRequirement().minColonyLevel());
                 tag.put("unlock_requirement", unlockTag);
             }
             list.add(tag);
@@ -115,11 +113,8 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
             RecipeUnlockRequirement unlockReq = RecipeUnlockRequirement.NONE;
             if (tag.contains("unlock_requirement")) {
                 CompoundTag urTag = tag.getCompound("unlock_requirement");
-                unlockReq = new RecipeUnlockRequirement(
-                        urTag.getInt("min_comfort"),
-                        urTag.getInt("min_magic"),
-                        urTag.getInt("min_wonder")
-                );
+                int level = urTag.contains("min_colony_level") ? urTag.getInt("min_colony_level") : 1;
+                unlockReq = new RecipeUnlockRequirement(level);
             }
             result.add(new RecipeEntry(id, output, nbt, cost, maxAffordable, lockedReason, unlockReq));
         }
@@ -133,7 +128,7 @@ public record CraftingStationPacket(BlockPos stationPos, ListTag recipes) implem
      * @param cost              element cost per unit
      * @param maxAffordable     maximum quantity affordable with current elements (0 when locked)
      * @param lockedReason      "unlocked" / "colony" / "elements" — client uses this to pick lock hint
-     * @param unlockRequirement colony evaluation thresholds (only meaningful when lockedReason=colony)
+     * @param unlockRequirement minimum colony level (only meaningful when lockedReason=colony)
      */
     public record RecipeEntry(
             String recipeId,

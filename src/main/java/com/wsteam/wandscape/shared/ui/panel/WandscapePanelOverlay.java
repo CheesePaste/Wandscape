@@ -90,15 +90,15 @@ public final class WandscapePanelOverlay {
             UUID cid = WandscapePanelState.getColonyId();
             if (cid != null) {
                 g.fill(RenderType.guiOverlay(), 0, 0, screenW, TOP_BAR_H, 0, BAR_BG);
-                g.fill(RenderType.guiOverlay(), 0, TOP_BAR_H - 1, screenW, TOP_BAR_H, 0, WandscapeTheme.COLOR_BORDER_NORMAL);
+                g.fill(RenderType.guiOverlay(), 0, TOP_BAR_H - 1, screenW, TOP_BAR_H, 0, 0xFFC8A040);
             }
         }
 
         // 2. Sidebar
         renderSidebar(g, screenW, screenH, mx, my);
 
-        // 3. Warning overlay
-        if (WandscapePanelState.isWarningOverlayActive() && WandscapePanelState.getShutdownCount() > 0) {
+        // 3. Warning overlay (quick preview — full screen opened from sidebar click)
+        if (WandscapePanelState.isWarningOverlayActive() && WandscapePanelState.getTotalAnomalyCount() > 0) {
             renderWarningOverlay(g, font, screenH);
         }
     }
@@ -129,29 +129,14 @@ public final class WandscapePanelOverlay {
         // Build / Road / Stats tabs
         for (int i = 0; i < 3; i++) {
             int iy = startY + i * totalIconH;
-            boolean active = isTabActive(i, activeMode);
-            boolean hovered = (i == hoveredIcon);
-            int color = active ? WandscapeTheme.COLOR_TEXT_ACTIVE
-                      : hovered ? WandscapeTheme.COLOR_TEXT_NORMAL
-                      : WandscapeTheme.COLOR_TEXT_DIM;
             int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
-            WandscapeTheme.drawIcon(g, tabIcons[i], ix, iy, SIDEBAR_ICON_S, SIDEBAR_ICON_S, color);
+            WandscapeTheme.drawIcon(g, tabIcons[i], ix, iy, SIDEBAR_ICON_S, SIDEBAR_ICON_S, WandscapeTheme.COLOR_TEXT_NORMAL);
         }
 
         // Warning icon (with gap below tabs)
         int warnY = startY + 3 * totalIconH + 12;
-        boolean hoveredWarn = (hoveredIcon == 3);
-        int warnColor = WandscapePanelState.getShutdownCount() > 0
-                ? (hoveredWarn ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_ACTIVE)
-                : WandscapeTheme.COLOR_TEXT_DIM;
         int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
-        WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, ix, warnY, SIDEBAR_ICON_S, SIDEBAR_ICON_S, warnColor);
-
-        // Red dot badge
-        if (WandscapePanelState.getShutdownCount() > 0) {
-            int dotX = ix + SIDEBAR_ICON_S - 2;
-            g.fill(RenderType.guiOverlay(), dotX, warnY, dotX + 6, warnY + 6, 0, 0xFFFF4444);
-        }
+        WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, ix, warnY, SIDEBAR_ICON_S, SIDEBAR_ICON_S, WandscapeTheme.COLOR_TEXT_NORMAL);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -159,22 +144,21 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderWarningOverlay(GuiGraphics g, Font font, int screenH) {
-        List<String> names = WandscapePanelState.getShutdownBuildingNames();
-        int count = WandscapePanelState.getShutdownCount();
-        int maxShow = Math.min(names.size(), 10);
+        List<String> shutdownNames = WandscapePanelState.getShutdownBuildingNames();
+        List<String> brokenNames = WandscapePanelState.getBrokenBuildingNames();
+        int total = WandscapePanelState.getTotalAnomalyCount();
 
-        int w = 200;
+        int w = 220;
         int lineH = font.lineHeight + 1;
-        int h = 12 + lineH * (2 + maxShow) + 4;
+        int maxLines = 12;
+        int h = 12 + lineH * 2 + 4 + lineH * Math.min(maxLines, total) + 4;
         int x = SIDEBAR_W;
         int startIconY = TOP_BAR_H + 8 + 3 * (SIDEBAR_ICON_S + SIDEBAR_GAP) + 12;
         int y = startIconY;
 
-        // Clamp to screen bottom
         if (y + h > screenH) y = screenH - h;
 
         g.fill(RenderType.guiOverlay(), x, y, x + w, y + h, 0, OVERLAY_BG);
-        // White border
         g.fill(RenderType.guiOverlay(), x, y, x + w, y + 1, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
         g.fill(RenderType.guiOverlay(), x, y + h - 1, x + w, y + h, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
         g.fill(RenderType.guiOverlay(), x, y + 1, x + 1, y + h - 1, 0, WandscapeTheme.COLOR_BORDER_ACTIVE);
@@ -182,12 +166,31 @@ public final class WandscapePanelOverlay {
 
         int tx = x + 8;
         int ty = y + 6;
-        drawText(g, font, "Shutdown (" + count + ")", tx, ty, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, "异常报告 (" + total + ")", tx, ty, WandscapeTheme.COLOR_TEXT_ACTIVE);
         ty += lineH + 4;
 
-        for (int i = 0; i < maxShow; i++) {
-            drawText(g, font, "- " + names.get(i), tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        int shown = 0;
+        int maxPerType = maxLines / 2;
+        if (!shutdownNames.isEmpty()) {
+            drawText(g, font, "§c[关闭]", tx + 2, ty, 0xFFB22222);
             ty += lineH;
+            for (int i = 0; i < Math.min(shutdownNames.size(), maxPerType); i++) {
+                drawText(g, font, "  - " + shutdownNames.get(i), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
+                ty += lineH;
+                shown++;
+            }
+        }
+        if (!brokenNames.isEmpty()) {
+            drawText(g, font, "§e[损坏]", tx + 2, ty, 0xFFB8860B);
+            ty += lineH;
+            for (int i = 0; i < Math.min(brokenNames.size(), maxPerType); i++) {
+                drawText(g, font, "  - " + brokenNames.get(i), tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
+                ty += lineH;
+                shown++;
+            }
+        }
+        if (shown >= maxLines && total > shown) {
+            drawText(g, font, "... 还有 " + (total - shown) + " 个异常", tx + 4, ty, WandscapeTheme.COLOR_TEXT_DIM);
         }
     }
 
@@ -277,10 +280,10 @@ public final class WandscapePanelOverlay {
         String npcText = WandscapePanelState.getNpcIdleCount() + "/" + WandscapePanelState.getNpcTotalCount() + " NPC";
         drawText(g, font, npcText, x, textY1, WandscapeTheme.COLOR_TEXT_NORMAL);
 
-        // 8. Warning icon+count at far right of first row
-        int shutdownCount = WandscapePanelState.getShutdownCount();
-        if (shutdownCount > 0) {
-            String warnStr = String.valueOf(shutdownCount);
+        // 8. Warning icon+count at far right of first row (total anomalies)
+        int anomalyCount = WandscapePanelState.getTotalAnomalyCount();
+        if (anomalyCount > 0) {
+            String warnStr = String.valueOf(anomalyCount);
             int warnWidth = iconS1 + 2 + font.width(warnStr);
             int warnX = screenW - rightMargin - warnWidth;
             WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, warnX, y1, iconS1, iconS1, WandscapeTheme.COLOR_TEXT_ACTIVE);
@@ -327,55 +330,91 @@ public final class WandscapePanelOverlay {
     private static void renderStatsContent(GuiGraphics g, Font font, int screenW, int screenH) {
         var stats = WandscapePanelState.getStatsSummary();
 
-        int boxW = 280;
-        int boxH = 140;
+        int boxW = 380;
+        int boxH = 165;
         int leftX = SIDEBAR_W + 4;
         int topY = TOP_BAR_H + 4;
         WandscapeTheme.drawRtsBox(g, leftX, topY, boxW, boxH, true, false);
 
-        int textX = leftX + 10;
-        int y = topY + 10;
+        int pad = 10;
         int lineH = font.lineHeight + 3;
+        int colW = (boxW - pad * 3) / 2;
 
         if (stats == null || stats.snapshotCount() == 0) {
-            drawText(g, font, "No statistics available yet.", textX, y, WandscapeTheme.COLOR_TEXT_DIM);
+            drawText(g, font, "No statistics available yet.", leftX + pad, topY + pad,
+                    WandscapeTheme.COLOR_TEXT_DIM);
             return;
         }
 
+        // ── Header (full width) ──
         String header = "Colony Statistics  |  Day " + stats.currentDay();
-        drawText(g, font, header, textX, y, WandscapeTheme.COLOR_TEXT_NORMAL);
+        drawText(g, font, header, leftX + pad, topY + pad, WandscapeTheme.COLOR_TEXT_NORMAL);
+        int sepY = topY + pad + font.lineHeight + 2;
+        g.fill(leftX + pad, sepY, leftX + boxW - pad, sepY + 1, WandscapeTheme.COLOR_BORDER_NORMAL);
+        int y0 = sepY + 6;
+
+        // ── Left column: maintenance + tourists ──
+        int lx = leftX + pad;
+        int y = y0;
+
+        drawText(g, font, "Maintenance", lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        y += lineH;
+        drawText(g, font, "  Paid: " + stats.buildingsPaid(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  Shut: " + stats.buildingsShutdown(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH + 4;
 
-        String maint = "Maintenance: " + stats.buildingsPaid() + " paid | " + stats.buildingsShutdown() + " shut";
-        drawText(g, font, maint, textX, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "Tourists", lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        y += lineH;
+        drawText(g, font, "  In:  " + stats.touristsArrived(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  Out: " + stats.touristsDeparted(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  Sat:  " + stats.avgSatisfaction() + "%", lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+
+        // ── Right column: elements consumed ──
+        int rx = lx + colW + pad;
+        y = y0;
+
+        drawText(g, font, "Elements (30d)", rx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
 
-        String tourist = "Tourists: " + stats.touristsArrived() + " in | " + stats.touristsDeparted() + " out | " + stats.avgSatisfaction() + "% ok";
-        drawText(g, font, tourist, textX, y, WandscapeTheme.COLOR_TEXT_DIM);
-        y += lineH + 4;
-
-        if (!stats.totalElementsConsumed().isEmpty()) {
-            drawText(g, font, "Elements consumed (30d):", textX, y, WandscapeTheme.COLOR_TEXT_NORMAL);
-            y += lineH;
-
-            var elements = stats.totalElementsConsumed();
+        var elements = stats.totalElementsConsumed();
+        if (elements.isEmpty()) {
+            drawText(g, font, "  —", rx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        } else {
             ElementType[] types = ElementType.values();
-            StringBuilder line = new StringBuilder();
             for (int i = 0; i < types.length; i++) {
                 long amount = elements.getOrDefault(types[i], 0L);
-                if (i > 0 && i % 3 == 0) {
-                    drawText(g, font, line.toString(), textX + 4, y, WandscapeTheme.COLOR_TEXT_DIM);
-                    line = new StringBuilder();
-                    y += lineH;
-                }
-                if (line.length() > 0) line.append("   ");
-                line.append(String.format("%-6s: %d", types[i].getId(), amount));
-            }
-            if (!line.isEmpty()) {
-                drawText(g, font, line.toString(), textX + 4, y, WandscapeTheme.COLOR_TEXT_DIM);
+                // Draw colored dot
+                int dotColor = elementColor(types[i]);
+                g.fill(rx + 2, y + 4, rx + 10, y + 12, dotColor);
+                // Element name + count
+                drawText(g, font,
+                        types[i].getId() + ": " + formatElementCount(amount),
+                        rx + 14, y, WandscapeTheme.COLOR_TEXT_DIM);
                 y += lineH;
+                if (i == 3) { y += 1; } // small gap after fire
             }
         }
+    }
+
+    private static int elementColor(ElementType type) {
+        return switch (type) {
+            case EARTH -> 0xFF8B6914;
+            case WOOD  -> 0xFF2E8B57;
+            case WATER -> 0xFF4A90D9;
+            case FIRE  -> 0xFFB22222;
+            case METAL -> 0xFF808080;
+            case WIND  -> 0xFF87CEEB;
+            case DARK  -> 0xFF4B0082;
+        };
+    }
+
+    private static String formatElementCount(long n) {
+        if (n < 1000) return String.valueOf(n);
+        if (n < 1_000_000) return String.format("%.1fK", n / 1000.0);
+        return String.format("%.1fM", n / 1_000_000.0);
     }
 
     // ═══════════════════════════════════════════════════════════════

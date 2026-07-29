@@ -47,9 +47,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_MAGIC = "magic";
     private static final String KEY_WONDER = "wonder";
     private static final String KEY_SCANNED = "scanned";
-    private static final String KEY_UNLOCK_COMFORT = "unlock_comfort";
-    private static final String KEY_UNLOCK_MAGIC = "unlock_magic";
-    private static final String KEY_UNLOCK_WONDER = "unlock_wonder";
+    private static final String KEY_UNLOCK_LEVEL = "unlock_min_level";
     private static final String KEY_SHOP_PROFIT = "shop_profit";
     private static final String KEY_SHOP_DURATION = "shop_duration";
     private static final String KEY_SERVICE_ENERGY = "service_energy";
@@ -71,7 +69,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private boolean scanned;
 
     // ── Unlock requirement ──
-    private int unlockMinComfort, unlockMinMagic, unlockMinWonder;
+    private int unlockMinLevel = 1;
 
     // ── Shop config ──
     private double shopProfitRate;
@@ -152,12 +150,8 @@ public class BuildingScannerBlockEntity extends BlockEntity {
 
     // ── Unlock requirement ──
 
-    public int getUnlockMinComfort() { return unlockMinComfort; }
-    public void setUnlockMinComfort(int v) { this.unlockMinComfort = v; }
-    public int getUnlockMinMagic() { return unlockMinMagic; }
-    public void setUnlockMinMagic(int v) { this.unlockMinMagic = v; }
-    public int getUnlockMinWonder() { return unlockMinWonder; }
-    public void setUnlockMinWonder(int v) { this.unlockMinWonder = v; }
+    public int getUnlockMinLevel() { return unlockMinLevel; }
+    public void setUnlockMinLevel(int v) { this.unlockMinLevel = Math.max(1, v); }
 
     // ── Shop config ──
 
@@ -227,9 +221,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         tag.putInt(KEY_MAGIC, magic);
         tag.putInt(KEY_WONDER, wonder);
         tag.putBoolean(KEY_SCANNED, scanned);
-        tag.putInt(KEY_UNLOCK_COMFORT, unlockMinComfort);
-        tag.putInt(KEY_UNLOCK_MAGIC, unlockMinMagic);
-        tag.putInt(KEY_UNLOCK_WONDER, unlockMinWonder);
+        tag.putInt(KEY_UNLOCK_LEVEL, unlockMinLevel);
         tag.putDouble(KEY_SHOP_PROFIT, shopProfitRate);
         tag.putInt(KEY_SHOP_DURATION, shopInteractionDurationTicks);
         tag.putInt(KEY_SERVICE_ENERGY, serviceEnergyPerUse);
@@ -269,9 +261,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         magic = tag.getInt(KEY_MAGIC);
         wonder = tag.getInt(KEY_WONDER);
         scanned = tag.getBoolean(KEY_SCANNED);
-        unlockMinComfort = tag.getInt(KEY_UNLOCK_COMFORT);
-        unlockMinMagic = tag.getInt(KEY_UNLOCK_MAGIC);
-        unlockMinWonder = tag.getInt(KEY_UNLOCK_WONDER);
+        unlockMinLevel = Math.max(1, tag.getInt(KEY_UNLOCK_LEVEL));
         shopProfitRate = tag.getDouble(KEY_SHOP_PROFIT);
         shopInteractionDurationTicks = tag.getInt(KEY_SHOP_DURATION);
         serviceEnergyPerUse = tag.getInt(KEY_SERVICE_ENERGY);

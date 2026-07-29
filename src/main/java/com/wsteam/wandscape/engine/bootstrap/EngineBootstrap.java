@@ -190,16 +190,16 @@ public final class EngineBootstrap {
         WandscapeEngine.setResourceRequestExec(resourceReqExec);
         Log.info(TAG, "  ResourceRequestExecutor registered (visual transport, staggered)");
 
-        // 9f. Register narrative event subscribers (stats, achievements)
-        StatsService.register();
-        AchievementService.register();
-        Log.info(TAG, "  StatsService / AchievementService registered");
-
         // 10. Publish boundary services
         WandscapeEngine.setMovementOps(movementOps);
 
-        // 11. Store world in singleton
+        // 11. Store world in singleton (must precede service registration)
         WandscapeEngine.setWorld(world);
+
+        // 12. Register narrative event subscribers (stats, achievements)
+        StatsService.register();
+        AchievementService.register();
+        Log.info(TAG, "  StatsService / AchievementService registered");
 
         Log.info(TAG, "CoreBootstrap bootstrap complete — {} systems, {} task sources, {} blueprints",
                 world.systemCount(), taskSources.size(), blueprints);

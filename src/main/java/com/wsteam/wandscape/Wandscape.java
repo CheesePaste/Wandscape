@@ -22,11 +22,9 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.MaintenanceForecastSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
-import com.wsteam.wandscape.building.editor.BuildingEditorNetwork;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlock;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
-import com.wsteam.wandscape.command.BuildEditorCommand;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.AuditElementsCommand;
@@ -41,8 +39,6 @@ import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
-import com.wsteam.wandscape.command.BlueprintEditorCommand;
-import com.wsteam.wandscape.command.SplineEditorCommand;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
@@ -60,11 +56,6 @@ import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
-import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
-import com.wsteam.wandscape.building.network.BuildingEditorEnterResponsePacket;
-import com.wsteam.wandscape.building.network.BuildingEditorExitPacket;
-import com.wsteam.wandscape.building.network.BuildingEditorExportPacket;
-import com.wsteam.wandscape.building.network.BuildingEditorExportResultPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
@@ -95,6 +86,7 @@ import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.engine.TaskPoolSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
+import com.wsteam.wandscape.engine.service.ColonyMetricsService;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
@@ -107,7 +99,6 @@ import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
-import com.wsteam.wandscape.blueprint.editor.BlueprintSavePacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
@@ -459,40 +450,12 @@ public class Wandscape {
                         BuildingActionPacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingActionPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Building Editor ──
-                .playToServer(
-                        BuildingEditorEnterPacket.TYPE,
-                        BuildingEditorEnterPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingEditorEnterPacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
-                .playToClient(
-                        BuildingEditorEnterResponsePacket.TYPE,
-                        BuildingEditorEnterResponsePacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingEditorEnterResponsePacket.handleClient(packet))
-                .playToServer(
-                        BuildingEditorExitPacket.TYPE,
-                        BuildingEditorExitPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingEditorExitPacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
-                .playToServer(
-                        BuildingEditorExportPacket.TYPE,
-                        BuildingEditorExportPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingEditorExportPacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
-                .playToClient(
-                        BuildingEditorExportResultPacket.TYPE,
-                        BuildingEditorExportResultPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingEditorExportResultPacket.handleClient(packet))
                 // ── Building Scanner ──
                 .playToServer(
                         BuildingScannerSyncPacket.TYPE,
                         BuildingScannerSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingScannerSyncPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
-                .playToClient(
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
-                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.road.network.SplineEditorEnterPacket.handleClient(packet, ctx))
                 .playToServer(
                         com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,
                         com.wsteam.wandscape.road.network.SplineBuildPacket.STREAM_CODEC,
@@ -541,12 +504,7 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                // ── Blueprint editor ──
-                .playToServer(
-                        BlueprintSavePacket.TYPE,
-                        BlueprintSavePacket.STREAM_CODEC,
-                        (packet, ctx) -> BlueprintSavePacket.handleServer(packet,
-                                (ServerPlayer) ctx.player()))
+                // ── Transport start ──
                 .playToClient(
                         TransportStartPacket.TYPE,
                         TransportStartPacket.STREAM_CODEC,
@@ -568,6 +526,12 @@ public class Wandscape {
         Log.info(TAG, "Wandscape server starting — bootstrapping engine...");
         buildingApi.setLevel(event.getServer().overworld());
         EngineBootstrap.bootstrap();
+
+        // Register unified metrics facade (after bootstrap, before any consumer queries it)
+        var metricsService = ColonyMetricsService.create();
+        com.wsteam.wandscape.shared.registry.WandscapeApis.setColonyMetricsApi(metricsService);
+        Log.info(TAG, "ColonyMetricsService registered");
+
         BuildCompleteListener.register();
         DemolishCompleteListener.register();
         // Rebuild colony spatial index from saved data
@@ -635,6 +599,12 @@ public class Wandscape {
         var colonyLevelData = ColonyLevelData.getOrCreate(level);
         var colonyLevelManager = new ColonyLevelManager(colonyLevelData);
         WandscapeEngine.setColonyLevelManager(colonyLevelManager);
+
+        // Wire level-up event to engine EventBus
+        if (world != null && world.eventBus != null) {
+            colonyLevelManager.setLevelUpCallback(evt -> world.eventBus.emit(evt));
+        }
+
         TouristSpawnSystem.setLevelManager(colonyLevelManager);
         Log.info(TAG, "Colony level system wired");
 
@@ -679,9 +649,6 @@ public class Wandscape {
                 .then(ColonyCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
                 .then(RecoveryCommand.node())
-                .then(BuildEditorCommand.node())
-                .then(BlueprintEditorCommand.node())
-                .then(SplineEditorCommand.node())
                 .then(SeedWarehouseCommand.node())
                 .then(ConsumeWarehouseCommand.node())
                 .then(StressTestCommand.buildNode())
@@ -694,7 +661,6 @@ public class Wandscape {
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
             ProjectionNetwork.removeByUuid(sp.getUUID());
-            BuildingEditorNetwork.removeByUuid(sp.getUUID());
         }
     }
 

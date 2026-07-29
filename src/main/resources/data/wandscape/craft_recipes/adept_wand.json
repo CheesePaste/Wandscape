@@ -15,6 +15,6 @@
     "metal": 16
   },
   "unlock_requirement": {
-    "min_magic": 50
+    "min_colony_level": 3
   }
 }

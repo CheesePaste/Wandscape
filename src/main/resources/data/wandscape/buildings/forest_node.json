@@ -23,7 +23,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_wonder": 0
+    "min_colony_level": 1
   },
   "node_config": {
     "blueprint": "node:gather",

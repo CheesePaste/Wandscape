@@ -13,6 +13,7 @@ public final class WandscapeApis {
     private static ManaPoolApi manaPoolApi;
     private static RoadApi roadApi;
     private static TouristApi touristApi;
+    private static ColonyMetricsApi colonyMetricsApi;
 
     private WandscapeApis() {}
 
@@ -87,4 +88,12 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static TouristApi getTouristApiSilently() { return touristApi; }
     public static void setTouristApi(TouristApi api) { touristApi = api; }
+
+    public static ColonyMetricsApi getColonyMetricsApi() {
+        if (colonyMetricsApi == null) throw new IllegalStateException("ColonyMetricsService not loaded");
+        return colonyMetricsApi;
+    }
+    @javax.annotation.Nullable
+    public static ColonyMetricsApi getColonyMetricsApiSilently() { return colonyMetricsApi; }
+    public static void setColonyMetricsApi(ColonyMetricsApi api) { colonyMetricsApi = api; }
 }

@@ -3,7 +3,6 @@ package com.wsteam.wandscape;
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
@@ -15,8 +14,6 @@ import com.wsteam.wandscape.projection.client.BuildingDebugController;
 import com.wsteam.wandscape.projection.client.BuildingDebugOverlay;
 import com.wsteam.wandscape.overview.client.OverviewFlightController;
 import com.wsteam.wandscape.overview.client.OverviewRenderer;
-import com.wsteam.wandscape.shared.ui.component.DemoScreen;
-import com.wsteam.wandscape.shared.ui.editor.UIEditorScreen;
 import com.wsteam.wandscape.production.client.CraftingStationScreen;
 import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
@@ -71,20 +68,6 @@ import com.wsteam.wandscape.shared.log.Log;
 @EventBusSubscriber(modid = Wandscape.MODID, value = Dist.CLIENT)
 public class WandscapeClient {
 
-    public static final KeyMapping OPEN_DEMO_SCREEN = new KeyMapping(
-            "key.wandscape.demo",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_M,
-            "key.categories.wandscape"
-    );
-
-    public static final KeyMapping OPEN_UI_EDITOR = new KeyMapping(
-            "key.wandscape.ui_editor",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_U,
-            "key.categories.wandscape"
-    );
-
     public static final KeyMapping OPEN_TASK_EDITOR = new KeyMapping(
             "key.wandscape.task_editor",
             InputConstants.Type.KEYSYM,
@@ -96,13 +79,6 @@ public class WandscapeClient {
             "key.wandscape.projection",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_V,
-            "key.categories.wandscape"
-    );
-
-    public static final KeyMapping IMGUI_TOGGLE = new KeyMapping(
-            "key.wandscape.imgui",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_F12,
             "key.categories.wandscape"
     );
 
@@ -122,8 +98,6 @@ public class WandscapeClient {
         ProjectionFlightController.register();
         BuildingDebugController.register();
         BuildingDebugOverlay.register();
-        com.wsteam.wandscape.road.client.SplineEditorController.register();
-        com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
 
@@ -136,8 +110,6 @@ public class WandscapeClient {
         OverviewFlightController.register();
         OverviewRenderer.register();
 
-        // ImGui: register static event handlers on ImGuiManager
-        NeoForge.EVENT_BUS.register(ImGuiManager.class);
     }
 
     @SubscribeEvent
@@ -226,29 +198,17 @@ public class WandscapeClient {
                             packet.colonyName(), packet.level(), packet.experience(), packet.expToNext()));
         });
 
-        // ImGui init is deferred to first render frame (when GL context is active)
-        // see ImGuiManager.ensureInit() called in onRenderFramePost
-
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
-        event.register(OPEN_DEMO_SCREEN);
-        event.register(OPEN_UI_EDITOR);
         event.register(OPEN_TASK_EDITOR);
         event.register(PROJECTION_TOGGLE);
-        event.register(IMGUI_TOGGLE);
         event.register(PANEL_CURSOR_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
-        while (OPEN_DEMO_SCREEN.consumeClick()) {
-            Minecraft.getInstance().setScreen(new DemoScreen());
-        }
-        while (OPEN_UI_EDITOR.consumeClick()) {
-            Minecraft.getInstance().setScreen(new UIEditorScreen());
-        }
         while (OPEN_TASK_EDITOR.consumeClick()) {
             PacketDistributor.sendToServer(new TaskEditorOpenPacket());
             Minecraft.getInstance().setScreen(new TaskEditorScreen());
@@ -265,11 +225,6 @@ public class WandscapeClient {
             // C key: lift/release cursor within the panel
             if (WandscapePanelState.isPanelOpen()) {
                 WandscapePanelState.toggleCursor();
-            }
-        }
-        while (IMGUI_TOGGLE.consumeClick()) {
-            if (Config.IMGUI_ENABLED.get()) {
-                ImGuiManager.toggle();
             }
         }
     }

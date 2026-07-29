@@ -1,20 +1,21 @@
 # shared/ — 公共 API + 事件 + UI
 
-所有包的公共层，50+ 文件。无实现代码，只有接口/数据/事件/UI组件。
+所有包的公共层，50+ 文件。无实现代码，只有接口/数据/事件/UI组件。新增 ColonyMetricsApi（实时全量指标聚合）和 ColonyMetricsSnapshot（统一指标数据 record）。
 
-## api/ — 10 个模块接口
+## api/ — 11 个模块接口
 
-WandApi / ElementApi / BuildingApi / NpcApi / WarehouseApi / RoadApi / ColonyApi / TavernApi / TouristApi / StatsApi。全部已实现，实现类在对应模块的 internal/ 下。
+WandApi / ElementApi / BuildingApi / NpcApi / WarehouseApi / RoadApi / ColonyApi / TavernApi / TouristApi / ColonyMetricsApi / StatsApi。全部已实现（StatsApi 为占位），实现类在对应模块的 internal/ 下。ColonyMetricsApi 由 engine/service/ColonyMetricsService 实现。
 
 ## registry/ — 全局注册
 
 WandscapeApis（静态服务定位器，未注册时抛异常）/ WandscapeConstants（TOML 未覆盖时的硬编码 fallback）/ WandscapeDataRegistry（泛型数据查询接口）
 
-## event/ — 12 个 NeoForge 事件
+## event/ — 13 个事件
 
 | 事件 | 发布者 | 触发时机 |
 |------|--------|---------|
 | ColonyCreatedEvent | engine | 殖民地创建 |
+| ColonyLevelUpEvent | engine | 殖民地升级 |
 | DailySettlementEvent | building | 每日维护结算 |
 | MaintenanceForecastWarningEvent | building | 维护费预警 |
 | ShopRestockedEvent | building | 商店补货 |
@@ -31,17 +32,15 @@ WandscapeApis（静态服务定位器，未注册时抛异常）/ WandscapeConst
 
 Log（封装 java.util.logging，debug/info/warn/error，支持 format 和 SLF4J 两种占位符）+ LogFilter（运行时标签白名单过滤）
 
-## ui/ — UI 组件库（40+ 文件，8 子包）
+## ui/ — UI 组件库
 
-中世纪魔法主题，CC0 精灵图 + 程序化渲染混合。
+MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。组件用精灵图（按钮等）或代码绘制混合渲染。
 
 | 子包 | 内容 |
 |------|------|
-| component/ | MedievalScreen / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / SearchBar / TaskQueuePanel / Slider 等 |
-| panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部全信息HUD栏+左侧模式侧边栏+停摆警告浮层) + BuildingSelectionOverlay |
-| task/ | TaskEditorClientState + TaskEditorScreen |
-| editor/ | UIEditorScreen / UILayoutManager / WidgetLayout |
-| util/ | BuildingPreviewRenderer（独立 3D 等轴测缩略图） |
+| component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / SearchBar / TaskQueuePanel / Slider / DemoScreen 等 |
+| panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen |
+| util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
 | animation/ | MedievalAnimation |
-| skin/ | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/p标签/滚动条) |
-| theme/ | WandscapeTheme（RTS风格绘制基元 + 7元素图标映射 + 通用UI图标）+ MedievalColors（羊皮纸/金色/紫色系/功能色） |
+| skin/ | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/关闭按钮/进度条/箭头图标) |
+| theme/ | MedievalColors(金色/紫色/文本/功能色) + WandscapeTheme(V面板覆盖层用RTS绘制基元 + 元素图标) |

@@ -214,8 +214,77 @@ public final class BuildingBreakHandler {
         params.put("blocks", blocks);
         params.put("name", new JsonPrimitive(config.displayName()));
 
+        // Compute material_list + material_counts from damaged blocks so the
+        // build:place_structure blueprint can request resources from the warehouse.
+        var materialData = computeRepairMaterialData(blocks);
+        params.put("material_list", materialData != null ? materialData.list : new JsonArray());
+        params.put("material_counts", materialData != null ? materialData.counts : new JsonObject());
+
         WorkItem repairWork = new WorkItem("build:place_structure", params, REPAIR_PRIORITY);
         state.getTaskQueue().addFirst(repairWork);
+    }
+
+    /** Compute deduped material_list + material_counts from a block mapping. */
+    private static RepairMaterialData computeRepairMaterialData(JsonObject blocks) {
+        var counts = new java.util.LinkedHashMap<String, Integer>();
+        var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+        for (var entry : blocks.entrySet()) {
+            String blockId = entry.getValue().getAsString();
+            if (blockId == null || "minecraft:air".equals(blockId)) continue;
+            // Strip blockstate properties; element mappings use bare IDs only.
+            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
+            if (!elementApi.hasElementMapping(pureId)) continue;
+            counts.merge(pureId, 1, Integer::sum);
+        }
+        if (counts.isEmpty()) return null;
+        JsonArray list = new JsonArray();
+        JsonObject map = new JsonObject();
+        for (var entry : counts.entrySet()) {
+            list.add(new JsonPrimitive(entry.getKey()));
+            map.addProperty(entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        return new RepairMaterialData(list, map);
+    }
+
+    private record RepairMaterialData(JsonArray list, JsonObject counts) {}
+
+    /**
+     * Manually trigger a repair scan and enqueue repair work for a broken building.
+     * Called from the anomaly system when the player clicks "修复" (Repair).
+     *
+     * @return true if repair was enqueued, false if building is intact or not found
+     */
+    public static boolean triggerRepair(Level level, UUID buildingId) {
+        BuildingSavedData data = BuildingSavedData.get(level);
+        if (data == null) return false;
+
+        BuildingState state = data.getBuilding(buildingId);
+        if (state == null) return false;
+
+        if (state.isStructureIntact()) return false; // not broken
+
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null) return false;
+
+        List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config);
+        if (damaged.isEmpty()) {
+            // No damaged blocks found — mark as intact
+            state.setStructureIntact(true);
+            UUID colonyId = state.getColonyId();
+            if (colonyId != null) {
+                data.addBuildingContribution(colonyId, state.getBuildingTypeId());
+            }
+            data.setDirty();
+            Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {} — marked intact",
+                    state.getBuildingTypeId(), state.getAnchor());
+            return true;
+        }
+
+        enqueueRepairForOffsets(state, config, damaged);
+        data.setDirty();
+        Log.info(TAG, "[Building] Repair triggered manually for {} at {} — {} blocks damaged, repair enqueued",
+                state.getBuildingTypeId(), state.getAnchor(), damaged.size());
+        return true;
     }
 
     private static JsonArray posToJsonArray(BlockPos pos) {

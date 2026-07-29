@@ -25,8 +25,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public class TavernScreen extends MedievalScreen {
 
-    private static final int PW = 260;
-    private static final int PH = 200;
+    private static final int PW = 300;
+    private static final int PH = 230;
 
     private final BlockPos buildingPos;
     private final UUID colonyId;

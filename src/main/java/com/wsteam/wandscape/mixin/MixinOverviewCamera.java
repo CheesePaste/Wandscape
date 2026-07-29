@@ -30,22 +30,6 @@ public abstract class MixinOverviewCamera {
             setRotation(
                     com.wsteam.wandscape.overview.client.OverviewClientState.getCamYaw(),
                     com.wsteam.wandscape.overview.client.OverviewClientState.getCamPitch());
-        } else if (com.wsteam.wandscape.building.editor.BuildingEditorClientState.isEditing()) {
-            setPosition(
-                    com.wsteam.wandscape.building.editor.BuildingEditorClientState.getCamX(),
-                    com.wsteam.wandscape.building.editor.BuildingEditorClientState.getCamY(),
-                    com.wsteam.wandscape.building.editor.BuildingEditorClientState.getCamZ());
-            setRotation(
-                    com.wsteam.wandscape.building.editor.BuildingEditorClientState.getCamYaw(),
-                    com.wsteam.wandscape.building.editor.BuildingEditorClientState.getCamPitch());
-        } else if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-            setPosition(
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.getCamX(),
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.getCamY(),
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.getCamZ());
-            setRotation(
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.getCamYaw(),
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.getCamPitch());
         }
     }
 }

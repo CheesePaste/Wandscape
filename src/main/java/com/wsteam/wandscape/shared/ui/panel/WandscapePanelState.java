@@ -4,9 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.wsteam.wandscape.building.editor.BuildingEditorClientState;
-import com.wsteam.wandscape.building.editor.BuildingEditorController;
-import com.wsteam.wandscape.building.network.BuildingEditorEnterPacket;
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
@@ -24,7 +21,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class WandscapePanelState {
 
-    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, BUILD_EDITOR, STATS, OVERVIEW }
+    public enum SubMode { NONE, BUILD_PROJECTION, ROAD_PROJECTION, STATS, OVERVIEW }
 
     /** Build projection phase: BAR = selecting building (UI, no ghost), PLACING = in-world placement (ghost visible). */
     public enum BuildPhase { BAR, PLACING }
@@ -54,6 +51,10 @@ public final class WandscapePanelState {
     private static volatile int metalAmount = 0;
     private static volatile int darkAmount = 0;
     private static volatile List<String> shutdownBuildingNames = List.of();
+    private static volatile List<UUID> shutdownBuildingIds = List.of();
+    private static volatile int brokenCount = 0;
+    private static volatile List<UUID> brokenBuildingIds = List.of();
+    private static volatile List<String> brokenBuildingNames = List.of();
 
     // ── Sidebar warning overlay toggle ──
     private static volatile boolean warningOverlayActive = false;
@@ -124,6 +125,15 @@ public final class WandscapePanelState {
     public static int getMetalAmount() { return metalAmount; }
     public static int getDarkAmount() { return darkAmount; }
     public static List<String> getShutdownBuildingNames() { return shutdownBuildingNames; }
+    public static List<UUID> getShutdownBuildingIds() { return shutdownBuildingIds; }
+
+    // ── Anomaly fields ──
+    public static int getBrokenCount() { return brokenCount; }
+    public static List<UUID> getBrokenBuildingIds() { return brokenBuildingIds; }
+    public static List<String> getBrokenBuildingNames() { return brokenBuildingNames; }
+
+    /** Total anomalies across all types (shutdown + broken). */
+    public static int getTotalAnomalyCount() { return shutdownCount + brokenCount; }
 
     // ── Warning overlay ──
     public static boolean isWarningOverlayActive() { return warningOverlayActive; }
@@ -149,7 +159,11 @@ public final class WandscapePanelState {
                                       int npcIdleCount, int npcTotalCount,
                                       int earth, int wood, int water, int fire, int wind,
                                       int metal, int dark,
-                                      List<String> shutdownNames) {
+                                      List<String> shutdownNames,
+                                      List<UUID> shutdownIds,
+                                      int brokenCount,
+                                      List<UUID> brokenIds,
+                                      List<String> brokenNames) {
         setColonyStats(colonyId, comfort, magic, wonder, name, level, experience);
         WandscapePanelState.touristCount = touristCount;
         WandscapePanelState.overnightStayerCount = overnightStayerCount;
@@ -164,6 +178,10 @@ public final class WandscapePanelState {
         WandscapePanelState.metalAmount = metal;
         WandscapePanelState.darkAmount = dark;
         WandscapePanelState.shutdownBuildingNames = shutdownNames != null ? shutdownNames : List.of();
+        WandscapePanelState.shutdownBuildingIds = shutdownIds != null ? shutdownIds : List.of();
+        WandscapePanelState.brokenCount = brokenCount;
+        WandscapePanelState.brokenBuildingIds = brokenIds != null ? brokenIds : List.of();
+        WandscapePanelState.brokenBuildingNames = brokenNames != null ? brokenNames : List.of();
     }
 
     public static void openPanel() {
@@ -392,7 +410,6 @@ public final class WandscapePanelState {
                 RoadPlacementState.enterProjection();
                 liftCursorForUI();
             }
-            case BUILD_EDITOR -> PacketDistributor.sendToServer(BuildingEditorEnterPacket.createNew());
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
         }
     }
@@ -423,11 +440,6 @@ public final class WandscapePanelState {
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     return;
-                }
-            }
-            case BUILD_EDITOR -> {
-                if (BuildingEditorClientState.isEditing()) {
-                    BuildingEditorController.doExit();
                 }
             }
             case OVERVIEW -> {

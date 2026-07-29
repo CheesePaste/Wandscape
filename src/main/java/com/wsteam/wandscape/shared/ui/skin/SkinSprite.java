@@ -36,12 +36,9 @@ public record SkinSprite(int u, int v, int width, int height) {
     public static final ResourceLocation PANEL_B    = skinTex("panel_9slice_b.png");
     public static final ResourceLocation HEADER_A   = skinTex("header_a.png");
     public static final ResourceLocation BUTTON_A   = skinTex("button_a.png");
-    public static final ResourceLocation BUTTON_B   = skinTex("button_b.png");
     public static final ResourceLocation TAB_C      = skinTex("tab_c.png");
-    public static final ResourceLocation TAB_D      = skinTex("tab_d.png");
     public static final ResourceLocation CLOSE_BTN  = skinTex("close_button.png");
     public static final ResourceLocation BAR_A      = skinTex("bar_a.png");
-    public static final ResourceLocation BAR_B      = skinTex("bar_b.png");
     public static final ResourceLocation LEFT_ARROW = skinTex("left_arrow.png");
     public static final ResourceLocation RIGHT_ARROW = skinTex("right_arrow.png");
     public static final ResourceLocation LESS_BTN   = skinTex("less_button.png");
@@ -63,17 +60,6 @@ public record SkinSprite(int u, int v, int width, int height) {
 
     public static final int BUTTON_A_SHEET_W = 384;
     public static final int BUTTON_A_SHEET_H = 22;
-
-    // ── Sprite definitions — button_b (384×22, 3 variants) ──
-
-    public static final SkinSprite[] BTN_B_VARIANTS = {
-        at(1, 0).size(191, 22),   // wide (left-cap)
-        at(194, 0).size(93, 22),  // medium (center stretch)
-        at(291, 0).size(91, 22),  // narrow (right-cap)
-    };
-
-    public static final int BUTTON_B_SHEET_W = 384;
-    public static final int BUTTON_B_SHEET_H = 22;
 
     // ── Sprite definitions — tab_c (384×32, 3 segments: left / center / right) ──
 
@@ -112,10 +98,6 @@ public record SkinSprite(int u, int v, int width, int height) {
     public static final SkinSprite BAR_A_SPRITE = at(0, 0).size(95, 17);
     public static final int BAR_A_SHEET_W = 95;
     public static final int BAR_A_SHEET_H = 17;
-
-    public static final SkinSprite BAR_B_SPRITE = at(0, 0).size(95, 15);
-    public static final int BAR_B_SHEET_W = 95;
-    public static final int BAR_B_SHEET_H = 15;
 
     // ── Sprite definitions — less_button (96×24, 4 states) ──
 

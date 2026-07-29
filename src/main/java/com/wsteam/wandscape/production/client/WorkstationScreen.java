@@ -173,9 +173,7 @@ public class WorkstationScreen extends MedievalScreen {
                 if ("colony".equals(reason)) {
                     costStr.append("🔒 ");
                     var req = item.unlockRequirement();
-                    if (req.minComfort() > 0) costStr.append("C>=").append(req.minComfort()).append(" ");
-                    if (req.minMagic()   > 0) costStr.append("M>=").append(req.minMagic()).append(" ");
-                    if (req.minWonder()  > 0) costStr.append("W>=").append(req.minWonder());
+                    costStr.append("Colony Lv>=").append(req.minColonyLevel());
                 } else {
                     item.cost().forEach((elem, amt) -> {
                         if (!costStr.isEmpty()) costStr.append(", ");

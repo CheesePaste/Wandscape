@@ -41,11 +41,7 @@ class BuildingConfigTest {
         assertNotNull(cfg.queue());
         assertEquals(5, cfg.queue().capacity());
         assertNotNull(cfg.unlockRequirement());
-        assertEquals(0, cfg.unlockRequirement().minComfort());
-        assertEquals(0, cfg.unlockRequirement().minMagic());
-        assertEquals(0, cfg.unlockRequirement().minComfort());
-        assertEquals(0, cfg.unlockRequirement().minMagic());
-        assertEquals(0, cfg.unlockRequirement().minWonder());
+        assertEquals(1, cfg.unlockRequirement().minColonyLevel());
         assertSame(UnlockRequirement.NONE, cfg.unlockRequirement());
     }
 
@@ -62,7 +58,7 @@ class BuildingConfigTest {
               "magic": 3,
               "wonder": 5,
               "queue": {"capacity": 60, "task_types": ["crafting", "ritual"]},
-              "unlock_requirement": {"min_comfort": 0, "min_magic": 0, "min_wonder": 15}
+              "unlock_requirement": {"min_colony_level": 5}
             }
             """;
 
@@ -76,9 +72,7 @@ class BuildingConfigTest {
         assertEquals(5, cfg.wonder());
         assertEquals(60, cfg.queue().capacity());
         assertEquals(List.of("crafting", "ritual"), cfg.queue().taskTypes());
-        assertEquals(15, cfg.unlockRequirement().minWonder());
-        assertEquals(0, cfg.unlockRequirement().minComfort());
-        assertEquals(0, cfg.unlockRequirement().minMagic());
+        assertEquals(5, cfg.unlockRequirement().minColonyLevel());
 
         // Pattern
         assertEquals(3, cfg.pattern().size());
@@ -146,9 +140,7 @@ class BuildingConfigTest {
             json.addProperty("category", "basic");
 
             BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
-            assertEquals(0, cfg.unlockRequirement().minComfort());
-        assertEquals(0, cfg.unlockRequirement().minMagic());
-        assertEquals(0, cfg.unlockRequirement().minWonder());
+            assertEquals(1, cfg.unlockRequirement().minColonyLevel());
         }
     }
 }

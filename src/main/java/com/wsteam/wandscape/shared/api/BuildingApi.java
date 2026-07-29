@@ -29,6 +29,15 @@ public interface BuildingApi {
     boolean isDemolishing(UUID buildingId);
 
     // ---- Colony stats ----
+
+    /** All three evaluation values computed in a single traversal. */
+    record ColonySnapshot(int comfort, int magic, int wonder) {
+        public static final ColonySnapshot EMPTY = new ColonySnapshot(0, 0, 0);
+    }
+
+    @Nullable
+    ColonySnapshot getColonySnapshot(UUID colonyId);
+
     int getColonyComfort(UUID colonyId);
     int getColonyMagic(UUID colonyId);
     int getColonyWonder(UUID colonyId);

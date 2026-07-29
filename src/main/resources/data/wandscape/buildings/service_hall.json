@@ -127,8 +127,7 @@
     "task_types": ["service"]
   },
   "unlock_requirement": {
-    "min_comfort": 3,
-    "min_wonder": 0
+    "min_colony_level": 2
   },
   "boundary": {
     "min": [-3, 0, -3],

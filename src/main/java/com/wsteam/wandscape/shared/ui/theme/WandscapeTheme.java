@@ -16,11 +16,11 @@ public final class WandscapeTheme {
     public static final int COLOR_BG_MAIN = 0xCC111214;       // 80% opacity dark grey-blue
     public static final int COLOR_BG_HOVER = 0xEE1A1C20;      // Lighter dark on hover
     public static final int COLOR_BORDER_NORMAL = 0xFF3A3E4A; // Dim grey border
-    public static final int COLOR_BORDER_ACTIVE = 0xFF78A563; // Pale green accent (RTS style)
-    
-    public static final int COLOR_TEXT_NORMAL = 0xFFE0E0E0;   // Soft white
+    public static final int COLOR_BORDER_ACTIVE = 0xFFC8A040; // Gold accent (RTS style)
+
+    public static final int COLOR_TEXT_NORMAL = 0xFFCCCCCC;   // Soft white (reduced from E0E0E0 for eye comfort)
     public static final int COLOR_TEXT_DIM = 0xFF888888;      // Grey
-    public static final int COLOR_TEXT_ACTIVE = 0xFF78A563;   // Pale green text
+    public static final int COLOR_TEXT_ACTIVE = 0xFFC8A040;   // Gold text
     
     public static final int COLOR_COMFORT = 0xFF4CAF50;
     public static final int COLOR_MAGIC = 0xFF42A5F5;
@@ -48,6 +48,7 @@ public final class WandscapeTheme {
     // UI icons (16x16)
     public static final ResourceLocation ICON_TOURIST = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_tourist.png");
     public static final ResourceLocation ICON_WARNING = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_warning.png");
+    public static final ResourceLocation ICON_LOCK = ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, "textures/gui/icons/icon_lock.png");
 
     private WandscapeTheme() {}
 

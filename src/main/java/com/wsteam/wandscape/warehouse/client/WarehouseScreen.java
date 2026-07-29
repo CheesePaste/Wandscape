@@ -9,8 +9,9 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.component.ElementPanel;
+import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
-import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket.ItemEntry;
@@ -19,7 +20,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,17 +31,14 @@ import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Warehouse GUI with two tabs. Uses {@link WandscapeTheme} RTS HUD style
- * to match the V-panel overlay and TownHallScreen.
- *
- * <p><b>Overview tab:</b> Element display + searchable item list (read-only).
- * <br><b>Exchange tab:</b> Warehouse items (click to withdraw) + player inventory (click to deposit).
+ * Warehouse GUI with two tabs — Overview (element display + searchable item list)
+ * and Exchange (warehouse ↔ player inventory).
+ * Uses {@link MedievalScreen} MINIMAL theme with {@link MedievalColors}.
  */
-public class WarehouseScreen extends Screen {
+public class WarehouseScreen extends MedievalScreen {
 
     private static final int PW = 380;
     private static final int PH = 250;
-    private static final int HEADER_H = 22;
     private static final int TAB_H = 18;
     private static final int MAX_QTY = 64;
     private static final int SLOT_SIZE = 18;
@@ -57,10 +54,6 @@ public class WarehouseScreen extends Screen {
     private List<ItemEntry> exchangeFilteredItems = new ArrayList<>();
     private Map<ElementType, Long> elements = new LinkedHashMap<>();
 
-    // Layout (computed in init)
-    private int leftPos;
-    private int topPos;
-
     // ── Tab 0: Overview widgets ──
     private EditBox searchInput;
     private ElementPanel elementPanel;
@@ -71,7 +64,10 @@ public class WarehouseScreen extends Screen {
     private EditBox exchangeSearchInput;
 
     public WarehouseScreen() {
-        super(Component.literal("Colony Warehouse"));
+        super(Component.literal("Colony Warehouse"), PW, PH);
+        setTitleBar("Colony Warehouse");
+        this.showCloseButton = true;
+        this.headerHeight = 22;
     }
 
     // ── Data updates from server ──
@@ -90,11 +86,10 @@ public class WarehouseScreen extends Screen {
 
     @Override
     protected void init() {
-        this.leftPos = (this.width - PW) / 2;
-        this.topPos = (this.height - PH) / 2;
+        super.init();
 
         int contentX = leftPos + 8;
-        int tabContentY = topPos + HEADER_H + 2 + TAB_H + 5;
+        int tabContentY = topPos + headerHeight + 2 + TAB_H + 5;
 
         buildOverviewTab(contentX, tabContentY);
         buildExchangeTab(contentX, tabContentY);
@@ -107,11 +102,9 @@ public class WarehouseScreen extends Screen {
         int tabH = topPos + PH - tabY - 6;
         int elementPanelW = 130;
 
-        // Left: Element panel
         elementPanel = new ElementPanel(contentX, tabY, elementPanelW);
         elementPanel.setElements(elements);
 
-        // Right: Search + item list
         int rightX = contentX + elementPanelW + 6;
         int rightW = PW - 16 - elementPanelW - 6;
         int searchH = font.lineHeight + 6;
@@ -119,8 +112,8 @@ public class WarehouseScreen extends Screen {
         searchInput = new EditBox(font, rightX + 1, tabY + 2, rightW - 2, font.lineHeight,
                 Component.literal("Search items..."));
         searchInput.setBordered(false);
-        searchInput.setTextColor(WandscapeTheme.COLOR_TEXT_NORMAL);
-        searchInput.setTextColorUneditable(WandscapeTheme.COLOR_TEXT_DIM);
+        searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         searchInput.setHint(Component.literal("Search items..."));
         searchInput.setCanLoseFocus(true);
         searchInput.setResponder(this::applyFilter);
@@ -137,10 +130,9 @@ public class WarehouseScreen extends Screen {
         int tabH = topPos + PH - tabY - 6;
         int rightW = PW - 16;
 
-        int invSectionH = 10 + SLOT_SIZE * 4; // label + 4 slot rows
+        int invSectionH = 10 + SLOT_SIZE * 4;
         int bottomY = tabY + tabH - invSectionH;
 
-        // Warehouse items list — fills from top to the bottom section
         int listH = bottomY - tabY - 2;
         exchangeList = buildItemList(contentX, tabY, rightW, listH, true);
         exchangeList.setItems(exchangeFilteredItems);
@@ -153,7 +145,6 @@ public class WarehouseScreen extends Screen {
                     buildingPos, "withdraw", entry.itemId(), entry.nbt(), take, -1));
         });
 
-        // Search bar — to the right of player inventory, aligned with label row
         int invRight = leftPos + 8 + 9 * SLOT_SIZE;
         int sbX = invRight + 6;
         int sbW = (leftPos + PW - 8) - sbX;
@@ -161,20 +152,19 @@ public class WarehouseScreen extends Screen {
         exchangeSearchInput = new EditBox(font, sbX + 1, sbY + 1, sbW - 2, font.lineHeight,
                 Component.literal("Search items..."));
         exchangeSearchInput.setBordered(false);
-        exchangeSearchInput.setTextColor(WandscapeTheme.COLOR_TEXT_NORMAL);
-        exchangeSearchInput.setTextColorUneditable(WandscapeTheme.COLOR_TEXT_DIM);
+        exchangeSearchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        exchangeSearchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         exchangeSearchInput.setHint(Component.literal("Search items..."));
         exchangeSearchInput.setCanLoseFocus(true);
         exchangeSearchInput.setResponder(this::applyExchangeFilter);
     }
 
-    /** Build a scrollable item list with RTS-colored row rendering. */
+    /** Build a scrollable item list with themed row rendering. */
     private ScrollableList<ItemEntry> buildItemList(int x, int y, int w, int h, boolean showHint) {
         return new ScrollableList<>(x, y, w, h, 20) {
             @Override
             protected void renderRow(GuiGraphics g, ItemEntry item, int rx, int ry, int index,
                                      boolean selected, boolean hovered) {
-                // Item icon
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
                 if (registryItem != null && registryItem != Items.AIR) {
                     ItemStack icon = new ItemStack(registryItem);
@@ -185,31 +175,27 @@ public class WarehouseScreen extends Screen {
                     g.renderItem(icon, rx, ry + 2);
                 }
 
-                // Name
                 String name = formatItemName(item.itemId());
-                int textColor = selected ? WandscapeTheme.COLOR_TEXT_ACTIVE
-                        : hovered ? WandscapeTheme.COLOR_TEXT_NORMAL
-                        : WandscapeTheme.COLOR_TEXT_DIM;
+                int textColor = selected ? MedievalColors.BORDER_GOLD
+                        : hovered ? MedievalColors.TEXT_WARM_WHITE
+                        : MedievalColors.TEXT_MUTED;
                 g.drawString(Minecraft.getInstance().font, name, rx + 20, ry + 3, textColor);
 
-                // Count (right-aligned)
                 String count = formatCount(item.count());
                 int countW = Minecraft.getInstance().font.width(count);
                 g.drawString(Minecraft.getInstance().font, count,
                         rx + getWidth() - SCROLLBAR_W - countW - 8, ry + 3,
-                        WandscapeTheme.COLOR_TEXT_DIM);
+                        MedievalColors.TEXT_MUTED);
 
-                // Exchange tab: hint on hover
                 if (showHint && hovered) {
                     String hint = "L-click: withdraw 1  |  R-click: withdraw " + MAX_QTY;
                     g.drawString(Minecraft.getInstance().font, hint, rx + 20, ry + 14,
-                            WandscapeTheme.COLOR_TEXT_DIM);
+                            MedievalColors.TEXT_MUTED);
                 }
             }
         };
     }
 
-    /** Y-position of the "Player Inventory" label (exchange tab). */
     private int getInventoryY() {
         return topPos + PH - 10 - SLOT_SIZE * 4 - 6;
     }
@@ -217,7 +203,6 @@ public class WarehouseScreen extends Screen {
     // ── Tab switching ──
 
     private void showTab(int tabIndex) {
-        // Remove all tab-specific widgets
         if (elementPanel != null) removeWidget(elementPanel);
         if (searchInput != null) removeWidget(searchInput);
         if (overviewList != null) removeWidget(overviewList);
@@ -238,75 +223,26 @@ public class WarehouseScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // 1. Panel background
         renderBackground(g, mouseX, mouseY, partialTick);
-
-        // 2. Header bar
-        renderHeader(g, mouseX, mouseY);
-
-        // 3. Tab bar
+        renderMinimalHeader(g);
+        renderCloseButton(g, mouseX, mouseY);
         renderTabs(g, mouseX, mouseY);
-
-        // 4. Search field backgrounds + separator line (behind widgets)
         renderDecorations(g);
 
-        // 5. Widgets (EditBox, ElementPanel, ScrollableList)
         for (Renderable r : this.renderables) {
             r.render(g, mouseX, mouseY, partialTick);
         }
 
-        // 6. Exchange tab: player inventory (after widgets)
         if (activeTab == 1) {
             renderPlayerInventory(g, mouseX, mouseY);
         }
-    }
-
-    @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderTransparentBackground(g);
-        WandscapeTheme.drawRtsBox(g, leftPos, topPos, PW, PH, false, false);
-    }
-
-    // ── Header ──
-
-    private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
-        int hx = leftPos + 1;
-        int hy = topPos + 1;
-        int hw = PW - 2;
-
-        // Header background
-        g.fill(hx, hy, hx + hw, hy + HEADER_H, WandscapeTheme.COLOR_BG_HOVER);
-        // Bottom separator
-        g.fill(hx, hy + HEADER_H, hx + hw, hy + HEADER_H + 1, WandscapeTheme.COLOR_BORDER_NORMAL);
-        // Green accent bar on left edge
-        g.fill(hx, hy, hx + 3, hy + HEADER_H, WandscapeTheme.COLOR_BORDER_ACTIVE);
-        // Title
-        g.drawString(font, "Colony Warehouse", hx + 10,
-                hy + (HEADER_H - font.lineHeight) / 2, WandscapeTheme.COLOR_TEXT_NORMAL);
-        // Close button
-        renderCloseBtn(g, mouseX, mouseY);
-    }
-
-    private void renderCloseBtn(GuiGraphics g, int mouseX, int mouseY) {
-        int bw = 20, bh = 16;
-        int bx = leftPos + PW - bw - 5;
-        int by = topPos + (HEADER_H - bh) / 2 + 1;
-
-        boolean hovered = isInRect(mouseX, mouseY, bx, by, bw, bh);
-        if (hovered) {
-            g.fill(bx, by, bx + bw, by + bh, 0x33FFFFFF);
-        }
-        g.drawString(font, "✕",
-                bx + (bw - font.width("✕")) / 2,
-                by + (bh - font.lineHeight) / 2,
-                hovered ? WandscapeTheme.COLOR_TEXT_NORMAL : WandscapeTheme.COLOR_TEXT_DIM);
     }
 
     // ── Tabs ──
 
     private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
         String[] tabs = { "Overview", "Exchange" };
-        int ty = topPos + HEADER_H + 2;
+        int ty = topPos + headerHeight + 2;
         int tx = leftPos + 8;
         int padH = 10;
 
@@ -315,11 +251,11 @@ public class WarehouseScreen extends Screen {
             boolean active = i == activeTab;
             boolean hovered = !active && isInRect(mouseX, mouseY, tx, ty, tw, TAB_H);
 
-            WandscapeTheme.drawRtsBox(g, tx, ty, tw, TAB_H, active, hovered);
+            drawMinimalBox(g, tx, ty, tw, TAB_H, active, hovered);
 
-            int textColor = active ? WandscapeTheme.COLOR_TEXT_ACTIVE
-                    : hovered ? WandscapeTheme.COLOR_TEXT_NORMAL
-                    : WandscapeTheme.COLOR_TEXT_DIM;
+            int textColor = active ? MedievalColors.BORDER_GOLD
+                    : hovered ? MedievalColors.TEXT_WARM_WHITE
+                    : MedievalColors.TEXT_MUTED;
             g.drawString(font, tabs[i],
                     tx + (tw - font.width(tabs[i])) / 2,
                     ty + (TAB_H - font.lineHeight) / 2,
@@ -328,7 +264,7 @@ public class WarehouseScreen extends Screen {
         }
     }
 
-    // ── Decorations (search backgrounds, separator) ──
+    // ── Decorations ──
 
     private void renderDecorations(GuiGraphics g) {
         if (activeTab == 0 && searchInput != null) {
@@ -338,23 +274,12 @@ public class WarehouseScreen extends Screen {
             drawInsetField(g, exchangeSearchInput.getX() - 1, exchangeSearchInput.getY() - 2,
                     exchangeSearchInput.getWidth() + 2, exchangeSearchInput.getHeight() + 4);
 
-            // Separator line above bottom section (full width)
             int invY = getInventoryY();
             g.fill(leftPos + 8, invY - 2, leftPos + PW - 8, invY - 1,
-                    WandscapeTheme.COLOR_BORDER_NORMAL);
+                    MedievalColors.BORDER_GOLD_DARK);
             g.drawString(font, "Player Inventory", leftPos + 8, invY,
-                    WandscapeTheme.COLOR_TEXT_DIM);
+                    MedievalColors.TEXT_MUTED);
         }
-    }
-
-    /** Dark inset field background with 1px border (for search inputs). */
-    private static void drawInsetField(GuiGraphics g, int x, int y, int w, int h) {
-        g.fill(x, y, x + w, y + h, 0x28000000);
-        int border = WandscapeTheme.COLOR_BORDER_NORMAL;
-        g.fill(x, y, x + w, y + 1, border);
-        g.fill(x, y + h - 1, x + w, y + h, border);
-        g.fill(x, y, x + 1, y + h, border);
-        g.fill(x + w - 1, y, x + w, y + h, border);
     }
 
     // ── Player inventory (Exchange tab) ──
@@ -367,7 +292,6 @@ public class WarehouseScreen extends Screen {
         if (player == null) return;
         var inventory = player.getInventory();
 
-        // Main inventory (slots 9-35, 3 rows)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 int slot = 9 + row * 9 + col;
@@ -378,7 +302,6 @@ public class WarehouseScreen extends Screen {
             }
         }
 
-        // Hotbar (slots 0-8)
         for (int col = 0; col < 9; col++) {
             int sx = invX + col * SLOT_SIZE;
             int sy = invY + 3 * SLOT_SIZE;
@@ -390,11 +313,10 @@ public class WarehouseScreen extends Screen {
     }
 
     private void renderSlot(GuiGraphics g, ItemStack stack, int x, int y, boolean hovered) {
-        int bg = hovered ? WandscapeTheme.COLOR_BG_HOVER : 0xFF15181C;
-        int border = hovered ? WandscapeTheme.COLOR_BORDER_ACTIVE : WandscapeTheme.COLOR_BORDER_NORMAL;
+        int bg = hovered ? MedievalColors.BUTTON_BG_HOVER : MedievalColors.PARCHMENT_DEEPEST;
+        int border = hovered ? MedievalColors.BORDER_GOLD : MedievalColors.BORDER_GOLD_DARK;
 
         g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, bg);
-        // 1px border
         g.fill(x, y, x + SLOT_SIZE, y + 1, border);
         g.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, border);
         g.fill(x, y, x + 1, y + SLOT_SIZE, border);
@@ -435,7 +357,7 @@ public class WarehouseScreen extends Screen {
     private void showHoverText(GuiGraphics g, ItemStack stack, int mx, int my) {
         if (!stack.isEmpty()) {
             g.drawString(Minecraft.getInstance().font, stack.getHoverName().getString(),
-                    mx + 8, my - 12, WandscapeTheme.COLOR_TEXT_NORMAL);
+                    mx + 8, my - 12, MedievalColors.TEXT_WARM_WHITE);
         }
     }
 
@@ -443,11 +365,8 @@ public class WarehouseScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Close button
-        if (button == 0 && isCloseHit(mouseX, mouseY)) {
-            this.onClose();
-            return true;
-        }
+        // Base class handles close button + widget clicks
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
 
         // Tab clicks
         if (button == 0) {
@@ -464,19 +383,12 @@ public class WarehouseScreen extends Screen {
             if (handleInventoryClick((int) mouseX, (int) mouseY, button)) return true;
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    private boolean isCloseHit(double mouseX, double mouseY) {
-        int bw = 20, bh = 16;
-        int bx = leftPos + PW - bw - 5;
-        int by = topPos + (HEADER_H - bh) / 2 + 1;
-        return isInRect(mouseX, mouseY, bx, by, bw, bh);
+        return false;
     }
 
     private int getTabAt(double mouseX, double mouseY) {
         String[] tabs = { "Overview", "Exchange" };
-        int ty = topPos + HEADER_H + 2;
+        int ty = topPos + headerHeight + 2;
         int tx = leftPos + 8;
         int padH = 10;
         for (int i = 0; i < tabs.length; i++) {
@@ -503,7 +415,6 @@ public class WarehouseScreen extends Screen {
         var player = Minecraft.getInstance().player;
         if (player == null) return false;
 
-        // Main inventory (slots 9-35)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 int slot = 9 + row * 9 + col;
@@ -514,7 +425,6 @@ public class WarehouseScreen extends Screen {
                 }
             }
         }
-        // Hotbar (slots 0-8)
         for (int col = 0; col < 9; col++) {
             int slot = col;
             int sx = invX + col * SLOT_SIZE;
@@ -579,10 +489,6 @@ public class WarehouseScreen extends Screen {
 
     // ── Helpers ──
 
-    private static boolean isInRect(double mx, double my, int x, int y, int w, int h) {
-        return mx >= x && mx < x + w && my >= y && my < y + h;
-    }
-
     private static String formatItemName(String itemId) {
         int colon = itemId.indexOf(':');
         String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
@@ -593,10 +499,5 @@ public class WarehouseScreen extends Screen {
         if (n < 1000) return String.valueOf(n);
         if (n < 1_000_000) return String.format("%.1fK", n / 1000.0);
         return String.format("%.1fM", n / 1_000_000.0);
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
     }
 }

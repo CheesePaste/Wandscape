@@ -1,8 +1,12 @@
 package com.wsteam.wandscape.engine.colony;
 
 import java.util.UUID;
+import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.shared.event.ColonyLevelUpEvent;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -23,8 +27,15 @@ public final class ColonyLevelManager {
 
     private final ColonyLevelData data;
 
+    @Nullable
+    private Consumer<ColonyLevelUpEvent> levelUpCallback;
+
     public ColonyLevelManager(ColonyLevelData data) {
         this.data = data;
+    }
+
+    public void setLevelUpCallback(@Nullable Consumer<ColonyLevelUpEvent> callback) {
+        this.levelUpCallback = callback;
     }
 
     /** Get the level for a colony (default 1). */
@@ -99,6 +110,9 @@ public final class ColonyLevelManager {
             data.setExperience(colonyId, overflow);
             Log.info(TAG, "[Colony] ⬆ Colony {} leveled up: Lv.{} → Lv.{} (overflow={})",
                     shortId(colonyId), level, newLevel, overflow);
+            if (levelUpCallback != null) {
+                levelUpCallback.accept(new ColonyLevelUpEvent(colonyId, level, newLevel, overflow));
+            }
         } else {
             data.setExperience(colonyId, total);
         }

@@ -8,7 +8,13 @@
 
 ## 引擎持有者
 
-WandscapeEngine 单例持有：World + AsyncTransformExecutor + 各边界实现 + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager。`reset()` 在 ServerStoppedEvent 清空静态状态。
+WandscapeEngine 单例持有：World + AsyncTransformExecutor + 各边界实现 + BlueprintConfigLoader + TaskPoolSavedData + RoadSavedData + ItemTransportManager + ColonyLevelManager。`reset()` 在 ServerStoppedEvent 清空静态状态。
+
+## 统一指标服务 (service/)
+
+`ColonyMetricsService` 需要引用所有模块 API（BuildingApi/TouristApi/NpcApi/WarehouseApi/ColonyLevelManager），放在 engine/ 符合依赖规则。它聚合实时殖民地指标，是 PanelStateTracker、PanelStateTogglePacket 和 AchievementService 的唯一数据源。
+
+`EngineBootstrap.register()` 前必须确保 `WandscapeEngine.setWorld(world)` 已完成——2026-07-29 修复了此前服务在 null world 上注册的时序 bug。
 
 ## TaskSource 实现 (source/)
 

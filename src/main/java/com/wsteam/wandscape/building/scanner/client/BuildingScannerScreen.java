@@ -49,7 +49,7 @@ public class BuildingScannerScreen extends Screen {
     private EditBox metaComfort, metaMagic, metaWonder;
 
     // ── Unlock requirement ──
-    private EditBox unlockComfort, unlockMagic, unlockWonder;
+    private EditBox unlockLevel;
 
     // ── Shop config (shown when category=shop) ──
     private EditBox shopProfitRate, shopDuration;
@@ -192,12 +192,8 @@ public class BuildingScannerScreen extends Screen {
         y += 14;
         unlockY = y - 14;
 
-        unlockComfort = mkNumEdit(lx + COL2, y, FW, scanner.getUnlockMinComfort(),
-                s -> { scanner.setUnlockMinComfort(intOrZero(s)); syncToServer(); });
-        unlockMagic = mkNumEdit(lx + COL2 + FW + 12, y, FW, scanner.getUnlockMinMagic(),
-                s -> { scanner.setUnlockMinMagic(intOrZero(s)); syncToServer(); });
-        unlockWonder = mkNumEdit(lx + COL2 + (FW + 12) * 2, y, FW, scanner.getUnlockMinWonder(),
-                s -> { scanner.setUnlockMinWonder(intOrZero(s)); syncToServer(); });
+        unlockLevel = mkNumEdit(lx + COL2, y, FW, scanner.getUnlockMinLevel(),
+                s -> { scanner.setUnlockMinLevel(intOrZero(s)); syncToServer(); });
         y += ROW_H + 10;
 
         // ── Category-specific sections ──
@@ -506,9 +502,7 @@ public class BuildingScannerScreen extends Screen {
 
         // Unlock requirement
         drawHdr(gui, "Unlock Requirement", lx, unlockY);
-        drawLbl(gui, "Comfort", lx + COL2, unlockY + ROW_H - 4);
-        drawLbl(gui, "Magic", lx + COL2 + FW + 12, unlockY + ROW_H - 4);
-        drawLbl(gui, "Wonder", lx + COL2 + (FW + 12) * 2, unlockY + ROW_H - 4);
+        drawLbl(gui, "Min Level", lx + COL2, unlockY + ROW_H - 4);
 
         // Category-specific
         String cat = scanner.getCategory();

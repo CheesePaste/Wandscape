@@ -15,6 +15,6 @@
     "dark": 32
   },
   "unlock_requirement": {
-    "min_magic": 150
+    "min_colony_level": 5
   }
 }

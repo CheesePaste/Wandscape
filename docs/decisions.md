@@ -209,21 +209,15 @@
 
 **为什么 V 键从三态循环改为面板开关？** 原三态循环（Normal→Projection→Road→Normal）选择不直观，无法直接跳到目标模式。面板底部页签可任意切换模式，V 键简化为面板开关单一职责。旧版 V 键循环逻辑移至 WandscapePanelState.enterSubMode()/exitCurrentSubMode()。
 
+## 统一指标聚合 (ColonyMetricsService，2026-07-29)
+
+**为什么创建 ColonyMetricsService 而非让每个消费者各自查询不同 API？** 三个消费者（PanelStateTracker、PanelStateTogglePacket、AchievementService）都需要查询同一组殖民地指标。让每个消费者分别调 5+ 个 API 意味着：(1) ~150 行重复聚合代码 (2) 每个消费者必须知道所有 API 的存在 (3) 新增指标需要改所有消费者。ColonyMetricsService 是 Facade 模式——它不持有数据、不写数据、不包含业务逻辑，只是将已有 API 的查询结果聚合到一个 record。这减少了**消费者**的耦合度（一个依赖而非五个），而没有增加系统本身的耦合度（已有的跨 API 依赖已经存在）。
+
+**为什么 ColonyMetricsService 放在 engine/service/ 而非作为独立模块？** engine/ 是唯一能合法引用所有模块的层（它需要调到 BuildingApi、TouristApi、NpcApi、WarehouseApi 和 ColonyLevelManager）。放在 engine/ 同时允许它访问 WandscapeEngine.getColonyLevelManager()——ColonyLevelManager 不像其他模块那样有 shared/api 接口，而是直接挂在 WandscapeEngine 上。
+
+**为什么 ColonyMetricsSnapshot 包含 shutdown/broken 建筑名称列表这种 UI 数据？** 这些列表有两种消费者：HUD 警告浮层（UI）和成就系统（未来可能需要统计"累计 N 栋建筑关停"）。两种场景都需要按原样传递列表。若只传计数，成就系统无法派生列表。若切分成"UI 专用列表 + 核心数值"两个 record，消费者需要调用两个方法再自行组装——正好是我们想避免的重复组装。
+
 **为什么面板从底部页签改为左侧侧边栏 + 顶部全宽 HUD？** 底部页签占据屏幕下方 48px，与 MC 原版快捷栏区域冲突，可显示信息量有限。新布局将模式切换移至左侧 36px 竖排侧边栏（Build/Road/Stats/Warning），顶部 28px 全宽 HUD 展示殖民地全貌（名称等级、三值、天数、游客、NPC、停摆、元素储量），信息密度更高且不遮挡中心视野。侧边栏警告图标带红色圆点徽章，点击弹出关停建筑列表浮层，让玩家在任意面板模式下都能感知殖民地健康状态。
-
-## 蓝图节点编辑器（Blueprint Node Editor）
-
-**为什么表达式也是节点（ExprNode as Canvas Node，方案 D）而非内联文本编辑？** 方案 B（分层构建器）和 C（悬停编辑+mini-builder）将表达式编辑隐藏在下拉菜单和弹窗中，用户无法看到完整的数据流图。方案 D 将所有 ExprNode 变体作为一等画布节点，数据引脚间通过连线传递值——这是 Unreal Engine Blueprints 的原生范式，开发者看到节点图即可理解数据从何而来、经过哪些变换。简单 `$var` 字面量节点虽然只输出一个变量名，但它们在画布上的存在让参数来源可追溯、可拖线替换。
-
-**为什么选 B（Loop Body 连线 DFS 收集子步骤）而非子图容器？** v1 不做嵌套子图（方案 C 的开发量约为 B 的 3×）。方案 B 通过 ForEach 节点的 Loop Body exec out 引脚连线到第一个子步骤，子步骤串行连线，DFS 沿 exec 边收集步骤列表——序列化时自动还原为 `for_each.steps` 数组。这保持了画布扁平、连线统一，同时不丢失控制流语义。
-
-**为什么节点定义用 descriptor 注册表（NodeDefinitionRegistry）而非每种节点写死渲染代码？** 14 种 StepNode + 22 种 ExprNode + Input 节点 = 37 种节点类型。为每种在 renderBlueprintEditor() 中写死 if-else 分支会导致渲染函数膨胀到 500+ 行且添加新节点类型需改渲染逻辑。Descriptor 模式让每种节点声明自己的引脚列表（exec + data + 类型 + 颜色），渲染函数遍历引脚列表统一渲染。新增节点只需注册一个 descriptor。
-
-**为什么 CanvasGraph → BlueprintDefinition JSON 序列化时简单 Var 节点输出糖语法 `"$var"` 而非显式对象 `{"$": "var"}`？** 保持 JSON 可读性。DSL 设计初衷是 JSON 可手工编辑，糖语法是默认表示法。反序列化时两种格式都支持读入，但写出时优先糖语法——与现有 `data/wandscape/blueprints/*.json` 风格一致，不破坏已有蓝图文件。
-
-**为什么字面量/Var 表达式节点值内联编辑（inlineValues map）而非也走连线？** 字面量（LiteralString/LiteralInt/LiteralPos）是表达式树的叶子节点，值为单一常量。为 `"42"` 这个 int 画一个独立节点并连线到 Add.left 虽然纯正，但会导致画布上出现大量无意义的"常量盒子"。折中：字面量/Var 节点仍渲染为小菱形节点（保留 D 路线的可追溯性），但其值直接内联编辑（点击节点在 Inspector 改值），输出为单根数据引脚——连线到消费节点即可。
-
-**为什么蓝图编辑器仿照 building/editor/ 模式独立为 blueprint/editor/ 包？** 复用已验证的架构：ClientState（volatile 静态状态）+ ImGui（渲染）+ Controller（逻辑）+ Network（网络包）。ImGuiManager 只负责调度，不持有编辑器逻辑——与 BuildingEditorImGui 的委托关系一致。BlueprintEditorCommand 作为入口，toggle 时激活编辑器状态。
 
 ## 懒加载道路斑块（Lazy Road Blob）系统（2026-06-28）
 
@@ -238,6 +232,16 @@
 **为什么边界只在 XZ 平面检查（不检查 Y±1）？** 楼梯/斜坡的每个台阶天然是边界——NPC 可以在任意台阶上/下道路。检查 Y±1 会让平坦道路的内部方块也成为边界（因为上方无方块），失去"内部 vs 边界"的区分意义。Y 变体通过 centroid 虫洞自动处理——BFS 已经将楼梯的所有台阶纳入同一个斑块。
 
 **为什么核心数据结构和引擎扫描分开为 core/RoadBlobCache + engine/RoadBlobExplorer？** 遵循 core/ 零 MC 依赖规则。RoadBlobCache 是纯 Java 集合操作（Map/Set/BFS），可在单元测试中验证。RoadBlobExplorer 需要 Level/BlockState/TagKey，放在 engine/。RoadRouter.buildGraph() 只读 RoadBlobCache，是纯核心逻辑。
+
+## UI 主题统一（2026-07-29）
+
+**为什么所有单页 Screen 统一用 MedievalScreen MINIMAL 而非保留 WandscapeTheme RTS 风格？** 项目存在 3 套视觉风格（FULL 羊皮纸精灵 / RTS 代码绘制 / 硬编码杂色），风格不统一。统一到 MINIMAL 后：所有 Screen 共享渐变玻璃面板 + 发光边框 + 紫色标题栏 + MedievalColors 调色板，玩家感受一致。新 Screen 只需 `extends MedievalScreen` 即自动获得整套风格。
+
+**为什么删除 DecorationLevel 枚举？** 枚举定义了 FULL/MINIMAL/NONE 三个级别，但只有 MINIMAL 被使用。保留枚举造成虚假的灵活性——"未来可能切回 FULL"的假设无实际需求支撑。删除后 MedievalScreen 代码减少分支，render() 和 renderBackground() 不再有 switch/if。
+
+**为什么 WandscapeTheme 限用于 V 面板覆盖层而非所有 UI？** BUILD/ROAD/STATS 覆盖层渲染在世界之上（HUD 层），使用 `RenderType.guiOverlay()` 和不同的透明度需求。Screen 渲染在独立的 GUI 层，有 dim 背景 + 居中面板。两层视觉上下文不同，强行统一到一套主题会牺牲各自的优势。WandscapeTheme 保留为覆盖层工具集，MedievalColors 作为 Screen 调色板。
+
+**为什么边框用 2 环发光渐变而非斜边（beveled）？** 斜边边框在不同方向使用不同颜色（上/左亮，下/右暗），角部颜色突变突兀。发光边框每环四边颜色统一，靠内外环不同透明度制造景深，角部自然平滑。
 
 ## 包重构（2026-07-04）
 

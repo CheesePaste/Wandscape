@@ -5,13 +5,12 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 /**
  * Utility for checking whether a building type is unlocked for a given colony.
  *
- * <p>A building is unlocked when the colony's evaluation values meet or exceed
- * all minima specified in {@link BuildingConfig.UnlockRequirement}.
+ * <p>A building is unlocked when the colony's level meets or exceeds the minimum
+ * specified in {@link BuildingConfig.UnlockRequirement}.
  * If no requirement is present ({@code NONE}) the building is always available.
  */
 public final class BuildingUnlockChecker {
@@ -26,10 +25,9 @@ public final class BuildingUnlockChecker {
         if (colonyId == null) return false;
         BuildingConfig.UnlockRequirement req = config.unlockRequirement();
         if (req == BuildingConfig.UnlockRequirement.NONE) return true;
-        BuildingApi api = WandscapeApis.getBuildingApi();
-        return api.getColonyComfort(colonyId) >= req.minComfort()
-            && api.getColonyMagic(colonyId)   >= req.minMagic()
-            && api.getColonyWonder(colonyId)  >= req.minWonder();
+        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        if (levelMgr == null) return false;
+        return levelMgr.getLevel(colonyId) >= req.minColonyLevel();
     }
 
     @Nullable
@@ -37,16 +35,12 @@ public final class BuildingUnlockChecker {
         BuildingConfig.UnlockRequirement req = config.unlockRequirement();
         if (req == BuildingConfig.UnlockRequirement.NONE) return null;
         if (colonyId == null) return "No colony assigned";
-        BuildingApi api = WandscapeApis.getBuildingApi();
-        int c = api.getColonyComfort(colonyId);
-        int m = api.getColonyMagic(colonyId);
-        int w = api.getColonyWonder(colonyId);
-        if (c < req.minComfort())
-            return "Requires Comfort %d (current: C=%d M=%d W=%d)".formatted(req.minComfort(), c, m, w);
-        if (m < req.minMagic())
-            return "Requires Magic %d (current: C=%d M=%d W=%d)".formatted(req.minMagic(), c, m, w);
-        if (w < req.minWonder())
-            return "Requires Wonder %d (current: C=%d M=%d W=%d)".formatted(req.minWonder(), c, m, w);
+        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        if (levelMgr == null) return "Level system not available";
+        int current = levelMgr.getLevel(colonyId);
+        int required = req.minColonyLevel();
+        if (current < required)
+            return "Requires colony level %d (current: %d)".formatted(required, current);
         return null;
     }
 }

@@ -93,23 +93,6 @@ public final class SkinRender {
                    SkinSprite.CLOSE_SHEET_W, SkinSprite.CLOSE_SHEET_H);
     }
 
-    // ── Tab segment rendering ──
-
-    public static void drawTabLeft(GuiGraphics g, int x, int y) {
-        drawSprite(g, SkinSprite.TAB_C, x, y, SkinSprite.TAB_C_LEFT,
-                   SkinSprite.TAB_C_SHEET_W, SkinSprite.TAB_C_SHEET_H);
-    }
-
-    public static void drawTabCenter(GuiGraphics g, int x, int y, int w) {
-        drawSprite(g, SkinSprite.TAB_C, x, y, w, SkinSprite.TAB_C_CENTER.height(),
-                   SkinSprite.TAB_C_CENTER, SkinSprite.TAB_C_SHEET_W, SkinSprite.TAB_C_SHEET_H);
-    }
-
-    public static void drawTabRight(GuiGraphics g, int x, int y) {
-        drawSprite(g, SkinSprite.TAB_C, x, y, SkinSprite.TAB_C_RIGHT,
-                   SkinSprite.TAB_C_SHEET_W, SkinSprite.TAB_C_SHEET_H);
-    }
-
     // ── Header bar (3-part: left cap + stretched center + right cap) ──
 
     /**

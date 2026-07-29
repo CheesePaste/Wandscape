@@ -218,8 +218,61 @@ GlobalTaskPool.addTask() → SchedulerSystem → NPC 执行
 - 顶部殖民地信息栏扩展为全宽 HUD：殖民地名称等级 + 三值 + 天数 + 游客数 + NPC idle/total + 停摆数 + 5 元素(地木水火风)数量
 - 新增停摆建筑警告浮层（侧边栏 Warning 图标点击弹出，列出关停建筑名称）
 - 新增 `WandscapeTheme.elementIcon()` 映射 7 种元素到对应图标
-- 服务端 HUD 数据采集（游客/NPC/元素/关停）通过 `PanelStateTracker` + `PanelStateTogglePacket` 推送到客户端
+- 服务端 HUD 数据采集（游客/NPC/元素/关停）通过 `ColonyMetricsApi` + `PanelStateTracker` + `PanelStateTogglePacket` 推送到客户端
 - 新增 7 种元素图标（earth/wood/water/fire/metal/wind/dark），白通道 64×64 PNG
+
+## 已完成：ColonyMetricsService 指标聚合服务 (2026-07-29)
+
+**消除了 PanelStateTracker 和 PanelStateTogglePacket 中 ~150 行重复的聚合逻辑**，为成就系统提供单一查询入口。
+
+### 新增文件
+
+| 文件 | 用途 |
+|------|------|
+| `shared/data/ColonyMetricsSnapshot.java` | 统一指标数据 record（22 字段） |
+| `shared/api/ColonyMetricsApi.java` | 统一查询接口 |
+| `shared/event/ColonyLevelUpEvent.java` | 殖民地升级事件 |
+| `engine/service/ColonyMetricsService.java` | 实现类，聚合 6 个 API 数据 |
+
+### 修改文件
+
+| 文件 | 变更 |
+|------|------|
+| `shared/api/BuildingApi.java` | 添加嵌套 ColonySnapshot record + getColonySnapshot() |
+| `building/internal/BuildingApiImpl.java` | 实现 getColonySnapshot()，三值查询从 3 次 O(n) 变为 1 次 |
+| `shared/api/NpcApi.java` | 添加 getNpcCount()/getIdleNpcCount() default 方法 |
+| `shared/registry/WandscapeApis.java` | 注册 ColonyMetricsApi |
+| `engine/colony/ColonyLevelManager.java` | 添加 levelUpCallback，升级时发 ColonyLevelUpEvent |
+| `Wandscape.java` | 启动时装配 MetricsService + levelUpCallback |
+| `engine/bootstrap/EngineBootstrap.java` | 修复服务注册在 setWorld() 之前的时序 bug |
+| `shared/network/PanelStateTracker.java` | 删除 ~80 行聚合，改用 ColonyMetricsApi |
+| `shared/network/PanelStateTogglePacket.java` | 删除 ~70 行聚合，改用 ColonyMetricsApi |
+| `shared/network/ColonyStatsSyncPacket.java` | 添加 fromSnapshot() 工厂方法 |
+| `engine/service/AchievementService.java` | 订阅 ColonyLevelUpEvent |
+
+### 数据流
+
+```
+ColonyMetricsService.getSnapshot(colonyId)   ← 成就/HUD 统一调用
+  → BuildingApi.getColonySnapshot()          三值(单次遍历)
+  → ColonyLevelManager                      等级/经验/名称
+  → TouristApi                              游客数/过夜/满意度
+  → BuildingApi.getColonyBuildings()         关停/损坏计数
+  → NpcApi.getNpcCount()                    NPC 数量
+  → WarehouseApi.getAllElements()            元素储量
+  → ColonyMetricsSnapshot (22字段)          返回值
+```
+
+## 已完成：UI 主题统一 (2026-07-29)
+
+- 所有单页 Screen 统一继承 `MedievalScreen`，MINIMAL 风格：渐变玻璃面板 + 2 环发光边框 + 紫色渐变标题栏
+- `WandscapeTheme` 限用于 V 面板覆盖层（BUILD/ROAD/STATS），不再被任何 Screen 直接使用
+- `TownHallScreen`、`WarehouseScreen` 从 `Screen+WandscapeTheme` 转换为 `MedievalScreen`
+- `AnomalyScreen` 清理硬编码颜色，改用 `MedievalColors`
+- 所有建筑 UI 面板统一为 300×230 尺寸
+- STATS 统计面板改为双栏布局（维护+游客 | 元素消耗）
+- 删除旧 ImGui 编辑器文档（imgui/standalone/blueprint_editor/building-editor）
+- 清理死代码：`DecorationLevel` 枚举、FULL/NONE 分支、3 个未使用 `MedievalColors` 常量、3 个 `SkinRender` 方法、4 个孤儿纹理
 
 ## 后续阶段（概览）
 

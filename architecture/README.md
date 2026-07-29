@@ -47,23 +47,22 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── boundary/     WandscapeBlockOps/WandscapeMovementOps/WandscapeRitualOps/WandscapeEntityOps + AsyncTransformExecutor + ResourceRequestExecutor
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
 │   ├── system/       ECS System（注册到World.tick()）NavigationSystem + FailureAnalyzerSystem
-│   ├── service/      非ECS服务（EventBus订阅者）StatsService + AchievementService
+│   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService
 │   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │
 ├── shared/           所有包依赖的公共层
-│   ├── api/          12 个模块接口(不含AtomixExecutor/HouseApi/ManaPoolApi桩) + registry/WandscapeApis.java(静态定位器)
-│   ├── data/         20+个record/enum(WorkItem/MaintenanceCost/BlueprintInfo/Emotion/MageResume/VisitMemory/...)
+│   ├── api/          13 个模块接口(ColonyMetricsApi + 现有12个) + registry/WandscapeApis.java(静态定位器)
+│   ├── data/         21+个record/enum(含ColonyMetricsSnapshot/WorkItem/MaintenanceCost/BlueprintInfo/Emotion/...)
 │   ├── event/        12 个 NeoForge 事件(模块间通信 + 模拟经营事件)
 │   ├── log/          Log 工具类 + LogFilter 运行时白名单过滤器
-│   └── ui/           中世纪魔法主题组件库(MedievalScreen/Button/ScrollableList/...)
+│   └── ui/           共享UI组件库(MedievalScreen MINIMAL风格/Button/ScrollableList/...)
 │
 ├── building/         建筑管理(零自定义方块/BE，全部SavedData)。
 │                     category: basic/node/storage/workstation/crafting_station/
 │                               potion_station/shop/service/decoration/wonder/tavern
 │                     系统: 每日结算(DailySettlementSystem) + 维护费预测(MaintenanceForecastSystem)
 │                           + 装饰辐射(DecorationBonusSystem) + 商店库存(ShopStockManager) + 奇观效果(WonderEffectApplier)
-│   ├── client/       HotelScreen/ShopScreen/TavernScreen
-│   ├── editor/       BuildingEditor 全套(状态/控制器/ImGui面板/输入处理)
+│   ├── client/       HotelScreen/ShopScreen/TavernScreen/TownHallScreen (MedievalScreen MINIMAL)
 │   └── network/      建筑相关网络包
 ├── wand/             法杖物品+预设+NBT+JSON配方(新attributes[]格式)
 ├── element/          方块→元素映射
@@ -82,11 +81,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── overview/         俯瞰（鸟瞰）视角模式，V 打开面板默认进入
 │   ├── client/       OverviewClientState/OverviewFlightController/OverviewRenderer
 │   └── network/      OverviewInteractPacket
-├── imgui/            ImGui 管理器 + 渲染调度
-├── standalone/       独立编辑器启动器(无需MC, 纯GLFW+ImGui)
 ├── equipment/        装备系统(EquipmentSlot/AttributeType/EquipmentPreset/EquipmentComponent)
-└── blueprint/        蓝图节点编辑器
-    └── editor/       BlueprintEditorClientState/Canvas/ImGui/Controller/Network
 ```
 
 ## 数据流（核心路径）
@@ -129,6 +124,23 @@ BuildingConfig JSON → BuildingConfigLoader
   → StatModifier/PriceModifier/RuleUnlock → 全局效果
 ```
 
+### 指标聚合数据流
+
+```
+ColonyMetricsService.getSnapshot(colonyId)   ← 统一查询入口
+  → BuildingApi.getColonySnapshot(colonyId)         三值(单次遍历)
+  → ColonyLevelManager                              等级/经验/名称
+  → TouristApi                                      游客数/过夜/满意度
+  → BuildingApi.getColonyBuildings(colonyId)        关停/损坏计数(一次遍历)
+  → NpcApi.getNpcCount/getIdleNpcCount              NPC 数量
+  → WarehouseApi.getAllElements(colonyId)            7 元素储量
+
+消费者:
+  PanelStateTracker          → ColonyStatsSyncPacket → 客户端 HUD
+  PanelStateTogglePacket     → ColonyStatsSyncPacket → 面板首次打开
+  AchievementService         → 成就评估触发器
+```
+
 ## 依赖规则
 
 ```
@@ -162,13 +174,10 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 仓库GUI/ItemBank | [packages/warehouse.md](packages/warehouse.md) |
 | 工作站/合成 | [packages/production.md](packages/production.md) |
 | JSON加载框架 | [packages/dataconfig.md](packages/dataconfig.md) |
-| 蓝图编辑器 | [packages/blueprint_editor.md](packages/blueprint_editor.md) |
 | 建筑预览/投影系统 | [packages/projection.md](packages/projection.md) |
 | 俯瞰视角模式 | [packages/overview.md](packages/overview.md) |
 | 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
-| ImGui管理器 | [packages/imgui.md](packages/imgui.md) |
-| 独立编辑器启动器 | [packages/standalone.md](packages/standalone.md) |
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |

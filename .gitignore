@@ -43,3 +43,23 @@ repo/
 AGENTS.md
 ref
 node_modules
+
+### Runtime / Generated ###
+logs/
+imgui.ini
+tmp/
+memory/
+analyse.csv
+TEMPLATE_LICENSE.txt
+
+### Reasonix (local per-machine config) ###
+reasonix.toml
+.reasonix/
+
+### Claude skill cache ###
+.claude/skills/minecraft-source/scripts/cache/
+
+### Root-level helper scripts (not needed in repo) ###
+gen_icons.py
+fix_icons.py
+generate_icons.js

@@ -83,7 +83,13 @@ public class BuildingState implements BuildingData {
     @Override public boolean isStructureIntact() { return structureIntact; }
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
-    public boolean hasWork() { return !taskQueue.isEmpty() && !shutdown; }
+    public boolean hasWork() {
+        if (taskQueue.isEmpty()) return false;
+        if (!shutdown) return true;
+        // Shutdown buildings can still process repair tasks
+        WorkItem first = taskQueue.peekFirst();
+        return first != null && "build:place_structure".equals(first.blueprintId());
+    }
 
     // ── Maintenance getters ──
 

@@ -56,11 +56,9 @@ public record BuildingConfig(
     }
 
     public record UnlockRequirement(
-            @SerializedName("min_comfort") int minComfort,
-            @SerializedName("min_magic")   int minMagic,
-            @SerializedName("min_wonder")  int minWonder
+            @SerializedName("min_colony_level") int minColonyLevel
     ) {
-        public static final UnlockRequirement NONE = new UnlockRequirement(0, 0, 0);
+        public static final UnlockRequirement NONE = new UnlockRequirement(1);
     }
 
     /**

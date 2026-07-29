@@ -2,6 +2,7 @@ package com.wsteam.wandscape.projection.network;
 
 import java.util.UUID;
 
+import com.wsteam.wandscape.building.internal.BuildingBreakHandler;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -64,6 +65,16 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                 Log.info(TAG, "Player {} initiated demolition of {} ({}) at {}",
                         player.getGameProfile().getName(), state.getBuildingTypeId(),
                         packet.buildingId(), state.getAnchor());
+            }
+            case "repair" -> {
+                boolean ok = BuildingBreakHandler.triggerRepair(player.level(), packet.buildingId());
+                if (ok) {
+                    Log.info(TAG, "Player {} triggered repair for {} ({})",
+                            player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
+                } else {
+                    Log.warn(TAG, "Player {} tried to repair {} ({}) but repair failed",
+                            player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
+                }
             }
             default -> Log.warn(TAG, "Unknown action: {}", packet.action());
         }

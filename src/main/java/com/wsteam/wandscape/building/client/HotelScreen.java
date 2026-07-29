@@ -16,8 +16,8 @@ import net.minecraft.network.chat.Component;
  */
 public class HotelScreen extends MedievalScreen {
 
-    private static final int PW = 240;
-    private static final int PH = 180;
+    private static final int PW = 300;
+    private static final int PH = 230;
 
     private final BlockPos buildingPos;
     private final UUID colonyId;

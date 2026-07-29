@@ -248,24 +248,30 @@ public class BuildingApiImpl implements BuildingApi {
     // ---- Colony stats (three-value system) ----
 
     @Override
-    public int getColonyComfort(UUID colonyId) {
+    @Nullable
+    public ColonySnapshot getColonySnapshot(UUID colonyId) {
         BuildingSavedData sd = getSavedData();
-        return sd != null && colonyId != null
-                ? sd.getContributionRegistry().getSnapshot(colonyId).comfort() : 0;
+        if (sd == null || colonyId == null) return null;
+        var inner = sd.getContributionRegistry().getSnapshot(colonyId);
+        return new ColonySnapshot(inner.comfort(), inner.magic(), inner.wonder());
+    }
+
+    @Override
+    public int getColonyComfort(UUID colonyId) {
+        ColonySnapshot snap = getColonySnapshot(colonyId);
+        return snap != null ? snap.comfort() : 0;
     }
 
     @Override
     public int getColonyMagic(UUID colonyId) {
-        BuildingSavedData sd = getSavedData();
-        return sd != null && colonyId != null
-                ? sd.getContributionRegistry().getSnapshot(colonyId).magic() : 0;
+        ColonySnapshot snap = getColonySnapshot(colonyId);
+        return snap != null ? snap.magic() : 0;
     }
 
     @Override
     public int getColonyWonder(UUID colonyId) {
-        BuildingSavedData sd = getSavedData();
-        return sd != null && colonyId != null
-                ? sd.getContributionRegistry().getSnapshot(colonyId).wonder() : 0;
+        ColonySnapshot snap = getColonySnapshot(colonyId);
+        return snap != null ? snap.wonder() : 0;
     }
 
     // ---- Demolish ----
@@ -348,10 +354,6 @@ public class BuildingApiImpl implements BuildingApi {
                         state.getColonyId() != null ? state.getColonyId().toString().substring(0, 8) : "null");
                 continue;
             }
-            if (state.isShutdown()) {
-                Log.debug(TAG, "[BldgAPI] skip {} isShutdown=true", id8);
-                continue;
-            }
             if (currentTasks.containsKey(state.getBuildingId())) {
                 Log.debug(TAG, "[BldgAPI] skip {} has active task", id8);
                 continue;
@@ -382,7 +384,13 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return null;
 
         BuildingState state = sd.getBuilding(buildingId);
-        if (state == null || state.isShutdown()) return null;
+        if (state == null) return null;
+
+        // Shutdown buildings: only allow repair tasks
+        if (state.isShutdown()) {
+            WorkItem first = state.getTaskQueue().peekFirst();
+            if (first == null || !"build:place_structure".equals(first.blueprintId())) return null;
+        }
 
         WorkItem item = state.getTaskQueue().pollFirst();
         if (item != null) sd.setDirty();
