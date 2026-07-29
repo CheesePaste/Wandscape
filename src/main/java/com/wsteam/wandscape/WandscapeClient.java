@@ -33,8 +33,6 @@ import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.tourist.client.TouristScreen;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.warehouse.client.WarehouseScreen;
-import com.wsteam.wandscape.task.client.TaskEditorScreen;
-import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
@@ -46,7 +44,6 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomData;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -67,13 +64,6 @@ import com.wsteam.wandscape.shared.log.Log;
 @Mod(value = Wandscape.MODID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = Wandscape.MODID, value = Dist.CLIENT)
 public class WandscapeClient {
-
-    public static final KeyMapping OPEN_TASK_EDITOR = new KeyMapping(
-            "key.wandscape.task_editor",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_T,
-            "key.categories.wandscape"
-    );
 
     public static final KeyMapping PROJECTION_TOGGLE = new KeyMapping(
             "key.wandscape.projection",
@@ -203,16 +193,11 @@ public class WandscapeClient {
 
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
-        event.register(OPEN_TASK_EDITOR);
         event.register(PROJECTION_TOGGLE);
         event.register(PANEL_CURSOR_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
-        while (OPEN_TASK_EDITOR.consumeClick()) {
-            PacketDistributor.sendToServer(new TaskEditorOpenPacket());
-            Minecraft.getInstance().setScreen(new TaskEditorScreen());
-        }
         while (PROJECTION_TOGGLE.consumeClick()) {
             // V key: toggle Wandscape panel open/close
             if (WandscapePanelState.isPanelOpen()) {

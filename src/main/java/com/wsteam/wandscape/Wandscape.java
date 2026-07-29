@@ -72,9 +72,6 @@ import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
-import com.wsteam.wandscape.task.network.BlueprintListResponsePacket;
-import com.wsteam.wandscape.task.network.TaskCreatePacket;
-import com.wsteam.wandscape.task.network.TaskEditorOpenPacket;
 
 import net.minecraft.commands.Commands;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
@@ -333,10 +330,6 @@ public class Wandscape {
                         WarehouseDataPacket.STREAM_CODEC,
                         (packet, ctx) -> WarehouseDataPacket.handleClient(packet))
                 .playToClient(
-                        BlueprintListResponsePacket.TYPE,
-                        BlueprintListResponsePacket.STREAM_CODEC,
-                        (packet, ctx) -> BlueprintListResponsePacket.handleClient(packet))
-                .playToClient(
                         WorkstationDataPacket.TYPE,
                         WorkstationDataPacket.STREAM_CODEC,
                         (packet, ctx) -> WorkstationDataPacket.handleClient(packet))
@@ -381,14 +374,6 @@ public class Wandscape {
                         DestroyFillPacket.TYPE,
                         DestroyFillPacket.STREAM_CODEC,
                         (packet, ctx) -> DestroyFillPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        TaskEditorOpenPacket.TYPE,
-                        TaskEditorOpenPacket.STREAM_CODEC,
-                        (packet, ctx) -> TaskEditorOpenPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
-                .playToServer(
-                        TaskCreatePacket.TYPE,
-                        TaskCreatePacket.STREAM_CODEC,
-                        (packet, ctx) -> TaskCreatePacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         RequestProductionTaskPacket.TYPE,
                         RequestProductionTaskPacket.STREAM_CODEC,
