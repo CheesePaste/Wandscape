@@ -51,9 +51,9 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │
 ├── shared/           所有包依赖的公共层
-│   ├── api/          13 个模块接口(ColonyMetricsApi + 现有12个) + registry/WandscapeApis.java(静态定位器)
+│   ├── api/          12 个模块接口(含 ColonyMetricsApi) + registry/WandscapeApis.java(静态定位器)
 │   ├── data/         21+个record/enum(含ColonyMetricsSnapshot/WorkItem/MaintenanceCost/BlueprintInfo/Emotion/...)
-│   ├── event/        12 个 NeoForge 事件(模块间通信 + 模拟经营事件)
+│   ├── event/        13 个 NeoForge 事件(模块间通信 + 模拟经营事件)
 │   ├── log/          Log 工具类 + LogFilter 运行时白名单过滤器
 │   └── ui/           共享UI组件库(MedievalScreen MINIMAL风格/Button/ScrollableList/...)
 │

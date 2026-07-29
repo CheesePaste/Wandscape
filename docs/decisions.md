@@ -85,7 +85,7 @@
 **为什么 wand_level NBT 只随 locked_reason=wand_level 下发，而非始终携带？** 绝大多数配方不需要 wand_level（为空或全是 0），随每个配方下发空 map 浪费带宽。只在锁定原因是 wand_level 时才序列化，客户端渲染时按需读取。服务端 `hasNonZeroWandLevel()` 做轻量扫描，零 GC 压力。
 
 
-**为什么 TaskCreatePacket 传字符串参数而非序列化 JsonElement？** 客户端 `EditBox` 产出字符串。在服务端解析为 JsonElement（`PublishBlueprintCommand.parseValue` 同逻辑），避免客户端依赖 Gson。
+**~~为什么 TaskCreatePacket 传字符串参数而非序列化 JsonElement？~~（已移除）** 编辑器 UI 及相关网络包（TaskCreatePacket、TaskEditorOpenPacket、BlueprintListResponsePacket、TaskNetworkHandler）已在 2026-07-29 删除。PlayerManualSource 仍保留，可通过 API 直接调用。
 
 **为什么两条 EventBus 不互通？** core `SimpleEventBus` 是引擎内部 tick-batch 模式，NeoForge `EVENT_BUS` 是实时模式。两者用途不同：引擎内部事件用于链式任务生成（`TaskAwaitingResources → synthesize → gather`），NeoForge 事件用于跨模块通知（`TaskPublishedEvent → UI 提示`）。`engine/` 层做唯一翻译点。
 
@@ -254,7 +254,7 @@
 
 **为什么 engine/road/ 移到 road/engine/，engine/colony/ 并入 engine 根？** 道路的 MC 实现（RoadBuilder、RoadSavedData）和纯核心算法（MstCalculator、RoadNetwork）属于同一子系统，不应因"一个零 MC 一个依赖 MC"就拆到两个顶级包。road/engine/ 作为 road/ 包内的实现层，自然保持与 core/ 同级的情理距离。ColonyApiImpl 只有 1 个文件，不值得独立子包。
 
-**为什么 task/network/ 和 shared/ui/task/ 也并入 task/？** 任务的网络层（4 个 packet）和客户端 GUI（TaskEditorScreen、TaskEditorClientState）是任务系统的横向切片，与引擎层的 dsl/pool/scheduler 属同一子系统。放在 task/client/ 和 task/network/ 后，开发者只需要了解 task/ 一个顶级包就掌握了任务系统的全貌。网络包仍保持 C→S/S→C 的通信模式不变。
+**为什么 task/network/ 和 shared/ui/task/ 也并入 task/？** 任务的网络层和客户端 GUI 是任务系统的横向切片，与引擎层的 dsl/pool/scheduler 属同一子系统。放在 task/ 下后开发者只需要了解一个顶级包。编辑器 UI（TaskEditorScreen 及其相关网络包）已于 2026-07-29 删除，但包结构原则不变。
 
 **为什么不把所有包统一成 api/internal 结构？** core/、op/、task/ 的 engine/dsl/scheduler 属于纯 Java 基础设施层，被多个 MC 模块引用但自身不引用 MC——它们是框架代码而非模块。road/algorith/、engine/boundary/、task/network/ 等仍是模块的标准 api/internal/client 模式。两套模式并行，取决于包的角色是"基础设施"还是"游戏模块"。
 

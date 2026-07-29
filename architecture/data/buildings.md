@@ -26,9 +26,7 @@
     "task_types": ["building"]
   },
   "unlock_requirement": {
-    "min_comfort": 0,
-    "min_magic": 0,
-    "min_wonder": 0
+    "min_colony_level": 1
   },
   "boundary": {
     "min": [-1, -1, -1],
@@ -59,7 +57,7 @@
 | queue | {capacity, task_types} | 建筑内部队列容量和允许的任务类型 |
 | boundary | {min:[x,y,z], max:[x,y,z]} | 建筑 AABB（相对 anchor）。用于重叠检测 |
 | blueprint | {id, bind} | DSL 模式。id="build:xxx"，bind 的 $field 引用上方 JSON 字段。无此字段时 fallback 到 DataDrivenSteps 遗留路径 |
-| unlock_requirement | {min_comfort, min_magic, min_wonder} | 建造此建筑需要殖民地三值达到的门槛。全部填 0 表示无条件解锁 |
+| unlock_requirement | {min_colony_level} | 建造此建筑需要殖民地达到的最低等级。填 1 表示无条件解锁。2026-07-29 从三值门槛改为等级门槛 |
 | decoration | {radius} | **仅 category=decoration**。曼哈顿辐射半径 |
 | wonder_config | {effects: [...]} | **仅 category=wonder**。全局效果列表(见下方)。JSON key 为 wonder_config 以避免与 int wonder 字段冲突 |
 | shop | {goods: [...], profit_rate} | **仅 category=shop**。货物定义 + 利润率 |

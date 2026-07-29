@@ -21,8 +21,8 @@
 ## 关键设计要点
 
 - **三值评估**：BuildingContributionRegistry 改为每建筑实例独立计算。shop 三值 = 建筑基础值 + 所有有货 goods 的 comfort/magic/wonder 合计。变化广播 `ColonyEvaluationChangedEvent`
-- **BuildingUnlockChecker**：静态工具，查询三值 vs unlockRequirement
-- **建筑编辑器**（building/editor/）：全套客户端编辑器，含状态/控制器/ImGui/渲染器/网络/导出
+- **BuildingUnlockChecker**：静态工具，查询殖民地等级 vs unlockRequirement.minColonyLevel（2026-07-29 三值门槛改为殖民地等级门槛）
+- **修复系统**：`BuildingBreakHandler.triggerRepair()` 通过 `BuildingActionPacket("repair")` 手动触发修复扫描，计入 repair material_list/counts 供蓝图调配仓库资源。shutdown 建筑可排队 repair 任务恢复
 
 ### 模拟经营系统
 
@@ -48,7 +48,14 @@
 建筑受损（Break/Explosion）
   → BuildingBreakHandler → structureIntact=false → 移除三值贡献
   → 广播 ColonyEvaluationChangedEvent
-  → 构造局部 WorkItem → addFirst 队首 → NPC修复 → BuildCompleteListener 扫描 → 恢复
+  → 构造局部 WorkItem（含 material_list/counts 凭据）→ addFirst 队首
+  → NPC修复 → BuildCompleteListener 扫描 → 恢复
+
+手动修复（AnomalyScreen → BuildingActionPacket("repair")）
+  → BuildingBreakHandler.triggerRepair() → 扫描损毁方块 → enqueueRepairForOffsets
+  → 同上修复流程
+
+shutdown 建筑例外：hasWork() 允许队首 repair 任务通过，pollWork() 不再直接跳过 shutdown 建筑
 
 维护费循环
   → DailySettlementSystem 每游戏日0:00

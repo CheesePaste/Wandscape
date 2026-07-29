@@ -36,9 +36,7 @@ SchedulerSystem 每 2tick NPC→task 反向匹配：评分=proximity×0.5 + effi
 ## 数据流
 
 ```
-玩家通过任务编辑器
-  → TaskCreatePacket → TaskNetworkHandler
-  → PlayerManualSource.publish(TaskRequest)
+PlayerManualSource.publish(TaskRequest)
   → GlobalTaskPool.addTask()
   ─┬→ SchedulerSystem (每2tick) → 分配任务给 NPC
    → TaskExecutionSystem (每tick) → NpcTaskQueue

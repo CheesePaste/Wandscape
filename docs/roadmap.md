@@ -170,39 +170,9 @@ FailureAnalyzerSystem
 
 ## GUI 任务编辑器
 
-**已完成 (2026-06-22)**。玩家按 `T` 键打开，可视化浏览蓝图、编辑参数、发布任务。
+**已移除 (2026-07-29)**。编辑器 UI 界面（TaskEditorScreen）及相关网络包已删除。任务系统核心（SchedulerSystem、GlobalTaskPool、PlayerManualSource 等）不受影响。
 
-### 数据流
-
-```
-TaskEditorScreen (客户端)
-  │  T 键打开 → 发送 TaskEditorOpenPacket
-  │  服务端回复 BlueprintListResponsePacket → 显示蓝图列表
-  │  用户选择蓝图 → 动态生成参数输入框
-  │  点 [Publish] → 发送 TaskCreatePacket
-  ▼
-TaskApiImpl (服务端防腐层)
-  │  getAvailableBlueprints() → BlueprintConfigLoader.getAll()
-  │  publishTask() → PlayerManualSource.publish(TaskRequest)
-  ▼
-GlobalTaskPool.addTask() → SchedulerSystem → NPC 执行
-```
-
-### 新增文件
-
-| 文件 | 层 | 用途 |
-|------|-----|------|
-| `shared/data/ParamTypeInfo.java` | shared | core ParamType 的枚举镜像 |
-| `shared/data/BlueprintInfo.java` | shared | 蓝图元数据 DTO |
-| `shared/ui/task/TaskEditorClientState.java` | client | 线程安全静态状态 |
-| `shared/ui/task/TaskEditorScreen.java` | client | MedievalScreen 子类 GUI |
-| `task/internal/TaskApiImpl.java` | server | TaskApi 实现，桥接 PlayerManualSource |
-| `task/network/TaskEditorOpenPacket.java` | C→S | 打开编辑器，请求蓝图列表 |
-| `task/network/BlueprintListResponsePacket.java` | S→C | 携带蓝图列表 |
-| `task/network/TaskCreatePacket.java` | C→S | 创建任务 |
-| `task/network/TaskNetworkHandler.java` | server | 网络工具类 |
-
-**零改动**: `core/` 下所有文件（PlayerManualSource、GlobalTaskPool、BlueprintRegistry 等）全部不动。
+PlayerManualSource 仍可通过 API 调用（如 debug 命令）手动提交任务。
 
 ## 已完成：道路样条线物流与客户端插值 (2026-07-09)
 

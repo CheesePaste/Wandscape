@@ -11,7 +11,7 @@
 | `core/` | 纯数据模型（RoadNetwork / RoadNode / RoadEdge / SplineModel 等） |
 | `algorithm/` | 算法（MST via Prim / L 形 PathGenerator / RoadPlanner / NetworkDiff / RoadRouter / DecorationPlanner） |
 | `engine/` | MC 实现（RoadBuilder / RoadSavedData / RoadTaskSource / RoadApiImpl / RoadEventListener / RoadBlobExplorer 等） |
-| `client/` | 编辑器客户端渲染 + 交互（RoadEditorClientState / SplineEditorClientState 含 SVG 导入导出等） |
+| `client/` | 客户端放置渲染 + 交互（RoadPlacementOverlay / RoadPlacementState / RoadPlacementController / RoadPlacementRenderer） |
 | `network/` | 网络包 |
 | `server/` | RoadEditorHandler |
 
