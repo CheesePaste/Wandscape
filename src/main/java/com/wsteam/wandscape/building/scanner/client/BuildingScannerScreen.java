@@ -37,7 +37,7 @@ public class BuildingScannerScreen extends Screen {
     // ── Category ──
     private CycleButton<String> categoryBtn;
     private static final List<String> CATEGORIES = List.of(
-            "basic", "node", "storage", "workstation", "crafting_station",
+            "basic", "government", "node", "storage", "workstation", "crafting_station",
             "potion_station", "tavern", "shop", "service", "decoration", "wonder"
     );
 

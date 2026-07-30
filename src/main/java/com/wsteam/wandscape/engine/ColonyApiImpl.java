@@ -90,7 +90,7 @@ public final class ColonyApiImpl implements ColonyApi {
     @Override
     @Nullable
     public UUID onBuildingIntact(BuildingData data) {
-        if ("town_hall".equals(data.getBuildingTypeId())) {
+        if ("government".equals(data.getCategory())) {
             // NEVER auto-create colonies. Only /wandscape colony create does that.
             // If a town_hall is built outside any existing colony range,
             // it's an orphan — refuse to assign it.
@@ -120,7 +120,7 @@ public final class ColonyApiImpl implements ColonyApi {
 
     @Override
     public void onBuildingDestroyed(BuildingData data) {
-        if ("town_hall".equals(data.getBuildingTypeId())
+        if ("government".equals(data.getCategory())
                 && data.getColonyId() != null) {
             deleteColony(data.getColonyId());
         }
@@ -147,7 +147,7 @@ public final class ColonyApiImpl implements ColonyApi {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;
         for (BuildingData bd : sd.getAllBuildings()) {
-            if ("town_hall".equals(bd.getBuildingTypeId())
+            if ("government".equals(bd.getCategory())
                     && bd.isStructureIntact()
                     && bd.getColonyId() != null) {
                 colonyOrigins.put(bd.getPosition(), bd.getColonyId());

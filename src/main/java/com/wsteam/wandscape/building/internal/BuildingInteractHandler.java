@@ -68,7 +68,7 @@ public final class BuildingInteractHandler {
         String typeId = state.getBuildingTypeId();
 
         // Town hall: show colony level & exp info
-        if ("town_hall".equals(typeId) && colonyId != null) {
+        if ("government".equals(category) && colonyId != null) {
             var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
             int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
             int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;

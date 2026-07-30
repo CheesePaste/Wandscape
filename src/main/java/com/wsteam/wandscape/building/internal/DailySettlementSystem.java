@@ -43,6 +43,7 @@ public final class DailySettlementSystem {
     static {
         CATEGORY_PRIORITY.put("node", MaintenancePriority.CRITICAL);
         CATEGORY_PRIORITY.put("basic", MaintenancePriority.CRITICAL);
+        CATEGORY_PRIORITY.put("government", MaintenancePriority.CRITICAL);
         CATEGORY_PRIORITY.put("storage", MaintenancePriority.CRITICAL);
         CATEGORY_PRIORITY.put("workstation", MaintenancePriority.HIGH);
         CATEGORY_PRIORITY.put("crafting_station", MaintenancePriority.HIGH);
