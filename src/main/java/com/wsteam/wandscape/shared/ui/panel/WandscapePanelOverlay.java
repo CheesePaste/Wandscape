@@ -208,6 +208,11 @@ public final class WandscapePanelOverlay {
             }
         }
 
+        // First-time guidance
+        if (WandscapePanelState.shouldShowGuidance()) {
+            renderGuidance(g, font, screenW, screenH);
+        }
+
         // Stats content (shifted right of sidebar)
         if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.STATS) {
             renderStatsContent(g, font, screenW, screenH);
@@ -321,6 +326,48 @@ public final class WandscapePanelOverlay {
             drawText(g, font, val, x, textY, colors[i]);
             x += font.width(val) + 6;
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── First-time guidance ──
+    // ═══════════════════════════════════════════════════════════════
+
+    private static void renderGuidance(GuiGraphics g, Font font, int screenW, int screenH) {
+        int pad = 10;
+        int lineH = font.lineHeight;
+        String title = "Getting Started";
+        String line1 = "Build a Town Hall to manage your colony";
+        String line2 = "Build a Warehouse to store resources";
+        String hint = "Select a building from the bar above";
+
+        int titleW = font.width(title);
+        int line1W = font.width(line1);
+        int line2W = font.width(line2);
+        int hintW = font.width(hint);
+        int boxW = Math.max(Math.max(titleW, Math.max(line1W, line2W)), hintW) + pad * 2;
+        int boxH = pad * 2 + lineH * 4 + 6;
+
+        int x = screenW - boxW - 8;
+        int y = TOP_BAR_H + 4;
+
+        // Background
+        g.fill(RenderType.guiOverlay(), x, y, x + boxW, y + boxH, 0, 0xDD1A1C22);
+        // Border
+        int col = 0xFFC8A040;
+        g.fill(RenderType.guiOverlay(), x, y, x + boxW, y + 1, 0, col);
+        g.fill(RenderType.guiOverlay(), x, y + boxH - 1, x + boxW, y + boxH, 0, col);
+        g.fill(RenderType.guiOverlay(), x, y, x + 1, y + boxH, 0, col);
+        g.fill(RenderType.guiOverlay(), x + boxW - 1, y, x + boxW, y + boxH, 0, col);
+
+        int tx = x + pad;
+        int ty = y + pad;
+        drawText(g, font, "§e" + title, tx, ty, 0xFFFFC040);
+        ty += lineH + 3;
+        drawText(g, font, " §7- " + line1, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        ty += lineH;
+        drawText(g, font, " §7- " + line2, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        ty += lineH + 3;
+        drawText(g, font, "§8" + hint, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -44,7 +44,9 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     ColonyMetricsApi metricsApi = WandscapeApis.getColonyMetricsApiSilently();
                     if (metricsApi != null) {
                         ColonyMetricsSnapshot snap = metricsApi.getSnapshotSafe(colonyId);
-                        PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
+                        if (snap.colonyId() != null) {
+                            PacketDistributor.sendToPlayer(player, ColonyStatsSyncPacket.fromSnapshot(snap));
+                        }
                     }
 
                     // Sync building interaction areas for overlay rendering

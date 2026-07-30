@@ -11,6 +11,7 @@ import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 
 import net.minecraft.client.Minecraft;
@@ -83,6 +84,11 @@ public final class WandscapePanelState {
 
     // ── Interaction area overlay (B key toggle) ──
     private static volatile boolean showBuildingAreas = false;
+
+    // ── First-time guidance ──
+    /** Whether the "build Town Hall & Warehouse" guide should be shown in the overlay. */
+    private static volatile boolean showGuidance = false;
+    private static boolean guidanceEverShown = false;
 
     public static boolean isShowBuildingAreas() { return showBuildingAreas; }
     public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
@@ -224,6 +230,48 @@ public final class WandscapePanelState {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ── First-time guidance ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Whether the "build Town Hall & Warehouse" guide should show.
+     * True when the colony has no town_hall or no warehouse, and not yet dismissed.
+     */
+    public static boolean shouldShowGuidance() {
+        if (!showGuidance) return false;
+        var buildings = BuildingAreaSyncPacket.getCached();
+        if (buildings.isEmpty()) return true;
+        boolean hasTownHall = false;
+        boolean hasWarehouse = false;
+        for (var b : buildings) {
+            if ("town_hall".equals(b.buildingTypeId())) hasTownHall = true;
+            if ("warehouse".equals(b.buildingTypeId())) hasWarehouse = true;
+        }
+        return !hasTownHall || !hasWarehouse;
+    }
+
+    /** Dismiss guidance (called when player opens building bar or on manual dismiss). */
+    public static void dismissGuidance() {
+        showGuidance = false;
+    }
+
+    /** Evaluate guidance based on the latest building cache. Called after BuildingAreaSyncPacket arrives. */
+    public static void evaluateGuidance() {
+        var buildings = BuildingAreaSyncPacket.getCached();
+        showGuidance = buildings.isEmpty()
+                || buildings.stream().noneMatch(e -> "town_hall".equals(e.buildingTypeId()))
+                || buildings.stream().noneMatch(e -> "warehouse".equals(e.buildingTypeId()));
+        if (showGuidance && !guidanceEverShown) {
+            guidanceEverShown = true;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("§e[Guide] §fBuild a Town Hall & Warehouse to start your colony!"), true);
+            }
+        }
+    }
+
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
 
     /** Lift cursor: release mouse for UI interaction (preset selection overlay). */
@@ -292,6 +340,7 @@ public final class WandscapePanelState {
     public static BuildPhase getBuildPhase() { return buildPhase; }
 
     public static void openBuildingBar() {
+        dismissGuidance();
         buildingBarOpen = true;
         buildingBarCategory = "All";
         buildingBarSearch = "";

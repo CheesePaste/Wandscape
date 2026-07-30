@@ -43,6 +43,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
 
     public static void handleClient(BuildingAreaSyncPacket packet) {
         cached = packet.buildings;
+        com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.evaluateGuidance();
         Log.info(TAG, "[Area] Cached {} building areas", packet.buildings.size());
     }
 
