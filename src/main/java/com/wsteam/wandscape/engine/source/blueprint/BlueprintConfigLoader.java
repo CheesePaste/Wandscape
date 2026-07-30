@@ -164,7 +164,8 @@ public final class BlueprintConfigLoader {
         ExprNode at = parseExpr(obj.get("at"));
         ExprNode block = parseExpr(obj.get("block"));
         ExprNode consumable = obj.has("consumable") ? parseExpr(obj.get("consumable")) : null;
-        return new StepNode.PlaceStep(at, block, consumable);
+        ExprNode nbt = obj.has("nbt") ? parseExpr(obj.get("nbt")) : null;
+        return new StepNode.PlaceStep(at, block, consumable, nbt);
     }
 
     private StepNode parseRemove(JsonObject obj) {

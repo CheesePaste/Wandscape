@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.core.boundary;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.core.types.*;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.BlockOps;
@@ -58,6 +60,13 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     @Override
     public void openGui(GridPos pos) {
         Log.debug(TAG, "openGui %s", pos);
+    }
+
+    @Override
+    public void setBlockEntityData(GridPos pos, @Nullable String nbtBase64) {
+        if (nbtBase64 != null && !nbtBase64.isEmpty()) {
+            Log.debug(TAG, "setBlockEntityData %s (nbt=%d bytes)", pos, nbtBase64.length());
+        }
     }
 
     // ---- EntityOps ----

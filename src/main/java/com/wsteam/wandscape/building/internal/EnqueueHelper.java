@@ -189,6 +189,10 @@ public final class EnqueueHelper {
                     params.put(blueprintParamName, value);
                 }
             }
+            // Auto-add blocks_nbt if not provided by bind (backward compat with older building JSONs)
+            if (!params.containsKey("blocks_nbt")) {
+                params.put("blocks_nbt", blockNbtToJson(config));
+            }
             if (config.boundary() != null) {
                 if (sd != null && buildingId != null) {
                     params.put("clear_offsets", computeClearOffsetsFiltered(config, sd, pos, buildingId));
@@ -229,6 +233,11 @@ public final class EnqueueHelper {
                     params.put("blocks", rotateBlockMappingJson(
                             params.get("blocks").getAsJsonObject(), rotationSteps));
                 }
+                // Rotate block_nbt (keys only — values are opaque base64 strings)
+                if (params.containsKey("blocks_nbt")) {
+                    params.put("blocks_nbt", rotateBlockNbtJson(
+                            params.get("blocks_nbt").getAsJsonObject(), rotationSteps));
+                }
                 // Rotate clear_offsets
                 if (params.containsKey("clear_offsets")) {
                     params.put("clear_offsets", rotateOffsetsJson(
@@ -252,6 +261,7 @@ public final class EnqueueHelper {
             case "category" -> new JsonPrimitive(config.category());
             case "pattern" -> patternToJson(config);
             case "block_mapping" -> blockMappingToJson(config);
+            case "block_nbt" -> blockNbtToJson(config);
             case "comfort" -> new JsonPrimitive(config.comfort());
             case "magic" -> new JsonPrimitive(config.magic());
             case "wonder" -> new JsonPrimitive(config.wonder());
@@ -306,6 +316,16 @@ public final class EnqueueHelper {
     private static JsonElement blockMappingToJson(BuildingConfig config) {
         JsonObject obj = new JsonObject();
         for (var entry : config.blockMapping().entrySet()) {
+            obj.addProperty(entry.getKey(), entry.getValue());
+        }
+        return obj;
+    }
+
+    private static JsonElement blockNbtToJson(BuildingConfig config) {
+        Map<String, String> nbt = config.blockNbt();
+        if (nbt == null) return new JsonObject();
+        JsonObject obj = new JsonObject();
+        for (var entry : nbt.entrySet()) {
             obj.addProperty(entry.getKey(), entry.getValue());
         }
         return obj;
@@ -452,6 +472,18 @@ public final class EnqueueHelper {
             BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
             String rotatedBlock = BuildingRotation.rotateBlockStateString(entry.getValue().getAsString(), steps);
             result.addProperty(rotatedOff.toKey(), rotatedBlock);
+        }
+        return result;
+    }
+
+    /** Rotate block_nbt keys (offset string → rotated offset string). Values are opaque base64. */
+    private static JsonObject rotateBlockNbtJson(JsonObject nbt, int steps) {
+        JsonObject result = new JsonObject();
+        for (var entry : nbt.entrySet()) {
+            BlockOffset off = parseKey(entry.getKey());
+            if (off == null) continue;
+            BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
+            result.addProperty(rotatedOff.toKey(), entry.getValue().getAsString());
         }
         return result;
     }

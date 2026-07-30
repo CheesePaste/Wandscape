@@ -64,7 +64,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                 if (inv == null || !inv.hasEnough(op.consumable().resource(),
                         op.consumable().amount())) {
                     return CompletableFuture.failedFuture(
-                            new ResourceShortageException(op.consumable()));
+                            new ResourceShortageException(List.of(op.consumable())));
                 }
                 inv.remove(op.consumable().resource(), op.consumable().amount());
                 Log.debug(TAG, "TransformOp consumable: -{} x{} from NPC {}",
@@ -80,6 +80,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             BlockOps blockOps = world.blockOps;
             if (blockOps != null) {
                 blockOps.setBlock(op.target(), op.to());
+                blockOps.setBlockEntityData(op.target(), op.blockNbtBase64());
             }
             return CompletableFuture.completedFuture(null);
         }
@@ -101,6 +102,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             pending.remove(p);
             if (p.world.blockOps != null) {
                 p.world.blockOps.setBlock(p.op.target(), p.op.to());
+                p.world.blockOps.setBlockEntityData(p.op.target(), p.op.blockNbtBase64());
             }
             // Visual feedback on the NPC that performed the work
             WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());

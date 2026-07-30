@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.core.boundary;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 /**
@@ -25,4 +27,12 @@ public interface BlockOps {
 
     /** Open the GUI for a block (chest, crafting table, etc.). */
     void openGui(GridPos pos);
+
+    /**
+     * Restore BlockEntity NBT data at the given position.
+     * Called after setBlock for blocks that have BlockEntity data (chests, signs, etc.).
+     *
+     * @param nbtBase64 Base64-encoded compressed NBT data, or null to skip
+     */
+    void setBlockEntityData(GridPos pos, @Nullable String nbtBase64);
 }

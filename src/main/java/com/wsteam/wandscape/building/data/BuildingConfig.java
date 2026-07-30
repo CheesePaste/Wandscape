@@ -32,6 +32,7 @@ public record BuildingConfig(
         String category,
         List<BlockOffset> pattern,
         @SerializedName("block_mapping") Map<String, String> blockMapping,
+        @SerializedName("block_nbt") Map<String, String> blockNbt,
         int comfort,
         int magic,
         int wonder,
@@ -154,6 +155,17 @@ public record BuildingConfig(
                 blockMapping = Map.copyOf(m);
             }
 
+            // Block NBT (base64-encoded BlockEntity data)
+            Map<String, String> blockNbt = Map.of();
+            if (obj.has("block_nbt")) {
+                JsonObject nbtMap = obj.getAsJsonObject("block_nbt");
+                Map<String, String> m = new HashMap<>();
+                for (var entry : nbtMap.entrySet()) {
+                    m.put(entry.getKey(), entry.getValue().getAsString());
+                }
+                blockNbt = Map.copyOf(m);
+            }
+
             int comfort = getInt(obj, "comfort", 0);
             int magic = getInt(obj, "magic", 0);
             int wonder = getInt(obj, "wonder", 0);
@@ -270,7 +282,7 @@ public record BuildingConfig(
             }
 
             return new BuildingConfig(id, displayName, category,
-                    pattern, blockMapping,
+                    pattern, blockMapping, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,

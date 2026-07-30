@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.building.scanner.network;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -19,6 +21,8 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -81,6 +85,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         // Scan blocks in world
         List<BlockOffset> pattern = new ArrayList<>();
         Map<String, String> blockMapping = new TreeMap<>(); // sorted for visual order
+        Map<String, String> blockNbt = new TreeMap<>();    // base64-encoded BlockEntity NBT
 
         for (int x = wMin.getX(); x <= wMax.getX(); x++) {
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
@@ -94,12 +99,27 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                     int rx = x - wMin.getX() + scanner.getBoundaryMin().x();
                     int ry = y - wMin.getY() + scanner.getBoundaryMin().y();
                     int rz = z - wMin.getZ() + scanner.getBoundaryMin().z();
+                    String key = rx + "," + ry + "," + rz;
 
                     BlockOffset offset = BlockOffset.of(rx, ry, rz);
                     pattern.add(offset);
 
                     String blockId = blockId(state);
-                    blockMapping.put(rx + "," + ry + "," + rz, blockId);
+                    blockMapping.put(key, blockId);
+
+                    // Save BlockEntity NBT if present
+                    BlockEntity blockEntity = level.getBlockEntity(bp);
+                    if (blockEntity != null) {
+                        try {
+                            CompoundTag tag = blockEntity.saveWithFullMetadata(level.registryAccess());
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            NbtIo.writeCompressed(tag, baos);
+                            String b64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+                            blockNbt.put(key, b64);
+                        } catch (IOException e) {
+                            Log.warn(TAG, "Failed to serialize BlockEntity NBT at {}: {}", bp, e.toString());
+                        }
+                    }
                 }
             }
         }
@@ -131,6 +151,15 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             bmObj.addProperty(entry.getKey(), entry.getValue());
         }
         root.add("block_mapping", bmObj);
+
+        // Block NBT (base64-encoded BlockEntity data)
+        if (!blockNbt.isEmpty()) {
+            JsonObject nbtObj = new JsonObject();
+            for (var entry : blockNbt.entrySet()) {
+                nbtObj.addProperty(entry.getKey(), entry.getValue());
+            }
+            root.add("block_nbt", nbtObj);
+        }
 
         // Meta
         root.addProperty("comfort", scanner.getComfort());
@@ -255,6 +284,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         JsonObject bind = new JsonObject();
         bind.addProperty("offsets", "$pattern");
         bind.addProperty("blocks", "$block_mapping");
+        bind.addProperty("blocks_nbt", "$block_nbt");
         bind.addProperty("name", "$display_name");
         bp.add("bind", bind);
         root.add("blueprint", bp);

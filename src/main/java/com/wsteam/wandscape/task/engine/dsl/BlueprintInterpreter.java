@@ -95,7 +95,10 @@ public final class BlueprintInterpreter {
                     String resourceId = evalString(s.consumable(), context, "place.consumable");
                     consumable = new ResourceStack(new ResourceId(resourceId), 1);
                 }
-                yield List.of(AtomicOp.TransformOp.place(at, block, consumable));
+                String nbt = s.nbt() != null
+                        ? evalString(s.nbt(), context, "place.nbt")
+                        : null;
+                yield List.of(AtomicOp.TransformOp.place(at, block, consumable, nbt));
             }
             case StepNode.RemoveStep s -> {
                 GridPos at = evalPos(s.at(), context, "remove.at");

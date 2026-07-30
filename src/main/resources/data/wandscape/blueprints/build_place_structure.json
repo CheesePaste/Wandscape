@@ -5,6 +5,7 @@
   "params": {
     "offsets": "list<pos>",
     "blocks": "map<string,string>",
+    "blocks_nbt": "map<string,string>",
     "name": "string",
     "anchor": "pos",
     "material_list": "list<string>",
@@ -28,7 +29,8 @@
         {
           "type": "place",
           "at": {"+": ["$anchor", "$off"]},
-          "block": {"get": ["$blocks", {"keyof": "$off"}]}
+          "block": {"get": ["$blocks", {"keyof": "$off"}]},
+          "nbt": {"get": ["$blocks_nbt", {"keyof": "$off"}]}
         }
       ]
     },

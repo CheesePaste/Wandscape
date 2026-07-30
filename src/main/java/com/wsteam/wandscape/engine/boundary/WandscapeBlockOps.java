@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.engine.boundary;
 
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,8 +16,12 @@ import com.wsteam.wandscape.core.types.GridPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -57,7 +63,36 @@ public class WandscapeBlockOps implements BlockOps {
         if (state != null) {
             BlockPos bp = toBlockPos(pos);
             evacuateEntities(level, bp);
-            level.setBlock(bp, state, 3);
+            level.setBlock(bp, state, 2);
+        }
+    }
+
+    @Override
+    public void setBlockEntityData(GridPos pos, @Nullable String nbtBase64) {
+        if (nbtBase64 == null || nbtBase64.isEmpty()) return;
+        Level level = getLevel();
+        if (level == null) return;
+        BlockPos bp = toBlockPos(pos);
+        try {
+            byte[] data = Base64.getDecoder().decode(nbtBase64);
+            CompoundTag tag = NbtIo.readCompressed(new ByteArrayInputStream(data), NbtAccounter.create(0x200000L));
+            BlockState state = level.getBlockState(bp);
+            BlockEntity be = BlockEntity.loadStatic(bp, state, tag, level.registryAccess());
+            if (be != null) {
+                level.setBlockEntity(be);
+                be.setChanged();
+                // Sync BlockEntity data to clients
+                if (level instanceof ServerLevel serverLevel) {
+                    var packet = be.getUpdatePacket();
+                    if (packet != null) {
+                        serverLevel.getChunkSource().chunkMap.getPlayers(
+                                serverLevel.getChunk(bp).getPos(), false
+                        ).forEach(player -> player.connection.send(packet));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.warn(TAG, "Failed to restore BlockEntity NBT at {}: {}", bp, e.toString());
         }
     }
 

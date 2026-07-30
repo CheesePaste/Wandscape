@@ -21,12 +21,13 @@ public sealed interface StepNode {
      * @param consumable optional expression evaluating to the resource to consume
      *                   from NPC inventory (e.g. "minecraft:stone_bricks").
      *                   {@code null} means free placement (no consumption).
+     * @param nbt        optional expression evaluating to a base64-encoded
+     *                   compressed NBT string for BlockEntity data restoration.
+     *                   {@code null} means no BlockEntity data.
      */
-    record PlaceStep(ExprNode at, ExprNode block, @javax.annotation.Nullable ExprNode consumable) implements StepNode {
-        /** Backward-compat: place without consumable. */
-        public PlaceStep(ExprNode at, ExprNode block) {
-            this(at, block, null);
-        }
+    record PlaceStep(ExprNode at, ExprNode block,
+                     @javax.annotation.Nullable ExprNode consumable,
+                     @javax.annotation.Nullable ExprNode nbt) implements StepNode {
     }
 
     /**

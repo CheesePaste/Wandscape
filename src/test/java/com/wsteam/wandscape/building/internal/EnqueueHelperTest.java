@@ -57,6 +57,7 @@ class EnqueueHelperTest {
                         "-1,1,1", "minecraft:oak_log",
                         "1,1,-1", "minecraft:oak_log",
                         "1,1,1", "minecraft:oak_log"),
+                Map.of(), /* blockNbt */
                 5, 3, 2,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
@@ -92,6 +93,7 @@ class EnqueueHelperTest {
                 "earth_node", "Test", "node",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:lodestone"),
+                Map.of(), /* blockNbt */
                 1, 2, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,
@@ -113,6 +115,7 @@ class EnqueueHelperTest {
                 "test_large", "Test", "basic",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:stone"),
+                Map.of(), /* blockNbt */
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
                 BuildingConfig.UnlockRequirement.NONE,

@@ -221,7 +221,7 @@ class BlueprintInterpreterTest {
             BlueprintDefinition def = new BlueprintDefinition("test:place", Collections.emptyMap(),
                     List.of(new StepNode.PlaceStep(
                             new ExprNode.LiteralPos(new GridPos(0, 64, 0)),
-                            new ExprNode.LiteralString("minecraft:stone_bricks"))));
+                            new ExprNode.LiteralString("minecraft:stone_bricks"), null, null)));
 
             TaskSequence seq = interpreter.interpret(def, params());
             assertEquals(1, seq.size());
@@ -376,7 +376,7 @@ class BlueprintInterpreterTest {
                             "off",
                             List.of(new StepNode.PlaceStep(
                                     new ExprNode.Var("off"),
-                                    new ExprNode.LiteralString("minecraft:stone"))))));
+                                    new ExprNode.LiteralString("minecraft:stone"), null, null))))));
 
             Map<String, JsonElement> p = params();
             TaskSequence seq = interpreter.interpret(def, p);
@@ -398,7 +398,7 @@ class BlueprintInterpreterTest {
                             "off",  // shadows param "off"
                             List.of(new StepNode.PlaceStep(
                                     new ExprNode.Var("off"),
-                                    new ExprNode.LiteralString("minecraft:stone"))))));
+                                    new ExprNode.LiteralString("minecraft:stone"), null, null))))));
 
             Map<String, JsonElement> p = new HashMap<>();
             p.put("off", posArray(0, 64, 0));
@@ -418,9 +418,9 @@ class BlueprintInterpreterTest {
                            "threshold", new ExprNode.LiteralInt(10)),
                     false,
                     List.of(new StepNode.PlaceStep(pos,
-                            new ExprNode.LiteralString("minecraft:dirt"))),
+                            new ExprNode.LiteralString("minecraft:dirt"), null, null)),
                     List.of(new StepNode.PlaceStep(pos,
-                            new ExprNode.LiteralString("minecraft:stone"))));
+                            new ExprNode.LiteralString("minecraft:stone"), null, null)));
 
             BlueprintDefinition def = new BlueprintDefinition("test:if",
                     Collections.emptyMap(), List.of(ifStep));
@@ -507,7 +507,7 @@ class BlueprintInterpreterTest {
                     Map.of("pos", ParamType.POS, "block", ParamType.STRING),
                     List.of(new StepNode.PlaceStep(
                             new ExprNode.Var("pos"),
-                            new ExprNode.Var("block"))));
+                            new ExprNode.Var("block"), null, null)));
 
             registry.register("sub:place_one", new Blueprint("sub:place_one",
                     (BlueprintSteps) p -> interpreter.interpret(sub, p), sub));
@@ -602,7 +602,8 @@ class BlueprintInterpreterTest {
                                                     new ExprNode.Var("anchor"),
                                                     new ExprNode.Var("off")),
                                             new ExprNode.MapGet(new ExprNode.Var("blocks"),
-                                                    new ExprNode.KeyOf(new ExprNode.Var("off")))))),
+                                                    new ExprNode.KeyOf(new ExprNode.Var("off"))),
+                                            null, null))),
                             new StepNode.EmitEventStep(new ExprNode.LiteralString("build_complete"),
                                     Map.of("building_name", new ExprNode.Var("name"),
                                            "blocks_placed", new ExprNode.Size(new ExprNode.Var("offsets"))))));
@@ -624,7 +625,8 @@ class BlueprintInterpreterTest {
                                             new ExprNode.Add(
                                                     new ExprNode.Var("anchor"),
                                                     new ExprNode.Var("off")),
-                                            new ExprNode.LiteralString("minecraft:air")))),
+                                            new ExprNode.LiteralString("minecraft:air"),
+                                            null, null)),
                             // call place_structure
                             new StepNode.CallStep(
                                     new ExprNode.LiteralString("build:place_structure"),

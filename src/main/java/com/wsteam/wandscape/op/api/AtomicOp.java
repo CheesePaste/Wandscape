@@ -42,7 +42,8 @@ public sealed interface AtomicOp
             BlockType to,
             boolean consumeSource,
             List<ResourceStack> drops,
-            ResourceStack consumable
+            ResourceStack consumable,
+            @Nullable String blockNbtBase64
     ) implements AtomicOp {
         public TransformOp {
             if (drops == null) drops = Collections.emptyList();
@@ -50,19 +51,27 @@ public sealed interface AtomicOp
 
         // Convenience constructors
         public static TransformOp place(GridPos target, BlockType to) {
-            return new TransformOp(target, BlockType.AIR, to, false, Collections.emptyList(), null);
+            return new TransformOp(target, BlockType.AIR, to, false, Collections.emptyList(), null, null);
         }
 
         public static TransformOp place(GridPos target, BlockType to, ResourceStack consumable) {
-            return new TransformOp(target, BlockType.AIR, to, false, Collections.emptyList(), consumable);
+            return new TransformOp(target, BlockType.AIR, to, false, Collections.emptyList(), consumable, null);
+        }
+
+        public static TransformOp place(GridPos target, BlockType to, @Nullable String blockNbtBase64) {
+            return new TransformOp(target, BlockType.AIR, to, false, Collections.emptyList(), null, blockNbtBase64);
+        }
+
+        public static TransformOp place(GridPos target, BlockType to, ResourceStack consumable, @Nullable String blockNbtBase64) {
+            return new TransformOp(target, BlockType.AIR, to, false, Collections.emptyList(), consumable, blockNbtBase64);
         }
 
         public static TransformOp remove(GridPos target, BlockType from, List<ResourceStack> drops) {
-            return new TransformOp(target, from, BlockType.AIR, true, drops, null);
+            return new TransformOp(target, from, BlockType.AIR, true, drops, null, null);
         }
 
         public static TransformOp convert(GridPos target, BlockType from, BlockType to) {
-            return new TransformOp(target, from, to, true, Collections.emptyList(), null);
+            return new TransformOp(target, from, to, true, Collections.emptyList(), null, null);
         }
 
         @Override
