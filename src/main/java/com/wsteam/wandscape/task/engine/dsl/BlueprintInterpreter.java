@@ -163,7 +163,11 @@ public final class BlueprintInterpreter {
                         stacks.add(new ResourceStack(new ResourceId(resource), amount));
                     }
                 }
-                yield List.of(new AtomicOp.ResourceRequestOp(stacks));
+                if (stacks.isEmpty()) {
+                    yield List.of(); // nothing to request — skip the op
+                } else {
+                    yield List.of(new AtomicOp.ResourceRequestOp(stacks));
+                }
             }
             case StepNode.EmitEventStep s -> {
                 String event = evalString(s.event(), context, "emit_event.event");

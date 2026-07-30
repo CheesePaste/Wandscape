@@ -195,12 +195,22 @@ public final class EnqueueHelper {
                 }
             }
             // material_list + material_counts: auto-computed from pattern → block_mapping
-            // When skipMaterials is true, omit them so the NPC doesn't request items.
-            if (!params.containsKey("material_list") && !skipMaterials) {
-                var materialData = computeMaterialData(config);
-                if (materialData != null) {
-                    params.put("material_list", materialData.list());
-                    params.put("material_counts", materialData.counts());
+            // When skipMaterials is true, emit empty arrays so the blueprint
+            // always has the param; the NPC simply requests nothing.
+            if (!params.containsKey("material_list")) {
+                if (skipMaterials) {
+                    params.put("material_list", new JsonArray());
+                    params.put("material_counts", new JsonObject());
+                } else {
+                    var materialData = computeMaterialData(config);
+                    if (materialData != null) {
+                        params.put("material_list", materialData.list());
+                        params.put("material_counts", materialData.counts());
+                    } else {
+                        // No element-mapped blocks → nothing to request
+                        params.put("material_list", new JsonArray());
+                        params.put("material_counts", new JsonObject());
+                    }
                 }
             }
 

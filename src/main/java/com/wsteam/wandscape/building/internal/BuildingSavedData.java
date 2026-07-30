@@ -815,8 +815,15 @@ public class BuildingSavedData extends SavedData {
 
     /**
      * Returns the {@link BuildingContributionRegistry} owned by this data store.
+     * Lazily initialises if accessed before any building transitions (e.g. fresh world).
      */
     public BuildingContributionRegistry getContributionRegistry() {
+        if (contributionRegistry == null) {
+            contributionRegistry = new BuildingContributionRegistry(
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS);
+            contributionRegistry.setBuildSource(this::getAllBuildings);
+            contributionRegistry.rebuildFrom(this::getAllBuildings);
+        }
         return contributionRegistry;
     }
 

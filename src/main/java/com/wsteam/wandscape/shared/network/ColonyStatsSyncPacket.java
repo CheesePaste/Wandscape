@@ -66,7 +66,8 @@ public record ColonyStatsSyncPacket(
     }
 
     static void write(RegistryFriendlyByteBuf buf, ColonyStatsSyncPacket pkt) {
-        buf.writeUUID(pkt.colonyId);
+        buf.writeBoolean(pkt.colonyId != null);
+        if (pkt.colonyId != null) buf.writeUUID(pkt.colonyId);
         buf.writeVarInt(pkt.comfort);
         buf.writeVarInt(pkt.magic);
         buf.writeVarInt(pkt.wonder);
@@ -93,8 +94,10 @@ public record ColonyStatsSyncPacket(
     }
 
     static ColonyStatsSyncPacket read(RegistryFriendlyByteBuf buf) {
+        boolean hasColonyId = buf.readBoolean();
+        UUID colonyId = hasColonyId ? buf.readUUID() : null;
         return new ColonyStatsSyncPacket(
-                buf.readUUID(),
+                colonyId,
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readUtf(), buf.readVarInt(), buf.readVarInt(),
                 buf.readVarInt(), // touristCount
