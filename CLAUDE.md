@@ -48,6 +48,7 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
   - 例：移动文件 → commit，改引用 → commit，更新文档 → commit
 - **Commit message 格式**：中文一句（改动什么 + 为什么）。
   - `fix:` 修复 bug，`refactor:` 重构，`feat:` 新功能，`doc:` 文档，`chore:` 杂项
+- **未版本管理的文件必须处理**：新文件要么 `git add` 纳入版本，要么加 `.gitignore` 排除。不允许有未处理的 untracked files。`.gitignore` 改完后立即 commit。
 
 ## 工作流
 

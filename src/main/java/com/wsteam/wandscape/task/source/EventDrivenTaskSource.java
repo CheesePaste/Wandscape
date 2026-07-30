@@ -85,7 +85,7 @@ public class EventDrivenTaskSource implements TaskSource {
         GridPos loc = parseLocation(params);
         return new TaskSequence(
                 List.of(
-                        new AtomicOp.ResourceRequestOp(new ResourceStack(resource, amount)),
+                        new AtomicOp.ResourceRequestOp(List.of(new ResourceStack(resource, amount))),
                         AtomicOp.TransformOp.place(loc, visualBlock)
                 ),
                 "Gather " + resource.id() + " x" + amount);

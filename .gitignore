@@ -59,6 +59,10 @@ reasonix.toml
 ### Claude skill cache ###
 .claude/skills/minecraft-source/scripts/cache/
 
+### Python cache ###
+__pycache__/
+*.pyc
+
 ### Root-level helper scripts (not needed in repo) ###
 gen_icons.py
 fix_icons.py
