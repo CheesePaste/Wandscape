@@ -25,10 +25,10 @@
 ### 数据驱动法杖需求 + 立即失败 ✅
 - **统一 `wand_level` JSON 字段**：节点 `node_config.wand_level` 和配方 `wand_level` 共用 `{"gathering": 1, "building": 0}` 格式。缺省=deriver 默认值，0=移除需求，≥1=覆盖等级。
 - **传递链**：JSON → NodeConfig/Recipe.wandLevel (Map<String,Integer>) → BehaviourTag.fromKey() → WorkItem.wandRequirementOverrides → TaskRequest → GlobalTaskPool.mergeOverrides() → GlobalTask.requirements。
-- **TaskState.FAILED**：新增终态。SchedulerSystem 在无 NPC 满足且仓库无法杖时调用 `taskPool.failTask()`。FAILED 与 COMPLETED 同等对待（isActive=false、不计入 persistable/size）。
+- **TaskState.FAILED**：终态保留（NBT 兼容），但系统不再生成 FAILED 任务。资源短缺走 AWAITING_RESOURCES 路径自动恢复。
 - **BehaviourTag.fromKey()**：JSON key ↔ enum 双向映射，与 WandProvisionSystem.mapToNbtKey() 互为逆映射。
-- **TaskFailureReason**：sealed interface，`WandRequirementUnmet(requirements)` 记录携带失败的结构化原因，供分析器读取。
-- **FailureAnalyzerSystem**：每 20 tick 扫描 FAILED 任务，对 `WandRequirementUnmet` 自动查找匹配法杖预设 → 在殖民地 crafting_station 排队 craft_wand。去重逻辑：同一任务不重复处理，同一法杖预设已在制作中不重复排队。
+- **TaskFailureReason**：已删除（空接口，无实现）。failTask() 从未被调用。
+- **FailureAnalyzerSystem → ResourceSupplySystem**：原 AWAITING_RESOURCES 轮询被 ResourceSupplySystem 替代。新系统扫描 AWAITING_RESOURCES 任务，聚合需求 → 合成/采集，与事件驱动的 onResourceAdded 互补。
 
 ### 殖民地三值评估系统 ✅
 - **BuildingContributionRegistry**：per-colony per-buildingType 的 intactCount 缓存。0↔1 边界跨越时广播 `ColonyEvaluationChangedEvent`。

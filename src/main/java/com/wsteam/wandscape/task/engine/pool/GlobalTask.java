@@ -50,10 +50,6 @@ public class GlobalTask {
     public final Deque<InterruptRecord> interruptHistory;
     public final ApprovalInfo approval;
 
-    /** Why this task failed, if {@link #state} is {@link TaskState#FAILED}. */
-    @Nullable
-    public TaskFailureReason failureReason;
-
     public GlobalTask(
             long id,
             TaskSequence sequence,

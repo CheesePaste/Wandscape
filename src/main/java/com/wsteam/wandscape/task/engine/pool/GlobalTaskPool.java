@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.task.engine.pool;
 
 import com.wsteam.wandscape.task.runtime.ApprovalInfo;
-import com.wsteam.wandscape.task.runtime.TaskFailureReason;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
 import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -376,7 +375,7 @@ public class GlobalTaskPool {
     private boolean isDuplicate(String blueprintId, String dedupKey, String dedupValue) {
         String labelPrefix = resolvedToLabelPrefix(blueprintId);
         for (GlobalTask t : all()) {
-            if (t.state == TaskState.COMPLETED || t.state == TaskState.FAILED) continue;
+            if (t.state == TaskState.COMPLETED) continue;
             String label = t.sequence.label();
             boolean labelMatch = label.startsWith(labelPrefix) || label.equals(blueprintId);
             if (labelMatch) {
@@ -444,23 +443,13 @@ public class GlobalTaskPool {
         }
     }
 
-    // ── Failure ──
-
-    /** Mark a task as permanently failed. */
-    public void failTask(long taskId, TaskFailureReason reason) {
+    /** Wake a single AWAITING_RESOURCES task back to PENDING_ASSIGN. */
+    public void wakeupTask(long taskId) {
         GlobalTask task = tasksById.get(taskId);
-        if (task == null) return;
-        removeFromAssignable(task);
-        task.state = TaskState.FAILED;
-        task.assignedNpcId = null;
-        task.failureReason = reason;
-        for (var sub : task.subscriptions) {
-            eventBus.unsubscribe(sub);
-        }
-        task.subscriptions.clear();
+        if (task == null || task.state != TaskState.AWAITING_RESOURCES) return;
+        transitionToPendingAssign(task);
         notifyChanged();
-        Log.info(TAG, "fail #%d '%s' reason=%s", taskId, task.sequence.label(),
-                reason);
+        Log.info(TAG, "wakeup #%d '%s' → PENDING_ASSIGN", taskId, task.sequence.label());
     }
 
     // ── Persistence ──
@@ -469,7 +458,7 @@ public class GlobalTaskPool {
     public List<GlobalTask> getPersistableTasks() {
         List<GlobalTask> result = new ArrayList<>();
         for (GlobalTask t : tasksById.values()) {
-            if (t.state != TaskState.COMPLETED && t.state != TaskState.FAILED && t.blueprintId != null) {
+            if (t.state != TaskState.COMPLETED && t.blueprintId != null) {
                 result.add(t);
             }
         }
@@ -522,14 +511,14 @@ public class GlobalTaskPool {
     public int size() {
         int count = 0;
         for (GlobalTask t : tasksById.values()) {
-            if (t.state != TaskState.COMPLETED && t.state != TaskState.FAILED) count++;
+            if (t.state != TaskState.COMPLETED) count++;
         }
         return count;
     }
 
     public boolean isActive(long taskId) {
         GlobalTask t = tasksById.get(taskId);
-        return t != null && t.state != TaskState.COMPLETED && t.state != TaskState.FAILED;
+        return t != null && t.state != TaskState.COMPLETED;
     }
 
     public Collection<GlobalTask> all() {

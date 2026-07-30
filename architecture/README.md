@@ -46,7 +46,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── bootstrap/    EngineBootstrap — 一次性装配所有边界实现+TaskSource+系统
 │   ├── boundary/     WandscapeBlockOps/WandscapeMovementOps/WandscapeRitualOps/WandscapeEntityOps + AsyncTransformExecutor + ResourceRequestExecutor
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
-│   ├── system/       ECS System（注册到World.tick()）NavigationSystem + FailureAnalyzerSystem
+│   ├── system/       ECS System（注册到World.tick()）NavigationSystem + ResourceSupplySystem
 │   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService
 │   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │

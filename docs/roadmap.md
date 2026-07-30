@@ -9,7 +9,7 @@
 - ✓ 道路系统（MST + 路网生成 + 装饰 + 编辑器 + 宽面渲染 + 路径规划 + 预览 + 拆除）
 - ✓ 仓库 GUI + ColonyItemBank + 网络同步
 - ✓ 工作站 GUI + 制作站 GUI + 节点自动采集 → 仓库闭环
-- ✓ 法杖需求接线 + 失败分析器 + 智能资源调度级联
+- ✓ 法杖需求接线 + 智能资源调度级联 + ResourceSupplySystem
 - ✓ 殖民地三值评估 + 配方解锁
 - **✓ 游客经济全系统**：维护费 + 装饰辐射 + 商店 + 奇观 + 游客(生成/移动/交互/离开) + 宾馆 + 酒馆招募
 
@@ -106,67 +106,32 @@ ColonyApi / HouseApi / ManaPoolApi / AtomicExecutor（被 core/op 替代）
 
 三值同时满足才解锁；填 0 表示该维度无门槛。
 
-## 已完成：失败分析器 (2026-06-23)
+## 已完成：ResourceSupplySystem (2026-07-30)
 
-### 当前覆盖
+FailureAnalyzerSystem 已被删除（其 AWAITING_RESOURCES 轮询与 onResourceAdded 冗余，FAILED 任务分析未实现）。
+替换为 ResourceSupplySystem 和 MaintenanceForecastSystem 两层。
 
-**法杖能力不足 → 自动制作法杖**。当任务因 `WandRequirementUnmet` 失败时，FailureAnalyzerSystem 自动：
-1. 从任务 requirements（如 `{GATHERING:1}`）反查匹配的法杖预设
-2. 通过任务 anchor 定位殖民地
-3. 在殖民地 crafting_station 入队 `craft_wand` 任务
-4. 去重：同一任务不重复处理，同一法杖已在制作中不重复入队
+### ResourceSupplySystem（40tick 心跳）
 
-法杖制作完成后存入仓库 → 下一轮节点采集/合成任务正常分配。
+扫描 AWAITING_RESOURCES 任务，聚合资源需求：
+1. 资源已到位 → 唤醒任务回 PENDING_ASSIGN
+2. 资源不足 → 查合成配方 → 在 crafting_station 排队 synthesize
+3. 无合成配方 → 在对应 node 建筑排队 gather
 
-### 数据流
+与事件驱动的 `onResourceAdded()` 互补：后者即时唤醒，前者为重试兜底。
 
-```
-SchedulerSystem
-  │  无 NPC 满足 + 仓库无法杖
-  │  → taskPool.failTask(id, new WandRequirementUnmet(reqs))
-  ▼
-GlobalTaskPool  →  task.state = FAILED, task.failureReason = reason
-  │
-  ▼
-FailureAnalyzerSystem (20tick 心跳)
-  │  1. taskPool.getByState(FAILED)
-  │  2. 匹配 failureReason instanceof WandRequirementUnmet
-  │  3. 遍历 WandPresetLoader → 找覆盖所有 reqs 的预设
-  │  4. taskParams.anchor → BuildingSavedData → colonyId
-  │  5. BuildingApi.getBuildingsByCategory(colonyId, "crafting_station")
-  │  6. api.enqueueWork(stationId, craft_wand WorkItem)
-  ▼
-BuildingTaskSource.poll() → TaskRequest → GlobalTaskPool → SchedulerSystem → NPC 制作法杖
-```
+### MaintenanceForecastSystem
 
-### 规划：建造/维护元素不足 → 自动节点采集
+维护费底线：检查元素储量 < 日维护费 × reserveDays，不足时在 node 建筑排队高优先级采集任务。
 
-**`ResourceUnavailable`** 失败原因（待实现）：
+### 删除
 
-```
-建造建筑
-  │  ColonyItemBank 检查元素不足
-  │  → failTask(id, new ResourceUnavailable(missingElements: Map<ElementType, Long>))
-  ▼
-FailureAnalyzerSystem
-  │  1. 匹配 failureReason instanceof ResourceUnavailable
-  │  2. missingElements 映射到对应 node 类型（earth→earth节点, wood→wood节点...）
-  │  3. 在殖民地查找匹配的 node 建筑（BuildingApi.getBuildingsByCategory(colonyId, "node")）
-  │  4. 对每个缺失元素，入队 gather WorkItem（如有对应 node 建筑）
-  ▼
-节点自动采集 → 元素入仓 → 建造重试
-```
-
-**设施维护**（待实现）同理：维护消耗后若元素池枯竭，触发的 `ResourceUnavailable` 由同一个 FailureAnalyzerSystem 处理。
-
-### 涉及的新增/修改
-
-| 文件 | 变更 |
+| 文件 | 原因 |
 |------|------|
-| `core/task/TaskFailureReason.java` | + `ResourceUnavailable(Map<ElementType, Long> missingElements)` |
-| `engine/system/FailureAnalyzerSystem.java` | + `handleResourceUnavailable()` 分支 |
-| `building/internal/BuildCompleteListener.java` 或建造执行路径 | 建造前检查元素 → 不足则 failTask |
-| 设施维护系统（待构建） | 维护后检查元素池 → 不足则 failTask |
+| `engine/system/FailureAnalyzerSystem.java` | AWAITING_RESOURCES 轮询与 onResourceAdded 冗余 |
+| `task/runtime/TaskFailureReason.java` | 空接口，failTask() 从未被调用 |
+| `GlobalTask.failureReason` 字段 | 从未被设置 |
+| `GlobalTaskPool.failTask()` 方法 | 从未被调用 |
 
 ## GUI 任务编辑器
 

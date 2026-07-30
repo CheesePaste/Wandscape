@@ -145,15 +145,9 @@
 
 **为什么 overrides 的 0 是"移除"而非"等级 0"？** 等级 0 的 BehaviourLevel 不存在（最低为 1）。用 0 表示移除是常见 DSL 惯例（类 Docker Compose 的 `replicas: 0`），避免引入额外的 nullable wrapper。
 
-**为什么不满足需求的任务立即 FAILED 而非永远 PENDING_ASSIGN？** PENDING_ASSIGN 不释放建筑队列，任务永久挂在队列中阻挡后续任务。立即 FAILED 让 BuildingTaskSource 的 activeTasks 清理逻辑自动移除跟踪，建筑队列恢复流动。FAILED 是终态，与 COMPLETED 同等待遇（isActive=false、不计入 persistable、不计入 size）。
+**为什么系统不再生成 FAILED 任务？** 原设计中 FAILED 用于"能力不匹配"场景（如无所需法杖），由 FailureAnalyzerSystem 自动 craft_wand 修复。2026-07-30 重构后，资源短缺走 AWAITING_RESOURCES → ResourceSupplySystem 自动补货路径，法杖制作等策略决策留给玩家手动管理。FAILED 枚举值保留（NBT 兼容），但 failTask() 和 TaskFailureReason 已删除。TaskState.FAILED 视为终态，与 COMPLETED 同等待遇（isActive=false、不计入 persistable、不计入 size）。
 
-**为什么只在 requirements 非空时才 failTask？** 空 requirements 表示任何 NPC 可执行。若所有 idle NPC 因法力耗尽被跳过，任务是暂时不可分配而非永久不可满足——等待法力回复后下一轮心跳即可接取。failTask 仅适用于"能力永远不匹配"的场景。
-
-**为什么失败分析器用 sealed interface 而非 enum + switch？** `TaskFailureReason` 是 sealed interface，每个变体是独立 record，携带类型安全的结构化数据（如 `WandRequirementUnmet` 携带 `Map<BehaviourTag, BehaviourLevel>`）。新增失败原因只需添加新 record + 分析器新增处理分支，无需修改已有代码。
-
-**为什么失败恢复是"重新排队而非重试"？** 失败的任务保持 FAILED 终态。分析器检测到失败后，enqueue 新的 craft_wand 任务到 crafting station。原始任务对应的建筑（节点/工作站）由 BuildingTaskSource 的自然轮询重新生成新任务——此时仓库中已有法杖，调度器可直接分配。这种"等待外部条件满足→自然恢复"模式避免了重试循环和状态机复杂性。
-
-**为什么失败分析器用任务 anchor 推断殖民地而非在任务中存 colonyId？** anchor 是任务参数中已存在的位置信息，从 anchor 反向查 BuildingSavedData 可获取殖民地。不修改 TaskRequest/WorkItem 数据模型，零侵入。对于无 anchor 的任务（如 EventDrivenTaskSource 的触发任务），分析器跳过恢复并记录警告。
+**为什么 FAILED 分析被 ResourceSupplySystem 替代？** 原 FailureAnalyzerSystem 计划实现两种自动修复：（1）WandRequirementUnmet → craft_wand，（2）ResourceUnavailable → gather。其中（1）是策略决策（选哪种法杖），应由玩家决定；（2）是执行层冗余（已有 ResourceShortageHandler + onResourceAdded 处理）。ResourceSupplySystem 专注于执行层:扫描 AWAITING_RESOURCES 任务 → 聚合需求 → 合成/采集，不涉及策略判断。
 
 ## 任务系统重构 v2（2026-06-25）
 
@@ -264,7 +258,7 @@
 
 **为什么 engine/system/ 拆分为 system/ + service/？** `engine/system/` 里混了两类完全不同的事物：(1) 实现 `core/ecs/System` 接口、注册到 `World.tick()` 的真正 ECS System；(2) 通过 `world.eventBus.subscribe()` 注册的纯事件订阅者。前者是 ECS 调度的组成部分，后者是旁路服务。混在一起让开发者无法从包名判断"这个 System 是 tick 驱动的还是事件驱动的"。拆分后 `engine/system/` 只放 ECS System，`engine/service/` 只放事件订阅者，各自职责单一。
 
-**为什么 StatsSystem/AchievementSystem 改名？** 叫 "System" 意味着它跟 NavigationSystem 和 FailureAnalyzerSystem 是同类事物——但实际上它既不实现 `core/ecs/System`，也不被 tick 驱动。命名误导比命名不统一更糟糕，因为会让新开发者花费无意义的精力去理解它们之间的异同。`StatsService` 和 `AchievementService` 准确表达了它们的实际角色：记录数据、提供服务。
+**为什么 StatsSystem/AchievementSystem 改名？** 叫 "System" 意味着它跟 NavigationSystem 和 ResourceSupplySystem 是同类事物——但实际上它既不实现 `core/ecs/System`，也不被 tick 驱动。命名误导比命名不统一更糟糕，因为会让新开发者花费无意义的精力去理解它们之间的异同。`StatsService` 和 `AchievementService` 准确表达了它们的实际角色：记录数据、提供服务。
 
 ## 样条线模型编辑器 (Spline Model Editor) (2026-07-08)
 

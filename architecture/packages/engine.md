@@ -26,7 +26,7 @@ TaskPoolSavedData（跨会话，保存 blueprintId + params + stepIndex → NBT�
 
 ## ECS 系统 (system/)
 
-NavigationSystem（≤64格寻路 + 卡死检测每60tick/3次→传送）/ FailureAnalyzerSystem（每20tick分析 FAILED 任务，自动制作法杖）。均 `implements System`，注册到 World.tick()。
+NavigationSystem（≤64格寻路 + 卡死检测每60tick/3次→传送）/ ResourceSupplySystem（每40tick扫描 AWAITING_RESOURCES 任务，聚合需求 → 合成/采集）。均 `implements System`，注册到 World.tick()。
 
 ## 物品运输 (transport/)
 

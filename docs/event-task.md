@@ -20,7 +20,7 @@ Event 存在只有一个理由：**一个事件触发多个响应**。
 | **Event** | 1:N 广播"发生了什么" | 1:1 场景用事件；在 handler 里执行业务逻辑 |
 | **TaskSource** | Event → TaskRequest 翻译器 | 不执行业务逻辑，不持有状态 |
 | **GlobalTaskPool** | 任务生命周期、状态转移、调度队列、资源短缺恢复 | 不创建新任务（trigger 系统除外） |
-| **FailureAnalyzer** | 分析 FAILED 任务 → 创建修复任务 | 不处理 AWAITING_RESOURCES |
+| **ResourceSupplySystem** | 扫描 AWAITING_RESOURCES 任务，聚合需求 → 自动合成/采集 | 不处理 FAILED（系统不再生产 FAILED 任务） |
 | **OpExecutor** | 执行原子操作 | 不处理资源短缺（抛异常交给 TaskPool） |
 
 ## 现有事件清单
@@ -49,24 +49,23 @@ PENDING_APPROVAL → PENDING_ASSIGN → IN_PROGRESS → COMPLETED
                          ↑                │
                          │    AWAITING_RESOURCES ←── ResourceShortageException
                          │          │
-                         │    ResourceFulfilled（资源到位自动唤醒）
-                         │
-                       FAILED（终端：WandRequirementUnmet / ColonyEvaluationTooLow）
+                         │    ResourceSupplySystem（扫描唤醒 + 自动补货）
 ```
 
-## 自动恢复链（资源不足 → 合成）
+## 自动恢复链（资源不足 → 合成/采集）
 
 ```
 ① NPC 执行 ResourceRequestOp → 仓库不足 → ResourceShortageException
 ② TaskExecutionSystem → taskPool.markAwaitingResources → 任务状态 AWAITING_RESOURCES
-③ GlobalTaskPool 直接调用 ResourceShortageHandler.handle()
+③ markAwaitingResources 内调用 ResourceShortageHandler.handle()
    └── 有合成配方 → 创建 production:synthesize 任务
         └── 合成任务执行时又缺元素 → 回到 ①（递归）
-④ 合成完成 → 仓库入库 → WarehouseManager → ResourceAddedListener 回调
-⑤ GlobalTaskPool.onResourceAdded() → 唤醒所有等待该资源的任务 → PENDING_ASSIGN
+④ ResourceSupplySystem（40tick 心跳）扫描 AWAITING_RESOURCES 任务
+   └── 资源到位 → 唤醒任务回 PENDING_ASSIGN
+   └── 资源不足 → 重试合成/采集（兜底：首次 handler 未成功时补发）
+⑤ 合成完成 → 仓库入库 → WarehouseManager → ResourceAddedListener 回调
+⑥ GlobalTaskPool.onResourceAdded() → 事件驱动即时唤醒等待该资源的任务
 ```
-
-**设计决策**：步骤 ③ 和 ④⑤ 都不通过事件。`ResourceShortageHandler` 和 `ResourceAddedListener` 都是 `core/boundary/` 下的 `@FunctionalInterface`，engine 层注入实现。1:1 场景不需要事件解耦——依赖反转接口已经解决了模块解耦问题。
 
 ## 如何新增事件
 
@@ -114,6 +113,6 @@ PENDING_APPROVAL → PENDING_ASSIGN → IN_PROGRESS → COMPLETED
 | `core/task/TaskState.java` | 任务状态枚举 |
 | `core/system/SchedulerSystem.java` | 任务调度（NPC 匹配 + 分配） |
 | `core/system/TaskExecutionSystem.java` | 任务执行（驱动 NPC 执行 Op 序列） |
-| `engine/system/FailureAnalyzerSystem.java` | 失败分析（WandRequirementUnmet → craft_wand） |
+| `engine/system/ResourceSupplySystem.java` | 资源供应系统（扫描 AWAITING_RESOURCES，聚合需求 → 合成/采集） |
 | `engine/bootstrap/EngineBootstrap.java` | 组装点：所有 Handler/TaskSource 在此注入 |
 | `core/task/TriggerDeclaration.java` | 蓝图级事件→任务映射（数据驱动，1:N 场景） |
