@@ -711,12 +711,14 @@ public class BuildingScannerScreen extends Screen {
         var level = scanner.getLevel();
         if (level == null) return;
 
+        BlockPos scannerPos = scanner.getBlockPos();
         int count = 0;
         for (int x = wMin.getX(); x <= wMax.getX(); x++) {
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
-                    var state = level.getBlockState(new BlockPos(x, y, z));
-                    if (!state.isAir()) count++;
+                    BlockPos bp = new BlockPos(x, y, z);
+                    if (bp.equals(scannerPos)) continue;
+                    if (!level.getBlockState(bp).isAir()) count++;
                 }
             }
         }

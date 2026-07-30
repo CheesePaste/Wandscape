@@ -86,6 +86,8 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
+                    // Skip the scanner block itself
+                    if (bp.equals(packet.pos)) continue;
                     BlockState state = level.getBlockState(bp);
                     if (state.isAir()) continue;
 
