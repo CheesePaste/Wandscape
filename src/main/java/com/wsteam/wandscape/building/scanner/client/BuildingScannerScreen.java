@@ -16,6 +16,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -56,6 +58,10 @@ public class BuildingScannerScreen extends Screen {
 
     // ── Service config (shown when category=service) ──
     private EditBox serviceEnergy, serviceMaxOcc, serviceDuration;
+
+    // ── Presets ──
+    private EditBox presetNameEdit;
+    private int presetY;
 
     // ── Scrolling ──
     private int scrollOff = 0;
@@ -195,6 +201,61 @@ public class BuildingScannerScreen extends Screen {
         unlockLevel = mkNumEdit(lx + COL2, y, FW, scanner.getUnlockMinLevel(),
                 s -> { scanner.setUnlockMinLevel(intOrZero(s)); syncToServer(); });
         y += ROW_H + 10;
+
+        // ── Presets section ──
+        addSectionHeader(y, "Presets");
+        y += 14;
+        presetY = y - 14;
+
+        presetNameEdit = mkEdit(lx + COL2, y, 100, "", null);
+        addRenderableWidget(Button.builder(Component.literal("Save"), b -> {
+                    String name = presetNameEdit.getValue();
+                    if (!name.isBlank()) {
+                        ScannerPresetStore.savePreset(name, capturePresetData());
+                        needsRebuild = true;
+                    }
+                })
+                .bounds(lx + COL2 + 104, y, 40, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("Load"), b -> {
+                    String name = presetNameEdit.getValue();
+                    if (!name.isBlank()) {
+                        CompoundTag data = ScannerPresetStore.loadPreset(name);
+                        if (data != null) {
+                            applyPresetData(data);
+                            syncToServer();
+                            needsRebuild = true;
+                        }
+                    }
+                })
+                .bounds(lx + COL2 + 148, y, 40, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("Del"), b -> {
+                    String name = presetNameEdit.getValue();
+                    if (!name.isBlank()) {
+                        ScannerPresetStore.deletePreset(name);
+                        needsRebuild = true;
+                    }
+                })
+                .bounds(lx + COL2 + 192, y, 40, 18).build());
+        y += ROW_H + 2;
+
+        // Preset name quick-load buttons
+        List<String> presetNames = ScannerPresetStore.listPresets();
+        int px = lx + COL2;
+        for (String pn : presetNames) {
+            int bw = Math.min(font.width(pn) + 10, 120);
+            addRenderableWidget(Button.builder(Component.literal(pn), btn -> {
+                        CompoundTag data = ScannerPresetStore.loadPreset(btn.getMessage().getString());
+                        if (data != null) {
+                            applyPresetData(data);
+                            syncToServer();
+                            needsRebuild = true;
+                        }
+                    })
+                    .bounds(px, y, bw, 16).build());
+            px += bw + 4;
+            if (px > width - 40) break;
+        }
+        y += 20;
 
         // ── Category-specific sections ──
         String cat = scanner.getCategory();
@@ -504,6 +565,9 @@ public class BuildingScannerScreen extends Screen {
         drawHdr(gui, "Unlock Requirement", lx, unlockY);
         drawLbl(gui, "Min Level", lx + COL2, unlockY + ROW_H - 4);
 
+        // Presets
+        drawHdr(gui, "Presets", lx, presetY);
+
         // Category-specific
         String cat = scanner.getCategory();
         if ("shop".equals(cat)) {
@@ -549,6 +613,97 @@ public class BuildingScannerScreen extends Screen {
         if (s == null || s.isEmpty()) return 0;
         try { return Integer.parseInt(s); }
         catch (NumberFormatException e) { return 0; }
+    }
+
+    // ── Preset helpers ──
+
+    /** Capture all config fields from the current scanner state into a CompoundTag. */
+    private CompoundTag capturePresetData() {
+        CompoundTag tag = new CompoundTag();
+        // boundary
+        BlockOffset bMin = scanner.getBoundaryMin();
+        BlockOffset bMax = scanner.getBoundaryMax();
+        tag.putIntArray("boundary_min", new int[]{bMin.x(), bMin.y(), bMin.z()});
+        tag.putIntArray("boundary_max", new int[]{bMax.x(), bMax.y(), bMax.z()});
+        // door
+        BlockOffset door = scanner.getDoorOffset();
+        if (door != null) {
+            tag.putIntArray("door_offset", new int[]{door.x(), door.y(), door.z()});
+        }
+        // interact zones
+        ListTag zones = new ListTag();
+        for (BoundaryBox zone : scanner.getInteractZones()) {
+            CompoundTag zt = new CompoundTag();
+            zt.putIntArray("min", new int[]{zone.min().x(), zone.min().y(), zone.min().z()});
+            zt.putIntArray("max", new int[]{zone.max().x(), zone.max().y(), zone.max().z()});
+            zones.add(zt);
+        }
+        tag.put("interact_zones", zones);
+        // category & meta
+        tag.putString("category", scanner.getCategory());
+        tag.putInt("comfort", scanner.getComfort());
+        tag.putInt("magic", scanner.getMagic());
+        tag.putInt("wonder", scanner.getWonder());
+        // unlock
+        tag.putInt("unlock_min_level", scanner.getUnlockMinLevel());
+        // shop
+        tag.putDouble("shop_profit", scanner.getShopProfitRate());
+        tag.putInt("shop_duration", scanner.getShopInteractionDurationTicks());
+        // service
+        tag.putInt("service_energy", scanner.getServiceEnergyPerUse());
+        tag.putInt("service_max_occ", scanner.getServiceMaxOccupancy());
+        tag.putInt("service_duration", scanner.getServiceInteractionDurationTicks());
+        return tag;
+    }
+
+    /** Restore all config fields from a preset CompoundTag into the scanner BE. */
+    private void applyPresetData(CompoundTag tag) {
+        // boundary
+        int[] bMin = tag.getIntArray("boundary_min");
+        int[] bMax = tag.getIntArray("boundary_max");
+        if (bMin.length == 3 && bMax.length == 3) {
+            scanner.setBoundary(
+                    BlockOffset.of(bMin[0], bMin[1], bMin[2]),
+                    BlockOffset.of(Math.max(bMax[0], bMin[0] + 1),
+                            Math.max(bMax[1], bMin[1] + 1),
+                            Math.max(bMax[2], bMin[2] + 1)));
+        }
+        // door
+        if (tag.contains("door_offset", Tag.TAG_INT_ARRAY)) {
+            int[] d = tag.getIntArray("door_offset");
+            scanner.setDoorOffset(d.length == 3 ? BlockOffset.of(d[0], d[1], d[2]) : null);
+        } else {
+            scanner.setDoorOffset(null);
+        }
+        // interact zones
+        scanner.clearInteractZones();
+        if (tag.contains("interact_zones", Tag.TAG_LIST)) {
+            for (int i = 0; i < tag.getList("interact_zones", Tag.TAG_COMPOUND).size(); i++) {
+                CompoundTag zt = tag.getList("interact_zones", Tag.TAG_COMPOUND).getCompound(i);
+                int[] zMin = zt.getIntArray("min");
+                int[] zMax = zt.getIntArray("max");
+                if (zMin.length == 3 && zMax.length == 3) {
+                    scanner.addInteractZone(new BoundaryBox(
+                            BlockOffset.of(zMin[0], zMin[1], zMin[2]),
+                            BlockOffset.of(zMax[0], zMax[1], zMax[2])));
+                }
+            }
+        }
+        // category
+        scanner.setCategory(tag.getString("category"));
+        // meta
+        scanner.setComfort(tag.getInt("comfort"));
+        scanner.setMagic(tag.getInt("magic"));
+        scanner.setWonder(tag.getInt("wonder"));
+        // unlock
+        scanner.setUnlockMinLevel(Math.max(1, tag.getInt("unlock_min_level")));
+        // shop
+        scanner.setShopProfitRate(tag.getDouble("shop_profit"));
+        scanner.setShopInteractionDurationTicks(tag.getInt("shop_duration"));
+        // service
+        scanner.setServiceEnergyPerUse(tag.getInt("service_energy"));
+        scanner.setServiceMaxOccupancy(tag.getInt("service_max_occ"));
+        scanner.setServiceInteractionDurationTicks(tag.getInt("service_duration"));
     }
 
     @Override
