@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.engine.colony.ColonySavedData;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 
@@ -40,6 +41,13 @@ public final class ColonyApiImpl implements ColonyApi {
         UUID colonyId = UUID.randomUUID();
         colonyOrigins.put(origin, colonyId);
         colonyToOrigin.put(colonyId, origin);
+
+        // Persist to ColonySavedData (independent from buildings)
+        ColonySavedData csd = getColonySavedData();
+        if (csd != null) {
+            csd.addColony(colonyId, origin);
+        }
+
         Log.info(TAG, "[Colony] Created colony {} at origin {}",
                 colonyId.toString().substring(0, 8), origin);
         return colonyId;
@@ -50,6 +58,13 @@ public final class ColonyApiImpl implements ColonyApi {
         BlockPos origin = colonyToOrigin.remove(colonyId);
         if (origin != null) {
             colonyOrigins.remove(origin);
+
+            // Remove from persistence
+            ColonySavedData csd = getColonySavedData();
+            if (csd != null) {
+                csd.removeColony(colonyId);
+            }
+
             Log.info(TAG, "[Colony] Deleted colony {} (origin {})",
                     colonyId.toString().substring(0, 8), origin);
             BuildingSavedData sd = getSavedData();
@@ -144,6 +159,19 @@ public final class ColonyApiImpl implements ColonyApi {
     public void rebuildFromSavedData() {
         colonyOrigins.clear();
         colonyToOrigin.clear();
+
+        // Primary source: ColonySavedData (independent colony persistence)
+        ColonySavedData csd = getColonySavedData();
+        if (csd != null && csd.size() > 0) {
+            for (var entry : csd.getAllColonies().entrySet()) {
+                colonyOrigins.put(entry.getValue(), entry.getKey());
+                colonyToOrigin.put(entry.getKey(), entry.getValue());
+            }
+            Log.info(TAG, "[Colony] Rebuilt index: {} colonies from ColonySavedData", colonyOrigins.size());
+            return;
+        }
+
+        // Fallback: scan buildings (backward compat / migration)
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;
         for (BuildingData bd : sd.getAllBuildings()) {
@@ -152,9 +180,14 @@ public final class ColonyApiImpl implements ColonyApi {
                     && bd.getColonyId() != null) {
                 colonyOrigins.put(bd.getPosition(), bd.getColonyId());
                 colonyToOrigin.put(bd.getColonyId(), bd.getPosition());
+                // Migrate to new persistence
+                if (csd != null) {
+                    csd.addColony(bd.getColonyId(), bd.getPosition());
+                }
             }
         }
-        Log.info(TAG, "[Colony] Rebuilt index: {} colonies from saved data", colonyOrigins.size());
+        Log.info(TAG, "[Colony] Rebuilt index: {} colonies from BuildingSavedData fallback (migrated)",
+                colonyOrigins.size());
     }
 
     // ── Singleton ─────────────────────────────────────────────────────────
@@ -175,6 +208,13 @@ public final class ColonyApiImpl implements ColonyApi {
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server == null) return null;
         return BuildingSavedData.get(server.overworld());
+    }
+
+    @Nullable
+    private static ColonySavedData getColonySavedData() {
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return null;
+        return ColonySavedData.getOrCreate(server.overworld());
     }
 
     /**

@@ -1,0 +1,109 @@
+package com.wsteam.wandscape.engine.colony;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.saveddata.SavedData;
+import com.wsteam.wandscape.shared.log.Log;
+
+/**
+ * Standalone persistence for colonies — does not depend on buildings.
+ *
+ * <p>Each colony is stored as (colonyId → origin). On server restart,
+ * {@code ColonyApiImpl.rebuildFromSavedData()} reads from this store directly
+ * instead of scanning {@code BuildingSavedData} for government buildings.
+ */
+public class ColonySavedData extends SavedData {
+    private static final String TAG = "ColonySavedData";
+    private static final String DATA_NAME = "wandscape_colonies";
+
+    private static final String KEY_COLONIES = "colonies";
+    private static final String KEY_ID = "id";
+    private static final String KEY_X = "x";
+    private static final String KEY_Y = "y";
+    private static final String KEY_Z = "z";
+
+    private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
+
+    private static final Factory<ColonySavedData> FACTORY = new Factory<>(
+            ColonySavedData::new,
+            ColonySavedData::load,
+            null
+    );
+
+    public static ColonySavedData getOrCreate(Level level) {
+        return level.getServer().overworld()
+                .getDataStorage()
+                .computeIfAbsent(FACTORY, DATA_NAME);
+    }
+
+    // ── Accessors ──
+
+    public void addColony(UUID colonyId, BlockPos origin) {
+        colonies.put(colonyId, origin.immutable());
+        setDirty();
+        Log.info(TAG, "[Colony] Persisted colony {} at {}", colonyId.toString().substring(0, 8), origin);
+    }
+
+    public void removeColony(UUID colonyId) {
+        BlockPos removed = colonies.remove(colonyId);
+        if (removed != null) {
+            setDirty();
+            Log.info(TAG, "[Colony] Removed colony {} from persistence", colonyId.toString().substring(0, 8));
+        }
+    }
+
+    @Nullable
+    public BlockPos getOrigin(UUID colonyId) {
+        return colonies.get(colonyId);
+    }
+
+    public Map<UUID, BlockPos> getAllColonies() {
+        return Collections.unmodifiableMap(colonies);
+    }
+
+    public int size() {
+        return colonies.size();
+    }
+
+    // ── NBT persistence ──
+
+    @Override
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        ListTag list = new ListTag();
+        for (var entry : colonies.entrySet()) {
+            CompoundTag entryTag = new CompoundTag();
+            entryTag.putUUID(KEY_ID, entry.getKey());
+            BlockPos pos = entry.getValue();
+            entryTag.putInt(KEY_X, pos.getX());
+            entryTag.putInt(KEY_Y, pos.getY());
+            entryTag.putInt(KEY_Z, pos.getZ());
+            list.add(entryTag);
+        }
+        tag.put(KEY_COLONIES, list);
+        return tag;
+    }
+
+    private static ColonySavedData load(CompoundTag tag, HolderLookup.Provider registries) {
+        ColonySavedData data = new ColonySavedData();
+        ListTag list = tag.getList(KEY_COLONIES, Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag entry = list.getCompound(i);
+            UUID id = entry.getUUID(KEY_ID);
+            int x = entry.getInt(KEY_X);
+            int y = entry.getInt(KEY_Y);
+            int z = entry.getInt(KEY_Z);
+            data.colonies.put(id, new BlockPos(x, y, z));
+        }
+        Log.info(TAG, "Loaded {} colonies from saved data", data.colonies.size());
+        return data;
+    }
+}

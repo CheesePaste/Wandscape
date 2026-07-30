@@ -28,8 +28,7 @@
         {
           "type": "place",
           "at": {"+": ["$anchor", "$off"]},
-          "block": {"get": ["$blocks", {"keyof": "$off"}]},
-          "consumable": {"get": ["$blocks", {"keyof": "$off"}]}
+          "block": {"get": ["$blocks", {"keyof": "$off"}]}
         }
       ]
     },

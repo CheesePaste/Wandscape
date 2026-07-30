@@ -30,8 +30,7 @@
         {
           "type": "place",
           "at": {"get": ["$tile", "pos"]},
-          "block": {"get": ["$tile", "block"]},
-          "consumable": {"get": ["$tile", "block"]}
+          "block": {"get": ["$tile", "block"]}
         }
       ]
     },
