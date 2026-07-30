@@ -223,11 +223,6 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             for (ShopGoodData g : scanner.getShopGoods()) {
                 JsonObject gt = new JsonObject();
                 gt.addProperty("item_id", g.itemId());
-                JsonObject rcObj = new JsonObject();
-                for (var entry : g.restockCost().entrySet()) {
-                    rcObj.addProperty(entry.getKey(), entry.getValue());
-                }
-                gt.add("restock_cost", rcObj);
                 gt.addProperty("comfort", g.comfort());
                 gt.addProperty("magic", g.magic());
                 gt.addProperty("wonder", g.wonder());

@@ -383,10 +383,10 @@ public class BuildingScannerScreen extends Screen {
             for (int gi = 0; gi < scanner.getShopGoods().size(); gi++) {
                 GoodRow gr = new GoodRow(gi, gx, gy);
                 goodRows.add(gr);
-                gy += 40 + scanner.getShopGoods().get(gi).restockCost().size() * 20;
+                gy += 40;
             }
             addRenderableWidget(Button.builder(Component.literal("+ Add Good"), b -> {
-                        scanner.addShopGood(new ShopGoodData("minecraft:air", Map.of("earth", 1), 0, 0, 0));
+                        scanner.addShopGood(new ShopGoodData("minecraft:air", 0, 0, 0));
                         syncToServer();
                         needsRebuild = true;
                     })
@@ -559,7 +559,6 @@ public class BuildingScannerScreen extends Screen {
         final int index;
         final EditBox itemIdBox;
         final EditBox gComfort, gMagic, gWonder;
-        final List<CostRow> restockRows = new ArrayList<>();
         int yBase;
 
         GoodRow(int idx, int x, int y) {
@@ -576,26 +575,11 @@ public class BuildingScannerScreen extends Screen {
                         needsRebuild = true;
                     })
                     .bounds(x + 228, y, 18, 18).build());
-            // Restock cost rows
-            int ry = y + 20;
-            int ri = 0;
-            for (var entry : good.restockCost().entrySet()) {
-                int rx = x + 8;
-                String elem = entry.getKey();
-                CostRow cr = new CostRow(rx, ry, elem, entry.getValue(),
-                        () -> { /* remove handled by rebuild */ }, this::updateGood);
-                restockRows.add(cr);
-                ry += 20;
-                ri++;
-            }
         }
 
         ShopGoodData captureGood() {
-            Map<String, Integer> rc = new HashMap<>();
-            for (CostRow cr : restockRows) rc.put(cr.element(), cr.amount());
             return new ShopGoodData(
                     itemIdBox.getValue(),
-                    rc,
                     intOrZero(gComfort), intOrZero(gMagic), intOrZero(gWonder));
         }
 
@@ -936,14 +920,6 @@ public class BuildingScannerScreen extends Screen {
         for (ShopGoodData g : scanner.getShopGoods()) {
             CompoundTag gt = new CompoundTag();
             gt.putString("item_id", g.itemId());
-            ListTag rcl = new ListTag();
-            for (var entry : g.restockCost().entrySet()) {
-                CompoundTag rt = new CompoundTag();
-                rt.putString("element", entry.getKey());
-                rt.putInt("amount", entry.getValue());
-                rcl.add(rt);
-            }
-            gt.put("restock_cost", rcl);
             gt.putInt("comfort", g.comfort());
             gt.putInt("magic", g.magic());
             gt.putInt("wonder", g.wonder());
@@ -1039,16 +1015,8 @@ public class BuildingScannerScreen extends Screen {
             ListTag gl = tag.getList("shop_goods", Tag.TAG_COMPOUND);
             for (int i = 0; i < gl.size(); i++) {
                 CompoundTag gt = gl.getCompound(i);
-                Map<String, Integer> rc = new HashMap<>();
-                if (gt.contains("restock_cost", Tag.TAG_LIST)) {
-                    ListTag rcl = gt.getList("restock_cost", Tag.TAG_COMPOUND);
-                    for (int j = 0; j < rcl.size(); j++) {
-                        CompoundTag rt = rcl.getCompound(j);
-                        rc.put(rt.getString("element"), rt.getInt("amount"));
-                    }
-                }
                 scanner.addShopGood(new ShopGoodData(
-                        gt.getString("item_id"), rc,
+                        gt.getString("item_id"),
                         gt.getInt("comfort"), gt.getInt("magic"), gt.getInt("wonder")));
             }
         }

@@ -71,7 +71,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_ENTRY_ELEMENT = "element";
     private static final String KEY_ENTRY_AMOUNT = "amount";
     private static final String KEY_GOOD_ITEM_ID = "item_id";
-    private static final String KEY_GOOD_RESTOCK = "restock_cost";
+    @SuppressWarnings("unused")
 
     // ── State ──
     private ScannerMode mode = ScannerMode.BOUNDARY;
@@ -340,15 +340,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         for (ShopGoodData good : shopGoods) {
             CompoundTag gt = new CompoundTag();
             gt.putString(KEY_GOOD_ITEM_ID, good.itemId());
-            // restock cost
-            ListTag rcList = new ListTag();
-            for (var entry : good.restockCost().entrySet()) {
-                CompoundTag rt = new CompoundTag();
-                rt.putString(KEY_ENTRY_ELEMENT, entry.getKey());
-                rt.putInt(KEY_ENTRY_AMOUNT, entry.getValue());
-                rcList.add(rt);
-            }
-            gt.put(KEY_GOOD_RESTOCK, rcList);
             gt.putInt("comfort", good.comfort());
             gt.putInt("magic", good.magic());
             gt.putInt("wonder", good.wonder());
@@ -432,17 +423,8 @@ public class BuildingScannerBlockEntity extends BlockEntity {
             ListTag list = tag.getList(KEY_SHOP_GOODS, Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag gt = list.getCompound(i);
-                Map<String, Integer> rc = new HashMap<>();
-                if (gt.contains(KEY_GOOD_RESTOCK, Tag.TAG_LIST)) {
-                    ListTag rcList = gt.getList(KEY_GOOD_RESTOCK, Tag.TAG_COMPOUND);
-                    for (int j = 0; j < rcList.size(); j++) {
-                        CompoundTag rt = rcList.getCompound(j);
-                        rc.put(rt.getString(KEY_ENTRY_ELEMENT), rt.getInt(KEY_ENTRY_AMOUNT));
-                    }
-                }
                 shopGoods.add(new ShopGoodData(
                         gt.getString(KEY_GOOD_ITEM_ID),
-                        rc,
                         gt.getInt("comfort"),
                         gt.getInt("magic"),
                         gt.getInt("wonder")));
@@ -484,14 +466,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
 
     public record ShopGoodData(
             String itemId,
-            Map<String, Integer> restockCost,
             int comfort,
             int magic,
             int wonder
     ) {
-        public ShopGoodData {
-            if (restockCost == null) restockCost = Map.of();
-        }
     }
 
     // ── Helpers ──

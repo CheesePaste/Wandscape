@@ -1,12 +1,9 @@
 package com.wsteam.wandscape.shared.data;
 
-import java.util.Map;
-
 import com.google.gson.annotations.SerializedName;
 /** A single good type sold by a shop building. maxStock is managed per-shop in ShopStockManager. */
 public record ShopGoodDef(
         @SerializedName("item_id") String itemId,
-        @SerializedName("restock_cost") Map<ElementType, Integer> restockCost,
         int comfort,
         int magic,
         int wonder
@@ -15,7 +12,6 @@ public record ShopGoodDef(
     public static final int DEFAULT_MAX_STOCK = 0;
 
     public ShopGoodDef {
-        if (restockCost == null) restockCost = Map.of();
         if (comfort < 0) comfort = 0;
         if (magic < 0) magic = 0;
         if (wonder < 0) wonder = 0;
