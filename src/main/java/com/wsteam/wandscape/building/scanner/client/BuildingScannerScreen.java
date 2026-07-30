@@ -1,13 +1,17 @@
 package com.wsteam.wandscape.building.scanner.client;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
+import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -66,6 +70,25 @@ public class BuildingScannerScreen extends Screen {
     // ── Scrolling ──
     private int scrollOff = 0;
     private int maxScroll = 0;
+
+    // ── Elements list for selectors ──
+    private static final List<String> ELEMENTS = List.of("earth", "wood", "water", "fire", "metal", "wind", "dark");
+
+    // ── Maintenance cost ──
+    private int maintCostY;
+    private final List<CostRow> maintRows = new ArrayList<>();
+
+    // ── Node config fields (category=node) ──
+    private EditBox nodeBlueprint, nodeElement, nodeAmount, nodeChannel, nodeMana;
+    private int nodeCatY;
+
+    // ── Shop goods rows (category=shop) ──
+    private int goodsCatY;
+    private final List<GoodRow> goodRows = new ArrayList<>();
+
+    // ── Service element output rows (category=service) ──
+    private int elemOutY;
+    private final List<CostRow> elemOutRows = new ArrayList<>();
 
     // ── Export ──
     private Component scanResult = Component.literal("Not scanned yet");
@@ -202,6 +225,64 @@ public class BuildingScannerScreen extends Screen {
                 s -> { scanner.setUnlockMinLevel(intOrZero(s)); syncToServer(); });
         y += ROW_H + 10;
 
+        // ── Maintenance Cost section ──
+        addSectionHeader(y, "Maintenance Cost");
+        y += 14;
+        maintCostY = y - 14;
+
+        maintRows.clear();
+        int my = y;
+        int mi = 0;
+        for (var entry : scanner.getMaintenanceCost().entrySet()) {
+            String elem = entry.getKey();
+            int ey = my + mi * 22;
+            CostRow cr = new CostRow(lx + COL2, ey, elem, entry.getValue(),
+                    () -> { scanner.removeMaintenanceCost(elem); syncToServer(); needsRebuild = true; },
+                    () -> syncMaintCost());
+            maintRows.add(cr);
+            mi++;
+        }
+        int addMaintY = my + mi * 22;
+        if (mi == 0) addMaintY = my;
+        addRenderableWidget(Button.builder(Component.literal("+"), b -> {
+                    scanner.addMaintenanceCost("earth", 1);
+                    syncToServer();
+                    needsRebuild = true;
+                })
+                .bounds(lx + COL2, addMaintY, 30, 18).build());
+        y = addMaintY + ROW_H + 6;
+
+        // ── Node Config section (only for category=node) ──
+        String cat = scanner.getCategory();
+        if ("node".equals(cat)) {
+            addSectionHeader(y, "Node Config");
+            y += 14;
+            nodeCatY = y - 14;
+
+            nodeBlueprint = mkEdit(lx + COL2, y, 100, scanner.getNodeBlueprint(),
+                    s -> { scanner.setNodeBlueprint(s); syncToServer(); });
+            y += ROW_H;
+
+            nodeElement = mkEdit(lx + COL2, y, 56, scanner.getNodeElement(),
+                    s -> { scanner.setNodeElement(s); syncToServer(); });
+            y += ROW_H;
+
+            nodeAmount = mkNumEdit(lx + COL2, y, FW, scanner.getNodeAmountPerHarvest(),
+                    s -> { scanner.setNodeAmountPerHarvest(intOrZero(s)); syncToServer(); });
+            y += ROW_H;
+
+            nodeChannel = mkNumEdit(lx + COL2, y, FW, scanner.getNodeChannelTicks(),
+                    s -> { scanner.setNodeChannelTicks(intOrZero(s)); syncToServer(); });
+            y += ROW_H;
+
+            nodeMana = mkNumEdit(lx + COL2, y, FW, scanner.getNodeManaCost(),
+                    s -> { scanner.setNodeManaCost(intOrZero(s)); syncToServer(); });
+            y += ROW_H + 6;
+        } else {
+            nodeBlueprint = null; nodeElement = null; nodeAmount = null; nodeChannel = null; nodeMana = null;
+            nodeCatY = 0;
+        }
+
         // ── Presets section ──
         addSectionHeader(y, "Presets");
         y += 14;
@@ -258,7 +339,7 @@ public class BuildingScannerScreen extends Screen {
         y += 20;
 
         // ── Category-specific sections ──
-        String cat = scanner.getCategory();
+        // cat is already declared above in the node config section
 
         if ("shop".equals(cat)) {
             addSectionHeader(y, "Shop Config");
@@ -276,12 +357,34 @@ public class BuildingScannerScreen extends Screen {
 
             shopDuration = mkNumEdit(lx + COL2, y, FW, scanner.getShopInteractionDurationTicks(),
                     s -> { scanner.setShopInteractionDurationTicks(intOrZero(s)); syncToServer(); });
-            y += ROW_H + 10;
+            y += ROW_H + 6;
             svcCatY = 0; // not used
+
+            // ── Shop Goods section ──
+            addSectionHeader(y, "Shop Goods");
+            y += 14;
+            goodsCatY = y - 14;
+
+            goodRows.clear();
+            int gx = lx + COL2;
+            int gy = y;
+            for (int gi = 0; gi < scanner.getShopGoods().size(); gi++) {
+                GoodRow gr = new GoodRow(gi, gx, gy);
+                goodRows.add(gr);
+                gy += 40 + scanner.getShopGoods().get(gi).restockCost().size() * 20;
+            }
+            addRenderableWidget(Button.builder(Component.literal("+ Add Good"), b -> {
+                        scanner.addShopGood(new ShopGoodData("minecraft:air", Map.of("earth", 1), 0, 0, 0));
+                        syncToServer();
+                        needsRebuild = true;
+                    })
+                    .bounds(gx, gy, 80, 18).build());
+            y = gy + ROW_H + 6;
         } else {
             shopProfitRate = null;
             shopDuration = null;
             shopCatY = 0;
+            goodsCatY = 0;
         }
 
         if ("service".equals(cat)) {
@@ -299,12 +402,39 @@ public class BuildingScannerScreen extends Screen {
 
             serviceDuration = mkNumEdit(lx + COL2, y, FW, scanner.getServiceInteractionDurationTicks(),
                     s -> { scanner.setServiceInteractionDurationTicks(intOrZero(s)); syncToServer(); });
-            y += ROW_H + 10;
+            y += ROW_H + 6;
+
+            // ── Element Output section ──
+            addSectionHeader(y, "Element Output");
+            y += 14;
+            elemOutY = y - 14;
+
+            elemOutRows.clear();
+            int eoy = y;
+            int eoi = 0;
+            for (var entry : scanner.getServiceElementOutput().entrySet()) {
+                String elem = entry.getKey();
+                int ey = eoy + eoi * 22;
+                CostRow cr = new CostRow(lx + COL2, ey, elem, entry.getValue(),
+                        () -> { scanner.removeServiceElementOutput(elem); syncToServer(); needsRebuild = true; },
+                        () -> syncElemOut());
+                elemOutRows.add(cr);
+                eoi++;
+            }
+            if (eoi == 0) eoy = y;
+            addRenderableWidget(Button.builder(Component.literal("+"), b -> {
+                        scanner.addServiceElementOutput("earth", 1);
+                        syncToServer();
+                        needsRebuild = true;
+                    })
+                    .bounds(lx + COL2, y + eoi * 22, 30, 18).build());
+            y = y + eoi * 22 + ROW_H + 6;
         } else {
             serviceEnergy = null;
             serviceMaxOcc = null;
             serviceDuration = null;
             if (!"shop".equals(cat)) svcCatY = 0;
+            elemOutY = 0;
         }
 
         // ── Export section ──
@@ -386,6 +516,80 @@ public class BuildingScannerScreen extends Screen {
                         needsRebuild = true;
                     })
                     .bounds(mx2 + (zw + 2) * 3 + 6, zy, 18, 16).build());
+        }
+    }
+
+    /** One row of the maintenance-cost or element-output editor: element selector + amount. */
+    private class CostRow {
+        final Runnable onChanged;
+        final CycleButton<String> elemBtn;
+        final EditBox amountBox;
+        CostRow(int x, int y, String elem, int amount, Runnable onRemove, Runnable onChanged) {
+            this.onChanged = onChanged;
+            elemBtn = addRenderableWidget(
+                    CycleButton.builder((String v) -> Component.literal(v))
+                            .withValues(ELEMENTS)
+                            .withInitialValue(ELEMENTS.contains(elem) ? elem : "earth")
+                            .displayOnlyValue()
+                            .create(x, y, 56, 18, Component.empty(), (b, v) -> onChanged.run()));
+            amountBox = mkNumEdit(x + 60, y, 36, amount, s -> onChanged.run());
+            if (onRemove != null) {
+                addRenderableWidget(Button.builder(Component.literal("×"), b -> onRemove.run())
+                        .bounds(x + 100, y, 18, 18).build());
+            }
+        }
+        String element() { return elemBtn.getValue(); }
+        int amount() { return intOrZero(amountBox); }
+    }
+
+    /** One row of the shop-goods editor. */
+    private class GoodRow {
+        final int index;
+        final EditBox itemIdBox;
+        final EditBox gComfort, gMagic, gWonder;
+        final List<CostRow> restockRows = new ArrayList<>();
+        int yBase;
+
+        GoodRow(int idx, int x, int y) {
+            this.index = idx;
+            this.yBase = y;
+            ShopGoodData good = scanner.getShopGoods().get(idx);
+            itemIdBox = mkEdit(x + 4, y, 120, good.itemId(), s -> updateGood());
+            gComfort = mkNumEdit(x + 130, y, 28, good.comfort(), s -> updateGood());
+            gMagic = mkNumEdit(x + 162, y, 28, good.magic(), s -> updateGood());
+            gWonder = mkNumEdit(x + 194, y, 28, good.wonder(), s -> updateGood());
+            addRenderableWidget(Button.builder(Component.literal("×"), b -> {
+                        scanner.removeShopGood(idx);
+                        syncToServer();
+                        needsRebuild = true;
+                    })
+                    .bounds(x + 228, y, 18, 18).build());
+            // Restock cost rows
+            int ry = y + 20;
+            int ri = 0;
+            for (var entry : good.restockCost().entrySet()) {
+                int rx = x + 8;
+                String elem = entry.getKey();
+                CostRow cr = new CostRow(rx, ry, elem, entry.getValue(),
+                        () -> { /* remove handled by rebuild */ }, this::updateGood);
+                restockRows.add(cr);
+                ry += 20;
+                ri++;
+            }
+        }
+
+        ShopGoodData captureGood() {
+            Map<String, Integer> rc = new HashMap<>();
+            for (CostRow cr : restockRows) rc.put(cr.element(), cr.amount());
+            return new ShopGoodData(
+                    itemIdBox.getValue(),
+                    rc,
+                    intOrZero(gComfort), intOrZero(gMagic), intOrZero(gWonder));
+        }
+
+        void updateGood() {
+            scanner.updateShopGood(index, captureGood());
+            syncToServer();
         }
     }
 
@@ -479,6 +683,22 @@ public class BuildingScannerScreen extends Screen {
         }
     }
 
+    // ── Sync helpers for new editors ──
+
+    private void syncMaintCost() {
+        Map<String, Integer> map = new HashMap<>();
+        for (CostRow row : maintRows) map.put(row.element(), row.amount());
+        scanner.setMaintenanceCost(map);
+        syncToServer();
+    }
+
+    private void syncElemOut() {
+        Map<String, Integer> map = new HashMap<>();
+        for (CostRow row : elemOutRows) map.put(row.element(), row.amount());
+        scanner.setServiceElementOutput(map);
+        syncToServer();
+    }
+
     // ── Scan & Export ──
 
     private void doScan() {
@@ -506,9 +726,15 @@ public class BuildingScannerScreen extends Screen {
     }
 
     private void doExport() {
+        String id = scanner.getBuildingId();
+        if (id.isBlank()) {
+            scanResult = Component.literal("Set a building ID before exporting");
+            return;
+        }
         scanner.setScanned(true);
-        com.wsteam.wandscape.shared.log.Log.info("ScannerScreen", "Export requested for building: {}", scanner.getBuildingId());
-        scanResult = Component.literal("Export stub — check server console");
+        // Send export request to server
+        PacketDistributor.sendToServer(new BuildingScannerExportPacket(scanner.getBlockPos()));
+        scanResult = Component.literal("Export requested for '" + id + "' — check server console");
         syncToServer();
     }
 
@@ -565,6 +791,19 @@ public class BuildingScannerScreen extends Screen {
         drawHdr(gui, "Unlock Requirement", lx, unlockY);
         drawLbl(gui, "Min Level", lx + COL2, unlockY + ROW_H - 4);
 
+        // Maintenance Cost
+        drawHdr(gui, "Maintenance Cost", lx, maintCostY);
+
+        // Node Config
+        if ("node".equals(scanner.getCategory())) {
+            drawHdr(gui, "Node Config", lx, nodeCatY);
+            drawLbl(gui, "Blueprint", lx + COL2, nodeCatY + ROW_H - 4);
+            drawLbl(gui, "Element", lx + COL2, nodeCatY + ROW_H * 2 - 4);
+            drawLbl(gui, "Amount/Harvest", lx + COL2, nodeCatY + ROW_H * 3 - 4);
+            drawLbl(gui, "Channel Ticks", lx + COL2, nodeCatY + ROW_H * 4 - 4);
+            drawLbl(gui, "Mana Cost", lx + COL2, nodeCatY + ROW_H * 5 - 4);
+        }
+
         // Presets
         drawHdr(gui, "Presets", lx, presetY);
 
@@ -573,12 +812,14 @@ public class BuildingScannerScreen extends Screen {
         if ("shop".equals(cat)) {
             drawHdr(gui, "Shop Config", lx, shopCatY);
             drawLbl(gui, "Profit%", lx + COL2, shopCatY + ROW_H - 4);
-            drawLbl(gui, "Duration (tick)", lx + COL2, shopCatY + ROW_H * 2);
+            drawLbl(gui, "Duration (tick)", lx + COL2, shopCatY + ROW_H * 2 - 4);
+            drawHdr(gui, "Shop Goods", lx, goodsCatY);
         } else if ("service".equals(cat)) {
             drawHdr(gui, "Service Config", lx, svcCatY);
             drawLbl(gui, "Energy/use", lx + COL2, svcCatY + ROW_H - 4);
             drawLbl(gui, "Max Occupancy", lx + COL2, svcCatY + ROW_H * 2 - 2);
             drawLbl(gui, "Duration (tick)", lx + COL2, svcCatY + ROW_H * 3 - 2);
+            drawHdr(gui, "Element Output", lx, elemOutY);
         }
 
         // Export
@@ -653,6 +894,56 @@ public class BuildingScannerScreen extends Screen {
         tag.putInt("service_energy", scanner.getServiceEnergyPerUse());
         tag.putInt("service_max_occ", scanner.getServiceMaxOccupancy());
         tag.putInt("service_duration", scanner.getServiceInteractionDurationTicks());
+
+        // maintenance cost
+        ListTag mcList = new ListTag();
+        for (var entry : scanner.getMaintenanceCost().entrySet()) {
+            CompoundTag et = new CompoundTag();
+            et.putString("element", entry.getKey());
+            et.putInt("amount", entry.getValue());
+            mcList.add(et);
+        }
+        tag.put("maintenance_cost", mcList);
+
+        // node config
+        CompoundTag nc = new CompoundTag();
+        nc.putString("blueprint", scanner.getNodeBlueprint());
+        nc.putString("element", scanner.getNodeElement());
+        nc.putInt("amount_per_harvest", scanner.getNodeAmountPerHarvest());
+        nc.putInt("channel_ticks", scanner.getNodeChannelTicks());
+        nc.putInt("mana_cost", scanner.getNodeManaCost());
+        tag.put("node_config", nc);
+
+        // shop goods
+        ListTag gl = new ListTag();
+        for (ShopGoodData g : scanner.getShopGoods()) {
+            CompoundTag gt = new CompoundTag();
+            gt.putString("item_id", g.itemId());
+            ListTag rcl = new ListTag();
+            for (var entry : g.restockCost().entrySet()) {
+                CompoundTag rt = new CompoundTag();
+                rt.putString("element", entry.getKey());
+                rt.putInt("amount", entry.getValue());
+                rcl.add(rt);
+            }
+            gt.put("restock_cost", rcl);
+            gt.putInt("comfort", g.comfort());
+            gt.putInt("magic", g.magic());
+            gt.putInt("wonder", g.wonder());
+            gl.add(gt);
+        }
+        tag.put("shop_goods", gl);
+
+        // service element output
+        ListTag so = new ListTag();
+        for (var entry : scanner.getServiceElementOutput().entrySet()) {
+            CompoundTag et = new CompoundTag();
+            et.putString("element", entry.getKey());
+            et.putInt("amount", entry.getValue());
+            so.add(et);
+        }
+        tag.put("service_element_output", so);
+
         return tag;
     }
 
@@ -704,6 +995,56 @@ public class BuildingScannerScreen extends Screen {
         scanner.setServiceEnergyPerUse(tag.getInt("service_energy"));
         scanner.setServiceMaxOccupancy(tag.getInt("service_max_occ"));
         scanner.setServiceInteractionDurationTicks(tag.getInt("service_duration"));
+
+        // maintenance cost
+        scanner.setMaintenanceCost(Map.of());
+        if (tag.contains("maintenance_cost", Tag.TAG_LIST)) {
+            ListTag list = tag.getList("maintenance_cost", Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag et = list.getCompound(i);
+                scanner.addMaintenanceCost(et.getString("element"), et.getInt("amount"));
+            }
+        }
+
+        // node config
+        if (tag.contains("node_config", Tag.TAG_COMPOUND)) {
+            CompoundTag nc = tag.getCompound("node_config");
+            scanner.setNodeBlueprint(nc.getString("blueprint"));
+            scanner.setNodeElement(nc.getString("element"));
+            scanner.setNodeAmountPerHarvest(nc.getInt("amount_per_harvest"));
+            scanner.setNodeChannelTicks(nc.getInt("channel_ticks"));
+            scanner.setNodeManaCost(nc.getInt("mana_cost"));
+        }
+
+        // shop goods
+        scanner.clearShopGoods();
+        if (tag.contains("shop_goods", Tag.TAG_LIST)) {
+            ListTag gl = tag.getList("shop_goods", Tag.TAG_COMPOUND);
+            for (int i = 0; i < gl.size(); i++) {
+                CompoundTag gt = gl.getCompound(i);
+                Map<String, Integer> rc = new HashMap<>();
+                if (gt.contains("restock_cost", Tag.TAG_LIST)) {
+                    ListTag rcl = gt.getList("restock_cost", Tag.TAG_COMPOUND);
+                    for (int j = 0; j < rcl.size(); j++) {
+                        CompoundTag rt = rcl.getCompound(j);
+                        rc.put(rt.getString("element"), rt.getInt("amount"));
+                    }
+                }
+                scanner.addShopGood(new ShopGoodData(
+                        gt.getString("item_id"), rc,
+                        gt.getInt("comfort"), gt.getInt("magic"), gt.getInt("wonder")));
+            }
+        }
+
+        // service element output
+        scanner.setServiceElementOutput(Map.of());
+        if (tag.contains("service_element_output", Tag.TAG_LIST)) {
+            ListTag so = tag.getList("service_element_output", Tag.TAG_COMPOUND);
+            for (int i = 0; i < so.size(); i++) {
+                CompoundTag et = so.getCompound(i);
+                scanner.addServiceElementOutput(et.getString("element"), et.getInt("amount"));
+            }
+        }
     }
 
     @Override
