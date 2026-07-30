@@ -79,7 +79,8 @@ public class BuildingScannerScreen extends Screen {
     private final List<CostRow> maintRows = new ArrayList<>();
 
     // ── Node config fields (category=node) ──
-    private EditBox nodeBlueprint, nodeElement, nodeAmount, nodeChannel, nodeMana;
+    private CycleButton<String> nodeElemBtn;
+    private EditBox nodeAmount, nodeChannel, nodeMana;
     private int nodeCatY;
 
     // ── Shop goods rows (category=shop) ──
@@ -245,7 +246,10 @@ public class BuildingScannerScreen extends Screen {
         int addMaintY = my + mi * 22;
         if (mi == 0) addMaintY = my;
         addRenderableWidget(Button.builder(Component.literal("+"), b -> {
-                    scanner.addMaintenanceCost("earth", 1);
+                    String next = ELEMENTS.stream()
+                            .filter(e -> !scanner.getMaintenanceCost().containsKey(e))
+                            .findFirst().orElse("earth");
+                    scanner.addMaintenanceCost(next, 1);
                     syncToServer();
                     needsRebuild = true;
                 })
@@ -255,16 +259,24 @@ public class BuildingScannerScreen extends Screen {
         // ── Node Config section (only for category=node) ──
         String cat = scanner.getCategory();
         if ("node".equals(cat)) {
+            // Use default blueprint for node
+            if (scanner.getNodeBlueprint().isBlank()) {
+                scanner.setNodeBlueprint("node:gather");
+            }
             addSectionHeader(y, "Node Config");
             y += 14;
             nodeCatY = y - 14;
 
-            nodeBlueprint = mkEdit(lx + COL2, y, 100, scanner.getNodeBlueprint(),
-                    s -> { scanner.setNodeBlueprint(s); syncToServer(); });
-            y += ROW_H;
-
-            nodeElement = mkEdit(lx + COL2, y, 56, scanner.getNodeElement(),
-                    s -> { scanner.setNodeElement(s); syncToServer(); });
+            // Element selector (CycleButton, like maintenance cost rows)
+            String currentElem = ELEMENTS.contains(scanner.getNodeElement())
+                    ? scanner.getNodeElement() : "earth";
+            nodeElemBtn = addRenderableWidget(
+                    CycleButton.builder((String v) -> Component.literal(v))
+                            .withValues(ELEMENTS)
+                            .withInitialValue(currentElem)
+                            .displayOnlyValue()
+                            .create(lx + COL2, y, 56, 18, Component.literal("Element"),
+                                    (b, val) -> { scanner.setNodeElement(val); syncToServer(); }));
             y += ROW_H;
 
             nodeAmount = mkNumEdit(lx + COL2, y, FW, scanner.getNodeAmountPerHarvest(),
@@ -279,7 +291,7 @@ public class BuildingScannerScreen extends Screen {
                     s -> { scanner.setNodeManaCost(intOrZero(s)); syncToServer(); });
             y += ROW_H + 6;
         } else {
-            nodeBlueprint = null; nodeElement = null; nodeAmount = null; nodeChannel = null; nodeMana = null;
+            nodeElemBtn = null; nodeAmount = null; nodeChannel = null; nodeMana = null;
             nodeCatY = 0;
         }
 
@@ -628,10 +640,14 @@ public class BuildingScannerScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double deltaX, double deltaY) {
         if (deltaY != 0) {
-            scrollOff = Math.max(maxScroll, Math.min(0, scrollOff + (int) (deltaY * 20)));
-            rebuild();
+            int newScroll = Math.max(maxScroll, Math.min(0, scrollOff + (int) (deltaY * 20)));
+            if (newScroll != scrollOff) {
+                scrollOff = newScroll;
+                rebuild();
+                return true;
+            }
         }
-        return true;
+        return false;
     }
 
     // ── Rebuild widgets (after zone add/remove or scroll) ──
@@ -799,11 +815,10 @@ public class BuildingScannerScreen extends Screen {
         // Node Config
         if ("node".equals(scanner.getCategory())) {
             drawHdr(gui, "Node Config", lx, nodeCatY);
-            drawLbl(gui, "Blueprint", lx + COL2, nodeCatY + ROW_H - 4);
-            drawLbl(gui, "Element", lx + COL2, nodeCatY + ROW_H * 2 - 4);
-            drawLbl(gui, "Amount/Harvest", lx + COL2, nodeCatY + ROW_H * 3 - 4);
-            drawLbl(gui, "Channel Ticks", lx + COL2, nodeCatY + ROW_H * 4 - 4);
-            drawLbl(gui, "Mana Cost", lx + COL2, nodeCatY + ROW_H * 5 - 4);
+            drawLbl(gui, "Element", lx + COL2, nodeCatY + ROW_H - 4);
+            drawLbl(gui, "Amount/Harvest", lx + COL2, nodeCatY + ROW_H * 2 - 4);
+            drawLbl(gui, "Channel Ticks", lx + COL2, nodeCatY + ROW_H * 3 - 4);
+            drawLbl(gui, "Mana Cost", lx + COL2, nodeCatY + ROW_H * 4 - 4);
         }
 
         // Presets

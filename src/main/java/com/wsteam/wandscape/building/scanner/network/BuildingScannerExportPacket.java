@@ -208,7 +208,8 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         // Category-specific configs
         if ("node".equals(scanner.getCategory())) {
             JsonObject nc = new JsonObject();
-            nc.addProperty("blueprint", scanner.getNodeBlueprint());
+            String bp = scanner.getNodeBlueprint();
+            nc.addProperty("blueprint", bp.isBlank() ? "node:gather" : bp);
             nc.addProperty("element", scanner.getNodeElement());
             nc.addProperty("amount_per_harvest", scanner.getNodeAmountPerHarvest());
             nc.addProperty("channel_ticks", scanner.getNodeChannelTicks());
