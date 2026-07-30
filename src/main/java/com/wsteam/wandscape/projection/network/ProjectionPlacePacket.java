@@ -1,12 +1,8 @@
 package com.wsteam.wandscape.projection.network;
 
-import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
@@ -17,22 +13,15 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.UUID;
-
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Client→Server: Player confirms building placement from projection mode.
  *
- * <p>Server handler:
- * <ol>
- *   <li>Validates the building type exists in config</li>
- *   <li>Checks position is not overlapping an existing building</li>
- *   <li>Registers the building via {@link EnqueueHelper#registerIfAbsent}</li>
- *   <li>Creates and enqueues a {@link WorkItem} for NPC construction with
- *       the specified rotation</li>
- * </ol>
+ * <p>Server handler delegates to {@link BuildingApi#placeBuilding} which
+ * validates, checks overlap, registers, handles first-free, and enqueues
+ * the WorkItem in a single unified call.
  */
 public record ProjectionPlacePacket(
         String buildingTypeId,
@@ -55,7 +44,7 @@ public record ProjectionPlacePacket(
     // ── Server handler ──
 
     public static void handleServer(ProjectionPlacePacket packet, ServerPlayer player) {
-        // 1. Validate building type exists
+        // 1. Validate building type exists (needed for display name in messages)
         BuildingConfig config = BuildingConfigLoader.getInstance().get(packet.buildingTypeId);
         if (config == null) {
             player.displayClientMessage(
@@ -66,7 +55,7 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 2. Validate position not overlapping
+        // 2. Unified placement — validates, registers, handles first-free, enqueues WorkItem
         BuildingApi api = WandscapeApis.getBuildingApi();
         if (api == null) {
             player.displayClientMessage(
@@ -75,69 +64,37 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        if (api.getBuildingAt(packet.anchorPos) != null) {
+        BuildingApi.PlacementResult result = api.placeBuilding(
+                packet.anchorPos, packet.buildingTypeId, packet.rotationSteps);
+
+        if (!result.success()) {
             player.displayClientMessage(
-                    Component.literal("[Projection] §cCannot place here — another building occupies this location"),
+                    Component.literal("[Projection] §c" + result.error()),
                     false);
             return;
         }
 
-        // 3. Register building
-        boolean registered = EnqueueHelper.registerIfAbsent(
-                packet.anchorPos, config, packet.buildingTypeId, packet.rotationSteps);
+        // 3. Success — notify player
+        String posStr = packet.anchorPos.getX() + ", " +
+                packet.anchorPos.getY() + ", " +
+                packet.anchorPos.getZ();
 
-        if (!registered) {
+        if (result.firstFree()) {
             player.displayClientMessage(
-                    Component.literal("[Projection] §cFailed to register building at " +
-                            packet.anchorPos.getX() + ", " +
-                            packet.anchorPos.getY() + ", " +
-                            packet.anchorPos.getZ()),
+                    Component.literal("[Projection] §a" + config.displayName() +
+                            " §fplaced at (" + posStr +
+                            ") — §eFREE first build, no materials consumed"),
                     false);
-            return;
-        }
-
-        // 4. Check first-free build: first build of marked buildings costs no materials
-        var buildingData = api.getBuildingAt(packet.anchorPos);
-        UUID colonyId = buildingData != null ? buildingData.getColonyId() : null;
-        boolean firstFree = config.firstFree()
-                && colonyId != null
-                && !BuildingSavedData.get(player.serverLevel()).isFirstFreeClaimed(colonyId, packet.buildingTypeId);
-
-        // 5. Enqueue build work item (filtered clear_offsets — skip other buildings' blocks)
-        if (buildingData != null) {
-            BuildingSavedData sd = BuildingSavedData.get(player.serverLevel());
-            WorkItem workItem = EnqueueHelper.buildWorkItem(
-                    config, packet.anchorPos, packet.buildingTypeId, 0,
-                    sd, buildingData.getBuildingId(), packet.rotationSteps,
-                    firstFree); // skipMaterials = firstFree
-
-            if (firstFree) {
-                sd.claimFirstFree(colonyId, packet.buildingTypeId);
-                player.displayClientMessage(
-                        Component.literal("[Projection] §a" + config.displayName() +
-                                " §fplaced at (" +
-                                packet.anchorPos.getX() + ", " +
-                                packet.anchorPos.getY() + ", " +
-                                packet.anchorPos.getZ() +
-                                ") — §eFREE first build, no materials consumed"),
-                        false);
-            } else {
-                player.displayClientMessage(
-                        Component.literal("[Projection] §a" + config.displayName() +
-                                " §fplaced at (" +
-                                packet.anchorPos.getX() + ", " +
-                                packet.anchorPos.getY() + ", " +
-                                packet.anchorPos.getZ() + ") — §aNPC will construct"),
-                        false);
-            }
-            api.enqueueWork(buildingData.getBuildingId(), workItem);
-
-            Log.info(TAG, "[Projection] Building '{}' placed at {} by player {}. WorkItem enqueued.",
-                    config.displayName(), packet.anchorPos, player.getGameProfile().getName());
         } else {
-            Log.warn(TAG, "[Projection] Building registered but getBuildingAt returned null at {}",
-                    packet.anchorPos);
+            player.displayClientMessage(
+                    Component.literal("[Projection] §a" + config.displayName() +
+                            " §fplaced at (" + posStr + ") — §aNPC will construct"),
+                    false);
         }
+
+        Log.info(TAG, "[Projection] '{}' placed at {} by {} firstFree={}",
+                config.displayName(), packet.anchorPos,
+                player.getGameProfile().getName(), result.firstFree());
     }
 
     // ── StreamCodec ──

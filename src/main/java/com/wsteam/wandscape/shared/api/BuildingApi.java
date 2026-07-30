@@ -79,6 +79,27 @@ public interface BuildingApi {
     /** Clear the active task when it completes or is cancelled. */
     void clearCurrentTask(UUID buildingId);
 
+    // ---- Placement (unified entry point) ----
+
+    /**
+     * Result of a building placement attempt via {@link #placeBuilding}.
+     */
+    record PlacementResult(boolean success, @Nullable UUID buildingId, boolean firstFree, @Nullable String error) {
+        public static PlacementResult ok(UUID buildingId, boolean firstFree) {
+            return new PlacementResult(true, buildingId, firstFree, null);
+        }
+        public static PlacementResult fail(String error) {
+            return new PlacementResult(false, null, false, error);
+        }
+    }
+
+    /**
+     * Unified building placement: validates config, checks overlap, registers,
+     * handles first-free, builds WorkItem, and enqueues — all in one call.
+     * Callers only need to handle the result and display messages.
+     */
+    PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps);
+
     /**
      * Scan the building's boundary AABB for bed blocks.
      * Returns world-coordinate positions of every bed block found.

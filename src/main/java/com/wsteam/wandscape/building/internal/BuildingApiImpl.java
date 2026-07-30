@@ -252,7 +252,9 @@ public class BuildingApiImpl implements BuildingApi {
     public ColonySnapshot getColonySnapshot(UUID colonyId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null || colonyId == null) return null;
-        var inner = sd.getContributionRegistry().getSnapshot(colonyId);
+        var registry = sd.getContributionRegistry();
+        if (registry == null) return null;
+        var inner = registry.getSnapshot(colonyId);
         return new ColonySnapshot(inner.comfort(), inner.magic(), inner.wonder());
     }
 
@@ -602,6 +604,51 @@ public class BuildingApiImpl implements BuildingApi {
         Log.info(TAG, "moveDown: [{}]{}↔[{}]{} at {}",
                 index, upper.blueprintId(), index + 1, lower.blueprintId(), buildingId);
         return true;
+    }
+
+    // ---- Placement (unified entry point) ----
+
+    @Override
+    public PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps) {
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(buildingTypeId);
+        if (config == null) {
+            return PlacementResult.fail("Unknown building type: " + buildingTypeId);
+        }
+
+        // Register (overlap check happens inside → BuildingSavedData.register)
+        boolean registered = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps);
+        if (!registered) {
+            return PlacementResult.fail("Cannot place here — overlaps with an existing building");
+        }
+
+        BuildingData data = getBuildingAt(anchor);
+        if (data == null) {
+            return PlacementResult.fail("Building registered but position lookup failed");
+        }
+
+        UUID colonyId = data.getColonyId();
+        UUID buildingId = data.getBuildingId();
+        BuildingSavedData sd = getSavedData();
+
+        boolean firstFree = config.firstFree()
+                && colonyId != null
+                && sd != null
+                && !sd.isFirstFreeClaimed(colonyId, buildingTypeId);
+
+        WorkItem workItem = EnqueueHelper.buildWorkItem(
+                config, anchor, buildingTypeId, 0,
+                sd, buildingId, rotationSteps,
+                firstFree);
+
+        if (firstFree && sd != null) {
+            sd.claimFirstFree(colonyId, buildingTypeId);
+        }
+
+        enqueueWork(buildingId, workItem);
+
+        Log.info(TAG, "[Placement] '{}' at {} firstFree={}",
+                config.displayName(), anchor, firstFree);
+        return PlacementResult.ok(buildingId, firstFree);
     }
 
     // ---- Helpers ----
