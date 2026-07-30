@@ -8,7 +8,7 @@
 ./gradlew build                    # 编译
 ./gradlew test                     # 运行单元测试
 ./gradlew runGameTestServer        # 运行 GameTest
-./gradlew neoForgeIdeSync          # 首次运行前/runClient 报错时
+./gradlew neoForgeIdeSync          # 首次运行前/runClient 报错`clientRunVmArgs.txt` 不存在时
 ```
 
 ## 核心原则
