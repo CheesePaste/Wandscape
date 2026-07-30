@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.building.internal;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -288,14 +290,15 @@ public final class EnqueueHelper {
 
     private record MaterialData(JsonArray list, JsonObject counts) {}
 
+    /** Pattern offsets sorted Y→X→Z so the building rises from bottom to top. */
     private static JsonElement patternToJson(BuildingConfig config) {
+        var sorted = new ArrayList<>(config.pattern());
+        sorted.sort(Comparator.comparingInt(BlockOffset::y)
+                .thenComparingInt(BlockOffset::x)
+                .thenComparingInt(BlockOffset::z));
         JsonArray arr = new JsonArray();
-        for (var offset : config.pattern()) {
-            JsonArray pos = new JsonArray();
-            pos.add(offset.x());
-            pos.add(offset.y());
-            pos.add(offset.z());
-            arr.add(pos);
+        for (var offset : sorted) {
+            arr.add(offsetToJson(offset));
         }
         return arr;
     }

@@ -104,11 +104,11 @@ public record BuildingConfig(
             }
         }
 
-        /** 遍历 AABB 内所有坐标（含边界）。 */
+        /** 遍历 AABB 内所有坐标，Y 从低到高（由下往上建造）。 */
         public List<BlockOffset> allPositions() {
             List<BlockOffset> result = new ArrayList<>();
-            for (int x = min.x(); x <= max.x(); x++) {
-                for (int y = min.y(); y <= max.y(); y++) {
+            for (int y = min.y(); y <= max.y(); y++) {
+                for (int x = min.x(); x <= max.x(); x++) {
                     for (int z = min.z(); z <= max.z(); z++) {
                         result.add(new BlockOffset(x, y, z));
                     }
