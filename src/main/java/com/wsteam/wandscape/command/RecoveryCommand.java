@@ -77,7 +77,6 @@ public final class RecoveryCommand {
         int pendingApproval = world.taskPool.getByState(TaskState.PENDING_APPROVAL).size();
         int inProgress = world.taskPool.getByState(TaskState.IN_PROGRESS).size();
         int awaiting = world.taskPool.getByState(TaskState.AWAITING_RESOURCES).size();
-        int failed = world.taskPool.getByState(TaskState.FAILED).size();
         int completed = world.taskPool.getByState(TaskState.COMPLETED).size();
         int buildings = world.buildingTaskPool != null
                 ? world.buildingTaskPool.totalBuildings() : 0;
@@ -89,7 +88,6 @@ public final class RecoveryCommand {
                         "  Pending appr:  " + pendingApproval + "\n" +
                         "  In progress:   " + inProgress + "\n" +
                         "  Awaiting res:  " + awaiting + "\n" +
-                        "  Failed:        " + failed + "\n" +
                         "  Completed:     " + completed + "\n" +
                         "  Buildings:     " + buildings),
                 false);

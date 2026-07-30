@@ -97,11 +97,6 @@ public sealed interface AtomicOp
             if (params == null) params = Collections.emptyMap();
         }
 
-        /** Backward-compat constructor for sync actions (toggle/activate/open_gui). */
-        public BlockInteractOp(GridPos target, InteractAction action) {
-            this(target, action, Collections.emptyMap(), 0, 1.0f);
-        }
-
         @Override
         public float baseManaCost() {
             return manaCost;
@@ -133,10 +128,6 @@ public sealed interface AtomicOp
             if (params == null) params = Collections.emptyMap();
         }
 
-        /** Convenience constructor without params (backward-compat). */
-        public RitualOp(RitualId ritual, GridPos target) {
-            this(ritual, target, Collections.emptyMap());
-        }
         @Override
         public float baseManaCost() {
             return switch (ritual.id()) {
@@ -186,16 +177,6 @@ public sealed interface AtomicOp
             if (items.isEmpty()) {
                 throw new IllegalArgumentException("ResourceRequestOp items must not be empty");
             }
-        }
-
-        /** Convenience constructor for a single resource (backward-compat). */
-        public ResourceRequestOp(ResourceStack single) {
-            this(List.of(single));
-        }
-
-        /** Backward-compat accessor for single-item requests. */
-        public ResourceStack requested() {
-            return items.get(0);
         }
 
         @Override

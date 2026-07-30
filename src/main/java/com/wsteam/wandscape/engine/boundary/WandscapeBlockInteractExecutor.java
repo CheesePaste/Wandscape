@@ -237,7 +237,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             int colonIdx = itemId.lastIndexOf(':');
             String shortId = colonIdx >= 0 ? itemId.substring(colonIdx + 1) : itemId;
             throw new ResourceShortageException(
-                    new ResourceStack(new ResourceId(shortId), count));
+                        List.of(new ResourceStack(new ResourceId(shortId), count)));
         }
 
         Map<ElementType, Long> yield = mappings.getSeedValues(itemId);
@@ -300,7 +300,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 String elementId = entry.getKey().name().toLowerCase();
                 Log.warn(TAG, "synthesize: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
-                        new ResourceStack(new ResourceId(elementId), (int) needed));
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
             }
         }
 
@@ -352,7 +352,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 String elementId = entry.getKey().name().toLowerCase();
                 Log.warn(TAG, "craft_wand: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
-                        new ResourceStack(new ResourceId(elementId), (int) needed));
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
             }
         }
 
@@ -414,7 +414,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                 String elementId = entry.getKey().name().toLowerCase();
                 Log.warn(TAG, "brew_potion: insufficient {} (need={})", entry.getKey(), needed);
                 throw new ResourceShortageException(
-                        new ResourceStack(new ResourceId(elementId), (int) needed));
+                        List.of(new ResourceStack(new ResourceId(elementId), (int) needed)));
             }
         }
 

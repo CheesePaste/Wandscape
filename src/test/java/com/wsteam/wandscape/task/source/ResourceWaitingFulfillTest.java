@@ -200,8 +200,8 @@ public class ResourceWaitingFulfillTest {
         registry.register("build:resource_heavy", (BlueprintSteps) p -> {
             GridPos loc = parseLocation(p);
             return TaskSequence.of("Resource Heavy Build",
-                    new AtomicOp.ResourceRequestOp(
-                            new ResourceStack(ResourceId.STONE_BRICKS, 10)),
+                    new AtomicOp.ResourceRequestOp(List.of(
+                            new ResourceStack(ResourceId.STONE_BRICKS, 10))),
                     AtomicOp.TransformOp.place(loc, BlockType.STONE_BRICKS)
             );
         });

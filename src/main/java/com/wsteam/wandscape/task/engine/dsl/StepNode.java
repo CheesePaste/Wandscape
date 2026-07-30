@@ -57,11 +57,6 @@ public sealed interface StepNode {
         public BlockInteractStep {
             if (params == null) params = Map.of();
         }
-
-        /** Backward-compat constructor for sync actions without params/channelTicks/manaCost. */
-        public BlockInteractStep(ExprNode at, String action) {
-            this(at, action, Map.of(), new ExprNode.LiteralInt(0), new ExprNode.LiteralInt(1));
-        }
     }
 
     /**
@@ -80,11 +75,6 @@ public sealed interface StepNode {
                       Map<String, ExprNode> params) implements StepNode {
         public RitualStep {
             if (params == null) params = Map.of();
-        }
-
-        /** Backward-compat constructor without params. */
-        public RitualStep(ExprNode ritual, ExprNode at) {
-            this(ritual, at, Map.of());
         }
     }
 
@@ -108,11 +98,6 @@ public sealed interface StepNode {
         /** Static items convenience (no dynamic expression). */
         public RequestResourceStep(List<ResourceEntry> items) {
             this(items, null);
-        }
-
-        /** Backward-compat: single resource + amount. */
-        public RequestResourceStep(ExprNode resource, ExprNode amount) {
-            this(List.of(new ResourceEntry(resource, amount)), null);
         }
 
         /** A single resource+amount entry within a request_resource step. */

@@ -257,7 +257,7 @@ public final class EngineBootstrap {
     /** Check if a synthesize task for the given recipe is already active in the pool. */
     private static boolean isSynthesizeInFlight(String recipeId, World world) {
         for (var t : world.taskPool.all()) {
-            if (t.state == TaskState.COMPLETED || t.state == TaskState.FAILED) continue;
+            if (t.state == TaskState.COMPLETED) continue;
             if (!"production:synthesize".equals(t.blueprintId)) continue;
             var recipeParam = t.taskParams.get("recipe_id");
             if (recipeParam != null && recipeParam.isJsonPrimitive()

@@ -30,17 +30,7 @@ public class ResourceShortageException extends RuntimeException {
         this.requested = List.copyOf(requested);
     }
 
-    /** Backward-compat for single-resource shortages. */
-    public ResourceShortageException(ResourceStack single) {
-        this(List.of(single));
-    }
-
-    /** Backward-compat: the first (or only) resource requested. */
-    public ResourceStack requested() {
-        return requested.get(0);
-    }
-
-    /** All resources that were requested (for multi-item ops). */
+    /** All resources that were requested. */
     public List<ResourceStack> requestedItems() {
         return requested;
     }

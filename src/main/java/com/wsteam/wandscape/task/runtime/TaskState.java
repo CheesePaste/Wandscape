@@ -17,8 +17,5 @@ public enum TaskState {
     AWAITING_RESOURCES,
 
     /** Task finished successfully. */
-    COMPLETED,
-
-    /** Task cannot be fulfilled — no NPC or wand satisfies requirements. Terminal. */
-    FAILED
+    COMPLETED
 }

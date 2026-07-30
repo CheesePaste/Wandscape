@@ -251,9 +251,9 @@ class BlueprintInterpreterTest {
         @DisplayName("request_resource generates ResourceRequestOp")
         void requestResourceStep() {
             BlueprintDefinition def = new BlueprintDefinition("test:req", Collections.emptyMap(),
-                    List.of(new StepNode.RequestResourceStep(
-                            new ExprNode.LiteralString("wood"),
-                            new ExprNode.LiteralInt(10))));
+                    List.of(new StepNode.RequestResourceStep(List.of(
+                            new StepNode.RequestResourceStep.ResourceEntry(
+                                    new ExprNode.LiteralString("wood"), new ExprNode.LiteralInt(10))))));
 
             TaskSequence seq = interpreter.interpret(def, Collections.emptyMap());
             assertEquals(1, seq.size());

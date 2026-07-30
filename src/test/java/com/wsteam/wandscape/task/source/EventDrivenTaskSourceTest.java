@@ -77,7 +77,7 @@ public class EventDrivenTaskSourceTest {
 
         world.blueprintRegistry.register("test:heavy", (BlueprintSteps) p ->
                 TaskSequence.of("Heavy Stone Task",
-                        new AtomicOp.ResourceRequestOp(new ResourceStack(ResourceId.STONE, 100)),
+                        new AtomicOp.ResourceRequestOp(List.of(new ResourceStack(ResourceId.STONE, 100))),
                         AtomicOp.TransformOp.place(parseLocation(p), BlockType.STONE_BRICKS)));
 
         long taskId = world.taskPool.addTask(

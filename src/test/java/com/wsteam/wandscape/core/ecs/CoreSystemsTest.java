@@ -97,11 +97,11 @@ public class CoreSystemsTest {
             // Scheduler no longer checks requirements — any NPC with mana can pick up any task.
             // This tests that the scheduler doesn't crash when task has requirements set.
             registerSimpleBp("test:ritual_req",
-                    new AtomicOp.RitualOp(RitualId.WARDING, center));
+                    new AtomicOp.RitualOp(RitualId.WARDING, center, Collections.emptyMap()));
 
             GlobalTask task = GlobalTask.createSmall(0,
                     TaskSequence.of("Ritual Task",
-                            new AtomicOp.RitualOp(RitualId.WARDING, center)),
+                            new AtomicOp.RitualOp(RitualId.WARDING, center, Collections.emptyMap())),
                     10, List.of(), Map.of());
             long taskId = world.taskPool.addTask(task);
 
@@ -186,7 +186,7 @@ public class CoreSystemsTest {
             // V2.5 async model: MockBoundary.beginRitual returns completedFuture
             // → RitualOp advances in one tick
             registerSimpleBp("test:ward_sync",
-                    new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(5, 64, 0)),
+                    new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(5, 64, 0), Collections.emptyMap()),
                     AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.GLASS));
 
             long taskId = world.taskPool.addTask(
@@ -205,7 +205,7 @@ public class CoreSystemsTest {
             // V2.5: execute() is called once for a RitualOp.
             // MockBoundary returns completedFuture → advances immediately.
             registerSimpleBp("test:ward_once",
-                    new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(10, 64, 0)));
+                    new AtomicOp.RitualOp(RitualId.WARDING, new GridPos(10, 64, 0), Collections.emptyMap()));
 
             long taskId = world.taskPool.addTask(
                     makeRequest("test:ward_once", new GridPos(0, 64, 0), 10));

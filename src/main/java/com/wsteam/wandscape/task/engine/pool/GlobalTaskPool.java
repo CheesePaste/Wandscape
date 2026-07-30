@@ -276,13 +276,6 @@ public class GlobalTaskPool {
         Log.info(TAG, "awaitingResources #%d need %s (step=%d)", taskId, needed, task.stepIndex);
     }
 
-    /** Backward-compat for single-resource shortages. */
-    public void markAwaitingResources(long taskId, long npcId,
-                                       ResourceStack needed,
-                                       World world) {
-        markAwaitingResources(taskId, npcId, List.of(needed), world);
-    }
-
     /**
      * Called when an NPC dies or can't continue. Preserves stepIndex for resume.
      */
@@ -454,7 +447,7 @@ public class GlobalTaskPool {
 
     // ── Persistence ──
 
-    /** All non-COMPLETED and non-FAILED tasks with a blueprintId. */
+    /** All non-COMPLETED tasks with a blueprintId. */
     public List<GlobalTask> getPersistableTasks() {
         List<GlobalTask> result = new ArrayList<>();
         for (GlobalTask t : tasksById.values()) {

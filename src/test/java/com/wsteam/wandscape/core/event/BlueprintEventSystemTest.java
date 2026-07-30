@@ -20,6 +20,7 @@ import com.wsteam.wandscape.core.event.SimpleEventBus;
 import com.wsteam.wandscape.task.scheduler.SystemBlueprintSystem;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.wsteam.wandscape.core.ecs.World;
@@ -484,8 +485,8 @@ public class BlueprintEventSystemTest {
                         "test:resilient_reply", 10,
                         Map.of(),
                         null)),
-                new AtomicOp.ResourceRequestOp(
-                        new ResourceStack(ResourceId.STONE_BRICKS, 10)),
+                new AtomicOp.ResourceRequestOp(List.of(
+                        new ResourceStack(ResourceId.STONE_BRICKS, 10))),
                 new AtomicOp.EmitEventOp("resilient_done", Map.of()));
 
         registerBp("test:resilient_reply", List.of(),
