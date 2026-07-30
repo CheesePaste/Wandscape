@@ -2,6 +2,7 @@
   "id": "warehouse",
   "display_name": "殖民地仓库",
   "category": "storage",
+  "first_free": true,
   "pattern": [
     [
       0,

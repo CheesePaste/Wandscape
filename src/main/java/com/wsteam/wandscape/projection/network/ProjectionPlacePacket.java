@@ -17,6 +17,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.UUID;
+
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -94,22 +96,41 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 4. Enqueue build work item (filtered clear_offsets — skip other buildings' blocks)
+        // 4. Check first-free build: first build of marked buildings costs no materials
         var buildingData = api.getBuildingAt(packet.anchorPos);
+        UUID colonyId = buildingData != null ? buildingData.getColonyId() : null;
+        boolean firstFree = config.firstFree()
+                && colonyId != null
+                && !BuildingSavedData.get(player.serverLevel()).isFirstFreeClaimed(colonyId, packet.buildingTypeId);
+
+        // 5. Enqueue build work item (filtered clear_offsets — skip other buildings' blocks)
         if (buildingData != null) {
             BuildingSavedData sd = BuildingSavedData.get(player.serverLevel());
             WorkItem workItem = EnqueueHelper.buildWorkItem(
                     config, packet.anchorPos, packet.buildingTypeId, 0,
-                    sd, buildingData.getBuildingId(), packet.rotationSteps);
-            api.enqueueWork(buildingData.getBuildingId(), workItem);
+                    sd, buildingData.getBuildingId(), packet.rotationSteps,
+                    firstFree); // skipMaterials = firstFree
 
-            player.displayClientMessage(
-                    Component.literal("[Projection] §a" + config.displayName() +
-                            " §fplaced at (" +
-                            packet.anchorPos.getX() + ", " +
-                            packet.anchorPos.getY() + ", " +
-                            packet.anchorPos.getZ() + ") — §aNPC will construct"),
-                    false);
+            if (firstFree) {
+                sd.claimFirstFree(colonyId, packet.buildingTypeId);
+                player.displayClientMessage(
+                        Component.literal("[Projection] §a" + config.displayName() +
+                                " §fplaced at (" +
+                                packet.anchorPos.getX() + ", " +
+                                packet.anchorPos.getY() + ", " +
+                                packet.anchorPos.getZ() +
+                                ") — §eFREE first build, no materials consumed"),
+                        false);
+            } else {
+                player.displayClientMessage(
+                        Component.literal("[Projection] §a" + config.displayName() +
+                                " §fplaced at (" +
+                                packet.anchorPos.getX() + ", " +
+                                packet.anchorPos.getY() + ", " +
+                                packet.anchorPos.getZ() + ") — §aNPC will construct"),
+                        false);
+            }
+            api.enqueueWork(buildingData.getBuildingId(), workItem);
 
             Log.info(TAG, "[Projection] Building '{}' placed at {} by player {}. WorkItem enqueued.",
                     config.displayName(), packet.anchorPos, player.getGameProfile().getName());

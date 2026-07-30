@@ -156,6 +156,20 @@ public final class EnqueueHelper {
                                           @Nullable BuildingSavedData sd,
                                           @Nullable UUID buildingId,
                                           int rotationSteps) {
+        return buildWorkItem(config, pos, buildingTypeId, priority, sd, buildingId, rotationSteps, false);
+    }
+
+    /**
+     * Build a WorkItem with rotation support and optional material skip.
+     * When {@code skipMaterials} is true, material_list and material_counts
+     * are omitted so the NPC does not request any items from the warehouse.
+     */
+    public static WorkItem buildWorkItem(BuildingConfig config, BlockPos pos,
+                                          String buildingTypeId, int priority,
+                                          @Nullable BuildingSavedData sd,
+                                          @Nullable UUID buildingId,
+                                          int rotationSteps,
+                                          boolean skipMaterials) {
         Map<String, JsonElement> params = new HashMap<>();
 
         params.put("anchor", posToJsonArray(pos));
@@ -181,7 +195,8 @@ public final class EnqueueHelper {
                 }
             }
             // material_list + material_counts: auto-computed from pattern → block_mapping
-            if (!params.containsKey("material_list")) {
+            // When skipMaterials is true, omit them so the NPC doesn't request items.
+            if (!params.containsKey("material_list") && !skipMaterials) {
                 var materialData = computeMaterialData(config);
                 if (materialData != null) {
                     params.put("material_list", materialData.list());

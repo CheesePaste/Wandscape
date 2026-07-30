@@ -82,6 +82,9 @@ public class BuildingSavedData extends SavedData {
     // NBT key for pattern positions (precise overlap detection)
     private static final String TAG_PATTERN_POSITIONS = "pattern_pos";
 
+    // NBT key for claimed first-free builds
+    private static final String TAG_CLAIMED_FREE = "claimed_free";
+
     private static final Gson PARAMS_GSON = new Gson();
     private static final java.lang.reflect.Type PARAMS_TYPE =
             new TypeToken<Map<String, JsonElement>>(){}.getType();
@@ -104,6 +107,21 @@ public class BuildingSavedData extends SavedData {
     private final Map<UUID, Map<String, Integer>> shopStock = new ConcurrentHashMap<>();
     /** buildingId → (itemId → max stock). Player-configured max stock settings. */
     private final Map<UUID, Map<String, Integer>> shopMaxStock = new ConcurrentHashMap<>();
+
+    // ── First-free build tracking ──
+    /** colonyId → set of buildingTypeIds whose first build was already claimed free. */
+    private final Map<UUID, Set<String>> claimedFreeBuilds = new ConcurrentHashMap<>();
+
+    public boolean isFirstFreeClaimed(UUID colonyId, String buildingTypeId) {
+        Set<String> claimed = claimedFreeBuilds.get(colonyId);
+        return claimed != null && claimed.contains(buildingTypeId);
+    }
+
+    public void claimFirstFree(UUID colonyId, String buildingTypeId) {
+        claimedFreeBuilds.computeIfAbsent(colonyId, k -> ConcurrentHashMap.newKeySet())
+                .add(buildingTypeId);
+        setDirty();
+    }
 
     // ── Factory ──
 
@@ -605,6 +623,17 @@ public class BuildingSavedData extends SavedData {
         }
         tag.put(TAG_SHOP_MAX_STOCK, maxStockTag);
 
+        // ── First-free builds ──
+        CompoundTag freeTag = new CompoundTag();
+        for (var entry : claimedFreeBuilds.entrySet()) {
+            ListTag typesTag = new ListTag();
+            for (String type : entry.getValue()) {
+                typesTag.add(net.minecraft.nbt.StringTag.valueOf(type));
+            }
+            freeTag.put(entry.getKey().toString(), typesTag);
+        }
+        tag.put(TAG_CLAIMED_FREE, freeTag);
+
         return tag;
     }
 
@@ -734,6 +763,24 @@ public class BuildingSavedData extends SavedData {
                     data.shopMaxStock.put(buildingId, items);
                 } catch (IllegalArgumentException e) {
                     Log.warn(TAG, "Invalid building UUID in shop max stock: {}", key);
+                }
+            }
+        }
+
+        // ── Load claimed first-free builds ──
+        if (tag.contains(TAG_CLAIMED_FREE)) {
+            CompoundTag freeTag = tag.getCompound(TAG_CLAIMED_FREE);
+            for (String key : freeTag.getAllKeys()) {
+                try {
+                    UUID colonyId = UUID.fromString(key);
+                    ListTag typesTag = freeTag.getList(key, Tag.TAG_STRING);
+                    Set<String> types = ConcurrentHashMap.newKeySet();
+                    for (int i = 0; i < typesTag.size(); i++) {
+                        types.add(typesTag.getString(i));
+                    }
+                    data.claimedFreeBuilds.put(colonyId, types);
+                } catch (IllegalArgumentException e) {
+                    Log.warn(TAG, "Invalid colony UUID in claimed free builds: {}", key);
                 }
             }
         }

@@ -2,6 +2,7 @@
   "id": "townhall1",
   "display_name": "townhall1",
   "category": "government",
+  "first_free": true,
   "pattern": [
     [
       0,

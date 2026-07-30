@@ -46,7 +46,8 @@ public record BuildingConfig(
         ShopConfig shop,
         ServiceConfig service,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
-        @SerializedName("interact_aabb") List<BoundaryBox> interactAabb
+        @SerializedName("interact_aabb") List<BoundaryBox> interactAabb,
+        @SerializedName("first_free") boolean firstFree
 ) {
     public record QueueDef(
             int capacity,
@@ -247,6 +248,10 @@ public record BuildingConfig(
                         obj.get("door_offset"), BlockOffset.class, context);
             }
 
+            // First-free build flag: when true, the first build of this building
+            // type in a colony does not consume warehouse materials.
+            boolean firstFree = getBoolean(obj, "first_free", false);
+
             // Interact AABB list: multiple interaction zones relative to anchor.
             // Each zone is spiral-scanned for walkable ground.
             // When not specified, interaction point is computed via spiral scan inside building boundary.
@@ -269,7 +274,7 @@ public record BuildingConfig(
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,
-                    doorOffset, interactAabb);
+                    doorOffset, interactAabb, firstFree);
         }
 
         private static String getString(JsonObject obj, String key, String def) {
@@ -278,6 +283,10 @@ public record BuildingConfig(
 
         private static int getInt(JsonObject obj, String key, int def) {
             return obj.has(key) ? obj.get(key).getAsInt() : def;
+        }
+
+        private static boolean getBoolean(JsonObject obj, String key, boolean def) {
+            return obj.has(key) ? obj.get(key).getAsBoolean() : def;
         }
     }
 }
