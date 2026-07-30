@@ -24,6 +24,7 @@ import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlock;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
@@ -440,6 +441,11 @@ public class Wandscape {
                         BuildingScannerSyncPacket.TYPE,
                         BuildingScannerSyncPacket.STREAM_CODEC,
                         (packet, ctx) -> BuildingScannerSyncPacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()))
+                .playToServer(
+                        BuildingScannerExportPacket.TYPE,
+                        BuildingScannerExportPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingScannerExportPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
                         com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,
