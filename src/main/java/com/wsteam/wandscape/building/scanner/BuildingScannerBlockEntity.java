@@ -54,6 +54,25 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_SERVICE_MAX_OCC = "service_max_occ";
     private static final String KEY_SERVICE_DURATION = "service_duration";
 
+    // ── New field NBT keys ──
+    private static final String KEY_MAINTENANCE_COST = "maintenance_cost";
+    private static final String KEY_NODE_CONFIG = "node_config";
+    private static final String KEY_SHOP_GOODS = "shop_goods";
+    private static final String KEY_SERVICE_ELEMENT_OUTPUT = "service_element_output";
+
+    // Sub-keys for node_config compound
+    private static final String KEY_NC_BLUEPRINT = "blueprint";
+    private static final String KEY_NC_ELEMENT = "element";
+    private static final String KEY_NC_AMOUNT = "amount_per_harvest";
+    private static final String KEY_NC_CHANNEL_TICKS = "channel_ticks";
+    private static final String KEY_NC_MANA_COST = "mana_cost";
+
+    // Sub-keys for cost/good list entries
+    private static final String KEY_ENTRY_ELEMENT = "element";
+    private static final String KEY_ENTRY_AMOUNT = "amount";
+    private static final String KEY_GOOD_ITEM_ID = "item_id";
+    private static final String KEY_GOOD_RESTOCK = "restock_cost";
+
     // ── State ──
     private ScannerMode mode = ScannerMode.BOUNDARY;
     private BlockOffset boundaryMin = BlockOffset.of(0, 0, 0);
@@ -77,6 +96,22 @@ public class BuildingScannerBlockEntity extends BlockEntity {
 
     // ── Service config ──
     private int serviceEnergyPerUse, serviceMaxOccupancy, serviceInteractionDurationTicks;
+
+    // ── Maintenance cost ──
+    private Map<String, Integer> maintenanceCost = new HashMap<>();
+
+    // ── Node config (only for category=node) ──
+    private String nodeBlueprint = "";
+    private String nodeElement = "earth";
+    private int nodeAmountPerHarvest = 5;
+    private int nodeChannelTicks = 200;
+    private int nodeManaCost = 5;
+
+    // ── Shop goods (only for category=shop) ──
+    private final List<ShopGoodData> shopGoods = new ArrayList<>();
+
+    // ── Service element output (only for category=service) ──
+    private final Map<String, Integer> serviceElementOutput = new HashMap<>();
 
     public BuildingScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -169,6 +204,59 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     public int getServiceInteractionDurationTicks() { return serviceInteractionDurationTicks; }
     public void setServiceInteractionDurationTicks(int v) { this.serviceInteractionDurationTicks = v; }
 
+    // ── Maintenance cost ──
+
+    public Map<String, Integer> getMaintenanceCost() { return Collections.unmodifiableMap(maintenanceCost); }
+    public void setMaintenanceCost(Map<String, Integer> map) {
+        maintenanceCost.clear();
+        if (map != null) maintenanceCost.putAll(map);
+    }
+    public void addMaintenanceCost(String element, int amount) {
+        maintenanceCost.put(element, amount);
+    }
+    public void removeMaintenanceCost(String element) {
+        maintenanceCost.remove(element);
+    }
+
+    // ── Node config ──
+
+    public String getNodeBlueprint() { return nodeBlueprint; }
+    public void setNodeBlueprint(String v) { this.nodeBlueprint = v; }
+    public String getNodeElement() { return nodeElement; }
+    public void setNodeElement(String v) { this.nodeElement = v; }
+    public int getNodeAmountPerHarvest() { return nodeAmountPerHarvest; }
+    public void setNodeAmountPerHarvest(int v) { this.nodeAmountPerHarvest = v; }
+    public int getNodeChannelTicks() { return nodeChannelTicks; }
+    public void setNodeChannelTicks(int v) { this.nodeChannelTicks = v; }
+    public int getNodeManaCost() { return nodeManaCost; }
+    public void setNodeManaCost(int v) { this.nodeManaCost = Math.max(1, v); }
+
+    // ── Shop goods ──
+
+    public List<ShopGoodData> getShopGoods() { return Collections.unmodifiableList(shopGoods); }
+    public void addShopGood(ShopGoodData good) { shopGoods.add(good); }
+    public void removeShopGood(int index) {
+        if (index >= 0 && index < shopGoods.size()) shopGoods.remove(index);
+    }
+    public void updateShopGood(int index, ShopGoodData good) {
+        if (index >= 0 && index < shopGoods.size()) shopGoods.set(index, good);
+    }
+    public void clearShopGoods() { shopGoods.clear(); }
+
+    // ── Service element output ──
+
+    public Map<String, Integer> getServiceElementOutput() { return Collections.unmodifiableMap(serviceElementOutput); }
+    public void setServiceElementOutput(Map<String, Integer> map) {
+        serviceElementOutput.clear();
+        if (map != null) serviceElementOutput.putAll(map);
+    }
+    public void addServiceElementOutput(String element, int amount) {
+        serviceElementOutput.put(element, amount);
+    }
+    public void removeServiceElementOutput(String element) {
+        serviceElementOutput.remove(element);
+    }
+
     /** Mark all meta fields dirty and sync to client. Call after batch updates. */
     public void syncMeta() {
         setChangedAndSync();
@@ -227,6 +315,56 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         tag.putInt(KEY_SERVICE_ENERGY, serviceEnergyPerUse);
         tag.putInt(KEY_SERVICE_MAX_OCC, serviceMaxOccupancy);
         tag.putInt(KEY_SERVICE_DURATION, serviceInteractionDurationTicks);
+
+        // Maintenance cost
+        ListTag mcList = new ListTag();
+        for (var entry : maintenanceCost.entrySet()) {
+            CompoundTag et = new CompoundTag();
+            et.putString(KEY_ENTRY_ELEMENT, entry.getKey());
+            et.putInt(KEY_ENTRY_AMOUNT, entry.getValue());
+            mcList.add(et);
+        }
+        tag.put(KEY_MAINTENANCE_COST, mcList);
+
+        // Node config
+        CompoundTag ncTag = new CompoundTag();
+        ncTag.putString(KEY_NC_BLUEPRINT, nodeBlueprint);
+        ncTag.putString(KEY_NC_ELEMENT, nodeElement);
+        ncTag.putInt(KEY_NC_AMOUNT, nodeAmountPerHarvest);
+        ncTag.putInt(KEY_NC_CHANNEL_TICKS, nodeChannelTicks);
+        ncTag.putInt(KEY_NC_MANA_COST, nodeManaCost);
+        tag.put(KEY_NODE_CONFIG, ncTag);
+
+        // Shop goods
+        ListTag goodsList = new ListTag();
+        for (ShopGoodData good : shopGoods) {
+            CompoundTag gt = new CompoundTag();
+            gt.putString(KEY_GOOD_ITEM_ID, good.itemId());
+            // restock cost
+            ListTag rcList = new ListTag();
+            for (var entry : good.restockCost().entrySet()) {
+                CompoundTag rt = new CompoundTag();
+                rt.putString(KEY_ENTRY_ELEMENT, entry.getKey());
+                rt.putInt(KEY_ENTRY_AMOUNT, entry.getValue());
+                rcList.add(rt);
+            }
+            gt.put(KEY_GOOD_RESTOCK, rcList);
+            gt.putInt("comfort", good.comfort());
+            gt.putInt("magic", good.magic());
+            gt.putInt("wonder", good.wonder());
+            goodsList.add(gt);
+        }
+        tag.put(KEY_SHOP_GOODS, goodsList);
+
+        // Service element output
+        ListTag seoList = new ListTag();
+        for (var entry : serviceElementOutput.entrySet()) {
+            CompoundTag et = new CompoundTag();
+            et.putString(KEY_ENTRY_ELEMENT, entry.getKey());
+            et.putInt(KEY_ENTRY_AMOUNT, entry.getValue());
+            seoList.add(et);
+        }
+        tag.put(KEY_SERVICE_ELEMENT_OUTPUT, seoList);
     }
 
     @Override
@@ -267,6 +405,59 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         serviceEnergyPerUse = tag.getInt(KEY_SERVICE_ENERGY);
         serviceMaxOccupancy = tag.getInt(KEY_SERVICE_MAX_OCC);
         serviceInteractionDurationTicks = tag.getInt(KEY_SERVICE_DURATION);
+
+        // Maintenance cost
+        maintenanceCost.clear();
+        if (tag.contains(KEY_MAINTENANCE_COST, Tag.TAG_LIST)) {
+            ListTag list = tag.getList(KEY_MAINTENANCE_COST, Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag et = list.getCompound(i);
+                maintenanceCost.put(et.getString(KEY_ENTRY_ELEMENT), et.getInt(KEY_ENTRY_AMOUNT));
+            }
+        }
+
+        // Node config
+        if (tag.contains(KEY_NODE_CONFIG, Tag.TAG_COMPOUND)) {
+            CompoundTag ncTag = tag.getCompound(KEY_NODE_CONFIG);
+            nodeBlueprint = ncTag.getString(KEY_NC_BLUEPRINT);
+            nodeElement = ncTag.contains(KEY_NC_ELEMENT) ? ncTag.getString(KEY_NC_ELEMENT) : "earth";
+            nodeAmountPerHarvest = ncTag.getInt(KEY_NC_AMOUNT);
+            nodeChannelTicks = ncTag.getInt(KEY_NC_CHANNEL_TICKS);
+            nodeManaCost = Math.max(1, ncTag.getInt(KEY_NC_MANA_COST));
+        }
+
+        // Shop goods
+        shopGoods.clear();
+        if (tag.contains(KEY_SHOP_GOODS, Tag.TAG_LIST)) {
+            ListTag list = tag.getList(KEY_SHOP_GOODS, Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag gt = list.getCompound(i);
+                Map<String, Integer> rc = new HashMap<>();
+                if (gt.contains(KEY_GOOD_RESTOCK, Tag.TAG_LIST)) {
+                    ListTag rcList = gt.getList(KEY_GOOD_RESTOCK, Tag.TAG_COMPOUND);
+                    for (int j = 0; j < rcList.size(); j++) {
+                        CompoundTag rt = rcList.getCompound(j);
+                        rc.put(rt.getString(KEY_ENTRY_ELEMENT), rt.getInt(KEY_ENTRY_AMOUNT));
+                    }
+                }
+                shopGoods.add(new ShopGoodData(
+                        gt.getString(KEY_GOOD_ITEM_ID),
+                        rc,
+                        gt.getInt("comfort"),
+                        gt.getInt("magic"),
+                        gt.getInt("wonder")));
+            }
+        }
+
+        // Service element output
+        serviceElementOutput.clear();
+        if (tag.contains(KEY_SERVICE_ELEMENT_OUTPUT, Tag.TAG_LIST)) {
+            ListTag list = tag.getList(KEY_SERVICE_ELEMENT_OUTPUT, Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag et = list.getCompound(i);
+                serviceElementOutput.put(et.getString(KEY_ENTRY_ELEMENT), et.getInt(KEY_ENTRY_AMOUNT));
+            }
+        }
     }
 
     // ── Client sync ──
@@ -287,6 +478,20 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ── Shop good data record ──
+
+    public record ShopGoodData(
+            String itemId,
+            Map<String, Integer> restockCost,
+            int comfort,
+            int magic,
+            int wonder
+    ) {
+        public ShopGoodData {
+            if (restockCost == null) restockCost = Map.of();
+        }
     }
 
     // ── Helpers ──
