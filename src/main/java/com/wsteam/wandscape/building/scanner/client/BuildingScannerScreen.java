@@ -435,7 +435,10 @@ public class BuildingScannerScreen extends Screen {
             }
             if (eoi == 0) eoy = y;
             addRenderableWidget(Button.builder(Component.literal("+"), b -> {
-                        scanner.addServiceElementOutput("earth", 1);
+                        String next = ELEMENTS.stream()
+                                .filter(e -> !scanner.getServiceElementOutput().containsKey(e))
+                                .findFirst().orElse("earth");
+                        scanner.addServiceElementOutput(next, 1);
                         syncToServer();
                         needsRebuild = true;
                     })
