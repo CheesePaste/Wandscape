@@ -275,3 +275,58 @@
 **为什么 SplineLeg 增加真正的 Arc Length 采样计算，而不用起终点直线距离？** 在升级为贝塞尔曲线（bz3）道路后，一条连续的弯曲样条线可能物理跨度只有 5 格（如掉头弯），但实际弧长有 50 格。如果只算起终点直线距离，那么 50 格的弯道会被错误地当做 5 格来分配持续时间（duration）。这会导致物资在客户端以惊人的超速（比如 0.25 秒内飞完 50 格）“瞬移”。通过在 `getApproxLength()` 中对 `uStart` 到 `uEnd` 按 10 个步长进行分段采样累加距离，以极小的 CPU 开销换取了极为精确的弧长，让物资在弯道上能保持严格匀速。
 
 **为什么 ResourceRequestExecutor.finish 不再减去 alreadyHas？** 发现了一个深藏的“双重扣除”Bug。当任务中含有多个并发步骤，或者 NPC 因为先前任务失败（比如 TransformOp 因为某种原因被中断）而包里残留了 1 个资源时。`execute()` 阶段计算 shortfall = need - alreadyHas 已经是扣除后的净需求，并且按照 shortfall 从仓库发起运输。当这批货物运达时，`finish()` 直接 `inv.add(need)` 即可。如果 `finish()` 再减一次 `alreadyHas`，就会导致实际给 NPC 的比需要的还少 1 个，最终在 `AsyncTransformExecutor` 中因为 `inv.hasEnough` 失败而阻断后续任务。修正后彻底解决了道路建造中途意外中断的僵尸路段问题。
+
+## 资源供需重构：有需求才采集（2026-07-31）
+
+### 现状核验：Workstation 自动合成是否存在？现在这套逻辑对吗？
+
+**结论：自动合成已实现，且链路完整正确。**
+
+逐段核实源码后的链路：
+
+1. **建造/补货发出请求**：蓝图的 `request_resource` op → `AtomicOp.ResourceRequestOp` → `ResourceRequestExecutor.execute`（`engine/boundary/ResourceRequestExecutor.java:104`）。
+2. **仓库物品不足 → 抛异常**：`execute` 先对全部需求做 all-or-nothing `hasEnough` 检查（`:126`），任一不足即 `failedFuture(ResourceShortageException)`，不产生部分取物。
+3. **任务挂起**：`TaskExecutionSystem` 捕获异常（`task/scheduler/TaskExecutionSystem.java:249`）→ `taskPool.markAwaitingResources` → 任务转 AWAITING_RESOURCES、保存 stepIndex、释放 NPC。
+4. **自动合成**：`markAwaitingResources` 调 `resourceShortageHandler`（`task/engine/pool/GlobalTaskPool.java:270`）→ `EngineBootstrap.createShortageHandler`（`engine/bootstrap/EngineBootstrap.java:213`）：该资源有 `production:synthesize` 配方且未 in-flight → 找 crafting_station → 入队 `production:synthesize`（priority 40）。无配方则返回 false。
+5. **兜底补货**：`ResourceSupplySystem.scanStuckTasks` 每 40 tick 扫描（`engine/system/ResourceSupplySystem.java:62`）：资源已够 → `wakeupTask`；不够 → `trySupplyResource` 先合成、再无配方时 `tryGatherElement` 采集元素。
+6. **补足后继续**：合成/采集完成 → `resources.addResource` → `WarehouseManager.addResource`（`warehouse/WarehouseManager.java:254`）→ `resourceAddedListener.onResourceAdded` → `GlobalTaskPool.onResourceAdded`（`task/engine/pool/GlobalTaskPool.java:404`）→ 匹配资源的 AWAITING_RESOURCES 任务全部可满足时 → 回到 PENDING_ASSIGN → 重新分配 → NPC 从保存的 stepIndex 续跑。
+
+即"元素/物品不足 → 自动合成任务 → 足了继续任务"的设想**已经是现状**。
+
+### 但"NPC 一直在 gather"的根因
+
+自动合成没问题，问题在**采集侧有三个触发器并存**，其中一个是无条件触发：
+
+| 触发器 | 触发条件 | 优先级 | 需求驱动 |
+|---|---|---|---|
+| `BuildingTaskSource.supplyNodeBuildings` | **无条件**，每 20 tick 对所有空闲 node 入队 gather | 15 | ❌ |
+| `MaintenanceForecastSystem.enqueueGatherTasks` | 元素储备 < 维护费×reserveDays | 55 | ✅ 维护需求 |
+| `ResourceSupplySystem.tryGatherElement` | 生产任务缺元素 | 40 | ✅ 生产需求 |
+
+`supplyNodeBuildings`（`engine/source/BuildingTaskSource.java:72` 调用、`:126-169` 实现，commit 95b71d3 引入，早于 ResourceSupplySystem）是"NPC 一直在 gather"的主因：即使仓库已满，每个空闲 node 永远排着一个 gather，NPC 永远不停。用户日志中 wind 已累计 10139 仍在采集，正符合该无条件行为。
+
+### 目标系统：有需求才采集
+
+采集只在两类需求下发生：
+
+1. **维护需求**：维护费 × `reserveDays`（默认 2 天）→ `MaintenanceForecastSystem` 入队采集。
+2. **生产需求**：Workstation / Crafting_Station 等消耗元素时元素不足 → `ResourceShortageException` → `ResourceSupplySystem` 采集。
+
+无需求不采集。两个需求触发器已存在，只需**删除无条件触发器**并修复以下缺口。
+
+### 修改方案
+
+1. **删除 `BuildingTaskSource.supplyNodeBuildings`**（BuildingTaskSource.java:72 调用 + :126-169 方法）。两处需求采集已覆盖全部采集场景，无条件采集只会造成"永远在 gather"。
+
+2. **修正采集入仓的 colony 归属**：`executeGather` 的 `addResource` 走 `WarehouseManager.findStorageColony()`——取**跨殖民地的首个 storage 建筑**。多殖民地时，node 采集的元素可能入到别的 colony，而 Forecast 按 **node 所在 colony** 读 `getElement()`，导致需求永不满足 → 每周期再入队高优先级采集。修正：`executeGather` 从 WorkItem 的 `anchor` 解析 node 所在 colony，直接 `addElement(nodeColony, ...)` + 触发 onResourceAdded（或给 `addResource` 增加 colony 参数）。
+
+3. **Forecast 无匹配 node 兜底**：缺的元素没有对应 node 时，`enqueueGatherTasks` 一个都不入队，但 shortfall 仍在 → 每 6000 tick 报警一次、永不解决。改为：无匹配 node → `Log.warn` 一次并进入冷却（防刷屏），不反复报警。
+
+4. **Forecast 采集优先级越过高审批门**：`FORECAST_GATHER_PRIORITY=55 ≥ 50`，而 `autoApproveTasks` 默认 false → forecast 的采集任务会进 PENDING_APPROVAL 等玩家审批，"自动预防维护关机"实际失效。对齐修复任务先例（priority=49 绕过审批门，见上文），改为 **49**（仍高于生产采集 40、手动发布 15）。
+
+5. **（可选）Forecast 采集量封顶**：当前对 shortfall 元素的所有空闲 node 全部入队，不按缺口量封顶。可改为按 shortfall / amountPerHarvest 计算所需采集次数再入队，避免过量采集。
+
+### 不做的事
+
+- 不改 `WarehouseApi` / `ColonyResourceAccess` 的**跨殖民地求和**语义——`available()` 求和正是生产需求的正确定义（任何殖民地的元素都能补给生产任务）。
+- 不改 `DailySettlementSystem`（维护费扣费与自动重启逻辑已正确）。
