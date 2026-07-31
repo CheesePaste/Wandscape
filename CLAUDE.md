@@ -52,7 +52,7 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
 
 ## 版本管理（alpha）
 
-- **自动更新版本号**：每次实质性更改（代码/资源/JSON/配置，即影响 jar 内容）提交时，同步递增 `gradle.properties` 的 `mod_version` 并一起 commit。当前 alpha 方案：补丁号递增、保留 `a` 后缀，bug修复改第三位，功能重构改第二位，大的新功能上线/破坏性大重构改第一位。纯文档（`docs/`、`architecture/`、`CLAUDE.md`）不递增。
+- **自动更新版本号**：每次实质性更改（代码/资源/JSON/配置，即影响 jar 内容）提交时，同步递增 `gradle.properties` 的 `mod_version` 并一起 commit。当前 alpha 方案：补丁号递增、保留 `a` 后缀，bug修复改第三位，小功能重构改第二位，大的新功能上线/破坏性大重构改第一位。纯文档（`docs/`、`architecture/`、`CLAUDE.md`）不递增。
 - **清理 build/libs/ 旧版本**：`./gradlew build` 后（或新工作开始时）检查 `build/libs/`，删除所有 `wandscape-*.jar` 中不是当前 `mod_version` 的旧 jar，只保留最新版，避免 alpha 阶段积压。
 
 ## 工作流
