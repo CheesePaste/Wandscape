@@ -1,0 +1,1083 @@
+{
+  "id": "potionstation1",
+  "display_name": "potionstation1",
+  "category": "potion_station",
+  "pattern": [
+    [
+      0,
+      -1,
+      0
+    ],
+    [
+      0,
+      -1,
+      1
+    ],
+    [
+      0,
+      -1,
+      2
+    ],
+    [
+      0,
+      -1,
+      3
+    ],
+    [
+      0,
+      -1,
+      4
+    ],
+    [
+      0,
+      -1,
+      5
+    ],
+    [
+      0,
+      -1,
+      6
+    ],
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      0,
+      2,
+      1
+    ],
+    [
+      0,
+      2,
+      2
+    ],
+    [
+      0,
+      2,
+      3
+    ],
+    [
+      0,
+      2,
+      4
+    ],
+    [
+      0,
+      2,
+      5
+    ],
+    [
+      0,
+      2,
+      6
+    ],
+    [
+      1,
+      -1,
+      0
+    ],
+    [
+      1,
+      -1,
+      1
+    ],
+    [
+      1,
+      -1,
+      2
+    ],
+    [
+      1,
+      -1,
+      3
+    ],
+    [
+      1,
+      -1,
+      4
+    ],
+    [
+      1,
+      -1,
+      5
+    ],
+    [
+      1,
+      -1,
+      6
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      2
+    ],
+    [
+      1,
+      0,
+      3
+    ],
+    [
+      1,
+      0,
+      4
+    ],
+    [
+      1,
+      0,
+      5
+    ],
+    [
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      2
+    ],
+    [
+      1,
+      1,
+      3
+    ],
+    [
+      1,
+      1,
+      4
+    ],
+    [
+      1,
+      1,
+      5
+    ],
+    [
+      1,
+      2,
+      0
+    ],
+    [
+      1,
+      2,
+      1
+    ],
+    [
+      1,
+      2,
+      2
+    ],
+    [
+      1,
+      2,
+      3
+    ],
+    [
+      1,
+      2,
+      4
+    ],
+    [
+      1,
+      2,
+      5
+    ],
+    [
+      1,
+      2,
+      6
+    ],
+    [
+      1,
+      3,
+      0
+    ],
+    [
+      1,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      2
+    ],
+    [
+      1,
+      3,
+      3
+    ],
+    [
+      1,
+      3,
+      4
+    ],
+    [
+      1,
+      3,
+      5
+    ],
+    [
+      1,
+      3,
+      6
+    ],
+    [
+      2,
+      -1,
+      0
+    ],
+    [
+      2,
+      -1,
+      1
+    ],
+    [
+      2,
+      -1,
+      2
+    ],
+    [
+      2,
+      -1,
+      3
+    ],
+    [
+      2,
+      -1,
+      4
+    ],
+    [
+      2,
+      -1,
+      5
+    ],
+    [
+      2,
+      -1,
+      6
+    ],
+    [
+      2,
+      0,
+      1
+    ],
+    [
+      2,
+      0,
+      4
+    ],
+    [
+      2,
+      0,
+      5
+    ],
+    [
+      2,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      1
+    ],
+    [
+      2,
+      1,
+      5
+    ],
+    [
+      2,
+      2,
+      1
+    ],
+    [
+      2,
+      2,
+      5
+    ],
+    [
+      2,
+      3,
+      0
+    ],
+    [
+      2,
+      3,
+      1
+    ],
+    [
+      2,
+      3,
+      2
+    ],
+    [
+      2,
+      3,
+      3
+    ],
+    [
+      2,
+      3,
+      4
+    ],
+    [
+      2,
+      3,
+      5
+    ],
+    [
+      2,
+      3,
+      6
+    ],
+    [
+      2,
+      4,
+      1
+    ],
+    [
+      2,
+      4,
+      2
+    ],
+    [
+      2,
+      4,
+      3
+    ],
+    [
+      2,
+      4,
+      4
+    ],
+    [
+      2,
+      4,
+      5
+    ],
+    [
+      3,
+      -1,
+      0
+    ],
+    [
+      3,
+      -1,
+      1
+    ],
+    [
+      3,
+      -1,
+      2
+    ],
+    [
+      3,
+      -1,
+      3
+    ],
+    [
+      3,
+      -1,
+      4
+    ],
+    [
+      3,
+      -1,
+      5
+    ],
+    [
+      3,
+      -1,
+      6
+    ],
+    [
+      3,
+      0,
+      1
+    ],
+    [
+      3,
+      0,
+      3
+    ],
+    [
+      3,
+      0,
+      4
+    ],
+    [
+      3,
+      0,
+      5
+    ],
+    [
+      3,
+      1,
+      1
+    ],
+    [
+      3,
+      1,
+      3
+    ],
+    [
+      3,
+      1,
+      5
+    ],
+    [
+      3,
+      2,
+      1
+    ],
+    [
+      3,
+      2,
+      3
+    ],
+    [
+      3,
+      2,
+      5
+    ],
+    [
+      3,
+      3,
+      0
+    ],
+    [
+      3,
+      3,
+      1
+    ],
+    [
+      3,
+      3,
+      3
+    ],
+    [
+      3,
+      3,
+      5
+    ],
+    [
+      3,
+      3,
+      6
+    ],
+    [
+      3,
+      4,
+      1
+    ],
+    [
+      3,
+      4,
+      2
+    ],
+    [
+      3,
+      4,
+      3
+    ],
+    [
+      3,
+      4,
+      4
+    ],
+    [
+      3,
+      4,
+      5
+    ],
+    [
+      4,
+      -1,
+      0
+    ],
+    [
+      4,
+      -1,
+      1
+    ],
+    [
+      4,
+      -1,
+      2
+    ],
+    [
+      4,
+      -1,
+      3
+    ],
+    [
+      4,
+      -1,
+      4
+    ],
+    [
+      4,
+      -1,
+      5
+    ],
+    [
+      4,
+      -1,
+      6
+    ],
+    [
+      4,
+      0,
+      1
+    ],
+    [
+      4,
+      0,
+      4
+    ],
+    [
+      4,
+      0,
+      5
+    ],
+    [
+      4,
+      1,
+      0
+    ],
+    [
+      4,
+      1,
+      1
+    ],
+    [
+      4,
+      1,
+      5
+    ],
+    [
+      4,
+      2,
+      1
+    ],
+    [
+      4,
+      2,
+      5
+    ],
+    [
+      4,
+      3,
+      0
+    ],
+    [
+      4,
+      3,
+      1
+    ],
+    [
+      4,
+      3,
+      2
+    ],
+    [
+      4,
+      3,
+      3
+    ],
+    [
+      4,
+      3,
+      4
+    ],
+    [
+      4,
+      3,
+      5
+    ],
+    [
+      4,
+      3,
+      6
+    ],
+    [
+      4,
+      4,
+      1
+    ],
+    [
+      4,
+      4,
+      2
+    ],
+    [
+      4,
+      4,
+      3
+    ],
+    [
+      4,
+      4,
+      4
+    ],
+    [
+      4,
+      4,
+      5
+    ],
+    [
+      5,
+      -1,
+      0
+    ],
+    [
+      5,
+      -1,
+      1
+    ],
+    [
+      5,
+      -1,
+      2
+    ],
+    [
+      5,
+      -1,
+      3
+    ],
+    [
+      5,
+      -1,
+      4
+    ],
+    [
+      5,
+      -1,
+      5
+    ],
+    [
+      5,
+      -1,
+      6
+    ],
+    [
+      5,
+      0,
+      1
+    ],
+    [
+      5,
+      0,
+      2
+    ],
+    [
+      5,
+      0,
+      3
+    ],
+    [
+      5,
+      0,
+      4
+    ],
+    [
+      5,
+      0,
+      5
+    ],
+    [
+      5,
+      1,
+      1
+    ],
+    [
+      5,
+      1,
+      2
+    ],
+    [
+      5,
+      1,
+      3
+    ],
+    [
+      5,
+      1,
+      4
+    ],
+    [
+      5,
+      1,
+      5
+    ],
+    [
+      5,
+      2,
+      0
+    ],
+    [
+      5,
+      2,
+      1
+    ],
+    [
+      5,
+      2,
+      2
+    ],
+    [
+      5,
+      2,
+      3
+    ],
+    [
+      5,
+      2,
+      4
+    ],
+    [
+      5,
+      2,
+      5
+    ],
+    [
+      5,
+      2,
+      6
+    ],
+    [
+      5,
+      3,
+      0
+    ],
+    [
+      5,
+      3,
+      1
+    ],
+    [
+      5,
+      3,
+      2
+    ],
+    [
+      5,
+      3,
+      3
+    ],
+    [
+      5,
+      3,
+      4
+    ],
+    [
+      5,
+      3,
+      5
+    ],
+    [
+      5,
+      3,
+      6
+    ],
+    [
+      6,
+      -1,
+      0
+    ],
+    [
+      6,
+      -1,
+      1
+    ],
+    [
+      6,
+      -1,
+      2
+    ],
+    [
+      6,
+      -1,
+      3
+    ],
+    [
+      6,
+      -1,
+      4
+    ],
+    [
+      6,
+      -1,
+      5
+    ],
+    [
+      6,
+      -1,
+      6
+    ],
+    [
+      6,
+      2,
+      0
+    ],
+    [
+      6,
+      2,
+      1
+    ],
+    [
+      6,
+      2,
+      2
+    ],
+    [
+      6,
+      2,
+      3
+    ],
+    [
+      6,
+      2,
+      4
+    ],
+    [
+      6,
+      2,
+      5
+    ],
+    [
+      6,
+      2,
+      6
+    ]
+  ],
+  "block_mapping": {
+    "0,-1,0": "minecraft:grass_block",
+    "0,-1,1": "minecraft:grass_block",
+    "0,-1,2": "minecraft:grass_block",
+    "0,-1,3": "minecraft:grass_block",
+    "0,-1,4": "minecraft:grass_block",
+    "0,-1,5": "minecraft:grass_block",
+    "0,-1,6": "minecraft:grass_block",
+    "0,2,0": "minecraft:spruce_slab[type\u003dtop]",
+    "0,2,1": "minecraft:spruce_slab[type\u003dtop]",
+    "0,2,2": "minecraft:spruce_slab[type\u003dtop]",
+    "0,2,3": "minecraft:spruce_slab[type\u003dtop]",
+    "0,2,4": "minecraft:spruce_slab[type\u003dtop]",
+    "0,2,5": "minecraft:spruce_slab[type\u003dtop]",
+    "0,2,6": "minecraft:spruce_slab[type\u003dtop]",
+    "1,-1,0": "minecraft:grass_block",
+    "1,-1,1": "minecraft:dirt",
+    "1,-1,2": "minecraft:spruce_planks",
+    "1,-1,3": "minecraft:spruce_planks",
+    "1,-1,4": "minecraft:spruce_planks",
+    "1,-1,5": "minecraft:dirt",
+    "1,-1,6": "minecraft:grass_block",
+    "1,0,1": "minecraft:spruce_log",
+    "1,0,2": "minecraft:spruce_planks",
+    "1,0,3": "minecraft:spruce_planks",
+    "1,0,4": "minecraft:spruce_planks",
+    "1,0,5": "minecraft:spruce_log",
+    "1,1,1": "minecraft:spruce_log",
+    "1,1,2": "minecraft:spruce_planks",
+    "1,1,3": "minecraft:spruce_planks",
+    "1,1,4": "minecraft:spruce_planks",
+    "1,1,5": "minecraft:spruce_log",
+    "1,2,0": "minecraft:spruce_slab[type\u003dtop]",
+    "1,2,1": "minecraft:spruce_log",
+    "1,2,2": "minecraft:spruce_planks",
+    "1,2,3": "minecraft:spruce_planks",
+    "1,2,4": "minecraft:spruce_planks",
+    "1,2,5": "minecraft:spruce_log",
+    "1,2,6": "minecraft:spruce_slab[type\u003dtop]",
+    "1,3,0": "minecraft:spruce_stairs[facing\u003dsouth,shape\u003douter_left]",
+    "1,3,1": "minecraft:spruce_stairs[facing\u003deast]",
+    "1,3,2": "minecraft:spruce_stairs[facing\u003deast]",
+    "1,3,3": "minecraft:spruce_stairs[facing\u003deast]",
+    "1,3,4": "minecraft:spruce_stairs[facing\u003deast]",
+    "1,3,5": "minecraft:spruce_stairs[facing\u003deast]",
+    "1,3,6": "minecraft:spruce_stairs[shape\u003douter_right]",
+    "2,-1,0": "minecraft:spruce_planks",
+    "2,-1,1": "minecraft:spruce_planks",
+    "2,-1,2": "minecraft:spruce_planks",
+    "2,-1,3": "minecraft:spruce_planks",
+    "2,-1,4": "minecraft:spruce_planks",
+    "2,-1,5": "minecraft:spruce_planks",
+    "2,-1,6": "minecraft:grass_block",
+    "2,0,1": "minecraft:spruce_planks",
+    "2,0,4": "minecraft:brewing_stand",
+    "2,0,5": "minecraft:oxidized_copper_grate",
+    "2,1,0": "minecraft:wall_torch",
+    "2,1,1": "minecraft:spruce_planks",
+    "2,1,5": "minecraft:oxidized_copper_grate",
+    "2,2,1": "minecraft:spruce_planks",
+    "2,2,5": "minecraft:oxidized_copper_grate",
+    "2,3,0": "minecraft:spruce_stairs[facing\u003dsouth]",
+    "2,3,1": "minecraft:spruce_stairs[facing\u003dwest,half\u003dtop,shape\u003dinner_right]",
+    "2,3,2": "minecraft:spruce_stairs[facing\u003dwest,half\u003dtop]",
+    "2,3,3": "minecraft:spruce_stairs[facing\u003dwest,half\u003dtop]",
+    "2,3,4": "minecraft:spruce_stairs[facing\u003dwest,half\u003dtop]",
+    "2,3,5": "minecraft:spruce_stairs[facing\u003dsouth,half\u003dtop,shape\u003dinner_right]",
+    "2,3,6": "minecraft:spruce_stairs",
+    "2,4,1": "minecraft:spruce_stairs[facing\u003deast,shape\u003douter_right]",
+    "2,4,2": "minecraft:spruce_stairs[facing\u003deast]",
+    "2,4,3": "minecraft:spruce_stairs[facing\u003deast]",
+    "2,4,4": "minecraft:spruce_stairs[facing\u003deast]",
+    "2,4,5": "minecraft:spruce_stairs[facing\u003deast,shape\u003douter_left]",
+    "3,-1,0": "minecraft:spruce_planks",
+    "3,-1,1": "minecraft:spruce_planks",
+    "3,-1,2": "minecraft:spruce_planks",
+    "3,-1,3": "minecraft:waxed_copper_bulb[lit\u003dtrue]",
+    "3,-1,4": "minecraft:spruce_planks",
+    "3,-1,5": "minecraft:spruce_planks",
+    "3,-1,6": "minecraft:grass_block",
+    "3,0,1": "minecraft:spruce_door[facing\u003dsouth]",
+    "3,0,3": "minecraft:cauldron",
+    "3,0,4": "minecraft:soul_campfire[facing\u003deast]",
+    "3,0,5": "minecraft:oxidized_copper_grate",
+    "3,1,1": "minecraft:spruce_door[facing\u003dsouth,half\u003dupper]",
+    "3,1,3": "minecraft:chain",
+    "3,1,5": "minecraft:oxidized_copper_grate",
+    "3,2,1": "minecraft:spruce_planks",
+    "3,2,3": "minecraft:chain",
+    "3,2,5": "minecraft:oxidized_copper_grate",
+    "3,3,0": "minecraft:spruce_stairs[facing\u003dsouth]",
+    "3,3,1": "minecraft:spruce_stairs[half\u003dtop]",
+    "3,3,3": "minecraft:chain",
+    "3,3,5": "minecraft:spruce_stairs[facing\u003dsouth,half\u003dtop]",
+    "3,3,6": "minecraft:spruce_stairs",
+    "3,4,1": "minecraft:oxidized_cut_copper_stairs[facing\u003dsouth]",
+    "3,4,2": "minecraft:oxidized_cut_copper_slab[type\u003dtop]",
+    "3,4,3": "minecraft:oxidized_cut_copper_slab[type\u003dtop]",
+    "3,4,4": "minecraft:oxidized_cut_copper_slab[type\u003dtop]",
+    "3,4,5": "minecraft:oxidized_cut_copper_stairs",
+    "4,-1,0": "minecraft:spruce_planks",
+    "4,-1,1": "minecraft:spruce_planks",
+    "4,-1,2": "minecraft:spruce_planks",
+    "4,-1,3": "minecraft:spruce_planks",
+    "4,-1,4": "minecraft:spruce_planks",
+    "4,-1,5": "minecraft:spruce_planks",
+    "4,-1,6": "minecraft:grass_block",
+    "4,0,1": "minecraft:spruce_planks",
+    "4,0,4": "minecraft:grindstone[face\u003dfloor,facing\u003dsouth]",
+    "4,0,5": "minecraft:oxidized_copper_grate",
+    "4,1,0": "minecraft:wall_torch",
+    "4,1,1": "minecraft:spruce_planks",
+    "4,1,5": "minecraft:oxidized_copper_grate",
+    "4,2,1": "minecraft:spruce_planks",
+    "4,2,5": "minecraft:oxidized_copper_grate",
+    "4,3,0": "minecraft:spruce_stairs[facing\u003dsouth]",
+    "4,3,1": "minecraft:spruce_stairs[facing\u003deast,half\u003dtop,shape\u003dinner_left]",
+    "4,3,2": "minecraft:spruce_stairs[facing\u003deast,half\u003dtop]",
+    "4,3,3": "minecraft:spruce_stairs[facing\u003deast,half\u003dtop]",
+    "4,3,4": "minecraft:spruce_stairs[facing\u003deast,half\u003dtop]",
+    "4,3,5": "minecraft:spruce_stairs[facing\u003dsouth,half\u003dtop,shape\u003dinner_left]",
+    "4,3,6": "minecraft:spruce_stairs",
+    "4,4,1": "minecraft:spruce_stairs[facing\u003dwest,shape\u003douter_left]",
+    "4,4,2": "minecraft:spruce_stairs[facing\u003dwest]",
+    "4,4,3": "minecraft:spruce_stairs[facing\u003dwest]",
+    "4,4,4": "minecraft:spruce_stairs[facing\u003dwest]",
+    "4,4,5": "minecraft:spruce_stairs[facing\u003dwest,shape\u003douter_right]",
+    "5,-1,0": "minecraft:grass_block",
+    "5,-1,1": "minecraft:dirt",
+    "5,-1,2": "minecraft:spruce_planks",
+    "5,-1,3": "minecraft:spruce_planks",
+    "5,-1,4": "minecraft:spruce_planks",
+    "5,-1,5": "minecraft:dirt",
+    "5,-1,6": "minecraft:grass_block",
+    "5,0,1": "minecraft:spruce_log",
+    "5,0,2": "minecraft:spruce_planks",
+    "5,0,3": "minecraft:spruce_planks",
+    "5,0,4": "minecraft:spruce_planks",
+    "5,0,5": "minecraft:spruce_log",
+    "5,1,1": "minecraft:spruce_log",
+    "5,1,2": "minecraft:spruce_planks",
+    "5,1,3": "minecraft:spruce_planks",
+    "5,1,4": "minecraft:spruce_planks",
+    "5,1,5": "minecraft:spruce_log",
+    "5,2,0": "minecraft:spruce_slab[type\u003dtop]",
+    "5,2,1": "minecraft:spruce_log",
+    "5,2,2": "minecraft:spruce_planks",
+    "5,2,3": "minecraft:spruce_planks",
+    "5,2,4": "minecraft:spruce_planks",
+    "5,2,5": "minecraft:spruce_log",
+    "5,2,6": "minecraft:spruce_slab[type\u003dtop]",
+    "5,3,0": "minecraft:spruce_stairs[facing\u003dsouth,shape\u003douter_right]",
+    "5,3,1": "minecraft:spruce_stairs[facing\u003dwest]",
+    "5,3,2": "minecraft:spruce_stairs[facing\u003dwest]",
+    "5,3,3": "minecraft:spruce_stairs[facing\u003dwest]",
+    "5,3,4": "minecraft:spruce_stairs[facing\u003dwest]",
+    "5,3,5": "minecraft:spruce_stairs[facing\u003dwest]",
+    "5,3,6": "minecraft:spruce_stairs[shape\u003douter_left]",
+    "6,-1,0": "minecraft:grass_block",
+    "6,-1,1": "minecraft:grass_block",
+    "6,-1,2": "minecraft:grass_block",
+    "6,-1,3": "minecraft:grass_block",
+    "6,-1,4": "minecraft:grass_block",
+    "6,-1,5": "minecraft:grass_block",
+    "6,-1,6": "minecraft:grass_block",
+    "6,2,0": "minecraft:spruce_slab[type\u003dtop]",
+    "6,2,1": "minecraft:spruce_slab[type\u003dtop]",
+    "6,2,2": "minecraft:spruce_slab[type\u003dtop]",
+    "6,2,3": "minecraft:spruce_slab[type\u003dtop]",
+    "6,2,4": "minecraft:spruce_slab[type\u003dtop]",
+    "6,2,5": "minecraft:spruce_slab[type\u003dtop]",
+    "6,2,6": "minecraft:spruce_slab[type\u003dtop]"
+  },
+  "block_nbt": {
+    "2,0,4": "H4sIAAAAAAAA/+NiYGBkYHErTc1hYGZgrGBgYDAE0pX///8/wsnA6lmSmlvMAAJAwSogxcnBwJSZwiCem5mXmlyUmFZilVSUWp6Zlx5fXJKYl8LEwOEE5Idk5qYCFQMAHPldk1wAAAA\u003d",
+    "3,0,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGAwAtKV////P8LJwOpZkppbzAACQMEqIMXJzcDjnJ+fnZmXHpKZmwqSY2FAA9wMgjAl+SWJOTjVcTAwZaYwCOVm5qUmFyWmlVglJ+YWpGUWpTIAAB+nzouNAAAA"
+  },
+  "comfort": 4,
+  "magic": 4,
+  "wonder": 4,
+  "maintenance_cost": {
+    "costs": {
+      "dark": 2,
+      "fire": 2
+    }
+  },
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "building"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      0,
+      -1,
+      0
+    ],
+    "max": [
+      6,
+      4,
+      6
+    ]
+  },
+  "door_offset": [
+    3,
+    0,
+    1
+  ],
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "blocks_nbt": "$block_nbt",
+      "name": "$display_name"
+    }
+  }
+}

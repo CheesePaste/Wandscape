@@ -1,0 +1,1824 @@
+{
+  "id": "nodewater",
+  "display_name": "nodewater",
+  "category": "node",
+  "pattern": [
+    [
+      0,
+      -1,
+      0
+    ],
+    [
+      0,
+      -1,
+      1
+    ],
+    [
+      0,
+      -1,
+      2
+    ],
+    [
+      0,
+      -1,
+      3
+    ],
+    [
+      0,
+      -1,
+      4
+    ],
+    [
+      0,
+      -1,
+      5
+    ],
+    [
+      0,
+      -1,
+      6
+    ],
+    [
+      0,
+      -1,
+      7
+    ],
+    [
+      0,
+      -1,
+      8
+    ],
+    [
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      0,
+      3
+    ],
+    [
+      0,
+      0,
+      4
+    ],
+    [
+      0,
+      0,
+      5
+    ],
+    [
+      0,
+      0,
+      6
+    ],
+    [
+      0,
+      0,
+      7
+    ],
+    [
+      1,
+      -1,
+      0
+    ],
+    [
+      1,
+      -1,
+      1
+    ],
+    [
+      1,
+      -1,
+      2
+    ],
+    [
+      1,
+      -1,
+      3
+    ],
+    [
+      1,
+      -1,
+      4
+    ],
+    [
+      1,
+      -1,
+      5
+    ],
+    [
+      1,
+      -1,
+      6
+    ],
+    [
+      1,
+      -1,
+      7
+    ],
+    [
+      1,
+      -1,
+      8
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      2
+    ],
+    [
+      1,
+      0,
+      3
+    ],
+    [
+      1,
+      0,
+      4
+    ],
+    [
+      1,
+      0,
+      5
+    ],
+    [
+      1,
+      0,
+      6
+    ],
+    [
+      1,
+      0,
+      7
+    ],
+    [
+      1,
+      0,
+      8
+    ],
+    [
+      1,
+      4,
+      2
+    ],
+    [
+      1,
+      4,
+      3
+    ],
+    [
+      1,
+      4,
+      4
+    ],
+    [
+      1,
+      4,
+      5
+    ],
+    [
+      1,
+      4,
+      6
+    ],
+    [
+      1,
+      5,
+      4
+    ],
+    [
+      1,
+      6,
+      4
+    ],
+    [
+      1,
+      7,
+      4
+    ],
+    [
+      2,
+      -1,
+      0
+    ],
+    [
+      2,
+      -1,
+      1
+    ],
+    [
+      2,
+      -1,
+      2
+    ],
+    [
+      2,
+      -1,
+      3
+    ],
+    [
+      2,
+      -1,
+      4
+    ],
+    [
+      2,
+      -1,
+      5
+    ],
+    [
+      2,
+      -1,
+      6
+    ],
+    [
+      2,
+      -1,
+      7
+    ],
+    [
+      2,
+      -1,
+      8
+    ],
+    [
+      2,
+      0,
+      0
+    ],
+    [
+      2,
+      0,
+      1
+    ],
+    [
+      2,
+      0,
+      2
+    ],
+    [
+      2,
+      0,
+      3
+    ],
+    [
+      2,
+      0,
+      4
+    ],
+    [
+      2,
+      0,
+      5
+    ],
+    [
+      2,
+      0,
+      6
+    ],
+    [
+      2,
+      0,
+      7
+    ],
+    [
+      2,
+      0,
+      8
+    ],
+    [
+      2,
+      1,
+      3
+    ],
+    [
+      2,
+      1,
+      5
+    ],
+    [
+      2,
+      2,
+      3
+    ],
+    [
+      2,
+      2,
+      5
+    ],
+    [
+      2,
+      4,
+      1
+    ],
+    [
+      2,
+      4,
+      2
+    ],
+    [
+      2,
+      4,
+      3
+    ],
+    [
+      2,
+      4,
+      4
+    ],
+    [
+      2,
+      4,
+      5
+    ],
+    [
+      2,
+      4,
+      6
+    ],
+    [
+      2,
+      4,
+      7
+    ],
+    [
+      2,
+      12,
+      4
+    ],
+    [
+      2,
+      13,
+      4
+    ],
+    [
+      3,
+      -1,
+      0
+    ],
+    [
+      3,
+      -1,
+      1
+    ],
+    [
+      3,
+      -1,
+      2
+    ],
+    [
+      3,
+      -1,
+      3
+    ],
+    [
+      3,
+      -1,
+      4
+    ],
+    [
+      3,
+      -1,
+      5
+    ],
+    [
+      3,
+      -1,
+      6
+    ],
+    [
+      3,
+      -1,
+      7
+    ],
+    [
+      3,
+      -1,
+      8
+    ],
+    [
+      3,
+      0,
+      0
+    ],
+    [
+      3,
+      0,
+      1
+    ],
+    [
+      3,
+      0,
+      2
+    ],
+    [
+      3,
+      0,
+      3
+    ],
+    [
+      3,
+      0,
+      4
+    ],
+    [
+      3,
+      0,
+      5
+    ],
+    [
+      3,
+      0,
+      6
+    ],
+    [
+      3,
+      0,
+      7
+    ],
+    [
+      3,
+      0,
+      8
+    ],
+    [
+      3,
+      1,
+      2
+    ],
+    [
+      3,
+      1,
+      3
+    ],
+    [
+      3,
+      1,
+      4
+    ],
+    [
+      3,
+      1,
+      5
+    ],
+    [
+      3,
+      1,
+      6
+    ],
+    [
+      3,
+      2,
+      2
+    ],
+    [
+      3,
+      2,
+      3
+    ],
+    [
+      3,
+      2,
+      4
+    ],
+    [
+      3,
+      2,
+      5
+    ],
+    [
+      3,
+      2,
+      6
+    ],
+    [
+      3,
+      3,
+      4
+    ],
+    [
+      3,
+      4,
+      1
+    ],
+    [
+      3,
+      4,
+      2
+    ],
+    [
+      3,
+      4,
+      3
+    ],
+    [
+      3,
+      4,
+      4
+    ],
+    [
+      3,
+      4,
+      5
+    ],
+    [
+      3,
+      4,
+      6
+    ],
+    [
+      3,
+      4,
+      7
+    ],
+    [
+      3,
+      11,
+      4
+    ],
+    [
+      3,
+      12,
+      3
+    ],
+    [
+      3,
+      12,
+      4
+    ],
+    [
+      3,
+      12,
+      5
+    ],
+    [
+      3,
+      13,
+      3
+    ],
+    [
+      3,
+      13,
+      4
+    ],
+    [
+      3,
+      13,
+      5
+    ],
+    [
+      4,
+      -1,
+      0
+    ],
+    [
+      4,
+      -1,
+      1
+    ],
+    [
+      4,
+      -1,
+      2
+    ],
+    [
+      4,
+      -1,
+      3
+    ],
+    [
+      4,
+      -1,
+      4
+    ],
+    [
+      4,
+      -1,
+      5
+    ],
+    [
+      4,
+      -1,
+      6
+    ],
+    [
+      4,
+      -1,
+      7
+    ],
+    [
+      4,
+      -1,
+      8
+    ],
+    [
+      4,
+      0,
+      0
+    ],
+    [
+      4,
+      0,
+      1
+    ],
+    [
+      4,
+      0,
+      2
+    ],
+    [
+      4,
+      0,
+      3
+    ],
+    [
+      4,
+      0,
+      4
+    ],
+    [
+      4,
+      0,
+      5
+    ],
+    [
+      4,
+      0,
+      6
+    ],
+    [
+      4,
+      0,
+      7
+    ],
+    [
+      4,
+      0,
+      8
+    ],
+    [
+      4,
+      1,
+      3
+    ],
+    [
+      4,
+      1,
+      4
+    ],
+    [
+      4,
+      1,
+      5
+    ],
+    [
+      4,
+      2,
+      3
+    ],
+    [
+      4,
+      2,
+      4
+    ],
+    [
+      4,
+      2,
+      5
+    ],
+    [
+      4,
+      3,
+      3
+    ],
+    [
+      4,
+      3,
+      4
+    ],
+    [
+      4,
+      3,
+      5
+    ],
+    [
+      4,
+      4,
+      1
+    ],
+    [
+      4,
+      4,
+      2
+    ],
+    [
+      4,
+      4,
+      3
+    ],
+    [
+      4,
+      4,
+      4
+    ],
+    [
+      4,
+      4,
+      5
+    ],
+    [
+      4,
+      4,
+      6
+    ],
+    [
+      4,
+      4,
+      7
+    ],
+    [
+      4,
+      5,
+      1
+    ],
+    [
+      4,
+      5,
+      4
+    ],
+    [
+      4,
+      5,
+      7
+    ],
+    [
+      4,
+      6,
+      1
+    ],
+    [
+      4,
+      6,
+      4
+    ],
+    [
+      4,
+      6,
+      7
+    ],
+    [
+      4,
+      7,
+      1
+    ],
+    [
+      4,
+      7,
+      4
+    ],
+    [
+      4,
+      7,
+      7
+    ],
+    [
+      4,
+      8,
+      4
+    ],
+    [
+      4,
+      10,
+      4
+    ],
+    [
+      4,
+      11,
+      3
+    ],
+    [
+      4,
+      11,
+      4
+    ],
+    [
+      4,
+      11,
+      5
+    ],
+    [
+      4,
+      12,
+      2
+    ],
+    [
+      4,
+      12,
+      3
+    ],
+    [
+      4,
+      12,
+      4
+    ],
+    [
+      4,
+      12,
+      5
+    ],
+    [
+      4,
+      12,
+      6
+    ],
+    [
+      4,
+      13,
+      2
+    ],
+    [
+      4,
+      13,
+      3
+    ],
+    [
+      4,
+      13,
+      4
+    ],
+    [
+      4,
+      13,
+      5
+    ],
+    [
+      4,
+      13,
+      6
+    ],
+    [
+      4,
+      14,
+      3
+    ],
+    [
+      4,
+      14,
+      4
+    ],
+    [
+      4,
+      14,
+      5
+    ],
+    [
+      4,
+      15,
+      4
+    ],
+    [
+      5,
+      -1,
+      0
+    ],
+    [
+      5,
+      -1,
+      1
+    ],
+    [
+      5,
+      -1,
+      2
+    ],
+    [
+      5,
+      -1,
+      3
+    ],
+    [
+      5,
+      -1,
+      4
+    ],
+    [
+      5,
+      -1,
+      5
+    ],
+    [
+      5,
+      -1,
+      6
+    ],
+    [
+      5,
+      -1,
+      7
+    ],
+    [
+      5,
+      -1,
+      8
+    ],
+    [
+      5,
+      0,
+      0
+    ],
+    [
+      5,
+      0,
+      1
+    ],
+    [
+      5,
+      0,
+      2
+    ],
+    [
+      5,
+      0,
+      3
+    ],
+    [
+      5,
+      0,
+      4
+    ],
+    [
+      5,
+      0,
+      5
+    ],
+    [
+      5,
+      0,
+      6
+    ],
+    [
+      5,
+      0,
+      7
+    ],
+    [
+      5,
+      0,
+      8
+    ],
+    [
+      5,
+      1,
+      2
+    ],
+    [
+      5,
+      1,
+      3
+    ],
+    [
+      5,
+      1,
+      4
+    ],
+    [
+      5,
+      1,
+      5
+    ],
+    [
+      5,
+      1,
+      6
+    ],
+    [
+      5,
+      2,
+      2
+    ],
+    [
+      5,
+      2,
+      3
+    ],
+    [
+      5,
+      2,
+      4
+    ],
+    [
+      5,
+      2,
+      5
+    ],
+    [
+      5,
+      2,
+      6
+    ],
+    [
+      5,
+      3,
+      4
+    ],
+    [
+      5,
+      4,
+      1
+    ],
+    [
+      5,
+      4,
+      2
+    ],
+    [
+      5,
+      4,
+      3
+    ],
+    [
+      5,
+      4,
+      4
+    ],
+    [
+      5,
+      4,
+      5
+    ],
+    [
+      5,
+      4,
+      6
+    ],
+    [
+      5,
+      4,
+      7
+    ],
+    [
+      5,
+      11,
+      4
+    ],
+    [
+      5,
+      12,
+      3
+    ],
+    [
+      5,
+      12,
+      4
+    ],
+    [
+      5,
+      12,
+      5
+    ],
+    [
+      5,
+      13,
+      3
+    ],
+    [
+      5,
+      13,
+      4
+    ],
+    [
+      5,
+      13,
+      5
+    ],
+    [
+      5,
+      14,
+      4
+    ],
+    [
+      6,
+      -1,
+      0
+    ],
+    [
+      6,
+      -1,
+      1
+    ],
+    [
+      6,
+      -1,
+      2
+    ],
+    [
+      6,
+      -1,
+      3
+    ],
+    [
+      6,
+      -1,
+      4
+    ],
+    [
+      6,
+      -1,
+      5
+    ],
+    [
+      6,
+      -1,
+      6
+    ],
+    [
+      6,
+      -1,
+      7
+    ],
+    [
+      6,
+      -1,
+      8
+    ],
+    [
+      6,
+      0,
+      0
+    ],
+    [
+      6,
+      0,
+      1
+    ],
+    [
+      6,
+      0,
+      2
+    ],
+    [
+      6,
+      0,
+      3
+    ],
+    [
+      6,
+      0,
+      4
+    ],
+    [
+      6,
+      0,
+      5
+    ],
+    [
+      6,
+      0,
+      6
+    ],
+    [
+      6,
+      0,
+      7
+    ],
+    [
+      6,
+      0,
+      8
+    ],
+    [
+      6,
+      1,
+      3
+    ],
+    [
+      6,
+      1,
+      5
+    ],
+    [
+      6,
+      2,
+      3
+    ],
+    [
+      6,
+      2,
+      5
+    ],
+    [
+      6,
+      4,
+      1
+    ],
+    [
+      6,
+      4,
+      2
+    ],
+    [
+      6,
+      4,
+      3
+    ],
+    [
+      6,
+      4,
+      4
+    ],
+    [
+      6,
+      4,
+      5
+    ],
+    [
+      6,
+      4,
+      6
+    ],
+    [
+      6,
+      4,
+      7
+    ],
+    [
+      6,
+      12,
+      4
+    ],
+    [
+      6,
+      13,
+      4
+    ],
+    [
+      7,
+      -1,
+      0
+    ],
+    [
+      7,
+      -1,
+      1
+    ],
+    [
+      7,
+      -1,
+      2
+    ],
+    [
+      7,
+      -1,
+      3
+    ],
+    [
+      7,
+      -1,
+      4
+    ],
+    [
+      7,
+      -1,
+      5
+    ],
+    [
+      7,
+      -1,
+      6
+    ],
+    [
+      7,
+      -1,
+      7
+    ],
+    [
+      7,
+      -1,
+      8
+    ],
+    [
+      7,
+      0,
+      0
+    ],
+    [
+      7,
+      0,
+      1
+    ],
+    [
+      7,
+      0,
+      2
+    ],
+    [
+      7,
+      0,
+      3
+    ],
+    [
+      7,
+      0,
+      4
+    ],
+    [
+      7,
+      0,
+      5
+    ],
+    [
+      7,
+      0,
+      6
+    ],
+    [
+      7,
+      0,
+      7
+    ],
+    [
+      7,
+      0,
+      8
+    ],
+    [
+      7,
+      4,
+      2
+    ],
+    [
+      7,
+      4,
+      3
+    ],
+    [
+      7,
+      4,
+      4
+    ],
+    [
+      7,
+      4,
+      5
+    ],
+    [
+      7,
+      4,
+      6
+    ],
+    [
+      7,
+      5,
+      4
+    ],
+    [
+      7,
+      6,
+      4
+    ],
+    [
+      7,
+      7,
+      4
+    ],
+    [
+      8,
+      -1,
+      0
+    ],
+    [
+      8,
+      -1,
+      1
+    ],
+    [
+      8,
+      -1,
+      2
+    ],
+    [
+      8,
+      -1,
+      3
+    ],
+    [
+      8,
+      -1,
+      4
+    ],
+    [
+      8,
+      -1,
+      5
+    ],
+    [
+      8,
+      -1,
+      6
+    ],
+    [
+      8,
+      -1,
+      7
+    ],
+    [
+      8,
+      -1,
+      8
+    ],
+    [
+      8,
+      0,
+      1
+    ],
+    [
+      8,
+      0,
+      2
+    ],
+    [
+      8,
+      0,
+      3
+    ],
+    [
+      8,
+      0,
+      4
+    ],
+    [
+      8,
+      0,
+      5
+    ],
+    [
+      8,
+      0,
+      6
+    ],
+    [
+      8,
+      0,
+      7
+    ]
+  ],
+  "block_mapping": {
+    "0,-1,0": "minecraft:grass_block",
+    "0,-1,1": "minecraft:dirt",
+    "0,-1,2": "minecraft:stone_bricks",
+    "0,-1,3": "minecraft:stone_bricks",
+    "0,-1,4": "minecraft:stone_bricks",
+    "0,-1,5": "minecraft:stone_bricks",
+    "0,-1,6": "minecraft:stone_bricks",
+    "0,-1,7": "minecraft:dirt",
+    "0,-1,8": "minecraft:grass_block",
+    "0,0,1": "minecraft:polished_diorite_slab",
+    "0,0,2": "minecraft:polished_diorite",
+    "0,0,3": "minecraft:polished_diorite",
+    "0,0,4": "minecraft:polished_diorite",
+    "0,0,5": "minecraft:polished_diorite",
+    "0,0,6": "minecraft:polished_diorite",
+    "0,0,7": "minecraft:polished_diorite_slab",
+    "1,-1,0": "minecraft:dirt",
+    "1,-1,1": "minecraft:stone_bricks",
+    "1,-1,2": "minecraft:stone_bricks",
+    "1,-1,3": "minecraft:stone_bricks",
+    "1,-1,4": "minecraft:stone_bricks",
+    "1,-1,5": "minecraft:stone_bricks",
+    "1,-1,6": "minecraft:stone_bricks",
+    "1,-1,7": "minecraft:stone_bricks",
+    "1,-1,8": "minecraft:dirt",
+    "1,0,0": "minecraft:polished_diorite_slab",
+    "1,0,1": "minecraft:polished_diorite",
+    "1,0,2": "minecraft:water[level\u003d2]",
+    "1,0,3": "minecraft:water[level\u003d1]",
+    "1,0,4": "minecraft:water[level\u003d2]",
+    "1,0,5": "minecraft:water[level\u003d1]",
+    "1,0,6": "minecraft:water[level\u003d2]",
+    "1,0,7": "minecraft:polished_diorite",
+    "1,0,8": "minecraft:polished_diorite_slab",
+    "1,4,2": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "1,4,3": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "1,4,4": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "1,4,5": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "1,4,6": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "1,5,4": "minecraft:cobblestone_wall",
+    "1,6,4": "minecraft:birch_fence",
+    "1,7,4": "minecraft:end_rod",
+    "2,-1,0": "minecraft:stone_bricks",
+    "2,-1,1": "minecraft:stone_bricks",
+    "2,-1,2": "minecraft:stone_bricks",
+    "2,-1,3": "minecraft:stone_bricks",
+    "2,-1,4": "minecraft:stone_bricks",
+    "2,-1,5": "minecraft:stone_bricks",
+    "2,-1,6": "minecraft:stone_bricks",
+    "2,-1,7": "minecraft:stone_bricks",
+    "2,-1,8": "minecraft:stone_bricks",
+    "2,0,0": "minecraft:polished_diorite",
+    "2,0,1": "minecraft:water[level\u003d2]",
+    "2,0,2": "minecraft:water[level\u003d1]",
+    "2,0,3": "minecraft:water[level\u003d8]",
+    "2,0,4": "minecraft:water[level\u003d1]",
+    "2,0,5": "minecraft:water[level\u003d8]",
+    "2,0,6": "minecraft:water[level\u003d1]",
+    "2,0,7": "minecraft:water[level\u003d2]",
+    "2,0,8": "minecraft:polished_diorite",
+    "2,1,3": "minecraft:water[level\u003d8]",
+    "2,1,5": "minecraft:water[level\u003d8]",
+    "2,12,4": "minecraft:blue_stained_glass",
+    "2,13,4": "minecraft:blue_stained_glass",
+    "2,2,3": "minecraft:water[level\u003d1]",
+    "2,2,5": "minecraft:water[level\u003d1]",
+    "2,4,1": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "2,4,2": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "2,4,3": "minecraft:polished_diorite_slab",
+    "2,4,4": "minecraft:polished_diorite_slab",
+    "2,4,5": "minecraft:polished_diorite_slab",
+    "2,4,6": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "2,4,7": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "3,-1,0": "minecraft:stone_bricks",
+    "3,-1,1": "minecraft:stone_bricks",
+    "3,-1,2": "minecraft:stone_bricks",
+    "3,-1,3": "minecraft:stone_bricks",
+    "3,-1,4": "minecraft:stone_bricks",
+    "3,-1,5": "minecraft:stone_bricks",
+    "3,-1,6": "minecraft:stone_bricks",
+    "3,-1,7": "minecraft:stone_bricks",
+    "3,-1,8": "minecraft:stone_bricks",
+    "3,0,0": "minecraft:polished_diorite",
+    "3,0,1": "minecraft:water[level\u003d1]",
+    "3,0,2": "minecraft:water[level\u003d8]",
+    "3,0,3": "minecraft:andesite_wall",
+    "3,0,4": "minecraft:water[level\u003d8]",
+    "3,0,5": "minecraft:andesite_wall",
+    "3,0,6": "minecraft:water[level\u003d8]",
+    "3,0,7": "minecraft:water[level\u003d1]",
+    "3,0,8": "minecraft:polished_diorite",
+    "3,1,2": "minecraft:water[level\u003d8]",
+    "3,1,3": "minecraft:water[level\u003d8]",
+    "3,1,4": "minecraft:water[level\u003d1]",
+    "3,1,5": "minecraft:water[level\u003d8]",
+    "3,1,6": "minecraft:water[level\u003d8]",
+    "3,11,4": "minecraft:blue_stained_glass",
+    "3,12,3": "minecraft:blue_stained_glass",
+    "3,12,4": "minecraft:ice",
+    "3,12,5": "minecraft:blue_stained_glass",
+    "3,13,3": "minecraft:blue_stained_glass",
+    "3,13,4": "minecraft:ice",
+    "3,13,5": "minecraft:blue_stained_glass",
+    "3,2,2": "minecraft:water[level\u003d1]",
+    "3,2,3": "minecraft:water",
+    "3,2,4": "minecraft:diorite_wall[east\u003dtall]",
+    "3,2,5": "minecraft:water",
+    "3,2,6": "minecraft:water[level\u003d1]",
+    "3,3,4": "minecraft:polished_diorite_slab",
+    "3,4,1": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "3,4,2": "minecraft:polished_diorite_slab",
+    "3,4,3": "minecraft:polished_diorite_slab",
+    "3,4,4": "minecraft:andesite_wall[east\u003dlow]",
+    "3,4,5": "minecraft:polished_diorite_slab",
+    "3,4,6": "minecraft:polished_diorite_slab",
+    "3,4,7": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "4,-1,0": "minecraft:stone_bricks",
+    "4,-1,1": "minecraft:stone_bricks",
+    "4,-1,2": "minecraft:stone_bricks",
+    "4,-1,3": "minecraft:stone_bricks",
+    "4,-1,4": "minecraft:stone_bricks",
+    "4,-1,5": "minecraft:stone_bricks",
+    "4,-1,6": "minecraft:stone_bricks",
+    "4,-1,7": "minecraft:stone_bricks",
+    "4,-1,8": "minecraft:stone_bricks",
+    "4,0,0": "minecraft:polished_diorite",
+    "4,0,1": "minecraft:water[level\u003d2]",
+    "4,0,2": "minecraft:water[level\u003d1]",
+    "4,0,3": "minecraft:water[level\u003d8]",
+    "4,0,4": "minecraft:polished_diorite",
+    "4,0,5": "minecraft:water[level\u003d8]",
+    "4,0,6": "minecraft:water[level\u003d1]",
+    "4,0,7": "minecraft:water[level\u003d2]",
+    "4,0,8": "minecraft:polished_diorite",
+    "4,1,3": "minecraft:water[level\u003d1]",
+    "4,1,4": "minecraft:polished_diorite",
+    "4,1,5": "minecraft:water[level\u003d1]",
+    "4,10,4": "minecraft:blue_stained_glass",
+    "4,11,3": "minecraft:blue_stained_glass",
+    "4,11,4": "minecraft:ice",
+    "4,11,5": "minecraft:blue_stained_glass",
+    "4,12,2": "minecraft:blue_stained_glass",
+    "4,12,3": "minecraft:ice",
+    "4,12,4": "minecraft:ice",
+    "4,12,5": "minecraft:ice",
+    "4,12,6": "minecraft:blue_stained_glass",
+    "4,13,2": "minecraft:blue_stained_glass",
+    "4,13,3": "minecraft:ice",
+    "4,13,4": "minecraft:ice",
+    "4,13,5": "minecraft:ice",
+    "4,13,6": "minecraft:blue_stained_glass",
+    "4,14,3": "minecraft:blue_stained_glass",
+    "4,14,4": "minecraft:ice",
+    "4,14,5": "minecraft:blue_stained_glass",
+    "4,15,4": "minecraft:blue_stained_glass",
+    "4,2,3": "minecraft:diorite_wall[south\u003dtall]",
+    "4,2,4": "minecraft:polished_diorite",
+    "4,2,5": "minecraft:diorite_wall[north\u003dtall]",
+    "4,3,3": "minecraft:polished_diorite_slab",
+    "4,3,4": "minecraft:polished_diorite",
+    "4,3,5": "minecraft:polished_diorite_slab",
+    "4,4,1": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "4,4,2": "minecraft:polished_diorite_slab",
+    "4,4,3": "minecraft:andesite_wall[south\u003dlow]",
+    "4,4,4": "minecraft:polished_diorite",
+    "4,4,5": "minecraft:andesite_wall[north\u003dlow]",
+    "4,4,6": "minecraft:polished_diorite_slab",
+    "4,4,7": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "4,5,1": "minecraft:cobblestone_wall",
+    "4,5,4": "minecraft:diorite_wall",
+    "4,5,7": "minecraft:cobblestone_wall",
+    "4,6,1": "minecraft:birch_fence",
+    "4,6,4": "minecraft:diorite_wall",
+    "4,6,7": "minecraft:birch_fence",
+    "4,7,1": "minecraft:end_rod",
+    "4,7,4": "minecraft:birch_fence",
+    "4,7,7": "minecraft:end_rod",
+    "4,8,4": "minecraft:birch_fence",
+    "5,-1,0": "minecraft:stone_bricks",
+    "5,-1,1": "minecraft:stone_bricks",
+    "5,-1,2": "minecraft:stone_bricks",
+    "5,-1,3": "minecraft:stone_bricks",
+    "5,-1,4": "minecraft:stone_bricks",
+    "5,-1,5": "minecraft:stone_bricks",
+    "5,-1,6": "minecraft:stone_bricks",
+    "5,-1,7": "minecraft:stone_bricks",
+    "5,-1,8": "minecraft:stone_bricks",
+    "5,0,0": "minecraft:polished_diorite",
+    "5,0,1": "minecraft:water[level\u003d1]",
+    "5,0,2": "minecraft:water[level\u003d8]",
+    "5,0,3": "minecraft:andesite_wall",
+    "5,0,4": "minecraft:water[level\u003d8]",
+    "5,0,5": "minecraft:andesite_wall",
+    "5,0,6": "minecraft:water[level\u003d8]",
+    "5,0,7": "minecraft:water[level\u003d1]",
+    "5,0,8": "minecraft:polished_diorite",
+    "5,1,2": "minecraft:water[level\u003d8]",
+    "5,1,3": "minecraft:water[level\u003d8]",
+    "5,1,4": "minecraft:water[level\u003d1]",
+    "5,1,5": "minecraft:water[level\u003d8]",
+    "5,1,6": "minecraft:water[level\u003d8]",
+    "5,11,4": "minecraft:blue_stained_glass",
+    "5,12,3": "minecraft:blue_stained_glass",
+    "5,12,4": "minecraft:ice",
+    "5,12,5": "minecraft:blue_stained_glass",
+    "5,13,3": "minecraft:blue_stained_glass",
+    "5,13,4": "minecraft:ice",
+    "5,13,5": "minecraft:blue_stained_glass",
+    "5,14,4": "minecraft:blue_stained_glass",
+    "5,2,2": "minecraft:water[level\u003d1]",
+    "5,2,3": "minecraft:water",
+    "5,2,4": "minecraft:diorite_wall[west\u003dtall]",
+    "5,2,5": "minecraft:water",
+    "5,2,6": "minecraft:water[level\u003d1]",
+    "5,3,4": "minecraft:polished_diorite_slab",
+    "5,4,1": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "5,4,2": "minecraft:polished_diorite_slab",
+    "5,4,3": "minecraft:polished_diorite_slab",
+    "5,4,4": "minecraft:andesite_wall[west\u003dlow]",
+    "5,4,5": "minecraft:polished_diorite_slab",
+    "5,4,6": "minecraft:polished_diorite_slab",
+    "5,4,7": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "6,-1,0": "minecraft:stone_bricks",
+    "6,-1,1": "minecraft:stone_bricks",
+    "6,-1,2": "minecraft:stone_bricks",
+    "6,-1,3": "minecraft:stone_bricks",
+    "6,-1,4": "minecraft:stone_bricks",
+    "6,-1,5": "minecraft:stone_bricks",
+    "6,-1,6": "minecraft:stone_bricks",
+    "6,-1,7": "minecraft:stone_bricks",
+    "6,-1,8": "minecraft:stone_bricks",
+    "6,0,0": "minecraft:polished_diorite",
+    "6,0,1": "minecraft:water[level\u003d2]",
+    "6,0,2": "minecraft:water[level\u003d1]",
+    "6,0,3": "minecraft:water[level\u003d8]",
+    "6,0,4": "minecraft:water[level\u003d1]",
+    "6,0,5": "minecraft:water[level\u003d8]",
+    "6,0,6": "minecraft:water[level\u003d1]",
+    "6,0,7": "minecraft:water[level\u003d2]",
+    "6,0,8": "minecraft:polished_diorite",
+    "6,1,3": "minecraft:water[level\u003d8]",
+    "6,1,5": "minecraft:water[level\u003d8]",
+    "6,12,4": "minecraft:blue_stained_glass",
+    "6,13,4": "minecraft:blue_stained_glass",
+    "6,2,3": "minecraft:water[level\u003d1]",
+    "6,2,5": "minecraft:water[level\u003d1]",
+    "6,4,1": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "6,4,2": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "6,4,3": "minecraft:polished_diorite_slab",
+    "6,4,4": "minecraft:polished_diorite_slab",
+    "6,4,5": "minecraft:polished_diorite_slab",
+    "6,4,6": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "6,4,7": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "7,-1,0": "minecraft:dirt",
+    "7,-1,1": "minecraft:stone_bricks",
+    "7,-1,2": "minecraft:stone_bricks",
+    "7,-1,3": "minecraft:stone_bricks",
+    "7,-1,4": "minecraft:stone_bricks",
+    "7,-1,5": "minecraft:stone_bricks",
+    "7,-1,6": "minecraft:stone_bricks",
+    "7,-1,7": "minecraft:stone_bricks",
+    "7,-1,8": "minecraft:dirt",
+    "7,0,0": "minecraft:polished_diorite_slab",
+    "7,0,1": "minecraft:polished_diorite",
+    "7,0,2": "minecraft:water[level\u003d2]",
+    "7,0,3": "minecraft:water[level\u003d1]",
+    "7,0,4": "minecraft:water[level\u003d2]",
+    "7,0,5": "minecraft:water[level\u003d1]",
+    "7,0,6": "minecraft:water[level\u003d2]",
+    "7,0,7": "minecraft:polished_diorite",
+    "7,0,8": "minecraft:polished_diorite_slab",
+    "7,4,2": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "7,4,3": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "7,4,4": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "7,4,5": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "7,4,6": "minecraft:polished_diorite_slab[type\u003dtop]",
+    "7,5,4": "minecraft:cobblestone_wall",
+    "7,6,4": "minecraft:birch_fence",
+    "7,7,4": "minecraft:end_rod",
+    "8,-1,0": "minecraft:grass_block",
+    "8,-1,1": "minecraft:dirt",
+    "8,-1,2": "minecraft:stone_bricks",
+    "8,-1,3": "minecraft:stone_bricks",
+    "8,-1,4": "minecraft:stone_bricks",
+    "8,-1,5": "minecraft:stone_bricks",
+    "8,-1,6": "minecraft:stone_bricks",
+    "8,-1,7": "minecraft:dirt",
+    "8,-1,8": "minecraft:grass_block",
+    "8,0,1": "minecraft:polished_diorite_slab",
+    "8,0,2": "minecraft:polished_diorite",
+    "8,0,3": "minecraft:polished_diorite",
+    "8,0,4": "minecraft:polished_diorite",
+    "8,0,5": "minecraft:polished_diorite",
+    "8,0,6": "minecraft:polished_diorite",
+    "8,0,7": "minecraft:polished_diorite_slab"
+  },
+  "comfort": 0,
+  "magic": 5,
+  "wonder": 0,
+  "maintenance_cost": {
+    "costs": {
+      "water": 5
+    }
+  },
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "building"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      0,
+      -1,
+      0
+    ],
+    "max": [
+      8,
+      15,
+      8
+    ]
+  },
+  "node_config": {
+    "blueprint": "node:gather",
+    "element": "water",
+    "amount_per_harvest": 10,
+    "channel_ticks": 1200,
+    "mana_cost": 25
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "blocks_nbt": "$block_nbt",
+      "name": "$display_name"
+    }
+  }
+}
