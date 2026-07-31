@@ -97,6 +97,14 @@ public final class WandscapePanelController {
         double mouseX = mc.mouseHandler.xpos() / guiScale;
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
+        // ── Guidance close (×) button — dismiss "Getting Started" guide ──
+        if (WandscapePanelState.shouldShowGuidance()
+                && WandscapePanelOverlay.isGuidanceCloseClicked(mc.font, mouseX, mouseY, screenW)) {
+            WandscapePanelState.dismissGuidance();
+            event.setCanceled(true);
+            return;
+        }
+
         // ── Building selection bar handling ──
         if (BuildingSelectionOverlay.isActive()) {
             // Scrollbar click — jump to position

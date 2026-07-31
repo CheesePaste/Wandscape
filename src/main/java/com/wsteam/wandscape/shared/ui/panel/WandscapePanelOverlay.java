@@ -211,7 +211,7 @@ public final class WandscapePanelOverlay {
 
         // First-time guidance
         if (WandscapePanelState.shouldShowGuidance()) {
-            renderGuidance(g, font, screenW, screenH);
+            renderGuidance(g, font, screenW, screenH, mx, my);
         }
 
         // Stats content (shifted right of sidebar)
@@ -333,7 +333,11 @@ public final class WandscapePanelOverlay {
     // ── First-time guidance ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static void renderGuidance(GuiGraphics g, Font font, int screenW, int screenH) {
+    /** Layout of the "Getting Started" guidance box. Single source of truth for render + hit-test. */
+    private record GuidanceBox(int x, int y, int w, int h, int closeX, int closeY, int closeS,
+                               String title, String line1, String line2, String hint) {}
+
+    private static GuidanceBox guidanceBox(Font font, int screenW) {
         int pad = 10;
         int lineH = font.lineHeight;
         String title = "Getting Started";
@@ -351,24 +355,50 @@ public final class WandscapePanelOverlay {
         int x = screenW - boxW - 8;
         int y = TOP_BAR_H + 4;
 
+        int closeS = 9;
+        int closeX = x + boxW - closeS - 7;
+        int closeY = y + 6;
+        return new GuidanceBox(x, y, boxW, boxH, closeX, closeY, closeS, title, line1, line2, hint);
+    }
+
+    /** @return true if the mouse is over the guidance close (×) button. */
+    public static boolean isGuidanceCloseClicked(Font font, double mx, double my, int screenW) {
+        GuidanceBox b = guidanceBox(font, screenW);
+        return mx >= b.closeX && mx <= b.closeX + b.closeS
+                && my >= b.closeY && my <= b.closeY + b.closeS;
+    }
+
+    private static void renderGuidance(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
+        GuidanceBox b = guidanceBox(font, screenW);
+        int pad = 10;
+        int lineH = font.lineHeight;
+
         // Background
-        g.fill(RenderType.guiOverlay(), x, y, x + boxW, y + boxH, 0, 0xDD1A1C22);
+        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + b.h, 0, 0xDD1A1C22);
         // Border
         int col = 0xFFC8A040;
-        g.fill(RenderType.guiOverlay(), x, y, x + boxW, y + 1, 0, col);
-        g.fill(RenderType.guiOverlay(), x, y + boxH - 1, x + boxW, y + boxH, 0, col);
-        g.fill(RenderType.guiOverlay(), x, y, x + 1, y + boxH, 0, col);
-        g.fill(RenderType.guiOverlay(), x + boxW - 1, y, x + boxW, y + boxH, 0, col);
+        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + 1, 0, col);
+        g.fill(RenderType.guiOverlay(), b.x, b.y + b.h - 1, b.x + b.w, b.y + b.h, 0, col);
+        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + 1, b.y + b.h, 0, col);
+        g.fill(RenderType.guiOverlay(), b.x + b.w - 1, b.y, b.x + b.w, b.y + b.h, 0, col);
 
-        int tx = x + pad;
-        int ty = y + pad;
-        drawText(g, font, "§e" + title, tx, ty, 0xFFFFC040);
+        int tx = b.x + pad;
+        int ty = b.y + pad;
+        drawText(g, font, "§e" + b.title, tx, ty, 0xFFFFC040);
         ty += lineH + 3;
-        drawText(g, font, " §7- " + line1, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, " §7- " + b.line1, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
         ty += lineH;
-        drawText(g, font, " §7- " + line2, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, " §7- " + b.line2, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
         ty += lineH + 3;
-        drawText(g, font, "§8" + hint, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "§8" + b.hint, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+
+        // Close (×) button, top-right
+        boolean hover = isGuidanceCloseClicked(font, mx, my, screenW);
+        if (hover) {
+            g.fill(RenderType.guiOverlay(), b.closeX - 1, b.closeY - 1,
+                    b.closeX + b.closeS + 1, b.closeY + b.closeS + 1, 0, 0x33111214);
+        }
+        drawText(g, font, "×", b.closeX + 1, b.closeY + 1, hover ? 0xFFFFFFFF : 0xAA888888);
     }
 
     // ═══════════════════════════════════════════════════════════════

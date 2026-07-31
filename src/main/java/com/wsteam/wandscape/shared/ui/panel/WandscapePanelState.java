@@ -89,6 +89,8 @@ public final class WandscapePanelState {
     /** Whether the "build Town Hall & Warehouse" guide should be shown in the overlay. */
     private static volatile boolean showGuidance = false;
     private static boolean guidanceEverShown = false;
+    /** Set when the player manually dismisses the guide (× button) — suppresses re-show on sync. */
+    private static volatile boolean guidanceDismissed = false;
 
     public static boolean isShowBuildingAreas() { return showBuildingAreas; }
     public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
@@ -239,6 +241,7 @@ public final class WandscapePanelState {
      * True when the colony has no town_hall or no warehouse, and not yet dismissed.
      */
     public static boolean shouldShowGuidance() {
+        if (guidanceDismissed) return false;
         if (!showGuidance) return false;
         var buildings = BuildingAreaSyncPacket.getCached();
         if (buildings.isEmpty()) return true;
@@ -254,10 +257,15 @@ public final class WandscapePanelState {
     /** Dismiss guidance (called when player opens building bar or on manual dismiss). */
     public static void dismissGuidance() {
         showGuidance = false;
+        guidanceDismissed = true;
     }
 
     /** Evaluate guidance based on the latest building cache. Called after BuildingAreaSyncPacket arrives. */
     public static void evaluateGuidance() {
+        if (guidanceDismissed) {
+            showGuidance = false;
+            return;
+        }
         var buildings = BuildingAreaSyncPacket.getCached();
         showGuidance = buildings.isEmpty()
                 || buildings.stream().noneMatch(e -> "town_hall".equals(e.buildingTypeId()))
