@@ -12,9 +12,12 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
+import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
+
+import net.minecraft.core.BlockPos;
 
 /**
  * Single driver of all NPC movement.
@@ -33,7 +36,11 @@ public class NavigationSystem implements System {
     private static final String TAG = "NavigationSystem";
 
     static final double STOP_RANGE_SQ = 25.0; // 5²
-    private static final int PATHFIND_MAX_RANGE = 32;
+    private static final int PATHFIND_MAX_RANGE = 64;
+    /** Road routing kicks in for hops beyond this XZ distance. */
+    private static final double ROAD_ROUTE_MIN_DIST_SQ = 24.0 * 24.0;
+    /** Horizontal distance to a road waypoint before advancing to the next. */
+    private static final double WAYPOINT_ARRIVE_SQ = 2.25;
     static final double NAV_SPEED = 1.0;
     private static final int STUCK_CHECK_INTERVAL = 60;
     private static final int MAX_STUCK_CHECKS = 3;
@@ -75,7 +82,7 @@ public class NavigationSystem implements System {
                 nav.lastCheckX = npc.getX();
                 nav.lastCheckZ = npc.getZ();
 
-                // Distance > 32 → skip pathfinding, use self_teleport ritual
+                // Distance > 64 → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
                         && hDistSq > (long) PATHFIND_MAX_RANGE * PATHFIND_MAX_RANGE) {
                     switchToRitualTeleport(nav, npcId, world);
@@ -85,12 +92,9 @@ public class NavigationSystem implements System {
                 npc.setAiWanderingEnabled(false);
 
                 if (nav.mode == NavigationState.Mode.PATHFINDING) {
-                    boolean ok = npc.getNavigation().moveTo(
-                            nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
-                    Log.info(TAG, "[NavSys] NPC {} pathfinding → ({},{},{}) hDistSq={} ok={}",
-                            npcId, nav.target.x(), nav.target.y(), nav.target.z(), (int) hDistSq, ok);
+                    boolean ok = startPathfinding(nav, npc, npcId);
                     if (!ok) {
-                        Log.info(TAG, "[NavSys] NPC {} — moveTo failed immediately, switching to teleport", npcId);
+                        Log.info(TAG, "[NavSys] NPC {} — pathfinding init failed, switching to teleport", npcId);
                         switchToRitualTeleport(nav, npcId, world);
                     }
                     continue;
@@ -111,11 +115,35 @@ public class NavigationSystem implements System {
     private void tickPathfinding(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
         int elapsed = tickCounter - nav.startTick;
 
+        // ── Road-route waypoint advancement ──
+        if (!nav.waypoints.isEmpty()) {
+            int idx = nav.waypointIndex;
+            if (idx < nav.waypoints.size()) {
+                GridPos wp = nav.waypoints.get(idx);
+                double dx = npc.getX() - (wp.x() + 0.5);
+                double dz = npc.getZ() - (wp.z() + 0.5);
+                if (dx * dx + dz * dz <= WAYPOINT_ARRIVE_SQ) {
+                    nav.waypointIndex = idx + 1;
+                    nav.repathCount = 0; // repath budget is per-leg, not per-journey
+                    moveToWaypoint(nav, npc);
+                }
+            } else {
+                // All waypoints walked → navigate directly to the final target
+                nav.waypoints = List.of();
+                nav.waypointIndex = 0;
+                npc.getNavigation().moveTo(
+                        nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
+                return;
+            }
+        }
+
         if (npc.getNavigation().isDone()) {
             if (nav.repathCount < MAX_REPATH) {
                 nav.repathCount++;
-                boolean ok = npc.getNavigation().moveTo(
-                        nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
+                boolean ok = !nav.waypoints.isEmpty()
+                        ? moveToWaypoint(nav, npc)
+                        : npc.getNavigation().moveTo(
+                                nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
                 Log.info(TAG, "[NavSys] NPC {} re-path #{}, elapsed={} ok={}",
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
@@ -155,6 +183,49 @@ public class NavigationSystem implements System {
             nav.lastCheckX = npc.getX();
             nav.lastCheckZ = npc.getZ();
         }
+    }
+
+    /**
+     * Initialise pathfinding for a fresh request: long hops route via the
+     * colony road network (coarse waypoints), short hops go straight to
+     * vanilla A*. Returns false if movement cannot start at all.
+     */
+    private boolean startPathfinding(NavigationState nav, WandscapeNpc npc, long npcId) {
+        GridPos target = nav.target;
+        BlockPos to = new BlockPos(target.x(), target.y(), target.z());
+        BlockPos from = npc.blockPosition();
+
+        if (from.distSqr(to) > ROAD_ROUTE_MIN_DIST_SQ) {
+            List<BlockPos> wps = RoadWalkPlanner.plan(npc.level(), from, to);
+            if (!wps.isEmpty()) {
+                nav.waypoints = wps.stream()
+                        .map(w -> new GridPos(w.getX(), w.getY(), w.getZ()))
+                        .toList();
+                nav.waypointIndex = 0;
+                boolean ok = moveToWaypoint(nav, npc);
+                Log.info(TAG, "[NavSys] NPC {} road route → {} wps, ok={}",
+                        npcId, nav.waypoints.size(), ok);
+                return ok;
+            }
+        }
+
+        nav.waypoints = List.of();
+        nav.waypointIndex = 0;
+        return npc.getNavigation().moveTo(
+                to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
+    }
+
+    /** Issue a moveTo for the current road waypoint, or the final target when out of waypoints. */
+    private boolean moveToWaypoint(NavigationState nav, WandscapeNpc npc) {
+        int idx = nav.waypointIndex;
+        if (idx < nav.waypoints.size()) {
+            GridPos wp = nav.waypoints.get(idx);
+            return npc.getNavigation().moveTo(
+                    wp.x() + 0.5, wp.y() + 0.5, wp.z() + 0.5, NAV_SPEED);
+        }
+        GridPos t = nav.target;
+        return npc.getNavigation().moveTo(
+                t.x() + 0.5, t.y() + 1, t.z() + 0.5, NAV_SPEED);
     }
 
     // ---- TELEPORT WAITING (mana-gated, for non-zero-cost rituals) ----

@@ -18,6 +18,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 
 import net.minecraft.core.BlockPos;
@@ -37,6 +38,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -205,6 +207,11 @@ public class WandscapeNpc extends PathfinderMob {
         super(entityType, level);
     }
 
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return new WandscapeNavigation(this, level);
+    }
+
     // ============================================================
     // Attributes (must be registered via EntityAttributeCreationEvent)
     // ============================================================
@@ -218,7 +225,7 @@ public class WandscapeNpc extends PathfinderMob {
                 .add(Attributes.MAX_HEALTH, 40.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
-                .add(Attributes.FOLLOW_RANGE, 32.0);
+                .add(Attributes.FOLLOW_RANGE, 48.0);
     }
 
     // ============================================================
