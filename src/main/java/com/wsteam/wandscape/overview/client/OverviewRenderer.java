@@ -4,8 +4,6 @@ import java.util.UUID;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 
@@ -69,18 +67,10 @@ public final class OverviewRenderer {
         if (targetPos != null) {
             var buildings = BuildingAreaSyncPacket.getCached();
             for (var entry : buildings) {
-                BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
-                if (config == null || config.boundary() == null) continue;
-
+                if (!entry.hasBoundary()) continue;
                 BlockPos anchor = entry.anchor();
-                int rotationSteps = entry.rotationSteps();
-                BuildingConfig.BoundaryBox boundary = config.boundary();
-                if (rotationSteps != 0) {
-                    boundary = com.wsteam.wandscape.projection.BuildingRotation.rotateBoundary(boundary, rotationSteps);
-                }
-                if (!isInsideBoundary(targetPos, anchor, boundary)) continue;
-
-                renderBoundingBox(buf, pose, anchor, boundary, LINE_R, LINE_G, LINE_B, LINE_A);
+                if (!isInsideBoundary(targetPos, anchor, entry)) continue;
+                renderBoundingBox(buf, pose, anchor, entry, LINE_R, LINE_G, LINE_B, LINE_A);
                 break;
             }
         }
@@ -137,14 +127,14 @@ public final class OverviewRenderer {
      * Render all 12 edges of the full bounding box as a white wireframe.
      */
     private static void renderBoundingBox(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
-                                           BlockPos anchor, BuildingConfig.BoundaryBox boundary,
+                                           BlockPos anchor, BuildingAreaSyncPacket.BuildingEntry entry,
                                            int r, int g, int b, int a) {
-        float x0 = anchor.getX() + boundary.min().x();
-        float y0 = anchor.getY() + boundary.min().y();
-        float z0 = anchor.getZ() + boundary.min().z();
-        float x1 = anchor.getX() + boundary.max().x() + 1f;
-        float y1 = anchor.getY() + boundary.max().y() + 1f;
-        float z1 = anchor.getZ() + boundary.max().z() + 1f;
+        float x0 = anchor.getX() + entry.bMinX();
+        float y0 = anchor.getY() + entry.bMinY();
+        float z0 = anchor.getZ() + entry.bMinZ();
+        float x1 = anchor.getX() + entry.bMaxX() + 1f;
+        float y1 = anchor.getY() + entry.bMaxY() + 1f;
+        float z1 = anchor.getZ() + entry.bMaxZ() + 1f;
 
         VertexConsumer vc = buf.getBuffer(RenderType.lines());
 
@@ -171,12 +161,13 @@ public final class OverviewRenderer {
 
     // ── Helpers ──
 
-    private static boolean isInsideBoundary(BlockPos pos, BlockPos anchor, BuildingConfig.BoundaryBox boundary) {
+    private static boolean isInsideBoundary(BlockPos pos, BlockPos anchor,
+                                            BuildingAreaSyncPacket.BuildingEntry entry) {
         int x = pos.getX(), y = pos.getY(), z = pos.getZ();
         int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
-        return x >= ax + boundary.min().x() && x <= ax + boundary.max().x()
-                && y >= ay + boundary.min().y() && y <= ay + boundary.max().y()
-                && z >= az + boundary.min().z() && z <= az + boundary.max().z();
+        return x >= ax + entry.bMinX() && x <= ax + entry.bMaxX()
+                && y >= ay + entry.bMinY() && y <= ay + entry.bMaxY()
+                && z >= az + entry.bMinZ() && z <= az + entry.bMaxZ();
     }
 
     private static void line(VertexConsumer vc, PoseStack.Pose pose,

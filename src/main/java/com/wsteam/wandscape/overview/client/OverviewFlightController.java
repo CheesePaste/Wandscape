@@ -5,8 +5,6 @@ import java.util.UUID;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
@@ -374,22 +372,15 @@ public final class OverviewFlightController {
     private static UUID findBuildingAt(BlockPos pos) {
         var buildings = BuildingAreaSyncPacket.getCached();
         for (var entry : buildings) {
-            BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
-            if (config == null || config.boundary() == null) continue;
+            if (!entry.hasBoundary()) continue;
 
             BlockPos anchor = entry.anchor();
-            int rotationSteps = entry.rotationSteps();
-            BuildingConfig.BoundaryBox boundary = config.boundary();
-            if (rotationSteps != 0) {
-                boundary = com.wsteam.wandscape.projection.BuildingRotation.rotateBoundary(boundary, rotationSteps);
-            }
             int x = pos.getX(), y = pos.getY(), z = pos.getZ();
             int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
 
-            if (x >= ax + boundary.min().x() && x <= ax + boundary.max().x()
-                    && y >= ay + boundary.min().y() && y <= ay + boundary.max().y()
-                    && z >= az + boundary.min().z() && z <= az + boundary.max().z()) {
-                // Generate a deterministic UUID from position combination
+            if (x >= ax + entry.bMinX() && x <= ax + entry.bMaxX()
+                    && y >= ay + entry.bMinY() && y <= ay + entry.bMaxY()
+                    && z >= az + entry.bMinZ() && z <= az + entry.bMaxZ()) {
                 return UUID.nameUUIDFromBytes((
                         entry.buildingTypeId() + "@" + anchor).getBytes());
             }

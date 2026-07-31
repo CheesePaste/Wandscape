@@ -82,32 +82,34 @@ public final class BuildingAreaRenderer {
         PoseStack.Pose pose = poseStack.last();
 
         for (var entry : buildings) {
-            BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
-            if (config == null || config.boundary() == null) continue;
+            if (!entry.hasBoundary()) continue;
 
             BlockPos anchor = entry.anchor();
             int rotationSteps = entry.rotationSteps();
 
-            BuildingConfig.BoundaryBox boundary = com.wsteam.wandscape.projection.BuildingRotation
-                    .rotateBoundary(config.boundary(), rotationSteps);
-            float bx0 = anchor.getX() + boundary.min().x();
-            float by0 = anchor.getY() + boundary.min().y();
-            float bz0 = anchor.getZ() + boundary.min().z();
-            float bx1 = anchor.getX() + boundary.max().x() + 1f;
-            float by1 = anchor.getY() + boundary.max().y() + 1f;
-            float bz1 = anchor.getZ() + boundary.max().z() + 1f;
+            // Pre-rotated boundary from entry — no rotation needed
+            float bx0 = anchor.getX() + entry.bMinX();
+            float by0 = anchor.getY() + entry.bMinY();
+            float bz0 = anchor.getZ() + entry.bMinZ();
+            float bx1 = anchor.getX() + entry.bMaxX() + 1f;
+            float by1 = anchor.getY() + entry.bMaxY() + 1f;
+            float bz1 = anchor.getZ() + entry.bMaxZ() + 1f;
 
-            // Render interact_aabb zones (orange) — apply rotation
-            for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
-                BuildingConfig.BoundaryBox rotatedZone = com.wsteam.wandscape.projection.BuildingRotation
-                        .rotateBoundary(zone, rotationSteps);
-                float zx0 = anchor.getX() + rotatedZone.min().x();
-                float zy0 = anchor.getY() + rotatedZone.min().y();
-                float zz0 = anchor.getZ() + rotatedZone.min().z();
-                float zx1 = anchor.getX() + rotatedZone.max().x() + 1f;
-                float zy1 = anchor.getY() + rotatedZone.max().y() + 1f;
-                float zz1 = anchor.getZ() + rotatedZone.max().z() + 1f;
-                renderZone(buf, pose, zx0, zy0, zz0, zx1, zy1, zz1);
+            // Render interact_aabb zones (orange) — rotate per zone with rotationSteps
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
+            if (config != null) {
+                for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
+                    BuildingConfig.BoundaryBox rotatedZone = rotationSteps != 0
+                            ? com.wsteam.wandscape.projection.BuildingRotation.rotateBoundary(zone, rotationSteps)
+                            : zone;
+                    float zx0 = anchor.getX() + rotatedZone.min().x();
+                    float zy0 = anchor.getY() + rotatedZone.min().y();
+                    float zz0 = anchor.getZ() + rotatedZone.min().z();
+                    float zx1 = anchor.getX() + rotatedZone.max().x() + 1f;
+                    float zy1 = anchor.getY() + rotatedZone.max().y() + 1f;
+                    float zz1 = anchor.getZ() + rotatedZone.max().z() + 1f;
+                    renderZone(buf, pose, zx0, zy0, zz0, zx1, zy1, zz1);
+                }
             }
 
             // Render building boundary reference (subtle green)

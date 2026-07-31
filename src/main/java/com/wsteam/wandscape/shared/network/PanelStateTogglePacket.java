@@ -53,8 +53,7 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     BuildingApi buildingApi = WandscapeApis.getBuildingApi();
                     List<BuildingAreaSyncPacket.BuildingEntry> entries =
                             buildingApi.getColonyBuildings(colonyId).stream()
-                                    .map(b -> new BuildingAreaSyncPacket.BuildingEntry(
-                                            b.getPosition(), b.getBuildingTypeId(), b.getRotationSteps()))
+                                    .map(BuildingAreaSyncPacket::fromBuildingData)
                                     .toList();
                     PacketDistributor.sendToPlayer(player,
                             new BuildingAreaSyncPacket(entries));
