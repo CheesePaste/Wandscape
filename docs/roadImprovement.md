@@ -2,7 +2,7 @@
 让当前的游客寻路支持室内寻路,如交互目标是室内某个点,tourist需要先抵达建筑,然后开门进建筑,达到某个点
 
 # Current situation
-对于游客AI： BuildingSavedData.java:207-245 — getInteractionTarget()
+对于游客AI： BuildingSavedData.java:207-245 — getTouristInteractionTarget()
 
 这是完全独立的一套逻辑。它使用从中心向外螺旋扫描（第224行），寻找边界框内可站立的地面位置（第234-236行：上方为空气 + 下方为实心方块）。如果找不到可站立位置，则回退到建筑锚点（第244行）。
 
@@ -17,7 +17,7 @@
 第2步 — 目标解析 (TouristMoveGoal.java:669):
 
 BlockPos interactionTarget = api.getInteractionTarget(chosen.getBuildingId());
-这调用 BuildingSavedData.getInteractionTarget()（见上文），返回建筑内一个可行走的 X/Y/Z 坐标。
+这调用 BuildingSavedData.getTouristInteractionTarget()（见上文），返回建筑内一个可行走的 X/Y/Z 坐标。
 
 第3步 — 导航 (TouristMoveGoal.java:822-868):
 

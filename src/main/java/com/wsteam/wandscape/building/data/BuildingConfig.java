@@ -47,7 +47,7 @@ public record BuildingConfig(
         ShopConfig shop,
         ServiceConfig service,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
-        @SerializedName("interact_aabb") List<BoundaryBox> interactAabb,
+        @SerializedName("tourist_interact_aabb") List<BoundaryBox> touristInteractAabb,
         @SerializedName("first_free") boolean firstFree
 ) {
     public record QueueDef(
@@ -264,12 +264,11 @@ public record BuildingConfig(
             // type in a colony does not consume warehouse materials.
             boolean firstFree = getBoolean(obj, "first_free", false);
 
-            // Interact AABB list: multiple interaction zones relative to anchor.
-            // Each zone is spiral-scanned for walkable ground.
+            // Tourist interact AABB list: multiple interaction zones relative to anchor.
             // When not specified, interaction point is computed via spiral scan inside building boundary.
-            List<BoundaryBox> interactAabb = List.of();
-            if (obj.has("interact_aabb")) {
-                JsonArray zonesArr = obj.getAsJsonArray("interact_aabb");
+            List<BoundaryBox> touristInteractAabb = List.of();
+            if (obj.has("tourist_interact_aabb")) {
+                JsonArray zonesArr = obj.getAsJsonArray("tourist_interact_aabb");
                 List<BoundaryBox> zones = new ArrayList<>();
                 BlockOffset.Deserializer offsetDs3 = new BlockOffset.Deserializer();
                 for (JsonElement zoneEl : zonesArr) {
@@ -278,7 +277,7 @@ public record BuildingConfig(
                     BlockOffset zMax = offsetDs3.deserialize(zoneObj.get("max"), BlockOffset.class, context);
                     zones.add(new BoundaryBox(zMin, zMax));
                 }
-                interactAabb = List.copyOf(zones);
+                touristInteractAabb = List.copyOf(zones);
             }
 
             return new BuildingConfig(id, displayName, category,
@@ -286,7 +285,7 @@ public record BuildingConfig(
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,
-                    doorOffset, interactAabb, firstFree);
+                    doorOffset, touristInteractAabb, firstFree);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

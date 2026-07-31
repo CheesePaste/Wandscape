@@ -731,7 +731,7 @@ public class BuildingApiImpl implements BuildingApi {
 
     @Override
     @Nullable
-    public BlockPos getInteractionTarget(UUID buildingId) {
+    public BlockPos getTouristInteractionTarget(UUID buildingId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return null;
 
@@ -739,7 +739,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (level == null) level = getServerLevel();
         if (level == null) return null;
 
-        return sd.getInteractionTarget(buildingId, level);
+        return sd.getTouristInteractionTarget(buildingId, level);
     }
 
     @Override
@@ -757,7 +757,7 @@ public class BuildingApiImpl implements BuildingApi {
 
     @Override
     @Nullable
-    public BlockPos getInteractPoint(UUID buildingId) {
+    public BlockPos getTouristInteractPoint(UUID buildingId) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return null;
 
@@ -765,7 +765,7 @@ public class BuildingApiImpl implements BuildingApi {
         if (level == null) level = getServerLevel();
         if (level == null) return null;
 
-        return sd.getInteractPoint(buildingId, level);
+        return sd.getTouristInteractPoint(buildingId, level);
     }
 
     @Nullable

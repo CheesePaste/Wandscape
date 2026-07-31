@@ -47,7 +47,7 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
         }
 
         // 2. Interact zones (green) — local offsets from block origin
-        for (BoundaryBox zone : be.getInteractZones()) {
+        for (BoundaryBox zone : be.getTouristInteractZones()) {
             renderBox(bufferSource, poseStack.last(),
                     zone.min().x(), zone.min().y(), zone.min().z(),
                     zone.max().x() + 1, zone.max().y() + 1, zone.max().z() + 1,

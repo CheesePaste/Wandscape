@@ -218,8 +218,8 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Computes the interaction target position for tourist AI.
-     * Iterates {@code interact_aabb} from building config if defined,
+     * Computes the tourist interaction target position for tourist AI.
+     * Iterates {@code tourist_interact_aabb} from building config if defined,
      * spiral-scanning each zone for walkable ground.
      * Falls back to spiral scan inside the building's bounding box.
      *
@@ -228,27 +228,27 @@ public class BuildingSavedData extends SavedData {
      * @return a walkable BlockPos inside the bounding box, or the anchor as fallback
      */
     @Nullable
-    public BlockPos getInteractionTarget(UUID buildingId, Level level) {
-        return getInteractPoint(buildingId, level);
+    public BlockPos getTouristInteractionTarget(UUID buildingId, Level level) {
+        return getTouristInteractPoint(buildingId, level);
     }
 
     /**
-     * Computes the precise interaction position within the building.
-     * Iterates {@code interact_aabb} from building config if defined,
+     * Computes the precise tourist interaction position within the building.
+     * Iterates {@code tourist_interact_aabb} from building config if defined,
      * spiral-scanning each zone for walkable ground.
      * Falls back to spiral scan inside the building's bounding box.
      */
     @Nullable
-    public BlockPos getInteractPoint(UUID buildingId, Level level) {
+    public BlockPos getTouristInteractPoint(UUID buildingId, Level level) {
         BuildingState state = buildings.get(buildingId);
         if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
 
-        // 1. Iterate interact_aabb entries: for each, compute world-space AABB and spiral-scan
-        if (config != null && !config.interactAabb().isEmpty()) {
+        // 1. Iterate tourist_interact_aabb entries: for each, compute world-space AABB and spiral-scan
+        if (config != null && !config.touristInteractAabb().isEmpty()) {
             BlockPos anchor = state.getAnchor();
-            for (BuildingConfig.BoundaryBox zone : config.interactAabb()) {
+            for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
                 BoundingBox worldZone = computeWorldBox(anchor, zone);
                 BlockPos result = spiralScanWalkable(worldZone, level, /* inside= */ true);
                 if (result != null) return result;

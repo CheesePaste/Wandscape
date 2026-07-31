@@ -250,7 +250,7 @@ public final class TouristSpawnSystem {
 
             // Pick target building weighted by preference
             BuildingState target = touristTargets.get(random.nextInt(touristTargets.size()));
-            BlockPos interactionTarget = buildingApi.getInteractionTarget(target.getBuildingId());
+            BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(target.getBuildingId());
             if (interactionTarget == null) interactionTarget = target.getAnchor();
 
             // Assign random spawn time distributed across the spawn window
@@ -557,7 +557,7 @@ public final class TouristSpawnSystem {
             if (!isHotelBuilding(b.getBuildingId())) continue;
             if (!hotel.hasVacancy(b.getBuildingId())) continue;
 
-            BlockPos target = api.getInteractionTarget(b.getBuildingId());
+            BlockPos target = api.getTouristInteractionTarget(b.getBuildingId());
             if (target == null) continue;
 
             t.setTargetBuildingId(b.getBuildingId());

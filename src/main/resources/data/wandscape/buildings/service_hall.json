@@ -134,7 +134,7 @@
     "max": [3, 3, 3]
   },
   "door_offset": [0, 0, -3],
-  "interact_aabb": [
+  "tourist_interact_aabb": [
     { "min": [-2, 0, -2], "max": [2, 0, 2] }
   ],
   "service": {

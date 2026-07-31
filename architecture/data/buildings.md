@@ -64,7 +64,7 @@
 | service | {energy_per_use, element_output, max_occupancy} | **仅 category=service**。交互参数 |
 | node_config | {...} | **仅 category=node**。节点采集配置 |
 | interaction_radius | int/{x,y,z}/{min,max} | 右键交互区扩展（默认 0）。>0 时玩家可从建筑边界外此范围内右键交互。支持三种格式：uniform int、per-axis {x,y,z}、explicit box {min,max} |
-| interact_aabb | [{min:[x,y,z], max:[x,y,z]}] | **替代旧字段 interact_offset**。室内游客导航目标区域列表（相对于 anchor）。游客 AI 遍历列表，对每个 AABB 螺旋扫描可步行地面，使用第一个找到的位置。未指定时回退到建筑 boundary 包围盒内扫描 |
+| tourist_interact_aabb | [{min:[x,y,z], max:[x,y,z]}] | **替代旧字段 interact_offset**。室内游客导航目标区域列表（相对于 anchor）。游客 AI 遍历列表，对每个 AABB 螺旋扫描可步行地面，使用第一个找到的位置。未指定时回退到建筑 boundary 包围盒内扫描 |
 
 ## 三值计入规则
 
@@ -236,12 +236,12 @@
 
 交互区检查在 `BuildingInteractHandler` 中：先精确匹配 posIndex，未命中时通过 chunkIndex 查找附近建筑的交互区。
 
-### 室内导航目标 (interact_aabb)
+### 室内导航目标 (tourist_interact_aabb)
 
-`interact_aabb` 定义建筑内部游客应该前往的交互区域列表，替代旧字段 `interact_offset`（单个偏移坐标）：
+`tourist_interact_aabb` 定义建筑内部游客应该前往的交互区域列表，替代旧字段 `interact_offset`（单个偏移坐标）：
 
 ```json
-"interact_aabb": [
+"tourist_interact_aabb": [
   { "min": [-2, 0, -2], "max": [2, 0, 2] }
 ]
 ```

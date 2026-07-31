@@ -109,8 +109,8 @@ public class TouristMoveGoal extends Goal {
     /** The precise interaction point inside the building. */
     @Nullable
     private BlockPos interactPoint;
-    /** World-space interact AABB zones for indoor arrival detection (Y-expanded for entity height). */
-    private List<BoundingBox> interactZones = List.of();
+    /** World-space tourist interact AABB zones for indoor arrival detection (Y-expanded for entity height). */
+    private List<BoundingBox> touristInteractZones = List.of();
 
     /** Push current debug state to entity synched data for client-side renderer. */
     private void syncDebugData() {
@@ -401,9 +401,9 @@ public class TouristMoveGoal extends Goal {
         // Arrival check: if interact_zones exist, check AABB containment (Y ±2 for entity height);
         // otherwise fall back to distance check
         boolean arrived;
-        if (!interactZones.isEmpty()) {
+        if (!touristInteractZones.isEmpty()) {
             arrived = false;
-            for (BoundingBox zone : interactZones) {
+            for (BoundingBox zone : touristInteractZones) {
                 if (zone.isInside(pos)) {
                     arrived = true;
                     break;
@@ -601,7 +601,7 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
-        interactZones = List.of();
+        touristInteractZones = List.of();
         interactionRemainingTicks = 0;
         syncDebugData();
 
@@ -891,7 +891,7 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
-        interactZones = List.of();
+        touristInteractZones = List.of();
         interactionRemainingTicks = 0;
         syncDebugData();
         tourist.getNavigation().stop();
@@ -1057,15 +1057,15 @@ public class TouristMoveGoal extends Goal {
         // Resolve entry point (macro nav destination) and interact point (micro nav destination)
         entryPoint = api.getEntryPoint(chosen.getBuildingId());
         if (entryPoint == null) entryPoint = chosen.getAnchor();
-        interactPoint = api.getInteractPoint(chosen.getBuildingId());
+        interactPoint = api.getTouristInteractPoint(chosen.getBuildingId());
         if (interactPoint == null) interactPoint = chosen.getAnchor();
 
-        // Compute world-space interact zones for indoor arrival detection
+        // Compute world-space tourist interact zones for indoor arrival detection
         BuildingConfig chosenConfig = BuildingConfigLoader.getInstance().get(chosen.getBuildingTypeId());
         BlockPos chosenAnchor = chosen.getAnchor();
-        if (chosenConfig != null && !chosenConfig.interactAabb().isEmpty()) {
+        if (chosenConfig != null && !chosenConfig.touristInteractAabb().isEmpty()) {
             List<BoundingBox> zones = new ArrayList<>();
-            for (BuildingConfig.BoundaryBox zone : chosenConfig.interactAabb()) {
+            for (BuildingConfig.BoundaryBox zone : chosenConfig.touristInteractAabb()) {
                 int yMin = chosenAnchor.getY() + zone.min().y() - 2; // 2 below for character feet
                 int yMax = chosenAnchor.getY() + zone.max().y() + 2; // 2 above for character head
                 zones.add(new BoundingBox(
@@ -1076,9 +1076,9 @@ public class TouristMoveGoal extends Goal {
                         yMax,
                         chosenAnchor.getZ() + zone.max().z()));
             }
-            interactZones = List.copyOf(zones);
+            touristInteractZones = List.copyOf(zones);
         } else {
-            interactZones = List.of();
+            touristInteractZones = List.of();
         }
         indoorPhase = false;
         exitingPhase = false;

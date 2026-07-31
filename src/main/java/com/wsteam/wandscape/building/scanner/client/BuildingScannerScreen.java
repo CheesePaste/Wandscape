@@ -47,7 +47,7 @@ public class BuildingScannerScreen extends Screen {
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
 
-    // ── Interact zones ──
+    // ── Tourist interact zones ──
     private final List<ZoneRow> zoneRows = new ArrayList<>();
 
     // ── Metadata ──
@@ -174,20 +174,20 @@ public class BuildingScannerScreen extends Screen {
                 })
                 .bounds(lx + COL2 + (FW + 4) * 3 + 8, doorEditY, 50, 20).build());
 
-        // ── Interact zones section ──
-        addSectionHeader(y, "Interact Zones (" + scanner.getInteractZones().size() + ")");
+        // ── Tourist interact zones section ──
+        addSectionHeader(y, "Tourist Interact Zones (" + scanner.getTouristInteractZones().size() + ")");
         y += 14;
         zoneHeaderY = y - 14;
 
         addRenderableWidget(Button.builder(Component.literal("+ Add Zone"), b -> {
-                    scanner.addInteractZone(new BoundaryBox(
+                    scanner.addTouristInteractZone(new BoundaryBox(
                             BlockOffset.of(-1, 0, -1), BlockOffset.of(1, 0, 1)));
                     syncToServer();
                     needsRebuild = true;
                 })
                 .bounds(lx + COL2 + 200, y - 11, 80, 18).build());
 
-        List<BoundaryBox> zones = scanner.getInteractZones();
+        List<BoundaryBox> zones = scanner.getTouristInteractZones();
         for (int i = 0; i < zones.size(); i++) {
             ZoneRow row = new ZoneRow(i, lx + 4, y);
             zoneRows.add(row);
@@ -503,7 +503,7 @@ public class BuildingScannerScreen extends Screen {
         ZoneRow(int idx, int zx, int zy) {
             this.index = idx;
             int zw = 28;
-            BoundaryBox zone = scanner.getInteractZones().get(idx);
+            BoundaryBox zone = scanner.getTouristInteractZones().get(idx);
 
             // "#N" label
             int labelW = 20;
@@ -526,7 +526,7 @@ public class BuildingScannerScreen extends Screen {
             max[2] = mkZoneEdit(mx2 + (zw + 2) * 2, zy, zw, zone.max().z(), () -> updateZone(idx));
 
             addRenderableWidget(Button.builder(Component.literal("×"), b -> {
-                        scanner.removeInteractZone(idx);
+                        scanner.removeTouristInteractZone(idx);
                         syncToServer();
                         needsRebuild = true;
                     })
@@ -534,7 +534,7 @@ public class BuildingScannerScreen extends Screen {
         }
     }
 
-    /** One row of the maintenance-cost or element-output editor: element selector + amount. */
+    /** One row of the maintenance-cost or tourist-element-output editor: element selector + amount. */
     private class CostRow {
         final Runnable onChanged;
         final CycleButton<String> elemBtn;
@@ -602,9 +602,9 @@ public class BuildingScannerScreen extends Screen {
     }
 
     private void updateZone(int idx) {
-        if (idx >= scanner.getInteractZones().size()) return;
+        if (idx >= scanner.getTouristInteractZones().size()) return;
         ZoneRow row = zoneRows.get(idx);
-        scanner.updateInteractZone(idx, new BoundaryBox(
+        scanner.updateTouristInteractZone(idx, new BoundaryBox(
                 BlockOffset.of(intOrZero(row.min[0]), intOrZero(row.min[1]), intOrZero(row.min[2])),
                 BlockOffset.of(intOrZero(row.max[0]), intOrZero(row.max[1]), intOrZero(row.max[2]))
         ));
@@ -781,8 +781,8 @@ public class BuildingScannerScreen extends Screen {
         drawLbl(gui, "Y", lx + COL2 + FW + 4, doorEditY - 10);
         drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
 
-        // Interact zones
-        drawHdr(gui, "Interact Zones (" + scanner.getInteractZones().size() + ")", lx, zoneHeaderY);
+        // Tourist interact zones
+        drawHdr(gui, "Tourist Interact Zones (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
 
         // Metadata
         drawHdr(gui, "Metadata", lx, metaStartY);
@@ -875,15 +875,15 @@ public class BuildingScannerScreen extends Screen {
         if (door != null) {
             tag.putIntArray("door_offset", new int[]{door.x(), door.y(), door.z()});
         }
-        // interact zones
+        // tourist interact zones
         ListTag zones = new ListTag();
-        for (BoundaryBox zone : scanner.getInteractZones()) {
+        for (BoundaryBox zone : scanner.getTouristInteractZones()) {
             CompoundTag zt = new CompoundTag();
             zt.putIntArray("min", new int[]{zone.min().x(), zone.min().y(), zone.min().z()});
             zt.putIntArray("max", new int[]{zone.max().x(), zone.max().y(), zone.max().z()});
             zones.add(zt);
         }
-        tag.put("interact_zones", zones);
+        tag.put("tourist_interact_zones", zones);
         // category & meta
         tag.putString("category", scanner.getCategory());
         tag.putInt("comfort", scanner.getComfort());
@@ -962,15 +962,15 @@ public class BuildingScannerScreen extends Screen {
         } else {
             scanner.setDoorOffset(null);
         }
-        // interact zones
-        scanner.clearInteractZones();
-        if (tag.contains("interact_zones", Tag.TAG_LIST)) {
-            for (int i = 0; i < tag.getList("interact_zones", Tag.TAG_COMPOUND).size(); i++) {
-                CompoundTag zt = tag.getList("interact_zones", Tag.TAG_COMPOUND).getCompound(i);
+        // tourist interact zones
+        scanner.clearTouristInteractZones();
+        if (tag.contains("tourist_interact_zones", Tag.TAG_LIST)) {
+            for (int i = 0; i < tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).size(); i++) {
+                CompoundTag zt = tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).getCompound(i);
                 int[] zMin = zt.getIntArray("min");
                 int[] zMax = zt.getIntArray("max");
                 if (zMin.length == 3 && zMax.length == 3) {
-                    scanner.addInteractZone(new BoundaryBox(
+                    scanner.addTouristInteractZone(new BoundaryBox(
                             BlockOffset.of(zMin[0], zMin[1], zMin[2]),
                             BlockOffset.of(zMax[0], zMax[1], zMax[2])));
                 }

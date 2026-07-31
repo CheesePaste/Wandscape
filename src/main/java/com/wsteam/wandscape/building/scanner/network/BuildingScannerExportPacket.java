@@ -215,9 +215,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         }
 
         // Interact AABB
-        if (!scanner.getInteractZones().isEmpty()) {
+        if (!scanner.getTouristInteractZones().isEmpty()) {
             JsonArray zonesArr = new JsonArray();
-            for (BoundaryBox zone : scanner.getInteractZones()) {
+            for (BoundaryBox zone : scanner.getTouristInteractZones()) {
                 JsonObject zObj = new JsonObject();
                 JsonArray zMin = new JsonArray();
                 zMin.add(zone.min().x());
@@ -231,7 +231,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 zObj.add("max", zMax);
                 zonesArr.add(zObj);
             }
-            root.add("interact_aabb", zonesArr);
+            root.add("tourist_interact_aabb", zonesArr);
         }
 
         // Category-specific configs

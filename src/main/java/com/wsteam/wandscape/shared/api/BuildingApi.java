@@ -123,7 +123,7 @@ public interface BuildingApi {
      * Returns the building anchor position as fallback if no walkable ground found.
      */
     @Nullable
-    BlockPos getInteractionTarget(UUID buildingId);
+    BlockPos getTouristInteractionTarget(UUID buildingId);
 
     /**
      * Get the entry point for tourists to approach a building.
@@ -137,10 +137,10 @@ public interface BuildingApi {
 
     /**
      * Get the precise interaction point inside the building.
-     * Iterates {@code interact_aabb} from building config if defined, spiral-scanning
+     * Iterates {@code tourist_interact_aabb} from building config if defined, spiral-scanning
      * each zone for walkable ground. Falls back to spiral scan inside the building's
      * bounding box.
      */
     @Nullable
-    BlockPos getInteractPoint(UUID buildingId);
+    BlockPos getTouristInteractPoint(UUID buildingId);
 }

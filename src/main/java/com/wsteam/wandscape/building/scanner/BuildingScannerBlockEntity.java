@@ -37,7 +37,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_BOUNDARY_MIN = "boundary_min";
     private static final String KEY_BOUNDARY_MAX = "boundary_max";
     private static final String KEY_DOOR_OFFSET = "door_offset";
-    private static final String KEY_INTERACT_ZONES = "interact_zones";
+    private static final String KEY_TOURIST_INTERACT_ZONES = "tourist_interact_zones";
     private static final String KEY_ZONE_MIN = "min";
     private static final String KEY_ZONE_MAX = "max";
     private static final String KEY_BUILDING_ID = "building_id";
@@ -79,7 +79,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private BlockOffset boundaryMax = BlockOffset.of(1, 1, 1);
     @Nullable
     private BlockOffset doorOffset = null;
-    private final List<BoundaryBox> interactZones = new ArrayList<>();
+    private final List<BoundaryBox> touristInteractZones = new ArrayList<>();
     private String buildingId = "";
     private String displayName = "";
     private String category = "basic";
@@ -140,27 +140,27 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         setChangedAndSync();
     }
 
-    public List<BoundaryBox> getInteractZones() {
-        return Collections.unmodifiableList(interactZones);
+    public List<BoundaryBox> getTouristInteractZones() {
+        return Collections.unmodifiableList(touristInteractZones);
     }
-    public void addInteractZone(BoundaryBox zone) {
-        interactZones.add(zone);
+    public void addTouristInteractZone(BoundaryBox zone) {
+        touristInteractZones.add(zone);
         setChangedAndSync();
     }
-    public void removeInteractZone(int index) {
-        if (index >= 0 && index < interactZones.size()) {
-            interactZones.remove(index);
+    public void removeTouristInteractZone(int index) {
+        if (index >= 0 && index < touristInteractZones.size()) {
+            touristInteractZones.remove(index);
             setChangedAndSync();
         }
     }
-    public void updateInteractZone(int index, BoundaryBox zone) {
-        if (index >= 0 && index < interactZones.size()) {
-            interactZones.set(index, zone);
+    public void updateTouristInteractZone(int index, BoundaryBox zone) {
+        if (index >= 0 && index < touristInteractZones.size()) {
+            touristInteractZones.set(index, zone);
             setChangedAndSync();
         }
     }
-    public void clearInteractZones() {
-        interactZones.clear();
+    public void clearTouristInteractZones() {
+        touristInteractZones.clear();
         setChangedAndSync();
     }
 
@@ -295,13 +295,13 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         }
         // Interact zones
         ListTag zonesTag = new ListTag();
-        for (BoundaryBox zone : interactZones) {
+        for (BoundaryBox zone : touristInteractZones) {
             CompoundTag zt = new CompoundTag();
             writeOffsetArray(zt, KEY_ZONE_MIN, zone.min());
             writeOffsetArray(zt, KEY_ZONE_MAX, zone.max());
             zonesTag.add(zt);
         }
-        tag.put(KEY_INTERACT_ZONES, zonesTag);
+        tag.put(KEY_TOURIST_INTERACT_ZONES, zonesTag);
         tag.putString(KEY_BUILDING_ID, buildingId);
         tag.putString(KEY_DISPLAY_NAME, displayName);
         tag.putString(KEY_CATEGORY, category);
@@ -373,14 +373,14 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         } else {
             doorOffset = null;
         }
-        interactZones.clear();
-        if (tag.contains(KEY_INTERACT_ZONES, Tag.TAG_LIST)) {
-            ListTag list = tag.getList(KEY_INTERACT_ZONES, Tag.TAG_COMPOUND);
+        touristInteractZones.clear();
+        if (tag.contains(KEY_TOURIST_INTERACT_ZONES, Tag.TAG_LIST)) {
+            ListTag list = tag.getList(KEY_TOURIST_INTERACT_ZONES, Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag zt = list.getCompound(i);
                 BlockOffset min = readOffsetArray(zt, KEY_ZONE_MIN);
                 BlockOffset max = readOffsetArray(zt, KEY_ZONE_MAX);
-                interactZones.add(new BoundaryBox(min, max));
+                touristInteractZones.add(new BoundaryBox(min, max));
             }
         }
         buildingId = tag.getString(KEY_BUILDING_ID);
