@@ -98,6 +98,17 @@ public class TouristMoveGoal extends Goal {
     private int wanderCooldown;
     private int wanderEvaluateTick;
 
+    // ── Roof-rescue insurance ──
+    /** Last position used to detect a stuck-on-roof situation while roaming. */
+    @Nullable
+    private BlockPos rescueLastPos;
+    /** Consecutive ticks with no meaningful movement while roaming. */
+    private int roofStuckTicks;
+    /** Zero-movement ticks on a floating surface before teleporting down. */
+    private static final int ROOF_STUCK_TICKS = 80;
+    /** Zero-movement ticks during active wander nav before teleporting to anchor. */
+    private static final int WANDER_STUCK_TICKS = 120;
+
     // ── Indoor / outdoor navigation phases ──
     /** True when the tourist is inside a building (micro-navigation phase). */
     private boolean indoorPhase;
@@ -163,6 +174,11 @@ public class TouristMoveGoal extends Goal {
         // While checked into hotel, stay still — HotelStayHandler heartbeat manages energy
         if (tourist.getCheckedInBuildingId() != null) {
             tourist.getNavigation().stop();
+            return;
+        }
+
+        // ── Roof-rescue insurance: stuck on a floating surface → teleport down ──
+        if (tickRoofRescue()) {
             return;
         }
 
@@ -760,6 +776,8 @@ public class TouristMoveGoal extends Goal {
         Log.info(TAG, "[Citizen] %s startWander".formatted(tourist.getTouristName()));
         wanderCooldown = 0;
         wanderEvaluateTick = 300 + tourist.getRandom().nextInt(200);
+        lastPos = null;
+        noMoveTicks = 0;
     }
 
     private void tickWander() {
@@ -775,6 +793,24 @@ public class TouristMoveGoal extends Goal {
         BlockPos pos = tourist.blockPosition();
         int manDist = Math.abs(pos.getX() - anchor.getX()) + Math.abs(pos.getZ() - anchor.getZ());
         var nav = tourist.getNavigation();
+
+        // ── Stuck unstick: active nav but no progress → teleport to a temp ground point ──
+        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+            noMoveTicks++;
+        } else {
+            noMoveTicks = 0;
+            lastPos = pos;
+        }
+        if (!nav.isDone() && noMoveTicks > WANDER_STUCK_TICKS) {
+            BlockPos ground = findGround(anchor.getX(), anchor.getY(), anchor.getZ());
+            BlockPos tp = ground != null ? ground : anchor;
+            Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
+            tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+            nav.stop();
+            noMoveTicks = 0;
+            lastPos = null;
+            return;
+        }
 
         // Too far from anchor → head back
         if (manDist > radius + 3) {
@@ -1407,6 +1443,55 @@ public class TouristMoveGoal extends Goal {
             return config.service().interactionDurationTicks();
         }
         return 0;
+    }
+
+    /** Universal insurance: if stuck on a floating surface (building roof) while roaming, teleport down. */
+    private boolean tickRoofRescue() {
+        // Never interfere with an active building interaction or POI stand-still.
+        if (currentMode == MoveMode.VISITING_BUILDING || poiPauseTicks > 0) return false;
+        BlockPos pos = tourist.blockPosition();
+        if (rescueLastPos == null || pos.distSqr(rescueLastPos) >= 1.0) {
+            rescueLastPos = pos;
+            roofStuckTicks = 0;
+            return false;
+        }
+        if (++roofStuckTicks <= ROOF_STUCK_TICKS) return false;
+        if (!isStandingOnFloatingSurface()) return false;
+
+        BlockPos below = findGroundBelow(pos.getX(), pos.getY() - 1, pos.getZ());
+        if (below == null) return false;
+        Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing down to {}", tourist.getTouristName(), below.toShortString());
+        tourist.getNavigation().stop();
+        tourist.setPos(below.getX() + 0.5, below.getY(), below.getZ() + 0.5);
+        noMoveTicks = 0;
+        totalNavTicks = 0;
+        rescueLastPos = null;
+        roofStuckTicks = 0;
+        return true;
+    }
+
+    /** True if the tourist stands on a solid block with open air directly beneath it (building roof / shelf). */
+    private boolean isStandingOnFloatingSurface() {
+        var lvl = tourist.level();
+        BlockPos feet = tourist.blockPosition();
+        if (!lvl.getBlockState(feet).isAir()) return false;
+        if (!lvl.getBlockState(feet.below()).isSolid()) return false;
+        return lvl.getBlockState(feet.below(2)).isAir();
+    }
+
+    /** Scan downward from {@code startY} for the first walkable spot (air above solid). */
+    @Nullable
+    private BlockPos findGroundBelow(int x, int startY, int z) {
+        var lvl = tourist.level();
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
+                x, Math.min(lvl.getMaxBuildHeight() - 1, startY), z);
+        while (mp.getY() > lvl.getMinBuildHeight()) {
+            if (lvl.getBlockState(mp).isAir() && lvl.getBlockState(mp.below()).isSolid()) {
+                return mp.immutable();
+            }
+            mp.move(0, -1, 0);
+        }
+        return null;
     }
 
     @Nullable
