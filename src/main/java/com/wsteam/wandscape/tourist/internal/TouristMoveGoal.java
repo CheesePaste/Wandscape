@@ -866,8 +866,19 @@ public class TouristMoveGoal extends Goal {
      *
      * <p>If BUILDING is selected but no colony buildings are available,
      * falls back to POI (or WANDER if no POIs).
+     *
+     * <p>During the post-interaction rest cooldown (after a shop or service
+     * interaction), the tourist is restricted to free movement: it wanders or
+     * strolls to POIs but never selects a building visit until the cooldown ends.
      */
     private MoveMode decideNextMode(@Nullable MoveMode from) {
+        // Rest cooldown: free movement (wander or POI strolling), never a building visit.
+        if (isInRestCooldown()) {
+            return (!tourist.getPoiList().isEmpty() && tourist.getRandom().nextDouble() < 0.5)
+                    ? MoveMode.EXPLORING_POI
+                    : MoveMode.WANDERING;
+        }
+
         double roll = tourist.getRandom().nextDouble();
         double bProb, pProb; // building, poi probabilities
 
@@ -1127,6 +1138,24 @@ public class TouristMoveGoal extends Goal {
                 entryPoint.toShortString(), interactPoint.toShortString());
     }
 
+    /** True while the post-interaction rest cooldown is active (wander freely, skip building visits). */
+    private boolean isInRestCooldown() {
+        return tourist.getServiceCooldownEndTick() > tourist.tickCount;
+    }
+
+    /**
+     * Apply the post-interaction rest cooldown after a successful building visit.
+     * Blocks the same building again (per-building) and forces a free-movement
+     * rest period (global, {@link Config#SERVICE_COOLDOWN_TICKS} ticks).
+     */
+    private void applyInteractionCooldown(UUID buildingId) {
+        int cooldownTicks = Config.SERVICE_COOLDOWN_TICKS.get();
+        if (cooldownTicks <= 0) return;
+        int endTick = tourist.tickCount + cooldownTicks;
+        tourist.setServiceCooldown(buildingId, endTick);
+        tourist.setServiceCooldownEndTick(endTick);
+    }
+
     private void interactWithShop(UUID buildingId) {
         ShopStockManager stockManager = ShopStockManager.getActive();
         if (stockManager == null) return;
@@ -1142,6 +1171,7 @@ public class TouristMoveGoal extends Goal {
             tourist.setSatisfaction(satBefore + gain);
             tourist.setEnergy(tourist.getEnergy() - 20);
             applyPreferenceDecay(buildingId);
+            applyInteractionCooldown(buildingId);
 
             String bldType = getBuildingTypeId(buildingId);
             String bldName = getBuildingDisplayName(buildingId, bldType);
@@ -1177,12 +1207,7 @@ public class TouristMoveGoal extends Goal {
         tourist.setSatisfaction(satBefore + gain);
         applyPreferenceDecay(buildingId);
 
-        int cooldownTicks = Config.SERVICE_COOLDOWN_TICKS.get();
-        if (cooldownTicks > 0) {
-            int endTick = tourist.tickCount + cooldownTicks;
-            tourist.setServiceCooldown(buildingId, endTick);
-            tourist.setServiceCooldownEndTick(endTick);
-        }
+        applyInteractionCooldown(buildingId);
 
         UUID colonyId = tourist.getColonyId();
         if (colonyId != null && !svc.elementOutput().isEmpty()) {

@@ -183,10 +183,11 @@ public class TouristEntity extends PathfinderMob {
     /** Set of building IDs the tourist has already visited this trip. */
     private final Set<UUID> visitedBuildings = new HashSet<>();
 
-    /** Per-service-building cooldown end ticks (buildingId → game tick when cooldown expires). */
+    /** Per-building cooldown end ticks (buildingId → game tick when cooldown expires). */
     private final Map<UUID, Integer> serviceCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Global cooldown end tick after using any service building. During this, tourist wanders streets. */
+    /** Global rest-cooldown end tick after interacting with any building (shop/service).
+     *  During this, the tourist wanders or visits POIs and skips building visits. */
     private int serviceCooldownEndTick;
 
     // ── Narrative memory (journey diary) ──

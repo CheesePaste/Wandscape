@@ -197,6 +197,14 @@
 
 **为什么货物种类由 JSON 固定而非玩家自由设定？** jingying.md 原始设计是"玩家设定进货清单"，但拖拽式进货清单需要物品浏览器+搜索+NBT匹配的完整 GUI，远超出 MVP 范围。JSON 固定货物种类实现商店类型差异化（面包店 vs 药水店由不同 JSON 定义），新增商店类型只需加 JSON 文件。玩家仍可通过 GUI 调整每种货物的 max_stock（库存深度决策），但不增减货物种类。
 
+## 游客交互冷却与闲逛合并（2026-07-31）
+
+**为什么冷却期间游客强制闲逛/逛景点而非站定？** 原实现中，服务交互后的全局冷却只在 `planNextBuilding` 里跳过服务建筑，但 `hasBuildingsAvailable()` 不检查冷却 → `decideNextMode` 反复选中 VISITING_BUILDING → `startBuildingVisit` 里 planNextBuilding 又失败 → 退回 WANDERING。这个每 15–25 秒一次的模式抖动会反复 stop 导航、甚至卡进 `tickOutdoorNav` 的空目标等待循环，视觉上"死死固定在一个点"。新实现：冷却期间 `decideNextMode` 直接短路为 WANDERING/EXPLORING_POI——游客自由移动但永不选择建筑访问，冷却结束自然恢复。这与现有闲逛状态合二为一，不引入新状态机。
+
+**为什么冷却覆盖商店而不仅是服务？** 原实现只有服务建筑设置冷却，商店可被连续扫街（逛完一家立刻进下一家），节奏突兀。改为每次成功的商店/服务交互都进入一段休息期，形成"一次交互 → 闲逛休息 → 下一建筑"的稳定节奏。商店交互失败（无货）不触发冷却，游客可立即转投其他商店。
+
+**为什么冷却期间允许逛景点？** 用户的"移动不受限制"指向自由移动——随机闲逛与 POI 游览都保留，只是不进入建筑交互。冷却期间 50% 概率逛景点（有 POI 时）、否则锚点附近闲逛。
+
 ## 综合面板 (WandscapePanel)
 
 **为什么面板用 Overlay 渲染（RenderGuiEvent.Post）而非 Screen？** Screen 方案会隐藏准心、使投影控制器 `mc.screen != null` 提前返回导致所有子模式失效。Overlay 方案渲染在游戏 GUI 之上，不干扰世界渲染和输入系统，准心保留。Cursor 通过 C 键手动控制 MouseHandler.releaseMouse()/grabMouse() 实现 UI 交互切换。

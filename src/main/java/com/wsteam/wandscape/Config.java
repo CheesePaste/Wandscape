@@ -238,7 +238,9 @@ public class Config {
             .defineInRange("tourist.microNavSwitchDistance", 5, 2, 16);
 
     public static final ModConfigSpec.IntValue SERVICE_COOLDOWN_TICKS = BUILDER
-            .comment("Cooldown in ticks before a tourist can use the same service building again")
+            .comment("Rest cooldown in ticks after a tourist interacts with a shop or service building. " +
+                     "During this period the tourist wanders or visits POIs and cannot interact with " +
+                     "any building; the same building is also blocked until it expires.")
             .defineInRange("service.cooldownTicks", 1200, 1200, 72000);
 
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SATISFACTION_THRESHOLD = BUILDER
