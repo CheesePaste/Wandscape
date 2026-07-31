@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.engine.colony;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -9,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -72,6 +75,39 @@ public class ColonySavedData extends SavedData {
 
     public int size() {
         return colonies.size();
+    }
+
+    /**
+     * Write colony data to disk synchronously, bypassing NeoForge's async IO
+     * worker. Call this immediately after {@link #addColony} to guarantee the
+     * colony survives a crash or quick exit.
+     *
+     * @param level      the overworld (used to locate the data folder)
+     * @param registries the server registry access
+     */
+    public void saveNow(Level level, HolderLookup.Provider registries) {
+        if (!isDirty()) return;
+
+        CompoundTag root = new CompoundTag();
+        root.put("data", this.save(new CompoundTag(), registries));
+        NbtUtils.addCurrentDataVersion(root);
+        CompoundTag copied = root.copy();
+
+        Path filePath = level.getServer().getWorldPath(
+                net.minecraft.world.level.storage.LevelResource.ROOT)
+                .resolve("data")
+                .resolve(DATA_NAME + ".dat");
+
+        try {
+            net.neoforged.neoforge.common.IOUtilities.writeNbtCompressed(
+                    copied, filePath);
+        } catch (IOException e) {
+            Log.error(TAG, "Failed to force-save colony data to {}", filePath);
+            return;
+        }
+
+        setDirty(false);
+        Log.info(TAG, "[Colony] Force-saved {} colonies to disk", colonies.size());
     }
 
     // ── NBT persistence ──

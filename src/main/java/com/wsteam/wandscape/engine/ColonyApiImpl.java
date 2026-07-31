@@ -42,10 +42,15 @@ public final class ColonyApiImpl implements ColonyApi {
         colonyOrigins.put(origin, colonyId);
         colonyToOrigin.put(colonyId, origin);
 
-        // Persist to ColonySavedData (independent from buildings)
+        // Persist to ColonySavedData synchronously — NeoForge's default
+        // async IO worker may not flush before a crash or quick exit.
         ColonySavedData csd = getColonySavedData();
         if (csd != null) {
             csd.addColony(colonyId, origin);
+            var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                csd.saveNow(server.overworld(), server.overworld().registryAccess());
+            }
         }
 
         Log.info(TAG, "[Colony] Created colony {} at origin {}",
@@ -135,10 +140,9 @@ public final class ColonyApiImpl implements ColonyApi {
 
     @Override
     public void onBuildingDestroyed(BuildingData data) {
-        if ("government".equals(data.getCategory())
-                && data.getColonyId() != null) {
-            deleteColony(data.getColonyId());
-        }
+        // Colonies are permanent — destroying the town hall does NOT delete
+        // the colony. The colony persists in ColonySavedData and will be
+        // recovered on next restart as long as the data file exists.
     }
 
     @Override
@@ -171,44 +175,29 @@ public final class ColonyApiImpl implements ColonyApi {
             return;
         }
 
-        // Fallback: scan buildings (backward compat / migration)
+        // Fallback: scan government buildings (backward compat / migration).
+        // This is a safety net for worlds created before ColonySavedData existed.
+        // Do NOT require isStructureIntact() — a broken town hall is still the colony origin.
         BuildingSavedData sd = getSavedData();
-        if (sd == null) {
-            Log.warn(TAG, "[Colony] ColonySavedData empty and BuildingSavedData unavailable — no colonies restored");
-            return;
-        }
-
-        // Pass 1: government buildings are strong colony-origin signals.
-        // Do NOT require isStructureIntact() — a broken town hall is still
-        // the colony origin and must be recovered.
-        for (BuildingData bd : sd.getAllBuildings()) {
-            if ("government".equals(bd.getCategory()) && bd.getColonyId() != null) {
-                colonyOrigins.put(bd.getPosition(), bd.getColonyId());
-                colonyToOrigin.put(bd.getColonyId(), bd.getPosition());
-                if (csd != null) {
-                    csd.addColony(bd.getColonyId(), bd.getPosition());
-                }
-            }
-        }
-
-        // Pass 2: any building with a colonyId can serve as a recovery
-        // source when ColonySavedData was lost (e.g. async save race).
-        // Use putIfAbsent so government origins take precedence.
-        if (colonyOrigins.isEmpty()) {
+        if (sd != null) {
             for (BuildingData bd : sd.getAllBuildings()) {
-                UUID cid = bd.getColonyId();
-                if (cid != null) {
-                    colonyOrigins.putIfAbsent(bd.getPosition(), cid);
-                    colonyToOrigin.putIfAbsent(cid, bd.getPosition());
+                if ("government".equals(bd.getCategory()) && bd.getColonyId() != null) {
+                    colonyOrigins.put(bd.getPosition(), bd.getColonyId());
+                    colonyToOrigin.put(bd.getColonyId(), bd.getPosition());
                     if (csd != null) {
-                        csd.addColony(cid, bd.getPosition());
+                        csd.addColony(bd.getColonyId(), bd.getPosition());
                     }
                 }
             }
+            if (!colonyOrigins.isEmpty()) {
+                Log.info(TAG, "[Colony] Rebuilt index: {} colonies from BuildingSavedData fallback (migrated)",
+                        colonyOrigins.size());
+            }
         }
 
-        Log.info(TAG, "[Colony] Rebuilt index: {} colonies from BuildingSavedData fallback (migrated)",
-                colonyOrigins.size());
+        if (colonyOrigins.isEmpty()) {
+            Log.warn(TAG, "[Colony] No colonies restored — ColonySavedData is empty and no government building found");
+        }
     }
 
     // ── Singleton ─────────────────────────────────────────────────────────
