@@ -424,7 +424,7 @@ public final class WandscapePanelState {
     }
 
     private static void releaseCursor() {
-        Minecraft.getInstance().mouseHandler.releaseMouse();
+        Minecraft.getInstance().mouseHandler.grabMouse();
     }
 
     // ── Sub-mode ──
