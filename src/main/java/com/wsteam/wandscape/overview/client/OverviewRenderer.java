@@ -73,9 +73,14 @@ public final class OverviewRenderer {
                 if (config == null || config.boundary() == null) continue;
 
                 BlockPos anchor = entry.anchor();
-                if (!isInsideBoundary(targetPos, anchor, config.boundary())) continue;
+                int rotationSteps = entry.rotationSteps();
+                BuildingConfig.BoundaryBox boundary = config.boundary();
+                if (rotationSteps != 0) {
+                    boundary = com.wsteam.wandscape.projection.BuildingRotation.rotateBoundary(boundary, rotationSteps);
+                }
+                if (!isInsideBoundary(targetPos, anchor, boundary)) continue;
 
-                renderBoundingBox(buf, pose, anchor, config.boundary(), LINE_R, LINE_G, LINE_B, LINE_A);
+                renderBoundingBox(buf, pose, anchor, boundary, LINE_R, LINE_G, LINE_B, LINE_A);
                 break;
             }
         }
