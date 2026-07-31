@@ -1,5 +1,37 @@
 # 旋转系统与交互 Bug 分析
 
+## 修复状态
+
+| Bug | 描述 | 状态 |
+|-----|------|------|
+| Bug 1 | townhall1 不显示 boundary + 右键无法交互 | ✅ 间接修复（Bug 3 修复后不再误判 BROKEN） |
+| Bug 2 | V 面板侧边栏图标不变色 | ✅ 已修复 |
+| Bug 3a | findDamagedBlocks 使用未旋转 pattern | ✅ 已修复 |
+| Bug 3b | 维修用未旋转 blockMapping | ✅ 已修复 |
+| Bug 3c | tourist_interact_aabb / door_offset 未旋转 | ✅ 已修复 |
+| Bug 3d | demolishBuilding 未旋转 offsets | ✅ 已修复 |
+| Bug 4 | 楼梯 SHAPE left/right 未交换 | ✅ 已修复 |
+| Bug 5 | Warehouse UI 显示 0 | ✅ 间接修复（殖民地 fallback 恢复） |
+| 新 Bug | 重进游戏殖民地消失 | ✅ 已修复（rebuildFromSavedData fallback 增强） |
+
+### 修复涉及的 12 个文件
+
+- `BuildingState.java` — 新增 `rotationSteps` 字段 + getter/setter
+- `BuildingSavedData.java` — NBT 持久化 + `register()`/`rebuildPosIndex()` 旋转 pattern + `getTouristInteractPoint()`/`getEntryPoint()` 旋转交互框
+- `BuildCompleteListener.java` — `findDamagedBlocks()` 接受 rotationSteps 参数
+- `BuildingBreakHandler.java` — `enqueueRepairForOffsets/Positions` 使用旋转后 blockMapping
+- `BuildingApiImpl.java` — `demolishBuilding()` 旋转 offsets
+- `EnqueueHelper.java` — `registerIfAbsent` 设置 rotationSteps + `buildWorkItem` 旋转 `tourist_interact_aabb`/`door_offset`
+- `BuildingRotation.java` — 新增 `swapShapeLeftRight()` 修复楼梯 SHAPE
+- `BuildingAreaRenderer.java` — 渲染时旋转 boundary 和 tourist_interact_aabb
+- `BuildingAreaSyncPacket.java` — BuildingEntry 新增 rotationSteps
+- `PanelStateTogglePacket.java` — 同步时携带 rotationSteps
+- `BuildingData.java` — 接口新增 `getRotationSteps()` 默认方法
+- `WandscapePanelOverlay.java` — Bug 2: 图标根据 activeMode 着色
+- `ColonyApiImpl.java` — 殖民地恢复 fallback 不要求 isStructureIntact + 全建筑兜底扫描
+
+---
+
 ## 总览
 
 旋转系统（`BuildingRotation` + `EnqueueHelper.buildWorkItem`）目前有**结构性缺陷**：所有 pipeline 中只有 blueprint param 层面的
