@@ -293,6 +293,7 @@ public class TouristMoveGoal extends Goal {
                 if (ground != null) tpTarget = ground;
                 tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
                 noMoveTicks = 0;
+                totalNavTicks = 0;
             }
             return;
         }
@@ -342,25 +343,31 @@ public class TouristMoveGoal extends Goal {
         BlockPos pos = tourist.blockPosition();
 
         // ── Real stuck detection & hard fallback ──
-        totalNavTicks++;
-        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
-            noMoveTicks++;
-        } else {
-            noMoveTicks = 0;
-            lastPos = pos;
-        }
-
-        if (noMoveTicks > 100 || totalNavTicks > 400) {
-            BlockPos tpTarget = exitingPhase ? (entryPoint != null ? entryPoint : tourist.getCommuteTarget()) : interactPoint;
-            if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
-            if (tpTarget != null) {
-                Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
-                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
-                noMoveTicks = 0;
+        // Skip while the interaction countdown is running: the tourist stands
+        // still deliberately during the interaction, so it is not "stuck", and
+        // running the counter here would starve the countdown / lock the fallback.
+        if (interactionRemainingTicks <= 0) {
+            totalNavTicks++;
+            if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+                noMoveTicks++;
             } else {
-                finishBuildingStop();
+                noMoveTicks = 0;
+                lastPos = pos;
             }
-            return;
+
+            if (noMoveTicks > 100 || totalNavTicks > 400) {
+                BlockPos tpTarget = exitingPhase ? (entryPoint != null ? entryPoint : tourist.getCommuteTarget()) : interactPoint;
+                if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
+                if (tpTarget != null) {
+                    Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
+                    tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
+                    noMoveTicks = 0;
+                    totalNavTicks = 0;
+                } else {
+                    finishBuildingStop();
+                }
+                return;
+            }
         }
 
         if (exitingPhase) {
@@ -460,6 +467,8 @@ public class TouristMoveGoal extends Goal {
             if (entryPoint != null && isInsideBuilding(buildingId)) {
                 exitingPhase = true;
                 stuckTicks = 0;
+                noMoveTicks = 0;
+                totalNavTicks = 0;
                 BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
                 BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
                 nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
@@ -657,6 +666,7 @@ public class TouristMoveGoal extends Goal {
                     if (ground != null) wp = ground;
                     tourist.setPos(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5);
                     noMoveTicks = 0;
+                    totalNavTicks = 0;
                 }
                 return;
             }

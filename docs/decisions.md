@@ -205,6 +205,8 @@
 
 **为什么冷却期间允许逛景点？** 用户的"移动不受限制"指向自由移动——随机闲逛与 POI 游览都保留，只是不进入建筑交互。冷却期间 50% 概率逛景点（有 POI 时）、否则锚点附近闲逛。
 
+**为什么硬兜底传送改为一次性救援而非每 tick 传送？** 原实现中 `totalNavTicks` 只在进入室内导航/切换模式时重置，硬兜底分支传送后只重置 `noMoveTicks`。游客在交互点站定（面包店 `interaction_duration_ticks=2400`，120 秒）时计数器照常累计，一旦超过 400 就**每 tick** 触发兜底：传送回固定点、提前 return 跳过交互倒计时 → 交互永不完成、游客永久卡死，且 /tp 或击打都被下一 tick 的 snap 回去（表现为 tp 免疫）。修复：(1) 三个兜底分支传送后同步重置 `totalNavTicks`，兜底变成"确实卡住才隔段时间拉一次"；(2) 交互倒计时期间跳过 stuck 检测——站定交互是故意的，不是卡住，计数器也不再饿死倒计时；(3) 交互结束进入 exitingPhase 时重置计数器，避免长倒计时后 exit 立即被兜底锁定。
+
 ## 综合面板 (WandscapePanel)
 
 **为什么面板用 Overlay 渲染（RenderGuiEvent.Post）而非 Screen？** Screen 方案会隐藏准心、使投影控制器 `mc.screen != null` 提前返回导致所有子模式失效。Overlay 方案渲染在游戏 GUI 之上，不干扰世界渲染和输入系统，准心保留。Cursor 通过 C 键手动控制 MouseHandler.releaseMouse()/grabMouse() 实现 UI 交互切换。
