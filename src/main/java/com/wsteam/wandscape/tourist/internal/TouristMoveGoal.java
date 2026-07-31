@@ -15,13 +15,10 @@ import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
+import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
-import com.wsteam.wandscape.road.core.RoadNetwork;
-import com.wsteam.wandscape.road.core.TransportRoute;
-import com.wsteam.wandscape.road.core.SplineLeg;
-import com.wsteam.wandscape.road.core.SplineVec3;
-import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -1359,19 +1356,10 @@ public class TouristMoveGoal extends Goal {
         if (network == null || network.isEmpty()) return false;
 
         BlockPos from = tourist.blockPosition();
-        TransportRoute route = RoadRoutingHelper.planNpcWithRoads(
-                roadApi, tourist.level(), null, from, target);
-        if (route.isEmpty()) return false;
+        List<BlockPos> wps = RoadWalkPlanner.plan(roadApi, tourist.level(), from, target);
+        if (wps.isEmpty()) return false;
 
-        List<BlockPos> wps = new ArrayList<>();
-        SplineLeg first = route.legs().get(0);
-        SplineVec3 startPos = first.spline().evaluate(first.uStart()).position();
-        wps.add(jitter(new BlockPos((int) startPos.x(), (int) startPos.y(), (int) startPos.z())));
-        for (SplineLeg leg : route.legs()) {
-            SplineVec3 endPos = leg.spline().evaluate(leg.uEnd()).position();
-            wps.add(jitter(new BlockPos((int) endPos.x(), (int) endPos.y(), (int) endPos.z())));
-        }
-        waypoints = wps.toArray(new BlockPos[0]);
+        waypoints = wps.stream().map(this::jitter).toArray(BlockPos[]::new);
         return true;
     }
 

@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
@@ -312,7 +313,7 @@ public class TouristEntity extends PathfinderMob {
 
     @Override
     protected PathNavigation createNavigation(Level level) {
-        return new TouristNavigation(this, level);
+        return new WandscapeNavigation(this, level);
     }
 
     @Override
@@ -515,7 +516,7 @@ public class TouristEntity extends PathfinderMob {
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
-                .add(Attributes.FOLLOW_RANGE, 48.0)
+                .add(Attributes.FOLLOW_RANGE, 64.0)
                 .add(Attributes.MAX_HEALTH, 20.0);
     }
 
