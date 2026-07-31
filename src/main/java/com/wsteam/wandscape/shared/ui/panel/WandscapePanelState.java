@@ -13,6 +13,7 @@ import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -248,7 +249,7 @@ public final class WandscapePanelState {
         boolean hasTownHall = false;
         boolean hasWarehouse = false;
         for (var b : buildings) {
-            if ("town_hall".equals(b.buildingTypeId())) hasTownHall = true;
+            if (WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.category())) hasTownHall = true;
             if ("warehouse".equals(b.buildingTypeId())) hasWarehouse = true;
         }
         return !hasTownHall || !hasWarehouse;
@@ -268,7 +269,8 @@ public final class WandscapePanelState {
         }
         var buildings = BuildingAreaSyncPacket.getCached();
         showGuidance = buildings.isEmpty()
-                || buildings.stream().noneMatch(e -> "town_hall".equals(e.buildingTypeId()))
+                || buildings.stream().noneMatch(
+                        e -> WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(e.category()))
                 || buildings.stream().noneMatch(e -> "warehouse".equals(e.buildingTypeId()));
         if (showGuidance && !guidanceEverShown) {
             guidanceEverShown = true;

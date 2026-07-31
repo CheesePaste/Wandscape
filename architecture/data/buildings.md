@@ -6,9 +6,9 @@
 
 ```json
 {
-  "id": "town_hall",
+  "id": "townhall1",
   "display_name": "殖民地市政厅",
-  "category": "basic",
+  "category": "government",
   "pattern": [[-1,0,-1], [0,0,-1], [1,0,-1], ...],
   "block_mapping": {
     "0,0,0": "minecraft:stone_bricks",

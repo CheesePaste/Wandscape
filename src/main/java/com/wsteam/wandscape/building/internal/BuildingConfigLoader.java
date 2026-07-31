@@ -57,6 +57,17 @@ public final class BuildingConfigLoader {
         return configs.get(id);
     }
 
+    /** Get the first config whose category matches, or null if none. */
+    @Nullable
+    public BuildingConfig getByCategory(String category) {
+        for (BuildingConfig config : configs.values()) {
+            if (category.equals(config.category())) {
+                return config;
+            }
+        }
+        return null;
+    }
+
     /** All loaded configs. */
     public Map<String, BuildingConfig> getAll() {
         return Map.copyOf(configs);

@@ -28,6 +28,8 @@
 
 **为什么 OverviewInteractPacket 不自己维护建筑交互分发？** 先前的修法是在 OverviewInteractPacket 中为 town_hall 加一个特判，但每新增一种 "typeId 判定" 的建筑类型就要在两个地方同步改。抽取 `BuildingInteractHandler.handleInteraction()` 统一分发，新增建筑只需改这一处。
 
+**为什么市政厅用 category=government 判定而非硬编码 buildingTypeId？** 建筑配置 id 由数据文件决定（如 townhall1.json），硬编码 `"town_hall"` 在配置改名后静默失效（`/wandscape colony create` 报 "config not found"）。category=government 是语义稳定的标识——任何配置为 government 的建筑都视为市政厅，改名/新增建筑无需改代码。客户端 `BuildingAreaSyncPacket` 因此携带 category 字段，让引导逻辑也能按分类判断。
+
 **为什么 node 右键 UI 复用 workstation 的包/Screen 模式而非自建交互区？** 工作站已经验证了「BuildingInteractHandler 发数据包 → 客户端打开 MedievalScreen → TaskQueuePanel 管理队列」的完整链路，node 与工作站同样靠建筑任务队列运行，直接复用最小成本。发布采集任务量化为"收获次数"滑条，合并为一个 WorkItem（amount/mana 按次数缩放），同工作站 decompose 的 count 合并方式。取消采集 = TaskQueueModifyPacket("delete")，queue 系统已原生支持 node:gather 条目，无需重复实现。
 
 ## 数据设计

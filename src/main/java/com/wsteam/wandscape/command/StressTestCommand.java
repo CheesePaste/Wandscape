@@ -10,6 +10,7 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.EnqueueHelper;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -61,11 +62,13 @@ public final class StressTestCommand {
             return 0;
         }
 
-        // Pre-load town_hall building config (fail fast if missing)
-        BuildingConfig config = BuildingConfigLoader.getInstance().get("town_hall");
+        // Pre-load government building config as the stress-test target (fail fast if missing)
+        BuildingConfig config = BuildingConfigLoader.getInstance()
+                .getByCategory(WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT);
         if (config == null) {
             src.sendFailure(Component.literal(
-                    "[Wandscape] town_hall building config not found"));
+                    "[Wandscape] no government building config found "
+                            + "(need a building JSON with category=government)"));
             return 0;
         }
 
@@ -104,7 +107,7 @@ public final class StressTestCommand {
 
                 BlockPos anchor = origin.offset(cx * spacing, cy * spacing, cz * spacing);
 
-                var workItem = EnqueueHelper.buildWorkItem(config, anchor, "town_hall", 10);
+                var workItem = EnqueueHelper.buildWorkItem(config, anchor, config.id(), 10);
                 world.taskPool.addTask(
                         new TaskRequest(workItem.blueprintId(), workItem.params(), workItem.priority()));
                 created++;

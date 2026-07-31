@@ -70,12 +70,13 @@ Building classification for organizational and UI grouping.
 
 | Value | Meaning |
 |-------|---------|
-| `basic` | Core colony buildings (town hall) |
+| `government` | Town hall / colony seat. Any building with this category is the colony's townhall. |
 | `node` | Element harvesting nodes |
+| `shop` / `service` / `storage` / `tavern` | Tourist-facing businesses and infrastructure |
+| `crafting_station` / `potion_station` / `workstation` | NPC production buildings |
 | `wonder` | High-tier wonder buildings |
-| `functional` | Workstations, crafting stations, etc. |
 
-**Runtime:** Written to `BuildingDataImpl.category`, exposed via `BuildingData.getCategory()`. No functional logic depends on it yet — it's a tag for future filtering/UI.
+**Runtime:** Written to `BuildingDataImpl.category`, exposed via `BuildingData.getCategory()`. `category=government` is functional — it marks the building as the colony's townhall (colony linkage in `ColonyApiImpl`, starter-inventory resolution in `ColonyCommand`/`StressTestCommand`, and client guidance in `WandscapePanelState`).
 
 ### 2.4 `block_id` (string, default: `""`)
 
@@ -277,9 +278,9 @@ JSON File (data/wandscape/buildings/<id>.json)
 
 ## 5. Existing Buildings
 
-### 5.1 Town Hall (`town_hall.json`)
+### 5.1 Town Hall (`townhall1.json`)
 
-- **Category:** basic
+- **Category:** government
 - **Pattern:** 12 blocks (8 floor + 4 pillars)
 - **Blocks:** stone_bricks floor, oak_log pillars
 - **Stats:** comfort=5, magic=3, wonder=2, maintenance=4

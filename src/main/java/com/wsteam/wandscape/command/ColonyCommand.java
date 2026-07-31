@@ -28,6 +28,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.event.ColonyCreatedEvent;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -94,10 +95,12 @@ public final class ColonyCommand {
         }
 
         // ── Step 1: load config ─────────────────────────────────────────────
-        BuildingConfig townHallConfig = BuildingConfigLoader.getInstance().get("town_hall");
+        BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()
+                .getByCategory(WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT);
         if (townHallConfig == null) {
             ctx.getSource().sendFailure(Component.literal(
-                    "[Wandscape] town_hall config not found"));
+                    "[Wandscape] no government building config found "
+                            + "(need a building JSON with category=government)"));
             return 0;
         }
 
@@ -179,7 +182,8 @@ public final class ColonyCommand {
                 "  NPC: builder at " + spawnPos.toShortString() + "\n" +
                 "  Inventory: " + starterItems.size() + " stacks (" + materialTypes + " types)\n" +
                 "  Radius: 256 blocks\n" +
-                "\nTip: use /wandscape fill town_hall 1 1 to queue construction"),
+                "\nTip: use /wandscape fill " + townHallConfig.id()
+                        + " 1 1 to queue construction"),
                 true);
 
         return Command.SINGLE_SUCCESS;

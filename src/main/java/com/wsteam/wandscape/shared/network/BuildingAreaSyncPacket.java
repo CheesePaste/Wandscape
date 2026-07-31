@@ -67,14 +67,15 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         int rotationSteps = building.getRotationSteps();
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(typeId);
+        String category = config != null ? config.category() : "";
         BuildingConfig.BoundaryBox raw = config != null ? config.boundary() : null;
         if (raw == null) {
-            return new BuildingEntry(anchor, typeId, rotationSteps,
+            return new BuildingEntry(anchor, typeId, category, rotationSteps,
                     false, 0, 0, 0, 0, 0, 0);
         }
         BuildingConfig.BoundaryBox boundary = rotationSteps != 0
                 ? BuildingRotation.rotateBoundary(raw, rotationSteps) : raw;
-        return new BuildingEntry(anchor, typeId, rotationSteps,
+        return new BuildingEntry(anchor, typeId, category, rotationSteps,
                 true,
                 boundary.min().x(), boundary.min().y(), boundary.min().z(),
                 boundary.max().x(), boundary.max().y(), boundary.max().z());
@@ -87,6 +88,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         for (BuildingEntry entry : pkt.buildings) {
             buf.writeBlockPos(entry.anchor());
             buf.writeUtf(entry.buildingTypeId());
+            buf.writeUtf(entry.category());
             buf.writeByte(entry.rotationSteps());
             buf.writeBoolean(entry.hasBoundary());
             if (entry.hasBoundary()) {
@@ -106,6 +108,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         for (int i = 0; i < count; i++) {
             BlockPos anchor = buf.readBlockPos();
             String typeId = buf.readUtf();
+            String category = buf.readUtf();
             int rotationSteps = buf.readByte();
             boolean hasBoundary = buf.readBoolean();
             int bMinX = 0, bMinY = 0, bMinZ = 0, bMaxX = 0, bMaxY = 0, bMaxZ = 0;
@@ -117,7 +120,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
                 bMaxY = buf.readVarInt();
                 bMaxZ = buf.readVarInt();
             }
-            entries.add(new BuildingEntry(anchor, typeId, rotationSteps,
+            entries.add(new BuildingEntry(anchor, typeId, category, rotationSteps,
                     hasBoundary, bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ));
         }
         return new BuildingAreaSyncPacket(entries);
@@ -125,7 +128,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
 
     // ── Data ──
 
-    public record BuildingEntry(BlockPos anchor, String buildingTypeId, int rotationSteps,
+    public record BuildingEntry(BlockPos anchor, String buildingTypeId, String category, int rotationSteps,
                                 boolean hasBoundary,
                                 int bMinX, int bMinY, int bMinZ,
                                 int bMaxX, int bMaxY, int bMaxZ) {}

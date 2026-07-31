@@ -3,6 +3,8 @@ package com.wsteam.wandscape.shared.registry;
 public final class WandscapeConstants {
     private WandscapeConstants() {}
 
+    public static final String BUILDING_CATEGORY_GOVERNMENT = "government";
+
     public static final int SCHEDULER_HEARTBEAT_TICKS = 40;
 
     public static final int DEFAULT_NPC_MAX_HEALTH = 40;
