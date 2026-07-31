@@ -46,6 +46,13 @@ public final class RoadRouter {
     private static final int MAX_GAP_Y = 3;
     private static final int NPC_MAX_Y_STEP = 1;
 
+    /**
+     * Max network-time multiplier vs direct before a walking NPC rejects the
+     * road detour. Items fly straight (1.5×), walkers can't cross terrain the
+     * direct way, so they tolerate a longer road path.
+     */
+    private static final double WALKER_ROUTE_FACTOR = 3.0;
+
     private RoadRouter() {}
 
     // ── Public API ────────────────────────────────────────────────
@@ -83,7 +90,7 @@ public final class RoadRouter {
     public static TransportRoute planNpc(@Nullable RoadNetwork network,
                                               @Nullable RoadBlobCache blobCache,
                                               PathPoint start, PathPoint end) {
-        TransportRoute route = plan(network, blobCache, start, end);
+        TransportRoute route = plan(network, blobCache, start, end, true);
         if (route.isEmpty()) return route;
 
         for (SplineLeg seg : route.legs()) {
@@ -124,6 +131,21 @@ public final class RoadRouter {
     public static TransportRoute plan(@Nullable RoadNetwork network,
                                            @Nullable RoadBlobCache blobCache,
                                            PathPoint start, PathPoint end) {
+        return plan(network, blobCache, start, end, false);
+    }
+
+    /**
+     * Plan a route with a configurable detour tolerance.
+     *
+     * @param walker {@code true} for walking entities — they can't cross terrain
+     *               the direct way, so the road network is preferred even when
+     *               it costs up to {@value #WALKER_ROUTE_FACTOR}× the direct time.
+     */
+    public static TransportRoute plan(@Nullable RoadNetwork network,
+                                           @Nullable RoadBlobCache blobCache,
+                                           PathPoint start, PathPoint end,
+                                           boolean walker) {
+        double routeFactor = walker ? WALKER_ROUTE_FACTOR : 1.5;
         // ── 0. Direct distance baseline ──
         int directDist = start.manhattanXZTo(end);
         int directTicks = directDist * TICKS_PER_BLOCK_OFF_ROAD;
@@ -173,9 +195,9 @@ public final class RoadRouter {
         // Smart early exit
         int estimatedTicks = (entryDist + exitDist) * TICKS_PER_BLOCK_OFF_ROAD
                 + roadDist * TICKS_PER_BLOCK_ON_ROAD;
-        if (estimatedTicks > directTicks * 1.5) {
-            Log.info(TAG, "  Estimated network time too high (%d ticks > %d * 1.5) → direct fly",
-                    estimatedTicks, directTicks);
+        if (estimatedTicks > directTicks * routeFactor) {
+            Log.info(TAG, "  Estimated network time too high (%d ticks > %d * %.1f) → direct fly",
+                    estimatedTicks, directTicks, routeFactor);
             return new TransportRoute(List.of());
         }
 

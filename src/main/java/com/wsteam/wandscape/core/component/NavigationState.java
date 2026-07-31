@@ -2,6 +2,7 @@ package com.wsteam.wandscape.core.component;
 
 import com.wsteam.wandscape.core.types.GridPos;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -46,6 +47,15 @@ public class NavigationState {
     public int lastCheckTick;
     public double lastCheckX, lastCheckZ;
 
+    /**
+     * Road-network waypoints for the current PATHFINDING request.
+     * Empty = direct vanilla navigation to {@link #target}.
+     */
+    public List<GridPos> waypoints = List.of();
+
+    /** Index of the next waypoint in {@link #waypoints} to walk to. */
+    public int waypointIndex;
+
     /** Reset to idle, clearing all state. */
     public void reset() {
         if (future != null && !future.isDone()) {
@@ -60,5 +70,7 @@ public class NavigationState {
         lastCheckTick = 0;
         lastCheckX = 0;
         lastCheckZ = 0;
+        waypoints = List.of();
+        waypointIndex = 0;
     }
 }
