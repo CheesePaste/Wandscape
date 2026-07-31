@@ -376,7 +376,7 @@ class BlueprintInterpreterTest {
                             "off",
                             List.of(new StepNode.PlaceStep(
                                     new ExprNode.Var("off"),
-                                    new ExprNode.LiteralString("minecraft:stone"), null, null))))));
+                                    new ExprNode.LiteralString("minecraft:stone"), null, null)))));
 
             Map<String, JsonElement> p = params();
             TaskSequence seq = interpreter.interpret(def, p);
@@ -398,7 +398,7 @@ class BlueprintInterpreterTest {
                             "off",  // shadows param "off"
                             List.of(new StepNode.PlaceStep(
                                     new ExprNode.Var("off"),
-                                    new ExprNode.LiteralString("minecraft:stone"), null, null))))));
+                                    new ExprNode.LiteralString("minecraft:stone"), null, null)))));
 
             Map<String, JsonElement> p = new HashMap<>();
             p.put("off", posArray(0, 64, 0));
@@ -626,7 +626,7 @@ class BlueprintInterpreterTest {
                                                     new ExprNode.Var("anchor"),
                                                     new ExprNode.Var("off")),
                                             new ExprNode.LiteralString("minecraft:air"),
-                                            null, null)),
+                                            null, null))),
                             // call place_structure
                             new StepNode.CallStep(
                                     new ExprNode.LiteralString("build:place_structure"),
