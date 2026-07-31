@@ -19,6 +19,7 @@ import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
+import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
@@ -176,7 +177,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         Map<String, String> params = op.params();
 
         switch (action) {
-            case "gather" -> executeGather(params, world, npcId);
+            case "gather" -> executeGather(op.target(), params, world, npcId);
             case "decompose" -> executeDecompose(params, world, npcId);
             case "synthesize" -> executeSynthesize(params, world, npcId);
             case "craft_wand" -> executeCraftWand(params, world, npcId);
@@ -185,25 +186,45 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
     }
 
-    private void executeGather(Map<String, String> params, World world, long npcId) {
+    private void executeGather(GridPos anchor, Map<String, String> params, World world, long npcId) {
         String element = params.getOrDefault("element", "wood");
         int amount = parseAmount(params);
 
-        ColonyResourceAccess resources = world.colonyResources;
-        if (resources == null) {
-            Log.warn(TAG, "block_interact gather: colonyResources is null, cannot inject {}", element);
+        ElementType elem;
+        try {
+            elem = ElementType.valueOf(element.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            Log.warn(TAG, "block_interact gather: unknown element {}", element);
             return;
         }
-        resources.addResource(new ResourceId(element), amount);
-        // addResource() now emits ResourceFulfilled internally via WarehouseManager
+
+        Level level = getNpcLevel(npcId);
+        if (level == null) return;
+
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) {
+            Log.warn(TAG, "block_interact gather: ColonyItemBank not available, cannot inject {}", element);
+            return;
+        }
+
+        // Resolve colony from the anchor position (the node building), not findStorageColony()
+        BlockPos pos = new BlockPos(anchor.x(), anchor.y(), anchor.z());
+        BuildingApi buildingApi = WandscapeApis.getBuildingApi();
+        BuildingData bd = buildingApi.getBuildingAt(pos);
+        UUID colonyId = (bd != null && bd.getColonyId() != null) ? bd.getColonyId() : new UUID(0, 0);
+
+        bank.addElement(colonyId, elem, amount);
+
+        // Notify listener to wake any AWAITING_RESOURCES tasks
+        world.taskPool.onResourceAdded(new ResourceId(element), amount);
 
         // ── Transport visualization: elements fly NPC → warehouse ──
         launchElementTransport(element, amount, world, npcId);
 
-        // Completion sparkle
         spawnCompletionParticles(npcId);
 
-        Log.info(TAG, "block_interact gather complete: {} x{} → colony warehouse", element, amount);
+        Log.info(TAG, "block_interact gather complete: {} x{} → colony {} warehouse ({} total)",
+                element, amount, colonyId.toString().substring(0, 8), bank.countElement(colonyId, elem));
     }
 
     // ── Production action implementations ──

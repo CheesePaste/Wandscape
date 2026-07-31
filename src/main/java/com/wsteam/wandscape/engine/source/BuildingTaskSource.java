@@ -2,22 +2,14 @@ package com.wsteam.wandscape.engine.source;
 
 import java.util.*;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.data.BuildingConfig.NodeConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.task.source.TaskSource;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-
-import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -68,10 +60,7 @@ public class BuildingTaskSource implements TaskSource {
             }
         }
 
-        // ── 2. Node auto-supply: enqueue gather work for idle node buildings ──
-        supplyNodeBuildings(api, btp);
-
-        // ── 3. Publish new work — only for buildings without a head task ──
+        // ── 2. Publish new work — only for buildings without a head task ──
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
@@ -117,64 +106,6 @@ public class BuildingTaskSource implements TaskSource {
         } catch (IllegalStateException e) {
             return null;
         }
-    }
-
-    /**
-     * For every idle node building (no current task, no queued work,
-     * operational), auto-enqueue a gather WorkItem.
-     */
-    private void supplyNodeBuildings(BuildingApi api, @javax.annotation.Nullable BuildingTaskPool btp) {
-        BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
-
-        // Buildings that already have queued work (will be published in step 3)
-        Set<UUID> hasWork = new HashSet<>(api.getBuildingsWithPendingWork(null));
-        Log.debug(TAG, "[TaskSrc] node supply scan: {} buildings already have pending work", hasWork.size());
-
-        List<UUID> nodeBuildings = api.getBuildingsByCategory(null, "node");
-        Log.debug(TAG, "[TaskSrc] node supply: found {} node buildings total", nodeBuildings.size());
-
-        for (UUID buildingId : nodeBuildings) {
-            // Already has queued work → skip
-            if (hasWork.contains(buildingId)) continue;
-            // Already running a task → skip
-            if (api.isBuildingOccupied(buildingId)) continue;
-            // Already has a head in building task pool → skip
-            if (btp != null && btp.hasHead(buildingId)) continue;
-
-            BuildingData bd = api.getBuilding(buildingId);
-            if (bd == null || bd.isShutdown() || !bd.isStructureIntact()) continue;
-
-            BuildingConfig config = configLoader.get(bd.getBuildingTypeId());
-            if (config == null) continue;
-
-            NodeConfig nodeConfig = config.nodeConfig();
-            if (nodeConfig == null) continue;
-
-            // Build WorkItem params
-            Map<String, JsonElement> params = new LinkedHashMap<>();
-            BlockPos pos = bd.getPosition();
-            params.put("anchor", posToJsonArray(pos));
-            params.put("element", new JsonPrimitive(nodeConfig.element()));
-            params.put("amount", new JsonPrimitive(nodeConfig.amountPerHarvest()));
-            params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
-            params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
-
-            WorkItem work = new WorkItem(nodeConfig.blueprint(), params, 15);
-            api.enqueueWork(buildingId, work);
-            Log.info(TAG, "[BuildingTaskSource] node supply: {} → {} x{} ({}t, {} mana)",
-                    buildingId.toString().substring(0, 8),
-                    nodeConfig.element(), nodeConfig.amountPerHarvest(),
-                    nodeConfig.channelTicks(), nodeConfig.manaCost());
-        }
-    }
-
-    /** Convert a BlockPos to a JSON array [x, y, z] for blueprint params. */
-    private static com.google.gson.JsonArray posToJsonArray(BlockPos pos) {
-        com.google.gson.JsonArray arr = new com.google.gson.JsonArray();
-        arr.add(pos.getX());
-        arr.add(pos.getY());
-        arr.add(pos.getZ());
-        return arr;
     }
 
     /** Convert engine long task id to a UUID for BuildingApi tracking. */

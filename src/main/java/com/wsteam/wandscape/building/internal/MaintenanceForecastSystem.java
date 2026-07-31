@@ -2,9 +2,11 @@ package com.wsteam.wandscape.building.internal;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.google.gson.JsonElement;
@@ -40,10 +42,15 @@ import com.wsteam.wandscape.shared.log.Log;
 public final class MaintenanceForecastSystem {
     private static final String TAG = "MaintenanceForecastSystem";
 
-    /** Priority for forecast-triggered gather tasks (higher than normal node supply at 15). */
-    private static final int FORECAST_GATHER_PRIORITY = 55;
+    /** Priority for forecast-triggered gather tasks. 49 stays below the auto-approve threshold (50),
+     * matching the repair task precedent — forecast tasks must not get stuck in PENDING_APPROVAL. */
+    private static final int FORECAST_GATHER_PRIORITY = 49;
+
+    /** Cooldown between repeated "no node for element" warnings (60 seconds of wall-clock time). */
+    private static final long NO_NODE_WARN_COOLDOWN_MS = 60_000;
 
     private int tickCounter;
+    private final Map<String, Long> lastNoNodeWarning = new HashMap<>();
 
     private MaintenanceForecastSystem() {}
 
@@ -144,6 +151,7 @@ public final class MaintenanceForecastSystem {
     private void enqueueGatherTasks(BuildingApi buildingApi, BuildingConfigLoader configLoader,
                                      UUID colonyId, Map<ElementType, Long> shortfall) {
         List<UUID> nodeBuildings = buildingApi.getBuildingsByCategory(colonyId, "node");
+        Set<ElementType> matched = new HashSet<>();
 
         for (UUID buildingId : nodeBuildings) {
             var bd = buildingApi.getBuilding(buildingId);
@@ -168,7 +176,7 @@ public final class MaintenanceForecastSystem {
             if (buildingApi.isBuildingOccupied(buildingId)) continue;
             if (!buildingApi.getQueue(buildingId).isEmpty()) continue;
 
-            // Build WorkItem (mirrors BuildingTaskSource.supplyNodeBuildings)
+            // Build WorkItem
             Map<String, JsonElement> params = new LinkedHashMap<>();
             BlockPos pos = bd.getPosition();
             params.put("anchor", posToJsonArray(pos));
@@ -180,9 +188,25 @@ public final class MaintenanceForecastSystem {
             WorkItem work = new WorkItem(nodeConfig.blueprint(), params,
                     FORECAST_GATHER_PRIORITY);
             buildingApi.enqueueWork(buildingId, work);
+            matched.add(producedElement);
 
             Log.info(TAG, "[Forecast] Enqueued high-priority gather on {} for {} (shortfall: {})",
                     buildingId.toString().substring(0, 8), producedElement, shortfall.get(producedElement));
+        }
+
+        // Warn once per cooldown period for elements with no matching node
+        for (var entry : shortfall.entrySet()) {
+            ElementType element = entry.getKey();
+            if (matched.contains(element)) continue;
+
+            String cacheKey = colonyId + ":" + element.name();
+            long now = System.currentTimeMillis();
+            long last = lastNoNodeWarning.getOrDefault(cacheKey, 0L);
+            if (now - last < NO_NODE_WARN_COOLDOWN_MS) continue;
+            lastNoNodeWarning.put(cacheKey, now);
+
+            Log.warn(TAG, "[Forecast] No node building produces {} for colony {} — shortfall {} cannot be auto-resolved",
+                    element, colonyId.toString().substring(0, 8), entry.getValue());
         }
     }
 
