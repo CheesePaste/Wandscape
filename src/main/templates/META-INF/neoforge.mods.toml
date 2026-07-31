@@ -33,20 +33,26 @@ displayName="${mod_name}" #mandatory
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
 
 # A URL for the "homepage" for this mod, displayed in the mod UI
-#displayURL="https://change.me.to.your.mods.homepage.example.invalid/" #optional
+displayURL="https://github.com/CheesePaste/Wandscape" #optional
 
 # A file name (in the root of the mod JAR) containing a logo for display
-#logoFile="examplemod.png" #optional
+logoFile="logo.png" #optional
 
 # A text field displayed in the mod UI
-#credits="" #optional
+credits="WandscapeDevTeam —— 感谢每一位测试玩家与贡献者的反馈与支持。" #optional
 
 # The authors of the mod, displayed in the mod UI (optional)
-#authors=""
+authors="WandscapeDevTeam"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-Example mod description.
+Wandscape —— 魔法殖民地自动化与模拟经营模组。
+
+指挥 NPC 法师挥舞法杖，发射彩色光束建造建筑、采集元素、合成物品、执行仪式，从零发展一座自运转的魔法殖民地。全部工作由全局任务池驱动，物资抽象为 7 种元素（地/木/水 → 火/铁/风 → 暗）。
+
+殖民地走上正轨后，游客沿道路入城：商店进货售卖回笼元素、服务建筑与宾馆接待过夜、装饰建筑范围辐射加成、奇观建筑改写全局规则，维护费与分级停摆构成完整的经济闭环。
+
+配置全部由 JSON 数据驱动，/reload 热重载，不修改原版行为。
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
