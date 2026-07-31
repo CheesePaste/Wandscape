@@ -342,8 +342,6 @@ public class TouristMoveGoal extends Goal {
             if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
             if (tpTarget != null) {
                 Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
-                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
-                if (ground != null) tpTarget = ground;
                 tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
                 noMoveTicks = 0;
             } else {
@@ -395,8 +393,9 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        BlockPos ground = findGround(target.getX(), target.getY(), target.getZ());
-        if (ground != null) target = ground;
+        // interactPoint is already a walkable spot (spiral-scanned for air-above-solid);
+        // do NOT re-derive ground via findGround — it scans from Y+5 downward and can
+        // land on the roof/shelf above the interaction floor.
 
         // Arrival check: if interact_zones exist, check AABB containment (Y ±2 for entity height);
         // otherwise fall back to distance check
@@ -486,8 +485,6 @@ public class TouristMoveGoal extends Goal {
         BlockPos target = interactPoint;
         if (target == null) target = tourist.getCommuteTarget();
         if (target != null) {
-            BlockPos ground = findGround(target.getX(), target.getY(), target.getZ());
-            if (ground != null) target = ground;
             tourist.getNavigation().moveTo(
                     target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
             Log.debug(TAG, "[Tourist] {} switching to indoor micro-nav → {}",
