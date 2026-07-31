@@ -47,12 +47,26 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
             return;
         }
 
+        int comfort = state.getComfort();
+        int magic = state.getMagic();
+        int wonder = state.getWonder();
+
+        // For shops, add in-stock goods bonuses so the V panel reflects effective values
+        if ("shop".equals(state.getCategory())) {
+            var stockMgr = com.wsteam.wandscape.building.internal.ShopStockManager.getActive();
+            if (stockMgr != null) {
+                comfort += stockMgr.getGoodsBonusComfort(state.getBuildingId());
+                magic += stockMgr.getGoodsBonusMagic(state.getBuildingId());
+                wonder += stockMgr.getGoodsBonusWonder(state.getBuildingId());
+            }
+        }
+
         List<WorkItem> queueSnapshot = new ArrayList<>(state.getTaskQueue());
         var response = new BuildingDebugResponsePacket(
                 state.getBuildingId(), state.getBuildingTypeId(), state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
                 state.isStructureIntact(), state.isShutdown(),
-                state.getComfort(), state.getMagic(), state.getWonder(),
+                comfort, magic, wonder,
                 state.getQueueCapacity(),
                 queueSnapshot, state.getCurrentTaskId()
         );
