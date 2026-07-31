@@ -378,12 +378,17 @@ public final class OverviewFlightController {
             if (config == null || config.boundary() == null) continue;
 
             BlockPos anchor = entry.anchor();
+            int rotationSteps = entry.rotationSteps();
+            BuildingConfig.BoundaryBox boundary = config.boundary();
+            if (rotationSteps != 0) {
+                boundary = com.wsteam.wandscape.projection.BuildingRotation.rotateBoundary(boundary, rotationSteps);
+            }
             int x = pos.getX(), y = pos.getY(), z = pos.getZ();
             int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
 
-            if (x >= ax + config.boundary().min().x() && x <= ax + config.boundary().max().x()
-                    && y >= ay + config.boundary().min().y() && y <= ay + config.boundary().max().y()
-                    && z >= az + config.boundary().min().z() && z <= az + config.boundary().max().z()) {
+            if (x >= ax + boundary.min().x() && x <= ax + boundary.max().x()
+                    && y >= ay + boundary.min().y() && y <= ay + boundary.max().y()
+                    && z >= az + boundary.min().z() && z <= az + boundary.max().z()) {
                 // Generate a deterministic UUID from position combination
                 return UUID.nameUUIDFromBytes((
                         entry.buildingTypeId() + "@" + anchor).getBytes());

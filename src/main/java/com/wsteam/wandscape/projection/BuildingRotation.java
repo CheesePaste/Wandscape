@@ -6,7 +6,6 @@ import java.util.Map;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 
-import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Rotation;
@@ -85,12 +84,8 @@ public final class BuildingRotation {
             }
         }
 
-        // Apply rotation step by step.
-        // MC's BlockState.rotate() only handles FACING; for stairs and similar
-        // blocks the SHAPE left/right must also be swapped on 90° / 270° turns.
         for (int i = 0; i < steps; i++) {
-            state = state.rotate(Rotation.COUNTERCLOCKWISE_90);
-            state = swapShapeLeftRight(state);
+            state = state.rotate(Rotation.CLOCKWISE_90);
         }
 
         return blockStateToString(state);
@@ -176,32 +171,6 @@ public final class BuildingRotation {
             result.add(rotateOffset(off, steps));
         }
         return java.util.Collections.unmodifiableList(result);
-    }
-
-    /**
-     * MC's {@link BlockState#rotate(Rotation)} only updates FACING, not SHAPE.
-     * For stairs (and any block with a left/right shape property), a 90° CCW
-     * turn must swap _left ↔ _right so the geometry stays correct.
-     */
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static BlockState swapShapeLeftRight(BlockState state) {
-        Property shapeProp = (Property) state.getBlock().getStateDefinition().getProperty("shape");
-        if (shapeProp == null) return state;
-        Object val = state.getValue(shapeProp);
-        if (val == null) return state;
-        String s = val.toString();
-        String swapped = null;
-        if (s.endsWith("_left")) {
-            swapped = s.substring(0, s.length() - 5) + "_right";
-        } else if (s.endsWith("_right")) {
-            swapped = s.substring(0, s.length() - 6) + "_left";
-        }
-        if (swapped == null) return state;
-        java.util.Optional opt = shapeProp.getValue(swapped);
-        if (opt.isPresent()) {
-            return (BlockState) state.setValue(shapeProp, (Comparable) opt.get());
-        }
-        return state;
     }
 
     // ── Internal helpers ──

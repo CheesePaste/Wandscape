@@ -158,7 +158,7 @@ public final class ProjectionRenderer {
             BlockOffset rotatedOffset = BuildingRotation.rotateOffset(originalOffset, rotationSteps);
             BlockState rotatedState = originalState;
             for (int i = 0; i < rotationSteps; i++) {
-                rotatedState = rotatedState.rotate(Rotation.COUNTERCLOCKWISE_90);
+                rotatedState = rotatedState.rotate(Rotation.CLOCKWISE_90);
             }
 
             poseStack.pushPose();
