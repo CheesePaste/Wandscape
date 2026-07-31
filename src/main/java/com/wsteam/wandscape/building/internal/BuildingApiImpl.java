@@ -620,19 +620,17 @@ public class BuildingApiImpl implements BuildingApi {
             return PlacementResult.fail("Unknown building type: " + buildingTypeId);
         }
 
-        // Register (overlap check happens inside → BuildingSavedData.register)
-        boolean registered = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps);
-        if (!registered) {
+        // Register (overlap check happens inside → BuildingSavedData.register).
+        // The anchor is a reference point only (may sit outside the building's own
+        // boundary, e.g. scanner placed in front), so use the returned state
+        // directly instead of re-locating the building by position.
+        BuildingState state = EnqueueHelper.registerIfAbsent(anchor, config, buildingTypeId, rotationSteps);
+        if (state == null) {
             return PlacementResult.fail("Cannot place here — overlaps with an existing building");
         }
 
-        BuildingData data = getBuildingAt(anchor);
-        if (data == null) {
-            return PlacementResult.fail("Building registered but position lookup failed");
-        }
-
-        UUID colonyId = data.getColonyId();
-        UUID buildingId = data.getBuildingId();
+        UUID colonyId = state.getColonyId();
+        UUID buildingId = state.getBuildingId();
         BuildingSavedData sd = getSavedData();
 
         boolean firstFree = config.firstFree()

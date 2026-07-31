@@ -52,9 +52,11 @@ public final class EnqueueHelper {
      * @param pos            the anchor position
      * @param config         the building config
      * @param buildingTypeId building type identifier
-     * @return true if newly registered, false if already registered
+     * @return the newly registered {@link BuildingState}, or null if the position was
+     *         already occupied or the building overlaps an existing one
      */
-    public static boolean registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId) {
+    @Nullable
+    public static BuildingState registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId) {
         return registerIfAbsent(pos, config, buildingTypeId, 0);
     }
 
@@ -65,13 +67,15 @@ public final class EnqueueHelper {
      * @param config         the building config
      * @param buildingTypeId building type identifier
      * @param rotationSteps  number of 90° CCW rotations (0-3)
-     * @return true if newly registered, false if already registered
+     * @return the newly registered {@link BuildingState}, or null if the position was
+     *         already occupied or the building overlaps an existing one
      */
-    public static boolean registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps) {
+    @Nullable
+    public static BuildingState registerIfAbsent(BlockPos pos, BuildingConfig config, String buildingTypeId, int rotationSteps) {
         try {
             BuildingApi api = WandscapeApis.getBuildingApi();
             if (api.getBuildingAt(pos) != null) {
-                return false;
+                return null;
             }
 
             UUID buildingId = UUID.randomUUID();
@@ -110,11 +114,11 @@ public final class EnqueueHelper {
                 }
             }
 
-            return true;
+            return state;
         } catch (IllegalStateException e) {
-            return false;
+            return null;
         } catch (BuildingOverlapException e) {
-            return false;
+            return null;
         }
     }
 
