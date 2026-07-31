@@ -1033,9 +1033,9 @@
     }
   },
   "queue": {
-    "capacity": 5,
+    "capacity": 60,
     "task_types": [
-      "building"
+      "crafting"
     ]
   },
   "unlock_requirement": {
