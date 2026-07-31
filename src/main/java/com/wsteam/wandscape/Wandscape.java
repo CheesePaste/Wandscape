@@ -62,6 +62,7 @@ import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
 import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.road.network.DestroyFillPacket;
+import com.wsteam.wandscape.road.network.FillBoxPacket;
 import com.wsteam.wandscape.road.network.RoadPlacePacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
@@ -375,6 +376,10 @@ public class Wandscape {
                         DestroyFillPacket.TYPE,
                         DestroyFillPacket.STREAM_CODEC,
                         (packet, ctx) -> DestroyFillPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        FillBoxPacket.TYPE,
+                        FillBoxPacket.STREAM_CODEC,
+                        (packet, ctx) -> FillBoxPacket.handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         RequestProductionTaskPacket.TYPE,
                         RequestProductionTaskPacket.STREAM_CODEC,
