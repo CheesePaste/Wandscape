@@ -5,10 +5,12 @@ import java.util.List;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.tourist.internal.TouristState;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 /**
  * Tourist info screen.
@@ -19,7 +21,7 @@ import net.minecraft.network.chat.Component;
 public class TouristScreen extends MedievalScreen {
 
     private static final int PW = 280;
-    private static final int PH = 248;
+    private static final int PH = 280;
 
     private final int entityId;
     private String touristName;
@@ -27,6 +29,11 @@ public class TouristScreen extends MedievalScreen {
     private int satisfaction;
     private int level;
     private List<TouristDataPacket.VisitEntry> recentVisits;
+    private String currentState;
+    private String targetBuildingName;
+    private String targetBuildingType;
+    private BlockPos targetPos;
+    private int cooldownRemainingTicks;
 
     public TouristScreen(TouristDataPacket packet) {
         super(Component.literal("Tourist Info"), PW, PH);
@@ -40,6 +47,11 @@ public class TouristScreen extends MedievalScreen {
         this.satisfaction = packet.satisfaction();
         this.level = packet.level();
         this.recentVisits = packet.recentVisits();
+        this.currentState = packet.currentState();
+        this.targetBuildingName = packet.targetBuildingName();
+        this.targetBuildingType = packet.targetBuildingType();
+        this.targetPos = packet.targetPos();
+        this.cooldownRemainingTicks = packet.cooldownRemainingTicks();
         setTitleBar(touristName);
     }
 
@@ -88,8 +100,24 @@ public class TouristScreen extends MedievalScreen {
         g.drawString(font, "等级:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(level), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
 
+        // ── Debug: state / target / position / cooldown ──
+        int dbgLabelW = 36;
+        int dbgY = statY + 12;
+        g.drawString(font, "状态:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, formatState(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
+        dbgY += 10;
+        g.drawString(font, "目标:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, formatTarget(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
+        dbgY += 10;
+        g.drawString(font, "位置:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, formatPos(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_MUTED);
+        dbgY += 10;
+        g.drawString(font, "冷却:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, formatCooldown(), leftCol + dbgLabelW, dbgY,
+                cooldownRemainingTicks > 0 ? MedievalColors.INFO_BLUE : MedievalColors.TEXT_MUTED);
+
         // ── Visits ──
-        int visitsTop = contentTop + 74;
+        int visitsTop = contentTop + 102;
         g.drawString(font, "行程", leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
         g.fill(leftCol, visitsTop + 10, leftPos + PW - 12, visitsTop + 11, MedievalColors.BORDER_GOLD_DARK);
 
@@ -119,6 +147,36 @@ public class TouristScreen extends MedievalScreen {
 
     private static String formatDelta(int delta) {
         return delta >= 0 ? "+" + delta : String.valueOf(delta);
+    }
+
+    /** Debug: state display name plus raw enum name. */
+    private String formatState() {
+        try {
+            TouristState st = TouristState.valueOf(currentState);
+            return st.getDisplayName() + " (" + currentState + ")";
+        } catch (IllegalArgumentException ignored) {
+            return currentState;
+        }
+    }
+
+    /** Debug: building display name with config type id. */
+    private String formatTarget() {
+        if (targetBuildingName.isEmpty()) return "—";
+        return targetBuildingType.isEmpty()
+                ? targetBuildingName
+                : targetBuildingName + " [" + targetBuildingType + "]";
+    }
+
+    /** Debug: navigation destination block position. */
+    private String formatPos() {
+        if (targetPos == null) return "—";
+        return "(" + targetPos.getX() + ", " + targetPos.getY() + ", " + targetPos.getZ() + ")";
+    }
+
+    /** Debug: remaining rest cooldown in ticks and seconds. */
+    private String formatCooldown() {
+        if (cooldownRemainingTicks <= 0) return "无";
+        return cooldownRemainingTicks + "t (" + String.format("%.1fs", cooldownRemainingTicks / 20.0) + ")";
     }
 
     /** Draw a compact stat bar. */
