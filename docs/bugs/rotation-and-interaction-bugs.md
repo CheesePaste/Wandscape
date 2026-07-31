@@ -12,64 +12,9 @@
 
 ### 现象
 
-- V 面板打开 + B 键开启区域显示后，旋转后的建筑不显示绿色边界线框（白框）
+- V 面板打开，准心碰到建筑不显示白色边界线框
 - 右键点击建筑无法打开市政厅 GUI
-
-### 根因
-
-#### 1a. 边界框渲染用了未旋转的 config.boundary()
-
-**文件**: `BuildingAreaRenderer.java:90-91`
-
-```java
-BuildingConfig.BoundaryBox boundary = config.boundary();  // ← 永远返回 JSON 中的原始值
-float bx0 = anchor.getX() + boundary.min().x();           // ← 未旋转的偏移
-```
-
-`config.boundary()` 是 JSON 加载的 BuildingConfig 不可变字段，**从不被修改**。当建筑旋转后，渲染器仍然在**未旋转**的位置画框。
-如果 rotatedBoundary 将 (0,0,0)→(5,3,10) 变为 (0,0,0)→(10,3,5)，画框时的坐标仍然是 (0,0,0)→(5,3,10)，与实际建筑位置完全不符。
-
-同样，`interact_aabb` 橙框（line 99-107）也使用 `config.interactAabb()`（未旋转），橙框也画在错误位置。
-
-#### 1b. 建筑注册时 posIndex 存入了未旋转的 pattern 位置
-
-**文件**: `EnqueueHelper.java:79-107` + `BuildingSavedData.java:440-476`
-
-注册流程：
-1. `registerIfAbsent` 创建 `BuildingState`（bounds=旋转后正确）
-2. 调用 `api.registerBuilding(state)` → `sd.register(state, config)`
-3. `sd.register()` 使用 `config.pattern()`（**未旋转**）填充 `posIndex`
-4. `registerIfAbsent` 返回后**覆盖** `state.setPatternPositions()` 为旋转后
-5. **但 `posIndex` 不会被更新** → 始终持有未旋转的坐标
-
-这意味着 `getBuildingIdAt(pos)` 的快速路径（posIndex 查找）对于旋转建筑的方块位置永远 miss。
-
-#### 1c. getBuildingIdInInteractionZone 跳过了非 intact 的建筑
-
-**文件**: `BuildingSavedData.java:204-218`
-
-```java
-public UUID getBuildingIdInInteractionZone(BlockPos pos) {
-    ...
-    if (state == null || state.isShutdown() || !state.isStructureIntact()) continue;
-    ...
-}
-```
-
-当建筑被标记为 BROKEN（见 Bug 3），这个方法直接跳过它，右键交互被完全阻断。
-
-#### 1d. 右键交互的两阶段查找都可能失败
-
-`onRightClickBlock` 的流程：
-1. `data.getBuildingAt(pos)` → `getBuildingIdAt(pos)`:
-   - posIndex miss（存了未旋转坐标）
-   - chunkIndex fallback 检查 `state.getBounds().isInside(pos)` → 如果 bounds 旋转正确，此路径**可能**工作
-2. 如果 #1 失败，`getBuildingIdInInteractionZone(pos)` → 因为 `structureIntact=false` 被跳过
-
-最终结果：旋转后建筑的右键交互**大部分情况下失败**。
-
----
-
+这里是0旋转，状态完好的建筑，和旋转无关，其他建筑正常
 ## Bug 2: V 面板侧边栏模式图标不会变色（不显示当前激活模式）
 
 ### 现象
@@ -161,14 +106,14 @@ static void enqueueRepairForOffsets(BuildingState state, BuildingConfig config,
 ✅ blocks    → rotateBlockMappingJson()
 ✅ blocks_nbt → rotateBlockNbtJson()
 ✅ clear_offsets → rotateOffsetsJson()
-❌ interact_aabb → 未处理！
+❌ tourist_interact_aabb → 未处理！
 ❌ door_offset   → 未处理！
 ```
 
-`interact_aabb` 和 `door_offset` 完全未参与旋转，导致：
-- `BuildingSavedData.getInteractPoint()` (line 251) 用 `config.interactAabb()` 原始值 → NPC 交互点计算在错误的世界坐标
+`tourist_interact_aabb` 和 `door_offset` 完全未参与旋转，导致：
+- `BuildingSavedData.getTouristInteractPoint()` (line 251) 用 `config.touristInteractAabb()` 原始值 → NPC 交互点计算在错误的世界坐标
 - `BuildingSavedData.getEntryPoint()` (line 290) 用 `config.doorOffset()` 原始值 → 游客入口在错误位置
-- `BuildingAreaRenderer` (line 99) 用 `config.interactAabb()` 原始值 → 橙色交互框画在错误位置
+- `BuildingAreaRenderer` (line 99) 用 `config.touristInteractAabb()` 原始值 → 橙色交互框画在错误位置
 
 #### 3d. demolishBuilding 未旋转 offsets
 
@@ -270,7 +215,7 @@ if ("government".equals(bd.getCategory())
 建筑旋转放置
   ↓
 buildWorkItem() 旋转了 offsets/blocks ✅
-  └─ interact_aabb/door_offset 未旋转 ❌  [Bug 3c]
+  └─ tourist_interact_aabb/door_offset 未旋转 ❌  [Bug 3c]
   └─ demolishBuilding 未旋转 offsets ❌   [Bug 3d]
   ↓
 NPC 在旋转后位置正确建好了方块 ✅
@@ -279,13 +224,6 @@ build_complete 事件
   ↓
 findDamagedBlocks() 用未旋转 pattern 验证 ❌  [Bug 3a]
   → 所有方块报为 damaged → building BROKEN
-  ↓
-structureIntact = false
-  ↓
-├─ getBuildingIdInInteractionZone() 跳过建筑 → 右键交互失败 [Bug 1c]
-├─ 维修 enqueueRepairForOffsets() 用未旋转数据覆盖 → 进一步破坏 [Bug 3b]
-├─ ColonySavedData 迁移跳过 broken 建筑 → colonyId 为 null [Bug 5a]
-└─ BuildingAreaRenderer 用未旋转 boundary 渲染 → 白框错位 [Bug 1a]
 ```
 
 ---
@@ -299,7 +237,7 @@ structureIntact = false
 确保旋转后的所有数据路径都使用旋转后的坐标和数据：
 
 - **posIndex 修复**: `registerIfAbsent` 在覆盖 patternPositions 后，需要同步更新 `BuildingSavedData.posIndex`
-- **interact_aabb 旋转**: `buildWorkItem` 添加 `interact_aabb` 的旋转（类似 `rotateBlockMappingJson` 的做法），
+- **tourist_interact_aabb 旋转**: `buildWorkItem` 添加 `tourist_interact_aabb` 的旋转（类似 `rotateBlockMappingJson` 的做法），
   同时 `BuildingAreaRenderer` 和 `BuildingSavedData.getInteractPoint` 需要获取旋转后的 aabb
 - **door_offset 旋转**: `buildWorkItem` 传递旋转后的 door offset 给 blueprint params，
   或 `BuildingSavedData.getEntryPoint` 在运行时根据 rotationSteps 旋转
