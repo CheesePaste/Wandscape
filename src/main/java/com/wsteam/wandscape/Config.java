@@ -237,12 +237,6 @@ public class Config {
                      "Micro-navigation supports opening doors and walking around furniture.")
             .defineInRange("tourist.microNavSwitchDistance", 5, 2, 16);
 
-    public static final ModConfigSpec.IntValue SERVICE_COOLDOWN_TICKS = BUILDER
-            .comment("Rest cooldown in ticks after a tourist interacts with a shop or service building. " +
-                     "During this period the tourist wanders or visits POIs and cannot interact with " +
-                     "any building; the same building is also blocked until it expires.")
-            .defineInRange("service.cooldownTicks", 1200, 1200, 72000);
-
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SATISFACTION_THRESHOLD = BUILDER
             .comment("Per-level three-value threshold. A building's three-value sum must be "
                     + ">= tourist.level × this to grant any satisfaction. Below = 0 gain.")

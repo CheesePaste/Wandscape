@@ -85,8 +85,6 @@ public class TouristMoveGoal extends Goal {
     // ── Building-visit state ──
     private int idleTicks;
     private static final int POST_TOUR_IDLE_TICKS = 200;
-    /** Remaining ticks of standing-still interaction before effects trigger. */
-    private int interactionRemainingTicks;
 
     // ── POI state ──
     private int poiPauseTicks;
@@ -343,31 +341,26 @@ public class TouristMoveGoal extends Goal {
         BlockPos pos = tourist.blockPosition();
 
         // ── Real stuck detection & hard fallback ──
-        // Skip while the interaction countdown is running: the tourist stands
-        // still deliberately during the interaction, so it is not "stuck", and
-        // running the counter here would starve the countdown / lock the fallback.
-        if (interactionRemainingTicks <= 0) {
-            totalNavTicks++;
-            if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
-                noMoveTicks++;
-            } else {
-                noMoveTicks = 0;
-                lastPos = pos;
-            }
+        totalNavTicks++;
+        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+            noMoveTicks++;
+        } else {
+            noMoveTicks = 0;
+            lastPos = pos;
+        }
 
-            if (noMoveTicks > 100 || totalNavTicks > 400) {
-                BlockPos tpTarget = exitingPhase ? (entryPoint != null ? entryPoint : tourist.getCommuteTarget()) : interactPoint;
-                if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
-                if (tpTarget != null) {
-                    Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
-                    tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
-                    noMoveTicks = 0;
-                    totalNavTicks = 0;
-                } else {
-                    finishBuildingStop();
-                }
-                return;
+        if (noMoveTicks > 100 || totalNavTicks > 400) {
+            BlockPos tpTarget = exitingPhase ? (entryPoint != null ? entryPoint : tourist.getCommuteTarget()) : interactPoint;
+            if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
+            if (tpTarget != null) {
+                Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
+                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
+                noMoveTicks = 0;
+                totalNavTicks = 0;
+            } else {
+                finishBuildingStop();
             }
+            return;
         }
 
         if (exitingPhase) {
@@ -434,31 +427,12 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (arrived) {
-            // Arrived at interact point
+            // Arrived at interact point — perform the interaction immediately.
+            // Effects (satisfaction/energy/itinerary) are recorded now, and the
+            // building's interaction_duration doubles as the rest-cooldown: the
+            // tourist then wanders / visits POIs during that window.
             tourist.getNavigation().stop();
 
-            // Interaction duration phase: stand still before effects trigger
-            if (interactionRemainingTicks > 0) {
-                // Still counting down
-                interactionRemainingTicks--;
-                if (interactionRemainingTicks > 0) {
-                    return;
-                }
-                // Duration elapsed → perform interaction now
-            } else if (!exitingPhase) {
-                // First tick at arrival — check if this building has an interaction duration
-                UUID bldIdCheck = buildingId;
-                if (bldIdCheck != null) {
-                    int duration = getInteractionDuration(bldIdCheck);
-                    if (duration > 0) {
-                        interactionRemainingTicks = duration;
-                        showActionBar("⏳ " + tourist.getTouristName() + " 正在互动...");
-                        return;
-                    }
-                }
-            }
-
-            // Perform the interaction (either no duration, or duration just elapsed)
             boolean hotelStayed = performBuildingInteraction();
             if (hotelStayed) {
                 return; // Hotel check-in handled everything
@@ -621,7 +595,6 @@ public class TouristMoveGoal extends Goal {
         entryPoint = null;
         interactPoint = null;
         touristInteractZones = List.of();
-        interactionRemainingTicks = 0;
         syncDebugData();
 
         // Probability-based next mode
@@ -943,7 +916,6 @@ public class TouristMoveGoal extends Goal {
         entryPoint = null;
         interactPoint = null;
         touristInteractZones = List.of();
-        interactionRemainingTicks = 0;
         syncDebugData();
         tourist.getNavigation().stop();
         // Sync display state with actual movement
@@ -1152,11 +1124,12 @@ public class TouristMoveGoal extends Goal {
 
     /**
      * Apply the post-interaction rest cooldown after a successful building visit.
-     * Blocks the same building again (per-building) and forces a free-movement
-     * rest period (global, {@link Config#SERVICE_COOLDOWN_TICKS} ticks).
+     * The building's {@code interaction_duration_ticks} doubles as the cooldown
+     * length — after interacting, the tourist wanders / visits POIs for that
+     * window and cannot interact with any building until it expires.
      */
     private void applyInteractionCooldown(UUID buildingId) {
-        int cooldownTicks = Config.SERVICE_COOLDOWN_TICKS.get();
+        int cooldownTicks = getInteractionDuration(buildingId);
         if (cooldownTicks <= 0) return;
         int endTick = tourist.tickCount + cooldownTicks;
         tourist.setServiceCooldown(buildingId, endTick);

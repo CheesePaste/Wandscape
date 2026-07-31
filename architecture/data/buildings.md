@@ -104,6 +104,7 @@
 - `profit_rate`: 利润率。游客购物时殖民地获得 `元素成本 × (1 + profit_rate)` 的元素收入
 - 每日清晨从仓库扣元素补货到 maxStock。未售出货品次日清除
 - 商店建筑交互区半径由 `interaction_radius` 控制（建议 4-6），玩家/游客在范围内即可交互
+- `interaction_duration_ticks`: 可选，默认 0。游客在该店交互后的**冷却时长**（tick）。交互效果（满意度/精力/行程记录）在游客到达交互点立即落地，之后游客在该时长内自由闲逛/逛景点、不与其他建筑交互。0=无冷却
 - 商店 GUI：每种货物一行，含物品 ID、当前库存 (×cur/max)、拖动滑动条（0–64）、`[−]` `[+]` 按钮
 
 ## 服务建筑 (category: service)
@@ -125,6 +126,7 @@
 ```
 
 - `max_occupancy`: 最大同时入住数（仅宾馆需要，0=不限）。宾馆通过此字段判断空位
+- `interaction_duration_ticks`: 可选，默认 0。游客在该服务建筑交互后的**冷却时长**（tick），语义同商店的 `interaction_duration_ticks`
 
 ## 装饰建筑 (category: decoration)
 
