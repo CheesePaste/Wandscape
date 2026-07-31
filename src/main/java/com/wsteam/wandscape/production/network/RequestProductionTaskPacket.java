@@ -125,7 +125,7 @@ public record RequestProductionTaskPacket(
                 params.put("recipe_id", new JsonPrimitive(pkt.recipeOrItemId));
             }
             params.put("count", new JsonPrimitive(pkt.quantity));
-            params.put("channel_ticks", new JsonPrimitive(1200)); // 60s
+            params.put("channel_ticks", new JsonPrimitive(120)); // 6s
             params.put("mana_cost", new JsonPrimitive(5));
 
             WorkItem work = new WorkItem(blueprintId, params, 10);
