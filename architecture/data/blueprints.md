@@ -90,6 +90,7 @@
 - `build:place_structure` / `build:clear_and_build` — 建筑放置
 - `node:gather` — 节点采集
 - `road:build_segment` / `road:build_decoration` — 道路
+- `terrain:fill_box` — Road Fill 模式:填满两角包围的立方体（Replace 用 `road:build_segment`，Destroy/Fill 用 `terrain:flatten`）
 - `demo:tnt_platform` — 测试用
 - `production/decompose` / `synthesize` / `craft_wand` / `brew_potion` — 工作站配方
 
