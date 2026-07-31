@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
@@ -105,6 +106,7 @@ public final class BuildingInteractHandler {
             }
             case "workstation" -> openWorkstationGui(level, colonyId, player, pos);
             case "crafting_station" -> openCraftingStationGui(level, colonyId, player, pos);
+            case "node" -> openNodeGui(level, player, pos, state);
             case "shop" -> {
                 if (shopStockManager != null) {
                     shopStockManager.ensureStockInitialized(state.getBuildingId());
@@ -204,6 +206,24 @@ public final class BuildingInteractHandler {
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
         var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId);
         PacketDistributor.sendToPlayer(player, pkt);
+    }
+
+    private static void openNodeGui(Level level, ServerPlayer player,
+                                    net.minecraft.core.BlockPos pos, BuildingState state) {
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null || config.nodeConfig() == null) {
+            Log.warn(TAG, "[Node] building {} has no node_config", state.getBuildingTypeId());
+            player.displayClientMessage(Component.literal(
+                    "[Wandscape] " + state.getBuildingTypeId() + " — no node_config"), false);
+            return;
+        }
+        var nc = config.nodeConfig();
+        PacketDistributor.sendToPlayer(player,
+                new NodeDataPacket(pos, state.getBuildingTypeId(), nc.element(),
+                        nc.amountPerHarvest(), nc.channelTicks(), nc.manaCost()));
+        Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={} mana={}",
+                state.getBuildingTypeId(), pos, nc.element(),
+                nc.amountPerHarvest(), nc.channelTicks(), nc.manaCost());
     }
 
     private static void openCraftingStationGui(Level level, UUID colonyId,

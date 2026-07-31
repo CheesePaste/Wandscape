@@ -28,6 +28,8 @@
 
 **为什么 OverviewInteractPacket 不自己维护建筑交互分发？** 先前的修法是在 OverviewInteractPacket 中为 town_hall 加一个特判，但每新增一种 "typeId 判定" 的建筑类型就要在两个地方同步改。抽取 `BuildingInteractHandler.handleInteraction()` 统一分发，新增建筑只需改这一处。
 
+**为什么 node 右键 UI 复用 workstation 的包/Screen 模式而非自建交互区？** 工作站已经验证了「BuildingInteractHandler 发数据包 → 客户端打开 MedievalScreen → TaskQueuePanel 管理队列」的完整链路，node 与工作站同样靠建筑任务队列运行，直接复用最小成本。发布采集任务量化为"收获次数"滑条，合并为一个 WorkItem（amount/mana 按次数缩放），同工作站 decompose 的 count 合并方式。取消采集 = TaskQueueModifyPacket("delete")，queue 系统已原生支持 node:gather 条目，无需重复实现。
+
 ## 数据设计
 
 **block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。

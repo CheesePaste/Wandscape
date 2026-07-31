@@ -57,6 +57,8 @@ import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
+import com.wsteam.wandscape.building.network.NodeDataPacket;
+import com.wsteam.wandscape.building.network.RequestGatherTaskPacket;
 import com.wsteam.wandscape.warehouse.WarehouseManager;
 import com.wsteam.wandscape.warehouse.WarehouseNotificationHandler;
 import com.wsteam.wandscape.warehouse.network.WarehouseActionPacket;
@@ -388,6 +390,14 @@ public class Wandscape {
                         TaskQueueModifyPacket.TYPE,
                         TaskQueueModifyPacket.STREAM_CODEC,
                         TaskQueueModifyPacket::handleServer)
+                .playToClient(
+                        NodeDataPacket.TYPE,
+                        NodeDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> NodeDataPacket.handleClient(packet))
+                .playToServer(
+                        RequestGatherTaskPacket.TYPE,
+                        RequestGatherTaskPacket.STREAM_CODEC,
+                        RequestGatherTaskPacket::handleServer)
                 .playToServer(
                         WarehouseActionPacket.TYPE,
                         WarehouseActionPacket.STREAM_CODEC,

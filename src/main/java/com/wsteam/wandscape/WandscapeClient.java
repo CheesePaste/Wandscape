@@ -19,11 +19,13 @@ import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.client.HotelScreen;
+import com.wsteam.wandscape.building.client.NodeScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
 import com.wsteam.wandscape.building.scanner.client.BuildingScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
@@ -125,12 +127,24 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(ws);
             }
         });
+        NodeDataPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof NodeScreen ns) {
+                ns.updateData(packet);
+            } else {
+                var ns = new NodeScreen();
+                ns.updateData(packet);
+                Minecraft.getInstance().setScreen(ns);
+            }
+        });
         TaskQueueDataPacket.setClientHandler(packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof WorkstationScreen ws) {
                 ws.updateQueueData(packet);
             } else if (screen instanceof CraftingStationScreen cs) {
                 cs.updateQueueData(packet);
+            } else if (screen instanceof NodeScreen ns) {
+                ns.updateQueueData(packet);
             }
         });
         CraftingStationPacket.setClientHandler(packet -> {
