@@ -46,6 +46,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p>Usage:
  * <pre>
  *   /wandscape colony create <name> [x y z]
+ *   /wandscape colony destroy          — destroy the colony nearest the player
  * </pre>
  *
  * <p>Creates a colony with a new UUID, spawns a builder NPC, and fills
@@ -63,6 +64,8 @@ public final class ColonyCommand {
                 .then(Commands.literal("create")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(ColonyCommand::createColony)))
+                .then(Commands.literal("destroy")
+                        .executes(ColonyCommand::destroyColony))
                 .build();
     }
 
@@ -179,6 +182,29 @@ public final class ColonyCommand {
                 "\nTip: use /wandscape fill town_hall 1 1 to queue construction"),
                 true);
 
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** Destroy the colony nearest the executing player (within 256 blocks). */
+    private static int destroyColony(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayer();
+        if (player == null) {
+            ctx.getSource().sendFailure(Component.literal("[Wandscape] Player-only command"));
+            return 0;
+        }
+
+        ColonyApi colonyApi = ColonyApiImpl.get();
+        UUID colonyId = colonyApi.getColonyId(player.blockPosition());
+        if (colonyId == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "[Wandscape] No colony within 256 blocks of your position"));
+            return 0;
+        }
+
+        colonyApi.deleteColony(colonyId);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "[Wandscape] Colony " + colonyId.toString().substring(0, 8) + " destroyed"),
+                true);
         return Command.SINGLE_SUCCESS;
     }
 
