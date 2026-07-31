@@ -78,13 +78,17 @@ public final class RoadPlacementRenderer {
             renderBlockOutline(bufferSource, poseStack, endPos, 255, 40, 40);
         }
 
-        // Path preview (yellow rectangle across all surface blocks)
+        // Preview: FILL renders the full 3D cube; Replace/Destroy render the surface rectangle
         BlockPos ghostPos = RoadPlacementState.getGhostPos();
         BlockPos from = startPos;
         BlockPos to = (endPos != null) ? endPos : ghostPos;
 
         if (from != null && to != null) {
-            renderPathPreview(mc.level, bufferSource, poseStack, from, to);
+            if (RoadPlacementState.isFill()) {
+                renderBoxPreview(bufferSource, poseStack, from, to);
+            } else {
+                renderPathPreview(mc.level, bufferSource, poseStack, from, to);
+            }
         }
 
         poseStack.popPose();
@@ -125,6 +129,69 @@ public final class RoadPlacementRenderer {
                               int r, int g, int b) {
         vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, 255).setNormal(pose, 0, 1, 0);
         vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, 255).setNormal(pose, 0, 1, 0);
+    }
+
+    // ── 3D cube preview (Fill mode) ──
+
+    /**
+     * Renders the full 3D box between the two corner blocks: a bright yellow
+     * wireframe (12 edges) plus translucent faces, matching the server-side
+     * fill in {@code FillBoxPacket}.
+     */
+    private static void renderBoxPreview(MultiBufferSource bufferSource, PoseStack poseStack,
+                                         BlockPos from, BlockPos to) {
+        int minX = Math.min(from.getX(), to.getX());
+        int maxX = Math.max(from.getX(), to.getX());
+        int minY = Math.min(from.getY(), to.getY());
+        int maxY = Math.max(from.getY(), to.getY());
+        int minZ = Math.min(from.getZ(), to.getZ());
+        int maxZ = Math.max(from.getZ(), to.getZ());
+
+        float x1 = minX, y1 = minY, z1 = minZ;
+        float x2 = maxX + 1f, y2 = maxY + 1f, z2 = maxZ + 1f;
+
+        // Wireframe — 12 edges
+        VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+        var pose = poseStack.last();
+        // Bottom face (y1)
+        line(lineVc, pose, x1, y1, z1, x2, y1, z1, 255, 255, 80);
+        line(lineVc, pose, x2, y1, z1, x2, y1, z2, 255, 255, 80);
+        line(lineVc, pose, x2, y1, z2, x1, y1, z2, 255, 255, 80);
+        line(lineVc, pose, x1, y1, z2, x1, y1, z1, 255, 255, 80);
+        // Top face (y2)
+        line(lineVc, pose, x1, y2, z1, x2, y2, z1, 255, 255, 80);
+        line(lineVc, pose, x2, y2, z1, x2, y2, z2, 255, 255, 80);
+        line(lineVc, pose, x2, y2, z2, x1, y2, z2, 255, 255, 80);
+        line(lineVc, pose, x1, y2, z2, x1, y2, z1, 255, 255, 80);
+        // Vertical edges
+        line(lineVc, pose, x1, y1, z1, x1, y2, z1, 255, 255, 80);
+        line(lineVc, pose, x2, y1, z1, x2, y2, z1, 255, 255, 80);
+        line(lineVc, pose, x2, y1, z2, x2, y2, z2, 255, 255, 80);
+        line(lineVc, pose, x1, y1, z2, x1, y2, z2, 255, 255, 80);
+
+        // Translucent faces — 6 quads
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.translucent());
+        int light = 0xF000F0;
+        int alpha = 40;
+        quad(vc, pose, x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2, light, alpha); // bottom
+        quad(vc, pose, x1, y2, z1, x1, y2, z2, x2, y2, z2, x2, y2, z1, light, alpha); // top
+        quad(vc, pose, x1, y1, z1, x1, y2, z1, x1, y2, z2, x1, y1, z2, light, alpha); // -X
+        quad(vc, pose, x2, y1, z1, x2, y1, z2, x2, y2, z2, x2, y2, z1, light, alpha); // +X
+        quad(vc, pose, x1, y1, z1, x2, y1, z1, x2, y2, z1, x1, y2, z1, light, alpha); // -Z
+        quad(vc, pose, x1, y1, z2, x1, y2, z2, x2, y2, z2, x2, y1, z2, light, alpha); // +Z
+    }
+
+    /** Adds a single translucent quad (two triangles, 6 vertices). */
+    private static void quad(VertexConsumer vc, PoseStack.Pose pose,
+                             float x1, float y1, float z1, float x2, float y2, float z2,
+                             float x3, float y3, float z3, float x4, float y4, float z4,
+                             int light, int alpha) {
+        vc.addVertex(pose, x1, y1, z1).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x2, y2, z2).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x3, y3, z3).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x3, y3, z3).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x4, y4, z4).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
+        vc.addVertex(pose, x1, y1, z1).setColor(255, 255, 80, alpha).setUv(0, 0).setLight(light).setNormal(pose, 0, 1, 0);
     }
 
     // ── Rectangle area preview ──

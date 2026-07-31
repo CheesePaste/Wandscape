@@ -149,15 +149,19 @@ public final class WandscapePanelController {
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
                 && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
             
-            if (RoadPlacementOverlay.isDestroyFillClicked(mouseX, mouseY, screenW, screenH)) {
-                RoadPlacementState.setActiveTool(RoadPlacementState.ToolMode.DESTROY_FILL);
+            RoadPlacementState.ToolMode toolMode = RoadPlacementOverlay.getToolModeClicked(mouseX, mouseY, screenW, screenH);
+            if (toolMode != null) {
+                RoadPlacementState.setActiveTool(toolMode);
                 RoadPlacementState.enterPlacing();
                 WandscapePanelState.releaseCursorToGame();
                 if (mc.player != null) {
+                    String hint = switch (toolMode) {
+                        case FILL -> "[Fill] §aRight-click set corner 1, Left-click set corner 2, Enter to submit";
+                        case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
+                        default -> "[Road] §aRight-click set start, Left-click set end, Enter to submit";
+                    };
                     mc.player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal(
-                                    "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit"),
-                            true);
+                            net.minecraft.network.chat.Component.literal(hint), true);
                 }
                 event.setCanceled(true);
                 return;

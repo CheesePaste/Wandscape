@@ -102,26 +102,12 @@ public final class RoadPlacementOverlay {
         int btnW = 84;
         int btnH = 32;
 
-        // Button 1: Square Fill
-        boolean isSf = RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SQUARE_FILL;
-        boolean btn1Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= toolsStartY && my <= toolsStartY + btnH;
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, toolsStartY, btnW, btnH, isSf, btn1Hover);
-        if (isSf) {
-            g.fill(RenderType.guiOverlay(), toolsStartX, toolsStartY + btnH - 2, toolsStartX + btnW, toolsStartY + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
-        }
-        font.drawInBatch("Square Fill", toolsStartX + (btnW - font.width("Square Fill")) / 2f, toolsStartY + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
-                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
-
-        // Button 2: Destroy/Fill
-        int btn3Y = toolsStartY + btnH + 10;
-        boolean isDf = RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.DESTROY_FILL;
-        boolean btn3Hover = mx >= toolsStartX && mx <= toolsStartX + btnW && my >= btn3Y && my <= btn3Y + btnH;
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, toolsStartX, btn3Y, btnW, btnH, isDf, btn3Hover);
-        if (isDf) {
-            g.fill(RenderType.guiOverlay(), toolsStartX, btn3Y + btnH - 2, toolsStartX + btnW, btn3Y + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
-        }
-        font.drawInBatch("Destroy/Fill", toolsStartX + (btnW - font.width("Destroy/Fill")) / 2f, btn3Y + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
-                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
+        drawToolButton(g, font, toolsStartX, toolsStartY, btnW, btnH, mx, my,
+                "Replace", RoadPlacementState.ToolMode.REPLACE);
+        drawToolButton(g, font, toolsStartX, toolsStartY + btnH + 10, btnW, btnH, mx, my,
+                "Fill", RoadPlacementState.ToolMode.FILL);
+        drawToolButton(g, font, toolsStartX, toolsStartY + (btnH + 10) * 2, btnW, btnH, mx, my,
+                "Destroy/Fill", RoadPlacementState.ToolMode.DESTROY_FILL);
 
         // Flush backgrounds before 3D preview
         g.bufferSource().endBatch(RenderType.guiOverlay());
@@ -238,11 +224,15 @@ public final class RoadPlacementOverlay {
         return -1;
     }
 
-    public static boolean isDestroyFillClicked(double mx, double my, int screenW, int screenH) {
-        if (!RoadPlacementState.isProjecting()) return false;
+    /**
+     * Returns the tool mode whose button was clicked, or null.
+     * Buttons stacked top→bottom in order: Replace, Fill, Destroy/Fill.
+     */
+    public static RoadPlacementState.ToolMode getToolModeClicked(double mx, double my, int screenW, int screenH) {
+        if (!RoadPlacementState.isProjecting()) return null;
 
         List<RoadPreset> presets = RoadPlacementState.getPresets();
-        if (presets.isEmpty()) return false;
+        if (presets.isEmpty()) return null;
 
         int toolsWidth = 100;
         int toolsStartX = com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X;
@@ -254,8 +244,37 @@ public final class RoadPlacementOverlay {
         int panelY = screenH - panelH;
 
         int toolsStartY = panelY + GRID_PAD_TOP;
-        int btn3Y = toolsStartY + (32 + 10) * 2;
+        int btnW = 84;
+        int btnH = 32;
 
-        return mx >= toolsStartX && mx <= toolsStartX + 84 && my >= btn3Y && my <= btn3Y + 32;
+        if (mx < toolsStartX || mx > toolsStartX + btnW) return null;
+
+        RoadPlacementState.ToolMode[] order = {
+                RoadPlacementState.ToolMode.REPLACE,
+                RoadPlacementState.ToolMode.FILL,
+                RoadPlacementState.ToolMode.DESTROY_FILL
+        };
+        for (int i = 0; i < order.length; i++) {
+            int btnY = toolsStartY + i * (btnH + 10);
+            if (my >= btnY && my <= btnY + btnH) {
+                return order[i];
+            }
+        }
+        return null;
+    }
+
+    /** Renders a single tool-mode button with active/hover highlight. */
+    private static void drawToolButton(GuiGraphics g, Font font,
+                                        int x, int y, int btnW, int btnH,
+                                        double mx, double my,
+                                        String label, RoadPlacementState.ToolMode mode) {
+        boolean active = RoadPlacementState.getActiveTool() == mode;
+        boolean hovered = mx >= x && mx <= x + btnW && my >= y && my <= y + btnH;
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, btnW, btnH, active, hovered);
+        if (active) {
+            g.fill(RenderType.guiOverlay(), x, y + btnH - 2, x + btnW, y + btnH, 0, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_BORDER_ACTIVE);
+        }
+        font.drawInBatch(label, x + (btnW - font.width(label)) / 2f, y + 12, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL, false,
+                g.pose().last().pose(), g.bufferSource(), Font.DisplayMode.SEE_THROUGH, 0, FULL_BRIGHT);
     }
 }

@@ -3,6 +3,7 @@ package com.wsteam.wandscape.road.client;
 import org.lwjgl.glfw.GLFW;
 
 import com.wsteam.wandscape.road.network.DestroyFillPacket;
+import com.wsteam.wandscape.road.network.FillBoxPacket;
 import com.wsteam.wandscape.road.network.RoadPlacePacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
@@ -187,9 +188,8 @@ public final class RoadPlacementController {
         // PLAN_START or PLAN_END → set / overwrite endPos
         RoadPlacementState.setEndPos(ghostPos);
         if (mc.player != null) {
-            String tag = RoadPlacementState.isDestroyFill() ? "[Destroy/Fill]" : "[Road]";
             mc.player.displayClientMessage(
-                    Component.literal(tag + " §aEnd point set at " + ghostPos.toShortString()
+                    Component.literal(tag() + " §aEnd point set at " + ghostPos.toShortString()
                             + " §7— Enter to publish, right-click to clear, Backspace to undo end"), true);
         }
     }
@@ -217,9 +217,8 @@ public final class RoadPlacementController {
     private static void handleEnter(Minecraft mc) {
         if (!RoadPlacementState.isReady()) {
             if (mc.player != null) {
-                String tag = RoadPlacementState.isDestroyFill() ? "[Destroy/Fill]" : "[Road]";
                 mc.player.displayClientMessage(
-                        Component.literal(tag + " §eSet both start and end points first"), true);
+                        Component.literal(tag() + " §eSet both start and end points first"), true);
             }
             return;
         }
@@ -227,7 +226,16 @@ public final class RoadPlacementController {
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
 
-        if (RoadPlacementState.isDestroyFill()) {
+        if (RoadPlacementState.isFill()) {
+            String presetId = RoadPlacementState.getSelectedPreset().id();
+            PacketDistributor.sendToServer(new FillBoxPacket(presetId, start, end));
+            Log.info(TAG, "[Fill] Published box: preset={} from={} to={}",
+                    presetId, start.toShortString(), end.toShortString());
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Fill] §aFill task submitted! NPC will fill the cube."), true);
+            }
+        } else if (RoadPlacementState.isDestroyFill()) {
             PacketDistributor.sendToServer(new DestroyFillPacket(start, end));
             Log.info(TAG, "[DestroyFill] Published: ref={} to={}", start.toShortString(), end.toShortString());
             if (mc.player != null) {
@@ -247,6 +255,13 @@ public final class RoadPlacementController {
 
         // Return to IDLE
         RoadPlacementState.clearAll();
+    }
+
+    /** Chat prefix for the active tool mode. */
+    private static String tag() {
+        if (RoadPlacementState.isFill()) return "[Fill]";
+        if (RoadPlacementState.isDestroyFill()) return "[Destroy/Fill]";
+        return "[Road]";
     }
 
     private static void handleBackspace(Minecraft mc) {
