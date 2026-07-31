@@ -54,6 +54,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         for (BuildingEntry entry : pkt.buildings) {
             buf.writeBlockPos(entry.anchor());
             buf.writeUtf(entry.buildingTypeId());
+            buf.writeByte(entry.rotationSteps());
         }
     }
 
@@ -63,12 +64,13 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         for (int i = 0; i < count; i++) {
             BlockPos anchor = buf.readBlockPos();
             String typeId = buf.readUtf();
-            entries.add(new BuildingEntry(anchor, typeId));
+            int rotationSteps = buf.readByte();
+            entries.add(new BuildingEntry(anchor, typeId, rotationSteps));
         }
         return new BuildingAreaSyncPacket(entries);
     }
 
     // ── Data ──
 
-    public record BuildingEntry(BlockPos anchor, String buildingTypeId) {}
+    public record BuildingEntry(BlockPos anchor, String buildingTypeId, int rotationSteps) {}
 }

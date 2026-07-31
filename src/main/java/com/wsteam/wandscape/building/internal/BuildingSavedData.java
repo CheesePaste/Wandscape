@@ -82,6 +82,9 @@ public class BuildingSavedData extends SavedData {
     // NBT key for pattern positions (precise overlap detection)
     private static final String TAG_PATTERN_POSITIONS = "pattern_pos";
 
+    // NBT key for rotation steps
+    private static final String TAG_ROTATION = "rotation";
+
     // NBT key for claimed first-free builds
     private static final String TAG_CLAIMED_FREE = "claimed_free";
 
@@ -248,8 +251,11 @@ public class BuildingSavedData extends SavedData {
         // 1. Iterate tourist_interact_aabb entries: for each, compute world-space AABB and spiral-scan
         if (config != null && !config.touristInteractAabb().isEmpty()) {
             BlockPos anchor = state.getAnchor();
+            int rotationSteps = state.getRotationSteps();
             for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
-                BoundingBox worldZone = computeWorldBox(anchor, zone);
+                BuildingConfig.BoundaryBox rotatedZone = com.wsteam.wandscape.projection.BuildingRotation
+                        .rotateBoundary(zone, rotationSteps);
+                BoundingBox worldZone = computeWorldBox(anchor, rotatedZone);
                 BlockPos result = spiralScanWalkable(worldZone, level, /* inside= */ true);
                 if (result != null) return result;
             }
@@ -287,7 +293,8 @@ public class BuildingSavedData extends SavedData {
 
         // 1. Use door_offset if defined
         if (config != null && config.doorOffset() != null) {
-            BlockOffset off = config.doorOffset();
+            BlockOffset off = com.wsteam.wandscape.projection.BuildingRotation
+                    .rotateOffset(config.doorOffset(), state.getRotationSteps());
             BlockPos doorWorld = anchor.offset(off.x(), off.y(), off.z());
 
             // Check all 4 horizontal neighbors; prefer one outside the building
@@ -438,9 +445,13 @@ public class BuildingSavedData extends SavedData {
      * @throws BuildingOverlapException if the building overlaps an existing one
      */
     public void register(BuildingState state, BuildingConfig config) {
-        // Build pattern positions from config
+        // Apply rotation to pattern
+        java.util.List<BlockOffset> pattern = com.wsteam.wandscape.projection.BuildingRotation
+                .rotateOffsets(config.pattern(), state.getRotationSteps());
+
+        // Build pattern positions from rotated pattern
         Set<BlockPos> newPattern = new HashSet<>();
-        for (BlockOffset off : config.pattern()) {
+        for (BlockOffset off : pattern) {
             newPattern.add(state.getAnchor().offset(off.x(), off.y(), off.z()));
         }
         state.setPatternPositions(Collections.unmodifiableSet(newPattern));
@@ -457,8 +468,8 @@ public class BuildingSavedData extends SavedData {
 
         buildings.put(state.getBuildingId(), state);
 
-        // Build posIndex from config pattern
-        for (BlockOffset off : config.pattern()) {
+        // Build posIndex from rotated pattern
+        for (BlockOffset off : pattern) {
             BlockPos worldPos = state.getAnchor().offset(off.x(), off.y(), off.z());
             posIndex.put(worldPos, state.getBuildingId());
         }
@@ -562,6 +573,7 @@ public class BuildingSavedData extends SavedData {
             entry.putInt(TAG_MAGIC, state.getMagic());
             entry.putInt(TAG_WONDER, state.getWonder());
             entry.putInt(TAG_CAPACITY, state.getQueueCapacity());
+            entry.putInt(TAG_ROTATION, state.getRotationSteps());
             if (state.getCurrentTaskId() != null) {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
             }
@@ -661,9 +673,11 @@ public class BuildingSavedData extends SavedData {
             int magic = entry.getInt(TAG_MAGIC);
             int wonder = entry.getInt(TAG_WONDER);
             int capacity = entry.getInt(TAG_CAPACITY);
+            int rotationSteps = entry.getInt(TAG_ROTATION);
 
             BuildingState state = new BuildingState(id, type, category, anchor, bounds,
                     comfort, magic, wonder, capacity);
+            state.setRotationSteps(rotationSteps);
 
             if (entry.hasUUID(TAG_COLONY)) {
                 state.setColonyId(entry.getUUID(TAG_COLONY));
@@ -805,7 +819,9 @@ public class BuildingSavedData extends SavedData {
 
     /** Rebuild posIndex entry for a building (used when BuildingConfig is available). */
     void rebuildPosIndex(BuildingState state, BuildingConfig config) {
-        for (BlockOffset off : config.pattern()) {
+        java.util.List<BlockOffset> pattern = com.wsteam.wandscape.projection.BuildingRotation
+                .rotateOffsets(config.pattern(), state.getRotationSteps());
+        for (BlockOffset off : pattern) {
             BlockPos worldPos = state.getAnchor().offset(off.x(), off.y(), off.z());
             posIndex.put(worldPos, state.getBuildingId());
         }

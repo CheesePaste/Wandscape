@@ -54,7 +54,7 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     List<BuildingAreaSyncPacket.BuildingEntry> entries =
                             buildingApi.getColonyBuildings(colonyId).stream()
                                     .map(b -> new BuildingAreaSyncPacket.BuildingEntry(
-                                            b.getPosition(), b.getBuildingTypeId()))
+                                            b.getPosition(), b.getBuildingTypeId(), b.getRotationSteps()))
                                     .toList();
                     PacketDistributor.sendToPlayer(player,
                             new BuildingAreaSyncPacket(entries));

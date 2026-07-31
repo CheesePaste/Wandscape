@@ -51,7 +51,7 @@ public final class BuildingBreakHandler {
         if (config == null) return;
 
         // Re-verify entire building after break
-        List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config);
+        List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps());
         if (damaged.isEmpty()) return; // broken block wasn't part of pattern
 
         boolean broken = BuildCompleteListener.isBroken(damaged.size(), config.pattern().size());
@@ -114,7 +114,7 @@ public final class BuildingBreakHandler {
             if (config == null) continue;
 
             // Re-verify entire building after explosion
-            List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config);
+            List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps());
             if (damaged.isEmpty()) continue;
 
             boolean broken = BuildCompleteListener.isBroken(damaged.size(), config.pattern().size());
@@ -154,6 +154,12 @@ public final class BuildingBreakHandler {
             return;
         }
 
+        int rotationSteps = state.getRotationSteps();
+        java.util.Map<String, String> blockMapping = rotationSteps != 0
+                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
+                        config.blockMapping(), rotationSteps)
+                : config.blockMapping();
+
         BlockPos anchor = state.getAnchor();
         JsonArray offsets = new JsonArray();
         JsonObject blocks = new JsonObject();
@@ -163,7 +169,7 @@ public final class BuildingBreakHandler {
             int dy = worldPos.getY() - anchor.getY();
             int dz = worldPos.getZ() - anchor.getZ();
             String key = dx + "," + dy + "," + dz;
-            String blockSpec = config.blockMapping().get(key);
+            String blockSpec = blockMapping.get(key);
             if (blockSpec == null) continue;
 
             JsonArray off = new JsonArray();
@@ -185,12 +191,18 @@ public final class BuildingBreakHandler {
      */
     static void enqueueRepairForOffsets(BuildingState state, BuildingConfig config,
                                         List<BlockOffset> damagedOffsets) {
+        int rotationSteps = state.getRotationSteps();
+        java.util.Map<String, String> blockMapping = rotationSteps != 0
+                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
+                        config.blockMapping(), rotationSteps)
+                : config.blockMapping();
+
         JsonArray offsets = new JsonArray();
         JsonObject blocks = new JsonObject();
 
         for (BlockOffset offset : damagedOffsets) {
             String key = offset.toKey();
-            String blockSpec = config.blockMapping().get(key);
+            String blockSpec = blockMapping.get(key);
             if (blockSpec == null) continue;
 
             JsonArray off = new JsonArray();
@@ -266,7 +278,7 @@ public final class BuildingBreakHandler {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return false;
 
-        List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config);
+        List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps());
         if (damaged.isEmpty()) {
             // No damaged blocks found — mark as intact
             state.setStructureIntact(true);

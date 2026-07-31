@@ -308,8 +308,13 @@ public class BuildingApiImpl implements BuildingApi {
         params.put("anchor", posToJsonArray(state.getAnchor()));
         params.put("building_id", new JsonPrimitive(buildingId.toString()));
 
+        int rotationSteps = state.getRotationSteps();
+        java.util.List<com.wsteam.wandscape.building.data.BlockOffset> pattern =
+                com.wsteam.wandscape.projection.BuildingRotation.rotateOffsets(
+                        config.pattern(), rotationSteps);
+
         JsonArray offsets = new JsonArray();
-        for (var offset : config.pattern()) {
+        for (var offset : pattern) {
             JsonArray arr = new JsonArray();
             arr.add(offset.x());
             arr.add(offset.y());

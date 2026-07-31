@@ -130,7 +130,8 @@ public final class WandscapePanelOverlay {
         for (int i = 0; i < 3; i++) {
             int iy = startY + i * totalIconH;
             int ix = (SIDEBAR_W - SIDEBAR_ICON_S) / 2;
-            WandscapeTheme.drawIcon(g, tabIcons[i], ix, iy, SIDEBAR_ICON_S, SIDEBAR_ICON_S, WandscapeTheme.COLOR_TEXT_NORMAL);
+            int color = isTabActive(i, activeMode) ? WandscapeTheme.COLOR_TEXT_ACTIVE : WandscapeTheme.COLOR_TEXT_NORMAL;
+            WandscapeTheme.drawIcon(g, tabIcons[i], ix, iy, SIDEBAR_ICON_S, SIDEBAR_ICON_S, color);
         }
 
         // Warning icon (with gap below tabs)

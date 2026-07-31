@@ -88,7 +88,7 @@ public final class BuildCompleteListener {
             return;
         }
 
-        List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config);
+        List<BlockOffset> damaged = findDamagedBlocks(level, anchor, config, state.getRotationSteps());
         boolean broken = isBroken(damaged.size(), config.pattern().size());
         boolean intact = !broken;
         state.setStructureIntact(intact);
@@ -166,13 +166,23 @@ public final class BuildCompleteListener {
     /**
      * Find all pattern blocks that don't match the expected state.
      * Returns an empty list if the building is fully intact.
+     *
+     * @param rotationSteps number of 90° CCW rotations applied to the building (0-3)
      */
-    static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config) {
+    static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config,
+                                                int rotationSteps) {
+        java.util.List<BlockOffset> pattern = com.wsteam.wandscape.projection.BuildingRotation
+                .rotateOffsets(config.pattern(), rotationSteps);
+        java.util.Map<String, String> blockMapping = rotationSteps != 0
+                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
+                        config.blockMapping(), rotationSteps)
+                : config.blockMapping();
+
         List<BlockOffset> damaged = new ArrayList<>();
-        for (BlockOffset offset : config.pattern()) {
+        for (BlockOffset offset : pattern) {
             BlockPos target = anchor.offset(offset.x(), offset.y(), offset.z());
             String expectedKey = offset.toKey();
-            String expectedSpec = config.blockMapping().get(expectedKey);
+            String expectedSpec = blockMapping.get(expectedKey);
             if (expectedSpec == null) continue;
 
             BlockState actual = level.getBlockState(target);

@@ -33,4 +33,7 @@ public interface BuildingData {
 
     /** Last game day when daily settlement processed this building. */
     default long getLastSettlementDay() { return 0; }
+
+    /** Number of 90° CCW rotation steps applied to the building (0-3). */
+    default int getRotationSteps() { return 0; }
 }

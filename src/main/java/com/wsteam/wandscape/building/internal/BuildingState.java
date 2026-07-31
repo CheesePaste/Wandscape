@@ -46,6 +46,7 @@ public class BuildingState implements BuildingData {
     private Set<BlockPos> patternPositions;
     @Nullable
     private UUID currentTaskId;
+    private int rotationSteps;
 
     public BuildingState(UUID buildingId, String buildingTypeId, String category,
                          BlockPos anchor, BoundingBox bounds,
@@ -114,6 +115,8 @@ public class BuildingState implements BuildingData {
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
     public void setDemolishing(boolean demolishing) { this.demolishing = demolishing; }
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
+    public int getRotationSteps() { return rotationSteps; }
+    public void setRotationSteps(int steps) { this.rotationSteps = steps & 3; }
 
     // ── Maintenance setters ──
 

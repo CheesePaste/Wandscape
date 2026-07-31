@@ -94,17 +94,8 @@ public final class EnqueueHelper {
                     config.wonder(),
                     config.queue().capacity()
             );
+            state.setRotationSteps(rotationSteps);
             api.registerBuilding(state);
-
-            // Apply rotation to pattern positions (overwrite the unrotated set from register())
-            if (rotationSteps != 0 && config.pattern() != null && !config.pattern().isEmpty()) {
-                Set<BlockPos> rotatedPattern = new HashSet<>();
-                for (BlockOffset off : config.pattern()) {
-                    BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, rotationSteps);
-                    rotatedPattern.add(pos.offset(rotatedOff.x(), rotatedOff.y(), rotatedOff.z()));
-                }
-                state.setPatternPositions(java.util.Collections.unmodifiableSet(rotatedPattern));
-            }
 
             // Assign colony if one exists nearby
             ColonyApiImpl.get().assignColonyIfPossible(state);
@@ -243,6 +234,21 @@ public final class EnqueueHelper {
                     params.put("clear_offsets", rotateOffsetsJson(
                             params.get("clear_offsets").getAsJsonArray(), rotationSteps));
                 }
+                // Rotate tourist_interact_aabb
+                if (params.containsKey("tourist_interact_aabb")) {
+                    params.put("tourist_interact_aabb", rotateTouristInteractAabbJson(
+                            params.get("tourist_interact_aabb").getAsJsonArray(), rotationSteps));
+                }
+                // Rotate door_offset
+                if (params.containsKey("door_offset")) {
+                    JsonArray arr = params.get("door_offset").getAsJsonArray();
+                    if (arr.size() == 3) {
+                        BlockOffset off = new BlockOffset(
+                                arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt());
+                        BlockOffset rotated = BuildingRotation.rotateOffset(off, rotationSteps);
+                        params.put("door_offset", offsetToJson(rotated));
+                    }
+                }
             }
         } else {
             blueprintId = "build:" + buildingTypeId;
@@ -266,6 +272,9 @@ public final class EnqueueHelper {
             case "magic" -> new JsonPrimitive(config.magic());
             case "wonder" -> new JsonPrimitive(config.wonder());
             case "boundary" -> boundaryToJson(config);
+            case "tourist_interact_aabb" -> touristInteractAabbToJson(config);
+            case "door_offset" -> config.doorOffset() != null
+                    ? offsetToJson(config.doorOffset()) : new JsonArray();
             default -> null;
         };
     }
@@ -496,6 +505,39 @@ public final class EnqueueHelper {
             BlockOffset off = new BlockOffset(pos.get(0).getAsInt(), pos.get(1).getAsInt(), pos.get(2).getAsInt());
             BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
             result.add(offsetToJson(rotated));
+        }
+        return result;
+    }
+
+    /** Serialize tourist_interact_aabb list to a JSON array of boundary objects. */
+    private static JsonElement touristInteractAabbToJson(BuildingConfig config) {
+        JsonArray arr = new JsonArray();
+        for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
+            JsonObject obj = new JsonObject();
+            obj.add("min", offsetToJson(zone.min()));
+            obj.add("max", offsetToJson(zone.max()));
+            arr.add(obj);
+        }
+        return arr;
+    }
+
+    /** Rotate a JSON array of tourist interact AABB boundary objects. */
+    private static JsonArray rotateTouristInteractAabbJson(JsonArray zones, int steps) {
+        JsonArray result = new JsonArray();
+        for (int i = 0; i < zones.size(); i++) {
+            JsonObject zone = zones.get(i).getAsJsonObject();
+            JsonArray minArr = zone.getAsJsonArray("min");
+            JsonArray maxArr = zone.getAsJsonArray("max");
+            BlockOffset min = new BlockOffset(
+                    minArr.get(0).getAsInt(), minArr.get(1).getAsInt(), minArr.get(2).getAsInt());
+            BlockOffset max = new BlockOffset(
+                    maxArr.get(0).getAsInt(), maxArr.get(1).getAsInt(), maxArr.get(2).getAsInt());
+            BuildingConfig.BoundaryBox rotated = BuildingRotation.rotateBoundary(
+                    new BuildingConfig.BoundaryBox(min, max), steps);
+            JsonObject rotatedZone = new JsonObject();
+            rotatedZone.add("min", offsetToJson(rotated.min()));
+            rotatedZone.add("max", offsetToJson(rotated.max()));
+            result.add(rotatedZone);
         }
         return result;
     }
