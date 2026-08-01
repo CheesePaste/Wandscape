@@ -16,6 +16,7 @@ import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
+import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
@@ -30,7 +31,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
@@ -103,6 +106,12 @@ public class TouristMoveGoal extends Goal {
     private static final int ROOF_STUCK_TICKS = 80;
     /** Zero-movement ticks during active wander nav before teleporting to anchor. */
     private static final int WANDER_STUCK_TICKS = 120;
+    /** Last path-node index seen while wandering — the primary stuck-detection signal. */
+    private int lastNodeIndex = -1;
+    /** Min ticks before re-picking a wander target after the current path finishes. */
+    private static final int WANDER_RECHOOSE_TICKS = 20;
+    /** Default wander radius (blocks) around the (drifting) anchor. */
+    private static final int WANDER_RADIUS = 12;
 
     // ── Indoor / outdoor navigation phases ──
     /** True when the tourist is inside a building (micro-navigation phase). */
@@ -350,15 +359,23 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (noMoveTicks > 100 || totalNavTicks > 400) {
-            BlockPos tpTarget = exitingPhase ? (entryPoint != null ? entryPoint : tourist.getCommuteTarget()) : interactPoint;
-            if (tpTarget == null) tpTarget = tourist.getCommuteTarget();
-            if (tpTarget != null) {
-                Log.info(TAG, "[Tourist] {} indoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
+            if (exitingPhase) {
+                // Leaving the building: keep teleporting toward the entry ground.
+                BlockPos tpTarget = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
+                if (tpTarget == null) {
+                    finishBuildingStop();
+                    return;
+                }
+                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
+                if (ground != null) tpTarget = ground;
+                Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
                 tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
                 noMoveTicks = 0;
                 totalNavTicks = 0;
             } else {
-                finishBuildingStop();
+                // Stuck navigating to the interact point. Do NOT teleport back onto the
+                // interact point — that just re-loops. Abandon the visit instead.
+                abandonBuildingVisit();
             }
             return;
         }
@@ -602,6 +619,52 @@ public class TouristMoveGoal extends Goal {
         dispatchStart();
     }
 
+    /**
+     * Abandon a stuck building visit: teleport out near the entry point, put the
+     * building on a short per-building cooldown, and force the tourist back to
+     * WANDERING.
+     *
+     * <p>This is the "治标" safety net. It does NOT go through
+     * {@link #finishBuildingStop()} — that re-plans probabilistically and can
+     * immediately re-target the same trap. Forcing WANDERING (and applying a
+     * per-building cooldown) breaks the stuck loop.
+     */
+    private void abandonBuildingVisit() {
+        UUID failed = tourist.getTargetBuildingId();
+
+        // Teleport to a safe, walkable ground spot near the entry point (already outside the bbox).
+        BlockPos safe = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
+        if (safe == null) safe = tourist.blockPosition();
+        BlockPos ground = findGround(safe.getX(), safe.getY(), safe.getZ());
+        if (ground != null) safe = ground;
+        tourist.setPos(safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5);
+
+        if (failed != null) {
+            // Avoid re-targeting the same trap for a while, but do NOT set the global
+            // rest cooldown — the tourist should still be able to visit other buildings.
+            int avoidTicks = Math.max(1200, getInteractionDuration(failed) / 2);
+            tourist.setServiceCooldown(failed, tourist.tickCount + avoidTicks);
+        }
+
+        tourist.setCommuteTarget(null);
+        tourist.setTargetBuildingId(null);
+        tourist.setTargetBuildingCategory(null);
+        indoorPhase = false;
+        exitingPhase = false;
+        entryPoint = null;
+        interactPoint = null;
+        touristInteractZones = List.of();
+        noMoveTicks = 0;
+        totalNavTicks = 0;
+        lastPos = null;
+        lastNodeIndex = -1;
+        syncDebugData();
+
+        Log.warn(TAG, "[Tourist] {} abandoned stuck building visit, forced to WANDER", tourist.getTouristName());
+        switchMode(MoveMode.WANDERING);
+        startWander();
+    }
+
     // ════════════════════════════════════════════════════════════════
     // EXPLORING_POI
     // ════════════════════════════════════════════════════════════════
@@ -758,6 +821,7 @@ public class TouristMoveGoal extends Goal {
         wanderEvaluateTick = 300 + tourist.getRandom().nextInt(200);
         lastPos = null;
         noMoveTicks = 0;
+        lastNodeIndex = -1;
     }
 
     private void tickWander() {
@@ -766,30 +830,61 @@ public class TouristMoveGoal extends Goal {
         if (anchor == null) {
             anchor = tourist.blockPosition();
             tourist.setWanderAnchor(anchor);
-            tourist.setWanderRadius(8);
+            tourist.setWanderRadius(WANDER_RADIUS);
         }
         int radius = tourist.getWanderRadius();
-        if (radius <= 0) radius = 8;
+        if (radius <= 0) radius = WANDER_RADIUS;
         BlockPos pos = tourist.blockPosition();
         int manDist = Math.abs(pos.getX() - anchor.getX()) + Math.abs(pos.getZ() - anchor.getZ());
         var nav = tourist.getNavigation();
 
-        // ── Stuck unstick: active nav but no progress → teleport to a temp ground point ──
-        if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
-            noMoveTicks++;
+        // ── Stuck detection ──
+        // Primary signal: the path's node index stops advancing (borrowed from
+        // MineColonies PathingStuckHandler). Jittering around an obstacle while the
+        // navigator still progresses along the path is NOT stuck, so we no longer rely
+        // on raw net displacement (which mis-fired and caused "teleport near an
+        // easy-to-reach target").
+        if (!nav.isDone()) {
+            Path path = nav.getPath();
+            if (path != null) {
+                int idx = path.getNextNodeIndex();
+                if (idx == lastNodeIndex) {
+                    noMoveTicks++;
+                } else {
+                    noMoveTicks = 0;
+                    lastNodeIndex = idx;
+                    lastPos = pos;
+                }
+            } else {
+                // No path object but navigator busy (recomputing) → fall back to position.
+                if (lastPos != null && pos.distSqr(lastPos) < 1.0) {
+                    noMoveTicks++;
+                } else {
+                    noMoveTicks = 0;
+                    lastPos = pos;
+                }
+            }
+            if (noMoveTicks > WANDER_STUCK_TICKS) {
+                BlockPos ground = findGround(anchor.getX(), anchor.getY(), anchor.getZ());
+                BlockPos tp = ground != null ? ground : anchor;
+                Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                nav.stop();
+                noMoveTicks = 0;
+                lastNodeIndex = -1;
+                lastPos = null;
+                return;
+            }
         } else {
             noMoveTicks = 0;
-            lastPos = pos;
         }
-        if (!nav.isDone() && noMoveTicks > WANDER_STUCK_TICKS) {
-            BlockPos ground = findGround(anchor.getX(), anchor.getY(), anchor.getZ());
-            BlockPos tp = ground != null ? ground : anchor;
-            Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
-            tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
-            nav.stop();
-            noMoveTicks = 0;
-            lastPos = null;
-            return;
+
+        // ── Anchor drift: let the wander area follow the tourist instead of pinning it
+        //    to one fixed point (fixes the "activity range is tiny" complaint). ──
+        if (manDist > radius / 2) {
+            anchor = pos;
+            tourist.setWanderAnchor(pos);
+            manDist = 0;
         }
 
         // Too far from anchor → head back
@@ -803,15 +898,47 @@ public class TouristMoveGoal extends Goal {
         // Periodic mode re-evaluation
         if (tickWanderEvaluate()) return;
 
-        // Random step within radius
-        if (--wanderCooldown <= 0) {
-            int tx = anchor.getX() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
-            int tz = anchor.getZ() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
-            BlockPos g = findGround(tx, anchor.getY(), tz);
+        // ── Pick a new wander target on cooldown expiry, OR as soon as the current path
+        //    finishes — no more idling on an exhausted/unreachable path. When the path
+        //    finishes early, shorten the remaining cooldown so we re-pick within a few
+        //    ticks instead of standing around. ──
+        boolean wantNew = --wanderCooldown <= 0;
+        if (!wantNew && nav.isDone()) {
+            wanderCooldown = Math.min(wanderCooldown, WANDER_RECHOOSE_TICKS);
+        }
+        if (wanderCooldown <= 0) {
+            BlockPos g = pickWanderTarget(anchor, radius);
             if (g != null)
                 nav.moveTo(g.getX() + 0.5, g.getY(), g.getZ() + 0.5, wanderSpeed);
             wanderCooldown = 60 + tourist.getRandom().nextInt(120);
         }
+    }
+
+    /** Pick a reachable ground point within {@code radius} of {@code anchor}, retrying a few times. */
+    @Nullable
+    private BlockPos pickWanderTarget(BlockPos anchor, int radius) {
+        for (int attempt = 0; attempt < 8; attempt++) {
+            int tx = anchor.getX() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
+            int tz = anchor.getZ() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
+            BlockPos g = findGround(tx, anchor.getY(), tz);
+            if (g != null && !isInsideAnyBuilding(g)) return g;
+        }
+        // Fallback: ground at the anchor (outside any building in the common case).
+        return findGround(anchor.getX(), anchor.getY(), anchor.getZ());
+    }
+
+    /** True if {@code pos} lies inside any colony building's bounding box. */
+    private boolean isInsideAnyBuilding(BlockPos pos) {
+        UUID colonyId = tourist.getColonyId();
+        if (colonyId == null) return false;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        for (BuildingData b : api.getColonyBuildings(colonyId)) {
+            if (!(b instanceof BuildingState state)) continue;
+            BoundingBox box = state.getBounds();
+            if (box != null && box.isInside(pos)) return true;
+        }
+        return false;
     }
 
     /** @return true if mode was switched (caller should return immediately) */
@@ -1085,21 +1212,27 @@ public class TouristMoveGoal extends Goal {
         interactPoint = api.getTouristInteractPoint(chosen.getBuildingId());
         if (interactPoint == null) interactPoint = chosen.getAnchor();
 
-        // Compute world-space tourist interact zones for indoor arrival detection
+        // Compute world-space tourist interact zones for indoor arrival detection.
+        // Zones MUST be rotated by the building's rotationSteps — interactPoint and the
+        // rendered orange box are already rotated; an unrotated zone here makes the arrival
+        // check fail for rotated buildings (tourist stands inside the zone but never
+        // "arrives" → VISITING stuck).
         BuildingConfig chosenConfig = BuildingConfigLoader.getInstance().get(chosen.getBuildingTypeId());
         BlockPos chosenAnchor = chosen.getAnchor();
+        int rotationSteps = chosen.getRotationSteps();
         if (chosenConfig != null && !chosenConfig.touristInteractAabb().isEmpty()) {
             List<BoundingBox> zones = new ArrayList<>();
             for (BuildingConfig.BoundaryBox zone : chosenConfig.touristInteractAabb()) {
-                int yMin = chosenAnchor.getY() + zone.min().y() - 2; // 2 below for character feet
-                int yMax = chosenAnchor.getY() + zone.max().y() + 2; // 2 above for character head
+                BuildingConfig.BoundaryBox rotated = BuildingRotation.rotateBoundary(zone, rotationSteps);
+                int yMin = chosenAnchor.getY() + rotated.min().y() - 2; // 2 below for character feet
+                int yMax = chosenAnchor.getY() + rotated.max().y() + 2; // 2 above for character head
                 zones.add(new BoundingBox(
-                        chosenAnchor.getX() + zone.min().x(),
+                        chosenAnchor.getX() + rotated.min().x(),
                         yMin,
-                        chosenAnchor.getZ() + zone.min().z(),
-                        chosenAnchor.getX() + zone.max().x(),
+                        chosenAnchor.getZ() + rotated.min().z(),
+                        chosenAnchor.getX() + rotated.max().x(),
                         yMax,
-                        chosenAnchor.getZ() + zone.max().z()));
+                        chosenAnchor.getZ() + rotated.max().z()));
             }
             touristInteractZones = List.copyOf(zones);
         } else {
@@ -1492,15 +1625,25 @@ public class TouristMoveGoal extends Goal {
         return null;
     }
 
+    /**
+     * Find a safe, walkable ground spot at (x, z). Scans from the world surface height
+     * at that column (not {@code baseY + 5}, which could land on a roof or upper floor)
+     * and requires two solid blocks below so it never stops on a floating roof or a
+     * thin shelf. Returns the block standing ON the ground.
+     */
     @Nullable
     private BlockPos findGround(int x, int baseY, int z) {
         var lvl = tourist.level();
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
-                x, Math.min(lvl.getMaxBuildHeight() - 1, baseY + 5), z);
+        int topY = Math.max(lvl.getMinBuildHeight(),
+                Math.min(lvl.getMaxBuildHeight() - 1,
+                        lvl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)));
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(x, topY, z);
         while (mp.getY() > lvl.getMinBuildHeight()) {
-            if (!lvl.getBlockState(mp).isAir()
-                    && lvl.getBlockState(mp.above()).isAir())
-                return mp.above().immutable();
+            if (lvl.getBlockState(mp).isAir()
+                    && lvl.getBlockState(mp.below()).isSolid()
+                    && lvl.getBlockState(mp.below(2)).isSolid()) {
+                return mp.immutable();
+            }
             mp.move(0, -1, 0);
         }
         return null;

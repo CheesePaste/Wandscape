@@ -9,9 +9,9 @@
 | Bug | 描述 | 状态 |
 |-----|------|------|
 | Bug 1 | 建筑 Demolish 后游客（含新生成）仍可虚空交互 | ⬜ 待修复 |
-| Bug 2 | 游客卡在羊毛块之间 / 建筑原点，状态 VISITING 卡死 | ⬜ 待修复 |
+| Bug 2 | 游客卡在羊毛块之间 / 建筑原点，状态 VISITING 卡死 | ✅ 已修复 2026-08-01（根因：交互区未按 rotationSteps 旋转；治标：卡死强制回游荡） |
 | Bug 3 | 满意度 60 + 有 inn，黄昏仍不入住直接离开 | ✅ 已修复 2026-08-01 |
-| Bug 4 | 游荡不合理：目标易走却频繁传送、长时间停留、范围小 | ⬜ 待修复 |
+| Bug 4 | 游荡不合理：目标易走却频繁传送、长时间停留、范围小 | ✅ 已修复 2026-08-01（节点推进判卡住/地表扫地面/目标可达性/锚点漂移/立即重挑） |
 
 ---
 
@@ -129,6 +129,13 @@ if ("shop".equals(category)) interactWithShop(buildingId);    // 用缓存 id �
 ---
 
 ## Bug 2：游客卡在羊毛块之间 / 建筑原点，状态 VISITING 卡死
+
+> **2026-08-01 修复勘误**：用户实测「游客完全包裹在交互区内，却 VISITING 不交互」，
+> 根因**不是**寻路（2a 的 Y 外扩误判理论作废），而是 `planNextBuilding`（TouristMoveGoal.java:1097-1116）
+> 计算 `touristInteractZones` 时**未按 `rotationSteps` 旋转**，而 `interactPoint` 与渲染橙框都已旋转
+> （`BuildingSavedData.getTouristInteractPoint` :256 用 `rotateBoundary`）→ 旋转建筑下到达判定命中错位框，
+> `arrived` 恒 false → 卡死兜底「传送到自己」形成不可见死循环。
+> 修复：zone 按 `BuildingRotation.rotateBoundary(zone, rotationSteps)` 对齐 + 卡死强制回游荡（治标，`abandonBuildingVisit`）。
 
 ### 现象
 
