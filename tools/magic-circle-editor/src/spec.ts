@@ -127,6 +127,13 @@ const num = (v: unknown, fallback: number): number =>
 const defaultBeadCount = (radius: number, explicit = 0): number =>
   explicit >= 2 ? Math.round(explicit) : Math.min(48, Math.max(4, Math.round((2 * Math.PI * Math.max(0.1, radius)) / 1.2)));
 
+/** polygon/star 新建默认：自转 + 整个窗口持续扩大 + 淡入，像 ring 示范一样"活"起来。 */
+const SHAPE_DEFAULT_ANIM: Anim = {
+  scale: [[0, 0], [1, 1.4]],
+  alpha: [[0, 0], [0.3, 1], [1, 1]],
+};
+const SHAPE_DEFAULT_ROTATE = 15;
+
 function normalizeAnim(a: Anim): Anim {
   return {
     scale: Array.isArray(a.scale) ? a.scale : [[0, 1]],
@@ -442,9 +449,9 @@ export function addElement(
   } else if (type === 'arc') {
     el = { ...base, type: 'arc', mode: 'beads', beads: 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 };
   } else if (type === 'polygon') {
-    el = { ...base, type: 'polygon', mode: 'beads', sides: 6, density: 2.5, trail_ticks: 10, y_offset: 0 };
+    el = { ...base, type: 'polygon', mode: 'beads', sides: 6, density: 2.5, trail_ticks: 10, y_offset: 0, rotate_speed: SHAPE_DEFAULT_ROTATE, anim: SHAPE_DEFAULT_ANIM };
   } else if (type === 'star') {
-    el = { ...base, type: 'star', mode: 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0 };
+    el = { ...base, type: 'star', mode: 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0, rotate_speed: SHAPE_DEFAULT_ROTATE, anim: SHAPE_DEFAULT_ANIM };
   } else {
     el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 };
   }
@@ -500,9 +507,9 @@ export function setElementType(
   } else if (type === 'arc') {
     next = { ...common, type: 'arc', mode: prevMode ?? 'beads', beads: prevBeads ?? 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 } as Element;
   } else if (type === 'polygon') {
-    next = { ...common, type: 'polygon', mode: prevMode ?? 'beads', sides: 6, density: 2.5, trail_ticks: 10, y_offset: 0 } as Element;
+    next = { ...common, type: 'polygon', mode: prevMode ?? 'beads', sides: 6, density: 2.5, trail_ticks: 10, y_offset: 0, rotate_speed: 15, anim: common.anim ?? SHAPE_DEFAULT_ANIM } as Element;
   } else if (type === 'star') {
-    next = { ...common, type: 'star', mode: prevMode ?? 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0 } as Element;
+    next = { ...common, type: 'star', mode: prevMode ?? 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0, rotate_speed: 15, anim: common.anim ?? SHAPE_DEFAULT_ANIM } as Element;
   } else {
     next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 } as Element;
   }

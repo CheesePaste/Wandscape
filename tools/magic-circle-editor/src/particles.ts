@@ -264,35 +264,46 @@ function computeShape(
   const yOff = el.y_offset ?? 0;
   const verts = shapeVertices(el);
 
-  // beads：顶点持久亮点 + 每条边均匀撒 density×边长 个粒子（静态描边，无抖动）
+  // beads：沿周长按 density×周长 均匀撒点（跨角不断、密度一致），无额外顶点亮点
   if ((el.mode ?? 'beads') === 'beads') {
     const n = verts.length;
-    const out: LiveParticle[] = [];
     const wv = verts.map((v) => pointAt(axis, radius * v.radiusRatio, phase + v.deg, yOff));
+    const segs: number[] = [];
+    let perimeter = 0;
     for (let e = 0; e < n; e++) {
       const p0 = wv[e];
       const p1 = wv[(e + 1) % n];
-      const edgeLen = Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
-      const N = Math.max(1, Math.round((el.density ?? 1.5) * edgeLen));
-      for (let k = 0; k < N; k++) {
-        const u = (k + 0.5) / N;
-        out.push({
-          pos: [
-            p0[0] + (p1[0] - p0[0]) * u,
-            p0[1] + (p1[1] - p0[1]) * u,
-            p0[2] + (p1[2] - p0[2]) * u,
-          ],
-          size,
-          frame,
-          texture,
-          alpha: alphaEmit,
-          tint,
-        });
-      }
+      const L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
+      segs.push(L);
+      perimeter += L;
     }
-    for (let i = 0; i < n; i++) {
-      const shimmer = 0.82 + 0.18 * Math.sin((i / n) * Math.PI * 2 + T * 0.11);
-      out.push({ pos: wv[i], size, frame, texture, alpha: alphaEmit * shimmer, tint });
+    if (perimeter <= 0) return [];
+    const total = Math.max(1, Math.round((el.density ?? 1.5) * perimeter));
+    const out: LiveParticle[] = [];
+    for (let i = 0; i < total; i++) {
+      // 目标弧长位置，按累计边长定位所在边
+      const s = ((i + 0.5) / total) * perimeter;
+      let acc = 0;
+      let e = 0;
+      while (e < n && acc + segs[e] < s) {
+        acc += segs[e];
+        e++;
+      }
+      const p0 = wv[e];
+      const p1 = wv[(e + 1) % n];
+      const u = segs[e] > 0 ? (s - acc) / segs[e] : 0;
+      out.push({
+        pos: [
+          p0[0] + (p1[0] - p0[0]) * u,
+          p0[1] + (p1[1] - p0[1]) * u,
+          p0[2] + (p1[2] - p0[2]) * u,
+        ],
+        size,
+        frame,
+        texture,
+        alpha: alphaEmit,
+        tint,
+      });
     }
     if (out.length > MAX_PER_ELEMENT) {
       const step = Math.ceil(out.length / MAX_PER_ELEMENT);
