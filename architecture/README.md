@@ -81,6 +81,10 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── overview/         俯瞰（鸟瞰）视角模式，V 打开面板默认进入
 │   ├── client/       OverviewClientState/OverviewFlightController/OverviewRenderer
 │   └── network/      OverviewInteractPacket
+├── magic/            魔法阵粒子渲染（数据契约由 Web 编辑器导出，MC 端粒子消费）
+│   ├── data/         MagicCircleSpec(record 镜像 + fromJson，纯数据)
+│   ├── internal/     MagicCircleLoader(dataconfig 注册 magic_circles 类目)
+│   └── client/       MagicCircleEmitter/DotParticle/RuneParticle
 ├── equipment/        装备系统(EquipmentSlot/AttributeType/EquipmentPreset/EquipmentComponent)
 ```
 
@@ -179,7 +183,9 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |
+| 魔法阵模块设计 | [packages/magic.md](packages/magic.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
+| 魔法阵JSON格式 | [data/magic-circles.md](data/magic-circles.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
 | 模拟经营设计推理 | [../docs/simulation.md](../docs/simulation.md) |
 | 编码规范和反模式 | [conventions.md](conventions.md) |
