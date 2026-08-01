@@ -82,9 +82,9 @@ export function shapeVertices(
   }
   const p = Math.max(2, Math.round(el.points));
   const inner = Math.min(1, Math.max(0.05, el.inner_ratio));
-  // 从 -90° 起（第一外顶点朝上），避免尖尖朝下
+  // 俯视坐标里屏幕上方 = 极角 180°；第一外顶点从 180° 起，使一个尖朝上
   return Array.from({ length: 2 * p }, (_, i) => ({
-    deg: -90 + (i * 180) / p,
+    deg: 180 + (i * 180) / p,
     radiusRatio: i % 2 === 0 ? 1 : inner,
   }));
 }
