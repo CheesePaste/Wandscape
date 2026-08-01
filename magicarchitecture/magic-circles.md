@@ -45,6 +45,19 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
       "start": 0.25
     },
     {
+      "type": "polygon",
+      "axis": [0, 1, 0],
+      "radius": 3.2,
+      "sides": 6,
+      "particle": "glow",
+      "color": "#00ccff",
+      "mode": "beads",
+      "rotate_speed": 8,
+      "interval_ticks": 10,
+      "start": 0.5,
+      "anim": { "easing": "smoothstep", "alpha": [[0, 0], [0.3, 1], [1, 1]] }
+    },
+    {
       "type": "glyph",
       "axis": [0, 1, 0],
       "radius": 3.5,
@@ -69,13 +82,13 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 | id | string | 唯一标识，snake_case |
 | duration_ticks | int | 整个法阵总时长（游戏 tick） |
 | height | double | 法阵中心离地高度（默认 0.1） |
-| elements | Element[] | 元素列表（ring / arc / glyph 三种） |
+| elements | Element[] | 元素列表（ring / arc / polygon / star / glyph 五种） |
 
 ### Element 通用字段
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| type | string | `ring` / `arc` / `glyph` |
+| type | string | `ring` / `arc` / `polygon` / `star` / `glyph` |
 | axis | [x,y,z] | 法阵平面法线，默认 `[0,1,0]`（水平地面）；`[1,0,0]`/`[0,0,1]` 为竖直环（传送门）。编辑器提供朝向预设 |
 | radius | double | 基础半径（编辑器里拖出来的值） |
 | particle | string | 粒子风格 id：`glow`/`ember`/`flame`/`endRod`…（映射到 MC 粒子/自定义粒子） |
@@ -94,9 +107,15 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 | ring | density | continuous 模式：每格弧长每 tick 粒子数（默认 1.5） |
 | ring | trail_ticks | continuous 模式：粒子存活 tick = 拖尾长度（默认 10） |
 | ring | y_offset | 多层堆叠的纵向偏移（默认 0） |
+| ring | interval_ticks | 可选脉冲：发射 N tick / 停 N tick 循环（默认无） |
 | arc | arc_start_deg | 起始角度（度） |
 | arc | arc_sweep_deg | 扫过角度（度，<360 为部分圆弧） |
-| arc | mode / beads / density / trail_ticks / y_offset | 同 ring |
+| arc | mode / beads / density / trail_ticks / y_offset / interval_ticks | 同 ring |
+| polygon | sides | 顶点数（≥3）= beads 模式亮点数 |
+| polygon | mode / density / trail_ticks / y_offset / interval_ticks | 同 ring（beads 时是顶点亮点） |
+| star | points | 星芒数（≥2，外顶点数；总顶点 = 2×points） |
+| star | inner_ratio | 内半径 = radius × inner_ratio（默认 0.4） |
+| star | mode / density / trail_ticks / y_offset / interval_ticks | 同 ring |
 | glyph | count | 符文个数 |
 | glyph | sprite | 符文贴图 key（后续与 MC 共享同一批资源） |
 | glyph | scale | 符文渲染尺寸（默认 0.3） |
@@ -110,8 +129,9 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 | scale | 半径/glyph 尺寸倍率 | `[[0,1]]`（恒 1） |
 | alpha | 粒子透明度倍率（≤0 不发射） | `[[0,1]]` |
 | rotation | 窗口内附加旋转角度（**度**），叠在静态旋转之上（合成公式见"旋转与朝向"） | `[]` |
+| easing | 关键帧间插值缓动：`linear` / `smoothstep`（平滑过渡） | `linear` |
 
-keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 smoothstep 缓动）。
+keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，按 `easing` 插值（默认线性）。
 
 ## 动画模型
 
@@ -151,7 +171,9 @@ angle(T) = rotation_offset_deg
 
 - **ring/arc · beads**（**默认**）：固定 `beads` 个亮点均布在圆周/弧上，随 `rotate_speed` 整体旋转，**无随机抖动**（有序不糊）。尺寸 = 粒子基础 quadSize×2（稳定，不用年龄曲线），亮度带一圈慢速行进波（shimmer）。alpha 来自曲线，级联展开由 `start` 控制。
 - **ring/arc · continuous**：每 tick 按当前 `radius×scale`、当前旋转角、当前 `alpha`，在圆周/弧上撒 `density × 弧长` 个粒子，带 ±0.2 格随机抖动（避免格子状伪影），存活 `trail_ticks`。适合火焰/雾等需要密度的风格。
+- **polygon/star**：`beads` = 每个顶点一个持久亮点（有序，正多边形/星形轮廓）；`continuous` = 沿各边密度拖尾。
 - **glyph**：每 tick 在 `count` 个符文位置撒短命符文粒子（存活 `trail_ticks`），尺寸 = glyph `scale`，alpha 来自曲线。
+- **脉冲**：设 `interval_ticks` 后按"发射 N tick / 停 N tick"循环，做呼吸节奏。
 - 同一时刻存活粒子约几百个，MC 可轻松承受。
 
 ### 粒子 fidelity（vanilla 贴图 + 尺寸）

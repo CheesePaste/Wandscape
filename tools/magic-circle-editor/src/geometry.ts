@@ -1,4 +1,4 @@
-import type { Element, GlyphElement, Vec3 } from './spec';
+import type { Element, GlyphElement, PolygonElement, StarElement, Vec3 } from './spec';
 
 export const rad = (deg: number): number => (deg * Math.PI) / 180;
 
@@ -72,12 +72,34 @@ export interface ElementPointOpts {
   rotationDeg?: number;
 }
 
-/** ring/arc 的外形折线点集（含 rotation_offset_deg 相位 + 可选半径缩放/附加旋转）。 */
+/** polygon/star 的顶点表：极角（度）+ 半径比例。star 外顶点 ratio 1、内顶点 inner_ratio。 */
+export function shapeVertices(
+  el: PolygonElement | StarElement,
+): Array<{ deg: number; radiusRatio: number }> {
+  if (el.type === 'polygon') {
+    const n = Math.max(3, Math.round(el.sides));
+    return Array.from({ length: n }, (_, i) => ({ deg: (i * 360) / n, radiusRatio: 1 }));
+  }
+  const p = Math.max(2, Math.round(el.points));
+  const inner = Math.min(1, Math.max(0.05, el.inner_ratio));
+  return Array.from({ length: 2 * p }, (_, i) => ({
+    deg: (i * 180) / p,
+    radiusRatio: i % 2 === 0 ? 1 : inner,
+  }));
+}
+
+/** ring/arc/polygon/star 的外形折线点集（含 rotation_offset_deg 相位 + 可选半径缩放/附加旋转）。 */
 export function elementOutlinePoints(el: Element, opts: ElementPointOpts = {}): Vec3[] {
   const n = normalize(el.axis ?? [0, 1, 0]);
   const offset = (el.rotation_offset_deg ?? 0) + (opts.rotationDeg ?? 0);
   const radius = el.radius * (opts.radiusScale ?? 1);
   const y = el.type === 'glyph' ? 0 : (el.y_offset ?? 0);
+
+  if (el.type === 'polygon' || el.type === 'star') {
+    const pts = shapeVertices(el).map((v) => pointAt(n, radius * v.radiusRatio, offset + v.deg, y));
+    pts.push(pts[0]); // 闭合折线
+    return pts;
+  }
 
   if (el.type === 'arc') {
     const start = offset + (el.arc_start_deg ?? 0);

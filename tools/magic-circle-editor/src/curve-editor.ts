@@ -1,4 +1,4 @@
-import type { Curve } from './spec';
+import type { Anim, Curve } from './spec';
 
 /** 常用曲线形状预设。 */
 export const CURVE_PRESETS: Record<string, { label: string; curve: Curve }> = {
@@ -22,6 +22,7 @@ export class CurveEditor {
   private ctx: CanvasRenderingContext2D;
   private curve: Pt[] = [];
   private onChange: (curve: Curve) => void;
+  private easing: Anim['easing'] = 'linear';
   private yMin = 0;
   private yMax = 1;
   private dragging = -1;
@@ -38,6 +39,11 @@ export class CurveEditor {
   setCurve(curve: Curve): void {
     this.curve = curve.map((k) => [k[0], k[1]] as Pt);
     this.computeRange();
+    this.draw();
+  }
+
+  setEasing(easing: Anim['easing']): void {
+    this.easing = easing;
     this.draw();
   }
 
@@ -218,15 +224,33 @@ export class CurveEditor {
     }
     ctx.textAlign = 'left';
 
-    // 曲线
+    // 曲线（smoothstep 时按缓动细分绘制平滑曲线）
     if (this.curve.length > 0) {
       ctx.strokeStyle = '#44ccff';
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       this.curve.forEach((p, i) => {
-        const [x, y] = this.toCanvas(p);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        if (i === 0) {
+          const [x, y] = this.toCanvas(p);
+          ctx.moveTo(x, y);
+          return;
+        }
+        const prev = this.curve[i - 1];
+        if (this.easing === 'smoothstep') {
+          const SUB = 12;
+          for (let s = 1; s <= SUB; s++) {
+            const f = s / SUB;
+            const fe = f * f * (3 - 2 * f);
+            const [x, y] = this.toCanvas([
+              prev[0] + (p[0] - prev[0]) * f,
+              prev[1] + (p[1] - prev[1]) * fe,
+            ]);
+            ctx.lineTo(x, y);
+          }
+        } else {
+          const [x, y] = this.toCanvas(p);
+          ctx.lineTo(x, y);
+        }
       });
       ctx.stroke();
     }

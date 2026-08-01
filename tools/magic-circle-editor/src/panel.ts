@@ -19,7 +19,7 @@ export interface PanelApi {
   setSelected(i: number): void;
 }
 
-const TYPE_LABEL: Record<string, string> = { ring: '环', arc: '弧', glyph: '符文' };
+const TYPE_LABEL: Record<string, string> = { ring: '环', arc: '弧', polygon: '多边形', star: '星形', glyph: '符文' };
 const AXIS_PRESETS: { label: string; axis: Vec3 }[] = [
   { label: '地面', axis: [0, 1, 0] },
   { label: '竖直-X', axis: [1, 0, 0] },
@@ -100,7 +100,7 @@ export function initPanel(api: PanelApi): { render: () => void } {
   );
 
   // ----- 元素操作按钮 -----
-  const bindAdd = (id: string, type: 'ring' | 'arc' | 'glyph'): void => {
+  const bindAdd = (id: string, type: 'ring' | 'arc' | 'polygon' | 'star' | 'glyph'): void => {
     document.getElementById(id)!.addEventListener('click', () => {
       const s = api.getSpec();
       const next = addElement(s, type);
@@ -111,6 +111,8 @@ export function initPanel(api: PanelApi): { render: () => void } {
   };
   bindAdd('btn-add-ring', 'ring');
   bindAdd('btn-add-arc', 'arc');
+  bindAdd('btn-add-polygon', 'polygon');
+  bindAdd('btn-add-star', 'star');
   bindAdd('btn-add-glyph', 'glyph');
 
   document.getElementById('btn-del-elem')!.addEventListener('click', () => {
@@ -184,17 +186,25 @@ export function initPanel(api: PanelApi): { render: () => void } {
 
     // ----- 类型 -----
     const typeSel = el('select');
-    for (const t of ['ring', 'arc', 'glyph'] as const) {
+    const TYPE_OPTIONS: Record<string, string> = {
+      ring: '环 ring',
+      arc: '弧 arc',
+      polygon: '多边形 polygon',
+      star: '星形 star',
+      glyph: '符文 glyph',
+    };
+    for (const t of ['ring', 'arc', 'polygon', 'star', 'glyph'] as const) {
       const o = el('option');
       o.value = t;
-      o.textContent = { ring: '环 ring', arc: '弧 arc', glyph: '符文 glyph' }[t];
+      o.textContent = TYPE_OPTIONS[t];
       if (t === e.type) o.selected = true;
       typeSel.append(o);
     }
     typeSel.addEventListener('change', () => {
-      api.setSpec(setElementType(api.getSpec(), sel, typeSel.value as 'ring' | 'arc' | 'glyph'), {
-        fit: false,
-      });
+      api.setSpec(
+        setElementType(api.getSpec(), sel, typeSel.value as 'ring' | 'arc' | 'polygon' | 'star' | 'glyph'),
+        { fit: false },
+      );
       api.setSelected(sel);
     });
     const secTitle = el('h4', 'sec');
@@ -299,13 +309,14 @@ export function initPanel(api: PanelApi): { render: () => void } {
     propsBox.append(fieldRow('起始 start [0,1)', startI));
 
     // ----- 类型专属 -----
-    if (e.type === 'ring' || e.type === 'arc') {
-      // 排布模式：beads = 有序亮点环（默认），continuous = 连续密度拖尾
+    if (e.type === 'ring' || e.type === 'arc' || e.type === 'polygon' || e.type === 'star') {
+      const isShape = e.type === 'polygon' || e.type === 'star';
+      // 排布模式：beads = 有序亮点（默认），continuous = 连续密度拖尾
       const modeSel = el('select');
       for (const m of ['beads', 'continuous'] as const) {
         const o = el('option');
         o.value = m;
-        o.textContent = m === 'beads' ? 'beads 有序亮点' : 'continuous 连续拖尾';
+        o.textContent = m === 'beads' ? (isShape ? 'beads 顶点亮点' : 'beads 有序亮点') : 'continuous 连续拖尾';
         if ((e.mode ?? 'beads') === m) o.selected = true;
         modeSel.append(o);
       }
@@ -316,9 +327,22 @@ export function initPanel(api: PanelApi): { render: () => void } {
       propsBox.append(fieldRow('排布 mode', modeSel));
 
       if ((e.mode ?? 'beads') === 'beads') {
-        const beadsI = numberInput(e.beads ?? 16, { min: 2, step: 1 });
-        bindNumeric(beadsI, (v) => patchElement({ beads: Math.max(2, Math.round(v)) }), () => e.beads ?? 16);
-        propsBox.append(fieldRow('亮点数 beads', beadsI));
+        if (e.type === 'ring' || e.type === 'arc') {
+          const beadsI = numberInput(e.beads ?? 16, { min: 2, step: 1 });
+          bindNumeric(beadsI, (v) => patchElement({ beads: Math.max(2, Math.round(v)) }), () => e.beads ?? 16);
+          propsBox.append(fieldRow('亮点数 beads', beadsI));
+        } else if (e.type === 'polygon') {
+          const sidesI = numberInput(e.sides, { min: 3, step: 1 });
+          bindNumeric(sidesI, (v) => patchElement({ sides: Math.max(3, Math.round(v)) }), () => e.sides);
+          propsBox.append(fieldRow('边数 sides', sidesI));
+        } else {
+          const pointsI = numberInput(e.points, { min: 2, step: 1 });
+          bindNumeric(pointsI, (v) => patchElement({ points: Math.max(2, Math.round(v)) }), () => e.points);
+          propsBox.append(fieldRow('星芒 points', pointsI));
+          const ratioI = numberInput(e.inner_ratio, { min: 0.05, max: 1, step: 0.05 });
+          bindNumeric(ratioI, (v) => patchElement({ inner_ratio: Math.min(1, Math.max(0.05, v)) }), () => e.inner_ratio);
+          propsBox.append(fieldRow('内径比 inner_ratio', ratioI));
+        }
       } else {
         const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
         bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
@@ -332,6 +356,17 @@ export function initPanel(api: PanelApi): { render: () => void } {
       const yOffI = numberInput(e.y_offset ?? 0, { step: 0.05 });
       bindNumeric(yOffI, (v) => patchElement({ y_offset: v }), () => e.y_offset ?? 0);
       propsBox.append(fieldRow('纵向偏移 y_offset', yOffI));
+
+      const intervalI = numberInput(e.interval_ticks ?? 0, { min: 0, step: 1 });
+      bindNumeric(
+        intervalI,
+        (v) => {
+          const iv = Math.max(0, Math.round(v));
+          patchElement(iv >= 1 ? { interval_ticks: iv } : { interval_ticks: undefined });
+        },
+        () => e.interval_ticks ?? 0,
+      );
+      propsBox.append(fieldRow('脉冲 interval_ticks(0=关)', intervalI));
     }
     if (e.type === 'arc') {
       const aStartI = numberInput(e.arc_start_deg ?? 0, { step: 1 });
@@ -376,11 +411,31 @@ export function initPanel(api: PanelApi): { render: () => void } {
     const curveCanvas = el('canvas', 'curve-canvas');
     propsBox.append(curveCanvas);
 
+    // 缓动：linear / smoothstep，作用于该元素全部曲线
+    const easingSel = el('select');
+    for (const m of ['linear', 'smoothstep'] as const) {
+      const o = el('option');
+      o.value = m;
+      o.textContent = m === 'linear' ? 'linear 线性' : 'smoothstep 平滑';
+      if ((e.anim?.easing ?? 'linear') === m) o.selected = true;
+      easingSel.append(o);
+    }
+    easingSel.addEventListener('change', () => {
+      const easing = easingSel.value as 'linear' | 'smoothstep';
+      const cur = api.getSpec();
+      const si = api.getSelected();
+      if (si < 0) return;
+      api.setSpec(withElement(cur, si, { anim: { ...(cur.elements[si].anim ?? {}), easing } }), { fit: false });
+      curveEditor.setEasing(easing);
+    });
+    propsBox.append(fieldRow('缓动 easing', easingSel));
+
     const hint = el('div', 'hint');
     hint.textContent = '空白处单击加点 · 拖拽移动 · 右键删点';
     propsBox.append(hint);
 
     const curveEditor = new CurveEditor(curveCanvas, (curve) => commitCurve(curve));
+    curveEditor.setEasing(e.anim?.easing ?? 'linear');
     curveEditor.setCurve(currentCurve());
 
     curveSelect.addEventListener('change', () => {

@@ -14,6 +14,8 @@ export interface Anim {
   scale?: Curve; // 半径/glyph 尺寸倍率，默认 [[0,1]]
   alpha?: Curve; // 粒子透明度倍率，默认 [[0,1]]
   rotation?: Curve; // 窗口内附加旋转角（度），默认 []
+  /** 关键帧间插值缓动，默认 'linear'；'smoothstep' 平滑过渡。 */
+  easing?: 'linear' | 'smoothstep';
 }
 
 /** 三种元素共有的字段。 */
@@ -51,6 +53,8 @@ export interface RingElement extends ElementBase {
   trail_ticks?: number;
   /** 多层堆叠的纵向偏移（格），默认 0。 */
   y_offset?: number;
+  /** 脉冲：发射 interval_ticks / 停 interval_ticks 循环，默认无。 */
+  interval_ticks?: number;
 }
 
 export interface ArcElement extends ElementBase {
@@ -64,6 +68,32 @@ export interface ArcElement extends ElementBase {
   density?: number;
   trail_ticks?: number;
   y_offset?: number;
+  /** 脉冲：发射 interval_ticks / 停 interval_ticks 循环，默认无。 */
+  interval_ticks?: number;
+}
+
+export interface PolygonElement extends ElementBase {
+  type: 'polygon';
+  /** 顶点数（= beads 模式亮点数），≥3。 */
+  sides: number;
+  mode?: ElementMode;
+  density?: number;
+  trail_ticks?: number;
+  y_offset?: number;
+  interval_ticks?: number;
+}
+
+export interface StarElement extends ElementBase {
+  type: 'star';
+  /** 星芒数（外顶点数），≥2；总顶点 = 2×points。 */
+  points: number;
+  /** 内半径 = radius × inner_ratio，默认 0.4。 */
+  inner_ratio: number;
+  mode?: ElementMode;
+  density?: number;
+  trail_ticks?: number;
+  y_offset?: number;
+  interval_ticks?: number;
 }
 
 export interface GlyphElement extends ElementBase {
@@ -76,7 +106,7 @@ export interface GlyphElement extends ElementBase {
   scale?: number;
 }
 
-export type Element = RingElement | ArcElement | GlyphElement;
+export type Element = RingElement | ArcElement | PolygonElement | StarElement | GlyphElement;
 
 export interface MagicCircleSpec {
   /** 唯一标识，小写 snake_case。 */
@@ -102,6 +132,7 @@ function normalizeAnim(a: Anim): Anim {
     scale: Array.isArray(a.scale) ? a.scale : [[0, 1]],
     alpha: Array.isArray(a.alpha) ? a.alpha : [[0, 1]],
     rotation: Array.isArray(a.rotation) ? a.rotation : [],
+    easing: a.easing === 'smoothstep' ? 'smoothstep' : 'linear',
   };
 }
 
@@ -187,25 +218,47 @@ export function normalizeSpec(input: MagicCircleSpec): MagicCircleSpec {
     }
 
     const mode = e.mode === 'continuous' ? 'continuous' : 'beads';
+    const interval = num(e.interval_ticks, 0);
     const ringLike = {
       mode,
-      beads: defaultBeadCount(num(e.radius, 1), num(e.beads, 0)),
       density: num(e.density, 1.5),
       trail_ticks: Math.max(1, Math.round(num(e.trail_ticks, 10))),
       y_offset: num(e.y_offset, 0),
+      ...(interval >= 1 ? { interval_ticks: Math.round(interval) } : {}),
     };
 
     if (e.type === 'arc') {
       return {
         ...base,
         ...ringLike,
+        beads: defaultBeadCount(num(e.radius, 1), num(e.beads, 0)),
         type: 'arc',
         arc_start_deg: num(e.arc_start_deg, 0),
         arc_sweep_deg: num(e.arc_sweep_deg, 360),
       } as ArcElement;
     }
 
-    return { ...base, ...ringLike, type: 'ring' } as RingElement;
+    if (e.type === 'polygon') {
+      return {
+        ...base,
+        ...ringLike,
+        type: 'polygon',
+        sides: Math.max(3, Math.round(num(e.sides, 6))),
+      } as PolygonElement;
+    }
+
+    if (e.type === 'star') {
+      const ratio = num(e.inner_ratio, 0.4);
+      return {
+        ...base,
+        ...ringLike,
+        type: 'star',
+        points: Math.max(2, Math.round(num(e.points, 5))),
+        inner_ratio: Math.min(1, Math.max(0.05, ratio)),
+      } as StarElement;
+    }
+
+    return { ...base, ...ringLike, beads: defaultBeadCount(num(e.radius, 1), num(e.beads, 0)), type: 'ring' } as RingElement;
   });
 
   return {
@@ -267,7 +320,7 @@ export function validateSpec(spec: MagicCircleSpec): string[] {
       errs.push(`${where} 不是对象`);
       return;
     }
-    if (!['ring', 'arc', 'glyph'].includes(el.type)) {
+    if (!['ring', 'arc', 'polygon', 'star', 'glyph'].includes(el.type)) {
       errs.push(`${where}: 未知 type「${String(el.type)}」`);
     }
     if (typeof el.radius !== 'number' || !Number.isFinite(el.radius) || el.radius < 0) {
@@ -287,6 +340,13 @@ export function validateSpec(spec: MagicCircleSpec): string[] {
     if (el.type !== 'glyph' && el.beads !== undefined && (!Number.isInteger(el.beads) || el.beads < 2)) {
       errs.push(`${where}: beads 必须为 ≥2 的整数`);
     }
+    if (
+      el.type !== 'glyph' &&
+      el.interval_ticks !== undefined &&
+      (!Number.isInteger(el.interval_ticks) || el.interval_ticks < 1)
+    ) {
+      errs.push(`${where}: interval_ticks 必须为 ≥1 的整数`);
+    }
     if (el.axis !== undefined && !validAxis(el.axis)) {
       errs.push(`${where}: axis 必须为 3 个数字的非零向量`);
     }
@@ -301,10 +361,24 @@ export function validateSpec(spec: MagicCircleSpec): string[] {
       if (el.anim.scale) validCurve(el.anim.scale, `${where}.anim.scale`, errs);
       if (el.anim.alpha) validCurve(el.anim.alpha, `${where}.anim.alpha`, errs);
       if (el.anim.rotation) validCurve(el.anim.rotation, `${where}.anim.rotation`, errs);
+      if (el.anim.easing !== undefined && el.anim.easing !== 'linear' && el.anim.easing !== 'smoothstep') {
+        errs.push(`${where}.anim.easing 必须为 linear 或 smoothstep`);
+      }
     }
     if (el.type === 'arc') {
       const sweep = el.arc_sweep_deg ?? 360;
       if (Math.abs(sweep) > 360) errs.push(`${where}: arc_sweep_deg 绝对值不能超过 360`);
+    }
+    if (el.type === 'polygon' && (!Number.isInteger(el.sides) || el.sides < 3)) {
+      errs.push(`${where}: polygon sides 必须为 ≥3 的整数`);
+    }
+    if (el.type === 'star') {
+      if (!Number.isInteger(el.points) || el.points < 2) {
+        errs.push(`${where}: star points 必须为 ≥2 的整数`);
+      }
+      if (el.inner_ratio <= 0 || el.inner_ratio > 1) {
+        errs.push(`${where}: star inner_ratio 必须在 (0,1] 区间`);
+      }
     }
     if (el.type === 'glyph') {
       if (!Number.isInteger(el.count) || el.count < 1) {
@@ -350,7 +424,7 @@ export function withCurve(
 /** 追加一个指定类型的元素（start 递增避免全部同时出现）。 */
 export function addElement(
   spec: MagicCircleSpec,
-  type: 'ring' | 'arc' | 'glyph',
+  type: 'ring' | 'arc' | 'polygon' | 'star' | 'glyph',
 ): MagicCircleSpec {
   const start = Math.min(0.9, spec.elements.length * 0.1);
   const base = {
@@ -367,6 +441,10 @@ export function addElement(
     el = { ...base, type: 'ring', mode: 'beads', beads: 16, density: 1.5, trail_ticks: 10, y_offset: 0 };
   } else if (type === 'arc') {
     el = { ...base, type: 'arc', mode: 'beads', beads: 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 };
+  } else if (type === 'polygon') {
+    el = { ...base, type: 'polygon', mode: 'beads', sides: 6, density: 1.5, trail_ticks: 10, y_offset: 0 };
+  } else if (type === 'star') {
+    el = { ...base, type: 'star', mode: 'beads', points: 5, inner_ratio: 0.4, density: 1.5, trail_ticks: 10, y_offset: 0 };
   } else {
     el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 };
   }
@@ -390,12 +468,12 @@ export function moveElement(spec: MagicCircleSpec, index: number, dir: -1 | 1): 
 export function setElementType(
   spec: MagicCircleSpec,
   index: number,
-  type: 'ring' | 'arc' | 'glyph',
+  type: 'ring' | 'arc' | 'polygon' | 'star' | 'glyph',
 ): MagicCircleSpec {
   const el = spec.elements[index];
-  const wasRingLike = el.type === 'ring' || el.type === 'arc';
+  const wasRingLike = el.type === 'ring' || el.type === 'arc' || el.type === 'polygon' || el.type === 'star';
   const prevMode = wasRingLike ? el.mode : undefined;
-  const prevBeads = wasRingLike ? el.beads : undefined;
+  const prevBeads = el.type === 'ring' || el.type === 'arc' ? el.beads : undefined;
   const common: Record<string, unknown> = { ...el };
   for (const k of [
     'density',
@@ -408,6 +486,10 @@ export function setElementType(
     'scale',
     'mode',
     'beads',
+    'sides',
+    'points',
+    'inner_ratio',
+    'interval_ticks',
   ]) {
     delete common[k];
   }
@@ -417,6 +499,10 @@ export function setElementType(
     next = { ...common, type: 'ring', mode: prevMode ?? 'beads', beads: prevBeads ?? 16, density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
   } else if (type === 'arc') {
     next = { ...common, type: 'arc', mode: prevMode ?? 'beads', beads: prevBeads ?? 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 } as Element;
+  } else if (type === 'polygon') {
+    next = { ...common, type: 'polygon', mode: prevMode ?? 'beads', sides: 6, density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
+  } else if (type === 'star') {
+    next = { ...common, type: 'star', mode: prevMode ?? 'beads', points: 5, inner_ratio: 0.4, density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
   } else {
     next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 } as Element;
   }

@@ -1,10 +1,20 @@
-import type { Curve, Element } from './spec';
+import type { Anim, Curve, Element } from './spec';
+
+/** 段内插值缓动：smoothstep 平滑过渡，linear 直连。 */
+function easeFactor(f: number, easing: Anim['easing']): number {
+  return easing === 'smoothstep' ? f * f * (3 - 2 * f) : f;
+}
 
 /**
- * 关键帧曲线采样——契约动画模型：归一化时间 [0,1]，线性插值。
+ * 关键帧曲线采样——契约动画模型：归一化时间 [0,1]。
  * 空/缺省曲线返回 fallback（scale/alpha 默认 1，rotation 默认 0）。
  */
-export function sampleCurve(curve: Curve | undefined, t: number, fallback: number): number {
+export function sampleCurve(
+  curve: Curve | undefined,
+  t: number,
+  fallback: number,
+  easing: Anim['easing'] = 'linear',
+): number {
   if (!curve || curve.length === 0) return fallback;
   if (curve.length === 1) return curve[0][1];
   const tc = Math.min(1, Math.max(0, t));
@@ -17,7 +27,7 @@ export function sampleCurve(curve: Curve | undefined, t: number, fallback: numbe
     if (tc >= t0 && tc <= t1) {
       const span = t1 - t0;
       const f = span === 0 ? 0 : (tc - t0) / span;
-      return v0 + (v1 - v0) * f;
+      return v0 + (v1 - v0) * easeFactor(f, easing);
     }
   }
   return last[1];
@@ -50,9 +60,10 @@ export function elementFrame(el: Element, t: number): ElementFrame {
     return { active: false, lt: 0, radiusScale: 0, alpha: 0, rotationDeg: 0 };
   }
   const anim = el.anim;
-  const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1));
-  const alpha = sampleCurve(anim?.alpha, lt, 1);
-  const rotationDeg = sampleCurve(anim?.rotation, lt, 0);
+  const easing = anim?.easing;
+  const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1, easing));
+  const alpha = sampleCurve(anim?.alpha, lt, 1, easing);
+  const rotationDeg = sampleCurve(anim?.rotation, lt, 0, easing);
   return { active: alpha > 0.001, lt, radiusScale, alpha, rotationDeg };
 }
 

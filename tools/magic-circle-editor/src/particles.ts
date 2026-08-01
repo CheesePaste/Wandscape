@@ -1,6 +1,6 @@
-import type { Element, Vec3 } from './spec';
+import type { Element, PolygonElement, StarElement, Vec3 } from './spec';
 import { AXIS_GROUND } from './spec';
-import { normalize, orthonormalBasis, rad } from './geometry';
+import { normalize, orthonormalBasis, pointAt, rad, shapeVertices } from './geometry';
 import { elementLocalTime, sampleCurve } from './anim';
 import { mcParticleStyle, PARTICLE_STYLE_IDS } from './mc-particles';
 
@@ -62,12 +62,19 @@ export function computeLiveParticles(
   durTicks: number,
   elIndex: number,
 ): LiveParticle[] {
-  if (el.type !== 'glyph' && (el.mode ?? 'beads') === 'beads') {
-    return computeBeads(el, t, durTicks, elIndex);
-  }
   const dur = Math.max(1, durTicks);
-  const trail = el.type === 'glyph' ? GLYPH_TRAIL : Math.round(el.trail_ticks ?? 10);
   const T = t * dur;
+  // 脉冲门控：interval_ticks 周期 on/off（呼吸节奏）
+  if (el.type !== 'glyph' && el.interval_ticks) {
+    if (Math.floor(T / el.interval_ticks) % 2 === 1) return [];
+  }
+  if (el.type === 'polygon' || el.type === 'star') {
+    return computeShape(el, t, dur, elIndex);
+  }
+  if (el.type !== 'glyph' && (el.mode ?? 'beads') === 'beads') {
+    return computeBeads(el, t, dur, elIndex);
+  }
+  const trail = el.type === 'glyph' ? GLYPH_TRAIL : Math.round(el.trail_ticks ?? 10);
   const startTick = Math.max(0, Math.floor(T - trail) + 1);
   const endTick = Math.floor(T);
   if (endTick < startTick) return [];
@@ -75,6 +82,7 @@ export function computeLiveParticles(
   const axis = normalize(el.axis ?? AXIS_GROUND);
   const { a, b } = orthonormalBasis(axis);
   const anim = el.anim;
+  const easing = anim?.easing;
   const start = el.start ?? 0;
   const style = el.type === 'glyph' ? undefined : mcParticleStyle(el.particle);
   const color = el.color ?? null;
@@ -85,10 +93,10 @@ export function computeLiveParticles(
   for (let Tp = startTick; Tp <= endTick; Tp++) {
     const lt = elementLocalTime(start, Tp / dur);
     if (lt === null) continue;
-    const alphaEmit = sampleCurve(anim?.alpha, lt, 1);
+    const alphaEmit = sampleCurve(anim?.alpha, lt, 1, easing);
     if (alphaEmit <= 0.001) continue;
-    const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1));
-    const animRot = sampleCurve(anim?.rotation, lt, 0);
+    const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1, easing));
+    const animRot = sampleCurve(anim?.rotation, lt, 0, easing);
     const phase =
       (el.rotation_offset_deg ?? 0) +
       ((el.rotate_speed ?? 0) * (Tp - start * dur)) / 20 +
@@ -174,11 +182,12 @@ function computeBeads(el: Element, t: number, durTicks: number, elIndex: number)
   const lt = elementLocalTime(start, t);
   if (lt === null) return [];
   const anim = el.anim;
-  const alphaEmit = sampleCurve(anim?.alpha, lt, 1);
+  const easing = anim?.easing;
+  const alphaEmit = sampleCurve(anim?.alpha, lt, 1, easing);
   if (alphaEmit <= 0.001) return [];
-  const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1));
+  const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1, easing));
   const radius = el.radius * radiusScale;
-  const animRot = sampleCurve(anim?.rotation, lt, 0);
+  const animRot = sampleCurve(anim?.rotation, lt, 0, easing);
   const phase =
     (el.rotation_offset_deg ?? 0) +
     ((el.rotate_speed ?? 0) * (T - start * dur)) / 20 +
@@ -215,6 +224,119 @@ function computeBeads(el: Element, t: number, durTicks: number, elIndex: number)
       alpha: alphaEmit * shimmer,
       tint,
     });
+  }
+  return out;
+}
+
+/**
+ * polygon/star：beads = 每个顶点一个持久亮点（有序，仿 computeBeads）；continuous = 沿各边
+ * 每 tick 撒 density×边长 个拖尾粒子。尺寸用基础 quadSize（稳定）。
+ */
+function computeShape(
+  el: PolygonElement | StarElement,
+  t: number,
+  dur: number,
+  elIndex: number,
+): LiveParticle[] {
+  const T = t * dur;
+  const start = el.start ?? 0;
+  const lt = elementLocalTime(start, t);
+  if (lt === null) return [];
+  const anim = el.anim;
+  const easing = anim?.easing;
+  const alphaEmit = sampleCurve(anim?.alpha, lt, 1, easing);
+  if (alphaEmit <= 0.001) return [];
+  const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1, easing));
+  const animRot = sampleCurve(anim?.rotation, lt, 0, easing);
+  const phase =
+    (el.rotation_offset_deg ?? 0) +
+    ((el.rotate_speed ?? 0) * (T - start * dur)) / 20 +
+    animRot;
+  const axis = normalize(el.axis ?? AXIS_GROUND);
+  const { a, b } = orthonormalBasis(axis);
+  const style = mcParticleStyle(el.particle);
+  const tint = style?.tintable ? (el.color ?? null) : null;
+  const frames = style ? style.frames : [];
+  const frame = frames.length ? Math.floor((T / 20) * 2) % frames.length : 0;
+  const texture = style ? frames[frame] : '';
+  const size = style ? 2 * style.quadSize : FALLBACK_SIZE;
+  const radius = el.radius * radiusScale;
+  const yOff = el.y_offset ?? 0;
+  const verts = shapeVertices(el);
+
+  // beads：顶点持久亮点（有序）
+  if ((el.mode ?? 'beads') === 'beads') {
+    const n = verts.length;
+    const out: LiveParticle[] = [];
+    for (let i = 0; i < n; i++) {
+      const v = verts[i];
+      const shimmer = 0.82 + 0.18 * Math.sin((i / n) * Math.PI * 2 + T * 0.11);
+      out.push({
+        pos: pointAt(axis, radius * v.radiusRatio, phase + v.deg, yOff),
+        size,
+        frame,
+        texture,
+        alpha: alphaEmit * shimmer,
+        tint,
+      });
+    }
+    return out;
+  }
+
+  // continuous：沿各边每 tick 撒 density×边长 个，带 trail 淡出 + 抖动
+  const trail = Math.round(el.trail_ticks ?? 10);
+  const jitter = 0.2;
+  const out: LiveParticle[] = [];
+  const startTick = Math.max(0, Math.floor(T - trail) + 1);
+  const endTick = Math.floor(T);
+  if (endTick >= startTick) {
+    for (let Tp = startTick; Tp <= endTick; Tp++) {
+      const ltp = elementLocalTime(start, Tp / dur);
+      if (ltp === null) continue;
+      const aEmit = sampleCurve(anim?.alpha, ltp, 1, easing);
+      if (aEmit <= 0.001) continue;
+      // 每 tick 用当刻的缩放/相位重建顶点（旋转拖尾）
+      const rs = Math.max(0, sampleCurve(anim?.scale, ltp, 1, easing));
+      const rp = el.radius * rs;
+      const ar = sampleCurve(anim?.rotation, ltp, 0, easing);
+      const pp =
+        (el.rotation_offset_deg ?? 0) +
+        ((el.rotate_speed ?? 0) * (Tp - start * dur)) / 20 +
+        ar;
+      const wv = verts.map((v) => pointAt(axis, rp * v.radiusRatio, pp + v.deg, yOff));
+      const age = T - Tp;
+      const ageFade = trail > 0 ? Math.max(0, 1 - age / trail) : 1;
+      for (let e = 0; e < wv.length; e++) {
+        const p0 = wv[e];
+        const p1 = wv[(e + 1) % wv.length];
+        const dx = p1[0] - p0[0];
+        const dy = p1[1] - p0[1];
+        const dz = p1[2] - p0[2];
+        const edgeLen = Math.hypot(dx, dy, dz);
+        const N = Math.max(1, Math.round((el.density ?? 1.5) * edgeLen));
+        for (let k = 0; k < N; k++) {
+          const u = (k + 0.5) / N;
+          const jx = (hash01(Tp, elIndex * 131 + e * 7 + k, 11) - 0.5) * 2 * jitter;
+          const jy = (hash01(Tp, elIndex * 131 + e * 7 + k, 991) - 0.5) * 2 * jitter;
+          out.push({
+            pos: [
+              p0[0] + dx * u + a[0] * jx + b[0] * jy,
+              p0[1] + dy * u + a[1] * jx + b[1] * jy,
+              p0[2] + dz * u + a[2] * jx + b[2] * jy,
+            ],
+            size,
+            frame,
+            texture,
+            alpha: aEmit * ageFade,
+            tint,
+          });
+        }
+      }
+    }
+  }
+  if (out.length > MAX_PER_ELEMENT) {
+    const step = Math.ceil(out.length / MAX_PER_ELEMENT);
+    return out.filter((_, i) => i % step === 0);
   }
   return out;
 }
