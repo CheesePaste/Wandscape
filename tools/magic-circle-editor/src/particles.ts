@@ -264,21 +264,39 @@ function computeShape(
   const yOff = el.y_offset ?? 0;
   const verts = shapeVertices(el);
 
-  // beads：顶点持久亮点（有序）
+  // beads：顶点持久亮点 + 每条边均匀撒 density×边长 个粒子（静态描边，无抖动）
   if ((el.mode ?? 'beads') === 'beads') {
     const n = verts.length;
     const out: LiveParticle[] = [];
+    const wv = verts.map((v) => pointAt(axis, radius * v.radiusRatio, phase + v.deg, yOff));
+    for (let e = 0; e < n; e++) {
+      const p0 = wv[e];
+      const p1 = wv[(e + 1) % n];
+      const edgeLen = Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
+      const N = Math.max(1, Math.round((el.density ?? 1.5) * edgeLen));
+      for (let k = 0; k < N; k++) {
+        const u = (k + 0.5) / N;
+        out.push({
+          pos: [
+            p0[0] + (p1[0] - p0[0]) * u,
+            p0[1] + (p1[1] - p0[1]) * u,
+            p0[2] + (p1[2] - p0[2]) * u,
+          ],
+          size,
+          frame,
+          texture,
+          alpha: alphaEmit,
+          tint,
+        });
+      }
+    }
     for (let i = 0; i < n; i++) {
-      const v = verts[i];
       const shimmer = 0.82 + 0.18 * Math.sin((i / n) * Math.PI * 2 + T * 0.11);
-      out.push({
-        pos: pointAt(axis, radius * v.radiusRatio, phase + v.deg, yOff),
-        size,
-        frame,
-        texture,
-        alpha: alphaEmit * shimmer,
-        tint,
-      });
+      out.push({ pos: wv[i], size, frame, texture, alpha: alphaEmit * shimmer, tint });
+    }
+    if (out.length > MAX_PER_ELEMENT) {
+      const step = Math.ceil(out.length / MAX_PER_ELEMENT);
+      return out.filter((_, i) => i % step === 0);
     }
     return out;
   }

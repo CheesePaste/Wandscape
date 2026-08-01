@@ -111,11 +111,11 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 | arc | arc_start_deg | 起始角度（度） |
 | arc | arc_sweep_deg | 扫过角度（度，<360 为部分圆弧） |
 | arc | mode / beads / density / trail_ticks / y_offset / interval_ticks | 同 ring |
-| polygon | sides | 顶点数（≥3）= beads 模式亮点数 |
-| polygon | mode / density / trail_ticks / y_offset / interval_ticks | 同 ring（beads 时是顶点亮点） |
+| polygon | sides | 顶点数（≥3） |
+| polygon | mode / density / trail_ticks / y_offset / interval_ticks | 同 ring（beads 时顶点亮点 + 均匀描边，`density` 控制描边密度） |
 | star | points | 星芒数（≥2，外顶点数；总顶点 = 2×points） |
 | star | inner_ratio | 内半径 = radius × inner_ratio（默认 0.4） |
-| star | mode / density / trail_ticks / y_offset / interval_ticks | 同 ring |
+| star | mode / density / trail_ticks / y_offset / interval_ticks | 同 polygon（首尖朝上） |
 | glyph | count | 符文个数 |
 | glyph | sprite | 符文贴图 key（后续与 MC 共享同一批资源） |
 | glyph | scale | 符文渲染尺寸（默认 0.3） |
@@ -171,7 +171,7 @@ angle(T) = rotation_offset_deg
 
 - **ring/arc · beads**（**默认**）：固定 `beads` 个亮点均布在圆周/弧上，随 `rotate_speed` 整体旋转，**无随机抖动**（有序不糊）。尺寸 = 粒子基础 quadSize×2（稳定，不用年龄曲线），亮度带一圈慢速行进波（shimmer）。alpha 来自曲线，级联展开由 `start` 控制。
 - **ring/arc · continuous**：每 tick 按当前 `radius×scale`、当前旋转角、当前 `alpha`，在圆周/弧上撒 `density × 弧长` 个粒子，带 ±0.2 格随机抖动（避免格子状伪影），存活 `trail_ticks`。适合火焰/雾等需要密度的风格。
-- **polygon/star**：`beads` = 每个顶点一个持久亮点（有序，正多边形/星形轮廓）；`continuous` = 沿各边密度拖尾。
+- **polygon/star**：`beads`（默认）= 顶点持久亮点 + 每条边均匀撒 `density×边长` 个粒子（静态描边，`density` 可调）；`continuous` = 沿各边动态拖尾。星形首尖朝上。
 - **glyph**：每 tick 在 `count` 个符文位置撒短命符文粒子（存活 `trail_ticks`），尺寸 = glyph `scale`，alpha 来自曲线。
 - **脉冲**：设 `interval_ticks` 后按"发射 N tick / 停 N tick"循环，做呼吸节奏。
 - 同一时刻存活粒子约几百个，MC 可轻松承受。

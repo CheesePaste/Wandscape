@@ -311,13 +311,14 @@ export function initPanel(api: PanelApi): { render: () => void } {
     // ----- 类型专属 -----
     if (e.type === 'ring' || e.type === 'arc' || e.type === 'polygon' || e.type === 'star') {
       const isShape = e.type === 'polygon' || e.type === 'star';
-      // 排布模式：beads = 有序亮点（默认），continuous = 连续密度拖尾
+      const isBeads = (e.mode ?? 'beads') === 'beads';
+      // 排布模式：beads = 有序亮点（shape 还带均匀描边），continuous = 连续密度拖尾
       const modeSel = el('select');
       for (const m of ['beads', 'continuous'] as const) {
         const o = el('option');
         o.value = m;
-        o.textContent = m === 'beads' ? (isShape ? 'beads 顶点亮点' : 'beads 有序亮点') : 'continuous 连续拖尾';
-        if ((e.mode ?? 'beads') === m) o.selected = true;
+        o.textContent = m === 'beads' ? (isShape ? 'beads 顶点+描边' : 'beads 有序亮点') : 'continuous 连续拖尾';
+        if (isBeads === (m === 'beads')) o.selected = true;
         modeSel.append(o);
       }
       modeSel.addEventListener('change', () => {
@@ -326,7 +327,7 @@ export function initPanel(api: PanelApi): { render: () => void } {
       });
       propsBox.append(fieldRow('排布 mode', modeSel));
 
-      if ((e.mode ?? 'beads') === 'beads') {
+      if (isBeads) {
         if (e.type === 'ring' || e.type === 'arc') {
           const beadsI = numberInput(e.beads ?? 16, { min: 2, step: 1 });
           bindNumeric(beadsI, (v) => patchElement({ beads: Math.max(2, Math.round(v)) }), () => e.beads ?? 16);
@@ -344,13 +345,16 @@ export function initPanel(api: PanelApi): { render: () => void } {
           propsBox.append(fieldRow('内径比 inner_ratio', ratioI));
         }
       } else {
-        const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
-        bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
-        propsBox.append(fieldRow('密度 density', densityI));
-
         const trailI = numberInput(e.trail_ticks ?? 10, { min: 1, step: 1 });
         bindNumeric(trailI, (v) => patchElement({ trail_ticks: Math.max(1, Math.round(v)) }), () => e.trail_ticks ?? 10);
         propsBox.append(fieldRow('拖尾 tick trail_ticks', trailI));
+      }
+
+      // 密度：shape 两模式都显示（beads 的描边 / continuous 的拖尾）；ring/arc 仅 continuous
+      if (isShape || !isBeads) {
+        const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
+        bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
+        propsBox.append(fieldRow('密度 density', densityI));
       }
 
       const yOffI = numberInput(e.y_offset ?? 0, { step: 0.05 });

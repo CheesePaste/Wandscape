@@ -442,9 +442,9 @@ export function addElement(
   } else if (type === 'arc') {
     el = { ...base, type: 'arc', mode: 'beads', beads: 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 };
   } else if (type === 'polygon') {
-    el = { ...base, type: 'polygon', mode: 'beads', sides: 6, density: 1.5, trail_ticks: 10, y_offset: 0 };
+    el = { ...base, type: 'polygon', mode: 'beads', sides: 6, density: 2.5, trail_ticks: 10, y_offset: 0 };
   } else if (type === 'star') {
-    el = { ...base, type: 'star', mode: 'beads', points: 5, inner_ratio: 0.4, density: 1.5, trail_ticks: 10, y_offset: 0 };
+    el = { ...base, type: 'star', mode: 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0 };
   } else {
     el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 };
   }
@@ -500,9 +500,9 @@ export function setElementType(
   } else if (type === 'arc') {
     next = { ...common, type: 'arc', mode: prevMode ?? 'beads', beads: prevBeads ?? 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 } as Element;
   } else if (type === 'polygon') {
-    next = { ...common, type: 'polygon', mode: prevMode ?? 'beads', sides: 6, density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
+    next = { ...common, type: 'polygon', mode: prevMode ?? 'beads', sides: 6, density: 2.5, trail_ticks: 10, y_offset: 0 } as Element;
   } else if (type === 'star') {
-    next = { ...common, type: 'star', mode: prevMode ?? 'beads', points: 5, inner_ratio: 0.4, density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
+    next = { ...common, type: 'star', mode: prevMode ?? 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0 } as Element;
   } else {
     next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 } as Element;
   }
