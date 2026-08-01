@@ -18,8 +18,8 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
       "radius": 4.0,
       "particle": "glow",
       "color": "#00ff88",
-      "density": 1.5,
-      "trail_ticks": 10,
+      "mode": "beads",
+      "beads": 20,
       "rotation_offset_deg": 0,
       "rotate_speed": 23,
       "y_offset": 0.0,
@@ -38,6 +38,7 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
       "arc_sweep_deg": 240,
       "particle": "ember",
       "color": "#ff8800",
+      "mode": "continuous",
       "density": 1.5,
       "trail_ticks": 8,
       "rotate_speed": -17,
@@ -88,12 +89,14 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 
 | 类型 | 字段 | 说明 |
 |------|------|------|
-| ring | density | 每格弧长每 tick 粒子数（默认 1.5） |
-| ring | trail_ticks | 粒子存活 tick = 拖尾长度（默认 10） |
+| ring | mode | 排布模式：`beads`（**默认**，固定亮点均布成环，有序） / `continuous`（连续密度拖尾） |
+| ring | beads | beads 模式亮点数（默认按周长 1.2 格/点推算，钳 [4,48]） |
+| ring | density | continuous 模式：每格弧长每 tick 粒子数（默认 1.5） |
+| ring | trail_ticks | continuous 模式：粒子存活 tick = 拖尾长度（默认 10） |
 | ring | y_offset | 多层堆叠的纵向偏移（默认 0） |
 | arc | arc_start_deg | 起始角度（度） |
 | arc | arc_sweep_deg | 扫过角度（度，<360 为部分圆弧） |
-| arc | density / trail_ticks / y_offset | 同 ring |
+| arc | mode / beads / density / trail_ticks / y_offset | 同 ring |
 | glyph | count | 符文个数 |
 | glyph | sprite | 符文贴图 key（后续与 MC 共享同一批资源） |
 | glyph | scale | 符文渲染尺寸（默认 0.3） |
@@ -146,7 +149,8 @@ angle(T) = rotation_offset_deg
 
 ## 粒子模型（MC 渲染端如何消费）
 
-- **ring/arc**：每 tick 按当前 `radius×scale`、当前旋转角、当前 `alpha`，在圆周/弧上撒 `density × 弧长` 个粒子，带 ±0.2 格随机抖动（避免格子状伪影），静止或轻微外漂，存活 `trail_ticks`。
+- **ring/arc · beads**（**默认**）：固定 `beads` 个亮点均布在圆周/弧上，随 `rotate_speed` 整体旋转，**无随机抖动**（有序不糊）。尺寸 = 粒子基础 quadSize×2（稳定，不用年龄曲线），亮度带一圈慢速行进波（shimmer）。alpha 来自曲线，级联展开由 `start` 控制。
+- **ring/arc · continuous**：每 tick 按当前 `radius×scale`、当前旋转角、当前 `alpha`，在圆周/弧上撒 `density × 弧长` 个粒子，带 ±0.2 格随机抖动（避免格子状伪影），存活 `trail_ticks`。适合火焰/雾等需要密度的风格。
 - **glyph**：每 tick 在 `count` 个符文位置撒短命符文粒子（存活 `trail_ticks`），尺寸 = glyph `scale`，alpha 来自曲线。
 - 同一时刻存活粒子约几百个，MC 可轻松承受。
 
@@ -202,6 +206,7 @@ angle(T) = rotation_offset_deg
       "radius": 4.0,
       "particle": "glow",
       "color": "#ff5522",
+      "mode": "continuous",
       "density": 1.5,
       "trail_ticks": 10,
       "rotate_speed": 23,
@@ -216,6 +221,7 @@ angle(T) = rotation_offset_deg
       "radius": 2.6,
       "particle": "ember",
       "color": "#ffaa00",
+      "mode": "continuous",
       "density": 1.5,
       "trail_ticks": 8,
       "rotate_speed": -17,
@@ -253,6 +259,7 @@ angle(T) = rotation_offset_deg
       "radius": 3.0,
       "particle": "glow",
       "color": "#44ccff",
+      "mode": "continuous",
       "density": 2.0,
       "trail_ticks": 12,
       "rotate_speed": 9,
@@ -266,6 +273,7 @@ angle(T) = rotation_offset_deg
       "arc_sweep_deg": 270,
       "particle": "endRod",
       "color": "#aaddff",
+      "mode": "continuous",
       "density": 1.5,
       "trail_ticks": 10,
       "rotate_speed": 23,
@@ -301,6 +309,7 @@ angle(T) = rotation_offset_deg
       "radius": 2.0,
       "particle": "glow",
       "color": "#cc66ff",
+      "mode": "continuous",
       "density": 1.5,
       "trail_ticks": 10,
       "rotate_speed": 40,
@@ -316,6 +325,7 @@ angle(T) = rotation_offset_deg
       "radius": 1.6,
       "particle": "endRod",
       "color": "#ddaaff",
+      "mode": "continuous",
       "density": 1.5,
       "trail_ticks": 8,
       "rotate_speed": -30,

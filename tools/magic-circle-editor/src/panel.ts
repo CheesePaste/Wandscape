@@ -300,13 +300,34 @@ export function initPanel(api: PanelApi): { render: () => void } {
 
     // ----- 类型专属 -----
     if (e.type === 'ring' || e.type === 'arc') {
-      const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
-      bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
-      propsBox.append(fieldRow('密度 density', densityI));
+      // 排布模式：beads = 有序亮点环（默认），continuous = 连续密度拖尾
+      const modeSel = el('select');
+      for (const m of ['beads', 'continuous'] as const) {
+        const o = el('option');
+        o.value = m;
+        o.textContent = m === 'beads' ? 'beads 有序亮点' : 'continuous 连续拖尾';
+        if ((e.mode ?? 'beads') === m) o.selected = true;
+        modeSel.append(o);
+      }
+      modeSel.addEventListener('change', () => {
+        patchElement({ mode: modeSel.value as 'beads' | 'continuous' });
+        api.setSelected(api.getSelected()); // 重渲染 props，切换字段显隐
+      });
+      propsBox.append(fieldRow('排布 mode', modeSel));
 
-      const trailI = numberInput(e.trail_ticks ?? 10, { min: 1, step: 1 });
-      bindNumeric(trailI, (v) => patchElement({ trail_ticks: Math.max(1, Math.round(v)) }), () => e.trail_ticks ?? 10);
-      propsBox.append(fieldRow('拖尾 tick trail_ticks', trailI));
+      if ((e.mode ?? 'beads') === 'beads') {
+        const beadsI = numberInput(e.beads ?? 16, { min: 2, step: 1 });
+        bindNumeric(beadsI, (v) => patchElement({ beads: Math.max(2, Math.round(v)) }), () => e.beads ?? 16);
+        propsBox.append(fieldRow('亮点数 beads', beadsI));
+      } else {
+        const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
+        bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
+        propsBox.append(fieldRow('密度 density', densityI));
+
+        const trailI = numberInput(e.trail_ticks ?? 10, { min: 1, step: 1 });
+        bindNumeric(trailI, (v) => patchElement({ trail_ticks: Math.max(1, Math.round(v)) }), () => e.trail_ticks ?? 10);
+        propsBox.append(fieldRow('拖尾 tick trail_ticks', trailI));
+      }
 
       const yOffI = numberInput(e.y_offset ?? 0, { step: 0.05 });
       bindNumeric(yOffI, (v) => patchElement({ y_offset: v }), () => e.y_offset ?? 0);

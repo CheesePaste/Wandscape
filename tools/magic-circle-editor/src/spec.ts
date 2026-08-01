@@ -36,11 +36,18 @@ export interface ElementBase {
   anim?: Anim;
 }
 
+/** ring/arc 的排布模式：beads = 固定数量亮点均布成环（有序）；continuous = 连续密度拖尾。 */
+export type ElementMode = 'beads' | 'continuous';
+
 export interface RingElement extends ElementBase {
   type: 'ring';
-  /** 每格弧长每 tick 粒子数，默认 1.5。 */
+  /** 排布模式，默认 'beads'（有序亮点环）。 */
+  mode?: ElementMode;
+  /** beads 模式：亮点数量（默认按半径 2πr/1.2 格自动推算）。 */
+  beads?: number;
+  /** continuous 模式：每格弧长每 tick 粒子数，默认 1.5。 */
   density?: number;
-  /** 粒子存活 tick = 拖尾长度，默认 10。 */
+  /** continuous 模式：粒子存活 tick = 拖尾长度，默认 10。 */
   trail_ticks?: number;
   /** 多层堆叠的纵向偏移（格），默认 0。 */
   y_offset?: number;
@@ -52,6 +59,8 @@ export interface ArcElement extends ElementBase {
   arc_start_deg?: number;
   /** 扫过角度（度），默认 360。 */
   arc_sweep_deg?: number;
+  mode?: ElementMode;
+  beads?: number;
   density?: number;
   trail_ticks?: number;
   y_offset?: number;
@@ -84,6 +93,9 @@ export const AXIS_GROUND: Vec3 = [0, 1, 0];
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 const num = (v: unknown, fallback: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+/** beads 默认数量：按周长 1.2 格间距推算，钳到 [4, 48]。显式 beads（>0）优先。 */
+const defaultBeadCount = (radius: number, explicit = 0): number =>
+  explicit >= 2 ? Math.round(explicit) : Math.min(48, Math.max(4, Math.round((2 * Math.PI * Math.max(0.1, radius)) / 1.2)));
 
 function normalizeAnim(a: Anim): Anim {
   return {
@@ -113,8 +125,8 @@ export function createDefaultSpec(): MagicCircleSpec {
         radius: 4.0,
         particle: 'glow',
         color: '#44ccff',
-        density: 1.5,
-        trail_ticks: 10,
+        mode: 'beads',
+        beads: 20,
         rotate_speed: 20,
         start: 0,
         anim: {
@@ -129,8 +141,8 @@ export function createDefaultSpec(): MagicCircleSpec {
         arc_sweep_deg: 240,
         particle: 'endRod',
         color: '#ffaa00',
-        density: 1.5,
-        trail_ticks: 8,
+        mode: 'beads',
+        beads: 14,
         rotate_speed: -14,
         start: 0.2,
       },
@@ -174,7 +186,10 @@ export function normalizeSpec(input: MagicCircleSpec): MagicCircleSpec {
       } as GlyphElement;
     }
 
+    const mode = e.mode === 'continuous' ? 'continuous' : 'beads';
     const ringLike = {
+      mode,
+      beads: defaultBeadCount(num(e.radius, 1), num(e.beads, 0)),
       density: num(e.density, 1.5),
       trail_ticks: Math.max(1, Math.round(num(e.trail_ticks, 10))),
       y_offset: num(e.y_offset, 0),
@@ -261,6 +276,17 @@ export function validateSpec(spec: MagicCircleSpec): string[] {
     if (el.type !== 'glyph' && (typeof el.particle !== 'string' || !el.particle)) {
       errs.push(`${where}: particle 必须为非空字符串`);
     }
+    if (
+      el.type !== 'glyph' &&
+      el.mode !== undefined &&
+      el.mode !== 'beads' &&
+      el.mode !== 'continuous'
+    ) {
+      errs.push(`${where}: mode 必须为 beads 或 continuous`);
+    }
+    if (el.type !== 'glyph' && el.beads !== undefined && (!Number.isInteger(el.beads) || el.beads < 2)) {
+      errs.push(`${where}: beads 必须为 ≥2 的整数`);
+    }
     if (el.axis !== undefined && !validAxis(el.axis)) {
       errs.push(`${where}: axis 必须为 3 个数字的非零向量`);
     }
@@ -338,9 +364,9 @@ export function addElement(
   };
   let el: Element;
   if (type === 'ring') {
-    el = { ...base, type: 'ring', density: 1.5, trail_ticks: 10, y_offset: 0 };
+    el = { ...base, type: 'ring', mode: 'beads', beads: 16, density: 1.5, trail_ticks: 10, y_offset: 0 };
   } else if (type === 'arc') {
-    el = { ...base, type: 'arc', arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 };
+    el = { ...base, type: 'arc', mode: 'beads', beads: 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 };
   } else {
     el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 };
   }
@@ -367,6 +393,9 @@ export function setElementType(
   type: 'ring' | 'arc' | 'glyph',
 ): MagicCircleSpec {
   const el = spec.elements[index];
+  const wasRingLike = el.type === 'ring' || el.type === 'arc';
+  const prevMode = wasRingLike ? el.mode : undefined;
+  const prevBeads = wasRingLike ? el.beads : undefined;
   const common: Record<string, unknown> = { ...el };
   for (const k of [
     'density',
@@ -377,15 +406,17 @@ export function setElementType(
     'count',
     'sprite',
     'scale',
+    'mode',
+    'beads',
   ]) {
     delete common[k];
   }
   delete common.type;
   let next: Element;
   if (type === 'ring') {
-    next = { ...common, type: 'ring', density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
+    next = { ...common, type: 'ring', mode: prevMode ?? 'beads', beads: prevBeads ?? 16, density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
   } else if (type === 'arc') {
-    next = { ...common, type: 'arc', arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 } as Element;
+    next = { ...common, type: 'arc', mode: prevMode ?? 'beads', beads: prevBeads ?? 12, arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 } as Element;
   } else {
     next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 } as Element;
   }

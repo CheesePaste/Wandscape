@@ -52,8 +52,9 @@ function hash01(a: number, b: number, c: number): number {
 
 /**
  * 计算元素在全局归一化时刻 t 的存活粒子（模拟契约粒子模型）：
- * 每 tick 撒 density×弧长 个粒子，存活 trail_ticks，带 ±0.2 格抖动。
- * vanilla 粒子用真实贴图 + 移植尺寸曲线；glyph 仍是回退圆点（符文贴图后续）。
+ * beads 模式 = 固定亮点均布成环（有序）；continuous = 每 tick 撒 density×弧长 个、
+ * 存活 trail_ticks、带 ±0.2 格抖动。vanilla 粒子用真实贴图 + 移植尺寸曲线；
+ * glyph 仍是回退圆点（符文贴图后续）。
  */
 export function computeLiveParticles(
   el: Element,
@@ -61,6 +62,9 @@ export function computeLiveParticles(
   durTicks: number,
   elIndex: number,
 ): LiveParticle[] {
+  if (el.type !== 'glyph' && (el.mode ?? 'beads') === 'beads') {
+    return computeBeads(el, t, durTicks, elIndex);
+  }
   const dur = Math.max(1, durTicks);
   const trail = el.type === 'glyph' ? GLYPH_TRAIL : Math.round(el.trail_ticks ?? 10);
   const T = t * dur;
@@ -153,6 +157,64 @@ export function computeLiveParticles(
   if (out.length > MAX_PER_ELEMENT) {
     const step = Math.ceil(out.length / MAX_PER_ELEMENT);
     return out.filter((_, i) => i % step === 0);
+  }
+  return out;
+}
+
+/**
+ * beads 有序模式：固定 `beads` 个持久亮点均布在圆周/弧上，随 rotate_speed 整体旋转，
+ * 无随机抖动（有序不糊）。亮点亮度带一圈慢速行进波（shimmer），帧随全局时间慢速推进。
+ * 尺寸用粒子基础 quadSize（稳定），不用 continuous 的年龄曲线。
+ */
+function computeBeads(el: Element, t: number, durTicks: number, elIndex: number): LiveParticle[] {
+  if (el.type === 'glyph') return [];
+  const dur = Math.max(1, durTicks);
+  const T = t * dur;
+  const start = el.start ?? 0;
+  const lt = elementLocalTime(start, t);
+  if (lt === null) return [];
+  const anim = el.anim;
+  const alphaEmit = sampleCurve(anim?.alpha, lt, 1);
+  if (alphaEmit <= 0.001) return [];
+  const radiusScale = Math.max(0, sampleCurve(anim?.scale, lt, 1));
+  const radius = el.radius * radiusScale;
+  const animRot = sampleCurve(anim?.rotation, lt, 0);
+  const phase =
+    (el.rotation_offset_deg ?? 0) +
+    ((el.rotate_speed ?? 0) * (T - start * dur)) / 20 +
+    animRot;
+  const axis = normalize(el.axis ?? AXIS_GROUND);
+  const { a, b } = orthonormalBasis(axis);
+  const style = mcParticleStyle(el.particle);
+  const tint = style?.tintable ? (el.color ?? null) : null;
+  const frames = style ? style.frames : [];
+  const count = Math.max(2, Math.round(el.beads ?? 16));
+  const sweep = el.type === 'arc' ? (el.arc_sweep_deg ?? 360) : 360;
+  const base = el.type === 'arc' ? (el.arc_start_deg ?? 0) : 0;
+  const size = style ? 2 * style.quadSize : FALLBACK_SIZE;
+  const yOff = el.y_offset ?? 0;
+  const frame = frames.length ? Math.floor((T / 20) * 2) % frames.length : 0;
+  const texture = style ? frames[frame] : '';
+  const out: LiveParticle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = phase + base + (i / count) * sweep;
+    const r = rad(angle);
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    // 行进亮度波：沿环一圈，周期约 3 秒
+    const shimmer = 0.82 + 0.18 * Math.sin((i / count) * Math.PI * 2 + T * 0.11);
+    out.push({
+      pos: [
+        a[0] * c * radius + b[0] * s * radius,
+        a[1] * c * radius + b[1] * s * radius + yOff,
+        a[2] * c * radius + b[2] * s * radius,
+      ],
+      size,
+      frame,
+      texture,
+      alpha: alphaEmit * shimmer,
+      tint,
+    });
   }
   return out;
 }
