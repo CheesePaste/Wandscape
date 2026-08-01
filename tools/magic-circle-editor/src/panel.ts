@@ -419,6 +419,10 @@ export function initPanel(api: PanelApi): { render: () => void } {
       const scaleI = numberInput(e.scale ?? 0.3, { min: 0, step: 0.05 });
       bindNumeric(scaleI, (v) => patchElement({ scale: Math.max(0, v) }), () => e.scale ?? 0.3);
       propsBox.append(fieldRow('尺寸 scale', scaleI));
+
+      const trailI = numberInput(e.trail_ticks ?? 8, { min: 1, step: 1 });
+      bindNumeric(trailI, (v) => patchElement({ trail_ticks: Math.max(1, Math.round(v)) }), () => e.trail_ticks ?? 8);
+      propsBox.append(fieldRow('彗星拖尾 tick trail_ticks', trailI));
     }
 
     // ----- 动画曲线 -----

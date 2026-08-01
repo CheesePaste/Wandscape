@@ -1,4 +1,4 @@
-import type { Element, PolygonElement, StarElement, Vec3 } from './spec';
+import type { ArcElement, Element, PolygonElement, RingElement, StarElement, Vec3 } from './spec';
 import { AXIS_GROUND } from './spec';
 import { normalize, orthonormalBasis, pointAt, rad, shapeVertices } from './geometry';
 import { elementLocalTime, sampleCurve } from './anim';
@@ -37,7 +37,10 @@ export interface LiveParticle {
   tint: string | null;
 }
 
-const GLYPH_TRAIL = 8;
+/** 符文彗星：头部相对 scale 的放大倍数（亮·大）。 */
+const GLYPH_HEAD_SCALE = 1.35;
+/** 符文彗星：最老拖尾粒子相对 scale 的缩小倍数（渐细）。 */
+const GLYPH_TAIL_SCALE = 0.35;
 const MAX_PER_ELEMENT = 1500;
 /** 未知粒子 id 的回退视觉尺寸（渲染宽，格）。 */
 const FALLBACK_SIZE = 0.28;
@@ -74,7 +77,7 @@ export function computeLiveParticles(
   if (el.type !== 'glyph' && (el.mode ?? 'beads') === 'beads') {
     return computeBeads(el, t, dur, elIndex);
   }
-  const trail = el.type === 'glyph' ? GLYPH_TRAIL : Math.round(el.trail_ticks ?? 10);
+  const trail = Math.round(el.trail_ticks ?? (el.type === 'glyph' ? 8 : 10));
   const startTick = Math.max(0, Math.floor(T - trail) + 1);
   const endTick = Math.floor(T);
   if (endTick < startTick) return [];
@@ -128,7 +131,9 @@ export function computeLiveParticles(
     let texture: string;
     let frame = 0;
     if (el.type === 'glyph') {
-      size = el.scale ?? 0.3;
+      // 彗星：头部 1.35× 且 alpha 全亮，尾部随 age 线性缩至 0.35× 并淡出
+      const taper = trail > 0 ? Math.min(1, age / trail) : 0;
+      size = (el.scale ?? 0.3) * (GLYPH_HEAD_SCALE - (GLYPH_HEAD_SCALE - GLYPH_TAIL_SCALE) * taper);
       texture = '';
     } else if (style) {
       // quadSize 是半宽，渲染宽 = 2×；lifetime 用拖尾 tick，曲线铺满可见生命
@@ -174,8 +179,7 @@ export function computeLiveParticles(
  * 无随机抖动（有序不糊）。亮点亮度带一圈慢速行进波（shimmer），帧随全局时间慢速推进。
  * 尺寸用粒子基础 quadSize（稳定），不用 continuous 的年龄曲线。
  */
-function computeBeads(el: Element, t: number, durTicks: number, elIndex: number): LiveParticle[] {
-  if (el.type === 'glyph') return [];
+function computeBeads(el: RingElement | ArcElement, t: number, durTicks: number, elIndex: number): LiveParticle[] {
   const dur = Math.max(1, durTicks);
   const T = t * dur;
   const start = el.start ?? 0;
