@@ -265,9 +265,9 @@ export function initPanel(api: PanelApi): { render: () => void } {
     }
     ph.append(
       document.createTextNode(
-        pDef.vanilla
-          ? `原版粒子，color 不生效（${pDef.label}）`
-          : `自定义粒子，可用 color 染色（${pDef.label}）`,
+        pDef.tintable
+          ? `可用 color 染色（${pDef.label}）`
+          : `贴图本色，color 不生效（${pDef.label}）`,
       ),
     );
     propsBox.append(ph);
