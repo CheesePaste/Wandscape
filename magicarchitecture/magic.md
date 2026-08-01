@@ -2,7 +2,7 @@
 
 战斗系统的视觉层。数据契约（`MagicCircleSpec` JSON）由独立 Web 编辑器导出，MC 端用粒子渲染同一份 spec——两端都只"画这份几何数据"，互不搬渲染管线。**渲染方案：粒子（非 shader）**，保证任何光影包下正常显示。
 
-JSON 格式见 [data/magic-circles.md](../data/magic-circles.md)。
+JSON 格式见 [data/magic-circles.md](magic-circles.md)。
 
 ## 包结构
 

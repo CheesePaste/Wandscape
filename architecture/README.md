@@ -183,9 +183,9 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |
-| 魔法阵模块设计 | [packages/magic.md](packages/magic.md) |
+| 魔法阵模块设计 | [packages/magic.md](../magicarchitecture/magic.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
-| 魔法阵JSON格式 | [data/magic-circles.md](data/magic-circles.md) |
+| 魔法阵JSON格式 | [data/magic-circles.md](../magicarchitecture/magic-circles.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
 | 模拟经营设计推理 | [../docs/simulation.md](../docs/simulation.md) |
 | 编码规范和反模式 | [conventions.md](conventions.md) |
