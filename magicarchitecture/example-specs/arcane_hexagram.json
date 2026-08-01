@@ -66,7 +66,7 @@
     },
     {
       "type": "glyph",
-      "radius": 2.75,
+      "radius": 4.0,
       "count": 6,
       "sprite": "rune_arcane",
       "scale": 0.32,
@@ -88,7 +88,7 @@
       "color": "#4aa3ff",
       "mode": "beads",
       "rotation_offset_deg": 30,
-      "rotate_speed": 8,
+      "rotate_speed": -8,
       "start": 0.12,
       "anim": {
         "scale": [[0, 0], [0.45, 1.0], [1, 0.85]],
