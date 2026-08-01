@@ -14,14 +14,18 @@ JSON 格式见 [data/magic-circles.md](magic-circles.md)。
 magic/
   ├── data/MagicCircleSpec.java        record 镜像 + fromJson（纯数据，无 MC 依赖）
   ├── internal/MagicCircleLoader.java  dataconfig 注册 magic_circles 类目 + get(id)/getAll()
+  ├── internal/MagicCastManager.java   服务端施法调度：法阵动画结束后生成信标光束（按施法者去重）
+  ├── internal/MagicCaster.java        施放入口：发 MagicCircleCastPacket + 登记光束（法杖/命令共用）
+  ├── entity/MagicBeamEntity.java      服务端显示实体：源点→目标，目标/颜色同步，短命自毁
   ├── client/MagicCircleEmitter.java   客户端静态持有器：Map<UUID, ActiveCircle>，
   │                                     注册 ClientTickEvent.Post，每 tick 采样曲线撒粒子
-  ├── client/MagicCircleDotParticle.java   ghost-trail 粒子：借用 vanilla SpriteSet + 移植
-  │                                      quadSize 公式（尺寸/贴图 fidelity 表见 magic-circles.md），ring/arc 用
-  └── client/MagicCircleRuneParticle.java   符文 sprite 粒子，glyph 用
+  ├── client/MagicCircleDotParticle.java   可染色点粒子（glow/ember + glyph 放大点，v1 同一类），
+  │                                      复用 minecraft:glow 贴图 + 元素 color 染色
+  └── client/MagicBeamEntityRenderer.java  原版 BeaconRenderer.renderBeaconBeam 旋转朝目标 + 染色
+      shared/network/MagicCircleCastPacket.java  服务端→客户端：effectId/pos/axis/circleId
 ```
 
-`MagicCircleSpec` 为 `sealed interface Element permits RingElement, ArcElement, GlyphElement` + 嵌套 `Anim`/`Keyframe` record。数据模型风格照抄 `building/data/BuildingConfig.java`。
+`MagicCircleSpec` 为单 record + `Element`（`ElementType` 判别：ring/arc/polygon/star/glyph）+ 嵌套 `Anim`/`Keyframe` record（编辑器就是单一 union，比 sealed 层级更贴合 fromJson/发射器）。数据模型风格照抄 `building/data/BuildingConfig.java`。
 
 ## 数据流
 
@@ -35,23 +39,31 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 施放触发（服务端 → 客户端）：
 
 ```
-调试命令 / 未来 ritual 钩子（服务端）
-  → MagicCircleCastPacket(effectId=UUID, pos, circleId)   (shared/network)
+法杖右键 / 调试命令 / 未来 ritual 钩子（服务端）
+  → MagicCaster.cast：MagicCircleCastPacket(effectId=UUID, pos, axis=法杖朝向, circleId)
+      + MagicCastManager.schedule(动画时长后生成光束)
   → PacketDistributor.sendToPlayersTrackingChunk
-  → 客户端 payload handler → MagicCircleEmitter.add(level, pos, loader.get(circleId))
+  → 客户端 payload handler → MagicCircleEmitter.add(level, pos, axis, loader.get(circleId))
   → ClientTickEvent.Post:  t = (nowTick - startTick) / duration
   → 采样 anim 曲线（scale/alpha/rotation）→ 当前几何位置撒粒子
   → t ≥ 1 自动移除
+  → 服务端 MagicCastManager.tick（ServerTick）：到期生成 MagicBeamEntity（源点→准星目标，颜色）
+  → 客户端 MagicBeamEntityRenderer：原版 BeaconRenderer.renderBeaconBeam 旋转朝目标渲染
 ```
+
+`axis` 由施放方传入并**覆盖** spec 元素 axis——攻击阵的"法阵垂直于法杖"就靠它实现（地面阵不传时回落到 spec 元素 axis）。
 
 ## 注册点
 
 | 注册点 | 位置 |
 |--------|------|
-| PARTICLE_TYPES（1~2 个 SimpleParticleType） | `Wandscape.java` |
+| PARTICLE_TYPES（`magic_glow` SimpleParticleType） | `Wandscape.java` |
 | MagicCircleLoader 挂到 DATA_LOADER | `Wandscape.java` 构造器 |
+| MAGIC_BEAM 实体（MobCategory.MISC，noSave） | `Wandscape.java` ENTITIES |
 | MagicCircleCastPacket 注册 playToClient | `Wandscape.onRegisterPayloads` |
-| 粒子 Provider 注册 | `WandscapeClient.onRegisterParticleProviders` |
+| MagicCastManager.tick（ServerTick） | `Wandscape.onServerTick` |
+| `/wandscape magic` 调试命令 | `Wandscape.onRegisterCommands` → `command/MagicCommand` |
+| 粒子 Provider / 光束渲染器 / emitter tick | `WandscapeClient` |
 
 ## 复用点
 
@@ -86,7 +98,7 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 
 ## 不做（本模块边界）
 
-- **不做 shader 渲染**：粒子方案 + 自定义符文贴图足够"好看"，绕开光影兼容风险。
-- **不做真实战斗/探索逻辑**：本模块只做视觉层 + 施放触发钩子；战斗数值/怪物 AI 是后续独立工作。
+- **不做 shader 渲染**：粒子方案 + 自定义符文贴图足够"好看"，绕开光影兼容风险。信标光束直接用**原版** `BeaconRenderer.renderBeaconBeam`（原版 beam shader，逐顶点染色），光影下正常。
+- **不做真实战斗/探索逻辑**：本模块只做视觉层 + 施放触发钩子；光束目前**不造成伤害**，伤害/战斗数值是守卫系统（`docs/guard/`）阶段 1+ 的独立工作。
 - **不做多人编辑器协作**：Web 编辑器是本地单用户工具。
-- **glyph 真符文 sprite 选择**：v1 用放大点粒子代替，真符文贴图留后续（需 sprite 索引机制）。
+- **glyph 真符文 sprite 选择**：v1 用放大点粒子代替（`MagicCircleDotParticle` 彗星头尾），真符文贴图留后续（需 sprite 索引机制）。

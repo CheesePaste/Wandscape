@@ -106,7 +106,7 @@ Monster 进入建筑 10 格
 
 | 阶段 | 内容 | 独立测试手段 | 状态 |
 |------|------|-------------|------|
-| **0** | M5 魔法阵攻击视觉：`magic/` 包（spec 数据/加载/粒子发射器）+ `MagicBeamEntity`（原版信标光束 + 染色）+ `MagicCircleCastPacket`；触发：法杖右键 + `/wandscape magic <circle> [color]` | 进游戏用命令/法杖施放，看魔法阵垂直于法杖、动画结束后光束射向准星目标、颜色可调 | ⬜ 未开始 |
+| **0** | M5 魔法阵攻击视觉：`magic/` 包（spec 数据/加载/粒子发射器）+ `MagicBeamEntity`（原版信标光束 + 染色）+ `MagicCircleCastPacket`；触发：法杖右键 + `/wandscape magic <circle> [color]` | 进游戏用命令/法杖施放，看魔法阵垂直于法杖、动画结束后光束射向准星目标、颜色可调 | ✅ 完成 |
 | **1** | M4 伤害边界：实现 `EntityOps.applyEffect(DAMAGE)` → `LivingEntity.hurt`，按 id 查实体、伤害来源 NPC；加调试命令"打伤指定怪物" | `/wandscape` 调试命令对目标怪物造成伤害，血量下降 | ⬜ 未开始 |
 | **2** | M3 战斗执行：`AttackMonsterOp` sealed 变体 + 异步 executor + `guard:attack` 代码蓝图 + `EngineBootstrap` 注册；NPC 可执行"击杀指定怪物"的手动/命令任务 | 给 NPC 派一条手动击杀任务，观察走到射程、施法、光束、掉血、死亡 | ⬜ 未开始 |
 | **3** | M1 + M2 威胁侦测 + 守卫任务源：建筑 10 格内扫怪 → 自动发布守卫任务，高优先级、去重、冷却 | 建筑旁刷怪，观察自动出任务、NPC 自动去击杀；多怪不重复发 | ⬜ 未开始 |
