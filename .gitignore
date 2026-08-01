@@ -13,7 +13,7 @@ out/
 !**/src/**/out/
 
 
-.claude/settings.local.json
+**/.claude/settings.local.json
 /assets/
 ### Eclipse ###
 .apt_generated
