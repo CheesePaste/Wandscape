@@ -66,19 +66,12 @@ function bindNumeric(i: HTMLInputElement, apply: (v: number) => void, read: () =
 }
 
 let curveField: 'scale' | 'alpha' | 'rotation' = 'scale';
+let particlePickerOpen = false;
 
 /** 初始化面板，返回 render() 供外部在结构/选中变化后调用。 */
 export function initPanel(api: PanelApi): { render: () => void } {
   const listBox = document.getElementById('elem-list')!;
   const propsBox = document.getElementById('elem-props')!;
-
-  // 粒子下拉建议列表
-  const datalist = document.getElementById('particle-list')!;
-  for (const id of PARTICLE_IDS) {
-    const o = el('option');
-    o.value = id;
-    datalist.append(o);
-  }
 
   // ----- 顶层字段 -----
   const fId = document.getElementById('f-id') as HTMLInputElement;
@@ -247,30 +240,61 @@ export function initPanel(api: PanelApi): { render: () => void } {
     axisInputs.forEach((i) => axisInputRow.append(i));
     propsBox.append(fieldRow('法线 XYZ', axisInputRow));
 
-    // ----- 粒子 / 颜色 -----
-    const particleI = el('input');
-    particleI.type = 'text';
-    particleI.list = 'particle-list';
-    particleI.value = e.particle ?? '';
-    particleI.addEventListener('change', () => patchElement({ particle: particleI.value.trim() }));
-    propsBox.append(fieldRow('粒子 particle', particleI));
-
+    // ----- 粒子选择器（可视化网格，含贴图预览） -----
     const pDef = particleDefFor(e.particle);
-    const ph = el('div', 'hint');
-    const url = textureUrl(pDef.frame);
-    if (url) {
-      const img = el('img', 'particle-swatch');
-      img.src = url;
-      ph.append(img);
+    const pRow = el('div', 'axis-row');
+    const trigger = el('button', 'p-trigger');
+    const triImg = el('img', 'particle-swatch');
+    const triUrl = textureUrl(pDef.frame);
+    if (triUrl) triImg.src = triUrl;
+    const triLabel = el('span', 'p-trigger-label');
+    triLabel.textContent = `${pDef.label}${pDef.tintable ? ' · 可染色' : ''}`;
+    trigger.append(triImg, triLabel);
+    trigger.title = '点击打开粒子选择器';
+    trigger.addEventListener('click', () => {
+      particlePickerOpen = !particlePickerOpen;
+      api.setSelected(api.getSelected());
+    });
+    pRow.append(trigger);
+    propsBox.append(fieldRow('粒子 particle', pRow));
+
+    if (particlePickerOpen) {
+      const grid = el('div', 'p-grid');
+      const filterI = el('input');
+      filterI.type = 'text';
+      filterI.placeholder = '筛选粒子…';
+      filterI.className = 'p-filter';
+      grid.append(filterI);
+      const cellsWrap = el('div', 'p-cells');
+      for (const id of PARTICLE_IDS) {
+        const def = particleDefFor(id);
+        const cell = el('button', 'p-cell' + (id === e.particle ? ' active' : ''));
+        const cImg = el('img', 'p-cell-img');
+        const cUrl = textureUrl(def.frame);
+        if (cUrl) cImg.src = cUrl;
+        cell.append(cImg);
+        const cLabel = el('span', 'p-cell-label');
+        cLabel.textContent = id;
+        cell.append(cLabel);
+        if (def.tintable) cell.classList.add('tintable');
+        cell.dataset.search = `${id} ${def.label}`.toLowerCase();
+        cell.title = def.label + (def.tintable ? '（可染色）' : '');
+        cell.addEventListener('click', () => {
+          particlePickerOpen = false;
+          patchElement({ particle: id });
+          api.setSelected(sel);
+        });
+        cellsWrap.append(cell);
+      }
+      grid.append(cellsWrap);
+      filterI.addEventListener('input', () => {
+        const q = filterI.value.trim().toLowerCase();
+        for (const c of Array.from(cellsWrap.children) as HTMLElement[]) {
+          c.style.display = !q || (c.dataset.search ?? '').includes(q) ? '' : 'none';
+        }
+      });
+      propsBox.append(grid);
     }
-    ph.append(
-      document.createTextNode(
-        pDef.tintable
-          ? `可用 color 染色（${pDef.label}）`
-          : `贴图本色，color 不生效（${pDef.label}）`,
-      ),
-    );
-    propsBox.append(ph);
 
     const colorI = el('input');
     colorI.type = 'color';
