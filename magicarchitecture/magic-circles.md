@@ -120,6 +120,12 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
 - **glyph**：每 tick 在 `count` 个符文位置撒短命符文粒子（存活 `trail_ticks`），尺寸 = glyph `scale`，alpha 来自曲线。
 - 同一时刻存活粒子约几百个，MC 可轻松承受。
 
+## 与仪式/传送的衔接
+
+- 仪式（含传送）通过 `circle_id` 绑定一张魔法阵（如 `ritual_teleport`）；施法时走 `MagicCircleCastPacket` → `MagicCircleEmitter`，环数/半径/动画全部来自 JSON。
+- 现有硬编码视觉（`WandscapeRitualOps.self_teleport` 的随机 PORTAL 爆点、`WandscapeNpcRenderer.spawnRitualCircle` 的 3 环 ENCHANT）上线后迁移为 spec 圆，不再散落魔法阵代码。
+- 道路样条线是独立子系统，不在此契约内。
+
 ## 示例
 
 ### fire_summon.json — 成长 + 级联 + 淡出

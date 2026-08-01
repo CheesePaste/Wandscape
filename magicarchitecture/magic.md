@@ -61,6 +61,19 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 | 客户端每 tick 钩子 | `WandscapeClient.onClientTick` |
 | 调试命令 | `command/` 包 |
 
+## 现有视觉的迁移（衔接点）
+
+系统上线后，现有**硬编码**的魔法视觉效果应收编为 spec 驱动——MC 端不再散落魔法阵代码：
+
+| 现有视觉 | 位置 | 迁移目标 |
+|----------|------|---------|
+| 传送"魔法阵"（随机 PORTAL 爆点，20 粒） | `engine/boundary/WandscapeRitualOps.java` `self_teleport` | 换成 spec 圆（如 `ritual_teleport`：地面环 + 竖直传送环），传送仍是 ritual 行为，视觉改走本系统 |
+| 仪式施法圈（3 环 ENCHANT，硬编码环数/半径） | `npc/client/WandscapeNpcRenderer.java` `spawnRitualCircle()` | 由 `circle_id` 查 spec 渲染，删掉硬编码环数/半径 |
+
+- **绑定方式**：仪式/法术通过 `circle_id` 引用一张魔法阵；施法时走 `MagicCircleCastPacket` → `MagicCircleEmitter`。环数/半径/动画全部来自 JSON。
+- **触发链路已为此预留**：数据流中的"未来 ritual 钩子"就是 `executeRitual` 完成后发 `MagicCircleCastPacket`。
+- **道路样条线不在此系统内**：独立子系统（物流/插值），仅与魔法阵共享粒子管线的能力，不与魔法阵耦合。
+
 ## 依赖
 
 - MC: `SimpleJsonResourceReloadListener`（经 dataconfig）、`TextureSheetParticle`、`ParticleEngine`
