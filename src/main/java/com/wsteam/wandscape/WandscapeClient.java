@@ -6,6 +6,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.wsteam.wandscape.npc.client.CastBoltParticle;
 import com.wsteam.wandscape.npc.client.WandscapeNpcRenderer;
 import com.wsteam.wandscape.npc.client.WizardHatModel;
+import com.wsteam.wandscape.magic.client.MagicBeamEntityRenderer;
+import com.wsteam.wandscape.magic.client.MagicCircleDotParticle;
+import com.wsteam.wandscape.magic.client.MagicCircleEmitter;
 import com.wsteam.wandscape.road.client.RoadPlacementController;
 import com.wsteam.wandscape.road.client.RoadPlacementRenderer;
 import com.wsteam.wandscape.projection.client.ProjectionRenderer;
@@ -84,6 +87,7 @@ public class WandscapeClient {
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, e -> MagicCircleEmitter.tick());
         RoadPlacementController.register();
         RoadPlacementRenderer.register();
         ProjectionRenderer.register();
@@ -233,6 +237,7 @@ public class WandscapeClient {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
         event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
+        event.registerEntityRenderer(Wandscape.MAGIC_BEAM.get(), MagicBeamEntityRenderer::new);
         event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
     }
 
@@ -263,6 +268,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(Wandscape.CAST_BOLT.get(), CastBoltParticle.Provider::new);
+        event.registerSpriteSet(Wandscape.MAGIC_GLOW.get(), MagicCircleDotParticle.Provider::new);
     }
 
     @SubscribeEvent

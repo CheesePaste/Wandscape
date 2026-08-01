@@ -40,6 +40,11 @@ import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
+import com.wsteam.wandscape.command.MagicCommand;
+import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
+import com.wsteam.wandscape.magic.internal.MagicCastManager;
+import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
+import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
@@ -181,6 +186,9 @@ public class Wandscape {
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
     public static final ElementApiImpl ELEMENT_API = new ElementApiImpl(ELEMENT_MAPPING_LOADER);
 
+    // ---- magic: magic circle loader (magic_circles 类目) ----
+    public static final MagicCircleLoader MAGIC_CIRCLE_LOADER = new MagicCircleLoader(DATA_LOADER);
+
     // ---- 10 production-stations: loader ----
     public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
 
@@ -195,6 +203,17 @@ public class Wandscape {
     // ---- 07 npc-system: particles ----
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CAST_BOLT =
             PARTICLE_TYPES.register("cast_bolt", () -> new SimpleParticleType(false));
+
+    // ---- magic: 法阵可染色点粒子 + 信标光束实体 ----
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> MAGIC_GLOW =
+            PARTICLE_TYPES.register("magic_glow", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<EntityType<?>, EntityType<MagicBeamEntity>> MAGIC_BEAM =
+            ENTITIES.register("magic_beam", () ->
+                    EntityType.Builder.<MagicBeamEntity>of(MagicBeamEntity::new, MobCategory.MISC)
+                            .sized(0.1f, 0.1f)
+                            .clientTrackingRange(16)
+                            .updateInterval(2)
+                            .build("magic_beam"));
 
     // ---- 07 npc-system: spawn egg ----
     public static final DeferredItem<Item> WANDSCAPE_NPC_EGG =
@@ -514,7 +533,12 @@ public class Wandscape {
                 .playToClient(
                         TransportStartPacket.TYPE,
                         TransportStartPacket.STREAM_CODEC,
-                        (packet, ctx) -> TransportStartPacket.handleClient(packet));
+                        (packet, ctx) -> TransportStartPacket.handleClient(packet))
+                // ── Magic circle cast ──
+                .playToClient(
+                        MagicCircleCastPacket.TYPE,
+                        MagicCircleCastPacket.STREAM_CODEC,
+                        (packet, ctx) -> MagicCircleCastPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -659,7 +683,8 @@ public class Wandscape {
                 .then(ConsumeWarehouseCommand.node())
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
-                .then(TransportCommand.node());
+                .then(TransportCommand.node())
+                .then(MagicCommand.node());
         dispatcher.register(root);
     }
 
@@ -672,6 +697,9 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
+        // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
+        MagicCastManager.tick();
+
         var world = WandscapeEngine.getWorld();
         if (world == null) return;
 
