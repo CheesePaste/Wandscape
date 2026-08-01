@@ -12,8 +12,9 @@ magic/
   ├── internal/MagicCircleLoader.java  dataconfig 注册 magic_circles 类目 + get(id)/getAll()
   ├── client/MagicCircleEmitter.java   客户端静态持有器：Map<UUID, ActiveCircle>，
   │                                     注册 ClientTickEvent.Post，每 tick 采样曲线撒粒子
-  ├── client/MagicCircleDotParticle.java   自定义软点粒子（可染色 + 尺寸），ring/arc 用
-  └── client/MagicCircleRuneParticle.java  符文 sprite 粒子，glyph 用
+  ├── client/MagicCircleDotParticle.java   ghost-trail 粒子：借用 vanilla SpriteSet + 移植
+  │                                      quadSize 公式（尺寸/贴图 fidelity 表见 magic-circles.md），ring/arc 用
+  └── client/MagicCircleRuneParticle.java   符文 sprite 粒子，glyph 用
 ```
 
 `MagicCircleSpec` 为 `sealed interface Element permits RingElement, ArcElement, GlyphElement` + 嵌套 `Anim`/`Keyframe` record。数据模型风格照抄 `building/data/BuildingConfig.java`。

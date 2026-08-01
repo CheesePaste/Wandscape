@@ -146,9 +146,40 @@ angle(T) = rotation_offset_deg
 
 ## 粒子模型（MC 渲染端如何消费）
 
-- **ring/arc**：每 tick 按当前 `radius×scale`、当前旋转角、当前 `alpha`，在圆周/弧上撒 `density × 弧长` 个粒子，带 ±0.2 格随机抖动（避免格子状伪影），静止或轻微外漂，存活 `trail_ticks`，颜色取 `color`。
+- **ring/arc**：每 tick 按当前 `radius×scale`、当前旋转角、当前 `alpha`，在圆周/弧上撒 `density × 弧长` 个粒子，带 ±0.2 格随机抖动（避免格子状伪影），静止或轻微外漂，存活 `trail_ticks`。
 - **glyph**：每 tick 在 `count` 个符文位置撒短命符文粒子（存活 `trail_ticks`），尺寸 = glyph `scale`，alpha 来自曲线。
 - 同一时刻存活粒子约几百个，MC 可轻松承受。
+
+### 粒子 fidelity（vanilla 贴图 + 尺寸）
+
+`particle` 风格分两类：
+
+- **原版粒子**：完全复现 MC 原生贴图与尺寸（quadSize 年龄曲线），`color` 字段**不生效**（贴图本色）。贴图来自 `assets/minecraft/textures/particle/*.png`，帧列表来自 `assets/minecraft/particles/<id>.json`。
+- **模组自定义粒子**（`glow`/`ember`）：复用 MC `glow.png` 贴图 + 元素 `color` 染色。
+
+尺寸口径：基础 quadSize = `0.1 × rand(0.5~1.0) × 2`（`SingleQuadParticle`，随机取期望 0.15），各粒子类再乘自带系数并叠年龄曲线。**quadSize 是半宽**，渲染宽 = `2 × quadSize`。`sizeOf(age, lifetime)` 移植各粒子类的 `getQuadSize`；`lifetime` 用元素 `trail_ticks`，曲线铺满可见生命。贴图帧随 age 推进（仿 `setSpriteFromAge`），如灵魂 swirl、enchant 字母翻页。
+
+**行为不原版**：ghost-trail 模型撒零速度粒子、静止贴环——火焰/灵魂不上升、暴击不坠落。贴图和尺寸 100% 原版，运动为模组自控。
+
+风格 id ↔ MC ParticleTypes 映射（编辑器 `mc-particles.ts` 为唯一实现，MC 端复用同一张表）：
+
+| 风格 id | MC id | 贴图帧 | quadSize（半宽） | 尺寸曲线 | 渲染层 |
+|---------|-------|--------|-----------------|---------|--------|
+| flame | flame | flame | 0.15 | 随龄缩小 ×(1−f²×0.5) | opaque |
+| soul | soul | soul_0..10 | 0.225 | 恒定 | opaque |
+| endRod | end_rod | glitter_7..0 | 0.1125 | 恒定 | translucent |
+| portal | portal | generic_0..7 | 0.06 | 随龄放大 ×f | translucent |
+| enchant | enchant | sga_a..z | 0.1125 | 恒定 | translucent |
+| enchanted_hit | enchanted_hit | enchanted_hit | 0.1125 | 恒定 | translucent |
+| spark | electric_spark | glow | 0.225 | 恒定 | translucent |
+| crit | crit | critical_hit | 0.1125 | 前 1/32 弹入 | opaque |
+| smoke | smoke | generic_7..0 | 0.1125 | 前 1/32 弹入 | opaque |
+| large_smoke | large_smoke | generic_7..0 | 0.28125 | 前 1/32 弹入 | opaque |
+| cloud | cloud | generic_7..0 | 0.28125 | 前 1/32 弹入 | translucent |
+| note | note | note | 0.225 | 前 1/32 弹入 | translucent（可染色） |
+| white_ash | white_ash | generic_0 | 0.1125 | 前 1/32 弹入 | opaque |
+| glow | —（自定义） | glow | 0.12 | 恒定 | translucent（可染色） |
+| ember | —（自定义） | glow | 0.08 | 恒定 | translucent（可染色） |
 
 ## 与仪式/传送的衔接
 

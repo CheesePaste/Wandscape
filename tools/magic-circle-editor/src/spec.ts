@@ -289,3 +289,105 @@ export function validateSpec(spec: MagicCircleSpec): string[] {
 
   return errs;
 }
+
+// ---------------------------------------------------------------------------
+// 不可变变更助手（编辑器写回用）
+// ---------------------------------------------------------------------------
+
+/** 替换顶层字段（elements 引用不变）。 */
+export function withSpec(spec: MagicCircleSpec, patch: Partial<MagicCircleSpec>): MagicCircleSpec {
+  return { ...spec, ...patch, elements: spec.elements };
+}
+
+/** 替换第 index 个元素的字段。 */
+export function withElement(
+  spec: MagicCircleSpec,
+  index: number,
+  patch: Partial<Element>,
+): MagicCircleSpec {
+  const elements = spec.elements.map((e, i) => (i === index ? ({ ...e, ...patch } as Element) : e));
+  return { ...spec, elements };
+}
+
+/** 写回某元素的某条动画曲线（scale/alpha/rotation）。 */
+export function withCurve(
+  spec: MagicCircleSpec,
+  index: number,
+  field: keyof NonNullable<Element['anim']>,
+  curve: Curve,
+): MagicCircleSpec {
+  const el = spec.elements[index];
+  const anim = { ...(el.anim ?? {}), [field]: curve };
+  return withElement(spec, index, { anim });
+}
+
+/** 追加一个指定类型的元素（start 递增避免全部同时出现）。 */
+export function addElement(
+  spec: MagicCircleSpec,
+  type: 'ring' | 'arc' | 'glyph',
+): MagicCircleSpec {
+  const start = Math.min(0.9, spec.elements.length * 0.1);
+  const base = {
+    axis: AXIS_GROUND as Vec3,
+    radius: type === 'glyph' ? 2.8 : 3.0,
+    particle: 'glow',
+    color: type === 'glyph' ? '#ffdd66' : type === 'arc' ? '#ff8800' : '#44ccff',
+    rotation_offset_deg: 0,
+    rotate_speed: 0,
+    start,
+  };
+  let el: Element;
+  if (type === 'ring') {
+    el = { ...base, type: 'ring', density: 1.5, trail_ticks: 10, y_offset: 0 };
+  } else if (type === 'arc') {
+    el = { ...base, type: 'arc', arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 };
+  } else {
+    el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 };
+  }
+  return { ...spec, elements: [...spec.elements, el] };
+}
+
+export function removeElement(spec: MagicCircleSpec, index: number): MagicCircleSpec {
+  return { ...spec, elements: spec.elements.filter((_, i) => i !== index) };
+}
+
+/** 上下移一个元素（与相邻元素交换）。 */
+export function moveElement(spec: MagicCircleSpec, index: number, dir: -1 | 1): MagicCircleSpec {
+  const j = index + dir;
+  if (j < 0 || j >= spec.elements.length) return spec;
+  const elements = [...spec.elements];
+  [elements[index], elements[j]] = [elements[j], elements[index]];
+  return { ...spec, elements };
+}
+
+/** 换元素类型：保留公共字段，按新类型填入默认专属字段。 */
+export function setElementType(
+  spec: MagicCircleSpec,
+  index: number,
+  type: 'ring' | 'arc' | 'glyph',
+): MagicCircleSpec {
+  const el = spec.elements[index];
+  const common: Record<string, unknown> = { ...el };
+  for (const k of [
+    'density',
+    'trail_ticks',
+    'y_offset',
+    'arc_start_deg',
+    'arc_sweep_deg',
+    'count',
+    'sprite',
+    'scale',
+  ]) {
+    delete common[k];
+  }
+  delete common.type;
+  let next: Element;
+  if (type === 'ring') {
+    next = { ...common, type: 'ring', density: 1.5, trail_ticks: 10, y_offset: 0 } as Element;
+  } else if (type === 'arc') {
+    next = { ...common, type: 'arc', arc_start_deg: 0, arc_sweep_deg: 240, density: 1.5, trail_ticks: 8, y_offset: 0 } as Element;
+  } else {
+    next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3 } as Element;
+  }
+  return withElement(spec, index, next);
+}

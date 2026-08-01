@@ -65,33 +65,52 @@ function buildArc(
   return pts;
 }
 
-/** ring/arc 的外形折线点集（静态几何：含 rotation_offset_deg 相位、不含时间动画）。 */
-export function elementOutlinePoints(el: Element): Vec3[] {
+export interface ElementPointOpts {
+  /** 半径倍率（anim.scale），默认 1。 */
+  radiusScale?: number;
+  /** 附加旋转（度），叠在 rotation_offset_deg 之上（rotate_speed + anim.rotation），默认 0。 */
+  rotationDeg?: number;
+}
+
+/** ring/arc 的外形折线点集（含 rotation_offset_deg 相位 + 可选半径缩放/附加旋转）。 */
+export function elementOutlinePoints(el: Element, opts: ElementPointOpts = {}): Vec3[] {
   const n = normalize(el.axis ?? [0, 1, 0]);
-  const offset = el.rotation_offset_deg ?? 0;
+  const offset = (el.rotation_offset_deg ?? 0) + (opts.rotationDeg ?? 0);
+  const radius = el.radius * (opts.radiusScale ?? 1);
   const y = el.type === 'glyph' ? 0 : (el.y_offset ?? 0);
 
   if (el.type === 'arc') {
     const start = offset + (el.arc_start_deg ?? 0);
     const sweep = el.arc_sweep_deg ?? 360;
     const segments = Math.max(8, Math.round((Math.abs(sweep) / 360) * 160));
-    return buildArc(n, el.radius, start, sweep, segments, y);
+    return buildArc(n, radius, start, sweep, segments, y);
   }
 
   // ring：整圆（圆对相位不敏感，但仍用 offset 保持几何一致性）
-  return buildArc(n, el.radius, offset, 360, 160, y);
+  return buildArc(n, radius, offset, 360, 160, y);
 }
 
-/** glyph 符文位置点集（含 rotation_offset_deg 相位）。 */
-export function glyphPoints(el: GlyphElement): Vec3[] {
+/** glyph 符文位置点集（含 rotation_offset_deg 相位 + 可选半径缩放/附加旋转）。 */
+export function glyphPoints(el: GlyphElement, opts: ElementPointOpts = {}): Vec3[] {
   const n = normalize(el.axis ?? [0, 1, 0]);
-  const offset = el.rotation_offset_deg ?? 0;
+  const offset = (el.rotation_offset_deg ?? 0) + (opts.rotationDeg ?? 0);
+  const radius = el.radius * (opts.radiusScale ?? 1);
   const count = Math.max(1, Math.round(el.count));
   const pts: Vec3[] = [];
   for (let i = 0; i < count; i++) {
-    pts.push(pointAt(n, el.radius, offset + (i * 360) / count, 0));
+    pts.push(pointAt(n, radius, offset + (i * 360) / count, 0));
   }
   return pts;
+}
+
+/** 平面内整圆轮廓（选中高亮用）。 */
+export function circleOutline(
+  n: Vec3,
+  radius: number,
+  yOffset = 0,
+  segments = 96,
+): Vec3[] {
+  return buildArc(normalize(n), radius, 0, 360, segments, yOffset);
 }
 
 export type ViewName = 'top' | 'frontX' | 'frontZ';

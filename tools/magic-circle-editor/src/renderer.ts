@@ -1,8 +1,11 @@
-import type { Element, MagicCircleSpec, Vec3 } from './spec';
+import type { Element, GlyphElement, MagicCircleSpec, Vec3 } from './spec';
 import type { Camera } from './geometry';
-import { elementOutlinePoints, glyphPoints } from './geometry';
+import { circleOutline, elementOutlinePoints, glyphPoints } from './geometry';
 import type { ViewState } from './view';
 import { worldToScreen } from './view';
+import { elementFrame, STATIC_FRAME, type ElementFrame } from './anim';
+import { computeLiveParticles, type LiveParticle } from './particles';
+import { getTexture } from './mc-textures';
 
 interface Rgb {
   r: number;
@@ -31,7 +34,16 @@ function colorFor(el: Element): Rgb {
   return parseHex(el.color) ?? TYPE_FALLBACK[el.type] ?? TYPE_FALLBACK.ring;
 }
 
-/** 画布主渲染：填充背景 + 网格 + 元素 + 中心点。 */
+export interface RenderOpts {
+  /** 归一化时刻 [0,1]；null = 静态预览（几何模式显示全部元素）。 */
+  time?: number | null;
+  /** 选中元素索引，-1 = 无。 */
+  selected?: number;
+  /** 预览模式：particle = 按发射模型渲染粒子，geometry = 几何线框。 */
+  mode?: 'geometry' | 'particle';
+}
+
+/** 画布主渲染：填充背景 + 网格 + 元素（几何或粒子） + 中心点。 */
 export function render(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -39,7 +51,13 @@ export function render(
   spec: MagicCircleSpec,
   view: ViewState,
   cam: Camera,
+  opts: RenderOpts = {},
 ): void {
+  const mode = opts.mode ?? 'geometry';
+  const time = mode === 'particle' ? (opts.time ?? 0) : (opts.time ?? null);
+  const selected = opts.selected ?? -1;
+  const dur = Math.max(1, spec.duration_ticks);
+
   ctx.fillStyle = '#0b0e14';
   ctx.fillRect(0, 0, w, h);
 
@@ -49,11 +67,99 @@ export function render(
     drawFrontGuide(ctx, view, cam, w, h);
   }
 
-  for (const el of spec.elements) {
-    drawElement(ctx, view, cam, el);
-  }
+  spec.elements.forEach((el, i) => {
+    if (i === selected) drawSelection(ctx, view, cam, el);
+
+    if (mode === 'particle') {
+      drawParticlePreview(ctx, view, cam, el, time, dur, i);
+      return;
+    }
+
+    const frame: ElementFrame = time === null ? STATIC_FRAME : elementFrame(el, time);
+    if (!frame.active) return;
+    // 契约旋转合成：angle = rotation_offset + rotate_speed×(T-T0)/20 + anim.rotation(lt)
+    const animRot = time === null ? 0 : frame.rotationDeg + ((el.rotate_speed ?? 0) * (time * dur - (el.start ?? 0) * dur)) / 20;
+    drawElement(ctx, view, cam, el, {
+      alpha: frame.alpha,
+      radiusScale: frame.radiusScale,
+      rotationDeg: animRot,
+    });
+  });
 
   drawCenter(ctx, view, cam);
+}
+
+/** 粒子模式：几何引导线（淡）+ 存活粒子。 */
+function drawParticlePreview(
+  ctx: CanvasRenderingContext2D,
+  view: ViewState,
+  cam: Camera,
+  el: Element,
+  t: number,
+  dur: number,
+  elIndex: number,
+): void {
+  // 淡引导线（看清楚粒子在环/弧/符文轨道上）
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  if (el.type === 'glyph') {
+    strokeProjected(ctx, view, cam, circleOutline(el.axis ?? [0, 1, 0], el.radius, 0));
+  } else {
+    strokeProjected(ctx, view, cam, elementOutlinePoints(el));
+  }
+  ctx.restore();
+
+  const parts = computeLiveParticles(el, t, dur, elIndex);
+  for (const p of parts) {
+    const s = worldToScreen(view, cam, p.pos);
+    const px = Math.max(1, p.size * view.scale);
+    drawParticleSprite(ctx, p, s.x, s.y, px);
+  }
+}
+
+/** 画一个存活粒子：真实贴图（MC 16×16 粒子），可染色，纹理未就绪则跳过。 */
+function drawParticleSprite(
+  ctx: CanvasRenderingContext2D,
+  p: LiveParticle,
+  sx: number,
+  sy: number,
+  px: number,
+): void {
+  const a = Math.max(0, Math.min(1, p.alpha));
+  ctx.save();
+  ctx.globalAlpha = a;
+
+  const img = p.texture ? getTexture(p.texture) : undefined;
+  if (img) {
+    ctx.drawImage(img, sx - px / 2, sy - px / 2, px, px);
+    if (p.tint) {
+      // source-atop：只作用已画贴图区域，保留贴图 alpha 软边，不改背景。
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = p.tint;
+      ctx.fillRect(sx - px / 2, sy - px / 2, px, px);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+    return;
+  }
+
+  // 回退圆点（glyph 符文 / 未知粒子 id）
+  const rgb = parseHex(p.tint ?? '#c8d2e0');
+  if (rgb) {
+    ctx.fillStyle = withAlpha(rgb, 0.9);
+    ctx.beginPath();
+    ctx.arc(sx, sy, Math.max(0.8, px * 0.5), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+interface DrawFrame {
+  alpha: number;
+  radiusScale: number;
+  rotationDeg: number;
 }
 
 function strokeProjected(
@@ -159,6 +265,7 @@ function drawElement(
   view: ViewState,
   cam: Camera,
   el: Element,
+  f: DrawFrame,
 ): void {
   const color = colorFor(el);
   ctx.save();
@@ -166,28 +273,28 @@ function drawElement(
   ctx.lineJoin = 'round';
 
   if (el.type === 'glyph') {
-    drawGlyph(ctx, view, cam, el, color);
+    drawGlyph(ctx, view, cam, el, color, f);
     ctx.restore();
     return;
   }
 
-  const pts = elementOutlinePoints(el);
+  const pts = elementOutlinePoints(el, f);
   const lw = Math.max(1, 0.05 * view.scale);
 
   // 外发光
-  ctx.strokeStyle = withAlpha(color, 0.2);
+  ctx.strokeStyle = withAlpha(color, 0.2 * f.alpha);
   ctx.lineWidth = lw * 3.2;
   strokeProjected(ctx, view, cam, pts);
 
   // 内核
-  ctx.strokeStyle = withAlpha(color, 0.95);
+  ctx.strokeStyle = withAlpha(color, 0.95 * f.alpha);
   ctx.lineWidth = lw;
   strokeProjected(ctx, view, cam, pts);
 
   // 弧端点提示点
   if (el.type === 'arc' && pts.length > 1) {
-    drawDot(ctx, view, cam, pts[0], color, lw * 1.6);
-    drawDot(ctx, view, cam, pts[pts.length - 1], color, lw * 1.6);
+    drawDot(ctx, view, cam, pts[0], color, lw * 1.6, f.alpha);
+    drawDot(ctx, view, cam, pts[pts.length - 1], color, lw * 1.6, f.alpha);
   }
 
   ctx.restore();
@@ -200,9 +307,10 @@ function drawDot(
   p: Vec3,
   color: Rgb,
   radius: number,
+  alpha = 1,
 ): void {
   const s = worldToScreen(view, cam, p);
-  ctx.fillStyle = withAlpha(color, 0.9);
+  ctx.fillStyle = withAlpha(color, 0.9 * alpha);
   ctx.beginPath();
   ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
   ctx.fill();
@@ -212,21 +320,41 @@ function drawGlyph(
   ctx: CanvasRenderingContext2D,
   view: ViewState,
   cam: Camera,
-  el: Element & { type: 'glyph' },
+  el: GlyphElement,
   color: Rgb,
+  f: DrawFrame,
 ): void {
   const r = Math.max(2.5, (el.scale ?? 0.3) * view.scale * 0.45);
-  for (const p of glyphPoints(el)) {
+  for (const p of glyphPoints(el, f)) {
     const s = worldToScreen(view, cam, p);
-    ctx.fillStyle = withAlpha(color, 0.18);
+    ctx.fillStyle = withAlpha(color, 0.18 * f.alpha);
     ctx.beginPath();
     ctx.arc(s.x, s.y, r * 2.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = withAlpha(color, 0.95);
+    ctx.fillStyle = withAlpha(color, 0.95 * f.alpha);
     ctx.beginPath();
     ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+/** 选中高亮：白色虚线轮廓（glyph 用半径参考圆）。 */
+function drawSelection(
+  ctx: CanvasRenderingContext2D,
+  view: ViewState,
+  cam: Camera,
+  el: Element,
+): void {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([6, 4]);
+  if (el.type === 'glyph') {
+    strokeProjected(ctx, view, cam, circleOutline(el.axis ?? [0, 1, 0], el.radius, 0));
+  } else {
+    strokeProjected(ctx, view, cam, elementOutlinePoints(el));
+  }
+  ctx.restore();
 }
 
 /** 世界原点中心点标记。 */
@@ -248,4 +376,29 @@ function drawCenter(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** 命中测试：返回离 (sx, sy) 最近的元素索引（屏幕像素距离 ≤ threshold），无命中返回 -1。 */
+export function pickElementAt(
+  view: ViewState,
+  cam: Camera,
+  spec: MagicCircleSpec,
+  sx: number,
+  sy: number,
+  threshold = 12,
+): number {
+  let best = -1;
+  let bestD = Infinity;
+  spec.elements.forEach((el, i) => {
+    const pts = el.type === 'glyph' ? glyphPoints(el) : elementOutlinePoints(el);
+    for (const p of pts) {
+      const s = worldToScreen(view, cam, p);
+      const d = Math.hypot(s.x - sx, s.y - sy);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+  });
+  return bestD <= threshold ? best : -1;
 }
