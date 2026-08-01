@@ -553,8 +553,8 @@ public final class TouristSpawnSystem {
         for (BuildingData b : api.getColonyBuildings(colonyId)) {
             if (!"service".equals(b.getCategory())) continue;
             if (b.isShutdown() || !b.isStructureIntact()) continue;
-            if (t.hasVisitedBuilding(b.getBuildingId())) continue;
             if (!isHotelBuilding(b.getBuildingId())) continue;
+            // 酒店豁免 visitedBuildings：白天逛过 inn 不应阻止夜晚入住
             if (!hotel.hasVacancy(b.getBuildingId())) continue;
 
             BlockPos target = api.getTouristInteractionTarget(b.getBuildingId());

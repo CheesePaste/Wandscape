@@ -985,7 +985,9 @@ public class TouristMoveGoal extends Goal {
             String cat = b.getCategory();
             if (!"shop".equals(cat) && !"service".equals(cat)) continue;
             if (b.isShutdown() || !b.isStructureIntact()) continue;
-            if (tourist.hasVisitedBuilding(b.getBuildingId())) continue;
+            // 白天普通逛过 inn 会记入 visitedBuildings，但夜晚不应阻止入住 → 酒店豁免该排除
+            boolean nightHotel = isNight && "service".equals(cat) && isHotelBuilding(b.getBuildingId());
+            if (!nightHotel && tourist.hasVisitedBuilding(b.getBuildingId())) continue;
 
             if ("service".equals(cat) && tourist.getServiceCooldown(b.getBuildingId()) > tourist.tickCount)
                 continue;
