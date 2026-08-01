@@ -37,10 +37,6 @@ export interface LiveParticle {
   tint: string | null;
 }
 
-/** 符文彗星：头部相对 scale 的放大倍数（亮·大）。 */
-const GLYPH_HEAD_SCALE = 1.35;
-/** 符文彗星：最老拖尾粒子相对 scale 的缩小倍数（渐细）。 */
-const GLYPH_TAIL_SCALE = 0.35;
 const MAX_PER_ELEMENT = 1500;
 /** 未知粒子 id 的回退视觉尺寸（渲染宽，格）。 */
 const FALLBACK_SIZE = 0.28;
@@ -131,9 +127,11 @@ export function computeLiveParticles(
     let texture: string;
     let frame = 0;
     if (el.type === 'glyph') {
-      // 彗星：头部 1.35× 且 alpha 全亮，尾部随 age 线性缩至 0.35× 并淡出
+      // 彗星：头部 head_scale× 且 alpha 全亮，尾部随 age 线性缩至 tail_scale× 并淡出
+      const head = el.head_scale ?? 1.35;
+      const tail = el.tail_scale ?? 0.35;
       const taper = trail > 0 ? Math.min(1, age / trail) : 0;
-      size = (el.scale ?? 0.3) * (GLYPH_HEAD_SCALE - (GLYPH_HEAD_SCALE - GLYPH_TAIL_SCALE) * taper);
+      size = (el.scale ?? 0.3) * (head - (head - tail) * taper);
       texture = '';
     } else if (style) {
       // quadSize 是半宽，渲染宽 = 2×；lifetime 用拖尾 tick，曲线铺满可见生命

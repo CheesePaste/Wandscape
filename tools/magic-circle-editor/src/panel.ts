@@ -423,6 +423,14 @@ export function initPanel(api: PanelApi): { render: () => void } {
       const trailI = numberInput(e.trail_ticks ?? 8, { min: 1, step: 1 });
       bindNumeric(trailI, (v) => patchElement({ trail_ticks: Math.max(1, Math.round(v)) }), () => e.trail_ticks ?? 8);
       propsBox.append(fieldRow('彗星拖尾 tick trail_ticks', trailI));
+
+      const headI = numberInput(e.head_scale ?? 1.35, { min: 0.1, step: 0.05 });
+      bindNumeric(headI, (v) => patchElement({ head_scale: Math.max(0.1, v) }), () => e.head_scale ?? 1.35);
+      propsBox.append(fieldRow('彗星头放大 head_scale', headI));
+
+      const tailI = numberInput(e.tail_scale ?? 0.35, { min: 0.05, step: 0.05 });
+      bindNumeric(tailI, (v) => patchElement({ tail_scale: Math.max(0.05, v) }), () => e.tail_scale ?? 0.35);
+      propsBox.append(fieldRow('彗星尾端大小 tail_scale', tailI));
     }
 
     // ----- 动画曲线 -----

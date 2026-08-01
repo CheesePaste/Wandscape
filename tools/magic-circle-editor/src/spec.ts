@@ -106,6 +106,10 @@ export interface GlyphElement extends ElementBase {
   scale?: number;
   /** 彗星拖尾：头部拖尾存活 tick = 尾巴长度，默认 8。 */
   trail_ticks?: number;
+  /** 彗星头部放大（相对 scale），默认 1.35。 */
+  head_scale?: number;
+  /** 彗星尾端最小（相对 scale），默认 0.35。 */
+  tail_scale?: number;
 }
 
 export type Element = RingElement | ArcElement | PolygonElement | StarElement | GlyphElement;
@@ -224,6 +228,8 @@ export function normalizeSpec(input: MagicCircleSpec): MagicCircleSpec {
         sprite: typeof e.sprite === 'string' ? e.sprite : 'rune',
         scale: num(e.scale, 0.3),
         trail_ticks: Math.max(1, Math.round(num(e.trail_ticks, 8))),
+        head_scale: Math.max(0.1, num(e.head_scale, 1.35)),
+        tail_scale: Math.max(0.05, num(e.tail_scale, 0.35)),
       } as GlyphElement;
     }
 
@@ -456,7 +462,7 @@ export function addElement(
   } else if (type === 'star') {
     el = { ...base, type: 'star', mode: 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0, rotate_speed: SHAPE_DEFAULT_ROTATE, anim: SHAPE_DEFAULT_ANIM };
   } else {
-    el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3, trail_ticks: 8 };
+    el = { ...base, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3, trail_ticks: 8, head_scale: 1.35, tail_scale: 0.35 };
   }
   return { ...spec, elements: [...spec.elements, el] };
 }
@@ -514,7 +520,7 @@ export function setElementType(
   } else if (type === 'star') {
     next = { ...common, type: 'star', mode: prevMode ?? 'beads', points: 5, inner_ratio: 0.4, density: 2.5, trail_ticks: 10, y_offset: 0, rotate_speed: 15, anim: common.anim ?? SHAPE_DEFAULT_ANIM } as Element;
   } else {
-    next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3, trail_ticks: 8 } as Element;
+    next = { ...common, type: 'glyph', count: 8, sprite: 'rune', scale: 0.3, trail_ticks: 8, head_scale: 1.35, tail_scale: 0.35 } as Element;
   }
   return withElement(spec, index, next);
 }
