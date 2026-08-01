@@ -458,6 +458,8 @@ public class BuildingSavedData extends SavedData {
 
         // Precise overlap check: pattern vs pattern (or AABB fallback for legacy)
         for (BuildingState existing : buildings.values()) {
+            // A building being demolished no longer occupies the space — don't block placement.
+            if (existing.isDemolishing()) continue;
             if (overlapsPattern(newPattern, existing)) {
                 throw new BuildingOverlapException(
                         "Building " + state.getBuildingTypeId() + " at " + state.getAnchor()

@@ -8,7 +8,7 @@
 
 | Bug | 描述 | 状态 |
 |-----|------|------|
-| Bug 1 | 建筑 Demolish 后游客（含新生成）仍可虚空交互 | ⬜ 待修复 |
+| Bug 1 | 建筑 Demolish 后游客（含新生成）仍可虚空交互 | ✅ 已修复 2026-08-01（unregister 提前到 NPC 派发时 + 交互前重新校验 + 排程不持引用） |
 | Bug 2 | 游客卡在羊毛块之间 / 建筑原点，状态 VISITING 卡死 | ✅ 已修复 2026-08-01（根因：交互区未按 rotationSteps 旋转；治标：卡死强制回游荡） |
 | Bug 3 | 满意度 60 + 有 inn，黄昏仍不入住直接离开 | ✅ 已修复 2026-08-01 |
 | Bug 4 | 游荡不合理：目标易走却频繁传送、长时间停留、范围小 | ✅ 已修复 2026-08-01（节点推进判卡住/地表扫地面/目标可达性/锚点漂移/立即重挑） |
@@ -45,11 +45,14 @@
 - V 面板点 Destroy → 执行 Demolish，建筑方块消失、V 面板准心无法再选中它（正常）。
 - 但旧游客仍能与该「空建筑」交互；退出重进后仍可交互；**新生成的游客也能交互**。
 
-### 现象推导
+### 现象推导（2026-08-01 修正）
 
-「建筑方块消失但数据仍在」是唯一能同时解释三条现象的状态：
-- V 面板选建筑靠射线命中方块（`OverviewRenderer` 以 `getBuildingIdAt` 查点击格），方块没了 → 选不中 →「看不见」。
-- 但 `BuildingSavedData.buildings` 里 `BuildingState` 还在，且 `structureIntact=true`、未 shutdown → 对游客而言它仍是合法目标。
+建筑**已完全拆除**（方块成平地），但数据只删了一部分，残留在 `BuildingSavedData.buildings`：
+- 放新建筑报「碰撞箱重叠」→ `register()` 遍历 `buildings.values()` 做重叠检查 → 被拆建筑还在 map 里。
+- 游客仍能交互 → 游客侧仍能命中它（生成排程持旧引用 / 交互不重新校验）。
+- **V 面板「看不到」是假象**：右键交互走 `getBuildingIdInInteractionZone`（带 `isStructureIntact` 过滤），方块被拆时 `structureIntact` 已置 false → 返回 null；边界框靠射线命中方块，方块没了打到下方地面 → 无响应。两者都不说明数据被清。
+
+**真正的断点**：`demolish_complete → listener → unregister` 这条链**在实践中永久断掉**——NPC 确实执行了 demolish（方块消失），但 unregister 从未运行。这不是「异步窗口」，而是数据清理完全没发生。
 
 ### 根因 1a：游客目标过滤漏掉 `isDemolishing`
 
@@ -125,6 +128,22 @@ if ("shop".equals(category)) interactWithShop(buildingId);    // 用缓存 id �
 4. `demolish_complete` 事件增加幂等兜底（如对已不存在/已 unregister 的建筑不报错）。
 5. `createSchedule` 生成排程时不要持有 `BuildingState` 引用，改存 buildingId，spawn 时实时查；
    或 spawn 前校验目标仍有效。
+
+### 修复方式（2026-08-01 实施）
+
+采纳「unregister 提前到 NPC 派发时」——数据清理不再依赖 `demolish_complete → listener` 这条易断的异步链：
+
+1. **`BuildingApiImpl.dequeueWork`**：取到 `build:demolish_structure` 任务时立即 `unregisterState()`。
+   NPC 执行 demolish 是「方块消失」的直接原因（已证实），此刻删数据；方块破坏用 WorkItem 里的快照
+   params，与数据清理解耦。`demolish_complete` listener 保留为幂等兜底。
+2. **`BuildingApiImpl.demolishBuilding`**：入队即 `setStructureIntact(false)`，关闭「点击 → 下次 poll」
+   之间 ~20 tick 的游客选择窗口。
+3. **`unregisterState` 增加 `removeShopData`**：拆完的商店不再「买到空货」。
+4. **`BuildingSavedData.register` 重叠检查跳过 `isDemolishing()`**：拆除中/已拆建筑不再挡新建筑放置。
+5. **`TouristMoveGoal.performBuildingInteraction` 交互前重新校验**建筑存在/intact/非 demolishing，
+   无效则 `finishBuildingStop()` 重规划——在途游客不会对幽灵建筑结算。
+6. **`TouristSpawnSystem` 排程只存 buildingId**：`createSchedule`/`forceSpawn`/`flushPendingSpawns`
+   在生成时实时查 + 校验，目标已拆则丢弃该次生成。
 
 ---
 

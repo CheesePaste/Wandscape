@@ -134,6 +134,14 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuildingAt(pos);
         if (state == null) return;
 
+        unregisterState(state);
+    }
+
+    /** Remove a building and all its residual data from every registry. */
+    private void unregisterState(BuildingState state) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return;
+
         UUID colonyId = state.getColonyId();
         if (colonyId != null) {
             Map<String, Integer> counts = colonyActiveCounts.get(colonyId);
@@ -146,6 +154,8 @@ public class BuildingApiImpl implements BuildingApi {
             sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
         }
         currentTasks.remove(state.getBuildingId());
+        // Clear shop stock too — otherwise a demolished shop still sells goods.
+        sd.removeShopData(state.getBuildingId());
         sd.unregister(state.getBuildingId());
     }
 
@@ -293,8 +303,11 @@ public class BuildingApiImpl implements BuildingApi {
             return;
         }
 
-        // Mark building for demolition and clear any pending work
+        // Mark building for demolition and clear any pending work. Also flip
+        // structureIntact so tourist filters (which only check intact/shutdown)
+        // drop the building immediately, before the NPC dispatch poll picks it up.
         state.setDemolishing(true);
+        state.setStructureIntact(false);
         state.getTaskQueue().clear();
 
         // Build the demolish WorkItem — iterate all pattern offsets, place air
@@ -400,7 +413,17 @@ public class BuildingApiImpl implements BuildingApi {
         }
 
         WorkItem item = state.getTaskQueue().pollFirst();
-        if (item != null) sd.setDirty();
+        if (item != null) {
+            sd.setDirty();
+            // Demolition task has been claimed by an NPC — remove the building
+            // data NOW instead of waiting for the fragile blueprint tail
+            // (for_each → emit_event). Block destruction uses the snapshot params
+            // in the WorkItem, so it is decoupled from data cleanup. The
+            // demolish_complete event listener stays as an idempotent fallback.
+            if ("build:demolish_structure".equals(item.blueprintId())) {
+                unregisterState(state);
+            }
+        }
         return item;
     }
 

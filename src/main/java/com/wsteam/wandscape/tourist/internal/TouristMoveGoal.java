@@ -555,6 +555,20 @@ public class TouristMoveGoal extends Goal {
             return false;
         }
 
+        // Re-validate the target building still exists and is operational. A building
+        // may be demolished/damaged while the tourist was en route — never settle an
+        // interaction against a ghost. Returning true tells the caller to stop
+        // navigation; finishBuildingStop already re-planned the next move.
+        BuildingApi api = getBuildingApi();
+        var target = api != null ? api.getBuilding(buildingId) : null;
+        if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
+            Log.info(TAG, "[Tourist] {} skipped interaction with invalid building {} ({})",
+                    tourist.getTouristName(), shortId(buildingId),
+                    target == null ? "removed" : target.getBuildingTypeId());
+            finishBuildingStop();
+            return true;
+        }
+
         String category = tourist.getTargetBuildingCategory();
         String bldType = getBuildingTypeId(buildingId);
         boolean isHotel = isHotelBuilding(buildingId);

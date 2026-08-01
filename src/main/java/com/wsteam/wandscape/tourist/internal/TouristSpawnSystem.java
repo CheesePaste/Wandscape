@@ -62,8 +62,7 @@ public final class TouristSpawnSystem {
 
     // ── Daily spawn schedule ──
 
-    record PendingSpawn(int level, int spawnTime, BlockPos spawnPos,
-                        BuildingState target, BlockPos interactionTarget) {}
+    record PendingSpawn(int level, int spawnTime, BlockPos spawnPos, UUID buildingId) {}
 
     private int tickCounter;
     private boolean scheduleCreated;
@@ -110,16 +109,24 @@ public final class TouristSpawnSystem {
         // Force all pending spawns immediately (ignore spawn time gating)
         List<PendingSpawn> all = new ArrayList<>(instance.pendingSpawns);
         instance.pendingSpawns.clear();
+        BuildingApi buildingApi = getBuildingApi();
         for (PendingSpawn ps : all) {
+            var target = buildingApi != null ? buildingApi.getBuilding(ps.buildingId()) : null;
+            if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
+                continue;
+            }
+            BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
+            if (interactionTarget == null) interactionTarget = target.getPosition();
+
             TouristEntity tourist = new TouristEntity(
                     com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
             tourist.setTouristName(instance.generateTouristName());
             tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
             tourist.setLevel(ps.level);
-            tourist.setTargetBuildingId(ps.target.getBuildingId());
-            tourist.setTargetBuildingCategory(ps.target.getCategory());
-            tourist.setColonyId(ps.target.getColonyId());
-            tourist.setCommuteTarget(ps.interactionTarget);
+            tourist.setTargetBuildingId(ps.buildingId());
+            tourist.setTargetBuildingCategory(target.getCategory());
+            tourist.setColonyId(target.getColonyId());
+            tourist.setCommuteTarget(interactionTarget);
             tourist.setArrivalTime(level.getGameTime());
             tourist.applyState(TouristState.VISITING);
             level.addFreshEntity(tourist);
@@ -127,7 +134,7 @@ public final class TouristSpawnSystem {
             // Register arrival
             var touristApi = getTouristApi();
             if (touristApi != null) {
-                touristApi.registerArrival(tourist.getUUID(), ps.target.getColonyId());
+                touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
             }
         }
     }
@@ -248,15 +255,15 @@ public final class TouristSpawnSystem {
             // Pick tourist level based on colony level distribution
             int touristLevel = rollTouristLevel(colonyLevel);
 
-            // Pick target building weighted by preference
+            // Pick target building weighted by preference. Only the buildingId is
+            // stored — the target is re-validated and interaction point re-derived
+            // at spawn time, so a building demolished after scheduling can't ghost it.
             BuildingState target = touristTargets.get(random.nextInt(touristTargets.size()));
-            BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(target.getBuildingId());
-            if (interactionTarget == null) interactionTarget = target.getAnchor();
 
             // Assign random spawn time distributed across the spawn window
             int spawnTime = windowStart + (windowDuration > 0 ? random.nextInt(windowDuration) : 0);
 
-            pendingSpawns.add(new PendingSpawn(touristLevel, spawnTime, spawnPos, target, interactionTarget));
+            pendingSpawns.add(new PendingSpawn(touristLevel, spawnTime, spawnPos, target.getBuildingId()));
         }
 
         if (!pendingSpawns.isEmpty()) {
@@ -276,15 +283,26 @@ public final class TouristSpawnSystem {
         List<PendingSpawn> remaining = new ArrayList<>();
         for (PendingSpawn ps : pendingSpawns) {
             if (dayTime >= ps.spawnTime()) {
+                // Re-validate the target at spawn time — the building may have been
+                // demolished after scheduling. Never spawn a tourist heading to a ghost.
+                var target = buildingApi.getBuilding(ps.buildingId());
+                if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
+                    Log.debug(TAG, "[Tourist] dropping pending spawn — target building gone/demolished: {}",
+                            ps.buildingId().toString().substring(0, 8));
+                    continue;
+                }
+                BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
+                if (interactionTarget == null) interactionTarget = target.getPosition();
+
                 TouristEntity tourist = new TouristEntity(
                         com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
                 tourist.setTouristName(generateTouristName());
                 tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
                 tourist.setLevel(ps.level);
-                tourist.setTargetBuildingId(ps.target.getBuildingId());
-                tourist.setTargetBuildingCategory(ps.target.getCategory());
-                tourist.setColonyId(ps.target.getColonyId());
-                tourist.setCommuteTarget(ps.interactionTarget);
+                tourist.setTargetBuildingId(ps.buildingId());
+                tourist.setTargetBuildingCategory(target.getCategory());
+                tourist.setColonyId(target.getColonyId());
+                tourist.setCommuteTarget(interactionTarget);
                 tourist.setArrivalTime(level.getGameTime());
                 tourist.applyState(TouristState.VISITING);
                 level.addFreshEntity(tourist);
@@ -292,12 +310,12 @@ public final class TouristSpawnSystem {
                 // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
                 var touristApi = getTouristApi();
                 if (touristApi != null) {
-                    touristApi.registerArrival(tourist.getUUID(), ps.target.getColonyId());
+                    touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
                 }
 
                 Log.info(TAG, "[Tourist] {} (Lv.{}) spawned, heading to {} '{}' at {}",
-                        tourist.getTouristName(), ps.level, ps.target.getCategory(),
-                        ps.target.getBuildingTypeId(), ps.interactionTarget.toShortString());
+                        tourist.getTouristName(), ps.level, target.getCategory(),
+                        target.getBuildingTypeId(), interactionTarget.toShortString());
             } else {
                 remaining.add(ps);
             }
