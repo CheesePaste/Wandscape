@@ -122,6 +122,7 @@ UsefulMagic 有三张完整法阵 PNG（`magic_*.png`）直接 billboard 渲染�
 | `polygon` / `star` 元素 | 正多边形环 / 星芒（P4 已落地） |
 | `anim.easing`（linear/smoothstep） | 关键帧缓动（P6/P10 部分落地） |
 | `interval_ticks` | 脉冲 on/off 闪烁（呼吸节奏） |
+| 60 种粒子风格（原版全部粒子 + 自定义 glow/ember） | 编辑器**可视化粒子选择器**：贴图网格 + 可染色标记（P9 已落地） |
 
 **仍缺口**（按价值排序）：
 
