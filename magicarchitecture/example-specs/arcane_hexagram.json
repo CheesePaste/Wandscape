@@ -66,14 +66,15 @@
     },
     {
       "type": "glyph",
-      "radius": 4.6,
+      "radius": 2.75,
       "count": 6,
       "sprite": "rune_arcane",
       "scale": 0.32,
       "particle": "glow",
       "color": "#d6f3ff",
-      "rotate_speed": 16,
-      "start": 0.18,
+      "rotation_offset_deg": 30,
+      "rotate_speed": 8,
+      "start": 0.12,
       "anim": {
         "scale": [[0, 0], [0.5, 1.0], [1, 1]],
         "alpha": [[0, 0], [0.16, 1], [0.9, 1], [1, 0]]
@@ -81,14 +82,14 @@
     },
     {
       "type": "polygon",
-      "radius": 3.4,
+      "radius": 2.75,
       "sides": 6,
       "particle": "glow",
       "color": "#4aa3ff",
       "mode": "beads",
-      "density": 1.5,
-      "rotate_speed": -5,
-      "start": 0.22,
+      "rotation_offset_deg": 30,
+      "rotate_speed": 8,
+      "start": 0.12,
       "anim": {
         "scale": [[0, 0], [0.45, 1.0], [1, 0.85]],
         "alpha": [[0, 0], [0.18, 1], [0.85, 1], [1, 0]]
