@@ -38,6 +38,9 @@ export function getTexture(name: string): HTMLImageElement | undefined {
   return cache.get(name);
 }
 
+/** 全部合法贴图名集合（文件去扩展名），供判断 glyph sprite 是否为可渲染贴图。 */
+export const TEXTURE_NAMES: ReadonlySet<string> = new Set(Object.keys(URLS));
+
 /** 取贴图数据 URL（面板小预览用，无需等加载完成）。 */
 export function textureUrl(name: string): string | undefined {
   return URLS[name];

@@ -67,6 +67,7 @@ function bindNumeric(i: HTMLInputElement, apply: (v: number) => void, read: () =
 
 let curveField: 'scale' | 'alpha' | 'rotation' = 'scale';
 let particlePickerOpen = false;
+let particleMulti = false;
 
 /** 初始化面板，返回 render() 供外部在结构/选中变化后调用。 */
 export function initPanel(api: PanelApi): { render: () => void } {
@@ -240,15 +241,22 @@ export function initPanel(api: PanelApi): { render: () => void } {
     axisInputs.forEach((i) => axisInputRow.append(i));
     propsBox.append(fieldRow('法线 XYZ', axisInputRow));
 
-    // ----- 粒子选择器（可视化网格，含贴图预览） -----
-    const pDef = particleDefFor(e.particle);
+    // ----- 粒子选择器（可视化网格，含贴图预览；单选/多选按位置轮流） -----
+    const multi = particleMulti;
+    const particles = Array.isArray(e.particles) ? e.particles : [];
+    const curSingle = e.particle ?? 'glow';
+    const pDef = particleDefFor(multi && particles.length > 0 ? particles[0] : curSingle);
     const pRow = el('div', 'axis-row');
     const trigger = el('button', 'p-trigger');
     const triImg = el('img', 'particle-swatch');
     const triUrl = textureUrl(pDef.frame);
     if (triUrl) triImg.src = triUrl;
     const triLabel = el('span', 'p-trigger-label');
-    triLabel.textContent = `${pDef.label}${pDef.tintable ? ' · 可染色' : ''}`;
+    if (multi) {
+      triLabel.textContent = `${particles.length} 种粒子 · 按位置轮流`;
+    } else {
+      triLabel.textContent = `${pDef.label}${pDef.tintable ? ' · 可染色' : ''}`;
+    }
     trigger.append(triImg, triLabel);
     trigger.title = '点击打开粒子选择器';
     trigger.addEventListener('click', () => {
@@ -256,10 +264,38 @@ export function initPanel(api: PanelApi): { render: () => void } {
       api.setSelected(api.getSelected());
     });
     pRow.append(trigger);
-    propsBox.append(fieldRow('粒子 particle', pRow));
+    propsBox.append(fieldRow(multi ? '粒子 particles(多选)' : '粒子 particle', pRow));
 
     if (particlePickerOpen) {
       const grid = el('div', 'p-grid');
+      const modeBar = el('div', 'axis-row');
+      for (const m of [
+        { v: false, label: '单选' },
+        { v: true, label: '多选' },
+      ] as const) {
+        const mb = el('button', 'mini' + (particleMulti === m.v ? ' active' : ''));
+        mb.textContent = m.label;
+        mb.addEventListener('click', () => {
+          if (particleMulti === m.v) return;
+          particleMulti = m.v;
+          if (m.v) {
+            // 首次切多选：把当前单选粒子作为列表起点
+            if (e.particles === undefined || e.particles.length === 0) {
+              patchElement({ particles: [curSingle] });
+            }
+          } else {
+            // 退回单选：清空列表，保留第一个作单选粒子
+            patchElement({
+              particles: undefined,
+              particle: particles.length > 0 ? particles[0] : curSingle,
+            });
+          }
+          api.setSelected(sel);
+        });
+        modeBar.append(mb);
+      }
+      grid.append(modeBar);
+
       const filterI = el('input');
       filterI.type = 'text';
       filterI.placeholder = '筛选粒子…';
@@ -268,7 +304,9 @@ export function initPanel(api: PanelApi): { render: () => void } {
       const cellsWrap = el('div', 'p-cells');
       for (const id of PARTICLE_IDS) {
         const def = particleDefFor(id);
-        const cell = el('button', 'p-cell' + (id === e.particle ? ' active' : ''));
+        const inList = multi && particles.includes(id);
+        const active = multi ? inList : id === curSingle;
+        const cell = el('button', 'p-cell' + (active ? ' active' : ''));
         const cImg = el('img', 'p-cell-img');
         const cUrl = textureUrl(def.frame);
         if (cUrl) cImg.src = cUrl;
@@ -280,8 +318,12 @@ export function initPanel(api: PanelApi): { render: () => void } {
         cell.dataset.search = `${id} ${def.label}`.toLowerCase();
         cell.title = def.label + (def.tintable ? '（可染色）' : '');
         cell.addEventListener('click', () => {
-          particlePickerOpen = false;
-          patchElement({ particle: id });
+          if (multi) {
+            const next = inList ? particles.filter((x) => x !== id) : [...particles, id];
+            patchElement(next.length > 0 ? { particles: next } : { particles: undefined, particle: curSingle });
+          } else {
+            patchElement({ particle: id, particles: undefined });
+          }
           api.setSelected(sel);
         });
         cellsWrap.append(cell);
@@ -334,14 +376,12 @@ export function initPanel(api: PanelApi): { render: () => void } {
 
     // ----- 类型专属 -----
     if (e.type === 'ring' || e.type === 'arc' || e.type === 'polygon' || e.type === 'star') {
-      const isShape = e.type === 'polygon' || e.type === 'star';
       const isBeads = (e.mode ?? 'beads') === 'beads';
-      // 排布模式：beads = 有序亮点（shape 还带均匀描边），continuous = 连续密度拖尾
       const modeSel = el('select');
       for (const m of ['beads', 'continuous'] as const) {
         const o = el('option');
         o.value = m;
-        o.textContent = m === 'beads' ? (isShape ? 'beads 顶点+描边' : 'beads 有序亮点') : 'continuous 连续拖尾';
+        o.textContent = m === 'beads' ? 'beads 整条线铺满' : 'continuous 移动拖尾';
         if (isBeads === (m === 'beads')) o.selected = true;
         modeSel.append(o);
       }
@@ -351,34 +391,28 @@ export function initPanel(api: PanelApi): { render: () => void } {
       });
       propsBox.append(fieldRow('排布 mode', modeSel));
 
-      if (isBeads) {
-        if (e.type === 'ring' || e.type === 'arc') {
-          const beadsI = numberInput(e.beads ?? 16, { min: 2, step: 1 });
-          bindNumeric(beadsI, (v) => patchElement({ beads: Math.max(2, Math.round(v)) }), () => e.beads ?? 16);
-          propsBox.append(fieldRow('亮点数 beads', beadsI));
-        } else if (e.type === 'polygon') {
-          const sidesI = numberInput(e.sides, { min: 3, step: 1 });
-          bindNumeric(sidesI, (v) => patchElement({ sides: Math.max(3, Math.round(v)) }), () => e.sides);
-          propsBox.append(fieldRow('边数 sides', sidesI));
-        } else {
-          const pointsI = numberInput(e.points, { min: 2, step: 1 });
-          bindNumeric(pointsI, (v) => patchElement({ points: Math.max(2, Math.round(v)) }), () => e.points);
-          propsBox.append(fieldRow('星芒 points', pointsI));
-          const ratioI = numberInput(e.inner_ratio, { min: 0.05, max: 1, step: 0.05 });
-          bindNumeric(ratioI, (v) => patchElement({ inner_ratio: Math.min(1, Math.max(0.05, v)) }), () => e.inner_ratio);
-          propsBox.append(fieldRow('内径比 inner_ratio', ratioI));
-        }
-      } else {
+      if (!isBeads) {
         const trailI = numberInput(e.trail_ticks ?? 10, { min: 1, step: 1 });
         bindNumeric(trailI, (v) => patchElement({ trail_ticks: Math.max(1, Math.round(v)) }), () => e.trail_ticks ?? 10);
         propsBox.append(fieldRow('拖尾 tick trail_ticks', trailI));
       }
 
-      // 密度：shape 两模式都显示（beads 的描边 / continuous 的拖尾）；ring/arc 仅 continuous
-      if (isShape || !isBeads) {
-        const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
-        bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
-        propsBox.append(fieldRow('密度 density', densityI));
+      const densityI = numberInput(e.density ?? 1.5, { min: 0, step: 0.1 });
+      bindNumeric(densityI, (v) => patchElement({ density: Math.max(0, v) }), () => e.density ?? 1.5);
+      propsBox.append(fieldRow('密度 density', densityI));
+
+      if (e.type === 'polygon') {
+        const sidesI = numberInput(e.sides, { min: 3, step: 1 });
+        bindNumeric(sidesI, (v) => patchElement({ sides: Math.max(3, Math.round(v)) }), () => e.sides);
+        propsBox.append(fieldRow('边数 sides', sidesI));
+      }
+      if (e.type === 'star') {
+        const pointsI = numberInput(e.points, { min: 2, step: 1 });
+        bindNumeric(pointsI, (v) => patchElement({ points: Math.max(2, Math.round(v)) }), () => e.points);
+        propsBox.append(fieldRow('星芒 points', pointsI));
+        const ratioI = numberInput(e.inner_ratio, { min: 0.05, max: 1, step: 0.05 });
+        bindNumeric(ratioI, (v) => patchElement({ inner_ratio: Math.min(1, Math.max(0.05, v)) }), () => e.inner_ratio);
+        propsBox.append(fieldRow('内径比 inner_ratio', ratioI));
       }
 
       const yOffI = numberInput(e.y_offset ?? 0, { step: 0.05 });
@@ -412,9 +446,13 @@ export function initPanel(api: PanelApi): { render: () => void } {
 
       const spriteI = el('input');
       spriteI.type = 'text';
+      spriteI.placeholder = '贴图名，如 sga_a / glow';
       spriteI.value = e.sprite ?? '';
       spriteI.addEventListener('change', () => patchElement({ sprite: spriteI.value.trim() }));
       propsBox.append(fieldRow('贴图 sprite', spriteI));
+      const spriteHint = el('div', 'hint');
+      spriteHint.textContent = '符文贴图用粒子选择器选；sprite 仅在粒子未知时兜底。';
+      propsBox.append(spriteHint);
 
       const scaleI = numberInput(e.scale ?? 0.3, { min: 0, step: 0.05 });
       bindNumeric(scaleI, (v) => patchElement({ scale: Math.max(0, v) }), () => e.scale ?? 0.3);

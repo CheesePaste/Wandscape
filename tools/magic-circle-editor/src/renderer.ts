@@ -71,7 +71,7 @@ export function render(
     if (i === selected) drawSelection(ctx, view, cam, el);
 
     if (mode === 'particle') {
-      drawParticlePreview(ctx, view, cam, el, time, dur, i);
+      drawParticlePreview(ctx, view, cam, el, time!, dur, i);
       return;
     }
 
@@ -145,13 +145,19 @@ function drawParticleSprite(
     return;
   }
 
-  // 回退圆点（glyph 符文 / 未知粒子 id）
+  // 兜底：贴图缺失/未加载时画菱形符文标记（tint 色描边），不糊成占位圆点
   const rgb = parseHex(p.tint ?? '#c8d2e0');
   if (rgb) {
-    ctx.fillStyle = withAlpha(rgb, 0.9);
+    const half = Math.max(2.5, px * 0.5);
+    ctx.strokeStyle = withAlpha(rgb, 0.9);
+    ctx.lineWidth = Math.max(1, px * 0.12);
     ctx.beginPath();
-    ctx.arc(sx, sy, Math.max(0.8, px * 0.5), 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(sx, sy - half);
+    ctx.lineTo(sx + half, sy);
+    ctx.lineTo(sx, sy + half);
+    ctx.lineTo(sx - half, sy);
+    ctx.closePath();
+    ctx.stroke();
   }
   ctx.restore();
 }

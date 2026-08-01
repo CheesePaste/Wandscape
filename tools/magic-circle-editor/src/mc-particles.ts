@@ -49,7 +49,7 @@ const constant = (q: number) => () => q;
 /** 便捷构造：默认 constant 尺寸、不染色。 */
 const S = (
   id: string,
-  mcId: string,
+  mcId: string | null,
   frames: string[],
   quadSize: number,
   renderType: 'opaque' | 'translucent',
