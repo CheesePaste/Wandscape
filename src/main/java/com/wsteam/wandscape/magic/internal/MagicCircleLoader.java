@@ -13,14 +13,23 @@ import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 public class MagicCircleLoader {
     private static final String CATEGORY = "magic_circles";
 
+    /** 静态实例，供客户端 emitter / 服务端命令按 id 查 spec（由 Wandscape 构造器设置）。 */
+    private static MagicCircleLoader INSTANCE;
+
     private final WandscapeDataRegistry<MagicCircleSpec> registry;
 
     public MagicCircleLoader(WandscapeDataLoader dataLoader) {
         this.registry = dataLoader.register(CATEGORY, MagicCircleSpec::fromJson);
+        INSTANCE = this;
     }
 
     @Nullable
     public MagicCircleSpec get(String id) {
         return registry.get(id);
+    }
+
+    @Nullable
+    public static MagicCircleSpec getSpec(String id) {
+        return INSTANCE != null ? INSTANCE.get(id) : null;
     }
 }
