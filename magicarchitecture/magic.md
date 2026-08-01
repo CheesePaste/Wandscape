@@ -5,6 +5,7 @@
 JSON 格式见 [data/magic-circles.md](magic-circles.md)。
 
 - **设计原则**（怎么写才好看，从 UsefulMagic 提炼）→ [magic-design-principles.md](magic-design-principles.md)
+- **示例 spec**（按原则设计，可在编辑器导入查看）→ `example-specs/`（如 `arcane_hexagram.json` 大型六芒星召唤阵）
 - **第三方参考样例**（UsefulMagic 的 Kotlin 魔法阵定义，GPL-3.0，本地只读、不纳入版本）→ `usefulmagic-examples/`（见其 README）
 
 ## 包结构

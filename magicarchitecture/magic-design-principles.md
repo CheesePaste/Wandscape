@@ -4,6 +4,8 @@
 
 > 适用对象：`data/wandscape/magic_circles/*.json` 的编写者 / Web 编辑器使用者。schema 见 [magic-circles.md](magic-circles.md)。
 
+> **配套示例**：按本原则设计的大型六芒星召唤阵 → [example-specs/arcane_hexagram.json](example-specs/arcane_hexagram.json)（半径 8.0，8 层，可在编辑器导入查看）。
+
 ## 核心心法
 
 **一座好看的魔法阵 = 5~8 个"简单层"的叠加，每层只做一件简单的事。**
@@ -40,8 +42,8 @@ UsefulMagic 到处是 `rotateAsAxis(PI/128)` 与 `rotateAsAxis(-PI/128)` 交替�
 ### P4. 正多边形环给法阵"骨架感"
 UsefulMagic 几乎每座阵都有 `addPolygonInCircle`（3/4/5/6/12 边）。三角（能量）、四角（稳定）、六角（传送/六芒）、八角（星芒）是经典视觉语言。
 
-- **Wandscape 当前缺口**：spec 只有 ring/arc/glyph，没有正多边形。建议新增 `polygon` 元素（`sides` + `rotation_offset_deg` 控制顶角朝向），或先临时用 `beads` 环 + 每 N 个加粗模拟。
-- 双层多边形错 45° 叠加 → 八角星（UsefulMagic 的 `addPolygonInCircle(...).rotateAsAxis(0.25*PI)` + 原多边形）。
+- **编辑器已支持** `polygon`（`sides`）与 `star`（`points` + `inner_ratio`，`star` 即六芒星/星芒）。**契约文档 magic-circles.md 尚未收录这两类**（文档滞后于编辑器，待补）。
+- 双层多边形错 45° 叠加 → 八角星；双 `star` 反向旋转 → 动态六芒星。
 
 ### P5. 顶点挂载符文，别手写每个符文
 UsefulMagic 用 `addPolygonInCircleVertices(12, r)` 取顶点，再在**每个顶点**上 `addBuilder(vertex, 子环/子形)`。glyph 环形布置本质上就是这个。
@@ -52,7 +54,7 @@ UsefulMagic 用 `addPolygonInCircleVertices(12, r)` 取顶点，再在**每个�
 UsefulMagic 用贝塞尔缩放（`CompositionBezierScaleHelper`：10 tick，0.01→1.0），先快后慢；入场附弹性旋转（`SkillRangeDisplay`：`outElastic` 180°→0° 入位）。
 
 - Wandscape 对应：`scale` 关键帧用缓动曲线（如 `[[0,0],[0.5,1.1],[1,1]]`），别 `[[0,0],[1,1]]` 线性涨。
-- **缺口**：keyframe 目前只有线性插值，建议加可选 `ease` 字段（`outBack` / `outElastic` / `inOutCubic` / `linear`）。
+- **已支持**：`anim.easing` 可选 `linear` / `smoothstep`（默认 linear）。`smoothstep` 即先慢后快再慢的平滑过渡。UsefulMagic 的 `outBack`（过冲）/`outElastic`（弹性）尚未收录。
 
 ### P7. 出场 = 逐层错开缩小消散
 UsefulMagic `reverseScaleOrRemove` 逐层 `doScaleReversed()` 缩小，配合 DISABLE 状态。层多时不要同帧一起消失——错开 `start` 让消散也有层次。
@@ -62,7 +64,7 @@ UsefulMagic `reverseScaleOrRemove` 逐层 `doScaleReversed()` 缩小，配合 DI
 ### P8. 状态驱动转速 — 待机/工作两种节奏
 UsefulMagic 有 `FormationStatus.IDLE/WORKING`：IDLE 慢转（PI/256），WORKING 快转（PI/128）。切换转速是"它被激活了"最便宜的信号。
 
-- **Wandscape 缺口**：spec 是单次播放。若做领域/结界等持续阵，需 `repeat`/`loop` 能力或 `phase`（循环待机 + 施法加速）。传送/仪式一次性施放无需此能力。
+- **已有半套**：`interval_ticks` 是脉冲（on/off 闪烁），可做"呼吸"；但**没有真正的循环播放模式**（单次播放到 t=1 即止）。若做领域/结界等持续阵，需 `repeat`/`loop` 能力或 `phase`（循环待机 + 施法加速）。传送/仪式一次性施放无需此能力。
 
 ### P9. 粒子风格克制 — 一种主力 + 同色系
 UsefulMagic 几乎所有阵法粒子都用 `ControlableEndRodEffect`（end rod），靠染色 + `size` 区分。极端统一反而高级。
@@ -90,14 +92,22 @@ UsefulMagic 有三张完整法阵 PNG（`magic_*.png`）直接 billboard 渲染�
 - [ ] 粒子 ≤2 种，色系统一
 - [ ] 高度（`y_offset`）不全挤在 0
 
-## 后续 spec 缺口清单（按价值排序）
+## 编辑器能力现状与后续缺口
+
+**已支持**（编辑器 spec.ts 领先于契约文档 magic-circles.md，文档待同步）：
+
+| 能力 | 用途 |
+|------|------|
+| `polygon` / `star` 元素 | 正多边形环 / 星芒（P4 已落地） |
+| `anim.easing`（linear/smoothstep） | 关键帧缓动（P6/P10 部分落地） |
+| `interval_ticks` | 脉冲 on/off 闪烁（呼吸节奏） |
+
+**仍缺口**（按价值排序）：
 
 | 缺口 | 来源原则 | 说明 |
 |------|---------|------|
-| `polygon` 元素 | P4 | 正多边形环，`sides` 边数 + 旋转偏移 |
-| keyframe `ease` 字段 | P6/P10 | 缓动函数，替代纯线性插值 |
-| glyph 相位列表 / `on_vertices` | P5 | 顶点挂载子形、符文指定落点 |
-| `repeat`/`loop` 持续模式 | P8 | 领域/结界持续运转 |
-| 顶层 `scale` 乘子 | P10 | 一套 spec 多级阵复用 |
+| glyph 相位列表 / `on_vertices` | P5 | 符文只能均布，无法指定落点或挂载子形（顶点小环/星芒） |
+| `repeat`/`loop` 持续运转模式 | P8 | `interval_ticks` 只是脉冲，非持续循环；领域/结界阵需要循环播放 |
+| 顶层 `scale` 乘子 | P10 | 一套 spec 多级阵复用（半径相对化） |
 
 这些是**设计能力**的扩展，不是当前必须实现的功能；每新增一个再更新本契约与 Web 编辑器。
