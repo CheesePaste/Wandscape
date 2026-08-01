@@ -97,7 +97,7 @@
     },
     {
       "type": "ring",
-      "radius": 2.0,
+      "radius": 1.5,
       "particle": "glow",
       "color": "#a8dcff",
       "mode": "beads",
