@@ -59,6 +59,9 @@ reasonix.toml
 ### Claude skill cache ###
 .claude/skills/minecraft-source/scripts/cache/
 
+### Third-party reference examples (GPL-3.0, read-only, not part of the mod) ###
+magicarchitecture/usefulmagic-examples/
+
 ### Python cache ###
 __pycache__/
 *.pyc
