@@ -17,7 +17,6 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -219,12 +218,11 @@ public final class OverviewFlightController {
                     case 3 -> "§e270°";
                     default -> "§70°";
                 };
-                mc.player.displayClientMessage(
-                        Component.literal("[Overview] §fRotation: " + direction), true);
+                Log.info(TAG, "[Overview] Rotation: {}", direction);
             }
 
             if (rightClicked) {
-                handleRightClick(mc);
+                handleRightClick();
             }
         }
 
@@ -268,10 +266,7 @@ public final class OverviewFlightController {
         if (ctrlDown) {
             float factor = (float) Math.pow(1.3, delta);
             flyingSpeed = Math.max(1.0, Math.min(100.0, flyingSpeed * factor));
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal(String.format("[Overview] §eSpeed: %.1f", flyingSpeed)), true);
-            }
+            Log.info(TAG, "[Overview] Speed: %.1f", flyingSpeed);
         } else {
             Vec3 dir = Vec3.directionFromRotation(
                     OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
@@ -392,10 +387,10 @@ public final class OverviewFlightController {
     // ── Right-click handling ──
     // ═══════════════════════════════════════════════════════════════════
 
-    private static void handleRightClick(Minecraft mc) {
+    private static void handleRightClick() {
         // Branch 1: Building selected via Build bar → place building
         if (ProjectionClientState.isProjecting()) {
-            handlePlace(mc);
+            handlePlace();
             return;
         }
 
@@ -403,10 +398,7 @@ public final class OverviewFlightController {
         int entityId = OverviewClientState.getTargetEntityId();
         if (entityId >= 0) {
             PacketDistributor.sendToServer(new OverviewEntityInteractPacket(entityId));
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Overview] Interacting with entity..."), true);
-            }
+            Log.info(TAG, "[Overview] Interacting with entity id={}", entityId);
             return;
         }
 
@@ -414,23 +406,17 @@ public final class OverviewFlightController {
         BlockPos target = OverviewClientState.getTargetBlockPos();
         if (target != null && OverviewClientState.getTargetBuildingId() != null) {
             PacketDistributor.sendToServer(new OverviewInteractPacket(target));
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Overview] Interacting with building..."), true);
-            }
+            Log.info(TAG, "[Overview] Interacting with building at {}", target);
         }
     }
 
     /** Place the selected building at the ghost position from overview raycast. */
-    private static void handlePlace(Minecraft mc) {
+    private static void handlePlace() {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) return;
 
         if (ProjectionClientState.isOverlapDetected()) {
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Overview] §cCannot place here — overlapping building"), true);
-            }
+            Log.warn(TAG, "[Overview] Cannot place here — overlapping building at {}", ghostPos);
             return;
         }
 
