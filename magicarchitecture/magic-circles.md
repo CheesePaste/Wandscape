@@ -14,22 +14,25 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
   "elements": [
     {
       "type": "ring",
+      "axis": [0, 1, 0],
       "radius": 4.0,
       "particle": "glow",
       "color": "#00ff88",
       "density": 1.5,
       "trail_ticks": 10,
-      "rotate_speed": 0.4,
+      "rotation_offset_deg": 0,
+      "rotate_speed": 23,
       "y_offset": 0.0,
       "start": 0.0,
       "anim": {
         "scale":    [[0, 0], [0.5, 1], [1, 1.1]],
         "alpha":    [[0, 0], [0.3, 1], [0.85, 1], [1, 0]],
-        "rotation": [[0, 0], [1, 1]]
+        "rotation": [[0, 0], [1, 90]]
       }
     },
     {
       "type": "arc",
+      "axis": [0, 1, 0],
       "radius": 3.0,
       "arc_start_deg": 0,
       "arc_sweep_deg": 240,
@@ -37,17 +40,18 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
       "color": "#ff8800",
       "density": 1.5,
       "trail_ticks": 8,
-      "rotate_speed": -0.3,
+      "rotate_speed": -17,
       "start": 0.25
     },
     {
       "type": "glyph",
+      "axis": [0, 1, 0],
       "radius": 3.5,
       "count": 8,
       "sprite": "rune_fire",
       "scale": 0.3,
       "color": "#ffaa00",
-      "rotate_speed": 0.2,
+      "rotate_speed": 12,
       "start": 0.3,
       "anim": { "alpha": [[0, 0], [0.2, 1], [1, 1]] }
     }
@@ -71,10 +75,12 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | type | string | `ring` / `arc` / `glyph` |
+| axis | [x,y,z] | 法阵平面法线，默认 `[0,1,0]`（水平地面）；`[1,0,0]`/`[0,0,1]` 为竖直环（传送门）。编辑器提供朝向预设 |
 | radius | double | 基础半径（编辑器里拖出来的值） |
 | particle | string | 粒子风格 id：`glow`/`ember`/`flame`/`endRod`…（映射到 MC 粒子/自定义粒子） |
 | color | string? | 可选十六进制 `#RRGGBB`；自定义粒子可染色，vanilla 粒子忽略 |
-| rotate_speed | double | 静态旋转速度（弧度/秒，负=反向），默认 0 |
+| rotation_offset_deg | double | 初始相位偏移（度），同半径双环靠它错开，默认 0 |
+| rotate_speed | double | 静态旋转速率（**度/秒**，负=反向），默认 0。合成公式见"旋转与朝向" |
 | start | double | 归一化起始时间 [0,1)：元素在总时长哪一刻开始出现（**级联核心**），默认 0 |
 | anim | Anim? | 关键帧曲线（见下） |
 
@@ -100,7 +106,7 @@ Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份�
 |------|------|------|
 | scale | 半径/glyph 尺寸倍率 | `[[0,1]]`（恒 1） |
 | alpha | 粒子透明度倍率（≤0 不发射） | `[[0,1]]` |
-| rotation | 窗口内附加旋转（弧度），叠在 `rotate_speed×elapsed` 之上 | `[]` |
+| rotation | 窗口内附加旋转角度（**度**），叠在静态旋转之上（合成公式见"旋转与朝向"） | `[]` |
 
 keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 smoothstep 缓动）。
 
@@ -113,6 +119,30 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
   - 逐渐放大：`scale: [[0,0],[0.5,1],...]`
   - 缩小消散：`scale` 尾段 → 0，`alpha` 尾段 → 0
   - 层进展开：每层不同 `start` + 各自 `scale` 从 0 涨起
+
+## 旋转与朝向
+
+旋转始终在元素自身平面内、绕自身中心进行（无论水平/竖直/倾斜），即角度相位的递增。**全阵同速旋转 = 所有元素设相同 `rotate_speed`。**
+
+### 合成公式
+
+对元素窗口内任意全局 tick `T`，当前旋转角：
+
+```
+angle(T) = rotation_offset_deg
+         + rotate_speed(度/秒) × (T - start × duration_ticks) / 20
+         + anim.rotation(lt)
+```
+
+- `T0 = start × duration_ticks` 为元素出现时刻，`lt` 为局部时间。**elapsed 从窗口起点计**——级联元素从自己出现那一刻才开始转。
+- `rotate_speed` 负值 = 反向；每元素独立，可做双环对旋。
+- 线性 `anim.rotation` 曲线（如 `[[0,0],[1,180]]`）等价于叠加一段恒定附加速率。
+
+### 朝向（axis）
+
+- 默认水平（`[0,1,0]`，地面法阵）。竖直环用 `[1,0,0]`（朝 X）或 `[0,0,1]`（朝 Z）——**传送门/传送阵必用竖直环**。
+- 任意倾斜用归一化法线 `[nx,ny,nz]`。两端渲染共用同一定点公式：由法线 `n` 构造正交基 `a = normalize(cross(n, m))`、`b = cross(n, a)`，圆周点 `p = a·cos θ + b·sin θ`（`m` 为任意不与 `n` 平行的单位向量）。
+- 编辑器提供朝向预设：地面 / 竖直-X / 竖直-Z / 自定义。
 
 ## 粒子模型（MC 渲染端如何消费）
 
@@ -143,7 +173,7 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
       "color": "#ff5522",
       "density": 1.5,
       "trail_ticks": 10,
-      "rotate_speed": 0.4,
+      "rotate_speed": 23,
       "start": 0.0,
       "anim": {
         "scale": [[0, 0], [0.5, 1], [1, 1.1]],
@@ -157,7 +187,7 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
       "color": "#ffaa00",
       "density": 1.5,
       "trail_ticks": 8,
-      "rotate_speed": -0.3,
+      "rotate_speed": -17,
       "start": 0.25,
       "anim": {
         "scale": [[0, 0], [0.5, 1], [1, 1]],
@@ -171,7 +201,7 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
       "sprite": "rune_fire",
       "scale": 0.3,
       "color": "#ff8800",
-      "rotate_speed": 0.2,
+      "rotate_speed": 12,
       "start": 0.4,
       "anim": { "alpha": [[0, 0], [0.2, 1], [1, 1]] }
     }
@@ -194,7 +224,7 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
       "color": "#44ccff",
       "density": 2.0,
       "trail_ticks": 12,
-      "rotate_speed": 0.15,
+      "rotate_speed": 9,
       "start": 0.0,
       "anim": { "alpha": [[0, 0], [0.3, 1], [1, 1]] }
     },
@@ -207,7 +237,7 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
       "color": "#aaddff",
       "density": 1.5,
       "trail_ticks": 10,
-      "rotate_speed": 0.4,
+      "rotate_speed": 23,
       "start": 0.2,
       "anim": { "alpha": [[0, 0], [0.3, 1], [1, 1]] }
     },
@@ -218,9 +248,63 @@ keyframe 格式 `[[t, v], ...]`，`t` 归一化 [0,1]，线性插值（可选 sm
       "sprite": "rune_arcane",
       "scale": 0.25,
       "color": "#88ddff",
-      "rotate_speed": -0.1,
+      "rotate_speed": -6,
       "start": 0.4,
       "anim": { "alpha": [[0, 0], [0.2, 1], [1, 1]] }
+    }
+  ]
+}
+```
+
+### ritual_teleport.json — 传送阵（地面环 + 竖直传送环）
+
+```json
+{
+  "id": "ritual_teleport",
+  "duration_ticks": 80,
+  "height": 0.05,
+  "elements": [
+    {
+      "type": "ring",
+      "axis": [0, 1, 0],
+      "radius": 2.0,
+      "particle": "glow",
+      "color": "#cc66ff",
+      "density": 1.5,
+      "trail_ticks": 10,
+      "rotate_speed": 40,
+      "start": 0.0,
+      "anim": {
+        "scale": [[0, 0], [0.3, 1], [1, 0.8]],
+        "alpha": [[0, 0], [0.2, 1], [0.8, 1], [1, 0]]
+      }
+    },
+    {
+      "type": "ring",
+      "axis": [1, 0, 0],
+      "radius": 1.6,
+      "particle": "endRod",
+      "color": "#ddaaff",
+      "density": 1.5,
+      "trail_ticks": 8,
+      "rotate_speed": -30,
+      "start": 0.15,
+      "anim": {
+        "scale": [[0, 0], [0.3, 1], [1, 0.9]],
+        "alpha": [[0, 0], [0.2, 1], [0.85, 1], [1, 0]]
+      }
+    },
+    {
+      "type": "glyph",
+      "axis": [0, 1, 0],
+      "radius": 2.3,
+      "count": 6,
+      "sprite": "rune_arcane",
+      "scale": 0.25,
+      "color": "#cc88ff",
+      "rotate_speed": 15,
+      "start": 0.25,
+      "anim": { "alpha": [[0, 0], [0.15, 1], [0.9, 1], [1, 0]] }
     }
   ]
 }
