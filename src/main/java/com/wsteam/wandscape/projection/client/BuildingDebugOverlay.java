@@ -75,7 +75,7 @@ public final class BuildingDebugOverlay {
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         if (!BuildingDebugClientState.isActive()) return;
 
-        BuildingDebugResponsePacket data = BuildingDebugClientState.getCachedData();
+        BuildingDebugResponsePacket data = BuildingDebugClientState.getDisplayData();
         if (data == null) {
             buttonsVisible = false;
             return;
@@ -242,7 +242,7 @@ public final class BuildingDebugOverlay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
 
-        BuildingDebugResponsePacket data = BuildingDebugClientState.getCachedData();
+        BuildingDebugResponsePacket data = BuildingDebugClientState.getDisplayData();
         if (data == null) return;
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;

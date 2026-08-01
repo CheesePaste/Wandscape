@@ -83,7 +83,7 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderFills(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        boolean lookingAtBuilding = BuildingDebugClientState.getCachedData() != null;
+        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null;
 
         // 1. Top bar background
         if (!lookingAtBuilding) {
@@ -200,7 +200,7 @@ public final class WandscapePanelOverlay {
     // ═══════════════════════════════════════════════════════════════
 
     private static void renderTexts(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        boolean lookingAtBuilding = BuildingDebugClientState.getCachedData() != null;
+        boolean lookingAtBuilding = BuildingDebugClientState.getDisplayData() != null;
 
         if (!lookingAtBuilding) {
             UUID cid = WandscapePanelState.getColonyId();

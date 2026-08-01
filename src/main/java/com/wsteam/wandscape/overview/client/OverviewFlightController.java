@@ -362,25 +362,10 @@ public final class OverviewFlightController {
 
     /**
      * Find which building (if any) contains the given block position.
-     * Uses cached building area data from {@link BuildingAreaSyncPacket}.
+     * Uses the shared boundary lookup over cached building area data.
      */
     private static UUID findBuildingAt(BlockPos pos) {
-        var buildings = BuildingAreaSyncPacket.getCached();
-        for (var entry : buildings) {
-            if (!entry.hasBoundary()) continue;
-
-            BlockPos anchor = entry.anchor();
-            int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-            int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
-
-            if (x >= ax + entry.bMinX() && x <= ax + entry.bMaxX()
-                    && y >= ay + entry.bMinY() && y <= ay + entry.bMaxY()
-                    && z >= az + entry.bMinZ() && z <= az + entry.bMaxZ()) {
-                return UUID.nameUUIDFromBytes((
-                        entry.buildingTypeId() + "@" + anchor).getBytes());
-            }
-        }
-        return null;
+        return BuildingAreaSyncPacket.findBuildingIdAt(pos);
     }
 
     // ═══════════════════════════════════════════════════════════════════

@@ -1,5 +1,16 @@
 # 已知问题与待澄清
 
+## 已完成的特性（2026-08-01）
+
+### Overview 建筑信息顶栏闪烁修复 ✅
+- **问题**：俯瞰模式下移动时准心扫过建筑，顶栏/建筑信息反复闪烁。根因是 `BuildingDebugController` 每 tick 射线检测，只要准心扫过不同方块就发 `BuildingDebugRequestPacket`（限速 200ms）并立即 `clearCachedData()`，服务器响应到达前缓存为 null → 顶栏闪现；命中非建筑方块时服务器不回包，缓存一直空。
+- **修复——本地检测 + 防抖 + 按建筑发包**：
+  1. `BuildingAreaSyncPacket.findBuildingIdAt(BlockPos)`：共享边界查询，从 `OverviewFlightController.findBuildingAt` 提取为单一来源。
+  2. `BuildingDebugController` 每 tick 用本地建筑区域缓存做即时检测 → `markBuildingDetected()` 刷新防抖窗（顶栏/建筑信息切换零网络、零闪烁）；仅当本地建筑 UUID 变化才发包（同一建筑扫过多块只发 1 包，发包量从 ~5/s 降到接近 0）。
+  3. `BuildingDebugClientState` 新增 250ms（5 tick）防抖窗 `SHOW_GRACE_MS` + `getDisplayData()`/`debouncedClear()`：准心离开建筑后最多 0.25s 内仍显示建筑信息，随后回退顶栏。
+  4. 消费点 `WandscapePanelOverlay`/`BuildingDebugOverlay`/`WandscapeHighlightRenderer` 改用 `getDisplayData()`。
+- **相关文件**：`BuildingAreaSyncPacket.java`, `BuildingDebugController.java`, `BuildingDebugClientState.java`, `BuildingDebugOverlay.java`, `WandscapePanelOverlay.java`, `WandscapeHighlightRenderer.java`, `OverviewFlightController.java`
+
 ## 已完成的特性（2026-07-08）
 
 ### 市政厅殖民地名称 + Overview 交互统一 ✅

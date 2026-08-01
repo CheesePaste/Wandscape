@@ -56,7 +56,7 @@ public final class WandscapeHighlightRenderer {
         PoseStack.Pose pose = poseStack.last();
 
         // 1. Building Outline (if looking at a building and response is cached)
-        BuildingDebugResponsePacket data = BuildingDebugClientState.getCachedData();
+        BuildingDebugResponsePacket data = BuildingDebugClientState.getDisplayData();
         if (data != null && data.anchor() != null && data.buildingTypeId() != null) {
             BuildingConfig config = BuildingConfigLoader.getInstance().get(data.buildingTypeId());
             if (config != null && config.boundary() != null) {

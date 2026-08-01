@@ -1,6 +1,9 @@
 package com.wsteam.wandscape.projection.client;
 
+import java.util.UUID;
+
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -68,34 +71,44 @@ public final class BuildingDebugController {
         if (mc.screen != null) return; // don't raycast when another screen is open
 
         BlockPos hitPos = raycastBuildingPos(mc);
+        UUID buildingId = hitPos != null ? BuildingAreaSyncPacket.findBuildingIdAt(hitPos) : null;
 
-        if (hitPos == null) {
-            // Looking at sky or non-block — clear overlay
+        // Local, instant building detection — refreshes the display debounce window
+        // every tick, so the top-bar/building-info switch never flickers mid-sweep.
+        // No packet involved; rich data is only (re)requested per building below.
+        if (buildingId != null) {
+            BuildingDebugClientState.markBuildingDetected();
+        }
+
+        if (buildingId == null) {
+            // Looking at sky or a non-building block — keep the last info visible
+            // briefly (debounced), then fall back to the top bar.
             if (BuildingDebugClientState.getLastRequestedPos() != null) {
                 Log.info(TAG, "[Debug] Look-away — clearing overlay (was pos={})",
                         BuildingDebugClientState.getLastRequestedPos());
             }
             BuildingDebugClientState.setLastRequestedPos(null);
-            BuildingDebugClientState.clearCachedData();
+            BuildingDebugClientState.setLastRequestedBuildingId(null);
+            BuildingDebugClientState.debouncedClear();
             return;
         }
 
-        BlockPos lastPos = BuildingDebugClientState.getLastRequestedPos();
+        // Same building as the last request — rich data is already cached (or in
+        // flight). Sweeping across a building's blocks only sends one request.
+        if (buildingId.equals(BuildingDebugClientState.getLastRequestedBuildingId())) return;
+
         long now = System.currentTimeMillis();
-
-        // Same position — nothing to do (already requested or response cached)
-        if (hitPos.equals(lastPos)) return;
-
-        // Different position — send new request
         long lastTime = BuildingDebugClientState.getLastRequestTime();
         if (now - lastTime < MIN_REQUEST_INTERVAL_MS) return; // rate limit
 
         BuildingDebugClientState.setLastRequestedPos(hitPos);
+        BuildingDebugClientState.setLastRequestedBuildingId(buildingId);
         BuildingDebugClientState.setLastRequestTime(now);
-        BuildingDebugClientState.clearCachedData(); // clear old data while waiting
+        // Keep the previous building visible while this new request is in flight.
+        BuildingDebugClientState.debouncedClear();
 
         PacketDistributor.sendToServer(new BuildingDebugRequestPacket(hitPos));
-        Log.info(TAG, "[Debug] Sent request: pos={} prevPos={}", hitPos, lastPos);
+        Log.info(TAG, "[Debug] Sent request: building={} at {}", buildingId, hitPos);
     }
 
     // ── Raycast ─────────────────────────────────────────────────────────────

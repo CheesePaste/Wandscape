@@ -2,6 +2,7 @@ package com.wsteam.wandscape.shared.network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -14,6 +15,8 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -40,6 +43,30 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
 
     public static List<BuildingEntry> getCached() {
         return cached;
+    }
+
+    /**
+     * Find which building (if any) contains the given block position, using the
+     * cached building-area data. Returns a stable per-building UUID derived from
+     * type + anchor, or {@code null} if the block is not inside any building.
+     */
+    @Nullable
+    public static UUID findBuildingIdAt(BlockPos pos) {
+        for (BuildingEntry entry : cached) {
+            if (!entry.hasBoundary()) continue;
+
+            BlockPos anchor = entry.anchor();
+            int x = pos.getX(), y = pos.getY(), z = pos.getZ();
+            int ax = anchor.getX(), ay = anchor.getY(), az = anchor.getZ();
+
+            if (x >= ax + entry.bMinX() && x <= ax + entry.bMaxX()
+                    && y >= ay + entry.bMinY() && y <= ay + entry.bMaxY()
+                    && z >= az + entry.bMinZ() && z <= az + entry.bMaxZ()) {
+                return UUID.nameUUIDFromBytes((
+                        entry.buildingTypeId() + "@" + anchor).getBytes());
+            }
+        }
+        return null;
     }
 
     @Override
