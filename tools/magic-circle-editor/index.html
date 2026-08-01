@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wandscape 魔法阵编辑器</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="toolbar">
+        <span class="brand">Wandscape 魔法阵编辑器</span>
+        <div class="group">
+          <button id="btn-new">新建</button>
+          <button id="btn-import">导入 JSON</button>
+          <button id="btn-export">导出 JSON</button>
+          <button id="btn-copy">复制 JSON</button>
+        </div>
+        <div class="group" id="view-group">
+          <span class="label">视图</span>
+          <button data-view="top" class="active">俯视</button>
+          <button data-view="frontX">前-X</button>
+          <button data-view="frontZ">前-Z</button>
+        </div>
+        <div class="spacer"></div>
+        <input type="file" id="file-input" accept="application/json,.json" hidden />
+        <button id="btn-fit">适配视图</button>
+      </header>
+      <main id="canvas-wrap">
+        <canvas id="canvas"></canvas>
+        <div id="toast" class="hidden"></div>
+      </main>
+      <footer id="status">
+        <span id="status-spec"></span>
+        <span id="status-zoom"></span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
