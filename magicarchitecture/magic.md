@@ -15,13 +15,16 @@ magic/
   ├── data/MagicCircleSpec.java        record 镜像 + fromJson（纯数据，无 MC 依赖）
   ├── internal/MagicCircleLoader.java  dataconfig 注册 magic_circles 类目 + get(id)/getAll()
   ├── internal/MagicCastManager.java   服务端施法调度：法阵动画结束后生成信标光束（按施法者去重）
-  ├── internal/MagicCaster.java        施放入口：发 MagicCircleCastPacket + 登记光束（法杖/命令共用）
-  ├── entity/MagicBeamEntity.java      服务端显示实体：源点→目标，目标/颜色同步，短命自毁
+  ├── internal/MagicCaster.java        施放入口：发 MagicCircleCastPacket + 登记光束（玩家命令 / NPC 共用）
+  ├── internal/MagicInteractHandler.java  shift+右键 NPC 触发施法（服务端拦截交互，防止打开信息界面）
+  ├── entity/MagicBeamEntity.java      服务端显示实体：源点→目标（端点一次性定死，非子弹），
+  │                                     目标/颜色同步，短命自毁；宽度动画 getWidthFactor
   ├── client/MagicCircleEmitter.java   客户端静态持有器：Map<UUID, ActiveCircle>，
   │                                     注册 ClientTickEvent.Post，每 tick 采样曲线撒粒子
   ├── client/MagicCircleDotParticle.java   可染色点粒子（glow/ember + glyph 放大点，v1 同一类），
   │                                      复用 minecraft:glow 贴图 + 元素 color 染色
-  └── client/MagicBeamEntityRenderer.java  原版 BeaconRenderer.renderBeaconBeam 旋转朝目标 + 染色
+  └── client/MagicBeamEntityRenderer.java  原版 BeaconRenderer.renderBeaconBeam 旋转朝目标 + 染色，
+                                      beamRadius/glowRadius 随 getWidthFactor 动画
       shared/network/MagicCircleCastPacket.java  服务端→客户端：effectId/pos/axis/circleId
 ```
 
@@ -39,19 +42,22 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 施放触发（服务端 → 客户端）：
 
 ```
-法杖右键 / 调试命令 / 未来 ritual 钩子（服务端）
-  → MagicCaster.cast：MagicCircleCastPacket(effectId=UUID, pos, axis=法杖朝向, circleId)
+法杖右键 / 调试命令 / shift+右键 NPC（服务端）
+  → MagicCaster.cast / castNpc：MagicCircleCastPacket(effectId=UUID, pos, axis=施法朝向, circleId)
       + MagicCastManager.schedule(动画时长后生成光束)
-  → PacketDistributor.sendToPlayersTrackingChunk
+  → PacketDistributor.sendToPlayersTrackingChunk / sendToPlayersTrackingEntity
   → 客户端 payload handler → MagicCircleEmitter.add(level, pos, axis, loader.get(circleId))
   → ClientTickEvent.Post:  t = (nowTick - startTick) / duration
   → 采样 anim 曲线（scale/alpha/rotation）→ 当前几何位置撒粒子
   → t ≥ 1 自动移除
-  → 服务端 MagicCastManager.tick（ServerTick）：到期生成 MagicBeamEntity（源点→准星目标，颜色）
+  → 服务端 MagicCastManager.tick（ServerTick）：到期生成 MagicBeamEntity（源点→目标，颜色）
   → 客户端 MagicBeamEntityRenderer：原版 BeaconRenderer.renderBeaconBeam 旋转朝目标渲染
+  → 光束粗细随寿命动画：先慢慢变宽（0→0.7）再快速变窄（0.7→1）
 ```
 
-`axis` 由施放方传入并**覆盖** spec 元素 axis——攻击阵的"法阵垂直于法杖"就靠它实现（地面阵不传时回落到 spec 元素 axis）。
+`axis` 由施放方传入并**覆盖** spec 元素 axis——攻击阵的"法阵垂直于施法朝向"就靠它实现（地面阵不传时回落到 spec 元素 axis）。
+
+**shift+右键 NPC**：`MagicInteractHandler` 服务端拦截 `PlayerInteractEvent.EntityInteract`（不打开信息界面），NPC 沿其当前朝向（不改朝向）施放，`startManualCast(duration)` 窗口内 `isCasting=true` 举起法杖。NPC 与玩家共用同一去重（按 UUID）。
 
 ## 注册点
 

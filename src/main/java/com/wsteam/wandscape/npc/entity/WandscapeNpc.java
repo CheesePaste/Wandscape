@@ -176,6 +176,18 @@ public class WandscapeNpc extends PathfinderMob {
     // ── Fast path: skip ECS polling for idle NPCs ──
     private int ecsPollCooldown = 0;
 
+    // ── 手动施法（shift+右键）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
+    private int manualCastTicks = 0;
+
+    /**
+     * 触发一次手动施法：在 {@code ticks} 内保持举杖姿态（isCasting=true）。
+     * 窗口结束由 tick() 自动恢复为 ECS 决定的状态。
+     */
+    public void startManualCast(int ticks) {
+        manualCastTicks = Math.max(manualCastTicks, ticks);
+        setCasting(true);
+    }
+
     // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
     public int lastParticleTick = -1;
 
@@ -279,8 +291,11 @@ public class WandscapeNpc extends PathfinderMob {
         super.tick();
         if (level().isClientSide) return;
 
+        boolean manual = manualCastTicks > 0;
+        if (manual) manualCastTicks--;
+
         boolean casting;
-        if (ecsPollCooldown > 0 && !isCasting()) {
+        if (ecsPollCooldown > 0 && !isCasting() && !manual) {
             // Fast path: idle NPC, skip ECS query this tick
             ecsPollCooldown--;
             return;
@@ -330,6 +345,7 @@ public class WandscapeNpc extends PathfinderMob {
             ecsPollCooldown = casting ? 0 : 20;
         }
 
+        if (manual) casting = true;
         if (casting != isCasting()) {
             setCasting(casting);
         }

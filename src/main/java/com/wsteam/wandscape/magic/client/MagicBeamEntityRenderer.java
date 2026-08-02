@@ -39,6 +39,11 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
         Vec3 ndir = dir.normalize();
         int height = Math.max(1, (int) Math.round(dist));
 
+        // 粗细动画：先慢慢变宽、再快速变窄（非子弹，端点固定，只变半径）
+        float wf = entity.getWidthFactor(partialTick);
+        float beamRadius = Math.max(0.01f, MagicBeamEntity.MAX_BEAM_RADIUS * wf);
+        float glowRadius = MagicBeamEntity.MAX_GLOW_RADIUS * wf;
+
         poseStack.pushPose();
         poseStack.translate(src.x, src.y, src.z);
         poseStack.mulPose(rotationYTo(ndir));
@@ -46,7 +51,7 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
         poseStack.translate(-0.5, 0, -0.5);
         BeaconRenderer.renderBeaconBeam(poseStack, buffer, BeaconRenderer.BEAM_LOCATION,
                 partialTick, 1.0f, entity.level().getGameTime(), 0, height,
-                entity.getBeamColor(), 0.2f, 0.25f);
+                entity.getBeamColor(), beamRadius, glowRadius);
         poseStack.popPose();
     }
 
