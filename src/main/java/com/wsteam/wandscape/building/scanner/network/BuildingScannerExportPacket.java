@@ -303,7 +303,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             Path exportDir = level.getServer().getServerDirectory()
                     .resolve("wandscape_buildings");
             Files.createDirectories(exportDir);
-            Path outFile = exportDir.resolve(id + ".json");
+            Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
@@ -365,7 +365,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         try {
             Path exportDir = level.getServer().getServerDirectory().resolve("wandscape_roads");
             Files.createDirectories(exportDir);
-            Path outFile = exportDir.resolve(id + ".json");
+            Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
 
@@ -377,6 +377,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "§cFailed to export road preset: " + e.getMessage()));
         }
+    }
+
+    private static String sanitizeFileName(String id) {
+        if (id == null || id.isBlank()) return "export_" + (System.currentTimeMillis() % 1000);
+        return id.replaceAll("[^a-zA-Z0-9_\\-]", "_");
     }
 
     /** Get the registry name of a block, with non-default blockstate properties. */
