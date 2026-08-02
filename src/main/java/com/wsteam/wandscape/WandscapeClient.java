@@ -117,7 +117,6 @@ public class WandscapeClient {
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
         com.wsteam.wandscape.road.client.SplineEditorOverlay.register();
-        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.imgui.ImGuiManager.class);
     }
 
     @SubscribeEvent
