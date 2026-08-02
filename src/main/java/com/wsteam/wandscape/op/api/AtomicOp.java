@@ -22,7 +22,8 @@ public sealed interface AtomicOp
                 AtomicOp.EmitEventOp,
                 AtomicOp.IfConditionOp,
                 AtomicOp.ParallelOp,
-                AtomicOp.AttackMonsterOp {
+                AtomicOp.AttackMonsterOp,
+                AtomicOp.SelfDefenseOp {
 
     /** Base mana cost for this operation (before wand efficiency). */
     float baseManaCost();
@@ -137,6 +138,29 @@ public sealed interface AtomicOp
         @Override
         public float baseManaCost() {
             return 0f; // guard casts are mana-free initially (M6 knob later)
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // no stance / no navigation — cast from current position
+        }
+    }
+
+    /**
+     * NPC self-defense: cast a magic circle + beam at a hostile near the NPC itself
+     * (not a building zone). Independent of the guard task system — injected into the
+     * NPC's private task queue, preempting the current task and resuming after.
+     * Positionless — the caster does NOT walk; the executor re-scans around the NPC
+     * each cycle and prioritizes a hated attacker (a non-player that hurt the NPC).
+     *
+     * @param radius   spherical distance around the NPC where hostile mobs are attacked
+     * @param circleId magic circle spec id for the cast visual
+     * @param color    beam color (ARGB)
+     */
+    record SelfDefenseOp(int radius, String circleId, int color) implements AtomicOp {
+        @Override
+        public float baseManaCost() {
+            return 0f; // self-defense casts are mana-free initially (M6 knob later)
         }
 
         @Override
