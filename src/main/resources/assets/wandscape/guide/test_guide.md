@@ -11,11 +11,13 @@
 
 > 💡 **中世纪智慧**：保持良好的游客声望与充足的元素积累，是拓展殖民地领土与科技的决定性关键。
 
-## 2. 交互动作链接
+## 2. 交互动作与跨文档跳转
 
-点击下方链接在游戏内响应动作：
+点击下方链接体验文档间跳转与游戏内动作：
 
-👉 [点击触发交互反馈](action:wandscape:guide_test_clicked)
+👉 [跳转至 🏛️ 市政厅指南](guide:townhall_guide)  
+👉 [跳转至 📦 仓库与物流指南](guide:warehouse_guide)  
+👉 [开启选建鸟瞰模式](action:wandscape:overview_mode)
 
 ## 3. 动态图像与动画
 
