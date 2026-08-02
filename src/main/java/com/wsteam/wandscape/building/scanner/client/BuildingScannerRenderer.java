@@ -35,6 +35,11 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
     @Override
     public void render(BuildingScannerBlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        // CORNER mode scanners do not render bounding box in world
+        if (be.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+            return;
+        }
+
         // 1. Boundary box (orange)
         BlockOffset bMin = be.getBoundaryMin();
         BlockOffset bMax = be.getBoundaryMax();
