@@ -209,6 +209,14 @@ ColonyMetricsService.getSnapshot(colonyId)   ← 成就/HUD 统一调用
 - 删除旧 ImGui 编辑器文档（imgui/standalone/blueprint_editor/building-editor）
 - 清理死代码：`DecorationLevel` 枚举、FULL/NONE 分支、3 个未使用 `MedievalColors` 常量、3 个 `SkinRender` 方法、4 个孤儿纹理
 
+## 已完成：移除 ImGui，样条编辑器并入原生 UI (2026-08-02)
+
+- 新增 `road/client/SplineEditorOverlay`：原生中世纪 HUD 样条编辑面板（右侧 overlay，复用 `shared/ui` 主题 + `TabBar`），替换 `SplineEditorImGui`
+- ROAD 栏 **Spline** 工具不再退出 V 面板，而是内嵌编辑：V 面板保持 ROAD 模式打开，右侧弹出面板，ROAD 底栏仍可切预设
+- `SplineEditorController` 8 处 ImGui capture 判断换成 `SplineEditorOverlay.wantsMouseAt/hasActiveTextInput/isOverRoadBar`
+- 删除整个 `imgui/` 包（`ImGuiManager`、`WandscapeImGuiTheme`）、`SplineEditorImGui`、imgui 单元测试、build.gradle 的 imgui-java 依赖
+- 世界交互层（Controller/Renderer/InputHandler/MixinSplineEditorCamera）保持不变
+
 ## 后续阶段（概览）
 
 - **阶段 4**：殖民地生命周期 + 房屋 + 魔力池 + 祭坛 + 管理面板

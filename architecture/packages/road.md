@@ -11,7 +11,7 @@
 | `core/` | 纯数据模型（RoadNetwork / RoadNode / RoadEdge / SplineModel 等） |
 | `algorithm/` | 算法（MST via Prim / L 形 PathGenerator / RoadPlanner / NetworkDiff / RoadRouter / DecorationPlanner） |
 | `engine/` | MC 实现（RoadBuilder / RoadSavedData / RoadTaskSource / RoadApiImpl / RoadEventListener / RoadBlobExplorer 等） |
-| `client/` | 客户端放置渲染 + 交互（RoadPlacementOverlay / RoadPlacementState / RoadPlacementController / RoadPlacementRenderer）。侧边栏三个工具：Replace（替换地表一层，走 `road:build_segment`）、Fill（填满两角立方体，走 `terrain:fill_box`）、Destroy/Fill（铲平/垫平，走 `terrain:flatten`） |
+| `client/` | 客户端放置渲染 + 交互（RoadPlacementOverlay / RoadPlacementState / RoadPlacementController / RoadPlacementRenderer / SplineEditorOverlay）。ROAD 栏工具：Spline（内嵌样条编辑器，右侧原生 `SplineEditorOverlay` 面板，走 `SplineBuildPacket`）、Replace（替换地表一层，走 `road:build_segment`）、Destroy/Fill（铲平/垫平，走 `terrain:flatten`） |
 | `network/` | 网络包 |
 | `server/` | RoadEditorHandler |
 

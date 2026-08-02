@@ -21,7 +21,7 @@
 
 | 模式 | 入口行为 | 适用场景 |
 | :--- | :--- | :--- |
-| **Spline** | 关闭 V 面板，打开 ImGui 可视化编辑器 | 优雅弯道、环形路、3D 立体曲线 |
+| **Spline** | ROAD 面板内嵌样条编辑器（V 面板不关） | 优雅弯道、环形路、3D 立体曲线 |
 | **Replace** | 进入世界内两点放置模式 | 直线地表石砖路平铺与替换 |
 | **Destroy/Fill** | 进入世界内参考方块选取模式 | 批量平整地形与清理障碍 |
 
@@ -31,7 +31,7 @@
 
 | 核心参数 / 属性 | 类型 / 范围 | 详细作用机制与计算影响 |
 | :--- | :--- | :--- |
-| **`ToolMode`** | Enum (`SPLINE / REPLACE / DESTROY_FILL`) | 道路建造工具的核心模式。模式 1 `SPLINE` 打开 ImGui 可视化样条线编辑器，模式 2 `REPLACE` 为直线地表替换，模式 3 `DESTROY_FILL` 为带基准高度清理。 |
+| **`ToolMode`** | Enum (`SPLINE / REPLACE / DESTROY_FILL`) | 道路建造工具的核心模式。模式 1 `SPLINE` 打开内嵌样条线编辑器，模式 2 `REPLACE` 为直线地表替换，模式 3 `DESTROY_FILL` 为带基准高度清理。 |
 | **`RoadPhase`** | Enum (`BAR / PLACING`) | `BAR` 状态下光标释放，用于在选单中挑选 Preset 材质与模式；`PLACING` 状态下光标锁定准心，用于在世界中点击 `StartPos` / `EndPos`。仅 REPLACE 与 DESTROY_FILL 使用。 |
 | **`Reach Distance`** | Float (`64.0 / 128.0 Blocks`) | 准心射线检测最大有效射程距离。REPLACE/DESTROY_FILL 为 64 格，Spline 编辑器为 128 格。 |
 | **`SplineBuildPacket`** | Network Payload | Spline 编辑器 Build Array Task 触发。包含全量 3D Bezier 曲线 JSON 数据与道路方块阵列，服务端批量生成道路。 |
@@ -43,7 +43,7 @@
 为了帮助您傻瓜式上手每一种模式，我们提供了独立的详细教学与 API 字典：
 
 - 👉 [【1. 样条线可视化编辑器 Spline Editor】超详细指南](guide:road_spline_guide)
-  *ImGui 可视化编辑器。添加锚点、拖拽三维轴、调节控制柄、阵列生成、模板存取。适用于弯道与 3D 曲线道路。*
+  *内嵌样条编辑器。添加锚点、拖拽三维轴、调节控制柄、阵列生成、模板存取。适用于弯道与 3D 曲线道路。*
 
 - 👉 [【2. 替换模式 Replace】超详细傻瓜指南](guide:road_replace_guide)
   *适用于地表石子路/石砖路平铺与已有地形替换。*
@@ -65,7 +65,7 @@
 | **Backspace (退格键)** | 撤销上一次设定的端点 |
 | **ESC 键** | 退出道路编辑模式 |
 
-### Spline 编辑器（ImGui 可视化模式）
+### Spline 编辑器（ROAD 面板内嵌模式）
 
 | 操作 / 按键 | 触发功能 |
 | :--- | :--- |
