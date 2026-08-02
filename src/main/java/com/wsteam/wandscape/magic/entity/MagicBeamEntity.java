@@ -159,12 +159,14 @@ public class MagicBeamEntity extends Entity {
         if (casterNpc == null || targetMob == null) return;
         if (casterNpc.isRemoved() || targetMob.isRemoved() || !targetMob.isAlive()) return;
 
-        casterNpc.faceTarget(targetMob.blockPosition());
+        // 瞄身体中心（AABB 中心），而非脚底
+        Vec3 aim = targetMob.getBoundingBox().getCenter();
+        casterNpc.faceTarget(BlockPos.containing(aim));
         Vec3 hand = casterNpc.getStaffPosition();
-        Vec3 aimDir = targetMob.getBoundingBox().getCenter().subtract(hand).normalize();
+        Vec3 aimDir = aim.subtract(hand).normalize();
         Vec3 source = hand.add(aimDir.scale(STAFF_CENTER_OFFSET));
         setPos(source.x, source.y, source.z);
-        setTarget(targetMob.blockPosition());
+        setTarget(BlockPos.containing(aim));
     }
 
     /**

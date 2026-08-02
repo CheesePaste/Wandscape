@@ -79,15 +79,17 @@ public final class MagicCaster {
         Monster target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
-        Vec3 axis = target != null
-                ? target.getBoundingBox().getCenter().subtract(hand).normalize()
+        // 瞄身体中心（AABB 中心），而非脚底
+        Vec3 aim = target != null ? target.getBoundingBox().getCenter() : null;
+        Vec3 axis = aim != null
+                ? aim.subtract(hand).normalize()
                 : npc.getFacingDirection();
         if (target != null) {
-            npc.faceTarget(target.blockPosition());
+            npc.faceTarget(BlockPos.containing(aim));
         }
         Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
         BlockPos beamTarget = target != null
-                ? target.blockPosition()
+                ? BlockPos.containing(aim)
                 : BlockPos.containing(source.add(axis.scale(BEAM_RANGE)));
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
