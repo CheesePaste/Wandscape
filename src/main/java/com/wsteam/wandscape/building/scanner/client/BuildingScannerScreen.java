@@ -12,7 +12,6 @@ import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
-import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
@@ -27,7 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Scanner GUI built on MedievalScreen MINIMAL theme.
- * Uses MedievalButton, MedievalColors, and inset dark fields for full theme harmony.
+ * Uses custom drawMinimalBox buttons and inset fields matching TownHallCreateScreen style.
  */
 public class BuildingScannerScreen extends MedievalScreen {
 
@@ -36,15 +35,14 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     private final BuildingScannerBlockEntity scanner;
 
+    // ── Custom Medieval Button Definition ──
+    private record CustomButton(int x, int y, int w, int h, String text, Runnable action) {}
+    private final List<CustomButton> customButtons = new ArrayList<>();
+
     // ── Structure Block Mode & Name ──
-    private MedievalButton blockModeBtn;
     private EditBox structureNameEdit;
 
-    // ── Target Mode (Building vs Road) ──
-    private MedievalButton targetModeBtn;
-
     // ── Category ──
-    private MedievalButton categoryBtn;
     private static final List<String> CATEGORIES = List.of(
             "basic", "government", "node", "storage", "workstation", "crafting_station",
             "potion_station", "tavern", "shop", "service", "decoration", "wonder"
@@ -85,7 +83,6 @@ public class BuildingScannerScreen extends MedievalScreen {
     private final List<CostRow> maintRows = new ArrayList<>();
 
     // ── Node config fields (category=node) ──
-    private MedievalButton nodeElemBtn;
     private String currentNodeElem;
     private EditBox nodeAmount, nodeChannel, nodeMana;
     private int nodeCatY;
@@ -132,11 +129,16 @@ public class BuildingScannerScreen extends MedievalScreen {
     /** Package-private accessor for the renderer. */
     BuildingScannerBlockEntity getScanner() { return scanner; }
 
+    private void addCustomButton(int x, int y, int w, int h, String text, Runnable action) {
+        customButtons.add(new CustomButton(x, y, w, h, text, action));
+    }
+
     // ── init / rebuild ──
 
     @Override
     protected void init() {
         super.init();
+        customButtons.clear();
         zoneRows.clear();
         insetFields.clear();
         maintRows.clear();
@@ -148,7 +150,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         int y = topPos + headerHeight + 8 + scrollOff;
 
         // ── Toolbar Row 1: Mode & Structure Name ──
-        blockModeBtn = mkMedievalButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
+        addCustomButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
             BuildingScannerBlockEntity.BlockMode next = scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
                     ? BuildingScannerBlockEntity.BlockMode.CORNER : BuildingScannerBlockEntity.BlockMode.SAVE;
             scanner.setBlockMode(next);
@@ -156,7 +158,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             needsRebuild = true;
         });
 
-        structureNameEdit = mkEdit(lx + 96, y, 208, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 150, y, 154, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
@@ -164,12 +166,12 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
             // CORNER mode: simplified UI
-            mkMedievalButton(cx - 50, y + 70, 100, 20, "完成", this::onClose);
+            addCustomButton(cx - 50, y + 60, 100, 22, "完成", this::onClose);
             return;
         }
 
         // ── Toolbar Row 2: Target & Category & Detect ──
-        targetModeBtn = mkMedievalButton(lx, y, 105, 20, "Target: " + scanner.getTargetMode().name(), () -> {
+        addCustomButton(lx, y, 105, 20, "Target: " + scanner.getTargetMode().name(), () -> {
             BuildingScannerBlockEntity.TargetMode next = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.BUILDING
                     ? BuildingScannerBlockEntity.TargetMode.ROAD : BuildingScannerBlockEntity.TargetMode.BUILDING;
             scanner.setTargetMode(next);
@@ -177,7 +179,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             needsRebuild = true;
         });
 
-        categoryBtn = mkMedievalButton(lx + 110, y, 95, 20, "Type: " + scanner.getCategory(), () -> {
+        addCustomButton(lx + 110, y, 95, 20, "Type: " + scanner.getCategory(), () -> {
             int curIdx = CATEGORIES.indexOf(scanner.getCategory());
             int nextIdx = (curIdx + 1) % CATEGORIES.size();
             scanner.setCategory(CATEGORIES.get(nextIdx));
@@ -185,7 +187,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             needsRebuild = true;
         });
 
-        mkMedievalButton(lx + 210, y, 94, 20, "匹配角点", () -> {
+        addCustomButton(lx + 210, y, 94, 20, "❖ 匹配角点", () -> {
             syncToServer();
             needsRebuild = true;
         });
@@ -204,7 +206,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         doorX = mkEdit(lx + COL2, doorEditY, FW, loadDoorStr(0), s -> onDoorChanged());
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
         doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
-        mkMedievalButton(lx + COL2 + (FW + 4) * 3 + 8, doorEditY, 50, 18, "清除", () -> {
+        addCustomButton(lx + COL2 + (FW + 4) * 3 + 8, doorEditY, 50, 20, "清除", () -> {
             scanner.setDoorOffset(null);
             doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
             syncToServer();
@@ -215,7 +217,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 14;
         zoneHeaderY = y - 14;
 
-        mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加区域", () -> {
+        addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加区域", () -> {
             scanner.addTouristInteractZone(new BoundaryBox(
                     BlockOffset.of(-1, 0, -1), BlockOffset.of(1, 0, 1)));
             syncToServer();
@@ -277,7 +279,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 14;
         maintCostY = y - 14;
 
-        mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加消耗", () -> {
+        addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加消耗", () -> {
             scanner.addMaintenanceCost("earth", 1);
             syncToServer();
             needsRebuild = true;
@@ -304,12 +306,12 @@ public class BuildingScannerScreen extends MedievalScreen {
             nodeCatY = y - 14;
 
             this.currentNodeElem = ELEMENTS.contains(scanner.getNodeElement()) ? scanner.getNodeElement() : "earth";
-            nodeElemBtn = mkMedievalButton(lx + COL2 + 70, y, 70, 18, currentNodeElem, () -> {
+            addCustomButton(lx + COL2 + 70, y, 70, 20, currentNodeElem, () -> {
                 int curIdx = ELEMENTS.indexOf(currentNodeElem);
                 currentNodeElem = ELEMENTS.get((curIdx + 1) % ELEMENTS.size());
                 scanner.setNodeElement(currentNodeElem);
-                nodeElemBtn.setMessage(Component.literal(currentNodeElem));
                 syncToServer();
+                needsRebuild = true;
             });
             y += ROW_H;
 
@@ -332,7 +334,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             y += ROW_H + 6;
         } else {
             nodeCatY = 0;
-            nodeElemBtn = null;
             nodeAmount = null; nodeChannel = null; nodeMana = null;
         }
 
@@ -341,8 +342,8 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 14;
         presetY = y - 14;
         presetNameEdit = mkEdit(lx + 4, y, 100, "", s -> {});
-        mkMedievalButton(lx + 110, y, 60, 18, "保存预设", this::onPresetSave);
-        mkMedievalButton(lx + 174, y, 60, 18, "加载预设", this::onPresetLoad);
+        addCustomButton(lx + 110, y, 60, 20, "保存预设", this::onPresetSave);
+        addCustomButton(lx + 174, y, 60, 20, "加载预设", this::onPresetLoad);
         y += ROW_H + 6;
 
         // ── Category-specific sections ──
@@ -370,7 +371,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             y += 14;
             goodsCatY = y - 14;
 
-            mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加商品", () -> {
+            addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加商品", () -> {
                 scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
                 syncToServer();
                 needsRebuild = true;
@@ -412,7 +413,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             y += 14;
             elemOutY = y - 14;
 
-            mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加产出", () -> {
+            addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加产出", () -> {
                 scanner.addServiceElementOutput("earth", 1);
                 syncToServer();
                 needsRebuild = true;
@@ -446,8 +447,8 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         String btnText = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD
                 ? "导出道路 JSON" : "导出建筑 JSON";
-        mkMedievalButton(lx + 5, exportBtnY, 100, 20, "扫描区域", () -> doScan());
-        mkMedievalButton(lx + 110, exportBtnY, 140, 20, btnText, () -> doExport());
+        addCustomButton(lx + 5, exportBtnY, 100, 22, "扫描区域", () -> doScan());
+        addCustomButton(lx + 110, exportBtnY, 140, 22, btnText, () -> doExport());
 
         int bottom = exportBtnY + 60;
         int visibleHeight = height - 40;
@@ -461,8 +462,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     // ── Widget creation helpers ──
 
     private EditBox mkEdit(int x, int y, int w, String val, Consumer<String> r) {
-        insetFields.add(new FieldRect(x, y, w, 18));
-        EditBox box = new EditBox(font, x + 3, y + 2, w - 6, 14, Component.empty());
+        insetFields.add(new FieldRect(x, y, w, 20));
+        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setValue(val);
         box.setBordered(false);
         box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
@@ -472,8 +473,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     }
 
     private EditBox mkNumEdit(int x, int y, int w, int val, Consumer<String> r) {
-        insetFields.add(new FieldRect(x, y, w, 18));
-        EditBox box = new EditBox(font, x + 3, y + 2, w - 6, 14, Component.empty());
+        insetFields.add(new FieldRect(x, y, w, 20));
+        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setFilter(s -> s.matches("\\d*"));
         box.setValue(String.valueOf(val));
         box.setBordered(false);
@@ -481,10 +482,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(r);
         return addRenderableWidget(box);
-    }
-
-    private MedievalButton mkMedievalButton(int x, int y, int w, int h, String text, Runnable onPress) {
-        return addRenderableWidget(new MedievalButton(x, y, w, h, Component.literal(text), onPress::run));
     }
 
     // ── Inner classes for rows ──
@@ -514,7 +511,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             max[1] = mkZoneEdit(mx2 + zw + 2, zy, zw, zone.max().y(), () -> updateZone(idx));
             max[2] = mkZoneEdit(mx2 + (zw + 2) * 2, zy, zw, zone.max().z(), () -> updateZone(idx));
 
-            mkMedievalButton(mx2 + (zw + 2) * 3 + 6, zy, 18, 18, "×", () -> {
+            addCustomButton(mx2 + (zw + 2) * 3 + 6, zy, 18, 20, "×", () -> {
                 scanner.removeTouristInteractZone(idx);
                 syncToServer();
                 needsRebuild = true;
@@ -524,25 +521,24 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     private class CostRow {
         final Runnable onChanged;
-        final MedievalButton elemBtn;
         private String currentElem;
         final EditBox amountBox;
 
         CostRow(int x, int y, String elem, int amount, Runnable onRemove, Runnable onChanged) {
             this.onChanged = onChanged;
             this.currentElem = ELEMENTS.contains(elem) ? elem : "earth";
-            this.elemBtn = addRenderableWidget(new MedievalButton(x, y, 56, 18, Component.literal(currentElem), this::cycleElem));
+            addCustomButton(x, y, 56, 20, currentElem, this::cycleElem);
             amountBox = mkNumEdit(x + 60, y, 36, amount, s -> onChanged.run());
             if (onRemove != null) {
-                mkMedievalButton(x + 100, y, 18, 18, "×", onRemove::run);
+                addCustomButton(x + 100, y, 18, 20, "×", onRemove::run);
             }
         }
 
         private void cycleElem() {
             int curIdx = ELEMENTS.indexOf(currentElem);
             currentElem = ELEMENTS.get((curIdx + 1) % ELEMENTS.size());
-            elemBtn.setMessage(Component.literal(currentElem));
             onChanged.run();
+            needsRebuild = true;
         }
 
         String element() { return currentElem; }
@@ -561,7 +557,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             gComfort = mkNumEdit(x + 130, y, 28, good.comfort(), s -> updateGood());
             gMagic = mkNumEdit(x + 162, y, 28, good.magic(), s -> updateGood());
             gWonder = mkNumEdit(x + 194, y, 28, good.wonder(), s -> updateGood());
-            mkMedievalButton(x + 228, y, 18, 18, "×", () -> {
+            addCustomButton(x + 228, y, 18, 20, "×", () -> {
                 scanner.removeShopGood(idx);
                 syncToServer();
                 needsRebuild = true;
@@ -581,8 +577,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     }
 
     private EditBox mkZoneEdit(int x, int y, int w, int val, Runnable onChange) {
-        insetFields.add(new FieldRect(x, y, w, 18));
-        EditBox box = new EditBox(font, x + 2, y + 1, w - 4, 14, Component.empty());
+        insetFields.add(new FieldRect(x, y, w, 20));
+        EditBox box = new EditBox(font, x + 2, y + 2, w - 4, 14, Component.empty());
         box.setMaxLength(6);
         box.setFilter(s -> s.matches("-?\\d{0,6}"));
         box.setValue(String.valueOf(val));
@@ -624,6 +620,19 @@ public class BuildingScannerScreen extends MedievalScreen {
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            for (CustomButton btn : customButtons) {
+                if (isInRect(mouseX, mouseY, btn.x(), btn.y(), btn.w(), btn.h())) {
+                    btn.action().run();
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void rebuild() {
@@ -909,6 +918,19 @@ public class BuildingScannerScreen extends MedievalScreen {
             drawInsetField(gui, f.x(), f.y(), f.w(), f.h());
         }
 
+        // Draw custom medieval minimal box buttons (matching TownHallCreateScreen style)
+        for (CustomButton btn : customButtons) {
+            boolean hover = isInRect(mx, my, btn.x(), btn.y(), btn.w(), btn.h());
+            drawMinimalBox(gui, btn.x(), btn.y(), btn.w(), btn.h(), hover, hover);
+            int textColor = hover ? MedievalColors.BORDER_GOLD : MedievalColors.TEXT_WARM_WHITE;
+            gui.drawString(font, btn.text(), btn.x() + (btn.w() - font.width(btn.text())) / 2,
+                    btn.y() + (btn.h() - font.lineHeight) / 2, textColor);
+        }
+
+        // Label for structure name
+        int topY = topPos + headerHeight + 8 + scrollOff;
+        gui.drawString(font, "结构名称", lx + 98, topY + 6, MedievalColors.TEXT_MUTED);
+
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
             drawMinimalBox(gui, lx, topPos + headerHeight + 36, 308, 64, true, false);
             gui.drawString(font, "❖ CORNER 辅角点模式", lx + 10, topPos + headerHeight + 44, MedievalColors.BORDER_GOLD);
@@ -939,7 +961,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         drawHdr(gui, "❖ 游览交互区 (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
 
-        drawHdr(gui, "❖ 建筑属性与标识", lx, metaStartY);
+        drawHdr(gui, "❖ 放置元数据", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
         drawLbl(gui, "Name", lx + 164, metaStartY + 14);
         drawLbl(gui, "Comfort", lx + COL2, metaLabelY - 10);
