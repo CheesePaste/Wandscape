@@ -6,6 +6,10 @@
 
 BuildingApi / ColonyApi / ColonyMetricsApi / ElementApi / HouseApi / ManaPoolApi / NpcApi / RoadApi / TavernApi / TouristApi / WandApi / WarehouseApi。全部已实现，实现类在对应模块的 internal/ 下。ColonyMetricsApi 由 engine/service/ColonyMetricsService 实现。
 
+## entity/ — 实体行为契约
+
+`VillagerLike` 纯标记接口：实现者获得「原版敌对生物像对村民一样索敌」的待遇（NPC/游客实现），由 engine/HostileTargetingHandler 消费。
+
 ## registry/ — 全局注册
 
 WandscapeApis（静态服务定位器，未注册时抛异常）/ WandscapeConstants（TOML 未覆盖时的硬编码 fallback）/ WandscapeDataRegistry（泛型数据查询接口）

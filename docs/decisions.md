@@ -34,6 +34,8 @@
 
 **为什么移除 ImGui，样条编辑器并入原生 UI？** 7/29 `UI统一` 已把建筑/蓝图编辑器从 ImGui 迁到 vanilla Screen + `shared/ui/`；8/2 又有人把 ImGui 从 git 历史恢复来写道路样条面板，随后 4 个提交全在修集成摩擦（framebuffer 对齐、CJK 字体 glyph ranges 悬空指针/截断、H 键指南被 ImGui 抢占 ESC）。ImGui 只承担一个 370px 侧边面板，而世界交互层（射线拾取/gizmo/相机）本就与 UI 框架无关。双 UI 体系 = 双主题 + 双输入路径互相抢占 + GLFW/OpenGL 集成反复出 bug。故改为 `SplineEditorOverlay` 原生 HUD overlay（静态绘制 + 命中检测，同 `RoadPlacementOverlay` 约定），复用 `shared/ui` 主题与 `TabBar`；ROAD 栏 Spline 工具不再退出 V 面板，而是内嵌编辑。3D 交互层一行未动。
 
+**为什么 NPC/游客索敌用「反射检查生物是否已索敌村民」而非枚举生物类？** 需求是「仇恨吸引和村民一样」。若枚举类清单（僵尸/掠夺者/劫掠兽…），既要在原版增减生物时维护，也容易漏掉中立但继承自僵尸族的生物（僵尸猪灵——它不追村民，若按 instanceof Zombie 加 goal 会让它无端攻击 NPC）。改为在 EntityJoinLevelEvent 时反射读每个生物已有 `NearestAttackableTargetGoal.targetType`，若目标是 AbstractVillager 或其子类，就同优先级追加一个对 `shared/entity/VillagerLike` 接口（NPC/游客实现）的等价 goal。自动覆盖所有会追村民的生物（含其它 mod），天然排除不追的，清单零维护。targetType 是历版稳定的 protected 字段，反射失败时 warn 跳过、不崩溃。
+
 ## 数据设计
 
 **block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。

@@ -32,6 +32,10 @@ NavigationSystem（≤64格寻路 + 卡死检测每60tick/3次→传送）/ Reso
 
 ItemTransportManager：样条线数据发客户端（TransportRoute + SplineLeg 列表），服务器仅 elapsed 倒计时判定到达。客户端真插值（TransportItemEntity 用 tickLeg 执行样条线，60FPS 帧率平滑）。自定义渲染胶囊气泡（中性金边暗灰底）。
 
+## 敌对生物索敌（HostileTargetingHandler）
+
+`EntityJoinLevelEvent`：生物加入世界时若目标选择器已有对 AbstractVillager 的 `NearestAttackableTargetGoal`，则同优先级追加对 `shared/entity/VillagerLike` 的等价 goal。不枚举生物类，自动覆盖僵尸族/灾厄村民/劫掠兽，排除中立生物（僵尸猪灵）。
+
 ## ColonyApiImpl（engine 根包）
 
 ColonyApi 实现，桥接 BuildingSavedData 查询殖民地信息。
