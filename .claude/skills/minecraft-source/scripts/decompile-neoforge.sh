@@ -197,6 +197,19 @@ suggest_similar_classes() {
     unzip -l "$jar" 2>/dev/null | grep -i "/${basename}" | head -10 | awk '{$1=$2=$3=""; print substr($0,4)}' || true
 }
 
+# List sibling .java files in the same package dir across all jars.
+# Generic for any removed/renamed class: shows what actually exists there.
+suggest_in_package() {
+    local path="$1"
+    shift
+    local dir="${path%/*}"
+    for jar in "$@"; do
+        if [[ -n "$jar" && -f "$jar" ]]; then
+            unzip -Z1 "$jar" 2>/dev/null | grep "^${dir}/" | grep '\.java$' | grep -v '\$' | grep -v 'package-info' | sed "s#^${dir}/##" || true
+        fi
+    done | sort -u | head -30 || true
+}
+
 find_in_jar() {
     local jar="$1"
     local query="$2"
@@ -382,6 +395,12 @@ else
         if [[ -z "$FOUND_JAR" ]]; then
             echo "ERROR: '${FILE_PATH}' not found in any jar." >&2
             echo "       Check the class name." >&2
+            _siblings=$(suggest_in_package "$FILE_PATH" "${ALL_JARS[@]}")
+            if [[ -n "$_siblings" ]]; then
+                echo "" >&2
+                echo "Did you mean one of these in the same package?" >&2
+                echo "$_siblings" | while read -r line; do echo "  $line" >&2; done
+            fi
             exit 1
         fi
         USE_JAR="$FOUND_JAR"
