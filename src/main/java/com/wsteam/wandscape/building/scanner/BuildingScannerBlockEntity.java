@@ -73,6 +73,9 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_GOOD_ITEM_ID = "item_id";
     @SuppressWarnings("unused")
 
+    public enum TargetMode { BUILDING, ROAD }
+    private TargetMode targetMode = TargetMode.BUILDING;
+
     // ── State ──
     private ScannerMode mode = ScannerMode.BOUNDARY;
     private BlockOffset boundaryMin = BlockOffset.of(0, 0, 0);
@@ -118,6 +121,12 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     }
 
     // ── Getters / Setters ──
+
+    public TargetMode getTargetMode() { return targetMode; }
+    public void setTargetMode(TargetMode tm) {
+        this.targetMode = tm;
+        setChangedAndSync();
+    }
 
     public ScannerMode getMode() { return mode; }
     public void setMode(ScannerMode m) {
@@ -287,6 +296,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        tag.putString("targetMode", targetMode.name());
         tag.putString(KEY_MODE, mode.name());
         writeOffsetArray(tag, KEY_BOUNDARY_MIN, boundaryMin);
         writeOffsetArray(tag, KEY_BOUNDARY_MAX, boundaryMax);
@@ -361,6 +371,13 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     @Override
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        if (tag.contains("targetMode")) {
+            try {
+                targetMode = TargetMode.valueOf(tag.getString("targetMode"));
+            } catch (Exception e) {
+                targetMode = TargetMode.BUILDING;
+            }
+        }
         try {
             mode = ScannerMode.valueOf(tag.getString(KEY_MODE));
         } catch (Exception e) {

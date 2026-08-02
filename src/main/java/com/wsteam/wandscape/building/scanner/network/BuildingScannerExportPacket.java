@@ -82,6 +82,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             return;
         }
 
+        if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
+            exportRoad(scanner, packet, player, level, wMin, wMax);
+            return;
+        }
+
         // Scan blocks in world
         List<BlockOffset> pattern = new ArrayList<>();
         Map<String, String> blockMapping = new TreeMap<>(); // sorted for visual order
@@ -306,6 +311,68 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             Log.warn(TAG, "Failed to export building '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "§cFailed to export: " + e.getMessage()));
+        }
+    }
+
+    private static void exportRoad(BuildingScannerBlockEntity scanner,
+                                   BuildingScannerExportPacket packet,
+                                   ServerPlayer player,
+                                   ServerLevel level,
+                                   BlockPos wMin,
+                                   BlockPos wMax) {
+        String id = scanner.getBuildingId();
+        if (id.isBlank()) id = "custom_road_" + (System.currentTimeMillis() % 1000);
+        String name = scanner.getDisplayName();
+        if (name.isBlank()) name = "自定义道路";
+
+        java.util.Map<String, Integer> blockCounts = new java.util.HashMap<>();
+        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                    BlockPos bp = new BlockPos(x, y, z);
+                    if (bp.equals(packet.pos)) continue;
+                    BlockState state = level.getBlockState(bp);
+                    if (state.isAir()) continue;
+                    String bId = blockId(state);
+                    blockCounts.put(bId, blockCounts.getOrDefault(bId, 0) + 1);
+                }
+            }
+        }
+
+        if (blockCounts.isEmpty()) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§cNo road blocks found inside boundary box"));
+            return;
+        }
+
+        JsonObject root = new JsonObject();
+        root.addProperty("id", id);
+        root.addProperty("display_name", name);
+        root.addProperty("category", "road_preset");
+
+        JsonArray blocksArr = new JsonArray();
+        for (var entry : blockCounts.entrySet()) {
+            JsonObject bObj = new JsonObject();
+            bObj.addProperty("blockId", entry.getKey());
+            bObj.addProperty("weight", entry.getValue());
+            blocksArr.add(bObj);
+        }
+        root.add("blocks", blocksArr);
+
+        try {
+            Path exportDir = level.getServer().getServerDirectory().resolve("wandscape_roads");
+            Files.createDirectories(exportDir);
+            Path outFile = exportDir.resolve(id + ".json");
+            String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
+            Files.writeString(outFile, json);
+
+            Log.info(TAG, "Exported road preset '{}' to {}", id, outFile.toAbsolutePath());
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath() + " §a(Hot registered!)"));
+        } catch (IOException e) {
+            Log.warn(TAG, "Failed to export road preset '{}'", id, e);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§cFailed to export road preset: " + e.getMessage()));
         }
     }
 

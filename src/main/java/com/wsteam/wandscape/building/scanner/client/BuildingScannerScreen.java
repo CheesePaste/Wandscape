@@ -34,6 +34,9 @@ public class BuildingScannerScreen extends Screen {
 
     private final BuildingScannerBlockEntity scanner;
 
+    // ── Target Mode (Building vs Road) ──
+    private CycleButton<BuildingScannerBlockEntity.TargetMode> targetModeBtn;
+
     // ── Category ──
     private CycleButton<String> categoryBtn;
     private static final List<String> CATEGORIES = List.of(
@@ -131,13 +134,23 @@ public class BuildingScannerScreen extends Screen {
         lx = cx - 152;
         int y = 10 + scrollOff;
 
+        // ── Target Mode selector (Structure block style) ──
+        targetModeBtn = addRenderableWidget(
+                CycleButton.builder((BuildingScannerBlockEntity.TargetMode v) -> Component.literal("Target: " + v.name()))
+                        .withValues(BuildingScannerBlockEntity.TargetMode.values())
+                        .withInitialValue(scanner.getTargetMode())
+                        .displayOnlyValue()
+                        .create(cx - 150, y, 120, 20, Component.literal("Target"),
+                                (btn, val) -> { scanner.setTargetMode(val); syncToServer(); needsRebuild = true; })
+        );
+
         // ── Category selector ──
         categoryBtn = addRenderableWidget(
                 CycleButton.builder((String v) -> Component.literal(v))
                         .withValues(CATEGORIES)
                         .withInitialValue(scanner.getCategory())
                         .displayOnlyValue()
-                        .create(cx - 60, y, 120, 20, Component.literal("Type"),
+                        .create(cx - 20, y, 120, 20, Component.literal("Type"),
                                 (btn, val) -> { scanner.setCategory(val); syncToServer(); needsRebuild = true; })
         );
         y += 28;
@@ -460,10 +473,12 @@ public class BuildingScannerScreen extends Screen {
         exportBtnY = y - 14;
         exportResultY = exportBtnY + ROW_H + 4;
 
-        addRenderableWidget(Button.builder(Component.literal("Scan Building"), b -> doScan())
-                .bounds(lx + 10, exportBtnY, 100, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Export JSON"), b -> doExport())
-                .bounds(lx + 120, exportBtnY, 100, 20).build());
+        String btnText = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD
+                ? "Export Road JSON" : "Export Building JSON";
+        addRenderableWidget(Button.builder(Component.literal("Scan Area"), b -> doScan())
+                .bounds(lx + 5, exportBtnY, 100, 20).build());
+        addRenderableWidget(Button.builder(Component.literal(btnText), b -> doExport())
+                .bounds(lx + 110, exportBtnY, 140, 20).build());
 
         // Compute max scroll — generous buffer so the user can always
         // scroll well past the bottom to see everything.
