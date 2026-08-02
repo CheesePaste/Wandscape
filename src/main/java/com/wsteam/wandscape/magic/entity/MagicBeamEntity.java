@@ -36,8 +36,10 @@ public class MagicBeamEntity extends Entity {
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）。 */
     public static final float PEAK_T = 0.7f;
     /** 峰值时的光束/光晕半径（方块）。 */
-    public static final float MAX_BEAM_RADIUS = 0.3f;
-    public static final float MAX_GLOW_RADIUS = 0.38f;
+    public static final float MAX_BEAM_RADIUS = 0.35f;
+    public static final float MAX_GLOW_RADIUS = 0.45f;
+    /** 宽度乘子下限：保证光束从生成起即可见（不过于细）。 */
+    private static final float MIN_WIDTH = 0.3f;
     /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
     private static final float WIDTH_POWER = 1.4f;
 
@@ -87,7 +89,7 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
-     * 宽度乘子 [0.1, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
+     * 宽度乘子 [MIN_WIDTH, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
      * t ∈ [PEAK_T, 1] 快速变窄（(1-k)^WIDTH_POWER）。
      * 恒大于 0，避免 renderBeaconBeam 内部除以 beamRadius 时为 0。
      */
@@ -101,7 +103,7 @@ public class MagicBeamEntity extends Entity {
             float k = Math.min(1f, (t - PEAK_T) / (1f - PEAK_T));
             factor = (float) Math.pow(1f - k, WIDTH_POWER);
         }
-        return Math.max(0.1f, factor);
+        return Math.max(MIN_WIDTH, factor);
     }
 
     /** 纯显示实体不入存档，避免世界重载后残留光束。 */

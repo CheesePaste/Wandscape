@@ -36,6 +36,8 @@ public final class MagicCaster {
     public static final int DEFAULT_COLOR = 0xFF3F8FFF;
 
     private static final double CAST_DISTANCE = 1.5;
+    /** 法杖中心距手部沿法杖方向的偏移（方块）：圆心/光束起点落在法杖中间而非手部。 */
+    private static final double STAFF_CENTER_OFFSET = 1.0;
     private static final double AIM_RANGE = 64.0;
 
     private MagicCaster() {}
@@ -60,20 +62,20 @@ public final class MagicCaster {
     }
 
     /**
-     * NPC 施放（shift+右键触发）：法阵出现在持杖右手处，垂直朝向为 NPC 水平正前方，
-     * 光束从法杖沿正前方射向远处。不改变 NPC 朝向，玩家需站在 NPC 正面观察。
+     * NPC 施放（shift+右键触发）：法阵圆心落在法杖中心（持杖手沿法杖方向前移一段），
+     * 法阵平面垂直法杖，光束从法杖中心沿法杖方向射向远处。不改变 NPC 朝向。
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) return false;
 
-        Vec3 source = npc.getStaffPosition();
-        Vec3 axis = npc.getFacingDirection();
-        BlockPos target = aimTarget(level, source, axis);
+        Vec3 staffDir = npc.getStaffDirection();
+        Vec3 source = npc.getStaffPosition().add(staffDir.scale(STAFF_CENTER_OFFSET));
+        BlockPos target = aimTarget(level, source, staffDir);
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
         PacketDistributor.sendToPlayersTrackingEntity(npc,
-                new MagicCircleCastPacket(UUID.randomUUID(), source, axis, circleId));
+                new MagicCircleCastPacket(UUID.randomUUID(), source, staffDir, circleId));
 
         return MagicCastManager.schedule(level, npc.getUUID(), source, target, c, spec.durationTicks);
     }

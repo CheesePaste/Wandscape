@@ -365,6 +365,8 @@ public class WandscapeNpc extends PathfinderMob {
     public static final double CAST_ARM_ANGLE = -1.2;
     /** 手臂长度（方块）。 */
     public static final double CAST_ARM_LENGTH = 0.75;
+    /** 肩高（方块），决定法杖方向的上仰程度（可调）。 */
+    public static final double CAST_ARM_PIVOT = 1.0;
 
     /** 当前右臂抬起角（弧度）= 基准角 + NPC 俯仰角。getXRot 由 faceTarget() 对准目标时设置。 */
     public double getCastArmAngle() {
@@ -390,6 +392,19 @@ public class WandscapeNpc extends PathfinderMob {
     public Vec3 getFacingDirection() {
         double yawRad = Math.toRadians(yBodyRot);
         return new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad)).normalize();
+    }
+
+    /**
+     * 法杖指向（世界单位向量）：沿右臂在「正前-竖直」平面内的方向，随手臂角度上仰。
+     * 瞄准目标时 faceTarget() 设 getXRot，法杖方向随之指向目标。
+     */
+    public Vec3 getStaffDirection() {
+        double armAngle = getCastArmAngle();
+        double deltaY = -CAST_ARM_LENGTH * (Math.cos(armAngle) - Math.cos(CAST_ARM_ANGLE));
+        double deltaFwd = -CAST_ARM_LENGTH * (Math.sin(armAngle) - Math.sin(CAST_ARM_ANGLE));
+        double fwd = 0.6 + deltaFwd;
+        double up = (1.5 + deltaY) - CAST_ARM_PIVOT;
+        return getFacingDirection().scale(fwd).add(0, up, 0).normalize();
     }
 
     /** Face the NPC toward a target block (yaw from horizontal, pitch from vertical angle). */
