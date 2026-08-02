@@ -2,7 +2,11 @@ package com.wsteam.wandscape.imgui;
 
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.road.client.SplineEditorImGui;
+import com.wsteam.wandscape.shared.log.Log;
 
+import imgui.ImFont;
+import imgui.ImFontConfig;
+import imgui.ImFontGlyphRangesBuilder;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
 import imgui.gl3.ImGuiImplGl3;
@@ -14,7 +18,9 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 
 import org.lwjgl.glfw.GLFW;
-import com.wsteam.wandscape.shared.log.Log;
+
+import java.io.File;
+import java.nio.file.Files;
 
 public class ImGuiManager {
     private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
@@ -43,28 +49,79 @@ public class ImGuiManager {
 
         ImGui.createContext();
 
-        // ── Fonts ──
-        imgui.ImFontConfig fontConfig = new imgui.ImFontConfig();
+        // ── Chinese CJK Glyph Ranges ──
+        short[] cjkRanges = ImGui.getIO().getFonts().getGlyphRangesChineseSimplifiedCommon();
+
+        ImFontConfig fontConfig = new ImFontConfig();
         fontConfig.setOversampleH(2);
         fontConfig.setOversampleV(2);
+        fontConfig.setPixelSnapH(true);
+        // CRITICAL: hold the range array via ImFontConfig. Passing ranges as an
+        // addFontFromFileTTF argument only pins the short[] during the native
+        // call — the C++ side stores the pointer and reads it later at build().
+        // Once the call returns the array has no Java reference, gets GC'd, and
+        // build() reads freed memory → CJK glyphs silently vanish as "?????".
+        fontConfig.setGlyphRanges(cjkRanges);
 
-        byte[] robotoBytes = loadFontBytes("fonts/Roboto-Regular.ttf");
-        if (robotoBytes != null) {
-            ImGui.getIO().getFonts().addFontFromMemoryTTF(robotoBytes, 18.0f, fontConfig);
-        } else {
-            ImGui.getIO().getFonts().addFontDefault();
-            ImGui.getIO().setFontGlobalScale(1.4f);
+        ImFont mainFont = null;
+
+        // 1. Try loading embedded resource Chinese font first if present
+        File embeddedFont = extractResourceFontToTemp("fonts/chinese.ttf");
+        if (embeddedFont != null && embeddedFont.exists()) {
+            try {
+                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(embeddedFont.getAbsolutePath(), 17.0f, fontConfig);
+                // native AddFont returns NULL on failure → Java wraps it as ImFont(0),
+                // so "!= null" is never a valid success check.
+                if (f != null && f.ptr != 0) {
+                    mainFont = f;
+                    Log.info("ImGui", "[Font] Successfully loaded embedded Chinese CJK font: " + embeddedFont.getAbsolutePath());
+                }
+            } catch (Exception e) {
+                Log.error("ImGui", "[Font] Failed to load embedded Chinese font", e);
+            }
         }
 
-        byte[] faBytes = loadFontBytes("fonts/fa-solid-900.ttf");
-        if (faBytes != null) {
-            imgui.ImFontConfig iconConfig = new imgui.ImFontConfig();
+        // 2. Try native system CJK fonts if embedded font is not available or failed
+        if (mainFont == null) {
+            String systemFontPath = findSystemFontPath();
+            if (systemFontPath != null) {
+                try {
+                    ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(systemFontPath, 17.0f, fontConfig);
+                    if (f != null && f.ptr != 0) {
+                        mainFont = f;
+                        Log.info("ImGui", "[Font] Successfully loaded system CJK font from: " + systemFontPath);
+                    }
+                } catch (Exception e) {
+                    Log.error("ImGui", "[Font] Failed to load system font: " + systemFontPath, e);
+                }
+            }
+        }
+
+        // 3. Fallback to default Roboto if CJK font loading failed
+        if (mainFont == null) {
+            Log.warn("ImGui", "[Font] CJK font loading failed completely! Fallback to Roboto-Regular.");
+            File tempRoboto = extractResourceFontToTemp("fonts/Roboto-Regular.ttf");
+            if (tempRoboto != null && tempRoboto.exists()) {
+                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(tempRoboto.getAbsolutePath(), 18.0f);
+                if (f == null || f.ptr == 0) {
+                    ImGui.getIO().getFonts().addFontDefault();
+                }
+            } else {
+                ImGui.getIO().getFonts().addFontDefault();
+            }
+        }
+
+        // 4. Merge FontAwesome icons into main font
+        File tempFaFile = extractResourceFontToTemp("fonts/fa-solid-900.ttf");
+        if (tempFaFile != null && tempFaFile.exists()) {
+            ImFontConfig iconConfig = new ImFontConfig();
             iconConfig.setMergeMode(true);
             iconConfig.setPixelSnapH(true);
             iconConfig.setOversampleH(2);
             iconConfig.setOversampleV(2);
-            short[] iconRanges = new short[]{ (short)0xe000, (short)0xf8ff, 0 };
-            ImGui.getIO().getFonts().addFontFromMemoryTTF(faBytes, 16.0f, iconConfig, iconRanges);
+            // Same lifetime requirement as the CJK ranges above.
+            iconConfig.setGlyphRanges(new short[]{ (short)0xe000, (short)0xf8ff, 0 });
+            ImGui.getIO().getFonts().addFontFromFileTTF(tempFaFile.getAbsolutePath(), 15.0f, iconConfig);
             iconConfig.destroy();
         }
 
@@ -81,17 +138,45 @@ public class ImGuiManager {
         Log.info("Wandscape", "ImGui initialized successfully");
     }
 
-    private static byte[] loadFontBytes(String path) {
+    private static String findSystemFontPath() {
+        String[] candidatePaths = new String[]{
+            "C:\\Windows\\Fonts\\simhei.ttf",       // SimHei (Standard Chinese TTF)
+            "C:\\Windows\\Fonts\\simkai.ttf",       // KaiTi (Standard Chinese TTF)
+            "C:\\Windows\\Fonts\\fangsong.ttf",     // FangSong (Standard Chinese TTF)
+            "C:\\Windows\\Fonts\\msyh.ttf",         // YaHei TTF variant
+            "C:\\Windows\\Fonts\\simsun.ttc",
+            "C:\\Windows\\Fonts\\msyh.ttc",
+            "/System/Library/Fonts/PingFang.ttc",
+            "/Library/Fonts/Arial Unicode.ttf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+        };
+        for (String path : candidatePaths) {
+            java.io.File file = new java.io.File(path);
+            if (file.exists() && file.isFile() && file.length() > 0) {
+                Log.info("ImGui", "[Font] Found candidate system font at " + path + " (size: " + file.length() + " bytes)");
+                return file.getAbsolutePath();
+            }
+        }
+        Log.warn("ImGui", "[Font] No system CJK candidate font file found!");
+        return null;
+    }
+
+    private static File extractResourceFontToTemp(String path) {
         try {
             var resource = net.minecraft.client.Minecraft.getInstance().getResourceManager()
                     .getResource(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.wsteam.wandscape.Wandscape.MODID, path));
             if (resource.isPresent()) {
-                try (java.io.InputStream is = resource.get().open()) {
-                    return is.readAllBytes();
+                File tempFile = File.createTempFile("ws_font_", "_" + new File(path).getName());
+                tempFile.deleteOnExit();
+                try (java.io.InputStream is = resource.get().open();
+                     java.io.FileOutputStream os = new java.io.FileOutputStream(tempFile)) {
+                    is.transferTo(os);
                 }
+                return tempFile;
             }
         } catch (Exception e) {
-            com.wsteam.wandscape.shared.log.Log.error("ImGui", "Failed to load font " + path, e);
+            Log.error("ImGui", "Failed to extract resource font " + path, e);
         }
         return null;
     }
@@ -137,8 +222,6 @@ public class ImGuiManager {
         if (!showGui || !initialized) return;
 
         if (event.getKey() == GLFW.GLFW_KEY_F12 && event.getAction() == GLFW.GLFW_PRESS) {
-            // While an editor is active, F12 must not hide ImGui: the editor
-            // owns mouse blocking and would start leaking input to the game.
             if (anyEditorActive()) return;
             toggle();
             return;
@@ -148,18 +231,12 @@ public class ImGuiManager {
     @SubscribeEvent
     public static void onMouseClick(InputEvent.MouseButton.Pre event) {
         if (!showGui || !initialized) return;
-        // While an editor is active, the editor owns every mouse button.
-        // ImGui already processed the event at the GLFW callback layer, so
-        // canceling here only stops vanilla: no item use, no attack, and no
-        // re-grab of the cursor when left-clicking the world.
         if (anyEditorActive()) event.setCanceled(true);
     }
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!showGui || !initialized) return;
-        // Scroll belongs to ImGui over its panels and to the editor camera
-        // elsewhere; vanilla must never see it (no hotbar switching).
         if (anyEditorActive()) {
             event.setCanceled(true);
             return;
@@ -183,12 +260,6 @@ public class ImGuiManager {
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // Minecraft draws into its mainRenderTarget FBO, whose size matches the GLFW
-        // window's LOGICAL size (MainTarget is created with window.getWidth()/getHeight()).
-        // ImGuiImplGlfw however sets DisplayFramebufferScale to fbSize/winSize (e.g. 1.5
-        // with 150% Windows DPI scaling), so ImGui would project onto a canvas larger
-        // than the FBO we actually draw into, clipping the panel's bottom/right edge.
-        // Force 1:1 — Minecraft's own blitToScreen handles the physical scaling.
         ImGui.getIO().setDisplayFramebufferScale(1.0f, 1.0f);
 
         if (SplineEditorClientState.isEditing()) {
@@ -205,28 +276,28 @@ public class ImGuiManager {
         ImGui.setNextWindowPos(20, 20, ImGuiCond.FirstUseEver);
         ImGui.setNextWindowSize(360, 200, ImGuiCond.FirstUseEver);
 
-        if (ImGui.begin("Wandscape Debug")) {
-            ImGui.text("ImGui integration test");
+        if (ImGui.begin("Wandscape 调试控制台")) {
+            ImGui.text("ImGui 集成测试");
             ImGui.separator();
 
             var io = ImGui.getIO();
-            ImGui.text(String.format("FPS: %.1f", io.getFramerate()));
-            ImGui.text(String.format("Capture Mouse: %b", io.getWantCaptureMouse()));
-            ImGui.text(String.format("Capture Keyboard: %b", io.getWantCaptureKeyboard()));
+            ImGui.text(String.format("帧率 FPS: %.1f", io.getFramerate()));
+            ImGui.text(String.format("捕获鼠标: %b", io.getWantCaptureMouse()));
+            ImGui.text(String.format("捕获键盘: %b", io.getWantCaptureKeyboard()));
 
             ImGui.separator();
-            if (ImGui.button("Test Button")) {
+            if (ImGui.button("测试按钮")) {
                 Minecraft.getInstance().player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("[ImGui] Button clicked!"), true);
+                        net.minecraft.network.chat.Component.literal("[ImGui] 按钮被点击!"), true);
             }
             ImGui.sameLine();
-            if (ImGui.button("Close")) {
+            if (ImGui.button("关闭")) {
                 toggle();
             }
-            ImGui.text("Press F12 to toggle");
+            ImGui.text("按 F12 键切换显示");
 
             var activity = (float) (Math.sin(System.currentTimeMillis() / 1000.0) * 0.5 + 0.5);
-            ImGui.progressBar(activity, 200, 0f, "Activity");
+            ImGui.progressBar(activity, 200, 0f, "系统运行度");
         }
         ImGui.end();
     }
