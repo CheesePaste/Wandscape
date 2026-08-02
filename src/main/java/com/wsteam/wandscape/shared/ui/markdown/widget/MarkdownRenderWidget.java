@@ -97,6 +97,23 @@ public class MarkdownRenderWidget extends AbstractWidget {
                 lh += calculateNodeHeight(item, font, width - 12);
             }
             return lh + 2;
+        } else if (node instanceof TableNode table) {
+            if (table.headers().isEmpty()) return 0;
+            int numCols = table.headers().size();
+            int cellPadding = 4;
+            int colW = Math.max(40, (width - 4) / numCols);
+
+            int th = font.lineHeight + 6 + 4;
+            for (List<String> row : table.rows()) {
+                int maxRowLines = 1;
+                for (int c = 0; c < numCols; c++) {
+                    String cellText = c < row.size() ? row.get(c) : "";
+                    List<FormattedCharSequence> lines = font.split(Component.literal(cellText), colW - cellPadding * 2);
+                    maxRowLines = Math.max(maxRowLines, Math.max(1, lines.size()));
+                }
+                th += maxRowLines * (font.lineHeight + 2) + 4;
+            }
+            return th + 6;
         }
         return 10;
     }
@@ -126,6 +143,19 @@ public class MarkdownRenderWidget extends AbstractWidget {
         }
 
         g.disableScissor();
+
+        // Render golden scrollbar thumb if content exceeds widget height
+        int maxScroll = Math.max(0, contentHeight - getHeight());
+        if (maxScroll > 0) {
+            int sbX = getX() + getWidth() - 3;
+            int sbY = getY() + 2;
+            int sbH = getHeight() - 4;
+            int thumbH = Math.max(12, sbH * sbH / Math.max(1, contentHeight));
+            int thumbY = sbY + (int) ((long) (sbH - thumbH) * scrollOffset / maxScroll);
+
+            g.fill(sbX, sbY, sbX + 2, sbY + sbH, 0x40000000);
+            g.fill(sbX, thumbY, sbX + 2, thumbY + thumbH, MedievalColors.BORDER_GOLD);
+        }
     }
 
     private int renderNode(GuiGraphics g, Font font, MarkdownNode node, int x, int y, int width, int mouseX, int mouseY) {
