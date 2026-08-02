@@ -71,20 +71,8 @@ public class ImGuiManager {
         fontConfig.destroy();
         ImGui.getIO().getFonts().build();
 
-        // ── Apply modern dark theme ──
-        imgui.ImGuiStyle style = ImGui.getStyle();
-        style.setWindowRounding(6.0f);
-        style.setFrameRounding(4.0f);
-        style.setPopupRounding(4.0f);
-        style.setScrollbarRounding(4.0f);
-        style.setGrabRounding(4.0f);
-        style.setTabRounding(4.0f);
-
-        style.setWindowPadding(12.0f, 12.0f);
-        style.setFramePadding(8.0f, 4.0f);
-        style.setItemSpacing(8.0f, 8.0f);
-        style.setWindowBorderSize(0.0f);
-        style.setFrameBorderSize(0.0f);
+        // ── Apply Wandscape Medieval-RTS UI Theme ──
+        WandscapeImGuiTheme.apply();
 
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");

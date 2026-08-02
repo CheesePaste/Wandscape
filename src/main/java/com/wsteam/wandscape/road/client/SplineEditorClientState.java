@@ -141,6 +141,13 @@ public final class SplineEditorClientState {
     private static volatile AxisDrag hoveredAxis = AxisDrag.NONE;
     private static volatile AxisDrag draggingAxis = AxisDrag.NONE;
 
+    public enum TemplateSourceMode { VPANEL_PRESET, JSON_FILE }
+
+    private static volatile TemplateSourceMode templateSourceMode = TemplateSourceMode.VPANEL_PRESET;
+    private static volatile int dynamicWidth = 5;
+    private static volatile int dynamicDepth = 1;
+    private static volatile boolean dynamicHasBorder = false;
+
     // Array Generation / Preview state
     private static volatile boolean arrayPreview = false;
     private static volatile double arrayStepDistance = 2.0;
@@ -150,7 +157,7 @@ public final class SplineEditorClientState {
     
     // Registry of loaded/exported road templates
     private static final java.util.Map<String, com.wsteam.wandscape.road.core.RoadTemplate> templateRegistry = new java.util.LinkedHashMap<>();
-    private static volatile String activeTemplateId = "test_road_5x1";
+    private static volatile String activeTemplateId = "vpanel_preset_dynamic";
 
     static {
         com.wsteam.wandscape.road.core.RoadTemplate testTemplate = new com.wsteam.wandscape.road.core.RoadTemplate("test_road_5x1");
@@ -160,6 +167,66 @@ public final class SplineEditorClientState {
         testTemplate.addBlock( 1, 0, 0, "minecraft:stone_bricks");
         testTemplate.addBlock( 2, 0, 0, "minecraft:stone_bricks");
         templateRegistry.put(testTemplate.getId(), testTemplate);
+
+        rebuildDynamicTemplate();
+    }
+
+    public static TemplateSourceMode getTemplateSourceMode() { return templateSourceMode; }
+    public static void setTemplateSourceMode(TemplateSourceMode mode) {
+        templateSourceMode = mode;
+        if (mode == TemplateSourceMode.VPANEL_PRESET) {
+            rebuildDynamicTemplate();
+        }
+    }
+
+    public static int getDynamicWidth() { return dynamicWidth; }
+    public static void setDynamicWidth(int width) {
+        dynamicWidth = Math.max(1, Math.min(15, width));
+        if (templateSourceMode == TemplateSourceMode.VPANEL_PRESET) rebuildDynamicTemplate();
+    }
+
+    public static int getDynamicDepth() { return dynamicDepth; }
+    public static void setDynamicDepth(int depth) {
+        dynamicDepth = Math.max(1, Math.min(3, depth));
+        if (templateSourceMode == TemplateSourceMode.VPANEL_PRESET) rebuildDynamicTemplate();
+    }
+
+    public static boolean isDynamicHasBorder() { return dynamicHasBorder; }
+    public static void setDynamicHasBorder(boolean border) {
+        dynamicHasBorder = border;
+        if (templateSourceMode == TemplateSourceMode.VPANEL_PRESET) rebuildDynamicTemplate();
+    }
+
+    public static void rebuildDynamicTemplate() {
+        var preset = RoadPlacementState.getSelectedPreset();
+        if (preset == null) return;
+
+        String id = "vpanel_preset_dynamic";
+        com.wsteam.wandscape.road.core.RoadTemplate template = new com.wsteam.wandscape.road.core.RoadTemplate(id);
+
+        int width = dynamicWidth;
+        int halfW = width / 2;
+        int minX = -halfW;
+        int maxX = (width % 2 == 0) ? (halfW - 1) : halfW;
+
+        for (int d = 0; d < dynamicDepth; d++) {
+            int y = -d;
+            for (int x = minX; x <= maxX; x++) {
+                boolean isEdge = (x == minX || x == maxX);
+                String blockState;
+                if (isEdge && dynamicHasBorder && d == 0) {
+                    blockState = "minecraft:stone_bricks";
+                } else {
+                    blockState = preset.pickBlock(x, y);
+                }
+                template.addBlock(x, y, 0, blockState);
+            }
+        }
+
+        templateRegistry.put(id, template);
+        if (templateSourceMode == TemplateSourceMode.VPANEL_PRESET) {
+            activeTemplateId = id;
+        }
     }
 
     private SplineEditorClientState() {}
