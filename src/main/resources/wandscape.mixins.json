@@ -3,7 +3,8 @@
   "package": "com.wsteam.wandscape.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "MixinOverviewCamera"
+    "MixinOverviewCamera",
+    "MixinSplineEditorCamera"
   ],
   "injectors": {
     "defaultRequire": 1

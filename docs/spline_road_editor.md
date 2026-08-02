@@ -34,6 +34,21 @@
 - **删除点 (Delete)**：选中任意锚点后，按 `Delete` / `Backspace` 键或面板上的 "删除" 按钮即可将其移除。
 - **中间插入点 (Insert)**：按住 `Ctrl` 键，将鼠标悬停在已有的曲线段上并点击左键，即可在对应的曲线上中途插入一个新的锚点。
 
+### 2.5 俯视模式 (Top-Down View)
+与 V 面板的 Overview 模式一致，方便从高空整体观察/规划道路：
+
+- **进入**：按 `G` 键或点击 ImGui 面板 "Top-Down View" 按钮。相机瞬间移动到当前编辑位置上方 20 格并垂直向下看（`pitch = 90°`）。
+- **操作**：
+  - **按住右键拖拽**：旋转俯视相机（可水平转 yaw、在 ±90° 内调整俯仰角）。
+  - **W / A / S / D**：在水平面平移（W 沿相机朝向）。
+  - **Space / Shift**：垂直升降。
+  - **滚轮**：沿视线方向移动 —— 正俯视时即垂直缩放高度。
+  - **Ctrl + 滚轮**：调节俯视平移速度（1–100 格/秒）。
+- **退出**：再次按 `G` 或点击面板按钮，相机恢复到进入前的位置与朝向；按 `ESC` 退出编辑器时自动清理。
+- 俯视模式下依然可以左键点选/添加样条点、拖拽 Gizmo 轴（射线从俯视相机发出）。
+
+**实现**：`MixinSplineEditorCamera` TAIL 注入 `Camera.setup` 覆盖相机位置/旋转（与 `MixinOverviewCamera` 相同机制），相机控制逻辑在 `SplineEditorController.handleTopDownCamera`，状态在 `SplineEditorClientState`（`enterTopDown`/`exitTopDown`）。
+
 ---
 
 ## 3. 坐标系统与保存设计

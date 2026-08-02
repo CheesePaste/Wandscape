@@ -16,6 +16,7 @@ import com.wsteam.wandscape.road.core.SplineVec3;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Global static client state for the Spline Road Editor.
@@ -42,6 +43,13 @@ public final class SplineEditorClientState {
     private static double camX, camY, camZ;
     private static float camYaw, camPitch;
 
+    // ── Top-Down (bird's eye) view state ──
+    private static volatile boolean topDown = false;
+    private static double topDownPrevX, topDownPrevY, topDownPrevZ;
+    private static float topDownPrevYaw, topDownPrevPitch;
+    private static double lastMouseX, lastMouseY;
+    private static float topDownSpeed = 10.0f; // blocks per second
+
     public static double getCamX() { return camX; }
     public static double getCamY() { return camY; }
     public static double getCamZ() { return camZ; }
@@ -53,6 +61,76 @@ public final class SplineEditorClientState {
     public static void setCamRotation(float yaw, float pitch) {
         camYaw = yaw;
         camPitch = pitch;
+    }
+
+    // ── Top-Down view control ──
+
+    public static boolean isTopDown() {
+        return topDown;
+    }
+
+    /**
+     * Enter bird's eye view, same as the V-panel overview mode:
+     * camera jumps 20 blocks above its current position and looks straight down.
+     * The previous camera state is saved so exiting restores it.
+     */
+    public static void enterTopDown() {
+        if (topDown) return;
+        topDownPrevX = camX;
+        topDownPrevY = camY;
+        topDownPrevZ = camZ;
+        topDownPrevYaw = camYaw;
+        topDownPrevPitch = camPitch;
+        camY += 20;
+        camPitch = 90;
+        // Reset mouse baseline so the grab transition does not snap the camera
+        Minecraft mc = Minecraft.getInstance();
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        lastMouseX = mx[0];
+        lastMouseY = my[0];
+        topDown = true;
+        Log.info(TAG, "[SplineEditor] Top-down view enabled");
+    }
+
+    public static void exitTopDown() {
+        if (!topDown) return;
+        topDown = false;
+        camX = topDownPrevX;
+        camY = topDownPrevY;
+        camZ = topDownPrevZ;
+        camYaw = topDownPrevYaw;
+        camPitch = topDownPrevPitch;
+        Log.info(TAG, "[SplineEditor] Top-down view disabled");
+    }
+
+    public static float getTopDownSpeed() {
+        return topDownSpeed;
+    }
+
+    public static void setTopDownSpeed(float speed) {
+        topDownSpeed = speed;
+    }
+
+    public static double getLastMouseX() {
+        return lastMouseX;
+    }
+
+    public static double getLastMouseY() {
+        return lastMouseY;
+    }
+
+    public static void setLastMouse(double x, double y) {
+        lastMouseX = x;
+        lastMouseY = y;
+    }
+
+    public static void addCamRotation(float yawDelta, float pitchDelta) {
+        camYaw += yawDelta;
+        camPitch += pitchDelta;
+        if (camPitch > 90) camPitch = 90;
+        if (camPitch < -90) camPitch = -90;
     }
 
     // Selection
@@ -97,7 +175,7 @@ public final class SplineEditorClientState {
         selectedType = SelectionType.NONE;
         hoveredAxis = AxisDrag.NONE;
         draggingAxis = AxisDrag.NONE;
-        
+        SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             camX = mc.player.getX();
@@ -116,6 +194,8 @@ public final class SplineEditorClientState {
         selectedType = SelectionType.NONE;
         hoveredAxis = AxisDrag.NONE;
         draggingAxis = AxisDrag.NONE;
+        if (topDown) exitTopDown();
+        SplineEditorController.resetInputState();
         Log.info(TAG, "[SplineEditor] Exited edit mode");
     }
 

@@ -22,7 +22,6 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class SplineEditorImGui {
     private static final String TAG = "SplineEditorImGui";
-    public static float panelLeftEdge = 0f;
 
     private static final ImString templateNameInput = new ImString(64);
     private static final ImDouble globalShiftX = new ImDouble(0.0);
@@ -49,7 +48,6 @@ public final class SplineEditorImGui {
         int flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoMove;
 
         if (ImGui.begin("Spline Editor Panel", flags)) {
-            panelLeftEdge = ImGui.getWindowPosX();
             ImGui.textColored(1.0f, 0.84f, 0.0f, 1.0f, "=== SPLINE ROAD EDITOR ===");
             ImGui.separator();
             ImGui.spacing();
@@ -306,7 +304,18 @@ public final class SplineEditorImGui {
             ImGui.textColored(0.4f, 0.7f, 1.0f, 1.0f, "ACTIONS");
             ImGui.separator();
             ImGui.spacing();
-            
+
+            imgui.ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.4f, 0.6f, 0.9f, 1.0f);
+            if (ImGui.button(SplineEditorClientState.isTopDown() ? "Exit Top-Down View (G)" : "Top-Down View (G)", -1, 28)) {
+                if (SplineEditorClientState.isTopDown()) {
+                    SplineEditorClientState.exitTopDown();
+                } else {
+                    SplineEditorClientState.enterTopDown();
+                }
+            }
+            imgui.ImGui.popStyleColor();
+            ImGui.spacing();
+
             if (ImGui.button("Clear Canvas", halfW, 28)) {
                 model.clear();
                 SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
