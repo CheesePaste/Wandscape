@@ -29,7 +29,6 @@ public abstract class MixinSplineEditorCamera {
     private void onSetupTail(BlockGetter level, Entity entity, boolean detached,
                              boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
         if (!com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) return;
-        if (!com.wsteam.wandscape.road.client.SplineEditorClientState.isTopDown()) return;
         setPosition(
                 com.wsteam.wandscape.road.client.SplineEditorClientState.getCamX(),
                 com.wsteam.wandscape.road.client.SplineEditorClientState.getCamY(),

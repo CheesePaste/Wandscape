@@ -13,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 
 /**
  * Per-tick controller for the Spline Road Editor.
@@ -30,6 +31,14 @@ public final class SplineEditorController {
 
     private SplineEditorController() {}
 
+    public static float getFlyingSpeed() {
+        return flyingSpeed;
+    }
+
+    public static void setFlyingSpeed(float speed) {
+        flyingSpeed = Math.max(0.02f, Math.min(5.0f, speed));
+    }
+
     public static void register() {
         if (registered) return;
         registered = true;
@@ -38,6 +47,7 @@ public final class SplineEditorController {
         bus.addListener(net.neoforged.neoforge.client.event.RenderLevelStageEvent.class, SplineEditorController::onRenderLevelStage);
         bus.addListener(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent.class, SplineEditorController::onMouseScroll);
         bus.addListener(InputEvent.MouseButton.Pre.class, SplineEditorController::onMouseButtonPre);
+        bus.addListener(MovementInputUpdateEvent.class, SplineEditorController::onMovementInputUpdate);
         Log.info(TAG, "[SplineEditor] Controller registered");
     }
 
@@ -174,8 +184,8 @@ public final class SplineEditorController {
             boolean sprintDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
                     || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
             
-            Vec3 fwd = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw());
-            Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
+            Vec3 fwd = Vec3.directionFromRotation(SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
+            Vec3 right = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw()).cross(new Vec3(0, 1, 0)).normalize();
             
             float speed = flyingSpeed * 20.0f; // Scale it to be comparable to previous logic (BPS)
             if (sprintDown) speed *= 2.0f;
@@ -183,7 +193,7 @@ public final class SplineEditorController {
             double move = speed * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
-            double moveY = vertical * move;
+            double moveY = (fwd.y * forward + vertical) * move;
             
             SplineEditorClientState.setCamPosition(
                     SplineEditorClientState.getCamX() + moveX,
@@ -242,14 +252,25 @@ public final class SplineEditorController {
         }
     }
 
+    static void onMovementInputUpdate(MovementInputUpdateEvent event) {
+        if (!SplineEditorClientState.isEditing()) return;
+        var input = event.getInput();
+        input.forwardImpulse = 0;
+        input.leftImpulse = 0;
+        input.up = false;
+        input.down = false;
+        input.left = false;
+        input.right = false;
+        input.jumping = false;
+        input.shiftKeyDown = false;
+    }
+
     static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
         if (!SplineEditorClientState.isEditing()) return;
         if (ImGuiManager.isInitialized() && imgui.ImGui.getIO().getWantCaptureMouse()) return;
 
         Minecraft mc = Minecraft.getInstance();
         long window = mc.getWindow().getWindow();
-        boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
 
         // Top-down view: scroll moves along the look direction (vertical zoom when
         // looking straight down), Ctrl+scroll adjusts the pan speed — same as overview.
@@ -257,6 +278,8 @@ public final class SplineEditorController {
             event.setCanceled(true);
             double delta = event.getScrollDeltaY();
             if (delta == 0) return;
+            boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                    || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
             if (ctrlDown) {
                 float factor = (float) Math.pow(1.3, delta);
                 SplineEditorClientState.setTopDownSpeed(
@@ -278,27 +301,17 @@ public final class SplineEditorController {
             return;
         }
 
-        if (!cameraActive) return;
+        // 3D Freecam mode: directly adjust flying speed with mouse scroll wheel (no Ctrl needed)
         event.setCanceled(true);
         double delta = event.getScrollDeltaY();
         if (delta == 0) return;
 
-        if (ctrlDown) {
-            float factor = (float) Math.pow(1.3, delta);
-            flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(String.format("[SplineEditor] §eSpeed: %.2f", flyingSpeed)), true);
-            }
-        } else {
-            Vec3 dir = Vec3.directionFromRotation(
-                    SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
-            double move = delta * 4.0;
-            SplineEditorClientState.setCamPosition(
-                    SplineEditorClientState.getCamX() + dir.x * move,
-                    SplineEditorClientState.getCamY() + dir.y * move,
-                    SplineEditorClientState.getCamZ() + dir.z * move
-            );
+        float factor = (float) Math.pow(1.2, delta);
+        flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
+        if (mc.player != null) {
+            mc.player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal(
+                            String.format("[SplineEditor] §eFreecam Speed: %.2f (BPS: %.1f)", flyingSpeed, flyingSpeed * 20.0f)), true);
         }
     }
 
@@ -365,6 +378,11 @@ public final class SplineEditorController {
     private static void drainVanillaInput(Minecraft mc) {
         while (mc.options.keyAttack.consumeClick()) {}
         while (mc.options.keyUse.consumeClick()) {}
+        while (mc.options.keyJump.consumeClick()) {}
+        while (mc.options.keyShift.consumeClick()) {}
+        while (mc.options.keyInventory.consumeClick()) {}
+        while (mc.options.keyDrop.consumeClick()) {}
+        while (mc.options.keySprint.consumeClick()) {}
     }
 
     public static void doBuildArray() {

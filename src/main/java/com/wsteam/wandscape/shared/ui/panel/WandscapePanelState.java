@@ -193,6 +193,12 @@ public final class WandscapePanelState {
         WandscapePanelState.brokenBuildingNames = brokenNames != null ? brokenNames : List.of();
     }
 
+    private static boolean panelEverOpened = false;
+
+    public static boolean isPanelEverOpened() {
+        return panelEverOpened;
+    }
+
     public static void openPanel() {
         panelOpen = true;
         showBuildingAreas = false;
@@ -204,6 +210,11 @@ public final class WandscapePanelState {
         if (mc.player != null) {
             mc.player.displayClientMessage(
                     Component.literal("[Panel] Opened — V: close, G: switch mode"), true);
+        }
+
+        if (!panelEverOpened) {
+            panelEverOpened = true;
+            WandscapePanelController.openPanelHelpDocument();
         }
     }
 
@@ -277,7 +288,7 @@ public final class WandscapePanelState {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
-                        Component.literal("§e[Guide] §fBuild a Town Hall & Warehouse to start your colony!"), true);
+                        Component.literal("§e[新手引导] §f请建造【市政厅】与【仓库】以开启殖民地管理！"), true);
             }
         }
     }
@@ -350,7 +361,6 @@ public final class WandscapePanelState {
     public static BuildPhase getBuildPhase() { return buildPhase; }
 
     public static void openBuildingBar() {
-        dismissGuidance();
         buildingBarOpen = true;
         buildingBarCategory = "All";
         buildingBarSearch = "";

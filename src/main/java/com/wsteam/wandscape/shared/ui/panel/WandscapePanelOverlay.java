@@ -350,22 +350,78 @@ public final class WandscapePanelOverlay {
 
     /** Layout of the "Getting Started" guidance box. Single source of truth for render + hit-test. */
     private record GuidanceBox(int x, int y, int w, int h, int closeX, int closeY, int closeS,
-                               String title, String line1, String line2, String hint) {}
+                               String title, java.util.List<String> lines, String hint) {}
 
     private static GuidanceBox guidanceBox(Font font, int screenW) {
         int pad = 10;
         int lineH = font.lineHeight;
-        String title = "Getting Started";
-        String line1 = "Build a Town Hall to manage your colony";
-        String line2 = "Build a Warehouse to store resources";
-        String hint = "Select a building from the bar above";
 
-        int titleW = font.width(title);
-        int line1W = font.width(line1);
-        int line2W = font.width(line2);
-        int hintW = font.width(hint);
-        int boxW = Math.max(Math.max(titleW, Math.max(line1W, line2W)), hintW) + pad * 2;
-        int boxH = pad * 2 + lineH * 4 + 6;
+        boolean hasTownHall = false;
+        boolean hasWarehouse = false;
+        var buildings = com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.getCached();
+        for (var b : buildings) {
+            if (com.wsteam.wandscape.shared.registry.WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.category())) {
+                hasTownHall = true;
+            }
+            if ("warehouse".equals(b.buildingTypeId())) {
+                hasWarehouse = true;
+            }
+        }
+
+        String title;
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        String hint;
+
+        boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
+        boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
+        boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
+
+        if (!hasTownHall) {
+            title = "🚩 新手引导 (1/2)：建造市政厅";
+            if (isPlacing) {
+                lines.add("§7✓ 1. 已选中市政厅蓝图");
+                lines.add("§7✓ 2. 建筑虚影已在世界中显现");
+                lines.add("§a▶ 3. 移动视角选择空地，§e右键点击确认建造");
+                hint = "💡 提示：按 R 键或左键可旋转建筑朝向";
+            } else if (buildMode && isBar) {
+                lines.add("§7✓ 1. 已打开建造面板");
+                lines.add("§a▶ 2. 在下方列表找到并§e双击【市政厅】");
+                lines.add("§7  3. 在世界中右键点击确认放置");
+                hint = "💡 提示：双击卡片即可开启建筑放置定位";
+            } else {
+                lines.add("§a▶ 1. 点击左侧边栏 🏛️【建造】图标");
+                lines.add("§7  2. 在【市政】分类中找到【市政厅】");
+                lines.add("§7  3. 双击卡片并在世界中右键放置蓝图");
+                hint = "💡 提示：市政厅是殖民地招募法师与管理的核心";
+            }
+        } else {
+            title = "🚩 新手引导 (2/2)：建造仓库";
+            if (isPlacing) {
+                lines.add("§7✓ 1. 已选中仓库蓝图");
+                lines.add("§7✓ 2. 建筑虚影已在世界中显现");
+                lines.add("§a▶ 3. 移动视角选择空地，§e右键点击确认建造");
+                hint = "💡 提示：寻找平坦空地，右键确认建造";
+            } else if (buildMode && isBar) {
+                lines.add("§7✓ 1. 已打开建造面板");
+                lines.add("§a▶ 2. 切换至【存储】分类，§e双击【仓库】");
+                lines.add("§7  3. 在世界中右键点击确认放置");
+                hint = "💡 提示：双击卡片即可开启建筑放置定位";
+            } else {
+                lines.add("§a▶ 1. 点击左侧边栏 🏛️【建造】图标");
+                lines.add("§7  2. 在【存储】分类中找到【仓库】");
+                lines.add("§7  3. 双击卡片并在世界中右键放置蓝图");
+                hint = "💡 提示：仓库用于安全存放居民采掘与合成的物资";
+            }
+        }
+
+        int maxW = font.width(title);
+        for (String l : lines) {
+            maxW = Math.max(maxW, font.width(l));
+        }
+        maxW = Math.max(maxW, font.width(hint));
+
+        int boxW = maxW + pad * 2 + 12;
+        int boxH = pad * 2 + lineH * (lines.size() + 2) + 12;
 
         int x = screenW - boxW - 8;
         int y = TOP_BAR_H + 4;
@@ -373,7 +429,7 @@ public final class WandscapePanelOverlay {
         int closeS = 9;
         int closeX = x + boxW - closeS - 7;
         int closeY = y + 6;
-        return new GuidanceBox(x, y, boxW, boxH, closeX, closeY, closeS, title, line1, line2, hint);
+        return new GuidanceBox(x, y, boxW, boxH, closeX, closeY, closeS, title, lines, hint);
     }
 
     /** @return true if the mouse is over the guidance close (×) button. */
@@ -389,9 +445,9 @@ public final class WandscapePanelOverlay {
         int lineH = font.lineHeight;
 
         // Background
-        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + b.h, 0, 0xDD1A1C22);
+        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + b.h, 0, 0xEE14161B);
         // Border
-        int col = 0xFFC8A040;
+        int col = 0xFFD4A338;
         g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + 1, 0, col);
         g.fill(RenderType.guiOverlay(), b.x, b.y + b.h - 1, b.x + b.w, b.y + b.h, 0, col);
         g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + 1, b.y + b.h, 0, col);
@@ -399,21 +455,25 @@ public final class WandscapePanelOverlay {
 
         int tx = b.x + pad;
         int ty = b.y + pad;
-        drawText(g, font, "§e" + b.title, tx, ty, 0xFFFFC040);
-        ty += lineH + 3;
-        drawText(g, font, " §7- " + b.line1, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
-        ty += lineH;
-        drawText(g, font, " §7- " + b.line2, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
-        ty += lineH + 3;
-        drawText(g, font, "§8" + b.hint, tx, ty, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, b.title, tx, ty, 0xFFFFD700);
+        ty += lineH + 5;
+        g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, 0x44D4A338);
+
+        for (String line : b.lines) {
+            drawText(g, font, line, tx, ty, 0xFFFFFFFF);
+            ty += lineH + 2;
+        }
+
+        ty += 3;
+        drawText(g, font, b.hint, tx, ty, 0xFFAAAAAA);
 
         // Close (×) button, top-right
         boolean hover = isGuidanceCloseClicked(font, mx, my, screenW);
         if (hover) {
-            g.fill(RenderType.guiOverlay(), b.closeX - 1, b.closeY - 1,
-                    b.closeX + b.closeS + 1, b.closeY + b.closeS + 1, 0, 0x33111214);
+            g.fill(RenderType.guiOverlay(), b.closeX - 2, b.closeY - 2,
+                    b.closeX + b.closeS + 2, b.closeY + b.closeS + 2, 0, 0x55FF4444);
         }
-        drawText(g, font, "×", b.closeX + 1, b.closeY + 1, hover ? 0xFFFFFFFF : 0xAA888888);
+        drawText(g, font, "×", b.closeX + 1, b.closeY, hover ? 0xFFFFFFFF : 0xAA888888);
     }
 
     // ═══════════════════════════════════════════════════════════════
