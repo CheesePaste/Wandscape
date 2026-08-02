@@ -139,26 +139,29 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return false;
     }
 
-    /** 目标解析：仇恨目标（存活、非玩家、hateRange 内）优先，否则半径内最近 {@code Enemy}。 */
+    /** 目标解析：仇恨目标（存活、非玩家、hateRange 内、可见）优先，否则半径内最近可见 {@code Enemy}。
+     *  地下/隔墙看不见的怪物不锁为目标。 */
     @Nullable
     private static LivingEntity resolveTarget(WandscapeNpc npc, ServerLevel level) {
         int hateRange = Config.GUARD_HATE_RANGE.get();
         LivingEntity hated = npc.getHatedAttacker(level);
         if (hated != null && !(hated instanceof Player)
-                && npc.distanceToSqr(hated) <= (double) hateRange * hateRange) {
+                && npc.distanceToSqr(hated) <= (double) hateRange * hateRange
+                && GuardCombat.hasLineOfSight(npc, hated)) {
             return hated;
         }
-        return nearestEnemyAround(npc, level, Config.GUARD_SELF_DEFENSE_RANGE.get());
+        return nearestVisibleEnemyAround(npc, level, Config.GUARD_SELF_DEFENSE_RANGE.get());
     }
 
-    /** 半径内最近存活 {@code Enemy}（球面距离）；无则 null。 */
+    /** 半径内最近可见存活 {@code Enemy}（球面距离 + LOS）；无则 null。 */
     @Nullable
-    private static LivingEntity nearestEnemyAround(WandscapeNpc npc, ServerLevel level, int radius) {
+    private static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, int radius) {
         LivingEntity nearest = null;
         double bestSq = (double) radius * radius;
         Vec3 pos = npc.position();
         for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(radius), e -> e instanceof Enemy)) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
+            if (!GuardCombat.hasLineOfSight(npc, mob)) continue;
             double d = mob.distanceToSqr(pos);
             if (d <= bestSq) {
                 bestSq = d;

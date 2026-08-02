@@ -372,5 +372,6 @@ NPC 不再"只会挨打"：主动仇恨半径内无条件攻击 + 被非玩家�
 - **仇恨 Enemy-only**：只对 `Enemy` 记仇/攻击。光束伤害（`MagicBeamEntity`）只伤 Enemy，对非 Enemy 记仇会导致反击打不死的空转；玩家/其它 NPC 伤害排除（友伤）。
 - **互相战斗（光束归属）**：守卫与自防御的光束伤害记为 NPC 造成（`DamageSources.indirectMagic(casterNpc, beam)` → `source.getEntity()=NPC`），怪物 `HurtByTargetGoal` 会反击 NPC → 受伤仇恨实际触发；玩家施法保持 `magic()`（无施法者）。配合 `HostileTargetingHandler`（NPC 已是村民级索敌目标），闭环成立。
 - **主动切换目标**：自防御复用 `GuardCombat`（光束重定向/LOS/隔墙寻路/施法节流），每 ~10 tick 重选目标（仇恨优先→半径最近），光束持续跟随最近怪物。
-- **配置**：`guard.selfDefenseRange`(12 主动仇恨半径)、`guard.hateRange`(32 反击距离)、`guard.hateDurationTicks`(600 记仇时长，每次被打刷新)。
+- **只看得到的目标**：仇恨与主动侦测的目标都要求 LOS（持杖手→目标中心无方块挡）——地下/隔墙不可见的怪物不锁为目标，避免对够不着的怪空耗寻路施法。
+- **配置**：`guard.selfDefenseRange`(16 主动仇恨半径)、`guard.hateRange`(48 反击距离)、`guard.hateDurationTicks`(600 记仇时长，每次被打刷新)。自防御半径 16 压过骷髅弓射程 15，仇恨半径 48 覆盖凋零跟随 40。
 - **版本**：v1.7.0a（第二位 +1 新子系统）。

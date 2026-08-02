@@ -268,12 +268,12 @@ public class Config {
             .comment("NPC self-defense aggro radius (blocks): hostile mobs within this spherical distance "
                     + "around an NPC are attacked unconditionally, preempting the NPC's current task. "
                     + "Independent of building guard zones.")
-            .defineInRange("guard.selfDefenseRange", 12, 1, 64);
+            .defineInRange("guard.selfDefenseRange", 16, 1, 64);
 
     public static final ModConfigSpec.IntValue GUARD_HATE_RANGE = BUILDER
             .comment("NPC retaliation range (blocks): the NPC fights back against a non-player mob that "
                     + "damaged it while the attacker is within this distance (the hate is refreshed on each hit).")
-            .defineInRange("guard.hateRange", 32, 1, 128);
+            .defineInRange("guard.hateRange", 48, 1, 128);
 
     public static final ModConfigSpec.IntValue GUARD_HATE_DURATION_TICKS = BUILDER
             .comment("NPC hate memory (ticks): how long the NPC keeps a grudge against a non-player attacker "

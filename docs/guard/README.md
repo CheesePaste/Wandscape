@@ -145,8 +145,8 @@ Monster 进入某建筑 AABB 水平 +10 区
 ## 一、目标与范围
 
 **要解决的问题**：建筑守卫只覆盖"空闲 NPC 守建筑"。NPC 若在城镇外、或正在执行其它任务，被怪打不反击、也不会主动攻击身边的怪。自防御补齐：**每个 NPC 独立**拥有
-- **主动仇恨半径**：`guard.selfDefenseRange`(12) 内的敌对生物**无条件攻击**。
-- **受伤仇恨**：被非玩家攻击者打伤后记仇（`guard.hateRange`=32 内、`guard.hateDurationTicks`=600 过期，每次被打刷新），优先反击攻击者。
+- **主动仇恨半径**：`guard.selfDefenseRange`(16) 内的敌对生物**无条件攻击**。
+- **受伤仇恨**：被非玩家攻击者打伤后记仇（`guard.hateRange`=48 内、`guard.hateDurationTicks`=600 过期，每次被打刷新），优先反击攻击者。
 
 **优先级最高**：有目标时**抢占**当前任务（暂停），击杀/目标消失后**恢复**原任务。
 
@@ -158,16 +158,17 @@ Monster 进入某建筑 AABB 水平 +10 区
 - 只对 `Enemy`（敌对生物）记仇/攻击——光束也只伤 `Enemy`，对非 Enemy 记仇会空转。
 - 玩家、其它 NPC 的伤害不记仇（友伤排除）。
 - 不扩展怪物 AI、不做追逐（自防御原地/寻路到能打到的位置施法，不追杀脱离目标）。
+- **只看得到的目标**：仇恨与主动侦测的目标都要求 LOS——地下/隔墙不可见的怪物不锁为目标（避免对够不着的怪空耗寻路施法）。
 
 ## 二、核心闭环
 
 ```
-[侦测] NPC 周围 guard.selfDefenseRange(12) 内有 Enemy  /  NPC 被非玩家攻击者打伤（记仇）
+[侦测] NPC 周围 guard.selfDefenseRange(16) 内可见 Enemy  /  NPC 被非玩家攻击者打伤（记仇）
   → SelfDefenseExecutor.detectAndInject（每4tick）：
       已有自防御/守卫战斗包 → 跳过
       有目标 → 分离 pendingFuture（若正卡异步op）→ queue.suspendCurrent → startPackage(self_defense)
   → 任务执行系统执行 SelfDefenseOp → SelfDefenseExecutor 持续循环（每10tick）：
-      目标 = 仇恨目标(存活/非玩家/hateRange内) 优先 → 否则半径内最近 Enemy
+      目标 = 仇恨目标(存活/非玩家/hateRange内/LOS可见) 优先 → 否则半径内最近可见 Enemy
       无目标 → complete future → 队列自动 resumeLatest 恢复挂起任务
       有目标 → GuardCombat.engage：光束重定向→LOS→隔墙寻路→施法
   → 光束每 tick 伤害束内 Enemy（记为 NPC 造成）→ 怪物反击 NPC → 受伤记仇 → 循环
@@ -182,7 +183,7 @@ Monster 进入某建筑 AABB 水平 +10 区
 | `SelfDefenseHandler` | `guard/SelfDefenseHandler.java` | NeoForge `LivingIncomingDamageEvent` → 记仇（非玩家非NPC的 Enemy） |
 | `GuardCombat` | `guard/executor/GuardCombat.java` | 共享战斗引擎（守卫 + 自防御复用） |
 | 仇恨状态 | `npc/entity/WandscapeNpc.java` | `hatedAttackerUuid`/`hateExpiryTick` + `getHatedAttacker`/`clearHatedAttackerIfExpired`；状态"战斗中" |
-| 配置 | `Config.java` | `guard.selfDefenseRange`(12) / `guard.hateRange`(32) / `guard.hateDurationTicks`(600) |
+| 配置 | `Config.java` | `guard.selfDefenseRange`(16) / `guard.hateRange`(48) / `guard.hateDurationTicks`(600) |
 
 ## 四、抢占与恢复（关键机制）
 

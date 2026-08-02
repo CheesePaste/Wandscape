@@ -34,7 +34,7 @@
 
 ## NPC 自防御（独立子系统）
 
-- **机制**：主动仇恨半径 `guard.selfDefenseRange`(12) 内无条件攻击；被非玩家 Enemy 打伤记仇（`guard.hateRange`=32、`guard.hateDurationTicks`=600，每次被打刷新），仇恨优先于半径扫描。
+- **机制**：主动仇恨半径 `guard.selfDefenseRange`(16) 内无条件攻击；被非玩家 Enemy 打伤记仇（`guard.hateRange`=48、`guard.hateDurationTicks`=600，每次被打刷新），仇恨优先于半径扫描。**仇恨与主动侦测的目标都要求 LOS**（地下/隔墙不可见的不锁）。
 - **抢占**：走 `NpcTaskQueue` 私有队列，不经过全局任务池（无审批）。`detectAndInject` 每 4 tick：已有自防御/守卫战斗包则跳过；有目标则分离 pendingFuture（防卡异步 op）→ `suspendCurrent` → `startPackage(self_defense)`；挂起栈满跳过。完成后队列自动 `resumeLatest` 恢复原包（stepIndex 不丢）。
 - **进度保护**：`TaskExecutionSystem.syncStepToPool` 只在当前包为 `global:*` 时同步——否则自防御的 step 覆盖被挂起全局任务进度。
 - **互相战斗**：守卫/自防御光束伤害记为 NPC 造成（`MagicBeamEntity` 用 `indirectMagic(casterNpc, beam)`），怪物 `HurtByTargetGoal` 反击 NPC → 受伤仇恨实际触发；玩家施法保持 `magic()`。
