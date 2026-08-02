@@ -42,5 +42,6 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 | panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen |
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
 | animation/ | MedievalAnimation |
+| markdown/ | AST节点(Header/Text/Image/Quote/List) + MarkdownParser(纯Java解析) + MarkdownRenderWidget(MC渲染控件) |
 | skin/ | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/关闭按钮/进度条/箭头图标) |
 | theme/ | MedievalColors(金色/紫色/文本/功能色) + WandscapeTheme(V面板覆盖层用RTS绘制基元 + 元素图标) |
