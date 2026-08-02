@@ -25,7 +25,7 @@ public final class RoadPlacementState {
     /** Road placement phase: BAR (preset selection UI) or PLACING (in-world placement). */
     public enum RoadPhase { BAR, PLACING }
 
-    public enum ToolMode { REPLACE, FILL, DESTROY_FILL }
+    public enum ToolMode { REPLACE, FILL, SPLINE, DESTROY_FILL }
 
     private static volatile boolean projecting = false;
     private static volatile RoadPhase roadPhase = RoadPhase.BAR;
