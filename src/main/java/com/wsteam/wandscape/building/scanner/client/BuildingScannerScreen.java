@@ -17,20 +17,22 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
 /**
- * All-in-one scanner GUI. Clean form layout with generous spacing.
- * Categories switch building type inline; category-specific fields
- * appear/disappear automatically.
+ * Scanner GUI built on MedievalScreen MINIMAL theme.
  */
-public class BuildingScannerScreen extends Screen {
+public class BuildingScannerScreen extends MedievalScreen {
+
+    private static final int PW = 340;
+    private static final int PH = 250;
 
     private final BuildingScannerBlockEntity scanner;
 
@@ -115,7 +117,11 @@ public class BuildingScannerScreen extends Screen {
     private static final int ROW_H = 22; // vertical row spacing
 
     public BuildingScannerScreen(BuildingScannerBlockEntity scanner) {
-        super(Component.literal("Building Scanner"));
+        super(Component.literal("Building Scanner"), PW, PH);
+        setTitleBar("结构扫描器");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "scanner_guide";
         this.scanner = scanner;
     }
 
@@ -129,11 +135,9 @@ public class BuildingScannerScreen extends Screen {
         super.init();
         zoneRows.clear();
 
-        addRenderableWidget(new com.wsteam.wandscape.shared.ui.component.HelpButton(this.width - 24, 6, 16, 16, this::openHelpDocument));
-
-        int cx = width / 2;
-        lx = cx - 152;
-        int y = 10 + scrollOff;
+        int cx = leftPos + PW / 2;
+        lx = leftPos + 16;
+        int y = topPos + headerHeight + 8 + scrollOff;
 
         // ── Block Mode selector (SAVE vs CORNER) ──
         blockModeBtn = addRenderableWidget(
@@ -774,24 +778,16 @@ public class BuildingScannerScreen extends Screen {
     // ── Render ──
 
     @Override
-    public void renderBackground(GuiGraphics gui, int mx, int my, float pt) {
-        renderTransparentBackground(gui);
-    }
-
-    @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui, mx, my, pt);
-        int cx = width / 2;
+        renderMinimalHeader(gui);
+        renderCloseButton(gui, mx, my);
 
-        // ── Section headers & labels ──
-
-        // Block Mode & Structure Name Labels
-        drawLbl(gui, "Mode", cx - 150, 0);
-        drawLbl(gui, "Structure Name", cx - 50, 0);
+        int cx = leftPos + PW / 2;
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
-            gui.drawString(font, "§7CORNER Mode: Set Structure Name to match SAVE scanner.", lx + 10, 40, 0xaaaaaa);
-            gui.drawString(font, "§7Place this block at the opposite 3D corner of your building.", lx + 10, 56, 0x888888);
+            gui.drawString(font, "§7CORNER 模式：请填写与 SAVE 扫描器相同的结构名称。", lx, topPos + headerHeight + 50, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "§7将此方块放置在建筑对角线的另一个顶点。", lx, topPos + headerHeight + 66, MedievalColors.TEXT_MUTED);
             super.render(gui, mx, my, pt);
             return;
         }
@@ -802,9 +798,9 @@ public class BuildingScannerScreen extends Screen {
         int dx = bMax.x() - bMin.x() + 1;
         int dy = bMax.y() - bMin.y() + 1;
         int dz = bMax.z() - bMin.z() + 1;
-        String bInfo = String.format("Box: Min(%d,%d,%d) ~ Max(%d,%d,%d)  |  Size: %d × %d × %d",
+        String bInfo = String.format("包围盒: Min(%d,%d,%d) ~ Max(%d,%d,%d) | 尺寸: %d×%d×%d",
                 bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z(), dx, dy, dz);
-        gui.drawString(font, "§e" + bInfo, lx + 4, 32, 0xffff88);
+        gui.drawString(font, bInfo, lx, topPos + headerHeight + 36, MedievalColors.BORDER_GOLD);
 
         // Door
         drawHdr(gui, "Door Offset", lx, doorEditY - 14);
@@ -865,14 +861,14 @@ public class BuildingScannerScreen extends Screen {
         super.render(gui, mx, my, pt);
     }
 
-    /** Draw bold section header. */
+    /** Draw bold section header with medieval gold theme. */
     private void drawHdr(GuiGraphics gui, String text, int x, int y) {
-        gui.drawString(font, Component.literal("§l" + text), x, y, 0xdddddd);
+        gui.drawString(font, Component.literal("§l" + text), x, y, MedievalColors.BORDER_GOLD);
     }
 
-    /** Draw a label. */
+    /** Draw a label with medieval muted color. */
     private void drawLbl(GuiGraphics gui, String text, int x, int y) {
-        gui.drawString(font, text, x, y, 0xaaaaaa);
+        gui.drawString(font, text, x, y, MedievalColors.TEXT_MUTED);
     }
 
     // ── Utilities ──
@@ -1064,27 +1060,5 @@ public class BuildingScannerScreen extends Screen {
                 scanner.addServiceElementOutput(et.getString("element"), et.getInt("amount"));
             }
         }
-    }
-
-    private void openHelpDocument() {
-        if (minecraft != null) {
-            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("scanner_guide");
-            var screen = new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(this, content, "scanner_guide");
-            minecraft.setScreen(screen);
-        }
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_H || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_F1) {
-            openHelpDocument();
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
     }
 }
