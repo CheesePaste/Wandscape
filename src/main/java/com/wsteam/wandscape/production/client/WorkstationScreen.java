@@ -56,6 +56,9 @@ public class WorkstationScreen extends MedievalScreen {
     public WorkstationScreen() {
         super(Component.literal("Workstation"), PW, PH);
         setTitleBar("Workstation");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "workstation_guide";
     }
 
     public void updateData(WorkstationDataPacket packet) {

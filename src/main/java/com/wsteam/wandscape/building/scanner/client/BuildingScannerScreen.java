@@ -125,6 +125,8 @@ public class BuildingScannerScreen extends Screen {
         super.init();
         zoneRows.clear();
 
+        addRenderableWidget(new com.wsteam.wandscape.shared.ui.component.HelpButton(this.width - 24, 6, 16, 16, this::openHelpDocument));
+
         int cx = width / 2;
         lx = cx - 152;
         int y = 10 + scrollOff;
@@ -1033,6 +1035,23 @@ public class BuildingScannerScreen extends Screen {
                 scanner.addServiceElementOutput(et.getString("element"), et.getInt("amount"));
             }
         }
+    }
+
+    private void openHelpDocument() {
+        if (minecraft != null) {
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("scanner_guide");
+            var screen = new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(this, content, "scanner_guide");
+            minecraft.setScreen(screen);
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_H || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_F1) {
+            openHelpDocument();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

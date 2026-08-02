@@ -37,6 +37,10 @@ public class TouristScreen extends MedievalScreen {
 
     public TouristScreen(TouristDataPacket packet) {
         super(Component.literal("Tourist Info"), PW, PH);
+        setTitleBar("Tourist Info");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "tourist_guide";
         this.entityId = packet.entityId();
         apply(packet);
     }

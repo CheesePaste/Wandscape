@@ -30,6 +30,9 @@ public class HotelScreen extends MedievalScreen {
                        int maxOccupancy, int currentOccupancy, List<String> guestNames) {
         super(Component.literal("Hotel"), PW, PH);
         setTitleBar("Hotel / Inn");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "hotel_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;

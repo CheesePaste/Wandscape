@@ -37,6 +37,9 @@ public class TavernScreen extends MedievalScreen {
     public TavernScreen(BlockPos buildingPos, UUID colonyId, List<MageResume> mageResumes) {
         super(Component.literal("Tavern"), PW, PH);
         setTitleBar("Adventurer's Tavern");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "tavern_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.mageResumes = mageResumes;

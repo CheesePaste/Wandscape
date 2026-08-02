@@ -45,6 +45,10 @@ public class NpcScreen extends MedievalScreen {
 
     public NpcScreen(NpcDataPacket packet) {
         super(Component.literal("NPC Info"), PW, PH);
+        setTitleBar("Mage Info");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "npc_guide";
         this.entityId = packet.entityId();
         apply(packet);
     }

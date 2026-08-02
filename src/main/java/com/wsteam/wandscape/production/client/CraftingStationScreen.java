@@ -43,6 +43,9 @@ public class CraftingStationScreen extends MedievalScreen {
     public CraftingStationScreen() {
         super(Component.literal("Crafting Station"), PW, PH);
         setTitleBar("Crafting Station");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "crafting_guide";
     }
 
     public void updateData(CraftingStationPacket packet) {
