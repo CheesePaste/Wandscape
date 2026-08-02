@@ -73,7 +73,29 @@ public final class MarkdownTextureManager {
             return location;
         }
 
-        // 3. PNG (Standard MC texture)
+        // 3. PNG (Standard MC texture with auto fallback for non-standard/disguised formats)
+        LoadedImage loaded = CACHE.computeIfAbsent(location, loc -> {
+            try {
+                Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(loc);
+                if (res.isPresent()) {
+                    try (InputStream is = res.get().open()) {
+                        byte[] header = is.readNBytes(8);
+                        // PNG magic header: 0x89 'P' 'N' 'G' '\r' '\n' 0x1A '\n'
+                        if (header.length >= 8 && header[0] == (byte) 0x89 && header[1] == (byte) 'P'
+                                && header[2] == (byte) 'N' && header[3] == (byte) 'G') {
+                            return new LoadedImage(List.of(loc), null, System.currentTimeMillis());
+                        }
+                    }
+                }
+                // Disguised format (e.g. JPEG saved as PNG): fallback decode via ImageIO
+                return loadNonPngImage(loc);
+            } catch (Exception e) {
+                return new LoadedImage(List.of(loc), null, System.currentTimeMillis());
+            }
+        });
+        if (loaded != null && !loaded.frameLocations().isEmpty()) {
+            return loaded.frameLocations().get(0);
+        }
         return location;
     }
 

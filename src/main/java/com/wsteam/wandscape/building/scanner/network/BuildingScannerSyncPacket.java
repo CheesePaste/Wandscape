@@ -43,6 +43,7 @@ public record BuildingScannerSyncPacket(BlockPos pos, CompoundTag data) implemen
             return;
         }
         scanner.loadAdditional(packet.data, level.registryAccess());
+        scanner.detectBoundaryFromCorners(level);
         scanner.setChanged();
         // Sync to all watching clients (including the sender)
         level.sendBlockUpdated(packet.pos, scanner.getBlockState(), scanner.getBlockState(), 3);

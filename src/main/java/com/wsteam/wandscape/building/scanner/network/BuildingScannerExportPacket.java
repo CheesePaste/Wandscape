@@ -82,6 +82,16 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             return;
         }
 
+        // Auto-detect boundary from CORNER blocks if in SAVE mode
+        scanner.detectBoundaryFromCorners(level);
+        wMin = scanner.getWorldMin();
+        wMax = scanner.getWorldMax();
+
+        if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
+            exportRoad(scanner, packet, player, level, wMin, wMax);
+            return;
+        }
+
         // Scan blocks in world
         List<BlockOffset> pattern = new ArrayList<>();
         Map<String, String> blockMapping = new TreeMap<>(); // sorted for visual order
@@ -91,10 +101,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
-                    // Skip the scanner block itself
-                    if (bp.equals(packet.pos)) continue;
                     BlockState state = level.getBlockState(bp);
-                    if (state.isAir()) continue;
+                    // Skip all scanner blocks (SAVE or CORNER) and air
+                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
 
                     int rx = x - wMin.getX() + scanner.getBoundaryMin().x();
                     int ry = y - wMin.getY() + scanner.getBoundaryMin().y();
@@ -294,7 +303,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             Path exportDir = level.getServer().getServerDirectory()
                     .resolve("wandscape_buildings");
             Files.createDirectories(exportDir);
-            Path outFile = exportDir.resolve(id + ".json");
+            Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
@@ -307,6 +316,72 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "§cFailed to export: " + e.getMessage()));
         }
+    }
+
+    private static void exportRoad(BuildingScannerBlockEntity scanner,
+                                   BuildingScannerExportPacket packet,
+                                   ServerPlayer player,
+                                   ServerLevel level,
+                                   BlockPos wMin,
+                                   BlockPos wMax) {
+        String id = scanner.getBuildingId();
+        if (id.isBlank()) id = "custom_road_" + (System.currentTimeMillis() % 1000);
+        String name = scanner.getDisplayName();
+        if (name.isBlank()) name = "自定义道路";
+
+        java.util.Map<String, Integer> blockCounts = new java.util.HashMap<>();
+        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                    BlockPos bp = new BlockPos(x, y, z);
+                    BlockState state = level.getBlockState(bp);
+                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                    String bId = blockId(state);
+                    blockCounts.put(bId, blockCounts.getOrDefault(bId, 0) + 1);
+                }
+            }
+        }
+
+        if (blockCounts.isEmpty()) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§cNo road blocks found inside boundary box"));
+            return;
+        }
+
+        JsonObject root = new JsonObject();
+        root.addProperty("id", id);
+        root.addProperty("display_name", name);
+        root.addProperty("category", "road_preset");
+
+        JsonArray blocksArr = new JsonArray();
+        for (var entry : blockCounts.entrySet()) {
+            JsonObject bObj = new JsonObject();
+            bObj.addProperty("blockId", entry.getKey());
+            bObj.addProperty("weight", entry.getValue());
+            blocksArr.add(bObj);
+        }
+        root.add("blocks", blocksArr);
+
+        try {
+            Path exportDir = level.getServer().getServerDirectory().resolve("wandscape_roads");
+            Files.createDirectories(exportDir);
+            Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
+            String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
+            Files.writeString(outFile, json);
+
+            Log.info(TAG, "Exported road preset '{}' to {}", id, outFile.toAbsolutePath());
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath() + " §a(Hot registered!)"));
+        } catch (IOException e) {
+            Log.warn(TAG, "Failed to export road preset '{}'", id, e);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§cFailed to export road preset: " + e.getMessage()));
+        }
+    }
+
+    private static String sanitizeFileName(String id) {
+        if (id == null || id.isBlank()) return "export_" + (System.currentTimeMillis() % 1000);
+        return id.replaceAll("[^a-zA-Z0-9_\\-]", "_");
     }
 
     /** Get the registry name of a block, with non-default blockstate properties. */
