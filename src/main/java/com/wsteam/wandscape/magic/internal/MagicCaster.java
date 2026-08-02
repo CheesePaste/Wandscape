@@ -20,7 +20,11 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -38,8 +42,6 @@ public final class MagicCaster {
     public static final int DEFAULT_COLOR = 0xFFA8E0FF;
 
     private static final double CAST_DISTANCE = 1.5;
-    /** 光束固定长度（方块）：大幅加长，壮观。 */
-    private static final double BEAM_RANGE = 200.0;
     /** 光束在法阵出现后多少 tick 开始生成（法阵动画期间从细变宽）。 */
     private static final int BEAM_SPAWN_DELAY = 20;
     /** 法阵结束后光束额外延续的 tick（快速变细到消失）。 */
@@ -58,7 +60,7 @@ public final class MagicCaster {
 
         Vec3 look = player.getLookAngle();
         Vec3 source = player.getEyePosition().add(look.scale(CAST_DISTANCE));
-        BlockPos target = BlockPos.containing(source.add(look.scale(BEAM_RANGE)));
+        BlockPos target = aimFirstBlock(level, source, look);
         int color = resolveColor(player.getMainHandItem(), colorHex);
 
         PacketDistributor.sendToPlayersTrackingChunk(level,
@@ -90,9 +92,7 @@ public final class MagicCaster {
             npc.faceTarget(BlockPos.containing(aim));
         }
         Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
-        BlockPos beamTarget = target != null
-                ? BlockPos.containing(aim)
-                : BlockPos.containing(source.add(axis.scale(BEAM_RANGE)));
+        BlockPos beamTarget = aimFirstBlock(level, source, axis);
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
         PacketDistributor.sendToPlayersTrackingEntity(npc,
@@ -105,6 +105,16 @@ public final class MagicCaster {
                 target != null ? target.getUUID().toString().substring(0, 8) : "null",
                 fmt(hand), fmt(axis), fmt(source), ok);
         return ok;
+    }
+
+    /** 沿 dir 射线检测第一个方块（光束终点，穿透生物只被方块挡住）；未命中取 BEAM_RANGE 外一点。 */
+    private static BlockPos aimFirstBlock(ServerLevel level, Vec3 from, Vec3 dir) {
+        HitResult hit = level.clip(new ClipContext(from, from.add(dir.scale(MagicBeamEntity.BEAM_RANGE)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+        if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
+            return bhr.getBlockPos();
+        }
+        return BlockPos.containing(from.add(dir.scale(MagicBeamEntity.BEAM_RANGE)));
     }
 
     /** 32 格内最近的敌对生物（实现 {@code Enemy} 接口）；无则 null。 */

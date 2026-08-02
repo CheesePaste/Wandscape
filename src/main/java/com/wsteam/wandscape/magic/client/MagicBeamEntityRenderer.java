@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
  * <p>注意：{@code EntityRenderDispatcher.render} 已把姿态栈平移到实体位置（即源点），
  * 这里<b>不能再</b>按世界坐标 translate，否则光束会被推到远处。只需旋转 + 抵消
  * {@code renderBeaconBeam} 内部的 translate(0.5,0,0.5)。
+ * 光束终点由服务端射线检测到第一个方块为止（穿透生物、只被方块挡住）。
  */
 public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
 

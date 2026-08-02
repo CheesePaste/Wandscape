@@ -17,9 +17,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 /**
  * 服务端显示实体：从源点（法阵中心）射向目标的信标光束。
@@ -49,6 +53,8 @@ public class MagicBeamEntity extends Entity {
     public static final int DEFAULT_LIFETIME_TICKS = 220;
     /** 法阵圆心/光束源点距持杖手沿目标方向的偏移（方块）。 */
     public static final double STAFF_CENTER_OFFSET = 2.0;
+    /** 光束最大长度（方块）：沿目标方向射线检测第一个方块为止，未命中取此长度。 */
+    public static final double BEAM_RANGE = 200.0;
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后快速变细到消失。 */
     public static final float PEAK_T = 0.86f;
     /** 峰值时的光束/光晕半径（方块）。 */
@@ -167,7 +173,18 @@ public class MagicBeamEntity extends Entity {
         Vec3 aimDir = aim.subtract(hand).normalize();
         Vec3 source = hand.add(aimDir.scale(STAFF_CENTER_OFFSET));
         setPos(source.x, source.y, source.z);
-        setTarget(BlockPos.containing(aim));
+        // 光束终点 = 沿目标方向第一个方块（穿透生物，只被方块挡住）
+        setTarget(aimFirstBlock(source, aimDir));
+    }
+
+    /** 沿 dir 射线检测第一个方块；未命中取 BEAM_RANGE 外一点。 */
+    private BlockPos aimFirstBlock(Vec3 from, Vec3 dir) {
+        HitResult hit = level().clip(new ClipContext(from, from.add(dir.scale(BEAM_RANGE)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+        if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
+            return bhr.getBlockPos();
+        }
+        return BlockPos.containing(from.add(dir.scale(BEAM_RANGE)));
     }
 
     /**
