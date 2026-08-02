@@ -33,14 +33,14 @@ public class MagicBeamEntity extends Entity {
             SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
 
     /** 光束总寿命（tick）。 */
-    public static final int LIFETIME_TICKS = 100;
+    public static final int LIFETIME_TICKS = 140;
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）。 */
     public static final float PEAK_T = 0.7f;
     /** 峰值时的光束/光晕半径（方块）。 */
-    public static final float MAX_BEAM_RADIUS = 0.35f;
-    public static final float MAX_GLOW_RADIUS = 0.45f;
+    public static final float MAX_BEAM_RADIUS = 0.5f;
+    public static final float MAX_GLOW_RADIUS = 0.7f;
     /** 宽度乘子下限：保证光束从生成起即可见（不过于细）。 */
-    private static final float MIN_WIDTH = 0.3f;
+    private static final float MIN_WIDTH = 0.4f;
     /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
     private static final float WIDTH_POWER = 1.4f;
 
@@ -86,6 +86,10 @@ public class MagicBeamEntity extends Entity {
             loggedSpawn = true;
             Log.info("MagicBeam", "beam tick id={} client={} pos={} targetPresent={} target={}",
                     getId(), level().isClientSide, position(), getTarget().isPresent(), getTarget().orElse(null));
+        }
+        if (tickCount == LIFETIME_TICKS - 1) {
+            Log.info("MagicBeam", "beam expire id={} client={} tickCount={}",
+                    getId(), level().isClientSide, tickCount);
         }
         // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
         if (tickCount >= LIFETIME_TICKS) discard();

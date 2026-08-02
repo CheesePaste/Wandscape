@@ -1,14 +1,10 @@
 package com.wsteam.wandscape.magic.client;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
-import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BeaconRenderer;
@@ -23,11 +19,12 @@ import net.minecraft.world.phys.Vec3;
  * 信标光束渲染：复用原版 {@link BeaconRenderer#renderBeaconBeam}（原版 beam shader + 逐顶点染色）。
  * 把局部 +Y 轴旋转到「源点→目标」方向，再按原版参数画高度=距离的竖直束体，得到指向目标的彩色光束。
  * 不用自定义渲染，避免光影包下异常。
+ *
+ * <p>注意：{@code EntityRenderDispatcher.render} 已把姿态栈平移到实体位置（即源点），
+ * 这里<b>不能再</b>按世界坐标 translate，否则光束会被推到远处。只需旋转 + 抵消
+ * {@code renderBeaconBeam} 内部的 translate(0.5,0,0.5)。
  */
 public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
-
-    /** 已记录首次渲染的实体 id，避免每帧刷日志。 */
-    private static final Set<Integer> LOGGED = new HashSet<>();
 
     public MagicBeamEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -36,15 +33,10 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
     @Override
     public void render(MagicBeamEntity entity, float entityYaw, float partialTick,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        Vec3 src = entity.getPosition(partialTick);
         BlockPos tgtPos = entity.getTarget().orElse(null);
-        if (LOGGED.add(entity.getId())) {
-            Log.info("MagicBeamRenderer", "render id={} src={} targetPresent={} target={}",
-                    entity.getId(), src, tgtPos != null, tgtPos);
-        }
         if (tgtPos == null) return;
-        Vec3 tgt = tgtPos.getCenter();
-        Vec3 dir = tgt.subtract(src);
+        Vec3 src = entity.getPosition(partialTick);
+        Vec3 dir = tgtPos.getCenter().subtract(src);
         double dist = dir.length();
         if (dist < 0.1) return;
         Vec3 ndir = dir.normalize();
@@ -56,7 +48,6 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
         float glowRadius = MagicBeamEntity.MAX_GLOW_RADIUS * wf;
 
         poseStack.pushPose();
-        poseStack.translate(src.x, src.y, src.z);
         poseStack.mulPose(rotationYTo(ndir));
         // 抵消 renderBeaconBeam 内部 translate(0.5, 0, 0.5)，使光束中心对准源点
         poseStack.translate(-0.5, 0, -0.5);
