@@ -1,7 +1,7 @@
-# guard/ — 守卫任务系统（Guard）总领性文档
+# guard/ — 守卫任务系统（Guard）+ NPC 自防御 总领性文档
 
-> 文档编号：12 / 版本：0.2 / 状态：实现中
-> 本文是**守卫任务系统**的总纲：先定可独立开发的模块和依赖关系，再按阶段一步步拆解实现。每个模块的实现细节后续各自落在 `docs/guard/<module>.md`。
+> 文档编号：12 / 版本：0.3 / 状态：实现中
+> 本文是**守卫任务系统** + **NPC 自防御**的总纲。守卫任务是建筑中心的全局任务；自防御是独立于守卫任务的 NPC 中心机制（主动仇恨半径 + 受伤反击），共享同一套战斗引擎（`GuardCombat`）。
 
 ## 一、目标与范围
 
@@ -137,3 +137,70 @@ Monster 进入某建筑 AABB 水平 +10 区
 - 魔法阵视觉层设计：`magicarchitecture/magic.md`、`magic-circles.md`、`magic-design-principles.md`
 - 现成魔法阵示例 spec：`magicarchitecture/example-specs/arcane_hexagram.json`
 - 代码结构总纲：`architecture/README.md`
+
+---
+
+# NPC 自防御（独立子系统，v1.7.0）
+
+## 一、目标与范围
+
+**要解决的问题**：建筑守卫只覆盖"空闲 NPC 守建筑"。NPC 若在城镇外、或正在执行其它任务，被怪打不反击、也不会主动攻击身边的怪。自防御补齐：**每个 NPC 独立**拥有
+- **主动仇恨半径**：`guard.selfDefenseRange`(12) 内的敌对生物**无条件攻击**。
+- **受伤仇恨**：被非玩家攻击者打伤后记仇（`guard.hateRange`=32 内、`guard.hateDurationTicks`=600 过期，每次被打刷新），优先反击攻击者。
+
+**优先级最高**：有目标时**抢占**当前任务（暂停），击杀/目标消失后**恢复**原任务。
+
+**独立于守卫任务**：守卫任务走全局任务池（`TaskRequest → GlobalTaskPool → SchedulerSystem` 派空闲 NPC）；自防御走 **NPC 私有任务队列**（`NpcTaskQueue`），不经过全局池（无审批、可直接抢占）。两者复用同一套**战斗引擎** `GuardCombat`（光束重定向 / LOS / 隔墙寻路 / 施法节流）。
+
+**互相战斗**：守卫与自防御的光束伤害都记为 NPC 造成（`DamageSources.indirectMagic(casterNpc, beam)`），怪物 `HurtByTargetGoal` 会反击 NPC → 受伤仇恨实际触发。玩家施法保持 `magic()` 不变（无施法者、不记仇恨）。
+
+**边界**：
+- 只对 `Enemy`（敌对生物）记仇/攻击——光束也只伤 `Enemy`，对非 Enemy 记仇会空转。
+- 玩家、其它 NPC 的伤害不记仇（友伤排除）。
+- 不扩展怪物 AI、不做追逐（自防御原地/寻路到能打到的位置施法，不追杀脱离目标）。
+
+## 二、核心闭环
+
+```
+[侦测] NPC 周围 guard.selfDefenseRange(12) 内有 Enemy  /  NPC 被非玩家攻击者打伤（记仇）
+  → SelfDefenseExecutor.detectAndInject（每4tick）：
+      已有自防御/守卫战斗包 → 跳过
+      有目标 → 分离 pendingFuture（若正卡异步op）→ queue.suspendCurrent → startPackage(self_defense)
+  → 任务执行系统执行 SelfDefenseOp → SelfDefenseExecutor 持续循环（每10tick）：
+      目标 = 仇恨目标(存活/非玩家/hateRange内) 优先 → 否则半径内最近 Enemy
+      无目标 → complete future → 队列自动 resumeLatest 恢复挂起任务
+      有目标 → GuardCombat.engage：光束重定向→LOS→隔墙寻路→施法
+  → 光束每 tick 伤害束内 Enemy（记为 NPC 造成）→ 怪物反击 NPC → 受伤记仇 → 循环
+```
+
+## 三、模块/文件
+
+| 模块 | 位置 | 职责 |
+|------|------|------|
+| `SelfDefenseOp(radius, circleId, color)` | `op/api/AtomicOp.java` | sealed 新变体（第10个），target()=null 不走路、耗蓝 0 |
+| `SelfDefenseExecutor` | `guard/executor/SelfDefenseExecutor.java` | 持续循环 + 侦测抢占注入；`tick(World)` 由 `onServerTick` 驱动 |
+| `SelfDefenseHandler` | `guard/SelfDefenseHandler.java` | NeoForge `LivingIncomingDamageEvent` → 记仇（非玩家非NPC的 Enemy） |
+| `GuardCombat` | `guard/executor/GuardCombat.java` | 共享战斗引擎（守卫 + 自防御复用） |
+| 仇恨状态 | `npc/entity/WandscapeNpc.java` | `hatedAttackerUuid`/`hateExpiryTick` + `getHatedAttacker`/`clearHatedAttackerIfExpired`；状态"战斗中" |
+| 配置 | `Config.java` | `guard.selfDefenseRange`(12) / `guard.hateRange`(32) / `guard.hateDurationTicks`(600) |
+
+## 四、抢占与恢复（关键机制）
+
+- 复用 `NpcTaskQueue.suspendCurrent/resumeLatest`（已有基础设施，自防御是首个真实消费者）。
+- **边界处理**：挂起时若 NPC 正卡异步 op（`pendingFuture` 未完成），先分离该 future（底层执行器独立推进、完成后 `startAsyncOp` 自动清理；导航 future 则取消导航），否则任务执行系统会一直等旧 future、不执行自防御包。
+- **挂起栈满（深度3）**：跳过本次抢占，不覆盖当前包。
+- **进度保护**：`TaskExecutionSystem.syncStepToPool` 现在只在当前包为 `global:*` 时同步 stepIndex 到全局任务池——否则自防御的 step 会覆盖被挂起全局任务的进度。
+- 完成后队列 `finishCurrentPackage → startNextPending → resumeLatest` 恢复原包（含 stepIndex），NPC 按包 stance 寻路回去继续。
+
+## 五、注册点
+
+| 注册点 | 位置 |
+|--------|------|
+| `SelfDefenseExecutor` OpExecutor 注册 + `WandscapeEngine.setSelfDefenseExecutor` | `engine/bootstrap/EngineBootstrap.java` + `engine/WandscapeEngine.java` |
+| `SelfDefenseHandler` NeoForge 事件订阅 | `Wandscape.java` 构造器 `EVENT_BUS.register` |
+| `SelfDefenseExecutor.tick(world)` 驱动 | `Wandscape.java` `onServerTick`（守卫 ①f 之后 ①g） |
+| `LivingIncomingDamageEvent`（NeoForge 1.21.1，`LivingHurtEvent` 已改名） | `guard/SelfDefenseHandler.java` |
+
+## 六、单测
+
+- `NpcTaskQueuePreemptionTest`：suspend→注入→finish 恢复挂起包且 stepIndex 不丢；挂起栈满防覆盖；空闲 NPC 抢占后回空闲。

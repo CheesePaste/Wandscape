@@ -361,3 +361,16 @@
 - **优先级 49**：< 50 避开 `autoApproveTasks=false` 的 PENDING_APPROVAL 门（同修复任务先例），且高于普通建造任务 ~40。
 - **主动切换最近目标**：执行器每 ~10 tick 重选最近 `Enemy` 并把当前光束 `MagicBeamEntity.retarget()` 到新目标——光束持续跟随最近怪物，而不是每束只锁一个。
 - **隔墙智能寻路**：LOS（持杖手→目标中心）被方块挡时，执行器经 `MovementOps.navigateTo` 向怪物位置寻路（寻路绕过墙体），LOS 一清就 `cancelNavigation` 停手施法；任务完成时停寻路、光束快速淡出。
+
+## NPC 自防御（2026-08-02）
+
+NPC 不再"只会挨打"：主动仇恨半径内无条件攻击 + 被非玩家打伤后仇恨反击；优先级最高，暂停当前任务打完恢复。**独立于守卫任务**（守卫=建筑中心全局池；自防御=NPC 中心私有队列抢占），复用同一战斗引擎。
+
+- **私有队列抢占，不走全局池**：自防御注入 `NpcTaskQueue`（`suspendCurrent`→`startPackage("self_defense")`），绕过 `GlobalTaskPool`/`SchedulerSystem`——因为是 NPC 个体反应、需抢占当前任务，且不能进 PENDING_APPROVAL。完成后队列 `resumeLatest` 自动恢复原包（stepIndex 不丢）。`NpcTaskQueue` 的 suspend/resume 基础设施此前无生产调用，自防御是首个真实消费者。
+- **抢占边界**：挂起时若 NPC 正卡异步 op（`pendingFuture` 未完成），先分离 future（底层执行器独立推进、完成后 `World.startAsyncOp` 自动清理；导航 future 取消导航），否则任务执行系统会一直等旧 future、不执行自防御包；挂起栈满（深度3）跳过不覆盖当前包。
+- **syncStepToPool 修复**：`TaskExecutionSystem.syncStepToPool` 现只在当前包为 `global:*` 时同步 stepIndex——否则自防御的 step 会覆盖被挂起全局任务的进度，恢复后从错误步骤继续。这是自防御抢占引入的核心修复。
+- **仇恨 Enemy-only**：只对 `Enemy` 记仇/攻击。光束伤害（`MagicBeamEntity`）只伤 Enemy，对非 Enemy 记仇会导致反击打不死的空转；玩家/其它 NPC 伤害排除（友伤）。
+- **互相战斗（光束归属）**：守卫与自防御的光束伤害记为 NPC 造成（`DamageSources.indirectMagic(casterNpc, beam)` → `source.getEntity()=NPC`），怪物 `HurtByTargetGoal` 会反击 NPC → 受伤仇恨实际触发；玩家施法保持 `magic()`（无施法者）。配合 `HostileTargetingHandler`（NPC 已是村民级索敌目标），闭环成立。
+- **主动切换目标**：自防御复用 `GuardCombat`（光束重定向/LOS/隔墙寻路/施法节流），每 ~10 tick 重选目标（仇恨优先→半径最近），光束持续跟随最近怪物。
+- **配置**：`guard.selfDefenseRange`(12 主动仇恨半径)、`guard.hateRange`(32 反击距离)、`guard.hateDurationTicks`(600 记仇时长，每次被打刷新)。
+- **版本**：v1.7.0a（第二位 +1 新子系统）。
