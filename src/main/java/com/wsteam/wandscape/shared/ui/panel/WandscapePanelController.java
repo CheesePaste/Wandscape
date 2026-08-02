@@ -152,16 +152,28 @@ public final class WandscapePanelController {
             RoadPlacementState.ToolMode toolMode = RoadPlacementOverlay.getToolModeClicked(mouseX, mouseY, screenW, screenH);
             if (toolMode != null) {
                 RoadPlacementState.setActiveTool(toolMode);
-                RoadPlacementState.enterPlacing();
-                WandscapePanelState.releaseCursorToGame();
-                if (mc.player != null) {
-                    String hint = switch (toolMode) {
-                        case SPLINE -> "[Spline Road] §aRight-click set start point, Left-click set end point, Enter to calculate Bezier path & submit";
-                        case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
-                        default -> "[Road Replace] §aRight-click set start, Left-click set end, Enter to submit";
-                    };
-                    mc.player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal(hint), true);
+                if (toolMode == RoadPlacementState.ToolMode.SPLINE) {
+                    // SPLINE mode: open ImGui Spline Road Editor
+                    com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
+                    com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
+                    if (mc.player != null) {
+                        mc.player.displayClientMessage(
+                                net.minecraft.network.chat.Component.literal(
+                                        "[Spline Editor] §aImGui editor opened — use the panel to add/edit/delete anchor points"),
+                                true);
+                    }
+                } else {
+                    // REPLACE / DESTROY_FILL: enter PLACING phase as before
+                    RoadPlacementState.enterPlacing();
+                    WandscapePanelState.releaseCursorToGame();
+                    if (mc.player != null) {
+                        String hint = switch (toolMode) {
+                            case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
+                            default -> "[Road Replace] §aRight-click set start, Left-click set end, Enter to submit";
+                        };
+                        mc.player.displayClientMessage(
+                                net.minecraft.network.chat.Component.literal(hint), true);
+                    }
                 }
                 event.setCanceled(true);
                 return;
