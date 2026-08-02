@@ -42,8 +42,6 @@ public final class SplineEditorOverlay {
     private static final int FIELD_H = 18;
     private static final int ROW_H = 18;
     private static final int POINT_LIST_ROWS = 5;
-    /** Reserve room at the bottom for the ROAD placement bar while it is visible. */
-    private static final int ROAD_BAR_RESERVE = 112;
 
     private static int panelX, panelY, panelW, panelH;
 
@@ -104,8 +102,13 @@ public final class SplineEditorOverlay {
     public static boolean isOverRoadBar() {
         if (!RoadPlacementState.isProjecting()) return false;
         Minecraft mc = Minecraft.getInstance();
-        int sh = mc.getWindow().getGuiScaledHeight();
-        return guiMY() > sh - ROAD_BAR_RESERVE;
+        return guiMY() > mc.getWindow().getGuiScaledHeight() - roadBarReserve();
+    }
+
+    /** Current ROAD placement bottom-bar height, matching the actual rendered overlay. */
+    private static int roadBarReserve() {
+        Minecraft mc = Minecraft.getInstance();
+        return RoadPlacementOverlay.getPanelHeight(mc.getWindow().getGuiScaledWidth());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -129,7 +132,7 @@ public final class SplineEditorOverlay {
         panelW = Math.min(PANEL_W, sw - PANEL_MARGIN * 2);
         panelX = sw - panelW - PANEL_MARGIN;
         panelY = PANEL_MARGIN;
-        int reserve = RoadPlacementState.isProjecting() ? ROAD_BAR_RESERVE : PANEL_MARGIN;
+        int reserve = RoadPlacementState.isProjecting() ? roadBarReserve() : PANEL_MARGIN;
         panelH = sh - PANEL_MARGIN - reserve;
     }
 

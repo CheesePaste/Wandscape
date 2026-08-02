@@ -34,6 +34,19 @@ public final class RoadPlacementOverlay {
     static final int CELL_GAP = 4;
     private static final int GRID_PAD_X = 12;
     private static final int GRID_PAD_TOP = 10;
+    /** 4 tool buttons (Replace / Fill / Destroy-Fill / Spline) stacked at 32px + 10px gaps. */
+    private static final int TOOLS_COLUMN_H = 4 * 32 + 3 * 10;
+
+    /** Height of the ROAD placement bottom bar, given the scaled screen width. */
+    public static int getPanelHeight(int screenW) {
+        int toolsWidth = 100;
+        int toolsStartX = com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay.SIDEBAR_W + GRID_PAD_X;
+        int gridAreaW = screenW - toolsStartX - GRID_PAD_X - toolsWidth;
+        int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
+        int rows = (RoadPlacementState.getPresets().size() + cols - 1) / cols;
+        int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
+        return GRID_PAD_TOP + Math.max(gridH, TOOLS_COLUMN_H) + 10;
+    }
 
     private static final int PANEL_BG = 0xEE14161C;
     private static final int PANEL_BORDER = 0xFF3A3E47;
@@ -71,7 +84,7 @@ public final class RoadPlacementOverlay {
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10; // Ensure enough height for 2 buttons
+        int panelH = getPanelHeight(screenW); // Ensure enough height for all tool buttons
         int panelY = screenH - panelH;
         int gridX = toolsStartX + toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
@@ -103,11 +116,13 @@ public final class RoadPlacementOverlay {
         int btnH = 32;
 
         drawToolButton(g, font, toolsStartX, toolsStartY, btnW, btnH, mx, my,
-                "Spline", RoadPlacementState.ToolMode.SPLINE);
-        drawToolButton(g, font, toolsStartX, toolsStartY + btnH + 10, btnW, btnH, mx, my,
                 "Replace", RoadPlacementState.ToolMode.REPLACE);
+        drawToolButton(g, font, toolsStartX, toolsStartY + btnH + 10, btnW, btnH, mx, my,
+                "Fill", RoadPlacementState.ToolMode.FILL);
         drawToolButton(g, font, toolsStartX, toolsStartY + (btnH + 10) * 2, btnW, btnH, mx, my,
                 "Destroy/Fill", RoadPlacementState.ToolMode.DESTROY_FILL);
+        drawToolButton(g, font, toolsStartX, toolsStartY + (btnH + 10) * 3, btnW, btnH, mx, my,
+                "Spline", RoadPlacementState.ToolMode.SPLINE);
 
         // Flush backgrounds before 3D preview
         g.bufferSource().endBatch(RenderType.guiOverlay());
@@ -210,7 +225,7 @@ public final class RoadPlacementOverlay {
         int rows = (presets.size() + cols - 1) / cols;
         int gridW = cols * (CELL_W + CELL_GAP) - CELL_GAP;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
+        int panelH = getPanelHeight(screenW);
         int panelY = screenH - panelH;
         int gridX = toolsStartX + toolsWidth + GRID_PAD_X + (gridAreaW - gridW) / 2;
         int gridStartY = panelY + GRID_PAD_TOP;
@@ -240,7 +255,7 @@ public final class RoadPlacementOverlay {
         int cols = Math.max(1, gridAreaW / (CELL_W + CELL_GAP));
         int rows = (presets.size() + cols - 1) / cols;
         int gridH = rows * (CELL_H + CELL_GAP) - CELL_GAP;
-        int panelH = GRID_PAD_TOP + Math.max(gridH, 74) + 10;
+        int panelH = getPanelHeight(screenW);
         int panelY = screenH - panelH;
 
         int toolsStartY = panelY + GRID_PAD_TOP;
@@ -250,9 +265,10 @@ public final class RoadPlacementOverlay {
         if (mx < toolsStartX || mx > toolsStartX + btnW) return null;
 
         RoadPlacementState.ToolMode[] order = {
-                RoadPlacementState.ToolMode.SPLINE,
                 RoadPlacementState.ToolMode.REPLACE,
-                RoadPlacementState.ToolMode.DESTROY_FILL
+                RoadPlacementState.ToolMode.FILL,
+                RoadPlacementState.ToolMode.DESTROY_FILL,
+                RoadPlacementState.ToolMode.SPLINE
         };
         for (int i = 0; i < order.length; i++) {
             int btnY = toolsStartY + i * (btnH + 10);

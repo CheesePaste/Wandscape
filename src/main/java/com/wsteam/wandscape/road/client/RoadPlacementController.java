@@ -227,7 +227,23 @@ public final class RoadPlacementController {
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
 
-        if (RoadPlacementState.isSpline()) {
+        if (RoadPlacementState.isFill()) {
+            String presetId = RoadPlacementState.getSelectedPreset().id();
+            PacketDistributor.sendToServer(new FillBoxPacket(presetId, start, end));
+            Log.info(TAG, "[Fill] Published box: preset={} from={} to={}",
+                    presetId, start.toShortString(), end.toShortString());
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Fill] §aFill task submitted! NPC will fill the cube."), true);
+            }
+        } else if (RoadPlacementState.isDestroyFill()) {
+            PacketDistributor.sendToServer(new DestroyFillPacket(start, end));
+            Log.info(TAG, "[DestroyFill] Published: ref={} to={}", start.toShortString(), end.toShortString());
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Destroy/Fill] §aTerrain flatten task submitted! NPC will flatten the area."), true);
+            }
+        } else if (RoadPlacementState.isSpline()) {
             String presetId = RoadPlacementState.getSelectedPreset().id();
             String tilesJson = "[{\"pos\":[" + start.getX() + "," + start.getY() + "," + start.getZ() + "],\"block\":\"" + presetId + "\"},{\"pos\":[" + end.getX() + "," + end.getY() + "," + end.getZ() + "],\"block\":\"" + presetId + "\"}]";
             String splineJson = "[{\"a\":[" + start.getX() + "," + start.getY() + "," + start.getZ() + "],\"p\":[0,0,0],\"n\":[0,0,0],\"l\":false},{\"a\":[" + end.getX() + "," + end.getY() + "," + end.getZ() + "],\"p\":[0,0,0],\"n\":[0,0,0],\"l\":false}]";
@@ -237,13 +253,6 @@ public final class RoadPlacementController {
             if (mc.player != null) {
                 mc.player.displayClientMessage(
                         Component.literal("[Spline Road] §aSpline road task submitted! NPC will pave the curve."), true);
-            }
-        } else if (RoadPlacementState.isDestroyFill()) {
-            PacketDistributor.sendToServer(new DestroyFillPacket(start, end));
-            Log.info(TAG, "[DestroyFill] Published: ref={} to={}", start.toShortString(), end.toShortString());
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Destroy/Fill] §aTerrain flatten task submitted! NPC will flatten the area."), true);
             }
         } else {
             String presetId = RoadPlacementState.getSelectedPreset().id();
@@ -262,8 +271,9 @@ public final class RoadPlacementController {
 
     /** Chat prefix for the active tool mode. */
     private static String tag() {
-        if (RoadPlacementState.isSpline()) return "[Spline Road]";
+        if (RoadPlacementState.isFill()) return "[Fill]";
         if (RoadPlacementState.isDestroyFill()) return "[Destroy/Fill]";
+        if (RoadPlacementState.isSpline()) return "[Spline Road]";
         return "[Road]";
     }
 

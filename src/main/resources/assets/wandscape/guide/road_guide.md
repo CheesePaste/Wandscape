@@ -12,18 +12,19 @@
 1. 在游戏内按下键盘 **`V` 键** 打开 Wandscape 控制面板。
 2. 点击左侧工具栏的 **【Road / 道路】图标**，即可开启道路施工投影模式。
 
-### 步骤二：如何在 3 种模式之间切换
+### 步骤二：如何在 4 种模式之间切换
 - 按下 **`C` 键** 可以在【光标选择 UI 面板】与【准心视线交互】之间快速切换。
-- **模式切换**：光标状态下，在左侧工具栏中点击切换 **`SPLINE`**、**`REPLACE`** 或 **`DESTROY/FILL`**。
+- **模式切换**：光标状态下，在左侧工具栏中点击切换 **`REPLACE`**、**`FILL`**、**`DESTROY/FILL`** 或 **`SPLINE`**。
 - **材质预设切换**：双击底部卡片挑选石砖、石板、泥土路或铺面。
 
-### 三种模式对比
+### 四种模式对比
 
 | 模式 | 入口行为 | 适用场景 |
 | :--- | :--- | :--- |
-| **Spline** | ROAD 面板内嵌样条编辑器（V 面板不关） | 优雅弯道、环形路、3D 立体曲线 |
 | **Replace** | 进入世界内两点放置模式 | 直线地表石砖路平铺与替换 |
+| **Fill** | 进入世界内两角点立方体填充模式 | 填满两角之间的立方体区域 |
 | **Destroy/Fill** | 进入世界内参考方块选取模式 | 批量平整地形与清理障碍 |
+| **Spline** | ROAD 面板内嵌样条编辑器（V 面板不关） | 优雅弯道、环形路、3D 立体曲线 |
 
 ---
 
@@ -31,8 +32,8 @@
 
 | 核心参数 / 属性 | 类型 / 范围 | 详细作用机制与计算影响 |
 | :--- | :--- | :--- |
-| **`ToolMode`** | Enum (`SPLINE / REPLACE / DESTROY_FILL`) | 道路建造工具的核心模式。模式 1 `SPLINE` 打开内嵌样条线编辑器，模式 2 `REPLACE` 为直线地表替换，模式 3 `DESTROY_FILL` 为带基准高度清理。 |
-| **`RoadPhase`** | Enum (`BAR / PLACING`) | `BAR` 状态下光标释放，用于在选单中挑选 Preset 材质与模式；`PLACING` 状态下光标锁定准心，用于在世界中点击 `StartPos` / `EndPos`。仅 REPLACE 与 DESTROY_FILL 使用。 |
+| **`ToolMode`** | Enum (`REPLACE / FILL / DESTROY_FILL / SPLINE`) | 道路建造工具的核心模式。模式 1 `REPLACE` 为直线地表替换，模式 2 `FILL` 为两角点立方体填充，模式 3 `DESTROY_FILL` 为带基准高度清理，模式 4 `SPLINE` 打开内嵌样条线编辑器。 |
+| **`RoadPhase`** | Enum (`BAR / PLACING`) | `BAR` 状态下光标释放，用于在选单中挑选 Preset 材质与模式；`PLACING` 状态下光标锁定准心，用于在世界中点击 `StartPos` / `EndPos`。仅 REPLACE、FILL 与 DESTROY_FILL 使用。 |
 | **`Reach Distance`** | Float (`64.0 / 128.0 Blocks`) | 准心射线检测最大有效射程距离。REPLACE/DESTROY_FILL 为 64 格，Spline 编辑器为 128 格。 |
 | **`SplineBuildPacket`** | Network Payload | Spline 编辑器 Build Array Task 触发。包含全量 3D Bezier 曲线 JSON 数据与道路方块阵列，服务端批量生成道路。 |
 
