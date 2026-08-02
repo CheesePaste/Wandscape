@@ -26,8 +26,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Scanner GUI built on MedievalScreen MINIMAL theme.
- * Features strict Scissor clipping to prevent scroll overflow, spacious layout,
- * and custom drawMinimalBox buttons matching TownHallCreateScreen style.
+ * Features strict Scissor clipping, highlighted edit box borders (focused/hovered glow),
+ * spacious layout, and custom drawMinimalBox buttons matching TownHallCreateScreen style.
  */
 public class BuildingScannerScreen extends MedievalScreen {
 
@@ -109,8 +109,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     private int shopCatY, svcCatY;
     private int exportBtnY;
 
-    // ── Field Background Inset Rectangles ──
-    private record FieldRect(int x, int y, int w, int h) {}
+    // ── Field Background Inset Rectangles with EditBox reference ──
+    private record FieldRect(int x, int y, int w, int h, EditBox box) {}
     private final List<FieldRect> insetFields = new ArrayList<>();
 
     // ── Column layout constants (Spacious: max right edge <= lx + 320) ──
@@ -506,18 +506,17 @@ public class BuildingScannerScreen extends MedievalScreen {
     // ── Widget creation helpers ──
 
     private EditBox mkEdit(int x, int y, int w, String val, Consumer<String> r) {
-        insetFields.add(new FieldRect(x, y, w, 20));
         EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setValue(val);
         box.setBordered(false);
         box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(r);
+        insetFields.add(new FieldRect(x, y, w, 20, box));
         return addRenderableWidget(box);
     }
 
     private EditBox mkNumEdit(int x, int y, int w, int val, Consumer<String> r) {
-        insetFields.add(new FieldRect(x, y, w, 20));
         EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setFilter(s -> s.matches("\\d*"));
         box.setValue(String.valueOf(val));
@@ -525,6 +524,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(r);
+        insetFields.add(new FieldRect(x, y, w, 20, box));
         return addRenderableWidget(box);
     }
 
@@ -621,7 +621,6 @@ public class BuildingScannerScreen extends MedievalScreen {
     }
 
     private EditBox mkZoneEdit(int x, int y, int w, int val, Runnable onChange) {
-        insetFields.add(new FieldRect(x, y, w, 20));
         EditBox box = new EditBox(font, x + 2, y + 2, w - 4, 14, Component.empty());
         box.setMaxLength(6);
         box.setFilter(s -> s.matches("-?\\d{0,6}"));
@@ -630,6 +629,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(s -> onChange.run());
+        insetFields.add(new FieldRect(x, y, w, 20, box));
         return addRenderableWidget(box);
     }
 
@@ -980,10 +980,12 @@ public class BuildingScannerScreen extends MedievalScreen {
         // Enable strict Scissor clipping for all internal text and custom buttons
         gui.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
 
-        // Render inset dark field backgrounds for all edit boxes inside scissor
+        // Render inset dark field backgrounds with glowing gold borders for all edit boxes inside scissor
         for (FieldRect f : insetFields) {
             if (f.y() + f.h() > clipTop && f.y() < clipBottom) {
-                drawInsetField(gui, f.x(), f.y(), f.w(), f.h());
+                boolean focused = f.box() != null && f.box().isFocused();
+                boolean hover = isInRect(mx, my, f.x(), f.y(), f.w(), f.h());
+                drawEditBoxBorder(gui, f.x(), f.y(), f.w(), f.h(), focused, hover);
             }
         }
 
@@ -1101,6 +1103,21 @@ public class BuildingScannerScreen extends MedievalScreen {
         gui.disableScissor();
 
         super.render(gui, mx, my, pt);
+    }
+
+    /** Draw custom border for edit box fields with focused/hovered glow effects. */
+    private void drawEditBoxBorder(GuiGraphics gui, int x, int y, int w, int h, boolean focused, boolean hover) {
+        drawInsetField(gui, x, y, w, h);
+        int borderColor = focused ? MedievalColors.BORDER_GOLD 
+                        : (hover ? 0xAAFFD700 : 0x55806848);
+        gui.fill(x, y, x + w, y + 1, borderColor);
+        gui.fill(x, y + h - 1, x + w, y + h, borderColor);
+        gui.fill(x, y, x + 1, y + h, borderColor);
+        gui.fill(x + w - 1, y, x + w, y + h, borderColor);
+
+        if (focused) {
+            gui.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0x18FFD700);
+        }
     }
 
     /** Draw bold section header with medieval gold theme. */
