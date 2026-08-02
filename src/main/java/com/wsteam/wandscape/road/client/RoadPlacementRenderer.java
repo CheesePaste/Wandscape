@@ -84,8 +84,8 @@ public final class RoadPlacementRenderer {
         BlockPos to = (endPos != null) ? endPos : ghostPos;
 
         if (from != null && to != null) {
-            if (RoadPlacementState.isSpline()) {
-                renderPathPreview(mc.level, bufferSource, poseStack, from, to);
+            if (RoadPlacementState.isFill()) {
+                renderBoxPreview(bufferSource, poseStack, from, to);
             } else {
                 renderPathPreview(mc.level, bufferSource, poseStack, from, to);
             }

@@ -166,11 +166,15 @@ public final class WandscapePanelController {
                                 true);
                     }
                 } else {
-                    // REPLACE / DESTROY_FILL: enter PLACING phase as before
+                    // REPLACE / FILL / DESTROY_FILL: leave the spline editor, enter PLACING phase as before
+                    if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+                        com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                    }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
                     if (mc.player != null) {
                         String hint = switch (toolMode) {
+                            case FILL -> "[Fill] §aRight-click set corner 1, Left-click set corner 2, Enter to submit";
                             case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
                             default -> "[Road Replace] §aRight-click set start, Left-click set end, Enter to submit";
                         };
