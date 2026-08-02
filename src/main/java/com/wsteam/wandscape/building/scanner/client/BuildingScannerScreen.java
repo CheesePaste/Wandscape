@@ -26,8 +26,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Scanner GUI built on MedievalScreen MINIMAL theme.
- * Features strict Scissor clipping, highlighted edit box borders (focused/hovered glow),
- * spacious layout, and custom drawMinimalBox buttons matching TownHallCreateScreen style.
+ * Features 6 boundary expand buttons (X±1, Y±1, Z±1), auto door detection & cycling,
+ * strict Scissor clipping, edit box highlights, and custom drawMinimalBox buttons.
  */
 public class BuildingScannerScreen extends MedievalScreen {
 
@@ -51,6 +51,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
+    private int detectedDoorIndex = -1;
 
     // ── Tourist interact zones ──
     private final List<ZoneRow> zoneRows = new ArrayList<>();
@@ -114,8 +115,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     private final List<FieldRect> insetFields = new ArrayList<>();
 
     // ── Column layout constants (Spacious: max right edge <= lx + 320) ──
-    private static final int COL2 = 70;  // input fields start here
-    private static final int FW = 54;    // default field width
+    private static final int COL2 = 60;  // input fields start here
+    private static final int FW = 48;    // default field width
     private static final int ROW_H = 24; // vertical row spacing
 
     public BuildingScannerScreen(BuildingScannerBlockEntity scanner) {
@@ -187,6 +188,15 @@ public class BuildingScannerScreen extends MedievalScreen {
 
             // Boundary Card Row
             boundaryCardY = y;
+            y += 24;
+
+            // 6 Boundary Expand Buttons (X±1, Y±1, Z±1)
+            addCustomButton(lx, y, 48, 20, "X-1", () -> { scanner.adjustBoundary(-1, 0, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
+            addCustomButton(lx + 52, y, 48, 20, "X+1", () -> { scanner.adjustBoundary(0, 0, 0, 1, 0, 0); syncToServer(); needsRebuild = true; });
+            addCustomButton(lx + 104, y, 48, 20, "Y-1", () -> { scanner.adjustBoundary(0, -1, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
+            addCustomButton(lx + 156, y, 48, 20, "Y+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 1, 0); syncToServer(); needsRebuild = true; });
+            addCustomButton(lx + 208, y, 48, 20, "Z-1", () -> { scanner.adjustBoundary(0, 0, -1, 0, 0, 0); syncToServer(); needsRebuild = true; });
+            addCustomButton(lx + 260, y, 48, 20, "Z+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 0, 1); syncToServer(); needsRebuild = true; });
             y += 28;
 
             // Road Preset Identity (ID & Display Name)
@@ -241,6 +251,15 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         // ── Boundary Card Row ──
         boundaryCardY = y;
+        y += 24;
+
+        // 6 Boundary Expand Buttons (X±1, Y±1, Z±1)
+        addCustomButton(lx, y, 48, 20, "X-1", () -> { scanner.adjustBoundary(-1, 0, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
+        addCustomButton(lx + 52, y, 48, 20, "X+1", () -> { scanner.adjustBoundary(0, 0, 0, 1, 0, 0); syncToServer(); needsRebuild = true; });
+        addCustomButton(lx + 104, y, 48, 20, "Y-1", () -> { scanner.adjustBoundary(0, -1, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
+        addCustomButton(lx + 156, y, 48, 20, "Y+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 1, 0); syncToServer(); needsRebuild = true; });
+        addCustomButton(lx + 208, y, 48, 20, "Z-1", () -> { scanner.adjustBoundary(0, 0, -1, 0, 0, 0); syncToServer(); needsRebuild = true; });
+        addCustomButton(lx + 260, y, 48, 20, "Z+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 0, 1); syncToServer(); needsRebuild = true; });
         y += 28;
 
         // ── Door section ──
@@ -252,11 +271,13 @@ public class BuildingScannerScreen extends MedievalScreen {
         doorX = mkEdit(lx + COL2, doorEditY, FW, loadDoorStr(0), s -> onDoorChanged());
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
         doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
-        addCustomButton(lx + 260, doorEditY, 60, 20, "清除", () -> {
+        addCustomButton(lx + 218, doorEditY, 44, 20, "清除", () -> {
             scanner.setDoorOffset(null);
             doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
+            detectedDoorIndex = -1;
             syncToServer();
         });
+        addCustomButton(lx + 266, doorEditY, 54, 20, "自动检门", this::onAutoDetectDoor);
 
         // ── Tourist interact zones section ──
         addSectionHeader(y, "❖ 游览交互区 (" + scanner.getTouristInteractZones().size() + ")");
@@ -497,6 +518,23 @@ public class BuildingScannerScreen extends MedievalScreen {
         int bottom = exportBtnY + 60;
         int visibleHeight = height - 40;
         maxScroll = Math.min(0, visibleHeight - bottom);
+    }
+
+    private void onAutoDetectDoor() {
+        if (minecraft == null || minecraft.level == null) return;
+        List<BlockOffset> doors = scanner.detectDoors(minecraft.level);
+        if (doors.isEmpty()) {
+            scanResult = Component.literal("未在包围盒内检测到门方块");
+            return;
+        }
+        detectedDoorIndex = (detectedDoorIndex + 1) % doors.size();
+        BlockOffset target = doors.get(detectedDoorIndex);
+        scanner.setDoorOffset(target);
+        if (doorX != null) doorX.setValue(String.valueOf(target.x()));
+        if (doorY != null) doorY.setValue(String.valueOf(target.y()));
+        if (doorZ != null) doorZ.setValue(String.valueOf(target.z()));
+        scanResult = Component.literal("已选门 #" + (detectedDoorIndex + 1) + "/" + doors.size() + ": (" + target.x() + "," + target.y() + "," + target.z() + ")");
+        syncToServer();
     }
 
     private void addSectionHeader(int y, String title) {
@@ -756,13 +794,18 @@ public class BuildingScannerScreen extends MedievalScreen {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
                     if (bp.equals(scannerPos)) continue;
-                    if (minecraft != null && minecraft.level != null && !minecraft.level.getBlockState(bp).isAir()) {
-                        count++;
+                    if (minecraft != null && minecraft.level != null) {
+                        net.minecraft.world.level.block.state.BlockState state = minecraft.level.getBlockState(bp);
+                        // Auto-filter scanner blocks
+                        if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                        if (!state.isAir()) {
+                            count++;
+                        }
                     }
                 }
             }
         }
-        scanResult = Component.literal("已扫描 " + count + " 个有效方块");
+        scanResult = Component.literal("已扫描 " + count + " 个有效方块 (不含扫描器)");
     }
 
     private void doExport() {

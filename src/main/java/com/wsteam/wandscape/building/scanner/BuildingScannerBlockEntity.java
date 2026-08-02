@@ -207,6 +207,40 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         setChangedAndSync();
     }
 
+    public void adjustBoundary(int dMinX, int dMinY, int dMinZ, int dMaxX, int dMaxY, int dMaxZ) {
+        this.boundaryMin = BlockOffset.of(boundaryMin.x() + dMinX, boundaryMin.y() + dMinY, boundaryMin.z() + dMinZ);
+        this.boundaryMax = BlockOffset.of(boundaryMax.x() + dMaxX, boundaryMax.y() + dMaxY, boundaryMax.z() + dMaxZ);
+        setChangedAndSync();
+    }
+
+    /**
+     * Scans the current 3D boundary box for all Door blocks (DoorBlock or BlockTags.DOORS),
+     * returning their relative BlockOffsets from this scanner block.
+     * Only counts lower halves (DoubleBlockHalf.LOWER) to avoid duplicates.
+     */
+    public List<BlockOffset> detectDoors(@Nullable net.minecraft.world.level.Level level) {
+        if (level == null) return List.of();
+        BlockPos wMin = getWorldMin();
+        BlockPos wMax = getWorldMax();
+        if (wMin == null || wMax == null) return List.of();
+
+        List<BlockOffset> list = new ArrayList<>();
+        BlockPos myPos = getBlockPos();
+
+        for (BlockPos pos : BlockPos.betweenClosed(wMin, wMax)) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(pos);
+            if (st.is(net.minecraft.tags.BlockTags.DOORS) || st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                if (st.hasProperty(net.minecraft.world.level.block.DoorBlock.HALF)) {
+                    if (st.getValue(net.minecraft.world.level.block.DoorBlock.HALF) != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) {
+                        continue;
+                    }
+                }
+                list.add(BlockOffset.of(pos.getX() - myPos.getX(), pos.getY() - myPos.getY(), pos.getZ() - myPos.getZ()));
+            }
+        }
+        return list;
+    }
+
     @Nullable
     public BlockOffset getDoorOffset() { return doorOffset; }
     public void setDoorOffset(@Nullable BlockOffset off) {
