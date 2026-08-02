@@ -153,20 +153,20 @@ public final class WandscapePanelController {
             if (toolMode != null) {
                 RoadPlacementState.setActiveTool(toolMode);
                 if (toolMode == RoadPlacementState.ToolMode.SPLINE) {
-                    // SPLINE mode: close V-panel, open ImGui Spline Road Editor
-                    // SplineEditorController takes over input (right-click camera, WASD flight, 3D axis gizmo drag)
-                    WandscapePanelState.exitCurrentSubMode();
-                    WandscapePanelState.closePanel();
+                    // SPLINE mode: keep the V-panel open and embed the native spline editor.
+                    // SplineEditorController takes over world input (right-click camera, WASD flight, gizmo drag).
                     com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                    com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                     if (mc.player != null) {
                         mc.player.displayClientMessage(
                                 net.minecraft.network.chat.Component.literal(
-                                        "[Spline Editor] §aImGui editor opened — Right-click+drag to rotate camera, WASD to fly, Left-click to add/select points, Drag axes to move, ESC to exit"),
+                                        "[Spline Editor] §a右侧面板编辑样条 — 右键转视角, WASD 飞行, 左键加点/选点, 拖轴移动, ESC 退出"),
                                 true);
                     }
                 } else {
-                    // REPLACE / DESTROY_FILL: enter PLACING phase as before
+                    // REPLACE / DESTROY_FILL: leave the spline editor, enter PLACING phase as before
+                    if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+                        com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                    }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
                     if (mc.player != null) {
@@ -187,6 +187,9 @@ public final class WandscapePanelController {
                 boolean doubleClicked = RoadPlacementState.handlePresetDoubleClick(presetIdx);
                 if (doubleClicked) {
                     // Double-click: confirm preset, enter PLACING phase (overlay hidden, cursor in game)
+                    if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+                        com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                    }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
                     if (mc.player != null) {
@@ -261,6 +264,10 @@ public final class WandscapePanelController {
     // ── Tab click → sub-mode switch ──
 
     private static void handleTabClick(int tabIndex) {
+        // Switching away from the ROAD tab while the spline editor is open leaves it.
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+        }
         WandscapePanelState.SubMode targetMode = switch (tabIndex) {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;

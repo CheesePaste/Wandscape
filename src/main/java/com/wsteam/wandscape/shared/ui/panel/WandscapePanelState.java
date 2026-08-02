@@ -501,6 +501,10 @@ public final class WandscapePanelState {
                 }
             }
             case ROAD_PROJECTION -> {
+                // Closing the ROAD mode / panel leaves the embedded spline editor.
+                if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+                    com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                }
                 if (RoadPlacementState.isProjecting()) {
                     RoadPlacementState.exitProjection();
                     releaseCursorToGame();

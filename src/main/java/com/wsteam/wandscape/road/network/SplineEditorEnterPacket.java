@@ -2,9 +2,9 @@ package com.wsteam.wandscape.road.network;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
-import com.wsteam.wandscape.imgui.ImGuiManager;
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -29,12 +29,14 @@ public record SplineEditorEnterPacket(boolean enter) implements CustomPacketPayl
 
     public static void handleClient(SplineEditorEnterPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
+            Minecraft mc = Minecraft.getInstance();
             if (packet.enter()) {
                 SplineEditorClientState.enterEditMode();
-                ImGuiManager.setVisible(true);
+                // Command entry: the V-panel is closed, so lift the cursor so the overlay is clickable.
+                if (mc.mouseHandler != null) mc.mouseHandler.releaseMouse();
             } else {
                 SplineEditorClientState.exitEditMode();
-                ImGuiManager.setVisible(false);
+                if (mc.mouseHandler != null) mc.mouseHandler.grabMouse();
             }
         });
     }

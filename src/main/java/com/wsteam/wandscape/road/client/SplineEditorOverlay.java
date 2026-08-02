@@ -100,6 +100,14 @@ public final class SplineEditorOverlay {
         return activeField != -1;
     }
 
+    /** True if the cursor sits over the ROAD placement bottom bar (its clicks belong to the panel, not the world). */
+    public static boolean isOverRoadBar() {
+        if (!RoadPlacementState.isProjecting()) return false;
+        Minecraft mc = Minecraft.getInstance();
+        int sh = mc.getWindow().getGuiScaledHeight();
+        return guiMY() > sh - ROAD_BAR_RESERVE;
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  Coordinates / layout
     // ═══════════════════════════════════════════════════════════════
