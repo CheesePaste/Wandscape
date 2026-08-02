@@ -1,6 +1,21 @@
-# 🧱 替换模式（Replace Mode）超详细傻瓜指南
+# 🧱 替换模式（Replace Mode）API 级详细指南
 
 替换模式用于将地表原有的草方块、泥土或沙石**直接替换为精美的道路铺面**。
+
+---
+
+## 📖 UI 控件与字段 API 级别明细字典 (UI Options API Reference)
+
+| 控件标识 / 属性 | 类型 / 范围 | 默认值 | 详细作用机制与计算影响 |
+| :--- | :--- | :--- | :--- |
+| **`ToolMode.REPLACE`** (模式切换) | Enum | `REPLACE` | 激活地表平铺替换算法。将框选范围内的地表顶层方块替换为选定的道路材质。 |
+| **`RoadPreset`** (材质预设) | Card Selector | `Cobblestone` | 从道路材质库中选择替换目标方块（如 *Cobblestone Road*, *Stone Brick Road*, *Dirt Path*）。双击卡片高亮选中。 |
+| **`RoadPhase`** (交互相态) | Enum (`BAR / PLACING`) | `BAR` | `BAR` (光标在 UI 上滑动选择预设与模式)；`PLACING` (按下 `C` 键释放光标，准心在世界中定点)。 |
+| **`StartPos`** (起点坐标) | BlockPos (`X, Y, Z`) | `null` | **`鼠标右键`** 瞄准地面触发。设置替换矩形区域的第一个基准顶点，在视口中高亮渲染红色边界框。 |
+| **`EndPos`** (终点坐标) | BlockPos (`X, Y, Z`) | `null` | **`鼠标左键`** 瞄准地面触发。与 `StartPos` 组合拉出平铺矩形区域，在视口中高亮渲染绿色包围框。 |
+| **`GhostPos`** (幽灵预览) | BlockPos | `null` | 准心 64 格射线裁剪（Reach Clip）检测到的视线所指悬停坐标，渲染白色半透明幽灵方块 preview。 |
+| **`Enter (回车提交)`** | Action Key | — | 校验 `StartPos` 与 `EndPos` 后，向服务端发送 `RoadPlacePacket` 包，批量替换区域内的地表方块。 |
+| **`Backspace (撤销端点)`** | Action Key | — | 优先撤销 `EndPos`；若已清空则撤销 `StartPos`。 |
 
 ---
 
@@ -26,7 +41,6 @@
 ## 🛠️ 常见问题排查（Troubleshooting）
 
 ### Q1: 按左键/右键没有反应？
-- **原因**：当前光标处于 UI 捕捉模式。
 - **解决**：按下 **`C` 键** 释放光标回到准心模式。
 
 ### Q2: 选错了起点怎么清除？
