@@ -21,7 +21,8 @@ public sealed interface AtomicOp
                 AtomicOp.ResourceRequestOp,
                 AtomicOp.EmitEventOp,
                 AtomicOp.IfConditionOp,
-                AtomicOp.ParallelOp {
+                AtomicOp.ParallelOp,
+                AtomicOp.AttackMonsterOp {
 
     /** Base mana cost for this operation (before wand efficiency). */
     float baseManaCost();
@@ -118,6 +119,29 @@ public sealed interface AtomicOp
         @Override
         public GridPos target() {
             return null; // targets an entity by ID, not a grid position
+        }
+    }
+
+    /**
+     * Guard combat: cast a magic circle + beam at the nearest hostile within a defended
+     * building zone. Positionless — the caster does NOT walk; the executor re-scans the
+     * zone each cycle and casts at whatever it can see.
+     *
+     * @param attackRange  horizontal X/Z expansion where monsters are attacked (Y unchanged)
+     * @param releaseRange horizontal X/Z expansion; the guard task completes only when no
+     *                     monster remains inside it (hysteresis, >= attackRange)
+     * @param circleId     magic circle spec id for the cast visual
+     * @param color        beam color (ARGB)
+     */
+    record AttackMonsterOp(int attackRange, int releaseRange, String circleId, int color) implements AtomicOp {
+        @Override
+        public float baseManaCost() {
+            return 0f; // guard casts are mana-free initially (M6 knob later)
+        }
+
+        @Override
+        public GridPos target() {
+            return null; // no stance / no navigation — cast from current position
         }
     }
 
