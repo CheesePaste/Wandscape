@@ -202,7 +202,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
 
     public TouristEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
-        setInvulnerable(true);
         setCustomNameVisible(true);
     }
 
@@ -276,7 +275,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     @Override
     public void onAddedToLevel() {
         super.onAddedToLevel();
-        setInvulnerable(true);
         syncName();
 
         if (getSkinVariant() < 0) {
