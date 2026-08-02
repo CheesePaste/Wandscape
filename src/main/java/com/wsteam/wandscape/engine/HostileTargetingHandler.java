@@ -8,6 +8,7 @@ import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
@@ -51,13 +52,13 @@ public final class HostileTargetingHandler {
     }
 
     /**
-     * 目标类型用 {@link VillagerLike}（接口）。运行时 {@code Level#getEntitiesOfClass} 走
-     * {@code clazz.isInstance()}，接口可用；仅编译期泛型约束 {@code T extends LivingEntity}
-     * 不满足接口，故 raw cast + 抑制警告。
+     * 目标类型必须是具体类而非接口：实体区块存储 {@code ClassInstanceMultiMap.find()} 只支持
+     * {@code Entity} 子类查找，接口会抛 IllegalArgumentException。故用 NPC/游客的公共父类
+     * {@link PathfinderMob}，再用谓词收窄到 {@link VillagerLike}，避免 engine 跨包引用实体类。
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private static Goal villagerLikeGoal(Mob mob) {
-        return new NearestAttackableTargetGoal(mob, (Class) VillagerLike.class, false);
+        return new NearestAttackableTargetGoal<>(mob, PathfinderMob.class, false,
+                e -> e instanceof VillagerLike);
     }
 
     private static boolean targetsVillagers(NearestAttackableTargetGoal<?> goal) {

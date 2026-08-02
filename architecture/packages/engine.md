@@ -34,7 +34,7 @@ ItemTransportManager：样条线数据发客户端（TransportRoute + SplineLeg 
 
 ## 敌对生物索敌（HostileTargetingHandler）
 
-`EntityJoinLevelEvent`：生物加入世界时若目标选择器已有对 AbstractVillager 的 `NearestAttackableTargetGoal`，则同优先级追加对 `shared/entity/VillagerLike` 的等价 goal。不枚举生物类，自动覆盖僵尸族/灾厄村民/劫掠兽，排除中立生物（僵尸猪灵）。
+`EntityJoinLevelEvent`：生物加入世界时若目标选择器已有对 AbstractVillager 的 `NearestAttackableTargetGoal`，则同优先级追加等价 goal——目标类型用公共父类 PathfinderMob + `instanceof VillagerLike` 谓词（实体区块存储 ClassInstanceMultiMap 只支持 Entity 子类查找、接口会崩）。不枚举生物类，自动覆盖僵尸族/灾厄村民/劫掠兽，排除中立生物（僵尸猪灵）。
 
 ## ColonyApiImpl（engine 根包）
 
