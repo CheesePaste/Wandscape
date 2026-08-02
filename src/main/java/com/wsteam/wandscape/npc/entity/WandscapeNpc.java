@@ -393,7 +393,7 @@ public class WandscapeNpc extends PathfinderMob {
     }
 
     /** Face the NPC toward a target block (yaw from horizontal, pitch from vertical angle). */
-    private void faceTarget(BlockPos target) {
+    public void faceTarget(BlockPos target) {
         double dx = target.getX() + 0.5 - getX();
         double dz = target.getZ() + 0.5 - getZ();
         float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;

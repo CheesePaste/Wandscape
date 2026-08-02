@@ -59,7 +59,7 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 
 `axis` 由施放方传入并**覆盖** spec 元素 axis——攻击阵的"法阵垂直于施法朝向"就靠它实现（地面阵不传时回落到 spec 元素 axis）。
 
-**shift+右键 NPC**：`MagicInteractHandler` 服务端拦截 `PlayerInteractEvent.EntityInteract`（不打开信息界面），NPC 沿其当前朝向（不改朝向）施放，`startManualCast(duration)` 窗口内 `isCasting=true` 举起法杖。NPC 与玩家共用同一去重（按 UUID）。
+**shift+右键 NPC**：`MagicInteractHandler` 服务端拦截 `PlayerInteractEvent.EntityInteract`（不打开信息界面），`MagicCaster.castNpc` 选 32 格内最近敌对生物（无则沿当前朝向）为目标，NPC 面向它施放，`startManualCast(duration)` 窗口内 `isCasting=true` 举起法杖。**动态跟踪**：光束每 tick 更新源点（跟随 NPC 持杖手，沿目标方向前移 2 格）与 DATA_TARGET（跟随生物坐标），NPC 随之转向；客户端 `MagicCircleEmitter` 按施法者 UUID 匹配光束实体，法阵跟随其源点/朝向。NPC 与玩家共用同一去重（按 UUID）。
 
 ## 注册点
 

@@ -1,8 +1,10 @@
 package com.wsteam.wandscape.magic.entity;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
@@ -23,9 +25,11 @@ import net.minecraft.world.phys.Vec3;
  * 目标与颜色经同步数据下发客户端，由 {@code MagicBeamEntityRenderer} 用原版
  * {@code BeaconRenderer.renderBeaconBeam} 渲染（原版 beam shader，可染色、光影下正常）。
  *
- * <p>不是子弹：起点/终点在生成时一次性定死，整段光束同时可见，不做位移。
+ * <p>不是子弹：整段光束同时可见、不做位移。若指定了施法 NPC 与目标生物，每 tick 动态跟踪——
+ * 源点跟随 NPC 持杖手（沿目标方向前移 {@link #STAFF_CENTER_OFFSET}），目标跟随生物当前坐标；
+ * 客户端据此渲染，光束随 NPC 转向。无目标时退化为固定源点→固定终点。
  * 光束粗细随时间动画——先慢慢变宽、再快速变窄（{@link #getWidthFactor}）。
- * 纯视觉实体：无 AI/碰撞/存档，短命后自毁。伤害由后续战斗 op（守卫阶段 1）负责。
+ * 纯视觉实体：无 AI/碰撞/存档，短命后自毁；每 tick 对束内敌对生物造成伤害。
  */
 public class MagicBeamEntity extends Entity {
 
@@ -36,9 +40,14 @@ public class MagicBeamEntity extends Entity {
     /** 光束总寿命（tick，由施放方按法阵时长传入并同步）。 */
     private static final EntityDataAccessor<Integer> DATA_LIFETIME =
             SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
+    /** 施法 NPC 的 UUID（同步，客户端用它匹配法阵跟随）。 */
+    private static final EntityDataAccessor<Optional<UUID>> DATA_CASTER =
+            SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.OPTIONAL_UUID);
 
     /** 默认寿命（tick），同步数据到达前的兜底。 */
     public static final int DEFAULT_LIFETIME_TICKS = 220;
+    /** 法阵圆心/光束源点距持杖手沿目标方向的偏移（方块）。 */
+    public static final double STAFF_CENTER_OFFSET = 2.0;
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后快速变细到消失。 */
     public static final float PEAK_T = 0.86f;
     /** 峰值时的光束/光晕半径（方块）。 */
@@ -50,6 +59,11 @@ public class MagicBeamEntity extends Entity {
     private static final float WIDTH_POWER = 1.4f;
     /** 光束满宽时每 tick 对束内敌对生物造成的伤害（当前按宽度因子正比，后续可加其他因素）。 */
     private static final float BEAM_DAMAGE = 2.0f;
+
+    /** 施法 NPC 实体引用（服务端跟踪用，null=静态光束）。 */
+    private WandscapeNpc casterNpc;
+    /** 目标生物实体引用（服务端跟踪用，null=静态光束）。 */
+    private Monster targetMob;
 
     public MagicBeamEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -87,11 +101,31 @@ public class MagicBeamEntity extends Entity {
         entityData.set(DATA_LIFETIME, Math.max(1, ticks));
     }
 
+    public Optional<UUID> getCasterUuid() {
+        return entityData.get(DATA_CASTER);
+    }
+
+    /** 记录施法者 UUID（同步，客户端法阵据此跟随本光束）。 */
+    public void setCaster(UUID uuid) {
+        entityData.set(DATA_CASTER, Optional.ofNullable(uuid));
+    }
+
+    /** 绑定施法 NPC 实体引用（服务端跟踪）。 */
+    public void bindCaster(WandscapeNpc npc) {
+        this.casterNpc = npc;
+    }
+
+    /** 绑定要跟踪的目标生物（服务端跟踪，null=静态光束）。 */
+    public void bindTarget(Monster mob) {
+        this.targetMob = mob;
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(DATA_TARGET, Optional.empty());
         builder.define(DATA_COLOR, 0xFFA8E0FF);
         builder.define(DATA_LIFETIME, DEFAULT_LIFETIME_TICKS);
+        builder.define(DATA_CASTER, Optional.empty());
     }
 
     private boolean loggedSpawn;
@@ -100,6 +134,7 @@ public class MagicBeamEntity extends Entity {
     public void tick() {
         super.tick();
         if (!level().isClientSide) {
+            trackTarget();
             damageTargets();
         }
         if (!loggedSpawn && tickCount >= 5) {
@@ -114,6 +149,22 @@ public class MagicBeamEntity extends Entity {
         }
         // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
         if (tickCount >= getLifetimeTicks()) discard();
+    }
+
+    /**
+     * 每 tick 动态跟踪：施法 NPC 面向目标生物，光束源点跟随 NPC 持杖手（沿目标方向前移
+     * {@link #STAFF_CENTER_OFFSET}），DATA_TARGET 跟随生物当前坐标。目标死亡/消失后冻结最后位置。
+     */
+    private void trackTarget() {
+        if (casterNpc == null || targetMob == null) return;
+        if (casterNpc.isRemoved() || targetMob.isRemoved() || !targetMob.isAlive()) return;
+
+        casterNpc.faceTarget(targetMob.blockPosition());
+        Vec3 hand = casterNpc.getStaffPosition();
+        Vec3 aimDir = targetMob.getBoundingBox().getCenter().subtract(hand).normalize();
+        Vec3 source = hand.add(aimDir.scale(STAFF_CENTER_OFFSET));
+        setPos(source.x, source.y, source.z);
+        setTarget(targetMob.blockPosition());
     }
 
     /**

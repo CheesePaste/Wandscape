@@ -11,13 +11,16 @@ import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.Easing;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.Element;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.ElementType;
+import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -64,7 +67,7 @@ public final class MagicCircleEmitter {
         ACTIVE.put(effectId, new ActiveCircle(level, spec, pos, axis));
     }
 
-    /** ClientTickEvent.Post：推进所有活跃法阵，到 t≥1 移除。 */
+    /** ClientTickEvent.Post：推进所有活跃法阵；跟随光束的更新源点/朝向，到 t≥1 移除。 */
     public static void tick() {
         var mc = Minecraft.getInstance();
         if (mc.level == null) {
@@ -72,11 +75,30 @@ public final class MagicCircleEmitter {
             return;
         }
         if (ACTIVE.isEmpty()) return;
-        Iterator<ActiveCircle> it = ACTIVE.values().iterator();
+        Iterator<Map.Entry<UUID, ActiveCircle>> it = ACTIVE.entrySet().iterator();
         while (it.hasNext()) {
-            ActiveCircle c = it.next();
+            Map.Entry<UUID, ActiveCircle> e = it.next();
+            ActiveCircle c = e.getValue();
+            followBeam(e.getKey(), c);
             c.tick();
             if (c.done) it.remove();
+        }
+    }
+
+    /** 若存在施法者为 effectId（=施法 NPC UUID）的光束实体，法阵跟随其源点与朝向。 */
+    private static void followBeam(UUID effectId, ActiveCircle c) {
+        for (Entity e : c.level.entitiesForRendering()) {
+            if (e instanceof MagicBeamEntity beam && beam.getCasterUuid().isPresent()
+                    && beam.getCasterUuid().get().equals(effectId)) {
+                BlockPos tgt = beam.getTarget().orElse(null);
+                if (tgt == null) return;
+                Vec3 pos = beam.position();
+                Vec3 axis = tgt.getCenter().subtract(pos);
+                if (axis.lengthSqr() < 1e-6) return;
+                c.pos = pos;
+                c.axis = axis.normalize();
+                return;
+            }
         }
     }
 
@@ -85,8 +107,8 @@ public final class MagicCircleEmitter {
     private static final class ActiveCircle {
         final ClientLevel level;
         final MagicCircleSpec spec;
-        final Vec3 pos;
-        final Vec3 axis;
+        Vec3 pos;
+        Vec3 axis;
         final long startTick;
         final int durationTicks;
         boolean done;

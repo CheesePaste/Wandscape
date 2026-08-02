@@ -7,11 +7,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -26,25 +30,30 @@ public final class MagicCastManager {
     private static final Set<UUID> ACTIVE_CASTERS = new HashSet<>();
 
     private record PendingCast(UUID caster, ServerLevel level, Vec3 source,
-                               BlockPos target, int color, long fireTick, int lifeTicks) {}
+                               BlockPos target, int color, long fireTick, int lifeTicks,
+                               @Nullable WandscapeNpc casterNpc, @Nullable Monster targetNpc) {}
 
     private MagicCastManager() {}
 
     /**
      * 登记一次施法：在 {@code delayTicks} 后生成光束（光束总寿命 {@code lifeTicks}）。
+     * {@code casterNpc}/{@code targetNpc} 为服务端跟踪用实体引用（null=静态光束）。
      * 若该施法者（玩家或 NPC 的 UUID）已有未发射的施法则拒绝。
      *
      * @return 是否登记成功
      */
     public static boolean schedule(ServerLevel level, UUID casterUuid,
-                                   Vec3 source, BlockPos target, int color, int delayTicks, int lifeTicks) {
+                                   Vec3 source, BlockPos target, int color, int delayTicks, int lifeTicks,
+                                   @Nullable WandscapeNpc casterNpc, @Nullable Monster targetNpc) {
         if (ACTIVE_CASTERS.contains(casterUuid)) return false;
         PENDING.add(new PendingCast(casterUuid, level, source, target, color,
-                level.getGameTime() + Math.max(1, delayTicks), Math.max(1, lifeTicks)));
+                level.getGameTime() + Math.max(1, delayTicks), Math.max(1, lifeTicks),
+                casterNpc, targetNpc));
         ACTIVE_CASTERS.add(casterUuid);
-        Log.info(TAG, "schedule caster={} source={} target={} fireTick={} life={} pending={}",
+        Log.info(TAG, "schedule caster={} source={} target={} fireTick={} life={} targetNpc={} pending={}",
                 casterUuid.toString().substring(0, 8), source, target,
-                level.getGameTime() + Math.max(1, delayTicks), lifeTicks, PENDING.size());
+                level.getGameTime() + Math.max(1, delayTicks), lifeTicks,
+                targetNpc != null ? targetNpc.getUUID().toString().substring(0, 8) : "null", PENDING.size());
         return true;
     }
 
@@ -57,10 +66,15 @@ public final class MagicCastManager {
             if (pc.level().getGameTime() >= pc.fireTick()) {
                 MagicBeamEntity beam = new MagicBeamEntity(pc.level(), pc.source(), pc.target(),
                         pc.color(), pc.lifeTicks());
+                beam.setCaster(pc.caster());
+                beam.bindCaster(pc.casterNpc());
+                beam.bindTarget(pc.targetNpc());
                 pc.level().addFreshEntity(beam);
-                Log.info(TAG, "beam spawned id={} source={} target={} color=#{} life={} time={}",
+                Log.info(TAG, "beam spawned id={} source={} target={} color=#{} life={} caster={} targetNpc={} time={}",
                         beam.getId(), pc.source(), pc.target(), Integer.toHexString(pc.color()),
-                        pc.lifeTicks(), pc.level().getGameTime());
+                        pc.lifeTicks(), pc.caster().toString().substring(0, 8),
+                        pc.targetNpc() != null ? pc.targetNpc().getUUID().toString().substring(0, 8) : "null",
+                        pc.level().getGameTime());
                 it.remove();
                 ACTIVE_CASTERS.remove(pc.caster());
             }
