@@ -179,6 +179,8 @@ public final class SplineEditorController {
         }
     }
 
+    private static boolean wasHelpDown = false;
+
     private static void handleKeyboard(Minecraft mc, long window, boolean imguiWantsKb) {
         boolean escDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
         if (escDown && !wasEscapeDown) {
@@ -189,6 +191,17 @@ public final class SplineEditorController {
             }
         }
         wasEscapeDown = escDown;
+
+        // H key (GUIDE_TOGGLE): open spline guide document
+        if (!imguiWantsKb && !cameraActive) {
+            int hKey = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getKey().getValue();
+            boolean helpDown = GLFW.glfwGetKey(window, hKey) == GLFW.GLFW_PRESS;
+            if (helpDown && !wasHelpDown) {
+                String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
+                mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
+            }
+            wasHelpDown = helpDown;
+        }
 
         // Shortcut for deleting points (Only when ImGui is not focusing typing)
         if (!imguiWantsKb && !cameraActive) {

@@ -248,6 +248,21 @@ public class WandscapeClient {
                 WandscapePanelState.toggleCursor();
             }
         }
+        while (GUIDE_TOGGLE.consumeClick()) {
+            // H key: open guide — panel has its own handler; this covers non-panel contexts
+            if (!WandscapePanelState.isPanelOpen()) {
+                openGuideIndex();
+            }
+        }
+    }
+
+    /** Opens the guide index page (callable from anywhere). */
+    public static void openGuideIndex() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null) {
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
+            mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "index_guide"));
+        }
     }
 
     @SubscribeEvent
