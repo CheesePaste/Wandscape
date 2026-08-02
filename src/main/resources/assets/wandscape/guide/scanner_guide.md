@@ -1,52 +1,56 @@
-# 🏗️ 建筑扫描器（Building Scanner）API 级详细指南
+# 🏗️ 建筑扫描器（Building Scanner）API 级指南
 
-建筑扫描器（Scanner）是创作者用于扫描游戏内建造好的建筑并**一键导出模组结构 JSON 蓝图**的开发工具。
+建筑扫描器（Building Scanner）是创作者用于扫描游戏内建造好的建筑/道路并**一键导出模组 JSON 蓝图与道路预设**的核心开发工具。
 
-![扫描器结构示意图](wandscape:textures/gui/guide/scanner_diagram.png =200x100)
-
----
-
-## 📖 UI 控件与字段 API 级别明细字典 (UI Options API Reference)
-
-| 控件标识 / 标签 | 类型 / 范围 | 默认值 | 详细作用机制与计算影响 |
-| :--- | :--- | :--- | :--- |
-| **`Mode`** | Enum (`SAVE / CORNER`) | `SAVE` | 结构方块工作模式。`SAVE` 为主保存扫描器，`CORNER` 为对角线辅角点方块。 |
-| **`Structure Name`** | String | 空 | 结构名称。在 64 格范围内，填有相同 Structure Name 的 `SAVE` 与 `CORNER` 方块会自动配对算出 3D 边界包围盒。 |
-| **`Target`** (导出目标) | Enum (`BUILDING / ROAD`) | `BUILDING` | 选择导出类型。`BUILDING` 导出建筑蓝图（含三值与维护费），`ROAD` 导出道路预设并自动热注册。 |
-| **`Category`** (类别下拉单) | Enum (`String`) | `basic` | 决定建筑的系统分类（`basic`, `shop`, `service`, `workstation`, `tavern` 等）。 |
-| **`Door (X, Y, Z)`** | Integer | `0, 0, 0` | 游客与 NPC 进入该建筑交互的门口 entry 偏移坐标。 |
-| **`Building ID`** (`metaId`) | String | `wandscape:new_bldg` | 蓝图在模组内的唯一注册标识符（如 `wandscape:townhall_lv1`）。 |
-| **`Display Name`** (`metaName`) | String | `新建筑` | 在选建界面与 HUD 面板中展示的名称。 |
-| **`Detect Corners`** | Action Button | — | 主动触发 64 格范围内同名 `CORNER` 角点方块的自动匹配与包围盒重算。 |
-| **`Export JSON`** (导出按钮) | Action Button | — | 触发扫描并将蓝图全量序列化输出至 `.minecraft/wandscape_buildings/<id>.json`（自动过滤扫描器方块本身）。 |
+![扫描器中世纪 UI 界面演示](wandscape:textures/gui/guide/scanner_ui.png)
 
 ---
 
-## 🚀 3 步傻瓜式操作流程
+## 📖 UI 控件与模式明细 (UI Reference)
 
-### 第一步：摆放 SAVE 与 CORNER 扫描器方块
-1. 在建筑的一角放置【扫描器方块】，在界面中将 Mode 设为 **`CORNER`**，填入结构名称（如 `house1`）。
-2. 在建筑的对角线顶点放置另一个【扫描器方块】，将 Mode 设为 **`SAVE`**，填入相同的结构名称（`house1`）。
+界面采用标准中世纪金边主题 (`MedievalScreen`) 与手绘渐变按钮 (`drawMinimalBox`)，输入框具有古铜金线边框与 **Focus / Hover 动态发光** 效果，且配置有原生视口裁剪（Scissor Clip），滑动时绝不出界。
 
-### 第二步：自动计算包围盒与参数配置
-1. 点击 SAVE 扫描器界面中的 **【Detect Corners】** 按钮，系统自动配对计算出 3D 包围盒并实时渲染边框。
-2. 配置 `Category` 类别、`Building ID`、`Display Name` 与 `Maintenance Cost` 等经营参数。
+### 1. 结构配对模式 (`BlockMode`)
+- **`SAVE` (保存主控)**：主扫描器，负责计算包围盒、展示配置面板与执行 JSON 导出。
+- **`CORNER` (辅角点)**：用于标记 3D 包围盒对角线顶点的辅助方块。
+- **自动配对**：在 64 格范围内，填有相同 `Structure Name` 的 `SAVE` 与 `CORNER` 方块会自动配对算准 3D 包围盒，无需手动录入坐标。
 
-### 第三步：一键导出 JSON
-1. 点击底部的 **【Export Building JSON】** （或 `ROAD` 模式下的 **【Export Road JSON】**）按钮。
-2. 建筑导出至 `.minecraft/wandscape_buildings/<id>.json`；道路导出至 `.minecraft/wandscape_roads/<id>.json` 并自动热注册。
-
----
-
-## 🛠️ 常见问题排查（Troubleshooting & FAQ）
-
-### Q1: 导出的蓝图建造时发现扫描器方块也被建出来了？
-- **解决**：最新版 Scanner 导包时已**自动过滤扫描器方块本身**。
-
-### Q2: 旋转放置建筑时，楼梯或门朝向错乱？
-- **解决**：扫描器已自动补全 4 方向 BlockState 的 `facing` 对齐数据。
+### 2. 导出目标模式 (`TargetMode`)
+- **`BUILDING` (建筑模式)**：
+  - 展示完整建筑配置（门偏移 `Door Offset`、游览交互区 `Tourist Zones`、三值 `Comfort/Magic/Wonder`、解锁等级 `Unlock Level`、周期维护费 `Maintenance Cost` 以及商店/服务/节点特化参数）。
+  - 点击 **【导出建筑 JSON】** 将蓝图导出至 `.minecraft/wandscape_buildings/<id>.json`。
+- **`ROAD` (道路模式 - 特化简化)**：
+  - 自动隐去所有建筑专属配置，界面极为精简通透。
+  - 仅保留 `Road Preset ID` 与 `Display Name`。
+  - 点击 **【导出与热注册道路 JSON】** 导出至 `.minecraft/wandscape_roads/<id>.json` 并**在游戏内立即热注册生效**！
 
 ---
 
-👉 [跳转至 俯瞰选建与旋转指南](guide:overview_guide)  
+## 📋 字段与操作明细表
+
+| 控件标识 / 标签 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| **`Mode`** | Button | 切换 `SAVE` 主保存模式与 `CORNER` 辅角点模式。 |
+| **`Structure Name`** | Input | 结构名称，配对依据（例：`townhall_lv1`）。 |
+| **`Target`** | Button | 切换 `BUILDING` 建筑模式与 `ROAD` 道路模式。 |
+| **`Type` (Category)** | Button | 决定建筑类型（`basic`, `shop`, `service`, `node`, `tavern` 等）。 |
+| **`❖ 匹配角点`** | Button | 主动触发 64 格范围内同名 `CORNER` 角点方块配对与包围盒重算。 |
+| **`❖ 门偏移`** | Inputs | 设定 NPC / 游客进入建筑交互的 Entry 偏移坐标 `(X, Y, Z)`。 |
+| **`❖ 游览交互区`** | Rows | 配置游客在建筑内停留交互的 3D 边界区域（`+ 添加` / `× 删除`）。 |
+| **`❖ 放置元数据`** | Inputs | 设定 Building ID（如 `wandscape:shop_bakery`）、显示名称与三值属性。 |
+| **`❖ 周期维护费`** | Rows | 设定建筑维持运转需消耗的元素与数量（如 `earth: 1`）。 |
+| **`扫描区域`** | Button | 统计 3D 包围盒内的非空气有效方块数量。 |
+| **`导出 JSON`** | Button | 序列化导出 JSON 文件（**自动过滤扫描器方块本身**）。 |
+
+---
+
+## 🚀 3 步操作流程
+
+1. **摆放与命名**：在建筑顶点放置 `SAVE` 扫描器并填写结构名称；在对角顶点放置 `CORNER` 扫描器并填写相同名称。
+2. **匹配与配置**：点击 `SAVE` 界面中的 **【❖ 匹配角点】** 自动计算 3D 尺寸；根据需求配置元数据、维护费或切换为 `ROAD` 模式。
+3. **一键导出**：点击 **【导出建筑 JSON】** 或 **【导出与热注册道路 JSON】**，查看聊天栏成功提示。
+
+---
+
+👉 [返回选建指南](guide:overview_guide)  
 👉 [返回主测试页](guide:test_guide)
