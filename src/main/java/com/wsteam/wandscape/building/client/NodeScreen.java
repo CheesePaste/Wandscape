@@ -51,6 +51,9 @@ public class NodeScreen extends MedievalScreen {
 
     public NodeScreen() {
         super(Component.literal("Node"), PW, PH);
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "node_guide";
     }
 
     public void updateData(NodeDataPacket packet) {

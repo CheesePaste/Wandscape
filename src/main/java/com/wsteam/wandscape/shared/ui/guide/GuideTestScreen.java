@@ -6,13 +6,16 @@ import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentHistoryStack;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader;
 import com.wsteam.wandscape.shared.ui.markdown.widget.MarkdownRenderWidget;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * Interactive Markdown Guide Screen supporting inter-document navigation and browser-like back/forward history stack.
+ * Interactive Markdown Guide Screen supporting inter-document navigation,
+ * browser-like back/forward history stack, and ESC key press interception.
  */
 public class GuideTestScreen extends MedievalScreen {
 
+    private final Screen parentScreen;
     private final DocumentHistoryStack historyStack;
     private MarkdownRenderWidget markdownWidget;
 
@@ -20,11 +23,12 @@ public class GuideTestScreen extends MedievalScreen {
     private MedievalButton btnForward;
 
     public GuideTestScreen(String initialMarkdownContent) {
-        this(initialMarkdownContent, "assets/wandscape/guide/test_guide.md");
+        this(null, initialMarkdownContent, "assets/wandscape/guide/test_guide.md");
     }
 
-    public GuideTestScreen(String initialMarkdownContent, String initialDocPath) {
+    public GuideTestScreen(Screen parentScreen, String initialMarkdownContent, String initialDocPath) {
         super(Component.literal("Wandscape 引导系统"), 320, 230);
+        this.parentScreen = parentScreen;
         this.historyStack = new DocumentHistoryStack(initialDocPath);
         this.showCloseButton = true;
         setTitleBar("Wandscape 引导指南");
@@ -110,5 +114,23 @@ public class GuideTestScreen extends MedievalScreen {
         if (btnForward != null) {
             btnForward.active = historyStack.canGoForward();
         }
+    }
+
+    @Override
+    public void onClose() {
+        if (parentScreen != null && minecraft != null) {
+            minecraft.setScreen(parentScreen);
+        } else {
+            super.onClose();
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            this.onClose();
+            return true; // Intercept ESC key press event, prevent event pass-through to parent screen
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 }

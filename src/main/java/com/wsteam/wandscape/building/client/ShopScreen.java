@@ -47,6 +47,9 @@ public class ShopScreen extends MedievalScreen {
                       Map<String, Integer> stock, Map<String, Integer> maxStocks) {
         super(Component.literal("Shop"), PW, PH);
         setTitleBar("Shop");
+        this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "shop_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;

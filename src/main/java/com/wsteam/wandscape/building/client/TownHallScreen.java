@@ -38,6 +38,8 @@ public class TownHallScreen extends MedievalScreen {
         super(Component.literal("Town Hall"), PW, PH);
         setTitleBar("市政厅");
         this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "townhall_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.colonyName = colonyName != null ? colonyName : "";

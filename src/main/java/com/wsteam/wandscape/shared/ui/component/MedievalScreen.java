@@ -30,6 +30,11 @@ public abstract class MedievalScreen extends Screen {
     protected int closeBtnX, closeBtnY, closeBtnW = 18, closeBtnH = 14;
     protected int closeBtnState;
 
+    // ── Built-in help button & document ──
+    protected boolean showHelpButton;
+    protected String helpDocumentPath;
+    protected HelpButton helpButton;
+
     // ── Glass panel gradient ──
     private static final int GLASS_TOP       = 0xBB483828;
     private static final int GLASS_BOTTOM    = 0xBB1E1410;
@@ -54,6 +59,33 @@ public abstract class MedievalScreen extends Screen {
             closeBtnX = leftPos + panelWidth - closeBtnW - 6;
             closeBtnY = topPos + (headerHeight - closeBtnH) / 2;
         }
+        if (showHelpButton && helpDocumentPath != null) {
+            int helpW = 14;
+            int helpH = 14;
+            int helpX = showCloseButton ? closeBtnX - helpW - 4 : leftPos + panelWidth - helpW - 6;
+            int helpY = topPos + (headerHeight - helpH) / 2;
+            helpButton = new HelpButton(helpX, helpY, helpW, helpH, this::openHelpDocument);
+            addRenderableWidget(helpButton);
+        }
+    }
+
+    public void openHelpDocument() {
+        if (helpDocumentPath != null && minecraft != null) {
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown(helpDocumentPath);
+            var screen = new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(this, content, helpDocumentPath);
+            minecraft.setScreen(screen);
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (showHelpButton && helpDocumentPath != null) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_H || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_F1) {
+                openHelpDocument();
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

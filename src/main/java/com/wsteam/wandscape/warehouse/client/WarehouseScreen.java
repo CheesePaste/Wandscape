@@ -67,6 +67,8 @@ public class WarehouseScreen extends MedievalScreen {
         super(Component.literal("Colony Warehouse"), PW, PH);
         setTitleBar("Colony Warehouse");
         this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "warehouse_guide";
         this.headerHeight = 22;
     }
 
