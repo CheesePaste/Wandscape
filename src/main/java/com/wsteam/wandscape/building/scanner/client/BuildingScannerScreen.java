@@ -99,10 +99,11 @@ public class BuildingScannerScreen extends MedievalScreen {
     private final List<CostRow> elemOutRows = new ArrayList<>();
 
     // ── Export ──
-    private Component scanResult = Component.literal("Not scanned yet");
+    private Component scanResult = Component.literal("尚未扫描");
 
     // ── Layout Y positions (computed in init, used in render) ──
     private int lx; // left edge for widgets
+    private int boundaryCardY;
     private int doorEditY;
     private int zoneHeaderY;
     private int metaStartY, metaLabelY;
@@ -146,7 +147,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         lx = leftPos + 16;
         int y = topPos + headerHeight + 8 + scrollOff;
 
-        // ── Block Mode selector (SAVE vs CORNER) ──
+        // ── Toolbar Row 1: Mode & Structure Name ──
         blockModeBtn = mkMedievalButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
             BuildingScannerBlockEntity.BlockMode next = scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
                     ? BuildingScannerBlockEntity.BlockMode.CORNER : BuildingScannerBlockEntity.BlockMode.SAVE;
@@ -155,8 +156,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             needsRebuild = true;
         });
 
-        // ── Structure Name input ──
-        structureNameEdit = mkEdit(lx + 96, y, 204, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 96, y, 208, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
@@ -164,11 +164,11 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
             // CORNER mode: simplified UI
-            mkMedievalButton(cx - 50, y + 30, 100, 20, "完成", this::onClose);
+            mkMedievalButton(cx - 50, y + 70, 100, 20, "完成", this::onClose);
             return;
         }
 
-        // ── Target Mode & Category & Detect ──
+        // ── Toolbar Row 2: Target & Category & Detect ──
         targetModeBtn = mkMedievalButton(lx, y, 105, 20, "Target: " + scanner.getTargetMode().name(), () -> {
             BuildingScannerBlockEntity.TargetMode next = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.BUILDING
                     ? BuildingScannerBlockEntity.TargetMode.ROAD : BuildingScannerBlockEntity.TargetMode.BUILDING;
@@ -185,14 +185,18 @@ public class BuildingScannerScreen extends MedievalScreen {
             needsRebuild = true;
         });
 
-        mkMedievalButton(lx + 210, y, 90, 20, "匹配角点", () -> {
+        mkMedievalButton(lx + 210, y, 94, 20, "匹配角点", () -> {
             syncToServer();
             needsRebuild = true;
         });
-        y += 28;
+        y += 26;
+
+        // ── Boundary Card Row ──
+        boundaryCardY = y;
+        y += 26;
 
         // ── Door section ──
-        addSectionHeader(y, "Door Offset");
+        addSectionHeader(y, "❖ 门偏移 (Door Offset)");
         y += 14;
         doorEditY = y + ROW_H - 4;
         y = doorEditY + ROW_H + 6;
@@ -207,7 +211,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         });
 
         // ── Tourist interact zones section ──
-        addSectionHeader(y, "Tourist Interact Zones (" + scanner.getTouristInteractZones().size() + ")");
+        addSectionHeader(y, "❖ 游览交互区 (" + scanner.getTouristInteractZones().size() + ")");
         y += 14;
         zoneHeaderY = y - 14;
 
@@ -227,7 +231,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 6;
 
         // ── Metadata section ──
-        addSectionHeader(y, "Metadata");
+        addSectionHeader(y, "❖ 放置元数据");
         y += 14;
         metaStartY = y - 14;
 
@@ -259,7 +263,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += ROW_H + 6;
 
         // ── Unlock requirement ──
-        addSectionHeader(y, "Unlock Requirement");
+        addSectionHeader(y, "❖ 解锁门槛");
         y += 14;
         unlockY = y - 14;
         unlockLevel = mkNumEdit(lx + COL2 + 70, y, 40, scanner.getUnlockMinLevel(), s -> {
@@ -269,7 +273,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += ROW_H + 6;
 
         // ── Maintenance cost section ──
-        addSectionHeader(y, "Maintenance Cost");
+        addSectionHeader(y, "❖ 周期维护费");
         y += 14;
         maintCostY = y - 14;
 
@@ -295,7 +299,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         // ── Node config (category=node) ──
         String cat = scanner.getCategory();
         if ("node".equals(cat)) {
-            addSectionHeader(y, "Node Config");
+            addSectionHeader(y, "❖ 节点配置");
             y += 14;
             nodeCatY = y - 14;
 
@@ -333,7 +337,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
 
         // ── Presets section ──
-        addSectionHeader(y, "Presets");
+        addSectionHeader(y, "❖ 预设预存");
         y += 14;
         presetY = y - 14;
         presetNameEdit = mkEdit(lx + 4, y, 100, "", s -> {});
@@ -344,7 +348,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         // ── Category-specific sections ──
         if ("shop".equals(cat)) {
             svcCatY = 0;
-            addSectionHeader(y, "Shop Config");
+            addSectionHeader(y, "❖ 商店参数");
             y += 14;
             shopCatY = y - 14;
 
@@ -362,7 +366,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             });
             y += ROW_H + 6;
 
-            addSectionHeader(y, "Shop Goods (" + scanner.getShopGoods().size() + ")");
+            addSectionHeader(y, "❖ 上架商品 (" + scanner.getShopGoods().size() + ")");
             y += 14;
             goodsCatY = y - 14;
 
@@ -382,7 +386,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             shopCatY = 0;
             goodsCatY = 0;
             shopProfitRate = null; shopDuration = null;
-            addSectionHeader(y, "Service Config");
+            addSectionHeader(y, "❖ 服务参数");
             y += 14;
             svcCatY = y - 14;
 
@@ -404,7 +408,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             });
             y += ROW_H + 6;
 
-            addSectionHeader(y, "Element Output");
+            addSectionHeader(y, "❖ 元素产出");
             y += 14;
             elemOutY = y - 14;
 
@@ -436,7 +440,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
 
         // ── Export section ──
-        addSectionHeader(y, "Export");
+        addSectionHeader(y, "❖ 蓝图与道路导出");
         y += 16;
         exportBtnY = y - 14;
 
@@ -540,6 +544,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             elemBtn.setMessage(Component.literal(currentElem));
             onChanged.run();
         }
+
         String element() { return currentElem; }
         int amount() { return intOrZero(amountBox); }
     }
@@ -680,7 +685,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         BlockPos wMin = scanner.getWorldMin();
         BlockPos wMax = scanner.getWorldMax();
         if (wMin == null || wMax == null) {
-            scanResult = Component.literal("No boundary defined");
+            scanResult = Component.literal("未定义 3D 边界");
             return;
         }
         int count = 0;
@@ -696,17 +701,17 @@ public class BuildingScannerScreen extends MedievalScreen {
                 }
             }
         }
-        scanResult = Component.literal("Scanned " + count + " non-air blocks");
+        scanResult = Component.literal("已扫描 " + count + " 个有效方块");
     }
 
     private void doExport() {
         String id = scanner.getBuildingId();
         if (id.isBlank()) {
-            scanResult = Component.literal("Set a building ID before exporting");
+            scanResult = Component.literal("请先设置 Building ID");
             return;
         }
         PacketDistributor.sendToServer(new BuildingScannerExportPacket(scanner.getBlockPos()));
-        scanResult = Component.literal("Export requested for '" + id + "' — check server console");
+        scanResult = Component.literal("已发起导出: " + id);
     }
 
     private void syncToServer() {
@@ -723,7 +728,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         if (name.isEmpty()) return;
         CompoundTag tag = capturePresetData();
         LOCAL_PRESETS.put(name, tag);
-        scanResult = Component.literal("Preset saved: " + name);
+        scanResult = Component.literal("预设已保存: " + name);
     }
 
     private void onPresetLoad() {
@@ -732,13 +737,13 @@ public class BuildingScannerScreen extends MedievalScreen {
         if (name.isEmpty()) return;
         CompoundTag tag = LOCAL_PRESETS.get(name);
         if (tag == null) {
-            scanResult = Component.literal("Preset not found: " + name);
+            scanResult = Component.literal("未找到预设: " + name);
             return;
         }
         applyPresetData(tag);
         syncToServer();
         needsRebuild = true;
-        scanResult = Component.literal("Preset loaded: " + name);
+        scanResult = Component.literal("预设已加载: " + name);
     }
 
     private CompoundTag capturePresetData() {
@@ -905,67 +910,72 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
-            gui.drawString(font, "CORNER 模式：请在名称框输入结构名称。", lx, topPos + headerHeight + 50, MedievalColors.TEXT_MUTED);
-            gui.drawString(font, "SAVE 模式扫描器会自动匹配同名 CORNER 算出 3D 包围盒。", lx, topPos + headerHeight + 66, MedievalColors.TEXT_DIM);
+            drawMinimalBox(gui, lx, topPos + headerHeight + 36, 308, 64, true, false);
+            gui.drawString(font, "❖ CORNER 辅角点模式", lx + 10, topPos + headerHeight + 44, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的结构名称。", lx + 10, topPos + headerHeight + 58, MedievalColors.TEXT_WARM_WHITE);
+            gui.drawString(font, "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。", lx + 10, topPos + headerHeight + 72, MedievalColors.TEXT_MUTED);
             super.render(gui, mx, my, pt);
             return;
         }
 
-        // Boundary size summary
-        BlockOffset bMin = scanner.getBoundaryMin();
-        BlockOffset bMax = scanner.getBoundaryMax();
-        int dx = bMax.x() - bMin.x() + 1;
-        int dy = bMax.y() - bMin.y() + 1;
-        int dz = bMax.z() - bMin.z() + 1;
-        String bInfo = String.format("包围盒: Min(%d,%d,%d) ~ Max(%d,%d,%d) | 尺寸: %d×%d×%d",
-                bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z(), dx, dy, dz);
-        gui.drawString(font, bInfo, lx, topPos + headerHeight + 36, MedievalColors.BORDER_GOLD);
+        // ── SAVE Mode 3D Box Status Card ──
+        if (boundaryCardY > topPos + headerHeight && boundaryCardY < topPos + PH - 16) {
+            drawMinimalBox(gui, lx, boundaryCardY, 304, 20, false, false);
+            BlockOffset bMin = scanner.getBoundaryMin();
+            BlockOffset bMax = scanner.getBoundaryMax();
+            int dx = Math.abs(bMax.x() - bMin.x()) + 1;
+            int dy = Math.abs(bMax.y() - bMin.y()) + 1;
+            int dz = Math.abs(bMax.z() - bMin.z()) + 1;
+            String sizeText = String.format("❖ 3D 区域尺寸: %d × %d × %d 格  (Min:%d,%d,%d Max:%d,%d,%d)",
+                    dx, dy, dz, bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z());
+            gui.drawString(font, sizeText, lx + 8, boundaryCardY + 6, MedievalColors.BORDER_GOLD);
+        }
 
         // Section Headers & Labels
-        drawHdr(gui, "门偏移 (Door Offset)", lx, doorEditY - 14);
+        drawHdr(gui, "❖ 门偏移 (Door Offset)", lx, doorEditY - 14);
         drawLbl(gui, "X", lx + COL2, doorEditY - 10);
         drawLbl(gui, "Y", lx + COL2 + FW + 4, doorEditY - 10);
         drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
 
-        drawHdr(gui, "游览交互区 (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
+        drawHdr(gui, "❖ 游览交互区 (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
 
-        drawHdr(gui, "放置元数据", lx, metaStartY);
+        drawHdr(gui, "❖ 建筑属性与标识", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
         drawLbl(gui, "Name", lx + 164, metaStartY + 14);
         drawLbl(gui, "Comfort", lx + COL2, metaLabelY - 10);
         drawLbl(gui, "Magic", lx + COL2 + FW + 12, metaLabelY - 10);
         drawLbl(gui, "Wonder", lx + COL2 + (FW + 12) * 2, metaLabelY - 10);
 
-        drawHdr(gui, "解锁等级", lx, unlockY);
+        drawHdr(gui, "❖ 解锁门槛", lx, unlockY);
         drawLbl(gui, "最低等级", lx + COL2, unlockY + ROW_H - 4);
 
-        drawHdr(gui, "周期维护费", lx, maintCostY);
+        drawHdr(gui, "❖ 周期维护费", lx, maintCostY);
 
         if ("node".equals(scanner.getCategory())) {
-            drawHdr(gui, "节点配置", lx, nodeCatY);
+            drawHdr(gui, "❖ 节点配置", lx, nodeCatY);
             drawLbl(gui, "元素", lx + COL2, nodeCatY + ROW_H - 4);
             drawLbl(gui, "产出/次", lx + COL2, nodeCatY + ROW_H * 2 - 4);
             drawLbl(gui, "引导Ticks", lx + COL2, nodeCatY + ROW_H * 3 - 4);
             drawLbl(gui, "魔力消耗", lx + COL2, nodeCatY + ROW_H * 4 - 4);
         }
 
-        drawHdr(gui, "预设预存", lx, presetY);
+        drawHdr(gui, "❖ 预设预存", lx, presetY);
 
         String cat = scanner.getCategory();
         if ("shop".equals(cat)) {
-            drawHdr(gui, "商店参数", lx, shopCatY);
+            drawHdr(gui, "❖ 商店参数", lx, shopCatY);
             drawLbl(gui, "利润率%", lx + COL2, shopCatY + ROW_H - 4);
             drawLbl(gui, "交互时长", lx + COL2, shopCatY + ROW_H * 2 - 4);
-            drawHdr(gui, "上架商品", lx, goodsCatY);
+            drawHdr(gui, "❖ 上架商品", lx, goodsCatY);
         } else if ("service".equals(cat)) {
-            drawHdr(gui, "服务参数", lx, svcCatY);
+            drawHdr(gui, "❖ 服务参数", lx, svcCatY);
             drawLbl(gui, "能量消耗/次", lx + COL2, svcCatY + ROW_H - 4);
             drawLbl(gui, "最大容纳人数", lx + COL2, svcCatY + ROW_H * 2 - 2);
             drawLbl(gui, "交互时长", lx + COL2, svcCatY + ROW_H * 3 - 2);
-            drawHdr(gui, "元素产出", lx, elemOutY);
+            drawHdr(gui, "❖ 元素产出", lx, elemOutY);
         }
 
-        drawHdr(gui, "导出导出", lx, exportBtnY - 14);
+        drawHdr(gui, "❖ 蓝图与道路导出", lx, exportBtnY - 14);
         gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, MedievalColors.TEXT_MUTED);
 
         super.render(gui, mx, my, pt);
