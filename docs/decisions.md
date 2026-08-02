@@ -346,3 +346,14 @@
 
 - 不改 `WarehouseApi` / `ColonyResourceAccess` 的**跨殖民地求和**语义——`available()` 求和正是生产需求的正确定义（任何殖民地的元素都能补给生产任务）。
 - 不改 `DailySettlementSystem`（维护费扣费与自动重启逻辑已正确）。
+
+## 守卫系统设计（2026-08-02）
+
+守卫闭环：怪物进入建筑 AABB 水平 +10 区 → 发布 `guard:attack` → 空闲 NPC 原地视线施法 → 光束每 tick 伤害束内 Enemy → 直到 +15 区内无怪才完成。
+
+- **滞回区间**：攻击/目标区 = 建筑包围盒水平 X/Z ± 10，Y 不扩展；任务完成/脱离区 = ± 15，Y 不扩展。有怪进 +10 触发守卫，持续到 +15 无怪才结束——避免怪物卡在 10 格边缘导致守卫反复进/出。
+- **Y 不扩展**：只做水平扩展，否则会索敌到地下洞穴怪物，光束打不到。
+- **不走路**：守卫 op `target() = null`（无 stance/导航），NPC 原地施法；射程由光束 200 格覆盖，只需视线（LOS）。
+- **持续任务**：一次守卫 = 一个持续 `guard:attack` 任务，执行器在 `tickAll` 循环（施法→等光束→重选最近→再施法），期间 NPC 保持 ACTIVE 不被改派；+15 区无怪才 complete。
+- **复用**：伤害与视觉完全复用 `MagicCaster.castNpcAt`/`MagicCastManager`/`MagicBeamEntity`（每 tick magic 伤害），不写 EntityOps stub。
+- **优先级 49**：< 50 避开 `autoApproveTasks=false` 的 PENDING_APPROVAL 门（同修复任务先例），且高于普通建造任务 ~40。
