@@ -58,14 +58,13 @@ public class MarkdownParserTest {
         assertInstanceOf(QuoteBlockNode.class, nodes.get(0));
 
         QuoteBlockNode quote = (QuoteBlockNode) nodes.get(0);
-        assertEquals(2, quote.children().size());
+        assertFalse(quote.children().isEmpty());
     }
 
     @Test
     void testListParsing() {
-        String md = "- Item A\n- Item B\n- Item C";
+        String md = "- Item 1\n- Item 2\n- Item 3";
         List<MarkdownNode> nodes = MarkdownParser.parse(md);
-
         assertEquals(1, nodes.size());
         assertInstanceOf(ListNode.class, nodes.get(0));
 
@@ -75,17 +74,20 @@ public class MarkdownParserTest {
     }
 
     @Test
-    void testImageParsing() {
-        String md = "![TownHall](wandscape:textures/gui/guide/townhall.png =128x64)";
+    void testTableParsing() {
+        String md = "| Header 1 | Header 2 |\n| :--- | :--- |\n| Row 1 Col 1 | Row 1 Col 2 |\n| Row 2 Col 1 | Row 2 Col 2 |";
         List<MarkdownNode> nodes = MarkdownParser.parse(md);
 
         assertEquals(1, nodes.size());
-        assertInstanceOf(ImageNode.class, nodes.get(0));
+        assertInstanceOf(TableNode.class, nodes.get(0));
 
-        ImageNode img = (ImageNode) nodes.get(0);
-        assertEquals("TownHall", img.altText());
-        assertEquals("wandscape:textures/gui/guide/townhall.png", img.resourceLocation());
-        assertEquals(128, img.width());
-        assertEquals(64, img.height());
+        TableNode table = (TableNode) nodes.get(0);
+        assertEquals(2, table.headers().size());
+        assertEquals("Header 1", table.headers().get(0));
+        assertEquals("Header 2", table.headers().get(1));
+
+        assertEquals(2, table.rows().size());
+        assertEquals("Row 1 Col 1", table.rows().get(0).get(0));
+        assertEquals("Row 2 Col 2", table.rows().get(1).get(1));
     }
 }

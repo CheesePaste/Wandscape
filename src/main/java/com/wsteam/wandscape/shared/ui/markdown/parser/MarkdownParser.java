@@ -14,9 +14,6 @@ import java.util.regex.Pattern;
 public final class MarkdownParser {
 
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^!\\[(.*?)\\]\\((.*?)(?:\\s+=(\\d+)x(\\d+))?\\)$");
-    private static final Pattern INLINE_PATTERN = Pattern.compile(
-            "(\\*\\*|\\*|~~|`|\\[)|(!\\[)"
-    );
 
     private MarkdownParser() {}
 
@@ -36,10 +33,21 @@ public final class MarkdownParser {
 
         List<String> quoteBuffer = new ArrayList<>();
         List<String> listBuffer = new ArrayList<>();
+        List<String> tableBuffer = new ArrayList<>();
         boolean currentListOrdered = false;
 
         for (String line : lines) {
             String trimmed = line.trim();
+
+            // Check table accumulation
+            if (isTableLine(trimmed)) {
+                flushListBuffer(nodes, listBuffer, currentListOrdered);
+                flushQuoteBuffer(nodes, quoteBuffer);
+                tableBuffer.add(trimmed);
+                continue;
+            } else if (!tableBuffer.isEmpty()) {
+                flushTableBuffer(nodes, tableBuffer);
+            }
 
             // Check quote block accumulation
             if (trimmed.startsWith(">")) {
@@ -92,64 +100,100 @@ public final class MarkdownParser {
                 continue;
             }
 
-            // Fallback: Text Paragraph
-            nodes.add(new TextParagraphNode(parseInlineSpans(line)));
+            // Standard text paragraph
+            List<FormattedSpan> spans = parseInlineSpans(trimmed);
+            if (!spans.isEmpty()) {
+                nodes.add(new TextParagraphNode(spans));
+            }
         }
 
-        // Flush remaining buffers
-        if (!quoteBuffer.isEmpty()) {
-            flushQuoteBuffer(nodes, quoteBuffer);
-        }
-        if (!listBuffer.isEmpty()) {
-            flushListBuffer(nodes, listBuffer, currentListOrdered);
-        }
+        // Flush remaining buffers at EOF
+        flushQuoteBuffer(nodes, quoteBuffer);
+        flushListBuffer(nodes, listBuffer, currentListOrdered);
+        flushTableBuffer(nodes, tableBuffer);
 
         return nodes;
     }
 
-    private static void flushQuoteBuffer(List<MarkdownNode> target, List<String> quoteBuffer) {
-        if (quoteBuffer.isEmpty()) {
-            return;
-        }
-        String combined = String.join("\n", quoteBuffer);
-        quoteBuffer.clear();
-        target.add(new QuoteBlockNode(parse(combined)));
+    private static boolean isTableLine(String trimmed) {
+        return trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.length() > 2;
     }
 
-    private static void flushListBuffer(List<MarkdownNode> target, List<String> listBuffer, boolean ordered) {
-        if (listBuffer.isEmpty()) {
-            return;
+    private static void flushTableBuffer(List<MarkdownNode> nodes, List<String> tableBuffer) {
+        if (tableBuffer.isEmpty()) return;
+
+        if (tableBuffer.size() >= 2) {
+            String headerLine = tableBuffer.get(0);
+            List<String> headers = parseTableRowCells(headerLine);
+
+            List<List<String>> rows = new ArrayList<>();
+            for (int i = 1; i < tableBuffer.size(); i++) {
+                String line = tableBuffer.get(i);
+                if (line.replaceAll("[|:\\-\\s]", "").isEmpty()) {
+                    continue; // Skip separator line | :--- | :--- |
+                }
+                rows.add(parseTableRowCells(line));
+            }
+            if (!headers.isEmpty()) {
+                nodes.add(new TableNode(headers, rows));
+            }
         }
-        List<MarkdownNode> items = new ArrayList<>();
-        for (String itemStr : listBuffer) {
-            items.add(new TextParagraphNode(parseInlineSpans(itemStr)));
+        tableBuffer.clear();
+    }
+
+    private static List<String> parseTableRowCells(String line) {
+        String trimmed = line.trim();
+        if (trimmed.startsWith("|")) trimmed = trimmed.substring(1);
+        if (trimmed.endsWith("|")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+
+        String[] parts = trimmed.split("\\|");
+        List<String> cells = new ArrayList<>();
+        for (String p : parts) {
+            cells.add(p.trim());
         }
-        listBuffer.clear();
-        target.add(new ListNode(ordered, items));
+        return cells;
     }
 
     private static boolean isListItem(String line) {
-        return line.startsWith("- ") || line.startsWith("* ") || line.startsWith("+ ") || isOrderedListItem(line);
+        return line.startsWith("- ") || line.startsWith("* ") || Pattern.matches("^\\d+\\.\\s+.*", line);
     }
 
     private static boolean isOrderedListItem(String line) {
-        return line.matches("^\\d+\\.\\s+.*");
+        return Pattern.matches("^\\d+\\.\\s+.*", line);
     }
 
     private static String stripListMarker(String line) {
-        if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("+ ")) {
+        if (line.startsWith("- ") || line.startsWith("* ")) {
             return line.substring(2).trim();
         }
-        int dotIdx = line.indexOf(". ");
-        if (dotIdx > 0 && dotIdx < 5) {
-            return line.substring(dotIdx + 2).trim();
+        int dot = line.indexOf(". ");
+        if (dot > 0) {
+            return line.substring(dot + 2).trim();
         }
         return line;
     }
 
+    private static void flushQuoteBuffer(List<MarkdownNode> nodes, List<String> quoteBuffer) {
+        if (!quoteBuffer.isEmpty()) {
+            String combined = String.join(" ", quoteBuffer);
+            nodes.add(new QuoteBlockNode(List.of(new TextParagraphNode(parseInlineSpans(combined)))));
+            quoteBuffer.clear();
+        }
+    }
+
+    private static void flushListBuffer(List<MarkdownNode> nodes, List<String> listBuffer, boolean ordered) {
+        if (!listBuffer.isEmpty()) {
+            List<MarkdownNode> items = new ArrayList<>();
+            for (String itemStr : listBuffer) {
+                items.add(new TextParagraphNode(parseInlineSpans(itemStr)));
+            }
+            nodes.add(new ListNode(ordered, items));
+            listBuffer.clear();
+        }
+    }
+
     /**
-     * Parse inline markdown formatting tokens inside a line.
-     * Supports: **bold**, *italic*, ~~strike~~, `code`, [text](link)
+     * Parse inline formatted spans (bold, italic, strikethrough, code, links).
      */
     public static List<FormattedSpan> parseInlineSpans(String text) {
         if (text == null || text.isEmpty()) {
@@ -157,88 +201,100 @@ public final class MarkdownParser {
         }
 
         List<FormattedSpan> spans = new ArrayList<>();
-        StringBuilder currentText = new StringBuilder();
+        int cursor = 0;
+        int len = text.length();
 
         boolean bold = false;
         boolean italic = false;
-        boolean strike = false;
+        boolean strikethrough = false;
         boolean code = false;
-        String currentLink = null;
 
-        int i = 0;
-        int len = text.length();
+        StringBuilder buf = new StringBuilder();
 
-        while (i < len) {
-            // Check link [text](action)
-            if (!code && text.charAt(i) == '[' && i < len - 1) {
-                int closingBracket = text.indexOf(']', i + 1);
-                if (closingBracket > i && closingBracket < len - 1 && text.charAt(closingBracket + 1) == '(') {
-                    int closingParen = text.indexOf(')', closingBracket + 2);
-                    if (closingParen > closingBracket + 1) {
-                        if (currentText.length() > 0) {
-                            spans.add(new FormattedSpan(currentText.toString(), bold, italic, strike, code, null, currentLink));
-                            currentText.setLength(0);
+        while (cursor < len) {
+            // Action Link [text](action:id) or standard link [text](url)
+            if (text.charAt(cursor) == '[' && !code) {
+                int closeBracket = text.indexOf(']', cursor);
+                if (closeBracket > cursor && closeBracket + 1 < len && text.charAt(closeBracket + 1) == '(') {
+                    int closeParen = text.indexOf(')', closeBracket + 2);
+                    if (closeParen > closeBracket + 2) {
+                        if (buf.length() > 0) {
+                            spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
+                            buf.setLength(0);
                         }
-                        String linkText = text.substring(i + 1, closingBracket);
-                        String linkAction = text.substring(closingBracket + 2, closingParen);
-                        spans.add(new FormattedSpan(linkText, bold, italic, strike, code, null, linkAction));
-                        i = closingParen + 1;
+
+                        String linkText = text.substring(cursor + 1, closeBracket);
+                        String linkAction = text.substring(closeBracket + 2, closeParen);
+
+                        spans.add(new FormattedSpan(linkText, bold, italic, strikethrough, false, null, linkAction));
+                        cursor = closeParen + 1;
                         continue;
                     }
                 }
             }
 
-            // Check bold **
-            if (!code && i + 1 < len && text.charAt(i) == '*' && text.charAt(i + 1) == '*') {
-                if (currentText.length() > 0) {
-                    spans.add(new FormattedSpan(currentText.toString(), bold, italic, strike, code, null, currentLink));
-                    currentText.setLength(0);
+            // Image tag inline ![alt](src)
+            if (cursor + 1 < len && text.charAt(cursor) == '!' && text.charAt(cursor + 1) == '[') {
+                int closeBracket = text.indexOf(']', cursor + 2);
+                if (closeBracket > cursor && closeBracket + 1 < len && text.charAt(closeBracket + 1) == '(') {
+                    int closeParen = text.indexOf(')', closeBracket + 2);
+                    if (closeParen > closeBracket + 2) {
+                        cursor = closeParen + 1;
+                        continue;
+                    }
+                }
+            }
+
+            // Bold **text**
+            if (cursor + 1 < len && text.startsWith("**", cursor) && !code) {
+                if (buf.length() > 0) {
+                    spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
+                    buf.setLength(0);
                 }
                 bold = !bold;
-                i += 2;
+                cursor += 2;
                 continue;
             }
 
-            // Check italic *
-            if (!code && text.charAt(i) == '*') {
-                if (currentText.length() > 0) {
-                    spans.add(new FormattedSpan(currentText.toString(), bold, italic, strike, code, null, currentLink));
-                    currentText.setLength(0);
+            // Strikethrough ~~text~~
+            if (cursor + 1 < len && text.startsWith("~~", cursor) && !code) {
+                if (buf.length() > 0) {
+                    spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
+                    buf.setLength(0);
+                }
+                strikethrough = !strikethrough;
+                cursor += 2;
+                continue;
+            }
+
+            // Italic *text*
+            if (text.charAt(cursor) == '*' && !code) {
+                if (buf.length() > 0) {
+                    spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
+                    buf.setLength(0);
                 }
                 italic = !italic;
-                i++;
+                cursor += 1;
                 continue;
             }
 
-            // Check strikethrough ~~
-            if (!code && i + 1 < len && text.charAt(i) == '~' && text.charAt(i + 1) == '~') {
-                if (currentText.length() > 0) {
-                    spans.add(new FormattedSpan(currentText.toString(), bold, italic, strike, code, null, currentLink));
-                    currentText.setLength(0);
-                }
-                strike = !strike;
-                i += 2;
-                continue;
-            }
-
-            // Check inline code `
-            if (text.charAt(i) == '`') {
-                if (currentText.length() > 0) {
-                    spans.add(new FormattedSpan(currentText.toString(), bold, italic, strike, code, null, currentLink));
-                    currentText.setLength(0);
+            // Code `text`
+            if (text.charAt(cursor) == '`') {
+                if (buf.length() > 0) {
+                    spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
+                    buf.setLength(0);
                 }
                 code = !code;
-                i++;
+                cursor += 1;
                 continue;
             }
 
-            // Append normal character
-            currentText.append(text.charAt(i));
-            i++;
+            buf.append(text.charAt(cursor));
+            cursor++;
         }
 
-        if (currentText.length() > 0) {
-            spans.add(new FormattedSpan(currentText.toString(), bold, italic, strike, code, null, currentLink));
+        if (buf.length() > 0) {
+            spans.add(new FormattedSpan(buf.toString(), bold, italic, strikethrough, code, null, null));
         }
 
         return spans;

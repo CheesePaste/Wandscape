@@ -31,6 +31,7 @@ public class GuideTestScreen extends MedievalScreen {
         this.parentScreen = parentScreen;
         this.historyStack = new DocumentHistoryStack(initialDocPath);
         this.showCloseButton = true;
+        this.titleXOffset = 52;
         setTitleBar("Wandscape 引导指南");
     }
 

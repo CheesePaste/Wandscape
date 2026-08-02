@@ -218,6 +218,80 @@ public class MarkdownRenderWidget extends AbstractWidget {
             return listY + 2;
         }
 
+        if (node instanceof TableNode table) {
+            if (table.headers().isEmpty()) {
+                return y;
+            }
+
+            int numCols = table.headers().size();
+            int cellPadding = 4;
+            int tableW = width - 4;
+            int colW = Math.max(40, tableW / numCols);
+
+            int currentY = y + 4;
+
+            // Render Header Row
+            int headerH = font.lineHeight + 6;
+            if (currentY + headerH >= getY() && currentY <= getY() + getHeight()) {
+                g.fill(x, currentY, x + tableW, currentY + headerH, MedievalColors.PARCHMENT_DARK);
+                g.fill(x, currentY, x + tableW, currentY + 1, MedievalColors.BORDER_GOLD);
+                g.fill(x, currentY + headerH - 1, x + tableW, currentY + headerH, MedievalColors.BORDER_GOLD);
+
+                for (int c = 0; c < numCols; c++) {
+                    int cellX = x + c * colW + cellPadding;
+                    String hText = table.headers().get(c);
+                    g.drawString(font, font.plainSubstrByWidth(hText, colW - cellPadding * 2), cellX, currentY + 3, MedievalColors.ACCENT_GOLD, true);
+                    if (c > 0) {
+                        g.fill(x + c * colW, currentY, x + c * colW + 1, currentY + headerH, MedievalColors.BORDER_GOLD_DARK);
+                    }
+                }
+            }
+            currentY += headerH;
+
+            // Render Data Rows
+            int rowIndex = 0;
+            for (List<String> row : table.rows()) {
+                int maxRowLines = 1;
+                List<List<FormattedCharSequence>> cellLinesList = new ArrayList<>();
+
+                for (int c = 0; c < numCols; c++) {
+                    String cellText = c < row.size() ? row.get(c) : "";
+                    List<FormattedCharSequence> lines = font.split(Component.literal(cellText), colW - cellPadding * 2);
+                    if (lines.isEmpty()) {
+                        lines = List.of(Component.literal("").getVisualOrderText());
+                    }
+                    cellLinesList.add(lines);
+                    maxRowLines = Math.max(maxRowLines, lines.size());
+                }
+
+                int rowH = maxRowLines * (font.lineHeight + 2) + 4;
+
+                if (currentY + rowH >= getY() && currentY <= getY() + getHeight()) {
+                    int rowBg = (rowIndex % 2 == 0) ? 0x301C1410 : 0x181C1410;
+                    g.fill(x, currentY, x + tableW, currentY + rowH, rowBg);
+
+                    for (int c = 0; c < numCols; c++) {
+                        int cellX = x + c * colW + cellPadding;
+                        List<FormattedCharSequence> cellLines = cellLinesList.get(c);
+                        int lineY = currentY + 2;
+                        for (FormattedCharSequence line : cellLines) {
+                            g.drawString(font, line, cellX, lineY, MedievalColors.TEXT_WARM_WHITE, true);
+                            lineY += font.lineHeight + 2;
+                        }
+                        if (c > 0) {
+                            g.fill(x + c * colW, currentY, x + c * colW + 1, currentY + rowH, 0x40C8A040);
+                        }
+                    }
+                    g.fill(x, currentY + rowH - 1, x + tableW, currentY + rowH, 0x40C8A040);
+                }
+
+                currentY += rowH;
+                rowIndex++;
+            }
+
+            return currentY + 6;
+        }
+
         return y + 10;
     }
 

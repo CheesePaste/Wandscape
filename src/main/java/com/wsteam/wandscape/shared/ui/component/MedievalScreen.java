@@ -23,6 +23,7 @@ public abstract class MedievalScreen extends Screen {
     protected final int panelHeight;
     protected int headerHeight = 22;
     protected String titleBarText;
+    protected int titleXOffset = 10;
     protected final List<MedievalAnimation> animations = new ArrayList<>();
 
     // ── Built-in close button ──
@@ -145,7 +146,7 @@ public abstract class MedievalScreen extends Screen {
                 0xFFD4A840, 0xFF6A4020);
 
         if (titleBarText != null) {
-            g.drawString(font, titleBarText, hx + 10,
+            g.drawString(font, titleBarText, hx + titleXOffset,
                     hy + (headerHeight - font.lineHeight) / 2,
                     MedievalColors.TEXT_WARM_WHITE);
         }
