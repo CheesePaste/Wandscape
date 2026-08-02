@@ -153,13 +153,16 @@ public final class WandscapePanelController {
             if (toolMode != null) {
                 RoadPlacementState.setActiveTool(toolMode);
                 if (toolMode == RoadPlacementState.ToolMode.SPLINE) {
-                    // SPLINE mode: open ImGui Spline Road Editor
+                    // SPLINE mode: close V-panel, open ImGui Spline Road Editor
+                    // SplineEditorController takes over input (right-click camera, WASD flight, 3D axis gizmo drag)
+                    WandscapePanelState.exitCurrentSubMode();
+                    WandscapePanelState.closePanel();
                     com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
                     com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                     if (mc.player != null) {
                         mc.player.displayClientMessage(
                                 net.minecraft.network.chat.Component.literal(
-                                        "[Spline Editor] §aImGui editor opened — use the panel to add/edit/delete anchor points"),
+                                        "[Spline Editor] §aImGui editor opened — Right-click+drag to rotate camera, WASD to fly, Left-click to add/select points, Drag axes to move, ESC to exit"),
                                 true);
                     }
                 } else {
