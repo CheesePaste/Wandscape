@@ -538,7 +538,12 @@ public class Wandscape {
                 .playToClient(
                         MagicCircleCastPacket.TYPE,
                         MagicCircleCastPacket.STREAM_CODEC,
-                        (packet, ctx) -> MagicCircleCastPacket.handleClient(packet));
+                        (packet, ctx) -> MagicCircleCastPacket.handleClient(packet))
+                // ── Guide test ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.GuideTestPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet));
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -684,7 +689,8 @@ public class Wandscape {
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
                 .then(TransportCommand.node())
-                .then(MagicCommand.node());
+                .then(MagicCommand.node())
+                .then(com.wsteam.wandscape.command.GuideCommand.node());
         dispatcher.register(root);
     }
 

@@ -206,6 +206,12 @@ public class WandscapeClient {
                             packet.colonyName(), packet.level(), packet.experience(), packet.expToNext()));
         });
 
+        // Guide test screen
+        com.wsteam.wandscape.shared.network.GuideTestPacket.setClientHandler(packet -> {
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(packet.markdownContent()));
+        });
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 
