@@ -170,11 +170,56 @@ public class BuildingScannerScreen extends MedievalScreen {
             return;
         }
 
-        // ── Toolbar Row 2: Target & Category & Detect ──
-        addCustomButton(lx, y, 105, 20, "Target: " + scanner.getTargetMode().name(), () -> {
-            BuildingScannerBlockEntity.TargetMode next = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.BUILDING
-                    ? BuildingScannerBlockEntity.TargetMode.ROAD : BuildingScannerBlockEntity.TargetMode.BUILDING;
-            scanner.setTargetMode(next);
+        // ── ROAD Target Mode: Ultra-clean UI (Only Road Info, Export & Hot-register) ──
+        if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
+            addCustomButton(lx, y, 140, 20, "Target: ROAD", () -> {
+                scanner.setTargetMode(BuildingScannerBlockEntity.TargetMode.BUILDING);
+                syncToServer();
+                needsRebuild = true;
+            });
+
+            addCustomButton(lx + 150, y, 154, 20, "❖ 匹配角点", () -> {
+                syncToServer();
+                needsRebuild = true;
+            });
+            y += 26;
+
+            // Boundary Card Row
+            boundaryCardY = y;
+            y += 26;
+
+            // Road Preset Identity (ID & Display Name)
+            addSectionHeader(y, "❖ 道路预设属性 (Road Preset)");
+            y += 14;
+            metaStartY = y - 14;
+
+            metaId = mkEdit(lx + 4, y + 14, 150, scanner.getBuildingId().isEmpty() ? "wandscape:custom_road" : scanner.getBuildingId(), s -> {
+                scanner.setBuildingId(s);
+                syncToServer();
+            });
+            metaName = mkEdit(lx + 164, y + 14, 140, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
+                scanner.setDisplayName(s);
+                syncToServer();
+            });
+            y += 36;
+
+            // Export section
+            addSectionHeader(y, "❖ 道路 JSON 导出与热注册");
+            y += 16;
+            exportBtnY = y - 14;
+
+            addCustomButton(lx + 5, exportBtnY, 100, 22, "扫描区域", () -> doScan());
+            addCustomButton(lx + 110, exportBtnY, 190, 22, "导出与热注册道路 JSON", () -> doExport());
+
+            int bottom = exportBtnY + 60;
+            int visibleHeight = height - 40;
+            maxScroll = Math.min(0, visibleHeight - bottom);
+            return;
+        }
+
+        // ── BUILDING Target Mode: Complete Building Configuration ──
+        addCustomButton(lx, y, 105, 20, "Target: BUILDING", () -> {
+            scanner.setTargetMode(BuildingScannerBlockEntity.TargetMode.ROAD);
             syncToServer();
             needsRebuild = true;
         });
@@ -445,10 +490,8 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 16;
         exportBtnY = y - 14;
 
-        String btnText = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD
-                ? "导出道路 JSON" : "导出建筑 JSON";
         addCustomButton(lx + 5, exportBtnY, 100, 22, "扫描区域", () -> doScan());
-        addCustomButton(lx + 110, exportBtnY, 140, 22, btnText, () -> doExport());
+        addCustomButton(lx + 110, exportBtnY, 140, 22, "导出建筑 JSON", () -> doExport());
 
         int bottom = exportBtnY + 60;
         int visibleHeight = height - 40;
@@ -716,7 +759,7 @@ public class BuildingScannerScreen extends MedievalScreen {
     private void doExport() {
         String id = scanner.getBuildingId();
         if (id.isBlank()) {
-            scanResult = Component.literal("请先设置 Building ID");
+            scanResult = Component.literal("请先设置 ID");
             return;
         }
         PacketDistributor.sendToServer(new BuildingScannerExportPacket(scanner.getBlockPos()));
@@ -940,7 +983,32 @@ public class BuildingScannerScreen extends MedievalScreen {
             return;
         }
 
-        // ── SAVE Mode 3D Box Status Card ──
+        // ── ROAD Target Mode Render ──
+        if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
+            if (boundaryCardY > topPos + headerHeight && boundaryCardY < topPos + PH - 16) {
+                drawMinimalBox(gui, lx, boundaryCardY, 304, 20, false, false);
+                BlockOffset bMin = scanner.getBoundaryMin();
+                BlockOffset bMax = scanner.getBoundaryMax();
+                int dx = Math.abs(bMax.x() - bMin.x()) + 1;
+                int dy = Math.abs(bMax.y() - bMin.y()) + 1;
+                int dz = Math.abs(bMax.z() - bMin.z()) + 1;
+                String sizeText = String.format("❖ 3D 区域尺寸: %d × %d × %d 格  (Min:%d,%d,%d Max:%d,%d,%d)",
+                        dx, dy, dz, bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z());
+                gui.drawString(font, sizeText, lx + 8, boundaryCardY + 6, MedievalColors.BORDER_GOLD);
+            }
+
+            drawHdr(gui, "❖ 道路预设属性 (Road Preset)", lx, metaStartY);
+            drawLbl(gui, "Road ID", lx + 4, metaStartY + 14);
+            drawLbl(gui, "Display Name", lx + 164, metaStartY + 14);
+
+            drawHdr(gui, "❖ 道路 JSON 导出与热注册", lx, exportBtnY - 14);
+            gui.drawString(font, scanResult, lx + 5, exportBtnY + 28, MedievalColors.TEXT_MUTED);
+
+            super.render(gui, mx, my, pt);
+            return;
+        }
+
+        // ── BUILDING Target Mode Render ──
         if (boundaryCardY > topPos + headerHeight && boundaryCardY < topPos + PH - 16) {
             drawMinimalBox(gui, lx, boundaryCardY, 304, 20, false, false);
             BlockOffset bMin = scanner.getBoundaryMin();
