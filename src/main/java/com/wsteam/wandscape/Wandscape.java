@@ -708,6 +708,7 @@ public class Wandscape {
                 .then(TouristCommand.node())
                 .then(TransportCommand.node())
                 .then(MagicCommand.node())
+                .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node());
         dispatcher.register(root);
