@@ -25,11 +25,11 @@ public final class RoadPlacementState {
     /** Road placement phase: BAR (preset selection UI) or PLACING (in-world placement). */
     public enum RoadPhase { BAR, PLACING }
 
-    public enum ToolMode { REPLACE, FILL, SPLINE, DESTROY_FILL }
+    public enum ToolMode { SPLINE, REPLACE, DESTROY_FILL }
 
     private static volatile boolean projecting = false;
     private static volatile RoadPhase roadPhase = RoadPhase.BAR;
-    private static volatile ToolMode activeTool = ToolMode.REPLACE;
+    private static volatile ToolMode activeTool = ToolMode.SPLINE;
     private static volatile int selectedPresetIndex = 0;
     private static volatile BlockPos startPos = null;
     private static volatile BlockPos endPos = null;
@@ -63,7 +63,7 @@ public final class RoadPlacementState {
     public static void exitProjection() {
         projecting = false;
         roadPhase = RoadPhase.BAR;
-        activeTool = ToolMode.REPLACE;
+        activeTool = ToolMode.SPLINE;
         startPos = null;
         endPos = null;
         ghostPos = null;
@@ -78,7 +78,7 @@ public final class RoadPlacementState {
     /** Enter BAR phase: clear positions, cursor lifted for preset selection overlay. */
     public static void enterBar() {
         roadPhase = RoadPhase.BAR;
-        activeTool = ToolMode.REPLACE;
+        activeTool = ToolMode.SPLINE;
         clearAll();
         ghostPos = null;
         refBlockId = "";
@@ -103,9 +103,9 @@ public final class RoadPlacementState {
         Log.info(TAG, "[RoadPlacement] Tool mode → {}", mode);
     }
 
-    public static boolean isReplace() { return activeTool == ToolMode.REPLACE; }
+    public static boolean isSpline() { return activeTool == ToolMode.SPLINE; }
 
-    public static boolean isFill() { return activeTool == ToolMode.FILL; }
+    public static boolean isReplace() { return activeTool == ToolMode.REPLACE; }
 
     public static boolean isDestroyFill() { return activeTool == ToolMode.DESTROY_FILL; }
 

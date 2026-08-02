@@ -156,9 +156,9 @@ public final class WandscapePanelController {
                 WandscapePanelState.releaseCursorToGame();
                 if (mc.player != null) {
                     String hint = switch (toolMode) {
-                        case FILL -> "[Fill] §aRight-click set corner 1, Left-click set corner 2, Enter to submit";
+                        case SPLINE -> "[Spline Road] §aRight-click set start point, Left-click set end point, Enter to calculate Bezier path & submit";
                         case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
-                        default -> "[Road] §aRight-click set start, Left-click set end, Enter to submit";
+                        default -> "[Road Replace] §aRight-click set start, Left-click set end, Enter to submit";
                     };
                     mc.player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal(hint), true);

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.road.client;
 
+import java.util.List;
 import org.lwjgl.glfw.GLFW;
 
 import com.wsteam.wandscape.road.network.DestroyFillPacket;
@@ -226,14 +227,16 @@ public final class RoadPlacementController {
         BlockPos start = RoadPlacementState.getStartPos();
         BlockPos end = RoadPlacementState.getEndPos();
 
-        if (RoadPlacementState.isFill()) {
+        if (RoadPlacementState.isSpline()) {
             String presetId = RoadPlacementState.getSelectedPreset().id();
-            PacketDistributor.sendToServer(new FillBoxPacket(presetId, start, end));
-            Log.info(TAG, "[Fill] Published box: preset={} from={} to={}",
+            String tilesJson = "[{\"pos\":[" + start.getX() + "," + start.getY() + "," + start.getZ() + "],\"block\":\"" + presetId + "\"},{\"pos\":[" + end.getX() + "," + end.getY() + "," + end.getZ() + "],\"block\":\"" + presetId + "\"}]";
+            String splineJson = "[{\"a\":[" + start.getX() + "," + start.getY() + "," + start.getZ() + "],\"p\":[0,0,0],\"n\":[0,0,0],\"l\":false},{\"a\":[" + end.getX() + "," + end.getY() + "," + end.getZ() + "],\"p\":[0,0,0],\"n\":[0,0,0],\"l\":false}]";
+            PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.SplineBuildPacket(tilesJson, splineJson));
+            Log.info(TAG, "[Spline] Published spline road: preset={} from={} to={}",
                     presetId, start.toShortString(), end.toShortString());
             if (mc.player != null) {
                 mc.player.displayClientMessage(
-                        Component.literal("[Fill] §aFill task submitted! NPC will fill the cube."), true);
+                        Component.literal("[Spline Road] §aSpline road task submitted! NPC will pave the curve."), true);
             }
         } else if (RoadPlacementState.isDestroyFill()) {
             PacketDistributor.sendToServer(new DestroyFillPacket(start, end));
@@ -259,7 +262,7 @@ public final class RoadPlacementController {
 
     /** Chat prefix for the active tool mode. */
     private static String tag() {
-        if (RoadPlacementState.isFill()) return "[Fill]";
+        if (RoadPlacementState.isSpline()) return "[Spline Road]";
         if (RoadPlacementState.isDestroyFill()) return "[Destroy/Fill]";
         return "[Road]";
     }

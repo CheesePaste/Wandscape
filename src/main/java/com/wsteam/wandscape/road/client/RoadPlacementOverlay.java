@@ -103,9 +103,9 @@ public final class RoadPlacementOverlay {
         int btnH = 32;
 
         drawToolButton(g, font, toolsStartX, toolsStartY, btnW, btnH, mx, my,
-                "Replace", RoadPlacementState.ToolMode.REPLACE);
+                "Spline", RoadPlacementState.ToolMode.SPLINE);
         drawToolButton(g, font, toolsStartX, toolsStartY + btnH + 10, btnW, btnH, mx, my,
-                "Fill", RoadPlacementState.ToolMode.FILL);
+                "Replace", RoadPlacementState.ToolMode.REPLACE);
         drawToolButton(g, font, toolsStartX, toolsStartY + (btnH + 10) * 2, btnW, btnH, mx, my,
                 "Destroy/Fill", RoadPlacementState.ToolMode.DESTROY_FILL);
 
@@ -250,8 +250,8 @@ public final class RoadPlacementOverlay {
         if (mx < toolsStartX || mx > toolsStartX + btnW) return null;
 
         RoadPlacementState.ToolMode[] order = {
+                RoadPlacementState.ToolMode.SPLINE,
                 RoadPlacementState.ToolMode.REPLACE,
-                RoadPlacementState.ToolMode.FILL,
                 RoadPlacementState.ToolMode.DESTROY_FILL
         };
         for (int i = 0; i < order.length; i++) {

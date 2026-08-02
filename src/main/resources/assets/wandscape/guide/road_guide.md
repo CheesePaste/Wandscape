@@ -14,7 +14,7 @@
 
 ### 步骤二：如何在 3 种模式与材质之间切换
 - 按下 **`C` 键** 可以在【光标选择 UI 面板】与【准心视线交互】之间快速切换。
-- **模式切换**：光标状态下，在底部/侧边栏工具选项中点击切换 **`REPLACE` (替换)**、**`FILL` (填充)** 或 **`SPLINE` (样条线)**。
+- **模式切换**：光标状态下，在左侧工具栏中点击切换 **`SPLINE` (样条线贝塞尔)**、**`REPLACE` (替换)** 或 **`DESTROY/FILL` (清理与填充)**。默认开启第一个模式 `SPLINE`！
 - **材质预设切换**：双击底部卡片挑选石砖、石板、泥土路或铺面。
 
 ---
@@ -23,8 +23,8 @@
 
 | 核心参数 / 属性 | 类型 / 范围 | 详细作用机制与计算影响 |
 | :--- | :--- | :--- |
-| **`ToolMode`** | Enum (`REPLACE / FILL / SPLINE / DESTROY_FILL`) | 道路建造工具的核心模式。控制底层的地表替换、3D 立方体包围盒填充或 3D 贝塞尔曲线采样算法。 |
-| **`RoadPhase`** | Enum (`BAR / PLACING`) | `BAR` 状态下光标释放，用于在选单中挑选 Preset 材质；`PLACING` 状态下光标锁定准心，用于在世界中点击 `StartPos` / `EndPos`。 |
+| **`ToolMode`** | Enum (`SPLINE / REPLACE / DESTROY_FILL`) | 道路建造工具的核心模式。模式 1 `SPLINE` 为 3D 贝塞尔曲线，模式 2 `REPLACE` 为直线地表替换，模式 3 `DESTROY_FILL` 为带基准高度清理。 |
+| **`RoadPhase`** | Enum (`BAR / PLACING`) | `BAR` 状态下光标释放，用于在选单中挑选 Preset 材质与模式；`PLACING` 状态下光标锁定准心，用于在世界中点击 `StartPos` / `EndPos`。 |
 | **`Reach Distance`** | Float (`64.0 Blocks`) | 准心射线检测（ClipContext）最大有效射程距离。超出 64 格外无法锁定方块坐标。 |
 | **`SplineBuildPacket`** | Network Payload | 包含全量 3D Bezier 曲线 JSON 数据，触发服务端在物理世界中平滑打点并生成道路方块网格。 |
 
@@ -34,14 +34,14 @@
 
 为了帮助您傻瓜式上手每一种模式，我们提供了独立的详细教学与 API 字典：
 
-- 👉 [【1. 替换模式 Replace】超详细傻瓜指南](guide:road_replace_guide)  
+- 👉 [【1. 样条线贝塞尔模式 Spline】超详细傻瓜指南](guide:road_spline_guide)  
+  *适用于打造优雅自然山路、环形弯道与 3D 平滑曲线道路（默认第一模式）。*
+
+- 👉 [【2. 替换模式 Replace】超详细傻瓜指南](guide:road_replace_guide)  
   *适用于地表石子路/石砖路平铺与已有地形替换。*
 
-- 👉 [【2. 填充模式 Fill】超详细傻瓜指南](guide:road_fill_guide)  
-  *适用于架设高架桥、平整深坑与建造 3D 立方体基座。*
-
-- 👉 [【3. 样条线贝塞尔模式 Spline】超详细傻瓜指南](guide:road_spline_guide)  
-  *适用于打造优雅自然山路、环形弯道与 3D 平滑曲线道路。*
+- 👉 [【3. 区域清理与填充模式 Destroy/Fill】超详细傻瓜指南](guide:road_fill_guide)  
+  *适用于右键拾取基准高度与方块类型后，批量平整地形与清理障碍。*
 
 ---
 
