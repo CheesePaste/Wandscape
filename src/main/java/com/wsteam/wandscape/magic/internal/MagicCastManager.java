@@ -42,6 +42,9 @@ public final class MagicCastManager {
         PENDING.add(new PendingCast(casterUuid, level, source, target, color,
                 level.getGameTime() + Math.max(1, delayTicks)));
         ACTIVE_CASTERS.add(casterUuid);
+        Log.info(TAG, "schedule caster={} source={} target={} fireTick={} pending={}",
+                casterUuid.toString().substring(0, 8), source, target, level.getGameTime() + Math.max(1, delayTicks),
+                PENDING.size());
         return true;
     }
 
@@ -54,8 +57,9 @@ public final class MagicCastManager {
             if (pc.level().getGameTime() >= pc.fireTick()) {
                 MagicBeamEntity beam = new MagicBeamEntity(pc.level(), pc.source(), pc.target(), pc.color());
                 pc.level().addFreshEntity(beam);
-                Log.debug(TAG, "beam spawned {} -> {} color=#{}",
-                        pc.source(), pc.target(), Integer.toHexString(pc.color()));
+                Log.info(TAG, "beam spawned id={} source={} target={} color=#{} time={}",
+                        beam.getId(), pc.source(), pc.target(), Integer.toHexString(pc.color()),
+                        pc.level().getGameTime());
                 it.remove();
                 ACTIVE_CASTERS.remove(pc.caster());
             }

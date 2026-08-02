@@ -1,10 +1,14 @@
 package com.wsteam.wandscape.magic.client;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
+import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BeaconRenderer;
@@ -22,6 +26,9 @@ import net.minecraft.world.phys.Vec3;
  */
 public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
 
+    /** 已记录首次渲染的实体 id，避免每帧刷日志。 */
+    private static final Set<Integer> LOGGED = new HashSet<>();
+
     public MagicBeamEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
@@ -31,6 +38,10 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         Vec3 src = entity.getPosition(partialTick);
         BlockPos tgtPos = entity.getTarget().orElse(null);
+        if (LOGGED.add(entity.getId())) {
+            Log.info("MagicBeamRenderer", "render id={} src={} targetPresent={} target={}",
+                    entity.getId(), src, tgtPos != null, tgtPos);
+        }
         if (tgtPos == null) return;
         Vec3 tgt = tgtPos.getCenter();
         Vec3 dir = tgt.subtract(src);

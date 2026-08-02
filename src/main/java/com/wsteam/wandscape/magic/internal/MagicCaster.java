@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 
 import net.minecraft.core.BlockPos;
@@ -30,13 +31,15 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public final class MagicCaster {
 
+    private static final String TAG = "MagicCast";
+
     /** 默认攻击法阵 spec id。 */
     public static final String DEFAULT_CIRCLE = "arcane_hexagram";
     /** 默认光束颜色（青蓝）。 */
     public static final int DEFAULT_COLOR = 0xFF3F8FFF;
 
     private static final double CAST_DISTANCE = 1.5;
-    /** 法杖中心距手部沿法杖方向的偏移（方块）：圆心/光束起点落在法杖中间而非手部。 */
+    /** 圆心/光束起点距持杖手沿瞄准方向的偏移（方块）：落在法杖中段而非手部。 */
     private static final double STAFF_CENTER_OFFSET = 1.0;
     private static final double AIM_RANGE = 64.0;
 
@@ -62,22 +65,34 @@ public final class MagicCaster {
     }
 
     /**
-     * NPC 施放（shift+右键触发）：法阵圆心落在法杖中心（持杖手沿法杖方向前移一段），
-     * 法阵平面垂直法杖，光束从法杖中心沿法杖方向射向远处。不改变 NPC 朝向。
+     * NPC 施放（shift+右键触发）：法阵圆心落在法杖中段（持杖手沿瞄准方向前移一段），
+     * 法阵平面垂直「NPC→目标」方向，光束沿该方向射向目标。不改变 NPC 朝向。
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) return false;
 
-        Vec3 staffDir = npc.getStaffDirection();
-        Vec3 source = npc.getStaffPosition().add(staffDir.scale(STAFF_CENTER_OFFSET));
-        BlockPos target = aimTarget(level, source, staffDir);
+        Vec3 hand = npc.getStaffPosition();
+        // 默认瞄准：NPC 前方沿水平朝向射线检测
+        BlockPos target = aimTarget(level, hand, npc.getFacingDirection());
+        // 倾角 = NPC→目标方向（法阵平面垂直它，光束沿它）
+        Vec3 axis = target.getCenter().subtract(hand).normalize();
+        Vec3 source = hand.add(axis.scale(STAFF_CENTER_OFFSET));
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
         PacketDistributor.sendToPlayersTrackingEntity(npc,
-                new MagicCircleCastPacket(UUID.randomUUID(), source, staffDir, circleId));
+                new MagicCircleCastPacket(UUID.randomUUID(), source, axis, circleId));
 
-        return MagicCastManager.schedule(level, npc.getUUID(), source, target, c, spec.durationTicks);
+        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, target, c, spec.durationTicks);
+        Log.info(TAG, "castNpc id={} circle={} hand={} axis={} source={} target={} scheduled={}",
+                npc.getUUID().toString().substring(0, 8), circleId,
+                fmt(hand), fmt(axis), fmt(source), target, ok);
+        return ok;
+    }
+
+    /** 调试日志：Vec3 四舍五入两位。 */
+    private static String fmt(Vec3 v) {
+        return String.format("(%.2f,%.2f,%.2f)", v.x, v.y, v.z);
     }
 
     /** 玩家准星目标：命中方块取其坐标，未命中取视线 64 格外一点。 */

@@ -3,6 +3,7 @@ package com.wsteam.wandscape.magic.entity;
 import java.util.Optional;
 
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -76,9 +77,16 @@ public class MagicBeamEntity extends Entity {
         builder.define(DATA_COLOR, 0xFF3F8FFF);
     }
 
+    private boolean loggedSpawn;
+
     @Override
     public void tick() {
         super.tick();
+        if (!loggedSpawn && tickCount >= 5) {
+            loggedSpawn = true;
+            Log.info("MagicBeam", "beam tick id={} client={} pos={} targetPresent={} target={}",
+                    getId(), level().isClientSide, position(), getTarget().isPresent(), getTarget().orElse(null));
+        }
         // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
         if (tickCount >= LIFETIME_TICKS) discard();
     }
