@@ -41,6 +41,9 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.road.engine.RoadTaskSource;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
+import com.wsteam.wandscape.guard.GuardBlueprints;
+import com.wsteam.wandscape.guard.GuardTaskSource;
+import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
@@ -82,6 +85,7 @@ public final class EngineBootstrap {
         }
 
         EventDrivenTaskSource.registerDefaultBlueprints(blueprints);
+        GuardBlueprints.registerDefault(blueprints);
 
         // 2. Build system blueprint registry
         SystemBlueprintRegistry sysBlueprints = new SystemBlueprintRegistry();
@@ -91,6 +95,7 @@ public final class EngineBootstrap {
         taskSources.add(new BuildingTaskSource());
         taskSources.add(new WorkbenchSource());
         taskSources.add(new RoadTaskSource());
+        taskSources.add(new GuardTaskSource());
 
         // 4. Build boundary implementations
         WandscapeBlockOps blockOps = new WandscapeBlockOps();
@@ -150,6 +155,12 @@ public final class EngineBootstrap {
 
         // 7. Register default op executors
         DefaultOpExecutors.registerAll(world.opExecutors);
+
+        // 7b. Register guard combat executor (sustained cast loop, driven by onServerTick tickAll)
+        GuardAttackExecutor guardExec = new GuardAttackExecutor();
+        world.opExecutors.register(guardExec);
+        WandscapeEngine.setGuardExecutor(guardExec);
+        Log.info(TAG, "  GuardAttackExecutor registered");
 
         // 8. Register NavigationSystem (drives all NPC movement via NavigationState)
         NavigationSystem navSystem = new NavigationSystem();
