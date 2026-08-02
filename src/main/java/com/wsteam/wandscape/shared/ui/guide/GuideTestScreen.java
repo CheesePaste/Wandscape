@@ -117,6 +117,15 @@ public class GuideTestScreen extends MedievalScreen {
         }
     }
 
+    /**
+     * Whether this guide is currently showing the given document path.
+     * Used by the spline editor to detect its own guide (for H-toggle/ESC close).
+     */
+    public boolean isShowingDocument(String docPath) {
+        return historyStack != null && docPath != null
+                && docPath.equals(historyStack.getCurrentDocument());
+    }
+
     @Override
     public void onClose() {
         if (parentScreen != null && minecraft != null) {

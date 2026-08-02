@@ -66,6 +66,9 @@ public final class SplineEditorController {
      */
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!SplineEditorClientState.isEditing()) return;
+        // A vanilla screen (guide) owns mouse buttons while open — do not
+        // start camera grabbing from the editor's RMB handling.
+        if (Minecraft.getInstance().screen != null) return;
         if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -99,7 +102,7 @@ public final class SplineEditorController {
         // ── Right-click camera rotation ──
         // Event-driven in onMouseButtonPre; this tick poll is a fallback for
         // presses that happened before the editor opened or missed events.
-        if (!cameraActive && rightDown && !imguiWantsMouse) {
+        if (!cameraActive && rightDown && !imguiWantsMouse && mc.screen == null) {
             cameraActive = true;
             mc.mouseHandler.grabMouse();
         } else if (cameraActive && !rightDown) {
@@ -120,7 +123,8 @@ public final class SplineEditorController {
 
             // World clicks belong to the editor when the cursor is over the
             // world; ImGui already consumed anything over its panels.
-            if (!imguiWantsMouse && !cursorLifted) {
+            // When a vanilla screen (guide) is open, its widgets own the clicks.
+            if (!imguiWantsMouse && !cursorLifted && mc.screen == null) {
                 SplineEditorInputHandler.handleClicks(mc, window);
             }
         }
@@ -321,20 +325,31 @@ public final class SplineEditorController {
         boolean escDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
         if (escDown && !wasEscapeDown) {
             if (!cameraActive) {
-                // Exit editor mode
-                SplineEditorClientState.exitEditMode();
-                ImGuiManager.toggle(); // Turn off ImGui if active
+                // If a guide screen is open, ESC closes it first (stays in editor)
+                if (isSplineGuideOpen(mc)) {
+                    mc.setScreen(null);
+                } else {
+                    // Exit editor mode
+                    SplineEditorClientState.exitEditMode();
+                    ImGuiManager.toggle(); // Turn off ImGui if active
+                }
             }
         }
         wasEscapeDown = escDown;
 
-        // H key (GUIDE_TOGGLE): open spline guide document
+        // H key (GUIDE_TOGGLE): toggle spline guide document
         if (!imguiWantsKb && !cameraActive) {
             int hKey = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getKey().getValue();
             boolean helpDown = GLFW.glfwGetKey(window, hKey) == GLFW.GLFW_PRESS;
             if (helpDown && !wasHelpDown) {
-                String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
-                mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
+                if (isSplineGuideOpen(mc)) {
+                    // Toggle off: close the guide, stay in the editor
+                    mc.setScreen(null);
+                    Log.info(TAG, "[SplineEditor] Guide closed (H toggle)");
+                } else {
+                    String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("road_spline_guide");
+                    mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "road_spline_guide"));
+                }
             }
             wasHelpDown = helpDown;
         }
@@ -383,6 +398,17 @@ public final class SplineEditorController {
         while (mc.options.keyInventory.consumeClick()) {}
         while (mc.options.keyDrop.consumeClick()) {}
         while (mc.options.keySprint.consumeClick()) {}
+    }
+
+    /**
+     * True if a spline guide document screen is currently open (the one we
+     * opened from the editor). GuideTestScreen carries its document path in a
+     * history stack; expose a way to check it without touching internals.
+     */
+    private static boolean isSplineGuideOpen(Minecraft mc) {
+        if (mc.screen == null) return false;
+        if (!(mc.screen instanceof com.wsteam.wandscape.shared.ui.guide.GuideTestScreen guide)) return false;
+        return guide.isShowingDocument("road_spline_guide");
     }
 
     public static void doBuildArray() {

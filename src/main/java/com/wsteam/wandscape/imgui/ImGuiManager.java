@@ -245,12 +245,18 @@ public class ImGuiManager {
     @SubscribeEvent
     public static void onMouseClick(InputEvent.MouseButton.Pre event) {
         if (!showGui || !initialized) return;
+        // When a vanilla MC screen is open (e.g. the spline guide document),
+        // let the screen handle its own clicks (close button, back/forward…).
+        // ImGui already processed the event at the GLFW layer, so canceling
+        // here would only strip vanilla of the click.
+        if (Minecraft.getInstance().screen != null) return;
         if (anyEditorActive()) event.setCanceled(true);
     }
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!showGui || !initialized) return;
+        if (Minecraft.getInstance().screen != null) return;
         if (anyEditorActive()) {
             event.setCanceled(true);
             return;
