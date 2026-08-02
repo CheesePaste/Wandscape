@@ -43,9 +43,9 @@ public final class MagicCaster {
 
     private static final double CAST_DISTANCE = 1.5;
     /** 光束在法阵出现后多少 tick 开始生成（法阵动画期间从细变宽）。 */
-    private static final int BEAM_SPAWN_DELAY = 20;
+    public static final int BEAM_SPAWN_DELAY = 20;
     /** 法阵结束后光束额外延续的 tick（快速变细到消失）。 */
-    private static final int BEAM_TAIL = 20;
+    public static final int BEAM_TAIL = 20;
     /** 施法目标搜索半径（方块）：取最近敌对生物。 */
     private static final double CAST_TARGET_RANGE = 32.0;
 
@@ -77,20 +77,48 @@ public final class MagicCaster {
      * 法阵/光束由 MagicBeamEntity 动态跟踪目标，随 NPC 转向。无目标时沿当前朝向射 200 格。
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
+        LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
+        if (target != null) {
+            return castNpcAt(level, npc, target, circleId, color);
+        }
+
+        // 无目标：沿当前朝向施放（视觉演示）
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) return false;
 
-        LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
+        UUID effectId = npc.getUUID();
+        Vec3 hand = npc.getStaffPosition();
+        Vec3 axis = npc.getFacingDirection();
+        Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
+        BlockPos beamTarget = aimFirstBlock(level, source, axis);
+        int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
+
+        PacketDistributor.sendToPlayersTrackingEntity(npc,
+                new MagicCircleCastPacket(effectId, source, axis, circleId));
+
+        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
+                BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, null);
+        Log.info(TAG, "castNpc id={} circle={} target=null (facing) hand={} axis={} source={} scheduled={}",
+                npc.getUUID().toString().substring(0, 8), circleId,
+                fmt(hand), fmt(axis), fmt(source), ok);
+        return ok;
+    }
+
+    /**
+     * NPC 施放指向**指定目标**（守卫执行器用）：面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
+     * 法阵/光束由 MagicBeamEntity 动态跟踪目标。目标必须存活；若该施法者已有未发射的施法则拒绝。
+     */
+    public static boolean castNpcAt(ServerLevel level, WandscapeNpc npc, LivingEntity target,
+                                    String circleId, @Nullable Integer color) {
+        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
+        if (spec == null || target == null || target.isRemoved() || !target.isAlive()) return false;
+
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
         // 瞄身体中心（AABB 中心），而非脚底
-        Vec3 aim = target != null ? target.getBoundingBox().getCenter() : null;
-        Vec3 axis = aim != null
-                ? aim.subtract(hand).normalize()
-                : npc.getFacingDirection();
-        if (target != null) {
-            npc.faceTarget(BlockPos.containing(aim));
-        }
+        Vec3 aim = target.getBoundingBox().getCenter();
+        Vec3 axis = aim.subtract(hand).normalize();
+        npc.faceTarget(BlockPos.containing(aim));
         Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
         BlockPos beamTarget = aimFirstBlock(level, source, axis);
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
@@ -100,9 +128,9 @@ public final class MagicCaster {
 
         boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
                 BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, target);
-        Log.info(TAG, "castNpc id={} circle={} target={} hand={} axis={} source={} scheduled={}",
+        Log.info(TAG, "castNpcAt id={} circle={} target={} hand={} axis={} source={} scheduled={}",
                 npc.getUUID().toString().substring(0, 8), circleId,
-                target != null ? target.getUUID().toString().substring(0, 8) : "null",
+                target.getUUID().toString().substring(0, 8),
                 fmt(hand), fmt(axis), fmt(source), ok);
         return ok;
     }
