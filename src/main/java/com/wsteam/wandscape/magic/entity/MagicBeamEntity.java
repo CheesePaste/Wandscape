@@ -87,7 +87,7 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
-     * 宽度乘子 [0.02, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
+     * 宽度乘子 [0.1, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
      * t ∈ [PEAK_T, 1] 快速变窄（(1-k)^WIDTH_POWER）。
      * 恒大于 0，避免 renderBeaconBeam 内部除以 beamRadius 时为 0。
      */
@@ -101,7 +101,7 @@ public class MagicBeamEntity extends Entity {
             float k = Math.min(1f, (t - PEAK_T) / (1f - PEAK_T));
             factor = (float) Math.pow(1f - k, WIDTH_POWER);
         }
-        return Math.max(0.02f, factor);
+        return Math.max(0.1f, factor);
     }
 
     /** 纯显示实体不入存档，避免世界重载后残留光束。 */

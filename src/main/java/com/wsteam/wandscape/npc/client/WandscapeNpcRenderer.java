@@ -29,6 +29,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import org.joml.Matrix4f;
 public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, HumanoidModel<WandscapeNpc>> {
@@ -210,49 +211,29 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         ClientLevel level = (ClientLevel) entity.level();
         float[] color = getWandColor(entity);
 
-        double yawRad = Math.toRadians(entity.yBodyRot);
-        double cos = Math.cos(yawRad);
-        double sin = Math.sin(yawRad);
+        // Hand position from shared geometry（与施法/光束同一来源，含手臂角度）
+        Vec3 hand = entity.getStaffPosition();
+        double ox = hand.x;
+        double oy = hand.y;
+        double oz = hand.z;
 
-        // Hand position adjusts with arm angle (pitch-driven)
-        float pitchRad = (float) Math.toRadians(entity.getXRot());
-        double armAngle = -1.2 + pitchRad;
-        double armLen = 0.75;
-        double deltaY = -armLen * (Math.cos(armAngle) - Math.cos(-1.2));
-        double deltaFwd = -armLen * (Math.sin(armAngle) - Math.sin(-1.2));
-        double fwd = 0.6 + deltaFwd;
-        double oy = entity.getY() + 1.5 + deltaY;
-
-        // Origin: right hand position
-        double ox = entity.getX() - 0.65 * cos - fwd * sin;
-        double oz = entity.getZ() - 0.65 * sin + fwd * cos;
-
-        // Aim at debug target (diamond block), or fallback to facing direction
+        // 朝向：有 debug target 则从右手指向目标，否则水平正前
         Optional<BlockPos> debugTarget = entity.getDebugTarget();
-        double dx, dy, dz, range;
+        Vec3 dir;
+        double range;
         if (debugTarget.isPresent()) {
             BlockPos bp = debugTarget.get();
-            double tx = bp.getX() + 0.5;
-            double ty = bp.getY() + 0.5;
-            double tz = bp.getZ() + 0.5;
-            dx = tx - ox;
-            dy = ty - oy;
-            dz = tz - oz;
-            double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            dx /= len;
-            dy /= len;
-            dz /= len;
-            range = len; // stop at target
+            Vec3 target = new Vec3(bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5);
+            dir = target.subtract(hand).normalize();
+            range = target.distanceTo(hand);
         } else {
-            dx = -sin;
-            dy = 0;
-            dz = cos;
+            dir = entity.getFacingDirection();
             range = RAY_RANGE;
         }
 
         for (double d = 0.8; d <= range; d += RAY_STEP) {
             CastBoltParticle.spawn(level,
-                    ox + dx * d, oy + dy * d, oz + dz * d,
+                    ox + dir.x * d, oy + dir.y * d, oz + dir.z * d,
                     color[0], color[1], color[2]);
         }
     }

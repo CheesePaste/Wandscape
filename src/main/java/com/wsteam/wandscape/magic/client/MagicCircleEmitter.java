@@ -134,13 +134,13 @@ public final class MagicCircleEmitter {
             List<String> ids = el.particleIds();
 
             switch (el.type()) {
-                case GLYPH -> spawnGlyph(el, a, b, radius, phase, alphaEmit, tint, ids);
-                case POLYGON, STAR -> spawnShape(el, a, b, radius, phase, alphaEmit, tint, ids);
+                case GLYPH -> spawnGlyph(el, a, b, pos, radius, phase, alphaEmit, tint, ids);
+                case POLYGON, STAR -> spawnShape(el, a, b, pos, radius, phase, alphaEmit, tint, ids);
                 case RING, ARC -> {
                     if (el.continuous()) {
-                        spawnContinuous(el, a, b, radius, phase, alphaEmit, tint, ids);
+                        spawnContinuous(el, a, b, pos, radius, phase, alphaEmit, tint, ids);
                     } else {
-                        spawnBeads(el, a, b, radius, phase, alphaEmit, tint, ids);
+                        spawnBeads(el, a, b, pos, radius, phase, alphaEmit, tint, ids);
                     }
                 }
             }
@@ -150,7 +150,7 @@ public final class MagicCircleEmitter {
     // ── 各元素类型撒粒子 ──
 
     /** ring/arc · beads：沿弧长按 density×弧长 均布，全部同时可见，无拖尾淡出。 */
-    private static void spawnBeads(Element el, Vec3 a, Vec3 b, double radius, double phase,
+    private static void spawnBeads(Element el, Vec3 a, Vec3 b, Vec3 center, double radius, double phase,
                                    double alphaEmit, float[] tint, List<String> ids) {
         double sweep = el.type() == ElementType.ARC ? el.arcSweepDeg() : 360;
         double base = el.type() == ElementType.ARC ? el.arcStartDeg() : 0;
@@ -159,14 +159,14 @@ public final class MagicCircleEmitter {
         int n = Math.max(2, (int) Math.round(el.density() * arcLen));
         for (int i = 0; i < n; i++) {
             double angle = phase + base + (i / (double) n) * sweep;
-            Vec3 p = pointOnCircle(a, b, radius, angle, el.yOffset());
+            Vec3 p = pointOnCircle(a, b, center, radius, angle, el.yOffset());
             String style = ids.get(i % ids.size());
             emit(el, style, p, tint, styleQuadSize(style), styleQuadSize(style), (float) alphaEmit, false, 3);
         }
     }
 
     /** ring/arc · continuous：每 tick 沿弧长撒 density×弧长 个拖尾粒子（±0.2 抖动），寿命=trail。 */
-    private static void spawnContinuous(Element el, Vec3 a, Vec3 b, double radius, double phase,
+    private static void spawnContinuous(Element el, Vec3 a, Vec3 b, Vec3 center, double radius, double phase,
                                         double alphaEmit, float[] tint, List<String> ids) {
         double sweep = el.type() == ElementType.ARC ? el.arcSweepDeg() : 360;
         double base = el.type() == ElementType.ARC ? el.arcStartDeg() : 0;
@@ -176,20 +176,20 @@ public final class MagicCircleEmitter {
         int lifetime = el.trailTicks();
         for (int k = 0; k < n; k++) {
             double angle = phase + base + (k / (double) n) * sweep;
-            Vec3 p = jitter(pointOnCircle(a, b, radius, angle, el.yOffset()), a, b);
+            Vec3 p = jitter(pointOnCircle(a, b, center, radius, angle, el.yOffset()), a, b);
             String style = ids.get(k % ids.size());
             emit(el, style, p, tint, styleQuadSize(style), styleQuadSize(style), (float) alphaEmit, true, lifetime);
         }
     }
 
     /** polygon/star：beads = 沿周长均布；continuous = 沿各边撒拖尾。 */
-    private static void spawnShape(Element el, Vec3 a, Vec3 b, double radius, double phase,
+    private static void spawnShape(Element el, Vec3 a, Vec3 b, Vec3 center, double radius, double phase,
                                    double alphaEmit, float[] tint, List<String> ids) {
         List<double[]> verts = shapeVertices(el);
         int n = verts.size();
         Vec3[] wv = new Vec3[n];
         for (int i = 0; i < n; i++) {
-            wv[i] = pointOnCircle(a, b, radius * verts.get(i)[1], phase + verts.get(i)[0], el.yOffset());
+            wv[i] = pointOnCircle(a, b, center, radius * verts.get(i)[1], phase + verts.get(i)[0], el.yOffset());
         }
 
         if (!el.continuous()) {
@@ -239,7 +239,7 @@ public final class MagicCircleEmitter {
     }
 
     /** glyph：count 个符文位，彗星头(head_scale×scale)→尾(tail_scale×scale)缩放 + 淡出。 */
-    private static void spawnGlyph(Element el, Vec3 a, Vec3 b, double radius, double phase,
+    private static void spawnGlyph(Element el, Vec3 a, Vec3 b, Vec3 center, double radius, double phase,
                                    double alphaEmit, float[] tint, List<String> ids) {
         int count = el.count();
         int lifetime = el.trailTicks();
@@ -247,7 +247,7 @@ public final class MagicCircleEmitter {
         float tail = (float) (el.glyphScale() * el.tailScale() / 2);
         for (int i = 0; i < count; i++) {
             double angle = phase + (i * 360.0) / count;
-            Vec3 p = jitter(pointOnCircle(a, b, radius, angle, 0), a, b);
+            Vec3 p = jitter(pointOnCircle(a, b, center, radius, angle, 0), a, b);
             String style = ids.get(i % ids.size());
             emit(el, style, p, tint, head, tail, (float) alphaEmit, true, lifetime);
         }
@@ -282,12 +282,12 @@ public final class MagicCircleEmitter {
         return new Vec3[]{a, b};
     }
 
-    /** 平面内角度 deg 处的圆周点（yOffset 加在世界 Y 上，同编辑器 pointAt）。 */
-    private static Vec3 pointOnCircle(Vec3 a, Vec3 b, double radius, double deg, double yOffset) {
+    /** 平面内角度 deg 处、以 center 为圆心的圆周点（yOffset 加在世界 Y 上，同编辑器 pointAt）。 */
+    private static Vec3 pointOnCircle(Vec3 a, Vec3 b, Vec3 center, double radius, double deg, double yOffset) {
         double t = Math.toRadians(deg);
         double c = Math.cos(t);
         double s = Math.sin(t);
-        return new Vec3(a.x * c * radius + b.x * s * radius,
+        return center.add(a.x * c * radius + b.x * s * radius,
                 a.y * c * radius + b.y * s * radius + yOffset,
                 a.z * c * radius + b.z * s * radius);
     }

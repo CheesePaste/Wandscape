@@ -17,7 +17,7 @@ public class WandscapeNpcModel extends HumanoidModel<WandscapeNpc> {
 
         if (entity.isCasting()) {
             float pitchRad = (float) Math.toRadians(entity.getXRot());
-            this.rightArm.xRot = -1.2f + pitchRad;
+            this.rightArm.xRot = (float) (WandscapeNpc.CAST_ARM_ANGLE + pitchRad);
             this.rightArm.yRot = 0.15f;
             this.rightArm.zRot = 0.0f;
         }

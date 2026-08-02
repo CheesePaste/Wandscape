@@ -355,6 +355,43 @@ public class WandscapeNpc extends PathfinderMob {
         }
     }
 
+    // ============================================================
+    // 施法几何（与客户端渲染器/模型同一套，保证法阵/光束落在持杖手上）
+    // 右臂举杖姿态基准角统一在此，避免模型/渲染/服务端三处硬编码漂移。
+    // 瞄准目标时 faceTarget() 设置 getXRot（俯仰角），手臂角度随之指向目标。
+    // ============================================================
+
+    /** 举杖姿态右臂 xRot 基准角（弧度）：模型 rightArm.xRot = 此值 + 俯仰角。 */
+    public static final double CAST_ARM_ANGLE = -1.2;
+    /** 手臂长度（方块）。 */
+    public static final double CAST_ARM_LENGTH = 0.75;
+
+    /** 当前右臂抬起角（弧度）= 基准角 + NPC 俯仰角。getXRot 由 faceTarget() 对准目标时设置。 */
+    public double getCastArmAngle() {
+        return CAST_ARM_ANGLE + Math.toRadians(getXRot());
+    }
+
+    /** 持法杖的右手世界位置。 */
+    public Vec3 getStaffPosition() {
+        double yawRad = Math.toRadians(yBodyRot);
+        double cos = Math.cos(yawRad);
+        double sin = Math.sin(yawRad);
+        double armAngle = getCastArmAngle();
+        double deltaY = -CAST_ARM_LENGTH * (Math.cos(armAngle) - Math.cos(CAST_ARM_ANGLE));
+        double deltaFwd = -CAST_ARM_LENGTH * (Math.sin(armAngle) - Math.sin(CAST_ARM_ANGLE));
+        double fwd = 0.6 + deltaFwd;
+        double oy = getY() + 1.5 + deltaY;
+        double ox = getX() - 0.65 * cos - fwd * sin;
+        double oz = getZ() - 0.65 * sin + fwd * cos;
+        return new Vec3(ox, oy, oz);
+    }
+
+    /** 水平正前方向（基于 yBodyRot，与 spawnCastRay 无目标 fallback 一致）。 */
+    public Vec3 getFacingDirection() {
+        double yawRad = Math.toRadians(yBodyRot);
+        return new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad)).normalize();
+    }
+
     /** Face the NPC toward a target block (yaw from horizontal, pitch from vertical angle). */
     private void faceTarget(BlockPos target) {
         double dx = target.getX() + 0.5 - getX();

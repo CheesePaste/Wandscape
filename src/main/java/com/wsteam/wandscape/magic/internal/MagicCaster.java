@@ -20,6 +20,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -35,7 +36,6 @@ public final class MagicCaster {
     public static final int DEFAULT_COLOR = 0xFF3F8FFF;
 
     private static final double CAST_DISTANCE = 1.5;
-    private static final double NPC_CAST_DISTANCE = 2.0;
     private static final double AIM_RANGE = 64.0;
 
     private MagicCaster() {}
@@ -60,20 +60,20 @@ public final class MagicCaster {
     }
 
     /**
-     * NPC 施放（shift+右键触发）：沿 NPC 当前朝向向前生成法阵，光束射向该方向远处。
-     * 不改变 NPC 朝向，玩家需站在 NPC 正面观察。
+     * NPC 施放（shift+右键触发）：法阵出现在持杖右手处，垂直朝向为 NPC 水平正前方，
+     * 光束从法杖沿正前方射向远处。不改变 NPC 朝向，玩家需站在 NPC 正面观察。
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) return false;
 
-        Vec3 look = npc.getLookAngle();
-        Vec3 source = npc.getEyePosition().add(look.scale(NPC_CAST_DISTANCE));
-        BlockPos target = aimTarget(level, npc);
+        Vec3 source = npc.getStaffPosition();
+        Vec3 axis = npc.getFacingDirection();
+        BlockPos target = aimTarget(level, source, axis);
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
         PacketDistributor.sendToPlayersTrackingEntity(npc,
-                new MagicCircleCastPacket(UUID.randomUUID(), source, look, circleId));
+                new MagicCircleCastPacket(UUID.randomUUID(), source, axis, circleId));
 
         return MagicCastManager.schedule(level, npc.getUUID(), source, target, c, spec.durationTicks);
     }
@@ -87,16 +87,14 @@ public final class MagicCaster {
         return BlockPos.containing(player.getEyePosition().add(player.getLookAngle().scale(AIM_RANGE)));
     }
 
-    /** NPC 目标：沿其朝向射线检测，命中方块取其坐标，未命中取 64 格外一点。 */
-    private static BlockPos aimTarget(ServerLevel level, WandscapeNpc npc) {
-        Vec3 eye = npc.getEyePosition();
-        Vec3 look = npc.getLookAngle();
-        HitResult hit = level.clip(new ClipContext(eye, eye.add(look.scale(AIM_RANGE)),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, npc));
+    /** NPC 目标：从源点沿水平朝向射线检测，命中方块取其坐标，未命中取 64 格外一点。 */
+    private static BlockPos aimTarget(ServerLevel level, Vec3 from, Vec3 dir) {
+        HitResult hit = level.clip(new ClipContext(from, from.add(dir.scale(AIM_RANGE)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
         if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
             return bhr.getBlockPos();
         }
-        return BlockPos.containing(eye.add(look.scale(AIM_RANGE)));
+        return BlockPos.containing(from.add(dir.scale(AIM_RANGE)));
     }
 
     /** 光束颜色：参数 > 手持法杖 wand_color > 默认青蓝。 */
