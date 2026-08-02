@@ -14,9 +14,10 @@
   → 守卫任务源扫描到最近威胁（区域内最近敌对生物）
   → 发布 guard:attack 任务（优先级 49，同一时间仅一个活跃守卫任务）
   → 调度器派给空闲 NPC
-  → NPC 原地转向、视线（LOS）确认、施放魔法阵（不需走近怪物）
-  → 动画结束后信标光束射向目标（每 tick 伤害束内敌对生物）
-  → 光束结束 → 执行器重选区域内最近怪物 → 再施法
+  → 执行器每 10 tick 循环：
+       ▶ LOS 可见 → 光束重定向到最近怪物（主动切换目标）、无光束则施法
+       ▶ LOS 被方块挡 → 寻路到能打到怪物的位置（绕过墙体，LOS 一清就停手施法）
+  → 动画结束后信标光束射向目标（每 tick 伤害束内敌对生物，光束随最近目标重定向）
   → 直到 AABB 水平 +15 格区域内无怪物 → 守卫任务完成，NPC 恢复空闲
 ```
 
@@ -53,15 +54,15 @@
 | **M0 配置** | `Config.java`（现有 TOML）+ `guard/GuardConstants.java` | `guard.range`(10)/`guard.releaseRange`(15)、守卫优先级(49)、轮询间隔(20)、法阵 id、颜色 | `Config.SPEC` 现有机制 |
 | **M1 威胁侦测** | `guard/GuardZone.java`（纯数据）+ `GuardTaskSource` 扫描 | 所有非停摆建筑包围盒水平 ±10 区 → 区域内最近存活 `Enemy`，产出威胁 | `BuildingApi.getBuildingBounds`、`Level.getEntities` |
 | **M2 守卫任务源** | `guard/GuardTaskSource` | 有威胁且无活跃守卫任务 → `TaskRequest("guard:attack", params)` 入池；`pool.isActive` 去重 | `TaskSource` + `TaskSourcePoller` + `BuildingTaskSource` 模板 |
-| **M3 战斗执行** | `op/api/AtomicOp`（新变体 `AttackMonsterOp`）+ `guard/executor/GuardAttackExecutor` | 持续异步循环：区域内找最近 `Enemy`（+10）→ 视线通过 → `castNpcAt` 施法 → 等光束结束 → 重选；+15 区无怪才完成 | `AsyncTransformExecutor` 形态 + `MagicCaster.castNpcAt` + `MagicCastManager` |
+| **M3 战斗执行** | `op/api/AtomicOp`（新变体 `AttackMonsterOp`）+ `guard/executor/GuardAttackExecutor` | 持续异步循环（每 ~10 tick）：找最近 `Enemy`（+10）→ 光束重定向到最近（主动切换）→ LOS 被挡则寻路绕过墙体 → 可见才 `castNpcAt` 施法；+15 区无怪才完成 | `AsyncTransformExecutor` 形态 + `MagicCaster.castNpcAt` + `MagicCastManager` + `MagicBeamEntity.retarget` |
 | **M4 伤害边界** | `magic/entity/MagicBeamEntity` | **已实现**：光束每 tick 对束内 `Enemy` 造成 magic 伤害（不需 `EntityOps.applyEffect` stub） | `MagicBeamEntity.damageTargets` |
 | **M5 魔法阵攻击视觉** | `magic/` | **已实现**：MagicCircleSpec 数据/粒子发射器 + MagicBeamEntity + MagicCircleCastPacket + 渲染 | `magic/` 现有契约 |
-| **M6 NPC 战斗行为** | `guard/executor/` + `npc/entity/WandscapeNpc` | 原地转向、LOS 判定、施法后任务 hold 住 NPC（不被改派）、法力/法术强度加成留待后续 | `faceTarget`/`getStaffPosition`/ECS `pendingFuture` |
+| **M6 NPC 战斗行为** | `guard/executor/` + `npc/entity/WandscapeNpc` | 转向、LOS 判定、LOS 被挡时经 `MovementOps` 寻路、施法后任务 hold 住 NPC（不被改派）、法力/法术强度加成留待后续 | `faceTarget`/`getStaffPosition`/`movementOps.navigateTo`/ECS `pendingFuture` |
 
 **说明**：
 - **M5 独立存在**：它同时也是玩家施法（法杖右键 / 调试命令）的视觉层，不依赖守卫系统。守卫系统只是它的一个消费者。
 - **M4 已内化到 M5**：光束实体直接结算伤害，`EntityOps.applyEffect` 的 stub 不走守卫路径。
-- **M3 持续循环**：守卫任务不是"一次施法一个任务"，而是**一个持续任务**——执行器在 `tickAll` 里循环（施法 → 等光束 → 重选最近 → 再施法），直到 +15 区清空才 complete。任务期间 NPC 保持 ACTIVE（future 未完成），不会被调度器改派、不会中途跑去干别的。
+- **M3 持续循环**：守卫任务不是"一次施法一个任务"，而是**一个持续任务**——执行器在 `tickAll` 里每 ~10 tick 循环（找最近 → 光束重定向 → LOS/寻路 → 施法），直到 +15 区清空才 complete。任务期间 NPC 保持 ACTIVE（future 未完成），不会被调度器改派、不会中途跑去干别的。光束在持续期间主动切换最近目标；隔墙时经寻路绕到能打到的位置。
 
 ## 四、依赖关系
 
@@ -94,15 +95,16 @@ Monster 进入某建筑 AABB 水平 +10 区
   → M2 GuardTaskSource.poll(20tick)：
         有威胁 且 无活跃守卫任务(pool.isActive) → TaskRequest("guard:attack",
             {attackRange:10, releaseRange:15, circle, color}, priority=49)
-  → GlobalTaskPool.addTask → SchedulerSystem(2tick) 派给空闲 NPC（op.target()=null → 无导航、不走路）
-  → M3 GuardAttackExecutor 持续循环（future 未完成，NPC 保持 ACTIVE）：
+  → GlobalTaskPool.addTask → SchedulerSystem(2tick) 派给空闲 NPC（op.target()=null → 任务本身无站位）
+  → M3 GuardAttackExecutor 持续循环（future 未完成，NPC 保持 ACTIVE，每 ~10 tick 一轮）：
         ① 重算所有非停摆建筑 GuardZone(±10 / ±15)
-        ② +10 区找最近存活 Enemy；无则看 +15 区 → 有怪 STANDBY 重试、无怪 complete(任务完成)
-        ③ 视线(LOS)：持杖手→目标中心 射线被方块挡 → STANDBY 重试
-        ④ MagicCaster.castNpcAt(npc, target, circle, color)：
+        ② +10 区找最近存活 Enemy（距 NPC）；无则看 +15 区 → 有怪待命重试、无怪 complete(任务完成)
+        ③ 有目标 → 当前光束重定向到最近怪物（beam.retarget，主动切换目标）
+        ④ LOS：持杖手→目标中心 射线被方块挡 → 寻路到怪物位置（寻路绕过墙体），LOS 一清就停手施法
+        ⑤ 施法 = MagicCaster.castNpcAt(npc, target, circle, color)：
            MagicCircleCastPacket → 客户端法阵；MagicCastManager 排程光束(延迟20tick)
-        ⑤ 等光束结束(20 + 法阵时长 + 20) → 回 ②（重选最近，实现"每施法换最近"）
-        ⑥ +15 区无怪 → complete future → 任务完成 → NPC 恢复空闲
+        ⑥ 光束每 tick 伤害束内 Enemy；光束随最近目标重定向，直到光束自然消失再补一发
+        ⑦ 脱离区无怪 → complete future → 任务完成 → NPC 恢复空闲（停寻路、光束淡出）
 ```
 
 ## 六、阶段划分（一步一步拆解）
@@ -112,10 +114,10 @@ Monster 进入某建筑 AABB 水平 +10 区
 | 阶段 | 内容 | 独立测试手段 | 状态 |
 |------|------|-------------|------|
 | **0** | M5 魔法阵攻击视觉（spec/粒子/光束/网络包） | 命令/法杖施放，看法阵垂直法杖、光束射向准星目标 | ✅ 完成 |
-| **1** | M0 配置 + M1 纯逻辑：`GuardZone`（水平扩展/Y 不变/contains）+ 单测 + `Config.guard.*` | `./gradlew test` 全绿 | ⬜ 进行中 |
-| **2** | M3 战斗执行：`AttackMonsterOp` + `MagicCaster.castNpcAt` + `GuardAttackExecutor` 持续循环 + 引擎钩子 | 手动派 `guard:attack` 任务，观察 NPC 原地施法→光束→怪掉血 | ⬜ 未开始 |
-| **3** | M2 守卫任务源：`GuardBlueprints` + `GuardTaskSource` + `EngineBootstrap` 注册 | 建筑旁刷怪，观察自动出任务、NPC 自动施法；区域清空后任务完成、NPC 空闲 | ⬜ 未开始 |
-| **4** | 打磨 + 调试命令：`/wandscape guard status`；法力/法术强度加成（M6 后续） | 多怪压力、10~15 边缘滞回、地下怪不锁定、命令打印状态 | ⬜ 未开始 |
+| **1** | M0 配置 + M1 纯逻辑：`GuardZone`（水平扩展/Y 不变/contains）+ 单测 + `Config.guard.*` | `./gradlew test` 全绿 | ✅ 完成 |
+| **2** | M3 战斗执行：`AttackMonsterOp` + `MagicCaster.castNpcAt` + `GuardAttackExecutor` 持续循环 + 引擎钩子 | 派 `guard:attack` 任务，观察 NPC 施法→光束→怪掉血 | ✅ 完成 |
+| **3** | M2 守卫任务源：`GuardBlueprints` + `GuardTaskSource` + `EngineBootstrap` 注册 | 建筑旁刷怪，观察自动出任务、NPC 自动施法；区域清空后任务完成、NPC 空闲 | ✅ 完成 |
+| **4** | 打磨：主动切换最近目标 + 隔墙智能寻路 + `/wandscape guard status` | 多怪切换最近、隔墙绕行施法、10~15 边缘滞回、地下怪不锁定 | ✅ 完成（M6 法力/法术强度加成后续） |
 
 ## 七、注册点（汇总）
 

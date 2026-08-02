@@ -359,3 +359,5 @@
 - **持续任务**：一次守卫 = 一个持续 `guard:attack` 任务，执行器在 `tickAll` 循环（施法→等光束→重选最近→再施法），期间 NPC 保持 ACTIVE 不被改派；+15 区无怪才 complete。
 - **复用**：伤害与视觉完全复用 `MagicCaster.castNpcAt`/`MagicCastManager`/`MagicBeamEntity`（每 tick magic 伤害），不写 EntityOps stub。
 - **优先级 49**：< 50 避开 `autoApproveTasks=false` 的 PENDING_APPROVAL 门（同修复任务先例），且高于普通建造任务 ~40。
+- **主动切换最近目标**：执行器每 ~10 tick 重选最近 `Enemy` 并把当前光束 `MagicBeamEntity.retarget()` 到新目标——光束持续跟随最近怪物，而不是每束只锁一个。
+- **隔墙智能寻路**：LOS（持杖手→目标中心）被方块挡时，执行器经 `MovementOps.navigateTo` 向怪物位置寻路（寻路绕过墙体），LOS 一清就 `cancelNavigation` 停手施法；任务完成时停寻路、光束快速淡出。
