@@ -217,6 +217,12 @@ public class WandscapeClient {
                             packet.colonyName(), packet.level(), packet.experience(), packet.expToNext()));
         });
 
+        // Colony create prompt: town hall right-clicked but no colony exists
+        com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.setClientHandler(packet -> {
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new com.wsteam.wandscape.building.client.TownHallCreateScreen(packet.townHallAnchor()));
+        });
+
         // Guide test screen
         com.wsteam.wandscape.shared.network.GuideTestPacket.setClientHandler(packet -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(

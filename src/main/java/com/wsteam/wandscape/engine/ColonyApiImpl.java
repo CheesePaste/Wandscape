@@ -111,9 +111,11 @@ public final class ColonyApiImpl implements ColonyApi {
     @Nullable
     public UUID onBuildingIntact(BuildingData data) {
         if ("government".equals(data.getCategory())) {
-            // NEVER auto-create colonies. Only /wandscape colony create does that.
-            // If a town_hall is built outside any existing colony range,
-            // it's an orphan — refuse to assign it.
+            // NEVER auto-create colonies here — colony creation is explicit
+            // (command or the town-hall naming panel). If a town hall is built
+            // within an existing colony, link it; otherwise leave it unassigned:
+            // the player can right-click it to open the naming panel, which
+            // creates the colony and links this town hall.
             UUID existing = getColonyId(data.getPosition());
             if (existing != null) {
                 colonyOrigins.put(data.getPosition(), existing);
@@ -123,8 +125,8 @@ public final class ColonyApiImpl implements ColonyApi {
                         data.getPosition(), existing.toString().substring(0, 8));
                 return existing;
             }
-            Log.error(TAG, "[Colony] Town hall built at {} but NO colony nearby! "
-                    + "Use '/wandscape colony create <name>' first, then build within 256 blocks.",
+            Log.info(TAG, "[Colony] Town hall at {} intact but no colony nearby — "
+                    + "right-click it to name & create the colony.",
                     data.getPosition());
             return null;
         }

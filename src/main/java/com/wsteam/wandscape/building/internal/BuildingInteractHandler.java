@@ -81,6 +81,18 @@ public final class BuildingInteractHandler {
             return;
         }
 
+        // Intact town hall with no colony → ask the player to name & create one.
+        // (The colony-creation routing replaces the old "no colony nearby" error.)
+        if ("government".equals(category) && state.isStructureIntact()) {
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            if (colonyApi == null || colonyApi.getAllColonyIds().isEmpty()) {
+                PacketDistributor.sendToPlayer(player,
+                        new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos));
+                Log.info(TAG, "[Colony] Town hall at {} right-clicked, no colony — prompting for name", pos);
+                return;
+            }
+        }
+
         // Hotel buildings: service with maxOccupancy > 0
         if ("service".equals(category) && bldConfig != null && bldConfig.service() != null
                 && bldConfig.service().maxOccupancy() > 0) {

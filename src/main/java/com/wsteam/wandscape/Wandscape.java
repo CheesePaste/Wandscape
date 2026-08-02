@@ -529,6 +529,17 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket
                                 .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                // ── Colony create (town hall naming flow) ──
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket
+                                .handleServer(packet, (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket
+                                .handleClient(packet))
                 // ── Transport start ──
                 .playToClient(
                         TransportStartPacket.TYPE,

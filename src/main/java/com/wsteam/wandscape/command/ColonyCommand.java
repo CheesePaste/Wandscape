@@ -94,14 +94,32 @@ public final class ColonyCommand {
             );
         }
 
+        String result = createColonyAt(level, origin, name);
+        if (result == null || result.startsWith("[Wandscape] no government")
+                || result.startsWith("[Wandscape] Failed")) {
+            ctx.getSource().sendFailure(Component.literal(result));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(result), true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * Core colony-creation routine shared by {@code /wandscape colony create}
+     * and the town-hall naming flow ({@code ColonyCreateRequestPacket}).
+     *
+     * <p>Creates the colony, spawns the builder NPC, seeds its inventory and
+     * fires {@link ColonyCreatedEvent}. Returns a human-readable result message
+     * (or null on failure — use the provided {@code feedback} sink to surface
+     * the error to the player).
+     */
+    public static String createColonyAt(ServerLevel level, BlockPos origin, String name) {
         // ── Step 1: load config ─────────────────────────────────────────────
         BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()
                 .getByCategory(WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT);
         if (townHallConfig == null) {
-            ctx.getSource().sendFailure(Component.literal(
-                    "[Wandscape] no government building config found "
-                            + "(need a building JSON with category=government)"));
-            return 0;
+            return "[Wandscape] no government building config found "
+                    + "(need a building JSON with category=government)";
         }
 
         // ── Step 2: create colonyId ─────────────────────────────────────────
@@ -133,9 +151,7 @@ public final class ColonyCommand {
         List<ResourceStack> starterItems = computeStarterInventory(townHallConfig);
         var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
         if (npc == null) {
-            ctx.getSource().sendFailure(Component.literal(
-                    "[Wandscape] Failed to spawn NPC at " + spawnPos));
-            return 0;
+            return "[Wandscape] Failed to spawn NPC at " + spawnPos;
         }
         npc.setInvulnerable(true);
         npc.setPersistenceRequired();
@@ -175,18 +191,14 @@ public final class ColonyCommand {
 
         // ── Step 7: reply ───────────────────────────────────────────────────
         int materialTypes = computeUniqueBlockTypes(townHallConfig);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "[Wandscape] Colony '" + name + "' created!\n" +
+        return "[Wandscape] Colony '" + name + "' created!\n" +
                 "  ID: " + colonyId.toString().substring(0, 8) + "\n" +
                 "  TownHall: " + origin.toShortString() + "\n" +
                 "  NPC: builder at " + spawnPos.toShortString() + "\n" +
                 "  Inventory: " + starterItems.size() + " stacks (" + materialTypes + " types)\n" +
                 "  Radius: 256 blocks\n" +
                 "\nTip: use /wandscape fill " + townHallConfig.id()
-                        + " 1 1 to queue construction"),
-                true);
-
-        return Command.SINGLE_SUCCESS;
+                        + " 1 1 to queue construction";
     }
 
     /** Destroy the colony nearest the executing player (within 256 blocks). */
