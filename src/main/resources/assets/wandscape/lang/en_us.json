@@ -15,6 +15,7 @@
   "key.categories.wandscape": "Wandscape",
   "key.wandscape.projection": "Toggle Soul Projection",
   "key.wandscape.panel_cursor": "Panel Cursor Toggle",
+  "key.wandscape.guide": "Open Help Guide",
 
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",

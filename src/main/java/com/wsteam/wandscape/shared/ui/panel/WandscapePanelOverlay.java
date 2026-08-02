@@ -308,7 +308,8 @@ public final class WandscapePanelOverlay {
         com.wsteam.wandscape.shared.ui.skin.SkinRender.drawHelpButton(g, helpX, helpY, helpW, helpH, helpState);
 
         if (helpHover) {
-            g.renderTooltip(font, net.minecraft.network.chat.Component.literal("打开指南 (H / F1)"), (int) mx, (int) my);
+            String keyName = com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.getTranslatedKeyMessage().getString();
+            g.renderTooltip(font, net.minecraft.network.chat.Component.literal("打开指南 (" + keyName + ")"), (int) mx, (int) my);
         }
 
         // ── Row 2: element icons + amounts ──

@@ -338,8 +338,8 @@ public final class WandscapePanelController {
             return;
         }
 
-        // H or F1 key: open guide document (only when panel is open)
-        if ((key == GLFW.GLFW_KEY_H || key == GLFW.GLFW_KEY_F1) && WandscapePanelState.isPanelOpen()) {
+        // Guide key: open guide document (only when panel is open)
+        if ((com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, event.getScanCode()) || key == GLFW.GLFW_KEY_F1) && WandscapePanelState.isPanelOpen()) {
             openPanelHelpDocument();
             return;
         }

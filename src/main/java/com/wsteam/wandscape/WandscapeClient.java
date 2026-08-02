@@ -84,6 +84,13 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping GUIDE_TOGGLE = new KeyMapping(
+            "key.wandscape.guide",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_H,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
@@ -219,6 +226,7 @@ public class WandscapeClient {
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(PROJECTION_TOGGLE);
         event.register(PANEL_CURSOR_TOGGLE);
+        event.register(GUIDE_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
