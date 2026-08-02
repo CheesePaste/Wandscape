@@ -1,5 +1,7 @@
 # Wandscape
 
+<p align="center"><img src="minecraft_title.png" alt="Wandscape — 魔法殖民地自动化与模拟经营" width="70%"></p>
+
 Minecraft NeoForge 1.21.1 模组 — 魔法殖民地自动化与模拟经营。
 
 玩家使用魔法法杖指挥 NPC 法师建造建筑、采集元素、合成物品、执行仪式；殖民地走上正轨后，游客沿道路入城，商店、宾馆、装饰与奇观构成完整的经营循环。
