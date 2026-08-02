@@ -251,5 +251,18 @@ public class Config {
                     + "after visiting it.")
             .defineInRange("tourist.preferenceDecay", 15, 0, 30);
 
+    // ---- Guard (守卫) system ----
+
+    public static final ModConfigSpec.IntValue GUARD_RANGE = BUILDER
+            .comment("Guard threat/attack radius: horizontal X/Z expansion of a building's AABB (Y unchanged). "
+                    + "Monsters within this radius are attacked.")
+            .defineInRange("guard.range", 10, 1, 64);
+
+    public static final ModConfigSpec.IntValue GUARD_RELEASE_RANGE = BUILDER
+            .comment("Guard release radius: the guard task completes only when no monster is within this "
+                    + "horizontal X/Z expansion (hysteresis band, should be > guard.range to avoid edge churn). "
+                    + "Y unchanged.")
+            .defineInRange("guard.releaseRange", 15, 2, 64);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
