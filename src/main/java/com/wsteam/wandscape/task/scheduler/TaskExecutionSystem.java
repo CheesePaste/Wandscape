@@ -348,8 +348,16 @@ public class TaskExecutionSystem implements System {
         }
     }
 
-    /** Sync stepIndex from the queue to both exec and the global task pool. */
+    /**
+     * Sync stepIndex from the queue to both exec and the global task pool.
+     * Only acts when the current package is the bound global task's package —
+     * otherwise (e.g. a {@code self_defense} package preempting a suspended global
+     * task) syncing would overwrite the suspended task's progress with the
+     * preempting package's step and corrupt its resume point.
+     */
     private void syncStepToPool(TaskExecutor exec, NpcTaskQueue queue) {
+        NpcTaskPackage pkg = queue.currentPackage();
+        if (pkg == null || !pkg.source().startsWith("global:")) return;
         exec.stepIndex = queue.stepIndex();
         if (exec.globalTaskId != null && taskPool != null) {
             taskPool.advanceStep(exec.globalTaskId, queue.stepIndex());
@@ -508,6 +516,7 @@ public class TaskExecutionSystem implements System {
             case AtomicOp.BlockInteractOp b -> "block_interact:" + b.action().id();
             case AtomicOp.TransformOp t   -> "transform";
             case AtomicOp.ParallelOp p    -> "parallel";
+            case AtomicOp.SelfDefenseOp s -> "combat";
             default                       -> null;
         };
     }

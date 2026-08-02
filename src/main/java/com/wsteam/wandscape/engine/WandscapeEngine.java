@@ -15,6 +15,7 @@ import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
+import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
 /**
  * Singleton holder for the engine {@link World} instance.
  * Bootstrap happens once in {@link EngineBootstrap}.
@@ -58,6 +59,8 @@ public final class WandscapeEngine {
     private static PlayerManualSource playerManualSource;
     @Nullable
     private static GuardAttackExecutor guardExec;
+    @Nullable
+    private static SelfDefenseExecutor selfDefenseExec;
 
     private WandscapeEngine() {}
 
@@ -138,6 +141,10 @@ public final class WandscapeEngine {
     @Nullable
     public static GuardAttackExecutor getGuardExecutor() { return guardExec; }
     public static void setGuardExecutor(@Nullable GuardAttackExecutor exec) { guardExec = exec; }
+
+    @Nullable
+    public static SelfDefenseExecutor getSelfDefenseExecutor() { return selfDefenseExec; }
+    public static void setSelfDefenseExecutor(@Nullable SelfDefenseExecutor exec) { selfDefenseExec = exec; }
 
     @Nullable
     private static ColonyLevelManager colonyLevelManager;

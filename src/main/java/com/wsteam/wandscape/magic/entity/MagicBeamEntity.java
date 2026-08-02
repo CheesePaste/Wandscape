@@ -52,7 +52,7 @@ public class MagicBeamEntity extends Entity {
     /** 默认寿命（tick），同步数据到达前的兜底。 */
     public static final int DEFAULT_LIFETIME_TICKS = 220;
     /** 法阵圆心/光束源点距持杖手沿目标方向的偏移（方块）。 */
-    public static final double STAFF_CENTER_OFFSET = 2.0;
+    public static final double STAFF_CENTER_OFFSET = 1.0;
     /** 光束最大长度（方块）：沿目标方向射线检测第一个方块为止，未命中取此长度。 */
     public static final double BEAM_RANGE = 200.0;
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后快速变细到消失。 */
@@ -218,7 +218,14 @@ public class MagicBeamEntity extends Entity {
             double eff = radius + mob.getBbWidth() / 2.0;
             if (center.distanceToSqr(closest) <= eff * eff) {
                 mob.invulnerableTime = 0;
-                mob.hurt(level().damageSources().magic(), damage);
+                if (casterNpc != null && !casterNpc.isRemoved()) {
+                    // NPC 施法：伤害记为 NPC 造成（source.getEntity()=NPC）→ 怪物 HurtByTargetGoal
+                    // 会反击 NPC，触发自防御的受伤仇恨，形成互相战斗。
+                    mob.hurt(level().damageSources().indirectMagic(casterNpc, this), damage);
+                } else {
+                    // 玩家/静态施法：无施法者，保持原行为（不记仇恨）。
+                    mob.hurt(level().damageSources().magic(), damage);
+                }
             }
         }
     }

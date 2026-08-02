@@ -308,6 +308,7 @@ public class Wandscape {
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(MagicInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
@@ -756,6 +757,10 @@ public class Wandscape {
         // ①f Tick guard combat sustained loops (cast → wait beam → retarget → complete)
         var guardExec = WandscapeEngine.getGuardExecutor();
         if (guardExec != null) guardExec.tickAll();
+
+        // ①g Tick NPC self-defense (proactive aggro scan + retaliation loop; preempts current task)
+        var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
+        if (selfDefenseExec != null) selfDefenseExec.tick(world);
 
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);

@@ -27,11 +27,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -187,6 +190,35 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public void startManualCast(int ticks) {
         manualCastTicks = Math.max(manualCastTicks, ticks);
         setCasting(true);
+    }
+
+    // ── 自防御仇恨：被非玩家攻击者打伤后记仇，直到对方死亡/超出范围/过期 ──
+    private UUID hatedAttackerUuid = null;
+    private long hateExpiryTick = 0;
+
+    /** 记录仇恨目标（非玩家攻击者）与其过期 tick。 */
+    public void setHatedAttacker(UUID attackerUuid, long expiryTick) {
+        this.hatedAttackerUuid = attackerUuid;
+        this.hateExpiryTick = expiryTick;
+    }
+
+    /**
+     * 当前有效仇恨目标：未过期且在所在 Level 中存活的生物；否则 null。
+     * 由 {@code SelfDefenseExecutor} 每轮目标解析调用。
+     */
+    @Nullable
+    public LivingEntity getHatedAttacker(ServerLevel level) {
+        if (hatedAttackerUuid == null || level.getGameTime() > hateExpiryTick) return null;
+        Entity e = level.getEntity(hatedAttackerUuid);
+        return (e instanceof LivingEntity le && le.isAlive() && !le.isRemoved()) ? le : null;
+    }
+
+    /** 仇恨已过期或目标已死/不存在时清除，避免空转。 */
+    public void clearHatedAttackerIfExpired(ServerLevel level) {
+        if (hatedAttackerUuid != null && getHatedAttacker(level) == null) {
+            hatedAttackerUuid = null;
+            hateExpiryTick = 0;
+        }
     }
 
     // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
@@ -446,6 +478,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                     String ritual = kind.substring("ritual:".length());
                     return ritualDisplayName(ritual);
                 }
+                if (kind.equals("combat")) return "战斗中";
             }
             return "引导中";
         }
@@ -464,6 +497,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                     return ritualDisplayName(kind.substring("ritual:".length()));
                 }
                 if (kind.equals("transform")) return "建造中";
+                if (kind.equals("combat")) return "战斗中";
             }
             return "执行中";
         }

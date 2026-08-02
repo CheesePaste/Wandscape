@@ -264,5 +264,21 @@ public class Config {
                     + "Y unchanged.")
             .defineInRange("guard.releaseRange", 15, 2, 64);
 
+    public static final ModConfigSpec.IntValue GUARD_SELF_DEFENSE_RANGE = BUILDER
+            .comment("NPC self-defense aggro radius (blocks): hostile mobs within this spherical distance "
+                    + "around an NPC are attacked unconditionally, preempting the NPC's current task. "
+                    + "Independent of building guard zones.")
+            .defineInRange("guard.selfDefenseRange", 12, 1, 64);
+
+    public static final ModConfigSpec.IntValue GUARD_HATE_RANGE = BUILDER
+            .comment("NPC retaliation range (blocks): the NPC fights back against a non-player mob that "
+                    + "damaged it while the attacker is within this distance (the hate is refreshed on each hit).")
+            .defineInRange("guard.hateRange", 32, 1, 128);
+
+    public static final ModConfigSpec.IntValue GUARD_HATE_DURATION_TICKS = BUILDER
+            .comment("NPC hate memory (ticks): how long the NPC keeps a grudge against a non-player attacker "
+                    + "before forgetting, unless it gets hurt again (600 = 30s).")
+            .defineInRange("guard.hateDurationTicks", 600, 20, 72000);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }
