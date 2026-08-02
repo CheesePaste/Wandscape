@@ -82,6 +82,14 @@ public class BuildingApiImpl implements BuildingApi {
         return result;
     }
 
+    @Override
+    @Nullable
+    public BoundingBox getBuildingBounds(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        BuildingState state = sd != null ? sd.getBuilding(buildingId) : null;
+        return state != null ? state.getBounds() : null;
+    }
+
     // ---- Lifecycle ----
 
     @Override

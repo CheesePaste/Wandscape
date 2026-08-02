@@ -750,6 +750,10 @@ public class Wandscape {
         var resourceReqExec = WandscapeEngine.getResourceRequestExec();
         if (resourceReqExec != null) resourceReqExec.tickAll();
 
+        // ①f Tick guard combat sustained loops (cast → wait beam → retarget → complete)
+        var guardExec = WandscapeEngine.getGuardExecutor();
+        if (guardExec != null) guardExec.tickAll();
+
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 

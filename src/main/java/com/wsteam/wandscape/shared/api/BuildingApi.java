@@ -6,6 +6,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -14,6 +15,14 @@ public interface BuildingApi {
     BuildingData getBuilding(UUID buildingId);
     BuildingData getBuildingAt(BlockPos pos);
     List<BuildingData> getColonyBuildings(UUID colonyId);
+
+    /**
+     * Get the building's world-space bounding box (AABB).
+     * Used by the guard system to compute defended zones. Returns null if the
+     * building no longer exists.
+     */
+    @Nullable
+    BoundingBox getBuildingBounds(UUID buildingId);
 
     // ---- Lifecycle (called by block place/break handlers) ----
     void registerBuilding(BuildingData data);
