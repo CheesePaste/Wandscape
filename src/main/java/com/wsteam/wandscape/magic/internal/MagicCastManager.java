@@ -26,25 +26,25 @@ public final class MagicCastManager {
     private static final Set<UUID> ACTIVE_CASTERS = new HashSet<>();
 
     private record PendingCast(UUID caster, ServerLevel level, Vec3 source,
-                               BlockPos target, int color, long fireTick) {}
+                               BlockPos target, int color, long fireTick, int lifeTicks) {}
 
     private MagicCastManager() {}
 
     /**
-     * 登记一次施法：在 {@code delayTicks}（=法阵 duration）后生成光束。
+     * 登记一次施法：在 {@code delayTicks} 后生成光束（光束总寿命 {@code lifeTicks}）。
      * 若该施法者（玩家或 NPC 的 UUID）已有未发射的施法则拒绝。
      *
      * @return 是否登记成功
      */
     public static boolean schedule(ServerLevel level, UUID casterUuid,
-                                   Vec3 source, BlockPos target, int color, int delayTicks) {
+                                   Vec3 source, BlockPos target, int color, int delayTicks, int lifeTicks) {
         if (ACTIVE_CASTERS.contains(casterUuid)) return false;
         PENDING.add(new PendingCast(casterUuid, level, source, target, color,
-                level.getGameTime() + Math.max(1, delayTicks)));
+                level.getGameTime() + Math.max(1, delayTicks), Math.max(1, lifeTicks)));
         ACTIVE_CASTERS.add(casterUuid);
-        Log.info(TAG, "schedule caster={} source={} target={} fireTick={} pending={}",
-                casterUuid.toString().substring(0, 8), source, target, level.getGameTime() + Math.max(1, delayTicks),
-                PENDING.size());
+        Log.info(TAG, "schedule caster={} source={} target={} fireTick={} life={} pending={}",
+                casterUuid.toString().substring(0, 8), source, target,
+                level.getGameTime() + Math.max(1, delayTicks), lifeTicks, PENDING.size());
         return true;
     }
 
@@ -55,11 +55,12 @@ public final class MagicCastManager {
         while (it.hasNext()) {
             PendingCast pc = it.next();
             if (pc.level().getGameTime() >= pc.fireTick()) {
-                MagicBeamEntity beam = new MagicBeamEntity(pc.level(), pc.source(), pc.target(), pc.color());
+                MagicBeamEntity beam = new MagicBeamEntity(pc.level(), pc.source(), pc.target(),
+                        pc.color(), pc.lifeTicks());
                 pc.level().addFreshEntity(beam);
-                Log.info(TAG, "beam spawned id={} source={} target={} color=#{} time={}",
+                Log.info(TAG, "beam spawned id={} source={} target={} color=#{} life={} time={}",
                         beam.getId(), pc.source(), pc.target(), Integer.toHexString(pc.color()),
-                        pc.level().getGameTime());
+                        pc.lifeTicks(), pc.level().getGameTime());
                 it.remove();
                 ACTIVE_CASTERS.remove(pc.caster());
             }

@@ -13,15 +13,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -35,13 +30,18 @@ public final class MagicCaster {
 
     /** 默认攻击法阵 spec id。 */
     public static final String DEFAULT_CIRCLE = "arcane_hexagram";
-    /** 默认光束颜色（青蓝）。 */
-    public static final int DEFAULT_COLOR = 0xFF3F8FFF;
+    /** 默认光束颜色（浅蓝）。 */
+    public static final int DEFAULT_COLOR = 0xFFA8E0FF;
 
     private static final double CAST_DISTANCE = 1.5;
     /** 圆心/光束起点距持杖手沿瞄准方向的偏移（方块）：落在法杖中段而非手部。 */
     private static final double STAFF_CENTER_OFFSET = 1.0;
-    private static final double AIM_RANGE = 64.0;
+    /** 光束固定长度（方块）：大幅加长，壮观。 */
+    private static final double BEAM_RANGE = 200.0;
+    /** 光束在法阵出现后多少 tick 开始生成（法阵动画期间从细变宽）。 */
+    private static final int BEAM_SPAWN_DELAY = 10;
+    /** 法阵结束后光束额外延续的 tick（快速变细到消失）。 */
+    private static final int BEAM_TAIL = 20;
 
     private MagicCaster() {}
 
@@ -54,36 +54,36 @@ public final class MagicCaster {
 
         Vec3 look = player.getLookAngle();
         Vec3 source = player.getEyePosition().add(look.scale(CAST_DISTANCE));
-        BlockPos target = aimTarget(player);
+        BlockPos target = BlockPos.containing(source.add(look.scale(BEAM_RANGE)));
         int color = resolveColor(player.getMainHandItem(), colorHex);
 
         PacketDistributor.sendToPlayersTrackingChunk(level,
                 new ChunkPos(BlockPos.containing(source)),
                 new MagicCircleCastPacket(UUID.randomUUID(), source, look, circleId));
 
-        return MagicCastManager.schedule(level, player.getUUID(), source, target, color, spec.durationTicks);
+        return MagicCastManager.schedule(level, player.getUUID(), source, target, color,
+                BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL);
     }
 
     /**
      * NPC 施放（shift+右键触发）：法阵圆心落在法杖中段（持杖手沿瞄准方向前移一段），
-     * 法阵平面垂直「NPC→目标」方向，光束沿该方向射向目标。不改变 NPC 朝向。
+     * 法阵平面垂直「NPC→目标」方向，光束沿该方向射向 200 格外。不改变 NPC 朝向。
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) return false;
 
         Vec3 hand = npc.getStaffPosition();
-        // 默认瞄准：NPC 前方沿水平朝向射线检测
-        BlockPos target = aimTarget(level, hand, npc.getFacingDirection());
-        // 倾角 = NPC→目标方向（法阵平面垂直它，光束沿它）
-        Vec3 axis = target.getCenter().subtract(hand).normalize();
+        Vec3 axis = npc.getFacingDirection();
         Vec3 source = hand.add(axis.scale(STAFF_CENTER_OFFSET));
+        BlockPos target = BlockPos.containing(source.add(axis.scale(BEAM_RANGE)));
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
         PacketDistributor.sendToPlayersTrackingEntity(npc,
                 new MagicCircleCastPacket(UUID.randomUUID(), source, axis, circleId));
 
-        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, target, c, spec.durationTicks);
+        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, target, c,
+                BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL);
         Log.info(TAG, "castNpc id={} circle={} hand={} axis={} source={} target={} scheduled={}",
                 npc.getUUID().toString().substring(0, 8), circleId,
                 fmt(hand), fmt(axis), fmt(source), target, ok);
@@ -93,25 +93,6 @@ public final class MagicCaster {
     /** 调试日志：Vec3 四舍五入两位。 */
     private static String fmt(Vec3 v) {
         return String.format("(%.2f,%.2f,%.2f)", v.x, v.y, v.z);
-    }
-
-    /** 玩家准星目标：命中方块取其坐标，未命中取视线 64 格外一点。 */
-    private static BlockPos aimTarget(Player player) {
-        HitResult hit = player.pick(AIM_RANGE, 1.0f, false);
-        if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
-            return bhr.getBlockPos();
-        }
-        return BlockPos.containing(player.getEyePosition().add(player.getLookAngle().scale(AIM_RANGE)));
-    }
-
-    /** NPC 目标：从源点沿水平朝向射线检测，命中方块取其坐标，未命中取 64 格外一点。 */
-    private static BlockPos aimTarget(ServerLevel level, Vec3 from, Vec3 dir) {
-        HitResult hit = level.clip(new ClipContext(from, from.add(dir.scale(AIM_RANGE)),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
-            return bhr.getBlockPos();
-        }
-        return BlockPos.containing(from.add(dir.scale(AIM_RANGE)));
     }
 
     /** 光束颜色：参数 > 手持法杖 wand_color > 默认青蓝。 */

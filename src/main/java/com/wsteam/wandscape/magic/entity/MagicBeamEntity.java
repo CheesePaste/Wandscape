@@ -31,16 +31,19 @@ public class MagicBeamEntity extends Entity {
             SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
     private static final EntityDataAccessor<Integer> DATA_COLOR =
             SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
+    /** 光束总寿命（tick，由施放方按法阵时长传入并同步）。 */
+    private static final EntityDataAccessor<Integer> DATA_LIFETIME =
+            SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
 
-    /** 光束总寿命（tick）。 */
-    public static final int LIFETIME_TICKS = 140;
-    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）。 */
-    public static final float PEAK_T = 0.7f;
+    /** 默认寿命（tick），同步数据到达前的兜底。 */
+    public static final int DEFAULT_LIFETIME_TICKS = 220;
+    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后快速变细到消失。 */
+    public static final float PEAK_T = 0.86f;
     /** 峰值时的光束/光晕半径（方块）。 */
     public static final float MAX_BEAM_RADIUS = 0.5f;
     public static final float MAX_GLOW_RADIUS = 0.7f;
-    /** 宽度乘子下限：保证光束从生成起即可见（不过于细）。 */
-    private static final float MIN_WIDTH = 0.4f;
+    /** 宽度乘子下限：光束从「特别细」开始，随法阵时长逐渐变宽。 */
+    private static final float MIN_WIDTH = 0.02f;
     /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
     private static final float WIDTH_POWER = 1.4f;
 
@@ -48,11 +51,12 @@ public class MagicBeamEntity extends Entity {
         super(type, level);
     }
 
-    public MagicBeamEntity(Level level, Vec3 source, BlockPos target, int color) {
+    public MagicBeamEntity(Level level, Vec3 source, BlockPos target, int color, int lifeTicks) {
         this(Wandscape.MAGIC_BEAM.get(), level);
         setPos(source.x, source.y, source.z);
         setTarget(target);
         setBeamColor(color);
+        setLifetime(lifeTicks);
     }
 
     public Optional<BlockPos> getTarget() {
@@ -71,10 +75,19 @@ public class MagicBeamEntity extends Entity {
         entityData.set(DATA_COLOR, color);
     }
 
+    public int getLifetimeTicks() {
+        return entityData.get(DATA_LIFETIME);
+    }
+
+    public void setLifetime(int ticks) {
+        entityData.set(DATA_LIFETIME, Math.max(1, ticks));
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(DATA_TARGET, Optional.empty());
-        builder.define(DATA_COLOR, 0xFF3F8FFF);
+        builder.define(DATA_COLOR, 0xFFA8E0FF);
+        builder.define(DATA_LIFETIME, DEFAULT_LIFETIME_TICKS);
     }
 
     private boolean loggedSpawn;
@@ -84,20 +97,21 @@ public class MagicBeamEntity extends Entity {
         super.tick();
         if (!loggedSpawn && tickCount >= 5) {
             loggedSpawn = true;
-            Log.info("MagicBeam", "beam tick id={} client={} pos={} targetPresent={} target={}",
-                    getId(), level().isClientSide, position(), getTarget().isPresent(), getTarget().orElse(null));
+            Log.info("MagicBeam", "beam tick id={} client={} pos={} targetPresent={} target={} life={}",
+                    getId(), level().isClientSide, position(), getTarget().isPresent(), getTarget().orElse(null),
+                    getLifetimeTicks());
         }
-        if (tickCount == LIFETIME_TICKS - 1) {
+        if (tickCount == getLifetimeTicks() - 1) {
             Log.info("MagicBeam", "beam expire id={} client={} tickCount={}",
                     getId(), level().isClientSide, tickCount);
         }
         // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
-        if (tickCount >= LIFETIME_TICKS) discard();
+        if (tickCount >= getLifetimeTicks()) discard();
     }
 
     /** 归一化寿命 t ∈ [0,1]（含 partialTick 插值），渲染端动画采样用。 */
     public float getAge(float partialTick) {
-        return Math.min(1.0f, (tickCount + partialTick) / (float) LIFETIME_TICKS);
+        return Math.min(1.0f, (tickCount + partialTick) / (float) getLifetimeTicks());
     }
 
     /**

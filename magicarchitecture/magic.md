@@ -44,16 +44,18 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 ```
 法杖右键 / 调试命令 / shift+右键 NPC（服务端）
   → MagicCaster.cast / castNpc：MagicCircleCastPacket(effectId=UUID, pos, axis=施法朝向, circleId)
-      + MagicCastManager.schedule(动画时长后生成光束)
+      + MagicCastManager.schedule(法阵出现后约 10 tick 生成光束，寿命=法阵时长+尾部)
   → PacketDistributor.sendToPlayersTrackingChunk / sendToPlayersTrackingEntity
   → 客户端 payload handler → MagicCircleEmitter.add(level, pos, axis, loader.get(circleId))
   → ClientTickEvent.Post:  t = (nowTick - startTick) / duration
   → 采样 anim 曲线（scale/alpha/rotation）→ 当前几何位置撒粒子
   → t ≥ 1 自动移除
-  → 服务端 MagicCastManager.tick（ServerTick）：到期生成 MagicBeamEntity（源点→目标，颜色）
+  → 服务端 MagicCastManager.tick（ServerTick）：到期生成 MagicBeamEntity（源点→目标，颜色，寿命）
   → 客户端 MagicBeamEntityRenderer：原版 BeaconRenderer.renderBeaconBeam 旋转朝目标渲染
-  → 光束粗细随寿命动画：先慢慢变宽（0→0.7）再快速变窄（0.7→1）
+  → 光束粗细随寿命动画：从特别细慢慢变宽（0→≈0.86）到法阵结束，再快速变细（≈0.86→1）消失
 ```
+
+光束寿命与法阵时长对齐（`spec.durationTicks + 尾部`），同步到客户端；长度固定 200 格（穿透地形，壮观）。默认色浅蓝 `0xFFA8E0FF`。
 
 `axis` 由施放方传入并**覆盖** spec 元素 axis——攻击阵的"法阵垂直于施法朝向"就靠它实现（地面阵不传时回落到 spec 元素 axis）。
 
