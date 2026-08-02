@@ -56,17 +56,26 @@ const FALLBACK_SIZE = 0.28;
  * 符文贴图解析：粒子风格帧 → 合法 sprite → 兜底 enchant 帧。恒返回可用帧名，
  * 绝不落回占位圆点（texture=''）。age/trail 用于仿 MC setSpriteFromAge 推进帧。
  */
+/**
+ * 符文贴图解析：显式粒子风格帧 → 合法 sprite → 隐式粒子风格帧 → 兜底 enchant 帧。
+ * 恒返回可用帧名，绝不落回占位圆点（texture=''）。age/trail 用于仿 MC setSpriteFromAge 推进帧。
+ */
 function resolveGlyphFrame(
   pstyle: McParticleStyle | undefined,
   glyphSprite: string,
   age: number,
   trail: number,
+  hasExplicitParticle: boolean,
 ): { frame: number; texture: string } {
-  if (pstyle && pstyle.frames.length > 0) {
+  if (hasExplicitParticle && pstyle && pstyle.frames.length > 0) {
     const frame = Math.min(pstyle.frames.length - 1, Math.floor((age / Math.max(1, trail)) * pstyle.frames.length));
     return { frame, texture: pstyle.frames[frame] };
   }
   if (glyphSprite) return { frame: 0, texture: glyphSprite };
+  if (pstyle && pstyle.frames.length > 0) {
+    const frame = Math.min(pstyle.frames.length - 1, Math.floor((age / Math.max(1, trail)) * pstyle.frames.length));
+    return { frame, texture: pstyle.frames[frame] };
+  }
   const fallback = mcParticleStyle('enchant');
   const frames = fallback && fallback.frames.length > 0 ? fallback.frames : ['glow'];
   const frame = Math.min(frames.length - 1, Math.floor((age / Math.max(1, trail)) * frames.length));
@@ -214,7 +223,13 @@ function computeGlyphParticles(
   const anim = el.anim;
   const easing = anim?.easing;
   const start = el.start ?? 0;
-  const ids = particleIds(el);
+  const rawIds = Array.isArray(el.particles)
+    ? el.particles.filter((s): s is string => typeof s === 'string' && s.length > 0)
+    : el.particle
+      ? [el.particle]
+      : [];
+  const hasExplicitParticle = rawIds.length > 0;
+  const ids = hasExplicitParticle ? rawIds : ['glow'];
   const color = el.color ?? null;
   const glyphSprite =
     typeof el.sprite === 'string' && TEXTURE_NAMES.has(el.sprite) ? el.sprite : '';
@@ -247,7 +262,7 @@ function computeGlyphParticles(
     for (let i = 0; i < count; i++) {
       const pid = ids[i % ids.length];
       const pstyle = mcParticleStyle(pid);
-      const res = resolveGlyphFrame(pstyle, glyphSprite, age, trail);
+      const res = resolveGlyphFrame(pstyle, glyphSprite, age, trail, hasExplicitParticle);
       const ang = rad(phase + (i * 360) / count);
       const jx = (hash01(Tp, elIndex * 131 + i * 7, 11) - 0.5) * 2 * jitter;
       const jy = (hash01(Tp, elIndex * 131 + i * 7, 991) - 0.5) * 2 * jitter;
@@ -263,7 +278,7 @@ function computeGlyphParticles(
         frame: res.frame,
         texture: res.texture,
         alpha: alphaEmit * ageFade,
-        tint: color,
+        tint: pstyle ? (pstyle.tintable ? color : null) : color,
       });
     }
   }
