@@ -27,6 +27,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Scanner GUI built on MedievalScreen MINIMAL theme.
  * Uses custom drawMinimalBox buttons and inset fields matching TownHallCreateScreen style.
+ * All widget bounds strictly constrained to panel boundaries (max right edge = lx + 304).
  */
 public class BuildingScannerScreen extends MedievalScreen {
 
@@ -99,7 +100,7 @@ public class BuildingScannerScreen extends MedievalScreen {
     private Component scanResult = Component.literal("尚未扫描");
 
     // ── Layout Y positions (computed in init, used in render) ──
-    private int lx; // left edge for widgets
+    private int lx; // left edge for widgets (leftPos + 16)
     private int boundaryCardY;
     private int doorEditY;
     private int zoneHeaderY;
@@ -112,9 +113,9 @@ public class BuildingScannerScreen extends MedievalScreen {
     private record FieldRect(int x, int y, int w, int h) {}
     private final List<FieldRect> insetFields = new ArrayList<>();
 
-    // ── Column layout constants ──
-    private static final int COL2 = 70;  // input fields start here
-    private static final int FW = 60;    // default field width
+    // ── Column layout constants (Strictly <= lx + 304) ──
+    private static final int COL2 = 60;  // input fields start here
+    private static final int FW = 48;    // default field width
     private static final int ROW_H = 22; // vertical row spacing
 
     public BuildingScannerScreen(BuildingScannerBlockEntity scanner) {
@@ -149,8 +150,8 @@ public class BuildingScannerScreen extends MedievalScreen {
         lx = leftPos + 16;
         int y = topPos + headerHeight + 8 + scrollOff;
 
-        // ── Toolbar Row 1: Mode & Structure Name ──
-        addCustomButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
+        // ── Toolbar Row 1: Mode & Structure Name (Right edge: lx + 304) ──
+        addCustomButton(lx, y, 85, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
             BuildingScannerBlockEntity.BlockMode next = scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
                     ? BuildingScannerBlockEntity.BlockMode.CORNER : BuildingScannerBlockEntity.BlockMode.SAVE;
             scanner.setBlockMode(next);
@@ -158,7 +159,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             needsRebuild = true;
         });
 
-        structureNameEdit = mkEdit(lx + 150, y, 154, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 135, y, 169, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
@@ -197,7 +198,7 @@ public class BuildingScannerScreen extends MedievalScreen {
                 scanner.setBuildingId(s);
                 syncToServer();
             });
-            metaName = mkEdit(lx + 164, y + 14, 140, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
+            metaName = mkEdit(lx + 160, y + 14, 144, scanner.getDisplayName().isEmpty() ? "自定义道路" : scanner.getDisplayName(), s -> {
                 scanner.setDisplayName(s);
                 syncToServer();
             });
@@ -208,8 +209,8 @@ public class BuildingScannerScreen extends MedievalScreen {
             y += 16;
             exportBtnY = y - 14;
 
-            addCustomButton(lx + 5, exportBtnY, 100, 22, "扫描区域", () -> doScan());
-            addCustomButton(lx + 110, exportBtnY, 190, 22, "导出与热注册道路 JSON", () -> doExport());
+            addCustomButton(lx + 4, exportBtnY, 90, 22, "扫描区域", () -> doScan());
+            addCustomButton(lx + 100, exportBtnY, 204, 22, "导出与热注册道路 JSON", () -> doExport());
 
             int bottom = exportBtnY + 60;
             int visibleHeight = height - 40;
@@ -251,7 +252,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         doorX = mkEdit(lx + COL2, doorEditY, FW, loadDoorStr(0), s -> onDoorChanged());
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
         doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
-        addCustomButton(lx + COL2 + (FW + 4) * 3 + 8, doorEditY, 50, 20, "清除", () -> {
+        addCustomButton(lx + 244, doorEditY, 60, 20, "清除", () -> {
             scanner.setDoorOffset(null);
             doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
             syncToServer();
@@ -262,7 +263,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 14;
         zoneHeaderY = y - 14;
 
-        addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加区域", () -> {
+        addCustomButton(lx + 224, y - 13, 80, 20, "+ 添加区域", () -> {
             scanner.addTouristInteractZone(new BoundaryBox(
                     BlockOffset.of(-1, 0, -1), BlockOffset.of(1, 0, 1)));
             syncToServer();
@@ -286,7 +287,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             scanner.setBuildingId(s);
             syncToServer();
         });
-        metaName = mkEdit(lx + 164, y + 14, 140, scanner.getDisplayName(), s -> {
+        metaName = mkEdit(lx + 160, y + 14, 144, scanner.getDisplayName(), s -> {
             scanner.setDisplayName(s);
             syncToServer();
         });
@@ -324,7 +325,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 14;
         maintCostY = y - 14;
 
-        addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加消耗", () -> {
+        addCustomButton(lx + 224, y - 13, 80, 20, "+ 添加消耗", () -> {
             scanner.addMaintenanceCost("earth", 1);
             syncToServer();
             needsRebuild = true;
@@ -416,7 +417,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             y += 14;
             goodsCatY = y - 14;
 
-            addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加商品", () -> {
+            addCustomButton(lx + 224, y - 13, 80, 20, "+ 添加商品", () -> {
                 scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
                 syncToServer();
                 needsRebuild = true;
@@ -458,7 +459,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             y += 14;
             elemOutY = y - 14;
 
-            addCustomButton(lx + COL2 + 200, y - 13, 80, 20, "+ 添加产出", () -> {
+            addCustomButton(lx + 224, y - 13, 80, 20, "+ 添加产出", () -> {
                 scanner.addServiceElementOutput("earth", 1);
                 syncToServer();
                 needsRebuild = true;
@@ -490,8 +491,8 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 16;
         exportBtnY = y - 14;
 
-        addCustomButton(lx + 5, exportBtnY, 100, 22, "扫描区域", () -> doScan());
-        addCustomButton(lx + 110, exportBtnY, 140, 22, "导出建筑 JSON", () -> doExport());
+        addCustomButton(lx + 4, exportBtnY, 90, 22, "扫描区域", () -> doScan());
+        addCustomButton(lx + 100, exportBtnY, 204, 22, "导出建筑 JSON", () -> doExport());
 
         int bottom = exportBtnY + 60;
         int visibleHeight = height - 40;
@@ -972,10 +973,10 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         // Label for structure name
         int topY = topPos + headerHeight + 8 + scrollOff;
-        gui.drawString(font, "结构名称", lx + 98, topY + 6, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "结构名称", lx + 88, topY + 6, MedievalColors.TEXT_MUTED);
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
-            drawMinimalBox(gui, lx, topPos + headerHeight + 36, 308, 64, true, false);
+            drawMinimalBox(gui, lx, topPos + headerHeight + 36, 304, 64, true, false);
             gui.drawString(font, "❖ CORNER 辅角点模式", lx + 10, topPos + headerHeight + 44, MedievalColors.BORDER_GOLD);
             gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的结构名称。", lx + 10, topPos + headerHeight + 58, MedievalColors.TEXT_WARM_WHITE);
             gui.drawString(font, "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。", lx + 10, topPos + headerHeight + 72, MedievalColors.TEXT_MUTED);
@@ -999,7 +1000,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
             drawHdr(gui, "❖ 道路预设属性 (Road Preset)", lx, metaStartY);
             drawLbl(gui, "Road ID", lx + 4, metaStartY + 14);
-            drawLbl(gui, "Display Name", lx + 164, metaStartY + 14);
+            drawLbl(gui, "Display Name", lx + 160, metaStartY + 14);
 
             drawHdr(gui, "❖ 道路 JSON 导出与热注册", lx, exportBtnY - 14);
             gui.drawString(font, scanResult, lx + 5, exportBtnY + 28, MedievalColors.TEXT_MUTED);
@@ -1031,7 +1032,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         drawHdr(gui, "❖ 放置元数据", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
-        drawLbl(gui, "Name", lx + 164, metaStartY + 14);
+        drawLbl(gui, "Name", lx + 160, metaStartY + 14);
         drawLbl(gui, "Comfort", lx + COL2, metaLabelY - 10);
         drawLbl(gui, "Magic", lx + COL2 + FW + 12, metaLabelY - 10);
         drawLbl(gui, "Wonder", lx + COL2 + (FW + 12) * 2, metaLabelY - 10);
