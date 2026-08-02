@@ -45,6 +45,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -58,7 +59,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p>Stage 2 (V1 minimal): basic idle AI, no task-driven movement.
  * Subsequent stages add stuck detection, death/grave, house binding, etc.
  */
-public class WandscapeNpc extends PathfinderMob {
+public class WandscapeNpc extends PathfinderMob implements VillagerLike {
 
     private static final String TAG = "WandscapeNpc";
 

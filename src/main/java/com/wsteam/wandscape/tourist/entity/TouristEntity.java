@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 
 import javax.annotation.Nullable;
@@ -61,7 +62,7 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
  * Mage tourists carry mana/spell-power stats; when their satisfaction reaches 100%,
  * their data is stored in the tavern as a recruitment resume.
  */
-public class TouristEntity extends PathfinderMob {
+public class TouristEntity extends PathfinderMob implements VillagerLike {
 
     private static final String TAG = "TouristEntity";
 

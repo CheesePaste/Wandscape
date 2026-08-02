@@ -1,6 +1,7 @@
 package com.wsteam.wandscape;
 
 import com.wsteam.wandscape.engine.ColonyApiImpl;
+import com.wsteam.wandscape.engine.HostileTargetingHandler;
 import com.wsteam.wandscape.engine.colony.ColonyLevelData;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import net.minecraft.core.BlockPos;
@@ -306,6 +307,7 @@ public class Wandscape {
         BLOCK_ENTITY_TYPES.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(MagicInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
