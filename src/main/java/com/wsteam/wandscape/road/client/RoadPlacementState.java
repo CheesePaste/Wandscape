@@ -134,7 +134,10 @@ public final class RoadPlacementState {
 
     public static int getSelectedPresetIndex() { return selectedPresetIndex; }
     public static void setSelectedPresetIndex(int idx) {
-        if (idx >= 0 && idx < presets.size()) selectedPresetIndex = idx;
+        if (idx >= 0 && idx < presets.size()) {
+            selectedPresetIndex = idx;
+            SplineEditorClientState.rebuildDynamicTemplate();
+        }
     }
 
     public static RoadPreset getSelectedPreset() { return presets.get(selectedPresetIndex); }
