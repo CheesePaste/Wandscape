@@ -88,7 +88,7 @@ public final class WandscapePanelState {
 
     // ── First-time guidance ──
     /** Whether the "build Town Hall & Warehouse" guide should be shown in the overlay. */
-    private static volatile boolean showGuidance = false;
+    private static volatile boolean showGuidance = true;
     private static boolean guidanceEverShown = false;
     /** Set when the player manually dismisses the guide (× button) — suppresses re-show on sync. */
     private static volatile boolean guidanceDismissed = false;

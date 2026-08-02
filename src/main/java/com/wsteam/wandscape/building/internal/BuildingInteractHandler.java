@@ -63,13 +63,22 @@ public final class BuildingInteractHandler {
                                           net.minecraft.core.BlockPos pos, BuildingState state) {
         String category = state.getCategory();
         UUID colonyId = state.getColonyId();
+
+        // Town hall with no colony linked → ask the player to name & create one.
+        if ("government".equals(category) && colonyId == null) {
+            PacketDistributor.sendToPlayer(player,
+                    new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos));
+            Log.info(TAG, "[Colony] Town hall at {} right-clicked with no colony — prompting for name", pos);
+            return;
+        }
+
         if (colonyId == null) colonyId = new UUID(0, 0);
 
         BuildingConfig bldConfig = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         String typeId = state.getBuildingTypeId();
 
-        // Town hall: show colony level & exp info
-        if ("government".equals(category) && colonyId != null) {
+        // Town hall with linked colony: show colony level & exp info
+        if ("government".equals(category) && state.getColonyId() != null) {
             var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
             int lvl = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
             int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
@@ -79,18 +88,6 @@ public final class BuildingInteractHandler {
                     new com.wsteam.wandscape.building.network.TownHallOpenPacket(
                             pos, colonyId, name, lvl, exp, expNext));
             return;
-        }
-
-        // Intact town hall with no colony → ask the player to name & create one.
-        // (The colony-creation routing replaces the old "no colony nearby" error.)
-        if ("government".equals(category) && state.isStructureIntact()) {
-            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
-            if (colonyApi == null || colonyApi.getAllColonyIds().isEmpty()) {
-                PacketDistributor.sendToPlayer(player,
-                        new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(pos));
-                Log.info(TAG, "[Colony] Town hall at {} right-clicked, no colony — prompting for name", pos);
-                return;
-            }
         }
 
         // Hotel buildings: service with maxOccupancy > 0

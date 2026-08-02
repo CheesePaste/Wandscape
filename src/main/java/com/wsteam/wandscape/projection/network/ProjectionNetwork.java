@@ -72,9 +72,24 @@ public final class ProjectionNetwork {
                 projectingPlayers.size());
     }
 
+    private static int categoryPriority(String category) {
+        if (category == null) return 10;
+        return switch (category) {
+            case "government" -> 0;
+            case "storage" -> 1;
+            case "service" -> 2;
+            case "shop" -> 3;
+            case "workstation" -> 4;
+            case "crafting_station" -> 5;
+            case "node" -> 6;
+            default -> 10;
+        };
+    }
+
     /**
      * Build the list of available buildings for projection placement.
-     * Reads from {@link BuildingConfigLoader} — returns all configs with a blueprint.
+     * Reads from {@link BuildingConfigLoader} — returns all configs with a blueprint,
+     * sorted by category priority (government first) then display name.
      */
     public static List<BuildingSlot> getAvailableBuildings() {
         var configs = BuildingConfigLoader.getInstance().getAll();
@@ -84,6 +99,8 @@ public final class ProjectionNetwork {
         return configs.values().stream()
                 .filter(c -> c.blueprint() != null) // only buildings with a build blueprint
                 .map(c -> new BuildingSlot(c.id(), c.displayName(), c.category()))
+                .sorted(java.util.Comparator.comparingInt((BuildingSlot s) -> categoryPriority(s.category()))
+                        .thenComparing(BuildingSlot::displayName))
                 .toList();
     }
 

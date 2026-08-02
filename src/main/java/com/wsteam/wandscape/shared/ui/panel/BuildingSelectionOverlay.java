@@ -157,6 +157,25 @@ public final class BuildingSelectionOverlay {
         return -1;
     }
 
+    private static final List<String> CATEGORY_ORDER = List.of(
+            "All", "government", "storage", "service", "shop", "workstation", "crafting_station", "node"
+    );
+
+    public static String getCategoryDisplayName(String cat) {
+        if (cat == null) return "未知";
+        return switch (cat) {
+            case "All" -> "全部";
+            case "government" -> "市政厅";
+            case "storage" -> "仓库/存储";
+            case "service" -> "服务/旅店";
+            case "shop" -> "商业/商店";
+            case "workstation" -> "生产工坊";
+            case "crafting_station" -> "法宝合成";
+            case "node" -> "元素节点";
+            default -> cat;
+        };
+    }
+
     public static int getCategoryAt(double mouseX, double mouseY, int screenW, int screenH) {
         if (!isActive()) return -1;
         int barY = getBarY(screenH);
@@ -167,7 +186,8 @@ public final class BuildingSelectionOverlay {
         Font font = Minecraft.getInstance().font;
         int searchX = screenW - GRID_PAD_X - SEARCH_W;
         for (int i = 0; i < cats.size(); i++) {
-            int w = font.width(cats.get(i)) + 10;
+            String label = getCategoryDisplayName(cats.get(i));
+            int w = font.width(label) + 8;
             if (x + w > searchX - 4) break;
             if (mouseX >= x && mouseX < x + w) return i;
             x += w + 2;
@@ -196,13 +216,21 @@ public final class BuildingSelectionOverlay {
     // ── Rendering helpers ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static List<String> getCategories() {
-        Set<String> seen = new LinkedHashSet<>();
-        seen.add("All");
+    public static List<String> getCategories() {
+        Set<String> present = new LinkedHashSet<>();
+        present.add("All");
         for (BuildingSlot slot : ProjectionClientState.getBuildingSlots()) {
-            seen.add(slot.category());
+            present.add(slot.category());
         }
-        return new ArrayList<>(seen);
+        List<String> sorted = new ArrayList<>();
+        for (String cat : CATEGORY_ORDER) {
+            if (present.contains(cat)) {
+                sorted.add(cat);
+                present.remove(cat);
+            }
+        }
+        sorted.addAll(present);
+        return sorted;
     }
 
     private static List<BuildingSlot> getFilteredSlots() {
@@ -222,7 +250,8 @@ public final class BuildingSelectionOverlay {
         String activeCat = WandscapePanelState.getBuildingBarCategory();
 
         for (String cat : cats) {
-            int w = font.width(cat) + 10;
+            String label = getCategoryDisplayName(cat);
+            int w = font.width(label) + 8;
             if (x + w > searchX - 4) break;
             boolean active = cat.equals(activeCat);
             boolean hovered = mouseY >= barY && mouseY < barY + CATEGORY_ROW_H
@@ -230,7 +259,7 @@ public final class BuildingSelectionOverlay {
 
             com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, w, CATEGORY_ROW_H - 2, active, hovered);
             int textColor = active ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM;
-            g.drawString(font, cat, x + 5, y + 2, textColor);
+            g.drawString(font, label, x + 4, y + 2, textColor);
             x += w + 2;
         }
 

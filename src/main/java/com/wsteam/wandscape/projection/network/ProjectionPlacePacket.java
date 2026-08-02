@@ -95,6 +95,16 @@ public record ProjectionPlacePacket(
         Log.info(TAG, "[Projection] '{}' placed at {} by {} firstFree={}",
                 config.displayName(), packet.anchorPos,
                 player.getGameProfile().getName(), result.firstFree());
+
+        // 4. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
+        if ("government".equals(config.category())) {
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            if (colonyApi == null || colonyApi.getColonyId(packet.anchorPos) == null) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                        new com.wsteam.wandscape.shared.network.ColonyCreatePromptPacket(packet.anchorPos));
+                Log.info(TAG, "[Projection] Government building placed at {}, prompting for colony creation", packet.anchorPos);
+            }
+        }
     }
 
     // ── StreamCodec ──

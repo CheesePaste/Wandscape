@@ -288,14 +288,7 @@ public final class WandscapePanelController {
     // ── Building selection bar handlers ──
 
     private static void handleCategoryClick(int catIdx) {
-        var allSlots = ProjectionClientState.getBuildingSlots();
-        // Derive categories list the same way BuildingSelectionOverlay does
-        java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
-        seen.add("All");
-        for (var slot : allSlots) {
-            seen.add(slot.category());
-        }
-        var cats = new java.util.ArrayList<>(seen);
+        var cats = BuildingSelectionOverlay.getCategories();
         if (catIdx >= 0 && catIdx < cats.size()) {
             WandscapePanelState.setBuildingBarCategory(cats.get(catIdx));
             WandscapePanelState.setBuildingBarSelectedIndex(-1);

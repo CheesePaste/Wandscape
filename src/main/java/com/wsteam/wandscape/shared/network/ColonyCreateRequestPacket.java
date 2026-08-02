@@ -51,31 +51,23 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         ServerLevel level = player.serverLevel();
         ColonyApi colonyApi = com.wsteam.wandscape.engine.ColonyApiImpl.get();
 
-        // Refuse if a colony already exists near the town hall (or anywhere).
-        // The V-panel / command flow owns colony creation; this panel only
-        // serves the "no colony yet" bootstrap case.
-        if (!colonyApi.getAllColonyIds().isEmpty()) {
-            // A colony exists somewhere — try to assign the town hall to the
-            // nearest one; if none is within range, refuse politely.
-            UUID existing = colonyApi.getColonyId(packet.townHallAnchor);
-            if (existing != null) {
-                linkTownHall(colonyApi, packet.townHallAnchor, existing);
-                sendMessage(player, "[Wandscape] Town hall linked to existing colony.");
-                return;
-            }
-            sendMessage(player, "[Wandscape] A colony already exists — use /wandscape colony create to make another.");
+        // If this town hall's position is ALREADY linked to an existing colony, link and notify
+        UUID existing = colonyApi.getColonyId(packet.townHallAnchor);
+        if (existing != null) {
+            linkTownHall(colonyApi, packet.townHallAnchor, existing);
+            sendMessage(player, "[Wandscape] 市政厅已关联至现有殖民地。");
             return;
         }
 
+        // Create new colony at townHallAnchor using ColonyCommand.createColonyAt
         String result = ColonyCommand.createColonyAt(level, packet.townHallAnchor, name);
         if (result == null || result.startsWith("[Wandscape] no government")
                 || result.startsWith("[Wandscape] Failed")) {
-            sendMessage(player, result != null ? result : "[Wandscape] Failed to create colony.");
+            sendMessage(player, result != null ? result : "[Wandscape] 创建殖民地失败。");
             return;
         }
 
-        // Link the town hall to the just-created colony. The colony origin
-        // matches the town hall anchor, so ColonyApi.onBuildingIntact links it.
+        // Link the town hall to the just-created colony
         UUID colonyId = colonyApi.getColonyId(packet.townHallAnchor);
         if (colonyId != null) {
             linkTownHall(colonyApi, packet.townHallAnchor, colonyId);

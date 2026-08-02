@@ -282,18 +282,20 @@ public final class ColonyCommand {
         return origin.above(2);
     }
 
-    /** Compute material stacks for the NPC's inventory. Each unique block type = 64. */
+    /** Compute exact material stacks for the NPC's inventory to construct the Town Hall. */
     private static List<ResourceStack> computeStarterInventory(BuildingConfig config) {
-        Set<String> seen = new LinkedHashSet<>();
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
         for (BlockOffset offset : config.pattern()) {
             String blockId = config.blockMapping().get(offset.toKey());
             if (blockId == null || "minecraft:air".equals(blockId)) continue;
             String cleanId = blockId.replaceAll("\\[.*?\\]", "").trim();
-            seen.add(cleanId);
+            counts.put(cleanId, counts.getOrDefault(cleanId, 0) + 1);
         }
         List<ResourceStack> stacks = new ArrayList<>();
-        for (String blockId : seen) {
-            stacks.add(new ResourceStack(new ResourceId(blockId), 64));
+        for (var entry : counts.entrySet()) {
+            // Give exact required quantity (at least 64 per type to be generous)
+            int qty = Math.max(64, entry.getValue());
+            stacks.add(new ResourceStack(new ResourceId(entry.getKey()), qty));
         }
         return stacks;
     }
