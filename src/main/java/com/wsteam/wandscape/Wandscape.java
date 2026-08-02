@@ -543,7 +543,12 @@ public class Wandscape {
                 .playToClient(
                         com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,
                         com.wsteam.wandscape.shared.network.GuideTestPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet));
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet))
+                // ── Spline Road Editor ──
+                .playToClient(
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket.STREAM_CODEC,
+                        com.wsteam.wandscape.road.network.SplineEditorEnterPacket::handleClient);
     }
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
@@ -690,7 +695,8 @@ public class Wandscape {
                 .then(TouristCommand.node())
                 .then(TransportCommand.node())
                 .then(MagicCommand.node())
-                .then(com.wsteam.wandscape.command.GuideCommand.node());
+                .then(com.wsteam.wandscape.command.GuideCommand.node())
+                .then(com.wsteam.wandscape.command.SplineEditorCommand.node());
         dispatcher.register(root);
     }
 

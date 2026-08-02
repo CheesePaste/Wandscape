@@ -113,6 +113,10 @@ public class WandscapeClient {
         OverviewFlightController.register();
         OverviewRenderer.register();
 
+        // Spline Road Editor & ImGui
+        com.wsteam.wandscape.road.client.SplineEditorController.register();
+        com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.imgui.ImGuiManager.class);
     }
 
     @SubscribeEvent
