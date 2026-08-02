@@ -15,7 +15,8 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -63,7 +64,7 @@ public class MagicBeamEntity extends Entity {
     /** 施法 NPC 实体引用（服务端跟踪用，null=静态光束）。 */
     private WandscapeNpc casterNpc;
     /** 目标生物实体引用（服务端跟踪用，null=静态光束）。 */
-    private Monster targetMob;
+    private LivingEntity targetMob;
 
     public MagicBeamEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -116,7 +117,7 @@ public class MagicBeamEntity extends Entity {
     }
 
     /** 绑定要跟踪的目标生物（服务端跟踪，null=静态光束）。 */
-    public void bindTarget(Monster mob) {
+    public void bindTarget(LivingEntity mob) {
         this.targetMob = mob;
     }
 
@@ -186,8 +187,8 @@ public class MagicBeamEntity extends Entity {
         float damage = BEAM_DAMAGE * wf;
 
         AABB box = new AABB(start, tgt.getCenter()).inflate(radius + 1.0);
-        for (Monster mob : level().getEntitiesOfClass(Monster.class, box)) {
-            if (mob.isRemoved()) continue;
+        for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof Enemy)) {
+            if (!(e instanceof LivingEntity mob) || mob.isRemoved()) continue;
             Vec3 center = mob.getBoundingBox().getCenter();
             double proj = center.subtract(start).dot(ndir);
             if (proj < -0.5 || proj > length + 0.5) continue;

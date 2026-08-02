@@ -15,7 +15,7 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -31,7 +31,7 @@ public final class MagicCastManager {
 
     private record PendingCast(UUID caster, ServerLevel level, Vec3 source,
                                BlockPos target, int color, long fireTick, int lifeTicks,
-                               @Nullable WandscapeNpc casterNpc, @Nullable Monster targetNpc) {}
+                               @Nullable WandscapeNpc casterNpc, @Nullable LivingEntity targetNpc) {}
 
     private MagicCastManager() {}
 
@@ -44,7 +44,7 @@ public final class MagicCastManager {
      */
     public static boolean schedule(ServerLevel level, UUID casterUuid,
                                    Vec3 source, BlockPos target, int color, int delayTicks, int lifeTicks,
-                                   @Nullable WandscapeNpc casterNpc, @Nullable Monster targetNpc) {
+                                   @Nullable WandscapeNpc casterNpc, @Nullable LivingEntity targetNpc) {
         if (ACTIVE_CASTERS.contains(casterUuid)) return false;
         PENDING.add(new PendingCast(casterUuid, level, source, target, color,
                 level.getGameTime() + Math.max(1, delayTicks), Math.max(1, lifeTicks),

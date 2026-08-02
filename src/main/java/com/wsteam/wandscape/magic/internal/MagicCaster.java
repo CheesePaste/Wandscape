@@ -14,7 +14,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.ChunkPos;
@@ -76,7 +78,7 @@ public final class MagicCaster {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) return false;
 
-        Monster target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
+        LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
         // 瞄身体中心（AABB 中心），而非脚底
@@ -105,17 +107,17 @@ public final class MagicCaster {
         return ok;
     }
 
-    /** 32 格内最近的敌对生物（Monster）；无则 null。 */
-    private static Monster findNearestHostile(ServerLevel level, WandscapeNpc npc, double range) {
-        Monster nearest = null;
+    /** 32 格内最近的敌对生物（实现 {@code Enemy} 接口）；无则 null。 */
+    private static LivingEntity findNearestHostile(ServerLevel level, WandscapeNpc npc, double range) {
+        LivingEntity nearest = null;
         double best = range * range;
         Vec3 pos = npc.position();
-        for (Monster m : level.getEntitiesOfClass(Monster.class, npc.getBoundingBox().inflate(range))) {
-            if (m.isRemoved() || !m.isAlive()) continue;
-            double d = m.distanceToSqr(pos);
+        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(range), e -> e instanceof Enemy)) {
+            if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
+            double d = mob.distanceToSqr(pos);
             if (d < best) {
                 best = d;
-                nearest = m;
+                nearest = mob;
             }
         }
         return nearest;
