@@ -19,6 +19,9 @@ import net.minecraft.world.phys.Vec3;
  * 服务端显示实体：从源点（法阵中心）射向目标的信标光束。
  * 目标与颜色经同步数据下发客户端，由 {@code MagicBeamEntityRenderer} 用原版
  * {@code BeaconRenderer.renderBeaconBeam} 渲染（原版 beam shader，可染色、光影下正常）。
+ *
+ * <p>不是子弹：起点/终点在生成时一次性定死，整段光束同时可见，不做位移。
+ * 光束粗细随时间动画——先慢慢变宽、再快速变窄（{@link #getWidthFactor}）。
  * 纯视觉实体：无 AI/碰撞/存档，短命后自毁。伤害由后续战斗 op（守卫阶段 1）负责。
  */
 public class MagicBeamEntity extends Entity {
@@ -28,9 +31,15 @@ public class MagicBeamEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_COLOR =
             SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
 
-    private static final int DEFAULT_LIFETIME = 60;
-
-    private int life;
+    /** 光束总寿命（tick）。 */
+    public static final int LIFETIME_TICKS = 100;
+    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）。 */
+    public static final float PEAK_T = 0.7f;
+    /** 峰值时的光束/光晕半径（方块）。 */
+    public static final float MAX_BEAM_RADIUS = 0.3f;
+    public static final float MAX_GLOW_RADIUS = 0.38f;
+    /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
+    private static final float WIDTH_POWER = 1.4f;
 
     public MagicBeamEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -41,7 +50,6 @@ public class MagicBeamEntity extends Entity {
         setPos(source.x, source.y, source.z);
         setTarget(target);
         setBeamColor(color);
-        this.life = DEFAULT_LIFETIME;
     }
 
     public Optional<BlockPos> getTarget() {
@@ -69,7 +77,31 @@ public class MagicBeamEntity extends Entity {
     @Override
     public void tick() {
         super.tick();
-        if (--life <= 0) discard();
+        // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
+        if (tickCount >= LIFETIME_TICKS) discard();
+    }
+
+    /** 归一化寿命 t ∈ [0,1]（含 partialTick 插值），渲染端动画采样用。 */
+    public float getAge(float partialTick) {
+        return Math.min(1.0f, (tickCount + partialTick) / (float) LIFETIME_TICKS);
+    }
+
+    /**
+     * 宽度乘子 [0.02, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
+     * t ∈ [PEAK_T, 1] 快速变窄（(1-k)^WIDTH_POWER）。
+     * 恒大于 0，避免 renderBeaconBeam 内部除以 beamRadius 时为 0。
+     */
+    public float getWidthFactor(float partialTick) {
+        float t = getAge(partialTick);
+        float factor;
+        if (t <= PEAK_T) {
+            float k = Math.max(0f, t / PEAK_T);
+            factor = (float) Math.pow(k, WIDTH_POWER);
+        } else {
+            float k = Math.min(1f, (t - PEAK_T) / (1f - PEAK_T));
+            factor = (float) Math.pow(1f - k, WIDTH_POWER);
+        }
+        return Math.max(0.02f, factor);
     }
 
     /** 纯显示实体不入存档，避免世界重载后残留光束。 */

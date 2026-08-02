@@ -12,12 +12,11 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * 服务端施法调度：法阵动画时长结束后生成信标光束实体。
- * 每个施法者同时只允许一个未发射的施法（去重，防止法阵重叠）。
+ * 每个施法者（玩家/NPC 共用 UUID）同时只允许一个未发射的施法（去重，防止法阵重叠）。
  */
 public final class MagicCastManager {
 
@@ -33,17 +32,16 @@ public final class MagicCastManager {
 
     /**
      * 登记一次施法：在 {@code delayTicks}（=法阵 duration）后生成光束。
-     * 若该施法者已有未发射的施法则拒绝。
+     * 若该施法者（玩家或 NPC 的 UUID）已有未发射的施法则拒绝。
      *
      * @return 是否登记成功
      */
-    public static boolean schedule(ServerLevel level, ServerPlayer caster,
+    public static boolean schedule(ServerLevel level, UUID casterUuid,
                                    Vec3 source, BlockPos target, int color, int delayTicks) {
-        UUID uid = caster.getUUID();
-        if (ACTIVE_CASTERS.contains(uid)) return false;
-        PENDING.add(new PendingCast(uid, level, source, target, color,
+        if (ACTIVE_CASTERS.contains(casterUuid)) return false;
+        PENDING.add(new PendingCast(casterUuid, level, source, target, color,
                 level.getGameTime() + Math.max(1, delayTicks)));
-        ACTIVE_CASTERS.add(uid);
+        ACTIVE_CASTERS.add(casterUuid);
         return true;
     }
 
