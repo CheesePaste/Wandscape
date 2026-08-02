@@ -10,12 +10,13 @@ import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
+import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
+import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -23,11 +24,10 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
-import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
 /**
  * Scanner GUI built on MedievalScreen MINIMAL theme.
+ * Uses MedievalButton, MedievalColors, and inset dark fields for full theme harmony.
  */
 public class BuildingScannerScreen extends MedievalScreen {
 
@@ -36,15 +36,15 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     private final BuildingScannerBlockEntity scanner;
 
-    // ── Structure Block Mode (SAVE vs CORNER) & Name ──
-    private CycleButton<BuildingScannerBlockEntity.BlockMode> blockModeBtn;
+    // ── Structure Block Mode & Name ──
+    private MedievalButton blockModeBtn;
     private EditBox structureNameEdit;
 
     // ── Target Mode (Building vs Road) ──
-    private CycleButton<BuildingScannerBlockEntity.TargetMode> targetModeBtn;
+    private MedievalButton targetModeBtn;
 
     // ── Category ──
-    private CycleButton<String> categoryBtn;
+    private MedievalButton categoryBtn;
     private static final List<String> CATEGORIES = List.of(
             "basic", "government", "node", "storage", "workstation", "crafting_station",
             "potion_station", "tavern", "shop", "service", "decoration", "wonder"
@@ -85,7 +85,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     private final List<CostRow> maintRows = new ArrayList<>();
 
     // ── Node config fields (category=node) ──
-    private CycleButton<String> nodeElemBtn;
+    private MedievalButton nodeElemBtn;
+    private String currentNodeElem;
     private EditBox nodeAmount, nodeChannel, nodeMana;
     private int nodeCatY;
 
@@ -102,16 +103,18 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     // ── Layout Y positions (computed in init, used in render) ──
     private int lx; // left edge for widgets
-    private int boundaryMinY, corner2Y, sizeInfoY;
     private int doorEditY;
     private int zoneHeaderY;
     private int metaStartY, metaLabelY;
     private int unlockY;
     private int shopCatY, svcCatY;
-    private int exportBtnY, exportResultY;
+    private int exportBtnY;
+
+    // ── Field Background Inset Rectangles ──
+    private record FieldRect(int x, int y, int w, int h) {}
+    private final List<FieldRect> insetFields = new ArrayList<>();
 
     // ── Column layout constants ──
-    private static final int COL1 = 0;   // label column (left-aligned)
     private static final int COL2 = 70;  // input fields start here
     private static final int FW = 60;    // default field width
     private static final int ROW_H = 22; // vertical row spacing
@@ -134,59 +137,58 @@ public class BuildingScannerScreen extends MedievalScreen {
     protected void init() {
         super.init();
         zoneRows.clear();
+        insetFields.clear();
+        maintRows.clear();
+        goodRows.clear();
+        elemOutRows.clear();
 
         int cx = leftPos + PW / 2;
         lx = leftPos + 16;
         int y = topPos + headerHeight + 8 + scrollOff;
 
         // ── Block Mode selector (SAVE vs CORNER) ──
-        blockModeBtn = addRenderableWidget(
-                CycleButton.builder((BuildingScannerBlockEntity.BlockMode v) -> Component.literal("Mode: " + v.name()))
-                        .withValues(BuildingScannerBlockEntity.BlockMode.values())
-                        .withInitialValue(scanner.getBlockMode())
-                        .displayOnlyValue()
-                        .create(cx - 150, y, 90, 20, Component.literal("Mode"),
-                                (btn, val) -> { scanner.setBlockMode(val); syncToServer(); needsRebuild = true; })
-        );
+        blockModeBtn = mkMedievalButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
+            BuildingScannerBlockEntity.BlockMode next = scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
+                    ? BuildingScannerBlockEntity.BlockMode.CORNER : BuildingScannerBlockEntity.BlockMode.SAVE;
+            scanner.setBlockMode(next);
+            syncToServer();
+            needsRebuild = true;
+        });
 
         // ── Structure Name input ──
-        structureNameEdit = mkEdit(cx - 50, y, 190, scanner.getStructureName(), s -> {
+        structureNameEdit = mkEdit(lx + 96, y, 204, scanner.getStructureName(), s -> {
             scanner.setStructureName(s);
             syncToServer();
         });
-        y += 28;
+        y += 26;
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
-            // CORNER mode: simplified UI, only mode & structure name needed
-            addRenderableWidget(Button.builder(Component.literal("Done"), b -> this.onClose())
-                    .bounds(cx - 50, y + 20, 100, 20).build());
+            // CORNER mode: simplified UI
+            mkMedievalButton(cx - 50, y + 30, 100, 20, "完成", this::onClose);
             return;
         }
 
-        // ── Target Mode & Category ──
-        targetModeBtn = addRenderableWidget(
-                CycleButton.builder((BuildingScannerBlockEntity.TargetMode v) -> Component.literal("Target: " + v.name()))
-                        .withValues(BuildingScannerBlockEntity.TargetMode.values())
-                        .withInitialValue(scanner.getTargetMode())
-                        .displayOnlyValue()
-                        .create(cx - 150, y, 110, 20, Component.literal("Target"),
-                                (btn, val) -> { scanner.setTargetMode(val); syncToServer(); needsRebuild = true; })
-        );
+        // ── Target Mode & Category & Detect ──
+        targetModeBtn = mkMedievalButton(lx, y, 105, 20, "Target: " + scanner.getTargetMode().name(), () -> {
+            BuildingScannerBlockEntity.TargetMode next = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.BUILDING
+                    ? BuildingScannerBlockEntity.TargetMode.ROAD : BuildingScannerBlockEntity.TargetMode.BUILDING;
+            scanner.setTargetMode(next);
+            syncToServer();
+            needsRebuild = true;
+        });
 
-        categoryBtn = addRenderableWidget(
-                CycleButton.builder((String v) -> Component.literal(v))
-                        .withValues(CATEGORIES)
-                        .withInitialValue(scanner.getCategory())
-                        .displayOnlyValue()
-                        .create(cx - 35, y, 95, 20, Component.literal("Type"),
-                                (btn, val) -> { scanner.setCategory(val); syncToServer(); needsRebuild = true; })
-        );
+        categoryBtn = mkMedievalButton(lx + 110, y, 95, 20, "Type: " + scanner.getCategory(), () -> {
+            int curIdx = CATEGORIES.indexOf(scanner.getCategory());
+            int nextIdx = (curIdx + 1) % CATEGORIES.size();
+            scanner.setCategory(CATEGORIES.get(nextIdx));
+            syncToServer();
+            needsRebuild = true;
+        });
 
-        addRenderableWidget(Button.builder(Component.literal("Detect Corners"), b -> {
-                    syncToServer();
-                    needsRebuild = true;
-                })
-                .bounds(cx + 65, y, 95, 20).build());
+        mkMedievalButton(lx + 210, y, 90, 20, "匹配角点", () -> {
+            syncToServer();
+            needsRebuild = true;
+        });
         y += 28;
 
         // ── Door section ──
@@ -198,25 +200,23 @@ public class BuildingScannerScreen extends MedievalScreen {
         doorX = mkEdit(lx + COL2, doorEditY, FW, loadDoorStr(0), s -> onDoorChanged());
         doorY = mkEdit(lx + COL2 + FW + 4, doorEditY, FW, loadDoorStr(1), s -> onDoorChanged());
         doorZ = mkEdit(lx + COL2 + (FW + 4) * 2, doorEditY, FW, loadDoorStr(2), s -> onDoorChanged());
-        addRenderableWidget(Button.builder(Component.literal("Clear"), b -> {
-                    scanner.setDoorOffset(null);
-                    doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
-                    syncToServer();
-                })
-                .bounds(lx + COL2 + (FW + 4) * 3 + 8, doorEditY, 50, 20).build());
+        mkMedievalButton(lx + COL2 + (FW + 4) * 3 + 8, doorEditY, 50, 18, "清除", () -> {
+            scanner.setDoorOffset(null);
+            doorX.setValue(""); doorY.setValue(""); doorZ.setValue("");
+            syncToServer();
+        });
 
         // ── Tourist interact zones section ──
         addSectionHeader(y, "Tourist Interact Zones (" + scanner.getTouristInteractZones().size() + ")");
         y += 14;
         zoneHeaderY = y - 14;
 
-        addRenderableWidget(Button.builder(Component.literal("+ Add Zone"), b -> {
-                    scanner.addTouristInteractZone(new BoundaryBox(
-                            BlockOffset.of(-1, 0, -1), BlockOffset.of(1, 0, 1)));
-                    syncToServer();
-                    needsRebuild = true;
-                })
-                .bounds(lx + COL2 + 200, y - 11, 80, 18).build());
+        mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加区域", () -> {
+            scanner.addTouristInteractZone(new BoundaryBox(
+                    BlockOffset.of(-1, 0, -1), BlockOffset.of(1, 0, 1)));
+            syncToServer();
+            needsRebuild = true;
+        });
 
         List<BoundaryBox> zones = scanner.getTouristInteractZones();
         for (int i = 0; i < zones.size(); i++) {
@@ -231,255 +231,207 @@ public class BuildingScannerScreen extends MedievalScreen {
         y += 14;
         metaStartY = y - 14;
 
-        // ID + Name on the same line
-        metaId = mkEdit(lx + 20, y, 130, scanner.getBuildingId(),
-                s -> { scanner.setBuildingId(s); syncToServer(); });
-        metaName = mkEdit(lx + 180, y, 120, scanner.getDisplayName(),
-                s -> { scanner.setDisplayName(s); syncToServer(); });
-        y += ROW_H + 2;
+        metaId = mkEdit(lx + 4, y + 14, 150, scanner.getBuildingId(), s -> {
+            scanner.setBuildingId(s);
+            syncToServer();
+        });
+        metaName = mkEdit(lx + 164, y + 14, 140, scanner.getDisplayName(), s -> {
+            scanner.setDisplayName(s);
+            syncToServer();
+        });
+        y += 36;
 
-        // Comfort / Magic / Wonder on the same line
-        metaLabelY = y - 4;
-        metaComfort = mkNumEdit(lx + COL2, metaLabelY, FW, scanner.getComfort(),
-                s -> { scanner.setComfort(intOrZero(s)); syncToServer(); });
-        metaMagic = mkNumEdit(lx + COL2 + FW + 12, metaLabelY, FW, scanner.getMagic(),
-                s -> { scanner.setMagic(intOrZero(s)); syncToServer(); });
-        metaWonder = mkNumEdit(lx + COL2 + (FW + 12) * 2, metaLabelY, FW, scanner.getWonder(),
-                s -> { scanner.setWonder(intOrZero(s)); syncToServer(); });
-        y = metaLabelY + ROW_H + 10;
+        metaLabelY = y;
+        y += 12;
 
-        // ── Unlock requirement section ──
+        metaComfort = mkNumEdit(lx + COL2, y, FW, scanner.getComfort(), s -> {
+            scanner.setComfort(intOrZero(s));
+            syncToServer();
+        });
+        metaMagic = mkNumEdit(lx + COL2 + FW + 12, y, FW, scanner.getMagic(), s -> {
+            scanner.setMagic(intOrZero(s));
+            syncToServer();
+        });
+        metaWonder = mkNumEdit(lx + COL2 + (FW + 12) * 2, y, FW, scanner.getWonder(), s -> {
+            scanner.setWonder(intOrZero(s));
+            syncToServer();
+        });
+        y += ROW_H + 6;
+
+        // ── Unlock requirement ──
         addSectionHeader(y, "Unlock Requirement");
         y += 14;
         unlockY = y - 14;
+        unlockLevel = mkNumEdit(lx + COL2 + 70, y, 40, scanner.getUnlockMinLevel(), s -> {
+            scanner.setUnlockMinLevel(Math.max(1, intOrZero(s)));
+            syncToServer();
+        });
+        y += ROW_H + 6;
 
-        unlockLevel = mkNumEdit(lx + COL2, y, FW, scanner.getUnlockMinLevel(),
-                s -> { scanner.setUnlockMinLevel(intOrZero(s)); syncToServer(); });
-        y += ROW_H + 10;
-
-        // ── Maintenance Cost section ──
+        // ── Maintenance cost section ──
         addSectionHeader(y, "Maintenance Cost");
         y += 14;
         maintCostY = y - 14;
 
-        maintRows.clear();
-        int my = y;
-        int mi = 0;
-        for (var entry : scanner.getMaintenanceCost().entrySet()) {
-            String elem = entry.getKey();
-            int ey = my + mi * 22;
-            CostRow cr = new CostRow(lx + COL2, ey, elem, entry.getValue(),
-                    () -> { scanner.removeMaintenanceCost(elem); syncToServer(); needsRebuild = true; },
-                    () -> syncMaintCost());
-            maintRows.add(cr);
-            mi++;
-        }
-        int addMaintY = my + mi * 22;
-        if (mi == 0) addMaintY = my;
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> {
-                    String next = ELEMENTS.stream()
-                            .filter(e -> !scanner.getMaintenanceCost().containsKey(e))
-                            .findFirst().orElse("earth");
-                    scanner.addMaintenanceCost(next, 1);
-                    syncToServer();
-                    needsRebuild = true;
-                })
-                .bounds(lx + COL2, addMaintY, 30, 18).build());
-        y = addMaintY + ROW_H + 6;
+        mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加消耗", () -> {
+            scanner.addMaintenanceCost("earth", 1);
+            syncToServer();
+            needsRebuild = true;
+        });
 
-        // ── Node Config section (only for category=node) ──
+        for (var entry : scanner.getMaintenanceCost().entrySet()) {
+            String el = entry.getKey();
+            maintRows.add(new CostRow(lx + 4, y, el, entry.getValue(),
+                    () -> {
+                        scanner.removeMaintenanceCost(el);
+                        syncToServer();
+                        needsRebuild = true;
+                    },
+                    this::syncMaintCost));
+            y += ROW_H;
+        }
+        y += 6;
+
+        // ── Node config (category=node) ──
         String cat = scanner.getCategory();
         if ("node".equals(cat)) {
-            // Use default blueprint for node
-            if (scanner.getNodeBlueprint().isBlank()) {
-                scanner.setNodeBlueprint("node:gather");
-            }
             addSectionHeader(y, "Node Config");
             y += 14;
             nodeCatY = y - 14;
 
-            // Element selector (CycleButton, like maintenance cost rows)
-            String currentElem = ELEMENTS.contains(scanner.getNodeElement())
-                    ? scanner.getNodeElement() : "earth";
-            nodeElemBtn = addRenderableWidget(
-                    CycleButton.builder((String v) -> Component.literal(v))
-                            .withValues(ELEMENTS)
-                            .withInitialValue(currentElem)
-                            .displayOnlyValue()
-                            .create(lx + COL2, y, 56, 18, Component.literal("Element"),
-                                    (b, val) -> { scanner.setNodeElement(val); syncToServer(); }));
+            this.currentNodeElem = ELEMENTS.contains(scanner.getNodeElement()) ? scanner.getNodeElement() : "earth";
+            nodeElemBtn = mkMedievalButton(lx + COL2 + 70, y, 70, 18, currentNodeElem, () -> {
+                int curIdx = ELEMENTS.indexOf(currentNodeElem);
+                currentNodeElem = ELEMENTS.get((curIdx + 1) % ELEMENTS.size());
+                scanner.setNodeElement(currentNodeElem);
+                nodeElemBtn.setMessage(Component.literal(currentNodeElem));
+                syncToServer();
+            });
             y += ROW_H;
 
-            nodeAmount = mkNumEdit(lx + COL2, y, FW, scanner.getNodeAmountPerHarvest(),
-                    s -> { scanner.setNodeAmountPerHarvest(intOrZero(s)); syncToServer(); });
+            nodeAmount = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getNodeAmountPerHarvest(), s -> {
+                scanner.setNodeAmountPerHarvest(intOrZero(s));
+                syncToServer();
+            });
             y += ROW_H;
 
-            nodeChannel = mkNumEdit(lx + COL2, y, FW, scanner.getNodeChannelTicks(),
-                    s -> { scanner.setNodeChannelTicks(intOrZero(s)); syncToServer(); });
+            nodeChannel = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getNodeChannelTicks(), s -> {
+                scanner.setNodeChannelTicks(intOrZero(s));
+                syncToServer();
+            });
             y += ROW_H;
 
-            nodeMana = mkNumEdit(lx + COL2, y, FW, scanner.getNodeManaCost(),
-                    s -> { scanner.setNodeManaCost(intOrZero(s)); syncToServer(); });
+            nodeMana = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getNodeManaCost(), s -> {
+                scanner.setNodeManaCost(intOrZero(s));
+                syncToServer();
+            });
             y += ROW_H + 6;
         } else {
-            nodeElemBtn = null; nodeAmount = null; nodeChannel = null; nodeMana = null;
             nodeCatY = 0;
+            nodeElemBtn = null;
+            nodeAmount = null; nodeChannel = null; nodeMana = null;
         }
 
         // ── Presets section ──
         addSectionHeader(y, "Presets");
         y += 14;
         presetY = y - 14;
-
-        presetNameEdit = mkEdit(lx + COL2, y, 100, "", null);
-        addRenderableWidget(Button.builder(Component.literal("Save"), b -> {
-                    String name = presetNameEdit.getValue();
-                    if (!name.isBlank()) {
-                        ScannerPresetStore.savePreset(name, capturePresetData());
-                        needsRebuild = true;
-                    }
-                })
-                .bounds(lx + COL2 + 104, y, 40, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Load"), b -> {
-                    String name = presetNameEdit.getValue();
-                    if (!name.isBlank()) {
-                        CompoundTag data = ScannerPresetStore.loadPreset(name);
-                        if (data != null) {
-                            applyPresetData(data);
-                            syncToServer();
-                            needsRebuild = true;
-                        }
-                    }
-                })
-                .bounds(lx + COL2 + 148, y, 40, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Del"), b -> {
-                    String name = presetNameEdit.getValue();
-                    if (!name.isBlank()) {
-                        ScannerPresetStore.deletePreset(name);
-                        needsRebuild = true;
-                    }
-                })
-                .bounds(lx + COL2 + 192, y, 40, 18).build());
-        y += ROW_H + 2;
-
-        // Preset name quick-load buttons
-        List<String> presetNames = ScannerPresetStore.listPresets();
-        int px = lx + COL2;
-        for (String pn : presetNames) {
-            int bw = Math.min(font.width(pn) + 10, 120);
-            addRenderableWidget(Button.builder(Component.literal(pn), btn -> {
-                        CompoundTag data = ScannerPresetStore.loadPreset(btn.getMessage().getString());
-                        if (data != null) {
-                            applyPresetData(data);
-                            syncToServer();
-                            needsRebuild = true;
-                        }
-                    })
-                    .bounds(px, y, bw, 16).build());
-            px += bw + 4;
-            if (px > width - 40) break;
-        }
-        y += 20;
+        presetNameEdit = mkEdit(lx + 4, y, 100, "", s -> {});
+        mkMedievalButton(lx + 110, y, 60, 18, "保存预设", this::onPresetSave);
+        mkMedievalButton(lx + 174, y, 60, 18, "加载预设", this::onPresetLoad);
+        y += ROW_H + 6;
 
         // ── Category-specific sections ──
-        // cat is already declared above in the node config section
-
         if ("shop".equals(cat)) {
+            svcCatY = 0;
             addSectionHeader(y, "Shop Config");
             y += 14;
             shopCatY = y - 14;
 
-            shopProfitRate = mkNumEdit(lx + COL2, y, FW,
-                    (int) (scanner.getShopProfitRate() * 100),
-                    s -> {
-                        double v = intOrZero(s) / 100.0;
-                        scanner.setShopProfitRate(v);
-                        syncToServer();
-                    });
-            y += ROW_H + 2;
+            shopProfitRate = mkEdit(lx + COL2 + 70, y, 50, String.valueOf(scanner.getShopProfitRate()), s -> {
+                try {
+                    scanner.setShopProfitRate(Double.parseDouble(s));
+                    syncToServer();
+                } catch (NumberFormatException ignored) {}
+            });
+            y += ROW_H;
 
-            shopDuration = mkNumEdit(lx + COL2, y, FW, scanner.getShopInteractionDurationTicks(),
-                    s -> { scanner.setShopInteractionDurationTicks(intOrZero(s)); syncToServer(); });
+            shopDuration = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getShopInteractionDurationTicks(), s -> {
+                scanner.setShopInteractionDurationTicks(intOrZero(s));
+                syncToServer();
+            });
             y += ROW_H + 6;
-            svcCatY = 0; // not used
 
-            // ── Shop Goods section ──
-            addSectionHeader(y, "Shop Goods");
+            addSectionHeader(y, "Shop Goods (" + scanner.getShopGoods().size() + ")");
             y += 14;
             goodsCatY = y - 14;
 
-            goodRows.clear();
-            int gx = lx + COL2;
-            int gy = y;
-            for (int gi = 0; gi < scanner.getShopGoods().size(); gi++) {
-                GoodRow gr = new GoodRow(gi, gx, gy);
-                goodRows.add(gr);
-                gy += 40;
+            mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加商品", () -> {
+                scanner.addShopGood(new ShopGoodData("minecraft:apple", 5, 0, 0));
+                syncToServer();
+                needsRebuild = true;
+            });
+
+            for (int i = 0; i < scanner.getShopGoods().size(); i++) {
+                goodRows.add(new GoodRow(i, lx + 4, y));
+                y += ROW_H;
             }
-            addRenderableWidget(Button.builder(Component.literal("+ Add Good"), b -> {
-                        scanner.addShopGood(new ShopGoodData("minecraft:air", 0, 0, 0));
-                        syncToServer();
-                        needsRebuild = true;
-                    })
-                    .bounds(gx, gy, 80, 18).build());
-            y = gy + ROW_H + 6;
-        } else {
-            shopProfitRate = null;
-            shopDuration = null;
+            y += 6;
+            elemOutY = 0;
+        } else if ("service".equals(cat)) {
             shopCatY = 0;
             goodsCatY = 0;
-        }
-
-        if ("service".equals(cat)) {
+            shopProfitRate = null; shopDuration = null;
             addSectionHeader(y, "Service Config");
             y += 14;
             svcCatY = y - 14;
 
-            serviceEnergy = mkNumEdit(lx + COL2, y, FW, scanner.getServiceEnergyPerUse(),
-                    s -> { scanner.setServiceEnergyPerUse(intOrZero(s)); syncToServer(); });
-            y += ROW_H + 2;
+            serviceEnergy = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getServiceEnergyPerUse(), s -> {
+                scanner.setServiceEnergyPerUse(intOrZero(s));
+                syncToServer();
+            });
+            y += ROW_H;
 
-            serviceMaxOcc = mkNumEdit(lx + COL2, y, FW, scanner.getServiceMaxOccupancy(),
-                    s -> { scanner.setServiceMaxOccupancy(intOrZero(s)); syncToServer(); });
-            y += ROW_H + 2;
+            serviceMaxOcc = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getServiceMaxOccupancy(), s -> {
+                scanner.setServiceMaxOccupancy(intOrZero(s));
+                syncToServer();
+            });
+            y += ROW_H;
 
-            serviceDuration = mkNumEdit(lx + COL2, y, FW, scanner.getServiceInteractionDurationTicks(),
-                    s -> { scanner.setServiceInteractionDurationTicks(intOrZero(s)); syncToServer(); });
+            serviceDuration = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getServiceInteractionDurationTicks(), s -> {
+                scanner.setServiceInteractionDurationTicks(intOrZero(s));
+                syncToServer();
+            });
             y += ROW_H + 6;
 
-            // ── Element Output section ──
             addSectionHeader(y, "Element Output");
             y += 14;
             elemOutY = y - 14;
 
-            elemOutRows.clear();
-            int eoy = y;
-            int eoi = 0;
+            mkMedievalButton(lx + COL2 + 200, y - 13, 80, 18, "+ 添加产出", () -> {
+                scanner.addServiceElementOutput("earth", 1);
+                syncToServer();
+                needsRebuild = true;
+            });
+
             for (var entry : scanner.getServiceElementOutput().entrySet()) {
-                String elem = entry.getKey();
-                int ey = eoy + eoi * 22;
-                CostRow cr = new CostRow(lx + COL2, ey, elem, entry.getValue(),
-                        () -> { scanner.removeServiceElementOutput(elem); syncToServer(); needsRebuild = true; },
-                        () -> syncElemOut());
-                elemOutRows.add(cr);
-                eoi++;
+                String el = entry.getKey();
+                elemOutRows.add(new CostRow(lx + 4, y, el, entry.getValue(),
+                        () -> {
+                            scanner.removeServiceElementOutput(el);
+                            syncToServer();
+                            needsRebuild = true;
+                        },
+                        this::syncServiceElemOutput));
+                y += ROW_H;
             }
-            if (eoi == 0) eoy = y;
-            addRenderableWidget(Button.builder(Component.literal("+"), b -> {
-                        String next = ELEMENTS.stream()
-                                .filter(e -> !scanner.getServiceElementOutput().containsKey(e))
-                                .findFirst().orElse("earth");
-                        scanner.addServiceElementOutput(next, 1);
-                        syncToServer();
-                        needsRebuild = true;
-                    })
-                    .bounds(lx + COL2, y + eoi * 22, 30, 18).build());
-            y = y + eoi * 22 + ROW_H + 6;
+            y += 6;
         } else {
-            serviceEnergy = null;
-            serviceMaxOcc = null;
-            serviceDuration = null;
-            if (!"shop".equals(cat)) svcCatY = 0;
+            shopCatY = 0;
+            goodsCatY = 0;
+            shopProfitRate = null;
+            shopDuration = null;
+            svcCatY = 0;
             elemOutY = 0;
         }
 
@@ -487,46 +439,51 @@ public class BuildingScannerScreen extends MedievalScreen {
         addSectionHeader(y, "Export");
         y += 16;
         exportBtnY = y - 14;
-        exportResultY = exportBtnY + ROW_H + 4;
 
         String btnText = scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD
-                ? "Export Road JSON" : "Export Building JSON";
-        addRenderableWidget(Button.builder(Component.literal("Scan Area"), b -> doScan())
-                .bounds(lx + 5, exportBtnY, 100, 20).build());
-        addRenderableWidget(Button.builder(Component.literal(btnText), b -> doExport())
-                .bounds(lx + 110, exportBtnY, 140, 20).build());
+                ? "导出道路 JSON" : "导出建筑 JSON";
+        mkMedievalButton(lx + 5, exportBtnY, 100, 20, "扫描区域", () -> doScan());
+        mkMedievalButton(lx + 110, exportBtnY, 140, 20, btnText, () -> doExport());
 
-        // Compute max scroll — generous buffer so the user can always
-        // scroll well past the bottom to see everything.
-        int bottom = exportResultY + 600;
+        int bottom = exportBtnY + 60;
         int visibleHeight = height - 40;
         maxScroll = Math.min(0, visibleHeight - bottom);
     }
 
-    /** Draw a bold section header at the given Y. Returns y + 14 for content. */
     private void addSectionHeader(int y, String title) {
-        // Subclasses don't draw at init time; this is a layout marker only.
-        // Rendering is done in render().
+        // Layout marker only
     }
 
     // ── Widget creation helpers ──
 
     private EditBox mkEdit(int x, int y, int w, String val, Consumer<String> r) {
-        EditBox box = new EditBox(font, x, y, w, 18, Component.empty());
+        insetFields.add(new FieldRect(x, y, w, 18));
+        EditBox box = new EditBox(font, x + 3, y + 2, w - 6, 14, Component.empty());
         box.setValue(val);
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(r);
         return addRenderableWidget(box);
     }
 
     private EditBox mkNumEdit(int x, int y, int w, int val, Consumer<String> r) {
-        EditBox box = new EditBox(font, x, y, w, 18, Component.empty());
+        insetFields.add(new FieldRect(x, y, w, 18));
+        EditBox box = new EditBox(font, x + 3, y + 2, w - 6, 14, Component.empty());
         box.setFilter(s -> s.matches("\\d*"));
         box.setValue(String.valueOf(val));
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(r);
         return addRenderableWidget(box);
     }
 
-    // ── Zone row inner class ──
+    private MedievalButton mkMedievalButton(int x, int y, int w, int h, String text, Runnable onPress) {
+        return addRenderableWidget(new MedievalButton(x, y, w, h, Component.literal(text), onPress::run));
+    }
+
+    // ── Inner classes for rows ──
 
     private class ZoneRow {
         final int index;
@@ -538,79 +495,72 @@ public class BuildingScannerScreen extends MedievalScreen {
             int zw = 28;
             BoundaryBox zone = scanner.getTouristInteractZones().get(idx);
 
-            // "#N" label
             int labelW = 20;
-            EditBox label = new EditBox(font, zx, zy, labelW, 16, Component.empty());
-            label.setValue("#" + idx);
+            EditBox label = mkEdit(zx, zy, labelW, "#" + idx, s -> {});
             label.setEditable(false);
             label.setFocused(false);
-            addRenderableWidget(label);
 
             int mx = zx + 24;
-            // "min" label + x,y,z
             min[0] = mkZoneEdit(mx, zy, zw, zone.min().x(), () -> updateZone(idx));
             min[1] = mkZoneEdit(mx + zw + 2, zy, zw, zone.min().y(), () -> updateZone(idx));
             min[2] = mkZoneEdit(mx + (zw + 2) * 2, zy, zw, zone.min().z(), () -> updateZone(idx));
 
             int mx2 = mx + (zw + 2) * 3 + 8;
-            // max x,y,z
             max[0] = mkZoneEdit(mx2, zy, zw, zone.max().x(), () -> updateZone(idx));
             max[1] = mkZoneEdit(mx2 + zw + 2, zy, zw, zone.max().y(), () -> updateZone(idx));
             max[2] = mkZoneEdit(mx2 + (zw + 2) * 2, zy, zw, zone.max().z(), () -> updateZone(idx));
 
-            addRenderableWidget(Button.builder(Component.literal("×"), b -> {
-                        scanner.removeTouristInteractZone(idx);
-                        syncToServer();
-                        needsRebuild = true;
-                    })
-                    .bounds(mx2 + (zw + 2) * 3 + 6, zy, 18, 16).build());
+            mkMedievalButton(mx2 + (zw + 2) * 3 + 6, zy, 18, 18, "×", () -> {
+                scanner.removeTouristInteractZone(idx);
+                syncToServer();
+                needsRebuild = true;
+            });
         }
     }
 
-    /** One row of the maintenance-cost or tourist-element-output editor: element selector + amount. */
     private class CostRow {
         final Runnable onChanged;
-        final CycleButton<String> elemBtn;
+        final MedievalButton elemBtn;
+        private String currentElem;
         final EditBox amountBox;
+
         CostRow(int x, int y, String elem, int amount, Runnable onRemove, Runnable onChanged) {
             this.onChanged = onChanged;
-            elemBtn = addRenderableWidget(
-                    CycleButton.builder((String v) -> Component.literal(v))
-                            .withValues(ELEMENTS)
-                            .withInitialValue(ELEMENTS.contains(elem) ? elem : "earth")
-                            .displayOnlyValue()
-                            .create(x, y, 56, 18, Component.empty(), (b, v) -> onChanged.run()));
+            this.currentElem = ELEMENTS.contains(elem) ? elem : "earth";
+            this.elemBtn = addRenderableWidget(new MedievalButton(x, y, 56, 18, Component.literal(currentElem), this::cycleElem));
             amountBox = mkNumEdit(x + 60, y, 36, amount, s -> onChanged.run());
             if (onRemove != null) {
-                addRenderableWidget(Button.builder(Component.literal("×"), b -> onRemove.run())
-                        .bounds(x + 100, y, 18, 18).build());
+                mkMedievalButton(x + 100, y, 18, 18, "×", onRemove::run);
             }
         }
-        String element() { return elemBtn.getValue(); }
+
+        private void cycleElem() {
+            int curIdx = ELEMENTS.indexOf(currentElem);
+            currentElem = ELEMENTS.get((curIdx + 1) % ELEMENTS.size());
+            elemBtn.setMessage(Component.literal(currentElem));
+            onChanged.run();
+        }
+        String element() { return currentElem; }
         int amount() { return intOrZero(amountBox); }
     }
 
-    /** One row of the shop-goods editor. */
     private class GoodRow {
         final int index;
         final EditBox itemIdBox;
         final EditBox gComfort, gMagic, gWonder;
-        int yBase;
 
         GoodRow(int idx, int x, int y) {
             this.index = idx;
-            this.yBase = y;
             ShopGoodData good = scanner.getShopGoods().get(idx);
             itemIdBox = mkEdit(x + 4, y, 120, good.itemId(), s -> updateGood());
             gComfort = mkNumEdit(x + 130, y, 28, good.comfort(), s -> updateGood());
             gMagic = mkNumEdit(x + 162, y, 28, good.magic(), s -> updateGood());
             gWonder = mkNumEdit(x + 194, y, 28, good.wonder(), s -> updateGood());
-            addRenderableWidget(Button.builder(Component.literal("×"), b -> {
-                        scanner.removeShopGood(idx);
-                        syncToServer();
-                        needsRebuild = true;
-                    })
-                    .bounds(x + 228, y, 18, 18).build());
+            mkMedievalButton(x + 228, y, 18, 18, "×", () -> {
+                scanner.removeShopGood(idx);
+                syncToServer();
+                needsRebuild = true;
+            });
         }
 
         ShopGoodData captureGood() {
@@ -626,10 +576,14 @@ public class BuildingScannerScreen extends MedievalScreen {
     }
 
     private EditBox mkZoneEdit(int x, int y, int w, int val, Runnable onChange) {
-        EditBox box = new EditBox(font, x, y, w, 16, Component.empty());
+        insetFields.add(new FieldRect(x, y, w, 18));
+        EditBox box = new EditBox(font, x + 2, y + 1, w - 4, 14, Component.empty());
         box.setMaxLength(6);
         box.setFilter(s -> s.matches("-?\\d{0,6}"));
         box.setValue(String.valueOf(val));
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
         box.setResponder(s -> onChange.run());
         return addRenderableWidget(box);
     }
@@ -644,7 +598,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         syncToServer();
     }
 
-    // ── Deferred rebuild flag (set from widget handlers to avoid CME) ──
     private boolean needsRebuild = false;
 
     @Override
@@ -654,8 +607,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             rebuild();
         }
     }
-
-    // ── Scrolling ──
 
     @Override
     public boolean mouseScrolled(double mx, double my, double deltaX, double deltaY) {
@@ -670,15 +621,11 @@ public class BuildingScannerScreen extends MedievalScreen {
         return false;
     }
 
-    // ── Rebuild widgets (after zone add/remove or scroll) ──
-
     private void rebuild() {
         super.clearWidgets();
         zoneRows.clear();
         init();
     }
-
-    // ── Door helpers ──
 
     private String loadDoorStr(int axis) {
         BlockOffset off = scanner.getDoorOffset();
@@ -689,8 +636,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             default -> String.valueOf(off.z());
         };
     }
-
-    // ── Door change ──
 
     private void onDoorChanged() {
         String xs = doorX.getValue();
@@ -709,23 +654,27 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
     }
 
-    // ── Sync helpers for new editors ──
-
     private void syncMaintCost() {
         Map<String, Integer> map = new HashMap<>();
-        for (CostRow row : maintRows) map.put(row.element(), row.amount());
+        for (CostRow r : maintRows) {
+            if (r.amount() > 0) {
+                map.put(r.element(), r.amount());
+            }
+        }
         scanner.setMaintenanceCost(map);
         syncToServer();
     }
 
-    private void syncElemOut() {
+    private void syncServiceElemOutput() {
         Map<String, Integer> map = new HashMap<>();
-        for (CostRow row : elemOutRows) map.put(row.element(), row.amount());
+        for (CostRow r : elemOutRows) {
+            if (r.amount() > 0) {
+                map.put(r.element(), r.amount());
+            }
+        }
         scanner.setServiceElementOutput(map);
         syncToServer();
     }
-
-    // ── Scan & Export ──
 
     private void doScan() {
         BlockPos wMin = scanner.getWorldMin();
@@ -734,23 +683,20 @@ public class BuildingScannerScreen extends MedievalScreen {
             scanResult = Component.literal("No boundary defined");
             return;
         }
-        var level = scanner.getLevel();
-        if (level == null) return;
-
-        BlockPos scannerPos = scanner.getBlockPos();
         int count = 0;
+        BlockPos scannerPos = scanner.getBlockPos();
         for (int x = wMin.getX(); x <= wMax.getX(); x++) {
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
                     if (bp.equals(scannerPos)) continue;
-                    if (!level.getBlockState(bp).isAir()) count++;
+                    if (minecraft != null && minecraft.level != null && !minecraft.level.getBlockState(bp).isAir()) {
+                        count++;
+                    }
                 }
             }
         }
-        scanner.setScanned(true);
         scanResult = Component.literal("Scanned " + count + " non-air blocks");
-        syncToServer();
     }
 
     private void doExport() {
@@ -759,19 +705,189 @@ public class BuildingScannerScreen extends MedievalScreen {
             scanResult = Component.literal("Set a building ID before exporting");
             return;
         }
-        scanner.setScanned(true);
-        // Send export request to server
         PacketDistributor.sendToServer(new BuildingScannerExportPacket(scanner.getBlockPos()));
         scanResult = Component.literal("Export requested for '" + id + "' — check server console");
-        syncToServer();
     }
 
-    // ── Network sync ──
-
     private void syncToServer() {
-        if (scanner.getLevel() == null || scanner.getLevel().isClientSide) {
-            CompoundTag tag = scanner.getUpdateTag(scanner.getLevel().registryAccess());
-            PacketDistributor.sendToServer(new BuildingScannerSyncPacket(scanner.getBlockPos(), tag));
+        if (minecraft == null || minecraft.level == null) return;
+        CompoundTag tag = scanner.saveWithoutMetadata(minecraft.level.registryAccess());
+        PacketDistributor.sendToServer(new BuildingScannerSyncPacket(scanner.getBlockPos(), tag));
+    }
+
+    private static final Map<String, CompoundTag> LOCAL_PRESETS = new HashMap<>();
+
+    private void onPresetSave() {
+        if (presetNameEdit == null || minecraft == null) return;
+        String name = presetNameEdit.getValue().trim();
+        if (name.isEmpty()) return;
+        CompoundTag tag = capturePresetData();
+        LOCAL_PRESETS.put(name, tag);
+        scanResult = Component.literal("Preset saved: " + name);
+    }
+
+    private void onPresetLoad() {
+        if (presetNameEdit == null || minecraft == null) return;
+        String name = presetNameEdit.getValue().trim();
+        if (name.isEmpty()) return;
+        CompoundTag tag = LOCAL_PRESETS.get(name);
+        if (tag == null) {
+            scanResult = Component.literal("Preset not found: " + name);
+            return;
+        }
+        applyPresetData(tag);
+        syncToServer();
+        needsRebuild = true;
+        scanResult = Component.literal("Preset loaded: " + name);
+    }
+
+    private CompoundTag capturePresetData() {
+        CompoundTag tag = new CompoundTag();
+        BlockOffset bMin = scanner.getBoundaryMin();
+        BlockOffset bMax = scanner.getBoundaryMax();
+        tag.putIntArray("boundary_min", new int[]{bMin.x(), bMin.y(), bMin.z()});
+        tag.putIntArray("boundary_max", new int[]{bMax.x(), bMax.y(), bMax.z()});
+
+        BlockOffset dOff = scanner.getDoorOffset();
+        if (dOff != null) {
+            tag.putIntArray("door_offset", new int[]{dOff.x(), dOff.y(), dOff.z()});
+        }
+
+        ListTag zonesTag = new ListTag();
+        for (BoundaryBox zone : scanner.getTouristInteractZones()) {
+            CompoundTag zt = new CompoundTag();
+            zt.putIntArray("min", new int[]{zone.min().x(), zone.min().y(), zone.min().z()});
+            zt.putIntArray("max", new int[]{zone.max().x(), zone.max().y(), zone.max().z()});
+            zonesTag.add(zt);
+        }
+        tag.put("tourist_interact_zones", zonesTag);
+
+        tag.putString("building_id", scanner.getBuildingId());
+        tag.putString("display_name", scanner.getDisplayName());
+        tag.putString("category", scanner.getCategory());
+        tag.putInt("comfort", scanner.getComfort());
+        tag.putInt("magic", scanner.getMagic());
+        tag.putInt("wonder", scanner.getWonder());
+        tag.putInt("unlock_min_level", scanner.getUnlockMinLevel());
+
+        ListTag mcList = new ListTag();
+        for (var entry : scanner.getMaintenanceCost().entrySet()) {
+            CompoundTag et = new CompoundTag();
+            et.putString("element", entry.getKey());
+            et.putInt("amount", entry.getValue());
+            mcList.add(et);
+        }
+        tag.put("maintenance_cost", mcList);
+
+        CompoundTag ncTag = new CompoundTag();
+        ncTag.putString("blueprint", scanner.getNodeBlueprint());
+        ncTag.putString("element", scanner.getNodeElement());
+        ncTag.putInt("amount_per_harvest", scanner.getNodeAmountPerHarvest());
+        ncTag.putInt("channel_ticks", scanner.getNodeChannelTicks());
+        ncTag.putInt("mana_cost", scanner.getNodeManaCost());
+        tag.put("node_config", ncTag);
+
+        tag.putDouble("shop_profit_rate", scanner.getShopProfitRate());
+        tag.putInt("shop_interaction_duration_ticks", scanner.getShopInteractionDurationTicks());
+
+        ListTag goodsList = new ListTag();
+        for (ShopGoodData good : scanner.getShopGoods()) {
+            CompoundTag gt = new CompoundTag();
+            gt.putString("item_id", good.itemId());
+            gt.putInt("comfort", good.comfort());
+            gt.putInt("magic", good.magic());
+            gt.putInt("wonder", good.wonder());
+            goodsList.add(gt);
+        }
+        tag.put("shop_goods", goodsList);
+
+        tag.putInt("service_energy_per_use", scanner.getServiceEnergyPerUse());
+        tag.putInt("service_max_occupancy", scanner.getServiceMaxOccupancy());
+        tag.putInt("service_interaction_duration_ticks", scanner.getServiceInteractionDurationTicks());
+
+        ListTag seoList = new ListTag();
+        for (var entry : scanner.getServiceElementOutput().entrySet()) {
+            CompoundTag et = new CompoundTag();
+            et.putString("element", entry.getKey());
+            et.putInt("amount", entry.getValue());
+            seoList.add(et);
+        }
+        tag.put("service_element_output", seoList);
+
+        return tag;
+    }
+
+    private void applyPresetData(CompoundTag tag) {
+        if (tag.contains("category")) scanner.setCategory(tag.getString("category"));
+        if (tag.contains("building_id")) scanner.setBuildingId(tag.getString("building_id"));
+        if (tag.contains("display_name")) scanner.setDisplayName(tag.getString("display_name"));
+        if (tag.contains("comfort")) scanner.setComfort(tag.getInt("comfort"));
+        if (tag.contains("magic")) scanner.setMagic(tag.getInt("magic"));
+        if (tag.contains("wonder")) scanner.setWonder(tag.getInt("wonder"));
+        if (tag.contains("unlock_min_level")) scanner.setUnlockMinLevel(tag.getInt("unlock_min_level"));
+
+        if (tag.contains("door_offset", Tag.TAG_INT_ARRAY)) {
+            int[] arr = tag.getIntArray("door_offset");
+            if (arr.length == 3) scanner.setDoorOffset(BlockOffset.of(arr[0], arr[1], arr[2]));
+        } else {
+            scanner.setDoorOffset(null);
+        }
+
+        scanner.clearTouristInteractZones();
+        if (tag.contains("tourist_interact_zones", Tag.TAG_LIST)) {
+            for (int i = 0; i < tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).size(); i++) {
+                CompoundTag zt = tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).getCompound(i);
+                int[] min = zt.getIntArray("min");
+                int[] max = zt.getIntArray("max");
+                if (min.length == 3 && max.length == 3) {
+                    scanner.addTouristInteractZone(new BoundaryBox(
+                            BlockOffset.of(min[0], min[1], min[2]),
+                            BlockOffset.of(max[0], max[1], max[2])));
+                }
+            }
+        }
+
+        scanner.setMaintenanceCost(Map.of());
+        if (tag.contains("maintenance_cost", Tag.TAG_LIST)) {
+            ListTag list = tag.getList("maintenance_cost", Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag et = list.getCompound(i);
+                scanner.addMaintenanceCost(et.getString("element"), et.getInt("amount"));
+            }
+        }
+
+        if (tag.contains("node_config", Tag.TAG_COMPOUND)) {
+            CompoundTag nc = tag.getCompound("node_config");
+            if (nc.contains("element")) scanner.setNodeElement(nc.getString("element"));
+            if (nc.contains("amount_per_harvest")) scanner.setNodeAmountPerHarvest(nc.getInt("amount_per_harvest"));
+            if (nc.contains("channel_ticks")) scanner.setNodeChannelTicks(nc.getInt("channel_ticks"));
+            if (nc.contains("mana_cost")) scanner.setNodeManaCost(nc.getInt("mana_cost"));
+        }
+
+        if (tag.contains("shop_profit_rate")) scanner.setShopProfitRate(tag.getDouble("shop_profit_rate"));
+        if (tag.contains("shop_interaction_duration_ticks")) scanner.setShopInteractionDurationTicks(tag.getInt("shop_interaction_duration_ticks"));
+
+        scanner.clearShopGoods();
+        if (tag.contains("shop_goods", Tag.TAG_LIST)) {
+            ListTag gl = tag.getList("shop_goods", Tag.TAG_COMPOUND);
+            for (int i = 0; i < gl.size(); i++) {
+                CompoundTag gt = gl.getCompound(i);
+                scanner.addShopGood(new ShopGoodData(
+                        gt.getString("item_id"), gt.getInt("comfort"), gt.getInt("magic"), gt.getInt("wonder")));
+            }
+        }
+
+        if (tag.contains("service_energy_per_use")) scanner.setServiceEnergyPerUse(tag.getInt("service_energy_per_use"));
+        if (tag.contains("service_max_occupancy")) scanner.setServiceMaxOccupancy(tag.getInt("service_max_occupancy"));
+        if (tag.contains("service_interaction_duration_ticks")) scanner.setServiceInteractionDurationTicks(tag.getInt("service_interaction_duration_ticks"));
+
+        scanner.setServiceElementOutput(Map.of());
+        if (tag.contains("service_element_output", Tag.TAG_LIST)) {
+            ListTag so = tag.getList("service_element_output", Tag.TAG_COMPOUND);
+            for (int i = 0; i < so.size(); i++) {
+                CompoundTag et = so.getCompound(i);
+                scanner.addServiceElementOutput(et.getString("element"), et.getInt("amount"));
+            }
         }
     }
 
@@ -783,16 +899,19 @@ public class BuildingScannerScreen extends MedievalScreen {
         renderMinimalHeader(gui);
         renderCloseButton(gui, mx, my);
 
-        int cx = leftPos + PW / 2;
+        // Render inset dark field backgrounds for all edit boxes
+        for (FieldRect f : insetFields) {
+            drawInsetField(gui, f.x(), f.y(), f.w(), f.h());
+        }
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
-            gui.drawString(font, "§7CORNER 模式：请填写与 SAVE 扫描器相同的结构名称。", lx, topPos + headerHeight + 50, MedievalColors.TEXT_MUTED);
-            gui.drawString(font, "§7将此方块放置在建筑对角线的另一个顶点。", lx, topPos + headerHeight + 66, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "CORNER 模式：请在名称框输入结构名称。", lx, topPos + headerHeight + 50, MedievalColors.TEXT_MUTED);
+            gui.drawString(font, "SAVE 模式扫描器会自动匹配同名 CORNER 算出 3D 包围盒。", lx, topPos + headerHeight + 66, MedievalColors.TEXT_DIM);
             super.render(gui, mx, my, pt);
             return;
         }
 
-        // Boundary size summary (calculated from SAVE <-> CORNER matching)
+        // Boundary size summary
         BlockOffset bMin = scanner.getBoundaryMin();
         BlockOffset bMax = scanner.getBoundaryMax();
         int dx = bMax.x() - bMin.x() + 1;
@@ -802,62 +921,53 @@ public class BuildingScannerScreen extends MedievalScreen {
                 bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z(), dx, dy, dz);
         gui.drawString(font, bInfo, lx, topPos + headerHeight + 36, MedievalColors.BORDER_GOLD);
 
-        // Door
-        drawHdr(gui, "Door Offset", lx, doorEditY - 14);
+        // Section Headers & Labels
+        drawHdr(gui, "门偏移 (Door Offset)", lx, doorEditY - 14);
         drawLbl(gui, "X", lx + COL2, doorEditY - 10);
         drawLbl(gui, "Y", lx + COL2 + FW + 4, doorEditY - 10);
         drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
 
-        // Tourist interact zones
-        drawHdr(gui, "Tourist Interact Zones (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
+        drawHdr(gui, "游览交互区 (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
 
-        // Metadata
-        drawHdr(gui, "Metadata", lx, metaStartY);
+        drawHdr(gui, "放置元数据", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
         drawLbl(gui, "Name", lx + 164, metaStartY + 14);
         drawLbl(gui, "Comfort", lx + COL2, metaLabelY - 10);
         drawLbl(gui, "Magic", lx + COL2 + FW + 12, metaLabelY - 10);
         drawLbl(gui, "Wonder", lx + COL2 + (FW + 12) * 2, metaLabelY - 10);
 
-        // Unlock requirement
-        drawHdr(gui, "Unlock Requirement", lx, unlockY);
-        drawLbl(gui, "Min Level", lx + COL2, unlockY + ROW_H - 4);
+        drawHdr(gui, "解锁等级", lx, unlockY);
+        drawLbl(gui, "最低等级", lx + COL2, unlockY + ROW_H - 4);
 
-        // Maintenance Cost
-        drawHdr(gui, "Maintenance Cost", lx, maintCostY);
+        drawHdr(gui, "周期维护费", lx, maintCostY);
 
-        // Node Config
         if ("node".equals(scanner.getCategory())) {
-            drawHdr(gui, "Node Config", lx, nodeCatY);
-            drawLbl(gui, "Element", lx + COL2, nodeCatY + ROW_H - 4);
-            drawLbl(gui, "Amount/Harvest", lx + COL2, nodeCatY + ROW_H * 2 - 4);
-            drawLbl(gui, "Channel Ticks", lx + COL2, nodeCatY + ROW_H * 3 - 4);
-            drawLbl(gui, "Mana Cost", lx + COL2, nodeCatY + ROW_H * 4 - 4);
+            drawHdr(gui, "节点配置", lx, nodeCatY);
+            drawLbl(gui, "元素", lx + COL2, nodeCatY + ROW_H - 4);
+            drawLbl(gui, "产出/次", lx + COL2, nodeCatY + ROW_H * 2 - 4);
+            drawLbl(gui, "引导Ticks", lx + COL2, nodeCatY + ROW_H * 3 - 4);
+            drawLbl(gui, "魔力消耗", lx + COL2, nodeCatY + ROW_H * 4 - 4);
         }
 
-        // Presets
-        drawHdr(gui, "Presets", lx, presetY);
+        drawHdr(gui, "预设预存", lx, presetY);
 
-        // Category-specific
         String cat = scanner.getCategory();
         if ("shop".equals(cat)) {
-            drawHdr(gui, "Shop Config", lx, shopCatY);
-            drawLbl(gui, "Profit%", lx + COL2, shopCatY + ROW_H - 4);
-            drawLbl(gui, "Duration (tick)", lx + COL2, shopCatY + ROW_H * 2 - 4);
-            drawHdr(gui, "Shop Goods", lx, goodsCatY);
+            drawHdr(gui, "商店参数", lx, shopCatY);
+            drawLbl(gui, "利润率%", lx + COL2, shopCatY + ROW_H - 4);
+            drawLbl(gui, "交互时长", lx + COL2, shopCatY + ROW_H * 2 - 4);
+            drawHdr(gui, "上架商品", lx, goodsCatY);
         } else if ("service".equals(cat)) {
-            drawHdr(gui, "Service Config", lx, svcCatY);
-            drawLbl(gui, "Energy/use", lx + COL2, svcCatY + ROW_H - 4);
-            drawLbl(gui, "Max Occupancy", lx + COL2, svcCatY + ROW_H * 2 - 2);
-            drawLbl(gui, "Duration (tick)", lx + COL2, svcCatY + ROW_H * 3 - 2);
-            drawHdr(gui, "Element Output", lx, elemOutY);
+            drawHdr(gui, "服务参数", lx, svcCatY);
+            drawLbl(gui, "能量消耗/次", lx + COL2, svcCatY + ROW_H - 4);
+            drawLbl(gui, "最大容纳人数", lx + COL2, svcCatY + ROW_H * 2 - 2);
+            drawLbl(gui, "交互时长", lx + COL2, svcCatY + ROW_H * 3 - 2);
+            drawHdr(gui, "元素产出", lx, elemOutY);
         }
 
-        // Export
-        drawHdr(gui, "Export", lx, exportBtnY - 14);
-        gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, 0x888888);
+        drawHdr(gui, "导出导出", lx, exportBtnY - 14);
+        gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, MedievalColors.TEXT_MUTED);
 
-        // ── Widgets ──
         super.render(gui, mx, my, pt);
     }
 
@@ -871,8 +981,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         gui.drawString(font, text, x, y, MedievalColors.TEXT_MUTED);
     }
 
-    // ── Utilities ──
-
     private static int intOrZero(EditBox box) {
         if (box == null) return 0;
         String s = box.getValue();
@@ -885,180 +993,5 @@ public class BuildingScannerScreen extends MedievalScreen {
         if (s == null || s.isEmpty()) return 0;
         try { return Integer.parseInt(s); }
         catch (NumberFormatException e) { return 0; }
-    }
-
-    // ── Preset helpers ──
-
-    /** Capture all config fields from the current scanner state into a CompoundTag. */
-    private CompoundTag capturePresetData() {
-        CompoundTag tag = new CompoundTag();
-        // boundary
-        BlockOffset bMin = scanner.getBoundaryMin();
-        BlockOffset bMax = scanner.getBoundaryMax();
-        tag.putIntArray("boundary_min", new int[]{bMin.x(), bMin.y(), bMin.z()});
-        tag.putIntArray("boundary_max", new int[]{bMax.x(), bMax.y(), bMax.z()});
-        // door
-        BlockOffset door = scanner.getDoorOffset();
-        if (door != null) {
-            tag.putIntArray("door_offset", new int[]{door.x(), door.y(), door.z()});
-        }
-        // tourist interact zones
-        ListTag zones = new ListTag();
-        for (BoundaryBox zone : scanner.getTouristInteractZones()) {
-            CompoundTag zt = new CompoundTag();
-            zt.putIntArray("min", new int[]{zone.min().x(), zone.min().y(), zone.min().z()});
-            zt.putIntArray("max", new int[]{zone.max().x(), zone.max().y(), zone.max().z()});
-            zones.add(zt);
-        }
-        tag.put("tourist_interact_zones", zones);
-        // category & meta
-        tag.putString("category", scanner.getCategory());
-        tag.putInt("comfort", scanner.getComfort());
-        tag.putInt("magic", scanner.getMagic());
-        tag.putInt("wonder", scanner.getWonder());
-        // unlock
-        tag.putInt("unlock_min_level", scanner.getUnlockMinLevel());
-        // shop
-        tag.putDouble("shop_profit", scanner.getShopProfitRate());
-        tag.putInt("shop_duration", scanner.getShopInteractionDurationTicks());
-        // service
-        tag.putInt("service_energy", scanner.getServiceEnergyPerUse());
-        tag.putInt("service_max_occ", scanner.getServiceMaxOccupancy());
-        tag.putInt("service_duration", scanner.getServiceInteractionDurationTicks());
-
-        // maintenance cost
-        ListTag mcList = new ListTag();
-        for (var entry : scanner.getMaintenanceCost().entrySet()) {
-            CompoundTag et = new CompoundTag();
-            et.putString("element", entry.getKey());
-            et.putInt("amount", entry.getValue());
-            mcList.add(et);
-        }
-        tag.put("maintenance_cost", mcList);
-
-        // node config
-        CompoundTag nc = new CompoundTag();
-        nc.putString("blueprint", scanner.getNodeBlueprint());
-        nc.putString("element", scanner.getNodeElement());
-        nc.putInt("amount_per_harvest", scanner.getNodeAmountPerHarvest());
-        nc.putInt("channel_ticks", scanner.getNodeChannelTicks());
-        nc.putInt("mana_cost", scanner.getNodeManaCost());
-        tag.put("node_config", nc);
-
-        // shop goods
-        ListTag gl = new ListTag();
-        for (ShopGoodData g : scanner.getShopGoods()) {
-            CompoundTag gt = new CompoundTag();
-            gt.putString("item_id", g.itemId());
-            gt.putInt("comfort", g.comfort());
-            gt.putInt("magic", g.magic());
-            gt.putInt("wonder", g.wonder());
-            gl.add(gt);
-        }
-        tag.put("shop_goods", gl);
-
-        // service element output
-        ListTag so = new ListTag();
-        for (var entry : scanner.getServiceElementOutput().entrySet()) {
-            CompoundTag et = new CompoundTag();
-            et.putString("element", entry.getKey());
-            et.putInt("amount", entry.getValue());
-            so.add(et);
-        }
-        tag.put("service_element_output", so);
-
-        return tag;
-    }
-
-    /** Restore all config fields from a preset CompoundTag into the scanner BE. */
-    private void applyPresetData(CompoundTag tag) {
-        // boundary
-        int[] bMin = tag.getIntArray("boundary_min");
-        int[] bMax = tag.getIntArray("boundary_max");
-        if (bMin.length == 3 && bMax.length == 3) {
-            scanner.setBoundary(
-                    BlockOffset.of(bMin[0], bMin[1], bMin[2]),
-                    BlockOffset.of(Math.max(bMax[0], bMin[0] + 1),
-                            Math.max(bMax[1], bMin[1] + 1),
-                            Math.max(bMax[2], bMin[2] + 1)));
-        }
-        // door
-        if (tag.contains("door_offset", Tag.TAG_INT_ARRAY)) {
-            int[] d = tag.getIntArray("door_offset");
-            scanner.setDoorOffset(d.length == 3 ? BlockOffset.of(d[0], d[1], d[2]) : null);
-        } else {
-            scanner.setDoorOffset(null);
-        }
-        // tourist interact zones
-        scanner.clearTouristInteractZones();
-        if (tag.contains("tourist_interact_zones", Tag.TAG_LIST)) {
-            for (int i = 0; i < tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).size(); i++) {
-                CompoundTag zt = tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).getCompound(i);
-                int[] zMin = zt.getIntArray("min");
-                int[] zMax = zt.getIntArray("max");
-                if (zMin.length == 3 && zMax.length == 3) {
-                    scanner.addTouristInteractZone(new BoundaryBox(
-                            BlockOffset.of(zMin[0], zMin[1], zMin[2]),
-                            BlockOffset.of(zMax[0], zMax[1], zMax[2])));
-                }
-            }
-        }
-        // category
-        scanner.setCategory(tag.getString("category"));
-        // meta
-        scanner.setComfort(tag.getInt("comfort"));
-        scanner.setMagic(tag.getInt("magic"));
-        scanner.setWonder(tag.getInt("wonder"));
-        // unlock
-        scanner.setUnlockMinLevel(Math.max(1, tag.getInt("unlock_min_level")));
-        // shop
-        scanner.setShopProfitRate(tag.getDouble("shop_profit"));
-        scanner.setShopInteractionDurationTicks(tag.getInt("shop_duration"));
-        // service
-        scanner.setServiceEnergyPerUse(tag.getInt("service_energy"));
-        scanner.setServiceMaxOccupancy(tag.getInt("service_max_occ"));
-        scanner.setServiceInteractionDurationTicks(tag.getInt("service_duration"));
-
-        // maintenance cost
-        scanner.setMaintenanceCost(Map.of());
-        if (tag.contains("maintenance_cost", Tag.TAG_LIST)) {
-            ListTag list = tag.getList("maintenance_cost", Tag.TAG_COMPOUND);
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag et = list.getCompound(i);
-                scanner.addMaintenanceCost(et.getString("element"), et.getInt("amount"));
-            }
-        }
-
-        // node config
-        if (tag.contains("node_config", Tag.TAG_COMPOUND)) {
-            CompoundTag nc = tag.getCompound("node_config");
-            scanner.setNodeBlueprint(nc.getString("blueprint"));
-            scanner.setNodeElement(nc.getString("element"));
-            scanner.setNodeAmountPerHarvest(nc.getInt("amount_per_harvest"));
-            scanner.setNodeChannelTicks(nc.getInt("channel_ticks"));
-            scanner.setNodeManaCost(nc.getInt("mana_cost"));
-        }
-
-        // shop goods
-        scanner.clearShopGoods();
-        if (tag.contains("shop_goods", Tag.TAG_LIST)) {
-            ListTag gl = tag.getList("shop_goods", Tag.TAG_COMPOUND);
-            for (int i = 0; i < gl.size(); i++) {
-                CompoundTag gt = gl.getCompound(i);
-                scanner.addShopGood(new ShopGoodData(
-                        gt.getString("item_id"),
-                        gt.getInt("comfort"), gt.getInt("magic"), gt.getInt("wonder")));
-            }
-        }
-
-        // service element output
-        scanner.setServiceElementOutput(Map.of());
-        if (tag.contains("service_element_output", Tag.TAG_LIST)) {
-            ListTag so = tag.getList("service_element_output", Tag.TAG_COMPOUND);
-            for (int i = 0; i < so.size(); i++) {
-                CompoundTag et = so.getCompound(i);
-                scanner.addServiceElementOutput(et.getString("element"), et.getInt("amount"));
-            }
-        }
     }
 }
