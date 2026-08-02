@@ -50,17 +50,31 @@ public class ImGuiManager {
         ImGui.createContext();
 
         // ── Chinese CJK Glyph Ranges ──
-        short[] cjkRanges = ImGui.getIO().getFonts().getGlyphRangesChineseSimplifiedCommon();
+        // NOTE: ImGui.getIO().getFonts().getGlyphRangesChineseSimplifiedCommon()
+        // is BROKEN in imgui-java 1.86.10 (SpaiR/imgui-java issue #70): CJK
+        // codepoints (0x4E00…) exceed the signed-short range, so the JNI
+        // return truncates them and the array carries no CJK ranges at all →
+        // Chinese renders as "?????" no matter what font is loaded. Build the
+        // range array by hand with explicit (short) casts to preserve the
+        // unsigned bit pattern (exactly what C++ ImWchar16 expects).
+        short[] cjkRanges = new short[]{
+                (short) 0x0020, (short) 0x00FF, // Basic Latin + Latin Supplement
+                (short) 0x2000, (short) 0x206F, // General Punctuation
+                (short) 0x3000, (short) 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
+                (short) 0x31F0, (short) 0x31FF, // Katakana Phonetic Extensions
+                (short) 0xFF00, (short) 0xFFEF, // Half-width characters
+                (short) 0xFFFD, (short) 0xFFFD, // Invalid
+                (short) 0x4E00, (short) 0x9FFF, // CJK Unified Ideographs (all 20k+ chars)
+                0,
+        };
 
         ImFontConfig fontConfig = new ImFontConfig();
         fontConfig.setOversampleH(2);
         fontConfig.setOversampleV(2);
         fontConfig.setPixelSnapH(true);
-        // CRITICAL: hold the range array via ImFontConfig. Passing ranges as an
-        // addFontFromFileTTF argument only pins the short[] during the native
-        // call — the C++ side stores the pointer and reads it later at build().
-        // Once the call returns the array has no Java reference, gets GC'd, and
-        // build() reads freed memory → CJK glyphs silently vanish as "?????".
+        // Keep the array alive for the whole font lifetime: the C++ side stores
+        // a pointer to it and only reads it at build(). Holding it via the
+        // config's Java field prevents the array from being GC'd.
         fontConfig.setGlyphRanges(cjkRanges);
 
         ImFont mainFont = null;
