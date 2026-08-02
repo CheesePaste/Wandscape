@@ -205,7 +205,7 @@ public final class WandscapePanelOverlay {
         if (!lookingAtBuilding) {
             UUID cid = WandscapePanelState.getColonyId();
             if (cid != null) {
-                renderTopBar(g, font, screenW);
+                renderTopBar(g, font, screenW, mx, my);
             }
         }
 
@@ -224,7 +224,7 @@ public final class WandscapePanelOverlay {
     // ── Top bar HUD ──
     // ═══════════════════════════════════════════════════════════════
 
-    private static void renderTopBar(GuiGraphics g, Font font, int screenW) {
+    private static void renderTopBar(GuiGraphics g, Font font, int screenW, double mx, double my) {
         int lvl = WandscapePanelState.getColonyLevel();
         String name = WandscapePanelState.getColonyName();
         UUID cid = WandscapePanelState.getColonyId();
@@ -287,14 +287,28 @@ public final class WandscapePanelOverlay {
         drawText(g, font, npcText, x, textY1, WandscapeTheme.COLOR_TEXT_NORMAL);
 
         // 8. Warning icon+count at far right of first row (total anomalies)
+        int warnWidth = 0;
         int anomalyCount = WandscapePanelState.getTotalAnomalyCount();
         if (anomalyCount > 0) {
             String warnStr = String.valueOf(anomalyCount);
-            int warnWidth = iconS1 + 2 + font.width(warnStr);
-            int warnX = screenW - rightMargin - warnWidth;
+            warnWidth = iconS1 + 2 + font.width(warnStr);
+            int warnX = screenW - rightMargin - warnWidth - 22;
             WandscapeTheme.drawIcon(g, WandscapeTheme.ICON_WARNING, warnX, y1, iconS1, iconS1, WandscapeTheme.COLOR_TEXT_ACTIVE);
             warnX += iconS1 + 2;
             drawText(g, font, warnStr, warnX, textY1, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        }
+
+        // 9. Help ? button at top right
+        int helpX = screenW - rightMargin - 16;
+        int helpY = 4;
+        int helpW = 14;
+        int helpH = 14;
+        boolean helpHover = WandscapePanelState.isCursorLifted() && mx >= helpX && mx <= helpX + helpW && my >= helpY && my <= helpY + helpH;
+        int helpState = helpHover ? 1 : 0;
+        com.wsteam.wandscape.shared.ui.skin.SkinRender.drawHelpButton(g, helpX, helpY, helpW, helpH, helpState);
+
+        if (helpHover) {
+            g.renderTooltip(font, net.minecraft.network.chat.Component.literal("打开指南 (H / F1)"), (int) mx, (int) my);
         }
 
         // ── Row 2: element icons + amounts ──

@@ -188,6 +188,16 @@ public final class WandscapePanelController {
             }
         }
 
+        // ── Top Bar Help ? button ──
+        if (mouseY <= WandscapePanelOverlay.TOP_BAR_H) {
+            int helpX = screenW - 24;
+            if (mouseX >= helpX - 4 && mouseX <= helpX + 18 && mouseY >= 2 && mouseY <= 20) {
+                openPanelHelpDocument();
+                event.setCanceled(true);
+                return;
+            }
+        }
+
         // ── Sidebar tabs ──
         if (mouseX <= WandscapePanelOverlay.SIDEBAR_W && mouseY >= WandscapePanelOverlay.TOP_BAR_H) {
             int sidebarIconIndex = getSidebarIconAt(mouseX, mouseY, screenW, screenH);
@@ -325,6 +335,12 @@ public final class WandscapePanelController {
         // G key: toggle overview mode ↔ ground mode (only when panel is open)
         if (key == GLFW.GLFW_KEY_G && WandscapePanelState.isPanelOpen()) {
             handleGKeyToggle();
+            return;
+        }
+
+        // H or F1 key: open guide document (only when panel is open)
+        if ((key == GLFW.GLFW_KEY_H || key == GLFW.GLFW_KEY_F1) && WandscapePanelState.isPanelOpen()) {
+            openPanelHelpDocument();
             return;
         }
 
@@ -493,5 +509,17 @@ public final class WandscapePanelController {
         if (key == GLFW.GLFW_KEY_SLASH) return shift ? "?" : "/";
         if (key == GLFW.GLFW_KEY_APOSTROPHE) return shift ? "\"" : "'";
         return null;
+    }
+
+    public static void openPanelHelpDocument() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null) {
+            String docPath = "overview_guide";
+            if (WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION) {
+                docPath = "road_guide";
+            }
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
+            mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, docPath));
+        }
     }
 }
