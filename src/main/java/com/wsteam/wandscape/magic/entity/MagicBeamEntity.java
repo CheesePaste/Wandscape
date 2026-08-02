@@ -10,8 +10,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -46,6 +48,8 @@ public class MagicBeamEntity extends Entity {
     private static final float MIN_WIDTH = 0.02f;
     /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
     private static final float WIDTH_POWER = 1.4f;
+    /** 光束满宽时每 tick 对束内敌对生物造成的伤害（当前按宽度因子正比，后续可加其他因素）。 */
+    private static final float BEAM_DAMAGE = 2.0f;
 
     public MagicBeamEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -95,6 +99,9 @@ public class MagicBeamEntity extends Entity {
     @Override
     public void tick() {
         super.tick();
+        if (!level().isClientSide) {
+            damageTargets();
+        }
         if (!loggedSpawn && tickCount >= 5) {
             loggedSpawn = true;
             Log.info("MagicBeam", "beam tick id={} client={} pos={} targetPresent={} target={} life={}",
@@ -107,6 +114,37 @@ public class MagicBeamEntity extends Entity {
         }
         // 两端都用 tickCount（客户端实体也自增），避免依赖未同步的字段导致客户端立即自毁
         if (tickCount >= getLifetimeTicks()) discard();
+    }
+
+    /**
+     * 每 tick 对光束圆柱内的敌对生物（Monster）造成伤害，伤害正比于当前宽度因子。
+     * 命中测试：实体中心到光束轴线段的距离 ≤ 束径 + 半体型宽。重置无敌帧使其可逐 tick 结算。
+     */
+    private void damageTargets() {
+        BlockPos tgt = getTarget().orElse(null);
+        if (tgt == null) return;
+        Vec3 start = position();
+        Vec3 dir = tgt.getCenter().subtract(start);
+        double length = dir.length();
+        if (length < 0.1) return;
+        Vec3 ndir = dir.normalize();
+        float wf = getWidthFactor(0);
+        float radius = Math.max(0.05f, MAX_BEAM_RADIUS * wf);
+        float damage = BEAM_DAMAGE * wf;
+
+        AABB box = new AABB(start, tgt.getCenter()).inflate(radius + 1.0);
+        for (Monster mob : level().getEntitiesOfClass(Monster.class, box)) {
+            if (mob.isRemoved()) continue;
+            Vec3 center = mob.getBoundingBox().getCenter();
+            double proj = center.subtract(start).dot(ndir);
+            if (proj < -0.5 || proj > length + 0.5) continue;
+            Vec3 closest = start.add(ndir.scale(Mth.clamp(proj, 0, length)));
+            double eff = radius + mob.getBbWidth() / 2.0;
+            if (center.distanceToSqr(closest) <= eff * eff) {
+                mob.invulnerableTime = 0;
+                mob.hurt(level().damageSources().magic(), damage);
+            }
+        }
     }
 
     /** 归一化寿命 t ∈ [0,1]（含 partialTick 插值），渲染端动画采样用。 */

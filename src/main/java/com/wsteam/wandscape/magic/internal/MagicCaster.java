@@ -39,7 +39,7 @@ public final class MagicCaster {
     /** 光束固定长度（方块）：大幅加长，壮观。 */
     private static final double BEAM_RANGE = 200.0;
     /** 光束在法阵出现后多少 tick 开始生成（法阵动画期间从细变宽）。 */
-    private static final int BEAM_SPAWN_DELAY = 10;
+    private static final int BEAM_SPAWN_DELAY = 20;
     /** 法阵结束后光束额外延续的 tick（快速变细到消失）。 */
     private static final int BEAM_TAIL = 20;
 
