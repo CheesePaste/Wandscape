@@ -127,6 +127,11 @@ public class MagicBeamEntity extends Entity {
         this.targetMob = mob;
     }
 
+    /** 切换跟踪目标（守卫执行器用于主动切换为最近的怪物）。 */
+    public void retarget(LivingEntity mob) {
+        this.targetMob = mob;
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(DATA_TARGET, Optional.empty());
