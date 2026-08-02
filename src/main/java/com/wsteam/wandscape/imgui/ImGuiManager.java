@@ -149,6 +149,9 @@ public class ImGuiManager {
         if (!showGui || !initialized) return;
 
         if (event.getKey() == GLFW.GLFW_KEY_F12 && event.getAction() == GLFW.GLFW_PRESS) {
+            // While an editor is active, F12 must not hide ImGui: the editor
+            // owns mouse blocking and would start leaking input to the game.
+            if (anyEditorActive()) return;
             toggle();
             return;
         }
@@ -157,17 +160,23 @@ public class ImGuiManager {
     @SubscribeEvent
     public static void onMouseClick(InputEvent.MouseButton.Pre event) {
         if (!showGui || !initialized) return;
-        if (anyEditorActive() && ImGui.getIO().getWantCaptureMouse()) {
-            event.setCanceled(true);
-        }
+        // While an editor is active, the editor owns every mouse button.
+        // ImGui already processed the event at the GLFW callback layer, so
+        // canceling here only stops vanilla: no item use, no attack, and no
+        // re-grab of the cursor when left-clicking the world.
+        if (anyEditorActive()) event.setCanceled(true);
     }
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!showGui || !initialized) return;
-        if (anyEditorActive() && !ImGui.getIO().getWantCaptureMouse()) {
+        // Scroll belongs to ImGui over its panels and to the editor camera
+        // elsewhere; vanilla must never see it (no hotbar switching).
+        if (anyEditorActive()) {
             event.setCanceled(true);
+            return;
         }
+        if (!ImGui.getIO().getWantCaptureMouse()) event.setCanceled(true);
     }
 
     // ── Render ──
@@ -185,6 +194,14 @@ public class ImGuiManager {
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
+
+        // Minecraft draws into its mainRenderTarget FBO, whose size matches the GLFW
+        // window's LOGICAL size (MainTarget is created with window.getWidth()/getHeight()).
+        // ImGuiImplGlfw however sets DisplayFramebufferScale to fbSize/winSize (e.g. 1.5
+        // with 150% Windows DPI scaling), so ImGui would project onto a canvas larger
+        // than the FBO we actually draw into, clipping the panel's bottom/right edge.
+        // Force 1:1 — Minecraft's own blitToScreen handles the physical scaling.
+        ImGui.getIO().setDisplayFramebufferScale(1.0f, 1.0f);
 
         if (SplineEditorClientState.isEditing()) {
             SplineEditorImGui.render();
