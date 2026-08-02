@@ -172,7 +172,8 @@ public class MarkdownRenderWidget extends AbstractWidget {
             if (y + imgH >= getY() && y <= getY() + getHeight()) {
                 try {
                     ResourceLocation tex = ResourceLocation.parse(img.resourceLocation());
-                    g.blit(tex, imgX, y, 0, 0, imgW, imgH, imgW, imgH);
+                    ResourceLocation activeTex = com.wsteam.wandscape.shared.ui.markdown.gif.GifTextureManager.getActiveFrameTexture(tex);
+                    g.blit(activeTex, imgX, y, 0, 0, imgW, imgH, imgW, imgH);
                     // Gold border frame
                     g.renderOutline(imgX - 1, y - 1, imgW + 2, imgH + 2, MedievalColors.BORDER_GOLD_DARK);
                 } catch (Exception e) {
