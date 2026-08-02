@@ -354,7 +354,10 @@ public final class SplineEditorInputHandler {
 
         double denom = a * c - b * b;
         if (Math.abs(denom) < 1e-6) return 0;
-        return (b * e - c * d) / denom;
+        // Closest point of the ray to the axis line, parameterized along axisDir:
+        // s = (c*d - b*e) / (a*c - b*b). (b*e - c*d) would be the sign-flipped value,
+        // which inverts the drag direction.
+        return (c * d - b * e) / denom;
     }
 
     private static BlockPos raycastToBlock(Minecraft mc, Vec3 rayDir) {
