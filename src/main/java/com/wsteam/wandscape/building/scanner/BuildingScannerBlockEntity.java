@@ -73,6 +73,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_GOOD_ITEM_ID = "item_id";
     @SuppressWarnings("unused")
 
+    public enum BlockMode { SAVE, CORNER }
+    private BlockMode blockMode = BlockMode.SAVE;
+    private String structureName = "";
+
     public enum TargetMode { BUILDING, ROAD }
     private TargetMode targetMode = TargetMode.BUILDING;
 
@@ -122,10 +126,71 @@ public class BuildingScannerBlockEntity extends BlockEntity {
 
     // ── Getters / Setters ──
 
+    public BlockMode getBlockMode() { return blockMode; }
+    public void setBlockMode(BlockMode bm) {
+        this.blockMode = bm;
+        setChangedAndSync();
+    }
+
+    public String getStructureName() { return structureName; }
+    public void setStructureName(String name) {
+        this.structureName = name;
+        setChangedAndSync();
+    }
+
     public TargetMode getTargetMode() { return targetMode; }
     public void setTargetMode(TargetMode tm) {
         this.targetMode = tm;
         setChangedAndSync();
+    }
+
+    /**
+     * Searches for matching CORNER scanner blocks with the same structureName within 64 blocks,
+     * and calculates the minimum bounding box covering this SAVE scanner and all matching CORNER scanners.
+     */
+    public boolean detectBoundaryFromCorners(@Nullable net.minecraft.world.level.Level level) {
+        if (blockMode != BlockMode.SAVE || level == null || structureName.isBlank()) {
+            return false;
+        }
+
+        BlockPos myPos = getBlockPos();
+        int radius = 64;
+        List<BlockPos> cornerPositions = new ArrayList<>();
+        cornerPositions.add(myPos);
+
+        BlockPos.betweenClosedStream(myPos.offset(-radius, -radius, -radius), myPos.offset(radius, radius, radius))
+                .forEach(pos -> {
+                    if (pos.equals(myPos)) return;
+                    net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof BuildingScannerBlockEntity other) {
+                        if (other.getBlockMode() == BlockMode.CORNER
+                                && structureName.equalsIgnoreCase(other.getStructureName())) {
+                            cornerPositions.add(pos.immutable());
+                        }
+                    }
+                });
+
+        if (cornerPositions.size() <= 1) {
+            return false;
+        }
+
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+
+        for (BlockPos p : cornerPositions) {
+            minX = Math.min(minX, p.getX());
+            minY = Math.min(minY, p.getY());
+            minZ = Math.min(minZ, p.getZ());
+            maxX = Math.max(maxX, p.getX());
+            maxY = Math.max(maxY, p.getY());
+            maxZ = Math.max(maxZ, p.getZ());
+        }
+
+        BlockOffset newMin = BlockOffset.of(minX - myPos.getX(), minY - myPos.getY(), minZ - myPos.getZ());
+        BlockOffset newMax = BlockOffset.of(maxX - myPos.getX(), maxY - myPos.getY(), maxZ - myPos.getZ());
+
+        setBoundary(newMin, newMax);
+        return true;
     }
 
     public ScannerMode getMode() { return mode; }
@@ -296,6 +361,8 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        tag.putString("blockMode", blockMode.name());
+        tag.putString("structureName", structureName);
         tag.putString("targetMode", targetMode.name());
         tag.putString(KEY_MODE, mode.name());
         writeOffsetArray(tag, KEY_BOUNDARY_MIN, boundaryMin);
@@ -371,6 +438,16 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     @Override
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        if (tag.contains("blockMode")) {
+            try {
+                blockMode = BlockMode.valueOf(tag.getString("blockMode"));
+            } catch (Exception e) {
+                blockMode = BlockMode.SAVE;
+            }
+        }
+        if (tag.contains("structureName")) {
+            structureName = tag.getString("structureName");
+        }
         if (tag.contains("targetMode")) {
             try {
                 targetMode = TargetMode.valueOf(tag.getString("targetMode"));

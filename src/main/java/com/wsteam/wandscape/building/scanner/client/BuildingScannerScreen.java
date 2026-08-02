@@ -34,6 +34,10 @@ public class BuildingScannerScreen extends Screen {
 
     private final BuildingScannerBlockEntity scanner;
 
+    // ── Structure Block Mode (SAVE vs CORNER) & Name ──
+    private CycleButton<BuildingScannerBlockEntity.BlockMode> blockModeBtn;
+    private EditBox structureNameEdit;
+
     // ── Target Mode (Building vs Road) ──
     private CycleButton<BuildingScannerBlockEntity.TargetMode> targetModeBtn;
 
@@ -43,9 +47,6 @@ public class BuildingScannerScreen extends Screen {
             "basic", "government", "node", "storage", "workstation", "crafting_station",
             "potion_station", "tavern", "shop", "service", "decoration", "wonder"
     );
-
-    // ── Boundary (two corners) ──
-    private EditBox minX, minY, minZ, maxX, maxY, maxZ;
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
@@ -134,44 +135,55 @@ public class BuildingScannerScreen extends Screen {
         lx = cx - 152;
         int y = 10 + scrollOff;
 
-        // ── Target Mode selector (Structure block style) ──
+        // ── Block Mode selector (SAVE vs CORNER) ──
+        blockModeBtn = addRenderableWidget(
+                CycleButton.builder((BuildingScannerBlockEntity.BlockMode v) -> Component.literal("Mode: " + v.name()))
+                        .withValues(BuildingScannerBlockEntity.BlockMode.values())
+                        .withInitialValue(scanner.getBlockMode())
+                        .displayOnlyValue()
+                        .create(cx - 150, y, 90, 20, Component.literal("Mode"),
+                                (btn, val) -> { scanner.setBlockMode(val); syncToServer(); needsRebuild = true; })
+        );
+
+        // ── Structure Name input ──
+        structureNameEdit = mkEdit(cx - 50, y, 190, scanner.getStructureName(), s -> {
+            scanner.setStructureName(s);
+            syncToServer();
+        });
+        y += 28;
+
+        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+            // CORNER mode: simplified UI, only mode & structure name needed
+            addRenderableWidget(Button.builder(Component.literal("Done"), b -> this.onClose())
+                    .bounds(cx - 50, y + 20, 100, 20).build());
+            return;
+        }
+
+        // ── Target Mode & Category ──
         targetModeBtn = addRenderableWidget(
                 CycleButton.builder((BuildingScannerBlockEntity.TargetMode v) -> Component.literal("Target: " + v.name()))
                         .withValues(BuildingScannerBlockEntity.TargetMode.values())
                         .withInitialValue(scanner.getTargetMode())
                         .displayOnlyValue()
-                        .create(cx - 150, y, 120, 20, Component.literal("Target"),
+                        .create(cx - 150, y, 110, 20, Component.literal("Target"),
                                 (btn, val) -> { scanner.setTargetMode(val); syncToServer(); needsRebuild = true; })
         );
 
-        // ── Category selector ──
         categoryBtn = addRenderableWidget(
                 CycleButton.builder((String v) -> Component.literal(v))
                         .withValues(CATEGORIES)
                         .withInitialValue(scanner.getCategory())
                         .displayOnlyValue()
-                        .create(cx - 20, y, 120, 20, Component.literal("Type"),
+                        .create(cx - 35, y, 95, 20, Component.literal("Type"),
                                 (btn, val) -> { scanner.setCategory(val); syncToServer(); needsRebuild = true; })
         );
+
+        addRenderableWidget(Button.builder(Component.literal("Detect Corners"), b -> {
+                    syncToServer();
+                    needsRebuild = true;
+                })
+                .bounds(cx + 65, y, 95, 20).build());
         y += 28;
-
-        // ── Boundary section ──
-        addSectionHeader(y, "Boundary");
-        y += 14;
-        boundaryMinY = y + 22; // reserve line for "Min" label above corner 1
-        corner2Y = boundaryMinY + ROW_H;
-        sizeInfoY = boundaryMinY + 4;
-        y = corner2Y + ROW_H + 6;
-
-        // Min row
-        minX = mkEdit(lx + COL2, boundaryMinY, FW, String.valueOf(scanner.getBoundaryMin().x()), s -> syncBoundary());
-        minY = mkEdit(lx + COL2 + FW + 4, boundaryMinY, FW, String.valueOf(scanner.getBoundaryMin().y()), s -> syncBoundary());
-        minZ = mkEdit(lx + COL2 + (FW + 4) * 2, boundaryMinY, FW, String.valueOf(scanner.getBoundaryMin().z()), s -> syncBoundary());
-
-        // Max row
-        maxX = mkEdit(lx + COL2, corner2Y, FW, String.valueOf(scanner.getBoundaryMax().x()), s -> syncBoundary());
-        maxY = mkEdit(lx + COL2 + FW + 4, corner2Y, FW, String.valueOf(scanner.getBoundaryMax().y()), s -> syncBoundary());
-        maxZ = mkEdit(lx + COL2 + (FW + 4) * 2, corner2Y, FW, String.valueOf(scanner.getBoundaryMax().z()), s -> syncBoundary());
 
         // ── Door section ──
         addSectionHeader(y, "Door Offset");
@@ -662,17 +674,7 @@ public class BuildingScannerScreen extends Screen {
         init();
     }
 
-    // ── Boundary helpers ──
-
-    private void syncBoundary() {
-        scanner.setBoundary(
-                BlockOffset.of(intOrZero(minX), intOrZero(minY), intOrZero(minZ)),
-                BlockOffset.of(
-                        Math.max(intOrZero(maxX), intOrZero(minX) + 1),
-                        Math.max(intOrZero(maxY), intOrZero(minY) + 1),
-                        Math.max(intOrZero(maxZ), intOrZero(minZ) + 1)));
-        syncToServer();
-    }
+    // ── Door helpers ──
 
     private String loadDoorStr(int axis) {
         BlockOffset off = scanner.getDoorOffset();
@@ -779,18 +781,30 @@ public class BuildingScannerScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui, mx, my, pt);
+        int cx = width / 2;
 
         // ── Section headers & labels ──
 
-        // Boundary
-        drawHdr(gui, "Boundary", lx, boundaryMinY - 14);
-        drawLbl(gui, "Min", lx + COL2, boundaryMinY - 10);
-        drawLbl(gui, "Max", lx + COL2, corner2Y - 10);
-        // Size summary
-        int dx = intOrZero(maxX) - intOrZero(minX) + 1;
-        int dy = intOrZero(maxY) - intOrZero(minY) + 1;
-        int dz = intOrZero(maxZ) - intOrZero(minZ) + 1;
-        gui.drawString(font, dx + " × " + dy + " × " + dz, lx + COL2 + (FW + 4) * 3 + 8, boundaryMinY + 4, 0x888888);
+        // Block Mode & Structure Name Labels
+        drawLbl(gui, "Mode", cx - 150, 0);
+        drawLbl(gui, "Structure Name", cx - 50, 0);
+
+        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+            gui.drawString(font, "§7CORNER Mode: Set Structure Name to match SAVE scanner.", lx + 10, 40, 0xaaaaaa);
+            gui.drawString(font, "§7Place this block at the opposite 3D corner of your building.", lx + 10, 56, 0x888888);
+            super.render(gui, mx, my, pt);
+            return;
+        }
+
+        // Boundary size summary (calculated from SAVE <-> CORNER matching)
+        BlockOffset bMin = scanner.getBoundaryMin();
+        BlockOffset bMax = scanner.getBoundaryMax();
+        int dx = bMax.x() - bMin.x() + 1;
+        int dy = bMax.y() - bMin.y() + 1;
+        int dz = bMax.z() - bMin.z() + 1;
+        String bInfo = String.format("Box: Min(%d,%d,%d) ~ Max(%d,%d,%d)  |  Size: %d × %d × %d",
+                bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z(), dx, dy, dz);
+        gui.drawString(font, "§e" + bInfo, lx + 4, 32, 0xffff88);
 
         // Door
         drawHdr(gui, "Door Offset", lx, doorEditY - 14);

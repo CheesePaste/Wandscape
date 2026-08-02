@@ -82,6 +82,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             return;
         }
 
+        // Auto-detect boundary from CORNER blocks if in SAVE mode
+        scanner.detectBoundaryFromCorners(level);
+        wMin = scanner.getWorldMin();
+        wMax = scanner.getWorldMax();
+
         if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
             exportRoad(scanner, packet, player, level, wMin, wMax);
             return;
@@ -96,10 +101,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
-                    // Skip the scanner block itself
-                    if (bp.equals(packet.pos)) continue;
                     BlockState state = level.getBlockState(bp);
-                    if (state.isAir()) continue;
+                    // Skip all scanner blocks (SAVE or CORNER) and air
+                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
 
                     int rx = x - wMin.getX() + scanner.getBoundaryMin().x();
                     int ry = y - wMin.getY() + scanner.getBoundaryMin().y();
@@ -330,9 +334,8 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             for (int y = wMin.getY(); y <= wMax.getY(); y++) {
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
-                    if (bp.equals(packet.pos)) continue;
                     BlockState state = level.getBlockState(bp);
-                    if (state.isAir()) continue;
+                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
                     String bId = blockId(state);
                     blockCounts.put(bId, blockCounts.getOrDefault(bId, 0) + 1);
                 }

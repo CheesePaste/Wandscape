@@ -10,35 +10,31 @@
 
 | 控件标识 / 标签 | 类型 / 范围 | 默认值 | 详细作用机制与计算影响 |
 | :--- | :--- | :--- | :--- |
-| **`Category`** (类别下拉单) | Enum (`String`) | `basic` | 决定建筑的系统分类。可选值：`basic`, `government`, `node`, `storage`, `workstation`, `crafting_station`, `potion_station`, `tavern`, `shop`, `service`, `decoration`, `wonder`。选择不同类别会自动展开/隐藏专属的字段面板。 |
-| **`Min (X, Y, Z)`** | Integer (`-64 ~ 64`) | `0, 0, 0` | 扫描 3D 包围盒的起始相对坐标（以扫描器方块为参照原点）。用于限定扫描的最小方块边界。 |
-| **`Max (X, Y, Z)`** | Integer (`-64 ~ 64`) | `10, 10, 10` | 扫描 3D 包围盒的结束相对坐标。与 Min 点组合形成 3D 立方体扫描区域。 |
-| **`Door (X, Y, Z)`** | Integer | `0, 0, 0` | 游客与 NPC 进入该建筑交互的门口 entry 偏移坐标。引导 NPC 在正确的坐标点触发动作。 |
-| **`Building ID`** (`metaId`) | String | `wandscape:new_bldg` | 蓝图在模组内的唯一注册标识符（格式 `namespace:path`），如 `wandscape:townhall_lv1`。 |
-| **`Display Name`** (`metaName`) | String | `新建筑` | 在选建界面与 HUD 面板中向玩家展示的本地化中文/英文名称。 |
-| **`Comfort / Magic / Wonder`** | Integer (`0 ~ 100`) | `10, 0, 0` | 评分三值。`Comfort`（舒适度：影响旅馆/商店收益）、`Magic`（魔力值：影响法师恢复）、`Wonder`（奇观值：影响全城声望加成）。 |
-| **`Unlock Level`** | Integer (`1 ~ 5`) | `1` | 殖民地升级解锁该蓝图所需的最低市政厅等级。 |
-| **`Maintenance Cost`** | Map (`Element -> Int`) | 空 | 建筑维持运转每周期需消耗的元素（`FIRE`, `WATER`, `EARTH`, `AIR`, `ORDER`, `CHAOS`）。若仓库缺元素将导致建筑 `SHUTDOWN` 停运。 |
-| **`Shop Goods`** (当 Category=shop) | List (`Item -> Ratings`) | 空 | 配置商店允许上架销售的商品 Item ID，及其额外赋予的 Comfort/Magic/Wonder 评分。 |
-| **`Service Element Output`** | Map (`Element -> Int`) | 空 | 当游客在该服务建筑消费时，每次交互向殖民地仓库反哺产出的元素类型与数量。 |
-| **`Export JSON`** (导出按钮) | Action Button | — | 点击触发客户端校验并将蓝图数据全量序列化输出至 `.minecraft/wandscape/exports/<metaId>.json`。 |
+| **`Mode`** | Enum (`SAVE / CORNER`) | `SAVE` | 结构方块工作模式。`SAVE` 为主保存扫描器，`CORNER` 为对角线辅角点方块。 |
+| **`Structure Name`** | String | 空 | 结构名称。在 64 格范围内，填有相同 Structure Name 的 `SAVE` 与 `CORNER` 方块会自动配对算出 3D 边界包围盒。 |
+| **`Target`** (导出目标) | Enum (`BUILDING / ROAD`) | `BUILDING` | 选择导出类型。`BUILDING` 导出建筑蓝图（含三值与维护费），`ROAD` 导出道路预设并自动热注册。 |
+| **`Category`** (类别下拉单) | Enum (`String`) | `basic` | 决定建筑的系统分类（`basic`, `shop`, `service`, `workstation`, `tavern` 等）。 |
+| **`Door (X, Y, Z)`** | Integer | `0, 0, 0` | 游客与 NPC 进入该建筑交互的门口 entry 偏移坐标。 |
+| **`Building ID`** (`metaId`) | String | `wandscape:new_bldg` | 蓝图在模组内的唯一注册标识符（如 `wandscape:townhall_lv1`）。 |
+| **`Display Name`** (`metaName`) | String | `新建筑` | 在选建界面与 HUD 面板中展示的名称。 |
+| **`Detect Corners`** | Action Button | — | 主动触发 64 格范围内同名 `CORNER` 角点方块的自动匹配与包围盒重算。 |
+| **`Export JSON`** (导出按钮) | Action Button | — | 触发扫描并将蓝图全量序列化输出至 `.minecraft/wandscape_buildings/<id>.json`（自动过滤扫描器方块本身）。 |
 
 ---
 
 ## 🚀 3 步傻瓜式操作流程
 
-### 第一步：放置扫描器方块
-1. 在选定的建筑角落放置一个【建筑扫描器方块】。
-2. 右键打开扫描器 UI 面板。
+### 第一步：摆放 SAVE 与 CORNER 扫描器方块
+1. 在建筑的一角放置【扫描器方块】，在界面中将 Mode 设为 **`CORNER`**，填入结构名称（如 `house1`）。
+2. 在建筑的对角线顶点放置另一个【扫描器方块】，将 Mode 设为 **`SAVE`**，填入相同的结构名称（`house1`）。
 
-### 第二步：框选 3D 边界与参数配置
-1. 在 `Min (X, Y, Z)` 与 `Max (X, Y, Z)` 中填入相对坐标。
-2. 在 `Category` 下拉菜单中选择建筑类别。
-3. 填入 `Building ID` 与 `Display Name`，并设定 `Comfort` 与 `Maintenance Cost`。
+### 第二步：自动计算包围盒与参数配置
+1. 点击 SAVE 扫描器界面中的 **【Detect Corners】** 按钮，系统自动配对计算出 3D 包围盒并实时渲染边框。
+2. 配置 `Category` 类别、`Building ID`、`Display Name` 与 `Maintenance Cost` 等经营参数。
 
 ### 第三步：一键导出 JSON
-1. 点击底部的 **【Export JSON】** 按钮。
-2. 文件将自动保存在 `.minecraft/wandscape/exports/<id>.json`。
+1. 点击底部的 **【Export Building JSON】** （或 `ROAD` 模式下的 **【Export Road JSON】**）按钮。
+2. 建筑导出至 `.minecraft/wandscape_buildings/<id>.json`；道路导出至 `.minecraft/wandscape_roads/<id>.json` 并自动热注册。
 
 ---
 
