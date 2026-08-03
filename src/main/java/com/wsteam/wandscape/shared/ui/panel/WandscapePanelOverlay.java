@@ -63,6 +63,10 @@ public final class WandscapePanelOverlay {
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
 
+        // Flush any pending HUD batches (chat text etc.) BEFORE rendering the panel, so the
+        // panel content composites above them instead of sharing a sorted text buffer.
+        g.flush();
+
         // Building selection bar
         BuildingSelectionOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
@@ -76,6 +80,9 @@ public final class WandscapePanelOverlay {
         renderFills(g, mc.font, screenW, screenH, mx, my);
         g.bufferSource().endBatch(RenderType.guiOverlay());
         renderTexts(g, mc.font, screenW, screenH, mx, my);
+
+        // Push the panel's remaining text/previews out in this pass so they stay above chat.
+        g.flush();
     }
 
     // ═══════════════════════════════════════════════════════════════
