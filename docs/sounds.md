@@ -128,7 +128,7 @@ public final class SoundService {
 |------|-----------|------|----------|
 | 法杖施法起手 | `magic/internal/MagicCaster.java` `cast()`:57、`castNpcAt()`:111 | 玩家/守卫施法 | 幽森钟鸣 + 上升滑音，中低响度，`PLAYERS` |
 | 法阵完成/光束发射 | `magic/internal/MagicCastManager.java` `tick()`:66-72 | 法阵动画结束生成光束 | 能量嗡鸣爆射瞬态，中高响度，`NEUTRAL` |
-| 建筑放置成功 | `projection/network/ProjectionPlacePacket.java` `handleServer()`:82-93 | 玩家投影放置确认 | 石料放置"咚"，`BLOCKS` |
+| 建筑蓝图放置确认 | `projection/network/ProjectionPlacePacket.java` `handleServer()`:82-93 | 玩家投影确认放置（任务已提交，NPC 后续施工） | 放置确认音，`BLOCKS` |
 | 投影进入/退出 | `projection/client/ProjectionClientState.java` `enterProjection()`:56、`exitProjection()`:82 | 玩家进/出放置模式 | 进入低鸣启动 swoosh，`PLAYERS` |
 | 俯瞰进入 | `overview/client/OverviewClientState.java` `enterOverview()`:41 | 玩家进入俯瞰 | 扬升 swoosh，`PLAYERS` |
 | GUI 按钮点击 | `shared/ui/component/MedievalButton.java` `onPress()`:30-34 | 所有中世纪按钮点击汇聚点 | `UI_BUTTON_CLICK` 或自定义轻点击，`playUI` |
@@ -138,9 +138,9 @@ public final class SoundService {
 
 | 挂点 | 文件:方法 | 触发 | 建议音效 |
 |------|-----------|------|----------|
-| 方块放置唯一入口 | `engine/boundary/WandscapeBlockOps.java` `setBlock()`:59-68 | 同步/异步建造都汇此 | 按方块材质 2-3 种放置"咚"，`BLOCKS` |
-| 异步批量建造 | `engine/boundary/AsyncTransformExecutor.java` `execute()` thenRun:99-115、`tickAll()`:123 | NPC 延迟逐块放置 | 镐凿节拍，与延迟 tick 同步 |
-| 任务发布 | `engine/source/BuildingTaskSource.java` `poll()`:90-95 | 每 20 tick 轮询 | 低响度纸卷微音，**必须节流** |
+| 方块放置 | `engine/boundary/WandscapeBlockOps.java` `setBlock()`:59-68 | 同步/异步建造都汇此 | 用方块自身原版放置音 `state.getSoundType(level,pos,null).getPlaceSound()`，`BLOCKS` |
+| NPC 施法放置 | `engine/boundary/AsyncTransformExecutor.java` `execute()` `thenRun`:99-115（`doWorkAnimation` :110 处） | NPC 放置每块方块 | 自定义施法音，`NEUTRAL` |
+| 玩家手动发布任务 | `task/source/PlayerManualSource.java` `publish()`:30 | 玩家在 GUI 手动创建任务（铺路/填充/投影建筑等） | 低响度纸卷微音，`PLAYERS` |
 | 守卫开火 | `guard/GuardCombat.java` `engage()`:54-79 | 守卫施法攻击（40 tick 节流） | 能量脉冲，`NEUTRAL` |
 | NPC 完工 | `npc/entity/WandscapeNpc.java` `doWorkAnimation()`:731-743 | NPC 执行完动作（已有粒子无声音） | 最自然的完工反馈点，轻快叮 |
 | 建筑建成/拆除 | `building/internal/BuildCompleteListener.java` `onBuildComplete()`:120、`DemolishCompleteListener.java` `onDemolishComplete()`:41 | NPC 蓝图施工完成 | 建成：沉稳确认音；拆除：崩塌 |
@@ -151,11 +151,8 @@ public final class SoundService {
 
 | 挂点 | 文件:方法 | 触发 | 建议音效 |
 |------|-----------|------|----------|
-| 每日结算 | `building/internal/DailySettlementSystem.java` `settleColony()`:273（发 DailySettlementEvent） | 每日 0:00 | 结算"咔嗒合账" |
 | 建筑关停/重启 | `building/internal/BuildingApiImpl.java`:197/:225（发 BuildingShutdown/RestartedEvent） | 维护费不足/恢复 | 关停：低沉闷响；重启：上升启动音 |
-| 袭击开始/胜利 | `raid/RaidTriggerScanner.java` `triggerForPlayer()`:70-72、`raid/ColonyRaidTracker.java` `tick()`:60-62 | 袭击触发/胜利 | 警报号角（可用 `createFixedRangeEvent` 加大范围）/胜利号角 |
 | 殖民地升级 | `shared/event/ColonyLevelUpEvent.java` | 殖民地升级 | 庄严升级音 |
-| 元素不足 | `shared/event/ResourceInsufficientEvent.java`（10s 冷却，已自带冷却） | 资源短缺 | 低警示音，`MASTER` 或 `AMBIENT` |
 | 公路铺路 | `road/engine/RoadBuilder.java` `buildTiles()`:56-188、玩家提交 `road/client/RoadPlacementController.java` `handleEnter()`:218 | NPC 铺路/玩家提交 | 砌路轻响，`BLOCKS` |
 | 奇观生效 | `building/internal/WonderEffectApplier.java` `applyEffects()`:183（发 WonderEffectChangedEvent） | 奇观效果应用/移除 | 神圣和声 |
 
@@ -163,10 +160,16 @@ public final class SoundService {
 
 `shared/event/` 全部 15 个事件均可在订阅处播音效，按类别：
 
-- **正面/庆祝**：`BuildingPlacedEvent`、`ColonyLevelUpEvent`、`ColonyRaidVictoryEvent`、`WonderEffectChangedEvent`、`ShopRestockedEvent`
-- **负面/警告**：`BuildingShutdownEvent`、`MaintenanceForecastWarningEvent`、`ResourceInsufficientEvent`、`ColonyRaidStartedEvent`
-- **信息/恢复**：`BuildingRestartedEvent`、`DailySettlementEvent`
+- **正面/庆祝**：`BuildingPlacedEvent`、`ColonyLevelUpEvent`、`WonderEffectChangedEvent`、`ShopRestockedEvent`
+- **负面**：`BuildingShutdownEvent`
+- **信息/恢复**：`BuildingRestartedEvent`
 - **游客流**：`TouristArrivedEvent`、`TouristDepartedEvent`（另 `ColonyEvaluationChangedEvent` 评价值变化可做轻微提示音）
+
+**已明确排除**：
+- 袭击开始/胜利（原版已有袭击音效）
+- 每日结算（`DailySettlementEvent`）
+- 元素不足 / 维护费预警（`ResourceInsufficientEvent` / `MaintenanceForecastWarningEvent`）
+- 自动派发的采集/合成任务不播音效（`BuildingTaskSource.poll` → `TaskRequest`），只有玩家手动任务（`PlayerManualSource.publish`）播
 
 > 注意：事件是"通知"语义（CLAUDE.md 陷阱 4），音效是纯瞬时副作用，适合直接订阅事件播放，无需依赖事件顺序。
 
