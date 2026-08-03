@@ -387,3 +387,14 @@ NPC 不再"只会挨打"：主动仇恨半径内无条件攻击 + 被非玩家�
 - **只看得到的目标**：仇恨与主动侦测的目标都要求 LOS（持杖手→目标中心无方块挡）——地下/隔墙不可见的怪物不锁为目标，避免对够不着的怪空耗寻路施法。
 - **配置**：`guard.selfDefenseRange`(16 主动仇恨半径)、`guard.hateRange`(48 反击距离)、`guard.hateDurationTicks`(600 记仇时长，每次被打刷新)。自防御半径 16 压过骷髅弓射程 15，仇恨半径 48 覆盖凋零跟随 40。
 - **版本**：v1.7.0a（第二位 +1 新子系统）。
+
+## 新手引导拆分独立模块（2026-08-03）
+
+V 面板右上角的"新手引导"从 `WandscapePanelState`/`WandscapePanelOverlay`/`WandscapePanelController` 拆出到 `shared/ui/guidance/`（GuideSession 状态 + GuideRenderer 渲染 + GuideRegistry 数据驱动步骤）。样式逐像素不变，仅迁移逻辑。
+
+- **为什么拆？** 原引导散在面板状态、overlay 渲染、controller 点击、网络包四处，且依赖 `BuildingAreaSyncPacket.getCached()` 的副作用触发——正是这个耦合导致"首次放市政厅引导不前进"的 bug（殖民地创建后缺一次建筑同步）。要加更多步骤（道路/游客）前，先解耦。
+- **为什么客户端驱动 + 服务端仅存进度？** 步骤完成判断（读建筑缓存）和渲染相位（BAR/PLACING）都在客户端，判定留在客户端改动最小；服务端只当"存档柜"，用 `GuideProgressSavedData`（overworld SavedData 按玩家 UUID）存 `{stepIndex, dismissed}`，避免服务端判步骤时踩"殖民地创建→建筑关联"的事件时序坑。两个小包：`GuideProgressSyncPacket`（服务端→客户端 seed，面板开启时发）、`GuideProgressUpdatePacket`（客户端→服务端，步骤前进/关闭时保存）。
+- **为什么步骤是 record 列表而非 JSON？** 步骤完成谓词需要代码（读建筑缓存等），JSON 化收益低；record + `Predicate<GuideContext>` 已是数据驱动（渲染/触发与步骤内容解耦），未来加道路/游客步骤只需在 `GuideContext` 接口加访问器 + 加一个 Step。
+- **为什么进度只前进不回退？** `currentStep = max(缓存推导, 服务端确认)`。防止缓存暂空/建筑被拆时引导倒退到已完成步骤。老玩家重进世界：面板开启 → 服务端 seed 已存步骤 → 不再弹出已完成的引导。
+- **触发源修复**：`ColonyCreateRequestPacket` 创建殖民地并 linkTownHall 后补发 `BuildingAreaSyncPacket.sendToPlayer(player, anchorHint)`；`sendToPlayer` 新增按锚点坐标兜底解析殖民地（玩家站得远时仍能同步）。首次放市政厅 → 引导即时从 1/2 跳到 2/2。
+- **版本**：v1.9.3a→v1.9.5a（补丁号 +3：重构/修复/持久化）。
