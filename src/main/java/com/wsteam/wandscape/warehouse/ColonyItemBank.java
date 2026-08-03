@@ -38,10 +38,14 @@ public class ColonyItemBank extends SavedData {
     private static final String TAG_ELEMENTS = "elements";
     private static final String TAG_ELEMENT_TYPE = "type";
     private static final String TAG_ELEMENT_AMOUNT = "amount";
+    private static final String TAG_SEEDED = "seeded";
+    private static final String TAG_SEEDED_ID = "id";
     // colonyId → items
     private final Map<UUID, Map<ItemKey, Long>> storage = new ConcurrentHashMap<>();
     // colonyId → elements
     private final Map<UUID, Map<ElementType, Long>> elementStorage = new ConcurrentHashMap<>();
+    /** Colonies that already received the initial element seed (persisted). */
+    private final Set<UUID> seededColonies = ConcurrentHashMap.newKeySet();
     // In-memory reservations (not persisted)
     private final Map<UUID, Map<ItemKey, Long>> reservations = new ConcurrentHashMap<>();
     // ── Factory ──
@@ -96,6 +100,17 @@ public class ColonyItemBank extends SavedData {
     public Map<ElementType, Long> getElementSnapshot(UUID colonyId) {
         Map<ElementType, Long> map = elementStorage.get(colonyId);
         return map != null ? Map.copyOf(map) : Map.of();
+    }
+
+    /** Whether this colony has already received the initial element seed. */
+    public boolean isSeeded(UUID colonyId) {
+        return seededColonies.contains(colonyId);
+    }
+
+    /** Mark a colony as seeded so it never receives the starter elements twice. */
+    public void markSeeded(UUID colonyId) {
+        seededColonies.add(colonyId);
+        setDirty();
     }
 
     // ════════════════════════════════════════════════════════════
@@ -235,6 +250,17 @@ public class ColonyItemBank extends SavedData {
             coloniesTag.add(colonyTag);
         }
         tag.put(TAG_COLONIES, coloniesTag);
+
+        // Persist seeded markers so each colony receives the starter elements exactly once.
+        if (!seededColonies.isEmpty()) {
+            ListTag seededTag = new ListTag();
+            for (UUID id : seededColonies) {
+                CompoundTag entry = new CompoundTag();
+                entry.putUUID(TAG_SEEDED_ID, id);
+                seededTag.add(entry);
+            }
+            tag.put(TAG_SEEDED, seededTag);
+        }
         return tag;
     }
 
@@ -273,6 +299,21 @@ public class ColonyItemBank extends SavedData {
                 bank.elementStorage.put(colonyId, elements);
             }
         }
+
+        // Read persisted seeded markers, then backfill from existing element ledgers:
+        // migrates colonies seeded by the old session flag (avoids a one-off double seed)
+        // and keeps spent-to-zero colonies seeded (the colonyId ledger key is never removed).
+        if (tag.contains(TAG_SEEDED)) {
+            ListTag seededTag = tag.getList(TAG_SEEDED, Tag.TAG_COMPOUND);
+            for (int i = 0; i < seededTag.size(); i++) {
+                CompoundTag entry = seededTag.getCompound(i);
+                if (entry.hasUUID(TAG_SEEDED_ID)) {
+                    bank.seededColonies.add(entry.getUUID(TAG_SEEDED_ID));
+                }
+            }
+        }
+        bank.seededColonies.addAll(bank.elementStorage.keySet());
+
         Log.info(TAG, "[BANK] Loaded {} colony item banks", bank.storage.size());
         return bank;
     }

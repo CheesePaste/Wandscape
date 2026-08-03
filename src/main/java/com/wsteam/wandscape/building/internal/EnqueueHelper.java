@@ -36,14 +36,12 @@ public final class EnqueueHelper {
 
     private static final String TAG = "EnqueueHelper";
 
-    /** Guard: seed warehouse only once per session. */
-    private static boolean warehouseSeeded = false;
-
     private EnqueueHelper() {}
 
     /**
      * Register a building with {@link BuildingApi} if it hasn't been registered yet.
-     * On the first-ever registration, seeds the colony warehouse with starter elements.
+     * On each colony's first building registration, seeds that colony's warehouse
+     * with starter elements (once per colony).
      *
      * @param pos            the anchor position
      * @param config         the building config
@@ -100,14 +98,10 @@ public final class EnqueueHelper {
             // Assign colony if one exists nearby
             ColonyApiImpl.get().assignColonyIfPossible(state);
 
-            // First building registered → seed warehouse with starter elements
-            if (!warehouseSeeded && state.getColonyId() != null) {
-                boolean ok = seedInitialElements(state.getColonyId());
-                if (ok) {
-                    warehouseSeeded = true;
-                } else {
-                    Log.warn(TAG, "[Enqueue] warehouse seed failed — will retry on next registration");
-                }
+            // First building registered for this colony → seed warehouse with starter
+            // elements (per-colony, persisted in ColonyItemBank).
+            if (state.getColonyId() != null) {
+                seedInitialElementsIfNeeded(state.getColonyId());
             }
 
             return state;
@@ -410,27 +404,28 @@ public final class EnqueueHelper {
     private static final long INITIAL_ELEMENT_COUNT = 2000;
 
     /**
-     * Seed the colony warehouse on first building registration.
+     * Seed the colony warehouse once per colony, on its first building registration.
      * Items start empty; the colony receives 2000 of every element type.
+     * Idempotent across restarts — the seeded marker persists in ColonyItemBank.
      */
-    private static boolean seedInitialElements(UUID colonyId) {
-        if (colonyId == null) colonyId = new UUID(0, 0);
+    private static void seedInitialElementsIfNeeded(UUID colonyId) {
         Level level = getServerLevel();
-        if (level == null) return false;
+        if (level == null) return;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) {
             Log.warn(TAG, "[Enqueue] seedInitialElements: ColonyItemBank not available");
-            return false;
+            return;
         }
+        if (bank.isSeeded(colonyId)) return;
 
         for (ElementType element : ElementType.values()) {
             bank.addElement(colonyId, element, INITIAL_ELEMENT_COUNT);
         }
+        bank.markSeeded(colonyId);
 
         Log.info(TAG, "[Enqueue] seeded warehouse: {} elements x{} (colony={})",
                 ElementType.values().length, INITIAL_ELEMENT_COUNT,
                 colonyId.toString().substring(0, 8));
-        return true;
     }
 
     private static Level getServerLevel() {
