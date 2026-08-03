@@ -2,6 +2,8 @@ package com.wsteam.wandscape.projection.network;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
@@ -12,6 +14,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
@@ -95,6 +98,9 @@ public record ProjectionPlacePacket(
         Log.info(TAG, "[Projection] '{}' placed at {} by {} firstFree={}",
                 config.displayName(), packet.anchorPos,
                 player.getGameProfile().getName(), result.firstFree());
+
+        SoundService.playAt(player.serverLevel(), packet.anchorPos,
+                WandscapeSounds.BUILDING_PLACE, SoundSource.BLOCKS, 0.5f, 1.0f);
 
         // 4. Refresh the client's building-area cache so the newly placed
         // building's construction ghost appears immediately (no need to

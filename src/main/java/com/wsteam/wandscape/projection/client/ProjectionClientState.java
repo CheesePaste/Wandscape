@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 
 import net.minecraft.client.Minecraft;
@@ -71,6 +73,8 @@ public final class ProjectionClientState {
 
         projecting = true;
 
+        SoundService.playUI(WandscapeSounds.PROJECTION_ENTER, 1.0f);
+
         Log.info(TAG, "[Projection] Entered placement mode. Body at {}, {} buildings",
                 anchor, slots.size());
     }
@@ -81,6 +85,8 @@ public final class ProjectionClientState {
      */
     public static void exitProjection() {
         projecting = false;
+
+        SoundService.playUI(WandscapeSounds.PROJECTION_EXIT, 1.0f);
 
         // Clear state
         bodyAnchor = null;

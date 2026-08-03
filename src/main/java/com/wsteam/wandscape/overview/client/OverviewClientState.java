@@ -2,6 +2,9 @@ package com.wsteam.wandscape.overview.client;
 
 import java.util.UUID;
 
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+
 import net.minecraft.core.BlockPos;
 
 /**
@@ -53,6 +56,8 @@ public final class OverviewClientState {
         targetBlockPos = null;
         targetBuildingId = null;
         active = true;
+
+        SoundService.playUI(WandscapeSounds.OVERVIEW_ENTER, 1.0f);
     }
 
     public static void exitOverview() {

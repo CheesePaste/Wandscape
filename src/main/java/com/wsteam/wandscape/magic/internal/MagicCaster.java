@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -14,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -67,8 +70,13 @@ public final class MagicCaster {
                 new ChunkPos(BlockPos.containing(source)),
                 new MagicCircleCastPacket(UUID.randomUUID(), source, look, circleId));
 
-        return MagicCastManager.schedule(level, player.getUUID(), source, target, color,
+        boolean ok = MagicCastManager.schedule(level, player.getUUID(), source, target, color,
                 BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, null, null);
+        if (ok) {
+            SoundService.playAt(level, player.getX(), player.getY(), player.getZ(),
+                    WandscapeSounds.MAGIC_CAST, SoundSource.PLAYERS, 0.5f, 1.0f);
+        }
+        return ok;
     }
 
     /**
@@ -78,29 +86,33 @@ public final class MagicCaster {
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
         LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
+        boolean ok;
         if (target != null) {
-            return castNpcAt(level, npc, target, circleId, color);
+            ok = castNpcAt(level, npc, target, circleId, color);
+        } else {
+            // 无目标：沿当前朝向施放（视觉演示）
+            MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
+            if (spec == null) return false;
+
+            UUID effectId = npc.getUUID();
+            Vec3 hand = npc.getStaffPosition();
+            Vec3 axis = npc.getFacingDirection();
+            Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
+            BlockPos beamTarget = aimFirstBlock(level, source, axis);
+            int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
+
+            PacketDistributor.sendToPlayersTrackingEntity(npc,
+                    new MagicCircleCastPacket(effectId, source, axis, circleId));
+
+            ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
+                    BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, null);
+            Log.info(TAG, "castNpc id={} circle={} target=null (facing) hand={} axis={} source={} scheduled={}",
+                    npc.getUUID().toString().substring(0, 8), circleId,
+                    fmt(hand), fmt(axis), fmt(source), ok);
         }
-
-        // 无目标：沿当前朝向施放（视觉演示）
-        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
-        if (spec == null) return false;
-
-        UUID effectId = npc.getUUID();
-        Vec3 hand = npc.getStaffPosition();
-        Vec3 axis = npc.getFacingDirection();
-        Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
-        BlockPos beamTarget = aimFirstBlock(level, source, axis);
-        int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
-
-        PacketDistributor.sendToPlayersTrackingEntity(npc,
-                new MagicCircleCastPacket(effectId, source, axis, circleId));
-
-        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
-                BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, null);
-        Log.info(TAG, "castNpc id={} circle={} target=null (facing) hand={} axis={} source={} scheduled={}",
-                npc.getUUID().toString().substring(0, 8), circleId,
-                fmt(hand), fmt(axis), fmt(source), ok);
+        if (ok) {
+            playCastSound(level, npc);
+        }
         return ok;
     }
 
@@ -159,6 +171,12 @@ public final class MagicCaster {
             }
         }
         return nearest;
+    }
+
+    /** 玩家命令的 NPC 施法起手音（守卫/自防御走 GuardCombat 专属开火音，不走这里避免重叠）。 */
+    private static void playCastSound(ServerLevel level, WandscapeNpc npc) {
+        SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
+                WandscapeSounds.MAGIC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f);
     }
 
     /** 调试日志：Vec3 四舍五入两位。 */

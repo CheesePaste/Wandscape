@@ -8,6 +8,8 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
@@ -23,6 +25,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -122,6 +125,8 @@ public record WarehouseActionPacket(
             Log.info(TAG, "[WarehouseAction] withdraw {}x {} for player {} (colony={})",
                     totalTaken, pkt.itemId, sp.getName().getString(),
                     colonyId.toString().substring(0, 8));
+            SoundService.playAt(sp.serverLevel(), pkt.buildingPos,
+                    WandscapeSounds.WAREHOUSE, SoundSource.BLOCKS, 0.5f, 1.0f);
         }
         sendRefresh(api, colonyId, pkt.buildingPos, sp);
     }
@@ -154,6 +159,9 @@ public record WarehouseActionPacket(
                 toDeposit, rl, sp.getName().getString(),
                 colonyId.toString().substring(0, 8));
 
+        SoundService.playAt(sp.serverLevel(), pkt.buildingPos,
+                WandscapeSounds.WAREHOUSE, SoundSource.BLOCKS, 0.5f, 1.0f);
+
         sendRefresh(api, colonyId, pkt.buildingPos, sp);
     }
 
@@ -177,6 +185,9 @@ public record WarehouseActionPacket(
         Log.info(TAG, "[WarehouseAction] deposit_from_slot {}x {} from slot {} (colony={})",
                 toDeposit, pkt.itemId(), slot,
                 colonyId.toString().substring(0, 8));
+
+        SoundService.playAt(sp.serverLevel(), pkt.buildingPos,
+                WandscapeSounds.WAREHOUSE, SoundSource.BLOCKS, 0.5f, 1.0f);
 
         sendRefresh(api, colonyId, pkt.buildingPos, sp);
     }
