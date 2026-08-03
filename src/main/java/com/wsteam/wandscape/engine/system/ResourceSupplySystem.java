@@ -95,20 +95,22 @@ public class ResourceSupplySystem implements System {
     }
 
     /**
-     * Enqueue a {@code production:synthesize} work item for {@code itemId} at a
-     * free workstation, unless a synthesize for the same recipe is already queued
-     * or in flight. The synthesized output lands in the colony warehouse; callers
-     * that initiated a restock should retry once the item becomes available.
+     * Enqueue {@code production:synthesize} work for {@code itemId} at a workstation,
+     * but only for the shortfall beyond what is already queued or running. The
+     * synthesized output lands in the colony warehouse; callers that initiated a
+     * restock should retry once the item becomes available.
      *
-     * @return true if the shortfall is being handled (recipe found and task queued
-     *         or already in flight); false if it cannot be synthesized right now
+     * @return true if the shortfall is being handled (covered by existing production
+     *         or a new task was queued); false if it cannot be synthesized right now
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable World world) {
         var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
         if (recipes == null) return false;
         if (recipes.getSynthesizeRecipe(itemId) == null) return false;
 
-        if (world != null && isSynthesizeInFlight(itemId, world)) return true;
+        int inFlight = countSynthesizeInFlight(itemId, world);
+        int toAdd = amount - inFlight;
+        if (toAdd <= 0) return true; // already covered by queued/running production
 
         BuildingApi api = getBuildingApi();
         if (api == null) return false;
@@ -123,14 +125,61 @@ public class ResourceSupplySystem implements System {
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("anchor", posToJsonArray(pos));
         params.put("recipe_id", new JsonPrimitive(itemId));
-        params.put("count", new JsonPrimitive(Math.max(amount, 1)));
+        params.put("count", new JsonPrimitive(Math.max(toAdd, 1)));
         params.put("channel_ticks", new JsonPrimitive(200));
         params.put("mana_cost", new JsonPrimitive(5));
 
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40));
-        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {}",
-                itemId, amount, itemId, stationId.toString().substring(0, 8));
+        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight)",
+                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight);
         return true;
+    }
+
+    /**
+     * Sum the amount of {@code production:synthesize} work for {@code itemId} already
+     * queued on any workstation or running in the task pool. Recipe ids are compared
+     * prefix-insensitively so bare ("bread") and full ("minecraft:bread") ids aggregate.
+     */
+    private static int countSynthesizeInFlight(String itemId, @Nullable World world) {
+        String key = stripMcPrefix(itemId);
+        int total = 0;
+
+        if (world != null) {
+            for (GlobalTask t : world.taskPool.all()) {
+                if (t.state == TaskState.COMPLETED) continue;
+                if (!"production:synthesize".equals(t.blueprintId)) continue;
+                if (!sameRecipe(key, t.taskParams.get("recipe_id"))) continue;
+                total += intParam(t.taskParams.get("count"));
+            }
+        }
+
+        BuildingApi api = getBuildingApi();
+        if (api != null) {
+            for (UUID stationId : api.getBuildingsByCategory(null, "workstation")) {
+                for (WorkItem item : api.getQueue(stationId)) {
+                    if (!"production:synthesize".equals(item.blueprintId())) continue;
+                    if (!sameRecipe(key, item.params().get("recipe_id"))) continue;
+                    total += intParam(item.params().get("count"));
+                }
+            }
+        }
+        return total;
+    }
+
+    private static boolean sameRecipe(String strippedKey, JsonElement recipeParam) {
+        return recipeParam != null && recipeParam.isJsonPrimitive()
+                && strippedKey.equals(stripMcPrefix(recipeParam.getAsString()));
+    }
+
+    private static int intParam(JsonElement el) {
+        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isNumber()) {
+            return el.getAsInt();
+        }
+        return 0;
+    }
+
+    private static String stripMcPrefix(String id) {
+        return id != null && id.startsWith("minecraft:") ? id.substring("minecraft:".length()) : id;
     }
 
     private void tryGatherElement(ResourceId resource, int deficit) {
@@ -190,19 +239,6 @@ public class ResourceSupplySystem implements System {
         } catch (IllegalStateException e) {
             return null;
         }
-    }
-
-    private static boolean isSynthesizeInFlight(String recipeId, World world) {
-        for (GlobalTask t : world.taskPool.all()) {
-            if (t.state == TaskState.COMPLETED) continue;
-            if (!"production:synthesize".equals(t.blueprintId)) continue;
-            JsonElement recipeParam = t.taskParams.get("recipe_id");
-            if (recipeParam != null && recipeParam.isJsonPrimitive()
-                    && recipeId.equals(recipeParam.getAsString())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static JsonArray posToJsonArray(BlockPos pos) {
