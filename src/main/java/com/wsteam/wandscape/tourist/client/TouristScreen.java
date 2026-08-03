@@ -144,7 +144,11 @@ public class TouristScreen extends MedievalScreen {
 
                 String outcomes = formatDelta(visit.satDelta()) + "满意"
                         + ", " + formatDelta(visit.energyDelta()) + "精力";
-                String line = visit.buildingName() + ": " + visit.whatHappened() + " (" + outcomes + ")";
+                Component building = (visit.buildingTypeId() == null || visit.buildingTypeId().isEmpty())
+                        ? Component.literal(visit.buildingName())
+                        : I18n.name("building.wandscape." + visit.buildingTypeId(), visit.buildingName());
+                Component line = building.copy()
+                        .append(Component.literal(": " + visit.whatHappened() + " (" + outcomes + ")"));
 
                 int color = visit.satDelta() > 0 ? MedievalColors.SUCCESS_GREEN
                         : visit.satDelta() < 0 ? MedievalColors.DANGER_RED
@@ -172,12 +176,12 @@ public class TouristScreen extends MedievalScreen {
         }
     }
 
-    /** Debug: building display name with config type id. */
-    private String formatTarget() {
-        if (targetBuildingName.isEmpty()) return "—";
-        return targetBuildingType.isEmpty()
-                ? targetBuildingName
-                : targetBuildingName + " [" + targetBuildingType + "]";
+    /** Target building name, localized via building.wandscape.<type> with the packet's fallback name. */
+    private Component formatTarget() {
+        if (targetBuildingName.isEmpty()) return Component.literal("—");
+        if (targetBuildingType.isEmpty()) return Component.literal(targetBuildingName);
+        return I18n.name("building.wandscape." + targetBuildingType, targetBuildingName)
+                .copy().append(" [" + targetBuildingType + "]");
     }
 
     /** Debug: navigation destination block position. */

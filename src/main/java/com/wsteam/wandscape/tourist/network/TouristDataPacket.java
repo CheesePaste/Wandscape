@@ -44,9 +44,11 @@ public record TouristDataPacket(
 
     /**
      * Serializable visit entry — lightweight subset of {@link com.wsteam.wandscape.shared.data.VisitMemory}.
+     * {@code buildingTypeId} lets the client resolve the localized name via {@code building.wandscape.<id>}.
      */
-    public record VisitEntry(String buildingName, String whatHappened, int satDelta, int energyDelta) {
+    public record VisitEntry(String buildingTypeId, String buildingName, String whatHappened, int satDelta, int energyDelta) {
         static void write(net.minecraft.network.FriendlyByteBuf buf, VisitEntry entry) {
+            buf.writeUtf(entry.buildingTypeId != null ? entry.buildingTypeId : "");
             buf.writeUtf(entry.buildingName != null ? entry.buildingName : "");
             buf.writeUtf(entry.whatHappened != null ? entry.whatHappened : "");
             buf.writeInt(entry.satDelta);
@@ -54,7 +56,7 @@ public record TouristDataPacket(
         }
 
         static VisitEntry read(net.minecraft.network.FriendlyByteBuf buf) {
-            return new VisitEntry(buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readInt());
+            return new VisitEntry(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readInt());
         }
     }
 
@@ -118,7 +120,7 @@ public record TouristDataPacket(
 
     public static TouristDataPacket from(TouristEntity tourist) {
         List<VisitEntry> visits = tourist.getRecentVisits().stream()
-                .map(v -> new VisitEntry(v.buildingDisplayName(), v.whatHappened(),
+                .map(v -> new VisitEntry(v.buildingTypeId(), v.buildingDisplayName(), v.whatHappened(),
                         v.satisfactionDelta(), v.energyDelta()))
                 .toList();
 
