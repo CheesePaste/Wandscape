@@ -66,8 +66,8 @@ public final class SpeechBubbleRenderer {
 
         if (timer < fadeInStart) return;
 
-        String text = state.currentText;
-        if (text == null || text.isEmpty()) return;
+        Component textComp = state.currentText;
+        if (textComp == null) return;
 
         float alpha = getAlpha(timer, fadeInStart);
         if (alpha <= 0.005F) return;
@@ -77,7 +77,6 @@ public final class SpeechBubbleRenderer {
         if (distSq > MAX_DIST_SQ) return;
 
         Font font = Minecraft.getInstance().font;
-        Component textComp = Component.literal(text);
         float textWidth = font.width(textComp);
         float textHeight = font.lineHeight;
 
@@ -150,7 +149,7 @@ public final class SpeechBubbleRenderer {
         int offset;
         int hiddenDuration;  // random 320-640 ticks (16-32 s)
         @Nullable
-        String currentText;
+        Component currentText;
         boolean initialized;
 
         BubbleState(LivingEntity entity) {

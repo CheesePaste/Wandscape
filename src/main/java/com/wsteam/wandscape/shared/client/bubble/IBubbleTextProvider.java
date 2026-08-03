@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.shared.client.bubble;
 
 import javax.annotation.Nullable;
+
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
@@ -11,5 +13,5 @@ import net.minecraft.world.entity.LivingEntity;
 public interface IBubbleTextProvider {
 
     @Nullable
-    String getText(LivingEntity entity);
+    Component getText(LivingEntity entity);
 }
