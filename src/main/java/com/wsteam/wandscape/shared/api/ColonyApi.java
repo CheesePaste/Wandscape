@@ -3,10 +3,21 @@ package com.wsteam.wandscape.shared.api;
 import java.util.Collection;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 public interface ColonyApi {
     /** Register a new colony at the given origin. Returns its UUID. */
-    UUID createColony(BlockPos origin);
+    default UUID createColony(BlockPos origin) {
+        return createColony(origin, null);
+    }
+
+    /** Register a new colony at the given origin, recording the founding player. */
+    UUID createColony(BlockPos origin, @Nullable UUID founder);
+
+    /** The founding player UUID of a colony, or null if unknown (legacy/console-created). */
+    @Nullable
+    UUID getFounder(UUID colonyId);
 
     /** Find the nearest colony UUID within 256 blocks of pos, or null. */
     UUID getColonyId(BlockPos pos);

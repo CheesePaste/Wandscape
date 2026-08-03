@@ -34,7 +34,7 @@ public final class ColonyApiImpl implements ColonyApi {
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
     @Override
-    public UUID createColony(BlockPos origin) {
+    public UUID createColony(BlockPos origin, @Nullable UUID founder) {
         UUID existing = colonyOrigins.get(origin);
         if (existing != null) return existing;
 
@@ -46,7 +46,7 @@ public final class ColonyApiImpl implements ColonyApi {
         // async IO worker may not flush before a crash or quick exit.
         ColonySavedData csd = getColonySavedData();
         if (csd != null) {
-            csd.addColony(colonyId, origin);
+            csd.addColony(colonyId, origin, founder);
             var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
                 csd.saveNow(server.overworld(), server.overworld().registryAccess());
@@ -56,6 +56,13 @@ public final class ColonyApiImpl implements ColonyApi {
         Log.info(TAG, "[Colony] Created colony {} at origin {}",
                 colonyId.toString().substring(0, 8), origin);
         return colonyId;
+    }
+
+    @Override
+    @Nullable
+    public UUID getFounder(UUID colonyId) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getFounder(colonyId) : null;
     }
 
     @Override

@@ -14,7 +14,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet: opens the Town Hall info screen with colony name, level and experience.
  */
 public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
-                                 String colonyName, int level, int experience, int expToNext)
+                                 String colonyName, int level, int experience, int expToNext,
+                                 String founderName)
         implements CustomPacketPayload {
 
     public static final Type<TownHallOpenPacket> TYPE =
@@ -41,15 +42,18 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         buf.writeVarInt(pkt.level);
         buf.writeVarInt(pkt.experience);
         buf.writeVarInt(pkt.expToNext);
+        buf.writeUtf(pkt.founderName != null ? pkt.founderName : "");
     }
 
     static TownHallOpenPacket read(RegistryFriendlyByteBuf buf) {
+        String founderName = buf.readUtf();
         return new TownHallOpenPacket(
                 BlockPos.of(buf.readLong()),
                 buf.readUUID(),
                 buf.readUtf(),
                 buf.readVarInt(),
                 buf.readVarInt(),
-                buf.readVarInt());
+                buf.readVarInt(),
+                founderName.isEmpty() ? null : founderName);
     }
 }

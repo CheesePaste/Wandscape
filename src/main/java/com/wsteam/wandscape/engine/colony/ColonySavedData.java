@@ -33,8 +33,11 @@ public class ColonySavedData extends SavedData {
     private static final String KEY_X = "x";
     private static final String KEY_Y = "y";
     private static final String KEY_Z = "z";
+    private static final String KEY_FOUNDER = "founder";
 
     private final Map<UUID, BlockPos> colonies = new ConcurrentHashMap<>();
+    /** colonyId → founding player UUID (informational; permissions remain shared). */
+    private final Map<UUID, UUID> founders = new ConcurrentHashMap<>();
 
     private static final Factory<ColonySavedData> FACTORY = new Factory<>(
             ColonySavedData::new,
@@ -51,13 +54,21 @@ public class ColonySavedData extends SavedData {
     // ── Accessors ──
 
     public void addColony(UUID colonyId, BlockPos origin) {
+        addColony(colonyId, origin, null);
+    }
+
+    public void addColony(UUID colonyId, BlockPos origin, @Nullable UUID founder) {
         colonies.put(colonyId, origin.immutable());
+        if (founder != null) {
+            founders.put(colonyId, founder);
+        }
         setDirty();
         Log.info(TAG, "[Colony] Persisted colony {} at {}", colonyId.toString().substring(0, 8), origin);
     }
 
     public void removeColony(UUID colonyId) {
         BlockPos removed = colonies.remove(colonyId);
+        founders.remove(colonyId);
         if (removed != null) {
             setDirty();
             Log.info(TAG, "[Colony] Removed colony {} from persistence", colonyId.toString().substring(0, 8));
@@ -67,6 +78,11 @@ public class ColonySavedData extends SavedData {
     @Nullable
     public BlockPos getOrigin(UUID colonyId) {
         return colonies.get(colonyId);
+    }
+
+    @Nullable
+    public UUID getFounder(UUID colonyId) {
+        return founders.get(colonyId);
     }
 
     public Map<UUID, BlockPos> getAllColonies() {
@@ -122,6 +138,10 @@ public class ColonySavedData extends SavedData {
             entryTag.putInt(KEY_X, pos.getX());
             entryTag.putInt(KEY_Y, pos.getY());
             entryTag.putInt(KEY_Z, pos.getZ());
+            UUID founder = founders.get(entry.getKey());
+            if (founder != null) {
+                entryTag.putUUID(KEY_FOUNDER, founder);
+            }
             list.add(entryTag);
         }
         tag.put(KEY_COLONIES, list);
@@ -138,6 +158,9 @@ public class ColonySavedData extends SavedData {
             int y = entry.getInt(KEY_Y);
             int z = entry.getInt(KEY_Z);
             data.colonies.put(id, new BlockPos(x, y, z));
+            if (entry.contains(KEY_FOUNDER)) {
+                data.founders.put(id, entry.getUUID(KEY_FOUNDER));
+            }
         }
         Log.info(TAG, "Loaded {} colonies from saved data", data.colonies.size());
         return data;

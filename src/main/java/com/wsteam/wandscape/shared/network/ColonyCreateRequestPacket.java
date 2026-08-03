@@ -60,7 +60,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         }
 
         // Create new colony at townHallAnchor using ColonyCommand.createColonyAt
-        String result = ColonyCommand.createColonyAt(level, packet.townHallAnchor, name);
+        String result = ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
         if (result == null || result.startsWith("[Wandscape] no government")
                 || result.startsWith("[Wandscape] Failed")) {
             sendMessage(player, result != null ? result : "[Wandscape] 创建殖民地失败。");

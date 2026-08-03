@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
@@ -50,6 +52,20 @@ public final class BuildingInteractHandler {
         shopStockManager = manager;
     }
 
+    /** Resolve a colony's founding player's display name for the town hall screen. */
+    @Nullable
+    private static String resolveFounderName(ServerPlayer player, UUID colonyId) {
+        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return null;
+        UUID founder = colonyApi.getFounder(colonyId);
+        if (founder == null) return null;
+        var profileCache = player.server.getProfileCache();
+        if (profileCache == null) return null;
+        return profileCache.get(founder)
+                .map(com.mojang.authlib.GameProfile::getName)
+                .orElse(null);
+    }
+
     /**
      * Central dispatch for building right-click interactions.
      * Called from both {@link #onRightClickBlock} (normal mode) and
@@ -84,9 +100,10 @@ public final class BuildingInteractHandler {
             int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
             int expNext = levelMgr != null ? levelMgr.expToNextLevel(colonyId) : 1000;
             String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
+            String founderName = resolveFounderName(player, colonyId);
             PacketDistributor.sendToPlayer(player,
                     new com.wsteam.wandscape.building.network.TownHallOpenPacket(
-                            pos, colonyId, name, lvl, exp, expNext));
+                            pos, colonyId, name, lvl, exp, expNext, founderName));
             return;
         }
 

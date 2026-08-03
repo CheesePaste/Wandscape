@@ -30,11 +30,13 @@ public class TownHallScreen extends MedievalScreen {
     private final int level;
     private final int experience;
     private final int expToNext;
+    private final String founderName;
 
     private EditBox nameBox;
 
     public TownHallScreen(BlockPos buildingPos, UUID colonyId,
-                          String colonyName, int level, int experience, int expToNext) {
+                          String colonyName, int level, int experience, int expToNext,
+                          String founderName) {
         super(Component.literal("Town Hall"), PW, PH);
         setTitleBar("市政厅");
         this.showCloseButton = true;
@@ -46,6 +48,7 @@ public class TownHallScreen extends MedievalScreen {
         this.level = level;
         this.experience = experience;
         this.expToNext = expToNext;
+        this.founderName = founderName;
     }
 
     @Override
@@ -98,8 +101,15 @@ public class TownHallScreen extends MedievalScreen {
         int ebH = font.lineHeight + 6;
         drawInsetField(g, ebX, ebY, ebW, ebH);
 
-        // Colony level
+        // Colony founder
         int y = ebY + ebH + 16;
+        String founderText = "创建者："
+                + (founderName != null && !founderName.isEmpty() ? founderName : "—");
+        g.drawString(font, founderText, cx - font.width(founderText) / 2, y,
+                MedievalColors.TEXT_WARM_WHITE);
+        y += font.lineHeight + 8;
+
+        // Colony level
         String levelText = "殖民地等级 " + level;
         g.drawString(font, levelText, cx - font.width(levelText) / 2, y,
                 MedievalColors.BORDER_GOLD);

@@ -6,6 +6,8 @@ import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -96,7 +98,9 @@ public final class ColonyCommand {
             );
         }
 
-        String result = createColonyAt(level, origin, name);
+        UUID founder = sender instanceof net.minecraft.world.entity.player.Player p
+                ? p.getUUID() : null;
+        String result = createColonyAt(level, origin, name, founder);
         if (result == null || result.startsWith("[Wandscape] no government")
                 || result.startsWith("[Wandscape] Failed")) {
             ctx.getSource().sendFailure(Component.literal(result));
@@ -115,7 +119,8 @@ public final class ColonyCommand {
      * (or null on failure — use the provided {@code feedback} sink to surface
      * the error to the player).
      */
-    public static String createColonyAt(ServerLevel level, BlockPos origin, String name) {
+    public static String createColonyAt(ServerLevel level, BlockPos origin, String name,
+                                        @Nullable UUID founder) {
         // ── Step 1: load config ─────────────────────────────────────────────
         BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()
                 .getByCategory(WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT);
@@ -126,7 +131,7 @@ public final class ColonyCommand {
 
         // ── Step 2: create colonyId ─────────────────────────────────────────
         ColonyApi colonyApi = ColonyApiImpl.get();
-        UUID colonyId = colonyApi.createColony(origin);
+        UUID colonyId = colonyApi.createColony(origin, founder);
         Log.info(TAG, "[Colony] Creating colony '{}' id={} at {}", name,
                 colonyId.toString().substring(0, 8), origin);
 
