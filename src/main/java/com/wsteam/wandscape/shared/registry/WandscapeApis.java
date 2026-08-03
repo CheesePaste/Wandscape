@@ -41,6 +41,8 @@ public final class WandscapeApis {
         if (npcApi == null) throw new IllegalStateException("Module NpcSystem not loaded");
         return npcApi;
     }
+    @javax.annotation.Nullable
+    public static NpcApi getNpcApiSilently() { return npcApi; }
     public static void setNpcApi(NpcApi api) { npcApi = api; }
 
     public static BuildingApi getBuildingApi() {

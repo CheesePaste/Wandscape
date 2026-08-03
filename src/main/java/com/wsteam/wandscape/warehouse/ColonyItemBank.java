@@ -40,12 +40,15 @@ public class ColonyItemBank extends SavedData {
     private static final String TAG_ELEMENT_AMOUNT = "amount";
     private static final String TAG_SEEDED = "seeded";
     private static final String TAG_SEEDED_ID = "id";
+    private static final String TAG_PURCHASE_COUNT = "purchases";
     // colonyId → items
     private final Map<UUID, Map<ItemKey, Long>> storage = new ConcurrentHashMap<>();
     // colonyId → elements
     private final Map<UUID, Map<ElementType, Long>> elementStorage = new ConcurrentHashMap<>();
     /** Colonies that already received the initial element seed (persisted). */
     private final Set<UUID> seededColonies = ConcurrentHashMap.newKeySet();
+    /** colonyId → cumulative tourist purchases (persisted, drives onboarding step 6). */
+    private final Map<UUID, Long> purchaseCounts = new ConcurrentHashMap<>();
     // In-memory reservations (not persisted)
     private final Map<UUID, Map<ItemKey, Long>> reservations = new ConcurrentHashMap<>();
     // ── Factory ──
@@ -102,6 +105,11 @@ public class ColonyItemBank extends SavedData {
         return map != null ? Map.copyOf(map) : Map.of();
     }
 
+    /** Cumulative number of items tourists have purchased from this colony's shops. */
+    public long getPurchaseCount(UUID colonyId) {
+        return purchaseCounts.getOrDefault(colonyId, 0L);
+    }
+
     /** Whether this colony has already received the initial element seed. */
     public boolean isSeeded(UUID colonyId) {
         return seededColonies.contains(colonyId);
@@ -124,6 +132,12 @@ public class ColonyItemBank extends SavedData {
                 .merge(type, amount, Long::sum);
         setDirty();
         Log.info(TAG, "[BANK] AddElement:%s".formatted(type.name()));
+    }
+
+    /** Record one successful tourist purchase for the colony. */
+    public void recordPurchase(UUID colonyId) {
+        purchaseCounts.merge(colonyId, 1L, Long::sum);
+        setDirty();
     }
 
     /** Consume amount of element type. Returns false if insufficient. */
@@ -213,6 +227,7 @@ public class ColonyItemBank extends SavedData {
 
         Set<UUID> allColonies = new HashSet<>(storage.keySet());
         allColonies.addAll(elementStorage.keySet());
+        allColonies.addAll(purchaseCounts.keySet());
 
         for (UUID colonyId : allColonies) {
             CompoundTag colonyTag = new CompoundTag();
@@ -245,6 +260,12 @@ public class ColonyItemBank extends SavedData {
                     elementsTag.add(elemTag);
                 }
                 colonyTag.put(TAG_ELEMENTS, elementsTag);
+            }
+
+            // Cumulative tourist purchases
+            long purchases = purchaseCounts.getOrDefault(colonyId, 0L);
+            if (purchases > 0) {
+                colonyTag.putLong(TAG_PURCHASE_COUNT, purchases);
             }
 
             coloniesTag.add(colonyTag);
@@ -297,6 +318,11 @@ public class ColonyItemBank extends SavedData {
                     elements.put(type, amount);
                 }
                 bank.elementStorage.put(colonyId, elements);
+            }
+
+            // Cumulative tourist purchases (absent on legacy saves → 0)
+            if (colonyTag.contains(TAG_PURCHASE_COUNT)) {
+                bank.purchaseCounts.put(colonyId, colonyTag.getLong(TAG_PURCHASE_COUNT));
             }
         }
 

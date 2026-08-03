@@ -270,6 +270,7 @@ public final class ShopStockManager {
                 long profit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
                 bank.addElement(colonyId, entry.getKey(), profit);
             }
+            bank.recordPurchase(colonyId);
         }
 
         // Dynamic restock: if stock dropped below 1/3 of max, trigger auto-restock
