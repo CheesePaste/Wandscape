@@ -213,6 +213,42 @@ public final class ColonyCommand {
                         + " 1 1 to queue construction";
     }
 
+    /**
+     * Ensure a colony exists near {@code origin}; if none is within range, create
+     * one at {@code origin} and persist its display name.
+     *
+     * <p>Used to auto-found the colony when the player opens the Wandscape panel
+     * (V key) on a world with no colony yet — BEFORE any building is placed.
+     * The per-colony first-free ({@code first_free}) claim happens at placement
+     * time, so the colony must already exist for the first building (the town
+     * hall) to build for free.
+     *
+     * @return the existing or newly created colonyId, or null if creation failed
+     */
+    @Nullable
+    public static UUID ensureColonyNear(ServerLevel level, BlockPos origin,
+                                        String name, @Nullable UUID founder) {
+        ColonyApi colonyApi = ColonyApiImpl.get();
+        UUID existing = colonyApi.getColonyId(origin);
+        if (existing != null) return existing;
+
+        String result = createColonyAt(level, origin, name, founder);
+        if (result == null || result.startsWith("[Wandscape] no government")
+                || result.startsWith("[Wandscape] Failed")) {
+            Log.warn(TAG, "[Colony] Auto-create failed at {}: {}", origin, result);
+            return null;
+        }
+
+        UUID created = colonyApi.getColonyId(origin);
+        if (created != null) {
+            var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
+            if (levelMgr != null) {
+                levelMgr.setColonyName(created, name);
+            }
+        }
+        return created;
+    }
+
     /** Destroy the colony nearest the executing player (within 256 blocks). */
     private static int destroyColony(CommandContext<CommandSourceStack> ctx) {
         net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayer();

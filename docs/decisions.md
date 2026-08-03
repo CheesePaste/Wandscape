@@ -408,3 +408,14 @@ V 面板右上角的"新手引导"从 `WandscapePanelState`/`WandscapePanelOverl
 - **触发时机**：面板开启 / 放置建筑 / 创建殖民地（即现有发 BuildingAreaSyncPacket 的 3 处）→ `GuideProgressApi.sendToPlayer` 重算并下发。游客驱动的步骤（购买/入住/满意度）在玩家下次开面板时推进——引导框只在面板开启时可见，开面板即刷新，符合"等待"步骤的节奏。
 - **只前进不回退**：`GuideProgressSavedData` 存 max(服务端算出的步, 已存步)，游客过夜数回落到 0 不会让引导倒退。
 - **版本**：v1.9.7a→v1.9.10a（补丁号 +3：服务端引擎 / 9 步内容与接线 / 待验证测试）。
+
+## 首免修复：殖民地创建提前到 V 面板打开时（2026-08-03）
+
+Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原因是 `placeBuilding` 里 `firstFree = config.firstFree() && colonyId != null && !claimed`，而殖民地此前要到"放置并右击市政厅 → 命名"时才创建——首座建筑（市政厅）放置时 `colonyId` 还是 null，`assignColonyIfPossible` 找不到殖民地，首免判定直接为 false。
+
+- **修法**：把"首次放市政厅没殖民地就创建殖民地"的逻辑从市政厅交互（`BuildingInteractHandler` 右击无殖民地市政厅 → `ColonyCreatePromptPacket`）提前到 **V 键面板打开**（`PanelStateTogglePacket.handleServer`）。面板打开时 `getColonyId(玩家位置)` 为 null 则调 `ColonyCommand.ensureColonyNear` 在玩家位置自动建殖民地（名字默认 `玩家名+的殖民地`，可事后在市政厅界面改名），并 `setColonyName` 持久化。
+- **为什么建在玩家位置而非等待市政厅锚点？** 面板打开时市政厅尚未放置，无锚点可用；玩家位置即殖民地原点。`ColonyApiImpl.onBuildingIntact` 会把殖民地原点重新锚定到之后建成的市政厅位置，所以先建在玩家位置是安全的。
+- **为什么保留市政厅命名流程？** 它仍作为兜底（如 `/fill` 直接建市政厅、从未开过 V 面板的情况）。正常 V→建造流程下殖民地已存在，右击市政厅走 `TownHallOpenPacket` 信息页。
+- **为什么只发生在面板打开时？** 引导/统计/建筑区域同步本就以面板打开为刷新时机；殖民地创建后 `guideApi.sendToPlayer(player, colonyId)` 拿到非空 colonyId，引导从第 1 步起即可正常推进。
+- **版本**：v1.10.2a→v1.10.3a（补丁号 +1：bug 修复）。
+
