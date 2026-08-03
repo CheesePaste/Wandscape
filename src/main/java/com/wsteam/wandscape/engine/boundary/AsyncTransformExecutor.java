@@ -38,6 +38,10 @@ import com.wsteam.wandscape.shared.log.Log;
 public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> {
 
     private static final String TAG = "AsyncTransformExecutor";
+
+    /** NPC 施法音节流间隔（tick）：与 WandscapeBlockOps 方块放置/拆除音同频，避免每块方块都播 Evoker 施法声刷屏。 */
+    private static final int NPC_CAST_THROTTLE_TICKS = 10;
+
     private final int delayTicks;
 
     record Pending(CompletableFuture<Void> future, AtomicOp.TransformOp op, World world,
@@ -114,10 +118,12 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                 npc.doWorkAnimation(new BlockPos(
                         p.op.target().x(), p.op.target().y(), p.op.target().z()));
                 // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
+                // 节流与方块放置/拆除音同频：整栋楼连续施工时不会每块都响
                 if (npc.level() instanceof ServerLevel sl) {
-                    SoundService.playAt(sl, p.op.target().x() + 0.5,
+                    SoundService.playAtThrottled(sl, p.op.target().x() + 0.5,
                             p.op.target().y() + 0.5, p.op.target().z() + 0.5,
-                            WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f);
+                            WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f,
+                            NPC_CAST_THROTTLE_TICKS);
                 }
             }
             Log.debug(TAG, "async TransformOp placed: {}→{} at {}",

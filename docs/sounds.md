@@ -139,7 +139,7 @@ public final class SoundService {
 | 挂点 | 文件:方法 | 触发 | 建议音效 |
 |------|-----------|------|----------|
 | 方块放置/移除 | `engine/boundary/WandscapeBlockOps.java` `setBlock()`:59-68 | 同步/异步建造/拆除都汇此 | 放置：方块自身原版放置音 `getPlaceSound()`；移除（目标为空气）：被拆方块原版破坏音 `getBreakSound()`。两者都走 `SoundService.playAtThrottled` 节流 10 tick，`BLOCKS` |
-| NPC 施法放置 | `engine/boundary/AsyncTransformExecutor.java` `execute()` `thenRun`:99-115（`doWorkAnimation` :110 处） | NPC 放置每块方块 | 自定义施法音，`NEUTRAL` |
+| NPC 施法放置 | `engine/boundary/AsyncTransformExecutor.java` `execute()` `thenRun`:99-115（`doWorkAnimation` :110 处） | NPC 放置每块方块 | 自定义施法音，`NEUTRAL`，与方块放置/拆除音同频节流 10 tick（`NPC_CAST_THROTTLE_TICKS`）防整栋楼连响刷屏 |
 | 玩家手动发布任务 | 4 个 road/network packet 的 `publish()` 调用处（RoadPlace/FillBox/DestroyFill/SplineBuild） | 玩家在 GUI 手动创建任务 | 低响度纸卷微音，`PLAYERS`。注：`task/` 是纯 Java（零 MC 依赖），`PlayerManualSource.publish` 不能播音，故在调用方播 |
 | 守卫开火 | `guard/GuardCombat.java` `engage()`:54-79 | 守卫施法攻击（40 tick 节流） | 能量脉冲，`NEUTRAL` |
 | NPC 完工 | `npc/entity/WandscapeNpc.java` `doWorkAnimation()`:731-743 | NPC 执行完动作（已有粒子无声音） | 最自然的完工反馈点，轻快叮 |
