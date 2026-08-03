@@ -2,6 +2,7 @@ package com.wsteam.wandscape.production.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
@@ -9,6 +10,7 @@ import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
@@ -16,6 +18,7 @@ import com.wsteam.wandscape.shared.ui.component.ScrollableList;
 import com.wsteam.wandscape.shared.ui.component.TabBar;
 import com.wsteam.wandscape.shared.ui.component.TaskQueuePanel;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
@@ -171,20 +174,16 @@ public class WorkstationScreen extends MedievalScreen {
                         textX, y + 1, nameColor);
 
                 // Requirement / cost row
-                StringBuilder costStr = new StringBuilder();
                 String reason = item.lockedReason();
                 if ("colony".equals(reason)) {
-                    costStr.append("🔒 ");
+                    StringBuilder costStr = new StringBuilder("🔒 ");
                     var req = item.unlockRequirement();
                     costStr.append("Colony Lv>=").append(req.minColonyLevel());
+                    g.drawString(Minecraft.getInstance().font, costStr.toString(),
+                            x + 20, y + 10, MedievalColors.TEXT_DIM);
                 } else {
-                    item.cost().forEach((elem, amt) -> {
-                        if (!costStr.isEmpty()) costStr.append(", ");
-                        costStr.append(elem.name().toLowerCase()).append(":").append(amt);
-                    });
+                    drawElementCost(g, item.cost(), x + 20, y + 10);
                 }
-                g.drawString(Minecraft.getInstance().font, costStr.toString(),
-                        x + 20, y + 10, MedievalColors.TEXT_DIM);
             }
         };
         synthesizeList.setItems(synthesizeRecipes);
@@ -290,6 +289,21 @@ public class WorkstationScreen extends MedievalScreen {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         Log.info(TAG,"[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+    }
+
+    /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */
+    private static void drawElementCost(GuiGraphics g, Map<ElementType, Long> cost, int x, int y) {
+        var font = Minecraft.getInstance().font;
+        int cx = x;
+        for (var e : cost.entrySet()) {
+            String id = e.getKey().getId();
+            int tint = WandscapeTheme.elementColor(id);
+            WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(id), cx, y - 2, 9, 9, tint);
+            cx += 11;
+            String text = "x" + e.getValue();
+            g.drawString(font, text, cx, y, tint);
+            cx += font.width(text) + 6;
+        }
     }
 
     private static String formatItemName(String itemId) {
