@@ -12,7 +12,7 @@
 | **`Max Stock Edit`** (`maxStockEdits`) | EditBox (Integer) | `64` | 该商品在此商店可容纳的最大备货上限。 |
 | **`Sales Bonus`** (销售加成) | Display Percent | `+0%` | 根据商店的 `Comfort`（舒适度）评分计算的售价溢价比例。舒适度越高，游客付费金币越多。 |
 | **`Stay Bonus`** (停留加成) | Display Percent | `+0%` | 影响游客在商店内逗留选购的时间缩放比例。 |
-| **`Element Feedback`** (元素反哺) | Display Rate | `0/s` | 当游客购买商品时，通过 `ServiceElementOutput` 反哺回魔法小镇仓库的魔力元素速率。 |
+| **`Element Feedback`** (元素反哺) | Display Rate | `0/s` | 当游客购买商品时，通过 `ServiceElementOutput` 反哺回仓库的魔力元素速率。 |
 
 ---
 
