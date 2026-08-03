@@ -2,6 +2,7 @@
   "id": "nodewind",
   "display_name": "nodewind",
   "category": "node",
+  "first_free": true,
   "pattern": [
     [
       0,

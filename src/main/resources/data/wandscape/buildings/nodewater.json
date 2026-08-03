@@ -2,6 +2,7 @@
   "id": "nodewater",
   "display_name": "nodewater",
   "category": "node",
+  "first_free": true,
   "pattern": [
     [
       0,

@@ -2,6 +2,7 @@
   "id": "breadshop",
   "display_name": "breadshop",
   "category": "shop",
+  "first_free": true,
   "pattern": [
     [
       1,

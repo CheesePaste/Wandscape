@@ -2,6 +2,7 @@
   "id": "potionstation1",
   "display_name": "potionstation1",
   "category": "potion_station",
+  "first_free": true,
   "pattern": [
     [
       0,

@@ -2,6 +2,7 @@
   "id": "nodedark",
   "display_name": "nodedark",
   "category": "node",
+  "first_free": true,
   "pattern": [
     [
       0,

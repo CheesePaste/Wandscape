@@ -2,6 +2,7 @@
   "id": "workstation1",
   "display_name": "workstation1",
   "category": "workstation",
+  "first_free": true,
   "pattern": [
     [
       0,

@@ -2,6 +2,7 @@
   "id": "nodefire",
   "display_name": "nodefire",
   "category": "node",
+  "first_free": true,
   "pattern": [
     [
       0,

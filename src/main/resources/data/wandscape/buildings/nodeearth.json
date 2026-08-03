@@ -2,6 +2,7 @@
   "id": "nodeearth",
   "display_name": "nodeearth",
   "category": "node",
+  "first_free": true,
   "pattern": [
     [
       0,

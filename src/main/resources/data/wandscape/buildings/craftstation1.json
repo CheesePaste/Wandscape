@@ -2,6 +2,7 @@
   "id": "craftstation1",
   "display_name": "craftstation1",
   "category": "crafting_station",
+  "first_free": true,
   "pattern": [
     [
       0,

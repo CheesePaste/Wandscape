@@ -2,6 +2,7 @@
   "id": "tavern",
   "display_name": "冒险者酒馆",
   "category": "tavern",
+  "first_free": true,
   "pattern": [
     [
       -1,
