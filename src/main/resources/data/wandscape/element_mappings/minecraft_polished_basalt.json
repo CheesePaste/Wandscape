@@ -1,8 +1,8 @@
 {
   "block": "minecraft:polished_basalt",
   "build_cost": {
-    "earth": 1,
-    "fire": 1
+    "fire": 1,
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

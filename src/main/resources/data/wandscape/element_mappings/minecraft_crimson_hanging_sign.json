@@ -1,9 +1,9 @@
 {
   "block": "minecraft:crimson_hanging_sign",
   "build_cost": {
-    "wood": 8,
+    "metal": 26,
     "fire": 4,
-    "metal": 26
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

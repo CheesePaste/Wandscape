@@ -1,10 +1,10 @@
 {
   "block": "minecraft:crafter",
   "build_cost": {
-    "earth": 7,
-    "wood": 8,
+    "metal": 344,
     "fire": 12,
-    "metal": 344
+    "earth": 7,
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

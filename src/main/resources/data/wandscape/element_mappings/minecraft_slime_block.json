@@ -1,8 +1,8 @@
 {
   "block": "minecraft:slime_block",
   "build_cost": {
-    "water": 288,
-    "dark": 288
+    "dark": 288,
+    "water": 288
   },
   "decompose_yield": {},
   "decomposable": false,

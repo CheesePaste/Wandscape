@@ -1,8 +1,8 @@
 {
   "item": "minecraft:lead",
   "build_cost": {
-    "water": 16,
-    "dark": 20
+    "dark": 20,
+    "water": 16
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "block": "minecraft:glowstone",
   "build_cost": {
-    "fire": 32,
-    "wind": 32
+    "wind": 32,
+    "fire": 32
   },
   "decompose_yield": {},
   "decomposable": false,

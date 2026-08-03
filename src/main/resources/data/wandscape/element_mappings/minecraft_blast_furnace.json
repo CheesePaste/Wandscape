@@ -1,8 +1,8 @@
 {
   "block": "minecraft:blast_furnace",
   "build_cost": {
-    "earth": 11,
-    "metal": 320
+    "metal": 320,
+    "earth": 11
   },
   "decompose_yield": {},
   "decomposable": false,

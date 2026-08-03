@@ -1,8 +1,8 @@
 {
   "item": "minecraft:diamond_sword",
   "build_cost": {
-    "wood": 2,
-    "metal": 2048
+    "metal": 2048,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,9 +1,9 @@
 {
   "item": "minecraft:creeper_banner_pattern",
   "build_cost": {
-    "wood": 4,
     "fire": 2048,
-    "dark": 2048
+    "dark": 2048,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "item": "minecraft:iron_shovel",
   "build_cost": {
-    "wood": 4,
-    "metal": 64
+    "metal": 64,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

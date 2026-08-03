@@ -2,8 +2,8 @@
   "item": "minecraft:recovery_compass",
   "build_cost": {
     "metal": 264,
-    "fire": 4,
     "wind": 2048,
+    "fire": 4,
     "dark": 4096
   },
   "decompose_yield": {},

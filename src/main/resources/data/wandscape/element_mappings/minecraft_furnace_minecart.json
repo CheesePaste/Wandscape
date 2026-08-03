@@ -1,8 +1,8 @@
 {
   "item": "minecraft:furnace_minecart",
   "build_cost": {
-    "earth": 8,
-    "metal": 320
+    "metal": 320,
+    "earth": 8
   },
   "decompose_yield": {},
   "decomposable": false,

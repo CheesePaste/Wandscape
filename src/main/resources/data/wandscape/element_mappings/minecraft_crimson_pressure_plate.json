@@ -1,8 +1,8 @@
 {
   "block": "minecraft:crimson_pressure_plate",
   "build_cost": {
-    "wood": 4,
-    "fire": 2
+    "fire": 2,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

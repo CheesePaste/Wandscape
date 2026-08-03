@@ -1,10 +1,10 @@
 {
   "block": "minecraft:beacon",
   "build_cost": {
-    "earth": 5,
     "fire": 32864,
-    "water": 96,
-    "dark": 32768
+    "dark": 32768,
+    "earth": 5,
+    "water": 96
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,10 +1,10 @@
 {
   "block": "minecraft:repeater",
   "build_cost": {
-    "earth": 3,
-    "wood": 4,
+    "metal": 24,
     "fire": 12,
-    "metal": 24
+    "earth": 3,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

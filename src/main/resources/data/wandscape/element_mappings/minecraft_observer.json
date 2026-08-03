@@ -1,10 +1,10 @@
 {
   "block": "minecraft:observer",
   "build_cost": {
-    "earth": 6,
     "metal": 16,
+    "wind": 8,
     "fire": 16,
-    "wind": 8
+    "earth": 6
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "item": "minecraft:iron_sword",
   "build_cost": {
-    "wood": 2,
-    "metal": 128
+    "metal": 128,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

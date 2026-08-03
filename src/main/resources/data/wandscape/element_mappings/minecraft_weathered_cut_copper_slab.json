@@ -1,7 +1,7 @@
 {
   "block": "minecraft:weathered_cut_copper_slab",
   "build_cost": {
-    "metal": 9
+    "metal": 36
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,7 +1,7 @@
 {
   "block": "minecraft:chiseled_stone_bricks",
   "build_cost": {
-    "earth": 1
+    "earth": 2
   },
   "decompose_yield": {},
   "decomposable": false,

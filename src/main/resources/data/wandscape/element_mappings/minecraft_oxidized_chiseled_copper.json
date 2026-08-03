@@ -1,7 +1,7 @@
 {
   "block": "minecraft:oxidized_chiseled_copper",
   "build_cost": {
-    "metal": 18
+    "metal": 72
   },
   "decompose_yield": {},
   "decomposable": false,

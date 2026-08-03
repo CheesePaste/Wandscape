@@ -1,9 +1,9 @@
 {
   "block": "minecraft:light_blue_stained_glass",
   "build_cost": {
+    "wind": 1,
     "earth": 1,
-    "wood": 1,
-    "wind": 1
+    "wood": 1
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,9 +1,9 @@
 {
   "item": "minecraft:mace",
   "build_cost": {
-    "earth": 65536,
     "metal": 32768,
     "wind": 64,
+    "earth": 65536,
     "dark": 32832
   },
   "decompose_yield": {},

@@ -1,9 +1,9 @@
 {
   "block": "minecraft:diorite_slab",
   "build_cost": {
-    "earth": 1,
+    "wind": 4,
     "fire": 4,
-    "wind": 4
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

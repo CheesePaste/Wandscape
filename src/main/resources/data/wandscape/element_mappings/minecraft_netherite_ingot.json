@@ -1,8 +1,8 @@
 {
   "item": "minecraft:netherite_ingot",
   "build_cost": {
-    "fire": 16384,
-    "metal": 33792
+    "metal": 33792,
+    "fire": 16384
   },
   "decompose_yield": {},
   "decomposable": false,

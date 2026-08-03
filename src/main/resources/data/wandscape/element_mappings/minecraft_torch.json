@@ -1,8 +1,8 @@
 {
   "block": "minecraft:torch",
   "build_cost": {
-    "wood": 1,
-    "fire": 2
+    "fire": 2,
+    "wood": 1
   },
   "decompose_yield": {},
   "decomposable": false,

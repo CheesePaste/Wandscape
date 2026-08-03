@@ -1,8 +1,8 @@
 {
   "item": "minecraft:compass",
   "build_cost": {
-    "fire": 4,
-    "metal": 264
+    "metal": 264,
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "block": "minecraft:smooth_quartz_stairs",
   "build_cost": {
-    "fire": 48,
-    "wind": 48
+    "wind": 48,
+    "fire": 48
   },
   "decompose_yield": {},
   "decomposable": false,

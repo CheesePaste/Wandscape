@@ -1,9 +1,9 @@
 {
   "block": "minecraft:polished_diorite",
   "build_cost": {
-    "earth": 1,
+    "wind": 8,
     "fire": 8,
-    "wind": 8
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,

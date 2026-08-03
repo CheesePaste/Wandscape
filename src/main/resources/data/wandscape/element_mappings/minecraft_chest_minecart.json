@@ -1,8 +1,8 @@
 {
   "item": "minecraft:chest_minecart",
   "build_cost": {
-    "wood": 16,
-    "metal": 320
+    "metal": 320,
+    "wood": 16
   },
   "decompose_yield": {},
   "decomposable": false,

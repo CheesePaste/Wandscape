@@ -1,9 +1,9 @@
 {
   "block": "minecraft:purple_carpet",
   "build_cost": {
-    "wood": 13,
     "wind": 13,
-    "dark": 5
+    "dark": 5,
+    "wood": 13
   },
   "decompose_yield": {},
   "decomposable": false,

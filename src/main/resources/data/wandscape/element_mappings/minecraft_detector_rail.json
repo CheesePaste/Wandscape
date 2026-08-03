@@ -1,9 +1,9 @@
 {
   "block": "minecraft:detector_rail",
   "build_cost": {
-    "earth": 1,
+    "metal": 65,
     "fire": 1,
-    "metal": 65
+    "earth": 1
   },
   "decompose_yield": {},
   "decomposable": false,
