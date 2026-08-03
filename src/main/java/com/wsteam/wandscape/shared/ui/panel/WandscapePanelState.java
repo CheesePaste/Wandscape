@@ -11,9 +11,7 @@ import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -85,13 +83,6 @@ public final class WandscapePanelState {
 
     // ── Interaction area overlay (B key toggle) ──
     private static volatile boolean showBuildingAreas = false;
-
-    // ── First-time guidance ──
-    /** Whether the "build Town Hall & Warehouse" guide should be shown in the overlay. */
-    private static volatile boolean showGuidance = true;
-    private static boolean guidanceEverShown = false;
-    /** Set when the player manually dismisses the guide (× button) — suppresses re-show on sync. */
-    private static volatile boolean guidanceDismissed = false;
 
     public static boolean isShowBuildingAreas() { return showBuildingAreas; }
     public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
@@ -241,55 +232,6 @@ public final class WandscapePanelState {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal("[Panel] Closed"), true);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ── First-time guidance ──
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * Whether the "build Town Hall & Warehouse" guide should show.
-     * True when the colony has no town_hall or no warehouse, and not yet dismissed.
-     */
-    public static boolean shouldShowGuidance() {
-        if (guidanceDismissed) return false;
-        if (!showGuidance) return false;
-        var buildings = BuildingAreaSyncPacket.getCached();
-        if (buildings.isEmpty()) return true;
-        boolean hasTownHall = false;
-        boolean hasWarehouse = false;
-        for (var b : buildings) {
-            if (WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.category())) hasTownHall = true;
-            if ("warehouse".equals(b.buildingTypeId())) hasWarehouse = true;
-        }
-        return !hasTownHall || !hasWarehouse;
-    }
-
-    /** Dismiss guidance (called when player opens building bar or on manual dismiss). */
-    public static void dismissGuidance() {
-        showGuidance = false;
-        guidanceDismissed = true;
-    }
-
-    /** Evaluate guidance based on the latest building cache. Called after BuildingAreaSyncPacket arrives. */
-    public static void evaluateGuidance() {
-        if (guidanceDismissed) {
-            showGuidance = false;
-            return;
-        }
-        var buildings = BuildingAreaSyncPacket.getCached();
-        showGuidance = buildings.isEmpty()
-                || buildings.stream().noneMatch(
-                        e -> WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(e.category()))
-                || buildings.stream().noneMatch(e -> "warehouse".equals(e.buildingTypeId()));
-        if (showGuidance && !guidanceEverShown) {
-            guidanceEverShown = true;
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("§e[新手引导] §f请建造【市政厅】与【仓库】以开启殖民地管理！"), true);
-            }
         }
     }
 

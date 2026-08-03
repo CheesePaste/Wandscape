@@ -98,11 +98,19 @@ public final class WandscapePanelController {
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
         // ── Guidance close (×) button — dismiss "Getting Started" guide ──
-        if (WandscapePanelState.shouldShowGuidance()
-                && WandscapePanelOverlay.isGuidanceCloseClicked(mc.font, mouseX, mouseY, screenW)) {
-            WandscapePanelState.dismissGuidance();
-            event.setCanceled(true);
-            return;
+        if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
+            boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
+            boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
+            boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
+            if (com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.isCloseClicked(mc.font, mouseX, mouseY,
+                    screenW, WandscapePanelOverlay.TOP_BAR_H,
+                    com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
+                            com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep()),
+                    buildMode, isPlacing, isBar)) {
+                com.wsteam.wandscape.shared.ui.guidance.GuideSession.dismiss();
+                event.setCanceled(true);
+                return;
+            }
         }
 
         // ── Building selection bar handling ──
