@@ -2587,7 +2587,7 @@
         "wonder": 0
       },
       {
-        "item_id": "minecraft:chiselled_bookshelf",
+        "item_id": "minecraft:chiseled_bookshelf",
         "comfort": 1,
         "magic": 1,
         "wonder": 1
@@ -2599,7 +2599,7 @@
         "wonder": 2
       },
       {
-        "item_id": "minecraft:book_and_quill",
+        "item_id": "minecraft:writable_book",
         "comfort": 0,
         "magic": 3,
         "wonder": 0
