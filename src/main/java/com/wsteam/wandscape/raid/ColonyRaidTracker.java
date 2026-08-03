@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
@@ -60,6 +61,13 @@ public final class ColonyRaidTracker {
                 NeoForge.EVENT_BUS.post(new ColonyRaidVictoryEvent(
                         entry.getKey(), tr.raidId, raid.getCenter(),
                         raid.getRaidOmenLevel(), raid.getGroupsSpawned()));
+                // ── 胜利庆祝：市政厅包围盒中心上方烟花 ──
+                var townHall = WandscapeApis.getBuildingApi().getBuildingAt(raid.getCenter());
+                if (townHall != null && townHall.getBounds() != null) {
+                    ParticleService.celebrateAt(level, ParticleService.boundsCenterAbove(townHall.getBounds(), 2), 8);
+                } else {
+                    ParticleService.celebrateAt(level, raid.getCenter().getCenter(), 8);
+                }
                 Log.info(TAG, "[Raid] Colony {} raid won (id={}, omen={}, waves={})",
                         entry.getKey().toString().substring(0, 8), tr.raidId,
                         raid.getRaidOmenLevel(), raid.getGroupsSpawned());

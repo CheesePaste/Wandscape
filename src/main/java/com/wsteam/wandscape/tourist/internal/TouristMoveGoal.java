@@ -16,6 +16,7 @@ import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
@@ -592,6 +593,8 @@ public class TouristMoveGoal extends Goal {
                     exitingPhase = false;
                     syncDebugData();
                     showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
+
+                    sparkleSatisfaction();
 
                     // Emit HOTEL_CHECKIN narrative
                     long gameTime = tourist.level().getGameTime();
@@ -1321,6 +1324,8 @@ public class TouristMoveGoal extends Goal {
 
             String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
             showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20");
+
+            sparkleSatisfaction();
         }
     }
 
@@ -1376,6 +1381,16 @@ public class TouristMoveGoal extends Goal {
 
         String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
         showActionBar("🔧 " + narrative + " | 满意+" + gain + " 精力-" + energyCost);
+
+        sparkleSatisfaction();
+    }
+
+    /** 满意度提升：游客位置撒金色星光（商店/服务/酒店入住共用）。粒子纯装饰，缺失静默跳过。 */
+    private void sparkleSatisfaction() {
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        ParticleService.burstColored(level, tourist.position().add(0, 1.2, 0),
+                1.0f, 0.85f, 0.30f, 10, 0.12f, 25, false);
     }
 
     // ── Preference / satisfaction ──

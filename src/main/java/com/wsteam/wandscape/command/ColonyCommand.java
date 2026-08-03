@@ -24,10 +24,12 @@ import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.event.ColonyCreatedEvent;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -188,6 +190,14 @@ public final class ColonyCommand {
 
         // ── Step 6: fire event ──────────────────────────────────────────────
         NeoForge.EVENT_BUS.post(new ColonyCreatedEvent(colonyId, origin));
+
+        // ── 创建庆祝：市政厅包围盒一圈烟花 ──
+        var townHall = WandscapeApis.getBuildingApi().getBuildingAt(origin);
+        if (townHall != null && townHall.getBounds() != null) {
+            ParticleService.celebrateRing(level, townHall.getBounds(), 3);
+        } else {
+            ParticleService.celebrateAt(level, origin.getCenter(), 3);
+        }
 
         // ── Step 7: reply ───────────────────────────────────────────────────
         int materialTypes = computeUniqueBlockTypes(townHallConfig);

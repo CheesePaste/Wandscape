@@ -4,12 +4,16 @@ import java.util.Map;
 
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
@@ -72,10 +76,20 @@ public final class GuardCombat {
             boolean ok = MagicCaster.castNpcAt(level, npc, target, circleId, color);
             if (ok) {
                 lastCastTick.put(npcId, level.getGameTime());
+                // 杖尖彩色爆闪（施法颜色）
+                float[] rgb = rgbOf(color);
+                ParticleService.burstColored(level, npc.getStaffPosition(), rgb[0], rgb[1], rgb[2], 6, 0.10f, 15, false);
+                SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
+                        WandscapeSounds.GUARD_FIRE, SoundSource.NEUTRAL, 0.6f, 1.0f);
             } else {
                 Log.debug(TAG, "NPC {} cast rejected (active cast / spec missing) — standby", npcId);
             }
         }
+    }
+
+    /** 0xAARRGGBB → [r,g,b]（0-1）。 */
+    private static float[] rgbOf(int argb) {
+        return new float[]{ ((argb >> 16) & 0xFF) / 255f, ((argb >> 8) & 0xFF) / 255f, (argb & 0xFF) / 255f };
     }
 
     // ── 光束 ──

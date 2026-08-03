@@ -4,11 +4,17 @@ import java.util.Map;
 
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
@@ -76,6 +82,15 @@ public final class DemolishCompleteListener {
         if (colonyApi != null) {
             colonyApi.onBuildingDestroyed(state);
         }
+
+        // ── 拆除完成：建筑包围盒一圈灰烟 ──
+        if (level instanceof ServerLevel srv) {
+            ParticleService.burstRing(srv, ParticleTypes.LARGE_SMOKE, state.getBounds(), 40, 1.8, 0.06);
+            ParticleService.burstRing(srv, ParticleTypes.CAMPFIRE_COSY_SMOKE, state.getBounds(), 20, 1.5, 0.08);
+        }
+
+        SoundService.playAt((ServerLevel) level, anchor,
+                WandscapeSounds.BUILDING_DEMOLISHED, SoundSource.BLOCKS, 0.7f, 1.0f);
 
         Log.info(TAG, "[Demolish] Building {} ({}) at {} — demolition complete, unregistered",
                 state.getBuildingTypeId(),

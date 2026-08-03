@@ -3,13 +3,16 @@ package com.wsteam.wandscape.raid;
 import java.util.UUID;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.guard.GuardZone;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.event.ColonyRaidStartedEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -17,6 +20,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
@@ -70,6 +74,16 @@ public final class RaidTriggerScanner {
             NeoForge.EVENT_BUS.post(new ColonyRaidStartedEvent(
                     colonyId, raid.getId(), townHall,
                     raid.getRaidOmenLevel(), raid.getNumGroups(level.getDifficulty())));
+            // ── 袭击开始：市政厅包围盒中心上方橙色警报烟 ──
+            Vec3 alarmPos = townHall.getCenter();
+            var buildingApi = WandscapeApis.getBuildingApi();
+            for (BuildingData b : buildingApi.getColonyBuildings(colonyId)) {
+                if (WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.getCategory())) {
+                    if (b.getBounds() != null) alarmPos = ParticleService.boundsCenterAbove(b.getBounds(), 0);
+                    break;
+                }
+            }
+            ParticleService.burstAt(level, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, alarmPos, 40, 2.0, 0.15);
             Log.info(TAG, "[Raid] Colony {} raid started (id={}, omen={}, waves={}) at {}",
                     colonyId.toString().substring(0, 8), raid.getId(),
                     raid.getRaidOmenLevel(), raid.getNumGroups(level.getDifficulty()),
