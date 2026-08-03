@@ -39,7 +39,7 @@ public class TownHallScreen extends MedievalScreen {
                           String colonyName, int level, int experience, int expToNext,
                           String founderName) {
         super(I18n.name("gui.wandscape.townhall.title", "Town Hall"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅").getString());
+        setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "townhall_guide";

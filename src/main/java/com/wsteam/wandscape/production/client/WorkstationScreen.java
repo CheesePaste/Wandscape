@@ -11,6 +11,7 @@ import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
@@ -58,7 +59,7 @@ public class WorkstationScreen extends MedievalScreen {
 
     public WorkstationScreen() {
         super(Component.literal("Workstation"), PW, PH);
-        setTitleBar("Workstation");
+        setTitleBar(I18n.name("gui.wandscape.workstation.title", "Workstation"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "workstation_guide";

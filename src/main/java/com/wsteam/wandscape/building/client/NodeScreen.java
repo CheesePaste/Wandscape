@@ -62,7 +62,8 @@ public class NodeScreen extends MedievalScreen {
         this.amountPerHarvest = packet.amountPerHarvest();
         this.channelTicks = packet.channelTicks();
         this.manaCost = packet.manaCost();
-        setTitleBar(packet.buildingTypeId());
+        setTitleBar(com.wsteam.wandscape.shared.ui.I18n.name(
+                "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {
             slider.setMax(MAX_HARVESTS);
             slider.setValue(1);

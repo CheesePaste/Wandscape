@@ -29,7 +29,7 @@ public class TownHallCreateScreen extends MedievalScreen {
 
     public TownHallCreateScreen(BlockPos townHallAnchor) {
         super(Component.literal("Create Colony"), PW, PH);
-        setTitleBar("创建殖民地");
+        setTitleBar(Component.literal("创建殖民地"));
         this.showCloseButton = true;
         this.townHallAnchor = townHallAnchor;
     }

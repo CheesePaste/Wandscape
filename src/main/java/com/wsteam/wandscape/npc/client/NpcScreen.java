@@ -2,6 +2,7 @@ package com.wsteam.wandscape.npc.client;
 
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -45,7 +46,7 @@ public class NpcScreen extends MedievalScreen {
 
     public NpcScreen(NpcDataPacket packet) {
         super(Component.literal("NPC Info"), PW, PH);
-        setTitleBar("Mage Info");
+        setTitleBar(I18n.name("gui.wandscape.npc.title", "Mage Info"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "npc_guide";
@@ -66,7 +67,7 @@ public class NpcScreen extends MedievalScreen {
         this.manaCostMultiplier = packet.manaCostMultiplier();
         this.wandStack = packet.wandStack();
         this.isDefaultWand = packet.isDefaultWand();
-        setTitleBar(npcName);
+        setTitleBar(Component.literal(npcName));
     }
 
     @Override

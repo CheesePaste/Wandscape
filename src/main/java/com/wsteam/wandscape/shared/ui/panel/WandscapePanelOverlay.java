@@ -389,7 +389,7 @@ public final class WandscapePanelOverlay {
         }
 
         // ── Header (full width) ──
-        String header = I18n.name("gui.wandscape.stats.title", "Colony Statistics  |  Day {0}", stats.currentDay()).getString();
+        String header = I18n.name("gui.wandscape.stats.title", "Colony Statistics  |  Day %s", stats.currentDay()).getString();
         drawText(g, font, header, leftX + pad, topY + pad, WandscapeTheme.COLOR_TEXT_NORMAL);
         int sepY = topY + pad + font.lineHeight + 2;
         g.fill(leftX + pad, sepY, leftX + boxW - pad, sepY + 1, WandscapeTheme.COLOR_BORDER_NORMAL);
@@ -401,18 +401,18 @@ public final class WandscapePanelOverlay {
 
         drawText(g, font, I18n.name("gui.wandscape.stats.maintenance", "Maintenance").getString(), lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
-        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.paid", "Paid: {0}", stats.buildingsPaid()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.paid", "Paid: %s", stats.buildingsPaid()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.shut", "Shut: {0}", stats.buildingsShutdown()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.shut", "Shut: %s", stats.buildingsShutdown()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH + 4;
 
         drawText(g, font, I18n.name("gui.wandscape.stats.tourists", "Tourists").getString(), lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
-        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.arrived", "In: {0}", stats.touristsArrived()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.arrived", "In: %s", stats.touristsArrived()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.departed", "Out: {0}", stats.touristsDeparted()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.departed", "Out: %s", stats.touristsDeparted()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.satisfaction", "Sat: {0}%", stats.avgSatisfaction()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.satisfaction", "Sat: %s%%", stats.avgSatisfaction()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Right column: elements consumed ──
         int rx = lx + colW + pad;

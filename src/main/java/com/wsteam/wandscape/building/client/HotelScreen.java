@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.client;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -29,7 +30,7 @@ public class HotelScreen extends MedievalScreen {
     public HotelScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
                        int maxOccupancy, int currentOccupancy, List<String> guestNames) {
         super(Component.literal("Hotel"), PW, PH);
-        setTitleBar("Hotel / Inn");
+        setTitleBar(I18n.name("gui.wandscape.hotel.title", "Hotel / Inn"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "hotel_guide";

@@ -22,7 +22,7 @@ public abstract class MedievalScreen extends Screen {
     protected final int panelWidth;
     protected final int panelHeight;
     protected int headerHeight = 22;
-    protected String titleBarText;
+    protected Component titleBarText;
     protected int titleXOffset = 10;
     protected final List<MedievalAnimation> animations = new ArrayList<>();
 
@@ -48,8 +48,8 @@ public abstract class MedievalScreen extends Screen {
         this.panelHeight = panelHeight;
     }
 
-    protected void setTitleBar(String text) {
-        this.titleBarText = (text != null && !text.isEmpty()) ? text : null;
+    protected void setTitleBar(Component title) {
+        this.titleBarText = title;
     }
 
     @Override

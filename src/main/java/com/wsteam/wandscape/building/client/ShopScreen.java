@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
@@ -46,7 +47,7 @@ public class ShopScreen extends MedievalScreen {
     public ShopScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
                       Map<String, Integer> stock, Map<String, Integer> maxStocks) {
         super(Component.literal("Shop"), PW, PH);
-        setTitleBar("Shop");
+        setTitleBar(I18n.name("gui.wandscape.shop.title", "Shop"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "shop_guide";

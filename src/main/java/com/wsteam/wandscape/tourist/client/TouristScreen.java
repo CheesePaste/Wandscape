@@ -39,7 +39,7 @@ public class TouristScreen extends MedievalScreen {
 
     public TouristScreen(TouristDataPacket packet) {
         super(Component.literal("Tourist Info"), PW, PH);
-        setTitleBar("Tourist Info");
+        setTitleBar(Component.literal("Tourist Info"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "tourist_guide";
@@ -59,7 +59,7 @@ public class TouristScreen extends MedievalScreen {
         this.targetBuildingType = packet.targetBuildingType();
         this.targetPos = packet.targetPos();
         this.cooldownRemainingTicks = packet.cooldownRemainingTicks();
-        setTitleBar(touristName);
+        setTitleBar(Component.literal(touristName));
     }
 
     @Override

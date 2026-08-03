@@ -10,6 +10,7 @@ import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket.RecipeEntry;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
@@ -45,7 +46,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
     public CraftingStationScreen() {
         super(Component.literal("Crafting Station"), PW, PH);
-        setTitleBar("Crafting Station");
+        setTitleBar(I18n.name("gui.wandscape.crafting_station.title", "Crafting Station"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "crafting_guide";

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.ElementPanel;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
@@ -65,7 +66,7 @@ public class WarehouseScreen extends MedievalScreen {
 
     public WarehouseScreen() {
         super(Component.literal("Colony Warehouse"), PW, PH);
-        setTitleBar("Colony Warehouse");
+        setTitleBar(I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "warehouse_guide";

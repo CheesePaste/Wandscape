@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.shared.data.MageResume;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -36,7 +37,7 @@ public class TavernScreen extends MedievalScreen {
 
     public TavernScreen(BlockPos buildingPos, UUID colonyId, List<MageResume> mageResumes) {
         super(Component.literal("Tavern"), PW, PH);
-        setTitleBar("Adventurer's Tavern");
+        setTitleBar(I18n.name("gui.wandscape.tavern.title", "Adventurer's Tavern"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "tavern_guide";

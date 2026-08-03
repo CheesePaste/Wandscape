@@ -121,7 +121,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     public BuildingScannerScreen(BuildingScannerBlockEntity scanner) {
         super(Component.literal("Building Scanner"), PW, PH);
-        setTitleBar("结构扫描器");
+        setTitleBar(Component.literal("结构扫描器"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "scanner_guide";
