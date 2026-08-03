@@ -127,14 +127,17 @@ public record NarrativeEvent(
 ```
 触发点                  模板引擎              输出
   │                     │                    │
-  ├─ onBuildingArrived ─┤                    ├─ ActionBar (即时)
-  ├─ onHotelCheckin   ─┼─ NarrativeGenerator ┼─ TouristDiary (存储)
-  ├─ onDeparture      ─┤   ├─ 模板匹配       ├─ ColonyChronicle (条件性)
-  │                     │   ├─ 情感推断       └─ Chat消息 (重要事件)
+  ├─ onBuildingArrived ─┤                    ├─ ActionBar (仅到达/酒店入住)
+  ├─ onHotelCheckin   ─┼─ NarrativeGenerator ┼─ 事件气泡 (购买物品/服务元素 icon×N + 满意度条)
+  ├─ onDeparture      ─┤   ├─ 模板匹配       ├─ TouristDiary (存储)
+  │                     │   ├─ 情感推断       └─ ColonyChronicle (条件性)
   │                     │   └─ 润色
   │                     │
 VisitMemory[] ───────────┘  (上下文增强)
 ```
+
+> 屏幕提示分工（1.10.34a）：到达与酒店入住保留 ActionBar；购买/服务改为事件气泡
+> （`TouristBubblePacket` → 客户端 `TransientBubbleStore`，气泡下方满意度条从交互前值平滑动画到交互后值）；离开无屏幕提示。
 
 ### 3.2 两级模板解析机制
 
@@ -289,14 +292,16 @@ satisfactionDelta ≥ 20  → DELIGHTED
 
 ## 5. 展示层
 
-### 5.1 ActionBar（即时）
+### 5.1 屏幕提示（即时）
 
-保持现有模式，但内容由 `NarrativeGenerator` 生成，不再就地拼字符串。
-
-```
-"🛒 张三从面包房购买了面包，感到非常满意"
-"✨ 张三入住了冒险者酒馆，期待明天的新旅程"
-```
+- **ActionBar（仅到达与酒店入住）**：内容由 `NarrativeGenerator` 生成，不再就地拼字符串。
+  ```
+  "✨ 张三入住了冒险者酒馆，期待明天的新旅程"
+  ```
+- **事件气泡（购买/服务，1.10.34a 起）**：购买冒「物品 icon × 数量」气泡，服务冒「随机元素 icon × 数量」气泡；
+  服务端 `TouristMoveGoal.sendBubble()` 发 `TouristBubblePacket`（32 格内玩家）→ 客户端 `TransientBubbleStore` →
+  `SpeechBubbleRenderer`（气泡）+ `SatisfactionBarRenderer`（气泡下方满意度条，从交互前值平滑动画到交互后值）。
+- **离开：无屏幕提示**（1.10.34a 起静默，仍写编年史）。
 
 ### 5.2 游客日记（右击查看）
 
@@ -333,7 +338,7 @@ Day 4 — 王五 访问了5座建筑，满意度100%，"完美旅程"
 当前: onBuildingArrived() → interactWithShop/Service → showActionBar(硬编码)
 改为: onBuildingArrived() → interact → createVisitMemory() 
       → NarrativeGenerator.generateVisitEvent() 
-      → showActionBar(生成的文本)
+      → sendBubble(TouristBubblePacket, 32格内玩家)  ← 购买/服务，不再 showActionBar
       → tourist.addVisitMemory()
       → (条件性) colonyChronicle.addEntry()
 ```
@@ -342,8 +347,7 @@ Day 4 — 王五 访问了5座建筑，满意度100%，"完美旅程"
 
 ```
 onSpawn:  记录 arrivalTime, 生成 ARRIVAL 事件
-onDepart: 收集所有 VisitMemory → generateDepartureSummary()
-          → 广播 chat 消息（重要旅程）
+onDepart: 收集所有 VisitMemory → generateDeparture() 事件（无屏幕提示，静默离开）
           → colonyChronicle.addEntry()
 ```
 
