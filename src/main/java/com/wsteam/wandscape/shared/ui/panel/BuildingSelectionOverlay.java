@@ -158,7 +158,12 @@ public final class BuildingSelectionOverlay {
     }
 
     private static final List<String> CATEGORY_ORDER = List.of(
-            "All", "government", "storage", "service", "shop", "workstation", "crafting_station", "node"
+            "All", "government", "storage", "service", "shop", "workstation", "node"
+    );
+
+    /** Categories merged into the 生产工坊 (workstation) tab instead of getting their own tab. */
+    private static final Set<String> WORKSHOP_MERGED_CATEGORIES = Set.of(
+            "crafting_station", "potion_station", "tavern"
     );
 
     public static String getCategoryDisplayName(String cat) {
@@ -170,7 +175,6 @@ public final class BuildingSelectionOverlay {
             case "service" -> "服务/旅店";
             case "shop" -> "商业/商店";
             case "workstation" -> "生产工坊";
-            case "crafting_station" -> "法宝合成";
             case "node" -> "元素节点";
             default -> cat;
         };
@@ -222,6 +226,7 @@ public final class BuildingSelectionOverlay {
         for (BuildingSlot slot : ProjectionClientState.getBuildingSlots()) {
             present.add(slot.category());
         }
+        present.removeAll(WORKSHOP_MERGED_CATEGORIES);
         List<String> sorted = new ArrayList<>();
         for (String cat : CATEGORY_ORDER) {
             if (present.contains(cat)) {
@@ -237,9 +242,15 @@ public final class BuildingSelectionOverlay {
         String cat = WandscapePanelState.getBuildingBarCategory();
         String search = WandscapePanelState.getBuildingBarSearch().toLowerCase();
         return ProjectionClientState.getBuildingSlots().stream()
-                .filter(s -> "All".equals(cat) || s.category().equals(cat))
+                .filter(s -> "All".equals(cat) || matchesCategory(s.category(), cat))
                 .filter(s -> search.isEmpty() || s.displayName().toLowerCase().contains(search))
                 .toList();
+    }
+
+    /** A slot belongs to the selected tab when its category matches, or it's merged into the workstation tab. */
+    private static boolean matchesCategory(String slotCategory, String selectedCategory) {
+        if (selectedCategory.equals(slotCategory)) return true;
+        return "workstation".equals(selectedCategory) && WORKSHOP_MERGED_CATEGORIES.contains(slotCategory);
     }
 
     private static int renderCategoryTabs(GuiGraphics g, Font font, List<String> cats,
