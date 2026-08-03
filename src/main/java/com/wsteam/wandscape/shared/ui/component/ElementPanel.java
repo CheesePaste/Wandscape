@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
 import net.minecraft.client.Minecraft;
@@ -77,7 +78,7 @@ public class ElementPanel extends AbstractWidget {
 
             // Name
             int nameColor = NAME_COLORS.getOrDefault(type, MedievalColors.TEXT_WARM_WHITE);
-            String displayName = capitalize(type.getId());
+            Component displayName = I18n.name("element.wandscape." + type.getId(), capitalize(type.getId()));
             g.drawString(font, displayName, getX() + ICON_SIZE + 4, rowY + 4, nameColor);
 
             // Amount (right-aligned)
