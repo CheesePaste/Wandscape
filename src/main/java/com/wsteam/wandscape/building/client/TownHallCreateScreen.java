@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.building.client;
 
 import com.wsteam.wandscape.shared.network.ColonyCreateRequestPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
@@ -28,8 +29,8 @@ public class TownHallCreateScreen extends MedievalScreen {
     private String pendingName = "";
 
     public TownHallCreateScreen(BlockPos townHallAnchor) {
-        super(Component.literal("Create Colony"), PW, PH);
-        setTitleBar(Component.literal("创建殖民地"));
+        super(Component.literal("Create Town"), PW, PH);
+        setTitleBar(I18n.name("gui.wandscape.townhall_create.title", "创建魔法小镇"));
         this.showCloseButton = true;
         this.townHallAnchor = townHallAnchor;
     }
@@ -41,7 +42,7 @@ public class TownHallCreateScreen extends MedievalScreen {
         int ebY = topPos + headerHeight + 26;
 
         nameBox = new EditBox(font, cx - 90, ebY, 180, font.lineHeight + 4,
-                Component.literal("Colony name"));
+                I18n.name("gui.wandscape.townhall_create.name_label", "魔法小镇名称"));
         nameBox.setMaxLength(30);
         nameBox.setBordered(false);
         nameBox.setTextColor(MedievalColors.TEXT_WARM_WHITE);
@@ -101,7 +102,8 @@ public class TownHallCreateScreen extends MedievalScreen {
         int cx = leftPos + PW / 2;
 
         // Title / instruction
-        String title = "你的市政厅已建成，但没有殖民地";
+        String title = I18n.name("gui.wandscape.townhall_create.prompt",
+                "你的市政厅已建成，但还没有魔法小镇").getString();
         g.drawString(font, title, cx - font.width(title) / 2,
                 topPos + headerHeight + 10, MedievalColors.TEXT_WARM_WHITE);
 
@@ -111,7 +113,7 @@ public class TownHallCreateScreen extends MedievalScreen {
         drawInsetField(g, ebX, ebY, 184, font.lineHeight + 6);
 
         // Hint
-        String hint = "输入殖民地名称";
+        String hint = I18n.name("gui.wandscape.townhall_create.name_hint", "输入魔法小镇名称").getString();
         g.drawString(font, hint, cx - font.width(hint) / 2, ebY + font.lineHeight + 14,
                 MedievalColors.TEXT_MUTED);
 
@@ -121,7 +123,7 @@ public class TownHallCreateScreen extends MedievalScreen {
         int by = topPos + headerHeight + 72;
         boolean hover = isInRect(mouseX, mouseY, bx, by, bw, bh);
         drawMinimalBox(g, bx, by, bw, bh, pendingName.trim().isEmpty() ? false : hover, hover);
-        String label = "创建殖民地";
+        String label = I18n.name("gui.wandscape.townhall_create.create", "创建").getString();
         g.drawString(font, label, cx - font.width(label) / 2,
                 by + (bh - font.lineHeight) / 2, MedievalColors.TEXT_WARM_WHITE);
     }

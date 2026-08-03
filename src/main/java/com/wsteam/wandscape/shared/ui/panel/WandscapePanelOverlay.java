@@ -290,7 +290,7 @@ public final class WandscapePanelOverlay {
 
         // 5. Day
         long day = mc.level != null ? mc.level.getDayTime() / 24000 + 1 : 1;
-        String dayText = "Day " + day;
+        String dayText = I18n.name("gui.wandscape.panel.day", "Day %s", day).getString();
         drawText(g, font, dayText, x, textY1, WandscapeTheme.COLOR_TEXT_DIM);
         x += font.width(dayText) + 10;
 
@@ -304,7 +304,8 @@ public final class WandscapePanelOverlay {
         x += font.width(touristText) + 10;
 
         // 7. NPC idle/total
-        String npcText = WandscapePanelState.getNpcIdleCount() + "/" + WandscapePanelState.getNpcTotalCount() + " NPC";
+        String npcText = I18n.name("gui.wandscape.panel.npc_count", "%s/%s NPC",
+                WandscapePanelState.getNpcIdleCount(), WandscapePanelState.getNpcTotalCount()).getString();
         drawText(g, font, npcText, x, textY1, WandscapeTheme.COLOR_TEXT_NORMAL);
 
         // 8. Warning icon+count at far right of first row (total anomalies)
