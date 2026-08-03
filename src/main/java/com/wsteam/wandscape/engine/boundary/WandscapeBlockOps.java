@@ -53,8 +53,8 @@ public class WandscapeBlockOps implements BlockOps {
             Direction.EAST, Direction.WEST, Direction.DOWN
     };
 
-    /** 拆除/清空等"移除"操作的破坏音节流间隔（tick），防止每块都响导致太吵。 */
-    private static final int REMOVE_SOUND_THROTTLE_TICKS = 10;
+    /** 方块放置/拆除音效节流间隔（tick）：建造连续放块、拆除连续清块时防止每块都响。 */
+    private static final int BLOCK_SOUND_THROTTLE_TICKS = 10;
 
     // Cache block type string → MC Block lookups
     private final ConcurrentMap<String, Block> blockCache = new ConcurrentHashMap<>();
@@ -76,13 +76,15 @@ public class WandscapeBlockOps implements BlockOps {
                 SoundEvent breakSound = oldState.getSoundType(level, bp, null).getBreakSound();
                 if (level instanceof ServerLevel sl && breakSound != null) {
                     SoundService.playAtThrottled(sl, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
-                            breakSound, SoundSource.BLOCKS, 0.8f, 1.0f, REMOVE_SOUND_THROTTLE_TICKS);
+                            breakSound, SoundSource.BLOCKS, 0.8f, 1.0f, BLOCK_SOUND_THROTTLE_TICKS);
                 }
             } else if (!state.isAir()) {
-                // 方块自身原版放置音（与原版玩家右手放置一致），BLOCKS 通道
-                level.playSound(null, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
-                        state.getSoundType(level, bp, null).getPlaceSound(),
-                        SoundSource.BLOCKS, 0.8f, 1.0f);
+                // 方块自身原版放置音（与原版玩家右手放置一致），BLOCKS 通道，与拆除同频节流
+                SoundEvent placeSound = state.getSoundType(level, bp, null).getPlaceSound();
+                if (level instanceof ServerLevel sl && placeSound != null) {
+                    SoundService.playAtThrottled(sl, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
+                            placeSound, SoundSource.BLOCKS, 0.8f, 1.0f, BLOCK_SOUND_THROTTLE_TICKS);
+                }
             }
         }
     }
