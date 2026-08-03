@@ -173,6 +173,19 @@ public final class SoundService {
 
 > 注意：事件是"通知"语义（CLAUDE.md 陷阱 4），音效是纯瞬时副作用，适合直接订阅事件播放，无需依赖事件顺序。
 
+### 4.4 环境音（不依赖事件，客户端循环）
+
+殖民地有白昼/夜晚两套**循环环境音**，由 `engine/sound/ColonyAmbientSystem.java` 客户端驱动（挂 `ClientTickEvent.Post`），不依赖任何事件，纯时间驱动：
+
+| 相位 | 时间窗口 | 音效 | 音量 |
+|------|---------|------|------|
+| 白天 | dayTime ∈ [1000, 18000)（游客在城；对齐 `tourist.spawnWindowStart`=1000 / `tourist.departureWindowStart`=18000） | `colony_ambient_day`（人群低语） | 0.5 |
+| 夜晚 | 其余时间（游客离城） | `colony_ambient_night`（森林，低音量） | 0.22 |
+
+- 音源是长循环 `.ogg`（`ambient/colony_day.ogg`、`ambient/colony_night.ogg`），sounds.json 里 `"stream": true` 流式播放，不整段载入内存。
+- 播放实例为 `AbstractTickableSoundInstance`（`looping` + `relative` + `SoundSource.AMBIENT` 通道），相位切换停旧启新并淡入。
+- 分界点如需调整，改 `ColonyAmbientSystem` 的 `DAY_START_TICK`/`NIGHT_START_TICK`（或对齐 Config 游客窗口）。
+
 ## 5. 命名与目录约定
 
 - **SoundEvent id**：kebab-case 动词短语，`<对象>_<动作>`，如 `building_place`、`magic_cast`、`ui_click`、`tourist_arrive`。

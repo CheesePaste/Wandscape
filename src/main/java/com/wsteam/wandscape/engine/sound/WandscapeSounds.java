@@ -48,6 +48,12 @@ public final class WandscapeSounds {
     /** 公路铺路。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> ROAD_PLACE = register("road_place");
 
+    // ---- 殖民地环境音（客户端循环，不依赖事件） ----
+    /** 白天（游客在城）人群环境音循环。 */
+    public static final DeferredHolder<SoundEvent, SoundEvent> COLONY_AMBIENT_DAY = register("colony_ambient_day");
+    /** 夜晚（游客离城）森林环境音循环，低音量。 */
+    public static final DeferredHolder<SoundEvent, SoundEvent> COLONY_AMBIENT_NIGHT = register("colony_ambient_night");
+
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(
                 ResourceLocation.fromNamespaceAndPath(Wandscape.MODID, name)));

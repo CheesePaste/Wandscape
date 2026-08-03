@@ -34,6 +34,7 @@ import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.engine.sound.ColonyAmbientSystem;
 import com.wsteam.wandscape.npc.client.NpcScreen;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.tourist.client.TouristScreen;
@@ -242,6 +243,7 @@ public class WandscapeClient {
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
+        ColonyAmbientSystem.tick();
         while (PROJECTION_TOGGLE.consumeClick()) {
             // V key: toggle Wandscape panel open/close
             if (WandscapePanelState.isPanelOpen()) {

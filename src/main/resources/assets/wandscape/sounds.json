@@ -50,5 +50,11 @@
   "road_place": {
     "subtitle": "wandscape.subtitle.road_place",
     "sounds": [ "minecraft:step/stone1" ]
+  },
+  "colony_ambient_day": {
+    "sounds": [ { "name": "wandscape:ambient/colony_day", "stream": true } ]
+  },
+  "colony_ambient_night": {
+    "sounds": [ { "name": "wandscape:ambient/colony_night", "stream": true } ]
   }
 }
