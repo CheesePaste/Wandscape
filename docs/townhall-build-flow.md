@@ -30,7 +30,7 @@ G 键 → ProjectionEnterPacket → 服务器记录投影模式
   │    │    └─ chunkIndex 构建
   │    ├─ 旋转 pattern（rotationSteps != 0）
   │    ├─ ColonyApiImpl.assignColonyIfPossible()              分配殖民地
-  │    └─ 首次 seed warehouse（builder_wand + 64×77 材料）
+  │    └─ 首次 seed warehouse（初始物品为空，7 元素各 ×2000）
   │
   ├─ 4. 判断 firstFree（首次建造不消耗材料）
   │    ├─ config.firstFree() && !sd.isFirstFreeClaimed()

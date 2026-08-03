@@ -3,9 +3,7 @@ package com.wsteam.wandscape.building.internal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -14,17 +12,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -47,7 +43,7 @@ public final class EnqueueHelper {
 
     /**
      * Register a building with {@link BuildingApi} if it hasn't been registered yet.
-     * On the first-ever registration, seeds the colony warehouse with starter items.
+     * On the first-ever registration, seeds the colony warehouse with starter elements.
      *
      * @param pos            the anchor position
      * @param config         the building config
@@ -104,9 +100,9 @@ public final class EnqueueHelper {
             // Assign colony if one exists nearby
             ColonyApiImpl.get().assignColonyIfPossible(state);
 
-            // First building registered → seed warehouse so it has materials to build itself
+            // First building registered → seed warehouse with starter elements
             if (!warehouseSeeded && state.getColonyId() != null) {
-                boolean ok = seedBuilderWand(state.getColonyId());
+                boolean ok = seedInitialElements(state.getColonyId());
                 if (ok) {
                     warehouseSeeded = true;
                 } else {
@@ -410,46 +406,30 @@ public final class EnqueueHelper {
 
     // ──────────────── Warehouse seed ────────────────
 
+    /** Amount of each element seeded into the first colony warehouse. */
+    private static final long INITIAL_ELEMENT_COUNT = 2000;
+
     /**
      * Seed the colony warehouse on first building registration.
-     * 1x builder_wand + 64 of every non-air block used by any building config.
+     * Items start empty; the colony receives 2000 of every element type.
      */
-    private static boolean seedBuilderWand(UUID colonyId) {
+    private static boolean seedInitialElements(UUID colonyId) {
         if (colonyId == null) colonyId = new UUID(0, 0);
         Level level = getServerLevel();
         if (level == null) return false;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) {
-            Log.warn(TAG, "[Enqueue] seedBuilderWand: ColonyItemBank not available");
+            Log.warn(TAG, "[Enqueue] seedInitialElements: ColonyItemBank not available");
             return false;
         }
 
-        // 1x builder_wand
-        WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
-        if (preset != null) {
-            ItemKey wandKey = ItemKey.of("wandscape:wand", preset.nbt().copy());
-            if (bank.count(colonyId, wandKey) == 0) {
-                bank.add(colonyId, wandKey, 1);
-                Log.info(TAG, "[Enqueue] seeded builder_wand (colony={})",
-                        colonyId.toString().substring(0, 8));
-            }
+        for (ElementType element : ElementType.values()) {
+            bank.addElement(colonyId, element, INITIAL_ELEMENT_COUNT);
         }
 
-        // 64x of every unique non-air block across ALL building configs
-        Set<String> seen = new java.util.LinkedHashSet<>();
-        for (BuildingConfig cfg : BuildingConfigLoader.getInstance().getAll().values()) {
-            for (String blockId : cfg.blockMapping().values()) {
-                String cleanId = blockId.replaceAll("\\[.*?\\]", "").trim();
-                if ("minecraft:air".equals(cleanId)) continue;
-                seen.add(cleanId);
-            }
-        }
-        for (String blockId : seen) {
-            bank.add(colonyId, ItemKey.of(blockId, null), 64);
-        }
-
-        Log.info(TAG, "[Enqueue] seeded warehouse: builder_wand + 64x{} unique materials (colony={})",
-                seen.size(), colonyId.toString().substring(0, 8));
+        Log.info(TAG, "[Enqueue] seeded warehouse: {} elements x{} (colony={})",
+                ElementType.values().length, INITIAL_ELEMENT_COUNT,
+                colonyId.toString().substring(0, 8));
         return true;
     }
 
