@@ -129,7 +129,9 @@ public class WorkstationScreen extends MedievalScreen {
                         : selected ? MedievalColors.ACCENT_GOLD
                         : hovered ? MedievalColors.TEXT_WARM_WHITE
                         : MedievalColors.TEXT_MUTED;
-                String name = formatItemName(item.itemId());
+                Component name = (registryItem != null && registryItem != Items.AIR)
+                        ? new ItemStack(registryItem).getHoverName()
+                        : Component.literal(item.itemId());
                 g.drawString(Minecraft.getInstance().font, name, x + 20, y + 2, textColor);
                 String count = "x" + formatCount(item.count());
                 int cw = Minecraft.getInstance().font.width(count);
@@ -170,8 +172,10 @@ public class WorkstationScreen extends MedievalScreen {
                     g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
                     textX += 14;
                 }
-                g.drawString(Minecraft.getInstance().font, formatItemName(item.outputItem()),
-                        textX, y + 1, nameColor);
+                Component recipeName = (registryItem != null && registryItem != Items.AIR)
+                        ? new ItemStack(registryItem).getHoverName()
+                        : Component.literal(item.outputItem());
+                g.drawString(Minecraft.getInstance().font, recipeName, textX, y + 1, nameColor);
 
                 // Requirement / cost row
                 String reason = item.lockedReason();
@@ -304,12 +308,6 @@ public class WorkstationScreen extends MedievalScreen {
             g.drawString(font, text, cx, y, tint);
             cx += font.width(text) + 6;
         }
-    }
-
-    private static String formatItemName(String itemId) {
-        int colon = itemId.indexOf(':');
-        String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
-        return path.replace('_', ' ');
     }
 
     private static String formatCount(long n) {

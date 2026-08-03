@@ -168,6 +168,7 @@ public class WarehouseScreen extends MedievalScreen {
             protected void renderRow(GuiGraphics g, ItemEntry item, int rx, int ry, int index,
                                      boolean selected, boolean hovered) {
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
+                Component name;
                 if (registryItem != null && registryItem != Items.AIR) {
                     ItemStack icon = new ItemStack(registryItem);
                     if (item.nbt() != null && !item.nbt().isEmpty()) {
@@ -175,9 +176,10 @@ public class WarehouseScreen extends MedievalScreen {
                                 net.minecraft.world.item.component.CustomData.of(item.nbt().copy()));
                     }
                     g.renderItem(icon, rx, ry + 2);
+                    name = icon.getHoverName();
+                } else {
+                    name = Component.literal(item.itemId());
                 }
-
-                String name = formatItemName(item.itemId());
                 int textColor = selected ? MedievalColors.BORDER_GOLD
                         : hovered ? MedievalColors.TEXT_WARM_WHITE
                         : MedievalColors.TEXT_MUTED;
@@ -490,12 +492,6 @@ public class WarehouseScreen extends MedievalScreen {
     }
 
     // ── Helpers ──
-
-    private static String formatItemName(String itemId) {
-        int colon = itemId.indexOf(':');
-        String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
-        return path.replace('_', ' ');
-    }
 
     private static String formatCount(long n) {
         if (n < 1000) return String.valueOf(n);

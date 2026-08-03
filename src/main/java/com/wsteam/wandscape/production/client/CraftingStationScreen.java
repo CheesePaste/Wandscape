@@ -123,8 +123,12 @@ public class CraftingStationScreen extends MedievalScreen {
                     g.drawString(Minecraft.getInstance().font, "🔒", textX, y + 1, MedievalColors.TEXT_DIM);
                     textX += 14;
                 }
-                g.drawString(Minecraft.getInstance().font, formatItemName(item.outputItem()),
-                        textX, y + 1, nameColor);
+                String itemFallback = (registryItem != null && registryItem != Items.AIR)
+                        ? new ItemStack(registryItem).getHoverName().getString()
+                        : item.outputItem();
+                Component recipeName = com.wsteam.wandscape.shared.ui.I18n.name(
+                        "craft_recipe.wandscape." + item.recipeId(), itemFallback);
+                g.drawString(Minecraft.getInstance().font, recipeName, textX, y + 1, nameColor);
 
                 // Requirement / cost row
                 String reason = item.lockedReason();
@@ -218,11 +222,5 @@ public class CraftingStationScreen extends MedievalScreen {
             g.drawString(font, text, cx, y, tint);
             cx += font.width(text) + 6;
         }
-    }
-
-    private static String formatItemName(String itemId) {
-        int colon = itemId.indexOf(':');
-        String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
-        return path.replace('_', ' ');
     }
 }
