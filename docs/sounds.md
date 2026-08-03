@@ -81,7 +81,7 @@ Minecraft.getInstance().getSoundManager()
 
 | 职责 | 位置 | 说明 |
 |------|------|------|
-| SoundEvent 定义 | `Wandscape.java` 或独立 `sound/SoundRegistry` 类 | 与现有 ITEMS/BLOCKS/PARTICLE_TYPES DeferredRegister 一致 |
+| SoundEvent 定义 | `engine/sound/WandscapeSounds.java` | 20 个自定义 SoundEvent；`Wandscape.java` 构造器注册 SOUNDS |
 | 播放封装 + 节流 | `engine/service/SoundService.java` | 与 ColonyMetricsService/StatsService/AchievementService 等非 ECS 服务并列，纯 MC 侧 |
 | 音频资源 + sounds.json | `assets/wandscape/sounds/` + `sounds.json` | 纯数据，不进 SavedData |
 
@@ -131,7 +131,7 @@ public final class SoundService {
 | 建筑蓝图放置确认 | `projection/network/ProjectionPlacePacket.java` `handleServer()`:82-93 | 玩家投影确认放置（任务已提交，NPC 后续施工） | 放置确认音，`BLOCKS` |
 | 投影进入/退出 | `projection/client/ProjectionClientState.java` `enterProjection()`:56、`exitProjection()`:82 | 玩家进/出放置模式 | 进入低鸣启动 swoosh，`PLAYERS` |
 | 俯瞰进入 | `overview/client/OverviewClientState.java` `enterOverview()`:41 | 玩家进入俯瞰 | 扬升 swoosh，`PLAYERS` |
-| GUI 按钮点击 | `shared/ui/component/MedievalButton.java` `onPress()`:30-34 | 所有中世纪按钮点击汇聚点 | `UI_BUTTON_CLICK` 或自定义轻点击，`playUI` |
+| GUI 按钮点击 | 无需接线（`AbstractButton.onClick` 自带 `UI_BUTTON_CLICK`） | 所有按钮点击 | 原版已覆盖 |
 | 仓库存取 | `warehouse/network/WarehouseActionPacket.java` `handleWithdraw()`:105、`handleDeposit()`:131 | 玩家存取元素 | 金属叮/铃，`PLAYERS` |
 
 ### P1 NPC / 自动行为（环境反馈）
@@ -140,11 +140,11 @@ public final class SoundService {
 |------|-----------|------|----------|
 | 方块放置 | `engine/boundary/WandscapeBlockOps.java` `setBlock()`:59-68 | 同步/异步建造都汇此 | 用方块自身原版放置音 `state.getSoundType(level,pos,null).getPlaceSound()`，`BLOCKS` |
 | NPC 施法放置 | `engine/boundary/AsyncTransformExecutor.java` `execute()` `thenRun`:99-115（`doWorkAnimation` :110 处） | NPC 放置每块方块 | 自定义施法音，`NEUTRAL` |
-| 玩家手动发布任务 | `task/source/PlayerManualSource.java` `publish()`:30 | 玩家在 GUI 手动创建任务（铺路/填充/投影建筑等） | 低响度纸卷微音，`PLAYERS` |
+| 玩家手动发布任务 | 4 个 road/network packet 的 `publish()` 调用处（RoadPlace/FillBox/DestroyFill/SplineBuild） | 玩家在 GUI 手动创建任务 | 低响度纸卷微音，`PLAYERS`。注：`task/` 是纯 Java（零 MC 依赖），`PlayerManualSource.publish` 不能播音，故在调用方播 |
 | 守卫开火 | `guard/GuardCombat.java` `engage()`:54-79 | 守卫施法攻击（40 tick 节流） | 能量脉冲，`NEUTRAL` |
 | NPC 完工 | `npc/entity/WandscapeNpc.java` `doWorkAnimation()`:731-743 | NPC 执行完动作（已有粒子无声音） | 最自然的完工反馈点，轻快叮 |
 | 建筑建成/拆除 | `building/internal/BuildCompleteListener.java` `onBuildComplete()`:120、`DemolishCompleteListener.java` `onDemolishComplete()`:41 | NPC 蓝图施工完成 | 建成：沉稳确认音；拆除：崩塌 |
-| 游客到达/离开 | `tourist/internal/TouristApiImpl.java` `registerArrival()`:55、`registerDeparture()`:62（事件订阅） | 游客生成/离场 | 到达：轻快入城音；离开：渐弱 |
+| 游客到达/离开 | `tourist/internal/TouristApiImpl.java` `registerArrival()`/`registerDeparture()`（按 UUID 在主世界查实体播 `playEntity`） | 游客生成/离场 | 到达：轻快入城音；离开：渐弱 |
 | 商店补货 | `building/internal/ShopStockManager.java` `restock()`:362（发 ShopRestockedEvent） | 每日补货 | 金币轻响 |
 
 ### P2 模拟经营 / 全局（低频，可做音乐性提示）
@@ -153,8 +153,8 @@ public final class SoundService {
 |------|-----------|------|----------|
 | 建筑关停/重启 | `building/internal/BuildingApiImpl.java`:197/:225（发 BuildingShutdown/RestartedEvent） | 维护费不足/恢复 | 关停：低沉闷响；重启：上升启动音 |
 | 殖民地升级 | `shared/event/ColonyLevelUpEvent.java` | 殖民地升级 | 庄严升级音 |
-| 公路铺路 | `road/engine/RoadBuilder.java` `buildTiles()`:56-188、玩家提交 `road/client/RoadPlacementController.java` `handleEnter()`:218 | NPC 铺路/玩家提交 | 砌路轻响，`BLOCKS` |
-| 奇观生效 | `building/internal/WonderEffectApplier.java` `applyEffects()`:183（发 WonderEffectChangedEvent） | 奇观效果应用/移除 | 神圣和声 |
+| ~~公路铺路~~（跳过） | 玩家提交已有 `TASK_PUBLISH`、NPC 放方块已有 `setBlock` 原版放置音，再加会重复 | — | 若需要道路编辑器进入音可复用 `road_place` |
+| 奇观生效 | `building/internal/WonderEffectApplier.java` `applyEffects()`/`removeEffects()`（发 WonderEffectChangedEvent） | 奇观效果应用/移除 | 神圣和声 |
 
 ### 4.3 事件钩子全表（15 个，模块间通信天然是音效钩子）
 
@@ -183,12 +183,12 @@ public final class SoundService {
 ## 6. 实现步骤（怎么加）
 
 1. **准备音频**：把 `.ogg` 放 `assets/wandscape/sounds/<分类>/<名>.ogg`，写 `sounds.json`。
-2. **注册**：`Wandscape.java` 加 `DeferredRegister<SoundEvent> SOUNDS` + 静态 holder，构造器 `SOUNDS.register(modEventBus)`。
+2. **注册**：建 `engine/sound/WandscapeSounds.java`（`DeferredRegister<SoundEvent>` + 静态 holder），`Wandscape.java` 构造器 `WandscapeSounds.SOUNDS.register(modEventBus)`。
 3. **封装**：建 `engine/service/SoundService.java`（playAt / playEntity / playUI / playAtThrottled）。
 4. **接线**：在 4 清单的挂点加一行 `SoundService.playXxx(...)`。
 5. **翻译**：`zh_cn.json` / `en_us.json` 加 subtitle 键。
 6. **验证**：`./gradlew build`；`runClient` 实测响度、距离衰减、节流是否生效。
-7. **文档同步**：实现后更新 `architecture/README.md` 包地图（+ `engine/service` 说明）；新建 `architecture/packages/sound.md` 记录注册/播放约定。
+7. **文档同步**：已更新 `architecture/README.md` 包地图（engine/service + engine/sound）；注册/播放约定见本文档，无需另建 packages/sound.md。
 8. **commit + 版本号**：音频资源/代码进 jar → 递增 `gradle.properties` 的 `mod_version`（补丁号）。
 
 ## 7. 约定与陷阱

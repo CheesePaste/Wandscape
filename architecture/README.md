@@ -47,7 +47,8 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── boundary/     WandscapeBlockOps/WandscapeMovementOps/WandscapeRitualOps/WandscapeEntityOps + AsyncTransformExecutor + ResourceRequestExecutor
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
 │   ├── system/       ECS System（注册到World.tick()）NavigationSystem + ResourceSupplySystem
-│   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService
+│   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService + SoundService(统一音效播放/节流)
+│   ├── sound/        WandscapeSounds — 全部自定义 SoundEvent 注册点（逻辑id→sounds.json→音频）
 │   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │
 ├── shared/           所有包依赖的公共层

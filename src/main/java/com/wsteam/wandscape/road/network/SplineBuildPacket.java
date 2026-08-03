@@ -12,6 +12,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.task.source.PlayerManualSource;
@@ -27,6 +29,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -162,6 +165,8 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             params.put("material_counts", counts);
 
             long taskId = source.publish(new TaskRequest("road:build_segment", params, 10));
+            SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
+                    WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             edge.incrementPendingSegments(1);
             savedData.setDirty();
 

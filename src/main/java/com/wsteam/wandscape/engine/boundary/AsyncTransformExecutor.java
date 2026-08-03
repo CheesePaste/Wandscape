@@ -7,6 +7,8 @@ import java.util.concurrent.CompletableFuture;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
@@ -15,6 +17,8 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -109,6 +113,12 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (npc != null) {
                 npc.doWorkAnimation(new BlockPos(
                         p.op.target().x(), p.op.target().y(), p.op.target().z()));
+                // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
+                if (npc.level() instanceof ServerLevel sl) {
+                    SoundService.playAt(sl, p.op.target().x() + 0.5,
+                            p.op.target().y() + 0.5, p.op.target().z() + 0.5,
+                            WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f);
+                }
             }
             Log.debug(TAG, "async TransformOp placed: {}→{} at {}",
                     p.op.from().id(), p.op.to().id(), p.op.target());

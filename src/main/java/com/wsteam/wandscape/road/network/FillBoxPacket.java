@@ -9,6 +9,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.road.data.RoadPreset;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.shared.log.Log;
@@ -19,6 +21,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -136,6 +139,8 @@ public record FillBoxPacket(String presetId, BlockPos startPos, BlockPos endPos)
 
         try {
             long taskId = source.publish(new TaskRequest("terrain:fill_box", params, 10));
+            SoundService.playAt(player.serverLevel(), player.getX(), player.getY(), player.getZ(),
+                    WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Fill] Published task #{}: preset={} box=({},{},{})→({},{},{}) tiles={}",
                     taskId, packet.presetId(), minX, minY, minZ, maxX, maxY, maxZ, tiles.size());
         } catch (Exception e) {

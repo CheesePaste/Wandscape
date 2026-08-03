@@ -22,6 +22,7 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -64,6 +65,10 @@ public class WandscapeBlockOps implements BlockOps {
             BlockPos bp = toBlockPos(pos);
             evacuateEntities(level, bp);
             level.setBlock(bp, state, 2);
+            // 方块自身原版放置音（与原版玩家右手放置一致），BLOCKS 通道
+            level.playSound(null, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
+                    state.getSoundType(level, bp, null).getPlaceSound(),
+                    SoundSource.BLOCKS, 0.8f, 1.0f);
         }
     }
 
