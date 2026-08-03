@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.engine.service.SoundService;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,6 +23,7 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
@@ -51,6 +53,9 @@ public class WandscapeBlockOps implements BlockOps {
             Direction.EAST, Direction.WEST, Direction.DOWN
     };
 
+    /** 拆除/清空等"移除"操作的破坏音节流间隔（tick），防止每块都响导致太吵。 */
+    private static final int REMOVE_SOUND_THROTTLE_TICKS = 10;
+
     // Cache block type string → MC Block lookups
     private final ConcurrentMap<String, Block> blockCache = new ConcurrentHashMap<>();
     // Cache resolved BlockStates for types with bracket properties
@@ -63,12 +68,22 @@ public class WandscapeBlockOps implements BlockOps {
         BlockState state = resolveBlockState(type);
         if (state != null) {
             BlockPos bp = toBlockPos(pos);
+            BlockState oldState = level.getBlockState(bp);
             evacuateEntities(level, bp);
             level.setBlock(bp, state, 2);
-            // 方块自身原版放置音（与原版玩家右手放置一致），BLOCKS 通道
-            level.playSound(null, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
-                    state.getSoundType(level, bp, null).getPlaceSound(),
-                    SoundSource.BLOCKS, 0.8f, 1.0f);
+            if (state.isAir() && !oldState.isAir()) {
+                // 移除（拆除/清空）：播被拆方块自身的原版破坏音，节流防止每块都响
+                SoundEvent breakSound = oldState.getSoundType(level, bp, null).getBreakSound();
+                if (level instanceof ServerLevel sl && breakSound != null) {
+                    SoundService.playAtThrottled(sl, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
+                            breakSound, SoundSource.BLOCKS, 0.8f, 1.0f, REMOVE_SOUND_THROTTLE_TICKS);
+                }
+            } else if (!state.isAir()) {
+                // 方块自身原版放置音（与原版玩家右手放置一致），BLOCKS 通道
+                level.playSound(null, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
+                        state.getSoundType(level, bp, null).getPlaceSound(),
+                        SoundSource.BLOCKS, 0.8f, 1.0f);
+            }
         }
     }
 

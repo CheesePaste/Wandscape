@@ -70,4 +70,18 @@ public final class SoundService {
         LAST_PLAYED_TICK.put(id, now);
         level.playSound(null, x, y, z, sound.get(), category, volume, pitch);
     }
+
+    /** 带节流的播放（原版 SoundEvent 版）：同一音效在 minIntervalTicks 内只播一次。 */
+    public static void playAtThrottled(ServerLevel level, double x, double y, double z,
+                                       SoundEvent sound, SoundSource category, float volume, float pitch,
+                                       int minIntervalTicks) {
+        if (level == null || sound == null) return;
+        ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getKey(sound);
+        if (id == null) return;
+        long now = level.getGameTime();
+        Long last = LAST_PLAYED_TICK.get(id);
+        if (last != null && now - last < minIntervalTicks) return;
+        LAST_PLAYED_TICK.put(id, now);
+        level.playSound(null, x, y, z, sound, category, volume, pitch);
+    }
 }
