@@ -15,6 +15,7 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -33,6 +34,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -57,6 +59,18 @@ public final class ShopStockManager {
 
     /** Buildings currently being restocked (prevents duplicate concurrent restocks). */
     private final Set<UUID> restockingInProgress = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Shops that triggered production (synthesize) for goods the warehouse
+     * couldn't supply. Retried periodically so once the produced item lands
+     * in the warehouse, the shop is refilled without waiting for a purchase
+     * or the next daily settlement.
+     */
+    private final Set<UUID> pendingRestock = ConcurrentHashMap.newKeySet();
+
+    /** Ticks between pending-restock retries (≈5s). */
+    private static final int RESTOCK_RETRY_INTERVAL_TICKS = 100;
+    private int restockRetryTicks = 0;
 
     /** Random picker for which affordable good a tourist buys. */
     private final Random random = new Random();
@@ -391,6 +405,7 @@ public final class ShopStockManager {
         }
 
         boolean changed = false;
+        boolean supplyPending = false;
 
         for (ShopGoodDef good : shopConfig.goods()) {
             Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
@@ -403,10 +418,21 @@ public final class ShopStockManager {
             ItemKey itemKey = ItemKey.of(good.itemId(), null);
             long availableInWarehouse = bank.available(colonyId, itemKey);
             int canAfford = (int) Math.min(needed, availableInWarehouse);
-            if (canAfford <= 0) continue;
+
+            if (canAfford <= 0) {
+                // Warehouse has none of the item — request production so a
+                // later retry can fill the shop once the item is synthesized.
+                if (requestSynthesize(good.itemId(), needed)) supplyPending = true;
+                continue;
+            }
 
             // Consume items from warehouse immediately (they are in transit)
             bank.consume(colonyId, itemKey, canAfford);
+
+            if (canAfford < needed && requestSynthesize(good.itemId(), needed - canAfford)) {
+                // Partial fill — request production for the remaining shortfall.
+                supplyPending = true;
+            }
 
             if (hasTransport && warehousePos != null) {
                 // Launch async transport visualization from warehouse to shop.
@@ -429,12 +455,74 @@ public final class ShopStockManager {
             }
         }
 
+        // Keep the shop in the retry set only while future production could still
+        // fill a short good; drop it once everything is stocked or unsynthesizable.
+        if (supplyPending) {
+            pendingRestock.add(buildingId);
+        } else {
+            pendingRestock.remove(buildingId);
+        }
+
         if (changed) {
             savedData.setDirty();
             Map<String, Integer> finalStock = savedData.getOrCreateShopStock(buildingId);
             updateHasStock(buildingId, finalStock);
             NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
             Log.debug(TAG, "[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
+        }
+    }
+
+    /**
+     * Ask the engine supply chain to synthesize {@code itemId} (at a workstation)
+     * because the warehouse is short. The produced item lands in the warehouse;
+     * the pending-restock retry picks it up on a later tick.
+     *
+     * @return true if the shortfall is being handled (recipe found, task queued or
+     *         already in flight); false if it cannot be synthesized right now
+     */
+    private boolean requestSynthesize(String itemId, int amount) {
+        try {
+            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, WandscapeEngine.getWorld());
+        } catch (Exception e) {
+            Log.warn(TAG, "[Shop] requestSynthesize({} x{}) failed: {}", itemId, amount, e.getMessage());
+            return false;
+        }
+    }
+
+    // ── Pending-restock retry ──
+
+    /** Re-attempt restock for shops awaiting produced goods, on a slow heartbeat. */
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        if (pendingRestock.isEmpty()) return;
+        if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
+        restockRetryTicks = 0;
+        retryPendingRestocks();
+    }
+
+    private void retryPendingRestocks() {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+
+        for (UUID buildingId : List.copyOf(pendingRestock)) {
+            BuildingState state = savedData.getBuilding(buildingId);
+            if (state == null || state.isShutdown() || !state.isStructureIntact()) {
+                pendingRestock.remove(buildingId);
+                continue;
+            }
+            UUID colonyId = state.getColonyId();
+            if (colonyId == null) continue;
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+            if (config == null || config.shop() == null) {
+                pendingRestock.remove(buildingId);
+                continue;
+            }
+            // restock() re-derives supplyPending and updates the pending set itself.
+            restock(buildingId, config.shop(), colonyId, bank);
         }
     }
 
