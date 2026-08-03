@@ -72,10 +72,13 @@ public final class ColonyAmbientSystem {
             Log.warn(TAG, "ambient sound event not bound — skipping");
             return;
         }
-        AmbientLoop loop = new AmbientLoop(ev, day ? DAY_VOLUME : NIGHT_VOLUME);
+        float target = day ? DAY_VOLUME : NIGHT_VOLUME;
+        Log.info(TAG, "start {} (target={}, masterSlider={}, ambientSlider={})", day ? "DAY" : "NIGHT", target,
+                Minecraft.getInstance().options.getSoundSourceVolume(SoundSource.MASTER),
+                Minecraft.getInstance().options.getSoundSourceVolume(SoundSource.AMBIENT));
+        AmbientLoop loop = new AmbientLoop(ev, target);
         activeLoop = loop;
         Minecraft.getInstance().getSoundManager().play(loop);
-        Log.debug(TAG, "start {}", day ? "DAY" : "NIGHT");
     }
 
     private static void stopLoop() {
@@ -86,23 +89,18 @@ public final class ColonyAmbientSystem {
         playing = false;
     }
 
-    /** 可循环的 2D 环境音实例，启动时淡入目标音量。 */
+    /** 可循环的 2D 环境音实例，走 MASTER 通道（环境通道滑块可能为 0 导致听不到），直接以目标音量播放。 */
     private static final class AmbientLoop extends AbstractTickableSoundInstance {
-        private final float targetVolume;
-
         AmbientLoop(SoundEvent sound, float volume) {
-            super(sound, SoundSource.AMBIENT, SoundInstance.createUnseededRandom());
+            super(sound, SoundSource.MASTER, SoundInstance.createUnseededRandom());
             this.looping = true;
             this.relative = true;
-            this.targetVolume = volume;
-            this.volume = 0.0F;
+            this.volume = volume;
         }
 
         @Override
         public void tick() {
-            if (this.volume < this.targetVolume) {
-                this.volume = Math.min(this.targetVolume, this.volume + 0.02F);
-            }
+            // 音量已直接设为目标值；无需额外处理
         }
     }
 }

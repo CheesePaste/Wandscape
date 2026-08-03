@@ -59,6 +59,10 @@ public final class ColonyAmbientTracker {
         BuildingSavedData sd = BuildingSavedData.get(level);
         if (sd == null) return;
 
+        long dayTime = level.getDayTime() % 24000L;
+        boolean day = dayTime >= DAY_START_TICK && dayTime < NIGHT_START_TICK;
+        long now = level.getGameTime();
+
         List<BoundingBox> townBoxes = new ArrayList<>();
         for (BuildingState b : sd.getAllBuildings()) {
             BoundingBox bounds = b.getBounds();
@@ -66,10 +70,10 @@ public final class ColonyAmbientTracker {
                 townBoxes.add(bounds.inflatedBy(TOWN_RADIUS));
             }
         }
-
-        long dayTime = level.getDayTime() % 24000L;
-        boolean day = dayTime >= DAY_START_TICK && dayTime < NIGHT_START_TICK;
-        long now = level.getGameTime();
+        if (counter % 200 == 0) {
+            Log.info(TAG, "ambient scan: {} buildings, {} town boxes (day={})",
+                    sd.getAllBuildings().size(), townBoxes.size(), day);
+        }
 
         java.util.Set<UUID> active = new java.util.HashSet<>();
         for (ServerPlayer player : level.players()) {
@@ -95,7 +99,7 @@ public final class ColonyAmbientTracker {
                 lastDay.put(id, day);
                 lastSentTick.put(id, now);
                 PacketDistributor.sendToPlayer(player, new ColonyAmbientPacket(inTown, day));
-                Log.debug(TAG, "player {} -> {} ({} {})", id.toString().substring(0, 8),
+                Log.info(TAG, "player {} -> {} ({} {})", id.toString().substring(0, 8),
                         inTown ? "IN_TOWN" : "OUTSIDE", inTown ? (day ? "DAY" : "NIGHT") : "-",
                         stateChanged ? "changed" : "heartbeat");
             }
