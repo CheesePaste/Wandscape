@@ -44,6 +44,8 @@
 
 **为什么成就系统用原版 Advancement 而非自定义成就模块？** 原版进度系统已内置全部所需能力：树形进度界面（L 键）、隐藏成就（`hidden:true` → 解锁前显示 `???`）、解锁 toast + 聊天广播、按玩家持久化、`/advancement` 查询命令。自建则要重写 GUI/持久化/网络同步/隐藏规则。模组侧只做两件事：`data/wandscape/advancement/*.json` 定义 15 个进度 + 条件达成时 `PlayerAdvancements.award()` 授予。criterion 用 `minecraft:impossible` 占位——它是空 trigger，`award()` 直接改进度、不依赖 trigger 自然触发。授予幂等（已授予则 grantProgress 返回 false、不重复弹 toast），因此事件驱动 + 100tick 周期扫描可以安全地补授予离线后上线的玩家。#15「击退袭击」挂 `ColonyRaidVictoryEvent`（raid 系统 8/2 已实现，胜利即广播）。
 
+**为什么施工虚影复用投影虚影渲染 + 走 BuildingAreaSyncPacket 的 completed 标记？** 需求是「未建好建筑显示虚影便于贴紧放置」。投影预览（ProjectionRenderer）只渲染当前正在放置的那一栋；对已放置、施工中的建筑，客户端需要独立的「未建好」信号。故把半透明方块虚影抽成共享 `BuildingGhostRenderer.renderGhostBlocks`（避免 building→projection 跨模块直引），`BuildingEntry` 增 `completed`（来自 `structureIntact`）随现有面板同步包下发；放置成功后重发同步包，刚放的建筑足迹立即出现、无需重开面板。面板关闭时不渲染（与 B 键区域渲染同一约定），正常游玩画面干净。
+
 ## 数据设计
 
 **block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。
