@@ -18,8 +18,6 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.production.ProductionRecipeLoader;
-import com.wsteam.wandscape.production.data.SynthesizeRecipe;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
@@ -92,41 +90,47 @@ public class ResourceSupplySystem implements System {
      * Prefers synthesize (elements → items) over raw node gathering.
      */
     private void trySupplyResource(ResourceId resource, int deficit, World world) {
-        ProductionRecipeLoader recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
-        if (recipes != null) {
-            String recipeKey = stripMcPrefix(resource.id());
-            SynthesizeRecipe recipe = recipes.getSynthesizeRecipe(recipeKey);
-            if (recipe != null && !isSynthesizeInFlight(recipeKey, world)) {
-                BuildingApi api = getBuildingApi();
-                if (api != null) {
-                    List<UUID> stations = api.getBuildingsByCategory(null, "crafting_station");
-                    if (!stations.isEmpty()) {
-                        UUID stationId = stations.get(0);
-                        BuildingData building = api.getBuilding(stationId);
-                        if (building != null) {
-                            enqueueSynthesize(api, stationId, building.getPosition(), recipeKey, deficit);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
+        if (enqueueSynthesize(resource.id(), deficit, world)) return;
         tryGatherElement(resource, deficit);
     }
 
-    private void enqueueSynthesize(BuildingApi api, UUID stationId, BlockPos pos,
-                                   String recipeKey, int amount) {
+    /**
+     * Enqueue a {@code production:synthesize} work item for {@code itemId} at a
+     * free workstation, unless a synthesize for the same recipe is already queued
+     * or in flight. The synthesized output lands in the colony warehouse; callers
+     * that initiated a restock should retry once the item becomes available.
+     *
+     * @return true if the shortfall is being handled (recipe found and task queued
+     *         or already in flight); false if it cannot be synthesized right now
+     */
+    public static boolean enqueueSynthesize(String itemId, int amount, @Nullable World world) {
+        var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
+        if (recipes == null) return false;
+        if (recipes.getSynthesizeRecipe(itemId) == null) return false;
+
+        if (world != null && isSynthesizeInFlight(itemId, world)) return true;
+
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        List<UUID> stations = api.getBuildingsByCategory(null, "workstation");
+        if (stations.isEmpty()) return false;
+
+        UUID stationId = stations.get(0);
+        BuildingData building = api.getBuilding(stationId);
+        if (building == null || building.isShutdown()) return false;
+
+        BlockPos pos = building.getPosition();
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("anchor", posToJsonArray(pos));
-        params.put("recipe_id", new JsonPrimitive(recipeKey));
+        params.put("recipe_id", new JsonPrimitive(itemId));
         params.put("count", new JsonPrimitive(Math.max(amount, 1)));
         params.put("channel_ticks", new JsonPrimitive(200));
         params.put("mana_cost", new JsonPrimitive(5));
 
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40));
-        Log.info(TAG, "shortfall {} x{} → synthesize:{} at station {}",
-                recipeKey, amount, recipeKey, stationId.toString().substring(0, 8));
+        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {}",
+                itemId, amount, itemId, stationId.toString().substring(0, 8));
+        return true;
     }
 
     private void tryGatherElement(ResourceId resource, int deficit) {
@@ -199,11 +203,6 @@ public class ResourceSupplySystem implements System {
             }
         }
         return false;
-    }
-
-    private static String stripMcPrefix(String id) {
-        if (id.startsWith("minecraft:")) return id.substring("minecraft:".length());
-        return id;
     }
 
     private static JsonArray posToJsonArray(BlockPos pos) {
