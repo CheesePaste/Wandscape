@@ -1,6 +1,6 @@
 {
   "id": "nodefire",
-  "display_name": "nodefire",
+  "display_name": "Fire Node",
   "category": "node",
   "first_free": true,
   "pattern": [

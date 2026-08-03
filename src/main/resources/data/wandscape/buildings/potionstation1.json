@@ -1,6 +1,6 @@
 {
   "id": "potionstation1",
-  "display_name": "potionstation1",
+  "display_name": "Potion Station",
   "category": "potion_station",
   "first_free": true,
   "pattern": [

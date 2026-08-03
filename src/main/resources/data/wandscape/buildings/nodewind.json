@@ -1,6 +1,6 @@
 {
   "id": "nodewind",
-  "display_name": "nodewind",
+  "display_name": "Wind Node",
   "category": "node",
   "first_free": true,
   "pattern": [

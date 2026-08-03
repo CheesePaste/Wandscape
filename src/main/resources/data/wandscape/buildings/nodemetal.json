@@ -1,6 +1,6 @@
 {
   "id": "nodemetal",
-  "display_name": "nodemetal",
+  "display_name": "Metal Node",
   "category": "node",
   "first_free": true,
   "pattern": [

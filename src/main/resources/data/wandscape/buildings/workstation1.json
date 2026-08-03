@@ -1,6 +1,6 @@
 {
   "id": "workstation1",
-  "display_name": "workstation1",
+  "display_name": "Workstation",
   "category": "workstation",
   "first_free": true,
   "pattern": [

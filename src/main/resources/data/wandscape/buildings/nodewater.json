@@ -1,6 +1,6 @@
 {
   "id": "nodewater",
-  "display_name": "nodewater",
+  "display_name": "Water Node",
   "category": "node",
   "first_free": true,
   "pattern": [
