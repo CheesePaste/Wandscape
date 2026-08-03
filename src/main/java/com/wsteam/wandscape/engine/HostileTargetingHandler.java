@@ -24,6 +24,9 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
  * mod 的生物），就追加一个同优先级、目标为 {@link VillagerLike} 的等价 goal。
  * 这样自动覆盖僵尸族 / 灾厄村民 / 劫掠兽，同时天然排除不追村民的中立生物
  * （如僵尸猪灵），也无需随原版生物增减而维护清单。
+ *
+ * <p>同一实体可能多次加入世界（维度传送 / chunk 重载），若目标选择器已存在本
+ * handler 追加的等价 goal 则跳过，避免每次 join 叠加一个重复 goal。
  */
 public final class HostileTargetingHandler {
 
@@ -45,6 +48,8 @@ public final class HostileTargetingHandler {
             Goal goal = wrapped.getGoal();
             if (!(goal instanceof NearestAttackableTargetGoal<?> targetGoal)) continue;
             if (!targetsVillagers(targetGoal)) continue;
+            // 同一实体可能多次 join（维度传送/chunk 重载）——重复 add 会叠加相同 goal
+            if (hasVillagerLikeGoal(mob)) return;
             // 该生物原本就猎杀村民 → 同优先级、同视野规则地索敌 NPC/游客
             mob.targetSelector.addGoal(wrapped.getPriority(), villagerLikeGoal(mob));
             return;
@@ -61,13 +66,30 @@ public final class HostileTargetingHandler {
                 e -> e instanceof VillagerLike);
     }
 
+    /** 已存在本 handler 追加的等价 goal（唯一标记：目标类恰为 PathfinderMob.class，原版生物不会直接索敌该宽类）。 */
+    private static boolean hasVillagerLikeGoal(Mob mob) {
+        for (WrappedGoal wrapped : mob.targetSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof NearestAttackableTargetGoal<?> goal
+                    && targetTypeOf(goal) == PathfinderMob.class) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean targetsVillagers(NearestAttackableTargetGoal<?> goal) {
+        Class<?> type = targetTypeOf(goal);
+        return type != null && AbstractVillager.class.isAssignableFrom(type);
+    }
+
+    @Nullable
+    private static Class<?> targetTypeOf(NearestAttackableTargetGoal<?> goal) {
+        if (TARGET_TYPE == null) return null;
         try {
-            Class<?> type = (Class<?>) TARGET_TYPE.get(goal);
-            return type != null && AbstractVillager.class.isAssignableFrom(type);
+            return (Class<?>) TARGET_TYPE.get(goal);
         } catch (IllegalAccessException e) {
             Log.warn(TAG, "反射读取索敌目标类失败: {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
