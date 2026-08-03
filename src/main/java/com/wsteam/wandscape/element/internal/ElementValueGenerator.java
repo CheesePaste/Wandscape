@@ -63,12 +63,28 @@ public class ElementValueGenerator {
         }
     }
 
+    /** Recipe kinds used in value resolution; keeps RecipeNode free of MC types. */
+    enum RecipeKind {
+        CRAFTING(CRAFTING_EFFICIENCY),
+        SMELTING(SMELTING_EFFICIENCY),
+        STONECUTTING(STONECUTTING_EFFICIENCY),
+        SMITHING(SMITHING_EFFICIENCY);
+
+        final double efficiency;
+
+        RecipeKind(double efficiency) {
+            this.efficiency = efficiency;
+        }
+    }
+
     record RecipeNode(
         String outputId,
         int outputCount,
-        RecipeType<?> recipeType,
+        RecipeKind kind,
         List<IngredientSlot> slots
     ) {}
+
+    record Resolution(Map<String, Map<ElementType, Long>> values, int iterations) {}
 
     public record GenerationReport(
         int seedsLoaded,
@@ -157,7 +173,7 @@ public class ElementValueGenerator {
                 }
                 if (!allKnown || slots.isEmpty()) continue;
 
-                RecipeNode node = new RecipeNode(outputId, outputCount, type, slots);
+                RecipeNode node = new RecipeNode(outputId, outputCount, toKind(type), slots);
                 recipeIndex.computeIfAbsent(outputId, k -> new ArrayList<>()).add(node);
                 recipesProcessed++;
             }
@@ -186,46 +202,71 @@ public class ElementValueGenerator {
     // ── Phase 3: Iterate ──
 
     void iterate() {
-        knownValues.putAll(seedValues);
+        Resolution res = resolve(seedValues, recipeIndex, MAX_ITERATIONS);
+        knownValues.clear();
+        knownValues.putAll(res.values());
+        iterationsRequired = res.iterations();
+    }
+
+    /**
+     * Fixed-point value resolution. Unlike a single sweep, already-resolved
+     * outputs are recomputed every pass, so a remaining-item subtraction
+     * (e.g. milk bucket − returned bucket) takes effect even when the
+     * remaining item's own recipe resolves in a later pass. Seed values are
+     * authoritative and never overwritten by recipes.
+     */
+    static Resolution resolve(
+            Map<String, Map<ElementType, Long>> seeds,
+            Map<String, List<RecipeNode>> recipeIndex,
+            int maxIterations) {
+        Map<String, Map<ElementType, Long>> known = new LinkedHashMap<>(seeds);
 
         boolean changed = true;
-        iterationsRequired = 0;
-
-        while (changed && iterationsRequired < MAX_ITERATIONS) {
+        int iterations = 0;
+        while (changed && iterations < maxIterations) {
             changed = false;
-            iterationsRequired++;
+            iterations++;
 
             for (var entry : recipeIndex.entrySet()) {
                 String outputId = entry.getKey();
-                if (knownValues.containsKey(outputId)) continue;
+                if (seeds.containsKey(outputId)) continue; // seeds are authoritative
 
+                Map<ElementType, Long> best = null;
                 for (RecipeNode node : entry.getValue()) {
-                    Map<ElementType, Long> computed = computeFromNode(node);
-                    if (computed != null && !computed.isEmpty()) {
-                        knownValues.put(outputId, computed);
-                        changed = true;
-                        break;
-                    }
+                    Map<ElementType, Long> computed = computeFromNode(node, known);
+                    if (computed == null || computed.isEmpty()) continue;
+                    best = computed;
+                    break; // first resolvable recipe wins (existing semantics)
+                }
+                if (best == null) continue; // not all ingredients resolved yet
+
+                Map<ElementType, Long> current = known.get(outputId);
+                if (current == null || !current.equals(best)) {
+                    known.put(outputId, best);
+                    changed = true;
                 }
             }
         }
+        return new Resolution(known, iterations);
     }
 
-    private Map<ElementType, Long> computeFromNode(RecipeNode node) {
+    private static Map<ElementType, Long> computeFromNode(
+            RecipeNode node,
+            Map<String, Map<ElementType, Long>> known) {
         Map<ElementType, Long> total = new HashMap<>();
 
         for (IngredientSlot slot : node.slots) {
             Map<ElementType, Long> best = null;  // net value (ingredient - remaining)
             for (int i = 0; i < slot.itemOptions().size(); i++) {
                 String itemId = slot.itemOptions().get(i);
-                Map<ElementType, Long> val = knownValues.get(itemId);
+                Map<ElementType, Long> val = known.get(itemId);
                 if (val == null) continue;
 
                 // Net cost = ingredient value minus remaining item value (e.g. milk bucket - bucket)
                 Map<ElementType, Long> net = new HashMap<>(val);
                 String remainingId = slot.remainingOptions().get(i);
                 if (!remainingId.isEmpty()) {
-                    Map<ElementType, Long> remVal = knownValues.get(remainingId);
+                    Map<ElementType, Long> remVal = known.get(remainingId);
                     if (remVal != null) {
                         subtractFrom(net, remVal);
                     }
@@ -241,7 +282,7 @@ public class ElementValueGenerator {
 
         if (total.isEmpty()) return null;
 
-        double efficiency = getEfficiency(node.recipeType);
+        double efficiency = node.kind().efficiency;
         Map<ElementType, Long> result = new HashMap<>();
         for (var entry : total.entrySet()) {
             long scaled = (long) (entry.getValue() * efficiency / node.outputCount);
@@ -283,13 +324,13 @@ public class ElementValueGenerator {
         }
     }
 
-    private static double getEfficiency(RecipeType<?> type) {
-        if (type == RecipeType.STONECUTTING) return STONECUTTING_EFFICIENCY;
+    private static RecipeKind toKind(RecipeType<?> type) {
         if (type == RecipeType.SMELTING || type == RecipeType.BLASTING
             || type == RecipeType.SMOKING || type == RecipeType.CAMPFIRE_COOKING)
-            return SMELTING_EFFICIENCY;
-        if (type == RecipeType.SMITHING) return SMITHING_EFFICIENCY;
-        return CRAFTING_EFFICIENCY;
+            return RecipeKind.SMELTING;
+        if (type == RecipeType.STONECUTTING) return RecipeKind.STONECUTTING;
+        if (type == RecipeType.SMITHING) return RecipeKind.SMITHING;
+        return RecipeKind.CRAFTING;
     }
 
     // ── Phase 4: Find matching blocks ──
