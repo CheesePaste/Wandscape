@@ -51,6 +51,13 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                     BuildingAreaSyncPacket.sendToPlayer(player);
                 }
             }
+
+            // Seed the player's saved tutorial progress (completed steps / dismissal),
+            // independent of colony existence so a pre-colony dismissal is honored.
+            var guideProgress = com.wsteam.wandscape.shared.data.GuideProgressSavedData
+                    .get(player.serverLevel()).get(player.getUUID());
+            PacketDistributor.sendToPlayer(player,
+                    new GuideProgressSyncPacket(guideProgress.stepIndex(), guideProgress.dismissed()));
         } else {
             PanelStateTracker.close(playerId);
         }

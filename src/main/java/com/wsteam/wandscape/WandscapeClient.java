@@ -234,6 +234,11 @@ public class WandscapeClient {
                     new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(packet.markdownContent()));
         });
 
+        // Guide progress seed — apply saved tutorial step/dismissal on panel open
+        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.setClientHandler(packet ->
+                com.wsteam.wandscape.shared.ui.guidance.GuideSession.applySync(
+                        packet.stepIndex(), packet.dismissed()));
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 

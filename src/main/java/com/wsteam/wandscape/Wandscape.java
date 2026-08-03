@@ -578,6 +578,16 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,
                         com.wsteam.wandscape.shared.network.GuideTestPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet))
+                // ── Guide progress (onboarding persistence) ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.handleClient(packet))
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.TYPE,
+                        com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
                 .playToClient(
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
