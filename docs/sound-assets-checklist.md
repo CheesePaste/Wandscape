@@ -38,7 +38,6 @@
 - [ ] `sounds/building/restart.ogg` — 建筑恢复运行。上升启动音，约 1.5s
 - [ ] `sounds/colony/level_up.ogg` — 殖民地升级。庄严升级音，约 2s
 - [ ] `sounds/building/wonder.ogg` — 奇观效果应用/移除。神圣和声，约 2.5s
-- ~~`sounds/road/place.ogg`~~ — 暂缓：玩家提交已有 `task/publish`、NPC 放方块已有原版放置音，此音会重复。如需道路编辑器进入音再启用
 
 ## 不用找的（直接用原版）
 
