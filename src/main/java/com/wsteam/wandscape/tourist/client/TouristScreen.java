@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
@@ -160,13 +161,14 @@ public class TouristScreen extends MedievalScreen {
         return delta >= 0 ? "+" + delta : String.valueOf(delta);
     }
 
-    /** Debug: state display name plus raw enum name. */
-    private String formatState() {
+    /** Debug: localized state display name plus raw enum name. */
+    private Component formatState() {
         try {
             TouristState st = TouristState.valueOf(currentState);
-            return st.getDisplayName() + " (" + currentState + ")";
+            return I18n.name(st.getDisplayNameKey(), st.getDisplayName())
+                    .copy().append(" (" + currentState + ")");
         } catch (IllegalArgumentException ignored) {
-            return currentState;
+            return Component.literal(currentState);
         }
     }
 

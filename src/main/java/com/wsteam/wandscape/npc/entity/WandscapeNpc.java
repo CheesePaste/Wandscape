@@ -455,77 +455,113 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         // 1. Navigation states (visible even if idle task-wise)
         if (nav != null) {
             switch (nav.mode) {
-                case TELEPORT_WAITING -> { return "等待魔力"; }
-                case TELEPORT_RITUAL   -> { return "等待传送"; }
-                case PATHFINDING       -> { return "移动中"; }
+                case TELEPORT_WAITING -> { return "waiting_magic"; }
+                case TELEPORT_RITUAL   -> { return "waiting_teleport"; }
+                case PATHFINDING       -> { return "moving"; }
             }
         }
 
         // 2. No task executor or no work → idle
-        if (exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null) || exec.state == ExecutorState.IDLE) return "空闲";
+        if (exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null) || exec.state == ExecutorState.IDLE) return "idle";
 
         // 3. Pending async future (navigation or channeled op)
         if (exec.pendingFuture != null && !exec.pendingFuture.isDone()) {
-            if (exec.pendingFutureIsNav) return "移动中";
+            if (exec.pendingFutureIsNav) return "moving";
             // Channeled op in progress
             String kind = exec.currentOpKind;
             if (kind != null) {
                 if (kind.startsWith("block_interact:")) {
                     String action = kind.substring("block_interact:".length());
-                    return actionDisplayName(action);
+                    return actionKey(action);
                 }
                 if (kind.startsWith("ritual:")) {
                     String ritual = kind.substring("ritual:".length());
-                    return ritualDisplayName(ritual);
+                    return ritualKey(ritual);
                 }
-                if (kind.equals("combat")) return "战斗中";
+                if (kind.equals("combat")) return "combat";
             }
-            return "引导中";
+            return "guiding";
         }
 
         // 4. Actively executing
         if (exec.state == ExecutorState.ACTIVE) {
             if (exec.currentSequence != null) {
-                return exec.currentSequence.label();
+                return "task:" + exec.currentSequence.label();
             }
             String kind = exec.currentOpKind;
             if (kind != null) {
                 if (kind.startsWith("block_interact:")) {
-                    return actionDisplayName(kind.substring("block_interact:".length()));
+                    return actionKey(kind.substring("block_interact:".length()));
                 }
                 if (kind.startsWith("ritual:")) {
-                    return ritualDisplayName(kind.substring("ritual:".length()));
+                    return ritualKey(kind.substring("ritual:".length()));
                 }
-                if (kind.equals("transform")) return "建造中";
-                if (kind.equals("combat")) return "战斗中";
+                if (kind.equals("transform")) return "transforming";
+                if (kind.equals("combat")) return "combat";
             }
-            return "执行中";
+            return "executing";
         }
 
-        if (exec.state == ExecutorState.WAITING) return "等待中";
+        if (exec.state == ExecutorState.WAITING) return "waiting";
 
         return "";
     }
 
-    private static String actionDisplayName(String action) {
+    private static String actionKey(String action) {
         return switch (action) {
-            case "gather" -> "采集中";
-            case "place" -> "放置中";
-            case "break" -> "破坏中";
-            case "interact" -> "交互中";
-            case "cast" -> "施法中";
-            default -> "执行: " + action;
+            case "gather" -> "gathering";
+            case "place" -> "placing";
+            case "break" -> "breaking";
+            case "interact" -> "interacting";
+            case "cast" -> "casting";
+            default -> "op:" + action;
         };
     }
 
-    private static String ritualDisplayName(String ritual) {
+    private static String ritualKey(String ritual) {
         return switch (ritual) {
-            case "self_teleport" -> "传送中";
-            case "lightning" -> "召唤雷电";
+            case "self_teleport" -> "teleporting";
+            case "lightning" -> "summon_lightning";
+            case "portal_gate" -> "portal_gate";
+            case "rain_call" -> "rain_call";
+            case "clear_weather" -> "clear_weather";
+            default -> "ritual:" + ritual;
+        };
+    }
+
+    /**
+     * Client-side fallback (zh) for a status key, shown only when the lang
+     * entry is missing. Keys prefixed {@code op:}/{@code ritual:}/{@code task:}
+     * carry dynamic payloads and never resolve via lang — fallback reassembles
+     * the original display text.
+     */
+    public static String statusFallback(String statusKey) {
+        return switch (statusKey) {
+            case "waiting_magic" -> "等待魔力";
+            case "waiting_teleport" -> "等待传送";
+            case "moving" -> "移动中";
+            case "idle" -> "空闲";
+            case "gathering" -> "采集中";
+            case "placing" -> "放置中";
+            case "breaking" -> "破坏中";
+            case "interacting" -> "交互中";
+            case "casting" -> "施法中";
+            case "combat" -> "战斗中";
+            case "guiding" -> "引导中";
+            case "transforming" -> "建造中";
+            case "executing" -> "执行中";
+            case "waiting" -> "等待中";
+            case "teleporting" -> "传送中";
+            case "summon_lightning" -> "召唤雷电";
             case "portal_gate" -> "开启传送门";
             case "rain_call" -> "祈雨";
             case "clear_weather" -> "驱云";
-            default -> "施法: " + ritual;
+            default -> {
+                if (statusKey.startsWith("op:")) yield "执行: " + statusKey.substring(3);
+                if (statusKey.startsWith("ritual:")) yield "施法: " + statusKey.substring(7);
+                if (statusKey.startsWith("task:")) yield statusKey.substring(5);
+                yield statusKey;
+            }
         };
     }
 

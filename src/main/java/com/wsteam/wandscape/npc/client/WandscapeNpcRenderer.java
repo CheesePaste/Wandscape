@@ -12,6 +12,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -118,7 +119,8 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
 
     private void renderStatusText(WandscapeNpc entity, String text, PoseStack poseStack,
                                   MultiBufferSource buffer, int packedLight) {
-        Component displayName = Component.literal("§7" + text); // gray italics-like
+        Component displayName = I18n.name("npc.wandscape.state." + text, WandscapeNpc.statusFallback(text))
+                .copy().withStyle(style -> style.withColor(0xAAAAAA)); // gray
         Font font = this.getFont();
         double dist = this.entityRenderDispatcher.distanceToSqr(entity);
         if (dist > 4096.0) return; // >64 blocks, don't render
