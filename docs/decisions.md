@@ -375,6 +375,12 @@
 2. **共享 `ResourceSupplySystem.enqueueSynthesize(itemId, amount, world)`**：查配方 → 找 workstation（修正类别）→ `isSynthesizeInFlight` 去重 → 入队 `production:synthesize`。`trySupplyResource` 与 `EngineBootstrap.createShortageHandler` 均改用它（原 80 行重复逻辑删除）。
 3. **`ShopStockManager.restock` 补货触发**：仓库缺货时调 `enqueueSynthesize` 补缺口；新增 `pendingRestock` 集合 + `ServerTickEvent.Post` 每 ~100 tick 重试，物品入仓后补齐店铺并退出重试集。
 
+### 后续修复：按在途量聚合去重（2026-08-03）
+
+实测打开 workstation 看到一堆合成任务、合成量远超目标。根因：`enqueueSynthesize` 原去重 `isSynthesizeInFlight` **只查全局任务池**，而 `BuildingTaskSource` 每 20 tick 才从工作站队列提升一个 work item——补货重试每 100 tick 在「已入队、未提升」的窗口内重复入队，堆积出 N 个同配方合成任务。
+
+改为 `countSynthesizeInFlight` 统计**工作站队列 + 任务池**的全部在途合成量（recipe_id 前缀无关匹配），`toAdd = amount − inFlight` 只入队缺口，在途已够则跳过。效果：多个补货入口（购买/每日/重试）对同一配方最多保持「总在途 ≈ 总需求」，不再超额合成。
+
 ### 结果链路
 
 ```

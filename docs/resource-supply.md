@@ -54,7 +54,7 @@
   1. 任务挂起时 `ResourceShortageHandler`（`EngineBootstrap.createShortageHandler`）立即尝试入队合成（优先级 40）
   2. `ResourceSupplySystem` 每 40 tick 兜底重试（若当时无空闲合成站）
   3. 商店补货直接调用共享的 `ResourceSupplySystem.enqueueSynthesize`
-- **防重复**：同一配方的合成任务已在队中（`isSynthesizeInFlight`）则不再重复入队
+- **防重复（按量聚合）**：`enqueueSynthesize` 统计该配方**在途合成总量**（所有工作站队列中的 work item + 任务池中的合成任务），只入队「需求 − 在途」的缺口；在途已够则不再入队——避免慢心跳重复入队导致合成量远超目标
 - **何时停止**：物品补足后，挂起任务被唤醒继续；商店物品入仓后 `pendingRestock` 重试把货补齐并退出
 
 > 合成需要的元素由合成站操作内部消耗；元素不足时会自动级联到采集流程（见下）。
