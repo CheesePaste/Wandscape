@@ -218,6 +218,9 @@ public class MagicBeamEntity extends Entity {
             double eff = radius + mob.getBbWidth() / 2.0;
             if (center.distanceToSqr(closest) <= eff * eff) {
                 mob.invulnerableTime = 0;
+                // 光束只造成伤害、不造成击退：magic/indirectMagic 不在 no_knockback 标签，
+                // hurt() 会按源点方向击退——先记速度再恢复以抵消。伤害/记仇/反击不受影响。
+                Vec3 pre = mob.getDeltaMovement();
                 if (casterNpc != null && !casterNpc.isRemoved()) {
                     // NPC 施法：伤害记为 NPC 造成（source.getEntity()=NPC）→ 怪物 HurtByTargetGoal
                     // 会反击 NPC，触发自防御的受伤仇恨，形成互相战斗。
@@ -226,6 +229,7 @@ public class MagicBeamEntity extends Entity {
                     // 玩家/静态施法：无施法者，保持原行为（不记仇恨）。
                     mob.hurt(level().damageSources().magic(), damage);
                 }
+                mob.setDeltaMovement(pre);
             }
         }
     }
