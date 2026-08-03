@@ -20,8 +20,8 @@ import net.minecraft.network.chat.Component;
  */
 public class TouristScreen extends MedievalScreen {
 
-    private static final int PW = 280;
-    private static final int PH = 280;
+    private static final int PW = 300;
+    private static final int PH = 230;
 
     private final int entityId;
     private String touristName;
@@ -79,10 +79,10 @@ public class TouristScreen extends MedievalScreen {
 
         // ── Stats ──
         g.drawString(font, "状态", leftCol, contentTop, MedievalColors.ACCENT_GOLD);
-        int sepY = contentTop + 10;
+        int sepY = contentTop + 8;
         g.fill(leftCol, sepY, leftCol + 50, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
 
-        int statY = sepY + 6;
+        int statY = sepY + 5;
         int labelW = 32;
         int barW = 100;
 
@@ -92,7 +92,7 @@ public class TouristScreen extends MedievalScreen {
                 Math.clamp((float) energy / 200f, 0f, 1f),
                 energy + "/200",
                 MedievalColors.SUCCESS_GREEN);
-        statY += 12;
+        statY += 11;
 
         // Satisfaction bar
         g.drawString(font, "满意:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
@@ -100,12 +100,12 @@ public class TouristScreen extends MedievalScreen {
                 Math.clamp((float) satisfaction / 100f, 0f, 1f),
                 satisfaction + "%",
                 MedievalColors.ACCENT_GOLD);
-        statY += 12;
+        statY += 11;
 
         // Level text
         g.drawString(font, "等级:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(level), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
-        statY += 12;
+        statY += 11;
 
         // Wallet text
         g.drawString(font, "钱包:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
@@ -113,7 +113,7 @@ public class TouristScreen extends MedievalScreen {
 
         // ── Debug: state / target / position / cooldown ──
         int dbgLabelW = 36;
-        int dbgY = statY + 12;
+        int dbgY = statY + 10;
         g.drawString(font, "状态:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
         g.drawString(font, formatState(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
         dbgY += 10;
@@ -128,7 +128,7 @@ public class TouristScreen extends MedievalScreen {
                 cooldownRemainingTicks > 0 ? MedievalColors.INFO_BLUE : MedievalColors.TEXT_MUTED);
 
         // ── Visits ──
-        int visitsTop = contentTop + 118;
+        int visitsTop = contentTop + 100;
         g.drawString(font, "行程", leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
         g.fill(leftCol, visitsTop + 10, leftPos + PW - 12, visitsTop + 11, MedievalColors.BORDER_GOLD_DARK);
 

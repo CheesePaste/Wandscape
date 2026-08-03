@@ -25,8 +25,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public class NpcScreen extends MedievalScreen {
 
-    private static final int PW = 280;
-    private static final int PH = 248;
+    private static final int PW = 300;
+    private static final int PH = 230;
     private static final int SLOT_SIZE = 18;
 
     // NPC data
@@ -164,7 +164,7 @@ public class NpcScreen extends MedievalScreen {
         g.drawString(font, String.valueOf(spellPower), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
 
         // ── Divider ──
-        int divY = contentTop + 100;
+        int divY = contentTop + 90;
         g.fill(leftCol, divY, leftPos + PW - 12, divY + 1, MedievalColors.BORDER_GOLD_DARK);
 
         // ── Inventory section (bottom) ──
@@ -257,7 +257,7 @@ public class NpcScreen extends MedievalScreen {
 
         // Click on inventory slot → equip (only if it's a wand item)
         int gridX = leftPos + 14;
-        int gridY = topPos + headerHeight + 125; // matches render() gridY
+        int gridY = topPos + headerHeight + 115; // matches render() gridY
         int slotPitch = 20;
         int cols = 9;
 
