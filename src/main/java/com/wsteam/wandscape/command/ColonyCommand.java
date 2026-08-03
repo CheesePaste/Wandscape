@@ -54,13 +54,15 @@ import com.wsteam.wandscape.shared.log.Log;
  *   /wandscape colony destroy          — destroy the colony nearest the player
  * </pre>
  *
- * <p>Creates a colony with a new UUID, spawns a builder NPC, and fills
- * the NPC's ECS {@link Inventory} with town_hall building materials.
+ * <p>Creates a colony with a new UUID, spawns 3 initial builder NPCs, and fills
+ * the NPCs' ECS {@link Inventory} with town_hall building materials.
  */
 public final class ColonyCommand {
 
     private static final String TAG = "ColonyCommand";
     private static final int WAND_RANGE = 8;
+    /** 新建殖民地时生成的初始 builder NPC 数量。 */
+    private static final int INITIAL_BUILDER_COUNT = 3;
 
     private ColonyCommand() {}
 
@@ -114,10 +116,10 @@ public final class ColonyCommand {
      * Core colony-creation routine shared by {@code /wandscape colony create}
      * and the town-hall naming flow ({@code ColonyCreateRequestPacket}).
      *
-     * <p>Creates the colony, spawns the builder NPC, seeds its inventory and
-     * fires {@link ColonyCreatedEvent}. Returns a human-readable result message
-     * (or null on failure — use the provided {@code feedback} sink to surface
-     * the error to the player).
+     * <p>Creates the colony, spawns the initial builder NPCs, seeds their
+     * inventories and fires {@link ColonyCreatedEvent}. Returns a human-readable
+     * result message (or null on failure — use the provided {@code feedback}
+     * sink to surface the error to the player).
      */
     public static String createColonyAt(ServerLevel level, BlockPos origin, String name,
                                         @Nullable UUID founder) {
@@ -154,44 +156,38 @@ public final class ColonyCommand {
         // fillDeferredInventory(). Both run BEFORE we set colonyId or
         // schedule inventory — so the ECS NPC gets PLACEHOLDER_COLONY
         // and an empty inventory. We fix both immediately after spawn.
-        BlockPos spawnPos = findGroundAbove(level, origin);
         List<ResourceStack> starterItems = computeStarterInventory(townHallConfig);
-        var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
-        if (npc == null) {
-            return "[Wandscape] Failed to spawn NPC at " + spawnPos;
-        }
-        npc.setInvulnerable(true);
-        npc.setPersistenceRequired();
-        npc.colonyId = colonyId;
-
-        Log.info(TAG, "[Colony] Spawned builder NPC at {} for colony {}",
-                spawnPos, colonyId.toString().substring(0, 8));
-
-        // ── Step 5: fix ECS state + fill inventory ─────────────────────────
-        // spawn() already ran onNpcJoinWorld(). If the NPC joined ECS
-        // immediately (engine was bootstrapped), its ColonyMember has
-        // PLACEHOLDER_COLONY and its Inventory is empty. Fix both now.
-        // For the deferred-join case (engine not yet bootstrapped), the
-        // scheduleInventoryFill fallback handles it when flushDeferredJoins
-        // runs — npc.colonyId is already set by then.
-        fixEcsAfterSpawn(npc, colonyId, starterItems);
-        EntityComponentBridge.INSTANCE.scheduleInventoryFill(
-                npc.getUUID(), colonyId, starterItems);
-
-        // Seed builder_wand into NPC's MC inventory so WandEquip can shortfill
-        // it without needing a storage building (cold-start bootstrap).
-        var wandPreset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
-        if (wandPreset != null) {
-            var wandRegItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                    .get(net.minecraft.resources.ResourceLocation.tryParse("wandscape:wand"));
-            if (wandRegItem != null) {
-                var wandStack = new net.minecraft.world.item.ItemStack(wandRegItem);
-                wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                        net.minecraft.world.item.component.CustomData.of(wandPreset.nbt().copy()));
-                npc.inventory.addItem(wandStack);
-                Log.info(TAG, "[Colony] Seeded builder_wand into NPC inventory");
+        List<BlockPos> spawnPositions = findBuilderSpawns(level, origin, INITIAL_BUILDER_COUNT);
+        List<WandscapeNpc> spawnedNpcs = new ArrayList<>();
+        for (BlockPos spawnPos : spawnPositions) {
+            var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
+            if (npc == null) {
+                return "[Wandscape] Failed to spawn NPC at " + spawnPos;
             }
+            npc.setInvulnerable(true);
+            npc.setPersistenceRequired();
+            npc.colonyId = colonyId;
+
+            // ── Step 5: fix ECS state + fill inventory ─────────────────────
+            // spawn() already ran onNpcJoinWorld(). If the NPC joined ECS
+            // immediately (engine was bootstrapped), its ColonyMember has
+            // PLACEHOLDER_COLONY and its Inventory is empty. Fix both now.
+            // For the deferred-join case (engine not yet bootstrapped), the
+            // scheduleInventoryFill fallback handles it when flushDeferredJoins
+            // runs — npc.colonyId is already set by then.
+            fixEcsAfterSpawn(npc, colonyId, starterItems);
+            EntityComponentBridge.INSTANCE.scheduleInventoryFill(
+                    npc.getUUID(), colonyId, starterItems);
+
+            // Seed builder_wand into NPC's MC inventory so WandEquip can
+            // shortfill it without needing a storage building (cold-start
+            // bootstrap). All initial NPCs are universal workers.
+            seedBuilderWand(npc);
+            spawnedNpcs.add(npc);
         }
+        Log.info(TAG, "[Colony] Spawned {} builder NPCs at {} for colony {}",
+                spawnedNpcs.size(), spawnPositions.get(0),
+                colonyId.toString().substring(0, 8));
 
         // ── Step 6: fire event ──────────────────────────────────────────────
         NeoForge.EVENT_BUS.post(new ColonyCreatedEvent(colonyId, origin));
@@ -209,7 +205,8 @@ public final class ColonyCommand {
         return "[Wandscape] Colony '" + name + "' created!\n" +
                 "  ID: " + colonyId.toString().substring(0, 8) + "\n" +
                 "  TownHall: " + origin.toShortString() + "\n" +
-                "  NPC: builder at " + spawnPos.toShortString() + "\n" +
+                "  NPC: " + INITIAL_BUILDER_COUNT + " builders at "
+                        + spawnPositions.get(0).toShortString() + "\n" +
                 "  Inventory: " + starterItems.size() + " stacks (" + materialTypes + " types)\n" +
                 "  Radius: 256 blocks\n" +
                 "\nTip: use /wandscape fill " + townHallConfig.id()
@@ -295,6 +292,46 @@ public final class ColonyCommand {
             }
         }
         return origin.above(2);
+    }
+
+    /**
+     * Find {@code count} distinct ground positions around {@code origin} so the
+     * initial NPCs do not stack on the same block.
+     */
+    private static List<BlockPos> findBuilderSpawns(ServerLevel level, BlockPos origin, int count) {
+        BlockPos[] bases = {
+                origin, origin.east(), origin.west(),
+                origin.north(), origin.south(), origin.east(2), origin.west(2)
+        };
+        List<BlockPos> result = new ArrayList<>();
+        for (BlockPos base : bases) {
+            if (result.size() >= count) break;
+            BlockPos ground = findGroundAbove(level, base);
+            if (!result.contains(ground)) {
+                result.add(ground);
+            }
+        }
+        // Fallback: nudge upward if terrain produced fewer distinct spots.
+        BlockPos last = result.isEmpty() ? origin.above(2) : result.get(result.size() - 1);
+        while (result.size() < count) {
+            last = last.above(1);
+            result.add(last);
+        }
+        return result;
+    }
+
+    /** Seed a builder_wand into the NPC's MC inventory (cold-start bootstrap). */
+    private static void seedBuilderWand(WandscapeNpc npc) {
+        var wandPreset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
+        if (wandPreset == null) return;
+        var wandRegItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                .get(net.minecraft.resources.ResourceLocation.tryParse("wandscape:wand"));
+        if (wandRegItem == null) return;
+        var wandStack = new net.minecraft.world.item.ItemStack(wandRegItem);
+        wandStack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(wandPreset.nbt().copy()));
+        npc.inventory.addItem(wandStack);
+        Log.info(TAG, "[Colony] Seeded builder_wand into NPC inventory");
     }
 
     /** Compute exact material stacks for the NPC's inventory to construct the Town Hall. */
