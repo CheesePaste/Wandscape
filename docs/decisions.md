@@ -361,6 +361,37 @@
 - 不改 `WarehouseApi` / `ColonyResourceAccess` 的**跨殖民地求和**语义——`available()` 求和正是生产需求的正确定义（任何殖民地的元素都能补给生产任务）。
 - 不改 `DailySettlementSystem`（维护费扣费与自动重启逻辑已正确）。
 
+## 商店补货自动合成链路（2026-08-03）
+
+用户实测：面包店缺货 → 补货检测 → 仓库无面包 → **自动合成完全不触发**；手动给仓库加面包却能正确补货。逐段核实现状后，发现三处断点叠加：
+
+1. **补货不产生需求信号**：`ShopStockManager.restock` 仓库无货时 `canAfford <= 0 → continue` 直接跳过。合成链路只服务 AWAITING_RESOURCES 的任务，补货从未创建任务/信号。
+2. **配方 id 匹配不上**：`ProductionRecipeLoader.getSynthesizeRecipe` 精确匹配（`id.equals(matchId)`），element_mappings 里是 `minecraft:bread`，而自动链 `stripMcPrefix` 后传 `bread` → 永远匹配不到原版物品。
+3. **合成目标类别错误**：`ResourceSupplySystem` / `EngineBootstrap.createShortageHandler` 找 `crafting_station`（法宝合成站），而生产 synthesize 实挂 `workstation`（玩家 WorkstationScreen 所在建筑）。colony 只有 workstation 时自动合成永不触发。
+
+### 修复
+
+1. **`getSynthesizeRecipe` 前缀无关匹配**：两侧 strip `minecraft:` 再比较，一处修复所有调用方（自动链/玩家/执行器）。
+2. **共享 `ResourceSupplySystem.enqueueSynthesize(itemId, amount, world)`**：查配方 → 找 workstation（修正类别）→ `isSynthesizeInFlight` 去重 → 入队 `production:synthesize`。`trySupplyResource` 与 `EngineBootstrap.createShortageHandler` 均改用它（原 80 行重复逻辑删除）。
+3. **`ShopStockManager.restock` 补货触发**：仓库缺货时调 `enqueueSynthesize` 补缺口；新增 `pendingRestock` 集合 + `ServerTickEvent.Post` 每 ~100 tick 重试，物品入仓后补齐店铺并退出重试集。
+
+### 结果链路
+
+```
+游客买面包 → 库存 < max/3 → 补货检测 → 仓库没面包
+ → 入队 production:synthesize（workstation）
+ → 合成缺元素（bread 成本=12 wood）→ ResourceShortageException → AWAITING
+ → ResourceSupplySystem 每 40 tick → 无合成配方 → 找 nodewood 入队 node:gather
+ → 采集 wood 入仓 → onResourceAdded 唤醒合成任务
+ → 合成完成 → bread 入仓 → pendingRestock 重试（~100 tick）
+ → restock 找到 bread → 补满店铺
+```
+
+### 不做的
+
+- 不改补货消耗语义（仍是物品 from warehouse，不扣元素）。
+- 补货层不重复做 node 采集兜底——合成任务缺元素时的 AWAITING → node 采集链已可用，补货只需入队合成即可。
+
 ## 守卫系统设计（2026-08-02）
 
 守卫闭环：怪物进入建筑 AABB 水平 +10 区 → 发布 `guard:attack` → 空闲 NPC 原地视线施法 → 光束每 tick 伤害束内 Enemy → 直到 +15 区内无怪才完成。

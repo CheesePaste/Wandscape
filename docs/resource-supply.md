@@ -44,16 +44,18 @@
 
 ## 二、什么时候自动合成（synthesize）
 
-自动合成只处理**物品**（有 `production:synthesize` 配方的资源，如 stone_bricks）。
+自动合成只处理**物品**（有 `production:synthesize` 配方的资源，如 stone_bricks）。合成站类别为 **`workstation`**（玩家 WorkstationScreen 所在的建筑，2026-08-03 修正——原代码误找 `crafting_station` 法宝合成站）。
 
-- **触发条件**：某任务请求物品时仓库不足，且该物品存在合成配方
-  - 建造/补货：蓝图 `request_resource` op → `ResourceRequestExecutor` 发现仓库物品不足
+- **触发条件**：某任务/补货请求物品时仓库不足，且该物品存在合成配方
+  - 建造任务：蓝图 `request_resource` op → `ResourceRequestExecutor` 发现仓库物品不足 → 任务挂起 → 入队合成
+  - 商店补货：`ShopStockManager.restock` 发现仓库缺货 → 直接调 `ResourceSupplySystem.enqueueSynthesize` 入队合成，并加入 `pendingRestock` 每 ~100 tick 重试；物品入仓后自动补齐店铺并退出重试集
   - 生产级联：synthesize 自身缺元素 → 抛异常 → 进入采集流程
 - **谁来入队**：
   1. 任务挂起时 `ResourceShortageHandler`（`EngineBootstrap.createShortageHandler`）立即尝试入队合成（优先级 40）
   2. `ResourceSupplySystem` 每 40 tick 兜底重试（若当时无空闲合成站）
+  3. 商店补货直接调用共享的 `ResourceSupplySystem.enqueueSynthesize`
 - **防重复**：同一配方的合成任务已在队中（`isSynthesizeInFlight`）则不再重复入队
-- **何时停止**：物品补足后，挂起任务被唤醒继续
+- **何时停止**：物品补足后，挂起任务被唤醒继续；商店物品入仓后 `pendingRestock` 重试把货补齐并退出
 
 > 合成需要的元素由合成站操作内部消耗；元素不足时会自动级联到采集流程（见下）。
 
@@ -109,5 +111,6 @@
 | 建筑每日维护（DailySettlementSystem） | 元素 | 采集（维护储备需求） |
 | 合成站 synthesize | 元素 | 采集（生产消耗需求） |
 | 工作站 decompose | 物品→元素（产出元素，不消耗元素） | 不触发采集 |
-| 建造/补货 request_resource | 物品 | 合成（若该物品有配方） |
+| 建造 request_resource | 物品 | 合成（若该物品有配方） |
+| 商店补货 | 物品 | 合成（若该物品有配方）；缺货直接入队 + `pendingRestock` 重试 |
 | 法杖制作 craft_wand | 元素 | 采集（生产消耗需求） |
