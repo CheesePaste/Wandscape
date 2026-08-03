@@ -1,9 +1,15 @@
 package com.wsteam.wandscape.engine;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +42,13 @@ public final class TaskPoolSavedData extends SavedData {
 
     private static final String TAG = "TaskPoolSavedData";
     private static final String DATA_NAME = "wandscape_tasks";
+
+    /**
+     * JSON params above this UTF-8 byte size are gzip-compressed before NBT storage.
+     * NBT StringTag writes via modified-UTF8 with a hard 64KB limit (UTFDataFormatException);
+     * large building blueprints (pattern / block_mapping) routinely exceed it.
+     */
+    private static final int MAX_PARAM_JSON_BYTES = 60000;
 
     private final GlobalTaskPool pool;
 
@@ -85,13 +98,21 @@ public final class TaskPoolSavedData extends SavedData {
         tag.putString("state", task.state.name());
         tag.putInt("priority", task.priority);
 
-        // taskParams: store each JsonElement value as a string
+        // taskParams: store each JsonElement value as a string; oversized JSON is gzip-compressed
+        // into a ByteArrayTag because NBT StringTag has a 64KB write limit.
         if (!task.taskParams.isEmpty()) {
             CompoundTag params = new CompoundTag();
+            CompoundTag paramsCompressed = new CompoundTag();
             for (var entry : task.taskParams.entrySet()) {
-                params.putString(entry.getKey(), entry.getValue().toString());
+                String json = entry.getValue().toString();
+                if (json.getBytes(StandardCharsets.UTF_8).length > MAX_PARAM_JSON_BYTES) {
+                    paramsCompressed.putByteArray(entry.getKey(), gzip(json));
+                } else {
+                    params.putString(entry.getKey(), json);
+                }
             }
-            tag.put("params", params);
+            if (!params.isEmpty()) tag.put("params", params);
+            if (!paramsCompressed.isEmpty()) tag.put("params_c", paramsCompressed);
         }
 
         // awaitingResource (now a list, persisted as ListTag of CompoundTags)
@@ -152,8 +173,20 @@ public final class TaskPoolSavedData extends SavedData {
         String blueprintId = tag.getString("bp");
         if (blueprintId.isEmpty()) return null;
 
-        // Reconstruct taskParams
+        // Reconstruct taskParams. Compressed params first (gzip'd during save), then plain strings.
         Map<String, JsonElement> taskParams = new HashMap<>();
+        if (tag.contains("params_c")) {
+            CompoundTag compressed = tag.getCompound("params_c");
+            for (String key : compressed.getAllKeys()) {
+                byte[] data = compressed.getByteArray(key);
+                try {
+                    taskParams.put(key, tryParseJson(ungzip(data)));
+                } catch (IOException e) {
+                    // Fall back: bytes may be an uncompressed string if gzip failed during save.
+                    taskParams.put(key, tryParseJson(new String(data, StandardCharsets.UTF_8)));
+                }
+            }
+        }
         if (tag.contains("params")) {
             CompoundTag paramsTag = tag.getCompound("params");
             for (String key : paramsTag.getAllKeys()) {
@@ -225,6 +258,30 @@ public final class TaskPoolSavedData extends SavedData {
             return com.google.gson.JsonParser.parseString(raw);
         } catch (Exception e) {
             return new JsonPrimitive(raw);
+        }
+    }
+
+    /** Gzip a JSON string so large params fit within NBT's 64KB per-string limit. */
+    private static byte[] gzip(String s) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (GZIPOutputStream gz = new GZIPOutputStream(baos)) {
+                gz.write(s.getBytes(StandardCharsets.UTF_8));
+            }
+            return baos.toByteArray();
+        } catch (IOException e) {
+            // Extremely unlikely (byte-array streams don't throw); store raw bytes as a fallback.
+            Log.warn(TAG, "[TaskPoolSavedData] gzip failed, storing param raw: {}", e.getMessage());
+            return s.getBytes(StandardCharsets.UTF_8);
+        }
+    }
+
+    /** Inverse of {@link #gzip}; returns the original string. */
+    private static String ungzip(byte[] data) throws IOException {
+        try (GZIPInputStream gz = new GZIPInputStream(new ByteArrayInputStream(data));
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            gz.transferTo(baos);
+            return baos.toString(StandardCharsets.UTF_8);
         }
     }
 }

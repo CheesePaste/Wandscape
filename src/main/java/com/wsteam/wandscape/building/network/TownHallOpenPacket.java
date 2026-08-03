@@ -46,14 +46,15 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
     }
 
     static TownHallOpenPacket read(RegistryFriendlyByteBuf buf) {
+        // Field order MUST match write(): long → UUID → utf → varint×3 → utf.
+        BlockPos buildingPos = BlockPos.of(buf.readLong());
+        UUID colonyId = buf.readUUID();
+        String colonyName = buf.readUtf();
+        int level = buf.readVarInt();
+        int experience = buf.readVarInt();
+        int expToNext = buf.readVarInt();
         String founderName = buf.readUtf();
-        return new TownHallOpenPacket(
-                BlockPos.of(buf.readLong()),
-                buf.readUUID(),
-                buf.readUtf(),
-                buf.readVarInt(),
-                buf.readVarInt(),
-                buf.readVarInt(),
+        return new TownHallOpenPacket(buildingPos, colonyId, colonyName, level, experience, expToNext,
                 founderName.isEmpty() ? null : founderName);
     }
 }
