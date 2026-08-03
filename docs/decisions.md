@@ -397,4 +397,4 @@ V 面板右上角的"新手引导"从 `WandscapePanelState`/`WandscapePanelOverl
 - **为什么步骤是 record 列表而非 JSON？** 步骤完成谓词需要代码（读建筑缓存等），JSON 化收益低；record + `Predicate<GuideContext>` 已是数据驱动（渲染/触发与步骤内容解耦），未来加道路/游客步骤只需在 `GuideContext` 接口加访问器 + 加一个 Step。
 - **为什么进度只前进不回退？** `currentStep = max(缓存推导, 服务端确认)`。防止缓存暂空/建筑被拆时引导倒退到已完成步骤。老玩家重进世界：面板开启 → 服务端 seed 已存步骤 → 不再弹出已完成的引导。
 - **触发源修复**：`ColonyCreateRequestPacket` 创建殖民地并 linkTownHall 后补发 `BuildingAreaSyncPacket.sendToPlayer(player, anchorHint)`；`sendToPlayer` 新增按锚点坐标兜底解析殖民地（玩家站得远时仍能同步）。首次放市政厅 → 引导即时从 1/2 跳到 2/2。
-- **版本**：v1.9.3a→v1.9.5a（补丁号 +3：重构/修复/持久化）。
+- **版本**：v1.9.2a→v1.9.6a（补丁号 +4：模块重构 / 触发修复 / 持久化 / 测试缝合）。

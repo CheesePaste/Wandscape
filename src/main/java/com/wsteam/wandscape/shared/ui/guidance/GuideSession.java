@@ -25,13 +25,17 @@ public final class GuideSession {
 
     /** Effective current step: max(derived from colony state, server-confirmed). */
     public static int currentStep() {
-        GuideContext ctx = GuideContext.fromBuildingCache();
+        return Math.max(derivedStep(GuideContext.fromBuildingCache()), serverStep);
+    }
+
+    /** Number of leading steps satisfied by the given colony state. Pure — unit-testable. */
+    static int derivedStep(GuideContext ctx) {
         int derived = 0;
         for (GuideStep s : GuideRegistry.STEPS) {
             if (s.done().test(ctx)) derived++;
             else break;
         }
-        return Math.max(derived, serverStep);
+        return derived;
     }
 
     public static boolean shouldShow() {
