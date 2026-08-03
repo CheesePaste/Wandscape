@@ -685,6 +685,12 @@ public class BuildingApiImpl implements BuildingApi {
         return PlacementResult.ok(buildingId, firstFree);
     }
 
+    @Override
+    public boolean isFirstFreeClaimed(UUID colonyId, String buildingTypeId) {
+        BuildingSavedData sd = getSavedData();
+        return sd != null && colonyId != null && sd.isFirstFreeClaimed(colonyId, buildingTypeId);
+    }
+
     // ---- Helpers ----
 
     @Override

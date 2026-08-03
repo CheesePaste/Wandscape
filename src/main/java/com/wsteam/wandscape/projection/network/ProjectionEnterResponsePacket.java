@@ -76,6 +76,7 @@ public record ProjectionEnterResponsePacket(
             buf.writeUtf(slot.id());
             buf.writeUtf(slot.displayName());
             buf.writeUtf(slot.category());
+            buf.writeBoolean(slot.firstFreeAvailable());
         }
         buf.writeBlockPos(pkt.bodyAnchor);
     }
@@ -85,7 +86,7 @@ public record ProjectionEnterResponsePacket(
         int count = buf.readVarInt();
         List<BuildingSlot> slots = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            slots.add(new BuildingSlot(buf.readUtf(), buf.readUtf(), buf.readUtf()));
+            slots.add(new BuildingSlot(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readBoolean()));
         }
         BlockPos anchor = buf.readBlockPos();
         return new ProjectionEnterResponsePacket(granted, slots, anchor);

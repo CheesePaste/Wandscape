@@ -1,8 +1,10 @@
 package com.wsteam.wandscape.projection.network;
 
 import java.util.List;
+import java.util.UUID;
 
 import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -58,7 +60,12 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
 
         // Grant entry
         ProjectionNetwork.addProjecting(player);
-        List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings();
+        UUID colonyId = null;
+        var colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi != null) {
+            colonyId = colonyApi.getColonyId(player.blockPosition());
+        }
+        List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);
         BlockPos bodyAnchor = player.blockPosition();
 
         Log.info(TAG, "[Projection] Granting entry to {}: {} buildings available, body at {}",

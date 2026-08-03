@@ -110,6 +110,13 @@ public interface BuildingApi {
     PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps);
 
     /**
+     * Whether this colony has already claimed the first-free build of a building type
+     * (i.e. {@code first_free: true} in its config, and a building of that type has
+     * already been placed for free here). Returns false when the first build is still free.
+     */
+    boolean isFirstFreeClaimed(UUID colonyId, String buildingTypeId);
+
+    /**
      * Scan the building's boundary AABB for bed blocks.
      * Returns world-coordinate positions of every bed block found.
      * Each bed (two halves) produces two entries.

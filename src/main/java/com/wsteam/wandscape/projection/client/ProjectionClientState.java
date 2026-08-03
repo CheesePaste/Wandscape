@@ -123,6 +123,20 @@ public final class ProjectionClientState {
         }
     }
 
+    /**
+     * Replace the building slot list in place (no state reset). Used by
+     * {@code ProjectionSlotsRefreshPacket} to keep first-free badges accurate
+     * after a placement claims a free build. No-op when not projecting.
+     */
+    public static void updateBuildingSlots(List<BuildingSlot> slots) {
+        if (!projecting) return;
+        synchronized (buildingSlots) {
+            buildingSlots.clear();
+            buildingSlots.addAll(slots);
+        }
+        Log.debug(TAG, "[Projection] Slot list refreshed to {} buildings", slots.size());
+    }
+
     // ── Ghost position ──
 
     public static BlockPos getGhostPos() {

@@ -47,6 +47,8 @@ public final class WandscapeApis {
         if (buildingApi == null) throw new IllegalStateException("Module BuildingCore not loaded");
         return buildingApi;
     }
+    @javax.annotation.Nullable
+    public static BuildingApi getBuildingApiSilently() { return buildingApi; }
     public static void setBuildingApi(BuildingApi api) { buildingApi = api; }
 
     public static HouseApi getHouseApi() {

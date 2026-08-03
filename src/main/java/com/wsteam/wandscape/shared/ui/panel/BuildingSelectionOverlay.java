@@ -370,6 +370,20 @@ public final class BuildingSelectionOverlay {
                     }
                 }
 
+                // First-free still available: green "首免" badge top-left
+                if (!locked && slot.firstFreeAvailable()) {
+                    String tag = "首免";
+                    int tagW = font.width(tag) + 4;
+                    int tagH = 9;
+                    int tagX = cellX + 1;
+                    int tagY = cellY + 1;
+                    g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                            tagX, tagY, tagX + tagW, tagY + tagH, 0, 0xEE1B5E20);
+                    g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                            tagX, tagY, tagX + tagW, tagY + 1, 0, 0xFF66BB6A);
+                    g.drawString(font, tag, tagX + 2, tagY + 1, 0xFFFFFFFF);
+                }
+
                 // Truncated name
                 String name = slot.displayName();
                 int nameW = font.width(name);

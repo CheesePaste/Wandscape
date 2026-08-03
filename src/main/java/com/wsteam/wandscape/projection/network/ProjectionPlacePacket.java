@@ -1,7 +1,11 @@
 package com.wsteam.wandscape.projection.network;
 
+import java.util.List;
+import java.util.UUID;
+
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -106,6 +110,21 @@ public record ProjectionPlacePacket(
         // building's construction ghost appears immediately (no need to
         // reopen the panel).
         com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player);
+
+        // 4b. Refresh projection slots so first-free badges stay accurate —
+        // placing a first-free building claims it server-side. Resolve the
+        // colony from the placement anchor (ground position near the colony,
+        // unlike the free-flying body position).
+        if (ProjectionNetwork.isProjecting(player)) {
+            UUID colonyId = null;
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            if (colonyApi != null) {
+                colonyId = colonyApi.getColonyId(packet.anchorPos);
+            }
+            List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new ProjectionSlotsRefreshPacket(slots));
+        }
 
         // 5. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
         if ("government".equals(config.category())) {
