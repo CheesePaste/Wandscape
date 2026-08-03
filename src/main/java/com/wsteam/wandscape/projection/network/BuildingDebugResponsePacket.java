@@ -21,6 +21,7 @@ import com.wsteam.wandscape.shared.log.Log;
 public record BuildingDebugResponsePacket(
         UUID buildingId,
         String buildingTypeId,
+        String displayName,
         String category,
         UUID colonyId,
         BlockPos anchor,
@@ -68,7 +69,8 @@ public record BuildingDebugResponsePacket(
 
     static void write(RegistryFriendlyByteBuf buf, BuildingDebugResponsePacket pkt) {
         buf.writeUUID(pkt.buildingId());
-        buf.writeResourceLocation(ResourceLocation.parse(pkt.buildingTypeId()));
+        buf.writeUtf(pkt.buildingTypeId(), 256);
+        buf.writeUtf(pkt.displayName(), 256);
         buf.writeUtf(pkt.category(), 256);
         if (pkt.colonyId() != null) {
             buf.writeBoolean(true);
@@ -103,7 +105,8 @@ public record BuildingDebugResponsePacket(
 
     static BuildingDebugResponsePacket read(RegistryFriendlyByteBuf buf) {
         UUID buildingId = buf.readUUID();
-        String typeId = buf.readResourceLocation().toString();
+        String typeId = buf.readUtf(256);
+        String displayName = buf.readUtf(256);
         String category = buf.readUtf(256);
         UUID colonyId = buf.readBoolean() ? buf.readUUID() : null;
         BlockPos anchor = buf.readBlockPos();
@@ -126,7 +129,7 @@ public record BuildingDebugResponsePacket(
         UUID currentTaskId = buf.readBoolean() ? buf.readUUID() : null;
 
         return new BuildingDebugResponsePacket(
-                buildingId, typeId, category, colonyId, anchor,
+                buildingId, typeId, displayName, category, colonyId, anchor,
                 intact, shutdown, comfort, magic, wonder, queueCap,
                 queue, currentTaskId);
     }

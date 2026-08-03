@@ -6,12 +6,14 @@ import java.util.UUID;
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -93,7 +95,7 @@ public final class BuildingDebugOverlay {
         int screenW = mc.getWindow().getGuiScaledWidth();
 
         // ── Build all lines ──
-        String l1 = data.buildingTypeId();
+        Component l1 = I18n.name("building.wandscape." + data.buildingTypeId(), data.displayName());
         String l1cat = data.category();
         String l1status = getStatusText(data);
         int l1statusColor = getStatusColor(data);
@@ -303,6 +305,12 @@ public final class BuildingDebugOverlay {
     // ── Text helpers ──
 
     private static void drawText(GuiGraphics g, Font font, String text, float x, float y, int color) {
+        font.drawInBatch(text, x, y, color, false,
+                g.pose().last().pose(), g.bufferSource(),
+                Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+    }
+
+    private static void drawText(GuiGraphics g, Font font, Component text, float x, float y, int color) {
         font.drawInBatch(text, x, y, color, false,
                 g.pose().last().pose(), g.bufferSource(),
                 Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);

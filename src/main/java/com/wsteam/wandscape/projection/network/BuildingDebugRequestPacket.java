@@ -62,8 +62,12 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
         }
 
         List<WorkItem> queueSnapshot = new ArrayList<>(state.getTaskQueue());
+        String typeId = state.getBuildingTypeId();
+        var config = com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().get(typeId);
+        String displayName = (config != null && config.displayName() != null && !config.displayName().isEmpty())
+                ? config.displayName() : typeId;
         var response = new BuildingDebugResponsePacket(
-                state.getBuildingId(), state.getBuildingTypeId(), state.getCategory(),
+                state.getBuildingId(), typeId, displayName, state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
                 state.isStructureIntact(), state.isShutdown(),
                 comfort, magic, wonder,
