@@ -26,7 +26,7 @@ import net.neoforged.neoforge.common.NeoForge;
  *
  * <p>Building boundary = green wireframe from {@code boundary}.
  *
- * <p>Activated when {@link WandscapePanelState#isPanelOpen()} and B key toggles
+* <p>Activated when {@link WandscapePanelState#isPanelOpen()} and B key toggles
  * {@link WandscapePanelState#isShowBuildingAreas()}.
  */
 public final class BuildingAreaRenderer {
