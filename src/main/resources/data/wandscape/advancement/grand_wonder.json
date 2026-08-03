@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:start",
+  "display": {
+    "icon": {"id": "minecraft:emerald_block"},
+    "title": {"translate": "advancements.wandscape.grand_wonder.title"},
+    "description": {"translate": "advancements.wandscape.grand_wonder.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

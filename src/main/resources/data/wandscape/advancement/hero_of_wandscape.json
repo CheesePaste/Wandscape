@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:start",
+  "display": {
+    "icon": {"id": "minecraft:shield"},
+    "title": {"translate": "advancements.wandscape.hero_of_wandscape.title"},
+    "description": {"translate": "advancements.wandscape.hero_of_wandscape.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

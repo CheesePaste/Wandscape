@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:start",
+  "display": {
+    "icon": {"id": "minecraft:oak_planks"},
+    "title": {"translate": "advancements.wandscape.hamlet.title"},
+    "description": {"translate": "advancements.wandscape.hamlet.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:start",
+  "display": {
+    "icon": {"id": "minecraft:ender_pearl"},
+    "title": {"translate": "advancements.wandscape.slayer_of_the_end.title"},
+    "description": {"translate": "advancements.wandscape.slayer_of_the_end.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

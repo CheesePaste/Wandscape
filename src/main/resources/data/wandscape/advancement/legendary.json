@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:famous",
+  "display": {
+    "icon": {"id": "minecraft:totem_of_undying"},
+    "title": {"translate": "advancements.wandscape.legendary.title"},
+    "description": {"translate": "advancements.wandscape.legendary.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

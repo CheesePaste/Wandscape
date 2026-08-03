@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:start",
+  "display": {
+    "icon": {"id": "minecraft:bed"},
+    "title": {"translate": "advancements.wandscape.full_house.title"},
+    "description": {"translate": "advancements.wandscape.full_house.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

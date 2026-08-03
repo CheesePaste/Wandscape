@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"id": "minecraft:grass_block"},
+    "title": {"translate": "advancements.wandscape.start.title"},
+    "description": {"translate": "advancements.wandscape.start.description"},
+    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

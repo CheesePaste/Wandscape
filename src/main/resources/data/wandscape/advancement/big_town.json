@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:prosperous_town",
+  "display": {
+    "icon": {"id": "minecraft:beacon"},
+    "title": {"translate": "advancements.wandscape.big_town.title"},
+    "description": {"translate": "advancements.wandscape.big_town.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

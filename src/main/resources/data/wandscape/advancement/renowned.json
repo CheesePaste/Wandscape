@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:level_up",
+  "display": {
+    "icon": {"id": "minecraft:emerald"},
+    "title": {"translate": "advancements.wandscape.renowned.title"},
+    "description": {"translate": "advancements.wandscape.renowned.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

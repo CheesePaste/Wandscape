@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:hamlet",
+  "display": {
+    "icon": {"id": "minecraft:stone_bricks"},
+    "title": {"translate": "advancements.wandscape.town.title"},
+    "description": {"translate": "advancements.wandscape.town.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

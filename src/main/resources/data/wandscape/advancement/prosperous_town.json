@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:town",
+  "display": {
+    "icon": {"id": "minecraft:gold_ingot"},
+    "title": {"translate": "advancements.wandscape.prosperous_town.title"},
+    "description": {"translate": "advancements.wandscape.prosperous_town.description"},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}
