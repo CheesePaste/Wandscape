@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -66,6 +67,11 @@ public final class WandscapePanelOverlay {
         // Flush any pending HUD batches (chat text etc.) BEFORE rendering the panel, so the
         // panel content composites above them instead of sharing a sorted text buffer.
         g.flush();
+
+        // Clear the depth buffer so depth-tested panel elements (sidebar icons, 3D previews)
+        // are not culled by depth written by earlier HUD/chat batches.
+        RenderSystem.clearDepth(1.0);
+        RenderSystem.clear(256, Minecraft.ON_OSX);
 
         // Building selection bar
         BuildingSelectionOverlay.render(g, mc.font, screenW, screenH, mx, my);
