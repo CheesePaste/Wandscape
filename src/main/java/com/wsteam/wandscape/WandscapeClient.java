@@ -202,6 +202,8 @@ public class WandscapeClient {
                 mc.setScreen(new TouristScreen(packet));
             }
         });
+        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.setClientHandler(packet ->
+                ColonyAmbientSystem.setState(packet.playing(), packet.day()));
         ShopOpenPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof ShopScreen existing) {

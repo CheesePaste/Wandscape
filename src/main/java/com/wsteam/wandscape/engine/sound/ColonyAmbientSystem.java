@@ -3,6 +3,7 @@ package com.wsteam.wandscape.engine.sound;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundEvent;
@@ -11,69 +12,70 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 /**
- * 殖民地昼夜环境音（客户端，不依赖事件，纯时间驱动）。
+ * 殖民地昼夜环境音（客户端，包驱动）。
  *
- * <p>白天（dayTime ∈ [1000, 18000)，游客在城期间）循环播放人群环境音；
- * 夜晚（其余时间，游客离城）低音量循环播放森林环境音。
- * 分界点对应 Config 的 tourist.spawnWindowStart=1000 / tourist.departureWindowStart=18000。
+ * <p>由服务端 {@code ColonyAmbientTracker} 判断玩家是否在城镇范围内并发送
+ * {@link com.wsteam.wandscape.shared.network.ColonyAmbientPacket}，本类据包启停/切相位：
+ * 白天（游客在城）播放人群环境音，夜晚低音量播放森林环境音。
  *
- * <p>两个循环都是 2D 全局声（relative + AMBIENT 通道），由 {@link AmbientLoop}
- * 驱动淡入，相位切换时停旧启新。
+ * <p>两个循环都是 2D 全局声（relative + AMBIENT 通道），由 {@link AmbientLoop} 淡入。
+ * {@link #tick()} 仅做安全兜底：世界卸载或切换维度时停止循环。
  */
 @OnlyIn(Dist.CLIENT)
 public final class ColonyAmbientSystem {
 
     private static final String TAG = "ColonyAmbient";
 
-    /** 白天开始（游客开始出现）。 */
-    private static final int DAY_START_TICK = 1000;
-    /** 夜晚开始（游客离场窗口）。 */
-    private static final int NIGHT_START_TICK = 18000;
-    /** 相位评估间隔（tick）。 */
-    private static final int CHECK_INTERVAL = 20;
     /** 白天人群环境音音量。 */
-    private static final float DAY_VOLUME = 0.5f;
+    private static final float DAY_VOLUME = 0.6f;
     /** 夜晚森林环境音音量（低）。 */
-    private static final float NIGHT_VOLUME = 0.22f;
+    private static final float NIGHT_VOLUME = 0.4f;
 
-    private static int checkCounter;
+    private static boolean playing;
     private static boolean dayPhase;
     private static AmbientLoop activeLoop;
+    private static ClientLevel lastLevel;
 
     private ColonyAmbientSystem() {}
 
-    /** 客户端每 tick 调用（挂 ClientTickEvent.Post）。 */
+    /** 客户端每 tick 调用（挂 ClientTickEvent.Post），仅做安全兜底。 */
     public static void tick() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) {
+        ClientLevel level = mc.level;
+        if (level == null) {
+            stopLoop();
+            lastLevel = null;
+            return;
+        }
+        if (level != lastLevel) {
+            // 维度切换/重新进入世界 → 停止旧循环，等服务器重新下发状态
+            stopLoop();
+            lastLevel = level;
+        }
+    }
+
+    /** 据服务端包更新环境音状态。 */
+    public static void setState(boolean play, boolean day) {
+        if (!play) {
             stopLoop();
             return;
         }
-        if (++checkCounter < CHECK_INTERVAL) return;
-        checkCounter = 0;
-
-        long dayTime = mc.level.getDayTime() % 24000L;
-        boolean day = dayTime >= DAY_START_TICK && dayTime < NIGHT_START_TICK;
-        if (day == dayPhase && activeLoop != null) return;
+        if (playing && dayPhase == day && activeLoop != null) return;
 
         stopLoop();
+        playing = true;
         dayPhase = day;
-        if (day) {
-            startLoop(WandscapeSounds.COLONY_AMBIENT_DAY.get(), DAY_VOLUME);
-        } else {
-            startLoop(WandscapeSounds.COLONY_AMBIENT_NIGHT.get(), NIGHT_VOLUME);
-        }
-        Log.debug(TAG, "phase switch -> {}", day ? "DAY" : "NIGHT");
-    }
-
-    private static void startLoop(SoundEvent sound, float volume) {
-        if (sound == null) {
+        SoundEvent ev = day
+                ? WandscapeSounds.COLONY_AMBIENT_DAY.get()
+                : WandscapeSounds.COLONY_AMBIENT_NIGHT.get();
+        if (ev == null) {
             Log.warn(TAG, "ambient sound event not bound — skipping");
             return;
         }
-        AmbientLoop loop = new AmbientLoop(sound, volume);
+        AmbientLoop loop = new AmbientLoop(ev, day ? DAY_VOLUME : NIGHT_VOLUME);
         activeLoop = loop;
         Minecraft.getInstance().getSoundManager().play(loop);
+        Log.debug(TAG, "start {}", day ? "DAY" : "NIGHT");
     }
 
     private static void stopLoop() {
@@ -81,6 +83,7 @@ public final class ColonyAmbientSystem {
             Minecraft.getInstance().getSoundManager().stop(activeLoop);
             activeLoop = null;
         }
+        playing = false;
     }
 
     /** 可循环的 2D 环境音实例，启动时淡入目标音量。 */

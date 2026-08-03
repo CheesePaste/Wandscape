@@ -535,6 +535,12 @@ public class Wandscape {
                         TouristDataPacket.TYPE,
                         TouristDataPacket.STREAM_CODEC,
                         (packet, ctx) -> TouristDataPacket.handleClient(packet))
+                // ── Colony day/night ambient ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyAmbientPacket
+                                .handleClient(packet))
                 // ── Colony name update ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.TYPE,
@@ -738,6 +744,9 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
+        // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
+        com.wsteam.wandscape.building.internal.ColonyAmbientTracker.tick(event.getServer());
+
         // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
         MagicCastManager.tick();
 
