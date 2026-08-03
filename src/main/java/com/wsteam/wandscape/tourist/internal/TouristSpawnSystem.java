@@ -120,7 +120,7 @@ public final class TouristSpawnSystem {
 
             TouristEntity tourist = new TouristEntity(
                     com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-            tourist.setTouristName(instance.generateTouristName());
+            tourist.setTouristName(generateRandomTouristName());
             tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
             tourist.setLevel(ps.level);
             tourist.setTargetBuildingId(ps.buildingId());
@@ -296,7 +296,7 @@ public final class TouristSpawnSystem {
 
                 TouristEntity tourist = new TouristEntity(
                         com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                tourist.setTouristName(generateTouristName());
+                tourist.setTouristName(generateRandomTouristName());
                 tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
                 tourist.setLevel(ps.level);
                 tourist.setTargetBuildingId(ps.buildingId());
@@ -712,9 +712,11 @@ public final class TouristSpawnSystem {
         "慧","敏","俊","杰","兰","玲","超","平","刚","涛"
     };
 
-    private String generateTouristName() {
-        String surname = TOURIST_SURNAMES[random.nextInt(TOURIST_SURNAMES.length)];
-        String given = TOURIST_GIVENS[random.nextInt(TOURIST_GIVENS.length)];
+    private static final Random NAME_RANDOM = new Random();
+
+    public static String generateRandomTouristName() {
+        String surname = TOURIST_SURNAMES[NAME_RANDOM.nextInt(TOURIST_SURNAMES.length)];
+        String given = TOURIST_GIVENS[NAME_RANDOM.nextInt(TOURIST_GIVENS.length)];
         return surname + given;
     }
 

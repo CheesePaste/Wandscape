@@ -16,7 +16,9 @@ import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
+import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 
 import javax.annotation.Nullable;
 
@@ -276,6 +278,25 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         syncName();
+
+        // Spawn-egg tourists arrive without a name or colony — fill both in so
+        // they get a display name and can plan building visits. System-spawned
+        // tourists already set these before addFreshEntity, so this is a no-op
+        // for them. Server-authoritative.
+        if (!level().isClientSide) {
+            if (touristName.isEmpty()) {
+                setTouristName(TouristSpawnSystem.generateRandomTouristName());
+            }
+            if (colonyId == null) {
+                var colonyApi = WandscapeApis.getColonyApiSilently();
+                if (colonyApi != null) {
+                    UUID detected = colonyApi.getColonyId(blockPosition());
+                    if (detected != null) {
+                        setColonyId(detected);
+                    }
+                }
+            }
+        }
 
         if (getSkinVariant() < 0) {
             // Step 1: roll appearance (5% mage)
