@@ -44,13 +44,28 @@ public class ProductionRecipeLoader {
     /** Returns a synthesize recipe derived from element_mappings, or null if not synthesizable. */
     @Nullable
     public SynthesizeRecipe getSynthesizeRecipe(String id) {
-        for (ElementMappingConfig config : elementMappingLoader.getAllConfigs()) {
+        return findSynthesizeRecipe(elementMappingLoader.getAllConfigs(), id);
+    }
+
+    /**
+     * Match a recipe id against element mappings. Id comparison is insensitive
+     * to the "minecraft:" prefix so callers may pass either the full id
+     * ("minecraft:bread") or a bare id ("bread").
+     */
+    @Nullable
+    public static SynthesizeRecipe findSynthesizeRecipe(Collection<ElementMappingConfig> configs, String id) {
+        String key = stripMcPrefix(id);
+        for (ElementMappingConfig config : configs) {
             String matchId = config.itemId() != null ? config.itemId() : config.blockId();
-            if (id.equals(matchId) && config.synthesize() != null) {
+            if (matchId != null && key.equals(stripMcPrefix(matchId)) && config.synthesize() != null) {
                 return SynthesizeRecipe.fromElementMapping(config);
             }
         }
         return null;
+    }
+
+    private static String stripMcPrefix(String id) {
+        return id != null && id.startsWith("minecraft:") ? id.substring("minecraft:".length()) : id;
     }
 
     public Collection<SynthesizeRecipe> getAllSynthesizeRecipes() {
