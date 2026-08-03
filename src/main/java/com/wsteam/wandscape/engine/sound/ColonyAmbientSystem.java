@@ -27,9 +27,9 @@ public final class ColonyAmbientSystem {
     private static final String TAG = "ColonyAmbient";
 
     /** 白天人群环境音音量。 */
-    private static final float DAY_VOLUME = 0.6f;
+    private static final float DAY_VOLUME = 0.1f;
     /** 夜晚森林环境音音量（低）。 */
-    private static final float NIGHT_VOLUME = 0.4f;
+    private static final float NIGHT_VOLUME = 0.1f;
 
     private static boolean playing;
     private static boolean dayPhase;
