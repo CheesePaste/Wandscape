@@ -54,5 +54,26 @@
   "wandscape.configuration.items": "Item List",
   "wandscape.configuration.logDirtBlock": "Log Dirt Block",
   "wandscape.configuration.magicNumberIntroduction": "Magic Number Text",
-  "wandscape.configuration.magicNumber": "Magic Number"
+  "wandscape.configuration.magicNumber": "Magic Number",
+
+  "wandscape.subtitle.magic_cast": "Wand cast",
+  "wandscape.subtitle.magic_beam": "Magic beam fires",
+  "wandscape.subtitle.building_place": "Building blueprint placed",
+  "wandscape.subtitle.projection_enter": "Enter projection mode",
+  "wandscape.subtitle.projection_exit": "Exit projection mode",
+  "wandscape.subtitle.overview_enter": "Enter overview mode",
+  "wandscape.subtitle.warehouse": "Warehouse transfer",
+  "wandscape.subtitle.npc_cast": "Mage casts",
+  "wandscape.subtitle.task_publish": "Task published",
+  "wandscape.subtitle.guard_fire": "Guard fires",
+  "wandscape.subtitle.building_placed": "Building constructed",
+  "wandscape.subtitle.building_demolished": "Building demolished",
+  "wandscape.subtitle.tourist_arrive": "Tourist arrives",
+  "wandscape.subtitle.tourist_depart": "Tourist departs",
+  "wandscape.subtitle.shop_restock": "Shop restocked",
+  "wandscape.subtitle.building_shutdown": "Building shut down",
+  "wandscape.subtitle.building_restart": "Building restarted",
+  "wandscape.subtitle.colony_level_up": "Colony level up",
+  "wandscape.subtitle.wonder_effect": "Wonder active",
+  "wandscape.subtitle.road_place": "Road placed"
 }

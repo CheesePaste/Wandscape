@@ -51,6 +51,7 @@ import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.PotionStationPacket;
@@ -305,6 +306,7 @@ public class Wandscape {
         CREATIVE_MODE_TABS.register(modEventBus);
         BLOCKS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
+        WandscapeSounds.SOUNDS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
