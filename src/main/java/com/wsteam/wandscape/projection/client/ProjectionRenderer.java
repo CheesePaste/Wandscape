@@ -1,30 +1,21 @@
 package com.wsteam.wandscape.projection.client;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
-import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
+import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Sheets;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -34,7 +25,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <ul>
  *   <li>Ghost building preview — actual textured block models rendered
  *       semi-transparently at the targeted position via
- *       {@link BlockRenderDispatcher#renderSingleBlock}.</li>
+ *       {@link BuildingGhostRenderer}.</li>
  *   <li>Body anchor meditation beam — translucent purple pillar at the
  *       position where the player left their body.</li>
  *   <li>Red wireframe boundary when overlapping an existing building.</li>
@@ -43,11 +34,6 @@ import com.wsteam.wandscape.shared.log.Log;
 public final class ProjectionRenderer {
 
     private static final String TAG = "ProjectionRenderer";
-
-    /** Alpha factor for ghost blocks (0.0-1.0). Applied via setColor interception. */
-    private static final float GHOST_ALPHA = 0.40f;
-    /** Full brightness: block=15, sky=15 (LightTexture.pack(15,15)). */
-    private static final int FULL_BRIGHT = 0xF000F0;
 
     private static boolean registered = false;
 
@@ -99,86 +85,8 @@ public final class ProjectionRenderer {
 
         boolean overlap = ProjectionClientState.isOverlapDetected();
 
-        Map<BlockOffset, BlockState> blockStates = resolveBlockStates(config);
-        if (blockStates.isEmpty()) return;
-
-        BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
-
-        // GhostBufferSource: wraps every VertexConsumer returned by bufferSource
-        // to multiply alpha on setColor. All default methods (putBulkData, addVertex
-        // with color/light/overlay) transitively call setColor, so alpha is applied
-        // uniformly to all rendering paths.
-        MultiBufferSource ghostSource = renderType -> {
-            VertexConsumer real = bufferSource.getBuffer(renderType);
-            return new VertexConsumer() {
-                @Override
-                public VertexConsumer addVertex(float x, float y, float z) {
-                    real.addVertex(x, y, z);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setColor(int r, int g, int b, int a) {
-                    real.setColor(r, g, b, (int) (a * GHOST_ALPHA));
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setUv(float u, float v) {
-                    real.setUv(u, v);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setUv1(int u, int v) {
-                    real.setUv1(u, v);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setUv2(int u, int v) {
-                    real.setUv2(u, v);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setNormal(float x, float y, float z) {
-                    real.setNormal(x, y, z);
-                    return this;
-                }
-            };
-        };
-
-        int rotationSteps = ProjectionClientState.getRotationSteps();
-
-        for (var entry : blockStates.entrySet()) {
-            BlockOffset originalOffset = entry.getKey();
-            BlockState originalState = entry.getValue();
-
-            BlockOffset rotatedOffset = BuildingRotation.rotateOffset(originalOffset, rotationSteps);
-            BlockState rotatedState = originalState;
-            for (int i = 0; i < rotationSteps; i++) {
-                rotatedState = rotatedState.rotate(Rotation.CLOCKWISE_90);
-            }
-
-            poseStack.pushPose();
-            poseStack.translate(
-                    ghostPos.getX() + rotatedOffset.x(),
-                    ghostPos.getY() + rotatedOffset.y(),
-                    ghostPos.getZ() + rotatedOffset.z());
-
-            blockRenderer.renderSingleBlock(
-                    rotatedState, poseStack, ghostSource,
-                    FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-                    ModelData.EMPTY, null);
-
-            poseStack.popPose();
-        }
-
-        // Flush entity-block render types
-        bufferSource.endBatch(Sheets.cutoutBlockSheet());
-        bufferSource.endBatch(Sheets.translucentCullBlockSheet());
-        bufferSource.endBatch(Sheets.translucentItemSheet());
+        BuildingGhostRenderer.renderGhostBlocks(mc, bufferSource, poseStack,
+                ghostPos, config, ProjectionClientState.getRotationSteps());
 
         // Overlap = red wireframe boundary
         if (overlap && config.boundary() != null) {
@@ -187,25 +95,6 @@ public final class ProjectionRenderer {
                     config.boundary().min(), config.boundary().max(), 255, 40, 40);
             bufferSource.endBatch(RenderType.lines());
         }
-    }
-
-    // ── Block mapping resolution ──
-
-    private static Map<BlockOffset, BlockState> resolveBlockStates(BuildingConfig config) {
-        Map<String, String> blockMapping = config.blockMapping();
-        if (blockMapping == null || blockMapping.isEmpty()) return Map.of();
-
-        Map<BlockOffset, BlockState> result = new HashMap<>();
-        for (BlockOffset offset : config.pattern()) {
-            String key = offset.toKey();
-            String blockId = blockMapping.get(key);
-            if (blockId == null) continue;
-            BlockState state = BuildingPreviewRenderer.resolveBlockState(blockId);
-            if (state != null) {
-                result.put(offset, state);
-            }
-        }
-        return result;
     }
 
     private static BuildingSlot getSelectedSlot() {

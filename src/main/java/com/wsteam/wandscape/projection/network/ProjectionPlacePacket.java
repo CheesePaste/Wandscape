@@ -96,7 +96,12 @@ public record ProjectionPlacePacket(
                 config.displayName(), packet.anchorPos,
                 player.getGameProfile().getName(), result.firstFree());
 
-        // 4. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
+        // 4. Refresh the client's building-area cache so the newly placed
+        // building's construction ghost appears immediately (no need to
+        // reopen the panel).
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player);
+
+        // 5. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
         if ("government".equals(config.category())) {
             var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
             if (colonyApi == null || colonyApi.getColonyId(packet.anchorPos) == null) {

@@ -7,14 +7,19 @@ import java.util.UUID;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.BuildingRotation;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 
@@ -92,20 +97,42 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         BlockPos anchor = building.getPosition();
         String typeId = building.getBuildingTypeId();
         int rotationSteps = building.getRotationSteps();
+        boolean completed = building.isStructureIntact();
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(typeId);
         String category = config != null ? config.category() : "";
         BuildingConfig.BoundaryBox raw = config != null ? config.boundary() : null;
         if (raw == null) {
-            return new BuildingEntry(anchor, typeId, category, rotationSteps,
+            return new BuildingEntry(anchor, typeId, category, rotationSteps, completed,
                     false, 0, 0, 0, 0, 0, 0);
         }
         BuildingConfig.BoundaryBox boundary = rotationSteps != 0
                 ? BuildingRotation.rotateBoundary(raw, rotationSteps) : raw;
-        return new BuildingEntry(anchor, typeId, category, rotationSteps,
+        return new BuildingEntry(anchor, typeId, category, rotationSteps, completed,
                 true,
                 boundary.min().x(), boundary.min().y(), boundary.min().z(),
                 boundary.max().x(), boundary.max().y(), boundary.max().z());
+    }
+
+    /**
+     * Build and send the building-area sync packet to a player (colony-scoped).
+     * Mirrors the panel-open sync so callers can refresh the client cache after
+     * any building lifecycle change (e.g. a new placement).
+     */
+    public static void sendToPlayer(ServerPlayer player) {
+        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return;
+        UUID colonyId = colonyApi.getColonyId(player.blockPosition());
+        if (colonyId == null) return;
+        BuildingApi buildingApi = WandscapeApis.getBuildingApi();
+        if (buildingApi == null) return;
+
+        List<BuildingEntry> entries = buildingApi.getColonyBuildings(colonyId).stream()
+                .map(BuildingAreaSyncPacket::fromBuildingData)
+                .toList();
+        PacketDistributor.sendToPlayer(player, new BuildingAreaSyncPacket(entries));
+        Log.info(TAG, "[Area] Sent {} building areas to {}", entries.size(),
+                player.getGameProfile().getName());
     }
 
     // ── StreamCodec ──
@@ -117,6 +144,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
             buf.writeUtf(entry.buildingTypeId());
             buf.writeUtf(entry.category());
             buf.writeByte(entry.rotationSteps());
+            buf.writeBoolean(entry.completed());
             buf.writeBoolean(entry.hasBoundary());
             if (entry.hasBoundary()) {
                 buf.writeVarInt(entry.bMinX());
@@ -137,6 +165,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
             String typeId = buf.readUtf();
             String category = buf.readUtf();
             int rotationSteps = buf.readByte();
+            boolean completed = buf.readBoolean();
             boolean hasBoundary = buf.readBoolean();
             int bMinX = 0, bMinY = 0, bMinZ = 0, bMaxX = 0, bMaxY = 0, bMaxZ = 0;
             if (hasBoundary) {
@@ -147,7 +176,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
                 bMaxY = buf.readVarInt();
                 bMaxZ = buf.readVarInt();
             }
-            entries.add(new BuildingEntry(anchor, typeId, category, rotationSteps,
+            entries.add(new BuildingEntry(anchor, typeId, category, rotationSteps, completed,
                     hasBoundary, bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ));
         }
         return new BuildingAreaSyncPacket(entries);
@@ -156,6 +185,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
     // ── Data ──
 
     public record BuildingEntry(BlockPos anchor, String buildingTypeId, String category, int rotationSteps,
+                                boolean completed,
                                 boolean hasBoundary,
                                 int bMinX, int bMinY, int bMinZ,
                                 int bMaxX, int bMaxY, int bMaxZ) {}

@@ -26,6 +26,7 @@ import com.wsteam.wandscape.building.client.NodeScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
+import com.wsteam.wandscape.building.client.ConstructionGhostRenderer;
 import com.wsteam.wandscape.building.scanner.client.BuildingScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
@@ -103,6 +104,7 @@ public class WandscapeClient {
         BuildingDebugOverlay.register();
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
+        ConstructionGhostRenderer.register();
 
         // Wandscape Panel
         WandscapePanelController.register();
