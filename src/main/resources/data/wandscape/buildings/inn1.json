@@ -10476,9 +10476,9 @@
   "service": {
     "energy_per_use": 20,
     "element_output": {
-      "earth": 5,
-      "wood": 5,
-      "water": 5
+      "earth": 7,
+      "wood": 7,
+      "water": 7
     },
     "max_occupancy": 8,
     "interaction_duration_ticks": 4800

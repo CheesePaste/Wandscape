@@ -44,7 +44,7 @@
   "maintenance_cost": { "costs": { "earth": 2, "water": 1 } },
   "service": {
     "energy_per_use": 20,
-    "element_output": { "earth": 1, "water": 2 },
+    "element_output": { "earth": 2, "water": 3 },
     "max_occupancy": 0
   },
   "queue": {

@@ -1,14 +1,15 @@
 package com.wsteam.wandscape.building.internal;
 
-import java.util.Map;
 import java.util.UUID;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Handles tourist interaction with shop buildings.
  *
- * <p>Tourist AI calls {@link #interact(ShopStockManager, UUID, UUID, UUID)}
- * to attempt a purchase. The tourist picks an in-stock item and buys one unit.
+ * <p>Tourist AI calls {@link #interact(ShopStockManager, UUID, UUID, UUID, int, int)}
+ * to attempt a purchase with their universal-element wallet. A random in-stock
+ * good the tourist can afford is chosen and as many units as the wallet allows
+ * are bought in one visit — cheap goods sell in bulk, expensive ones singly.
  * This is programmatic — the player-facing shop management GUI is separate.
  */
 public final class ShopInteractionHandler {
@@ -17,40 +18,30 @@ public final class ShopInteractionHandler {
     private ShopInteractionHandler() {}
 
     /**
-     * Tourist attempts to buy from a shop.
+     * Tourist attempts to buy from a shop with their universal-element wallet.
      *
-     * @param stockManager the shop stock manager instance
-     * @param touristId    the tourist entity UUID (for logging)
-     * @param buildingId   the shop building UUID
-     * @param colonyId     the colony the shop belongs to
-     * @return the itemId purchased, or null if purchase failed
+     * @param stockManager  the shop stock manager instance
+     * @param touristId     the tourist entity UUID (for logging)
+     * @param buildingId    the shop building UUID
+     * @param colonyId      the colony the shop belongs to
+     * @param wallet        the tourist's current universal-element wallet balance
+     * @param initialWallet the wallet the tourist arrived with (caps each trip's budget)
+     * @return the purchase result (item, count, total spent), or null if nothing was bought
      */
-    public static String interact(ShopStockManager stockManager,
-                                  UUID touristId, UUID buildingId, UUID colonyId) {
-        Map<String, Integer> stock = stockManager.getStock(buildingId);
-        if (stock.isEmpty()) {
-            Log.debug(TAG, "[ShopInteract] Tourist {} tried shop {} — out of stock",
-                    shortId(touristId), shortId(buildingId));
-            return null;
+    public static ShopStockManager.PurchaseResult interact(ShopStockManager stockManager,
+                                  UUID touristId, UUID buildingId, UUID colonyId,
+                                  int wallet, int initialWallet) {
+        ShopStockManager.PurchaseResult result =
+                stockManager.purchaseAffordable(buildingId, colonyId, wallet, initialWallet);
+        if (result != null) {
+            Log.debug(TAG, "[ShopInteract] Tourist {} bought {} x{} from shop {} (spent {})",
+                    shortId(touristId), result.itemId(), result.count(),
+                    shortId(buildingId), result.spent());
+        } else {
+            Log.debug(TAG, "[ShopInteract] Tourist {} found nothing buyable at shop {} (wallet={})",
+                    shortId(touristId), shortId(buildingId), wallet);
         }
-
-        // Pick the first available in-stock item
-        String chosenItem = null;
-        for (var entry : stock.entrySet()) {
-            if (entry.getValue() > 0) {
-                chosenItem = entry.getKey();
-                break;
-            }
-        }
-        if (chosenItem == null) return null;
-
-        boolean success = stockManager.purchase(buildingId, chosenItem, colonyId);
-        if (success) {
-            Log.debug(TAG, "[ShopInteract] Tourist {} bought {} from shop {}",
-                    shortId(touristId), chosenItem, shortId(buildingId));
-            return chosenItem;
-        }
-        return null;
+        return result;
     }
 
     private static String shortId(UUID id) {

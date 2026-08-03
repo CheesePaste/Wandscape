@@ -28,6 +28,7 @@ public class TouristScreen extends MedievalScreen {
     private int energy;
     private int satisfaction;
     private int level;
+    private int wallet;
     private List<TouristDataPacket.VisitEntry> recentVisits;
     private String currentState;
     private String targetBuildingName;
@@ -50,6 +51,7 @@ public class TouristScreen extends MedievalScreen {
         this.energy = packet.energy();
         this.satisfaction = packet.satisfaction();
         this.level = packet.level();
+        this.wallet = packet.wallet();
         this.recentVisits = packet.recentVisits();
         this.currentState = packet.currentState();
         this.targetBuildingName = packet.targetBuildingName();
@@ -103,6 +105,11 @@ public class TouristScreen extends MedievalScreen {
         // Level text
         g.drawString(font, "等级:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(level), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        statY += 12;
+
+        // Wallet text
+        g.drawString(font, "钱包:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, String.valueOf(wallet), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
 
         // ── Debug: state / target / position / cooldown ──
         int dbgLabelW = 36;
@@ -121,7 +128,7 @@ public class TouristScreen extends MedievalScreen {
                 cooldownRemainingTicks > 0 ? MedievalColors.INFO_BLUE : MedievalColors.TEXT_MUTED);
 
         // ── Visits ──
-        int visitsTop = contentTop + 102;
+        int visitsTop = contentTop + 118;
         g.drawString(font, "行程", leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
         g.fill(leftCol, visitsTop + 10, leftPos + PW - 12, visitsTop + 11, MedievalColors.BORDER_GOLD_DARK);
 

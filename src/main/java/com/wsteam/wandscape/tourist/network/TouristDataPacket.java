@@ -27,6 +27,7 @@ public record TouristDataPacket(
         int energy,
         int satisfaction,
         int level,
+        int wallet,
         List<VisitEntry> recentVisits,
         String currentState,
         String targetBuildingName,
@@ -84,6 +85,7 @@ public record TouristDataPacket(
         buf.writeInt(pkt.energy);
         buf.writeInt(pkt.satisfaction);
         buf.writeInt(pkt.level);
+        buf.writeInt(pkt.wallet);
         buf.writeCollection(pkt.recentVisits, (b, v) -> VisitEntry.write(b, v));
         buf.writeUtf(pkt.currentState);
         buf.writeUtf(pkt.targetBuildingName);
@@ -99,6 +101,7 @@ public record TouristDataPacket(
         return new TouristDataPacket(
                 buf.readInt(),
                 buf.readUtf(),
+                buf.readInt(),
                 buf.readInt(),
                 buf.readInt(),
                 buf.readInt(),
@@ -151,6 +154,7 @@ public record TouristDataPacket(
                 tourist.getEnergy(),
                 tourist.getSatisfaction(),
                 tourist.getLevel(),
+                tourist.getWallet(),
                 visits,
                 tourist.getCurrentState().name(),
                 targetName,

@@ -1042,6 +1042,11 @@ public class TouristMoveGoal extends Goal {
             if (!"shop".equals(cat) && !"service".equals(cat)) continue;
             if (b.isShutdown() || !b.isStructureIntact()) continue;
             if (tourist.hasVisitedBuilding(b.getBuildingId())) continue;
+            // Broke tourists don't target shops — service buildings remain visitable.
+            if ("shop".equals(cat)) {
+                ShopStockManager stock = ShopStockManager.getActive();
+                if (stock == null || !stock.hasStock(b.getBuildingId()) || tourist.getWallet() <= 0) continue;
+            }
             return true;
         }
         return false;
@@ -1141,7 +1146,8 @@ public class TouristMoveGoal extends Goal {
 
             if ("shop".equals(cat)) {
                 ShopStockManager stock = ShopStockManager.getActive();
-                if (stock != null && stock.hasStock(b.getBuildingId())) {
+                if (stock != null && stock.hasStock(b.getBuildingId())
+                        && tourist.getWallet() > 0) {
                     shopTargets.add(state);
                 }
             } else {
@@ -1295,9 +1301,11 @@ public class TouristMoveGoal extends Goal {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        String purchased = com.wsteam.wandscape.building.internal.ShopInteractionHandler.interact(
-                stockManager, tourist.getUUID(), buildingId, colonyId);
-        if (purchased != null) {
+        ShopStockManager.PurchaseResult purchase = com.wsteam.wandscape.building.internal.ShopInteractionHandler.interact(
+                stockManager, tourist.getUUID(), buildingId, colonyId,
+                tourist.getWallet(), tourist.getInitialWallet());
+        if (purchase != null) {
+            tourist.spendWallet(purchase.spent());
             int satBefore = tourist.getSatisfaction();
             int gain = computeSatisfactionGain(buildingId);
             tourist.setSatisfaction(satBefore + gain);
@@ -1307,6 +1315,9 @@ public class TouristMoveGoal extends Goal {
 
             String bldType = getBuildingTypeId(buildingId);
             String bldName = getBuildingDisplayName(buildingId, bldType);
+            String purchased = purchase.count() > 1
+                    ? purchase.itemId() + " ×" + purchase.count()
+                    : purchase.itemId();
             VisitMemory memory = new VisitMemory.Builder()
                     .buildingTypeId(bldType != null ? bldType : "unknown")
                     .buildingDisplayName(bldName)
@@ -1323,7 +1334,7 @@ public class TouristMoveGoal extends Goal {
             emitNarrativeEvent(shopEvent);
 
             String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
-            showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20");
+            showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20 钱包-" + purchase.spent());
 
             sparkleSatisfaction();
         }

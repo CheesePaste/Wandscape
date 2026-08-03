@@ -251,6 +251,16 @@ public class Config {
                     + "after visiting it.")
             .defineInRange("tourist.preferenceDecay", 15, 0, 30);
 
+    public static final ModConfigSpec.IntValue TOURIST_BASE_WALLET = BUILDER
+            .comment("Starting universal-element wallet for a level-1 tourist. "
+                    + "Reference prices: bread ~16, cake ~750, golden apple ~2684.")
+            .defineInRange("tourist.baseWallet", 200, 0, 1000000);
+
+    public static final ModConfigSpec.IntValue TOURIST_WALLET_PER_LEVEL = BUILDER
+            .comment("Additional universal-element wallet per tourist level. "
+                    + "Wallet = baseWallet + level × walletPerLevel.")
+            .defineInRange("tourist.walletPerLevel", 300, 0, 1000000);
+
     // ---- Guard (守卫) system ----
 
     public static final ModConfigSpec.IntValue GUARD_RANGE = BUILDER

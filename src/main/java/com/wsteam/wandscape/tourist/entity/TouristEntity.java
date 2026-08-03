@@ -149,6 +149,10 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     private int energy = 100;
     private int satisfaction;
     private int level = 1;
+    /** Universal-element spending money. Higher tourist levels start with more. */
+    private int wallet;
+    /** The wallet the tourist arrived with — caps each shopping trip's budget. */
+    private int initialWallet;
 
     // ── Per-building-type preference (buildingTypeId → 5..100, default 50) ──
 
@@ -362,6 +366,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         tag.putInt("energy", energy);
         tag.putInt("satisfaction", satisfaction);
         tag.putInt("level", level);
+        tag.putInt("wallet", wallet);
+        tag.putInt("initialWallet", initialWallet);
 
         // Save per-building-type preferences as a flat compound
         CompoundTag prefs = new CompoundTag();
@@ -453,6 +459,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         this.energy = Math.clamp(tag.getInt("energy"), 0, 200);
         this.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
         this.level = Math.max(1, tag.getInt("level"));
+        this.wallet = Math.max(0, tag.getInt("wallet"));
+        this.initialWallet = Math.max(0, tag.getInt("initialWallet"));
 
         // Restore per-building-type preferences
         this.typePreferences.clear();
@@ -606,6 +614,17 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
 
     public int getLevel() { return level; }
     public void setLevel(int l) { this.level = Math.max(1, l); }
+
+    public int getWallet() { return wallet; }
+    public void setWallet(int w) { this.wallet = Math.max(0, w); }
+
+    public int getInitialWallet() { return initialWallet; }
+    public void setInitialWallet(int w) { this.initialWallet = Math.max(0, w); }
+
+    /** Spend from the universal wallet; clamps at 0 if the amount exceeds the balance. */
+    public void spendWallet(long amount) {
+        this.wallet = (int) Math.max(0, (long) this.wallet - amount);
+    }
 
     // ── Preferences ──
 

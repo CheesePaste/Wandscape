@@ -140,9 +140,9 @@
   "service": {
     "energy_per_use": 15,
     "element_output": {
-      "fire": 3,
-      "earth": 2,
-      "air": 1
+      "fire": 4,
+      "earth": 3,
+      "wind": 2
     },
     "max_occupancy": 0
   },

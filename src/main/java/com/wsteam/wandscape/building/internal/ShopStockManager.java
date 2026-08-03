@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.building.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +57,9 @@ public final class ShopStockManager {
 
     /** Buildings currently being restocked (prevents duplicate concurrent restocks). */
     private final Set<UUID> restockingInProgress = ConcurrentHashMap.newKeySet();
+
+    /** Random picker for which affordable good a tourist buys. */
+    private final Random random = new Random();
 
     @javax.annotation.Nullable
     private static ShopStockManager active;
@@ -231,32 +236,100 @@ public final class ShopStockManager {
 
     // ── Operations ──
 
+    /** Result of a tourist bulk purchase: what was bought, how many, and total wallet spent. */
+    public record PurchaseResult(String itemId, int count, long spent) {}
+
     /**
-     * Tourist purchases one unit of an item.
-     *
-     * @return true if purchase succeeded (stock was available)
+     * Universal-element wallet price for one unit of a good: the sum of all
+     * per-element profits the colony receives (each element × (1 + profitRate)).
+     * Returns 0 for goods with no element mapping.
      */
-    public boolean purchase(UUID buildingId, String itemId, UUID colonyId) {
+    public static long walletPrice(ShopConfig shopConfig, ShopGoodDef good) {
+        double profitRate = shopConfig != null ? shopConfig.profitRate() : 0.0;
+        long total = 0;
+        for (var entry : getItemElementValue(good.itemId()).entrySet()) {
+            total += (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
+        }
+        return total;
+    }
+
+    /**
+     * Tourist buys from a shop with their universal-element wallet.
+     *
+     * <p>Each shopping trip draws a random budget fraction a ∈ [0.2, 1] of the
+     * tourist's initial wallet (capped at the current balance), selects one random
+     * in-stock good, and buys floor(budget/price) + 1 units (the +1 guarantees a
+     * purchase even for expensive goods). The full price is deducted from the
+     * wallet afterwards, so a single expensive good empties it.
+     *
+     * @return the purchase result, or null if nothing was buyable
+     */
+    @Nullable
+    public PurchaseResult purchaseAffordable(UUID buildingId, UUID colonyId, int wallet, int initialWallet) {
+        if (wallet <= 0) return null;
         BuildingSavedData savedData = getSavedData();
-        if (savedData == null) return false;
+        if (savedData == null) return null;
+        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
+        if (s.isEmpty()) return null;
+        BuildingState state = getBuildingState(buildingId);
+        if (state == null) return null;
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null || config.shop() == null) return null;
+
+        // Selectable = in-stock goods with a real (mapped) price. The tourist can
+        // buy even if the price exceeds their wallet — they go into debt, clamped to 0.
+        List<ShopGoodDef> selectable = new ArrayList<>();
+        for (ShopGoodDef good : config.shop().goods()) {
+            if (s.getOrDefault(good.itemId(), 0) <= 0) continue;
+            if (walletPrice(config.shop(), good) > 0) selectable.add(good);
+        }
+        if (selectable.isEmpty()) return null;
+
+        ShopGoodDef chosen = selectable.get(random.nextInt(selectable.size()));
+        long price = walletPrice(config.shop(), chosen);
+        int stock = s.getOrDefault(chosen.itemId(), 0);
+
+        // Trip budget: random 20%–100% of the initial wallet, capped at what remains.
+        double a = 0.2 + 0.8 * random.nextDouble();
+        long budget = (long) (a * initialWallet);
+        if (budget > wallet) budget = wallet;
+
+        // floor(budget/price) + 1: buy until just under the budget, then one more so
+        // expensive goods are never bought zero times.
+        int qty = (int) Math.min(stock, budget / price + 1);
+
+        int bought = purchase(buildingId, chosen.itemId(), colonyId, qty);
+        if (bought <= 0) return null;
+        return new PurchaseResult(chosen.itemId(), bought, price * bought);
+    }
+
+    /**
+     * Tourist purchases {@code count} units of an item (or as many as are in stock).
+     *
+     * @return the number of units actually purchased (0 if the purchase failed)
+     */
+    public int purchase(UUID buildingId, String itemId, UUID colonyId, int count) {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null || count <= 0) return 0;
 
         Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
         int current = s.getOrDefault(itemId, 0);
-        if (current <= 0) return false;
+        if (current <= 0) return 0;
 
         ServerLevel level = getServerLevel();
-        if (level == null) return false;
+        if (level == null) return 0;
         BuildingState state = savedData.getBuilding(buildingId);
-        if (state == null) return false;
+        if (state == null) return 0;
 
         BuildingConfig config = BuildingConfigLoader.getInstance()
                 .get(state.getBuildingTypeId());
-        if (config == null || config.shop() == null) return false;
+        if (config == null || config.shop() == null) return 0;
 
         ShopGoodDef good = findGood(config.shop(), itemId);
-        if (good == null) return false;
+        if (good == null) return 0;
 
-        int newStock = current - 1;
+        int qty = Math.min(count, current);
+        int newStock = current - qty;
         s.put(itemId, newStock);
         savedData.setDirty();
         updateHasStock(buildingId, s);
@@ -267,8 +340,8 @@ public final class ShopStockManager {
             double profitRate = config.shop().profitRate();
             Map<ElementType, Long> elementValue = getItemElementValue(itemId);
             for (var entry : elementValue.entrySet()) {
-                long profit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
-                bank.addElement(colonyId, entry.getKey(), profit);
+                long perUnit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
+                bank.addElement(colonyId, entry.getKey(), perUnit * qty);
             }
             bank.recordPurchase(colonyId);
         }
@@ -283,9 +356,9 @@ public final class ShopStockManager {
             }
         }
 
-        Log.debug(TAG, "[Shop] Purchase: building={} item={} remaining={}",
-                buildingId.toString().substring(0, 8), itemId, newStock);
-        return true;
+        Log.debug(TAG, "[Shop] Purchase: building={} item={} x{} remaining={}",
+                buildingId.toString().substring(0, 8), itemId, qty, newStock);
+        return qty;
     }
 
     // ── Internal ──

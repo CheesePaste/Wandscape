@@ -123,6 +123,8 @@ public final class TouristSpawnSystem {
             tourist.setTouristName(generateRandomTouristName());
             tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
             tourist.setLevel(ps.level);
+            tourist.setWallet(startingWallet(ps.level));
+            tourist.setInitialWallet(startingWallet(ps.level));
             tourist.setTargetBuildingId(ps.buildingId());
             tourist.setTargetBuildingCategory(target.getCategory());
             tourist.setColonyId(target.getColonyId());
@@ -299,6 +301,8 @@ public final class TouristSpawnSystem {
                 tourist.setTouristName(generateRandomTouristName());
                 tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
                 tourist.setLevel(ps.level);
+                tourist.setWallet(startingWallet(ps.level));
+                tourist.setInitialWallet(startingWallet(ps.level));
                 tourist.setTargetBuildingId(ps.buildingId());
                 tourist.setTargetBuildingCategory(target.getCategory());
                 tourist.setColonyId(target.getColonyId());
@@ -718,6 +722,11 @@ public final class TouristSpawnSystem {
         String surname = TOURIST_SURNAMES[NAME_RANDOM.nextInt(TOURIST_SURNAMES.length)];
         String given = TOURIST_GIVENS[NAME_RANDOM.nextInt(TOURIST_GIVENS.length)];
         return surname + given;
+    }
+
+    /** Universal-element starting wallet: base + level × per-level bonus. */
+    private static int startingWallet(int level) {
+        return Config.TOURIST_BASE_WALLET.get() + Math.max(0, level) * Config.TOURIST_WALLET_PER_LEVEL.get();
     }
 
     // ── Action bar ──
