@@ -14,6 +14,8 @@ WandscapeEngine 单例持有：World + AsyncTransformExecutor + 各边界实现 
 
 `ColonyMetricsService` 需要引用所有模块 API（BuildingApi/TouristApi/NpcApi/WarehouseApi/ColonyLevelManager），放在 engine/ 符合依赖规则。它聚合实时殖民地指标，是 PanelStateTracker、PanelStateTogglePacket 和 AchievementService 的唯一数据源。
 
+`AchievementService` 是成就授予器：进度定义在 `data/wandscape/advancement/*.json`（15 个，vanilla 系统，不自定义），它订阅 BuildingPlaced/ShopRestocked/LivingDeath/ColonyRaidVictory/ColonyLevelUp 事件 + 100tick 周期扫描，条件达成时 `PlayerAdvancements.award()` 授予全部在线玩家（授予幂等）。
+
 `EngineBootstrap.register()` 前必须确保 `WandscapeEngine.setWorld(world)` 已完成——2026-07-29 修复了此前服务在 null world 上注册的时序 bug。
 
 ## TaskSource 实现 (source/)

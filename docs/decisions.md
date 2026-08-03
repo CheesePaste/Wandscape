@@ -42,6 +42,8 @@
 
 **为什么袭击无失败概念？** mixin 使 isVillage 在市政厅恒 true，原版 LOSS（村庄被毁）基本不触发。袭击的真实代价由现有机制兜底：掠夺者破坏建筑 → `structureIntact=false` → 三值扣减 + 自动排修复。故只广播 Started/Victory 两个事件，胜利事件带 colonyId/raidId/omenLevel/groupsSpawned 供成就系统订阅。
 
+**为什么成就系统用原版 Advancement 而非自定义成就模块？** 原版进度系统已内置全部所需能力：树形进度界面（L 键）、隐藏成就（`hidden:true` → 解锁前显示 `???`）、解锁 toast + 聊天广播、按玩家持久化、`/advancement` 查询命令。自建则要重写 GUI/持久化/网络同步/隐藏规则。模组侧只做两件事：`data/wandscape/advancement/*.json` 定义 15 个进度 + 条件达成时 `PlayerAdvancements.award()` 授予。criterion 用 `minecraft:impossible` 占位——它是空 trigger，`award()` 直接改进度、不依赖 trigger 自然触发。授予幂等（已授予则 grantProgress 返回 false、不重复弹 toast），因此事件驱动 + 100tick 周期扫描可以安全地补授予离线后上线的玩家。#15「击退袭击」挂 `ColonyRaidVictoryEvent`（raid 系统 8/2 已实现，胜利即广播）。
+
 ## 数据设计
 
 **block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。

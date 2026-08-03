@@ -217,6 +217,13 @@ ColonyMetricsService.getSnapshot(colonyId)   ← 成就/HUD 统一调用
 - 删除整个 `imgui/` 包（`ImGuiManager`、`WandscapeImGuiTheme`）、`SplineEditorImGui`、imgui 单元测试、build.gradle 的 imgui-java 依赖
 - 世界交互层（Controller/Renderer/InputHandler/MixinSplineEditorCamera）保持不变
 
+## 已完成：成就系统（vanilla 进度）(2026-08-03)
+
+- 用原版 Advancement 系统，不自定义：`data/wandscape/advancement/` 15 个 JSON + 中英翻译键（`advancements.wandscape.*`）
+- 单根 `start`，建筑链（1/5/10/20/50）+ 等级链（2/5/10/20/30）+ 特殊成就；#11 末影猎手、#14 奇观为隐藏成就（`hidden:true`）
+- `engine/service/AchievementService` 事件驱动（BuildingPlaced/ShopRestocked/LivingDeath/ColonyRaidVictory/ColonyLevelUp）+ 100tick 周期扫描兜底，条件达成时 `PlayerAdvancements.award()` 授予全部在线玩家（幂等，补授予离线玩家）
+- 展示/持久化/隐藏/通知全部交给原版进度系统，无自定义 GUI/SavedData
+
 ## 后续阶段（概览）
 
 - **阶段 4**：殖民地生命周期 + 房屋 + 魔力池 + 祭坛 + 管理面板

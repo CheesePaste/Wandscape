@@ -148,7 +148,7 @@ ColonyMetricsService.getSnapshot(colonyId)   ← 统一查询入口
 消费者:
   PanelStateTracker          → ColonyStatsSyncPacket → 客户端 HUD
   PanelStateTogglePacket     → ColonyStatsSyncPacket → 面板首次打开
-  AchievementService         → 成就评估触发器
+  AchievementService         → 条件达成时授予 vanilla 进度（data/wandscape/advancement/）
 ```
 
 ## 依赖规则
