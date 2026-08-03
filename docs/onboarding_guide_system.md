@@ -44,7 +44,7 @@ shared/ui/markdown/
 
 ## 三、 引导 Markdown 自定义语法规范 (Syntax Specification)
 
-引导指南文档放在 `assets/wandscape/guide/*.md` 资源路径中，支持以下丰富语法：
+引导指南文档放在 `assets/wandscape/guide/<locale>/` 资源路径中（locale 子目录：`zh_cn/` 已有 20 个 md，`en/` 待翻译），支持以下丰富语法：
 
 ### 1. 标题语法（Header）
 - `# H1 大标题`：使用 `BORDER_GOLD` (#C8A040) 金色发光渲染，自带下方黄金分界线。
@@ -124,4 +124,4 @@ Wandscape UI 体系
 /wandscape guide
 ```
 
-执行该命令后，服务端会向客户端发送 `GuideTestPacket`，并在游戏内弹出基于 `MedievalScreen` 玻璃金边样式的 Markdown 测试视窗，展示 `assets/wandscape/guide/test_guide.md` 中的所有排版、图片与点击交互效果。
+执行该命令后，服务端会向客户端发送 `GuideTestPacket`，并在游戏内弹出基于 `MedievalScreen` 玻璃金边样式的 Markdown 测试视窗；视窗内容由客户端 `DocumentLoader` 按当前语言从 `assets/wandscape/guide/<locale>/` 加载（当前为 `zh_cn/`），展示所有排版、图片与点击交互效果。
