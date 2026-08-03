@@ -398,3 +398,13 @@ V 面板右上角的"新手引导"从 `WandscapePanelState`/`WandscapePanelOverl
 - **为什么进度只前进不回退？** `currentStep = max(缓存推导, 服务端确认)`。防止缓存暂空/建筑被拆时引导倒退到已完成步骤。老玩家重进世界：面板开启 → 服务端 seed 已存步骤 → 不再弹出已完成的引导。
 - **触发源修复**：`ColonyCreateRequestPacket` 创建殖民地并 linkTownHall 后补发 `BuildingAreaSyncPacket.sendToPlayer(player, anchorHint)`；`sendToPlayer` 新增按锚点坐标兜底解析殖民地（玩家站得远时仍能同步）。首次放市政厅 → 引导即时从 1/2 跳到 2/2。
 - **版本**：v1.9.2a→v1.9.6a（补丁号 +4：模块重构 / 触发修复 / 持久化 / 测试缝合）。
+
+## 新手引导扩为 9 步，完成判定上移服务端（2026-08-03）
+
+引导从 2 步扩到 9 步：市政厅→仓库→元素节点→生产工坊→法宝合成→商店（补货+游客购买）→旅店（游客入住）→酒馆（招募 NPC）→殖民地升 2 级。
+
+- **为什么从客户端驱动改为服务端驱动？** 新步骤要判断"游客购买"（`ShopStockManager.purchase`）、"游客入住"（`TouristApi.getOvernightStayerCount`）、"殖民地等级"（`ColonyLevelData.getLevel`）——这些数据只在服务端，客户端看不到。与其为教程往客户端同步一堆殖民地状态，不如让服务端算步骤、客户端只渲染。`GuideProgressService.computeStep(GuideServerContext)` 是纯函数（MC-free 接口），可 JUnit 单测；顺序必须与客户端 `GuideRegistry.STEPS` 一致（测试里用 `STEPS.size()` 兜底校验）。
+- **为什么给 ColonyItemBank 加购买计数？** 步骤 6"等待游客购买"需要一个"发生过购买"的持久信号。`ColonyItemBank` 本就按 colonyId 存殖民地经济（游客购买的元素利润也入这里），加一个 `purchaseCount` 字段最自然；`ShopStockManager.purchase` 成功时 `recordPurchase(colonyId)`。
+- **触发时机**：面板开启 / 放置建筑 / 创建殖民地（即现有发 BuildingAreaSyncPacket 的 3 处）→ `GuideProgressApi.sendToPlayer` 重算并下发。游客驱动的步骤（购买/入住/满意度）在玩家下次开面板时推进——引导框只在面板开启时可见，开面板即刷新，符合"等待"步骤的节奏。
+- **只前进不回退**：`GuideProgressSavedData` 存 max(服务端算出的步, 已存步)，游客过夜数回落到 0 不会让引导倒退。
+- **版本**：v1.9.7a→v1.9.10a（补丁号 +3：服务端引擎 / 9 步内容与接线 / 待验证测试）。
