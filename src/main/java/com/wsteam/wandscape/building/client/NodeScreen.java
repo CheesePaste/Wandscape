@@ -127,7 +127,9 @@ public class NodeScreen extends MedievalScreen {
         super.render(g, mouseX, mouseY, partialTick);
 
         int y = topPos + headerHeight + 8;
-        drawInfoLine(g, y, "Element", element); y += INFO_ROW_H;
+        drawInfoLine(g, y, "Element",
+                com.wsteam.wandscape.shared.ui.I18n.name("element.wandscape." + element, element).getString());
+        y += INFO_ROW_H;
         drawInfoLine(g, y, "Per Harvest", String.valueOf(amountPerHarvest)); y += INFO_ROW_H;
         drawInfoLine(g, y, "Channel", channelTicks + " ticks"); y += INFO_ROW_H;
         drawInfoLine(g, y, "Mana / Harvest", String.valueOf(manaCost));

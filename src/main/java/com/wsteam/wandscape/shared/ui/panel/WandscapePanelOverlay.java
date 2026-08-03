@@ -7,6 +7,7 @@ import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 
 import net.minecraft.client.Minecraft;
@@ -382,13 +383,13 @@ public final class WandscapePanelOverlay {
         int colW = (boxW - pad * 3) / 2;
 
         if (stats == null || stats.snapshotCount() == 0) {
-            drawText(g, font, "No statistics available yet.", leftX + pad, topY + pad,
-                    WandscapeTheme.COLOR_TEXT_DIM);
+            drawText(g, font, I18n.name("gui.wandscape.stats.none", "No statistics available yet.").getString(),
+                    leftX + pad, topY + pad, WandscapeTheme.COLOR_TEXT_DIM);
             return;
         }
 
         // ── Header (full width) ──
-        String header = "Colony Statistics  |  Day " + stats.currentDay();
+        String header = I18n.name("gui.wandscape.stats.title", "Colony Statistics  |  Day {0}", stats.currentDay()).getString();
         drawText(g, font, header, leftX + pad, topY + pad, WandscapeTheme.COLOR_TEXT_NORMAL);
         int sepY = topY + pad + font.lineHeight + 2;
         g.fill(leftX + pad, sepY, leftX + boxW - pad, sepY + 1, WandscapeTheme.COLOR_BORDER_NORMAL);
@@ -398,26 +399,26 @@ public final class WandscapePanelOverlay {
         int lx = leftX + pad;
         int y = y0;
 
-        drawText(g, font, "Maintenance", lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.stats.maintenance", "Maintenance").getString(), lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
-        drawText(g, font, "  Paid: " + stats.buildingsPaid(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.paid", "Paid: {0}", stats.buildingsPaid()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  Shut: " + stats.buildingsShutdown(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.shut", "Shut: {0}", stats.buildingsShutdown()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH + 4;
 
-        drawText(g, font, "Tourists", lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.stats.tourists", "Tourists").getString(), lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
-        drawText(g, font, "  In:  " + stats.touristsArrived(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.arrived", "In: {0}", stats.touristsArrived()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  Out: " + stats.touristsDeparted(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.departed", "Out: {0}", stats.touristsDeparted()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  Sat:  " + stats.avgSatisfaction() + "%", lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.satisfaction", "Sat: {0}%", stats.avgSatisfaction()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Right column: elements consumed ──
         int rx = lx + colW + pad;
         y = y0;
 
-        drawText(g, font, "Elements (30d)", rx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.stats.elements_30d", "Elements (30d)").getString(), rx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
 
         var elements = stats.totalElementsConsumed();
@@ -432,7 +433,8 @@ public final class WandscapePanelOverlay {
                 g.fill(rx + 2, y + 4, rx + 10, y + 12, dotColor);
                 // Element name + count
                 drawText(g, font,
-                        types[i].getId() + ": " + formatElementCount(amount),
+                        I18n.name("element.wandscape." + types[i].getId(), types[i].getId()).getString()
+                                + ": " + formatElementCount(amount),
                         rx + 14, y, WandscapeTheme.COLOR_TEXT_DIM);
                 y += lineH;
                 if (i == 3) { y += 1; } // small gap after fire
