@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.shared.ui.component;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -102,6 +103,9 @@ public class TaskQueuePanel extends AbstractWidget {
     private static final int ARROW_STATE_HOVER    = 1;
     private static final int ARROW_STATE_DISABLED = 2;
     private static final int CLOSE_STATE_DISABLED = 3;
+
+    // Normal and hover share the same arrow sprite; hover is brightened to stay distinguishable.
+    private static final float HOVER_BRIGHTEN = 1.6F;
 
     public TaskQueuePanel(int x, int y, int width, int height) {
         super(x, y, width, height, Component.literal("Task Queue"));
@@ -250,7 +254,7 @@ public class TaskQueuePanel extends AbstractWidget {
                     ? ARROW_STATE_HOVER
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
-        SkinRender.drawUpArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        renderArrow(g, btnX, btnY, state, true);
         storePressAction(btnX, btnY, active, onPress);
     }
 
@@ -261,8 +265,24 @@ public class TaskQueuePanel extends AbstractWidget {
                     ? ARROW_STATE_HOVER
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
-        SkinRender.drawDownArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        renderArrow(g, btnX, btnY, state, false);
         storePressAction(btnX, btnY, active, onPress);
+    }
+
+    /**
+     * Draws an up/down arrow sprite, brightening it on hover so the shared
+     * normal sprite stays visually distinguishable. Shader color is always reset.
+     */
+    private void renderArrow(GuiGraphics g, int btnX, int btnY, int state, boolean up) {
+        if (state == ARROW_STATE_HOVER) {
+            RenderSystem.setShaderColor(HOVER_BRIGHTEN, HOVER_BRIGHTEN, HOVER_BRIGHTEN, 1.0F);
+        }
+        if (up) {
+            SkinRender.drawUpArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        } else {
+            SkinRender.drawDownArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        }
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     private void drawCloseBtn(GuiGraphics g, int btnX, int btnY,
