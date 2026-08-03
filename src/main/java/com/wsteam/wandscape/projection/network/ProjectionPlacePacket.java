@@ -10,6 +10,7 @@ import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -81,21 +82,26 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 3. Success — notify player
+        // 3. Success — notify player. Building name resolves against the client locale
+        // via building.wandscape.<id>; displayName stays as the fallback (D4).
         String posStr = packet.anchorPos.getX() + ", " +
                 packet.anchorPos.getY() + ", " +
                 packet.anchorPos.getZ();
+        Component buildingName = I18n.name("building.wandscape." + config.id(), config.displayName());
 
         if (result.firstFree()) {
             player.displayClientMessage(
-                    Component.literal("[Projection] §a" + config.displayName() +
-                            " §fplaced at (" + posStr +
-                            ") — §eFREE first build, no materials consumed"),
+                    Component.literal("[Projection] §a")
+                            .append(buildingName)
+                            .append(Component.literal(" §fplaced at (" + posStr +
+                                    ") — §eFREE first build, no materials consumed")),
                     false);
         } else {
             player.displayClientMessage(
-                    Component.literal("[Projection] §a" + config.displayName() +
-                            " §fplaced at (" + posStr + ") — §aNPC will construct"),
+                    Component.literal("[Projection] §a")
+                            .append(buildingName)
+                            .append(Component.literal(" §fplaced at (" + posStr +
+                                    ") — §aNPC will construct")),
                     false);
         }
 
