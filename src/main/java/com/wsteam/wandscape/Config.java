@@ -280,5 +280,29 @@ public class Config {
                     + "before forgetting, unless it gets hurt again (600 = 30s).")
             .defineInRange("guard.hateDurationTicks", 600, 20, 72000);
 
+    // ---- Raid (袭击) system ----
+
+    public static final ModConfigSpec.IntValue RAID_TRIGGER_RANGE = BUILDER
+            .comment("Raid trigger radius: a player carrying Bad Omen (RAID_OMEN/BAD_OMEN) within this horizontal "
+                    + "X/Z expansion of a non-shutdown building's AABB (Y unchanged) starts a raid centered on the "
+                    + "colony's town hall.")
+            .defineInRange("raid.triggerRange", 10, 1, 64);
+
+    public static final ModConfigSpec.IntValue RAID_VILLAGE_RANGE = BUILDER
+            .comment("Raid village radius: ServerLevel.isVillage returns true within this horizontal distance of a "
+                    + "colony's town hall, so the vanilla Raid treats the colony as a village (won't stop/LOSS, "
+                    + "spawns waves around it).")
+            .defineInRange("raid.villageRange", 16, 1, 64);
+
+    public static final ModConfigSpec.IntValue RAID_NEARBY_RADIUS = BUILDER
+            .comment("Raid nearby radius (blocks): while an active raid's center is within this distance of a "
+                    + "colony's town hall, no new raid is triggered for that colony (one raid at a time).")
+            .defineInRange("raid.nearbyRadius", 64, 8, 256);
+
+    public static final ModConfigSpec.IntValue RAID_CHECK_INTERVAL = BUILDER
+            .comment("Raid trigger scan interval (ticks): how often the scanner checks for bad-omen players near "
+                    + "buildings.")
+            .defineInRange("raid.checkIntervalTicks", 20, 5, 200);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

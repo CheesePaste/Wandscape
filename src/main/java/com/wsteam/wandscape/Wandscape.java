@@ -762,6 +762,13 @@ public class Wandscape {
         var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
         if (selfDefenseExec != null) selfDefenseExec.tick(world);
 
+        // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
+        var raidLevel = event.getServer().overworld();
+        if (raidLevel != null) {
+            com.wsteam.wandscape.raid.RaidTriggerScanner.INSTANCE.tick(raidLevel);
+            com.wsteam.wandscape.raid.ColonyRaidTracker.INSTANCE.tick(raidLevel);
+        }
+
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 

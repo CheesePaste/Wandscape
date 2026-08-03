@@ -36,6 +36,12 @@
 
 **为什么 NPC/游客索敌用「反射检查生物是否已索敌村民」而非枚举生物类？** 需求是「仇恨吸引和村民一样」。若枚举类清单（僵尸/掠夺者/劫掠兽…），既要在原版增减生物时维护，也容易漏掉中立但继承自僵尸族的生物（僵尸猪灵——它不追村民，若按 instanceof Zombie 加 goal 会让它无端攻击 NPC）。改为在 EntityJoinLevelEvent 时反射读每个生物已有 `NearestAttackableTargetGoal.targetType`，若目标是 AbstractVillager 或其子类，就同优先级追加一个对 `shared/entity/VillagerLike` 接口（NPC/游客实现）的等价 goal。自动覆盖所有会追村民的生物（含其它 mod），天然排除不追的，清单零维护。targetType 是历版稳定的 protected 字段，反射失败时 warn 跳过、不崩溃。
 
+**为什么袭击机制复用原版 Raid/Raids 而非自己写波次？** 原版 Raid 已含完整波次表、掠夺者/卫道士/唤魔者/女巫/劫掠兽阵容、Boss 条、袭击号角、村庄英雄、SavedData 持久化。直接调 `level.getRaids().createOrExtendRaid(player, 市政厅)` 即获得全部，零重写。唯一障碍是 `Raid.tick()` 每 tick 要求 `isVillage(center)` 为真（否则 STOP/LOSS）——用 `MixinServerLevel` 让 `ServerLevel.isVillage` 在市政厅 `raid.villageRange` 内返回 true，殖民地即被原版袭击视为村庄。多模组 `@Inject` 同方法会全部执行（cancel 不跳过后继 handler），故其它模组在此混入不影响袭击触发；只有 `@ModifyReturnValue`/同调用点 `@Redirect` 才硬冲突且崩溃是显式的。
+
+**为什么袭击中心放市政厅而非触发建筑？** 触发源是「带不祥之兆玩家靠近任意建筑 10 格」——触发点可能在殖民地边缘；但袭击围绕核心展开更合理，且中心=市政厅与「殖民地被袭击」语义一致。`createOrExtendRaid` 传入市政厅位置（无原版村庄 POI → 中心即市政厅）。触发半径（任意建筑 ±10）与袭击中心（市政厅）刻意分离。
+
+**为什么袭击无失败概念？** mixin 使 isVillage 在市政厅恒 true，原版 LOSS（村庄被毁）基本不触发。袭击的真实代价由现有机制兜底：掠夺者破坏建筑 → `structureIntact=false` → 三值扣减 + 自动排修复。故只广播 Started/Victory 两个事件，胜利事件带 colonyId/raidId/omenLevel/groupsSpawned 供成就系统订阅。
+
 ## 数据设计
 
 **block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。

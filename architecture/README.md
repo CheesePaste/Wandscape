@@ -88,6 +88,9 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── guard/            守卫任务系统(建筑周边怪物检测→守卫任务→NPC原地施法)
 │   ├── executor/     GuardAttackExecutor(持续异步循环，施法→等光束→重选)
 │   └── GuardZone/GuardTaskSource/GuardBlueprints/GuardConstants/GuardCommand
+├── raid/             袭击机制(复用原版村庄袭击：玩家带不祥之兆近建筑10格→市政厅中心触发)
+│   ├── RaidTriggerScanner(触发扫描器) + ColonyRaidTracker(胜利跟踪→事件)
+│   └── RaidTownHall(市政厅定位) + MixinServerLevel(isVillage 钩子)
 ├── equipment/        装备系统(EquipmentSlot/AttributeType/EquipmentPreset/EquipmentComponent)
 ```
 
@@ -188,6 +191,7 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |
 | 魔法阵模块设计 | [packages/magic.md](../magicarchitecture/magic.md) |
 | 守卫任务系统 | [packages/guard.md](packages/guard.md) |
+| 袭击机制 | [packages/raid.md](packages/raid.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
 | 魔法阵JSON格式 | [data/magic-circles.md](../magicarchitecture/magic-circles.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
