@@ -180,6 +180,32 @@ WandEquipExecutor 通过 `npc.setItemInHand()` 修改手持，该调用通过 En
 7. **大量删除死代码**：TaskData/TaskStatus/TaskTemplate/TaskPublishedEvent/TaskAssignedEvent/TaskInterruptedEvent 等旧类型。
 8. **文档更新**：architecture/packages/core.md 和 building.md 反映新架构。
 
+## Bug 记录：重进世界后任务被多 NPC 反复接取 —— 真正根因（2026-08-03）
+
+### 现象
+
+- 正常游戏内发布任务只有一个 NPC 接取；**退出世界重进**后，做到一半（IN_PROGRESS）的任务会被多个 NPC 同时接取。
+- 日志表现为同一任务 id 被 Scheduler 反复分配给不同 NPC（如 `assigned #1 'Demolish...' → NPC 6`，随后 NPC 3/4/5/12），分数递减、距离递增，像「同一心跳内按分数挑剩下的人」。
+- 与任务类型无关（node 采集、建造、拆除都会触发）。概率触发，且一直没真正修好——2026-06-22 的「工作站任务重复分配」记录结论是错的。
+
+### 根因（真正的）
+
+`TaskPoolSavedData.taskFromNbt()` 用 `pool.addTask(request)` 建任务，得到一个**临时 id**（`nextTaskId++`，从 1 开始，按存档里 HashMap 迭代顺序分配），随后 `addLoadedTask(task, originalId)` 把**同一个对象** re-key 到保存的 id。但 `GlobalTask.id` 是 **final 字段不会跟着变**，于是加载后任务的 `id` 字段 ≠ `tasksById` 的 key：
+
+- 存档任务 id 与加载顺序对不上时（如 id={7,1}，先加载 7 → 字段 id=1、key=7；后加载 1 → 字段 id=2、key=1），前者的**字段 id=1 恰好命中后者的 key=1**。
+- Scheduler 遍历 assignableSet，对幽灵对象调 `assignLight(task.id=1)` → `tasksById.get(1)` 解析到**另一个任务**，把它置为 IN_PROGRESS、`assignableSet.remove(该任务)`——但幽灵对象本身（字段 id=1、key=7）**永远留在 assignableSet**。
+- 于是每个心跳幽灵对象都被再次遍历、再次把同一个底层任务分配给下一个空闲 NPC，直到没人可分配。`GlobalTask.id` 与池 key 错位也导致 `get(task.id)` / `advanceStep` / `completeTask` 等查错或查空。
+- 2026-06-25 的「Layer 1 addLoadedTask 去重」只处理了 tasksById 双键，没处理 id 字段本身，所以修了个寂寞。
+
+### 修复（2026-08-03）
+
+- `GlobalTaskPool` 抽出 `addTaskWithId(request, id)`：直接以指定 id 建任务，`GlobalTask.id` 恒等于 `tasksById` key。`addTask(request)` 委托给它（`nextTaskId++`）。
+- `taskFromNbt()` 改用 `addTaskWithId(request, originalId)`，从源头消除临时 id 错位。
+- `addLoadedTask()` 幂等：同 id 旧副本先从 map/assignableSet 清掉；非 PENDING_ASSIGN 状态从 assignableSet 移除（修掉 AWAITING_RESOURCES 误入可分配集）。
+- 回归测试 `reload_loadedTasksKeepOriginalId_singleOwnerPerTask`：加载非顺序 id 的任务后，任务 id 字段==池 key，且带空闲 NPC 时任务不会被抢走。
+
+相关文件：`GlobalTaskPool.java`, `TaskPoolSavedData.java`, `CoreSystemsTest.java`。
+
 ## Bug 记录：`setColonyId` 静默吞失败 —— 殖民地分配的幽灵bug（2026-06-24）
 
 ### 现象

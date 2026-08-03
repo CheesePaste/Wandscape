@@ -134,6 +134,65 @@ public class CoreSystemsTest {
             assertFalse(mock.isAir(center.add(5, 0, 5)));
         }
 
+        @Test
+        void reload_loadedTasksKeepOriginalId_singleOwnerPerTask() {
+            // Regression: 退出世界重进后同一任务被多个 NPC 反复接取。
+            // 根因：taskFromNbt 原先用 pool.addTask() 给任务分配临时 id，再用
+            // addLoadedTask() 把同一对象 re-key 到保存的 id。GlobalTask.id 是 final，
+            // 字段不会跟着变 → 任务 id 字段与池 key 不一致。调度器 assignLight(task.id)
+            // 因此查到错误任务或 null，幽灵任务留在 assignableSet，每个心跳把同一个
+            // 底层任务重新分配给一个新空闲 NPC。修复：加载直接用原始 id 建任务
+            // （addTaskWithId），使 id 字段恒等于池 key。
+            registerSimpleBp("test:load_a",
+                    AtomicOp.TransformOp.place(center.add(10, 0, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 1, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 2, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 3, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 4, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 5, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 6, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 7, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 8, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 9, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 10, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 11, 0), BlockType.STONE));
+            registerSimpleBp("test:load_b",
+                    AtomicOp.TransformOp.place(center.add(20, 0, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(20, 1, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(20, 2, 0), BlockType.STONE));
+            // A third, far-away NPC that stays idle — the old ghost would hand the
+            // same task to it every heartbeat.
+            long spare = CoreBootstrap.createNpc(world, 50, 64, 50, colonyId, 100, 5);
+
+            // Simulate the load path: two saved tasks whose saved ids (7 and 1) don't
+            // line up with load order (7 loads first, so the old flow gave it temp id 1).
+            long taskA = world.taskPool.addTaskWithId(makeRequest("test:load_a", center, 10), 7);
+            long taskB = world.taskPool.addTaskWithId(makeRequest("test:load_b", center, 10), 1);
+            world.taskPool.addLoadedTask(world.taskPool.get(taskA), 7);
+            world.taskPool.addLoadedTask(world.taskPool.get(taskB), 1);
+
+            // Invariant (root fix): a loaded task's id field always equals its pool key.
+            assertEquals(7, world.taskPool.get(taskA).id,
+                    "loaded task id must equal its pool key");
+            assertEquals(1, world.taskPool.get(taskB).id,
+                    "loaded task id must equal its pool key");
+
+            // Both tasks get claimed by the two near NPCs; the far spare stays idle.
+            tickN(4);
+            GlobalTask a = world.taskPool.get(taskA);
+            assertNotEquals(TaskState.PENDING_ASSIGN, a.state, "task A should be claimed");
+            assertNotEquals(spare, (long) a.assignedNpcId, "spare must not steal task A");
+            long ownerA = a.assignedNpcId;
+
+            // Keep heartbeating while the spare remains idle — the owner must not rotate.
+            tickN(8);
+            GlobalTask a2 = world.taskPool.get(taskA);
+            assertEquals(ownerA, (long) a2.assignedNpcId,
+                    "task A must stay with its original owner across heartbeats");
+            assertNotEquals(spare, (long) a2.assignedNpcId,
+                    "task A must not be re-assigned to the spare idle NPC");
+        }
+
         // ---- helpers ----
         private void registerSimpleBp(String id, AtomicOp... steps) {
             world.blueprintRegistry.register(id, new Blueprint(id,

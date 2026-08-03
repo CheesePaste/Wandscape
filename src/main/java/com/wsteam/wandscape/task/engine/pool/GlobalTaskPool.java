@@ -104,9 +104,21 @@ public class GlobalTaskPool {
 
     /** Add a task from a request. Automatically determines if approval is needed. */
     public long addTask(TaskRequest request) {
+        return addTaskWithId(request, nextTaskId++);
+    }
+
+    /**
+     * Add a task with a fixed id (used by persistence load). The task's
+     * {@code id} field is set to the given id so it always matches its pool key —
+     * otherwise {@code taskPool.get(task.id)} / {@code assignLight(task.id)} resolve
+     * to the wrong entry (or null) after a reload, which can leave a ghost task in
+     * the assignable set that re-assigns the same underlying task to a new NPC
+     * every heartbeat.
+     */
+    public long addTaskWithId(TaskRequest request, long id) {
         CompiledBlueprint compiled = compiler.compile(request, null);
         TaskSequence seq = compiled.sequence();
-        long id = nextTaskId++;
+        if (id >= nextTaskId) nextTaskId = id + 1;
 
         TaskState initialState;
         ApprovalInfo approval = null;
@@ -463,12 +475,24 @@ public class GlobalTaskPool {
 
     /** Add a task loaded from persistence, preserving its original ID. */
     public void addLoadedTask(GlobalTask task, long originalId) {
-        tasksById.values().removeIf(existing -> existing == task && existing.id != originalId);
+        // Idempotency: evict any prior copy under this id so a reload can't leave
+        // a stale duplicate in tasksById / assignableSet.
+        GlobalTask existing = tasksById.remove(originalId);
+        if (existing != null && existing != task) {
+            assignableSet.remove(existing);
+        }
+        // Evict a stale key the same object may be parked under (e.g. a temp id).
+        tasksById.values().removeIf(v -> v == task && v.id != originalId);
         tasksById.put(originalId, task);
         if (originalId >= nextTaskId) {
             nextTaskId = originalId + 1;
         }
-        addToAssignable(task);
+        // Only PENDING_ASSIGN tasks belong in the assignable set.
+        if (task.state == TaskState.PENDING_ASSIGN) {
+            addToAssignable(task);
+        } else {
+            assignableSet.remove(task);
+        }
         Log.info(TAG, "loadTask #%d '%s' state=%s step=%d/%d",
                 originalId, task.sequence.label(), task.state,
                 task.stepIndex, task.sequence.size());

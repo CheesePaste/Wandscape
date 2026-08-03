@@ -130,9 +130,9 @@ public final class TaskPoolSavedData extends SavedData {
         int loaded = 0;
         for (int i = 0; i < list.size(); i++) {
             CompoundTag t = list.getCompound(i);
-            GlobalTask task = taskFromNbt(t, pool);
+            long originalId = t.getLong("id");
+            GlobalTask task = taskFromNbt(t, pool, originalId);
             if (task != null) {
-                long originalId = t.getLong("id");
                 pool.addLoadedTask(task, originalId);
                 loaded++;
             }
@@ -148,7 +148,7 @@ public final class TaskPoolSavedData extends SavedData {
     }
 
     @Nullable
-    private static GlobalTask taskFromNbt(CompoundTag tag, GlobalTaskPool pool) {
+    private static GlobalTask taskFromNbt(CompoundTag tag, GlobalTaskPool pool, long originalId) {
         String blueprintId = tag.getString("bp");
         if (blueprintId.isEmpty()) return null;
 
@@ -180,11 +180,14 @@ public final class TaskPoolSavedData extends SavedData {
         int stepIndex = tag.getInt("step");
         int priority = tag.getInt("priority");
 
-        // Recompile the blueprint to get TaskSequence, requirements, triggers
+        // Recompile the blueprint to get TaskSequence, requirements, triggers.
+        // Use the ORIGINAL id so the task's id field always matches its pool key —
+        // otherwise assignLight(task.id) / get(task.id) resolve to the wrong entry
+        // after a reload, leaving a ghost task that re-assigns the same task to a
+        // new NPC every heartbeat.
         TaskRequest request = new TaskRequest(blueprintId, taskParams, priority);
         try {
-            // Use raw addTask to compile, then adjust state/stepIndex
-            long newId = pool.addTask(request);
+            long newId = pool.addTaskWithId(request, originalId);
             GlobalTask task = pool.get(newId);
             if (task != null) {
                 task.state = state;
