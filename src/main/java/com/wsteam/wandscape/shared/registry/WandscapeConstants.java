@@ -29,6 +29,9 @@ public final class WandscapeConstants {
     public static final int QUEUE_MANA_POOL = 10;
     public static final int QUEUE_TAVERN = 5;
 
+    public static final int WORKSTATION_CRAFT_TICKS_PER_UNIT = 10;
+    public static final int CRAFTING_STATION_CRAFT_TICKS_PER_UNIT = 1200;
+
     public static final int BASE_OPERATION_RANGE = 16;
     public static final int PER_WAND_LEVEL_RANGE = 8;
 

@@ -24,6 +24,7 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.runtime.TaskState;
 
@@ -122,11 +123,12 @@ public class ResourceSupplySystem implements System {
         if (building == null || building.isShutdown()) return false;
 
         BlockPos pos = building.getPosition();
+        int count = Math.max(toAdd, 1);
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("anchor", posToJsonArray(pos));
         params.put("recipe_id", new JsonPrimitive(itemId));
-        params.put("count", new JsonPrimitive(Math.max(toAdd, 1)));
-        params.put("channel_ticks", new JsonPrimitive(200));
+        params.put("count", new JsonPrimitive(count));
+        params.put("channel_ticks", new JsonPrimitive(WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count));
         params.put("mana_cost", new JsonPrimitive(5));
 
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40));
