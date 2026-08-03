@@ -562,6 +562,11 @@ public class Wandscape {
                         MagicCircleCastPacket.TYPE,
                         MagicCircleCastPacket.STREAM_CODEC,
                         (packet, ctx) -> MagicCircleCastPacket.handleClient(packet))
+                // ── Particle burst (colored FX) ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ParticleBurstPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ParticleBurstPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ParticleBurstPacket.handleClient(packet))
                 // ── Guide test ──
                 .playToClient(
                         com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,

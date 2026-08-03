@@ -2,7 +2,10 @@ package com.wsteam.wandscape.shared.data;
 
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 public interface BuildingData {
     UUID getBuildingId();
     UUID getColonyId();
@@ -15,6 +18,10 @@ public interface BuildingData {
     int getWonder();
     int getQueueCapacity();
     boolean isStructureIntact();
+
+    /** Building's world-space bounding box, for FX placement (particles/sounds). */
+    @Nullable
+    default BoundingBox getBounds() { return null; }
 
     /** Whether the building is being demolished by an NPC task. */
     default boolean isDemolishing() { return false; }

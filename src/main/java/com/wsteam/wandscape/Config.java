@@ -304,5 +304,10 @@ public class Config {
                     + "buildings.")
             .defineInRange("raid.checkIntervalTicks", 20, 5, 200);
 
+    public static final ModConfigSpec.ConfigValue<String> PARTICLE_LEVEL = BUILDER
+            .comment("Particle effect level: OFF disables all mod particles, LOW halves count, "
+                    + "NORMAL default, HIGH doubles count.")
+            .define("particle.level", "NORMAL");
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

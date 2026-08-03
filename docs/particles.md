@@ -97,68 +97,78 @@ MagicCircleDotParticle.spawn(level, x, y, z, r, g, b,
 ```java
 // engine/service/ParticleService.java —— 静态门面
 public final class ParticleService {
-    private ParticleService() {}
+    /** 服务端向 32 格内玩家广播原版粒子（有 Vec3/BlockPos/BoundingBox 重载） */
+    public static void burstAt(ServerLevel level, ParticleOptions type, Vec3 pos,
+                               int count, double spread, double speed);
 
-    /** 服务端向 32 格内玩家广播原版粒子 */
-    public static void burstAt(ServerLevel level, ParticleOptions type,
-                               Vec3 pos, int count, double spread, double speed);
+    /** 服务端向 512 格内玩家广播（逐玩家 longDistance=true）—— 大范围庆祝 */
+    public static void burstAtFar(ServerLevel level, ParticleOptions type, Vec3 pos,
+                                  int count, double spread, double speed);
 
-    /** 服务端大范围广播（512 格，逐玩家 longDistance=true）—— 建成/升级/胜利庆祝用 */
-    public static void burstAtFar(ServerLevel level, ParticleOptions type,
-                                  Vec3 pos, int count, double spread, double speed);
+    /** 服务端沿建筑包围盒周长一圈撒原版粒子（拆除/崩塌等） */
+    public static void burstRing(ServerLevel level, ParticleOptions type, BoundingBox bounds,
+                                 int count, double spread, double speed);
 
-    /** 服务端触发染色粒子：发 ParticleBurstPacket 给追踪玩家，客户端 spawn */
+    /** 服务端触发染色粒子：发 ParticleBurstPacket 给追踪玩家，客户端撒运动点粒子 */
     public static void burstColored(ServerLevel level, Vec3 pos,
                                     float r, float g, float b,
-                                    int count, float size, int lifetime);
+                                    int count, float size, int lifetime, boolean vertical);
 
-    /** 带节流：同一 key 在 minIntervalTicks 内只放一次（防高频 tick 刷屏） */
-    public static void burstAtThrottled(ServerLevel level, String key,
-                                        ParticleOptions type, Vec3 pos,
-                                        int count, double spread, double speed,
-                                        int minIntervalTicks);
+    /** 单点烟花庆祝：bursts 次彩色爆花（不用原版 EXPLOSION_EMITTER，爆炸闪屏太大） */
+    public static void celebrateAt(ServerLevel level, Vec3 pos, int bursts);
+
+    /** 建筑包围盒周长一圈烟花庆祝：totalBursts 均布到包围盒椭圆周 */
+    public static void celebrateRing(ServerLevel level, BoundingBox bounds, int totalBursts);
+
+    /** 建筑包围盒 XZ 脚印中心、顶面 + rise 上方的点（单点庆祝定位用） */
+    public static Vec3 boundsCenterAbove(BoundingBox bounds, double rise);
 }
 ```
 
-- 节流实现：`Map<String, Long> lastTick`（按 key + 服务端 tick），间隔不足跳过。高频点（光束每 tick 命中、逐块放置）必须走节流版。
-- 所有方法内部先查 `Config.PARTICLE_LEVEL`：`OFF` 直接 return，`LOW` 减半 count，`NORMAL` 原样，`HIGH` 原样。开关一个点控制全局。
+- **定位规则**：建筑事件（建成/拆除/创建）用包围盒 **周长一圈**（`celebrateRing`/`burstRing`），单点庆祝（升级/袭击胜利/开始/关停重启）用包围盒 **XZ 中心上方**（`boundsCenterAbove`）——绝不用自定义 anchor（可能落在建筑外）。`BuildingData.getBounds()` 默认方法提供包围盒（BuildingState 实现），模块间无需跨包引用。
+- 染色粒子客户端渲染：`MagicCircleDotParticle.spawnMoving`（新增的运动重载，velocity + 淡出）。`vertical=true` 竖直光柱（奇观金柱），`false` 球形爆花。
+- 所有方法内部先查 `Config.PARTICLE_LEVEL`：`OFF` 直接 return，`LOW` 减半 count，`NORMAL` 原样，`HIGH` 翻倍。开关一个点控制全局。
 
 ## 4. 接入点清单（哪里可以加）
+
+> **实现状态（2026-08-03）**：✅ = 已实现，❌ = 按决定排除。统一走 `engine/service/ParticleService`（burstAt/burstAtFar/burstRing/burstColored/celebrateAt/celebrateRing）+ `shared/network/ParticleBurstPacket`，全局开关 `Config.PARTICLE_LEVEL`（OFF/LOW/NORMAL/HIGH）。**粒子位置一律取自建筑包围盒（`BuildingData.getBounds()`），绝不用自定义 anchor。**
 
 挂点按优先级分组；`文件:方法` 为当前快照，以方法名为准。`服务端` = 用 `sendParticles` 广播；`客户端` = 走 `ParticleBurstPacket` 或本地撒点。
 
 ### P0 建成庆祝 + 玩家直接可见（反馈最强烈，优先做）
 
-| 挂点 | 文件:方法 | 触发 | 建议特效 | 侧 |
-|------|-----------|------|----------|----|
-| 建筑建成 🎆 | `building/internal/BuildCompleteListener.java` `onBuildComplete()`:120（anchor 在手） | NPC 蓝图施工完成 | 原版 `FIREWORK` 升空 + `EXPLOSION_EMITTER` 于 anchor 上方，`burstAtFar` 大范围 | 服务端 |
-| 建筑拆除完成 | `building/internal/DemolishCompleteListener.java` `onDemolishComplete()`:41（anchor 在手） | NPC 拆完所有方块 | `LARGE_SMOKE` 灰烟 + `CAMPFIRE_COSY_SMOKE` 灰烬 + 少量碎石，`burstAt` | 服务端 |
-| 殖民地创建 | `command/ColonyCommand.java`:190（发 ColonyCreatedEvent，origin 在手） | `/wandscape colony create` | origin 上空少量烟花，`burstAt` | 服务端 |
-| 殖民地升级 | `engine/colony/ColonyLevelManager.java` `addExperience()`:114（事件只有 colonyId） | 经验达阈值升级 | 市政厅位置烟花/垂直光柱；需先经 BuildingApi 找 government 建筑锚点，`burstAtFar` | 服务端 |
+| 挂点 | 文件:方法 | 触发 | 建议特效 | 侧 | 状态 |
+|------|-----------|------|----------|----|------|
+| 建筑建成 🎆 | `building/internal/BuildCompleteListener.java` `onBuildComplete()`（state 在手） | NPC 蓝图施工完成 | `celebrateRing` 烟花（**包围盒一圈**彩色爆花）；category==wonder 额外金色圣光柱（包围盒中心上方） | 服务端 | ✅ |
+| 建筑拆除完成 | `building/internal/DemolishCompleteListener.java` `onDemolishComplete()`（state 在手） | NPC 拆完所有方块 | `burstRing` 灰烟（**包围盒一圈**）+ `CAMPFIRE_COSY_SMOKE` 灰烬 | 服务端 | ✅ |
+| 殖民地创建 | `command/ColonyCommand.java`:190（发 ColonyCreatedEvent，origin 在手） | `/wandscape colony create` | 市政厅**包围盒一圈**烟花（找不到包围盒回退 origin 中心） | 服务端 | ✅ |
+| 殖民地升级 | `engine/colony/ColonyLevelManager.java` `addExperience()`:114 | 经验达阈值升级 | 市政厅**包围盒中心上方**烟花（经 BuildingApi 找 government，API 未就绪静默跳过） | 服务端 | ✅ |
 
-### P1 NPC / 自动行为（环境反馈）——含修复 3 处坏粒子
+### P1 NPC / 自动行为（环境反馈）
 
-| 挂点 | 文件:方法 | 触发 | 建议特效 | 侧 |
-|------|-----------|------|----------|----|
-| NPC 完工粒子（**修复 no-op**） | `npc/entity/WandscapeNpc.java` `doWorkAnimation()`:731 | NPC 每放一块方块 | 改 `sendParticles(WITCH,...)`；大建筑逐块会多，建议 count 降到 1–2 | 服务端 |
-| 采集/合成/酿造完成（**修复 no-op**） | `engine/boundary/WandscapeBlockInteractExecutor.java` `spawnCompletionParticles()`:557 | 异步动作完成 | 改 `sendParticles(HAPPY_VILLAGER,...)`，或按元素/产物染色 `burstColored` | 服务端 |
-| NPC 自传送（**修复 no-op**） | `engine/boundary/WandscapeRitualOps.java` `executeRitual()`:116 | self_teleport 完成 | 起点+终点两端 `PORTAL` 爆开 | 服务端 |
-| 守卫开火 | `guard/executor/GuardCombat.java` `engage()`:72 | 守卫施法（40 tick 节流） | 已发法阵粒子，可加杖尖 `burstColored` 爆闪（可选，避免叠堆） | 服务端 |
-| 游客到达 | `tourist/internal/TouristSpawnSystem.java` `flushPendingSpawns()`:308（spawnPos 在手） | 游客生成 | 脚下 `HAPPY_VILLAGER`/`END_ROD` 小金星 | 服务端 |
-| 游客离开 | `tourist/internal/TouristSpawnSystem.java` `onTouristDepart()`:511 | 游客离场 | 消散粒子（游客当前位置，淡出） | 服务端 |
-| 游客购物/服务交互 | `tourist/internal/TouristMoveGoal.java` `interactWithShop()`:1288、`interactWithService()`:1327 | 交互完成加满意度 | 建筑交互点按 gain 撒星光（`HAPPY_VILLAGER` 或染色），`burstColored` | 服务端 |
-| 酒店入住 | `tourist/internal/TouristMoveGoal.java`:585（checkIn 成功） | 夜晚入住 | 酒店口 `NOTE`/`CAMPFIRE_COSY_SMOKE` 舒适感（可选） | 服务端 |
-| 商店补货 | `building/internal/ShopStockManager.java` `restock()`:362（发 ShopRestockedEvent） | 每日补货 | 商店口金币星光（可选；已有物品飞行视觉） | 服务端 |
+| 挂点 | 文件:方法 | 触发 | 建议特效 | 侧 | 状态 |
+|------|-----------|------|----------|----|------|
+| 守卫开火 | `guard/executor/GuardCombat.java` `engage()`:72 | 守卫施法（40 tick 节流） | 杖尖 `burstColored` 爆闪（用施法颜色） | 服务端 | ✅ |
+| 游客购物/服务交互 | `tourist/internal/TouristMoveGoal.java` `interactWithShop()`:1288、`interactWithService()`:1327 | 交互完成加满意度 | 游客位置金色星光 `burstColored` | 服务端 | ✅ |
+| 酒店入住（并入上一行） | `tourist/internal/TouristMoveGoal.java`:585（checkIn 成功） | 夜晚入住 | 与购物/服务交互同一星光 | 服务端 | ✅ |
+| 方块放置 | `engine/boundary/WandscapeBlockOps.java` `setBlock()`:59 | 每块方块落定 | —（排除，避免上千粒子） | 服务端 | ❌ |
+| 采集/合成/酿造完成 | `engine/boundary/WandscapeBlockInteractExecutor.java` `spawnCompletionParticles()`:557 | 异步动作完成 | —（排除） | 服务端 | ❌ |
+| NPC 完工粒子 | `npc/entity/WandscapeNpc.java` `doWorkAnimation()`:731 | NPC 每放一块方块 | —（排除） | 服务端 | ❌ |
+| 游客到达 | `tourist/internal/TouristSpawnSystem.java` `flushPendingSpawns()`:308 | 游客生成 | —（排除） | 服务端 | ❌ |
+| 游客离开 | `tourist/internal/TouristSpawnSystem.java` `onTouristDepart()`:511 | 游客离场 | —（排除） | 服务端 | ❌ |
+| 商店补货 | `building/internal/ShopStockManager.java` `restock()`:362 | 每日补货 | —（排除） | 服务端 | ❌ |
+
+> ⚠️ 排除项里 `doWorkAnimation`/`spawnCompletionParticles`/`WandscapeRitualOps` 的服务端 `addParticle` 仍是 no-op（§2.4），按决定不做粒子，未修复——列为已知文档事项，不在本次范围。
 
 ### P2 模拟经营 / 全局（低频，可做音乐性/庆祝）
 
-| 挂点 | 文件:方法 | 触发 | 建议特效 | 侧 |
-|------|-----------|------|----------|----|
-| 奇观生效/移除 | `building/internal/WonderEffectApplier.java` `applyEffects()`:183、`removeEffects()`:156（发 WonderEffectChangedEvent，buildingId 在手） | 奇观 intact 且非关停 | 生效：金色圣光柱（`END_ROD`/`burstColored` 染金）；移除：淡出 | 服务端 |
-| 建筑关停/重启 | `building/internal/BuildingApiImpl.java`:197（Shutdown）/`:225`（Restarted） | 维护费不足/恢复 | 关停：屋顶灰烟下坠；重启：上升星光（anchor 在手） | 服务端 |
-| 袭击胜利 | `raid/ColonyRaidTracker.java`:60（发 ColonyRaidVictoryEvent，center 在手） | 玩家守城胜利 | 全殖民地大范围烟花 `burstAtFar`（512 格） | 服务端 |
-| 袭击开始（可选） | `raid/RaidTriggerScanner.java`:70（发 ColonyRaidStartedEvent，center 在手） | 袭击触发 | 市政厅红色信号烟（`SMOKE` 上升）；原版已有袭击音效，可只做视觉 | 服务端 |
-| 方块放置（建造/铺路过程，可选） | `engine/boundary/WandscapeBlockOps.java` `setBlock()`:59 | 每块方块落定 | ⚠️ 高风险：大建筑上千粒子。建议极淡 dust 或直接放弃——建成烟花已覆盖"结果" | 服务端 |
+| 挂点 | 文件:方法 | 触发 | 建议特效 | 侧 | 状态 |
+|------|-----------|------|----------|----|------|
+| 建筑关停/重启 | `building/internal/BuildingApiImpl.java`:197（Shutdown）/`:225`（Restarted） | 维护费不足/恢复 | 关停：**包围盒中心上方**屋顶 `LARGE_SMOKE`；重启：**包围盒中心上方**上升 `END_ROD` 星光 | 服务端 | ✅ |
+| 袭击胜利 | `raid/ColonyRaidTracker.java`:60（发 ColonyRaidVictoryEvent，center 在手） | 玩家守城胜利 | 市政厅**包围盒中心上方**烟花（8 连发，找不到包围盒回退 center） | 服务端 | ✅ |
+| 袭击开始 | `raid/RaidTriggerScanner.java`:70（发 ColonyRaidStartedEvent，center 在手） | 袭击触发 | 市政厅**包围盒中心上方** `CAMPFIRE_SIGNAL_SMOKE` 橙色警报烟 | 服务端 | ✅ |
+| 奇观生效 | `building/internal/BuildCompleteListener.java`（category==wonder） | 奇观建成 | 金色圣光柱 `burstColored`（**包围盒中心上方**竖直）；移除并入关停灰烟 | 服务端 | ✅ |
+
 
 ### 4.3 事件钩子全表（订阅处即粒子挂点）
 
@@ -185,20 +195,22 @@ public final class ParticleService {
 
 ## 6. 实现步骤（怎么加）
 
-1. **先修 3 处坏粒子**（基础设施）：`doWorkAnimation` / `WandscapeRitualOps` / `spawnCompletionParticles` 的服务端 `addParticle` → `sendParticles`。
-2. **建 `engine/service/ParticleService.java`**（burstAt / burstAtFar / burstColored / burstAtThrottled）+ `Config.PARTICLE_LEVEL` 开关（`ModConfigSpec.ConfigValue<String>`，取值 `OFF/LOW/NORMAL/HIGH`，语法同现有 `ROAD_SURFACE_PALETTE`）。
-3. **建 `shared/network/ParticleBurstPacket.java`**（仿 `MagicCircleCastPacket`：pos/RGB/count/size/lifetime，`Wandscape.java onRegisterPayloads` 里 `playToClient`），handleClient 调 `MagicCircleDotParticle.spawn`。
-4. **P0 接线**：建成烟花（BuildCompleteListener 或 BuildingPlacedEvent 订阅处）→ `burstAtFar` 大范围。这是用户要的头号效果。
-5. **P1 接线**：游客到达/离开、交互、守卫（可选）。
-6. **P2 接线**：升级/胜利/奇观/关停重启（低频庆祝）。
-7. **验证**：`./gradlew build`；`runClient` 实测 32 格/512 格范围、节流、开关是否生效（建成烟花离远点看是否仍可见）。
+> **2026-08-03 已实现**（✅）：ParticleService + ParticleBurstPacket + `Config.PARTICLE_LEVEL` + 建成/拆除/创建/升级/关停重启/守卫/游客交互/酒店入住/袭击胜利/袭击开始 全部接线，`./gradlew compileJava` 通过。待 `runClient` 实测调参。
+
+1. ~~**先修 3 处坏粒子**~~（❌ 按决定排除，见 §4 说明）。
+2. **建 `engine/service/ParticleService.java`** ✅（burstAt / burstAtFar / burstRing / burstColored / celebrateAt / celebrateRing）+ `Config.PARTICLE_LEVEL` 开关（`ModConfigSpec.ConfigValue<String>`，取值 `OFF/LOW/NORMAL/HIGH`）。
+3. **建 `shared/network/ParticleBurstPacket.java`** ✅（仿 `MagicCircleCastPacket`：pos/RGB/count/size/lifetime/vertical，`Wandscape.java onRegisterPayloads` 里 `playToClient`），handleClient 调 `MagicCircleDotParticle.spawnMoving`（新增运动重载）。
+4. **P0 接线** ✅：建成烟花（BuildCompleteListener）+ 奇观金柱（category==wonder）；拆除灰烟；创建/升级烟花。
+5. **P1 接线** ✅：守卫杖尖爆闪、游客购物/服务/酒店入住星光。
+6. **P2 接线** ✅：关停/重启、袭击胜利/开始。
+7. **验证**：`./gradlew build`；`runClient` 实测 32 格/512 格范围、粒子密度、`PARTICLE_LEVEL` 开关是否生效（建成烟花离远点看是否仍可见）。
 8. **commit + 版本号**：代码/资源进 jar → 递增 `gradle.properties` 的 `mod_version`（补丁号）。
 
 ## 7. 约定与陷阱
 
 - **服务端广播用 `sendParticles`，客户端本地才用 `addParticle`/静态 spawn；永远不要服务端调 `level.addParticle`**（空操作，§2.4）。
-- **大范围庆祝必须 `burstAtFar`（512 格）**：建成烟花/升级/胜利如果走默认 32 格，玩家离建筑远一点就看不到，违背"世界内可见"的目标。
-- **防刷屏**：光束每 tick 命中、逐块放置、20tick 轮询等高频点必须走 `burstAtThrottled`，最小间隔 5–10 tick。`MagicBeamEntity.damageTargets()`（:199 每 tick 结算）不建议逐帧撒粒子；要做就在目标死亡时撒一次。
+- **庆祝范围**：当前 `celebrateAt`/`celebrateRing` 走 32–64 格（彩色 `ParticleBurstPacket` 追踪 chunk）；玩家在建筑附近即可见。若未来要超大地图远距离可见，用 `burstAtFar`（512 格，逐玩家 longDistance=true）。
+- **防刷屏**：本次实现只做离散事件，高频点（光束每 tick 命中、逐块放置）一律不做逐帧粒子；`MagicBeamEntity.damageTargets()`（:199 每 tick 结算）不要撒。若未来要做持续特效（光柱常驻等），需另加节流。
 - **别叠堆**：守卫/施法已有法阵粒子，施法起手别再撒一大把，会糊成一片。加"杖尖爆闪"要克制（count ≤ 5）。
 - **全局开关一个点**：所有粒子走 `ParticleService`，`PARTICLE_LEVEL=OFF` 一键全关；不要绕过门面自己 addParticle。
 - **不进 SavedData/ECS**：粒子是纯瞬时表现，不持久化、不参与任务/结算。
