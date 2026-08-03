@@ -120,9 +120,21 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
      * any building lifecycle change (e.g. a new placement).
      */
     public static void sendToPlayer(ServerPlayer player) {
+        sendToPlayer(player, null);
+    }
+
+    /**
+     * Send the building-area sync, resolving the colony from the player's
+     * position, or from {@code colonyHint} when the player stands outside any
+     * colony range (e.g. right after creating a colony at a distant anchor).
+     */
+    public static void sendToPlayer(ServerPlayer player, @Nullable BlockPos colonyHint) {
         ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
         if (colonyApi == null) return;
         UUID colonyId = colonyApi.getColonyId(player.blockPosition());
+        if (colonyId == null && colonyHint != null) {
+            colonyId = colonyApi.getColonyId(colonyHint);
+        }
         if (colonyId == null) return;
         BuildingApi buildingApi = WandscapeApis.getBuildingApi();
         if (buildingApi == null) return;

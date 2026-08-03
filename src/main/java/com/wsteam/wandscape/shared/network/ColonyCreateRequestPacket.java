@@ -75,6 +75,11 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
                     packet.townHallAnchor, colonyId.toString().substring(0, 8));
         }
 
+        // Refresh the client's building-area cache immediately: the just-created
+        // colony's town hall must appear on the client so the onboarding guide
+        // advances and the panel overlay shows its boundary (no panel reopen needed).
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player, packet.townHallAnchor);
+
         sendMessage(player, result);
     }
 
