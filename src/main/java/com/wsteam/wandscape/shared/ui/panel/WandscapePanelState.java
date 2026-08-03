@@ -14,7 +14,6 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Client-side static state holder for the Wandscape comprehensive panel.
@@ -197,11 +196,6 @@ public final class WandscapePanelState {
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
         // Default to overview mode
         enterSubMode(SubMode.OVERVIEW);
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("[Panel] Opened — V: close, G: switch mode"), true);
-        }
 
         if (!panelEverOpened) {
             panelEverOpened = true;
@@ -229,10 +223,6 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Panel] Closed"), true);
-        }
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
@@ -284,16 +274,8 @@ public final class WandscapePanelState {
         Minecraft mc = Minecraft.getInstance();
         if (cursorLifted) {
             mc.mouseHandler.releaseMouse();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Panel] Cursor lifted — click tabs to switch mode"), true);
-            }
         } else {
             mc.mouseHandler.grabMouse();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Panel] Cursor released to game"), true);
-            }
         }
     }
 

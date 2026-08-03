@@ -1,11 +1,11 @@
 package com.wsteam.wandscape.shared.ui.guide;
 
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentHistoryStack;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader;
 import com.wsteam.wandscape.shared.ui.markdown.widget.MarkdownRenderWidget;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -93,11 +93,7 @@ public class GuideTestScreen extends MedievalScreen {
         }
 
         // Game action link (action:...)
-        if (Minecraft.getInstance().player != null) {
-            Minecraft.getInstance().player.sendSystemMessage(
-                    Component.literal("§a[Wandscape] 触发游戏内动作: " + action)
-            );
-        }
+        Log.debug("GuideTestScreen", "[Guide] Triggered in-game action: {}", action);
     }
 
     private void loadDocument(String docPath) {

@@ -164,12 +164,7 @@ public final class WandscapePanelController {
                     // SPLINE mode: keep the V-panel open and embed the native spline editor.
                     // SplineEditorController takes over world input (right-click camera, WASD flight, gizmo drag).
                     com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                    if (mc.player != null) {
-                        mc.player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(
-                                        "[Spline Editor] §a右侧面板编辑样条 — 右键转视角, WASD 飞行, 左键加点/选点, 拖轴移动, ESC 退出"),
-                                true);
-                    }
+                    Log.debug(TAG, "[Spline Editor] Entered spline edit mode (right-drag camera, WASD flight, left-click add/select point, drag gizmo, ESC exit)");
                 } else {
                     // REPLACE / FILL / DESTROY_FILL: leave the spline editor, enter PLACING phase as before
                     if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
@@ -177,15 +172,12 @@ public final class WandscapePanelController {
                     }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
-                    if (mc.player != null) {
-                        String hint = switch (toolMode) {
-                            case FILL -> "[Fill] §aRight-click set corner 1, Left-click set corner 2, Enter to submit";
-                            case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
-                            default -> "[Road Replace] §aRight-click set start, Left-click set end, Enter to submit";
-                        };
-                        mc.player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(hint), true);
-                    }
+                    String hint = switch (toolMode) {
+                        case FILL -> "[Fill] Right-click set corner 1, Left-click set corner 2, Enter to submit";
+                        case DESTROY_FILL -> "[Destroy/Fill] Right-click a block to set ref height & block, Left-click to set area, Enter to submit";
+                        default -> "[Road Replace] Right-click set start, Left-click set end, Enter to submit";
+                    };
+                    Log.debug(TAG, hint);
                 }
                 event.setCanceled(true);
                 return;
@@ -201,13 +193,8 @@ public final class WandscapePanelController {
                     }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
-                    if (mc.player != null) {
-                        String name = RoadPlacementState.getSelectedPreset().displayName();
-                        mc.player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(
-                                        "[Road] §aPlacing: " + name + " §7— Right-click set start, Left-click set end, ESC to reselect"),
-                                true);
-                    }
+                    String name = RoadPlacementState.getSelectedPreset().displayName();
+                    Log.debug(TAG, "[Road] Placing preset: {} (right-click start, left-click end, ESC reselect)", name);
                 }
                 // Single click: highlight only (handlePresetDoubleClick already set selectedPresetIndex)
                 event.setCanceled(true);
@@ -323,14 +310,9 @@ public final class WandscapePanelController {
             // Select building, close bar, enter PLACING phase (cursor in game, ghost visible)
             ProjectionClientState.setSelectedSlotIndex(slotIndex);
             WandscapePanelState.enterPlacingPhase();
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                String name = (slotIndex >= 0 && slotIndex < slots.size())
-                        ? slots.get(slotIndex).displayName() : "???";
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("[Build] §aSelected: " + name + " §7— ESC to reselect"),
-                        true);
-            }
+            String name = (slotIndex >= 0 && slotIndex < slots.size())
+                    ? slots.get(slotIndex).displayName() : "???";
+            Log.debug(TAG, "[Build] Selected: {} (ESC to reselect)", name);
         }
     }
 
@@ -347,12 +329,7 @@ public final class WandscapePanelController {
         // B key: toggle interaction area overlay (works whenever panel is open)
         if (key == GLFW.GLFW_KEY_B && WandscapePanelState.isPanelOpen()) {
             WandscapePanelState.toggleBuildingAreas();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "[Panel] Building areas: " + (WandscapePanelState.isShowBuildingAreas() ? "§aON" : "§7OFF")),
-                        true);
-            }
+            Log.debug(TAG, "[Panel] Building areas overlay: {}", WandscapePanelState.isShowBuildingAreas() ? "ON" : "OFF");
             return;
         }
 
@@ -412,12 +389,7 @@ public final class WandscapePanelController {
             } else {
                 WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.BUILD_PROJECTION);
             }
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "[Panel] §aGround mode — G for overview"), true);
-            }
+            Log.debug(TAG, "[Panel] Ground mode (G for overview)");
         } else {
             // Ground → Overview mode
             WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
@@ -426,12 +398,7 @@ public final class WandscapePanelController {
                 WandscapePanelState.exitCurrentSubMode();
             }
             WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.OVERVIEW);
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "[Panel] §aOverview mode — WASD move, Scroll zoom, G for ground"), true);
-            }
+            Log.debug(TAG, "[Panel] Overview mode (WASD move, Scroll zoom, G for ground)");
         }
     }
 
@@ -474,9 +441,7 @@ public final class WandscapePanelController {
             event.setCanceled(true);
             ProjectionClientState.setGhostPos(null);
             WandscapePanelState.returnToBar();
-            Minecraft.getInstance().player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("[Build] §7Select another building or ESC to cancel"),
-                    true);
+            Log.debug(TAG, "[Build] Select another building or ESC to cancel");
             return;
         }
 
@@ -486,9 +451,7 @@ public final class WandscapePanelController {
                 && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
             event.setCanceled(true);
             WandscapePanelState.exitCurrentSubMode();
-            Minecraft.getInstance().player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("[Road] §eExited road placement mode"),
-                    true);
+            Log.debug(TAG, "[Road] Exited road placement mode");
             return;
         }
 
@@ -499,9 +462,7 @@ public final class WandscapePanelController {
             event.setCanceled(true);
             RoadPlacementState.enterBar();
             WandscapePanelState.liftCursorForUI();
-            Minecraft.getInstance().player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("[Road] §eReturned to preset selection — double-click to resume"),
-                    true);
+            Log.debug(TAG, "[Road] Returned to preset selection (double-click to resume)");
             return;
         }
     }

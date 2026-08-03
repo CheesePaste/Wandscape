@@ -158,23 +158,18 @@ public final class BuildingInteractHandler {
                         "[Wandscape] Potion Station — not yet implemented"), false);
             }
             default -> {
-                String status = "[Wandscape] " + state.getBuildingTypeId()
-                        + " | intact=" + state.isStructureIntact()
-                        + " | shutdown=" + state.isShutdown()
-                        + " | queue=" + state.getTaskQueue().size();
+                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
+                        state.getBuildingTypeId(), state.getAnchor(),
+                        state.isStructureIntact(), state.isShutdown(),
+                        state.getTaskQueue().size());
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
                 if (config != null) {
                     String lockReason = com.wsteam.wandscape.building.internal.BuildingUnlockChecker
                             .getLockReason(state.getColonyId(), config);
                     if (lockReason != null) {
-                        status += "\n  [Locked] " + lockReason;
+                        Log.info(TAG, "[Building] {} locked: {}", state.getBuildingTypeId(), lockReason);
                     }
                 }
-                player.displayClientMessage(Component.literal(status), false);
-                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
-                        state.getBuildingTypeId(), state.getAnchor(),
-                        state.isStructureIntact(), state.isShutdown(),
-                        state.getTaskQueue().size());
             }
         }
     }

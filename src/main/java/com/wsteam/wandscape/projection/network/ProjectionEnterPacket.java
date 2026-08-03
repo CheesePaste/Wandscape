@@ -50,7 +50,7 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
         // Already projecting? Toggle off.
         if (ProjectionNetwork.isProjecting(player)) {
             ProjectionNetwork.removeProjecting(player);
-            player.displayClientMessage(Component.literal("[Projection] Exited projection mode"), false);
+            Log.debug(TAG, "[Projection] Player {} exited projection mode", player.getGameProfile().getName());
             // Restore abilities — player should return to anchor at last known body pos
             // The client handles the teleport + ability restore on receive of denied response
             var deny = new ProjectionEnterResponsePacket(false, List.of(), BlockPos.ZERO);

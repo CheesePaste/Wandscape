@@ -155,14 +155,12 @@ public final class ProjectionFlightController {
             ProjectionClientState.rotate();
             int steps = ProjectionClientState.getRotationSteps();
             String direction = switch (steps) {
-                case 1 -> "§e90°";
-                case 2 -> "§e180°";
-                case 3 -> "§e270°";
-                default -> "§e0°";
+                case 1 -> "90°";
+                case 2 -> "180°";
+                case 3 -> "270°";
+                default -> "0°";
             };
-            mc.player.displayClientMessage(
-                    Component.literal("[Projection] §fRotation: " + direction),
-                    true);
+            Log.debug(TAG, "[Projection] Rotation: {}", direction);
         }
 
         // Right-click: place building
@@ -214,13 +212,7 @@ public final class ProjectionFlightController {
     private static void doExit() {
         PacketDistributor.sendToServer(new ProjectionExitPacket());
         ProjectionClientState.exitProjection();
-
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("[Projection] §eExited building placement mode"),
-                    true);
-        }
+        Log.debug(TAG, "[Projection] Exited building placement mode");
     }
 
     // ── Input draining ──
