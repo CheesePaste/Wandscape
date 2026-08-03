@@ -15,6 +15,16 @@
 
   "message.wandscape.town.welcome": "[Wandscape] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！",
 
+  "gui.wandscape.townhall.title": "市政厅",
+  "gui.wandscape.townhall.name_hint": "魔法小镇名称",
+  "gui.wandscape.townhall.founder": "创建者：%s",
+  "gui.wandscape.townhall.level": "魔法小镇等级 %s",
+  "gui.wandscape.townhall.exp_source": "经验来源（游客满意度100%时）：",
+  "gui.wandscape.townhall.exp_lt": "游客等级 < 魔法小镇等级 → 0 经验",
+  "gui.wandscape.townhall.exp_eq": "游客等级 = 魔法小镇等级 → 100 经验",
+  "gui.wandscape.townhall.exp_gt": "游客等级 > 魔法小镇等级 → 500 经验",
+  "gui.wandscape.townhall.hint": "点击名称框修改魔法小镇名称，输入完成自动保存",
+
   "advancements.wandscape.start.title": "魔法城镇",
   "advancements.wandscape.start.description": "建立 1 个建筑",
   "advancements.wandscape.hamlet.title": "小聚落",

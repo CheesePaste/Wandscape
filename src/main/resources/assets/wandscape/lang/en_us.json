@@ -19,6 +19,16 @@
 
   "message.wandscape.town.welcome": "[Wandscape] Welcome! Press V to open the building panel and start building your town.",
 
+  "gui.wandscape.townhall.title": "Town Hall",
+  "gui.wandscape.townhall.name_hint": "Town name",
+  "gui.wandscape.townhall.founder": "Founder: %s",
+  "gui.wandscape.townhall.level": "Town Level %s",
+  "gui.wandscape.townhall.exp_source": "Experience source (when tourist satisfaction is 100%):",
+  "gui.wandscape.townhall.exp_lt": "Tourist level < town level → 0 XP",
+  "gui.wandscape.townhall.exp_eq": "Tourist level = town level → 100 XP",
+  "gui.wandscape.townhall.exp_gt": "Tourist level > town level → 500 XP",
+  "gui.wandscape.townhall.hint": "Click the name box to change the town name; it saves automatically when done",
+
   "advancements.wandscape.start.title": "Wandscape",
   "advancements.wandscape.start.description": "Build your first building",
   "advancements.wandscape.hamlet.title": "Small Settlement",
