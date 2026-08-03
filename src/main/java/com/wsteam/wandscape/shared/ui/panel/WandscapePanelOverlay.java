@@ -352,14 +352,14 @@ public final class WandscapePanelOverlay {
             WandscapePanelState.getWindAmount(),
             WandscapePanelState.getDarkAmount()
         };
-        int[] colors = {0xFF8B6914, 0xFF2E8B57, 0xFF4A90D9, 0xFFB22222, 0xFFA0A0A0, 0xFF87CEEB, 0xFF6B3FA0};
 
         for (int i = 0; i < elementIds.length; i++) {
             var icon = WandscapeTheme.elementIcon(elementIds[i]);
-            WandscapeTheme.drawIcon(g, icon, x, y, s, s, colors[i]);
+            int color = WandscapeTheme.elementColor(elementIds[i]);
+            WandscapeTheme.drawIcon(g, icon, x, y, s, s, color);
             x += s + 2;
             String val = String.valueOf(amounts[i]);
-            drawText(g, font, val, x, textY, colors[i]);
+            drawText(g, font, val, x, textY, color);
             x += font.width(val) + 6;
         }
     }
@@ -441,15 +441,7 @@ public final class WandscapePanelOverlay {
     }
 
     private static int elementColor(ElementType type) {
-        return switch (type) {
-            case EARTH -> 0xFF8B6914;
-            case WOOD  -> 0xFF2E8B57;
-            case WATER -> 0xFF4A90D9;
-            case FIRE  -> 0xFFB22222;
-            case METAL -> 0xFF808080;
-            case WIND  -> 0xFF87CEEB;
-            case DARK  -> 0xFF4B0082;
-        };
+        return WandscapeTheme.elementColor(type.getId());
     }
 
     private static String formatElementCount(long n) {

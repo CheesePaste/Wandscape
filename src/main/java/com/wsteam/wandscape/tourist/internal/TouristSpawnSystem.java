@@ -26,10 +26,8 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -538,11 +536,8 @@ public final class TouristSpawnSystem {
             touristApi.registerDeparture(t.getUUID(), colonyId, satisfaction);
         }
 
-        // Generate departure narrative and broadcast to nearby players
+        // Generate departure narrative (no on-screen text — silent by design)
         int visitCount = t.getRecentVisits().size();
-        String departureText = NarrativeGenerator.generateDepartureSummary(
-                t.getTouristName(), satisfaction, visitCount);
-        showNearbyActionBar(t, departureText, level);
 
         NarrativeEvent departureEvent = NarrativeGenerator.generateDeparture(
                 t.getTouristName(), satisfaction, visitCount, t.level().getGameTime());
@@ -727,18 +722,6 @@ public final class TouristSpawnSystem {
     /** Universal-element starting wallet: base + level × per-level bonus. */
     private static int startingWallet(int level) {
         return Config.TOURIST_BASE_WALLET.get() + Math.max(0, level) * Config.TOURIST_WALLET_PER_LEVEL.get();
-    }
-
-    // ── Action bar ──
-
-    private static void showNearbyActionBar(TouristEntity t, String msg, ServerLevel level) {
-        if (level.isClientSide) return;
-        Component comp = Component.literal(msg);
-        for (ServerPlayer p : level.getEntitiesOfClass(
-                ServerPlayer.class,
-                t.getBoundingBox().inflate(32))) {
-            p.sendSystemMessage(comp, true);
-        }
     }
 
     // ── Colony ID helper ──

@@ -535,6 +535,11 @@ public class Wandscape {
                         TouristDataPacket.TYPE,
                         TouristDataPacket.STREAM_CODEC,
                         (packet, ctx) -> TouristDataPacket.handleClient(packet))
+                // ── Tourist purchase / service bubble ──
+                .playToClient(
+                        com.wsteam.wandscape.tourist.network.TouristBubblePacket.TYPE,
+                        com.wsteam.wandscape.tourist.network.TouristBubblePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.tourist.network.TouristBubblePacket.handleClient(packet))
                 // ── Colony day/night ambient ──
                 .playToClient(
                         com.wsteam.wandscape.shared.network.ColonyAmbientPacket.TYPE,

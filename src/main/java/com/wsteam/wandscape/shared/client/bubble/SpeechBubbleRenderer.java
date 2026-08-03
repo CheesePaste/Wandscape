@@ -9,13 +9,22 @@ import javax.annotation.Nullable;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 
 import org.joml.Matrix4f;
 
@@ -43,6 +52,13 @@ public final class SpeechBubbleRenderer {
                                     MultiBufferSource buffer, int packedLight,
                                     IBubbleTextProvider textProvider) {
         if (entity.isInvisible()) return;
+
+        // Transient event bubble (purchase / service feedback) temporarily overrides ambient text
+        TransientBubbleStore.Event event = TransientBubbleStore.get(entity.getUUID(), entity.tickCount);
+        if (event != null) {
+            renderEventBubble(entity, event, poseStack, buffer, packedLight);
+            return;
+        }
 
         UUID uuid = entity.getUUID();
         BubbleState state = STATES.computeIfAbsent(uuid, k -> new BubbleState(entity));
@@ -84,7 +100,6 @@ public final class SpeechBubbleRenderer {
         float bubbleH = textHeight + BUBBLE_PADDING * 2;
         float totalH = bubbleH + TRIANGLE_SIZE;
 
-        float bx = -bubbleW / 2F;
         float by = -totalH;
 
         poseStack.pushPose();
@@ -93,33 +108,10 @@ public final class SpeechBubbleRenderer {
         poseStack.scale(SCALE, -SCALE, SCALE);
         Matrix4f matrix = poseStack.last().pose();
 
-        float ex = 0F;
         float ey = by + bubbleH / 2F;
-        float rx = bubbleW / 2F;
-        float ry = bubbleH / 2F;
 
-        // Draw filled ellipse using debug quads (POSITION_COLOR, works in entity pipeline)
-        VertexConsumer vc = buffer.getBuffer(RenderType.debugQuads());
-        for (int i = 0; i < ELLIPSE_SEGMENTS; i++) {
-            double a1 = 2 * Math.PI * i / ELLIPSE_SEGMENTS;
-            double a2 = 2 * Math.PI * (i + 1) / ELLIPSE_SEGMENTS;
-            float px1 = (float)(ex + rx * Math.cos(a1));
-            float py1 = (float)(ey + ry * Math.sin(a1));
-            float px2 = (float)(ex + rx * Math.cos(a2));
-            float py2 = (float)(ey + ry * Math.sin(a2));
-
-            vc.addVertex(matrix, ex, ey, 0).setColor(1F, 1F, 1F, alpha);
-            vc.addVertex(matrix, px1, py1, 0).setColor(1F, 1F, 1F, alpha);
-            vc.addVertex(matrix, px2, py2, 0).setColor(1F, 1F, 1F, alpha);
-            vc.addVertex(matrix, px2, py2, 0).setColor(1F, 1F, 1F, alpha);
-        }
-
-        // Triangle pointer
-        float triBase = by + bubbleH;
-        vc.addVertex(matrix, -TRIANGLE_SIZE, triBase, 0).setColor(1F, 1F, 1F, alpha);
-        vc.addVertex(matrix, TRIANGLE_SIZE, triBase, 0).setColor(1F, 1F, 1F, alpha);
-        vc.addVertex(matrix, 0F, triBase + TRIANGLE_SIZE, 0).setColor(1F, 1F, 1F, alpha);
-        vc.addVertex(matrix, 0F, triBase + TRIANGLE_SIZE, 0).setColor(1F, 1F, 1F, alpha);
+        // Draw filled ellipse + pointer using debug quads (POSITION_COLOR, works in entity pipeline)
+        drawEllipseBody(buffer, matrix, bubbleW, bubbleH, by, alpha);
 
         // Text
         float textX = -textWidth / 2F;
@@ -127,6 +119,135 @@ public final class SpeechBubbleRenderer {
         font.drawInBatch(textComp, textX, textY, 0xFF000000, false,
                 matrix, buffer, Font.DisplayMode.NORMAL, 0, packedLight);
 
+        poseStack.popPose();
+    }
+
+    // ── Transient event bubble (purchase / service feedback) ──
+    // The satisfaction bar below the bubble is rendered independently by
+    // SatisfactionBarRenderer; this method only draws the bubble body + icon.
+
+    private static void renderEventBubble(LivingEntity entity, TransientBubbleStore.Event event,
+                                          PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+        int elapsed = Math.max(0, entity.tickCount - event.startTick());
+        float alpha = TransientBubbleStore.alpha(elapsed);
+        if (alpha <= 0.005F) return;
+
+        EntityRenderDispatcher renderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        if (renderDispatcher.distanceToSqr(entity) > MAX_DIST_SQ) return;
+
+        int iconKind = event.iconKind();
+        if (iconKind == TransientBubbleStore.ICON_NONE) return; // satisfaction bar only
+
+        Font font = Minecraft.getInstance().font;
+        String countText = "×" + event.count();
+        float countW = font.width(countText);
+
+        final float iconSize = 16F;
+        final float gap = 4F;
+        // Reserve room below the bubble for the decoupled satisfaction bar + pointer
+        final float barH = 6F;
+        final float barGap = 3F;
+
+        float contentW = iconSize + gap + countW;
+        float bubbleW = contentW + BUBBLE_PADDING * 2F;
+        float bubbleH = iconSize + BUBBLE_PADDING * 2F;
+        float totalH = bubbleH + barGap + barH + TRIANGLE_SIZE;
+        float by = -totalH;
+        float ey = by + bubbleH / 2F;
+
+        poseStack.pushPose();
+        poseStack.translate(0, entity.getBbHeight() + Y_OFFSET, 0);
+        poseStack.mulPose(renderDispatcher.cameraOrientation());
+        poseStack.scale(SCALE, -SCALE, SCALE);
+        Matrix4f matrix = poseStack.last().pose();
+
+        drawEllipseBody(buffer, matrix, bubbleW, bubbleH, by, alpha);
+
+        float cx = -contentW / 2F + iconSize / 2F;
+        if (iconKind == TransientBubbleStore.ICON_ITEM) {
+            drawItemIcon(entity, event.iconId(), cx, ey, poseStack, buffer, packedLight);
+        } else if (iconKind == TransientBubbleStore.ICON_ELEMENT) {
+            drawElementIcon(event.iconId(), cx, ey, poseStack, buffer, packedLight, alpha);
+        }
+
+        float textX = cx + iconSize / 2F + gap;
+        float textY = ey - font.lineHeight / 2F;
+        font.drawInBatch(Component.literal(countText), textX, textY, 0xFF000000, false,
+                matrix, buffer, Font.DisplayMode.NORMAL, 0, packedLight);
+
+        poseStack.popPose();
+    }
+
+    /** Ellipse bubble body + downward pointer. */
+    private static void drawEllipseBody(MultiBufferSource buffer, Matrix4f matrix,
+                                        float bubbleW, float bubbleH, float by, float alpha) {
+        VertexConsumer vc = buffer.getBuffer(RenderType.debugQuads());
+        float ex = 0F;
+        float ey = by + bubbleH / 2F;
+        float rx = bubbleW / 2F;
+        float ry = bubbleH / 2F;
+        for (int i = 0; i < ELLIPSE_SEGMENTS; i++) {
+            double a1 = 2 * Math.PI * i / ELLIPSE_SEGMENTS;
+            double a2 = 2 * Math.PI * (i + 1) / ELLIPSE_SEGMENTS;
+            float px1 = (float) (ex + rx * Math.cos(a1));
+            float py1 = (float) (ey + ry * Math.sin(a1));
+            float px2 = (float) (ex + rx * Math.cos(a2));
+            float py2 = (float) (ey + ry * Math.sin(a2));
+            vc.addVertex(matrix, ex, ey, 0).setColor(1F, 1F, 1F, alpha);
+            vc.addVertex(matrix, px1, py1, 0).setColor(1F, 1F, 1F, alpha);
+            vc.addVertex(matrix, px2, py2, 0).setColor(1F, 1F, 1F, alpha);
+            vc.addVertex(matrix, px2, py2, 0).setColor(1F, 1F, 1F, alpha);
+        }
+        float triBase = by + bubbleH;
+        vc.addVertex(matrix, -TRIANGLE_SIZE, triBase, 0).setColor(1F, 1F, 1F, alpha);
+        vc.addVertex(matrix, TRIANGLE_SIZE, triBase, 0).setColor(1F, 1F, 1F, alpha);
+        vc.addVertex(matrix, 0F, triBase + TRIANGLE_SIZE, 0).setColor(1F, 1F, 1F, alpha);
+        vc.addVertex(matrix, 0F, triBase + TRIANGLE_SIZE, 0).setColor(1F, 1F, 1F, alpha);
+    }
+
+    /** Renders the purchased item as a flat GUI icon, mirroring {@code GuiGraphics.renderItem} pose. */
+    private static void drawItemIcon(LivingEntity entity, @Nullable String itemId,
+                                     float cx, float cy, PoseStack poseStack,
+                                     MultiBufferSource buffer, int packedLight) {
+        if (itemId == null) return;
+        ResourceLocation rl = ResourceLocation.tryParse(itemId);
+        if (rl == null) return;
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(rl));
+        if (stack.isEmpty()) return;
+
+        poseStack.pushPose();
+        poseStack.translate(cx, cy, 0.5F);
+        poseStack.scale(16F, -16F, 16F);
+        ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+        BakedModel model = itemRenderer.getModel(stack, entity.level(), entity, 0);
+        itemRenderer.render(stack, ItemDisplayContext.GUI, false, poseStack, buffer,
+                packedLight, OverlayTexture.NO_OVERLAY, model);
+        poseStack.popPose();
+    }
+
+    /** Renders an element icon (white-channel PNG tinted with its theme color) as a billboard quad. */
+    private static void drawElementIcon(@Nullable String elementId, float cx, float cy,
+                                        PoseStack poseStack, MultiBufferSource buffer,
+                                        int packedLight, float alpha) {
+        if (elementId == null) return;
+        int argb = WandscapeTheme.elementColor(elementId);
+        float r = ((argb >> 16) & 0xFF) / 255F;
+        float g = ((argb >> 8) & 0xFF) / 255F;
+        float b = (argb & 0xFF) / 255F;
+        float s = 16F;
+        float x0 = cx - s / 2F;
+        float x1 = cx + s / 2F;
+        float y0 = cy - s / 2F;
+        float y1 = cy + s / 2F;
+
+        poseStack.pushPose();
+        poseStack.translate(0, 0, 0.1F);
+        Matrix4f matrix = poseStack.last().pose();
+        VertexConsumer vc = buffer.getBuffer(RenderType.text(WandscapeTheme.elementIcon(elementId)));
+        vc.addVertex(matrix, x0, y0, 0).setColor(r, g, b, alpha).setUv(0, 0).setLight(packedLight);
+        vc.addVertex(matrix, x1, y0, 0).setColor(r, g, b, alpha).setUv(1, 0).setLight(packedLight);
+        vc.addVertex(matrix, x1, y1, 0).setColor(r, g, b, alpha).setUv(1, 1).setLight(packedLight);
+        vc.addVertex(matrix, x0, y1, 0).setColor(r, g, b, alpha).setUv(0, 1).setLight(packedLight);
         poseStack.popPose();
     }
 

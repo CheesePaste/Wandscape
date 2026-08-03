@@ -23,9 +23,11 @@ import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
+import com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.network.TouristBubblePacket;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -36,6 +38,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -1105,6 +1108,19 @@ public class TouristMoveGoal extends Goal {
         }
     }
 
+    /** Notify nearby players of a purchase / service bubble event above this tourist. */
+    private void sendBubble(int iconKind, @Nullable String iconId, int count,
+                            int satBefore, int satAfter) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        TouristBubblePacket packet =
+                new TouristBubblePacket(tourist.getId(), iconKind, iconId, count, satBefore, satAfter);
+        for (ServerPlayer p : level.getEntitiesOfClass(
+                ServerPlayer.class, tourist.getBoundingBox().inflate(32))) {
+            PacketDistributor.sendToPlayer(p, packet);
+        }
+    }
+
     private void planNextBuilding() {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
@@ -1333,8 +1349,8 @@ public class TouristMoveGoal extends Goal {
             NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
             emitNarrativeEvent(shopEvent);
 
-            String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
-            showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20 钱包-" + purchase.spent());
+            sendBubble(TransientBubbleStore.ICON_ITEM, purchase.itemId(), purchase.count(),
+                    satBefore, tourist.getSatisfaction());
 
             sparkleSatisfaction();
         }
@@ -1390,8 +1406,14 @@ public class TouristMoveGoal extends Goal {
         NarrativeEvent serviceEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(serviceEvent);
 
-        String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
-        showActionBar("🔧 " + narrative + " | 满意+" + gain + " 精力-" + energyCost);
+        if (!svc.elementOutput().isEmpty()) {
+            var entries = List.copyOf(svc.elementOutput().entrySet());
+            var pick = entries.get(tourist.level().random.nextInt(entries.size()));
+            sendBubble(TransientBubbleStore.ICON_ELEMENT, pick.getKey(), pick.getValue(),
+                    satBefore, tourist.getSatisfaction());
+        } else {
+            sendBubble(TransientBubbleStore.ICON_NONE, null, 0, satBefore, tourist.getSatisfaction());
+        }
 
         sparkleSatisfaction();
     }

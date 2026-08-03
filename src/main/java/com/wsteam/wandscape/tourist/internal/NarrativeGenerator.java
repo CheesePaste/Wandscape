@@ -6,8 +6,6 @@ import com.wsteam.wandscape.shared.data.NarrativeEventType;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -83,22 +81,6 @@ public final class NarrativeGenerator {
     }
 
     /**
-     * Generate departure summary line (condensed version for action bar).
-     */
-    public static String generateDepartureSummary(String touristName, int satisfaction, int visitCount) {
-        NarrativeTemplates tmpl = NarrativeTemplates.getInstance();
-        Emotion tone = Emotion.fromSatisfaction(satisfaction);
-        Map<String, String> vars = Map.of(
-                "name", touristName,
-                "visit_count", String.valueOf(visitCount)
-        );
-
-        String key = "departure_" + tone.name().toLowerCase();
-        String template = tmpl.getGenericTemplate(key);
-        return NarrativeTemplates.render(template, vars);
-    }
-
-    /**
      * Generate hotel checkin text.
      */
     public static NarrativeEvent generateHotelCheckin(String touristName,
@@ -155,20 +137,5 @@ public final class NarrativeGenerator {
 
         return NarrativeEvent.of(NarrativeEventType.SATISFACTION_MILESTONE, gameTime,
                 Emotion.PLEASED, text);
-    }
-
-    /**
-     * Generate quick one-line text for ActionBar display.
-     * This is the primary output for Phase 2 — no GUI needed.
-     */
-    public static String generateActionBarText(VisitMemory memory, String touristName) {
-        String template = NarrativeTemplates.getInstance().getTemplate(
-                memory.buildingTypeId(), memory.category(), "visit");
-        Map<String, String> vars = new HashMap<>();
-        vars.put("name", touristName);
-        vars.put("building", memory.buildingDisplayName());
-        vars.put("item", memory.whatHappened());
-        vars.put("emotion_adj", NarrativeTemplates.getInstance().pickEmotionAdjective(memory.emotion()));
-        return NarrativeTemplates.render(template, vars);
     }
 }
