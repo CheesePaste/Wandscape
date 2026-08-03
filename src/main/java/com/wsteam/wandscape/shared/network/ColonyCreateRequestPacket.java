@@ -80,6 +80,12 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         // advances and the panel overlay shows its boundary (no panel reopen needed).
         com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player, packet.townHallAnchor);
 
+        // Push tutorial progress — the new colony's town hall completes the first step.
+        var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+        if (guideApi != null) {
+            guideApi.sendToPlayer(player, colonyId);
+        }
+
         sendMessage(player, result);
     }
 

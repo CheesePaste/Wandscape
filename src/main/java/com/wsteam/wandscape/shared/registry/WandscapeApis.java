@@ -100,4 +100,9 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static ColonyMetricsApi getColonyMetricsApiSilently() { return colonyMetricsApi; }
     public static void setColonyMetricsApi(ColonyMetricsApi api) { colonyMetricsApi = api; }
+
+    private static GuideProgressApi guideProgressApi;
+    @javax.annotation.Nullable
+    public static GuideProgressApi getGuideProgressApiSilently() { return guideProgressApi; }
+    public static void setGuideProgressApi(GuideProgressApi api) { guideProgressApi = api; }
 }

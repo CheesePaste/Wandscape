@@ -616,6 +616,11 @@ public class Wandscape {
         com.wsteam.wandscape.shared.registry.WandscapeApis.setColonyMetricsApi(metricsService);
         Log.info(TAG, "ColonyMetricsService registered");
 
+        // Register server-authoritative tutorial progress evaluator
+        com.wsteam.wandscape.shared.registry.WandscapeApis.setGuideProgressApi(
+                new com.wsteam.wandscape.engine.service.GuideProgressService());
+        Log.info(TAG, "GuideProgressService registered");
+
         BuildCompleteListener.register();
         DemolishCompleteListener.register();
         // Rebuild colony spatial index from saved data

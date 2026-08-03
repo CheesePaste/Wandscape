@@ -35,9 +35,10 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
         UUID playerId = player.getUUID();
         if (packet.open) {
             PanelStateTracker.open(playerId);
+            UUID colonyId = null;
             ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
-                UUID colonyId = colonyApi.getColonyId(player.blockPosition());
+                colonyId = colonyApi.getColonyId(player.blockPosition());
                 if (colonyId != null) {
                     ColonyMetricsApi metricsApi = WandscapeApis.getColonyMetricsApiSilently();
                     if (metricsApi != null) {
@@ -52,12 +53,12 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                 }
             }
 
-            // Seed the player's saved tutorial progress (completed steps / dismissal),
-            // independent of colony existence so a pre-colony dismissal is honored.
-            var guideProgress = com.wsteam.wandscape.shared.data.GuideProgressSavedData
-                    .get(player.serverLevel()).get(player.getUUID());
-            PacketDistributor.sendToPlayer(player,
-                    new GuideProgressSyncPacket(guideProgress.stepIndex(), guideProgress.dismissed()));
+            // Seed tutorial progress (recomputed when a colony exists; otherwise
+            // only the saved value so a pre-colony dismissal still persists).
+            var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+            if (guideApi != null) {
+                guideApi.sendToPlayer(player, colonyId);
+            }
         } else {
             PanelStateTracker.close(playerId);
         }

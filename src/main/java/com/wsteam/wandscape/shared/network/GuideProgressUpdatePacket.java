@@ -11,10 +11,11 @@ import net.minecraft.server.level.ServerPlayer;
 import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
- * Client→Server: Player's tutorial progress changed (step advanced or guide
- * dismissed). Server persists it per-player in {@link GuideProgressSavedData}.
+ * Client→Server: The player dismissed the tutorial guide. Step index is
+ * computed server-side, so the client only reports dismissal; the saved step is
+ * kept.
  */
-public record GuideProgressUpdatePacket(int stepIndex, boolean dismissed) implements CustomPacketPayload {
+public record GuideProgressUpdatePacket(boolean dismissed) implements CustomPacketPayload {
 
     public static final Type<GuideProgressUpdatePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "guide_progress_update"));
@@ -28,16 +29,16 @@ public record GuideProgressUpdatePacket(int stepIndex, boolean dismissed) implem
     }
 
     public static void handleServer(GuideProgressUpdatePacket packet, ServerPlayer player) {
-        GuideProgressSavedData.get(player.serverLevel())
-                .set(player.getUUID(), packet.stepIndex, packet.dismissed);
+        GuideProgressSavedData sd = GuideProgressSavedData.get(player.serverLevel());
+        GuideProgressSavedData.GuideProgress saved = sd.get(player.getUUID());
+        sd.set(player.getUUID(), saved.stepIndex(), packet.dismissed());
     }
 
     static void write(RegistryFriendlyByteBuf buf, GuideProgressUpdatePacket pkt) {
-        buf.writeVarInt(pkt.stepIndex);
         buf.writeBoolean(pkt.dismissed);
     }
 
     static GuideProgressUpdatePacket read(RegistryFriendlyByteBuf buf) {
-        return new GuideProgressUpdatePacket(buf.readVarInt(), buf.readBoolean());
+        return new GuideProgressUpdatePacket(buf.readBoolean());
     }
 }
