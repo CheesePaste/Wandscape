@@ -1,11 +1,11 @@
 {
   "magic_cast": {
     "subtitle": "wandscape.subtitle.magic_cast",
-    "sounds": [ "minecraft:block/enchantment_table/enchant1", "minecraft:block/enchantment_table/enchant2" ]
+    "sounds": [ "wandscape:magic/cast" ]
   },
   "magic_beam": {
     "subtitle": "wandscape.subtitle.magic_beam",
-    "sounds": [ "minecraft:block/beacon/activate" ]
+    "sounds": [ "wandscape:magic/beam" ]
   },
   "building_place": {
     "subtitle": "wandscape.subtitle.building_place",
@@ -25,7 +25,7 @@
   },
   "warehouse": {
     "subtitle": "wandscape.subtitle.warehouse",
-    "sounds": [ "minecraft:item/armor/equip_gold1" ]
+    "sounds": [ "wandscape:warehouse/transfer" ]
   },
   "npc_cast": {
     "subtitle": "wandscape.subtitle.npc_cast",
@@ -33,39 +33,39 @@
   },
   "task_publish": {
     "subtitle": "wandscape.subtitle.task_publish",
-    "sounds": [ "minecraft:random/click_stereo" ]
+    "sounds": [ "wandscape:task/publish" ]
   },
   "guard_fire": {
     "subtitle": "wandscape.subtitle.guard_fire",
-    "sounds": [ "minecraft:mob/ghast/fireball4" ]
+    "sounds": [ "wandscape:guard/fire" ]
   },
   "building_placed": {
     "subtitle": "wandscape.subtitle.building_placed",
-    "sounds": [ "minecraft:block/amethyst/shimmer" ]
+    "sounds": [ "wandscape:building/placed" ]
   },
   "building_demolished": {
     "subtitle": "wandscape.subtitle.building_demolished",
-    "sounds": [ "minecraft:dig/stone1" ]
+    "sounds": [ "wandscape:building/demolished" ]
   },
   "tourist_arrive": {
     "subtitle": "wandscape.subtitle.tourist_arrive",
-    "sounds": [ "minecraft:note/bell" ]
+    "sounds": [ "wandscape:tourist/arrive" ]
   },
   "tourist_depart": {
     "subtitle": "wandscape.subtitle.tourist_depart",
-    "sounds": [ "minecraft:note/harp2" ]
+    "sounds": [ "wandscape:tourist/depart" ]
   },
   "shop_restock": {
     "subtitle": "wandscape.subtitle.shop_restock",
-    "sounds": [ "minecraft:note/cow_bell" ]
+    "sounds": [ "wandscape:shop/restock" ]
   },
   "building_shutdown": {
     "subtitle": "wandscape.subtitle.building_shutdown",
-    "sounds": [ "minecraft:block/iron_door/close1" ]
+    "sounds": [ "wandscape:building/shutdown" ]
   },
   "building_restart": {
     "subtitle": "wandscape.subtitle.building_restart",
-    "sounds": [ "minecraft:block/beacon/activate" ]
+    "sounds": [ "wandscape:building/restart" ]
   },
   "colony_level_up": {
     "subtitle": "wandscape.subtitle.colony_level_up",
