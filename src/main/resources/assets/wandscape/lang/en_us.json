@@ -66,13 +66,6 @@
   "wandscape.subtitle.npc_cast": "Mage casts",
   "wandscape.subtitle.task_publish": "Task published",
   "wandscape.subtitle.guard_fire": "Guard fires",
-  "wandscape.subtitle.building_placed": "Building constructed",
-  "wandscape.subtitle.building_demolished": "Building demolished",
-  "wandscape.subtitle.tourist_arrive": "Tourist arrives",
-  "wandscape.subtitle.tourist_depart": "Tourist departs",
-  "wandscape.subtitle.shop_restock": "Shop restocked",
-  "wandscape.subtitle.building_shutdown": "Building shut down",
-  "wandscape.subtitle.building_restart": "Building restarted",
   "wandscape.subtitle.colony_level_up": "Colony level up",
   "wandscape.subtitle.wonder_effect": "Wonder active",
   "wandscape.subtitle.road_place": "Road placed"

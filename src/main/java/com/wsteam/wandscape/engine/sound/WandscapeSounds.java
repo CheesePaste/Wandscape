@@ -39,22 +39,8 @@ public final class WandscapeSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> TASK_PUBLISH = register("task_publish");
     /** 守卫开火。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> GUARD_FIRE = register("guard_fire");
-    /** NPC 蓝图施工整栋建成。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> BUILDING_PLACED = register("building_placed");
-    /** NPC 拆除建筑。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> BUILDING_DEMOLISHED = register("building_demolished");
-    /** 游客到达。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> TOURIST_ARRIVE = register("tourist_arrive");
-    /** 游客离开。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> TOURIST_DEPART = register("tourist_depart");
-    /** 商店补货。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> SHOP_RESTOCK = register("shop_restock");
 
     // ---- P2 模拟经营 / 全局 ----
-    /** 建筑因维护费不足关停。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> BUILDING_SHUTDOWN = register("building_shutdown");
-    /** 建筑恢复运行。 */
-    public static final DeferredHolder<SoundEvent, SoundEvent> BUILDING_RESTART = register("building_restart");
     /** 殖民地升级。 */
     public static final DeferredHolder<SoundEvent, SoundEvent> COLONY_LEVEL_UP = register("colony_level_up");
     /** 奇观效果应用/移除。 */

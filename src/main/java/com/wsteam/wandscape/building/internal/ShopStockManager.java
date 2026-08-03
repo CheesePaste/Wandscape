@@ -13,8 +13,6 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -31,7 +29,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundSource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -363,11 +360,6 @@ public final class ShopStockManager {
             Map<String, Integer> finalStock = savedData.getOrCreateShopStock(buildingId);
             updateHasStock(buildingId, finalStock);
             NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
-            BuildingState shop = savedData.getBuilding(buildingId);
-            if (shop != null) {
-                SoundService.playAt(level, shop.getAnchor(),
-                        WandscapeSounds.SHOP_RESTOCK, SoundSource.BLOCKS, 0.5f, 1.0f);
-            }
             Log.debug(TAG, "[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
         }
     }

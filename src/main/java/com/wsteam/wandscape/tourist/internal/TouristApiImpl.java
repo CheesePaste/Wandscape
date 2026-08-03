@@ -5,19 +5,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.TouristApi;
 import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
 import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
 
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 /**
  * Implementation of {@link TouristApi}.
  * Tracks tourist presence and satisfaction per colony in memory.
@@ -64,7 +56,6 @@ public class TouristApiImpl implements TouristApi {
         colonyTourists.computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                 .put(touristId, 0);
         NeoForge.EVENT_BUS.post(new TouristArrivedEvent(touristId, colonyId));
-        playTouristSound(touristId, WandscapeSounds.TOURIST_ARRIVE);
     }
 
     @Override
@@ -77,19 +68,6 @@ public class TouristApiImpl implements TouristApi {
             }
         }
         NeoForge.EVENT_BUS.post(new TouristDepartedEvent(touristId, colonyId, satisfaction));
-        playTouristSound(touristId, WandscapeSounds.TOURIST_DEPART);
-    }
-
-    /** 游客到达/离开音：按 UUID 在服务端主世界找实体播音，找不到则跳过。 */
-    private static void playTouristSound(UUID touristId, DeferredHolder<SoundEvent, SoundEvent> sound) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        ServerLevel overworld = server.overworld();
-        if (overworld == null) return;
-        Entity tourist = overworld.getEntity(touristId);
-        if (tourist != null) {
-            SoundService.playEntity(tourist, sound, 0.6f, 1.0f);
-        }
     }
 
     @Override

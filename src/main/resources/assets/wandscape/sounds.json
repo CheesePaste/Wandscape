@@ -39,34 +39,6 @@
     "subtitle": "wandscape.subtitle.guard_fire",
     "sounds": [ "wandscape:guard/fire" ]
   },
-  "building_placed": {
-    "subtitle": "wandscape.subtitle.building_placed",
-    "sounds": [ "wandscape:building/placed" ]
-  },
-  "building_demolished": {
-    "subtitle": "wandscape.subtitle.building_demolished",
-    "sounds": [ "wandscape:building/demolished" ]
-  },
-  "tourist_arrive": {
-    "subtitle": "wandscape.subtitle.tourist_arrive",
-    "sounds": [ "wandscape:tourist/arrive" ]
-  },
-  "tourist_depart": {
-    "subtitle": "wandscape.subtitle.tourist_depart",
-    "sounds": [ "wandscape:tourist/depart" ]
-  },
-  "shop_restock": {
-    "subtitle": "wandscape.subtitle.shop_restock",
-    "sounds": [ "wandscape:shop/restock" ]
-  },
-  "building_shutdown": {
-    "subtitle": "wandscape.subtitle.building_shutdown",
-    "sounds": [ "wandscape:building/shutdown" ]
-  },
-  "building_restart": {
-    "subtitle": "wandscape.subtitle.building_restart",
-    "sounds": [ "wandscape:building/restart" ]
-  },
   "colony_level_up": {
     "subtitle": "wandscape.subtitle.colony_level_up",
     "sounds": [ "minecraft:random/levelup" ]

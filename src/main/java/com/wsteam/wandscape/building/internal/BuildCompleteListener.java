@@ -11,14 +11,11 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.NeoForge;
@@ -134,9 +131,6 @@ public final class BuildCompleteListener {
                             1.0f, 0.85f, 0.30f, 40, 0.14f, 40, true);
                 }
             }
-
-            SoundService.playAt((ServerLevel) level, anchor,
-                    WandscapeSounds.BUILDING_PLACED, SoundSource.BLOCKS, 0.7f, 1.0f);
 
             // Record contribution: only fires ColonyEvaluationChangedEvent when this
             // building type transitions from 0→1 intact buildings in the colony.

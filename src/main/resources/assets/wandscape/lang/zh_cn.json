@@ -54,13 +54,6 @@
   "wandscape.subtitle.npc_cast": "法师施法",
   "wandscape.subtitle.task_publish": "发布任务",
   "wandscape.subtitle.guard_fire": "守卫开火",
-  "wandscape.subtitle.building_placed": "建筑建成",
-  "wandscape.subtitle.building_demolished": "建筑拆除",
-  "wandscape.subtitle.tourist_arrive": "游客到达",
-  "wandscape.subtitle.tourist_depart": "游客离开",
-  "wandscape.subtitle.shop_restock": "商店补货",
-  "wandscape.subtitle.building_shutdown": "建筑关停",
-  "wandscape.subtitle.building_restart": "建筑恢复运行",
   "wandscape.subtitle.colony_level_up": "殖民地升级",
   "wandscape.subtitle.wonder_effect": "奇观生效",
   "wandscape.subtitle.road_place": "铺设道路"

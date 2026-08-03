@@ -11,8 +11,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.engine.service.SoundService;
-import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
@@ -24,7 +22,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -206,8 +203,6 @@ public class BuildingApiImpl implements BuildingApi {
                 if (serverLevel instanceof ServerLevel srv) {
                     ParticleService.burstAt(srv, ParticleTypes.LARGE_SMOKE,
                             ParticleService.boundsCenterAbove(state.getBounds(), 0), 20, 1.2, 0.05);
-                    SoundService.playAt(srv, state.getAnchor(),
-                            WandscapeSounds.BUILDING_SHUTDOWN, SoundSource.BLOCKS, 0.6f, 1.0f);
                 }
             }
 
@@ -242,8 +237,6 @@ public class BuildingApiImpl implements BuildingApi {
                 if (serverLevel instanceof ServerLevel srv) {
                     ParticleService.burstAt(srv, ParticleTypes.END_ROD,
                             ParticleService.boundsCenterAbove(state.getBounds(), 0), 15, 1.0, 0.08);
-                    SoundService.playAt(srv, state.getAnchor(),
-                            WandscapeSounds.BUILDING_RESTART, SoundSource.BLOCKS, 0.6f, 1.0f);
                 }
             }
             sd.setDirty();
