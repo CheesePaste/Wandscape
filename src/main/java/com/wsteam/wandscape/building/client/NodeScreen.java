@@ -105,7 +105,8 @@ public class NodeScreen extends MedievalScreen {
         addRenderableWidget(slider);
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
-                Component.literal("Publish Gather"), this::onSubmit);
+                com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.node.publish_gather", "Publish Gather"),
+                this::onSubmit);
         addRenderableWidget(submitBtn);
 
         // ── Right panel: Task Queue (cancel / reorder gather tasks) ──
@@ -128,19 +129,26 @@ public class NodeScreen extends MedievalScreen {
         super.render(g, mouseX, mouseY, partialTick);
 
         int y = topPos + headerHeight + 8;
-        drawInfoLine(g, y, "Element",
-                com.wsteam.wandscape.shared.ui.I18n.name("element.wandscape." + element, element).getString());
+        drawInfoLine(g, y, i18n("gui.wandscape.node.element", "Element"),
+                i18n("element.wandscape." + element, element));
         y += INFO_ROW_H;
-        drawInfoLine(g, y, "Per Harvest", String.valueOf(amountPerHarvest)); y += INFO_ROW_H;
-        drawInfoLine(g, y, "Channel", channelTicks + " ticks"); y += INFO_ROW_H;
-        drawInfoLine(g, y, "Mana / Harvest", String.valueOf(manaCost));
+        drawInfoLine(g, y, i18n("gui.wandscape.node.per_harvest", "Per Harvest"), String.valueOf(amountPerHarvest));
+        y += INFO_ROW_H;
+        drawInfoLine(g, y, i18n("gui.wandscape.node.channel", "Channel"),
+                i18n("gui.wandscape.node.channel_ticks", "%s ticks", channelTicks));
+        y += INFO_ROW_H;
+        drawInfoLine(g, y, i18n("gui.wandscape.node.mana_per_harvest", "Mana / Harvest"), String.valueOf(manaCost));
 
         // Live totals below the slider
         int n = slider != null ? slider.getValue() : 1;
-        String totals = "Total " + (amountPerHarvest * n)
-                + " | Mana " + (manaCost * n);
+        String totals = i18n("gui.wandscape.node.total_line", "Total %1$s | Mana %2$s",
+                amountPerHarvest * n, manaCost * n);
         g.drawString(Minecraft.getInstance().font, totals,
                 contentX, controlY + 26, MedievalColors.TEXT_MUTED);
+    }
+
+    private static String i18n(String key, String fallback, Object... args) {
+        return com.wsteam.wandscape.shared.ui.I18n.name(key, fallback, args).getString();
     }
 
     private void drawInfoLine(GuiGraphics g, int y, String label, String value) {

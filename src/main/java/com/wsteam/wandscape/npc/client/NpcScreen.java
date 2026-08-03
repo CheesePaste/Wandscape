@@ -76,7 +76,7 @@ public class NpcScreen extends MedievalScreen {
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                Component.literal("Close"), () -> Minecraft.getInstance().setScreen(null)));
+                I18n.name("gui.wandscape.common.close", "Close"), () -> Minecraft.getInstance().setScreen(null)));
     }
 
     @Override
@@ -89,7 +89,8 @@ public class NpcScreen extends MedievalScreen {
         int contentTop = topPos + headerHeight + 6;
 
         // ── Equipment section (left) ──
-        g.drawString(font, "Equipment", leftCol, contentTop, MedievalColors.ACCENT_GOLD);
+        g.drawString(font, I18n.name("gui.wandscape.npc.equipment", "Equipment"),
+                leftCol, contentTop, MedievalColors.ACCENT_GOLD);
         int sepY = contentTop + 10;
         g.fill(leftCol, sepY, leftCol + 62, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
 
@@ -106,7 +107,7 @@ public class NpcScreen extends MedievalScreen {
         g.fill(slotBgX + slotBgSize - 1, slotBgY, slotBgX + slotBgSize, slotBgY + slotBgSize, MedievalColors.BORDER_GOLD);
 
         // "Wand" label below
-        g.drawCenteredString(font, "Wand",
+        g.drawCenteredString(font, I18n.name("gui.wandscape.npc.wand", "Wand"),
                 slotBgX + slotBgSize / 2, slotBgY + slotBgSize + 2, MedievalColors.TEXT_MUTED);
 
         // Store bounds for click detection
@@ -122,7 +123,8 @@ public class NpcScreen extends MedievalScreen {
         }
 
         // ── Attributes section (right) ──
-        g.drawString(font, "Attributes", rightCol, contentTop, MedievalColors.ACCENT_GOLD);
+        g.drawString(font, I18n.name("gui.wandscape.npc.attributes", "Attributes"),
+                rightCol, contentTop, MedievalColors.ACCENT_GOLD);
         g.fill(rightCol, sepY, rightCol + 175, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
 
         int attrY = sepY + 4;
@@ -130,7 +132,8 @@ public class NpcScreen extends MedievalScreen {
         int barWidth = 135;
 
         // Health
-        g.drawString(font, "Health:", rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.npc.health", "Health").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, rightCol + labelW, attrY, barWidth, 10,
                 (float) currentHealth / maxHealth,
                 currentHealth + "/" + maxHealth,
@@ -138,7 +141,8 @@ public class NpcScreen extends MedievalScreen {
         attrY += 11;
 
         // Mana
-        g.drawString(font, "Mana:", rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.npc.mana", "Mana").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, rightCol + labelW, attrY, barWidth, 10,
                 (float) currentMana / maxMana,
                 currentMana + "/" + maxMana,
@@ -146,22 +150,27 @@ public class NpcScreen extends MedievalScreen {
         attrY += 11;
 
         // Range
-        g.drawString(font, "Range:", rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, range + " blocks", rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, I18n.name("gui.wandscape.npc.range", "Range").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, range + " " + I18n.name("gui.wandscape.npc.blocks", "blocks").getString(),
+                rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
         attrY += 10;
 
         // Mana Cost
-        g.drawString(font, "Cost:", rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.npc.cost", "Cost").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.format("%.1fx", manaCostMultiplier), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
         attrY += 10;
 
         // Regen
-        g.drawString(font, "Regen:", rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.npc.regen", "Regen").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, manaRegen + "/tick", rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
         attrY += 10;
 
         // Spell Power
-        g.drawString(font, "Spell:", rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, I18n.name("gui.wandscape.npc.spell", "Spell").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(spellPower), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
 
         // ── Divider ──
@@ -170,7 +179,8 @@ public class NpcScreen extends MedievalScreen {
 
         // ── Inventory section (bottom) ──
         int invLabelY = divY + 6;
-        g.drawString(font, "Inventory", leftCol, invLabelY, MedievalColors.ACCENT_GOLD);
+        g.drawString(font, I18n.name("gui.wandscape.npc.inventory", "Inventory"),
+                leftCol, invLabelY, MedievalColors.ACCENT_GOLD);
 
         int gridX = leftCol + 2;
         int gridY = invLabelY + 13;

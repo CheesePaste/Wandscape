@@ -136,7 +136,8 @@ public class CraftingStationScreen extends MedievalScreen {
                 if ("colony".equals(reason)) {
                     StringBuilder costStr = new StringBuilder("🔒 ");
                     var req = item.unlockRequirement();
-                    costStr.append("Colony Lv>=").append(req.minColonyLevel());
+                    costStr.append(I18n.name("gui.wandscape.recipe.colony_level",
+                            "Colony Lv>=%s", req.minColonyLevel()).getString());
                     g.drawString(Minecraft.getInstance().font, costStr.toString(),
                             x + 20, y + 12, MedievalColors.TEXT_DIM);
                 } else {
@@ -155,7 +156,7 @@ public class CraftingStationScreen extends MedievalScreen {
 
         addRenderableWidget(new MedievalButton(
                 contentX + contentW - 70, controlY + 4, 70, 18,
-                Component.literal("Submit"), this::onSubmit));
+                I18n.name("gui.wandscape.common.submit", "Submit"), this::onSubmit));
 
         // ── Right panel: Task Queue ──
         // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding

@@ -110,7 +110,10 @@ public class WorkstationScreen extends MedievalScreen {
 
         // Tab bar
         tabBar = new TabBar(contentX, contentY, contentW,
-                List.of("Decompose", "Synthesize"), activeTab, this::onTabChanged);
+                List.of(
+                        I18n.name("gui.wandscape.workstation.decompose", "Decompose").getString(),
+                        I18n.name("gui.wandscape.workstation.synthesize", "Synthesize").getString()),
+                activeTab, this::onTabChanged);
         addRenderableWidget(tabBar);
 
         // Lists
@@ -183,7 +186,8 @@ public class WorkstationScreen extends MedievalScreen {
                 if ("colony".equals(reason)) {
                     StringBuilder costStr = new StringBuilder("🔒 ");
                     var req = item.unlockRequirement();
-                    costStr.append("Colony Lv>=").append(req.minColonyLevel());
+                    costStr.append(I18n.name("gui.wandscape.recipe.colony_level",
+                            "Colony Lv>=%s", req.minColonyLevel()).getString());
                     g.drawString(Minecraft.getInstance().font, costStr.toString(),
                             x + 20, y + 10, MedievalColors.TEXT_DIM);
                 } else {
@@ -200,7 +204,7 @@ public class WorkstationScreen extends MedievalScreen {
         addRenderableWidget(slider);
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
-                Component.literal("Submit"), this::onSubmit);
+                I18n.name("gui.wandscape.common.submit", "Submit"), this::onSubmit);
         addRenderableWidget(submitBtn);
 
         // Show active tab

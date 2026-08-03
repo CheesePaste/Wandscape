@@ -49,7 +49,7 @@ public class HotelScreen extends MedievalScreen {
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                Component.literal("Close"), this::onClose));
+                I18n.name("gui.wandscape.common.close", "Close"), this::onClose));
     }
 
     @Override
@@ -61,7 +61,8 @@ public class HotelScreen extends MedievalScreen {
         int y = topPos + headerHeight + 12;
 
         // Occupancy header
-        String occText = "Guests: " + currentOccupancy + " / " + maxOccupancy;
+        String occText = I18n.name("gui.wandscape.hotel.guests", "Guests").getString()
+                + ": " + currentOccupancy + " / " + maxOccupancy;
         g.drawString(font, occText, x, y, MedievalColors.ACCENT_GOLD);
         y += 16;
 
@@ -71,7 +72,8 @@ public class HotelScreen extends MedievalScreen {
 
         // Guest list
         if (guestNames.isEmpty()) {
-            g.drawString(font, "No guests checked in.", x, y, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.hotel.no_guests", "No guests checked in."),
+                    x, y, MedievalColors.TEXT_MUTED);
         } else {
             for (int i = 0; i < guestNames.size(); i++) {
                 String line = (i + 1) + ". " + guestNames.get(i);
@@ -82,7 +84,8 @@ public class HotelScreen extends MedievalScreen {
         }
 
         // Building info at bottom
-        String bldText = "Building: " + buildingId.toString().substring(0, 8);
+        String bldText = I18n.name("gui.wandscape.common.building_label", "Building").getString()
+                + ": " + buildingId.toString().substring(0, 8);
         g.drawString(font, bldText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
     }
 }

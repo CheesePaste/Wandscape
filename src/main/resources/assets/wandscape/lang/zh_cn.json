@@ -31,6 +31,8 @@
   "gui.wandscape.workstation.title": "工作台",
   "gui.wandscape.crafting_station.title": "合成台",
   "gui.wandscape.npc.title": "法师信息",
+  "gui.wandscape.npc.wand": "法杖",
+  "gui.wandscape.npc.blocks": "格",
   "gui.wandscape.common.close": "关闭",
   "gui.wandscape.common.submit": "提交",
   "gui.wandscape.common.search": "搜索",

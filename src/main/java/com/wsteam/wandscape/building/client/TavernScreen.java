@@ -57,11 +57,12 @@ public class TavernScreen extends MedievalScreen {
 
         addRenderableWidget(new MedievalButton(
                 leftPos + 16, tabY, tabW, tabH,
-                Component.literal("Recruit NPC"),
+                I18n.name("gui.wandscape.tavern.recruit_npc", "Recruit NPC"),
                 () -> activeTab = 0));
         addRenderableWidget(new MedievalButton(
                 leftPos + 16 + tabW + 8, tabY, tabW, tabH,
-                Component.literal("Mages (" + mageResumes.size() + ")"),
+                Component.literal(I18n.name("gui.wandscape.tavern.mages", "Mages").getString()
+                        + " (" + mageResumes.size() + ")"),
                 () -> activeTab = 1));
 
         if (activeTab == 0) {
@@ -73,7 +74,7 @@ public class TavernScreen extends MedievalScreen {
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                Component.literal("Close"), this::onClose));
+                I18n.name("gui.wandscape.common.close", "Close"), this::onClose));
     }
 
     private void initRecruitTab() {
@@ -83,7 +84,7 @@ public class TavernScreen extends MedievalScreen {
         addRenderableWidget(new MedievalButton(
                 centerX - btnW / 2, topPos + headerHeight + 36,
                 btnW, btnH,
-                Component.literal("Recruit NPC"),
+                I18n.name("gui.wandscape.tavern.recruit_npc", "Recruit NPC"),
                 this::onRecruit));
     }
 
@@ -94,7 +95,7 @@ public class TavernScreen extends MedievalScreen {
             final int index = i;
             addRenderableWidget(new MedievalButton(
                     leftPos + PW - 60, y, 42, 16,
-                    Component.literal("Hire"),
+                    I18n.name("gui.wandscape.tavern.hire", "Hire"),
                     () -> onRecruitMage(index)));
             y += 22;
         }
@@ -112,13 +113,13 @@ public class TavernScreen extends MedievalScreen {
         var font = Minecraft.getInstance().font;
 
         if (activeTab == 0) {
-            String subtitle = "Recruit a new adventurer";
+            Component subtitle = I18n.name("gui.wandscape.tavern.recruit_subtitle", "Recruit a new adventurer");
             int textW = font.width(subtitle);
             g.drawString(font, subtitle,
                     leftPos + (PW - textW) / 2, topPos + headerHeight + 60,
                     MedievalColors.TEXT_MUTED);
 
-            String costText = "No elemental cost";
+            Component costText = I18n.name("gui.wandscape.tavern.no_cost", "No elemental cost");
             int costW = font.width(costText);
             g.drawString(font, costText,
                     leftPos + (PW - costW) / 2, topPos + headerHeight + 76,
@@ -126,12 +127,11 @@ public class TavernScreen extends MedievalScreen {
         } else {
             // Mages tab
             if (mageResumes.isEmpty()) {
-                String msg = "No mage resumes available.";
-                g.drawString(font, msg, leftPos + 16, topPos + headerHeight + 40,
-                        MedievalColors.TEXT_MUTED);
-                String hint = "Mages reach 100% satisfaction to leave resumes.";
-                g.drawString(font, hint, leftPos + 16, topPos + headerHeight + 54,
-                        MedievalColors.TEXT_DIM);
+                g.drawString(font, I18n.name("gui.wandscape.tavern.no_resumes", "No mage resumes available."),
+                        leftPos + 16, topPos + headerHeight + 40, MedievalColors.TEXT_MUTED);
+                g.drawString(font, I18n.name("gui.wandscape.tavern.resume_hint",
+                                "Mages reach 100% satisfaction to leave resumes."),
+                        leftPos + 16, topPos + headerHeight + 54, MedievalColors.TEXT_DIM);
             } else {
                 int y = topPos + headerHeight + 34;
                 for (int i = 0; i < mageResumes.size(); i++) {
@@ -148,7 +148,8 @@ public class TavernScreen extends MedievalScreen {
         }
 
         // Colony info at bottom
-        String colText = "Colony: " + colonyId.toString().substring(0, 8);
+        String colText = I18n.name("gui.wandscape.common.colony_label", "Colony").getString()
+                + ": " + colonyId.toString().substring(0, 8);
         g.drawString(font, colText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
     }
 

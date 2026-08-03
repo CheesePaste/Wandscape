@@ -113,11 +113,11 @@ public class WarehouseScreen extends MedievalScreen {
         int searchH = font.lineHeight + 6;
 
         searchInput = new EditBox(font, rightX + 1, tabY + 2, rightW - 2, font.lineHeight,
-                Component.literal("Search items..."));
+                I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         searchInput.setBordered(false);
         searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        searchInput.setHint(Component.literal("Search items..."));
+        searchInput.setHint(I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         searchInput.setCanLoseFocus(true);
         searchInput.setResponder(this::applyFilter);
 
@@ -153,11 +153,11 @@ public class WarehouseScreen extends MedievalScreen {
         int sbW = (leftPos + PW - 8) - sbX;
         int sbY = getInventoryY();
         exchangeSearchInput = new EditBox(font, sbX + 1, sbY + 1, sbW - 2, font.lineHeight,
-                Component.literal("Search items..."));
+                I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         exchangeSearchInput.setBordered(false);
         exchangeSearchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         exchangeSearchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        exchangeSearchInput.setHint(Component.literal("Search items..."));
+        exchangeSearchInput.setHint(I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         exchangeSearchInput.setCanLoseFocus(true);
         exchangeSearchInput.setResponder(this::applyExchangeFilter);
     }
@@ -193,7 +193,8 @@ public class WarehouseScreen extends MedievalScreen {
                         MedievalColors.TEXT_MUTED);
 
                 if (showHint && hovered) {
-                    String hint = "L-click: withdraw 1  |  R-click: withdraw " + MAX_QTY;
+                    String hint = I18n.name("gui.wandscape.warehouse.withdraw_hint",
+                            "L-click: withdraw 1 | R-click: withdraw %s", MAX_QTY).getString();
                     g.drawString(Minecraft.getInstance().font, hint, rx + 20, ry + 14,
                             MedievalColors.TEXT_MUTED);
                 }
@@ -246,7 +247,10 @@ public class WarehouseScreen extends MedievalScreen {
     // ── Tabs ──
 
     private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
-        String[] tabs = { "Overview", "Exchange" };
+        String[] tabs = {
+                I18n.name("gui.wandscape.warehouse.overview", "Overview").getString(),
+                I18n.name("gui.wandscape.warehouse.exchange", "Exchange").getString()
+        };
         int ty = topPos + headerHeight + 2;
         int tx = leftPos + 8;
         int padH = 10;
@@ -282,8 +286,8 @@ public class WarehouseScreen extends MedievalScreen {
             int invY = getInventoryY();
             g.fill(leftPos + 8, invY - 2, leftPos + PW - 8, invY - 1,
                     MedievalColors.BORDER_GOLD_DARK);
-            g.drawString(font, "Player Inventory", leftPos + 8, invY,
-                    MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.warehouse.player_inventory", "Player Inventory"),
+                    leftPos + 8, invY, MedievalColors.TEXT_MUTED);
         }
     }
 
@@ -392,7 +396,10 @@ public class WarehouseScreen extends MedievalScreen {
     }
 
     private int getTabAt(double mouseX, double mouseY) {
-        String[] tabs = { "Overview", "Exchange" };
+        String[] tabs = {
+                I18n.name("gui.wandscape.warehouse.overview", "Overview").getString(),
+                I18n.name("gui.wandscape.warehouse.exchange", "Exchange").getString()
+        };
         int ty = topPos + headerHeight + 2;
         int tx = leftPos + 8;
         int padH = 10;

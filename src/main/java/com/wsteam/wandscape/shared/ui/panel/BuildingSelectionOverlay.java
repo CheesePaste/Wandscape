@@ -167,17 +167,8 @@ public final class BuildingSelectionOverlay {
     );
 
     public static String getCategoryDisplayName(String cat) {
-        if (cat == null) return "未知";
-        return switch (cat) {
-            case "All" -> "全部";
-            case "government" -> "市政厅";
-            case "storage" -> "仓库/存储";
-            case "service" -> "服务/旅店";
-            case "shop" -> "商业/商店";
-            case "workstation" -> "生产工坊";
-            case "node" -> "元素节点";
-            default -> cat;
-        };
+        if (cat == null) return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape.all", "All").getString();
+        return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape." + cat.toLowerCase(), cat).getString();
     }
 
     public static int getCategoryAt(double mouseX, double mouseY, int screenW, int screenH) {
@@ -282,7 +273,9 @@ public final class BuildingSelectionOverlay {
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, SEARCH_W, SEARCH_H, false, false);
 
         String text = WandscapePanelState.getBuildingBarSearch();
-        String display = text.isEmpty() ? "Search" : text;
+        String display = text.isEmpty()
+                ? com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.common.search", "Search").getString()
+                : text;
         int textColor = text.isEmpty() ? 0xFF666666 : 0xFFFFFFFF;
 
         int maxChars = (SEARCH_W - 4) / 6;
@@ -383,7 +376,8 @@ public final class BuildingSelectionOverlay {
 
                 // First-free still available: green "首免" badge top-left
                 if (!locked && slot.firstFreeAvailable()) {
-                    String tag = "首免";
+                    String tag = com.wsteam.wandscape.shared.ui.I18n.name(
+                            "gui.wandscape.badge.first_free", "First Free").getString();
                     int tagW = font.width(tag) + 4;
                     int tagH = 9;
                     int tagX = cellX + 1;
