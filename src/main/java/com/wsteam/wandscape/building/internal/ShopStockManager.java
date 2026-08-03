@@ -41,8 +41,8 @@ import com.wsteam.wandscape.shared.log.Log;
 /**
  * Manages shop inventory: dynamic restock on low stock, tourist purchases.
  *
- * <p>Each shop building has its own stock map. When a purchase drops an item's
- * stock below maxStock/3, an automatic restock is triggered that fills goods
+ * <p>Each shop building has its own stock map. When a purchase leaves an item's
+ * stock below maxStock, an automatic restock is triggered that fills goods
  * to their maxStock by deducting element costs from the colony bank.
  *
  * <p>Stock data is persisted through {@link BuildingSavedData} so that inventory
@@ -360,9 +360,9 @@ public final class ShopStockManager {
             bank.recordPurchase(colonyId);
         }
 
-        // Dynamic restock: if stock dropped below 1/3 of max, trigger auto-restock
+        // Dynamic restock: if stock is no longer full, trigger auto-restock
         int maxStock = getMaxStock(buildingId, itemId);
-        if (maxStock > 0 && newStock < maxStock / 3) {
+        if (maxStock > 0 && newStock < maxStock) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             if (bank != null && restockingInProgress.add(buildingId)) {
                 restock(buildingId, config.shop(), colonyId, bank);
