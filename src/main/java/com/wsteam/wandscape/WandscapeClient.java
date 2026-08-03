@@ -50,6 +50,7 @@ import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,6 +58,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
@@ -96,6 +98,7 @@ public class WandscapeClient {
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, WandscapeClient::onPlayerLoggingIn);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, e -> MagicCircleEmitter.tick());
         RoadPlacementController.register();
         RoadPlacementRenderer.register();
@@ -280,6 +283,14 @@ public class WandscapeClient {
         if (mc != null) {
             String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown("index_guide");
             mc.setScreen(new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, "index_guide"));
+        }
+    }
+
+    /** Welcome message on world join — points new players at the V-key building panel. */
+    private static void onPlayerLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+        var player = event.getPlayer();
+        if (player != null) {
+            player.displayClientMessage(Component.translatable("message.wandscape.town.welcome"), false);
         }
     }
 
