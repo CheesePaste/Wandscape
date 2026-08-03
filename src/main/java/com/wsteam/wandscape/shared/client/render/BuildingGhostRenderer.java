@@ -41,10 +41,14 @@ public final class BuildingGhostRenderer {
      * Render {@code config}'s pattern blocks as a semi-transparent ghost at {@code anchor}.
      *
      * @param rotationSteps number of 90° CCW rotations (0-3)
+     * @param hideBuiltBlocks when true, cells already containing a block of the
+     *                        expected type are skipped so a real block takes
+     *                        priority over the ghost (construction footprint)
      */
     public static void renderGhostBlocks(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
                                           PoseStack poseStack,
-                                          BlockPos anchor, BuildingConfig config, int rotationSteps) {
+                                          BlockPos anchor, BuildingConfig config, int rotationSteps,
+                                          boolean hideBuiltBlocks) {
         Map<BlockOffset, BlockState> blockStates = resolveBlockStates(config);
         if (blockStates.isEmpty()) return;
 
@@ -103,6 +107,17 @@ public final class BuildingGhostRenderer {
             BlockState rotatedState = originalState;
             for (int i = 0; i < rotationSteps; i++) {
                 rotatedState = rotatedState.rotate(Rotation.CLOCKWISE_90);
+            }
+
+            // A real block wins over the ghost: once the intended block is placed
+            // at this cell, stop rendering its ghost (otherwise the ghost blends
+            // over the block and the cell looks unbuilt).
+            if (hideBuiltBlocks) {
+                BlockPos worldPos = anchor.offset(
+                        rotatedOffset.x(), rotatedOffset.y(), rotatedOffset.z());
+                if (mc.level.getBlockState(worldPos).getBlock() == rotatedState.getBlock()) {
+                    continue;
+                }
             }
 
             poseStack.pushPose();

@@ -46,6 +46,8 @@
 
 **为什么施工虚影复用投影虚影渲染 + 走 BuildingAreaSyncPacket 的 completed 标记？** 需求是「未建好建筑显示虚影便于贴紧放置」。投影预览（ProjectionRenderer）只渲染当前正在放置的那一栋；对已放置、施工中的建筑，客户端需要独立的「未建好」信号。故把半透明方块虚影抽成共享 `BuildingGhostRenderer.renderGhostBlocks`（避免 building→projection 跨模块直引），`BuildingEntry` 增 `completed`（来自 `structureIntact`）随现有面板同步包下发；放置成功后重发同步包，刚放的建筑足迹立即出现、无需重开面板。面板关闭时不渲染（与 B 键区域渲染同一约定），正常游玩画面干净。
 
+**为什么虚影要「方块优先」——已建好的格子不再显示虚影？** 同一格内虚影与实际方块深度相同（LEQUAL），半透明虚影会直接叠加在实心方块上，看起来像没建好。故 `renderGhostBlocks` 增 `hideBuiltBlocks` 开关：实际方块类型匹配目标方块类型的格子跳过虚影，施工中虚影随方块放置逐渐消退（不再覆盖已建好的方块）。仅施工虚影启用该开关；投影放置预览传 false 保持完整足迹，避免摆放时因地面已有同类方块导致足迹显得不完整。
+
 ## 数据设计
 
 **block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。

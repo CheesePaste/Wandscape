@@ -60,7 +60,7 @@ public final class ConstructionGhostRenderer {
             BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
             if (config == null) continue;
             BuildingGhostRenderer.renderGhostBlocks(mc, buf, poseStack,
-                    entry.anchor(), config, entry.rotationSteps());
+                    entry.anchor(), config, entry.rotationSteps(), true);
         }
 
         poseStack.popPose();

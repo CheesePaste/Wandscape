@@ -86,7 +86,7 @@ public final class ProjectionRenderer {
         boolean overlap = ProjectionClientState.isOverlapDetected();
 
         BuildingGhostRenderer.renderGhostBlocks(mc, bufferSource, poseStack,
-                ghostPos, config, ProjectionClientState.getRotationSteps());
+                ghostPos, config, ProjectionClientState.getRotationSteps(), false);
 
         // Overlap = red wireframe boundary
         if (overlap && config.boundary() != null) {
