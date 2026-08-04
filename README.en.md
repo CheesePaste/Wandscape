@@ -4,7 +4,7 @@
 
 **English** | [中文](README.md)
 
-A Minecraft NeoForge 1.21.1 mod — **Magic Town** (魔法小镇). Magic-powered town automation & management sim.
+A Minecraft NeoForge 1.21.1 mod — **Wandscape** . Magic-powered town automation & management sim.
 
 Point your magic wand at NPC mages to build structures, gather elements, craft items, and cast rituals. Once your town gets going, tourists walk in along the roads, and shops, inns, decorations and wonders complete a full management loop.
 
