@@ -32,7 +32,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class BuildingScannerScreen extends MedievalScreen {
 
     private static final int PW = 360;
-    private static final int PH = 270;
+    private static final int PH = 800;
 
     private final BuildingScannerBlockEntity scanner;
 
@@ -103,6 +103,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     // ── Layout Y positions (computed in init, used in render) ──
     private int lx; // left edge for widgets (leftPos + 16)
     private int boundaryCardY;
+    private int boundaryEditY;
+    private EditBox bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ;
     private int doorEditY;
     private int zoneHeaderY;
     private int metaStartY, metaLabelY;
@@ -188,16 +190,12 @@ public class BuildingScannerScreen extends MedievalScreen {
 
             // Boundary Card Row
             boundaryCardY = y;
-            y += 24;
+            y += 10;
 
-            // 6 Boundary Expand Buttons (X±1, Y±1, Z±1)
-            addCustomButton(lx, y, 48, 20, "X-1", () -> { scanner.adjustBoundary(-1, 0, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
-            addCustomButton(lx + 52, y, 48, 20, "X+1", () -> { scanner.adjustBoundary(0, 0, 0, 1, 0, 0); syncToServer(); needsRebuild = true; });
-            addCustomButton(lx + 104, y, 48, 20, "Y-1", () -> { scanner.adjustBoundary(0, -1, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
-            addCustomButton(lx + 156, y, 48, 20, "Y+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 1, 0); syncToServer(); needsRebuild = true; });
-            addCustomButton(lx + 208, y, 48, 20, "Z-1", () -> { scanner.adjustBoundary(0, 0, -1, 0, 0, 0); syncToServer(); needsRebuild = true; });
-            addCustomButton(lx + 260, y, 48, 20, "Z+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 0, 1); syncToServer(); needsRebuild = true; });
-            y += 28;
+            // Boundary min/max edit rows (top=min, bottom=max)
+            boundaryEditY = y;
+            addBoundaryEdits(y);
+            y += ROW_H * 2 + 14;
 
             // Road Preset Identity (ID & Display Name)
             addSectionHeader(y, "❖ 道路预设属性 (Road Preset)");
@@ -223,8 +221,8 @@ public class BuildingScannerScreen extends MedievalScreen {
             addCustomButton(lx + 105, exportBtnY, 215, 22, "导出与热注册道路 JSON", () -> doExport());
 
             int bottom = exportBtnY + 60;
-            int visibleHeight = height - 40;
-            maxScroll = Math.min(0, visibleHeight - bottom);
+            int visibleBottom = Math.min(topPos + PH - 6, height - 12);
+            maxScroll = Math.min(0, visibleBottom - bottom);
             return;
         }
 
@@ -251,16 +249,12 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         // ── Boundary Card Row ──
         boundaryCardY = y;
-        y += 24;
+        y += 10;
 
-        // 6 Boundary Expand Buttons (X±1, Y±1, Z±1)
-        addCustomButton(lx, y, 48, 20, "X-1", () -> { scanner.adjustBoundary(-1, 0, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
-        addCustomButton(lx + 52, y, 48, 20, "X+1", () -> { scanner.adjustBoundary(0, 0, 0, 1, 0, 0); syncToServer(); needsRebuild = true; });
-        addCustomButton(lx + 104, y, 48, 20, "Y-1", () -> { scanner.adjustBoundary(0, -1, 0, 0, 0, 0); syncToServer(); needsRebuild = true; });
-        addCustomButton(lx + 156, y, 48, 20, "Y+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 1, 0); syncToServer(); needsRebuild = true; });
-        addCustomButton(lx + 208, y, 48, 20, "Z-1", () -> { scanner.adjustBoundary(0, 0, -1, 0, 0, 0); syncToServer(); needsRebuild = true; });
-        addCustomButton(lx + 260, y, 48, 20, "Z+1", () -> { scanner.adjustBoundary(0, 0, 0, 0, 0, 1); syncToServer(); needsRebuild = true; });
-        y += 28;
+        // Boundary min/max edit rows (top=min, bottom=max)
+        boundaryEditY = y;
+        addBoundaryEdits(y);
+        y += ROW_H * 2 + 14;
 
         // ── Door section ──
         addSectionHeader(y, "❖ 门偏移 (Door Offset)");
@@ -516,8 +510,8 @@ public class BuildingScannerScreen extends MedievalScreen {
         addCustomButton(lx + 105, exportBtnY, 215, 22, "导出建筑 JSON", () -> doExport());
 
         int bottom = exportBtnY + 60;
-        int visibleHeight = height - 40;
-        maxScroll = Math.min(0, visibleHeight - bottom);
+        int visibleBottom = Math.min(topPos + PH - 6, height - 12);
+        maxScroll = Math.min(0, visibleBottom - bottom);
     }
 
     private void onAutoDetectDoor() {
@@ -660,6 +654,62 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     private EditBox mkZoneEdit(int x, int y, int w, int val, Runnable onChange) {
         EditBox box = new EditBox(font, x + 2, y + 2, w - 4, 14, Component.empty());
+        box.setMaxLength(6);
+        box.setFilter(s -> s.matches("-?\\d{0,6}"));
+        box.setValue(String.valueOf(val));
+        box.setBordered(false);
+        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
+        box.setResponder(s -> onChange.run());
+        insetFields.add(new FieldRect(x, y, w, 20, box));
+        return addRenderableWidget(box);
+    }
+
+    private void addBoundaryEdits(int y) {
+        int cw = 48;
+        int gap = 8;
+        int col1 = lx + 20;
+        int col2 = col1 + cw + gap;
+        int col3 = col2 + cw + gap;
+        bMinX = mkCoordEdit(col1, y, cw, scanner.getBoundaryMin().x(), this::onBoundaryEdit);
+        bMinY = mkCoordEdit(col2, y, cw, scanner.getBoundaryMin().y(), this::onBoundaryEdit);
+        bMinZ = mkCoordEdit(col3, y, cw, scanner.getBoundaryMin().z(), this::onBoundaryEdit);
+        bMaxX = mkCoordEdit(col1, y + ROW_H, cw, scanner.getBoundaryMax().x(), this::onBoundaryEdit);
+        bMaxY = mkCoordEdit(col2, y + ROW_H, cw, scanner.getBoundaryMax().y(), this::onBoundaryEdit);
+        bMaxZ = mkCoordEdit(col3, y + ROW_H, cw, scanner.getBoundaryMax().z(), this::onBoundaryEdit);
+    }
+
+    private void onBoundaryEdit() {
+        scanner.setBoundary(
+                BlockOffset.of(intOrZero(bMinX), intOrZero(bMinY), intOrZero(bMinZ)),
+                BlockOffset.of(intOrZero(bMaxX), intOrZero(bMaxY), intOrZero(bMaxZ)));
+        syncToServer();
+    }
+
+    private void drawBoundaryLabels(GuiGraphics gui) {
+        if (bMinX == null) return;
+        int cw = 48;
+        int gap = 8;
+        int col1 = lx + 20;
+        int col2 = col1 + cw + gap;
+        int col3 = col2 + cw + gap;
+        gui.drawString(font, "X", col1, boundaryCardY, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "Y", col2, boundaryCardY, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "Z", col3, boundaryCardY, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "min", lx + 2, boundaryEditY + 3, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "max", lx + 2, boundaryEditY + ROW_H + 3, MedievalColors.TEXT_MUTED);
+        BlockOffset bMin = scanner.getBoundaryMin();
+        BlockOffset bMax = scanner.getBoundaryMax();
+        int dx = Math.abs(bMax.x() - bMin.x()) + 1;
+        int dy = Math.abs(bMax.y() - bMin.y()) + 1;
+        int dz = Math.abs(bMax.z() - bMin.z()) + 1;
+        String sizeText = String.format("尺寸 %d×%d×%d  (Min:%d,%d,%d Max:%d,%d,%d)",
+                dx, dy, dz, bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z());
+        gui.drawString(font, sizeText, lx + 2, boundaryEditY + ROW_H * 2 + 4, MedievalColors.BORDER_GOLD);
+    }
+
+    private EditBox mkCoordEdit(int x, int y, int w, int val, Runnable onChange) {
+        EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setMaxLength(6);
         box.setFilter(s -> s.matches("-?\\d{0,6}"));
         box.setValue(String.valueOf(val));
@@ -1059,17 +1109,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         // ── ROAD Target Mode Render ──
         if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
-            if (boundaryCardY > topPos + headerHeight && boundaryCardY < topPos + PH - 16) {
-                drawMinimalBox(gui, lx, boundaryCardY, 320, 20, false, false);
-                BlockOffset bMin = scanner.getBoundaryMin();
-                BlockOffset bMax = scanner.getBoundaryMax();
-                int dx = Math.abs(bMax.x() - bMin.x()) + 1;
-                int dy = Math.abs(bMax.y() - bMin.y()) + 1;
-                int dz = Math.abs(bMax.z() - bMin.z()) + 1;
-                String sizeText = String.format("❖ 3D 区域尺寸: %d × %d × %d 格  (Min:%d,%d,%d Max:%d,%d,%d)",
-                        dx, dy, dz, bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z());
-                gui.drawString(font, sizeText, lx + 8, boundaryCardY + 6, MedievalColors.BORDER_GOLD);
-            }
+            drawBoundaryLabels(gui);
 
             drawHdr(gui, "❖ 道路预设属性 (Road Preset)", lx, metaStartY);
             drawLbl(gui, "Road ID", lx + 4, metaStartY + 14);
@@ -1084,17 +1124,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
 
         // ── BUILDING Target Mode Render ──
-        if (boundaryCardY > topPos + headerHeight && boundaryCardY < topPos + PH - 16) {
-            drawMinimalBox(gui, lx, boundaryCardY, 320, 20, false, false);
-            BlockOffset bMin = scanner.getBoundaryMin();
-            BlockOffset bMax = scanner.getBoundaryMax();
-            int dx = Math.abs(bMax.x() - bMin.x()) + 1;
-            int dy = Math.abs(bMax.y() - bMin.y()) + 1;
-            int dz = Math.abs(bMax.z() - bMin.z()) + 1;
-            String sizeText = String.format("❖ 3D 区域尺寸: %d × %d × %d 格  (Min:%d,%d,%d Max:%d,%d,%d)",
-                    dx, dy, dz, bMin.x(), bMin.y(), bMin.z(), bMax.x(), bMax.y(), bMax.z());
-            gui.drawString(font, sizeText, lx + 8, boundaryCardY + 6, MedievalColors.BORDER_GOLD);
-        }
+        drawBoundaryLabels(gui);
 
         // Section Headers & Labels
         drawHdr(gui, "❖ 门偏移 (Door Offset)", lx, doorEditY - 14);

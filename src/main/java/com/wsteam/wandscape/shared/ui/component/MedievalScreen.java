@@ -55,7 +55,7 @@ public abstract class MedievalScreen extends Screen {
     @Override
     protected void init() {
         this.leftPos = (this.width - panelWidth) / 2;
-        this.topPos = (this.height - panelHeight) / 2;
+        this.topPos = Math.max(2, (this.height - panelHeight) / 2);
         if (showCloseButton) {
             closeBtnX = leftPos + panelWidth - closeBtnW - 6;
             closeBtnY = topPos + (headerHeight - closeBtnH) / 2;
