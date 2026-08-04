@@ -1,99 +1,91 @@
 # Wandscape — A Magic Automation & Simulation Colony Mod
 
-Command **mages, not miners or farmers**, to build, gather, craft, and resurrect your own magical town. Every task flows through wands, a global task pool, and seven elemental resources.
-
-> 📌 **图片添加点（替换 `__IMAGE_n__` 为你上传到图库后复制的图片 URL）**
-> - `__IMAGE_1__` 主视觉图 / Banner（主 icon 或小镇全景）
-> - `__IMAGE_2__` 小镇建设截图
-> - `__IMAGE_3__` 魔法阵截图
-> - `__IMAGE_4__` 游客经济截图
-
-![Wandscape Banner / 主视觉图](__IMAGE_1__)
+Command **mages**, to build, gather, and craft your own magical town. Every task flows through wands, a global task pool, and seven elemental resources — then the tourists come.
 
 ## What is it?
-Wandscape is a **magic automation + colony simulation** mod for Minecraft 1.21.1 (NeoForge). NPC mages execute atomic tasks — build, gather, synthesize, brew — driven by your wand and a task-pool scheduler, while a living tourist economy turns your surplus into growth.
-
-![Build your town / 小镇建设](__IMAGE_2__)
+Wandscape is a **magic automation + colony simulation** mod for Minecraft 1.21.1 (NeoForge). NPC mages execute atomic tasks — build, gather, synthesize, brew, shape terrain, lay roads — driven by your wand and a task-pool scheduler, while a living tourist economy turns your surplus into growth.
 
 ## Key Features
 
 **🏰 Town Automation**
-- A single never-breaking wand commands a team of mages
-- 7 elements — Earth, Wood, Water, Fire, Metal, Wind, Dark — flow from mining to crafting
-- Data-driven buildings: node, warehouse, workstation, shop, inn, tavern, town hall, wonders
+- A single unbreakable wand — craft it from Basic to Adept to Master
+- Command mages who keep personal mana pools and can be resurrected
+- 7 elements (Earth, Wood, Water, Fire, Metal, Wind, Dark) flow from mining to crafting
+- 19 JSON-driven buildings: town hall, warehouse, 4 shops, 7 element nodes, tavern, inn, library, service hall, potion/workstation/crafting stations
 - Comfort / Magic / Wonder values unlock buildings and recipes
-- Road network with a built-in spline editor
+- Road network with a built-in spline editor — tourists and mages travel along your roads
 
-**✨ Magic Circles & Casting**
-- Particle-rendered, data-driven magic circles — rings, runes, hexagrams — no shaders required
+**✨ Magic Circles & Lasers**
+- Data-driven magic circles — rings, runes, hexagrams — rendered as glowing particles, no shaders required
+- Cast a laser beam from the circle at your target
 - Works under any shader pack
 
-![Magic circles / 魔法阵](__IMAGE_3__)
-
-**👥 Tourist Economy**
-- Tourists arrive along your roads and spend energy visiting shops and services
+**👥 A Town That Lives**
+- Tourists arrive along your roads, with energy, satisfaction, preferences and moods
+- They talk: speech bubbles and story-like broadcasts of arrivals, visits, check-ins and departures
 - Shops restock from your warehouse and turn surplus into profit
-- Decorations radiate bonuses to nearby buildings
+- Decoration buildings radiate bonuses to nearby buildings
 - Wonders rewrite the rules: boost spells, raise prices, unlock transport
-- Maintenance with graceful shutdown — no soft-locks
+- Upkeep with graceful tiered shutdown — no soft-locks
+- 100%-satisfied mage tourists leave résumés at the tavern — recruit them
 
-![Tourists & shops / 游客经济](__IMAGE_4__)
+**⚔️ Defense**
+- Repel raids and defend your town
+
+**🏆 Progression**
+- 15 vanilla advancements: build 5→50 buildings, reach colony level 30, repel a raid, and more
 
 **🛠️ Management**
 - V-panel: run the whole town from a top-down overview
-- Building scanner turns any structure into a blueprint
-- Vanilla advancement achievements
-
-## Requirements
-- Minecraft 1.21.1
-- NeoForge 21.1.x
+- Building scanner: box-select any structure to generate a blueprint
+- Soul projection for placing blueprints; H-key in-game guide; daily stats & 30-day summaries
 
 ## License
 MIT
 
 ---
 
-# 杖野（Wandscape）— 魔法自动化 & 模拟经营模组
+# 魔法小镇（Wandscape）— 魔法自动化 & 模拟经营模组
 
-指挥**法师，而非矿工或农民**——用法杖建造、采集、合成、复活属于你的魔法小镇。所有生产流经法杖、全局任务池与七种元素资源。
+指挥**法师**——用法杖建造、采集、合成属于你的魔法小镇。所有生产流经法杖、全局任务池与七种元素资源，然后游客来了。
 
 ## 这是什么？
-Wandscape 是 Minecraft 1.21.1（NeoForge）的**魔法自动化 + 模拟经营**模组。NPC 法师执行原子任务——建造、采集、合成、炼药——由你的法杖和任务池调度驱动；游客经济把盈余转化为城镇发展。
-
-![小镇建设 / 建造你的小镇](__IMAGE_2__)
+Wandscape 是 Minecraft 1.21.1（NeoForge）的**魔法自动化 + 模拟经营**模组。NPC 法师执行原子任务——建造、采集、合成、炼药、整地、修路——由你的法杖和任务池调度驱动；游客经济把盈余转化为城镇发展。
 
 ## 核心特性
 
 **🏰 小镇自动化**
-- 一支永不损坏的法杖指挥法师团队
+- 一支永不损坏的法杖，从基础升级到进阶、大师
+- 指挥拥有个人魔力池、可复活的法师
 - 7 种元素（地、木、水、火、铁、风、暗）贯穿采集到合成
-- 数据驱动的建筑：节点、仓库、工作站、商店、宾馆、酒馆、市政厅、奇观
+- 19 种 JSON 数据驱动的建筑：市政厅、仓库、4 种商店、7 种元素节点、酒馆、宾馆、图书馆、服务大厅、药水站/工作站/合成站
 - 舒适 / 魔法 / 奇观三值解锁建筑与配方
-- 道路系统，内置样条线编辑器
+- 道路系统，内置样条线编辑器——游客与法师都沿路行走
 
-**✨ 魔法阵与施法**
-- 粒子渲染、数据驱动的魔法阵——环、符文、六芒星——无需着色器
+**✨ 魔法阵与激光**
+- 数据驱动的魔法阵——环、符文、六芒星——粒子渲染，无需着色器
+- 从法阵向目标发射激光光束
 - 任何光影包下正常显示
 
-![魔法阵 / 施法画面](__IMAGE_3__)
-
-**👥 游客经济**
-- 游客沿道路入城，消耗精力逛商店与服务建筑
+**👥 有生命的小镇**
+- 游客沿道路入城，拥有精力、满意度、偏好与心情
+- 他们会说话：对话气泡 + 到达、参观、入住、离开的叙事广播
 - 商店从仓库补货，把盈余转化为利润
 - 装饰建筑辐射加成周边建筑
 - 奇观改变规则：增强法术、提升售价、解锁传送
 - 维护费与分级停摆保护，绝不卡档
+- 满意度满值的法师游客在酒馆留下简历——招募他们
 
-![游客经济 / 商店与游客](__IMAGE_4__)
+**⚔️ 防御**
+- 抵御袭击，保卫你的小镇
+
+**🏆 进度**
+- 15 个原版成就：建造 5→50 栋建筑、升到殖民地 30 级、击退袭击等
 
 **🛠️ 管理操作**
 - V 面板：俯瞰视角管理整座小镇
-- 建筑扫描方块：任意结构一键生成蓝图
-- 原版进度成就系统
-
-## 运行要求
-- Minecraft 1.21.1
-- NeoForge 21.1.x
+- 建筑扫描方块：框选任意结构生成蓝图
+- 灵魂投影放置蓝图；H 键游戏内指南；每日统计与 30 天摘要
 
 ## 许可证
 MIT
