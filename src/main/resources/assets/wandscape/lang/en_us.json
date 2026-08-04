@@ -16,6 +16,8 @@
   "key.wandscape.projection": "Toggle Soul Projection",
   "key.wandscape.panel_cursor": "Panel Cursor Toggle",
   "key.wandscape.guide": "Open Help Guide",
+  "key.wandscape.building_areas": "Toggle Building Areas",
+  "key.wandscape.overview": "Toggle Overview / Ground View",
 
   "message.wandscape.town.welcome": "[Wandscape] Welcome! Press V to open the building panel and start building your town.",
 

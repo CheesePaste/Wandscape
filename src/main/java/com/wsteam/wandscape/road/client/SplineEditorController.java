@@ -337,9 +337,11 @@ public final class SplineEditorController {
             wasHelpDown = helpDown;
         }
 
-        // G key: toggle top-down (bird's eye) view — same as the V-panel overview mode
+        // G key (OVERVIEW_TOGGLE): toggle top-down (bird's eye) view — follows the
+        // V-panel overview keybinding so a rebind applies to both contexts
         if (!wantsKb && !cameraActive) {
-            boolean gDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_G) == GLFW.GLFW_PRESS;
+            int gKey = com.wsteam.wandscape.WandscapeClient.OVERVIEW_TOGGLE.getKey().getValue();
+            boolean gDown = GLFW.glfwGetKey(window, gKey) == GLFW.GLFW_PRESS;
             if (gDown && !wasGDown) {
                 if (SplineEditorClientState.isTopDown()) {
                     SplineEditorClientState.exitTopDown();

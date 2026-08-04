@@ -323,15 +323,17 @@ public final class WandscapePanelController {
 
         int key = event.getKey();
 
-        // B key: toggle interaction area overlay (works whenever panel is open)
-        if (key == GLFW.GLFW_KEY_B && WandscapePanelState.isPanelOpen()) {
+        // Building areas overlay toggle (works whenever panel is open)
+        if (com.wsteam.wandscape.WandscapeClient.PANEL_AREAS_TOGGLE.matches(key, event.getScanCode())
+                && WandscapePanelState.isPanelOpen()) {
             WandscapePanelState.toggleBuildingAreas();
             Log.debug(TAG, "[Panel] Building areas overlay: {}", WandscapePanelState.isShowBuildingAreas() ? "ON" : "OFF");
             return;
         }
 
-        // G key: toggle overview mode ↔ ground mode (only when panel is open)
-        if (key == GLFW.GLFW_KEY_G && WandscapePanelState.isPanelOpen()) {
+        // Overview mode ↔ ground mode toggle (only when panel is open)
+        if (com.wsteam.wandscape.WandscapeClient.OVERVIEW_TOGGLE.matches(key, event.getScanCode())
+                && WandscapePanelState.isPanelOpen()) {
             handleGKeyToggle();
             return;
         }
