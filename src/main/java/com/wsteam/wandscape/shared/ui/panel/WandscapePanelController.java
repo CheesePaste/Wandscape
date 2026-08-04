@@ -371,22 +371,18 @@ public final class WandscapePanelController {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * G key: toggle between overview camera and ground (build projection) mode.
+     * G key: toggle between overview camera and ground (first-person) mode.
      * Only effective when the panel is open.
      */
     private static void handleGKeyToggle() {
         // Check if overview camera is currently active (pure overview OR overview+build/road)
         if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
-            // Overview → Ground mode: save current submode to restore after exit
-            WandscapePanelState.SubMode prevSubMode = WandscapePanelState.getActiveSubMode();
+            // Overview → Ground mode: exit the overview camera and return to a clean panel
+            // state. Must NOT auto-open the building panel (BUILD_PROJECTION opens the
+            // building selection bar via enterSubMode's overview-branch).
             WandscapePanelState.exitCurrentSubMode();
             com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
-            // Restore the submode that was active (ROAD, or default BUILD for everything else)
-            if (prevSubMode == WandscapePanelState.SubMode.ROAD_PROJECTION) {
-                WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.ROAD_PROJECTION);
-            } else {
-                WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.BUILD_PROJECTION);
-            }
+            WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
             Log.debug(TAG, "[Panel] Ground mode (G for overview)");
         } else {
             // Ground → Overview mode
