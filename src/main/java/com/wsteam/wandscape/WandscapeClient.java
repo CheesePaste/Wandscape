@@ -113,6 +113,7 @@ public class WandscapeClient {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, WandscapeClient::onPlayerLoggingIn);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, WandscapeClient::onPlayerLoggingOut);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, e -> MagicCircleEmitter.tick());
         RoadPlacementController.register();
         RoadPlacementRenderer.register();
@@ -311,6 +312,11 @@ public class WandscapeClient {
         if (player != null) {
             player.displayClientMessage(Component.translatable("message.wandscape.town.welcome"), false);
         }
+    }
+
+    /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
+    private static void onPlayerLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        WandscapePanelState.reset();
     }
 
     @SubscribeEvent

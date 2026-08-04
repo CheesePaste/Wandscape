@@ -225,6 +225,66 @@ public final class WandscapePanelState {
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
     }
 
+    /**
+     * Hard-reset all panel + related client UI state. Called on client disconnect so state
+     * from the previous world does not leak into the next one. Unlike {@link #closePanel()},
+     * performs no network sends and no cursor/mouse changes.
+     */
+    public static void reset() {
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+            com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        }
+        if (ProjectionClientState.isProjecting()) {
+            ProjectionClientState.exitProjection();
+        }
+        if (RoadPlacementState.isProjecting()) {
+            RoadPlacementState.exitProjection();
+        }
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+        }
+        BuildingDebugClientState.setActive(false);
+
+        panelOpen = false;
+        cursorLifted = false;
+        activeSubMode = SubMode.NONE;
+        colonyId = null;
+        comfort = 0;
+        magic = 0;
+        wonder = 0;
+        colonyName = "";
+        colonyLevel = 1;
+        colonyExperience = 0;
+        touristCount = 0;
+        overnightStayerCount = 0;
+        shutdownCount = 0;
+        npcIdleCount = 0;
+        npcTotalCount = 0;
+        earthAmount = 0;
+        woodAmount = 0;
+        waterAmount = 0;
+        fireAmount = 0;
+        windAmount = 0;
+        metalAmount = 0;
+        darkAmount = 0;
+        shutdownBuildingNames = List.of();
+        shutdownBuildingIds = List.of();
+        brokenCount = 0;
+        brokenBuildingIds = List.of();
+        brokenBuildingNames = List.of();
+        warningOverlayActive = false;
+        statsSummary = StatsSummary.EMPTY;
+        showBuildingAreas = false;
+        buildingBarOpen = false;
+        buildingBarCategory = "All";
+        buildingBarSearch = "";
+        buildingBarSelectedIndex = -1;
+        buildingBarScrollOffset = 0;
+        buildPhase = BuildPhase.BAR;
+        lastClickTime = 0;
+        lastClickIndex = -1;
+    }
+
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
 
     /** Lift cursor: release mouse for UI interaction (preset selection overlay). */
