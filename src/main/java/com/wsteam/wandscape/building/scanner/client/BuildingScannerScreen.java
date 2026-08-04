@@ -74,6 +74,7 @@ public class BuildingScannerScreen extends MedievalScreen {
     private int presetY;
 
     // ── Scrolling ──
+    private static final int SCROLL_TRAIL = 500;
     private int scrollOff = 0;
     private int maxScroll = 0;
 
@@ -229,7 +230,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
             int bottom = exportBtnY + 60;
             int visibleBottom = Math.min(topPos + PH - 6, height - 12);
-            maxScroll = Math.min(0, visibleBottom - bottom);
+            maxScroll = Math.min(0, Math.min(visibleBottom - bottom, -SCROLL_TRAIL));
             return;
         }
 
@@ -518,7 +519,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         int bottom = exportBtnY + 60;
         int visibleBottom = Math.min(topPos + PH - 6, height - 12);
-        maxScroll = Math.min(0, visibleBottom - bottom);
+        maxScroll = Math.min(0, Math.min(visibleBottom - bottom, -SCROLL_TRAIL));
     }
 
     private void onAutoDetectDoor() {
