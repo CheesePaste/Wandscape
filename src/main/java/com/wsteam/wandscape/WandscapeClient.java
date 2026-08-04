@@ -115,6 +115,9 @@ public class WandscapeClient {
         WandscapePanelOverlay.register();
         com.wsteam.wandscape.shared.ui.util.WandscapeHighlightRenderer.register();
 
+        // Replay mod compat: don't open UI screens during ReplayMod/ReforgedPlay playback
+        com.wsteam.wandscape.shared.ui.ReplayScreenGuard.register();
+
         // Overview mode
         OverviewFlightController.register();
         OverviewRenderer.register();
