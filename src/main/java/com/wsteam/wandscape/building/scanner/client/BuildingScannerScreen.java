@@ -32,7 +32,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class BuildingScannerScreen extends MedievalScreen {
 
     private static final int PW = 360;
-    private static final int PH = 800;
+    private static final int PH = 1000;
 
     private final BuildingScannerBlockEntity scanner;
 
