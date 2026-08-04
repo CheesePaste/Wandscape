@@ -2,11 +2,10 @@ package com.wsteam.wandscape.shared.ui.util;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Minecraft;
@@ -55,12 +54,19 @@ public final class WandscapeHighlightRenderer {
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
         PoseStack.Pose pose = poseStack.last();
 
-        // 1. Building Outline (if looking at a building and response is cached)
+        // 1. Building Outline (if looking at a building and response is cached).
+        //    Uses the pre-rotated boundary from the building-area cache (same source
+        //    as OverviewRenderer) so a rotated building's outline matches its true
+        //    footprint — the debug packet only carries the anchor, not the rotation.
         BuildingDebugResponsePacket data = BuildingDebugClientState.getDisplayData();
         if (data != null && data.anchor() != null && data.buildingTypeId() != null) {
-            BuildingConfig config = BuildingConfigLoader.getInstance().get(data.buildingTypeId());
-            if (config != null && config.boundary() != null) {
-                renderBoundingBox(buf, pose, data.anchor(), config.boundary(), LINE_R, LINE_G, LINE_B, LINE_A);
+            for (BuildingAreaSyncPacket.BuildingEntry entry : BuildingAreaSyncPacket.getCached()) {
+                if (entry.hasBoundary()
+                        && entry.anchor().equals(data.anchor())
+                        && entry.buildingTypeId().equals(data.buildingTypeId())) {
+                    renderBoundingBox(buf, pose, entry, LINE_R, LINE_G, LINE_B, LINE_A);
+                    break;
+                }
             }
         }
 
@@ -108,14 +114,15 @@ public final class WandscapeHighlightRenderer {
     }
 
     private static void renderBoundingBox(MultiBufferSource.BufferSource buf, PoseStack.Pose pose,
-                                           BlockPos anchor, BuildingConfig.BoundaryBox boundary,
+                                           BuildingAreaSyncPacket.BuildingEntry entry,
                                            int r, int g, int b, int a) {
-        float x0 = anchor.getX() + boundary.min().x();
-        float y0 = anchor.getY() + boundary.min().y();
-        float z0 = anchor.getZ() + boundary.min().z();
-        float x1 = anchor.getX() + boundary.max().x() + 1f;
-        float y1 = anchor.getY() + boundary.max().y() + 1f;
-        float z1 = anchor.getZ() + boundary.max().z() + 1f;
+        BlockPos anchor = entry.anchor();
+        float x0 = anchor.getX() + entry.bMinX();
+        float y0 = anchor.getY() + entry.bMinY();
+        float z0 = anchor.getZ() + entry.bMinZ();
+        float x1 = anchor.getX() + entry.bMaxX() + 1f;
+        float y1 = anchor.getY() + entry.bMaxY() + 1f;
+        float z1 = anchor.getZ() + entry.bMaxZ() + 1f;
 
         VertexConsumer vc = buf.getBuffer(RenderType.lines());
 
