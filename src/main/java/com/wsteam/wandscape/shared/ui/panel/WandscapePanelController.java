@@ -1,11 +1,9 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.PauseScreen;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import org.lwjgl.glfw.GLFW;
@@ -46,7 +44,6 @@ public final class WandscapePanelController {
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
         bus.addListener(InputEvent.MouseScrollingEvent.class, WandscapePanelController::onMouseScroll);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
-        bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpen);
         Log.info(TAG, "[Panel] Controller registered");
     }
 
@@ -340,7 +337,8 @@ public final class WandscapePanelController {
         }
 
         // Guide key: open guide document (only when panel is open)
-        if ((com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, event.getScanCode()) || key == GLFW.GLFW_KEY_F1) && WandscapePanelState.isPanelOpen()) {
+        if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, event.getScanCode())
+                && WandscapePanelState.isPanelOpen()) {
             openPanelHelpDocument();
             return;
         }
@@ -348,8 +346,6 @@ public final class WandscapePanelController {
         if (!BuildingSelectionOverlay.isActive()) return;
         int mods = event.getModifiers();
         boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
-
-        // ESC handled by ScreenEvent.Opening to suppress pause menu
 
         if (key == GLFW.GLFW_KEY_BACKSPACE) {
             String current = WandscapePanelState.getBuildingBarSearch();
@@ -419,52 +415,6 @@ public final class WandscapePanelController {
         }
         WandscapePanelState.setBuildingBarScrollOffset(current);
         event.setCanceled(true);
-    }
-
-    // ── Suppress pause menu when in build mode ──
-
-    static void onScreenOpen(ScreenEvent.Opening event) {
-        if (!(event.getScreen() instanceof PauseScreen)) return;
-
-        // BAR phase: building selection bar is open — cancel pause, exit sub-mode
-        if (BuildingSelectionOverlay.isActive()) {
-            event.setCanceled(true);
-            WandscapePanelState.exitCurrentSubMode();
-            WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            return;
-        }
-
-        // PLACING phase: ghost is visible, cursor in game — cancel pause, return to bar
-        if (WandscapePanelState.isPanelOpen()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING) {
-            event.setCanceled(true);
-            ProjectionClientState.setGhostPos(null);
-            WandscapePanelState.returnToBar();
-            Log.debug(TAG, "[Build] Select another building or ESC to cancel");
-            return;
-        }
-
-        // ROAD BAR phase: overlay visible, cursor lifted — cancel pause, exit road mode
-        if (WandscapePanelState.isPanelOpen()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
-            event.setCanceled(true);
-            WandscapePanelState.exitCurrentSubMode();
-            Log.debug(TAG, "[Road] Exited road placement mode");
-            return;
-        }
-
-        // ROAD PLACING phase: cursor in game — cancel pause, return to BAR
-        if (WandscapePanelState.isPanelOpen()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.PLACING) {
-            event.setCanceled(true);
-            RoadPlacementState.enterBar();
-            WandscapePanelState.liftCursorForUI();
-            Log.debug(TAG, "[Road] Returned to preset selection (double-click to resume)");
-            return;
-        }
     }
 
     /** Compute number of building grid columns for the current screen width. */

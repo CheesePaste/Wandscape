@@ -82,10 +82,10 @@ public final class RoadPlacementController {
 
         long window = mc.getWindow().getWindow();
 
-        // ESC must work in both PLACING (cursor in game) and BAR (cursor lifted) phases.
-        // When cursor is lifted (mouse released), vanilla MC does NOT open the PauseScreen
-        // on ESC — it grabs the mouse back instead. So we cannot rely on ScreenEvent.Opening
-        // to handle ESC; we do it here directly.
+        // ESC is handled here only as defensive cleanup when the panel is closed.
+        // With the panel open, ESC falls through to the vanilla pause menu — in 1.21.1
+        // pressing ESC with screen == null opens the PauseScreen regardless of cursor
+        // capture state, so no interception is needed.
         handleEscapeInput(mc, window);
 
         // Cursor lifted → panel UI mode: drain all input
@@ -280,13 +280,9 @@ public final class RoadPlacementController {
     // ── ESC handling (runs before cursorLifted guard) ──
 
     /**
-     * Handles ESC in BAR phase only (cursor lifted). PLACING phase ESC is handled by
-     * {@code WandscapePanelController.onScreenOpen} via PauseScreen interception,
-     * matching BUILD mode behavior.
-     *
-     * <p>After BAR → exit we also consume the key press to prevent the vanilla
-     * KeyboardHandler from calling {@code pauseGame()} on the same ESC press
-     * (ScreenEvent.Opening can't catch it because activeSubMode is already NONE).</p>
+     * Defensive ESC cleanup for the rare case where road placement is still active
+     * after the panel has been closed. With the panel open, ESC is left entirely
+     * to the vanilla pause menu.
      */
     private static void handleEscapeInput(Minecraft mc, long window) {
         boolean escapeDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
@@ -301,7 +297,7 @@ public final class RoadPlacementController {
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
             Log.debug(TAG, "[Road] Exited road placement mode");
         }
-        // When panel is open, ESC handled by WandscapePanelController via ScreenEvent.Opening
+        // With the panel open, ESC falls through to the vanilla pause menu
     }
 
     // ── Input draining ──

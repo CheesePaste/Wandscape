@@ -81,7 +81,7 @@ public abstract class MedievalScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (showHelpButton && helpDocumentPath != null) {
-            if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode) || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_F1) {
+            if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
                 openHelpDocument();
                 return true;
             }
