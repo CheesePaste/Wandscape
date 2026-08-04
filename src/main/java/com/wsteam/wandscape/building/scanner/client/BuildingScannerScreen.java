@@ -148,7 +148,7 @@ public class BuildingScannerScreen extends MedievalScreen {
     protected void init() {
         super.init();
         brCloseX = leftPos + PW - BR_CLOSE_W - 12;
-        brCloseY = Math.min(topPos + PH - BR_CLOSE_H - 12, height - BR_CLOSE_H - 24);
+        brCloseY = topPos + PH - BR_CLOSE_H - 12;
         customButtons.clear();
         zoneRows.clear();
         insetFields.clear();
