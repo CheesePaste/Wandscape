@@ -112,6 +112,11 @@ public class BuildingScannerScreen extends MedievalScreen {
     private int shopCatY, svcCatY;
     private int exportBtnY;
 
+    // ── Bottom-right close button (always visible) ──
+    private static final int BR_CLOSE_W = 56;
+    private static final int BR_CLOSE_H = 20;
+    private int brCloseX, brCloseY;
+
     // ── Field Background Inset Rectangles with EditBox reference ──
     private record FieldRect(int x, int y, int w, int h, EditBox box) {}
     private final List<FieldRect> insetFields = new ArrayList<>();
@@ -142,6 +147,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     @Override
     protected void init() {
         super.init();
+        brCloseX = leftPos + PW - BR_CLOSE_W - 12;
+        brCloseY = Math.min(topPos + PH - BR_CLOSE_H - 12, height - BR_CLOSE_H - 24);
         customButtons.clear();
         zoneRows.clear();
         insetFields.clear();
@@ -708,6 +715,15 @@ public class BuildingScannerScreen extends MedievalScreen {
         gui.drawString(font, sizeText, lx + 2, boundaryEditY + ROW_H * 2 + 4, MedievalColors.BORDER_GOLD);
     }
 
+    private void drawBottomClose(GuiGraphics gui, int mx, int my) {
+        boolean hover = isInRect(mx, my, brCloseX, brCloseY, BR_CLOSE_W, BR_CLOSE_H);
+        drawMinimalBox(gui, brCloseX, brCloseY, BR_CLOSE_W, BR_CLOSE_H, false, hover);
+        String text = "关闭";
+        gui.drawString(font, text, brCloseX + (BR_CLOSE_W - font.width(text)) / 2,
+                brCloseY + (BR_CLOSE_H - font.lineHeight) / 2,
+                hover ? MedievalColors.BORDER_GOLD : MedievalColors.TEXT_WARM_WHITE);
+    }
+
     private EditBox mkCoordEdit(int x, int y, int w, int val, Runnable onChange) {
         EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setMaxLength(6);
@@ -756,6 +772,10 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && isInRect(mouseX, mouseY, brCloseX, brCloseY, BR_CLOSE_W, BR_CLOSE_H)) {
+            this.onClose();
+            return true;
+        }
         int clipTop = topPos + headerHeight + 2;
         int clipBottom = topPos + PH - 6;
         if (mouseY < clipTop || mouseY > clipBottom) {
@@ -1103,6 +1123,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的结构名称。", lx + 10, topPos + headerHeight + 60, MedievalColors.TEXT_WARM_WHITE);
             gui.drawString(font, "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。", lx + 10, topPos + headerHeight + 74, MedievalColors.TEXT_MUTED);
             gui.disableScissor();
+            drawBottomClose(gui, mx, my);
             super.render(gui, mx, my, pt);
             return;
         }
@@ -1119,6 +1140,7 @@ public class BuildingScannerScreen extends MedievalScreen {
             gui.drawString(font, scanResult, lx + 5, exportBtnY + 28, MedievalColors.TEXT_MUTED);
 
             gui.disableScissor();
+            drawBottomClose(gui, mx, my);
             super.render(gui, mx, my, pt);
             return;
         }
@@ -1174,6 +1196,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, MedievalColors.TEXT_MUTED);
 
         gui.disableScissor();
+        drawBottomClose(gui, mx, my);
 
         super.render(gui, mx, my, pt);
     }
