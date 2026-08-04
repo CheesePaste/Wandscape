@@ -79,10 +79,7 @@
 
   <!-- 法杖 -->
   <polygon points="247,470 265,470 260,196 252,196" fill="url(#wandWood)"/>
-  <rect x="252.5" y="330" width="7" height="10" fill="#c9a15c"/>
-  <rect x="253.5" y="252" width="5" height="8"  fill="#c9a15c"/>
   <rect x="253"   y="130" width="6" height="67" fill="#2e1d10"/>
-  <ellipse cx="256" cy="198" rx="13" ry="7" fill="#6b4326" stroke="#c9a15c" stroke-width="1.5"/>
 
   <!-- 杖顶光球 -->
   <circle cx="256" cy="116" r="70" fill="url(#orbGlow)"/>
@@ -96,8 +93,6 @@
         fill="#070b1a"/>
   <rect x="138" y="372" width="8" height="70" fill="#070b1a"/>
   <rect x="198" y="368" width="7" height="80" fill="#070b1a"/>
-  <rect x="256.5" y="348" width="3" height="30" fill="#0c1424"/>
-  <path d="M 257.5,348 L 276,357 L 257.5,366 Z" fill="#8fd0ff" opacity="0.9"/>
 
   <!-- 前景星光 -->
   <use href="#spark" transform="translate(120,140) scale(0.8)" fill="#cfeaff" opacity="0.9"/>
