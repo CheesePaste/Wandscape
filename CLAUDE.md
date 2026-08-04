@@ -50,9 +50,9 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
   - `fix:` 修复 bug，`refactor:` 重构，`feat:` 新功能，`doc:` 文档，`chore:` 杂项
 - **未版本管理的文件必须处理**：新文件要么 `git add` 纳入版本，要么加 `.gitignore` 排除。不允许有未处理的 untracked files。`.gitignore` 改完后立即 commit。
 
-## 版本管理（beta）
+## 版本管理
 
-- **自动更新版本号**：每次实质性更改（代码/资源/JSON/配置，即影响 jar 内容）提交时，同步递增 `gradle.properties` 的 `mod_version` 并一起 commit。当前 beta 方案：从 `1.0.0b` 起，补丁号递增、保留 `b` 后缀，bug修复，小功能改进改第三位，功能重构改第二位，第三位归零，大的新功能上线/破坏性大重构改第一位，第二，三位归零。纯文档（`docs/`、`architecture/`、`CLAUDE.md`）不递增。
+- **自动更新版本号**：每次实质性更改（代码/资源/JSON/配置，即影响 jar 内容）提交时，同步递增 `gradle.properties` 的 `mod_version` 并一起 commit。bug修复，小功能改进改第三位，功能重构改第二位，第三位归零，大的新功能上线/破坏性大重构改第一位，第二，三位归零。纯文档（`docs/`、`architecture/`、`CLAUDE.md`）不递增。
 - **清理 build/libs/ 旧版本**：仅当第二位（次版本号）变化时清理旧 jar。例如 1.2.x → 1.3.0 时删除所有 1.2.x 的 `wandscape-*.jar`；仅第三位（补丁号）变化（如 1.2.0 → 1.2.1）**不删除**旧 jar，保留补丁迭代便于回退。
 
 ### 发布 release 流程
