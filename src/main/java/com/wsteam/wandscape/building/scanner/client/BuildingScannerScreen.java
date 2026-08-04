@@ -113,11 +113,6 @@ public class BuildingScannerScreen extends MedievalScreen {
     private int shopCatY, svcCatY;
     private int exportBtnY;
 
-    // ── Bottom-right close button (always visible) ──
-    private static final int BR_CLOSE_W = 56;
-    private static final int BR_CLOSE_H = 20;
-    private int brCloseX, brCloseY;
-
     // ── Field Background Inset Rectangles with EditBox reference ──
     private record FieldRect(int x, int y, int w, int h, EditBox box) {}
     private final List<FieldRect> insetFields = new ArrayList<>();
@@ -148,8 +143,6 @@ public class BuildingScannerScreen extends MedievalScreen {
     @Override
     protected void init() {
         super.init();
-        brCloseX = leftPos + PW - BR_CLOSE_W - 12;
-        brCloseY = topPos + PH - BR_CLOSE_H - 12;
         customButtons.clear();
         zoneRows.clear();
         insetFields.clear();
@@ -230,7 +223,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
             int bottom = exportBtnY + 60;
             int visibleBottom = Math.min(topPos + PH - 6, height - 12);
-            maxScroll = Math.min(0, Math.min(visibleBottom - bottom, -SCROLL_TRAIL));
+            maxScroll = -10000;
             return;
         }
 
@@ -413,7 +406,18 @@ public class BuildingScannerScreen extends MedievalScreen {
         presetNameEdit = mkEdit(lx + 4, y, 110, "", s -> {});
         addCustomButton(lx + 120, y, 65, 20, "保存预设", this::onPresetSave);
         addCustomButton(lx + 190, y, 65, 20, "加载预设", this::onPresetLoad);
-        y += ROW_H + 8;
+        addCustomButton(lx + 260, y, 55, 20, "删除预设", this::onPresetDelete);
+        y += ROW_H;
+
+        // Preset name quick-load buttons (directly clickable to load)
+        int px = lx + 4;
+        for (String pn : ScannerPresetStore.listPresets()) {
+            int bw = Math.min(font.width(pn) + 12, 120);
+            if (px + bw > lx + 320) { px = lx + 4; y += 22; }
+            addCustomButton(px, y, bw, 18, pn, () -> loadPresetByName(pn));
+            px += bw + 4;
+        }
+        y += 22 + 8;
 
         // ── Category-specific sections ──
         if ("shop".equals(cat)) {
@@ -519,7 +523,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         int bottom = exportBtnY + 60;
         int visibleBottom = Math.min(topPos + PH - 6, height - 12);
-        maxScroll = Math.min(0, Math.min(visibleBottom - bottom, -SCROLL_TRAIL));
+        maxScroll = -10000;
     }
 
     private void onAutoDetectDoor() {
@@ -716,15 +720,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         gui.drawString(font, sizeText, lx + 2, boundaryEditY + ROW_H * 2 + 4, MedievalColors.BORDER_GOLD);
     }
 
-    private void drawBottomClose(GuiGraphics gui, int mx, int my) {
-        boolean hover = isInRect(mx, my, brCloseX, brCloseY, BR_CLOSE_W, BR_CLOSE_H);
-        drawMinimalBox(gui, brCloseX, brCloseY, BR_CLOSE_W, BR_CLOSE_H, false, hover);
-        String text = "关闭";
-        gui.drawString(font, text, brCloseX + (BR_CLOSE_W - font.width(text)) / 2,
-                brCloseY + (BR_CLOSE_H - font.lineHeight) / 2,
-                hover ? MedievalColors.BORDER_GOLD : MedievalColors.TEXT_WARM_WHITE);
-    }
-
     private EditBox mkCoordEdit(int x, int y, int w, int val, Runnable onChange) {
         EditBox box = new EditBox(font, x + 3, y + 3, w - 6, 14, Component.empty());
         box.setMaxLength(6);
@@ -773,10 +768,6 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && isInRect(mouseX, mouseY, brCloseX, brCloseY, BR_CLOSE_W, BR_CLOSE_H)) {
-            this.onClose();
-            return true;
-        }
         int clipTop = topPos + headerHeight + 2;
         int clipBottom = topPos + PH - 6;
         if (mouseY < clipTop || mouseY > clipBottom) {
@@ -895,22 +886,36 @@ public class BuildingScannerScreen extends MedievalScreen {
         PacketDistributor.sendToServer(new BuildingScannerSyncPacket(scanner.getBlockPos(), tag));
     }
 
-    private static final Map<String, CompoundTag> LOCAL_PRESETS = new HashMap<>();
-
     private void onPresetSave() {
-        if (presetNameEdit == null || minecraft == null) return;
+        if (presetNameEdit == null) return;
         String name = presetNameEdit.getValue().trim();
-        if (name.isEmpty()) return;
-        CompoundTag tag = capturePresetData();
-        LOCAL_PRESETS.put(name, tag);
+        if (name.isEmpty()) {
+            scanResult = Component.literal("请先输入预设名");
+            return;
+        }
+        ScannerPresetStore.savePreset(name, capturePresetData());
         scanResult = Component.literal("预设已保存: " + name);
+        needsRebuild = true;
     }
 
     private void onPresetLoad() {
-        if (presetNameEdit == null || minecraft == null) return;
+        if (presetNameEdit == null) return;
         String name = presetNameEdit.getValue().trim();
         if (name.isEmpty()) return;
-        CompoundTag tag = LOCAL_PRESETS.get(name);
+        loadPresetByName(name);
+    }
+
+    private void onPresetDelete() {
+        if (presetNameEdit == null) return;
+        String name = presetNameEdit.getValue().trim();
+        if (name.isEmpty()) return;
+        ScannerPresetStore.deletePreset(name);
+        scanResult = Component.literal("预设已删除: " + name);
+        needsRebuild = true;
+    }
+
+    private void loadPresetByName(String name) {
+        CompoundTag tag = ScannerPresetStore.loadPreset(name);
         if (tag == null) {
             scanResult = Component.literal("未找到预设: " + name);
             return;
@@ -1116,15 +1121,14 @@ public class BuildingScannerScreen extends MedievalScreen {
 
         // Label for structure name
         int topY = topPos + headerHeight + 10 + scrollOff;
-        gui.drawString(font, "结构名称", lx + 94, topY + 6, MedievalColors.TEXT_MUTED);
+        gui.drawString(font, "暗号", lx + 94, topY + 6, MedievalColors.TEXT_MUTED);
 
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
             drawMinimalBox(gui, lx, topPos + headerHeight + 38, 320, 64, true, false);
             gui.drawString(font, "❖ CORNER 辅角点模式", lx + 10, topPos + headerHeight + 46, MedievalColors.BORDER_GOLD);
-            gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的结构名称。", lx + 10, topPos + headerHeight + 60, MedievalColors.TEXT_WARM_WHITE);
+            gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的暗号。", lx + 10, topPos + headerHeight + 60, MedievalColors.TEXT_WARM_WHITE);
             gui.drawString(font, "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。", lx + 10, topPos + headerHeight + 74, MedievalColors.TEXT_MUTED);
             gui.disableScissor();
-            drawBottomClose(gui, mx, my);
             super.render(gui, mx, my, pt);
             return;
         }
@@ -1141,7 +1145,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             gui.drawString(font, scanResult, lx + 5, exportBtnY + 28, MedievalColors.TEXT_MUTED);
 
             gui.disableScissor();
-            drawBottomClose(gui, mx, my);
             super.render(gui, mx, my, pt);
             return;
         }
@@ -1197,7 +1200,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, MedievalColors.TEXT_MUTED);
 
         gui.disableScissor();
-        drawBottomClose(gui, mx, my);
 
         super.render(gui, mx, my, pt);
     }
