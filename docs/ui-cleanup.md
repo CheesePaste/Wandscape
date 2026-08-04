@@ -47,7 +47,6 @@
 | 组件 | 精灵调用 | 说明 |
 |------|---------|------|
 | `TaskQueuePanel` | `SkinSprite.PANEL_B` (9-slice) | 内嵌面板背景，可改为代码绘制 |
-| `SearchBar` | `SkinRender.drawHeader()` (HEADER_A) | 搜索框装饰边框，可改为 drawInsetField |
 | `ProgressIndicator` | `SkinRender.drawBar()` (BAR_A) | 进度条背景，可改为纯代码绘制 |
 | `MedievalButton` | `SkinRender.drawButton()` (BUTTON_A) | 按钮精灵，改动影响面大 |
 
@@ -101,9 +100,10 @@
 7. 删除 `DecorationLevel` 枚举中的 FULL/NONE 值 → 或直接删掉枚举，只保留 MINIMAL 行为
 
 **第三批（需验证后替换）：**
-8. SearchBar 精灵背景 → 改用 drawInsetField
-9. TaskQueuePanel 精灵面板 → 改用代码绘制
-10. ProgressIndicator 精灵进度条 → 改用纯代码绘制
+8. TaskQueuePanel 精灵面板 → 改用代码绘制
+9. ProgressIndicator 精灵进度条 → 改用纯代码绘制
+
+> ✅ SearchBar 组件已删除 (2026-08-04)：Workstation/CraftingStation 搜索框改用 `EditBox + drawInsetField`（仓库样式），原 item 8 完成。
 
 ---
 

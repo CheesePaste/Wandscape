@@ -24,6 +24,7 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -48,8 +49,11 @@ public class WorkstationScreen extends MedievalScreen {
 
     private List<DecomposableEntry> decomposableItems = new ArrayList<>();
     private List<SynthesizeEntry> synthesizeRecipes = new ArrayList<>();
+    private List<DecomposableEntry> decomposeFiltered = new ArrayList<>();
+    private List<SynthesizeEntry> synthesizeFiltered = new ArrayList<>();
 
     private TabBar tabBar;
+    private EditBox searchInput;
     private ScrollableList<?> currentList;
     private ScrollableList<DecomposableEntry> decomposeList;
     private ScrollableList<SynthesizeEntry> synthesizeList;
@@ -69,8 +73,8 @@ public class WorkstationScreen extends MedievalScreen {
         this.stationPos = packet.stationPos();
         this.decomposableItems = packet.decomposableEntries();
         this.synthesizeRecipes = packet.synthesizeEntries();
-        if (decomposeList != null) decomposeList.setItems(decomposableItems);
-        if (synthesizeList != null) synthesizeList.setItems(synthesizeRecipes);
+        // Re-apply the current search filter to the refreshed data
+        applySearch(searchInput != null ? searchInput.getValue() : "");
         // Reset slider on new data
         if (slider != null) {
             slider.setMax(1);
@@ -116,9 +120,27 @@ public class WorkstationScreen extends MedievalScreen {
                 activeTab, this::onTabChanged);
         addRenderableWidget(tabBar);
 
+        // Search box between tabs and list (warehouse-style inset field)
+        int searchH = font.lineHeight + 6;
+        searchInput = new EditBox(font, contentX + 1, contentY + 20 + 2, contentW - 2, font.lineHeight,
+                I18n.name("gui.wandscape.common.search", "Search")) {
+            @Override
+            public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+                drawInsetField(g, getX() - 1, getY() - 2, getWidth() + 2, getHeight() + 4);
+                super.renderWidget(g, mouseX, mouseY, partialTick);
+            }
+        };
+        searchInput.setBordered(false);
+        searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
+        searchInput.setHint(I18n.name("gui.wandscape.common.search", "Search"));
+        searchInput.setCanLoseFocus(true);
+        searchInput.setResponder(this::applySearch);
+        addRenderableWidget(searchInput);
+
         // Lists
-        int listY = contentY + 20;
-        int listH = PH - headerHeight - 4 - 20 - 44;
+        int listY = contentY + 20 + searchH + 4;
+        int listH = PH - headerHeight - 4 - (20 + searchH + 4) - 44;
 
         decomposeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
             @Override
@@ -143,8 +165,7 @@ public class WorkstationScreen extends MedievalScreen {
                         x + getWidth() - scrollbarWidth - cw - 6, y + 2, MedievalColors.TEXT_DIM);
             }
         };
-        decomposeList.setItems(decomposableItems);
-        decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposableItems.get(i)));
+        decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposeFiltered.get(i)));
 
         synthesizeList = new ScrollableList<>(contentX, listY, contentW, listH, 20) {
             @Override
@@ -195,8 +216,7 @@ public class WorkstationScreen extends MedievalScreen {
                 }
             }
         };
-        synthesizeList.setItems(synthesizeRecipes);
-        synthesizeList.setOnSelect(i -> updateSliderForSynthesize(synthesizeRecipes.get(i)));
+        synthesizeList.setOnSelect(i -> updateSliderForSynthesize(synthesizeFiltered.get(i)));
 
         // Quantity slider + submit
         int controlY = listY + listH + 6;
@@ -209,6 +229,7 @@ public class WorkstationScreen extends MedievalScreen {
 
         // Show active tab
         showTab(activeTab);
+        applySearch(searchInput.getValue());
 
         // ── Right panel: Task Queue ──
         // Shorter panel: header + 4px top + 4px bottom = 8px total vertical padding (was 12px)
@@ -249,6 +270,8 @@ public class WorkstationScreen extends MedievalScreen {
     private void onTabChanged(int tabIndex) {
         activeTab = tabIndex;
         showTab(tabIndex);
+        // Re-apply search to the newly shown tab
+        applySearch(searchInput.getValue());
         // Reset slider for new tab
         slider.setMax(1);
         slider.setValue(1);
@@ -298,6 +321,41 @@ public class WorkstationScreen extends MedievalScreen {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         Log.info(TAG,"[TaskQueue] MOVE_DOWN index={} pos={}", index, stationPos);
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "move_down", index));
+    }
+
+    /** Filter both lists by the search query, keeping the lists in sync with selection indexes. */
+    private void applySearch(String query) {
+        String lower = (query == null ? "" : query.trim()).toLowerCase();
+        decomposeFiltered = lower.isEmpty()
+                ? new ArrayList<>(decomposableItems)
+                : decomposableItems.stream()
+                        .filter(d -> decomposeSearchText(d).toLowerCase().contains(lower))
+                        .toList();
+        if (decomposeList != null) decomposeList.setItems(decomposeFiltered);
+        synthesizeFiltered = lower.isEmpty()
+                ? new ArrayList<>(synthesizeRecipes)
+                : synthesizeRecipes.stream()
+                        .filter(s -> synthesizeSearchText(s).toLowerCase().contains(lower))
+                        .toList();
+        if (synthesizeList != null) synthesizeList.setItems(synthesizeFiltered);
+    }
+
+    /** Searchable text for a decomposable item: localized name + raw id. */
+    private static String decomposeSearchText(DecomposableEntry d) {
+        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(d.itemId()));
+        String name = (registryItem != null && registryItem != Items.AIR)
+                ? new ItemStack(registryItem).getHoverName().getString()
+                : d.itemId();
+        return name + " " + d.itemId();
+    }
+
+    /** Searchable text for a synthesize recipe: localized name + output/recipe ids. */
+    private static String synthesizeSearchText(SynthesizeEntry s) {
+        var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(s.outputItem()));
+        String name = (registryItem != null && registryItem != Items.AIR)
+                ? new ItemStack(registryItem).getHoverName().getString()
+                : s.outputItem();
+        return name + " " + s.outputItem() + " " + s.recipeId();
     }
 
     /** Draw an element cost as [icon]xN (icon tinted per element, like the V-key panel). */
