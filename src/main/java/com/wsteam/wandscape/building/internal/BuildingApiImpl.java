@@ -570,10 +570,6 @@ public class BuildingApiImpl implements BuildingApi {
             Log.warn(TAG, "removeFromQueue: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
             return false;
         }
-        if (index == 0) {
-            Log.warn(TAG, "removeFromQueue: refused to remove index 0 (current task) at {}", buildingId);
-            return false;
-        }
 
         // Convert deque to list, remove, then rebuild deque
         java.util.List<WorkItem> list = new ArrayList<>(queue);

@@ -131,4 +131,4 @@
   - 辅助方法 `summarizeWorkItem` 重构为 `(blueprintId, params)`，`anchorOf()` 解析锚点（优先 `params["anchor"]`，回退 `state.getAnchor()`）。
 - `TaskQueuePanel`：新增 `CurrentInfo`/`setCurrent`/`tickProgress()`，顶部渲染锁定当前任务行（金色高亮 + 进度条 + 剩余时间文案：通道型"~Ns"/M:SS，多步型"i/N"）；pending 行下移一行。
 - 三个屏幕（Workstation/CraftingStation/Node）`updateQueueData` 传 `packet.current()`；新增 `tick()` 每 20 tick 重发 REFRESH + `taskQueuePanel.tickProgress()`（进度条每秒实时更新、两帧间平滑递减）。
-- **队首保护保留**：`BuildingApiImpl.removeFromQueue` 仍拒绝 index 0（下一个待执行任务不可删除）。
+- **队首保护移除**：`BuildingApiImpl.removeFromQueue` 允许删除任意 pending 项（含 index 0 / 下一个待执行）；`moveUp` 仍拒绝 index 0（上面无物可移）。面板 pending 行全部可操作，剩余时间文案用「≈Ns」，时间与进度条右对齐到面板右缘（当前行无按钮，避开按钮区预留，不与长任务名重叠）。
