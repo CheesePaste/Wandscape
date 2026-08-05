@@ -8,6 +8,7 @@ import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -80,13 +81,18 @@ public abstract class MedievalScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (showHelpButton && helpDocumentPath != null) {
-            if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
-                openHelpDocument();
-                return true;
-            }
+        // Let a focused text box consume the key first (typing letters incl. H);
+        // only open the help document when H is pressed outside any edit box.
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        if (showHelpButton && helpDocumentPath != null
+                && !(getFocused() instanceof EditBox box && box.canConsumeInput())
+                && com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
+            openHelpDocument();
+            return true;
+        }
+        return false;
     }
 
     @Override

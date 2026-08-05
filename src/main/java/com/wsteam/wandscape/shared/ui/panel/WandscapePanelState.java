@@ -88,6 +88,7 @@ public final class WandscapePanelState {
 
     // ── Building selection bar ──
     private static volatile boolean buildingBarOpen = false;
+    private static volatile boolean buildingBarSearchFocused = false;
     private static volatile String buildingBarCategory = "All";
     private static volatile String buildingBarSearch = "";
     private static volatile int buildingBarSelectedIndex = -1;
@@ -276,6 +277,7 @@ public final class WandscapePanelState {
         statsSummary = StatsSummary.EMPTY;
         showBuildingAreas = false;
         buildingBarOpen = false;
+        buildingBarSearchFocused = false;
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = -1;
@@ -344,8 +346,13 @@ public final class WandscapePanelState {
     public static boolean isBuildingBarOpen() { return buildingBarOpen; }
     public static BuildPhase getBuildPhase() { return buildPhase; }
 
+    /** Search box only accepts keyboard input once clicked/activated. */
+    public static boolean isBuildingBarSearchFocused() { return buildingBarSearchFocused; }
+    public static void setBuildingBarSearchFocused(boolean focused) { buildingBarSearchFocused = focused; }
+
     public static void openBuildingBar() {
         buildingBarOpen = true;
+        buildingBarSearchFocused = false;
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = ProjectionClientState.getSelectedSlotIndex();
@@ -363,6 +370,7 @@ public final class WandscapePanelState {
 
     public static void closeBuildingBar() {
         buildingBarOpen = false;
+        buildingBarSearchFocused = false;
         buildingBarCategory = "All";
         buildingBarSearch = "";
         buildingBarSelectedIndex = -1;

@@ -171,6 +171,15 @@ public final class BuildingSelectionOverlay {
         return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape." + cat.toLowerCase(), cat).getString();
     }
 
+    /** @return true if the mouse is over the search box (click focuses it for keyboard input). */
+    public static boolean isOverSearchBox(double mouseX, double mouseY, int screenW, int screenH) {
+        if (!isActive()) return false;
+        int barY = getBarY(screenH);
+        int searchX = screenW - GRID_PAD_X - SEARCH_W;
+        return mouseX >= searchX && mouseX <= searchX + SEARCH_W
+                && mouseY >= barY + 2 && mouseY <= barY + 2 + SEARCH_H;
+    }
+
     public static int getCategoryAt(double mouseX, double mouseY, int screenW, int screenH) {
         if (!isActive()) return -1;
         int barY = getBarY(screenH);
@@ -270,11 +279,13 @@ public final class BuildingSelectionOverlay {
 
     private static void renderSearchBar(GuiGraphics g, Font font, int x, int y,
                                          double mouseX, double mouseY) {
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, SEARCH_W, SEARCH_H, false, false);
+        boolean focused = WandscapePanelState.isBuildingBarSearchFocused();
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, SEARCH_W, SEARCH_H, focused, false);
 
         String text = WandscapePanelState.getBuildingBarSearch();
+        // Placeholder hint only shows while unfocused; a focused empty box shows just the cursor
         String display = text.isEmpty()
-                ? com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.common.search", "Search").getString()
+                ? (focused ? "" : com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.common.search", "Search").getString())
                 : text;
         int textColor = text.isEmpty() ? 0xFF666666 : 0xFFFFFFFF;
 
@@ -283,6 +294,11 @@ public final class BuildingSelectionOverlay {
             display = display.substring(0, maxChars);
         }
         g.drawString(font, display, x + 3, y + 2, textColor);
+        if (focused) {
+            g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                    x + 3 + font.width(display), y + 2, x + 4 + font.width(display), y + SEARCH_H - 2,
+                    0, 0xFFFFFFFF);
+        }
     }
 
     private static void renderBuildingGrid(GuiGraphics g, Font font, List<BuildingSlot> slots,

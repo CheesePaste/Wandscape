@@ -275,8 +275,12 @@ public class WandscapeClient {
 
     private void onClientTick(ClientTickEvent.Post event) {
         ColonyAmbientSystem.tick();
+        // When the building search box is focused, letter keys must type into it,
+        // not trigger panel hotkeys — so swallow V/C/H clicks while it's focused.
+        boolean searchFocused = WandscapePanelState.isBuildingBarSearchFocused();
         while (PROJECTION_TOGGLE.consumeClick()) {
             // V key: toggle Wandscape panel open/close
+            if (searchFocused) continue;
             if (WandscapePanelState.isPanelOpen()) {
                 WandscapePanelState.closePanel();
             } else {
@@ -285,12 +289,14 @@ public class WandscapeClient {
         }
         while (PANEL_CURSOR_TOGGLE.consumeClick()) {
             // C key: lift/release cursor within the panel
+            if (searchFocused) continue;
             if (WandscapePanelState.isPanelOpen()) {
                 WandscapePanelState.toggleCursor();
             }
         }
         while (GUIDE_TOGGLE.consumeClick()) {
             // H key: open guide — panel has its own handler; this covers non-panel contexts
+            if (searchFocused) continue;
             if (!WandscapePanelState.isPanelOpen()) {
                 openGuideIndex();
             }

@@ -112,6 +112,14 @@ public final class WandscapePanelController {
 
         // ── Building selection bar handling ──
         if (BuildingSelectionOverlay.isActive()) {
+            // Search box click activates keyboard input; any other bar click deactivates it
+            if (BuildingSelectionOverlay.isOverSearchBox(mouseX, mouseY, screenW, screenH)) {
+                WandscapePanelState.setBuildingBarSearchFocused(true);
+                event.setCanceled(true);
+                return;
+            }
+            WandscapePanelState.setBuildingBarSearchFocused(false);
+
             // Scrollbar click — jump to position
             if (BuildingSelectionOverlay.isOverScrollbar(mouseX, screenW)) {
                 int barY = BuildingSelectionOverlay.getBarY(screenH);
@@ -322,9 +330,19 @@ public final class WandscapePanelController {
         if (mc.screen != null) return;
 
         int key = event.getKey();
+        int scanCode = event.getScanCode();
+        int mods = event.getModifiers();
+
+        // Focused search box: route printable/backspace keys into it FIRST, so
+        // global hotkeys (H/G/B) don't hijack letters while typing a name.
+        if (BuildingSelectionOverlay.isActive() && WandscapePanelState.isBuildingBarSearchFocused()) {
+            if (handleSearchInput(key, mods)) {
+                return;
+            }
+        }
 
         // Building areas overlay toggle (works whenever panel is open)
-        if (com.wsteam.wandscape.WandscapeClient.PANEL_AREAS_TOGGLE.matches(key, event.getScanCode())
+        if (com.wsteam.wandscape.WandscapeClient.PANEL_AREAS_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
             WandscapePanelState.toggleBuildingAreas();
             Log.debug(TAG, "[Panel] Building areas overlay: {}", WandscapePanelState.isShowBuildingAreas() ? "ON" : "OFF");
@@ -332,38 +350,44 @@ public final class WandscapePanelController {
         }
 
         // Overview mode ↔ ground mode toggle (only when panel is open)
-        if (com.wsteam.wandscape.WandscapeClient.OVERVIEW_TOGGLE.matches(key, event.getScanCode())
+        if (com.wsteam.wandscape.WandscapeClient.OVERVIEW_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
             handleGKeyToggle();
             return;
         }
 
         // Guide key: open guide document (only when panel is open)
-        if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, event.getScanCode())
+        if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
             openPanelHelpDocument();
             return;
         }
 
+        // Search bar input only accepted once the box has been clicked/activated
         if (!BuildingSelectionOverlay.isActive()) return;
-        int mods = event.getModifiers();
-        boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
+        if (!WandscapePanelState.isBuildingBarSearchFocused()) return;
+        handleSearchInput(key, mods);
+    }
 
+    /** Type printable chars / backspace into the building search box. @return true if consumed. */
+    private static boolean handleSearchInput(int key, int mods) {
+        boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
         if (key == GLFW.GLFW_KEY_BACKSPACE) {
             String current = WandscapePanelState.getBuildingBarSearch();
             if (!current.isEmpty()) {
                 WandscapePanelState.setBuildingBarSearch(current.substring(0, current.length() - 1));
             }
-            return;
+            return true;
         }
-
         String ch = keyToChar(key, shift);
         if (ch != null) {
             String current = WandscapePanelState.getBuildingBarSearch();
             if (current.length() < 32) {
                 WandscapePanelState.setBuildingBarSearch(current + ch);
             }
+            return true;
         }
+        return false;
     }
 
     // ═══════════════════════════════════════════════════════════════
