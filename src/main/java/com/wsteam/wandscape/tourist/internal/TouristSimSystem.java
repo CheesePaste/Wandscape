@@ -49,10 +49,10 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 public final class TouristSimSystem {
 
     private static final String TAG = "TouristSimSystem";
-    /** Sim step interval in game ticks (user-specified: 20). */
-    private static final int SIM_INTERVAL = 20;
-    /** Constant straight-line speed per sim step: 0.5 blocks/tick × 20. */
-    private static final double SPEED = 10.0;
+    /** Sim runs every tick — per-tourist work is a few arithmetic ops (negligible). */
+    private static final int SIM_INTERVAL = 1;
+    /** Constant straight-line speed per tick: 0.5 blocks/tick (matches entity speed). */
+    private static final double SPEED = 0.5;
     private static final double ARRIVE_RANGE = 1.0;
     private static final int WANDER_RADIUS = 24;
 
@@ -140,9 +140,17 @@ public final class TouristSimSystem {
             if (e instanceof TouristEntity t) {
                 if (!t.isAlive()) continue;
                 entities.put(t.getUUID(), t);
-                // Orphan: no shadow → departed tourist, clear the residual body.
-                if (!shadows.containsKey(t.getUUID())) {
+                TouristShadow sh = shadows.get(t.getUUID());
+                if (sh == null) {
+                    // Orphan: no shadow → departed tourist, clear the residual body.
                     Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
+                    t.discard();
+                } else if (((int) t.getX() >> 4) != ((int) sh.getPosX() >> 4)
+                        || ((int) t.getZ() >> 4) != ((int) sh.getPosZ() >> 4)) {
+                    // Stale frozen body: the sim moved the shadow to another chunk. The
+                    // real entity spawns/positions at the shadow's chunk — this leftover
+                    // body would otherwise duplicate it when that chunk loads.
+                    Log.info(TAG, "[Tourist] discarding stale body {} (shadow moved chunk)", shortId(t.getUUID()));
                     t.discard();
                 }
             }
@@ -199,6 +207,14 @@ public final class TouristSimSystem {
         e.setSkinVariant(s.getSkinVariant());
         e.setAppearance(s.isMage() ? TouristEntity.Appearance.MAGE : TouristEntity.Appearance.TOURIST);
         e.setPos(s.getPosX(), s.getPosY(), s.getPosZ());
+        // The sim ignores terrain — the shadow's Y may have drifted into the ground
+        // or air. Snap to the nearest ground surface now that the chunk is loaded.
+        if (e.level() instanceof ServerLevel sl) {
+            BlockPos ground = groundAt(sl, e.getX(), e.getY(), e.getZ());
+            if (ground != null) {
+                e.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
+            }
+        }
         e.setLevel(s.getLevel());
         e.setWallet(s.getWallet());
         e.setInitialWallet(s.getInitialWallet());
@@ -327,6 +343,19 @@ public final class TouristSimSystem {
             return;
         }
         wander(s);
+    }
+
+    /** Scan down a few blocks for the first solid-with-air-above surface; null if none nearby. */
+    private static @Nullable BlockPos groundAt(ServerLevel level, double x, double y, double z) {
+        int startY = Math.clamp((int) y + 1, level.getMinBuildHeight() + 1, level.getMaxBuildHeight() - 1);
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos((int) x, startY, (int) z);
+        for (int i = 0; i < 16; i++) {
+            if (!level.getBlockState(mp).isAir() && level.getBlockState(mp.above()).isAir()) {
+                return mp.above().immutable();
+            }
+            mp.move(0, -1, 0);
+        }
+        return null;
     }
 
     private void wander(TouristShadow s) {
