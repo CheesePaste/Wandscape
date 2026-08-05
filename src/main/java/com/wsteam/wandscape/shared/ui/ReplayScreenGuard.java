@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.shared.ui;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -49,8 +48,6 @@ public final class ReplayScreenGuard {
     private static void onScreenOpening(ScreenEvent.Opening event) {
         if (isReplayPlaying() && event.getScreen() instanceof MedievalScreen) {
             event.setCanceled(true);
-            Log.debug(TAG, "Suppressed Wandscape screen ({}) during replay playback",
-                    event.getScreen().getClass().getSimpleName());
         }
     }
 }

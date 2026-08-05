@@ -12,7 +12,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Server→Client: refreshed building slot list (e.g. after a placement claims a
@@ -37,7 +36,6 @@ public record ProjectionSlotsRefreshPacket(
 
     public static void handleClient(ProjectionSlotsRefreshPacket packet) {
         ProjectionClientState.updateBuildingSlots(packet.buildingSlots);
-        Log.debug(TAG, "[Projection] Refreshed {} building slots", packet.buildingSlots.size());
     }
 
     static void write(RegistryFriendlyByteBuf buf, ProjectionSlotsRefreshPacket pkt) {

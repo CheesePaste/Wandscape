@@ -160,7 +160,6 @@ public final class ProjectionFlightController {
                 case 3 -> "270°";
                 default -> "0°";
             };
-            Log.debug(TAG, "[Projection] Rotation: {}", direction);
         }
 
         // Right-click: place building
@@ -212,7 +211,6 @@ public final class ProjectionFlightController {
     private static void doExit() {
         PacketDistributor.sendToServer(new ProjectionExitPacket());
         ProjectionClientState.exitProjection();
-        Log.debug(TAG, "[Projection] Exited building placement mode");
     }
 
     // ── Input draining ──

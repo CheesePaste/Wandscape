@@ -27,6 +27,5 @@ public final class StatsService {
 
     private static void onEvent(NarrativeEventTriggered event) {
         // TODO: record stats (type counts, game-time distribution, etc.)
-        Log.debug(TAG, "stat event: %s", event);
     }
 }

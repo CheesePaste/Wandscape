@@ -248,7 +248,6 @@ public class WandscapeBlockOps implements BlockOps {
     private void redstonePulse(Level level, BlockPos target) {
         BlockPos adj = findAdjacentAir(level, target);
         if (adj == null) {
-            Log.debug(TAG, "activate redstone fallback: no adjacent air at {}", target);
             return;
         }
         level.setBlock(adj, Blocks.REDSTONE_BLOCK.defaultBlockState(),
@@ -295,8 +294,6 @@ public class WandscapeBlockOps implements BlockOps {
 
         // Container access for future item manipulation
         if (blockEntity instanceof Container container) {
-            Log.debug(TAG, "openGui: container at {} has {} slots",
-                    bp, container.getContainerSize());
             // Stage 3+: NPC reads/writes items via Container interface
         }
 

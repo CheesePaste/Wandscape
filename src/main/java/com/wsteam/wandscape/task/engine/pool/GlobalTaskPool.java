@@ -241,7 +241,6 @@ public class GlobalTaskPool {
             exec.releaseGlobalTask();
         }
         task.assignedNpcId = null;
-        Log.debug(TAG, "releaseNpc #%d ← NPC %d", taskId, npcId);
     }
 
     // ── State transitions ──
@@ -313,7 +312,6 @@ public class GlobalTaskPool {
         GlobalTask task = tasksById.get(taskId);
         if (task != null) {
             task.stepIndex = newStepIndex;
-            Log.debug(TAG, "advanceStep #%d → %d/%d", taskId, newStepIndex, task.sequence.size());
         }
     }
 
@@ -323,7 +321,6 @@ public class GlobalTaskPool {
         if (!trigger.eventName().equals(event.name())) return;
 
         if (!matchesFilter(trigger.paramFilter(), event.params())) {
-            Log.debug(TAG, "trigger %s → filter mismatch for event %s", trigger.eventName(), event);
             return;
         }
 
@@ -342,8 +339,6 @@ public class GlobalTaskPool {
         if (trigger.dedupKey() != null) {
             String dedupValue = event.params().get(trigger.dedupKey());
             if (dedupValue != null && isDuplicate(resolvedBpId, trigger.dedupKey(), dedupValue)) {
-                Log.debug(TAG, "trigger %s → dedup skip: %s=%s already in flight",
-                        trigger.eventName(), trigger.dedupKey(), dedupValue);
                 return;
             }
         }

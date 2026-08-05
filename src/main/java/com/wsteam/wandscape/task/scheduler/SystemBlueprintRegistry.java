@@ -97,8 +97,6 @@ public class SystemBlueprintRegistry {
         if (trigger.dedupKey() != null) {
             String dedupValue = event.params().get(trigger.dedupKey());
             if (dedupValue != null && isDuplicate(resolvedBpId, trigger.dedupKey(), dedupValue, taskPool)) {
-                Log.debug(TAG, "trigger %s → dedup skip: %s=%s already in flight",
-                        trigger.eventName(), trigger.dedupKey(), dedupValue);
                 return;
             }
         }

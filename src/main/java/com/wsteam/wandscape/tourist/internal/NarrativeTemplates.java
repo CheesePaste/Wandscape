@@ -166,7 +166,6 @@ public final class NarrativeTemplates {
                 }
             }
             buildingTemplates.put(buildingTypeId, tmpl);
-            Log.debug(TAG, "Loaded building narrative: {} ({} events)", buildingTypeId, tmpl.size());
         } catch (Exception e) {
             buildingTemplates.put(buildingTypeId, Map.of()); // mark as empty on error
             Log.warn(TAG, "Failed to load building narrative {}: {}", path, e.getMessage());

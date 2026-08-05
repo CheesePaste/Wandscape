@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.task.scheduler;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.op.api.AtomicOp;
@@ -45,7 +44,6 @@ public class SystemBlueprintSystem implements System {
             try {
                 seq = bp.steps().generate(Collections.emptyMap());
             } catch (Exception e) {
-                Log.debug(TAG, "system blueprint '%s' failed to compile: %s", bp.id(), e.getMessage());
                 continue;
             }
             if (seq == null || seq.size() == 0) continue;
@@ -91,7 +89,6 @@ public class SystemBlueprintSystem implements System {
 
             if (seq.isComplete(stepIndex)) {
                 stepIndices.remove(bp.id());
-                Log.debug(TAG, "system blueprint '%s' complete", bp.id());
             }
         }
     }

@@ -10,7 +10,6 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
-import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -82,7 +81,6 @@ public final class GuardCombat {
                 SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
                         WandscapeSounds.GUARD_FIRE, SoundSource.NEUTRAL, 0.6f, 1.0f);
             } else {
-                Log.debug(TAG, "NPC {} cast rejected (active cast / spec missing) — standby", npcId);
             }
         }
     }

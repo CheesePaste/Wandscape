@@ -370,8 +370,6 @@ public final class ShopStockManager {
             }
         }
 
-        Log.debug(TAG, "[Shop] Purchase: building={} item={} x{} remaining={}",
-                buildingId.toString().substring(0, 8), itemId, qty, newStock);
         return qty;
     }
 
@@ -468,7 +466,6 @@ public final class ShopStockManager {
             Map<String, Integer> finalStock = savedData.getOrCreateShopStock(buildingId);
             updateHasStock(buildingId, finalStock);
             NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
-            Log.debug(TAG, "[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
         }
     }
 
@@ -544,10 +541,6 @@ public final class ShopStockManager {
         transporter.send(key, amount, warehousePos, shopPos, level, 0, route, false)
             .thenRun(() -> onTransportArrived(buildingId, itemId, amount));
 
-        Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} legs)",
-                amount, itemId, warehousePos.toShortString(),
-                shopPos.toShortString(),
-                route != null ? route.legs().size() : 0);
     }
 
     /** Called when all transport units arrive — just logs. Stock already added at restock time. */
@@ -560,8 +553,6 @@ public final class ShopStockManager {
                     buildingId.toString().substring(0, 8), amount, itemId);
             return;
         }
-        Log.debug(TAG, "[Shop] Transport arrived: {} × {} at {}",
-                amount, itemId, buildingId.toString().substring(0, 8));
     }
 
     /**

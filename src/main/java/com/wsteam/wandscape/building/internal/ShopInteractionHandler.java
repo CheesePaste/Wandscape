@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.building.internal;
 
 import java.util.UUID;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Handles tourist interaction with shop buildings.
@@ -34,12 +33,7 @@ public final class ShopInteractionHandler {
         ShopStockManager.PurchaseResult result =
                 stockManager.purchaseAffordable(buildingId, colonyId, wallet, initialWallet);
         if (result != null) {
-            Log.debug(TAG, "[ShopInteract] Tourist {} bought {} x{} from shop {} (spent {})",
-                    shortId(touristId), result.itemId(), result.count(),
-                    shortId(buildingId), result.spent());
         } else {
-            Log.debug(TAG, "[ShopInteract] Tourist {} found nothing buyable at shop {} (wallet={})",
-                    shortId(touristId), shortId(buildingId), wallet);
         }
         return result;
     }

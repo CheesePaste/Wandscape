@@ -163,13 +163,9 @@ public class BuildingSavedData extends SavedData {
         UUID fallbackId = getBuildingIdAt(pos);
         if (fallbackId != null) {
             BuildingState state = buildings.get(fallbackId);
-            Log.debug(TAG, "[Debug] getBuildingAt fallback hit: pos={} buildingId={} type={}",
-                    pos, fallbackId.toString().substring(0, 8), state != null ? state.getBuildingTypeId() : "?");
             return state;
         }
 
-        Log.debug(TAG, "[Debug] getBuildingAt miss: pos={} posIndexSize={} chunkIndexSize={}",
-                pos, posIndex.size(), chunkIndex.size());
         return null;
     }
 
@@ -483,9 +479,6 @@ public class BuildingSavedData extends SavedData {
         });
 
         setDirty();
-        Log.debug(TAG, "registered building {} type={} at {} patternSize={} posIndexSize={}",
-                state.getBuildingId().toString().substring(0, 8),
-                state.getBuildingTypeId(), state.getAnchor(), newPattern.size(), posIndex.size());
     }
 
     /**
@@ -544,9 +537,6 @@ public class BuildingSavedData extends SavedData {
         }
 
         setDirty();
-        Log.debug(TAG, "unregistered building {} type={} at {}",
-                buildingId.toString().substring(0, 8),
-                state.getBuildingTypeId(), state.getAnchor());
         return state;
     }
 

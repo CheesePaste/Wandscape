@@ -44,7 +44,6 @@ public class TavernRecruitStorage extends SavedData {
         list.add(resume);
         while (list.size() > MAX_PER_COLONY) {
             MageResume removed = list.remove(0);
-            Log.debug(TAG, "[Tourist] Evicted oldest resume: {}", removed.touristName());
         }
         setDirty();
         Log.info(TAG, "[Tourist] Mage resume stored for colony {}: {} (Lv.{})",
@@ -112,7 +111,6 @@ public class TavernRecruitStorage extends SavedData {
             }
             storage.colonyResumes.put(colonyId, resumes);
         }
-        Log.debug(TAG, "[Tourist] Loaded {} colonies from disk", storage.colonyResumes.size());
         return storage;
     }
 

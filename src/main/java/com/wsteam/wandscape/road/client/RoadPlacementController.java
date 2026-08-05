@@ -151,7 +151,6 @@ public final class RoadPlacementController {
         if (RoadPlacementState.isReady()) {
             // PLAN_END → right-click: clear all, return to IDLE
             RoadPlacementState.clearAll();
-            Log.debug(TAG, "[Road] Cleared — right-click to set new start");
         } else if (RoadPlacementState.isDestroyFill()) {
             // Destroy/Fill: capture reference block + position
             RoadPlacementState.setStartPos(ghostPos);
@@ -160,13 +159,9 @@ public final class RoadPlacementController {
                     ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
                     : "unknown";
             RoadPlacementState.setRefBlockId(blockName);
-            Log.debug(TAG, "[Destroy/Fill] Ref block: {} at Y={} (left-click set area, right-click move ref)",
-                    blockName, ghostPos.getY());
         } else {
             // IDLE or PLAN_START → right-click: set / overwrite startPos
             RoadPlacementState.setStartPos(ghostPos);
-            Log.debug(TAG, "[Road] Start point set at {} (left-click set end, right-click move start)",
-                    ghostPos.toShortString());
         }
     }
 
@@ -178,8 +173,6 @@ public final class RoadPlacementController {
 
         // PLAN_START or PLAN_END → set / overwrite endPos
         RoadPlacementState.setEndPos(ghostPos);
-        Log.debug(TAG, "{} End point set at {} (Enter publish, right-click clear, Backspace undo end)",
-                tag(), ghostPos.toShortString());
     }
 
     // ── Keyboard handling (no ESC — handled by handleEscapeInput) ──
@@ -268,11 +261,9 @@ public final class RoadPlacementController {
         if (RoadPlacementState.hasEnd()) {
             // PLAN_END → clear end, back to PLAN_START
             RoadPlacementState.clearEndPos();
-            Log.debug(TAG, "[Road] End point cleared — set new end or Backspace to cancel");
         } else if (RoadPlacementState.isPlanning()) {
             // PLAN_START → clear start, back to IDLE
             RoadPlacementState.clearStartPos();
-            Log.debug(TAG, "[Road] Cancelled");
         }
     }
 
@@ -294,7 +285,6 @@ public final class RoadPlacementController {
                 && RoadPlacementState.getRoadPhase() != RoadPlacementState.RoadPhase.PLACING) {
             WandscapePanelState.exitCurrentSubMode();
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            Log.debug(TAG, "[Road] Exited road placement mode");
         }
         // With the panel open, ESC is handled by WandscapePanelController instead
     }

@@ -64,7 +64,6 @@ public final class DemolishCompleteListener {
 
         BuildingState state = findByAnchor(sd, anchor);
         if (state == null) {
-            Log.debug(TAG, "demolish_complete for unknown building at {} — already unregistered", anchor);
             return;
         }
 

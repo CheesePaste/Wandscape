@@ -49,7 +49,6 @@ public final class CoreBootstrap {
         world.movementOps = config.movementOps();
         world.colonyResources = config.colonyResources();
         world.eventBus = new SimpleEventBus();
-        Log.debug(TAG, "boundary services injected");
 
         // 2. Register component stores
         world.registerComponent(Position.class, new HashMapComponentStore<>());
@@ -84,7 +83,6 @@ public final class CoreBootstrap {
         world.addSystem(new TaskSourcePoller(config.taskSources()));
         world.addSystem(new SchedulerSystem());
         world.addSystem(new TaskExecutionSystem(world.taskPool));
-        Log.debug(TAG, "%d systems registered", world.systemCount());
 
         Log.info(TAG, "bootstrap complete - %d component stores, %d systems, %d task sources",
                 world.stores().size(), world.systemCount(), config.taskSources().size());

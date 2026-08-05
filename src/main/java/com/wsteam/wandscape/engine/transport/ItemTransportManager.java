@@ -98,9 +98,6 @@ public class ItemTransportManager {
             PacketDistributor.sendToPlayersTrackingChunk(serverLevel, new net.minecraft.world.level.ChunkPos(from), packet);
         }
 
-        Log.debug(TAG, "[Transport] send {} {}→{} legs={} ticks={} npc={} ownsItem={}",
-                key.itemId(), from.toShortString(), to.toShortString(),
-                actualRoute.legs().size(), totalTicks, ownerNpcId, ownsItem);
         return future;
     }
 

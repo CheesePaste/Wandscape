@@ -79,8 +79,6 @@ public final class BuildCompleteListener {
         BuildingSavedData data = BuildingSavedData.get(level);
         BuildingState state = findByAnchor(data, anchor);
         if (state == null) {
-            Log.debug(TAG, "build_complete for unknown building at {} (name={}) — may be unregistered",
-                    anchor, buildingName);
             return;
         }
 

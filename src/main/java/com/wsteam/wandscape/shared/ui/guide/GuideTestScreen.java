@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.shared.ui.guide;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentHistoryStack;
@@ -93,7 +92,6 @@ public class GuideTestScreen extends MedievalScreen {
         }
 
         // Game action link (action:...)
-        Log.debug("GuideTestScreen", "[Guide] Triggered in-game action: {}", action);
     }
 
     private void loadDocument(String docPath) {

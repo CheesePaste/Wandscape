@@ -87,15 +87,9 @@ public final class BuildingSelectionOverlay {
     public static void render(GuiGraphics g, Font font, int screenW, int screenH,
                                double mouseX, double mouseY) {
         if (!isActive()) {
-            Log.debug(TAG, "[Bar] NOT active: panel={} projecting={} subMode={} barOpen={}",
-                    WandscapePanelState.isPanelOpen(),
-                    ProjectionClientState.isProjecting(),
-                    WandscapePanelState.getActiveSubMode(),
-                    WandscapePanelState.isBuildingBarOpen());
             return;
         }
 
-        Log.debug(TAG, "[Bar] ACTIVE: slots={} filtered={}", getSlotsSize(), getFilteredSlots().size());
         int barY = screenH - BAR_HEIGHT;
 
         // Background

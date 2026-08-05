@@ -53,7 +53,6 @@ public class SchedulerSystem implements System {
         }
 
         if (idleNpcs.isEmpty()) {
-            Log.debug(TAG, "heartbeat - no idle NPCs");
             return;
         }
 
@@ -66,19 +65,10 @@ public class SchedulerSystem implements System {
             }
         }
 
-        Log.debug(TAG, "heartbeat - colony_count=%d idle_npcs=%d assignable_tasks=%d",
-                npcsByColony.size(),
-                idleNpcs.size(), world.taskPool.getAssignableTasks().size());
         for (long eid : idleNpcs) {
             EquipmentComponent eq = world.get(eid, EquipmentComponent.class);
             ManaPool mp = world.get(eid, ManaPool.class);
             ColonyMember cm = world.get(eid, ColonyMember.class);
-            Log.debug(TAG, "  idle NPC %d colony=%s equipped=%s mana=%.1f/%d",
-                    eid,
-                    cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
-                    eq != null ? String.valueOf(eq.getEquippedPreset(EquipmentSlot.WAND)) : "none",
-                    mp != null ? mp.current() : -1,
-                    mp != null ? mp.max() : -1);
         }
 
         GlobalTaskPool taskPool = world.taskPool;
@@ -100,8 +90,6 @@ public class SchedulerSystem implements System {
                 // Skip if another NPC is already working on the same target position
                 GridPos taskTarget = extractTaskTarget(task);
                 if (taskTarget != null && occupiedTargets.contains(taskTarget)) {
-                    Log.debug(TAG, "skip #%d '%s' — target %s already occupied",
-                            task.id, task.sequence.label(), taskTarget);
                     continue;
                 }
 

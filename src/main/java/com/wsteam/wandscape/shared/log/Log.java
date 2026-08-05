@@ -7,7 +7,6 @@ import java.util.logging.*;
  * Use static methods for convenient one-liners:
  * <pre>
  *   Log.info("Scheduler", "Assigned task #%d to NPC %d", taskId, npcId);
- *   Log.debug("TaskExec", "Executing %s at %s", op.getClass().getSimpleName(), pos);
  * </pre>
  */
 public final class Log {
@@ -47,15 +46,6 @@ public final class Log {
 
     public static Logger get(String name) {
         return Logger.getLogger(name);
-    }
-
-    public static void debug(String tag, String msg, Object... args) {
-        if (!verbose) return;
-        if (!LogFilter.allows(tag)) return;
-        Logger logger = get(tag);
-        if (logger.isLoggable(Level.FINE)) {
-            logger.fine(format(msg, args));
-        }
     }
 
     public static void info(String tag, String msg, Object... args) {

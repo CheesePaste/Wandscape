@@ -75,11 +75,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                             new ResourceShortageException(List.of(op.consumable())));
                 }
                 inv.remove(op.consumable().resource(), op.consumable().amount());
-                Log.debug(TAG, "TransformOp consumable: -{} x{} from NPC {}",
-                        op.consumable().resource().id(), op.consumable().amount(), npcId);
             } else {
-                Log.debug(TAG, "TransformOp free block (no element mapping): {} — placing directly",
-                        op.consumable().resource().id());
             }
         }
 
@@ -126,12 +122,8 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                             NPC_CAST_THROTTLE_TICKS);
                 }
             }
-            Log.debug(TAG, "async TransformOp placed: {}→{} at {}",
-                    p.op.from().id(), p.op.to().id(), p.op.target());
         });
 
-        Log.debug(TAG, "async TransformOp: {}→{} at {} ({} tick delay)",
-                op.from().id(), op.to().id(), op.target(), delayTicks);
         return future;
     }
 
@@ -158,8 +150,6 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         }
 
         if (!toComplete.isEmpty()) {
-            Log.debug(TAG, "async tickAll: {} completed, {} remaining",
-                    toComplete.size(), pending.size());
         }
     }
 

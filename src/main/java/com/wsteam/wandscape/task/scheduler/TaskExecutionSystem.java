@@ -71,10 +71,6 @@ public class TaskExecutionSystem implements System {
             // ── 0. No work → idle ──
             if (!queue.hasWork() && exec.globalTaskId == null) {
                 if (exec.state != ExecutorState.IDLE) {
-                    Log.debug(TAG, "NPC %d → IDLE (no work, was=%s pendingFuture=%s nav=%s)",
-                            npcId, exec.state,
-                            exec.pendingFuture != null && !exec.pendingFuture.isDone(),
-                            exec.pendingFutureIsNav);
                 }
                 exec.state = ExecutorState.IDLE;
                 exec.currentOpTarget = null;
@@ -109,7 +105,6 @@ public class TaskExecutionSystem implements System {
         boolean navJustResolved = false;
         if (exec.pendingFuture != null) {
             if (!exec.pendingFuture.isDone()) {
-                Log.debug(TAG, "NPC %d — waiting on future (nav=%s)", npcId, exec.pendingFutureIsNav);
                 return; // still waiting
             }
             Log.info(TAG, "NPC %d — future resolved (wasNav=%s)", npcId, exec.pendingFutureIsNav);
@@ -154,7 +149,6 @@ public class TaskExecutionSystem implements System {
                             npcId, pkg.stance().x(), pkg.stance().y(), pkg.stance().z());
                     exec.pendingFuture = navFuture;
                     exec.pendingFutureIsNav = true;
-                    Log.debug(TAG, "NPC %d — navigating to pkg stance %s", npcId, pkg.stance());
                     exec.state = ExecutorState.ACTIVE;
                     return;
                 }
@@ -217,7 +211,6 @@ public class TaskExecutionSystem implements System {
                         exec.pendingFuture = navFuture;
                         exec.pendingFutureIsNav = true;
                         exec.state = ExecutorState.ACTIVE;
-                        Log.debug(TAG, "NPC %d — navigating to op target %s", npcId, target);
                         return;
                     }
                 }
@@ -292,7 +285,6 @@ public class TaskExecutionSystem implements System {
             exec.pendingFuture = future;
             exec.pendingFutureIsNav = false;
             exec.state = ExecutorState.ACTIVE;
-            Log.debug(TAG, "NPC %d - async op in-flight, waiting", npcId);
             return;
         }
 
@@ -500,7 +492,6 @@ public class TaskExecutionSystem implements System {
         exec.state = ExecutorState.ACTIVE;
         exec.currentOpTarget = null;
         exec.currentOpKind = "parallel";
-        Log.debug(TAG, "NPC %d — launched %d parallel ops, waiting for allOf", npcId, subs.size());
     }
 
     // ── Helpers ──

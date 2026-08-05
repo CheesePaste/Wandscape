@@ -414,8 +414,6 @@ public class TouristMoveGoal extends Goal {
             double distSqr = pos.distSqr(exitTarget);
             if (distSqr < 4.0 || !isInsideBuilding(buildingId)) {
                 // Reached exit point or left building → back to macro
-                Log.debug(TAG, "[Tourist] {} exited building, switching to macro nav",
-                        tourist.getTouristName());
                 finishBuildingStop();
                 return;
             }
@@ -483,8 +481,6 @@ public class TouristMoveGoal extends Goal {
                 BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
                 BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
                 nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
-                Log.debug(TAG, "[Tourist] {} interaction done, exiting to {}",
-                        tourist.getTouristName(), entryPoint.toShortString());
             } else {
                 // Not inside building or no entry point → finish directly
                 finishBuildingStop();
@@ -520,8 +516,6 @@ public class TouristMoveGoal extends Goal {
         if (target != null) {
             tourist.getNavigation().moveTo(
                     target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
-            Log.debug(TAG, "[Tourist] {} switching to indoor micro-nav → {}",
-                    tourist.getTouristName(), target.toShortString());
         }
     }
 
@@ -1073,8 +1067,6 @@ public class TouristMoveGoal extends Goal {
 
     private void switchMode(MoveMode next) {
         if (currentMode != next) {
-            Log.debug(TAG, "[Tourist] {} mode {} → {}",
-                    tourist.getTouristName(), currentMode, next);
         }
         currentMode = next;
         waypoints = null;
@@ -1305,10 +1297,6 @@ public class TouristMoveGoal extends Goal {
         tourist.setTargetBuildingCategory(chosen.getCategory());
         // Macro navigation starts toward the entry point
         tourist.setCommuteTarget(entryPoint);
-        Log.debug(TAG, "[Tourist] {} next stop: {} '{}' entry={} interact={}",
-                tourist.getTouristName(), chosen.getCategory(),
-                chosen.getBuildingTypeId(),
-                entryPoint.toShortString(), interactPoint.toShortString());
     }
 
     /** True while the post-interaction rest cooldown is active (wander freely, skip building visits). */
@@ -1421,8 +1409,6 @@ public class TouristMoveGoal extends Goal {
         String typeId = getBuildingTypeId(buildingId);
         if (typeId == null) return;
         tourist.adjustTypePreference(typeId, -decay);
-        Log.debug(TAG, "[Tourist] {} decay preference for {} → {}",
-                tourist.getTouristName(), typeId, tourist.getTypePreference(typeId));
     }
 
     @Nullable
@@ -1461,9 +1447,6 @@ public class TouristMoveGoal extends Goal {
         usingRoad = planRoute(target);
         wpIndex = 1;
         moveToNext(speed, target);
-        Log.debug(TAG, "[Tourist] {} heading to {} via {}",
-                tourist.getTouristName(), target.toShortString(),
-                usingRoad ? "road" : "direct");
     }
 
     private boolean planRoute(BlockPos target) {

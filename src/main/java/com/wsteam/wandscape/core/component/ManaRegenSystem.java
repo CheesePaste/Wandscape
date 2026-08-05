@@ -2,7 +2,6 @@ package com.wsteam.wandscape.core.component;
 
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Regenerates mana for all entities that have a ManaPool component.
@@ -23,7 +22,6 @@ public class ManaRegenSystem implements System {
             }
         }
         if (regened > 0) {
-            Log.debug(TAG, "regen'd %d entities", regened);
         }
     }
 }

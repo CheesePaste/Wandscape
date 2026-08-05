@@ -199,8 +199,6 @@ public final class DailySettlementSystem {
                         state.getBuildingId(), state.getBuildingTypeId(), state.getCategory(),
                         true, false, false));
 
-                Log.debug(TAG, "[Settlement] {} paid maintenance: {}",
-                        state.getBuildingId().toString().substring(0, 8), cost.costs());
             } else {
                 // Shutdown
                 com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi()

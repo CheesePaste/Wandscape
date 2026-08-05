@@ -3,7 +3,6 @@ package com.wsteam.wandscape.core.boundary;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.types.*;
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.boundary.EntityOps;
@@ -34,7 +33,6 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         } else {
             blocks.put(pos, type);
         }
-        Log.debug(TAG, "setBlock %s → %s", pos, type.id());
     }
 
     @Override
@@ -49,23 +47,19 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     @Override
     public void toggle(GridPos pos) {
-        Log.debug(TAG, "toggle %s", pos);
     }
 
     @Override
     public void activate(GridPos pos) {
-        Log.debug(TAG, "activate %s", pos);
     }
 
     @Override
     public void openGui(GridPos pos) {
-        Log.debug(TAG, "openGui %s", pos);
     }
 
     @Override
     public void setBlockEntityData(GridPos pos, @Nullable String nbtBase64) {
         if (nbtBase64 != null && !nbtBase64.isEmpty()) {
-            Log.debug(TAG, "setBlockEntityData %s (nbt=%d bytes)", pos, nbtBase64.length());
         }
     }
 
@@ -73,8 +67,6 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     @Override
     public void applyEffect(EntityId target, EffectId effect, int strength, int duration) {
-        Log.debug(TAG, "applyEffect %s strength=%d duration=%d on %s",
-                effect.id(), strength, duration, target);
     }
 
     @Override
@@ -88,8 +80,6 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     public CompletableFuture<Void> beginRitual(RitualId ritual, GridPos target, World world,
                                                long casterId,
                                                Map<String, String> params) {
-        Log.debug(TAG, "beginRitual %s target=%s caster=%d params=%s → completed (sync)",
-                ritual.id(), target, casterId, params);
         // All rituals are sync for headless testing
         return CompletableFuture.completedFuture(null);
     }
@@ -99,15 +89,11 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     @Override
     public void addResource(ResourceId resource, int amount) {
         warehouse.merge(resource, amount, Integer::sum);
-        Log.debug(TAG, "addResource %s: +%d (total %d)", resource.id(), amount,
-                warehouse.getOrDefault(resource, 0));
     }
 
     /** Seed the warehouse with initial resources. */
     public void seedWarehouse(ResourceId resource, int amount) {
         warehouse.merge(resource, amount, Integer::sum);
-        Log.debug(TAG, "seedWarehouse %s: +%d (total %d)", resource.id(), amount,
-                warehouse.getOrDefault(resource, 0));
     }
 
     @Override
@@ -121,7 +107,6 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         int avail = available(resource);
         if (avail < amount) return false;
         reserved.merge(resource, amount, Integer::sum);
-        Log.debug(TAG, "reserve %s: %d (available after: %d)", resource.id(), amount, available(resource));
         return true;
     }
 
@@ -131,15 +116,12 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
         if (res == null || res < amount) return false;
         reserved.merge(resource, -amount, Integer::sum);
         warehouse.merge(resource, -amount, Integer::sum);
-        Log.debug(TAG, "commit %s: -%d (remaining: %d)", resource.id(), amount,
-                warehouse.getOrDefault(resource, 0));
         return true;
     }
 
     @Override
     public void release(ResourceId resource, int amount) {
         reserved.merge(resource, -amount, (a, b) -> Math.max(0, a + b));
-        Log.debug(TAG, "release %s: %d", resource.id(), amount);
     }
 
     @Override

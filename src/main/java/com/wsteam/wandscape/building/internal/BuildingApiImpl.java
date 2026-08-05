@@ -128,8 +128,6 @@ public class BuildingApiImpl implements BuildingApi {
                     .computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                     .merge(state.getBuildingTypeId(), 1, Integer::sum);
         }
-        Log.debug(TAG, "registered building {} type={} at {}",
-                state.getBuildingId(), state.getBuildingTypeId(), state.getAnchor());
 
         // Notify downstream systems (e.g. tourist spawner, colony evaluation)
         // so they react to building registration regardless of whether an NPC
@@ -325,7 +323,6 @@ public class BuildingApiImpl implements BuildingApi {
         if (state == null) return;
 
         if (state.isDemolishing()) {
-            Log.debug(TAG, "demolishBuilding: {} already being demolished", buildingId);
             return;
         }
 
@@ -394,19 +391,12 @@ public class BuildingApiImpl implements BuildingApi {
         for (BuildingState state : sd.getAllBuildings()) {
             String id8 = state.getBuildingId().toString().substring(0, 8);
             if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())) {
-                Log.debug(TAG, "[BldgAPI] skip {} colony mismatch: filter={} state={}",
-                        id8,
-                        colonyId != null ? colonyId.toString().substring(0, 8) : "null",
-                        state.getColonyId() != null ? state.getColonyId().toString().substring(0, 8) : "null");
                 continue;
             }
             if (currentTasks.containsKey(state.getBuildingId())) {
-                Log.debug(TAG, "[BldgAPI] skip {} has active task", id8);
                 continue;
             }
             if (!state.hasWork()) {
-                Log.debug(TAG, "[BldgAPI] skip {} queue={} shutdown={} noWork=true",
-                        id8, state.getTaskQueue().size(), state.isShutdown());
                 continue;
             }
             // No longer skip unloaded anchors: BuildingTaskSource force-loads the
@@ -414,10 +404,6 @@ public class BuildingApiImpl implements BuildingApi {
             // even while its chunks are unloaded.
             result.add(state.getBuildingId());
         }
-        Log.debug(TAG, "[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
-                colonyId != null ? colonyId.toString().substring(0, 8) : "null",
-                result.size(),
-                result.stream().map(u -> u.toString().substring(0, 8)).toList());
         return result;
     }
 
@@ -505,9 +491,6 @@ public class BuildingApiImpl implements BuildingApi {
             result.add(state.getBuildingId());
         }
 
-        Log.debug(TAG, "[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
-                colonyId != null ? colonyId.toString().substring(0, 8) : "null",
-                category, result.size(), total, skippedColony, skippedCat);
         return result;
     }
 
@@ -734,7 +717,6 @@ public class BuildingApiImpl implements BuildingApi {
                 }
             }
         }
-        Log.debug(TAG, "[BldgAPI] findBeds({}) → {}/{} blocks in boundary", buildingId, found, total);
         return beds;
     }
 
@@ -777,7 +759,6 @@ public class BuildingApiImpl implements BuildingApi {
                 }
             }
         }
-        Log.debug(TAG, "[BldgAPI] sampleWalkableGround({}) → {} samples", buildingId, result.size());
         return result;
     }
 

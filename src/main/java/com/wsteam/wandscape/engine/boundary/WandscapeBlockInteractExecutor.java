@@ -133,8 +133,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         });
 
-        Log.debug(TAG, "block_interact {}: NPC {} channeling at {} ({} ticks)",
-                action, npcId, op.target(), op.channelTicks());
         return future;
     }
 
@@ -161,8 +159,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         pending.removeIf(p -> p.future().isDone());
 
         if (!toComplete.isEmpty()) {
-            Log.debug(TAG, "block_interact tickAll: {} completed, {} remaining",
-                    toComplete.size(), pending.size());
         }
     }
 
@@ -493,7 +489,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         String itemId = resolveElementItem(elementName);
         if (itemId == null) {
-            Log.debug(TAG, "gather transport: no visual item for element '{}', skipping", elementName);
             return;
         }
 
@@ -505,8 +500,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         ItemKey key = ItemKey.of(itemId, null);
         transporter.send(key, amount, from, to, npc.level(), npcId, route);
-        Log.debug(TAG, "gather transport: {} x{}({}) NPC→warehouse",
-                elementName, amount, itemId);
     }
 
     /** Launch transport animation for produced items (synthesize/craft_wand/brew_potion). */
@@ -521,8 +514,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         TransportRoute route = planRoute(colonyId, from, to, npc.level());
 
         transporter.send(outputKey, count, from, to, npc.level(), npcId, route);
-        Log.debug(TAG, "production transport: {} x{} NPC→warehouse",
-                outputKey.itemId(), count);
     }
 
     /** Map an element name to a representative MC block ID for visual transport. */

@@ -84,9 +84,6 @@ public final class RoadBlobExplorer {
                         Set<PathPoint> blob = discoverBlob(level, pos, roadTag, cache);
                         if (!blob.isEmpty()) {
                             UUID blobId = cache.addBlob(blob);
-                            Log.debug(TAG, "Blob {}: {} blocks at ({},{},{})",
-                                    blobId.toString().substring(0, 8),
-                                    blob.size(), pos.getX(), pos.getY(), pos.getZ());
                             found++;
                             // After discovering a blob, skip to next scan position
                             // (the blob's blocks are now cached and will be skipped)
@@ -158,8 +155,6 @@ public final class RoadBlobExplorer {
         }
 
         if (blob.isEmpty()) {
-            Log.debug(TAG, "BFS at ({},{},{}) found 0 blocks after {} checks",
-                    start.getX(), start.getY(), start.getZ(), checked);
         }
 
         return blob;

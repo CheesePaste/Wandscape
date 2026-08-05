@@ -193,7 +193,7 @@ public final class BlueprintInterpreter {
                 String level = s.level();
                 switch (level) {
                     case "warn" -> Log.warn(TAG, "%s", text);
-                    case "debug" -> Log.debug(TAG, "%s", text);
+                    case "debug" -> { /* FINE logs removed */ }
                     default -> Log.info(TAG, "%s", text);
                 }
                 yield List.of(); // No AtomicOp
@@ -655,7 +655,6 @@ public final class BlueprintInterpreter {
         } catch (NumberFormatException ignored) {}
 
         // 3. Fallback: deterministic 64-bit non-negative hash (FNV-1a)
-        Log.debug(TAG, "parseEntityId: hash fallback for '{}' (not a UUID or numeric ID)", str);
         long hash = 0xCBF29CE484222325L;
         for (int i = 0; i < str.length(); i++) {
             hash ^= str.charAt(i);

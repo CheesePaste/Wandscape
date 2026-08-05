@@ -131,7 +131,6 @@ public final class EntityComponentBridge {
         // (chunk unload/reload). Only trust this path if the UUID is still known.
         if (npc.ecsEntityId > 0 && ecsIdByUuid.containsKey(npc.getUUID())
                 && world.has(npc.ecsEntityId, Position.class)) {
-            Log.debug(TAG, "NPC {} reconnecting to ECS entity {}", npc.getUUID(), npc.ecsEntityId);
             world.addComponent(npc.ecsEntityId,
                     new Position(
                             new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));

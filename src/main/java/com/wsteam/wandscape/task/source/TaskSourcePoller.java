@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.task.source;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 
@@ -27,7 +26,6 @@ public class TaskSourcePoller implements System {
 
         for (TaskSource source : sources) {
             if (tickCounter % source.pollIntervalTicks() == 0) {
-                Log.debug(TAG, "polling %s (tick %d)", source.getClass().getSimpleName(), tickCounter);
                 source.poll(world.taskPool, world);
             }
         }

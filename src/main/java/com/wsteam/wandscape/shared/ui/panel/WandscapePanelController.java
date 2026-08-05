@@ -172,7 +172,6 @@ public final class WandscapePanelController {
                     // SPLINE mode: keep the V-panel open and embed the native spline editor.
                     // SplineEditorController takes over world input (right-click camera, WASD flight, gizmo drag).
                     com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                    Log.debug(TAG, "[Spline Editor] Entered spline edit mode (right-drag camera, WASD flight, left-click add/select point, drag gizmo, ESC exit)");
                 } else {
                     // REPLACE / FILL / DESTROY_FILL: leave the spline editor, enter PLACING phase as before
                     if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
@@ -185,7 +184,6 @@ public final class WandscapePanelController {
                         case DESTROY_FILL -> "[Destroy/Fill] Right-click a block to set ref height & block, Left-click to set area, Enter to submit";
                         default -> "[Road Replace] Right-click set start, Left-click set end, Enter to submit";
                     };
-                    Log.debug(TAG, hint);
                 }
                 event.setCanceled(true);
                 return;
@@ -202,7 +200,6 @@ public final class WandscapePanelController {
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
                     String name = RoadPlacementState.getSelectedPreset().displayName();
-                    Log.debug(TAG, "[Road] Placing preset: {} (right-click start, left-click end, ESC reselect)", name);
                 }
                 // Single click: highlight only (handlePresetDoubleClick already set selectedPresetIndex)
                 event.setCanceled(true);
@@ -320,7 +317,6 @@ public final class WandscapePanelController {
             WandscapePanelState.enterPlacingPhase();
             String name = (slotIndex >= 0 && slotIndex < slots.size())
                     ? slots.get(slotIndex).displayName() : "???";
-            Log.debug(TAG, "[Build] Selected: {} (ESC to reselect)", name);
         }
     }
 
@@ -348,7 +344,6 @@ public final class WandscapePanelController {
         if (com.wsteam.wandscape.WandscapeClient.PANEL_AREAS_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
             WandscapePanelState.toggleBuildingAreas();
-            Log.debug(TAG, "[Panel] Building areas overlay: {}", WandscapePanelState.isShowBuildingAreas() ? "ON" : "OFF");
             return;
         }
 
@@ -392,7 +387,6 @@ public final class WandscapePanelController {
         // 1. Spline road editor: ESC exits edit mode, stays in the ROAD selection bar
         if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
             com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-            Log.debug(TAG, "[Panel] ESC: exited spline editor (stay in Road)");
             return;
         }
 
@@ -405,7 +399,6 @@ public final class WandscapePanelController {
                 && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.PLACING);
         if (placing) {
             WandscapePanelState.toggleCursor();
-            Log.debug(TAG, "[Panel] ESC: raised cursor back to selection bar");
             return;
         }
 
@@ -419,13 +412,11 @@ public final class WandscapePanelController {
                     || after == WandscapePanelState.SubMode.STATS) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
             }
-            Log.debug(TAG, "[Panel] ESC: exited sub-mode {} (panel stays open)", sub);
             return;
         }
 
         // 4. Bare panel (overview or no sub-mode) → close it
         WandscapePanelState.closePanel();
-        Log.debug(TAG, "[Panel] ESC: closed panel");
     }
 
     /** Type printable chars / backspace into the building search box. @return true if consumed. */
@@ -466,7 +457,6 @@ public final class WandscapePanelController {
             WandscapePanelState.exitCurrentSubMode();
             com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            Log.debug(TAG, "[Panel] Ground mode (G for overview)");
         } else {
             // Ground → Overview mode
             WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
@@ -475,7 +465,6 @@ public final class WandscapePanelController {
                 WandscapePanelState.exitCurrentSubMode();
             }
             WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.OVERVIEW);
-            Log.debug(TAG, "[Panel] Overview mode (WASD move, Scroll zoom, G for ground)");
         }
     }
 

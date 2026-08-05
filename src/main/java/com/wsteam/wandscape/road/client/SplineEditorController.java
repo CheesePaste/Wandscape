@@ -280,7 +280,6 @@ public final class SplineEditorController {
                 float factor = (float) Math.pow(1.3, delta);
                 SplineEditorClientState.setTopDownSpeed(
                         Math.max(1.0f, Math.min(100.0f, SplineEditorClientState.getTopDownSpeed() * factor)));
-                Log.debug(TAG, "[SplineEditor] Top-Down Speed: %.1f", SplineEditorClientState.getTopDownSpeed());
             } else {
                 Vec3 dir = Vec3.directionFromRotation(
                         SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
@@ -300,7 +299,6 @@ public final class SplineEditorController {
 
         float factor = (float) Math.pow(1.2, delta);
         flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
-        Log.debug(TAG, "[SplineEditor] Freecam Speed: %.2f (BPS: %.1f)", flyingSpeed, flyingSpeed * 20.0f);
     }
 
     private static boolean wasHelpDown = false;
@@ -345,10 +343,8 @@ public final class SplineEditorController {
             if (gDown && !wasGDown) {
                 if (SplineEditorClientState.isTopDown()) {
                     SplineEditorClientState.exitTopDown();
-                    Log.debug(TAG, "[SplineEditor] Top-down view off (G to re-enable)");
                 } else {
                     SplineEditorClientState.enterTopDown();
-                    Log.debug(TAG, "[SplineEditor] Top-down view on (RMB drag rotate, WASD pan, Scroll zoom, G to exit)");
                 }
             }
             wasGDown = gDown;

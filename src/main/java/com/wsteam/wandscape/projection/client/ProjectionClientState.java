@@ -134,7 +134,6 @@ public final class ProjectionClientState {
             buildingSlots.clear();
             buildingSlots.addAll(slots);
         }
-        Log.debug(TAG, "[Projection] Slot list refreshed to {} buildings", slots.size());
     }
 
     // ── Ghost position ──

@@ -149,7 +149,6 @@ public final class ColonyLevelManager {
                 }
             }
         } catch (IllegalStateException e) {
-            Log.debug(TAG, "level-up celebration skipped — building api not loaded");
         }
     }
 

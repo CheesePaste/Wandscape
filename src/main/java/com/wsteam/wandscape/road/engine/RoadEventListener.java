@@ -56,7 +56,6 @@ public final class RoadEventListener {
     }
 
     private static void onEvent(CustomEvent event) {
-        Log.debug(TAG, "[Road] event received: {} params={}", event.name(), event.params().keySet());
         switch (event.name()) {
             case "build_complete" -> onBuildComplete(event);
             case "road_segment_complete" -> onSegmentComplete(event);
@@ -89,7 +88,6 @@ public final class RoadEventListener {
         roadData.setBuildingCount(buildingCount);
 
         if (buildingCount < threshold) {
-            Log.debug(TAG, "[Road] Skipping — {} buildings < threshold {}", buildingCount, threshold);
             roadData.markChanged();
             return;
         }
@@ -151,13 +149,11 @@ public final class RoadEventListener {
 
         // ── Incremental ──
         if (newBuilding == null) {
-            Log.debug(TAG, "[Road] No new building parsed — skipping incremental");
             roadData.markChanged();
             return;
         }
 
         if (network.getBuildingNode(newBuilding.id()).isPresent()) {
-            Log.debug(TAG, "[Road] Building {} already in network — skipping", buildingName);
             roadData.markChanged();
             return;
         }
@@ -213,8 +209,6 @@ public final class RoadEventListener {
 
         String edgeIdStr = event.params().get("edge_id");
         String segIdStr = event.params().get("segment_id");
-        Log.debug(TAG, "[Road] segment_complete event: edge_id={} segment_id={} params={}",
-                edgeIdStr, segIdStr, event.params().keySet());
 
         if (edgeIdStr == null) {
             Log.warn(TAG, "[Road] segment_complete event missing edge_id — params={}",

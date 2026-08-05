@@ -82,8 +82,6 @@ public final class HotelStayHandler {
 
         Set<UUID> guests = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
         if (guests.size() >= maxOccupancy) {
-            Log.debug(TAG, "[Tourist] Check-in failed: building {} full ({}/{})",
-                    shortId(buildingId), guests.size(), maxOccupancy);
             return false;
         }
 

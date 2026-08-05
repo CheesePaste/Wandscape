@@ -73,9 +73,6 @@ public class BuildingTaskSource implements TaskSource {
         buildingIds.sort(Comparator.comparing(UUID::toString));
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
-            Log.debug(TAG, "[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
-                    pollCount, pool.size(), buildingIds.size(),
-                    btp != null ? btp.totalBuildings() : 0);
         }
 
         ChunkLoadManager chunkLoad = ChunkLoadManager.get();
@@ -89,8 +86,6 @@ public class BuildingTaskSource implements TaskSource {
             boolean alreadyLeased = chunkLoad.isLeased(buildingId);
             if (!alreadyLeased) {
                 if (chunkLoad.leasedCount() >= budget) {
-                    Log.debug(TAG, "[BuildingTaskSource] budget reached ({}), deferring building {}",
-                            chunkLoad.leasedCount(), buildingId.toString().substring(0, 8));
                     continue;
                 }
                 if (!chunkLoad.leaseBuilding(buildingId)) {

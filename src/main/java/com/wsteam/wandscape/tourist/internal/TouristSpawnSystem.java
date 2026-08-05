@@ -300,8 +300,6 @@ public final class TouristSpawnSystem {
                 // demolished after scheduling. Never spawn a tourist heading to a ghost.
                 var target = buildingApi.getBuilding(ps.buildingId());
                 if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
-                    Log.debug(TAG, "[Tourist] dropping pending spawn — target building gone/demolished: {}",
-                            ps.buildingId().toString().substring(0, 8));
                     continue;
                 }
                 BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
@@ -575,8 +573,6 @@ public final class TouristSpawnSystem {
                 t.getTouristName(), satisfaction, visitCount, t.level().getGameTime());
         emitNarrativeEvent(departureEvent);
 
-        Log.debug(TAG, "[Tourist] {} departed (energy={} satisfaction={} mage={})",
-                t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
     }
 
     // ════════════════════════════════════════════════════════════════

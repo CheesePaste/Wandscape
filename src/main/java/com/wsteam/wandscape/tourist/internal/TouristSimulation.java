@@ -168,8 +168,6 @@ public final class TouristSimulation {
         String what = purchase.count() > 1
                 ? purchase.itemId() + " ×" + purchase.count()
                 : purchase.itemId();
-        Log.debug(TAG, "[Tourist] {} bought {} at shop {} (sat {}→{}, energy {})",
-                t.getTouristName(), what, shortId(buildingId), satBefore, t.getSatisfaction(), t.getEnergy());
         return new InteractionResult(purchase, satBefore, gain, -20, what);
     }
 
@@ -201,8 +199,6 @@ public final class TouristSimulation {
                 }
             }
         }
-        Log.debug(TAG, "[Tourist] {} used service {} (sat {}→{}, energy {})",
-                t.getTouristName(), shortId(buildingId), satBefore, t.getSatisfaction(), t.getEnergy());
         return new InteractionResult(null, satBefore, gain, -svc.energyPerUse(), "服务");
     }
 

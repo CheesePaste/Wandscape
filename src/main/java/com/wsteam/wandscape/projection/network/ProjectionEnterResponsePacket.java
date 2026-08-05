@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.core.BlockPos;
@@ -51,8 +50,6 @@ public record ProjectionEnterResponsePacket(
             ProjectionClientState.enterProjection(packet.bodyAnchor, packet.buildingSlots);
             // Auto-open building selection bar
             WandscapePanelState.openBuildingBar();
-            Log.debug("ProjectionEnterResponsePacket", "[Build] {} buildings available — double-click to select",
-                    packet.buildingSlots.size());
         } else {
             ProjectionClientState.exitProjection();
             WandscapePanelState.closeBuildingBar();
