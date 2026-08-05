@@ -118,3 +118,17 @@
 2. **面板始终显示**：不随标签切换隐藏，decompose/synthesize 共用同一队列 ✅
 3. **仓库不需要**：仓库无本地队列 ✅
 4. **刷新策略**：modify 操作后服务端回发，Screen 打开时发 REFRESH 请求，不主动轮询 ✅
+
+### 第 3 轮：显示正在执行的任务 + 进度条 ✅ (2026-08-05)
+
+**问题**：任务被 `BuildingTaskSource` 领取发布后即从 `taskQueue` 移除，队列第 1 位显示的是"下一个待执行"而非"正在执行"。
+
+**改动**：
+- `TaskQueueDataPacket` 新增 `CurrentTask`（entry + stepIndex/totalSteps + channelRemainingTicks/channelTotalTicks），包带 nullable `current` 字段（write/read 同步）。
+- 服务端 `TaskQueueModifyPacket.handleServer`：由 `BuildingState.getCurrentTaskId()`（= `new UUID(taskId,0)`）→ `WandscapeEngine.getWorld().taskPool.get(taskId)` 取 `GlobalTask`，用同一套 categorize/extractItemId/summarize 构造当前任务条目；进度来源：
+  - 通道型任务（production:*、node:gather）：`channel_ticks` 参数为总耗时，剩余 tick 从 `WandscapeBlockInteractExecutor.getChannelProgress(anchor)` 取（按 op.target == 建筑锚点匹配，未开始则进度 0%）。
+  - 多步任务（build:*）：`stepIndex / sequence.size()`。
+  - 辅助方法 `summarizeWorkItem` 重构为 `(blueprintId, params)`，`anchorOf()` 解析锚点（优先 `params["anchor"]`，回退 `state.getAnchor()`）。
+- `TaskQueuePanel`：新增 `CurrentInfo`/`setCurrent`/`tickProgress()`，顶部渲染锁定当前任务行（金色高亮 + 进度条 + 剩余时间文案：通道型"~Ns"/M:SS，多步型"i/N"）；pending 行下移一行。
+- 三个屏幕（Workstation/CraftingStation/Node）`updateQueueData` 传 `packet.current()`；新增 `tick()` 每 20 tick 重发 REFRESH + `taskQueuePanel.tickProgress()`（进度条每秒实时更新、两帧间平滑递减）。
+- **队首保护保留**：`BuildingApiImpl.removeFromQueue` 仍拒绝 index 0（下一个待执行任务不可删除）。
