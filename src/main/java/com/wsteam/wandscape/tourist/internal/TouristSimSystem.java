@@ -57,6 +57,7 @@ public final class TouristSimSystem {
     private static final int WANDER_RADIUS = 24;
 
     private int tickCounter;
+    private int simStepLogCounter;
     private TouristSimRegistry registry;
     private final Random random = new Random();
 
@@ -108,6 +109,9 @@ public final class TouristSimSystem {
         s.setSpellPower(t.getSpellPower());
         exportToShadow(t, s);
         registry.put(t.getUUID(), s);
+        Log.info(TAG, "[Tourist][diag] adopted shadow {} at ({},{}), commute={}, target={}",
+                s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
+                s.getCommuteTarget(), s.getTargetBuildingId());
     }
 
     /** Remove a tourist's shadow (called when a loaded tourist departs). */
@@ -124,7 +128,11 @@ public final class TouristSimSystem {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();
-        if (level == null || registry == null) return;
+        if (level == null || registry == null) {
+            if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick skipped (server/level/registry null)");
+            return;
+        }
+        if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick firing, shadows={}", registry.getShadows().size());
 
         if (++tickCounter % SIM_INTERVAL != 0) return;
         runTick(level);
@@ -151,13 +159,21 @@ public final class TouristSimSystem {
             }
         }
 
+        int loadedCount = 0, simmedCount = 0, stuckCount = 0;
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
             boolean loaded = level.isLoaded(new BlockPos((int) s.getPosX(), (int) s.getPosY(), (int) s.getPosZ()));
             if (loaded) {
+                loadedCount++;
+                if (entities.get(s.getTouristId()) == null) stuckCount++;
                 handleLoaded(level, s, entities.get(s.getTouristId()));
             } else {
+                simmedCount++;
                 simStep(level, s);
             }
+        }
+        if (tickCounter % 200 == 0) {
+            Log.info(TAG, "[Tourist][diag] runTick shadows={} loaded={} (entity-null={}) simmed={}",
+                    shadows.size(), loadedCount, stuckCount, simmedCount);
         }
     }
 
@@ -273,6 +289,13 @@ public final class TouristSimSystem {
     // ── Unloaded sim step ──
 
     private void simStep(ServerLevel level, TouristShadow s) {
+        if (++simStepLogCounter % 100 == 0) {
+            Log.info(TAG, "[Tourist][diag] simStep {} pos=({},{}) commute={} target={} sat={} energy={} tick={}",
+                    s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
+                    s.getCommuteTarget() != null ? s.getCommuteTarget().toShortString() : "null",
+                    s.getTargetBuildingId() != null ? s.getTargetBuildingId().toString().substring(0, 8) : "null",
+                    s.getSatisfaction(), s.getEnergy(), s.simTick());
+        }
         s.advanceSimTick(SIM_INTERVAL);
         s.markUnhydrated();
 
