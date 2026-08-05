@@ -117,7 +117,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         // ── CORNER mode: minimal pairing UI ──
         if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
             addCustomButton(leftPos + PW / 2 - 50, y + 70, 100, 22, "完成", this::onClose);
-            maxScroll = 0;
+            maxScroll = -300;
             return;
         }
 
@@ -166,7 +166,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
             addCustomButton(lx + 4, exportBtnY, 95, 22, "扫描区域", () -> doScan());
             addCustomButton(lx + 105, exportBtnY, 215, 22, "导出与热注册道路 JSON", () -> doExport());
 
-            maxScroll = 0;
+            maxScroll = -300;
             return;
         }
 
@@ -218,7 +218,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         addCustomButton(lx + 4, exportBtnY, 95, 22, "扫描区域", () -> doScan());
         addCustomButton(lx + 105, exportBtnY, 215, 22, "导出建筑 JSON", () -> doExport());
 
-        maxScroll = 0;
+        maxScroll = -300;
     }
 
     private void onAutoDetectDoor() {
