@@ -291,6 +291,8 @@ public class Wandscape {
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();
     private final BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
     public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
+    public static final com.wsteam.wandscape.road.data.RoadPresetLoader ROAD_PRESET_LOADER =
+            com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance();
     private DecorationBonusSystem decorationBonusSystem;
     private ShopStockManager shopStockManager;
     private WonderEffectApplier wonderEffectApplier;
@@ -341,6 +343,7 @@ public class Wandscape {
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
         BLUEPRINT_CONFIG_LOADER.registerWith(DATA_LOADER);
+        ROAD_PRESET_LOADER.registerWith(DATA_LOADER);
         WandscapeEngine.setBlueprintConfigLoader(BLUEPRINT_CONFIG_LOADER);
 
         // Production recipe loader

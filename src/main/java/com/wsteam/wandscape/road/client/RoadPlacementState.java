@@ -3,6 +3,7 @@ package com.wsteam.wandscape.road.client;
 import java.util.List;
 
 import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.road.data.RoadPresetLoader;
 
 import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
@@ -37,8 +38,6 @@ public final class RoadPlacementState {
 
     /** The block ID right-clicked as reference in DESTROY_FILL mode. */
     private static volatile String refBlockId = "";
-
-    private static final List<RoadPreset> presets = RoadPreset.DEFAULT_PRESETS;
 
     // ── Double-click tracking (mirrors WandscapePanelState.BUILD pattern) ──
     private static volatile long lastPresetClickTime = 0;
@@ -136,14 +135,22 @@ public final class RoadPlacementState {
 
     public static int getSelectedPresetIndex() { return selectedPresetIndex; }
     public static void setSelectedPresetIndex(int idx) {
-        if (idx >= 0 && idx < presets.size()) {
+        if (idx >= 0 && idx < RoadPresetLoader.getInstance().getAll().size()) {
             selectedPresetIndex = idx;
             SplineEditorClientState.rebuildDynamicTemplate();
         }
     }
 
-    public static RoadPreset getSelectedPreset() { return presets.get(selectedPresetIndex); }
-    public static List<RoadPreset> getPresets() { return presets; }
+    public static RoadPreset getSelectedPreset() {
+        List<RoadPreset> all = RoadPresetLoader.getInstance().getAll();
+        if (selectedPresetIndex < 0 || selectedPresetIndex >= all.size()) {
+            return RoadPreset.DEFAULT_PRESETS.get(0);
+        }
+        return all.get(selectedPresetIndex);
+    }
+    public static List<RoadPreset> getPresets() {
+        return RoadPresetLoader.getInstance().getAll();
+    }
 
     // ── Positions ──
 

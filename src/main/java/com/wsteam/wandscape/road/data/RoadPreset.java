@@ -1,6 +1,15 @@
 package com.wsteam.wandscape.road.data;
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -11,6 +20,31 @@ import net.minecraft.world.level.block.Blocks;
 public record RoadPreset(String id, String displayName, List<WeightedEntry> blocks) {
 
     public record WeightedEntry(String blockId, int weight) {}
+
+    /**
+     * Custom Gson deserializer matching the scanner export format
+     * ({@code id}, {@code display_name}, {@code blocks:[{blockId, weight}]}).
+     */
+    public static class Deserializer implements JsonDeserializer<RoadPreset> {
+        @Override
+        public RoadPreset deserialize(JsonElement json, Type typeOfT,
+                                       JsonDeserializationContext context) throws JsonParseException {
+            JsonObject obj = json.getAsJsonObject();
+            String id = obj.has("id") ? obj.get("id").getAsString() : "";
+            String name = obj.has("display_name") ? obj.get("display_name").getAsString() : id;
+            List<WeightedEntry> blocks = new ArrayList<>();
+            if (obj.has("blocks")) {
+                JsonArray arr = obj.getAsJsonArray("blocks");
+                for (JsonElement el : arr) {
+                    JsonObject bo = el.getAsJsonObject();
+                    String blockId = bo.has("blockId") ? bo.get("blockId").getAsString() : "";
+                    int weight = bo.has("weight") ? bo.get("weight").getAsInt() : 1;
+                    if (!blockId.isEmpty()) blocks.add(new WeightedEntry(blockId, weight));
+                }
+            }
+            return new RoadPreset(id, name, List.copyOf(blocks));
+        }
+    }
 
     /** Convenience factory for a single-block preset. */
     public static RoadPreset single(String id, String displayName, Block block) {

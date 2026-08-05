@@ -301,7 +301,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         // Write file into the datapack-readable buildings directory so it can be built immediately
         // and ships with the mod jar (dev source resources) or stays readable via /reload (world datapack).
         try {
-            Path exportDir = resolveBuildingsDir(level);
+            Path exportDir = resolveDatapackDir(level, "buildings", "wandscape_builds");
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 
@@ -323,20 +323,20 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
     }
 
     /**
-     * Resolve the directory buildings are loaded from as a datapack.
+     * Resolve the datapack directory for a config category (e.g. "buildings").
      * In a dev environment this is the mod's source resources
-     * ({@code src/main/resources/data/wandscape/buildings}), which are packaged into the mod jar
-     * and served as the {@code data/wandscape/buildings} datapack for real players.
+     * ({@code src/main/resources/data/wandscape/<category>}), which are packaged into the mod jar
+     * and served as the {@code data/wandscape/<category>} datapack for real players.
      * Falls back to a world datapack so the export is still readable via /reload.
      */
-    private static Path resolveBuildingsDir(ServerLevel level) {
+    private static Path resolveDatapackDir(ServerLevel level, String category, String fallbackPack) {
         Path serverDir = level.getServer().getServerDirectory();
         if (serverDir.getParent() != null) {
-            Path dev = serverDir.getParent().resolve("src/main/resources/data/wandscape/buildings");
-            if (Files.isDirectory(dev)) return dev;
+            Path devBase = serverDir.getParent().resolve("src/main/resources/data/wandscape");
+            if (Files.isDirectory(devBase)) return devBase.resolve(category);
         }
         Path datapacks = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR);
-        return datapacks.resolve("wandscape_builds/data/wandscape/buildings");
+        return datapacks.resolve(fallbackPack + "/data/wandscape/" + category);
     }
 
     private static void exportRoad(BuildingScannerBlockEntity scanner,
@@ -384,15 +384,19 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         root.add("blocks", blocksArr);
 
         try {
-            Path exportDir = level.getServer().getServerDirectory().resolve("wandscape_roads");
+            Path exportDir = resolveDatapackDir(level, "road_presets", "wandscape_roads");
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
 
-            Log.info(TAG, "Exported road preset '{}' to {}", id, outFile.toAbsolutePath());
+            // Register in-memory so the preset is usable immediately, no /reload needed.
+            com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance().registerFromJson(root);
+
+            Log.info(TAG, "Exported road preset '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath() + " §a(Hot registered!)"));
+                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath()
+                    + "§a — 可立即使用，/reload 后依然有效"));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export road preset '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(

@@ -150,10 +150,7 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
     // ── Helper ──
 
     private static RoadPreset findPreset(String id) {
-        for (RoadPreset p : RoadPreset.DEFAULT_PRESETS) {
-            if (p.id().equals(id)) return p;
-        }
-        return null;
+        return com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance().get(id);
     }
 
     // ── StreamCodec ──
