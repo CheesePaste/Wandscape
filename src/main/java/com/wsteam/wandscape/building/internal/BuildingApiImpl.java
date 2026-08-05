@@ -15,6 +15,7 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
 import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
 import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
 
@@ -168,6 +169,8 @@ public class BuildingApiImpl implements BuildingApi {
         // Clear shop stock too — otherwise a demolished shop still sells goods.
         sd.removeShopData(state.getBuildingId());
         sd.unregister(state.getBuildingId());
+        // Notify engine services (e.g. ChunkLoadManager) to release the footprint lease.
+        NeoForge.EVENT_BUS.post(new BuildingRemovedEvent(state.getBuildingId(), state.getColonyId()));
     }
 
     // ---- Shutdown/Restart ----
@@ -406,11 +409,9 @@ public class BuildingApiImpl implements BuildingApi {
                         id8, state.getTaskQueue().size(), state.isShutdown());
                 continue;
             }
-            if (!serverLevel.isLoaded(state.getAnchor())) {
-                Log.debug(TAG, "[BldgAPI] skip {} anchor={} not loaded",
-                        id8, state.getAnchor());
-                continue;
-            }
+            // No longer skip unloaded anchors: BuildingTaskSource force-loads the
+            // building's footprint before dispatching, so the colony keeps building
+            // even while its chunks are unloaded.
             result.add(state.getBuildingId());
         }
         Log.debug(TAG, "[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",

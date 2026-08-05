@@ -456,3 +456,15 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 - **为什么只发生在面板打开时？** 引导/统计/建筑区域同步本就以面板打开为刷新时机；殖民地创建后 `guideApi.sendToPlayer(player, colonyId)` 拿到非空 colonyId，引导从第 1 步起即可正常推进。
 - **版本**：v1.10.2a→v1.10.3a（补丁号 +1：bug 修复）。
 
+
+## 殖民地 24/7 运行：按需强加载建筑 footprint（2026-08-05）
+
+目标：殖民地在区块卸载时几乎全部行为照常运行（经济/生产/任务调度 24/7），只在"必须放置方块"（建造/生产/采集/拆除）时强加载建筑 footprint 区块，做完释放。不做"虚拟世界 ledger"——物理世界永远是真相源，方块只落在真实加载的区块里。
+
+- **为什么不做 ledger（虚拟方块状态）？** 方块写入本质必须目标区块已加载（`ServerLevel.setBlock` 对未加载区块静默 no-op，`getBlock` 返回 AIR 还会误判 TaskExecutionSystem 4a 的 no-op skip）；离线写 chunk 文件与地形生成/光照/方块实体冲突。ledger 只做"预计算 + 访问时兑现"，引入世界状态分歧、加载风暴、与玩家改动的冲突检测——全是比原问题更难的 bug 源。而"只强加载当前在施工的建筑 footprint"花销小（默认并发 3 个建筑，`general.maxConcurrentBuildings`）。
+- **为什么经济层本来就 24/7？** 经济/维护/商店/生产队列/任务进度全在 SavedData + 全局 ECS tick（`world.tick` 在 `ServerTickEvent.Post` 全局驱动，与区块加载无关）。唯一卡在加载的是方块放置与实体移动。所以只差"施工时把目标区块加载上"。
+- **NPC 卸载时怎么施工？** ECS NPC 状态在区块卸载时保留（`onNpcLeaveWorld` 只处理 KILLED/DISCARDED，注释可信已验证）；施工任务在强加载的 footprint 里执行，NPC 无需物理到场。玩家在场时区块自然加载，物理 NPC 照常寻路施工，行为不变。
+- **物资消耗**：ColonyItemBank(SavedData) + NPC ECS 库存(内存) → TransformOp 扣除，卸载时整条链路正常；缺料 → AWAITING_RESOURCES → 节点采集任务同样经强加载闭环。
+- **为什么任务归属要落盘？** `TaskPoolSavedData` 原不存 `buildingId`/`isBuildingHead`，重启后恢复任务失去建筑归属 → lease 释放失效、可能重复施工。补存后重启正确。
+- **崩溃残留**：`setChunkForced` 写入 `ForcedChunksSavedData`（磁盘持久化），崩溃会残留永久强加载。`ChunkLeaseData` 注册表（`wandscape_chunk_leases`）+ 启动对账释放解决。
+- **版本**：v1.1.0→v1.2.0（新功能：殖民地区块卸载时照常运行，只强加载活跃施工建筑）。

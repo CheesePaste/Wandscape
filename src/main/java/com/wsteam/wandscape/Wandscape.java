@@ -99,6 +99,7 @@ import com.wsteam.wandscape.engine.TaskPoolSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.engine.service.ColonyMetricsService;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
@@ -708,6 +709,10 @@ public class Wandscape {
             Log.info(TAG, "Task persistence wired — pool has {} active tasks", world.taskPool.size());
         }
 
+        // Chunk load manager — force-loads active building footprints on demand so
+        // colonies keep building/producing while their chunks are unloaded.
+        ChunkLoadManager.get().init(level);
+
         // Road persistence + API
         var roadSaved = RoadSavedData.getOrCreate(level);
         WandscapeEngine.setRoadSavedData(roadSaved);
@@ -744,6 +749,7 @@ public class Wandscape {
     public void onServerStopped(ServerStoppedEvent event) {
         Log.info(TAG, "Wandscape server stopped — resetting engine.");
         buildingApi.setLevel(null);
+        ChunkLoadManager.get().reset();
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
     }

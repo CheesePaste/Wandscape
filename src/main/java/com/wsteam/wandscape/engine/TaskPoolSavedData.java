@@ -98,6 +98,13 @@ public final class TaskPoolSavedData extends SavedData {
         tag.putString("state", task.state.name());
         tag.putInt("priority", task.priority);
 
+        // Building attribution: needed after restart so a restored head task knows
+        // which building it belongs to (lease release / duplicate-construction guard).
+        if (task.buildingId != null) {
+            tag.putUUID("bid", task.buildingId);
+        }
+        tag.putBoolean("head", task.isBuildingHead);
+
         // taskParams: store each JsonElement value as a string; oversized JSON is gzip-compressed
         // into a ByteArrayTag because NBT StringTag has a 64KB write limit.
         if (!task.taskParams.isEmpty()) {
@@ -225,6 +232,12 @@ public final class TaskPoolSavedData extends SavedData {
             if (task != null) {
                 task.state = state;
                 task.stepIndex = stepIndex;
+
+                // Restore building attribution (see taskToNbt).
+                if (tag.contains("bid")) {
+                    task.buildingId = tag.getUUID("bid");
+                    task.isBuildingHead = tag.getBoolean("head");
+                }
 
                 // Restore awaitingResource
                 if (tag.contains("await")) {

@@ -48,6 +48,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
 │   ├── system/       ECS System（注册到World.tick()）NavigationSystem + ResourceSupplySystem
 │   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService + SoundService(统一音效播放/节流)
+│   │                 + ChunkLoadManager/ChunkLeaseData（建造时按需强加载建筑 footprint，殖民地区块卸载时照常施工）
 │   ├── sound/        WandscapeSounds — 全部自定义 SoundEvent 注册点（逻辑id→sounds.json→音频）
 │   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │
@@ -101,11 +102,13 @@ Config.java           NeoForge TOML 配置，所有可调参数
 BuildingConfig JSON → BuildingConfigLoader
   → EnqueueHelper → WorkItem 入 BuildingState.taskQueue
   → BuildingTaskSource.poll(每20tick)
-  → TaskRequest → task/engine/pool/GlobalTaskPool.addTask()
+     ├─ ChunkLoadManager.leaseBuilding(强加载建筑 footprint，预算内)   ← 区块卸载时也施工
+     └─ TaskRequest → task/engine/pool/GlobalTaskPool.addTask()
   → task/scheduler/SchedulerSystem(每2tick评分: proximity×0.5 + efficiency×0.3 + attributes×0.2)
   → NPC领取 → task/scheduler/TaskExecutionSystem
   → AtomicOp → op/executor/OpExecutor → engine/boundary/WandscapeBlockOps(MC世界实际方块操作)
   → emit_event → BuildCompleteListener → BuildingSavedData.structureIntact=true
+  → head完成且队列排空 → ChunkLoadManager.releaseBuilding(区块可卸载)
 ```
 
 ### 模拟经营数据流

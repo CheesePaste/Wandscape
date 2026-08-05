@@ -2,6 +2,7 @@ package com.wsteam.wandscape.engine.source;
 
 import java.util.*;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.task.source.TaskSource;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
@@ -11,6 +12,7 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 
 /**
  * {@link TaskSource} that polls building block entities and translates
@@ -56,12 +58,19 @@ public class BuildingTaskSource implements TaskSource {
                     api.clearCurrentTask(buildingId);
                     Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
                             buildingId.toString().substring(0, 8), headId);
+                    // Queue fully drained → release the footprint lease so the
+                    // chunks can unload again.
+                    if (!btp.hasHead(buildingId)) {
+                        ChunkLoadManager.get().releaseBuilding(buildingId);
+                    }
                 }
             }
         }
 
         // ── 2. Publish new work — only for buildings without a head task ──
         List<UUID> buildingIds = api.getBuildingsWithPendingWork(null);
+        // Deterministic order so the concurrent-build budget isn't starved by map order.
+        buildingIds.sort(Comparator.comparing(UUID::toString));
 
         if (pollCount % HEARTBEAT_INTERVAL == 0) {
             Log.debug(TAG, "[BuildingTaskSource] heartbeat #{} — pool={} tasks, buildings_with_work={}, building_pool={}",
@@ -69,12 +78,34 @@ public class BuildingTaskSource implements TaskSource {
                     btp != null ? btp.totalBuildings() : 0);
         }
 
+        ChunkLoadManager chunkLoad = ChunkLoadManager.get();
+        int budget = Config.MAX_CONCURRENT_BUILDINGS.get();
+
         for (UUID buildingId : buildingIds) {
-            // Skip if building already has an active head
+            // Skip if building already has an active head (should already be leased)
             if (btp != null && btp.hasHead(buildingId)) continue;
 
+            // Force-load the footprint when a building is newly activated, within budget.
+            boolean alreadyLeased = chunkLoad.isLeased(buildingId);
+            if (!alreadyLeased) {
+                if (chunkLoad.leasedCount() >= budget) {
+                    Log.debug(TAG, "[BuildingTaskSource] budget reached ({}), deferring building {}",
+                            chunkLoad.leasedCount(), buildingId.toString().substring(0, 8));
+                    continue;
+                }
+                if (!chunkLoad.leaseBuilding(buildingId)) {
+                    Log.warn(TAG, "[BuildingTaskSource] lease failed for building {}, deferring",
+                            buildingId.toString().substring(0, 8));
+                    continue;
+                }
+            }
+
             WorkItem item = api.dequeueWork(buildingId);
-            if (item == null) continue;
+            if (item == null) {
+                // Nothing to actually do — drop the pointless lease.
+                chunkLoad.releaseBuilding(buildingId);
+                continue;
+            }
 
             try {
                 long taskId;
@@ -94,6 +125,7 @@ public class BuildingTaskSource implements TaskSource {
                             buildingId.toString().substring(0, 8), pool.size());
                 }
             } catch (Exception e) {
+                chunkLoad.releaseBuilding(buildingId);
                 Log.warn(TAG, "[BuildingTaskSource] FAILED: blueprint={} building={} error={}",
                         item.blueprintId(), buildingId, e.getMessage());
             }
