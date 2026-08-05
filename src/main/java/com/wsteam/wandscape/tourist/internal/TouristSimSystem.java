@@ -140,17 +140,12 @@ public final class TouristSimSystem {
             if (e instanceof TouristEntity t) {
                 if (!t.isAlive()) continue;
                 entities.put(t.getUUID(), t);
-                TouristShadow sh = shadows.get(t.getUUID());
-                if (sh == null) {
-                    // Orphan: no shadow → departed tourist, clear the residual body.
+                // Orphan: no shadow → departed tourist, clear the residual body.
+                // (A chunk-unload race can briefly move a shadow to another chunk while
+                // the body is still loaded — do NOT discard by position difference, that
+                // kills freshly spawned tourists.)
+                if (!shadows.containsKey(t.getUUID())) {
                     Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
-                    t.discard();
-                } else if (((int) t.getX() >> 4) != ((int) sh.getPosX() >> 4)
-                        || ((int) t.getZ() >> 4) != ((int) sh.getPosZ() >> 4)) {
-                    // Stale frozen body: the sim moved the shadow to another chunk. The
-                    // real entity spawns/positions at the shadow's chunk — this leftover
-                    // body would otherwise duplicate it when that chunk loads.
-                    Log.info(TAG, "[Tourist] discarding stale body {} (shadow moved chunk)", shortId(t.getUUID()));
                     t.discard();
                 }
             }
