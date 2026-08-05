@@ -23,25 +23,26 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
- * Drives tourists when their position chunk is not entity-ticking.
+ * Drives tourists when no player can observe them.
  *
  * <p>Every tourist has a {@link TouristShadow}. Every {@code SIM_INTERVAL} ticks
- * this system walks all shadows and switches per tourist by whether the chunk's
- * entity AI is actually running (a chunk can be loaded without ticking entities —
- * e.g. spawn chunks beyond their tick radius, or force-loaded chunks with no
- * player near):
+ * this system walks all shadows and switches per tourist by whether any player is
+ * within simulation distance. Chunk state is deliberately NOT used: spawn chunks
+ * stay "loaded"/"ticking" even with the player far away, yet the real AI doesn't
+ * behave for unobserved tourists — so player proximity is the only reliable signal:
  * <ul>
- *   <li><b>Ticking</b> — the physical entity runs the real AI; the shadow mirrors it.
- *       On the not-ticking→ticking transition the shadow wins (sim may have moved the
+ *   <li><b>Observed</b> — the physical entity runs the real AI; the shadow mirrors it.
+ *       On the unobserved→observed transition the shadow wins (sim may have moved the
  *       tourist), then the entity takes over.</li>
- *   <li><b>Not ticking</b> — the sim advances the shadow: constant-speed straight-line
+ *   <li><b>Unobserved</b> — the physical body is detached (UNLOADED_TO_CHUNK, shadow
+ *       survives) and the sim advances the shadow: constant-speed straight-line
  *       movement (no terrain, no pathfinding), shop/service/hotel interactions and
  *       cooldowns via the shared {@link TouristSimulation} economy, then departure
  *       on night / energy exhaustion.</li>
@@ -163,27 +164,48 @@ public final class TouristSimSystem {
             }
         }
 
-        int tickingCount = 0, simmedCount = 0, stuckCount = 0;
+        int observedCount = 0, simmedCount = 0, stuckCount = 0;
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
-            // "Loaded" for sim purposes = the chunk is actually entity-ticking (real AI
-            // runs). A chunk can be loaded-but-not-ticking (spawn chunks beyond their
-            // tick radius, force-loaded chunks with no player near) — the entity there is
-            // frozen, so the sim must take over. isLoaded() would miss those.
-            boolean ticking = level.getChunkSource().isPositionTicking(
-                    ChunkPos.asLong(((int) s.getPosX()) >> 4, ((int) s.getPosZ()) >> 4));
-            if (ticking) {
-                tickingCount++;
+            // The sim drives a tourist whenever no player can observe it. Chunk state is
+            // an unreliable proxy here: spawn chunks stay "loaded"/"ticking" even with the
+            // player far away (so isLoaded/isPositionTicking never let the sim take over),
+            // yet the real AI doesn't actually behave for unobserved tourists. Player
+            // proximity is the signal that decides whether the physical entity runs.
+            boolean observed = hasObserver(level, s);
+            if (observed) {
+                observedCount++;
                 if (entities.get(s.getTouristId()) == null) stuckCount++;
                 handleLoaded(level, s, entities.get(s.getTouristId()));
             } else {
+                // Detach the physical body (UNLOADED_TO_CHUNK ≠ KILLED/DISCARDED, so the
+                // shadow survives) so it can't double-run real AI against the sim's shadow.
+                TouristEntity body = entities.get(s.getTouristId());
+                if (body != null && body.isAlive()) {
+                    body.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                }
                 simmedCount++;
                 simStep(level, s);
             }
         }
         if (tickCounter % 200 == 0) {
-            Log.info(TAG, "[Tourist][diag] runTick shadows={} ticking={} (entity-null={}) simmed={}",
-                    shadows.size(), tickingCount, stuckCount, simmedCount);
+            Log.info(TAG, "[Tourist][diag] runTick shadows={} observed={} (entity-null={}) simmed={}",
+                    shadows.size(), observedCount, stuckCount, simmedCount);
         }
+    }
+
+    /** True when a non-spectator player is within simulation distance of the tourist. */
+    private boolean hasObserver(ServerLevel level, TouristShadow s) {
+        double range = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
+        double sq = range * range;
+        double x = s.getPosX();
+        double z = s.getPosZ();
+        for (net.minecraft.server.level.ServerPlayer p : level.players()) {
+            if (p.isSpectator()) continue;
+            double dx = p.getX() - x;
+            double dz = p.getZ() - z;
+            if (dx * dx + dz * dz < sq) return true;
+        }
+        return false;
     }
 
     // ── Loaded path ──
