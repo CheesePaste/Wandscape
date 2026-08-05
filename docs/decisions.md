@@ -484,3 +484,9 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 - 影子 spawn 实体时不还原外观/皮肤（TouristEntity 无 setter，纯装饰）。
 - 过夜统计 `countOvernightStayers` 仍只数加载实体，未含卸载影子（指标级缺口）。
 - NPC 跨重启库存/私有队列持久化仍另开阶段。
+
+## 游客生成用"瞬间加载"（2026-08-05）
+
+殖民地不加载时游客照常生成（TouristSpawnSystem 全局 tick，无区块门控），但直接 `addFreshEntity` 到卸载区块有隐患：`findGround` 读不到真实方块（Y 不可靠）、卸载区块加实体有边缘情况。改为 spawn 时用 `ChunkLoadManager` 临时强加载 spawn 区块 → 重新 `findGround` 找真实地面 → 生成 → 释放。游客随后以影子 sim 推进，加载时实体化。
+
+- **版本**：v1.3.2→v1.3.3（bug 修复）。

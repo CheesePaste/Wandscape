@@ -14,6 +14,7 @@ import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -28,6 +29,7 @@ import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -116,30 +118,37 @@ public final class TouristSpawnSystem {
             BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
             if (interactionTarget == null) interactionTarget = target.getPosition();
 
-            TouristEntity tourist = new TouristEntity(
-                    com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-            tourist.setTouristName(generateRandomTouristName());
-            tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
-            tourist.setLevel(ps.level);
-            tourist.setWallet(startingWallet(ps.level));
-            tourist.setInitialWallet(startingWallet(ps.level));
-            tourist.setTargetBuildingId(ps.buildingId());
-            tourist.setTargetBuildingCategory(target.getCategory());
-            tourist.setColonyId(target.getColonyId());
-            tourist.setCommuteTarget(interactionTarget);
-            tourist.setArrivalTime(level.getGameTime());
-            tourist.applyState(TouristState.VISITING);
-            level.addFreshEntity(tourist);
+            ChunkPos cp = new ChunkPos(ps.spawnPos);
+            ChunkLoadManager.get().acquireChunk(cp);
+            try {
+                BlockPos ground = findGround(level, ps.spawnPos);
+                TouristEntity tourist = new TouristEntity(
+                        com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
+                tourist.setTouristName(generateRandomTouristName());
+                tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
+                tourist.setLevel(ps.level);
+                tourist.setWallet(startingWallet(ps.level));
+                tourist.setInitialWallet(startingWallet(ps.level));
+                tourist.setTargetBuildingId(ps.buildingId());
+                tourist.setTargetBuildingCategory(target.getCategory());
+                tourist.setColonyId(target.getColonyId());
+                tourist.setCommuteTarget(interactionTarget);
+                tourist.setArrivalTime(level.getGameTime());
+                tourist.applyState(TouristState.VISITING);
+                level.addFreshEntity(tourist);
 
-            // Register arrival
-            var touristApi = getTouristApi();
-            if (touristApi != null) {
-                touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                // Register arrival
+                var touristApi = getTouristApi();
+                if (touristApi != null) {
+                    touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                }
+
+                // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                TouristSimSystem sim = TouristSimSystem.getActive();
+                if (sim != null) sim.adoptTourist(tourist);
+            } finally {
+                ChunkLoadManager.get().releaseChunk(cp);
             }
-
-            // Create the data shadow so the sim can track this tourist when its chunk unloads.
-            TouristSimSystem sim = TouristSimSystem.getActive();
-            if (sim != null) sim.adoptTourist(tourist);
         }
     }
 
@@ -298,34 +307,45 @@ public final class TouristSpawnSystem {
                 BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
                 if (interactionTarget == null) interactionTarget = target.getPosition();
 
-                TouristEntity tourist = new TouristEntity(
-                        com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                tourist.setTouristName(generateRandomTouristName());
-                tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
-                tourist.setLevel(ps.level);
-                tourist.setWallet(startingWallet(ps.level));
-                tourist.setInitialWallet(startingWallet(ps.level));
-                tourist.setTargetBuildingId(ps.buildingId());
-                tourist.setTargetBuildingCategory(target.getCategory());
-                tourist.setColonyId(target.getColonyId());
-                tourist.setCommuteTarget(interactionTarget);
-                tourist.setArrivalTime(level.getGameTime());
-                tourist.applyState(TouristState.VISITING);
-                level.addFreshEntity(tourist);
+                // Momentarily force-load the spawn chunk so the entity is created with real
+                // ground (findGround reads AIR on unloaded chunks) and to avoid
+                // addFreshEntity-on-unloaded-chunk edge cases. The tourist then sims from
+                // its shadow until the chunk is loaded again.
+                ChunkPos cp = new ChunkPos(ps.spawnPos);
+                ChunkLoadManager.get().acquireChunk(cp);
+                try {
+                    BlockPos ground = findGround(level, ps.spawnPos);
+                    TouristEntity tourist = new TouristEntity(
+                            com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
+                    tourist.setTouristName(generateRandomTouristName());
+                    tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
+                    tourist.setLevel(ps.level);
+                    tourist.setWallet(startingWallet(ps.level));
+                    tourist.setInitialWallet(startingWallet(ps.level));
+                    tourist.setTargetBuildingId(ps.buildingId());
+                    tourist.setTargetBuildingCategory(target.getCategory());
+                    tourist.setColonyId(target.getColonyId());
+                    tourist.setCommuteTarget(interactionTarget);
+                    tourist.setArrivalTime(level.getGameTime());
+                    tourist.applyState(TouristState.VISITING);
+                    level.addFreshEntity(tourist);
 
-                // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
-                var touristApi = getTouristApi();
-                if (touristApi != null) {
-                    touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                    // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
+                    var touristApi = getTouristApi();
+                    if (touristApi != null) {
+                        touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                    }
+
+                    // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                    TouristSimSystem sim = TouristSimSystem.getActive();
+                    if (sim != null) sim.adoptTourist(tourist);
+
+                    Log.info(TAG, "[Tourist] {} (Lv.{}) spawned, heading to {} '{}' at {}",
+                            tourist.getTouristName(), ps.level, target.getCategory(),
+                            target.getBuildingTypeId(), interactionTarget.toShortString());
+                } finally {
+                    ChunkLoadManager.get().releaseChunk(cp);
                 }
-
-                // Create the data shadow so the sim can track this tourist when its chunk unloads.
-                TouristSimSystem sim = TouristSimSystem.getActive();
-                if (sim != null) sim.adoptTourist(tourist);
-
-                Log.info(TAG, "[Tourist] {} (Lv.{}) spawned, heading to {} '{}' at {}",
-                        tourist.getTouristName(), ps.level, target.getCategory(),
-                        target.getBuildingTypeId(), interactionTarget.toShortString());
             } else {
                 remaining.add(ps);
             }
@@ -712,7 +732,7 @@ public final class TouristSpawnSystem {
                 random.nextInt(10) - 5, 0, random.nextInt(10) - 5));
     }
 
-    private BlockPos findGround(ServerLevel level, BlockPos pos) {
+    private static BlockPos findGround(ServerLevel level, BlockPos pos) {
         BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
                 pos.getX(), Math.min(level.getMaxBuildHeight() - 1, 120), pos.getZ());
         while (mp.getY() > level.getMinBuildHeight()) {
