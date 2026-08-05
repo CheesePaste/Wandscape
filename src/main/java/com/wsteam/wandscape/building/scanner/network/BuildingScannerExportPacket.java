@@ -298,24 +298,45 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         bp.add("bind", bind);
         root.add("blueprint", bp);
 
-        // Write file
+        // Write file into the datapack-readable buildings directory so it can be built immediately
+        // and ships with the mod jar (dev source resources) or stays readable via /reload (world datapack).
         try {
-            Path exportDir = level.getServer().getServerDirectory()
-                    .resolve("wandscape_buildings");
+            Path exportDir = resolveBuildingsDir(level);
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
 
-            Log.info(TAG, "Exported building '{}' to {}", id, outFile.toAbsolutePath());
+            // Register in-memory so the building is buildable right now, no /reload needed.
+            com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().registerFromJson(root);
+
+            Log.info(TAG, "Exported building '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§aExported building '" + id + "' to §e" + outFile.toAbsolutePath()));
+                    "§aExported building '" + id + "' to §e" + outFile.toAbsolutePath()
+                    + "§a — 可立即建造，/reload 后依然有效"));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export building '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "§cFailed to export: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Resolve the directory buildings are loaded from as a datapack.
+     * In a dev environment this is the mod's source resources
+     * ({@code src/main/resources/data/wandscape/buildings}), which are packaged into the mod jar
+     * and served as the {@code data/wandscape/buildings} datapack for real players.
+     * Falls back to a world datapack so the export is still readable via /reload.
+     */
+    private static Path resolveBuildingsDir(ServerLevel level) {
+        Path serverDir = level.getServer().getServerDirectory();
+        if (serverDir.getParent() != null) {
+            Path dev = serverDir.getParent().resolve("src/main/resources/data/wandscape/buildings");
+            if (Files.isDirectory(dev)) return dev;
+        }
+        Path datapacks = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR);
+        return datapacks.resolve("wandscape_builds/data/wandscape/buildings");
     }
 
     private static void exportRoad(BuildingScannerBlockEntity scanner,
