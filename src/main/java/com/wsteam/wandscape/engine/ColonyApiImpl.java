@@ -66,6 +66,13 @@ public final class ColonyApiImpl implements ColonyApi {
     }
 
     @Override
+    @Nullable
+    public UUID getColonyByFounder(UUID founder) {
+        ColonySavedData csd = getColonySavedData();
+        return csd != null ? csd.getColonyByFounder(founder) : null;
+    }
+
+    @Override
     public void deleteColony(UUID colonyId) {
         BlockPos origin = colonyToOrigin.remove(colonyId);
         if (origin != null) {

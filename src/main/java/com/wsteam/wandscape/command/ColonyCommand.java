@@ -123,6 +123,11 @@ public final class ColonyCommand {
      */
     public static String createColonyAt(ServerLevel level, BlockPos origin, String name,
                                         @Nullable UUID founder) {
+        // 一人一殖民地：玩家已拥有殖民地时拒绝创建第二个（V 面板/市政厅命名/命令共用此入口）
+        if (founder != null && ColonyApiImpl.get().getColonyByFounder(founder) != null) {
+            return "[Wandscape] Failed: 你已拥有殖民地，不能创建第二个。";
+        }
+
         // ── Step 1: load config ─────────────────────────────────────────────
         BuildingConfig townHallConfig = BuildingConfigLoader.getInstance()
                 .getByCategory(WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT);
@@ -229,6 +234,11 @@ public final class ColonyCommand {
     public static UUID ensureColonyNear(ServerLevel level, BlockPos origin,
                                         String name, @Nullable UUID founder) {
         ColonyApi colonyApi = ColonyApiImpl.get();
+        // 一人一殖民地：玩家已有殖民地时返回它（无论多远），绝不新建第二个
+        if (founder != null) {
+            UUID owned = colonyApi.getColonyByFounder(founder);
+            if (owned != null) return owned;
+        }
         UUID existing = colonyApi.getColonyId(origin);
         if (existing != null) return existing;
 

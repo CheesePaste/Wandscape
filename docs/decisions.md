@@ -490,3 +490,12 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 殖民地不加载时游客照常生成（TouristSpawnSystem 全局 tick，无区块门控），但直接 `addFreshEntity` 到卸载区块有隐患：`findGround` 读不到真实方块（Y 不可靠）、卸载区块加实体有边缘情况。改为 spawn 时用 `ChunkLoadManager` 临时强加载 spawn 区块 → 重新 `findGround` 找真实地面 → 生成 → 释放。游客随后以影子 sim 推进，加载时实体化。
 
 - **版本**：v1.3.2→v1.3.3（bug 修复）。
+
+## 殖民地与玩家绑定：一人一殖民地（2026-08-05）
+
+需求：殖民地和玩家绑定，一个人无论如何只有一个殖民地。此前「距殖民地太远按 V 打开面板 → `getColonyId(玩家位置)` 为 null → `ensureColonyNear` 在当前位置自动新建」会让玩家每跑远一次就多一个殖民地。
+
+- **为什么打开面板优先按 founder 反查而非空间就近？** 空间查找（`getColonyId(pos)` 256 格内最近）在玩家已有殖民地时，会选中「别人的殖民地」或触发新建。面板打开先 `getColonyByFounder(玩家UUID)` 返回玩家自己的殖民地——无论玩家在哪，V 面板永远操作自己的殖民地，绝不新建第二个。
+- **为什么守卫放在 ColonyCommand 的两个入口而非各调用点？** V 面板自动创建、市政厅命名、`/wandscape colony create` 三个来源都汇聚到 `createColonyAt`/`ensureColonyNear`。`ensureColonyNear` 玩家已有殖民地→直接返回已有；`createColonyAt` 已拥有→拒绝（`[Wandscape] Failed: 你已拥有殖民地，不能创建第二个。`）。一处修复覆盖全部入口。
+- **为什么 founder 为 null（控制台命令）不拦截？** 只有玩家发起的创建才有「一人一殖民地」约束；控制台创建不绑定玩家，保持原行为。
+- **版本**：v1.3.3→v1.3.4（行为修正 / bug 修复）。

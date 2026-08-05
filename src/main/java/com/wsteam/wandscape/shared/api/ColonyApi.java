@@ -19,6 +19,10 @@ public interface ColonyApi {
     @Nullable
     UUID getFounder(UUID colonyId);
 
+    /** The colony founded by the given player (one player = one colony), or null. */
+    @Nullable
+    UUID getColonyByFounder(UUID founder);
+
     /** Find the nearest colony UUID within 256 blocks of pos, or null. */
     UUID getColonyId(BlockPos pos);
 

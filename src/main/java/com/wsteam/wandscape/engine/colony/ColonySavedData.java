@@ -85,6 +85,15 @@ public class ColonySavedData extends SavedData {
         return founders.get(colonyId);
     }
 
+    /** The colony founded by the given player (one player = one colony), or null. */
+    @Nullable
+    public UUID getColonyByFounder(UUID founder) {
+        for (var entry : founders.entrySet()) {
+            if (entry.getValue().equals(founder)) return entry.getKey();
+        }
+        return null;
+    }
+
     public Map<UUID, BlockPos> getAllColonies() {
         return Collections.unmodifiableMap(colonies);
     }

@@ -45,7 +45,12 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
             UUID colonyId = null;
             ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
             if (colonyApi != null) {
-                colonyId = colonyApi.getColonyId(player.blockPosition());
+                // 殖民地与玩家绑定：优先返回玩家自己的殖民地（无论距离），面板永远操作自己的殖民地。
+                // 否则玩家已有殖民地时走空间查找，在远处按 V 会新建第二个殖民地。
+                colonyId = colonyApi.getColonyByFounder(playerId);
+                if (colonyId == null) {
+                    colonyId = colonyApi.getColonyId(player.blockPosition());
+                }
                 if (colonyId == null) {
                     // 首免修复：把「首次放市政厅没殖民地才创建」提前到面板打开时。
                     // 殖民地必须在首座建筑（市政厅）放置前就存在，否则 placeBuilding
