@@ -1,8 +1,8 @@
 {
   "block": "minecraft:dried_kelp_block",
   "build_cost": {
-    "wood": 18,
-    "water": 18
+    "water": 18,
+    "wood": 18
   },
   "decompose_yield": {},
   "decomposable": false,

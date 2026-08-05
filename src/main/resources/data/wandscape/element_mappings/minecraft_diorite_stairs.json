@@ -1,9 +1,9 @@
 {
   "block": "minecraft:diorite_stairs",
   "build_cost": {
-    "wind": 12,
+    "earth": 1,
     "fire": 12,
-    "earth": 1
+    "wind": 12
   },
   "decompose_yield": {},
   "decomposable": false,

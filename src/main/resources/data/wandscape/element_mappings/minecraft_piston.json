@@ -1,10 +1,10 @@
 {
   "block": "minecraft:piston",
   "build_cost": {
-    "metal": 72,
-    "fire": 4,
     "earth": 4,
-    "wood": 6
+    "wood": 6,
+    "fire": 4,
+    "metal": 72
   },
   "decompose_yield": {},
   "decomposable": false,

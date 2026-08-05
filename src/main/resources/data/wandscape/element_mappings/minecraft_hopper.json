@@ -1,8 +1,8 @@
 {
   "block": "minecraft:hopper",
   "build_cost": {
-    "metal": 320,
-    "wood": 16
+    "wood": 16,
+    "metal": 320
   },
   "decompose_yield": {},
   "decomposable": false,

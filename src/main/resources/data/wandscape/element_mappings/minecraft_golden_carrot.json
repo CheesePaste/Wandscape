@@ -1,8 +1,8 @@
 {
   "item": "minecraft:golden_carrot",
   "build_cost": {
-    "metal": 224,
-    "wood": 4
+    "wood": 4,
+    "metal": 224
   },
   "decompose_yield": {},
   "decomposable": false,

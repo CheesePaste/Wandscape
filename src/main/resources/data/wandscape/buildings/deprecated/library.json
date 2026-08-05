@@ -2,6 +2,7 @@
   "id": "library",
   "display_name": "图书馆",
   "category": "service",
+  "deprecated": true,
   "pattern": [
     [-1,0,-1], [0,0,-1], [1,0,-1],
     [-1,0, 0], [0,0, 0], [1,0, 0],

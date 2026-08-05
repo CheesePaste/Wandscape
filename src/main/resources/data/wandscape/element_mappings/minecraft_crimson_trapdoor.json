@@ -1,8 +1,8 @@
 {
   "block": "minecraft:crimson_trapdoor",
   "build_cost": {
-    "fire": 3,
-    "wood": 6
+    "wood": 6,
+    "fire": 3
   },
   "decompose_yield": {},
   "decomposable": false,

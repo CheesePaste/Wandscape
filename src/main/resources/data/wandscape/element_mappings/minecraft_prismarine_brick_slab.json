@@ -1,9 +1,9 @@
 {
   "block": "minecraft:prismarine_brick_slab",
   "build_cost": {
-    "earth": 72,
+    "water": 72,
     "dark": 72,
-    "water": 72
+    "earth": 72
   },
   "decompose_yield": {},
   "decomposable": false,

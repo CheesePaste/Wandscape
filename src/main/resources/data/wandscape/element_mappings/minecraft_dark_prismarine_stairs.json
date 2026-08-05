@@ -1,11 +1,11 @@
 {
   "block": "minecraft:dark_prismarine_stairs",
   "build_cost": {
-    "wind": 12,
-    "earth": 192,
+    "water": 192,
     "dark": 192,
+    "earth": 192,
     "wood": 12,
-    "water": 192
+    "wind": 12
   },
   "decompose_yield": {},
   "decomposable": false,

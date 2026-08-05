@@ -1,9 +1,9 @@
 {
   "block": "minecraft:dropper",
   "build_cost": {
+    "earth": 7,
     "metal": 8,
-    "fire": 4,
-    "earth": 7
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

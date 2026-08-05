@@ -1,9 +1,9 @@
 {
   "block": "minecraft:powered_rail",
   "build_cost": {
-    "metal": 257,
+    "wood": 1,
     "fire": 1,
-    "wood": 1
+    "metal": 257
   },
   "decompose_yield": {},
   "decomposable": false,

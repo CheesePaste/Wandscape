@@ -1,8 +1,8 @@
 {
   "item": "minecraft:cooked_salmon",
   "build_cost": {
-    "wood": 8,
-    "water": 8
+    "water": 8,
+    "wood": 8
   },
   "decompose_yield": {},
   "decomposable": false,

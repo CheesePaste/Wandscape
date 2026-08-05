@@ -1,9 +1,9 @@
 {
   "block": "minecraft:orange_bed",
   "build_cost": {
-    "wind": 32,
     "dark": 24,
-    "wood": 38
+    "wood": 38,
+    "wind": 32
   },
   "decompose_yield": {},
   "decomposable": false,

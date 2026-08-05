@@ -1,8 +1,8 @@
 {
   "block": "minecraft:smithing_table",
   "build_cost": {
-    "metal": 128,
-    "wood": 8
+    "wood": 8,
+    "metal": 128
   },
   "decompose_yield": {},
   "decomposable": false,

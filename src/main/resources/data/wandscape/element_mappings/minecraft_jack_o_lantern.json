@@ -1,8 +1,8 @@
 {
   "block": "minecraft:jack_o_lantern",
   "build_cost": {
-    "fire": 2,
-    "wood": 9
+    "wood": 9,
+    "fire": 2
   },
   "decompose_yield": {},
   "decomposable": false,

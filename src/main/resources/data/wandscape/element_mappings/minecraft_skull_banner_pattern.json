@@ -1,9 +1,9 @@
 {
   "item": "minecraft:skull_banner_pattern",
   "build_cost": {
-    "fire": 2048,
     "dark": 2048,
-    "wood": 4
+    "wood": 4,
+    "fire": 2048
   },
   "decompose_yield": {},
   "decomposable": false,

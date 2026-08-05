@@ -1,8 +1,8 @@
 {
   "block": "minecraft:smooth_quartz_slab",
   "build_cost": {
-    "wind": 16,
-    "fire": 16
+    "fire": 16,
+    "wind": 16
   },
   "decompose_yield": {},
   "decomposable": false,

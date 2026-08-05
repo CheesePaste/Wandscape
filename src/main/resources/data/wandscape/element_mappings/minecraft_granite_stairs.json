@@ -1,9 +1,9 @@
 {
   "block": "minecraft:granite_stairs",
   "build_cost": {
-    "wind": 24,
+    "earth": 1,
     "fire": 24,
-    "earth": 1
+    "wind": 24
   },
   "decompose_yield": {},
   "decomposable": false,

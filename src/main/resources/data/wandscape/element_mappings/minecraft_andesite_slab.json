@@ -1,9 +1,9 @@
 {
   "block": "minecraft:andesite_slab",
   "build_cost": {
-    "wind": 2,
+    "earth": 1,
     "fire": 2,
-    "earth": 1
+    "wind": 2
   },
   "decompose_yield": {},
   "decomposable": false,

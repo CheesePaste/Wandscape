@@ -1,10 +1,10 @@
 {
   "item": "minecraft:end_crystal",
   "build_cost": {
-    "wind": 128,
-    "fire": 160,
     "dark": 64,
-    "earth": 7
+    "earth": 7,
+    "fire": 160,
+    "wind": 128
   },
   "decompose_yield": {},
   "decomposable": false,

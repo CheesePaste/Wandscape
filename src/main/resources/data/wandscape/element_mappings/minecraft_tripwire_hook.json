@@ -1,8 +1,8 @@
 {
   "block": "minecraft:tripwire_hook",
   "build_cost": {
-    "metal": 32,
-    "wood": 2
+    "wood": 2,
+    "metal": 32
   },
   "decompose_yield": {},
   "decomposable": false,

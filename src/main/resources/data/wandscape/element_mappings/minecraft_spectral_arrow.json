@@ -1,10 +1,10 @@
 {
   "item": "minecraft:spectral_arrow",
   "build_cost": {
-    "wind": 18,
-    "fire": 16,
     "earth": 1,
-    "wood": 1
+    "wood": 1,
+    "fire": 16,
+    "wind": 18
   },
   "decompose_yield": {},
   "decomposable": false,

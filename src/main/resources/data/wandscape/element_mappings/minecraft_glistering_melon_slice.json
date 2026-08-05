@@ -1,9 +1,9 @@
 {
   "item": "minecraft:glistering_melon_slice",
   "build_cost": {
-    "metal": 224,
+    "water": 2,
     "wood": 2,
-    "water": 2
+    "metal": 224
   },
   "decompose_yield": {},
   "decomposable": false,

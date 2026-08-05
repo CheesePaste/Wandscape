@@ -1,9 +1,9 @@
 {
   "block": "minecraft:green_candle",
   "build_cost": {
-    "wind": 8,
     "dark": 2,
-    "wood": 40
+    "wood": 40,
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,8 +1,8 @@
 {
   "block": "minecraft:conduit",
   "build_cost": {
-    "wind": 1024,
-    "water": 8704
+    "water": 8704,
+    "wind": 1024
   },
   "decompose_yield": {},
   "decomposable": false,

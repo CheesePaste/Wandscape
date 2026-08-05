@@ -1,9 +1,9 @@
 {
   "block": "minecraft:lantern",
   "build_cost": {
-    "metal": 56,
+    "wood": 1,
     "fire": 2,
-    "wood": 1
+    "metal": 56
   },
   "decompose_yield": {},
   "decomposable": false,

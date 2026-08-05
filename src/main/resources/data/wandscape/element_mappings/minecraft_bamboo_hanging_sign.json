@@ -1,8 +1,8 @@
 {
   "block": "minecraft:bamboo_hanging_sign",
   "build_cost": {
-    "metal": 26,
-    "wood": 4
+    "wood": 4,
+    "metal": 26
   },
   "decompose_yield": {},
   "decomposable": false,

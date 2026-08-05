@@ -1,9 +1,9 @@
 {
   "block": "minecraft:diorite",
   "build_cost": {
-    "wind": 8,
+    "earth": 1,
     "fire": 8,
-    "earth": 1
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

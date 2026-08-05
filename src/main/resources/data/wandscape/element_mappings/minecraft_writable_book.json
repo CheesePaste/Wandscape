@@ -1,10 +1,10 @@
 {
   "item": "minecraft:writable_book",
   "build_cost": {
-    "wind": 16,
+    "water": 8,
     "earth": 8,
     "wood": 28,
-    "water": 8
+    "wind": 16
   },
   "decompose_yield": {},
   "decomposable": false,

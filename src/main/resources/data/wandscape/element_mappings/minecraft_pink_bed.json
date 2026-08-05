@@ -1,9 +1,9 @@
 {
   "block": "minecraft:pink_bed",
   "build_cost": {
-    "wind": 24,
     "dark": 24,
-    "wood": 30
+    "wood": 30,
+    "wind": 24
   },
   "decompose_yield": {},
   "decomposable": false,

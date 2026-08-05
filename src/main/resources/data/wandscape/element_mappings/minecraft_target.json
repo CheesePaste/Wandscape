@@ -1,9 +1,9 @@
 {
   "block": "minecraft:target",
   "build_cost": {
+    "wood": 36,
     "metal": 32,
-    "fire": 16,
-    "wood": 36
+    "fire": 16
   },
   "decompose_yield": {},
   "decomposable": false,

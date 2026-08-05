@@ -1,8 +1,8 @@
 {
   "block": "minecraft:nether_brick_stairs",
   "build_cost": {
-    "fire": 6,
-    "earth": 6
+    "earth": 6,
+    "fire": 6
   },
   "decompose_yield": {},
   "decomposable": false,
