@@ -204,7 +204,7 @@
 - **无维护费**：不写 `maintenance_cost` 字段。`DailySettlementSystem` 对空成本直接跳过（标记已支付、不关停）。
 - **游客不可交互**：游客系统只将 `shop`/`service` 建筑作为交互目标，`custom` 类别天然被排除，不会生成游客交互区。
 - **三值恒 0**：`comfort`/`magic`/`wonder` 全为 0，对殖民地三值无贡献。
-- 用途：生存玩家用**生存建筑扫描器**（`building_scanner`）框选自己建造的建筑导出，让 NPC 用蓝图重建；创造建筑扫描器（`creative_building_scanner`）的 Type 也能切到 `custom`。
+- 用途：生存玩家用**建筑扫描器**（`building_scanner`）框选自己建造的建筑导出，让 NPC 用蓝图重建；创造建筑扫描器（`creative_building_scanner`）的 Type 也能切到 `custom`。
 - 玩家右键建筑走 `BuildingInteractHandler` 的 default 分支（无专用 GUI，仅信息/解锁提示）。
 
 ## 废弃建筑 (deprecated)

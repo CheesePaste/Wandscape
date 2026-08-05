@@ -28,7 +28,7 @@
 ### 建筑扫描器（两种）
 
 - **创造建筑扫描器**（`creative_building_scanner`，原名 `building_scanner` 改名而来）：完整创作者工具，Type 可选全部类别（含 `custom`），支持 SAVE/CORNER 配对、交互区/维护费/三值/商店/服务/节点配置、预设、ROAD 导出。
-- **生存建筑扫描器**（`building_scanner`）：简化版，专供生存玩家复制自己的建筑供 NPC 重建。类别锁定 `custom`（不可修改，导出无维护费/交互区，三值恒0），GUI 仅尺寸/门偏移/ID/Name/导出 + ROAD 模式。方块可合成（金锭×4 + 紫水晶碎片×4 + 工作台）。
+- **建筑扫描器**（`building_scanner`）：简化版，专供生存玩家复制自己的建筑供 NPC 重建。类别锁定 `custom`（不可修改，导出无维护费/交互区，三值恒0），GUI 仅尺寸/门偏移/ID/Name/导出 + ROAD 模式。方块可合成（金锭×4 + 紫水晶碎片×4 + 工作台）。
 - 两者共用 `BuildingScannerExportPacket`（导出到 datapack 并热注册）与 `BuildingScannerSyncPacket`；渲染共用 `BuildingScannerRenderer`。
 
 ### 模拟经营系统

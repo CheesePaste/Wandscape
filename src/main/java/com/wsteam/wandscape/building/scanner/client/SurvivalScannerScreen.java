@@ -76,8 +76,8 @@ public class SurvivalScannerScreen extends MedievalScreen {
     private int maxScroll = 0;
 
     public SurvivalScannerScreen(SurvivalScannerBlockEntity scanner) {
-        super(Component.literal("Survival Building Scanner"), PW, PH);
-        setTitleBar(Component.literal("生存建筑扫描器"));
+        super(Component.literal("Building Scanner"), PW, PH);
+        setTitleBar(Component.literal("建筑扫描器"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "scanner_guide";

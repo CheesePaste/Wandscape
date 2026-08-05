@@ -3,7 +3,7 @@
 建筑扫描器用于扫描游戏内建造好的建筑/道路并**一键导出模组 JSON 蓝图与道路预设**，让 NPC 通过蓝图重建。现分两种：
 
 - **创造建筑扫描器**（`creative_building_scanner`）：完整创作者工具，支持全部类别与完整配置。
-- **生存建筑扫描器**（`building_scanner`）：专供生存玩家复制自己的建筑，类别固定为**自定义（custom）**，仅尺寸/门/ID/名称 + 导出。
+- **建筑扫描器**（`building_scanner`）：专供生存玩家复制自己的建筑，类别固定为**自定义（custom）**，仅尺寸/门/ID/名称 + 导出。
 
 ![扫描器中世纪 UI 界面演示](wandscape:textures/gui/guide/scanner_ui.png)
 
@@ -34,7 +34,7 @@
 
 ---
 
-## 🧱 生存建筑扫描器（Survival Building Scanner）
+## 🧱 建筑扫描器（Building Scanner）
 
 专为生存玩家设计，用于把**自己建造的建筑复制一份**交给 NPC 重建（扫描器本身可通过合成台合成：四角金锭 + 上下左右紫水晶碎片 + 中间工作台）。
 

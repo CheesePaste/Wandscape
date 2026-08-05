@@ -3,7 +3,7 @@
 The Building Scanner scans buildings/roads built in-game and **exports mod JSON blueprints and road presets in one click**, so NPCs can rebuild them from blueprints. There are two variants:
 
 - **Creative Building Scanner** (`creative_building_scanner`): full creator tool, all categories and full configuration.
-- **Survival Building Scanner** (`building_scanner`): for survival players to copy their own builds; category is locked to **custom** — only size/door/ID/name + export.
+- **Building Scanner** (`building_scanner`): for survival players to copy their own builds; category is locked to **custom** — only size/door/ID/name + export.
 
 ![Scanner medieval UI demo](wandscape:textures/gui/guide/scanner_ui.png)
 
@@ -34,7 +34,7 @@ The UI uses the standard medieval gilded theme (`MedievalScreen`) with hand-draw
 
 ---
 
-## 🧱 Survival Building Scanner
+## 🧱 Building Scanner
 
 Designed for survival players to **copy a build they made themselves** so NPCs can rebuild it. The scanner is crafted at a crafting table (gold ingots in the corners, amethyst shards top/bottom/left/right, a crafting table in the middle).
 
