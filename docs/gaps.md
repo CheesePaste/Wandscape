@@ -379,3 +379,8 @@ WASD 移动已从 `ClientTickEvent.Post`（20Hz tick）迁移至 `RenderLevelSta
 - 游客：仅"经济 sim"规划中（人口/满意度/消费/补货数据推进，待与用户确认以区块判定）；物理游客只在区块加载时存在并走真实 AI，卸载时游客不移动。
 - 守卫/袭击：物理任务，依赖区块加载。
 - NPC 跨重启持久化：库存/私有任务队列不落盘（既有缺口，另开阶段）。
+
+### 游客 sim 已知缺口（2026-08-05）
+- 影子 spawn 实体时外观/皮肤不还原（TouristEntity 无 setSkinVariant/setAppearance，纯装饰性，暂接受）。
+- 过夜统计 countOvernightStayers 只数加载实体，未含卸载影子（指标级，待补）。
+- 游客 sim 为直线移动，忽略地形/碰撞；与真实 AI 的路径不同（可接受）。

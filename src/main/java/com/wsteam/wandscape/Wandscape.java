@@ -110,6 +110,7 @@ import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
 import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
+import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -737,6 +738,10 @@ public class Wandscape {
         TouristSpawnSystem.setLevelManager(colonyLevelManager);
         Log.info(TAG, "Colony level system wired");
 
+        // Tourist sim — drives unloaded tourists from data shadows.
+        TouristSimSystem.register(level);
+        Log.info(TAG, "Tourist sim system wired");
+
         // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
         if (world != null && world.taskPool != null) {
             PlayerManualSource playerSource = new PlayerManualSource(world.taskPool);
@@ -750,6 +755,7 @@ public class Wandscape {
         Log.info(TAG, "Wandscape server stopped — resetting engine.");
         buildingApi.setLevel(null);
         ChunkLoadManager.get().reset();
+        TouristSimSystem.reset();
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
     }

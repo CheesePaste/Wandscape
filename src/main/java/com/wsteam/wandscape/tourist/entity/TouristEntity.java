@@ -19,6 +19,7 @@ import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
+import com.wsteam.wandscape.tourist.internal.TouristStateHost;
 
 import javax.annotation.Nullable;
 
@@ -64,7 +65,7 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
  * Mage tourists carry mana/spell-power stats; when their satisfaction reaches 100%,
  * their data is stored in the tavern as a recruitment resume.
  */
-public class TouristEntity extends PathfinderMob implements VillagerLike {
+public class TouristEntity extends PathfinderMob implements VillagerLike, TouristStateHost {
 
     private static final String TAG = "TouristEntity";
 
@@ -345,6 +346,10 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
+
+    /** Time base for cooldown comparisons — mirrors {@link TouristStateHost#timeBase()}. */
+    @Override
+    public int timeBase() { return this.tickCount; }
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -644,6 +649,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         }
     }
 
+    /** Mutable type-preference map (for shadow sync). */
+    public Map<String, Integer> getTypePreferencesMap() { return typePreferences; }
+
     // ── Mage-only ──
 
     public int getMaxMana() { return maxMana; }
@@ -700,6 +708,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
         this.serviceCooldownEndTick = endTick;
     }
+
+    /** Mutable service-cooldown map (for shadow sync). */
+    public Map<UUID, Integer> getServiceCooldownsMap() { return serviceCooldowns; }
 
     // ── Narrative memory (journey diary) ──
 

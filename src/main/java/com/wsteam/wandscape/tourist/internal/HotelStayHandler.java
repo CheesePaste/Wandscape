@@ -128,8 +128,17 @@ public final class HotelStayHandler {
 
     // ── Query ──
 
-    /** Returns the number of currently checked-in tourists in a hotel. */
+    /** Returns the number of currently checked-in tourists in a hotel.
+     *  Derived from the shadow registry so unloaded (sim) guests also count. */
     public int getOccupancy(UUID buildingId) {
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            int n = 0;
+            for (TouristShadow s : sim.getRegistry().getShadows().values()) {
+                if (buildingId.equals(s.getCheckedInBuildingId())) n++;
+            }
+            return n;
+        }
         Set<UUID> guests = occupancy.get(buildingId);
         return guests != null ? guests.size() : 0;
     }

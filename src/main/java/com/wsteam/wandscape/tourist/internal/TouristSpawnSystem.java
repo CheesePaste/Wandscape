@@ -136,6 +136,10 @@ public final class TouristSpawnSystem {
             if (touristApi != null) {
                 touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
             }
+
+            // Create the data shadow so the sim can track this tourist when its chunk unloads.
+            TouristSimSystem sim = TouristSimSystem.getActive();
+            if (sim != null) sim.adoptTourist(tourist);
         }
     }
 
@@ -314,6 +318,10 @@ public final class TouristSpawnSystem {
                 if (touristApi != null) {
                     touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
                 }
+
+                // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                TouristSimSystem sim = TouristSimSystem.getActive();
+                if (sim != null) sim.adoptTourist(tourist);
 
                 Log.info(TAG, "[Tourist] {} (Lv.{}) spawned, heading to {} '{}' at {}",
                         tourist.getTouristName(), ps.level, target.getCategory(),
@@ -535,6 +543,10 @@ public final class TouristSpawnSystem {
         if (touristApi != null && colonyId != null) {
             touristApi.registerDeparture(t.getUUID(), colonyId, satisfaction);
         }
+
+        // Remove the data shadow — a departed tourist has no sim state left.
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null) sim.removeShadow(t.getUUID());
 
         // Generate departure narrative (no on-screen text — silent by design)
         int visitCount = t.getRecentVisits().size();

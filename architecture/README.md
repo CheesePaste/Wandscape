@@ -13,6 +13,8 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── data/         TouristAttributes (level/energy/satisfaction/preferences/appearance)
 │   ├── api/          TouristApi
 │   └── internal/     TouristSpawnSystem/TouristMoveGoal/TouristInteractGoal/...
+│                     TouristSimSystem/TouristShadow/TouristSimRegistry（游客卸载 sim：区块卸载时
+│                     影子数据直线移动+交互+离开，加载时刷回实体）
 │
 ├── core/             ECS 核心框架（精简），纯 Java 21，零 MC 依赖
 │   ├── ecs/          World + System + ComponentStore + CoreBootstrap

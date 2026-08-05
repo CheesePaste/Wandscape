@@ -468,3 +468,19 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 - **为什么任务归属要落盘？** `TaskPoolSavedData` 原不存 `buildingId`/`isBuildingHead`，重启后恢复任务失去建筑归属 → lease 释放失效、可能重复施工。补存后重启正确。
 - **崩溃残留**：`setChunkForced` 写入 `ForcedChunksSavedData`（磁盘持久化），崩溃会残留永久强加载。`ChunkLeaseData` 注册表（`wandscape_chunk_leases`）+ 启动对账释放解决。
 - **版本**：v1.1.0→v1.2.0（新功能：殖民地区块卸载时照常运行，只强加载活跃施工建筑）。
+
+## 游客个人级 sim：逐游客按区块判定（2026-08-05）
+
+目标：游客在区块卸载时也能"活着"——个人属性按真实时间推进、模拟购物/服务/宾馆/随机游荡、直线恒速移动、夜晚/精力耗尽离开结算。不做玩家距离判定（殖民地大、市政厅远时误判），改为**逐游客查自己所在区块是否加载**。
+
+- **影子为准 + vanilla 身体 + 孤儿清除**：每个游客一个数据影子（SavedData `wandscape_tourist_sim`）。卸载时 sim 推进影子；加载时影子刷回 vanilla 恢复的实体身体（玩家刚加载看不到跳变）；离开时删影子，身体残留 chunk 下次加载清除。依赖 vanilla 实体持久化保位置，避免瞬移观感。
+- **共享经济逻辑**：`TouristStateHost` 接口（实体/影子共同实现）+ `TouristSimulation` 静态助手（满意度增益/商店购买/服务元素输出/冷却/目标选择），`TouristMoveGoal` 与 sim 共用同一套，杜绝漂移。商店走 `ShopStockManager.purchaseAffordable`（减库存+入元素+自动补货），服务走 `elementOutput`→ColonyItemBank——全 SavedData，无区块依赖。
+- **叙事/气泡不模拟**：卸载时玩家看不见，sim 只做经济副作用，跳过叙事/气泡/粒子（加载路径保留）。
+- **sim 移动**：假设地形不存在，每 20 tick 以恒定速度（0.5 格/tick）直线逼近目标（商店/服务锚点），到达即交互；无寻路，几乎零开销。
+- **宾馆**：占用派生自影子（加载+卸载游客都算），清晨退房回满能量。
+- **版本**：v1.2.0→v1.3.0（新功能：游客卸载时照常生活，只加载时显示实体）。
+
+## 已知取舍（见 docs/gaps.md）
+- 影子 spawn 实体时不还原外观/皮肤（TouristEntity 无 setter，纯装饰）。
+- 过夜统计 `countOvernightStayers` 仍只数加载实体，未含卸载影子（指标级缺口）。
+- NPC 跨重启库存/私有队列持久化仍另开阶段。

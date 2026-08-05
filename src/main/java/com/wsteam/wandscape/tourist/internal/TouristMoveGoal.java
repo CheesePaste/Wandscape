@@ -1296,123 +1296,59 @@ public class TouristMoveGoal extends Goal {
         return tourist.getServiceCooldownEndTick() > tourist.tickCount;
     }
 
-    /**
-     * Apply the post-interaction rest cooldown after a successful building visit.
-     * The building's {@code interaction_duration_ticks} doubles as the cooldown
-     * length — after interacting, the tourist wanders / visits POIs for that
-     * window and cannot interact with any building until it expires.
-     */
-    private void applyInteractionCooldown(UUID buildingId) {
-        int cooldownTicks = getInteractionDuration(buildingId);
-        if (cooldownTicks <= 0) return;
-        int endTick = tourist.tickCount + cooldownTicks;
-        tourist.setServiceCooldown(buildingId, endTick);
-        tourist.setServiceCooldownEndTick(endTick);
-    }
-
     private void interactWithShop(UUID buildingId) {
-        ShopStockManager stockManager = ShopStockManager.getActive();
-        if (stockManager == null) return;
-
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        ShopStockManager.PurchaseResult purchase = com.wsteam.wandscape.building.internal.ShopInteractionHandler.interact(
-                stockManager, tourist.getUUID(), buildingId, colonyId,
-                tourist.getWallet(), tourist.getInitialWallet());
-        if (purchase != null) {
-            tourist.spendWallet(purchase.spent());
-            int satBefore = tourist.getSatisfaction();
-            int gain = computeSatisfactionGain(buildingId);
-            tourist.setSatisfaction(satBefore + gain);
-            tourist.setEnergy(tourist.getEnergy() - 20);
-            applyPreferenceDecay(buildingId);
-            applyInteractionCooldown(buildingId);
+        var result = TouristSimulation.performShopInteraction(level, tourist, buildingId, colonyId);
+        if (result == null) return;
 
-            String bldType = getBuildingTypeId(buildingId);
-            String bldName = getBuildingDisplayName(buildingId, bldType);
-            String purchased = purchase.count() > 1
-                    ? purchase.itemId() + " ×" + purchase.count()
-                    : purchase.itemId();
-            VisitMemory memory = new VisitMemory.Builder()
-                    .buildingTypeId(bldType != null ? bldType : "unknown")
-                    .buildingDisplayName(bldName)
-                    .category("shop")
-                    .gameTime(tourist.level().getGameTime())
-                    .satisfactionBefore(satBefore)
-                    .satisfactionDelta(gain)
-                    .energyDelta(-20)
-                    .whatHappened(purchased)
-                    .build();
-            tourist.addVisitMemory(memory);
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "shop",
+                tourist.level().getGameTime(), result.satBefore(), result.satDelta(), result.energyDelta(),
+                result.whatHappened());
 
-            NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
-            emitNarrativeEvent(shopEvent);
+        NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
+        emitNarrativeEvent(shopEvent);
 
-            sendBubble(TransientBubbleStore.ICON_ITEM, purchase.itemId(), purchase.count(),
-                    satBefore, tourist.getSatisfaction());
+        var purchase = result.purchase();
+        sendBubble(TransientBubbleStore.ICON_ITEM,
+                purchase != null ? purchase.itemId() : null,
+                purchase != null ? purchase.count() : 0,
+                result.satBefore(), tourist.getSatisfaction());
 
-            sparkleSatisfaction();
-        }
+        sparkleSatisfaction();
     }
 
     private void interactWithService(UUID buildingId) {
-        var config = BuildingConfigLoader.getInstance().get(getBuildingTypeId(buildingId));
-        if (config == null || config.service() == null) return;
-
-        var svc = config.service();
-        int satBefore = tourist.getSatisfaction();
-        int energyCost = svc.energyPerUse();
-        tourist.setEnergy(tourist.getEnergy() - energyCost);
-        int gain = computeSatisfactionGain(buildingId);
-        tourist.setSatisfaction(satBefore + gain);
-        applyPreferenceDecay(buildingId);
-
-        applyInteractionCooldown(buildingId);
-
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
         UUID colonyId = tourist.getColonyId();
-        if (colonyId != null && !svc.elementOutput().isEmpty()) {
-            ServerLevel level = getServerLevel();
-            if (level != null) {
-                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level);
-                if (bank != null) {
-                    for (var entry : svc.elementOutput().entrySet()) {
-                        try {
-                            var elementType = com.wsteam.wandscape.shared.data.ElementType.fromId(entry.getKey());
-                            bank.addElement(colonyId, elementType, entry.getValue());
-                        } catch (IllegalArgumentException e) {
-                            Log.warn(TAG, "[Tourist] Unknown element type '{}' in service {} elementOutput",
-                                    entry.getKey(), shortId(buildingId));
-                        }
-                    }
-                }
-            }
-        }
+        if (colonyId == null) return;
 
-        String bldType = getBuildingTypeId(buildingId);
+        var result = TouristSimulation.performServiceInteraction(level, tourist, buildingId, colonyId);
+        if (result == null) return;
+
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
         String bldName = getBuildingDisplayName(buildingId, bldType);
-        VisitMemory memory = new VisitMemory.Builder()
-                .buildingTypeId(bldType != null ? bldType : "unknown")
-                .buildingDisplayName(bldName)
-                .category("service")
-                .gameTime(tourist.level().getGameTime())
-                .satisfactionBefore(satBefore)
-                .satisfactionDelta(gain)
-                .energyDelta(-energyCost)
-                .whatHappened("服务")
-                .build();
-        tourist.addVisitMemory(memory);
+        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
+                tourist.level().getGameTime(), result.satBefore(), result.satDelta(), result.energyDelta(),
+                result.whatHappened());
 
         NarrativeEvent serviceEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(serviceEvent);
 
-        if (!svc.elementOutput().isEmpty()) {
-            var entries = List.copyOf(svc.elementOutput().entrySet());
+        var config = TouristSimulation.getConfig(level, buildingId);
+        if (config != null && config.service() != null && !config.service().elementOutput().isEmpty()) {
+            var entries = List.copyOf(config.service().elementOutput().entrySet());
             var pick = entries.get(tourist.level().random.nextInt(entries.size()));
             sendBubble(TransientBubbleStore.ICON_ELEMENT, pick.getKey(), pick.getValue(),
-                    satBefore, tourist.getSatisfaction());
+                    result.satBefore(), tourist.getSatisfaction());
         } else {
-            sendBubble(TransientBubbleStore.ICON_NONE, null, 0, satBefore, tourist.getSatisfaction());
+            sendBubble(TransientBubbleStore.ICON_NONE, null, 0, result.satBefore(), tourist.getSatisfaction());
         }
 
         sparkleSatisfaction();
@@ -1456,25 +1392,6 @@ public class TouristMoveGoal extends Goal {
         int typePref = tourist.getTypePreference(typeId);
         int sum = threeValueSum(buildingId);
         return typePref * sum;
-    }
-
-    private int computeSatisfactionGain(@Nullable UUID buildingId) {
-        int threeSum = threeValueSum(buildingId);
-        int threshold = tourist.getLevel() * Config.TOURIST_LEVEL_SATISFACTION_THRESHOLD.get();
-        String typeId = getBuildingTypeId(buildingId);
-        int typePref = typeId != null ? tourist.getTypePreference(typeId) : 50;
-
-        if (threeSum < threshold) {
-            // Below threshold → negative satisfaction (diminishing sqrt, same as positive side)
-            int deficit = threshold - threeSum;
-            int baseScore = typePref * (deficit + 1);
-            int penalty = -(int) Math.sqrt(baseScore);
-            return Math.max(penalty, -15);
-        }
-
-        int baseScore = typePref * (threeSum - threshold + 1);
-        int gain = (int) Math.sqrt(baseScore);
-        return Math.min(gain, Config.TOURIST_MAX_SATISFACTION_PER_VISIT.get());
     }
 
     private void applyPreferenceDecay(UUID buildingId) {
