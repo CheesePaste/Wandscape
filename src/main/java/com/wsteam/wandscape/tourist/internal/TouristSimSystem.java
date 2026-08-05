@@ -395,10 +395,16 @@ public final class TouristSimSystem {
         }
 
         String category = s.getTargetBuildingCategory();
-        if ("shop".equals(category)) {
-            TouristSimulation.performShopInteraction(level, s, buildingId, colonyId);
-        } else if ("service".equals(category) || isHotel) {
-            TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
+        var result = "shop".equals(category)
+                ? TouristSimulation.performShopInteraction(level, s, buildingId, colonyId)
+                : TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
+        if (result != null) {
+            Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → sat {}→{}, energy {}",
+                    s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
+                    result.satBefore(), s.getSatisfaction(), s.getEnergy());
+        } else {
+            Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
+                    s.getTouristName(), shortId(buildingId), category);
         }
 
         s.addVisitedBuilding(buildingId);
