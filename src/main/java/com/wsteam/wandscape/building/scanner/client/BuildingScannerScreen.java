@@ -46,7 +46,7 @@ public class BuildingScannerScreen extends MedievalScreen {
     // ── Category ──
     private static final List<String> CATEGORIES = List.of(
             "basic", "government", "node", "storage", "workstation", "crafting_station",
-            "potion_station", "tavern", "shop", "service", "decoration", "wonder"
+            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "custom"
     );
 
     // ── Door offset ──
@@ -123,8 +123,8 @@ public class BuildingScannerScreen extends MedievalScreen {
     private static final int ROW_H = 24; // vertical row spacing
 
     public BuildingScannerScreen(BuildingScannerBlockEntity scanner) {
-        super(Component.literal("Building Scanner"), PW, PH);
-        setTitleBar(Component.literal("结构扫描器"));
+        super(Component.literal("Creative Building Scanner"), PW, PH);
+        setTitleBar(Component.literal("创造建筑扫描器"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "scanner_guide";
@@ -858,8 +858,9 @@ public class BuildingScannerScreen extends MedievalScreen {
                     if (bp.equals(scannerPos)) continue;
                     if (minecraft != null && minecraft.level != null) {
                         net.minecraft.world.level.block.state.BlockState state = minecraft.level.getBlockState(bp);
-                        // Auto-filter scanner blocks
-                        if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                        // Auto-filter both scanner blocks (creative + survival)
+                        if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
+                                || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())) continue;
                         if (!state.isAir()) {
                             count++;
                         }

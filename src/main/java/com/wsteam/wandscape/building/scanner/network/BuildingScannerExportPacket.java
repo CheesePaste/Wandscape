@@ -103,7 +103,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                     BlockPos bp = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(bp);
                     // Skip all scanner blocks (SAVE or CORNER) and air
-                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                    if (state.isAir()) continue;
+                    if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
+                            || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())) continue;
 
                     int rx = x - wMin.getX() + scanner.getBoundaryMin().x();
                     int ry = y - wMin.getY() + scanner.getBoundaryMin().y();
@@ -356,7 +358,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(bp);
-                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                    if (state.isAir()) continue;
+                    if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
+                            || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())) continue;
                     String bId = blockId(state);
                     blockCounts.put(bId, blockCounts.getOrDefault(bId, 0) + 1);
                 }

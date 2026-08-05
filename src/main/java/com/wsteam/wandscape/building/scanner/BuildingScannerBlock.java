@@ -32,7 +32,7 @@ public class BuildingScannerBlock extends Block implements EntityBlock {
 
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
-    private final Supplier<? extends BlockEntityType<?>> beType;
+    protected final Supplier<? extends BlockEntityType<?>> beType;
 
     public BuildingScannerBlock(Properties properties, Supplier<? extends BlockEntityType<?>> beType) {
         super(properties);

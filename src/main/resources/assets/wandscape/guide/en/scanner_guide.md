@@ -1,12 +1,15 @@
 # 🏗️ Building Scanner API Guide
 
-The Building Scanner (Scanner) is the core developer tool for scanning buildings/roads built in-game and **exporting mod JSON blueprints and road presets in one click**.
+The Building Scanner scans buildings/roads built in-game and **exports mod JSON blueprints and road presets in one click**, so NPCs can rebuild them from blueprints. There are two variants:
+
+- **Creative Building Scanner** (`creative_building_scanner`): full creator tool, all categories and full configuration.
+- **Survival Building Scanner** (`building_scanner`): for survival players to copy their own builds; category is locked to **custom** — only size/door/ID/name + export.
 
 ![Scanner medieval UI demo](wandscape:textures/gui/guide/scanner_ui.png)
 
 ---
 
-## 📖 UI Controls & Modes Reference
+## 🛠 Creative Building Scanner
 
 The UI uses the standard medieval gilded theme (`MedievalScreen`) with hand-drawn gradient buttons (`drawMinimalBox`). Input boxes have bronze-gold borders and **Focus / Hover dynamic glow**, with native viewport clipping (Scissor Clip) so nothing spills when scrolling.
 
@@ -18,39 +21,39 @@ The UI uses the standard medieval gilded theme (`MedievalScreen`) with hand-draw
 ### 2. Export Target Mode (`TargetMode`)
 - **`BUILDING` (building mode)**:
   - Shows the full building config (door `Door Offset`, `Tourist Zones`, the three values `Comfort/Magic/Wonder`, `Unlock Level`, `Maintenance Cost`, plus shop/service/node-specific parameters).
-  - Click **【Export Building JSON】** to export the blueprint to `.minecraft/wandscape_buildings/<id>.json`.
+  - `Type (Category)` covers all categories, including **`custom`** — meaning no maintenance cost, no tourist interaction, and zero three-values.
+  - Click **【Export Building JSON】** to export the blueprint into the datapack buildings folder and **hot-register it immediately**; it stays valid after `/reload`.
 - **`ROAD` (road mode — simplified)**:
   - Automatically hides all building-specific config; the UI becomes minimal and clean.
   - Keeps only `Road Preset ID` and `Display Name`.
-  - Click **【Export & Hot-Register Road JSON】** to export to `.minecraft/wandscape_roads/<id>.json` and **take effect immediately in-game**!
+  - Click **【Export & Hot-Register Road JSON】** to export and **take effect immediately in-game**!
+
+### 3. Key Actions
+- **`Auto-Detect Door`**: auto-scans doors inside the 3D bounding box and fills the door offset; supports multi-door cycling.
+- **`Scan Area`**: counts non-air blocks inside the 3D bounding box (**automatically excludes all scanner blocks**).
 
 ---
 
-## 📋 Fields & Actions Reference Table
+## 🧱 Survival Building Scanner
 
-| Control / Label | Type | Description |
-| :--- | :--- | :--- |
-| **`Mode`** | Button | Switches between `SAVE` master mode and `CORNER` corner mode. |
-| **`Structure Name`** | Input | Structure name, used for pairing (e.g. `townhall_lv1`). |
-| **`Target`** | Button | Switches between `BUILDING` and `ROAD` mode. |
-| **`Type` (Category)** | Button | Determines building type (`basic`, `shop`, `service`, `node`, `tavern`, etc.). |
-| **`❖ Match Corners`** | Button | Actively triggers pairing with same-named `CORNER` blocks within 64 blocks and recomputes the bounding box. |
-| **`X±1 / Y±1 / Z±1`** | Buttons | 6 micro-adjust buttons expanding the 3D bounding box by 1 block along X/Y/Z, no need to move blocks. |
-| **`❖ Door Offset`** | Inputs | Sets the entry offset `(X, Y, Z)` for NPC/tourist building interaction. |
-| **`Auto-Detect Door`** | Button | **Auto-scans doors inside the 3D bounding box** and fills the door offset; supports multi-door cycling. |
-| **`❖ Tourist Zones`** | Rows | Configures 3D interaction regions where tourists stay inside the building (`+ Add` / `× Delete`). |
-| **`❖ Placement Metadata`** | Inputs | Sets Building ID (e.g. `wandscape:shop_bakery`), display name and the three value attributes. |
-| **`❖ Periodic Maintenance Cost`** | Rows | Sets the elements and amounts needed to keep the building running (e.g. `earth: 1`). |
-| **`Scan Area`** | Button | Counts non-air blocks inside the 3D bounding box (**automatically excludes the scanner blocks themselves**). |
-| **`Export JSON`** | Button | Serializes and exports the JSON file (**automatically filters out scanner blocks**). |
+Designed for survival players to **copy a build they made themselves** so NPCs can rebuild it. The scanner is crafted at a crafting table (gold ingots in the corners, amethyst shards top/bottom/left/right, a crafting table in the middle).
 
----
+- **Category locked to `custom`** — not changeable.
+  - **No maintenance cost**: skipped every daily settlement, never shut down for maintenance.
+  - **No tourist interaction**: tourists never visit it.
+  - **Three values always 0**: `comfort/magic/wonder` are all 0, no colony contribution.
+- **Only exposes**:
+  - **Size (boundary)**: manually set the 3D bounding box min/max.
+  - **Door Offset**: set the entry coordinate for NPC interaction; auto-detect supported.
+  - **ID / Name**: unique building id and display name.
+  - **Export**: `Scan Area` counts valid blocks; `Export Building JSON` writes a `custom` blueprint.
+- **ROAD mode is preserved** as well for exporting road presets.
 
-## 🚀 3-Step Workflow
+### 3-Step Workflow (Survival)
 
-1. **Place & name**: put a `SAVE` scanner at one building corner with a structure name; put a `CORNER` scanner at the diagonal corner with the same name.
-2. **Match & configure**: click **【❖ Match Corners】** in the `SAVE` UI to auto-compute the 3D size; configure metadata, maintenance cost, or switch to `ROAD` mode as needed.
-3. **One-click export**: click **【Export Building JSON】** or **【Export & Hot-Register Road JSON】** and check the success message in chat.
+1. **Frame it**: place the survival scanner and manually set the boundary box to cover your build.
+2. **Name it**: set a building ID (e.g. `player_castle`) and display name; auto-detect the door offset.
+3. **Export**: click **【Export Building JSON】** and confirm the chat message, then have NPCs rebuild it from the blueprint.
 
 ---
 

@@ -17,12 +17,19 @@
 | service | 服务建筑（游客交互，需进入建筑） |
 | decoration | 装饰建筑（范围辐射加成） |
 | wonder | 奇观（全局效果） |
+| custom | 自定义建筑（无维护费、游客不可交互、三值恒0） |
 
 ## 关键设计要点
 
 - **三值评估**：BuildingContributionRegistry 改为每建筑实例独立计算。shop 三值 = 建筑基础值 + 所有有货 goods 的 comfort/magic/wonder 合计。变化广播 `ColonyEvaluationChangedEvent`
 - **BuildingUnlockChecker**：静态工具，查询殖民地等级 vs unlockRequirement.minColonyLevel（2026-07-29 三值门槛改为殖民地等级门槛）
 - **修复系统**：`BuildingBreakHandler.triggerRepair()` 通过 `BuildingActionPacket("repair")` 手动触发修复扫描，计入 repair material_list/counts 供蓝图调配仓库资源。shutdown 建筑可排队 repair 任务恢复
+
+### 建筑扫描器（两种）
+
+- **创造建筑扫描器**（`creative_building_scanner`，原名 `building_scanner` 改名而来）：完整创作者工具，Type 可选全部类别（含 `custom`），支持 SAVE/CORNER 配对、交互区/维护费/三值/商店/服务/节点配置、预设、ROAD 导出。
+- **生存建筑扫描器**（`building_scanner`）：简化版，专供生存玩家复制自己的建筑供 NPC 重建。类别锁定 `custom`（不可修改，导出无维护费/交互区，三值恒0），GUI 仅尺寸/门偏移/ID/Name/导出 + ROAD 模式。方块可合成（金锭×4 + 紫水晶碎片×4 + 工作台）。
+- 两者共用 `BuildingScannerExportPacket`（导出到 datapack 并热注册）与 `BuildingScannerSyncPacket`；渲染共用 `BuildingScannerRenderer`。
 
 ### 模拟经营系统
 

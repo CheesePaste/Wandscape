@@ -325,6 +325,7 @@ public class WandscapeClient {
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
         event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
         event.registerEntityRenderer(Wandscape.MAGIC_BEAM.get(), MagicBeamEntityRenderer::new);
+        event.registerBlockEntityRenderer(Wandscape.CREATIVE_BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
         event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
     }
 

@@ -49,7 +49,7 @@
 |------|------|------|
 | id | string | 唯一标识，snake_case |
 | display_name | string | 显示名称 |
-| category | string | basic/node/storage/workstation/crafting_station/potion_station/tavern/shop/service/decoration/wonder |
+| category | string | basic/node/storage/workstation/crafting_station/potion_station/tavern/shop/service/decoration/wonder/custom |
 | pattern | [x,y,z][] | 相对 anchor 的偏移列表。单方块建筑写 `[[0,0,0]]` |
 | block_mapping | {"x,y,z":"mod:block"} | pattern 中每个偏移→原版方块 ID |
 | comfort/magic/wonder | int | 建筑三值。规则因 category 而异(见下方"三值计入规则") |
@@ -77,6 +77,7 @@
 | service | 每栋正常计入。shutdown→游客交互产出减半但三值仍计入（见 jingying.md） |
 | decoration | **不计入殖民地总数**。自身 comfort/magic/wonder 以范围辐射方式加成给曼哈顿距离内功能建筑 |
 | wonder | **每栋直接计入殖民地总数**，且不受装饰加成上限限制 |
+| custom | 三值恒为 0，正常计入但无贡献（见下方「自定义建筑」） |
 
 ## 商店建筑 (category: shop)
 
@@ -182,6 +183,29 @@
 - 三值直接计入殖民地总数，不受装饰加成上限限制
 - 不参与游客交互系统
 
+## 自定义建筑 (category: custom)
+
+```json
+{
+  "id": "player_castle",
+  "display_name": "玩家城堡",
+  "category": "custom",
+  "pattern": [[0,0,0], [0,1,0], ...],
+  "block_mapping": { "0,0,0": "minecraft:stone_bricks" },
+  "comfort": 0,
+  "magic": 0,
+  "wonder": 0,
+  "boundary": { "min": [-5, 0, -5], "max": [5, 10, 5] },
+  "blueprint": { "id": "build:clear_and_build", "bind": { "offsets": "$pattern", "blocks": "$block_mapping", "name": "$display_name" } }
+}
+```
+
+- **无维护费**：不写 `maintenance_cost` 字段。`DailySettlementSystem` 对空成本直接跳过（标记已支付、不关停）。
+- **游客不可交互**：游客系统只将 `shop`/`service` 建筑作为交互目标，`custom` 类别天然被排除，不会生成游客交互区。
+- **三值恒 0**：`comfort`/`magic`/`wonder` 全为 0，对殖民地三值无贡献。
+- 用途：生存玩家用**生存建筑扫描器**（`building_scanner`）框选自己建造的建筑导出，让 NPC 用蓝图重建；创造建筑扫描器（`creative_building_scanner`）的 Type 也能切到 `custom`。
+- 玩家右键建筑走 `BuildingInteractHandler` 的 default 分支（无专用 GUI，仅信息/解锁提示）。
+
 ## 维护费 (所有建筑)
 
 ```json
@@ -208,6 +232,7 @@
 | wonder | 全局效果**暂停**（防止连锁 bug） |
 | workstation / node | 工作时间 **+100%**，产出 **-50%** |
 | basic / storage / tavern | 三值贡献归零 |
+| custom | 三值恒 0、无维护费，通常不触发关停 |
 | **所有建筑** | **不产生维护费** |
 
 ## 节点建筑额外字段

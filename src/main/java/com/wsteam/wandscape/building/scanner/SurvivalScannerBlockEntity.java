@@ -1,0 +1,51 @@
+package com.wsteam.wandscape.building.scanner;
+
+import java.util.List;
+import java.util.Map;
+
+import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
+import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+
+/**
+ * Block entity for the Survival Building Scanner.
+ * Category is permanently locked to {@code custom}: tourists never interact with it,
+ * it carries no maintenance cost, and comfort/magic/wonder are always zero.
+ * All other logic (boundary/door/id/name/NBT/door detection) is inherited from the
+ * full BuildingScannerBlockEntity — getters are overridden so the invariant holds
+ * even if stale or hostile NBT is loaded.
+ */
+public class SurvivalScannerBlockEntity extends BuildingScannerBlockEntity {
+
+    public SurvivalScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        setCategory("custom");
+    }
+
+    @Override
+    public String getCategory() { return "custom"; }
+
+    @Override
+    public Map<String, Integer> getMaintenanceCost() { return Map.of(); }
+
+    @Override
+    public int getComfort() { return 0; }
+
+    @Override
+    public int getMagic() { return 0; }
+
+    @Override
+    public int getWonder() { return 0; }
+
+    @Override
+    public List<BoundaryBox> getTouristInteractZones() { return List.of(); }
+
+    @Override
+    public List<ShopGoodData> getShopGoods() { return List.of(); }
+
+    @Override
+    public Map<String, Integer> getServiceElementOutput() { return Map.of(); }
+}
