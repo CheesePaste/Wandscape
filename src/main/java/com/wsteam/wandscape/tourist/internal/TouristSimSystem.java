@@ -23,21 +23,25 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
- * Drives tourists while their position chunk is unloaded.
+ * Drives tourists when their position chunk is not entity-ticking.
  *
  * <p>Every tourist has a {@link TouristShadow}. Every {@code SIM_INTERVAL} ticks
- * this system walks all shadows and switches per tourist by chunk load state:
+ * this system walks all shadows and switches per tourist by whether the chunk's
+ * entity AI is actually running (a chunk can be loaded without ticking entities —
+ * e.g. spawn chunks beyond their tick radius, or force-loaded chunks with no
+ * player near):
  * <ul>
- *   <li><b>Loaded</b> — the physical entity runs the real AI; the shadow mirrors it.
- *       On the unloaded→loaded transition the shadow wins (sim may have moved the
+ *   <li><b>Ticking</b> — the physical entity runs the real AI; the shadow mirrors it.
+ *       On the not-ticking→ticking transition the shadow wins (sim may have moved the
  *       tourist), then the entity takes over.</li>
- *   <li><b>Unloaded</b> — the sim advances the shadow: constant-speed straight-line
+ *   <li><b>Not ticking</b> — the sim advances the shadow: constant-speed straight-line
  *       movement (no terrain, no pathfinding), shop/service/hotel interactions and
  *       cooldowns via the shared {@link TouristSimulation} economy, then departure
  *       on night / energy exhaustion.</li>
@@ -159,11 +163,16 @@ public final class TouristSimSystem {
             }
         }
 
-        int loadedCount = 0, simmedCount = 0, stuckCount = 0;
+        int tickingCount = 0, simmedCount = 0, stuckCount = 0;
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
-            boolean loaded = level.isLoaded(new BlockPos((int) s.getPosX(), (int) s.getPosY(), (int) s.getPosZ()));
-            if (loaded) {
-                loadedCount++;
+            // "Loaded" for sim purposes = the chunk is actually entity-ticking (real AI
+            // runs). A chunk can be loaded-but-not-ticking (spawn chunks beyond their
+            // tick radius, force-loaded chunks with no player near) — the entity there is
+            // frozen, so the sim must take over. isLoaded() would miss those.
+            boolean ticking = level.getChunkSource().isPositionTicking(
+                    ChunkPos.asLong(((int) s.getPosX()) >> 4, ((int) s.getPosZ()) >> 4));
+            if (ticking) {
+                tickingCount++;
                 if (entities.get(s.getTouristId()) == null) stuckCount++;
                 handleLoaded(level, s, entities.get(s.getTouristId()));
             } else {
@@ -172,8 +181,8 @@ public final class TouristSimSystem {
             }
         }
         if (tickCounter % 200 == 0) {
-            Log.info(TAG, "[Tourist][diag] runTick shadows={} loaded={} (entity-null={}) simmed={}",
-                    shadows.size(), loadedCount, stuckCount, simmedCount);
+            Log.info(TAG, "[Tourist][diag] runTick shadows={} ticking={} (entity-null={}) simmed={}",
+                    shadows.size(), tickingCount, stuckCount, simmedCount);
         }
     }
 
