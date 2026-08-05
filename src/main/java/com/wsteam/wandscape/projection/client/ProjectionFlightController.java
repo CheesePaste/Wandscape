@@ -200,11 +200,11 @@ public final class ProjectionFlightController {
 
         if (!escapeClicked) return;
 
-        // Panel not open → exit projection entirely
+        // Panel not open → exit projection entirely. While the panel is open, ESC is
+        // intercepted by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
         if (!WandscapePanelState.isPanelOpen()) {
             doExit();
         }
-        // When panel is open, ESC falls through to the vanilla pause menu
     }
 
     // ── Exit ──

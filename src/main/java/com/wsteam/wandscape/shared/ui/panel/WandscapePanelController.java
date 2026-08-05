@@ -1,9 +1,11 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import org.lwjgl.glfw.GLFW;
@@ -18,8 +20,8 @@ import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Input controller for the Wandscape comprehensive panel.
- * Handles Escape key to close the panel and mouse clicks on UI tabs
- * when the cursor is lifted (C key toggled).
+ * Handles the Escape exit pipeline (spline editor → PLACING cursor raise → sub-mode → panel),
+ * mouse clicks on UI tabs when the cursor is lifted (C key toggled), and the building search box.
  */
 public final class WandscapePanelController {
 
@@ -44,6 +46,7 @@ public final class WandscapePanelController {
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
         bus.addListener(InputEvent.MouseScrollingEvent.class, WandscapePanelController::onMouseScroll);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
+        bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpening);
         Log.info(TAG, "[Panel] Controller registered");
     }
 
@@ -367,6 +370,62 @@ public final class WandscapePanelController {
         if (!BuildingSelectionOverlay.isActive()) return;
         if (!WandscapePanelState.isBuildingBarSearchFocused()) return;
         handleSearchInput(key, mods);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── Escape exit pipeline (replaces the vanilla pause screen) ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * While the panel is open, ESC is intercepted here instead of opening the vanilla
+     * pause menu. Each press walks one step down the exit pipeline (innermost first):
+     * spline editor → PLACING cursor raise → sub-mode exit → panel close.
+     */
+    static void onScreenOpening(ScreenEvent.Opening event) {
+        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!(event.getScreen() instanceof PauseScreen)) return;
+        event.setCanceled(true);
+        handlePanelEscape();
+    }
+
+    private static void handlePanelEscape() {
+        // 1. Spline road editor: ESC exits edit mode, stays in the ROAD selection bar
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+            Log.debug(TAG, "[Panel] ESC: exited spline editor (stay in Road)");
+            return;
+        }
+
+        WandscapePanelState.SubMode sub = WandscapePanelState.getActiveSubMode();
+
+        // 2. BUILD / ROAD in PLACING (crosshair in game): ESC == C key — raise the cursor
+        boolean placing = (sub == WandscapePanelState.SubMode.BUILD_PROJECTION
+                && WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING)
+                || (sub == WandscapePanelState.SubMode.ROAD_PROJECTION
+                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.PLACING);
+        if (placing) {
+            WandscapePanelState.toggleCursor();
+            Log.debug(TAG, "[Panel] ESC: raised cursor back to selection bar");
+            return;
+        }
+
+        // 3. Sub-mode active → exit it, keep the panel open
+        if (sub != WandscapePanelState.SubMode.NONE && sub != WandscapePanelState.SubMode.OVERVIEW) {
+            WandscapePanelState.exitCurrentSubMode();
+            // Ground-mode / STATS exit leaves the sub-mode set — drop to the bare panel
+            WandscapePanelState.SubMode after = WandscapePanelState.getActiveSubMode();
+            if (after == WandscapePanelState.SubMode.BUILD_PROJECTION
+                    || after == WandscapePanelState.SubMode.ROAD_PROJECTION
+                    || after == WandscapePanelState.SubMode.STATS) {
+                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
+            }
+            Log.debug(TAG, "[Panel] ESC: exited sub-mode {} (panel stays open)", sub);
+            return;
+        }
+
+        // 4. Bare panel (overview or no sub-mode) → close it
+        WandscapePanelState.closePanel();
+        Log.debug(TAG, "[Panel] ESC: closed panel");
     }
 
     /** Type printable chars / backspace into the building search box. @return true if consumed. */

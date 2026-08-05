@@ -82,10 +82,9 @@ public final class RoadPlacementController {
 
         long window = mc.getWindow().getWindow();
 
-        // ESC is handled here only as defensive cleanup when the panel is closed.
-        // With the panel open, ESC falls through to the vanilla pause menu — in 1.21.1
-        // pressing ESC with screen == null opens the PauseScreen regardless of cursor
-        // capture state, so no interception is needed.
+        // ESC is defensive cleanup for the rare case where road placement is still
+        // active after the panel has been closed. While the panel is open, ESC is
+        // intercepted by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
         handleEscapeInput(mc, window);
 
         // Cursor lifted → panel UI mode: drain all input
@@ -281,8 +280,8 @@ public final class RoadPlacementController {
 
     /**
      * Defensive ESC cleanup for the rare case where road placement is still active
-     * after the panel has been closed. With the panel open, ESC is left entirely
-     * to the vanilla pause menu.
+     * after the panel has been closed. While the panel is open, ESC is intercepted
+     * by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
      */
     private static void handleEscapeInput(Minecraft mc, long window) {
         boolean escapeDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
@@ -297,7 +296,7 @@ public final class RoadPlacementController {
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
             Log.debug(TAG, "[Road] Exited road placement mode");
         }
-        // With the panel open, ESC falls through to the vanilla pause menu
+        // With the panel open, ESC is handled by WandscapePanelController instead
     }
 
     // ── Input draining ──
