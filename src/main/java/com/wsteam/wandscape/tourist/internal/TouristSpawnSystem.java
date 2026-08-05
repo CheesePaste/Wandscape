@@ -656,6 +656,15 @@ public final class TouristSpawnSystem {
                 if (colonyId != null) overnightCounts.merge(colonyId, 1, Integer::sum);
             }
         }
+        // Include unloaded (sim) guests — their shadows carry the check-in state.
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            for (TouristShadow s : sim.getRegistry().getShadows().values()) {
+                if (s.getCheckedInBuildingId() != null && s.getColonyId() != null) {
+                    overnightCounts.merge(s.getColonyId(), 1, Integer::sum);
+                }
+            }
+        }
         var touristApi = getTouristApi();
         if (touristApi instanceof TouristApiImpl impl) {
             for (var entry : overnightCounts.entrySet()) {

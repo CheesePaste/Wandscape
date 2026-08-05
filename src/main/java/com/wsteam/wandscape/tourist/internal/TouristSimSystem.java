@@ -189,6 +189,8 @@ public final class TouristSimSystem {
 
     private void importToEntity(TouristEntity e, TouristShadow s) {
         e.setTouristName(s.getTouristName());
+        e.setSkinVariant(s.getSkinVariant());
+        e.setAppearance(s.isMage() ? TouristEntity.Appearance.MAGE : TouristEntity.Appearance.TOURIST);
         e.setPos(s.getPosX(), s.getPosY(), s.getPosZ());
         e.setLevel(s.getLevel());
         e.setWallet(s.getWallet());

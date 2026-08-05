@@ -243,8 +243,16 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         return entityData.get(DATA_SKIN_VARIANT);
     }
 
+    public void setSkinVariant(int variant) {
+        entityData.set(DATA_SKIN_VARIANT, variant);
+    }
+
     public Appearance getAppearance() {
         return entityData.get(DATA_APPEARANCE) == 1 ? Appearance.MAGE : Appearance.TOURIST;
+    }
+
+    public void setAppearance(Appearance appearance) {
+        entityData.set(DATA_APPEARANCE, (byte) (appearance == Appearance.MAGE ? 1 : 0));
     }
 
     public boolean isMage() {
