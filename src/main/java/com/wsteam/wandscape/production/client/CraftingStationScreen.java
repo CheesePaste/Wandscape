@@ -78,13 +78,39 @@ public class CraftingStationScreen extends MedievalScreen {
                         qe.blueprintId(), qe.summary()));
             }
             taskQueuePanel.setEntries(entries);
+            taskQueuePanel.setCurrent(toPanelCurrent(packet.current()));
         }
+    }
+
+    /** Convert the packet's current-task record to the panel's CurrentInfo (or null). */
+    private static TaskQueuePanel.CurrentInfo toPanelCurrent(TaskQueueDataPacket.CurrentTask ct) {
+        if (ct == null) return null;
+        TaskQueueDataPacket.QueueEntry e = ct.entry();
+        return new TaskQueuePanel.CurrentInfo(
+                new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
+                        e.quantity(), e.blueprintId(), e.summary()),
+                ct.stepIndex(), ct.totalSteps(),
+                ct.channelRemainingTicks(), ct.channelTotalTicks());
     }
 
     /** Send a REFRESH request to the server to get the current task queue. */
     private void requestQueueRefresh() {
         if (stationPos == null || stationPos.equals(BlockPos.ZERO)) return;
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(stationPos, "refresh", 0));
+    }
+
+    private int queueRefreshCounter;
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (taskQueuePanel != null) {
+            taskQueuePanel.tickProgress();
+            if (++queueRefreshCounter >= 20) {
+                queueRefreshCounter = 0;
+                requestQueueRefresh();
+            }
+        }
     }
 
     @Override

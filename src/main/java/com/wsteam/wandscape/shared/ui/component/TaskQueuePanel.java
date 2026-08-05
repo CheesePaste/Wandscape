@@ -76,8 +76,32 @@ public class TaskQueuePanel extends AbstractWidget {
         }
     }
 
+    /**
+     * The building's currently executing (head) task + its progress.
+     * Channel tasks ({@code channelTotalTicks > 0}) show a countdown; multi-step
+     * tasks fall back to step progress.
+     */
+    public record CurrentInfo(
+            Entry entry,
+            int stepIndex,
+            int totalSteps,
+            int channelRemainingTicks,
+            int channelTotalTicks
+    ) {}
+
     private final List<Entry> entries = new ArrayList<>();
     private final int rowHeight = 16;
+
+    // ── Current (executing) task ──
+    private static final int CURRENT_ROW_H = 18;
+    @javax.annotation.Nullable
+    private Entry currentEntry;
+    private int currentStep;
+    private int currentTotalSteps;
+    private int currentChannelRemaining;
+    private int currentChannelTotal;
+    /** Smoothed remaining channel ticks, decremented per client tick between refreshes. */
+    private double animatedRemaining;
 
     /** Callbacks wired by the parent Screen. */
     private java.util.function.IntConsumer onDelete;
@@ -130,6 +154,71 @@ public class TaskQueuePanel extends AbstractWidget {
         return Collections.unmodifiableList(entries);
     }
 
+    /**
+     * Replace the currently executing (head) task shown at the top of the panel.
+     * Pass null when the building has no active head task.
+     */
+    public void setCurrent(@javax.annotation.Nullable CurrentInfo info) {
+        if (info == null) {
+            this.currentEntry = null;
+            this.currentStep = 0;
+            this.currentTotalSteps = 0;
+            this.currentChannelRemaining = 0;
+            this.currentChannelTotal = 0;
+            this.animatedRemaining = 0;
+            return;
+        }
+        this.currentEntry = info.entry();
+        this.currentStep = info.stepIndex();
+        this.currentTotalSteps = info.totalSteps();
+        this.currentChannelRemaining = info.channelRemainingTicks();
+        this.currentChannelTotal = info.channelTotalTicks();
+        this.animatedRemaining = Math.max(0, info.channelRemainingTicks());
+    }
+
+    /** Decrement the animated channel countdown by one client tick. Call from the parent Screen's tick(). */
+    public void tickProgress() {
+        if (currentEntry != null && currentChannelTotal > 0 && animatedRemaining > 0) {
+            animatedRemaining = Math.max(0, animatedRemaining - 1);
+        }
+    }
+
+    /** Fraction 0..1 through the current task (channel-based, else step-based). */
+    private float progressFraction() {
+        if (currentEntry == null) return 0;
+        if (currentChannelTotal > 0) {
+            float frac = 1f - (float) animatedRemaining / Math.max(1, currentChannelTotal);
+            return Math.max(0, Math.min(1, frac));
+        }
+        if (currentTotalSteps > 0) {
+            return (float) currentStep / Math.max(1, currentTotalSteps);
+        }
+        return 0;
+    }
+
+    /** Short "time remaining" label for the current task row. */
+    private String timeLabel() {
+        if (currentEntry == null) return "";
+        if (currentChannelTotal > 0) {
+            int sec = (int) Math.ceil(animatedRemaining / 20.0);
+            if (sec >= 60) return String.format("%d:%02d", sec / 60, sec % 60);
+            return "~" + sec + "s";
+        }
+        if (currentTotalSteps > 0) {
+            return currentStep + "/" + currentTotalSteps;
+        }
+        return "";
+    }
+
+    /** Simple track + gold fill progress bar. */
+    private static void drawProgressBar(GuiGraphics g, int x, int y, int w, int h, float frac) {
+        g.fill(x, y, x + w, y + h, 0x66000000);
+        int fw = Math.round(w * frac);
+        if (fw > 0) {
+            g.fill(x, y, x + fw, y + h, 0xFFD4A840);
+        }
+    }
+
     /** Resolve a cached ItemStack for the given resource id, or null. */
     @javax.annotation.Nullable
     private ItemStack resolveIcon(String itemOrRecipeId) {
@@ -176,12 +265,19 @@ public class TaskQueuePanel extends AbstractWidget {
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4; // 4px bottom padding
 
+        // ── Current (executing) task — top row, locked, with progress bar ──
+        int rowStartY = textY;
+        if (currentEntry != null) {
+            rowStartY = textY + CURRENT_ROW_H;
+            renderCurrentRow(g, textY, colRightStart);
+        }
+
         for (int row = 0; row < entries.size(); row++) {
-            if (textY + rowHeight > listBottom) break;
+            int rowBaseY = rowStartY + row * rowHeight;
+            if (rowBaseY + rowHeight > listBottom) break;
 
             Entry e = entries.get(row);
             boolean isCurrent = (e.index == 0);
-            int rowBaseY = textY + row * rowHeight;
 
             // Alternating row background
             if (row % 2 == 1) {
@@ -227,6 +323,34 @@ public class TaskQueuePanel extends AbstractWidget {
             drawCloseBtn(g,colRightStart + 2*(BTN_W+BTN_GAP),btnY, canDelete, mouseX, mouseY,
                         () -> { if (canDelete && onDelete != null)   onDelete.accept(e.index);    });
         }
+    }
+
+    /** Draw the locked current-task row: icon + label + remaining time + progress bar. */
+    private void renderCurrentRow(GuiGraphics g, int rowY, int colRightStart) {
+        // Gold-tinted highlight so the running task stands out from pending rows
+        g.fill(getX() + 1, rowY, getX() + width - 1, rowY + CURRENT_ROW_H - 1, 0x44D4A840);
+
+        int contentX = getX() + CONTENT_LEFT_PAD;
+        int textColEnd = colRightStart - 2;
+
+        ItemStack icon = resolveIcon(currentEntry.itemOrRecipeId());
+        if (icon != null) {
+            renderIcon(g, icon, contentX, rowY, CURRENT_ROW_H);
+        }
+
+        int labelX = contentX + ICON_SIZE + ICON_GAP;
+        String label = categoryLabel(currentEntry.category());
+        g.drawString(Minecraft.getInstance().font, label, labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
+
+        String time = timeLabel();
+        if (!time.isEmpty()) {
+            int timeW = Minecraft.getInstance().font.width(time);
+            g.drawString(Minecraft.getInstance().font, time, textColEnd - timeW, rowY + 2, MedievalColors.TEXT_MUTED);
+        }
+
+        // Progress bar spans from the label start to the right text edge
+        int barW = Math.max(8, textColEnd - labelX);
+        drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction());
     }
 
     /**
@@ -317,9 +441,10 @@ public class TaskQueuePanel extends AbstractWidget {
         int topPadding = 4;
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4;
+        int rowStartY = textY + (currentEntry != null ? CURRENT_ROW_H : 0);
 
         for (int row = entries.size() - 1; row >= 0; row--) {
-            int rowBaseY = textY + row * rowHeight;
+            int rowBaseY = rowStartY + row * rowHeight;
             if (rowBaseY + rowHeight < textY || rowBaseY > listBottom) continue;
 
             Entry e = entries.get(row);

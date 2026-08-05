@@ -170,6 +170,20 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         return !pending.isEmpty();
     }
 
+    /**
+     * Channel progress for the async op targeting {@code target}.
+     * @return {remainingTicks, totalTicks}, or {-1, -1} if no channel is running there.
+     */
+    public int[] getChannelProgress(GridPos target) {
+        for (Pending p : pending) {
+            GridPos t = p.op().target();
+            if (t != null && t.equals(target)) {
+                return new int[]{p.remainingTicks(), p.op().channelTicks()};
+            }
+        }
+        return new int[]{-1, -1};
+    }
+
     // ── Action implementations ──
 
     private void executeAsyncAction(AtomicOp.BlockInteractOp op, World world, long npcId) {

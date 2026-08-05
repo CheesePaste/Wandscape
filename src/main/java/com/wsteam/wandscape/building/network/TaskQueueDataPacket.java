@@ -23,7 +23,8 @@ import com.wsteam.wandscape.shared.log.Log;
  */
 public record TaskQueueDataPacket(
     BlockPos stationPos,
-    List<QueueEntry> entries
+    List<QueueEntry> entries,
+    @javax.annotation.Nullable CurrentTask current
 ) implements CustomPacketPayload {
 
     private static final String TAG = "TaskQueueDataPacket";
@@ -58,6 +59,19 @@ public record TaskQueueDataPacket(
             String summary
     ) {}
 
+    /**
+     * The building's currently executing (head) task.
+     * {@code entry} mirrors the same display fields as a {@link QueueEntry}.
+     * Progress is either channel-based ({@code channelTotalTicks > 0}) or step-based.
+     */
+    public record CurrentTask(
+            QueueEntry entry,
+            int stepIndex,
+            int totalSteps,
+            int channelRemainingTicks,
+            int channelTotalTicks
+    ) {}
+
     private static Consumer<TaskQueueDataPacket> clientHandler;
 
     public static void setClientHandler(Consumer<TaskQueueDataPacket> handler) {
@@ -76,13 +90,26 @@ public record TaskQueueDataPacket(
         buf.writeBlockPos(pkt.stationPos);
         buf.writeVarInt(pkt.entries.size());
         for (TaskQueueDataPacket.QueueEntry entry : pkt.entries) {
-            buf.writeVarInt(entry.index);
-            buf.writeUtf(entry.category);
-            buf.writeUtf(entry.itemOrRecipeId);
-            buf.writeVarInt(entry.quantity);
-            buf.writeUtf(entry.blueprintId);
-            buf.writeUtf(entry.summary);
+            writeEntry(buf, entry);
         }
+        CurrentTask current = pkt.current;
+        buf.writeBoolean(current != null);
+        if (current != null) {
+            writeEntry(buf, current.entry());
+            buf.writeVarInt(current.stepIndex());
+            buf.writeVarInt(current.totalSteps());
+            buf.writeVarInt(current.channelRemainingTicks());
+            buf.writeVarInt(current.channelTotalTicks());
+        }
+    }
+
+    private static void writeEntry(RegistryFriendlyByteBuf buf, QueueEntry entry) {
+        buf.writeVarInt(entry.index);
+        buf.writeUtf(entry.category);
+        buf.writeUtf(entry.itemOrRecipeId);
+        buf.writeVarInt(entry.quantity);
+        buf.writeUtf(entry.blueprintId);
+        buf.writeUtf(entry.summary);
     }
 
     static TaskQueueDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -90,14 +117,27 @@ public record TaskQueueDataPacket(
         int size = buf.readVarInt();
         List<QueueEntry> entries = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            int index = buf.readVarInt();
-            String category = buf.readUtf();
-            String itemOrRecipeId = buf.readUtf();
-            int quantity = buf.readVarInt();
-            String blueprintId = buf.readUtf();
-            String summary = buf.readUtf();
-            entries.add(new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary));
+            entries.add(readEntry(buf));
         }
-        return new TaskQueueDataPacket(pos, entries);
+        CurrentTask current = null;
+        if (buf.readBoolean()) {
+            current = new CurrentTask(
+                    readEntry(buf),
+                    buf.readVarInt(),
+                    buf.readVarInt(),
+                    buf.readVarInt(),
+                    buf.readVarInt());
+        }
+        return new TaskQueueDataPacket(pos, entries, current);
+    }
+
+    private static QueueEntry readEntry(RegistryFriendlyByteBuf buf) {
+        int index = buf.readVarInt();
+        String category = buf.readUtf();
+        String itemOrRecipeId = buf.readUtf();
+        int quantity = buf.readVarInt();
+        String blueprintId = buf.readUtf();
+        String summary = buf.readUtf();
+        return new QueueEntry(index, category, itemOrRecipeId, quantity, blueprintId, summary);
     }
 }

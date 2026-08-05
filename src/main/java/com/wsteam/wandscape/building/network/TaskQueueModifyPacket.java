@@ -8,13 +8,18 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -111,18 +116,20 @@ public record TaskQueueModifyPacket(
                 String itemOrRecipeId = extractItemId(bid, params);
                 int quantity = paramInt(params, "count", 0);
                 entries.add(new TaskQueueDataPacket.QueueEntry(
-                        i, category, itemOrRecipeId, quantity, bid, summarizeWorkItem(item)
+                        i, category, itemOrRecipeId, quantity, bid, summarizeWorkItem(bid, params)
                 ));
             }
-            TaskQueueDataPacket response = new TaskQueueDataPacket(pkt.stationPos, entries);
+
+            // ── Current (executing) task — the building head, tracked separately from the queue ──
+            TaskQueueDataPacket.CurrentTask current = buildCurrentTask(data.getBuilding(buildingId));
+
+            TaskQueueDataPacket response = new TaskQueueDataPacket(pkt.stationPos, entries, current);
             PacketDistributor.sendToPlayer(sp, response);
         });
     }
 
-    /** Format a human-readable summary for the given WorkItem. */
-    static String summarizeWorkItem(WorkItem item) {
-        String bid = item.blueprintId();
-        Map<String, JsonElement> params = item.params();
+    /** Format a human-readable summary for a blueprint + params (WorkItem or GlobalTask). */
+    static String summarizeWorkItem(String bid, Map<String, JsonElement> params) {
         return switch (bid) {
             case "production:decompose" -> {
                 String id = paramStr(params, "item_id");
@@ -192,6 +199,65 @@ public record TaskQueueModifyPacket(
             if (el != null) return el;
         }
         return "";
+    }
+
+    /**
+     * Build the currently executing (head) task for a building, with progress.
+     * Returns null when no head task is active or it can't be resolved.
+     */
+    @Nullable
+    private static TaskQueueDataPacket.CurrentTask buildCurrentTask(@Nullable BuildingState state) {
+        if (state == null) return null;
+        UUID currentTaskUuid = state.getCurrentTaskId();
+        if (currentTaskUuid == null) return null;
+
+        World world = WandscapeEngine.getWorld();
+        GlobalTask gt = world != null ? world.taskPool.get(currentTaskUuid.getMostSignificantBits()) : null;
+        if (gt == null || gt.blueprintId == null) return null;
+
+        String bid = gt.blueprintId;
+        Map<String, JsonElement> params = gt.taskParams;
+        int totalSteps = Math.max(1, gt.sequence.size());
+        int stepIndex = Math.max(0, Math.min(gt.stepIndex, totalSteps));
+
+        int channelTotal = paramInt(params, "channel_ticks", 0);
+        int channelRemaining = channelTotal;
+        if (channelTotal > 0) {
+            GridPos anchor = anchorOf(params, state);
+            if (anchor != null) {
+                var exec = WandscapeEngine.getBlockInteractExec();
+                int[] prog = exec != null ? exec.getChannelProgress(anchor) : new int[]{-1, -1};
+                if (prog[0] >= 0) {
+                    channelRemaining = Math.max(0, prog[0]);
+                    if (prog[1] > 0) channelTotal = prog[1];
+                }
+            }
+        }
+
+        TaskQueueDataPacket.QueueEntry entry = new TaskQueueDataPacket.QueueEntry(
+                0, categorize(bid), extractItemId(bid, params),
+                paramInt(params, "count", 0), bid, summarizeWorkItem(bid, params));
+        return new TaskQueueDataPacket.CurrentTask(
+                entry, stepIndex, totalSteps, channelRemaining, channelTotal);
+    }
+
+    /** Resolve the channel op anchor: the "anchor" param (same source as the compiled op), else the building anchor. */
+    @Nullable
+    private static GridPos anchorOf(Map<String, JsonElement> params, @Nullable BuildingState state) {
+        JsonElement anchorEl = params.get("anchor");
+        if (anchorEl instanceof JsonArray arr && arr.size() >= 3) {
+            try {
+                return new GridPos(
+                        arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt());
+            } catch (NumberFormatException | IllegalStateException ignored) {
+                // fall through to building anchor
+            }
+        }
+        if (state != null && state.getAnchor() != null) {
+            BlockPos p = state.getAnchor();
+            return new GridPos(p.getX(), p.getY(), p.getZ());
+        }
+        return null;
     }
 
     @Nullable
