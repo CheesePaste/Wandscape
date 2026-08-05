@@ -162,8 +162,15 @@ public final class TouristSimSystem {
 
     private void handleLoaded(ServerLevel level, TouristShadow s, @Nullable TouristEntity entity) {
         if (entity == null) {
-            spawnEntity(level, s);
-            s.markHydrated();
+            if (s.isHydrated()) {
+                // The entity was removed (killed/discarded) while its chunk stayed
+                // loaded — drop the shadow so the sim doesn't respawn it.
+                registry.remove(s.getTouristId());
+                Log.info(TAG, "[Tourist] dropped shadow {} (entity removed while loaded)", shortId(s.getTouristId()));
+            } else {
+                spawnEntity(level, s);
+                s.markHydrated();
+            }
             return;
         }
         if (!s.isHydrated()) {

@@ -19,6 +19,7 @@ import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
+import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
 import com.wsteam.wandscape.tourist.internal.TouristStateHost;
 
 import javax.annotation.Nullable;
@@ -36,6 +37,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -50,6 +52,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
@@ -354,6 +357,41 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
+
+    /**
+     * A killed/discarded tourist must fully die. Its data shadow would otherwise
+     * make the sim respawn it at its old position — clear the shadow, free hotel
+     * occupancy and the colony's population slot.
+     */
+    @Override
+    public void onRemovedFromLevel() {
+        super.onRemovedFromLevel();
+        RemovalReason reason = getRemovalReason();
+        if (level().isClientSide || reason == null) return;
+        if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
+            onTouristKilled();
+        }
+    }
+
+    private void onTouristKilled() {
+        UUID colonyId = getColonyId();
+        if (getCheckedInBuildingId() != null) {
+            HotelStayHandler hotel = HotelStayHandler.getActive();
+            if (hotel != null && level() instanceof ServerLevel sl) {
+                hotel.checkOut(this, sl);
+            }
+        }
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null) {
+            sim.removeShadow(getUUID());
+        }
+        if (colonyId != null) {
+            var api = WandscapeApis.getTouristApiSilently();
+            if (api != null) {
+                api.registerDeparture(getUUID(), colonyId, getSatisfaction());
+            }
+        }
+    }
 
     /** Time base for cooldown comparisons — mirrors {@link TouristStateHost#timeBase()}. */
     @Override
