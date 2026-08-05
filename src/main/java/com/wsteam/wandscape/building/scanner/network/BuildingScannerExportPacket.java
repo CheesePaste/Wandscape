@@ -326,19 +326,31 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
 
     /**
      * Resolve the datapack directory for a config category (e.g. "buildings").
-     * In a dev environment this is the mod's source resources
-     * ({@code src/main/resources/data/wandscape/<category>}), which are packaged into the mod jar
-     * and served as the {@code data/wandscape/<category>} datapack for real players.
-     * Falls back to a world datapack so the export is still readable via /reload.
+     *
+     * <p>Exports always go into a <b>world datapack</b> ({@code <world>/datapacks/<fallbackPack>}):
+     * the game loads world datapacks on every restart, so exported buildings/roads survive
+     * quitting and re-entering in both dev and production. (Dev serves the mod's data from
+     * {@code build/resources/main}, not {@code src/main/resources}, so writing into the source
+     * folder was lost on relaunch.) {@code pack.mcmeta} makes the folder a valid, auto-enabled
+     * datapack; without it the game ignores the folder entirely.
      */
-    private static Path resolveDatapackDir(ServerLevel level, String category, String fallbackPack) {
-        Path serverDir = level.getServer().getServerDirectory();
-        if (serverDir.getParent() != null) {
-            Path devBase = serverDir.getParent().resolve("src/main/resources/data/wandscape");
-            if (Files.isDirectory(devBase)) return devBase.resolve(category);
-        }
-        Path datapacks = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR);
-        return datapacks.resolve(fallbackPack + "/data/wandscape/" + category);
+    private static Path resolveDatapackDir(ServerLevel level, String category, String fallbackPack) throws IOException {
+        Path packRoot = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR)
+                .resolve(fallbackPack);
+        ensurePackMeta(packRoot);
+        return packRoot.resolve("data/wandscape/" + category);
+    }
+
+    /** Write a pack.mcmeta so the folder is recognized as a loadable world datapack. */
+    private static void ensurePackMeta(Path packRoot) throws IOException {
+        Path metaFile = packRoot.resolve("pack.mcmeta");
+        if (Files.exists(metaFile)) return;
+        Files.createDirectories(packRoot);
+        int format = net.minecraft.SharedConstants.getCurrentVersion()
+                .getPackVersion(net.minecraft.server.packs.PackType.SERVER_DATA);
+        String meta = "{\n  \"pack\": {\n    \"pack_format\": " + format
+                + ",\n    \"description\": \"Wandscape exported buildings & road presets\"\n  }\n}";
+        Files.writeString(metaFile, meta);
     }
 
     private static void exportRoad(BuildingScannerBlockEntity scanner,
