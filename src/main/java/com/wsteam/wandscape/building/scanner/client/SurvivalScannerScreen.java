@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
+import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.SurvivalScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
@@ -28,13 +29,17 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class SurvivalScannerScreen extends MedievalScreen {
 
     private static final int PW = 360;
-    private static final int PH = 1000;
+    private static final int PH = 320;
 
     private final SurvivalScannerBlockEntity scanner;
 
     // ── Custom Medieval Button Definition (same as BuildingScannerScreen) ──
     private record CustomButton(int x, int y, int w, int h, String text, Runnable action) {}
     private final List<CustomButton> customButtons = new ArrayList<>();
+
+    // ── Structure pairing (SAVE/CORNER) ──
+    private EditBox structureNameEdit;
+    private int modeY;
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
@@ -94,12 +99,38 @@ public class SurvivalScannerScreen extends MedievalScreen {
         lx = leftPos + 16;
         int y = topPos + headerHeight + 10 + scrollOff;
 
-        // ── Toolbar Row: Target Mode + locked category label ──
+        // ── Toolbar Row 1: BlockMode (SAVE/CORNER) + structure name (配对暗号) ──
+        modeY = y;
+        addCustomButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
+            BuildingScannerBlockEntity.BlockMode next = scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
+                    ? BuildingScannerBlockEntity.BlockMode.CORNER : BuildingScannerBlockEntity.BlockMode.SAVE;
+            scanner.setBlockMode(next);
+            syncToServer();
+            needsRebuild = true;
+        });
+        structureNameEdit = mkEdit(lx + 145, y, 175, scanner.getStructureName(), s -> {
+            scanner.setStructureName(s);
+            syncToServer();
+        });
+        y += 28;
+
+        // ── CORNER mode: minimal pairing UI ──
+        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+            addCustomButton(leftPos + PW / 2 - 50, y + 70, 100, 22, "完成", this::onClose);
+            maxScroll = 0;
+            return;
+        }
+
+        // ── Toolbar Row 2: Target Mode + 匹配角点 (+ locked category label) ──
         targetY = y;
         addCustomButton(lx, y, 110, 20, "Target: " + scanner.getTargetMode().name(), () -> {
             SurvivalScannerBlockEntity.TargetMode next = scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.BUILDING
                     ? SurvivalScannerBlockEntity.TargetMode.ROAD : SurvivalScannerBlockEntity.TargetMode.BUILDING;
             scanner.setTargetMode(next);
+            syncToServer();
+            needsRebuild = true;
+        });
+        addCustomButton(lx + 115, y, 100, 20, "❖ 匹配角点", () -> {
             syncToServer();
             needsRebuild = true;
         });
@@ -135,7 +166,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
             addCustomButton(lx + 4, exportBtnY, 95, 22, "扫描区域", () -> doScan());
             addCustomButton(lx + 105, exportBtnY, 215, 22, "导出与热注册道路 JSON", () -> doExport());
 
-            maxScroll = -10000;
+            maxScroll = 0;
             return;
         }
 
@@ -187,7 +218,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         addCustomButton(lx + 4, exportBtnY, 95, 22, "扫描区域", () -> doScan());
         addCustomButton(lx + 105, exportBtnY, 215, 22, "导出建筑 JSON", () -> doExport());
 
-        maxScroll = -10000;
+        maxScroll = 0;
     }
 
     private void onAutoDetectDoor() {
@@ -449,9 +480,24 @@ public class SurvivalScannerScreen extends MedievalScreen {
             }
         }
 
-        // Locked category label next to the target button (BUILDING mode only)
-        if (scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.BUILDING) {
-            gui.drawString(font, "类别: 自定义 (custom)", lx + 118, targetY + 6, MedievalColors.TEXT_MUTED);
+        // 暗号 label for the structure-name pairing key (Mode row)
+        gui.drawString(font, "暗号", lx + 94, modeY + 6, MedievalColors.TEXT_MUTED);
+
+        // Locked category label on the target row (BUILDING mode only)
+        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
+                && scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.BUILDING) {
+            gui.drawString(font, "类别: 自定义", lx + 222, targetY + 6, MedievalColors.TEXT_MUTED);
+        }
+
+        // ── CORNER mode render ──
+        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+            drawMinimalBox(gui, lx, topPos + headerHeight + 38, 320, 64, true, false);
+            gui.drawString(font, "❖ CORNER 辅角点模式", lx + 10, topPos + headerHeight + 46, MedievalColors.BORDER_GOLD);
+            gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的暗号。", lx + 10, topPos + headerHeight + 60, MedievalColors.TEXT_WARM_WHITE);
+            gui.drawString(font, "2. 将此方块放置在建筑 3D 对角线的另一个顶点位置。", lx + 10, topPos + headerHeight + 74, MedievalColors.TEXT_MUTED);
+            gui.disableScissor();
+            super.render(gui, mx, my, pt);
+            return;
         }
 
         // ── ROAD Target Mode Render ──
