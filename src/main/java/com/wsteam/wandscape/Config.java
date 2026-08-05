@@ -4,6 +4,11 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.BooleanValue DEBUG = BUILDER
+            .comment("Verbose logging: show INFO/DEBUG log messages. "
+                    + "When false (default), only WARN/ERROR messages are logged.")
+            .define("general.debug", false);
+
     public static final ModConfigSpec.IntValue COLONY_RADIUS = BUILDER
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);

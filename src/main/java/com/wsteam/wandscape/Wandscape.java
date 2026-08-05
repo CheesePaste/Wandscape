@@ -139,6 +139,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -360,6 +361,9 @@ public class Wandscape {
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
+        // Keep log verbosity in sync with the config (applies on load and reload)
+        modEventBus.addListener(this::onModConfig);
+
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
         WandscapeApis.setNpcApi(new NpcApiImpl());
@@ -383,6 +387,10 @@ public class Wandscape {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
         Log.info(TAG, "Wandscape common setup — wand, element, buildings, npc ready");
+    }
+
+    private void onModConfig(ModConfigEvent event) {
+        Log.setVerbose(Config.DEBUG.get());
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
