@@ -585,6 +585,9 @@ public final class TouristSpawnSystem {
             if (!isHotelBuilding(b.getBuildingId())) continue;
             // 酒店豁免 visitedBuildings：白天逛过 inn 不应阻止夜晚入住
             if (!hotel.hasVacancy(b.getBuildingId())) continue;
+            // Only route to a hotel whose chunk is loaded — a loaded tourist can't
+            // path into an unloaded chunk.
+            if (!level.isLoaded(b.getPosition())) continue;
 
             BlockPos target = api.getTouristInteractionTarget(b.getBuildingId());
             if (target == null) continue;

@@ -277,6 +277,22 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        // Target chunk unloaded while en route → can't path there; re-plan to a
+        // loaded building (or wander). Prevents stalling at the load boundary.
+        if (!tourist.level().isLoaded(target)) {
+            tourist.setCommuteTarget(null);
+            tourist.setTargetBuildingId(null);
+            tourist.setTargetBuildingCategory(null);
+            planNextBuilding();
+            if (tourist.getCommuteTarget() != null) {
+                beginNavigation(tourist.getCommuteTarget(), touristSpeed);
+            } else {
+                switchMode(MoveMode.WANDERING);
+                startWander();
+            }
+            return;
+        }
+
         // Check if we're close enough to the building to switch to indoor micro-nav
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId != null && isWithinDistanceOfBbox(buildingId, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
@@ -1159,6 +1175,10 @@ public class TouristMoveGoal extends Goal {
 
             BuildingState state = savedData.getBuilding(b.getBuildingId());
             if (state == null) continue;
+
+            // A loaded tourist can't path into an unloaded chunk — only target
+            // buildings whose anchor chunk is loaded, else it stalls at the boundary.
+            if (!tourist.level().isLoaded(state.getAnchor())) continue;
 
             if ("shop".equals(cat)) {
                 ShopStockManager stock = ShopStockManager.getActive();

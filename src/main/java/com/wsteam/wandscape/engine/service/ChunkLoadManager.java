@@ -139,6 +139,23 @@ public final class ChunkLoadManager {
         return leases.size();
     }
 
+    // ---- Temporary per-op lease (general safety net) ----
+
+    /**
+     * Force-load a single chunk for the duration of one block-op write. Refcounted,
+     * so it is a no-op (no {@code setChunkForced} call) when a building lease already
+     * holds the chunk — covers manual blueprints / road tasks that skip the building
+     * lease path without adding cost to the main construction path.
+     */
+    public void acquireChunk(ChunkPos cp) {
+        acquire(cp);
+    }
+
+    /** Release a {@link #acquireChunk(ChunkPos)} lease. */
+    public void releaseChunk(ChunkPos cp) {
+        release(cp);
+    }
+
     // ---- Chunk-level refcount ----
 
     private void acquire(ChunkPos cp) {

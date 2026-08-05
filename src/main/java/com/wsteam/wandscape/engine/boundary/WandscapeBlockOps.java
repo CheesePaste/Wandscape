@@ -12,9 +12,11 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.engine.service.SoundService;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -66,8 +68,16 @@ public class WandscapeBlockOps implements BlockOps {
         Level level = getLevel();
         if (level == null) return;
         BlockState state = resolveBlockState(type);
-        if (state != null) {
-            BlockPos bp = toBlockPos(pos);
+        if (state == null) return;
+
+        BlockPos bp = toBlockPos(pos);
+        ChunkPos cp = new ChunkPos(bp);
+        // Temporary lease: force-load the target chunk so the write lands even when
+        // the area is otherwise unloaded (manual blueprints / road tasks that skip the
+        // building lease). Refcounted — no-op on the construction path where the
+        // building lease already holds the chunk.
+        ChunkLoadManager.get().acquireChunk(cp);
+        try {
             BlockState oldState = level.getBlockState(bp);
             evacuateEntities(level, bp);
             level.setBlock(bp, state, 2);
@@ -86,6 +96,8 @@ public class WandscapeBlockOps implements BlockOps {
                             placeSound, SoundSource.BLOCKS, 0.8f, 1.0f, BLOCK_SOUND_THROTTLE_TICKS);
                 }
             }
+        } finally {
+            ChunkLoadManager.get().releaseChunk(cp);
         }
     }
 
@@ -95,6 +107,8 @@ public class WandscapeBlockOps implements BlockOps {
         Level level = getLevel();
         if (level == null) return;
         BlockPos bp = toBlockPos(pos);
+        ChunkPos cp = new ChunkPos(bp);
+        ChunkLoadManager.get().acquireChunk(cp);
         try {
             byte[] data = Base64.getDecoder().decode(nbtBase64);
             CompoundTag tag = NbtIo.readCompressed(new ByteArrayInputStream(data), NbtAccounter.create(0x200000L));
@@ -115,6 +129,8 @@ public class WandscapeBlockOps implements BlockOps {
             }
         } catch (Exception e) {
             Log.warn(TAG, "Failed to restore BlockEntity NBT at {}: {}", bp, e.toString());
+        } finally {
+            ChunkLoadManager.get().releaseChunk(cp);
         }
     }
 
