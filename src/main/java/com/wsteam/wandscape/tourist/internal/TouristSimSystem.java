@@ -165,15 +165,15 @@ public final class TouristSimSystem {
 
     private void handleLoaded(ServerLevel level, TouristShadow s, @Nullable TouristEntity entity) {
         if (entity == null) {
-            if (s.isHydrated()) {
-                // The entity was removed (killed/discarded) while its chunk stayed
-                // loaded — drop the shadow so the sim doesn't respawn it.
-                registry.remove(s.getTouristId());
-                Log.info(TAG, "[Tourist] dropped shadow {} (entity removed while loaded)", shortId(s.getTouristId()));
-            } else {
+            if (!s.isHydrated()) {
                 spawnEntity(level, s);
                 s.markHydrated();
             }
+            // entity == null && hydrated: the chunk is mid-unload (entity already removed
+            // from the loaded list while isLoaded is still briefly true) or the tourist was
+            // killed (onRemovedFromLevel already removed the shadow). Do nothing — the
+            // chunk finishes unloading and simStep takes over. Never drop the shadow here:
+            // that orphaned the surviving entity and mass-killed tourists on world load.
             return;
         }
         if (!s.isHydrated()) {

@@ -661,6 +661,13 @@ public final class TouristSpawnSystem {
     }
 
     private int countExistingTourists(ServerLevel level) {
+        // The shadow registry is the authoritative population (loaded entities + unloaded
+        // shadows). Counting only live entities would ignore unloaded tourists and let the
+        // colony over-spawn past its cap.
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            return sim.getRegistry().getShadows().size();
+        }
         int count = 0;
         for (var entity : level.getAllEntities()) {
             if (entity instanceof TouristEntity t && t.isAlive()) {
