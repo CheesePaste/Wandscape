@@ -48,7 +48,8 @@ public record BuildingConfig(
         ServiceConfig service,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
         @SerializedName("tourist_interact_aabb") List<BoundaryBox> touristInteractAabb,
-        @SerializedName("first_free") boolean firstFree
+        @SerializedName("first_free") boolean firstFree,
+        @SerializedName("deprecated") boolean deprecated
 ) {
     public record QueueDef(
             int capacity,
@@ -264,6 +265,10 @@ public record BuildingConfig(
             // type in a colony does not consume warehouse materials.
             boolean firstFree = getBoolean(obj, "first_free", false);
 
+            // Deprecated flag: config still loads (old-map buildings keep working),
+            // but the building is hidden from the placement panel (BUILD_PROJECTION bar).
+            boolean deprecated = getBoolean(obj, "deprecated", false);
+
             // Tourist interact AABB list: multiple interaction zones relative to anchor.
             // When not specified, interaction point is computed via spiral scan inside building boundary.
             List<BoundaryBox> touristInteractAabb = List.of();
@@ -285,7 +290,7 @@ public record BuildingConfig(
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service,
-                    doorOffset, touristInteractAabb, firstFree);
+                    doorOffset, touristInteractAabb, firstFree, deprecated);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

@@ -106,6 +106,7 @@ public final class ProjectionNetwork {
         var buildingApi = WandscapeApis.getBuildingApiSilently();
         return configs.values().stream()
                 .filter(c -> c.blueprint() != null) // only buildings with a build blueprint
+                .filter(c -> !c.deprecated()) // deprecated buildings stay functional but are hidden from placement
                 .map(c -> {
                     boolean firstFreeAvailable = c.firstFree()
                             && colonyId != null

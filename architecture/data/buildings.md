@@ -65,6 +65,7 @@
 | node_config | {...} | **仅 category=node**。节点采集配置 |
 | interaction_radius | int/{x,y,z}/{min,max} | 右键交互区扩展（默认 0）。>0 时玩家可从建筑边界外此范围内右键交互。支持三种格式：uniform int、per-axis {x,y,z}、explicit box {min,max} |
 | tourist_interact_aabb | [{min:[x,y,z], max:[x,y,z]}] | **替代旧字段 interact_offset**。室内游客导航目标区域列表（相对于 anchor）。游客 AI 遍历列表，对每个 AABB 螺旋扫描可步行地面，使用第一个找到的位置。未指定时回退到建筑 boundary 包围盒内扫描 |
+| deprecated | boolean | 默认 false。为 true 时配置照常加载、旧地图上已放置的建筑功能全部保留（维护费/任务/修复/拆除），但**从建筑面板（BUILD_PROJECTION 建筑栏）隐藏**，无法再新建。用于模组版本更新中"保留旧 id + 隐藏面板"的软废弃 |
 
 ## 三值计入规则
 
@@ -205,6 +206,25 @@
 - **三值恒 0**：`comfort`/`magic`/`wonder` 全为 0，对殖民地三值无贡献。
 - 用途：生存玩家用**生存建筑扫描器**（`building_scanner`）框选自己建造的建筑导出，让 NPC 用蓝图重建；创造建筑扫描器（`creative_building_scanner`）的 Type 也能切到 `custom`。
 - 玩家右键建筑走 `BuildingInteractHandler` 的 default 分支（无专用 GUI，仅信息/解锁提示）。
+
+## 废弃建筑 (deprecated)
+
+```json
+{
+  "id": "old_house",
+  "display_name": "旧民居",
+  "category": "basic",
+  "deprecated": true,
+  "pattern": [[0,0,0], ...],
+  "block_mapping": { "0,0,0": "minecraft:stone_bricks" },
+  "blueprint": { "id": "build:clear_and_build", "bind": { "offsets": "$pattern", "blocks": "$block_mapping", "name": "$display_name" } }
+}
+```
+
+- `deprecated: true` 时该建筑**从建筑面板（BUILD_PROJECTION 建筑栏）隐藏**，无法再选择新建。
+- 配置仍正常加载（`BuildingConfigLoader.get(id)` 命中），**旧地图上已放置的同 id 建筑功能全部保留**：维护费结算、任务队列、损坏检测/修复、拆除、商店补货、游客交互均不受影响。
+- 用途：模组版本更新中软废弃某建筑——保留原 id 让旧存档建筑继续运转，同时从面板隐藏避免新玩家再建造。需要换新建筑时用 `deprecated: true` 标记旧 id，另起新 id 的 JSON，不必硬删或改名。
+- 文件位置无特殊要求：`deprecated/` 子文件夹只是组织习惯，加载器递归扫描且注册键用 JSON 内 `id`，隐藏语义完全由 `deprecated` 字段决定。
 
 ## 维护费 (所有建筑)
 
