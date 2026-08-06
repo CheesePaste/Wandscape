@@ -25,6 +25,9 @@ tools/
 /wandscape-icon-v2-400.png
 /wandscape-icon-v2.svg
 
+### Icon source assets (svg 已应用进模组 resources，源文件不入库) ###
+assets_src/
+
 /assets/
 ### Eclipse ###
 .apt_generated
