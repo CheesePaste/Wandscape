@@ -10,7 +10,6 @@ public final class WandscapeApis {
     private static HouseApi houseApi;
     private static TavernApi tavernApi;
     private static ColonyApi colonyApi;
-    private static ManaPoolApi manaPoolApi;
     private static RoadApi roadApi;
     private static TouristApi touristApi;
     private static ColonyMetricsApi colonyMetricsApi;
@@ -72,12 +71,6 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static ColonyApi getColonyApiSilently() { return colonyApi; }
     public static void setColonyApi(ColonyApi api) { colonyApi = api; }
-
-    public static ManaPoolApi getManaPoolApi() {
-        if (manaPoolApi == null) throw new IllegalStateException("Module HousingManaPool not loaded");
-        return manaPoolApi;
-    }
-    public static void setManaPoolApi(ManaPoolApi api) { manaPoolApi = api; }
 
     public static RoadApi getRoadApi() {
         if (roadApi == null) throw new IllegalStateException("Module RoadSystem not loaded");

@@ -12,10 +12,11 @@ public interface TavernApi {
 
     /**
      * Called when a mage tourist departs at 100% satisfaction.
-     * Stores their resume in the colony's tavern recruitment pool.
+     * Stores their rolled attributes (resume) in the colony's tavern recruitment pool.
      */
     void receiveMageResume(UUID colonyId, String touristName, int level,
-                           int maxMana, int manaRegenRate, int spellPower, int skinVariant);
+                           float maxHp, float moveSpeed, float spellPower,
+                           float workSpeed, float spellSpeed, float armorValue, int skinVariant);
 
     /** Returns mage resumes available at a tavern, newest first. */
     List<MageResume> getMageResumes(UUID colonyId);

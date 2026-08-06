@@ -109,9 +109,12 @@ public final class TouristSimSystem {
         s.setTouristName(t.getTouristName());
         s.setMage(t.isMage());
         s.setSkinVariant(t.getSkinVariant());
-        s.setMaxMana(t.getMaxMana());
-        s.setManaRegenRate(t.getManaRegenRate());
+        s.setMaxHp(t.getMaxHp());
+        s.setMoveSpeed(t.getMoveSpeed());
         s.setSpellPower(t.getSpellPower());
+        s.setWorkSpeed(t.getWorkSpeed());
+        s.setSpellSpeed(t.getSpellSpeed());
+        s.setArmor(t.getArmor());
         exportToShadow(t, s);
         registry.put(t.getUUID(), s);
         Log.info(TAG, "[Tourist][diag] adopted shadow {} at ({},{}), commute={}, target={}",
@@ -562,7 +565,8 @@ public final class TouristSimSystem {
         try {
             WandscapeApis.getTavernApi().receiveMageResume(
                     s.getColonyId(), s.getTouristName(), s.getLevel(),
-                    s.getMaxMana(), s.getManaRegenRate(), s.getSpellPower(), s.getSkinVariant());
+                    s.getMaxHp(), s.getMoveSpeed(), s.getSpellPower(),
+                    s.getWorkSpeed(), s.getSpellSpeed(), s.getArmor(), s.getSkinVariant());
         } catch (IllegalStateException e) {
             Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}", s.getTouristName());
         }

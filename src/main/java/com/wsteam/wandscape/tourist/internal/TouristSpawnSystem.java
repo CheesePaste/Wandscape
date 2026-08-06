@@ -522,7 +522,8 @@ public final class TouristSpawnSystem {
         try {
             var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
             tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
-                    t.getMaxMana(), t.getManaRegenRate(), t.getSpellPower(),
+                    t.getMaxHp(), t.getMoveSpeed(), t.getSpellPower(),
+                    t.getWorkSpeed(), t.getSpellSpeed(), t.getArmor(),
                     t.getSkinVariant());
             Log.info(TAG, "[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
         } catch (IllegalStateException e) {

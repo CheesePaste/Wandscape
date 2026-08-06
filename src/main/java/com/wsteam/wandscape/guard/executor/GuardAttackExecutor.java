@@ -1,9 +1,7 @@
 package com.wsteam.wandscape.guard.executor;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.wsteam.wandscape.core.ecs.World;
@@ -44,8 +42,6 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
                            int attackRange, int releaseRange, String circleId, int color) {}
 
     private final List<Pending> pending = new ArrayList<>();
-    /** npcId → 上次成功施法的 gameTime（施法节流）。 */
-    private final Map<Long, Long> lastCastTick = new HashMap<>();
 
     @Override
     public Class<AtomicOp.AttackMonsterOp> opType() {
@@ -81,7 +77,6 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             int wait = runCycle(p);
             if (wait < 0) {
                 toComplete.add(p.future());
-                lastCastTick.remove(p.npcId());
             } else {
                 next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, wait),
                         p.attackRange(), p.releaseRange(), p.circleId(), p.color()));
@@ -121,7 +116,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         }
 
         GuardCombat.engage(level, npc, nearest, p.world(), p.npcId(),
-                p.circleId(), p.color(), lastCastTick);
+                p.circleId(), p.color());
         return RECHECK_TICKS;
     }
 }

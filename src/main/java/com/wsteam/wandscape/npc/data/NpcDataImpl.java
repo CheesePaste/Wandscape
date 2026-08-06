@@ -15,10 +15,10 @@ public class NpcDataImpl implements NpcData {
     private final String name;
     private final int maxHealth;
     private final int currentHealth;
-    private final int maxMana;
-    private final int currentMana;
-    private final int spellPower;
-    private final int manaRegenRate;
+    private final float spellPower;
+    private final float workSpeed;
+    private final float spellSpeed;
+    private final float armorValue;
     private final boolean isIdle;
     @Nullable private final UUID assignedHouseId;
     @Nullable private final UUID currentTaskId;
@@ -26,7 +26,7 @@ public class NpcDataImpl implements NpcData {
     @Nullable private final UUID graveBlockEntityId;
 
     NpcDataImpl(UUID npcId, String name, int maxHealth, int currentHealth,
-                int maxMana, int currentMana, int spellPower, int manaRegenRate,
+                float spellPower, float workSpeed, float spellSpeed, float armorValue,
                 boolean isIdle,
                 @Nullable UUID assignedHouseId, @Nullable UUID currentTaskId,
                 boolean isDead, @Nullable UUID graveBlockEntityId) {
@@ -34,10 +34,10 @@ public class NpcDataImpl implements NpcData {
         this.name = name;
         this.maxHealth = maxHealth;
         this.currentHealth = currentHealth;
-        this.maxMana = maxMana;
-        this.currentMana = currentMana;
         this.spellPower = spellPower;
-        this.manaRegenRate = manaRegenRate;
+        this.workSpeed = workSpeed;
+        this.spellSpeed = spellSpeed;
+        this.armorValue = armorValue;
         this.isIdle = isIdle;
         this.assignedHouseId = assignedHouseId;
         this.currentTaskId = currentTaskId;
@@ -52,10 +52,10 @@ public class NpcDataImpl implements NpcData {
                 npc.getNpcName(),
                 (int) npc.getMaxHealth(),
                 (int) npc.getHealth(),
-                npc.maxMana,
-                npc.currentMana,
                 npc.spellPower,
-                npc.manaRegenRate,
+                npc.workSpeed,
+                npc.spellSpeed,
+                npc.armorValue,
                 npc.isEngineIdle(),
                 null,            // stage 4+: house binding
                 npc.getCurrentTaskId(),
@@ -70,10 +70,10 @@ public class NpcDataImpl implements NpcData {
     @Override public String getName() { return name; }
     @Override public int getMaxHealth() { return maxHealth; }
     @Override public int getCurrentHealth() { return currentHealth; }
-    @Override public int getMaxMana() { return maxMana; }
-    @Override public int getCurrentMana() { return currentMana; }
-    @Override public int getSpellPower() { return spellPower; }
-    @Override public int getManaRegenRate() { return manaRegenRate; }
+    @Override public float getSpellPower() { return spellPower; }
+    @Override public float getWorkSpeed() { return workSpeed; }
+    @Override public float getSpellSpeed() { return spellSpeed; }
+    @Override public float getArmorValue() { return armorValue; }
     @Override public boolean isIdle() { return isIdle; }
     @Override @Nullable public UUID getAssignedHouseId() { return assignedHouseId; }
     @Override @Nullable public UUID getCurrentTaskId() { return currentTaskId; }

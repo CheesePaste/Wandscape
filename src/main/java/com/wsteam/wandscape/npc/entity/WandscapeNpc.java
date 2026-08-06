@@ -9,12 +9,15 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.ManaPool;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -77,13 +80,115 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public UUID colonyId = EntityComponentBridge.PLACEHOLDER_COLONY;
 
     // ============================================================
-    // Attributes (ECS is authoritative at runtime; these are NBT transit)
+    // Attributes (ECS EquipmentComponent is authoritative at runtime:
+    // base = these fields + equipment modifiers; these fields are NBT transit)
     // ============================================================
 
-    public int currentMana = 100;
-    public int maxMana = 100;
-    public int manaRegenRate = 2;
-    public int spellPower = 1;
+    public float maxHp = NpcAttributes.defaults().maxHp();
+    public float moveSpeed = NpcAttributes.defaults().moveSpeed();
+    public float spellPower = NpcAttributes.defaults().spellPower();
+    public float workSpeed = NpcAttributes.defaults().workSpeed();
+    public float spellSpeed = NpcAttributes.defaults().spellSpeed();
+    public float armorValue = NpcAttributes.defaults().armorValue();
+
+    // ============================================================
+    // 魔法冷却（剩余 tick）——施法后进入冷却，CD 受 SPELL_SPEED 影响；
+    // 施法时间（魔法阵+激光、仪式引导）不参与。NBT 存剩余值防跨存档失真。
+    // ============================================================
+
+    private int spellCooldown = 0;
+
+    /** 是否可施法（冷却已过）。 */
+    public boolean canCastSpell() {
+        return spellCooldown <= 0;
+    }
+
+    /** 开始冷却：baseCD 除以 SPELL_SPEED（向上取整）。 */
+    public void startSpellCooldown(int baseCooldown) {
+        float speed = getEffectiveAttribute(AttributeType.SPELL_SPEED);
+        int eff = speed > 1f ? (int) Math.ceil(baseCooldown / speed) : baseCooldown;
+        spellCooldown = Math.max(spellCooldown, eff);
+    }
+
+    // ============================================================
+    // 脱战生命恢复：受击后封伤 grace tick，之后每 interval tick 回 1 HP。
+    // 剩余值 NBT 持久（tick 数可跨存档）。
+    // ============================================================
+
+    private int regenCooldown = 0;
+    private int regenAccum = 0;
+
+    /** 受击时调用（SelfDefenseHandler）：重置脱战封伤计时。 */
+    public void markRecentlyDamaged() {
+        regenCooldown = Config.NPC_REGEN_GRACE_TICKS.get();
+        regenAccum = 0;
+    }
+
+    /** 每 server tick：脱战封伤计时递减，封伤过后按 interval 累计回血。 */
+    private void tickHealthRegen() {
+        if (regenCooldown > 0) {
+            regenCooldown--;
+            return;
+        }
+        if (getHealth() < getMaxHealth()) {
+            regenAccum++;
+            if (regenAccum >= Config.NPC_REGEN_INTERVAL_TICKS.get()) {
+                regenAccum = 0;
+                heal(1f);
+            }
+        } else {
+            regenAccum = 0;
+        }
+    }
+
+    /**
+     * 读取 NPC 有效属性（ECS EquipmentComponent：base + 装备加成）。
+     * ECS 不可用时回退到 NBT transit 字段。
+     */
+    public float getEffectiveAttribute(AttributeType type) {
+        World world = WandscapeEngine.getWorld();
+        if (world != null && ecsEntityId > 0) {
+            EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+            if (eq != null) return eq.getAttribute(type);
+        }
+        return switch (type) {
+            case MAX_HP -> maxHp;
+            case MOVE_SPEED -> moveSpeed;
+            case SPELL_POWER -> spellPower;
+            case WORK_SPEED -> workSpeed;
+            case SPELL_SPEED -> spellSpeed;
+            case ARMOR_VALUE -> armorValue;
+        };
+    }
+
+    /** 上次推送到 vanilla 的属性值（防每 tick 重复 setBaseValue）。 */
+    private float appliedMaxHp = -1;
+    private float appliedMoveSpeed = -1;
+    private float appliedArmor = -1;
+
+    /** 把有效属性推送到 vanilla 实体（最大生命/移速/护甲）。 */
+    private void applyEffectiveAttributes() {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || ecsEntityId <= 0) return;
+        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+        if (eq == null) return;
+        float maxHp = eq.getAttribute(AttributeType.MAX_HP);
+        float speed = eq.getAttribute(AttributeType.MOVE_SPEED);
+        float armor = eq.getAttribute(AttributeType.ARMOR_VALUE);
+        if (Math.abs(maxHp - appliedMaxHp) > 0.001f) {
+            appliedMaxHp = maxHp;
+            this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(maxHp);
+            if (getHealth() > maxHp) setHealth(maxHp);
+        }
+        if (Math.abs(speed - appliedMoveSpeed) > 0.001f) {
+            appliedMoveSpeed = speed;
+            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(speed);
+        }
+        if (Math.abs(armor - appliedArmor) > 0.001f) {
+            appliedArmor = armor;
+            this.getAttribute(Attributes.ARMOR).setBaseValue(armor);
+        }
+    }
 
     // ============================================================
     // Inventory
@@ -323,6 +428,11 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
+
+        // 冷却递减 + 脱战回血 + 属性推送：idle NPC 也要执行，放在快路 return 之前
+        if (spellCooldown > 0) spellCooldown--;
+        tickHealthRegen();
+        applyEffectiveAttributes();
 
         boolean manual = manualCastTicks > 0;
         if (manual) manualCastTicks--;
@@ -689,18 +799,16 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         super.addAdditionalSaveData(tag);
         tag.putInt("SkinVariant", getSkinVariant());
         tag.putInt("HatColor", getHatColor());
-        // Read current mana from ECS (the authoritative source at runtime)
-        World world = WandscapeEngine.getWorld();
-        if (world != null && ecsEntityId > 0) {
-            ManaPool mana = world.get(ecsEntityId, ManaPool.class);
-            tag.putInt("currentMana", mana != null ? (int) mana.current() : currentMana);
-        } else {
-            tag.putInt("currentMana", currentMana);
-        }
         tag.putLong("EcsEntityId", ecsEntityId);
-        tag.putInt("maxMana", maxMana);
-        tag.putInt("manaRegenRate", manaRegenRate);
-        tag.putInt("spellPower", spellPower);
+        tag.putFloat("maxHp", maxHp);
+        tag.putFloat("moveSpeed", moveSpeed);
+        tag.putFloat("spellPower", spellPower);
+        tag.putFloat("workSpeed", workSpeed);
+        tag.putFloat("spellSpeed", spellSpeed);
+        tag.putFloat("armorValue", armorValue);
+        tag.putInt("spellCooldown", spellCooldown);
+        tag.putInt("regenCooldown", regenCooldown);
+        tag.putInt("regenAccum", regenAccum);
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
@@ -718,10 +826,15 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
             this.entityData.set(DATA_HAT_COLOR, tag.getInt("HatColor"));
         }
         ecsEntityId = tag.getLong("EcsEntityId");
-        currentMana = tag.getInt("currentMana");
-        maxMana = tag.getInt("maxMana");
-        manaRegenRate = tag.getInt("manaRegenRate");
-        spellPower = tag.getInt("spellPower");
+        maxHp = tag.getFloat("maxHp");
+        moveSpeed = tag.getFloat("moveSpeed");
+        spellPower = tag.getFloat("spellPower");
+        workSpeed = tag.getFloat("workSpeed");
+        spellSpeed = tag.getFloat("spellSpeed");
+        armorValue = tag.getFloat("armorValue");
+        spellCooldown = tag.getInt("spellCooldown");
+        regenCooldown = tag.getInt("regenCooldown");
+        regenAccum = tag.getInt("regenAccum");
         hasDefaultWand = tag.getBoolean("hasDefaultWand");
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");

@@ -76,9 +76,12 @@ public interface TouristStateHost {
     boolean isMage();
     boolean isMageResumeStored();
     void setMageResumeStored(boolean v);
-    int getMaxMana();
-    int getManaRegenRate();
-    int getSpellPower();
+    float getMaxHp();
+    float getMoveSpeed();
+    float getSpellPower();
+    float getWorkSpeed();
+    float getSpellSpeed();
+    float getArmor();
 
     long getArrivalTime();
     void setArrivalTime(long t);

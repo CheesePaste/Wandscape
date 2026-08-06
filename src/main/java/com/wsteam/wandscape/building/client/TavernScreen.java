@@ -138,8 +138,10 @@ public class TavernScreen extends MedievalScreen {
                     MageResume r = mageResumes.get(i);
                     String line = (i + 1) + ". " + r.touristName()
                             + "  Lv." + r.level()
-                            + "  MP:" + r.maxMana()
-                            + "  SP:" + r.spellPower();
+                            + " 强度:" + String.format("%.1f", r.spellPower())
+                            + " 工速:" + String.format("%.1f", r.workSpeed())
+                            + " 施速:" + String.format("%.1f", r.spellSpeed())
+                            + " 护甲:" + String.format("%.1f", r.armorValue());
                     g.drawString(font, line, leftPos + 16, y, MedievalColors.TEXT_WARM_WHITE);
                     y += 22;
                     if (y > topPos + PH - 30) break;

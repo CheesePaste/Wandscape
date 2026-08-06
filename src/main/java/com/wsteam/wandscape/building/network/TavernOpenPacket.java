@@ -59,9 +59,12 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
             CompoundTag rt = new CompoundTag();
             rt.putString("name", r.touristName());
             rt.putInt("level", r.level());
-            rt.putInt("maxMana", r.maxMana());
-            rt.putInt("manaRegen", r.manaRegenRate());
-            rt.putInt("spellPower", r.spellPower());
+            rt.putFloat("maxHp", r.maxHp());
+            rt.putFloat("moveSpeed", r.moveSpeed());
+            rt.putFloat("spellPower", r.spellPower());
+            rt.putFloat("workSpeed", r.workSpeed());
+            rt.putFloat("spellSpeed", r.spellSpeed());
+            rt.putFloat("armorValue", r.armorValue());
             rt.putInt("skinVariant", r.skinVariant());
             rt.putLong("timestamp", r.timestamp());
             resumesTag.add(rt);
@@ -82,9 +85,12 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
             resumes.add(new MageResume(
                     rt.getString("name"),
                     rt.getInt("level"),
-                    rt.getInt("maxMana"),
-                    rt.getInt("manaRegen"),
-                    rt.getInt("spellPower"),
+                    rt.getFloat("maxHp"),
+                    rt.getFloat("moveSpeed"),
+                    rt.getFloat("spellPower"),
+                    rt.getFloat("workSpeed"),
+                    rt.getFloat("spellSpeed"),
+                    rt.getFloat("armorValue"),
                     rt.getInt("skinVariant"),
                     rt.getLong("timestamp")));
         }

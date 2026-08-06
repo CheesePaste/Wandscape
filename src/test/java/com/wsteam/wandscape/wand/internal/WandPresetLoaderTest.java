@@ -33,14 +33,14 @@ class WandPresetLoaderTest {
               "display_name": "Full Wand",
               "wand_color": "#ABCDEF",
               "attributes": [
-                { "type": "range", "operation": "addition", "amount": 1 },
-                { "type": "mana_cost_multiplier", "operation": "addition", "amount": -0.2 }
+                { "type": "spell_power", "operation": "addition", "amount": 1 },
+                { "type": "work_speed", "operation": "addition", "amount": 0.5 }
               ]
             }""";
         WandPreset preset = WandPreset.fromJson("full", JsonParser.parseString(json));
         assertEquals(2, preset.attributes().size());
-        assertEquals("range", preset.attributes().get(0).type().name().toLowerCase());
-        assertEquals(-0.2f, preset.attributes().get(1).amount(), 0.001f);
+        assertEquals("spell_power", preset.attributes().get(0).type().name().toLowerCase());
+        assertEquals(0.5f, preset.attributes().get(1).amount(), 0.001f);
     }
 
     @Test

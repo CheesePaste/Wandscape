@@ -34,7 +34,6 @@ import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.AuditElementsCommand;
 import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
 import com.wsteam.wandscape.command.LogFilterCommand;
-import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.RecoveryCommand;
@@ -94,7 +93,6 @@ import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.engine.TaskPoolSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
@@ -788,7 +786,6 @@ public class Wandscape {
                 .then(AuditElementsCommand.node())
                 .then(LogFilterCommand.node())
                 .then(FillBuildingCommand.fillNode())
-                .then(ManaCommand.node())
                 .then(NavTestCommand.node())
                 .then(ColonyCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
@@ -877,32 +874,6 @@ public class Wandscape {
                     world.getNextEntityId() - 1,
                     world.taskPool != null ? world.taskPool.size() : 0,
                     world.hasPendingAsyncOps() ? 1 : 0);
-
-            // Mana debug: send NPC mana values to the player who enabled debug
-            if (WandscapeEngine.isManaDebug()) {
-                ServerPlayer target = WandscapeEngine.getManaDebugTarget();
-                if (target != null && !target.isRemoved()) {
-                    var manaEntities = world.query(ManaPool.class);
-                    StringBuilder sb = new StringBuilder("[Wandscape Mana] ");
-                    if (manaEntities.isEmpty()) {
-                        sb.append("no entities");
-                    } else {
-                        for (int i = 0; i < manaEntities.size(); i++) {
-                            long id = manaEntities.get(i);
-                            ManaPool pool = world.get(id, ManaPool.class);
-                            if (pool != null) {
-                                if (i > 0) sb.append(" | ");
-                                sb.append(String.format("NPC-%d: %.0f/%d",
-                                        id, pool.current(), pool.max()));
-                            }
-                        }
-                    }
-                    target.sendSystemMessage(Component.literal(sb.toString()));
-                } else {
-                    WandscapeEngine.setManaDebug(false);
-                    WandscapeEngine.setManaDebugTarget(null);
-                }
-            }
         }
     }
 }

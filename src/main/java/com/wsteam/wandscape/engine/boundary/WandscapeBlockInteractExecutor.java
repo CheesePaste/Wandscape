@@ -11,9 +11,11 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
@@ -118,7 +120,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         CompletableFuture<Void> future = world.startAsyncOp(
                 "block_interact_" + action + "_" + op.target());
-        pending.add(new Pending(future, op, world, npcId, op.channelTicks()));
+        pending.add(new Pending(future, op, world, npcId, effectiveChannel(world, npcId, op.channelTicks())));
 
         future.thenRun(() -> {
             try {
@@ -134,6 +136,14 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         });
 
         return future;
+    }
+
+    /** Effective channel duration for this NPC: base channelTicks divided by WORK_SPEED. */
+    private static int effectiveChannel(World world, long npcId, int baseTicks) {
+        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
+        float work = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : 1f;
+        if (work <= 1f) return baseTicks;
+        return Math.max(1, (int) Math.ceil(baseTicks / work));
     }
 
     /** Called every MC tick. Decrements countdowns and completes futures. */

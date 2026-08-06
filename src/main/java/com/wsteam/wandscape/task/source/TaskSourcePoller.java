@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * Polls all registered TaskSources on their configured intervals.
- * Runs second in the tick order (after ManaRegenSystem).
+ * Runs second in the tick order.
  */
 public class TaskSourcePoller implements System {
 

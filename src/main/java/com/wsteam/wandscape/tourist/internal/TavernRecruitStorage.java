@@ -84,9 +84,12 @@ public class TavernRecruitStorage extends SavedData {
     private static final String TAG_RESUMES = "resumes";
     private static final String TAG_NAME = "name";
     private static final String TAG_LEVEL = "level";
-    private static final String TAG_MAX_MANA = "maxMana";
-    private static final String TAG_MANA_REGEN = "manaRegen";
+    private static final String TAG_MAX_HP = "maxHp";
+    private static final String TAG_MOVE_SPEED = "moveSpeed";
     private static final String TAG_SPELL_POWER = "spellPower";
+    private static final String TAG_WORK_SPEED = "workSpeed";
+    private static final String TAG_SPELL_SPEED = "spellSpeed";
+    private static final String TAG_ARMOR_VALUE = "armorValue";
     private static final String TAG_SKIN_VARIANT = "skinVariant";
     private static final String TAG_TIMESTAMP = "timestamp";
 
@@ -103,9 +106,12 @@ public class TavernRecruitStorage extends SavedData {
                 resumes.add(new MageResume(
                         rt.getString(TAG_NAME),
                         rt.getInt(TAG_LEVEL),
-                        rt.getInt(TAG_MAX_MANA),
-                        rt.getInt(TAG_MANA_REGEN),
-                        rt.getInt(TAG_SPELL_POWER),
+                        rt.getFloat(TAG_MAX_HP),
+                        rt.getFloat(TAG_MOVE_SPEED),
+                        rt.getFloat(TAG_SPELL_POWER),
+                        rt.getFloat(TAG_WORK_SPEED),
+                        rt.getFloat(TAG_SPELL_SPEED),
+                        rt.getFloat(TAG_ARMOR_VALUE),
                         rt.getInt(TAG_SKIN_VARIANT),
                         rt.getLong(TAG_TIMESTAMP)));
             }
@@ -125,9 +131,12 @@ public class TavernRecruitStorage extends SavedData {
                 CompoundTag rt = new CompoundTag();
                 rt.putString(TAG_NAME, r.touristName());
                 rt.putInt(TAG_LEVEL, r.level());
-                rt.putInt(TAG_MAX_MANA, r.maxMana());
-                rt.putInt(TAG_MANA_REGEN, r.manaRegenRate());
-                rt.putInt(TAG_SPELL_POWER, r.spellPower());
+                rt.putFloat(TAG_MAX_HP, r.maxHp());
+                rt.putFloat(TAG_MOVE_SPEED, r.moveSpeed());
+                rt.putFloat(TAG_SPELL_POWER, r.spellPower());
+                rt.putFloat(TAG_WORK_SPEED, r.workSpeed());
+                rt.putFloat(TAG_SPELL_SPEED, r.spellSpeed());
+                rt.putFloat(TAG_ARMOR_VALUE, r.armorValue());
                 rt.putInt(TAG_SKIN_VARIANT, r.skinVariant());
                 rt.putLong(TAG_TIMESTAMP, r.timestamp());
                 resumesTag.add(rt);

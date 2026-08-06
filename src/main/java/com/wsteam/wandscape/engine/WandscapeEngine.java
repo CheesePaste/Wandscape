@@ -31,16 +31,6 @@ public final class WandscapeEngine {
     static WandscapeRitualOps ritualOps;
     @Nullable
     static WandscapeBlockInteractExecutor blockInteractExec;
-    static boolean manaDebug;
-    @Nullable
-    static net.minecraft.server.level.ServerPlayer manaDebugTarget;
-
-    public static boolean isManaDebug() { return manaDebug; }
-    public static void setManaDebug(boolean v) { manaDebug = v; }
-
-    @Nullable
-    public static net.minecraft.server.level.ServerPlayer getManaDebugTarget() { return manaDebugTarget; }
-    public static void setManaDebugTarget(@Nullable net.minecraft.server.level.ServerPlayer p) { manaDebugTarget = p; }
 
     @Nullable
     private static WandscapeMovementOps movementOps;

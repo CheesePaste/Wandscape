@@ -55,12 +55,13 @@ public class TavernApiImpl implements TavernApi {
 
     @Override
     public void receiveMageResume(UUID colonyId, String touristName, int level,
-                                   int maxMana, int manaRegenRate, int spellPower, int skinVariant) {
+                                   float maxHp, float moveSpeed, float spellPower,
+                                   float workSpeed, float spellSpeed, float armorValue, int skinVariant) {
         TavernRecruitStorage s = getStorage();
         if (s == null) return;
 
-        MageResume resume = new MageResume(touristName, level, maxMana,
-                manaRegenRate, spellPower, skinVariant, System.currentTimeMillis());
+        MageResume resume = new MageResume(touristName, level, maxHp, moveSpeed, spellPower,
+                workSpeed, spellSpeed, armorValue, skinVariant, System.currentTimeMillis());
         s.addResume(colonyId, resume);
         Log.info(TAG, "[Tourist] Received mage resume: {} (Lv.{}) for colony {}",
                 touristName, level, colonyId.toString().substring(0, 8));

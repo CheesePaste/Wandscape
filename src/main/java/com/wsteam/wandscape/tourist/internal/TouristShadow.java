@@ -39,9 +39,12 @@ public final class TouristShadow implements TouristStateHost {
     private String touristName;
     private int skinVariant;
     private boolean mage;
-    private int maxMana;
-    private int manaRegenRate;
-    private int spellPower;
+    private float maxHp;
+    private float moveSpeed;
+    private float spellPower;
+    private float workSpeed;
+    private float spellSpeed;
+    private float armorValue;
     private boolean mageResumeStored;
 
     // ── Sim clock (mirrors entity tickCount for cooldown semantics) ──
@@ -127,12 +130,18 @@ public final class TouristShadow implements TouristStateHost {
     public boolean isMage() { return mage; }
     public void setMage(boolean m) { this.mage = m; }
 
-    public int getMaxMana() { return maxMana; }
-    public void setMaxMana(int v) { this.maxMana = v; }
-    public int getManaRegenRate() { return manaRegenRate; }
-    public void setManaRegenRate(int v) { this.manaRegenRate = v; }
-    public int getSpellPower() { return spellPower; }
-    public void setSpellPower(int v) { this.spellPower = v; }
+    public float getMaxHp() { return maxHp; }
+    public void setMaxHp(float v) { this.maxHp = v; }
+    public float getMoveSpeed() { return moveSpeed; }
+    public void setMoveSpeed(float v) { this.moveSpeed = v; }
+    public float getSpellPower() { return spellPower; }
+    public void setSpellPower(float v) { this.spellPower = v; }
+    public float getWorkSpeed() { return workSpeed; }
+    public void setWorkSpeed(float v) { this.workSpeed = v; }
+    public float getSpellSpeed() { return spellSpeed; }
+    public void setSpellSpeed(float v) { this.spellSpeed = v; }
+    public float getArmor() { return armorValue; }
+    public void setArmor(float v) { this.armorValue = v; }
     public boolean isMageResumeStored() { return mageResumeStored; }
     public void setMageResumeStored(boolean v) { this.mageResumeStored = v; }
 
@@ -229,9 +238,12 @@ public final class TouristShadow implements TouristStateHost {
         tag.putString("name", touristName);
         tag.putInt("skin", skinVariant);
         tag.putBoolean("mage", mage);
-        tag.putInt("maxMana", maxMana);
-        tag.putInt("manaRegen", manaRegenRate);
-        tag.putInt("spellPower", spellPower);
+        tag.putFloat("maxHp", maxHp);
+        tag.putFloat("moveSpeed", moveSpeed);
+        tag.putFloat("spellPower", spellPower);
+        tag.putFloat("workSpeed", workSpeed);
+        tag.putFloat("spellSpeed", spellSpeed);
+        tag.putFloat("armorValue", armorValue);
         tag.putBoolean("mageResume", mageResumeStored);
         tag.putInt("simTick", simTick);
         tag.putDouble("x", posX);
@@ -299,9 +311,12 @@ public final class TouristShadow implements TouristStateHost {
         s.touristName = tag.getString("name");
         s.skinVariant = tag.getInt("skin");
         s.mage = tag.getBoolean("mage");
-        s.maxMana = tag.getInt("maxMana");
-        s.manaRegenRate = tag.getInt("manaRegen");
-        s.spellPower = tag.getInt("spellPower");
+        s.maxHp = tag.getFloat("maxHp");
+        s.moveSpeed = tag.getFloat("moveSpeed");
+        s.spellPower = tag.getFloat("spellPower");
+        s.workSpeed = tag.getFloat("workSpeed");
+        s.spellSpeed = tag.getFloat("spellSpeed");
+        s.armorValue = tag.getFloat("armorValue");
         s.mageResumeStored = tag.getBoolean("mageResume");
         s.simTick = tag.getInt("simTick");
         s.posX = tag.getDouble("x");

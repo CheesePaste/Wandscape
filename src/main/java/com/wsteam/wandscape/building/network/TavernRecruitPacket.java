@@ -6,6 +6,8 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -150,8 +152,12 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         // Apply mage stats from resume
         npc.setCustomName(Component.literal(resume.touristName()));
         npc.setCustomNameVisible(true);
-        // Mage-specific attributes are applied via NPC stat system on spawn
-        // The resume stats (maxMana, spellPower, etc.) will be used by the NPC system
+        npc.maxHp = resume.maxHp();
+        npc.moveSpeed = resume.moveSpeed();
+        npc.spellPower = resume.spellPower();
+        npc.workSpeed = resume.workSpeed();
+        npc.spellSpeed = resume.spellSpeed();
+        npc.armorValue = resume.armorValue();
 
         fixEcsAfterSpawn(npc, colonyId);
 
@@ -163,9 +169,15 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         sp.displayClientMessage(
                 Component.literal("[Wandscape] Mage " + resume.touristName()
                         + " recruited! Lv." + resume.level()
-                        + " MP:" + resume.maxMana()
-                        + " SP:" + resume.spellPower()),
+                        + " 强度:" + fmt(resume.spellPower())
+                        + " 工速:" + fmt(resume.workSpeed())
+                        + " 施速:" + fmt(resume.spellSpeed())
+                        + " 护甲:" + fmt(resume.armorValue())),
                 false);
+    }
+
+    private static String fmt(float v) {
+        return String.format("%.1f", v);
     }
 
     /** Find a valid spawn position near the tavern. */
@@ -197,13 +209,21 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         return origin.above(2);
     }
 
-    /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId. */
+    /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId,
+     *  and re-seed ECS base attributes from the resume (the NPC spawned with defaults). */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId) {
         World ecsWorld = WandscapeEngine.getWorld();
         if (ecsWorld == null) return;
 
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());
         if (ecsId == null) return;
+
+        // Re-seed ECS base attributes from the resume's rolled values
+        EquipmentComponent eq = ecsWorld.get(ecsId, EquipmentComponent.class);
+        if (eq != null) {
+            eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
+                    npc.workSpeed, npc.spellSpeed, npc.armorValue));
+        }
 
         var member = ecsWorld.get(ecsId,
                 ColonyMember.class);

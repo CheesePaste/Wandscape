@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Drives system blueprint steps via heartbeat.
- * Runs after ManaRegenSystem, before TaskSourcePoller.
+ * Runs before TaskSourcePoller.
  *
  * <p>Each system blueprint with steps has its execution tracked by a local
  * stepIndex (no NPC context). Pure ops batch continuously; side-effect ops

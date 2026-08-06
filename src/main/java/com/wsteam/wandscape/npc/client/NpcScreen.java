@@ -20,7 +20,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <p>Layout:
  * <ul>
  *   <li>Left — equipment slot (wand)</li>
- *   <li>Right — attributes (HP, mana, regen, spell power)</li>
+ *   <li>Right — attributes (HP, spell power, work speed, spell speed, armor)</li>
  *   <li>Bottom — player inventory grid (click wand items to equip)</li>
  * </ul>
  */
@@ -34,10 +34,7 @@ public class NpcScreen extends MedievalScreen {
     private final int entityId;
     private String npcName;
     private int currentHealth, maxHealth;
-    private int currentMana, maxMana;
-    private int manaRegen, spellPower;
-    private int range;
-    private float manaCostMultiplier;
+    private float spellPower, workSpeed, spellSpeed, armorValue;
     private ItemStack wandStack;
     private boolean isDefaultWand;
 
@@ -59,12 +56,10 @@ public class NpcScreen extends MedievalScreen {
         this.npcName = packet.npcName();
         this.currentHealth = packet.currentHealth();
         this.maxHealth = packet.maxHealth();
-        this.currentMana = packet.currentMana();
-        this.maxMana = packet.maxMana();
-        this.manaRegen = packet.manaRegen();
         this.spellPower = packet.spellPower();
-        this.range = packet.range();
-        this.manaCostMultiplier = packet.manaCostMultiplier();
+        this.workSpeed = packet.workSpeed();
+        this.spellSpeed = packet.spellSpeed();
+        this.armorValue = packet.armorValue();
         this.wandStack = packet.wandStack();
         this.isDefaultWand = packet.isDefaultWand();
         setTitleBar(Component.literal(npcName));
@@ -140,38 +135,28 @@ public class NpcScreen extends MedievalScreen {
                 MedievalColors.DANGER_RED);
         attrY += 11;
 
-        // Mana
-        g.drawString(font, I18n.name("gui.wandscape.npc.mana", "Mana").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        drawStatBar(g, rightCol + labelW, attrY, barWidth, 10,
-                (float) currentMana / maxMana,
-                currentMana + "/" + maxMana,
-                MedievalColors.INFO_BLUE);
-        attrY += 11;
-
-        // Range
-        g.drawString(font, I18n.name("gui.wandscape.npc.range", "Range").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, range + " " + I18n.name("gui.wandscape.npc.blocks", "blocks").getString(),
-                rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
-        // Mana Cost
-        g.drawString(font, I18n.name("gui.wandscape.npc.cost", "Cost").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.format("%.1fx", manaCostMultiplier), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
-        // Regen
-        g.drawString(font, I18n.name("gui.wandscape.npc.regen", "Regen").getString() + ":",
-                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, manaRegen + "/tick", rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
-        attrY += 10;
-
         // Spell Power
         g.drawString(font, I18n.name("gui.wandscape.npc.spell", "Spell").getString() + ":",
                 rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.valueOf(spellPower), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, String.format("%.1f", spellPower), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
+        attrY += 10;
+
+        // Work Speed
+        g.drawString(font, I18n.name("gui.wandscape.npc.work", "Work").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, String.format("%.1f", workSpeed), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
+        attrY += 10;
+
+        // Spell Speed
+        g.drawString(font, I18n.name("gui.wandscape.npc.spellSpeed", "Cast").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, String.format("%.1f", spellSpeed), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
+        attrY += 10;
+
+        // Armor
+        g.drawString(font, I18n.name("gui.wandscape.npc.armor", "Armor").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, String.format("%.1f", armorValue), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
 
         // ── Divider ──
         int divY = contentTop + 90;

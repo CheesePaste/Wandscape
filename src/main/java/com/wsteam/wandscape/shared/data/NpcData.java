@@ -6,10 +6,10 @@ public interface NpcData {
     String getName();
     int getMaxHealth();
     int getCurrentHealth();
-    int getMaxMana();
-    int getCurrentMana();
-    int getSpellPower();
-    int getManaRegenRate();
+    float getSpellPower();
+    float getWorkSpeed();
+    float getSpellSpeed();
+    float getArmorValue();
     boolean isIdle();
     UUID getAssignedHouseId();
     UUID getCurrentTaskId();

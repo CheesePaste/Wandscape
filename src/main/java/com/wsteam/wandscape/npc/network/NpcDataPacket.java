@@ -24,12 +24,10 @@ public record NpcDataPacket(
         String npcName,
         int currentHealth,
         int maxHealth,
-        int currentMana,
-        int maxMana,
-        int manaRegen,
-        int spellPower,
-        int range,
-        float manaCostMultiplier,
+        float spellPower,
+        float workSpeed,
+        float spellSpeed,
+        float armorValue,
         ItemStack wandStack,
         boolean isDefaultWand
 ) implements CustomPacketPayload {
@@ -66,12 +64,10 @@ public record NpcDataPacket(
         buf.writeUtf(pkt.npcName);
         buf.writeInt(pkt.currentHealth);
         buf.writeInt(pkt.maxHealth);
-        buf.writeInt(pkt.currentMana);
-        buf.writeInt(pkt.maxMana);
-        buf.writeInt(pkt.manaRegen);
-        buf.writeInt(pkt.spellPower);
-        buf.writeInt(pkt.range);
-        buf.writeFloat(pkt.manaCostMultiplier);
+        buf.writeFloat(pkt.spellPower);
+        buf.writeFloat(pkt.workSpeed);
+        buf.writeFloat(pkt.spellSpeed);
+        buf.writeFloat(pkt.armorValue);
         buf.writeBoolean(pkt.isDefaultWand);
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, pkt.wandStack);
     }
@@ -81,16 +77,14 @@ public record NpcDataPacket(
         String npcName = buf.readUtf();
         int currentHealth = buf.readInt();
         int maxHealth = buf.readInt();
-        int currentMana = buf.readInt();
-        int maxMana = buf.readInt();
-        int manaRegen = buf.readInt();
-        int spellPower = buf.readInt();
-        int range = buf.readInt();
-        float manaCostMultiplier = buf.readFloat();
+        float spellPower = buf.readFloat();
+        float workSpeed = buf.readFloat();
+        float spellSpeed = buf.readFloat();
+        float armorValue = buf.readFloat();
         boolean isDefaultWand = buf.readBoolean();
         ItemStack wandStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
-                currentMana, maxMana, manaRegen, spellPower, range, manaCostMultiplier,
+                spellPower, workSpeed, spellSpeed, armorValue,
                 wandStack, isDefaultWand);
     }
 
@@ -102,15 +96,19 @@ public record NpcDataPacket(
         ItemStack held = npc.getItemInHand(InteractionHand.MAIN_HAND);
         boolean isDefault = npc.hasDefaultWand();
 
-        // Read effective range and mana cost from ECS equipment
-        int range = 1;
-        float manaCostMult = 1f;
+        // Read effective attributes from ECS equipment (base + additive modifiers)
+        float spellPower = npc.spellPower;
+        float workSpeed = npc.workSpeed;
+        float spellSpeed = npc.spellSpeed;
+        float armorValue = npc.armorValue;
         World world = WandscapeEngine.getWorld();
         if (world != null && npc.ecsEntityId > 0) {
             EquipmentComponent eq = world.get(npc.ecsEntityId, EquipmentComponent.class);
             if (eq != null) {
-                range = Math.round(eq.getAttribute(AttributeType.RANGE));
-                manaCostMult = eq.getAttribute(AttributeType.MANA_COST_MULTIPLIER);
+                spellPower = eq.getAttribute(AttributeType.SPELL_POWER);
+                workSpeed = eq.getAttribute(AttributeType.WORK_SPEED);
+                spellSpeed = eq.getAttribute(AttributeType.SPELL_SPEED);
+                armorValue = eq.getAttribute(AttributeType.ARMOR_VALUE);
             }
         }
 
@@ -119,12 +117,10 @@ public record NpcDataPacket(
                 npc.getNpcName(),
                 (int) npc.getHealth(),
                 (int) npc.getMaxHealth(),
-                npc.currentMana,
-                npc.maxMana,
-                npc.manaRegenRate,
-                npc.spellPower,
-                range,
-                manaCostMult,
+                spellPower,
+                workSpeed,
+                spellSpeed,
+                armorValue,
                 isDefault ? ItemStack.EMPTY : held,
                 isDefault
         );

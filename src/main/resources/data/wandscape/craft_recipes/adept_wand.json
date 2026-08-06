@@ -6,8 +6,7 @@
   "slot": "wand",
   "wand_color": "#CD853F",
   "attributes": [
-    { "type": "range", "operation": "addition", "amount": 1 },
-    { "type": "mana_cost_multiplier", "operation": "addition", "amount": -0.2 }
+    { "type": "spell_power", "operation": "addition", "amount": 0.5 }
   ],
   "output": { "item": "wandscape:wand" },
   "cost": {

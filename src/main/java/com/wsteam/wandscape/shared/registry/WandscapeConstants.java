@@ -8,14 +8,7 @@ public final class WandscapeConstants {
     public static final int SCHEDULER_HEARTBEAT_TICKS = 40;
 
     public static final int DEFAULT_NPC_MAX_HEALTH = 40;
-    public static final int DEFAULT_NPC_MAX_MANA = 100;
     public static final int DEFAULT_NPC_SPELL_POWER = 1;
-    public static final int DEFAULT_NPC_MANA_REGEN = 2;
-
-    public static final float HOUSE_MANA_REGEN_MULTIPLIER = 3.0f;
-
-    public static final float DEFAULT_MANA_COST_MULTIPLIER = 1.0f;
-    public static final int DEFAULT_WAND_RANGE = 1;
 
     public static final double SAME_BUILDING_CONTINUATION_BONUS = 50.0;
 
@@ -26,7 +19,6 @@ public final class WandscapeConstants {
     public static final int QUEUE_RITUAL_ALTAR = 10;
     public static final int QUEUE_NODE = 10;
     public static final int QUEUE_HOUSE = 5;
-    public static final int QUEUE_MANA_POOL = 10;
     public static final int QUEUE_TAVERN = 5;
 
     public static final int WORKSTATION_CRAFT_TICKS_PER_UNIT = 10;

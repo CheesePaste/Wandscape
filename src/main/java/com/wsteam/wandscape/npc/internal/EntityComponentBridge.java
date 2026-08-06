@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -59,7 +60,6 @@ public final class EntityComponentBridge {
     /** ECS component types that make up an NPC. */
     private static final Class<?>[] NPC_COMPONENTS = {
             Position.class,
-            ManaPool.class,
             TaskExecutor.class,
             EquipmentComponent.class,
             Inventory.class,
@@ -158,18 +158,12 @@ public final class EntityComponentBridge {
             }
         }
 
+        NpcAttributes attrs = new NpcAttributes(
+                npc.maxHp, npc.moveSpeed, npc.spellPower, npc.workSpeed,
+                npc.spellSpeed, npc.armorValue);
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                colony, npc.maxMana, npc.manaRegenRate);
-
-        // Apply current mana from NBT if it was consumed before save
-        ManaPool mana = world.get(ecsId, ManaPool.class);
-        if (mana != null && npc.currentMana < mana.max()) {
-            float toConsume = mana.current() - npc.currentMana;
-            if (toConsume > 0) {
-                mana.consume(toConsume);
-            }
-        }
+                colony, attrs);
 
         npc.ecsEntityId = ecsId;
         npcByEcsId.put(ecsId, npc);

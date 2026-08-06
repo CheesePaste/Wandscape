@@ -43,7 +43,7 @@ public class SchedulerSystem implements System {
 
         // 1. Find all idle NPCs with full component set
         List<Long> idleNpcs = new ArrayList<>();
-        for (long entity : world.query(Position.class, ManaPool.class, TaskExecutor.class,
+        for (long entity : world.query(Position.class, TaskExecutor.class,
                 EquipmentComponent.class, Inventory.class, ColonyMember.class)) {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
@@ -63,12 +63,6 @@ public class SchedulerSystem implements System {
             if (member != null) {
                 npcsByColony.computeIfAbsent(member.colonyId(), k -> new ArrayList<>()).add(npcId);
             }
-        }
-
-        for (long eid : idleNpcs) {
-            EquipmentComponent eq = world.get(eid, EquipmentComponent.class);
-            ManaPool mp = world.get(eid, ManaPool.class);
-            ColonyMember cm = world.get(eid, ColonyMember.class);
         }
 
         GlobalTaskPool taskPool = world.taskPool;
@@ -107,10 +101,6 @@ public class SchedulerSystem implements System {
                         eq.equipDefaultWand();
                     }
 
-                    // Check mana: at least enough for first step
-                    ManaPool mana = world.get(npcId, ManaPool.class);
-                    if (mana == null || mana.isEmpty()) continue;
-
                     // Calculate horizontal distance from NPC to task target
                     double distance = 0;
                     if (taskTarget != null) {
@@ -122,10 +112,10 @@ public class SchedulerSystem implements System {
                         }
                     }
 
-                    // Temp score: proximity + mana efficiency
+                    // Score: proximity + work speed (faster workers favored)
                     float proximity = 10f / (10f + (float) distance);
-                    float manaEff = eq.getAttribute(AttributeType.MANA_COST_MULTIPLIER);
-                    double score = proximity * 0.6f + (1f - manaEff) * 0.4f;
+                    float workEff = Math.min(eq.getAttribute(AttributeType.WORK_SPEED), 4f);
+                    double score = proximity * 0.6f + (workEff - 1f) * 0.4f;
 
                     if (score > bestScore) {
                         bestScore = score;

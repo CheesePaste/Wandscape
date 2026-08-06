@@ -6,10 +6,10 @@ package com.wsteam.wandscape.core.types;
  * Effective values are computed from base values + equipment modifiers.
  */
 public enum AttributeType {
-    RANGE,
-    MANA_COST_MULTIPLIER,
-    MAX_MANA,
-    MANA_REGEN,
     MAX_HP,
-    MOVE_SPEED
+    MOVE_SPEED,
+    SPELL_POWER,
+    WORK_SPEED,
+    SPELL_SPEED,
+    ARMOR_VALUE
 }

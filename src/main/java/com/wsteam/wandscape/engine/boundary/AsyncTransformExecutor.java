@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.wsteam.wandscape.core.boundary.BlockOps;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.op.api.AtomicOp;
@@ -97,7 +99,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         //    Engine stores this future in TaskExecutor.pendingFuture,
         //    does NOT re-invoke execute(). When complete() fires, engine
         //    advances stepIndex and calls execute() for the NEXT op.
-        pending.add(new Pending(future, op, world, npcId, delayTicks));
+        pending.add(new Pending(future, op, world, npcId, effectiveDelay(world, npcId)));
 
         // Hook: place block when delay expires
         future.thenRun(() -> {
@@ -125,6 +127,14 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         });
 
         return future;
+    }
+
+    /** Effective per-block delay for this NPC: base delayTicks divided by WORK_SPEED. */
+    private int effectiveDelay(World world, long npcId) {
+        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
+        float work = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : 1f;
+        if (work <= 1f) return delayTicks;
+        return Math.max(1, (int) Math.ceil(delayTicks / work));
     }
 
     /** Called every MC tick. Decrements countdowns and completes futures. */

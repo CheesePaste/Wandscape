@@ -93,21 +93,21 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex)
         if (newWandStack.isEmpty()) return;
         if (!(newWandStack.getItem() instanceof WandItem)) return;
 
-        // Read wand attributes from CustomData
-        float range = 1f;
-        float manaCost = 1f;
+        // Resolve additive attribute modifiers from the wand's preset.
+        // All equipment grants are addition on top of base attributes.
+        String presetId = "";
+        List<AttributeModifier> modifiers = List.of(
+                new AttributeModifier(AttributeType.SPELL_POWER, 0f, ModifierOperation.ADDITION));
         CustomData cd = newWandStack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
-            var tag = cd.copyTag();
-            if (tag.contains("range")) range = tag.getInt("range");
-            if (tag.contains("mana_cost_multiplier")) manaCost = tag.getFloat("mana_cost_multiplier");
+            presetId = cd.copyTag().getString("preset_id");
+            if (!presetId.isEmpty()) {
+                var preset = Wandscape.WAND_PRESET_LOADER.getPreset(presetId);
+                if (preset != null && !preset.attributes().isEmpty()) {
+                    modifiers = preset.attributes();
+                }
+            }
         }
-
-        // Build modifiers offset from base (base=1, so modifier = value - 1)
-        List<AttributeModifier> modifiers = List.of(
-                new AttributeModifier(AttributeType.RANGE, range - 1f, ModifierOperation.ADDITION),
-                new AttributeModifier(AttributeType.MANA_COST_MULTIPLIER, manaCost - 1f, ModifierOperation.ADDITION)
-        );
 
         // ── Swap items ──
         ItemStack oldWand = npc.getItemInHand(InteractionHand.MAIN_HAND);
@@ -130,9 +130,9 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex)
             EquipmentComponent eq = world.get(npc.ecsEntityId, EquipmentComponent.class);
             if (eq != null) {
                 eq.unequip(EquipmentSlot.WAND);
-                eq.equip(EquipmentSlot.WAND, "custom_wand", modifiers);
-                Log.info(TAG, "ECS equip: NPC {} range={} manaCost={}",
-                        npc.getUUID().toString().substring(0, 8), range, manaCost);
+                eq.equip(EquipmentSlot.WAND, presetId.isEmpty() ? "custom_wand" : presetId, modifiers);
+                Log.info(TAG, "ECS equip: NPC {} preset={} modifiers={}",
+                        npc.getUUID().toString().substring(0, 8), presetId, modifiers.size());
             }
         }
 

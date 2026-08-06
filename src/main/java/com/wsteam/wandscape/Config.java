@@ -43,21 +43,17 @@ public class Config {
             .comment("Default NPC max health")
             .defineInRange("npc.defaultMaxHealth", 40, 10, 200);
 
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_MAX_MANA = BUILDER
-            .comment("Default NPC max mana")
-            .defineInRange("npc.defaultMaxMana", 100, 20, 500);
-
     public static final ModConfigSpec.IntValue DEFAULT_NPC_SPELL_POWER = BUILDER
             .comment("Default NPC spell power")
             .defineInRange("npc.defaultSpellPower", 1, 1, 10);
 
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_MANA_REGEN = BUILDER
-            .comment("Default NPC mana regen per tick")
-            .defineInRange("npc.defaultManaRegen", 2, 0, 20);
+    public static final ModConfigSpec.IntValue NPC_REGEN_GRACE_TICKS = BUILDER
+            .comment("Ticks after taking damage before out-of-combat health regen resumes (100 = 5s)")
+            .defineInRange("npc.regenGraceTicks", 100, 20, 1000);
 
-    public static final ModConfigSpec.DoubleValue HOUSE_MANA_REGEN_MULTIPLIER = BUILDER
-            .comment("Mana regen multiplier when NPC is in assigned house")
-            .defineInRange("npc.houseManaRegenMultiplier", 3.0, 1.0, 10.0);
+    public static final ModConfigSpec.IntValue NPC_REGEN_INTERVAL_TICKS = BUILDER
+            .comment("Ticks per 1 HP healed once out-of-combat regen is active (80 = 4s)")
+            .defineInRange("npc.regenIntervalTicks", 80, 20, 400);
 
     public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
@@ -70,14 +66,6 @@ public class Config {
     public static final ModConfigSpec.IntValue PER_WAND_LEVEL_RANGE = BUILDER
             .comment("Additional range per wand level")
             .defineInRange("wand.perWandLevelRange", 8, 0, 32);
-
-    public static final ModConfigSpec.DoubleValue DEFAULT_MANA_COST_MULTIPLIER = BUILDER
-            .comment("Default mana cost multiplier for wands (lower = cheaper)")
-            .defineInRange("wand.defaultManaCostMultiplier", 1.0, 0.3, 1.0);
-
-    public static final ModConfigSpec.IntValue DEFAULT_WAND_RANGE = BUILDER
-            .comment("Default wand range")
-            .defineInRange("wand.defaultWandRange", 1, 1, 5);
 
     // ---- Road system ----
 

@@ -11,6 +11,7 @@ import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
 import com.google.gson.JsonElement;
@@ -61,7 +62,7 @@ public class EventDrivenTaskSourceTest {
         colonyId = UUID.randomUUID();
         CoreBootstrap.createColony(world, colonyCenter.x(), colonyCenter.y(), colonyCenter.z(), 50);
 
-        npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
+        npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
     }
 
     // ======================== Full restock chain ========================

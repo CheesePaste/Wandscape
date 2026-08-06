@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.guard.executor;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -60,8 +59,6 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
                            int radius, String circleId, int color) {}
 
     private final List<Pending> pending = new ArrayList<>();
-    /** npcId → 上次成功施法的 gameTime（施法节流，跨轮共享）。 */
-    private final Map<Long, Long> lastCastTick = new HashMap<>();
     private int detectTickCounter = 0;
 
     @Override
@@ -189,7 +186,6 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             int wait = runCycle(p);
             if (wait < 0) {
                 toComplete.add(p.future());
-                lastCastTick.remove(p.npcId());
             } else {
                 next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, wait),
                         p.radius(), p.circleId(), p.color()));
@@ -219,7 +215,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             return -1;
         }
         GuardCombat.engage(level, npc, target, p.world(), p.npcId(),
-                p.circleId(), p.color(), lastCastTick);
+                p.circleId(), p.color());
         return RECHECK_TICKS;
     }
 }
