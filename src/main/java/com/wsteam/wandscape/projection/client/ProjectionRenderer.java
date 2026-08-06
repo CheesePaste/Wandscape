@@ -84,9 +84,18 @@ public final class ProjectionRenderer {
         if (config == null) return;
 
         boolean overlap = ProjectionClientState.isOverlapDetected();
+        boolean pinned = ProjectionClientState.isPinned();
 
         BuildingGhostRenderer.renderGhostBlocks(mc, bufferSource, poseStack,
                 ghostPos, config, ProjectionClientState.getRotationSteps(), false);
+
+        // Pinned (non-overlap): gold wireframe — ghost is fixed, player can walk around to review
+        if (pinned && !overlap && config.boundary() != null) {
+            VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+            drawAABBOutline(lineVc, poseStack.last(), ghostPos,
+                    config.boundary().min(), config.boundary().max(), 212, 175, 55);
+            bufferSource.endBatch(RenderType.lines());
+        }
 
         // Overlap = red wireframe boundary
         if (overlap && config.boundary() != null) {

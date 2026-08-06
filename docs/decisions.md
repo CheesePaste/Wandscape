@@ -499,3 +499,21 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 - **为什么守卫放在 ColonyCommand 的两个入口而非各调用点？** V 面板自动创建、市政厅命名、`/wandscape colony create` 三个来源都汇聚到 `createColonyAt`/`ensureColonyNear`。`ensureColonyNear` 玩家已有殖民地→直接返回已有；`createColonyAt` 已拥有→拒绝（`[Wandscape] Failed: 你已拥有殖民地，不能创建第二个。`）。一处修复覆盖全部入口。
 - **为什么 founder 为 null（控制台命令）不拦截？** 只有玩家发起的创建才有「一人一殖民地」约束；控制台创建不绑定玩家，保持原行为。
 - **版本**：v1.3.3→v1.3.4（行为修正 / bug 修复）。
+
+## 建筑放置：右键固定预览 + 施工 UI（2026-08-06）
+
+需求（issue #5）：右键原本直接放置，位置不合适只能拆了重建。改为「右键固定虚影→走动观察→左键撤销回手持 / 右键进施工 UI 微调坐标并提交」。
+
+- **为什么复用 `ProjectionPlacePacket` 而非新建提交包？** Submit 的语义就是"在此坐标放置该建筑"，`ProjectionPlacePacket.handleServer` 已含类型校验、重叠拒绝、成功/失败消息、槽刷新、教程推进。新包只会重复这套逻辑。
+- **为什么用 `pinned` 标志而非直接冻结 ghostPos？** 地面与俯瞰两模式每 tick 都靠射线覆盖 `ghostPos`，需要一个显式状态让两处 `updateGhostPosition`/`performRaycast` 跳过覆盖、只重算重叠。`pinned` 同时作为施工 UI 打开时的世界背景（Screen 非暂停屏，虚影在玻璃面板后实时移动）。
+- **为什么固定后不可旋转？** 左键被"撤销"占用，避免再加新键。旋转可先左键撤销→左键旋转→再右键固定，代价可接受。
+- **为什么施工 UI 放 `projection/client/` 而非 `building/client/`？** `building/client/` 是"与已建成建筑交互"的界面（商店/旅店/市政厅），施工 UI 是"放置新建筑"流程的一部分，与 `ProjectionFlightController`/`OverviewFlightController` 同层，且被两模式共用。
+- **提交后为什么回建筑选择条？** 用户确认偏好，便于连续选下一个建筑；`openBuildingBar()` 保留 `selectedSlotIndex`，已放置的建筑在条上保持高亮。
+- **版本**：v1.3.9→v1.3.10（bug 修复 + 小功能改进）。
+
+## 建筑选择条：单击切换、双击收回鼠标（2026-08-06）
+
+需求（issue #4）：原来单击建筑只高亮、必须双击才切换手上建筑并收回鼠标，不符合直觉。改为单击即切换手上建筑（条保持打开），双击收回鼠标进入放置。
+
+- **为什么把 `setSelectedSlotIndex` 从双击分支移到每次点击？** 单击/双击在 `handleBuildingSlotClick` 里共用一次检测，双击分支仍要 `enterPlacingPhase()`，把状态赋值提前到每次点击即可同时满足"单击切换"与"双击进放置"，幂等无害。
+- **版本**：v1.3.9→v1.3.10（bug 修复 + 小功能改进）。

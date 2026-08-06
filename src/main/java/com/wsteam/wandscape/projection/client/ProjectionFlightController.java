@@ -1,9 +1,10 @@
 package com.wsteam.wandscape.projection.client;
 
 import org.lwjgl.glfw.GLFW;
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
-import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
@@ -108,6 +109,16 @@ public final class ProjectionFlightController {
     // ── Ghost position ──
 
     private static void updateGhostPosition(Minecraft mc) {
+        // Pinned: ghost stays fixed — only re-check overlap against the fixed position
+        if (ProjectionClientState.isPinned()) {
+            BlockPos fixed = ProjectionClientState.getGhostPos();
+            if (fixed != null) {
+                BuildingApi api = WandscapeApis.getBuildingApi();
+                ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
+            }
+            return;
+        }
+
         // Perform a long-range raycast from camera
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
@@ -150,6 +161,16 @@ public final class ProjectionFlightController {
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
 
+        // Pinned: left-click cancels (back to hand-following), right-click opens the construction screen
+        if (ProjectionClientState.isPinned()) {
+            if (leftClicked) {
+                ProjectionClientState.setPinned(false);
+            } else if (rightClicked) {
+                openConstructionScreen(mc);
+            }
+            return;
+        }
+
         // Left-click: rotate building 90° CCW
         if (leftClicked) {
             ProjectionClientState.rotate();
@@ -162,32 +183,36 @@ public final class ProjectionFlightController {
             };
         }
 
-        // Right-click: place building
+        // Right-click: pin the ghost preview at its current position
         if (rightClicked) {
-            handlePlace(mc);
+            BlockPos ghostPos = ProjectionClientState.getGhostPos();
+            if (ghostPos == null) {
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(
+                            Component.literal("[Projection] §c无法固定 — 准星没有对准方块"), true);
+                }
+                return;
+            }
+            ProjectionClientState.setPinned(true);
+            Log.info(TAG, "[Projection] Ghost pinned at {}", ghostPos);
         }
     }
 
-    private static void handlePlace(Minecraft mc) {
-        BlockPos ghostPos = ProjectionClientState.getGhostPos();
-        if (ghostPos == null || ProjectionClientState.isOverlapDetected()) {
-            if (ghostPos != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Projection] §cCannot place here — overlapping building"),
-                        true);
-            }
-            return;
-        }
+    /** Open the construction screen for the pinned ghost position (also used by overview mode). */
+    public static void openConstructionScreen(Minecraft mc) {
+        BlockPos pos = ProjectionClientState.getGhostPos();
+        if (pos == null) return;
 
         var slots = ProjectionClientState.getBuildingSlots();
         int index = ProjectionClientState.getSelectedSlotIndex();
         if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
 
         BuildingSlot slot = slots.get(index);
-        int rotationSteps = ProjectionClientState.getRotationSteps();
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos, rotationSteps));
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
+        if (config == null) return;
 
-        Log.info(TAG, "[Projection] Placed '{}' at {} rotation={}", slot.displayName(), ghostPos, rotationSteps);
+        mc.setScreen(new ConstructionScreen(config, slot.id(), pos,
+                ProjectionClientState.getRotationSteps()));
     }
 
     // ── Escape ──

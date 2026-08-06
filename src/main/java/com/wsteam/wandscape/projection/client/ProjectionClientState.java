@@ -36,6 +36,9 @@ public final class ProjectionClientState {
     /** Whether the current ghost position overlaps an existing building. */
     private static volatile boolean overlapDetected = false;
 
+    /** Whether the ghost preview is pinned to a fixed position (no longer follows the crosshair). */
+    private static volatile boolean pinned = false;
+
     /** Available building slots received from server. */
     private static final List<BuildingSlot> buildingSlots =
             Collections.synchronizedList(new ArrayList<>());
@@ -70,6 +73,7 @@ public final class ProjectionClientState {
         ghostPos = null;
         overlapDetected = false;
         rotationSteps = 0;
+        pinned = false;
 
         projecting = true;
 
@@ -94,6 +98,7 @@ public final class ProjectionClientState {
         ghostPos = null;
         overlapDetected = false;
         rotationSteps = 0;
+        pinned = false;
         synchronized (buildingSlots) {
             buildingSlots.clear();
         }
@@ -154,6 +159,17 @@ public final class ProjectionClientState {
 
     public static void setOverlapDetected(boolean overlapped) {
         overlapDetected = overlapped;
+    }
+
+    // ── Pinned ghost ──
+
+    /** Whether the ghost preview is fixed to its current position. */
+    public static boolean isPinned() {
+        return pinned;
+    }
+
+    public static void setPinned(boolean fixed) {
+        pinned = fixed;
     }
 
     // ── Rotation ──

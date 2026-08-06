@@ -311,9 +311,12 @@ public final class WandscapePanelController {
             if (config == null || !BuildingUnlockChecker.isUnlocked(WandscapePanelState.getColonyId(), config)) return;
         }
         boolean doubleClicked = WandscapePanelState.handleBuildingSlotClick(slotIndex);
-        if (doubleClicked) {
-            // Select building, close bar, enter PLACING phase (cursor in game, ghost visible)
+        // Single click: switch the held building while keeping the bar open.
+        if (slotIndex >= 0) {
             ProjectionClientState.setSelectedSlotIndex(slotIndex);
+        }
+        if (doubleClicked) {
+            // Double click: close bar, enter PLACING phase (cursor in game, ghost visible)
             WandscapePanelState.enterPlacingPhase();
             String name = (slotIndex >= 0 && slotIndex < slots.size())
                     ? slots.get(slotIndex).displayName() : "???";

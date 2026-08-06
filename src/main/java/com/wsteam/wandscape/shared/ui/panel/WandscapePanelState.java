@@ -362,6 +362,7 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         // Clear ghost — no preview while selecting
         ProjectionClientState.setGhostPos(null);
+        ProjectionClientState.setPinned(false);
         if (!cursorLifted) {
             cursorLifted = true;
             Minecraft.getInstance().mouseHandler.releaseMouse();

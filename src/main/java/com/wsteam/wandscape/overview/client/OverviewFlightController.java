@@ -8,15 +8,15 @@ import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -208,21 +208,30 @@ public final class OverviewFlightController {
             wasLeftDown = leftDown;
             wasRightDown = rightDown;
 
-            // Left-click: rotate building 90° CCW (only when build mode is active)
-            if (leftClicked && ProjectionClientState.isProjecting()) {
-                ProjectionClientState.rotate();
-                int steps = ProjectionClientState.getRotationSteps();
-                String direction = switch (steps) {
-                    case 1 -> "§e90°";
-                    case 2 -> "§e180°";
-                    case 3 -> "§e270°";
-                    default -> "§70°";
-                };
-                Log.info(TAG, "[Overview] Rotation: {}", direction);
-            }
+            // Pinned ghost: left-click cancels (back to hand-following), right-click opens the construction screen
+            if (ProjectionClientState.isPinned()) {
+                if (leftClicked) {
+                    ProjectionClientState.setPinned(false);
+                } else if (rightClicked) {
+                    ProjectionFlightController.openConstructionScreen(mc);
+                }
+            } else {
+                // Left-click: rotate building 90° CCW (only when build mode is active)
+                if (leftClicked && ProjectionClientState.isProjecting()) {
+                    ProjectionClientState.rotate();
+                    int steps = ProjectionClientState.getRotationSteps();
+                    String direction = switch (steps) {
+                        case 1 -> "§e90°";
+                        case 2 -> "§e180°";
+                        case 3 -> "§e270°";
+                        default -> "§70°";
+                    };
+                    Log.info(TAG, "[Overview] Rotation: {}", direction);
+                }
 
-            if (rightClicked) {
-                handleRightClick();
+                if (rightClicked) {
+                    handleRightClick();
+                }
             }
         }
 
@@ -333,7 +342,7 @@ public final class OverviewFlightController {
         // ── Pick closer target ──
         if (entityDist < blockDist && hitEntityId >= 0) {
             OverviewClientState.setTargetEntity(hitEntityId);
-            if (ProjectionClientState.isProjecting()) {
+            if (ProjectionClientState.isProjecting() && !ProjectionClientState.isPinned()) {
                 ProjectionClientState.setGhostPos(null);
                 ProjectionClientState.setOverlapDetected(false);
             }
@@ -344,16 +353,25 @@ public final class OverviewFlightController {
 
             // When build mode is projecting in overview, sync ghost from the same raycast
             if (ProjectionClientState.isProjecting()) {
-                BlockPos placePos = hitPos.relative(blockHit.getDirection());
-                ProjectionClientState.setGhostPos(placePos);
-                var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                boolean overlap = api != null && api.getBuildingAt(placePos) != null;
-                ProjectionClientState.setOverlapDetected(overlap);
+                if (ProjectionClientState.isPinned()) {
+                    // Ghost stays fixed — only re-check overlap against the fixed position
+                    BlockPos fixed = ProjectionClientState.getGhostPos();
+                    if (fixed != null) {
+                        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                        ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
+                    }
+                } else {
+                    BlockPos placePos = hitPos.relative(blockHit.getDirection());
+                    ProjectionClientState.setGhostPos(placePos);
+                    var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                    boolean overlap = api != null && api.getBuildingAt(placePos) != null;
+                    ProjectionClientState.setOverlapDetected(overlap);
+                }
             }
         } else {
             OverviewClientState.clearTarget();
             OverviewClientState.clearTargetEntity();
-            if (ProjectionClientState.isProjecting()) {
+            if (ProjectionClientState.isProjecting() && !ProjectionClientState.isPinned()) {
                 ProjectionClientState.setGhostPos(null);
                 ProjectionClientState.setOverlapDetected(false);
             }
@@ -373,9 +391,9 @@ public final class OverviewFlightController {
     // ═══════════════════════════════════════════════════════════════════
 
     private static void handleRightClick() {
-        // Branch 1: Building selected via Build bar → place building
+        // Branch 1: Building selected via Build bar → pin the ghost preview
         if (ProjectionClientState.isProjecting()) {
-            handlePlace();
+            pinGhost();
             return;
         }
 
@@ -395,24 +413,19 @@ public final class OverviewFlightController {
         }
     }
 
-    /** Place the selected building at the ghost position from overview raycast. */
-    private static void handlePlace() {
+    /** Pin the selected building's ghost at the current overview raycast position. */
+    private static void pinGhost() {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
-        if (ghostPos == null) return;
-
-        if (ProjectionClientState.isOverlapDetected()) {
-            Log.warn(TAG, "[Overview] Cannot place here — overlapping building at {}", ghostPos);
+        if (ghostPos == null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Overview] §c无法固定 — 准星没有对准方块"), true);
+            }
             return;
         }
-
-        var slots = ProjectionClientState.getBuildingSlots();
-        int index = ProjectionClientState.getSelectedSlotIndex();
-        if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
-
-        BuildingSlot slot = slots.get(index);
-        int rotationSteps = ProjectionClientState.getRotationSteps();
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos, rotationSteps));
-        Log.info(TAG, "[Overview] Placed '{}' at {} rotation={}", slot.displayName(), ghostPos, rotationSteps);
+        ProjectionClientState.setPinned(true);
+        Log.info(TAG, "[Overview] Ghost pinned at {}", ghostPos);
     }
 
     // ═══════════════════════════════════════════════════════════════════
