@@ -1,8 +1,8 @@
 # 魔法阵 JSON 格式（MagicCircleSpec）
 
-位置：`data/wandscape/magic_circles/*.json`（由独立 Web 编辑器导出，MC 端加载同款）
+位置：`data/wandscape/magic_circles/*.json`（由独立项目 [magic-circle-editor](https://github.com/CheesePaste/magic-circle-editor) 导出，MC 端加载同款）
 
-Web 编辑器与 MC 粒子渲染器的**唯一契约**：两端都只"画这份几何 spec"，互不搬渲染管线。
+**本文件是 `MagicCircleSpec` 的契约权威**：Web 编辑器与 MC 粒子渲染器都只"画这份几何 spec"，互不搬渲染管线。编辑器仓库 `src/spec.ts` 是本 schema 的 TypeScript 镜像——改 schema 时需同步：本文档 → 编辑器 `src/spec.ts` → 模组侧 `magic/data/MagicCircleSpec.java`。
 
 ## 完整 schema
 
@@ -187,7 +187,7 @@ angle(T) = rotation_offset_deg
 
 **行为不原版**：ghost-trail 模型撒零速度粒子、静止贴环——火焰/灵魂不上升、暴击不坠落。贴图和尺寸 100% 原版，运动为模组自控。
 
-风格 id ↔ MC ParticleTypes 映射（编辑器 `mc-particles.ts` 为唯一实现，MC 端复用同一张表）：
+风格 id ↔ MC ParticleTypes 映射（编辑器仓库 `src/mc-particles.ts` 为唯一实现，MC 端复用同一张表）：
 
 | 风格 id | MC id | 贴图帧 | quadSize（半宽） | 尺寸曲线 | 渲染层 |
 |---------|-------|--------|-----------------|---------|--------|
@@ -372,3 +372,12 @@ angle(T) = rotation_offset_deg
   ]
 }
 ```
+
+## 编辑器（独立外部项目）
+
+魔法阵由独立 Web 编辑器可视化设计：[CheesePaste/magic-circle-editor](https://github.com/CheesePaste/magic-circle-editor)（Vite + TypeScript，打包为单 HTML，离线可用）。
+
+- **构建**：`npm install && npm run build`，产物 `dist/index.html`
+- **使用流程**：编辑器导出 `<id>.json` → 放入本模组 `data/wandscape/magic_circles/`
+- **契约关系**：编辑器是本文档的消费方（`src/spec.ts` 为镜像）；示例 spec 以本仓库 `example-specs/` 为准
+- **schema 变更流程**：先改本文档（权威）→ 同步编辑器 `src/spec.ts` → 同步 MC 端 `MagicCircleSpec.java`

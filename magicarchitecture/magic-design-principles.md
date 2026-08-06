@@ -2,7 +2,7 @@
 
 本文从第三方模组 **UsefulMagic**（GPL-3.0，参考样例见 `usefulmagic-examples/`）的魔法阵实现中提炼出一套可迁移到 Wandscape `MagicCircleSpec` 的设计原则。目的是让后续设计魔法阵时有章可循，避免"堆元素但不好看"。
 
-> 适用对象：`data/wandscape/magic_circles/*.json` 的编写者 / Web 编辑器使用者。schema 见 [magic-circles.md](magic-circles.md)。
+> 适用对象：`data/wandscape/magic_circles/*.json` 的编写者 / [Web 编辑器](https://github.com/CheesePaste/magic-circle-editor)（独立项目）使用者。schema 见 [magic-circles.md](magic-circles.md)。
 
 > **配套示例**：按本原则设计的大型六芒星召唤阵 → [example-specs/arcane_hexagram.json](example-specs/arcane_hexagram.json)（半径 8.0，8 层，可在编辑器导入查看）。
 
