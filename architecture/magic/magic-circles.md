@@ -2,8 +2,6 @@
 
 位置：`data/wandscape/magic_circles/*.json`（由独立项目 [magic-circle-editor](https://github.com/CheesePaste/magic-circle-editor) 导出，MC 端加载同款）
 
-> 本文件由 `magicarchitecture/magic-circles.md` 迁移并**对照 `magic/data/MagicCircleSpec.java` + `client/MagicCircleEmitter.java` 修正**。
-
 **本文件是 `MagicCircleSpec` 的契约权威**：Web 编辑器与 MC 粒子渲染器都只"画这份几何 spec"，互不搬渲染管线。编辑器仓库 `src/spec.ts` 是本 schema 的 TypeScript 镜像——改 schema 时需同步：本文档 → 编辑器 `src/spec.ts` → 模组侧 `magic/data/MagicCircleSpec.java`。
 
 ## 完整 schema

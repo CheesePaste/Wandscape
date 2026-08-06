@@ -11,7 +11,8 @@ freecam/
 *.ipr
 out/
 !**/src/**/out/
-
+magicarchitecture/
+spec/
 ### Claude (local working files, kept out of the repo) ###
 .claude/
 

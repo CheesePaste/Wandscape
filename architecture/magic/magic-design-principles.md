@@ -1,7 +1,5 @@
 # 魔法阵设计原则（从 UsefulMagic 提炼）
 
-> 本文件由 `magicarchitecture/magic-design-principles.md` 迁移；仅修正与现契约文档滞后相关的两处注记（P4、粒子风格数），原则本身为设计指导，不涉及代码事实。
-
 本文从第三方模组 **UsefulMagic**（GPL-3.0，参考样例见 `usefulmagic-examples/`）的魔法阵实现中提炼出一套可迁移到 Wandscape `MagicCircleSpec` 的设计原则。目的是让后续设计魔法阵时有章可循，避免"堆元素但不好看"。
 
 > 适用对象：`data/wandscape/magic_circles/*.json` 的编写者 / [Web 编辑器](https://github.com/CheesePaste/magic-circle-editor)（独立项目）使用者。schema 见 [magic-circles.md](magic-circles.md)。

@@ -1,7 +1,5 @@
 # magic/ — 魔法阵（Magic Circle）粒子渲染
 
-> 本文件由 `magicarchitecture/magic.md` 迁移并**对照真实代码修正**（以 `src/main/java/com/wsteam/wandscape/magic/` 为准）。
-
 战斗系统的视觉层。数据契约（`MagicCircleSpec` JSON）由独立 Web 编辑器（[magic-circle-editor](https://github.com/CheesePaste/magic-circle-editor)）导出，MC 端用粒子渲染同一份 spec——两端都只"画这份几何数据"，互不搬渲染管线。**渲染方案：粒子（非 shader）**，保证任何光影包下正常显示。
 
 JSON 格式见 [magic-circles.md](magic-circles.md)。
