@@ -4,7 +4,7 @@
 
 **English** | [中文](README.md)
 
-A Minecraft NeoForge 1.21.1 mod — **Wandscape** (魔法小镇).
+A Minecraft NeoForge 1.21.1 mod — **Wandscape**.
 
 > **You're the mayor. Your mages do the rest.**
 
