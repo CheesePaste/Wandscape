@@ -12,7 +12,9 @@ freecam/
 out/
 !**/src/**/out/
 
-**/.claude/settings.local.json
+### Claude (local working files, kept out of the repo) ###
+.claude/
+
 /assets/
 ### Eclipse ###
 .apt_generated
@@ -53,9 +55,6 @@ TEMPLATE_LICENSE.txt
 ### Reasonix (local per-machine config) ###
 reasonix.toml
 .reasonix/
-
-### Claude skill cache ###
-.claude/skills/minecraft-source/scripts/cache/
 
 ### Third-party reference examples (GPL-3.0, read-only, not part of the mod) ###
 magicarchitecture/usefulmagic-examples/
