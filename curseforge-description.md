@@ -4,6 +4,8 @@
 
 > **You're the mayor. Your mages do the rest.**
 
+## Summary
+
 Wandscape is a **magic × town-building × simulation** mod for Minecraft 1.21.1 (NeoForge). Found a town with a single block, and wizard NPCs take it from there — they gather elements, lay bricks, brew potions, and guard the walls while you run the place. Then tourists start showing up on your roads: shopping, drinking, checking into your inn, and telling everyone how good (or how bad) your town is.
 
 ## Your first ten minutes
@@ -32,7 +34,7 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 
 ## 👥 Tourists with a life of their own
 
-*   Tourists arrive on your roads with energy, satisfaction, and preferences.
+*   Tourists arrive on your roads with energy, satisfaction, preferences, and moods.
 *   They shop, hit the tavern, and check into the inn when night falls — complete with speech bubbles and story-like broadcasts of every arrival, purchase, and departure.
 *   Shops restock themselves from your warehouse and turn a profit; decorations radiate bonuses to nearby buildings.
 *   Keep a mage tourist at 100% satisfaction and they'll leave a résumé at the tavern — recruit them to grow your workforce.
@@ -45,7 +47,7 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 *   Your mages are real wizards — they cast in glowing magic circles (rings, arcs, polygons, stars, glyphs) and fire beams of pure light.
 *   Every cast is a little show: particle-driven animation, no shaders required (though it looks gorgeous under any shader pack).
 *   Forge wands at the crafting station and equip them on your mages — Basic, Adept, Master, each tier boosting their spell power. Wands never break.
-*   Every mage carries their own stats — spell power, casting speed, work speed, armor and more — and mage tourists you recruit bring theirs with them.
+*   Every mage carries their own stats — spell power, casting speed, work speed, armor and more.
 *   Beams are just the first spell. More magic, spectacular and practical, is on the way.
 
 ![alt text](https://media.forgecdn.net/attachments/1842/96/npc-jpg.jpg)
@@ -87,7 +89,7 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 ![alt text](https://media.forgecdn.net/attachments/1842/82/minecraft_title-png.png)
 
 > **你是镇长，法师干活。**
-
+## 简介
 Wandscape 是一个 **魔法 × 小镇建设 × 模拟经营** 模组（Minecraft 1.21.1 / NeoForge）：放下一个方块，一座小镇就此诞生——法师 NPC 替你采集元素、砌砖盖房、炼制药剂、守卫城墙，你只管经营。然后游客沿着你的道路慕名而来：逛街、泡酒馆、住进旅馆，还会告诉全世界你的小镇到底好不好。
 
 ## 上手十分钟
@@ -116,7 +118,7 @@ Wandscape 是一个 **魔法 × 小镇建设 × 模拟经营** 模组（Minecraf
 
 ## 👥 游客有自己的生活
 
-*   游客沿你的道路入城，各有精力、满意度与偏好。
+*   游客沿你的道路入城，各有精力、满意度、偏好和心情。
 *   他们逛商店、泡酒馆、入夜住进旅馆——头顶气泡会说话，到达、购物、离城都有故事般的播报。
 *   商店自动从仓库补货、按利润率回笼元素；装饰建筑向周边辐射加成。
 *   把法师游客的满意度喂到 100%，他们会在酒馆留下简历——去招募，壮大你的法师团队。
@@ -129,7 +131,7 @@ Wandscape 是一个 **魔法 × 小镇建设 × 模拟经营** 模组（Minecraf
 *   你的法师是货真价实的巫师——在发光的魔法阵中施法（环、弧、多边形、星形、符文），抬手就是一道纯光光束。
 *   每一次施法都是一场小演出：纯粒子动画，不开光影也好看，开了光影更好看。
 *   在合成站锻造法杖、给法师装备上——基础、进阶、大师三档，逐级提升法术强度。法杖永不损坏。
-*   每个法师都有自己的属性——法术强度、施法速度、工作速度、护甲等等——酒馆招募来的法师游客，还会把一身属性带进你的团队。
+*   每个法师都有自己的属性——法术强度、施法速度、工作速度、护甲等等。
 *   光束只是第一个法术。更多兼具观赏性与实用性的魔法，已经在路上了。
 
 ![alt text](https://media.forgecdn.net/attachments/1842/96/npc-jpg.jpg)
