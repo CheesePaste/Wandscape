@@ -50,6 +50,9 @@ public final class OverviewFlightController {
     // ── Input edge detection ──
     private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
+    /** True while a {@code Screen} (e.g. the Construction UI) is open — used to baseline
+     *  button edge-detection when it closes so a UI click isn't re-read as a world click. */
+    private static boolean wasScreenOpen = false;
     /**
      * Tracks whether the cursor was in "grabbed" state last frame.
      * Cursor is "free" when a Screen is open or the panel cursor is lifted.
@@ -191,9 +194,18 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-        if (mc.screen != null) return;
 
         long window = mc.getWindow().getWindow();
+
+        // Same screen-close baseline as ProjectionFlightController: a left-click that
+        // closes the Construction UI must not re-appear as a fresh world left-click.
+        boolean screenOpen = mc.screen != null;
+        if (wasScreenOpen && !screenOpen) {
+            wasLeftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            wasRightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        }
+        wasScreenOpen = screenOpen;
+        if (screenOpen) return;
 
         // ── Raycast from camera (also syncs ghost position when build is projecting) ──
         performRaycast(mc);
@@ -413,11 +425,12 @@ public final class OverviewFlightController {
         }
     }
 
-    /** Pin the selected building's ghost at the current overview raycast position. */
+    /** Pin the selected building's ghost at the current overview raycast position
+     *  and open the construction screen. */
     private static void pinGhost() {
+        Minecraft mc = Minecraft.getInstance();
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) {
-            Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
                         Component.literal("[Overview] §c").append(
@@ -428,6 +441,7 @@ public final class OverviewFlightController {
             return;
         }
         ProjectionClientState.setPinned(true);
+        ProjectionFlightController.openConstructionScreen(mc);
         Log.info(TAG, "[Overview] Ghost pinned at {}", ghostPos);
     }
 

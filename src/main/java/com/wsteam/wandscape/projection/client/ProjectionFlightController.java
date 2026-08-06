@@ -39,6 +39,7 @@ public final class ProjectionFlightController {
     private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
     private static boolean wasEscapeDown = false;
+    private static boolean wasScreenOpen = false;
 
     private static boolean registered = false;
 
@@ -67,12 +68,22 @@ public final class ProjectionFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        if (mc.screen != null) return;
+
+        long window = mc.getWindow().getWindow();
+
+        // Closing a Screen with the mouse (e.g. Construction UI buttons) would otherwise
+        // re-appear as a fresh left-click on the next tick and cancel the pinned ghost.
+        // Baseline the button edge-detection whenever a screen just closed.
+        boolean screenOpen = mc.screen != null;
+        if (wasScreenOpen && !screenOpen) {
+            wasLeftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            wasRightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        }
+        wasScreenOpen = screenOpen;
+        if (screenOpen) return;
 
         boolean buildingBarOpen = WandscapePanelState.isBuildingBarOpen();
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
-
-        long window = mc.getWindow().getWindow();
 
         // ── Building bar mode: no ghost, drain all input ──
         if (buildingBarOpen) {
@@ -183,7 +194,7 @@ public final class ProjectionFlightController {
             };
         }
 
-        // Right-click: pin the ghost preview at its current position
+        // Right-click: pin the ghost at its position and open the construction screen
         if (rightClicked) {
             BlockPos ghostPos = ProjectionClientState.getGhostPos();
             if (ghostPos == null) {
@@ -197,6 +208,7 @@ public final class ProjectionFlightController {
                 return;
             }
             ProjectionClientState.setPinned(true);
+            openConstructionScreen(mc);
             Log.info(TAG, "[Projection] Ghost pinned at {}", ghostPos);
         }
     }

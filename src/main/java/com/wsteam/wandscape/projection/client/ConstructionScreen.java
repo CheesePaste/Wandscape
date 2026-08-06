@@ -23,9 +23,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Construction screen — fine-tune a building placement before submitting the build task.
  *
- * <p>Opened from projection mode once the ghost preview is pinned (right-click while pinned).
- * Shows a large 3D preview, editable X/Y/Z coordinates (the world ghost moves live behind the
- * screen), and a Submit button that reuses {@link ProjectionPlacePacket} to enqueue the build.
+ * <p>Opened from projection mode by right-clicking with a building selected: the ghost
+ * preview is pinned to that spot and this screen opens immediately. Shows a large 3D
+ * preview, editable X/Y/Z coordinates (the world ghost moves live behind the screen),
+ * a Submit button (reuses {@link ProjectionPlacePacket}) and a Close button. Closing
+ * without submitting keeps the ghost pinned so the player can walk around and review
+ * the placement — right-click reopens the screen at the pinned position.
  */
 public class ConstructionScreen extends MedievalScreen {
 
@@ -84,8 +87,11 @@ public class ConstructionScreen extends MedievalScreen {
         zBox.setValue(String.valueOf(defaultZ));
 
         addRenderableWidget(new MedievalButton(
-                leftPos + 20, topPos + SUBMIT_Y, 260, 20,
+                leftPos + 20, topPos + SUBMIT_Y, 124, 20,
                 I18n.name("gui.wandscape.common.submit", "提交"), this::submit));
+        addRenderableWidget(new MedievalButton(
+                leftPos + 148, topPos + SUBMIT_Y, 132, 20,
+                I18n.name("gui.wandscape.common.close", "关闭"), this::onClose));
     }
 
     private EditBox makeBox(int row) {
