@@ -18,6 +18,13 @@ out/
 ### Dev tools (maintained outside the repo) ###
 tools/
 
+### Root branding icons (kept local only) ###
+/wandscape-icon.png
+/wandscape-icon.svg
+/wandscape-icon-v2.png
+/wandscape-icon-v2-400.png
+/wandscape-icon-v2.svg
+
 /assets/
 ### Eclipse ###
 .apt_generated
