@@ -74,19 +74,23 @@ public class ConstructionScreen extends MedievalScreen {
     @Override
     protected void init() {
         super.init();
-        xBox = makeBox(0, String.valueOf(defaultX));
-        yBox = makeBox(1, String.valueOf(defaultY));
-        zBox = makeBox(2, String.valueOf(defaultZ));
+        // Create all three boxes first, then set values — setValue fires the responder
+        // which reads all boxes; ordering avoids reading a not-yet-assigned field.
+        xBox = makeBox(0);
+        yBox = makeBox(1);
+        zBox = makeBox(2);
+        xBox.setValue(String.valueOf(defaultX));
+        yBox.setValue(String.valueOf(defaultY));
+        zBox.setValue(String.valueOf(defaultZ));
 
         addRenderableWidget(new MedievalButton(
                 leftPos + 20, topPos + SUBMIT_Y, 260, 20,
                 I18n.name("gui.wandscape.construction.submit", "Submit 建造"), this::submit));
     }
 
-    private EditBox makeBox(int row, String value) {
+    private EditBox makeBox(int row) {
         EditBox box = new EditBox(font, leftPos + BOX_X, topPos + ROW_Y + row * ROW_GAP,
                 BOX_W, BOX_H, I18n.name("gui.wandscape.construction.coord", "坐标"));
-        box.setValue(value);
         box.setMaxLength(9);
         box.setBordered(false);
         box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
@@ -167,6 +171,7 @@ public class ConstructionScreen extends MedievalScreen {
     }
 
     private BlockPos parsePos() {
+        if (xBox == null || yBox == null || zBox == null) return null;
         try {
             int x = Integer.parseInt(xBox.getValue().trim());
             int y = Integer.parseInt(yBox.getValue().trim());
