@@ -32,7 +32,7 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 
 ## 👥 Tourists with a life of their own
 
-*   Tourists arrive on your roads with energy, satisfaction, preferences, and moods.
+*   Tourists arrive on your roads with energy, satisfaction, and preferences.
 *   They shop, hit the tavern, and check into the inn when night falls — complete with speech bubbles and story-like broadcasts of every arrival, purchase, and departure.
 *   Shops restock themselves from your warehouse and turn a profit; decorations radiate bonuses to nearby buildings.
 *   Keep a mage tourist at 100% satisfaction and they'll leave a résumé at the tavern — recruit them to grow your workforce.
@@ -40,11 +40,13 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 
 ![alt text](https://media.forgecdn.net/attachments/1842/97/tourist-jpg.jpg)
 
-## ✨ You get a wand too
+## ✨ Wizards at work
 
-*   Right-click to cast: an animated magic circle — rings, arcs, polygons, stars, glyphs — followed by a beam of pure light.
-*   All particles, no shaders required (though it looks gorgeous under any shader pack).
-*   Upgrade your wand Basic → Adept → Master as your town grows. It never breaks — no durability, ever.
+*   Your mages are real wizards — they cast in glowing magic circles (rings, arcs, polygons, stars, glyphs) and fire beams of pure light.
+*   Every cast is a little show: particle-driven animation, no shaders required (though it looks gorgeous under any shader pack).
+*   Forge wands at the crafting station and equip them on your mages — Basic, Adept, Master, each tier boosting their spell power. Wands never break.
+*   Every mage carries their own stats — spell power, casting speed, work speed, armor and more — and mage tourists you recruit bring theirs with them.
+*   Beams are just the first spell. More magic, spectacular and practical, is on the way.
 
 ![alt text](https://media.forgecdn.net/attachments/1842/96/npc-jpg.jpg)
 
@@ -114,7 +116,7 @@ Wandscape 是一个 **魔法 × 小镇建设 × 模拟经营** 模组（Minecraf
 
 ## 👥 游客有自己的生活
 
-*   游客沿你的道路入城，各有精力、满意度、偏好和心情。
+*   游客沿你的道路入城，各有精力、满意度与偏好。
 *   他们逛商店、泡酒馆、入夜住进旅馆——头顶气泡会说话，到达、购物、离城都有故事般的播报。
 *   商店自动从仓库补货、按利润率回笼元素；装饰建筑向周边辐射加成。
 *   把法师游客的满意度喂到 100%，他们会在酒馆留下简历——去招募，壮大你的法师团队。
@@ -122,11 +124,13 @@ Wandscape 是一个 **魔法 × 小镇建设 × 模拟经营** 模组（Minecraf
 
 ![alt text](https://media.forgecdn.net/attachments/1842/97/tourist-jpg.jpg)
 
-## ✨ 你也有自己的法杖
+## ✨ 会施法的法师
 
-*   右键施法：先绽放一圈动态魔法阵——环、弧、多边形、星形、符文——再射出一道纯光光束。
-*   纯粒子渲染，不开光影也好看，开了光影更好看。
-*   法杖随小镇成长升级：基础 → 进阶 → 大师。永不损坏，没有耐久条。
+*   你的法师是货真价实的巫师——在发光的魔法阵中施法（环、弧、多边形、星形、符文），抬手就是一道纯光光束。
+*   每一次施法都是一场小演出：纯粒子动画，不开光影也好看，开了光影更好看。
+*   在合成站锻造法杖、给法师装备上——基础、进阶、大师三档，逐级提升法术强度。法杖永不损坏。
+*   每个法师都有自己的属性——法术强度、施法速度、工作速度、护甲等等——酒馆招募来的法师游客，还会把一身属性带进你的团队。
+*   光束只是第一个法术。更多兼具观赏性与实用性的魔法，已经在路上了。
 
 ![alt text](https://media.forgecdn.net/attachments/1842/96/npc-jpg.jpg)
 
