@@ -15,6 +15,9 @@ out/
 ### Claude (local working files, kept out of the repo) ###
 .claude/
 
+### Dev tools (maintained outside the repo) ###
+tools/
+
 /assets/
 ### Eclipse ###
 .apt_generated
