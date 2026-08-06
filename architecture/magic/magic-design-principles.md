@@ -1,5 +1,7 @@
 # 魔法阵设计原则（从 UsefulMagic 提炼）
 
+> 本文件由 `magicarchitecture/magic-design-principles.md` 迁移；仅修正与现契约文档滞后相关的两处注记（P4、粒子风格数），原则本身为设计指导，不涉及代码事实。
+
 本文从第三方模组 **UsefulMagic**（GPL-3.0，参考样例见 `usefulmagic-examples/`）的魔法阵实现中提炼出一套可迁移到 Wandscape `MagicCircleSpec` 的设计原则。目的是让后续设计魔法阵时有章可循，避免"堆元素但不好看"。
 
 > 适用对象：`data/wandscape/magic_circles/*.json` 的编写者 / [Web 编辑器](https://github.com/CheesePaste/magic-circle-editor)（独立项目）使用者。schema 见 [magic-circles.md](magic-circles.md)。
@@ -43,7 +45,7 @@ UsefulMagic 到处是 `rotateAsAxis(PI/128)` 与 `rotateAsAxis(-PI/128)` 交替�
 ### P4. 正多边形环给法阵"骨架感"
 UsefulMagic 几乎每座阵都有 `addPolygonInCircle`（3/4/5/6/12 边）。三角（能量）、四角（稳定）、六角（传送/六芒）、八角（星芒）是经典视觉语言。
 
-- **编辑器已支持** `polygon`（`sides`）与 `star`（`points` + `inner_ratio`，`star` 即六芒星/星芒）。**契约文档 magic-circles.md 尚未收录这两类**（文档滞后于编辑器，待补）。
+- **契约已支持**：`polygon`（`sides`）与 `star`（`points` + `inner_ratio`，`star` 即六芒星/星芒），见 [magic-circles.md](magic-circles.md)。
 - 双层多边形错 45° 叠加 → 八角星；双 `star` 反向旋转 → 动态六芒星。
 
 ### P5. 顶点挂载符文，别手写每个符文
@@ -71,6 +73,7 @@ UsefulMagic 有 `FormationStatus.IDLE/WORKING`：IDLE 慢转（PI/256），WORKI
 UsefulMagic 几乎所有阵法粒子都用 `ControlableEndRodEffect`（end rod），靠染色 + `size` 区分。极端统一反而高级。
 
 - Wandscape：一个法阵尽量 1 种主力粒子（同色系），跨色系 ≤2 色。色系决定法阵"属性感"：火=橙红、雷=青蓝、传送=紫、奥术=蓝青。
+- **注意 MC 端支持子集**：编辑器有 60 种风格，MC 端只映射 13 个原版风格 + glow/ember 两个自定义染色点，其余回退染色点（见 magic-circles.md"粒子风格"节）——设计时只用子集内的风格。
 
 ### P10. 半径由"阵规模"定，元素写相对值
 UsefulMagic 把结构（`FormationScale`：小/中/大水晶布局）与表现（particle style 消费半径）分离。
@@ -120,19 +123,19 @@ UsefulMagic 有三张完整法阵 PNG（`magic_*.png`）直接 billboard 渲染�
 - [ ] 相邻层转速异向，外层快内层慢
 - [ ] 入场 scale 用缓动曲线，出场 alpha/scale 尾段归零
 - [ ] 各层 `start` 错开（级联展开）
-- [ ] 粒子 ≤2 种，色系统一
+- [ ] 粒子 ≤2 种（且都在 MC 端子集内），色系统一
 - [ ] 高度（`y_offset`）不全挤在 0
 
 ## 编辑器能力现状与后续缺口
 
-**已支持**（编辑器 spec.ts 领先于契约文档 magic-circles.md，文档待同步）：
+**已支持**（编辑器与契约文档已同步）：
 
 | 能力 | 用途 |
 |------|------|
 | `polygon` / `star` 元素 | 正多边形环 / 星芒（P4 已落地） |
 | `anim.easing`（linear/smoothstep） | 关键帧缓动（P6/P10 部分落地） |
 | `interval_ticks` | 脉冲 on/off 闪烁（呼吸节奏） |
-| 60 种粒子风格（原版全部粒子 + 自定义 glow/ember） | 编辑器**可视化粒子选择器**：贴图网格 + 可染色标记（P9 已落地） |
+| 60 种粒子风格（编辑器侧；MC 端支持 13 原版 + 2 自定义子集） | 编辑器**可视化粒子选择器**：贴图网格 + 可染色标记（P9 已落地） |
 
 **仍缺口**（按价值排序）：
 

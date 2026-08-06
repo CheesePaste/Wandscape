@@ -16,7 +16,7 @@ import com.google.gson.JsonParser;
  * 两端只画同一份几何 spec，互不搬渲染管线。解析时套用编辑器 {@code normalizeSpec} 的默认值，
  * 保证 MC 端渲染与编辑器预览一致。
  *
- * <p>字段与 {@code magicarchitecture/magic-circles.md} 一致；元素用单一 {@link Element} record +
+ * <p>字段与 {@code architecture/magic/magic-circles.md} 一致；元素用单一 {@link Element} record +
  * {@link ElementType} 判别（编辑器就是单一 union，比 sealed 层级更贴合 fromJson/发射器）。
  */
 public final class MagicCircleSpec {

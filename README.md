@@ -95,7 +95,7 @@ src/main/resources/data/wandscape/    # JSON 配置（建筑/配方/元素映射
 docs/                                 # 模块文档与数据格式（以真实代码为准，权威）
 architecture/                         # 旧结构快照（部分过时，以 docs/ 为准）
 spec/                                 # JSON 格式规范
-magicarchitecture/                    # 魔法阵设计契约（spec/原则/示例）
+architecture/magic/                   # 魔法阵契约（spec/原则/示例/设计原则）
 ```
 
 ## 设计原则

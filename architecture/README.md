@@ -207,11 +207,11 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |
-| 魔法阵模块设计 | [packages/magic.md](../magicarchitecture/magic.md) |
+| 魔法阵模块设计 | [magic/magic.md](magic/magic.md) |
 | 守卫任务系统 | [packages/guard.md](packages/guard.md) |
 | 袭击机制 | [packages/raid.md](packages/raid.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
-| 魔法阵JSON格式 | [data/magic-circles.md](../magicarchitecture/magic-circles.md) |
+| 魔法阵JSON格式 | [magic/magic-circles.md](magic/magic-circles.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
 | 模拟经营（游客）详解 | [../docs/modules/tourist.md](../docs/modules/tourist.md) |
 | 编码规范和反模式 | [conventions.md](conventions.md) |

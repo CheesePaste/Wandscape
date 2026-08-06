@@ -95,7 +95,7 @@ src/main/resources/data/wandscape/    # JSON configs (buildings/recipes/element 
 docs/                                 # module docs & data formats (source of truth, written against the real code)
 architecture/                         # legacy structure snapshot (partly outdated — trust docs/)
 spec/                                 # JSON format specs
-magicarchitecture/                    # magic circle design contract (spec/principles/examples)
+architecture/magic/                   # magic circle contract (spec/principles/examples)
 ```
 
 ## Design Principles
