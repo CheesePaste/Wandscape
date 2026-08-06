@@ -47,6 +47,6 @@
 ## 使用路径
 
 - 建造算料：`ElementApi.getBuildCost`（EnqueueHelper 施工用料）。
-- 分解：`getDecomposeYield` / `getSeedValues`（Workstation decompose → colonyResources）。
+- 分解：`getItemElementValue`（decompose_yield → build_cost 回退）× 1/5 向下取整（Workstation decompose → colonyResources）。
 - 合成：`SynthesizeRecipe.fromElementMapping`（cost = buildCost）。
 - 审计：`ElementAuditor` + `gametest/ElementAuditRunner`（`wandscape.runAudit=true`）。

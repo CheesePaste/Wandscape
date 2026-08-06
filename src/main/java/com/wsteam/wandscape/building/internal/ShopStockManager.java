@@ -29,7 +29,6 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -600,18 +599,7 @@ public final class ShopStockManager {
     private static Map<ElementType, Long> getItemElementValue(String itemId) {
         var loader = com.wsteam.wandscape.Wandscape.ELEMENT_MAPPING_LOADER;
         if (loader == null) return Map.of();
-
-        ResourceLocation rl = ResourceLocation.tryParse(itemId);
-        if (rl == null) return Map.of();
-
-        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
-
-        // Prefer decompose_yield (what you get back when decomposing); fall back to build_cost
-        Map<ElementType, Long> source = loader.getItemDecomposeYield(item);
-        if (source.isEmpty()) {
-            source = loader.getItemBuildCost(item);
-        }
-        return source;
+        return loader.getItemElementValue(itemId);
     }
 
     // ── Daily restock ──

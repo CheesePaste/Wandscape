@@ -281,10 +281,12 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
         }
 
-        Map<ElementType, Long> yield = mappings.getSeedValues(itemId);
+        // Decompose returns 1/5 of the item's element value (anti item-duplication):
+        // source is decompose_yield, falling back to build_cost — same lookup as shop sale profit.
+        Map<ElementType, Long> yield = mappings.getItemElementValue(itemId);
 
         if (yield.isEmpty()) {
-            Log.warn(TAG, "decompose: no seed values for {}", itemId);
+            Log.warn(TAG, "decompose: no element value for {}", itemId);
             return;
         }
 
@@ -298,9 +300,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : yield.entrySet()) {
-            long total = entry.getValue() * count;
+            long total = (entry.getValue() * count) / 5;
+            if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
-            Log.info(TAG, "decompose: {} x{} → {} x{}", itemId, count,
+            Log.info(TAG, "decompose: {} x{} → {} x{} (1/5 of value)", itemId, count,
                     entry.getKey().name().toLowerCase(), total);
         }
 
