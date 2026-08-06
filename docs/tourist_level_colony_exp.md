@@ -75,26 +75,29 @@
 
 已在 `TouristMoveGoal.computeSatisfactionGain()` 中实现。
 
-### 3.4 等级影响法师招募数值（需修改）
+### 3.4 等级影响法师招募数值（已实现）
 
-**当前状态**：`TouristEntity.onAddedToLevel()` 中法师数值是纯随机，不与等级挂钩。
+**当前状态**：`TouristEntity.onAddedToLevel()` 中法师 6 属性（maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue）按等级缩放 roll。
 
-**修改方案**：法师的 `maxMana/manaRegenRate/spellPower` 生成时乘以缩放因子：
+**修改方案**（2026-08-06 属性重构后）：法师属性生成时乘以缩放因子：
 
 ```
 scaleFactor = 0.8 + level × 0.2
 ```
 
 例如：
-- `maxMana = random(80, 200) × scaleFactor`
-- `manaRegenRate = random(1, 5) × scaleFactor`
 - `spellPower = random(1, 4) × scaleFactor`
+- `workSpeed = random(1, 2) × scaleFactor`
+- `spellSpeed = random(1, 2) × scaleFactor`
+- `maxHp = random(40, 60) × scaleFactor`
+- `armorValue = random(0, 10) × scaleFactor`
+- `moveSpeed = 0.25~0.40`
 
-| 等级 | scaleFactor | maxMana 范围 |
-|------|------------|-------------|
-| 1    | 1.0        | 80 - 200    |
-| 2    | 1.2        | 96 - 240    |
-| 3    | 1.4        | 112 - 280   |
+| 等级 | scaleFactor | spellPower 范围 |
+|------|------------|-----------------|
+| 1    | 1.0        | 1 - 4           |
+| 2    | 1.2        | 1.2 - 4.8       |
+| 3    | 1.4        | 1.4 - 5.6       |
 | 5    | 1.8        | 144 - 360   |
 | 10   | 2.8        | 224 - 560   |
 

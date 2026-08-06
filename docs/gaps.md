@@ -92,8 +92,8 @@ SchedulerSystem 中 `score += 50` 是 magic number。应移至 TOML 全局配置
 ### WandscapeConstants 与 Config 值重复
 `WandscapeConstants.java` 硬编码默认值（SCHEDULER_HEARTBEAT_TICKS=40 等），`Config.java` 定义相同的 TOML 可配值。两者的优先级关系无文档说明。
 
-### 4 个 API 接口无实现
-WandscapeApis 中 ColonyApi、HouseApi、ManaPoolApi、AtomicExecutor 的 getter 永远抛 "not loaded"。要么移除，要么标注为预留。
+### 3 个 API 接口无实现
+WandscapeApis 中 ColonyApi、HouseApi、AtomicExecutor 的 getter 永远抛 "not loaded"。要么移除，要么标注为预留。
 
 ~~TaskApi — 已实现 (2026-06-22)~~
 ~~TavernApi — 部分实现 (2026-06-26)：mage resume 相关方法已可用；3 个 NPC 招募方法仍为占位~~
@@ -284,7 +284,7 @@ private void setColonyId(BuildingData data, @Nullable UUID colonyId) {
   - 清晨（0-1000）：重置调度。从 `onServerTick` 重构为在 0-1000 窗口内条件性清除 `scheduleDay` 标志。
   - 生成窗口（1000-13000）：`createSchedule()` 预计算当日游客数量（含等级、生成位置、目标建筑的 `PendingSpawn` 列表），`flushPendingSpawns()` 按 tick 到达逐个生成。
   - 夜晚离城（18000-24000）：满意度 <50 或 =100 → 0-1500 tick 随机延迟后离城；50-99 → 引导至旅馆。
-- **法师缩放**：`TouristEntity.onAddedToLevel()` 中 `scale = 0.8 + level × 0.2`，maxMana/manaRegen/spellPower 乘以 scale。
+- **法师缩放**：`TouristEntity.onAddedToLevel()` 中 `scale = 0.8 + level × 0.2`，roll 新 6 属性（maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue）乘以 scale。
 - **相关文件**：`ColonyLevelData.java`, `ColonyLevelManager.java`, `TouristSpawnSystem.java`, `TouristEntity.java`, `Config.java`, `ColonyStatsSyncPacket.java`, `PanelStateTogglePacket.java`, `PanelStateTracker.java`, `TownHallOpenPacket.java`, `TownHallScreen.java`, `BuildingInteractHandler.java`, `WandscapeEngine.java`, `WandscapeClient.java`, `Wandscape.java`
 
 ## 后续待办

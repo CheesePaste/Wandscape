@@ -31,12 +31,12 @@
 
 ## 未实现的 API
 
-ColonyApi / HouseApi / ManaPoolApi / AtomicExecutor（被 core/op 替代）
+ColonyApi / HouseApi / AtomicExecutor（被 core/op 替代）
 
 ~~TaskApi~~ — 已实现 (2026-06-22)
 ~~TavernApi~~ — 部分实现 (2026-06-26)：mage resume 存储/查询/招募已可用；3 个 NPC 招募方法仍为占位
 
-对应的模块：殖民地生命周期、房屋分配、魔力池 — 均为阶段 4 内容。
+对应的模块：殖民地生命周期、房屋分配 — 均为阶段 4 内容。
 
 ## 待完成
 

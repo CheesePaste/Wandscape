@@ -45,7 +45,7 @@ public class WorldEcsTest {
 
         @BeforeEach
         void setUp() {
-            // Bootstrap a minimal world with Position and ManaPool stores
+            // Bootstrap a minimal world with Position store
             MockBoundary mock = new MockBoundary();
             CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock,
                     java.util.List.of(), new BlueprintRegistry(),

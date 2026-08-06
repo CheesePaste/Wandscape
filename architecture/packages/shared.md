@@ -2,9 +2,9 @@
 
 所有包的公共层，50+ 文件。无实现代码，只有接口/数据/事件/UI组件。新增 ColonyMetricsApi（实时全量指标聚合）和 ColonyMetricsSnapshot（统一指标数据 record）。
 
-## api/ — 12 个模块接口
+## api/ — 11 个模块接口
 
-BuildingApi / ColonyApi / ColonyMetricsApi / ElementApi / HouseApi / ManaPoolApi / NpcApi / RoadApi / TavernApi / TouristApi / WandApi / WarehouseApi。全部已实现，实现类在对应模块的 internal/ 下。ColonyMetricsApi 由 engine/service/ColonyMetricsService 实现。
+BuildingApi / ColonyApi / ColonyMetricsApi / ElementApi / HouseApi / NpcApi / RoadApi / TavernApi / TouristApi / WandApi / WarehouseApi。全部已实现，实现类在对应模块的 internal/ 下。ColonyMetricsApi 由 engine/service/ColonyMetricsService 实现。
 
 ## entity/ — 实体行为契约
 

@@ -14,7 +14,15 @@ World（中央容器：ComponentStore + System 列表 + 边界引用）、System
 
 ## 组件
 
-Position / ManaPool / EquipmentComponent / TaskExecutor / NpcTaskQueue / Inventory / NavigationState / ColonyMember / ColonyMetadata / SuspensionContext。配套 System：ManaRegenSystem（每 tick 恢复 ManaPool，虽实现 ECS System 但因紧耦合 ManaPool 归入 component/ 而非 ecs/ 框架包）。
+Position / EquipmentComponent / TaskExecutor / NpcTaskQueue / Inventory / NavigationState / ColonyMember / ColonyMetadata / SuspensionContext（共 9 个）。
+
+### NPC 属性模型
+
+NPC 只有 6 个属性：`MAX_HP` / `MOVE_SPEED` / `SPELL_POWER` / `WORK_SPEED` / `SPELL_SPEED` / `ARMOR_VALUE`。魔力系统已整体移除（ManaPool/ManaRegenSystem 已删）。属性值存于 `EquipmentComponent`：base（来自 `NpcAttributes`，招募/默认值） + 装备 modifier，**所有装备加成一律加法**（`effective = base + Σmodifier`，`ModifierOperation` 只有 ADDITION）。运行时各机制读取：
+- `SPELL_POWER` → 光束伤害倍率（MagicBeamEntity）
+- `WORK_SPEED` → 建造/采集/合成耗时：`实际 = 基础tick / WORK_SPEED`（AsyncTransformExecutor / WandscapeBlockInteractExecutor）
+- `SPELL_SPEED` → 魔法 CD：`实际CD = 基础 / SPELL_SPEED`（光束 40、传送 600；施法时间不参与）
+- `MAX_HP` / `MOVE_SPEED` / `ARMOR_VALUE` → 推送到 vanilla 实体属性（WandscapeNpc 每 tick）
 
 ## 边界接口 (boundary/)
 

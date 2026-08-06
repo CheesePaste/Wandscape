@@ -286,7 +286,7 @@
 
 ## 包重构第二轮：System 归属整理（2026-07-04）
 
-**为什么 ManaRegenSystem 从 core/ecs/ 移到 core/component/？** `core/ecs/` 是 ECS 框架包（World、System 接口、ComponentStore），应只放抽象和基础设施。`ManaRegenSystem` 是具体实现——它做的事情就是遍历所有 ManaPool 并调用 `pool.regen()`，与 ManaPool 紧耦合。把实现和框架混在一起会模糊包的职责边界。放在 `core/component/` 后，开发者看到 ManaPool 就能在同一包找到其配套处理器，搜索成本更低。
+**为什么 ManaRegenSystem 从 core/ecs/ 移到 core/component/？** `core/ecs/` 是 ECS 框架包（World、System 接口、ComponentStore），应只放抽象和基础设施。`ManaRegenSystem` 是具体实现——它做的事情就是遍历所有 ManaPool 并调用 `pool.regen()`，与 ManaPool 紧耦合。把实现和框架混在一起会模糊包的职责边界。放在 `core/component/` 后，开发者看到 ManaPool 就能在同一包找到其配套处理器，搜索成本更低。（**2026-08-06 废弃**：魔力系统整体移除，ManaPool/ManaRegenSystem 已删除，见文末「NPC 属性重构」。）
 
 **为什么 engine/system/ 拆分为 system/ + service/？** `engine/system/` 里混了两类完全不同的事物：(1) 实现 `core/ecs/System` 接口、注册到 `World.tick()` 的真正 ECS System；(2) 通过 `world.eventBus.subscribe()` 注册的纯事件订阅者。前者是 ECS 调度的组成部分，后者是旁路服务。混在一起让开发者无法从包名判断"这个 System 是 tick 驱动的还是事件驱动的"。拆分后 `engine/system/` 只放 ECS System，`engine/service/` 只放事件订阅者，各自职责单一。
 
@@ -518,3 +518,15 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 
 - **为什么把 `setSelectedSlotIndex` 从双击分支移到每次点击？** 单击/双击在 `handleBuildingSlotClick` 里共用一次检测，双击分支仍要 `enterPlacingPhase()`，把状态赋值提前到每次点击即可同时满足"单击切换"与"双击进放置"，幂等无害。
 - **版本**：v1.3.9→v1.3.10（bug 修复 + 小功能改进）。
+
+## NPC 属性重构：删魔力换 6 属性 + 脱战回血 + 统一魔法冷却（2026-08-06）
+
+需求：魔力恢复太快形同虚设；魔法不再消耗魔力，改由「施法时间（固定）+ CD」门控。NPC 属性收敛为 6 个（`MAX_HP/MOVE_SPEED/SPELL_POWER/WORK_SPEED/SPELL_SPEED/ARMOR_VALUE`），彻底删除魔力系统。
+
+- **为什么直接删魔力而非调低恢复？** 对殖民地自动化这种吞吐优先的玩法，单 worker 的"随时间自动回蓝"池是错误资源形态——回蓝参数怎么调都只是把"等回蓝"换成"等时长"，不如直接去掉中间层。魔法门控改为纯时间：施法时间固定（光束=魔法阵+激光、传送=仪式引导），CD 受 `SPELL_SPEED` 影响。
+- **为什么施法时间不随属性变、只有 CD 随属性变？** 双机制分离：施法时间决定一次施法的展示/引导时长（稳定），CD 决定施法频率（属性增益的落点）。`SPELL_SPEED` 只作用于 CD（`baseCD / SPELL_SPEED`），避免把"每次施法时长"和"施法频率"混成一个乘数。
+- **为什么冷却常量定义在各魔法类里而非 WandscapeConstants？** 用户要求：每魔法的冷却就近定义（`GuardCombat.CAST_MIN_INTERVAL=40`、`NavigationSystem.TELEPORT_COOLDOWN_TICKS=600`），避免中央常量表"翻字段"。
+- **为什么装备加成一律加法（删 MULTIPLY_BASE/MULTIPLY_TOTAL）？** 用户要求更直观、更好算。`ModifierOperation` 只剩 ADDITION，`EquipmentComponent.recalculateAll` 简化为 `base + Σadd`。法杖 JSON 本就只用 addition。
+- **为什么游客法师保留按等级 roll（5%）而非固定默认？** 游客是"凹完美NPC"的属性来源：5% 概率是法师（`MAGE_CHANCE` 本就是 0.05），按等级 `scale = 0.8 + level×0.2` roll 6 属性；100% 满意度留简历 → 酒馆招募。招募时把简历属性写回 NPC 并重种 ECS，闭环生效。
+- **为什么脱战回血 100tick 封伤 + 每 80tick 回 1 HP？** 对齐原版玩家恢复节奏（80tick/HP），受击后 100tick 封伤避免战斗中回血；NPC 无饥饿值，直接按脱战计时简化实现。
+- **版本**：v1.3.10→v1.4.0（功能重构，第二位递增）。
