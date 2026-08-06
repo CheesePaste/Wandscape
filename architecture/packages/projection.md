@@ -5,11 +5,12 @@
 ## 交互逻辑
 
 1. 射线检测（摄像机→64格），使用缓存的建筑区域数据判断命中
-2. 右键：Build 栏选中建筑时 → 固定虚影（`ProjectionClientState.pinned`，ghost 不再跟随准星，渲染金色线框）
-3. 固定后：左键撤销回手持跟随；右键 → `ConstructionScreen`（施工 UI：大 3D 预览 + X/Y/Z 坐标编辑 + Submit）
+2. 右键：Build 栏选中建筑时 → 固定虚影（`ProjectionClientState.pinned`）并**直接打开** `ConstructionScreen`（施工 UI）
+3. 施工 UI：大 3D 预览 + X/Y/Z 坐标编辑 + Submit/Close；坐标编辑时世界虚影实时移动
 4. Submit 复用 `ProjectionPlacePacket` 发建造任务，成功回建筑选择条；重叠位置客户端拒绝
-5. 左键（未固定）：旋转建筑 90°；固定后不可旋转（先撤销再转）
-6. 建筑选择条：单击切换手上建筑（`selectedSlotIndex`），双击收回鼠标进入放置（PLACING）
+5. Close / X：关闭 UI，虚影保持固定 → 玩家可走动观察（白色线框）；右键重开施工 UI，左键撤销回手持
+6. 左键（未固定）：旋转建筑 90°；固定后不可旋转（先撤销再转）
+7. 建筑选择条：单击切换手上建筑（`selectedSlotIndex`），双击收回鼠标进入放置（PLACING）
 
 ## 网络包
 

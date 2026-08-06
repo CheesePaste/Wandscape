@@ -502,10 +502,11 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 
 ## 建筑放置：右键固定预览 + 施工 UI（2026-08-06）
 
-需求（issue #5）：右键原本直接放置，位置不合适只能拆了重建。改为「右键固定虚影→走动观察→左键撤销回手持 / 右键进施工 UI 微调坐标并提交」。
+需求（issue #5）：右键原本直接放置，位置不合适只能拆了重建。改为「右键固定虚影并打开施工 UI→走动观察→Submit 提交」。
 
 - **为什么复用 `ProjectionPlacePacket` 而非新建提交包？** Submit 的语义就是"在此坐标放置该建筑"，`ProjectionPlacePacket.handleServer` 已含类型校验、重叠拒绝、成功/失败消息、槽刷新、教程推进。新包只会重复这套逻辑。
 - **为什么用 `pinned` 标志而非直接冻结 ghostPos？** 地面与俯瞰两模式每 tick 都靠射线覆盖 `ghostPos`，需要一个显式状态让两处 `updateGhostPosition`/`performRaycast` 跳过覆盖、只重算重叠。`pinned` 同时作为施工 UI 打开时的世界背景（Screen 非暂停屏，虚影在玻璃面板后实时移动）。
+- **为什么右键一次就直接打开施工 UI，而不是先固定再右键第二次？** 两次右键不直观（第一次只是"放下了虚影"却没反馈）。一次右键 = 固定 + 打开 UI，反馈明确；Close 退出后虚影仍固定，玩家照样可走动观察，再右键重开 UI——既保留原需求的"四处移动看合不合适"，又让主路径更短。
 - **为什么固定后不可旋转？** 左键被"撤销"占用，避免再加新键。旋转可先左键撤销→左键旋转→再右键固定，代价可接受。
 - **为什么施工 UI 放 `projection/client/` 而非 `building/client/`？** `building/client/` 是"与已建成建筑交互"的界面（商店/旅店/市政厅），施工 UI 是"放置新建筑"流程的一部分，与 `ProjectionFlightController`/`OverviewFlightController` 同层，且被两模式共用。
 - **提交后为什么回建筑选择条？** 用户确认偏好，便于连续选下一个建筑；`openBuildingBar()` 保留 `selectedSlotIndex`，已放置的建筑在条上保持高亮。

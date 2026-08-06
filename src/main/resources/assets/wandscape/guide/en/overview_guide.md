@@ -25,7 +25,7 @@ Switch between these three functions via the sidebar:
 
 1. **🏛️ Build Mode**:
    - Contains all buildable buildings: town hall, warehouse, housing, shops, services, infrastructure, etc.
-   - **Double-click a building card** in the bottom building bar to activate a ghost preview; left-click in the world to rotate, right-click to confirm and place the blueprint.
+   - **Click a building card** in the bottom building bar to select it, **double-click** to enter placement; in the world **left-click** to rotate, **right-click** to pin the ghost and open the Construction UI, where you can fine-tune **X/Y/Z coordinates** and **Submit** to build.
 
 2. **🛣️ Road Mode**:
    - **Auto/point road laying**: pick a road preset to connect buildings to the main road.
