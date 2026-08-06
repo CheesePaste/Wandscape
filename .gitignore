@@ -12,7 +12,6 @@ freecam/
 out/
 !**/src/**/out/
 
-
 **/.claude/settings.local.json
 /assets/
 ### Eclipse ###
@@ -69,3 +68,6 @@ __pycache__/
 gen_icons.py
 fix_icons.py
 generate_icons.js
+
+### CurseForge description (local only, not part of the mod) ###
+curseforge-description.md
