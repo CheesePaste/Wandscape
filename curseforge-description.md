@@ -1,91 +1,127 @@
-# Wandscape — A Magic Automation & Simulation Colony Mod
+# Wandscape — Magic Town Simulation
 
-Command **mages**, to build, gather, and craft your own magical town. Every task flows through wands, a global task pool, and seven elemental resources — then the tourists come.
+![alt text](https://media.forgecdn.net/attachments/1842/82/minecraft_title-png.png)
 
-## What is it?
-Wandscape is a **magic automation + colony simulation** mod for Minecraft 1.21.1 (NeoForge). NPC mages execute atomic tasks — build, gather, synthesize, brew, shape terrain, lay roads — driven by your wand and a task-pool scheduler, while a living tourist economy turns your surplus into growth.
+## In one line
 
-## Key Features
+Wandscape is a **magic × town-building × simulation** mod for Minecraft 1.21.1 (NeoForge). Build a self-governing magic town: mages gather, build and craft for you, while tourists travel your roads to visit — a town that runs and grows on its own.
 
-**🏰 Town Automation**
-- A single unbreakable wand — craft it from Basic to Adept to Master
-- Command mages who keep personal mana pools and can be resurrected
-- 7 elements (Earth, Wood, Water, Fire, Metal, Wind, Dark) flow from mining to crafting
-- 19 JSON-driven buildings: town hall, warehouse, 4 shops, 7 element nodes, tavern, inn, library, service hall, potion/workstation/crafting stations
-- Comfort / Magic / Wonder values unlock buildings and recipes
-- Road network with a built-in spline editor — tourists and mages travel along your roads
+## The core loop
 
-**✨ Magic Circles & Lasers**
-- Data-driven magic circles — rings, runes, hexagrams — rendered as glowing particles, no shaders required
-- Cast a laser beam from the circle at your target
-- Works under any shader pack
+1. **Found it** — place a town hall, name your colony, and a town is born.
+2. **Feed it** — build a warehouse and element nodes: the warehouse pre-stocks every element, and nodes continuously harvest the seven elements (Earth, Wood, Water, Fire, Metal, Wind, Dark).
+3. **Run it** — build workstations, a crafting station, tavern, inn, shops… mages automatically pick up work: gathering, building, crafting wands and potions.
+4. **Thrive** — open shops and connect roads; tourists arrive, spend, and their satisfaction feeds colony experience.
+5. **Make a name** — level up to unlock more buildings and recipes, grow bigger — and fend off raiders.
 
-**👥 A Town That Lives**
-- Tourists arrive along your roads, with energy, satisfaction, preferences and moods
-- They talk: speech bubbles and story-like broadcasts of arrivals, visits, check-ins and departures
-- Shops restock from your warehouse and turn surplus into profit
-- Decoration buildings radiate bonuses to nearby buildings
-- Wonders rewrite the rules: boost spells, raise prices, unlock transport
-- Upkeep with graceful tiered shutdown — no soft-locks
-- 100%-satisfied mage tourists leave résumés at the tavern — recruit them
+Your job: open the V-panel overview, pick a spot with Soul Projection to place buildings, and right-click each building to manage it. **The mages do the heavy lifting — you run the town.**
 
-**⚔️ Defense**
-- Repel raids and defend your town
+![alt text](https://media.forgecdn.net/attachments/1842/98/town-jpg.jpg) ![alt text](https://media.forgecdn.net/attachments/1842/94/warehouse-png.png)
 
-**🏆 Progression**
-- 15 vanilla advancements: build 5→50 buildings, reach colony level 30, repel a raid, and more
+## 🏰 Town automation: you decide, mages build
 
-**🛠️ Management**
-- V-panel: run the whole town from a top-down overview
-- Building scanner: box-select any structure to generate a blueprint
-- Soul projection for placing blueprints; H-key in-game guide; daily stats & 30-day summaries
+*   Every building comes with a build blueprint — once placed, NPC mages construct it block by block, restock materials, and repair damage.
+*   Nearly 20 buildings in 9 categories: town hall, warehouse, 7 element nodes, 4 shops, tavern, inn, service hall, workstation, crafting station, brewing station…
+*   Higher Comfort / Magic / Wonder values make tourists happier; higher colony level unlocks more buildings and recipes.
+*   Upkeep is settled daily — low on elements? Buildings **suspend gracefully** instead of breaking, and restart automatically when resupplied. No soft-locks.
+*   Building scanner: box-select any existing structure and export it as a reusable blueprint — even a craftable scanner in survival.
+
+## 👥 A town that lives (tourist economy)
+
+*   Tourists walk your roads, each with energy, satisfaction, preferences and mood — they shop, check into the inn, and visit the tavern.
+*   Speech bubbles overhead, plus story-like broadcasts of arrivals, purchases, check-ins and departures.
+*   Shops restock automatically from your warehouse and turn a profit; decorations radiate bonuses to nearby buildings.
+*   A 100%-satisfied mage tourist leaves a résumé at the tavern — recruit them to grow your mage workforce.
+
+![alt text](https://media.forgecdn.net/attachments/1842/97/tourist-jpg.jpg)
+
+## ✨ Magic & elements
+
+*   Seven elements form a full economy: gather, decompose, synthesize, spend — all connected.
+*   The wand is **your** casting tool, upgradeable from Basic to Adept to Master.
+*   Right-click to cast a glowing magic circle and fire a beam at your target — pure particles, looks great under any shader pack.
+
+![alt text](https://media.forgecdn.net/attachments/1842/96/npc-jpg.jpg)
+
+## ⚔️ Defend your town
+
+*   Mages automatically guard buildings: they spot threats, return fire with beams, and hold grudges when hit.
+*   Raids center on your town hall — repel the waves and your town's fame grows.
+
+## 🛠️ Management & progress
+
+*   **V-panel overview**: manage the whole town from above, place buildings, check statistics.
+*   **Roads**: auto-generated network once you have enough buildings, plus a hand-placed road brush and a spline editor for curvy routes.
+*   **15 vanilla advancements**: build 50 buildings, reach colony level 30, repel a raid…
+*   **In-game guide (H key)** + daily stats and 30-day trend summaries.
 
 ## License
+
 MIT
+
+[Source Code on GitHub](https://github.com/CheesePaste/Wandscape)
 
 ---
 
-# 魔法小镇（Wandscape）— 魔法自动化 & 模拟经营模组
+# Wandscape — 魔法小镇模拟经营
 
-指挥**法师**——用法杖建造、采集、合成属于你的魔法小镇。所有生产流经法杖、全局任务池与七种元素资源，然后游客来了。
+![alt text](https://media.forgecdn.net/attachments/1842/82/minecraft_title-png.png)
 
-## 这是什么？
-Wandscape 是 Minecraft 1.21.1（NeoForge）的**魔法自动化 + 模拟经营**模组。NPC 法师执行原子任务——建造、采集、合成、炼药、整地、修路——由你的法杖和任务池调度驱动；游客经济把盈余转化为城镇发展。
+## 一句话
 
-## 核心特性
+Wandscape 是一个**魔法 × 小镇建设 × 模拟经营**模组：你建起一座自治的魔法小镇，法师们替你采集、建造、合成，游客们沿着道路慕名而来——一座会自己运转、自己成长的小镇。
 
-**🏰 小镇自动化**
-- 一支永不损坏的法杖，从基础升级到进阶、大师
-- 指挥拥有个人魔力池、可复活的法师
-- 7 种元素（地、木、水、火、铁、风、暗）贯穿采集到合成
-- 19 种 JSON 数据驱动的建筑：市政厅、仓库、4 种商店、7 种元素节点、酒馆、宾馆、图书馆、服务大厅、药水站/工作站/合成站
-- 舒适 / 魔法 / 奇观三值解锁建筑与配方
-- 道路系统，内置样条线编辑器——游客与法师都沿路行走
+## 你怎么玩（核心循环）
 
-**✨ 魔法阵与激光**
-- 数据驱动的魔法阵——环、符文、六芒星——粒子渲染，无需着色器
-- 从法阵向目标发射激光光束
-- 任何光影包下正常显示
+1. **开张**——放下一座市政厅，给殖民地起个名字，小镇由此诞生。
+2. **造血**——建仓库和元素节点：仓库会预先储备每种元素，节点法师持续采集地、木、水、火、铁、风、暗七种元素。
+3. **运转**——建工作站、合成站、酒馆、旅馆、商店……法师自动认领工作：采集、施工、合成法杖与药水。
+4. **繁荣**——开商店、修路接通城镇，游客沿道路入城消费，满意度反哺殖民地经验。
+5. **扬名**——等级越高解锁越多建筑与配方，小镇越做越大，直到击退一波波袭击。
 
-**👥 有生命的小镇**
-- 游客沿道路入城，拥有精力、满意度、偏好与心情
-- 他们会说话：对话气泡 + 到达、参观、入住、离开的叙事广播
-- 商店从仓库补货，把盈余转化为利润
-- 装饰建筑辐射加成周边建筑
-- 奇观改变规则：增强法术、提升售价、解锁传送
-- 维护费与分级停摆保护，绝不卡档
-- 满意度满值的法师游客在酒馆留下简历——招募他们
+你要做的只是：按 V 打开俯瞰面板、用灵魂投影挑好位置放建筑、右键建筑逐个管理。**搬砖的是法师，你当镇长。**
 
-**⚔️ 防御**
-- 抵御袭击，保卫你的小镇
+![alt text](https://media.forgecdn.net/attachments/1842/98/town-jpg.jpg) ![alt text](https://media.forgecdn.net/attachments/1842/94/warehouse-png.png)
 
-**🏆 进度**
-- 15 个原版成就：建造 5→50 栋建筑、升到殖民地 30 级、击退袭击等
+## 🏰 小镇自动化：你出主意，法师干活
 
-**🛠️ 管理操作**
-- V 面板：俯瞰视角管理整座小镇
-- 建筑扫描方块：框选任意结构生成蓝图
-- 灵魂投影放置蓝图；H 键游戏内指南；每日统计与 30 天摘要
+*   每个建筑自带施工图纸——放置后 NPC 法师按图自动建造、补料、修复损坏。
+*   建筑分 9 大类、近 20 种：市政厅、仓库、7 种元素节点、4 家商店、酒馆、旅馆、服务大厅、工作站、合成站、酿造站……
+*   舒适 / 魔力 / 奇观三值越高，游客越满意；殖民地等级越高，解锁的建筑与配方越多。
+*   维护费每日结算，元素不足时建筑会**分级停摆**而非崩坏，补足后自动重启——绝不卡档。
+*   建筑扫描方块：框选任何现成结构，一键导出成可复用蓝图；生存模式也有可合成的扫描器。
 
-## 许可证
+## 👥 一座有生命的小镇（游客经济）
+
+*   游客沿你的道路入城，各有精力、满意度、偏好与心情，会去逛商店、住旅馆、泡酒馆。
+*   他们头顶的气泡会说话，旅途中还会播报故事般的见闻（到达、购物、入住、离城）。
+*   商店从仓库自动补货、按利润率回笼元素；装饰建筑向周边辐射加成。
+*   满意度拉满的法师游客会在酒馆留下简历——去酒馆招募他们，壮大你的法师团队。
+
+![alt text](https://media.forgecdn.net/attachments/1842/97/tourist-jpg.jpg)
+
+## ✨ 魔法与元素
+
+*   七种元素构成完整经济：采集、分解、合成、消耗，环环相扣。
+*   法杖是你**自己**的施法工具，从基础、进阶到大师三档升级。
+*   右键施放绚丽的魔法阵，向目标射出光束——纯粒子渲染，任何光影包下都好看。
+
+![alt text](https://media.forgecdn.net/attachments/1842/96/npc-jpg.jpg)
+
+## ⚔️ 保卫小镇
+
+*   法师自动守卫建筑周边：主动索敌、光束反击，被打还会记仇。
+*   袭击以市政厅为中心展开，击退波次后小镇声名远扬。
+
+## 🛠️ 管理与进度
+
+*   **V 键俯瞰面板**：全局视角管理小镇、放置建筑、查看统计。
+*   **道路系统**：建筑够多时自动生成路网，也能用路刷手绘、或用样条编辑器画曲线路。
+*   **15 个原版成就**：建到 50 栋楼、升到 30 级、击退袭击……
+*   **H 键游戏内指南** + 每日经营统计与 30 天走势摘要。
+
+## License / 许可证
+
 MIT
+
+[Source Code on GitHub](https://github.com/CheesePaste/Wandscape)

@@ -1,0 +1,50 @@
+# npc/ — NPC 法师模块
+
+`src/main/java/com/wsteam/wandscape/npc/`
+
+## 职责
+
+殖民地 NPC 法师实体：是任务系统的执行载体，通过 ECS `EquipmentComponent` 管理 6 属性与装备。实体 ↔ ECS 由 `EntityComponentBridge` 桥接。
+
+## WandscapeNpc
+
+- `extends PathfinderMob implements VillagerLike`。注册 `wandscape_npc`（CREATURE, 0.6×1.8, tracking 10）。
+- **6 属性字段**：maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue，默认 `NpcAttributes.defaults()` = (40, 0.3, 1, 1, 1, 0)。vanilla 基础属性：MAX_HEALTH 40、MOVEMENT_SPEED 0.3、ATTACK_DAMAGE 1.0、FOLLOW_RANGE 48。
+- **施法冷却**：`canCastSpell()` = spellCooldown<=0；`startSpellCooldown(baseCD)` 用 `getEffectiveAttribute(SPELL_SPEED)` 除 baseCD 取整；每 tick 递减。
+- **脱战回血**：`markRecentlyDamaged()` 重置 `NPC_REGEN_GRACE_TICKS`(100) 封伤；`tickHealthRegen()` 封伤过后每 `NPC_REGEN_INTERVAL_TICKS`(80) 回 1 HP。
+- **装备/属性权威**：ECS `EquipmentComponent` 是运行时权威。`getEffectiveAttribute` 有 ECS 则取 eq.getAttribute，否则回退 NBT transit 字段；`applyEffectiveAttributes()` 仅变化时 setBaseValue MAX_HEALTH/MOVEMENT_SPEED/ARMOR（3 个 applied 脏值防重复）。
+- `tick()` 服务端：冷却/回血/属性推送恒执行；fast path ecsPollCooldown（施法中每 tick、空闲每 20 tick 才查 ECS）；从 TaskExecutor 读 casting/currentOpTarget/currentOpKind 同步到 SynchedEntityData（computeStatusText 映射移动/施法/仪式状态）。
+- 交互 `mobInteract` 右键发 NpcDataPacket 打开界面。
+- 生命周期：onAddedToLevel 设随机 skin/hat、发默认 wand、setPersistenceRequired，调 EntityComponentBridge.onNpcJoinWorld 或 deferJoin；onRemovedFromLevel 仅 KILLED/DISCARDED 时释放 global task/取消运输/销毁 ECS（CHANGED_DIMENSION 与 unload 保留）。
+- NBT 存 SkinVariant/HatColor/EcsEntityId/6 属性/冷却/回血/hasDefaultWand/colonyId。
+- 仇恨表 `setHatedAttacker/getHatedAttacker`。
+
+## EntityComponentBridge
+
+单例 INSTANCE；双向 map（ecsEntityId→NPC 与 UUID→ecsEntityId）。`PLACEHOLDER_COLONY`=全零 UUID。
+
+- `onNpcJoinWorld`：同会话重连（chunk reload）只补 Position；否则自动探测 spawn-egg 殖民地，用 `CoreBootstrap.createNpc` 建 ECS 实体（Position、EquipmentComponent(seedBaseValues+equipDefaultWand)、TaskExecutor、Inventory(27)、ColonyMember）。
+- `deferJoin` → `flushDeferredJoins`：引擎就绪后补注册，deferredInventory 补发库存。
+- 每 tick `syncPositions` 把 MC 坐标写回 ECS Position（Wandscape.onServerTick 引擎 gate 前）。
+- `onNpcLeaveWorld` 逐个 removeComponent；`clear()` 世界重置时清映射。
+
+## NpcApiImpl
+
+`getColonyNpcs(colonyId)` 遍历 bridge.allNpcs 按 ColonyMember 过滤；`getIdleNpcs` 再过滤 isIdle；`getNpc(uuid)` 经 getEcsId → NpcDataImpl.from；`assignHouse` 恒返回 false（Stage 4 未实现）。
+
+## 网络
+
+- `NpcDataPacket`（S→C）：信息屏，含 entityId/名字/血量/4 属性/wandStack/isDefaultWand；from() 从 ECS EquipmentComponent 读有效属性。
+- `NpcEquipPacket`（C→S）：equip/unequip wand。handleEquip 校验 WandItem、读 wand preset 的 attributes（均为 ADDITION），换物品并同步 ECS eq.unequip/equip；handleUnequip 拒绝卸默认 wand，回默认 wand。
+
+## 客户端
+
+- `WandscapeNpcRenderer`：HumanoidMobRenderer，纹理自动检测 `textures/entity/wizard/*.png`；inline 绘制 SpeechBubbleRenderer、状态文字、施法中按 opKind 画仪式法阵或 cast ray。
+- `WandscapeNpcModel`：casting 时 rightArm.xRot = CAST_ARM_ANGLE + getXRot()。
+- `WizardHatModel/WizardHatLayer`：hat 几何，Layer 用 entityCutoutNoCull + hatColor 着色，brim edge 金色不着色。
+- `CastBoltParticle`：固定亮星粒子，lifetime 10-15 tick，全亮。
+- `NpcScreen`：MedievalScreen，装备格 + 属性条 + 4 行背包；点击 wand 槽发 UNEQUIP、点 WandItem 发 EQUIP。
+
+## MageResume（shared/data/）
+
+酒馆 100% 满意度法师留下的简历（touristName/level/6 属性/skinVariant/timestamp），构造器钳制非法值，toCandidate() 转 RecruitmentCandidate；存于 TavernRecruitStorage，每殖民地上限 5。
