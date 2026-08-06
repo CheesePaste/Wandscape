@@ -136,7 +136,6 @@ public record RequestProductionTaskPacket(
                 default -> 120; // brew_potion, unchanged
             };
             params.put("channel_ticks", new JsonPrimitive(channelTicks));
-            params.put("mana_cost", new JsonPrimitive(5));
 
             WorkItem work = new WorkItem(blueprintId, params, 10);
 

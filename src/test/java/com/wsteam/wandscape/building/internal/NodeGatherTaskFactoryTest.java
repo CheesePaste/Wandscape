@@ -17,10 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NodeGatherTaskFactoryTest {
 
     private static final NodeConfig CONFIG =
-            new NodeConfig("node:gather", "wood", 10, 1200, 25);
+            new NodeConfig("node:gather", "wood", 10, 1200);
 
     @Test
-    void buildWorkItem_scalesAmountAndManaByHarvests() {
+    void buildWorkItem_scalesAmountByHarvests() {
         WorkItem item = NodeGatherTaskFactory.buildWorkItem(new BlockPos(3, 64, -5), CONFIG, 4);
 
         assertEquals("node:gather", item.blueprintId());
@@ -33,7 +33,6 @@ class NodeGatherTaskFactoryTest {
         assertEquals("wood", strParam(item.params(), "element"));
         assertEquals(40, intParam(item.params(), "amount"));
         assertEquals(1200, intParam(item.params(), "channel_ticks"));
-        assertEquals(100, intParam(item.params(), "mana_cost"));
     }
 
     @Test
@@ -41,7 +40,6 @@ class NodeGatherTaskFactoryTest {
         WorkItem item = NodeGatherTaskFactory.buildWorkItem(new BlockPos(1, 2, 3), CONFIG, 1);
 
         assertEquals(10, intParam(item.params(), "amount"));
-        assertEquals(25, intParam(item.params(), "mana_cost"));
     }
 
     @Test
@@ -49,7 +47,6 @@ class NodeGatherTaskFactoryTest {
         WorkItem item = NodeGatherTaskFactory.buildWorkItem(new BlockPos(0, 0, 0), CONFIG, 0);
 
         assertEquals(10, intParam(item.params(), "amount"));
-        assertEquals(25, intParam(item.params(), "mana_cost"));
     }
 
     private static int intParam(Map<String, JsonElement> params, String key) {

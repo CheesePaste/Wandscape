@@ -71,12 +71,8 @@ public record BuildingConfig(
             String blueprint,
             String element,
             @SerializedName("amount_per_harvest") int amountPerHarvest,
-            @SerializedName("channel_ticks") int channelTicks,
-            @SerializedName("mana_cost") int manaCost
+            @SerializedName("channel_ticks") int channelTicks
     ) {
-        public NodeConfig {
-            if (manaCost <= 0) manaCost = 5; // default 5 mana
-        }
     }
 
     /**

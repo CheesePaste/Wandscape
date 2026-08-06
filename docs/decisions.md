@@ -525,8 +525,11 @@ Bug：`first_free` 建筑在殖民地未建立时放置，首免不触发。原�
 
 - **为什么直接删魔力而非调低恢复？** 对殖民地自动化这种吞吐优先的玩法，单 worker 的"随时间自动回蓝"池是错误资源形态——回蓝参数怎么调都只是把"等回蓝"换成"等时长"，不如直接去掉中间层。魔法门控改为纯时间：施法时间固定（光束=魔法阵+激光、传送=仪式引导），CD 受 `SPELL_SPEED` 影响。
 - **为什么施法时间不随属性变、只有 CD 随属性变？** 双机制分离：施法时间决定一次施法的展示/引导时长（稳定），CD 决定施法频率（属性增益的落点）。`SPELL_SPEED` 只作用于 CD（`baseCD / SPELL_SPEED`），避免把"每次施法时长"和"施法频率"混成一个乘数。
-- **为什么冷却常量定义在各魔法类里而非 WandscapeConstants？** 用户要求：每魔法的冷却就近定义（`GuardCombat.CAST_MIN_INTERVAL=40`、`NavigationSystem.TELEPORT_COOLDOWN_TICKS=600`），避免中央常量表"翻字段"。
+- **为什么冷却常量定义在各魔法类里而非 WandscapeConstants？** 用户要求：每魔法的冷却就近定义（`GuardCombat.CAST_MIN_INTERVAL=40`、`NavigationSystem.TELEPORT_COOLDOWN_TICKS=300`），避免中央常量表"翻字段"。
 - **为什么装备加成一律加法（删 MULTIPLY_BASE/MULTIPLY_TOTAL）？** 用户要求更直观、更好算。`ModifierOperation` 只剩 ADDITION，`EquipmentComponent.recalculateAll` 简化为 `base + Σadd`。法杖 JSON 本就只用 addition。
 - **为什么游客法师保留按等级 roll（5%）而非固定默认？** 游客是"凹完美NPC"的属性来源：5% 概率是法师（`MAGE_CHANCE` 本就是 0.05），按等级 `scale = 0.8 + level×0.2` roll 6 属性；100% 满意度留简历 → 酒馆招募。招募时把简历属性写回 NPC 并重种 ECS，闭环生效。
 - **为什么脱战回血 100tick 封伤 + 每 80tick 回 1 HP？** 对齐原版玩家恢复节奏（80tick/HP），受击后 100tick 封伤避免战斗中回血；NPC 无饥饿值，直接按脱战计时简化实现。
+- **为什么 SPELL_POWER 在伤害事件入口统一乘而非每个魔法单独写？** 用户要求"对能造成伤害的全部生效"。NPC 伤害几乎全来自魔法，`LivingIncomingDamageEvent` 是给怪物核算伤害的唯一入口（伤害源是 NPC 且目标为 `Enemy`），在此乘倍率，未来新增魔法自动生效、不会漏写。玩家施法（伤害源是玩家）不经过，保持 1.0。
+- **为什么传送 CD 定为 300 tick？** 用户实测后下调：600 tick（30s）偏长，300 tick（15s）保证导航回退的可用性又不至于滥用。
+- **为什么清掉 mana_cost/baseManaCost/spawnNpc 死代码？** 删魔力后这些沿 DSL→蓝图→node→scanner 贯穿的数据已无任何消耗方，保留会误导后续开发；spawnNpc 接口从未实现（招募走 TavernRecruitPacket 直接生成），一并移除。
 - **版本**：v1.3.10→v1.4.0（功能重构，第二位递增）。

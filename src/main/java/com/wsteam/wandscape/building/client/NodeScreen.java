@@ -41,7 +41,6 @@ public class NodeScreen extends MedievalScreen {
     private String element = "";
     private int amountPerHarvest = 1;
     private int channelTicks = 0;
-    private int manaCost = 0;
 
     private int contentX;
     private int controlY;
@@ -61,7 +60,6 @@ public class NodeScreen extends MedievalScreen {
         this.element = packet.element();
         this.amountPerHarvest = packet.amountPerHarvest();
         this.channelTicks = packet.channelTicks();
-        this.manaCost = packet.manaCost();
         setTitleBar(com.wsteam.wandscape.shared.ui.I18n.name(
                 "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {
@@ -163,12 +161,11 @@ public class NodeScreen extends MedievalScreen {
         drawInfoLine(g, y, i18n("gui.wandscape.node.channel", "Channel"),
                 i18n("gui.wandscape.node.channel_ticks", "%s ticks", channelTicks));
         y += INFO_ROW_H;
-        drawInfoLine(g, y, i18n("gui.wandscape.node.mana_per_harvest", "Mana / Harvest"), String.valueOf(manaCost));
 
         // Live totals below the slider
         int n = slider != null ? slider.getValue() : 1;
-        String totals = i18n("gui.wandscape.node.total_line", "Total %1$s | Mana %2$s",
-                amountPerHarvest * n, manaCost * n);
+        String totals = i18n("gui.wandscape.node.total_line", "Total %1$s",
+                amountPerHarvest * n);
         g.drawString(Minecraft.getInstance().font, totals,
                 contentX, controlY + 26, MedievalColors.TEXT_MUTED);
     }

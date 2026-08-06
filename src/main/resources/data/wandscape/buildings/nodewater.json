@@ -1811,7 +1811,6 @@
     "element": "water",
     "amount_per_harvest": 10,
     "channel_ticks": 1200,
-    "mana_cost": 25
   },
   "blueprint": {
     "id": "build:clear_and_build",

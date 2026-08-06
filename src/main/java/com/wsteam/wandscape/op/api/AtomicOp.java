@@ -25,9 +25,6 @@ public sealed interface AtomicOp
                 AtomicOp.AttackMonsterOp,
                 AtomicOp.SelfDefenseOp {
 
-    /** Base mana cost for this operation (before wand efficiency). */
-    float baseManaCost();
-
     /**
      * The world position this operation acts on, or {@code null} if positionless
      * (e.g. event emission, conditional branching, entity targeting by ID).
@@ -77,11 +74,6 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return 0.2f;
-        }
-
-        @Override
         public GridPos target() {
             return target;
         }
@@ -90,18 +82,12 @@ public sealed interface AtomicOp
     /**
      * Interact with a block — sync (toggle/activate/open_gui) or async (gather/decompose/synthesize).
      * Async actions use channelTicks for timing and params for action-specific data.
-     * Mana cost and channelTicks are configurable from the blueprint (unlike RitualOp).
+     * channelTicks is configurable from the blueprint (unlike RitualOp).
      */
     record BlockInteractOp(GridPos target, InteractAction action,
-                           Map<String, String> params, int channelTicks,
-                           float manaCost) implements AtomicOp {
+                           Map<String, String> params, int channelTicks) implements AtomicOp {
         public BlockInteractOp {
             if (params == null) params = Collections.emptyMap();
-        }
-
-        @Override
-        public float baseManaCost() {
-            return manaCost;
         }
 
         @Override
@@ -112,11 +98,6 @@ public sealed interface AtomicOp
 
     /** Apply an effect to a non-NPC entity. */
     record EntityInteractOp(EntityId entityId, EffectId effect, int strength, int duration) implements AtomicOp {
-        @Override
-        public float baseManaCost() {
-            return 1.0f;
-        }
-
         @Override
         public GridPos target() {
             return null; // targets an entity by ID, not a grid position
@@ -136,11 +117,6 @@ public sealed interface AtomicOp
      */
     record AttackMonsterOp(int attackRange, int releaseRange, String circleId, int color) implements AtomicOp {
         @Override
-        public float baseManaCost() {
-            return 0f; // guard casts are mana-free initially (M6 knob later)
-        }
-
-        @Override
         public GridPos target() {
             return null; // no stance / no navigation — cast from current position
         }
@@ -159,11 +135,6 @@ public sealed interface AtomicOp
      */
     record SelfDefenseOp(int radius, String circleId, int color) implements AtomicOp {
         @Override
-        public float baseManaCost() {
-            return 0f; // self-defense casts are mana-free initially (M6 knob later)
-        }
-
-        @Override
         public GridPos target() {
             return null; // no stance / no navigation — cast from current position
         }
@@ -177,15 +148,8 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return switch (ritual.id()) {
-                case "self_teleport", "item_teleport", "player_summon" -> 0;
-                case "warding" -> 15f;
-                case "group_vigor" -> 20f;
-                case "rain_call", "clear_weather" -> 30f;
-                case "portal_gate" -> 45f;
-                default -> 15f;
-            };
+        public GridPos target() {
+            return target;
         }
 
         /** Channeling duration in ticks (0 = instant). Hardcoded per ritual type. */
@@ -198,11 +162,6 @@ public sealed interface AtomicOp
                 case "portal_gate" -> 1800;
                 default -> 0;
             };
-        }
-
-        @Override
-        public GridPos target() {
-            return target;
         }
     }
 
@@ -228,11 +187,6 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return 0.0f; // Teleportation cost handled by the ritual inserted into private queue
-        }
-
-        @Override
         public GridPos target() {
             return null; // warehouse request, no world position
         }
@@ -246,11 +200,6 @@ public sealed interface AtomicOp
     record EmitEventOp(String eventName, Map<String, String> templateParams) implements AtomicOp {
         public EmitEventOp {
             if (templateParams == null) templateParams = Collections.emptyMap();
-        }
-
-        @Override
-        public float baseManaCost() {
-            return 0;
         }
 
         @Override
@@ -279,11 +228,6 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return 0;
-        }
-
-        @Override
         public GridPos target() {
             return null; // conditional logic, no world position
         }
@@ -303,11 +247,6 @@ public sealed interface AtomicOp
     record ParallelOp(List<AtomicOp> steps) implements AtomicOp {
         public ParallelOp {
             steps = List.copyOf(steps);
-        }
-
-        @Override
-        public float baseManaCost() {
-            return 0; // each sub-op carries its own mana cost
         }
 
         @Override

@@ -87,7 +87,7 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     // ── Node config fields (category=node) ──
     private String currentNodeElem;
-    private EditBox nodeAmount, nodeChannel, nodeMana;
+    private EditBox nodeAmount, nodeChannel;
     private int nodeCatY;
 
     // ── Shop goods rows (category=shop) ──
@@ -387,16 +387,10 @@ public class BuildingScannerScreen extends MedievalScreen {
                 scanner.setNodeChannelTicks(intOrZero(s));
                 syncToServer();
             });
-            y += ROW_H + 2;
-
-            nodeMana = mkNumEdit(lx + COL2 + 70, y, 50, scanner.getNodeManaCost(), s -> {
-                scanner.setNodeManaCost(intOrZero(s));
-                syncToServer();
-            });
             y += ROW_H + 8;
         } else {
             nodeCatY = 0;
-            nodeAmount = null; nodeChannel = null; nodeMana = null;
+            nodeAmount = null; nodeChannel = null;
         }
 
         // ── Presets section ──
@@ -970,7 +964,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         ncTag.putString("element", scanner.getNodeElement());
         ncTag.putInt("amount_per_harvest", scanner.getNodeAmountPerHarvest());
         ncTag.putInt("channel_ticks", scanner.getNodeChannelTicks());
-        ncTag.putInt("mana_cost", scanner.getNodeManaCost());
         tag.put("node_config", ncTag);
 
         tag.putDouble("shop_profit_rate", scanner.getShopProfitRate());
@@ -1047,7 +1040,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             if (nc.contains("element")) scanner.setNodeElement(nc.getString("element"));
             if (nc.contains("amount_per_harvest")) scanner.setNodeAmountPerHarvest(nc.getInt("amount_per_harvest"));
             if (nc.contains("channel_ticks")) scanner.setNodeChannelTicks(nc.getInt("channel_ticks"));
-            if (nc.contains("mana_cost")) scanner.setNodeManaCost(nc.getInt("mana_cost"));
         }
 
         if (tag.contains("shop_profit_rate")) scanner.setShopProfitRate(tag.getDouble("shop_profit_rate"));
@@ -1178,7 +1170,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             drawLbl(gui, "元素", lx + COL2, nodeCatY + ROW_H - 4);
             drawLbl(gui, "产出/次", lx + COL2, nodeCatY + ROW_H * 2 - 4);
             drawLbl(gui, "引导Ticks", lx + COL2, nodeCatY + ROW_H * 3 - 4);
-            drawLbl(gui, "魔力消耗", lx + COL2, nodeCatY + ROW_H * 4 - 4);
         }
 
         drawHdr(gui, "❖ 预设预存", lx, presetY);

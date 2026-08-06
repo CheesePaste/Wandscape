@@ -183,7 +183,6 @@ public final class MaintenanceForecastSystem {
             params.put("element", new JsonPrimitive(nodeConfig.element()));
             params.put("amount", new JsonPrimitive(nodeConfig.amountPerHarvest()));
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
-            params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
 
             WorkItem work = new WorkItem(nodeConfig.blueprint(), params,
                     FORECAST_GATHER_PRIORITY);

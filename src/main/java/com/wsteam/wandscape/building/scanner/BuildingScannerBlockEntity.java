@@ -65,7 +65,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_NC_ELEMENT = "element";
     private static final String KEY_NC_AMOUNT = "amount_per_harvest";
     private static final String KEY_NC_CHANNEL_TICKS = "channel_ticks";
-    private static final String KEY_NC_MANA_COST = "mana_cost";
 
     // Sub-keys for cost/good list entries
     private static final String KEY_ENTRY_ELEMENT = "element";
@@ -112,7 +111,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private String nodeElement = "earth";
     private int nodeAmountPerHarvest = 5;
     private int nodeChannelTicks = 200;
-    private int nodeManaCost = 5;
 
     // ── Shop goods (only for category=shop) ──
     private final List<ShopGoodData> shopGoods = new ArrayList<>();
@@ -336,8 +334,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     public void setNodeAmountPerHarvest(int v) { this.nodeAmountPerHarvest = v; }
     public int getNodeChannelTicks() { return nodeChannelTicks; }
     public void setNodeChannelTicks(int v) { this.nodeChannelTicks = v; }
-    public int getNodeManaCost() { return nodeManaCost; }
-    public void setNodeManaCost(int v) { this.nodeManaCost = Math.max(1, v); }
 
     // ── Shop goods ──
 
@@ -443,7 +439,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         ncTag.putString(KEY_NC_ELEMENT, nodeElement);
         ncTag.putInt(KEY_NC_AMOUNT, nodeAmountPerHarvest);
         ncTag.putInt(KEY_NC_CHANNEL_TICKS, nodeChannelTicks);
-        ncTag.putInt(KEY_NC_MANA_COST, nodeManaCost);
         tag.put(KEY_NODE_CONFIG, ncTag);
 
         // Shop goods
@@ -542,7 +537,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
             nodeElement = ncTag.contains(KEY_NC_ELEMENT) ? ncTag.getString(KEY_NC_ELEMENT) : "earth";
             nodeAmountPerHarvest = ncTag.getInt(KEY_NC_AMOUNT);
             nodeChannelTicks = ncTag.getInt(KEY_NC_CHANNEL_TICKS);
-            nodeManaCost = Math.max(1, ncTag.getInt(KEY_NC_MANA_COST));
         }
 
         // Shop goods

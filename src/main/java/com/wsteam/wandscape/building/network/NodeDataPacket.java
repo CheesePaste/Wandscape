@@ -14,15 +14,14 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
  * Server→client packet carrying node building data for the {@code NodeScreen}:
- * the harvested element and per-harvest cost (amount, channel ticks, mana).
+ * the harvested element and per-harvest stats (amount, channel ticks).
  */
 public record NodeDataPacket(
     BlockPos nodePos,
     String buildingTypeId,
     String element,
     int amountPerHarvest,
-    int channelTicks,
-    int manaCost
+    int channelTicks
 ) implements CustomPacketPayload {
 
     private static final String TAG = "NodeDataPacket";
@@ -58,7 +57,6 @@ public record NodeDataPacket(
         buf.writeUtf(pkt.element);
         buf.writeVarInt(pkt.amountPerHarvest);
         buf.writeVarInt(pkt.channelTicks);
-        buf.writeVarInt(pkt.manaCost);
     }
 
     static NodeDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -66,7 +64,6 @@ public record NodeDataPacket(
                 buf.readBlockPos(),
                 buf.readUtf(),
                 buf.readUtf(),
-                buf.readVarInt(),
                 buf.readVarInt(),
                 buf.readVarInt()
         );

@@ -115,13 +115,12 @@ public final class BlueprintInterpreter {
                 GridPos at = evalPos(s.at(), context, "block_interact.at");
                 InteractAction action = new InteractAction(s.action());
                 int channelTicks = evalInt(s.channelTicks(), context, "block_interact.channel_ticks");
-                float manaCost = (float) evalInt(s.manaCost(), context, "block_interact.mana_cost");
                 Map<String, String> params = new LinkedHashMap<>();
                 for (var entry : s.params().entrySet()) {
                     params.put(entry.getKey(),
                             evalString(entry.getValue(), context, "block_interact.params." + entry.getKey()));
                 }
-                yield List.of(new AtomicOp.BlockInteractOp(at, action, params, channelTicks, manaCost));
+                yield List.of(new AtomicOp.BlockInteractOp(at, action, params, channelTicks));
             }
             case StepNode.EntityInteractStep s -> {
                 String targetStr = evalString(s.target(), context, "entity_interact.target");

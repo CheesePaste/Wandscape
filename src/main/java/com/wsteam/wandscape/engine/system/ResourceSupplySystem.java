@@ -129,7 +129,6 @@ public class ResourceSupplySystem implements System {
         params.put("recipe_id", new JsonPrimitive(itemId));
         params.put("count", new JsonPrimitive(count));
         params.put("channel_ticks", new JsonPrimitive(WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count));
-        params.put("mana_cost", new JsonPrimitive(5));
 
         api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40));
         Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight)",
@@ -225,7 +224,6 @@ public class ResourceSupplySystem implements System {
             params.put("element", new JsonPrimitive(nodeConfig.element()));
             params.put("amount", new JsonPrimitive(nodeConfig.amountPerHarvest()));
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
-            params.put("mana_cost", new JsonPrimitive(nodeConfig.manaCost()));
 
             api.enqueueWork(buildingId, new WorkItem(nodeConfig.blueprint(), params, 40));
             Log.info(TAG, "shortfall {} x{} → gather on node {}",

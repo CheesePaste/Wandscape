@@ -4,7 +4,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.wsteam.wandscape.Wandscape;
-import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -207,11 +206,8 @@ public class MagicBeamEntity extends Entity {
         Vec3 ndir = dir.normalize();
         float wf = getWidthFactor(0);
         float radius = Math.max(0.05f, MAX_BEAM_RADIUS * wf);
-        // SPELL_POWER 倍率：NPC 施法时按施法者有效属性加成（默认 1.0）
-        float power = casterNpc != null && !casterNpc.isRemoved()
-                ? casterNpc.getEffectiveAttribute(AttributeType.SPELL_POWER)
-                : 1f;
-        float damage = BEAM_DAMAGE * wf * power;
+        // SPELL_POWER 倍率由 NpcSpellPowerHandler 在伤害核算入口统一应用，不在此处单独乘
+        float damage = BEAM_DAMAGE * wf;
 
         AABB box = new AABB(start, tgt.getCenter()).inflate(radius + 1.0);
         for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof Enemy)) {

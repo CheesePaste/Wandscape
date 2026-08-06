@@ -253,7 +253,6 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             nc.addProperty("element", scanner.getNodeElement());
             nc.addProperty("amount_per_harvest", scanner.getNodeAmountPerHarvest());
             nc.addProperty("channel_ticks", scanner.getNodeChannelTicks());
-            nc.addProperty("mana_cost", scanner.getNodeManaCost());
             root.add("node_config", nc);
         }
 

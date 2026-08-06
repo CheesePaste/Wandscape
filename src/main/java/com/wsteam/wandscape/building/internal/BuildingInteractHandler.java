@@ -241,10 +241,10 @@ public final class BuildingInteractHandler {
         var nc = config.nodeConfig();
         PacketDistributor.sendToPlayer(player,
                 new NodeDataPacket(pos, state.getBuildingTypeId(), nc.element(),
-                        nc.amountPerHarvest(), nc.channelTicks(), nc.manaCost()));
-        Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={} mana={}",
+                        nc.amountPerHarvest(), nc.channelTicks()));
+        Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={}",
                 state.getBuildingTypeId(), pos, nc.element(),
-                nc.amountPerHarvest(), nc.channelTicks(), nc.manaCost());
+                nc.amountPerHarvest(), nc.channelTicks());
     }
 
     private static void openCraftingStationGui(Level level, UUID colonyId,

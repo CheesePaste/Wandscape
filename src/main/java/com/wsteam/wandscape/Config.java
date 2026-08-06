@@ -39,14 +39,6 @@ public class Config {
             .comment("Number of consecutive stuck checks before NPC teleports")
             .defineInRange("scheduler.stuckMaxRetries", 3, 1, 10);
 
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_MAX_HEALTH = BUILDER
-            .comment("Default NPC max health")
-            .defineInRange("npc.defaultMaxHealth", 40, 10, 200);
-
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_SPELL_POWER = BUILDER
-            .comment("Default NPC spell power")
-            .defineInRange("npc.defaultSpellPower", 1, 1, 10);
-
     public static final ModConfigSpec.IntValue NPC_REGEN_GRACE_TICKS = BUILDER
             .comment("Ticks after taking damage before out-of-combat health regen resumes (100 = 5s)")
             .defineInRange("npc.regenGraceTicks", 100, 20, 1000);

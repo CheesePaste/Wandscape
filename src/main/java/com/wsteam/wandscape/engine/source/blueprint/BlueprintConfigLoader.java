@@ -186,8 +186,6 @@ public final class BlueprintConfigLoader {
         String action = obj.get("action").getAsString();
         ExprNode channelTicks = obj.has("channel_ticks") ? parseExpr(obj.get("channel_ticks"))
                 : new ExprNode.LiteralInt(0);
-        ExprNode manaCost = obj.has("mana_cost") ? parseExpr(obj.get("mana_cost"))
-                : new ExprNode.LiteralInt(1);
         Map<String, ExprNode> params = new LinkedHashMap<>();
         if (obj.has("params")) {
             JsonObject paramsObj = obj.getAsJsonObject("params");
@@ -195,7 +193,7 @@ public final class BlueprintConfigLoader {
                 params.put(entry.getKey(), parseExpr(entry.getValue()));
             }
         }
-        return new StepNode.BlockInteractStep(at, action, params, channelTicks, manaCost);
+        return new StepNode.BlockInteractStep(at, action, params, channelTicks);
     }
 
     private StepNode parseEntityInteract(JsonObject obj) {

@@ -47,7 +47,7 @@ public class NavigationSystem implements System {
     private static final int PATHFIND_TIMEOUT = 200;
     private static final int MAX_REPATH = 5;
     /** Base cooldown (ticks) between self_teleport casts; divided by SPELL_SPEED. */
-    private static final int TELEPORT_COOLDOWN_TICKS = 600;
+    private static final int TELEPORT_COOLDOWN_TICKS = 300;
 
     private int tickCounter;
 

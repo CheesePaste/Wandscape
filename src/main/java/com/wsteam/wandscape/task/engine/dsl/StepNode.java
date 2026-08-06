@@ -49,11 +49,10 @@ public sealed interface StepNode {
      * @param action       the interaction type (toggle/activate/open_gui/gather/decompose/synthesize)
      * @param params       action-specific key-value pairs (e.g. element, amount)
      * @param channelTicks channeling duration in ticks (0 = instant for sync actions)
-     * @param manaCost     mana consumed by this interaction (configurable, unlike RitualOp)
      */
     record BlockInteractStep(ExprNode at, String action,
                              Map<String, ExprNode> params,
-                             ExprNode channelTicks, ExprNode manaCost) implements StepNode {
+                             ExprNode channelTicks) implements StepNode {
         public BlockInteractStep {
             if (params == null) params = Map.of();
         }

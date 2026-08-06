@@ -170,7 +170,8 @@ public final class EngineBootstrap {
 
         // 9. Override TransformOp executor with async version (V2.5 gating demo)
         //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
-        int asyncDelay = 1; // 5 MC tick delay per TransformOp
+        //    保持 1 tick：建造即时感更好（WORK_SPEED 作用于采集/合成的大 channelTicks）。
+        int asyncDelay = 1;
         if (asyncDelay > 0) {
             AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor

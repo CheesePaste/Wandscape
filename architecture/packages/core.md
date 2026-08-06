@@ -19,9 +19,9 @@ Position / EquipmentComponent / TaskExecutor / NpcTaskQueue / Inventory / Naviga
 ### NPC 属性模型
 
 NPC 只有 6 个属性：`MAX_HP` / `MOVE_SPEED` / `SPELL_POWER` / `WORK_SPEED` / `SPELL_SPEED` / `ARMOR_VALUE`。魔力系统已整体移除（ManaPool/ManaRegenSystem 已删）。属性值存于 `EquipmentComponent`：base（来自 `NpcAttributes`，招募/默认值） + 装备 modifier，**所有装备加成一律加法**（`effective = base + Σmodifier`，`ModifierOperation` 只有 ADDITION）。运行时各机制读取：
-- `SPELL_POWER` → 光束伤害倍率（MagicBeamEntity）
-- `WORK_SPEED` → 建造/采集/合成耗时：`实际 = 基础tick / WORK_SPEED`（AsyncTransformExecutor / WandscapeBlockInteractExecutor）
-- `SPELL_SPEED` → 魔法 CD：`实际CD = 基础 / SPELL_SPEED`（光束 40、传送 600；施法时间不参与）
+- `SPELL_POWER` → NPC 对敌对生物的魔法伤害倍率，在伤害核算入口统一乘（`guard/NpcSpellPowerHandler`，`LivingIncomingDamageEvent`；判定伤害源是 NPC 且目标为 `Enemy`）——任何未来魔法自动生效，不在单个魔法里写乘算
+- `WORK_SPEED` → 采集/合成耗时：`实际 = 基础tick / WORK_SPEED`（`WandscapeBlockInteractExecutor`；建造 TransformOp 保持 1 tick 即时感，不随 WORK_SPEED）
+- `SPELL_SPEED` → 魔法 CD：`实际CD = 基础 / SPELL_SPEED`（光束 40、传送 300；施法时间不参与）
 - `MAX_HP` / `MOVE_SPEED` / `ARMOR_VALUE` → 推送到 vanilla 实体属性（WandscapeNpc 每 tick）
 
 ## 边界接口 (boundary/)
