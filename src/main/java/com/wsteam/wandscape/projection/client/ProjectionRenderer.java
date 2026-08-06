@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;
 
@@ -89,20 +90,25 @@ public final class ProjectionRenderer {
         BuildingGhostRenderer.renderGhostBlocks(mc, bufferSource, poseStack,
                 ghostPos, config, ProjectionClientState.getRotationSteps(), false);
 
-        // Pinned (non-overlap): gold wireframe — ghost is fixed, player can walk around to review
-        if (pinned && !overlap && config.boundary() != null) {
-            VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
-            drawAABBOutline(lineVc, poseStack.last(), ghostPos,
-                    config.boundary().min(), config.boundary().max(), 212, 175, 55);
-            bufferSource.endBatch(RenderType.lines());
-        }
+        // Boundary is rotated so the outline matches the ghost's current rotation —
+        // same source as the white "target building" highlight (WandscapeHighlightRenderer).
+        if (config.boundary() != null) {
+            BuildingConfig.BoundaryBox boundary =
+                    BuildingRotation.rotateBoundary(config.boundary(), ProjectionClientState.getRotationSteps());
 
-        // Overlap = red wireframe boundary
-        if (overlap && config.boundary() != null) {
-            VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
-            drawAABBOutline(lineVc, poseStack.last(), ghostPos,
-                    config.boundary().min(), config.boundary().max(), 255, 40, 40);
-            bufferSource.endBatch(RenderType.lines());
+            // Pinned (non-overlap): white wireframe — ghost is fixed, player can walk around to review
+            if (pinned && !overlap) {
+                VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+                drawAABBOutline(lineVc, poseStack.last(), ghostPos,
+                        boundary.min(), boundary.max(), 255, 255, 255);
+                bufferSource.endBatch(RenderType.lines());
+            } else if (overlap) {
+                // Overlap = red wireframe boundary
+                VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
+                drawAABBOutline(lineVc, poseStack.last(), ghostPos,
+                        boundary.min(), boundary.max(), 255, 40, 40);
+                bufferSource.endBatch(RenderType.lines());
+            }
         }
     }
 

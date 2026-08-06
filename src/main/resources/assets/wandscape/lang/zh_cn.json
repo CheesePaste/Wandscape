@@ -17,6 +17,8 @@
   "key.wandscape.overview": "切换俯瞰/地面视角",
 
   "message.wandscape.town.welcome": "[Wandscape] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！",
+  "message.wandscape.projection.cannot_pin": "无法固定 — 准星没有对准方块",
+  "message.wandscape.overview.cannot_pin": "无法固定 — 准星没有对准方块",
 
   "gui.wandscape.townhall.title": "市政厅",
   "gui.wandscape.townhall.name_hint": "魔法小镇名称",
@@ -46,6 +48,10 @@
   "gui.wandscape.common.search": "搜索",
   "gui.wandscape.common.building_label": "建筑",
   "gui.wandscape.common.colony_label": "魔法小镇",
+  "gui.wandscape.construction.title": "施工",
+  "gui.wandscape.construction.coord": "坐标",
+  "gui.wandscape.construction.overlap": "该位置与现有建筑重叠",
+  "gui.wandscape.construction.invalid": "坐标无效（Y 需在 -64 ~ 320）",
   "gui.wandscape.shop.no_goods": "未配置货物",
   "gui.wandscape.tavern.recruit_npc": "招募法师",
   "gui.wandscape.tavern.mages": "法师",

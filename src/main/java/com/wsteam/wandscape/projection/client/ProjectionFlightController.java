@@ -189,7 +189,10 @@ public final class ProjectionFlightController {
             if (ghostPos == null) {
                 if (mc.player != null) {
                     mc.player.displayClientMessage(
-                            Component.literal("[Projection] §c无法固定 — 准星没有对准方块"), true);
+                            Component.literal("[Projection] §c").append(
+                                    com.wsteam.wandscape.shared.ui.I18n.name(
+                                            "message.wandscape.projection.cannot_pin",
+                                            "无法固定 — 准星没有对准方块")), true);
                 }
                 return;
             }

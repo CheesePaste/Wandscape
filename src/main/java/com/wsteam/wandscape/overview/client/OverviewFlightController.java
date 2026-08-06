@@ -420,7 +420,10 @@ public final class OverviewFlightController {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
-                        Component.literal("[Overview] §c无法固定 — 准星没有对准方块"), true);
+                        Component.literal("[Overview] §c").append(
+                                com.wsteam.wandscape.shared.ui.I18n.name(
+                                        "message.wandscape.overview.cannot_pin",
+                                        "无法固定 — 准星没有对准方块")), true);
             }
             return;
         }

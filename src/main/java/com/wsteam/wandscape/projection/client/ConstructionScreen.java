@@ -85,7 +85,7 @@ public class ConstructionScreen extends MedievalScreen {
 
         addRenderableWidget(new MedievalButton(
                 leftPos + 20, topPos + SUBMIT_Y, 260, 20,
-                I18n.name("gui.wandscape.construction.submit", "Submit 建造"), this::submit));
+                I18n.name("gui.wandscape.common.submit", "提交"), this::submit));
     }
 
     private EditBox makeBox(int row) {
