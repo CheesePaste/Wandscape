@@ -15,6 +15,12 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * （光束/未来法术），在「给怪物核算伤害」的唯一入口乘倍率，任何未来新增魔法自动
  * 生效，不会漏写。判定：伤害源实体是 {@link WandscapeNpc} 且目标是 {@link Enemy}。
  * 玩家施法（伤害源是玩家）不经过这里，保持原倍率 1.0。
+ *
+ * <p>契约：任何 NPC 伤害源必须让 {@code source.getEntity()} 解析为施法 NPC——
+ * 弹射物/光束类伤害用 {@code damageSources().indirectMagic(直接实体, 施法NPC)}，
+ * 施法 NPC 放第二个参数（因 {@code DamageSources.source()} 参数名与
+ * {@code DamageSource} 构造器 {@code (directEntity, causingEntity)} 错位，
+ * {@code getEntity()} 返回第二个参数）。漏掉则倍率静默不生效。
  */
 public final class NpcSpellPowerHandler {
     private static final String TAG = "NpcSpellPower";
