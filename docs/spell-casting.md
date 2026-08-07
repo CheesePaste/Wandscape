@@ -1,7 +1,9 @@
-# NPC 施法决策层 — 设计提案（规划中，未实现）
+# NPC 施法决策层 — 设计文档
 
-> **状态**：本文是面向"多魔法"的设计提案，**尚未实现**。当前代码仍是无决策层的状态（见「现状问题」）。
-> 文档以 `docs/` 为权威；实现落地后本文转为模块文档，并与 `docs/modules/magic.md` 对齐。
+> **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中均已实现**（见文末实施表）。
+> 当前代码：`MagicDef` + `magic_spells` JSON（beam/teleport）+ `SpellbookLoader` + `CastBrain` 已落地，
+> 守卫/自防御经 CastBrain 选魔法、CD/蓝/射程/视觉全部数据驱动。**P3 玩家策略（Spellbook/CastStrategy 组件 + NpcScreen UI）规划中**。
+> 本文既记录已落地结构，也是 P3 的实施蓝图。
 
 ## 一、现状问题：为什么需要决策层
 
@@ -108,28 +110,31 @@ priority: [magicId…]   // 玩家可编辑的优先级列表；custom 预设必
 ## 六、模块结构与关键类
 
 ```
-shared/data/MagicDef.java          record 镜像 + fromJson（纯数据，仿 MagicCircleSpec）
-shared/api/SpellcastingApi.java    决策层对外接口（getKnownSpells/getStrategy/setStrategy…）
-core/component/SpellbookComponent.java   NPC 会哪些魔法（magicId 列表）
-core/component/CastStrategyComponent.java 策略预设 + 优先级列表
-magic/internal/SpellbookLoader.java dataconfig 注册 magic_spells 类目 + getSpec(id)/getAll()
-magic/internal/MagicOp.java        魔法效果分发注册表（仿 op/api/AtomicOp 的 sealed interface）
-magic/internal/CastBrain.java      统一施法脑：意图 → L0 覆盖 → L1 优先级扫描 → L2 兜底 → 选出魔法
+magic/data/MagicDef.java            ✅ record 镜像 + fromJson（纯数据，仿 MagicCircleSpec；已实现）
+magic/internal/SpellbookLoader.java ✅ dataconfig 注册 magic_spells 类目 + getSpec(id)/getAll()
+magic/internal/CastBrain.java       ✅ 统一施法脑：L1 优先级扫描（列表顺序 + 门控可施放 + 目标规则）
+shared/api/SpellcastingApi.java     （P3）决策层对外接口（getKnownSpells/getStrategy/setStrategy…）
+core/component/SpellbookComponent.java   （P3）NPC 会哪些魔法（magicId 列表）
+core/component/CastStrategyComponent.java (P3) 策略预设 + 优先级列表
+magic/internal/MagicOp.java         （延后）魔法效果分发注册表——有第二个战斗魔法时再建
 ```
 
-### 6.1 `MagicOp` — 效果分发（模仿 `AtomicOp` 先例）
+### 6.1 `MagicOp` — 效果分发（**未实现，延后**）
 
-当前 `AtomicOp`（op/api/AtomicOp.java）是 sealed interface + `OpExecutorRegistry` 注册表：**纯数据请求 + 执行器按类型分发**。`MagicOp` 照此模式：
+当前 `AtomicOp`（op/api/AtomicOp.java）是 sealed interface + `OpExecutorRegistry` 注册表：**纯数据请求 + 执行器按类型分发**。`MagicOp` 计划照此模式：
 
 - sealed interface `MagicOp`，每个魔法一个 variant（`BeamOp`/`TeleportOp`/未来的 `AoEOp`/`BuffOp`…），携带该效果所需参数。
 - 执行器按 magicId 注册：beam 效果走现有 `MagicCaster`/`MagicCastManager`/`MagicBeamEntity`；teleport 走 `engine/boundary/WandscapeRitualOps.self_teleport`（已有）。
 - **效果实现仍留在各模块 internal**，`MagicOp` 只做分发——不违反"引擎是请求层、适配层是实现"。
 
-### 6.2 `CastBrain` — 统一施法脑
+> **为何延后**：当前只有一个战斗魔法（beam），守卫循环里按 magicId 一个 if 即可分发；
+> 建单实现的 sealed 层级是死代码。等第二个战斗魔法（AOE/单攻变体）落地时再建。
 
-- **纯决策函数**，不是新的任务系统：`select(World, npcId, 意图) → MagicOp?`。
-- 调用方（守卫/自防御/导航）把**意图**喂进来（意图 = 目标线索 + 可用魔法集合的边界），`CastBrain` 返回选定的魔法，调用方执行。
-- 决策每 ~10 tick 一轮（沿用现有守卫执行器节奏），不额外起线程。
+### 6.2 `CastBrain` — 统一施法脑（✅ 已实现）
+
+- **纯决策函数**，不是新的任务系统：`select(known, castable, hasTarget) → MagicDef?`，纯 Java 可单测。
+- 调用方（守卫/自防御）在 ~10 tick 战斗循环里构造 `castable` 判定（互斥锁 + CD + 蓝）喂入；拿到结果后按魔法 id 分发执行。
+- P3 起 `known` 来自 NPC 的 `SpellbookComponent` 与玩家策略（当前为 `defaultCombatSpells()` = [beam]）。
 
 ## 七、决策流程（数据流）
 
@@ -141,32 +146,32 @@ magic/internal/CastBrain.java      统一施法脑：意图 → L0 覆盖 → L1
       ├─ L1 按 priority 列表从上往下扫：
       │     MagicState.canCast(magicId) && 蓝够 && target_mode 命中 → 选中
       └─ L2 兜底：基础攻击/走位/待命
-  → 选出 MagicOp → 执行器（BeamOp→MagicCaster/MagicCastManager/MagicBeamEntity；
-      TeleportOp→WandscapeRitualOps）
+  → 选出魔法 → 按 id 分发（当前仅 beam → MagicCaster/MagicCastManager/MagicBeamEntity；
+      未来 TeleportOp→WandscapeRitualOps）
   → 门控仍走 npc.tryCastSpell（MagicState 不变）
 ```
 
 ## 八、对接现有代码（迁移路径）
 
-1. **beam 迁移为第一个 `MagicOp`**：`id="beam"`、沿用 `BEAM_BASE_CD=40` / `BEAM_MANA_COST=50` / `DEFAULT_CIRCLE`，行为不变。数据从 `MagicCaster` 常量挪进 `magic_spells/beam.json`（新魔法才能纯 JSON 接入）。
-2. **teleport 迁移为第二个 `MagicOp`**：导航回退的传送属于 L0 硬性路径（`NavigationSystem` 的 `tryCastSpell("teleport")` 保留，只是 magicId 定义进 `MagicDef`）。
-3. **`GuardCombat.engage` / `SelfDefenseExecutor` 改造**：不再直接 `MagicCaster.castNpcAt`，改为构造意图 → `CastBrain.select()` → 执行选出的 `MagicOp`。
-4. **`MagicCaster` 瘦身**：从"只会射光束"变成"`MagicOp` 分发器的 beam 实现"；玩家调试命令 `cast` / shift+右键 `castNpc` 保留（免费，测试功能，走 L0 调试路径不进玩家策略）。
+1. ✅ **beam 数据迁入 `magic_spells/beam.json`**：CD 40 / 蓝 50 / 射程 32 / 法阵 arcane_hexagram / 颜色 #A8E0FF；`MagicCaster` 改读 MagicDef（缺失回退常量）。
+2. ✅ **teleport 定义进 MagicDef**（CD 300 / 蓝 30，utility 类）；`NavigationSystem` 门控改读 teleport.json，锁时长保留 `WandscapeRitualOps` 引导对齐。
+3. ✅ **`GuardCombat.engage` 改造**：不再直接 `MagicCaster.castNpcAt`，经 `CastBrain.select` 选魔法再按 id 分发；守卫/自防御共用此路径。
+4. **`MagicCaster` 瘦身**（随 MagicOp 一起）：从"只会射光束"变成"`MagicOp` 分发器的 beam 实现"；玩家调试命令 `cast` / shift+右键 `castNpc` 保留（免费，测试功能，走 L0 调试路径不进玩家策略）。
 5. **手动施法**（shift+右键）保持免费、不占蓝（现注释即"测试功能"），只占用 CD 与互斥锁——不归玩家策略管。
 
 ## 九、分阶段实施
 
-| 阶段 | 内容 | 验收 |
+| 阶段 | 内容 | 状态 |
 |---|---|---|
-| **P1 数据与分发** | `MagicDef` + `SpellbookLoader`（dataconfig）+ `MagicOp` 注册表；把 beam/teleport 迁成 `MagicOp` | 行为与现在完全一致（纯重构） |
-| **P2 决策集中** | `CastBrain`；GuardCombat/SelfDefense 改为喂意图；L0 覆盖落地 | 守卫/自防御不再各自选魔法 |
-| **P3 玩家策略** | 策略预设 + 优先级列表 + `CastStrategyComponent` + `NpcScreen` 策略 UI | 玩家可在 NPC 界面调"火力/支援/自定义+排序" |
+| **P1 数据与分发** | `MagicDef` + `magic_spells` JSON（beam/teleport）+ `SpellbookLoader`（dataconfig）；CD/蓝/射程/视觉改数据驱动 | ✅ 已实现（行为不变，配 6 个解析单测） |
+| **P2 决策集中** | `CastBrain`（L1 优先级扫描）；GuardCombat/SelfDefense 经 CastBrain 选魔法再分发 | ✅ 已实现（配 6 个单测） |
+| **P3 玩家策略** | `SpellbookComponent` + `CastStrategyComponent` + 策略预设/优先级列表 + `NpcScreen` 策略 UI | ⏳ 规划中 |
 
 P1/P2 玩家无感知（内部重构），P3 才见 UI。每个阶段完成即按 CLAUDE.md 提交规则 commit。
 
 ## 十、依赖与边界
 
-- `MagicDef` / `CastStrategy` 是纯数据 record → 放 `shared/data/`（所有包可见，仿 `MagicCircleSpec`）。
+- `MagicDef` 是纯数据 record → 放 `magic/data/`（仿 `MagicCircleSpec` 同在 magic/data）；`CastStrategy`（P3）是纯数据 → `core/` 或 `npc/data/`。
 - `SpellbookComponent` / `CastStrategyComponent` → `core/component/`（纯 Java 零 MC，仿 `MagicState`）。
 - 效果实现 → `magic/internal/`（beam）与 `engine/boundary/`（teleport），`MagicOp` 只做分发。
 - 模块间通过 `SpellcastingApi` + 事件，不跨包 new 类（铁律 1）。

@@ -23,7 +23,7 @@
 - **道路装饰**：`RoadConfig.getDecorationConfig` 无调用方——Config 里有 `road.decoration.*`（路灯/长椅）设置，但 `RoadBuilder` **未接入**装饰生成。
 - **`potion_station`**：`BuildingInteractHandler` 对 potion_station 只提示"not yet implemented"；`PotionStationPacket.handleClient` 空实现，**无 GUI**。配方 JSON 有 2 个药水配方（mana/stamina）但无法在游戏中生产。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
-- **施法决策分散**：`GuardCombat.engage` / `SelfDefenseExecutor` / `NavigationSystem` 三处各自直接调 `MagicCaster.castNpcAt` 或 `tryCastSpell`，无统一决策层；NPC 无"会哪些魔法"概念，魔法效果只有 beam 一种。多魔法扩展的完整方案见 [spell-casting.md](spell-casting.md)（规划中）。
+- **施法决策已集中但魔法面仍窄**：`GuardCombat`/`SelfDefense` 已改经 `CastBrain` 选魔法（P1/P2 落地，CD/蓝/射程/视觉数据驱动）；但 NPC 仍无"会哪些魔法"概念（`SpellbookComponent` 未做），魔法效果只有 beam 一种，CastBrain 已知列表硬编码 `[beam]`。完整方案见 [spell-casting.md](spell-casting.md)（P3 规划中）。
 - **`TavernApi.getCandidates/refreshCandidates/recruitCandidate`**：占位（返回空/false）；实际招募走 `TavernRecruitPacket.handleRecruitMage` + `receiveMageResume/recruitMage`。
 - **`WorkbenchSource`**：V1 stub（POLL_INTERVAL=30，poll 空）。
 - **`ElementAuditor`/`ElementAuditRunner`**：需系统属性 `wandscape.runAudit=true` 才跑（GameTest 用途）。
