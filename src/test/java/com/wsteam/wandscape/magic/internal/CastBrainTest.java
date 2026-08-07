@@ -204,12 +204,12 @@ class CastBrainTest {
                 "类内按 spellbook 顺序");
     }
 
-    // ── resolvePriority：custom ──
+    // ── resolvePriority：已配置（显式列表始终生效）──
 
     @Test
-    void customUsesExplicitOrder() {
+    void configuredUsesExplicitOrder() {
         CastStrategyComponent s = new CastStrategyComponent();
-        s.setPreset(CastStrategyComponent.Preset.CUSTOM);
+        s.setConfigured(true);
         s.setCustomPriority(List.of("beam", "heal", "shield"));
         List<MagicDef> known = List.of(
                 spell("shield", "defense", "self"),
@@ -217,13 +217,28 @@ class CastBrainTest {
                 spell("beam", "single_target", "hostile_nearest"));
         List<MagicDef> priority = CastBrain.resolvePriority(s, known);
         assertEquals(List.of("beam", "heal", "shield"),
-                priority.stream().map(MagicDef::id).toList(), "custom 用显式 magicId 顺序");
+                priority.stream().map(MagicDef::id).toList(), "已配置用显式 magicId 顺序");
     }
 
     @Test
-    void customDropsUnknownIds() {
+    void configuredPresetUsesExplicitPriority() {
         CastStrategyComponent s = new CastStrategyComponent();
-        s.setPreset(CastStrategyComponent.Preset.CUSTOM);
+        s.setPreset(CastStrategyComponent.Preset.OFFENSIVE);
+        s.setConfigured(true);
+        s.setCustomPriority(List.of("shield", "beam"));
+        List<MagicDef> known = List.of(
+                spell("shield", "defense", "self"),
+                spell("beam", "single_target", "hostile_nearest"));
+        List<MagicDef> priority = CastBrain.resolvePriority(s, known);
+        assertEquals(List.of("shield", "beam"),
+                priority.stream().map(MagicDef::id).toList(),
+                "非 CUSTOM 预设下显式列表仍生效（分类内手动序被保留，不被预设分类排序覆盖）");
+    }
+
+    @Test
+    void configuredDropsUnknownIds() {
+        CastStrategyComponent s = new CastStrategyComponent();
+        s.setConfigured(true);
         s.setCustomPriority(List.of("beam", "not_a_spell"));
         List<MagicDef> known = List.of(spell("beam", "single_target", "hostile_nearest"));
         List<MagicDef> priority = CastBrain.resolvePriority(s, known);
@@ -232,16 +247,16 @@ class CastBrainTest {
     }
 
     @Test
-    void emptyCustomFallsBackToBalanced() {
+    void configuredEmptyMeansNothingEnabled() {
         CastStrategyComponent s = new CastStrategyComponent();
-        s.setPreset(CastStrategyComponent.Preset.CUSTOM);
+        s.setConfigured(true);
+        s.setCustomPriority(List.of());
         List<MagicDef> known = List.of(
                 spell("shield", "defense", "self"),
                 spell("beam", "single_target", "hostile_nearest"));
         List<MagicDef> priority = CastBrain.resolvePriority(s, known);
-        assertEquals(List.of("beam", "shield"),
-                priority.stream().map(MagicDef::id).toList(),
-                "custom 空列表回退 balanced（AOE 无则 SINGLE_TARGET 优先）");
+        assertEquals(List.of(), priority.stream().map(MagicDef::id).toList(),
+                "玩家配置过但全关 → 空优先级（NPC 不施法，走基础攻击），不兜底回预设");
     }
 
     @Test

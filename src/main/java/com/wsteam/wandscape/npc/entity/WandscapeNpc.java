@@ -882,6 +882,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
             customPriority.add(StringTag.valueOf(id));
         }
         tag.put("castStrategyPriority", customPriority);
+        tag.putBoolean("castStrategyConfigured", castStrategy.configured());
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
         }
@@ -934,6 +935,13 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                 pri.add(pl.getString(i));
             }
             castStrategy.setCustomPriority(pri);
+        }
+        // configured 恢复：新存档有显式标记；旧存档无标记时，CUSTOM 预设视为已配置（沿用显式列表），
+        // 否则按预设推导（行为与旧版一致）。须在 setCustomPriority 之后覆盖（后者会置 configured=true）。
+        if (tag.contains("castStrategyConfigured")) {
+            castStrategy.setConfigured(tag.getBoolean("castStrategyConfigured"));
+        } else {
+            castStrategy.setConfigured("CUSTOM".equals(tag.getString("castStrategyPreset")));
         }
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");

@@ -56,29 +56,33 @@ public final class CastBrain {
     /**
      * 按玩家策略解析出有效施法优先级（魔法级顺序）：
      * <ul>
-     *   <li>预设（非 CUSTOM）：按 {@link #PRESET_ORDER} 分类顺序，类内按 {@code known} 顺序，
+     *   <li>已配置（{@code CastStrategyComponent.configured()}）：用 {@code customPriority}
+     *       显式顺序过滤到 known 返回；空列表 = 全部停用（不兜底，NPC 走基础攻击）。</li>
+     *   <li>未配置：按 {@link #PRESET_ORDER} 预设分类顺序，类内按 {@code known} 顺序，
      *       UTILITY 类不进列表。</li>
-     *   <li>CUSTOM：用 {@code strategy.customPriority()} 显式 magicId 顺序（不在 known 的丢弃）；
-     *       列表为空回退 balanced。</li>
      * </ul>
+     * CUSTOM 预设保留仅为旧存档兼容：已配置时走显式列表，未配置时回退 balanced 推导。
      */
     public static List<MagicDef> resolvePriority(@Nullable CastStrategyComponent strategy, List<MagicDef> known) {
         CastStrategyComponent s = strategy != null ? strategy : new CastStrategyComponent();
-        if (s.preset() == CastStrategyComponent.Preset.CUSTOM) {
-            List<MagicDef> custom = new ArrayList<>();
-            for (String id : s.customPriority()) {
-                for (MagicDef def : known) {
-                    if (def.id().equals(id)) {
-                        custom.add(def);
-                        break;
-                    }
-                }
-            }
-            return custom.isEmpty()
-                    ? resolvePreset(CastStrategyComponent.Preset.BALANCED, known)
-                    : custom;
+        if (s.configured()) {
+            return filterToKnown(s.customPriority(), known);
         }
         return resolvePreset(s.preset(), known);
+    }
+
+    /** 把 magicId 顺序表过滤到 known（按显式顺序、跳过未知），返回零个到多个魔法定义。 */
+    private static List<MagicDef> filterToKnown(List<String> ids, List<MagicDef> known) {
+        List<MagicDef> out = new ArrayList<>();
+        for (String id : ids) {
+            for (MagicDef def : known) {
+                if (def.id().equals(id)) {
+                    out.add(def);
+                    break;
+                }
+            }
+        }
+        return out;
     }
 
     private static List<MagicDef> resolvePreset(CastStrategyComponent.Preset preset, List<MagicDef> known) {

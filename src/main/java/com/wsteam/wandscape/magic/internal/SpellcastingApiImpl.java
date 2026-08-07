@@ -48,12 +48,10 @@ public final class SpellcastingApiImpl implements SpellcastingApi {
     public void setStrategy(UUID npcId, String preset, List<String> priority) {
         WandscapeNpc npc = resolve(npcId);
         if (npc == null) return;
+        // 始终存储显式列表（setCustomPriority 会置 configured=true）：客户端每次改动发完整扁平
+        // 列表（含点预设后的重排结果）；空列表 = 全部停用。不再按 CUSTOM 门控清空。
         npc.castStrategy.setPreset(preset);
-        if (npc.castStrategy.preset() == CastStrategyComponent.Preset.CUSTOM) {
-            npc.castStrategy.setCustomPriority(priority);
-        } else {
-            npc.castStrategy.setCustomPriority(List.of());
-        }
+        npc.castStrategy.setCustomPriority(priority != null ? priority : List.of());
     }
 
     private static WandscapeNpc resolve(UUID npcId) {
