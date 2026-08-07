@@ -14,4 +14,7 @@ public interface EntityOps {
 
     /** Get the position of an external entity. */
     GridPos getPosition(EntityId entity);
+
+    /** Get the current mana of an NPC by ECS entity id (scheduler mana gate). */
+    float getCurrentMana(long npcId);
 }

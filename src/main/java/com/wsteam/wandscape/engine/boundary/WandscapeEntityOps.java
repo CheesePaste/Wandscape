@@ -4,6 +4,8 @@ import com.wsteam.wandscape.core.boundary.EntityOps;
 import com.wsteam.wandscape.core.types.EffectId;
 import com.wsteam.wandscape.core.types.EntityId;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 /**
  * MC implementation of {@link EntityOps}.
  *
@@ -23,5 +25,11 @@ public class WandscapeEntityOps implements EntityOps {
     public GridPos getPosition(EntityId entity) {
         // Stage 3+: look up entity and return real position
         return GridPos.ORIGIN;
+    }
+
+    @Override
+    public float getCurrentMana(long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        return npc != null ? npc.getCurrentMana() : 0f;
     }
 }

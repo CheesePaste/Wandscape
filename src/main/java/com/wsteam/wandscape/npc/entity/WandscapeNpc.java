@@ -121,6 +121,14 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                 getEffectiveAttribute(AttributeType.SPELL_SPEED));
     }
 
+    /**
+     * 祭坛施法门控：扣蓝 + 占互斥锁，不设置本 NPC 的每魔法 CD
+     * （祭坛 CD 按建筑独立存放，见 {@code MagicState#tryAltarCast}）。
+     */
+    public boolean tryAltarCast(int manaCost, int lockDurationTicks) {
+        return magic.tryAltarCast(manaCost, lockDurationTicks);
+    }
+
     // ============================================================
     // 脱战生命恢复：受击后封伤 grace tick，之后每 interval tick 回 1 HP。
     // 剩余值 NBT 持久（tick 数可跨存档）。

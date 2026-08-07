@@ -41,6 +41,23 @@ public class MagicState {
         return true;
     }
 
+    /**
+     * 祭坛施法：扣蓝 + 占互斥锁，但**不设置本 NPC 的每魔法 CD**。
+     *
+     * <p>祭坛施法的冷却按祭坛（building）独立存放（见 AltarCastState），与 NPC 自身的
+     * 每魔法 CD 解耦——否则同一 NPC 在 A 祭坛施法会被自身 CD 挡住 B 祭坛，
+     * 违反"不同祭坛之间 CD 不共享"。锁仍占用，保证引导期间 NPC 不并发施法/战斗施法。
+     *
+     * @param manaCost  固定魔力消耗
+     * @param lockTicks 引导期间占用的互斥锁时长（= 祭坛魔法时长）
+     */
+    public boolean tryAltarCast(int manaCost, int lockTicks) {
+        if (lockTicks > 0 || currentMana < manaCost) return false;
+        currentMana -= manaCost;
+        this.lockTicks = Math.max(this.lockTicks, lockTicks);
+        return true;
+    }
+
     /** 每 server tick 推进：锁/CD 递减；每 {@code regenIntervalTicks} 回 1 点魔力，封顶 maxMana。 */
     public void tickRegen(float maxMana, int regenIntervalTicks) {
         if (lockTicks > 0) lockTicks--;
