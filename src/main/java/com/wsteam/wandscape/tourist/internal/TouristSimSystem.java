@@ -239,7 +239,13 @@ public final class TouristSimSystem {
 
     /** Create a physical entity from the shadow at the shadow's position. */
     private void spawnEntity(ServerLevel level, TouristShadow s) {
+        if (s.getTouristId() == null) return;
         TouristEntity tourist = new TouristEntity(Wandscape.TOURIST.get(), level);
+        // The body must BE this shadow's tourist. Without this, the fresh body gets a
+        // random UUID and onAddedToLevel's auto-adopt registers it as a brand-new shadow,
+        // leaving the original shadow as a ghost that respawns bodies — duplicating the
+        // tourist exponentially across unload/reload cycles (and making duplicates unkillable).
+        tourist.setUUID(s.getTouristId());
         importToEntity(tourist, s);
         level.addFreshEntity(tourist);
         Log.info(TAG, "[Tourist] spawned entity {} from shadow at {}", shortId(s.getTouristId()),
