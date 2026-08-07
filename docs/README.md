@@ -31,6 +31,7 @@ Wandscape 是一个 Minecraft NeoForge 1.21.1 模组，包含两大系统：
 | 生产模块（工作站/合成站/酿造站/配方） | [modules/production.md](modules/production.md) |
 | 仓库模块（元素银行/双标签 GUI/运输） | [modules/warehouse.md](modules/warehouse.md) |
 | 魔法模块（魔法阵粒子/光束实体） | [modules/magic.md](modules/magic.md) |
+| **NPC 施法决策层（多魔法规划，未实现）** | [spell-casting.md](spell-casting.md) |
 | 守卫模块（守卫任务/主动索敌/自卫反击） | [modules/guard.md](modules/guard.md) |
 | 袭击模块（复用原版袭击/市政厅为中心） | [modules/raid.md](modules/raid.md) |
 | 灵魂投影建造模式 | [modules/projection.md](modules/projection.md) |
