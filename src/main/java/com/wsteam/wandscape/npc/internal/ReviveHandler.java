@@ -167,7 +167,10 @@ public final class ReviveHandler {
         npc.spellSpeed = rec.spellSpeed();
         npc.armorValue = rec.armorValue();
         npc.maxMana = rec.maxMana();
-        npc.magic.setMana(rec.maxMana()); // 满蓝复活
+        // 虚弱复活：1 血 0 蓝，靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复
+        npc.setHealth(1f);
+        npc.magic.setMana(0f);
+        npc.magic.markManaSeeded(); // 阻止首 tick 的"满蓝种子"逻辑把蓝填满
         npc.setHasDefaultWand(rec.hasDefaultWand());
 
         fixEcsAfterSpawn(npc, rec);
