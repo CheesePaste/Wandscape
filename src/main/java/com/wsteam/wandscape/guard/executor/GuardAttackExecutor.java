@@ -8,6 +8,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.guard.GuardScanner;
 import com.wsteam.wandscape.guard.GuardZone;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
+import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.op.api.AtomicOp;
@@ -39,7 +40,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
     private static final int RECHECK_TICKS = 10;
 
     private record Pending(CompletableFuture<Void> future, World world, long npcId, int remainingTicks,
-                           int attackRange, int releaseRange, String circleId, int color) {}
+                           int attackRange, int releaseRange) {}
 
     private final List<Pending> pending = new ArrayList<>();
 
@@ -56,7 +57,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         }
         CompletableFuture<Void> future = world.startAsyncOp("guard_attack");
         pending.add(new Pending(future, world, npcId, 1,
-                op.attackRange(), op.releaseRange(), op.circleId(), op.color()));
+                op.attackRange(), op.releaseRange()));
         return future;
     }
 
@@ -71,7 +72,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             int remaining = p.remainingTicks() - 1;
             if (remaining > 0) {
                 next.add(new Pending(p.future(), p.world(), p.npcId(), remaining,
-                        p.attackRange(), p.releaseRange(), p.circleId(), p.color()));
+                        p.attackRange(), p.releaseRange()));
                 continue;
             }
             int wait = runCycle(p);
@@ -79,7 +80,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
                 toComplete.add(p.future());
             } else {
                 next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, wait),
-                        p.attackRange(), p.releaseRange(), p.circleId(), p.color()));
+                        p.attackRange(), p.releaseRange()));
             }
         }
 
@@ -115,8 +116,9 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             return RECHECK_TICKS;
         }
 
+        // 施法视觉（法阵/颜色）由 beam MagicDef 定义（magic_spells/beam.json），随魔法数据走
         GuardCombat.engage(level, npc, nearest, p.world(), p.npcId(),
-                p.circleId(), p.color());
+                MagicCaster.beamCircleId(), MagicCaster.beamColor());
         return RECHECK_TICKS;
     }
 }

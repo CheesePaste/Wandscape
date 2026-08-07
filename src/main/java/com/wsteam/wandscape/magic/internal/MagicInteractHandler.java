@@ -28,10 +28,10 @@ public final class MagicInteractHandler {
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.SUCCESS);
 
-        MagicCircleSpec spec = MagicCircleLoader.getSpec(MagicCaster.DEFAULT_CIRCLE);
+        MagicCircleSpec spec = MagicCircleLoader.getSpec(MagicCaster.beamCircleId());
         if (spec == null) return;
 
-        if (MagicCaster.castNpc((ServerLevel) npc.level(), npc, MagicCaster.DEFAULT_CIRCLE, null)) {
+        if (MagicCaster.castNpc((ServerLevel) npc.level(), npc, MagicCaster.beamCircleId(), null)) {
             // 举杖窗口 = 法阵动画时长，光束在其后由 MagicCastManager 生成
             npc.startManualCast(spec.durationTicks);
         } else {

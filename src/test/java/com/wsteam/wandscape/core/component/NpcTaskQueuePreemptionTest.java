@@ -26,7 +26,7 @@ class NpcTaskQueuePreemptionTest {
 
     private static NpcTaskPackage defensePkg() {
         return NpcTaskPackage.system("self_defense",
-                new AtomicOp.SelfDefenseOp(12, "arcane_hexagram", 0xFFA8E0FF), null, SELF_DEFENSE_PRIORITY);
+                new AtomicOp.SelfDefenseOp(12), null, SELF_DEFENSE_PRIORITY);
     }
 
     @Test

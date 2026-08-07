@@ -107,15 +107,14 @@ public sealed interface AtomicOp
     /**
      * Guard combat: cast a magic circle + beam at the nearest hostile within a defended
      * building zone. Positionless — the caster does NOT walk; the executor re-scans the
-     * zone each cycle and casts at whatever it can see.
+     * zone each cycle and casts at whatever it can see. 施法视觉（法阵/颜色）由 beam
+     * 魔法的 MagicDef 定义，不随任务参数传递。
      *
      * @param attackRange  horizontal X/Z expansion where monsters are attacked (Y unchanged)
      * @param releaseRange horizontal X/Z expansion; the guard task completes only when no
      *                     monster remains inside it (hysteresis, >= attackRange)
-     * @param circleId     magic circle spec id for the cast visual
-     * @param color        beam color (ARGB)
      */
-    record AttackMonsterOp(int attackRange, int releaseRange, String circleId, int color) implements AtomicOp {
+    record AttackMonsterOp(int attackRange, int releaseRange) implements AtomicOp {
         @Override
         public GridPos target() {
             return null; // no stance / no navigation — cast from current position
@@ -128,12 +127,11 @@ public sealed interface AtomicOp
      * NPC's private task queue, preempting the current task and resuming after.
      * Positionless — the caster does NOT walk; the executor re-scans around the NPC
      * each cycle and prioritizes a hated attacker (a non-player that hurt the NPC).
+     * 施法视觉（法阵/颜色）由 beam 魔法的 MagicDef 定义，不随任务参数传递。
      *
      * @param radius   spherical distance around the NPC where hostile mobs are attacked
-     * @param circleId magic circle spec id for the cast visual
-     * @param color    beam color (ARGB)
      */
-    record SelfDefenseOp(int radius, String circleId, int color) implements AtomicOp {
+    record SelfDefenseOp(int radius) implements AtomicOp {
         @Override
         public GridPos target() {
             return null; // no stance / no navigation — cast from current position

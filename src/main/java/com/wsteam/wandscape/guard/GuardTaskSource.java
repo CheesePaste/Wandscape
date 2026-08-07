@@ -8,7 +8,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
-import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
@@ -62,8 +61,6 @@ public final class GuardTaskSource implements TaskSource {
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("attackRange", new JsonPrimitive(Config.GUARD_RANGE.get()));
         params.put("releaseRange", new JsonPrimitive(Config.GUARD_RELEASE_RANGE.get()));
-        params.put("circle", new JsonPrimitive(MagicCaster.DEFAULT_CIRCLE));
-        params.put("color", new JsonPrimitive(MagicCaster.DEFAULT_COLOR));
         TaskRequest request = new TaskRequest("guard:attack", params, GuardConstants.GUARD_PRIORITY);
         activeTaskId = pool.addTask(request);
         Log.info(TAG, ">>> GUARD TASK PUBLISHED #{} target={} attack={} release={} pool={}",

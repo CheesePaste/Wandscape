@@ -27,7 +27,7 @@ public final class MagicCommand {
 
     public static CommandNode<CommandSourceStack> node() {
         return Commands.literal("magic")
-                .executes(ctx -> doCast(ctx, MagicCaster.DEFAULT_CIRCLE, null))
+                .executes(ctx -> doCast(ctx, MagicCaster.beamCircleId(), null))
                 .then(Commands.argument("circle", StringArgumentType.word())
                         .executes(ctx -> doCast(ctx, StringArgumentType.getString(ctx, "circle"), null))
                         .then(Commands.argument("color", StringArgumentType.string())

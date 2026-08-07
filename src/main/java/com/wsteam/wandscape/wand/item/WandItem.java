@@ -37,7 +37,7 @@ public class WandItem extends Item {
             player.getCooldowns().addCooldown(this, CAST_COOLDOWN_TICKS);
             // 施放攻击魔法阵：发包渲染（垂直于法杖）+ 动画结束后光束射向准星目标
             if (player instanceof ServerPlayer sp) {
-                MagicCaster.cast(sp.serverLevel(), sp, MagicCaster.DEFAULT_CIRCLE, null);
+                MagicCaster.cast(sp.serverLevel(), sp, MagicCaster.beamCircleId(), null);
             }
             return InteractionResultHolder.success(stack);
         }
