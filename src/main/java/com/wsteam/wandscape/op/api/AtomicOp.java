@@ -18,6 +18,7 @@ public sealed interface AtomicOp
                 AtomicOp.BlockInteractOp,
                 AtomicOp.EntityInteractOp,
                 AtomicOp.RitualOp,
+                AtomicOp.AltarCastOp,
                 AtomicOp.ResourceRequestOp,
                 AtomicOp.EmitEventOp,
                 AtomicOp.IfConditionOp,
@@ -160,6 +161,27 @@ public sealed interface AtomicOp
                 case "portal_gate" -> 1800;
                 default -> 0;
             };
+        }
+    }
+
+    /**
+     * 祭坛施法：NPC 走到祭坛旁（target = 祭坛中心），引导 {@code duration} tick 后释放魔法效果。
+     * 蓝耗扣在**接取该任务的 NPC** 身上；冷却按祭坛（params["altar"] = building UUID）独立存放
+     * （AltarCastState），与 NPC 自身每魔法 CD 解耦。
+     *
+     * @param target  祭坛包围盒中心（stance/寻路锚点）
+     * @param magicId 要施放的魔法 id（MagicDef，须 altarOnly）
+     * @param params  altar=<buildingId>、duration、mana_cost（调度器分派门槛读 mana_cost）
+     */
+    record AltarCastOp(GridPos target, String magicId,
+                       Map<String, String> params) implements AtomicOp {
+        public AltarCastOp {
+            if (params == null) params = Collections.emptyMap();
+        }
+
+        @Override
+        public GridPos target() {
+            return target;
         }
     }
 

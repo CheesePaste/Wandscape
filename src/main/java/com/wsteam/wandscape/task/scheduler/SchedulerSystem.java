@@ -18,6 +18,8 @@ import java.util.*;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonElement;
+
 /**
  * Assigns global tasks to idle NPCs.
  * Runs every 2 ticks (configurable heartbeat).
@@ -87,6 +89,14 @@ public class SchedulerSystem implements System {
                     continue;
                 }
 
+                // 任务可声明殖民地归属 + 魔力门槛（如祭坛施法）：
+                // 只分给指定殖民地的 NPC，且其当前魔力必须 ≥ 任务蓝耗（不足则任务挂起，等回蓝）。
+                String taskColony = taskColonyFilter(task);
+                if (taskColony != null && !taskColony.equals(entry.getKey().toString())) {
+                    continue;
+                }
+                int manaRequirement = taskManaRequirement(task);
+
                 // Find the best NPC for this task
                 long bestNpc = -1;
                 double bestScore = -1;
@@ -95,6 +105,12 @@ public class SchedulerSystem implements System {
                 for (long npcId : colonyNpcs) {
                     EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
                     if (eq == null) continue;
+
+                    // 魔力门槛：接取前当前魔力 ≥ 任务蓝耗（否则跳过，等魔力恢复后下轮再评）
+                    if (manaRequirement > 0 && (world.entityOps == null
+                            || world.entityOps.getCurrentMana(npcId) < manaRequirement)) {
+                        continue;
+                    }
 
                     // Ensure NPC has a wand equipped
                     if (!eq.hasEquipment(EquipmentSlot.WAND)) {
@@ -161,6 +177,25 @@ public class SchedulerSystem implements System {
             if (t != null) return t;
         }
         return null;
+    }
+
+    /** 任务声明的殖民地归属（params["colony_id"]）；无 = 不限殖民地。 */
+    @Nullable
+    private static String taskColonyFilter(GlobalTask task) {
+        JsonElement el = task.taskParams.get("colony_id");
+        return el != null && el.isJsonPrimitive() ? el.getAsString() : null;
+    }
+
+    /** 任务要求的接取魔力门槛（params["mana_cost"]）；无 = 0（不限）。 */
+    private static int taskManaRequirement(GlobalTask task) {
+        JsonElement el = task.taskParams.get("mana_cost");
+        if (el != null && el.isJsonPrimitive()) {
+            try {
+                return el.getAsInt();
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
     }
 
     /** Manually trigger a scheduling heartbeat (for testing). */

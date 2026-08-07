@@ -140,6 +140,16 @@ public final class BlueprintInterpreter {
                 }
                 yield List.of(new AtomicOp.RitualOp(ritual, at, params));
             }
+            case StepNode.AltarCastStep s -> {
+                GridPos at = evalPos(s.at(), context, "altar_cast.at");
+                String magicId = evalString(s.magicId(), context, "altar_cast.magic_id");
+                Map<String, String> params = new LinkedHashMap<>();
+                for (var entry : s.params().entrySet()) {
+                    params.put(entry.getKey(),
+                            evalString(entry.getValue(), context, "altar_cast.params." + entry.getKey()));
+                }
+                yield List.of(new AtomicOp.AltarCastOp(at, magicId, params));
+            }
             case StepNode.RequestResourceStep s -> {
                 List<ResourceStack> stacks;
                 if (s.dynamicItems() != null) {

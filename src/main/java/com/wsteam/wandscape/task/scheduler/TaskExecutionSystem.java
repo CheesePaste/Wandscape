@@ -465,6 +465,7 @@ public class TaskExecutionSystem implements System {
     private static String opKind(AtomicOp op) {
         return switch (op) {
             case AtomicOp.RitualOp r      -> "ritual:" + r.ritual().id();
+            case AtomicOp.AltarCastOp a   -> "altar_cast:" + a.magicId();
             case AtomicOp.BlockInteractOp b -> "block_interact:" + b.action().id();
             case AtomicOp.TransformOp t   -> "transform";
             case AtomicOp.ParallelOp p    -> "parallel";

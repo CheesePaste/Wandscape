@@ -144,6 +144,7 @@ public final class BlueprintConfigLoader {
             case "block_interact" -> parseBlockInteract(obj);
             case "entity_interact" -> parseEntityInteract(obj);
             case "ritual" -> parseRitual(obj);
+            case "altar_cast" -> parseAltarCast(obj);
             case "request_resource" -> parseRequestResource(obj);
             case "emit_event" -> parseEmitEvent(obj);
             case "for_each" -> parseForEach(obj);
@@ -215,6 +216,19 @@ public final class BlueprintConfigLoader {
             }
         }
         return new StepNode.RitualStep(ritual, at, params);
+    }
+
+    private StepNode parseAltarCast(JsonObject obj) {
+        ExprNode at = parseExpr(obj.get("at"));
+        ExprNode magicId = parseExpr(obj.get("magic_id"));
+        Map<String, ExprNode> params = new LinkedHashMap<>();
+        if (obj.has("params")) {
+            JsonObject paramsObj = obj.getAsJsonObject("params");
+            for (var entry : paramsObj.entrySet()) {
+                params.put(entry.getKey(), parseExpr(entry.getValue()));
+            }
+        }
+        return new StepNode.AltarCastStep(at, magicId, params);
     }
 
     private StepNode parseRequestResource(JsonObject obj) {

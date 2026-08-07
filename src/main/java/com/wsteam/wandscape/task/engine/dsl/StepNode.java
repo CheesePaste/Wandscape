@@ -78,6 +78,20 @@ public sealed interface StepNode {
     }
 
     /**
+     * Cast an altar-only magic at the given position. JSON type: {@code "altar_cast"}.
+     * → {@link AtomicOp.AltarCastOp}
+     * Channeling duration is carried in {@code params["duration"]} (the magic's
+     * altar_duration); mana cost and altar building UUID ride along for the scheduler
+     * gate and the per-altar cooldown state.
+     */
+    record AltarCastStep(ExprNode at, ExprNode magicId,
+                         Map<String, ExprNode> params) implements StepNode {
+        public AltarCastStep {
+            if (params == null) params = Map.of();
+        }
+    }
+
+    /**
      * Request resources from colony warehouse. JSON type: {@code "request_resource"}.
      * → {@link AtomicOp.ResourceRequestOp}
      *

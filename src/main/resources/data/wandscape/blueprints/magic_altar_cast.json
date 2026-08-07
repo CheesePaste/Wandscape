@@ -1,0 +1,22 @@
+{
+  "id": "magic:altar_cast",
+  "display_name": "Altar Cast",
+  "description": "NPC walks to the altar and casts the selected altar-only magic, consuming its own mana. Mana gate and per-altar cooldown are enforced by the scheduler/executor, not the blueprint.",
+  "params": {
+    "anchor": "pos",
+    "magic_id": "string",
+    "altar": "string",
+    "duration": "int"
+  },
+  "steps": [
+    {
+      "type": "altar_cast",
+      "at": "$anchor",
+      "magic_id": "$magic_id",
+      "params": {
+        "altar": "$altar",
+        "duration": "$duration"
+      }
+    }
+  ]
+}
