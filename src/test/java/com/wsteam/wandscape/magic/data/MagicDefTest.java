@@ -119,6 +119,21 @@ class MagicDefTest {
         assertEquals(0, def.range(), 1e-9);
     }
 
+    @Test
+    void parsesConditions() {
+        MagicDef def = MagicDef.fromJson("aoe", JsonParser.parseString(
+                "{\"conditions\": {\"min_enemies\": 3, \"self_hp_max\": 0.6, \"no_effect\": \"minecraft:absorption\"}}"));
+        assertEquals(3, def.conditions().minEnemies());
+        assertEquals(0.6f, def.conditions().selfHpMax(), 1e-6f);
+        assertEquals("minecraft:absorption", def.conditions().noEffect());
+    }
+
+    @Test
+    void conditionsDefaultNone() {
+        MagicDef def = MagicDef.fromJson("plain", JsonParser.parseString("{}"));
+        assertEquals(SpellConditions.NONE, def.conditions());
+    }
+
     private static MagicDef loadSpec(String path) throws Exception {
         try (var is = MagicDefTest.class.getResourceAsStream(path)) {
             if (is == null) return null;

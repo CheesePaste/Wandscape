@@ -24,7 +24,8 @@ public record MagicDef(
         @Nullable Integer effectColor,
         boolean altarOnly,
         int altarCooldown,
-        int altarDuration
+        int altarDuration,
+        SpellConditions conditions
 ) {
 
     public MagicDef {
@@ -33,6 +34,7 @@ public record MagicDef(
         range = Math.max(0, range);
         altarCooldown = Math.max(0, altarCooldown);
         altarDuration = Math.max(0, altarDuration);
+        conditions = conditions != null ? conditions : SpellConditions.NONE;
     }
 
     /**
@@ -64,8 +66,9 @@ public record MagicDef(
         boolean altarOnly = getBool(obj, "altar_only", false);
         int altarCooldown = (int) Math.round(getDouble(obj, "altar_cooldown", 0));
         int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
+        SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
         return new MagicDef(defId, category, manaCost, baseCooldown, range, targetMode,
-                circleId, color, altarOnly, altarCooldown, altarDuration);
+                circleId, color, altarOnly, altarCooldown, altarDuration, conditions);
     }
 
     /** "#A8E0FF" → 0xFFA8E0FF；非法/缺失返回 null。 */
