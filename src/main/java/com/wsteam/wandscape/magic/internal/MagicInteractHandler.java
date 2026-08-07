@@ -35,7 +35,8 @@ public final class MagicInteractHandler {
             // 举杖窗口 = 法阵动画时长，光束在其后由 MagicCastManager 生成
             npc.startManualCast(spec.durationTicks);
         } else {
-            Log.warn(TAG, "NPC {} 施法被拒（已有未发射的施法）", npc.getUUID().toString().substring(0, 8));
+            Log.warn(TAG, "NPC {} 施法被拒（施法互斥锁占用/光束CD未过/正在施法中）",
+                    npc.getUUID().toString().substring(0, 8));
         }
     }
 }

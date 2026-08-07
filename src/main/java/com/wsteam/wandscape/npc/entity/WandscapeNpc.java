@@ -122,25 +122,6 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     }
 
     // ============================================================
-    // 魔法冷却（剩余 tick）——施法后进入冷却，CD 受 SPELL_SPEED 影响；
-    // 施法时间（魔法阵+激光、仪式引导）不参与。NBT 存剩余值防跨存档失真。
-    // ============================================================
-
-    private int spellCooldown = 0;
-
-    /** 是否可施法（冷却已过）。 */
-    public boolean canCastSpell() {
-        return spellCooldown <= 0;
-    }
-
-    /** 开始冷却：baseCD 除以 SPELL_SPEED（向上取整）。 */
-    public void startSpellCooldown(int baseCooldown) {
-        float speed = getEffectiveAttribute(AttributeType.SPELL_SPEED);
-        int eff = speed > 1f ? (int) Math.ceil(baseCooldown / speed) : baseCooldown;
-        spellCooldown = Math.max(spellCooldown, eff);
-    }
-
-    // ============================================================
     // 脱战生命恢复：受击后封伤 grace tick，之后每 interval tick 回 1 HP。
     // 剩余值 NBT 持久（tick 数可跨存档）。
     // ============================================================
@@ -460,8 +441,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         super.tick();
         if (level().isClientSide) return;
 
-        // 冷却递减 + 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
-        if (spellCooldown > 0) spellCooldown--;
+        // 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
         tickHealthRegen();
         applyEffectiveAttributes();
         // 首 tick 满蓝填充（新 NPC / 旧存档迁移），此后每 10tick 回 1 点
@@ -844,7 +824,6 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         tag.putFloat("spellSpeed", spellSpeed);
         tag.putFloat("armorValue", armorValue);
         tag.putFloat("maxMana", maxMana);
-        tag.putInt("spellCooldown", spellCooldown);
         tag.putFloat("currentMana", magic.getMana());
         tag.putInt("manaRegenAccum", magic.getManaRegenAccum());
         tag.putInt("spellLockTicks", magic.getLockTicks());
@@ -880,7 +859,6 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         spellSpeed = tag.getFloat("spellSpeed");
         armorValue = tag.getFloat("armorValue");
         maxMana = tag.getFloat("maxMana");
-        spellCooldown = tag.getInt("spellCooldown");
         Map<String, Integer> cds = new HashMap<>();
         if (tag.contains("magicCooldowns")) {
             CompoundTag mc = tag.getCompound("magicCooldowns");

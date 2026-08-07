@@ -48,6 +48,8 @@ public class NavigationSystem implements System {
     private static final int MAX_REPATH = 5;
     /** Base cooldown (ticks) between self_teleport casts; divided by SPELL_SPEED. */
     private static final int TELEPORT_COOLDOWN_TICKS = 300;
+    /** 传送固定魔力消耗。 */
+    private static final int TELEPORT_MANA_COST = 30;
 
     private int tickCounter;
 
@@ -256,8 +258,10 @@ public class NavigationSystem implements System {
         GridPos target = nav.target;
 
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
-        if (npc != null && !npc.canCastSpell()) {
-            Log.info(TAG, "[NavSys] NPC {} — teleport on cooldown, falling back to walking", npcId);
+        // 门控：施法互斥锁 + 传送独立 CD + 固定魔力，任一不满足回退走路（而不是站等）。
+        // 锁时长 = self_teleport 引导 tick（当前 1，待 WandscapeRitualOps 还原 600 时同步）。
+        if (npc != null && !npc.tryCastSpell("teleport", TELEPORT_COOLDOWN_TICKS, TELEPORT_MANA_COST, 1)) {
+            Log.info(TAG, "[NavSys] NPC {} — teleport gated (lock/CD/mana), falling back to walking", npcId);
             nav.mode = NavigationState.Mode.PATHFINDING;
             nav.startTick = 0;
             return;
@@ -285,9 +289,6 @@ public class NavigationSystem implements System {
             if (exec != null) {
                 exec.pendingFuture = ritualFuture;
                 exec.pendingFutureIsNav = true;
-            }
-            if (npc != null) {
-                npc.startSpellCooldown(TELEPORT_COOLDOWN_TICKS);
             }
             nav.mode = NavigationState.Mode.TELEPORT_RITUAL;
             nav.stuckChecks = 0;

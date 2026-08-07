@@ -44,6 +44,13 @@ public final class MagicCaster {
     /** 默认光束颜色（浅蓝）。 */
     public static final int DEFAULT_COLOR = 0xFFA8E0FF;
 
+    /** 光束魔法 id（每魔法独立 CD 的 key）。 */
+    public static final String BEAM_MAGIC_ID = "beam";
+    /** 光束施法最小间隔基础（tick），除以 SPELL_SPEED 得实际 CD；施法时间（魔法阵+光束）不参与。 */
+    public static final int BEAM_BASE_CD = 40;
+    /** 守卫光束固定魔力消耗。 */
+    public static final int BEAM_MANA_COST = 50;
+
     private static final double CAST_DISTANCE = 1.5;
     /** 光束在法阵出现后多少 tick 开始生成（法阵动画期间从细变宽）。 */
     public static final int BEAM_SPAWN_DELAY = 20;
@@ -88,11 +95,14 @@ public final class MagicCaster {
         LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
         boolean ok;
         if (target != null) {
-            ok = castNpcAt(level, npc, target, circleId, color);
+            // 手动施法免费（测试功能），仍占用光束 CD 与施法互斥锁
+            ok = castNpcBeam(level, npc, target, circleId, color, 0);
         } else {
             // 无目标：沿当前朝向施放（视觉演示）
             MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
             if (spec == null) return false;
+            int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
+            if (!npc.tryCastSpell(BEAM_MAGIC_ID, BEAM_BASE_CD, 0, lockDuration)) return false;
 
             UUID effectId = npc.getUUID();
             Vec3 hand = npc.getStaffPosition();
@@ -118,12 +128,26 @@ public final class MagicCaster {
 
     /**
      * NPC 施放指向**指定目标**（守卫执行器用）：面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
-     * 法阵/光束由 MagicBeamEntity 动态跟踪目标。目标必须存活；若该施法者已有未发射的施法则拒绝。
+     * 法阵/光束由 MagicBeamEntity 动态跟踪目标。目标必须存活；门控（锁/CD/蓝）不满足则拒绝。
      */
     public static boolean castNpcAt(ServerLevel level, WandscapeNpc npc, LivingEntity target,
                                     String circleId, @Nullable Integer color) {
+        return castNpcBeam(level, npc, target, circleId, color, BEAM_MANA_COST);
+    }
+
+    /**
+     * 光束施放公共路径（守卫/手动共用）：先过施法门控（互斥锁 + 光束独立 CD + 固定魔力），
+     * 成功后面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
+     *
+     * @param manaCost 本次施放消耗的魔力（守卫 {@link #BEAM_MANA_COST}；手动施法 0）
+     */
+    private static boolean castNpcBeam(ServerLevel level, WandscapeNpc npc, LivingEntity target,
+                                       String circleId, @Nullable Integer color, int manaCost) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null || target == null || target.isRemoved() || !target.isAlive()) return false;
+
+        int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
+        if (!npc.tryCastSpell(BEAM_MAGIC_ID, BEAM_BASE_CD, manaCost, lockDuration)) return false;
 
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
@@ -140,7 +164,7 @@ public final class MagicCaster {
 
         boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
                 BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, target);
-        Log.info(TAG, "castNpcAt id={} circle={} target={} hand={} axis={} source={} scheduled={}",
+        Log.info(TAG, "castNpcBeam id={} circle={} target={} hand={} axis={} source={} scheduled={}",
                 npc.getUUID().toString().substring(0, 8), circleId,
                 target.getUUID().toString().substring(0, 8),
                 fmt(hand), fmt(axis), fmt(source), ok);

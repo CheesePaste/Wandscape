@@ -35,9 +35,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 public final class GuardCombat {
     private GuardCombat() {}
 
-    /** 两次施法最小间隔基础（tick），除以 SPELL_SPEED 得实际 CD。施法时间（魔法阵+光束）不参与。 */
-    public static final int CAST_MIN_INTERVAL = 40;
-
     private static final String TAG = "GuardCombat";
 
     // ── 单轮战斗动作：光束重定向 / LOS / 寻路 / 施法 ──
@@ -47,10 +44,10 @@ public final class GuardCombat {
      * <ol>
      *   <li>有活跃光束 → 重定向到目标（主动切换最近目标）。</li>
      *   <li>LOS 被方块挡 → 旧光束快速淡出、向目标寻路（绕过墙体），停手。</li>
-     *   <li>LOS 可见 → 停止移动；无光束且 NPC 冷却已过 → {@link MagicCaster#castNpcAt} 施法。</li>
+     *   <li>LOS 可见 → 停止移动；无光束 → {@link MagicCaster#castNpcAt} 施法。</li>
      * </ol>
      *
-     * <p>施法冷却由 NPC 自身管理（{@code npc.canCastSpell()/startSpellCooldown}），
+     * <p>施法门控（施法互斥锁 + 光束独立 CD + 固定魔力）在 {@code MagicCaster} 内部完成，
      * 实际 CD = 基础 / SPELL_SPEED。
      */
     public static void engage(ServerLevel level, WandscapeNpc npc, LivingEntity target,
@@ -67,18 +64,16 @@ public final class GuardCombat {
             return;
         }
 
-        // 看得见：停止移动，确保有光束（没有才施法，靠 ACTIVE_CASTERS + 冷却防堆叠）
+        // 看得见：停止移动，确保有光束（没有才施法，CD/蓝/锁在 MagicCaster 内部门控）
         cancelNavigation(world, npcId);
-        if (beam == null && npc.canCastSpell()) {
+        if (beam == null) {
             boolean ok = MagicCaster.castNpcAt(level, npc, target, circleId, color);
             if (ok) {
-                npc.startSpellCooldown(CAST_MIN_INTERVAL);
                 // 杖尖彩色爆闪（施法颜色）
                 float[] rgb = rgbOf(color);
                 ParticleService.burstColored(level, npc.getStaffPosition(), rgb[0], rgb[1], rgb[2], 6, 0.10f, 15, false);
                 SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
                         WandscapeSounds.GUARD_FIRE, SoundSource.NEUTRAL, 0.6f, 1.0f);
-            } else {
             }
         }
     }
