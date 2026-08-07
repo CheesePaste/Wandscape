@@ -72,6 +72,12 @@ public class ColonyDeathRegistry extends SavedData {
         return DeathRecord.nearest(records, pos.getX(), pos.getY(), pos.getZ(), range);
     }
 
+    /** 最近死去的死亡记录（按 deathTime 最新，不限位置）；无则 null。祭坛复活用。 */
+    @Nullable
+    public DeathRecord latest() {
+        return DeathRecord.latest(records);
+    }
+
     /** 清理过期记录（deathTime + EXPIRE_TICKS < nowTick）。 */
     public void prune(long nowTick) {
         long expiredBefore = nowTick - EXPIRE_TICKS;

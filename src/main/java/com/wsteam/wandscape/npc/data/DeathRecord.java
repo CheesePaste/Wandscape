@@ -48,4 +48,16 @@ public record DeathRecord(
         }
         return best;
     }
+
+    /** 最近死去的记录（deathTime 最大，不限位置）；空表返回 null。纯逻辑，可单测。 */
+    @Nullable
+    public static DeathRecord latest(List<DeathRecord> records) {
+        DeathRecord best = null;
+        for (DeathRecord r : records) {
+            if (best == null || r.deathTime() > best.deathTime()) {
+                best = r;
+            }
+        }
+        return best;
+    }
 }
