@@ -1810,7 +1810,7 @@
     "blueprint": "node:gather",
     "element": "water",
     "amount_per_harvest": 10,
-    "channel_ticks": 1200,
+    "channel_ticks": 1200
   },
   "blueprint": {
     "id": "build:clear_and_build",
