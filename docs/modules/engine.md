@@ -70,7 +70,7 @@
 
 ## system/（ECS System，注册到 World）
 
-- **NavigationSystem**：唯一移动驱动器。到达判定 5²；首帧距离²>64² → 切 ritual 传送；道路 waypoint 到点 2.25²、重寻路上限 5、超时 200 tick、卡死 60 tick×3 次 → 传送；远跳（>24²）走 RoadWalkPlanner；`switchToRitualTeleport` 受 canCastSpell + 冷却 300/SPELL_SPEED 门控，经 `world.ritualOps.beginRitual(SELF_TELEPORT)` 并写回 exec.pendingFuture。
+- **NavigationSystem**：唯一移动驱动器。到达判定 5²；首帧距离²>64² → 切 ritual 传送；道路 waypoint 到点 2.25²、重寻路上限 5、超时 200 tick、卡死 60 tick×3 次 → 传送；远跳（>24²）走 RoadWalkPlanner；`switchToRitualTeleport` 受 `npc.tryCastSpell("teleport", 300, 30, 1)` 门控（互斥锁 + 传送独立 CD 300/SPELL_SPEED + 30 魔力，任一不满足回退走路），经 `world.ritualOps.beginRitual(SELF_TELEPORT)` 并写回 exec.pendingFuture。
 - **ResourceSupplySystem**：40 tick 心跳。扫描 AWAITING_RESOURCES：可用即唤醒；缺料 `trySupplyResource → enqueueSynthesize`（去重 in-flight）→ `tryGatherElement`（node 建筑匹配元素）。
 
 ## transport/

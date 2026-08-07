@@ -113,6 +113,6 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 ## 不做（本模块边界）
 
 - **不做 shader 渲染**：粒子方案 + 自定义符文贴图足够"好看"，绕开光影兼容风险。信标光束直接用**原版** `BeaconRenderer.renderBeaconBeam`（原版 beam shader，逐顶点染色），光影下正常。
-- **不做施法机制/冷却**：施法频率由使用方决定（玩家法杖 8 tick 冷却；NPC 由 `canCastSpell` + SPELL_SPEED 统一冷却，见 npc 模块）。本模块只做视觉层 + 施放触发钩子 + 光束伤害。
+- **不做施法机制/冷却**：施法频率由使用方决定（玩家法杖 8 tick 冷却；NPC 经 `npc.tryCastSpell` 门控——每魔法独立 CD + 施法互斥锁 + 魔力消耗，见 npc 模块；光束 CD/蓝/锁在 `MagicCaster`）。本模块只做视觉层 + 施放触发钩子 + 光束伤害。
 - **不做多人编辑器协作**：Web 编辑器是本地单用户工具。
 - **glyph 真符文 sprite 选择**：v1 用放大点粒子代替（`MagicCircleDotParticle` 彗星头尾），真符文贴图留后续（需 sprite 索引机制）。

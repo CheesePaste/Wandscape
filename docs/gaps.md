@@ -50,4 +50,5 @@
 ## 五、版本相关（历史提交提示）
 
 - `refactor: 删魔力系统`（1bd748d）：NPC 属性收敛为 6 属性 + 脱战回血 + 统一魔法冷却 + 装备仅加法。**旧文档若仍描述"魔力/mana_cost"概念，一律作废**（`mana_cost`/`baseManaCost`/`spawnNpc` 死代码已删）。
+- `feat: 魔力回归`（1.5.0）：魔力为第 7 属性（MAX_MANA，默认 200），每魔法独立 CD + 施法互斥锁（`MagicState`），光束 50 蓝/传送 30 蓝，回复 10t/1 点；统一 `spellCooldown` 已删，`canCastSpell/startSpellCooldown` 不再存在。
 - `refactor: SPELL_POWER 改伤害核算入口统一倍率`（93cc7a3）：伤害在 `MagicBeamEntity`/`NpcSpellPowerHandler` 按 SPELL_POWER 统一放大；传送 CD 300。
