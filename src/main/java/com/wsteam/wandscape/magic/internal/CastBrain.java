@@ -46,7 +46,7 @@ public final class CastBrain {
     /** 目标规则是否要求调用方先选定目标。 */
     public static boolean requiresTarget(MagicDef def) {
         return switch (def.targetMode()) {
-            case HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP -> true;
+            case HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP, DEAD_ALLY -> true;
             case SELF, NONE -> false;
         };
     }

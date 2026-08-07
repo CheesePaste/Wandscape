@@ -40,6 +40,20 @@ class MagicDefTest {
     }
 
     @Test
+    void parsesRevive() throws Exception {
+        MagicDef revive = loadSpec("/data/wandscape/magic_spells/revive.json");
+        assertNotNull(revive, "revive.json should be on classpath");
+        assertEquals("revive", revive.id());
+        assertEquals(MagicDef.Category.UTILITY, revive.category());
+        assertEquals(80, revive.manaCost());
+        assertEquals(600, revive.baseCooldown());
+        assertEquals(32, revive.range(), 1e-9);
+        assertEquals(MagicDef.TargetMode.DEAD_ALLY, revive.targetMode());
+        assertEquals("self_teleport", revive.effectCircleId());
+        assertNull(revive.effectColor());
+    }
+
+    @Test
     void appliesNormalizeDefaults() {
         MagicDef def = MagicDef.fromJson("minimal", JsonParser.parseString("{}"));
         assertEquals("minimal", def.id());

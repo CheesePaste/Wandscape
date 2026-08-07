@@ -38,7 +38,7 @@ public record MagicDef(
     public enum Category { SINGLE_TARGET, AOE, DEFENSE, SUPPORT, UTILITY }
 
     /** 目标规则：决定"何时算有有效目标"。 */
-    public enum TargetMode { HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP, SELF, NONE }
+    public enum TargetMode { HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP, SELF, NONE, DEAD_ALLY }
 
     public static MagicDef fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();

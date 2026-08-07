@@ -252,6 +252,15 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         return this.entityData.get(DATA_HAT_COLOR);
     }
 
+    /** 恢复外观（复活魔法用）。 */
+    public void setSkinVariant(int variant) {
+        this.entityData.set(DATA_SKIN_VARIANT, variant);
+    }
+
+    public void setHatColor(int color) {
+        this.entityData.set(DATA_HAT_COLOR, color);
+    }
+
     public boolean isCasting() {
         return this.entityData.get(DATA_CASTING);
     }

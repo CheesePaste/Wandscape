@@ -1,0 +1,11 @@
+{
+  "id": "revive",
+  "category": "utility",
+  "mana_cost": 80,
+  "base_cooldown": 600,
+  "range": 32,
+  "target_mode": "dead_ally",
+  "effect": {
+    "circle_id": "self_teleport"
+  }
+}

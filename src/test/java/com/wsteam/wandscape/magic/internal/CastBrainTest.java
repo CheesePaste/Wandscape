@@ -66,6 +66,7 @@ class CastBrainTest {
         assertTrue(CastBrain.requiresTarget(spell("a", "hostile_nearest")));
         assertTrue(CastBrain.requiresTarget(spell("b", "hostile_lowest_hp")));
         assertTrue(CastBrain.requiresTarget(spell("c", "ally_lowest_hp")));
+        assertTrue(CastBrain.requiresTarget(spell("f", "dead_ally")), "复活需要死者目标");
         assertFalse(CastBrain.requiresTarget(spell("d", "self")));
         assertFalse(CastBrain.requiresTarget(spell("e", "none")));
     }

@@ -347,6 +347,7 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
         NeoForge.EVENT_BUS.register(MagicInteractHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
@@ -820,6 +821,9 @@ public class Wandscape {
 
         // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
         MagicCastManager.tick();
+
+        // Revive: 引导到期生成复活 NPC + 每日清理过期死亡记录（不依赖 ECS）
+        com.wsteam.wandscape.npc.internal.ReviveHandler.tick(event.getServer().overworld());
 
         var world = WandscapeEngine.getWorld();
         if (world == null) return;
