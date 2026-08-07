@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.npc.network;
 
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.core.component.EquipmentComponent;
@@ -7,6 +9,7 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -32,7 +35,10 @@ public record NpcDataPacket(
         float spellSpeed,
         float armorValue,
         ItemStack wandStack,
-        boolean isDefaultWand
+        boolean isDefaultWand,
+        String strategyPreset,
+        List<String> knownSpells,
+        List<String> priority
 ) implements CustomPacketPayload {
 
     public static final Type<NpcDataPacket> TYPE =
@@ -76,6 +82,16 @@ public record NpcDataPacket(
         buf.writeFloat(pkt.armorValue);
         buf.writeBoolean(pkt.isDefaultWand);
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, pkt.wandStack);
+        buf.writeUtf(pkt.strategyPreset);
+        writeStringList(buf, pkt.knownSpells);
+        writeStringList(buf, pkt.priority);
+    }
+
+    private static void writeStringList(RegistryFriendlyByteBuf buf, List<String> list) {
+        buf.writeVarInt(list.size());
+        for (String s : list) {
+            buf.writeUtf(s);
+        }
     }
 
     static NpcDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -92,9 +108,21 @@ public record NpcDataPacket(
         float armorValue = buf.readFloat();
         boolean isDefaultWand = buf.readBoolean();
         ItemStack wandStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
+        String strategyPreset = buf.readUtf();
+        List<String> knownSpells = readStringList(buf);
+        List<String> priority = readStringList(buf);
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
-                armorValue, wandStack, isDefaultWand);
+                armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells, priority);
+    }
+
+    private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
+        int size = buf.readVarInt();
+        List<String> out = new java.util.ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            out.add(buf.readUtf());
+        }
+        return out;
     }
 
     /**
@@ -123,6 +151,18 @@ public record NpcDataPacket(
             }
         }
 
+        // P3：施法策略（预设 + 魔法表 + 解析后的优先级），经 SpellcastingApi 取；未初始化回退空
+        String strategyPreset = "";
+        List<String> knownSpells = List.of();
+        List<String> priority = List.of();
+        var casting = WandscapeApis.getSpellcastingApiSilently();
+        if (casting != null) {
+            UUID uuid = npc.getUUID();
+            strategyPreset = casting.getStrategyPreset(uuid);
+            knownSpells = casting.getKnownSpells(uuid);
+            priority = casting.getPriority(uuid);
+        }
+
         return new NpcDataPacket(
                 npc.getId(),
                 npc.getNpcName(),
@@ -136,7 +176,10 @@ public record NpcDataPacket(
                 spellSpeed,
                 armorValue,
                 isDefault ? ItemStack.EMPTY : held,
-                isDefault
+                isDefault,
+                strategyPreset,
+                knownSpells,
+                priority
         );
     }
 }

@@ -47,6 +47,7 @@ import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCastManager;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadEventListener;
@@ -105,6 +106,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
@@ -199,6 +201,12 @@ public class Wandscape {
     public static final MagicCircleLoader MAGIC_CIRCLE_LOADER = new MagicCircleLoader(DATA_LOADER);
     // ---- magic: spellbook loader (magic_spells 类目) ----
     public static final SpellbookLoader SPELLBOOK_LOADER = new SpellbookLoader(DATA_LOADER);
+    // ---- magic: 施法决策 API（P3 玩家策略 + 条件） ----
+    public static final SpellcastingApiImpl SPELLCASTING_API = new SpellcastingApiImpl();
+
+    static {
+        WandscapeApis.setSpellcastingApi(SPELLCASTING_API);
+    }
 
     // ---- 10 production-stations: loader ----
     public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
@@ -581,6 +589,11 @@ public class Wandscape {
                         NpcEquipPacket.TYPE,
                         NpcEquipPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcEquipPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        NpcStrategyPacket.TYPE,
+                        NpcStrategyPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcStrategyPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Tourist info screen ──
                 .playToClient(

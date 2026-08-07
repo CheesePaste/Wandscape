@@ -98,4 +98,13 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static GuideProgressApi getGuideProgressApiSilently() { return guideProgressApi; }
     public static void setGuideProgressApi(GuideProgressApi api) { guideProgressApi = api; }
+
+    private static SpellcastingApi spellcastingApi;
+    public static SpellcastingApi getSpellcastingApi() {
+        if (spellcastingApi == null) throw new IllegalStateException("SpellcastingApi not loaded");
+        return spellcastingApi;
+    }
+    @javax.annotation.Nullable
+    public static SpellcastingApi getSpellcastingApiSilently() { return spellcastingApi; }
+    public static void setSpellcastingApi(SpellcastingApi api) { spellcastingApi = api; }
 }
