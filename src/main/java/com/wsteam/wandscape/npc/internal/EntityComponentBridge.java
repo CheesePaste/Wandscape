@@ -160,7 +160,7 @@ public final class EntityComponentBridge {
 
         NpcAttributes attrs = new NpcAttributes(
                 npc.maxHp, npc.moveSpeed, npc.spellPower, npc.workSpeed,
-                npc.spellSpeed, npc.armorValue);
+                npc.spellSpeed, npc.armorValue, npc.maxMana);
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
                 colony, attrs);

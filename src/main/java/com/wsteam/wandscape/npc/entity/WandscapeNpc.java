@@ -90,6 +90,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public float workSpeed = NpcAttributes.defaults().workSpeed();
     public float spellSpeed = NpcAttributes.defaults().spellSpeed();
     public float armorValue = NpcAttributes.defaults().armorValue();
+    public float maxMana = NpcAttributes.defaults().maxMana();
 
     // ============================================================
     // 魔法冷却（剩余 tick）——施法后进入冷却，CD 受 SPELL_SPEED 影响；
@@ -158,6 +159,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
             case WORK_SPEED -> workSpeed;
             case SPELL_SPEED -> spellSpeed;
             case ARMOR_VALUE -> armorValue;
+            case MAX_MANA -> maxMana;
         };
     }
 
@@ -806,6 +808,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         tag.putFloat("workSpeed", workSpeed);
         tag.putFloat("spellSpeed", spellSpeed);
         tag.putFloat("armorValue", armorValue);
+        tag.putFloat("maxMana", maxMana);
         tag.putInt("spellCooldown", spellCooldown);
         tag.putInt("regenCooldown", regenCooldown);
         tag.putInt("regenAccum", regenAccum);
@@ -832,6 +835,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         workSpeed = tag.getFloat("workSpeed");
         spellSpeed = tag.getFloat("spellSpeed");
         armorValue = tag.getFloat("armorValue");
+        maxMana = tag.getFloat("maxMana");
         spellCooldown = tag.getInt("spellCooldown");
         regenCooldown = tag.getInt("regenCooldown");
         regenAccum = tag.getInt("regenAccum");

@@ -10,10 +10,11 @@ public record NpcAttributes(
         float spellPower,
         float workSpeed,
         float spellSpeed,
-        float armorValue
+        float armorValue,
+        float maxMana
 ) {
     /** Defaults matching current NPC behavior (no equipment). */
     public static NpcAttributes defaults() {
-        return new NpcAttributes(40f, 0.3f, 1f, 1f, 1f, 0f);
+        return new NpcAttributes(40f, 0.3f, 1f, 1f, 1f, 0f, 200f);
     }
 }

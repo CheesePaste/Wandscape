@@ -27,12 +27,13 @@ public class EquipmentComponentTest {
         assertEquals(1f, eq.getAttribute(AttributeType.WORK_SPEED));
         assertEquals(1f, eq.getAttribute(AttributeType.SPELL_SPEED));
         assertEquals(0f, eq.getAttribute(AttributeType.ARMOR_VALUE));
+        assertEquals(200f, eq.getAttribute(AttributeType.MAX_MANA));
     }
 
     @Test
     void seedBaseValues_overridesDefaults() {
         EquipmentComponent eq = new EquipmentComponent();
-        NpcAttributes attrs = new NpcAttributes(60f, 0.4f, 2f, 1.5f, 1.5f, 5f);
+        NpcAttributes attrs = new NpcAttributes(60f, 0.4f, 2f, 1.5f, 1.5f, 5f, 250f);
         eq.seedBaseValues(attrs);
         assertEquals(60f, eq.getAttribute(AttributeType.MAX_HP));
         assertEquals(0.4f, eq.getAttribute(AttributeType.MOVE_SPEED));
@@ -40,6 +41,7 @@ public class EquipmentComponentTest {
         assertEquals(1.5f, eq.getAttribute(AttributeType.WORK_SPEED));
         assertEquals(1.5f, eq.getAttribute(AttributeType.SPELL_SPEED));
         assertEquals(5f, eq.getAttribute(AttributeType.ARMOR_VALUE));
+        assertEquals(250f, eq.getAttribute(AttributeType.MAX_MANA));
     }
 
     @Test

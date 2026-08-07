@@ -11,5 +11,6 @@ public enum AttributeType {
     SPELL_POWER,
     WORK_SPEED,
     SPELL_SPEED,
-    ARMOR_VALUE
+    ARMOR_VALUE,
+    MAX_MANA
 }

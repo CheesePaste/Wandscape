@@ -222,7 +222,7 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         EquipmentComponent eq = ecsWorld.get(ecsId, EquipmentComponent.class);
         if (eq != null) {
             eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
-                    npc.workSpeed, npc.spellSpeed, npc.armorValue));
+                    npc.workSpeed, npc.spellSpeed, npc.armorValue, npc.maxMana));
         }
 
         var member = ecsWorld.get(ecsId,

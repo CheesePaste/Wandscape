@@ -31,6 +31,7 @@ public class EquipmentComponent {
         BASE_VALUES.put(AttributeType.WORK_SPEED, 1f);
         BASE_VALUES.put(AttributeType.SPELL_SPEED, 1f);
         BASE_VALUES.put(AttributeType.ARMOR_VALUE, 0f);
+        BASE_VALUES.put(AttributeType.MAX_MANA, 200f);
     }
 
     /** Default wand modifiers (neutral — no change from base). */
@@ -68,6 +69,7 @@ public class EquipmentComponent {
         baseOverrides.put(AttributeType.WORK_SPEED, attrs.workSpeed());
         baseOverrides.put(AttributeType.SPELL_SPEED, attrs.spellSpeed());
         baseOverrides.put(AttributeType.ARMOR_VALUE, attrs.armorValue());
+        baseOverrides.put(AttributeType.MAX_MANA, attrs.maxMana());
         recalculateAll();
     }
 
