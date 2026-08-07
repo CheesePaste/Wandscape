@@ -14,6 +14,7 @@
 - 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0。能量 0-200、满意度 0-100。
 - 偏好 `typePreferences`：默认 40，范围 5-100。法师属性 maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue。
 - **无物品背包**，仅 `recentVisits` 记忆（上限 24 FIFO）+ visitedBuildings/serviceCooldowns/serviceCooldownEndTick。不可被推动，`removeWhenFarAway=false`。
+- **救援传送（被困兜底，`TouristTeleport`）只落点建筑外**：优先最近已建成道路（`rescueRoadRadius`），无路则建筑外围（入口点/bbox 面/外扩环扫，`rescuePeripheryRadius`），绝不传进建筑或房顶；找不到安全点则不传送。影子→实体水合若落在建筑房顶也改传安全点（`TouristSimSystem.importToEntity`）。
 
 ## 生命周期（TouristSpawnSystem）
 

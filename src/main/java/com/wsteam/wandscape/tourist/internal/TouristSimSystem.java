@@ -255,9 +255,15 @@ public final class TouristSimSystem {
         e.setPos(s.getPosX(), s.getPosY(), s.getPosZ());
         // The sim ignores terrain — the shadow's Y may have drifted into the ground
         // or air. Snap to the nearest ground surface now that the chunk is loaded.
+        // The shadow straight-lines through terrain, so its column can be over a
+        // building: never hydrate onto a roof — relocate outside all buildings.
         if (e.level() instanceof ServerLevel sl) {
             BlockPos ground = groundAt(sl, e.getX(), e.getY(), e.getZ());
             if (ground != null) {
+                if (TouristTeleport.isRoofInsideBuilding(sl, ground, s.getColonyId())) {
+                    BlockPos safe = TouristTeleport.findSafeSpot(sl, ground, s.getColonyId(), s.getTargetBuildingId());
+                    if (safe != null) ground = safe;
+                }
                 e.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
             }
         }

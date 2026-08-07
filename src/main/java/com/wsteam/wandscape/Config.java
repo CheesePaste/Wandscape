@@ -176,6 +176,14 @@ public class Config {
             .comment("Max random delay ticks before night departure (0-this)")
             .defineInRange("tourist.departureDelayMaxTicks", 1500, 0, 6000);
 
+    public static final ModConfigSpec.IntValue TOURIST_RESCUE_ROAD_RADIUS = BUILDER
+            .comment("Max blocks a rescue teleport searches for a road before falling back to building periphery")
+            .defineInRange("tourist.rescueRoadRadius", 96, 16, 512);
+
+    public static final ModConfigSpec.IntValue TOURIST_RESCUE_PERIPHERY_RADIUS = BUILDER
+            .comment("Max blocks a rescue teleport scans outward for open ground outside all buildings")
+            .defineInRange("tourist.rescuePeripheryRadius", 24, 8, 128);
+
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
             .comment("Experience granted when tourist level == colony level (at 100% satisfaction)")
             .defineInRange("colony.expEqualLevel", 100, 0, 10000);

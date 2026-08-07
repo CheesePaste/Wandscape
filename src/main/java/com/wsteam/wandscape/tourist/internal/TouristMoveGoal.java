@@ -313,14 +313,12 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (noMoveTicks > 100 || totalNavTicks > 600) {
-            Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting near {}", tourist.getTouristName(), target.toShortString());
-            BlockPos tpTarget = currentTarget(target);
-            if (tpTarget != null) {
-                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
-                if (ground != null) tpTarget = ground;
-                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
-                noMoveTicks = 0;
-                totalNavTicks = 0;
+            noMoveTicks = 0;
+            totalNavTicks = 0;
+            BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
+            if (tp != null) {
+                Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
             }
             return;
         }
@@ -379,19 +377,19 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (noMoveTicks > 100 || totalNavTicks > 400) {
+            noMoveTicks = 0;
+            totalNavTicks = 0;
             if (exitingPhase) {
-                // Leaving the building: keep teleporting toward the entry ground.
-                BlockPos tpTarget = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
-                if (tpTarget == null) {
+                // Leaving the building: teleport to safe ground just outside the entry.
+                BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(),
+                        entryPoint != null ? entryPoint : tourist.getCommuteTarget(),
+                        tourist.getColonyId());
+                if (tp == null) {
                     finishBuildingStop();
                     return;
                 }
-                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
-                if (ground != null) tpTarget = ground;
-                Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
-                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
-                noMoveTicks = 0;
-                totalNavTicks = 0;
+                Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
             } else {
                 // Stuck navigating to the interact point. Do NOT teleport back onto the
                 // interact point — that just re-loops. Abandon the visit instead.
@@ -662,12 +660,13 @@ public class TouristMoveGoal extends Goal {
     private void abandonBuildingVisit() {
         UUID failed = tourist.getTargetBuildingId();
 
-        // Teleport to a safe, walkable ground spot near the entry point (already outside the bbox).
+        // Teleport to safe ground near the entry point (outside the bbox, road-preferred).
         BlockPos safe = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
         if (safe == null) safe = tourist.blockPosition();
-        BlockPos ground = findGround(safe.getX(), safe.getY(), safe.getZ());
-        if (ground != null) safe = ground;
-        tourist.setPos(safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5);
+        BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), safe, tourist.getColonyId());
+        if (tp != null) {
+            tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+        }
 
         if (failed != null) {
             // Avoid re-targeting the same trap for a while, but do NOT set the global
@@ -725,14 +724,12 @@ public class TouristMoveGoal extends Goal {
             }
 
             if (noMoveTicks > 100 || totalNavTicks > 400) {
-                BlockPos wp = currentTarget();
-                if (wp != null) {
-                    Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), wp.toShortString());
-                    BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
-                    if (ground != null) wp = ground;
-                    tourist.setPos(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5);
-                    noMoveTicks = 0;
-                    totalNavTicks = 0;
+                noMoveTicks = 0;
+                totalNavTicks = 0;
+                BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
+                if (tp != null) {
+                    Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                 }
                 return;
             }
@@ -895,14 +892,15 @@ public class TouristMoveGoal extends Goal {
                 }
             }
             if (noMoveTicks > WANDER_STUCK_TICKS) {
-                BlockPos ground = findGround(anchor.getX(), anchor.getY(), anchor.getZ());
-                BlockPos tp = ground != null ? ground : anchor;
-                Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
-                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
                 nav.stop();
                 noMoveTicks = 0;
                 lastNodeIndex = -1;
                 lastPos = null;
+                if (tp != null) {
+                    Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                }
                 return;
             }
         } else {
@@ -1571,15 +1569,15 @@ public class TouristMoveGoal extends Goal {
         if (++roofStuckTicks <= ROOF_STUCK_TICKS) return false;
         if (!isStandingOnFloatingSurface()) return false;
 
-        BlockPos below = findGroundBelow(pos.getX(), pos.getY() - 1, pos.getZ());
-        if (below == null) return false;
-        Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing down to {}", tourist.getTouristName(), below.toShortString());
+        BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
         tourist.getNavigation().stop();
-        tourist.setPos(below.getX() + 0.5, below.getY(), below.getZ() + 0.5);
-        noMoveTicks = 0;
-        totalNavTicks = 0;
         rescueLastPos = null;
         roofStuckTicks = 0;
+        if (tp == null) return false;
+        Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing to {}", tourist.getTouristName(), tp.toShortString());
+        tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+        noMoveTicks = 0;
+        totalNavTicks = 0;
         return true;
     }
 
@@ -1590,21 +1588,6 @@ public class TouristMoveGoal extends Goal {
         if (!lvl.getBlockState(feet).isAir()) return false;
         if (!lvl.getBlockState(feet.below()).isSolid()) return false;
         return lvl.getBlockState(feet.below(2)).isAir();
-    }
-
-    /** Scan downward from {@code startY} for the first walkable spot (air above solid). */
-    @Nullable
-    private BlockPos findGroundBelow(int x, int startY, int z) {
-        var lvl = tourist.level();
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
-                x, Math.min(lvl.getMaxBuildHeight() - 1, startY), z);
-        while (mp.getY() > lvl.getMinBuildHeight()) {
-            if (lvl.getBlockState(mp).isAir() && lvl.getBlockState(mp.below()).isSolid()) {
-                return mp.immutable();
-            }
-            mp.move(0, -1, 0);
-        }
-        return null;
     }
 
     /**
@@ -1651,6 +1634,13 @@ public class TouristMoveGoal extends Goal {
     private static ServerLevel getServerLevel() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server != null ? server.overworld() : null;
+    }
+
+    /** The tourist's own server level (goals tick server-side), falling back to the overworld. */
+    @Nullable
+    private ServerLevel serverLevel() {
+        if (tourist.level() instanceof ServerLevel sl) return sl;
+        return getServerLevel();
     }
 
     private static void emitNarrativeEvent(NarrativeEvent ne) {
