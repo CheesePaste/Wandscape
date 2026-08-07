@@ -42,6 +42,7 @@ public class NpcScreen extends MedievalScreen {
     private boolean isDefaultWand;
     private String strategyPreset = "BALANCED";
     private List<String> knownSpells = List.of();
+    private List<String> spellCategories = List.of();
     private List<String> priority = List.of();
 
     // Layout positions (computed in render, used for click detection)
@@ -73,6 +74,7 @@ public class NpcScreen extends MedievalScreen {
         this.isDefaultWand = packet.isDefaultWand();
         this.strategyPreset = packet.strategyPreset();
         this.knownSpells = packet.knownSpells();
+        this.spellCategories = packet.spellCategories();
         this.priority = packet.priority();
         setTitleBar(Component.literal(npcName));
     }
@@ -85,7 +87,7 @@ public class NpcScreen extends MedievalScreen {
                 leftPos + PW - 104, topPos + PH - 22, 46, 16,
                 I18n.name("gui.wandscape.npc.strategy", "Strategy"),
                 () -> Minecraft.getInstance().setScreen(
-                        new NpcStrategyScreen(entityId, strategyPreset, knownSpells, priority))));
+                        new NpcStrategyScreen(entityId, strategyPreset, knownSpells, spellCategories, priority))));
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,

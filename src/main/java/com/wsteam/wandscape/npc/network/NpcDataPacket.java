@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.npc.network;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -8,6 +9,8 @@ import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
@@ -21,6 +24,9 @@ import net.minecraft.world.item.ItemStack;
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server→client packet: opens / updates the NPC info screen.
+ *
+ * <p>{@code spellCategories} 与 {@code knownSpells} 并行同序（每魔法分类名小写，未知为
+ * {@code "unknown"}），让客户端无需跨模块读魔法数据即可按分类分组。
  */
 public record NpcDataPacket(
         int entityId,
@@ -38,6 +44,7 @@ public record NpcDataPacket(
         boolean isDefaultWand,
         String strategyPreset,
         List<String> knownSpells,
+        List<String> spellCategories,
         List<String> priority
 ) implements CustomPacketPayload {
 
@@ -84,6 +91,7 @@ public record NpcDataPacket(
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, pkt.wandStack);
         buf.writeUtf(pkt.strategyPreset);
         writeStringList(buf, pkt.knownSpells);
+        writeStringList(buf, pkt.spellCategories);
         writeStringList(buf, pkt.priority);
     }
 
@@ -110,10 +118,12 @@ public record NpcDataPacket(
         ItemStack wandStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         String strategyPreset = buf.readUtf();
         List<String> knownSpells = readStringList(buf);
+        List<String> spellCategories = readStringList(buf);
         List<String> priority = readStringList(buf);
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
-                armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells, priority);
+                armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells,
+                spellCategories, priority);
     }
 
     private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
@@ -162,6 +172,12 @@ public record NpcDataPacket(
             knownSpells = casting.getKnownSpells(uuid);
             priority = casting.getPriority(uuid);
         }
+        // 与 knownSpells 并行：每魔法分类名（小写），未知回退 "unknown"
+        List<String> spellCategories = new java.util.ArrayList<>(knownSpells.size());
+        for (String id : knownSpells) {
+            MagicDef def = SpellbookLoader.getSpec(id);
+            spellCategories.add(def != null ? def.category().name().toLowerCase(Locale.ROOT) : "unknown");
+        }
 
         return new NpcDataPacket(
                 npc.getId(),
@@ -179,6 +195,7 @@ public record NpcDataPacket(
                 isDefault,
                 strategyPreset,
                 knownSpells,
+                spellCategories,
                 priority
         );
     }
