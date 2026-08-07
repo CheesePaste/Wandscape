@@ -16,6 +16,7 @@ spec/
 ### Claude (local working files, kept out of the repo) ###
 .claude/
 magiccircles/
+CLAUDE.local.md
 ### Dev tools (maintained outside the repo) ###
 tools/
 

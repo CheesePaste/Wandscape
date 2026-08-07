@@ -36,9 +36,10 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
 
 ## 代码发现
 
-1. 结构查询（类/调用链/位置）优先用 **codebase-memory-mcp**：`search_graph` → `trace_path` → `get_code_snippet`
-2. MC/NeoForge API 必须用 `minecraft-source` skill 查源码，不靠记忆
-3. 大改后重新索引：`index_repository '{"repo_path":"."}'`
+1. 结构查询（类/调用链/位置）优先用结构化索引/图查询工具（可用时）；否则用 Grep/Glob/Agent(Explore) 兜底
+2. MC/NeoForge API 必须查源码、不靠记忆（本地 sources jar / 反编译 / 在线源码均可）
+3. 大改后重新建立索引（若有索引工具）
+4. 本机可用的具体工具及用法见 `CLAUDE.local.md`（可选，不入库）
 
 ## 提交规则
 
@@ -79,7 +80,7 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
 ## 工作流
 
 - **澄清后再写**：需求模糊时先 `grill-me` skill 追问，不直接动代码
-- 写代码前读 architecture/README.md → search_graph 查关键类 → roadmap.md 确认阶段
+- 写代码前读 architecture/README.md → 用结构查询工具查关键类 → roadmap.md 确认阶段
 - 写代码时：新接口→`shared/api/`，新事件→`shared/event/`，注册→更新 package 文件
 - 写完后：改设计→`docs/decisions.md`，发现问题→`docs/gaps.md`
 
