@@ -9,6 +9,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.CommandNode;
@@ -52,6 +53,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <pre>
  *   /wandscape colony create <name> [x y z]
  *   /wandscape colony destroy          — destroy the colony nearest the player
+ *   /wandscape colony level <n>        — set the colony level to n (debug/test, e.g. 100)
  * </pre>
  *
  * <p>Creates a colony with a new UUID, spawns 3 initial builder NPCs, and fills
@@ -73,6 +75,9 @@ public final class ColonyCommand {
                                 .executes(ColonyCommand::createColony)))
                 .then(Commands.literal("destroy")
                         .executes(ColonyCommand::destroyColony))
+                .then(Commands.literal("level")
+                        .then(Commands.argument("level", IntegerArgumentType.integer(1))
+                                .executes(ColonyCommand::setColonyLevel)))
                 .build();
     }
 
@@ -279,6 +284,35 @@ public final class ColonyCommand {
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "[Wandscape] Colony " + colonyId.toString().substring(0, 8) + " destroyed"),
                 true);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** 设置殖民地等级到指定值（调试/测试用，如 /wandscape colony level 100）。 */
+    private static int setColonyLevel(CommandContext<CommandSourceStack> ctx) {
+        int level = IntegerArgumentType.getInteger(ctx, "level");
+        net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayer();
+        if (player == null) {
+            ctx.getSource().sendFailure(Component.literal("[Wandscape] Player-only command"));
+            return 0;
+        }
+
+        ColonyApi colonyApi = ColonyApiImpl.get();
+        UUID colonyId = colonyApi.getColonyId(player.blockPosition());
+        if (colonyId == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "[Wandscape] No colony within 256 blocks of your position"));
+            return 0;
+        }
+
+        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        if (levelMgr == null) {
+            ctx.getSource().sendFailure(Component.literal("[Wandscape] Level manager not ready"));
+            return 0;
+        }
+        levelMgr.setLevel(colonyId, level);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "[Wandscape] Colony " + colonyId.toString().substring(0, 8)
+                        + " level → " + level), true);
         return Command.SINGLE_SUCCESS;
     }
 

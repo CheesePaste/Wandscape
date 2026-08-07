@@ -61,6 +61,12 @@ public final class ColonyLevelManager {
         return data.getName(colonyId);
     }
 
+    /** 直接设置殖民地等级（调试/测试用），经验清零。 */
+    public void setLevel(UUID colonyId, int level) {
+        data.setLevel(colonyId, Math.max(1, level));
+        data.setExperience(colonyId, 0);
+    }
+
     /** Set the display name for a colony. */
     public void setColonyName(UUID colonyId, String name) {
         if (name != null && !name.isEmpty()) {
