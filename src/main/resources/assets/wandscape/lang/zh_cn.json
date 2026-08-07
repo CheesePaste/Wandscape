@@ -436,5 +436,18 @@
   "bubble.wandscape.npc.__fallback__.1": "环境宜人",
   "bubble.wandscape.npc.__fallback__.2": "继续努力",
   "bubble.wandscape.npc.__fallback__.3": "日子一天天过",
-  "bubble.wandscape.npc.__fallback__.4": "希望一切顺利"
+  "bubble.wandscape.npc.__fallback__.4": "希望一切顺利",
+  "gui.wandscape.npc.strategy": "策略",
+  "gui.wandscape.strategy.title": "施法策略",
+  "gui.wandscape.strategy.preset.balanced": "均衡",
+  "gui.wandscape.strategy.preset.offensive": "火力",
+  "gui.wandscape.strategy.preset.support": "支援",
+  "gui.wandscape.strategy.preset.defensive": "防御",
+  "gui.wandscape.strategy.priority": "施法优先级（点击切换启停）",
+  "gui.wandscape.strategy.enabled": "启用",
+  "gui.wandscape.strategy.disabled": "停用",
+  "gui.wandscape.strategy.hint": "预设按分类排序魔法；点击某个魔法会切到自定义",
+  "magic.wandscape.beam": "光束",
+  "magic.wandscape.teleport": "传送",
+  "magic.wandscape.revive": "复活"
 }

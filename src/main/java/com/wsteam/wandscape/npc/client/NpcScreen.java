@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.npc.client;
 
+import java.util.List;
+
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
@@ -38,6 +40,9 @@ public class NpcScreen extends MedievalScreen {
     private float moveSpeed, spellPower, workSpeed, spellSpeed, armorValue;
     private ItemStack wandStack;
     private boolean isDefaultWand;
+    private String strategyPreset = "BALANCED";
+    private List<String> knownSpells = List.of();
+    private List<String> priority = List.of();
 
     // Layout positions (computed in render, used for click detection)
     private int wandSlotX, wandSlotY;
@@ -66,12 +71,21 @@ public class NpcScreen extends MedievalScreen {
         this.armorValue = packet.armorValue();
         this.wandStack = packet.wandStack();
         this.isDefaultWand = packet.isDefaultWand();
+        this.strategyPreset = packet.strategyPreset();
+        this.knownSpells = packet.knownSpells();
+        this.priority = packet.priority();
         setTitleBar(Component.literal(npcName));
     }
 
     @Override
     protected void init() {
         super.init();
+        // 策略按钮（打开施法策略屏）
+        addRenderableWidget(new MedievalButton(
+                leftPos + PW - 104, topPos + PH - 22, 46, 16,
+                I18n.name("gui.wandscape.npc.strategy", "Strategy"),
+                () -> Minecraft.getInstance().setScreen(
+                        new NpcStrategyScreen(entityId, strategyPreset, knownSpells, priority))));
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,

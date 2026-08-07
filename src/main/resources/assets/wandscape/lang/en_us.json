@@ -448,5 +448,18 @@
   "bubble.wandscape.npc.__fallback__.1": "Pleasant surroundings",
   "bubble.wandscape.npc.__fallback__.2": "Keep going",
   "bubble.wandscape.npc.__fallback__.3": "Day by day",
-  "bubble.wandscape.npc.__fallback__.4": "Hope all goes well"
+  "bubble.wandscape.npc.__fallback__.4": "Hope all goes well",
+  "gui.wandscape.npc.strategy": "Strategy",
+  "gui.wandscape.strategy.title": "Cast Strategy",
+  "gui.wandscape.strategy.preset.balanced": "Balanced",
+  "gui.wandscape.strategy.preset.offensive": "Offensive",
+  "gui.wandscape.strategy.preset.support": "Support",
+  "gui.wandscape.strategy.preset.defensive": "Defensive",
+  "gui.wandscape.strategy.priority": "Cast priority (click to toggle)",
+  "gui.wandscape.strategy.enabled": "On",
+  "gui.wandscape.strategy.disabled": "Off",
+  "gui.wandscape.strategy.hint": "Presets order spells by category; toggling a spell switches to custom",
+  "magic.wandscape.beam": "Beam",
+  "magic.wandscape.teleport": "Teleport",
+  "magic.wandscape.revive": "Revive"
 }

@@ -38,6 +38,7 @@ import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.engine.sound.ColonyAmbientSystem;
 import com.wsteam.wandscape.npc.client.NpcScreen;
+import com.wsteam.wandscape.npc.client.NpcStrategyScreen;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.tourist.client.TouristScreen;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
@@ -216,7 +217,9 @@ public class WandscapeClient {
         });
         NpcDataPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
-            if (mc.screen instanceof NpcScreen existing) {
+            if (mc.screen instanceof NpcStrategyScreen strategyScreen) {
+                strategyScreen.apply(packet);
+            } else if (mc.screen instanceof NpcScreen existing) {
                 existing.apply(packet);
             } else {
                 mc.setScreen(new NpcScreen(packet));
