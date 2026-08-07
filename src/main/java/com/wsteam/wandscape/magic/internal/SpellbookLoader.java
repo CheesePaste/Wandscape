@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.magic.internal;
 
+import java.util.Map;
+
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
@@ -28,8 +30,18 @@ public class SpellbookLoader {
         return registry.get(id);
     }
 
+    /** 全部魔法（id → 定义），供祭坛/策略 UI 列举。 */
+    public Map<String, MagicDef> getAll() {
+        return registry.getAll();
+    }
+
     @Nullable
     public static MagicDef getSpec(String id) {
         return INSTANCE != null ? INSTANCE.get(id) : null;
+    }
+
+    /** 全部魔法（id → 定义）；loader 未初始化时为空 map。 */
+    public static Map<String, MagicDef> getAllSpecs() {
+        return INSTANCE != null ? INSTANCE.getAll() : Map.of();
     }
 }

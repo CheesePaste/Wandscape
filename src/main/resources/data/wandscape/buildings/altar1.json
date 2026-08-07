@@ -1,0 +1,109 @@
+{
+  "id": "altar1",
+  "display_name": "Altar",
+  "category": "altar",
+  "pattern": [
+    [-2, 0, -2],
+    [-1, 0, -2],
+    [0, 0, -2],
+    [1, 0, -2],
+    [2, 0, -2],
+    [-2, 0, -1],
+    [-1, 0, -1],
+    [0, 0, -1],
+    [1, 0, -1],
+    [2, 0, -1],
+    [-2, 0, 0],
+    [-1, 0, 0],
+    [0, 0, 0],
+    [1, 0, 0],
+    [2, 0, 0],
+    [-2, 0, 1],
+    [-1, 0, 1],
+    [0, 0, 1],
+    [1, 0, 1],
+    [2, 0, 1],
+    [-2, 0, 2],
+    [-1, 0, 2],
+    [0, 0, 2],
+    [1, 0, 2],
+    [2, 0, 2],
+    [-2, 1, -2],
+    [2, 1, -2],
+    [-2, 1, 2],
+    [2, 1, 2],
+    [0, 1, 0],
+    [-2, 2, -2],
+    [2, 2, -2],
+    [-2, 2, 2],
+    [2, 2, 2],
+    [0, 2, 0]
+  ],
+  "block_mapping": {
+    "-2,0,-2": "minecraft:stone_bricks",
+    "-1,0,-2": "minecraft:stone_bricks",
+    "0,0,-2": "minecraft:stone_bricks",
+    "1,0,-2": "minecraft:stone_bricks",
+    "2,0,-2": "minecraft:stone_bricks",
+    "-2,0,-1": "minecraft:stone_bricks",
+    "-1,0,-1": "minecraft:stone_bricks",
+    "0,0,-1": "minecraft:stone_bricks",
+    "1,0,-1": "minecraft:stone_bricks",
+    "2,0,-1": "minecraft:stone_bricks",
+    "-2,0,0": "minecraft:stone_bricks",
+    "-1,0,0": "minecraft:stone_bricks",
+    "0,0,0": "minecraft:stone_bricks",
+    "1,0,0": "minecraft:stone_bricks",
+    "2,0,0": "minecraft:stone_bricks",
+    "-2,0,1": "minecraft:stone_bricks",
+    "-1,0,1": "minecraft:stone_bricks",
+    "0,0,1": "minecraft:stone_bricks",
+    "1,0,1": "minecraft:stone_bricks",
+    "2,0,1": "minecraft:stone_bricks",
+    "-2,0,2": "minecraft:stone_bricks",
+    "-1,0,2": "minecraft:stone_bricks",
+    "0,0,2": "minecraft:stone_bricks",
+    "1,0,2": "minecraft:stone_bricks",
+    "2,0,2": "minecraft:stone_bricks",
+    "-2,1,-2": "minecraft:chiseled_stone_bricks",
+    "2,1,-2": "minecraft:chiseled_stone_bricks",
+    "-2,1,2": "minecraft:chiseled_stone_bricks",
+    "2,1,2": "minecraft:chiseled_stone_bricks",
+    "0,1,0": "minecraft:polished_blackstone_bricks",
+    "-2,2,-2": "minecraft:chiseled_stone_bricks",
+    "2,2,-2": "minecraft:chiseled_stone_bricks",
+    "-2,2,2": "minecraft:chiseled_stone_bricks",
+    "2,2,2": "minecraft:chiseled_stone_bricks",
+    "0,2,0": "minecraft:amethyst_block"
+  },
+  "comfort": 2,
+  "magic": 8,
+  "wonder": 4,
+  "maintenance_cost": {
+    "costs": {
+      "dark": 2
+    }
+  },
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "magic"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 3
+  },
+  "boundary": {
+    "min": [-2, 0, -2],
+    "max": [2, 2, 2]
+  },
+  "door_offset": [0, 0, 2],
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
+  }
+}

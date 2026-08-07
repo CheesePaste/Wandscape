@@ -46,7 +46,7 @@ public class BuildingScannerScreen extends MedievalScreen {
     // ── Category ──
     private static final List<String> CATEGORIES = List.of(
             "basic", "government", "node", "storage", "workstation", "crafting_station",
-            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "custom"
+            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "altar", "custom"
     );
 
     // ── Door offset ──
