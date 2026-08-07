@@ -23,8 +23,9 @@ import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Listens for block break and explosion events.
- * Marks affected buildings as {@code structureIntact = false} and enqueues a
- * partial repair WorkItem targeting only the damaged positions.
+ * Marks affected buildings as {@code structureIntact = false} so the player can
+ * see the damage and trigger a repair. Repair is only ever initiated by the
+ * player (see {@link #triggerRepair}) — never enqueued automatically.
  */
 public final class BuildingBreakHandler {
     private static final String TAG = "BuildingBreakHandler";
@@ -87,8 +88,7 @@ public final class BuildingBreakHandler {
             colonyApi.onBuildingDestroyed(state);
         }
 
-        enqueueRepairForOffsets(state, config, damaged);
-        Log.info(TAG, "[Building] {} BROKEN at {} — {}/{} blocks damaged (>= 1/3), repair enqueued",
+        Log.info(TAG, "[Building] {} BROKEN at {} — {}/{} blocks damaged (>= 1/3), awaiting manual repair",
                 state.getBuildingTypeId(), state.getAnchor(), damaged.size(), config.pattern().size());
     }
 
@@ -137,52 +137,9 @@ public final class BuildingBreakHandler {
                 }
             }
 
-            enqueueRepairForOffsets(state, config, damaged);
-            Log.info(TAG, "[Building] {} BROKEN by explosion at {} — {}/{} blocks damaged (>= 1/3), repair enqueued",
+            Log.info(TAG, "[Building] {} BROKEN by explosion at {} — {}/{} blocks damaged (>= 1/3), awaiting manual repair",
                     state.getBuildingTypeId(), state.getAnchor(), damaged.size(), config.pattern().size());
         }
-    }
-
-    /**
-     * Enqueue a partial repair targeting specific world positions.
-     * Used when the damaged positions are known from the break/explosion event.
-     */
-    static void enqueueRepairForPositions(BuildingState state, List<BlockPos> damagedWorldPositions) {
-        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
-        if (config == null) {
-            Log.warn(TAG, "[Building] Cannot enqueue repair — config not found: {}", state.getBuildingTypeId());
-            return;
-        }
-
-        int rotationSteps = state.getRotationSteps();
-        java.util.Map<String, String> blockMapping = rotationSteps != 0
-                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
-                        config.blockMapping(), rotationSteps)
-                : config.blockMapping();
-
-        BlockPos anchor = state.getAnchor();
-        JsonArray offsets = new JsonArray();
-        JsonObject blocks = new JsonObject();
-
-        for (BlockPos worldPos : damagedWorldPositions) {
-            int dx = worldPos.getX() - anchor.getX();
-            int dy = worldPos.getY() - anchor.getY();
-            int dz = worldPos.getZ() - anchor.getZ();
-            String key = dx + "," + dy + "," + dz;
-            String blockSpec = blockMapping.get(key);
-            if (blockSpec == null) continue;
-
-            JsonArray off = new JsonArray();
-            off.add(dx);
-            off.add(dy);
-            off.add(dz);
-            offsets.add(off);
-            blocks.addProperty(key, blockSpec);
-        }
-
-        if (offsets.isEmpty()) return;
-
-        enqueueRepairWorkItem(state, config, offsets, blocks);
     }
 
     /**
