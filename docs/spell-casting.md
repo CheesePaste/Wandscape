@@ -1,9 +1,9 @@
 # NPC 施法决策层 — 设计文档
 
-> **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中均已实现**（见文末实施表）。
+> **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中、P4 死亡留存 + 复活均已实现**（见文末实施表）。
 > 分类已定案为 5 类（SINGLE_TARGET / AOE / DEFENSE / SUPPORT / UTILITY）。
-> **P3 玩家策略 + CastBrain 条件扩展（WorldSnapshot + conditions）规划中**；**P4 死亡留存 + 复活规划中**。
-> 本文既记录已落地结构，也是 P3/P4 的实施蓝图。
+> **P3 玩家策略 + CastBrain 条件扩展（WorldSnapshot + conditions）规划中**。
+> 本文既记录已落地结构，也是 P3 的实施蓝图。
 
 ## 一、现状问题：为什么需要决策层
 
@@ -161,9 +161,10 @@ shared/api/SpellcastingApi.java     （P3）决策层对外接口（getKnownSpel
 core/component/SpellbookComponent.java   （P3）NPC 会哪些魔法（magicId 列表）
 core/component/CastStrategyComponent.java (P3) 策略预设 + 优先级列表
 magic/internal/MagicOp.java         （延后）魔法效果分发注册表——有第二个战斗魔法时再建
-npc/data/DeathRecord.java           （P4）死亡留存记录（纯数据）
-npc/internal/ColonyDeathRegistry.java   （P4）死亡记录 SavedData（按殖民地分组）
-magic/internal/ReviveExecutor.java  （P4）复活效果：走仪式系统生成 NPC
+npc/data/DeathRecord.java           ✅ 死亡留存记录（纯数据 record + nearest 纯逻辑）
+npc/internal/ColonyDeathRegistry.java ✅ 死亡记录 SavedData（平铺列表，3 天过期清理）
+npc/internal/NpcDeathHandler.java   ✅ LivingDeathEvent 钩子：死亡瞬间抓快照
+npc/internal/ReviveHandler.java     ✅ 复活魔法：dead_ally 目标解析 + 门控 + 引导调度 + 生成 NPC
 ```
 
 ### 6.1 `MagicOp` — 效果分发（**未实现，延后**）
@@ -207,27 +208,27 @@ magic/internal/ReviveExecutor.java  （P4）复活效果：走仪式系统生成
 4. **`MagicCaster` 瘦身**（随 MagicOp 一起）：从"只会射光束"变成"`MagicOp` 分发器的 beam 实现"；玩家调试命令 `cast` / shift+右键 `castNpc` 保留（免费，测试功能，走 L0 调试路径不进玩家策略）。
 5. **手动施法**（shift+右键）保持免费、不占蓝（现注释即"测试功能"），只占用 CD 与互斥锁——不归玩家策略管。
 
-## 九、复活与死亡留存（P4 设计）
+## 九、复活与死亡留存（✅ 已实现）
 
-**动机**：守卫 NPC 战死不可逆，殖民地战力永久损失。复活 = UTILITY 魔法 + 仪式执行 + 死亡留存数据。
+**动机**：守卫 NPC 战死不可逆，殖民地战力永久损失。复活 = UTILITY 魔法（`magic_spells/revive.json`）+ 死亡留存数据，**第一版不走仪式系统**（shift+右键玩家指挥式，独立引导调度）。
 
-### 9.1 死亡留存（前置系统）
+### 9.1 死亡留存（已实现）
 
-NPC 死后实体与 ECS 状态即被清理，必须**在死亡瞬间**抓快照：
+- **触发**：`NpcDeathHandler`（LivingDeathEvent 钩子，Wandscape 构造器注册），在实体清理前抓快照。
+- **数据 `DeathRecord`**（纯 record）：npcId、名字、维度、死亡坐标、死亡时间、所属殖民地、外观（皮肤变体/帽子颜色）、hasDefaultWand、7 属性快照、背包快照（ECS Inventory 的 ResourceStack 列表）。
+- **存储 `ColonyDeathRegistry`**：SavedData（`wandscape_npc_deaths`），每世界一份平铺列表。
+- **清理**：复活成功后删除；超过 3 游戏日（`EXPIRE_TICKS`）由 `ReviveHandler.tick` 每日 prune。
+- **第一版无墓碑方块**：施法时死亡点生成法阵（复用 `MagicCircleCastPacket` 链路），玩家看到法阵即知位置。
 
-- **触发**：新增 `LivingDeathEvent` 钩子（WandscapeNpc 死亡，且非测试/命令移除），在实体清理前调用。
-- **数据 `DeathRecord`**（纯 record）：npcId、名字、死亡坐标（维度 + x/y/z）、死亡时间（游戏日）、所属殖民地、外观（皮肤变体/帽子颜色）、7 属性快照、装备快照、背包快照（27 格）。
-- **存储 `ColonyDeathRegistry`**：SavedData，按殖民地分组（仿 `StatisticsData`/`ColonyItemBank`）。
-- **清理**：复活成功后删除记录；超时过期（如 3 游戏日，可配）自动清除（"尸骨未寒"才有价值）。
-- **第一版不做墓碑方块**：玩家靠复活施法时生成的魔法阵 + `/wandscape` 命令/NPC 界面看到死者位置；墓碑方块留作后续视觉增强。
+### 9.2 复活魔法（已实现）
 
-### 9.2 复活魔法
-
-- **MagicDef**：`id=revive`、`category=utility`、`target_mode=dead_ally`、高蓝耗、长 CD。
-- **目标解析**：施法时在施法者周围扫描最近的 `DeathRecord`（范围可配），法阵在死亡点生成（复用 `MagicCircleCastPacket` 链路），引导期间玩家看到法阵即知位置。
-- **执行**：走**仪式系统**（RitualOp + 新 `RitualId.REVIVE`，长引导 600+ tick，可选祭品消耗），完成后在死亡点生成新 `WandscapeNpc`，恢复身份/外观/属性/装备/背包，删除死亡记录。
-- **触发方式**：第一版为**玩家指挥**（shift+右键 NPC / NpcScreen 按钮 → NPC 面向最近死者施法）；NPC 自动发现死者复活的 AI 不做（需"发现死者"能力，复杂度高）。
-- **与施法决策的关系**：复活不自动进 NPC 战斗决策表（L1），它走玩家命令的 L0/手动路径——避免 NPC 战斗中放着敌人不管去拉人。
+- **MagicDef**：`id=revive`、`category=utility`、`target_mode=dead_ally`、蓝 80 / CD 600 / 射程 32、法阵 `self_teleport`（紫色传送阵）。
+- **触发**：shift+右键 NPC → `MagicInteractHandler` → `ReviveHandler.castRevive`：施法者周围射程内最近的 `DeathRecord`；无则提示玩家。门控（互斥锁 + revive 独立 CD + 魔力）走 `npc.tryCastSpell`。
+- **引导**：时长 = 复活法阵 spec 时长（法阵完整展开后完成，缺失回退 100 tick）；期间 NPC 面向死亡点、举杖（`startManualCast`）。
+- **完成**：`ReviveHandler.tick`（onServerTick 驱动）到期后在死亡点附近安全位置生成新 `WandscapeNpc`，恢复名字/外观/属性/满蓝/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
+- **失败兜底**：生成位置无地可放等失败 → 记录保留，玩家可重试。
+- **与施法决策的关系**：复活不进 NPC 自动战斗决策表（L1）——玩家指挥式，避免 NPC 战斗中弃敌救人。
+- **遗留**：装备只恢复 default wand（当前装备系统仅 WAND 槽）；墓碑方块视觉留作后续增强。
 
 ## 十、分阶段实施
 
@@ -235,8 +236,8 @@ NPC 死后实体与 ECS 状态即被清理，必须**在死亡瞬间**抓快照�
 |---|---|---|
 | **P1 数据与分发** | `MagicDef` + `magic_spells` JSON（beam/teleport）+ `SpellbookLoader`（dataconfig）；CD/蓝/射程/视觉改数据驱动 | ✅ 已实现（行为不变，配 6 个解析单测） |
 | **P2 决策集中** | `CastBrain`（L1 优先级扫描）；GuardCombat/SelfDefense 经 CastBrain 选魔法再分发 | ✅ 已实现（配 6 个单测） |
-| **P3 玩家策略 + 条件** | 分类定案（5 类）；`Conditions` + `WorldSnapshot` + CastBrain 扩展；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `NpcScreen` 策略 UI | ⏳ 规划中 |
-| **P4 死亡留存 + 复活** | `DeathRecord` + `ColonyDeathRegistry`（SavedData）+ 死亡钩子；`revive` MagicDef + `dead_ally` 目标 + 仪式接入 + 重生恢复 | ⏳ 规划中 |
+| **P3 玩家策略 + 条件** | 分类定案（5 类，已落地）；`Conditions` + `WorldSnapshot` + CastBrain 扩展；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `NpcScreen` 策略 UI | ⏳ 规划中 |
+| **P4 死亡留存 + 复活** | `DeathRecord` + `ColonyDeathRegistry`（SavedData）+ `NpcDeathHandler` 钩子；`revive` MagicDef + `dead_ally` 目标 + shift+右键施放 + 引导到期生成 NPC 恢复数据 | ✅ 已实现（配 8 个单测） |
 
 P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即按 CLAUDE.md 提交规则 commit。
 
