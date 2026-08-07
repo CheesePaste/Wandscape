@@ -11,6 +11,7 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
+import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -259,8 +260,9 @@ public class NavigationSystem implements System {
 
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
         // 门控：施法互斥锁 + 传送独立 CD + 固定魔力，任一不满足回退走路（而不是站等）。
-        // 锁时长 = self_teleport 引导 tick（当前 1，待 WandscapeRitualOps 还原 600 时同步）。
-        if (npc != null && !npc.tryCastSpell("teleport", TELEPORT_COOLDOWN_TICKS, TELEPORT_MANA_COST, 1)) {
+        // 锁时长 = self_teleport 引导 tick（与 WandscapeRitualOps 引导时长对齐，防止引导期间并发施法）。
+        if (npc != null && !npc.tryCastSpell("teleport", TELEPORT_COOLDOWN_TICKS, TELEPORT_MANA_COST,
+                WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT))) {
             Log.info(TAG, "[NavSys] NPC {} — teleport gated (lock/CD/mana), falling back to walking", npcId);
             nav.mode = NavigationState.Mode.PATHFINDING;
             nav.startTick = 0;
