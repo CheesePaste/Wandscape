@@ -90,6 +90,7 @@ public class TavernRecruitStorage extends SavedData {
     private static final String TAG_WORK_SPEED = "workSpeed";
     private static final String TAG_SPELL_SPEED = "spellSpeed";
     private static final String TAG_ARMOR_VALUE = "armorValue";
+    private static final String TAG_MAX_MANA = "maxMana";
     private static final String TAG_SKIN_VARIANT = "skinVariant";
     private static final String TAG_TIMESTAMP = "timestamp";
 
@@ -112,6 +113,7 @@ public class TavernRecruitStorage extends SavedData {
                         rt.getFloat(TAG_WORK_SPEED),
                         rt.getFloat(TAG_SPELL_SPEED),
                         rt.getFloat(TAG_ARMOR_VALUE),
+                        rt.getFloat(TAG_MAX_MANA),
                         rt.getInt(TAG_SKIN_VARIANT),
                         rt.getLong(TAG_TIMESTAMP)));
             }
@@ -137,6 +139,7 @@ public class TavernRecruitStorage extends SavedData {
                 rt.putFloat(TAG_WORK_SPEED, r.workSpeed());
                 rt.putFloat(TAG_SPELL_SPEED, r.spellSpeed());
                 rt.putFloat(TAG_ARMOR_VALUE, r.armorValue());
+                rt.putFloat(TAG_MAX_MANA, r.maxMana());
                 rt.putInt(TAG_SKIN_VARIANT, r.skinVariant());
                 rt.putLong(TAG_TIMESTAMP, r.timestamp());
                 resumesTag.add(rt);

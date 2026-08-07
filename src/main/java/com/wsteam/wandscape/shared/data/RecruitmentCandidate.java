@@ -13,5 +13,6 @@ public record RecruitmentCandidate(
     float workSpeed,
     float spellSpeed,
     float armorValue,
+    float maxMana,
     List<String> starterWandIds
 ) {}

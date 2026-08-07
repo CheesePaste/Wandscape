@@ -45,6 +45,7 @@ public final class TouristShadow implements TouristStateHost {
     private float workSpeed;
     private float spellSpeed;
     private float armorValue;
+    private float maxMana;
     private boolean mageResumeStored;
 
     // ── Sim clock (mirrors entity tickCount for cooldown semantics) ──
@@ -142,6 +143,8 @@ public final class TouristShadow implements TouristStateHost {
     public void setSpellSpeed(float v) { this.spellSpeed = v; }
     public float getArmor() { return armorValue; }
     public void setArmor(float v) { this.armorValue = v; }
+    public float getMaxMana() { return maxMana; }
+    public void setMaxMana(float v) { this.maxMana = v; }
     public boolean isMageResumeStored() { return mageResumeStored; }
     public void setMageResumeStored(boolean v) { this.mageResumeStored = v; }
 
@@ -244,6 +247,7 @@ public final class TouristShadow implements TouristStateHost {
         tag.putFloat("workSpeed", workSpeed);
         tag.putFloat("spellSpeed", spellSpeed);
         tag.putFloat("armorValue", armorValue);
+        tag.putFloat("maxMana", maxMana);
         tag.putBoolean("mageResume", mageResumeStored);
         tag.putInt("simTick", simTick);
         tag.putDouble("x", posX);
@@ -317,6 +321,7 @@ public final class TouristShadow implements TouristStateHost {
         s.workSpeed = tag.getFloat("workSpeed");
         s.spellSpeed = tag.getFloat("spellSpeed");
         s.armorValue = tag.getFloat("armorValue");
+        s.maxMana = tag.getFloat("maxMana");
         s.mageResumeStored = tag.getBoolean("mageResume");
         s.simTick = tag.getInt("simTick");
         s.posX = tag.getDouble("x");

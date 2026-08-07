@@ -65,6 +65,7 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
             rt.putFloat("workSpeed", r.workSpeed());
             rt.putFloat("spellSpeed", r.spellSpeed());
             rt.putFloat("armorValue", r.armorValue());
+            rt.putFloat("maxMana", r.maxMana());
             rt.putInt("skinVariant", r.skinVariant());
             rt.putLong("timestamp", r.timestamp());
             resumesTag.add(rt);
@@ -91,6 +92,7 @@ public record TavernOpenPacket(BlockPos buildingPos, UUID colonyId,
                     rt.getFloat("workSpeed"),
                     rt.getFloat("spellSpeed"),
                     rt.getFloat("armorValue"),
+                    rt.getFloat("maxMana"),
                     rt.getInt("skinVariant"),
                     rt.getLong("timestamp")));
         }

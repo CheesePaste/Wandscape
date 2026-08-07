@@ -16,7 +16,8 @@ public interface TavernApi {
      */
     void receiveMageResume(UUID colonyId, String touristName, int level,
                            float maxHp, float moveSpeed, float spellPower,
-                           float workSpeed, float spellSpeed, float armorValue, int skinVariant);
+                           float workSpeed, float spellSpeed, float armorValue,
+                           float maxMana, int skinVariant);
 
     /** Returns mage resumes available at a tavern, newest first. */
     List<MageResume> getMageResumes(UUID colonyId);

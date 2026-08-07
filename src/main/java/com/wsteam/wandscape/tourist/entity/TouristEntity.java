@@ -173,6 +173,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     private float workSpeed = 1f;
     private float spellSpeed = 1f;
     private float armorValue = 0f;
+    private float maxMana = 200f;
 
     /** Whether the mage resume has already been stored in the tavern for this tourist. */
     private boolean mageResumeStored;
@@ -324,14 +325,15 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
             if (mage) {
                 variant = random.nextInt(WIZARD_SKIN_COUNT);
-                // Roll mage attributes by level (spawn system pre-sets level based on colony level)
-                double scale = 0.8 + this.level * 0.2;
-                maxHp = Math.max(20f, (float) Math.round((40 + random.nextInt(21)) * scale));   // 40–60 × scale
-                moveSpeed = 0.25f + random.nextFloat() * 0.15f;                                  // 0.25–0.40
-                spellPower = Math.max(1f, (float) Math.round((1 + random.nextInt(4)) * scale)); // 1–4 × scale
-                workSpeed = Math.max(1f, (float) Math.round((1 + random.nextInt(2)) * scale));  // 1–2 × scale
-                spellSpeed = Math.max(1f, (float) Math.round((1 + random.nextInt(2)) * scale)); // 1–2 × scale
-                armorValue = (float) Math.round(random.nextInt(11) * scale);                    // 0–10 × scale
+                // 偏斜分布 random²（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
+                int lvlBonus = level - 1;
+                maxHp = (float) Math.round(20 + 20 * skew()) + lvlBonus * 2f;        // 20–40 + 2/级
+                maxMana = (float) Math.round(150 + 100 * skew()) + lvlBonus * 15f;   // 150–250 + 15/级
+                moveSpeed = 0.25f + random.nextFloat() * 0.15f;                      // 0.25–0.40（不变）
+                spellPower = round2(0.5f + (float) skew() + lvlBonus * 0.05f);       // 0.5–1.5 + 0.05/级
+                workSpeed = round2(0.5f + (float) skew() + lvlBonus * 0.05f);
+                spellSpeed = round2(0.5f + (float) skew() + lvlBonus * 0.05f);
+                armorValue = (float) Math.round(8 * skew()) + lvlBonus * 0.5f;       // 0–8 + 0.5/级
             } else {
                 variant = random.nextInt(TOURIST_SKIN_COUNT);
             }
@@ -439,6 +441,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         tag.putFloat("workSpeed", workSpeed);
         tag.putFloat("spellSpeed", spellSpeed);
         tag.putFloat("armorValue", armorValue);
+        tag.putFloat("maxMana", maxMana);
         tag.putBoolean("mageResumeStored", mageResumeStored);
 
         if (colonyId != null) tag.putUUID("colonyId", colonyId);
@@ -537,6 +540,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.workSpeed = tag.getFloat("workSpeed");
         this.spellSpeed = tag.getFloat("spellSpeed");
         this.armorValue = tag.getFloat("armorValue");
+        this.maxMana = tag.getFloat("maxMana");
         this.mageResumeStored = tag.getBoolean("mageResumeStored");
 
         this.colonyId = tag.hasUUID("colonyId") ? tag.getUUID("colonyId") : null;
@@ -718,6 +722,18 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public float getWorkSpeed() { return workSpeed; }
     public float getSpellSpeed() { return spellSpeed; }
     public float getArmor() { return armorValue; }
+    public float getMaxMana() { return maxMana; }
+
+    /** 偏斜随机因子：random² ∈ [0,1)，多数偏向低值、偶发接近 1。 */
+    private double skew() {
+        double r = random.nextDouble();
+        return r * r;
+    }
+
+    /** 保留两位小数。 */
+    private static float round2(float v) {
+        return Math.round(v * 100f) / 100f;
+    }
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }

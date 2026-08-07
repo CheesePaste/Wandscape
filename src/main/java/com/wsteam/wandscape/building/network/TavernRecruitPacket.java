@@ -158,6 +158,8 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         npc.workSpeed = resume.workSpeed();
         npc.spellSpeed = resume.spellSpeed();
         npc.armorValue = resume.armorValue();
+        npc.maxMana = resume.maxMana();
+        npc.magic.setMana(resume.maxMana()); // 满蓝入职
 
         fixEcsAfterSpawn(npc, colonyId);
 

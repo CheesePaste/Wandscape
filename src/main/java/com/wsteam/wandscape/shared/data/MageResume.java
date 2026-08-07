@@ -15,6 +15,7 @@ public record MageResume(
         @SerializedName("work_speed") float workSpeed,
         @SerializedName("spell_speed") float spellSpeed,
         @SerializedName("armor_value") float armorValue,
+        @SerializedName("max_mana") float maxMana,
         @SerializedName("skin_variant") int skinVariant,
         long timestamp
 ) {
@@ -26,12 +27,13 @@ public record MageResume(
         if (workSpeed < 1f) workSpeed = 1f;
         if (spellSpeed < 1f) spellSpeed = 1f;
         if (armorValue < 0f) armorValue = 0f;
+        if (maxMana < 1f) maxMana = 200f;
         if (skinVariant < 0) skinVariant = 0;
     }
 
     /** Convert to a RecruitmentCandidate for the tavern GUI and NPC spawning. */
     public RecruitmentCandidate toCandidate() {
         return new RecruitmentCandidate(level, maxHp, moveSpeed, spellPower,
-                workSpeed, spellSpeed, armorValue, java.util.List.of());
+                workSpeed, spellSpeed, armorValue, maxMana, java.util.List.of());
     }
 }

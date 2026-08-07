@@ -82,6 +82,7 @@ public interface TouristStateHost {
     float getWorkSpeed();
     float getSpellSpeed();
     float getArmor();
+    float getMaxMana();
 
     long getArrivalTime();
     void setArrivalTime(long t);
