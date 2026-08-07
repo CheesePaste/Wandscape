@@ -51,4 +51,17 @@ class DeathRecordTest {
         assertEquals(3, r.z());
         assertEquals("A", r.name());
     }
+
+    @Test
+    void latestPicksNewestDeathTimeIgnoringPosition() {
+        DeathRecord old = new DeathRecord(UUID.randomUUID(), "Old", "minecraft:overworld",
+                100, 0, 0, 100L, UUID.randomUUID(), 0, 0, true,
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+        DeathRecord fresh = new DeathRecord(UUID.randomUUID(), "Fresh", "minecraft:overworld",
+                20, 5, 20, 900L, UUID.randomUUID(), 0, 0, true,
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+        DeathRecord r = DeathRecord.latest(List.of(old, fresh));
+        assertEquals("Fresh", r.name(), "取 deathTime 最新的记录，不限位置");
+        assertNull(DeathRecord.latest(List.of()), "空列表返回 null");
+    }
 }

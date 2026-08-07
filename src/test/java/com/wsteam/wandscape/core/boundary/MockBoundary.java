@@ -65,6 +65,11 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     // ---- EntityOps ----
 
+    /** 模拟 NPC 当前魔力（调度器魔力门槛用）。 */
+    private float npcMana = 200f;
+
+    public void setNpcMana(float v) { this.npcMana = v; }
+
     @Override
     public void applyEffect(EntityId target, EffectId effect, int strength, int duration) {
     }
@@ -72,6 +77,11 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     @Override
     public GridPos getPosition(EntityId entity) {
         return GridPos.ORIGIN;
+    }
+
+    @Override
+    public float getCurrentMana(long npcId) {
+        return npcMana;
     }
 
     // ---- RitualOps ----

@@ -52,7 +52,7 @@ public class MagicState {
      * @param lockTicks 引导期间占用的互斥锁时长（= 祭坛魔法时长）
      */
     public boolean tryAltarCast(int manaCost, int lockTicks) {
-        if (lockTicks > 0 || currentMana < manaCost) return false;
+        if (this.lockTicks > 0 || currentMana < manaCost) return false;
         currentMana -= manaCost;
         this.lockTicks = Math.max(this.lockTicks, lockTicks);
         return true;

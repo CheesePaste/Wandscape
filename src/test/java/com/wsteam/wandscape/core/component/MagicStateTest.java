@@ -111,4 +111,30 @@ class MagicStateTest {
         assertEquals(cds.get("beam"), t.getCooldown("beam"));
         assertEquals(cds.get("teleport"), t.getCooldown("teleport"));
     }
+
+    @Test
+    void altarCastDeductsManaAndLocksWithoutPerMagicCooldown() {
+        MagicState s = full();
+        // 祭坛施法：扣蓝 80、占锁 160，但不设任何每魔法 CD（祭坛 CD 独立存放）
+        assertTrue(s.tryAltarCast(80, 160));
+        assertEquals(120f, s.getMana());
+        assertTrue(s.getLockTicks() > 0);
+        assertEquals(0, s.getCooldown("revive"), "祭坛施法不设置 NPC 每魔法 CD");
+        // 锁占用期间任何魔法（含祭坛）不可施
+        assertFalse(s.tryCast("beam", 40, 50, 1, 1f));
+        assertFalse(s.tryAltarCast(10, 1));
+        // 推进 160 tick：锁释放，可再祭坛施法
+        for (int i = 0; i < 160; i++) s.tickRegen(MAX_MANA, 10);
+        assertEquals(0, s.getLockTicks());
+        assertTrue(s.tryAltarCast(80, 160));
+    }
+
+    @Test
+    void altarCastRejectsInsufficientManaWithoutDeducting() {
+        MagicState s = full();
+        s.setMana(50f);
+        assertFalse(s.tryAltarCast(80, 160), "魔力不足应拒绝");
+        assertEquals(50f, s.getMana(), "拒绝时不能扣蓝");
+        assertEquals(0, s.getLockTicks(), "拒绝时不能占锁");
+    }
 }

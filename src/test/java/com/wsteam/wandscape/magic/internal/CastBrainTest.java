@@ -62,6 +62,18 @@ class CastBrainTest {
     }
 
     @Test
+    void skipsAltarOnlySpells() {
+        MagicDef beam = spell("beam", "hostile_nearest");
+        MagicDef revive = MagicDef.fromJson("revive", JsonParser.parseString(
+                "{\"id\": \"revive\", \"target_mode\": \"dead_ally\", \"altar_only\": true}"));
+        // 即使 altarOnly 魔法可施放且有目标，NPC 自动施法也不选它（祭坛专属）
+        MagicDef chosen = CastBrain.select(List.of(beam, revive), def -> true, true);
+        assertEquals("beam", chosen.id(), "altarOnly 魔法应被 NPC 自动施法跳过");
+        assertNull(CastBrain.select(List.of(revive), def -> true, true),
+                "只有 altarOnly 魔法时不施放（等待祭坛）");
+    }
+
+    @Test
     void requiresTargetByMode() {
         assertTrue(CastBrain.requiresTarget(spell("a", "hostile_nearest")));
         assertTrue(CastBrain.requiresTarget(spell("b", "hostile_lowest_hp")));

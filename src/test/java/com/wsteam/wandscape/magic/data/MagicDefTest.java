@@ -1,8 +1,10 @@
 package com.wsteam.wandscape.magic.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 
@@ -51,6 +53,30 @@ class MagicDefTest {
         assertEquals(MagicDef.TargetMode.DEAD_ALLY, revive.targetMode());
         assertEquals("self_teleport", revive.effectCircleId());
         assertNull(revive.effectColor());
+        assertTrue(revive.altarOnly(), "复活是祭坛专属魔法");
+        assertEquals(600, revive.altarCooldown());
+        assertEquals(160, revive.altarDuration());
+    }
+
+    @Test
+    void parsesAltarFields() {
+        MagicDef def = MagicDef.fromJson("altar", JsonParser.parseString(
+                "{\"altar_only\": true, \"altar_cooldown\": 600, \"altar_duration\": 160}"));
+        assertTrue(def.altarOnly());
+        assertEquals(600, def.altarCooldown());
+        assertEquals(160, def.altarDuration());
+    }
+
+    @Test
+    void altarFieldsDefaultAndClamp() {
+        MagicDef d = MagicDef.fromJson("d", JsonParser.parseString("{}"));
+        assertFalse(d.altarOnly());
+        assertEquals(0, d.altarCooldown());
+        assertEquals(0, d.altarDuration());
+        MagicDef neg = MagicDef.fromJson("neg", JsonParser.parseString(
+                "{\"altar_cooldown\": -5, \"altar_duration\": -1}"));
+        assertEquals(0, neg.altarCooldown());
+        assertEquals(0, neg.altarDuration());
     }
 
     @Test
