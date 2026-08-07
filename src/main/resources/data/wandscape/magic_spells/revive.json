@@ -5,6 +5,9 @@
   "base_cooldown": 600,
   "range": 32,
   "target_mode": "dead_ally",
+  "altar_only": true,
+  "altar_cooldown": 600,
+  "altar_duration": 160,
   "effect": {
     "circle_id": "self_teleport"
   }

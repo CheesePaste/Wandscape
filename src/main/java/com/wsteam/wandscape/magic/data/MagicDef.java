@@ -21,13 +21,18 @@ public record MagicDef(
         double range,
         TargetMode targetMode,
         @Nullable String effectCircleId,
-        @Nullable Integer effectColor
+        @Nullable Integer effectColor,
+        boolean altarOnly,
+        int altarCooldown,
+        int altarDuration
 ) {
 
     public MagicDef {
         manaCost = Math.max(0, manaCost);
         baseCooldown = Math.max(0, baseCooldown);
         range = Math.max(0, range);
+        altarCooldown = Math.max(0, altarCooldown);
+        altarDuration = Math.max(0, altarDuration);
     }
 
     /**
@@ -56,7 +61,11 @@ public record MagicDef(
             circleId = getString(effect, "circle_id", null);
             color = parseColorHex(getString(effect, "color", null));
         }
-        return new MagicDef(defId, category, manaCost, baseCooldown, range, targetMode, circleId, color);
+        boolean altarOnly = getBool(obj, "altar_only", false);
+        int altarCooldown = (int) Math.round(getDouble(obj, "altar_cooldown", 0));
+        int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
+        return new MagicDef(defId, category, manaCost, baseCooldown, range, targetMode,
+                circleId, color, altarOnly, altarCooldown, altarDuration);
     }
 
     /** "#A8E0FF" → 0xFFA8E0FF；非法/缺失返回 null。 */
@@ -86,5 +95,9 @@ public record MagicDef(
 
     private static double getDouble(JsonObject o, String key, double def) {
         return o.has(key) && o.get(key).isJsonPrimitive() ? o.get(key).getAsDouble() : def;
+    }
+
+    private static boolean getBool(JsonObject o, String key, boolean def) {
+        return o.has(key) && o.get(key).isJsonPrimitive() ? o.get(key).getAsBoolean() : def;
     }
 }

@@ -30,12 +30,16 @@ public final class CastBrain {
      * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
      *
+     * <p>{@code altarOnly} 魔法（如复活）只允许祭坛施放，NPC 直接施法永不选中——防御性保证
+     * 其不会进守卫/自防御的自动决策表。
+     *
      * @param castable  MagicDef → 是否满足施法门控（互斥锁 + 该魔法 CD + 蓝够）
      * @param hasTarget 调用方是否已选定有效目标（HOSTILE 系/ALLY 系需要目标，SELF/NONE 不需要）
      */
     @Nullable
     public static MagicDef select(List<MagicDef> known, Predicate<MagicDef> castable, boolean hasTarget) {
         for (MagicDef def : known) {
+            if (def.altarOnly()) continue;
             if (!castable.test(def)) continue;
             if (requiresTarget(def) && !hasTarget) continue;
             return def;
