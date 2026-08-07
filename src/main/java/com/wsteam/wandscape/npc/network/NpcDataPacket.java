@@ -24,6 +24,9 @@ public record NpcDataPacket(
         String npcName,
         int currentHealth,
         int maxHealth,
+        int currentMana,
+        int maxMana,
+        float moveSpeed,
         float spellPower,
         float workSpeed,
         float spellSpeed,
@@ -64,6 +67,9 @@ public record NpcDataPacket(
         buf.writeUtf(pkt.npcName);
         buf.writeInt(pkt.currentHealth);
         buf.writeInt(pkt.maxHealth);
+        buf.writeInt(pkt.currentMana);
+        buf.writeInt(pkt.maxMana);
+        buf.writeFloat(pkt.moveSpeed);
         buf.writeFloat(pkt.spellPower);
         buf.writeFloat(pkt.workSpeed);
         buf.writeFloat(pkt.spellSpeed);
@@ -77,6 +83,9 @@ public record NpcDataPacket(
         String npcName = buf.readUtf();
         int currentHealth = buf.readInt();
         int maxHealth = buf.readInt();
+        int currentMana = buf.readInt();
+        int maxMana = buf.readInt();
+        float moveSpeed = buf.readFloat();
         float spellPower = buf.readFloat();
         float workSpeed = buf.readFloat();
         float spellSpeed = buf.readFloat();
@@ -84,8 +93,8 @@ public record NpcDataPacket(
         boolean isDefaultWand = buf.readBoolean();
         ItemStack wandStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
-                spellPower, workSpeed, spellSpeed, armorValue,
-                wandStack, isDefaultWand);
+                currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
+                armorValue, wandStack, isDefaultWand);
     }
 
     /**
@@ -97,6 +106,7 @@ public record NpcDataPacket(
         boolean isDefault = npc.hasDefaultWand();
 
         // Read effective attributes from ECS equipment (base + additive modifiers)
+        float moveSpeed = npc.moveSpeed;
         float spellPower = npc.spellPower;
         float workSpeed = npc.workSpeed;
         float spellSpeed = npc.spellSpeed;
@@ -105,6 +115,7 @@ public record NpcDataPacket(
         if (world != null && npc.ecsEntityId > 0) {
             EquipmentComponent eq = world.get(npc.ecsEntityId, EquipmentComponent.class);
             if (eq != null) {
+                moveSpeed = eq.getAttribute(AttributeType.MOVE_SPEED);
                 spellPower = eq.getAttribute(AttributeType.SPELL_POWER);
                 workSpeed = eq.getAttribute(AttributeType.WORK_SPEED);
                 spellSpeed = eq.getAttribute(AttributeType.SPELL_SPEED);
@@ -117,6 +128,9 @@ public record NpcDataPacket(
                 npc.getNpcName(),
                 (int) npc.getHealth(),
                 (int) npc.getMaxHealth(),
+                (int) npc.getCurrentMana(),
+                (int) npc.getMaxMana(),
+                moveSpeed,
                 spellPower,
                 workSpeed,
                 spellSpeed,

@@ -34,7 +34,8 @@ public class NpcScreen extends MedievalScreen {
     private final int entityId;
     private String npcName;
     private int currentHealth, maxHealth;
-    private float spellPower, workSpeed, spellSpeed, armorValue;
+    private int currentMana, maxMana;
+    private float moveSpeed, spellPower, workSpeed, spellSpeed, armorValue;
     private ItemStack wandStack;
     private boolean isDefaultWand;
 
@@ -56,6 +57,9 @@ public class NpcScreen extends MedievalScreen {
         this.npcName = packet.npcName();
         this.currentHealth = packet.currentHealth();
         this.maxHealth = packet.maxHealth();
+        this.currentMana = packet.currentMana();
+        this.maxMana = packet.maxMana();
+        this.moveSpeed = packet.moveSpeed();
         this.spellPower = packet.spellPower();
         this.workSpeed = packet.workSpeed();
         this.spellSpeed = packet.spellSpeed();
@@ -134,6 +138,21 @@ public class NpcScreen extends MedievalScreen {
                 currentHealth + "/" + maxHealth,
                 MedievalColors.DANGER_RED);
         attrY += 11;
+
+        // Mana
+        g.drawString(font, I18n.name("gui.wandscape.npc.mana", "Mana").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        drawStatBar(g, rightCol + labelW, attrY, barWidth, 10,
+                maxMana > 0 ? (float) currentMana / maxMana : 0f,
+                currentMana + "/" + maxMana,
+                MedievalColors.MANA_BLUE);
+        attrY += 11;
+
+        // Move Speed
+        g.drawString(font, I18n.name("gui.wandscape.npc.moveSpeed", "Move").getString() + ":",
+                rightCol, attrY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, String.format("%.2f", moveSpeed), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
+        attrY += 10;
 
         // Spell Power
         g.drawString(font, I18n.name("gui.wandscape.npc.spell", "Spell").getString() + ":",
