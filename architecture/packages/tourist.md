@@ -50,6 +50,7 @@ Level 越高门槛越高，√ 递减保证至少 4 次交互才满，硬上限 
       → 满意度 ≥ 100 → depart（法师→酒馆简历）
       → 70–99 + 离开条件 → HotelStayHandler（有空位入住/无空位depart）
       → < 70 + 离开条件 → depart
+酒馆「招募 NPC」按钮 → MageAttributeRoller（random² 偏斜 + 殖民地等级加成）→ WandscapeNpc 入职
 ```
 
 ## 与道路系统联动
@@ -59,6 +60,7 @@ Level 越高门槛越高，√ 递减保证至少 4 次交互才满，硬上限 
 ## 依赖
 
 - shared/api/TouristApi / shared/event/TouristArrivedEvent/TouristDepartedEvent / WandscapeApis
+- shared/data/MageAttributeRoller（法师 7 属性 random² 掷点，游客简历与酒馆招募共用）
 - engine/road/RoadSavedData
 - building/internal/ShopInteractionHandler, ShopStockManager
 - Config（衰减/阈值/上限等参数）

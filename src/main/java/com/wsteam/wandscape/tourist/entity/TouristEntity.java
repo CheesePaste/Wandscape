@@ -14,6 +14,8 @@ import java.util.stream.Stream;
 
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
 import com.wsteam.wandscape.shared.data.Emotion;
+import com.wsteam.wandscape.shared.data.MageAttributeRoller;
+import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -326,14 +328,15 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             if (mage) {
                 variant = random.nextInt(WIZARD_SKIN_COUNT);
                 // 偏斜分布 random²（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
-                int lvlBonus = level - 1;
-                maxHp = (float) Math.round(20 + 20 * skew()) + lvlBonus * 2f;        // 20–40 + 2/级
-                maxMana = (float) Math.round(150 + 100 * skew()) + lvlBonus * 15f;   // 150–250 + 15/级
-                moveSpeed = 0.25f + random.nextFloat() * 0.15f;                      // 0.25–0.40（不变）
-                spellPower = round2(0.5f + (float) skew() + lvlBonus * 0.05f);       // 0.5–1.5 + 0.05/级
-                workSpeed = round2(0.5f + (float) skew() + lvlBonus * 0.05f);
-                spellSpeed = round2(0.5f + (float) skew() + lvlBonus * 0.05f);
-                armorValue = (float) Math.round(8 * skew()) + lvlBonus * 0.5f;       // 0–8 + 0.5/级
+                RecruitmentCandidate roll = MageAttributeRoller.roll(level,
+                        new java.util.Random(random.nextLong()));
+                maxHp = roll.maxHp();
+                maxMana = roll.maxMana();
+                moveSpeed = roll.moveSpeed();
+                spellPower = roll.spellPower();
+                workSpeed = roll.workSpeed();
+                spellSpeed = roll.spellSpeed();
+                armorValue = roll.armorValue();
             } else {
                 variant = random.nextInt(TOURIST_SKIN_COUNT);
             }
@@ -723,17 +726,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public float getSpellSpeed() { return spellSpeed; }
     public float getArmor() { return armorValue; }
     public float getMaxMana() { return maxMana; }
-
-    /** 偏斜随机因子：random² ∈ [0,1)，多数偏向低值、偶发接近 1。 */
-    private double skew() {
-        double r = random.nextDouble();
-        return r * r;
-    }
-
-    /** 保留两位小数。 */
-    private static float round2(float v) {
-        return Math.round(v * 100f) / 100f;
-    }
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }
