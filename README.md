@@ -87,6 +87,25 @@ Wandscape 是一个**魔法 × 小镇建设 × 模拟经营**模组：放下一�
 - **Mappings**：Parchment 2024.11.17
 - **JDK**：21+
 
+### AI 辅助开发工具（可选但推荐）
+
+用 Claude Code 开发时建议安装 **codebase-memory-mcp**：它把代码库索引成语义知识图谱，结构查询（调用链、影响面、架构、死代码）比逐个 grep 更快、更省 token，也是本项目 `CLAUDE.md`「代码发现」工作流（`search_graph` → `trace_path` → `get_code_snippet`）的基础。
+
+开源地址：<https://github.com/DeusData/codebase-memory-mcp>（MIT，单静态二进制，零依赖）。安装后会自动检测 Claude Code 并写入 MCP 配置：
+
+```powershell
+# Windows (PowerShell)
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 -OutFile install.ps1
+.\install.ps1
+```
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash
+```
+
+装完重启 Claude Code，首次使用先索引仓库：`index_repository '{"repo_path":"."}'`
+
 ## 项目结构
 
 ```

@@ -87,6 +87,25 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 - **Mappings** — Parchment 2024.11.17
 - **JDK** — 21+
 
+### AI-assisted dev tool (optional but recommended)
+
+If you develop with Claude Code, install **codebase-memory-mcp**: it indexes the codebase into a semantic knowledge graph so structural queries (call chains, impact analysis, architecture, dead code) are far faster and more token-efficient than grepping. It also backs the "code discovery" workflow in `CLAUDE.md` (`search_graph` → `trace_path` → `get_code_snippet`).
+
+Open source: <https://github.com/DeusData/codebase-memory-mcp> (MIT, single static binary, zero deps). After install it auto-detects Claude Code and writes the MCP config:
+
+```powershell
+# Windows (PowerShell)
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.ps1 -OutFile install.ps1
+.\install.ps1
+```
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash
+```
+
+Restart Claude Code after installing; on first use, index the repo first: `index_repository '{"repo_path":"."}'`
+
 ## Project Layout
 
 ```
