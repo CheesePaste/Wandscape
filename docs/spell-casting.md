@@ -306,7 +306,7 @@ npc/                                  DeathRecord.latest + ColonyDeathRegistry.l
 |---|---|---|
 | **P1 数据与分发** | `MagicDef` + `magic_spells` JSON（beam/teleport）+ `SpellbookLoader`（dataconfig）；CD/蓝/射程/视觉改数据驱动 | ✅ 已实现（行为不变，配 6 个解析单测） |
 | **P2 决策集中** | `CastBrain`（L1 优先级扫描）；GuardCombat/SelfDefense 经 CastBrain 选魔法再分发 | ✅ 已实现（配 6 个单测） |
-| **P3 玩家策略 + 条件** | 分类定案（5 类，已落地）；`SpellConditions` + `WorldSnapshot` + CastBrain 扩展（快照目标规则 + conditions 门控 + resolvePriority）；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `SpellcastingApi` + `NpcScreen` 策略 UI | ✅ 已实现（配单测：WorldSnapshot/SpellConditions/SpellbookComponent/CastStrategyComponent/CastBrain 共 41 个） |
+| **P3 玩家策略 + 条件** | 分类定案（5 类，已落地）；`SpellConditions` + `WorldSnapshot` + CastBrain 扩展（快照目标规则 + conditions 门控 + resolvePriority）；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `SpellcastingApi` + `NpcScreen` 策略 UI | ✅ 已实现（配单测：WorldSnapshot/SpellConditions/SpellbookComponent/CastStrategyComponent/CastBrain 共 46 个） |
 | **P4 死亡留存 + 复活** | `DeathRecord` + `ColonyDeathRegistry`（SavedData）+ `NpcDeathHandler` 钩子；`revive` MagicDef + `dead_ally` 目标 + shift+右键施放 + 引导到期生成 NPC 恢复数据（虚弱复活：1 血 0 蓝） | ✅ 已实现（配 8 个单测） |
 | **P5 祭坛施法** | altar 建筑类别 + AltarScreen + 祭坛施法任务（NPC 走到祭坛旁，法阵在祭坛中心）；复活改祭坛唯一入口（目标 = 最近死去不限位置，复活点 = 祭坛中心最上方）；扣接取任务 NPC 的蓝（调度器魔力门槛）、每祭坛每魔法 CD 独立（AltarCastState）、altarOnly 魔法禁 NPC 直接施放 | ✅ 已实现（配单测：MagicState.tryAltarCast/DeathRecord.latest/MagicDef altar 字段/CastBrain altarOnly 跳过） |
 
