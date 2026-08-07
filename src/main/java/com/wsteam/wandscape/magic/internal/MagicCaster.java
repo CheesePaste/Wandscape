@@ -18,9 +18,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.ChunkPos;
@@ -57,8 +55,6 @@ public final class MagicCaster {
     public static final int BEAM_SPAWN_DELAY = 20;
     /** 法阵结束后光束额外延续的 tick（快速变细到消失）。 */
     public static final int BEAM_TAIL = 20;
-    /** 施法目标搜索半径（方块）：取最近敌对生物。 */
-    private static final double CAST_TARGET_RANGE = 32.0;
 
     // ── beam 参数：数据驱动（magic_spells/beam.json），缺失回退常量 ──
 
@@ -78,12 +74,6 @@ public final class MagicCaster {
     public static int beamManaCost() {
         MagicDef spec = beamSpec();
         return spec != null ? spec.manaCost() : BEAM_MANA_COST;
-    }
-
-    /** 手动施法目标搜索半径（方块）。 */
-    public static double beamRange() {
-        MagicDef spec = beamSpec();
-        return spec != null ? spec.range() : CAST_TARGET_RANGE;
     }
 
     /** 光束法阵 spec id（效果参数）。 */
@@ -126,67 +116,26 @@ public final class MagicCaster {
     }
 
     /**
-     * NPC 施放（shift+右键触发）：目标=最近的敌对生物（32 格内），NPC 面向它施放。
-     * 法阵圆心落在法杖中段（持杖手沿目标方向前移 {@link MagicBeamEntity#STAFF_CENTER_OFFSET}），
-     * 法阵/光束由 MagicBeamEntity 动态跟踪目标，随 NPC 转向。无目标时沿当前朝向射 200 格。
-     */
-    public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
-        LivingEntity target = findNearestHostile(level, npc, beamRange());
-        boolean ok;
-        if (target != null) {
-            // 手动施法免费（测试功能），仍占用光束 CD 与施法互斥锁
-            ok = castNpcBeam(level, npc, target, circleId, color, 0);
-        } else {
-            // 无目标：沿当前朝向施放（视觉演示）
-            MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
-            if (spec == null) return false;
-            int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
-            if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), 0, lockDuration)) return false;
-
-            UUID effectId = npc.getUUID();
-            Vec3 hand = npc.getStaffPosition();
-            Vec3 axis = npc.getFacingDirection();
-            Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
-            BlockPos beamTarget = aimFirstBlock(level, source, axis);
-            int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
-
-            PacketDistributor.sendToPlayersTrackingEntity(npc,
-                    new MagicCircleCastPacket(effectId, source, axis, circleId));
-
-            ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
-                    BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, null);
-            Log.info(TAG, "castNpc id={} circle={} target=null (facing) hand={} axis={} source={} scheduled={}",
-                    npc.getUUID().toString().substring(0, 8), circleId,
-                    fmt(hand), fmt(axis), fmt(source), ok);
-        }
-        if (ok) {
-            playCastSound(level, npc);
-        }
-        return ok;
-    }
-
-    /**
      * NPC 施放指向**指定目标**（守卫执行器用）：面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
      * 法阵/光束由 MagicBeamEntity 动态跟踪目标。目标必须存活；门控（锁/CD/蓝）不满足则拒绝。
      */
     public static boolean castNpcAt(ServerLevel level, WandscapeNpc npc, LivingEntity target,
                                     String circleId, @Nullable Integer color) {
-        return castNpcBeam(level, npc, target, circleId, color, beamManaCost());
+        return castNpcBeam(level, npc, target, circleId, color);
     }
 
     /**
-     * 光束施放公共路径（守卫/手动共用）：先过施法门控（互斥锁 + 光束独立 CD + 固定魔力），
+     * 光束施放公共路径（守卫用）：先过施法门控（互斥锁 + 光束独立 CD + 固定魔力），
      * 成功后面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
-     *
-     * @param manaCost 本次施放消耗的魔力（守卫 {@link #BEAM_MANA_COST}；手动施法 0）
+     * 魔力消耗 = beam MagicDef 数据（magic_spells/beam.json）。
      */
     private static boolean castNpcBeam(ServerLevel level, WandscapeNpc npc, LivingEntity target,
-                                       String circleId, @Nullable Integer color, int manaCost) {
+                                       String circleId, @Nullable Integer color) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null || target == null || target.isRemoved() || !target.isAlive()) return false;
 
         int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
-        if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), manaCost, lockDuration)) return false;
+        if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), beamManaCost(), lockDuration)) return false;
 
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
@@ -218,28 +167,6 @@ public final class MagicCaster {
             return bhr.getBlockPos();
         }
         return BlockPos.containing(from.add(dir.scale(MagicBeamEntity.BEAM_RANGE)));
-    }
-
-    /** 32 格内最近的敌对生物（实现 {@code Enemy} 接口）；无则 null。 */
-    private static LivingEntity findNearestHostile(ServerLevel level, WandscapeNpc npc, double range) {
-        LivingEntity nearest = null;
-        double best = range * range;
-        Vec3 pos = npc.position();
-        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(range), e -> e instanceof Enemy)) {
-            if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
-            double d = mob.distanceToSqr(pos);
-            if (d < best) {
-                best = d;
-                nearest = mob;
-            }
-        }
-        return nearest;
-    }
-
-    /** 玩家命令的 NPC 施法起手音（守卫/自防御走 GuardCombat 专属开火音，不走这里避免重叠）。 */
-    private static void playCastSound(ServerLevel level, WandscapeNpc npc) {
-        SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
-                WandscapeSounds.MAGIC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f);
     }
 
     /** 调试日志：Vec3 四舍五入两位。 */
