@@ -3,6 +3,8 @@ package com.wsteam.wandscape.npc.entity;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -13,6 +15,7 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.EquipmentComponent;
+import com.wsteam.wandscape.core.component.MagicState;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
@@ -91,6 +94,32 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public float spellSpeed = NpcAttributes.defaults().spellSpeed();
     public float armorValue = NpcAttributes.defaults().armorValue();
     public float maxMana = NpcAttributes.defaults().maxMana();
+
+    // ============================================================
+    // 魔力值 + 每魔法独立 CD + 施法互斥锁（纯逻辑在 core/component/MagicState）
+    // 魔力上限 = 第 7 属性 MAX_MANA（ECS EquipmentComponent 权威，getEffectiveAttribute 读取）
+    // ============================================================
+
+    public final MagicState magic = new MagicState();
+
+    /** 当前魔力。 */
+    public float getCurrentMana() {
+        return magic.getMana();
+    }
+
+    /** 魔力上限（第 7 属性有效值）。 */
+    public float getMaxMana() {
+        return getEffectiveAttribute(AttributeType.MAX_MANA);
+    }
+
+    /**
+     * 原子施放门控：互斥锁 + 该魔法独立 CD + 固定魔力消耗，全满足才成功。
+     * CD 基础值按 SPELL_SPEED 缩短（向上取整）；成功后占用 {@code lockDurationTicks} 的施法互斥锁。
+     */
+    public boolean tryCastSpell(String magicId, int baseCooldown, int manaCost, int lockDurationTicks) {
+        return magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
+                getEffectiveAttribute(AttributeType.SPELL_SPEED));
+    }
 
     // ============================================================
     // 魔法冷却（剩余 tick）——施法后进入冷却，CD 受 SPELL_SPEED 影响；
@@ -431,10 +460,16 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         super.tick();
         if (level().isClientSide) return;
 
-        // 冷却递减 + 脱战回血 + 属性推送：idle NPC 也要执行，放在快路 return 之前
+        // 冷却递减 + 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
         if (spellCooldown > 0) spellCooldown--;
         tickHealthRegen();
         applyEffectiveAttributes();
+        // 首 tick 满蓝填充（新 NPC / 旧存档迁移），此后每 10tick 回 1 点
+        if (!magic.isManaSeeded()) {
+            magic.setMana(getMaxMana());
+            magic.markManaSeeded();
+        }
+        magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get());
 
         boolean manual = manualCastTicks > 0;
         if (manual) manualCastTicks--;
@@ -810,6 +845,15 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         tag.putFloat("armorValue", armorValue);
         tag.putFloat("maxMana", maxMana);
         tag.putInt("spellCooldown", spellCooldown);
+        tag.putFloat("currentMana", magic.getMana());
+        tag.putInt("manaRegenAccum", magic.getManaRegenAccum());
+        tag.putInt("spellLockTicks", magic.getLockTicks());
+        tag.putBoolean("manaSeeded", magic.isManaSeeded());
+        CompoundTag magicCds = new CompoundTag();
+        for (Map.Entry<String, Integer> e : magic.getCooldowns().entrySet()) {
+            magicCds.putInt(e.getKey(), e.getValue());
+        }
+        tag.put("magicCooldowns", magicCds);
         tag.putInt("regenCooldown", regenCooldown);
         tag.putInt("regenAccum", regenAccum);
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
@@ -837,6 +881,15 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         armorValue = tag.getFloat("armorValue");
         maxMana = tag.getFloat("maxMana");
         spellCooldown = tag.getInt("spellCooldown");
+        Map<String, Integer> cds = new HashMap<>();
+        if (tag.contains("magicCooldowns")) {
+            CompoundTag mc = tag.getCompound("magicCooldowns");
+            for (String key : mc.getAllKeys()) {
+                cds.put(key, mc.getInt(key));
+            }
+        }
+        magic.load(tag.getFloat("currentMana"), tag.getInt("manaRegenAccum"),
+                tag.getInt("spellLockTicks"), tag.getBoolean("manaSeeded"), cds);
         regenCooldown = tag.getInt("regenCooldown");
         regenAccum = tag.getInt("regenAccum");
         hasDefaultWand = tag.getBoolean("hasDefaultWand");

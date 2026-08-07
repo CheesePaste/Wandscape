@@ -77,6 +77,9 @@ public class MagicState {
 
     public int getCooldown(String magicId) { return cooldowns.getOrDefault(magicId, 0); }
 
+    /** 全部魔法冷却（magicId → 剩余 tick），供序列化。 */
+    public Map<String, Integer> getCooldowns() { return cooldowns; }
+
     /** NBT 反序列化入口：覆盖全部可持久字段（cooldowns 先清空再填充）。 */
     public void load(float currentMana, int manaRegenAccum, int lockTicks,
                      boolean manaSeeded, Map<String, Integer> cooldowns) {

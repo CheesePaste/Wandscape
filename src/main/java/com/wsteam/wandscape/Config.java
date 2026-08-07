@@ -47,6 +47,10 @@ public class Config {
             .comment("Ticks per 1 HP healed once out-of-combat regen is active (80 = 4s)")
             .defineInRange("npc.regenIntervalTicks", 80, 20, 400);
 
+    public static final ModConfigSpec.IntValue NPC_MANA_REGEN_TICKS = BUILDER
+            .comment("Ticks per 1 mana regenerated (10 = 1 point every 0.5s)")
+            .defineInRange("npc.manaRegenTicks", 10, 1, 100);
+
     public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
             .defineInRange("npc.walkThreshold", 64, 16, 256);
