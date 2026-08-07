@@ -1,9 +1,8 @@
 # NPC 施法决策层 — 设计文档
 
-> **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中、P4 死亡留存 + 复活、P5 祭坛施法均已实现**（见文末实施表）。
+> **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中、P3 玩家策略 + 条件、P4 死亡留存 + 复活、P5 祭坛施法均已实现**（见文末实施表）。
 > 分类已定案为 5 类（SINGLE_TARGET / AOE / DEFENSE / SUPPORT / UTILITY）。
-> **P3 玩家策略 + CastBrain 条件扩展** 规划中（未实现）。
-> 本文既记录已落地结构，也是 P3 的实施蓝图。
+> 本文既记录已落地结构，也是各阶段的实施蓝图。
 
 ## 一、现状问题：为什么需要决策层
 
@@ -104,7 +103,7 @@ L2 兜底层
 | `none` | 无需目标（辅助/场地魔法） |
 | `dead_ally` | 最近死亡留存记录（复活用，P4） |
 
-### 5.2 `conditions` — 内置触发条件（数据驱动，非玩家脚本）
+### 5.2 `conditions` — 内置触发条件（✅ 已实现，数据驱动，非玩家脚本）
 
 每个魔法可配自己的触发阈值，`CastBrain` 对照世界快照判断。**全部可选**，缺省 = 无条件：
 
@@ -119,7 +118,7 @@ L2 兜底层
 
 **防御 vs 治疗的血线竞争**靠阈值错开解决，不靠运行时互斥：护盾配 `self_hp_max: 0.6`（血量偏高时保命），治疗配 `ally_hp_max: 0.5`（低血线才奶）——两者天然不会同时抢。
 
-### 5.3 `WorldSnapshot` — CastBrain 的输入（纯数据 record，可单测）
+### 5.3 `WorldSnapshot` — CastBrain 的输入（✅ 已实现，纯数据 record，可单测）
 
 CastBrain 由 `select(known, castable, hasTarget)` 扩展为吃世界快照：
 
@@ -134,7 +133,7 @@ record WorldSnapshot(
 
 判定规则：HOSTILE 系需要 `enemyCount > 0`，ALLY 系需要 `allyLowestHpRatio < 1`，SELF/NONE 不需要目标。快照由调用方（守卫/自防御战斗循环）在每轮 ~10 tick 循环里构造。
 
-### 5.4 `CastStrategy` — 施法策略（存于 NPC 数据）
+### 5.4 `CastStrategy` — 施法策略（✅ 已实现，存于 NPC 数据）
 
 ```
 预设: balanced / offensive / support / defensive / custom
@@ -157,12 +156,12 @@ priority: [magicId…]   // 玩家可编辑的优先级列表；custom 预设必
 ```
 magic/data/MagicDef.java            ✅ record 镜像 + fromJson（纯数据，仿 MagicCircleSpec；已实现）
 magic/internal/SpellbookLoader.java ✅ dataconfig 注册 magic_spells 类目 + getSpec(id)/getAll()
-magic/internal/CastBrain.java       ✅ 统一施法脑：L1 优先级扫描（列表顺序 + 门控可施放 + 目标规则）
-                                    ⏳ P3 扩展：吃 WorldSnapshot + conditions
-magic/data/WorldSnapshot.java       （P3）决策输入快照（纯数据 record）
-shared/api/SpellcastingApi.java     （P3）决策层对外接口（getKnownSpells/getStrategy/setStrategy…）
-core/component/SpellbookComponent.java   （P3）NPC 会哪些魔法（magicId 列表）
-core/component/CastStrategyComponent.java (P3) 策略预设 + 优先级列表
+magic/internal/CastBrain.java       ✅ 统一施法脑：L1 优先级扫描 + 策略优先级解析 + 快照目标规则 + conditions 门控
+magic/data/WorldSnapshot.java       ✅ 决策输入快照（纯数据 record，已实现）
+magic/data/SpellConditions.java     ✅ 魔法内置触发条件（conditions JSON 镜像 + matches，已实现）
+shared/api/SpellcastingApi.java     ✅ 决策层对外接口（getKnownSpells/getStrategyPreset/getPriority/setStrategy，已实现）
+core/component/SpellbookComponent.java   ✅ NPC 会哪些魔法（magicId 列表，已实现）
+core/component/CastStrategyComponent.java ✅ 策略预设 + 优先级列表（已实现）
 magic/internal/MagicOp.java         （延后）魔法效果分发注册表——有第二个战斗魔法时再建
 npc/data/DeathRecord.java           ✅ 死亡留存记录（纯数据 record + nearest 纯逻辑）
 npc/internal/ColonyDeathRegistry.java ✅ 死亡记录 SavedData（平铺列表，3 天过期清理）
@@ -181,22 +180,24 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 > **为何延后**：当前只有一个战斗魔法（beam），守卫循环里按 magicId 一个 if 即可分发；
 > 建单实现的 sealed 层级是死代码。等第二个战斗魔法（AOE/单攻变体）落地时再建。
 
-### 6.2 `CastBrain` — 统一施法脑（✅ 已实现，P3 扩展）
+### 6.2 `CastBrain` — 统一施法脑（✅ 已实现，含 P3 扩展）
 
-- **纯决策函数**，不是新的任务系统：`select(known, castable, hasTarget) → MagicDef?`，纯 Java 可单测。
-- 调用方（守卫/自防御）在 ~10 tick 战斗循环里构造 `castable` 判定（互斥锁 + CD + 蓝）喂入；拿到结果后按魔法 id 分发执行。
-- **P3 扩展**：签名改为 `select(known, castable, snapshot)`，加 conditions 判定（5.2/5.3）。
-- P3 起 `known` 来自 NPC 的 `SpellbookComponent` 与玩家策略（当前为 `defaultCombatSpells()` = [beam]）。
+- **纯决策函数**，不是新的任务系统：`select(known, castable, snapshot) → MagicDef?`，纯 Java 可单测。
+- 调用方（守卫/自防御）在 ~10 tick 战斗循环里构造 `castable` 判定（互斥锁 + CD + 蓝）与 `WorldSnapshot`（敌数/自血/友方最低血/状态）喂入；拿到结果后按魔法 id 分发执行。
+- **P3 扩展（已实现）**：快照驱动目标规则（HOSTILE 需敌数>0、ALLY 需有受伤友方、DEAD_ALLY 祭坛专属永不自选）+ conditions 门控（5.2/5.3）。
+- **`resolvePriority(strategy, known)`**：预设 → 分类级默认排序（类内按 spellbook 顺序，UTILITY 不进表）；CUSTOM 用显式 magicId 列表，空回退 balanced。
+- P3 起 `known` 来自 NPC 的 `SpellbookComponent`（默认 [beam]）经玩家策略解析，替代硬编码。
 
 ## 七、决策流程（数据流）
 
 ```
 触发源：守卫任务循环 / 自防御循环 / 导航回退 / 手动 shift+右键
-  → 构造 WorldSnapshot（敌数/自身血/友方最低血/状态）+ 已知魔法表
+  → 构造 WorldSnapshot（敌数/自身血/友方最低血/状态）
+  → known = 玩家策略（SpellbookComponent + CastStrategyComponent）经 CastBrain.resolvePriority 解析
   → CastBrain.select()
       ├─ L0 硬性覆盖：血量危机/LOS/互斥锁 → 硬性魔法 或 直接返回"不施放"
       ├─ L1 按 priority 列表从上往下扫：
-      │     MagicState.canCast(magicId) && 蓝够 && target_mode 命中 && conditions 满足 → 选中
+      │     MagicState.canCast(magicId) && 蓝够 && 快照目标规则命中 && conditions 满足 → 选中
       └─ L2 兜底：基础攻击/走位/待命
   → 选出魔法 → 按 id 分发（当前仅 beam → MagicCaster/MagicCastManager/MagicBeamEntity；
       未来 TeleportOp→WandscapeRitualOps、ReviveOp→仪式系统）
@@ -211,11 +212,32 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 4. **`MagicCaster` 瘦身**（随 MagicOp 一起）：从"只会射光束"变成"`MagicOp` 分发器的 beam 实现"；玩家调试命令 `cast` / shift+右键 `castNpc` 保留（免费，测试功能，走 L0 调试路径不进玩家策略）。
 5. **手动施法**（shift+右键）保持免费、不占蓝（现注释即"测试功能"），只占用 CD 与互斥锁——不归玩家策略管。
 
-## 九、复活与死亡留存（✅ 已实现）
+## 九、玩家策略与条件（P3 已实现）
+
+**动机**：CastBrain 原来只有 `hasTarget` 布尔，支撑不了防御/治疗/AOE 的条件决策；NPC 无"会哪些魔法"概念。P3 补齐条件决策（数据驱动）+ 玩家可控的策略层（只调一个"策略/优先级"维度，不写脚本）。
+
+### 9.1 条件决策（已实现）
+
+- **`SpellConditions`**（`magic/data/`）：`MagicDef.conditions` JSON → record（min_enemies / self_hp_max / ally_hp_max / no_effect），`matches(WorldSnapshot)` 纯逻辑判定，缺省 = 无条件。
+- **`WorldSnapshot`**（`magic/data/`）：决策输入快照（敌数 / 自身血比例 / 友方最低血比例 / 状态 id 集合），由守卫/自防御战斗循环每轮构造（`GuardCombat.buildSnapshot`：半径 16 内敌数、自身血比、半径内其他友方 NPC/村民最低血比、`unwrapKey` 取状态 id）。
+- **`CastBrain.select(known, castable, snapshot)`**：目标规则改由快照驱动（HOSTILE 需敌数>0、ALLY 需有受伤友方、DEAD_ALLY 祭坛专属永不自选），并追加 conditions 门控。
+
+### 9.2 玩家策略（已实现）
+
+- **`SpellbookComponent`**（`core/component/`）：NPC 会哪些魔法（magicId 列表，默认 `[beam]`），仿 `MagicState` 实体持有 + NBT 持久。
+- **`CastStrategyComponent`**（`core/component/`）：预设（balanced/offensive/support/defensive/custom）+ 自定义优先级列表。
+- **`CastBrain.resolvePriority(strategy, known)`**：预设 → 分类级默认排序（类内按 spellbook 顺序，UTILITY 不进表）；CUSTOM 用显式 magicId 列表，空回退 balanced。
+- **`SpellcastingApi`**（`shared/api/`，实现 `magic/internal/SpellcastingApiImpl`）：查/改魔法表与策略；`NpcDataPacket` 携带策略数据，`NpcStrategyPacket`（client→server）改策略后回发刷新。
+
+### 9.3 策略 UI（已实现）
+
+- NpcScreen 加「策略」按钮 → **NpcStrategyScreen**：4 预设按钮（均衡/火力/支援/防御，当前预设金框高亮）+ 每魔法启停列表（启用在优先级序在前、停用在后）；点预设按分类排序，点魔法切 CUSTOM（显式顺序）。lang 键 `gui.wandscape.strategy.*` + `magic.wandscape.*`。
+
+## 十、复活与死亡留存（✅ 已实现）
 
 **动机**：守卫 NPC 战死不可逆，殖民地战力永久损失。复活 = UTILITY 魔法（`magic_spells/revive.json`）+ 死亡留存数据，**第一版不走仪式系统**（shift+右键玩家指挥式，独立引导调度）。
 
-### 9.1 死亡留存（已实现）
+### 10.1 死亡留存（已实现）
 
 - **触发**：`NpcDeathHandler`（LivingDeathEvent 钩子，Wandscape 构造器注册），在实体清理前抓快照。
 - **数据 `DeathRecord`**（纯 record）：npcId、名字、维度、死亡坐标、死亡时间、所属殖民地、外观（皮肤变体/帽子颜色）、hasDefaultWand、7 属性快照、背包快照（ECS Inventory 的 ResourceStack 列表）。
@@ -223,10 +245,10 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **清理**：复活成功后删除；超过 3 游戏日（`EXPIRE_TICKS`）由 `ReviveHandler.tick` 每日 prune。
 - **第一版无墓碑方块**：施法时死亡点生成法阵（复用 `MagicCircleCastPacket` 链路），玩家看到法阵即知位置。
 
-### 9.2 复活魔法（已实现）
+### 10.2 复活魔法（已实现）
 
 - **MagicDef**：`id=revive`、`category=utility`、`target_mode=dead_ally`、蓝 80 / CD 600 / 射程 32、法阵 `self_teleport`（紫色传送阵）。
-- **触发（P4 原入口，已迁移）**：原为 shift+右键 NPC → `MagicInteractHandler` → `ReviveHandler.castRevive`（施法者周围射程内最近的 `DeathRecord`，门控走 `npc.tryCastSpell`）；**P5 起复活唯一入口为祭坛**（见第十章），shift+右键施放已移除。
+- **触发（P4 原入口，已迁移）**：原为 shift+右键 NPC → `MagicInteractHandler` → `ReviveHandler.castRevive`（施法者周围射程内最近的 `DeathRecord`，门控走 `npc.tryCastSpell`）；**P5 起复活唯一入口为祭坛**（见第十一章），shift+右键施放已移除。
 - **引导**：时长 = 复活法阵 spec 时长（法阵完整展开后完成，缺失回退 100 tick）；期间 NPC 面向死亡点、举杖（`startManualCast`）。
 - **完成（P5 后）**：`AltarCastExecutor` 引导到期调用 `ReviveHandler.spawnFromRecordAt(level, rec, 祭坛中心最上方)` 生成新 `WandscapeNpc`，恢复名字/外观/属性上限/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
 - **虚弱复活**：复活后 **1 血 0 蓝**（`setHealth(1)` + `setMana(0)` + `markManaSeeded` 阻止首 tick 满蓝种子），靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复——复活有代价。
@@ -235,11 +257,11 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **遗留**：装备只恢复 default wand（当前装备系统仅 WAND 槽）；墓碑方块视觉留作后续增强。
 - **P5 迁移（已完成）**：复活入口已改为**祭坛**（见下章），shift+右键施放已移除。
 
-## 十、祭坛施法（P5 已实现）
+## 十一、祭坛施法（P5 已实现）
 
 **动机**：复活等重大魔法不应随手 shift+右键施放。祭坛作为殖民地的"神圣设施"，集中管理重大魔法：玩家在祭坛选中魔法 → NPC 走到祭坛旁施法。
 
-### 10.1 需求（用户定，全部落地）
+### 11.1 需求（用户定，全部落地）
 
 1. **新建筑类别 altar（祭坛）**：与其他建筑一样放置/维护（`buildings/altar1.json`）。
 2. **施法入口**：玩家 V 面板右键祭坛 → AltarScreen → 选中魔法（如复活）执行。
@@ -250,7 +272,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 7. **复活目标**：**最近死去的 NPC**（`ColonyDeathRegistry.latest()`，按 deathTime 最新，不限位置）。
 8. **复活点**：祭坛包围盒中心最上方方块顶端。
 
-### 10.2 结构（已落地）
+### 11.2 结构（已落地）
 
 ```
 building/executor/AltarCastExecutor   OpExecutor<AltarCastOp>：幂等复核（祭坛 CD + 魔力 + 锁）→ tryAltarCast 扣蓝占锁 → 设祭坛 CD → 中心起法阵 → 引导 → 到期 fireEffect（revive）
@@ -263,7 +285,7 @@ magic/                                MagicDef 加 altar_only/altar_cooldown/alt
 npc/                                  DeathRecord.latest + ColonyDeathRegistry.latest；ReviveHandler.spawnFromRecordAt（生成点来源改为祭坛中心最上方）
 ```
 
-### 10.3 依赖与复用
+### 11.3 依赖与复用
 
 - `BuildingApi.getBuildingBounds(UUID)` 取祭坛包围盒 → 中心 + 最高面生成点（`AltarCastHandler.centerTop`）。
 - 建筑交互先例：`BuildingInteractHandler` 的 altar 分支；GUI 先例 `MedievalScreen MINIMAL` + `ScrollableList`。
@@ -271,26 +293,26 @@ npc/                                  DeathRecord.latest + ColonyDeathRegistry.l
 - 任务分派：`PlayerManualSource.publish`（蓝图 `magic:altar_cast`，priority = `QUEUE_RITUAL_ALTAR` = 10）。
 - 调度器魔力门槛：`GlobalTask.taskParams["mana_cost"]` + `EntityOps.getCurrentMana(ecsId)`（core 边界，`SchedulerSystem` 纯 Java 不碰 MC 类）。
 
-### 10.4 边界
+### 11.4 边界
 
 - 祭坛可施魔法列表 = 数据驱动（`MagicDef.altar_only` 过滤），当前仅 revive。
 - 跨殖民地限制：第一版不做；祭坛任务带 `colony_id`，调度器只分给该殖民地 NPC。
 - 祭坛施法进任务系统（NPC 移动/交互是任务），不进 CastBrain 自动决策表；`CastBrain.select` 再加 altarOnly 跳过作防御性保证。
 - 引导时长与法阵视觉对齐：`altar_duration` 设为该魔法 circle spec 的 `durationTicks`（revive → self_teleport = 160）。
 
-## 十一、分阶段实施
+## 十二、分阶段实施
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | **P1 数据与分发** | `MagicDef` + `magic_spells` JSON（beam/teleport）+ `SpellbookLoader`（dataconfig）；CD/蓝/射程/视觉改数据驱动 | ✅ 已实现（行为不变，配 6 个解析单测） |
 | **P2 决策集中** | `CastBrain`（L1 优先级扫描）；GuardCombat/SelfDefense 经 CastBrain 选魔法再分发 | ✅ 已实现（配 6 个单测） |
-| **P3 玩家策略 + 条件** | 分类定案（5 类，已落地）；`Conditions` + `WorldSnapshot` + CastBrain 扩展；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `NpcScreen` 策略 UI | ⏳ 规划中 |
+| **P3 玩家策略 + 条件** | 分类定案（5 类，已落地）；`SpellConditions` + `WorldSnapshot` + CastBrain 扩展（快照目标规则 + conditions 门控 + resolvePriority）；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `SpellcastingApi` + `NpcScreen` 策略 UI | ✅ 已实现（配单测：WorldSnapshot/SpellConditions/SpellbookComponent/CastStrategyComponent/CastBrain 共 41 个） |
 | **P4 死亡留存 + 复活** | `DeathRecord` + `ColonyDeathRegistry`（SavedData）+ `NpcDeathHandler` 钩子；`revive` MagicDef + `dead_ally` 目标 + shift+右键施放 + 引导到期生成 NPC 恢复数据（虚弱复活：1 血 0 蓝） | ✅ 已实现（配 8 个单测） |
 | **P5 祭坛施法** | altar 建筑类别 + AltarScreen + 祭坛施法任务（NPC 走到祭坛旁，法阵在祭坛中心）；复活改祭坛唯一入口（目标 = 最近死去不限位置，复活点 = 祭坛中心最上方）；扣接取任务 NPC 的蓝（调度器魔力门槛）、每祭坛每魔法 CD 独立（AltarCastState）、altarOnly 魔法禁 NPC 直接施放 | ✅ 已实现（配单测：MagicState.tryAltarCast/DeathRecord.latest/MagicDef altar 字段/CastBrain altarOnly 跳过） |
 
 P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即按 CLAUDE.md 提交规则 commit。
 
-## 十二、依赖与边界
+## 十三、依赖与边界
 
 - `MagicDef` 是纯数据 record → 放 `magic/data/`（仿 `MagicCircleSpec` 同在 magic/data）；`CastStrategy`（P3）与 `DeathRecord`（P4）是纯数据 → `core/` 或 `npc/data/`。
 - `SpellbookComponent` / `CastStrategyComponent` → `core/component/`（纯 Java 零 MC，仿 `MagicState`）。

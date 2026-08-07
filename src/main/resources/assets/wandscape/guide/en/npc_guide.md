@@ -18,5 +18,22 @@ Wizards (NPCs) are the core worker entities of the town's automation!
 
 ---
 
+## 🎯 Cast Strategy (Right-click a wizard → Info screen → "Strategy")
+
+Controls a wizard's automatic casting in combat — one "strategy/priority" dial, no scripting:
+
+| Preset | Casting tendency (category order) |
+| :--- | :--- |
+| Balanced | AOE > Single-target > Support > Defense |
+| Offensive | Single-target > AOE > Defense > Support |
+| Support | Support (heal first) > Defense > AOE > Single-target |
+| Defensive | Defense > Support > AOE > Single-target |
+
+- Click a spell row to toggle it on/off: disabled spells no longer auto-cast, and the list switches to "Custom".
+- Presets order spells by category; "Custom" follows the order you enabled (enabled first, disabled after).
+- Guard/self-defense combat picks spells by this strategy; altar-only spells (e.g. revive) are excluded (altar-exclusive).
+
+---
+
 👉 [Go to tourist debug guide](guide:tourist_guide)  
 👉 [Back to main test page](guide:test_guide)
