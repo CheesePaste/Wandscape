@@ -77,17 +77,19 @@ class MagicCircleSpecTest {
             assertEquals("#15803d", star.color());
             assertEquals(10.0, star.rotateSpeed(), 1e-9);
 
-            // 凹口符文：ember 粒子、6 枚、offset 30 对齐缺口
+            // 凹口符文：ember 粒子、6 枚、offset 30 对齐缺口；拖尾等比 ×3.75（600t/160t）
             MagicCircleSpec.Element gapRunes = spec.elements.get(1);
             assertEquals(MagicCircleSpec.ElementType.GLYPH, gapRunes.type());
             assertEquals("ember", gapRunes.particle());
             assertEquals(6, gapRunes.count());
             assertEquals(30.0, gapRunes.rotationOffsetDeg(), 1e-9);
+            assertEquals(30, gapRunes.trailTicks());
 
             // 大符文环：enchant 粒子、12 枚（P18 独立符文随 R 疏密）
             MagicCircleSpec.Element runeRing = spec.elements.get(3);
             assertEquals("enchant", runeRing.particle());
             assertEquals(12, runeRing.count());
+            assertEquals(60, runeRing.trailTicks());
 
             // 外环三层均为 240° 圆弧（beads 旋转无 continuous）
             for (int i = 5; i <= 7; i++) {
