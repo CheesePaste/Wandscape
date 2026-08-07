@@ -2,8 +2,8 @@
 
 > **状态（2026-08-07）**：**P1 数据与分发、P2 决策集中、P4 死亡留存 + 复活均已实现**（见文末实施表）。
 > 分类已定案为 5 类（SINGLE_TARGET / AOE / DEFENSE / SUPPORT / UTILITY）。
-> **P3 玩家策略 + CastBrain 条件扩展（WorldSnapshot + conditions）规划中**。
-> 本文既记录已落地结构，也是 P3 的实施蓝图。
+> **P3 玩家策略 + CastBrain 条件扩展** 与 **P5 祭坛施法** 规划中（未实现）。
+> 本文既记录已落地结构，也是 P3/P5 的实施蓝图。
 
 ## 一、现状问题：为什么需要决策层
 
@@ -225,23 +225,62 @@ npc/internal/ReviveHandler.java     ✅ 复活魔法：dead_ally 目标解析 + 
 - **MagicDef**：`id=revive`、`category=utility`、`target_mode=dead_ally`、蓝 80 / CD 600 / 射程 32、法阵 `self_teleport`（紫色传送阵）。
 - **触发**：shift+右键 NPC → `MagicInteractHandler` → `ReviveHandler.castRevive`：施法者周围射程内最近的 `DeathRecord`；无则提示玩家。门控（互斥锁 + revive 独立 CD + 魔力）走 `npc.tryCastSpell`。
 - **引导**：时长 = 复活法阵 spec 时长（法阵完整展开后完成，缺失回退 100 tick）；期间 NPC 面向死亡点、举杖（`startManualCast`）。
-- **完成**：`ReviveHandler.tick`（onServerTick 驱动）到期后在死亡点附近安全位置生成新 `WandscapeNpc`，恢复名字/外观/属性/满蓝/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
+- **完成**：`ReviveHandler.tick`（onServerTick 驱动）到期后在死亡点附近安全位置生成新 `WandscapeNpc`，恢复名字/外观/属性上限/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
+- **虚弱复活**：复活后 **1 血 0 蓝**（`setHealth(1)` + `setMana(0)` + `markManaSeeded` 阻止首 tick 满蓝种子），靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复——复活有代价。
 - **失败兜底**：生成位置无地可放等失败 → 记录保留，玩家可重试。
 - **与施法决策的关系**：复活不进 NPC 自动战斗决策表（L1）——玩家指挥式，避免 NPC 战斗中弃敌救人。
 - **遗留**：装备只恢复 default wand（当前装备系统仅 WAND 槽）；墓碑方块视觉留作后续增强。
+- **P5 迁移**：复活入口将改为**祭坛**（见下章），shift+右键施放届时移除。
 
-## 十、分阶段实施
+## 十、祭坛施法（P5 规划，未实现）
+
+**动机**：复活等重大魔法不应随手 shift+右键施放。祭坛作为殖民地的"神圣设施"，集中管理重大魔法：玩家在祭坛选中魔法 → NPC 走到祭坛旁交互施法。
+
+### 10.1 需求（用户定）
+
+1. **新建筑类别 altar（祭坛）**：与其他建筑一样放置/维护。
+2. **施法入口**：玩家 V 面板（俯瞰视角）右键祭坛 → 打开祭坛 UI → 选中魔法（如复活）执行。
+3. **NPC 执行**：NPC 走到祭坛旁边，与其他建筑一样与祭坛交互施法；**魔法阵/特效在祭坛中心释放**。
+4. **复活目标**：**最近死去的 NPC**（按 deathTime 最新，不限位置——不再按施法者范围搜索）。
+5. **复活点**：祭坛包围盒中心最上方方块顶端。
+6. **入口迁移**：复活唯一入口改为祭坛（P4 的 shift+右键施放移除）。
+
+### 10.2 结构草案
+
+```
+building/   category 加 "altar"（建筑 JSON）；BuildingInteractHandler 加 altar 分支（V 面板右键 → 打开 AltarScreen）
+building/client/  AltarScreen（MedievalScreen MINIMAL）：列出祭坛可施魔法（当前仅 revive），点选 → 发任务
+task/       新 Op（如 AltarCastOp，仿 RitualOp 模式）：NPC 走到祭坛旁 → 施法（门控走 tryCastSpell）
+magic/      魔法阵定位到祭坛中心：MagicCircleCastPacket 以祭坛包围盒中心 + 地面高度为原点
+npc/        ColonyDeathRegistry 加 latest()（按 deathTime 最新，纯逻辑可单测）；生成点 = 祭坛 AABB 中心最上方
+```
+
+### 10.3 依赖与复用
+
+- `BuildingApi.getBuildingBounds(UUID)`（已有）取祭坛包围盒 → 中心 + 最高面生成点。
+- 建筑交互先例：`BuildingInteractHandler` 已有 shop/potion_station 等分支；GUI 先例 `MedievalScreen MINIMAL`（HotelScreen/ShopScreen）。
+- 施法/法阵/复活逻辑复用：`MagicCircleCastPacket`、`tryCastSpell` 门控、`ReviveHandler.spawnNpcFromRecord`（改生成点来源）。
+- 复活"最近死去"选择：`ColonyDeathRegistry.latest()` 纯逻辑（deathTime 最大），配单测。
+
+### 10.4 边界
+
+- 祭坛可施魔法列表 = 数据驱动（魔法定义加"可祭坛施放"标记，或按 category=utility 过滤）——P5 实施时定。
+- 跨殖民地限制：第一版不做（同 P4，范围最近即取）。
+- 祭坛施法进任务系统（NPC 移动/交互是任务），不进 CastBrain 自动决策表。
+
+## 十一、分阶段实施
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | **P1 数据与分发** | `MagicDef` + `magic_spells` JSON（beam/teleport）+ `SpellbookLoader`（dataconfig）；CD/蓝/射程/视觉改数据驱动 | ✅ 已实现（行为不变，配 6 个解析单测） |
 | **P2 决策集中** | `CastBrain`（L1 优先级扫描）；GuardCombat/SelfDefense 经 CastBrain 选魔法再分发 | ✅ 已实现（配 6 个单测） |
 | **P3 玩家策略 + 条件** | 分类定案（5 类，已落地）；`Conditions` + `WorldSnapshot` + CastBrain 扩展；`SpellbookComponent` + `CastStrategyComponent`（含 defensive 预设）+ `NpcScreen` 策略 UI | ⏳ 规划中 |
-| **P4 死亡留存 + 复活** | `DeathRecord` + `ColonyDeathRegistry`（SavedData）+ `NpcDeathHandler` 钩子；`revive` MagicDef + `dead_ally` 目标 + shift+右键施放 + 引导到期生成 NPC 恢复数据 | ✅ 已实现（配 8 个单测） |
+| **P4 死亡留存 + 复活** | `DeathRecord` + `ColonyDeathRegistry`（SavedData）+ `NpcDeathHandler` 钩子；`revive` MagicDef + `dead_ally` 目标 + shift+右键施放 + 引导到期生成 NPC 恢复数据（虚弱复活：1 血 0 蓝） | ✅ 已实现（配 8 个单测） |
+| **P5 祭坛施法** | altar 建筑类别 + AltarScreen + 祭坛施法任务（NPC 走到祭坛旁，法阵在祭坛中心）；复活改祭坛唯一入口（目标 = 最近死去不限位置，复活点 = 祭坛中心最上方） | ⏳ 规划中 |
 
 P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即按 CLAUDE.md 提交规则 commit。
 
-## 十一、依赖与边界
+## 十二、依赖与边界
 
 - `MagicDef` 是纯数据 record → 放 `magic/data/`（仿 `MagicCircleSpec` 同在 magic/data）；`CastStrategy`（P3）与 `DeathRecord`（P4）是纯数据 → `core/` 或 `npc/data/`。
 - `SpellbookComponent` / `CastStrategyComponent` → `core/component/`（纯 Java 零 MC，仿 `MagicState`）。

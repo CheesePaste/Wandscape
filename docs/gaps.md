@@ -24,6 +24,7 @@
 - **`potion_station`**：`BuildingInteractHandler` 对 potion_station 只提示"not yet implemented"；`PotionStationPacket.handleClient` 空实现，**无 GUI**。配方 JSON 有 2 个药水配方（mana/stamina）但无法在游戏中生产。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
 - **施法决策已集中但战斗魔法面仍窄**：守卫/自防御经 `CastBrain` 选魔法（P1/P2 落地），CD/蓝/射程/视觉数据驱动；魔法效果现有 beam（战斗）+ revive（玩家指挥，不走 CastBrain）。NPC 仍无"会哪些魔法"概念（`SpellbookComponent` 未做），CastBrain 已知列表硬编码 `[beam]`。完整方案见 [spell-casting.md](spell-casting.md)（P3 规划中）。
+- **复活入口待迁移祭坛（P5 规划）**：当前复活 = shift+右键 NPC 玩家指挥式（P4 已实现）；P5 将改为祭坛唯一入口（altar 建筑 + AltarScreen + NPC 到祭坛旁施法，目标 = 最近死去不限位置，复活点 = 祭坛中心最上方），见 [spell-casting.md](spell-casting.md) 第十章。
 - **`TavernApi.getCandidates/refreshCandidates/recruitCandidate`**：占位（返回空/false）；实际招募走 `TavernRecruitPacket.handleRecruitMage` + `receiveMageResume/recruitMage`。
 - **`WorkbenchSource`**：V1 stub（POLL_INTERVAL=30，poll 空）。
 - **`ElementAuditor`/`ElementAuditRunner`**：需系统属性 `wandscape.runAudit=true` 才跑（GameTest 用途）。
