@@ -28,6 +28,7 @@
 - `TouristSimSystem` 每 tick：判定"有玩家观察"用**玩家 simulation distance**（非区块状态）。观察中 → 实体运行 AI，`exportToShadow` 镜像；未观察 → 实体 `UNLOADED_TO_CHUNK` 移除（影子存活），`simStep` 推进。
 - 影子直线匀速移动 SPEED=0.5/tick、ARRIVE_RANGE=1.0、WANDER_RADIUS=24；到建筑锚点走 shop/service/hotel 交互与冷却；酒店满员由影子注册表派生。
 - 实体↔影子转换：加载过渡**影子胜出**（importToEntity），冷却以各自 timeBase 互转；孤儿实体（无影子）被 discard。
+- **新鲜生成自动收养**：非磁盘加载的游客（刷怪蛋等）在 `onAddedToLevel` 自动 `sim.adoptTourist`（`loadedFromDisk` 区分：`readAdditionalSaveData` 置 true，`finalizeSpawn` 置 false）。磁盘加载且已离境的身体仍走孤儿 discard，避免复活。
 - `TouristSimRegistry`（SavedData `wandscape_tourist_sim`）：`ConcurrentHashMap<UUID, TouristShadow>`。
 
 ## TouristState / TouristStateHost

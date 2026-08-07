@@ -37,13 +37,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -52,6 +55,7 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.server.level.ServerLevel;
@@ -127,6 +131,14 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     // ── Identity ──
 
     private String touristName = "";
+
+    /**
+     * True when this entity was restored from saved world data (chunk load)
+     * rather than freshly spawned. Fresh spawns get adopted into the tourist sim
+     * shadow registry; disk-loaded bodies that outlived their departed shadow are
+     * left for the sim's orphan sweep to discard.
+     */
+    private boolean loadedFromDisk;
 
     // ── State label (synced by TouristMoveGoal) ──
 
@@ -318,6 +330,15 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                     }
                 }
             }
+            // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
+            // them now, else the sim's orphan sweep discards them as departed
+            // bodies. Disk-loaded bodies (loadedFromDisk) are left for that sweep.
+            if (!loadedFromDisk) {
+                TouristSimSystem sim = TouristSimSystem.getActive();
+                if (sim != null && sim.getRegistry() != null && sim.getRegistry().get(getUUID()) == null) {
+                    sim.adoptTourist(this);
+                }
+            }
         }
 
         if (getSkinVariant() < 0) {
@@ -368,6 +389,18 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
+
+    /**
+     * Only fresh spawns go through finalizeSpawn — clear the disk-load flag so a
+     * spawn egg carrying custom entity NBT isn't mistaken for a restored body.
+     */
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
+            MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+        SpawnGroupData data = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+        this.loadedFromDisk = false;
+        return data;
+    }
 
     /**
      * A killed/discarded tourist must fully die. Its data shadow would otherwise
@@ -500,6 +533,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        // Restored from world data — not a fresh spawn (see loadedFromDisk).
+        this.loadedFromDisk = true;
         this.touristName = tag.getString("touristName");
 
         if (tag.contains("currentState")) {
