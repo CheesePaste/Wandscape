@@ -247,7 +247,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 
 ### 10.2 复活魔法（已实现）
 
-- **MagicDef**：`id=revive`、`category=utility`、`target_mode=dead_ally`、蓝 80 / CD 600 / 射程 32、法阵 `self_teleport`（紫色传送阵）。
+- **MagicDef**：`id=revive`、`category=utility`、`target_mode=dead_ally`、蓝 80 / CD 600 / 射程 32、法阵 `revive_ritual`（绿色复活阵，半径 13 / 600 tick，spec 见 `architecture/magic/example-specs/revive_ritual.json`）。
 - **触发（P4 原入口，已迁移）**：原为 shift+右键 NPC → `MagicInteractHandler` → `ReviveHandler.castRevive`（施法者周围射程内最近的 `DeathRecord`，门控走 `npc.tryCastSpell`）；**P5 起复活唯一入口为祭坛**（见第十一章），shift+右键施放已移除。
 - **引导**：时长 = 复活法阵 spec 时长（法阵完整展开后完成，缺失回退 100 tick）；期间 NPC 面向死亡点、举杖（`startManualCast`）。
 - **完成（P5 后）**：`AltarCastExecutor` 引导到期调用 `ReviveHandler.spawnFromRecordAt(level, rec, 祭坛中心最上方)` 生成新 `WandscapeNpc`，恢复名字/外观/属性上限/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
@@ -298,7 +298,7 @@ npc/                                  DeathRecord.latest + ColonyDeathRegistry.l
 - 祭坛可施魔法列表 = 数据驱动（`MagicDef.altar_only` 过滤），当前仅 revive。
 - 跨殖民地限制：第一版不做；祭坛任务带 `colony_id`，调度器只分给该殖民地 NPC。
 - 祭坛施法进任务系统（NPC 移动/交互是任务），不进 CastBrain 自动决策表；`CastBrain.select` 再加 altarOnly 跳过作防御性保证。
-- 引导时长与法阵视觉对齐：`altar_duration` 设为该魔法 circle spec 的 `durationTicks`（revive → self_teleport = 160）。
+- 引导时长与法阵视觉对齐：`altar_duration` 设为该魔法 circle spec 的 `durationTicks`（revive → revive_ritual = 600）。
 
 ## 十二、分阶段实施
 

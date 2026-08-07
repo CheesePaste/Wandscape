@@ -51,11 +51,11 @@ class MagicDefTest {
         assertEquals(600, revive.baseCooldown());
         assertEquals(32, revive.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.DEAD_ALLY, revive.targetMode());
-        assertEquals("self_teleport", revive.effectCircleId());
+        assertEquals("revive_ritual", revive.effectCircleId());
         assertNull(revive.effectColor());
         assertTrue(revive.altarOnly(), "复活是祭坛专属魔法");
         assertEquals(600, revive.altarCooldown());
-        assertEquals(160, revive.altarDuration());
+        assertEquals(600, revive.altarDuration());
     }
 
     @Test
