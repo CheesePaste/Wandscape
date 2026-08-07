@@ -45,7 +45,7 @@
 3. **`ResourceShortageHandler` 兜底链路**：`taskPool.setResourceShortageHandler → ResourceSupplySystem.enqueueSynthesize`（缺元素时合成），但合成又需要元素成本——可能死循环，靠 in-flight 去重缓解。
 4. **`SplineBuildPacket` 端点吸附**：3 格内吸附节点，否则建 ORPHAN 节点；tier 硬编码 "dirt"。
 5. **`nodedark.json` 的 `node_config` 对象有非法尾逗号**（`"channel_ticks": 1200,` 后跟 `}`）。Gson 内部 lenient 模式可解析，故能正常加载；但严格 JSON 校验会失败，建议清理。
-6. **元素价值口径**：建造用 `build_cost`（EnqueueHelper 算料）、分解用 `getItemElementValue`（decompose_yield → build_cost 回退，×1/5）、商店售卖利润同用 `getItemElementValue`、合成用 `buildCost`——来源尽量统一，`GenerateElementMappingsCommand` 负责保证一致性。
+6. **元素价值口径**：建造用 `build_cost`（EnqueueHelper 算料）、分解用 `getItemElementValue`（decompose_yield → build_cost 回退，×1/5，且 count×总价值<5 时拒绝）、商店售卖利润同用 `getItemElementValue`、合成用 `buildCost`——来源尽量统一，`GenerateElementMappingsCommand` 负责保证一致性。
 
 ## 五、版本相关（历史提交提示）
 

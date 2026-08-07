@@ -64,6 +64,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
     private static final String TAG = "WandscapeBlockInteractExecutor";
 
+    /** Decompose yields 1/N of the item's element value; refuse when count × total value < N (would burn items for zero output). */
+    private static final long DECOMPOSE_DIVISOR = 5;
+
     @Nullable
     private static ElementMappingLoader elementMappingLoader;
 
@@ -281,12 +284,23 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
         }
 
-        // Decompose returns 1/5 of the item's element value (anti item-duplication):
+        // Decompose returns 1/N of the item's element value (anti item-duplication):
         // source is decompose_yield, falling back to build_cost — same lookup as shop sale profit.
         Map<ElementType, Long> yield = mappings.getItemElementValue(itemId);
 
         if (yield.isEmpty()) {
             Log.warn(TAG, "decompose: no element value for {}", itemId);
+            return;
+        }
+
+        long totalValue = 0;
+        for (var v : yield.values()) totalValue += v;
+
+        // Refuse up front when count × total value < divisor: the batch would
+        // burn items and yield 0 elements (floor division truncates to zero).
+        if (count * totalValue < DECOMPOSE_DIVISOR) {
+            Log.warn(TAG, "decompose: refuse {} x{} — total value {} < {}", itemId, count,
+                    count * totalValue, DECOMPOSE_DIVISOR);
             return;
         }
 
@@ -300,11 +314,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : yield.entrySet()) {
-            long total = (entry.getValue() * count) / 5;
+            long total = (entry.getValue() * count) / DECOMPOSE_DIVISOR;
             if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
-            Log.info(TAG, "decompose: {} x{} → {} x{} (1/5 of value)", itemId, count,
-                    entry.getKey().name().toLowerCase(), total);
+            Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, count,
+                    entry.getKey().name().toLowerCase(), total, DECOMPOSE_DIVISOR);
         }
 
         spawnCompletionParticles(npcId);

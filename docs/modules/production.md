@@ -41,7 +41,7 @@
 ## 执行（WandscapeBlockInteractExecutor）
 
 - sync 动作 toggle/activate/open_gui 立即执行；异步走 channel tick + thenRun。
-- `executeDecompose`：扣物品（bank.consume），产出 = `mappings.getItemElementValue(itemId)`（decompose_yield→build_cost 回退，与商店同源）× 1/5 向下取整，**加到 colonyResources.addResource(元素名 ResourceId)**（非 ColonyItemBank 元素）。
+- `executeDecompose`：先校验 count×总价值 ≥ 5（否则拒绝，不扣物品），再扣物品（bank.consume），产出 = `mappings.getItemElementValue(itemId)`（decompose_yield→build_cost 回退，与商店同源）× 1/5 向下取整，**加到 colonyResources.addResource(元素名 ResourceId)**（非 ColonyItemBank 元素）。
 - `executeSynthesize`：校验 bank.countElement ≥ cost，consumeElement，产出 bank.add。
 - `executeCraftWand`：同样扣元素，产出 ItemStack 写 CUSTOM_DATA=outputNbt，以带 NBT 的 ItemKey 入库。
 - `executeBrewPotion`：校验元素 cost + input_items，同时扣元素与输入物品，产出入仓。

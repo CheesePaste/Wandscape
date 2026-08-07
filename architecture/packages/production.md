@@ -20,7 +20,7 @@
 ## 执行处理
 
 WandscapeBlockInteractExecutor 中 4 个异步动作：
-- `executeDecompose()` — 消耗物品 → 查 `getItemElementValue`（decompose_yield→build_cost 回退，与商店同源）→ 产 1/5（向下取整）→ colonyResources
+- `executeDecompose()` — 查 `getItemElementValue`（decompose_yield→build_cost 回退，与商店同源）→ 产 1/5（向下取整）→ colonyResources；count×总价值 < 5 提前拒绝（不扣物品）
 - `executeSynthesize()` — 查 element_mappings → bank.consumeElement() → bank.add() 产物
 - `executeCraftWand()` — 同 synthesize，产物带 NBT
 - `executeBrewPotion()` — 同 synthesize，额外消耗 input_items
