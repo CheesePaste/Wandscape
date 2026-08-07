@@ -18,7 +18,7 @@ class MageAttributeRollerTest {
         assertInRange(c.workSpeed(), 0.5f, 1.5f);
         assertInRange(c.spellSpeed(), 0.5f, 1.5f);
         assertInRange(c.armorValue(), 0f, 8f);
-        assertInRange(c.moveSpeed(), 0.25f, 0.40f);
+        assertInRange(c.moveSpeed(), 0.2f, 0.4f);
     }
 
     @Test
@@ -32,7 +32,7 @@ class MageAttributeRollerTest {
         assertEquals(0.10f, high.workSpeed() - low.workSpeed(), 0.011f);
         assertEquals(0.10f, high.spellSpeed() - low.spellSpeed(), 0.011f);
         assertEquals(1f, high.armorValue() - low.armorValue(), 0.001f); // 0.5/级 × 2
-        assertEquals(low.moveSpeed(), high.moveSpeed(), 0.001f);     // 移速无等级加成
+        assertEquals(0.04f, high.moveSpeed() - low.moveSpeed(), 0.001f);     // 0.02/级 × 2
     }
 
     @Test
@@ -53,7 +53,7 @@ class MageAttributeRollerTest {
             assertInRange(c.maxHp(), 38f, 58f);
             assertInRange(c.maxMana(), 285f, 385f);
             assertInRange(c.spellPower(), 0.95f, 1.95f);
-            assertInRange(c.moveSpeed(), 0.25f, 0.40f);
+            assertInRange(c.moveSpeed(), 0.38f, 0.58f);
         }
     }
 

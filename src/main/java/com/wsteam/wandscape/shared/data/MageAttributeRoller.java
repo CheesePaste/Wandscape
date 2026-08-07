@@ -22,7 +22,7 @@ public final class MageAttributeRoller {
         int lvl = safeLevel - 1;
         float maxHp = (float) Math.round(20 + 20 * skew(random)) + lvl * 2f;        // 20–40 + 2/级
         float maxMana = (float) Math.round(150 + 100 * skew(random)) + lvl * 15f;   // 150–250 + 15/级
-        float moveSpeed = 0.25f + random.nextFloat() * 0.15f;                        // 0.25–0.40
+        float moveSpeed = 0.2f + random.nextFloat() * 0.2f + lvl * 0.02f;            // 0.2–0.4 + 0.02/级
         float spellPower = round2(0.5f + (float) skew(random) + lvl * 0.05f);        // 0.5–1.5 + 0.05/级
         float workSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);
         float spellSpeed = round2(0.5f + (float) skew(random) + lvl * 0.05f);

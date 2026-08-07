@@ -49,7 +49,7 @@
 
 ## 酒馆招募
 
-- 法师游客（5%）满意度到 100% → `storeMageResume` → `TavernApi.receiveMageResume`。法师 7 属性按**加法 + 偏斜 random²** roll：生命 20–40 + 2/级、魔力 150–250 + 15/级、移速 0.25–0.40（不变）、法强/工速/施速 0.5–1.5 + 0.05/级、护甲 0–8 + 0.5/级（`random²` 偏向低值、偶发高值 → 自然出专精；等级做加法叠加，更公平）。掷点公式集中在 `shared/data/MageAttributeRoller`（游客掷简历与酒馆招募共用）。
+- 法师游客（5%）满意度到 100% → `storeMageResume` → `TavernApi.receiveMageResume`。法师 7 属性按**加法 + 偏斜 random²** roll：生命 20–40 + 2/级、魔力 150–250 + 15/级、移速 0.2–0.4 + 0.02/级、法强/工速/施速 0.5–1.5 + 0.05/级、护甲 0–8 + 0.5/级（`random²` 偏向低值、偶发高值 → 自然出专精；等级做加法叠加，更公平）。掷点公式集中在 `shared/data/MageAttributeRoller`（游客掷简历与酒馆招募共用）。
 - `TavernRecruitStorage`（SavedData `wandscape_tavern_recruits`）每殖民地最多 5 条，超出逐出最旧。
 - `TavernRecruitPacket.handleRecruitMage`：取出简历 → 生成 WandscapeNpc（MobSpawnType.COMMAND），写入 resume 的 7 属性 + 满蓝入职，setPersistenceRequired + colonyId。`getCandidates/refreshCandidates/recruitCandidate` 为占位（返回空/false）。
 - 酒馆「招募 NPC」按钮（`TavernRecruitPacket` spawn_npc）：用同一掷点公式、以**殖民地当前等级**立即生成一名法师——`MageAttributeRoller.roll(colonyLevel)`（random² 偏斜 + (殖民地等级−1) 加成），满蓝入职并播种 ECS，等价于「模拟殖民地等级游客投出的简历」。
