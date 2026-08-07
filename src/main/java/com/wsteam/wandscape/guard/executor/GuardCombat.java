@@ -1,13 +1,18 @@
 package com.wsteam.wandscape.guard.executor;
 
+import java.util.List;
+
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
+import com.wsteam.wandscape.magic.internal.CastBrain;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -47,7 +52,8 @@ public final class GuardCombat {
      *   <li>LOS 可见 → 停止移动；无光束 → {@link MagicCaster#castNpcAt} 施法。</li>
      * </ol>
      *
-     * <p>施法门控（施法互斥锁 + 光束独立 CD + 固定魔力）在 {@code MagicCaster} 内部完成，
+     * <p>施法决策经 {@link CastBrain}（L1 优先级扫描：CD/蓝/目标规则），选出后按魔法 id
+     * 分发执行；门控（施法互斥锁 + 光束独立 CD + 固定魔力）在 {@code MagicCaster} 内部原子复验，
      * 实际 CD = 基础 / SPELL_SPEED。
      */
     public static void engage(ServerLevel level, WandscapeNpc npc, LivingEntity target,
@@ -64,10 +70,19 @@ public final class GuardCombat {
             return;
         }
 
-        // 看得见：停止移动，确保有光束（没有才施法，CD/蓝/锁在 MagicCaster 内部门控）
+        // 看得见：停止移动，无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
         cancelNavigation(world, npcId);
         if (beam == null) {
-            boolean ok = MagicCaster.castNpcAt(level, npc, target, circleId, color);
+            MagicDef chosen = CastBrain.select(CastBrain.defaultCombatSpells(),
+                    def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), true);
+            if (chosen == null) return;
+            boolean ok;
+            if (MagicCaster.BEAM_MAGIC_ID.equals(chosen.id())) {
+                ok = MagicCaster.castNpcAt(level, npc, target, circleId, color);
+            } else {
+                Log.warn(TAG, "施法分发缺失：魔法 {} 无执行器（已知魔法表与执行器不一致）", chosen.id());
+                return;
+            }
             if (ok) {
                 // 杖尖彩色爆闪（施法颜色）
                 float[] rgb = rgbOf(color);
