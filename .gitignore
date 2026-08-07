@@ -15,7 +15,7 @@ magicarchitecture/
 spec/
 ### Claude (local working files, kept out of the repo) ###
 .claude/
-
+magiccircles/
 ### Dev tools (maintained outside the repo) ###
 tools/
 
