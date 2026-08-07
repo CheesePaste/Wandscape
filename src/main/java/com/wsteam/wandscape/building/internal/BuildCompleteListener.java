@@ -179,8 +179,8 @@ public final class BuildCompleteListener {
      *
      * @param rotationSteps number of 90° CCW rotations applied to the building (0-3)
      */
-    static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config,
-                                                int rotationSteps) {
+    public static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config,
+                                                        int rotationSteps) {
         java.util.List<BlockOffset> pattern = com.wsteam.wandscape.projection.BuildingRotation
                 .rotateOffsets(config.pattern(), rotationSteps);
         java.util.Map<String, String> blockMapping = rotationSteps != 0

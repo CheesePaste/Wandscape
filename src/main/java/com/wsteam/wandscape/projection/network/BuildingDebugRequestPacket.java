@@ -66,10 +66,17 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
         var config = com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().get(typeId);
         String displayName = (config != null && config.displayName() != null && !config.displayName().isEmpty())
                 ? config.displayName() : typeId;
+
+        // Whether the building has any damaged pattern blocks (minor < 1/3 or broken
+        // >= 1/3) — drives the client-side Repair button availability.
+        boolean needsRepair = config != null && !com.wsteam.wandscape.building.internal.BuildCompleteListener
+                .findDamagedBlocks(player.level(), state.getAnchor(), config, state.getRotationSteps())
+                .isEmpty();
+
         var response = new BuildingDebugResponsePacket(
                 state.getBuildingId(), typeId, displayName, state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
-                state.isStructureIntact(), state.isShutdown(),
+                state.isStructureIntact(), needsRepair, state.isShutdown(),
                 comfort, magic, wonder,
                 state.getQueueCapacity(),
                 queueSnapshot, state.getCurrentTaskId()

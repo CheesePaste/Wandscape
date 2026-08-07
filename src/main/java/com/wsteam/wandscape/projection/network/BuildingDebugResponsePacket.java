@@ -26,6 +26,7 @@ public record BuildingDebugResponsePacket(
         UUID colonyId,
         BlockPos anchor,
         boolean intact,
+        boolean needsRepair,
         boolean shutdown,
         int comfort,
         int magic,
@@ -80,6 +81,7 @@ public record BuildingDebugResponsePacket(
         }
         buf.writeBlockPos(pkt.anchor());
         buf.writeBoolean(pkt.intact());
+        buf.writeBoolean(pkt.needsRepair());
         buf.writeBoolean(pkt.shutdown());
         buf.writeInt(pkt.comfort());
         buf.writeInt(pkt.magic());
@@ -111,6 +113,7 @@ public record BuildingDebugResponsePacket(
         UUID colonyId = buf.readBoolean() ? buf.readUUID() : null;
         BlockPos anchor = buf.readBlockPos();
         boolean intact = buf.readBoolean();
+        boolean needsRepair = buf.readBoolean();
         boolean shutdown = buf.readBoolean();
         int comfort = buf.readInt();
         int magic = buf.readInt();
@@ -130,7 +133,7 @@ public record BuildingDebugResponsePacket(
 
         return new BuildingDebugResponsePacket(
                 buildingId, typeId, displayName, category, colonyId, anchor,
-                intact, shutdown, comfort, magic, wonder, queueCap,
+                intact, needsRepair, shutdown, comfort, magic, wonder, queueCap,
                 queue, currentTaskId);
     }
 }

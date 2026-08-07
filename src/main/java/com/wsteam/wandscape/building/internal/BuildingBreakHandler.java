@@ -218,10 +218,12 @@ public final class BuildingBreakHandler {
     private record RepairMaterialData(JsonArray list, JsonObject counts) {}
 
     /**
-     * Manually trigger a repair scan and enqueue repair work for a broken building.
-     * Called from the anomaly system when the player clicks "修复" (Repair).
+     * Manually trigger a repair scan and enqueue repair work for a building with
+     * any damage (minor < 1/3 or broken >= 1/3).
+     * Called from the V-panel Repair button or the anomaly system.
      *
-     * @return true if repair was enqueued, false if building is intact or not found
+     * @return true if a repair was enqueued, false if the building has no damage
+     *         or was not found
      */
     public static boolean triggerRepair(Level level, UUID buildingId) {
         BuildingSavedData data = BuildingSavedData.get(level);
@@ -230,23 +232,24 @@ public final class BuildingBreakHandler {
         BuildingState state = data.getBuilding(buildingId);
         if (state == null) return false;
 
-        if (state.isStructureIntact()) return false; // not broken
-
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return false;
 
         List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps());
         if (damaged.isEmpty()) {
-            // No damaged blocks found — mark as intact
-            state.setStructureIntact(true);
-            UUID colonyId = state.getColonyId();
-            if (colonyId != null) {
-                data.addBuildingContribution(colonyId, state.getBuildingTypeId());
+            // No damaged blocks found — nothing to repair. If the building was
+            // marked broken, restore its intact state and contribution.
+            if (!state.isStructureIntact()) {
+                state.setStructureIntact(true);
+                UUID colonyId = state.getColonyId();
+                if (colonyId != null) {
+                    data.addBuildingContribution(colonyId, state.getBuildingTypeId());
+                }
+                data.setDirty();
+                Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {} — marked intact",
+                        state.getBuildingTypeId(), state.getAnchor());
             }
-            data.setDirty();
-            Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {} — marked intact",
-                    state.getBuildingTypeId(), state.getAnchor());
-            return true;
+            return false;
         }
 
         enqueueRepairForOffsets(state, config, damaged);

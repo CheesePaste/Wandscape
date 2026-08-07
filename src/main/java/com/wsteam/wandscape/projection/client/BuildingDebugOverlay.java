@@ -216,12 +216,12 @@ public final class BuildingDebugOverlay {
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
-        boolean repairEnabled = !data.intact();
+        boolean repairEnabled = data.needsRepair();
         boolean hoverRepair = repairEnabled && mx >= repairX && mx <= repairX + repairW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverShutdown = mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverDestroy = mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
-        // Repair button (green, leftmost) — only usable when the building is broken
+        // Repair button (green, leftmost) — only usable when the building has any damage
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
         g.fill(RenderType.guiOverlay(), repairX, btnY + BTN_HEIGHT - 2, repairX + repairW, btnY + BTN_HEIGHT, 0,
                 repairEnabled ? BTN_REPAIR_BG : 0x66445544);
@@ -270,8 +270,8 @@ public final class BuildingDebugOverlay {
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
 
-        // Check repair button (left) — only usable when the building is broken
-        if (!data.intact()
+        // Check repair button (left) — only usable when the building has any damage
+        if (data.needsRepair()
                 && mx >= btnRepairX && mx <= btnRepairX + btnRepairW
                 && my >= btnRepairY && my <= btnRepairY + BTN_HEIGHT) {
             event.setCanceled(true);
@@ -304,12 +304,14 @@ public final class BuildingDebugOverlay {
     private static String getStatusText(BuildingDebugResponsePacket data) {
         if (data.shutdown()) return "[STOPPED]";
         if (!data.intact()) return "[BROKEN]";
+        if (data.needsRepair()) return "[DAMAGED]";
         return "[OK]";
     }
 
     private static int getStatusColor(BuildingDebugResponsePacket data) {
         if (data.shutdown()) return TEXT_RED;
         if (!data.intact()) return TEXT_YELLOW;
+        if (data.needsRepair()) return TEXT_YELLOW;
         return TEXT_GREEN;
     }
 
