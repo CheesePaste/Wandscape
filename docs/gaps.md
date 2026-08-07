@@ -23,8 +23,8 @@
 - **道路装饰**：`RoadConfig.getDecorationConfig` 无调用方——Config 里有 `road.decoration.*`（路灯/长椅）设置，但 `RoadBuilder` **未接入**装饰生成。
 - **`potion_station`**：`BuildingInteractHandler` 对 potion_station 只提示"not yet implemented"；`PotionStationPacket.handleClient` 空实现，**无 GUI**。配方 JSON 有 2 个药水配方（mana/stamina）但无法在游戏中生产。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
-- **施法决策已集中但战斗魔法面仍窄**：守卫/自防御经 `CastBrain` 选魔法（P1/P2 落地），CD/蓝/射程/视觉数据驱动；魔法效果现有 beam（战斗）+ revive（玩家指挥，不走 CastBrain）。NPC 仍无"会哪些魔法"概念（`SpellbookComponent` 未做），CastBrain 已知列表硬编码 `[beam]`。完整方案见 [spell-casting.md](spell-casting.md)（P3 规划中）。
-- **复活入口待迁移祭坛（P5 规划）**：当前复活 = shift+右键 NPC 玩家指挥式（P4 已实现）；P5 将改为祭坛唯一入口（altar 建筑 + AltarScreen + NPC 到祭坛旁施法，目标 = 最近死去不限位置，复活点 = 祭坛中心最上方），见 [spell-casting.md](spell-casting.md) 第十章。
+- **施法决策已集中但战斗魔法面仍窄**：守卫/自防御经 `CastBrain` 选魔法（P1/P2 落地），CD/蓝/射程/视觉数据驱动；魔法效果现有 beam（战斗）+ revive（祭坛施法）。NPC 仍无"会哪些魔法"概念（`SpellbookComponent` 未做），CastBrain 已知列表硬编码 `[beam]`，且自动施法永不选 `altarOnly` 魔法。完整方案见 [spell-casting.md](spell-casting.md)（P3 规划中）。
+- **祭坛施法（P5 已实现）**：`altar1` 建筑类别 + `AltarScreen`（V 面板右键祭坛）+ NPC 走到祭坛旁执行 `AltarCastOp`（扣接取任务 NPC 的蓝，`SchedulerSystem` 按 `mana_cost` 门槛分派）；每祭坛每魔法 CD 存 `AltarCastState`（SavedData，祭坛间不共享）；`altarOnly` 魔法（revive）禁止 NPC 直接施放——shift+右键复活已移除，复活 = 最近死去（`ColonyDeathRegistry.latest`）在祭坛中心最上方重生。见 [spell-casting.md](spell-casting.md) 第十章。
 - **`TavernApi.getCandidates/refreshCandidates/recruitCandidate`**：占位（返回空/false）；实际招募走 `TavernRecruitPacket.handleRecruitMage` + `receiveMageResume/recruitMage`。
 - **`WorkbenchSource`**：V1 stub（POLL_INTERVAL=30，poll 空）。
 - **`ElementAuditor`/`ElementAuditRunner`**：需系统属性 `wandscape.runAudit=true` 才跑（GameTest 用途）。
