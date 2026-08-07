@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
+import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
@@ -59,6 +60,44 @@ public final class MagicCaster {
     /** 施法目标搜索半径（方块）：取最近敌对生物。 */
     private static final double CAST_TARGET_RANGE = 32.0;
 
+    // ── beam 参数：数据驱动（magic_spells/beam.json），缺失回退常量 ──
+
+    /** beam 魔法定义（可能为 null，取用前判空）。 */
+    @Nullable
+    public static MagicDef beamSpec() {
+        return SpellbookLoader.getSpec(BEAM_MAGIC_ID);
+    }
+
+    /** 光束基础冷却（tick）。 */
+    public static int beamBaseCooldown() {
+        MagicDef spec = beamSpec();
+        return spec != null ? spec.baseCooldown() : BEAM_BASE_CD;
+    }
+
+    /** 光束固定魔力消耗。 */
+    public static int beamManaCost() {
+        MagicDef spec = beamSpec();
+        return spec != null ? spec.manaCost() : BEAM_MANA_COST;
+    }
+
+    /** 手动施法目标搜索半径（方块）。 */
+    public static double beamRange() {
+        MagicDef spec = beamSpec();
+        return spec != null ? spec.range() : CAST_TARGET_RANGE;
+    }
+
+    /** 光束法阵 spec id（效果参数）。 */
+    public static String beamCircleId() {
+        MagicDef spec = beamSpec();
+        return spec != null && spec.effectCircleId() != null ? spec.effectCircleId() : DEFAULT_CIRCLE;
+    }
+
+    /** 光束颜色（效果参数，ARGB）。 */
+    public static int beamColor() {
+        MagicDef spec = beamSpec();
+        return spec != null && spec.effectColor() != null ? spec.effectColor() : DEFAULT_COLOR;
+    }
+
     private MagicCaster() {}
 
     /**
@@ -92,7 +131,7 @@ public final class MagicCaster {
      * 法阵/光束由 MagicBeamEntity 动态跟踪目标，随 NPC 转向。无目标时沿当前朝向射 200 格。
      */
     public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
-        LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
+        LivingEntity target = findNearestHostile(level, npc, beamRange());
         boolean ok;
         if (target != null) {
             // 手动施法免费（测试功能），仍占用光束 CD 与施法互斥锁
@@ -102,7 +141,7 @@ public final class MagicCaster {
             MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
             if (spec == null) return false;
             int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
-            if (!npc.tryCastSpell(BEAM_MAGIC_ID, BEAM_BASE_CD, 0, lockDuration)) return false;
+            if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), 0, lockDuration)) return false;
 
             UUID effectId = npc.getUUID();
             Vec3 hand = npc.getStaffPosition();
@@ -132,7 +171,7 @@ public final class MagicCaster {
      */
     public static boolean castNpcAt(ServerLevel level, WandscapeNpc npc, LivingEntity target,
                                     String circleId, @Nullable Integer color) {
-        return castNpcBeam(level, npc, target, circleId, color, BEAM_MANA_COST);
+        return castNpcBeam(level, npc, target, circleId, color, beamManaCost());
     }
 
     /**
@@ -147,7 +186,7 @@ public final class MagicCaster {
         if (spec == null || target == null || target.isRemoved() || !target.isAlive()) return false;
 
         int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
-        if (!npc.tryCastSpell(BEAM_MAGIC_ID, BEAM_BASE_CD, manaCost, lockDuration)) return false;
+        if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), manaCost, lockDuration)) return false;
 
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
