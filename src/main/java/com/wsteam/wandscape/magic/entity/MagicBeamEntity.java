@@ -223,9 +223,13 @@ public class MagicBeamEntity extends Entity {
                 // hurt() 会按源点方向击退——先记速度再恢复以抵消。伤害/记仇/反击不受影响。
                 Vec3 pre = mob.getDeltaMovement();
                 if (casterNpc != null && !casterNpc.isRemoved()) {
-                    // NPC 施法：伤害记为 NPC 造成（source.getEntity()=NPC）→ 怪物 HurtByTargetGoal
-                    // 会反击 NPC，触发自防御的受伤仇恨，形成互相战斗。
-                    mob.hurt(level().damageSources().indirectMagic(casterNpc, this), damage);
+                    // NPC 施法：伤害记为 NPC 造成 → 怪物 HurtByTargetGoal 反击 NPC，触发自防御受伤仇恨。
+                    // 参数顺序是坑：indirectMagic(A, B) 因 DamageSources.source() 的参数名与
+                    // DamageSource 构造器(directEntity, causingEntity)错位，getEntity() 返回 B，
+                    // 所以 B 必须是 NPC。否则 LivingEntity.hurt 里 setLastHurtByMob 拿到光束实体
+                    // （非 LivingEntity）永不记仇，且 NpcSpellPowerHandler/AchievementService 的
+                    // source.getEntity() instanceof WandscapeNpc 判定也失效（SPELL_POWER 倍率不结算）。
+                    mob.hurt(level().damageSources().indirectMagic(this, casterNpc), damage);
                 } else {
                     // 玩家/静态施法：无施法者，保持原行为（不记仇恨）。
                     mob.hurt(level().damageSources().magic(), damage);
