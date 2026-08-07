@@ -46,6 +46,7 @@ import com.wsteam.wandscape.command.MagicCommand;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCastManager;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
+import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.internal.MagicInteractHandler;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
@@ -195,6 +196,8 @@ public class Wandscape {
 
     // ---- magic: magic circle loader (magic_circles 类目) ----
     public static final MagicCircleLoader MAGIC_CIRCLE_LOADER = new MagicCircleLoader(DATA_LOADER);
+    // ---- magic: spellbook loader (magic_spells 类目) ----
+    public static final SpellbookLoader SPELLBOOK_LOADER = new SpellbookLoader(DATA_LOADER);
 
     // ---- 10 production-stations: loader ----
     public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
