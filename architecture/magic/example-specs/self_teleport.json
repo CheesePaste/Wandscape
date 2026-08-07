@@ -1,6 +1,6 @@
 {
   "id": "self_teleport_c",
-  "duration_ticks": 170,
+  "duration_ticks": 200,
   "height": 0.1,
   "elements": [
     {

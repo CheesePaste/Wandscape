@@ -1,6 +1,6 @@
 {
   "id": "self_teleport",
-  "duration_ticks": 170,
+  "duration_ticks": 160,
   "height": 0.1,
   "elements": [
     {
@@ -270,7 +270,7 @@
       "color": "#a78bfa",
       "rotation_offset_deg": 0,
       "rotate_speed": -14,
-      "start": 0.56,
+      "start": 0.52,
       "anim": {
         "scale": [
           [
