@@ -3,7 +3,9 @@ package com.wsteam.wandscape.npc.entity;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,10 +15,12 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.ColonyMember;
 import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.MagicState;
 import com.wsteam.wandscape.core.component.NavigationState;
+import com.wsteam.wandscape.core.component.SpellbookComponent;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.AttributeType;
@@ -30,6 +34,9 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -101,6 +108,12 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     // ============================================================
 
     public final MagicState magic = new MagicState();
+
+    /** 会哪些魔法（magicId 列表，P3；默认 [beam]）。决策层已知表来源。 */
+    public final SpellbookComponent spellbook = new SpellbookComponent();
+
+    /** 施法策略（玩家可控：预设 + 自定义优先级）。GuardCombat 经 CastBrain.resolvePriority 消费。 */
+    public final CastStrategyComponent castStrategy = new CastStrategyComponent();
 
     /** 当前魔力。 */
     public float getCurrentMana() {
@@ -736,6 +749,10 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide) {
+            // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
+            if (spellbook.isEmpty()) {
+                spellbook.set(SpellbookComponent.DEFAULT_SPELLS);
+            }
             if (getSkinVariant() < 0) {
                 this.entityData.set(DATA_SKIN_VARIANT, random.nextInt(SKIN_VARIANT_COUNT));
             }
@@ -853,6 +870,18 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         tag.putInt("regenCooldown", regenCooldown);
         tag.putInt("regenAccum", regenAccum);
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
+        // P3：施法决策（会哪些魔法 + 策略预设 + 自定义优先级）
+        ListTag spellbookIds = new ListTag();
+        for (String id : spellbook.ids()) {
+            spellbookIds.add(StringTag.valueOf(id));
+        }
+        tag.put("spellbookIds", spellbookIds);
+        tag.putString("castStrategyPreset", castStrategy.preset().name());
+        ListTag customPriority = new ListTag();
+        for (String id : castStrategy.customPriority()) {
+            customPriority.add(StringTag.valueOf(id));
+        }
+        tag.put("castStrategyPriority", customPriority);
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
         }
@@ -888,6 +917,24 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         regenCooldown = tag.getInt("regenCooldown");
         regenAccum = tag.getInt("regenAccum");
         hasDefaultWand = tag.getBoolean("hasDefaultWand");
+        // P3：施法决策恢复（旧存档无字段 → 保持默认 [beam] / balanced）
+        if (tag.contains("spellbookIds")) {
+            ListTag sl = tag.getList("spellbookIds", Tag.TAG_STRING);
+            List<String> ids = new ArrayList<>(sl.size());
+            for (int i = 0; i < sl.size(); i++) {
+                ids.add(sl.getString(i));
+            }
+            spellbook.set(ids);
+        }
+        castStrategy.setPreset(tag.getString("castStrategyPreset"));
+        if (tag.contains("castStrategyPriority")) {
+            ListTag pl = tag.getList("castStrategyPriority", Tag.TAG_STRING);
+            List<String> pri = new ArrayList<>(pl.size());
+            for (int i = 0; i < pl.size(); i++) {
+                pri.add(pl.getString(i));
+            }
+            castStrategy.setCustomPriority(pri);
+        }
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");
         }

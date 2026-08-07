@@ -1,32 +1,100 @@
 package com.wsteam.wandscape.magic.internal;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.data.WorldSnapshot;
 
 /**
- * 统一施法决策脑：给定「已知魔法 + 可施放判定 + 是否有目标」，按列表顺序选第一个
- * 可施放且目标规则满足的魔法；全部不满足返回 null（调用方走兜底：基础攻击/走位/待命）。
+ * 统一施法决策脑：给定「已知魔法 + 可施放判定 + 世界快照」，按策略解析出的优先级顺序选第一个
+ * 可施放、目标规则命中且条件满足的魔法；全部不满足返回 null（调用方走兜底：基础攻击/走位/待命）。
  *
  * <p>L1 优先级扫描（docs/spell-casting.md 三层决策）。L0 硬性覆盖（血量危机/LOS/互斥锁）
- * 由调用方（守卫/自防御战斗循环）在调用前处理；P3 起"已知魔法"来自 NPC 的
- * SpellbookComponent 与玩家策略，当前阶段由调用方传入默认列表。
+ * 由调用方（守卫/自防御战斗循环）在调用前处理。P3 起已知魔法来自 NPC 的
+ * {@code SpellbookComponent} 与玩家策略（{@link #resolvePriority}），替代硬编码 {@code [beam]}。
  */
 public final class CastBrain {
 
     private CastBrain() {}
 
-    /** 当前默认战斗魔法列表（[beam]）；beam 定义缺失时为空。 */
-    public static List<MagicDef> defaultCombatSpells() {
-        MagicDef beam = MagicCaster.beamSpec();
-        return beam != null ? List.of(beam) : List.of();
+    /** 预设 → 分类级默认排序（高→低）。UTILITY 不进预设表（L0 硬性路径/玩家命令管）。 */
+    private static final Map<CastStrategyComponent.Preset, List<MagicDef.Category>> PRESET_ORDER = Map.of(
+            CastStrategyComponent.Preset.OFFENSIVE, List.of(
+                    MagicDef.Category.SINGLE_TARGET, MagicDef.Category.AOE,
+                    MagicDef.Category.DEFENSE, MagicDef.Category.SUPPORT),
+            CastStrategyComponent.Preset.BALANCED, List.of(
+                    MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET,
+                    MagicDef.Category.SUPPORT, MagicDef.Category.DEFENSE),
+            CastStrategyComponent.Preset.SUPPORT, List.of(
+                    MagicDef.Category.SUPPORT, MagicDef.Category.DEFENSE,
+                    MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET),
+            CastStrategyComponent.Preset.DEFENSIVE, List.of(
+                    MagicDef.Category.DEFENSE, MagicDef.Category.SUPPORT,
+                    MagicDef.Category.AOE, MagicDef.Category.SINGLE_TARGET));
+
+    /**
+     * 把魔法 id 列表解析为魔法定义列表（SpellbookLoader 查表，缺失跳过）。
+     * 供调用方把 NPC 的 {@code SpellbookComponent.ids()} 转成 {@code known}。
+     */
+    public static List<MagicDef> knownSpells(List<String> ids) {
+        List<MagicDef> out = new ArrayList<>();
+        if (ids != null) {
+            for (String id : ids) {
+                MagicDef def = SpellbookLoader.getSpec(id);
+                if (def != null) out.add(def);
+            }
+        }
+        return out;
     }
 
     /**
-     * 按 {@code known} 顺序返回第一个门控通过（{@code castable}）且目标规则满足的魔法；
+     * 按玩家策略解析出有效施法优先级（魔法级顺序）：
+     * <ul>
+     *   <li>预设（非 CUSTOM）：按 {@link #PRESET_ORDER} 分类顺序，类内按 {@code known} 顺序，
+     *       UTILITY 类不进列表。</li>
+     *   <li>CUSTOM：用 {@code strategy.customPriority()} 显式 magicId 顺序（不在 known 的丢弃）；
+     *       列表为空回退 balanced。</li>
+     * </ul>
+     */
+    public static List<MagicDef> resolvePriority(@Nullable CastStrategyComponent strategy, List<MagicDef> known) {
+        CastStrategyComponent s = strategy != null ? strategy : new CastStrategyComponent();
+        if (s.preset() == CastStrategyComponent.Preset.CUSTOM) {
+            List<MagicDef> custom = new ArrayList<>();
+            for (String id : s.customPriority()) {
+                for (MagicDef def : known) {
+                    if (def.id().equals(id)) {
+                        custom.add(def);
+                        break;
+                    }
+                }
+            }
+            return custom.isEmpty()
+                    ? resolvePreset(CastStrategyComponent.Preset.BALANCED, known)
+                    : custom;
+        }
+        return resolvePreset(s.preset(), known);
+    }
+
+    private static List<MagicDef> resolvePreset(CastStrategyComponent.Preset preset, List<MagicDef> known) {
+        List<MagicDef.Category> order = PRESET_ORDER.getOrDefault(preset,
+                PRESET_ORDER.get(CastStrategyComponent.Preset.BALANCED));
+        List<MagicDef> out = new ArrayList<>();
+        for (MagicDef.Category category : order) {
+            for (MagicDef def : known) {
+                if (def.category() == category) out.add(def);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 按 {@code known} 顺序返回第一个门控通过（{@code castable}）、目标规则命中且条件满足的魔法；
      * 无则 null。调用方拿到结果后自行执行（门控在 {@code MagicState.tryCast} 原子复验，
      * 此处只做选择、不扣资源）。
      *
@@ -34,20 +102,32 @@ public final class CastBrain {
      * 其不会进守卫/自防御的自动决策表。
      *
      * @param castable  MagicDef → 是否满足施法门控（互斥锁 + 该魔法 CD + 蓝够）
-     * @param hasTarget 调用方是否已选定有效目标（HOSTILE 系/ALLY 系需要目标，SELF/NONE 不需要）
+     * @param snapshot  世界快照（敌数/自血/友方最低血/状态），驱动目标规则与 {@code conditions}
      */
     @Nullable
-    public static MagicDef select(List<MagicDef> known, Predicate<MagicDef> castable, boolean hasTarget) {
+    public static MagicDef select(List<MagicDef> known, Predicate<MagicDef> castable, WorldSnapshot snapshot) {
+        WorldSnapshot s = snapshot != null ? snapshot : WorldSnapshot.EMPTY;
         for (MagicDef def : known) {
             if (def.altarOnly()) continue;
             if (!castable.test(def)) continue;
-            if (requiresTarget(def) && !hasTarget) continue;
+            if (!targetAvailable(def, s)) continue;
+            if (!def.conditions().matches(s)) continue;
             return def;
         }
         return null;
     }
 
-    /** 目标规则是否要求调用方先选定目标。 */
+    /** 快照下目标规则是否命中（SELF/NONE 恒真，DEAD_ALLY 走祭坛永不自选）。 */
+    static boolean targetAvailable(MagicDef def, WorldSnapshot s) {
+        return switch (def.targetMode()) {
+            case HOSTILE_NEAREST, HOSTILE_LOWEST_HP -> s.hasHostileTarget();
+            case ALLY_LOWEST_HP -> s.hasInjuredAlly();
+            case DEAD_ALLY -> false;
+            case SELF, NONE -> true;
+        };
+    }
+
+    /** 目标规则是否要求调用方先选定目标（纯模式判定）。 */
     public static boolean requiresTarget(MagicDef def) {
         return switch (def.targetMode()) {
             case HOSTILE_NEAREST, HOSTILE_LOWEST_HP, ALLY_LOWEST_HP, DEAD_ALLY -> true;

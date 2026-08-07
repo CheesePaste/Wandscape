@@ -1,6 +1,8 @@
 package com.wsteam.wandscape.guard.executor;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
@@ -8,6 +10,7 @@ import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.data.WorldSnapshot;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.CastBrain;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
@@ -17,7 +20,11 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -73,8 +80,12 @@ public final class GuardCombat {
         // 看得见：停止移动，无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
         cancelNavigation(world, npcId);
         if (beam == null) {
-            MagicDef chosen = CastBrain.select(CastBrain.defaultCombatSpells(),
-                    def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), true);
+            // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
+            List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
+                    CastBrain.knownSpells(npc.spellbook.ids()));
+            WorldSnapshot snapshot = buildSnapshot(level, npc);
+            MagicDef chosen = CastBrain.select(known,
+                    def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), snapshot);
             if (chosen == null) return;
             boolean ok;
             if (MagicCaster.BEAM_MAGIC_ID.equals(chosen.id())) {
@@ -96,6 +107,52 @@ public final class GuardCombat {
     /** 0xAARRGGBB → [r,g,b]（0-1）。 */
     private static float[] rgbOf(int argb) {
         return new float[]{ ((argb >> 16) & 0xFF) / 255f, ((argb >> 8) & 0xFF) / 255f, (argb & 0xFF) / 255f };
+    }
+
+    // ── 决策快照：每轮战斗循环构造（敌数/自血/友方最低血/状态），喂给 CastBrain.select ──
+
+    /** 快照扫描半径（方块）：AOE 敌数 / 友方最低血的"附近"范围。 */
+    private static final int SNAPSHOT_SCAN_RADIUS = 16;
+
+    private static WorldSnapshot buildSnapshot(ServerLevel level, WandscapeNpc npc) {
+        return new WorldSnapshot(
+                countEnemies(level, npc),
+                npc.getHealth() / Math.max(1f, npc.getMaxHealth()),
+                lowestAllyHpRatio(level, npc),
+                activeEffectIds(npc));
+    }
+
+    /** 半径内存活 {@code Enemy} 数量（min_enemies 用）。 */
+    private static int countEnemies(ServerLevel level, WandscapeNpc npc) {
+        int count = 0;
+        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(SNAPSHOT_SCAN_RADIUS),
+                e -> e instanceof Enemy)) {
+            if (e.isAlive() && !e.isRemoved()) count++;
+        }
+        return count;
+    }
+
+    /** 半径内其他友方（NPC/村民）的最低血量比例；无友方 = 1（ally_hp_max 用）。 */
+    private static float lowestAllyHpRatio(ServerLevel level, WandscapeNpc npc) {
+        float lowest = 1f;
+        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(SNAPSHOT_SCAN_RADIUS),
+                e -> e instanceof WandscapeNpc || e instanceof Villager)) {
+            if (e == npc || !e.isAlive() || e.isRemoved()) continue;
+            if (e instanceof LivingEntity le) {
+                lowest = Math.min(lowest, le.getHealth() / Math.max(1f, le.getMaxHealth()));
+            }
+        }
+        return lowest;
+    }
+
+    /** 自身已有状态 id（"minecraft:absorption" 等），no_effect 用。 */
+    private static Set<String> activeEffectIds(WandscapeNpc npc) {
+        Set<String> ids = new HashSet<>();
+        for (MobEffectInstance effect : npc.getActiveEffects()) {
+            effect.getEffect().unwrapKey()
+                    .ifPresent(key -> ids.add(key.location().toString()));
+        }
+        return ids;
     }
 
     // ── 光束 ──
