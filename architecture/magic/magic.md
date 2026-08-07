@@ -92,17 +92,17 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 | 客户端每 tick 钩子 | `WandscapeClient.onClientTick` |
 | 调试命令 | `command/` 包 |
 
-## 现有视觉的迁移（规划中，尚未执行）
+## 现有视觉的迁移（传送已完成，仪式施法圈规划中）
 
-> 以下为迁移**规划**。当前代码中 `WandscapeRitualOps.self_teleport` 仍用硬编码 PORTAL 爆点、`WandscapeNpcRenderer.spawnRitualCircle` 仍硬编码 3 环 ENCHANT——均未迁移为 spec 驱动。
+> 传送已迁移为 spec 驱动；`WandscapeNpcRenderer.spawnRitualCircle`（仪式施法圈）仍硬编码 3 环 ENCHANT，待迁移。
 
-| 现有视觉 | 位置 | 迁移目标 |
-|----------|------|---------|
-| 传送"魔法阵"（随机 PORTAL 爆点，20 粒） | `engine/boundary/WandscapeRitualOps.java` `self_teleport` | 换成 spec 圆（如 `ritual_teleport`：地面环 + 竖直传送环），传送仍是 ritual 行为，视觉改走本系统 |
-| 仪式施法圈（3 环 ENCHANT，硬编码环数/半径） | `npc/client/WandscapeNpcRenderer.java` `spawnRitualCircle()` | 由 `circle_id` 查 spec 渲染，删掉硬编码环数/半径 |
+| 现有视觉 | 位置 | 迁移目标 | 状态 |
+|----------|------|---------|------|
+| 传送"魔法阵"（随机 PORTAL 爆点，20 粒） | `engine/boundary/WandscapeRitualOps.java` `self_teleport` | `self_teleport` spec 地面法阵（脚底+目标双端），传送仍是 ritual 行为 | 已迁移（引导开始发双端 packet，引导结束传送+末影人式 PORTAL 爆点） |
+| 仪式施法圈（3 环 ENCHANT，硬编码环数/半径） | `npc/client/WandscapeNpcRenderer.java` `spawnRitualCircle()` | 由 `circle_id` 查 spec 渲染，删掉硬编码环数/半径 | 规划中 |
 
 - **绑定方式**：仪式/法术通过 `circle_id` 引用一张魔法阵；施法时走 `MagicCircleCastPacket` → `MagicCircleEmitter`。环数/半径/动画全部来自 JSON。
-- **触发链路已为此预留**：`executeRitual` 完成后发 `MagicCircleCastPacket`。
+- **触发链路**：`WandscapeRitualOps.beginRitual` 在**引导开始**即发 `MagicCircleCastPacket`（脚底+目标点各一），法阵时长 = 引导时长；引导结束 `executeRitual` 执行传送并喷 PORTAL 爆点。
 - **道路样条线不在此系统内**：独立子系统（物流/插值），仅与魔法阵共享粒子管线的能力，不与魔法阵耦合。
 
 ## 依赖

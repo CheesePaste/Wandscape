@@ -195,8 +195,8 @@ MC 端 `MagicCircleEmitter.VANILLA` 映射表——**只有以下 13 个原版�
 
 ## 与仪式/传送的衔接
 
-- 仪式（含传送）通过 `circle_id` 绑定一张魔法阵（如 `ritual_teleport`）；施法时走 `MagicCircleCastPacket` → `MagicCircleEmitter`，环数/半径/动画全部来自 JSON。
-- 现有硬编码视觉（`WandscapeRitualOps.self_teleport` 的随机 PORTAL 爆点、`WandscapeNpcRenderer.spawnRitualCircle` 的 3 环 ENCHANT）迁移为 spec 圆属**规划中**，尚未执行（见 magic.md）。
+- 仪式（含传送）通过 `circle_id` 绑定一张魔法阵（如 `self_teleport`）；施法时走 `MagicCircleCastPacket` → `MagicCircleEmitter`，环数/半径/动画全部来自 JSON。
+- 传送已迁移为 spec 圆（`self_teleport.json`，引导开始双端生成）；`WandscapeNpcRenderer.spawnRitualCircle` 的 3 环 ENCHANT 迁移仍属**规划中**（见 magic.md）。
 - 道路样条线是独立子系统，不在此契约内。
 
 ## 示例
