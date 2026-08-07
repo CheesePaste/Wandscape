@@ -91,7 +91,7 @@
     ]
   },
   "unlock_requirement": {
-    "min_colony_level": 3
+    "min_colony_level": 1
   },
   "boundary": {
     "min": [-2, 0, -2],
