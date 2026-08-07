@@ -59,6 +59,8 @@ import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.AltarCastRequestPacket;
+import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
@@ -430,6 +432,15 @@ public class Wandscape {
                         TownHallOpenPacket.TYPE,
                         TownHallOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> TownHallOpenPacket.handleClient(packet))
+                .playToClient(
+                        AltarOpenPacket.TYPE,
+                        AltarOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> AltarOpenPacket.handleClient(packet))
+                .playToServer(
+                        AltarCastRequestPacket.TYPE,
+                        AltarCastRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> AltarCastRequestPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToClient(
                         PotionStationPacket.TYPE,
                         PotionStationPacket.STREAM_CODEC,
@@ -823,6 +834,9 @@ public class Wandscape {
         // Revive: 引导到期生成复活 NPC + 每日清理过期死亡记录（不依赖 ECS）
         com.wsteam.wandscape.npc.internal.ReviveHandler.tick(event.getServer().overworld());
 
+        // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
+        com.wsteam.wandscape.building.internal.AltarCastHandler.tick(event.getServer().overworld());
+
         var world = WandscapeEngine.getWorld();
         if (world == null) return;
 
@@ -855,6 +869,10 @@ public class Wandscape {
         // ①g Tick NPC self-defense (proactive aggro scan + retaliation loop; preempts current task)
         var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
         if (selfDefenseExec != null) selfDefenseExec.tick(world);
+
+        // ①g2 Tick altar cast channeling countdowns (altar-only magic channel → effect fire)
+        var altarCastExec = WandscapeEngine.getAltarCastExecutor();
+        if (altarCastExec != null) altarCastExec.tickAll();
 
         // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
         var raidLevel = event.getServer().overworld();

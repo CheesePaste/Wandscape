@@ -25,10 +25,12 @@ import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.NodeScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.client.AltarScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
 import com.wsteam.wandscape.building.client.ConstructionGhostRenderer;
 import com.wsteam.wandscape.building.scanner.client.BuildingScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
@@ -206,6 +208,11 @@ public class WandscapeClient {
                     packet.buildingPos(), packet.colonyId(), packet.buildingId(),
                     packet.maxOccupancy(), packet.currentOccupancy(),
                     packet.guestNames()));
+        });
+        AltarOpenPacket.setClientHandler(packet -> {
+            Minecraft.getInstance().setScreen(new AltarScreen(
+                    packet.buildingPos(), packet.colonyId(), packet.buildingId(),
+                    packet.spells()));
         });
         NpcDataPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();

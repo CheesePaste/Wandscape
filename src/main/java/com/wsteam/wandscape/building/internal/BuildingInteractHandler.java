@@ -11,6 +11,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
+import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
@@ -156,6 +157,13 @@ public final class BuildingInteractHandler {
             case "potion_station" -> {
                 player.displayClientMessage(Component.literal(
                         "[Wandscape] Potion Station — not yet implemented"), false);
+            }
+            case "altar" -> {
+                if (level instanceof net.minecraft.server.level.ServerLevel sl) {
+                    PacketDistributor.sendToPlayer(player,
+                            new AltarOpenPacket(pos, colonyId, state.getBuildingId(),
+                                    AltarCastHandler.listSpells(sl, state.getBuildingId())));
+                }
             }
             default -> {
                 Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",

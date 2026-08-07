@@ -42,6 +42,7 @@ import com.wsteam.wandscape.guard.GuardBlueprints;
 import com.wsteam.wandscape.guard.GuardTaskSource;
 import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
+import com.wsteam.wandscape.building.executor.AltarCastExecutor;
 
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import com.wsteam.wandscape.shared.log.Log;
@@ -158,6 +159,13 @@ public final class EngineBootstrap {
         world.opExecutors.register(selfDefenseExec);
         WandscapeEngine.setSelfDefenseExecutor(selfDefenseExec);
         Log.info(TAG, "  SelfDefenseExecutor registered");
+
+        // 7c. Register altar cast executor (NPC casts an altar-only magic at the altar;
+        //     channeling countdown driven by onServerTick tickAll)
+        AltarCastExecutor altarCastExec = new AltarCastExecutor();
+        world.opExecutors.register(altarCastExec);
+        WandscapeEngine.setAltarCastExecutor(altarCastExec);
+        Log.info(TAG, "  AltarCastExecutor registered");
 
         // 8. Register NavigationSystem (drives all NPC movement via NavigationState)
         NavigationSystem navSystem = new NavigationSystem();
