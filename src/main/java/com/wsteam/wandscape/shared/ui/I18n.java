@@ -16,7 +16,7 @@ public final class I18n {
         return Component.translatableWithFallback(key, fallback);
     }
 
-    /** Translatable name with fallback text and placeholders ({@code {0}}, {@code {1}}, ...). */
+    /** Translatable name with fallback text and placeholders ({@code %s}, {@code %1$s}, ...). */
     public static MutableComponent name(String key, String fallback, Object... args) {
         return Component.translatableWithFallback(key, fallback, args);
     }

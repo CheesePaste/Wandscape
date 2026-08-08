@@ -126,7 +126,7 @@ public class TavernScreen extends MedievalScreen {
             Component costText = recruitCount == 0
                     ? I18n.name("gui.wandscape.tavern.first_free", "First recruit is free")
                     : I18n.name("gui.wandscape.tavern.cost_per_recruit",
-                            "Each recruit costs {0} of every element",
+                            "Each recruit costs %s of every element",
                             WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT);
             int costW = font.width(costText);
             g.drawString(font, costText,

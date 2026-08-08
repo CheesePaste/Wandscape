@@ -112,7 +112,7 @@
   "gui.wandscape.tavern.hire": "Hire",
   "gui.wandscape.tavern.recruit_subtitle": "Recruit a new adventurer",
   "gui.wandscape.tavern.first_free": "First recruit is free",
-  "gui.wandscape.tavern.cost_per_recruit": "Each recruit costs {0} of every element",
+  "gui.wandscape.tavern.cost_per_recruit": "Each recruit costs %s of every element",
   "gui.wandscape.tavern.no_resumes": "No mage resumes available.",
   "gui.wandscape.tavern.resume_hint": "Mages reach 100% satisfaction to leave resumes.",
   "gui.wandscape.hotel.guests": "Guests",
