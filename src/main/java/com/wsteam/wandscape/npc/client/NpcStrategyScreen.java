@@ -91,6 +91,8 @@ public class NpcStrategyScreen extends MedievalScreen {
         super(Component.literal("Cast Strategy"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.strategy.title", "Cast Strategy"));
         this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "strategy_guide";
         this.entityId = entityId;
         this.preset = preset;
         this.knownSpells = List.copyOf(knownSpells);
