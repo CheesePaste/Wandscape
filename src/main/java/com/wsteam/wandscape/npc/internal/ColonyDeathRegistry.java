@@ -62,20 +62,16 @@ public class ColonyDeathRegistry extends SavedData {
         setDirty();
     }
 
-    public boolean isEmpty() {
-        return records.isEmpty();
-    }
-
     /** 范围内最近的死亡记录（3D 距离，含 Y）；无则 null。 */
     @Nullable
     public DeathRecord nearest(BlockPos pos, double range) {
         return DeathRecord.nearest(records, pos.getX(), pos.getY(), pos.getZ(), range);
     }
 
-    /** 最近死去的死亡记录（按 deathTime 最新，不限位置）；无则 null。祭坛复活用。 */
+    /** 某殖民地最近死去的死亡记录（按 deathTime 最新，不限位置）；colonyId 为 null 时不限殖民地；无则 null。祭坛复活用。 */
     @Nullable
-    public DeathRecord latest() {
-        return DeathRecord.latest(records);
+    public DeathRecord latestInColony(@Nullable UUID colonyId) {
+        return DeathRecord.latestInColony(records, colonyId);
     }
 
     /** 清理过期记录（deathTime + EXPIRE_TICKS < nowTick）。 */

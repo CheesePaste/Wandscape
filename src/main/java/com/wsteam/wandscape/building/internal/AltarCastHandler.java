@@ -98,12 +98,12 @@ public final class AltarCastHandler {
             player.displayClientMessage(Component.literal("[Wandscape] 该祭坛正在施法中"), false);
             return;
         }
-        if (ReviveHandler.REVIVE_MAGIC_ID.equals(magicId) && ColonyDeathRegistry.get(level).isEmpty()) {
-            player.displayClientMessage(Component.literal("[Wandscape] 没有可复活的死亡记录"), false);
+        UUID colonyId = building.getColonyId();
+        if (ReviveHandler.REVIVE_MAGIC_ID.equals(magicId)
+                && ColonyDeathRegistry.get(level).latestInColony(colonyId) == null) {
+            player.displayClientMessage(Component.literal("[Wandscape] 该殖民地没有可复活的死亡记录"), false);
             return;
         }
-
-        UUID colonyId = building.getColonyId();
         if (!hasAdequateMage(level, colonyId, def.manaCost())) {
             player.displayClientMessage(Component.literal(
                     "[Wandscape] 没有魔力足够（≥" + def.manaCost() + "）的法师 NPC"), false);

@@ -19,6 +19,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.ReviveHandler;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
+import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -78,6 +79,15 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.warn(TAG, "NPC {} — 非法祭坛 id '{}'，任务跳过", npcId, altarStr);
             return CompletableFuture.completedFuture(null);
         }
+        UUID colonyId = null;
+        String colonyStr = op.params().get("colony_id");
+        if (colonyStr != null) {
+            try {
+                colonyId = UUID.fromString(colonyStr);
+            } catch (IllegalArgumentException e) {
+                colonyId = null;
+            }
+        }
 
         var buildingApi = WandscapeApis.getBuildingApiSilently();
         BoundingBox bounds = buildingApi != null ? buildingApi.getBuildingBounds(altarId) : null;
@@ -92,9 +102,10 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.info(TAG, "NPC {} — 祭坛 {} 冷却中，施法跳过（任务幂等结束）", npcId, altarId.toString().substring(0, 8));
             return CompletableFuture.completedFuture(null);
         }
-        // 幂等复核：记录可能在发布后被其他祭坛复活消耗/过期——此时不放法阵不扣蓝
-        if (ReviveHandler.REVIVE_MAGIC_ID.equals(op.magicId()) && ColonyDeathRegistry.get(level).isEmpty()) {
-            Log.info(TAG, "NPC {} — 无死亡记录可复活，施法跳过（任务幂等结束）", npcId);
+        // 幂等复核：记录可能在发布后被同殖民地其他祭坛复活消耗/过期——此时不放法阵不扣蓝
+        if (ReviveHandler.REVIVE_MAGIC_ID.equals(op.magicId())
+                && ColonyDeathRegistry.get(level).latestInColony(colonyId) == null) {
+            Log.info(TAG, "NPC {} — 无该殖民地死亡记录可复活，施法跳过（任务幂等结束）", npcId);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -162,9 +173,11 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.warn(TAG, "复活：祭坛 {} 已不存在", altarId.toString().substring(0, 8));
             return;
         }
-        DeathRecord rec = ColonyDeathRegistry.get(level).latest();
+        BuildingData building = buildingApi != null ? buildingApi.getBuilding(altarId) : null;
+        UUID colonyId = building != null ? building.getColonyId() : null;
+        DeathRecord rec = ColonyDeathRegistry.get(level).latestInColony(colonyId);
         if (rec == null) {
-            Log.warn(TAG, "复活：无死亡记录可复活（祭坛 {}）", altarId.toString().substring(0, 8));
+            Log.warn(TAG, "复活：无该殖民地死亡记录可复活（祭坛 {}）", altarId.toString().substring(0, 8));
             return;
         }
         BlockPos center = AltarCastHandler.centerTop(bounds);

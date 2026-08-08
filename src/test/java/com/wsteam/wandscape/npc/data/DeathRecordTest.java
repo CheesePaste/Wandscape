@@ -53,15 +53,30 @@ class DeathRecordTest {
     }
 
     @Test
-    void latestPicksNewestDeathTimeIgnoringPosition() {
+    void latestInColonyPicksNewestDeathTimeIgnoringPosition() {
         DeathRecord old = new DeathRecord(UUID.randomUUID(), "Old", "minecraft:overworld",
                 100, 0, 0, 100L, UUID.randomUUID(), 0, 0, true,
                 40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
         DeathRecord fresh = new DeathRecord(UUID.randomUUID(), "Fresh", "minecraft:overworld",
                 20, 5, 20, 900L, UUID.randomUUID(), 0, 0, true,
                 40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
-        DeathRecord r = DeathRecord.latest(List.of(old, fresh));
+        DeathRecord r = DeathRecord.latestInColony(List.of(old, fresh), null);
         assertEquals("Fresh", r.name(), "取 deathTime 最新的记录，不限位置");
-        assertNull(DeathRecord.latest(List.of()), "空列表返回 null");
+        assertNull(DeathRecord.latestInColony(List.of(), null), "空列表返回 null");
+    }
+
+    @Test
+    void latestInColonyFiltersByColony() {
+        UUID colonyA = UUID.randomUUID();
+        UUID colonyB = UUID.randomUUID();
+        DeathRecord otherColony = new DeathRecord(UUID.randomUUID(), "Other", "minecraft:overworld",
+                10, 0, 0, 2000L, colonyB, 0, 0, true,
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+        DeathRecord mine = new DeathRecord(UUID.randomUUID(), "Mine", "minecraft:overworld",
+                20, 5, 20, 500L, colonyA, 0, 0, true,
+                40f, 0.3f, 1f, 1f, 1f, 0f, 200f, List.of());
+        DeathRecord r = DeathRecord.latestInColony(List.of(otherColony, mine), colonyA);
+        assertEquals("Mine", r.name(), "跳过其他殖民地更新的记录，取本殖民地最新");
+        assertNull(DeathRecord.latestInColony(List.of(otherColony), colonyA), "无本殖民地记录返回 null");
     }
 }
