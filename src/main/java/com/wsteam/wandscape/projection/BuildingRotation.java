@@ -147,6 +147,25 @@ public final class BuildingRotation {
     }
 
     /**
+     * Rotate a map of offsets-to-NBT strings (block_nbt) by {@code steps}.
+     * Keys are "x,y,z" strings; values are opaque NBT strings carried as-is.
+     * Returns {@code null} when the input map is {@code null}.
+     */
+    public static Map<String, String> rotateBlockNbt(Map<String, String> blockNbt, int steps) {
+        if (blockNbt == null || blockNbt.isEmpty()) return blockNbt;
+        if (steps <= 0) return blockNbt;
+        steps = steps & 3;
+        Map<String, String> result = new HashMap<>();
+        for (var entry : blockNbt.entrySet()) {
+            BlockOffset off = parseKey(entry.getKey());
+            if (off == null) continue;
+            BlockOffset rotatedOff = rotateOffset(off, steps);
+            result.put(rotatedOff.toKey(), entry.getValue());
+        }
+        return result;
+    }
+
+    /**
      * Rotate an array of offset positions (pattern) by {@code steps}.
      * Used for clear_offsets and pattern lists.
      */

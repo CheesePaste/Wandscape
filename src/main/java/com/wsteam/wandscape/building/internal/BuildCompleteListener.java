@@ -94,6 +94,11 @@ public final class BuildCompleteListener {
         state.setStructureIntact(intact);
         data.setDirty();
 
+        // Refresh client caches: a completed building's construction ghost clears,
+        // a broken one gains a ghost footprint.
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                ServerLifecycleHooks.getCurrentServer(), anchor);
+
         if (intact) {
             if (damaged.isEmpty()) {
                 Log.info(TAG, "[Building] {} at {} construction complete — now operational",

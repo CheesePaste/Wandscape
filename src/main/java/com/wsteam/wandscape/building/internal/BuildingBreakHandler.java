@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -70,6 +71,10 @@ public final class BuildingBreakHandler {
 
         state.setStructureIntact(false);
         data.setDirty();
+
+        // Refresh client caches so a newly-broken building gains a ghost footprint.
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                ServerLifecycleHooks.getCurrentServer(), state.getAnchor());
 
         // Remove contribution
         UUID colonyId = state.getColonyId();
@@ -127,6 +132,10 @@ public final class BuildingBreakHandler {
             state.setStructureIntact(false);
             data.setDirty();
 
+            // Refresh client caches so a newly-broken building gains a ghost footprint.
+            com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                    ServerLifecycleHooks.getCurrentServer(), state.getAnchor());
+
             // Remove contribution
             UUID colonyId = state.getColonyId();
             if (colonyId != null) {
@@ -153,9 +162,14 @@ public final class BuildingBreakHandler {
                 ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
                         config.blockMapping(), rotationSteps)
                 : config.blockMapping();
+        java.util.Map<String, String> blockNbt = rotationSteps != 0
+                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockNbt(
+                        config.blockNbt(), rotationSteps)
+                : config.blockNbt();
 
         JsonArray offsets = new JsonArray();
         JsonObject blocks = new JsonObject();
+        JsonObject blocksNbt = new JsonObject();
 
         for (BlockOffset offset : damagedOffsets) {
             String key = offset.toKey();
@@ -168,19 +182,30 @@ public final class BuildingBreakHandler {
             off.add(offset.z());
             offsets.add(off);
             blocks.addProperty(key, blockSpec);
+
+            // Carry over the block's NBT (e.g. container contents) so the
+            // repaired block matches the original, not just the block state.
+            if (blockNbt != null) {
+                String nbt = blockNbt.get(key);
+                if (nbt != null) {
+                    blocksNbt.addProperty(key, nbt);
+                }
+            }
         }
 
         if (offsets.isEmpty()) return;
 
-        enqueueRepairWorkItem(state, config, offsets, blocks);
+        enqueueRepairWorkItem(state, config, offsets, blocks, blocksNbt);
     }
 
     private static void enqueueRepairWorkItem(BuildingState state, BuildingConfig config,
-                                               JsonArray offsets, JsonObject blocks) {
+                                               JsonArray offsets, JsonObject blocks,
+                                               JsonObject blocksNbt) {
         Map<String, JsonElement> params = new HashMap<>();
         params.put("anchor", posToJsonArray(state.getAnchor()));
         params.put("offsets", offsets);
         params.put("blocks", blocks);
+        params.put("blocks_nbt", blocksNbt);
         params.put("name", new JsonPrimitive(config.displayName()));
 
         // Compute material_list + material_counts from damaged blocks so the
@@ -246,6 +271,8 @@ public final class BuildingBreakHandler {
                     data.addBuildingContribution(colonyId, state.getBuildingTypeId());
                 }
                 data.setDirty();
+                com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                        ServerLifecycleHooks.getCurrentServer(), state.getAnchor());
                 Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {} — marked intact",
                         state.getBuildingTypeId(), state.getAnchor());
             }

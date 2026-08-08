@@ -18,6 +18,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -144,6 +145,19 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         PacketDistributor.sendToPlayer(player, new BuildingAreaSyncPacket(entries));
         Log.info(TAG, "[Area] Sent {} building areas to {}", entries.size(),
                 player.getGameProfile().getName());
+    }
+
+    /**
+     * Re-send the area sync to all players after a building integrity
+     * transition (completed / broken / repaired), so client caches refresh —
+     * e.g. a just-completed building's construction ghost footprint clears.
+     * Players outside any colony fall back to the given anchor's colony.
+     */
+    public static void broadcastToColony(MinecraftServer server, BlockPos anchor) {
+        if (server == null) return;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            sendToPlayer(player, anchor);
+        }
     }
 
     // ── StreamCodec ──
