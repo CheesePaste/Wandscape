@@ -57,9 +57,9 @@ public class MagicBeamEntity extends Entity {
     public static final double BEAM_RANGE = 200.0;
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后平滑变细到消失。 */
     public static final float PEAK_T = 0.86f;
-    /** 峰值时的光束/光晕半径（方块）。粗细翻倍后视觉与伤害判定半径同宽。 */
-    public static final float MAX_BEAM_RADIUS = 1.0f;
-    public static final float MAX_GLOW_RADIUS = 1.4f;
+    /** 峰值时的光束/光晕半径（方块）。 */
+    public static final float MAX_BEAM_RADIUS = 0.5f;
+    public static final float MAX_GLOW_RADIUS = 0.7f;
     /** 宽度/伤害乘子下限：开头即有少量伤害，不再近乎零伤。 */
     private static final float MIN_WIDTH = 0.1f;
     /**
@@ -269,8 +269,7 @@ public class MagicBeamEntity extends Entity {
     public AABB getBoundingBoxForCulling() {
         BlockPos tgt = getTarget().orElse(null);
         if (tgt != null) {
-            // 1.5 覆盖峰值光晕半径(1.4)，避免光束变粗后边缘被视锥剔除
-            return new AABB(position(), tgt.getCenter()).inflate(1.5);
+            return new AABB(position(), tgt.getCenter()).inflate(1.0);
         }
         return super.getBoundingBoxForCulling();
     }
