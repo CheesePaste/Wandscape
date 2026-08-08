@@ -6,13 +6,15 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-import com.wsteam.wandscape.tourist.internal.TouristState;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 /**
  * Tourist info screen.
  *
@@ -31,10 +33,6 @@ public class TouristScreen extends MedievalScreen {
     private int level;
     private int wallet;
     private List<TouristDataPacket.VisitEntry> recentVisits;
-    private String currentState;
-    private String targetBuildingName;
-    private String targetBuildingType;
-    private BlockPos targetPos;
     private int cooldownRemainingTicks;
 
     public TouristScreen(TouristDataPacket packet) {
@@ -54,10 +52,6 @@ public class TouristScreen extends MedievalScreen {
         this.level = packet.level();
         this.wallet = packet.wallet();
         this.recentVisits = packet.recentVisits();
-        this.currentState = packet.currentState();
-        this.targetBuildingName = packet.targetBuildingName();
-        this.targetBuildingType = packet.targetBuildingType();
-        this.targetPos = packet.targetPos();
         this.cooldownRemainingTicks = packet.cooldownRemainingTicks();
         setTitleBar(Component.literal(touristName));
     }
@@ -112,24 +106,14 @@ public class TouristScreen extends MedievalScreen {
         g.drawString(font, "钱包:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(wallet), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
 
-        // ── Debug: state / target / position / cooldown ──
+        // ── Cooldown ──
         int dbgLabelW = 36;
         int dbgY = statY + 10;
-        g.drawString(font, "状态:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
-        g.drawString(font, formatState(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
-        dbgY += 10;
-        g.drawString(font, "目标:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
-        g.drawString(font, formatTarget(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
-        dbgY += 10;
-        g.drawString(font, "位置:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
-        g.drawString(font, formatPos(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_MUTED);
-        dbgY += 10;
-        g.drawString(font, "冷却:", leftCol, dbgY, MedievalColors.TEXT_MUTED);
-        g.drawString(font, formatCooldown(), leftCol + dbgLabelW, dbgY,
-                cooldownRemainingTicks > 0 ? MedievalColors.INFO_BLUE : MedievalColors.TEXT_MUTED);
+        g.drawString(font, "冷却:", leftCol, dbgY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, formatCooldown(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
 
         // ── Visits ──
-        int visitsTop = contentTop + 100;
+        int visitsTop = dbgY + 20;
         g.drawString(font, "行程", leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
         g.fill(leftCol, visitsTop + 10, leftPos + PW - 12, visitsTop + 11, MedievalColors.BORDER_GOLD_DARK);
 
@@ -148,7 +132,9 @@ public class TouristScreen extends MedievalScreen {
                         ? Component.literal(visit.buildingName())
                         : I18n.name("building.wandscape." + visit.buildingTypeId(), visit.buildingName());
                 Component line = building.copy()
-                        .append(Component.literal(": " + visit.whatHappened() + " (" + outcomes + ")"));
+                        .append(Component.literal(": "))
+                        .append(localizeItemName(visit.whatHappened()))
+                        .append(Component.literal(" (" + outcomes + ")"));
 
                 int color = visit.satDelta() > 0 ? MedievalColors.SUCCESS_GREEN
                         : visit.satDelta() < 0 ? MedievalColors.DANGER_RED
@@ -165,35 +151,29 @@ public class TouristScreen extends MedievalScreen {
         return delta >= 0 ? "+" + delta : String.valueOf(delta);
     }
 
-    /** Debug: localized state display name plus raw enum name. */
-    private Component formatState() {
-        try {
-            TouristState st = TouristState.valueOf(currentState);
-            return I18n.name(st.getDisplayNameKey(), st.getDisplayName())
-                    .copy().append(" (" + currentState + ")");
-        } catch (IllegalArgumentException ignored) {
-            return Component.literal(currentState);
-        }
-    }
-
-    /** Target building name, localized via building.wandscape.<type> with the packet's fallback name. */
-    private Component formatTarget() {
-        if (targetBuildingName.isEmpty()) return Component.literal("—");
-        if (targetBuildingType.isEmpty()) return Component.literal(targetBuildingName);
-        return I18n.name("building.wandscape." + targetBuildingType, targetBuildingName)
-                .copy().append(" [" + targetBuildingType + "]");
-    }
-
-    /** Debug: navigation destination block position. */
-    private String formatPos() {
-        if (targetPos == null) return "—";
-        return "(" + targetPos.getX() + ", " + targetPos.getY() + ", " + targetPos.getZ() + ")";
-    }
-
     /** Debug: remaining rest cooldown in ticks and seconds. */
     private String formatCooldown() {
         if (cooldownRemainingTicks <= 0) return "无";
         return cooldownRemainingTicks + "t (" + String.format("%.1fs", cooldownRemainingTicks / 20.0) + ")";
+    }
+
+    /**
+     * Localize an item registry id (optionally with a " ×N" count suffix) from a
+     * visit log entry, falling back to the raw text for non-item entries (e.g. "服务").
+     */
+    private static Component localizeItemName(String whatHappened) {
+        String id = whatHappened;
+        String suffix = "";
+        int sep = whatHappened.indexOf(" ×");
+        if (sep > 0) {
+            id = whatHappened.substring(0, sep);
+            suffix = whatHappened.substring(sep);
+        }
+        var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id));
+        if (item != null && item != Items.AIR) {
+            return new ItemStack(item).getHoverName().copy().append(Component.literal(suffix));
+        }
+        return Component.literal(whatHappened);
     }
 
     /** Draw a compact stat bar. */
