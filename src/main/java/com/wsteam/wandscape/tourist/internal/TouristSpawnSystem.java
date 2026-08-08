@@ -121,7 +121,10 @@ public final class TouristSpawnSystem {
             ChunkPos cp = new ChunkPos(ps.spawnPos);
             ChunkLoadManager.get().acquireChunk(cp);
             try {
-                BlockPos ground = findGround(level, ps.spawnPos);
+                // Reuse the stuck-rescue picker so a spawn never lands on a roof or
+                // inside a building: road first, then safe ground near the building.
+                BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), target.getColonyId(), ps.buildingId());
+                if (ground == null) continue;
                 TouristEntity tourist = new TouristEntity(
                         com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
                 tourist.setTouristName(generateRandomTouristName());
@@ -262,7 +265,7 @@ public final class TouristSpawnSystem {
         int windowStart = Config.TOURIST_SPAWN_WINDOW_START.get();
         int windowDuration = Config.TOURIST_SPAWN_WINDOW_END.get() - windowStart;
         for (int i = 0; i < toSpawn; i++) {
-            BlockPos spawnPos = pickSpawnPos(spawnCandidates, level);
+            BlockPos spawnPos = pickSpawnPos(spawnCandidates);
             if (spawnPos == null) continue;
 
             // Pick tourist level based on colony level distribution
@@ -305,14 +308,17 @@ public final class TouristSpawnSystem {
                 BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
                 if (interactionTarget == null) interactionTarget = target.getPosition();
 
-                // Momentarily force-load the spawn chunk so the entity is created with real
-                // ground (findGround reads AIR on unloaded chunks) and to avoid
-                // addFreshEntity-on-unloaded-chunk edge cases. The tourist then sims from
-                // its shadow until the chunk is loaded again.
+                // Momentarily force-load the spawn chunk so the landing spot is resolved
+                // against real blocks (block reads on unloaded chunks return AIR) and to
+                // avoid addFreshEntity-on-unloaded-chunk edge cases. The tourist then sims
+                // from its shadow until the chunk is loaded again.
                 ChunkPos cp = new ChunkPos(ps.spawnPos);
                 ChunkLoadManager.get().acquireChunk(cp);
                 try {
-                    BlockPos ground = findGround(level, ps.spawnPos);
+                    // Reuse the stuck-rescue picker so a spawn never lands on a roof or
+                    // inside a building: road first, then safe ground near the building.
+                    BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), target.getColonyId(), ps.buildingId());
+                    if (ground == null) continue;
                     TouristEntity tourist = new TouristEntity(
                             com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
                     tourist.setTouristName(generateRandomTouristName());
@@ -729,23 +735,12 @@ public final class TouristSpawnSystem {
         return positions;
     }
 
-    private BlockPos pickSpawnPos(List<BlockPos> candidates, ServerLevel level) {
+    /** Pick a random spawn candidate (road point or building anchor) with a small jitter. */
+    private BlockPos pickSpawnPos(List<BlockPos> candidates) {
         if (candidates.isEmpty()) return null;
         BlockPos picked = candidates.get(random.nextInt(candidates.size()));
-        return findGround(level, picked.offset(
-                random.nextInt(10) - 5, 0, random.nextInt(10) - 5));
-    }
-
-    private static BlockPos findGround(ServerLevel level, BlockPos pos) {
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
-                pos.getX(), Math.min(level.getMaxBuildHeight() - 1, 120), pos.getZ());
-        while (mp.getY() > level.getMinBuildHeight()) {
-            if (!level.getBlockState(mp).isAir()
-                    && level.getBlockState(mp.above()).isAir())
-                return mp.above().immutable();
-            mp.move(0, -1, 0);
-        }
-        return pos;
+        return picked.offset(
+                random.nextInt(10) - 5, 0, random.nextInt(10) - 5);
     }
 
     // ── Name generation ──

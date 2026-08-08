@@ -29,7 +29,7 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
  * colony building: nearest built road first, then the building periphery (entry point,
  * bbox faces, a bounded ring scan), then the origin itself if it already stands on safe
  * open ground. Returns null (keep the tourist where it is) rather than teleport it into
- * a building.
+ * a building. Tourist spawns share this method so they also never land on a building.
  */
 public final class TouristTeleport {
 
