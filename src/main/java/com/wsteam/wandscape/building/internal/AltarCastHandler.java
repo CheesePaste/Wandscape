@@ -16,7 +16,9 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.ColonyDeathRegistry;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.npc.internal.ReviveHandler;
 import com.wsteam.wandscape.shared.data.AltarSpellInfo;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -94,6 +96,10 @@ public final class AltarCastHandler {
         if (isAltarCastLocked(buildingId, magicId)) {
             // 已发布未施放 / 正在施法 —— 发布即锁定，直到施放结束
             player.displayClientMessage(Component.literal("[Wandscape] 该祭坛正在施法中"), false);
+            return;
+        }
+        if (ReviveHandler.REVIVE_MAGIC_ID.equals(magicId) && ColonyDeathRegistry.get(level).isEmpty()) {
+            player.displayClientMessage(Component.literal("[Wandscape] 没有可复活的死亡记录"), false);
             return;
         }
 

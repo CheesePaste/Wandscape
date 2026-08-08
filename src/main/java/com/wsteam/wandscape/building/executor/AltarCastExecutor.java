@@ -92,6 +92,11 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.info(TAG, "NPC {} — 祭坛 {} 冷却中，施法跳过（任务幂等结束）", npcId, altarId.toString().substring(0, 8));
             return CompletableFuture.completedFuture(null);
         }
+        // 幂等复核：记录可能在发布后被其他祭坛复活消耗/过期——此时不放法阵不扣蓝
+        if (ReviveHandler.REVIVE_MAGIC_ID.equals(op.magicId()) && ColonyDeathRegistry.get(level).isEmpty()) {
+            Log.info(TAG, "NPC {} — 无死亡记录可复活，施法跳过（任务幂等结束）", npcId);
+            return CompletableFuture.completedFuture(null);
+        }
 
         int duration = Math.max(1, def.altarDuration());
         if (!npc.tryAltarCast(def.manaCost(), duration)) {
