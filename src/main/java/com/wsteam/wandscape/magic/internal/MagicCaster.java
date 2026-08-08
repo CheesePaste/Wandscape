@@ -45,8 +45,8 @@ public final class MagicCaster {
 
     /** 光束魔法 id（每魔法独立 CD 的 key）。 */
     public static final String BEAM_MAGIC_ID = "beam";
-    /** 光束施法最小间隔基础（tick），除以 SPELL_SPEED 得实际 CD；施法时间（魔法阵+光束）不参与。 */
-    public static final int BEAM_BASE_CD = 40;
+    /** 光束施法后的冷却基础（tick），除以 SPELL_SPEED 得实际值；在施法互斥锁（法阵+光束全程）结束后才开始倒计时。 */
+    public static final int BEAM_BASE_CD = 400;
     /** 守卫光束固定魔力消耗。 */
     public static final int BEAM_MANA_COST = 50;
 

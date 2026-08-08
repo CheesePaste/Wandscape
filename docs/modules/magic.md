@@ -38,8 +38,8 @@
 
 ## MagicCaster
 
-- DEFAULT_CIRCLE=arcane_hexagram、DEFAULT_COLOR=0xFFA8E0FF、BEAM_SPAWN_DELAY=20、BEAM_TAIL=20、CAST_TARGET_RANGE=32、CAST_DISTANCE=1.5、BEAM_BASE_CD=40、BEAM_MANA_COST=50。
-- `cast`（玩家调试命令）向追踪块玩家发包；`castNpcAt`（守卫用）：先过 `npc.tryCastSpell("beam", 40, 50, 锁)` 门控（施法互斥锁 + 光束独立 CD + 50 魔力），成功后面向目标、持杖手中段施法，锁时长 = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL（光束全程）；`castNpc`（手动，shift+右键）免费（0 蓝）。
+- DEFAULT_CIRCLE=arcane_hexagram、DEFAULT_COLOR=0xFFA8E0FF、BEAM_SPAWN_DELAY=20、BEAM_TAIL=20、CAST_TARGET_RANGE=32、CAST_DISTANCE=1.5、BEAM_BASE_CD=400、BEAM_MANA_COST=50。
+- `cast`（玩家调试命令）向追踪块玩家发包；`castNpcAt`（守卫用）：先过 `npc.tryCastSpell("beam", 400, 50, 锁)` 门控（施法互斥锁 + 光束独立 CD + 50 魔力），成功后面向目标、持杖手中段施法，锁时长 = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL（光束全程）；CD 在锁释放后才倒计时（光束结束停 400 tick，总间隔 = 锁 240 + CD 400）；`castNpc`（手动，shift+右键）免费（0 蓝）。
 - `MagicCircleCastPacket`（S→C）：(effectId,pos,axis,circleId)，handler 调 MagicCircleEmitter.add。每次登记施法即发包（玩家命令/NPC 施法）。
 
 ## 与其他模块关系

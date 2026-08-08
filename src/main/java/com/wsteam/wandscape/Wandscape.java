@@ -101,6 +101,7 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.engine.service.ColonyMetricsService;
 import com.wsteam.wandscape.engine.service.ChunkLoadManager;
+import com.wsteam.wandscape.npc.entity.EvilMage;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
@@ -220,6 +221,14 @@ public class Wandscape {
                             .clientTrackingRange(10)
                             .build("wandscape_npc"));
 
+    // ---- 敌对测试法师：与 NPC 法师同外观/属性/施法管线，索敌生存玩家 ----
+    public static final DeferredHolder<EntityType<?>, EntityType<EvilMage>> EVIL_MAGE =
+            ENTITIES.register("evil_mage", () ->
+                    EntityType.Builder.of(EvilMage::new, MobCategory.MONSTER)
+                            .sized(0.6f, 1.8f)
+                            .clientTrackingRange(10)
+                            .build("evil_mage"));
+
     // ---- 07 npc-system: particles ----
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CAST_BOLT =
             PARTICLE_TYPES.register("cast_bolt", () -> new SimpleParticleType(false));
@@ -242,6 +251,15 @@ public class Wandscape {
                             () -> (EntityType<? extends Mob>) (EntityType<?>) WANDSCAPE_NPC.get(),
                             0x4B0082,  // dark purple background
                             0xFFD700,  // gold highlight
+                            new Item.Properties()));
+
+    // ---- 敌对测试法师 spawn egg（深红/黑） ----
+    public static final DeferredItem<Item> EVIL_MAGE_SPAWN_EGG =
+            ITEMS.register("evil_mage_spawn_egg", () ->
+                    new DeferredSpawnEggItem(
+                            () -> (EntityType<? extends Mob>) (EntityType<?>) EVIL_MAGE.get(),
+                            0x8B0000,  // dark red background
+                            0x1A1A1A,  // black highlight
                             new Item.Properties()));
 
     // ---- tourist-system: entity ----
@@ -322,6 +340,7 @@ public class Wandscape {
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
+                        output.accept(EVIL_MAGE_SPAWN_EGG.get());
                         output.accept(TOURIST_SPAWN_EGG.get());
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
@@ -673,6 +692,7 @@ public class Wandscape {
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(WANDSCAPE_NPC.get(), WandscapeNpc.createAttributes().build());
+        event.put(EVIL_MAGE.get(), WandscapeNpc.createAttributes().build());
         event.put(TOURIST.get(), TouristEntity.createAttributes().build());
     }
 

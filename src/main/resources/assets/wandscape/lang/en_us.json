@@ -10,6 +10,8 @@
   "block.wandscape.creative_building_scanner": "Creative Building Scanner",
   "entity.wandscape.wandscape_npc": "Wizard",
   "item.wandscape.wandscape_npc_spawn_egg": "Wizard Spawn Egg",
+  "entity.wandscape.evil_mage": "Evil Mage",
+  "item.wandscape.evil_mage_spawn_egg": "Evil Mage Spawn Egg",
   "entity.wandscape.tourist": "Tourist",
   "item.wandscape.tourist_spawn_egg": "Tourist Spawn Egg",
   "wandscape.character_name.0": "Wang Ming",

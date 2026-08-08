@@ -43,9 +43,15 @@ class MagicStateTest {
         assertTrue(s.getLockTicks() > 0);
         assertFalse(s.tryCast("teleport", 300, 30, 1, 1f));
         assertFalse(s.tryCast("beam", 40, 50, 1, 1f));
-        // 推进 160 tick：锁释放，CD 也已过，可再施
+        // 推进 160 tick：锁释放；但 CD 在锁期间冻结，锁释放后才开始倒计时
         for (int i = 0; i < 160; i++) s.tickRegen(MAX_MANA, 10);
-        assertTrue(s.tryCast("teleport", 300, 30, 1, 1f));
+        assertEquals(0, s.getLockTicks());
+        assertEquals(40, s.getCooldown("beam"), "CD 在锁期间冻结，锁释放后才起算");
+        assertFalse(s.tryCast("beam", 40, 50, 1, 1f), "锁释放后 CD 未清仍不可施");
+        // 再推进 40 tick：beam CD 清空可再施；teleport CD 300 仍未过
+        for (int i = 0; i < 40; i++) s.tickRegen(MAX_MANA, 10);
+        assertTrue(s.tryCast("beam", 40, 50, 1, 1f));
+        assertFalse(s.tryCast("teleport", 300, 30, 1, 1f));
     }
 
     @Test

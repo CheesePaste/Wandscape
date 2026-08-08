@@ -68,7 +68,7 @@ L2 兜底层
   "id": "beam",                 // 魔法 id（tryCastSpell 的 magicId key）
   "category": "single_target",  // 分类：single_target / aoe / defense / support / utility
   "mana_cost": 50,
-  "base_cooldown": 40,          // tick；按 SPELL_SPEED 缩短（沿用 MagicState 现有逻辑）
+  "base_cooldown": 400,         // tick；施法互斥锁（法阵/引导/光束全程）结束后才开始倒计时的冷却，按 SPELL_SPEED 缩短
   "range": 32,
   "target_mode": "hostile_nearest",
   "altar_only": true,            // 仅祭坛可施放；NPC 直接施法（CastBrain）永不选中
@@ -207,11 +207,13 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 
 ## 八、对接现有代码（迁移路径）
 
-1. ✅ **beam 数据迁入 `magic_spells/beam.json`**：CD 40 / 蓝 50 / 射程 32 / 法阵 arcane_hexagram / 颜色 #A8E0FF；`MagicCaster` 改读 MagicDef（缺失回退常量）。
+1. ✅ **beam 数据迁入 `magic_spells/beam.json`**：CD 400（施法锁结束后起算）/ 蓝 50 / 射程 32 / 法阵 arcane_hexagram / 颜色 #A8E0FF；`MagicCaster` 改读 MagicDef（缺失回退常量）。
 2. ✅ **teleport 定义进 MagicDef**（CD 300 / 蓝 30，utility 类）；`NavigationSystem` 门控改读 teleport.json，锁时长保留 `WandscapeRitualOps` 引导对齐。
 3. ✅ **`GuardCombat.engage` 改造**：不再直接 `MagicCaster.castNpcAt`，经 `CastBrain.select` 选魔法再按 id 分发；守卫/自防御共用此路径。
 4. **`MagicCaster` 瘦身**（随 MagicOp 一起）：从"只会射光束"变成"`MagicOp` 分发器的 beam 实现"；玩家调试命令 `cast` / shift+右键 `castNpc` 保留（免费，测试功能，走 L0 调试路径不进玩家策略）。
 5. **手动施法**（shift+右键）保持免费、不占蓝（现注释即"测试功能"），只占用 CD 与互斥锁——不归玩家策略管。
+
+> **CD 与锁的关系（2026-08 起）**：`MagicState` 的每魔法 CD 在施法互斥锁占用期间**冻结**，锁释放后才倒计时——CD 表示「施法结束后的恢复间隔」，施法时间（法阵/引导/光束全程）不计入。总间隔 = 锁时长 + CD。此前 CD 与锁同时从施法开始倒计时，光束锁（240 tick）盖过 CD（40 tick）导致连发无停顿；现改为光束 240 tick 结束后再停 400 tick。
 
 ## 九、玩家策略与条件（P3 已实现）
 

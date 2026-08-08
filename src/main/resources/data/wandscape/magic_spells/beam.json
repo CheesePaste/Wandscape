@@ -2,7 +2,7 @@
   "id": "beam",
   "category": "single_target",
   "mana_cost": 50,
-  "base_cooldown": 40,
+  "base_cooldown": 400,
   "range": 32,
   "target_mode": "hostile_nearest",
   "effect": {

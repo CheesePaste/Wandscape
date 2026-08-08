@@ -111,8 +111,11 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         // GUI 展示克隆（NPC 面板 3D 模型）跳过气泡与名牌
         if (entity.guiDisplayMode) return;
 
-        SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
-                AmbientTextPools::getNpcText);
+        // 敌对法师等不显示闲聊气泡（showsSpeechBubbles=false）
+        if (entity.showsSpeechBubbles()) {
+            SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
+                    AmbientTextPools::getNpcText);
+        }
 
         // Name above the head, status above the name
         renderNamePlate(entity, poseStack, buffer, packedLight);

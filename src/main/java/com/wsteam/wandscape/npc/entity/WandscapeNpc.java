@@ -131,7 +131,8 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
 
     /**
      * 原子施放门控：互斥锁 + 该魔法独立 CD + 固定魔力消耗，全满足才成功。
-     * CD 基础值按 SPELL_SPEED 缩短（向上取整）；成功后占用 {@code lockDurationTicks} 的施法互斥锁。
+     * 成功后占用 {@code lockDurationTicks} 的施法互斥锁；CD 在锁占用期间冻结、锁释放后
+     * 才开始倒计时（施法时间不计入 CD），CD 基础值按 SPELL_SPEED 缩短（向上取整）。
      */
     public boolean tryCastSpell(String magicId, int baseCooldown, int manaCost, int lockDurationTicks) {
         return magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
@@ -155,6 +156,11 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
      */
     public boolean canBeamHurt(LivingEntity target) {
         return target instanceof Enemy;
+    }
+
+    /** 头顶是否显示闲聊气泡（客户端渲染器用）。敌对法师等子类覆盖为 false。 */
+    public boolean showsSpeechBubbles() {
+        return true;
     }
 
     // ============================================================
@@ -887,7 +893,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
      * 敌对测试法师等独立实体覆盖为 false：保留外观/魔法表/法杖初始化，但不进 ECS，
      * 也因此在死亡记录与村民索敌增强中被排除（见 NpcDeathHandler / HostileTargetingHandler）。
      */
-    protected boolean isColonyNpc() {
+    public boolean isColonyNpc() {
         return true;
     }
 

@@ -4,6 +4,8 @@
 
   "entity.wandscape.wandscape_npc": "法师",
   "item.wandscape.wandscape_npc_spawn_egg": "法师刷怪蛋",
+  "entity.wandscape.evil_mage": "邪恶法师",
+  "item.wandscape.evil_mage_spawn_egg": "邪恶法师刷怪蛋",
   "entity.wandscape.tourist": "游客",
   "item.wandscape.tourist_spawn_egg": "游客刷怪蛋",
   "wandscape.character_name.0": "王明",

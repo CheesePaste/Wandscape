@@ -21,7 +21,7 @@ class MagicDefTest {
         assertEquals("beam", beam.id());
         assertEquals(MagicDef.Category.SINGLE_TARGET, beam.category());
         assertEquals(50, beam.manaCost());
-        assertEquals(40, beam.baseCooldown());
+        assertEquals(400, beam.baseCooldown());
         assertEquals(32, beam.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, beam.targetMode());
         assertEquals("arcane_hexagram", beam.effectCircleId());

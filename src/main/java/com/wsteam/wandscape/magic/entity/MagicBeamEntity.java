@@ -8,11 +8,15 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -63,7 +67,16 @@ public class MagicBeamEntity extends Entity {
     /** 宽度/伤害乘子下限：开头即有少量伤害，不再近乎零伤。 */
     private static final float MIN_WIDTH = 0.1f;
     /**
-     * 光束满宽（wf=1）时每 tick 对束内敌对生物造成的伤害 = 平滑曲线峰值。
+     * 光束伤害类型（{@code data/wandscape/damage_type/beam.json}）：**不用原版 magic /
+     * indirect_magic**——它们在 {@code damage_type/bypasses_armor} tag 里会绕过护甲减伤且不掉护甲
+     * 耐久。自定义类型走正常护甲流程：护甲减伤、耐久按命中伤害递减、死亡消息沿用
+     * {@code death.attack.magic}（被魔法杀死）。
+     */
+    public static final ResourceKey<DamageType> BEAM_DAMAGE_TYPE =
+            ResourceKey.create(Registries.DAMAGE_TYPE,
+                    ResourceLocation.fromNamespaceAndPath("wandscape", "beam"));
+    /**
+     * 光束满宽（wf=1）时每 tick 对束内目标造成的伤害 = 平滑曲线峰值。
      * 总伤 ≈ BEAM_DAMAGE × 寿命 × (0.5 + 0.5×MIN_WIDTH) ≈ 60/目标/次施法。
      */
     private static final float BEAM_DAMAGE = 0.5f;
@@ -194,6 +207,17 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
+     * 光束能否伤害该目标。默认只伤敌对生物（{@link Enemy}）——普通 NPC / 玩家施法的
+     * 光束**永远不会伤到玩家、NPC 或村民**；施法者是 {@code WandscapeNpc} 时按其
+     * {@code canBeamHurt} 判定（敌对法师覆盖为也伤生存玩家），保证「NPC 伤不了玩家、
+     * 邪恶法师能伤生存玩家」的边界唯一。
+     */
+    private boolean canDamage(LivingEntity mob) {
+        if (mob instanceof Enemy) return true;
+        return casterNpc != null && !casterNpc.isRemoved() && casterNpc.canBeamHurt(mob);
+    }
+
+    /**
      * 每 tick 对光束圆柱内的敌对生物（Monster）造成伤害，伤害正比于当前宽度因子。
      * 命中测试：实体中心到光束轴线段的距离 ≤ 束径 + 半体型宽。重置无敌帧使其可逐 tick 结算。
      */
@@ -211,29 +235,31 @@ public class MagicBeamEntity extends Entity {
         float damage = BEAM_DAMAGE * wf;
 
         AABB box = new AABB(start, tgt.getCenter()).inflate(radius + 1.0);
-        for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof Enemy)) {
+        for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof LivingEntity)) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved()) continue;
+            if (!canDamage(mob)) continue;
             Vec3 center = mob.getBoundingBox().getCenter();
             double proj = center.subtract(start).dot(ndir);
             if (proj < -0.5 || proj > length + 0.5) continue;
             Vec3 closest = start.add(ndir.scale(Mth.clamp(proj, 0, length)));
             double eff = radius + mob.getBbWidth() / 2.0;
             if (center.distanceToSqr(closest) <= eff * eff) {
+                // 光束只造成伤害、不造成击退：本类型不在 no_knockback 标签，hurt() 会按源点
+                // 方向击退——先记速度再恢复以抵消。伤害/记仇/反击不受影响。
+                // 重置无敌帧使其可逐 tick 结算（帧伤节奏，测试反馈保留）。
                 mob.invulnerableTime = 0;
-                // 光束只造成伤害、不造成击退：magic/indirectMagic 不在 no_knockback 标签，
-                // hurt() 会按源点方向击退——先记速度再恢复以抵消。伤害/记仇/反击不受影响。
                 Vec3 pre = mob.getDeltaMovement();
                 if (casterNpc != null && !casterNpc.isRemoved()) {
                     // NPC 施法：伤害记为 NPC 造成 → 怪物 HurtByTargetGoal 反击 NPC，触发自防御受伤仇恨。
-                    // 参数顺序是坑：indirectMagic(A, B) 因 DamageSources.source() 的参数名与
+                    // 参数顺序是坑：source(key, A, B) 的参数名(causingEntity, directEntity)与
                     // DamageSource 构造器(directEntity, causingEntity)错位，getEntity() 返回 B，
                     // 所以 B 必须是 NPC。否则 LivingEntity.hurt 里 setLastHurtByMob 拿到光束实体
                     // （非 LivingEntity）永不记仇，且 NpcSpellPowerHandler/AchievementService 的
                     // source.getEntity() instanceof WandscapeNpc 判定也失效（SPELL_POWER 倍率不结算）。
-                    mob.hurt(level().damageSources().indirectMagic(this, casterNpc), damage);
+                    mob.hurt(level().damageSources().source(BEAM_DAMAGE_TYPE, this, casterNpc), damage);
                 } else {
                     // 玩家/静态施法：无施法者，保持原行为（不记仇恨）。
-                    mob.hurt(level().damageSources().magic(), damage);
+                    mob.hurt(level().damageSources().source(BEAM_DAMAGE_TYPE), damage);
                 }
                 mob.setDeltaMovement(pre);
             }

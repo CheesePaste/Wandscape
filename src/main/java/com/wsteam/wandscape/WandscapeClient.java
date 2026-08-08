@@ -338,6 +338,8 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
+        // 敌对测试法师复用同款渲染器（模型/纹理/帽子/名牌），外观与 NPC 法师一致
+        event.registerEntityRenderer(Wandscape.EVIL_MAGE.get(), WandscapeNpcRenderer::new);
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
         event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
         event.registerEntityRenderer(Wandscape.MAGIC_BEAM.get(), MagicBeamEntityRenderer::new);

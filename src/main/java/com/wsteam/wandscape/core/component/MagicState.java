@@ -9,6 +9,9 @@ import java.util.Map;
  * <p>纯 Java 零 MC 依赖，由 {@code WandscapeNpc} 持有并在 tick 时推进。
  * 魔力上限不是本类的字段——它是第 7 属性（{@code AttributeType.MAX_MANA}），
  * 由 {@code EquipmentComponent} 权威计算，调用方（实体）每 tick 传入。
+ *
+ * <p>冷却在施法互斥锁占用期间冻结、锁释放后才倒计时——CD 表示「施法结束后的恢复
+ * 间隔」，施法时间（法阵/引导/光束全程）不计入 CD。总间隔 = 锁时长 + 冷却。
  */
 public class MagicState {
 
@@ -26,7 +29,8 @@ public class MagicState {
     /**
      * 原子尝试施放：锁/CD/蓝任一不满足即拒绝；成功则扣蓝、置该魔法 CD、占互斥锁。
      *
-     * @param baseCooldown 基础冷却 tick（按 spellSpeed 缩短，向上取整）
+     * @param baseCooldown 基础冷却 tick（按 spellSpeed 缩短，向上取整）；锁占用期间冻结，
+     *                     锁释放后才开始倒计时
      * @param manaCost     固定魔力消耗
      * @param lockTicks    施法期间占用的互斥锁时长（该魔法施放全程）
      * @param spellSpeed   SPELL_SPEED 有效值（&gt;1 时缩短 CD）
@@ -58,10 +62,16 @@ public class MagicState {
         return true;
     }
 
-    /** 每 server tick 推进：锁/CD 递减；每 {@code regenIntervalTicks} 回 1 点魔力，封顶 maxMana。 */
+    /**
+     * 每 server tick 推进：锁递减；锁占用期间每魔法 CD 冻结，锁释放后才递减。
+     * 每 {@code regenIntervalTicks} 回 1 点魔力，封顶 maxMana。
+     */
     public void tickRegen(float maxMana, int regenIntervalTicks) {
-        if (lockTicks > 0) lockTicks--;
-        cooldowns.replaceAll((k, v) -> Math.max(0, v - 1));
+        if (lockTicks > 0) {
+            lockTicks--;
+        } else {
+            cooldowns.replaceAll((k, v) -> Math.max(0, v - 1));
+        }
         cooldowns.entrySet().removeIf(e -> e.getValue() <= 0);
         if (currentMana >= maxMana) {
             manaRegenAccum = 0;
