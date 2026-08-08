@@ -107,10 +107,9 @@ public class TouristScreen extends MedievalScreen {
         g.drawString(font, String.valueOf(wallet), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
 
         // ── Cooldown ──
-        int dbgLabelW = 36;
         int dbgY = statY + 10;
         g.drawString(font, "冷却:", leftCol, dbgY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, formatCooldown(), leftCol + dbgLabelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, formatCooldown(), leftCol + labelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
 
         // ── Visits ──
         int visitsTop = dbgY + 20;
