@@ -37,7 +37,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -754,7 +753,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
             // tavern-recruited and revived mages already carry a name). Assign once —
             // the custom name persists through save/load, so this is a no-op later.
             if (!hasCustomName()) {
-                setCustomName(Component.literal(generateRandomNpcName()));
+                setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(generateRandomNpcName()));
                 setCustomNameVisible(true);
             }
             // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
@@ -979,9 +978,10 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                 ? new UUID(0, exec.globalTaskId) : null;
     }
 
-    /** In-game display name for the NPC. */
+    /** In-game display name for the NPC (resolved to the current language). */
     public String getNpcName() {
-        return hasCustomName() ? getCustomName().getString() : "Wizard";
+        if (!hasCustomName()) return "Wizard";
+        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(getCustomName().getString());
     }
 
     // ── Auto-generated mage names ──
@@ -989,9 +989,9 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     // Tavern-recruited and revived mages keep their own names. Mages and
     // tourists share one name pool (shared.data.CharacterNames).
 
-    /** Roll a random name from the shared character name pool. */
+    /** Roll a random name key from the shared bilingual character name pool. */
     public static String generateRandomNpcName() {
-        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomName();
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey();
     }
 
     // ============================================================

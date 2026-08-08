@@ -56,6 +56,7 @@ public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
             st.putInt("cd", s.cooldownTicks());
             st.putInt("dur", s.durationTicks());
             st.putInt("cdr", s.cooldownRemaining());
+            st.putBoolean("locked", s.locked());
             spells.add(st);
         }
         tag.put("spells", spells);
@@ -76,7 +77,8 @@ public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
                     st.getInt("mana"),
                     st.getInt("cd"),
                     st.getInt("dur"),
-                    st.getInt("cdr")));
+                    st.getInt("cdr"),
+                    st.getBoolean("locked")));
         }
         return new AltarOpenPacket(
                 BlockPos.of(tag.getLong("pos")),

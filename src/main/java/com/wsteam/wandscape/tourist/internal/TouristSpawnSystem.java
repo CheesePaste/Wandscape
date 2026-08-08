@@ -751,7 +751,7 @@ public final class TouristSpawnSystem {
     // ── Name generation ──
 
     public static String generateRandomTouristName() {
-        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomName();
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey();
     }
 
     /** Universal-element starting wallet: base + level × per-level bonus. */

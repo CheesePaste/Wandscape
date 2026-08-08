@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
@@ -50,14 +51,15 @@ public final class AltarCastHandler {
         return new BlockPos(cx, cy + 1, cz);
     }
 
-    /** 该祭坛可施放魔法列表（altarOnly）+ 各自当前祭坛 CD。 */
+    /** 该祭坛可施放魔法列表（altarOnly）+ 各自当前祭坛 CD / 锁定状态。 */
     public static List<AltarSpellInfo> listSpells(ServerLevel level, UUID buildingId) {
         AltarCastState state = AltarCastState.get(level);
         List<AltarSpellInfo> out = new ArrayList<>();
         for (MagicDef def : SpellbookLoader.getAllSpecs().values()) {
             if (!def.altarOnly()) continue;
             out.add(new AltarSpellInfo(def.id(), def.manaCost(), def.altarCooldown(),
-                    def.altarDuration(), state.getCooldown(buildingId, def.id())));
+                    def.altarDuration(), state.getCooldown(buildingId, def.id()),
+                    isAltarCastLocked(buildingId, def.id())));
         }
         return out;
     }
@@ -87,6 +89,11 @@ public final class AltarCastHandler {
         if (cd > 0) {
             player.displayClientMessage(Component.literal(
                     "[Wandscape] 祭坛冷却中（剩余 " + (cd / 20.0) + " 秒）"), false);
+            return;
+        }
+        if (isAltarCastLocked(buildingId, magicId)) {
+            // 已发布未施放 / 正在施法 —— 发布即锁定，直到施放结束
+            player.displayClientMessage(Component.literal("[Wandscape] 该祭坛正在施法中"), false);
             return;
         }
 
@@ -133,6 +140,15 @@ public final class AltarCastHandler {
             if (npc.getCurrentMana() >= manaCost) return true;
         }
         return false;
+    }
+
+    /** 该祭坛该魔法是否已有活跃的 altar_cast 任务（已发布未施放 / 正在施法）——发布即锁定。 */
+    private static boolean isAltarCastLocked(UUID buildingId, String magicId) {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || world.taskPool == null) return false;
+        return world.taskPool.hasActiveTask(TASK_BLUEPRINT, Map.of(
+                "altar", new JsonPrimitive(buildingId.toString()),
+                "magic_id", new JsonPrimitive(magicId)));
     }
 
     private static JsonArray posToJson(BlockPos pos) {

@@ -106,7 +106,7 @@ public final class TouristSimSystem {
         if (registry == null) return;
         TouristShadow s = new TouristShadow();
         s.setTouristId(t.getUUID());
-        s.setTouristName(t.getTouristName());
+        s.setTouristName(t.getTouristNameKey());
         s.setMage(t.isMage());
         s.setSkinVariant(t.getSkinVariant());
         s.setMaxHp(t.getMaxHp());
@@ -255,7 +255,7 @@ public final class TouristSimSystem {
     // ── Shadow ↔ entity sync ──
 
     private void importToEntity(TouristEntity e, TouristShadow s) {
-        e.setTouristName(s.getTouristName());
+        e.setTouristName(s.getTouristNameKey());
         e.setSkinVariant(s.getSkinVariant());
         e.setAppearance(s.isMage() ? TouristEntity.Appearance.MAGE : TouristEntity.Appearance.TOURIST);
         e.setPos(s.getPosX(), s.getPosY(), s.getPosZ());

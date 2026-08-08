@@ -22,6 +22,8 @@ import com.wsteam.wandscape.core.event.TaskCompleted;
 
 import java.util.*;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
@@ -531,6 +533,31 @@ public class GlobalTaskPool {
     public boolean isActive(long taskId) {
         GlobalTask t = tasksById.get(taskId);
         return t != null && t.state != TaskState.COMPLETED;
+    }
+
+    /**
+     * True if any non-COMPLETED task has {@code blueprintId} and its params contain
+     * all of {@code requiredParams} (exact JsonElement equality). {@code blueprintId}
+     * may be null to match any blueprint. Used to lock/dedupe pending work on the same
+     * subject (e.g. one altar cast per altar+magic while the previous task is queued
+     * or being channeled).
+     */
+    public boolean hasActiveTask(@Nullable String blueprintId,
+                                 Map<String, JsonElement> requiredParams) {
+        for (GlobalTask t : tasksById.values()) {
+            if (t.state == TaskState.COMPLETED) continue;
+            if (blueprintId != null && !blueprintId.equals(t.blueprintId)) continue;
+            if (paramsMatch(t.taskParams, requiredParams)) return true;
+        }
+        return false;
+    }
+
+    private static boolean paramsMatch(Map<String, JsonElement> taskParams,
+                                       Map<String, JsonElement> required) {
+        for (Map.Entry<String, JsonElement> e : required.entrySet()) {
+            if (!e.getValue().equals(taskParams.get(e.getKey()))) return false;
+        }
+        return true;
     }
 
     public Collection<GlobalTask> all() {

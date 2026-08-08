@@ -33,7 +33,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -685,7 +684,14 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     // ──────────────────────── Getters / Setters ────────────────────────
 
-    public String getTouristName() { return touristName; }
+    /** Display name resolved to the current language (legacy literal names pass through). */
+    public String getTouristName() {
+        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(touristName);
+    }
+
+    /** Raw name key (or legacy literal) — used when copying between entity and shadow. */
+    public String getTouristNameKey() { return touristName; }
+
     public void setTouristName(String name) { this.touristName = name; syncName(); }
 
     public TouristState getCurrentState() { return currentState; }
@@ -865,5 +871,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         entityData.set(DEBUG_INDOOR_PHASE, indoor);
     }
 
-    private void syncName() { setCustomName(Component.literal(touristName)); }
+    private void syncName() {
+        setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(touristName));
+    }
 }

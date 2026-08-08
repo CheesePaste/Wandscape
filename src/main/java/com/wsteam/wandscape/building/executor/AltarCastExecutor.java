@@ -34,8 +34,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * 祭坛施法执行器：接取祭坛施法任务的 NPC 走到祭坛旁后执行 {@link AtomicOp.AltarCastOp}。
  *
  * <p>流程：幂等复核（祭坛 CD 已过 + NPC 魔力够 + 施法锁空）→ {@code tryAltarCast} 扣蓝占锁
- * （**不设置 NPC 每魔法 CD**，祭坛 CD 独立）→ 设祭坛 CD（AltarCastState）→ 祭坛中心起法阵 →
- * 引导 {@code altarDuration} tick → 到期 {@link #fireEffect}（当前仅 revive）。
+ * （**不设置 NPC 每魔法 CD**，祭坛 CD 独立）→ 祭坛中心起法阵 → 引导 {@code altarDuration} tick →
+ * 到期 {@link #fireEffect} 释放效果（当前仅 revive）并**起祭坛 CD**——发布即锁定
+ * （AltarCastHandler 查任务池），施放结束才进入 CD，二者接续无缝隙。
  *
  * <p>引导为内存态（Pending 列表，仿 GuardAttackExecutor），由 {@link #tickAll()} 驱动
  * （接线在 Wandscape.onServerTick）。NPC 接取任务时的魔力门槛由 SchedulerSystem 保证，
@@ -98,7 +99,6 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.info(TAG, "NPC {} — 祭坛施法被拒（魔力不足/施法锁占用），施法跳过", npcId);
             return CompletableFuture.completedFuture(null);
         }
-        state.setCooldown(altarId, op.magicId(), def.altarCooldown());
 
         BlockPos center = AltarCastHandler.centerTop(bounds);
         sendCircle(level, center, def);
@@ -137,8 +137,12 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
         return !pending.isEmpty();
     }
 
-    /** 引导完成释放魔法效果（当前仅 revive）。 */
+    /** 引导完成释放魔法效果（当前仅 revive）；祭坛 CD 自施放结束起算（发布即锁定，见 AltarCastHandler）。 */
     private void fireEffect(ServerLevel level, UUID altarId, String magicId) {
+        MagicDef def = SpellbookLoader.getSpec(magicId);
+        if (def != null && def.altarCooldown() > 0) {
+            AltarCastState.get(level).setCooldown(altarId, magicId, def.altarCooldown());
+        }
         switch (magicId) {
             case ReviveHandler.REVIVE_MAGIC_ID -> fireRevive(level, altarId);
             default -> Log.warn(TAG, "未知祭坛魔法 '{}' — 无效果", magicId);

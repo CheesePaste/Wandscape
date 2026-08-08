@@ -122,7 +122,14 @@ public final class TouristShadow implements TouristStateHost {
     public UUID getTouristId() { return touristId; }
     public void setTouristId(UUID id) { this.touristId = id; }
 
-    public String getTouristName() { return touristName; }
+    /** Display name resolved to the current language (legacy literal names pass through). */
+    public String getTouristName() {
+        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(touristName);
+    }
+
+    /** Raw name key (or legacy literal) — used when copying between entity and shadow. */
+    public String getTouristNameKey() { return touristName; }
+
     public void setTouristName(String n) { this.touristName = n; }
 
     public int getSkinVariant() { return skinVariant; }

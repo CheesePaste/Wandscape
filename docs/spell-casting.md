@@ -260,12 +260,12 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 
 ## 十一、祭坛施法（P5 已实现）
 
-**动机**：复活等重大魔法不应随手 shift+右键施放。祭坛作为殖民地的"神圣设施"，集中管理重大魔法：玩家在祭坛选中魔法 → NPC 走到祭坛旁施法。
+**动机**：复活等重大魔法不应随手 shift+右键施放。祭坛作为殖民地的"神圣设施"，集中管理重大魔法：玩家在祭坛左键选中魔法、点右下角 Submit 发布任务 → NPC 走到祭坛旁施法。
 
 ### 11.1 需求（用户定，全部落地）
 
 1. **新建筑类别 altar（祭坛）**：与其他建筑一样放置/维护（`buildings/altar1.json`）。
-2. **施法入口**：玩家 V 面板右键祭坛 → AltarScreen → 选中魔法（如复活）执行。
+2. **施法入口**：玩家 V 面板右键祭坛 → AltarScreen → **左键选中**魔法（如复活，仅高亮不发任务）→ 点右下角 **Submit**（`gui.wandscape.common.submit`）发布任务 → NPC 执行。
 3. **NPC 执行**：NPC 走到祭坛旁边，与其他建筑一样以任务方式施法；**魔法阵/特效在祭坛中心释放**。
 4. **魔力来源**：**扣接取祭坛施法任务的 NPC 的蓝**；`SchedulerSystem` 分派时要求其当前魔力 ≥ 该魔法蓝耗（不足则任务挂起等回蓝）。
 5. **祭坛 CD/时长**：每个魔法有祭坛侧冷却与引导时长（`altar_cooldown`/`altar_duration`），**按祭坛（building UUID）独立**存放（`AltarCastState` SavedData），**不同祭坛之间不共享**。
@@ -276,11 +276,11 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 ### 11.2 结构（已落地）
 
 ```
-building/executor/AltarCastExecutor   OpExecutor<AltarCastOp>：幂等复核（祭坛 CD + 魔力 + 锁）→ tryAltarCast 扣蓝占锁 → 设祭坛 CD → 中心起法阵 → 引导 → 到期 fireEffect（revive）
+building/executor/AltarCastExecutor   OpExecutor<AltarCastOp>：幂等复核（祭坛 CD + 魔力 + 锁）→ tryAltarCast 扣蓝占锁 → 中心起法阵 → 引导 → 到期 fireEffect（revive）+ 起祭坛 CD
 building/internal/AltarCastState      SavedData（wandscape_altar_casts）：按祭坛 UUID 独立存每魔法剩余 CD，每 tick 推进
-building/internal/AltarCastHandler    玩家点选校验 + 经 PlayerManualSource 发任务 + tick 降 CD + centerTop 助手
-building/client/AltarScreen           MedievalScreen MINIMAL + ScrollableList：列出 altarOnly 魔法（名称/蓝耗/CD/时长/冷却状态）
-building/network/                     AltarOpenPacket（server→client）+ AltarCastRequestPacket（client→server）
+building/internal/AltarCastHandler    玩家点选校验 + 锁定校验（任务池 hasActiveTask，发布即锁）+ 经 PlayerManualSource 发任务 + tick 降 CD + centerTop 助手
+building/client/AltarScreen           MedievalScreen MINIMAL + ScrollableList：列出 altarOnly 魔法（名称/蓝耗/CD/时长/冷却·锁定状态）；左键选中 + 右下角 Submit 提交
+building/network/                     AltarOpenPacket（server→client，含 locked）+ AltarCastRequestPacket（client→server）
 task/                                 AltarCastOp（AtomicOp permit）+ DSL "altar_cast" 步骤 + blueprint magic:altar_cast
 magic/                                MagicDef 加 altar_only/altar_cooldown/altar_duration；CastBrain.select 跳过 altarOnly
 npc/                                  DeathRecord.latest + ColonyDeathRegistry.latest；ReviveHandler.spawnFromRecordAt（生成点来源改为祭坛中心最上方）
@@ -300,6 +300,7 @@ npc/                                  DeathRecord.latest + ColonyDeathRegistry.l
 - 跨殖民地限制：第一版不做；祭坛任务带 `colony_id`，调度器只分给该殖民地 NPC。
 - 祭坛施法进任务系统（NPC 移动/交互是任务），不进 CastBrain 自动决策表；`CastBrain.select` 再加 altarOnly 跳过作防御性保证。
 - 引导时长与法阵视觉对齐：`altar_duration` 设为该魔法 circle spec 的 `durationTicks`（revive → revive_ritual = 600）。
+- **发布即锁定，施放结束才起 CD**：玩家提交后该祭坛+魔法被任务池锁定（`GlobalTaskPool.hasActiveTask("magic:altar_cast", {altar, magic_id})`，覆盖已发布未施放 + 施放中），任务完成（施放结束）即解锁；祭坛 CD 在 `fireEffect` 起算，接续锁定窗口无缝隙——防止玩家在 NPC 接取前反复点击刷多次施法。客户端以 `AltarSpellInfo.locked` + 本地 submitted 集显示「施法中/已安排」并禁用 Submit。
 
 ## 十二、分阶段实施
 

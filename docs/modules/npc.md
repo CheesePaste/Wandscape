@@ -15,7 +15,7 @@
 - **装备/属性权威**：ECS `EquipmentComponent` 是运行时权威。`getEffectiveAttribute` 有 ECS 则取 eq.getAttribute，否则回退 NBT transit 字段；`applyEffectiveAttributes()` 仅变化时 setBaseValue MAX_HEALTH/MOVEMENT_SPEED/ARMOR（3 个 applied 脏值防重复）。
 - `tick()` 服务端：魔力回复（含互斥锁/各魔法 CD 递减）+ 脱战回血 + 属性推送恒执行；fast path ecsPollCooldown（施法中每 tick、空闲每 20 tick 才查 ECS）；从 TaskExecutor 读 casting/currentOpTarget/currentOpKind 同步到 SynchedEntityData（computeStatusText 映射移动/施法/仪式状态）。
 - 交互 `mobInteract` 右键发 NpcDataPacket 打开界面。
-- 生命周期：onAddedToLevel 设随机 skin/hat、**无 custom name 时自动命名**（`generateRandomNpcName` → 共享 `shared/data/CharacterNames` 池；酒馆招募/复活的名保留）、发默认 wand、setPersistenceRequired，调 EntityComponentBridge.onNpcJoinWorld 或 deferJoin；onRemovedFromLevel 仅 KILLED/DISCARDED 时释放 global task/取消运输/销毁 ECS（CHANGED_DIMENSION 与 unload 保留）。
+- 生命周期：onAddedToLevel 设随机 skin/hat、**无 custom name 时自动命名**（`generateRandomNpcName` → 共享 `shared/data/CharacterNames` 池的 lang key，`setCustomName(translatable key)` 客户端按语言显示中/英文名；酒馆招募/复活的名保留）、发默认 wand、setPersistenceRequired，调 EntityComponentBridge.onNpcJoinWorld 或 deferJoin；onRemovedFromLevel 仅 KILLED/DISCARDED 时释放 global task/取消运输/销毁 ECS（CHANGED_DIMENSION 与 unload 保留）。
 - NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/colonyId。
 - 仇恨表 `setHatedAttacker/getHatedAttacker`。
 
