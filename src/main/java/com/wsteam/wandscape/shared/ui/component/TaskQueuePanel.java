@@ -259,10 +259,6 @@ public class TaskQueuePanel extends AbstractWidget {
         int rightPad     = 4;  // padding between button area and panel right edge
         int colRightStart = getX() + width - BTN_AREA_W - rightPad;
 
-        // Title
-        g.drawString(Minecraft.getInstance().font, I18n.name("gui.wandscape.queue.title", "Queue"),
-                getX() + CONTENT_LEFT_PAD, getY() + topPadding, MedievalColors.TEXT_WARM_WHITE, false);
-
         // Row area
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4; // 4px bottom padding

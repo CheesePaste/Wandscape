@@ -124,7 +124,6 @@
   "gui.wandscape.warehouse.withdraw_hint": "L-click: withdraw 1 | R-click: withdraw %s",
   "gui.wandscape.workstation.decompose": "Decompose",
   "gui.wandscape.workstation.synthesize": "Synthesize",
-  "gui.wandscape.queue.title": "Queue",
   "gui.wandscape.queue.category.decompose": "Decompose",
   "gui.wandscape.queue.category.synthesize": "Synthesize",
   "gui.wandscape.queue.category.craft": "Craft Wand",
