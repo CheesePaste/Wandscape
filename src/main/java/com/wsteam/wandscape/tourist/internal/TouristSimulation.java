@@ -156,15 +156,20 @@ public final class TouristSimulation {
 
         ShopStockManager.PurchaseResult purchase = ShopInteractionHandler.interact(
                 stock, idOf(t), buildingId, colonyId, t.getWallet(), t.getInitialWallet());
-        if (purchase == null) return null;
 
-        t.spendWallet(purchase.spent());
+        // 照常结算：买不起/没货也涨满意度、扣精力、衰减偏好并进入冷却，
+        // 只是行程记成「进去逛了一圈，什么也没买」。
         int satBefore = t.getSatisfaction();
         int gain = satisfactionGain(level, t, buildingId);
         t.setSatisfaction(satBefore + gain);
         t.setEnergy(t.getEnergy() - 20);
         applyPreferenceDecay(level, t, buildingId);
         applyInteractionCooldown(level, t, buildingId);
+
+        if (purchase == null) {
+            return new InteractionResult(null, satBefore, gain, -20, "进去逛了一圈，什么也没买");
+        }
+        t.spendWallet(purchase.spent());
         String what = purchase.count() > 1
                 ? purchase.itemId() + " ×" + purchase.count()
                 : purchase.itemId();
@@ -253,7 +258,7 @@ public final class TouristSimulation {
 
             if ("shop".equals(cat)) {
                 ShopStockManager stock = ShopStockManager.getActive();
-                if (stock != null && stock.hasStock(b.getBuildingId()) && t.getWallet() > 0) {
+                if (stock != null && stock.hasStock(b.getBuildingId())) {
                     shopTargets.add(state);
                 }
             } else {

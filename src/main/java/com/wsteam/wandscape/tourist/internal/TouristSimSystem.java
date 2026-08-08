@@ -491,6 +491,14 @@ public final class TouristSimSystem {
             Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → sat {}→{}, energy {}",
                     s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
                     result.satBefore(), s.getSatisfaction(), s.getEnergy());
+            // 与实体路径一致：商店/服务访问也记入行程（买不起记「逛了一圈什么也没买」）
+            String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+            var bldCfg = TouristSimulation.getConfig(level, buildingId);
+            String bldName = (bldCfg != null && bldCfg.displayName() != null && !bldCfg.displayName().isEmpty())
+                    ? bldCfg.displayName() : (bldType != null ? bldType : "建筑");
+            TouristSimulation.addVisitMemory(s, bldType, bldName, category,
+                    level.getGameTime(), result.satBefore(), result.satDelta(), result.energyDelta(),
+                    result.whatHappened());
         } else {
             Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
                     s.getTouristName(), shortId(buildingId), category);

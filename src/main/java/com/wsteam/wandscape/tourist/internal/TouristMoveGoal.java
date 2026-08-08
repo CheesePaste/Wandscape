@@ -1086,10 +1086,10 @@ public class TouristMoveGoal extends Goal {
             if (!"shop".equals(cat) && !"service".equals(cat)) continue;
             if (b.isShutdown() || !b.isStructureIntact()) continue;
             if (tourist.hasVisitedBuilding(b.getBuildingId())) continue;
-            // Broke tourists don't target shops — service buildings remain visitable.
+            // Empty shops aren't targets; broke tourists may still browse (they settle with nothing bought).
             if ("shop".equals(cat)) {
                 ShopStockManager stock = ShopStockManager.getActive();
-                if (stock == null || !stock.hasStock(b.getBuildingId()) || tourist.getWallet() <= 0) continue;
+                if (stock == null || !stock.hasStock(b.getBuildingId())) continue;
             }
             return true;
         }
@@ -1205,8 +1205,7 @@ public class TouristMoveGoal extends Goal {
 
             if ("shop".equals(cat)) {
                 ShopStockManager stock = ShopStockManager.getActive();
-                if (stock != null && stock.hasStock(b.getBuildingId())
-                        && tourist.getWallet() > 0) {
+                if (stock != null && stock.hasStock(b.getBuildingId())) {
                     shopTargets.add(state);
                 }
             } else {
@@ -1354,7 +1353,7 @@ public class TouristMoveGoal extends Goal {
         emitNarrativeEvent(shopEvent);
 
         var purchase = result.purchase();
-        sendBubble(TransientBubbleStore.ICON_ITEM,
+        sendBubble(purchase != null ? TransientBubbleStore.ICON_ITEM : TransientBubbleStore.ICON_NONE,
                 purchase != null ? purchase.itemId() : null,
                 purchase != null ? purchase.count() : 0,
                 result.satBefore(), tourist.getSatisfaction());
