@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.shared.ui.component;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -259,7 +260,7 @@ public class TaskQueuePanel extends AbstractWidget {
         int colRightStart = getX() + width - BTN_AREA_W - rightPad;
 
         // Title
-        g.drawString(Minecraft.getInstance().font, "Queue",
+        g.drawString(Minecraft.getInstance().font, I18n.name("gui.wandscape.queue.title", "Queue"),
                 getX() + CONTENT_LEFT_PAD, getY() + topPadding, MedievalColors.TEXT_WARM_WHITE, false);
 
         // Row area
@@ -295,7 +296,7 @@ public class TaskQueuePanel extends AbstractWidget {
 
             // ── Category label + quantity ──
             int labelX = contentX + ICON_SIZE + ICON_GAP;
-            String label = categoryLabel(e.category);
+            Component label = categoryLabel(e.category);
             g.drawString(Minecraft.getInstance().font, label,
                     labelX, centerY - 4, MedievalColors.TEXT_DIM);
 
@@ -340,7 +341,7 @@ public class TaskQueuePanel extends AbstractWidget {
         }
 
         int labelX = contentX + ICON_SIZE + ICON_GAP;
-        String label = categoryLabel(currentEntry.category());
+        Component label = categoryLabel(currentEntry.category());
         g.drawString(Minecraft.getInstance().font, label, labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
 
         String time = timeLabel();
@@ -355,18 +356,19 @@ public class TaskQueuePanel extends AbstractWidget {
     }
 
     /**
-     * Map internal category key to a short display label.
+     * Map internal category key to a short display label (localized).
      * Keep strings short so they fit on one line with the icon.
      */
-    private static String categoryLabel(String cat) {
+    private static Component categoryLabel(String cat) {
+        String key = "gui.wandscape.queue.category." + cat;
         return switch (cat) {
-            case "decompose" -> "Decompose";
-            case "synthesize" -> "Synthesize";
-            case "craft"      -> "Craft Wand";
-            case "brew"       -> "Brew";
-            case "build"      -> "Build";
-            case "gather"     -> "Gather";
-            default           -> cat;
+            case "decompose" -> I18n.name(key, "Decompose");
+            case "synthesize" -> I18n.name(key, "Synthesize");
+            case "craft"      -> I18n.name(key, "Craft Wand");
+            case "brew"       -> I18n.name(key, "Brew");
+            case "build"      -> I18n.name(key, "Build");
+            case "gather"     -> I18n.name(key, "Gather");
+            default           -> I18n.name(key, cat);
         };
     }
 
