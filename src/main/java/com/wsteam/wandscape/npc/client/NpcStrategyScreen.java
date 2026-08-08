@@ -36,7 +36,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class NpcStrategyScreen extends MedievalScreen {
 
     private static final int PW = 300;
-    private static final int PH = 252;
+    private static final int PH = 230;
     private static final int BTN_W = 62;   // 预设按钮
     private static final int CAT_W = 58;   // 分类按钮
     private static final int ROW_H = 24;
