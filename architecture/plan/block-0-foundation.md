@@ -137,6 +137,7 @@ public record AtmConfig(
   }
   ```
 - `interact_spots`：`[{"pos":[x,y,z],"action":"<动作>"},...]` 相对 anchor 的交互位列表，**每点带动作种类**。`tourist_interact_aabb` 删除。
+- **spot 语义**：**spot 数量 = 该建筑同时交互的游客人数上限**（全满 → 排队，见 Block 3）；**交互时长 `duration_ticks` 由建筑模式预设块的 `interaction_duration_ticks` 决定**（与 spot 无关）；**同建筑不同 spot 动作可不同**。
 - `action` 取值 = Activity 枚举的子集（`browse/eat/bathe/view/meditate/rest/withdraw`），由 `interact_spot_marker` 方块设置（见 Block 1）。**动作只决定游客在该点的活动状态/粒子；精力/经济效果由 category 模式预设块决定**。
 - 可选字段省略即默认：`energy_restore`=0、`withdraw_amount`=0。
 - **不解析**旧 `tourist_interact_aabb` 顶层字段；`shop`/`service` 仍解析（保留）。

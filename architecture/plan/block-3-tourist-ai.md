@@ -36,7 +36,9 @@
   - `service`：产元素 + 消耗精力（`energyPerUse`）；`maxOccupancy>0` 为旅店（夜晚）。
   - `relax`：回复精力（`energyRestore`，clamp 到 `TOURIST_MAX_ENERGY`）——精力循环的「恢复建筑」。
   - `atm`：取钱（`amount = min(withdrawAmount, travelFund)`，`wallet += amount`、`travelFund -= amount`）。
-- **spot 占用**：`TouristSpotManager` 按 buildingId 记每个 spot 下标被谁占用；满了排队；等待超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃。**排队仅机制，无可见标记**（用户明确延后）。
+- **spot 占用**：`TouristSpotManager` 按 buildingId 记每个 spot 下标被谁占用；**spot 总数 = 该建筑同时交互人数上限**；全满 → 排队；等待超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃。**排队仅机制，无可见标记**（用户明确延后）。
+- **duration 由建筑定**：游客站 spot 的时长 = 该建筑模式预设块的 `interaction_duration_ticks`（不是每个 spot 单独设）。
+- **动作在 spot 上**：同建筑不同 spot 可设不同 action（如面包店 browse/eat 两个 spot），游客做所在 spot 的动作；`setActivityTicks(duration)` 用建筑级 duration。
 
 ## 具体改动
 
