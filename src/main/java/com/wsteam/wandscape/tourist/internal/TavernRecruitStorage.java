@@ -30,6 +30,8 @@ public class TavernRecruitStorage extends SavedData {
     private static final int MAX_PER_COLONY = 5;
 
     private final Map<UUID, List<MageResume>> colonyResumes = new ConcurrentHashMap<>();
+    /** colonyId → 酒馆「招募 NPC」累计成功次数（首次免费，之后每次扣元素）。 */
+    private final Map<UUID, Integer> recruitCounts = new ConcurrentHashMap<>();
 
     private TavernRecruitStorage() {}
 
@@ -77,6 +79,19 @@ public class TavernRecruitStorage extends SavedData {
         return resume;
     }
 
+    // ── 招募计数（每殖民地「招募 NPC」次数，首次免费） ──
+
+    /** 殖民地累计成功招募 NPC 的次数。 */
+    public int getRecruitCount(UUID colonyId) {
+        return recruitCounts.getOrDefault(colonyId, 0);
+    }
+
+    /** 记录一次成功招募。 */
+    public void incrementRecruitCount(UUID colonyId) {
+        recruitCounts.merge(colonyId, 1, Integer::sum);
+        setDirty();
+    }
+
     // ── SavedData serialization ──
 
     private static final String TAG_COLONIES = "colonies";
@@ -93,6 +108,8 @@ public class TavernRecruitStorage extends SavedData {
     private static final String TAG_MAX_MANA = "maxMana";
     private static final String TAG_SKIN_VARIANT = "skinVariant";
     private static final String TAG_TIMESTAMP = "timestamp";
+    private static final String TAG_RECRUIT_COUNTS = "recruitCounts";
+    private static final String TAG_RECRUIT_COUNT = "count";
 
     static TavernRecruitStorage load(CompoundTag tag, HolderLookup.Provider provider) {
         TavernRecruitStorage storage = new TavernRecruitStorage();
@@ -118,6 +135,11 @@ public class TavernRecruitStorage extends SavedData {
                         rt.getLong(TAG_TIMESTAMP)));
             }
             storage.colonyResumes.put(colonyId, resumes);
+        }
+        ListTag counts = tag.getList(TAG_RECRUIT_COUNTS, Tag.TAG_COMPOUND);
+        for (int i = 0; i < counts.size(); i++) {
+            CompoundTag ct = counts.getCompound(i);
+            storage.recruitCounts.put(ct.getUUID(TAG_COLONY_ID), ct.getInt(TAG_RECRUIT_COUNT));
         }
         return storage;
     }
@@ -148,6 +170,14 @@ public class TavernRecruitStorage extends SavedData {
             colonies.add(colonyTag);
         }
         tag.put(TAG_COLONIES, colonies);
+        ListTag counts = new ListTag();
+        for (var entry : recruitCounts.entrySet()) {
+            CompoundTag ct = new CompoundTag();
+            ct.putUUID(TAG_COLONY_ID, entry.getKey());
+            ct.putInt(TAG_RECRUIT_COUNT, entry.getValue());
+            counts.add(ct);
+        }
+        tag.put(TAG_RECRUIT_COUNTS, counts);
         return tag;
     }
 

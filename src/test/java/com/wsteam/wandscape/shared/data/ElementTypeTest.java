@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.shared.data;
 
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -74,5 +76,44 @@ class ElementTypeTest {
             .map(ElementType::getId).toList();
         assertEquals(ids.size(), ids.stream().distinct().count(),
             "Element IDs must be unique");
+    }
+
+    @Test
+    void allEnoughTrueWhenEveryElementMeetsCost() {
+        Map<ElementType, Long> balances = new EnumMap<>(ElementType.class);
+        for (ElementType t : ElementType.values()) {
+            balances.put(t, 10_000L);
+        }
+        assertTrue(ElementType.allEnough(balances, 10_000L), "恰好在成本线上应通过");
+    }
+
+    @Test
+    void allEnoughFalseWhenAnyElementBelowCost() {
+        Map<ElementType, Long> balances = new EnumMap<>(ElementType.class);
+        for (ElementType t : ElementType.values()) {
+            balances.put(t, 10_000L);
+        }
+        balances.put(ElementType.FIRE, 9_999L);
+        assertFalse(ElementType.allEnough(balances, 10_000L), "任一种不足应失败");
+    }
+
+    @Test
+    void allEnoughFalseWhenElementMissing() {
+        Map<ElementType, Long> balances = new EnumMap<>(ElementType.class);
+        for (ElementType t : ElementType.values()) {
+            if (t == ElementType.WIND) continue;
+            balances.put(t, 10_000L);
+        }
+        assertFalse(ElementType.allEnough(balances, 10_000L), "缺某元素应失败");
+    }
+
+    @Test
+    void allEnoughEmptyMapFalseForPositiveCost() {
+        assertFalse(ElementType.allEnough(Map.of(), 10_000L), "空存量面对正成本应失败");
+    }
+
+    @Test
+    void allEnoughZeroCostAlwaysTrue() {
+        assertTrue(ElementType.allEnough(Map.of(), 0L), "成本 0 时空存量也应通过");
     }
 }

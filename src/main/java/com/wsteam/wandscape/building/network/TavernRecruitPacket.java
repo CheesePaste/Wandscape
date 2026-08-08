@@ -28,6 +28,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 /**
  * Client→server packet: player clicks "Recruit NPC" in the tavern GUI.
@@ -83,6 +84,20 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
+            // 2.5 招募计费门控（仅「招募 NPC」收费）：每殖民地首次免费，之后每次需每种元素 10000
+            com.wsteam.wandscape.shared.api.TavernApi tavernApi = null;
+            try {
+                tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            } catch (IllegalStateException ignored) {}
+            if (tavernApi != null && !tavernApi.canAffordRecruit(colonyId)) {
+                sp.displayClientMessage(
+                        Component.literal("[Wandscape] Insufficient elements: recruiting costs "
+                                + WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT
+                                + " of every element (first recruit free)."),
+                        false);
+                return;
+            }
+
             // 3. Roll recruit attributes: random² 偏斜分布 + 殖民地等级加成
             //    （模拟殖民地等级游客投出的简历——与法师游客掷简历同一公式）
             var levelMgr = WandscapeEngine.getColonyLevelManager();
@@ -116,6 +131,11 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
 
             // 7. Fix ECS state (spawn() already triggered onNpcJoinWorld)
             fixEcsAfterSpawn(npc, colonyId);
+
+            // 7.5 生成成功后再扣费计数（首次免费）
+            if (tavernApi != null) {
+                tavernApi.chargeRecruit(colonyId);
+            }
 
             Log.info(TAG, "[Tourist] Recruited mage Lv.{} for colony {} at {}",
                     candidate.level(),

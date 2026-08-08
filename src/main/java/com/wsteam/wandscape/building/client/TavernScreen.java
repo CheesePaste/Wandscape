@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.shared.data.MageResume;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
@@ -31,11 +32,13 @@ public class TavernScreen extends MedievalScreen {
 
     private final BlockPos buildingPos;
     private final UUID colonyId;
+    private final int recruitCount;
     private final List<MageResume> mageResumes;
 
     private int activeTab = 0; // 0 = Recruit, 1 = Mages
 
-    public TavernScreen(BlockPos buildingPos, UUID colonyId, List<MageResume> mageResumes) {
+    public TavernScreen(BlockPos buildingPos, UUID colonyId, int recruitCount,
+                        List<MageResume> mageResumes) {
         super(Component.literal("Tavern"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.tavern.title", "Adventurer's Tavern"));
         this.showCloseButton = true;
@@ -43,6 +46,7 @@ public class TavernScreen extends MedievalScreen {
         this.helpDocumentPath = "tavern_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
+        this.recruitCount = recruitCount;
         this.mageResumes = mageResumes;
     }
 
@@ -119,7 +123,11 @@ public class TavernScreen extends MedievalScreen {
                     leftPos + (PW - textW) / 2, topPos + headerHeight + 60,
                     MedievalColors.TEXT_MUTED);
 
-            Component costText = I18n.name("gui.wandscape.tavern.no_cost", "No elemental cost");
+            Component costText = recruitCount == 0
+                    ? I18n.name("gui.wandscape.tavern.first_free", "First recruit is free")
+                    : I18n.name("gui.wandscape.tavern.cost_per_recruit",
+                            "Each recruit costs {0} of every element",
+                            WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT);
             int costW = font.width(costText);
             g.drawString(font, costText,
                     leftPos + (PW - costW) / 2, topPos + headerHeight + 76,

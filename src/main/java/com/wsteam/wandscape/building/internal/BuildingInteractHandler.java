@@ -147,12 +147,14 @@ public final class BuildingInteractHandler {
             }
             case "tavern" -> {
                 List<com.wsteam.wandscape.shared.data.MageResume> mageResumes = List.of();
+                int recruitCount = 0;
                 try {
                     var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
                     mageResumes = tavernApi.getMageResumes(colonyId);
+                    recruitCount = tavernApi.getRecruitCount(colonyId);
                 } catch (IllegalStateException ignored) {}
                 PacketDistributor.sendToPlayer(player,
-                        new TavernOpenPacket(pos, colonyId, mageResumes));
+                        new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes));
             }
             case "potion_station" -> {
                 player.displayClientMessage(Component.literal(

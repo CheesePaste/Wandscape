@@ -18,7 +18,7 @@
 | `HouseApi` | getAssignedNpc/isOccupied/assignNpc/unassignNpc/getVacantHouses |
 | `NpcApi` | getColonyNpcs/getIdleNpcs/getNpc/assignHouse + 默认 getNpcCount/getIdleNpcCount |
 | `RoadApi` | getNetwork/getEdges/requestFullRebuild/requestIncrementalUpdate/getBuildingThreshold/getRoadBlock/getBlobCache/removeEdge |
-| `TavernApi` | getCandidates/refreshCandidates/recruitCandidate/receiveMageResume/getMageResumes/recruitMage |
+| `TavernApi` | getCandidates/refreshCandidates/recruitCandidate/receiveMageResume/getMageResumes/recruitMage + getRecruitCount/canAffordRecruit/chargeRecruit（「招募 NPC」计费，每殖民地首次免费） |
 | `TouristApi` | getTouristCount/getTouristsInColony/spawnTourist/getAverageSatisfaction/registerArrival/registerDeparture/getOvernightStayerCount |
 | `WandApi` | getWandColor(ItemStack) |
 | `WarehouseApi` | getElement/getAllElements/consumeElement/addElement/getItemCount/extractItem/insertItems |

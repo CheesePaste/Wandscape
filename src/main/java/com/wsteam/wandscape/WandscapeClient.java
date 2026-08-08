@@ -202,7 +202,7 @@ public class WandscapeClient {
         TavernOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(
                     new TavernScreen(packet.buildingPos(), packet.colonyId(),
-                            packet.mageResumes()));
+                            packet.recruitCount(), packet.mageResumes()));
         });
         HotelOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(new HotelScreen(
