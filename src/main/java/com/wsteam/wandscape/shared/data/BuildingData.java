@@ -19,6 +19,15 @@ public interface BuildingData {
     int getQueueCapacity();
     boolean isStructureIntact();
 
+    /**
+     * Whether the building has ever completed construction. Sticky — stays true
+     * even if the building later becomes damaged. Drives the client construction
+     * ghost: only buildings that never completed show a footprint.
+     */
+    default boolean hasEverCompleted() {
+        return isStructureIntact();
+    }
+
     /** Building's world-space bounding box, for FX placement (particles/sounds). */
     @Nullable
     default BoundingBox getBounds() { return null; }

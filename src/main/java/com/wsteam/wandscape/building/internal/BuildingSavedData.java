@@ -60,6 +60,7 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_COLONY = "colony";
     private static final String TAG_SHUTDOWN = "shutdown";
     private static final String TAG_INTACT = "intact";
+    private static final String TAG_EVER_COMPLETED = "ever_completed";
     private static final String TAG_QUEUE = "queue";
     private static final String TAG_CURRENT_TASK = "current_task";
     private static final String TAG_COMFORT = "comfort";
@@ -561,6 +562,7 @@ public class BuildingSavedData extends SavedData {
             }
             entry.putBoolean(TAG_SHUTDOWN, state.isShutdown());
             entry.putBoolean(TAG_INTACT, state.isStructureIntact());
+            entry.putBoolean(TAG_EVER_COMPLETED, state.hasEverCompleted());
             entry.putInt(TAG_COMFORT, state.getComfort());
             entry.putInt(TAG_MAGIC, state.getMagic());
             entry.putInt(TAG_WONDER, state.getWonder());
@@ -676,6 +678,11 @@ public class BuildingSavedData extends SavedData {
             }
             state.setShutdown(entry.getBoolean(TAG_SHUTDOWN));
             state.setStructureIntact(entry.getBoolean(TAG_INTACT));
+            // Migration: older saves lack the flag; a currently-intact building
+            // was necessarily built, so infer it completed construction.
+            state.setHasEverCompleted(entry.contains(TAG_EVER_COMPLETED)
+                    ? entry.getBoolean(TAG_EVER_COMPLETED)
+                    : state.isStructureIntact());
             if (entry.hasUUID(TAG_CURRENT_TASK)) {
                 state.setCurrentTaskId(entry.getUUID(TAG_CURRENT_TASK));
             }

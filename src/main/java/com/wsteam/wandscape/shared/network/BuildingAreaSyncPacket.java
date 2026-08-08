@@ -97,7 +97,7 @@ public record BuildingAreaSyncPacket(List<BuildingEntry> buildings) implements C
         BlockPos anchor = building.getPosition();
         String typeId = building.getBuildingTypeId();
         int rotationSteps = building.getRotationSteps();
-        boolean completed = building.isStructureIntact();
+        boolean completed = building.hasEverCompleted();
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(typeId);
         String category = config != null ? config.category() : "";

@@ -92,6 +92,11 @@ public final class BuildCompleteListener {
         boolean broken = isBroken(damaged.size(), config.pattern().size());
         boolean intact = !broken;
         state.setStructureIntact(intact);
+        if (intact) {
+            // Sticky: once construction completes, never show the ghost again,
+            // even if the building later becomes damaged.
+            state.setHasEverCompleted(true);
+        }
         data.setDirty();
 
         // Refresh client caches: a completed building's construction ghost clears,
