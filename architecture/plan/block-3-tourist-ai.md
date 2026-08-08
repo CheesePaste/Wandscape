@@ -1,27 +1,28 @@
-# Block 3 — 游客 AI + 交互 + 排队
+# Block 3 — 游客 AI + 四类交互 + 排队
 
-> 依赖 Block 0 契约（InteractionConfig/Activity/TouristStateHost）+ Block 2 的数据（经接口调用，**不碰实体文件**）。这是最大的块。本块与 Block 1/2/4 可并行。所有游客行为逻辑：三条填充、Find-Best-Action 目标选择、spots 排队做动作、旅店、离开规则。
+> 依赖 Block 0 契约（四类模式预设块 / Activity / TouristStateHost）+ Block 2 的数据（经接口调用，**不碰实体文件**）。这是最大的块。本块与 Block 1/2/4 可并行。所有游客行为逻辑：三条填充、Find-Best-Action 目标选择、spots 排队做动作、四类交互（购物/产元素/回精力/取钱）、旅店、离开规则。
+> **一阶段不统一四类交互**：`performShopInteraction`/`performServiceInteraction` 保留，新增 `performRelaxInteraction`（回精力）/`performAtmInteraction`（取钱）。统一成 `performInteraction` 属二阶段（phase-2/README.md）。
 
 ## 目标
 
-1. `satisfactionGain` → `fillBars`（无惩罚填三条）；`performShopInteraction/performServiceInteraction` → 统一 `performInteraction`。
-2. 目标选择 = Find-Best-Action（需求缺口 × 建筑值 + 精力 + 排队惩罚），**无 typePreferences**。
+1. `satisfactionGain` → `fillBars`（无惩罚填三条）；四类交互各自结算（shop 购物 / service 产元素+耗精力 / relax 回精力 / atm 取钱）。
+2. 目标选择 = Find-Best-Action（需求缺口 × 建筑值 + 精力 + 排队惩罚），**无 typePreferences**，**只看视野内**。
 3. spots 单点寻路 + 占用/活动/释放 + 排队（`TouristSpotManager`）。
-4. 旅店改 beds 判定，删 sat≥50 门槛，按 D6 离场。
+4. 旅店改 `service.maxOccupancy>0` 判定，删 sat≥50 门槛，按 D6 离场。
 5. 从 `TouristStateHost` **删除** `getSatisfaction/setSatisfaction`、`getTypePreference/adjustTypePreference`（迁移完调用点后）。
 
 ## 负责文件
 
 | 文件 | 动作 |
 |---|---|
-| `tourist/internal/TouristSimulation.java` | fillBars / performInteraction / Find-Best-Action / 删 pref |
+| `tourist/internal/TouristSimulation.java` | fillBars / 四类交互 / Find-Best-Action / 删 pref |
 | `tourist/internal/TouristMoveGoal.java` | spot 单点导航 + 占用/活动/释放 + 排队 + 删 AABB/匹配分/pref |
 | `tourist/internal/TouristSimSystem.java` | 镜像交互（共享 TouristSimulation）+ 离开规则 + registerDeparture 新签名 |
-| `tourist/internal/HotelStayHandler.java` | beds 判定 + nightsStayed + 删 sat≥50 |
+| `tourist/internal/HotelStayHandler.java` | `service.maxOccupancy>0` 判定 + nightsStayed + 删 sat≥50 |
 | `tourist/internal/TouristSpotManager.java` | 新建：spot 占用/队列/等待超时 |
 | `tourist/internal/TouristStateHost.java` | 删遗留方法 |
 | `tourist/internal/TouristState.java` | 不动（移动标签） |
-| `building/internal/ShopStockManager.java` | 按 interaction.trade() 工作 |
+| `building/internal/ShopStockManager.java` | 按 `cfg.shop()` 工作 |
 | `building/internal/ShopInteractionHandler.java` | 同 |
 
 ## 关键概念
@@ -29,14 +30,19 @@
 - **fillBars**：`sat_d += round(value_d × TOURIST_BAR_GAIN_COEFF)`，封顶 `need_d`。无惩罚。
 - **isFullySatisfied()**（Block 2 实现）：三条 ratio 全 1。经验/法师简历仅满条**夜晚**离场触发。
 - **Find-Best-Action**：`score(b) = Σ_d max(0,(need_d−sat_d)) × value_d × coeff + energyUrgency − queuePenalty`。
-- **视野（vision）**：目标选择**只看 `TOURIST_VISION_RADIUS` 内且已加载**的可交互建筑。视野内无合适目标 → **闲逛**，直到视野出现合适的（不跨城镇寻路到远处建筑，省寻路开销）。
+- **视野（vision）**：目标选择**只看 `TOURIST_VISION_RADIUS` 内且已加载**的可交互建筑。视野内无合适目标 → **闲逛**，直到视野出现合适的。
+- **四类交互（category 模式预设）**：
+  - `shop`：购物（钱包买货，殖民地收元素）；精力 -20（沿用旧硬编码）。
+  - `service`：产元素 + 消耗精力（`energyPerUse`）；`maxOccupancy>0` 为旅店（夜晚）。
+  - `relax`：回复精力（`energyRestore`，clamp 到 `TOURIST_MAX_ENERGY`）——精力循环的「恢复建筑」。
+  - `atm`：取钱（`amount = min(withdrawAmount, travelFund)`，`wallet += amount`、`travelFund -= amount`）。
 - **spot 占用**：`TouristSpotManager` 按 buildingId 记每个 spot 下标被谁占用；满了排队；等待超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃。**排队仅机制，无可见标记**（用户明确延后）。
 
 ## 具体改动
 
 ### 1. TouristSimulation（当前 :70-177, :231-331）
 
-- `effectiveValues`（:70-85）：保留（三值 + 商店货品加成）。
+- `effectiveValues`（:70-85）：保留（三值 + shop 货品加成）。
 - **删除** `satisfactionGain`（:98-113，含阈值惩罚）→ 新增：
   ```java
   /** 填三条：sat_d += round(value_d × coeff)，封顶 need_d。返回是否发生了任何填充。 */
@@ -44,31 +50,62 @@
   ```
 - **删除** `matchScore`（:92-96，pref×threeSum）→ 新增 need-gap 评分（见 D9 公式）。
 - `applyPreferenceDecay`（:127-133）**删除**（无 pref）。
-- `performShopInteraction`（:152-177）/`performServiceInteraction`（:181-208）→ 统一 `performInteraction(level, t, buildingId, colonyId)`：
-  - 精力：`t.setEnergy(t.getEnergy() + interaction.energy())`（负数消耗、正数恢复）。
-  - 填条：`fillBars(...)`。
-  - 经济：`interaction.trade()!=null` → 走 ShopStockManager 购买（沿用现有 purchase/purchaseAffordable）；`!interaction.output().isEmpty()` → ColonyItemBank.addElement（沿用现有）。
-  - `InteractionResult` record 保留（journey diary/气泡/叙事用）。
-- `selectNextTarget`（:231-292）：改为按 interaction 判断目标建筑（`cfg.hasInteraction()`），shop 有货判断改 `trade()!=null && hasStock`，hotel 判断改 `beds()>0`，加入精力轴 + 排队惩罚（D9）。**候选只取视野 `TOURIST_VISION_RADIUS` 内且已加载的建筑**；视野内无合适目标 → 返回 null，调用方**闲逛**直到视野出现合适的。
+- `interactionDuration`（:115-125）：按四类块取 `interactionDurationTicks`：
+  ```java
+  if (cfg.shop()!=null && cfg.shop()!=ShopConfig.NONE) return cfg.shop().interactionDurationTicks();
+  if (cfg.service()!=null && cfg.service()!=ServiceConfig.NONE) return cfg.service().interactionDurationTicks();
+  if (cfg.relax()!=null && cfg.relax()!=RelaxConfig.NONE) return cfg.relax().interactionDurationTicks();
+  if (cfg.atm()!=null && cfg.atm()!=AtmConfig.NONE) return cfg.atm().interactionDurationTicks();
+  ```
+- **保留** `performShopInteraction`（:152-177）与 `performServiceInteraction`（:181-208），但 `satisfactionGain` 调用改为 `fillBars`。
+- **新增**：
+  ```java
+  /** Relax 建筑：回复精力 + 填条 + 冷却。 */
+  public static InteractionResult performRelaxInteraction(ServerLevel level,
+          TouristStateHost t, UUID buildingId, UUID colonyId) {
+      BuildingConfig cfg = getConfig(level, buildingId);
+      if (cfg == null || cfg.relax() == null) return null;
+      var r = cfg.relax();
+      int energyBefore = t.getEnergy();
+      t.setEnergy(t.getEnergy() + r.energyRestore());          // clamp 在 setEnergy 内
+      int gain = fillBars(level, t, cfg) ? computedGain : 0;   // 填条，见 fillBars 返回
+      applyInteractionCooldown(level, t, buildingId);
+      return new InteractionResult(null, satBefore, gain, r.energyRestore(), "歇脚恢复精力");
+  }
+  /** ATM 建筑：从 travelFund 取现补钱包 + 填条 + 冷却。 */
+  public static InteractionResult performAtmInteraction(ServerLevel level,
+          TouristStateHost t, UUID buildingId, UUID colonyId) {
+      BuildingConfig cfg = getConfig(level, buildingId);
+      if (cfg == null || cfg.atm() == null) return null;
+      var a = cfg.atm();
+      int amount = Math.min(a.withdrawAmount(), t.getTravelFund());
+      t.setWallet(t.getWallet() + amount);
+      t.setTravelFund(t.getTravelFund() - amount);
+      int gain = fillBars(level, t, cfg) ? computedGain : 0;
+      applyInteractionCooldown(level, t, buildingId);
+      return new InteractionResult(null, satBefore, gain, 0, "取钱 " + amount);
+  }
+  ```
+- `selectNextTarget`（:231-292）：改为按 category 判断目标建筑（`cfg.isTouristTarget()`），shop 有货判断改 `cfg.shop()!=NONE && hasStock`，hotel 判断改 `cfg.service().maxOccupancy()>0`，加入精力轴（精力 0 只能去 `relax.energyRestore()>0`）+ 排队惩罚。**候选只取视野 `TOURIST_VISION_RADIUS` 内且已加载的建筑**；视野内无合适目标 → 返回 null，调用方**闲逛**。
 - `weightedPick`（:294-311）：权重改为 Find-Best-Action 分数。
 
 ### 2. TouristMoveGoal（当前 :564-609 performBuildingInteraction、:1163-1330 planNextBuilding、:1337-1463 交互/评分、:125-132/437/454-465/479/517/1296-1321 AABB 逻辑）
 
-- **删 AABB 交互区逻辑**：`touristInteractZones: List<BoundingBox>`（:125-132）及生成（:1296-1321）、到达判定（:454-465）→ 改为**寻路到一个 spot 点**：`interactPoint = api.getTouristInteractPoint(buildingId)`（Block 0/4 保持该 API 返回一个点，由 spots 派生）；到达 = `distSqr(spot) <= ARRIVAL_RADIUS²`。
-- `performBuildingInteraction`（:564-609）：删 shop/service category 分发 → 调 `TouristSimulation.performInteraction`。
-- `interactWithShop/interactWithService`（:1337-1393）→ 合并为一个按 interaction 处理的交互（气泡/叙事沿用）。
+- **删 AABB 交互区逻辑**：`touristInteractZones: List<BoundingBox>`（:125-132）及生成（:1296-1321）、到达判定（:454-465）→ 改为**寻路到一个 spot 点**：`interactPoint = api.getTouristInteractPoint(buildingId)`（由 interactSpots 派生，返回一个点）；到达 = `distSqr(spot) <= ARRIVAL_RADIUS²`。
+- `performBuildingInteraction`（:564-609）：按 category 分发到 `performShopInteraction/performServiceInteraction/performRelaxInteraction/performAtmInteraction`（不再有「shop/service 两类」假设）。
+- `interactWithShop/interactWithService`（:1337-1393）→ 扩展为四类（relax/atm 沿用气泡/叙事格式）。
 - `computeMatchScore/applyPreferenceDecay`（:1427-1442）**删除**；`weightedPick`（:1445-1463）改 need-gap 分数。
-- `planNextBuilding/hasBuildingsAvailable`（:1163-1330/:1077-1097）：目标过滤改 `cfg.hasInteraction()`；hotel 判 `beds()>0`；shop 有货判 `trade()!=null && hasStock`。
+- `planNextBuilding/hasBuildingsAvailable`（:1163-1330/:1077-1097）：目标过滤改 `cfg.isTouristTarget()`；hotel 判 `service.maxOccupancy()>0`；shop 有货判 `shop()!=NONE && hasStock`；精力 0 只选 `relax.energyRestore()>0`。
 - `decideNextMode`（:1042-1074）：休息冷却概念保留（活动后冷却），但不再有 sat 参与。
-- **活动/占用**：到达 spot → `TouristSpotManager.claim(buildingId, spotIndex, touristId)` → `setCurrentActivity(<该 spot 的 action，来自 InteractSpot.action>)` + `setOccupiedSpot` + `setActivityTicks(duration)` → 活动期间站着做动作（粒子/姿态，可加简单特效）→ `duration_ticks` 后 `release` + 结算。
+- **活动/占用**：到达 spot → `TouristSpotManager.claim(buildingId, spotIndex, touristId)` → `setCurrentActivity(<该 spot 的 action，来自 InteractSpot.action>)` + `setOccupiedSpot` + `setActivityTicks(duration)` → 活动期间站着做动作（粒子/姿态）→ `duration_ticks` 后 `release` + 结算。
 - **排队**：spot 全满 → `setCurrentActivity(QUEUE)` 在建筑旁等；超时放弃（`release` + 去别处）。仅机制，无可见标记。
 
 ### 3. TouristSimSystem（当前 :444-511 interact、:514-524 hasHotelVacancy、:528-576 checkDeparture/routeToHotel、:578+ depart）
 
-- `interact`（:444-511）：删 shop/service category 分发 → 调 `TouristSimulation.performInteraction`（与实体共用）。
-- 旅店入住（:458-484）：条件改 `beds()>0 && !isFullySatisfied() && (夜晚) && hasVacancy`，删 `sat>=50`；入住记 nightsStayed。
-- `checkDeparture`（:528-558）：改 D6 规则（isFullySatisfied&&夜晚 / deadline / 夜晚无床位 / idle；**删** sat 三段与「精力 0 无恢复→离场」——精力 0 无恢复改为闲逛），删 sat 三段。
-- `routeToHotel`（:560-576）：`"service".equals(category)` → `cfg.beds()>0`。
+- `interact`（:444-511）：按 category 分发到四类交互（与实体共用 TouristSimulation）。
+- 旅店入住（:458-484）：条件改 `service.maxOccupancy()>0 && !isFullySatisfied() && (夜晚) && hasVacancy`，删 `sat>=50`；入住记 nightsStayed。
+- `checkDeparture`（:528-558）：改 D6 规则（isFullySatisfied&&夜晚 / deadline / 夜晚无床位 / idle；删 sat 三段与「精力 0 无恢复→离场」——精力 0 无恢复改为闲逛）。
+- `routeToHotel`（:560-576）：`"service".equals(category)` → `cfg.service().maxOccupancy()>0`。
 - `depart`/`registerDeparture`（:578+）：satisfaction 实参 → 聚合值（min-ratio×100，Block 4 收口签名）。
 
 ### 4. TouristSpotManager（新建，仿 HotelStayHandler 单例）
@@ -87,14 +124,14 @@ public final class TouristSpotManager {
 
 ### 5. HotelStayHandler（当前 :84 checkIn、:154 settleIntoBed、:110 checkOut、:268-295 heartbeat、:228 hasVacancy）
 
-- 旅店判定 `config.service().maxOccupancy()`（:39/86/88/230/231）→ 改 `config.interaction().beds()`。
+- 旅店判定 `config.service().maxOccupancy()`（:39/86/88/230/231）→ **保持不变**（service.maxOccupancy 仍在）。
 - checkIn 条件（:84）删 `sat>=50`，改 `!isFullySatisfied() && 夜晚`。
 - 退房（heartbeat 清晨 1000-1200）：`nightsStayed++`、精力回 100（沿用）。入住点 wakeUpPos 逻辑保留。
 
 ### 6. ShopStockManager / ShopInteractionHandler
 
-- `onDailySettlement` 补货过滤 `"shop".equals(state.getCategory())`（:623）→ 改 `cfg.interaction().trade()!=null`。
-- `purchaseAffordable/purchase/getGoodsBonus*`（:282/:327/:203-215）：读 `cfg.interaction().trade().goods()`（经 BuildingConfig 访问器或直接 interaction）。
+- `onDailySettlement` 补货过滤 `"shop".equals(state.getCategory())`（:623）→ 改 `cfg.shop()!=NONE`。
+- `purchaseAffordable/purchase/getGoodsBonus*`（:282/:327/:203-215）：读 `cfg.shop().goods()`（不变）。
 - `ShopInteractionHandler`（:15-40）：纯透传，按新字段。
 
 ### 7. TouristStateHost（删遗留方法）
@@ -105,6 +142,6 @@ public final class TouristSpotManager {
 ## Done 判定
 
 1. `./gradlew build` 绿。
-2. 游客：逛建筑填三条（无惩罚）；**只看视野内目标，视野内无目标则闲逛**；精力低/0 时优先/只能去 energy>0 建筑、无恢复则闲逛；在 spots 占位做**该 spot 指定动作**、满了排队、超时放弃；夜间入旅店、清晨退房回精力。
+2. 游客：逛建筑填三条（无惩罚）；**只看视野内目标，视野内无目标则闲逛**；精力低/0 时优先/只能去 `relax.energyRestore()>0` 建筑、无恢复则闲逛；去 atm 取钱（travelFund 扣减、钱包增加）；在 spots 占位做**该 spot 指定动作**、满了排队、超时放弃；夜间入旅店、清晨退房回精力。
 3. **满条游客等夜晚离场**给经验 + mage resume；停留 2-4 天到点离场；低级小镇满不了条 → 0 经验。
-4. `tourist/**`（AI 部分）无 `getSatisfaction`/`getTypePreference`/`"shop"`/`"service"` 引用。
+4. `tourist/**`（AI 部分）无 `getSatisfaction`/`getTypePreference` 引用。
