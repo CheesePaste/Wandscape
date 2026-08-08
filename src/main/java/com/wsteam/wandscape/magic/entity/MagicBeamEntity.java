@@ -33,7 +33,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  * <p>不是子弹：整段光束同时可见、不做位移。若指定了施法 NPC 与目标生物，每 tick 动态跟踪——
  * 源点跟随 NPC 持杖手（沿目标方向前移 {@link #STAFF_CENTER_OFFSET}），目标跟随生物当前坐标；
  * 客户端据此渲染，光束随 NPC 转向。无目标时退化为固定源点→固定终点。
- * 光束粗细随时间动画——先慢慢变宽、再快速变窄（{@link #getWidthFactor}）。
+ * 光束粗细随时间动画——先平滑变宽、再平滑变窄（{@link #getWidthFactor}）。
  * 纯视觉实体：无 AI/碰撞/存档，短命后自毁；每 tick 对束内敌对生物造成伤害。
  */
 public class MagicBeamEntity extends Entity {
@@ -55,17 +55,18 @@ public class MagicBeamEntity extends Entity {
     public static final double STAFF_CENTER_OFFSET = 1.0;
     /** 光束最大长度（方块）：沿目标方向射线检测第一个方块为止，未命中取此长度。 */
     public static final double BEAM_RANGE = 200.0;
-    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后快速变细到消失。 */
+    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后平滑变细到消失。 */
     public static final float PEAK_T = 0.86f;
-    /** 峰值时的光束/光晕半径（方块）。 */
-    public static final float MAX_BEAM_RADIUS = 0.5f;
-    public static final float MAX_GLOW_RADIUS = 0.7f;
-    /** 宽度乘子下限：光束从「特别细」开始，随法阵时长逐渐变宽。 */
-    private static final float MIN_WIDTH = 0.02f;
-    /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
-    private static final float WIDTH_POWER = 1.4f;
-    /** 光束满宽时每 tick 对束内敌对生物造成的伤害（当前按宽度因子正比，后续可加其他因素）。 */
-    private static final float BEAM_DAMAGE = 2.0f;
+    /** 峰值时的光束/光晕半径（方块）。粗细翻倍后视觉与伤害判定半径同宽。 */
+    public static final float MAX_BEAM_RADIUS = 1.0f;
+    public static final float MAX_GLOW_RADIUS = 1.4f;
+    /** 宽度/伤害乘子下限：开头即有少量伤害，不再近乎零伤。 */
+    private static final float MIN_WIDTH = 0.1f;
+    /**
+     * 光束满宽（wf=1）时每 tick 对束内敌对生物造成的伤害 = 平滑曲线峰值。
+     * 总伤 ≈ BEAM_DAMAGE × 寿命 × (0.5 + 0.5×MIN_WIDTH) ≈ 60/目标/次施法。
+     */
+    private static final float BEAM_DAMAGE = 0.5f;
 
     /** 施法 NPC 实体引用（服务端跟踪用，null=静态光束）。 */
     private WandscapeNpc casterNpc;
@@ -245,21 +246,16 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
-     * 宽度乘子 [MIN_WIDTH, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
-     * t ∈ [PEAK_T, 1] 快速变窄（(1-k)^WIDTH_POWER）。
-     * 恒大于 0，避免 renderBeaconBeam 内部除以 beamRadius 时为 0。
+     * 宽度乘子 [MIN_WIDTH, 1]：半余弦平滑曲线——t ∈ [0, PEAK_T] 平滑变宽至满值、
+     * t ∈ [PEAK_T, 1] 平滑变窄回下限。两端与接点斜率均为 0（ease-in-out），
+     * 开头不再近乎零伤、峰值不再突兀。恒 ≥ MIN_WIDTH > 0，避免 renderBeaconBeam 除以 0。
      */
     public float getWidthFactor(float partialTick) {
         float t = getAge(partialTick);
-        float factor;
-        if (t <= PEAK_T) {
-            float k = Math.max(0f, t / PEAK_T);
-            factor = (float) Math.pow(k, WIDTH_POWER);
-        } else {
-            float k = Math.min(1f, (t - PEAK_T) / (1f - PEAK_T));
-            factor = (float) Math.pow(1f - k, WIDTH_POWER);
-        }
-        return Math.max(MIN_WIDTH, factor);
+        float k = t <= PEAK_T ? t / PEAK_T : (t - PEAK_T) / (1f - PEAK_T);
+        float ease = 0.5f * (1f - (float) Math.cos(Math.PI * k)); // 平滑 0→1
+        float shape = t <= PEAK_T ? ease : 1f - ease;
+        return MIN_WIDTH + (1f - MIN_WIDTH) * shape;
     }
 
     /** 纯显示实体不入存档，避免世界重载后残留光束。 */
@@ -273,7 +269,8 @@ public class MagicBeamEntity extends Entity {
     public AABB getBoundingBoxForCulling() {
         BlockPos tgt = getTarget().orElse(null);
         if (tgt != null) {
-            return new AABB(position(), tgt.getCenter()).inflate(1.0);
+            // 1.5 覆盖峰值光晕半径(1.4)，避免光束变粗后边缘被视锥剔除
+            return new AABB(position(), tgt.getCenter()).inflate(1.5);
         }
         return super.getBoundingBoxForCulling();
     }
