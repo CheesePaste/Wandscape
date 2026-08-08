@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.npc.internal;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,7 +9,6 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.npc.data.DeathRecord;
-import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -21,17 +19,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * 每世界一份的死亡留存注册表（SavedData）：NPC 战死快照在此增删查。
- * 复活成功后 {@link #remove}；过期记录由 {@link #prune} 清理（尸骨未寒才有价值）。
+ * 每世界一份的死亡留存注册表（SavedData）：NPC 战死快照在此增删查，永久留存直至复活成功。
+ * 复活成功后 {@link #remove}；不做时间过期清理。
  */
 public class ColonyDeathRegistry extends SavedData {
 
     private static final String TAG = "ColonyDeathRegistry";
     private static final String DATA_NAME = "wandscape_npc_deaths";
     private static final String TAG_RECORDS = "records";
-
-    /** 记录过期时长（tick）：默认 3 游戏日。 */
-    public static final long EXPIRE_TICKS = 3L * 24000L;
 
     private final List<DeathRecord> records = new ArrayList<>();
 
@@ -72,25 +67,6 @@ public class ColonyDeathRegistry extends SavedData {
     @Nullable
     public DeathRecord latestInColony(@Nullable UUID colonyId) {
         return DeathRecord.latestInColony(records, colonyId);
-    }
-
-    /** 清理过期记录（deathTime + EXPIRE_TICKS < nowTick）。 */
-    public void prune(long nowTick) {
-        long expiredBefore = nowTick - EXPIRE_TICKS;
-        boolean changed = false;
-        Iterator<DeathRecord> it = records.iterator();
-        while (it.hasNext()) {
-            DeathRecord r = it.next();
-            if (r.deathTime() < expiredBefore) {
-                it.remove();
-                changed = true;
-                Log.info(TAG, "过期清除死亡记录：{} ({}) at {},{},{}", r.name(), r.npcId().toString().substring(0, 8), r.x(), r.y(), r.z());
-            }
-        }
-        if (changed) {
-            setDirty();
-            Log.info(TAG, "prune：剩余 {} 条死亡记录", records.size());
-        }
     }
 
     // ── NBT ──

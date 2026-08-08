@@ -102,7 +102,7 @@ public final class AltarCastExecutor implements OpExecutor<AtomicOp.AltarCastOp>
             Log.info(TAG, "NPC {} — 祭坛 {} 冷却中，施法跳过（任务幂等结束）", npcId, altarId.toString().substring(0, 8));
             return CompletableFuture.completedFuture(null);
         }
-        // 幂等复核：记录可能在发布后被同殖民地其他祭坛复活消耗/过期——此时不放法阵不扣蓝
+        // 幂等复核：记录可能在发布后被同殖民地其他祭坛复活消耗——此时不放法阵不扣蓝
         if (ReviveHandler.REVIVE_MAGIC_ID.equals(op.magicId())
                 && ColonyDeathRegistry.get(level).latestInColony(colonyId) == null) {
             Log.info(TAG, "NPC {} — 无该殖民地死亡记录可复活，施法跳过（任务幂等结束）", npcId);

@@ -39,18 +39,7 @@ public final class ReviveHandler {
     /** revive 魔法 id（magic_spells/revive.json 的 key）。 */
     public static final String REVIVE_MAGIC_ID = "revive";
 
-    private static long lastPruneTick = 0;
-
     private ReviveHandler() {}
-
-    /** ServerTick 驱动：每日清理过期死亡记录（引导/生成已迁至祭坛）。 */
-    public static void tick(ServerLevel level) {
-        long now = level.getGameTime();
-        if (now - lastPruneTick >= 24000L) {
-            lastPruneTick = now;
-            ColonyDeathRegistry.get(level).prune(now);
-        }
-    }
 
     /** 在指定位置生成新 NPC，恢复死亡快照，删除记录。 */
     public static void spawnFromRecordAt(ServerLevel level, DeathRecord rec, BlockPos desiredPos) {

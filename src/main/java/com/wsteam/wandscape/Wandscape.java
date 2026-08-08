@@ -870,9 +870,6 @@ public class Wandscape {
         // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
         MagicCastManager.tick();
 
-        // Revive: 引导到期生成复活 NPC + 每日清理过期死亡记录（不依赖 ECS）
-        com.wsteam.wandscape.npc.internal.ReviveHandler.tick(event.getServer().overworld());
-
         // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
         com.wsteam.wandscape.building.internal.AltarCastHandler.tick(event.getServer().overworld());
 

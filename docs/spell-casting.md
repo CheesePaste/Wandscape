@@ -165,7 +165,7 @@ core/component/SpellbookComponent.java   ✅ NPC 会哪些魔法（magicId 列�
 core/component/CastStrategyComponent.java ✅ 策略预设 + 优先级列表（已实现）
 magic/internal/MagicOp.java         （延后）魔法效果分发注册表——有第二个战斗魔法时再建
 npc/data/DeathRecord.java           ✅ 死亡留存记录（纯数据 record + nearest 纯逻辑）
-npc/internal/ColonyDeathRegistry.java ✅ 死亡记录 SavedData（平铺列表，3 天过期清理）
+npc/internal/ColonyDeathRegistry.java ✅ 死亡记录 SavedData（平铺列表，永久留存，复活成功后删除）
 npc/internal/NpcDeathHandler.java   ✅ LivingDeathEvent 钩子：死亡瞬间抓快照
 npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指定位置生成 + 恢复快照 + 虚弱复活）；入口已迁祭坛（P5），shift+右键移除
 ```
@@ -245,7 +245,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **触发**：`NpcDeathHandler`（LivingDeathEvent 钩子，Wandscape 构造器注册），在实体清理前抓快照。
 - **数据 `DeathRecord`**（纯 record）：npcId、名字、维度、死亡坐标、死亡时间、所属殖民地、外观（皮肤变体/帽子颜色）、hasDefaultWand、7 属性快照、背包快照（ECS Inventory 的 ResourceStack 列表）。
 - **存储 `ColonyDeathRegistry`**：SavedData（`wandscape_npc_deaths`），每世界一份平铺列表。
-- **清理**：复活成功后删除；超过 3 游戏日（`EXPIRE_TICKS`）由 `ReviveHandler.tick` 每日 prune。
+- **清理**：仅复活成功后删除；不做时间过期清理（永久留存）。
 - **第一版无墓碑方块**：施法时死亡点生成法阵（复用 `MagicCircleCastPacket` 链路），玩家看到法阵即知位置。
 
 ### 10.2 复活魔法（已实现）
@@ -254,7 +254,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
 - **触发（P4 原入口，已迁移）**：原为 shift+右键 NPC → `MagicInteractHandler` → `ReviveHandler.castRevive`（施法者周围射程内最近的 `DeathRecord`，门控走 `npc.tryCastSpell`）；**P5 起复活唯一入口为祭坛**（见第十一章），shift+右键施放已移除。
 - **引导**：时长 = 复活法阵 spec 时长（法阵完整展开后完成，缺失回退 100 tick）；期间 NPC 面向死亡点、举杖（`startManualCast`）。
 - **完成（P5 后）**：`AltarCastExecutor` 引导到期调用 `ReviveHandler.spawnFromRecordAt(level, rec, 祭坛中心最上方)` 生成新 `WandscapeNpc`，恢复名字/外观/属性上限/默认法杖/背包（ECS 重 seed + ColonyMember 修正），删除死亡记录，PORTAL 爆点。
-- **无死亡记录前置校验（按殖民地）**：`AltarCastHandler.onCastRequest` 点选 revive 时若该殖民地无死亡记录（`latestInColony(colonyId) == null`）直接提示、不发布任务；`AltarCastExecutor` 幂等复核兜底——发布后记录被同殖民地其他祭坛复活消耗/过期时跳过施法（不扣蓝、不放法阵）；`fireRevive` 同样按祭坛所属殖民地取记录（`getBuilding(altarId).getColonyId()`），不跨殖民地捞人。
+- **无死亡记录前置校验（按殖民地）**：`AltarCastHandler.onCastRequest` 点选 revive 时若该殖民地无死亡记录（`latestInColony(colonyId) == null`）直接提示、不发布任务；`AltarCastExecutor` 幂等复核兜底——发布后记录被同殖民地其他祭坛复活消耗时跳过施法（不扣蓝、不放法阵）；`fireRevive` 同样按祭坛所属殖民地取记录（`getBuilding(altarId).getColonyId()`），不跨殖民地捞人。
 - **虚弱复活**：复活后 **1 血 0 蓝**（`setHealth(1)` + `setMana(0)` + `markManaSeeded` 阻止首 tick 满蓝种子），靠脱战回血（interval 回 1 HP）与魔力回复（10t/1 点）缓慢恢复——复活有代价。
 - **失败兜底**：生成位置无地可放等失败 → 记录保留，玩家可重试。
 - **与施法决策的关系**：复活不进 NPC 自动战斗决策表（L1）——玩家指挥式，避免 NPC 战斗中弃敌救人。
