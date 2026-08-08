@@ -3,9 +3,12 @@ package com.wsteam.wandscape.core.types;
 /**
  * Equipment slot on an NPC.
  * <p>
- * Currently only {@code WAND} is defined; future slots (RING, AMULET, ROBE, BOOTS, etc.)
- * can be added here without changing the component infrastructure.
+ * {@code WAND} 是法杖格；HEAD/CHEST/LEGS/FEET 对应四个盔甲格（外观不渲染，仅影响属性）。
  */
 public enum EquipmentSlot {
-    WAND
+    WAND,
+    HEAD,
+    CHEST,
+    LEGS,
+    FEET
 }

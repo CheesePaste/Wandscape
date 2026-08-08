@@ -45,7 +45,10 @@ public record NpcDataPacket(
         String strategyPreset,
         List<String> knownSpells,
         List<String> spellCategories,
-        List<String> priority
+        List<String> priority,
+        List<ItemStack> armorStacks,
+        int skinVariant,
+        int hatColor
 ) implements CustomPacketPayload {
 
     public static final Type<NpcDataPacket> TYPE =
@@ -93,6 +96,12 @@ public record NpcDataPacket(
         writeStringList(buf, pkt.knownSpells);
         writeStringList(buf, pkt.spellCategories);
         writeStringList(buf, pkt.priority);
+        buf.writeVarInt(pkt.armorStacks.size());
+        for (ItemStack stack : pkt.armorStacks) {
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, stack);
+        }
+        buf.writeInt(pkt.skinVariant);
+        buf.writeInt(pkt.hatColor);
     }
 
     private static void writeStringList(RegistryFriendlyByteBuf buf, List<String> list) {
@@ -120,10 +129,17 @@ public record NpcDataPacket(
         List<String> knownSpells = readStringList(buf);
         List<String> spellCategories = readStringList(buf);
         List<String> priority = readStringList(buf);
+        int armorCount = buf.readVarInt();
+        List<ItemStack> armorStacks = new java.util.ArrayList<>(armorCount);
+        for (int i = 0; i < armorCount; i++) {
+            armorStacks.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
+        }
+        int skinVariant = buf.readInt();
+        int hatColor = buf.readInt();
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
                 armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells,
-                spellCategories, priority);
+                spellCategories, priority, armorStacks, skinVariant, hatColor);
     }
 
     private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
@@ -179,6 +195,12 @@ public record NpcDataPacket(
             spellCategories.add(def != null ? def.category().name().toLowerCase(Locale.ROOT) : "unknown");
         }
 
+        // 盔甲格（顺序：头盔/胸甲/护腿/靴子）— 防御性拷贝，避免引用共享实例
+        List<ItemStack> armorStacks = new java.util.ArrayList<>(WandscapeNpc.ARMOR_SLOT_COUNT);
+        for (int i = 0; i < WandscapeNpc.ARMOR_SLOT_COUNT; i++) {
+            armorStacks.add(npc.getArmorItem(i).copy());
+        }
+
         return new NpcDataPacket(
                 npc.getId(),
                 npc.getNpcName(),
@@ -196,7 +218,10 @@ public record NpcDataPacket(
                 strategyPreset,
                 knownSpells,
                 spellCategories,
-                priority
+                priority,
+                armorStacks,
+                npc.getSkinVariant(),
+                npc.getHatColor()
         );
     }
 }

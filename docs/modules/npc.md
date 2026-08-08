@@ -16,7 +16,8 @@
 - `tick()` 服务端：魔力回复（含互斥锁/各魔法 CD 递减）+ 脱战回血 + 属性推送恒执行；fast path ecsPollCooldown（施法中每 tick、空闲每 20 tick 才查 ECS）；从 TaskExecutor 读 casting/currentOpTarget/currentOpKind 同步到 SynchedEntityData（computeStatusText 映射移动/施法/仪式状态）。
 - 交互 `mobInteract` 右键发 NpcDataPacket 打开界面。
 - 生命周期：onAddedToLevel 设随机 skin/hat、**无 custom name 时自动命名**（`generateRandomNpcName` → 共享 `shared/data/CharacterNames` 池的 lang key，`setCustomName(translatable key)` 客户端按语言显示中/英文名；酒馆招募/复活的名保留）、发默认 wand、setPersistenceRequired，调 EntityComponentBridge.onNpcJoinWorld 或 deferJoin；onRemovedFromLevel 仅 KILLED/DISCARDED 时释放 global task/取消运输/销毁 ECS（CHANGED_DIMENSION 与 unload 保留）。
-- NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/colonyId。
+- **盔甲格**：`armorInventory`（SimpleContainer 4，顺序 头盔/胸甲/护腿/靴子），与 vanilla 装备槽分开存放 → 法袍外观不被覆盖（外形不渲染，仅数值生效）。`armorValueOf(stack)` 累加物品原版 `Attributes.ARMOR` 修饰符得单件护甲值；`syncArmorAttributes()` 把 4 槽护甲值以加法修饰符写回 ECS EquipmentComponent（HEAD/CHEST/LEGS/FEET），GUI 显示与伤害减免（vanilla ARMOR）都生效。onNpcJoinWorld（含重连/延迟注册）后调用。
+- NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/armorInventory/colonyId。
 - 仇恨表 `setHatedAttacker/getHatedAttacker`。
 
 ## EntityComponentBridge
@@ -34,16 +35,16 @@
 
 ## 网络
 
-- `NpcDataPacket`（S→C）：信息屏，含 entityId/名字/血量/4 属性/wandStack/isDefaultWand；from() 从 ECS EquipmentComponent 读有效属性。
-- `NpcEquipPacket`（C→S）：equip/unequip wand。handleEquip 校验 WandItem、读 wand preset 的 attributes（均为 ADDITION），换物品并同步 ECS eq.unequip/equip；handleUnequip 拒绝卸默认 wand，回默认 wand。
+- `NpcDataPacket`（S→C）：信息屏，含 entityId/名字/血量/7 属性/wandStack/isDefaultWand/strategyPreset+魔法表+优先级/armorStacks(4)/skinVariant/hatColor；from() 从 ECS EquipmentComponent 读有效属性。
+- `NpcEquipPacket`（C→S）：equip/unequip wand + equip/unequip armor（4 槽）。handleEquip 校验 WandItem、读 wand preset 的 attributes（均为 ADDITION），换物品并同步 ECS eq.unequip/equip；handleUnequip 拒绝卸默认 wand，回默认 wand。handleEquipArmor 用 `npc.getEquipmentSlotForItem` 判定盔甲槽（不信任客户端）、交换物品并 `syncArmorAttributes()`；handleUnequipArmor 回收背包。
 
 ## 客户端
 
-- `WandscapeNpcRenderer`：HumanoidMobRenderer，纹理自动检测 `textures/entity/wizard/*.png`；inline 绘制 SpeechBubbleRenderer、**名牌（白色名字在头顶，灰色状态在名字上方；override shouldShowName 抑制原版 nametag 防重名）**、施法中按 opKind 画仪式法阵或 cast ray。
+- `WandscapeNpcRenderer`：HumanoidMobRenderer，纹理自动检测 `textures/entity/wizard/*.png`；inline 绘制 SpeechBubbleRenderer、**名牌（白色名字在头顶，灰色状态在名字上方；override shouldShowName 抑制原版 nametag 防重名）**、施法中按 opKind 画仪式法阵或 cast ray。`guiDisplayMode` 为 true 的展示克隆跳过气泡与名牌。
 - `WandscapeNpcModel`：casting 时 rightArm.xRot = CAST_ARM_ANGLE + getXRot()。
 - `WizardHatModel/WizardHatLayer`：hat 几何，Layer 用 entityCutoutNoCull + hatColor 着色，brim edge 金色不着色。
 - `CastBoltParticle`：固定亮星粒子，lifetime 10-15 tick，全亮。
-- `NpcScreen`：MedievalScreen，装备格 + 属性区（生命/魔力条 + 移速/法术强度/工作速度/施法速度/护甲值）+ 4 行背包；点击 wand 槽发 UNEQUIP、点 WandItem 发 EQUIP。
+- `NpcScreen`：MedievalScreen（300×230）。左侧 **5 个同尺寸 18×18 金边装备槽**（4 盔甲 + 法杖，空槽显示部位占位图标：原版 E 的盔甲 sprite / 法杖图标）+ **原版装备栏风格 3D 展示**（`renderEntityInInventoryFollowsMouse` 渲染从包数据构建的展示克隆，皮肤变体/帽子颜色/当前法杖；槽列与属性区之间留空隙）；右侧属性区（生命/魔力条 + 移速/法术强度/工作速度/施法速度/护甲值）；底部 4 行背包。点背包 WandItem → EQUIP、盔甲物品 → EQUIP_ARMOR（按物品装备槽）。
 
 ## MageResume（shared/data/）
 

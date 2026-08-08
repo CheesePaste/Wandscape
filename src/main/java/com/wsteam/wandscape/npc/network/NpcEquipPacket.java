@@ -27,19 +27,24 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
- * Client→server packet: equip/unequip a wand for an NPC.
+ * Client→server packet: equip/unequip a wand or armor piece for an NPC.
  *
  * <p>Actions:
  * <ul>
  *   <li>{@code ACTION_EQUIP} + {@code slotIndex=N} — equip wand from player inventory slot N</li>
  *   <li>{@code ACTION_UNEQUIP} — unequip NPC's current wand back to player inventory</li>
+ *   <li>{@code ACTION_EQUIP_ARMOR} + {@code slotIndex=N} — equip armor from player inventory slot N
+ *       (服务端按物品自身判定盔甲槽，忽略 armorSlot)</li>
+ *   <li>{@code ACTION_UNEQUIP_ARMOR} + {@code armorSlot=0..3} — unequip armor slot back to inventory</li>
  * </ul>
  */
-public record NpcEquipPacket(int entityId, int action, int slotIndex)
+public record NpcEquipPacket(int entityId, int action, int slotIndex, int armorSlot)
         implements CustomPacketPayload {
 
     public static final int ACTION_EQUIP = 0;
     public static final int ACTION_UNEQUIP = 1;
+    public static final int ACTION_EQUIP_ARMOR = 2;
+    public static final int ACTION_UNEQUIP_ARMOR = 3;
 
     public static final Type<NpcEquipPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "npc_equip"));
@@ -58,10 +63,11 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex)
         buf.writeInt(pkt.entityId);
         buf.writeInt(pkt.action);
         buf.writeInt(pkt.slotIndex);
+        buf.writeInt(pkt.armorSlot);
     }
 
     static NpcEquipPacket read(RegistryFriendlyByteBuf buf) {
-        return new NpcEquipPacket(buf.readInt(), buf.readInt(), buf.readInt());
+        return new NpcEquipPacket(buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
     }
 
     // ── Server handler ──
@@ -81,6 +87,8 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex)
         switch (packet.action()) {
             case ACTION_EQUIP -> handleEquip(packet, player, npc);
             case ACTION_UNEQUIP -> handleUnequip(player, npc);
+            case ACTION_EQUIP_ARMOR -> handleEquipArmor(packet, player, npc);
+            case ACTION_UNEQUIP_ARMOR -> handleUnequipArmor(player, npc, packet.armorSlot());
             default -> Log.warn(TAG, "Unknown equip action: {}", packet.action());
         }
     }
@@ -167,6 +175,64 @@ public record NpcEquipPacket(int entityId, int action, int slotIndex)
                         npc.getUUID().toString().substring(0, 8));
             }
         }
+
+        // ── Send updated screen data ──
+        PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
+    }
+
+    // ── Armor equip/unequip ──
+
+    /** 原版装备槽 → 盔甲格索引（0..3），非盔甲返回 -1。 */
+    private static int armorIndexFor(net.minecraft.world.entity.EquipmentSlot slot) {
+        for (int i = 0; i < WandscapeNpc.ARMOR_SLOT_COUNT; i++) {
+            if (WandscapeNpc.ARMOR_VANILLA_SLOTS[i] == slot) return i;
+        }
+        return -1;
+    }
+
+    private static void handleEquipArmor(NpcEquipPacket packet, ServerPlayer player, WandscapeNpc npc) {
+        int slot = packet.slotIndex();
+        if (slot < 0 || slot >= player.getInventory().items.size()) return;
+
+        ItemStack newArmor = player.getInventory().getItem(slot);
+        if (newArmor.isEmpty()) return;
+
+        // 按物品自身判定盔甲槽（不信任客户端），非盔甲直接拒绝
+        int armorIdx = armorIndexFor(npc.getEquipmentSlotForItem(newArmor));
+        if (armorIdx < 0) return;
+
+        // ── Swap items ──
+        ItemStack oldArmor = npc.getArmorItem(armorIdx);
+        npc.setArmorItem(armorIdx, newArmor.copyWithCount(1));
+        if (!oldArmor.isEmpty()) {
+            player.getInventory().setItem(slot, oldArmor);
+        } else {
+            newArmor.shrink(1);
+            if (newArmor.isEmpty()) {
+                player.getInventory().setItem(slot, ItemStack.EMPTY);
+            }
+        }
+
+        // ── Sync ECS attributes (armor value) ──
+        npc.syncArmorAttributes();
+
+        // ── Send updated screen data ──
+        PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));
+    }
+
+    private static void handleUnequipArmor(ServerPlayer player, WandscapeNpc npc, int armorSlot) {
+        if (armorSlot < 0 || armorSlot >= WandscapeNpc.ARMOR_SLOT_COUNT) return;
+
+        ItemStack stack = npc.getArmorItem(armorSlot);
+        if (stack.isEmpty()) return;
+
+        npc.setArmorItem(armorSlot, ItemStack.EMPTY);
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
+
+        // ── Sync ECS attributes (armor value) ──
+        npc.syncArmorAttributes();
 
         // ── Send updated screen data ──
         PacketDistributor.sendToPlayer(player, NpcDataPacket.from(npc));

@@ -108,6 +108,9 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         }
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
 
+        // GUI 展示克隆（NPC 面板 3D 模型）跳过气泡与名牌
+        if (entity.guiDisplayMode) return;
+
         SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
                 AmbientTextPools::getNpcText);
 

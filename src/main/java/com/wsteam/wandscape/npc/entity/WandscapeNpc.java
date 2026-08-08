@@ -23,7 +23,10 @@ import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.SpellbookComponent;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.core.types.EquipmentSlot;
+import com.wsteam.wandscape.core.types.ModifierOperation;
 import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
@@ -50,6 +53,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -142,6 +146,17 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         return magic.tryAltarCast(manaCost, lockDurationTicks);
     }
 
+    /**
+     * 该法师的魔法光束能伤害的目标判定钩子。默认只伤敌对生物（{@link Enemy}）——
+     * 殖民地 NPC 的光束**永不伤害玩家**、其它 NPC 或村民。敌对法师等子类
+     * 覆盖为「Enemy 或 生存玩家」，用于实战测试。光束伤害（{@code MagicBeamEntity}）、
+     * SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）与战斗快照敌数（{@code GuardCombat}）
+     * 三处统一走此钩子，保证「NPC 伤不了玩家、邪恶法师能伤生存玩家」的边界唯一且一致。
+     */
+    public boolean canBeamHurt(LivingEntity target) {
+        return target instanceof Enemy;
+    }
+
     // ============================================================
     // 脱战生命恢复：受击后封伤 grace tick，之后每 interval tick 回 1 HP。
     // 剩余值 NBT 持久（tick 数可跨存档）。
@@ -228,6 +243,71 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     // ============================================================
 
     public final SimpleContainer inventory = new SimpleContainer(27);
+
+    // ============================================================
+    // Armor slots (4). Stored separately from vanilla equipment slots so the
+    // wizard robe appearance is never overridden — armor only affects stats.
+    // ============================================================
+
+    public static final int ARMOR_SLOT_COUNT = 4;
+
+    /** 盔甲格顺序：0=头盔 1=胸甲 2=护腿 3=靴子。 */
+    public final SimpleContainer armorInventory = new SimpleContainer(ARMOR_SLOT_COUNT);
+
+    /** 盔甲槽索引 → 原版装备槽（读物品属性/判断装备槽用）。 */
+    public static final net.minecraft.world.entity.EquipmentSlot[] ARMOR_VANILLA_SLOTS = {
+            net.minecraft.world.entity.EquipmentSlot.HEAD,
+            net.minecraft.world.entity.EquipmentSlot.CHEST,
+            net.minecraft.world.entity.EquipmentSlot.LEGS,
+            net.minecraft.world.entity.EquipmentSlot.FEET
+    };
+
+    public ItemStack getArmorItem(int slot) {
+        return armorInventory.getItem(slot);
+    }
+
+    public void setArmorItem(int slot, ItemStack stack) {
+        armorInventory.setItem(slot, stack);
+    }
+
+    /** 从物品的原版 ARMOR 属性修饰符求单件盔甲的护甲值（外观不渲染，仅数值生效）。 */
+    public static float armorValueOf(ItemStack stack) {
+        if (stack.isEmpty()) return 0f;
+        float total = 0f;
+        for (var entry : stack.getAttributeModifiers().modifiers()) {
+            if (entry.attribute().is(Attributes.ARMOR)) {
+                total += entry.modifier().amount();
+            }
+        }
+        return Math.max(0f, total);
+    }
+
+    /**
+     * 把 4 个盔甲格的护甲值同步到 ECS EquipmentComponent（每槽一个加法修饰符），
+     * 使 armorValue 同时生效于属性查询（GUI）与伤害减免（vanilla ARMOR）。
+     */
+    public void syncArmorAttributes() {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || ecsEntityId <= 0) return;
+        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+        if (eq == null) return;
+        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+            EquipmentSlot coreSlot = switch (i) {
+                case 0 -> EquipmentSlot.HEAD;
+                case 1 -> EquipmentSlot.CHEST;
+                case 2 -> EquipmentSlot.LEGS;
+                default -> EquipmentSlot.FEET;
+            };
+            ItemStack stack = armorInventory.getItem(i);
+            if (stack.isEmpty()) {
+                eq.unequip(coreSlot);
+            } else {
+                eq.equip(coreSlot, stack.getItem().getDescriptionId(),
+                        List.of(new AttributeModifier(AttributeType.ARMOR_VALUE,
+                                armorValueOf(stack), ModifierOperation.ADDITION)));
+            }
+        }
+    }
 
     // ============================================================
     // Casting state (synced to client for animation + particles)
@@ -371,6 +451,12 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
     public int lastParticleTick = -1;
 
+    /**
+     * 客户端 NPC 面板 3D 展示用的瞬态标记：渲染器据此跳过名牌与气泡。
+     * 仅当该实体是 GUI 展示克隆（不在世界里）时为 true。
+     */
+    public boolean guiDisplayMode = false;
+
     /** Enable or disable idle wandering AI. Called by NavigationSystem. */
     public void setAiWanderingEnabled(boolean enabled) {
         this.suppressWandering = !enabled;
@@ -481,6 +567,15 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         }
         magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get());
 
+        tickCastingState();
+    }
+
+    /**
+     * ECS 驱动施法状态同步：casting/status/debug/op/faceTarget。
+     * 子类可覆盖为完全接管（如敌对法师由自己的施法 goal 驱动 {@code isCasting}，
+     * 而非 ECS 任务执行器）。
+     */
+    protected void tickCastingState() {
         boolean manual = manualCastTicks > 0;
         if (manual) manualCastTicks--;
 
@@ -771,17 +866,29 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                     new ItemStack(Wandscape.WAND.get()));
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
-            World world = WandscapeEngine.getWorld();
-            if (world != null) {
-                EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
-            } else {
-                // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
-                // Defer registration until the next tick.
-                Log.warn(TAG, "NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
-                        getUUID().toString().substring(0, 8));
-                EntityComponentBridge.INSTANCE.deferJoin(this);
+            if (isColonyNpc()) {
+                World world = WandscapeEngine.getWorld();
+                if (world != null) {
+                    EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
+                    syncArmorAttributes();
+                } else {
+                    // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
+                    // Defer registration until the next tick.
+                    Log.warn(TAG, "NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
+                            getUUID().toString().substring(0, 8));
+                    EntityComponentBridge.INSTANCE.deferJoin(this);
+                }
             }
         }
+    }
+
+    /**
+     * 是否作为殖民地 NPC 注册进 ECS（加入任务调度/属性权威/死亡记录等）。
+     * 敌对测试法师等独立实体覆盖为 false：保留外观/魔法表/法杖初始化，但不进 ECS，
+     * 也因此在死亡记录与村民索敌增强中被排除（见 NpcDeathHandler / HostileTargetingHandler）。
+     */
+    protected boolean isColonyNpc() {
+        return true;
     }
 
     private int generateRandomHatColor() {
@@ -877,6 +984,12 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         tag.putInt("regenCooldown", regenCooldown);
         tag.putInt("regenAccum", regenAccum);
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
+        // 盔甲格（外观不渲染，仅属性生效）
+        ListTag armorList = new ListTag();
+        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+            armorList.add(armorInventory.getItem(i).saveOptional(registryAccess()));
+        }
+        tag.put("armorInventory", armorList);
         // P3：施法决策（会哪些魔法 + 策略预设 + 自定义优先级）
         ListTag spellbookIds = new ListTag();
         for (String id : spellbook.ids()) {
@@ -925,6 +1038,14 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         regenCooldown = tag.getInt("regenCooldown");
         regenAccum = tag.getInt("regenAccum");
         hasDefaultWand = tag.getBoolean("hasDefaultWand");
+        // 盔甲格恢复（旧存档无字段 → 空）
+        if (tag.contains("armorInventory", Tag.TAG_LIST)) {
+            ListTag armorList = tag.getList("armorInventory", Tag.TAG_COMPOUND);
+            for (int i = 0; i < ARMOR_SLOT_COUNT && i < armorList.size(); i++) {
+                armorInventory.setItem(i,
+                        ItemStack.parseOptional(registryAccess(), armorList.getCompound(i)));
+            }
+        }
         // P3：施法决策恢复（旧存档无字段 → 保持默认 [beam] / balanced）
         if (tag.contains("spellbookIds")) {
             ListTag sl = tag.getList("spellbookIds", Tag.TAG_STRING);
