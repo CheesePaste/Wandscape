@@ -37,6 +37,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -749,6 +750,13 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide) {
+            // Give the mage a name if it doesn't have one (spawn egg / colony spawns;
+            // tavern-recruited and revived mages already carry a name). Assign once —
+            // the custom name persists through save/load, so this is a no-op later.
+            if (!hasCustomName()) {
+                setCustomName(Component.literal(generateRandomNpcName()));
+                setCustomNameVisible(true);
+            }
             // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
             if (spellbook.isEmpty()) {
                 spellbook.set(SpellbookComponent.DEFAULT_SPELLS);
@@ -974,6 +982,16 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     /** In-game display name for the NPC. */
     public String getNpcName() {
         return hasCustomName() ? getCustomName().getString() : "Wizard";
+    }
+
+    // ── Auto-generated mage names ──
+    // Only used when a mage has no custom name (spawn egg / colony spawns).
+    // Tavern-recruited and revived mages keep their own names. Mages and
+    // tourists share one name pool (shared.data.CharacterNames).
+
+    /** Roll a random name from the shared character name pool. */
+    public static String generateRandomNpcName() {
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomName();
     }
 
     // ============================================================

@@ -32,6 +32,7 @@
 ## data/（数据类）
 
 - `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/isShutdown/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/getMaintenanceCost/...。
+- `CharacterNames`：法师与游客共享的中文随机名池（surname+given），`generateRandomName()`；游客 `TouristSpawnSystem.generateRandomTouristName()` 与 NPC `WandscapeNpc.generateRandomNpcName()` 均委托它。
 - `ColonyMetricsSnapshot` record：colonyId + 三评 + 名称/等级/经验 + 游客数/过夜数/平均满意度 + NPC 空闲/总数 + 七元素 + 停机/损坏名单；EMPTY、totalAnomalyCount()。
 - `ElementType` enum：EARTH/WOOD/WATER/FIRE/METAL/WIND/DARK。
 - `Emotion` enum：DELIGHTED/PLEASED/SATISFIED/NEUTRAL/DISAPPOINTED/UPSET。

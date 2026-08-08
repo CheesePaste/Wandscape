@@ -750,21 +750,8 @@ public final class TouristSpawnSystem {
 
     // ── Name generation ──
 
-    private static final String[] TOURIST_SURNAMES = {
-        "王","李","张","刘","陈","杨","赵","黄","周","吴",
-        "游客","旅人","行者","访客","商贾"
-    };
-    private static final String[] TOURIST_GIVENS = {
-        "明","华","文","伟","芳","丽","强","勇","静",
-        "慧","敏","俊","杰","兰","玲","超","平","刚","涛"
-    };
-
-    private static final Random NAME_RANDOM = new Random();
-
     public static String generateRandomTouristName() {
-        String surname = TOURIST_SURNAMES[NAME_RANDOM.nextInt(TOURIST_SURNAMES.length)];
-        String given = TOURIST_GIVENS[NAME_RANDOM.nextInt(TOURIST_GIVENS.length)];
-        return surname + given;
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomName();
     }
 
     /** Universal-element starting wallet: base + level × per-level bonus. */
