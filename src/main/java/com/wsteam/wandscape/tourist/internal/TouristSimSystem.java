@@ -464,6 +464,16 @@ public final class TouristSimSystem {
                 s.setCheckedInBuildingId(buildingId);
                 s.setHotelCheckinTime(s.simTick());
                 s.addVisitedBuilding(buildingId);
+                // 入住也是服务：按服务公式涨满意度（受等级阈值/偏好/建筑三维值影响）并记入行程
+                int satBefore = s.getSatisfaction();
+                int gain = TouristSimulation.satisfactionGain(level, s, buildingId);
+                s.setSatisfaction(satBefore + gain);
+                String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+                var hotelCfg = TouristSimulation.getConfig(level, buildingId);
+                String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
+                        ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
+                TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
+                        level.getGameTime(), satBefore, gain, 0, "入住");
                 s.setCommuteTarget(null);
                 s.setTargetBuildingId(null);
                 s.setTargetBuildingCategory(null);

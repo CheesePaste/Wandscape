@@ -633,6 +633,18 @@ public class TouristMoveGoal extends Goal {
         tourist.addVisitedBuilding(buildingId);
         hotel.settleIntoBed(tourist, serverLevel(), buildingId);
         applyPreferenceDecay(buildingId);
+
+        // 入住也是服务：按服务公式涨满意度（受等级阈值/偏好/建筑三维值影响）并记入行程
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        ServerLevel level = serverLevel();
+        if (level != null) {
+            int satBefore = tourist.getSatisfaction();
+            int gain = TouristSimulation.satisfactionGain(level, tourist, buildingId);
+            tourist.setSatisfaction(satBefore + gain);
+            TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
+                    level.getGameTime(), satBefore, gain, 0, "入住");
+        }
+
         tourist.setCommuteTarget(null);
         tourist.setTargetBuildingId(null);
         tourist.setTargetBuildingCategory(null);
@@ -645,7 +657,6 @@ public class TouristMoveGoal extends Goal {
 
         // Emit HOTEL_CHECKIN narrative
         long gameTime = tourist.level().getGameTime();
-        String bldName = getBuildingDisplayName(buildingId, bldType);
         NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
                 tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
         emitNarrativeEvent(checkinEvent);
