@@ -1,6 +1,8 @@
 # 游客经济大改造 — 并行实现方案
 
-> 本文档是本轮大改造的**唯一权威方案**。实现方按 Block 分块并行推进，Block 0 先行（产出共享契约），Block 1-4 并行，Block 5 集成清理。任何块开工前**先读 `block-0-foundation.md`** 获取共享契约。
+> 本文档是本轮大改造的**唯一权威方案**。实现方按 Block 分块并行推进，Block 0 先行（产出共享契约），Block 1-4 并行，Block 5 集成清理。
+> **开工前必读**：[goal.md](goal.md) —— 目标效果说明书（玩家/游客体验 + 每个机制的「为什么」+ 非协商红线）。block 文档没写清的细节以 goal.md 为准推断意图，不要自己发挥。
+> 每个 block 开工前**先读 `block-0-foundation.md`** 获取共享契约。
 
 ## 问题
 
@@ -71,6 +73,7 @@ Block 0 (foundation, 顺序, 必须最先) ──产出共享契约──▶
 
 | 文档 | 内容 |
 |---|---|
+| [goal.md](goal.md) | **目标效果说明书**（北极星）：玩家/游客体验 + 每个机制的为什么 + 非协商红线 |
 | [block-0-foundation.md](block-0-foundation.md) | 共享契约完整定义（InteractionConfig / Activity / TouristStateHost / BuildingConfig / JSON schema / Config 键） |
 | [block-1-scanner.md](block-1-scanner.md) | 扫描器大改 + interact_spot_marker 方块 |
 | [block-2-tourist-data.md](block-2-tourist-data.md) | 游客数据：三条/画像/停留/活动 + 去 satisfaction/typePreferences |
