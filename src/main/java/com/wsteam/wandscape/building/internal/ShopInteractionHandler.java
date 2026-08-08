@@ -7,8 +7,9 @@ import java.util.UUID;
  *
  * <p>Tourist AI calls {@link #interact(ShopStockManager, UUID, UUID, UUID, int, int)}
  * to attempt a purchase with their universal-element wallet. A random in-stock
- * good the tourist can afford is chosen and as many units as the wallet allows
- * are bought in one visit — cheap goods sell in bulk, expensive ones singly.
+ * good the tourist can afford within their trip budget is chosen and as many
+ * units as the budget allows are bought in one visit — cheap goods sell in bulk,
+ * expensive ones singly, and nothing is bought if the budget can't cover a unit.
  * This is programmatic — the player-facing shop management GUI is separate.
  */
 public final class ShopInteractionHandler {

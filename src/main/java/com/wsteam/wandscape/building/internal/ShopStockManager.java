@@ -270,10 +270,11 @@ public final class ShopStockManager {
      * Tourist buys from a shop with their universal-element wallet.
      *
      * <p>Each shopping trip draws a random budget fraction a ∈ [0.2, 1] of the
-     * tourist's initial wallet (capped at the current balance), selects one random
-     * in-stock good, and buys floor(budget/price) + 1 units (the +1 guarantees a
-     * purchase even for expensive goods). The full price is deducted from the
-     * wallet afterwards, so a single expensive good empties it.
+     * tourist's initial wallet (capped at the current balance), then selects one
+     * random in-stock good whose unit price fits within that budget and buys as
+     * many units as the budget allows (capped by stock). The tourist never spends
+     * more than the current wallet, so a single expensive good no longer empties
+     * the wallet and leaves nothing for later trips.
      *
      * @return the purchase result, or null if nothing was buyable
      */
@@ -289,12 +290,19 @@ public final class ShopStockManager {
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null || config.shop() == null) return null;
 
-        // Selectable = in-stock goods with a real (mapped) price. The tourist can
-        // buy even if the price exceeds their wallet — they go into debt, clamped to 0.
+        // Trip budget: random 20%–100% of the initial wallet, capped at what remains.
+        double a = 0.2 + 0.8 * random.nextDouble();
+        long budget = (long) (a * initialWallet);
+        if (budget > wallet) budget = wallet;
+
+        // Selectable = in-stock goods the tourist can afford at least one unit of
+        // this trip (unit price within budget). No debt: goods beyond the budget
+        // are simply not buyable now.
         List<ShopGoodDef> selectable = new ArrayList<>();
         for (ShopGoodDef good : config.shop().goods()) {
             if (s.getOrDefault(good.itemId(), 0) <= 0) continue;
-            if (walletPrice(config.shop(), good) > 0) selectable.add(good);
+            long price = walletPrice(config.shop(), good);
+            if (price > 0 && price <= budget) selectable.add(good);
         }
         if (selectable.isEmpty()) return null;
 
@@ -302,14 +310,9 @@ public final class ShopStockManager {
         long price = walletPrice(config.shop(), chosen);
         int stock = s.getOrDefault(chosen.itemId(), 0);
 
-        // Trip budget: random 20%–100% of the initial wallet, capped at what remains.
-        double a = 0.2 + 0.8 * random.nextDouble();
-        long budget = (long) (a * initialWallet);
-        if (budget > wallet) budget = wallet;
-
-        // floor(budget/price) + 1: buy until just under the budget, then one more so
-        // expensive goods are never bought zero times.
-        int qty = (int) Math.min(stock, budget / price + 1);
+        // Buy as many units as the trip budget allows, capped by stock. No +1: a
+        // good the budget can't cover is not bought at all.
+        int qty = (int) Math.min(stock, budget / price);
 
         int bought = purchase(buildingId, chosen.itemId(), colonyId, qty);
         if (bought <= 0) return null;
