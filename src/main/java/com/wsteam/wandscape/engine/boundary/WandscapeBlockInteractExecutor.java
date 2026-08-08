@@ -36,6 +36,7 @@ import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
@@ -63,9 +64,6 @@ import com.wsteam.wandscape.shared.log.Log;
 public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.BlockInteractOp> {
 
     private static final String TAG = "WandscapeBlockInteractExecutor";
-
-    /** Decompose yields 1/N of the item's element value; refuse when count × total value < N (would burn items for zero output). */
-    private static final long DECOMPOSE_DIVISOR = 5;
 
     @Nullable
     private static ElementMappingLoader elementMappingLoader;
@@ -298,9 +296,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         // Refuse up front when count × total value < divisor: the batch would
         // burn items and yield 0 elements (floor division truncates to zero).
-        if (count * totalValue < DECOMPOSE_DIVISOR) {
+        if (count * totalValue < WandscapeConstants.DECOMPOSE_DIVISOR) {
             Log.warn(TAG, "decompose: refuse {} x{} — total value {} < {}", itemId, count,
-                    count * totalValue, DECOMPOSE_DIVISOR);
+                    count * totalValue, WandscapeConstants.DECOMPOSE_DIVISOR);
             return;
         }
 
@@ -314,11 +312,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : yield.entrySet()) {
-            long total = (entry.getValue() * count) / DECOMPOSE_DIVISOR;
+            long total = (entry.getValue() * count) / WandscapeConstants.DECOMPOSE_DIVISOR;
             if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
             Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, count,
-                    entry.getKey().name().toLowerCase(), total, DECOMPOSE_DIVISOR);
+                    entry.getKey().name().toLowerCase(), total, WandscapeConstants.DECOMPOSE_DIVISOR);
         }
 
         spawnCompletionParticles(npcId);

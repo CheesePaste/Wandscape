@@ -11,6 +11,7 @@ import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
@@ -189,6 +190,7 @@ public class WorkstationScreen extends MedievalScreen {
                 int cw = Minecraft.getInstance().font.width(count);
                 g.drawString(Minecraft.getInstance().font, count,
                         x + getWidth() - scrollbarWidth - cw - 6, y + 2, MedievalColors.TEXT_DIM);
+                drawElementYield(g, item.elementValue(), x + 20, y + 10);
             }
         };
         decomposeList.setOnSelect(i -> updateSliderForDecompose(decomposeFiltered.get(i)));
@@ -394,6 +396,25 @@ public class WorkstationScreen extends MedievalScreen {
             WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(id), cx, y - 2, 9, 9, tint);
             cx += 11;
             String text = "x" + e.getValue();
+            g.drawString(font, text, cx, y, tint);
+            cx += font.width(text) + 6;
+        }
+    }
+
+    /**
+     * Draw the per-item decompose yield as [icon]xY.Z — 1/DECOMPOSE_DIVISOR of the item's
+     * element value. Integer value / 5 is always a multiple of 0.2, so one decimal is exact.
+     */
+    private static void drawElementYield(GuiGraphics g, Map<ElementType, Long> value, int x, int y) {
+        if (value == null || value.isEmpty()) return;
+        var font = Minecraft.getInstance().font;
+        int cx = x;
+        for (var e : value.entrySet()) {
+            String id = e.getKey().getId();
+            int tint = WandscapeTheme.elementColor(id);
+            WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(id), cx, y - 2, 9, 9, tint);
+            cx += 11;
+            String text = "x" + String.format("%.1f", e.getValue() / (double) WandscapeConstants.DECOMPOSE_DIVISOR);
             g.drawString(font, text, cx, y, tint);
             cx += font.width(text) + 6;
         }

@@ -222,11 +222,14 @@ public final class BuildingInteractHandler {
 
         var elemLoader = Wandscape.ELEMENT_MAPPING_LOADER;
         Map<ItemKey, Long> decomposableItems = new LinkedHashMap<>();
+        Map<String, Map<ElementType, Long>> itemElementValues = new LinkedHashMap<>();
         for (var entry : bank.getSnapshot(colonyId).entrySet()) {
             // Every warehouse item with a real element value is decomposable
             // (1/5 yield); items without a mapping yield nothing and are hidden.
-            if (elemLoader.getItemElementValue(entry.getKey().itemId()).isEmpty()) continue;
+            Map<ElementType, Long> value = elemLoader.getItemElementValue(entry.getKey().itemId());
+            if (value.isEmpty()) continue;
             decomposableItems.put(entry.getKey(), entry.getValue());
+            itemElementValues.put(entry.getKey().itemId(), value);
         }
 
         var prodLoader = Wandscape.PRODUCTION_RECIPE_LOADER;
@@ -235,7 +238,7 @@ public final class BuildingInteractHandler {
                 : java.util.Collections.<com.wsteam.wandscape.production.data.SynthesizeRecipe>emptyList();
 
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-        var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId);
+        var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId, itemElementValues);
         PacketDistributor.sendToPlayer(player, pkt);
     }
 
