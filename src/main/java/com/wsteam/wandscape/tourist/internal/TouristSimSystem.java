@@ -287,6 +287,7 @@ public final class TouristSimSystem {
         e.setCommuteTarget(s.getCommuteTarget());
         e.setCheckedInBuildingId(s.getCheckedInBuildingId());
         e.setHotelCheckinTime(s.getHotelCheckinTime());
+        e.setWakeUpPos(s.getWakeUpPos());
         e.setArrivalTime(s.getArrivalTime());
         e.setMageResumeStored(s.isMageResumeStored());
         for (UUID id : s.getVisitedBuildings()) e.addVisitedBuilding(id);
@@ -317,6 +318,7 @@ public final class TouristSimSystem {
         s.setCommuteTarget(e.getCommuteTarget());
         s.setCheckedInBuildingId(e.getCheckedInBuildingId());
         s.setHotelCheckinTime(e.getHotelCheckinTime());
+        s.setWakeUpPos(e.getWakeUpPos());
         s.setArrivalTime(e.getArrivalTime());
         s.setMageResumeStored(e.isMageResumeStored());
         s.getVisitedBuildings().clear();
@@ -350,11 +352,17 @@ public final class TouristSimSystem {
         if (hotel != null) {
             long dayTime = level.getDayTime() % 24000;
             if (dayTime >= 1000 && dayTime < 1200) {
-                // Morning checkout: energy → 100.
+                // Morning checkout: energy → 100, return to the spot where the
+                // tourist stood at check-in (before it teleported into a bed).
                 s.setCheckedInBuildingId(null);
                 s.setHotelCheckinTime(0);
                 s.setEnergy(100);
                 s.setCommuteTarget(null);
+                BlockPos wake = s.getWakeUpPos();
+                if (wake != null) {
+                    s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
+                    s.setWakeUpPos(null);
+                }
             }
             return;
         }

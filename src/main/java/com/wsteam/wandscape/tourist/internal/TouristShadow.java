@@ -79,6 +79,9 @@ public final class TouristShadow implements TouristStateHost {
     @Nullable
     private UUID checkedInBuildingId;
     private int hotelCheckinTime;
+    /** Position to return to on morning checkout (the pre-bed spot). */
+    @Nullable
+    private BlockPos wakeUpPos;
 
     // ── Visit / cooldown state ──
     private final Set<UUID> visitedBuildings = new HashSet<>();
@@ -209,6 +212,8 @@ public final class TouristShadow implements TouristStateHost {
     public void setCheckedInBuildingId(@Nullable UUID id) { this.checkedInBuildingId = id; }
     public int getHotelCheckinTime() { return hotelCheckinTime; }
     public void setHotelCheckinTime(int t) { this.hotelCheckinTime = t; }
+    @Nullable public BlockPos getWakeUpPos() { return wakeUpPos; }
+    public void setWakeUpPos(@Nullable BlockPos pos) { this.wakeUpPos = pos; }
 
     public Set<UUID> getVisitedBuildings() { return visitedBuildings; }
     public boolean hasVisitedBuilding(UUID id) { return visitedBuildings.contains(id); }
@@ -276,6 +281,7 @@ public final class TouristShadow implements TouristStateHost {
         if (colonyId != null) tag.putUUID("colony", colonyId);
         if (checkedInBuildingId != null) tag.putUUID("hotel", checkedInBuildingId);
         tag.putInt("hotelCheckin", hotelCheckinTime);
+        if (wakeUpPos != null) tag.putLong("wakeUpPos", wakeUpPos.asLong());
 
         ListTag visited = new ListTag();
         for (UUID id : visitedBuildings) {
@@ -351,6 +357,7 @@ public final class TouristShadow implements TouristStateHost {
         s.colonyId = tag.hasUUID("colony") ? tag.getUUID("colony") : null;
         s.checkedInBuildingId = tag.hasUUID("hotel") ? tag.getUUID("hotel") : null;
         s.hotelCheckinTime = tag.getInt("hotelCheckin");
+        s.wakeUpPos = tag.contains("wakeUpPos") ? BlockPos.of(tag.getLong("wakeUpPos")) : null;
 
         if (tag.contains("visited", Tag.TAG_LIST)) {
             ListTag visited = tag.getList("visited", Tag.TAG_COMPOUND);
