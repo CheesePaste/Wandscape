@@ -17,6 +17,8 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ColorParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
@@ -80,7 +82,7 @@ public final class ReviveHandler {
         fixEcsAfterSpawn(npc, rec);
         ColonyDeathRegistry.get(level).remove(rec);
 
-        spawnReviveBurst(level, npc.getX(), npc.getY() + 1.0, npc.getZ());
+        spawnReviveBurst(level, spawnPos.getX() + 0.5, spawnPos.getY() + 1.0, spawnPos.getZ() + 0.5);
         Log.info(TAG, "NPC {} ({}) 已复活 at {}（恢复 {} 格背包）",
                 npc.getUUID().toString().substring(0, 8), rec.name(),
                 spawnPos.toShortString(), rec.inventory().size());
@@ -135,14 +137,17 @@ public final class ReviveHandler {
         return desired.above(2);
     }
 
-    /** 复活爆点：绿色 glow 爆花（法阵主题色 #4ade80/#86efac），中心大爆花 + 环绕一圈二次爆花。 */
+    /** 复活爆点：ENTITY_EFFECT 原生绿色魔法粒子（药水式发光粒子，原生广播必现）+ burstColored 绿色 glow 爆花（增强）。 */
     private static void spawnReviveBurst(ServerLevel level, double x, double y, double z) {
-        ParticleService.burstColored(level, new Vec3(x, y, z), 0.29f, 0.87f, 0.50f, 22, 0.16f, 30, false);
-        for (int i = 0; i < 6; i++) {
-            double a = i / 6.0 * Math.PI * 2;
+        Log.info(TAG, "复活爆花 @ ({}, {}, {})", x, y, z);
+        level.sendParticles(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0.29f, 0.87f, 0.50f),
+                x, y, z, 30, 0.4, 1.0, 0.4, 0.15);
+        ParticleService.burstColored(level, new Vec3(x, y, z), 0.29f, 0.87f, 0.50f, 30, 0.22f, 40, false);
+        for (int i = 0; i < 8; i++) {
+            double a = i / 8.0 * Math.PI * 2;
             ParticleService.burstColored(level,
-                    new Vec3(x + Math.cos(a) * 0.9, y + level.random.nextDouble() * 0.6, z + Math.sin(a) * 0.9),
-                    0.53f, 0.94f, 0.67f, 7, 0.12f, 24, false);
+                    new Vec3(x + Math.cos(a) * 1.1, y + level.random.nextDouble() * 0.8, z + Math.sin(a) * 1.1),
+                    0.53f, 0.94f, 0.67f, 10, 0.16f, 34, false);
         }
     }
 }
