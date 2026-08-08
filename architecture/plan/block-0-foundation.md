@@ -79,7 +79,10 @@ public record TradeConfig(List<ShopGoodDef> goods, double profitRate) {
     "beds": 8,
     "duration_ticks": 2400
   },
-  "interact_spots": [[1,0,1],[3,0,1]],
+  "interact_spots": [
+    {"pos":[1,0,1], "action":"browse"},
+    {"pos":[3,0,1], "action":"eat"}
+  ],
   "boundary": {...},
   "door_offset": [...],
   "maintenance_cost": {...},
@@ -88,7 +91,8 @@ public record TradeConfig(List<ShopGoodDef> goods, double profitRate) {
 }
 ```
 
-- `interact_spots`：`[[x,y,z],...]` 相对 anchor 的单点列表。`tourist_interact_aabb` 删除。
+- `interact_spots`：`[{"pos":[x,y,z],"action":"<动作>"},...]` 相对 anchor 的交互位列表，**每点带动作种类**。`tourist_interact_aabb` 删除。
+- `action` 取值 = Activity 枚举的子集（`browse/eat/bathe/view/meditate/rest`），由 `interact_spot_marker` 方块设置（见 Block 1）。动作决定游客在该点的活动状态/粒子；**精力/经济仍由 building 级 `interaction` 决定**。
 - 可选字段省略即默认：`energy`=0、`trade`=无、`output`=空、`beds`=0、`duration_ticks`=0。
 - **不解析**旧 `shop`/`service`/`tourist_interact_aabb` 顶层字段。
 
@@ -96,7 +100,18 @@ public record TradeConfig(List<ShopGoodDef> goods, double profitRate) {
 
 **record 组件变更**（当前 :29-53）：
 - 删除：`ShopConfig shop`、`ServiceConfig service`、`@SerializedName("tourist_interact_aabb") List<BoundaryBox> touristInteractAabb`
-- 新增：`InteractionConfig interaction`、`@SerializedName("interact_spots") List<BlockOffset> interactSpots`
+- 新增：`InteractionConfig interaction`、`@SerializedName("interact_spots") List<InteractSpot> interactSpots`
+- 新增嵌套 record（放 BuildingConfig 内，像 BoundaryBox 一样）：
+```java
+/** 交互位：相对 anchor 的坐标 + 动作种类。 */
+public record InteractSpot(BlockOffset pos, Activity action) {
+    public InteractSpot {
+        if (pos == null) throw new IllegalArgumentException("interact spot pos must not be null");
+        if (action == null) action = Activity.BROWSE;
+    }
+}
+```
+> `Activity` 定义在 `shared/data/Activity.java`（见契约 §5），保证 `building/data` 可引用且不违反跨模块规则。
 
 **兼容派生访问器**（保证旧消费者编译+行为不变；Block 5 删）：
 ```java
@@ -110,7 +125,7 @@ public ServiceConfig service() {
             interaction.beds(), interaction.durationTicks());
 }
 public List<BoundaryBox> touristInteractAabb() {
-    return interactSpots.stream().map(p -> new BoundaryBox(p, p)).toList();
+    return interactSpots.stream().map(s -> new BoundaryBox(s.pos(), s.pos())).toList();
 }
 public boolean hasInteraction() { return interaction != null && interaction.isTarget(); }
 ```
@@ -118,7 +133,7 @@ public boolean hasInteraction() { return interaction != null && interaction.isTa
 
 **Deserializer（当前 :122-303）**：
 - 解析 `interaction` 块：`energy`(int)、`trade`{goods/profit_rate}、`output`(Map<String,Integer>)、`beds`(int)、`duration_ticks`(int)；缺省 `InteractionConfig.NONE`。
-- 解析 `interact_spots`：`JsonArray` of `[x,y,z]` → `List<BlockOffset>`；缺省空。
+- 解析 `interact_spots`：`JsonArray` of `{"pos":[x,y,z],"action":"<字符串>"}` → `List<InteractSpot>`；`action` 字符串→Activity 用 `Activity.valueOf`（非法值回退 BROWSE）；缺省空。
 - **删除** shop/service/tourist_interact_aabb 的解析分支。
 - 其余字段（pattern/block_mapping/comfort/magic/wonder/queue/boundary/blueprint/node_config/maintenance_cost/decoration/wonder_config/door_offset/first_free/deprecated）保持不变。
 
@@ -146,14 +161,20 @@ default boolean isFullySatisfied() { return false; }
 
 **Block 0 期间保留**（勿删）：`getSatisfaction()/setSatisfaction()`、`getTypePreference()/adjustTypePreference()`——Block 3 迁移完调用点后删除。
 
-## 契约 §5 — Activity 枚举（新 `tourist/internal/Activity.java`）
+## 契约 §5 — Activity 枚举（新 `shared/data/Activity.java`）
 
 ```java
+package com.wsteam.wandscape.shared.data;
+
 public enum Activity {
     TRAVEL, QUEUE, BROWSE, EAT, BATHE, VIEW, MEDITATE, SLEEP, REST
 }
 ```
-活动→建筑映射由 Block 3 依据 interaction 字段派生（trade→BROWSE、energy>0→REST/EAT、output→SERVICE/VIEW、beds→SLEEP），**不做成 JSON 字段**。`TouristState` 保持移动标签，禁止塞活动。
+
+- **放 `shared/data`**（不是 tourist/internal），因为 `building/data/BuildingConfig.InteractSpot` 要引用它（避免跨模块直接引用）。
+- **交互位动作子集**：`BROWSE/EAT/BATHE/VIEW/MEDITATE/REST` —— `interact_spot_marker` 只在这几个里循环；游客在某 spot 做该 spot 的 action。
+- `SLEEP` 归旅店（beds 建筑夜晚）；`TRAVEL/QUEUE` 是 AI 移动/排队状态，非交互位动作。
+- `TouristState` 保持移动标签，禁止塞活动。
 
 ## 契约 §6 — Config / Constants
 
@@ -163,17 +184,27 @@ public enum Activity {
   - `TOURIST_ENERGY_RESTORE_THRESHOLD`（double，默认 0.25）——精力低于此比例强烈偏向恢复建筑
   - `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS`（int，默认 2400）——排队等待上限
   - `TOURIST_STAY_MIN_DAYS`（int，默认 2）、`TOURIST_STAY_MAX_DAYS`（int，默认 4）——`departureDeadline = arrivalTime + rand(2~4) × 24000`
+  - `TOURIST_VISION_RADIUS`（int，默认 48）——**视野**：目标选择只看半径内（且已加载）的建筑；视野内无合适目标 → 闲逛，直到出现合适的
   - 画像分布权重（可硬编码于 Block 2 生成处，或 Config：`TOURIST_PERSONA_BALANCED/COMFORT/MAGIC/WONDER`）
+- **画像需求与等级正相关**（Block 2 生成时 roll）：
+  ```
+  weightShare_d = persona 各维权重占比（均衡 1/3；偏置如 140/80/80 归一化到 1.0）
+  totalNeed      = TOURIST_NEED_BASE + (touristLevel − 1) × TOURIST_NEED_PER_LEVEL
+  need_d         = round(totalNeed × weightShare_d)
+  ```
+  `TOURIST_NEED_BASE`（默认 300）、`TOURIST_NEED_PER_LEVEL`（默认 50）→ 等级越高总需求越高、**越难满足**（自然难度曲线）。如等级1 总300、等级5 总500。
 - **删除**：`TOURIST_LEVEL_SATISFACTION_THRESHOLD`、`TOURIST_MAX_SATISFACTION_PER_VISIT`、`TOURIST_PREFERENCE_DECAY`
 
 `WandscapeConstants.java`：确认 `TOURIST_MAX_ENERGY` 存在；如需要加 `TOURIST_BAR_BASE`(=100)。
+
+> **精力/经济数值（energy/trade profit/output 数值）是建筑级 `interaction` 字段，扫描器可编辑，平衡后置**（本方案不预先定死恢复/消耗数值，只定机制）。
 
 ## 契约 §7 — 迁移全部 `data/wandscape/buildings/*.json`
 
 规则：
 - `category: "shop"` → `"interact"`，`shop` 块 → `interaction.trade`，`interaction.energy = -20`（沿用旧硬编码），`duration_ticks` 从 shop 块搬。
 - `category: "service"` → `"interact"`，`service` 块 → `interaction`（`energy = -energy_per_use`、`output = element_output`、`beds = max_occupancy`、`duration_ticks`）。
-- `tourist_interact_aabb` → `interact_spots`（每个 AABB 取中心点或 min 点，成 `[[x,y,z]]`）。
+- `tourist_interact_aabb` → `interact_spots`（每个 AABB 取中心点或 min 点，`action` 默认 `"browse"`，成 `[{"pos":[...],"action":"browse"}]`）。
 - `tavern` → `"interact"`（挂一个简单 interaction，如 `{"energy":10}` 或带 output），使其成为游客目标。
 - `altar1` → 可选迁移为 `"interact"`（挂 interaction）或保持 `altar`。
 - node/storage/government/workstation/crafting_station/potion_station 不变（无 interaction）。

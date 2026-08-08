@@ -13,12 +13,14 @@
 ## 目标（用户拍板）
 
 - 满意度 = **三条进度条（Comfort/Magic/Wonder）**，按建筑三值填充、无惩罚；**直接去除单一 satisfaction 字段**；**满条才给经验**（开局建筑数量提高兜底）。
-- 每条游客有**需求画像**（三值需求比例，如喜欢魔法则 magic 需求更高）→ 自组织多样性。**删除 typePreferences**。
-- 精力循环：精力=0 只能去恢复建筑（白天餐厅/澡堂恢复）；旅店=纯夜晚休息。
-- 停留上限 1-3 晚（共 2-4 天），到点强制离开；`visitedBuildings` 停留期不重置。
-- `interaction` 块取代 `shop`/`service`；`category` 合并为 `interact`；`interact_spots`（单点列表）取代 `tourist_interact_aabb`，**寻路目标=一个点**。
-- 真实交互动作 + **排队机制**：多建同类型=多交互位=高吞吐=排队短。
-- 扫描器大改：适应新字段；**独立方块 `interact_spot_marker` 放置标记交互位**。
+- 每条游客有**需求画像**（三值需求比例，如喜欢魔法则 magic 需求更高）→ 自组织多样性。**删除 typePreferences**。**画像总值与等级正相关**：等级越高总需求越高、越难满足（自然难度曲线）。
+- **视野限制**：游客目标选择**只看视野内（`TOURIST_VISION_RADIUS`）且已加载**的建筑；视野内无合适目标 → **闲逛**直到出现合适的（不跨城镇寻路到远处建筑）。
+- 精力循环：精力=0 **只能**去恢复建筑（白天餐厅/澡堂恢复）；**精力 0 且无恢复建筑 → 闲逛**（不离场）；旅店=纯夜晚休息。
+- 停留上限 1-3 晚（共 2-4 天），到点强制离开；`visitedBuildings` 停留期不重置。**满条等夜晚再离场**（白天满条先闲逛）。
+- `interaction` 块取代 `shop`/`service`；`category` 合并为 `interact`；`interact_spots`（**每点带动作种类**）取代 `tourist_interact_aabb`，**寻路目标=一个点**。
+- 真实交互动作 + **排队机制**（多建同类型=多交互位=高吞吐=排队短）。**排队仅机制，无可见标记**（延后）。
+- 扫描器大改：适应新字段；**独立方块 `interact_spot_marker` 放置标记交互位，可右键循环设置动作种类**。
+- 精力/经济数值 = 建筑级 `interaction` 字段，扫描器可编辑，**平衡后置**。
 - **不保留**旧 shop/service 顶层字段的 JSON 兼容解析。
 
 ## 依赖顺序
@@ -36,7 +38,7 @@ Block 0 (foundation, 顺序, 必须最先) ──产出共享契约──▶
 
 | Block | 文件 |
 |---|---|
-| **0** | `shared/data/InteractionConfig.java`(新)、`shared/data/ShopConfig.java`、`shared/data/ServiceConfig.java`、`building/data/BuildingConfig.java`、`Config.java`、`WandscapeConstants.java`、`tourist/internal/TouristStateHost.java`(只增 default 方法)、`tourist/internal/Activity.java`(新)、全部 `data/wandscape/buildings/*.json`、`docs/data/buildings.md` |
+| **0** | `shared/data/InteractionConfig.java`(新)、`shared/data/ShopConfig.java`、`shared/data/ServiceConfig.java`、`building/data/BuildingConfig.java`、`Config.java`、`WandscapeConstants.java`、`tourist/internal/TouristStateHost.java`(只增 default 方法)、`shared/data/Activity.java`(新)、全部 `data/wandscape/buildings/*.json`、`docs/data/buildings.md` |
 | **1** | `building/scanner/**`（BE、Screen、ExportPacket、Renderer、SurvivalScanner*、network 包）、`interact_spot_marker` 方块类+注册（`Wandscape.java`）+ 资源（blockstate/model/lang/recipe/物品模型/创造标签） |
 | **2** | `tourist/entity/TouristEntity.java`、`tourist/internal/TouristShadow.java`、`tourist/internal/TouristSpawnSystem.java`、`tourist/network/TouristDataPacket.java`、`tourist/client/TouristScreen.java` |
 | **3** | `tourist/internal/TouristStateHost.java`(删遗留方法)、`TouristSimulation.java`、`TouristMoveGoal.java`、`TouristSimSystem.java`、`TouristState.java`、`HotelStayHandler.java`、`TouristSpotManager.java`(新)、`building/internal/ShopStockManager.java`、`ShopInteractionHandler.java` |
@@ -56,12 +58,13 @@ Block 0 (foundation, 顺序, 必须最先) ──产出共享契约──▶
 - 编译：`./gradlew build`
 - 单测：`./gradlew test`（InteractionConfig 序列化、bar 填充公式、need-gap 评分应有 JUnit）
 - 手测（runClient）：
-  1. interact 建筑（interaction+interact_spots）→ 游客导航到 spot、占位、做动作、释放
+  1. interact 建筑（interaction+interact_spots）→ 游客导航到 spot、占位、做该 spot 动作、释放
   2. 2 栋同类型 → 排队变短（多建收益）
-  3. 精力 0 → 只能去 energy>0 建筑
-  4. 夜晚 → 非满条游客入住 beds 建筑；满条离场给经验
-  5. 停留 2-4 天到点离场；低级小镇满不了条 → 0 经验
-  6. 扫描器：放置 interact_spot_marker 收集 spots、导出新 schema、即时可建
+  3. 精力 0 → 只能去 energy>0 建筑；无恢复建筑时闲逛（不离场）
+  4. 视野外建筑不被选为目标；视野内无目标 → 闲逛
+  5. 夜晚 → 非满条游客入住 beds 建筑；满条游客等夜晚再离场给经验
+  6. 停留 2-4 天到点离场；低级小镇满不了条 → 0 经验；高等级游客需求更高更难满
+  7. 扫描器：放置 interact_spot_marker、右键循环动作、潜行移除、导出新 schema、即时可建
 - 回归：旧存档建筑（category=interact 迁移后）能加载、可交互。
 
 ## 分块文档

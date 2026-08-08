@@ -40,9 +40,11 @@
 ### 2. interact_spot_marker 方块（新）
 
 - 放置式方块，视觉小标记（非透明，类比 CORNER 块）。类可放 `building/scanner/InteractSpotMarkerBlock.java`。
-- 玩家放置到目标位置 = 标记一个交互位（相对 anchor 偏移由扫描器导出时计算）；打掉 = 移除。
-- **注册**：block+item（`Wandscape.java` 或新 registry 类），blockstate/model（简单方片模型）、lang（中英）、recipe（配 vanilla 合成，如木棍+线，或仅创造标签）、物品模型、创造标签。
-- 导出时 BuildingScannerExportPacket 扫描 boundary 内该方块 → 转相对 anchor 偏移 → `interact_spots`；该方块**跳过 pattern**（像扫描器方块一样）。
+- **放置**到目标位置 = 标记一个交互位（相对 anchor 偏移由扫描器导出时计算）。
+- **右键循环动作种类**：`BROWSE→EAT→BATHE→VIEW→MEDITATE→REST`（Activity 子集），方块 NBT 存当前 action；右键时给玩家文字/粒子反馈（如 ActionBar 提示「该交互位：用餐」）。**潜行右键 = 移除**该 marker。
+- 交互位 action 决定游客在该点做的活动状态/粒子（精力/经济仍由 building 级 `interaction` 决定）。
+- **注册**：block+item（`Wandscape.java` 或新 registry 类），blockstate/model（可用不同颜色/贴图区分动作）、lang（中英）、recipe（配 vanilla 合成，如木棍+线，或仅创造标签）、物品模型、创造标签。
+- 导出时 BuildingScannerExportPacket 扫描 boundary 内该方块 → 读其 NBT action → 转相对 anchor 偏移 → `interact_spots`（含 action）；该方块**跳过 pattern**（像扫描器方块一样）。
 
 ### 3. BuildingScannerScreen
 
@@ -55,13 +57,13 @@
 ### 4. BuildingScannerExportPacket
 
 当前导出（network/BuildingScannerExportPacket.java）：
-- `tourist_interact_aabb` JSON 数组（:229-246）→ 换成：扫描 boundary 内 `interact_spot_marker` 方块，收集相对偏移 → `interact_spots` JSON 数组 `[[x,y,z],...]`。
+- `tourist_interact_aabb` JSON 数组（:229-246）→ 换成：扫描 boundary 内 `interact_spot_marker` 方块，读各自 NBT 的 action，收集相对偏移 → `interact_spots` JSON 数组 `[{"pos":[x,y,z],"action":"<action>"},...]`。
 - shop 分支（:259-273）、service 分支（:276-288）→ 删除，统一导出 `interaction` 块（energy/trade/output/beds/duration_ticks）。
 - 其余（pattern/block_mapping/block_nbt/comfort/magic/wonder/maintenance/queue/unlock/boundary/door_offset/blueprint）不动。
 
 ### 5. BuildingScannerRenderer
 
-当前画绿色交互区（getTouristInteractZones，:55-61）→ 改为在 `interactSpots` 各点画小方块/粒子标记。
+当前画绿色交互区（getTouristInteractZones，:55-61）→ 改为在 `interactSpots` 各点画点标记（小方块/粒子），并按 action 用不同颜色区分（如 browse 青、eat 橙、bathe 蓝）。排队可见性**本方案不做**（用户明确延后）。
 
 ### 6. SurvivalScanner
 
@@ -70,7 +72,7 @@
 ## Done 判定
 
 1. `./gradlew build` 绿。
-2. 创造扫描器：可编辑 `interaction`（energy/trade/output/beds/duration），可放置 marker 方块并在列表看到点。
+2. 创造扫描器：可编辑 `interaction`（energy/trade/output/beds/duration），可放置 marker 方块、右键循环动作、潜行移除，并在列表看到点（含动作）。
 3. 导出 JSON 为新 schema（`interaction` + `interact_spots`），无 `shop`/`service`/`tourist_interact_aabb`；即时可建。
 4. 渲染交互位为点标记。
 5. SurvivalScanner 不崩。

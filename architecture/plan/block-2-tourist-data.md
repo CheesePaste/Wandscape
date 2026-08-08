@@ -56,21 +56,28 @@ private long departureDeadline = Long.MAX_VALUE;    // 离境截止（gameTime�
 
 **生成时**（flushPendingSpawns / forceSpawn）新增：
 ```java
-// roll 画像（40% 均衡 {100,100,100}；20% 舒适 {140,80,80}；20% 魔法 {80,140,80}；20% 奇观 {80,80,140}）
-int[] persona = rollPersona(random);
-tourist.setComfortNeed(persona[0]); tourist.setMagicNeed(persona[1]); tourist.setWonderNeed(persona[2]);
-tourist.setDepartureDeadline(level.getGameTime() + (randDays(min,max)) * 24000L);
+// 1) roll 画像权重：40% 均衡 {1,1,1}；20% 舒适 {1.4,0.8,0.8}；20% 魔法 {0.8,1.4,0.8}；20% 奇观 {0.8,0.8,1.4}
+double[] w = rollPersonaWeights(random);
+// 2) 总需求与等级正相关：总需求 = BASE + (level-1)×PER_LEVEL，越高越难满足
+int totalNeed = TOURIST_NEED_BASE + (touristLevel - 1) * TOURIST_NEED_PER_LEVEL;
+double sum = w[0] + w[1] + w[2];
+tourist.setComfortNeed((int) Math.round(totalNeed * w[0] / sum));
+tourist.setMagicNeed((int) Math.round(totalNeed * w[1] / sum));
+tourist.setWonderNeed((int) Math.round(totalNeed * w[2] / sum));
+// 3) 停留截止：2~4 天
+tourist.setDepartureDeadline(level.getGameTime() + (TOURIST_STAY_MIN_DAYS + random.nextInt(MAX-MIN+1)) * 24000L);
 ```
 
 **离开判定重写**（D6）——替换 `cleanupTourists` / `processNightDepartures` 里 sat<50/50-99/100 三段逻辑：
 ```
 离开条件（任一）：
- 1. isFullySatisfied()                       → 满条离场（grantExperience + mage resume）
- 2. gameTime >= departureDeadline            → 到点离场（满条才有经验）
- 3. 夜晚 && 无 beds 建筑有空位                → 离场（routeToHotel 失败）
- 4. energy==0 && 无恢复建筑 && 非夜晚         → 离场
- 5. idleTimeout（长时间无目标）               → 离场
+ 1. isFullySatisfied() && 夜晚    → 满条离场（grantExperience + mage resume）。
+                                     白天满条先继续闲逛，等到夜晚再离场（不立刻走）。
+ 2. gameTime >= departureDeadline → 到点离场（满条才有经验）
+ 3. 夜晚 && 无 beds 建筑有空位     → 离场（routeToHotel 失败）
+ 4. idleTimeout（长时间无目标）    → 离场
 ```
+- **精力 0 且无恢复建筑 → 不在此离场**：改为闲逛（Block 3 行为），直到视野出现恢复建筑 / 夜晚入旅店 / 截止。
 - 删除 `getSatisfaction()` 的所有读取；`grantExperience`（:511-523）的条件改为 `isFullySatisfied()`。
 - `onTouristDepart`（:546-583）读的 satisfaction → 改读三条/`isFullySatisfied()`；`registerDeparture(uuid,colonyId,satisfaction)` 的 satisfaction 实参改传聚合值（min-ratio×100，Block 4 收口签名）。
 
@@ -85,4 +92,4 @@ tourist.setDepartureDeadline(level.getGameTime() + (randDays(min,max)) * 24000L)
 1. `./gradlew build` 绿（Block 3 未合入时，游客行为可能暂时不完整——本块只要求编译 + 数据正确）。
 2. 游客 NBT 含三条/画像/活动/停留 key；无 `satisfaction`/`typePreferences` key。
 3. TouristScreen 显示三条 bar + 画像 + 活动 + 停留天数。
-4. 生成时画像随机、截止时间在 2-4 天内。
+4. 生成时画像随机且**按等级缩放总需求**（高等级总需求更高）；截止时间在 2-4 天内。
