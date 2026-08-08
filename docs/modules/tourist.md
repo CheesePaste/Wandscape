@@ -48,7 +48,11 @@
 ## 酒店（HotelStayHandler）
 
 - checkIn 条件（TouristMoveGoal 把关）：sat≥50 且 <100 且（夜晚 或 精力耗尽），且 ServiceConfig.maxOccupancy>0、有空房；入住后移动停止。
-- 心跳每 20 tick；清晨窗口 1000-1200 自动退房；checkOut 精力恢复 100、发 HOTEL_WAKEUP 叙事。白天旅馆按普通服务建筑处理。占用数从影子注册表派生。
+- **提前入住**：到达酒店建筑 bbox 内 5 格（microNavSwitchDistance）即入住（`tryHotelCheckIn`），无需走到精确交互点——避免夜晚在酒店门口站定触发卡死传送。白天条件不满足则按普通服务建筑处理。
+- **睡床（纯视觉）**：入住后 `settleIntoBed` 在酒店 bbox 内找最近一张没人睡的床（跳过 `OCCUPIED` 与已分配床），传送上床并置 SLEEPING 姿态（`setSleepingPos` + `Pose.SLEEPING`，不改床方块状态 → 无占用泄漏）；无空床则原地站着。
+- 入住点存为 `wakeUpPos`（实体 NBT 持久化）；清晨窗口 1000-1200 自动退房：`stopSleeping` 起床并**传送回入住点**，精力恢复 100、发 HOTEL_WAKEUP 叙事。
+- 床位占用由 HotelStayHandler 内存 `touristToBed` 跟踪（退房/强制退房时清除），不依赖床方块 OCCUPIED 标记。
+- 心跳每 20 tick；占用数从影子注册表派生。
 
 ## 酒馆招募
 

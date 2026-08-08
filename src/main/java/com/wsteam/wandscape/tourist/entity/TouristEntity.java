@@ -209,6 +209,11 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     /** Tick count when the tourist checked into the hotel. */
     private int hotelCheckinTime;
 
+    /** Position to return to when checking out of the hotel in the morning
+     *  (the spot where the tourist stood before teleporting into a bed). */
+    @Nullable
+    private BlockPos wakeUpPos;
+
     /** Set of building IDs the tourist has already visited this trip. */
     private final Set<UUID> visitedBuildings = new HashSet<>();
 
@@ -483,6 +488,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         if (targetBuildingId != null) tag.putUUID("targetBuildingId", targetBuildingId);
         if (targetBuildingCategory != null) tag.putString("targetBuildingCategory", targetBuildingCategory);
         if (checkedInBuildingId != null) tag.putUUID("checkedInBuildingId", checkedInBuildingId);
+        if (wakeUpPos != null) tag.putLong("wakeUpPos", wakeUpPos.asLong());
 
         // Save visited building IDs
         ListTag visitedList = new ListTag();
@@ -584,6 +590,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.targetBuildingId = tag.hasUUID("targetBuildingId") ? tag.getUUID("targetBuildingId") : null;
         this.targetBuildingCategory = tag.contains("targetBuildingCategory") ? tag.getString("targetBuildingCategory") : null;
         this.checkedInBuildingId = tag.hasUUID("checkedInBuildingId") ? tag.getUUID("checkedInBuildingId") : null;
+        this.wakeUpPos = tag.contains("wakeUpPos") ? BlockPos.of(tag.getLong("wakeUpPos")) : null;
 
         // Restore visited building IDs
         this.visitedBuildings.clear();
@@ -782,6 +789,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     public int getHotelCheckinTime() { return hotelCheckinTime; }
     public void setHotelCheckinTime(int time) { this.hotelCheckinTime = time; }
+
+    @Nullable public BlockPos getWakeUpPos() { return wakeUpPos; }
+    public void setWakeUpPos(@Nullable BlockPos pos) { this.wakeUpPos = pos; }
 
     public Set<UUID> getVisitedBuildings() { return visitedBuildings; }
     public void addVisitedBuilding(UUID buildingId) {

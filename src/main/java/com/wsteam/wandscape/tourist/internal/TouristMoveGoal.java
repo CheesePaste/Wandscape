@@ -296,6 +296,11 @@ public class TouristMoveGoal extends Goal {
         // Check if we're close enough to the building to switch to indoor micro-nav
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId != null && isWithinDistanceOfBbox(buildingId, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
+            // Hotels: check in the moment the tourist reaches the building — it
+            // teleports into a bed, no need to reach the exact interact point.
+            if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                return;
+            }
             switchToIndoorNav();
             return;
         }
@@ -586,36 +591,9 @@ public class TouristMoveGoal extends Goal {
         boolean isHotel = isHotelBuilding(buildingId);
 
         if (isHotel) {
-            long dayTime = tourist.level().getDayTime() % 24000;
-            boolean isNight = dayTime >= 13000;
-            int sat = tourist.getSatisfaction();
-            boolean energyDepleted = tourist.getEnergy() <= 0;
             // 入住条件: 满意度 >= 50 且 < 100, 同时 到了夜晚 或 精力耗尽
-            if (sat >= 50 && sat < 100 && (isNight || energyDepleted)) {
-                HotelStayHandler hotel = HotelStayHandler.getActive();
-                UUID colonyId = tourist.getColonyId();
-                if (hotel != null && colonyId != null && hotel.checkIn(tourist, buildingId, colonyId)) {
-                    tourist.addVisitedBuilding(buildingId);
-                    applyPreferenceDecay(buildingId);
-                    tourist.setCommuteTarget(null);
-                    tourist.setTargetBuildingId(null);
-                    tourist.setTargetBuildingCategory(null);
-                    indoorPhase = false;
-                    exitingPhase = false;
-                    syncDebugData();
-                    showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
-
-                    sparkleSatisfaction();
-
-                    // Emit HOTEL_CHECKIN narrative
-                    long gameTime = tourist.level().getGameTime();
-                    String bldName = getBuildingDisplayName(buildingId, bldType);
-                    NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
-                            tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
-                    emitNarrativeEvent(checkinEvent);
-
-                    return true;
-                }
+            if (tryHotelCheckIn(buildingId, bldType)) {
+                return true;
             }
             // Daytime or conditions not met: fall through to regular service interaction
         }
@@ -628,6 +606,50 @@ public class TouristMoveGoal extends Goal {
 
         tourist.addVisitedBuilding(buildingId);
         return false;
+    }
+
+    /**
+     * Check a tourist into a hotel and settle it into a free bed. Also called
+     * from {@link #tickOutdoorNav()} the moment the tourist reaches the hotel
+     * building, so lodging never depends on reaching the exact interact point
+     * (an unreachable one used to leave the tourist standing still at night and
+     * trip the stuck-teleport fallback).
+     *
+     * @return true if the tourist checked in (caller must stop navigation)
+     */
+    private boolean tryHotelCheckIn(UUID buildingId, @Nullable String bldType) {
+        if (!isHotelBuilding(buildingId)) return false;
+        long dayTime = tourist.level().getDayTime() % 24000;
+        boolean isNight = dayTime >= 13000;
+        int sat = tourist.getSatisfaction();
+        boolean energyDepleted = tourist.getEnergy() <= 0;
+        if (!(sat >= 50 && sat < 100 && (isNight || energyDepleted))) return false;
+
+        HotelStayHandler hotel = HotelStayHandler.getActive();
+        UUID colonyId = tourist.getColonyId();
+        if (hotel == null || colonyId == null) return false;
+        if (!hotel.checkIn(tourist, buildingId, colonyId)) return false;
+
+        tourist.addVisitedBuilding(buildingId);
+        hotel.settleIntoBed(tourist, serverLevel(), buildingId);
+        applyPreferenceDecay(buildingId);
+        tourist.setCommuteTarget(null);
+        tourist.setTargetBuildingId(null);
+        tourist.setTargetBuildingCategory(null);
+        indoorPhase = false;
+        exitingPhase = false;
+        syncDebugData();
+        showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
+
+        sparkleSatisfaction();
+
+        // Emit HOTEL_CHECKIN narrative
+        long gameTime = tourist.level().getGameTime();
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
+                tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
+        emitNarrativeEvent(checkinEvent);
+        return true;
     }
 
     private void finishBuildingStop() {

@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.tourist.internal;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,8 +19,13 @@ import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -47,6 +53,8 @@ public final class HotelStayHandler {
     private final Map<UUID, Set<UUID>> occupancy = new ConcurrentHashMap<>();
     /** touristId → buildingId for reverse lookup */
     private final Map<UUID, UUID> touristToHotel = new ConcurrentHashMap<>();
+    /** touristId → bed the tourist is sleeping in (visual-only occupancy tracking) */
+    private final Map<UUID, BlockPos> touristToBed = new ConcurrentHashMap<>();
 
     private int tickCounter;
 
@@ -107,6 +115,19 @@ public final class HotelStayHandler {
             guests.remove(tourist.getUUID());
             if (guests.isEmpty()) occupancy.remove(buildingId);
         }
+        touristToBed.remove(tourist.getUUID());
+
+        // Wake up and return to the spot where the tourist stood at check-in,
+        // before it teleported into a bed.
+        if (tourist.isSleeping()) {
+            tourist.stopSleeping();
+        }
+        BlockPos wakeUp = tourist.getWakeUpPos();
+        if (wakeUp != null) {
+            tourist.setPos(wakeUp.getX() + 0.5, wakeUp.getY(), wakeUp.getZ() + 0.5);
+            tourist.setWakeUpPos(null);
+        }
+        tourist.applyState(TouristState.IDLE);
 
         tourist.setCheckedInBuildingId(null);
         tourist.setHotelCheckinTime(0);
@@ -122,6 +143,67 @@ public final class HotelStayHandler {
 
         Log.info(TAG, "[Tourist] {} checked out of {} (energy → 100)",
                 tourist.getTouristName(), shortId(buildingId));
+    }
+
+    /**
+     * After a successful check-in, teleport the tourist onto a free bed in the
+     * hotel to sleep (visual only — no stat effects). If no bed is free, the
+     * tourist simply stays where it is until morning checkout.
+     */
+    public void settleIntoBed(TouristEntity tourist, ServerLevel level, UUID buildingId) {
+        tourist.setWakeUpPos(tourist.blockPosition());
+        BlockPos bed = findFreeBed(level, buildingId, tourist.blockPosition());
+        if (bed == null) {
+            Log.info(TAG, "[Tourist] {} checked into {} but no free bed — staying put",
+                    tourist.getTouristName(), shortId(buildingId));
+            return;
+        }
+        // Visual-only sleeping: lie on the bed without mutating the bed's occupied
+        // property (no block updates, and no stuck-occupied leak if the chunk
+        // unloads mid-sleep). Bed assignment is tracked in memory instead.
+        tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
+        tourist.setSleepingPos(bed);
+        tourist.applyState(TouristState.SLEEPING);
+        touristToBed.put(tourist.getUUID(), bed);
+        Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
+                tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
+    }
+
+    /** Nearest unoccupied bed (head half) inside the hotel's bounding box, or null. */
+    @Nullable
+    private BlockPos findFreeBed(ServerLevel level, UUID buildingId, BlockPos near) {
+        BuildingState state = getBuildingState(buildingId);
+        if (state == null) return null;
+        BoundingBox box = state.getBounds();
+        if (box == null) return null;
+
+        Set<BlockPos> assigned = new HashSet<>(touristToBed.values());
+        BlockPos best = null;
+        double bestSq = Double.MAX_VALUE;
+        for (int x = box.minX(); x <= box.maxX(); x++) {
+            for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                for (int y = box.minY(); y <= box.maxY(); y++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState bs = level.getBlockState(p);
+                    if (!(bs.getBlock() instanceof BedBlock)) continue;
+                    if (bs.getValue(BedBlock.OCCUPIED)) continue;
+                    BlockPos head = bedHeadPos(bs, p);
+                    if (assigned.contains(head)) continue;
+                    double sq = head.distSqr(near);
+                    if (sq < bestSq) {
+                        bestSq = sq;
+                        best = head;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    /** The head half of a bed (where the sleeper lies with its head on the pillow). */
+    private static BlockPos bedHeadPos(BlockState bs, BlockPos pos) {
+        if (bs.getValue(BedBlock.PART) == BedPart.HEAD) return pos;
+        return pos.relative(bs.getValue(BedBlock.FACING));
     }
 
     // ── Query ──
@@ -222,17 +304,21 @@ public final class HotelStayHandler {
                 if (guests.isEmpty()) occupancy.remove(buildingId);
             }
         }
+        touristToBed.remove(touristId);
+    }
+
+    @Nullable
+    private BuildingState getBuildingState(UUID buildingId) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return null;
+        BuildingSavedData sd = BuildingSavedData.get(level);
+        return sd != null ? sd.getBuilding(buildingId) : null;
     }
 
     @Nullable
     private BuildingConfig getBuildingConfig(UUID buildingId) {
-        ServerLevel level = getServerLevel();
-        if (level == null) return null;
-        BuildingSavedData sd = BuildingSavedData.get(level);
-        if (sd == null) return null;
-        BuildingState state = sd.getBuilding(buildingId);
-        if (state == null) return null;
-        return BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        BuildingState state = getBuildingState(buildingId);
+        return state != null ? BuildingConfigLoader.getInstance().get(state.getBuildingTypeId()) : null;
     }
 
     @Nullable
