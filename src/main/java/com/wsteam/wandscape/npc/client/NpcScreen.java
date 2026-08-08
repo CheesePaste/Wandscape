@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
@@ -12,6 +13,7 @@ import com.wsteam.wandscape.wand.item.WandItem;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -48,9 +50,13 @@ public class NpcScreen extends MedievalScreen {
     // Layout positions (computed in render, used for click detection)
     private int wandSlotX, wandSlotY;
 
+    // ── Editable name (top-left title bar) ──
+    private EditBox nameBox;
+    /** 服务端已确认的名字（与 nameBox 一致时跳过重复发送）。 */
+    private String lastServerName = "";
+
     public NpcScreen(NpcDataPacket packet) {
         super(Component.literal("NPC Info"), PW, PH);
-        setTitleBar(I18n.name("gui.wandscape.npc.title", "Mage Info"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "npc_guide";
@@ -76,12 +82,39 @@ public class NpcScreen extends MedievalScreen {
         this.knownSpells = packet.knownSpells();
         this.spellCategories = packet.spellCategories();
         this.priority = packet.priority();
-        setTitleBar(Component.literal(npcName));
+        // 名字：仅当输入框未聚焦时才回写（避免打断正在编辑），且值相同则不触发重发
+        this.lastServerName = packet.npcName();
+        if (nameBox != null && !nameBox.isFocused()
+                && !nameBox.getValue().equals(packet.npcName())) {
+            nameBox.setValue(packet.npcName());
+        }
     }
 
     @Override
     protected void init() {
         super.init();
+        // 左上角名字框（可编辑，写名字自动保存；结束于帮助按钮之前）
+        int boxH = font.lineHeight + 2;
+        int bx = leftPos + titleXOffset + 1;
+        int by = topPos + (headerHeight - boxH) / 2;
+        int boxRight = closeBtnX - 20; // 14(help) + 4(gap) + 2
+        nameBox = new EditBox(font, bx, by, Math.max(40, boxRight - bx), boxH,
+                Component.literal("Name")) {
+            @Override
+            public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+                drawInsetField(g, getX() - 1, getY() - 2, getWidth() + 2, getHeight() + 4);
+                super.renderWidget(g, mouseX, mouseY, partialTick);
+            }
+        };
+        nameBox.setValue(npcName != null ? npcName : "");
+        nameBox.setMaxLength(NpcRenamePacket.MAX_NAME_LENGTH);
+        nameBox.setBordered(false);
+        nameBox.setTextColor(MedievalColors.TEXT_WARM_WHITE);
+        nameBox.setTextColorUneditable(MedievalColors.TEXT_MUTED);
+        nameBox.setCanLoseFocus(true);
+        nameBox.setResponder(this::onNameChanged);
+        addRenderableWidget(nameBox);
+
         // 策略按钮（打开施法策略屏）
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 104, topPos + PH - 22, 46, 16,
@@ -92,6 +125,15 @@ public class NpcScreen extends MedievalScreen {
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
                 I18n.name("gui.wandscape.common.close", "Close"), () -> Minecraft.getInstance().setScreen(null)));
+    }
+
+    /** 名字框每次变更：非空且与服务端不同则自动发送改名包（写好了自动保存）。 */
+    private void onNameChanged(String newName) {
+        String trimmed = newName.trim();
+        if (trimmed.isEmpty() || trimmed.equals(lastServerName)) return;
+        lastServerName = trimmed;
+        this.npcName = trimmed;
+        PacketDistributor.sendToServer(new NpcRenamePacket(entityId, trimmed));
     }
 
     @Override

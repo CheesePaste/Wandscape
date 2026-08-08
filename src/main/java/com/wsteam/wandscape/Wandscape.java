@@ -106,6 +106,7 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
@@ -594,6 +595,11 @@ public class Wandscape {
                         NpcStrategyPacket.TYPE,
                         NpcStrategyPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcStrategyPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        NpcRenamePacket.TYPE,
+                        NpcRenamePacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcRenamePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Tourist info screen ──
                 .playToClient(
