@@ -139,7 +139,6 @@ public final class ReviveHandler {
 
     /** 复活爆点：ENTITY_EFFECT 原生绿色魔法粒子（药水式发光粒子，原生广播必现）+ burstColored 绿色 glow 爆花（增强）。 */
     private static void spawnReviveBurst(ServerLevel level, double x, double y, double z) {
-        Log.info(TAG, "复活爆花 @ ({}, {}, {})", x, y, z);
         level.sendParticles(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0.29f, 0.87f, 0.50f),
                 x, y, z, 30, 0.4, 1.0, 0.4, 0.15);
         ParticleService.burstColored(level, new Vec3(x, y, z), 0.29f, 0.87f, 0.50f, 30, 0.22f, 40, false);
