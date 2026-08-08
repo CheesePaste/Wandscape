@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Rolls a mage recruit's base attributes with a random² skew distribution,
+ * Rolls a mage recruit's base attributes with a random⁴ skew distribution,
  * scaled by a per-level bonus — the same profile used for tourist resumes
  * (TouristEntity). Centralizes the formula so tourism and tavern recruitment
  * stay in sync.
@@ -14,7 +14,7 @@ public final class MageAttributeRoller {
 
     /**
      * Roll a mage candidate at the given level. Each attribute draws an
-     * independent random² factor ∈ [0,1) — mostly low with occasional high
+     * independent random⁴ factor ∈ [0,1) — mostly low with occasional high
      * spikes (natural specialisation); the level adds a flat per-level bonus.
      */
     public static RecruitmentCandidate roll(int level, Random random) {
@@ -31,10 +31,10 @@ public final class MageAttributeRoller {
                 workSpeed, spellSpeed, armorValue, maxMana, List.of());
     }
 
-    /** 偏斜随机因子：random² ∈ [0,1)，多数偏向低值、偶发接近 1。 */
+    /** 偏斜随机因子：random⁴ ∈ [0,1)，多数偏向低值、偶发接近 1。 */
     private static double skew(Random random) {
         double r = random.nextDouble();
-        return r * r;
+        return r * r * r * r;
     }
 
     /** 保留两位小数。 */
