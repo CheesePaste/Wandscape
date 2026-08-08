@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
@@ -84,8 +85,8 @@ public class TouristScreen extends MedievalScreen {
         // Energy bar
         g.drawString(font, "精力:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         drawStatBar(g, leftCol + labelW, statY, barW, 10,
-                Math.clamp((float) energy / 200f, 0f, 1f),
-                energy + "/200",
+                Math.clamp((float) energy / WandscapeConstants.TOURIST_MAX_ENERGY, 0f, 1f),
+                energy + "/" + WandscapeConstants.TOURIST_MAX_ENERGY,
                 MedievalColors.SUCCESS_GREEN);
         statY += 11;
 

@@ -19,6 +19,7 @@ import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
@@ -163,7 +164,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     // ── Tourist attributes ──
 
-    private int energy = 100;
+    private int energy = WandscapeConstants.TOURIST_MAX_ENERGY;
     private int satisfaction;
     private int level = 1;
     /** Universal-element spending money. Higher tourist levels start with more. */
@@ -562,7 +563,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.wanderAnchor = tag.contains("wanderAnchor") ? BlockPos.of(tag.getLong("wanderAnchor")) : null;
         this.wanderRadius = tag.getInt("wanderRadius");
         // Clamp values in case of corrupted data
-        this.energy = Math.clamp(tag.getInt("energy"), 0, 200);
+        this.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
         this.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
         this.level = Math.max(1, tag.getInt("level"));
         this.wallet = Math.max(0, tag.getInt("wallet"));
@@ -722,7 +723,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public void setPoiList(List<BlockPos> pois) { this.poiList = List.copyOf(pois); }
 
     public int getEnergy() { return energy; }
-    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, 200); }
+    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
 
     public int getSatisfaction() { return satisfaction; }
     public void setSatisfaction(int s) { this.satisfaction = Math.clamp(s, 0, 100); }

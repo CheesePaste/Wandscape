@@ -17,6 +17,7 @@ import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -356,7 +357,7 @@ public final class TouristSimSystem {
                 // tourist stood at check-in (before it teleported into a bed).
                 s.setCheckedInBuildingId(null);
                 s.setHotelCheckinTime(0);
-                s.setEnergy(100);
+                s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
                 s.setCommuteTarget(null);
                 BlockPos wake = s.getWakeUpPos();
                 if (wake != null) {

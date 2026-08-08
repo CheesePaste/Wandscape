@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -173,7 +174,7 @@ public final class TouristShadow implements TouristStateHost {
     public void setTargetBuildingCategory(@Nullable String c) { this.targetBuildingCategory = c; }
 
     public int getEnergy() { return energy; }
-    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, 200); }
+    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
     public int getSatisfaction() { return satisfaction; }
     public void setSatisfaction(int s) { this.satisfaction = Math.clamp(s, 0, 100); }
     public int getLevel() { return level; }
@@ -343,7 +344,7 @@ public final class TouristShadow implements TouristStateHost {
         s.commuteTarget = tag.contains("commute") ? BlockPos.of(tag.getLong("commute")) : null;
         s.targetBuildingId = tag.hasUUID("target") ? tag.getUUID("target") : null;
         s.targetBuildingCategory = tag.contains("targetCat") ? tag.getString("targetCat") : null;
-        s.energy = Math.clamp(tag.getInt("energy"), 0, 200);
+        s.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
         s.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
         s.level = Math.max(1, tag.getInt("level"));
         s.wallet = Math.max(0, tag.getInt("wallet"));

@@ -17,6 +17,7 @@ import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import net.minecraft.core.BlockPos;
@@ -131,7 +132,7 @@ public final class HotelStayHandler {
 
         tourist.setCheckedInBuildingId(null);
         tourist.setHotelCheckinTime(0);
-        tourist.setEnergy(100);
+        tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
 
         // Emit HOTEL_WAKEUP narrative
         String bldType = getBuildingTypeId(buildingId);
