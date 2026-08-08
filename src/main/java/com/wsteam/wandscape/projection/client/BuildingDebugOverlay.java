@@ -5,14 +5,12 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
-import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -99,7 +97,7 @@ public final class BuildingDebugOverlay {
         // ── Build all lines ──
         Component l1 = I18n.name("building.wandscape." + data.buildingTypeId(), data.displayName());
         String l1cat = data.category();
-        String l1status = getStatusText(data);
+        Component l1status = getStatusText(data);
         int l1statusColor = getStatusColor(data);
 
         // We will render stats with icons manually.
@@ -107,16 +105,6 @@ public final class BuildingDebugOverlay {
         String magicStr = String.valueOf(data.magic());
         String wonderStr = String.valueOf(data.wonder());
         String queueStr = String.valueOf(data.queueCapacity());
-        String l3id = "id:" + shortUuid(data.buildingId());
-        String l3cid = data.colonyId() != null ? "cid:" + shortUuid(data.colonyId()) : "no colony";
-        String l3anchor = posStr(data.anchor());
-
-        List<WorkItem> queue = data.queue();
-        int qSize = queue != null ? queue.size() : 0;
-        String l4queue = "queue:" + qSize + " tasks";
-        String l4task = data.currentTaskId() != null
-                ? "current:" + shortUuid(data.currentTaskId())
-                : "no task";
 
         // ── Measure ──
         int iconW = 9;
@@ -127,15 +115,13 @@ public final class BuildingDebugOverlay {
 
         int[] widths = {
                 font.width(l1) + GAP + font.width(l1cat) + GAP + font.width(l1status),
-                statsW,
-                font.width(l3id) + GAP + font.width(l3cid) + GAP + font.width(l3anchor),
-                font.width(l4queue) + GAP + font.width(l4task)
+                statsW
         };
         int maxW = 0;
         for (int w : widths) if (w > maxW) maxW = w;
 
         int boxW = maxW + PAD_X * 2 + 24; // Extra padding to make the box wider
-        int boxH = font.lineHeight * 4 + PAD_Y * 2 + 3;
+        int boxH = font.lineHeight * 2 + PAD_Y * 2 + 3;
         int boxX = (screenW - boxW) / 2;
         int boxY = 4;
         float yBase = boxY + PAD_Y;
@@ -174,20 +160,6 @@ public final class BuildingDebugOverlay {
         drawText(g, font, "Q:", x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
         x2 += font.width("Q:") + 2;
         drawText(g, font, queueStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
-
-        // ── Line 3: id | colonyId | anchor ──
-        float x3 = boxX + PAD_X;
-        drawText(g, font, l3id, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x3 += font.width(l3id) + GAP;
-        drawText(g, font, l3cid, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x3 += font.width(l3cid) + GAP;
-        drawText(g, font, l3anchor, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-
-        // ── Line 4: queue count | current task ──
-        float x4 = boxX + PAD_X;
-        drawText(g, font, l4queue, x4, yBase + LINE_H * 3, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x4 += font.width(l4queue) + GAP;
-        drawText(g, font, l4task, x4, yBase + LINE_H * 3, data.currentTaskId() != null ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Buttons: Repair | Shutdown/Restart | Destroy ──
         int btnY = boxY + boxH + 2;
@@ -301,17 +273,15 @@ public final class BuildingDebugOverlay {
 
     // ── Status helpers ──
 
-    private static String getStatusText(BuildingDebugResponsePacket data) {
-        if (data.shutdown()) return "[STOPPED]";
-        if (!data.intact()) return "[BROKEN]";
-        if (data.needsRepair()) return "[DAMAGED]";
-        return "[OK]";
+    private static Component getStatusText(BuildingDebugResponsePacket data) {
+        if (data.shutdown()) return I18n.name("gui.wandscape.building_status.stopped", "Stopped");
+        if (!data.intact()) return I18n.name("gui.wandscape.building_status.broken", "Broken");
+        return I18n.name("gui.wandscape.building_status.ok", "Operational");
     }
 
     private static int getStatusColor(BuildingDebugResponsePacket data) {
         if (data.shutdown()) return TEXT_RED;
         if (!data.intact()) return TEXT_YELLOW;
-        if (data.needsRepair()) return TEXT_YELLOW;
         return TEXT_GREEN;
     }
 
@@ -319,11 +289,6 @@ public final class BuildingDebugOverlay {
 
     private static String shortUuid(UUID id) {
         return id.toString().substring(0, 8);
-    }
-
-    private static String posStr(BlockPos pos) {
-        if (pos == null) return "-";
-        return pos.getX() + "," + pos.getY() + "," + pos.getZ();
     }
 
     private static int brighten(int color) {
