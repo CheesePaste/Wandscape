@@ -44,6 +44,8 @@ public class AltarScreen extends MedievalScreen {
         super(Component.literal("Altar"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.altar.title", "Altar"));
         this.showCloseButton = true;
+        this.showHelpButton = true;
+        this.helpDocumentPath = "altar_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
@@ -73,10 +75,6 @@ public class AltarScreen extends MedievalScreen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         var font = Minecraft.getInstance().font;
-
-        g.drawString(font, I18n.name("gui.wandscape.altar.hint",
-                "Select a spell, then Submit — a colony mage will cast it (costs its mana)."),
-                leftPos + 14, topPos + headerHeight + 3, MedievalColors.TEXT_MUTED);
 
         String bldText = I18n.name("gui.wandscape.common.building_label", "Building").getString()
                 + ": " + buildingId.toString().substring(0, 8);

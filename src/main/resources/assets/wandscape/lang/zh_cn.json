@@ -94,7 +94,6 @@
   "gui.wandscape.common.building_label": "建筑",
   "gui.wandscape.common.colony_label": "魔法小镇",
   "gui.wandscape.altar.title": "祭坛",
-  "gui.wandscape.altar.hint": "选中魔法后点提交——殖民地法师会走过来施放（消耗其魔力）。",
   "gui.wandscape.altar.cooldown": "冷却中 {}",
   "gui.wandscape.altar.ready": "可施放",
   "gui.wandscape.altar.submitted": "已安排",

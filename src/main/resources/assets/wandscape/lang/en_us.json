@@ -98,7 +98,6 @@
   "gui.wandscape.common.building_label": "Building",
   "gui.wandscape.common.colony_label": "Colony",
   "gui.wandscape.altar.title": "Altar",
-  "gui.wandscape.altar.hint": "Select a spell, then Submit — a colony mage will cast it (costs its mana).",
   "gui.wandscape.altar.cooldown": "Cooldown {}",
   "gui.wandscape.altar.ready": "Ready",
   "gui.wandscape.altar.submitted": "Queued",
