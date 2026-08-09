@@ -76,10 +76,15 @@ public final class WandscapePanelController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        // Enforce cursor state: when a Screen closes, MC grabs the mouse back to game.
-        // If cursor was lifted, re-release it to the UI layer.
-        if (WandscapePanelState.isCursorLifted() && mc.screen == null) {
-            mc.mouseHandler.releaseMouse();
+        // Reconcile the OS cursor to cursorLifted every tick (when no Screen is open).
+        // Bidirectional: prevents both "cursor stuck hidden" and "cursor stuck shown"
+        // after transitions that grab/release the mouse. Screens manage their own cursor.
+        if (mc.screen == null) {
+            if (WandscapePanelState.isCursorLifted()) {
+                mc.mouseHandler.releaseMouse();
+            } else {
+                mc.mouseHandler.grabMouse();
+            }
         }
     }
 
@@ -280,12 +285,8 @@ public final class WandscapePanelController {
 
         WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
         if (current == targetMode) {
-            // Clicking the active tab: deactivate (exit sub-mode, stay in panel)
-            WandscapePanelState.exitCurrentSubMode();
-            // If exitCurrentSubMode returned to overview, don't override with NONE
-            if (WandscapePanelState.getActiveSubMode() != WandscapePanelState.SubMode.OVERVIEW) {
-                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            }
+            // Clicking the already-active tab is a no-op (avoid misclick discarding work).
+            // Use ESC to exit a sub-mode.
             return;
         }
 
