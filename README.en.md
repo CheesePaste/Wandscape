@@ -46,7 +46,7 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 
 - Your mages are real wizards — they cast in glowing magic circles (rings, arcs, polygons, stars, glyphs) and fire beams of pure light.
 - Every cast is a little show: particle-driven animation, no shaders required (though it looks gorgeous under any shader pack).
-- The wand is **your** casting tool — right-click to cast a magic circle, and it never breaks. Forge wands at the crafting station and equip them on your mages: Basic, Adept, Master, each tier boosting their spell power.
+- Wands are your mages' casting tools — forge them at the crafting station and equip them on your mages: Basic, Adept, Master, each tier boosting their spell power. Wands never break.
 - Every mage carries their own stats — spell power, casting speed, work speed, armor and more.
 
 ## ⚔️ Even wizards need a militia

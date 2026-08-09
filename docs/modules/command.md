@@ -24,7 +24,6 @@
 | `stress <n> <m>` | spawn N NPC 网格 + M 个 town_hall 任务（3D 立方分布） |
 | `tourist list/spawn/state/cooldown` | 游客调试：列出/生成/状态/跳过冷却 |
 | `transport [spawn|fx fy fz [item] [tx ty tz [count]]]` | 物品飞行动画测试 |
-| `magic [circle] [color]` | 施法阵 + 信标光束（默认 arcane_hexagram） |
 | `guard status`（guard/GuardCommand） | 打印守卫区数/最近威胁/脱离区清空/活跃守卫任务数 |
 | `guide` | 加载 `assets/wandscape/guide/test_guide.md` 发 GuideTestPacket 开 Markdown 引导测试屏 |
 | `spline edit|done` | 进/出样条道路编辑器（SplineEditorEnterPacket） |

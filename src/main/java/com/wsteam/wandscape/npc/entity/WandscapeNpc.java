@@ -413,7 +413,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     // ── Fast path: skip ECS polling for idle NPCs ──
     private int ecsPollCooldown = 0;
 
-    // ── 手动施法（shift+右键）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
+    // ── 手动施法（祭坛施法引导窗口）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
     private int manualCastTicks = 0;
 
     /**

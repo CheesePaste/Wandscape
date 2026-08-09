@@ -156,7 +156,7 @@ self_teleport 的三个候选变体为**本地草稿**，只放根目录 [`../..
 
 共同规则（P16/P17/P18/P19）：单层地面阵、紫色系（每张 ≤3 个同族色阶，粒子只用 `glow` 可染色点）、`start` 内→外升序、每圈 `scale` 恒 1、符文放星形凹口且与宿主同速（P13/P14）、相邻层异向旋转、**旋转层全 beads 无拖尾**、独立符文放大、符文数随 R、粒子密度参考示例。
 
-- **选型流程**：在 [Web 编辑器](https://github.com/CheesePaste/magic-circle-editor) 或游戏内 `/wandscape magic` 预览三个变体 → 挑中并定稿 → **确认后才能**把选中的 spec 放进 `data/wandscape/magic_circles/`（src）正式接线（`circle_id` 引用）。
+- **选型流程**：在 [Web 编辑器](https://github.com/CheesePaste/magic-circle-editor) 预览三个变体 → 挑中并定稿 → **确认后才能**把选中的 spec 放进 `data/wandscape/magic_circles/`（src）正式接线（`circle_id` 引用）。
 - **草稿与成品分离**：`magiccircles/` 只存本地候选；进 src 的 spec 才算数。落选变体留在 `magiccircles/` 或删除，不提交。
 
 ## 检查清单（写完一个 JSON 后自查）

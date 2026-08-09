@@ -42,7 +42,6 @@ import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
-import com.wsteam.wandscape.command.MagicCommand;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCastManager;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
@@ -869,7 +868,6 @@ public class Wandscape {
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
                 .then(TransportCommand.node())
-                .then(MagicCommand.node())
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node());

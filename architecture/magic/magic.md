@@ -15,8 +15,7 @@ magic/
   ├── data/MagicCircleSpec.java        record 镜像 + fromJson（纯数据，无 MC 依赖；套编辑器 normalize 默认值）
   ├── internal/MagicCircleLoader.java  dataconfig 注册 magic_circles 类目 + getSpec(id)/getAll()
   ├── internal/MagicCastManager.java   服务端施法调度：按施法者 UUID 去重，到 fireTick 生成信标光束
-  ├── internal/MagicCaster.java        施放入口：发 MagicCircleCastPacket + 登记光束（玩家命令 / NPC 共用）
-  ├── internal/MagicInteractHandler.java  shift+右键 NPC 触发施法（服务端拦截交互，防止打开信息界面）
+  ├── internal/MagicCaster.java        施放入口：发 MagicCircleCastPacket + 登记光束（守卫/自防御 castNpcAt 共用）
   ├── entity/MagicBeamEntity.java      服务端显示实体：源点→目标（端点一次性定死，非子弹），
   │                                     目标/颜色同步；每 tick 对束内 Enemy 造成伤害；宽度动画 getWidthFactor
   ├── client/MagicCircleEmitter.java   客户端静态持有器：Map<UUID, ActiveCircle>，
@@ -42,8 +41,8 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 施放触发（服务端 → 客户端）：
 
 ```
-法杖右键（WandItem.use，8 tick 冷却）/ 调试命令 / shift+右键 NPC（服务端）
-  → MagicCaster.cast / castNpc
+守卫/自防御执行器（GuardCombat/SelfDefenseExecutor 经 CastBrain 选魔法）
+  → MagicCaster.castNpcAt → castNpcBeam
       · MagicCircleCastPacket(effectId=UUID, pos, axis=施法朝向, circleId) → PacketDistributor
       · 客户端 payload handler → MagicCircleEmitter.add(level, pos, axis, loader.get(circleId))
       · MagicCastManager.schedule(level, casterUuid, source, target, color,
@@ -65,7 +64,7 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 
 `axis` 由施放方传入并**覆盖** spec 元素 axis——攻击阵的"法阵垂直于施法朝向"就靠它实现（地面阵不传时回落到 spec 元素 axis）。
 
-**shift+右键 NPC**：`MagicInteractHandler` 服务端拦截 `PlayerInteractEvent.EntityInteract`（不打开信息界面），`MagicCaster.castNpc` 选 `CAST_TARGET_RANGE=32` 格内最近敌对生物（无则沿当前朝向）为目标，NPC 面向它施放，`startManualCast(duration)` 窗口内 `isCasting=true` 举起法杖。**动态跟踪**：光束每 tick 更新源点（跟随 NPC 持杖手，沿目标方向前移 1.0）与 DATA_TARGET（跟随生物坐标），NPC 随之转向；客户端 `MagicCircleEmitter.followBeam` 按施法者 UUID 匹配光束实体，法阵跟随其源点/朝向。NPC 与玩家共用同一去重（按 UUID）。
+**NPC 施法（守卫/自防御）**：`GuardCombat`/`SelfDefenseExecutor` 经 `CastBrain` 选魔法后调 `MagicCaster.castNpcAt`，以最近敌对生物为目标，NPC 面向它施放。**动态跟踪**：光束每 tick 更新源点（跟随 NPC 持杖手，沿目标方向前移 1.0）与 DATA_TARGET（跟随生物坐标），NPC 随之转向；客户端 `MagicCircleEmitter.followBeam` 按施法者 UUID 匹配光束实体，法阵跟随其源点/朝向。按施法者 UUID 去重。原 shift+右键手动施放 / 玩家法杖右键入口已移除（测试完成）。
 
 ## 注册点
 
@@ -76,7 +75,6 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 | MAGIC_BEAM 实体（MobCategory.MISC） | `Wandscape.java` ENTITIES |
 | MagicCircleCastPacket 注册 playToClient | `Wandscape.onRegisterPayloads` |
 | MagicCastManager.tick（ServerTick） | `Wandscape.onServerTick` |
-| `/wandscape magic` 调试命令 | `Wandscape.onRegisterCommands` → `command/MagicCommand` |
 | 粒子 Provider / 光束渲染器 / emitter tick | `WandscapeClient` |
 
 ## 复用点
@@ -113,6 +111,6 @@ data/wandscape/magic_circles/*.json    ← Web 编辑器导出
 ## 不做（本模块边界）
 
 - **不做 shader 渲染**：粒子方案 + 自定义符文贴图足够"好看"，绕开光影兼容风险。信标光束直接用**原版** `BeaconRenderer.renderBeaconBeam`（原版 beam shader，逐顶点染色），光影下正常。
-- **不做施法机制/冷却**：施法频率由使用方决定（玩家法杖 8 tick 冷却；NPC 经 `npc.tryCastSpell` 门控——每魔法独立 CD + 施法互斥锁 + 魔力消耗，见 npc 模块；光束 CD/蓝/锁在 `MagicCaster`）。本模块只做视觉层 + 施放触发钩子 + 光束伤害。
+- **不做施法机制/冷却**：施法频率由使用方决定（NPC 经 `npc.tryCastSpell` 门控——每魔法独立 CD + 施法互斥锁 + 魔力消耗，见 npc 模块；光束 CD/蓝/锁在 `MagicCaster`）。本模块只做视觉层 + 施放触发钩子 + 光束伤害。
 - **不做多人编辑器协作**：Web 编辑器是本地单用户工具。
 - **glyph 真符文 sprite 选择**：v1 用放大点粒子代替（`MagicCircleDotParticle` 彗星头尾），真符文贴图留后续（需 sprite 索引机制）。

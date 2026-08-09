@@ -4,12 +4,12 @@
 
 ## 职责
 
-NPC 法师与玩家的法杖物品：预设（配方 JSON → attributes）、NBT、施法触发。
+NPC 法师的法杖物品：预设（配方 JSON → attributes）、NBT、施法表现载体。
 
 ## WandItem
 
 - 注册 `wand`；不可损坏/无耐久条。
-- `use()`：服务器端 8 tick 冷却后调 `MagicCaster.cast` 释放法阵（魔法阵+信标光束）。
+- 纯外观/属性载体，无玩家施放行为（玩家法杖右键施放已移除，测试完成）；施法由 `magic/` 的 `MagicCaster.castNpcAt` 驱动。
 
 ## WandPresetLoader
 

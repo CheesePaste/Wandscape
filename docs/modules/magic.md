@@ -32,18 +32,13 @@
 - 服务端 trackTarget：NPC 面向目标、源点跟持杖手前移 1.0；终点=沿方向首个方块（穿透生物只被方块挡）。damageTargets 每 tick 对束内 Enemy 造成 magic 伤害（伤害∝宽度因子），重置 invulnerableTime；NPC 施法用 indirectMagic(casterNpc, this) 让怪记仇反击，否则 magic()；无击退。getWidthFactor 宽度动画：慢变宽→PEAK_T 后快变窄。
 - 渲染 `MagicBeamEntityRenderer`：复用原版 BeaconRenderer.renderBeaconBeam，旋转 +Y→beam 方向。
 
-## MagicInteractHandler
-
-@Subscribe PlayerInteractEvent.EntityInteract，仅服务端；shift+右键 WandscapeNpc → cancel 事件(SUCCESS)，调 `MagicCaster.castNpc(DEFAULT_CIRCLE)`，成功后 `npc.startManualCast(spec.durationTicks)`（举杖窗口）。
-
 ## MagicCaster
 
-- DEFAULT_CIRCLE=arcane_hexagram、DEFAULT_COLOR=0xFFA8E0FF、BEAM_SPAWN_DELAY=20、BEAM_TAIL=20、CAST_TARGET_RANGE=32、CAST_DISTANCE=1.5、BEAM_BASE_CD=400、BEAM_MANA_COST=50。
-- `cast`（玩家调试命令）向追踪块玩家发包；`castNpcAt`（守卫用）：先过 `npc.tryCastSpell("beam", 400, 50, 锁)` 门控（施法互斥锁 + 光束独立 CD + 50 魔力），成功后面向目标、持杖手中段施法，锁时长 = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL（光束全程）；CD 在锁释放后才倒计时（光束结束停 400 tick，总间隔 = 锁 240 + CD 400）；`castNpc`（手动，shift+右键）免费（0 蓝）。
-- `MagicCircleCastPacket`（S→C）：(effectId,pos,axis,circleId)，handler 调 MagicCircleEmitter.add。每次登记施法即发包（玩家命令/NPC 施法）。
+- DEFAULT_CIRCLE=arcane_hexagram、DEFAULT_COLOR=0xFFA8E0FF、BEAM_SPAWN_DELAY=20、BEAM_TAIL=20、BEAM_BASE_CD=400、BEAM_MANA_COST=50。
+- `castNpcAt`（守卫/自防御用）：先过 `npc.tryCastSpell("beam", 400, 50, 锁)` 门控（施法互斥锁 + 光束独立 CD + 50 魔力），成功后面向目标、持杖手中段施法，锁时长 = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL（光束全程）；CD 在锁释放后才倒计时（光束结束停 400 tick，总间隔 = 锁 240 + CD 400）。玩家施放入口（法杖右键 / `/wandscape magic` 命令 / shift+右键 NPC）已移除（测试完成）。
+- `MagicCircleCastPacket`（S→C）：(effectId,pos,axis,circleId)，handler 调 MagicCircleEmitter.add。每次登记施法即发包（NPC 施法）。
 
 ## 与其他模块关系
 
-- `WandItem.use` 触发 `MagicCaster.cast`。
 - `GuardCombat` 用 `castNpcAt` 施法（守卫攻击表现）。
 - `NpcSpellPowerHandler` 用 SPELL_POWER 放大 NPC 施法伤害。
