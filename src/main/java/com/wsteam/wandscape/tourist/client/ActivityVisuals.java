@@ -25,9 +25,11 @@ public final class ActivityVisuals {
             float armXRot, float armZRot,
             float legXRot,
             float armSwing,
-            @Nullable ParticleSpec particles
+            @Nullable ParticleSpec particles,
+            /** true = 只动右手（主手持物，如 EAT 抬手到嘴边），左手保持自然下垂。 */
+            boolean rightArmOnly
     ) {
-        public static final Visuals NONE = new Visuals(0, 0, 0, 0, 0, 0, 0, null);
+        public static final Visuals NONE = new Visuals(0, 0, 0, 0, 0, 0, 0, null, false);
     }
 
     /** 粒子规格：发射的粒子类型 + 每次数量 + 散布半径。 */
@@ -42,16 +44,16 @@ public final class ActivityVisuals {
         if (a == null) return Visuals.NONE;
         return switch (a) {
             case TRAVEL, QUEUE, SLEEP -> Visuals.NONE;
-            case BROWSE -> new Visuals(0.12f, 0, 0, -0.2f, 0.1f, 0, 0, null);
-            case EAT -> new Visuals(0.15f, 0, 0, -1.4f, 0.5f, 0, 0.18f, null);
+            case BROWSE -> new Visuals(0.12f, 0, 0, -0.2f, 0.1f, 0, 0, null, false);
+            case EAT -> new Visuals(0.15f, 0, 0, -1.4f, 0.5f, 0, 0.18f, null, true);
             case BATHE -> new Visuals(0, 0, -0.05f, -1.0f, 0.6f, 0.15f, 0,
-                    new ParticleSpec(ParticleTypes.BUBBLE_POP, 2, 0.3));
-            case VIEW -> new Visuals(-0.35f, 0.25f, 0, -0.3f, 0.1f, 0, 0, null);
+                    new ParticleSpec(ParticleTypes.BUBBLE_POP, 2, 0.3), false);
+            case VIEW -> new Visuals(-0.35f, 0.25f, 0, -0.3f, 0.1f, 0, 0, null, false);
             case MEDITATE -> new Visuals(0.08f, 0, 0, -1.5f, 0.35f, 0.2f, 0,
-                    new ParticleSpec(ParticleTypes.ENCHANT, 3, 0.4));
-            case REST -> new Visuals(0.10f, 0, -0.05f, -0.4f, 0.2f, 0, 0, null);
+                    new ParticleSpec(ParticleTypes.ENCHANT, 3, 0.4), false);
+            case REST -> new Visuals(0.10f, 0, -0.05f, -0.4f, 0.2f, 0, 0, null, false);
             case WITHDRAW -> new Visuals(-0.15f, 0, 0, -0.9f, 0, 0, 0,
-                    new ParticleSpec(ParticleTypes.HAPPY_VILLAGER, 3, 0.4));
+                    new ParticleSpec(ParticleTypes.HAPPY_VILLAGER, 3, 0.4), false);
         };
     }
 }

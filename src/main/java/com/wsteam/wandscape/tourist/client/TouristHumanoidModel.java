@@ -50,19 +50,26 @@ public class TouristHumanoidModel extends HumanoidModel<TouristEntity> {
         head.xRot += v.headXRot() * t;
         head.yRot += v.headYRot() * t;
         body.xRot += v.bodyXRot() * t;
-        rightArm.xRot += v.armXRot() * t;
-        leftArm.xRot += v.armXRot() * t;
-        rightArm.zRot += v.armZRot() * t;
-        leftArm.zRot += -v.armZRot() * t;
+        // EAT 等 rightArmOnly：只抬右手（主手持物到嘴边），左手保持自然
+        if (v.rightArmOnly()) {
+            rightArm.xRot += v.armXRot() * t;
+            rightArm.zRot += v.armZRot() * t;
+        } else {
+            rightArm.xRot += v.armXRot() * t;
+            leftArm.xRot += v.armXRot() * t;
+            rightArm.zRot += v.armZRot() * t;
+            leftArm.zRot += -v.armZRot() * t;
+        }
         rightLeg.xRot += v.legXRot() * t;
         leftLeg.xRot += v.legXRot() * t;
 
         // 循环动画（周期摆动，与 Blender/GeckoLib 无关的原版正弦关键帧）
         if (v.armSwing() > 0f) {
-            // 双臂一起小幅摆动（EAT 抬食到嘴边）——单臂泵动会显得很奇怪
             float swing = Mth.sin(ageInTicks * 0.3f) * v.armSwing();
             rightArm.xRot += swing;
-            leftArm.xRot += swing;
+            if (!v.rightArmOnly()) {
+                leftArm.xRot += swing;
+            }
         }
         if (activity == Activity.VIEW) {
             // 看展：缓慢转身扫视
