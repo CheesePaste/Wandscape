@@ -29,14 +29,15 @@ Wandscape 是个模拟经营模组：你放下建筑，**法师 NPC 替你干活
 - [元素节点 Node](guide:node_guide)
 - [祭坛 Altar（复活）](guide:altar_guide)
 - [酒馆 Tavern（招募法师）](guide:tavern_guide)
-- [商店 Shop](guide:shop_guide)（机制重做中）
-- [旅馆 Hotel](guide:hotel_guide)（机制重做中）
+- [商店 Shop（卖东西给游客）](guide:shop_guide)
+- [旅馆与服务建筑（过夜 / 产元素）](guide:hotel_guide)
+- 放松建筑（澡堂等，回复精力）与取款机 ATM（补旅费）——见[游客系统指南](guide:tourist_guide)
 
 ## 👥 NPC 与游客
 
 - [法师 NPC 指南](guide:npc_guide)
 - [施法策略指南](guide:strategy_guide)
-- [游客系统指南](guide:tourist_guide)
+- [游客系统指南](guide:tourist_guide)——三条需求条、画像与四类游客建筑
 
 ## ⚠️ 经营与维护
 
