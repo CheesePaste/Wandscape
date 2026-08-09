@@ -15,8 +15,8 @@ Welcome to the Markdown viewer test page built into the **Wandscape** mod! This 
 
 Click the links below to experience document jumps and in-game actions:
 
-👉 [Jump to 🏛️ Town Hall guide](guide:townhall_guide)  
-👉 [Jump to 📦 Warehouse & logistics guide](guide:warehouse_guide)  
+👉 [Jump to 🏛️ Town Hall guide](townhall_guide.md)  
+👉 [Jump to 📦 Warehouse & logistics guide](warehouse_guide.md)  
 👉 [Open build overview mode](action:wandscape:overview_mode)
 
 ## 3. Dynamic Images & Animations

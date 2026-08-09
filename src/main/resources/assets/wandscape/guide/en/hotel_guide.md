@@ -1,27 +1,32 @@
 # 🏨 Hotel & Service Buildings
 
-Service buildings do two things: **make tourists spend energy and produce elements for you**. One type also **keeps tourists overnight** — that is the hotel. Both count as the `service` category; the only difference is "whether there are beds".
+Service buildings make tourists spend energy and produce elements for the town. Hotels add overnight stays on top of that, with tourists checking out in the morning with full energy.
 
-## Hotels (the Kind That Keeps You Overnight)
+## Hotel
 
-The hotel is tourists' resting place: when energy is bottomed out or night falls before they've finished exploring, tourists come here for a night, and **check out in the morning with full energy**, then keep exploring.
+When a tourist's energy runs out or night falls before they finish exploring, they head to a hotel for the night and **check out in the morning with full energy** to continue.
 
-- **Beds** are decided by the building's `max_occupancy` — when full, later tourists go elsewhere or leave.
-- Tourists lie down to sleep on check-in (purely visual, doesn't affect the bed), and get up on their own in the morning.
-- Checking in also takes an **interact spot**; if spots are full, they queue up as well.
+| Item | Description |
+|---|---|
+| Beds | Fixed per hotel; when full, later tourists go elsewhere or leave |
+| Interact spot | Check-in occupies one spot; if full, they queue |
+| Animation | Tourists lie down to sleep on check-in (purely visual; does not affect the bed) |
 
-## Service Buildings (the Kind That Doesn't Keep Overnight)
+## Service Buildings
 
-Buildings like the Service Hall operate during the day: tourists go in to "receive service", **spending energy and producing elements for you**. They work well as "element supply stations" — place one where tourists get tired, they pay energy and you collect elements, a win-win.
+Buildings like the Service Hall operate during the day: tourists enter to receive service, **spending energy and producing elements for the town**.
 
-## What Makes Them Run
+## Built-in Buildings
 
-Every service building has a set of parameters: how much **tourist energy each service consumes**, **which elements it produces**, whether it has beds, and how long the interaction takes. Want to build your own? Configure the parameters with the service mode of the [Creative Building Scanner](guide:creative_scanner_guide) — it takes effect the moment you export.
+| Building | Beds | Energy Use | Elements Produced |
+|---|---|---|---|
+| Hotel | 8 | Higher | Earth / Wood / Water |
+| Service Hall | None | Lower | Fire / Earth / Wind |
 
-(The mod ships with an Inn and a Service Hall: the Inn has 8 beds, consumes more energy, and produces Earth/Wood/Water; the Service Hall has no beds, consumes little, and produces Fire/Earth/Wind. Different styles — placed in different spots, each has its own uses.)
+Different service buildings do different things: some produce different elements, some add overnight stays. To configure a new one: use the service mode of the [Creative Building Scanner](creative_scanner_guide.md) — it takes effect on export.
 
 ---
 
-[Shop (Where the Money Is Made)](guide:shop_guide)  
-[Tourist System Guide](guide:tourist_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Shop](shop_guide.md)  
+[Tourist System Guide](tourist_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

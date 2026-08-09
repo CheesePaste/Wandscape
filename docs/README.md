@@ -48,6 +48,7 @@ Wandscape 是一个 Minecraft NeoForge 1.21.1 模组，包含两大系统：
 | 道路 JSON（模板/规则/等级） | [data/road.md](data/road.md) |
 | 叙事 JSON 格式 | [data/narratives.md](data/narratives.md) |
 | architecture 与代码差异 / 未接线点 / 已知问题 | [gaps.md](gaps.md) |
+| 游戏内指南书文体规范（写作标尺） | [guide_style.md](guide_style.md) |
 
 ## 代码发现路径
 

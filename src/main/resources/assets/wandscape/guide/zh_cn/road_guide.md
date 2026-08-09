@@ -1,6 +1,6 @@
 # 🛣️ 道路系统
 
-先说个残酷的事实：**游客只走铺好的路**。你修的路能延伸多远，小镇的经济就能长多远——这不是比喻，是硬规则。所以这篇值得认真读。
+**游客只走铺好的路**。没有路就没有游客，商店开门也不会有人进。
 
 ![道路系统示意图](wandscape:textures/gui/guide/road_diagram.png =200x100)
 
@@ -31,15 +31,15 @@
 | **Backspace** | 撤销上一个端点 |
 | **ESC** | 退出道路施工 |
 
-提交后 NPC 法师会照任务自动铺；建筑放得够多时，小镇也会自动规划道路把建筑连起来。要画精细的弯道和立交，用[样条线编辑器](guide:road_spline_guide)。
+提交后 NPC 法师会照任务自动铺；建筑放得够多时，小镇也会自动规划道路把建筑连起来。要画精细的弯道和立交，用[样条线编辑器](road_spline_guide.md)。
 
 ## 分模式教程
 
-- [替换模式（地表铺路）](guide:road_replace_guide)
-- [填充与清理（Fill / Destroy）](guide:road_fill_guide)
-- [样条线编辑器（弯道与立交）](guide:road_spline_guide)
+- [替换模式（地表铺路）](road_replace_guide.md)
+- [填充与清理（Fill / Destroy）](road_fill_guide.md)
+- [样条线编辑器（弯道与立交）](road_spline_guide.md)
 
 ---
 
-[全局面板与鸟瞰视角](guide:overview_guide)  
-[📖 返回指南首页](guide:index_guide)
+[全局面板与鸟瞰视角](overview_guide.md)  
+[📖 返回指南首页](index_guide.md)

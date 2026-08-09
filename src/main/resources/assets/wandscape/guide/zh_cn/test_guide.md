@@ -15,8 +15,8 @@
 
 点击下方链接体验文档间跳转与游戏内动作：
 
-👉 [跳转至 🏛️ 市政厅指南](guide:townhall_guide)  
-👉 [跳转至 📦 仓库与物流指南](guide:warehouse_guide)  
+👉 [跳转至 🏛️ 市政厅指南](townhall_guide.md)  
+👉 [跳转至 📦 仓库与物流指南](warehouse_guide.md)  
 👉 [开启选建鸟瞰模式](action:wandscape:overview_mode)
 
 ## 3. 动态图像与动画
