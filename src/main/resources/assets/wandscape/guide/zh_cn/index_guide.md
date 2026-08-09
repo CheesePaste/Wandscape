@@ -9,7 +9,8 @@ Wandscape 是个模拟经营模组：你放下建筑，**法师 NPC 替你干活
 ## 🏗️ 建造与城镇
 
 - [全局面板与鸟瞰视角](guide:overview_guide)——按 V 打开，一切从这里开始
-- [建筑扫描器](guide:scanner_guide)——把建好的房子变成蓝图，让 NPC 照着重建
+- [建筑扫描器](guide:scanner_guide)——生存玩家把建好的房子复制成蓝图，让 NPC 重建
+- [创造建筑扫描器](guide:creative_scanner_guide)——创作者工具：交互位、经营参数、装饰导出
 
 ## 🛣️ 道路系统
 
