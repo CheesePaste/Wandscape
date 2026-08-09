@@ -207,6 +207,9 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         JsonObject root = new JsonObject();
         root.addProperty("id", id);
         root.addProperty("display_name", scanner.getDisplayName());
+        if (scanner.getCreator() != null && !scanner.getCreator().isBlank()) {
+            root.addProperty("creator", scanner.getCreator());
+        }
         root.addProperty("category", scanner.getCategory());
 
         // Pattern

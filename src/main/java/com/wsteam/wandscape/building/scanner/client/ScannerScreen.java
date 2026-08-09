@@ -46,7 +46,7 @@ public class ScannerScreen extends MedievalScreen {
     private int detectedDoorIndex = -1;
 
     // ── Metadata ──
-    private EditBox metaId, metaName;
+    private EditBox metaId, metaName, metaCreator;
 
     // ── Export ──
     private Component scanResult = Component.literal("尚未扫描");
@@ -59,6 +59,7 @@ public class ScannerScreen extends MedievalScreen {
     private EditBox bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ;
     private int doorEditY;
     private int metaStartY;
+    private int metaCreatorY;
     private int exportBtnY;
 
     // ── Field Background Inset Rectangles with EditBox reference ──
@@ -208,7 +209,13 @@ public class ScannerScreen extends MedievalScreen {
             scanner.setDisplayName(s);
             syncToServer();
         });
-        y += 40;
+        y += ROW_H + 2;
+        metaCreatorY = y;
+        metaCreator = mkEdit(lx + 4, y + 14, 310, scanner.getCreator(), s -> {
+            scanner.setCreator(s);
+            syncToServer();
+        });
+        y += ROW_H + 8;
 
         // ── Export section ──
         addSectionHeader(y, "❖ 导出 (类别固定 custom)");
@@ -527,6 +534,7 @@ public class ScannerScreen extends MedievalScreen {
         drawHdr(gui, "❖ 建筑标识", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
         drawLbl(gui, "Name", lx + 165, metaStartY + 14);
+        drawLbl(gui, "Creator", lx + 4, metaCreatorY);
 
         drawHdr(gui, "❖ 导出 (类别固定 custom)", lx, exportBtnY - 14);
         gui.drawString(font, scanResult, lx + 230, exportBtnY + 6, MedievalColors.TEXT_MUTED);

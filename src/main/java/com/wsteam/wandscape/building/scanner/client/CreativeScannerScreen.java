@@ -54,7 +54,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     private int detectedDoorIndex = -1;
 
     // ── Metadata ──
-    private EditBox metaId, metaName;
+    private EditBox metaId, metaName, metaCreator;
     private EditBox metaComfort, metaMagic, metaWonder;
 
     // ── Unlock requirement ──
@@ -112,7 +112,7 @@ public class CreativeScannerScreen extends MedievalScreen {
     private int doorEditY;
     private int spotHeaderY;
     private int spotMarkerCount;
-    private int metaStartY, metaLabelY;
+    private int metaStartY, metaCreatorY, metaLabelY;
     private int unlockY;
     private int shopCatY, svcCatY, relaxCatY, atmCatY;
     private int exportBtnY;
@@ -301,7 +301,13 @@ public class CreativeScannerScreen extends MedievalScreen {
             scanner.setDisplayName(s);
             syncToServer();
         });
-        y += 40;
+        y += ROW_H + 2;
+        metaCreatorY = y;
+        metaCreator = mkEdit(lx + 4, y + 14, 310, scanner.getCreator(), s -> {
+            scanner.setCreator(s);
+            syncToServer();
+        });
+        y += ROW_H + 8;
 
         metaLabelY = y;
         y += 14;
@@ -941,6 +947,7 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         tag.putString("building_id", scanner.getBuildingId());
         tag.putString("display_name", scanner.getDisplayName());
+        tag.putString("creator", scanner.getCreator());
         tag.putString("category", scanner.getCategory());
         tag.putInt("comfort", scanner.getComfort());
         tag.putInt("magic", scanner.getMagic());
@@ -1002,6 +1009,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (tag.contains("category")) scanner.setCategory(tag.getString("category"));
         if (tag.contains("building_id")) scanner.setBuildingId(tag.getString("building_id"));
         if (tag.contains("display_name")) scanner.setDisplayName(tag.getString("display_name"));
+        if (tag.contains("creator")) scanner.setCreator(tag.getString("creator"));
         if (tag.contains("comfort")) scanner.setComfort(tag.getInt("comfort"));
         if (tag.contains("magic")) scanner.setMagic(tag.getInt("magic"));
         if (tag.contains("wonder")) scanner.setWonder(tag.getInt("wonder"));
@@ -1150,6 +1158,7 @@ public class CreativeScannerScreen extends MedievalScreen {
         drawHdr(gui, "❖ 放置元数据", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
         drawLbl(gui, "Name", lx + 165, metaStartY + 14);
+        drawLbl(gui, "Creator", lx + 4, metaCreatorY);
         drawLbl(gui, "Comfort", lx + COL2, metaLabelY - 10);
         drawLbl(gui, "Magic", lx + COL2 + FW + 16, metaLabelY - 10);
         drawLbl(gui, "Wonder", lx + COL2 + (FW + 16) * 2, metaLabelY - 10);

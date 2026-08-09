@@ -38,6 +38,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private static final String KEY_DOOR_OFFSET = "door_offset";
     private static final String KEY_BUILDING_ID = "building_id";
     private static final String KEY_DISPLAY_NAME = "display_name";
+    private static final String KEY_CREATOR = "creator";
     private static final String KEY_CATEGORY = "category";
     private static final String KEY_COMFORT = "comfort";
     private static final String KEY_MAGIC = "magic";
@@ -87,6 +88,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private BlockOffset doorOffset = null;
     private String buildingId = "";
     private String displayName = "";
+    private String creator = "";
     private String category = "basic";
     private int comfort, magic, wonder;
     /** Whether blocks have been scanned for pattern/mapping. */
@@ -257,6 +259,9 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String name) { this.displayName = name; }
 
+    public String getCreator() { return creator; }
+    public void setCreator(String value) { this.creator = value; }
+
     public String getCategory() { return category; }
     public void setCategory(String cat) { this.category = cat; }
 
@@ -397,6 +402,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         }
         tag.putString(KEY_BUILDING_ID, buildingId);
         tag.putString(KEY_DISPLAY_NAME, displayName);
+        tag.putString(KEY_CREATOR, creator);
         tag.putString(KEY_CATEGORY, category);
         tag.putInt(KEY_COMFORT, comfort);
         tag.putInt(KEY_MAGIC, magic);
@@ -488,6 +494,7 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         }
         buildingId = tag.getString(KEY_BUILDING_ID);
         displayName = tag.getString(KEY_DISPLAY_NAME);
+        creator = tag.getString(KEY_CREATOR);
         category = tag.contains(KEY_CATEGORY) ? tag.getString(KEY_CATEGORY) : "basic";
         comfort = tag.getInt(KEY_COMFORT);
         magic = tag.getInt(KEY_MAGIC);
