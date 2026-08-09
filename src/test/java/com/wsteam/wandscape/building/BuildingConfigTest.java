@@ -256,4 +256,33 @@ class BuildingConfigTest {
             assertTrue(cfg.interactSpots().isEmpty());
         }
     }
+
+    @Nested
+    class DecorationEntities {
+        @Test
+        void parseEntitiesArray() {
+            String json = """
+                {"id":"gallery","category":"custom",
+                 "entities":[
+                   {"offset":[1,2,0],"type":"minecraft:item_frame","facing":"north","nbt":"aGVsbG8="},
+                   {"offset":[1,2,0],"type":"minecraft:painting","facing":"south","nbt":"d29ybGQ="}
+                 ]}
+                """;
+            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+            assertEquals(2, cfg.entities().size());
+            assertEquals(new BlockOffset(1, 2, 0), cfg.entities().get(0).offset());
+            assertEquals("minecraft:item_frame", cfg.entities().get(0).type());
+            assertEquals("north", cfg.entities().get(0).facing());
+            assertEquals("aGVsbG8=", cfg.entities().get(0).nbtBase64());
+            assertEquals("minecraft:painting", cfg.entities().get(1).type());
+            assertEquals("south", cfg.entities().get(1).facing());
+        }
+
+        @Test
+        void missingEntitiesDefaultsEmpty() {
+            String json = "{\"id\":\"x\",\"category\":\"basic\"}";
+            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+            assertTrue(cfg.entities().isEmpty());
+        }
+    }
 }

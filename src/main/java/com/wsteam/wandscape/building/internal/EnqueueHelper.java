@@ -178,6 +178,11 @@ public final class EnqueueHelper {
             if (!params.containsKey("blocks_nbt")) {
                 params.put("blocks_nbt", blockNbtToJson(config));
             }
+            // Auto-add entities if not provided by bind (older building JSONs) so the
+            // blueprint's for_each $entities always has a value — empty means no decorations.
+            if (!params.containsKey("entities")) {
+                params.put("entities", entitiesToJson(config));
+            }
             if (config.boundary() != null) {
                 if (sd != null && buildingId != null) {
                     params.put("clear_offsets", computeClearOffsetsFiltered(config, sd, pos, buildingId));
@@ -223,6 +228,11 @@ public final class EnqueueHelper {
                     params.put("blocks_nbt", rotateBlockNbtJson(
                             params.get("blocks_nbt").getAsJsonObject(), rotationSteps));
                 }
+                // Rotate decoration entities (offsets + facing strings, NBT opaque)
+                if (params.containsKey("entities")) {
+                    params.put("entities", rotateEntitiesJson(
+                            params.get("entities").getAsJsonArray(), rotationSteps));
+                }
                 // Rotate clear_offsets
                 if (params.containsKey("clear_offsets")) {
                     params.put("clear_offsets", rotateOffsetsJson(
@@ -266,6 +276,7 @@ public final class EnqueueHelper {
             case "magic" -> new JsonPrimitive(config.magic());
             case "wonder" -> new JsonPrimitive(config.wonder());
             case "boundary" -> boundaryToJson(config);
+            case "entities" -> entitiesToJson(config);
             case "tourist_interact_aabb" -> touristInteractAabbToJson(config);
             case "door_offset" -> config.doorOffset() != null
                     ? offsetToJson(config.doorOffset()) : new JsonArray();
@@ -332,6 +343,22 @@ public final class EnqueueHelper {
             obj.addProperty(entry.getKey(), entry.getValue());
         }
         return obj;
+    }
+
+    /** Serialize decoration entities to a JSON array of {offset, type, facing, nbt}. */
+    private static JsonElement entitiesToJson(BuildingConfig config) {
+        JsonArray arr = new JsonArray();
+        for (BuildingConfig.DecorationEntity ent : config.entities()) {
+            JsonObject obj = new JsonObject();
+            obj.add("offset", offsetToJson(ent.offset()));
+            obj.addProperty("type", ent.type());
+            obj.addProperty("facing", ent.facing());
+            if (ent.nbtBase64() != null) {
+                obj.addProperty("nbt", ent.nbtBase64());
+            }
+            arr.add(obj);
+        }
+        return arr;
     }
 
     private static JsonElement boundaryToJson(BuildingConfig config) {
@@ -472,6 +499,28 @@ public final class EnqueueHelper {
             if (off == null) continue;
             BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
             result.addProperty(rotatedOff.toKey(), entry.getValue().getAsString());
+        }
+        return result;
+    }
+
+    /** Rotate a JSON array of decoration entity objects: offset + facing rotate, NBT stays opaque. */
+    private static JsonArray rotateEntitiesJson(JsonArray entities, int steps) {
+        JsonArray result = new JsonArray();
+        for (int i = 0; i < entities.size(); i++) {
+            JsonObject ent = entities.get(i).getAsJsonObject();
+            JsonArray offArr = ent.getAsJsonArray("offset");
+            BlockOffset off = new BlockOffset(
+                    offArr.get(0).getAsInt(), offArr.get(1).getAsInt(), offArr.get(2).getAsInt());
+            BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
+            JsonObject rotatedEnt = new JsonObject();
+            rotatedEnt.add("offset", offsetToJson(rotated));
+            rotatedEnt.addProperty("type", ent.get("type").getAsString());
+            rotatedEnt.addProperty("facing", BuildingRotation.rotateFacing(
+                    ent.get("facing").getAsString(), steps));
+            if (ent.has("nbt")) {
+                rotatedEnt.addProperty("nbt", ent.get("nbt").getAsString());
+            }
+            result.add(rotatedEnt);
         }
         return result;
     }

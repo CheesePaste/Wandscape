@@ -6,6 +6,7 @@ import java.util.Map;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Rotation;
@@ -144,6 +145,21 @@ public final class BuildingRotation {
             result.put(rotatedOff.toKey(), rotatedBlock);
         }
         return result;
+    }
+
+    /**
+     * Rotate a Direction string (e.g. "north") by {@code steps} increments of 90°
+     * clockwise around Y — same handedness as {@link #rotateOffset}. Up/down
+     * directions are unchanged; unknown strings pass through unchanged.
+     */
+    public static String rotateFacing(String facing, int steps) {
+        Direction dir = Direction.byName(facing);
+        if (dir == null || dir.getAxis() == Direction.Axis.Y) return facing;
+        steps = steps & 3;
+        for (int i = 0; i < steps; i++) {
+            dir = dir.getClockWise();
+        }
+        return dir.getName();
     }
 
     /**

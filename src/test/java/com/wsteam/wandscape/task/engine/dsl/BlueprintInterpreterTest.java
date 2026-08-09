@@ -232,6 +232,26 @@ class BlueprintInterpreterTest {
         }
 
         @Test
+        @DisplayName("spawn_entity step generates SpawnDecorationOp")
+        void spawnEntityStep() {
+            BlueprintDefinition def = new BlueprintDefinition("test:spawn", Collections.emptyMap(),
+                    List.of(new StepNode.SpawnEntityStep(
+                            new ExprNode.LiteralPos(new GridPos(1, 65, 0)),
+                            new ExprNode.LiteralString("minecraft:item_frame"),
+                            new ExprNode.LiteralString("north"),
+                            new ExprNode.LiteralString("b64nbt"))));
+
+            TaskSequence seq = interpreter.interpret(def, Collections.emptyMap());
+            assertEquals(1, seq.size());
+            assertTrue(seq.get(0) instanceof AtomicOp.SpawnDecorationOp);
+            AtomicOp.SpawnDecorationOp op = (AtomicOp.SpawnDecorationOp) seq.get(0);
+            assertEquals(new GridPos(1, 65, 0), op.target());
+            assertEquals("minecraft:item_frame", op.entityType());
+            assertEquals("north", op.facing());
+            assertEquals("b64nbt", op.nbtBase64());
+        }
+
+        @Test
         @DisplayName("emit_event generates EmitEventOp")
         void emitEventStep() {
             BlueprintDefinition def = new BlueprintDefinition("test:emit", Collections.emptyMap(),
