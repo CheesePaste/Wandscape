@@ -47,3 +47,7 @@ Tourists only walk on paved roads. **Roads are the lifeline of the economy** —
 ## 🛠️ Creator Tools
 
 - [Magic Circle Web Editor](guide:magic_circle_editor_guide)
+
+## 📝 About
+
+- [Creators & Special Thanks](guide:creators_guide)
