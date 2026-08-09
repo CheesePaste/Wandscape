@@ -80,7 +80,14 @@ public class WandscapeBlockOps implements BlockOps {
         try {
             BlockState oldState = level.getBlockState(bp);
             evacuateEntities(level, bp);
-            level.setBlock(bp, state, 2);
+            // 建造放置瞬间开启守卫：丢弃放置触发的 scheduled tick（水/岩浆流动、
+            // 侦测器脉冲、比较器重算），方块落地即为其最终状态，避免施工中水流。
+            BuildPlacementGuard.enable();
+            try {
+                level.setBlock(bp, state, 2);
+            } finally {
+                BuildPlacementGuard.disable();
+            }
             if (state.isAir() && !oldState.isAir()) {
                 // 移除（拆除/清空）：播被拆方块自身的原版破坏音，节流防止每块都响
                 SoundEvent breakSound = oldState.getSoundType(level, bp, null).getBreakSound();
