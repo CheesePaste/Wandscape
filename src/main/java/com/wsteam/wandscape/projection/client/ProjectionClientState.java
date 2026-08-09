@@ -55,6 +55,16 @@ public final class ProjectionClientState {
     }
 
     /**
+     * Clamp a slot index into {@code [0, size)}. Out-of-range (negative, or {@code >= size},
+     * including any index when {@code size == 0}) folds back to 0. Package-private so the
+     * selection-preservation logic can be unit-tested in isolation.
+     */
+    static int clampSlotIndex(int current, int size) {
+        if (current < 0 || current >= size) return 0;
+        return current;
+    }
+
+    /**
      * Enter projection mode. Called from {@code ProjectionEnterResponsePacket} client handler.
      * Saves current player state, enablestransl flight, stores building slots.
      */
@@ -71,9 +81,7 @@ public final class ProjectionClientState {
         }
         // Preserve selection across suspend/resume within a session: only clamp the
         // slot index into the (possibly changed) list; keep rotation and pin.
-        if (selectedSlotIndex < 0 || selectedSlotIndex >= slots.size()) {
-            selectedSlotIndex = 0;
-        }
+        selectedSlotIndex = clampSlotIndex(selectedSlotIndex, slots.size());
         // Drop a stale crosshair-follow position, but keep a pinned placement.
         if (!pinned) {
             ghostPos = null;
