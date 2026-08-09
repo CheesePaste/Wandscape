@@ -83,5 +83,8 @@ gen_icons.py
 fix_icons.py
 generate_icons.js
 
+### 废弃的指南重写临时目录（已 revert，残留不入库） ###
+guide_rewrite_temp/
+
 ### CurseForge description (local only, not part of the mod) ###
 curseforge-description.md
