@@ -17,12 +17,12 @@ The Warehouse doesn't look like much, but all the town's money and materials pas
 ## A Few Numbers
 
 - When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds.
-- Elements are the lifeline: maintenance, building, and crafting all cost them. When short on elements, gather them from [Element Nodes](guide:node_guide) or replenish by decomposing at the [Workstation](guide:workstation_guide).
+- Elements are the lifeline: maintenance, building, and crafting all cost them. When short on elements, gather them from [Element Nodes](node_guide.md) or replenish by decomposing at the [Workstation](workstation_guide.md).
 - When NPCs take materials, you'll see items **flying** from the warehouse to the wizard's hands — that is normal, not a glitch.
 
 ---
 
-[Town Hall](guide:townhall_guide)  
-[Element Node](guide:node_guide)  
-[Getting Started: From Empty Land to a Tourist Town](guide:getting_started_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Town Hall](townhall_guide.md)  
+[Element Node](node_guide.md)  
+[Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

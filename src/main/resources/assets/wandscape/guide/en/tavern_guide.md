@@ -15,12 +15,12 @@ About **5% of tourists are mage tourists**. When their three need bars are **all
 ## A Few Tips
 
 - Recruited wizards join with full mana and start working right away.
-- Want more resumes? See the [Tourist Guide](guide:tourist_guide) for how to get tourists to fill their need bars.
-- For wizard attributes, equipment, and combat strategy, see the [Wizard NPC Guide](guide:npc_guide).
+- Want more resumes? See the [Tourist Guide](tourist_guide.md) for how to get tourists to fill their need bars.
+- For wizard attributes, equipment, and combat strategy, see the [Wizard NPC Guide](npc_guide.md).
 
 ---
 
-[Wizard NPC Guide](guide:npc_guide)  
-[Tourist System Guide](guide:tourist_guide)  
-[Getting Started: From Empty Land to a Tourist Town](guide:getting_started_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Wizard NPC Guide](npc_guide.md)  
+[Tourist System Guide](tourist_guide.md)  
+[Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

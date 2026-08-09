@@ -25,10 +25,10 @@ How to open: **right-click a wizard → info screen → the "Strategy" button**.
 - When auto-casting, scan from high to low by "preset order + in-category order", and pick the **first castable one**: valid target, cooldown passed, mana sufficient.
 - **Changes save instantly** — no confirmation needed.
 - Once you have configured a wizard (toggled or reordered), your configuration is used; wizards you never configured follow the preset.
-- Altar spells (like Revive) are not in auto-casting — that's the [Altar](guide:altar_guide)'s business.
+- Altar spells (like Revive) are not in auto-casting — that's the [Altar](altar_guide.md)'s business.
 
 ---
 
-[Wizard NPC Guide](guide:npc_guide)  
-[Altar (Ritual Spells like Revive)](guide:altar_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Wizard NPC Guide](npc_guide.md)  
+[Altar (Ritual Spells like Revive)](altar_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

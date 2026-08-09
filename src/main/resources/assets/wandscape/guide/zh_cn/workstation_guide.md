@@ -14,11 +14,11 @@
 
 ## 几个提示
 
-- **元素周转**：合成扣元素、分解补元素，配合[元素节点](guide:node_guide)采集，就能把元素收支盘活。
+- **元素周转**：合成扣元素、分解补元素，配合[元素节点](node_guide.md)采集，就能把元素收支盘活。
 - 配方锁着的时候会显示原因（等级不够 / 元素不足），照着补即可，不用瞎猜。
 
 ---
 
-[合成台（造法杖）](guide:crafting_guide)  
-[元素节点](guide:node_guide)  
-[📖 返回指南首页](guide:index_guide)
+[合成台（造法杖）](crafting_guide.md)  
+[元素节点](node_guide.md)  
+[📖 返回指南首页](index_guide.md)

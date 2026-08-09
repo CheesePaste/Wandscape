@@ -46,8 +46,8 @@ Two big things live in the **Workshop** category of the build panel:
 
 For tourists to fill their three need bars (Comfort/Magic/Wonder) here, you need a few supporting buildings:
 
-- **Shop**: tourists buy things, you earn elements — see the [Shop Guide](guide:shop_guide).
-- **Hotel**: tourists sleep overnight to restore energy, and also produce elements for the town — see the [Hotel Guide](guide:hotel_guide).
+- **Shop**: tourists buy things, you earn elements — see the [Shop Guide](shop_guide.md).
+- **Hotel**: tourists sleep overnight to restore energy, and also produce elements for the town — see the [Hotel Guide](hotel_guide.md).
 - **Relax buildings** (bathhouses etc.) and **ATMs**: the former restores energy, the latter refills travel money — with energy to move around and money to spend, tourists won't leave halfway.
 
 ## Step 7: Build a Tavern and Recruit Wizards
@@ -67,6 +67,6 @@ Settlement happens every day, and each building must pay its **maintenance cost*
 
 ---
 
-[Panel & Overview](guide:overview_guide)  
-[Road System Overview](guide:road_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Panel & Overview](overview_guide.md)  
+[Road System Overview](road_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

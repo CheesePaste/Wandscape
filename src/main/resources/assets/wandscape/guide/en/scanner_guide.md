@@ -25,9 +25,9 @@ Want to copy a stretch of road? Switch to **ROAD mode**, fill in the road preset
 
 ## What About the Creative Building Scanner?
 
-The feature-packed **Creative Building Scanner** is for creators and map makers (it can configure interact spots, business parameters, and decoration export) — **unavailable in survival mode**, and those settings are of no use for normal play anyway. Map makers can go to the [Creative Building Scanner Guide](guide:creative_scanner_guide); players have seen all they need here.
+The feature-packed **Creative Building Scanner** is for creators and map makers (it can configure interact spots, business parameters, and decoration export) — **unavailable in survival mode**, and those settings are of no use for normal play anyway. Map makers can go to the [Creative Building Scanner Guide](creative_scanner_guide.md); players have seen all they need here.
 
 ---
 
-[Panel & Overview](guide:overview_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Panel & Overview](overview_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

@@ -18,12 +18,12 @@
 ## 几个提示
 
 - 节点建成后自动发布采集任务；仓库元素低于日耗时，系统还会自动**加派高优先采集**补货——缺元素时的救命稻草。
-- 采集进的是**仓库**，去[仓库面板](guide:warehouse_guide)看存量。
-- 缺哪种元素就多建几个对应节点；急用就[工作站](guide:workstation_guide)分解。
+- 采集进的是**仓库**，去[仓库面板](warehouse_guide.md)看存量。
+- 缺哪种元素就多建几个对应节点；急用就[工作站](workstation_guide.md)分解。
 
 ---
 
-[仓库与物资](guide:warehouse_guide)  
-[工作站（分解与合成）](guide:workstation_guide)  
-[新手入门：从空城到游客小镇](guide:getting_started_guide)  
-[📖 返回指南首页](guide:index_guide)
+[仓库与物资](warehouse_guide.md)  
+[工作站（分解与合成）](workstation_guide.md)  
+[新手入门：从空城到游客小镇](getting_started_guide.md)  
+[📖 返回指南首页](index_guide.md)

@@ -18,12 +18,12 @@ Place a node and **right-click** to open the panel:
 ## A Few Tips
 
 - A node publishes a gather task automatically once built; when the warehouse's elements fall below the daily consumption, the system also automatically **adds high-priority gather tasks** to restock — a lifesaver when elements run short.
-- Gathers go into the **warehouse** — check the stock in the [Warehouse Panel](guide:warehouse_guide).
-- Short on an element? Build more of the matching node; in a hurry, decompose at the [Workstation](guide:workstation_guide).
+- Gathers go into the **warehouse** — check the stock in the [Warehouse Panel](warehouse_guide.md).
+- Short on an element? Build more of the matching node; in a hurry, decompose at the [Workstation](workstation_guide.md).
 
 ---
 
-[Warehouse & Materials](guide:warehouse_guide)  
-[Workstation (Decompose & Synthesize)](guide:workstation_guide)  
-[Getting Started: From Empty Land to a Tourist Town](guide:getting_started_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Warehouse & Materials](warehouse_guide.md)  
+[Workstation (Decompose & Synthesize)](workstation_guide.md)  
+[Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

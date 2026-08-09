@@ -17,11 +17,11 @@ A shop isn't done when built — **it needs an interact spot, the right goods, a
 
 ## The Shops Available
 
-The mod ships with a Bread Shop, Flower Shop, Book Shop, and Magic Shop. Want to open your own new shop? Use the shop mode of the [Creative Building Scanner](guide:creative_scanner_guide) to configure goods and profit rate — it takes effect the moment you export.
+The mod ships with a Bread Shop, Flower Shop, Book Shop, and Magic Shop. Want to open your own new shop? Use the shop mode of the [Creative Building Scanner](creative_scanner_guide.md) to configure goods and profit rate — it takes effect the moment you export.
 
 (By the way: a shop's goods list is defined in the building JSON — `goods` + `profit_rate` + interaction duration. The Bread Shop has 6 kinds of food, the Flower Shop 6 kinds of flowers, the Book Shop 6 kinds of books, each with its own focus — placing them on different streets attracts tourists of different profiles.)
 
 ---
 
-[Tourist System Guide](guide:tourist_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Tourist System Guide](tourist_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

@@ -25,4 +25,4 @@ Pick a shape → tune the animation (stroke, pulse, smoothness) → drag the cur
 
 ---
 
-[📖 Back to the Guide Index](guide:index_guide)
+[📖 Back to the Guide Index](index_guide.md)

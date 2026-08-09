@@ -14,11 +14,11 @@ Right-click the Workstation → pick a tab → pick a recipe → set the quantit
 
 ## A Few Tips
 
-- **Element turnover**: synthesizing spends elements, decomposing replenishes them — combined with [Element Node](guide:node_guide) gathering, you can keep the element balance alive.
+- **Element turnover**: synthesizing spends elements, decomposing replenishes them — combined with [Element Node](node_guide.md) gathering, you can keep the element balance alive.
 - When a recipe is locked, the reason is shown (level too low / elements insufficient) — just fill it in, no guessing.
 
 ---
 
-[Crafting Station (Wands)](guide:crafting_guide)  
-[Element Node](guide:node_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Crafting Station (Wands)](crafting_guide.md)  
+[Element Node](node_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

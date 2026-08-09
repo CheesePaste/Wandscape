@@ -32,7 +32,7 @@ Tourists stay **2~4 days** and visit each building only once during the whole st
 
 - **Relax buildings** (bathhouses etc.): **restore energy**. Tourists whose energy is exhausted but who don't want to leave head straight here.
 - **ATM buildings** (ATMs): **refill the wallet**. Tourists who ran out of travel money but haven't finished exploring come here to withdraw and continue.
-- **Hotel**: sleep overnight to restore energy — see the [Hotel Guide](guide:hotel_guide).
+- **Hotel**: sleep overnight to restore energy — see the [Hotel Guide](hotel_guide.md).
 
 With all three in place, tourists can fill their need bars in town and leave satisfied.
 
@@ -42,7 +42,7 @@ How many tourists one building can **host at once** depends on how many **intera
 
 ## Mage Tourists
 
-About **5% of tourists are mage tourists**. Mage tourists with all three need bars full leave resumes at the [Tavern](guide:tavern_guide) — free recruitment; this is how you build your wizard roster.
+About **5% of tourists are mage tourists**. Mage tourists with all three need bars full leave resumes at the [Tavern](tavern_guide.md) — free recruitment; this is how you build your wizard roster.
 
 ## How to Keep the Town Well Served
 
@@ -52,7 +52,7 @@ About **5% of tourists are mage tourists**. Mage tourists with all three need ba
 
 ---
 
-[Shop (Where the Money Is Made)](guide:shop_guide)  
-[Hotel & Service Buildings](guide:hotel_guide)  
-[Tavern (Recruiting Wizards)](guide:tavern_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Shop (Where the Money Is Made)](shop_guide.md)  
+[Hotel & Service Buildings](hotel_guide.md)  
+[Tavern (Recruiting Wizards)](tavern_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

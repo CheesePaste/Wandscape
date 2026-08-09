@@ -25,4 +25,4 @@
 
 ---
 
-[📖 返回指南首页](guide:index_guide)
+[📖 返回指南首页](index_guide.md)

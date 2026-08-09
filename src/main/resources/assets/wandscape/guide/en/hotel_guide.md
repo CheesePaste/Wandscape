@@ -16,12 +16,12 @@ Buildings like the Service Hall operate during the day: tourists go in to "recei
 
 ## What Makes Them Run
 
-Every service building has a set of parameters: how much **tourist energy each service consumes**, **which elements it produces**, whether it has beds, and how long the interaction takes. Want to build your own? Configure the parameters with the service mode of the [Creative Building Scanner](guide:creative_scanner_guide) — it takes effect the moment you export.
+Every service building has a set of parameters: how much **tourist energy each service consumes**, **which elements it produces**, whether it has beds, and how long the interaction takes. Want to build your own? Configure the parameters with the service mode of the [Creative Building Scanner](creative_scanner_guide.md) — it takes effect the moment you export.
 
 (The mod ships with an Inn and a Service Hall: the Inn has 8 beds, consumes more energy, and produces Earth/Wood/Water; the Service Hall has no beds, consumes little, and produces Fire/Earth/Wind. Different styles — placed in different spots, each has its own uses.)
 
 ---
 
-[Shop (Where the Money Is Made)](guide:shop_guide)  
-[Tourist System Guide](guide:tourist_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Shop (Where the Money Is Made)](shop_guide.md)  
+[Tourist System Guide](tourist_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

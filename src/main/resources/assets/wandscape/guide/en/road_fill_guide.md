@@ -26,6 +26,6 @@ These two modes handle **3D terrain**: Fill mode is a 3D paint bucket — bridgi
 
 ---
 
-[Replace Mode (Surface Paving)](guide:road_replace_guide)  
-[Road System Overview](guide:road_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Replace Mode (Surface Paving)](road_replace_guide.md)  
+[Road System Overview](road_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

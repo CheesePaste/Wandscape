@@ -20,14 +20,14 @@
 
 ## 怎么预防
 
-- **仓库常留底**：多建[元素节点](guide:node_guide)采集，用[工作站](guide:workstation_guide)分解多余材料补元素。
+- **仓库常留底**：多建[元素节点](node_guide.md)采集，用[工作站](workstation_guide.md)分解多余材料补元素。
 - 损坏**不会自己修**——修复必须你点，别指望法师自觉。
 
 顺带一提：扫描器导出的 **custom 建筑没有维护费**，永远不会因为交不起钱停运。
 
 ---
 
-[元素节点（采集元素）](guide:node_guide)  
-[仓库与物资](guide:warehouse_guide)  
-[全局面板与鸟瞰视角](guide:overview_guide)  
-[📖 返回指南首页](guide:index_guide)
+[元素节点（采集元素）](node_guide.md)  
+[仓库与物资](warehouse_guide.md)  
+[全局面板与鸟瞰视角](overview_guide.md)  
+[📖 返回指南首页](index_guide.md)

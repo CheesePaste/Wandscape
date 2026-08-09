@@ -17,12 +17,12 @@
 ## 几个数字
 
 - 放第一座建筑时，仓库自动收到**每种元素各 2000** 的启动资金。
-- 元素是命脉：维护费、建造、合成全要花。缺元素时靠[元素节点](guide:node_guide)采集、或[工作站](guide:workstation_guide)分解补充。
+- 元素是命脉：维护费、建造、合成全要花。缺元素时靠[元素节点](node_guide.md)采集、或[工作站](workstation_guide.md)分解补充。
 - NPC 取料时你会看到物品**飞行动画**从仓库送到法师手里——那是正常的，不是卡了。
 
 ---
 
-[市政厅](guide:townhall_guide)  
-[元素节点](guide:node_guide)  
-[新手入门：从空城到游客小镇](guide:getting_started_guide)  
-[📖 返回指南首页](guide:index_guide)
+[市政厅](townhall_guide.md)  
+[元素节点](node_guide.md)  
+[新手入门：从空城到游客小镇](getting_started_guide.md)  
+[📖 返回指南首页](index_guide.md)

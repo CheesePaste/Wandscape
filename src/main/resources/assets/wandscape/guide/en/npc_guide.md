@@ -11,7 +11,7 @@ Wizards are the town's hands: building houses, gathering elements, crafting, and
 
 **Left side · Equipment (5 slots)**
 
-- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). The three wand tiers are in the [Crafting Station](guide:crafting_guide).
+- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). The three wand tiers are in the [Crafting Station](crafting_guide.md).
 - **Armor slots (4)**: helmet / chestplate / leggings / boots, raising armor damage reduction. Wear with confidence — it doesn't affect the appearance; the robe stays as is, only numbers count.
 
 **Right side · Attributes**
@@ -31,17 +31,17 @@ Wizards are the town's hands: building houses, gathering elements, crafting, and
 ## Combat
 
 - Wizards **guard** the colony: monsters near buildings trigger auto-casting, and they fight back in self-defense when hit.
-- In fights they pick spells by your [Cast Strategy](guide:strategy_guide).
+- In fights they pick spells by your [Cast Strategy](strategy_guide.md).
 - A **nameplate** above the head shows the name and status — who is doing what at a glance.
 
 ## A Few Tips
 
 - **Wands first**: Spell Power directly decides combat strength; give the good wands to your main wizards.
-- Fallen wizards don't disappear — revive them at the [Altar](guide:altar_guide); they're just weak for a while.
+- Fallen wizards don't disappear — revive them at the [Altar](altar_guide.md); they're just weak for a while.
 
 ---
 
-[Cast Strategy Guide](guide:strategy_guide)  
-[Tavern (Recruiting Wizards)](guide:tavern_guide)  
-[Crafting Station (Wands)](guide:crafting_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Cast Strategy Guide](strategy_guide.md)  
+[Tavern (Recruiting Wizards)](tavern_guide.md)  
+[Crafting Station (Wands)](crafting_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

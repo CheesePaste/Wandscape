@@ -17,11 +17,11 @@
 
 ## 几种商店
 
-模组自带面包店、花店、书店、魔法商店。想自己开新店？用[创造建筑扫描器](guide:creative_scanner_guide)的商店模式配置商品和利润率，导出即生效。
+模组自带面包店、花店、书店、魔法商店。想自己开新店？用[创造建筑扫描器](creative_scanner_guide.md)的商店模式配置商品和利润率，导出即生效。
 
 （顺带一提：商店的商品列表在建筑 JSON 里定义——`goods` + `profit_rate` + 交互时长。面包店 6 种食品、花店 6 种花、书店 6 种书，各有侧重，开在不同街区能吸引不同画像的游客。）
 
 ---
 
-[游客系统指南](guide:tourist_guide)  
-[📖 返回指南首页](guide:index_guide)
+[游客系统指南](tourist_guide.md)  
+[📖 返回指南首页](index_guide.md)

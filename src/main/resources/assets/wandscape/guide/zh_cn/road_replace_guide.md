@@ -22,7 +22,7 @@
 
 ---
 
-[填充与清理模式](guide:road_fill_guide)  
-[样条线编辑器](guide:road_spline_guide)  
-[道路系统总览](guide:road_guide)  
-[📖 返回指南首页](guide:index_guide)
+[填充与清理模式](road_fill_guide.md)  
+[样条线编辑器](road_spline_guide.md)  
+[道路系统总览](road_guide.md)  
+[📖 返回指南首页](index_guide.md)

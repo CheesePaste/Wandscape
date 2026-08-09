@@ -22,10 +22,10 @@ It opens in **overview mode** by default: the camera rises above your head, lett
 ## The Three Sidebar Tabs
 
 - **Build**: the building bar below lists everything you can build by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). **Single-click** to select, **double-click** to enter placement; in the world, **left-click** rotates the orientation, **right-click** pins and opens the construction screen — fine-tune X/Y/Z, then **Submit**. First-free buildings are marked.
-- **Roads**: the complete paving toolset — see the [Road System Overview](guide:road_guide).
+- **Roads**: the complete paving toolset — see the [Road System Overview](road_guide.md).
 - **Stats**: tourist flow, economic income, resident count, and anomaly warnings — the town's state at a glance.
 
-Below the sidebar there is also a **⚠️ warning icon**: it lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](guide:anomaly_guide), where broken buildings can be repaired in one click.
+Below the sidebar there is also a **⚠️ warning icon**: it lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired in one click.
 
 ## Where to Start
 
@@ -33,9 +33,9 @@ Below the sidebar there is also a **⚠️ warning icon**: it lights up when a b
 2. Build a **Warehouse** to store materials.
 3. Connect the buildings with the road tools — tourists only walk on paved roads.
 
-See [Getting Started](guide:getting_started_guide) for the full route.
+See [Getting Started](getting_started_guide.md) for the full route.
 
 ---
 
-[Road System Overview](guide:road_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Road System Overview](road_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

@@ -18,12 +18,12 @@
 
 ## 几个提示
 
-- 做好的法杖进**仓库**，在[法师面板](guide:npc_guide)给法师装上。
+- 做好的法杖进**仓库**，在[法师面板](npc_guide.md)给法师装上。
 - 法杖不耗耐久，造一把用一辈子。
 - 金和暗元素比较金贵，大师法杖是后期的东西，别急。
 
 ---
 
-[工作站（分解与合成）](guide:workstation_guide)  
-[法师 NPC 指南](guide:npc_guide)  
-[📖 返回指南首页](guide:index_guide)
+[工作站（分解与合成）](workstation_guide.md)  
+[法师 NPC 指南](npc_guide.md)  
+[📖 返回指南首页](index_guide.md)

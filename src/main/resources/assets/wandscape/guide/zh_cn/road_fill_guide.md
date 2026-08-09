@@ -26,6 +26,6 @@
 
 ---
 
-[替换模式（地表铺路）](guide:road_replace_guide)  
-[道路系统总览](guide:road_guide)  
-[📖 返回指南首页](guide:index_guide)
+[替换模式（地表铺路）](road_replace_guide.md)  
+[道路系统总览](road_guide.md)  
+[📖 返回指南首页](index_guide.md)

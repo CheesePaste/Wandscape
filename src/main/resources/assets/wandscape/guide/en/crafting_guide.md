@@ -18,12 +18,12 @@ Spell power directly decides a wizard's casting might. Recipes have level gates;
 
 ## A Few Tips
 
-- Finished wands go into the **warehouse**; equip them on wizards in the [Wizard Panel](guide:npc_guide).
+- Finished wands go into the **warehouse**; equip them on wizards in the [Wizard Panel](npc_guide.md).
 - Wands never lose durability — craft one and use it forever.
 - Metal and Dark are precious elements; the Master Wand is a late-game thing, no rush.
 
 ---
 
-[Workstation (Decompose & Synthesize)](guide:workstation_guide)  
-[Wizard NPC Guide](guide:npc_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Workstation (Decompose & Synthesize)](workstation_guide.md)  
+[Wizard NPC Guide](npc_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

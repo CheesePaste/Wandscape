@@ -22,7 +22,7 @@ Picked the wrong spot? **Right-click** once to clear and reselect, or **Backspac
 
 ---
 
-[Fill & Destroy](guide:road_fill_guide)  
-[Spline Editor](guide:road_spline_guide)  
-[Road System Overview](guide:road_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Fill & Destroy](road_fill_guide.md)  
+[Spline Editor](road_spline_guide.md)  
+[Road System Overview](road_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

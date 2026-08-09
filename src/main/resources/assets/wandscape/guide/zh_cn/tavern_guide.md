@@ -15,12 +15,12 @@
 ## 几个提示
 
 - 招募成功后法师满蓝入职，直接开始干活。
-- 想多拿简历？去[游客指南](guide:tourist_guide)看看怎么让游客填满需求条。
-- 法师的属性、装备和战斗策略，见[法师 NPC 指南](guide:npc_guide)。
+- 想多拿简历？去[游客指南](tourist_guide.md)看看怎么让游客填满需求条。
+- 法师的属性、装备和战斗策略，见[法师 NPC 指南](npc_guide.md)。
 
 ---
 
-[法师 NPC 指南](guide:npc_guide)  
-[游客系统指南](guide:tourist_guide)  
-[新手入门：从空城到游客小镇](guide:getting_started_guide)  
-[📖 返回指南首页](guide:index_guide)
+[法师 NPC 指南](npc_guide.md)  
+[游客系统指南](tourist_guide.md)  
+[新手入门：从空城到游客小镇](getting_started_guide.md)  
+[📖 返回指南首页](index_guide.md)

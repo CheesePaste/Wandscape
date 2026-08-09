@@ -24,6 +24,6 @@ When tourists with **all three need bars full** leave satisfied at night, the to
 
 ---
 
-[Warehouse & Materials](guide:warehouse_guide)  
-[Getting Started: From Empty Land to a Tourist Town](guide:getting_started_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Warehouse & Materials](warehouse_guide.md)  
+[Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

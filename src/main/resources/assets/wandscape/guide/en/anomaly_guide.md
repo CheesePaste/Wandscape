@@ -20,14 +20,14 @@ When a building has a problem, the **⚠️ warning icon in the V panel's sideba
 
 ## How to Prevent It
 
-- **Always keep a reserve in the warehouse**: build more [Element Nodes](guide:node_guide) to gather, and decompose surplus materials at the [Workstation](guide:workstation_guide) to top up elements.
+- **Always keep a reserve in the warehouse**: build more [Element Nodes](node_guide.md) to gather, and decompose surplus materials at the [Workstation](workstation_guide.md) to top up elements.
 - Damage **doesn't repair itself** — repairs must be triggered by you; don't expect wizards to volunteer.
 
 By the way: **custom buildings** exported by the scanner have **no maintenance cost** and can never shut down for failing to pay.
 
 ---
 
-[Element Node (Gathering Elements)](guide:node_guide)  
-[Warehouse & Materials](guide:warehouse_guide)  
-[Panel & Overview](guide:overview_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Element Node (Gathering Elements)](node_guide.md)  
+[Warehouse & Materials](warehouse_guide.md)  
+[Panel & Overview](overview_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

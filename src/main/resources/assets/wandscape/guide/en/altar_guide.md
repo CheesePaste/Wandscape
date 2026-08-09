@@ -25,6 +25,6 @@ Wizards can die in battle. The Altar is your regret medicine — for now it know
 
 ---
 
-[Wizard NPC Guide](guide:npc_guide)  
-[Cast Strategy Guide](guide:strategy_guide)  
-[📖 Back to the Guide Index](guide:index_guide)
+[Wizard NPC Guide](npc_guide.md)  
+[Cast Strategy Guide](strategy_guide.md)  
+[📖 Back to the Guide Index](index_guide.md)

@@ -24,6 +24,6 @@
 
 ---
 
-[仓库与物资](guide:warehouse_guide)  
-[新手入门：从空城到游客小镇](guide:getting_started_guide)  
-[📖 返回指南首页](guide:index_guide)
+[仓库与物资](warehouse_guide.md)  
+[新手入门：从空城到游客小镇](getting_started_guide.md)  
+[📖 返回指南首页](index_guide.md)

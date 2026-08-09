@@ -25,6 +25,6 @@
 
 ---
 
-[法师 NPC 指南](guide:npc_guide)  
-[施法策略指南](guide:strategy_guide)  
-[📖 返回指南首页](guide:index_guide)
+[法师 NPC 指南](npc_guide.md)  
+[施法策略指南](strategy_guide.md)  
+[📖 返回指南首页](index_guide.md)
