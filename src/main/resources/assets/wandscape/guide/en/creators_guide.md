@@ -38,7 +38,8 @@ List the programmers who took part in developing the mod:
 - **curseforge**: https://www.curseforge.com/minecraft/mc-mods/wandscape
 - **modrinth**: To be added
 - **mc百科**: To be added
-
+## Feedback
+- https://github.com/CheesePaste/Wandscape/issues
 ---
 
 [📖 Back to Guide Home](guide:index_guide)

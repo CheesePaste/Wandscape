@@ -1,33 +1,44 @@
-# 📝 制作者 & 特别感谢
+# 关于我们 & 反馈
 
-Wandscape 由热爱《哈利波特》与模拟经营的开发者、建筑师与玩家们共同浇灌。感谢每一位为这座魔法小镇添砖加瓦的人。
+Wandscape 由热爱Minecraft与模拟经营的开发者、建筑师与玩家们共同浇灌。感谢每一位为这座魔法小镇添砖加瓦的人。
 
-> 本页是编辑模板：下方列出模组的创作者与贡献者。建筑师、个人链接、程序等请补充在对应分区。
+## 主策划 & 主开发
+- **CheesePaste**
+- https://space.bilibili.com/514121566
 
-## 🏗️ 建筑师
+## 主开发
+- **Victory FX**
+- https://space.bilibili.com/630432283
+- **Flamtingo**
+- https://space.bilibili.com/1506072626
 
-在这里列出贡献建筑蓝图的建筑师（姓名 / 游戏内 ID / 个人链接）：
+## 建筑师
 
-- **（建筑师名）** —— 贡献建筑：xxx、xxx —— [个人链接](https://example.com)
+在这里列出为模组提供了建筑的建筑师们：
 
-## 👨💻 程序
+- **(开发者名）** —— 贡献建筑：xxx、xxx —— [个人链接](https://example.com)
+
+## 开发
 
 在这里列出参与模组开发的程序员：
 
 - **（开发者名）** —— 职责：xxx —— [个人链接](https://example.com)
 
-## 🔗 个人链接
-
-在这里集中列出上述创作者的个人主页 / 作品链接：
-
-- [姓名 / 昵称](https://example.com) —— 简介
-
-## 💐 特别感谢
-
-在这里列出想感谢的人、社区与灵感来源：
+## 特别感谢
 
 - ...
+## 支持我们
+- https://ifdian.net/a/CheesePaste
 
+## 官方平台(部分)
+- **bilibili**:https://space.bilibili.com/514121566
+- **discord**:https://discord.gg/da8ZPuQ7Ys
+- **github**:https://github.com/CheesePaste/Wandscape
+- **curseforge**:https://www.curseforge.com/minecraft/mc-mods/wandscape
+- **modrinth**:等待补充
+- **mc百科**:等待补充
+## 反馈
+- https://github.com/CheesePaste/Wandscape/issues
 ---
 
 [📖 返回指南首页](guide:index_guide)

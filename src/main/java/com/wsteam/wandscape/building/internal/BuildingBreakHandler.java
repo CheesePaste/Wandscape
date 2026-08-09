@@ -195,18 +195,29 @@ public final class BuildingBreakHandler {
 
         if (offsets.isEmpty()) return;
 
-        enqueueRepairWorkItem(state, config, offsets, blocks, blocksNbt);
+        enqueueRepairWorkItem(state, config, offsets, blocks, blocksNbt, rotationSteps);
     }
 
     private static void enqueueRepairWorkItem(BuildingState state, BuildingConfig config,
                                                JsonArray offsets, JsonObject blocks,
-                                               JsonObject blocksNbt) {
+                                               JsonObject blocksNbt, int rotationSteps) {
         Map<String, JsonElement> params = new HashMap<>();
         params.put("anchor", posToJsonArray(state.getAnchor()));
         params.put("offsets", offsets);
         params.put("blocks", blocks);
         params.put("blocks_nbt", blocksNbt);
         params.put("name", new JsonPrimitive(config.displayName()));
+
+        // Restore decorative entities too — replay the full list (idempotent:
+        // spawnDecoration clears the cell before spawning, so undamaged ones are
+        // re-confirmed without loss and lost ones come back). Skipped when none.
+        if (!config.entities().isEmpty()) {
+            JsonArray entities = EnqueueHelper.entitiesToJson(config);
+            if (rotationSteps != 0) {
+                entities = EnqueueHelper.rotateEntitiesJson(entities, rotationSteps);
+            }
+            params.put("entities", entities);
+        }
 
         // Compute material_list + material_counts from damaged blocks so the
         // build:place_structure blueprint can request resources from the warehouse.

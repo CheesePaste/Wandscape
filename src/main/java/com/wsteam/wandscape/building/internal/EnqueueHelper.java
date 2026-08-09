@@ -340,7 +340,7 @@ public final class EnqueueHelper {
     }
 
     /** Serialize decoration entities to a JSON array of {offset, type, facing, nbt}. */
-    private static JsonElement entitiesToJson(BuildingConfig config) {
+    static JsonArray entitiesToJson(BuildingConfig config) {
         JsonArray arr = new JsonArray();
         for (BuildingConfig.DecorationEntity ent : config.entities()) {
             JsonObject obj = new JsonObject();
@@ -498,7 +498,7 @@ public final class EnqueueHelper {
     }
 
     /** Rotate a JSON array of decoration entity objects: offset + facing rotate, NBT stays opaque. */
-    private static JsonArray rotateEntitiesJson(JsonArray entities, int steps) {
+    static JsonArray rotateEntitiesJson(JsonArray entities, int steps) {
         JsonArray result = new JsonArray();
         for (int i = 0; i < entities.size(); i++) {
             JsonObject ent = entities.get(i).getAsJsonObject();
