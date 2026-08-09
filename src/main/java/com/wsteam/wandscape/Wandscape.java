@@ -332,6 +332,12 @@ public class Wandscape {
     public static final DeferredItem<Item> BUILDING_SCANNER_ITEM =
             ITEMS.register("building_scanner", () -> new BlockItem(BUILDING_SCANNER.get(), new Item.Properties()));
 
+    public static final DeferredHolder<Block, Block> INTERACT_SPOT_MARKER = BLOCKS.register("interact_spot_marker",
+            () -> (Block) new com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock(
+                    BlockBehaviour.Properties.of().strength(2.0f).noOcclusion()));
+    public static final DeferredItem<Item> INTERACT_SPOT_MARKER_ITEM =
+            ITEMS.register("interact_spot_marker", () -> new BlockItem(INTERACT_SPOT_MARKER.get(), new Item.Properties()));
+
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =
             CREATIVE_MODE_TABS.register("wandscape_tab", () -> CreativeModeTab.builder()
@@ -344,6 +350,7 @@ public class Wandscape {
                         output.accept(TOURIST_SPAWN_EGG.get());
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
+                        output.accept(INTERACT_SPOT_MARKER_ITEM.get());
                     })
                     .build());
 

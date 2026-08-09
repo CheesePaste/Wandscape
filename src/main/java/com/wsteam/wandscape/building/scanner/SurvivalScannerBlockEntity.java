@@ -3,7 +3,6 @@ package com.wsteam.wandscape.building.scanner;
 import java.util.List;
 import java.util.Map;
 
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
 
 import net.minecraft.core.BlockPos;
@@ -39,9 +38,6 @@ public class SurvivalScannerBlockEntity extends BuildingScannerBlockEntity {
 
     @Override
     public int getWonder() { return 0; }
-
-    @Override
-    public List<BoundaryBox> getTouristInteractZones() { return List.of(); }
 
     @Override
     public List<ShopGoodData> getShopGoods() { return List.of(); }

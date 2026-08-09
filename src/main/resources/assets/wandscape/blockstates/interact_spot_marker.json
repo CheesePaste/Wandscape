@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "wandscape:block/interact_spot_marker"
+    }
+  }
+}

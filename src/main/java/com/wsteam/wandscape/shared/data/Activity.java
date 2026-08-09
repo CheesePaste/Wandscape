@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.shared.data;
 
+import net.minecraft.util.StringRepresentable;
+
 /**
  * 游客活动状态 / 交互位动作种类。
  *
@@ -7,8 +9,9 @@ package com.wsteam.wandscape.shared.data;
  * 要引用它，避免跨模块直接引用。
  *
  * <p>{@code TouristState} 保持移动状态标签，禁止扩展为状态机；活动状态一律走本枚举。
+ * 实现 {@link StringRepresentable} 以便作为 blockstate 属性值（interact_spot_marker 的 action）。
  */
-public enum Activity {
+public enum Activity implements StringRepresentable {
     /** 赶路中（AI 移动状态，非交互位动作）。 */
     TRAVEL,
     /** 排队等待（spot 全满，AI 状态，非交互位动作）。 */
@@ -47,6 +50,11 @@ public enum Activity {
 
     /** 序列化为小写 JSON 字符串。 */
     public String toJsonString() {
+        return name().toLowerCase();
+    }
+
+    @Override
+    public String getSerializedName() {
         return name().toLowerCase();
     }
 }

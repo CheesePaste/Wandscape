@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
@@ -46,15 +45,13 @@ public class BuildingScannerScreen extends MedievalScreen {
     // ── Category ──
     private static final List<String> CATEGORIES = List.of(
             "basic", "government", "node", "storage", "workstation", "crafting_station",
-            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "altar", "custom"
+            "potion_station", "tavern", "shop", "service", "decoration", "wonder", "altar",
+            "relax", "atm", "custom"
     );
 
     // ── Door offset ──
     private EditBox doorX, doorY, doorZ;
     private int detectedDoorIndex = -1;
-
-    // ── Tourist interact zones ──
-    private final List<ZoneRow> zoneRows = new ArrayList<>();
 
     // ── Metadata ──
     private EditBox metaId, metaName;
@@ -68,6 +65,12 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     // ── Service config (shown when category=service) ──
     private EditBox serviceEnergy, serviceMaxOcc, serviceDuration;
+
+    // ── Relax config (shown when category=relax) ──
+    private EditBox relaxEnergy, relaxDuration;
+
+    // ── Atm config (shown when category=atm) ──
+    private EditBox atmWithdraw, atmDuration;
 
     // ── Presets ──
     private EditBox presetNameEdit;
@@ -107,10 +110,11 @@ public class BuildingScannerScreen extends MedievalScreen {
     private int boundaryEditY;
     private EditBox bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ;
     private int doorEditY;
-    private int zoneHeaderY;
+    private int spotHeaderY;
+    private int spotMarkerCount;
     private int metaStartY, metaLabelY;
     private int unlockY;
-    private int shopCatY, svcCatY;
+    private int shopCatY, svcCatY, relaxCatY, atmCatY;
     private int exportBtnY;
 
     // ── Field Background Inset Rectangles with EditBox reference ──
@@ -144,7 +148,6 @@ public class BuildingScannerScreen extends MedievalScreen {
     protected void init() {
         super.init();
         customButtons.clear();
-        zoneRows.clear();
         insetFields.clear();
         maintRows.clear();
         goodRows.clear();
@@ -274,23 +277,14 @@ public class BuildingScannerScreen extends MedievalScreen {
         });
         addCustomButton(lx + 266, doorEditY, 54, 20, "自动检门", this::onAutoDetectDoor);
 
-        // ── Tourist interact zones section ──
-        addSectionHeader(y, "❖ 游览交互区 (" + scanner.getTouristInteractZones().size() + ")");
+        // ── Interact spots (marker-driven) section ──
+        spotMarkerCount = countSpotMarkers();
+        addSectionHeader(y, "❖ 交互位 (" + spotMarkerCount + ")");
+        spotHeaderY = y - 14;
         y += 16;
-        zoneHeaderY = y - 14;
-
-        addCustomButton(lx + 240, y - 15, 80, 20, "+ 添加区域", () -> {
-            scanner.addTouristInteractZone(new BoundaryBox(
-                    BlockOffset.of(-1, 0, -1), BlockOffset.of(1, 0, 1)));
-            syncToServer();
-            needsRebuild = true;
-        });
-
-        List<BoundaryBox> zones = scanner.getTouristInteractZones();
-        for (int i = 0; i < zones.size(); i++) {
-            ZoneRow row = new ZoneRow(i, lx + 4, y);
-            zoneRows.add(row);
-            y += ROW_H + 4;
+        y += ROW_H * 2;   // 两行提示文案
+        if (isTouristCategory(scanner.getCategory()) && spotMarkerCount == 0) {
+            y += ROW_H;   // 无交互位警告
         }
         y += 8;
 
@@ -498,6 +492,50 @@ public class BuildingScannerScreen extends MedievalScreen {
                 y += ROW_H + 2;
             }
             y += 8;
+        } else if ("relax".equals(cat)) {
+            shopCatY = 0;
+            goodsCatY = 0;
+            shopProfitRate = null;
+            shopDuration = null;
+            svcCatY = 0;
+            elemOutY = 0;
+            addSectionHeader(y, "❖ 放松参数");
+            y += 16;
+            relaxCatY = y - 14;
+
+            relaxEnergy = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getRelaxEnergyRestore(), s -> {
+                scanner.setRelaxEnergyRestore(intOrZero(s));
+                syncToServer();
+            });
+            y += ROW_H + 2;
+
+            relaxDuration = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getRelaxInteractionDurationTicks(), s -> {
+                scanner.setRelaxInteractionDurationTicks(intOrZero(s));
+                syncToServer();
+            });
+            y += ROW_H + 8;
+        } else if ("atm".equals(cat)) {
+            shopCatY = 0;
+            goodsCatY = 0;
+            shopProfitRate = null;
+            shopDuration = null;
+            svcCatY = 0;
+            elemOutY = 0;
+            addSectionHeader(y, "❖ ATM 参数");
+            y += 16;
+            atmCatY = y - 14;
+
+            atmWithdraw = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getAtmWithdrawAmount(), s -> {
+                scanner.setAtmWithdrawAmount(intOrZero(s));
+                syncToServer();
+            });
+            y += ROW_H + 2;
+
+            atmDuration = mkNumEdit(lx + COL2 + 90, y, 50, scanner.getAtmInteractionDurationTicks(), s -> {
+                scanner.setAtmInteractionDurationTicks(intOrZero(s));
+                syncToServer();
+            });
+            y += ROW_H + 8;
         } else {
             shopCatY = 0;
             goodsCatY = 0;
@@ -541,6 +579,31 @@ public class BuildingScannerScreen extends MedievalScreen {
         // Layout marker only
     }
 
+    private static boolean isTouristCategory(String c) {
+        return "shop".equals(c) || "service".equals(c) || "relax".equals(c) || "atm".equals(c);
+    }
+
+    /** 扫 boundary 内 interact_spot_marker 数量（client，一次 rebuild 算一次）。 */
+    private int countSpotMarkers() {
+        var level = scanner.getLevel();
+        if (level == null) return 0;
+        BlockPos wMin = scanner.getWorldMin();
+        BlockPos wMax = scanner.getWorldMax();
+        if (wMin == null || wMax == null) return 0;
+        int count = 0;
+        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                    if (level.getBlockState(new BlockPos(x, y, z))
+                            .is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
     // ── Widget creation helpers ──
 
     private EditBox mkEdit(int x, int y, int w, String val, Consumer<String> r) {
@@ -567,39 +630,6 @@ public class BuildingScannerScreen extends MedievalScreen {
     }
 
     // ── Inner classes for rows ──
-
-    private class ZoneRow {
-        final int index;
-        final EditBox[] min = new EditBox[3];
-        final EditBox[] max = new EditBox[3];
-
-        ZoneRow(int idx, int zx, int zy) {
-            this.index = idx;
-            int zw = 28;
-            BoundaryBox zone = scanner.getTouristInteractZones().get(idx);
-
-            int labelW = 20;
-            EditBox label = mkEdit(zx, zy, labelW, "#" + idx, s -> {});
-            label.setEditable(false);
-            label.setFocused(false);
-
-            int mx = zx + 24;
-            min[0] = mkZoneEdit(mx, zy, zw, zone.min().x(), () -> updateZone(idx));
-            min[1] = mkZoneEdit(mx + zw + 2, zy, zw, zone.min().y(), () -> updateZone(idx));
-            min[2] = mkZoneEdit(mx + (zw + 2) * 2, zy, zw, zone.min().z(), () -> updateZone(idx));
-
-            int mx2 = mx + (zw + 2) * 3 + 8;
-            max[0] = mkZoneEdit(mx2, zy, zw, zone.max().x(), () -> updateZone(idx));
-            max[1] = mkZoneEdit(mx2 + zw + 2, zy, zw, zone.max().y(), () -> updateZone(idx));
-            max[2] = mkZoneEdit(mx2 + (zw + 2) * 2, zy, zw, zone.max().z(), () -> updateZone(idx));
-
-            addCustomButton(mx2 + (zw + 2) * 3 + 6, zy, 18, 20, "×", () -> {
-                scanner.removeTouristInteractZone(idx);
-                syncToServer();
-                needsRebuild = true;
-            });
-        }
-    }
 
     private class CostRow {
         final Runnable onChanged;
@@ -658,19 +688,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
     }
 
-    private EditBox mkZoneEdit(int x, int y, int w, int val, Runnable onChange) {
-        EditBox box = new EditBox(font, x + 2, y + 2, w - 4, 14, Component.empty());
-        box.setMaxLength(6);
-        box.setFilter(s -> s.matches("-?\\d{0,6}"));
-        box.setValue(String.valueOf(val));
-        box.setBordered(false);
-        box.setTextColor(MedievalColors.TEXT_WARM_WHITE);
-        box.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        box.setResponder(s -> onChange.run());
-        insetFields.add(new FieldRect(x, y, w, 20, box));
-        return addRenderableWidget(box);
-    }
-
     private void addBoundaryEdits(int y) {
         int cw = 48;
         int gap = 8;
@@ -727,16 +744,6 @@ public class BuildingScannerScreen extends MedievalScreen {
         return addRenderableWidget(box);
     }
 
-    private void updateZone(int idx) {
-        if (idx >= scanner.getTouristInteractZones().size()) return;
-        ZoneRow row = zoneRows.get(idx);
-        scanner.updateTouristInteractZone(idx, new BoundaryBox(
-                BlockOffset.of(intOrZero(row.min[0]), intOrZero(row.min[1]), intOrZero(row.min[2])),
-                BlockOffset.of(intOrZero(row.max[0]), intOrZero(row.max[1]), intOrZero(row.max[2]))
-        ));
-        syncToServer();
-    }
-
     private boolean needsRebuild = false;
 
     @Override
@@ -783,7 +790,6 @@ public class BuildingScannerScreen extends MedievalScreen {
 
     private void rebuild() {
         super.clearWidgets();
-        zoneRows.clear();
         init();
     }
 
@@ -933,15 +939,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             tag.putIntArray("door_offset", new int[]{dOff.x(), dOff.y(), dOff.z()});
         }
 
-        ListTag zonesTag = new ListTag();
-        for (BoundaryBox zone : scanner.getTouristInteractZones()) {
-            CompoundTag zt = new CompoundTag();
-            zt.putIntArray("min", new int[]{zone.min().x(), zone.min().y(), zone.min().z()});
-            zt.putIntArray("max", new int[]{zone.max().x(), zone.max().y(), zone.max().z()});
-            zonesTag.add(zt);
-        }
-        tag.put("tourist_interact_zones", zonesTag);
-
         tag.putString("building_id", scanner.getBuildingId());
         tag.putString("display_name", scanner.getDisplayName());
         tag.putString("category", scanner.getCategory());
@@ -993,6 +990,11 @@ public class BuildingScannerScreen extends MedievalScreen {
         }
         tag.put("service_element_output", seoList);
 
+        tag.putInt("relax_energy_restore", scanner.getRelaxEnergyRestore());
+        tag.putInt("relax_duration", scanner.getRelaxInteractionDurationTicks());
+        tag.putInt("atm_withdraw_amount", scanner.getAtmWithdrawAmount());
+        tag.putInt("atm_duration", scanner.getAtmInteractionDurationTicks());
+
         return tag;
     }
 
@@ -1010,20 +1012,6 @@ public class BuildingScannerScreen extends MedievalScreen {
             if (arr.length == 3) scanner.setDoorOffset(BlockOffset.of(arr[0], arr[1], arr[2]));
         } else {
             scanner.setDoorOffset(null);
-        }
-
-        scanner.clearTouristInteractZones();
-        if (tag.contains("tourist_interact_zones", Tag.TAG_LIST)) {
-            for (int i = 0; i < tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).size(); i++) {
-                CompoundTag zt = tag.getList("tourist_interact_zones", Tag.TAG_COMPOUND).getCompound(i);
-                int[] min = zt.getIntArray("min");
-                int[] max = zt.getIntArray("max");
-                if (min.length == 3 && max.length == 3) {
-                    scanner.addTouristInteractZone(new BoundaryBox(
-                            BlockOffset.of(min[0], min[1], min[2]),
-                            BlockOffset.of(max[0], max[1], max[2])));
-                }
-            }
         }
 
         scanner.setMaintenanceCost(Map.of());
@@ -1151,7 +1139,13 @@ public class BuildingScannerScreen extends MedievalScreen {
         drawLbl(gui, "Y", lx + COL2 + FW + 4, doorEditY - 10);
         drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
 
-        drawHdr(gui, "❖ 游览交互区 (" + scanner.getTouristInteractZones().size() + ")", lx, zoneHeaderY);
+        drawHdr(gui, "❖ 交互位 (" + spotMarkerCount + ")", lx, spotHeaderY);
+        gui.drawString(font, "放置 interact_spot_marker 标记交互位；右键循环动作，潜行右键移除。",
+                lx + 4, spotHeaderY + 16, MedievalColors.TEXT_MUTED);
+        if (isTouristCategory(scanner.getCategory()) && spotMarkerCount == 0) {
+            gui.drawString(font, "§c无交互位 = 游客不选该建筑",
+                    lx + 4, spotHeaderY + 30, MedievalColors.TEXT_MUTED);
+        }
 
         drawHdr(gui, "❖ 放置元数据", lx, metaStartY);
         drawLbl(gui, "ID", lx + 4, metaStartY + 14);
@@ -1186,6 +1180,14 @@ public class BuildingScannerScreen extends MedievalScreen {
             drawLbl(gui, "最大容纳人数", lx + COL2, svcCatY + ROW_H * 2 - 2);
             drawLbl(gui, "交互时长", lx + COL2, svcCatY + ROW_H * 3 - 2);
             drawHdr(gui, "❖ 元素产出", lx, elemOutY);
+        } else if ("relax".equals(cat)) {
+            drawHdr(gui, "❖ 放松参数", lx, relaxCatY);
+            drawLbl(gui, "回精力/次", lx + COL2, relaxCatY + ROW_H - 4);
+            drawLbl(gui, "交互时长", lx + COL2, relaxCatY + ROW_H * 2 - 4);
+        } else if ("atm".equals(cat)) {
+            drawHdr(gui, "❖ ATM 参数", lx, atmCatY);
+            drawLbl(gui, "取现上限", lx + COL2, atmCatY + ROW_H - 4);
+            drawLbl(gui, "交互时长", lx + COL2, atmCatY + ROW_H * 2 - 4);
         }
 
         drawHdr(gui, "❖ 蓝图与道路导出", lx, exportBtnY - 14);

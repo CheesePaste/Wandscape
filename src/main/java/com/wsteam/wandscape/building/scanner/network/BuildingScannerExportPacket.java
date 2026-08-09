@@ -14,9 +14,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
+import com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
@@ -102,10 +102,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(bp);
-                    // Skip all scanner blocks (SAVE or CORNER) and air
+                    // Skip all scanner blocks (SAVE or CORNER), interact spot markers, and air
                     if (state.isAir()) continue;
                     if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
-                            || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())) continue;
+                            || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())
+                            || state.is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) continue;
 
                     int rx = x - wMin.getX() + scanner.getBoundaryMin().x();
                     int ry = y - wMin.getY() + scanner.getBoundaryMin().y();
@@ -225,24 +226,27 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             root.add("door_offset", dArr);
         }
 
-        // Interact AABB
-        if (!scanner.getTouristInteractZones().isEmpty()) {
-            JsonArray zonesArr = new JsonArray();
-            for (BoundaryBox zone : scanner.getTouristInteractZones()) {
-                JsonObject zObj = new JsonObject();
-                JsonArray zMin = new JsonArray();
-                zMin.add(zone.min().x());
-                zMin.add(zone.min().y());
-                zMin.add(zone.min().z());
-                zObj.add("min", zMin);
-                JsonArray zMax = new JsonArray();
-                zMax.add(zone.max().x());
-                zMax.add(zone.max().y());
-                zMax.add(zone.max().z());
-                zObj.add("max", zMax);
-                zonesArr.add(zObj);
+        // Interact spots: 扫 boundary 内 interact_spot_marker → interact_spots（相对 anchor 偏移 + 动作小写）。
+        // marker 占格即 spot 格（创作者自行留空），marker 已从 pattern 跳过。
+        JsonArray spotsArr = new JsonArray();
+        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                    BlockState st = level.getBlockState(new BlockPos(x, y, z));
+                    if (!st.is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) continue;
+                    JsonObject sObj = new JsonObject();
+                    JsonArray posArr = new JsonArray();
+                    posArr.add(x - scanner.getBlockPos().getX());
+                    posArr.add(y - scanner.getBlockPos().getY());
+                    posArr.add(z - scanner.getBlockPos().getZ());
+                    sObj.add("pos", posArr);
+                    sObj.addProperty("action", InteractSpotMarkerBlock.spotActionOrBrowse(st).toJsonString());
+                    spotsArr.add(sObj);
+                }
             }
-            root.add("tourist_interact_aabb", zonesArr);
+        }
+        if (!spotsArr.isEmpty()) {
+            root.add("interact_spots", spotsArr);
         }
 
         // Category-specific configs
@@ -286,6 +290,20 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             svc.addProperty("max_occupancy", scanner.getServiceMaxOccupancy());
             svc.addProperty("interaction_duration_ticks", scanner.getServiceInteractionDurationTicks());
             root.add("service", svc);
+        }
+
+        if ("relax".equals(scanner.getCategory())) {
+            JsonObject rx = new JsonObject();
+            rx.addProperty("energy_restore", scanner.getRelaxEnergyRestore());
+            rx.addProperty("interaction_duration_ticks", scanner.getRelaxInteractionDurationTicks());
+            root.add("relax", rx);
+        }
+
+        if ("atm".equals(scanner.getCategory())) {
+            JsonObject ax = new JsonObject();
+            ax.addProperty("withdraw_amount", scanner.getAtmWithdrawAmount());
+            ax.addProperty("interaction_duration_ticks", scanner.getAtmInteractionDurationTicks());
+            root.add("atm", ax);
         }
 
         // Blueprint reference

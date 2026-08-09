@@ -1,10 +1,15 @@
 package com.wsteam.wandscape.building.scanner.client;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
+import com.wsteam.wandscape.shared.data.Activity;
 
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -14,8 +19,8 @@ import net.minecraft.core.BlockPos;
 
 /**
  * Block Entity Renderer for the Building Scanner block.
- * Draws orange boundary box, green interact zones, and red door marker
- * for ALL loaded scanner blocks (like vanilla structure blocks).
+ * Draws orange boundary box, per-action colored interact-spot dots (scanned from
+ * world {@code interact_spot_marker} blocks, cached at low frequency), and red door marker.
  */
 public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScannerBlockEntity> {
 
@@ -23,12 +28,26 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
     private static final int BDY_R = 255, BDY_G = 150, BDY_B = 50, BDY_A = 200;
     private static final int BDY_FACE_R = 255, BDY_FACE_G = 150, BDY_FACE_B = 50, BDY_FACE_A = 50;
 
-    // Interact zone: green
-    private static final int IZ_R = 50, IZ_G = 220, IZ_B = 80, IZ_A = 200;
-    private static final int IZ_FACE_R = 50, IZ_FACE_G = 220, IZ_FACE_B = 80, IZ_FACE_A = 50;
-
     // Door marker: red
     private static final int DOOR_R = 255, DOOR_G = 50, DOOR_B = 50, DOOR_A = 200;
+
+    // Interact spot dot colors by action
+    private static final Map<Activity, int[]> ACTION_COLORS = new HashMap<>();
+    static {
+        ACTION_COLORS.put(Activity.BROWSE, new int[]{0, 255, 255});       // 青
+        ACTION_COLORS.put(Activity.EAT, new int[]{255, 165, 0});          // 橙
+        ACTION_COLORS.put(Activity.BATHE, new int[]{30, 144, 255});       // 蓝
+        ACTION_COLORS.put(Activity.VIEW, new int[]{180, 60, 255});        // 紫
+        ACTION_COLORS.put(Activity.MEDITATE, new int[]{0, 200, 0});       // 绿
+        ACTION_COLORS.put(Activity.REST, new int[]{255, 120, 170});       // 粉
+        ACTION_COLORS.put(Activity.WITHDRAW, new int[]{255, 255, 0});     // 黄
+    }
+
+    /** 低频扫 world marker，避免每帧扫整个 boundary。 */
+    private static final int SPOT_SCAN_INTERVAL_TICKS = 40;
+    private final Map<BuildingScannerBlockEntity, SpotCache> spotCaches = new HashMap<>();
+
+    private record SpotCache(List<BlockPos> positions, List<Activity> actions, long lastScan) {}
 
     public BuildingScannerRenderer(BlockEntityRendererProvider.Context ctx) {}
 
@@ -51,13 +70,17 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
                     BDY_FACE_R, BDY_FACE_G, BDY_FACE_B, BDY_FACE_A);
         }
 
-        // 2. Interact zones (green) — local offsets from block origin
-        for (BoundaryBox zone : be.getTouristInteractZones()) {
+        // 2. Interact spots (colored dots by action) — local offsets from block origin
+        SpotCache spots = refreshSpots(be);
+        BlockPos bePos = be.getBlockPos();
+        for (int i = 0; i < spots.positions().size(); i++) {
+            BlockPos lp = spots.positions().get(i).subtract(bePos);
+            int[] c = ACTION_COLORS.getOrDefault(spots.actions().get(i), ACTION_COLORS.get(Activity.BROWSE));
             renderBox(bufferSource, poseStack.last(),
-                    zone.min().x(), zone.min().y(), zone.min().z(),
-                    zone.max().x() + 1, zone.max().y() + 1, zone.max().z() + 1,
-                    IZ_R, IZ_G, IZ_B, IZ_A,
-                    IZ_FACE_R, IZ_FACE_G, IZ_FACE_B, IZ_FACE_A);
+                    lp.getX() + 0.25f, lp.getY() + 0.25f, lp.getZ() + 0.25f,
+                    lp.getX() + 0.75f, lp.getY() + 0.75f, lp.getZ() + 0.75f,
+                    c[0], c[1], c[2], 220,
+                    c[0], c[1], c[2], 60);
         }
 
         // 3. Door marker (red)
@@ -69,6 +92,39 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
                     DOOR_R, DOOR_G, DOOR_B, DOOR_A,
                     DOOR_R, DOOR_G, DOOR_B, DOOR_A);
         }
+    }
+
+    private SpotCache refreshSpots(BuildingScannerBlockEntity be) {
+        var level = be.getLevel();
+        if (level == null) {
+            return new SpotCache(List.of(), List.of(), 0);
+        }
+        long now = level.getGameTime();
+        SpotCache cached = spotCaches.get(be);
+        if (cached != null && now - cached.lastScan() < SPOT_SCAN_INTERVAL_TICKS) {
+            return cached;
+        }
+        BlockPos wMin = be.getWorldMin();
+        BlockPos wMax = be.getWorldMax();
+        List<BlockPos> positions = new ArrayList<>();
+        List<Activity> actions = new ArrayList<>();
+        if (wMin != null && wMax != null) {
+            for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+                for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                    for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                        BlockPos p = new BlockPos(x, y, z);
+                        if (level.getBlockState(p).is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) {
+                            positions.add(p.immutable());
+                            actions.add(com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock
+                                    .spotActionOrBrowse(level.getBlockState(p)));
+                        }
+                    }
+                }
+            }
+        }
+        SpotCache fresh = new SpotCache(positions, actions, now);
+        spotCaches.put(be, fresh);
+        return fresh;
     }
 
     private static void renderBox(MultiBufferSource buf, PoseStack.Pose pose,

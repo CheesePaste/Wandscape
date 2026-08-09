@@ -9,7 +9,6 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
@@ -37,9 +36,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_BOUNDARY_MIN = "boundary_min";
     private static final String KEY_BOUNDARY_MAX = "boundary_max";
     private static final String KEY_DOOR_OFFSET = "door_offset";
-    private static final String KEY_TOURIST_INTERACT_ZONES = "tourist_interact_zones";
-    private static final String KEY_ZONE_MIN = "min";
-    private static final String KEY_ZONE_MAX = "max";
     private static final String KEY_BUILDING_ID = "building_id";
     private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_CATEGORY = "category";
@@ -53,6 +49,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_SERVICE_ENERGY = "service_energy";
     private static final String KEY_SERVICE_MAX_OCC = "service_max_occ";
     private static final String KEY_SERVICE_DURATION = "service_duration";
+    private static final String KEY_RELAX_ENERGY = "relax_energy_restore";
+    private static final String KEY_RELAX_DURATION = "relax_duration";
+    private static final String KEY_ATM_WITHDRAW = "atm_withdraw_amount";
+    private static final String KEY_ATM_DURATION = "atm_duration";
 
     // ── New field NBT keys ──
     private static final String KEY_MAINTENANCE_COST = "maintenance_cost";
@@ -85,7 +85,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private BlockOffset boundaryMax = BlockOffset.of(1, 1, 1);
     @Nullable
     private BlockOffset doorOffset = null;
-    private final List<BoundaryBox> touristInteractZones = new ArrayList<>();
     private String buildingId = "";
     private String displayName = "";
     private String category = "basic";
@@ -102,6 +101,12 @@ public class BuildingScannerBlockEntity extends BlockEntity {
 
     // ── Service config ──
     private int serviceEnergyPerUse, serviceMaxOccupancy, serviceInteractionDurationTicks;
+
+    // ── Relax config ──
+    private int relaxEnergyRestore, relaxInteractionDurationTicks;
+
+    // ── Atm config ──
+    private int atmWithdrawAmount, atmInteractionDurationTicks;
 
     // ── Maintenance cost ──
     private Map<String, Integer> maintenanceCost = new HashMap<>();
@@ -246,30 +251,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         setChangedAndSync();
     }
 
-    public List<BoundaryBox> getTouristInteractZones() {
-        return Collections.unmodifiableList(touristInteractZones);
-    }
-    public void addTouristInteractZone(BoundaryBox zone) {
-        touristInteractZones.add(zone);
-        setChangedAndSync();
-    }
-    public void removeTouristInteractZone(int index) {
-        if (index >= 0 && index < touristInteractZones.size()) {
-            touristInteractZones.remove(index);
-            setChangedAndSync();
-        }
-    }
-    public void updateTouristInteractZone(int index, BoundaryBox zone) {
-        if (index >= 0 && index < touristInteractZones.size()) {
-            touristInteractZones.set(index, zone);
-            setChangedAndSync();
-        }
-    }
-    public void clearTouristInteractZones() {
-        touristInteractZones.clear();
-        setChangedAndSync();
-    }
-
     public String getBuildingId() { return buildingId; }
     public void setBuildingId(String id) { this.buildingId = id; }
 
@@ -309,6 +290,20 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     public void setServiceMaxOccupancy(int v) { this.serviceMaxOccupancy = v; }
     public int getServiceInteractionDurationTicks() { return serviceInteractionDurationTicks; }
     public void setServiceInteractionDurationTicks(int v) { this.serviceInteractionDurationTicks = v; }
+
+    // ── Relax config ──
+
+    public int getRelaxEnergyRestore() { return relaxEnergyRestore; }
+    public void setRelaxEnergyRestore(int v) { this.relaxEnergyRestore = Math.max(0, v); }
+    public int getRelaxInteractionDurationTicks() { return relaxInteractionDurationTicks; }
+    public void setRelaxInteractionDurationTicks(int v) { this.relaxInteractionDurationTicks = Math.max(0, v); }
+
+    // ── Atm config ──
+
+    public int getAtmWithdrawAmount() { return atmWithdrawAmount; }
+    public void setAtmWithdrawAmount(int v) { this.atmWithdrawAmount = Math.max(0, v); }
+    public int getAtmInteractionDurationTicks() { return atmInteractionDurationTicks; }
+    public void setAtmInteractionDurationTicks(int v) { this.atmInteractionDurationTicks = Math.max(0, v); }
 
     // ── Maintenance cost ──
 
@@ -400,15 +395,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         if (doorOffset != null) {
             writeOffsetArray(tag, KEY_DOOR_OFFSET, doorOffset);
         }
-        // Interact zones
-        ListTag zonesTag = new ListTag();
-        for (BoundaryBox zone : touristInteractZones) {
-            CompoundTag zt = new CompoundTag();
-            writeOffsetArray(zt, KEY_ZONE_MIN, zone.min());
-            writeOffsetArray(zt, KEY_ZONE_MAX, zone.max());
-            zonesTag.add(zt);
-        }
-        tag.put(KEY_TOURIST_INTERACT_ZONES, zonesTag);
         tag.putString(KEY_BUILDING_ID, buildingId);
         tag.putString(KEY_DISPLAY_NAME, displayName);
         tag.putString(KEY_CATEGORY, category);
@@ -422,6 +408,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         tag.putInt(KEY_SERVICE_ENERGY, serviceEnergyPerUse);
         tag.putInt(KEY_SERVICE_MAX_OCC, serviceMaxOccupancy);
         tag.putInt(KEY_SERVICE_DURATION, serviceInteractionDurationTicks);
+        tag.putInt(KEY_RELAX_ENERGY, relaxEnergyRestore);
+        tag.putInt(KEY_RELAX_DURATION, relaxInteractionDurationTicks);
+        tag.putInt(KEY_ATM_WITHDRAW, atmWithdrawAmount);
+        tag.putInt(KEY_ATM_DURATION, atmInteractionDurationTicks);
 
         // Maintenance cost
         ListTag mcList = new ListTag();
@@ -496,16 +486,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         } else {
             doorOffset = null;
         }
-        touristInteractZones.clear();
-        if (tag.contains(KEY_TOURIST_INTERACT_ZONES, Tag.TAG_LIST)) {
-            ListTag list = tag.getList(KEY_TOURIST_INTERACT_ZONES, Tag.TAG_COMPOUND);
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag zt = list.getCompound(i);
-                BlockOffset min = readOffsetArray(zt, KEY_ZONE_MIN);
-                BlockOffset max = readOffsetArray(zt, KEY_ZONE_MAX);
-                touristInteractZones.add(new BoundaryBox(min, max));
-            }
-        }
         buildingId = tag.getString(KEY_BUILDING_ID);
         displayName = tag.getString(KEY_DISPLAY_NAME);
         category = tag.contains(KEY_CATEGORY) ? tag.getString(KEY_CATEGORY) : "basic";
@@ -519,6 +499,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         serviceEnergyPerUse = tag.getInt(KEY_SERVICE_ENERGY);
         serviceMaxOccupancy = tag.getInt(KEY_SERVICE_MAX_OCC);
         serviceInteractionDurationTicks = tag.getInt(KEY_SERVICE_DURATION);
+        relaxEnergyRestore = tag.getInt(KEY_RELAX_ENERGY);
+        relaxInteractionDurationTicks = tag.getInt(KEY_RELAX_DURATION);
+        atmWithdrawAmount = tag.getInt(KEY_ATM_WITHDRAW);
+        atmInteractionDurationTicks = tag.getInt(KEY_ATM_DURATION);
 
         // Maintenance cost
         maintenanceCost.clear();
