@@ -12,12 +12,14 @@ public record VisitMemory(
         String buildingDisplayName,
         String category,
         long gameTime,
-        int satisfactionBefore,
-        int satisfactionDelta,
+        /** 三条需求条填充率增量（Comfort/Magic/Wonder，各 0-100）。 */
+        int comfortDelta,
+        int magicDelta,
+        int wonderDelta,
         int energyDelta,
         /** One-line event summary, e.g. "购买了 面包". */
         String whatHappened,
-        /** Computed from satisfactionDelta. */
+        /** Computed from the three deltas (sum → emotion). */
         Emotion emotion
 ) {
 
@@ -30,8 +32,9 @@ public record VisitMemory(
         private String buildingDisplayName = "";
         private String category = "basic";
         private long gameTime;
-        private int satisfactionBefore;
-        private int satisfactionDelta;
+        private int comfortDelta;
+        private int magicDelta;
+        private int wonderDelta;
         private int energyDelta;
         private String whatHappened = "";
 
@@ -39,16 +42,17 @@ public record VisitMemory(
         public Builder buildingDisplayName(String v) { this.buildingDisplayName = v; return this; }
         public Builder category(String v) { this.category = v; return this; }
         public Builder gameTime(long v) { this.gameTime = v; return this; }
-        public Builder satisfactionBefore(int v) { this.satisfactionBefore = v; return this; }
-        public Builder satisfactionDelta(int v) { this.satisfactionDelta = v; return this; }
+        public Builder comfortDelta(int v) { this.comfortDelta = v; return this; }
+        public Builder magicDelta(int v) { this.magicDelta = v; return this; }
+        public Builder wonderDelta(int v) { this.wonderDelta = v; return this; }
         public Builder energyDelta(int v) { this.energyDelta = v; return this; }
         public Builder whatHappened(String v) { this.whatHappened = v; return this; }
 
         public VisitMemory build() {
             return new VisitMemory(
                     buildingTypeId, buildingDisplayName, category, gameTime,
-                    satisfactionBefore, satisfactionDelta, energyDelta,
-                    whatHappened, Emotion.fromDelta(satisfactionDelta));
+                    comfortDelta, magicDelta, wonderDelta, energyDelta,
+                    whatHappened, Emotion.fromDelta(comfortDelta + magicDelta + wonderDelta));
         }
     }
 }

@@ -12,7 +12,7 @@
 | **`Colony Level`** (`stat_level`) | Display Badge (`1 ~ 5`) | `1` | 展现当前魔法小镇等级。等级提升可增加全局人口上限与解锁高级建筑蓝图。 |
 | **`Experience Bar`** (`stat_exp`) | Progress Bar (`0 ~ 100%`) | `0/1000` | 展现魔法小镇建设与经营经验进度 (`experience / expToNext`)。经验满后触发市政厅升级。 |
 | **`Build Plans Button`** (`btn_open_build_plans`) | MedievalButton | — | 点击触发打开蓝图选建 Overlay (`BuildingSelectionOverlay`)，允许玩家挑选并发布建设计划。 |
-| **`Reputation Stat`** (`stat_reputation`) | Rating (-100 ~ +100) | `0` | 游客满意度积累的全局声望值。声望越高，每日城门吸引入城的稀有/富裕游客数量越多。 |
+| **`Reputation Stat`** (`stat_reputation`) | Rating (-100 ~ +100) | `0` | 游客满意度（三条需求条填充）积累的全局声望值。声望越高，每日城门吸引入城的稀有/富裕游客数量越多。 |
 
 ---
 

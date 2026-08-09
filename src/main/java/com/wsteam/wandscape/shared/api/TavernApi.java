@@ -11,7 +11,7 @@ public interface TavernApi {
     boolean recruitCandidate(UUID tavernId, int index);
 
     /**
-     * Called when a mage tourist departs at 100% satisfaction.
+     * Called when a mage tourist departs with all three bars full.
      * Stores their rolled attributes (resume) in the colony's tavern recruitment pool.
      */
     void receiveMageResume(UUID colonyId, String touristName, int level,

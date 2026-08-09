@@ -19,7 +19,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Persists mage tourist resumes that reached 100% satisfaction.
+ * Persists mage tourist resumes whose three bars were full.
  * Max 5 entries per colony, oldest evicted on overflow.
  *
  * <p>Stored as world SavedData under "wandscape_tavern_recruits".

@@ -32,7 +32,8 @@ public record StatsSyncPacket(ColonyStatsSummary summary) implements CustomPacke
         WandscapePanelState.setStatsSummary(new WandscapePanelState.StatsSummary(
                 s.currentDay(),
                 s.buildingsPaid(), s.buildingsShutdown(), s.buildingsRestarted(),
-                s.touristsArrived(), s.touristsDeparted(), s.avgSatisfaction(),
+                s.touristsArrived(), s.touristsDeparted(),
+                s.avgComfortRatio(), s.avgMagicRatio(), s.avgWonderRatio(),
                 s.comfort(), s.magic(), s.wonder(),
                 s.totalElementsConsumed(), s.snapshotCount()));
     }
@@ -47,7 +48,9 @@ public record StatsSyncPacket(ColonyStatsSummary summary) implements CustomPacke
         buf.writeVarInt(s.buildingsRestarted());
         buf.writeVarInt(s.touristsArrived());
         buf.writeVarInt(s.touristsDeparted());
-        buf.writeVarInt(s.avgSatisfaction());
+        buf.writeVarInt(s.avgComfortRatio());
+        buf.writeVarInt(s.avgMagicRatio());
+        buf.writeVarInt(s.avgWonderRatio());
         buf.writeVarInt(s.comfort());
         buf.writeVarInt(s.magic());
         buf.writeVarInt(s.wonder());
@@ -62,7 +65,9 @@ public record StatsSyncPacket(ColonyStatsSummary summary) implements CustomPacke
         int buildingsRestarted = buf.readVarInt();
         int touristsArrived = buf.readVarInt();
         int touristsDeparted = buf.readVarInt();
-        int avgSatisfaction = buf.readVarInt();
+        int avgComfortRatio = buf.readVarInt();
+        int avgMagicRatio = buf.readVarInt();
+        int avgWonderRatio = buf.readVarInt();
         int comfort = buf.readVarInt();
         int magic = buf.readVarInt();
         int wonder = buf.readVarInt();
@@ -72,7 +77,8 @@ public record StatsSyncPacket(ColonyStatsSummary summary) implements CustomPacke
         return new StatsSyncPacket(new ColonyStatsSummary(
                 currentDay,
                 buildingsPaid, buildingsShutdown, buildingsRestarted,
-                touristsArrived, touristsDeparted, avgSatisfaction,
+                touristsArrived, touristsDeparted,
+                avgComfortRatio, avgMagicRatio, avgWonderRatio,
                 comfort, magic, wonder,
                 totalConsumed, snapshotCount));
     }

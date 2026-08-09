@@ -2,7 +2,7 @@ package com.wsteam.wandscape.shared.data;
 
 import com.google.gson.annotations.SerializedName;
 /**
- * A mage tourist who reached 100% satisfaction and left their resume at the tavern.
+ * A mage tourist whose three bars were full and who left their resume at the tavern.
  * Stored in {@code TavernRecruitStorage} (SavedData), max 5 per colony.
  * Carries the rolled attribute set (maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue).
  */

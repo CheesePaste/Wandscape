@@ -67,7 +67,9 @@ public final class WandscapePanelState {
             int buildingsRestarted,
             int touristsArrived,
             int touristsDeparted,
-            int avgSatisfaction,
+            int avgComfortRatio,
+            int avgMagicRatio,
+            int avgWonderRatio,
             int comfort,
             int magic,
             int wonder,
@@ -75,7 +77,7 @@ public final class WandscapePanelState {
             int snapshotCount
     ) {
         public static final StatsSummary EMPTY = new StatsSummary(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
     }
 
     private static volatile StatsSummary statsSummary = StatsSummary.EMPTY;

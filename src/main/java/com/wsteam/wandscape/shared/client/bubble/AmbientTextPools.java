@@ -57,7 +57,7 @@ public final class AmbientTextPools {
                     pool.get(idx));
         }
 
-        Emotion emotion = Emotion.fromSatisfaction(tourist.getSatisfaction());
+        Emotion emotion = Emotion.fromBarRatio(minRatioPct(tourist));
 
         // 50% chance to use a building reference if we have recent visits
         List<VisitMemory> visits = tourist.getRecentVisits();
@@ -81,6 +81,18 @@ public final class AmbientTextPools {
         if (generic == null) return null;
         return bubble("bubble.wandscape.tourist.generic." + emotion.name().toLowerCase()
                 + "." + state.name().toLowerCase() + "." + generic.idx(), generic.text());
+    }
+
+    /** 三条需求条填充率的最小值（min-ratio×100），驱动闲逛气泡情绪。 */
+    private static int minRatioPct(TouristEntity tourist) {
+        int c = pct(tourist.getComfortSat(), tourist.getComfortNeed());
+        int m = pct(tourist.getMagicSat(), tourist.getMagicNeed());
+        int w = pct(tourist.getWonderSat(), tourist.getWonderNeed());
+        return Math.min(Math.min(c, m), w);
+    }
+
+    private static int pct(int sat, int need) {
+        return need <= 0 ? 0 : (int) Math.floor(sat * 100.0 / need);
     }
 
     /** One selected pool entry with its stable index (used to derive the lang key). */

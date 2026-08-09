@@ -9,7 +9,7 @@ The Tavern offers food and leisure services to visiting tourists, and lets you r
 | Control / Label | Type / Range | Default | Details |
 | :--- | :--- | :--- | :--- |
 | **`Tab 0: Recruit`** | Tab | — | Spawns / recruits ordinary wizard NPCs into the town. **First recruit is free**; each subsequent recruit costs 10000 of every element. |
-| **`Tab 1: Mages`** | Tab | — | **Wizard resume panel**. Shows resumes of elite wizard tourists who reached 100% satisfaction and chose to stay. |
+| **`Tab 1: Mages`** | Tab | — | **Wizard resume panel**. Shows resumes of elite wizard tourists whose three bars were full and who chose to stay. |
 | **`Recruit Button`** | MedievalButton | — | Pays the hiring fee to officially recruit the selected wizard as a permanent town worker. |
 
 ---

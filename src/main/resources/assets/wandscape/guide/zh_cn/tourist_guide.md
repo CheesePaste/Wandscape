@@ -9,7 +9,7 @@
 | 控件标识 / 标签 | 类型 / 范围 | 默认值 | 详细作用机制与计算影响 |
 | :--- | :--- | :--- | :--- |
 | **`Energy Stat`** | Display (`0 ~ 100`) | `100` | 体力值。体力过低会触发前往旅馆（Hotel）过夜或离城。 |
-| **`Satisfaction Stat`** | Display (`0 ~ 100%`) | `50%` | 满意度。达到 100% 后会在酒馆留下简历可被招募为法师。 |
+| **`三条需求条`** (Comfort/Magic/Wonder) | Display (`fill/need`) | — | 游客的三条需求条（舒适/魔法/奇观）。逛对应建筑会填充；三条全满的游客夜晚离场会留经验，法师会留下简历可被招募。 |
 | **`Tourist Level`** | Display (`1 ~ 5`) | `1` | 游客富裕等级。等级越高消费力与带入金币越多。 |
 | **`State Badge`** | Enum (`String`) | `VISITING` | 当前 AI 状态（`VISITING` 逛店, `EXPLORING` 游览景点, `SLEEPING` 住宿, `WANDERING` 漫步）。 |
 | **`Target Building`** | Display String | — | 游客当前寻路前往的目标建筑名称与坐标 (`X, Y, Z`)。 |

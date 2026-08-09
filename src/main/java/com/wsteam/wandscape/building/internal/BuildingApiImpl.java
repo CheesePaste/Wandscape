@@ -253,7 +253,7 @@ public class BuildingApiImpl implements BuildingApi {
     private void applyShutdownPenalties(BuildingSavedData sd, BuildingState state,
                                         UUID colonyId, String category) {
         switch (category) {
-            case "shop", "basic", "government", "storage", "tavern":
+            case "shop", "basic", "government", "storage", "tavern", "relax", "atm":
                 sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
                 Log.info(TAG, "[Shutdown] {} '{}': contribution zeroed",
                         category, state.getBuildingId().toString().substring(0, 8));

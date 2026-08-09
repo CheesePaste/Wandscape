@@ -3,6 +3,7 @@ package com.wsteam.wandscape.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristCooldownDebug;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
@@ -61,10 +62,12 @@ public final class TouristCommand {
 
         for (TouristEntity t : tourists) {
             String appearance = t.isMage() ? "法师" : "市民";
-            lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | 满意%d%%",
+            BarRatio br = BarRatio.of(t.getComfortSat(), t.getComfortNeed(),
+                    t.getMagicSat(), t.getMagicNeed(), t.getWonderSat(), t.getWonderNeed());
+            lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | C%d%% M%d%% W%d%%",
                     t.getTouristName(), appearance,
                     t.getCurrentState().getDisplayName(),
-                    t.getLevel(), t.getEnergy(), t.getSatisfaction()));
+                    t.getLevel(), t.getEnergy(), br.comfort(), br.magic(), br.wonder()));
         }
 
         // Show debug flag state

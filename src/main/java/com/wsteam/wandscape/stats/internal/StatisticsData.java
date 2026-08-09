@@ -90,7 +90,9 @@ public final class StatisticsData extends SavedData {
         int buildingsRestarted = 0;
         int touristsArrived = 0;
         int touristsDeparted = 0;
-        int totalSatisfaction = 0;
+        int touristComfortTotal = 0;
+        int touristMagicTotal = 0;
+        int touristWonderTotal = 0;
         long currentDay = 0;
         int comfort = 0;
         int magic = 0;
@@ -103,7 +105,9 @@ public final class StatisticsData extends SavedData {
             buildingsRestarted += snap.buildingsRestarted();
             touristsArrived += snap.touristsArrived();
             touristsDeparted += snap.touristsDeparted();
-            totalSatisfaction += snap.totalSatisfaction();
+            touristComfortTotal += snap.touristComfortTotal();
+            touristMagicTotal += snap.touristMagicTotal();
+            touristWonderTotal += snap.touristWonderTotal();
             currentDay = Math.max(currentDay, snap.day());
 
             for (var entry : snap.elementsConsumed().entrySet()) {
@@ -117,14 +121,21 @@ public final class StatisticsData extends SavedData {
         magic = newest.magic();
         wonder = newest.wonder();
 
-        int avgSatisfaction = touristsDeparted > 0
-                ? (int) Math.round((double) totalSatisfaction / touristsDeparted)
+        int avgComfortRatio = touristsDeparted > 0
+                ? (int) Math.round((double) touristComfortTotal / touristsDeparted)
+                : 0;
+        int avgMagicRatio = touristsDeparted > 0
+                ? (int) Math.round((double) touristMagicTotal / touristsDeparted)
+                : 0;
+        int avgWonderRatio = touristsDeparted > 0
+                ? (int) Math.round((double) touristWonderTotal / touristsDeparted)
                 : 0;
 
         return new ColonyStatsSummary(
                 currentDay,
                 buildingsPaid, buildingsShutdown, buildingsRestarted,
-                touristsArrived, touristsDeparted, avgSatisfaction,
+                touristsArrived, touristsDeparted,
+                avgComfortRatio, avgMagicRatio, avgWonderRatio,
                 comfort, magic, wonder,
                 Map.copyOf(totalConsumed), list.size());
     }

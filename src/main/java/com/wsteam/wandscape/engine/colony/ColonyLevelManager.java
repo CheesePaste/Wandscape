@@ -86,7 +86,7 @@ public final class ColonyLevelManager {
 
     /**
      * Return the experience a tourist of the given level contributes
-     * when departing with 100% satisfaction.
+     * when departing with all three bars full.
      *
      * @param colonyLevel the colony's current level
      * @param touristLevel the tourist's level

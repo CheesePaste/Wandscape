@@ -29,6 +29,20 @@
         "{name} 在{building}醒来，精力充沛",
         "清晨的阳光照进{building}，{name} 伸了个懒腰"
       ]
+    },
+    "relax": {
+      "visit": [
+        "{name} 在{building}歇了歇脚，恢复了精神，{emotion_adj}",
+        "{name} 在{building}放松了一下，觉得{emotion_adj}",
+        "{name} 在{building}好好休息了一番，精力充沛"
+      ]
+    },
+    "atm": {
+      "visit": [
+        "{name} 在{building}取了一笔钱，钱包又鼓起来了，{emotion_adj}",
+        "{name} 在{building}取现补足了旅费，{emotion_adj}",
+        "{name} 在{building}取了钱，继续愉快的旅程，{emotion_adj}"
+      ]
     }
   },
 
@@ -67,15 +81,6 @@
       "{name} 有些失望地离开了殖民地",
       "{name} 叹了口气，离开了殖民地，下次争取更好",
       "{name} 不太满意这趟旅程，默默地离开了"
-    ],
-    "satisfaction_milestone_50": [
-      "{name} 的满意度达到了一半！旅程渐入佳境"
-    ],
-    "satisfaction_milestone_70": [
-      "{name} 对这趟旅程越来越满意了"
-    ],
-    "satisfaction_milestone_100": [
-      "🎉 {name} 的满意度达到了满点！完美的旅程！"
     ]
   },
 

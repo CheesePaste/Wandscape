@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <p>Two tabs:
  * <ul>
  *   <li><b>Recruit</b> — spawn a generic NPC for the colony</li>
- *   <li><b>Mages</b> — list mage tourists who left resumes at 100% satisfaction</li>
+ *   <li><b>Mages</b> — list mage tourists who left resumes with three bars full</li>
  * </ul>
  */
 public class TavernScreen extends MedievalScreen {
@@ -138,7 +138,7 @@ public class TavernScreen extends MedievalScreen {
                 g.drawString(font, I18n.name("gui.wandscape.tavern.no_resumes", "No mage resumes available."),
                         leftPos + 16, topPos + headerHeight + 40, MedievalColors.TEXT_MUTED);
                 g.drawString(font, I18n.name("gui.wandscape.tavern.resume_hint",
-                                "Mages reach 100% satisfaction to leave resumes."),
+                                "Mages whose three bars are full leave resumes."),
                         leftPos + 16, topPos + headerHeight + 54, MedievalColors.TEXT_DIM);
             } else {
                 int y = topPos + headerHeight + 34;

@@ -12,7 +12,7 @@ The Town Hall is the brain of the whole town!
 | **`Colony Level`** (`stat_level`) | Display Badge (`1 ~ 5`) | `1` | Shows the current town level. Leveling up raises the global population cap and unlocks advanced building blueprints. |
 | **`Experience Bar`** (`stat_exp`) | Progress Bar (`0 ~ 100%`) | `0/1000` | Shows town building and management experience progress (`experience / expToNext`). Filling it triggers a Town Hall upgrade. |
 | **`Build Plans Button`** (`btn_open_build_plans`) | MedievalButton | — | Opens the blueprint selection overlay (`BuildingSelectionOverlay`), letting the player pick and publish construction plans. |
-| **`Reputation Stat`** (`stat_reputation`) | Rating (-100 ~ +100) | `0` | Global reputation accumulated from tourist satisfaction. Higher reputation attracts more rare/wealthy tourists to the gate each morning. |
+| **`Reputation Stat`** (`stat_reputation`) | Rating (-100 ~ +100) | `0` | Global reputation accumulated from tourist satisfaction (three-bar fill). Higher reputation attracts more rare/wealthy tourists to the gate each morning. |
 
 ---
 

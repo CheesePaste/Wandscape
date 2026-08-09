@@ -152,7 +152,7 @@ public final class BuildingSelectionOverlay {
     }
 
     private static final List<String> CATEGORY_ORDER = List.of(
-            "All", "government", "storage", "service", "shop", "workstation", "node"
+            "All", "government", "storage", "service", "shop", "relax", "atm", "workstation", "node"
     );
 
     /** Categories merged into the 生产工坊 (workstation) tab instead of getting their own tab. */

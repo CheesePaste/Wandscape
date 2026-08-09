@@ -49,6 +49,8 @@ public final class DailySettlementSystem {
         CATEGORY_PRIORITY.put("crafting_station", MaintenancePriority.HIGH);
         CATEGORY_PRIORITY.put("potion_station", MaintenancePriority.HIGH);
         CATEGORY_PRIORITY.put("shop", MaintenancePriority.NORMAL);
+        CATEGORY_PRIORITY.put("relax", MaintenancePriority.NORMAL);
+        CATEGORY_PRIORITY.put("atm", MaintenancePriority.NORMAL);
         CATEGORY_PRIORITY.put("tavern", MaintenancePriority.NORMAL);
         // service, decoration, wonder, and any unknown category → LOW
     }

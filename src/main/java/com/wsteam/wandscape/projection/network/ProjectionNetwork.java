@@ -81,6 +81,8 @@ public final class ProjectionNetwork {
             case "storage" -> 1;
             case "service" -> 2;
             case "shop" -> 3;
+            case "relax" -> 3;
+            case "atm" -> 3;
             case "workstation" -> 4;
             case "crafting_station" -> 5;
             case "node" -> 6;

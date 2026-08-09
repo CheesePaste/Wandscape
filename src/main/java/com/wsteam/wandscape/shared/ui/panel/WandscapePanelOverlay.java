@@ -413,7 +413,11 @@ public final class WandscapePanelOverlay {
         y += lineH;
         drawText(g, font, "  " + I18n.name("gui.wandscape.stats.departed", "Out: %s", stats.touristsDeparted()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.satisfaction", "Sat: %s%%", stats.avgSatisfaction()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.tourist_comfort", "Fill C: %s%%", stats.avgComfortRatio()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.tourist_magic", "Fill M: %s%%", stats.avgMagicRatio()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.tourist_wonder", "Fill W: %s%%", stats.avgWonderRatio()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Right column: elements consumed ──
         int rx = lx + colW + pad;

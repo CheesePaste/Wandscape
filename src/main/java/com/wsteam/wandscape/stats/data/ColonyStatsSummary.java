@@ -15,7 +15,9 @@ public record ColonyStatsSummary(
         int buildingsRestarted,
         int touristsArrived,
         int touristsDeparted,
-        int avgSatisfaction,
+        int avgComfortRatio,
+        int avgMagicRatio,
+        int avgWonderRatio,
         int comfort,
         int magic,
         int wonder,
@@ -23,5 +25,5 @@ public record ColonyStatsSummary(
         int snapshotCount
 ) {
     public static final ColonyStatsSummary EMPTY = new ColonyStatsSummary(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
 }

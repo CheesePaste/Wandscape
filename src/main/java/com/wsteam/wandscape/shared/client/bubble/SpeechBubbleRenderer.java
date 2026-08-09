@@ -123,8 +123,7 @@ public final class SpeechBubbleRenderer {
     }
 
     // ── Transient event bubble (purchase / service feedback) ──
-    // The satisfaction bar below the bubble is rendered independently by
-    // SatisfactionBarRenderer; this method only draws the bubble body + icon.
+    // 瞬时满意度头顶条已移除（Block 4）；本方法只画气泡主体 + 图标。
 
     private static void renderEventBubble(LivingEntity entity, TransientBubbleStore.Event event,
                                           PoseStack poseStack, MultiBufferSource buffer, int packedLight) {

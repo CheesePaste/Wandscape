@@ -11,7 +11,6 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
-import com.wsteam.wandscape.shared.client.bubble.SatisfactionBarRenderer;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
 
 import net.minecraft.client.model.HumanoidModel;
@@ -63,7 +62,6 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, Humanoid
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
         SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
                 AmbientTextPools::getTouristText);
-        SatisfactionBarRenderer.renderBar(entity, poseStack, buffer, packedLight);
     }
 
     @Override
