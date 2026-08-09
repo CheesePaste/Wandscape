@@ -53,6 +53,13 @@ public final class BlueprintInterpreter {
         Objects.requireNonNull(definition, "definition must not be null");
         Objects.requireNonNull(params, "params must not be null");
 
+        // Apply defaults for optional params omitted by the caller
+        if (!definition.defaults().isEmpty()) {
+            Map<String, JsonElement> filled = new HashMap<>(params);
+            definition.defaults().forEach((name, defVal) -> filled.putIfAbsent(name, defVal));
+            params = filled;
+        }
+
         // Validate required params
         validateParams(definition, params);
 
@@ -330,6 +337,9 @@ public final class BlueprintInterpreter {
             JsonElement value = evaluate(valueExpr, context);
             calleeContext.put(paramName, value);
         }
+
+        // Apply callee defaults for optional params omitted from the with block
+        calleeDef.defaults().forEach((name, defVal) -> calleeContext.putIfAbsent(name, defVal));
 
         // Validate: all declared params must be provided
         for (var paramEntry : calleeDef.params().entrySet()) {

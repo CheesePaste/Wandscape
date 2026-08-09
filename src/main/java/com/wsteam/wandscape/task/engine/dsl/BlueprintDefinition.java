@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.task.engine.dsl;
 
+import com.google.gson.JsonElement;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
 
 import java.util.List;
@@ -14,16 +15,24 @@ import java.util.Map;
  * @param steps       the root step list
  * @param displayName optional human-readable name
  * @param description optional description text
+ * @param defaults    default values for optional params (applied when a caller omits them)
  */
 public record BlueprintDefinition(
         String id,
         Map<String, ParamType> params,
         List<StepNode> steps,
         String displayName,
-        String description
+        String description,
+        Map<String, JsonElement> defaults
 ) {
-    /** Convenience: blueprint with no description/displayName. */
+    /** Convenience: blueprint with no description/displayName/defaults. */
     public BlueprintDefinition(String id, Map<String, ParamType> params, List<StepNode> steps) {
-        this(id, params, steps, "", "");
+        this(id, params, steps, "", "", Map.of());
+    }
+
+    /** Convenience: blueprint with displayName/description but no defaults. */
+    public BlueprintDefinition(String id, Map<String, ParamType> params, List<StepNode> steps,
+                              String displayName, String description) {
+        this(id, params, steps, displayName, description, Map.of());
     }
 }

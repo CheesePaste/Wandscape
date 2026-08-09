@@ -88,15 +88,22 @@ public final class BlueprintConfigLoader {
             params = parseParams(obj.getAsJsonObject("params"));
         }
 
+        // Parse defaults (optional params: callers may omit them, interpreter fills these)
+        Map<String, JsonElement> defaults = Collections.emptyMap();
+        if (obj.has("defaults")) {
+            defaults = parseDefaults(obj.getAsJsonObject("defaults"));
+        }
+
         // Parse steps
         List<StepNode> steps = Collections.emptyList();
         if (obj.has("steps")) {
             steps = parseSteps(obj.getAsJsonArray("steps"));
         }
 
-        BlueprintDefinition def = new BlueprintDefinition(id, params, steps, displayName, description);
+        BlueprintDefinition def = new BlueprintDefinition(id, params, steps, displayName, description, defaults);
         definitions.put(id, def);
-        Log.info(TAG, "loaded blueprint: %s (params=%d steps=%d)", id, params.size(), steps.size());
+        Log.info(TAG, "loaded blueprint: %s (params=%d defaults=%d steps=%d)",
+                id, params.size(), defaults.size(), steps.size());
         return def;
     }
 
@@ -117,6 +124,14 @@ public final class BlueprintConfigLoader {
             params.put(entry.getKey(), type);
         }
         return Collections.unmodifiableMap(params);
+    }
+
+    private Map<String, JsonElement> parseDefaults(JsonObject obj) {
+        Map<String, JsonElement> defaults = new LinkedHashMap<>();
+        for (var entry : obj.entrySet()) {
+            defaults.put(entry.getKey(), entry.getValue());
+        }
+        return Collections.unmodifiableMap(defaults);
     }
 
     // ─────────────────────────────────────────────────────────────────

@@ -509,6 +509,41 @@ class BlueprintInterpreterTest {
             p.put("extra", new JsonPrimitive("ignored"));
             assertDoesNotThrow(() -> interpreter.interpret(def, p));
         }
+
+        @Test
+        @DisplayName("defaults fill omitted optional params")
+        void defaultsFillOmittedParams() {
+            BlueprintDefinition def = new BlueprintDefinition("test:def",
+                    Map.of("entities", ParamType.LIST_OBJECT),
+                    List.of(new StepNode.ForEachStep(
+                            new ExprNode.Var("entities"), "ent", List.of())),
+                    "d", "d",
+                    Map.of("entities", (JsonElement) new JsonArray()));
+
+            // Omitted → default [] applies; for_each over empty array yields no ops
+            TaskSequence seq = interpreter.interpret(def, Collections.emptyMap());
+            assertEquals(0, seq.size());
+        }
+
+        @Test
+        @DisplayName("explicit params override defaults")
+        void explicitParamsOverrideDefaults() {
+            BlueprintDefinition def = new BlueprintDefinition("test:def_override",
+                    Map.of("entities", ParamType.LIST_OBJECT),
+                    List.of(new StepNode.ForEachStep(
+                            new ExprNode.Var("entities"), "ent",
+                            List.of(new StepNode.PlaceStep(
+                                    new ExprNode.LiteralPos(new GridPos(0, 64, 0)),
+                                    new ExprNode.LiteralString("minecraft:stone"), null, null)))),
+                    "d", "d",
+                    Map.of("entities", (JsonElement) new JsonArray()));
+
+            // Provided non-empty → default must NOT override
+            JsonArray one = new JsonArray();
+            one.add(new JsonObject());
+            TaskSequence seq = interpreter.interpret(def, Map.of("entities", one));
+            assertEquals(1, seq.size());
+        }
     }
 
     // ─────────────────────────────────────────────────────
@@ -713,6 +748,33 @@ class BlueprintInterpreterTest {
             assertEquals("build_complete", evt.eventName());
             assertEquals("Test Hut", evt.templateParams().get("building_name"));
             assertEquals("2", evt.templateParams().get("blocks_placed"));
+        }
+
+        @Test
+        @DisplayName("call applies callee defaults for omitted with params")
+        void callAppliesCalleeDefaults() {
+            // Sub-blueprint declares optional entities (default [])
+            BlueprintDefinition sub = new BlueprintDefinition("sub:opt",
+                    Map.of("entities", ParamType.LIST_OBJECT),
+                    List.of(new StepNode.ForEachStep(
+                            new ExprNode.Var("entities"), "ent", List.of())),
+                    "d", "d",
+                    Map.of("entities", (JsonElement) new JsonArray()));
+            registry.register("sub:opt", new Blueprint("sub:opt",
+                    (BlueprintSteps) p -> interpreter.interpret(sub, p), sub));
+
+            // Caller calls sub WITHOUT entities in the with block → default [] applies
+            BlueprintDefinition caller = new BlueprintDefinition("test:call_defaults",
+                    Collections.emptyMap(),
+                    List.of(new StepNode.CallStep(
+                            new ExprNode.LiteralString("sub:opt"),
+                            Collections.emptyMap())));
+
+            registry.register("test:call_defaults", new Blueprint("test:call_defaults",
+                    (BlueprintSteps) p -> interpreter.interpret(caller, p), caller));
+
+            TaskSequence seq = interpreter.interpret(caller, Collections.emptyMap());
+            assertEquals(0, seq.size());
         }
     }
 }

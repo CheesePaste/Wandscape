@@ -12,6 +12,9 @@
     "material_list": "list<string>",
     "material_counts": "map<string,string>"
   },
+  "defaults": {
+    "entities": []
+  },
   "steps": [
     {
       "type": "request_resource",

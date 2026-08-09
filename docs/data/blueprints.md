@@ -20,11 +20,16 @@
     "amount": "int",
     "tiles": "list<string>"
   },
+  "defaults": {
+    "entities": []
+  },
   "steps": [ ... ]
 }
 ```
 
-`params` 值是字符串类型声明：`"string"` / `"int"` / `"pos"` / `"list<pos>"` / `"list<string>"` / `"map<string,string>"`。
+`params` 值是字符串类型声明：`"string"` / `"int"` / `"pos"` / `"list<pos>"` / `"list<string>"` / `"map<string,string>"` / `"list<map<string,string>>"`。
+
+`defaults`（可选）声明**可选参数**的默认值：调用方省略该参数时解释器自动填入（如旧建筑/修复任务没有装饰实体时 `entities` 缺省为空数组）。显式传入的值优先于默认值。参数类型必须是 `params` 里声明的类型。
 
 ## steps 数组（StepNode 类型）
 
