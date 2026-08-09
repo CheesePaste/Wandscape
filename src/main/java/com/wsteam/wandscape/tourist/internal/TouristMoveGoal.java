@@ -36,6 +36,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
@@ -515,6 +516,20 @@ public class TouristMoveGoal extends Goal {
         performingActivity = true;
         queueing = false;
         faceSpot(level, buildingId, spot);
+        // EAT：手里拿上食物（进食粒子从嘴边冒）
+        if (action == Activity.EAT) {
+            tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, heldFoodStack());
+        }
+    }
+
+    /** 游客用餐手持的食物栈（非法 id 回退面包）。 */
+    private net.minecraft.world.item.ItemStack heldFoodStack() {
+        ResourceLocation rl = ResourceLocation.tryParse(tourist.getHeldFoodItem());
+        var item = rl != null ? net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl) : null;
+        if (item == null || item == net.minecraft.world.item.Items.AIR) {
+            item = net.minecraft.world.item.Items.BREAD;
+        }
+        return new net.minecraft.world.item.ItemStack(item);
     }
 
     /** 活动期间面向 spot 朝向（游客做动作时面朝该方向；锁定朝向防转身）。 */
@@ -543,6 +558,7 @@ public class TouristMoveGoal extends Goal {
         tourist.setCurrentActivity(null);
         tourist.setOccupiedSpot(-1);
         tourist.setFrozenYaw(null);
+        tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
         performingActivity = false;
 
         if (buildingId != null) {
@@ -612,6 +628,7 @@ public class TouristMoveGoal extends Goal {
         tourist.setCurrentActivity(null);
         tourist.setOccupiedSpot(-1);
         tourist.setFrozenYaw(null);
+        tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
     }
 
     /** Switch from outdoor macro-nav to indoor micro-nav. */

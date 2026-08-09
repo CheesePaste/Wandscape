@@ -197,6 +197,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     @javax.annotation.Nullable
     private Float frozenYaw;
 
+    /** 用餐（EAT）时手持的食物（registry id，缺省面包）。 */
+    private String heldFoodItem = "minecraft:bread";
+
     // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
 
     private float maxHp = 40f;
@@ -815,6 +818,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     @javax.annotation.Nullable
     public Float getFrozenYaw() { return frozenYaw; }
     public void setFrozenYaw(@javax.annotation.Nullable Float yaw) { this.frozenYaw = yaw; }
+
+    /** 用餐时手持的食物 registry id（非法值回退面包）。 */
+    public String getHeldFoodItem() { return heldFoodItem; }
+    public void setHeldFoodItem(String id) {
+        if (id != null && !id.isBlank()) this.heldFoodItem = id;
+    }
     public int getOccupiedSpot() { return occupiedSpot; }
     public void setOccupiedSpot(int i) { this.occupiedSpot = i; }
     public int getNightsStayed() { return nightsStayed; }
