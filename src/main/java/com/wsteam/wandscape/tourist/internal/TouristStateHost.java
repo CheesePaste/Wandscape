@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 
 import net.minecraft.core.BlockPos;
@@ -89,4 +90,44 @@ public interface TouristStateHost {
 
     @Nullable BlockPos getCommuteTarget();
     void setCommuteTarget(@Nullable BlockPos t);
+
+    // ── 三条需求条（fill/need）——Block 0 契约，Block 2 实现实体存储 ──
+
+    default int getComfortSat() { return 0; }
+    default void setComfortSat(int v) {}
+    default int getMagicSat() { return 0; }
+    default void setMagicSat(int v) {}
+    default int getWonderSat() { return 0; }
+    default void setWonderSat(int v) {}
+    default int getComfortNeed() { return 100; }
+    default void setComfortNeed(int v) {}
+    default int getMagicNeed() { return 100; }
+    default void setMagicNeed(int v) {}
+    default int getWonderNeed() { return 100; }
+    default void setWonderNeed(int v) {}
+
+    // ── 活动状态（占位做动作）──
+
+    default Activity getCurrentActivity() { return null; }
+    default void setCurrentActivity(Activity a) {}
+    default int getActivityTicks() { return 0; }
+    default void setActivityTicks(int t) {}
+    default int getOccupiedSpot() { return -1; }
+    default void setOccupiedSpot(int i) {}
+
+    // ── 停留 ──
+
+    default int getNightsStayed() { return 0; }
+    default void setNightsStayed(int n) {}
+    default long getDepartureDeadline() { return Long.MAX_VALUE; }
+    default void setDepartureDeadline(long t) {}
+
+    // ── 满条判定：三条 ratio 全 1 ──
+
+    default boolean isFullySatisfied() { return false; }
+
+    // ── 总旅费（ATM 取现来源；初始 = startingWallet × TOURIST_ATM_TRAVEL_FUND_MULTIPLIER）──
+
+    default int getTravelFund() { return 0; }
+    default void setTravelFund(int v) {}
 }

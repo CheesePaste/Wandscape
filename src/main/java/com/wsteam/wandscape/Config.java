@@ -264,6 +264,44 @@ public class Config {
                     + "Wallet = baseWallet + level × walletPerLevel.")
             .defineInRange("tourist.walletPerLevel", 300, 0, 1000000);
 
+    // ── 游客经济改造：三条需求条 / 精力循环 / 停留 / 视野 / ATM（Block 0 新增）──
+
+    public static final ModConfigSpec.DoubleValue TOURIST_BAR_GAIN_COEFF = BUILDER
+            .comment("每条需求条填充 = round(建筑该维值 × 该系数)，封顶 need。")
+            .defineInRange("tourist.barGainCoeff", 2.0, 0.1, 10.0);
+
+    public static final ModConfigSpec.DoubleValue TOURIST_ENERGY_RESTORE_THRESHOLD = BUILDER
+            .comment("精力低于此比例（0~1）时，游客强烈偏向恢复（relax）建筑。")
+            .defineInRange("tourist.energyRestoreThreshold", 0.25, 0.0, 1.0);
+
+    public static final ModConfigSpec.IntValue TOURIST_QUEUE_WAIT_TOLERANCE_TICKS = BUILDER
+            .comment("spot 全满排队等待上限（tick），超时放弃去别处。")
+            .defineInRange("tourist.queueWaitToleranceTicks", 2400, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_STAY_MIN_DAYS = BUILDER
+            .comment("游客最少停留天数（离境截止下限）。")
+            .defineInRange("tourist.stayMinDays", 2, 1, 7);
+
+    public static final ModConfigSpec.IntValue TOURIST_STAY_MAX_DAYS = BUILDER
+            .comment("游客最多停留天数（离境截止上限）。")
+            .defineInRange("tourist.stayMaxDays", 4, 1, 7);
+
+    public static final ModConfigSpec.IntValue TOURIST_VISION_RADIUS = BUILDER
+            .comment("游客视野半径（格）：目标选择只看半径内且已加载的建筑；视野内无目标 → 闲逛。")
+            .defineInRange("tourist.visionRadius", 48, 8, 256);
+
+    public static final ModConfigSpec.DoubleValue TOURIST_ATM_TRAVEL_FUND_MULTIPLIER = BUILDER
+            .comment("生成时 travelFund = 随身现金 × 该系数（ATM 分批取现的池子上限，防无限取现）。")
+            .defineInRange("tourist.atmTravelFundMultiplier", 2.0, 1.0, 10.0);
+
+    public static final ModConfigSpec.IntValue TOURIST_NEED_BASE = BUILDER
+            .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。")
+            .defineInRange("tourist.needBase", 300, 50, 2000);
+
+    public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
+            .comment("游客每级需求增量。")
+            .defineInRange("tourist.needPerLevel", 50, 0, 500);
+
     // ---- Guard (守卫) system ----
 
     public static final ModConfigSpec.IntValue GUARD_RANGE = BUILDER
