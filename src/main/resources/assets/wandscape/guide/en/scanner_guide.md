@@ -18,7 +18,7 @@ In short, it doesn't earn money and doesn't attract people; it purely lets you c
 ## Three Steps
 
 1. **Box it in**: place the scanner and set the **bounding box** manually in the panel so it covers the whole building you want to copy.
-2. **Identify**: fill in the building's **ID** (a unique identifier, e.g. `player_castle`) and **display name**; click "Auto-Detect Door" to pick the door's position — that is the entrance NPCs use.
+2. **Identify**: give the building an **English ID** (something like `player_castle`, which you'll use to pick this blueprint later) and a **display name**; click "Auto-Detect Door" to pick the door's position — that is the entrance NPCs use.
 3. **Export**: click "Scan Area" to count the blocks, then click "**Export Building JSON**". Once the chat bar reports success, the building is a blueprint — you can select it in the build panel from now on and have NPCs rebuild it.
 
 Want to copy a stretch of road? Switch to **ROAD mode**, fill in the road preset ID and display name, and export.

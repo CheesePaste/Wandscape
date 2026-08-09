@@ -16,12 +16,11 @@ It opens in **overview mode** by default: the camera rises above your head, lett
 
 ## Flying in Overview Mode
 
-- **Move the mouse** to rotate the view, **WASD** to pan, **Space / Shift** to ascend/descend, **scroll wheel** to zoom in/out. **Ctrl + scroll wheel** adjusts speed.
-- Want a closer look at a building? Just fly closer; if the camera speed feels too slow, scroll the wheel a couple of notches (while holding Ctrl).
+Flying works just like creative mode: **WASD** to pan, **Space / Shift** to ascend/descend, **scroll wheel** to zoom. Want a closer look at a building? Just fly closer; if it feels too slow, hold **Ctrl + scroll wheel** to adjust speed.
 
 ## The Three Sidebar Tabs
 
-- **Build**: the building bar below lists everything you can build by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). **Single-click** to select, **double-click** to enter placement; in the world, **left-click** rotates the orientation, **right-click** pins and opens the construction screen — fine-tune X/Y/Z, then **Submit**. First-free buildings are marked.
+- **Build**: the building bar below lists everything you can build by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). The flow is **single-click** to select → **double-click** to enter placement → **left-click** in the world to rotate → **right-click** to pin and open the construction screen → fine-tune X/Y/Z → **Submit**. First-free buildings are marked.
 - **Roads**: the complete paving toolset — see the [Road System Overview](road_guide.md).
 - **Stats**: tourist flow, economic income, resident count, and anomaly warnings — the town's state at a glance.
 

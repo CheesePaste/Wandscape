@@ -8,17 +8,9 @@ Press **V** → the **Roads** icon → click **Spline**; an edit panel appears o
 
 ## Learn to Fly First
 
-After entering the editor, your character "leaves its body" — **WASD no longer moves the character**, but controls the camera:
+After entering the editor, your character "leaves its body" — **WASD no longer moves the character, but controls the camera**. Flying works just like creative mode: **hold right-click + WASD/Space/Shift** to fly, **scroll wheel** to adjust speed, **Ctrl** to go faster.
 
-| Control | Action |
-| :--- | :--- |
-| **Hold right-click + mouse** | Rotate the view |
-| **Hold right-click + WASD** | Fly |
-| **Hold right-click + Space / Shift** | Ascend / descend |
-| **Hold right-click + Ctrl** | 2x speed |
-| **Scroll wheel** | Adjust flight speed |
-| **G** | Switch to 2D top-down view |
-| **H** | Open this guide |
+Two editor-only keys: **G** switches to 2D top-down view, **H** opens this guide.
 
 Release right-click and the cursor is free, so you can click the panel or control points in the world.
 

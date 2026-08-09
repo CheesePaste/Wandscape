@@ -9,8 +9,8 @@ When a building has a problem, the **⚠️ warning icon in the V panel's sideba
 | Column | Description |
 | :--- | :--- |
 | **Building name** | Who is in trouble |
-| **Status** | `Stopped` (shut down) or `Broken` |
-| **Action** | A `Restart` or `Repair` button |
+| **Status** | Stopped (shut down) or Broken |
+| **Action** | A Restart or Repair button |
 
 ## The Two Kinds of Problems
 
@@ -23,7 +23,7 @@ When a building has a problem, the **⚠️ warning icon in the V panel's sideba
 - **Always keep a reserve in the warehouse**: build more [Element Nodes](node_guide.md) to gather, and decompose surplus materials at the [Workstation](workstation_guide.md) to top up elements.
 - Damage **doesn't repair itself** — repairs must be triggered by you; don't expect wizards to volunteer.
 
-By the way: **custom buildings** exported by the scanner have **no maintenance cost** and can never shut down for failing to pay.
+By the way: **buildings copied with the scanner** have **no maintenance cost** and can never shut down for failing to pay.
 
 ---
 
