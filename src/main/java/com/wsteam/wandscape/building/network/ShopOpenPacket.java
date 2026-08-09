@@ -18,6 +18,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * and building context.
  */
 public record ShopOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+                              String creator,
                               Map<String, Integer> stock, Map<String, Integer> maxStocks)
         implements CustomPacketPayload {
 
@@ -46,6 +47,7 @@ public record ShopOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingI
         tag.putLong("pos", pkt.buildingPos.asLong());
         tag.putUUID("colony", pkt.colonyId);
         tag.putUUID("building", pkt.buildingId);
+        tag.putString("creator", pkt.creator);
         CompoundTag stockTag = new CompoundTag();
         for (var entry : pkt.stock.entrySet()) {
             stockTag.putInt(entry.getKey(), entry.getValue());
@@ -63,7 +65,7 @@ public record ShopOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingI
         CompoundTag tag = buf.readNbt();
         if (tag == null) {
             return new ShopOpenPacket(BlockPos.ZERO, new UUID(0, 0),
-                    new UUID(0, 0), Map.of(), Map.of());
+                    new UUID(0, 0), "", Map.of(), Map.of());
         }
         Map<String, Integer> stock = new HashMap<>();
         CompoundTag stockTag = tag.getCompound("stock");
@@ -79,6 +81,7 @@ public record ShopOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingI
                 BlockPos.of(tag.getLong("pos")),
                 tag.getUUID("colony"),
                 tag.getUUID("building"),
+                tag.getString("creator"),
                 stock,
                 maxStocks);
     }

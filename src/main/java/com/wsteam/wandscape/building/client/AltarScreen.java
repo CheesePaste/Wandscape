@@ -32,6 +32,7 @@ public class AltarScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
+    private final String creator;
     private final List<AltarSpellInfo> spells;
     /** 本次打开会话中已提交（发布任务）的魔法 id —— 本地锁定反馈。 */
     private final Set<String> submitted = new HashSet<>();
@@ -39,7 +40,7 @@ public class AltarScreen extends MedievalScreen {
     private MedievalButton submitBtn;
     private SpellList list;
 
-    public AltarScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+    public AltarScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId, String creator,
                        List<AltarSpellInfo> spells) {
         super(Component.literal("Altar"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.altar.title", "Altar"));
@@ -49,6 +50,7 @@ public class AltarScreen extends MedievalScreen {
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
+        this.creator = creator;
         this.spells = List.copyOf(spells);
     }
 
@@ -76,9 +78,11 @@ public class AltarScreen extends MedievalScreen {
         super.render(g, mouseX, mouseY, partialTick);
         var font = Minecraft.getInstance().font;
 
-        String bldText = I18n.name("gui.wandscape.common.building_label", "Building").getString()
-                + ": " + buildingId.toString().substring(0, 8);
-        g.drawString(font, bldText, leftPos + 14, topPos + PH - 24, MedievalColors.TEXT_DIM);
+        if (creator != null && !creator.isBlank()) {
+            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                    + ": " + creator;
+            g.drawString(font, creatorText, leftPos + 14, topPos + PH - 24, MedievalColors.TEXT_DIM);
+        }
     }
 
     /** 该魔法当前是否不可提交：服务端锁定（施法中）/ 冷却中 / 本会话已提交。 */

@@ -23,11 +23,12 @@ public class HotelScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
+    private final String creator;
     private final int maxOccupancy;
     private final int currentOccupancy;
     private final List<String> guestNames;
 
-    public HotelScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+    public HotelScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId, String creator,
                        int maxOccupancy, int currentOccupancy, List<String> guestNames) {
         super(Component.literal("Hotel"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.hotel.title", "Hotel / Inn"));
@@ -37,6 +38,7 @@ public class HotelScreen extends MedievalScreen {
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
+        this.creator = creator;
         this.maxOccupancy = maxOccupancy;
         this.currentOccupancy = currentOccupancy;
         this.guestNames = guestNames;
@@ -83,9 +85,11 @@ public class HotelScreen extends MedievalScreen {
             }
         }
 
-        // Building info at bottom
-        String bldText = I18n.name("gui.wandscape.common.building_label", "Building").getString()
-                + ": " + buildingId.toString().substring(0, 8);
-        g.drawString(font, bldText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
+        // Creator info at bottom
+        if (creator != null && !creator.isBlank()) {
+            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                    + ": " + creator;
+            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
+        }
     }
 }

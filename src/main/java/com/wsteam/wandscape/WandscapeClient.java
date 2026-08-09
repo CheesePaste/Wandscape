@@ -206,13 +206,13 @@ public class WandscapeClient {
         });
         HotelOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(new HotelScreen(
-                    packet.buildingPos(), packet.colonyId(), packet.buildingId(),
+                    packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
                     packet.maxOccupancy(), packet.currentOccupancy(),
                     packet.guestNames()));
         });
         AltarOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(new AltarScreen(
-                    packet.buildingPos(), packet.colonyId(), packet.buildingId(),
+                    packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
                     packet.spells()));
         });
         NpcDataPacket.setClientHandler(packet -> {
@@ -241,7 +241,7 @@ public class WandscapeClient {
                 existing.updateFrom(packet.stock(), packet.maxStocks());
             } else {
                 mc.setScreen(new ShopScreen(packet.buildingPos(), packet.colonyId(),
-                        packet.buildingId(), packet.stock(), packet.maxStocks()));
+                        packet.buildingId(), packet.creator(), packet.stock(), packet.maxStocks()));
             }
         });
 

@@ -34,6 +34,7 @@ import net.minecraft.core.Direction;
 public record BuildingConfig(
         String id,
         @SerializedName("display_name") String displayName,
+        @SerializedName("creator") String creator,
         String category,
         List<BlockOffset> pattern,
         @SerializedName("block_mapping") Map<String, String> blockMapping,
@@ -174,6 +175,7 @@ public record BuildingConfig(
 
             String id = getString(obj, "id", "");
             String displayName = getString(obj, "display_name", "");
+            String creator = getString(obj, "creator", "");
             String category = getString(obj, "category", "basic");
 
             // Pattern
@@ -359,7 +361,7 @@ public record BuildingConfig(
                 entities = List.copyOf(ents);
             }
 
-            return new BuildingConfig(id, displayName, category,
+            return new BuildingConfig(id, displayName, creator, category,
                     pattern, blockMapping, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,

@@ -22,6 +22,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * (altarOnly magics) and each spell's current per-altar cooldown.
  */
 public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+                              String creator,
                               List<AltarSpellInfo> spells)
         implements CustomPacketPayload {
 
@@ -48,6 +49,7 @@ public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
         tag.putLong("pos", pkt.buildingPos.asLong());
         tag.putUUID("colony", pkt.colonyId);
         tag.putUUID("building", pkt.buildingId);
+        tag.putString("creator", pkt.creator);
         ListTag spells = new ListTag();
         for (AltarSpellInfo s : pkt.spells) {
             CompoundTag st = new CompoundTag();
@@ -66,7 +68,7 @@ public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
     static AltarOpenPacket read(RegistryFriendlyByteBuf buf) {
         CompoundTag tag = buf.readNbt();
         if (tag == null) {
-            return new AltarOpenPacket(BlockPos.ZERO, new UUID(0, 0), new UUID(0, 0), List.of());
+            return new AltarOpenPacket(BlockPos.ZERO, new UUID(0, 0), new UUID(0, 0), "", List.of());
         }
         List<AltarSpellInfo> spells = new ArrayList<>();
         ListTag list = tag.getList("spells", Tag.TAG_COMPOUND);
@@ -84,6 +86,7 @@ public record AltarOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
                 BlockPos.of(tag.getLong("pos")),
                 tag.getUUID("colony"),
                 tag.getUUID("building"),
+                tag.getString("creator"),
                 spells);
     }
 }

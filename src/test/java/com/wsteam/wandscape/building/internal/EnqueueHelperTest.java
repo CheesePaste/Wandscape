@@ -67,7 +67,7 @@ class EnqueueHelperTest {
     @DisplayName("town_hall: clear entire boundary box (18 positions), anchor included")
     void townHallFullBox() {
         BuildingConfig cfg = new BuildingConfig(
-                "town_hall", "Test", "basic",
+                "town_hall", "Test", "", "basic",
                 List.of(
                         off(-1, 0, -1), off(-1, 0, 0), off(-1, 0, 1),
                         off(0, 0, -1),                     off(0, 0, 1),
@@ -119,7 +119,7 @@ class EnqueueHelperTest {
     @DisplayName("single-block building: anchor-only boundary → clear anchor")
     void singleBlockClear() {
         BuildingConfig cfg = new BuildingConfig(
-                "earth_node", "Test", "node",
+                "earth_node", "Test", "", "node",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:lodestone"),
                 Map.of(), /* blockNbt */
@@ -141,7 +141,7 @@ class EnqueueHelperTest {
     @DisplayName("large 3×3×3 boundary: all 27 positions cleared")
     void largeBoundaryFullBox() {
         BuildingConfig cfg = new BuildingConfig(
-                "test_large", "Test", "basic",
+                "test_large", "Test", "", "basic",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:stone"),
                 Map.of(), /* blockNbt */
@@ -182,7 +182,7 @@ class EnqueueHelperTest {
     @org.junit.jupiter.api.Disabled("buildWorkItem 全流程触发 BuiltInRegistries（rotateBlockStateString），需要 MC Bootstrap，纯 JUnit 环境不可跑——留待集成测试")
     void entitiesPassThroughAndRotate() {
         BuildingConfig cfg = new BuildingConfig(
-                "gallery", "Gallery", "custom",
+                "gallery", "Gallery", "", "custom",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:stone"),
                 Map.of(), /* blockNbt */

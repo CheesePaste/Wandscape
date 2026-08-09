@@ -38,13 +38,14 @@ public class ShopScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
+    private final String creator;
     private Map<String, Integer> stock;
     private Map<String, Integer> maxStocks;
     private String[] itemIds;
     private ItemStack[] icons;
     private Component[] displayNames;
 
-    public ShopScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+    public ShopScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId, String creator,
                       Map<String, Integer> stock, Map<String, Integer> maxStocks) {
         super(Component.literal("Shop"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.shop.title", "Shop"));
@@ -54,6 +55,7 @@ public class ShopScreen extends MedievalScreen {
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
+        this.creator = creator;
         this.stock = new LinkedHashMap<>(stock);
         this.maxStocks = new LinkedHashMap<>(maxStocks);
         this.itemIds = this.maxStocks.keySet().toArray(new String[0]);
@@ -171,9 +173,11 @@ public class ShopScreen extends MedievalScreen {
             g.drawString(font, "×" + cur + "/" + max, rightX, cy - font.lineHeight / 2, textColor);
         }
 
-        String bldText = I18n.name("gui.wandscape.common.building_label", "Building").getString()
-                + ": " + buildingId.toString().substring(0, 8);
-        g.drawString(font, bldText, leftPos + 16, topPos + PH - 26, MedievalColors.TEXT_DIM);
+        if (creator != null && !creator.isBlank()) {
+            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                    + ": " + creator;
+            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 26, MedievalColors.TEXT_DIM);
+        }
     }
 
     private void adjustMaxStock(String itemId, int newMax) {

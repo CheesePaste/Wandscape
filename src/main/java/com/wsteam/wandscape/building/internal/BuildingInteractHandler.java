@@ -93,6 +93,7 @@ public final class BuildingInteractHandler {
 
         BuildingConfig bldConfig = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         String typeId = state.getBuildingTypeId();
+        String creator = bldConfig != null ? bldConfig.creator() : "";
 
         // Town hall with linked colony: show colony level & exp info
         if ("government".equals(category) && state.getColonyId() != null) {
@@ -118,7 +119,7 @@ public final class BuildingInteractHandler {
                     ? hotel.getGuestNames(state.getBuildingId(), level)
                     : java.util.List.<String>of();
             PacketDistributor.sendToPlayer(player,
-                    new HotelOpenPacket(pos, colonyId, state.getBuildingId(), maxOcc, occupancy, guestNames));
+                    new HotelOpenPacket(pos, colonyId, state.getBuildingId(), creator, maxOcc, occupancy, guestNames));
             return;
         }
 
@@ -143,7 +144,7 @@ public final class BuildingInteractHandler {
                 Map<String, Integer> maxStocks = shopStockManager != null
                         ? shopStockManager.getAllMaxStocks(state.getBuildingId()) : Map.of();
                 PacketDistributor.sendToPlayer(player,
-                        new ShopOpenPacket(pos, colonyId, state.getBuildingId(), stock, maxStocks));
+                        new ShopOpenPacket(pos, colonyId, state.getBuildingId(), creator, stock, maxStocks));
             }
             case "tavern" -> {
                 List<com.wsteam.wandscape.shared.data.MageResume> mageResumes = List.of();
@@ -163,7 +164,7 @@ public final class BuildingInteractHandler {
             case "altar" -> {
                 if (level instanceof net.minecraft.server.level.ServerLevel sl) {
                     PacketDistributor.sendToPlayer(player,
-                            new AltarOpenPacket(pos, colonyId, state.getBuildingId(),
+                            new AltarOpenPacket(pos, colonyId, state.getBuildingId(), creator,
                                     AltarCastHandler.listSpells(sl, state.getBuildingId())));
                 }
             }
