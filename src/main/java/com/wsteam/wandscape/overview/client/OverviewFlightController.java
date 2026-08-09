@@ -14,8 +14,10 @@ import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Camera;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -46,6 +48,11 @@ public final class OverviewFlightController {
     private static final float MOUSE_SENSITIVITY = 0.15f;
 
     private static boolean registered = false;
+
+    /** 进入前玩家的相机类型，退出时恢复（渲染玩家实体用第三人称）。 */
+    private static CameraType prevCameraType = null;
+    /** 受伤检测的血量基线：进入时采样，下降沿触发自动退出。 */
+    private static float lastHealth = 0f;
 
     // ── Input edge detection ──
     private static boolean wasLeftDown = false;
@@ -91,6 +98,10 @@ public final class OverviewFlightController {
         OverviewClientState.enterOverview(
                 mc.player.getX(), mc.player.getY(), mc.player.getZ(),
                 mc.player.getYRot(), mc.player.getXRot());
+        // 切第三人称以渲染玩家实体；存原相机类型供 exit 恢复；采样血量作受伤检测基线
+        prevCameraType = mc.options.getCameraType();
+        mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        lastHealth = mc.player.getHealth();
         // Initialize last mouse position to current cursor
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
@@ -102,9 +113,39 @@ public final class OverviewFlightController {
     }
 
     public static void exit() {
+        Minecraft mc = Minecraft.getInstance();
+        // 恢复原相机类型
+        if (prevCameraType != null) {
+            mc.options.setCameraType(prevCameraType);
+            prevCameraType = null;
+        }
+        // 显式落定玩家旋转到进入快照：每帧冻结只在 active 时跑，退出瞬间 active 已落，
+        // 残留的鼠标漂移会让视角「甩头」，故在此强制写回快照值
+        if (mc.player != null) {
+            freezePlayerRotation(mc.player);
+        }
         OverviewClientState.exitOverview();
         lastFrameNanos = 0;
         wasGrabbed = false;
+    }
+
+    /**
+     * 把玩家旋转强制冻回进入空中视角时的快照。抵消原版 {@code MouseHandler.turnPlayer}
+     * 对玩家真实旋转的每帧污染（光标 grabbed 时原版仍 turn 玩家）。必须同步 yBodyRot/yHeadRot——
+     * LivingEntityRenderer 用 yBodyRot 画身体，而 yBodyRot 在 tickHeadTurn 以 30%/tick 跟随 yRot，
+     * 只冻 yRot 会让第三人称模型随鼠标抽搐。
+     */
+    private static void freezePlayerRotation(LivingEntity player) {
+        float yaw = OverviewClientState.getPrevYaw();
+        float pitch = OverviewClientState.getPrevPitch();
+        player.setYRot(yaw);
+        player.yRotO = yaw;
+        player.yBodyRot = yaw;
+        player.yBodyRotO = yaw;
+        player.yHeadRot = yaw;
+        player.yHeadRotO = yaw;
+        player.setXRot(pitch);
+        player.xRotO = pitch;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -117,6 +158,12 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+
+        // 每帧把相机类型拉回第三人称：F5 在 handleKeybinds（早于 ClientTickEvent.Post）就已
+        // consume 并 cycle，drain 无效，必须用 reconcile 才能稳住「渲染玩家实体」
+        if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        }
 
         long window = mc.getWindow().getWindow();
 
@@ -183,6 +230,10 @@ public final class OverviewFlightController {
                     OverviewClientState.getCamY() + moveY,
                     OverviewClientState.getCamZ() + moveZ);
         }
+
+        // 冻结玩家旋转到进入快照（AFTER_SKY 早于实体渲染，时机正好）：
+        // 抵消 MouseHandler.turnPlayer 污染 + 稳定第三人称玩家模型朝向
+        freezePlayerRotation(mc.player);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -194,6 +245,20 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+
+        // 受伤/死亡 → 完全退出控制面板（保留空中相机缓存），回原版第一人称夺回操控
+        if (mc.player.isDeadOrDying()) {
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closePanel();
+            return;
+        }
+        float health = mc.player.getHealth();
+        if (health < lastHealth) {
+            Log.info(TAG, "[Overview] Player took damage ({} → {}), exiting control panel", lastHealth, health);
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closePanel();
+            lastHealth = health;
+            return;
+        }
+        lastHealth = health;
 
         long window = mc.getWindow().getWindow();
 
