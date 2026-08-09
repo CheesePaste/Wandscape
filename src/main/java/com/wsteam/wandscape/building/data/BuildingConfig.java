@@ -16,9 +16,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
+import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.DecorationConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
@@ -46,8 +49,10 @@ public record BuildingConfig(
         @SerializedName("wonder_config") WonderConfig wonderConfig,
         ShopConfig shop,
         ServiceConfig service,
+        RelaxConfig relax,
+        AtmConfig atm,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
-        @SerializedName("tourist_interact_aabb") List<BoundaryBox> touristInteractAabb,
+        @SerializedName("interact_spots") List<InteractSpot> interactSpots,
         @SerializedName("first_free") boolean firstFree,
         @SerializedName("deprecated") boolean deprecated
 ) {
@@ -114,6 +119,30 @@ public record BuildingConfig(
             }
             return result;
         }
+    }
+
+    /** 交互位：相对 anchor 的坐标 + 动作种类。spot 数量 = 该建筑同时交互的游客人数上限。 */
+    public record InteractSpot(
+            BlockOffset pos,
+            Activity action
+    ) {
+        public InteractSpot {
+            if (pos == null) {
+                throw new IllegalArgumentException("interact spot pos must not be null");
+            }
+            if (action == null) action = Activity.BROWSE;
+        }
+    }
+
+    /** 该建筑是不是游客交互目标（四类旅游 category 之一）。 */
+    public boolean isTouristTarget() {
+        return shop() != ShopConfig.NONE || service() != ServiceConfig.NONE
+                || relax() != RelaxConfig.NONE || atm() != AtmConfig.NONE;
+    }
+
+    /** 派生视图：由 interactSpots 算出退化 AABB（一阶段兼容旧消费者；二阶段删）。 */
+    public List<BoundaryBox> touristInteractAabb() {
+        return interactSpots.stream().map(s -> new BoundaryBox(s.pos(), s.pos())).toList();
     }
 
     /**
@@ -249,6 +278,18 @@ public record BuildingConfig(
                 service = context.deserialize(obj.get("service"), ServiceConfig.class);
             }
 
+            // Relax config (only for category=relax): 回复精力
+            RelaxConfig relax = RelaxConfig.NONE;
+            if (obj.has("relax")) {
+                relax = context.deserialize(obj.get("relax"), RelaxConfig.class);
+            }
+
+            // Atm config (only for category=atm): 取现
+            AtmConfig atm = AtmConfig.NONE;
+            if (obj.has("atm")) {
+                atm = context.deserialize(obj.get("atm"), AtmConfig.class);
+            }
+
             // Door offset: position of the building door relative to anchor.
             // When not specified, entry point is computed via heuristic spiral scan.
             BlockOffset doorOffset = null;
@@ -265,28 +306,28 @@ public record BuildingConfig(
             // but the building is hidden from the placement panel (BUILD_PROJECTION bar).
             boolean deprecated = getBoolean(obj, "deprecated", false);
 
-            // Tourist interact AABB list: multiple interaction zones relative to anchor.
-            // When not specified, interaction point is computed via spiral scan inside building boundary.
-            List<BoundaryBox> touristInteractAabb = List.of();
-            if (obj.has("tourist_interact_aabb")) {
-                JsonArray zonesArr = obj.getAsJsonArray("tourist_interact_aabb");
-                List<BoundaryBox> zones = new ArrayList<>();
-                BlockOffset.Deserializer offsetDs3 = new BlockOffset.Deserializer();
-                for (JsonElement zoneEl : zonesArr) {
-                    JsonObject zoneObj = zoneEl.getAsJsonObject();
-                    BlockOffset zMin = offsetDs3.deserialize(zoneObj.get("min"), BlockOffset.class, context);
-                    BlockOffset zMax = offsetDs3.deserialize(zoneObj.get("max"), BlockOffset.class, context);
-                    zones.add(new BoundaryBox(zMin, zMax));
+            // Interact spots: 交互位列表（相对 anchor 坐标 + 动作种类）。
+            // 旧 tourist_interact_aabb 顶层字段不再解析；0-spot 建筑对游客无效（Block 3 过滤，无兜底）。
+            List<InteractSpot> interactSpots = List.of();
+            if (obj.has("interact_spots")) {
+                JsonArray spotsArr = obj.getAsJsonArray("interact_spots");
+                List<InteractSpot> spots = new ArrayList<>();
+                BlockOffset.Deserializer spotDs = new BlockOffset.Deserializer();
+                for (JsonElement spotEl : spotsArr) {
+                    JsonObject spotObj = spotEl.getAsJsonObject();
+                    BlockOffset pos = spotDs.deserialize(spotObj.get("pos"), BlockOffset.class, context);
+                    String actionStr = spotObj.has("action") ? spotObj.get("action").getAsString() : "";
+                    spots.add(new InteractSpot(pos, Activity.fromJsonString(actionStr)));
                 }
-                touristInteractAabb = List.copyOf(zones);
+                interactSpots = List.copyOf(spots);
             }
 
             return new BuildingConfig(id, displayName, category,
                     pattern, blockMapping, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
-                    maintenanceCost, decoration, wonderConfig, shop, service,
-                    doorOffset, touristInteractAabb, firstFree, deprecated);
+                    maintenanceCost, decoration, wonderConfig, shop, service, relax, atm,
+                    doorOffset, interactSpots, firstFree, deprecated);
         }
 
         private static String getString(JsonObject obj, String key, String def) {
