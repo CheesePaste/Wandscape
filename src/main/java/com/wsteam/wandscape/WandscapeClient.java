@@ -266,6 +266,14 @@ public class WandscapeClient {
                     new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(packet.markdownContent()));
         });
 
+        // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
+        com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket.setClientHandler(packet -> {
+            String docPath = packet.docPath();
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, docPath));
+        });
+
         // Guide progress seed — apply saved tutorial step/dismissal on panel open
         com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.setClientHandler(packet ->
                 com.wsteam.wandscape.shared.ui.guidance.GuideSession.applySync(

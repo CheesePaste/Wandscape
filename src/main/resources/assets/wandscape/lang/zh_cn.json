@@ -1,6 +1,8 @@
 {
   "itemGroup.wandscape": "Wandscape",
   "item.wandscape.wand": "法杖",
+  "item.wandscape.guide_book": "Wandscape 指南",
+  "item.wandscape.guide_book.tooltip": "右键打开模组教程",
 
   "entity.wandscape.wandscape_npc": "法师",
   "item.wandscape.wandscape_npc_spawn_egg": "法师刷怪蛋",

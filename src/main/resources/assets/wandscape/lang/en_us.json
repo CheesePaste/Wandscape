@@ -1,6 +1,8 @@
 {
   "itemGroup.wandscape": "Wandscape",
   "item.wandscape.wand": "Wand",
+  "item.wandscape.guide_book": "Wandscape Guide",
+  "item.wandscape.guide_book.tooltip": "Right-click to open the mod tutorial",
 
   "block.wandscape.town_hall": "Town Hall",
   "block.wandscape.forest_node": "Forest Node",

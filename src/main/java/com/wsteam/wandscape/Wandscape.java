@@ -122,6 +122,8 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 import com.wsteam.wandscape.wand.item.WandItem;
+import com.wsteam.wandscape.guidebook.item.GuideBookItem;
+import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
 import com.wsteam.wandscape.engine.transport.TransportStartPacket;
 
@@ -195,6 +197,10 @@ public class Wandscape {
             () -> new WandItem(new Item.Properties()));
     public static final WandPresetLoader WAND_PRESET_LOADER = new WandPresetLoader(DATA_LOADER);
     public static final WandApiImpl WAND_API = new WandApiImpl();
+
+    // ---- 指南书（右键打开教程首页） ----
+    public static final DeferredItem<Item> GUIDE_BOOK = ITEMS.register("guide_book",
+            () -> new GuideBookItem(new Item.Properties()));
 
     // ---- 03 element-system ----
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
@@ -352,6 +358,7 @@ public class Wandscape {
                         output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
+                        output.accept(GUIDE_BOOK.get());
                     })
                     .build());
 
@@ -682,6 +689,11 @@ public class Wandscape {
                         com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,
                         com.wsteam.wandscape.shared.network.GuideTestPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet))
+                // ── Guide book (right-click to open tutorial home) ──
+                .playToClient(
+                        GuideBookOpenPacket.TYPE,
+                        GuideBookOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> GuideBookOpenPacket.handleClient(packet))
                 // ── Guide progress (onboarding persistence) ──
                 .playToClient(
                         com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.TYPE,
