@@ -54,7 +54,8 @@ public record BuildingConfig(
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
         @SerializedName("interact_spots") List<InteractSpot> interactSpots,
         @SerializedName("first_free") boolean firstFree,
-        @SerializedName("deprecated") boolean deprecated
+        @SerializedName("deprecated") boolean deprecated,
+        @SerializedName("entities") List<DecorationEntity> entities
 ) {
     public record QueueDef(
             int capacity,
@@ -131,6 +132,24 @@ public record BuildingConfig(
                 throw new IllegalArgumentException("interact spot pos must not be null");
             }
             if (action == null) action = Activity.BROWSE;
+        }
+    }
+
+    /**
+     * 装饰实体（物品展示框/画等悬挂实体）：相对 anchor 的偏移 + 实体类型 + 朝向 + 修剪后实体 NBT。
+     * 由扫描器导出；建造时经 spawn_entity 步骤重建。offset 为实体所在的方块格。
+     * facing 是 Direction 字符串（如 "north"），独立成字段以便旋转只动结构化字段、不碰 base64。
+     */
+    public record DecorationEntity(
+            BlockOffset offset,
+            String type,
+            String facing,
+            @Nullable String nbtBase64
+    ) {
+        public DecorationEntity {
+            if (offset == null) {
+                throw new IllegalArgumentException("decoration entity offset must not be null");
+            }
         }
     }
 
@@ -322,12 +341,29 @@ public record BuildingConfig(
                 interactSpots = List.copyOf(spots);
             }
 
+            // Decoration entities: 装饰实体列表（物品展示框/画）。缺省空列表。
+            List<DecorationEntity> entities = List.of();
+            if (obj.has("entities")) {
+                JsonArray entsArr = obj.getAsJsonArray("entities");
+                List<DecorationEntity> ents = new ArrayList<>();
+                BlockOffset.Deserializer entDs = new BlockOffset.Deserializer();
+                for (JsonElement entEl : entsArr) {
+                    JsonObject entObj = entEl.getAsJsonObject();
+                    BlockOffset offset = entDs.deserialize(entObj.get("offset"), BlockOffset.class, context);
+                    String type = getString(entObj, "type", "");
+                    String facing = getString(entObj, "facing", "");
+                    String nbt = entObj.has("nbt") ? entObj.get("nbt").getAsString() : null;
+                    ents.add(new DecorationEntity(offset, type, facing, nbt));
+                }
+                entities = List.copyOf(ents);
+            }
+
             return new BuildingConfig(id, displayName, category,
                     pattern, blockMapping, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     maintenanceCost, decoration, wonderConfig, shop, service, relax, atm,
-                    doorOffset, interactSpots, firstFree, deprecated);
+                    doorOffset, interactSpots, firstFree, deprecated, entities);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

@@ -65,6 +65,7 @@
 | node_config | {...} | **仅 category=node**。节点采集配置 |
 | interaction_radius | int/{x,y,z}/{min,max} | 右键交互区扩展（默认 0）。>0 时玩家可从建筑边界外此范围内右键交互。支持三种格式：uniform int、per-axis {x,y,z}、explicit box {min,max} |
 | tourist_interact_aabb | [{min:[x,y,z], max:[x,y,z]}] | **替代旧字段 interact_offset**。室内游客导航目标区域列表（相对于 anchor）。游客 AI 遍历列表，对每个 AABB 螺旋扫描可步行地面，使用第一个找到的位置。未指定时回退到建筑 boundary 包围盒内扫描 |
+| entities | [{offset, type, facing, nbt}] | **扫描器导出**。装饰实体列表（物品展示框/发光框/画），NPC 建造时经 `spawn_entity` 步骤重建。offset 为实体所在方块格（相对 anchor），facing 为 Direction 字符串（如 "north"），nbt 为修剪后实体 NBT（base64，位置已重定基为相对偏移）。建筑旋转时 offset 与 facing 同步旋转 |
 | deprecated | boolean | 默认 false。为 true 时配置照常加载、旧地图上已放置的建筑功能全部保留（维护费/任务/修复/拆除），但**从建筑面板（BUILD_PROJECTION 建筑栏）隐藏**，无法再新建。用于模组版本更新中"保留旧 id + 隐藏面板"的软废弃 |
 
 ## 三值计入规则
@@ -297,6 +298,24 @@
 - 游客 AI 遍历列表，对每个 AABB 计算世界坐标包围盒，螺旋扫描可步行地面（空气在上、实心在下）
 - 使用第一个找到的有效位置作为室内导航目标
 - 未指定时回退到建筑 `boundary` 包围盒内螺旋扫描
+
+## 装饰实体 (entities)
+
+由**建筑扫描器**（`building_scanner`）导出。物品展示框/发光框/画是**实体**而非方块，扫描器按边界 AABB 查询并写入此字段，NPC 建造时在方块全部放置后经 `spawn_entity` 步骤重建：
+
+```json
+"entities": [
+  { "offset": [1, 2, 0], "type": "minecraft:item_frame", "facing": "north", "nbt": "<base64>" },
+  { "offset": [1, 2, 0], "type": "minecraft:painting", "facing": "south", "nbt": "<base64>" }
+]
+```
+
+- `offset`：实体所在方块格（相对 anchor 的偏移）
+- `type`：实体注册 ID。白名单：`minecraft:item_frame` / `minecraft:glow_item_frame` / `minecraft:painting`
+- `facing`：Direction 字符串（`north/south/east/west/up/down`），独立成字段以便建筑旋转时同步旋转
+- `nbt`：修剪后实体 NBT（base64 压缩），已去掉 `UUID/Pos/Motion` 并把位置重定基为相对偏移
+- 同一格空气可有正反两面两个展示框，故用**数组**而非按 offset 作 key 的 map
+- 实体装饰 v1 不参与材料成本计算（`computeMaterialData` 只算方块）
 
 ## 现有建筑
 

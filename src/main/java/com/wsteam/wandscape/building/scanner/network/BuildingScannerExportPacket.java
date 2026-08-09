@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.gson.GsonBuilder;
@@ -22,6 +23,8 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -29,10 +32,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.phys.AABB;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -44,6 +49,13 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
 
     private static final String TAG = "ScannerExport";
+
+    /**
+     * 装饰实体白名单：实体（非方块）类装饰，方块三重循环扫不到，需单独按 AABB 查询。
+     * 三者都是 BlockAttachedEntity（NBT 用 TileX/TileY/TileZ 存挂靠块坐标），机制统一。
+     */
+    private static final Set<String> DECORATION_TYPES = Set.of(
+            "minecraft:item_frame", "minecraft:glow_item_frame", "minecraft:painting");
 
     public static final Type<BuildingScannerExportPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "scanner_export"));
@@ -136,6 +148,57 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             }
         }
 
+        // Scan decoration entities (item frames, paintings) inside the boundary.
+        // They are entities, not blocks — the block loop above cannot see them.
+        // offset = 实体块坐标 − 扫描器坐标（与 block_mapping 同约定）。
+        List<JsonObject> entities = new ArrayList<>();
+        List<Entity> decorations = level.getEntities((Entity) null,
+                new AABB(wMin.getX(), wMin.getY(), wMin.getZ(),
+                        wMax.getX() + 1.0, wMax.getY() + 1.0, wMax.getZ() + 1.0),
+                e -> DECORATION_TYPES.contains(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString()));
+        for (Entity e : decorations) {
+            try {
+                BlockPos epos = e.blockPosition();
+                int rx = epos.getX() - scanner.getBlockPos().getX();
+                int ry = epos.getY() - scanner.getBlockPos().getY();
+                int rz = epos.getZ() - scanner.getBlockPos().getZ();
+                String typeId = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+
+                // Trim entity NBT: strip UUID/Pos/Motion, rebase position to the
+                // relative offset so the export is independent of absolute coords.
+                CompoundTag tag = e.saveWithoutId(new CompoundTag());
+                tag.remove("UUID");
+                tag.remove("Pos");
+                tag.remove("Motion");
+                tag.putString("id", typeId);
+                tag.putInt("TileX", rx);
+                tag.putInt("TileY", ry);
+                tag.putInt("TileZ", rz);
+                ListTag posList = new ListTag();
+                posList.add(DoubleTag.valueOf(rx + 0.5));
+                posList.add(DoubleTag.valueOf(ry + 0.5));
+                posList.add(DoubleTag.valueOf(rz + 0.5));
+                tag.put("Pos", posList);
+
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                NbtIo.writeCompressed(tag, baos);
+
+                JsonObject ent = new JsonObject();
+                JsonArray offArr = new JsonArray();
+                offArr.add(rx);
+                offArr.add(ry);
+                offArr.add(rz);
+                ent.add("offset", offArr);
+                ent.addProperty("type", typeId);
+                ent.addProperty("facing", e.getDirection().getName());
+                ent.addProperty("nbt", Base64.getEncoder().encodeToString(baos.toByteArray()));
+                entities.add(ent);
+            } catch (IOException ex) {
+                Log.warn(TAG, "Failed to serialize decoration entity at {}: {}",
+                        e.blockPosition(), ex.toString());
+            }
+        }
+
         scanner.setScanned(true);
         scanner.setChanged();
         level.sendBlockUpdated(packet.pos, scanner.getBlockState(), scanner.getBlockState(), 3);
@@ -171,6 +234,15 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 nbtObj.addProperty(entry.getKey(), entry.getValue());
             }
             root.add("block_nbt", nbtObj);
+        }
+
+        // Decoration entities (item frames / paintings), rebuilt via spawn_entity step
+        if (!entities.isEmpty()) {
+            JsonArray entitiesArr = new JsonArray();
+            for (JsonObject ent : entities) {
+                entitiesArr.add(ent);
+            }
+            root.add("entities", entitiesArr);
         }
 
         // Meta
@@ -313,6 +385,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         bind.addProperty("offsets", "$pattern");
         bind.addProperty("blocks", "$block_mapping");
         bind.addProperty("blocks_nbt", "$block_nbt");
+        bind.addProperty("entities", "$entities");
         bind.addProperty("name", "$display_name");
         bp.add("bind", bind);
         root.add("blueprint", bp);
