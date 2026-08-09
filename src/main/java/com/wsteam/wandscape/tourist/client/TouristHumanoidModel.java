@@ -69,5 +69,9 @@ public class TouristHumanoidModel extends HumanoidModel<TouristEntity> {
             // 浏览：小幅左右打量
             head.yRot += Mth.sin(ageInTicks * 0.15f) * 0.2f * t;
         }
+
+        // super.setupAnim 里 hat.copyFrom(head) 在我们改 head 之前就执行了；
+        // 重新拷贝一次让外层头发层随头部扫视/打量一起转。
+        this.hat.copyFrom(this.head);
     }
 }
