@@ -49,6 +49,7 @@
 |------|------|------|
 | id | string | 唯一标识，snake_case |
 | display_name | string | 显示名称 |
+| creator | string | 可选，制作者名（商店/旅店/祭坛屏幕左下角显示） |
 | category | string | basic/node/storage/workstation/crafting_station/potion_station/tavern/shop/service/decoration/wonder/custom |
 | pattern | [x,y,z][] | 相对 anchor 的偏移列表。单方块建筑写 `[[0,0,0]]` |
 | block_mapping | {"x,y,z":"mod:block"} | pattern 中每个偏移→原版方块 ID |

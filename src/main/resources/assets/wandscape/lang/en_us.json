@@ -110,7 +110,7 @@
   "gui.wandscape.common.close": "Close",
   "gui.wandscape.common.submit": "Submit",
   "gui.wandscape.common.search": "Search",
-  "gui.wandscape.common.building_label": "Building",
+  "gui.wandscape.common.creator_label": "Creator",
   "gui.wandscape.common.colony_label": "Colony",
   "gui.wandscape.altar.title": "Altar",
   "gui.wandscape.altar.cooldown": "Cooldown {}",

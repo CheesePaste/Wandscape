@@ -10,6 +10,7 @@
 {
   "id": "townhall1",                    // string，必填
   "display_name": "Town Hall",          // string，显示名（中文直接内嵌）
+  "creator": "xxx",                     // string，可选：制作者名（商店/旅店/祭坛屏幕左下角显示）
   "category": "government",             // string，默认 "basic"。实际值见下
   "first_free": true,                   // bool，可选：殖民地首个该建筑不消耗材料
   "deprecated": true,                   // bool，可选：仍加载（旧存档建筑可用）但隐藏于放置面板
