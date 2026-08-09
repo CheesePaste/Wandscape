@@ -354,11 +354,18 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                     }
                 }
             }
-            // Spawn-egg / pre-Block-2 save tourists may lack a stay window (arrival=0,
-            // deadline=Long.MAX_VALUE) — heal it before the sim shadow is created so the
-            // info screen's stay-day count and the deadline-based departure both work.
+            // Spawn-egg / command tourists bypass applySpawnDefaults — give them the full
+            // random-spawn defaults (rolled level, wallet, persona needs, stay window, travel
+            // fund) so they behave like a randomly generated tourist. Disk-loaded tourists
+            // keep their saved data; only heal the pre-Block-2 stay-window gap for them.
             if (!previewMode) {
-                ensureStayWindow(level().getGameTime());
+                if (loadedFromDisk) {
+                    ensureStayWindow(level().getGameTime());
+                } else {
+                    TouristSpawnSystem.applyRandomSpawnDefaults(this, colonyId, level().getGameTime());
+                    // 兜底：applyRandomSpawnDefaults 失败（系统未注册）时仍补停留窗口。
+                    ensureStayWindow(level().getGameTime());
+                }
             }
             // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
             // them now, else the sim's orphan sweep discards them as departed

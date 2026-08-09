@@ -27,6 +27,8 @@ import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -385,6 +387,27 @@ public final class TouristSpawnSystem {
         tourist.setDepartureDeadline(gameTime + stayTicks);
         tourist.setTravelFund((int) Math.round(startingWallet(touristLevel)
                 * Config.TOURIST_ATM_TRAVEL_FUND_MULTIPLIER.get()));
+    }
+
+    /**
+     * 刷怪蛋/命令生成的游客补齐随机生成默认值，使其等同于随机生成的游客：
+     * 按殖民地等级 roll 等级（无殖民地/等级管理器时按 1）、按等级算随身现金与总旅费、
+     * roll 画像三条 need、补 2~4 天停留窗口与 arrivalTime。磁盘加载（有 NBT）的游客不走这里。
+     */
+    public static void applyRandomSpawnDefaults(TouristEntity tourist, @Nullable UUID colonyId, long gameTime) {
+        if (instance == null) {
+            Log.warn(TAG, "[Tourist] SpawnSystem not registered — cannot apply random defaults");
+            return;
+        }
+        int colonyLevel = (colonyId != null && instance.levelManager != null)
+                ? instance.levelManager.getLevel(colonyId) : 1;
+        int touristLevel = instance.rollTouristLevel(colonyLevel);
+        tourist.setLevel(touristLevel);
+        int start = instance.startingWallet(touristLevel);
+        tourist.setWallet(start);
+        tourist.setInitialWallet(start);
+        instance.applySpawnDefaults(tourist, touristLevel, gameTime);
+        tourist.setArrivalTime(gameTime);
     }
 
     /**
