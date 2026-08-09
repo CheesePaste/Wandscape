@@ -22,6 +22,9 @@
 | `tourist/internal/TouristSpotManager.java` | 新建：spot 占用/队列/等待超时 |
 | `tourist/internal/TouristStateHost.java` | 删遗留方法 |
 | `tourist/internal/TouristState.java` | 不动（移动标签） |
+| `tourist/client/ActivityVisuals.java` | 新建：Activity → (Pose/骨骼目标角度/粒子) 注册表，未知动作兜底 browse |
+| `tourist/client/TouristHumanoidModel.java` | 新建：HumanoidModel 子类，setupAnim 按当前 Activity 插值姿态 |
+| `tourist/client/TouristRenderer.java` | 改用 TouristHumanoidModel + 按 activity 发射粒子 |
 | `building/internal/ShopStockManager.java` | 按 `cfg.shop()` 工作 |
 | `building/internal/ShopInteractionHandler.java` | 同 |
 
@@ -141,9 +144,31 @@ public final class TouristSpotManager {
 - 迁移完所有调用点后，**删除** `getSatisfaction()/setSatisfaction()`、`getTypePreference()/adjustTypePreference()`。
 - 全仓库 grep 确认无引用（Block 4 负责非 tourist 文件；本块负责 tourist AI 文件）。
 
+### 8. 交互动作视觉（客户端，零依赖）
+
+> 动作是数据（spot 上的 `Activity`），表现是客户端映射。**不用 GeckoLib / PlayerAnimator**：游客是 PathfinderMob + 玩家模型（`HumanoidModel(PLAYER)`），两库分别面向自定义 geo 模型 / 玩家实体，引入需换渲染管线且违背零依赖原则（PlayerAnimator README 明说非玩家实体请用 GeckoLib）。用原版 API：`Pose` + `setupAnim` 骨骼旋转 + 粒子，先例见 `WandscapeNpcModel` 施法摆臂。
+
+- **`ActivityVisuals`**（新建，client）：`Activity → (Pose, 骨骼目标角度, 粒子规格)` 注册表；**未知 Activity 兜底 BROWSE**——动作是创作者可配数据（扫描器 marker 可设），渲染不能因未知值崩。
+- **`TouristHumanoidModel`**（新建，client，extends HumanoidModel）：`setupAnim` 读 `getCurrentActivity()` + `activityTicks`，各骨骼用 `Mth.lerp` 缓动到目标角度（约 10 tick 过渡），进出平滑不瞬移。
+- 首版动作映射：
+
+| Activity | 表现 |
+|---|---|
+| BROWSE | 头微低 + 手臂轻抬 + head 小幅左右打量（默认兜底） |
+| EAT | 手持食物 + 手臂周期抬放 |
+| BATHE | `Pose.SWIMMING` + 蒸汽粒子 |
+| VIEW | 头仰望 + 缓慢转身扫视 |
+| MEDITATE | 双手合十 + 头微垂 + 魔法粒子 |
+| WITHDRAW | 手臂前伸 + 金币粒子 |
+
+- 循环动画（EAT 咀嚼等）用 vanilla `AnimationDefinition`/`AnimationState` + `AnimationUtils.animate()`（warden/allay 同款，Java 关键帧，仍零依赖）。
+- **BlockBench 只做创作参考，不做运行时资产**：摆参考姿态或设计动画后经「Animation to Java Converter」插件转 Java 关键帧塞进 `AnimationDefinition`；不引入 `.geo.json`/GeckoLib 格式。
+- 粒子在 `TouristRenderer` 按 activity 发射，复用现有粒子体系。
+
 ## Done 判定
 
 1. `./gradlew build` 绿。
 2. 游客：逛建筑填三条（无惩罚）；**只看视野内目标，视野内无目标则闲逛**；精力低/0 时优先/只能去 `relax.energyRestore()>0` 建筑、无恢复则闲逛；去 atm 取钱（travelFund 扣减、钱包增加）；在 spots 占位做**该 spot 指定动作**、满了排队、超时放弃；夜间入旅店、清晨退房回精力。
 3. **满条游客等夜晚离场**给经验 + mage resume；停留 2-4 天到点离场；低级小镇满不了条 → 0 经验。
 4. `tourist/**`（AI 部分）无 `getSatisfaction`/`getTypePreference` 引用。
+5. 游客在 spot 做动作时有对应姿态/粒子（浏览/用餐/泡澡/看展/冥想/取现），切换平滑；未知 action 兜底浏览，不崩渲染。
