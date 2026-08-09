@@ -93,6 +93,7 @@
   ```
 - `selectNextTarget`（:231-292）：改为按 category 判断目标建筑（`cfg.isTouristTarget()`），shop 有货判断改 `cfg.shop()!=NONE && hasStock`，hotel 判断改 `cfg.service().maxOccupancy()>0`，加入精力轴（精力 0 只能去 `relax.energyRestore()>0`）+ 排队惩罚。**候选只取视野 `TOURIST_VISION_RADIUS` 内且已加载的建筑**；视野内无合适目标 → 返回 null，调用方**闲逛**。
 - `weightedPick`（:294-311）：权重改为 Find-Best-Action 分数。
+- **`addVisitMemory`（:211）**：签名去 `satBefore`、`satDelta` → `barDelta`（三条 ratio 增量之和，Block 4 契约 C4）；交互后气泡（`sendBubble`）不再传 sat 参数（Block 4 删瞬时头顶条，C6）。
 
 ### 2. TouristMoveGoal（当前 :564-609 performBuildingInteraction、:1163-1330 planNextBuilding、:1337-1463 交互/评分、:125-132/437/454-465/479/517/1296-1321 AABB 逻辑）
 
@@ -111,7 +112,7 @@
 - 旅店入住（:458-484）：条件改 `service.maxOccupancy()>0 && !isFullySatisfied() && (夜晚) && hasVacancy`，删 `sat>=50`；入住记 nightsStayed。
 - `checkDeparture`（:528-558）：改 D6 规则（isFullySatisfied&&夜晚 / deadline / 夜晚无床位 / idle；删 sat 三段与「精力 0 无恢复→离场」——精力 0 无恢复改为闲逛）。
 - `routeToHotel`（:560-576）：`"service".equals(category)` → `cfg.service().maxOccupancy()>0`。
-- `depart`/`registerDeparture`（:578+）：satisfaction 实参 → 聚合值（min-ratio×100，Block 4 收口签名）。
+- `depart`/`registerDeparture`（:578+）：satisfaction 实参 → `BarRatio`（三条填充率，Block 4 收口签名，见 block-4 C2）。
 
 ### 4. TouristSpotManager（新建，仿 HotelStayHandler 单例）
 
@@ -164,6 +165,7 @@ public final class TouristSpotManager {
 - 循环动画（EAT 咀嚼等）用 vanilla `AnimationDefinition`/`AnimationState` + `AnimationUtils.animate()`（warden/allay 同款，Java 关键帧，仍零依赖）。
 - **BlockBench 只做创作参考，不做运行时资产**：摆参考姿态或设计动画后经「Animation to Java Converter」插件转 Java 关键帧塞进 `AnimationDefinition`；不引入 `.geo.json`/GeckoLib 格式。
 - 粒子在 `TouristRenderer` 按 activity 发射，复用现有粒子体系。
+- **瞬时头顶条由 Block 4 删除**：`SatisfactionBarRenderer` 会被删（C6），`TouristRenderer` 不再渲染 before→after 进度条；本条只保留气泡 + 动作姿态/粒子，不重造进度条。
 
 ## Done 判定
 
