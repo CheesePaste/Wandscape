@@ -218,10 +218,9 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Computes the tourist interaction target position for tourist AI.
-     * Iterates {@code tourist_interact_aabb} from building config if defined,
-     * spiral-scanning each zone for walkable ground.
-     * Falls back to spiral scan inside the building's bounding box.
+     * Computes the tourist interaction target position for tourist AI:
+     * 第一个 interact spot 的世界坐标（anchor + 旋转偏移）。
+     * 0-spot 建筑对游客无效（无 spiral-scan 兜底）→ 返回 null。
      *
      * @param buildingId the building to target
      * @param level      the world level (for block-state queries)

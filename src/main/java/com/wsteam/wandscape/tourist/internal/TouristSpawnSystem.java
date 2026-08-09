@@ -45,7 +45,7 @@ import com.wsteam.wandscape.shared.log.Log;
  *   <li>Morning (0-1000): daily reset, hotel checkout
  *   <li>Spawn window (1000-13000): tourists spawn at distributed random times
  *   <li>Evening (13000-18000): no new spawns, existing tourists continue interactions
- *   <li>Night departure (18000-24000): satisfaction-based departure + hotel routing
+ *   <li>Night departure (18000-24000): 满条夜晚离场 / 入旅店 + hotel routing
  * </ul>
  *
  * <p><b>Spawn count:</b> base(6) + colonyLevel × levelSpawnBonus(3), randomized × 0.8~1.2

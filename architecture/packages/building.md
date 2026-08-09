@@ -13,11 +13,15 @@
 | crafting_station | 制作站（法杖制作） |
 | potion_station | 魔药站 |
 | tavern | 酒馆（招募） |
-| shop | 商店（游客购物，带交互区） |
-| service | 服务建筑（游客交互，需进入建筑） |
+| shop | 商店（游客购物） |
+| service | 服务建筑（游客交互；`max_occupancy>0`=旅店） |
+| relax | 歇脚建筑（游客回复精力） |
+| atm | 取款建筑（游客取现补钱包） |
 | decoration | 装饰建筑（范围辐射加成） |
 | wonder | 奇观（全局效果） |
 | custom | 自定义建筑（无维护费、游客不可交互、三值恒0） |
+
+> 游客四类目标 = `shop`/`service`/`relax`/`atm`（各带模式预设块）。`interact_spots` 标记交互位（spot 数量 = 同时交互人数上限）；无 spots 的游客目标建筑对游客无效（无兜底）。
 
 ## 关键设计要点
 
@@ -27,7 +31,7 @@
 
 ### 建筑扫描器（两种）
 
-- **创造建筑扫描器**（`creative_building_scanner`，原名 `building_scanner` 改名而来）：完整创作者工具，Type 可选全部类别（含 `custom`），支持 SAVE/CORNER 配对、交互区/维护费/三值/商店/服务/节点配置、预设、ROAD 导出。
+- **创造建筑扫描器**（`creative_building_scanner`，原名 `building_scanner` 改名而来）：完整创作者工具，Type 可选全部类别（含 `custom`），支持 SAVE/CORNER 配对、四类游客模式预设编辑（shop/service/relax/atm）、维护费/三值/节点配置、预设、ROAD 导出。**交互位唯一真源 = world 里的 `interact_spot_marker` 方块**（放置=标记 spot、右键循环动作、潜行右键移除，action 存 blockstate），BE 不存 spot 列表；导出扫 boundary 内 marker → `interact_spots`（marker 格跳过 pattern，创作者自行留空）。
 - **建筑扫描器**（`building_scanner`）：简化版，专供生存玩家复制自己的建筑供 NPC 重建。类别锁定 `custom`（不可修改，导出无维护费/交互区，三值恒0），GUI 仅尺寸/门偏移/ID/Name/导出 + ROAD 模式。方块可合成（金锭×4 + 紫水晶碎片×4 + 工作台）。
 - 两者共用 `BuildingScannerExportPacket`（导出到 datapack 并热注册）与 `BuildingScannerSyncPacket`；渲染共用 `BuildingScannerRenderer`。
 
@@ -66,7 +70,7 @@ shutdown 建筑例外：hasWork() 允许队首 repair 任务通过，pollWork() 
 
 维护费循环
   → DailySettlementSystem 每游戏日0:00
-  → 按优先级：CRITICAL(node/basic/storage) → HIGH(production) → NORMAL(shop/tavern) → LOW(service/decoration)
+  → 按优先级：CRITICAL(node/basic/government/storage) → HIGH(workstation/crafting_station/potion_station) → NORMAL(shop/tavern/relax/atm) → LOW(service/decoration)
   → ColonyItemBank.consumeElements() → 不足则shutdown → 按category分级惩罚
   → 剩余元素 → 自动重启已 shutdown 建筑
 
@@ -81,12 +85,13 @@ shutdown 建筑例外：hasWork() 允许队首 repair 任务通过，pollWork() 
 
 ## JSON
 
-位置：`data/wandscape/buildings/*.json`，8 个现有建筑。格式参见 [data/buildings.md](../data/buildings.md)。
+位置：`data/wandscape/buildings/*.json`（含 `deprecated/`）。格式参见 [data/buildings.md](../data/buildings.md)：四类游客模式预设块（`shop{}`/`service{}`/`relax{}`/`atm{}`）+ `interact_spots`（相对 anchor 交互位，每点带动作）；旧 `tourist_interact_aabb` 顶层字段不再解析。
 
 ## 依赖
 
 - shared/api/BuildingApi, shared/data/BuildingData, shared/data/WorkItem
-- shared/data/MaintenanceCost, shared/data/DecorationConfig, shared/data/WonderConfig, shared/data/WonderEffect, shared/data/ShopConfig, shared/data/ServiceConfig
+- shared/data/MaintenanceCost, shared/data/DecorationConfig, shared/data/WonderConfig, shared/data/WonderEffect
+- shared/data/ShopConfig, shared/data/ServiceConfig, shared/data/RelaxConfig, shared/data/AtmConfig, shared/data/Activity
 - shared/event/BuildingPlacedEvent/BuildingShutdownEvent/BuildingRestartedEvent/ColonyEvaluationChangedEvent
 - shared/event/MaintenanceDueEvent/ShopRestockedEvent/WonderEffectChangedEvent
 - shared/registry/WandscapeApis

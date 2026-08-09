@@ -185,7 +185,7 @@ public class Config {
             .defineInRange("tourist.rescuePeripheryRadius", 24, 8, 128);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
-            .comment("Experience granted when tourist level == colony level (at 100% satisfaction)")
+            .comment("Experience granted when tourist level == colony level (满条离场时)")
             .defineInRange("colony.expEqualLevel", 100, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
@@ -239,20 +239,6 @@ public class Config {
                      "switch from road-based macro navigation to indoor micro-navigation. " +
                      "Micro-navigation supports opening doors and walking around furniture.")
             .defineInRange("tourist.microNavSwitchDistance", 5, 2, 16);
-
-    public static final ModConfigSpec.IntValue TOURIST_LEVEL_SATISFACTION_THRESHOLD = BUILDER
-            .comment("Per-level three-value threshold. A building's three-value sum must be "
-                    + ">= tourist.level × this to grant any satisfaction. Below = 0 gain.")
-            .defineInRange("tourist.levelSatisfactionThreshold", 3, 1, 10);
-
-    public static final ModConfigSpec.IntValue TOURIST_MAX_SATISFACTION_PER_VISIT = BUILDER
-            .comment("Maximum satisfaction a tourist can gain from a single building visit")
-            .defineInRange("tourist.maxSatisfactionPerVisit", 30, 10, 50);
-
-    public static final ModConfigSpec.IntValue TOURIST_PREFERENCE_DECAY = BUILDER
-            .comment("How much a tourist's preference for a building type decreases "
-                    + "after visiting it.")
-            .defineInRange("tourist.preferenceDecay", 15, 0, 30);
 
     public static final ModConfigSpec.IntValue TOURIST_BASE_WALLET = BUILDER
             .comment("Starting universal-element wallet for a level-1 tourist. "

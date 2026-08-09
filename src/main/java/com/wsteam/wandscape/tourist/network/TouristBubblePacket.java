@@ -15,17 +15,15 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 
 /**
  * Server→client packet: notify players near a tourist that it made a shop
- * purchase or used a service, so a transient bubble + satisfaction bar can be
- * shown above it. Icon kinds mirror {@link TransientBubbleStore#ICON_ITEM} /
+ * purchase or used a service, so a transient bubble can be shown above it.
+ * Icon kinds mirror {@link TransientBubbleStore#ICON_ITEM} /
  * {@link TransientBubbleStore#ICON_ELEMENT} / {@link TransientBubbleStore#ICON_NONE}.
  */
 public record TouristBubblePacket(
         int entityId,
         int iconKind,
         @Nullable String iconId,
-        int count,
-        int satBefore,
-        int satAfter
+        int count
 ) implements CustomPacketPayload {
 
     public static final Type<TouristBubblePacket> TYPE =
@@ -45,7 +43,7 @@ public record TouristBubblePacket(
         Entity e = mc.level.getEntity(packet.entityId());
         if (e == null) return;
         TransientBubbleStore.trigger(e.getUUID(), packet.iconKind(), packet.iconId(),
-                packet.count(), packet.satBefore(), packet.satAfter(), e.tickCount);
+                packet.count(), e.tickCount);
     }
 
     // ── StreamCodec ──
@@ -55,8 +53,6 @@ public record TouristBubblePacket(
         buf.writeVarInt(pkt.iconKind);
         buf.writeUtf(pkt.iconId != null ? pkt.iconId : "");
         buf.writeInt(pkt.count);
-        buf.writeInt(pkt.satBefore);
-        buf.writeInt(pkt.satAfter);
     }
 
     static TouristBubblePacket read(RegistryFriendlyByteBuf buf) {
@@ -64,9 +60,6 @@ public record TouristBubblePacket(
         int iconKind = buf.readVarInt();
         String iconId = buf.readUtf();
         int count = buf.readInt();
-        int satBefore = buf.readInt();
-        int satAfter = buf.readInt();
-        return new TouristBubblePacket(entityId, iconKind, iconId.isEmpty() ? null : iconId,
-                count, satBefore, satAfter);
+        return new TouristBubblePacket(entityId, iconKind, iconId.isEmpty() ? null : iconId, count);
     }
 }

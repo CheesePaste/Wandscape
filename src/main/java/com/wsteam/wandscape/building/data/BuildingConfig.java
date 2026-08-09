@@ -159,11 +159,6 @@ public record BuildingConfig(
                 || relax() != RelaxConfig.NONE || atm() != AtmConfig.NONE;
     }
 
-    /** 派生视图：由 interactSpots 算出退化 AABB（一阶段兼容旧消费者；二阶段删）。 */
-    public List<BoundaryBox> touristInteractAabb() {
-        return interactSpots.stream().map(s -> new BoundaryBox(s.pos(), s.pos())).toList();
-    }
-
     /**
      * Custom Gson deserializer that applies defaults for missing optional sections.
      */

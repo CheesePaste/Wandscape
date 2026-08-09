@@ -235,18 +235,6 @@ class BuildingConfigTest {
         }
 
         @Test
-        void derivedTouristInteractAabbFromSpots() {
-            String json = """
-                {"id":"x","category":"shop",
-                 "interact_spots":[{"pos":[1,0,1],"action":"browse"}]}
-                """;
-            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
-            assertEquals(1, cfg.touristInteractAabb().size());
-            assertEquals(new BlockOffset(1, 0, 1), cfg.touristInteractAabb().get(0).min());
-            assertEquals(new BlockOffset(1, 0, 1), cfg.touristInteractAabb().get(0).max());
-        }
-
-        @Test
         void legacyTouristInteractAabbIsIgnored() {
             String json = """
                 {"id":"x","category":"shop",

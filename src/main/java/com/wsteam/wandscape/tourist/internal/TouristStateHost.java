@@ -16,7 +16,7 @@ import net.minecraft.core.BlockPos;
  * (loaded path) and {@link TouristShadow} (unloaded sim path).
  *
  * <p>The shared interaction economy ({@link TouristSimulation}) operates on this
- * interface so the sim reuses exactly the same satisfaction / energy / cooldown /
+ * interface so the sim reuses exactly the same three bars / energy / cooldown /
  * wallet logic as the real AI — one implementation, no drift.
  *
  * <p>Cooldowns are stored as an absolute "end time" in the host's own time base:

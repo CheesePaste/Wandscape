@@ -51,9 +51,6 @@ public final class NarrativeTemplates {
     private static final String FALLBACK_DEPARTURE = "{name} 离开了殖民地";
     private static final String FALLBACK_HOTEL_CHECKIN = "✨ {name} 入住了 {building}";
     private static final String FALLBACK_HOTEL_WAKEUP = "{name} 在 {building} 醒来";
-    private static final String FALLBACK_SATISFACTION_50 = "{name} 的满意度达到 50%";
-    private static final String FALLBACK_SATISFACTION_70 = "{name} 的满意度达到 70%";
-    private static final String FALLBACK_SATISFACTION_100 = "{name} 的满意度达到 100%！";
 
     // ── Loaded templates ──
 
@@ -265,9 +262,6 @@ public final class NarrativeTemplates {
             case "arrival_night" -> FALLBACK_ARRIVAL_NIGHT;
             case "departure_delighted", "departure_pleased",
                  "departure_neutral", "departure_unsatisfied" -> FALLBACK_DEPARTURE;
-            case "satisfaction_milestone_50" -> FALLBACK_SATISFACTION_50;
-            case "satisfaction_milestone_70" -> FALLBACK_SATISFACTION_70;
-            case "satisfaction_milestone_100" -> FALLBACK_SATISFACTION_100;
             default -> "{name}";
         };
     }

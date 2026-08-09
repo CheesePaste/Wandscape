@@ -73,7 +73,7 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
  *
  * <p>95% tourist appearance (skins from {@code textures/entity/tourist}),
  * 5% mage appearance (skins from {@code textures/entity/wizard}).
- * Mage tourists carry mana/spell-power stats; when their satisfaction reaches 100%,
+ * Mage tourists carry mana/spell-power stats; when their three bars are full,
  * their data is stored in the tavern as a recruitment resume.
  */
 public class TouristEntity extends PathfinderMob implements VillagerLike, TouristStateHost {

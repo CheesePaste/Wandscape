@@ -1,0 +1,95 @@
+{
+  "id": "atm",
+  "display_name": "自动取款机",
+  "category": "atm",
+  "first_free": true,
+  "pattern": [
+    [-1, 0, -1],
+    [0, 0, -1],
+    [1, 0, -1],
+    [-1, 0, 0],
+    [0, 0, 0],
+    [1, 0, 0],
+    [-1, 0, 1],
+    [0, 0, 1],
+    [1, 0, 1],
+    [-1, 1, -1],
+    [0, 1, -1],
+    [1, 1, -1],
+    [-1, 1, 0],
+    [1, 1, 0],
+    [-1, 2, -1],
+    [0, 2, -1],
+    [1, 2, -1],
+    [-1, 2, 0],
+    [0, 2, 0],
+    [1, 2, 0],
+    [-1, 2, 1],
+    [0, 2, 1],
+    [1, 2, 1]
+  ],
+  "block_mapping": {
+    "-1,0,-1": "minecraft:stone_bricks",
+    "0,0,-1": "minecraft:smithing_table",
+    "1,0,-1": "minecraft:stone_bricks",
+    "-1,0,0": "minecraft:stone_bricks",
+    "0,0,0": "minecraft:stone_bricks",
+    "1,0,0": "minecraft:stone_bricks",
+    "-1,0,1": "minecraft:stone_bricks",
+    "0,0,1": "minecraft:stone_bricks",
+    "1,0,1": "minecraft:stone_bricks",
+    "-1,1,-1": "minecraft:stone_bricks",
+    "0,1,-1": "minecraft:stone_bricks",
+    "1,1,-1": "minecraft:stone_bricks",
+    "-1,1,0": "minecraft:stone_bricks",
+    "1,1,0": "minecraft:stone_bricks",
+    "-1,2,-1": "minecraft:oak_planks",
+    "0,2,-1": "minecraft:oak_planks",
+    "1,2,-1": "minecraft:oak_planks",
+    "-1,2,0": "minecraft:oak_planks",
+    "0,2,0": "minecraft:oak_planks",
+    "1,2,0": "minecraft:oak_planks",
+    "-1,2,1": "minecraft:oak_planks",
+    "0,2,1": "minecraft:oak_planks",
+    "1,2,1": "minecraft:oak_planks"
+  },
+  "comfort": 2,
+  "magic": 2,
+  "wonder": 4,
+  "maintenance_cost": {
+    "costs": {
+      "earth": 3,
+      "metal": 3
+    }
+  },
+  "queue": {
+    "capacity": 0,
+    "task_types": []
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [-1, 0, -1],
+    "max": [1, 2, 1]
+  },
+  "door_offset": [0, 0, 1],
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
+  },
+  "atm": {
+    "withdraw_amount": 50,
+    "interaction_duration_ticks": 1200
+  },
+  "interact_spots": [
+    {
+      "pos": [0, 0, 0],
+      "action": "withdraw"
+    }
+  ]
+}

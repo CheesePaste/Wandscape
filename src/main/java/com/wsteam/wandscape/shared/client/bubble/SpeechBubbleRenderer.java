@@ -135,7 +135,7 @@ public final class SpeechBubbleRenderer {
         if (renderDispatcher.distanceToSqr(entity) > MAX_DIST_SQ) return;
 
         int iconKind = event.iconKind();
-        if (iconKind == TransientBubbleStore.ICON_NONE) return; // satisfaction bar only
+        if (iconKind == TransientBubbleStore.ICON_NONE) return; // 无图标 → 不显示气泡
 
         Font font = Minecraft.getInstance().font;
         String countText = "×" + event.count();
@@ -143,14 +143,11 @@ public final class SpeechBubbleRenderer {
 
         final float iconSize = 16F;
         final float gap = 4F;
-        // Reserve room below the bubble for the decoupled satisfaction bar + pointer
-        final float barH = 6F;
-        final float barGap = 3F;
 
         float contentW = iconSize + gap + countW;
         float bubbleW = contentW + BUBBLE_PADDING * 2F;
         float bubbleH = iconSize + BUBBLE_PADDING * 2F;
-        float totalH = bubbleH + barGap + barH + TRIANGLE_SIZE;
+        float totalH = bubbleH + TRIANGLE_SIZE;
         float by = -totalH;
         float ey = by + bubbleH / 2F;
 

@@ -17,7 +17,6 @@ import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.data.Activity;
-import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -1213,12 +1212,11 @@ public class TouristMoveGoal extends Goal {
     }
 
     /** Notify nearby players of a purchase / service bubble event above this tourist. */
-    private void sendBubble(int iconKind, @Nullable String iconId, int count,
-                            int satBefore, int satAfter) {
+    private void sendBubble(int iconKind, @Nullable String iconId, int count) {
         ServerLevel level = getServerLevel();
         if (level == null) return;
         TouristBubblePacket packet =
-                new TouristBubblePacket(tourist.getId(), iconKind, iconId, count, satBefore, satAfter);
+                new TouristBubblePacket(tourist.getId(), iconKind, iconId, count);
         for (ServerPlayer p : level.getEntitiesOfClass(
                 ServerPlayer.class, tourist.getBoundingBox().inflate(32))) {
             PacketDistributor.sendToPlayer(p, packet);
@@ -1263,7 +1261,6 @@ public class TouristMoveGoal extends Goal {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        int barBefore = barMinPct();
         var result = TouristSimulation.performShopInteraction(level, tourist, buildingId, colonyId);
         if (result == null) return;
 
@@ -1279,8 +1276,7 @@ public class TouristMoveGoal extends Goal {
         var purchase = result.purchase();
         sendBubble(purchase != null ? TransientBubbleStore.ICON_ITEM : TransientBubbleStore.ICON_NONE,
                 purchase != null ? purchase.itemId() : null,
-                purchase != null ? purchase.count() : 0,
-                barBefore, barMinPct());
+                purchase != null ? purchase.count() : 0);
 
         sparkleSatisfaction();
     }
@@ -1291,7 +1287,6 @@ public class TouristMoveGoal extends Goal {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        int barBefore = barMinPct();
         var result = TouristSimulation.performServiceInteraction(level, tourist, buildingId, colonyId);
         if (result == null) return;
 
@@ -1308,10 +1303,9 @@ public class TouristMoveGoal extends Goal {
         if (config != null && config.service() != null && !config.service().elementOutput().isEmpty()) {
             var entries = List.copyOf(config.service().elementOutput().entrySet());
             var pick = entries.get(tourist.level().random.nextInt(entries.size()));
-            sendBubble(TransientBubbleStore.ICON_ELEMENT, pick.getKey(), pick.getValue(),
-                    barBefore, barMinPct());
+            sendBubble(TransientBubbleStore.ICON_ELEMENT, pick.getKey(), pick.getValue());
         } else {
-            sendBubble(TransientBubbleStore.ICON_NONE, null, 0, barBefore, barMinPct());
+            sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
         }
 
         sparkleSatisfaction();
@@ -1324,7 +1318,6 @@ public class TouristMoveGoal extends Goal {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        int barBefore = barMinPct();
         var result = TouristSimulation.performRelaxInteraction(level, tourist, buildingId, colonyId);
         if (result == null) return;
 
@@ -1337,7 +1330,7 @@ public class TouristMoveGoal extends Goal {
         NarrativeEvent relaxEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(relaxEvent);
 
-        sendBubble(TransientBubbleStore.ICON_NONE, null, 0, barBefore, barMinPct());
+        sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
         sparkleSatisfaction();
     }
 
@@ -1348,7 +1341,6 @@ public class TouristMoveGoal extends Goal {
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        int barBefore = barMinPct();
         var result = TouristSimulation.performAtmInteraction(level, tourist, buildingId, colonyId);
         if (result == null) return;
 
@@ -1361,15 +1353,8 @@ public class TouristMoveGoal extends Goal {
         NarrativeEvent atmEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(atmEvent);
 
-        sendBubble(TransientBubbleStore.ICON_NONE, null, 0, barBefore, barMinPct());
+        sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
         sparkleSatisfaction();
-    }
-
-    /** 三条最短板比例（min-ratio×100）：气泡/叙事用聚合值。 */
-    private int barMinPct() {
-        return (int) Math.round(BarRatio.of(tourist.getComfortSat(), tourist.getComfortNeed(),
-                tourist.getMagicSat(), tourist.getMagicNeed(),
-                tourist.getWonderSat(), tourist.getWonderNeed()).minPct());
     }
 
     /** 满意度提升：游客位置撒金色星光（四类交互共用）。粒子纯装饰，缺失静默跳过。 */

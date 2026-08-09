@@ -12,7 +12,6 @@ public enum NarrativeEventType {
     VISIT_ATM(false),
     HOTEL_CHECKIN(false),
     HOTEL_WAKEUP(false),
-    SATISFACTION_MILESTONE(true),
     ENERGY_CRITICAL(false),
     MAGE_RECRUIT(true),
     DEPARTURE(false),

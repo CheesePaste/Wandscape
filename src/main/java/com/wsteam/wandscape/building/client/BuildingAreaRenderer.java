@@ -18,10 +18,10 @@ import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * World-space renderer that visualizes building boundaries and indoor interaction
- * zones when the Wandscape panel is open.
+ * spots when the Wandscape panel is open.
  *
- * <p>Interaction zone = {@code tourist_interact_aabb} entries from building config,
- * rendered as semi-transparent orange boxes. These are the areas where tourists
+ * <p>Interaction spots = {@code interact_spots} from building config (anchor + 旋转偏移),
+ * rendered as semi-transparent orange boxes. These are the spots where tourists
  * navigate indoors to interact with the building.
  *
  * <p>Building boundary = green wireframe from {@code boundary}.
