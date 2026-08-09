@@ -29,6 +29,7 @@ import com.wsteam.wandscape.tourist.internal.TouristStateHost;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
@@ -352,6 +353,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                         setColonyId(detected);
                     }
                 }
+            }
+            // Spawn-egg / pre-Block-2 save tourists may lack a stay window (arrival=0,
+            // deadline=Long.MAX_VALUE) — heal it before the sim shadow is created so the
+            // info screen's stay-day count and the deadline-based departure both work.
+            if (!previewMode) {
+                ensureStayWindow(level().getGameTime());
             }
             // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
             // them now, else the sim's orphan sweep discards them as departed
@@ -830,6 +837,27 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public void setNightsStayed(int n) { this.nightsStayed = Math.max(0, n); }
     public long getDepartureDeadline() { return departureDeadline; }
     public void setDepartureDeadline(long t) { this.departureDeadline = t; }
+
+    /**
+     * 兜底：刷怪蛋/旧存档游客可能没走过 {@code applySpawnDefaults}，停留字段仍是初始值
+     * （arrivalTime=0、departureDeadline=Long.MAX_VALUE）——信息屏「共 X 天」会溢出成巨数，
+     * 且永远不会按停留到点离场。给它们补一个 2~4 天的窗口。幂等：已设好窗口的游客不受影响。
+     */
+    public void ensureStayWindow(long gameTime) {
+        long arrival = getArrivalTime();
+        if (arrival <= 0L) {
+            arrival = gameTime;
+            setArrivalTime(arrival);
+        }
+        long deadline = getDepartureDeadline();
+        if (deadline == Long.MAX_VALUE || deadline < arrival) {
+            int stayMin = Config.TOURIST_STAY_MIN_DAYS.get();
+            int stayMax = Config.TOURIST_STAY_MAX_DAYS.get();
+            long stayTicks = (stayMin + random.nextInt(stayMax - stayMin + 1)) * 24000L;
+            setDepartureDeadline(arrival + stayTicks);
+        }
+    }
+
     public int getTravelFund() { return travelFund; }
     public void setTravelFund(int v) { this.travelFund = Math.max(0, v); }
 

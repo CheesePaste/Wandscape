@@ -68,7 +68,7 @@
 
 ## client/ 与 network/
 
-- `TouristScreen`：MedievalScreen 300×230，显示精力/200、满意度/100、等级、钱包、状态/目标/位置/冷却、行程列表。
+- `TouristScreen`：MedievalScreen 300×300，显示三条需求条（舒适/魔法/奇观 fill/need）、画像标签、精力、等级、钱包、停留（已住 N 晚 / 共 X 天）、行程列表。
 - `TouristRenderer`：HumanoidMobRenderer + HumanoidModel(PLAYER)，运行时枚举贴图；渲染 SpeechBubbleRenderer + SatisfactionBarRenderer。
 - `TouristDebugRenderer`：按 G 开关（RenderLevelStageEvent.AFTER_TRIPWIRE_BLOCKS），扫描半径 80，X-ray 画线/十字（青=入口、品红=交互点）。
 - `TouristDataPacket`：S→C 信息屏（含 VisitEntry 轻量子集）；`TouristBubblePacket`：购买/服务后触发 TransientBubbleStore.trigger。

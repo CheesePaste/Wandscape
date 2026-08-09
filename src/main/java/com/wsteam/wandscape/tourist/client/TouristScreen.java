@@ -2,9 +2,6 @@ package com.wsteam.wandscape.tourist.client;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
@@ -22,7 +19,7 @@ import net.minecraft.world.item.Items;
 /**
  * Tourist info screen.
  *
- * <p>Block 2：三条需求条（Comfort/Magic/Wonder fill/need）+ 画像标签 + 活动 + 停留 + 钱包/旅费；
+ * <p>Block 2：三条需求条（Comfort/Magic/Wonder fill/need）+ 画像标签 + 停留 + 钱包；
  * 行程逐维增量；删除单一满意度。
  */
 public class TouristScreen extends MedievalScreen {
@@ -35,11 +32,8 @@ public class TouristScreen extends MedievalScreen {
     private int energy;
     private int level;
     private int wallet;
-    private int travelFund;
     private int comfortSat, magicSat, wonderSat;
     private int comfortNeed, magicNeed, wonderNeed;
-    @Nullable
-    private Activity currentActivity;
     private int nightsStayed;
     private int stayDaysTotal;
     private List<TouristDataPacket.VisitEntry> recentVisits;
@@ -59,14 +53,12 @@ public class TouristScreen extends MedievalScreen {
         this.energy = packet.energy();
         this.level = packet.level();
         this.wallet = packet.wallet();
-        this.travelFund = packet.travelFund();
         this.comfortSat = packet.comfortSat();
         this.magicSat = packet.magicSat();
         this.wonderSat = packet.wonderSat();
         this.comfortNeed = packet.comfortNeed();
         this.magicNeed = packet.magicNeed();
         this.wonderNeed = packet.wonderNeed();
-        this.currentActivity = packet.currentActivity();
         this.nightsStayed = packet.nightsStayed();
         this.stayDaysTotal = packet.stayDaysTotal();
         this.recentVisits = packet.recentVisits();
@@ -135,19 +127,14 @@ public class TouristScreen extends MedievalScreen {
         g.drawString(font, String.valueOf(level), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
-        // Wallet / travel fund
+        // Wallet
         g.drawString(font, "钱包:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, wallet + "  旅费:" + travelFund, leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, String.valueOf(wallet), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
         // Stay
         g.drawString(font, "停留:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, "已住 " + nightsStayed + " 晚 / 共 " + stayDaysTotal + " 天", leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
-        statY += 11;
-
-        // Activity
-        g.drawString(font, "活动:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, activityLabel(), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
         // ── Visits ──
@@ -189,25 +176,6 @@ public class TouristScreen extends MedievalScreen {
         if (comfortNeed >= magicNeed && comfortNeed >= wonderNeed) return "偏爱舒适";
         if (magicNeed >= wonderNeed) return "偏爱魔法";
         return "偏爱奇观";
-    }
-
-    /** 活动名（中文直显，与面板其余文案一致；null = 无活动）。 */
-    private String activityLabel() {
-        if (currentActivity == null) return "—";
-        return switch (currentActivity) {
-            case TRAVEL -> "赶路";
-            case QUEUE -> "排队";
-            case BROWSE -> "浏览";
-            case EAT -> "用餐";
-            case BATHE -> "泡澡";
-            case VIEW -> "看展";
-            case PAY -> "付钱";
-            case READ -> "看书";
-            case TAKE -> "拿取";
-            case SLEEP -> "睡觉";
-            case REST -> "歇脚";
-            case WITHDRAW -> "取现";
-        };
     }
 
     private static float ratio(int sat, int need) {

@@ -301,6 +301,9 @@ public final class TouristSimSystem {
         e.setWakeUpPos(s.getWakeUpPos());
         e.setArrivalTime(s.getArrivalTime());
         e.setMageResumeStored(s.isMageResumeStored());
+        // Shadow may carry the pre-Block-2 defaults (arrival=0 / deadline=Long.MAX_VALUE) —
+        // heal so the info screen's stay-day count and deadline departure stay sane.
+        e.ensureStayWindow(e.level().getGameTime());
         for (UUID id : s.getVisitedBuildings()) e.addVisitedBuilding(id);
         for (var v : s.getRecentVisits()) e.addVisitMemory(v);
         e.applyState(com.wsteam.wandscape.tourist.internal.TouristState.VISITING);
