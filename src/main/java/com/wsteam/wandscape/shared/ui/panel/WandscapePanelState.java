@@ -355,16 +355,13 @@ public final class WandscapePanelState {
     public static void openBuildingBar() {
         buildingBarOpen = true;
         buildingBarSearchFocused = false;
-        buildingBarCategory = "All";
-        buildingBarSearch = "";
+        // Preserve category/search/scroll from last open (selection cache). Resync the
+        // highlighted slot from the persisted projection selection.
         buildingBarSelectedIndex = ProjectionClientState.getSelectedSlotIndex();
-        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
-        // Clear ghost — no preview while selecting
-        ProjectionClientState.setGhostPos(null);
-        ProjectionClientState.setPinned(false);
+        // Keep ghost/pinned so toggling the bar does not discard a placement in progress.
         if (!cursorLifted) {
             cursorLifted = true;
             Minecraft.getInstance().mouseHandler.releaseMouse();
@@ -374,10 +371,8 @@ public final class WandscapePanelState {
     public static void closeBuildingBar() {
         buildingBarOpen = false;
         buildingBarSearchFocused = false;
-        buildingBarCategory = "All";
-        buildingBarSearch = "";
+        // Preserve category/search/scroll (selection cache). selectedIndex resyncs on reopen.
         buildingBarSelectedIndex = -1;
-        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         if (cursorLifted) {
