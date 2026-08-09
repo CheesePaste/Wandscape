@@ -53,10 +53,9 @@ public final class RoadPlacementState {
     public static void enterProjection() {
         projecting = true;
         roadPhase = RoadPhase.BAR;
-        startPos = null;
-        endPos = null;
-        ghostPos = null;
-        Log.info(TAG, "[RoadPlacement] Entered placement mode");
+        // Preserve startPos/endPos/ghostPos/activeTool/selectedPresetIndex/refBlockId
+        // across suspend/resume within a session. Fields start null so first entry is clean.
+        Log.info(TAG, "[RoadPlacement] Entered placement mode (selection preserved)");
     }
 
     public static void exitProjection() {
@@ -70,26 +69,30 @@ public final class RoadPlacementState {
         Log.info(TAG, "[RoadPlacement] Exited placement mode");
     }
 
+    /**
+     * Suspend road placement without clearing the selection (positions, tool, preset,
+     * ref block). Used when temporarily leaving ROAD so in-progress placement survives
+     * re-entry. Full clear is {@link #exitProjection()}, called only on disconnect.
+     */
+    public static void suspendProjection() {
+        projecting = false;
+        Log.info(TAG, "[RoadPlacement] Suspended placement mode (selection preserved)");
+    }
+
     // ── Phase ──
 
     public static RoadPhase getRoadPhase() { return roadPhase; }
 
-    /** Enter BAR phase: clear positions, cursor lifted for preset selection overlay. */
+    /** Enter BAR phase (preset selection overlay). Preserves in-progress positions/tool. */
     public static void enterBar() {
         roadPhase = RoadPhase.BAR;
-        activeTool = ToolMode.REPLACE;
-        clearAll();
-        ghostPos = null;
-        refBlockId = "";
-        Log.info(TAG, "[RoadPlacement] Entered BAR phase");
+        Log.info(TAG, "[RoadPlacement] Entered BAR phase (positions preserved)");
     }
 
-    /** Enter PLACING phase: clear positions, cursor in game for start/end point selection. */
+    /** Enter PLACING phase (in-world start/end selection). Preserves in-progress positions/tool. */
     public static void enterPlacing() {
         roadPhase = RoadPhase.PLACING;
-        clearAll();
-        ghostPos = null;
-        Log.info(TAG, "[RoadPlacement] Entered PLACING phase");
+        Log.info(TAG, "[RoadPlacement] Entered PLACING phase (positions preserved)");
     }
 
     // ── Tool mode ──

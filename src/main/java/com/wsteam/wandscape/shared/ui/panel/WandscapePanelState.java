@@ -501,7 +501,7 @@ public final class WandscapePanelState {
                     com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
                 }
                 if (RoadPlacementState.isProjecting()) {
-                    RoadPlacementState.exitProjection();
+                    RoadPlacementState.suspendProjection();
                     releaseCursorToGame();
                 }
                 // If entered from overview, go back to pure overview
