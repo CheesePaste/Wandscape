@@ -54,3 +54,17 @@
 - `refactor: 删魔力系统`（1bd748d）：NPC 属性收敛为 6 属性 + 脱战回血 + 统一魔法冷却 + 装备仅加法。**旧文档若仍描述"魔力/mana_cost"概念，一律作废**（`mana_cost`/`baseManaCost`/`spawnNpc` 死代码已删）。
 - `feat: 魔力回归`（1.5.0）：魔力为第 7 属性（MAX_MANA，默认 200），每魔法独立 CD + 施法互斥锁（`MagicState`），光束 50 蓝/传送 30 蓝，回复 10t/1 点；统一 `spellCooldown` 已删，`canCastSpell/startSpellCooldown` 不再存在。
 - `refactor: SPELL_POWER 改伤害核算入口统一倍率`（93cc7a3）：伤害在 `MagicBeamEntity`/`NpcSpellPowerHandler` 按 SPELL_POWER 统一放大；传送 CD 300。
+
+## 六、指南文本与真实机制不一致（2026-08 调查发现）
+
+调查游戏内指南书文体时发现以下文本与真实机制不符。本次仅修文体、未改事实（用户决定事实修正另开任务），此处记录待处理：
+
+1. **「声望(reputation)」机制虚构**——指南把"声望"当真实机制讲，但代码无 reputation 概念：
+   - `guide/zh_cn/townhall_guide.md` L3（"等级、经验、声望、小镇名字"）、L16（"声望：由游客的满意离场积累。声望越高，每天进城门的游客越稀有、越有钱"）
+   - `guide/zh_cn/getting_started_guide.md` L60（第八步标题"升级与声望"）、L62（"游客越满意，积累的声望越高，以后进城的游客就越富有"）
+   - `guide/zh_cn/test_guide.md` L12（测试页"游客声望"，已隔离不在导航）
+   - 英文镜像 `guide/en/` 对应位置同病。
+
+   真实机制：游客生成数 = `base(6) + colonyLevel×3` 浮动，等级分布固定 40%(colonyLevel−1) / 40%(==) / 20%(+1)，与"声望"无关。修正方向：改为"殖民地等级影响游客生成数量与等级"。
+
+   （调查同时核实：指南对「奇观(Wonder)」仅作为需求条/商品三值提及，属真实机制，未虚构"奇观建筑"；指南未提及「药水酿造站」。此两者非指南错误。）
