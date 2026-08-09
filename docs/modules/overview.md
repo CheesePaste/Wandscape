@@ -8,12 +8,20 @@
 
 ## OverviewClientState
 
-静态相机状态（camX/Y/Z、yaw、pitch）+ 目标（targetBlockPos/targetBuildingId/targetEntityId）；`enterOverview` 从玩家上方 20 格、pitch=90 俯视。
+静态相机状态（camX/Y/Z、yaw、pitch）+ 目标（targetBlockPos/targetBuildingId/targetEntityId）+ 玩家旋转快照（prevYaw/prevPitch，每次进入刷新）+ 相机缓存标志 `aerialCacheValid`。
+
+- `enterOverview`：每次刷新玩家快照；`aerialCacheValid` 为假时算「角色后上方 45°」默认（camPitch=45、位置=脚位 − 水平前向×14、Y+14、camYaw=玩家朝向）并置缓存有效；为真则原样保留 cam 字段（用户上次飞到的位置）。
+- `exitOverview`：suspend 语义——只落 active 标志 + 清瞬态准星目标，**保留 cam 字段与 aerialCacheValid**，下次进入复用。
+- `hardReset`：清零全部含缓存标志，仅 `WandscapePanelState.reset()`（断开连接）调用，防止上一世界的相机位置泄漏到下一世界。
 
 ## OverviewFlightController
 
 - 移动在 `RenderLevelStageEvent.AFTER_SKY` 处理（帧率无关 WASD/Space/Shift）；`MovementInputUpdateEvent` 清零玩家移动；滚轮沿视线推拉、Ctrl 调速；onMouseButtonPre 全取消。
+- **渲染玩家实体**：`enter` 切第三人称（`CameraType.THIRD_PERSON_BACK`）、`exit` 恢复原相机类型；`onRenderLevelStage` 每帧 reconcile 相机类型（F5 在 `handleKeybinds` 早于 ClientTickPost 消费，drain 无效，必须每帧拉回）。
+- **防玩家视角污染**：`onRenderLevelStage` 末尾每帧把玩家旋转（yRot/xRot/yRotO/xRotO + yBodyRot/yBodyRotO + yHeadRot/yHeadRotO）冻结回进入快照，抵消原版 `MouseHandler.turnPlayer`；`exit` 显式落定防退出瞬间甩头。两个「玩家视角」（原版 + 地面模式）共享这一份玩家旋转。
+- **受伤自动退出**：`enter` 采样血量基线；`onClientTickPost` 检测血量下降沿或死亡 → `WandscapePanelState.closePanel()` 完全退出控制面板（保留空中相机缓存），回原版第一人称夺回操控。
 - onClientTickPost raycast 方块 + 实体（WandscapeNpc/TouristEntity），若投影激活则同步 ghost 位置。右键三分支：投影中 → pinGhost + 开 ConstructionScreen；实体 → OverviewEntityInteractPacket；建筑 → OverviewInteractPacket。
+- 进入音效 `OVERVIEW_ENTER` 在 `enter()` 播放（不在 OverviewClientState，保持状态 holder 纯净可测）。
 
 ## OverviewRenderer
 
