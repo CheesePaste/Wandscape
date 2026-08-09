@@ -1,6 +1,6 @@
 # 🛣️ Road System
 
-First, a harsh fact: **tourists only walk on paved roads**. How far your roads reach is how far your town's economy can grow — that is not a metaphor, it is a hard rule. So this page is worth reading carefully.
+**Tourists only walk on paved roads.** Without roads there are no tourists — a shop can open but no one will enter.
 
 ![Road system diagram](wandscape:textures/gui/guide/road_diagram.png =200x100)
 
@@ -31,7 +31,7 @@ Double-click a card in the bottom bar to pick: **Dirt Path / Road (Stone) / Gras
 | **Backspace** | Undo the last endpoint |
 | **ESC** | Exit road construction |
 
-After submitting, wizard NPCs pave automatically according to the task; when you have enough buildings, the town also plans roads automatically to connect them. For fine curves and interchanges, use the [Spline Editor](road_spline_guide.md).
+After submitting, wizard NPCs pave automatically according to the task; when enough buildings are placed, the town also plans roads automatically to connect them. For fine curves and interchanges, use the [Spline Editor](road_spline_guide.md).
 
 ## Per-Mode Tutorials
 

@@ -1,8 +1,6 @@
 # 🏰 Panel & Overview
 
-The panel opened with **V** is your command center for managing the town. It can be a bit overwhelming the first time — a screen full of icons and buttons — don't worry, you'll get the hang of it in three minutes.
-
-It opens in **overview mode** by default: the camera rises above your head, letting you survey the whole town, place buildings like a chess game, patrol the streets, and check statistics.
+The panel opened with **V** is used to manage the town: place buildings, lay roads, and check statistics. It opens in **overview mode** by default: the camera rises above your head to survey the whole town.
 
 ## Key Bindings
 
@@ -16,15 +14,15 @@ It opens in **overview mode** by default: the camera rises above your head, lett
 
 ## Flying in Overview Mode
 
-Flying works just like creative mode: **WASD** to pan, **Space / Shift** to ascend/descend, **scroll wheel** to zoom. Want a closer look at a building? Just fly closer; if it feels too slow, hold **Ctrl + scroll wheel** to adjust speed.
+Flying works the same as creative mode: **WASD** to pan, **Space / Shift** to ascend/descend, **scroll wheel** to zoom. To inspect a building up close, fly closer; hold **Ctrl + scroll wheel** to adjust flight speed.
 
 ## The Three Sidebar Tabs
 
-- **Build**: the building bar below lists everything you can build by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). The flow is **single-click** to select → **double-click** to enter placement → **left-click** in the world to rotate → **right-click** to pin and open the construction screen → fine-tune X/Y/Z → **Submit**. First-free buildings are marked.
-- **Roads**: the complete paving toolset — see the [Road System Overview](road_guide.md).
-- **Stats**: tourist flow, economic income, resident count, and anomaly warnings — the town's state at a glance.
+- **Build**: the building bar below lists buildable structures by category (All / Government / Storage / Service / Shops / Relax / ATM / Workshop / Node). Flow: **single-click** to select → **double-click** to enter placement → **left-click** in the world to rotate → **right-click** to pin and open the construction screen → fine-tune X/Y/Z → **Submit**. First-free buildings are marked in the bar.
+- **Roads**: the paving toolset — see [Road System Overview](road_guide.md).
+- **Stats**: tourist flow, economic income, resident count, anomaly warnings.
 
-Below the sidebar there is also a **⚠️ warning icon**: it lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired in one click.
+The **⚠️ warning icon** below the sidebar lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired.
 
 ## Where to Start
 
