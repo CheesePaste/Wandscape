@@ -15,8 +15,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -46,7 +46,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * The server reads the scanner BE, scans world blocks, builds a JSON matching
  * the building config format, and writes it to wandscape_buildings/&lt;id&gt;.json.
  */
-public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
+public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
 
     private static final String TAG = "ScannerExport";
 
@@ -57,22 +57,22 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
     private static final Set<String> DECORATION_TYPES = Set.of(
             "minecraft:item_frame", "minecraft:glow_item_frame", "minecraft:painting");
 
-    public static final Type<BuildingScannerExportPacket> TYPE =
+    public static final Type<ScannerExportPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "scanner_export"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, BuildingScannerExportPacket> STREAM_CODEC =
-            StreamCodec.of(BuildingScannerExportPacket::write, BuildingScannerExportPacket::read);
+    public static final StreamCodec<RegistryFriendlyByteBuf, ScannerExportPacket> STREAM_CODEC =
+            StreamCodec.of(ScannerExportPacket::write, ScannerExportPacket::read);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 
-    public static void handleServer(BuildingScannerExportPacket packet, ServerPlayer player) {
+    public static void handleServer(ScannerExportPacket packet, ServerPlayer player) {
         if (player == null) return;
         ServerLevel level = player.serverLevel();
         BlockEntity be = level.getBlockEntity(packet.pos);
-        if (!(be instanceof BuildingScannerBlockEntity scanner)) {
+        if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "§cNo scanner found at " + packet.pos));
@@ -99,7 +99,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         wMin = scanner.getWorldMin();
         wMax = scanner.getWorldMax();
 
-        if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
+        if (scanner.getTargetMode() == CreativeScannerBlockEntity.TargetMode.ROAD) {
             exportRoad(scanner, packet, player, level, wMin, wMax);
             return;
         }
@@ -444,8 +444,8 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         Files.writeString(metaFile, meta);
     }
 
-    private static void exportRoad(BuildingScannerBlockEntity scanner,
-                                   BuildingScannerExportPacket packet,
+    private static void exportRoad(CreativeScannerBlockEntity scanner,
+                                   ScannerExportPacket packet,
                                    ServerPlayer player,
                                    ServerLevel level,
                                    BlockPos wMin,
@@ -539,11 +539,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         return id.toString();
     }
 
-    private static void write(RegistryFriendlyByteBuf buf, BuildingScannerExportPacket pkt) {
+    private static void write(RegistryFriendlyByteBuf buf, ScannerExportPacket pkt) {
         buf.writeBlockPos(pkt.pos);
     }
 
-    private static BuildingScannerExportPacket read(RegistryFriendlyByteBuf buf) {
-        return new BuildingScannerExportPacket(buf.readBlockPos());
+    private static ScannerExportPacket read(RegistryFriendlyByteBuf buf) {
+        return new ScannerExportPacket(buf.readBlockPos());
     }
 }

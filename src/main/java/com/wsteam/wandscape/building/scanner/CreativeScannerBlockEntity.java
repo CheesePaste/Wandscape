@@ -27,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Block entity for the Building Scanner block.
  * Stores all scanner state and syncs to client for wireframe rendering.
  */
-public class BuildingScannerBlockEntity extends BlockEntity {
+public class CreativeScannerBlockEntity extends BlockEntity {
 
     private static final String TAG = "ScannerBE";
 
@@ -123,7 +123,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     // ── Service element output (only for category=service) ──
     private final Map<String, Integer> serviceElementOutput = new HashMap<>();
 
-    public BuildingScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public CreativeScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
@@ -165,7 +165,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
                 .forEach(pos -> {
                     if (pos.equals(myPos)) return;
                     net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof BuildingScannerBlockEntity other) {
+                    if (be instanceof CreativeScannerBlockEntity other) {
                         if (other.getBlockMode() == BlockMode.CORNER
                                 && structureName.equalsIgnoreCase(other.getStructureName())) {
                             cornerPositions.add(pos.immutable());

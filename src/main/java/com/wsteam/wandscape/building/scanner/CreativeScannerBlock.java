@@ -4,7 +4,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.building.scanner.client.BuildingScannerScreen;
+import com.wsteam.wandscape.building.scanner.client.CreativeScannerScreen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -28,13 +28,13 @@ import net.minecraft.world.phys.BlockHitResult;
  * Works like the vanilla Structure Block: place, right-click to open GUI,
  * configure boundary/door/interact zones/meta in modes, export building JSON.
  */
-public class BuildingScannerBlock extends Block implements EntityBlock {
+public class CreativeScannerBlock extends Block implements EntityBlock {
 
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
     protected final Supplier<? extends BlockEntityType<?>> beType;
 
-    public BuildingScannerBlock(Properties properties, Supplier<? extends BlockEntityType<?>> beType) {
+    public CreativeScannerBlock(Properties properties, Supplier<? extends BlockEntityType<?>> beType) {
         super(properties);
         this.beType = beType;
         registerDefaultState(defaultBlockState().setValue(FACING, net.minecraft.core.Direction.NORTH));
@@ -48,7 +48,7 @@ public class BuildingScannerBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new BuildingScannerBlockEntity(beType.get(), pos, state);
+        return new CreativeScannerBlockEntity(beType.get(), pos, state);
     }
 
     @Override
@@ -56,8 +56,8 @@ public class BuildingScannerBlock extends Block implements EntityBlock {
                                                 Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof BuildingScannerBlockEntity scanner) {
-                Minecraft.getInstance().setScreen(new BuildingScannerScreen(scanner));
+            if (be instanceof CreativeScannerBlockEntity scanner) {
+                Minecraft.getInstance().setScreen(new CreativeScannerScreen(scanner));
             }
         }
         return InteractionResult.SUCCESS;

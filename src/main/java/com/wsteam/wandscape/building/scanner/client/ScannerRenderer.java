@@ -8,7 +8,7 @@ import java.util.Map;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.data.Activity;
 
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -22,7 +22,7 @@ import net.minecraft.core.BlockPos;
  * Draws orange boundary box, per-action colored interact-spot dots (scanned from
  * world {@code interact_spot_marker} blocks, cached at low frequency), and red door marker.
  */
-public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScannerBlockEntity> {
+public class ScannerRenderer implements BlockEntityRenderer<CreativeScannerBlockEntity> {
 
     // Boundary: orange
     private static final int BDY_R = 255, BDY_G = 150, BDY_B = 50, BDY_A = 200;
@@ -47,17 +47,17 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
 
     /** 低频扫 world marker，避免每帧扫整个 boundary。 */
     private static final int SPOT_SCAN_INTERVAL_TICKS = 40;
-    private final Map<BuildingScannerBlockEntity, SpotCache> spotCaches = new HashMap<>();
+    private final Map<CreativeScannerBlockEntity, SpotCache> spotCaches = new HashMap<>();
 
     private record SpotCache(List<BlockPos> positions, List<Activity> actions, long lastScan) {}
 
-    public BuildingScannerRenderer(BlockEntityRendererProvider.Context ctx) {}
+    public ScannerRenderer(BlockEntityRendererProvider.Context ctx) {}
 
     @Override
-    public void render(BuildingScannerBlockEntity be, float partialTick, PoseStack poseStack,
+    public void render(CreativeScannerBlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         // CORNER mode scanners do not render bounding box in world
-        if (be.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+        if (be.getBlockMode() == CreativeScannerBlockEntity.BlockMode.CORNER) {
             return;
         }
 
@@ -96,7 +96,7 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
         }
     }
 
-    private SpotCache refreshSpots(BuildingScannerBlockEntity be) {
+    private SpotCache refreshSpots(CreativeScannerBlockEntity be) {
         var level = be.getLevel();
         if (level == null) {
             return new SpotCache(List.of(), List.of(), 0);

@@ -23,12 +23,12 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.MaintenanceForecastSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlock;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.SurvivalScannerBlock;
-import com.wsteam.wandscape.building.scanner.SurvivalScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlock;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.ScannerBlock;
+import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
+import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.AuditElementsCommand;
@@ -294,27 +294,27 @@ public class Wandscape {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
 
     // Forward reference: wired in each scanner BE's supplier below
-    private static Supplier<BlockEntityType<BuildingScannerBlockEntity>> creativeScannerBeTypeRef = () -> {
+    private static Supplier<BlockEntityType<CreativeScannerBlockEntity>> creativeScannerBeTypeRef = () -> {
         Log.warn(TAG, "creativeScannerBeTypeRef called before initialization — falling back to registry lookup");
         var rl = ResourceLocation.fromNamespaceAndPath(MODID, "creative_building_scanner");
         var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
-        return (BlockEntityType<BuildingScannerBlockEntity>) reg.get(rl);
+        return (BlockEntityType<CreativeScannerBlockEntity>) reg.get(rl);
     };
-    private static Supplier<BlockEntityType<SurvivalScannerBlockEntity>> survivalScannerBeTypeRef = () -> {
+    private static Supplier<BlockEntityType<ScannerBlockEntity>> survivalScannerBeTypeRef = () -> {
         Log.warn(TAG, "survivalScannerBeTypeRef called before initialization — falling back to registry lookup");
         var rl = ResourceLocation.fromNamespaceAndPath(MODID, "building_scanner");
         var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
-        return (BlockEntityType<SurvivalScannerBlockEntity>) reg.get(rl);
+        return (BlockEntityType<ScannerBlockEntity>) reg.get(rl);
     };
 
     public static final DeferredHolder<Block, Block> CREATIVE_BUILDING_SCANNER = BLOCKS.register("creative_building_scanner",
-            () -> (Block) new BuildingScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+            () -> (Block) new CreativeScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
                     creativeScannerBeTypeRef));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BuildingScannerBlockEntity>> CREATIVE_BUILDING_SCANNER_BE =
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeScannerBlockEntity>> CREATIVE_BUILDING_SCANNER_BE =
             BLOCK_ENTITY_TYPES.register("creative_building_scanner",
                     () -> {
-                        BlockEntityType<BuildingScannerBlockEntity> type = BlockEntityType.Builder.of(
-                                (pos, state) -> new BuildingScannerBlockEntity(creativeScannerBeTypeRef.get(), pos, state),
+                        BlockEntityType<CreativeScannerBlockEntity> type = BlockEntityType.Builder.of(
+                                (pos, state) -> new CreativeScannerBlockEntity(creativeScannerBeTypeRef.get(), pos, state),
                                 CREATIVE_BUILDING_SCANNER.get()).build(null);
                         creativeScannerBeTypeRef = () -> type;
                         return type;
@@ -324,13 +324,13 @@ public class Wandscape {
             ITEMS.register("creative_building_scanner", () -> new BlockItem(CREATIVE_BUILDING_SCANNER.get(), new Item.Properties()));
 
     public static final DeferredHolder<Block, Block> BUILDING_SCANNER = BLOCKS.register("building_scanner",
-            () -> (Block) new SurvivalScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+            () -> (Block) new ScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
                     survivalScannerBeTypeRef));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SurvivalScannerBlockEntity>> BUILDING_SCANNER_BE =
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ScannerBlockEntity>> BUILDING_SCANNER_BE =
             BLOCK_ENTITY_TYPES.register("building_scanner",
                     () -> {
-                        BlockEntityType<SurvivalScannerBlockEntity> type = BlockEntityType.Builder.of(
-                                (pos, state) -> new SurvivalScannerBlockEntity(survivalScannerBeTypeRef.get(), pos, state),
+                        BlockEntityType<ScannerBlockEntity> type = BlockEntityType.Builder.of(
+                                (pos, state) -> new ScannerBlockEntity(survivalScannerBeTypeRef.get(), pos, state),
                                 BUILDING_SCANNER.get()).build(null);
                         survivalScannerBeTypeRef = () -> type;
                         return type;
@@ -580,14 +580,14 @@ public class Wandscape {
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Building Scanner ──
                 .playToServer(
-                        BuildingScannerSyncPacket.TYPE,
-                        BuildingScannerSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingScannerSyncPacket.handleServer(packet,
+                        ScannerSyncPacket.TYPE,
+                        ScannerSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> ScannerSyncPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
-                        BuildingScannerExportPacket.TYPE,
-                        BuildingScannerExportPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingScannerExportPacket.handleServer(packet,
+                        ScannerExportPacket.TYPE,
+                        ScannerExportPacket.STREAM_CODEC,
+                        (packet, ctx) -> ScannerExportPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
                         com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,

@@ -4,7 +4,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.building.scanner.client.SurvivalScannerScreen;
+import com.wsteam.wandscape.building.scanner.client.ScannerScreen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -18,19 +18,19 @@ import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * Survival Building Scanner block — simplified counterpart of the Creative Building Scanner.
- * Opens {@link SurvivalScannerScreen} which is locked to the {@code custom} building category
+ * Opens {@link ScannerScreen} which is locked to the {@code custom} building category
  * and only exposes size/door/id/name + export.
  */
-public class SurvivalScannerBlock extends BuildingScannerBlock {
+public class ScannerBlock extends CreativeScannerBlock {
 
-    public SurvivalScannerBlock(Properties properties, Supplier<? extends BlockEntityType<?>> beType) {
+    public ScannerBlock(Properties properties, Supplier<? extends BlockEntityType<?>> beType) {
         super(properties, beType);
     }
 
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new SurvivalScannerBlockEntity(beType.get(), pos, state);
+        return new ScannerBlockEntity(beType.get(), pos, state);
     }
 
     @Override
@@ -38,8 +38,8 @@ public class SurvivalScannerBlock extends BuildingScannerBlock {
                                                 Player player, BlockHitResult hitResult) {
         if (level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof SurvivalScannerBlockEntity scanner) {
-                Minecraft.getInstance().setScreen(new SurvivalScannerScreen(scanner));
+            if (be instanceof ScannerBlockEntity scanner) {
+                Minecraft.getInstance().setScreen(new ScannerScreen(scanner));
             }
         }
         return InteractionResult.SUCCESS;

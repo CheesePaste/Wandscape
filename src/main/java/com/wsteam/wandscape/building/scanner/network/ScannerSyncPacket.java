@@ -1,6 +1,6 @@
 package com.wsteam.wandscape.building.scanner.network;
 
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
@@ -19,26 +19,26 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Client→Server: Carries the full BuildingScanner state as NBT.
  * Server deserializes into the target BE and syncs to all clients.
  */
-public record BuildingScannerSyncPacket(BlockPos pos, CompoundTag data) implements CustomPacketPayload {
+public record ScannerSyncPacket(BlockPos pos, CompoundTag data) implements CustomPacketPayload {
 
     private static final String TAG = "ScannerSyncPacket";
 
-    public static final Type<BuildingScannerSyncPacket> TYPE =
+    public static final Type<ScannerSyncPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "scanner_sync"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, BuildingScannerSyncPacket> STREAM_CODEC =
-            StreamCodec.of(BuildingScannerSyncPacket::write, BuildingScannerSyncPacket::read);
+    public static final StreamCodec<RegistryFriendlyByteBuf, ScannerSyncPacket> STREAM_CODEC =
+            StreamCodec.of(ScannerSyncPacket::write, ScannerSyncPacket::read);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 
-    public static void handleServer(BuildingScannerSyncPacket packet, ServerPlayer player) {
+    public static void handleServer(ScannerSyncPacket packet, ServerPlayer player) {
         if (player == null) return;
         ServerLevel level = player.serverLevel();
         BlockEntity be = level.getBlockEntity(packet.pos);
-        if (!(be instanceof BuildingScannerBlockEntity scanner)) {
+        if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
             return;
         }
@@ -49,15 +49,15 @@ public record BuildingScannerSyncPacket(BlockPos pos, CompoundTag data) implemen
         level.sendBlockUpdated(packet.pos, scanner.getBlockState(), scanner.getBlockState(), 3);
     }
 
-    private static void write(RegistryFriendlyByteBuf buf, BuildingScannerSyncPacket pkt) {
+    private static void write(RegistryFriendlyByteBuf buf, ScannerSyncPacket pkt) {
         buf.writeBlockPos(pkt.pos);
         buf.writeNbt(pkt.data);
     }
 
-    private static BuildingScannerSyncPacket read(RegistryFriendlyByteBuf buf) {
+    private static ScannerSyncPacket read(RegistryFriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         CompoundTag data = buf.readNbt();
         if (data == null) data = new CompoundTag();
-        return new BuildingScannerSyncPacket(pos, data);
+        return new ScannerSyncPacket(pos, data);
     }
 }

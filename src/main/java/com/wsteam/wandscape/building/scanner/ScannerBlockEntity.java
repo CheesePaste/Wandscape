@@ -3,7 +3,7 @@ package com.wsteam.wandscape.building.scanner;
 import java.util.List;
 import java.util.Map;
 
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -14,12 +14,12 @@ import net.minecraft.world.level.block.state.BlockState;
  * Category is permanently locked to {@code custom}: tourists never interact with it,
  * it carries no maintenance cost, and comfort/magic/wonder are always zero.
  * All other logic (boundary/door/id/name/NBT/door detection) is inherited from the
- * full BuildingScannerBlockEntity — getters are overridden so the invariant holds
+ * full CreativeScannerBlockEntity — getters are overridden so the invariant holds
  * even if stale or hostile NBT is loaded.
  */
-public class SurvivalScannerBlockEntity extends BuildingScannerBlockEntity {
+public class ScannerBlockEntity extends CreativeScannerBlockEntity {
 
-    public SurvivalScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public ScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
         setCategory("custom");
     }

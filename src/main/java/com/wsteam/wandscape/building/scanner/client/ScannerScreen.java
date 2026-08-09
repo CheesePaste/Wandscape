@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.SurvivalScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
+import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
@@ -21,19 +21,19 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Survival Building Scanner GUI built on the same MedievalScreen MINIMAL theme as
- * {@link BuildingScannerScreen}, but intentionally stripped down:
+ * {@link CreativeScannerScreen}, but intentionally stripped down:
  * category is locked to {@code custom} (no maintenance / no tourist interaction),
  * and only size (boundary), door offset, building ID/name and export are exposed.
  * ROAD target mode is preserved.
  */
-public class SurvivalScannerScreen extends MedievalScreen {
+public class ScannerScreen extends MedievalScreen {
 
     private static final int PW = 360;
     private static final int PH = 320;
 
-    private final SurvivalScannerBlockEntity scanner;
+    private final ScannerBlockEntity scanner;
 
-    // ── Custom Medieval Button Definition (same as BuildingScannerScreen) ──
+    // ── Custom Medieval Button Definition (same as CreativeScannerScreen) ──
     private record CustomButton(int x, int y, int w, int h, String text, Runnable action) {}
     private final List<CustomButton> customButtons = new ArrayList<>();
 
@@ -75,7 +75,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
     private int scrollOff = 0;
     private int maxScroll = 0;
 
-    public SurvivalScannerScreen(SurvivalScannerBlockEntity scanner) {
+    public ScannerScreen(ScannerBlockEntity scanner) {
         super(Component.literal("Building Scanner"), PW, PH);
         setTitleBar(Component.literal("建筑扫描器"));
         this.showCloseButton = true;
@@ -102,8 +102,8 @@ public class SurvivalScannerScreen extends MedievalScreen {
         // ── Toolbar Row 1: BlockMode (SAVE/CORNER) + structure name (配对暗号) ──
         modeY = y;
         addCustomButton(lx, y, 90, 20, "Mode: " + scanner.getBlockMode().name(), () -> {
-            BuildingScannerBlockEntity.BlockMode next = scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
-                    ? BuildingScannerBlockEntity.BlockMode.CORNER : BuildingScannerBlockEntity.BlockMode.SAVE;
+            CreativeScannerBlockEntity.BlockMode next = scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.SAVE
+                    ? CreativeScannerBlockEntity.BlockMode.CORNER : CreativeScannerBlockEntity.BlockMode.SAVE;
             scanner.setBlockMode(next);
             syncToServer();
             needsRebuild = true;
@@ -115,7 +115,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         y += 28;
 
         // ── CORNER mode: minimal pairing UI ──
-        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+        if (scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.CORNER) {
             addCustomButton(leftPos + PW / 2 - 50, y + 70, 100, 22, "完成", this::onClose);
             maxScroll = -300;
             return;
@@ -124,8 +124,8 @@ public class SurvivalScannerScreen extends MedievalScreen {
         // ── Toolbar Row 2: Target Mode + 匹配角点 (+ locked category label) ──
         targetY = y;
         addCustomButton(lx, y, 110, 20, "Target: " + scanner.getTargetMode().name(), () -> {
-            SurvivalScannerBlockEntity.TargetMode next = scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.BUILDING
-                    ? SurvivalScannerBlockEntity.TargetMode.ROAD : SurvivalScannerBlockEntity.TargetMode.BUILDING;
+            ScannerBlockEntity.TargetMode next = scanner.getTargetMode() == ScannerBlockEntity.TargetMode.BUILDING
+                    ? ScannerBlockEntity.TargetMode.ROAD : ScannerBlockEntity.TargetMode.BUILDING;
             scanner.setTargetMode(next);
             syncToServer();
             needsRebuild = true;
@@ -137,7 +137,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         y += 28;
 
         // ── ROAD Target Mode: Ultra-clean UI (Only Road Info, Export & Hot-register) ──
-        if (scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.ROAD) {
+        if (scanner.getTargetMode() == ScannerBlockEntity.TargetMode.ROAD) {
             boundaryCardY = y;
             y += 10;
 
@@ -421,7 +421,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
             scanResult = Component.literal("请先设置 ID");
             return;
         }
-        PacketDistributor.sendToServer(new BuildingScannerExportPacket(scanner.getBlockPos()));
+        PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
         scanResult = Component.literal("已发起导出: " + id);
     }
 
@@ -430,7 +430,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         // Lock the custom invariant before persisting (belt and suspenders on top of the BE getter overrides).
         scanner.setCategory("custom");
         CompoundTag tag = scanner.saveWithoutMetadata(minecraft.level.registryAccess());
-        PacketDistributor.sendToServer(new BuildingScannerSyncPacket(scanner.getBlockPos(), tag));
+        PacketDistributor.sendToServer(new ScannerSyncPacket(scanner.getBlockPos(), tag));
     }
 
     private static boolean isScannerBlock(net.minecraft.world.level.block.state.BlockState state) {
@@ -484,13 +484,13 @@ public class SurvivalScannerScreen extends MedievalScreen {
         gui.drawString(font, "暗号", lx + 94, modeY + 6, MedievalColors.TEXT_MUTED);
 
         // Locked category label on the target row (BUILDING mode only)
-        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.SAVE
-                && scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.BUILDING) {
+        if (scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.SAVE
+                && scanner.getTargetMode() == ScannerBlockEntity.TargetMode.BUILDING) {
             gui.drawString(font, "类别: 自定义", lx + 222, targetY + 6, MedievalColors.TEXT_MUTED);
         }
 
         // ── CORNER mode render ──
-        if (scanner.getBlockMode() == BuildingScannerBlockEntity.BlockMode.CORNER) {
+        if (scanner.getBlockMode() == CreativeScannerBlockEntity.BlockMode.CORNER) {
             drawMinimalBox(gui, lx, topPos + headerHeight + 38, 320, 64, true, false);
             gui.drawString(font, "❖ CORNER 辅角点模式", lx + 10, topPos + headerHeight + 46, MedievalColors.BORDER_GOLD);
             gui.drawString(font, "1. 请在上方输入与 SAVE 扫描器相同的暗号。", lx + 10, topPos + headerHeight + 60, MedievalColors.TEXT_WARM_WHITE);
@@ -501,7 +501,7 @@ public class SurvivalScannerScreen extends MedievalScreen {
         }
 
         // ── ROAD Target Mode Render ──
-        if (scanner.getTargetMode() == SurvivalScannerBlockEntity.TargetMode.ROAD) {
+        if (scanner.getTargetMode() == ScannerBlockEntity.TargetMode.ROAD) {
             drawBoundaryLabels(gui);
 
             drawHdr(gui, "❖ 道路预设属性 (Road Preset)", lx, metaStartY);

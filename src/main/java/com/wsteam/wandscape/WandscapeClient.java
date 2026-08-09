@@ -28,7 +28,7 @@ import com.wsteam.wandscape.building.client.TavernScreen;
 import com.wsteam.wandscape.building.client.AltarScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
 import com.wsteam.wandscape.building.client.ConstructionGhostRenderer;
-import com.wsteam.wandscape.building.scanner.client.BuildingScannerRenderer;
+import com.wsteam.wandscape.building.scanner.client.ScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
@@ -351,8 +351,8 @@ public class WandscapeClient {
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
         event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
         event.registerEntityRenderer(Wandscape.MAGIC_BEAM.get(), MagicBeamEntityRenderer::new);
-        event.registerBlockEntityRenderer(Wandscape.CREATIVE_BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
-        event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
+        event.registerBlockEntityRenderer(Wandscape.CREATIVE_BUILDING_SCANNER_BE.get(), ScannerRenderer::new);
+        event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), ScannerRenderer::new);
     }
 
     @SubscribeEvent
