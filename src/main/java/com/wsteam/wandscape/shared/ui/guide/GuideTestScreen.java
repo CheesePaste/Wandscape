@@ -83,15 +83,46 @@ public class GuideTestScreen extends MedievalScreen {
             return;
         }
 
-        // Inter-document navigation link (guide:doc_path)
-        if (action.startsWith("guide:")) {
-            String docPath = action.substring(6).trim();
-            historyStack.navigateTo(docPath);
-            loadDocument(docPath);
+        String target = action.trim();
+
+        // 1. Game action link (action:...) — reserved stub, not yet dispatched
+        if (target.startsWith("action:")) {
             return;
         }
 
-        // Game action link (action:...)
+        // 2. External URL — gracefully ignored (not opened in-game)
+        if (isExternalUrl(target)) {
+            return;
+        }
+
+        // 3. In-page anchor (#xxx) — not supported, gracefully ignored
+        if (target.startsWith("#")) {
+            return;
+        }
+
+        // 4. Document reference:
+        //    - native markdown link (doc_id.md / bare doc_id / assets/... full path)
+        //    - legacy guide:doc_id (backwards compat — strip prefix)
+        //    DocumentLoader.resolveCandidates normalizes all of these (incl. .md suffix).
+        String docPath = target;
+        if (target.startsWith("guide:")) {
+            docPath = target.substring("guide:".length()).trim();
+        }
+
+        historyStack.navigateTo(docPath);
+        loadDocument(docPath);
+    }
+
+    /** Whether a link target is an external URL with a known scheme (not opened in-game). */
+    private static boolean isExternalUrl(String target) {
+        int colon = target.indexOf(':');
+        if (colon <= 0) {
+            return false; // no scheme prefix → not a URL
+        }
+        String scheme = target.substring(0, colon).toLowerCase();
+        return scheme.equals("http") || scheme.equals("https")
+                || scheme.equals("mailto") || scheme.equals("ftp")
+                || scheme.equals("file");
     }
 
     private void loadDocument(String docPath) {
