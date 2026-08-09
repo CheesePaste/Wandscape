@@ -234,9 +234,10 @@ public final class WandscapePanelState {
      * performs no network sends and no cursor/mouse changes.
      */
     public static void reset() {
-        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
-            com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
-        }
+        com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        // 清空空中视角相机缓存（exitOverview 是 suspend 语义、保留缓存），
+        // 防止上一世界的相机位置泄漏到下一世界
+        com.wsteam.wandscape.overview.client.OverviewClientState.hardReset();
         if (ProjectionClientState.isProjecting()) {
             ProjectionClientState.exitProjection();
         }
