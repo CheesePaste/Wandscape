@@ -487,7 +487,7 @@ public final class WandscapePanelState {
                 buildPhase = BuildPhase.BAR;
                 if (ProjectionClientState.isProjecting()) {
                     PacketDistributor.sendToServer(new ProjectionExitPacket());
-                    ProjectionClientState.exitProjection();
+                    ProjectionClientState.suspendProjection();
                 }
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
