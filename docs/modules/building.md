@@ -81,10 +81,10 @@ wonder 类且完整非关停生效；三种效果：`StatMod(target,value)` / `P
 
 ## 扫描器（scanner/）
 
-- **创造模式扫描器** `creative_building_scanner`（原 building_scanner 更名，给创作者）：含 FACING，右键开 BuildingScannerScreen；ScannerMode：BOUNDARY/DOOR/INTERACT/META/EXPORT；BE 另有 BlockMode SAVE/CORNER、TargetMode BUILDING/ROAD；`detectBoundaryFromCorners`（同 structureName 64 格内）、`detectDoors`（只计下半）。导出时扫描边界、跳过空气/扫描器、生成 pattern/block_mapping/block_nbt(base64 压缩 NBT)，写 JSON 到世界 datapack `wandscape_builds` 并即时可建；ROAD 模式导出道路预设。
+- **创造模式扫描器** `creative_building_scanner`（原 building_scanner 更名，给创作者）：含 FACING，右键开 CreativeScannerScreen；ScannerMode：BOUNDARY/DOOR/INTERACT/META/EXPORT；BE 另有 BlockMode SAVE/CORNER、TargetMode BUILDING/ROAD；`detectBoundaryFromCorners`（同 structureName 64 格内）、`detectDoors`（只计下半）。导出时扫描边界、跳过空气/扫描器、生成 pattern/block_mapping/block_nbt(base64 压缩 NBT)，写 JSON 到世界 datapack `wandscape_builds` 并即时可建；ROAD 模式导出道路预设。
 - **生存模式扫描器** `building_scanner`：类别锁 "custom"、维护/三值/交互区恒空，配原版合成配方。
 - `ScannerPresetStore`：客户端 `<gameDir>/wandscape/scanner_presets/*.nbt` 的 list/load/save/delete。
 
 ## network/ 包
 
-S→C：TownHallOpenPacket / ShopOpenPacket / HotelOpenPacket / TavernOpenPacket / NodeDataPacket / TaskQueueDataPacket。C→S：ShopMaxStockPacket（改上限）/ TavernRecruitPacket（招募）/ RequestGatherTaskPacket（harvests → NodeGatherTaskFactory 入队）/ TaskQueueModifyPacket（refresh/delete/move_up/move_down）/ BuildingScannerSyncPacket / BuildingScannerExportPacket。
+S→C：TownHallOpenPacket / ShopOpenPacket / HotelOpenPacket / TavernOpenPacket / NodeDataPacket / TaskQueueDataPacket。C→S：ShopMaxStockPacket（改上限）/ TavernRecruitPacket（招募）/ RequestGatherTaskPacket（harvests → NodeGatherTaskFactory 入队）/ TaskQueueModifyPacket（refresh/delete/move_up/move_down）/ ScannerSyncPacket / ScannerExportPacket。
