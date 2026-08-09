@@ -64,7 +64,9 @@
   "activity.wandscape.eat": "用餐",
   "activity.wandscape.bathe": "泡澡",
   "activity.wandscape.view": "看展",
-  "activity.wandscape.meditate": "冥想",
+  "activity.wandscape.pay": "付钱",
+  "activity.wandscape.read": "看书",
+  "activity.wandscape.take": "拿取",
   "activity.wandscape.rest": "歇脚",
   "activity.wandscape.withdraw": "取现",
 

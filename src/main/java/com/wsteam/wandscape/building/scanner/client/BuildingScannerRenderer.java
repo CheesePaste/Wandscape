@@ -39,6 +39,8 @@ public class BuildingScannerRenderer implements BlockEntityRenderer<BuildingScan
         ACTION_COLORS.put(Activity.BATHE, new int[]{30, 144, 255});       // 蓝
         ACTION_COLORS.put(Activity.VIEW, new int[]{180, 60, 255});        // 紫
         ACTION_COLORS.put(Activity.PAY, new int[]{255, 215, 0});          // 金币黄
+        ACTION_COLORS.put(Activity.READ, new int[]{139, 69, 19});         // 书卷棕
+        ACTION_COLORS.put(Activity.TAKE, new int[]{0, 255, 127});         // 拿取青绿
         ACTION_COLORS.put(Activity.REST, new int[]{255, 120, 170});       // 粉
         ACTION_COLORS.put(Activity.WITHDRAW, new int[]{255, 255, 0});     // 黄
     }

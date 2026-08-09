@@ -26,6 +26,10 @@ public enum Activity implements StringRepresentable {
     VIEW,
     /** 付钱/捐资（交互位动作）：伸手递钱，原「冥想」。 */
     PAY,
+    /** 看书（交互位动作）：双手抬起持书 + 低头。 */
+    READ,
+    /** 拿取/接收（交互位动作）：纯双手抬起。 */
+    TAKE,
     /** 睡觉（旅店夜晚，非交互位动作）。 */
     SLEEP,
     /** 歇脚/休息（交互位动作）。 */
@@ -35,7 +39,7 @@ public enum Activity implements StringRepresentable {
 
     /** 可设置在 {@code interact_spot_marker} 交互位上的动作子集。 */
     public static final Activity[] SPOT_ACTIONS = {
-            BROWSE, EAT, BATHE, VIEW, PAY, REST, WITHDRAW
+            BROWSE, EAT, BATHE, VIEW, PAY, READ, TAKE, REST, WITHDRAW
     };
 
     /** JSON 字符串 = 枚举名小写；非法值回退 BROWSE。 */
