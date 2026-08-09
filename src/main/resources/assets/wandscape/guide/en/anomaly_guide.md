@@ -1,17 +1,33 @@
-# 🌟 Wonder & Anomaly API Guide
+# ⚠️ Building Failures & Maintenance
 
-Wonders are the ultimate late-game buildings of the town!
+Things go wrong in a town: buildings shut down, walls get blown up. Fortunately, most problems can be handled in one click in the "Anomaly Report".
+
+## How to Open It
+
+When a building has a problem, the **⚠️ warning icon in the V panel's sidebar** lights up (with a count). Opening it shows the **Anomaly Report**, a list of all buildings with problems:
+
+| Column | Description |
+| :--- | :--- |
+| **Building name** | Who is in trouble |
+| **Status** | `Stopped` (shut down) or `Broken` |
+| **Action** | A `Restart` or `Repair` button |
+
+## The Two Kinds of Problems
+
+**Stopped (maintenance unpaid)**: at the daily settlement, maintenance costs (in elements) are deducted by building type; when the warehouse is empty, buildings shut down. Stopped buildings don't work and don't contribute. Click "**Restart**" to pay up from the warehouse and bring it back online.
+
+**Broken (physical damage)**: when a building is damaged by monsters, explosions, or the like beyond about **1/3**, it counts as broken and stops contributing. Click "**Repair**" and the system dispatches wizards to fix it according to the blueprint.
+
+## How to Prevent It
+
+- **Always keep a reserve in the warehouse**: build more [Element Nodes](guide:node_guide) to gather, and decompose surplus materials at the [Workstation](guide:workstation_guide) to top up elements.
+- Damage **doesn't repair itself** — repairs must be triggered by you; don't expect wizards to volunteer.
+
+By the way: **custom buildings** exported by the scanner have **no maintenance cost** and can never shut down for failing to pay.
 
 ---
 
-## 📖 UI Controls & Fields API Reference
-
-| Control / Label | Type / Range | Default | Details |
-| :--- | :--- | :--- | :--- |
-| **`Anomaly Entry`** | List Row | — | Row of buildings with faults. Shows building name, coordinates and fault type. |
-| **`Anomaly Status`** | Enum (`String`) | `SHUTDOWN` | `SHUTDOWN` (stopped due to unpaid maintenance) / `BROKEN` (physically damaged, needs repair). |
-| **`Repair / Restart Button`** | MedievalButton | — | Automatically dispatches a wizard NPC to repair the building, or restarts it by supplying maintenance elements from the warehouse. |
-
----
-
-👉 [Back to main test page](guide:test_guide)
+[Element Node (Gathering Elements)](guide:node_guide)  
+[Warehouse & Materials](guide:warehouse_guide)  
+[Panel & Overview](guide:overview_guide)  
+[📖 Back to the Guide Index](guide:index_guide)

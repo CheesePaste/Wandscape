@@ -1,40 +1,30 @@
-# 🏛️ Altar Guide
+# 🏛️ Altar
 
-The Altar is the town's core ritual building: you issue a command here, and the colony dispatches a mage who walks to the altar center and casts the **altar-exclusive spell** (e.g. Revive) on your behalf.
+Wizards can die in battle. The Altar is your regret medicine — for now it knows only one ritual spell: **Revive**. Wizards never use this spell on their own in combat; you must order it at the altar.
 
----
+## Casting a Ritual Spell
 
-## 🎯 How to use
+1. Press **V** to open the panel, then **right-click the altar** to open the Altar panel.
+2. The list shows the castable spells; each row marks **name / mana cost / cooldown / channel duration**.
+3. **Single-click** a row to select it (just highlights, doesn't cast).
+4. Click **Submit** in the bottom right — the colony dispatches a wizard with enough mana to walk to the altar and cast; the magic circle unfolds at the altar's center.
+5. "Casting" is shown until the cast finishes; each altar keeps an **independent cooldown per spell**, so they never interfere.
 
-1. Approach the altar and **right-click** to open the Altar panel.
-2. The list shows all altar-castable spells (each row: name / mana cost / cooldown / duration).
-3. **Left-click** a row to select it (highlighted).
-4. Click **Submit** at the bottom right — the colony assigns a mage with enough mana to walk over and cast it.
-5. Until the cast finishes the spell shows as "Casting", and that altar enters its own cooldown for the spell.
+## How Revive Works
 
-> 💡 Altar-exclusive spells (like Revive) can only be cast at an altar; mages never auto-cast them in combat.
+- **Target**: the **most recently deceased wizard** of this colony, no matter where they died.
+- **Effect**: the wizard is reborn at the **altar's center**, with name, appearance, attributes, and inventory restored as they were.
+- **Cost**: the revived wizard is **weak** — 1 HP and 0 mana, recovered slowly through out-of-combat regeneration and mana regen.
+- **Prerequisite**: a death record must exist (death records are kept permanently, and only removed after a successful revive).
 
----
+## A Few Tips
 
-## 📖 UI Controls Reference
-
-| Control / Label | Type | Details |
-| :--- | :--- | :--- |
-| **Spell list** | List | All altar-castable spells. Each row shows name, mana cost, cooldown, and channel duration. |
-| **Row status** | Text | `Ready` = available; `Cooldown Ns` = altar cooldown still running; `Casting` = a mage is casting it; `Queued` = already submitted this session. |
-| **Submit** | Button | Publishes the altar-cast task for the selected spell. Enabled only when a spell is selected and not locked / cooling / queued. |
-
----
-
-## ⚙️ Mechanics
-
-- **Mana cost**: casting consumes the mage's mana; you cannot submit while no colony mage has enough mana (≥ cost).
-- **Cast flow**: the mage walks to the altar center and channels for `duration` ticks.
-- **Per-altar cooldown**: cooldowns are stored per altar (building); altars never share them. Counting starts when the cast finishes.
-- **Locked on submit**: submitting locks the spell until the cast ends, preventing duplicate casts.
-- **Revive**: requires a revivable death record in the colony (death records persist permanently, removed only after a successful revive).
+- Casting consumes the **performing wizard's** mana; you can't submit while no colony wizard has enough mana.
+- **Locked on publish**: submitting locks the spell until the cast ends, preventing accidental duplicate casts.
+- Altar spells aren't part of a wizard's auto-cast strategy — for revives, come to the altar; don't expect them to get up on their own.
 
 ---
 
-👉 [Go to Mage NPC guide](guide:npc_guide)  
-👉 [Back to main test page](guide:test_guide)
+[Wizard NPC Guide](guide:npc_guide)  
+[Cast Strategy Guide](guide:strategy_guide)  
+[📖 Back to the Guide Index](guide:index_guide)

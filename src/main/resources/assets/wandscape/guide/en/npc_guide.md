@@ -1,39 +1,47 @@
-# 🧙‍♂️ Wizard NPC Panel API Guide
+# 🧙‍♂️ Wizard NPC
 
-Wizards (NPCs) are the core worker entities of the town's automation!
+Wizards are the town's hands: building houses, gathering elements, crafting, and fighting monsters — all of it is them. How fast and how steadily the town runs depends on how many wizards you have and how strong you raise them.
 
----
+## How to Recruit
 
-## 📖 UI Controls & Fields API Reference
+- Hire directly with the Tavern's "**Recruit NPC**" (first recruit free).
+- Take in the **mage tourist resumes** at the tavern (left by those with all three need bars full — free).
 
-| Control / Label | Type / Range | Default | Details |
-| :--- | :--- | :--- | :--- |
-| **`Wand Equipment Slot`** | ItemSlot | empty / default wand | **Wand equipment slot**. Placing a custom wand boosts the wizard's spell power and cast range. |
-| **`Health Stat`** (`stat_hp`) | Display (`Cur/Max`) | `20/20` | Current health and max health. |
-| **`Mana Stat`** (`stat_mana`) | Display (`Cur/Max`) | `100/100` | Current mana and max mana. Executing atomic tasks consumes mana. |
-| **`Mana Regen`** (`stat_regen`) | Int (`pts/s`) | `5` | Natural mana regeneration rate. |
-| **`Spell Power`** (`stat_spell`) | Int | `10` | Spell power. Affects cast speed and shortens craft countdowns. |
-| **`Cast Range`** (`stat_range`) | Int (`blocks`) | `16` | Maximum effective cast distance (in blocks). |
-| **`Mana Cost Multiplier`** | Float (`0.5 ~ 2.0`) | `1.0` | Cast mana cost coefficient. Lower is more mana-efficient. |
+## The Panel (Right-click a Wizard to Open)
 
----
+**Left side · Equipment (5 slots)**
 
-## 🎯 Cast Strategy (Right-click a wizard → Info screen → "Strategy")
+- **Wand slot**: equip a better wand to raise **Spell Power** (casting might). The three wand tiers are in the [Crafting Station](guide:crafting_guide).
+- **Armor slots (4)**: helmet / chestplate / leggings / boots, raising armor damage reduction. Wear with confidence — it doesn't affect the appearance; the robe stays as is, only numbers count.
 
-Controls a wizard's automatic casting in combat — one "strategy/priority" dial, no scripting:
+**Right side · Attributes**
 
-| Preset | Casting tendency (category order) |
+| Attribute | Description |
 | :--- | :--- |
-| Balanced | AOE > Single-target > Support > Defense |
-| Offensive | Single-target > AOE > Defense > Support |
-| Support | Support (heal first) > Defense > AOE > Single-target |
-| Defensive | Defense > Support > AOE > Single-target |
+| **Health** | Auto-regenerates after being out of combat for a while |
+| **Mana** | Consumed by casting, regenerates over time |
+| **Move Speed** | Travel and hauling efficiency |
+| **Spell Power** | Casting might |
+| **Work Speed** | Building / crafting efficiency |
+| **Cast Speed** | How fast spells channel |
+| **Armor** | Damage reduction |
 
-- Click a spell row to toggle it on/off: disabled spells no longer auto-cast, and the list switches to "Custom".
-- Presets order spells by category; "Custom" follows the order you enabled (enabled first, disabled after).
-- Guard/self-defense combat picks spells by this strategy; altar-only spells (e.g. revive) are excluded (altar-exclusive).
+**Bottom · Inventory**: click a wand to equip it, click armor to wear it — simple.
+
+## Combat
+
+- Wizards **guard** the colony: monsters near buildings trigger auto-casting, and they fight back in self-defense when hit.
+- In fights they pick spells by your [Cast Strategy](guide:strategy_guide).
+- A **nameplate** above the head shows the name and status — who is doing what at a glance.
+
+## A Few Tips
+
+- **Wands first**: Spell Power directly decides combat strength; give the good wands to your main wizards.
+- Fallen wizards don't disappear — revive them at the [Altar](guide:altar_guide); they're just weak for a while.
 
 ---
 
-👉 [Go to tourist debug guide](guide:tourist_guide)  
-👉 [Back to main test page](guide:test_guide)
+[Cast Strategy Guide](guide:strategy_guide)  
+[Tavern (Recruiting Wizards)](guide:tavern_guide)  
+[Crafting Station (Wands)](guide:crafting_guide)  
+[📖 Back to the Guide Index](guide:index_guide)

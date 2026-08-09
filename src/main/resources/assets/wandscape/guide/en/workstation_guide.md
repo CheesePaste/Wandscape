@@ -1,19 +1,24 @@
-# ⚙️ Workstation API Guide
+# ⚙️ Workstation
 
-The Workstation handles decomposition of advanced materials and processing of complex products!
+The Workstation is the element exchange: it **decomposes** unneeded high-tier materials into elements, and **synthesizes** what you need from elements. Decomposing is for emergencies, synthesizing is for spending — both ends are usable.
+
+## Two Tabs
+
+**Decompose**: turns items with elemental value (high-tier building materials, ores, and the like) back into elements. Note there is an **about 1/5 discount** — fine for emergency element top-ups, but you won't get rich off it.
+
+**Synthesize**: combines elements + materials into high-tier blocks, equipment, and special items. Synthesize recipes have colony level gates; those below your level stay locked.
+
+## Operation
+
+Right-click the Workstation → pick a tab → pick a recipe → set the quantity → **Submit**. Wizards work in the task queue; just watch the progress in the panel.
+
+## A Few Tips
+
+- **Element turnover**: synthesizing spends elements, decomposing replenishes them — combined with [Element Node](guide:node_guide) gathering, you can keep the element balance alive.
+- When a recipe is locked, the reason is shown (level too low / elements insufficient) — just fill it in, no guessing.
 
 ---
 
-## 📖 UI Controls & Fields API Reference
-
-| Control / Label | Type / Range | Default | Details |
-| :--- | :--- | :--- | :--- |
-| **`Decompose Tab`** | Tab | — | **Decompose mode**: breaks high-tier composite materials back into base elements or raw materials. |
-| **`Synthesize Tab`** | Tab | — | **Synthesize mode**: combines materials and elements into high-tier gear and special blocks. |
-| **`Recipe List`** | ScrollableList | — | Shows all valid recipes for the current tab. |
-| **`Batch Slider`** | Slider (`1 ~ 64`) | `1` | Production / decomposition quantity. |
-
----
-
-👉 [Go to wizard NPC guide](guide:npc_guide)  
-👉 [Back to main test page](guide:test_guide)
+[Crafting Station (Wands)](guide:crafting_guide)  
+[Element Node](guide:node_guide)  
+[📖 Back to the Guide Index](guide:index_guide)

@@ -9,11 +9,11 @@ Welcome to the Markdown viewer test page built into the **Wandscape** mod! This 
 - ~~Strikethrough~~: this is a ~~Strikethrough~~ demo.
 - Inline code: access interfaces via `WandscapeApis.getColonyApi()`.
 
-> 💡 **Medieval wisdom**: keeping good tourist reputation and ample element reserves is the decisive key to expanding your town's territory and technology.
+> 💡 **Medieval wisdom**: keeping good tourist reputation and ample element reserves is the decisive key to expanding the magic town's territory and technology.
 
 ## 2. Interactions & Cross-Document Navigation
 
-Click the links below to experience cross-document jumps and in-game actions:
+Click the links below to experience document jumps and in-game actions:
 
 👉 [Jump to 🏛️ Town Hall guide](guide:townhall_guide)  
 👉 [Jump to 📦 Warehouse & logistics guide](guide:warehouse_guide)  

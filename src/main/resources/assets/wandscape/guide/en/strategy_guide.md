@@ -1,39 +1,34 @@
-# ⚔️ Cast Strategy Guide
+# ⚔️ Cast Strategy
 
-The Cast Strategy screen controls how a mage auto-casts in combat: a single "strategy / priority" knob — no scripting. Open it via **right-click a mage → info screen → "Strategy"**.
+Which spells a wizard casts in combat is decided by the strategy. You don't have to set it — wizards follow the default. But set it, and your wizards become much smarter.
 
----
+How to open: **right-click a wizard → info screen → the "Strategy" button**.
 
-## 🎯 Two-layer model
+## Two Layers: Preset + Fine-Tuning
 
-Strategy has two layers: the **overall preset** decides the category priority order, and **spells within a category** can be enabled/disabled and reordered individually.
+**Layer 1 · Overall preset** (the top 4 buttons) decides the casting priority order:
 
-### Layer 1: Overall preset (top 4 buttons)
-
-| Preset | Category priority (high → low) |
+| Preset | Casting order (high → low) |
 | :--- | :--- |
-| Balanced | AOE > Single-target > Support > Defense |
-| Offensive | Single-target > AOE > Defense > Support |
-| Support | Support (heal first) > Defense > AOE > Single-target |
-| Defensive | Defense > Support > AOE > Single-target |
+| **Balanced** | AoE → Single-target → Support → Defense |
+| **Offensive** | Single-target → AoE → Defense → Support |
+| **Support** | Support (heal first) → Defense → AoE → Single-target |
+| **Defensive** | Defense → Support → AoE → Single-target |
 
-### Layer 2: Spells within a category
+**Layer 2 · Fine-tuning within a category**: the second row of category buttons (**Single-target / AoE / Defense / Support**) switches to a category and shows the wizard's **known spells**:
 
-- The second row of 4 category buttons (**Single-target / AOE / Defense / Support**) switches the currently shown category.
-- Each category lists the mage's known spells, one per row:
-  - **Toggle button** (On/Off): enables / disables the spell. Disabled spells never auto-cast.
-  - **↑ / ↓ arrows**: reorder the **enabled spells within the same category** (disabled rows cannot be moved).
+- **On/Off**: enable or disable; disabled spells are never cast.
+- **↑ / ↓**: reorder the enabled spells within the same category.
 
----
+## Mechanics
 
-## ⚙️ Mechanics
-
-- **Auto-cast flow**: concatenate the preset category order with each category's enabled-spell order into a flat priority, then pick the **first castable** spell from top to bottom (must satisfy target rule, conditions, cooldown, and mana).
-- **Changes save instantly**: any change (preset / toggle / up / down) is sent to the server immediately — no manual confirmation.
-- **Explicit priority**: once you configure a mage's strategy (toggled or reordered), auto-cast uses your explicit priority instead of deriving from a pure preset.
-- **Altar spells excluded**: altar-exclusive spells (like Revive) can only be cast at an altar; mages never auto-select them in combat.
+- When auto-casting, scan from high to low by "preset order + in-category order", and pick the **first castable one**: valid target, cooldown passed, mana sufficient.
+- **Changes save instantly** — no confirmation needed.
+- Once you have configured a wizard (toggled or reordered), your configuration is used; wizards you never configured follow the preset.
+- Altar spells (like Revive) are not in auto-casting — that's the [Altar](guide:altar_guide)'s business.
 
 ---
 
-👉 [Go to Mage NPC guide](guide:npc_guide)  
-👉 [Back to main test page](guide:test_guide)
+[Wizard NPC Guide](guide:npc_guide)  
+[Altar (Ritual Spells like Revive)](guide:altar_guide)  
+[📖 Back to the Guide Index](guide:index_guide)
