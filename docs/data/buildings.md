@@ -59,24 +59,52 @@
     "profit_rate": 0.3,
     "interaction_duration_ticks": 2400
   },
-  "service": {                          // 仅 category=service
+  "service": {                          // 仅 category=service（产元素+耗精力；max_occupancy>0=旅店）
     "energy_per_use": 10,
     "element_output": {"water": 4},
     "max_occupancy": 4,
     "interaction_duration_ticks": 600
   },
+  "relax": {                            // 仅 category=relax（回复精力）
+    "energy_restore": 40,
+    "interaction_duration_ticks": 1200
+  },
+  "atm": {                              // 仅 category=atm（取现）
+    "withdraw_amount": 50,
+    "interaction_duration_ticks": 1200
+  },
   "door_offset": [x,y,z],               // 可选：入口位置，缺省螺旋扫描
-  "tourist_interact_aabb": [            // 可选：游客交互区列表，缺省螺旋扫描
-    {"min":[x,y,z], "max":[x,y,z]}
+  "interact_spots": [                   // 交互位列表（相对 anchor），见下节
+    {"pos": [x,y,z], "action": "browse"}
   ]
 }
 ```
 
+## interact_spots（交互位）与游客目标建筑
+
+- **`interact_spots`**：`[{"pos":[x,y,z], "action":"<动作>"}, ...]`，坐标**相对 anchor**。**取代**旧 `tourist_interact_aabb`（不再解析，旧字段被忽略）。
+- **action 取值** = `Activity` 枚举名小写（子集）：`browse`/`eat`/`bathe`/`view`/`meditate`/`rest`/`withdraw`。缺省/非法值回退 `browse`。动作只决定游客在该点的活动状态/粒子；**精力/经济效果由建筑 category 的模式预设块决定**。
+- **spot 语义**：**spot 数量 = 该建筑同时交互的游客人数上限**（全满 → 排队）；**交互时长由模式预设块的 `interaction_duration_ticks` 决定**（与 spot 无关）；**同建筑不同 spot 动作可不同**。
+- **必须 ≥1 个 spot，无兜底**：游客目标建筑（category ∈ {shop,service,relax,atm} 且带对应模式预设块）必须给出非空 `interact_spots`，否则游客不选该建筑（旧的 spiral-scan 兜底随 `tourist_interact_aabb` 一并删除）。
+- 扫描器用 `interact_spot_marker` 方块标记交互位（放置=加 spot、右键循环动作、潜行右键移除），导出时扫进 `interact_spots`。
+
+## 四类游客 category（模式预设块）
+
+| category | 块 | 交互效果 | 关键字段 |
+|---|---|---|---|
+| `shop` | `shop{}` | 卖物品（钱包购货、殖民地收元素） | `goods`、`profit_rate`、`interaction_duration_ticks` |
+| `service` | `service{}` | 产元素 + 消耗精力；`max_occupancy>0`=旅店（夜晚住宿） | `energy_per_use`、`element_output`、`max_occupancy`、`interaction_duration_ticks` |
+| `relax` | `relax{}` | 回复精力（白天恢复建筑） | `energy_restore`、`interaction_duration_ticks` |
+| `atm` | `atm{}` | 从 travelFund 取现补钱包 | `withdraw_amount`、`interaction_duration_ticks` |
+
+> 一阶段四个 category 保持独立，**不合并**；统一成 `interact` 的 `interaction` 块是二阶段（延后）。
+
 ## category 实际值（当前数据文件）
 
-`government`（townhall1）、`storage`（warehouse）、`node`（nodedark/nodeearth/...）、`shop`（breadshop/bookshop/flowershop/magicshop）、`service`（deprecated/library）、`tavern`（tavern）、另有 `crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）、`hotel`（inn1）。
+`government`（townhall1）、`storage`（warehouse）、`node`（nodedark/nodeearth/nodefire/nodemetal/nodewater/nodewind/nodewood）、`shop`（breadshop/bookshop/flowershop/magicshop）、`service`（inn1/service_hall/deprecated-library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）；`relax`/`atm` 为**新增** category（示例 JSON 待补，可用扫描器导出）。
 
 > 各建筑 JSON 在 `buildings/deprecated/` 下的仍会加载（旧存档兼容）但不出现在放置面板。
+> `tavern`/`altar1` 保持原 category（招募/祭坛功能按 category 字符串判定），即使有 `interact_spots` 也非游客目标（无四类模式预设块）。
 
 ## 三值 & 维护费示例
 
@@ -84,4 +112,4 @@
 - nodedark（node）：magic5，维护 dark5，node_config 用 node:gather/dark/10/1200。
 - townhall1（government）：三值全 10，维护 earth5+metal5+dark5，door_offset [18,1,4]。
 - breadshop（shop）：shop.goods 6 种食品各带三值，profit_rate 0.3，duration 2400。
-- tavern：有 door_offset 与 tourist_interact_aabb。
+- tavern：有 door_offset 与 `interact_spots`（保持 tavern，非游客目标）。
