@@ -45,12 +45,12 @@ public final class ActivityVisuals {
         return switch (a) {
             case TRAVEL, QUEUE, SLEEP -> Visuals.NONE;
             case BROWSE -> new Visuals(0.12f, 0, 0, -0.2f, 0.1f, 0, 0, null, false);
-            case EAT -> new Visuals(0.15f, 0, 0, -1.4f, 0.5f, 0, 0.4f, null, true);
+            case EAT -> new Visuals(0.5f, 0, 0, -1.4f, 0.5f, 0, 0.4f, null, true);
             case BATHE -> new Visuals(0, 0, -0.05f, -1.0f, 0.6f, 0.15f, 0,
                     new ParticleSpec(ParticleTypes.BUBBLE_POP, 2, 0.3), false);
             case VIEW -> new Visuals(-0.35f, 0.25f, 0, -0.3f, 0.1f, 0, 0, null, false);
             case PAY -> new Visuals(0.2f, 0, 0.12f, -1.2f, 0.25f, 0, 0, null, true);
-            case READ -> new Visuals(0.3f, 0, 0, -1.1f, 0.2f, 0, 0, null, false);
+            case READ -> new Visuals(0.65f, 0, 0, -1.1f, 0.2f, 0, 0, null, false);
             case TAKE -> new Visuals(0f, 0, 0, -0.9f, 0.1f, 0, 0, null, false);
             case REST -> new Visuals(0.10f, 0, -0.05f, -0.4f, 0.2f, 0, 0, null, false);
             case WITHDRAW -> new Visuals(-0.15f, 0, 0, -0.9f, 0, 0, 0,
