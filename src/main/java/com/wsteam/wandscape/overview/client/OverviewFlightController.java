@@ -5,6 +5,8 @@ import java.util.UUID;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
@@ -102,6 +104,7 @@ public final class OverviewFlightController {
         prevCameraType = mc.options.getCameraType();
         mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
         lastHealth = mc.player.getHealth();
+        SoundService.playUI(WandscapeSounds.OVERVIEW_ENTER, 1.0f);
         // Initialize last mouse position to current cursor
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
