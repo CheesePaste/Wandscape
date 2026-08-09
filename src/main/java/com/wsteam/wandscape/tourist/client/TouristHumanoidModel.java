@@ -59,8 +59,10 @@ public class TouristHumanoidModel extends HumanoidModel<TouristEntity> {
 
         // 循环动画（周期摆动，与 Blender/GeckoLib 无关的原版正弦关键帧）
         if (v.armSwing() > 0f) {
+            // 双臂一起小幅摆动（EAT 抬食到嘴边）——单臂泵动会显得很奇怪
             float swing = Mth.sin(ageInTicks * 0.3f) * v.armSwing();
             rightArm.xRot += swing;
+            leftArm.xRot += swing;
         }
         if (activity == Activity.VIEW) {
             // 看展：缓慢转身扫视
