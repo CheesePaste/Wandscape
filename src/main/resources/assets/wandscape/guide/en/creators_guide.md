@@ -1,32 +1,43 @@
-# 📝 Creators & Special Thanks
+# About Us & Feedback
 
-Wandscape is grown by developers, architects and players who love Harry Potter and management sims. Thank you to everyone who has added a brick to this magic town.
+Wandscape is grown by developers, architects and players who love Minecraft and management sims. Thank you to everyone who has added a brick to this magic town.
 
-> This page is an editing template: it lists the mod's creators and contributors. Add architects, personal links, programmers, etc. to the matching sections below.
+## Lead Designer & Lead Developer
+- **CheesePaste**
+- https://space.bilibili.com/514121566
 
-## 🏗️ Architects
+## Lead Developers
+- **Victory FX**
+- https://space.bilibili.com/630432283
+- **Flamtingo**
+- https://space.bilibili.com/1506072626
 
-List the architects who contributed building blueprints (name / in-game ID / personal link):
+## Architects
 
-- **(Architect name)** — buildings: xxx, xxx — [personal link](https://example.com)
+List the architects who have provided buildings for the mod:
 
-## 👨💻 Programmers
+- **(Developer name)** — buildings: xxx, xxx — [personal link](https://example.com)
 
-List the developers who worked on the mod:
+## Developers
+
+List the programmers who took part in developing the mod:
 
 - **(Developer name)** — role: xxx — [personal link](https://example.com)
 
-## 🔗 Links
-
-Collect the creators' personal pages / portfolios here:
-
-- [Name / alias](https://example.com) — about
-
-## 💐 Special Thanks
-
-List the people, communities and inspirations you want to thank:
+## Special Thanks
 
 - ...
+
+## Support Us
+- https://ifdian.net/a/CheesePaste
+
+## Official Platforms (Partial)
+- **bilibili**: https://space.bilibili.com/514121566
+- **discord**: https://discord.gg/da8ZPuQ7Ys
+- **github**: https://github.com/CheesePaste/Wandscape
+- **curseforge**: https://www.curseforge.com/minecraft/mc-mods/wandscape
+- **modrinth**: To be added
+- **mc百科**: To be added
 
 ---
 
