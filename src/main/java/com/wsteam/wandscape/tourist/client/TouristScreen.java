@@ -2,6 +2,9 @@ package com.wsteam.wandscape.tourist.client;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
+import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
@@ -19,22 +22,27 @@ import net.minecraft.world.item.Items;
 /**
  * Tourist info screen.
  *
- * <p>Shows stats (energy, satisfaction, level) and a list of recent
- * attraction visits with outcomes.
+ * <p>Block 2：三条需求条（Comfort/Magic/Wonder fill/need）+ 画像标签 + 活动 + 停留 + 钱包/旅费；
+ * 行程逐维增量；删除单一满意度。
  */
 public class TouristScreen extends MedievalScreen {
 
     private static final int PW = 300;
-    private static final int PH = 230;
+    private static final int PH = 300;
 
     private final int entityId;
     private String touristName;
     private int energy;
-    private int satisfaction;
     private int level;
     private int wallet;
+    private int travelFund;
+    private int comfortSat, magicSat, wonderSat;
+    private int comfortNeed, magicNeed, wonderNeed;
+    @Nullable
+    private Activity currentActivity;
+    private int nightsStayed;
+    private int stayDaysTotal;
     private List<TouristDataPacket.VisitEntry> recentVisits;
-    private int cooldownRemainingTicks;
 
     public TouristScreen(TouristDataPacket packet) {
         super(Component.literal("Tourist Info"), PW, PH);
@@ -49,11 +57,19 @@ public class TouristScreen extends MedievalScreen {
     public void apply(TouristDataPacket packet) {
         this.touristName = packet.touristName();
         this.energy = packet.energy();
-        this.satisfaction = packet.satisfaction();
         this.level = packet.level();
         this.wallet = packet.wallet();
+        this.travelFund = packet.travelFund();
+        this.comfortSat = packet.comfortSat();
+        this.magicSat = packet.magicSat();
+        this.wonderSat = packet.wonderSat();
+        this.comfortNeed = packet.comfortNeed();
+        this.magicNeed = packet.magicNeed();
+        this.wonderNeed = packet.wonderNeed();
+        this.currentActivity = packet.currentActivity();
+        this.nightsStayed = packet.nightsStayed();
+        this.stayDaysTotal = packet.stayDaysTotal();
         this.recentVisits = packet.recentVisits();
-        this.cooldownRemainingTicks = packet.cooldownRemainingTicks();
         setTitleBar(Component.literal(touristName));
     }
 
@@ -73,14 +89,38 @@ public class TouristScreen extends MedievalScreen {
         int leftCol = leftPos + 12;
         int contentTop = topPos + headerHeight + 6;
 
-        // ── Stats ──
-        g.drawString(font, "状态", leftCol, contentTop, MedievalColors.ACCENT_GOLD);
+        // ── 画像 + 三条需求条 ──
+        g.drawString(font, personaLabel(), leftCol, contentTop, MedievalColors.ACCENT_GOLD);
         int sepY = contentTop + 8;
         g.fill(leftCol, sepY, leftCol + 50, sepY + 1, MedievalColors.BORDER_GOLD_DARK);
 
         int statY = sepY + 5;
         int labelW = 32;
         int barW = 100;
+
+        // Comfort bar
+        g.drawString(font, "舒适:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        drawStatBar(g, leftCol + labelW, statY, barW, 10,
+                ratio(comfortSat, comfortNeed),
+                comfortSat + "/" + comfortNeed,
+                MedievalColors.SUCCESS_GREEN);
+        statY += 11;
+
+        // Magic bar
+        g.drawString(font, "魔法:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        drawStatBar(g, leftCol + labelW, statY, barW, 10,
+                ratio(magicSat, magicNeed),
+                magicSat + "/" + magicNeed,
+                MedievalColors.ACCENT_GOLD);
+        statY += 11;
+
+        // Wonder bar
+        g.drawString(font, "奇观:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        drawStatBar(g, leftCol + labelW, statY, barW, 10,
+                ratio(wonderSat, wonderNeed),
+                wonderSat + "/" + wonderNeed,
+                MedievalColors.INFO_BLUE);
+        statY += 11;
 
         // Energy bar
         g.drawString(font, "精力:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
@@ -90,30 +130,28 @@ public class TouristScreen extends MedievalScreen {
                 MedievalColors.SUCCESS_GREEN);
         statY += 11;
 
-        // Satisfaction bar
-        g.drawString(font, "满意:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
-        drawStatBar(g, leftCol + labelW, statY, barW, 10,
-                Math.clamp((float) satisfaction / 100f, 0f, 1f),
-                satisfaction + "%",
-                MedievalColors.ACCENT_GOLD);
-        statY += 11;
-
         // Level text
         g.drawString(font, "等级:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, String.valueOf(level), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
         statY += 11;
 
-        // Wallet text
+        // Wallet / travel fund
         g.drawString(font, "钱包:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, String.valueOf(wallet), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        g.drawString(font, wallet + "  旅费:" + travelFund, leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        statY += 11;
 
-        // ── Cooldown ──
-        int dbgY = statY + 10;
-        g.drawString(font, "冷却:", leftCol, dbgY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, formatCooldown(), leftCol + labelW, dbgY, MedievalColors.TEXT_WARM_WHITE);
+        // Stay
+        g.drawString(font, "停留:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, "已住 " + nightsStayed + " 晚 / 共 " + stayDaysTotal + " 天", leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        statY += 11;
+
+        // Activity
+        g.drawString(font, "活动:", leftCol, statY, MedievalColors.TEXT_WARM_WHITE);
+        g.drawString(font, activityLabel(), leftCol + labelW, statY, MedievalColors.TEXT_MUTED);
+        statY += 11;
 
         // ── Visits ──
-        int visitsTop = dbgY + 20;
+        int visitsTop = statY + 20;
         g.drawString(font, "行程", leftCol, visitsTop, MedievalColors.ACCENT_GOLD);
         g.fill(leftCol, visitsTop + 10, leftPos + PW - 12, visitsTop + 11, MedievalColors.BORDER_GOLD_DARK);
 
@@ -126,8 +164,10 @@ public class TouristScreen extends MedievalScreen {
             for (var visit : recentVisits) {
                 if (count >= maxLines) break;
 
-                String outcomes = formatDelta(visit.satDelta()) + "满意"
-                        + ", " + formatDelta(visit.energyDelta()) + "精力";
+                String outcomes = "舒适" + formatDelta(visit.comfortDelta())
+                        + " 魔法" + formatDelta(visit.magicDelta())
+                        + " 奇观" + formatDelta(visit.wonderDelta())
+                        + " · 精力" + formatDelta(visit.energyDelta());
                 Component building = (visit.buildingTypeId() == null || visit.buildingTypeId().isEmpty())
                         ? Component.literal(visit.buildingName())
                         : I18n.name("building.wandscape." + visit.buildingTypeId(), visit.buildingName());
@@ -136,25 +176,44 @@ public class TouristScreen extends MedievalScreen {
                         .append(localizeItemName(visit.whatHappened()))
                         .append(Component.literal(" (" + outcomes + ")"));
 
-                int color = visit.satDelta() > 0 ? MedievalColors.SUCCESS_GREEN
-                        : visit.satDelta() < 0 ? MedievalColors.DANGER_RED
-                        : MedievalColors.TEXT_MUTED;
-
-                g.drawString(font, line, leftCol, visitY, color);
+                g.drawString(font, line, leftCol, visitY, MedievalColors.TEXT_MUTED);
                 visitY += 10;
                 count++;
             }
         }
     }
 
-    private static String formatDelta(int delta) {
-        return delta >= 0 ? "+" + delta : String.valueOf(delta);
+    /** 画像标签：need 最高维 = 偏爱；三条相等 = 均衡。 */
+    private String personaLabel() {
+        if (comfortNeed == magicNeed && magicNeed == wonderNeed) return "均衡";
+        if (comfortNeed >= magicNeed && comfortNeed >= wonderNeed) return "偏爱舒适";
+        if (magicNeed >= wonderNeed) return "偏爱魔法";
+        return "偏爱奇观";
     }
 
-    /** Debug: remaining rest cooldown in ticks and seconds. */
-    private String formatCooldown() {
-        if (cooldownRemainingTicks <= 0) return "无";
-        return cooldownRemainingTicks + "t (" + String.format("%.1fs", cooldownRemainingTicks / 20.0) + ")";
+    /** 活动名（中文直显，与面板其余文案一致；null = 无活动）。 */
+    private String activityLabel() {
+        if (currentActivity == null) return "—";
+        return switch (currentActivity) {
+            case TRAVEL -> "赶路";
+            case QUEUE -> "排队";
+            case BROWSE -> "浏览";
+            case EAT -> "用餐";
+            case BATHE -> "泡澡";
+            case VIEW -> "看展";
+            case MEDITATE -> "冥想";
+            case SLEEP -> "睡觉";
+            case REST -> "歇脚";
+            case WITHDRAW -> "取现";
+        };
+    }
+
+    private static float ratio(int sat, int need) {
+        return need <= 0 ? 0f : (float) sat / need;
+    }
+
+    private static String formatDelta(int delta) {
+        return delta >= 0 ? "+" + delta : String.valueOf(delta);
     }
 
     /**

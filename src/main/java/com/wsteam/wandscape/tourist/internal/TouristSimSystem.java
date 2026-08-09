@@ -15,6 +15,7 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
+import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
@@ -278,10 +279,18 @@ public final class TouristSimSystem {
         e.setWallet(s.getWallet());
         e.setInitialWallet(s.getInitialWallet());
         e.setEnergy(s.getEnergy());
-        e.setSatisfaction(s.getSatisfaction());
-        for (var entry : s.getTypePreferences().entrySet()) {
-            e.adjustTypePreference(entry.getKey(), entry.getValue() - 40);
-        }
+        e.setComfortSat(s.getComfortSat());
+        e.setMagicSat(s.getMagicSat());
+        e.setWonderSat(s.getWonderSat());
+        e.setComfortNeed(s.getComfortNeed());
+        e.setMagicNeed(s.getMagicNeed());
+        e.setWonderNeed(s.getWonderNeed());
+        e.setCurrentActivity(s.getCurrentActivity());
+        e.setActivityTicks(s.getActivityTicks());
+        e.setOccupiedSpot(s.getOccupiedSpot());
+        e.setNightsStayed(s.getNightsStayed());
+        e.setDepartureDeadline(s.getDepartureDeadline());
+        e.setTravelFund(s.getTravelFund());
         e.setColonyId(s.getColonyId());
         e.setTargetBuildingId(s.getTargetBuildingId());
         e.setTargetBuildingCategory(s.getTargetBuildingCategory());
@@ -292,14 +301,6 @@ public final class TouristSimSystem {
         e.setArrivalTime(s.getArrivalTime());
         e.setMageResumeStored(s.isMageResumeStored());
         for (UUID id : s.getVisitedBuildings()) e.addVisitedBuilding(id);
-        // Convert shadow cooldowns (simTick base) to entity tickCount base.
-        int entityNow = e.tickCount;
-        for (var entry : s.getServiceCooldownsMap().entrySet()) {
-            int remaining = entry.getValue() - s.timeBase();
-            if (remaining > 0) e.setServiceCooldown(entry.getKey(), entityNow + remaining);
-        }
-        int globalRemaining = s.getServiceCooldownEndTick() - s.timeBase();
-        if (globalRemaining > 0) e.setServiceCooldownEndTick(entityNow + globalRemaining);
         for (var v : s.getRecentVisits()) e.addVisitMemory(v);
         e.applyState(com.wsteam.wandscape.tourist.internal.TouristState.VISITING);
     }
@@ -310,9 +311,18 @@ public final class TouristSimSystem {
         s.setWallet(e.getWallet());
         s.setInitialWallet(e.getInitialWallet());
         s.setEnergy(e.getEnergy());
-        s.setSatisfaction(e.getSatisfaction());
-        s.getTypePreferences().clear();
-        s.getTypePreferences().putAll(e.getTypePreferencesMap());
+        s.setComfortSat(e.getComfortSat());
+        s.setMagicSat(e.getMagicSat());
+        s.setWonderSat(e.getWonderSat());
+        s.setComfortNeed(e.getComfortNeed());
+        s.setMagicNeed(e.getMagicNeed());
+        s.setWonderNeed(e.getWonderNeed());
+        s.setCurrentActivity(e.getCurrentActivity());
+        s.setActivityTicks(e.getActivityTicks());
+        s.setOccupiedSpot(e.getOccupiedSpot());
+        s.setNightsStayed(e.getNightsStayed());
+        s.setDepartureDeadline(e.getDepartureDeadline());
+        s.setTravelFund(e.getTravelFund());
         s.setColonyId(e.getColonyId());
         s.setTargetBuildingId(e.getTargetBuildingId());
         s.setTargetBuildingCategory(e.getTargetBuildingCategory());
@@ -324,14 +334,6 @@ public final class TouristSimSystem {
         s.setMageResumeStored(e.isMageResumeStored());
         s.getVisitedBuildings().clear();
         s.getVisitedBuildings().addAll(e.getVisitedBuildings());
-        int entityNow = e.tickCount;
-        s.getServiceCooldownsMap().clear();
-        for (var entry : e.getServiceCooldownsMap().entrySet()) {
-            int remaining = entry.getValue() - entityNow;
-            if (remaining > 0) s.setServiceCooldown(entry.getKey(), s.timeBase() + remaining);
-        }
-        int globalRemaining = e.getServiceCooldownEndTick() - entityNow;
-        s.setServiceCooldownEndTick(globalRemaining > 0 ? s.timeBase() + globalRemaining : 0);
         s.clearRecentVisits();
         for (var v : e.getRecentVisits()) s.addVisitMemory(v);
     }
@@ -340,11 +342,11 @@ public final class TouristSimSystem {
 
     private void simStep(ServerLevel level, TouristShadow s) {
         if (++simStepLogCounter % 100 == 0) {
-            Log.info(TAG, "[Tourist][diag] simStep {} pos=({},{}) commute={} target={} sat={} energy={} tick={}",
+            Log.info(TAG, "[Tourist][diag] simStep {} pos=({},{}) commute={} target={} bars={}/{}/{} energy={} tick={}",
                     s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
                     s.getCommuteTarget() != null ? s.getCommuteTarget().toShortString() : "null",
                     s.getTargetBuildingId() != null ? s.getTargetBuildingId().toString().substring(0, 8) : "null",
-                    s.getSatisfaction(), s.getEnergy(), s.simTick());
+                    s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy(), s.simTick());
         }
         s.advanceSimTick(SIM_INTERVAL);
         s.markUnhydrated();
@@ -353,10 +355,10 @@ public final class TouristSimSystem {
         if (hotel != null) {
             long dayTime = level.getDayTime() % 24000;
             if (dayTime >= 1000 && dayTime < 1200) {
-                // Morning checkout: energy → 100, return to the spot where the
-                // tourist stood at check-in (before it teleported into a bed).
+                // Morning checkout: 住店晚数 +1、精力回 100，回到入住前站位。
                 s.setCheckedInBuildingId(null);
                 s.setHotelCheckinTime(0);
+                s.setNightsStayed(s.getNightsStayed() + 1);
                 s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
                 s.setCommuteTarget(null);
                 BlockPos wake = s.getWakeUpPos();
@@ -405,15 +407,12 @@ public final class TouristSimSystem {
     }
 
     private void decideNext(ServerLevel level, TouristShadow s) {
-        if (s.getServiceCooldownEndTick() > s.timeBase()) {
-            wander(s);
-            return;
-        }
-        BuildingState chosen = TouristSimulation.selectNextTarget(level, s);
+        BuildingState chosen = TouristSimulation.selectNextTarget(level, s, false);
         if (chosen != null) {
             s.setTargetBuildingId(chosen.getBuildingId());
             s.setTargetBuildingCategory(chosen.getCategory());
-            s.setCommuteTarget(chosen.getAnchor());
+            BlockPos target = TouristSimulation.spotWorldPos(level, chosen.getBuildingId(), 0);
+            s.setCommuteTarget(target != null ? target : chosen.getAnchor());
             return;
         }
         wander(s);
@@ -459,46 +458,45 @@ public final class TouristSimSystem {
         if (isHotel) {
             long dayTime = level.getDayTime() % 24000;
             boolean isNight = dayTime >= 13000;
-            int sat = s.getSatisfaction();
-            boolean energyDepleted = s.getEnergy() <= 0;
-            if (sat >= 50 && sat < 100 && (isNight || energyDepleted) && hasHotelVacancy(level, buildingId)) {
+            // 夜晚 + 未满条 → 入住（满条游客夜晚等离场）；入住只睡觉回精力，不填三条
+            if (isNight && !s.isFullySatisfied() && hasHotelVacancy(level, buildingId)) {
                 s.setCheckedInBuildingId(buildingId);
                 s.setHotelCheckinTime(s.simTick());
                 s.addVisitedBuilding(buildingId);
-                // 入住也是服务：按服务公式涨满意度（受等级阈值/偏好/建筑三维值影响）并记入行程
-                int satBefore = s.getSatisfaction();
-                int gain = TouristSimulation.satisfactionGain(level, s, buildingId);
-                s.setSatisfaction(satBefore + gain);
                 String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
                 var hotelCfg = TouristSimulation.getConfig(level, buildingId);
                 String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
                         ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
                 TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
-                        level.getGameTime(), satBefore, gain, 0, "入住");
+                        level.getGameTime(), 0, 0, 0, 0, "入住");
                 s.setCommuteTarget(null);
                 s.setTargetBuildingId(null);
                 s.setTargetBuildingCategory(null);
                 Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
                 return;
             }
+            // 白天/满条 → 当普通 service 交互（fall through）
         }
 
         String category = s.getTargetBuildingCategory();
-        var result = "shop".equals(category)
-                ? TouristSimulation.performShopInteraction(level, s, buildingId, colonyId)
-                : TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
+        var result = switch (category == null ? "" : category) {
+            case "shop" -> TouristSimulation.performShopInteraction(level, s, buildingId, colonyId);
+            case "relax" -> TouristSimulation.performRelaxInteraction(level, s, buildingId, colonyId);
+            case "atm" -> TouristSimulation.performAtmInteraction(level, s, buildingId, colonyId);
+            default -> TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
+        };
         if (result != null) {
-            Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → sat {}→{}, energy {}",
+            Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → bars {}/{}/{}, energy {}",
                     s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
-                    result.satBefore(), s.getSatisfaction(), s.getEnergy());
-            // 与实体路径一致：商店/服务访问也记入行程（买不起记「逛了一圈什么也没买」）
+                    s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
+            // 与实体路径一致：交互记入行程（买不起记「逛了一圈什么也没买」）
             String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
             var bldCfg = TouristSimulation.getConfig(level, buildingId);
             String bldName = (bldCfg != null && bldCfg.displayName() != null && !bldCfg.displayName().isEmpty())
                     ? bldCfg.displayName() : (bldType != null ? bldType : "建筑");
             TouristSimulation.addVisitMemory(s, bldType, bldName, category,
-                    level.getGameTime(), result.satBefore(), result.satDelta(), result.energyDelta(),
-                    result.whatHappened());
+                    level.getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                    result.energyDelta(), result.whatHappened());
         } else {
             Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
                     s.getTouristName(), shortId(buildingId), category);
@@ -528,29 +526,28 @@ public final class TouristSimSystem {
     private void checkDeparture(ServerLevel level, TouristShadow s) {
         if (s.getCheckedInBuildingId() != null) return;
 
-        if (s.getSatisfaction() >= 100 && s.isMage() && !s.isMageResumeStored()) {
+        if (s.isFullySatisfied() && s.isMage() && !s.isMageResumeStored()) {
             storeMageResume(s);
             s.setMageResumeStored(true);
         }
 
         long dayTime = level.getDayTime() % 24000;
         boolean isNight = dayTime >= 13000;
-        boolean energyDepleted = s.getEnergy() <= 0;
         boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
         boolean idleTimeout = isIdle && s.simTick() > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
-        int sat = s.getSatisfaction();
 
+        // D6 离场（goal.md）：到点 / 满条夜晚 / 夜晚无旅店 / idle 超时
         boolean leave;
-        if (sat >= 100) {
-            leave = energyDepleted || (isNight && isIdle) || idleTimeout;
-        } else if (sat >= 50) {
-            if (energyDepleted || isNight) {
-                leave = !routeToHotel(level, s);
-            } else {
-                leave = idleTimeout;
-            }
+        if (level.getGameTime() >= s.getDepartureDeadline()) {
+            leave = true;
+        } else if (s.isFullySatisfied()) {
+            // 满条等夜晚再离场（白天满条先开心闲逛）
+            leave = isNight || idleTimeout;
+        } else if (isNight) {
+            // 夜晚 + 未满条：入旅店；无旅店/满 → 离场
+            leave = !routeToHotel(level, s);
         } else {
-            leave = energyDepleted || (isNight && isIdle) || idleTimeout;
+            leave = idleTimeout;
         }
         if (leave) {
             depart(level, s);
@@ -577,20 +574,22 @@ public final class TouristSimSystem {
 
     private void depart(ServerLevel level, TouristShadow s) {
         grantExperience(s);
-        if (s.isMage() && s.getSatisfaction() >= 100 && !s.isMageResumeStored()) {
+        if (s.isMage() && s.isFullySatisfied() && !s.isMageResumeStored()) {
             storeMageResume(s);
         }
         TouristApi touristApi = getTouristApi();
         if (touristApi != null && s.getColonyId() != null) {
-            touristApi.registerDeparture(s.getTouristId(), s.getColonyId(), s.getSatisfaction());
+            BarRatio fill = BarRatio.of(s.getComfortSat(), s.getComfortNeed(),
+                    s.getMagicSat(), s.getMagicNeed(), s.getWonderSat(), s.getWonderNeed());
+            touristApi.registerDeparture(s.getTouristId(), s.getColonyId(), fill);
         }
         registry.remove(s.getTouristId());
-        Log.info(TAG, "[Tourist] {} (sim) departed (sat={} energy={})",
-                s.getTouristName(), s.getSatisfaction(), s.getEnergy());
+        Log.info(TAG, "[Tourist] {} (sim) departed (bars={}/{}/{} energy={})",
+                s.getTouristName(), s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
     }
 
     private void grantExperience(TouristShadow s) {
-        if (s.getSatisfaction() < 100) return;
+        if (!s.isFullySatisfied()) return;
         ColonyLevelManager lm = WandscapeEngine.getColonyLevelManager();
         if (lm == null || s.getColonyId() == null) return;
         int colonyLevel = lm.getLevel(s.getColonyId());

@@ -13,14 +13,14 @@ import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
 
-import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModList;
-public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, HumanoidModel<TouristEntity>> {
+public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, TouristHumanoidModel> {
 
     private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(
             "textures/entity/tourist");
@@ -53,15 +53,34 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, Humanoid
     }
 
     public TouristRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+        super(ctx, new TouristHumanoidModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
     }
 
     @Override
     public void render(TouristEntity entity, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+        spawnActivityParticles(entity);
         SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
                 AmbientTextPools::getTouristText);
+    }
+
+    /** 按 activity 发射装饰粒子（泡澡蒸汽/冥想魔法/取现金币）；节流，未知活动无粒子。 */
+    private void spawnActivityParticles(TouristEntity entity) {
+        if (entity.getCurrentActivity() == null) return;
+        if (entity.tickCount % 8 != 0) return;
+        var spec = ActivityVisuals.safeFor(entity.getCurrentActivity()).particles();
+        if (spec == null || !(entity.level() instanceof ClientLevel cl)) return;
+        double x = entity.getX();
+        double y = entity.getY() + 1.4;
+        double z = entity.getZ();
+        for (int i = 0; i < spec.count(); i++) {
+            cl.addParticle(spec.type(),
+                    x + (entity.getRandom().nextDouble() - 0.5) * spec.spread(),
+                    y + (entity.getRandom().nextDouble() - 0.5) * spec.spread(),
+                    z + (entity.getRandom().nextDouble() - 0.5) * spec.spread(),
+                    0, 0.02, 0);
+        }
     }
 
     @Override

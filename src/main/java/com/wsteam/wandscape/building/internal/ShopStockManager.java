@@ -620,12 +620,11 @@ public final class ShopStockManager {
 
         for (BuildingState state : savedData.getAllBuildings()) {
             if (!colonyId.equals(state.getColonyId())) continue;
-            if (!"shop".equals(state.getCategory())) continue;
             if (state.isShutdown() || !state.isStructureIntact()) continue;
 
             BuildingConfig config = BuildingConfigLoader.getInstance()
                     .get(state.getBuildingTypeId());
-            if (config == null || config.shop() == null) continue;
+            if (config == null || config.shop() == ShopConfig.NONE) continue;
 
             restock(state.getBuildingId(), config.shop(), colonyId, bank);
         }

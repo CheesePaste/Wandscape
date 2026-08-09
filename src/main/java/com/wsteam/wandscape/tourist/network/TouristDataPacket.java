@@ -1,17 +1,13 @@
 package com.wsteam.wandscape.tourist.network;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -20,20 +16,26 @@ import net.minecraft.resources.ResourceLocation;
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server→client packet: opens / updates the tourist info screen.
+ *
+ * <p>Block 2：三条需求条（sat/need）+ 画像 + 活动 + 停留 + 钱包/旅费；去掉单一 satisfaction 与调试字段。
  */
 public record TouristDataPacket(
         int entityId,
         String touristName,
         int energy,
-        int satisfaction,
         int level,
         int wallet,
-        List<VisitEntry> recentVisits,
-        String currentState,
-        String targetBuildingName,
-        String targetBuildingType,
-        @Nullable BlockPos targetPos,
-        int cooldownRemainingTicks
+        int travelFund,
+        int comfortSat,
+        int magicSat,
+        int wonderSat,
+        int comfortNeed,
+        int magicNeed,
+        int wonderNeed,
+        @Nullable Activity currentActivity,
+        int nightsStayed,
+        int stayDaysTotal,
+        List<VisitEntry> recentVisits
 ) implements CustomPacketPayload {
 
     public static final Type<TouristDataPacket> TYPE =
@@ -45,18 +47,23 @@ public record TouristDataPacket(
     /**
      * Serializable visit entry — lightweight subset of {@link com.wsteam.wandscape.shared.data.VisitMemory}.
      * {@code buildingTypeId} lets the client resolve the localized name via {@code building.wandscape.<id>}.
+     * Block 2：满意度 satDelta → 三维增量（comfort/magic/wonder）。
      */
-    public record VisitEntry(String buildingTypeId, String buildingName, String whatHappened, int satDelta, int energyDelta) {
+    public record VisitEntry(String buildingTypeId, String buildingName, String whatHappened,
+                             int comfortDelta, int magicDelta, int wonderDelta, int energyDelta) {
         static void write(net.minecraft.network.FriendlyByteBuf buf, VisitEntry entry) {
             buf.writeUtf(entry.buildingTypeId != null ? entry.buildingTypeId : "");
             buf.writeUtf(entry.buildingName != null ? entry.buildingName : "");
             buf.writeUtf(entry.whatHappened != null ? entry.whatHappened : "");
-            buf.writeInt(entry.satDelta);
+            buf.writeInt(entry.comfortDelta);
+            buf.writeInt(entry.magicDelta);
+            buf.writeInt(entry.wonderDelta);
             buf.writeInt(entry.energyDelta);
         }
 
         static VisitEntry read(net.minecraft.network.FriendlyByteBuf buf) {
-            return new VisitEntry(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readInt());
+            return new VisitEntry(buf.readUtf(), buf.readUtf(), buf.readUtf(),
+                    buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
         }
     }
 
@@ -85,18 +92,22 @@ public record TouristDataPacket(
         buf.writeInt(pkt.entityId);
         buf.writeUtf(pkt.touristName);
         buf.writeInt(pkt.energy);
-        buf.writeInt(pkt.satisfaction);
         buf.writeInt(pkt.level);
         buf.writeInt(pkt.wallet);
-        buf.writeCollection(pkt.recentVisits, (b, v) -> VisitEntry.write(b, v));
-        buf.writeUtf(pkt.currentState);
-        buf.writeUtf(pkt.targetBuildingName);
-        buf.writeUtf(pkt.targetBuildingType);
-        buf.writeBoolean(pkt.targetPos != null);
-        if (pkt.targetPos != null) {
-            buf.writeBlockPos(pkt.targetPos);
+        buf.writeInt(pkt.travelFund);
+        buf.writeInt(pkt.comfortSat);
+        buf.writeInt(pkt.magicSat);
+        buf.writeInt(pkt.wonderSat);
+        buf.writeInt(pkt.comfortNeed);
+        buf.writeInt(pkt.magicNeed);
+        buf.writeInt(pkt.wonderNeed);
+        buf.writeBoolean(pkt.currentActivity != null);
+        if (pkt.currentActivity != null) {
+            buf.writeEnum(pkt.currentActivity);
         }
-        buf.writeInt(pkt.cooldownRemainingTicks);
+        buf.writeInt(pkt.nightsStayed);
+        buf.writeInt(pkt.stayDaysTotal);
+        buf.writeCollection(pkt.recentVisits, (b, v) -> VisitEntry.write(b, v));
     }
 
     static TouristDataPacket read(RegistryFriendlyByteBuf buf) {
@@ -107,12 +118,16 @@ public record TouristDataPacket(
                 buf.readInt(),
                 buf.readInt(),
                 buf.readInt(),
-                buf.readList(b -> VisitEntry.read(b)),
-                buf.readUtf(),
-                buf.readUtf(),
-                buf.readUtf(),
-                buf.readBoolean() ? buf.readBlockPos() : null,
-                buf.readInt()
+                buf.readInt(),
+                buf.readInt(),
+                buf.readInt(),
+                buf.readInt(),
+                buf.readInt(),
+                buf.readInt(),
+                buf.readBoolean() ? buf.readEnum(Activity.class) : null,
+                buf.readInt(),
+                buf.readInt(),
+                buf.readList(b -> VisitEntry.read(b))
         );
     }
 
@@ -121,48 +136,29 @@ public record TouristDataPacket(
     public static TouristDataPacket from(TouristEntity tourist) {
         List<VisitEntry> visits = tourist.getRecentVisits().stream()
                 .map(v -> new VisitEntry(v.buildingTypeId(), v.buildingDisplayName(), v.whatHappened(),
-                        v.satisfactionDelta(), v.energyDelta()))
+                        v.comfortDelta(), v.magicDelta(), v.wonderDelta(), v.energyDelta()))
                 .toList();
 
-        String targetName = "";
-        String targetType = "";
-        UUID targetId = tourist.getTargetBuildingId();
-        if (targetId != null) {
-            try {
-                BuildingData data = WandscapeApis.getBuildingApi().getBuilding(targetId);
-                if (data != null) {
-                    String typeId = data.getBuildingTypeId();
-                    if (typeId != null) {
-                        targetType = typeId;
-                        var config = BuildingConfigLoader.getInstance().get(typeId);
-                        if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
-                            targetName = config.displayName();
-                        }
-                    }
-                }
-            } catch (IllegalStateException e) {
-                // Building module not loaded — leave target fields empty
-            }
-        }
-        if (targetName.isEmpty()) {
-            targetName = targetType;
-        }
-
-        int remaining = tourist.getServiceCooldownEndTick() - tourist.tickCount;
+        long stayTicks = Math.max(1L, tourist.getDepartureDeadline() - tourist.getArrivalTime());
+        int stayDaysTotal = Math.max(1, (int) (stayTicks / 24000L));
 
         return new TouristDataPacket(
                 tourist.getId(),
                 tourist.getTouristName(),
                 tourist.getEnergy(),
-                tourist.getSatisfaction(),
                 tourist.getLevel(),
                 tourist.getWallet(),
-                visits,
-                tourist.getCurrentState().name(),
-                targetName,
-                targetType,
-                tourist.getCommuteTarget(),
-                Math.max(0, remaining)
+                tourist.getTravelFund(),
+                tourist.getComfortSat(),
+                tourist.getMagicSat(),
+                tourist.getWonderSat(),
+                tourist.getComfortNeed(),
+                tourist.getMagicNeed(),
+                tourist.getWonderNeed(),
+                tourist.getCurrentActivity(),
+                tourist.getNightsStayed(),
+                stayDaysTotal,
+                visits
         );
     }
 }

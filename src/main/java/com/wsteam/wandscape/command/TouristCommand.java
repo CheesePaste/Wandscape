@@ -23,7 +23,7 @@ import java.util.List;
  * /wandscape tourist list
  * /wandscape tourist spawn
  * /wandscape tourist state &lt;name|all&gt; &lt;state&gt;
- * /wandscape tourist cooldown &lt;service|visited|preference|all&gt; &lt;on|off&gt;
+ * /wandscape tourist cooldown &lt;visited|all&gt; &lt;on|off&gt;
  * </pre>
  */
 public final class TouristCommand {
@@ -72,10 +72,8 @@ public final class TouristCommand {
 
         // Show debug flag state
         lines.add("");
-        lines.add("--- Cooldown Debug ---");
-        lines.add("  service : " + (TouristCooldownDebug.skipServiceCooldown ? "DISABLED (skip)" : "ENABLED (normal)"));
+        lines.add("--- Debug ---");
         lines.add("  visited : " + (TouristCooldownDebug.skipVisitedBuildings ? "DISABLED (skip)" : "ENABLED (normal)"));
-        lines.add("  pref    : " + (TouristCooldownDebug.skipPreferenceDecay ? "DISABLED (skip)" : "ENABLED (normal)"));
 
         String msg = String.join("\n", lines);
         src.sendSuccess(() -> Component.literal(msg), false);
@@ -163,14 +161,8 @@ public final class TouristCommand {
         }
 
         switch (layer) {
-            case "service" -> {
-                TouristCooldownDebug.skipServiceCooldown = !enable;
-            }
             case "visited" -> {
                 TouristCooldownDebug.skipVisitedBuildings = !enable;
-            }
-            case "preference", "pref" -> {
-                TouristCooldownDebug.skipPreferenceDecay = !enable;
             }
             case "all" -> {
                 if (enable) {
@@ -181,7 +173,7 @@ public final class TouristCommand {
             }
             default -> {
                 ctx.getSource().sendFailure(Component.literal(
-                        "Unknown layer: '" + layer + "'. Valid: service, visited, preference, all"));
+                        "Unknown layer: '" + layer + "'. Valid: visited, all"));
                 return 0;
             }
         }
@@ -213,9 +205,7 @@ public final class TouristCommand {
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestLayers(
             CommandContext<CommandSourceStack> ctx,
             com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
-        builder.suggest("service");
         builder.suggest("visited");
-        builder.suggest("preference");
         builder.suggest("all");
         return builder.buildFuture();
     }

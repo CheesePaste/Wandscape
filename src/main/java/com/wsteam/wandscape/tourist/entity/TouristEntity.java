@@ -13,6 +13,8 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
+import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.MageAttributeRoller;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
@@ -165,21 +167,25 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     // ── Tourist attributes ──
 
     private int energy = WandscapeConstants.TOURIST_MAX_ENERGY;
-    private int satisfaction;
     private int level = 1;
     /** Universal-element spending money. Higher tourist levels start with more. */
     private int wallet;
     /** The wallet the tourist arrived with — caps each shopping trip's budget. */
     private int initialWallet;
 
-    // ── Per-building-type preference (buildingTypeId → 5..100, default 50) ──
+    // ── 三条需求条（fill/need）＋ 画像 / 活动 / 停留 / 总旅费（Block 2） ──
 
-    private final Map<String, Integer> typePreferences = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final int DEFAULT_TYPE_PREFERENCE = 40;
-    private static final int MIN_TYPE_PREFERENCE = 5;
-    private static final int MAX_TYPE_PREFERENCE = 100;
+    private int comfortSat, magicSat, wonderSat;
+    private int comfortNeed = 100, magicNeed = 100, wonderNeed = 100;
+    @javax.annotation.Nullable
+    private Activity currentActivity;
+    private int activityTicks;
+    private int occupiedSpot = -1;
+    private int nightsStayed;
+    private long departureDeadline = Long.MAX_VALUE;
+    private int travelFund;
 
-    // ── Mage-only attributes (stored in tavern recruitment resume at 100% satisfaction) ──
+    // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
 
     private float maxHp = 40f;
     private float moveSpeed = 0.3f;
@@ -217,13 +223,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     /** Set of building IDs the tourist has already visited this trip. */
     private final Set<UUID> visitedBuildings = new HashSet<>();
-
-    /** Per-building cooldown end ticks (buildingId → game tick when cooldown expires). */
-    private final Map<UUID, Integer> serviceCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
-
-    /** Global rest-cooldown end tick after interacting with any building (shop/service).
-     *  During this, the tourist wanders or visits POIs and skips building visits. */
-    private int serviceCooldownEndTick;
 
     // ── Narrative memory (journey diary) ──
 
@@ -437,7 +436,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         if (colonyId != null) {
             var api = WandscapeApis.getTouristApiSilently();
             if (api != null) {
-                api.registerDeparture(getUUID(), colonyId, getSatisfaction());
+                api.registerDeparture(getUUID(), colonyId,
+                        BarRatio.of(getComfortSat(), getComfortNeed(), getMagicSat(), getMagicNeed(),
+                                getWonderSat(), getWonderNeed()));
             }
         }
     }
@@ -464,17 +465,23 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         }
         tag.putInt("wanderRadius", wanderRadius);
         tag.putInt("energy", energy);
-        tag.putInt("satisfaction", satisfaction);
         tag.putInt("level", level);
         tag.putInt("wallet", wallet);
         tag.putInt("initialWallet", initialWallet);
 
-        // Save per-building-type preferences as a flat compound
-        CompoundTag prefs = new CompoundTag();
-        for (var entry : typePreferences.entrySet()) {
-            prefs.putInt(entry.getKey(), entry.getValue());
-        }
-        tag.put("typePreferences", prefs);
+        // ── 三条需求条 / 活动 / 停留 / 总旅费（Block 2）──
+        tag.putInt("comfortSat", comfortSat);
+        tag.putInt("magicSat", magicSat);
+        tag.putInt("wonderSat", wonderSat);
+        tag.putInt("comfortNeed", comfortNeed);
+        tag.putInt("magicNeed", magicNeed);
+        tag.putInt("wonderNeed", wonderNeed);
+        if (currentActivity != null) tag.putString("currentActivity", currentActivity.name());
+        tag.putInt("activityTicks", activityTicks);
+        tag.putInt("occupiedSpot", occupiedSpot);
+        tag.putInt("nightsStayed", nightsStayed);
+        tag.putLong("departureDeadline", departureDeadline);
+        tag.putInt("travelFund", travelFund);
 
         tag.putFloat("maxHp", maxHp);
         tag.putFloat("moveSpeed", moveSpeed);
@@ -500,23 +507,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         }
         tag.put("visitedBuildings", visitedList);
 
-        // Save service cooldowns as remaining ticks (absolute tickCount values are not portable)
-        ListTag cooldownList = new ListTag();
-        for (var entry : serviceCooldowns.entrySet()) {
-            int remaining = entry.getValue() - this.tickCount;
-            if (remaining > 0) {
-                CompoundTag entryTag = new CompoundTag();
-                entryTag.putUUID("buildingId", entry.getKey());
-                entryTag.putInt("remaining", remaining);
-                cooldownList.add(entryTag);
-            }
-        }
-        tag.put("serviceCooldowns", cooldownList);
-        int remainingGlobal = serviceCooldownEndTick - this.tickCount;
-        if (remainingGlobal > 0) {
-            tag.putInt("serviceCooldownRemaining", remainingGlobal);
-        }
-
         // Save visit memories (journey diary)
         ListTag visitsList = new ListTag();
         for (VisitMemory v : recentVisits) {
@@ -525,8 +515,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             vt.putString("buildingDisplayName", v.buildingDisplayName());
             vt.putString("category", v.category());
             vt.putLong("gameTime", v.gameTime());
-            vt.putInt("satisfactionBefore", v.satisfactionBefore());
-            vt.putInt("satisfactionDelta", v.satisfactionDelta());
+            vt.putInt("comfortDelta", v.comfortDelta());
+            vt.putInt("magicDelta", v.magicDelta());
+            vt.putInt("wonderDelta", v.wonderDelta());
             vt.putInt("energyDelta", v.energyDelta());
             vt.putString("whatHappened", v.whatHappened());
             visitsList.add(vt);
@@ -564,19 +555,29 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.wanderRadius = tag.getInt("wanderRadius");
         // Clamp values in case of corrupted data
         this.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
-        this.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
         this.level = Math.max(1, tag.getInt("level"));
         this.wallet = Math.max(0, tag.getInt("wallet"));
         this.initialWallet = Math.max(0, tag.getInt("initialWallet"));
 
-        // Restore per-building-type preferences
-        this.typePreferences.clear();
-        if (tag.contains("typePreferences")) {
-            CompoundTag prefs = tag.getCompound("typePreferences");
-            for (String key : prefs.getAllKeys()) {
-                this.typePreferences.put(key, prefs.getInt(key));
+        // ── 三条需求条 / 活动 / 停留 / 总旅费（Block 2；旧档无 key 走字段默认）──
+        if (tag.contains("comfortNeed")) this.comfortNeed = Math.max(1, tag.getInt("comfortNeed"));
+        if (tag.contains("magicNeed")) this.magicNeed = Math.max(1, tag.getInt("magicNeed"));
+        if (tag.contains("wonderNeed")) this.wonderNeed = Math.max(1, tag.getInt("wonderNeed"));
+        this.comfortSat = Math.clamp(tag.getInt("comfortSat"), 0, comfortNeed);
+        this.magicSat = Math.clamp(tag.getInt("magicSat"), 0, magicNeed);
+        this.wonderSat = Math.clamp(tag.getInt("wonderSat"), 0, wonderNeed);
+        if (tag.contains("currentActivity")) {
+            try {
+                this.currentActivity = Activity.valueOf(tag.getString("currentActivity"));
+            } catch (IllegalArgumentException e) {
+                this.currentActivity = null;
             }
         }
+        this.activityTicks = Math.max(0, tag.getInt("activityTicks"));
+        this.occupiedSpot = tag.getInt("occupiedSpot");
+        this.nightsStayed = Math.max(0, tag.getInt("nightsStayed"));
+        if (tag.contains("departureDeadline")) this.departureDeadline = tag.getLong("departureDeadline");
+        if (tag.contains("travelFund")) this.travelFund = Math.max(0, tag.getInt("travelFund"));
 
         this.maxHp = tag.getFloat("maxHp");
         this.moveSpeed = tag.getFloat("moveSpeed");
@@ -605,24 +606,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             }
         }
 
-        // Restore service cooldowns from remaining ticks (reconstruct absolute endTick for current session)
-        this.serviceCooldowns.clear();
-        if (tag.contains("serviceCooldowns")) {
-            ListTag cooldownList = tag.getList("serviceCooldowns", Tag.TAG_COMPOUND);
-            for (int i = 0; i < cooldownList.size(); i++) {
-                CompoundTag entry = cooldownList.getCompound(i);
-                if (entry.hasUUID("buildingId")) {
-                    int remaining = entry.getInt("remaining");
-                    if (remaining > 0) {
-                        this.serviceCooldowns.put(entry.getUUID("buildingId"), this.tickCount + remaining);
-                    }
-                }
-            }
-        }
-        this.serviceCooldownEndTick = tag.contains("serviceCooldownRemaining")
-                ? this.tickCount + tag.getInt("serviceCooldownRemaining")
-                : 0;
-
         // Restore visit memories
         this.recentVisits.clear();
         if (tag.contains("recentVisits")) {
@@ -634,11 +617,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                         vt.getString("buildingDisplayName"),
                         vt.getString("category"),
                         vt.getLong("gameTime"),
-                        vt.getInt("satisfactionBefore"),
-                        vt.getInt("satisfactionDelta"),
+                        vt.getInt("comfortDelta"),
+                        vt.getInt("magicDelta"),
+                        vt.getInt("wonderDelta"),
                         vt.getInt("energyDelta"),
                         vt.getString("whatHappened"),
-                        Emotion.fromDelta(vt.getInt("satisfactionDelta"))
+                        Emotion.fromDelta(vt.getInt("comfortDelta") + vt.getInt("magicDelta") + vt.getInt("wonderDelta"))
                 ));
             }
         }
@@ -725,8 +709,25 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public int getEnergy() { return energy; }
     public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
 
-    public int getSatisfaction() { return satisfaction; }
-    public void setSatisfaction(int s) { this.satisfaction = Math.clamp(s, 0, 100); }
+    // ── 三条需求条（fill/need）──
+
+    @Override public int getComfortSat() { return comfortSat; }
+    @Override public void setComfortSat(int v) { this.comfortSat = Math.clamp(v, 0, Math.max(0, comfortNeed)); }
+    @Override public int getMagicSat() { return magicSat; }
+    @Override public void setMagicSat(int v) { this.magicSat = Math.clamp(v, 0, Math.max(0, magicNeed)); }
+    @Override public int getWonderSat() { return wonderSat; }
+    @Override public void setWonderSat(int v) { this.wonderSat = Math.clamp(v, 0, Math.max(0, wonderNeed)); }
+    @Override public int getComfortNeed() { return comfortNeed; }
+    @Override public void setComfortNeed(int v) { this.comfortNeed = Math.max(1, v); }
+    @Override public int getMagicNeed() { return magicNeed; }
+    @Override public void setMagicNeed(int v) { this.magicNeed = Math.max(1, v); }
+    @Override public int getWonderNeed() { return wonderNeed; }
+    @Override public void setWonderNeed(int v) { this.wonderNeed = Math.max(1, v); }
+
+    /** 满条 = 三条 ratio 全 1。 */
+    @Override public boolean isFullySatisfied() {
+        return comfortSat >= comfortNeed && magicSat >= magicNeed && wonderSat >= wonderNeed;
+    }
 
     public boolean isMageResumeStored() { return mageResumeStored; }
     public void setMageResumeStored(boolean v) { this.mageResumeStored = v; }
@@ -745,26 +746,24 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.wallet = (int) Math.max(0, (long) this.wallet - amount);
     }
 
-    // ── Preferences ──
+    // ── 活动 / 停留 / 总旅费 ──
 
-    /** Returns this tourist's preference for a building type (5–100, default 50). */
-    public int getTypePreference(String buildingTypeId) {
-        return typePreferences.getOrDefault(buildingTypeId, DEFAULT_TYPE_PREFERENCE);
-    }
+    @Nullable public Activity getCurrentActivity() { return currentActivity; }
+    public void setCurrentActivity(@Nullable Activity a) { this.currentActivity = a; }
+    public int getActivityTicks() { return activityTicks; }
+    public void setActivityTicks(int t) { this.activityTicks = Math.max(0, t); }
+    public int getOccupiedSpot() { return occupiedSpot; }
+    public void setOccupiedSpot(int i) { this.occupiedSpot = i; }
+    public int getNightsStayed() { return nightsStayed; }
+    public void setNightsStayed(int n) { this.nightsStayed = Math.max(0, n); }
+    public long getDepartureDeadline() { return departureDeadline; }
+    public void setDepartureDeadline(long t) { this.departureDeadline = t; }
+    public int getTravelFund() { return travelFund; }
+    public void setTravelFund(int v) { this.travelFund = Math.max(0, v); }
 
-    /** Adjust preference for a building type by delta (clamped to 5–100). */
-    public void adjustTypePreference(String buildingTypeId, int delta) {
-        int current = getTypePreference(buildingTypeId);
-        int next = Math.clamp(current + delta, MIN_TYPE_PREFERENCE, MAX_TYPE_PREFERENCE);
-        if (next == DEFAULT_TYPE_PREFERENCE) {
-            typePreferences.remove(buildingTypeId); // keep map small
-        } else {
-            typePreferences.put(buildingTypeId, next);
-        }
-    }
-
-    /** Mutable type-preference map (for shadow sync). */
-    public Map<String, Integer> getTypePreferencesMap() { return typePreferences; }
+    /** 游客当前位置（视野过滤用）。 */
+    @Override
+    public BlockPos touristPos() { return blockPosition(); }
 
     // ── Mage-only ──
 
@@ -803,35 +802,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return false;
         return visitedBuildings.contains(buildingId);
     }
-
-    // ── Service cooldown ──
-
-    /** Returns the tick when the cooldown for a specific service building expires, or 0. */
-    public int getServiceCooldown(UUID buildingId) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return 0;
-        return serviceCooldowns.getOrDefault(buildingId, 0);
-    }
-
-    /** Set a cooldown for a specific service building until the given tick. */
-    public void setServiceCooldown(UUID buildingId, int endTick) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
-        serviceCooldowns.put(buildingId, endTick);
-    }
-
-    /** Returns the global service cooldown end tick (0 = no cooldown). */
-    public int getServiceCooldownEndTick() {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return 0;
-        return serviceCooldownEndTick;
-    }
-
-    /** Set the global service cooldown end tick. */
-    public void setServiceCooldownEndTick(int endTick) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
-        this.serviceCooldownEndTick = endTick;
-    }
-
-    /** Mutable service-cooldown map (for shadow sync). */
-    public Map<UUID, Integer> getServiceCooldownsMap() { return serviceCooldowns; }
 
     // ── Narrative memory (journey diary) ──
 

@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
@@ -67,11 +68,20 @@ public final class TouristShadow implements TouristStateHost {
 
     // ── Attributes ──
     private int energy;
-    private int satisfaction;
     private int level;
     private int wallet;
     private int initialWallet;
-    private final Map<String, Integer> typePreferences = new HashMap<>();
+
+    // ── 三条需求条（fill/need）＋ 画像 / 活动 / 停留 / 总旅费（Block 2）──
+    private int comfortSat, magicSat, wonderSat;
+    private int comfortNeed = 100, magicNeed = 100, wonderNeed = 100;
+    @Nullable
+    private Activity currentActivity;
+    private int activityTicks;
+    private int occupiedSpot = -1;
+    private int nightsStayed;
+    private long departureDeadline = Long.MAX_VALUE;
+    private int travelFund;
 
     @Nullable
     private UUID colonyId;
@@ -84,11 +94,8 @@ public final class TouristShadow implements TouristStateHost {
     @Nullable
     private BlockPos wakeUpPos;
 
-    // ── Visit / cooldown state ──
+    // ── Visit state ──
     private final Set<UUID> visitedBuildings = new HashSet<>();
-    /** buildingId → simTick when the cooldown expires (0 = none). */
-    private final Map<UUID, Integer> serviceCooldowns = new HashMap<>();
-    private int serviceCooldownEndTick;
     private final List<VisitMemory> recentVisits = new ArrayList<>();
     private long arrivalTime;
 
@@ -175,8 +182,27 @@ public final class TouristShadow implements TouristStateHost {
 
     public int getEnergy() { return energy; }
     public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
-    public int getSatisfaction() { return satisfaction; }
-    public void setSatisfaction(int s) { this.satisfaction = Math.clamp(s, 0, 100); }
+
+    // ── 三条需求条（fill/need）──
+
+    @Override public int getComfortSat() { return comfortSat; }
+    @Override public void setComfortSat(int v) { this.comfortSat = Math.clamp(v, 0, Math.max(0, comfortNeed)); }
+    @Override public int getMagicSat() { return magicSat; }
+    @Override public void setMagicSat(int v) { this.magicSat = Math.clamp(v, 0, Math.max(0, magicNeed)); }
+    @Override public int getWonderSat() { return wonderSat; }
+    @Override public void setWonderSat(int v) { this.wonderSat = Math.clamp(v, 0, Math.max(0, wonderNeed)); }
+    @Override public int getComfortNeed() { return comfortNeed; }
+    @Override public void setComfortNeed(int v) { this.comfortNeed = Math.max(1, v); }
+    @Override public int getMagicNeed() { return magicNeed; }
+    @Override public void setMagicNeed(int v) { this.magicNeed = Math.max(1, v); }
+    @Override public int getWonderNeed() { return wonderNeed; }
+    @Override public void setWonderNeed(int v) { this.wonderNeed = Math.max(1, v); }
+
+    /** 满条 = 三条 ratio 全 1。 */
+    @Override public boolean isFullySatisfied() {
+        return comfortSat >= comfortNeed && magicSat >= magicNeed && wonderSat >= wonderNeed;
+    }
+
     public int getLevel() { return level; }
     public void setLevel(int l) { this.level = Math.max(1, l); }
     public int getWallet() { return wallet; }
@@ -189,22 +215,24 @@ public final class TouristShadow implements TouristStateHost {
         this.wallet = (int) Math.max(0, (long) this.wallet - amount);
     }
 
-    public Map<String, Integer> getTypePreferences() { return typePreferences; }
+    // ── 活动 / 停留 / 总旅费 ──
 
-    public int getTypePreference(String buildingTypeId) {
-        return typePreferences.getOrDefault(buildingTypeId, 40);
-    }
+    @Nullable public Activity getCurrentActivity() { return currentActivity; }
+    public void setCurrentActivity(@Nullable Activity a) { this.currentActivity = a; }
+    public int getActivityTicks() { return activityTicks; }
+    public void setActivityTicks(int t) { this.activityTicks = Math.max(0, t); }
+    public int getOccupiedSpot() { return occupiedSpot; }
+    public void setOccupiedSpot(int i) { this.occupiedSpot = i; }
+    public int getNightsStayed() { return nightsStayed; }
+    public void setNightsStayed(int n) { this.nightsStayed = Math.max(0, n); }
+    public long getDepartureDeadline() { return departureDeadline; }
+    public void setDepartureDeadline(long t) { this.departureDeadline = t; }
+    public int getTravelFund() { return travelFund; }
+    public void setTravelFund(int v) { this.travelFund = Math.max(0, v); }
 
-    /** Adjust preference for a building type by delta (clamped to 5–100). */
-    public void adjustTypePreference(String buildingTypeId, int delta) {
-        int current = getTypePreference(buildingTypeId);
-        int next = Math.clamp(current + delta, 5, 100);
-        if (next == 40) {
-            typePreferences.remove(buildingTypeId);
-        } else {
-            typePreferences.put(buildingTypeId, next);
-        }
-    }
+    /** 游客当前位置（视野过滤用；影子坐标）。 */
+    @Override
+    public BlockPos touristPos() { return new BlockPos((int) posX, (int) posY, (int) posZ); }
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }
@@ -219,19 +247,6 @@ public final class TouristShadow implements TouristStateHost {
     public Set<UUID> getVisitedBuildings() { return visitedBuildings; }
     public boolean hasVisitedBuilding(UUID id) { return visitedBuildings.contains(id); }
     public void addVisitedBuilding(UUID id) { visitedBuildings.add(id); }
-
-    public int getServiceCooldown(UUID buildingId) {
-        return serviceCooldowns.getOrDefault(buildingId, 0);
-    }
-
-    public void setServiceCooldown(UUID buildingId, int endSimTick) {
-        serviceCooldowns.put(buildingId, endSimTick);
-    }
-
-    public Map<UUID, Integer> getServiceCooldownsMap() { return serviceCooldowns; }
-
-    public int getServiceCooldownEndTick() { return serviceCooldownEndTick; }
-    public void setServiceCooldownEndTick(int endSimTick) { this.serviceCooldownEndTick = endSimTick; }
 
     public void addVisitMemory(VisitMemory memory) {
         if (recentVisits.size() >= 24) {
@@ -270,14 +285,23 @@ public final class TouristShadow implements TouristStateHost {
         if (targetBuildingId != null) tag.putUUID("target", targetBuildingId);
         if (targetBuildingCategory != null) tag.putString("targetCat", targetBuildingCategory);
         tag.putInt("energy", energy);
-        tag.putInt("satisfaction", satisfaction);
         tag.putInt("level", level);
         tag.putInt("wallet", wallet);
         tag.putInt("initialWallet", initialWallet);
 
-        CompoundTag prefs = new CompoundTag();
-        for (var e : typePreferences.entrySet()) prefs.putInt(e.getKey(), e.getValue());
-        tag.put("prefs", prefs);
+        // ── 三条需求条 / 活动 / 停留 / 总旅费（Block 2）──
+        tag.putInt("comfortSat", comfortSat);
+        tag.putInt("magicSat", magicSat);
+        tag.putInt("wonderSat", wonderSat);
+        tag.putInt("comfortNeed", comfortNeed);
+        tag.putInt("magicNeed", magicNeed);
+        tag.putInt("wonderNeed", wonderNeed);
+        if (currentActivity != null) tag.putString("currentActivity", currentActivity.name());
+        tag.putInt("activityTicks", activityTicks);
+        tag.putInt("occupiedSpot", occupiedSpot);
+        tag.putInt("nightsStayed", nightsStayed);
+        tag.putLong("departureDeadline", departureDeadline);
+        tag.putInt("travelFund", travelFund);
 
         if (colonyId != null) tag.putUUID("colony", colonyId);
         if (checkedInBuildingId != null) tag.putUUID("hotel", checkedInBuildingId);
@@ -292,18 +316,6 @@ public final class TouristShadow implements TouristStateHost {
         }
         tag.put("visited", visited);
 
-        ListTag cooldowns = new ListTag();
-        for (var e : serviceCooldowns.entrySet()) {
-            if (e.getValue() > simTick) {
-                CompoundTag c = new CompoundTag();
-                c.putUUID("buildingId", e.getKey());
-                c.putInt("end", e.getValue());
-                cooldowns.add(c);
-            }
-        }
-        tag.put("cooldowns", cooldowns);
-        if (serviceCooldownEndTick > simTick) tag.putInt("cooldownEnd", serviceCooldownEndTick);
-
         ListTag visits = new ListTag();
         for (VisitMemory v : recentVisits) {
             CompoundTag vt = new CompoundTag();
@@ -311,8 +323,9 @@ public final class TouristShadow implements TouristStateHost {
             vt.putString("buildingDisplayName", v.buildingDisplayName());
             vt.putString("category", v.category());
             vt.putLong("gameTime", v.gameTime());
-            vt.putInt("satisfactionBefore", v.satisfactionBefore());
-            vt.putInt("satisfactionDelta", v.satisfactionDelta());
+            vt.putInt("comfortDelta", v.comfortDelta());
+            vt.putInt("magicDelta", v.magicDelta());
+            vt.putInt("wonderDelta", v.wonderDelta());
             vt.putInt("energyDelta", v.energyDelta());
             vt.putString("whatHappened", v.whatHappened());
             visits.add(vt);
@@ -345,15 +358,26 @@ public final class TouristShadow implements TouristStateHost {
         s.targetBuildingId = tag.hasUUID("target") ? tag.getUUID("target") : null;
         s.targetBuildingCategory = tag.contains("targetCat") ? tag.getString("targetCat") : null;
         s.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
-        s.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
         s.level = Math.max(1, tag.getInt("level"));
         s.wallet = Math.max(0, tag.getInt("wallet"));
         s.initialWallet = Math.max(0, tag.getInt("initialWallet"));
 
-        if (tag.contains("prefs")) {
-            CompoundTag prefs = tag.getCompound("prefs");
-            for (String key : prefs.getAllKeys()) s.typePreferences.put(key, prefs.getInt(key));
+        // ── 三条需求条 / 活动 / 停留 / 总旅费（Block 2；旧档无 key 走字段默认）──
+        if (tag.contains("comfortNeed")) s.comfortNeed = Math.max(1, tag.getInt("comfortNeed"));
+        if (tag.contains("magicNeed")) s.magicNeed = Math.max(1, tag.getInt("magicNeed"));
+        if (tag.contains("wonderNeed")) s.wonderNeed = Math.max(1, tag.getInt("wonderNeed"));
+        s.comfortSat = Math.clamp(tag.getInt("comfortSat"), 0, s.comfortNeed);
+        s.magicSat = Math.clamp(tag.getInt("magicSat"), 0, s.magicNeed);
+        s.wonderSat = Math.clamp(tag.getInt("wonderSat"), 0, s.wonderNeed);
+        if (tag.contains("currentActivity")) {
+            try { s.currentActivity = Activity.valueOf(tag.getString("currentActivity")); }
+            catch (IllegalArgumentException e) { s.currentActivity = null; }
         }
+        s.activityTicks = Math.max(0, tag.getInt("activityTicks"));
+        s.occupiedSpot = tag.getInt("occupiedSpot");
+        s.nightsStayed = Math.max(0, tag.getInt("nightsStayed"));
+        if (tag.contains("departureDeadline")) s.departureDeadline = tag.getLong("departureDeadline");
+        if (tag.contains("travelFund")) s.travelFund = Math.max(0, tag.getInt("travelFund"));
 
         s.colonyId = tag.hasUUID("colony") ? tag.getUUID("colony") : null;
         s.checkedInBuildingId = tag.hasUUID("hotel") ? tag.getUUID("hotel") : null;
@@ -368,30 +392,22 @@ public final class TouristShadow implements TouristStateHost {
             }
         }
 
-        if (tag.contains("cooldowns", Tag.TAG_LIST)) {
-            ListTag cooldowns = tag.getList("cooldowns", Tag.TAG_COMPOUND);
-            for (int i = 0; i < cooldowns.size(); i++) {
-                CompoundTag c = cooldowns.getCompound(i);
-                if (c.hasUUID("buildingId")) s.serviceCooldowns.put(c.getUUID("buildingId"), c.getInt("end"));
-            }
-        }
-        s.serviceCooldownEndTick = tag.contains("cooldownEnd") ? tag.getInt("cooldownEnd") : 0;
-
         if (tag.contains("visits", Tag.TAG_LIST)) {
             ListTag visits = tag.getList("visits", Tag.TAG_COMPOUND);
             for (int i = 0; i < visits.size(); i++) {
                 CompoundTag vt = visits.getCompound(i);
-                int delta = vt.getInt("satisfactionDelta");
+                int comfortDelta = vt.getInt("comfortDelta");
+                int magicDelta = vt.getInt("magicDelta");
+                int wonderDelta = vt.getInt("wonderDelta");
                 s.recentVisits.add(new VisitMemory(
                         vt.getString("buildingTypeId"),
                         vt.getString("buildingDisplayName"),
                         vt.getString("category"),
                         vt.getLong("gameTime"),
-                        vt.getInt("satisfactionBefore"),
-                        delta,
+                        comfortDelta, magicDelta, wonderDelta,
                         vt.getInt("energyDelta"),
                         vt.getString("whatHappened"),
-                        Emotion.fromDelta(delta)));
+                        Emotion.fromDelta(comfortDelta + magicDelta + wonderDelta)));
             }
         }
 

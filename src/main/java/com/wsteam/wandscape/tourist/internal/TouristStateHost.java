@@ -34,9 +34,6 @@ public interface TouristStateHost {
     int getEnergy();
     void setEnergy(int e);
 
-    int getSatisfaction();
-    void setSatisfaction(int s);
-
     int getLevel();
 
     int getWallet();
@@ -52,15 +49,6 @@ public interface TouristStateHost {
 
     @Nullable String getTargetBuildingCategory();
     void setTargetBuildingCategory(@Nullable String cat);
-
-    int getTypePreference(String buildingTypeId);
-    void adjustTypePreference(String buildingTypeId, int delta);
-
-    int getServiceCooldown(UUID buildingId);
-    void setServiceCooldown(UUID buildingId, int endTime);
-
-    int getServiceCooldownEndTick();
-    void setServiceCooldownEndTick(int endTime);
 
     boolean hasVisitedBuilding(UUID buildingId);
     void addVisitedBuilding(UUID buildingId);
@@ -130,4 +118,9 @@ public interface TouristStateHost {
 
     default int getTravelFund() { return 0; }
     default void setTravelFund(int v) {}
+
+    // ── 当前位置（视野过滤用；实体返回 blockPosition，影子返回 shadow 坐标）──
+
+    @Nullable
+    default BlockPos touristPos() { return null; }
 }

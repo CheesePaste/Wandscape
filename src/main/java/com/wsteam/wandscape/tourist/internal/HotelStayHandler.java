@@ -132,6 +132,7 @@ public final class HotelStayHandler {
 
         tourist.setCheckedInBuildingId(null);
         tourist.setHotelCheckinTime(0);
+        tourist.setNightsStayed(tourist.getNightsStayed() + 1);
         tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
 
         // Emit HOTEL_WAKEUP narrative
