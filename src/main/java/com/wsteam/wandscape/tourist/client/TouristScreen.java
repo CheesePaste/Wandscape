@@ -201,7 +201,7 @@ public class TouristScreen extends MedievalScreen {
             case EAT -> "用餐";
             case BATHE -> "泡澡";
             case VIEW -> "看展";
-            case MEDITATE -> "冥想";
+            case PAY -> "付钱";
             case SLEEP -> "睡觉";
             case REST -> "歇脚";
             case WITHDRAW -> "取现";

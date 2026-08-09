@@ -49,8 +49,7 @@ public final class ActivityVisuals {
             case BATHE -> new Visuals(0, 0, -0.05f, -1.0f, 0.6f, 0.15f, 0,
                     new ParticleSpec(ParticleTypes.BUBBLE_POP, 2, 0.3), false);
             case VIEW -> new Visuals(-0.35f, 0.25f, 0, -0.3f, 0.1f, 0, 0, null, false);
-            case MEDITATE -> new Visuals(0.08f, 0, 0, -1.5f, 0.35f, 0.2f, 0,
-                    new ParticleSpec(ParticleTypes.ENCHANT, 3, 0.4), false);
+            case PAY -> new Visuals(0.2f, 0, 0.12f, -1.2f, 0.25f, 0, 0, null, true);
             case REST -> new Visuals(0.10f, 0, -0.05f, -0.4f, 0.2f, 0, 0, null, false);
             case WITHDRAW -> new Visuals(-0.15f, 0, 0, -0.9f, 0, 0, 0,
                     new ParticleSpec(ParticleTypes.HAPPY_VILLAGER, 3, 0.4), false);
