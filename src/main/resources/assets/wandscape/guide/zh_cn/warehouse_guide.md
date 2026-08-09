@@ -1,21 +1,28 @@
-# 📦 仓库与物资调配 API 级详细指南
+# 📦 仓库
 
-仓库负责全城的自动化资源存储与物流分配！
+仓库看着不起眼，但小镇的所有钱和物资都从它手里过：建造、合成、维护都要从这里扣，游客的消费收入也回到这里。**材料存进仓库，NPC 才拿得到。**
+
+## 两个页签
+
+**总览（Overview）**：
+
+- **元素面板**：小镇储备的 **7 种元素**（土 / 木 / 水 / 火 / 金 / 风 / 暗）存量，一眼扫完家底。
+- **物品列表**：可搜索的物资清单，按名字模糊搜。
+- **物资缺口**：合成台或工作站卡住的时候，缺的材料会在这里高亮——照着补就行，不用自己猜。
+
+**存取（Exchange）**：
+
+- 点仓库物品**取出**，点背包物品**存入**，数量可调。简单直接。
+
+## 几个数字
+
+- 放第一座建筑时，仓库自动收到**每种元素各 2000** 的启动资金。
+- 元素是命脉：维护费、建造、合成全要花。缺元素时靠[元素节点](guide:node_guide)采集、或[工作站](guide:workstation_guide)分解补充。
+- NPC 取料时你会看到物品**飞行动画**从仓库送到法师手里——那是正常的，不是卡了。
 
 ---
 
-## 📖 UI 控件与字段 API 级别明细字典 (UI Options API Reference)
-
-| 控件标识 / 标签 | 类型 / 范围 | 默认值 | 详细作用机制与计算影响 |
-| :--- | :--- | :--- | :--- |
-| **`Tab Switcher`** (`activeTab`) | TabBar (`0/1`) | `0` | 切换面板模式。`Tab 0: Overview` (全局物资与六元素存量)；`Tab 1: Exchange` (玩家背包与仓库互存)。 |
-| **`Search Input`** (`searchInput`) | String | 空 | 物资搜索过滤框。支持输入物品中文/英文名称不区分大小写进行模糊匹配。 |
-| **`Element Panel`** (`elementPanel`) | Display Grid | — | 展现当前魔法小镇储备的六大原生魔力元素（`FIRE`, `WATER`, `EARTH`, `AIR`, `ORDER`, `CHAOS`）的总数量。 |
-| **`Supply Gap Tab`** (`supply_gap_tab`) | Alert Tab | — | **物资缺口面板**。当合成台或工作站生产因缺少材料卡住时，缺少的材料在此高亮展示。 |
-| **`Quantity Slider`** (`qtySlider`) | Slider (`1 ~ 64`) | `1` | 转移数量调节拉条。控制每次存入或取出物品的堆叠数量。 |
-| **`Deposit / Withdraw Buttons`** | MedievalButton | — | 存入（Deposit）与取出（Withdraw）按钮。触发仓库与玩家背包之间的数据交互。 |
-
----
-
-👉 [返回市政厅指南](guide:townhall_guide)  
-👉 [返回主引导测试页](guide:test_guide)
+[市政厅](guide:townhall_guide)  
+[元素节点](guide:node_guide)  
+[新手入门：从空城到游客小镇](guide:getting_started_guide)  
+[📖 返回指南首页](guide:index_guide)
