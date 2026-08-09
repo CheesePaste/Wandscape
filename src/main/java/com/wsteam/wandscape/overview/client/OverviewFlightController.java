@@ -12,6 +12,7 @@ import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -63,6 +64,9 @@ public final class OverviewFlightController {
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
+
+    // ── Damage tracking for auto-close ──
+    private static int lastHurtTime = 0;
 
     private OverviewFlightController() {}
 
@@ -134,8 +138,8 @@ public final class OverviewFlightController {
 
         // Only rotate when no screen open and cursor not lifted to panel
         if (mc.screen == null) {
-            boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
-                    && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+            boolean cursorLifted = WandscapePanelState.isPanelOpen()
+                    && WandscapePanelState.isCursorLifted();
             boolean grabbed = !cursorLifted;
 
             // Detect cursor transition: free → grabbed. The cursor is "free"
@@ -194,6 +198,14 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+
+        int currentHurtTime = mc.player.hurtTime;
+        if (lastHurtTime == 0 && currentHurtTime > 0) {
+            WandscapePanelState.closePanel();
+            lastHurtTime = currentHurtTime;
+            return;
+        }
+        lastHurtTime = currentHurtTime;
 
         long window = mc.getWindow().getWindow();
 

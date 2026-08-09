@@ -8,7 +8,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import com.wsteam.wandscape.overview.client.OverviewClientState;
 
 @Mixin(Camera.class)
 public abstract class MixinOverviewCamera {
@@ -19,17 +22,25 @@ public abstract class MixinOverviewCamera {
     @Shadow
     protected abstract void setRotation(float yRot, float xRot);
 
+    @ModifyVariable(method = "setup", at = @At("HEAD"), argsOnly = true, ordinal = 2)
+    private boolean forceDetachedFlagWhenOverview(boolean detached) {
+        if (OverviewClientState.isActive()) {
+            return true;
+        }
+        return detached;
+    }
+
     @Inject(method = "setup", at = @At("TAIL"))
     private void onSetupTail(BlockGetter level, Entity entity, boolean detached,
                              boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
-        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+        if (OverviewClientState.isActive()) {
             setPosition(
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamX(),
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamY(),
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamZ());
+                    OverviewClientState.getCamX(),
+                    OverviewClientState.getCamY(),
+                    OverviewClientState.getCamZ());
             setRotation(
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamYaw(),
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamPitch());
+                    OverviewClientState.getCamYaw(),
+                    OverviewClientState.getCamPitch());
         }
     }
 }
