@@ -62,7 +62,7 @@
   "key.wandscape.building_areas": "切换建筑区域",
   "key.wandscape.overview": "切换俯瞰/地面视角",
 
-  "message.wandscape.town.welcome": "[Wandscape] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！",
+  "message.wandscape.town.welcome": "[Wandscape] 欢迎！按 V 键打开建筑面板，开始建设你的魔法小镇吧！按 C 键抬起鼠标操作面板界面，按 H 键打开新手教程。",
   "message.wandscape.projection.cannot_pin": "无法固定 — 准星没有对准方块",
   "message.wandscape.overview.cannot_pin": "无法固定 — 准星没有对准方块",
 
