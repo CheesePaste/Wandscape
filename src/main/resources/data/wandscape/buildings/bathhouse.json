@@ -92,7 +92,8 @@
   "interact_spots": [
     {
       "pos": [0, 0, 0],
-      "action": "bathe"
+      "action": "bathe",
+      "facing": "south"
     }
   ]
 }

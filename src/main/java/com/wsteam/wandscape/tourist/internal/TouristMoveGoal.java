@@ -153,7 +153,8 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return tourist.isAlive();
+        // 预览假人：不参与 AI，站桩循环做动作
+        return tourist.isAlive() && !tourist.isPreview();
     }
 
     @Override
@@ -513,10 +514,24 @@ public class TouristMoveGoal extends Goal {
         tourist.setActivityTicks(duration);
         performingActivity = true;
         queueing = false;
+        faceSpot(level, buildingId, spot);
+    }
+
+    /** 活动期间面向 spot 朝向（游客做动作时面朝该方向）。 */
+    private void faceSpot(ServerLevel level, UUID buildingId, int spot) {
+        float yaw = TouristSimulation.spotFacing(level, buildingId, spot).toYRot();
+        tourist.setYRot(yaw);
+        tourist.setYHeadRot(yaw);
+        tourist.yBodyRot = yaw;
     }
 
     /** 活动倒计时：duration 结束 → 释放 spot + 结算（四类交互）+ 退出。 */
     private void tickActivity() {
+        // 活动期间持续面向 spot（look 控制/随机张望可能拉偏 yaw）
+        UUID bid = tourist.getTargetBuildingId();
+        if (bid != null && claimedSpot >= 0 && tourist.level() instanceof ServerLevel sl) {
+            faceSpot(sl, bid, claimedSpot);
+        }
         int remaining = tourist.getActivityTicks() - 1;
         tourist.setActivityTicks(remaining);
         if (remaining > 0) return;

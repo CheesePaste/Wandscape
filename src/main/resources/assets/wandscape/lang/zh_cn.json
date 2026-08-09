@@ -56,6 +56,8 @@
   "block.wandscape.creative_building_scanner": "创造建筑扫描器",
   "block.wandscape.interact_spot_marker": "交互位标记",
   "marker.wandscape.spot_action": "该交互位：%s",
+  "marker.wandscape.spot_facing": "该交互位朝向：%s",
+  "preview.wandscape.name": "预览：%s",
   "activity.wandscape.browse": "浏览",
   "activity.wandscape.eat": "用餐",
   "activity.wandscape.bathe": "泡澡",

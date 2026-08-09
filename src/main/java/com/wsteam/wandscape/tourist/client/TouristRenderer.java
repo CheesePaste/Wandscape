@@ -61,8 +61,11 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, TouristH
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
         spawnActivityParticles(entity);
-        SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
-                AmbientTextPools::getTouristText);
+        // 预览假人：只显示动作姿态/粒子，不弹闲聊气泡
+        if (!entity.isPreview()) {
+            SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
+                    AmbientTextPools::getTouristText);
+        }
     }
 
     /** 按 activity 发射装饰粒子（泡澡蒸汽/冥想魔法/取现金币）；节流，未知活动无粒子。 */

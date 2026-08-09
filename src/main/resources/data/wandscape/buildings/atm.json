@@ -89,7 +89,8 @@
   "interact_spots": [
     {
       "pos": [0, 0, 0],
-      "action": "withdraw"
+      "action": "withdraw",
+      "facing": "north"
     }
   ]
 }

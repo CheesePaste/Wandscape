@@ -114,6 +114,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     /** 0 = TOURIST, 1 = MAGE. */
     private static final EntityDataAccessor<Byte> DATA_APPEARANCE =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BYTE);
+    /** 当前活动动作（Activity ordinal，-1 = 无）。同步给客户端驱动姿态/粒子渲染。 */
+    private static final EntityDataAccessor<Integer> DATA_ACTIVITY =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
+    /** 预览假人标记（客户端用于跳过气泡渲染）。 */
+    private static final EntityDataAccessor<Boolean> DATA_PREVIEW =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     // ── Debug synched data (for TouristDebugRenderer) ──
 
@@ -177,13 +183,15 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     private int comfortSat, magicSat, wonderSat;
     private int comfortNeed = 100, magicNeed = 100, wonderNeed = 100;
-    @javax.annotation.Nullable
-    private Activity currentActivity;
+    /** 活动状态存 synched data（DATA_ACTIVITY），客户端渲染姿态/粒子用。 */
     private int activityTicks;
     private int occupiedSpot = -1;
     private int nightsStayed;
     private long departureDeadline = Long.MAX_VALUE;
     private int travelFund;
+
+    /** 预览模式（交互位 marker 的演示假人）：不参与 AI/生成/离开，仅站桩循环做动作。 */
+    private boolean previewMode;
 
     // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
 
@@ -257,6 +265,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         super.defineSynchedData(builder);
         builder.define(DATA_SKIN_VARIANT, -1);
         builder.define(DATA_APPEARANCE, (byte) 0);
+        builder.define(DATA_ACTIVITY, -1);
+        builder.define(DATA_PREVIEW, false);
         builder.define(DEBUG_COMMUTE_TARGET, Optional.empty());
         builder.define(DEBUG_ENTRY_POINT, Optional.empty());
         builder.define(DEBUG_INTERACT_POINT, Optional.empty());
@@ -299,6 +309,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!this.isAlive()) return super.mobInteract(player, hand);
+        // 预览假人不可交互（右键不出面板）
+        if (previewMode) return InteractionResult.PASS;
 
         if (level().isClientSide) {
             return InteractionResult.SUCCESS;
@@ -337,7 +349,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
             // them now, else the sim's orphan sweep discards them as departed
             // bodies. Disk-loaded bodies (loadedFromDisk) are left for that sweep.
-            if (!loadedFromDisk) {
+            // Preview mannequins are never adopted (no sim, no departure).
+            if (!previewMode && !loadedFromDisk) {
                 TouristSimSystem sim = TouristSimSystem.getActive();
                 if (sim != null && sim.getRegistry() != null && sim.getRegistry().get(getUUID()) == null) {
                     sim.adoptTourist(this);
@@ -389,7 +402,14 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     }
 
     @Override
-    public boolean shouldBeSaved() { return true; }
+    public boolean shouldBeSaved() { return !previewMode; }
+
+    /** 预览假人免疫伤害（仅站桩演示，不能被炸死/打掉）。 */
+    @Override
+    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (previewMode) return false;
+        return super.hurt(source, amount);
+    }
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
@@ -422,6 +442,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     }
 
     private void onTouristKilled() {
+        // 预览假人：无 shadow/无离场，禁止任何 departure 副作用
+        if (previewMode) return;
         UUID colonyId = getColonyId();
         if (getCheckedInBuildingId() != null) {
             HotelStayHandler hotel = HotelStayHandler.getActive();
@@ -476,7 +498,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         tag.putInt("comfortNeed", comfortNeed);
         tag.putInt("magicNeed", magicNeed);
         tag.putInt("wonderNeed", wonderNeed);
-        if (currentActivity != null) tag.putString("currentActivity", currentActivity.name());
+        if (getCurrentActivity() != null) tag.putString("currentActivity", getCurrentActivity().name());
         tag.putInt("activityTicks", activityTicks);
         tag.putInt("occupiedSpot", occupiedSpot);
         tag.putInt("nightsStayed", nightsStayed);
@@ -568,9 +590,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.wonderSat = Math.clamp(tag.getInt("wonderSat"), 0, wonderNeed);
         if (tag.contains("currentActivity")) {
             try {
-                this.currentActivity = Activity.valueOf(tag.getString("currentActivity"));
+                setCurrentActivity(Activity.valueOf(tag.getString("currentActivity")));
             } catch (IllegalArgumentException e) {
-                this.currentActivity = null;
+                setCurrentActivity(null);
             }
         }
         this.activityTicks = Math.max(0, tag.getInt("activityTicks"));
@@ -748,10 +770,23 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     // ── 活动 / 停留 / 总旅费 ──
 
-    @Nullable public Activity getCurrentActivity() { return currentActivity; }
-    public void setCurrentActivity(@Nullable Activity a) { this.currentActivity = a; }
+    @Nullable public Activity getCurrentActivity() {
+        int o = entityData.get(DATA_ACTIVITY);
+        Activity[] values = Activity.values();
+        return o < 0 || o >= values.length ? null : values[o];
+    }
+    public void setCurrentActivity(@Nullable Activity a) {
+        entityData.set(DATA_ACTIVITY, a == null ? -1 : a.ordinal());
+    }
     public int getActivityTicks() { return activityTicks; }
     public void setActivityTicks(int t) { this.activityTicks = Math.max(0, t); }
+
+    /** 预览假人（交互位演示）：不参与 AI/生成/离开，仅站桩循环做动作。 */
+    public boolean isPreview() { return entityData.get(DATA_PREVIEW); }
+    public void setPreview(boolean v) {
+        entityData.set(DATA_PREVIEW, v);
+        this.previewMode = v;
+    }
     public int getOccupiedSpot() { return occupiedSpot; }
     public void setOccupiedSpot(int i) { this.occupiedSpot = i; }
     public int getNightsStayed() { return nightsStayed; }

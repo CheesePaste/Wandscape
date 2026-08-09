@@ -428,6 +428,7 @@ public final class TouristSpawnSystem {
         for (var entity : level.getAllEntities()) {
             if (!(entity instanceof TouristEntity t)) continue;
             if (!t.isAlive()) continue;
+            if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
             // Checked into hotel — safe, HotelStayHandler heartbeat manages them
             if (t.getCheckedInBuildingId() != null) continue;
@@ -471,6 +472,7 @@ public final class TouristSpawnSystem {
         for (var entity : level.getAllEntities()) {
             if (!(entity instanceof TouristEntity t)) continue;
             if (!t.isAlive()) continue;
+            if (t.isPreview()) continue; // 预览假人：不参与生成/离开
             if (t.getCheckedInBuildingId() != null) continue;
 
             // Store mage resume instantly when fully satisfied

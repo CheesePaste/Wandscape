@@ -1140,7 +1140,7 @@ public class BuildingScannerScreen extends MedievalScreen {
         drawLbl(gui, "Z", lx + COL2 + (FW + 4) * 2, doorEditY - 10);
 
         drawHdr(gui, "❖ 交互位 (" + spotMarkerCount + ")", lx, spotHeaderY);
-        gui.drawString(font, "放置 interact_spot_marker 标记交互位；右键循环动作，潜行右键移除。",
+        gui.drawString(font, "放置 marker 标记交互位（面朝游客朝向）；右键循环动作，潜行右键循环朝向，敲掉=移除。",
                 lx + 4, spotHeaderY + 16, MedievalColors.TEXT_MUTED);
         if (isTouristCategory(scanner.getCategory()) && spotMarkerCount == 0) {
             gui.drawString(font, "§c无交互位 = 游客不选该建筑",

@@ -75,18 +75,19 @@
   },
   "door_offset": [x,y,z],               // 可选：入口位置，缺省螺旋扫描
   "interact_spots": [                   // 交互位列表（相对 anchor），见下节
-    {"pos": [x,y,z], "action": "browse"}
+    {"pos": [x,y,z], "action": "browse", "facing": "south"}
   ]
 }
 ```
 
 ## interact_spots（交互位）与游客目标建筑
 
-- **`interact_spots`**：`[{"pos":[x,y,z], "action":"<动作>"}, ...]`，坐标**相对 anchor**。**取代**旧 `tourist_interact_aabb`（不再解析，旧字段被忽略）。
+- **`interact_spots`**：`[{"pos":[x,y,z], "action":"<动作>", "facing":"<朝向>"}, ...]`，坐标**相对 anchor**。**取代**旧 `tourist_interact_aabb`（不再解析，旧字段被忽略）。
 - **action 取值** = `Activity` 枚举名小写（子集）：`browse`/`eat`/`bathe`/`view`/`meditate`/`rest`/`withdraw`。缺省/非法值回退 `browse`。动作只决定游客在该点的活动状态/粒子；**精力/经济效果由建筑 category 的模式预设块决定**。
+- **facing 取值** = 水平方向 `north`/`east`/`south`/`west`（缺省 `south`；Y 轴/非法值回退 `south`）：游客在该位做动作时**面朝的方向**。建筑旋转时随建筑一起旋转。扫描器 marker 放置时取玩家面朝方向，潜行右键循环朝向。
 - **spot 语义**：**spot 数量 = 该建筑同时交互的游客人数上限**（全满 → 排队）；**交互时长由模式预设块的 `interaction_duration_ticks` 决定**（与 spot 无关）；**同建筑不同 spot 动作可不同**。
 - **必须 ≥1 个 spot，无兜底**：游客目标建筑（category ∈ {shop,service,relax,atm} 且带对应模式预设块）必须给出非空 `interact_spots`，否则游客不选该建筑（旧的 spiral-scan 兜底随 `tourist_interact_aabb` 一并删除）。
-- 扫描器用 `interact_spot_marker` 方块标记交互位（放置=加 spot、右键循环动作、潜行右键移除），导出时扫进 `interact_spots`。
+- 扫描器用 `interact_spot_marker` 方块标记交互位（放置=加 spot、右键循环动作、潜行右键循环朝向、敲掉=移除），导出时扫进 `interact_spots`。每个 marker 自动生成**预览假人**（站桩循环播放该 spot 动作，含姿态/粒子/朝向），方便创作者查看效果。
 
 ## 四类游客 category（模式预设块）
 

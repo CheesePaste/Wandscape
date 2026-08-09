@@ -111,6 +111,7 @@ import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
+import com.wsteam.wandscape.tourist.internal.MarkerPreviewManager;
 import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
 import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
@@ -395,6 +396,7 @@ public class Wandscape {
         BuildingInteractHandler.setShopStockManager(shopStockManager);
         TouristSpawnSystem.register();
         HotelStayHandler.register();
+        MarkerPreviewManager.register();
         WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);

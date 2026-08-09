@@ -25,6 +25,8 @@ import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
+
+import net.minecraft.core.Direction;
 /**
  * Parsed from {@code data/wandscape/buildings/<id>.json}.
  * Immutable — created once at JSON load time.
@@ -122,16 +124,18 @@ public record BuildingConfig(
         }
     }
 
-    /** 交互位：相对 anchor 的坐标 + 动作种类。spot 数量 = 该建筑同时交互的游客人数上限。 */
+    /** 交互位：相对 anchor 的坐标 + 动作种类 + 朝向。spot 数量 = 该建筑同时交互的游客人数上限。 */
     public record InteractSpot(
             BlockOffset pos,
-            Activity action
+            Activity action,
+            Direction facing
     ) {
         public InteractSpot {
             if (pos == null) {
                 throw new IllegalArgumentException("interact spot pos must not be null");
             }
             if (action == null) action = Activity.BROWSE;
+            if (facing == null || facing.getAxis() == Direction.Axis.Y) facing = Direction.SOUTH;
         }
     }
 
@@ -331,7 +335,9 @@ public record BuildingConfig(
                     JsonObject spotObj = spotEl.getAsJsonObject();
                     BlockOffset pos = spotDs.deserialize(spotObj.get("pos"), BlockOffset.class, context);
                     String actionStr = spotObj.has("action") ? spotObj.get("action").getAsString() : "";
-                    spots.add(new InteractSpot(pos, Activity.fromJsonString(actionStr)));
+                    String facingStr = spotObj.has("facing") ? spotObj.get("facing").getAsString() : "";
+                    Direction facing = Direction.byName(facingStr); // 非法/缺省 → compact 构造回退 SOUTH
+                    spots.add(new InteractSpot(pos, Activity.fromJsonString(actionStr), facing));
                 }
                 interactSpots = List.copyOf(spots);
             }

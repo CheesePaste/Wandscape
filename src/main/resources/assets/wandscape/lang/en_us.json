@@ -10,6 +10,8 @@
   "block.wandscape.creative_building_scanner": "Creative Building Scanner",
   "block.wandscape.interact_spot_marker": "Interact Spot Marker",
   "marker.wandscape.spot_action": "This interact spot: %s",
+  "marker.wandscape.spot_facing": "This interact spot faces: %s",
+  "preview.wandscape.name": "Preview: %s",
   "activity.wandscape.browse": "Browse",
   "activity.wandscape.eat": "Eat",
   "activity.wandscape.bathe": "Bathe",

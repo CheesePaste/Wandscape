@@ -313,6 +313,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                     posArr.add(z - scanner.getBlockPos().getZ());
                     sObj.add("pos", posArr);
                     sObj.addProperty("action", InteractSpotMarkerBlock.spotActionOrBrowse(st).toJsonString());
+                    sObj.addProperty("facing", st.getValue(InteractSpotMarkerBlock.FACING).getName());
                     spotsArr.add(sObj);
                 }
             }

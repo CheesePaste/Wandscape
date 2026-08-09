@@ -46,6 +46,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 
 - 交互时长 = 模式预设块 `interaction_duration_ticks`（与 spot 无关）。
 - 动作（`Activity`）只决定游客在 spot 上的活动状态/粒子；**精力/经济效果由 category 模式预设块决定**。
+- 每个 spot 带**朝向 `facing`**（水平方向，缺省 south，随建筑旋转）：游客在位上做动作时 `setYRot` 面向该方向（`TouristMoveGoal.faceSpot`）。
 
 ## 离场规则（D6）
 

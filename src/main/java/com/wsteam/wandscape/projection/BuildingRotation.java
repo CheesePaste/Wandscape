@@ -163,6 +163,19 @@ public final class BuildingRotation {
     }
 
     /**
+     * Rotate a horizontal {@link Direction} by {@code steps} increments of 90°
+     * clockwise around Y (same handedness as {@link #rotateOffset}).
+     */
+    public static Direction rotateDirection(Direction dir, int steps) {
+        if (dir == null || dir.getAxis() == Direction.Axis.Y) return dir;
+        steps = steps & 3;
+        for (int i = 0; i < steps; i++) {
+            dir = dir.getClockWise();
+        }
+        return dir;
+    }
+
+    /**
      * Rotate a map of offsets-to-NBT strings (block_nbt) by {@code steps}.
      * Keys are "x,y,z" strings; values are opaque NBT strings carried as-is.
      * Returns {@code null} when the input map is {@code null}.

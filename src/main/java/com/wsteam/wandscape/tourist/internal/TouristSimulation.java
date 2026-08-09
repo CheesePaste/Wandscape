@@ -28,6 +28,7 @@ import com.wsteam.wandscape.warehouse.ColonyItemBank;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 
 /**
@@ -172,6 +173,19 @@ public final class TouristSimulation {
         BuildingConfig.InteractSpot spot = cfg.interactSpots().get(index);
         BlockOffset rotated = BuildingRotation.rotateOffset(spot.pos(), state.getRotationSteps());
         return state.getAnchor().offset(rotated.x(), rotated.y(), rotated.z());
+    }
+
+    /** 第 index 个 spot 的朝向（anchor + 旋转偏移）；游客在位上做动作时面向此方向。 */
+    public static Direction spotFacing(ServerLevel level, UUID buildingId, int index) {
+        BuildingState state = getState(level, buildingId);
+        if (state == null) return Direction.SOUTH;
+        BuildingConfig cfg = getConfig(level, buildingId);
+        if (cfg == null || cfg.interactSpots() == null || index < 0 || index >= cfg.interactSpots().size()) {
+            return Direction.SOUTH;
+        }
+        Direction facing = cfg.interactSpots().get(index).facing();
+        if (facing == null) return Direction.SOUTH;
+        return BuildingRotation.rotateDirection(facing, state.getRotationSteps());
     }
 
     /** 认领一个空 spot 并占用；全满返回 -1（游客排队等待）。 */

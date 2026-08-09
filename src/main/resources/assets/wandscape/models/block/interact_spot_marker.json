@@ -1,6 +1,20 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/block",
   "textures": {
-    "all": "minecraft:block/structure_block_data"
-  }
+    "marker": "minecraft:block/structure_block_data"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 1],
+      "to": [15, 2, 15],
+      "faces": {
+        "down":  { "uv": [1, 1, 15, 15], "texture": "#marker" },
+        "up":    { "uv": [1, 1, 15, 15], "texture": "#marker" },
+        "north": { "uv": [1, 14, 15, 16], "texture": "#marker" },
+        "south": { "uv": [1, 14, 15, 16], "texture": "#marker" },
+        "west":  { "uv": [1, 14, 15, 16], "texture": "#marker" },
+        "east":  { "uv": [1, 14, 15, 16], "texture": "#marker" }
+      }
+    }
+  ]
 }

@@ -11,6 +11,9 @@ import com.wsteam.wandscape.building.data.BuildingConfig.UnlockRequirement;
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.RelaxConfig;
+
+import net.minecraft.core.Direction;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 
@@ -184,6 +187,30 @@ class BuildingConfigTest {
                 """;
             BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
             assertEquals(Activity.BROWSE, cfg.interactSpots().get(0).action());
+        }
+
+        @Test
+        void parseSpotFacing() {
+            String json = """
+                {"id":"x","category":"shop",
+                 "interact_spots":[{"pos":[0,0,0],"action":"eat","facing":"north"}]}
+                """;
+            BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+            assertEquals(Direction.NORTH, cfg.interactSpots().get(0).facing());
+
+            // 缺省/非法 facing → 回退 SOUTH
+            String noFacing = """
+                {"id":"x","category":"shop",
+                 "interact_spots":[{"pos":[0,0,0],"action":"eat"}]}
+                """;
+            assertEquals(Direction.SOUTH,
+                    GSON.fromJson(noFacing, BuildingConfig.class).interactSpots().get(0).facing());
+            String badFacing = """
+                {"id":"x","category":"shop",
+                 "interact_spots":[{"pos":[0,0,0],"action":"eat","facing":"up"}]}
+                """;
+            assertEquals(Direction.SOUTH,
+                    GSON.fromJson(badFacing, BuildingConfig.class).interactSpots().get(0).facing());
         }
 
         @Test

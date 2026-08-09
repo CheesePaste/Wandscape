@@ -158,6 +158,7 @@ public final class TouristSimSystem {
         for (var e : level.getAllEntities()) {
             if (e instanceof TouristEntity t) {
                 if (!t.isAlive()) continue;
+                if (t.isPreview()) continue; // 预览假人：无 shadow，不参与 sim/孤儿清除
                 entities.put(t.getUUID(), t);
                 // Orphan: no shadow → departed tourist, clear the residual body.
                 // (A chunk-unload race can briefly move a shadow to another chunk while
@@ -618,7 +619,7 @@ public final class TouristSimSystem {
     private void adoptExistingEntities(ServerLevel level) {
         int adopted = 0;
         for (var e : level.getAllEntities()) {
-            if (e instanceof TouristEntity t && t.isAlive() && registry.get(t.getUUID()) == null) {
+            if (e instanceof TouristEntity t && t.isAlive() && !t.isPreview() && registry.get(t.getUUID()) == null) {
                 adoptTourist(t);
                 adopted++;
             }
