@@ -356,16 +356,44 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             }
             // Spawn-egg / command tourists bypass applySpawnDefaults — give them the full
             // random-spawn defaults (rolled level, wallet, persona needs, stay window, travel
-            // fund) so they behave like a randomly generated tourist. Disk-loaded tourists
-            // keep their saved data; only heal the pre-Block-2 stay-window gap for them.
+            // fund) so they behave like a randomly generated tourist. Only truly-uninitialized
+            // fresh tourists qualify (deadline is still the Long.MAX_VALUE sentinel): system-
+            // spawned and shadow-restored tourists already carry valid values and must not be
+            // re-rolled, or their level/wallet/persona get wiped on every load.
             if (!previewMode) {
-                if (loadedFromDisk) {
-                    ensureStayWindow(level().getGameTime());
-                } else {
+                if (!loadedFromDisk && getDepartureDeadline() == Long.MAX_VALUE) {
                     TouristSpawnSystem.applyRandomSpawnDefaults(this, colonyId, level().getGameTime());
-                    // 兜底：applyRandomSpawnDefaults 失败（系统未注册）时仍补停留窗口。
-                    ensureStayWindow(level().getGameTime());
                 }
+                // 兜底：applyRandomSpawnDefaults 失败（系统未注册）或旧存档缺少停留字段时仍补停留窗口。
+                ensureStayWindow(level().getGameTime());
+            }
+            // Roll appearance (5% mage + skin variant) BEFORE adopt so the sim shadow captures
+            // the rolled values. Adopting first exports the uninitialized -1 / non-mage state,
+            // and importToEntity then overwrites the entity with them on the first observed sim
+            // tick — every tourist would render the default skin and mages would vanish.
+            if (getSkinVariant() < 0) {
+                // Step 1: roll appearance (5% mage)
+                boolean mage = random.nextDouble() < MAGE_CHANCE;
+                int variant;
+
+                if (mage) {
+                    variant = random.nextInt(WIZARD_SKIN_COUNT);
+                    // 偏斜分布 random⁴（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
+                    RecruitmentCandidate roll = MageAttributeRoller.roll(level,
+                            new java.util.Random(random.nextLong()));
+                    maxHp = roll.maxHp();
+                    maxMana = roll.maxMana();
+                    moveSpeed = roll.moveSpeed();
+                    spellPower = roll.spellPower();
+                    workSpeed = roll.workSpeed();
+                    spellSpeed = roll.spellSpeed();
+                    armorValue = roll.armorValue();
+                } else {
+                    variant = random.nextInt(TOURIST_SKIN_COUNT);
+                }
+
+                entityData.set(DATA_SKIN_VARIANT, variant);
+                entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
             }
             // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
             // them now, else the sim's orphan sweep discards them as departed
@@ -377,31 +405,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                     sim.adoptTourist(this);
                 }
             }
-        }
-
-        if (getSkinVariant() < 0) {
-            // Step 1: roll appearance (5% mage)
-            boolean mage = random.nextDouble() < MAGE_CHANCE;
-            int variant;
-
-            if (mage) {
-                variant = random.nextInt(WIZARD_SKIN_COUNT);
-                // 偏斜分布 random⁴（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
-                RecruitmentCandidate roll = MageAttributeRoller.roll(level,
-                        new java.util.Random(random.nextLong()));
-                maxHp = roll.maxHp();
-                maxMana = roll.maxMana();
-                moveSpeed = roll.moveSpeed();
-                spellPower = roll.spellPower();
-                workSpeed = roll.workSpeed();
-                spellSpeed = roll.spellSpeed();
-                armorValue = roll.armorValue();
-            } else {
-                variant = random.nextInt(TOURIST_SKIN_COUNT);
-            }
-
-            entityData.set(DATA_SKIN_VARIANT, variant);
-            entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
         }
 
         // Re-establish hotel check-in when entity is loaded from disk
