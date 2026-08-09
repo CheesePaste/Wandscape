@@ -1,21 +1,25 @@
 # 🍺 Tavern
 
-Wizards don't fall from the sky — to hire, go to the Tavern. It has two tabs, matching two ways to recruit.
+The building for recruiting wizards, with two tabs: "Recruit NPC" and "Mage Resumes".
 
 ## Recruit NPC
 
-Click the "**Recruit NPC**" button to instantly generate a wizard, with attributes rolled from the town's **current level** (you may roll a high-attribute specialist — it's a matter of luck).
+Click the "**Recruit NPC**" button to instantly generate a wizard, with attributes rolled from the town's **current level**.
 
-Cost: **free on first recruit** per colony; afterwards each recruit costs **10000 of each of the 7 elements** — not cheap, but wizards are the core workforce, and this is money well spent.
+| Item | Description |
+|---|---|
+| First time | **Free** once per colony |
+| Afterwards | Each recruit costs **10000 of each of the 7 elements** |
+| Attributes | Rolled by current level; high-attribute specialists may appear |
 
 ## Mage Resumes
 
-About **5% of tourists are mage tourists**. When their three need bars are **all full**, they voluntarily leave a resume. Wizards here are hired **for free** — this is the reward for running the town well, and the main channel for building your wizard roster.
+About **5% of tourists are wizard tourists**. When their three need bars are **all full**, they leave a resume at the tavern and can be hired **for free** — the main channel for building your wizard roster.
 
-## A Few Tips
+## Tips
 
-- Recruited wizards join with full mana and start working right away.
-- Want more resumes? See the [Tourist Guide](tourist_guide.md) for how to get tourists to fill their need bars.
+- Recruited wizards join with full mana and start working immediately.
+- To increase resume sources: see the [Tourist Guide](tourist_guide.md) on filling need bars.
 - For wizard attributes, equipment, and combat strategy, see the [Wizard NPC Guide](npc_guide.md).
 
 ---
