@@ -1,23 +1,30 @@
-# 📖 Wandscape Guide Index
+# 📖 Wandscape Guide
 
-Welcome to the Wandscape help system! Press **H** at any time to open this page.
+Welcome to the Wandscape help system! Press **H** anytime to open this index.
+
+---
+
+## 🚀 Getting Started
+
+- 👉 [New Player's Path: From Empty Land to a Tourist Town](guide:getting_started_guide)
 
 ---
 
 ## 🏗️ Building System
 
-- 👉 [Overview Guide](guide:overview_guide)
-- 👉 [Building Scanner Guide](guide:scanner_guide)
-- 👉 [Magic Circle Editor Guide](guide:magic_circle_editor_guide)
+- 👉 [Global Panel & Overview View](guide:overview_guide)
+- 👉 [Building Scanner (Copy your builds)](guide:scanner_guide)
 
 ---
 
 ## 🛣️ Road System
 
-- 👉 [Road System Overview Guide](guide:road_guide)
-- 👉 [Spline Visual Editor](guide:road_spline_guide)
-- 👉 [Replace Mode](guide:road_replace_guide)
-- 👉 [Destroy/Fill Mode](guide:road_fill_guide)
+> Tourists only travel along paved roads — **roads are your economy's lifeline**.
+
+- 👉 [Road System Overview & Modes](guide:road_guide)
+- 👉 [Spline Editor (curves & overpasses)](guide:road_spline_guide)
+- 👉 [Replace Mode (surface paving)](guide:road_replace_guide)
+- 👉 [Destroy/Fill (terrain clearing & filling)](guide:road_fill_guide)
 
 ---
 
@@ -31,16 +38,18 @@ Welcome to the Wandscape help system! Press **H** at any time to open this page.
 - 👉 [Workstation](guide:workstation_guide)
 - 👉 [Crafting Station](guide:crafting_guide)
 - 👉 [Element Node](guide:node_guide)
+- 👉 [Altar](guide:altar_guide)
 
 ---
 
 ## 👥 NPCs & Tourists
 
 - 👉 [Wizard NPC Guide](guide:npc_guide)
+- 👉 [Cast Strategy Guide](guide:strategy_guide)
 - 👉 [Tourist System Guide](guide:tourist_guide)
 
 ---
 
-## ⚠️ Other
+## ⚠️ Anomalies & Maintenance
 
-- 👉 [Anomaly Event Guide](guide:anomaly_guide)
+- 👉 [Wonders & Anomalies (building failures)](guide:anomaly_guide)
