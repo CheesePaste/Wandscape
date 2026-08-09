@@ -139,6 +139,7 @@ public final class BlueprintConfigLoader {
     private StepNode parseStep(String type, JsonObject obj) {
         return switch (type) {
             case "place" -> parsePlace(obj);
+            case "spawn_entity" -> parseSpawnEntity(obj);
             case "remove" -> parseRemove(obj);
             case "convert" -> parseConvert(obj);
             case "block_interact" -> parseBlockInteract(obj);
@@ -167,6 +168,16 @@ public final class BlueprintConfigLoader {
         ExprNode consumable = obj.has("consumable") ? parseExpr(obj.get("consumable")) : null;
         ExprNode nbt = obj.has("nbt") ? parseExpr(obj.get("nbt")) : null;
         return new StepNode.PlaceStep(at, block, consumable, nbt);
+    }
+
+    private StepNode parseSpawnEntity(JsonObject obj) {
+        ExprNode at = parseExpr(obj.get("at"));
+        ExprNode type = parseExpr(obj.get("entity_type"));
+        ExprNode facing = obj.has("facing")
+                ? parseExpr(obj.get("facing"))
+                : new ExprNode.LiteralString("");
+        ExprNode nbt = obj.has("nbt") ? parseExpr(obj.get("nbt")) : null;
+        return new StepNode.SpawnEntityStep(at, type, facing, nbt);
     }
 
     private StepNode parseRemove(JsonObject obj) {

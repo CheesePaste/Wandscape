@@ -30,6 +30,12 @@ public sealed interface ParamType {
     /** A key-value map of string → string. Queriable via {@code get}. */
     record MapStringStringType() implements ParamType {}
 
+    /**
+     * An ordered list of JSON objects (e.g. decoration entities
+     * {@code [{offset, type, facing, nbt}, ...]}). Iterable by {@code for_each}.
+     */
+    record ListObjectType() implements ParamType {}
+
     // ---- Convenience instances ----
 
     ParamType STRING = new StringType();
@@ -38,6 +44,7 @@ public sealed interface ParamType {
     ParamType LIST_POS = new ListPosType();
     ParamType LIST_STRING = new ListStringType();
     ParamType MAP_STRING_STRING = new MapStringStringType();
+    ParamType LIST_OBJECT = new ListObjectType();
 
     /**
      * Parse a type string (e.g. "string", "list<pos>") into a ParamType.
@@ -51,6 +58,7 @@ public sealed interface ParamType {
             case "list<pos>" -> LIST_POS;
             case "list<string>" -> LIST_STRING;
             case "map<string,string>" -> MAP_STRING_STRING;
+            case "list<object>", "list<map<string,string>>" -> LIST_OBJECT;
             default -> null;
         };
     }

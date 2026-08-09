@@ -70,6 +70,13 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     public void setNpcMana(float v) { this.npcMana = v; }
 
+    /** 最近一次 spawnDecoration 调用（测试断言用）。 */
+    @Nullable
+    public SpawnDecorationCall lastSpawnDecoration;
+
+    public record SpawnDecorationCall(GridPos pos, String entityType, String facing,
+                                      @Nullable String nbtBase64) {}
+
     @Override
     public void applyEffect(EntityId target, EffectId effect, int strength, int duration) {
     }
@@ -82,6 +89,12 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
     @Override
     public float getCurrentMana(long npcId) {
         return npcMana;
+    }
+
+    @Override
+    public void spawnDecoration(GridPos pos, String entityType, String facing,
+                                @Nullable String nbtBase64) {
+        lastSpawnDecoration = new SpawnDecorationCall(pos, entityType, facing, nbtBase64);
     }
 
     // ---- RitualOps ----

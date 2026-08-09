@@ -24,7 +24,8 @@ public sealed interface AtomicOp
                 AtomicOp.IfConditionOp,
                 AtomicOp.ParallelOp,
                 AtomicOp.AttackMonsterOp,
-                AtomicOp.SelfDefenseOp {
+                AtomicOp.SelfDefenseOp,
+                AtomicOp.SpawnDecorationOp {
 
     /**
      * The world position this operation acts on, or {@code null} if positionless
@@ -250,6 +251,22 @@ public sealed interface AtomicOp
         @Override
         public GridPos target() {
             return null; // conditional logic, no world position
+        }
+    }
+
+    /**
+     * Spawn a decoration entity (item frame, painting) during building construction.
+     * The entity is rebuilt from trimmed NBT at the target block cell.
+     *
+     * @param entityType entity registry id (e.g. "minecraft:item_frame")
+     * @param facing     Direction name (e.g. "north"), may be empty to keep NBT's embedded facing
+     * @param nbtBase64  base64-encoded compressed entity NBT (position-rebased, relative to anchor)
+     */
+    record SpawnDecorationOp(GridPos target, String entityType, String facing,
+                             @Nullable String nbtBase64) implements AtomicOp {
+        @Override
+        public GridPos target() {
+            return target;
         }
     }
 

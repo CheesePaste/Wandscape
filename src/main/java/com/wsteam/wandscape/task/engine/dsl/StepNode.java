@@ -31,6 +31,19 @@ public sealed interface StepNode {
     }
 
     /**
+     * Spawn a decoration entity (item frame, painting). JSON type: {@code "spawn_entity"}.
+     * → {@link AtomicOp.SpawnDecorationOp}
+     *
+     * @param at         position expression — the block cell the entity occupies
+     * @param entityType expression evaluating to the entity registry id (e.g. "minecraft:item_frame")
+     * @param facing     expression evaluating to a Direction name ("north"…), empty string keeps NBT's facing
+     * @param nbt        optional expression evaluating to base64-encoded entity NBT (position-rebased)
+     */
+    record SpawnEntityStep(ExprNode at, ExprNode entityType, ExprNode facing,
+                           @javax.annotation.Nullable ExprNode nbt) implements StepNode {
+    }
+
+    /**
      * Remove/break a block. JSON type: {@code "remove"}.
      * → {@link AtomicOp.TransformOp#remove}
      */

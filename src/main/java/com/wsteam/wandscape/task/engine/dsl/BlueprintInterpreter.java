@@ -100,6 +100,15 @@ public final class BlueprintInterpreter {
                         : null;
                 yield List.of(AtomicOp.TransformOp.place(at, block, consumable, nbt));
             }
+            case StepNode.SpawnEntityStep s -> {
+                GridPos at = evalPos(s.at(), context, "spawn_entity.at");
+                String type = evalString(s.entityType(), context, "spawn_entity.entity_type");
+                String facing = evalString(s.facing(), context, "spawn_entity.facing");
+                String nbt = s.nbt() != null
+                        ? evalString(s.nbt(), context, "spawn_entity.nbt")
+                        : null;
+                yield List.of(new AtomicOp.SpawnDecorationOp(at, type, facing, nbt));
+            }
             case StepNode.RemoveStep s -> {
                 GridPos at = evalPos(s.at(), context, "remove.at");
                 BlockType from = new BlockType(evalString(s.from(), context, "remove.from"));
