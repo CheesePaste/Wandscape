@@ -193,6 +193,10 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     /** 预览模式（交互位 marker 的演示假人）：不参与 AI/生成/离开，仅站桩循环做动作。 */
     private boolean previewMode;
 
+    /** 活动期间锁定的朝向 yaw（null=不锁定）。交互动作时锁定面向 spot，防 LookControl/MoveControl 拉偏。 */
+    @javax.annotation.Nullable
+    private Float frozenYaw;
+
     // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
 
     private float maxHp = 40f;
@@ -413,6 +417,25 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
+
+    /**
+     * 锁定朝向：交互动作/预览期间（frozenYaw != null），在整帧 tick 末尾强制把
+     * yRot/yBodyRot/yHeadRot 设回锁定值——LookControl/MoveControl/BodyRotationControl
+     * 在 aiStep 里会用 setYRot 覆盖 spot 朝向，这里收尾兜底保证游客不转身。
+     */
+    @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide && frozenYaw != null) {
+            float yaw = frozenYaw;
+            this.setYRot(yaw);
+            this.yRotO = yaw;
+            this.yBodyRot = yaw;
+            this.yBodyRotO = yaw;
+            this.setYHeadRot(yaw);
+            this.yHeadRotO = yaw;
+        }
+    }
 
     /**
      * Only fresh spawns go through finalizeSpawn — clear the disk-load flag so a
@@ -787,6 +810,11 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         entityData.set(DATA_PREVIEW, v);
         this.previewMode = v;
     }
+
+    /** 锁定朝向（交互动作/预览时用）；null=解锁。 */
+    @javax.annotation.Nullable
+    public Float getFrozenYaw() { return frozenYaw; }
+    public void setFrozenYaw(@javax.annotation.Nullable Float yaw) { this.frozenYaw = yaw; }
     public int getOccupiedSpot() { return occupiedSpot; }
     public void setOccupiedSpot(int i) { this.occupiedSpot = i; }
     public int getNightsStayed() { return nightsStayed; }

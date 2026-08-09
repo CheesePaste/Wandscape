@@ -517,9 +517,10 @@ public class TouristMoveGoal extends Goal {
         faceSpot(level, buildingId, spot);
     }
 
-    /** 活动期间面向 spot 朝向（游客做动作时面朝该方向）。 */
+    /** 活动期间面向 spot 朝向（游客做动作时面朝该方向；锁定朝向防转身）。 */
     private void faceSpot(ServerLevel level, UUID buildingId, int spot) {
         float yaw = TouristSimulation.spotFacing(level, buildingId, spot).toYRot();
+        tourist.setFrozenYaw(yaw);
         tourist.setYRot(yaw);
         tourist.setYHeadRot(yaw);
         tourist.yBodyRot = yaw;
@@ -541,6 +542,7 @@ public class TouristMoveGoal extends Goal {
         claimedSpot = -1;
         tourist.setCurrentActivity(null);
         tourist.setOccupiedSpot(-1);
+        tourist.setFrozenYaw(null);
         performingActivity = false;
 
         if (buildingId != null) {
@@ -593,6 +595,7 @@ public class TouristMoveGoal extends Goal {
         queueing = true;
         queueTicks = 0;
         tourist.setCurrentActivity(Activity.QUEUE);
+        tourist.setFrozenYaw(null);
         tourist.getNavigation().stop();
     }
 
@@ -608,6 +611,7 @@ public class TouristMoveGoal extends Goal {
         queueTicks = 0;
         tourist.setCurrentActivity(null);
         tourist.setOccupiedSpot(-1);
+        tourist.setFrozenYaw(null);
     }
 
     /** Switch from outdoor macro-nav to indoor micro-nav. */

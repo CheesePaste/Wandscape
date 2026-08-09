@@ -229,6 +229,7 @@ public final class MarkerPreviewManager {
 
     private static void applyFacing(TouristEntity p, Direction facing) {
         float yaw = facing.toYRot();
+        p.setFrozenYaw(yaw);
         p.setYRot(yaw);
         p.setYHeadRot(yaw);
         p.yBodyRot = yaw;
