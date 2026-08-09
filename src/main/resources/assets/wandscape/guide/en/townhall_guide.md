@@ -1,26 +1,28 @@
 # 🏛️ Town Hall
 
-Without a Town Hall, you don't have a town — you just have a pile of buildings. The Town Hall is the brain: level, experience, reputation, and the town's name are all managed here. It is also the key to attracting wizard NPCs to join.
+The core facility of the colony. It manages the town name, colony level, experience, and reputation, and is the key to attracting wizard NPCs to join. The Town Hall must be built and the colony created before other buildings can operate.
 
-## Building It
+## Building & Enabling
 
-Press **V** → the **Government** category of the build panel → place it. **Free on first build** — build with confidence.
+Press **V** to open the panel → the **Government** category of the build panel → place it. **Free on first build**.
 
-After it is placed, **right-click it**: the first interaction asks you to **name the town and create a colony**. Without a colony, the town doesn't turn.
+After placement, **right-click** the Town Hall; the first interaction asks you to **name the town and create a colony**.
 
-## What the Panel Shows
+## Panel
 
-- **Town name**: change it any time.
-- **Level**: the colony level. The higher the level, the higher the population cap and the more buildings unlock.
-- **Experience bar**: the progress of running your town; when full, you level up.
-- **Reputation**: accumulated from tourists leaving satisfied. The higher the reputation, the rarer and richer the tourists who come through the gate each day.
-- **Blueprint selection**: opens the building selection panel directly, to pick buildings and publish construction plans.
+| Item | Description |
+|---|---|
+| Town name | Change any time |
+| Level | The colony level; higher levels raise the population cap and unlock more buildings |
+| Experience bar | Progress of running the town; levels up automatically when full |
+| Reputation | Accumulated from tourists leaving satisfied; the higher the reputation, the rarer and richer the tourists entering the gate each day |
+| Blueprint selection | Opens the building selection panel to pick buildings and publish construction plans |
 
-## How to Level Up
+## Leveling Up
 
-When tourists with **all three need bars full** leave satisfied at night, the town gains experience — note that the higher the tourist's level relative to the town, the more experience given. When experience is full, you level up automatically, unlocking advanced building blueprints and raising the population cap.
+When tourists with **all three need bars full** leave satisfied at night, the town gains experience. The higher a tourist's level relative to the town, the more experience they give. When experience is full, you level up automatically, unlocking advanced building blueprints and raising the population cap.
 
-(Many advanced buildings require a high enough colony level; when your level is insufficient, the build bar keeps them locked — go run the town.)
+> Advanced buildings require a sufficient colony level; when your level is insufficient, the corresponding blueprints show as locked in the build bar.
 
 ---
 

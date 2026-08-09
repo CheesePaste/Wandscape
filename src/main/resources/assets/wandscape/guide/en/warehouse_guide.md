@@ -1,24 +1,32 @@
 # 📦 Warehouse
 
-The Warehouse doesn't look like much, but all the town's money and materials pass through its hands: building, crafting, and maintenance are all deducted from here, and tourists' spending income comes back here. **NPCs can only get materials that are stored in the warehouse.**
+Stores all the town's elements and materials. Building, crafting, and maintenance deduct from here, and tourists' spending income returns here. **NPCs can only use materials stored in the warehouse.**
 
 ## Two Tabs
 
-**Overview**:
+**Overview**
 
-- **Element panel**: the town's reserve of the **7 elements** (Earth / Wood / Water / Fire / Metal / Wind / Dark) — your whole fortune at a glance.
-- **Item list**: a searchable list of materials, with fuzzy search by name.
-- **Supply gaps**: when the Crafting Station or Workstation is stuck, the missing materials are highlighted here — just fill them in, no guessing needed.
+| Item | Description |
+|---|---|
+| Element panel | Reserve of the town's **7 elements** (Earth / Wood / Water / Fire / Metal / Wind / Dark) |
+| Item list | Searchable material list with fuzzy search by name |
+| Supply gaps | When the Crafting Station or Workstation is stuck, the missing materials are highlighted here |
 
-**Exchange**:
+**Exchange**
 
-- Click warehouse items to **withdraw**, click inventory items to **deposit**, with adjustable quantities. Simple and direct.
+Click warehouse items to **withdraw**, click inventory items to **deposit**, with adjustable quantities.
 
-## A Few Numbers
+## Startup Funds
 
-- When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds.
-- Elements are the lifeline: maintenance, building, and crafting all cost them. When short on elements, gather them from [Element Nodes](node_guide.md) or replenish by decomposing at the [Workstation](workstation_guide.md).
-- When NPCs take materials, you'll see items **flying** from the warehouse to the wizard's hands — that is normal, not a glitch.
+When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds.
+
+## Element Consumption
+
+Maintenance, building, and crafting all consume elements. When short, gather from [Element Nodes](node_guide.md) or replenish by decomposing at the [Workstation](workstation_guide.md).
+
+## Tips
+
+> When NPCs take materials, items are shown **flying** from the warehouse to the wizard's hands; this is normal, not a glitch.
 
 ---
 
