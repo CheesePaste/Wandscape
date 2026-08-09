@@ -1,10 +1,10 @@
 # 📖 Wandscape Guide
 
-Welcome to Wandscape! If you are reading this book, you are most likely standing on an empty plot of land, wondering how to turn it into a magic town — congratulations, that really is a good idea.
+Welcome to Wandscape. Turning it into a magic town starts here.
 
 Wandscape is a management sim mod: you place buildings, and **wizard NPCs do the work for you** (building, gathering, crafting, guarding), while **tourists walk along the roads to spend in town**. Your job is to decide where the town goes. This book can be opened at any time with the **H** key.
 
-> Playing for the first time? Read [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md) first. That page explains the whole game loop — after reading it you will know what to do.
+> Playing for the first time? Read [Getting Started: From Empty Land to a Tourist Town](getting_started_guide.md) first — it walks through the full game loop.
 
 ## 🏗️ Building & Town
 
@@ -14,7 +14,7 @@ Wandscape is a management sim mod: you place buildings, and **wizard NPCs do the
 
 ## 🛣️ Road System
 
-Tourists only walk on paved roads. **Roads are the lifeline of the economy** — that is not a metaphor.
+Tourists only walk on paved roads. No roads means no tourists; shops won't get visitors even when open.
 
 - [Road System Overview](road_guide.md)
 - [Replace Mode (Surface Paving)](road_replace_guide.md)

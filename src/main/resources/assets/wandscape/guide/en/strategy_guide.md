@@ -1,6 +1,6 @@
 # ⚔️ Cast Strategy
 
-Which spells a wizard casts in combat is decided by the strategy. You don't have to set it — wizards follow the default. But set it, and your wizards become much smarter.
+Which spells a wizard casts in combat is decided by the strategy. With no strategy set, the wizard follows the default preset.
 
 How to open: **right-click a wizard → info screen → the "Strategy" button**.
 
@@ -25,7 +25,7 @@ How to open: **right-click a wizard → info screen → the "Strategy" button**.
 - When auto-casting, scan from high to low by "preset order + in-category order", and pick the **first castable one**: valid target, cooldown passed, mana sufficient.
 - **Changes save instantly** — no confirmation needed.
 - Once you have configured a wizard (toggled or reordered), your configuration is used; wizards you never configured follow the preset.
-- Altar spells (like Revive) are not in auto-casting — that's the [Altar](altar_guide.md)'s business.
+- Altar spells (like Revive) are not in auto-casting — see the [Altar](altar_guide.md).
 
 ---
 
