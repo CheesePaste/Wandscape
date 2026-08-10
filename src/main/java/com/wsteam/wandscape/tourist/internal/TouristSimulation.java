@@ -47,8 +47,8 @@ public final class TouristSimulation {
 
     private static final String TAG = "TouristSimulation";
 
-    /** 精力低于此比例 → relax 建筑紧急加分（Config.TOURIST_ENERGY_RESTORE_THRESHOLD 的补充启发值）。 */
-    private static final double ENERGY_URGENCY_BONUS = 2000;
+    /** 精力低于此比例 → relax 建筑紧急加分（与单次满意度增益同量级，不再碾压选店）。 */
+    private static final double ENERGY_URGENCY_BONUS = 100;
     /** 钱包低于初始 1/4 → ATM 取现加分（与单次满意度增益同量级，不再碾压选店）。 */
     private static final double WALLET_LOW_BONUS = 50;
     /** 钱包=0 → ATM 取现加分稍高（优先取现继续逛）。 */
@@ -458,7 +458,7 @@ public final class TouristSimulation {
 
         BuildingConfig cfg = getConfig(level, state.getBuildingId());
         if (cfg != null) {
-            // 精力低 → 强烈偏向恢复（relax）建筑
+            // 精力低 → 偏向恢复（relax）建筑（加分与单次满意度增益同量级）
             double energyRatio = t.getEnergy() / (double) WandscapeConstants.TOURIST_MAX_ENERGY;
             boolean isRelax = cfg.relax() != RelaxConfig.NONE && cfg.relax().energyRestore() > 0;
             if (isRelax && energyRatio < Config.TOURIST_ENERGY_RESTORE_THRESHOLD.get()) {
