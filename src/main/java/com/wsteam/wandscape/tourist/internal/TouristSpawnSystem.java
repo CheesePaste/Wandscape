@@ -238,20 +238,13 @@ public final class TouristSpawnSystem {
             return;
         }
 
-        // Count existing tourists
-        int existing = countExistingTourists(level);
-
-        // Compute target count: uniform integer range
-        // [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth]
+        // 每天固定新增这批游客，不因殖民地已有游客（含住店客）而扣减
         int colonyLevel = levelManager != null ? levelManager.getLevel(colonyId) : 1;
         int lower = Config.TOURIST_BASE_SPAWN_COUNT.get()
                 + (colonyLevel - 1) * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
         int upper = lower + Config.TOURIST_SPAWN_RANGE_WIDTH.get();
-        int targetCount = lower + (upper > lower ? random.nextInt(upper - lower + 1) : 0);
-        targetCount = Math.max(1, Math.min(targetCount, Config.TOURIST_MAX_PER_COLONY.get()));
-
-        int toSpawn = Math.max(0, targetCount - existing);
-        if (toSpawn <= 0) return;
+        int toSpawn = lower + (upper > lower ? random.nextInt(upper - lower) : 0);
+        toSpawn = Math.max(1, Math.min(toSpawn, Config.TOURIST_MAX_PER_COLONY.get()));
 
         // Collect spawn positions
         List<BlockPos> spawnCandidates = collectSpawnPositions(level, allBuildings);
@@ -278,8 +271,8 @@ public final class TouristSpawnSystem {
         }
 
         if (!pendingSpawns.isEmpty()) {
-            Log.info(TAG, "[Tourist] Schedule created: {} tourists (colony Lv.{}), targetCount={}",
-                    pendingSpawns.size(), colonyLevel, targetCount);
+            Log.info(TAG, "[Tourist] Schedule created: {} tourists (colony Lv.{}), dailyArrivals={}",
+                    pendingSpawns.size(), colonyLevel, toSpawn);
         }
     }
 
@@ -714,23 +707,6 @@ public final class TouristSpawnSystem {
             if (state != null) targets.add(state);
         }
         return targets;
-    }
-
-    private int countExistingTourists(ServerLevel level) {
-        // The shadow registry is the authoritative population (loaded entities + unloaded
-        // shadows). Counting only live entities would ignore unloaded tourists and let the
-        // colony over-spawn past its cap.
-        TouristSimSystem sim = TouristSimSystem.getActive();
-        if (sim != null && sim.getRegistry() != null) {
-            return sim.getRegistry().getShadows().size();
-        }
-        int count = 0;
-        for (var entity : level.getAllEntities()) {
-            if (entity instanceof TouristEntity t && t.isAlive()) {
-                count++;
-            }
-        }
-        return count;
     }
 
     /** Count tourists currently checked into hotels per colony and store as overnight stayers. */
