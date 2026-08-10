@@ -20,7 +20,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 
 - **TouristSpawnSystem** — 生成：roll 画像 → 设三条 need / 停留截止 / travelFund；**出生不指派目标**，出生即闲逛，目标完全由视野内 Find-Best-Action 决定。离开判定 D6（见下）。
 - **TouristSimulation**（共享交互经济）— `fillBars` 填三条、四类交互结算（shop 购物 / service 产元素+耗精力 / relax 回精力 / atm 取钱）、**Find-Best-Action 目标选择**（视野内）、spot 认领/释放。实体路径与影子 sim 路径共用本类，一套逻辑无漂移。
-- **TouristMoveGoal**（实体 AI）— MoveMode 状态机：`VISITING_BUILDING`（spot 单点导航 + 占用/活动/释放 + 排队）/ `EXPLORING_POI` / `WANDERING`。
+- **TouristMoveGoal**（实体 AI）— MoveMode 状态机：`VISITING_BUILDING`（spot 单点导航 + 占用/活动/释放 + 排队）/ `EXPLORING_POI` / `WANDERING`。**闲逛目标 = `wandscape:custom_roads` 标签方块**（玩家自铺的路也算），锚点仅站到路上时随动，离闲逛起点 32 格强制折返（详见「与道路系统联动」）。
 - **TouristSimSystem**（影子 sim）— 游客区块卸载后由 shadow 直线移动推进，镜像 `TouristSimulation` 交互与 D6 离场；玩家靠近时实体接管（shadow 胜出 → importToEntity）。
 - **HotelStayHandler** — 夜晚旅店（`service.maxOccupancy>0`）：入住 → 睡床（视觉）+ 填一次三条 → 清晨退房精力回 100、`nightsStayed++`、回到入住站位。
 - **TouristSpotManager** — spot 占用（buildingId → 占用下标集合）。**spot 数量 = 该建筑同时交互人数上限**；全满 → 排队（在建筑旁等，超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃去别处）。仅机制，无可见标记。
@@ -81,6 +81,13 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 ## 与道路系统联动
 
 游客生成和移动都依赖道路系统：RoadSavedData 边界路面位置生成，RoadRouter 路网寻路。道路布局直接影响游客流量。
+
+**闲逛与建路系统解耦**：`WANDERING` / POI 兜底的目标选取不依赖 `RoadNetwork` 建路系统，而是把 `wandscape:custom_roads` 标签方块直接当路——玩家用任意该标签内的方块（默认含草径/圆石/石砖/砂土等）铺路即可让游客在路上逛。闲逛规则：
+
+- 目标 = 锚点半径（默认 12 格）内随机的 `custom_roads` 方块；该半径内无路 → 取 2 倍半径内最近的路把游客拉回路上；完全无路 → 锚点附近小范围微逛（绝不跑远）。
+- **锚点只沿路漂移**：仅当游客站在路上（脚下是 `custom_roads` 方块）时闲逛区域中心才随动，野外不漂移。
+- **硬上限**：离本次闲逛起点超过 32 格强制折返（回到起点附近的路）。
+- 道路方块列表数据驱动（`data/wandscape/tags/block/custom_roads.json`，`replace:false` 可被数据包合并扩展）；`RoadBlobExplorer` 也把该标签方块当路由用的"自定义道路"，标签扩充对两者是良性协同。
 
 ## 依赖
 

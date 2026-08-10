@@ -16,6 +16,7 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.road.engine.WandscapeTags;
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
@@ -98,6 +99,13 @@ public class TouristMoveGoal extends Goal {
     // ── Wander state ──
     private int wanderCooldown;
     private int wanderEvaluateTick;
+    /** 本次闲逛会话起点（贴路走硬上限基准）。 */
+    @Nullable
+    private BlockPos wanderOrigin;
+    /** 道路候选缓存（key = 锚点+半径哈希，过期重扫）。 */
+    private int roadCacheKey;
+    private long roadCacheTick = Long.MIN_VALUE;
+    private List<BlockPos> roadCache = List.of();
 
     // ── Roof-rescue insurance ──
     /** Last position used to detect a stuck-on-roof situation while roaming. */
@@ -115,6 +123,12 @@ public class TouristMoveGoal extends Goal {
     private static final int WANDER_RECHOOSE_TICKS = 20;
     /** Default wander radius (blocks) around the (drifting) anchor. */
     private static final int WANDER_RADIUS = 12;
+    /** 闲逛硬上限：离闲逛起点超过该距离强制折返（格）。 */
+    private static final int WANDER_MAX_ORIGIN_DIST = 32;
+    /** 道路方块垂直扫描范围（锚点 Y 上下各几格）。 */
+    private static final int ROAD_SCAN_VERTICAL = 3;
+    /** 道路候选缓存有效期（tick），避免反复全扫。 */
+    private static final long ROAD_CACHE_TICKS = 100;
 
     // ── Indoor / outdoor navigation phases ──
     /** True when the tourist is inside a building (micro-navigation phase). */
@@ -1264,12 +1278,11 @@ public class TouristMoveGoal extends Goal {
                     : pois.get(tourist.getRandom().nextInt(pois.size()));
         }
         if (rawTarget == null) {
+            // No POIs — fall back to the same road-based wander picker so the
+            // tourist never roams open field.
             BlockPos anchor = tourist.getWanderAnchor();
             if (anchor != null) {
-                int r = tourist.getWanderRadius();
-                rawTarget = anchor.offset(
-                        tourist.getRandom().nextInt(r * 2 + 1) - r, 0,
-                        tourist.getRandom().nextInt(r * 2 + 1) - r);
+                rawTarget = pickWanderTarget(anchor, tourist.getWanderRadius());
             }
         }
         if (rawTarget == null) return false;
@@ -1298,13 +1311,17 @@ public class TouristMoveGoal extends Goal {
         lastPos = null;
         noMoveTicks = 0;
         lastNodeIndex = -1;
+        wanderOrigin = tourist.blockPosition();
     }
 
     private void tickWander() {
         BlockPos anchor = tourist.getWanderAnchor();
-        // If no anchor, use current position
+        // If no anchor, use current position (snapped onto the nearest road so the
+        // wander area centers on roads).
         if (anchor == null) {
             anchor = tourist.blockPosition();
+            BlockPos nearRoad = nearestRoadBlock(anchor, WANDER_RADIUS * 2);
+            if (nearRoad != null) anchor = roadStandingSpot(nearRoad);
             tourist.setWanderAnchor(anchor);
             tourist.setWanderRadius(WANDER_RADIUS);
         }
@@ -1356,9 +1373,30 @@ public class TouristMoveGoal extends Goal {
             noMoveTicks = 0;
         }
 
+        // ── Hard cap: never drift more than WANDER_MAX_ORIGIN_DIST from where this
+        //    wander session started. Head back to a road near the origin. ──
+        if (wanderOrigin != null && pos.distSqr(wanderOrigin) > WANDER_MAX_ORIGIN_DIST * WANDER_MAX_ORIGIN_DIST) {
+            BlockPos back = nearestRoadBlock(wanderOrigin, WANDER_RADIUS);
+            if (back == null) {
+                back = findGround(wanderOrigin.getX(), wanderOrigin.getY(), wanderOrigin.getZ());
+            } else {
+                BlockPos stand = roadStandingSpot(back);
+                if (stand != null) back = stand;
+            }
+            if (back != null) {
+                tourist.setWanderAnchor(back);
+                nav.moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, wanderSpeed);
+            }
+            noMoveTicks = 0;
+            lastNodeIndex = -1;
+            return;
+        }
+
         // ── Anchor drift: let the wander area follow the tourist instead of pinning it
-        //    to one fixed point (fixes the "activity range is tiny" complaint). ──
-        if (manDist > radius / 2) {
+        //    to one fixed point (fixes the "activity range is tiny" complaint). Only
+        //    re-center when standing ON a road, so the roam area tracks the road
+        //    network and never drifts across open field. ──
+        if (manDist > radius / 2 && isOnRoad(pos)) {
             anchor = pos;
             tourist.setWanderAnchor(pos);
             manDist = 0;
@@ -1391,17 +1429,99 @@ public class TouristMoveGoal extends Goal {
         }
     }
 
-    /** Pick a reachable ground point within {@code radius} of {@code anchor}, retrying a few times. */
+    /**
+     * Pick a road-based wander target near {@code anchor}: prefer a random
+     * {@code custom_roads} block inside the radius, then the nearest road just
+     * outside (to pull the tourist back onto roads), then a tiny bounded
+     * micro-wander so the tourist never strays far when no roads exist nearby.
+     */
     @Nullable
     private BlockPos pickWanderTarget(BlockPos anchor, int radius) {
+        List<BlockPos> roads = cachedRoadBlocks(anchor, radius);
+        List<BlockPos> candidates = new ArrayList<>();
+        for (BlockPos r : roads) {
+            if (isInsideAnyBuilding(r)) continue;
+            BlockPos stand = roadStandingSpot(r);
+            if (stand != null) candidates.add(stand);
+        }
+        if (!candidates.isEmpty()) {
+            return candidates.get(tourist.getRandom().nextInt(candidates.size()));
+        }
+
+        // No road in radius — pull toward the nearest road at double the radius.
+        BlockPos near = nearestRoadBlock(anchor, radius * 2);
+        if (near != null) {
+            BlockPos stand = roadStandingSpot(near);
+            if (stand != null) return stand;
+        }
+
+        // No road nearby at all: small bounded micro-wander, never far.
         for (int attempt = 0; attempt < 8; attempt++) {
-            int tx = anchor.getX() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
-            int tz = anchor.getZ() + tourist.getRandom().nextInt(radius * 2 + 1) - radius;
+            int half = Math.max(2, radius / 2);
+            int tx = anchor.getX() + tourist.getRandom().nextInt(half * 2 + 1) - half;
+            int tz = anchor.getZ() + tourist.getRandom().nextInt(half * 2 + 1) - half;
             BlockPos g = findGround(tx, anchor.getY(), tz);
             if (g != null && !isInsideAnyBuilding(g)) return g;
         }
         // Fallback: ground at the anchor (outside any building in the common case).
         return findGround(anchor.getX(), anchor.getY(), anchor.getZ());
+    }
+
+    /** Collect {@code custom_roads} tag blocks in a box around {@code center}. */
+    private List<BlockPos> scanRoadBlocks(BlockPos center, int radius) {
+        var lvl = tourist.level();
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = -ROAD_SCAN_VERTICAL; dy <= ROAD_SCAN_VERTICAL; dy++) {
+                    BlockPos p = center.offset(dx, dy, dz);
+                    if (lvl.getBlockState(p).is(WandscapeTags.Blocks.CUSTOM_ROADS)) {
+                        out.add(p);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** {@link #scanRoadBlocks} with a short-lived cache so we don't re-scan every tick. */
+    private List<BlockPos> cachedRoadBlocks(BlockPos center, int radius) {
+        int key = ((center.getX() * 31 + center.getY()) * 31 + center.getZ()) * 31 + radius;
+        long now = tourist.level().getGameTime();
+        if (key == roadCacheKey && now - roadCacheTick < ROAD_CACHE_TICKS) {
+            return roadCache;
+        }
+        roadCache = scanRoadBlocks(center, radius);
+        roadCacheKey = key;
+        roadCacheTick = now;
+        return roadCache;
+    }
+
+    /** Nearest {@code custom_roads} tag block within {@code radius} of {@code center}. */
+    @Nullable
+    private BlockPos nearestRoadBlock(BlockPos center, int radius) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos r : scanRoadBlocks(center, radius)) {
+            double d = center.distSqr(r);
+            if (d < bestDist) {
+                bestDist = d;
+                best = r;
+            }
+        }
+        return best;
+    }
+
+    /** The block a tourist stands in when standing ON the road block {@code road}. */
+    @Nullable
+    private BlockPos roadStandingSpot(BlockPos road) {
+        BlockPos g = findGround(road.getX(), road.getY(), road.getZ());
+        return g != null ? g : road.above();
+    }
+
+    /** True if the entity stands directly on a {@code custom_roads} block. */
+    private boolean isOnRoad(BlockPos pos) {
+        return tourist.level().getBlockState(pos.below()).is(WandscapeTags.Blocks.CUSTOM_ROADS);
     }
 
     /** True if {@code pos} lies inside any colony building's bounding box. */
