@@ -1,0 +1,60 @@
+{
+  "magic_cast": {
+    "subtitle": "wandscape.subtitle.magic_cast",
+    "sounds": [ "wandscape:magic/cast" ]
+  },
+  "magic_beam": {
+    "subtitle": "wandscape.subtitle.magic_beam",
+    "sounds": [ "wandscape:magic/beam" ]
+  },
+  "building_place": {
+    "subtitle": "wandscape.subtitle.building_place",
+    "sounds": [ "minecraft:dig/stone1" ]
+  },
+  "projection_enter": {
+    "subtitle": "wandscape.subtitle.projection_enter",
+    "sounds": [ "minecraft:item/trident/return1" ]
+  },
+  "projection_exit": {
+    "subtitle": "wandscape.subtitle.projection_exit",
+    "sounds": [ "minecraft:mob/endermen/portal2" ]
+  },
+  "overview_enter": {
+    "subtitle": "wandscape.subtitle.overview_enter",
+    "sounds": [ "minecraft:mob/phantom/flap1" ]
+  },
+  "warehouse": {
+    "subtitle": "wandscape.subtitle.warehouse",
+    "sounds": [ "wandscape:warehouse/transfer" ]
+  },
+  "npc_cast": {
+    "subtitle": "wandscape.subtitle.npc_cast",
+    "sounds": [ "minecraft:mob/evocation_illager/cast1", "minecraft:mob/evocation_illager/cast2" ]
+  },
+  "task_publish": {
+    "subtitle": "wandscape.subtitle.task_publish",
+    "sounds": [ "wandscape:task/publish" ]
+  },
+  "guard_fire": {
+    "subtitle": "wandscape.subtitle.guard_fire",
+    "sounds": [ "wandscape:guard/fire" ]
+  },
+  "colony_level_up": {
+    "subtitle": "wandscape.subtitle.colony_level_up",
+    "sounds": [ "minecraft:random/levelup" ]
+  },
+  "wonder_effect": {
+    "subtitle": "wandscape.subtitle.wonder_effect",
+    "sounds": [ "minecraft:note/pling" ]
+  },
+  "road_place": {
+    "subtitle": "wandscape.subtitle.road_place",
+    "sounds": [ "minecraft:step/stone1" ]
+  },
+  "colony_ambient_day": {
+    "sounds": [ { "name": "wandscape:ambient/colony_day", "stream": true } ]
+  },
+  "colony_ambient_night": {
+    "sounds": [ { "name": "wandscape:ambient/colony_night", "stream": true } ]
+  }
+}
