@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.client;
 import java.util.List;
 import java.util.UUID;
 
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -22,20 +23,22 @@ public class HotelScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
+    private final String creator;
     private final int maxOccupancy;
     private final int currentOccupancy;
     private final List<String> guestNames;
 
-    public HotelScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+    public HotelScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId, String creator,
                        int maxOccupancy, int currentOccupancy, List<String> guestNames) {
         super(Component.literal("Hotel"), PW, PH);
-        setTitleBar("Hotel / Inn");
+        setTitleBar(I18n.name("gui.wandscape.hotel.title", "Hotel / Inn"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "hotel_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
+        this.creator = creator;
         this.maxOccupancy = maxOccupancy;
         this.currentOccupancy = currentOccupancy;
         this.guestNames = guestNames;
@@ -48,7 +51,7 @@ public class HotelScreen extends MedievalScreen {
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                Component.literal("Close"), this::onClose));
+                I18n.name("gui.wandscape.common.close", "Close"), this::onClose));
     }
 
     @Override
@@ -60,7 +63,8 @@ public class HotelScreen extends MedievalScreen {
         int y = topPos + headerHeight + 12;
 
         // Occupancy header
-        String occText = "Guests: " + currentOccupancy + " / " + maxOccupancy;
+        String occText = I18n.name("gui.wandscape.hotel.guests", "Guests").getString()
+                + ": " + currentOccupancy + " / " + maxOccupancy;
         g.drawString(font, occText, x, y, MedievalColors.ACCENT_GOLD);
         y += 16;
 
@@ -70,7 +74,8 @@ public class HotelScreen extends MedievalScreen {
 
         // Guest list
         if (guestNames.isEmpty()) {
-            g.drawString(font, "No guests checked in.", x, y, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.hotel.no_guests", "No guests checked in."),
+                    x, y, MedievalColors.TEXT_MUTED);
         } else {
             for (int i = 0; i < guestNames.size(); i++) {
                 String line = (i + 1) + ". " + guestNames.get(i);
@@ -80,8 +85,11 @@ public class HotelScreen extends MedievalScreen {
             }
         }
 
-        // Building info at bottom
-        String bldText = "Building: " + buildingId.toString().substring(0, 8);
-        g.drawString(font, bldText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
+        // Creator info at bottom
+        if (creator != null && !creator.isBlank()) {
+            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                    + ": " + creator;
+            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
+        }
     }
 }

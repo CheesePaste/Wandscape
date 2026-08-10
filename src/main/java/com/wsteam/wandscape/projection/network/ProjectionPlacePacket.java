@@ -1,9 +1,16 @@
 package com.wsteam.wandscape.projection.network;
 
+import java.util.List;
+import java.util.UUID;
+
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -12,6 +19,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
@@ -74,21 +82,26 @@ public record ProjectionPlacePacket(
             return;
         }
 
-        // 3. Success — notify player
+        // 3. Success — notify player. Building name resolves against the client locale
+        // via building.wandscape.<id>; displayName stays as the fallback (D4).
         String posStr = packet.anchorPos.getX() + ", " +
                 packet.anchorPos.getY() + ", " +
                 packet.anchorPos.getZ();
+        Component buildingName = I18n.name("building.wandscape." + config.id(), config.displayName());
 
         if (result.firstFree()) {
             player.displayClientMessage(
-                    Component.literal("[Projection] §a" + config.displayName() +
-                            " §fplaced at (" + posStr +
-                            ") — §eFREE first build, no materials consumed"),
+                    Component.literal("[Projection] §a")
+                            .append(buildingName)
+                            .append(Component.literal(" §fplaced at (" + posStr +
+                                    ") — §eFREE first build, no materials consumed")),
                     false);
         } else {
             player.displayClientMessage(
-                    Component.literal("[Projection] §a" + config.displayName() +
-                            " §fplaced at (" + posStr + ") — §aNPC will construct"),
+                    Component.literal("[Projection] §a")
+                            .append(buildingName)
+                            .append(Component.literal(" §fplaced at (" + posStr +
+                                    ") — §aNPC will construct")),
                     false);
         }
 
@@ -96,7 +109,38 @@ public record ProjectionPlacePacket(
                 config.displayName(), packet.anchorPos,
                 player.getGameProfile().getName(), result.firstFree());
 
-        // 4. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
+        SoundService.playAt(player.serverLevel(), packet.anchorPos,
+                WandscapeSounds.BUILDING_PLACE, SoundSource.BLOCKS, 0.5f, 1.0f);
+
+        // 4. Refresh the client's building-area cache so the newly placed
+        // building's construction ghost appears immediately (no need to
+        // reopen the panel).
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player);
+
+        // 4b. Refresh projection slots so first-free badges stay accurate —
+        // placing a first-free building claims it server-side. Resolve the
+        // colony from the placement anchor (ground position near the colony,
+        // unlike the free-flying body position).
+        if (ProjectionNetwork.isProjecting(player)) {
+            UUID colonyId = null;
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            if (colonyApi != null) {
+                colonyId = colonyApi.getColonyId(packet.anchorPos);
+            }
+            List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new ProjectionSlotsRefreshPacket(slots));
+        }
+
+        // 4c. Push tutorial progress — the newly placed building may advance a step.
+        var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+        if (guideApi != null) {
+            var colonyApi2 = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            UUID guideColony = colonyApi2 != null ? colonyApi2.getColonyId(packet.anchorPos) : null;
+            guideApi.sendToPlayer(player, guideColony);
+        }
+
+        // 5. If placing a government building (Town Hall) and no colony is linked to this position, prompt for colony creation
         if ("government".equals(config.category())) {
             var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
             if (colonyApi == null || colonyApi.getColonyId(packet.anchorPos) == null) {

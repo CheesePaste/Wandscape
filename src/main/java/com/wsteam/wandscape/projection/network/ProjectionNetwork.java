@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.data.BuildingConfig;
@@ -79,6 +81,8 @@ public final class ProjectionNetwork {
             case "storage" -> 1;
             case "service" -> 2;
             case "shop" -> 3;
+            case "relax" -> 3;
+            case "atm" -> 3;
             case "workstation" -> 4;
             case "crafting_station" -> 5;
             case "node" -> 6;
@@ -90,15 +94,28 @@ public final class ProjectionNetwork {
      * Build the list of available buildings for projection placement.
      * Reads from {@link BuildingConfigLoader} — returns all configs with a blueprint,
      * sorted by category priority (government first) then display name.
+     * Each slot carries whether the colony's first-free build is still available
+     * (config {@code first_free: true} and not yet claimed for {@code colonyId}).
+     *
+     * @param colonyId the colony to check claim state against; may be null when no colony
+     *                 resolves — then no building is marked first-free.
      */
-    public static List<BuildingSlot> getAvailableBuildings() {
+    public static List<BuildingSlot> getAvailableBuildings(@Nullable UUID colonyId) {
         var configs = BuildingConfigLoader.getInstance().getAll();
         if (configs == null || configs.isEmpty()) {
             return List.of();
         }
+        var buildingApi = WandscapeApis.getBuildingApiSilently();
         return configs.values().stream()
                 .filter(c -> c.blueprint() != null) // only buildings with a build blueprint
-                .map(c -> new BuildingSlot(c.id(), c.displayName(), c.category()))
+                .filter(c -> !c.deprecated()) // deprecated buildings stay functional but are hidden from placement
+                .map(c -> {
+                    boolean firstFreeAvailable = c.firstFree()
+                            && colonyId != null
+                            && buildingApi != null
+                            && !buildingApi.isFirstFreeClaimed(colonyId, c.id());
+                    return new BuildingSlot(c.id(), c.displayName(), c.category(), firstFreeAvailable);
+                })
                 .sorted(java.util.Comparator.comparingInt((BuildingSlot s) -> categoryPriority(s.category()))
                         .thenComparing(BuildingSlot::displayName))
                 .toList();

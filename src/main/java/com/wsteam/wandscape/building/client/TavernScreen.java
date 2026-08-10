@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.shared.data.MageResume;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -20,7 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <p>Two tabs:
  * <ul>
  *   <li><b>Recruit</b> — spawn a generic NPC for the colony</li>
- *   <li><b>Mages</b> — list mage tourists who left resumes at 100% satisfaction</li>
+ *   <li><b>Mages</b> — list mage tourists who left resumes with three bars full</li>
  * </ul>
  */
 public class TavernScreen extends MedievalScreen {
@@ -30,18 +32,21 @@ public class TavernScreen extends MedievalScreen {
 
     private final BlockPos buildingPos;
     private final UUID colonyId;
+    private final int recruitCount;
     private final List<MageResume> mageResumes;
 
     private int activeTab = 0; // 0 = Recruit, 1 = Mages
 
-    public TavernScreen(BlockPos buildingPos, UUID colonyId, List<MageResume> mageResumes) {
+    public TavernScreen(BlockPos buildingPos, UUID colonyId, int recruitCount,
+                        List<MageResume> mageResumes) {
         super(Component.literal("Tavern"), PW, PH);
-        setTitleBar("Adventurer's Tavern");
+        setTitleBar(I18n.name("gui.wandscape.tavern.title", "Adventurer's Tavern"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "tavern_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
+        this.recruitCount = recruitCount;
         this.mageResumes = mageResumes;
     }
 
@@ -56,11 +61,12 @@ public class TavernScreen extends MedievalScreen {
 
         addRenderableWidget(new MedievalButton(
                 leftPos + 16, tabY, tabW, tabH,
-                Component.literal("Recruit NPC"),
+                I18n.name("gui.wandscape.tavern.recruit_npc", "Recruit NPC"),
                 () -> activeTab = 0));
         addRenderableWidget(new MedievalButton(
                 leftPos + 16 + tabW + 8, tabY, tabW, tabH,
-                Component.literal("Mages (" + mageResumes.size() + ")"),
+                Component.literal(I18n.name("gui.wandscape.tavern.mages", "Mages").getString()
+                        + " (" + mageResumes.size() + ")"),
                 () -> activeTab = 1));
 
         if (activeTab == 0) {
@@ -72,7 +78,7 @@ public class TavernScreen extends MedievalScreen {
         // Close button
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
-                Component.literal("Close"), this::onClose));
+                I18n.name("gui.wandscape.common.close", "Close"), this::onClose));
     }
 
     private void initRecruitTab() {
@@ -82,7 +88,7 @@ public class TavernScreen extends MedievalScreen {
         addRenderableWidget(new MedievalButton(
                 centerX - btnW / 2, topPos + headerHeight + 36,
                 btnW, btnH,
-                Component.literal("Recruit NPC"),
+                I18n.name("gui.wandscape.tavern.recruit_npc", "Recruit NPC"),
                 this::onRecruit));
     }
 
@@ -93,7 +99,7 @@ public class TavernScreen extends MedievalScreen {
             final int index = i;
             addRenderableWidget(new MedievalButton(
                     leftPos + PW - 60, y, 42, 16,
-                    Component.literal("Hire"),
+                    I18n.name("gui.wandscape.tavern.hire", "Hire"),
                     () -> onRecruitMage(index)));
             y += 22;
         }
@@ -111,13 +117,17 @@ public class TavernScreen extends MedievalScreen {
         var font = Minecraft.getInstance().font;
 
         if (activeTab == 0) {
-            String subtitle = "Recruit a new adventurer";
+            Component subtitle = I18n.name("gui.wandscape.tavern.recruit_subtitle", "Recruit a new adventurer");
             int textW = font.width(subtitle);
             g.drawString(font, subtitle,
                     leftPos + (PW - textW) / 2, topPos + headerHeight + 60,
                     MedievalColors.TEXT_MUTED);
 
-            String costText = "No elemental cost";
+            Component costText = recruitCount == 0
+                    ? I18n.name("gui.wandscape.tavern.first_free", "First recruit is free")
+                    : I18n.name("gui.wandscape.tavern.cost_per_recruit",
+                            "Each recruit costs %s of every element",
+                            WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT);
             int costW = font.width(costText);
             g.drawString(font, costText,
                     leftPos + (PW - costW) / 2, topPos + headerHeight + 76,
@@ -125,20 +135,21 @@ public class TavernScreen extends MedievalScreen {
         } else {
             // Mages tab
             if (mageResumes.isEmpty()) {
-                String msg = "No mage resumes available.";
-                g.drawString(font, msg, leftPos + 16, topPos + headerHeight + 40,
-                        MedievalColors.TEXT_MUTED);
-                String hint = "Mages reach 100% satisfaction to leave resumes.";
-                g.drawString(font, hint, leftPos + 16, topPos + headerHeight + 54,
-                        MedievalColors.TEXT_DIM);
+                g.drawString(font, I18n.name("gui.wandscape.tavern.no_resumes", "No mage resumes available."),
+                        leftPos + 16, topPos + headerHeight + 40, MedievalColors.TEXT_MUTED);
+                g.drawString(font, I18n.name("gui.wandscape.tavern.resume_hint",
+                                "Mages whose three bars are full leave resumes."),
+                        leftPos + 16, topPos + headerHeight + 54, MedievalColors.TEXT_DIM);
             } else {
                 int y = topPos + headerHeight + 34;
                 for (int i = 0; i < mageResumes.size(); i++) {
                     MageResume r = mageResumes.get(i);
                     String line = (i + 1) + ". " + r.touristName()
                             + "  Lv." + r.level()
-                            + "  MP:" + r.maxMana()
-                            + "  SP:" + r.spellPower();
+                            + " 强度:" + String.format("%.1f", r.spellPower())
+                            + " 工速:" + String.format("%.1f", r.workSpeed())
+                            + " 施速:" + String.format("%.1f", r.spellSpeed())
+                            + " 护甲:" + String.format("%.1f", r.armorValue());
                     g.drawString(font, line, leftPos + 16, y, MedievalColors.TEXT_WARM_WHITE);
                     y += 22;
                     if (y > topPos + PH - 30) break;
@@ -147,7 +158,8 @@ public class TavernScreen extends MedievalScreen {
         }
 
         // Colony info at bottom
-        String colText = "Colony: " + colonyId.toString().substring(0, 8);
+        String colText = I18n.name("gui.wandscape.common.colony_label", "Colony").getString()
+                + ": " + colonyId.toString().substring(0, 8);
         g.drawString(font, colText, leftPos + 16, topPos + PH - 28, MedievalColors.TEXT_DIM);
     }
 

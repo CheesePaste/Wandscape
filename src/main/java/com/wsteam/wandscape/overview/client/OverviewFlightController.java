@@ -5,18 +5,22 @@ import java.util.UUID;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.projection.data.BuildingSlot;
+import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Camera;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -47,9 +51,17 @@ public final class OverviewFlightController {
 
     private static boolean registered = false;
 
+    /** 进入前玩家的相机类型，退出时恢复（渲染玩家实体用第三人称）。 */
+    private static CameraType prevCameraType = null;
+    /** 受伤检测的血量基线：进入时采样，下降沿触发自动退出。 */
+    private static float lastHealth = 0f;
+
     // ── Input edge detection ──
     private static boolean wasLeftDown = false;
     private static boolean wasRightDown = false;
+    /** True while a {@code Screen} (e.g. the Construction UI) is open — used to baseline
+     *  button edge-detection when it closes so a UI click isn't re-read as a world click. */
+    private static boolean wasScreenOpen = false;
     /**
      * Tracks whether the cursor was in "grabbed" state last frame.
      * Cursor is "free" when a Screen is open or the panel cursor is lifted.
@@ -88,6 +100,11 @@ public final class OverviewFlightController {
         OverviewClientState.enterOverview(
                 mc.player.getX(), mc.player.getY(), mc.player.getZ(),
                 mc.player.getYRot(), mc.player.getXRot());
+        // 切第三人称以渲染玩家实体；存原相机类型供 exit 恢复；采样血量作受伤检测基线
+        prevCameraType = mc.options.getCameraType();
+        mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        lastHealth = mc.player.getHealth();
+        SoundService.playUI(WandscapeSounds.OVERVIEW_ENTER, 1.0f);
         // Initialize last mouse position to current cursor
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
@@ -99,9 +116,39 @@ public final class OverviewFlightController {
     }
 
     public static void exit() {
+        Minecraft mc = Minecraft.getInstance();
+        // 恢复原相机类型
+        if (prevCameraType != null) {
+            mc.options.setCameraType(prevCameraType);
+            prevCameraType = null;
+        }
+        // 显式落定玩家旋转到进入快照：每帧冻结只在 active 时跑，退出瞬间 active 已落，
+        // 残留的鼠标漂移会让视角「甩头」，故在此强制写回快照值
+        if (mc.player != null) {
+            freezePlayerRotation(mc.player);
+        }
         OverviewClientState.exitOverview();
         lastFrameNanos = 0;
         wasGrabbed = false;
+    }
+
+    /**
+     * 把玩家旋转强制冻回进入空中视角时的快照。抵消原版 {@code MouseHandler.turnPlayer}
+     * 对玩家真实旋转的每帧污染（光标 grabbed 时原版仍 turn 玩家）。必须同步 yBodyRot/yHeadRot——
+     * LivingEntityRenderer 用 yBodyRot 画身体，而 yBodyRot 在 tickHeadTurn 以 30%/tick 跟随 yRot，
+     * 只冻 yRot 会让第三人称模型随鼠标抽搐。
+     */
+    private static void freezePlayerRotation(LivingEntity player) {
+        float yaw = OverviewClientState.getPrevYaw();
+        float pitch = OverviewClientState.getPrevPitch();
+        player.setYRot(yaw);
+        player.yRotO = yaw;
+        player.yBodyRot = yaw;
+        player.yBodyRotO = yaw;
+        player.yHeadRot = yaw;
+        player.yHeadRotO = yaw;
+        player.setXRot(pitch);
+        player.xRotO = pitch;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -114,6 +161,12 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+
+        // 每帧把相机类型拉回第三人称：F5 在 handleKeybinds（早于 ClientTickEvent.Post）就已
+        // consume 并 cycle，drain 无效，必须用 reconcile 才能稳住「渲染玩家实体」
+        if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        }
 
         long window = mc.getWindow().getWindow();
 
@@ -180,6 +233,10 @@ public final class OverviewFlightController {
                     OverviewClientState.getCamY() + moveY,
                     OverviewClientState.getCamZ() + moveZ);
         }
+
+        // 冻结玩家旋转到进入快照（AFTER_SKY 早于实体渲染，时机正好）：
+        // 抵消 MouseHandler.turnPlayer 污染 + 稳定第三人称玩家模型朝向
+        freezePlayerRotation(mc.player);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -191,9 +248,32 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-        if (mc.screen != null) return;
+
+        // 受伤/死亡 → 完全退出控制面板（保留空中相机缓存），回原版第一人称夺回操控
+        if (mc.player.isDeadOrDying()) {
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closePanel();
+            return;
+        }
+        float health = mc.player.getHealth();
+        if (health < lastHealth) {
+            Log.info(TAG, "[Overview] Player took damage ({} → {}), exiting control panel", lastHealth, health);
+            com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closePanel();
+            lastHealth = health;
+            return;
+        }
+        lastHealth = health;
 
         long window = mc.getWindow().getWindow();
+
+        // Same screen-close baseline as ProjectionFlightController: a left-click that
+        // closes the Construction UI must not re-appear as a fresh world left-click.
+        boolean screenOpen = mc.screen != null;
+        if (wasScreenOpen && !screenOpen) {
+            wasLeftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            wasRightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        }
+        wasScreenOpen = screenOpen;
+        if (screenOpen) return;
 
         // ── Raycast from camera (also syncs ghost position when build is projecting) ──
         performRaycast(mc);
@@ -208,21 +288,30 @@ public final class OverviewFlightController {
             wasLeftDown = leftDown;
             wasRightDown = rightDown;
 
-            // Left-click: rotate building 90° CCW (only when build mode is active)
-            if (leftClicked && ProjectionClientState.isProjecting()) {
-                ProjectionClientState.rotate();
-                int steps = ProjectionClientState.getRotationSteps();
-                String direction = switch (steps) {
-                    case 1 -> "§e90°";
-                    case 2 -> "§e180°";
-                    case 3 -> "§e270°";
-                    default -> "§70°";
-                };
-                Log.info(TAG, "[Overview] Rotation: {}", direction);
-            }
+            // Pinned ghost: left-click cancels (back to hand-following), right-click opens the construction screen
+            if (ProjectionClientState.isPinned()) {
+                if (leftClicked) {
+                    ProjectionClientState.setPinned(false);
+                } else if (rightClicked) {
+                    ProjectionFlightController.openConstructionScreen(mc);
+                }
+            } else {
+                // Left-click: rotate building 90° CCW (only when build mode is active)
+                if (leftClicked && ProjectionClientState.isProjecting()) {
+                    ProjectionClientState.rotate();
+                    int steps = ProjectionClientState.getRotationSteps();
+                    String direction = switch (steps) {
+                        case 1 -> "§e90°";
+                        case 2 -> "§e180°";
+                        case 3 -> "§e270°";
+                        default -> "§70°";
+                    };
+                    Log.info(TAG, "[Overview] Rotation: {}", direction);
+                }
 
-            if (rightClicked) {
-                handleRightClick();
+                if (rightClicked) {
+                    handleRightClick();
+                }
             }
         }
 
@@ -333,7 +422,7 @@ public final class OverviewFlightController {
         // ── Pick closer target ──
         if (entityDist < blockDist && hitEntityId >= 0) {
             OverviewClientState.setTargetEntity(hitEntityId);
-            if (ProjectionClientState.isProjecting()) {
+            if (ProjectionClientState.isProjecting() && !ProjectionClientState.isPinned()) {
                 ProjectionClientState.setGhostPos(null);
                 ProjectionClientState.setOverlapDetected(false);
             }
@@ -344,16 +433,25 @@ public final class OverviewFlightController {
 
             // When build mode is projecting in overview, sync ghost from the same raycast
             if (ProjectionClientState.isProjecting()) {
-                BlockPos placePos = hitPos.relative(blockHit.getDirection());
-                ProjectionClientState.setGhostPos(placePos);
-                var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                boolean overlap = api != null && api.getBuildingAt(placePos) != null;
-                ProjectionClientState.setOverlapDetected(overlap);
+                if (ProjectionClientState.isPinned()) {
+                    // Ghost stays fixed — only re-check overlap against the fixed position
+                    BlockPos fixed = ProjectionClientState.getGhostPos();
+                    if (fixed != null) {
+                        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                        ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
+                    }
+                } else {
+                    BlockPos placePos = hitPos.relative(blockHit.getDirection());
+                    ProjectionClientState.setGhostPos(placePos);
+                    var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                    boolean overlap = api != null && api.getBuildingAt(placePos) != null;
+                    ProjectionClientState.setOverlapDetected(overlap);
+                }
             }
         } else {
             OverviewClientState.clearTarget();
             OverviewClientState.clearTargetEntity();
-            if (ProjectionClientState.isProjecting()) {
+            if (ProjectionClientState.isProjecting() && !ProjectionClientState.isPinned()) {
                 ProjectionClientState.setGhostPos(null);
                 ProjectionClientState.setOverlapDetected(false);
             }
@@ -373,9 +471,9 @@ public final class OverviewFlightController {
     // ═══════════════════════════════════════════════════════════════════
 
     private static void handleRightClick() {
-        // Branch 1: Building selected via Build bar → place building
+        // Branch 1: Building selected via Build bar → pin the ghost preview
         if (ProjectionClientState.isProjecting()) {
-            handlePlace();
+            pinGhost();
             return;
         }
 
@@ -395,24 +493,24 @@ public final class OverviewFlightController {
         }
     }
 
-    /** Place the selected building at the ghost position from overview raycast. */
-    private static void handlePlace() {
+    /** Pin the selected building's ghost at the current overview raycast position
+     *  and open the construction screen. */
+    private static void pinGhost() {
+        Minecraft mc = Minecraft.getInstance();
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
-        if (ghostPos == null) return;
-
-        if (ProjectionClientState.isOverlapDetected()) {
-            Log.warn(TAG, "[Overview] Cannot place here — overlapping building at {}", ghostPos);
+        if (ghostPos == null) {
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("[Overview] §c").append(
+                                com.wsteam.wandscape.shared.ui.I18n.name(
+                                        "message.wandscape.overview.cannot_pin",
+                                        "无法固定 — 准星没有对准方块")), true);
+            }
             return;
         }
-
-        var slots = ProjectionClientState.getBuildingSlots();
-        int index = ProjectionClientState.getSelectedSlotIndex();
-        if (slots.isEmpty() || index < 0 || index >= slots.size()) return;
-
-        BuildingSlot slot = slots.get(index);
-        int rotationSteps = ProjectionClientState.getRotationSteps();
-        PacketDistributor.sendToServer(new ProjectionPlacePacket(slot.id(), ghostPos, rotationSteps));
-        Log.info(TAG, "[Overview] Placed '{}' at {} rotation={}", slot.displayName(), ghostPos, rotationSteps);
+        ProjectionClientState.setPinned(true);
+        ProjectionFlightController.openConstructionScreen(mc);
+        Log.info(TAG, "[Overview] Ghost pinned at {}", ghostPos);
     }
 
     // ═══════════════════════════════════════════════════════════════════

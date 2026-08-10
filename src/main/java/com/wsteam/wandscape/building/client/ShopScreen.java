@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.Slider;
@@ -37,22 +38,24 @@ public class ShopScreen extends MedievalScreen {
     private final BlockPos buildingPos;
     private final UUID colonyId;
     private final UUID buildingId;
+    private final String creator;
     private Map<String, Integer> stock;
     private Map<String, Integer> maxStocks;
     private String[] itemIds;
     private ItemStack[] icons;
     private Component[] displayNames;
 
-    public ShopScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+    public ShopScreen(BlockPos buildingPos, UUID colonyId, UUID buildingId, String creator,
                       Map<String, Integer> stock, Map<String, Integer> maxStocks) {
         super(Component.literal("Shop"), PW, PH);
-        setTitleBar("Shop");
+        setTitleBar(I18n.name("gui.wandscape.shop.title", "Shop"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "shop_guide";
         this.buildingPos = buildingPos;
         this.colonyId = colonyId;
         this.buildingId = buildingId;
+        this.creator = creator;
         this.stock = new LinkedHashMap<>(stock);
         this.maxStocks = new LinkedHashMap<>(maxStocks);
         this.itemIds = this.maxStocks.keySet().toArray(new String[0]);
@@ -101,7 +104,7 @@ public class ShopScreen extends MedievalScreen {
         super.init();
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 20, 46, 16,
-                Component.literal("Close"), this::onClose));
+                I18n.name("gui.wandscape.common.close", "Close"), this::onClose));
 
         for (int i = 0; i < itemIds.length; i++) {
             int cy = rowCenterY(i);
@@ -142,7 +145,8 @@ public class ShopScreen extends MedievalScreen {
         int x = leftPos + 16;
 
         if (itemIds.length == 0) {
-            g.drawString(font, "No goods configured.", x, firstRowY() + 4, MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.shop.no_goods", "No goods configured."),
+                    x, firstRowY() + 4, MedievalColors.TEXT_MUTED);
         }
 
         for (int i = 0; i < itemIds.length; i++) {
@@ -169,8 +173,11 @@ public class ShopScreen extends MedievalScreen {
             g.drawString(font, "×" + cur + "/" + max, rightX, cy - font.lineHeight / 2, textColor);
         }
 
-        String bldText = "Building: " + buildingId.toString().substring(0, 8);
-        g.drawString(font, bldText, leftPos + 16, topPos + PH - 26, MedievalColors.TEXT_DIM);
+        if (creator != null && !creator.isBlank()) {
+            String creatorText = I18n.name("gui.wandscape.common.creator_label", "Creator").getString()
+                    + ": " + creator;
+            g.drawString(font, creatorText, leftPos + 16, topPos + PH - 26, MedievalColors.TEXT_DIM);
+        }
     }
 
     private void adjustMaxStock(String itemId, int newMax) {

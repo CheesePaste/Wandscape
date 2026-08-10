@@ -8,7 +8,6 @@ import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -48,17 +47,6 @@ public final class BuildingDebugController {
         var bus = NeoForge.EVENT_BUS;
         bus.addListener(ClientTickEvent.Post.class, BuildingDebugController::onClientTickPost);
         Log.info(TAG, "[Debug] Controller registered (auto-raycast mode)");
-    }
-
-    public static void toggle() {
-        boolean newActive = !BuildingDebugClientState.isActive();
-        BuildingDebugClientState.setActive(newActive);
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("[Debug] " + (newActive ? "§aON §f— look at buildings to inspect" : "§cOFF")),
-                    false);
-        }
     }
 
     // ── Post-tick: auto raycast ───────────────────────────────────────────

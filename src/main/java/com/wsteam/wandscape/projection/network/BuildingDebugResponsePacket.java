@@ -21,10 +21,12 @@ import com.wsteam.wandscape.shared.log.Log;
 public record BuildingDebugResponsePacket(
         UUID buildingId,
         String buildingTypeId,
+        String displayName,
         String category,
         UUID colonyId,
         BlockPos anchor,
         boolean intact,
+        boolean needsRepair,
         boolean shutdown,
         int comfort,
         int magic,
@@ -68,7 +70,8 @@ public record BuildingDebugResponsePacket(
 
     static void write(RegistryFriendlyByteBuf buf, BuildingDebugResponsePacket pkt) {
         buf.writeUUID(pkt.buildingId());
-        buf.writeResourceLocation(ResourceLocation.parse(pkt.buildingTypeId()));
+        buf.writeUtf(pkt.buildingTypeId(), 256);
+        buf.writeUtf(pkt.displayName(), 256);
         buf.writeUtf(pkt.category(), 256);
         if (pkt.colonyId() != null) {
             buf.writeBoolean(true);
@@ -78,6 +81,7 @@ public record BuildingDebugResponsePacket(
         }
         buf.writeBlockPos(pkt.anchor());
         buf.writeBoolean(pkt.intact());
+        buf.writeBoolean(pkt.needsRepair());
         buf.writeBoolean(pkt.shutdown());
         buf.writeInt(pkt.comfort());
         buf.writeInt(pkt.magic());
@@ -103,11 +107,13 @@ public record BuildingDebugResponsePacket(
 
     static BuildingDebugResponsePacket read(RegistryFriendlyByteBuf buf) {
         UUID buildingId = buf.readUUID();
-        String typeId = buf.readResourceLocation().toString();
+        String typeId = buf.readUtf(256);
+        String displayName = buf.readUtf(256);
         String category = buf.readUtf(256);
         UUID colonyId = buf.readBoolean() ? buf.readUUID() : null;
         BlockPos anchor = buf.readBlockPos();
         boolean intact = buf.readBoolean();
+        boolean needsRepair = buf.readBoolean();
         boolean shutdown = buf.readBoolean();
         int comfort = buf.readInt();
         int magic = buf.readInt();
@@ -126,8 +132,8 @@ public record BuildingDebugResponsePacket(
         UUID currentTaskId = buf.readBoolean() ? buf.readUUID() : null;
 
         return new BuildingDebugResponsePacket(
-                buildingId, typeId, category, colonyId, anchor,
-                intact, shutdown, comfort, magic, wonder, queueCap,
+                buildingId, typeId, displayName, category, colonyId, anchor,
+                intact, needsRepair, shutdown, comfort, magic, wonder, queueCap,
                 queue, currentTaskId);
     }
 }

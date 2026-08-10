@@ -5,13 +5,13 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.projection.network.BuildingActionPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -26,7 +26,7 @@ import org.lwjgl.glfw.GLFW;
  * is active (now tied to V panel open/close) and the player is looking at a
  * building.
  *
- * <p>Includes shutdown/restart and destroy action buttons below the info box.
+ * <p>Includes repair, shutdown/restart and destroy action buttons below the info box.
  */
 public final class BuildingDebugOverlay {
 
@@ -47,6 +47,7 @@ public final class BuildingDebugOverlay {
     private static final int LINE_H = 10;
 
     // Button colors
+    private static final int BTN_REPAIR_BG = 0xCC2E7D32;
     private static final int BTN_SHUTDOWN_BG = 0xCC8B4513;
     private static final int BTN_RESTART_BG = 0xCC2E7D32;
     private static final int BTN_DESTROY_BG = 0xCC8B0000;
@@ -56,6 +57,7 @@ public final class BuildingDebugOverlay {
     private static final int BTN_GAP = 4;
 
     // Button bounds — set each frame, read by mouse handler
+    private static volatile int btnRepairX, btnRepairY, btnRepairW;
     private static volatile int btnShutdownX, btnShutdownY, btnShutdownW;
     private static volatile int btnDestroyX, btnDestroyY, btnDestroyW;
     private static volatile boolean buttonsVisible = false;
@@ -93,9 +95,9 @@ public final class BuildingDebugOverlay {
         int screenW = mc.getWindow().getGuiScaledWidth();
 
         // ── Build all lines ──
-        String l1 = data.buildingTypeId();
+        Component l1 = I18n.name("building.wandscape." + data.buildingTypeId(), data.displayName());
         String l1cat = data.category();
-        String l1status = getStatusText(data);
+        Component l1status = getStatusText(data);
         int l1statusColor = getStatusColor(data);
 
         // We will render stats with icons manually.
@@ -103,16 +105,6 @@ public final class BuildingDebugOverlay {
         String magicStr = String.valueOf(data.magic());
         String wonderStr = String.valueOf(data.wonder());
         String queueStr = String.valueOf(data.queueCapacity());
-        String l3id = "id:" + shortUuid(data.buildingId());
-        String l3cid = data.colonyId() != null ? "cid:" + shortUuid(data.colonyId()) : "no colony";
-        String l3anchor = posStr(data.anchor());
-
-        List<WorkItem> queue = data.queue();
-        int qSize = queue != null ? queue.size() : 0;
-        String l4queue = "queue:" + qSize + " tasks";
-        String l4task = data.currentTaskId() != null
-                ? "current:" + shortUuid(data.currentTaskId())
-                : "no task";
 
         // ── Measure ──
         int iconW = 9;
@@ -123,15 +115,13 @@ public final class BuildingDebugOverlay {
 
         int[] widths = {
                 font.width(l1) + GAP + font.width(l1cat) + GAP + font.width(l1status),
-                statsW,
-                font.width(l3id) + GAP + font.width(l3cid) + GAP + font.width(l3anchor),
-                font.width(l4queue) + GAP + font.width(l4task)
+                statsW
         };
         int maxW = 0;
         for (int w : widths) if (w > maxW) maxW = w;
 
         int boxW = maxW + PAD_X * 2 + 24; // Extra padding to make the box wider
-        int boxH = font.lineHeight * 4 + PAD_Y * 2 + 3;
+        int boxH = font.lineHeight * 2 + PAD_Y * 2 + 3;
         int boxX = (screenW - boxW) / 2;
         int boxY = 4;
         float yBase = boxY + PAD_Y;
@@ -171,64 +161,68 @@ public final class BuildingDebugOverlay {
         x2 += font.width("Q:") + 2;
         drawText(g, font, queueStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
-        // ── Line 3: id | colonyId | anchor ──
-        float x3 = boxX + PAD_X;
-        drawText(g, font, l3id, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x3 += font.width(l3id) + GAP;
-        drawText(g, font, l3cid, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x3 += font.width(l3cid) + GAP;
-        drawText(g, font, l3anchor, x3, yBase + LINE_H * 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-
-        // ── Line 4: queue count | current task ──
-        float x4 = boxX + PAD_X;
-        drawText(g, font, l4queue, x4, yBase + LINE_H * 3, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-        x4 += font.width(l4queue) + GAP;
-        drawText(g, font, l4task, x4, yBase + LINE_H * 3, data.currentTaskId() != null ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
-
-        // ── Buttons ──
+        // ── Buttons: Repair | Shutdown/Restart | Destroy ──
         int btnY = boxY + boxH + 2;
-        String leftLabel = data.shutdown() ? "Restart" : "Shutdown";
+        Component repairLabel = I18n.name("gui.wandscape.building_action.repair", "Repair");
+        Component shutdownLabel = I18n.name(
+                data.shutdown() ? "gui.wandscape.building_action.restart" : "gui.wandscape.building_action.shutdown",
+                data.shutdown() ? "Restart" : "Shutdown");
+        Component destroyLabel = I18n.name("gui.wandscape.building_action.destroy", "Destroy");
 
-        // Measure button widths from labels
-        int leftLabelW = font.width(leftLabel);
-        int rightLabelW = font.width("Destroy");
-        int btnTotalW = leftLabelW + rightLabelW + PAD_X * 4 + BTN_GAP + 8;
+        int repairLabelW = font.width(repairLabel);
+        int shutdownLabelW = font.width(shutdownLabel);
+        int destroyLabelW = font.width(destroyLabel);
+
+        int repairW = repairLabelW + PAD_X * 2 + 4;
+        int shutdownW = shutdownLabelW + PAD_X * 2 + 4;
+        int destroyW = destroyLabelW + PAD_X * 2 + 4;
+        int btnTotalW = repairW + shutdownW + destroyW + BTN_GAP * 2;
         int btnAreaW = Math.max(btnTotalW, boxW);
         int btnStartX = boxX + (boxW - btnAreaW) / 2;
 
-        int leftW = leftLabelW + PAD_X * 2 + 4;
-        int rightW = rightLabelW + PAD_X * 2 + 4;
-        int leftX = btnStartX + (btnAreaW - leftW - rightW - BTN_GAP) / 2;
-        int rightX = leftX + leftW + BTN_GAP;
+        int repairX = btnStartX + (btnAreaW - btnTotalW) / 2;
+        int shutdownX = repairX + repairW + BTN_GAP;
+        int destroyX = shutdownX + shutdownW + BTN_GAP;
 
         // Hover state
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
-        boolean hoverLeft = mx >= leftX && mx <= leftX + leftW && my >= btnY && my <= btnY + BTN_HEIGHT;
-        boolean hoverRight = mx >= rightX && mx <= rightX + rightW && my >= btnY && my <= btnY + BTN_HEIGHT;
+        boolean repairEnabled = data.needsRepair();
+        boolean hoverRepair = repairEnabled && mx >= repairX && mx <= repairX + repairW && my >= btnY && my <= btnY + BTN_HEIGHT;
+        boolean hoverShutdown = mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
+        boolean hoverDestroy = mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
-        // Left button (shutdown / restart)
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, leftX, btnY, leftW, BTN_HEIGHT, false, hoverLeft);
-        // Draw a small colored rect to indicate action color (orange/green)
-        int leftAccent = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
-        g.fill(RenderType.guiOverlay(), leftX, btnY + BTN_HEIGHT - 2, leftX + leftW, btnY + BTN_HEIGHT, 0, leftAccent);
-        drawCenteredText(g, font, leftLabel, leftX + leftW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+        // Repair button (green, leftmost) — only usable when the building has any damage
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
+        g.fill(RenderType.guiOverlay(), repairX, btnY + BTN_HEIGHT - 2, repairX + repairW, btnY + BTN_HEIGHT, 0,
+                repairEnabled ? BTN_REPAIR_BG : 0x66445544);
+        drawCenteredText(g, font, repairLabel, repairX + repairW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
+                repairEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
-        // Right button (destroy)
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, rightX, btnY, rightW, BTN_HEIGHT, false, hoverRight);
-        g.fill(RenderType.guiOverlay(), rightX, btnY + BTN_HEIGHT - 2, rightX + rightW, btnY + BTN_HEIGHT, 0, BTN_DESTROY_BG);
-        drawCenteredText(g, font, "Destroy", rightX + rightW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+        // Shutdown / Restart button (orange/green, middle)
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, shutdownX, btnY, shutdownW, BTN_HEIGHT, false, hoverShutdown);
+        int shutdownAccent = data.shutdown() ? BTN_RESTART_BG : BTN_SHUTDOWN_BG;
+        g.fill(RenderType.guiOverlay(), shutdownX, btnY + BTN_HEIGHT - 2, shutdownX + shutdownW, btnY + BTN_HEIGHT, 0, shutdownAccent);
+        drawCenteredText(g, font, shutdownLabel, shutdownX + shutdownW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
+
+        // Destroy button (dark red, rightmost)
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, destroyX, btnY, destroyW, BTN_HEIGHT, false, hoverDestroy);
+        g.fill(RenderType.guiOverlay(), destroyX, btnY + BTN_HEIGHT - 2, destroyX + destroyW, btnY + BTN_HEIGHT, 0, BTN_DESTROY_BG);
+        drawCenteredText(g, font, destroyLabel, destroyX + destroyW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
         g.bufferSource().endBatch(RenderType.guiOverlay());
 
         // Store bounds for mouse handler
-        btnShutdownX = leftX;
+        btnRepairX = repairX;
+        btnRepairY = btnY;
+        btnRepairW = repairW;
+        btnShutdownX = shutdownX;
         btnShutdownY = btnY;
-        btnShutdownW = leftW;
-        btnDestroyX = rightX;
+        btnShutdownW = shutdownW;
+        btnDestroyX = destroyX;
         btnDestroyY = btnY;
-        btnDestroyW = rightW;
+        btnDestroyW = destroyW;
         buttonsVisible = true;
     }
 
@@ -248,7 +242,17 @@ public final class BuildingDebugOverlay {
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
 
-        // Check left button (shutdown / restart)
+        // Check repair button (left) — only usable when the building has any damage
+        if (data.needsRepair()
+                && mx >= btnRepairX && mx <= btnRepairX + btnRepairW
+                && my >= btnRepairY && my <= btnRepairY + BTN_HEIGHT) {
+            event.setCanceled(true);
+            PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "repair"));
+            Log.info(TAG, "[Debug] Button click: repair on building {}", shortUuid(data.buildingId()));
+            return;
+        }
+
+        // Check shutdown / restart button (middle)
         if (mx >= btnShutdownX && mx <= btnShutdownX + btnShutdownW
                 && my >= btnShutdownY && my <= btnShutdownY + BTN_HEIGHT) {
             event.setCanceled(true);
@@ -258,7 +262,7 @@ public final class BuildingDebugOverlay {
             return;
         }
 
-        // Check right button (destroy)
+        // Check destroy button (right)
         if (mx >= btnDestroyX && mx <= btnDestroyX + btnDestroyW
                 && my >= btnDestroyY && my <= btnDestroyY + BTN_HEIGHT) {
             event.setCanceled(true);
@@ -269,10 +273,10 @@ public final class BuildingDebugOverlay {
 
     // ── Status helpers ──
 
-    private static String getStatusText(BuildingDebugResponsePacket data) {
-        if (data.shutdown()) return "[STOPPED]";
-        if (!data.intact()) return "[BROKEN]";
-        return "[OK]";
+    private static Component getStatusText(BuildingDebugResponsePacket data) {
+        if (data.shutdown()) return I18n.name("gui.wandscape.building_status.stopped", "Stopped");
+        if (!data.intact()) return I18n.name("gui.wandscape.building_status.broken", "Broken");
+        return I18n.name("gui.wandscape.building_status.ok", "Operational");
     }
 
     private static int getStatusColor(BuildingDebugResponsePacket data) {
@@ -285,11 +289,6 @@ public final class BuildingDebugOverlay {
 
     private static String shortUuid(UUID id) {
         return id.toString().substring(0, 8);
-    }
-
-    private static String posStr(BlockPos pos) {
-        if (pos == null) return "-";
-        return pos.getX() + "," + pos.getY() + "," + pos.getZ();
     }
 
     private static int brighten(int color) {
@@ -308,7 +307,17 @@ public final class BuildingDebugOverlay {
                 Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
     }
 
+    private static void drawText(GuiGraphics g, Font font, Component text, float x, float y, int color) {
+        font.drawInBatch(text, x, y, color, false,
+                g.pose().last().pose(), g.bufferSource(),
+                Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+    }
+
     private static void drawCenteredText(GuiGraphics g, Font font, String text, int x, float y, int color) {
+        drawText(g, font, text, x - font.width(text) / 2f, y, color);
+    }
+
+    private static void drawCenteredText(GuiGraphics g, Font font, Component text, int x, float y, int color) {
         drawText(g, font, text, x - font.width(text) / 2f, y, color);
     }
 }

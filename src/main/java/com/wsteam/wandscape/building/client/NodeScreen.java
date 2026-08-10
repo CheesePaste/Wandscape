@@ -41,7 +41,6 @@ public class NodeScreen extends MedievalScreen {
     private String element = "";
     private int amountPerHarvest = 1;
     private int channelTicks = 0;
-    private int manaCost = 0;
 
     private int contentX;
     private int controlY;
@@ -61,8 +60,8 @@ public class NodeScreen extends MedievalScreen {
         this.element = packet.element();
         this.amountPerHarvest = packet.amountPerHarvest();
         this.channelTicks = packet.channelTicks();
-        this.manaCost = packet.manaCost();
-        setTitleBar(packet.buildingTypeId());
+        setTitleBar(com.wsteam.wandscape.shared.ui.I18n.name(
+                "building.wandscape." + packet.buildingTypeId(), packet.buildingTypeId()));
         if (slider != null) {
             slider.setMax(MAX_HARVESTS);
             slider.setValue(1);
@@ -80,13 +79,39 @@ public class NodeScreen extends MedievalScreen {
                         qe.blueprintId(), qe.summary()));
             }
             taskQueuePanel.setEntries(entries);
+            taskQueuePanel.setCurrent(toPanelCurrent(packet.current()));
         }
+    }
+
+    /** Convert the packet's current-task record to the panel's CurrentInfo (or null). */
+    private static TaskQueuePanel.CurrentInfo toPanelCurrent(TaskQueueDataPacket.CurrentTask ct) {
+        if (ct == null) return null;
+        TaskQueueDataPacket.QueueEntry e = ct.entry();
+        return new TaskQueuePanel.CurrentInfo(
+                new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
+                        e.quantity(), e.blueprintId(), e.summary()),
+                ct.stepIndex(), ct.totalSteps(),
+                ct.channelRemainingTicks(), ct.channelTotalTicks());
     }
 
     /** Send a REFRESH request to the server to get the current task queue. */
     private void requestQueueRefresh() {
         if (nodePos == null || nodePos.equals(BlockPos.ZERO)) return;
         PacketDistributor.sendToServer(new TaskQueueModifyPacket(nodePos, "refresh", 0));
+    }
+
+    private int queueRefreshCounter;
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (taskQueuePanel != null) {
+            taskQueuePanel.tickProgress();
+            if (++queueRefreshCounter >= 20) {
+                queueRefreshCounter = 0;
+                requestQueueRefresh();
+            }
+        }
     }
 
     @Override
@@ -104,7 +129,8 @@ public class NodeScreen extends MedievalScreen {
         addRenderableWidget(slider);
 
         submitBtn = new MedievalButton(contentX + contentW - 70, controlY + 4, 70, 18,
-                Component.literal("Publish Gather"), this::onSubmit);
+                com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.node.publish_gather", "Publish Gather"),
+                this::onSubmit);
         addRenderableWidget(submitBtn);
 
         // ── Right panel: Task Queue (cancel / reorder gather tasks) ──
@@ -127,17 +153,25 @@ public class NodeScreen extends MedievalScreen {
         super.render(g, mouseX, mouseY, partialTick);
 
         int y = topPos + headerHeight + 8;
-        drawInfoLine(g, y, "Element", element); y += INFO_ROW_H;
-        drawInfoLine(g, y, "Per Harvest", String.valueOf(amountPerHarvest)); y += INFO_ROW_H;
-        drawInfoLine(g, y, "Channel", channelTicks + " ticks"); y += INFO_ROW_H;
-        drawInfoLine(g, y, "Mana / Harvest", String.valueOf(manaCost));
+        drawInfoLine(g, y, i18n("gui.wandscape.node.element", "Element"),
+                i18n("element.wandscape." + element, element));
+        y += INFO_ROW_H;
+        drawInfoLine(g, y, i18n("gui.wandscape.node.per_harvest", "Per Harvest"), String.valueOf(amountPerHarvest));
+        y += INFO_ROW_H;
+        drawInfoLine(g, y, i18n("gui.wandscape.node.channel", "Channel"),
+                i18n("gui.wandscape.node.channel_ticks", "%s ticks", channelTicks));
+        y += INFO_ROW_H;
 
         // Live totals below the slider
         int n = slider != null ? slider.getValue() : 1;
-        String totals = "Total " + (amountPerHarvest * n)
-                + " | Mana " + (manaCost * n);
+        String totals = i18n("gui.wandscape.node.total_line", "Total %1$s",
+                amountPerHarvest * n);
         g.drawString(Minecraft.getInstance().font, totals,
                 contentX, controlY + 26, MedievalColors.TEXT_MUTED);
+    }
+
+    private static String i18n(String key, String fallback, Object... args) {
+        return com.wsteam.wandscape.shared.ui.I18n.name(key, fallback, args).getString();
     }
 
     private void drawInfoLine(GuiGraphics g, int y, String label, String value) {

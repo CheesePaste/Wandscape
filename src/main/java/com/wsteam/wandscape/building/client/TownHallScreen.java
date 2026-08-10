@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.client;
 import java.util.UUID;
 
 import com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
@@ -30,13 +31,15 @@ public class TownHallScreen extends MedievalScreen {
     private final int level;
     private final int experience;
     private final int expToNext;
+    private final String founderName;
 
     private EditBox nameBox;
 
     public TownHallScreen(BlockPos buildingPos, UUID colonyId,
-                          String colonyName, int level, int experience, int expToNext) {
-        super(Component.literal("Town Hall"), PW, PH);
-        setTitleBar("市政厅");
+                          String colonyName, int level, int experience, int expToNext,
+                          String founderName) {
+        super(I18n.name("gui.wandscape.townhall.title", "Town Hall"), PW, PH);
+        setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "townhall_guide";
@@ -46,6 +49,7 @@ public class TownHallScreen extends MedievalScreen {
         this.level = level;
         this.experience = experience;
         this.expToNext = expToNext;
+        this.founderName = founderName;
     }
 
     @Override
@@ -56,7 +60,7 @@ public class TownHallScreen extends MedievalScreen {
         int ebY = topPos + headerHeight + 13;
 
         nameBox = new EditBox(font, cx - 80, ebY, 160, font.lineHeight + 2,
-                Component.literal("Colony name"));
+                I18n.name("gui.wandscape.townhall.name_hint", "魔法小镇名称"));
         nameBox.setValue(colonyName);
         nameBox.setMaxLength(30);
         nameBox.setBordered(false);
@@ -98,9 +102,16 @@ public class TownHallScreen extends MedievalScreen {
         int ebH = font.lineHeight + 6;
         drawInsetField(g, ebX, ebY, ebW, ebH);
 
-        // Colony level
+        // Colony founder
         int y = ebY + ebH + 16;
-        String levelText = "殖民地等级 " + level;
+        Component founderText = I18n.name("gui.wandscape.townhall.founder", "创建者：%s",
+                founderName != null && !founderName.isEmpty() ? founderName : "—");
+        g.drawString(font, founderText, cx - font.width(founderText) / 2, y,
+                MedievalColors.TEXT_WARM_WHITE);
+        y += font.lineHeight + 8;
+
+        // Colony level
+        Component levelText = I18n.name("gui.wandscape.townhall.level", "魔法小镇等级 %s", level);
         g.drawString(font, levelText, cx - font.width(levelText) / 2, y,
                 MedievalColors.BORDER_GOLD);
         y += font.lineHeight + 10;
@@ -110,22 +121,24 @@ public class TownHallScreen extends MedievalScreen {
         y += EXP_BAR_H + 14;
 
         // Experience source info
-        g.drawString(font, "经验来源（游客满意度100%时）：", leftX, y,
-                MedievalColors.TEXT_MUTED);
+        g.drawString(font, I18n.name("gui.wandscape.townhall.exp_source", "经验来源（游客满意度100%时）："),
+                leftX, y, MedievalColors.TEXT_MUTED);
         y += font.lineHeight + 3;
 
-        String[] expLines = {
-            "游客等级 < 殖民地等级 → 0 经验",
-            "游客等级 = 殖民地等级 → 100 经验",
-            "游客等级 > 殖民地等级 → 500 经验"
+        Component[] expLines = {
+            I18n.name("gui.wandscape.townhall.exp_lt", "游客等级 < 魔法小镇等级 → 0 经验"),
+            I18n.name("gui.wandscape.townhall.exp_eq", "游客等级 = 魔法小镇等级 → 100 经验"),
+            I18n.name("gui.wandscape.townhall.exp_gt", "游客等级 > 魔法小镇等级 → 500 经验")
         };
-        for (String line : expLines) {
-            g.drawString(font, "  " + line, leftX + 4, y, MedievalColors.TEXT_MUTED);
+        for (Component line : expLines) {
+            g.drawString(font, Component.literal("  ").copy().append(line), leftX + 4, y,
+                    MedievalColors.TEXT_MUTED);
             y += font.lineHeight + 2;
         }
 
         y += 4;
-        String hint = "点击名称框修改殖民地名称，输入完成自动保存";
+        Component hint = I18n.name("gui.wandscape.townhall.hint",
+                "点击名称框修改魔法小镇名称，输入完成自动保存");
         g.drawString(font, hint, cx - font.width(hint) / 2, y, MedievalColors.TEXT_MUTED);
     }
 

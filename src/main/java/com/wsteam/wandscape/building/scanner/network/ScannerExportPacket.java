@@ -8,20 +8,23 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity.ShopGoodData;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
+import com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -29,10 +32,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.phys.AABB;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
@@ -41,26 +46,33 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * The server reads the scanner BE, scans world blocks, builds a JSON matching
  * the building config format, and writes it to wandscape_buildings/&lt;id&gt;.json.
  */
-public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
+public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
 
     private static final String TAG = "ScannerExport";
 
-    public static final Type<BuildingScannerExportPacket> TYPE =
+    /**
+     * 装饰实体白名单：实体（非方块）类装饰，方块三重循环扫不到，需单独按 AABB 查询。
+     * 三者都是 BlockAttachedEntity（NBT 用 TileX/TileY/TileZ 存挂靠块坐标），机制统一。
+     */
+    private static final Set<String> DECORATION_TYPES = Set.of(
+            "minecraft:item_frame", "minecraft:glow_item_frame", "minecraft:painting");
+
+    public static final Type<ScannerExportPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "scanner_export"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, BuildingScannerExportPacket> STREAM_CODEC =
-            StreamCodec.of(BuildingScannerExportPacket::write, BuildingScannerExportPacket::read);
+    public static final StreamCodec<RegistryFriendlyByteBuf, ScannerExportPacket> STREAM_CODEC =
+            StreamCodec.of(ScannerExportPacket::write, ScannerExportPacket::read);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 
-    public static void handleServer(BuildingScannerExportPacket packet, ServerPlayer player) {
+    public static void handleServer(ScannerExportPacket packet, ServerPlayer player) {
         if (player == null) return;
         ServerLevel level = player.serverLevel();
         BlockEntity be = level.getBlockEntity(packet.pos);
-        if (!(be instanceof BuildingScannerBlockEntity scanner)) {
+        if (!(be instanceof CreativeScannerBlockEntity scanner)) {
             Log.warn(TAG, "No scanner BE at {}", packet.pos);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "§cNo scanner found at " + packet.pos));
@@ -87,7 +99,7 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         wMin = scanner.getWorldMin();
         wMax = scanner.getWorldMax();
 
-        if (scanner.getTargetMode() == BuildingScannerBlockEntity.TargetMode.ROAD) {
+        if (scanner.getTargetMode() == CreativeScannerBlockEntity.TargetMode.ROAD) {
             exportRoad(scanner, packet, player, level, wMin, wMax);
             return;
         }
@@ -102,8 +114,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(bp);
-                    // Skip all scanner blocks (SAVE or CORNER) and air
-                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                    // Skip all scanner blocks (SAVE or CORNER), interact spot markers, and air
+                    if (state.isAir()) continue;
+                    if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
+                            || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())
+                            || state.is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) continue;
 
                     int rx = x - wMin.getX() + scanner.getBoundaryMin().x();
                     int ry = y - wMin.getY() + scanner.getBoundaryMin().y();
@@ -133,6 +148,57 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             }
         }
 
+        // Scan decoration entities (item frames, paintings) inside the boundary.
+        // They are entities, not blocks — the block loop above cannot see them.
+        // offset = 实体块坐标 − 扫描器坐标（与 block_mapping 同约定）。
+        List<JsonObject> entities = new ArrayList<>();
+        List<Entity> decorations = level.getEntities((Entity) null,
+                new AABB(wMin.getX(), wMin.getY(), wMin.getZ(),
+                        wMax.getX() + 1.0, wMax.getY() + 1.0, wMax.getZ() + 1.0),
+                e -> DECORATION_TYPES.contains(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString()));
+        for (Entity e : decorations) {
+            try {
+                BlockPos epos = e.blockPosition();
+                int rx = epos.getX() - scanner.getBlockPos().getX();
+                int ry = epos.getY() - scanner.getBlockPos().getY();
+                int rz = epos.getZ() - scanner.getBlockPos().getZ();
+                String typeId = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+
+                // Trim entity NBT: strip UUID/Pos/Motion, rebase position to the
+                // relative offset so the export is independent of absolute coords.
+                CompoundTag tag = e.saveWithoutId(new CompoundTag());
+                tag.remove("UUID");
+                tag.remove("Pos");
+                tag.remove("Motion");
+                tag.putString("id", typeId);
+                tag.putInt("TileX", rx);
+                tag.putInt("TileY", ry);
+                tag.putInt("TileZ", rz);
+                ListTag posList = new ListTag();
+                posList.add(DoubleTag.valueOf(rx + 0.5));
+                posList.add(DoubleTag.valueOf(ry + 0.5));
+                posList.add(DoubleTag.valueOf(rz + 0.5));
+                tag.put("Pos", posList);
+
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                NbtIo.writeCompressed(tag, baos);
+
+                JsonObject ent = new JsonObject();
+                JsonArray offArr = new JsonArray();
+                offArr.add(rx);
+                offArr.add(ry);
+                offArr.add(rz);
+                ent.add("offset", offArr);
+                ent.addProperty("type", typeId);
+                ent.addProperty("facing", e.getDirection().getName());
+                ent.addProperty("nbt", Base64.getEncoder().encodeToString(baos.toByteArray()));
+                entities.add(ent);
+            } catch (IOException ex) {
+                Log.warn(TAG, "Failed to serialize decoration entity at {}: {}",
+                        e.blockPosition(), ex.toString());
+            }
+        }
+
         scanner.setScanned(true);
         scanner.setChanged();
         level.sendBlockUpdated(packet.pos, scanner.getBlockState(), scanner.getBlockState(), 3);
@@ -141,6 +207,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         JsonObject root = new JsonObject();
         root.addProperty("id", id);
         root.addProperty("display_name", scanner.getDisplayName());
+        if (scanner.getCreator() != null && !scanner.getCreator().isBlank()) {
+            root.addProperty("creator", scanner.getCreator());
+        }
         root.addProperty("category", scanner.getCategory());
 
         // Pattern
@@ -168,6 +237,15 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 nbtObj.addProperty(entry.getKey(), entry.getValue());
             }
             root.add("block_nbt", nbtObj);
+        }
+
+        // Decoration entities (item frames / paintings), rebuilt via spawn_entity step
+        if (!entities.isEmpty()) {
+            JsonArray entitiesArr = new JsonArray();
+            for (JsonObject ent : entities) {
+                entitiesArr.add(ent);
+            }
+            root.add("entities", entitiesArr);
         }
 
         // Meta
@@ -223,24 +301,28 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             root.add("door_offset", dArr);
         }
 
-        // Interact AABB
-        if (!scanner.getTouristInteractZones().isEmpty()) {
-            JsonArray zonesArr = new JsonArray();
-            for (BoundaryBox zone : scanner.getTouristInteractZones()) {
-                JsonObject zObj = new JsonObject();
-                JsonArray zMin = new JsonArray();
-                zMin.add(zone.min().x());
-                zMin.add(zone.min().y());
-                zMin.add(zone.min().z());
-                zObj.add("min", zMin);
-                JsonArray zMax = new JsonArray();
-                zMax.add(zone.max().x());
-                zMax.add(zone.max().y());
-                zMax.add(zone.max().z());
-                zObj.add("max", zMax);
-                zonesArr.add(zObj);
+        // Interact spots: 扫 boundary 内 interact_spot_marker → interact_spots（相对 anchor 偏移 + 动作小写）。
+        // marker 占格即 spot 格（创作者自行留空），marker 已从 pattern 跳过。
+        JsonArray spotsArr = new JsonArray();
+        for (int x = wMin.getX(); x <= wMax.getX(); x++) {
+            for (int y = wMin.getY(); y <= wMax.getY(); y++) {
+                for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
+                    BlockState st = level.getBlockState(new BlockPos(x, y, z));
+                    if (!st.is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) continue;
+                    JsonObject sObj = new JsonObject();
+                    JsonArray posArr = new JsonArray();
+                    posArr.add(x - scanner.getBlockPos().getX());
+                    posArr.add(y - scanner.getBlockPos().getY());
+                    posArr.add(z - scanner.getBlockPos().getZ());
+                    sObj.add("pos", posArr);
+                    sObj.addProperty("action", InteractSpotMarkerBlock.spotActionOrBrowse(st).toJsonString());
+                    sObj.addProperty("facing", st.getValue(InteractSpotMarkerBlock.FACING).getName());
+                    spotsArr.add(sObj);
+                }
             }
-            root.add("tourist_interact_aabb", zonesArr);
+        }
+        if (!spotsArr.isEmpty()) {
+            root.add("interact_spots", spotsArr);
         }
 
         // Category-specific configs
@@ -251,7 +333,6 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             nc.addProperty("element", scanner.getNodeElement());
             nc.addProperty("amount_per_harvest", scanner.getNodeAmountPerHarvest());
             nc.addProperty("channel_ticks", scanner.getNodeChannelTicks());
-            nc.addProperty("mana_cost", scanner.getNodeManaCost());
             root.add("node_config", nc);
         }
 
@@ -287,6 +368,20 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
             root.add("service", svc);
         }
 
+        if ("relax".equals(scanner.getCategory())) {
+            JsonObject rx = new JsonObject();
+            rx.addProperty("energy_restore", scanner.getRelaxEnergyRestore());
+            rx.addProperty("interaction_duration_ticks", scanner.getRelaxInteractionDurationTicks());
+            root.add("relax", rx);
+        }
+
+        if ("atm".equals(scanner.getCategory())) {
+            JsonObject ax = new JsonObject();
+            ax.addProperty("withdraw_amount", scanner.getAtmWithdrawAmount());
+            ax.addProperty("interaction_duration_ticks", scanner.getAtmInteractionDurationTicks());
+            root.add("atm", ax);
+        }
+
         // Blueprint reference
         JsonObject bp = new JsonObject();
         bp.addProperty("id", "build:clear_and_build");
@@ -294,23 +389,28 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         bind.addProperty("offsets", "$pattern");
         bind.addProperty("blocks", "$block_mapping");
         bind.addProperty("blocks_nbt", "$block_nbt");
+        bind.addProperty("entities", "$entities");
         bind.addProperty("name", "$display_name");
         bp.add("bind", bind);
         root.add("blueprint", bp);
 
-        // Write file
+        // Write file into the datapack-readable buildings directory so it can be built immediately
+        // and ships with the mod jar (dev source resources) or stays readable via /reload (world datapack).
         try {
-            Path exportDir = level.getServer().getServerDirectory()
-                    .resolve("wandscape_buildings");
+            Path exportDir = resolveDatapackDir(level, "buildings", "wandscape_builds");
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
 
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
 
-            Log.info(TAG, "Exported building '{}' to {}", id, outFile.toAbsolutePath());
+            // Register in-memory so the building is buildable right now, no /reload needed.
+            com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().registerFromJson(root);
+
+            Log.info(TAG, "Exported building '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§aExported building '" + id + "' to §e" + outFile.toAbsolutePath()));
+                    "§aExported building '" + id + "' to §e" + outFile.toAbsolutePath()
+                    + "§a — 可立即建造，/reload 后依然有效"));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export building '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
@@ -318,8 +418,37 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         }
     }
 
-    private static void exportRoad(BuildingScannerBlockEntity scanner,
-                                   BuildingScannerExportPacket packet,
+    /**
+     * Resolve the datapack directory for a config category (e.g. "buildings").
+     *
+     * <p>Exports always go into a <b>world datapack</b> ({@code <world>/datapacks/<fallbackPack>}):
+     * the game loads world datapacks on every restart, so exported buildings/roads survive
+     * quitting and re-entering in both dev and production. (Dev serves the mod's data from
+     * {@code build/resources/main}, not {@code src/main/resources}, so writing into the source
+     * folder was lost on relaunch.) {@code pack.mcmeta} makes the folder a valid, auto-enabled
+     * datapack; without it the game ignores the folder entirely.
+     */
+    private static Path resolveDatapackDir(ServerLevel level, String category, String fallbackPack) throws IOException {
+        Path packRoot = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR)
+                .resolve(fallbackPack);
+        ensurePackMeta(packRoot);
+        return packRoot.resolve("data/wandscape/" + category);
+    }
+
+    /** Write a pack.mcmeta so the folder is recognized as a loadable world datapack. */
+    private static void ensurePackMeta(Path packRoot) throws IOException {
+        Path metaFile = packRoot.resolve("pack.mcmeta");
+        if (Files.exists(metaFile)) return;
+        Files.createDirectories(packRoot);
+        int format = net.minecraft.SharedConstants.getCurrentVersion()
+                .getPackVersion(net.minecraft.server.packs.PackType.SERVER_DATA);
+        String meta = "{\n  \"pack\": {\n    \"pack_format\": " + format
+                + ",\n    \"description\": \"Wandscape exported buildings & road presets\"\n  }\n}";
+        Files.writeString(metaFile, meta);
+    }
+
+    private static void exportRoad(CreativeScannerBlockEntity scanner,
+                                   ScannerExportPacket packet,
                                    ServerPlayer player,
                                    ServerLevel level,
                                    BlockPos wMin,
@@ -335,7 +464,9 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
                 for (int z = wMin.getZ(); z <= wMax.getZ(); z++) {
                     BlockPos bp = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(bp);
-                    if (state.isAir() || state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())) continue;
+                    if (state.isAir()) continue;
+                    if (state.is(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER.get())
+                            || state.is(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER.get())) continue;
                     String bId = blockId(state);
                     blockCounts.put(bId, blockCounts.getOrDefault(bId, 0) + 1);
                 }
@@ -363,15 +494,19 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         root.add("blocks", blocksArr);
 
         try {
-            Path exportDir = level.getServer().getServerDirectory().resolve("wandscape_roads");
+            Path exportDir = resolveDatapackDir(level, "road_presets", "wandscape_roads");
             Files.createDirectories(exportDir);
             Path outFile = exportDir.resolve(sanitizeFileName(id) + ".json");
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
             Files.writeString(outFile, json);
 
-            Log.info(TAG, "Exported road preset '{}' to {}", id, outFile.toAbsolutePath());
+            // Register in-memory so the preset is usable immediately, no /reload needed.
+            com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance().registerFromJson(root);
+
+            Log.info(TAG, "Exported road preset '{}' to {} (runtime-registered)", id, outFile.toAbsolutePath());
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath() + " §a(Hot registered!)"));
+                    "§aExported road preset '" + id + "' to §e" + outFile.toAbsolutePath()
+                    + "§a — 可立即使用，/reload 后依然有效"));
         } catch (IOException e) {
             Log.warn(TAG, "Failed to export road preset '{}'", id, e);
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
@@ -407,11 +542,11 @@ public record BuildingScannerExportPacket(BlockPos pos) implements CustomPacketP
         return id.toString();
     }
 
-    private static void write(RegistryFriendlyByteBuf buf, BuildingScannerExportPacket pkt) {
+    private static void write(RegistryFriendlyByteBuf buf, ScannerExportPacket pkt) {
         buf.writeBlockPos(pkt.pos);
     }
 
-    private static BuildingScannerExportPacket read(RegistryFriendlyByteBuf buf) {
-        return new BuildingScannerExportPacket(buf.readBlockPos());
+    private static ScannerExportPacket read(RegistryFriendlyByteBuf buf) {
+        return new ScannerExportPacket(buf.readBlockPos());
     }
 }

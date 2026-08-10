@@ -6,6 +6,7 @@ import java.util.Map;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Rotation;
@@ -142,6 +143,53 @@ public final class BuildingRotation {
             BlockOffset rotatedOff = rotateOffset(off, steps);
             String rotatedBlock = rotateBlockStateString(entry.getValue(), steps);
             result.put(rotatedOff.toKey(), rotatedBlock);
+        }
+        return result;
+    }
+
+    /**
+     * Rotate a Direction string (e.g. "north") by {@code steps} increments of 90°
+     * clockwise around Y — same handedness as {@link #rotateOffset}. Up/down
+     * directions are unchanged; unknown strings pass through unchanged.
+     */
+    public static String rotateFacing(String facing, int steps) {
+        Direction dir = Direction.byName(facing);
+        if (dir == null || dir.getAxis() == Direction.Axis.Y) return facing;
+        steps = steps & 3;
+        for (int i = 0; i < steps; i++) {
+            dir = dir.getClockWise();
+        }
+        return dir.getName();
+    }
+
+    /**
+     * Rotate a horizontal {@link Direction} by {@code steps} increments of 90°
+     * clockwise around Y (same handedness as {@link #rotateOffset}).
+     */
+    public static Direction rotateDirection(Direction dir, int steps) {
+        if (dir == null || dir.getAxis() == Direction.Axis.Y) return dir;
+        steps = steps & 3;
+        for (int i = 0; i < steps; i++) {
+            dir = dir.getClockWise();
+        }
+        return dir;
+    }
+
+    /**
+     * Rotate a map of offsets-to-NBT strings (block_nbt) by {@code steps}.
+     * Keys are "x,y,z" strings; values are opaque NBT strings carried as-is.
+     * Returns {@code null} when the input map is {@code null}.
+     */
+    public static Map<String, String> rotateBlockNbt(Map<String, String> blockNbt, int steps) {
+        if (blockNbt == null || blockNbt.isEmpty()) return blockNbt;
+        if (steps <= 0) return blockNbt;
+        steps = steps & 3;
+        Map<String, String> result = new HashMap<>();
+        for (var entry : blockNbt.entrySet()) {
+            BlockOffset off = parseKey(entry.getKey());
+            if (off == null) continue;
+            BlockOffset rotatedOff = rotateOffset(off, steps);
+            result.put(rotatedOff.toKey(), entry.getValue());
         }
         return result;
     }

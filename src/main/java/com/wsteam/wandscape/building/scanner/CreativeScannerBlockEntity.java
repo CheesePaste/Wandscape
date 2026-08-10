@@ -9,7 +9,6 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BlockOffset;
-import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
@@ -28,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Block entity for the Building Scanner block.
  * Stores all scanner state and syncs to client for wireframe rendering.
  */
-public class BuildingScannerBlockEntity extends BlockEntity {
+public class CreativeScannerBlockEntity extends BlockEntity {
 
     private static final String TAG = "ScannerBE";
 
@@ -37,11 +36,9 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_BOUNDARY_MIN = "boundary_min";
     private static final String KEY_BOUNDARY_MAX = "boundary_max";
     private static final String KEY_DOOR_OFFSET = "door_offset";
-    private static final String KEY_TOURIST_INTERACT_ZONES = "tourist_interact_zones";
-    private static final String KEY_ZONE_MIN = "min";
-    private static final String KEY_ZONE_MAX = "max";
     private static final String KEY_BUILDING_ID = "building_id";
     private static final String KEY_DISPLAY_NAME = "display_name";
+    private static final String KEY_CREATOR = "creator";
     private static final String KEY_CATEGORY = "category";
     private static final String KEY_COMFORT = "comfort";
     private static final String KEY_MAGIC = "magic";
@@ -53,6 +50,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_SERVICE_ENERGY = "service_energy";
     private static final String KEY_SERVICE_MAX_OCC = "service_max_occ";
     private static final String KEY_SERVICE_DURATION = "service_duration";
+    private static final String KEY_RELAX_ENERGY = "relax_energy_restore";
+    private static final String KEY_RELAX_DURATION = "relax_duration";
+    private static final String KEY_ATM_WITHDRAW = "atm_withdraw_amount";
+    private static final String KEY_ATM_DURATION = "atm_duration";
 
     // ── New field NBT keys ──
     private static final String KEY_MAINTENANCE_COST = "maintenance_cost";
@@ -65,7 +66,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private static final String KEY_NC_ELEMENT = "element";
     private static final String KEY_NC_AMOUNT = "amount_per_harvest";
     private static final String KEY_NC_CHANNEL_TICKS = "channel_ticks";
-    private static final String KEY_NC_MANA_COST = "mana_cost";
 
     // Sub-keys for cost/good list entries
     private static final String KEY_ENTRY_ELEMENT = "element";
@@ -86,9 +86,9 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private BlockOffset boundaryMax = BlockOffset.of(1, 1, 1);
     @Nullable
     private BlockOffset doorOffset = null;
-    private final List<BoundaryBox> touristInteractZones = new ArrayList<>();
     private String buildingId = "";
     private String displayName = "";
+    private String creator = "";
     private String category = "basic";
     private int comfort, magic, wonder;
     /** Whether blocks have been scanned for pattern/mapping. */
@@ -104,6 +104,12 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     // ── Service config ──
     private int serviceEnergyPerUse, serviceMaxOccupancy, serviceInteractionDurationTicks;
 
+    // ── Relax config ──
+    private int relaxEnergyRestore, relaxInteractionDurationTicks;
+
+    // ── Atm config ──
+    private int atmWithdrawAmount, atmInteractionDurationTicks;
+
     // ── Maintenance cost ──
     private Map<String, Integer> maintenanceCost = new HashMap<>();
 
@@ -112,7 +118,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     private String nodeElement = "earth";
     private int nodeAmountPerHarvest = 5;
     private int nodeChannelTicks = 200;
-    private int nodeManaCost = 5;
 
     // ── Shop goods (only for category=shop) ──
     private final List<ShopGoodData> shopGoods = new ArrayList<>();
@@ -120,7 +125,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     // ── Service element output (only for category=service) ──
     private final Map<String, Integer> serviceElementOutput = new HashMap<>();
 
-    public BuildingScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public CreativeScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
@@ -162,7 +167,7 @@ public class BuildingScannerBlockEntity extends BlockEntity {
                 .forEach(pos -> {
                     if (pos.equals(myPos)) return;
                     net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof BuildingScannerBlockEntity other) {
+                    if (be instanceof CreativeScannerBlockEntity other) {
                         if (other.getBlockMode() == BlockMode.CORNER
                                 && structureName.equalsIgnoreCase(other.getStructureName())) {
                             cornerPositions.add(pos.immutable());
@@ -248,35 +253,14 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         setChangedAndSync();
     }
 
-    public List<BoundaryBox> getTouristInteractZones() {
-        return Collections.unmodifiableList(touristInteractZones);
-    }
-    public void addTouristInteractZone(BoundaryBox zone) {
-        touristInteractZones.add(zone);
-        setChangedAndSync();
-    }
-    public void removeTouristInteractZone(int index) {
-        if (index >= 0 && index < touristInteractZones.size()) {
-            touristInteractZones.remove(index);
-            setChangedAndSync();
-        }
-    }
-    public void updateTouristInteractZone(int index, BoundaryBox zone) {
-        if (index >= 0 && index < touristInteractZones.size()) {
-            touristInteractZones.set(index, zone);
-            setChangedAndSync();
-        }
-    }
-    public void clearTouristInteractZones() {
-        touristInteractZones.clear();
-        setChangedAndSync();
-    }
-
     public String getBuildingId() { return buildingId; }
     public void setBuildingId(String id) { this.buildingId = id; }
 
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String name) { this.displayName = name; }
+
+    public String getCreator() { return creator; }
+    public void setCreator(String value) { this.creator = value; }
 
     public String getCategory() { return category; }
     public void setCategory(String cat) { this.category = cat; }
@@ -312,6 +296,20 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     public int getServiceInteractionDurationTicks() { return serviceInteractionDurationTicks; }
     public void setServiceInteractionDurationTicks(int v) { this.serviceInteractionDurationTicks = v; }
 
+    // ── Relax config ──
+
+    public int getRelaxEnergyRestore() { return relaxEnergyRestore; }
+    public void setRelaxEnergyRestore(int v) { this.relaxEnergyRestore = Math.max(0, v); }
+    public int getRelaxInteractionDurationTicks() { return relaxInteractionDurationTicks; }
+    public void setRelaxInteractionDurationTicks(int v) { this.relaxInteractionDurationTicks = Math.max(0, v); }
+
+    // ── Atm config ──
+
+    public int getAtmWithdrawAmount() { return atmWithdrawAmount; }
+    public void setAtmWithdrawAmount(int v) { this.atmWithdrawAmount = Math.max(0, v); }
+    public int getAtmInteractionDurationTicks() { return atmInteractionDurationTicks; }
+    public void setAtmInteractionDurationTicks(int v) { this.atmInteractionDurationTicks = Math.max(0, v); }
+
     // ── Maintenance cost ──
 
     public Map<String, Integer> getMaintenanceCost() { return Collections.unmodifiableMap(maintenanceCost); }
@@ -336,8 +334,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
     public void setNodeAmountPerHarvest(int v) { this.nodeAmountPerHarvest = v; }
     public int getNodeChannelTicks() { return nodeChannelTicks; }
     public void setNodeChannelTicks(int v) { this.nodeChannelTicks = v; }
-    public int getNodeManaCost() { return nodeManaCost; }
-    public void setNodeManaCost(int v) { this.nodeManaCost = Math.max(1, v); }
 
     // ── Shop goods ──
 
@@ -404,17 +400,9 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         if (doorOffset != null) {
             writeOffsetArray(tag, KEY_DOOR_OFFSET, doorOffset);
         }
-        // Interact zones
-        ListTag zonesTag = new ListTag();
-        for (BoundaryBox zone : touristInteractZones) {
-            CompoundTag zt = new CompoundTag();
-            writeOffsetArray(zt, KEY_ZONE_MIN, zone.min());
-            writeOffsetArray(zt, KEY_ZONE_MAX, zone.max());
-            zonesTag.add(zt);
-        }
-        tag.put(KEY_TOURIST_INTERACT_ZONES, zonesTag);
         tag.putString(KEY_BUILDING_ID, buildingId);
         tag.putString(KEY_DISPLAY_NAME, displayName);
+        tag.putString(KEY_CREATOR, creator);
         tag.putString(KEY_CATEGORY, category);
         tag.putInt(KEY_COMFORT, comfort);
         tag.putInt(KEY_MAGIC, magic);
@@ -426,6 +414,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         tag.putInt(KEY_SERVICE_ENERGY, serviceEnergyPerUse);
         tag.putInt(KEY_SERVICE_MAX_OCC, serviceMaxOccupancy);
         tag.putInt(KEY_SERVICE_DURATION, serviceInteractionDurationTicks);
+        tag.putInt(KEY_RELAX_ENERGY, relaxEnergyRestore);
+        tag.putInt(KEY_RELAX_DURATION, relaxInteractionDurationTicks);
+        tag.putInt(KEY_ATM_WITHDRAW, atmWithdrawAmount);
+        tag.putInt(KEY_ATM_DURATION, atmInteractionDurationTicks);
 
         // Maintenance cost
         ListTag mcList = new ListTag();
@@ -443,7 +435,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         ncTag.putString(KEY_NC_ELEMENT, nodeElement);
         ncTag.putInt(KEY_NC_AMOUNT, nodeAmountPerHarvest);
         ncTag.putInt(KEY_NC_CHANNEL_TICKS, nodeChannelTicks);
-        ncTag.putInt(KEY_NC_MANA_COST, nodeManaCost);
         tag.put(KEY_NODE_CONFIG, ncTag);
 
         // Shop goods
@@ -501,18 +492,9 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         } else {
             doorOffset = null;
         }
-        touristInteractZones.clear();
-        if (tag.contains(KEY_TOURIST_INTERACT_ZONES, Tag.TAG_LIST)) {
-            ListTag list = tag.getList(KEY_TOURIST_INTERACT_ZONES, Tag.TAG_COMPOUND);
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag zt = list.getCompound(i);
-                BlockOffset min = readOffsetArray(zt, KEY_ZONE_MIN);
-                BlockOffset max = readOffsetArray(zt, KEY_ZONE_MAX);
-                touristInteractZones.add(new BoundaryBox(min, max));
-            }
-        }
         buildingId = tag.getString(KEY_BUILDING_ID);
         displayName = tag.getString(KEY_DISPLAY_NAME);
+        creator = tag.getString(KEY_CREATOR);
         category = tag.contains(KEY_CATEGORY) ? tag.getString(KEY_CATEGORY) : "basic";
         comfort = tag.getInt(KEY_COMFORT);
         magic = tag.getInt(KEY_MAGIC);
@@ -524,6 +506,10 @@ public class BuildingScannerBlockEntity extends BlockEntity {
         serviceEnergyPerUse = tag.getInt(KEY_SERVICE_ENERGY);
         serviceMaxOccupancy = tag.getInt(KEY_SERVICE_MAX_OCC);
         serviceInteractionDurationTicks = tag.getInt(KEY_SERVICE_DURATION);
+        relaxEnergyRestore = tag.getInt(KEY_RELAX_ENERGY);
+        relaxInteractionDurationTicks = tag.getInt(KEY_RELAX_DURATION);
+        atmWithdrawAmount = tag.getInt(KEY_ATM_WITHDRAW);
+        atmInteractionDurationTicks = tag.getInt(KEY_ATM_DURATION);
 
         // Maintenance cost
         maintenanceCost.clear();
@@ -542,7 +528,6 @@ public class BuildingScannerBlockEntity extends BlockEntity {
             nodeElement = ncTag.contains(KEY_NC_ELEMENT) ? ncTag.getString(KEY_NC_ELEMENT) : "earth";
             nodeAmountPerHarvest = ncTag.getInt(KEY_NC_AMOUNT);
             nodeChannelTicks = ncTag.getInt(KEY_NC_CHANNEL_TICKS);
-            nodeManaCost = Math.max(1, ncTag.getInt(KEY_NC_MANA_COST));
         }
 
         // Shop goods
