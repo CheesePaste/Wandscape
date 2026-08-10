@@ -220,9 +220,6 @@ public final class WandscapePanelState {
         if (buildingBarOpen) {
             closeBuildingBar();
         }
-        if (cursorLifted) {
-            releaseCursor();
-        }
         panelOpen = false;
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(false);
@@ -231,6 +228,9 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
+        // Panel closed → the per-tick reconciler no longer runs, so return the
+        // cursor to gameplay (grabbed) directly here.
+        grabMouseForGame();
     }
 
     /**
@@ -296,25 +296,23 @@ public final class WandscapePanelState {
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
+    // These only set the intent flag `cursorLifted`. The OS cursor (grab/release +
+    // position restore) is applied solely by WandscapePanelController.onClientTickPost,
+    // so sub-mode transitions never race by grabbing then immediately releasing.
 
-    /** Lift cursor: release mouse for UI interaction (preset selection overlay). */
+    /** Lift cursor: show/free it for UI interaction. */
     public static void liftCursorForUI() {
-        if (!cursorLifted) {
-            cursorLifted = true;
-            Minecraft.getInstance().mouseHandler.releaseMouse();
-        }
+        cursorLifted = true;
     }
 
-    /** Release cursor to game: grab mouse for in-world interaction. */
+    /** Release cursor to game: hide/lock it for in-world interaction. */
     public static void releaseCursorToGame() {
-        if (cursorLifted) {
-            cursorLifted = false;
-            Minecraft.getInstance().mouseHandler.grabMouse();
-        }
+        cursorLifted = false;
     }
 
     public static void toggleCursor() {
         // C key mouse grab removed — V panel maintains persistent free cursor with RMB camera drag
+        // （origin/main 的 C 键切换 bar/placing 实现在本分支无调用点，5650adb6 已整体移除 C 键）
     }
 
     // ── Building selection bar ──
@@ -336,10 +334,7 @@ public final class WandscapePanelState {
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
         // Keep ghost/pinned so toggling the bar does not discard a placement in progress.
-        if (!cursorLifted) {
-            cursorLifted = true;
-            Minecraft.getInstance().mouseHandler.releaseMouse();
-        }
+        cursorLifted = true;
     }
 
     public static void closeBuildingBar() {
@@ -349,6 +344,8 @@ public final class WandscapePanelState {
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
         lastClickIndex = -1;
+        // 不放下光标：V 面板是持久自由光标（openBuildingBar 置 true 后保持），
+        // 关 bar 只影响 bar 本身，光标意图由面板层决定（与 origin 的「关 bar 归游戏」不同）。
     }
 
     /** Double-click: enter PLACING phase (bar closed, cursor in game, ghost visible). */
@@ -395,7 +392,7 @@ public final class WandscapePanelState {
         return false;
     }
 
-    private static void releaseCursor() {
+    private static void grabMouseForGame() {
         Minecraft.getInstance().mouseHandler.grabMouse();
     }
 
@@ -438,6 +435,7 @@ public final class WandscapePanelState {
             case BUILD_PROJECTION -> {
                 buildPhase = BuildPhase.BAR;
                 PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                if (!buildingBarOpen) openBuildingBar();
             }
             case ROAD_PROJECTION -> {
                 RoadPlacementState.enterProjection();
@@ -445,6 +443,7 @@ public final class WandscapePanelState {
                 com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                 liftCursorForUI();
             }
+            case STATS -> liftCursorForUI();
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
         }
     }
