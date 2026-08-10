@@ -8,9 +8,9 @@ From an empty plot of land to a magic town that earns money, it only takes eight
 
 ## Step 1: Place the Town Hall
 
-Press **V** to open the panel → the **Build** icon on the left → the **Government** category → select the Town Hall, **double-click** to enter placement, **right-click** to pin it and open the construction screen, then **Submit** to build.
+Press **V** to open the panel → the **Build** icon on the left → the **Government** category → select the Town Hall, **double-click** to enter placement → move the ghost preview to an empty spot, press **📌 Lock** on the right panel (or **Enter**) to pin it → press **✓ Submit** to open the construction screen, then **Submit** to build.
 
-The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, **right-click it** to name your town — that counts as opening for business.
+The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, **left-click it in overview mode** to name your town — that counts as opening for business.
 
 (By the way: most buildings are **free on first build**, and the build bar marks them with a "First Free" badge. When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds — don't squander them.)
 
@@ -26,14 +26,14 @@ Tourists **only walk on paved roads**. No roads means no tourists — a shop can
 
 1. Press **V** → the **Roads** icon on the left.
 2. Select **Replace Mode (REPLACE)**, and double-click a surface material (stone-brick roads are just fine).
-3. Press **C** to release the cursor, **right-click** to set the start, **left-click** to set the end, then **Enter** to pave.
+3. **Hold left-click and drag a box** over the ground to select the area to pave, release to finish, then **Enter** to pave.
 4. Want curves? Draw them with the **Spline (SPLINE)** tool, and let the wizards pave what you drew.
 
 ## Step 4: Build Element Nodes
 
 Elements are the town's currency: building, crafting, and maintenance all cost them. **Element nodes** are the mint — each type of node produces one fixed element, and wizards will come to harvest automatically.
 
-Right-click a node to open its panel, set the harvest count, and click **Publish Gather**. Short on an element? Build a few more matching nodes.
+**Left-click a node in overview mode** to open its panel, set the harvest count, and click **Publish Gather**. Short on an element? Build a few more matching nodes.
 
 ## Step 5: Build Production Workshops
 

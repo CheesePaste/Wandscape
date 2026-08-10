@@ -2,7 +2,7 @@
 
 Which spells a wizard casts in combat is decided by the strategy. With no strategy set, the wizard follows the default preset.
 
-How to open: **right-click a wizard → info screen → the "Strategy" button**.
+How to open: **left-click a wizard in overview mode → info screen → the "Strategy" button**.
 
 ## Two Layers: Preset + Fine-Tuning
 

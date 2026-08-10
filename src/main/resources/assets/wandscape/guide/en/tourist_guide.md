@@ -8,7 +8,7 @@ Tourists have three **need bars**: **Comfort / Magic / Wonder**. They go to plac
 
 Each tourist has a **profile**: favoring Comfort, Magic, or Wonder, and prioritizes the bar they favor.
 
-## The Info Screen (Right-click a Tourist to Open)
+## The Info Screen (Left-click a Tourist in Overview Mode to Open)
 
 | Item | Description |
 | :--- | :--- |
