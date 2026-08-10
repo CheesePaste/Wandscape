@@ -249,9 +249,15 @@ public final class ProjectionFlightController {
 
         if (!escapeClicked) return;
 
-        // Panel not open → exit projection entirely. While the panel is open, ESC is
+        // Panel not open → handle projection-level ESC. While the panel is open, ESC is
         // intercepted by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
         if (!WandscapePanelState.isPanelOpen()) {
+            // Pinned (gizmo phase): ESC first unpins back to aiming phase; next ESC exits.
+            if (ProjectionClientState.isPinned()) {
+                ProjectionClientState.setPinned(false);
+                Log.info(TAG, "[Projection] Esc: unpinned ghost, staying in projection");
+                return;
+            }
             doExit();
         }
     }

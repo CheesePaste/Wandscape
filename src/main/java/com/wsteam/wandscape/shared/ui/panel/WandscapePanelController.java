@@ -392,6 +392,14 @@ public final class WandscapePanelController {
 
         WandscapePanelState.SubMode sub = WandscapePanelState.getActiveSubMode();
 
+        // 2.5 Build projection pinned (gizmo phase): ESC first unpins back to aiming phase.
+        //     Covers both ground and overview (overview keeps the BUILD_PROJECTION sub-mode).
+        if (sub == WandscapePanelState.SubMode.BUILD_PROJECTION
+                && com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned()) {
+            com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(false);
+            return;
+        }
+
         // 3. Sub-mode active → exit it, keep the panel open
         if (sub != WandscapePanelState.SubMode.NONE && sub != WandscapePanelState.SubMode.OVERVIEW) {
             WandscapePanelState.exitCurrentSubMode();
