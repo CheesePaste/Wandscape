@@ -23,8 +23,8 @@ Each tourist has a **profile**: favoring Comfort, Magic, or Wonder, and prioriti
 
 1. **Arrival**: walks into town along roads in the morning — **only on paved roads**.
 2. **Explore**: automatically picks the most suitable destination (computed from need gap + energy + wallet — the most lacking bar gets visited first). Buying at shops, services at service buildings, soaking at bathhouses, withdrawing at ATMs.
-3. **Overnight**: if night falls before they've had enough, sleep at the **hotel** and continue with full energy in the morning.
-4. **Departure**: tourists with **all three need bars full** leave at night, and the town gains **experience**; unsatisfied tourists also leave but give no experience.
+3. **Overnight**: from nightfall (~19:40) tourists prefer a **hotel**; after checking in they remember that hotel, come back to sleep every night and wake with full energy. Tourists still without a hotel head straight to the nearest one in the late evening (~21:00).
+4. **Departure**: tourists with **all three need bars full** leave happily that night, and the town gains **experience**; hotel guests stay until their trip ends (2~4 days); tourists with neither a hotel nor full bars leave late at night (after ~21:00).
 
 Tourists stay **2~4 days** and visit each building only once during the whole stay (**ATMs are the exception**: while travel money is still left and the wallet runs low again, they can go back for another withdrawal after a short cooldown — money comes out in batches).
 

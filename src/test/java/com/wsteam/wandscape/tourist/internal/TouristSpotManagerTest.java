@@ -171,4 +171,15 @@ class TouristSpotManagerTest {
         assertEquals(2, m.freeSpotCount(B, 2));   // 占位恢复
         assertEquals(0, m.queuePosition(B, 1, A)); // 队列不受占位影响
     }
+
+    /** 防御：null 建筑 key 的释放不崩溃（曾因 clearSpotState 在目标置 null 后释放 spot 触发 NPE）。 */
+    @Test
+    void releaseWithNullBuildingIsNoop() {
+        TouristSpotManager m = new TouristSpotManager();
+        m.claim(B, 2); // spot 0 被占
+        assertDoesNotThrow(() -> m.release(null, 0));
+        assertEquals(1, m.freeSpotCount(B, 2)); // 正常 spot 不受影响
+        assertDoesNotThrow(() -> m.release(B, 0));
+        assertEquals(2, m.freeSpotCount(B, 2));
+    }
 }

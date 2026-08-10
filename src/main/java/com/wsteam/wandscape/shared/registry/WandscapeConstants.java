@@ -36,6 +36,6 @@ public final class WandscapeConstants {
     public static final double STUCK_MIN_MOVE_DISTANCE = 2.0;
     public static final int STUCK_MAX_RETRIES = 3;
 
-    /** 游客精力上限：初始 100、清晨退房回满 100，耗尽(=0)触发入住酒店。 */
+    /** 游客精力上限：初始 100、清晨晨起回满 100，耗尽(=0)只能去 relax 恢复建筑。 */
     public static final int TOURIST_MAX_ENERGY = 100;
 }

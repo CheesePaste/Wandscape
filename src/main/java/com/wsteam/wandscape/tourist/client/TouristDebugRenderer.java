@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * Debug renderer that visualizes tourist navigation targets.
  *
- * <p>Press G to toggle. X-ray (no depth test) rendering:
+ * <p>X-ray (no depth test) rendering:
  * <ul>
  *   <li>Cyan line → entry point (macro outdoor nav target)</li>
  *   <li>Blue cross at entry point</li>

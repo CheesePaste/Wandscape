@@ -11,8 +11,8 @@
 - `extends PathfinderMob implements VillagerLike, TouristStateHost`。
 - 外观：`Appearance` 枚举 TOURIST/MAGE，`MAGE_CHANCE=0.05`；皮肤数运行时扫描 `textures/entity/tourist|wizard`。
 - 属性：MOVEMENT_SPEED 0.5、FOLLOW_RANGE 64、MAX_HEALTH 20。AI：FloatGoal(0)/OpenDoorGoal(1)/TouristMoveGoal(2)/RandomLookAroundGoal(3)。`createNavigation` → WandscapeNavigation。
-- 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0。能量 0-200、满意度 0-100。
-- 偏好 `typePreferences`：默认 40，范围 5-100。法师属性 maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue。
+- 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0；`travelFund`（总旅费 = ATM 取现池，见 simulation.md）。能量 0-100（`TOURIST_MAX_ENERGY`）。
+- 法师属性 maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue。
 - **无物品背包**，仅 `recentVisits` 记忆（上限 24 FIFO）+ visitedBuildings（停留期不重置，ATM 缺钱时豁免可分批取现）+ lastAtmWithdrawTime（取现冷却）。不可被推动，`removeWhenFarAway=false`。
 - **救援传送（被困兜底，`TouristTeleport`）只落点建筑外**：优先最近已建成道路（`rescueRoadRadius`），无路则建筑外围（入口点/bbox 面/外扩环扫，`rescuePeripheryRadius`），绝不传进建筑或房顶；找不到安全点则不传送。影子→实体水合若落在建筑房顶也改传安全点（`TouristSimSystem.importToEntity`）。
 
@@ -20,14 +20,17 @@
 
 每 `CHECK_INTERVAL=100` tick 检查。时段由 Config 划分：生成窗口 [1000, 8000]（约 07:00–14:00，集中在上午、最晚下午到），离境窗口 [18000, 24000]。
 
-- **生成数**：`targetCount` = 均匀整数区间 `[base(5)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)]`，即 1 级 5~7、2 级 6~8、3 级 7~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；生成时间在 [1000, 8000] 窗口内**均匀排布**；`toSpawn = targetCount - existing`（existing 用影子注册表计数）。
+- **生成数**：`toSpawn` = 均匀整数区间 `[base(5)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)-1]`，即 1 级 5~7、2 级 6~8、3 级 7~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；**每天固定新增 toSpawn 个**，不因殖民地已有游客（含住店客）而扣减；每个游客的到达时间在 [1000, 8000] 窗口内**随机**取（错峰到达）；`onServerTick` 对生成路径**每 tick flush**（不等 `CHECK_INTERVAL=100`），高 tick rate（如 1000）下窗口也不会被跳过——防护「来不及生成」。
 - **条件**：需已注册殖民地 + 存在完整 shop/service 目标。生成点取道路网 COMPLETE 边端点，无路用建筑位置。等级分布：colonyLevel-1/+1 = 40/40/20%。生成时强制加载区块；**到达登记（`registerArrival`）与 shadow 收养统一在 `TouristEntity.onAddedToLevel` 单点完成**（覆盖系统生成/刷怪蛋/命令；sim 再水合实体与磁盘加载体排除，避免重复触发 TouristArrivedEvent）。
 - **离开**：sat<50 或 sat=100 → 夜晚带 0-1500 tick 随机延迟离开；sat 50-99 → 引导去旅馆，无房则离开。白天/傍晚：能量耗尽、夜晚且空闲、空闲超时 `TOURIST_DESPAWN_TIMEOUT_TICKS=36000`。100% 满意度 → `grantExperience`。
+- **住店客免疫清场**：入住后（`checkedInBuildingId` 常驻）只按停留截止（`departureDeadline`）或**满条当晚开心离场**（用户确认），不被夜晚/闲置清掉——`cleanupTourists`/`processNightDepartures`/sim `checkDeparture` 对住店客只判截止/满条。
+- **清场窗口统一 18000–24000**：未观察的 sim 游客与观察中的实体游客一致，都在离场窗口内清无旅店/满条游客（原 sim 从 13000 起提前清人，已对齐）；夜晚阈值 `tourist.nightStart`（默认 14000）起游客优先旅店/可入住，多逛 40 分钟。
 
 ## 影子模拟（TouristSimSystem / TouristSimulation / TouristShadow / TouristSimRegistry）
 
 - `TouristSimSystem` 每 tick：判定"有玩家观察"用**玩家 simulation distance**（非区块状态）。观察中 → 实体运行 AI，`exportToShadow` 镜像；未观察 → 实体 `UNLOADED_TO_CHUNK` 移除（影子存活），`simStep` 推进。
 - 影子直线匀速移动 SPEED=0.5/tick、ARRIVE_RANGE=1.0、WANDER_RADIUS=24；到建筑锚点走 shop/service/hotel 交互与冷却；酒店满员由影子注册表派生。
+- **住店客同步**：sim 住店客白天外出逛街、夜晚回自己旅店（`routeToOwnHotel`，已到店不动）、清晨晨起保留登记；未满条住店客不被清（`checkDeparture` 只判截止/满条）；清场窗口与实体一致 **18000–24000**；16000 起无旅店游客 `routeToHotelForEvening` 打断当前交互去旅店。
 - 实体↔影子转换：加载过渡**影子胜出**（importToEntity），冷却以各自 timeBase 互转；孤儿实体（无影子）被 discard。
 - **影子↔身体 UUID 一致**：`spawnEntity` 用 `setUUID(shadow.touristId)` 生成身体——否则身体带随机新 UUID，`onAddedToLevel` 自动收养会把它注册成**另一个影子**，原影子沦为幽灵持续复活身体 → 卸载/重载指数级复制，且复制体 kill 不掉。磁盘加载的身体保留自身 UUID（与影子匹配）。
 - **新鲜生成自动收养 + 到达登记**：非磁盘加载的游客（刷怪蛋等）在 `onAddedToLevel` 自动 `sim.adoptTourist` 并 `registerArrival`（`loadedFromDisk` 区分：`readAdditionalSaveData` 置 true，`finalizeSpawn` 置 false；registry 已有该 shadow 的再水合实体跳过）。磁盘加载且已离境的身体仍走孤儿 discard，避免复活。
@@ -42,18 +45,20 @@
 
 ## 满意度与偏好
 
-- `satisfactionGain`：`threeSum` = comfort+magic+wonder（商店叠加 ShopStockManager.getGoodsBonus）；`threshold = level × TOURIST_LEVEL_SATISFACTION_THRESHOLD(3)`；threeSum<threshold → 惩罚 `-sqrt(typePref×(deficit+1))` 下限 -15；否则增益 `sqrt(typePref×(threeSum-threshold+1))` 上限 TOURIST_MAX_SATISFACTION_PER_VISIT=30。
-- `preferenceDecay=15`：每次访问后从该建筑类型偏好扣减。
-- `TouristApiImpl.getAverageSatisfaction` = 满意度之和/人数；注册表 colonyId→(touristId→sat)。
+- 三值需求条（Comfort/Magic/Wonder）+ 画像 + 精力/钱包/spot 排队驱动的目标选择（Find-Best-Action 评分）是独立系统，见 [simulation.md](../simulation.md)——本文不重复。
+- 历史：单一 `satisfaction`/`typePreferences` 与 sqrt 增益公式已在 2026-08 三值改造中删除，本小节不再描述旧机制。
 
-## 酒店（HotelStayHandler）
+## 酒店（HotelStayHandler）——住店客机制
 
-- checkIn 条件（TouristMoveGoal 把关）：sat≥50 且 <100 且（夜晚 或 精力耗尽），且 ServiceConfig.maxOccupancy>0、有空房；入住后移动停止。
-- **提前入住**：到达酒店建筑 bbox 内 5 格（microNavSwitchDistance）即入住（`tryHotelCheckIn`），无需走到精确交互点——避免夜晚在酒店门口站定触发卡死传送。白天条件不满足则按普通服务建筑处理。
-- **睡床（纯视觉）**：入住后 `settleIntoBed` 在酒店 bbox 内找最近一张没人睡的床（跳过 `OCCUPIED` 与已分配床），传送上床并置 SLEEPING 姿态（`setSleepingPos` + `Pose.SLEEPING`，不改床方块状态 → 无占用泄漏）；无空床则原地站着。
-- 入住点存为 `wakeUpPos`（实体与影子 NBT 持久化，`exportToShadow`/`importToEntity` 同步）；清晨窗口 1000-1200 自动退房：加载路径 `stopSleeping` 起床并**传送回入住点**，影子路径 simStep 退房时同样把位置恢复到入住点（不再水合在酒店内），精力恢复 100、发 HOTEL_WAKEUP 叙事。
-- 床位占用由 HotelStayHandler 内存 `touristToBed` 跟踪（退房/强制退房时清除），不依赖床方块 OCCUPIED 标记。
-- 心跳每 20 tick；占用数从影子注册表派生。
+- **住店客（resident）**：游客入住后 `checkedInBuildingId` **常驻**（实体/影子 NBT 持久化）——清晨只「晨起」（`wakeUp`：精力回 100、回入住前站位、住店晚数 +1），**名单不删**；白天照常外出逛街，夜晚回**自己**旅店睡觉。离场（截止/满条当晚/被杀）才 `checkOut` 从名单删除。
+- **checkIn 条件**（TouristMoveGoal 把关）：夜晚（`tourist.nightStart` ≥14000）且未满条，且 ServiceConfig.maxOccupancy>0；`checkIn` 幂等——已是该旅店住店客（回店/磁盘加载）跳过容量检查，避免被自己占的床位挤掉。
+- **提前入住（入住即时完成）**：游客**进入酒店建筑 bbox** 即 `tryHotelCheckIn`（bbox 外扩 +5 已去掉——大旅店不会在离门老远就入住）——**不占 spot、不等 `interaction_duration_ticks`**，进入即入住躺床；白天条件不满足则按普通服务建筑处理。夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）。
+- **夜晚回店**：住店客夜晚（或凌晨 0-1000）空闲时 `returnToOwnHotel` 回自己旅店——已睡着停住、在店旁强制躺床、在路上继续走、否则开始回店；旅店被拆 → 解除登记按无旅店处理；**过远（> `tourist.hotelTeleportDistance` 64）直接传送**（省寻路开销）。
+- **傍晚路由**：`tourist.eveningRoutingStart`（默认 16000）起，无旅店未满条游客**停止当前任务**去旅店（`TouristSimulation.findHotelTarget` 全殖民地找最近可用旅店，实体路径要求区块已加载）。
+- **睡床（纯视觉）**：入住即 `settleIntoBed` **强制躺床**——有空床躺空床；床不够（全被占用）躺**最近一张床**（纯视觉可共用）；旅店一张床都没有 → **卡原地不动**。床判定 = 酒店 bbox 内 `BedBlock`（跳过原版 `OCCUPIED`），`setSleepingPos` + `Pose.SLEEPING`，不改床方块状态 → 无占用泄漏。
+- 入住点存为 `wakeUpPos`（实体与影子 NBT 持久化，`exportToShadow`/`importToEntity` 同步）；清晨窗口 1000-1200 晨起：加载路径 `stopSleeping` 起床并**传送回入住点**，影子路径 simStep 同样恢复位置，发 HOTEL_WAKEUP 叙事。
+- 床位占用由 HotelStayHandler 内存 `touristToBed` 跟踪（晨起/强制退房时清除），不依赖床方块 OCCUPIED 标记。
+- 心跳每 20 tick（晨起窗口唤醒住店客；实体未加载但影子仍是住店客时跳过强制退房）；占用数从影子注册表派生。
 
 ## 酒馆招募
 
@@ -71,7 +76,7 @@
 
 - `TouristScreen`：MedievalScreen 300×300，显示三条需求条（舒适/魔法/奇观 fill/need）、画像标签、精力、等级、钱包、停留（已住 N 晚 / 共 X 天）、行程列表。
 - `TouristRenderer`：HumanoidMobRenderer + HumanoidModel(PLAYER)，运行时枚举贴图；渲染 SpeechBubbleRenderer + SatisfactionBarRenderer。
-- `TouristDebugRenderer`：按 G 开关（RenderLevelStageEvent.AFTER_TRIPWIRE_BLOCKS），扫描半径 80，X-ray 画线/十字（青=入口、品红=交互点）。
+- `TouristDebugRenderer`：RenderLevelStageEvent.AFTER_TRIPWIRE_BLOCKS，扫描半径 80，X-ray 画线/十字（青=入口、品红=交互点）。
 - `TouristDataPacket`：S→C 信息屏（含 VisitEntry 轻量子集）；`TouristBubblePacket`：购买/服务后触发 TransientBubbleStore.trigger。
 
 ## 经济交互

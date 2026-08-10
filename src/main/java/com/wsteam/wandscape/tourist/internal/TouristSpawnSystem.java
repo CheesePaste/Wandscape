@@ -46,7 +46,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <ul>
  *   <li>Morning (0-1000): daily reset, hotel checkout
  *   <li>Spawn window (1000-8000): tourists spawn at distributed random times
- *   <li>Evening (13000-18000): no new spawns, existing tourists continue interactions
+ *   <li>Evening (14000-18000): no new spawns, existing tourists continue interactions
  *   <li>Night departure (18000-24000): 满条夜晚离场 / 入旅店 + hotel routing
  * </ul>
  *
@@ -157,21 +157,21 @@ public final class TouristSpawnSystem {
         ServerLevel level = server.overworld();
         if (level == null) return;
 
-        tickCounter++;
-        if (tickCounter % CHECK_INTERVAL != 0) return;
-
         long dayTime = level.getDayTime() % 24000;
         long day = level.getDayTime() / 24000;
 
-        // ── Morning: reset schedule flag + count overnight stayers ──
+        // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
         if (dayTime < 1000 && scheduleDay != day) {
             scheduleCreated = false;
             pendingSpawns.clear();
-            scheduleDay = -1;
+            scheduleDay = day;
             countOvernightStayers(level);
         }
 
-        // ── Spawn window (1000-8000) ──
+        // ── Spawn window (1000-8000)：每 tick flush，不等 CHECK_INTERVAL ──
+        // 高 tick rate（如 1000）下游戏时间推进更快：若只在每 CHECK_INTERVAL tick 才
+        // flush，生成窗口可能被跳过去、每日游客「来不及生成」。改为每 tick flush，
+        // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
         boolean inSpawnWindow = dayTime >= Config.TOURIST_SPAWN_WINDOW_START.get()
                 && dayTime < Config.TOURIST_SPAWN_WINDOW_END.get();
         if (inSpawnWindow) {
@@ -181,6 +181,10 @@ public final class TouristSpawnSystem {
             }
             flushPendingSpawns(level);
         }
+
+        // ── 周期性重型工作（每 CHECK_INTERVAL tick）──
+        tickCounter++;
+        if (tickCounter % CHECK_INTERVAL != 0) return;
 
         // ── Night departure window (18000-24000) ──
         boolean inDepartureWindow = dayTime >= Config.TOURIST_DEPARTURE_WINDOW_START.get()
@@ -238,25 +242,20 @@ public final class TouristSpawnSystem {
             return;
         }
 
-        // Count existing tourists
-        int existing = countExistingTourists(level);
-
-        // Compute target count: uniform integer range
-        // [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth]
+        // 每天固定新增这批游客，不因殖民地已有游客（含住店客）而扣减
         int colonyLevel = levelManager != null ? levelManager.getLevel(colonyId) : 1;
         int lower = Config.TOURIST_BASE_SPAWN_COUNT.get()
                 + (colonyLevel - 1) * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
         int upper = lower + Config.TOURIST_SPAWN_RANGE_WIDTH.get();
-        int targetCount = lower + (upper > lower ? random.nextInt(upper - lower + 1) : 0);
-        targetCount = Math.max(1, Math.min(targetCount, Config.TOURIST_MAX_PER_COLONY.get()));
-
-        int toSpawn = Math.max(0, targetCount - existing);
-        if (toSpawn <= 0) return;
+        int toSpawn = lower + (upper > lower ? random.nextInt(upper - lower) : 0);
+        toSpawn = Math.max(1, Math.min(toSpawn, Config.TOURIST_MAX_PER_COLONY.get()));
 
         // Collect spawn positions
         List<BlockPos> spawnCandidates = collectSpawnPositions(level, allBuildings);
 
-        // Create pending spawns with random levels and spawn times spread evenly across the window
+        // Create pending spawns. 生成时间在 [windowStart, windowEnd) 内随机取，
+        // 每天游客错峰到达。高 tick rate 防护在 onServerTick（每 tick flush），
+        // 不在这里——这里只负责把到达时间随机分布到生成窗口内。
         int windowStart = Config.TOURIST_SPAWN_WINDOW_START.get();
         int windowDuration = Config.TOURIST_SPAWN_WINDOW_END.get() - windowStart;
         for (int i = 0; i < toSpawn; i++) {
@@ -271,15 +270,15 @@ public final class TouristSpawnSystem {
             // at spawn time, so a building demolished after scheduling can't ghost it.
             BuildingState target = touristTargets.get(random.nextInt(touristTargets.size()));
 
-            // Assign spawn time spread evenly across the spawn window (1000-8000)
-            int spawnTime = windowStart + (i * windowDuration) / toSpawn;
+            int spawnTime = windowDuration > 0
+                    ? windowStart + random.nextInt(windowDuration) : windowStart;
 
             pendingSpawns.add(new PendingSpawn(touristLevel, spawnTime, spawnPos, target.getBuildingId()));
         }
 
         if (!pendingSpawns.isEmpty()) {
-            Log.info(TAG, "[Tourist] Schedule created: {} tourists (colony Lv.{}), targetCount={}",
-                    pendingSpawns.size(), colonyLevel, targetCount);
+            Log.info(TAG, "[Tourist] Schedule created: {} tourists (colony Lv.{}), dailyArrivals={}",
+                    pendingSpawns.size(), colonyLevel, toSpawn);
         }
     }
 
@@ -440,8 +439,8 @@ public final class TouristSpawnSystem {
      * Cleanup logic applying to all times of day（Block 2 D6）：
      * <ul>
      *   <li>满条法师 → 即时存简历</li>
-     *   <li>到点（departureDeadline）→ 离场</li>
-     *   <li>idle 超时 → 离场</li>
+     *   <li>到点（departureDeadline）→ 离场（住店客也只按此离场——无论多晚不被清）</li>
+     *   <li>idle 超时 → 离场（仅非住店客）</li>
      *   <li>精力 0 不再离场（goal.md：无恢复建筑 → 闲逛，不离场）</li>
      *   <li>夜晚离场由 {@link #processNightDepartures} 处理</li>
      * </ul>
@@ -454,13 +453,18 @@ public final class TouristSpawnSystem {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
-            // Checked into hotel — safe, HotelStayHandler heartbeat manages them
-            if (t.getCheckedInBuildingId() != null) continue;
-
             // Store mage resume instantly when fully satisfied
             if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
                 storeMageResume(t);
                 t.setMageResumeStored(true);
+            }
+
+            // 住店客：只按停留截止离场（不被夜晚/闲置清掉；夜晚回店睡觉由 TouristMoveGoal 管）
+            if (t.getCheckedInBuildingId() != null) {
+                if (level.getGameTime() >= t.getDepartureDeadline()) {
+                    toRemove.add(t);
+                }
+                continue;
             }
 
             // In departure window, night logic is handled by processNightDepartures
@@ -484,9 +488,10 @@ public final class TouristSpawnSystem {
     /**
      * Night departure window（18000-24000，Block 2 D6）：
      * <ul>
-     *   <li>到点 → 离场（满条才给经验）</li>
-     *   <li>满条 → 开心离场（随机延迟错峰，简历已存）</li>
-     *   <li>非满条 → 入旅店；无旅店/满 → 离场</li>
+     *   <li>到点 → 离场（满条才给经验；住店客也适用）</li>
+     *   <li>满条 → 开心离场（随机延迟错峰，简历已存；住店客满条当晚也离场）</li>
+     *   <li>非满条住店客 → 留店（无论多晚不被清）</li>
+     *   <li>非满条非住店客 → 入旅店；无旅店/满 → 离场</li>
      * </ul>
      */
     private void processNightDepartures(ServerLevel level) {
@@ -497,7 +502,6 @@ public final class TouristSpawnSystem {
             if (!(entity instanceof TouristEntity t)) continue;
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
-            if (t.getCheckedInBuildingId() != null) continue;
 
             // Store mage resume instantly when fully satisfied
             if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
@@ -505,10 +509,27 @@ public final class TouristSpawnSystem {
                 t.setMageResumeStored(true);
             }
 
-            // 到点 → 离场
+            // 到点 → 离场（住店客也适用）
             if (gameTime >= t.getDepartureDeadline()) {
                 toRemove.add(t);
                 pendingDepartures.remove(t.getUUID());
+                continue;
+            }
+
+            if (t.getCheckedInBuildingId() != null) {
+                // 住店客：满条 → 当晚开心离场；未满条 → 留店（不被清）
+                if (t.isFullySatisfied()) {
+                    Long departAt = pendingDepartures.get(t.getUUID());
+                    if (departAt == null) {
+                        int delay = random.nextInt(Config.TOURIST_DEPARTURE_DELAY_MAX_TICKS.get() + 1);
+                        departAt = gameTime + delay;
+                        pendingDepartures.put(t.getUUID(), departAt);
+                    }
+                    if (gameTime >= departAt) {
+                        toRemove.add(t);
+                        pendingDepartures.remove(t.getUUID());
+                    }
+                }
                 continue;
             }
 
@@ -692,23 +713,6 @@ public final class TouristSpawnSystem {
             if (state != null) targets.add(state);
         }
         return targets;
-    }
-
-    private int countExistingTourists(ServerLevel level) {
-        // The shadow registry is the authoritative population (loaded entities + unloaded
-        // shadows). Counting only live entities would ignore unloaded tourists and let the
-        // colony over-spawn past its cap.
-        TouristSimSystem sim = TouristSimSystem.getActive();
-        if (sim != null && sim.getRegistry() != null) {
-            return sim.getRegistry().getShadows().size();
-        }
-        int count = 0;
-        for (var entity : level.getAllEntities()) {
-            if (entity instanceof TouristEntity t && t.isAlive()) {
-                count++;
-            }
-        }
-        return count;
     }
 
     /** Count tourists currently checked into hotels per colony and store as overnight stayers. */

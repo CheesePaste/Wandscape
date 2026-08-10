@@ -34,18 +34,18 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Manages hotel/inn stays for tourists.
+ * Manages hotel/inn stays for tourists（住店客机制）.
  *
  * <p>Hotels are service buildings with {@link ServiceConfig#maxOccupancy()} &gt; 0.
- * Tourists check in at night (when not fully satisfied — 满条游客夜晚等离场) and
- * stay until morning checkout at dayTime=1000, when energy is restored to 100.
+ * Tourists check in at night (when not fully satisfied — 满条游客夜晚等离场) and become
+ * **住店客**：登记常驻（清晨晨起保留登记、白天外出、夜晚回店睡），离场/被杀才退房。
  *
  * <p>During the day, hotels behave as regular service buildings —
  * three bars come from the normal service interaction, not from sleeping.
  *
  * <p>Checked-in tourists are stored in a per-building occupancy set.
- * On morning (dayTime 1000-1200), all guests are automatically checked out
- * with full energy restoration.
+ * On morning (dayTime 1000-1200), guests are woken up ({@link #wakeUp}) with full
+ * energy restoration but KEEP their registration — the guest list is not cleared.
  */
 public final class HotelStayHandler {
     private static final String TAG = "HotelStayHandler";
@@ -90,6 +90,15 @@ public final class HotelStayHandler {
         if (maxOccupancy <= 0) return false;
 
         Set<UUID> guests = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
+        // 已是该旅店住店客（夜晚回店重上床 / 磁盘加载恢复登记）→ 幂等，跳过容量检查。
+        // 磁盘加载时 occupancy 从空重建，若旅店被其它住店客占满，正常 checkIn 会失败而误清住店登记。
+        if (isResidentAt(tourist.getUUID(), buildingId)) {
+            guests.add(tourist.getUUID());
+            touristToHotel.put(tourist.getUUID(), buildingId);
+            tourist.setCheckedInBuildingId(buildingId);
+            return true;
+        }
+
         if (guests.size() >= maxOccupancy) {
             return false;
         }
@@ -105,7 +114,45 @@ public final class HotelStayHandler {
     }
 
     /**
-     * Check a tourist out of their hotel. Restores energy to 100.
+     * 住店客晨起：回入住前站位、清睡觉姿态、精力回 100、住店晚数 +1；**保持酒店登记**
+     * （游客仍是该旅店住店客，白天外出逛街、夜晚回来睡，名单上不删除）。
+     *
+     * <p>幂等：heartbeat 在晨间窗口（1000-1200）每 20 tick 跑一次，已醒且已回位的游客跳过。
+     */
+    public void wakeUp(TouristEntity tourist, ServerLevel level) {
+        if (!tourist.isSleeping() && tourist.getWakeUpPos() == null) return;
+
+        if (tourist.isSleeping()) {
+            tourist.stopSleeping();
+        }
+        BlockPos wakeUp = tourist.getWakeUpPos();
+        if (wakeUp != null) {
+            tourist.setPos(wakeUp.getX() + 0.5, wakeUp.getY(), wakeUp.getZ() + 0.5);
+            tourist.setWakeUpPos(null);
+        }
+        tourist.applyState(TouristState.IDLE);
+        tourist.setHotelCheckinTime(0);
+        tourist.setNightsStayed(tourist.getNightsStayed() + 1);
+        tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+
+        // Emit HOTEL_WAKEUP narrative
+        UUID buildingId = touristToHotel.get(tourist.getUUID());
+        if (buildingId != null) {
+            String bldType = getBuildingTypeId(buildingId);
+            String bldName = getBuildingDisplayName(buildingId, bldType);
+            NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(
+                    tourist.getTouristName(), bldType != null ? bldType : "inn",
+                    bldName, level.getGameTime());
+            emitNarrativeEvent(wakeupEvent);
+        }
+
+        Log.info(TAG, "[Tourist] {} woke up at {} (still resident, energy → 100)",
+                tourist.getTouristName(), tourist.blockPosition().toShortString());
+    }
+
+    /**
+     * 最终退房（游客离场/被杀）：从旅店名单删除、清睡觉姿态与登记。晚数与精力恢复由晨起
+     * {@link #wakeUp} 负责，离场时不再重复计入。
      */
     public void checkOut(TouristEntity tourist, ServerLevel level) {
         UUID buildingId = touristToHotel.remove(tourist.getUUID());
@@ -132,54 +179,46 @@ public final class HotelStayHandler {
 
         tourist.setCheckedInBuildingId(null);
         tourist.setHotelCheckinTime(0);
-        tourist.setNightsStayed(tourist.getNightsStayed() + 1);
-        tourist.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
 
-        // Emit HOTEL_WAKEUP narrative
-        String bldType = getBuildingTypeId(buildingId);
-        String bldName = getBuildingDisplayName(buildingId, bldType);
-        NarrativeEvent wakeupEvent = NarrativeGenerator.generateHotelWakeup(
-                tourist.getTouristName(), bldType != null ? bldType : "inn",
-                bldName, level.getGameTime());
-        emitNarrativeEvent(wakeupEvent);
-
-        Log.info(TAG, "[Tourist] {} checked out of {} (energy → 100)",
+        Log.info(TAG, "[Tourist] {} checked out of {} (departed)",
                 tourist.getTouristName(), shortId(buildingId));
     }
 
     /**
-     * After a successful check-in, teleport the tourist onto a free bed in the
-     * hotel to sleep (visual only — no stat effects). If no bed is free, the
-     * tourist simply stays where it is until morning checkout.
+     * After a successful check-in, force the tourist to sleep — 入住即强制躺床：
+     * 有空床躺空床；床不够（全被占用）就躺最近一张床；旅店一张床都没有 → 卡原地不动。
+     * 床上睡觉纯视觉（不改床方块占用状态，无占用泄漏），床位分配只记在内存。
      */
     public void settleIntoBed(TouristEntity tourist, ServerLevel level, UUID buildingId) {
         tourist.setWakeUpPos(tourist.blockPosition());
-        BlockPos bed = findFreeBed(level, buildingId, tourist.blockPosition());
-        if (bed == null) {
-            Log.info(TAG, "[Tourist] {} checked into {} but no free bed — staying put",
-                    tourist.getTouristName(), shortId(buildingId));
+        BlockPos bed = findBed(level, buildingId, tourist.blockPosition(), true);
+        if (bed == null) bed = findBed(level, buildingId, tourist.blockPosition(), false); // 床不够 → 躺第一张（最近）
+        if (bed != null) {
+            tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
+            tourist.setSleepingPos(bed);
+            tourist.applyState(TouristState.SLEEPING);
+            touristToBed.put(tourist.getUUID(), bed);
+            Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
+                    tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
             return;
         }
-        // Visual-only sleeping: lie on the bed without mutating the bed's occupied
-        // property (no block updates, and no stuck-occupied leak if the chunk
-        // unloads mid-sleep). Bed assignment is tracked in memory instead.
-        tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
-        tourist.setSleepingPos(bed);
-        tourist.applyState(TouristState.SLEEPING);
-        touristToBed.put(tourist.getUUID(), bed);
-        Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
-                tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
+        // 没床 → 卡原地（不动，等清晨晨起）
+        Log.info(TAG, "[Tourist] {} checked into {} but the hotel has no beds — staying put",
+                tourist.getTouristName(), shortId(buildingId));
     }
 
-    /** Nearest unoccupied bed (head half) inside the hotel's bounding box, or null. */
+    /**
+     * 旅店里最近的一张床（head 半）。{@code requireUnassigned}=true 时跳过已分配给其它
+     * 住店客的床；false 时不看占用分配（床不够的兜底，纯视觉可共用），仅跳过原版 OCCUPIED 的床。
+     */
     @Nullable
-    private BlockPos findFreeBed(ServerLevel level, UUID buildingId, BlockPos near) {
+    private BlockPos findBed(ServerLevel level, UUID buildingId, BlockPos near, boolean requireUnassigned) {
         BuildingState state = getBuildingState(buildingId);
         if (state == null) return null;
         BoundingBox box = state.getBounds();
         if (box == null) return null;
 
-        Set<BlockPos> assigned = new HashSet<>(touristToBed.values());
+        Set<BlockPos> assigned = requireUnassigned ? new HashSet<>(touristToBed.values()) : Set.of();
         BlockPos best = null;
         double bestSq = Double.MAX_VALUE;
         for (int x = box.minX(); x <= box.maxX(); x++) {
@@ -274,24 +313,27 @@ public final class HotelStayHandler {
         if (level == null) return;
 
         long dayTime = level.getDayTime() % 24000;
-        // Morning checkout window: 1000-1200 (清晨退房，精力回满)
+        // Morning wake-up window: 1000-1200 (清晨起床，精力回满；住店客保留登记)
         boolean isMorning = dayTime >= 1000 && dayTime < 1200;
 
         for (var entry : touristToHotel.entrySet()) {
             UUID touristId = entry.getKey();
             TouristEntity tourist = findTourist(level, touristId);
             if (tourist == null || !tourist.isAlive()) {
+                // 实体未加载：若影子仍是住店客（sim 驱动），跳过——sim 自己处理晨起与回店；
+                // 实体真没了（被杀/离场已由 onTouristKilled/onTouristDepart 清理）才强制退房。
+                if (shadowStillResident(touristId)) continue;
                 forceCheckOut(touristId);
                 continue;
             }
 
-            // Morning checkout: energy → 100
+            // Morning wake-up: keep the tourist registered as a resident
             if (isMorning) {
-                checkOut(tourist, level);
+                wakeUp(tourist, level);
                 continue;
             }
 
-            // No gradual energy recovery — energy restored to 100 at checkout only
+            // No gradual energy recovery — energy restored to 100 at morning wake-up only
         }
     }
 
@@ -307,6 +349,28 @@ public final class HotelStayHandler {
             }
         }
         touristToBed.remove(touristId);
+    }
+
+    /**
+     * 游客是否已是该旅店的住店客（内存登记，或磁盘加载/夜晚回店时影子仍登记在案）。
+     * 供 {@link #checkIn} 幂等跳过容量检查，避免住店客被自己占的床位挤掉。
+     */
+    private boolean isResidentAt(UUID touristId, UUID buildingId) {
+        if (buildingId.equals(touristToHotel.get(touristId))) return true;
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            TouristShadow s = sim.getRegistry().getShadows().get(touristId);
+            if (s != null && buildingId.equals(s.getCheckedInBuildingId())) return true;
+        }
+        return false;
+    }
+
+    /** 影子仍是住店客（实体未加载但 sim 驱动的场景）→ 心跳不应强制退房。 */
+    private boolean shadowStillResident(UUID touristId) {
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim == null || sim.getRegistry() == null) return false;
+        TouristShadow s = sim.getRegistry().getShadows().get(touristId);
+        return s != null && s.getCheckedInBuildingId() != null;
     }
 
     @Nullable

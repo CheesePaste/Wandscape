@@ -47,14 +47,12 @@ public final class TouristSimulation {
 
     private static final String TAG = "TouristSimulation";
 
-    /** 精力低于此比例 → relax 建筑紧急加分（Config.TOURIST_ENERGY_RESTORE_THRESHOLD 的补充启发值）。 */
-    private static final double ENERGY_URGENCY_BONUS = 2000;
-    /** 钱包低于初始 1/4 → ATM 紧急加分。 */
-    private static final double WALLET_LOW_BONUS = 2000;
-    /** 钱包=0 → ATM 大幅加分（优先取现继续逛）。 */
-    private static final double WALLET_EMPTY_BONUS = 4000;
-    /** spot 全满或有人排队 → 排队惩罚（远大于单次增益，热点建筑强烈分流；有空位建筑优先）。 */
-    private static final double QUEUE_PENALTY = 3000;
+    /** 精力低于此比例 → relax 建筑紧急加分（与单次满意度增益同量级，不再碾压选店）。 */
+    private static final double ENERGY_URGENCY_BONUS = 100;
+    /** 钱包低于初始 1/4 → ATM 取现加分（与单次满意度增益同量级，不再碾压选店）。 */
+    private static final double WALLET_LOW_BONUS = 50;
+    /** 钱包=0 → ATM 取现加分稍高（优先取现继续逛）。 */
+    private static final double WALLET_EMPTY_BONUS = 100;
 
     private TouristSimulation() {
     }
@@ -401,7 +399,7 @@ public final class TouristSimulation {
         if (touristPos == null) return null;
 
         long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000;
+        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         boolean energyEmpty = t.getEnergy() <= 0;
         boolean nightHotel = isNight && !t.isFullySatisfied();
 
@@ -460,7 +458,7 @@ public final class TouristSimulation {
 
         BuildingConfig cfg = getConfig(level, state.getBuildingId());
         if (cfg != null) {
-            // 精力低 → 强烈偏向恢复（relax）建筑
+            // 精力低 → 偏向恢复（relax）建筑（加分与单次满意度增益同量级）
             double energyRatio = t.getEnergy() / (double) WandscapeConstants.TOURIST_MAX_ENERGY;
             boolean isRelax = cfg.relax() != RelaxConfig.NONE && cfg.relax().energyRestore() > 0;
             if (isRelax && energyRatio < Config.TOURIST_ENERGY_RESTORE_THRESHOLD.get()) {
@@ -477,12 +475,12 @@ public final class TouristSimulation {
                     score += WALLET_LOW_BONUS;
                 }
             }
-            // 排队惩罚：spot 全满或已有人排队减分——spot 空但队长的间隙也持续降权，
-            // 避免新游客挤进热点建筑；多建同类型 = 有空位 → 排队短。
+            // 排队惩罚 = 等比例降权：spot 全满时按总排队人数等比缩小
+            // （1 人 -25%、2 人 -50%、3 人 -75%，封顶 -75%）。多建同类型 = 排队短 = 降权轻；
+            // 不再像固定 -3000 那样把满店压到权重地板，排队短的好店仍比空置低价值建筑更受欢迎。
             if (cfg.interactSpots() != null && !cfg.interactSpots().isEmpty()
-                    && (TouristSpotManager.getActive().isFull(state.getBuildingId(), cfg.interactSpots().size())
-                    || TouristSpotManager.getActive().totalQueueLength(state.getBuildingId()) > 0)) {
-                score -= QUEUE_PENALTY;
+                    && TouristSpotManager.getActive().isFull(state.getBuildingId(), cfg.interactSpots().size())) {
+                score *= queuePenaltyMultiplier(TouristSpotManager.getActive().totalQueueLength(state.getBuildingId()));
             }
         }
         return score;
@@ -506,6 +504,16 @@ public final class TouristSimulation {
             gain += Math.min(gap, (int) Math.round(values[d] * coeff));
         }
         return gain;
+    }
+
+    /**
+     * 排队惩罚乘数：spot 全满时，按该建筑总排队人数等比降权。
+     * 1 人 ×0.75、2 人 ×0.5、3 人 ×0.25，封顶 ×0.25（人再多不再加深）；0 人 ×1.0（无惩罚）。
+     * 纯计算（不依赖 MC 运行时），可 JUnit 单测。
+     */
+    static double queuePenaltyMultiplier(int queueLen) {
+        if (queueLen <= 0) return 1.0;
+        return Math.max(0.25, 1.0 - 0.25 * queueLen);
     }
 
     @Nullable
@@ -532,6 +540,44 @@ public final class TouristSimulation {
         HotelStayHandler hotel = HotelStayHandler.getActive();
         if (hotel == null) return false;
         return hotel.hasVacancy(buildingId);
+    }
+
+    /**
+     * 找一个可入住的旅店（实体与 sim 共用）：在殖民地全部 intact 旅店中选**水平距离最近**、
+     * 有空位的（需已加载的由 {@code requireLoaded} 把关）。
+     * 住店客回**自己**旅店不经过这里（各自在调用方直接解析，需区分「旅店失效解除登记」）。
+     *
+     * @param requireLoaded 实体寻路需要目标区块已加载；sim（直线移动）传 false
+     * @return 目标旅店 BuildingState；无可用旅店返回 null
+     */
+    @javax.annotation.Nullable
+    public static BuildingState findHotelTarget(ServerLevel level, TouristStateHost t,
+            boolean requireLoaded) {
+        UUID colonyId = t.getColonyId();
+        if (colonyId == null) return null;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return null;
+
+        // 任意可用旅店：最近优先
+        BlockPos touristPos = t.touristPos();
+        BuildingState best = null;
+        int bestDist = Integer.MAX_VALUE;
+        for (BuildingData b : api.getColonyBuildings(colonyId)) {
+            if (!"service".equals(b.getCategory())) continue;
+            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!isHotelBuilding(level, b.getBuildingId())) continue;
+            if (requireLoaded && !level.isLoaded(b.getPosition())) continue;
+            if (!hasHotelVacancy(level, b.getBuildingId())) continue;
+            int d = touristPos != null
+                    ? Math.abs(touristPos.getX() - b.getPosition().getX())
+                      + Math.abs(touristPos.getZ() - b.getPosition().getZ())
+                    : 0;
+            if (d < bestDist) {
+                bestDist = d;
+                best = getState(level, b.getBuildingId());
+            }
+        }
+        return best;
     }
 
     // ── Helpers ──

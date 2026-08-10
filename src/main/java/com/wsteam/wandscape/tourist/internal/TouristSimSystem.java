@@ -64,6 +64,8 @@ public final class TouristSimSystem {
     private static final double SPEED = 0.5;
     private static final double ARRIVE_RANGE = 1.0;
     private static final int WANDER_RADIUS = 24;
+    /** 住店客判定「已在自己旅店」的水平距离（格）：旅店可能很大，取宽松值。 */
+    private static final int AT_HOTEL_RANGE = 16;
 
     private int tickCounter;
     private int simStepLogCounter;
@@ -378,12 +380,18 @@ public final class TouristSimSystem {
         s.advanceSimTick(SIM_INTERVAL);
         s.markUnhydrated();
 
+        long dayTime = level.getDayTime() % 24000;
+        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         UUID hotel = s.getCheckedInBuildingId();
+
         if (hotel != null) {
-            long dayTime = level.getDayTime() % 24000;
-            if (dayTime >= 1000 && dayTime < 1200) {
-                // Morning checkout: 住店晚数 +1、精力回 100，回到入住前站位。
-                s.setCheckedInBuildingId(null);
+            if (dayTime < 1000) {
+                // 深夜：住店客在旅店，不动
+                checkDeparture(level, s);
+                return;
+            }
+            if (dayTime < 1200) {
+                // 清晨晨起：住店晚数 +1、精力回 100、回入住前站位；**保持登记**（名单不删）
                 s.setHotelCheckinTime(0);
                 s.setNightsStayed(s.getNightsStayed() + 1);
                 s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
@@ -393,8 +401,43 @@ public final class TouristSimSystem {
                     s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
                     s.setWakeUpPos(null);
                 }
+                // 晨起后白天外出 → fall through 到正常 sim
+            } else if (isNight) {
+                // 夜晚：未满条 → 回自己旅店睡；满条 → 不回店（18000+ 由 checkDeparture 离场）
+                if (!s.isFullySatisfied()) {
+                    boolean busy = s.getInteractTicksLeft() > 0 || s.getQueueSpotIndex() >= 0;
+                    if (!busy) {
+                        if (atOwnHotel(level, s, hotel)) {
+                            checkDeparture(level, s);
+                            return; // 已到店 → 不动
+                        }
+                        if (!hotel.equals(s.getTargetBuildingId())) {
+                            if (!routeToOwnHotel(level, s)) {
+                                // 旅店已失效 → 解除登记，按无旅店游客处理
+                                s.setCheckedInBuildingId(null);
+                                s.setHotelCheckinTime(0);
+                                s.setCommuteTarget(null);
+                                s.setTargetBuildingId(null);
+                                s.setTargetBuildingCategory(null);
+                            }
+                        }
+                        // fall through → moveToward 回店
+                    }
+                    // 交互/排队中：先完成（完成后下 tick 回店）
+                }
+                // 满条住店客夜晚 → 正常 sim（不回店，等离场窗口）
             }
-            return;
+            // 白天（1200-14000）：外出逛街，fall through
+        }
+
+        // ── 傍晚路由：无旅店游客停止当前任务去旅店（防夜晚无旅店被清场；16000 起）──
+        if (dayTime >= Config.TOURIST_EVENING_ROUTING_START.get()
+                && hotel == null && !s.isFullySatisfied()) {
+            UUID cur = s.getTargetBuildingId();
+            if (cur == null || !TouristSimulation.isHotelBuilding(level, cur)) {
+                routeToHotelForEvening(level, s); // 打断当前交互/排队并设置去旅店目标
+            }
+            // fall through → 正常移动逻辑（走回旅店）
         }
 
         // ── 交互中：在交互点等 interactionDuration 倒计时结束才结算（与实体一致，防 sim 0CD 刷产出）──
@@ -501,23 +544,35 @@ public final class TouristSimSystem {
         boolean isHotel = TouristSimulation.isHotelBuilding(level, buildingId);
         if (isHotel) {
             long dayTime = level.getDayTime() % 24000;
-            boolean isNight = dayTime >= 13000;
-            // 夜晚 + 未满条 → 入住（满条游客夜晚等离场）；入住也填一次满意值（利好玩家的特性），清晨退房精力回 100
-            if (isNight && !s.isFullySatisfied() && hasHotelVacancy(level, buildingId)) {
-                s.setCheckedInBuildingId(buildingId);
-                s.setHotelCheckinTime(s.simTick());
-                s.addVisitedBuilding(buildingId);
-                String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
-                var hotelCfg = TouristSimulation.getConfig(level, buildingId);
-                String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
-                        ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
-                int[] delta = TouristSimulation.fillBars(level, s, buildingId);
-                TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
-                        level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
+            boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
+            boolean alreadyResident = buildingId.equals(s.getCheckedInBuildingId());
+            if (isNight && !s.isFullySatisfied()) {
+                // 夜晚 + 未满条：到达即入住（住店客回店免查空位、免重复填条）——入住即时完成，无 spot 交互
+                if (alreadyResident || hasHotelVacancy(level, buildingId)) {
+                    if (!alreadyResident) {
+                        s.setCheckedInBuildingId(buildingId);
+                        s.setHotelCheckinTime(s.simTick());
+                        s.setWakeUpPos(s.touristPos());
+                        s.addVisitedBuilding(buildingId);
+                        // 首次入住：填一次满意值（住宿贡献三条）+ 记行程
+                        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+                        var hotelCfg = TouristSimulation.getConfig(level, buildingId);
+                        String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
+                                ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
+                        int[] delta = TouristSimulation.fillBars(level, s, buildingId);
+                        TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
+                                level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
+                        Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
+                    }
+                    s.setCommuteTarget(null);
+                    s.setTargetBuildingId(null);
+                    s.setTargetBuildingCategory(null);
+                    return;
+                }
+                // 夜晚意图入住但旅店满员 → 不当 service 逛/排队（避免排队拖到被清场），放弃重新规划
                 s.setCommuteTarget(null);
                 s.setTargetBuildingId(null);
                 s.setTargetBuildingCategory(null);
-                Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
                 return;
             }
             // 白天/满条 → 当普通 service 交互（fall through）
@@ -652,30 +707,42 @@ public final class TouristSimSystem {
     // ── Departure ──
 
     private void checkDeparture(ServerLevel level, TouristShadow s) {
-        if (s.getCheckedInBuildingId() != null) return;
+        UUID hotel = s.getCheckedInBuildingId();
+        long dayTime = level.getDayTime() % 24000;
+        // 离场/清场只在 18000-24000 窗口（与实体路径一致，sim 不再 14000 起提前清人）
+        boolean inDepartureWindow = dayTime >= Config.TOURIST_DEPARTURE_WINDOW_START.get()
+                && dayTime < Config.TOURIST_DEPARTURE_WINDOW_END.get();
+
+        if (hotel != null) {
+            // 住店客：只按停留截止（任意时刻）或满条在离场窗口离场；其余时刻不被清
+            if (level.getGameTime() >= s.getDepartureDeadline()) {
+                depart(level, s);
+            } else if (s.isFullySatisfied() && inDepartureWindow) {
+                depart(level, s);
+            }
+            return;
+        }
 
         if (s.isFullySatisfied() && s.isMage() && !s.isMageResumeStored()) {
             storeMageResume(s);
             s.setMageResumeStored(true);
         }
 
-        long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000;
         boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
         boolean idleTimeout = isIdle && s.simTick() > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
         // 交互/排队中：不转旅店（routeToHotel 会改 target 打断当前交互），先完成当前交互，
         // 完成后 decideNext 的夜晚逻辑自会选旅店。
         boolean interacting = s.getInteractTicksLeft() > 0 || s.getQueueSpotIndex() >= 0;
 
-        // D6 离场（goal.md）：到点 / 满条夜晚 / 夜晚无旅店 / idle 超时
+        // D6 离场（goal.md）：到点 / 满条离场窗口 / 离场窗口无旅店 / idle 超时
         boolean leave;
         if (level.getGameTime() >= s.getDepartureDeadline()) {
             leave = true;
         } else if (s.isFullySatisfied()) {
-            // 满条等夜晚再离场（白天满条先开心闲逛）
-            leave = isNight || idleTimeout;
-        } else if (isNight) {
-            // 夜晚 + 未满条：入旅店；无旅店/满 → 离场。交互/排队中先完成交互，不打断。
+            // 满条等离场窗口再离场（白天满条先开心闲逛；14000-18000 不提前清）
+            leave = inDepartureWindow || idleTimeout;
+        } else if (inDepartureWindow) {
+            // 离场窗口 + 未满条：入旅店；无旅店/满 → 离场。交互/排队中先完成交互，不打断。
             leave = interacting ? false : !routeToHotel(level, s);
         } else {
             leave = idleTimeout;
@@ -686,21 +753,58 @@ public final class TouristSimSystem {
     }
 
     private boolean routeToHotel(ServerLevel level, TouristShadow s) {
-        UUID colonyId = s.getColonyId();
-        if (colonyId == null) return false;
+        BuildingState hotel = TouristSimulation.findHotelTarget(level, s, false);
+        if (hotel == null) return false;
+        s.setTargetBuildingId(hotel.getBuildingId());
+        s.setTargetBuildingCategory("service");
+        s.setCommuteTarget(hotel.getPosition());
+        return true;
+    }
+
+    /**
+     * 傍晚路由（16000 起，无旅店游客）：打断当前交互/排队，设置去最近旅店的目标。
+     * 旅店可用才打断（无旅店则保持原状，离场窗口兜底）。
+     */
+    private boolean routeToHotelForEvening(ServerLevel level, TouristShadow s) {
+        BuildingState hotel = TouristSimulation.findHotelTarget(level, s, false);
+        if (hotel == null) return false;
+        releaseShadowSpots(s);
+        s.setCommuteTarget(null);
+        s.setTargetBuildingId(null);
+        s.setTargetBuildingCategory(null);
+        s.setTargetBuildingId(hotel.getBuildingId());
+        s.setTargetBuildingCategory("service");
+        s.setCommuteTarget(hotel.getPosition());
+        return true;
+    }
+
+    /** 住店客夜晚回自己旅店；旅店已失效返回 false（调用方解除登记）。 */
+    private boolean routeToOwnHotel(ServerLevel level, TouristShadow s) {
+        UUID hotel = s.getCheckedInBuildingId();
+        if (hotel == null) return false;
         BuildingApi api = getBuildingApi();
-        if (api == null) return false;
-        for (BuildingData b : api.getColonyBuildings(colonyId)) {
-            if (!"service".equals(b.getCategory())) continue;
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
-            if (!TouristSimulation.isHotelBuilding(level, b.getBuildingId())) continue;
-            if (!hasHotelVacancy(level, b.getBuildingId())) continue;
-            s.setTargetBuildingId(b.getBuildingId());
-            s.setTargetBuildingCategory("service");
-            s.setCommuteTarget(b.getPosition());
-            return true;
+        BuildingData data = api != null ? api.getBuilding(hotel) : null;
+        if (data == null || data.isShutdown() || !data.isStructureIntact()
+                || !TouristSimulation.isHotelBuilding(level, hotel)) {
+            return false;
         }
-        return false;
+        s.setCommuteTarget(null);
+        s.setTargetBuildingId(null);
+        s.setTargetBuildingCategory(null);
+        s.setTargetBuildingId(hotel);
+        s.setTargetBuildingCategory("service");
+        s.setCommuteTarget(data.getPosition());
+        return true;
+    }
+
+    /** 影子是否已在自己旅店附近（入住/回店后停在此处）。旅店已消失视为已到店（离场逻辑兜底）。 */
+    private boolean atOwnHotel(ServerLevel level, TouristShadow s, UUID hotel) {
+        BuildingApi api = getBuildingApi();
+        BuildingData data = api != null ? api.getBuilding(hotel) : null;
+        if (data == null) return true;
+        BlockPos p = data.getPosition();
+        return Math.abs(s.getPosX() - p.getX()) <= AT_HOTEL_RANGE
+                && Math.abs(s.getPosZ() - p.getZ()) <= AT_HOTEL_RANGE;
     }
 
     private void depart(ServerLevel level, TouristShadow s) {

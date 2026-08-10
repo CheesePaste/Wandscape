@@ -151,7 +151,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_BASE_SPAWN_COUNT = BUILDER
             .comment("Daily spawn count lower bound at colony level 1. "
-                    + "每日生成数 = 均匀区间 [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth]")
+                    + "每日新增数 = 均匀区间 [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth-1]")
             .defineInRange("tourist.baseSpawnCount", 5, 1, 100);
 
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SPAWN_BONUS = BUILDER
@@ -159,7 +159,7 @@ public class Config {
             .defineInRange("tourist.levelSpawnBonus", 1, 0, 10);
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_RANGE_WIDTH = BUILDER
-            .comment("Daily spawn count fluctuation width: target ∈ [lower, lower+width]. "
+            .comment("Daily spawn count fluctuation width: target ∈ [lower, lower+width-1]. "
                     + "默认 3 = 1 级 5~7、2 级 6~8、3 级 7~9")
             .defineInRange("tourist.spawnRangeWidth", 3, 0, 50);
 
@@ -287,7 +287,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_VISION_RADIUS = BUILDER
             .comment("游客视野半径（格）：目标选择只看半径内且已加载的建筑；视野内无目标 → 闲逛。")
-            .defineInRange("tourist.visionRadius", 48, 8, 256);
+            .defineInRange("tourist.visionRadius", 64, 8, 256);
 
     public static final ModConfigSpec.DoubleValue TOURIST_ATM_TRAVEL_FUND_MULTIPLIER = BUILDER
             .comment("生成时 travelFund = 随身现金 × 该系数（ATM 分批取现的池子上限，防无限取现）。")
@@ -305,6 +305,22 @@ public class Config {
     public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
             .comment("游客每级需求增量。")
             .defineInRange("tourist.needPerLevel", 20, 0, 500);
+
+    public static final ModConfigSpec.IntValue TOURIST_NIGHT_START = BUILDER
+            .comment("游客「夜晚」开始时刻（game time tick）：夜晚后游客优先去旅店、可入住、住店客回店睡觉。"
+                    + "默认 14000（约 19:40），比原版天黑稍晚，让游客白天/傍晚多逛一会儿。")
+            .defineInRange("tourist.nightStart", 14000, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_EVENING_ROUTING_START = BUILDER
+            .comment("傍晚路由开始时刻（game time tick）：无旅店的未满条游客从此刻起停止当前任务去旅店，"
+                    + "避免天黑后还在逛商店、夜晚无旅店被清场。默认 16000（约 21:00，夜晚中）。"
+                    + "旅店入住仍要求夜晚（>=nightStart）；此值只需早于离场窗口起点 18000 即可保证来得及。")
+            .defineInRange("tourist.eveningRoutingStart", 16000, 0, 24000);
+
+    public static final ModConfigSpec.IntValue TOURIST_HOTEL_TELEPORT_DISTANCE = BUILDER
+            .comment("夜晚回/去旅店时，游客与旅店入口水平距离超过此值（格）→ 直接传送（省寻路开销，"
+                    + "寻路到远/未加载区块代价大）。默认 64 = 视野半径（超出视野即传送）。")
+            .defineInRange("tourist.hotelTeleportDistance", 64, 16, 512);
 
     // ---- Guard (守卫) system ----
 

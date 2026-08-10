@@ -1,16 +1,16 @@
 # 🏨 Hotel & Service Buildings
 
-Service buildings make tourists spend energy and produce elements for the town. Hotels add overnight stays on top of that, with tourists checking out in the morning with full energy.
+Service buildings make tourists spend energy and produce elements for the town. Hotels add overnight stays on top of that: once a tourist checks in, they remember that hotel, come back to sleep every night, wake up with full energy, and only check out when they leave town.
 
 ## Hotel
 
-When a tourist's energy runs out or night falls before they finish exploring, they head to a hotel for the night and **check out in the morning with full energy** to continue.
+When night falls (from ~19:40) tourists prefer a hotel for the night; if they still have no hotel by late evening (~21:00), they head straight to the nearest one. Check-in **forces them into bed**; they **wake up in the morning with full energy**, shop during the day, and return to the same hotel to sleep each night. Once checked in, tourists are never cleared for being out late — they stay until their trip ends (or leave the same night they max out their needs).
 
 | Item | Description |
 |---|---|
 | Beds | Fixed per hotel; when full, later tourists go elsewhere or leave |
-| Interact spot | Check-in occupies one spot; if full, they queue |
-| Animation | Tourists lie down to sleep on check-in (purely visual; does not affect the bed) |
+| Animation | Tourists lie down to sleep on check-in (purely visual; does not affect the bed). If no bed is free they take the nearest one; if the hotel has no beds at all they stay put |
+| Guest list | Checked-in tourists stay on the hotel's guest list after waking up; they only check out when leaving town |
 
 ## Service Buildings
 
