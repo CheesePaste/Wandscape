@@ -313,10 +313,6 @@ public final class WandscapePanelController {
     // ── Tab click → sub-mode switch ──
 
     private static void handleTabClick(int tabIndex) {
-        // Switching away from the ROAD tab while the spline editor is open leaves it.
-        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-        }
         WandscapePanelState.SubMode targetMode = switch (tabIndex) {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
             case 1 -> WandscapePanelState.SubMode.ROAD_PROJECTION;
@@ -328,11 +324,16 @@ public final class WandscapePanelController {
 
         WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
         if (current == targetMode) {
-            // Clicking the already-active tab is a no-op (avoid misclick discarding work).
-            // Use ESC to exit a sub-mode.
+            // Clicking an already-active tab clean-exits the sub-mode (same as pressing ESC).
+            WandscapePanelState.exitCurrentSubMode();
+            if (!com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
+            }
+            Log.info(TAG, "[Panel] Tab {} clicked again → exited SubMode {}", tabIndex, targetMode);
             return;
         }
 
+        // Switching to a different tab: exitCurrentSubMode inside enterSubMode handles cleanup.
         WandscapePanelState.enterSubMode(targetMode);
         Log.info(TAG, "[Panel] Tab {} clicked → SubMode {}", tabIndex, targetMode);
     }

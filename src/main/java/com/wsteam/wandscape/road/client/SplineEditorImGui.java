@@ -61,10 +61,7 @@ public final class SplineEditorImGui {
 
     // ── Panel geometry: width is user-draggable from the left edge (window stays right-aligned) ──
     private static float panelWidth = 370.0f;
-    private static final float SPLITTER_W = 5.0f;
     private static final float MIN_PANEL_W = 300.0f;
-    private static long resizeCursor = 0L;
-    private static boolean resizeCursorActive = false;
 
     // Dynamic Template Generator UI binding
     private static final int[] uiDynamicWidth = new int[]{5};
@@ -91,38 +88,35 @@ public final class SplineEditorImGui {
         if (ImGui.begin("道路制作工坊", flags)) {
             SplineModel model = SplineEditorClientState.getModel();
 
-            // ── 左缘拖柄：按住向右拖加宽 / 向左拖收窄，窗口始终紧贴右缘 ──
-            // 注意：内容区起点在窗口 padding(12px) 处，cursorPos 要回退负值让按钮 hitbox
-            // 真正覆盖窗口左缘 0px 起（否则用户对着左缘白线拖，按钮在 12px 内，永远点不到）。
-            long win = mc.getWindow().getWindow();
-            ImGui.setCursorPos(-12.0f, 0.0f);
-            ImGui.invisibleButton("##PanelSplitter", SPLITTER_W + 12.0f, ImGui.getWindowHeight());
+            // ── 左缘拖柄：按住向左拖加宽 / 向右拖收窄，窗口始终紧贴右缘 ──
+            float winX = ImGui.getWindowPos().x;
+            float winY = ImGui.getWindowPos().y;
+            float winH = ImGui.getWindowHeight();
+
+            // 将拖柄按钮放置在窗口最左侧内部 [winX, winX + 10]，确保在 ImGui ClipRect 内部正常触发 hover
+            ImGui.setCursorScreenPos(winX, winY);
+            ImGui.invisibleButton("##PanelSplitter", 10.0f, winH);
             boolean splitterHovered = ImGui.isItemHovered();
-            // ImGui 的 item active 只在按钮 hitbox 内按下才算；加 GLFW 左键兜底，
-            // 鼠标压在左缘拖柄附近时即使未命中 item 也能拖（防边缘 1-2px 点不到）。
-            boolean glfwLeftDown = win != 0L && GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-            boolean splitterHeld = ImGui.isItemActive() || (splitterHovered && glfwLeftDown);
-            if (splitterHeld) {
-                panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth + ImGui.getIO().getMouseDeltaX()));
+            boolean splitterActive = ImGui.isItemActive();
+
+            if (splitterHovered || splitterActive) {
+                ImGui.setMouseCursor(imgui.flag.ImGuiMouseCursor.ResizeEW);
             }
-            // hover 时切 EW resize 光标，离开恢复
-            if (splitterHovered) {
-                if (resizeCursor == 0L) {
-                    resizeCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_RESIZE_EW_CURSOR);
-                }
-                GLFW.glfwSetCursor(win, resizeCursor);
-                resizeCursorActive = true;
-            } else if (resizeCursorActive) {
-                GLFW.glfwSetCursor(win, 0L);
-                resizeCursorActive = false;
+
+            if (splitterActive) {
+                float deltaX = ImGui.getIO().getMouseDeltaX();
+                panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth - deltaX));
             }
+
             // 可见的拖柄竖线
             var drawList = ImGui.getWindowDrawList();
-            float splitterLineX = ImGui.getWindowPos().x + SPLITTER_W * 0.5f;
-            drawList.addLine(splitterLineX, ImGui.getWindowPos().y,
-                    splitterLineX, ImGui.getWindowPos().y + ImGui.getWindowHeight(), 0x66FFFFFF, 1.0f);
+            float splitterLineX = winX + 1.0f;
+            int lineColor = (splitterHovered || splitterActive) ? 0xFFE6AD2A : 0x44FFFFFF;
+            float lineThickness = (splitterHovered || splitterActive) ? 3.0f : 1.0f;
+            drawList.addLine(splitterLineX, winY, splitterLineX, winY + winH, lineColor, lineThickness);
 
-            ImGui.setCursorPos(12.0f, 12.0f);
+            // 重置 ImGui 光标位置到内部 content padding
+            ImGui.setCursorPos(12.0f, 14.0f);
 
             // ── Banner Header ──
             drawHeaderBanner(model);
