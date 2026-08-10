@@ -47,7 +47,8 @@
 
 ## 道路放置流程（玩家操作）
 
-- `RoadPlacementState`：静态状态（RoadPhase BAR/PLACING、ToolMode REPLACE/FILL/DESTROY_FILL/SPLINE、start/end/ghost、预设双击 400ms 确认）。
+- `RoadPlacementState`：静态状态（RoadPhase BAR/PLACING、ToolMode REPLACE/FILL/DESTROY_FILL/SPLINE、start/end/ghost、预设双击 400ms 确认）。enterBar/enterPlacing 为纯相位翻转（不清位置/工具/参考块/预设）；suspendProjection 落 projecting 标志、保留全部选取；exitProjection 全清（仅 `reset()` 登出时调）；clearAll 仅清 start/end（提交/显式撤销用，保留工具）。
+- **选取缓存语义**：道路的起终点/工具/预设/参考块在会话内跨模式切换（切 tab/按 G/ESC/关面板/C 切相位）保留，仅登出或提交（Enter 发包后 clearAll）/撤销清空。
 - `RoadPlacementController`：每 tick：右击设 start、左击设 end、Enter 按工具模式发包、Backspace/ESC 清理；ghost 位由 64 格射线取 block。
 - `RoadPlacementOverlay`：预设网格 + 4 工具按钮 + 3D 方块预览。
 - `RoadPlacementRenderer`：世界预览（绿 start/红 end、黄色矩形表面填充、FILL 完整 3D 盒）。

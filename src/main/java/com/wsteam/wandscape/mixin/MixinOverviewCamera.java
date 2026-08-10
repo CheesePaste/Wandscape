@@ -10,6 +10,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.wsteam.wandscape.overview.client.OverviewClientState;
+
 @Mixin(Camera.class)
 public abstract class MixinOverviewCamera {
 
@@ -22,14 +24,14 @@ public abstract class MixinOverviewCamera {
     @Inject(method = "setup", at = @At("TAIL"))
     private void onSetupTail(BlockGetter level, Entity entity, boolean detached,
                              boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
-        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+        if (OverviewClientState.isActive()) {
             setPosition(
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamX(),
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamY(),
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamZ());
+                    OverviewClientState.getCamX(),
+                    OverviewClientState.getCamY(),
+                    OverviewClientState.getCamZ());
             setRotation(
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamYaw(),
-                    com.wsteam.wandscape.overview.client.OverviewClientState.getCamPitch());
+                    OverviewClientState.getCamYaw(),
+                    OverviewClientState.getCamPitch());
         }
     }
 }

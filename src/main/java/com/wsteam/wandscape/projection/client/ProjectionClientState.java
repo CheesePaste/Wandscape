@@ -55,6 +55,16 @@ public final class ProjectionClientState {
     }
 
     /**
+     * Clamp a slot index into {@code [0, size)}. Out-of-range (negative, or {@code >= size},
+     * including any index when {@code size == 0}) folds back to 0. Package-private so the
+     * selection-preservation logic can be unit-tested in isolation.
+     */
+    static int clampSlotIndex(int current, int size) {
+        if (current < 0 || current >= size) return 0;
+        return current;
+    }
+
+    /**
      * Enter projection mode. Called from {@code ProjectionEnterResponsePacket} client handler.
      * Saves current player state, enablestransl flight, stores building slots.
      */
@@ -64,22 +74,25 @@ public final class ProjectionClientState {
 
         bodyAnchor = anchor;
 
-        // Store building slots
+        // Server re-sends slots on every enter; merge, don't discard the selection.
         synchronized (buildingSlots) {
             buildingSlots.clear();
             buildingSlots.addAll(slots);
         }
-        selectedSlotIndex = 0;
-        ghostPos = null;
+        // Preserve selection across suspend/resume within a session: only clamp the
+        // slot index into the (possibly changed) list; keep rotation and pin.
+        selectedSlotIndex = clampSlotIndex(selectedSlotIndex, slots.size());
+        // Drop a stale crosshair-follow position, but keep a pinned placement.
+        if (!pinned) {
+            ghostPos = null;
+        }
         overlapDetected = false;
-        rotationSteps = 0;
-        pinned = false;
 
         projecting = true;
 
         SoundService.playUI(WandscapeSounds.PROJECTION_ENTER, 1.0f);
 
-        Log.info(TAG, "[Projection] Entered placement mode. Body at {}, {} buildings",
+        Log.info(TAG, "[Projection] Entered placement mode. Body at {}, {} buildings (selection preserved)",
                 anchor, slots.size());
     }
 
@@ -104,6 +117,18 @@ public final class ProjectionClientState {
         }
 
         Log.info(TAG, "[Projection] Exited projection mode");
+    }
+
+    /**
+     * Suspend projection mode without clearing the selection. Used when temporarily
+     * leaving BUILD (tab switch / G / ESC / panel close) so the player's chosen
+     * building, rotation, pinned position and slot list survive re-entry within the
+     * same session. Full clear is {@link #exitProjection()}, called only on disconnect.
+     */
+    public static void suspendProjection() {
+        projecting = false;
+        SoundService.playUI(WandscapeSounds.PROJECTION_EXIT, 1.0f);
+        Log.info(TAG, "[Projection] Suspended placement mode (selection preserved)");
     }
 
     // ── Body anchor ──

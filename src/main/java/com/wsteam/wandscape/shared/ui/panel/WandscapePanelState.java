@@ -234,9 +234,10 @@ public final class WandscapePanelState {
      * performs no network sends and no cursor/mouse changes.
      */
     public static void reset() {
-        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
-            com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
-        }
+        com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        // 清空空中视角相机缓存（exitOverview 是 suspend 语义、保留缓存），
+        // 防止上一世界的相机位置泄漏到下一世界
+        com.wsteam.wandscape.overview.client.OverviewClientState.hardReset();
         if (ProjectionClientState.isProjecting()) {
             ProjectionClientState.exitProjection();
         }
@@ -355,16 +356,13 @@ public final class WandscapePanelState {
     public static void openBuildingBar() {
         buildingBarOpen = true;
         buildingBarSearchFocused = false;
-        buildingBarCategory = "All";
-        buildingBarSearch = "";
+        // Preserve category/search/scroll from last open (selection cache). Resync the
+        // highlighted slot from the persisted projection selection.
         buildingBarSelectedIndex = ProjectionClientState.getSelectedSlotIndex();
-        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
-        // Clear ghost — no preview while selecting
-        ProjectionClientState.setGhostPos(null);
-        ProjectionClientState.setPinned(false);
+        // Keep ghost/pinned so toggling the bar does not discard a placement in progress.
         if (!cursorLifted) {
             cursorLifted = true;
             Minecraft.getInstance().mouseHandler.releaseMouse();
@@ -374,10 +372,8 @@ public final class WandscapePanelState {
     public static void closeBuildingBar() {
         buildingBarOpen = false;
         buildingBarSearchFocused = false;
-        buildingBarCategory = "All";
-        buildingBarSearch = "";
+        // Preserve category/search/scroll (selection cache). selectedIndex resyncs on reopen.
         buildingBarSelectedIndex = -1;
-        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         if (cursorLifted) {
@@ -487,7 +483,7 @@ public final class WandscapePanelState {
                 buildPhase = BuildPhase.BAR;
                 if (ProjectionClientState.isProjecting()) {
                     PacketDistributor.sendToServer(new ProjectionExitPacket());
-                    ProjectionClientState.exitProjection();
+                    ProjectionClientState.suspendProjection();
                 }
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
@@ -501,7 +497,7 @@ public final class WandscapePanelState {
                     com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
                 }
                 if (RoadPlacementState.isProjecting()) {
-                    RoadPlacementState.exitProjection();
+                    RoadPlacementState.suspendProjection();
                     releaseCursorToGame();
                 }
                 // If entered from overview, go back to pure overview
