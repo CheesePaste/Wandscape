@@ -93,8 +93,11 @@ public final class WandscapePanelController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        // Tab 已被面板用作抬/放光标，抑制原版玩家列表在 Tab 按下时闪烁
-        mc.options.keyPlayerList.setDown(false);
+        // 光标切换键（默认 Tab）已被面板用作抬/放光标：仅当绑定仍在 Tab 时抑制原版
+        // 玩家列表在 Tab 按下时闪烁；玩家改绑后 Tab 恢复原版玩家列表功能。
+        if (com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
+            mc.options.keyPlayerList.setDown(false);
+        }
 
         long window = mc.getWindow().getWindow();
         boolean screenOpen = mc.screen != null;
@@ -425,8 +428,9 @@ public final class WandscapePanelController {
             return;
         }
 
-        // Tab: toggle cursor raise/lower (replaces the old C key). Only when panel is open.
-        if (key == GLFW.GLFW_KEY_TAB && WandscapePanelState.isPanelOpen()) {
+        // Cursor toggle key (default Tab): raise/lower the cursor. Only when panel is open.
+        if (com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.matches(key, scanCode)
+                && WandscapePanelState.isPanelOpen()) {
             WandscapePanelState.toggleCursor();
             return;
         }

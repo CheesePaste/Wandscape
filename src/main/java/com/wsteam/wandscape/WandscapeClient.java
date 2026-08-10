@@ -85,6 +85,14 @@ public class WandscapeClient {
     );
 
 
+    public static final KeyMapping PANEL_CURSOR_TOGGLE = new KeyMapping(
+            "key.wandscape.panel_cursor",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_TAB,
+            "key.categories.wandscape"
+    );
+
+
     public static final KeyMapping GUIDE_TOGGLE = new KeyMapping(
             "key.wandscape.guide",
             InputConstants.Type.KEYSYM,
@@ -281,6 +289,7 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(PROJECTION_TOGGLE);
+        event.register(PANEL_CURSOR_TOGGLE);
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
         event.register(OVERVIEW_TOGGLE);
