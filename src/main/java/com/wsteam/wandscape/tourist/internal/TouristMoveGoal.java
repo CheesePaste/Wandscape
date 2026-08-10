@@ -346,14 +346,13 @@ public class TouristMoveGoal extends Goal {
         // Check if we're close enough to the building to switch to indoor micro-nav
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId != null && isWithinDistanceOfBbox(buildingId, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
-            // Hotels: check in the moment the tourist reaches the building — it
-            // teleports into a bed, no need to reach the exact interact point.
-            if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
-                return;
-            }
-            // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
-            // 直接放弃本次访问重新规划（去别的旅店/离场窗口兜底），避免排队拖到被清场。
-            if (isHotelBuilding(buildingId)) {
+            // 旅店入住：游客**进入建筑 bbox** 时触发（bbox+5 外扩已去掉，避免大旅店离门老远就入住）
+            if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
+                if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                    return;
+                }
+                // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
+                // 直接放弃本次访问重新规划（去别的旅店/离场窗口兜底），避免排队拖到被清场。
                 long dayTime = tourist.level().getDayTime() % 24000;
                 if (dayTime >= Config.TOURIST_NIGHT_START.get() && !tourist.isFullySatisfied()) {
                     finishBuildingStop();
@@ -433,9 +432,9 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // 已进旅店（室内）：入住即时完成，不占 spot、不等 interaction_duration。
+        // 已进旅店（进入建筑 bbox）：入住即时完成，不占 spot、不等 interaction_duration。
         // 白天/满条/满员（tryHotelCheckIn 失败）→ 按普通 service 建筑继续。
-        if (isHotelBuilding(buildingId)) {
+        if (isHotelBuilding(buildingId) && isInsideBuilding(buildingId)) {
             long dayTime = tourist.level().getDayTime() % 24000;
             if (dayTime >= Config.TOURIST_NIGHT_START.get() && !tourist.isFullySatisfied()) {
                 if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
@@ -980,10 +979,10 @@ public class TouristMoveGoal extends Goal {
             return ReturnHomeResult.NONE;
         }
 
-        // 已在自己旅店旁 → 回店睡（alreadyResident 路径，直接强制躺床）。
+        // 已在自己旅店内（进入建筑 bbox，无 +5 外扩）→ 回店睡（alreadyResident 路径，直接强制躺床）。
         // 无床卡原地（wakeUpPos == 当前位置且未睡着）→ 站定等晨起，不重复 settle；
         // 重载后站在床上（wakeUpPos != 当前位置）→ 仍重新躺床。
-        if (isWithinDistanceOfBbox(hotel, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
+        if (isInsideBuilding(hotel)) {
             if (tourist.getWakeUpPos() != null && !tourist.isSleeping()
                     && tourist.getWakeUpPos().equals(tourist.blockPosition())) {
                 tourist.getNavigation().stop();
