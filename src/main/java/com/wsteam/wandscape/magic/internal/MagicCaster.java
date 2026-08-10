@@ -116,7 +116,7 @@ public final class MagicCaster {
         BlockPos beamTarget = aimFirstBlock(level, source, axis);
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
-        PacketDistributor.sendToPlayersTrackingEntity(npc,
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, source, axis, circleId));
 
         boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,

@@ -96,7 +96,11 @@ public class MagicCircleDotParticle extends TextureSheetParticle {
                              float r, float g, float b,
                              float startSize, float endSize,
                              float baseAlpha, boolean fadeOut, int lifetime) {
-        if (cachedSprite == null) return;
+        if (level == null) return;
+        if (cachedSprite == null) {
+            level.addParticle(com.wsteam.wandscape.Wandscape.MAGIC_GLOW.get(), x, y, z, 0, 0, 0);
+            return;
+        }
         var p = new MagicCircleDotParticle(level, x, y, z, r, g, b,
                 startSize, endSize, baseAlpha, fadeOut, lifetime, cachedSprite);
         Minecraft.getInstance().particleEngine.add(p);

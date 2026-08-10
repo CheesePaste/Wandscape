@@ -59,6 +59,52 @@ class MagicDefTest {
     }
 
     @Test
+    void parsesHeal() throws Exception {
+        MagicDef heal = loadSpec("/data/wandscape/magic_spells/heal.json");
+        assertNotNull(heal, "heal.json should be on classpath");
+        assertEquals("heal", heal.id());
+        assertEquals(MagicDef.Category.SUPPORT, heal.category());
+        assertEquals(40, heal.manaCost());
+        assertEquals(300, heal.baseCooldown());
+        assertEquals(16, heal.range(), 1e-9);
+        assertEquals(MagicDef.TargetMode.ALLY_LOWEST_HP, heal.targetMode());
+        assertEquals("heal_magic_circle", heal.effectCircleId());
+        assertEquals(0xFF2ECC71, heal.effectColor());
+        assertEquals(0.9f, heal.conditions().allyHpMax(), 1e-6f);
+    }
+
+    @Test
+    void parsesMeteor() throws Exception {
+        MagicDef meteor = loadSpec("/data/wandscape/magic_spells/meteor.json");
+        assertNotNull(meteor, "meteor.json should be on classpath");
+        assertEquals("meteor", meteor.id());
+        assertEquals(MagicDef.Category.AOE, meteor.category());
+        assertEquals(70, meteor.manaCost());
+        assertEquals(500, meteor.baseCooldown());
+        assertEquals(24, meteor.range(), 1e-9);
+        assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, meteor.targetMode());
+        assertEquals("meteor_magic_circle", meteor.effectCircleId());
+        assertEquals(0xFFE74C3C, meteor.effectColor());
+        assertEquals(1, meteor.conditions().minEnemies());
+    }
+
+    @Test
+    void parsesPetrification() throws Exception {
+        MagicDef pet = loadSpec("/data/wandscape/magic_spells/petrification.json");
+        assertNotNull(pet, "petrification.json should be on classpath");
+        assertEquals("petrification", pet.id());
+        assertEquals(MagicDef.Category.DEFENSE, pet.category());
+        assertEquals(50, pet.manaCost());
+        assertEquals(600, pet.baseCooldown());
+        assertEquals(0, pet.range(), 1e-9);
+        assertEquals(MagicDef.TargetMode.SELF, pet.targetMode());
+        assertEquals("petrification_magic_circle", pet.effectCircleId());
+        assertEquals(0xFF7F8C8D, pet.effectColor());
+        assertEquals(0.8f, pet.conditions().selfHpMax(), 1e-6f);
+        assertEquals("wandscape:petrification", pet.conditions().noEffect());
+    }
+
+    @Test
     void parsesAltarFields() {
         MagicDef def = MagicDef.fromJson("altar", JsonParser.parseString(
                 "{\"altar_only\": true, \"altar_cooldown\": 600, \"altar_duration\": 160}"));

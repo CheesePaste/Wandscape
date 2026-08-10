@@ -1,0 +1,99 @@
+{
+  "id": "petrification_magic_circle",
+  "duration_ticks": 100,
+  "height": 0.05,
+  "elements": [
+    {
+      "type": "polygon",
+      "radius": 3.5,
+      "sides": 8,
+      "particle": "glow",
+      "color": "#7f8c8d",
+      "mode": "beads",
+      "density": 1.8,
+      "rotate_speed": 6,
+      "start": 0.0,
+      "anim": {
+        "scale": [[0, 0], [0.35, 1.0], [0.85, 1.0], [1, 0.8]],
+        "alpha": [[0, 0], [0.2, 1.0], [0.85, 1.0], [1, 0.0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 3.2,
+      "particle": "smoke",
+      "color": "#cd6133",
+      "mode": "beads",
+      "density": 1.4,
+      "rotate_speed": -8,
+      "start": 0.08,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.0], [0.85, 1.0], [1, 0.8]],
+        "alpha": [[0, 0], [0.2, 1.0], [0.85, 1.0], [1, 0.0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "polygon",
+      "radius": 2.2,
+      "sides": 4,
+      "particle": "glow",
+      "color": "#d35400",
+      "mode": "beads",
+      "density": 1.8,
+      "rotation_offset_deg": 45,
+      "rotate_speed": 10,
+      "start": 0.16,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.0], [0.85, 1.0], [1, 0.85]],
+        "alpha": [[0, 0], [0.2, 1.0], [0.85, 1.0], [1, 0.0]]
+      }
+    },
+    {
+      "type": "glyph",
+      "radius": 2.6,
+      "count": 4,
+      "sprite": "rune_earth",
+      "scale": 0.42,
+      "particle": "crit",
+      "color": "#f39c12",
+      "rotation_offset_deg": 0,
+      "rotate_speed": 10,
+      "start": 0.22,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.0], [1, 0.9]],
+        "alpha": [[0, 0], [0.2, 1.0], [0.85, 1.0], [1, 0.0]]
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 1.2,
+      "particle": "glow",
+      "color": "#7f8c8d",
+      "mode": "beads",
+      "density": 1.5,
+      "rotate_speed": -14,
+      "start": 0.28,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.0], [1, 0.85]],
+        "alpha": [[0, 0], [0.2, 1.0], [0.85, 1.0], [1, 0.0]]
+      }
+    },
+    {
+      "type": "polygon",
+      "radius": 0.6,
+      "sides": 8,
+      "particle": "glow",
+      "color": "#e67e22",
+      "mode": "beads",
+      "density": 2.0,
+      "rotate_speed": 20,
+      "start": 0.34,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.1], [1, 0.9]],
+        "alpha": [[0, 0], [0.15, 1.0], [0.9, 1.0], [1, 0.0]]
+      }
+    }
+  ]
+}

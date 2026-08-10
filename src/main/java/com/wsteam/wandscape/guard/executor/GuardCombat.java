@@ -14,6 +14,7 @@ import com.wsteam.wandscape.magic.data.WorldSnapshot;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.CastBrain;
 import com.wsteam.wandscape.magic.internal.MagicCaster;
+import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -87,13 +88,7 @@ public final class GuardCombat {
             MagicDef chosen = CastBrain.select(known,
                     def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), snapshot);
             if (chosen == null) return;
-            boolean ok;
-            if (MagicCaster.BEAM_MAGIC_ID.equals(chosen.id())) {
-                ok = MagicCaster.castNpcAt(level, npc, target, circleId, color);
-            } else {
-                Log.warn(TAG, "施法分发缺失：魔法 {} 无执行器（已知魔法表与执行器不一致）", chosen.id());
-                return;
-            }
+            boolean ok = MagicSpellExecutors.dispatch(level, npc, target, chosen, circleId, color);
             if (ok) {
                 // 杖尖彩色爆闪（施法颜色）
                 float[] rgb = rgbOf(color);

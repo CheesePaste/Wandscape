@@ -185,6 +185,8 @@ public class Wandscape {
                             .build("transport_item"));
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
             DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
+    public static final DeferredRegister<net.minecraft.world.effect.MobEffect> MOB_EFFECTS =
+            DeferredRegister.create(Registries.MOB_EFFECT, MODID);
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -384,7 +386,9 @@ public class Wandscape {
         CREATIVE_MODE_TABS.register(modEventBus);
         BLOCKS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
+        MOB_EFFECTS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
+        com.wsteam.wandscape.magic.internal.WandscapeEffects.PETRIFICATION.getId();
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
@@ -872,7 +876,8 @@ public class Wandscape {
                 .then(TransportCommand.node())
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
-                .then(com.wsteam.wandscape.command.SplineEditorCommand.node());
+                .then(com.wsteam.wandscape.command.SplineEditorCommand.node())
+                .then(com.wsteam.wandscape.command.MagicCommand.node());
         dispatcher.register(root);
     }
 

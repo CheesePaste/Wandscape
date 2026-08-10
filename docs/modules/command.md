@@ -27,6 +27,7 @@
 | `guard status`（guard/GuardCommand） | 打印守卫区数/最近威胁/脱离区清空/活跃守卫任务数 |
 | `guide` | 加载 `assets/wandscape/guide/test_guide.md` 发 GuideTestPacket 开 Markdown 引导测试屏 |
 | `spline edit|done` | 进/出样条道路编辑器（SplineEditorEnterPacket） |
+| `magic cast <spell_id>` | 魔法调试测试：直接对玩家触发/施加指定魔法（heal/meteor/petrification/beam 等） |
 
 ## 辅助说明
 

@@ -1,0 +1,15 @@
+{
+  "id": "heal",
+  "category": "support",
+  "mana_cost": 40,
+  "base_cooldown": 300,
+  "range": 16,
+  "target_mode": "ally_lowest_hp",
+  "conditions": {
+    "ally_hp_max": 0.9
+  },
+  "effect": {
+    "circle_id": "heal_magic_circle",
+    "color": "#2ECC71"
+  }
+}
