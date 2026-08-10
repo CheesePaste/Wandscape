@@ -52,7 +52,7 @@
 
 - **住店客（resident）**：游客入住后 `checkedInBuildingId` **常驻**（实体/影子 NBT 持久化）——清晨只「晨起」（`wakeUp`：精力回 100、回入住前站位、住店晚数 +1），**名单不删**；白天照常外出逛街，夜晚回**自己**旅店睡觉。离场（截止/满条当晚/被杀）才 `checkOut` 从名单删除。
 - **checkIn 条件**（TouristMoveGoal 把关）：夜晚（`tourist.nightStart` ≥14000）且未满条，且 ServiceConfig.maxOccupancy>0；`checkIn` 幂等——已是该旅店住店客（回店/磁盘加载）跳过容量检查，避免被自己占的床位挤掉。
-- **提前入住（入住即时完成）**：到达酒店建筑 bbox 内 5 格（microNavSwitchDistance）/到达入口/已进店内即 `tryHotelCheckIn`——**不占 spot、不等 `interaction_duration_ticks`**，到达即入住躺床；白天条件不满足则按普通服务建筑处理。夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）。
+- **提前入住（入住即时完成）**：游客**进入酒店建筑 bbox** 即 `tryHotelCheckIn`（bbox 外扩 +5 已去掉——大旅店不会在离门老远就入住）——**不占 spot、不等 `interaction_duration_ticks`**，进入即入住躺床；白天条件不满足则按普通服务建筑处理。夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）。
 - **夜晚回店**：住店客夜晚（或凌晨 0-1000）空闲时 `returnToOwnHotel` 回自己旅店——已睡着停住、在店旁强制躺床、在路上继续走、否则开始回店；旅店被拆 → 解除登记按无旅店处理；**过远（> `tourist.hotelTeleportDistance` 64）直接传送**（省寻路开销）。
 - **傍晚路由**：`tourist.eveningRoutingStart`（默认 16000）起，无旅店未满条游客**停止当前任务**去旅店（`TouristSimulation.findHotelTarget` 全殖民地找最近可用旅店，实体路径要求区块已加载）。
 - **睡床（纯视觉）**：入住即 `settleIntoBed` **强制躺床**——有空床躺空床；床不够（全被占用）躺**最近一张床**（纯视觉可共用）；旅店一张床都没有 → **卡原地不动**。床判定 = 酒店 bbox 内 `BedBlock`（跳过原版 `OCCUPIED`），`setSleepingPos` + `Pose.SLEEPING`，不改床方块状态 → 无占用泄漏。
