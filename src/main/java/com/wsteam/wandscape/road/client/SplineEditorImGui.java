@@ -24,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Clean UTF-8 Chinese Localized ImGui Studio Interface for Road Placement & Spline Editor.
@@ -58,6 +59,13 @@ public final class SplineEditorImGui {
     private static final float[] uiOffsetPitch = new float[]{0.0f};
     private static final float[] uiOffsetYaw = new float[]{0.0f};
 
+    // ── Panel geometry: width is user-draggable from the left edge (window stays right-aligned) ──
+    private static float panelWidth = 370.0f;
+    private static final float SPLITTER_W = 5.0f;
+    private static final float MIN_PANEL_W = 300.0f;
+    private static long resizeCursor = 0L;
+    private static boolean resizeCursorActive = false;
+
     // Dynamic Template Generator UI binding
     private static final int[] uiDynamicWidth = new int[]{5};
     private static final int[] uiDynamicDepth = new int[]{1};
@@ -69,7 +77,10 @@ public final class SplineEditorImGui {
         Minecraft mc = Minecraft.getInstance();
         var io = ImGui.getIO();
 
-        float width = 370.0f;
+        // 宽度可调（左缘拖柄拖动），每帧保持紧贴右缘
+        float maxW = Math.max(480.0f, io.getDisplaySizeX() * 0.85f);
+        panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth));
+        float width = panelWidth;
         ImGui.setNextWindowPos(io.getDisplaySizeX() - width, 0, ImGuiCond.Always);
         ImGui.setNextWindowSize(width, io.getDisplaySizeY(), ImGuiCond.Always);
 
@@ -79,6 +90,39 @@ public final class SplineEditorImGui {
 
         if (ImGui.begin("道路制作工坊", flags)) {
             SplineModel model = SplineEditorClientState.getModel();
+
+            // ── 左缘拖柄：按住向右拖加宽 / 向左拖收窄，窗口始终紧贴右缘 ──
+            // 注意：内容区起点在窗口 padding(12px) 处，cursorPos 要回退负值让按钮 hitbox
+            // 真正覆盖窗口左缘 0px 起（否则用户对着左缘白线拖，按钮在 12px 内，永远点不到）。
+            long win = mc.getWindow().getWindow();
+            ImGui.setCursorPos(-12.0f, 0.0f);
+            ImGui.invisibleButton("##PanelSplitter", SPLITTER_W + 12.0f, ImGui.getWindowHeight());
+            boolean splitterHovered = ImGui.isItemHovered();
+            // ImGui 的 item active 只在按钮 hitbox 内按下才算；加 GLFW 左键兜底，
+            // 鼠标压在左缘拖柄附近时即使未命中 item 也能拖（防边缘 1-2px 点不到）。
+            boolean glfwLeftDown = win != 0L && GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            boolean splitterHeld = ImGui.isItemActive() || (splitterHovered && glfwLeftDown);
+            if (splitterHeld) {
+                panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth + ImGui.getIO().getMouseDeltaX()));
+            }
+            // hover 时切 EW resize 光标，离开恢复
+            if (splitterHovered) {
+                if (resizeCursor == 0L) {
+                    resizeCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_RESIZE_EW_CURSOR);
+                }
+                GLFW.glfwSetCursor(win, resizeCursor);
+                resizeCursorActive = true;
+            } else if (resizeCursorActive) {
+                GLFW.glfwSetCursor(win, 0L);
+                resizeCursorActive = false;
+            }
+            // 可见的拖柄竖线
+            var drawList = ImGui.getWindowDrawList();
+            float splitterLineX = ImGui.getWindowPos().x + SPLITTER_W * 0.5f;
+            drawList.addLine(splitterLineX, ImGui.getWindowPos().y,
+                    splitterLineX, ImGui.getWindowPos().y + ImGui.getWindowHeight(), 0x66FFFFFF, 1.0f);
+
+            ImGui.setCursorPos(12.0f, 12.0f);
 
             // ── Banner Header ──
             drawHeaderBanner(model);
@@ -402,11 +446,13 @@ public final class SplineEditorImGui {
     private static void drawHeaderBanner(SplineModel model) {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
         ImGui.pushStyleColor(ImGuiCol.Border, 0.78f, 0.63f, 0.25f, 0.50f);
-        ImGui.beginChild("HeaderBanner", 0, 56, true);
+        ImGui.beginChild("HeaderBanner", 0, 80, true);
         {
             ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
+            ImGui.spacing();
+            ImGui.spacing();
 
             String toolName = switch (RoadPlacementState.getActiveTool()) {
                 case REPLACE -> "直线替换";
@@ -603,8 +649,17 @@ public final class SplineEditorImGui {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.55f, 0.15f, 0.15f, 0.85f);
             ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.75f, 0.20f, 0.20f, 0.95f);
             if (ImGui.button(ICON_TRASH + " \u5220\u9664\u8282\u70b9 #" + selectedIdx, -1, 26)) {
+                int before = model.getPoints().size();
                 model.removePoint(selectedIdx);
-                SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                // \u50cf\u6808\u4e00\u6837\uff1a\u5220\u9664\u540e\u81ea\u52a8\u9009\u4e2d\u4e0a\u4e00\u4e2a\u70b9\uff1b\u5220\u7684\u662f\u6700\u540e\u4e00\u4e2a\u5219\u9009\u4e2d\u65b0\u7684\u672b\u5c3e
+                int after = model.getPoints().size();
+                if (after > 0) {
+                    int nextIdx = Math.min(selectedIdx, after - 1);
+                    SplineEditorClientState.setSelectedPoint(nextIdx, SplineEditorClientState.SelectionType.ANCHOR);
+                } else {
+                    SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                }
+                Log.info(TAG, "[SplineEditor] Deleted node #{} ({} \u2192 {} points), selected #{}", selectedIdx, before, after, after > 0 ? Math.min(selectedIdx, after - 1) : -1);
             }
             WandscapeImGuiTheme.drawTooltip("\u79fb\u9664\u5f53\u524d\u9009\u4e2d\u7684\u63a7\u5236\u8282\u70b9 (\u5feb\u6377\u952e Delete / Backspace)\u3002");
             ImGui.popStyleColor(2);
