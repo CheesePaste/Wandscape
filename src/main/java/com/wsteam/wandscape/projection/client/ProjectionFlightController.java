@@ -40,6 +40,7 @@ public final class ProjectionFlightController {
     private static boolean wasRightDown = false;
     private static boolean wasEscapeDown = false;
     private static boolean wasScreenOpen = false;
+    private static long lastLeftClickTime = 0;
 
     private static boolean registered = false;
 
@@ -176,11 +177,17 @@ public final class ProjectionFlightController {
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
 
-        // Pinned: left-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
+        // Pinned: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
         if (ProjectionClientState.isPinned()) {
             boolean overGizmo = BuildGizmoController.getHoveredAxis() != BuildGizmoController.AxisDrag.NONE;
             if (leftClicked && !overGizmo) {
-                openConstructionScreen(mc);
+                long now = System.currentTimeMillis();
+                if (now - lastLeftClickTime < 400) {
+                    openConstructionScreen(mc);
+                    lastLeftClickTime = 0;
+                } else {
+                    lastLeftClickTime = now;
+                }
             }
             return;
         }

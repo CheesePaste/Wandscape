@@ -71,6 +71,7 @@ public final class OverviewFlightController {
     private static boolean wasGrabbed = false;
     private static int skipFrames = 0;
     private static double rmbDragDistance = 0.0;
+    private static long lastLeftClickTime = 0;
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
@@ -310,12 +311,18 @@ public final class OverviewFlightController {
                 rmbDragDistance = 0.0;
             }
 
-            // Pinned ghost: left-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
+            // Pinned ghost: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
             if (ProjectionClientState.isPinned()) {
                 boolean overGizmo = com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis()
                         != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
                 if (leftClicked && !overGizmo) {
-                    ProjectionFlightController.openConstructionScreen(mc);
+                    long now = System.currentTimeMillis();
+                    if (now - lastLeftClickTime < 400) {
+                        ProjectionFlightController.openConstructionScreen(mc);
+                        lastLeftClickTime = 0;
+                    } else {
+                        lastLeftClickTime = now;
+                    }
                 }
             }
         }

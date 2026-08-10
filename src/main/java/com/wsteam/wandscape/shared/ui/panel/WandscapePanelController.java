@@ -137,6 +137,13 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverSubmitButton(mouseX, mouseY, screenW)) {
+                com.wsteam.wandscape.projection.client.ProjectionFlightController.openConstructionScreen(mc);
+                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                event.setCanceled(true);
+                return;
+            }
             if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) {
                 event.setCanceled(true);
                 return;
