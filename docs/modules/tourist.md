@@ -11,8 +11,8 @@
 - `extends PathfinderMob implements VillagerLike, TouristStateHost`。
 - 外观：`Appearance` 枚举 TOURIST/MAGE，`MAGE_CHANCE=0.05`；皮肤数运行时扫描 `textures/entity/tourist|wizard`。
 - 属性：MOVEMENT_SPEED 0.5、FOLLOW_RANGE 64、MAX_HEALTH 20。AI：FloatGoal(0)/OpenDoorGoal(1)/TouristMoveGoal(2)/RandomLookAroundGoal(3)。`createNavigation` → WandscapeNavigation。
-- 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0。能量 0-200、满意度 0-100。
-- 偏好 `typePreferences`：默认 40，范围 5-100。法师属性 maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue。
+- 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0；`travelFund`（总旅费 = ATM 取现池，见 simulation.md）。能量 0-100（`TOURIST_MAX_ENERGY`）。
+- 法师属性 maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue。
 - **无物品背包**，仅 `recentVisits` 记忆（上限 24 FIFO）+ visitedBuildings（停留期不重置，ATM 缺钱时豁免可分批取现）+ lastAtmWithdrawTime（取现冷却）。不可被推动，`removeWhenFarAway=false`。
 - **救援传送（被困兜底，`TouristTeleport`）只落点建筑外**：优先最近已建成道路（`rescueRoadRadius`），无路则建筑外围（入口点/bbox 面/外扩环扫，`rescuePeripheryRadius`），绝不传进建筑或房顶；找不到安全点则不传送。影子→实体水合若落在建筑房顶也改传安全点（`TouristSimSystem.importToEntity`）。
 
@@ -42,9 +42,8 @@
 
 ## 满意度与偏好
 
-- `satisfactionGain`：`threeSum` = comfort+magic+wonder（商店叠加 ShopStockManager.getGoodsBonus）；`threshold = level × TOURIST_LEVEL_SATISFACTION_THRESHOLD(3)`；threeSum<threshold → 惩罚 `-sqrt(typePref×(deficit+1))` 下限 -15；否则增益 `sqrt(typePref×(threeSum-threshold+1))` 上限 TOURIST_MAX_SATISFACTION_PER_VISIT=30。
-- `preferenceDecay=15`：每次访问后从该建筑类型偏好扣减。
-- `TouristApiImpl.getAverageSatisfaction` = 满意度之和/人数；注册表 colonyId→(touristId→sat)。
+- 三值需求条（Comfort/Magic/Wonder）+ 画像 + 精力/钱包/spot 排队驱动的目标选择（Find-Best-Action 评分）是独立系统，见 [simulation.md](../simulation.md)——本文不重复。
+- 历史：单一 `satisfaction`/`typePreferences` 与 sqrt 增益公式已在 2026-08 三值改造中删除，本小节不再描述旧机制。
 
 ## 酒店（HotelStayHandler）
 

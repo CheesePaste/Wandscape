@@ -77,7 +77,7 @@
 |----------|-------------|
 | basic/node/storage/workstation/crafting_station/potion_station/tavern | 每栋正常计入。shutdown/损毁→0 |
 | shop | 建筑基础值 + 所有有货 goods 的 comfort/magic/wonder 合计。**单 goods 缺货不影响其他 goods** |
-| service | 每栋正常计入。shutdown→游客交互产出减半但三值仍计入（见 jingying.md） |
+| service | 每栋正常计入。shutdown→游客交互产出减半但三值仍计入（见 docs/simulation.md） |
 | decoration | **不计入殖民地总数**。自身 comfort/magic/wonder 以范围辐射方式加成给曼哈顿距离内功能建筑 |
 | wonder | **每栋直接计入殖民地总数**，且不受装饰加成上限限制 |
 | custom | 三值恒为 0，正常计入但无贡献（见下方「自定义建筑」） |
