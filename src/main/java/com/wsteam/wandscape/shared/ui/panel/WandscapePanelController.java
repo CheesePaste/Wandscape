@@ -120,6 +120,21 @@ public final class WandscapePanelController {
             }
         }
 
+        // ── Build mode right pop panel handling ──
+        if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isActive()) {
+            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverRotateButton(mouseX, mouseY, screenW)) {
+                com.wsteam.wandscape.projection.client.ProjectionClientState.rotate();
+                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                event.setCanceled(true);
+                return;
+            }
+            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) {
+                event.setCanceled(true);
+                return;
+            }
+        }
+
         // ── Building selection bar handling ──
         if (BuildingSelectionOverlay.isActive()) {
             // Search box click activates keyboard input; any other bar click deactivates it

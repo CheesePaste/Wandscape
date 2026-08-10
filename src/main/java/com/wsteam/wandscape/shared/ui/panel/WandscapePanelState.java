@@ -103,7 +103,7 @@ public final class WandscapePanelState {
     private WandscapePanelState() {}
 
     public static boolean isPanelOpen() { return panelOpen; }
-    public static boolean isCursorLifted() { return cursorLifted; }
+    public static boolean isCursorLifted() { return panelOpen; }
     public static SubMode getActiveSubMode() { return activeSubMode; }
     public static UUID getColonyId() { return colonyId; }
     public static int getComfort() { return comfort; }
@@ -194,6 +194,11 @@ public final class WandscapePanelState {
 
     public static void openPanel() {
         panelOpen = true;
+        cursorLifted = true;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.mouseHandler != null) {
+            mc.mouseHandler.releaseMouse();
+        }
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));

@@ -69,6 +69,7 @@ public final class OverviewFlightController {
      * cursor, so the mouse baseline must be reset to prevent a camera jump.
      */
     private static boolean wasGrabbed = false;
+    private static int skipFrames = 0;
     private static double rmbDragDistance = 0.0;
 
     // ── Frame-time tracking for smooth movement ──
@@ -200,6 +201,13 @@ public final class OverviewFlightController {
             // the baseline the delta from the old free position to center
             // causes a sudden camera rotation.
             if (!wasGrabbed && grabbed) {
+                skipFrames = 2;
+                OverviewClientState.lastMouseX = mx[0];
+                OverviewClientState.lastMouseY = my[0];
+                dx = 0;
+                dy = 0;
+            } else if (skipFrames > 0) {
+                skipFrames--;
                 OverviewClientState.lastMouseX = mx[0];
                 OverviewClientState.lastMouseY = my[0];
                 dx = 0;
@@ -207,12 +215,13 @@ public final class OverviewFlightController {
             }
             wasGrabbed = grabbed;
 
-            if (grabbed) {
+            if (grabbed && skipFrames == 0) {
                 OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
             }
         } else {
             // Screen is open → cursor is free
             wasGrabbed = false;
+            skipFrames = 0;
         }
 
         OverviewClientState.lastMouseX = mx[0];
@@ -305,23 +314,6 @@ public final class OverviewFlightController {
                     ProjectionClientState.setPinned(false);
                 } else if (rightReleased && rmbDragDistance < 5.0) {
                     ProjectionFlightController.openConstructionScreen(mc);
-                }
-            } else {
-                // Left-click: rotate building 90° CCW (only when build mode is active)
-                if (leftClicked && ProjectionClientState.isProjecting()) {
-                    ProjectionClientState.rotate();
-                    int steps = ProjectionClientState.getRotationSteps();
-                    String direction = switch (steps) {
-                        case 1 -> "§e90°";
-                        case 2 -> "§e180°";
-                        case 3 -> "§e270°";
-                        default -> "§70°";
-                    };
-                    Log.info(TAG, "[Overview] Rotation: {}", direction);
-                }
-
-                if (rightReleased && rmbDragDistance < 5.0) {
-                    handleRightClick();
                 }
             }
         }
@@ -493,11 +485,15 @@ public final class OverviewFlightController {
                         ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
                     }
                 } else {
-                    BlockPos placePos = hitPos.relative(blockHit.getDirection());
-                    ProjectionClientState.setGhostPos(placePos);
-                    var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                    boolean overlap = api != null && api.getBuildingAt(placePos) != null;
-                    ProjectionClientState.setOverlapDetected(overlap);
+                    long window = mc.getWindow().getWindow();
+                    boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+                    if (rightDown) {
+                        BlockPos placePos = hitPos.relative(blockHit.getDirection());
+                        ProjectionClientState.setGhostPos(placePos);
+                        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+                        boolean overlap = api != null && api.getBuildingAt(placePos) != null;
+                        ProjectionClientState.setOverlapDetected(overlap);
+                    }
                 }
             }
         } else {

@@ -26,6 +26,7 @@ public final class SplineEditorController {
     private static boolean wasEscapeDown = false;
     private static boolean wasGDown = false;
     private static boolean cameraActive = false;
+    private static int skipFrames = 0;
     private static boolean topDownWasGrabbed = false;
     private static boolean registered = false;
 
@@ -53,6 +54,7 @@ public final class SplineEditorController {
 
     static void resetInputState() {
         cameraActive = false;
+        skipFrames = 0;
         wasEscapeDown = false;
         wasHelpDown = false;
         wasGDown = false;
@@ -174,13 +176,21 @@ public final class SplineEditorController {
             if (!wasCameraActive) {
                 SplineEditorClientState.setLastMouse(mx[0], my[0]);
                 wasCameraActive = true;
+                skipFrames = 2;
             }
             double dx = mx[0] - SplineEditorClientState.getLastMouseX();
             double dy = my[0] - SplineEditorClientState.getLastMouseY();
-            SplineEditorClientState.addCamRotation((float) dx * 0.15f, (float) dy * 0.15f);
-            SplineEditorClientState.setLastMouse(mx[0], my[0]);
+
+            if (skipFrames > 0) {
+                skipFrames--;
+                SplineEditorClientState.setLastMouse(mx[0], my[0]);
+            } else {
+                SplineEditorClientState.addCamRotation((float) dx * 0.15f, (float) dy * 0.15f);
+                SplineEditorClientState.setLastMouse(mx[0], my[0]);
+            }
         } else {
             wasCameraActive = false;
+            skipFrames = 0;
         }
 
         // If not holding right-click or if ImGui is capturing input, don't fly
