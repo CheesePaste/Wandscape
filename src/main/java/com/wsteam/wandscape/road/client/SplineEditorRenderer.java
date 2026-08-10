@@ -144,7 +144,7 @@ public final class SplineEditorRenderer {
         }
     }
 
-    private static void drawArrayPreview(MultiBufferSource buf, PoseStack poseStack, SplineModel model) {
+    private static void drawArrayPreview(MultiBufferSource.BufferSource buf, PoseStack poseStack, SplineModel model) {
         if (!SplineEditorClientState.isArrayPreview()) return;
 
         double stepDist = SplineEditorClientState.getArrayStepDistance();
@@ -152,7 +152,13 @@ public final class SplineEditorRenderer {
         if (samples.isEmpty()) return;
 
         RoadTemplate template = SplineEditorClientState.getActiveTemplate();
-        if (template == null || template.getBlocks().isEmpty()) return;
+        // 兜底：静态初始化时 V 面板预设可能还没加载，动态模板未注册导致 getActiveTemplate() 为 null。
+        // 预设可用后立即补建一次，保证预览与下发使用同一模板。
+        if (template == null || template.getBlocks().isEmpty()) {
+            SplineEditorClientState.rebuildDynamicTemplate();
+            template = SplineEditorClientState.getActiveTemplate();
+            if (template == null || template.getBlocks().isEmpty()) return;
+        }
 
         float roll = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetRoll());
         float pitch = (float) Math.toRadians(SplineEditorClientState.getArrayOffsetPitch());
@@ -215,9 +221,18 @@ public final class SplineEditorRenderer {
             net.minecraft.core.BlockPos bp = entry.getKey();
             poseStack.pushPose();
             poseStack.translate(bp.getX(), bp.getY(), bp.getZ());
-            blockRenderer.renderSingleBlock(entry.getValue(), poseStack, buf, light, overlay);
+            blockRenderer.renderSingleBlock(entry.getValue(), poseStack, buf, light, overlay,
+                    net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
             poseStack.popPose();
         }
+
+        // 关键：renderSingleBlock 写入的是 Sheets.cutoutBlockSheet() 等方块实体 sheet，
+        // 关卡渲染器的方块实体阶段（早于 AFTER_TRIPWIRE_BLOCKS）已 flush 过这些批次。
+        // 不显式 flush 的话，预览方块在渲染管线里被丢弃，世界里什么都不会显示。
+        // 与 BuildingGhostRenderer 相同的处理方式。
+        buf.endBatch(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+        buf.endBatch(net.minecraft.client.renderer.Sheets.translucentCullBlockSheet());
+        buf.endBatch(net.minecraft.client.renderer.Sheets.translucentItemSheet());
     }
 
     private static void drawSplinePointsLines(VertexConsumer vcLines, PoseStack.Pose pose, SplineModel model) {
