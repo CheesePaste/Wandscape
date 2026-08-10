@@ -351,6 +351,15 @@ public class TouristMoveGoal extends Goal {
             if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
                 return;
             }
+            // 夜晚 + 未满条：意图入住（到达即入，spot time = 0）。旅店满员 → 不排队当 service 逛，
+            // 直接放弃本次访问重新规划（去别的旅店/离场窗口兜底），避免排队拖到被清场。
+            if (isHotelBuilding(buildingId)) {
+                long dayTime = tourist.level().getDayTime() % 24000;
+                if (dayTime >= Config.TOURIST_NIGHT_START.get() && !tourist.isFullySatisfied()) {
+                    finishBuildingStop();
+                    return;
+                }
+            }
             switchToIndoorNav();
             return;
         }
@@ -382,6 +391,11 @@ public class TouristMoveGoal extends Goal {
         double distSqr = pos.distSqr(target);
         int interactionRange = getInteractionRange();
         if (distSqr < interactionRange * interactionRange) {
+            // 到达旅店 → 入住即时完成（不占 spot、不等 interaction_duration）
+            if (buildingId != null && isHotelBuilding(buildingId)
+                    && tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                return;
+            }
             // Reached entry point — switch to indoor micro-nav
             switchToIndoorNav();
             return;
@@ -417,6 +431,20 @@ public class TouristMoveGoal extends Goal {
         if (buildingId == null) {
             finishBuildingStop();
             return;
+        }
+
+        // 已进旅店（室内）：入住即时完成，不占 spot、不等 interaction_duration。
+        // 白天/满条/满员（tryHotelCheckIn 失败）→ 按普通 service 建筑继续。
+        if (isHotelBuilding(buildingId)) {
+            long dayTime = tourist.level().getDayTime() % 24000;
+            if (dayTime >= Config.TOURIST_NIGHT_START.get() && !tourist.isFullySatisfied()) {
+                if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                    return;
+                }
+                // 夜晚意图入住但旅店满员 → 不当 service 逛/排队，放弃重新规划（避免排队拖到被清场）
+                finishBuildingStop();
+                return;
+            }
         }
 
         // 活动中（在 spot 上做动作）：duration 倒计时，结束才结算

@@ -546,23 +546,30 @@ public final class TouristSimSystem {
             long dayTime = level.getDayTime() % 24000;
             boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
             boolean alreadyResident = buildingId.equals(s.getCheckedInBuildingId());
-            // 夜晚 + 未满条 → 入住/回店睡（满条游客夜晚等离场）；住店客回店免查空位、免重复填条
-            if (isNight && !s.isFullySatisfied() && (alreadyResident || hasHotelVacancy(level, buildingId))) {
-                if (!alreadyResident) {
-                    s.setCheckedInBuildingId(buildingId);
-                    s.setHotelCheckinTime(s.simTick());
-                    s.setWakeUpPos(s.touristPos());
-                    s.addVisitedBuilding(buildingId);
-                    // 首次入住：填一次满意值（住宿贡献三条）+ 记行程
-                    String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
-                    var hotelCfg = TouristSimulation.getConfig(level, buildingId);
-                    String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
-                            ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
-                    int[] delta = TouristSimulation.fillBars(level, s, buildingId);
-                    TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
-                            level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
-                    Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
+            if (isNight && !s.isFullySatisfied()) {
+                // 夜晚 + 未满条：到达即入住（住店客回店免查空位、免重复填条）——入住即时完成，无 spot 交互
+                if (alreadyResident || hasHotelVacancy(level, buildingId)) {
+                    if (!alreadyResident) {
+                        s.setCheckedInBuildingId(buildingId);
+                        s.setHotelCheckinTime(s.simTick());
+                        s.setWakeUpPos(s.touristPos());
+                        s.addVisitedBuilding(buildingId);
+                        // 首次入住：填一次满意值（住宿贡献三条）+ 记行程
+                        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+                        var hotelCfg = TouristSimulation.getConfig(level, buildingId);
+                        String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
+                                ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
+                        int[] delta = TouristSimulation.fillBars(level, s, buildingId);
+                        TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
+                                level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
+                        Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
+                    }
+                    s.setCommuteTarget(null);
+                    s.setTargetBuildingId(null);
+                    s.setTargetBuildingCategory(null);
+                    return;
                 }
+                // 夜晚意图入住但旅店满员 → 不当 service 逛/排队（避免排队拖到被清场），放弃重新规划
                 s.setCommuteTarget(null);
                 s.setTargetBuildingId(null);
                 s.setTargetBuildingCategory(null);

@@ -11,15 +11,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.BedBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
-import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import java.util.List;
@@ -27,13 +22,12 @@ import java.util.List;
 /**
  * Debug renderer that visualizes tourist navigation targets.
  *
- * <p>Press F6 to toggle. X-ray (no depth test) rendering:
+ * <p>X-ray (no depth test) rendering:
  * <ul>
  *   <li>Cyan line → entry point (macro outdoor nav target)</li>
  *   <li>Blue cross at entry point</li>
  *   <li>Magenta line → interact point (micro indoor nav)</li>
  *   <li>Yellow cross at interact point</li>
- *   <li>旅店床位 debug（临时，后面删）：旅店 bbox 内每张床画黄色十字（原版 OCCUPIED 的床画红色）+ 白色 bbox 线框</li>
  * </ul>
  */
 public final class TouristDebugRenderer {
@@ -72,6 +66,8 @@ public final class TouristDebugRenderer {
         List<? extends TouristEntity> tourists = mc.level.getEntitiesOfClass(
                 TouristEntity.class,
                 new AABB(mc.player.blockPosition()).inflate(SCAN_RADIUS));
+
+        if (tourists.isEmpty()) return;
 
         Vec3 camPos = event.getCamera().getPosition();
         PoseStack poseStack = event.getPoseStack();
@@ -129,54 +125,8 @@ public final class TouristDebugRenderer {
             }
         }
 
-        drawHotelBeds(mc, pose, lineBuf);
-
         buf.endBatch(DebugRenderType.DEBUG_LINES);
         poseStack.popPose();
-    }
-
-    /**
-     * 临时 debug（后面删）：显示附近旅店 bbox 内每张床的位置。
-     * 黄色 = 可用的床，红色 = 原版 OCCUPIED 的床；白线框 = 旅店 bbox（findBed 扫描的就是这个范围）。
-     * 需要先开过一次 V 面板（BuildingAreaSyncPacket 缓存才有建筑数据）。
-     */
-    private static void drawHotelBeds(Minecraft mc, PoseStack.Pose pose, VertexConsumer vc) {
-        var buildings = BuildingAreaSyncPacket.getCached();
-        if (buildings.isEmpty()) return;
-
-        BlockPos playerPos = mc.player.blockPosition();
-        int scanSq = SCAN_RADIUS * SCAN_RADIUS;
-        for (BuildingAreaSyncPacket.BuildingEntry entry : buildings) {
-            if (!entry.hasBoundary()) continue;
-            BlockPos anchor = entry.anchor();
-            if (anchor.distSqr(playerPos) > scanSq) continue;
-
-            BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
-            if (config == null || config.service() == null || config.service().maxOccupancy() <= 0) continue;
-
-            int x0 = anchor.getX() + entry.bMinX();
-            int y0 = anchor.getY() + entry.bMinY();
-            int z0 = anchor.getZ() + entry.bMinZ();
-            int x1 = anchor.getX() + entry.bMaxX();
-            int y1 = anchor.getY() + entry.bMaxY();
-            int z1 = anchor.getZ() + entry.bMaxZ();
-
-            // bbox 线框（白）
-            boxEdges(vc, pose, x0, y0, z0, x1 + 1, y1 + 1, z1 + 1, 255, 255, 255, 120);
-
-            // 每张床一个十字
-            for (int x = x0; x <= x1; x++) {
-                for (int y = y0; y <= y1; y++) {
-                    for (int z = z0; z <= z1; z++) {
-                        BlockState bs = mc.level.getBlockState(new BlockPos(x, y, z));
-                        if (!(bs.getBlock() instanceof BedBlock)) continue;
-                        boolean occupied = bs.getValue(BedBlock.OCCUPIED);
-                        cross(pose, vc, new BlockPos(x, y, z),
-                                occupied ? 255 : 255, occupied ? 60 : 220, occupied ? 60 : 50, 220);
-                    }
-                }
-            }
-        }
     }
 
     // ── Drawing primitives ──
@@ -205,23 +155,6 @@ public final class TouristDebugRenderer {
         // Y spike
         vc.addVertex(pose, cx, cy - 0.1f, cz).setColor(r, g, b, a);
         vc.addVertex(pose, cx, cy + 0.1f, cz).setColor(r, g, b, a);
-    }
-
-    private static void boxEdges(VertexConsumer vc, PoseStack.Pose pose,
-                                 float x0, float y0, float z0, float x1, float y1, float z1,
-                                 int r, int g, int b, int a) {
-        line(pose, vc, x0, y0, z0, x1, y0, z0, r, g, b, a);
-        line(pose, vc, x1, y0, z0, x1, y0, z1, r, g, b, a);
-        line(pose, vc, x1, y0, z1, x0, y0, z1, r, g, b, a);
-        line(pose, vc, x0, y0, z1, x0, y0, z0, r, g, b, a);
-        line(pose, vc, x0, y1, z0, x1, y1, z0, r, g, b, a);
-        line(pose, vc, x1, y1, z0, x1, y1, z1, r, g, b, a);
-        line(pose, vc, x1, y1, z1, x0, y1, z1, r, g, b, a);
-        line(pose, vc, x0, y1, z1, x0, y1, z0, r, g, b, a);
-        line(pose, vc, x0, y0, z0, x0, y1, z0, r, g, b, a);
-        line(pose, vc, x1, y0, z0, x1, y1, z0, r, g, b, a);
-        line(pose, vc, x1, y0, z1, x1, y1, z1, r, g, b, a);
-        line(pose, vc, x0, y0, z1, x0, y1, z1, r, g, b, a);
     }
 
     // ═══════════════════════════════════════════════════════════════

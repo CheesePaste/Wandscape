@@ -112,14 +112,6 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    /** 临时调试（后面删）：F6 切换旅店床位 debug 显示。 */
-    public static final KeyMapping TOURIST_DEBUG_TOGGLE = new KeyMapping(
-            "key.wandscape.tourist_debug",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_F6,
-            "key.categories.wandscape"
-    );
-
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
@@ -297,7 +289,6 @@ public class WandscapeClient {
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
         event.register(OVERVIEW_TOGGLE);
-        event.register(TOURIST_DEBUG_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
@@ -327,10 +318,6 @@ public class WandscapeClient {
             if (!WandscapePanelState.isPanelOpen()) {
                 openGuideIndex();
             }
-        }
-        while (TOURIST_DEBUG_TOGGLE.consumeClick()) {
-            // F6: 临时游客/旅店床位 debug（后面删）
-            TouristDebugRenderer.toggle();
         }
     }
 
