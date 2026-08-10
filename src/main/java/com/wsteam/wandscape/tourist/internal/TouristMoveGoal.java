@@ -203,12 +203,18 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public void tick() {
+        // 睡着（住店客在旅店床上）：不动，等清晨晨起（HotelStayHandler.wakeUp 后自然外出）
+        if (tourist.isSleeping()) {
+            tourist.getNavigation().stop();
+            return;
+        }
+
         long dayTime = tourist.level().getDayTime() % 24000;
         boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         UUID hotelId = tourist.getCheckedInBuildingId();
 
-        // ── 夜晚 + 住店客（未满条）：回自己旅店睡觉（空闲即回店；满条住店客夜晚等离场）──
-        if (isNight && hotelId != null && !tourist.isFullySatisfied()
+        // ── 住店客（未满条）：夜晚/凌晨回自己旅店睡觉（空闲即回店；满条住店客夜晚等离场）──
+        if ((isNight || dayTime < 1000) && hotelId != null && !tourist.isFullySatisfied()
                 && !performingActivity && !queueing) {
             ReturnHomeResult r = returnToOwnHotel();
             if (r == ReturnHomeResult.STOP) {
@@ -946,8 +952,15 @@ public class TouristMoveGoal extends Goal {
             return ReturnHomeResult.NONE;
         }
 
-        // 已在自己旅店旁 → 回店睡（alreadyResident 路径，直接强制躺床）
+        // 已在自己旅店旁 → 回店睡（alreadyResident 路径，直接强制躺床）。
+        // 无床卡原地（wakeUpPos == 当前位置且未睡着）→ 站定等晨起，不重复 settle；
+        // 重载后站在床上（wakeUpPos != 当前位置）→ 仍重新躺床。
         if (isWithinDistanceOfBbox(hotel, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
+            if (tourist.getWakeUpPos() != null && !tourist.isSleeping()
+                    && tourist.getWakeUpPos().equals(tourist.blockPosition())) {
+                tourist.getNavigation().stop();
+                return ReturnHomeResult.STOP;
+            }
             tryHotelCheckIn(hotel, getBuildingTypeId(hotel));
             tourist.getNavigation().stop();
             return ReturnHomeResult.STOP;
