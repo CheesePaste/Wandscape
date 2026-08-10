@@ -440,8 +440,8 @@ public final class TouristSpawnSystem {
      * Cleanup logic applying to all times of day（Block 2 D6）：
      * <ul>
      *   <li>满条法师 → 即时存简历</li>
-     *   <li>到点（departureDeadline）→ 离场</li>
-     *   <li>idle 超时 → 离场</li>
+     *   <li>到点（departureDeadline）→ 离场（住店客也只按此离场——无论多晚不被清）</li>
+     *   <li>idle 超时 → 离场（仅非住店客）</li>
      *   <li>精力 0 不再离场（goal.md：无恢复建筑 → 闲逛，不离场）</li>
      *   <li>夜晚离场由 {@link #processNightDepartures} 处理</li>
      * </ul>
@@ -454,13 +454,18 @@ public final class TouristSpawnSystem {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
-            // Checked into hotel — safe, HotelStayHandler heartbeat manages them
-            if (t.getCheckedInBuildingId() != null) continue;
-
             // Store mage resume instantly when fully satisfied
             if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
                 storeMageResume(t);
                 t.setMageResumeStored(true);
+            }
+
+            // 住店客：只按停留截止离场（不被夜晚/闲置清掉；夜晚回店睡觉由 TouristMoveGoal 管）
+            if (t.getCheckedInBuildingId() != null) {
+                if (level.getGameTime() >= t.getDepartureDeadline()) {
+                    toRemove.add(t);
+                }
+                continue;
             }
 
             // In departure window, night logic is handled by processNightDepartures
@@ -484,9 +489,10 @@ public final class TouristSpawnSystem {
     /**
      * Night departure window（18000-24000，Block 2 D6）：
      * <ul>
-     *   <li>到点 → 离场（满条才给经验）</li>
-     *   <li>满条 → 开心离场（随机延迟错峰，简历已存）</li>
-     *   <li>非满条 → 入旅店；无旅店/满 → 离场</li>
+     *   <li>到点 → 离场（满条才给经验；住店客也适用）</li>
+     *   <li>满条 → 开心离场（随机延迟错峰，简历已存；住店客满条当晚也离场）</li>
+     *   <li>非满条住店客 → 留店（无论多晚不被清）</li>
+     *   <li>非满条非住店客 → 入旅店；无旅店/满 → 离场</li>
      * </ul>
      */
     private void processNightDepartures(ServerLevel level) {
@@ -497,7 +503,6 @@ public final class TouristSpawnSystem {
             if (!(entity instanceof TouristEntity t)) continue;
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
-            if (t.getCheckedInBuildingId() != null) continue;
 
             // Store mage resume instantly when fully satisfied
             if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
@@ -505,10 +510,27 @@ public final class TouristSpawnSystem {
                 t.setMageResumeStored(true);
             }
 
-            // 到点 → 离场
+            // 到点 → 离场（住店客也适用）
             if (gameTime >= t.getDepartureDeadline()) {
                 toRemove.add(t);
                 pendingDepartures.remove(t.getUUID());
+                continue;
+            }
+
+            if (t.getCheckedInBuildingId() != null) {
+                // 住店客：满条 → 当晚开心离场；未满条 → 留店（不被清）
+                if (t.isFullySatisfied()) {
+                    Long departAt = pendingDepartures.get(t.getUUID());
+                    if (departAt == null) {
+                        int delay = random.nextInt(Config.TOURIST_DEPARTURE_DELAY_MAX_TICKS.get() + 1);
+                        departAt = gameTime + delay;
+                        pendingDepartures.put(t.getUUID(), departAt);
+                    }
+                    if (gameTime >= departAt) {
+                        toRemove.add(t);
+                        pendingDepartures.remove(t.getUUID());
+                    }
+                }
                 continue;
             }
 
