@@ -87,9 +87,16 @@ public final class RoadPlacementController {
         // intercepted by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
         handleEscapeInput(mc, window);
 
-        // Cursor lifted → panel UI mode: drain all input
+        // Cursor lifted → panel UI mode
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
+        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
+                && imgui.ImGui.getIO().getWantCaptureMouse();
         if (cursorLifted) {
+            // When cursor is over 3D world (outside ImGui window), handle world clicks for Replace/Fill/DestroyFill!
+            if (!imguiWantsMouse && RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) {
+                updateGhostPosition(mc);
+                handleMouseButtons(mc, window);
+            }
             drainVanillaInput(mc);
             return;
         }

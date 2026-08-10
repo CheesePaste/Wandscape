@@ -121,10 +121,10 @@ public final class SplineEditorController {
             // Lock movement when not rotating
             mc.player.setDeltaMovement(Vec3.ZERO);
 
-            // World clicks belong to the editor when the cursor is over the
-            // world; ImGui already consumed anything over its panels.
+            // World clicks belong to the editor when the cursor is over the 3D world
+            // (!imguiWantsMouse); ImGui already consumed anything over its panels.
             // When a vanilla screen (guide) is open, its widgets own the clicks.
-            if (!imguiWantsMouse && !cursorLifted && mc.screen == null) {
+            if (!imguiWantsMouse && mc.screen == null) {
                 SplineEditorInputHandler.handleClicks(mc, window);
             }
         }
