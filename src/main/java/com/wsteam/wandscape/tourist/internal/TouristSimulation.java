@@ -53,8 +53,8 @@ public final class TouristSimulation {
     private static final double WALLET_LOW_BONUS = 2000;
     /** 钱包=0 → ATM 大幅加分（优先取现继续逛）。 */
     private static final double WALLET_EMPTY_BONUS = 4000;
-    /** spot 全满 → 排队惩罚（有空位建筑优先；全满仍可排队）。 */
-    private static final double QUEUE_PENALTY = 1500;
+    /** spot 全满或有人排队 → 排队惩罚（远大于单次增益，热点建筑强烈分流；有空位建筑优先）。 */
+    private static final double QUEUE_PENALTY = 3000;
 
     private TouristSimulation() {
     }

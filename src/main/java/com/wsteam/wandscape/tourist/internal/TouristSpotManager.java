@@ -35,6 +35,12 @@ public final class TouristSpotManager {
         return ACTIVE;
     }
 
+    /** 清空全部占用与排队（服务端停止/世界卸载时调用；静态单例跨世界存活，否则残留幽灵占位）。 */
+    public void clear() {
+        occupancy.clear();
+        queue.clear();
+    }
+
     /** 认领一个空 spot 并占用。 */
     public int claim(UUID buildingId, int totalSpots) {
         if (totalSpots <= 0) return -1;

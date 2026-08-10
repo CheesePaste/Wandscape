@@ -116,6 +116,7 @@ import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
 import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
+import com.wsteam.wandscape.tourist.internal.TouristSpotManager;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
@@ -835,6 +836,7 @@ public class Wandscape {
         buildingApi.setLevel(null);
         ChunkLoadManager.get().reset();
         TouristSimSystem.reset();
+        TouristSpotManager.getActive().clear(); // 静态单例跨世界存活，需清空幽灵占位/排队
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
     }

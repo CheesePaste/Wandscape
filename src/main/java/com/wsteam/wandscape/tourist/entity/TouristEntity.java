@@ -25,6 +25,7 @@ import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
+import com.wsteam.wandscape.tourist.internal.TouristSpotManager;
 import com.wsteam.wandscape.tourist.internal.TouristStateHost;
 
 import javax.annotation.Nullable;
@@ -479,6 +480,19 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         super.onRemovedFromLevel();
         RemovalReason reason = getRemovalReason();
         if (level().isClientSide || reason == null) return;
+        // 任意移除原因都释放其交互 spot 占位并清其排队登记——否则 occupancy/queue 残留
+        // （离场 discard、被击杀、随世界卸载），该建筑永久显示占用/排队，新游客被分流饿死。
+        if (!previewMode) {
+            UUID bid = getTargetBuildingId();
+            if (bid != null) {
+                TouristSpotManager spots = TouristSpotManager.getActive();
+                spots.leaveAllQueues(bid, getUUID());
+                int occupied = getOccupiedSpot();
+                if (occupied >= 0) {
+                    spots.release(bid, occupied);
+                }
+            }
+        }
         if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
             onTouristKilled();
         }

@@ -119,6 +119,20 @@ class TouristSpotManagerTest {
         assertEquals(0, m.totalQueueLength(B));
     }
 
+    /** 清空：占用与排队一并清除（服务端停止/世界卸载时用，防幽灵残留饿死建筑）。 */
+    @Test
+    void clearWipesOccupancyAndQueues() {
+        TouristSpotManager m = new TouristSpotManager();
+        m.claimAt(B, 0, 2);
+        m.claimAt(B, 1, 2);
+        m.joinQueue(B, 0, A);
+        m.joinQueue(B, 1, B);
+        m.clear();
+        assertEquals(2, m.freeSpotCount(B, 2));
+        assertEquals(0, m.totalQueueLength(B));
+        assertEquals(0, m.claimAt(B, 0, 2)); // 清空后可重新认领
+    }
+
     /** 指定 spot 认领：只能认领空位，已被占返回 -1。 */
     @Test
     void claimAtClaimsOnlyFreeSpot() {
