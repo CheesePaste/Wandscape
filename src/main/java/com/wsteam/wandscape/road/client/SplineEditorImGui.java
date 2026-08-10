@@ -649,8 +649,17 @@ public final class SplineEditorImGui {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.55f, 0.15f, 0.15f, 0.85f);
             ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.75f, 0.20f, 0.20f, 0.95f);
             if (ImGui.button(ICON_TRASH + " \u5220\u9664\u8282\u70b9 #" + selectedIdx, -1, 26)) {
+                int before = model.getPoints().size();
                 model.removePoint(selectedIdx);
-                SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                // \u50cf\u6808\u4e00\u6837\uff1a\u5220\u9664\u540e\u81ea\u52a8\u9009\u4e2d\u4e0a\u4e00\u4e2a\u70b9\uff1b\u5220\u7684\u662f\u6700\u540e\u4e00\u4e2a\u5219\u9009\u4e2d\u65b0\u7684\u672b\u5c3e
+                int after = model.getPoints().size();
+                if (after > 0) {
+                    int nextIdx = Math.min(selectedIdx, after - 1);
+                    SplineEditorClientState.setSelectedPoint(nextIdx, SplineEditorClientState.SelectionType.ANCHOR);
+                } else {
+                    SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                }
+                Log.info(TAG, "[SplineEditor] Deleted node #{} ({} \u2192 {} points), selected #{}", selectedIdx, before, after, after > 0 ? Math.min(selectedIdx, after - 1) : -1);
             }
             WandscapeImGuiTheme.drawTooltip("\u79fb\u9664\u5f53\u524d\u9009\u4e2d\u7684\u63a7\u5236\u8282\u70b9 (\u5feb\u6377\u952e Delete / Backspace)\u3002");
             ImGui.popStyleColor(2);

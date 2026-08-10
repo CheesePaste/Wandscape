@@ -25,6 +25,7 @@ public final class SplineEditorController {
 
     private static boolean wasEscapeDown = false;
     private static boolean wasGDown = false;
+    private static boolean wasDeleteDown = false;
     private static boolean cameraActive = false;
     private static int skipFrames = 0;
     private static boolean topDownWasGrabbed = false;
@@ -406,11 +407,20 @@ public final class SplineEditorController {
         if (!imguiWantsKb && !cameraActive) {
             boolean delDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_DELETE) == GLFW.GLFW_PRESS
                     || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_BACKSPACE) == GLFW.GLFW_PRESS;
-            if (delDown) {
+            boolean delClicked = delDown && !wasDeleteDown;
+            wasDeleteDown = delDown;
+            if (delClicked) {
                 int selected = SplineEditorClientState.getSelectedPointIndex();
                 if (selected != -1) {
                     SplineEditorClientState.getModel().removePoint(selected);
-                    SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                    int after = SplineEditorClientState.getModel().getPoints().size();
+                    if (after > 0) {
+                        // 像栈一样：删除后自动选中上一个点；删的是最后一个则选中新的末尾
+                        int nextIdx = Math.min(selected, after - 1);
+                        SplineEditorClientState.setSelectedPoint(nextIdx, SplineEditorClientState.SelectionType.ANCHOR);
+                    } else {
+                        SplineEditorClientState.setSelectedPoint(-1, SplineEditorClientState.SelectionType.NONE);
+                    }
                 }
             }
         }
