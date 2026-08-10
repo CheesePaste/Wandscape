@@ -10,7 +10,7 @@ The Workstation is the element exchange: it **decomposes** unneeded high-tier ma
 
 ## Operation
 
-Right-click the Workstation → pick a tab → pick a recipe → set the quantity → **Submit**. Wizards work in the task queue; just watch the progress in the panel.
+**Left-click the Workstation in overview mode** → pick a tab → pick a recipe → set the quantity → **Submit**. Wizards work in the task queue; just watch the progress in the panel.
 
 ## A Few Tips
 
