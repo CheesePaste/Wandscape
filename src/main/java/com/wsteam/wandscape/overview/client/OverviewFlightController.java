@@ -47,6 +47,15 @@ public final class OverviewFlightController {
     private static double flyingSpeed = 10.0;     // blocks per second
     private static final double SCROLL_SPEED = 4.0;
     private static final float MOUSE_SENSITIVITY = 0.15f;
+    /**
+     * 单帧鼠标位移阈值（像素）。超过即视为光标被 OS / 对账器强制 warp
+     * （grabMouse 把光标甩到窗口中心、release 后 setCursorPos 回位）。
+     * 疯狂右键连点时 tick 与渲染帧先后顺序随机：若按下后的首帧先于 tick，
+     * 边沿检测的 skipFrames 被提前消费，warp 的跳变 delta 会在下一帧被当成
+     * 正常旋转 → 镜头猛转。阈值兜底：正常甩动单帧不可能超过，warp 必然超过，
+     * 命中即丢弃该帧 delta 并重置基线。
+     */
+    private static final double MOUSE_JUMP_THRESHOLD = 100.0;
 
     private static boolean registered = false;
 
@@ -216,7 +225,14 @@ public final class OverviewFlightController {
             wasGrabbed = grabbed;
 
             if (grabbed && skipFrames == 0) {
-                OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
+                // 兜底：单帧位移超阈值 = 光标被强制 warp（grab/release 过渡的时序竞态），
+                // 丢弃该帧 delta 并重置基线，下一帧即恢复。正常旋转不会触发。
+                if (Math.abs(dx) > MOUSE_JUMP_THRESHOLD || Math.abs(dy) > MOUSE_JUMP_THRESHOLD) {
+                    OverviewClientState.lastMouseX = mx[0];
+                    OverviewClientState.lastMouseY = my[0];
+                } else {
+                    OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
+                }
             }
         } else {
             // Screen is open → cursor is free
