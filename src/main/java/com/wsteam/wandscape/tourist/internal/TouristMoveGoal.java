@@ -163,6 +163,16 @@ public class TouristMoveGoal extends Goal {
         return tourist.isAlive();
     }
 
+    /**
+     * 交互时长/排队容忍等 goal 内计时器以真实 tick 计：vanilla 默认 goal 每 2 个游戏 tick
+     * 才 tick 一次（Mob.serverAiStep 按 (tickCount+id)%2 交替），必须覆盖此方法让 tick 每帧跑，
+     * 否则 interaction_duration_ticks=2400 实测会变成 4800 tick（半速倒计时）。
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
     // ── Entry / exit ──
 
     @Override

@@ -411,8 +411,9 @@ public final class TouristSpawnSystem {
     }
 
     /**
-     * 画像 roll：40% 均衡 {1,1,1}；20% 舒适 {1.4,0.8,0.8}；20% 魔法 {0.8,1.4,0.8}；20% 奇观 {0.8,0.8,1.4}。
+     * 画像 roll：40% 均衡 {1,1,1}；20% 舒适 {1.6,0.7,0.7}；20% 魔法 {0.7,1.6,0.7}；20% 奇观 {0.7,0.7,1.6}。
      * 三条 need = 总需求 × 画像权重占比，总需求 = BASE + (level-1)×PER_LEVEL（等级越高越难满足）。
+     * 1 级（totalNeed=150）：均衡 → 50/50/50；侧重 → 80/35/35（及其置换）。
      */
     private void rollAndSetPersona(TouristEntity t, int touristLevel) {
         double r = random.nextDouble();
@@ -421,15 +422,25 @@ public final class TouristSpawnSystem {
                   : r < 0.8 ? PERSONA_WEIGHTS[2]
                   : PERSONA_WEIGHTS[3];
         int totalNeed = Config.TOURIST_NEED_BASE.get() + (touristLevel - 1) * Config.TOURIST_NEED_PER_LEVEL.get();
-        double sum = w[0] + w[1] + w[2];
-        t.setComfortNeed((int) Math.round(totalNeed * w[0] / sum));
-        t.setMagicNeed((int) Math.round(totalNeed * w[1] / sum));
-        t.setWonderNeed((int) Math.round(totalNeed * w[2] / sum));
+        int[] need = personaNeeds(totalNeed, w);
+        t.setComfortNeed(need[0]);
+        t.setMagicNeed(need[1]);
+        t.setWonderNeed(need[2]);
     }
 
     private static final double[][] PERSONA_WEIGHTS = {
-            {1.0, 1.0, 1.0}, {1.4, 0.8, 0.8}, {0.8, 1.4, 0.8}, {0.8, 0.8, 1.4}
+            {1.0, 1.0, 1.0}, {1.6, 0.7, 0.7}, {0.7, 1.6, 0.7}, {0.7, 0.7, 1.6}
     };
+
+    /** 纯计算（可单测）：把 totalNeed 按画像权重占比分配到三条 need。 */
+    static int[] personaNeeds(int totalNeed, double[] w) {
+        double sum = w[0] + w[1] + w[2];
+        return new int[]{
+                (int) Math.round(totalNeed * w[0] / sum),
+                (int) Math.round(totalNeed * w[1] / sum),
+                (int) Math.round(totalNeed * w[2] / sum)
+        };
+    }
 
     // ════════════════════════════════════════════════════════════════
     // Cleanup
