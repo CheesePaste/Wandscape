@@ -2,6 +2,10 @@
   "required": true,
   "package": "com.wsteam.wandscape.mixin",
   "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MixinServerLevel",
+    "MixinLevelTicks"
+  ],
   "client": [
     "MixinOverviewCamera",
     "MixinSplineEditorCamera"

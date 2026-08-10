@@ -10,10 +10,12 @@ import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.NeoForge;
@@ -77,8 +79,6 @@ public final class BuildCompleteListener {
         BuildingSavedData data = BuildingSavedData.get(level);
         BuildingState state = findByAnchor(data, anchor);
         if (state == null) {
-            Log.debug(TAG, "build_complete for unknown building at {} (name={}) — may be unregistered",
-                    anchor, buildingName);
             return;
         }
 
@@ -92,7 +92,17 @@ public final class BuildCompleteListener {
         boolean broken = isBroken(damaged.size(), config.pattern().size());
         boolean intact = !broken;
         state.setStructureIntact(intact);
+        if (intact) {
+            // Sticky: once construction completes, never show the ghost again,
+            // even if the building later becomes damaged.
+            state.setHasEverCompleted(true);
+        }
         data.setDirty();
+
+        // Refresh client caches: a completed building's construction ghost clears,
+        // a broken one gains a ghost footprint.
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                ServerLifecycleHooks.getCurrentServer(), anchor);
 
         if (intact) {
             if (damaged.isEmpty()) {
@@ -119,6 +129,16 @@ public final class BuildCompleteListener {
             // downstream handlers (e.g. tourist spawner) check the registry anyway.
             NeoForge.EVENT_BUS.post(new BuildingPlacedEvent(
                     state.getBuildingId(), state.getColonyId(), state.getBuildingTypeId()));
+
+            // ── 建成庆祝：建筑包围盒一圈烟花；奇观建筑额外金色圣光柱 ──
+            if (level instanceof ServerLevel srv) {
+                ParticleService.celebrateRing(srv, state.getBounds(), 4);
+                if ("wonder".equals(state.getCategory())) {
+                    ParticleService.burstColored(srv,
+                            ParticleService.boundsCenterAbove(state.getBounds(), 2),
+                            1.0f, 0.85f, 0.30f, 40, 0.14f, 40, true);
+                }
+            }
 
             // Record contribution: only fires ColonyEvaluationChangedEvent when this
             // building type transitions from 0→1 intact buildings in the colony.
@@ -169,8 +189,8 @@ public final class BuildCompleteListener {
      *
      * @param rotationSteps number of 90° CCW rotations applied to the building (0-3)
      */
-    static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config,
-                                                int rotationSteps) {
+    public static List<BlockOffset> findDamagedBlocks(Level level, BlockPos anchor, BuildingConfig config,
+                                                        int rotationSteps) {
         java.util.List<BlockOffset> pattern = com.wsteam.wandscape.projection.BuildingRotation
                 .rotateOffsets(config.pattern(), rotationSteps);
         java.util.Map<String, String> blockMapping = rotationSteps != 0

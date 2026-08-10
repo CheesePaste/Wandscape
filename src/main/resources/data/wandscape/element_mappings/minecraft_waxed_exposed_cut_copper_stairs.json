@@ -1,7 +1,7 @@
 {
   "block": "minecraft:waxed_exposed_cut_copper_stairs",
   "build_cost": {
-    "wood": 32,
+    "wood": 48,
     "metal": 108
   },
   "decompose_yield": {},

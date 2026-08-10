@@ -43,7 +43,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             Map<ItemKey, Long> decomposableItems,
             Collection<SynthesizeRecipe> synthRecipes,
             Map<ElementType, Long> elementMap,
-            @Nullable UUID colonyId) {
+            @Nullable UUID colonyId,
+            Map<String, Map<ElementType, Long>> itemElementValues) {
         ListTag itemList = new ListTag();
         for (var entry : decomposableItems.entrySet()) {
             CompoundTag tag = new CompoundTag();
@@ -52,6 +53,15 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
                 tag.put("nbt", entry.getKey().nbt());
             }
             tag.putLong("count", entry.getValue());
+            // Canonical element value (decompose_yield → build_cost fallback); decompose yields 1/5 of it.
+            Map<ElementType, Long> value = itemElementValues.get(entry.getKey().itemId());
+            if (value != null && !value.isEmpty()) {
+                CompoundTag yieldTag = new CompoundTag();
+                for (var e : value.entrySet()) {
+                    yieldTag.putLong(e.getKey().name().toLowerCase(), e.getValue());
+                }
+                tag.put("yield", yieldTag);
+            }
             itemList.add(tag);
         }
 
@@ -117,7 +127,19 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
             CompoundTag nbt = tag.contains("nbt") ? tag.getCompound("nbt") : null;
             long count = tag.getLong("count");
             if (!key.isEmpty() && count > 0) {
-                result.add(new DecomposableEntry(key, nbt, count));
+                result.add(new DecomposableEntry(key, nbt, count, readElementMap(tag, "yield")));
+            }
+        }
+        return result;
+    }
+
+    private static Map<ElementType, Long> readElementMap(CompoundTag tag, String keyName) {
+        Map<ElementType, Long> result = new LinkedHashMap<>();
+        if (tag.contains(keyName)) {
+            CompoundTag mapTag = tag.getCompound(keyName);
+            for (String key : mapTag.getAllKeys()) {
+                ElementType type = ElementType.valueOf(key.toUpperCase());
+                result.put(type, mapTag.getLong(key));
             }
         }
         return result;
@@ -149,7 +171,8 @@ public record WorkstationDataPacket(BlockPos stationPos, ListTag items, ListTag 
         return result;
     }
 
-    public record DecomposableEntry(String itemId, @javax.annotation.Nullable CompoundTag nbt, long count) {}
+    public record DecomposableEntry(String itemId, @javax.annotation.Nullable CompoundTag nbt, long count,
+                                    Map<ElementType, Long> elementValue) {}
 
     /**
      * @param recipeId          recipe identifier

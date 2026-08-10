@@ -5,10 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
+import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
@@ -50,6 +53,20 @@ public final class BuildingInteractHandler {
         shopStockManager = manager;
     }
 
+    /** Resolve a colony's founding player's display name for the town hall screen. */
+    @Nullable
+    private static String resolveFounderName(ServerPlayer player, UUID colonyId) {
+        var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return null;
+        UUID founder = colonyApi.getFounder(colonyId);
+        if (founder == null) return null;
+        var profileCache = player.server.getProfileCache();
+        if (profileCache == null) return null;
+        return profileCache.get(founder)
+                .map(com.mojang.authlib.GameProfile::getName)
+                .orElse(null);
+    }
+
     /**
      * Central dispatch for building right-click interactions.
      * Called from both {@link #onRightClickBlock} (normal mode) and
@@ -76,6 +93,7 @@ public final class BuildingInteractHandler {
 
         BuildingConfig bldConfig = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         String typeId = state.getBuildingTypeId();
+        String creator = bldConfig != null ? bldConfig.creator() : "";
 
         // Town hall with linked colony: show colony level & exp info
         if ("government".equals(category) && state.getColonyId() != null) {
@@ -84,9 +102,10 @@ public final class BuildingInteractHandler {
             int exp = levelMgr != null ? levelMgr.getExperience(colonyId) : 0;
             int expNext = levelMgr != null ? levelMgr.expToNextLevel(colonyId) : 1000;
             String name = levelMgr != null ? levelMgr.getColonyName(colonyId) : "";
+            String founderName = resolveFounderName(player, colonyId);
             PacketDistributor.sendToPlayer(player,
                     new com.wsteam.wandscape.building.network.TownHallOpenPacket(
-                            pos, colonyId, name, lvl, exp, expNext));
+                            pos, colonyId, name, lvl, exp, expNext, founderName));
             return;
         }
 
@@ -100,7 +119,7 @@ public final class BuildingInteractHandler {
                     ? hotel.getGuestNames(state.getBuildingId(), level)
                     : java.util.List.<String>of();
             PacketDistributor.sendToPlayer(player,
-                    new HotelOpenPacket(pos, colonyId, state.getBuildingId(), maxOcc, occupancy, guestNames));
+                    new HotelOpenPacket(pos, colonyId, state.getBuildingId(), creator, maxOcc, occupancy, guestNames));
             return;
         }
 
@@ -125,39 +144,43 @@ public final class BuildingInteractHandler {
                 Map<String, Integer> maxStocks = shopStockManager != null
                         ? shopStockManager.getAllMaxStocks(state.getBuildingId()) : Map.of();
                 PacketDistributor.sendToPlayer(player,
-                        new ShopOpenPacket(pos, colonyId, state.getBuildingId(), stock, maxStocks));
+                        new ShopOpenPacket(pos, colonyId, state.getBuildingId(), creator, stock, maxStocks));
             }
             case "tavern" -> {
                 List<com.wsteam.wandscape.shared.data.MageResume> mageResumes = List.of();
+                int recruitCount = 0;
                 try {
                     var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
                     mageResumes = tavernApi.getMageResumes(colonyId);
+                    recruitCount = tavernApi.getRecruitCount(colonyId);
                 } catch (IllegalStateException ignored) {}
                 PacketDistributor.sendToPlayer(player,
-                        new TavernOpenPacket(pos, colonyId, mageResumes));
+                        new TavernOpenPacket(pos, colonyId, recruitCount, mageResumes));
             }
             case "potion_station" -> {
                 player.displayClientMessage(Component.literal(
                         "[Wandscape] Potion Station — not yet implemented"), false);
             }
+            case "altar" -> {
+                if (level instanceof net.minecraft.server.level.ServerLevel sl) {
+                    PacketDistributor.sendToPlayer(player,
+                            new AltarOpenPacket(pos, colonyId, state.getBuildingId(), creator,
+                                    AltarCastHandler.listSpells(sl, state.getBuildingId())));
+                }
+            }
             default -> {
-                String status = "[Wandscape] " + state.getBuildingTypeId()
-                        + " | intact=" + state.isStructureIntact()
-                        + " | shutdown=" + state.isShutdown()
-                        + " | queue=" + state.getTaskQueue().size();
+                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
+                        state.getBuildingTypeId(), state.getAnchor(),
+                        state.isStructureIntact(), state.isShutdown(),
+                        state.getTaskQueue().size());
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
                 if (config != null) {
                     String lockReason = com.wsteam.wandscape.building.internal.BuildingUnlockChecker
                             .getLockReason(state.getColonyId(), config);
                     if (lockReason != null) {
-                        status += "\n  [Locked] " + lockReason;
+                        Log.info(TAG, "[Building] {} locked: {}", state.getBuildingTypeId(), lockReason);
                     }
                 }
-                player.displayClientMessage(Component.literal(status), false);
-                Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
-                        state.getBuildingTypeId(), state.getAnchor(),
-                        state.isStructureIntact(), state.isShutdown(),
-                        state.getTaskQueue().size());
             }
         }
     }
@@ -200,11 +223,14 @@ public final class BuildingInteractHandler {
 
         var elemLoader = Wandscape.ELEMENT_MAPPING_LOADER;
         Map<ItemKey, Long> decomposableItems = new LinkedHashMap<>();
+        Map<String, Map<ElementType, Long>> itemElementValues = new LinkedHashMap<>();
         for (var entry : bank.getSnapshot(colonyId).entrySet()) {
-            String itemId = entry.getKey().itemId();
-            if (elemLoader.hasSeedValue(itemId)) {
-                decomposableItems.put(entry.getKey(), entry.getValue());
-            }
+            // Every warehouse item with a real element value is decomposable
+            // (1/5 yield); items without a mapping yield nothing and are hidden.
+            Map<ElementType, Long> value = elemLoader.getItemElementValue(entry.getKey().itemId());
+            if (value.isEmpty()) continue;
+            decomposableItems.put(entry.getKey(), entry.getValue());
+            itemElementValues.put(entry.getKey().itemId(), value);
         }
 
         var prodLoader = Wandscape.PRODUCTION_RECIPE_LOADER;
@@ -213,7 +239,7 @@ public final class BuildingInteractHandler {
                 : java.util.Collections.<com.wsteam.wandscape.production.data.SynthesizeRecipe>emptyList();
 
         Map<ElementType, Long> elemSnapshot = bank.getElementSnapshot(colonyId);
-        var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId);
+        var pkt = WorkstationDataPacket.from(pos, decomposableItems, synthRecipes, elemSnapshot, colonyId, itemElementValues);
         PacketDistributor.sendToPlayer(player, pkt);
     }
 
@@ -229,10 +255,10 @@ public final class BuildingInteractHandler {
         var nc = config.nodeConfig();
         PacketDistributor.sendToPlayer(player,
                 new NodeDataPacket(pos, state.getBuildingTypeId(), nc.element(),
-                        nc.amountPerHarvest(), nc.channelTicks(), nc.manaCost()));
-        Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={} mana={}",
+                        nc.amountPerHarvest(), nc.channelTicks()));
+        Log.info(TAG, "[Node] open GUI type={} at={} element={} amount={} ticks={}",
                 state.getBuildingTypeId(), pos, nc.element(),
-                nc.amountPerHarvest(), nc.channelTicks(), nc.manaCost());
+                nc.amountPerHarvest(), nc.channelTicks());
     }
 
     private static void openCraftingStationGui(Level level, UUID colonyId,

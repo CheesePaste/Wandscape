@@ -16,6 +16,7 @@ import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
+import com.wsteam.wandscape.building.executor.AltarCastExecutor;
 /**
  * Singleton holder for the engine {@link World} instance.
  * Bootstrap happens once in {@link EngineBootstrap}.
@@ -31,16 +32,6 @@ public final class WandscapeEngine {
     static WandscapeRitualOps ritualOps;
     @Nullable
     static WandscapeBlockInteractExecutor blockInteractExec;
-    static boolean manaDebug;
-    @Nullable
-    static net.minecraft.server.level.ServerPlayer manaDebugTarget;
-
-    public static boolean isManaDebug() { return manaDebug; }
-    public static void setManaDebug(boolean v) { manaDebug = v; }
-
-    @Nullable
-    public static net.minecraft.server.level.ServerPlayer getManaDebugTarget() { return manaDebugTarget; }
-    public static void setManaDebugTarget(@Nullable net.minecraft.server.level.ServerPlayer p) { manaDebugTarget = p; }
 
     @Nullable
     private static WandscapeMovementOps movementOps;
@@ -61,6 +52,8 @@ public final class WandscapeEngine {
     private static GuardAttackExecutor guardExec;
     @Nullable
     private static SelfDefenseExecutor selfDefenseExec;
+    @Nullable
+    private static AltarCastExecutor altarCastExec;
 
     private WandscapeEngine() {}
 
@@ -78,6 +71,7 @@ public final class WandscapeEngine {
         roadSavedData = null;
         playerManualSource = null;
         colonyLevelManager = null;
+        altarCastExec = null;
         // blueprintConfigLoader: intentionally NOT nulled — it's a permanent singleton
         // whose internal definitions map is managed by WandscapeDataLoader resource reload.
         // Nulling it would break DSL blueprint registration on world re-entry.
@@ -145,6 +139,10 @@ public final class WandscapeEngine {
     @Nullable
     public static SelfDefenseExecutor getSelfDefenseExecutor() { return selfDefenseExec; }
     public static void setSelfDefenseExecutor(@Nullable SelfDefenseExecutor exec) { selfDefenseExec = exec; }
+
+    @Nullable
+    public static AltarCastExecutor getAltarCastExecutor() { return altarCastExec; }
+    public static void setAltarCastExecutor(@Nullable AltarCastExecutor exec) { altarCastExec = exec; }
 
     @Nullable
     private static ColonyLevelManager colonyLevelManager;

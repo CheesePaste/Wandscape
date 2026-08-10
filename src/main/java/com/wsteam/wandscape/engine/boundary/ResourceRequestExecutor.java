@@ -117,8 +117,6 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
         }
 
         if (needs.isEmpty()) {
-            Log.debug(TAG, "[ResourceReq] NPC {} already has all {} items, skipping warehouse",
-                    npcId, items.size());
             return CompletableFuture.completedFuture(null);
         }
 
@@ -218,8 +216,6 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                     CompletableFuture.allOf(b.inFlight.toArray(new CompletableFuture[0]))
                             .thenRun(() -> finish(b.doneFuture, b.needs,
                                     b.resources, b.world, b.npcId));
-                    Log.debug(TAG, "[ResourceReq] all {} items launched, awaiting arrivals",
-                            b.totalItems);
                 }
             } else if (!b.remaining.isEmpty()) {
                 b.launchCountdown = cd;
@@ -265,7 +261,6 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
                         npcId, need.resource().id(), need.amount());
             } else {
                 resources.commit(need.resource(), need.amount());
-                Log.debug(TAG, "[ResourceReq] NPC {} received {}", npcId, need);
             }
         }
 

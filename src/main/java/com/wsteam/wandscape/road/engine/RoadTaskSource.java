@@ -54,8 +54,6 @@ public class RoadTaskSource implements TaskSource {
 
     @Override
     public void poll(GlobalTaskPool pool, World world) {
-        Log.debug(TAG, "[RoadTaskSource] poll: {} segments pending",
-                pendingSegments.size());
         publishSegments(pool);
     }
 

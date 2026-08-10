@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.task.scheduler;
 
 import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
@@ -31,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>Each NPC has a queue of {@link NpcTaskPackage}s. This system drives the
  * current package's op sequence, handles async futures, and releases packages
- * back to the global pool on mana depletion or resource shortage.
+ * back to the global pool on resource shortage.
  *
  * <p>V3 package-driven model:
  * <ol>
@@ -39,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
  *   <li>Pending async future → wait or advance</li>
  *   <li>No current package → start next from queue</li>
  *   <li>Navigate to package stance if out of range</li>
- *   <li>Execute current op → handle mana, resources, async</li>
+ *   <li>Execute current op → handle resources, async</li>
  * </ol>
  */
 public class TaskExecutionSystem implements System {
@@ -59,7 +58,7 @@ public class TaskExecutionSystem implements System {
         OpExecutorRegistry registry = world.opExecutors;
         if (registry == null) return;
 
-        List<Long> npcs = world.query(Position.class, ManaPool.class, TaskExecutor.class,
+        List<Long> npcs = world.query(Position.class, TaskExecutor.class,
                 EquipmentComponent.class, Inventory.class);
 
         for (long npcId : npcs) {
@@ -71,10 +70,6 @@ public class TaskExecutionSystem implements System {
             // ── 0. No work → idle ──
             if (!queue.hasWork() && exec.globalTaskId == null) {
                 if (exec.state != ExecutorState.IDLE) {
-                    Log.debug(TAG, "NPC %d → IDLE (no work, was=%s pendingFuture=%s nav=%s)",
-                            npcId, exec.state,
-                            exec.pendingFuture != null && !exec.pendingFuture.isDone(),
-                            exec.pendingFutureIsNav);
                 }
                 exec.state = ExecutorState.IDLE;
                 exec.currentOpTarget = null;
@@ -109,7 +104,6 @@ public class TaskExecutionSystem implements System {
         boolean navJustResolved = false;
         if (exec.pendingFuture != null) {
             if (!exec.pendingFuture.isDone()) {
-                Log.debug(TAG, "NPC %d — waiting on future (nav=%s)", npcId, exec.pendingFutureIsNav);
                 return; // still waiting
             }
             Log.info(TAG, "NPC %d — future resolved (wasNav=%s)", npcId, exec.pendingFutureIsNav);
@@ -154,7 +148,6 @@ public class TaskExecutionSystem implements System {
                             npcId, pkg.stance().x(), pkg.stance().y(), pkg.stance().z());
                     exec.pendingFuture = navFuture;
                     exec.pendingFutureIsNav = true;
-                    Log.debug(TAG, "NPC %d — navigating to pkg stance %s", npcId, pkg.stance());
                     exec.state = ExecutorState.ACTIVE;
                     return;
                 }
@@ -182,25 +175,8 @@ public class TaskExecutionSystem implements System {
                 return;
             }
 
-            // ── 4c. Mana check + consume ──
+            // ── 4c. Pure-op classification (no mana gate — magic is time-gated) ──
             boolean isPure = isPureOp(currentOp);
-            if (!isPure) {
-                ManaPool mana = world.get(npcId, ManaPool.class);
-                if (mana == null || eq == null) return;
-
-                float actualCost = currentOp.baseManaCost() * eq.getAttribute(AttributeType.MANA_COST_MULTIPLIER);
-                if (mana.current() < actualCost) {
-                    releaseToGlobalPool(exec, queue, npcId, world);
-                    Log.info(TAG, "NPC %d — mana %.1f < %.1f, released pkg to pool",
-                            npcId, mana.current(), actualCost);
-                    return;
-                }
-                mana.consume(actualCost);
-                Log.info(TAG, "NPC %d — mana -%.1f → %.1f/%d (%s)",
-                        npcId, actualCost, mana.current(), mana.max(),
-                        currentOp instanceof AtomicOp.RitualOp r ? r.ritual().id()
-                                : currentOp.getClass().getSimpleName());
-            }
 
             // ── 4d. Range check (for per-op nav, when no stance is set) ──
             GridPos target = currentOp.target();
@@ -217,7 +193,6 @@ public class TaskExecutionSystem implements System {
                         exec.pendingFuture = navFuture;
                         exec.pendingFutureIsNav = true;
                         exec.state = ExecutorState.ACTIVE;
-                        Log.debug(TAG, "NPC %d — navigating to op target %s", npcId, target);
                         return;
                     }
                 }
@@ -292,7 +267,6 @@ public class TaskExecutionSystem implements System {
             exec.pendingFuture = future;
             exec.pendingFutureIsNav = false;
             exec.state = ExecutorState.ACTIVE;
-            Log.debug(TAG, "NPC %d - async op in-flight, waiting", npcId);
             return;
         }
 
@@ -461,27 +435,6 @@ public class TaskExecutionSystem implements System {
             return;
         }
 
-        float totalCost = 0;
-        for (AtomicOp sub : subs) {
-            if (!isPureOp(sub)) totalCost += sub.baseManaCost();
-        }
-
-        if (totalCost > 0) {
-            ManaPool mana = world.get(npcId, ManaPool.class);
-            EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
-            if (mana == null || eq == null) return;
-            float actualCost = totalCost * eq.getAttribute(AttributeType.MANA_COST_MULTIPLIER);
-            if (mana.current() < actualCost) {
-                releaseToGlobalPool(exec, queue, npcId, world);
-                Log.info(TAG, "NPC %d — mana %.1f < %.1f total for %d parallel ops, released",
-                        npcId, mana.current(), actualCost, subs.size());
-                return;
-            }
-            mana.consume(actualCost);
-            Log.info(TAG, "NPC %d — mana -%.1f → %.1f/%d (parallel x%d)",
-                    npcId, actualCost, mana.current(), mana.max(), subs.size());
-        }
-
         CompletableFuture<Void>[] futures = new CompletableFuture[subs.size()];
         for (int i = 0; i < subs.size(); i++) {
             AtomicOp sub = subs.get(i);
@@ -500,7 +453,6 @@ public class TaskExecutionSystem implements System {
         exec.state = ExecutorState.ACTIVE;
         exec.currentOpTarget = null;
         exec.currentOpKind = "parallel";
-        Log.debug(TAG, "NPC %d — launched %d parallel ops, waiting for allOf", npcId, subs.size());
     }
 
     // ── Helpers ──
@@ -513,6 +465,7 @@ public class TaskExecutionSystem implements System {
     private static String opKind(AtomicOp op) {
         return switch (op) {
             case AtomicOp.RitualOp r      -> "ritual:" + r.ritual().id();
+            case AtomicOp.AltarCastOp a   -> "altar_cast:" + a.magicId();
             case AtomicOp.BlockInteractOp b -> "block_interact:" + b.action().id();
             case AtomicOp.TransformOp t   -> "transform";
             case AtomicOp.ParallelOp p    -> "parallel";

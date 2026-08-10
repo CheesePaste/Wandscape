@@ -78,6 +78,18 @@ public final class BuildingConfigLoader {
         return configs.containsKey(id);
     }
 
+    /**
+     * Register a building config from JSON at runtime.
+     * Used by the scanner export so an exported building is immediately buildable
+     * without waiting for a /reload. On /reload the same JSON is re-parsed from the datapack.
+     */
+    public void registerFromJson(JsonElement json) {
+        BuildingConfig config = parseConfig(json);
+        if (config == null) {
+            Log.warn(TAG, "Runtime registration failed for exported building JSON");
+        }
+    }
+
     // ---- Internal ----
 
     private synchronized BuildingConfig parseConfig(JsonElement json) {

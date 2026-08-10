@@ -13,9 +13,7 @@ import com.wsteam.wandscape.npc.data.NpcDataImpl;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.NpcApi;
 import com.wsteam.wandscape.shared.data.NpcData;
-import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 
-import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -24,7 +22,6 @@ import com.wsteam.wandscape.shared.log.Log;
  *
  * <p>Stage 2 limitations:
  * <ul>
- *   <li>{@link #spawnNpc} is not implemented — NPCs are created via spawn egg.</li>
  *   <li>{@link #assignHouse} always returns false (stage 4).</li>
  *   <li>NPC lookups go through the bridge's in-memory map (fast but not
  *       persisted across server restarts).</li>
@@ -72,14 +69,5 @@ public class NpcApiImpl implements NpcApi {
     public boolean assignHouse(UUID npcId, UUID houseId) {
         // Stage 4: bind NPC to house building → ECS component update
         return false;
-    }
-
-    @Override
-    @Nullable
-    public UUID spawnNpc(UUID colonyId, BlockPos pos, RecruitmentCandidate candidate) {
-        // Stage 4: create WandscapeNpc entity programmatically
-        // For now, NPCs are created exclusively via spawn egg
-        Log.warn(TAG, "spawnNpc not implemented — use spawn egg for stage 2 testing");
-        return null;
     }
 }

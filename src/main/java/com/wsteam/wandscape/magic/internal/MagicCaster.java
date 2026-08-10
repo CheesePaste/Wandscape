@@ -5,6 +5,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
+import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
@@ -13,13 +14,9 @@ import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -28,9 +25,9 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * 施放一次魔法阵攻击：向追踪的玩家发 {@link MagicCircleCastPacket}（客户端渲染法阵，
+ * 施放一次魔法阵攻击：向追踪区块的玩家发 {@link MagicCircleCastPacket}（客户端渲染法阵，
  * 垂直于施法朝向），并在法阵动画结束后由 {@link MagicCastManager} 生成信标光束射向目标。
- * 调试命令（玩家）、shift+右键 NPC 共用此入口。
+ * 守卫/自防御执行器（{@link #castNpcAt}）使用；玩家施放入口（法杖右键 / 调试命令）已移除。
  */
 public final class MagicCaster {
 
@@ -41,77 +38,73 @@ public final class MagicCaster {
     /** 默认光束颜色（浅蓝）。 */
     public static final int DEFAULT_COLOR = 0xFFA8E0FF;
 
-    private static final double CAST_DISTANCE = 1.5;
+    /** 光束魔法 id（每魔法独立 CD 的 key）。 */
+    public static final String BEAM_MAGIC_ID = "beam";
+    /** 光束施法后的冷却基础（tick），除以 SPELL_SPEED 得实际值；在施法互斥锁（法阵+光束全程）结束后才开始倒计时。 */
+    public static final int BEAM_BASE_CD = 400;
+    /** 守卫光束固定魔力消耗。 */
+    public static final int BEAM_MANA_COST = 50;
+
     /** 光束在法阵出现后多少 tick 开始生成（法阵动画期间从细变宽）。 */
     public static final int BEAM_SPAWN_DELAY = 20;
     /** 法阵结束后光束额外延续的 tick（快速变细到消失）。 */
     public static final int BEAM_TAIL = 20;
-    /** 施法目标搜索半径（方块）：取最近敌对生物。 */
-    private static final double CAST_TARGET_RANGE = 32.0;
+
+    // ── beam 参数：数据驱动（magic_spells/beam.json），缺失回退常量 ──
+
+    /** beam 魔法定义（可能为 null，取用前判空）。 */
+    @Nullable
+    public static MagicDef beamSpec() {
+        return SpellbookLoader.getSpec(BEAM_MAGIC_ID);
+    }
+
+    /** 光束基础冷却（tick）。 */
+    public static int beamBaseCooldown() {
+        MagicDef spec = beamSpec();
+        return spec != null ? spec.baseCooldown() : BEAM_BASE_CD;
+    }
+
+    /** 光束固定魔力消耗。 */
+    public static int beamManaCost() {
+        MagicDef spec = beamSpec();
+        return spec != null ? spec.manaCost() : BEAM_MANA_COST;
+    }
+
+    /** 光束法阵 spec id（效果参数）。 */
+    public static String beamCircleId() {
+        MagicDef spec = beamSpec();
+        return spec != null && spec.effectCircleId() != null ? spec.effectCircleId() : DEFAULT_CIRCLE;
+    }
+
+    /** 光束颜色（效果参数，ARGB）。 */
+    public static int beamColor() {
+        MagicDef spec = beamSpec();
+        return spec != null && spec.effectColor() != null ? spec.effectColor() : DEFAULT_COLOR;
+    }
 
     private MagicCaster() {}
 
     /**
-     * 玩家施放（调试命令）。返回 false 表示未找到 spec 或该施法者已有未发射施法。
-     */
-    public static boolean cast(ServerLevel level, ServerPlayer player, String circleId, @Nullable String colorHex) {
-        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
-        if (spec == null) return false;
-
-        Vec3 look = player.getLookAngle();
-        Vec3 source = player.getEyePosition().add(look.scale(CAST_DISTANCE));
-        BlockPos target = aimFirstBlock(level, source, look);
-        int color = resolveColor(player.getMainHandItem(), colorHex);
-
-        PacketDistributor.sendToPlayersTrackingChunk(level,
-                new ChunkPos(BlockPos.containing(source)),
-                new MagicCircleCastPacket(UUID.randomUUID(), source, look, circleId));
-
-        return MagicCastManager.schedule(level, player.getUUID(), source, target, color,
-                BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, null, null);
-    }
-
-    /**
-     * NPC 施放（shift+右键触发）：目标=最近的敌对生物（32 格内），NPC 面向它施放。
-     * 法阵圆心落在法杖中段（持杖手沿目标方向前移 {@link MagicBeamEntity#STAFF_CENTER_OFFSET}），
-     * 法阵/光束由 MagicBeamEntity 动态跟踪目标，随 NPC 转向。无目标时沿当前朝向射 200 格。
-     */
-    public static boolean castNpc(ServerLevel level, WandscapeNpc npc, String circleId, @Nullable Integer color) {
-        LivingEntity target = findNearestHostile(level, npc, CAST_TARGET_RANGE);
-        if (target != null) {
-            return castNpcAt(level, npc, target, circleId, color);
-        }
-
-        // 无目标：沿当前朝向施放（视觉演示）
-        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
-        if (spec == null) return false;
-
-        UUID effectId = npc.getUUID();
-        Vec3 hand = npc.getStaffPosition();
-        Vec3 axis = npc.getFacingDirection();
-        Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
-        BlockPos beamTarget = aimFirstBlock(level, source, axis);
-        int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
-
-        PacketDistributor.sendToPlayersTrackingEntity(npc,
-                new MagicCircleCastPacket(effectId, source, axis, circleId));
-
-        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
-                BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, null);
-        Log.info(TAG, "castNpc id={} circle={} target=null (facing) hand={} axis={} source={} scheduled={}",
-                npc.getUUID().toString().substring(0, 8), circleId,
-                fmt(hand), fmt(axis), fmt(source), ok);
-        return ok;
-    }
-
-    /**
      * NPC 施放指向**指定目标**（守卫执行器用）：面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
-     * 法阵/光束由 MagicBeamEntity 动态跟踪目标。目标必须存活；若该施法者已有未发射的施法则拒绝。
+     * 法阵/光束由 MagicBeamEntity 动态跟踪目标。目标必须存活；门控（锁/CD/蓝）不满足则拒绝。
      */
     public static boolean castNpcAt(ServerLevel level, WandscapeNpc npc, LivingEntity target,
                                     String circleId, @Nullable Integer color) {
+        return castNpcBeam(level, npc, target, circleId, color);
+    }
+
+    /**
+     * 光束施放公共路径（守卫用）：先过施法门控（互斥锁 + 光束独立 CD + 固定魔力），
+     * 成功后面向目标、法阵圆心落在法杖中段、光束射向目标身体中心。
+     * 魔力消耗 = beam MagicDef 数据（magic_spells/beam.json）。
+     */
+    private static boolean castNpcBeam(ServerLevel level, WandscapeNpc npc, LivingEntity target,
+                                       String circleId, @Nullable Integer color) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null || target == null || target.isRemoved() || !target.isAlive()) return false;
+
+        int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
+        if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), beamManaCost(), lockDuration)) return false;
 
         UUID effectId = npc.getUUID();
         Vec3 hand = npc.getStaffPosition();
@@ -128,7 +121,7 @@ public final class MagicCaster {
 
         boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
                 BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, target);
-        Log.info(TAG, "castNpcAt id={} circle={} target={} hand={} axis={} source={} scheduled={}",
+        Log.info(TAG, "castNpcBeam id={} circle={} target={} hand={} axis={} source={} scheduled={}",
                 npc.getUUID().toString().substring(0, 8), circleId,
                 target.getUUID().toString().substring(0, 8),
                 fmt(hand), fmt(axis), fmt(source), ok);
@@ -143,22 +136,6 @@ public final class MagicCaster {
             return bhr.getBlockPos();
         }
         return BlockPos.containing(from.add(dir.scale(MagicBeamEntity.BEAM_RANGE)));
-    }
-
-    /** 32 格内最近的敌对生物（实现 {@code Enemy} 接口）；无则 null。 */
-    private static LivingEntity findNearestHostile(ServerLevel level, WandscapeNpc npc, double range) {
-        LivingEntity nearest = null;
-        double best = range * range;
-        Vec3 pos = npc.position();
-        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(range), e -> e instanceof Enemy)) {
-            if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
-            double d = mob.distanceToSqr(pos);
-            if (d < best) {
-                best = d;
-                nearest = mob;
-            }
-        }
-        return nearest;
     }
 
     /** 调试日志：Vec3 四舍五入两位。 */

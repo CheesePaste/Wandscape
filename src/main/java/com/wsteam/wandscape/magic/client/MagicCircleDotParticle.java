@@ -25,26 +25,39 @@ public class MagicCircleDotParticle extends TextureSheetParticle {
     private final float endSize;
     private final float baseAlpha;
     private final boolean fadeOut;
+    /** 运动粒子（爆花/光柱用）：tick 时保留速度，不自清。 */
+    private final boolean moving;
 
     protected MagicCircleDotParticle(ClientLevel level, double x, double y, double z,
                                      float r, float g, float b,
                                      float startSize, float endSize,
                                      float baseAlpha, boolean fadeOut,
                                      int lifetime, SpriteSet sprites) {
+        this(level, x, y, z, r, g, b, startSize, endSize, baseAlpha, fadeOut,
+                lifetime, sprites, 0, 0, 0, false);
+    }
+
+    protected MagicCircleDotParticle(ClientLevel level, double x, double y, double z,
+                                     float r, float g, float b,
+                                     float startSize, float endSize,
+                                     float baseAlpha, boolean fadeOut,
+                                     int lifetime, SpriteSet sprites,
+                                     double vx, double vy, double vz, boolean moving) {
         super(level, x, y, z, 0, 0, 0);
         this.sprites = sprites;
         this.startSize = startSize;
         this.endSize = endSize;
         this.baseAlpha = baseAlpha;
         this.fadeOut = fadeOut;
+        this.moving = moving;
         this.lifetime = Math.max(1, lifetime);
         this.quadSize = startSize;
         this.hasPhysics = false;
         this.gravity = 0;
         this.friction = 1.0f;
-        this.xd = 0;
-        this.yd = 0;
-        this.zd = 0;
+        this.xd = vx;
+        this.yd = vy;
+        this.zd = vz;
         this.setColor(r, g, b);
         this.setAlpha(baseAlpha);
         this.pickSprite(sprites);
@@ -52,9 +65,11 @@ public class MagicCircleDotParticle extends TextureSheetParticle {
 
     @Override
     public void tick() {
-        this.xd = 0;
-        this.yd = 0;
-        this.zd = 0;
+        if (!moving) {
+            this.xd = 0;
+            this.yd = 0;
+            this.zd = 0;
+        }
         super.tick();
         float f = Math.min(1.0f, (float) this.age / this.lifetime);
         this.quadSize = startSize + (endSize - startSize) * f;
@@ -84,6 +99,20 @@ public class MagicCircleDotParticle extends TextureSheetParticle {
         if (cachedSprite == null) return;
         var p = new MagicCircleDotParticle(level, x, y, z, r, g, b,
                 startSize, endSize, baseAlpha, fadeOut, lifetime, cachedSprite);
+        Minecraft.getInstance().particleEngine.add(p);
+    }
+
+    /**
+     * 撒一个运动粒子（爆花/光柱用）：带速度，随寿命淡出，可染色。
+     */
+    public static void spawnMoving(ClientLevel level, double x, double y, double z,
+                                   double vx, double vy, double vz,
+                                   float r, float g, float b,
+                                   float size, float alpha, int lifetime) {
+        if (cachedSprite == null) return;
+        var p = new MagicCircleDotParticle(level, x, y, z, r, g, b,
+                size, size, alpha, true, lifetime, cachedSprite,
+                vx, vy, vz, true);
         Minecraft.getInstance().particleEngine.add(p);
     }
 

@@ -12,8 +12,11 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
+import com.wsteam.wandscape.engine.service.SoundService;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -22,6 +25,8 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -50,6 +55,9 @@ public class WandscapeBlockOps implements BlockOps {
             Direction.EAST, Direction.WEST, Direction.DOWN
     };
 
+    /** 方块放置/拆除音效节流间隔（tick）：建造连续放块、拆除连续清块时防止每块都响。 */
+    private static final int BLOCK_SOUND_THROTTLE_TICKS = 10;
+
     // Cache block type string → MC Block lookups
     private final ConcurrentMap<String, Block> blockCache = new ConcurrentHashMap<>();
     // Cache resolved BlockStates for types with bracket properties
@@ -60,10 +68,43 @@ public class WandscapeBlockOps implements BlockOps {
         Level level = getLevel();
         if (level == null) return;
         BlockState state = resolveBlockState(type);
-        if (state != null) {
-            BlockPos bp = toBlockPos(pos);
+        if (state == null) return;
+
+        BlockPos bp = toBlockPos(pos);
+        ChunkPos cp = new ChunkPos(bp);
+        // Temporary lease: force-load the target chunk so the write lands even when
+        // the area is otherwise unloaded (manual blueprints / road tasks that skip the
+        // building lease). Refcounted — no-op on the construction path where the
+        // building lease already holds the chunk.
+        ChunkLoadManager.get().acquireChunk(cp);
+        try {
+            BlockState oldState = level.getBlockState(bp);
             evacuateEntities(level, bp);
-            level.setBlock(bp, state, 2);
+            // 建造放置瞬间开启守卫：丢弃放置触发的 scheduled tick（水/岩浆流动、
+            // 侦测器脉冲、比较器重算），方块落地即为其最终状态，避免施工中水流。
+            BuildPlacementGuard.enable();
+            try {
+                level.setBlock(bp, state, 2);
+            } finally {
+                BuildPlacementGuard.disable();
+            }
+            if (state.isAir() && !oldState.isAir()) {
+                // 移除（拆除/清空）：播被拆方块自身的原版破坏音，节流防止每块都响
+                SoundEvent breakSound = oldState.getSoundType(level, bp, null).getBreakSound();
+                if (level instanceof ServerLevel sl && breakSound != null) {
+                    SoundService.playAtThrottled(sl, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
+                            breakSound, SoundSource.BLOCKS, 0.8f, 1.0f, BLOCK_SOUND_THROTTLE_TICKS);
+                }
+            } else if (!state.isAir()) {
+                // 方块自身原版放置音（与原版玩家右手放置一致），BLOCKS 通道，与拆除同频节流
+                SoundEvent placeSound = state.getSoundType(level, bp, null).getPlaceSound();
+                if (level instanceof ServerLevel sl && placeSound != null) {
+                    SoundService.playAtThrottled(sl, bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5,
+                            placeSound, SoundSource.BLOCKS, 0.8f, 1.0f, BLOCK_SOUND_THROTTLE_TICKS);
+                }
+            }
+        } finally {
+            ChunkLoadManager.get().releaseChunk(cp);
         }
     }
 
@@ -73,6 +114,8 @@ public class WandscapeBlockOps implements BlockOps {
         Level level = getLevel();
         if (level == null) return;
         BlockPos bp = toBlockPos(pos);
+        ChunkPos cp = new ChunkPos(bp);
+        ChunkLoadManager.get().acquireChunk(cp);
         try {
             byte[] data = Base64.getDecoder().decode(nbtBase64);
             CompoundTag tag = NbtIo.readCompressed(new ByteArrayInputStream(data), NbtAccounter.create(0x200000L));
@@ -93,6 +136,8 @@ public class WandscapeBlockOps implements BlockOps {
             }
         } catch (Exception e) {
             Log.warn(TAG, "Failed to restore BlockEntity NBT at {}: {}", bp, e.toString());
+        } finally {
+            ChunkLoadManager.get().releaseChunk(cp);
         }
     }
 
@@ -210,7 +255,6 @@ public class WandscapeBlockOps implements BlockOps {
     private void redstonePulse(Level level, BlockPos target) {
         BlockPos adj = findAdjacentAir(level, target);
         if (adj == null) {
-            Log.debug(TAG, "activate redstone fallback: no adjacent air at {}", target);
             return;
         }
         level.setBlock(adj, Blocks.REDSTONE_BLOCK.defaultBlockState(),
@@ -257,8 +301,6 @@ public class WandscapeBlockOps implements BlockOps {
 
         // Container access for future item manipulation
         if (blockEntity instanceof Container container) {
-            Log.debug(TAG, "openGui: container at {} has {} slots",
-                    bp, container.getContainerSize());
             // Stage 3+: NPC reads/writes items via Container interface
         }
 

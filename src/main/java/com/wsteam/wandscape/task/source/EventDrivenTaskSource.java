@@ -51,7 +51,6 @@ public class EventDrivenTaskSource implements TaskSource {
     }
 
     private void onTaskCompleted(TaskCompleted e) {
-        Log.debug(TAG, "TaskCompleted(#%d by NPC %d) — no chain rules defined", e.taskId(), e.completedByNpcId());
     }
 
     // ======================== Blueprint auto-registration ========================

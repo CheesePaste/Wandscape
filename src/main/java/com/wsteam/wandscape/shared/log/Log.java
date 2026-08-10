@@ -7,27 +7,39 @@ import java.util.logging.*;
  * Use static methods for convenient one-liners:
  * <pre>
  *   Log.info("Scheduler", "Assigned task #%d to NPC %d", taskId, npcId);
- *   Log.debug("TaskExec", "Executing %s at %s", op.getClass().getSimpleName(), pos);
  * </pre>
  */
 public final class Log {
 
     private Log() {}
 
-    // Default level: FINE for debug, INFO for normal
-    private static final Level DEFAULT_LEVEL = Level.INFO;
+    private static final Logger ROOT = Logger.getLogger("");
+    private static final ConsoleHandler HANDLER = new ConsoleHandler();
+    private static volatile boolean verbose = false;
 
     static {
-        // Configure root logger for clean console output
-        Logger rootLogger = Logger.getLogger("");
-        for (Handler h : rootLogger.getHandlers()) {
-            rootLogger.removeHandler(h);
+        // Configure root logger for clean console output.
+        // Level follows setVerbose(): false (default) = WARN/ERROR only, true = DEBUG+.
+        for (Handler h : ROOT.getHandlers()) {
+            ROOT.removeHandler(h);
         }
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(DEFAULT_LEVEL);
-        handler.setFormatter(new BriefFormatter());
-        rootLogger.addHandler(handler);
-        rootLogger.setLevel(DEFAULT_LEVEL);
+        HANDLER.setFormatter(new BriefFormatter());
+        ROOT.addHandler(HANDLER);
+        applyLevel(verbose);
+    }
+
+    public static boolean isVerbose() { return verbose; }
+
+    /** Toggle verbose logging. false (default): only WARN/ERROR shown; true: DEBUG/INFO/WARN/ERROR. */
+    public static void setVerbose(boolean v) {
+        verbose = v;
+        applyLevel(v);
+    }
+
+    private static void applyLevel(boolean v) {
+        Level level = v ? Level.FINE : Level.WARNING;
+        ROOT.setLevel(level);
+        HANDLER.setLevel(level);
     }
 
     // ---- Convenience methods ----
@@ -36,15 +48,8 @@ public final class Log {
         return Logger.getLogger(name);
     }
 
-    public static void debug(String tag, String msg, Object... args) {
-        if (!LogFilter.allows(tag)) return;
-        Logger logger = get(tag);
-        if (logger.isLoggable(Level.FINE)) {
-            logger.fine(format(msg, args));
-        }
-    }
-
     public static void info(String tag, String msg, Object... args) {
+        if (!verbose) return;
         if (!LogFilter.allows(tag)) return;
         Logger logger = get(tag);
         if (logger.isLoggable(Level.INFO)) {

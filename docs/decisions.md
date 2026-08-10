@@ -1,377 +1,173 @@
-# 设计决策日志
+# 设计决策记录
 
-只记录非显而易见的决策——为什么选这个方案而非那个。实现细节见源代码和 architecture/。
+本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
-## 架构决策
+## 2026-08-10：生成窗口收窄到 1000–8000
 
-**为什么 core/ 禁止引用 MC 类？** 保证核心引擎可纯 JUnit 测试（不启动 MC）。所有 MC 交互通过 boundary/ 接口注入。
+**需求**（用户实测）：游客生成太晚、下午晚上都有生成；晚到游客没时间逛/走向旅店，当晚就被清场消失。
 
-**为什么 BuildingSavedData 用 Level SavedData 而非自定义方块 BE？** BE 随方块破坏丢失。SavedData 独立于方块，建筑数据不因方块被破坏而消失。仓库物品同样原因迁到 ColonyItemBank。
+**决策**：`TOURIST_SPAWN_WINDOW_END` 默认 13000（约 18:30 黄昏）→ **8000（约 14:00）**，`SPAWN_WINDOW_START=1000`（约 07:00）不变，窗口内仍均匀分布。游客集中在上午到，最晚的也有整个下午逛、傍晚走向旅店，减轻「晚生成 → 没时间逛 → 夜晚无旅店可达被清场」。**离场规则保持现状**（未满条游客夜晚无旅店 → 离场，goal.md 规则 3，用户确认不改）。
 
-**为什么 EngineBootstrap 在 ServerStarting 而非 FMLCommonSetup？** 引擎需要访问 ServerLevel。FMLCommonSetup 时世界尚未加载。
+**注意**：配置默认值只对新生成配置生效；已有存档的 `serverconfig` TOML 里 `spawnWindowEnd` 仍是 13000，需手动改或删配置再生成。
 
-**为什么导航失败改传送而非重试寻路？** 动态建筑工地路径频繁作废，寻路不可靠。直接传送保证 NPC 到达目标。
+## 2026-08-10：游客目标选择偏好改为「总三值满意度增益」+ 晃悠根因分析
 
-**为什么法杖永不损坏？** 核心物品，损坏会阻断整个殖民地工作流。平衡通过魔力消耗实现。
+**需求**（用户实测）：游客在建筑附近（spot 有空位）仍一直晃悠不去逛，尤其「一维数值夸张、另两条很低」的游客；Comfort 侧重游客 Comfort 满条后仍被高 Comfort 建筑吸走。
 
-**为什么殖民地经验仅来自 100% 满意度的游客？** 要求全满意才贡献经验，给予玩家优化游客体验的强动机。0/100/500 三级贡献鼓励玩家吸引高等级游客、提升殖民地满意度。
+**决策**：
+- **满意度偏好 = 总三值满意度增益**：`score(满意度) = Σ_d min(需求缺口_d, round(建筑该维值 × TOURIST_BAR_GAIN_COEFF))`，即「这次访问能把总三值满意度提升多少（潜在总三值 − 现在三值）」，与 `fillBars` 实际结算逐维一致。旧式 `Σ 需求缺口 × 建筑值` 会把单维数值夸张（如 Comfort 90/其余 0）的建筑权重抬得过高——Comfort 满条的游客仍被高 Comfort 建筑吸走，浪费访问、另两条常年填不满。增益式下均衡建筑（30/30/30）比单维夸张（90/0/0）总增益更高（90>80），游客会优先去能把三条总满意度抬得更高的地方。精力/钱包紧急加分、排队惩罚不变。
 
-**为什么生成公式用 base + colonyLevel × bonus × (0.8~1.2)？** 乘法缩放保证殖民地等级越低游客越少（新殖民地起步慢节奏），每日随机浮动（±20%）制造日间波动不单调。
+**晃悠根因分析**（用户问「太挑剔还是视野太小」）：
+- **不是挑剔**：`weightedPick` 兜底权重 0.5，候选非空必选；视野内无目标才闲逛。真正挡住目标是**过滤**而非评分：
+- **① visited 耗尽**：`visitedBuildings` 一次停留不重置（红线 #8，防挂机），小/同质殖民地很快把视野内（48 格）建筑逛完 → 闲逛，直到漂到新的未逛建筑附近。
+- **② 傍晚旅店锁（与「一维夸张两维低」最吻合）**：`selectNextTarget` 里 `nightHotel = 夜晚 && !满条` → 未满条游客夜晚只能去旅店；而离场窗口 18000 才开。13000–18000 视野内无旅店 → 闲逛 5000 tick。一维夸张两维低的游客几乎永远不满条 → **每天傍晚都晃悠**。
+- **③ gap×value 评分浪费访问**：侧重 Comfort（80/35/35）游客起步被 Comfort 90 建筑吸走（score 7200 > 均衡 4500），但实际总增益 80<90——另两条常年低 → 加剧 ② + 更快逛完视野内建筑。
+- **④ 精力 0 → 只去 relax**（无恢复建筑 → 闲逛，不离场，goal 非协商项）。视野 48 是次要因素（殖民地建筑更分散时确实够不着，可按需调 `TOURIST_VISION_RADIUS`）。
 
-**为什么游客等级用 40/40/20 分布？** 以殖民地等级为中心的正态近似——大多数游客与殖民地同级（40%），少量低一级（40%），少数高一级（20%）。下限 1 防止等级溢出。
+- **决策②（傍晚回退，本次一并落地）**：`selectNextTarget` 夜晚 + 未满条 → **优先旅店**（不查 visited）；视野内无旅店 → **回退普通建筑**（尊重 visited、精力 0 只去 relax），未满条游客傍晚不再干晃 5000 tick；18000 后仍由离场窗口接管（入旅店/离场）。满旅店不入回退候选（夜晚不该当普通 service 逛）。
 
-**为什么游客生成用三阶段日周期而非持续生成？** 集中生成窗口（1000-13000）模拟"清晨入城"，夜晚统一离城。给玩家一个完整的日间经营周期——上午游客涌入、下午互动、傍晚结算离城。
+**本次改动修 ③ + ②**；① visited 不重置是设计红线（防挂机）不碰；视野 48 可按需调 `TOURIST_VISION_RADIUS`。
 
-**为什么殖民地名称存在 ColonyLevelData 而非独立 SavedData？** ColonyLevelData 已经按 colonyId 建索引，加一个 name 字段不需要新增 SavedData 文件。名称和等级经验一起保存/加载，保证原子性。
+## 2026-08-10：修复游客交互时长/满意度 2 倍 + 下调 1 级需求
 
-**为什么名称编辑用 C→S 包而非直接修改本地数据？** 多人模式下名称必须在服务端持久化并同步到所有客户端。EditBox responder 每次修改都发送包，保证输入的实时性和停机不断电。30 字符上限防止存储滥用。
+**需求**（用户实测）：花店 `interaction_duration_ticks=2400` 实测 ~4800 tick；满意度三值比 JSON 大一倍（10/3/2 → +20/+6/+4）。要求 1 级游客三条 need = 40% 均衡 50/50/50、60% 侧重 80/35/35 类。
 
-**为什么 OverviewInteractPacket 不自己维护建筑交互分发？** 先前的修法是在 OverviewInteractPacket 中为 town_hall 加一个特判，但每新增一种 "typeId 判定" 的建筑类型就要在两个地方同步改。抽取 `BuildingInteractHandler.handleInteraction()` 统一分发，新增建筑只需改这一处。
+**决策**：
+- **交互时长 2 倍根因 = vanilla goal 每 2 tick 才跑一次**：`Mob.serverAiStep()`（final）按 `(tickCount+id)%2` 交替 `goalSelector.tick()` 与 `tickRunningGoals(false)`，默认 `Goal.requiresUpdateEveryTick()`=false → `TouristMoveGoal.tick()` 半速，倒计时（以及排队容忍/卡死检测等所有 goal 内计时器）都按 2× 真实 tick 跑。修复：`TouristMoveGoal.requiresUpdateEveryTick()` 覆盖返回 `true`。副作用是把其余 goal 内计时器一并修正为真实 tick 速率（原写死的阈值本来就按真实 tick 意图）。
+- **满意度 2 倍根因 = `TOURIST_BAR_GAIN_COEFF` 默认 2.0**：`fillBar = round(值×coeff)` 把 JSON 值翻倍。修复：默认改 1.0（增益 = JSON 值）。保留配置旋钮便于调参。
+- **1 级需求下调**：`TOURIST_NEED_BASE` 默认 300 → 150；侧重画像权重 `{1.4,0.8,0.8}` → `{1.6,0.7,0.7}`（配合 needBase=150 → 1 级均衡 50/50/50、侧重 80/35/35）。与 coeff→1.0 组合后「每需求条填满所需访问次数」与旧值大致持平（旧 100 需求/20 增益=5 次 → 新 50/10=5 次），只是显示数字更直觉、更贴近 JSON。
+- **旧存档游客不迁移**：已生成的游客 keep 旧 need（100/140）直到离场；新生成游客用新值。三值 `set*Need` 有 `>=1` clamp，混合值安全。
+- **sim 路径不参与本次修复**：未观察游客（`TouristSimSystem`）到点即结算、无视 `interaction_duration_ticks`，是既有简化（无可见站立），保持原样。
 
-**为什么市政厅用 category=government 判定而非硬编码 buildingTypeId？** 建筑配置 id 由数据文件决定（如 townhall1.json），硬编码 `"town_hall"` 在配置改名后静默失效（`/wandscape colony create` 报 "config not found"）。category=government 是语义稳定的标识——任何配置为 government 的建筑都视为市政厅，改名/新增建筑无需改代码。客户端 `BuildingAreaSyncPacket` 因此携带 category 字段，让引导逻辑也能按分类判断。
+**为什么**：JSON 是数据唯一真源（`interaction_duration_ticks` = 真实游戏 tick、建筑三值 = 实际增益），运行时 2 倍是 vanilla goal tick 频率与系数默认值的双重偏差，应当修到「JSON 写多少就是多少」，而非给 JSON 打补丁。
 
-**为什么 node 右键 UI 复用 workstation 的包/Screen 模式而非自建交互区？** 工作站已经验证了「BuildingInteractHandler 发数据包 → 客户端打开 MedievalScreen → TaskQueuePanel 管理队列」的完整链路，node 与工作站同样靠建筑任务队列运行，直接复用最小成本。发布采集任务量化为"收获次数"滑条，合并为一个 WorkItem（amount/mana 按次数缩放），同工作站 decompose 的 count 合并方式。取消采集 = TaskQueueModifyPacket("delete")，queue 系统已原生支持 node:gather 条目，无需重复实现。
+## 2026-08：游客经济大改造（满意度→三条需求条 / interact_spots / 四类 category）
 
-**为什么移除 ImGui，样条编辑器并入原生 UI？** 7/29 `UI统一` 已把建筑/蓝图编辑器从 ImGui 迁到 vanilla Screen + `shared/ui/`；8/2 又有人把 ImGui 从 git 历史恢复来写道路样条面板，随后 4 个提交全在修集成摩擦（framebuffer 对齐、CJK 字体 glyph ranges 悬空指针/截断、H 键指南被 ImGui 抢占 ESC）。ImGui 只承担一个 370px 侧边面板，而世界交互层（射线拾取/gizmo/相机）本就与 UI 框架无关。双 UI 体系 = 双主题 + 双输入路径互相抢占 + GLFW/OpenGL 集成反复出 bug。故改为 `SplineEditorOverlay` 原生 HUD overlay（静态绘制 + 命中检测，同 `RoadPlacementOverlay` 约定），复用 `shared/ui` 主题与 `TabBar`；ROAD 栏 Spline 工具不再退出 V 面板，而是内嵌编辑。3D 交互层一行未动。
+**需求**：把游客从「碰建筑进 CD 干晃悠」变成「真在城镇生活」：三条需求条无惩罚填条、画像驱动多样城镇、spot 占位做动作+排队、精力循环+relax、ATM 取现、停留上限防挂机。完整目标见 `architecture/plan/goal.md`。
 
-**为什么 NPC/游客索敌用「反射检查生物是否已索敌村民」而非枚举生物类？** 需求是「仇恨吸引和村民一样」。若枚举类清单（僵尸/掠夺者/劫掠兽…），既要在原版增减生物时维护，也容易漏掉中立但继承自僵尸族的生物（僵尸猪灵——它不追村民，若按 instanceof Zombie 加 goal 会让它无端攻击 NPC）。改为在 EntityJoinLevelEvent 时反射读每个生物已有 `NearestAttackableTargetGoal.targetType`，若目标是 AbstractVillager 或其子类，就同优先级追加一个对 `shared/entity/VillagerLike` 接口（NPC/游客实现）的等价 goal。自动覆盖所有会追村民的生物（含其它 mod），天然排除不追的，清单零维护。targetType 是历版稳定的 protected 字段，反射失败时 warn 跳过、不崩溃。
+**决策**：
+- **满意度 → 三条需求条（Comfort/Magic/Wonder）**：删除单一 `satisfaction` 与 `typePreferences`（字段/NBT/接口/调用/配置全清）。填充无惩罚：`sat += round(值 × TOURIST_BAR_GAIN_COEFF)` 封顶 need；满条 = 三条 ratio 全 1，**满条夜晚离场才给经验**（防刷）。离场载荷 `registerDeparture(UUID, UUID, BarRatio)`，stats/HUD 走三条。
+- **画像 + 等级缩放**：40% 均衡 / 20% 舒适 / 20% 魔法 / 20% 奇观；`totalNeed = BASE + (level-1)×PER_LEVEL` → 等级越高总需求越高、越难满足（自然难度曲线，不惩罚普通建筑）。
+- **`interact_spots` 取代 `tourist_interact_aabb`**：每点带动作（`Activity` 子集 browse/eat/bathe/view/pay/rest/withdraw），**spot 数量 = 同时交互人数上限**（全满排队，超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃）；交互时长由模式预设块 `interaction_duration_ticks` 决定（与 spot 无关）；0-spot 游客目标建筑不选（**无 spiral-scan 兜底**）。旧字段不保留 JSON 兼容解析。
+- **排队站位 = 每 spot 一队、沿 spot 朝向排开（2026-08 新增）**：原「全满排队」只是站在建筑旁随机等位，不好看。改为**每个 spot 各排一队**：新游客均匀分散到队最短的 spot 后（并列取最小下标），沿该 spot 的 `facing` **反方向**一个贴一个向后排（`tourist.queueSlotSpacing` 默认 1.0 格），队首紧贴正在交互的游客，**朝向 = spot 朝向**（和交互游客同向）；队首离队后续自动前移。**严格 FIFO**（只有队首可认领该 spot 空位）。队列注册在 `TouristSpotManager`（按 buildingId→spotIndex 分队列，内存态），站位坐标计算在 `TouristSimulation.queueSlotPos`。
+- **交互位唯一真源 = world 里 `interact_spot_marker` 方块**：BE 不存 spot 列表；放置=标记、右键循环动作、潜行右键移除，action 存 blockstate（无 BE/NBT）。导出扫 boundary 内 marker → `interact_spots`，marker 格跳过 pattern（创作者自行留空该格）。
+- **四类 category 保持独立（不合并）**：`shop`（卖物品）/`service`（产元素+耗精力，`max_occupancy>0`=旅店）/`relax`（回精力）/`atm`（取现 `min(withdrawAmount, travelFund)`）；统一成 `interact` 的 `interaction` 块 → **二阶段**（`architecture/plan/phase-2/`）。动作只决定游客活动状态/粒子，精力/经济效果由模式预设块决定。
+- **目标选择 = Find-Best-Action，只看视野内**（`TOURIST_VISION_RADIUS` 且已加载）：`Σ(总三值满意度增益) + 精力紧急(relax) + 钱包紧急(atm) − 排队惩罚`；视野内无目标 → 闲逛；精力 0 → 只能去 relax、无则闲逛（**不离场**）。
+- **停留上限 + `visitedBuildings` 不重置**：停留 2-4 天（`departureDeadline`），整个停留一栋建筑只逛一次，防挂机。
+- **`Activity` 枚举放 `shared/data`**（building/data 要引用，避免跨模块直接引用）；`TouristState` 保持移动标签不扩展为状态机。
+- **瞬时头顶条移除**：删 `SatisfactionBarRenderer`；气泡仍在（图标+文案），不画 before→after 进度条。
 
-## 数据设计
+**为什么**：三条无惩罚 + 画像自组织 = 「多样城镇」由游客行为引导而非规则逼迫；spots/排队 = 多建同类型有实际收益（多交互位=排队短）；视野限制 = 省寻路开销且行为真实；满条才给经验 = 经验是里程碑不是流水。
 
-**block_mapping 为什么用逐键映射而非 palette+data？** 当前建筑规模（<50 类型，<1000 方块）无瓶颈。未来建筑规模扩大时迁移到调色板数组格式，空间节省约 20 倍。不向后兼容。
+**与方案文档的偏差**：
+- `VisitMemory` 用**三维增量**（comfortDelta/magicDelta/wonderDelta）而非方案文档的单个 `barDelta` 聚合：面板行程逐维显示（`舒适+X 魔法+Y 奇观+Z`），`Emotion.fromDelta(三维之和)` 语义与 C4 的「三条 ratio 增量之和」一致。信息更丰富、贴近 goal 的三条表示，保留此实现。
 
-**为什么蓝图 DSL 不直接用 Java 代码？** JSON 数据驱动允许热重载（/reload），无需重启客户端。非程序员可编辑建筑定义。
+## 2026-08：交互位朝向 facing + 预览假人 + 活动同步修复
 
-**为什么 NBT 传出要 copy？** MC 的 CompoundTag 可变。传出引用允许外部修改破坏内部状态。copy() 代价低，防御性强。
+**需求**（用户实测反馈）：交互位没有朝向，用餐等动作可能朝向不对；且希望能在交互位看到动作效果的循环预览。
 
-**为什么元素和物品分开存储而非用 ELEMENT_TO_BLOCK 映射？** 旧设计将元素映射为 MC 物品（WOOD→oak_log, EARTH→dirt）存入 ColonyItemBank 物品存储。这导致节点采集产出物理方块而非抽象元素，分解/合成/法杖制作在物品和元素之间形成循环映射。改为在 ColonyItemBank 内建独立 `elementStorage`（Map<UUID, Map<ElementType, Long>>），物品和元素在同一个 SavedData 中完全分离。9 个 long 计数器不值得开独立 SavedData，同一 Bank 天然保证分解（消耗物品+注入元素）和合成（消耗元素+注入物品）的事务原子性。
+**决策**：
+- **`interact_spots` 增加 `facing`（水平朝向）**：游客在该位做动作时面朝的方向。缺省 `south`，Y 轴/非法值回退 `south`；建筑旋转时随 `BuildingRotation.rotateDirection` 一起旋转（用户要求「旋转后方向也正确旋转」）。`TouristMoveGoal` 活动期间持续 `setYRot/yBodyRot/yHeadRot` 面向 spot（含 look control 拉偏兜底）。
+- **marker 交互改为「右键循环动作、潜行右键循环朝向、敲掉=移除」**（用户拍板，放弃原来的潜行右键移除）。放置时 facing 取玩家面朝方向作为起点。marker 改为**无碰撞 + 贴地薄板模型**（`getCollisionShape` 返回空），让预览假人可站在同一格、且不被整格方块挡住。
+- **预览假人（始终常态）**：`MarkerPreviewManager`（服务器端单例）为每个 marker 维护一个 preview 模式 `TouristEntity`——站桩循环播放该 spot 动作（复用现有游客渲染：姿态/粒子/朝向/动作名 name tag）。生命周期靠 `BlockEvent.EntityPlaceEvent`（放置生成）+ marker `useWithoutItem` 后回调（改动作/朝向即时更新）+ `BlockEvent.BreakEvent`（敲掉移除）+ `ChunkEvent.Load`（palette `maybeHas` 高效发现，chunk 卸载即消失、重载重建）+ 周期 reconcile 兜底。preview 不参与生成/离开/孤儿清除、不持久化、免疫伤害、不可交互。**为何不用客户端渲染**：服务器实体复用全部现有渲染（姿态/粒子/气泡开关），且多方可见；客户端 ghost 需自建模型渲染管线。
+- **活动同步修复**：原 `currentActivity` 是普通字段，**不同步到客户端** → 游客姿态/粒子其实渲染不出来（红线 #10「看到游客真的在泡澡/排队」隐患）。改为 `DATA_ACTIVITY` synched data（ordinal，-1=无），客户端渲染直接读实体同步值，预览假人与真实游客一并受益。
 
-## 任务系统
+## 2026-08：扫描器装饰实体用「修剪 NBT + 独立朝向字段」而非结构化 JSON
 
-**为什么调度器评分用 proximity×0.5 + efficiency×0.3 + level×0.2？** 距离因素权重最高（减少 NPC 来回跑）。魔力效率次之（节省资源）。行为等级最低（所有 NPC 都能做基本任务）。
+**需求**：物品展示框/画是实体，扫描器（只遍历方块格子）扫不到，NPC 建造也只会放方块。端到端补上：扫描捕获 → 导出 JSON → 建造重建（含旋转）。
 
-**为什么 GlobalTaskPool 直接用 long 作 task ID 而非 UUID？** 引擎内部性能优先。UUID 仅在与 MC 系统对接时通过 toTaskUuid() 桥接。
+**决策**：
+- JSON 用 `entities` **数组**：`{offset, type, facing, nbt}`。数组而非按 offset 作 key 的 map——同一格空气正反两面可挂两个展示框。`nbt` 是**修剪后实体 NBT**（base64，与 `block_nbt` 同风格）：去掉 `UUID/Pos/Motion`，位置重定基为相对偏移（文件与绝对坐标解耦），`id` 显式写入。
+- `facing` 独立成 Direction 字符串字段，**不塞进 base64**——建筑旋转时只转结构化字段（offset + facing），NBT 保持不透明，免去解码/重编码。
+- 重建走 `EntityType.create(tag, level)` 通用往返，按类型写朝向字节（item_frame 用 `Facing`+3D 值，painting 用 `facing`+2D 值——两个原版字段名大小写不同，已核源码）。生成前先清除同格悬挂实体，避免新旧展示框共存互相 `survives()` 踢掉。
+- 新原子操作 `SpawnDecorationOp` + DSL 步骤 `spawn_entity` + `EntityOps.spawnDecoration` 边界方法；执行器走 sync——建造时序已保证实体在方块后生成（异步 TransformOp 逐个完成推进 stepIndex 后才执行 `for_each $entities`）。
 
-**为什么调度器在无合格 NPC 且仓库无对应法杖时放任任务保持 PENDING_ASSIGN？** 任务进入池后，SchedulerSystem 按能力匹配 NPC。若无人满足，任务保持 PENDING_ASSIGN 状态等待。这不是阻塞——当玩家通过 crafting_station 制作出所需法杖并存入仓库后，WandProvider 自动为 NPC 装备法杖，下一轮心跳即可接取。这种"等待机制"不靠聊天通知，玩家通过 TaskQueuePanel UI 直接看到队列状态。
+**为什么**：结构化 JSON 需要按类型解析实体 NBT（枚举性）；base64 NBT 往返是通用机制，与既有 `block_nbt` 一致，任何悬挂实体加白名单即可支持。朝向是唯一需要旋转的字段，独立出来把旋转成本压到最低。
 
-## 法杖需求系统
+**v1 边界**：白名单 = item_frame/glow_item_frame/painting（都是 BlockAttachedEntity）。盔甲架/display 实体位置重定基已通用，但朝向内嵌 NBT 无法随建筑旋转，留待后续。实体装饰不参与材料成本（`computeMaterialData` 只算方块）。修复路径（`BuildingBreakHandler`）不带实体。
 
-**为什么 task.requirements 从 TaskSequence 自动推导而非蓝图声明？** 蓝图可能包含多种 op（TransformOp+BlockInteractOp），手动声明容易遗漏或出错。自动推导保证需求与操作一致，且零维护成本。WandRequirementDeriver.derive() 是纯函数，按 op 类型→BehaviourTag 映射，多个同 tag 取 max level。
+## 2026-08：敌对测试法师（EvilMage）复用 NPC 施法管线
 
-**为什么不在任务发布前做能力检查而是让任务自然流入池？** 发布前检查需要预先编译蓝图和遍历 NPC，形成冗余——SchedulerSystem 心跳时已经做了同样的能力匹配。发布前拒绝 + 重新入队会导致无限循环（WorkItem 永不离开队列）。发布前通知玩家（chat message）是对全体玩家的 spam，不如让玩家通过 TaskQueuePanel UI 自行查看队列状态。SchedulerSystem 的"不满足则保持 PENDING_ASSIGN"是最简洁的等待机制。
+**需求**：实战测试法术系统强度——一个与殖民地法师外观/属性/施法完全一致的敌对生物，索敌生存玩家，创造模式右键可编辑施法表/策略。
 
-**为什么 WandEquipOp/WandReturnOp 注入私人队列而非创建独立 task？** 法杖是执行主任务的**前置条件**，不是独立的后台工作。注入同一 NPC 的私人队列保证原子性：取法杖→执行→归还三条一体，不会被其他 NPC 抢走或调度器误分配。私人队列 LIFO 特性确保 WandEquipOp 先执行、WandReturnOp 最后执行。
+**决策**：`EvilMage extends WandscapeNpc implements Enemy`，而非独立实现。
 
-**为什么 WandProvider 是 @FunctionalInterface 而非在 World 放仓储引用？** core/ 不能引用 MC 类（ColonyItemBank/SavedData）。WandProvider 将仓库查询抽象为纯 core 接口，engine 层通过 WandProvisionSystem 注入具体实现。SchedulerSystem 通过构造器接收，依赖关系清晰。
+**为什么**：施法管线（`MagicCaster.castNpcAt`、`MagicCastManager`、`MagicBeamEntity`、`GuardCombat`、`CastBrain`、`MagicState` 门控、SPELL_POWER 倍率）全部绑定具体类型 `WandscapeNpc`。子类化即零成本复用全部施法/NBT/渲染/编辑能力；独立类需要把整个管线重构为接口，风险大且偏离「测试工具」定位。
 
-**为什么所有法杖共用物品 ID "wandscape:wand" 而非每种一个 ID？** 4 种法杖（builder/gatherer/crafter/ritual）只有 NBT "behaviors" 不同。NBT 驱动允许新法杖类型仅靠 JSON 添加，无需注册新 Item。ColonyItemBank 按 ItemKey(itemId, nbt) 区分，同一 ID 不同 NBT 自动成为不同条目。引擎通过 preset NBT 的 wand_color 匹配回 preset ID。
+**与殖民地解耦的三条钩子**（行为保持的扩展点）：
+- `isColonyNpc()`（默认 true）：false 时不注册进 ECS / 不入任务调度，`NpcDeathHandler` 跳过死亡记录（不可复活），`onAddedToLevel` 仍做外观/魔法表/法杖初始化。
+- `canBeamHurt(LivingEntity)`（默认 `instanceof Enemy`）：决定光束能伤害哪些目标。**普通 NPC 的光束永不伤玩家**；`EvilMage` 覆盖为「Enemy 或 生存玩家」。光束伤害（`MagicBeamEntity`）、SPELL_POWER 倍率（`NpcSpellPowerHandler`）、战斗快照敌数（`GuardCombat.countEnemies`）三处统一走此钩子，边界唯一。
+- `tickCastingState()`（protected，默认 ECS 驱动）：`EvilMage` 覆盖为空，施法姿态改由 `EvilMageCastGoal` 驱动（不加入 ECS 故无 TaskExecutor）。
 
-**为什么 craft_wand 和 synthesize 蓝图不硬编码 CRAFTING 需求，而是由配方 wand_level 控制？** `craft_wand` 和 `synthesize` 的 wand 能力要求不是由动作本身决定，而是由配方的 `wand_level` 字段控制。`craft_wand` 移除 CRAFTING 需求可打破冷启动死锁（无 wand → 不能做任何事 → 永远造不出 wand）。`synthesize` 同理：低级配方（`stone_bricks`）不需要 CRAFTING，高级配方可在 JSON 里通过 `"wand_level": {"crafting": 1}` 按需添加需求。两者统一由 `WandRequirementDeriver` 返回空 map，再通过 `GlobalTaskPool.mergeOverrides()` 把 `wand_level` JSON 字段合并进 `requirements`，0=删除、≥1=覆盖，行为一致。
+**其它**：
+- `HostileTargetingHandler` 的村民级索敌谓词排除 `Enemy`——僵尸/灾厄不会追杀同为敌对的邪恶法师。
+- `SpellcastingApiImpl.resolve` 桥查失败回退按 UUID 扫世界（界面编辑/显示的低频路径），使非 ECS 实体也能读写施法策略。
+- 装备/护甲属性依赖 ECS `EquipmentComponent`，邪恶法师不进 ECS → 法杖换色生效（`getMainHandItem` 取色），属性加成不生效，恒为默认属性。
 
-**为什么法杖取还零魔力消耗？** 取/还法杖是殖民地物流操作，不是施法。消耗魔力只在实际执行任务操作（TransformOp/BlockInteractOp/RitualOp）时发生，符合"法杖是工具→工具不耗能→使用工具才耗能"的直觉。
+## 2026-08：光束连发无停顿 → 每魔法 CD 改为锁结束后起算
 
-## GUI 任务编辑器
+**需求**：实测邪恶法师几乎 0 间隔连发光束——`base_cooldown: 40` 明明设了却没停顿。
 
-**为什么 GUI 发布任务走网络包而非直接调 API？** 客户端代码在 `shared/ui/`，不能引用 `core/` 类（core 纯 Java 零 MC，不参与客户端编译）。网络包是 Minecraft 原生的客户端→服务端通信模式，也是 NeoForge 的标准做法。
+**根因**：`MagicState` 的每魔法 CD 与施法互斥锁**同时从施法开始倒计时**。光束锁 = 20(法阵延迟)+200(法阵时长)+20(拖尾) = 240 tick，锁 240 > CD 40，`canCast` 要求锁和 CD 都为 0 → 下一发由锁决定，恰在上一发光束消失时（240 tick）就绪，光束无缝衔接、CD 从未产生停顿。
 
-**为什么 ParamTypeInfo 要重复定义而不是直接引用 core/ParamType？** `core/task/ParamType` 是 sealed interface，出现在 shared/data 会破坏 core 的零 MC 依赖。枚举镜像 `ParamTypeInfo` + `fromCore()` 转换器是干净的防腐层。
+**决策**：
+- `MagicState.tickRegen`：锁占用期间每魔法 CD **冻结**，锁释放后才倒计时——CD 表示「施法结束后的恢复间隔」，施法时间不计入。总间隔 = 锁时长 + CD。
+- beam CD 40 → **400**：光束（240 tick）结束后再停 400 tick，总间隔 640 tick。`beam.json base_cooldown` 与 `MagicCaster.BEAM_BASE_CD` 同步。
 
-## 殖民地三值评估系统
+**为什么**：设计意图（「施法时间不参与 CD」）本应让 CD 在施法后追加一段间隔，但并发倒计时把它吸收成 0。冻结语义对传送（CD 300）同样成立且更合理——CD 不再被引导锁盖掉。
 
-**为什么贡献粒度从按建筑类型改为按建筑实例（2026-06-26 修正）？** 装饰辐射、shutdown 状态、商店货物库存都是每建筑实例独立变化的。同类建筑按 count × config 值计算无法区分"两栋都正常"和"一栋正常一栋 shutdown"。改为遍历 BuildSource.allBuildings()，每栋独立检查 isStructureIntact()/isShutdown()/shopHasStock/货物三值，精确反映每栋建筑的实际贡献。
+**影响**：所有走 `tryCastSpell` 的魔法 CD 语义统一改为「锁释放后起算」；`MagicStateTest.castingLockBlocksAllMagics` 随之更新（锁期间 CD 冻结断言）。
 
-**为什么事件广播从 0↔1 边界改为任意 snapshot 变化？** 改为每实例独立贡献后，1→2 也改变殖民地三值（从 1×config 变为 2×config），需要广播事件。改为 before/after snapshot 比较，仅在不相等时广播。
+## 2026-08：光束伤害类型与命中节流
 
-**为什么注册表放在 BuildingSavedData 而非 BuildingApiImpl？** `BuildingSavedData` 是所有建筑状态的单一真相来源（结构完整性变化、注册/注销都在这里发生），在 state change 同步发生时更新贡献缓存最自然。BuildingApiImpl 只读查询。
+**需求**：实战测试发现原版 `magic`/`indirect_magic` 伤害类型都在 `damage_type/bypasses_armor` tag 里——护甲不减伤、耐久不掉，邪恶法师对穿甲玩家是真伤，太强。
 
-**为什么配方解锁用三字段 unlock_requirement 而非 legacy unlock_magic_value 单字段？** 三值（舒适/魔法/奇观）都是 ≥0 的自然数，缺省填 0 表示无要求，不存在歧义。三个 int 的结构清晰可读，不需要额外的 legacy 分支兼容逻辑。JSON 格式统一为 `{"min_comfort": x, "min_magic": y, "min_wonder": z}`，只需其中一个维度填非零值。
+**决策**：
+- 新增自定义伤害类型 `data/wandscape/damage_type/beam.json`（`message_id: "magic"` → 死亡消息复用「被魔法杀死」，不在 bypasses_armor → 护甲减伤 + 耐久递减）。
+- 光束保持**每 tick 结算**（`invulnerableTime = 0` 重置），帧伤节奏经实测确认保留（屏幕受击抖动为已知代价）；曾试过靠原版 20 tick 无敌帧节流到 1 次/秒（单次峰值 10=0.5×20，DPS 不变），实测后回退。
 
-**为什么移除 required_level 字段，统一用 C/M/W 三维控制配方可见性？** `required_level` 在 UI 仅显示 Lv.X 标签，不做任何过滤或校验，对实际游戏逻辑零贡献，是早期设计残留。C/M/W 三维已足够表达所有解锁场景（C=建筑规模、M=魔法研究、W=奇观积累），引入额外字段只会增加 JSON 配置负担和理解成本。移除后配方 record 更简洁，数据包体积减小，UI 渲染逻辑统一。
+## 2026-08：指南书 md 链接格式从 guide:doc_id 改为原生 doc_id.md
 
-**为什么数据包增加 `locked_reason` 字段而非客户端根据 `maxAffordable==0` 和 `unlockRequirement` 推算？** `maxAffordable==0` 有两种不同原因（三维未满足 / 元素不足 / wand_level 要求），客户端无法仅靠 `maxAffordable` 和 `unlockRequirement` 区分——特别是当配方有 `wand_level` 但元素恰好为零时，误判为"三维锁定"会错误显示 C/M/W 门槛。`locked_reason` 是服务端单点计算的四值枚举（`unlocked / colony / elements / wand_level`），客户端零逻辑直接渲染，新增锁定类型只需服务端加一个分支。
+**需求**：游戏内指南书 md 文档原先用自定义 `[文本](guide:doc_id)` 链接格式，GitHub 预览/IDE 无法识别、不能点击跳转，开发不便。
 
-**为什么 wand_level NBT 只随 locked_reason=wand_level 下发，而非始终携带？** 绝大多数配方不需要 wand_level（为空或全是 0），随每个配方下发空 map 浪费带宽。只在锁定原因是 wand_level 时才序列化，客户端渲染时按需读取。服务端 `hasNonZeroWandLevel()` 做轻量扫描，零 GC 压力。
+**决策**：
+- 链接格式改为原生 markdown 相对链接 `[文本](doc_id.md)`，GitHub/IDE 可直接点击跳转到同目录 md 文件（zh_cn/、en/ 各 24 篇，共 48 文件、239 处链接）。
+- 链接分发 `GuideTestScreen.handleLinkAction` 重构为四分支：`action:` 游戏动作（保留 stub）/ 外部 URL（http/https/mailto/ftp/file，优雅忽略）/ 纯锚点 `#xxx`（优雅忽略，当前不支持页内跳转）/ 文档引用（`.md` 后缀或裸 doc_id，交 DocumentLoader）。
+- **保留 `guide:` 前缀向后兼容**：DocumentLoader 与 handleLinkAction 仍剥离 `guide:` 前缀，旧 md / 历史示例 / 第三方片段不破坏。
+- 解析层（MarkdownParser）与资源定位（DocumentLoader）**零改动**——后者早已支持 `.md` 后缀补全与 locale 目录回退；解析器本就把括号内 target 原样存入 `FormattedSpan.linkAction`，不区分前缀。
 
+**为什么**：开发态可点击性是日常高频痛点；运行时分发改动集中在一个方法 + 一条兼容分支，风险最低；保留兼容避免破坏存量内容。`action:` 链接（如「开启鸟瞰模式」）是游戏动作而非文档跳转，原生 markdown 无对应概念，保留 `action:` 前缀不动。
 
-**~~为什么 TaskCreatePacket 传字符串参数而非序列化 JsonElement？~~（已移除）** 编辑器 UI 及相关网络包（TaskCreatePacket、TaskEditorOpenPacket、BlueprintListResponsePacket、TaskNetworkHandler）已在 2026-07-29 删除。PlayerManualSource 仍保留，可通过 API 直接调用。
+## 2026-08：子模式拆分 suspend/exit + 光标每 tick 双向 reconcile
 
-**为什么两条 EventBus 不互通？** core `SimpleEventBus` 是引擎内部 tick-batch 模式，NeoForge `EVENT_BUS` 是实时模式。两者用途不同：引擎内部事件用于链式任务生成（`TaskAwaitingResources → synthesize → gather`），NeoForge 事件用于跨模块通知（`TaskPublishedEvent → UI 提示`）。`engine/` 层做唯一翻译点。
+**需求**（玩家实测反馈）：切 tab / 按 G / ESC / 关面板 / 按 C 时，已选的建筑、朝向、pin 位置、道路起终点、搜索筛选瞬间清空，要完全重来；另一侧，OS 鼠标指针在 UI 心态下偶尔突然消失。
 
-**为什么修复任务 priority=49 而不是 100？** GlobalTaskPool.addTask 对 priority ≥ 50 的任务进入 PENDING_APPROVAL 状态，等待玩家审批。建筑损坏修复是殖民地自治行为，绝不能卡在审批门后。49 在节点采集（15）之上，同时越过高优先级审批门。
+**根因**：所有选取态是客户端 static volatile，清空链「宁可错杀」——`enterBar`/`enterPlacing`/`openBuildingBar`/`closeBuildingBar` 每次都清位置/工具/筛选；子模式退出一律走全清 `exitProjection`。光标 enforcer 只单向（Screen 关闭后把鼠标重新 release 给 UI），反向（该 grab 时没 grab）不兜底。
 
-**为什么 global.autoApproveTasks 默认关闭？** 建造类大任务（town_hall 等）涉及地形改造，默认审批让玩家有机会取消或推迟。殖民地自治只需开一次开关，之后所有建筑修复/建造任务全自动，无需再手动 `/wandscape approve`。开在 Config TOML 而非硬编码，保留玩家控制权。
+**决策**：
+- **拆分 suspend（保留选取）与 exit（仅登出全清）**：`ProjectionClientState` / `RoadPlacementState` 各新增 `suspendProjection()`——只落 projecting 标志、保留全部选取；`exitProjection()` 保持原样，仅在 `WandscapePanelState.reset()`（登出/断线）调用。`WandscapePanelState.exitCurrentSubMode()` 的 BUILD/ROAD 分支改调 suspend（仍发 ProjectionExitPacket 通知服务端）。
+- **相位翻转纯化**：`RoadPlacementState.enterBar`/`enterPlacing` 删除 clearAll/ghostPos/工具/参考块重置，只翻 roadPhase；`clearAll()` 不变，仍供提交（`RoadPlacementController.handleEnter` 发包后）/显式撤销使用。`ProjectionClientState.enterProjection` 重装服务端 slots 时只把 selectedSlotIndex 钳到合法区间（抽出 package-private `clampSlotIndex` 供单测），保留 rotation/pin，丢弃未 pin 的准星跟随位置。
+- **建筑条停止清空**：`openBuildingBar`/`closeBuildingBar` 删除分类/搜索/滚动/ghost/pin 重置，只 defocus + 重同步 selectedIndex；`reset()` 仍全清 bar 字段。提交后清虚影移到 `ConstructionScreen.submit`（`setGhostPos(null)`，已放置建筑不再需要预览）。
+- **光标双向自愈**：`WandscapePanelController.onClientTickPost` 每 tick（无 Screen 时）按 `cursorLifted` 双向 reconcile——该 release 则 release、该 grab 则 grab，消除转换后「光标卡死显/隐」两侧故障。同 tab 点击改为 no-op（不再退出子模式，避免误点丢工作；用 ESC 退出）。
 
-**为什么任务的 TriggerDeclaration 在完成时取消订阅？** 防止内存泄漏。已完成任务不应继续响应事件。
+**为什么**：玩家痛点本质是「临时离开」与「真正结束」被当成同一回事。suspend/exit 二分让切模式/切相位成为无损操作，全清只在登出或显式提交/撤销发生——符合「会话内连续作业」心智模型。光标每 tick reconcile 是状态机自愈，比「在某个转换点打补丁」更鲁棒，避免遗漏新的转换路径。
 
-## 维护费系统重构（2026-06-30）
+**约束保留**：ConstructionScreen 的 Close 按钮语义不变（保留 pin + 回准星复查）；`exitProjection` / `clearAll` / `reset()` 三个全清入口行为不变，只是调用方收紧。
 
-**为什么从周期心跳改为每日结算？** 原 `MaintenanceSystem` 每 1200 tick（60秒）扫描一次，与游戏内"每天"的概念脱节。玩家无法直观理解"每60秒扣一次元素"——每天日出结算更符合殖民地模拟的直觉，也与其他每日事件（游客生成、商店进货、酒店退房）对齐。
+## 2026-08：空中视角——相机位置缓存 + 玩家旋转冻结 + 第三人称渲染 + 受伤退出
 
-**为什么按建筑类别分组优先级？** 不加优先级的均匀扣费会在元素不足时导致**所有**建筑同时 shutdown，包括正在产元素的 node 建筑。分组优先级（CRITICAL→HIGH→NORMAL→LOW）确保减产时先缩减非核心服务（装饰、服务类），保留元素生产（node）和生产加工（workstation）的运转。
+**需求**（玩家实测反馈）：空中视角的鼠标移动会污染玩家视角（退出后常指向天空）；默认「正上方/视角正下」空间感知负担大；误触关闭后再进丢失飞到的相机位置；空中视角看不到玩家自己；空中视角下受伤无法立即夺回操控。
 
-**为什么在结算时保证 CRITICAL 优先？** node 和 basic 是殖民地的元素产出和结构基石。如果它们因元素不足 shutdown，殖民地将彻底丧失恢复能力——即使玩家补充元素也无 node 可采集。让 CRITICAL 优先扣费保证最后的火力始终在产元素的核心建筑上。
+**根因**：空中视角期间光标 grabbed，原版 `MouseHandler.turnPlayer` 每帧 `player.turn(...)` 改玩家真实旋转，退出后 mixin 不再覆写摄像机 → 玩家视角停在漂移位置（`prevYaw/prevPitch` 存了却从没用）。每次 `enterOverview` 都重算位置、`exitOverview` 全清 cam 字段，无跨会话缓存。第一人称不渲染 LocalPlayer。无受伤退出。
 
-**为什么引入 MaintenanceForecastSystem 提前准备？** 原系统被动等待结算→元素不足→shutdown。玩家事后手动补元素已为时已晚。Forecast 系统在元素储备低于 N 天预期消耗时就触发节点采集，留给玩家足够的缓冲时间。这个系统不依赖玩家指令，全自动运作。
+**决策**：
+- **相机位置缓存与玩家旋转快照分离**：camX/Y/Z/yaw/pitch + `aerialCacheValid` 跨 enter/exit 保留，但玩家水平离开缓存锚点（建立缓存时的玩家位置）超过 8 格则失效重算（`exitOverview` 改 suspend 语义只落 active + 清瞬态目标）；`hardReset()`（`WandscapePanelState.reset()` 登出调用）无条件清。这让「误触关闭原地重开」复用相机、「走远后重开」重算合适位置；`prevYaw/prevPitch` 每次 `enterOverview` 从 `mc.player` 重新采样（冻结基准不跨会话，否则地面转头后再进被冻回旧朝向）。
+- **默认视角改角色后上方 45°**：`enterOverview` 无缓存时 camPitch=45、位置=脚位−水平前向×14、Y+14、camYaw=玩家朝向（取代旧的 py+20/pitch=90 正下方）。
+- **玩家旋转每帧冻结（reconcile）**：`OverviewFlightController.onRenderLevelStage`（AFTER_SKY，早于实体渲染）末尾每帧把玩家 yRot/xRot/yRotO/xRotO + yBodyRot/yBodyRotO + yHeadRot/yHeadRotO 冻结回快照，抵消 `MouseHandler` 污染；`exit()` 显式落定防退出瞬间甩头。两个「玩家视角」（原版 + 地面模式）共享这一份旋转。
+- **第三人称渲染玩家**：`enter` 切 `CameraType.THIRD_PERSON_BACK`、`exit` 恢复；`onRenderLevelStage` 每帧 reconcile 相机类型防 F5（F5 在 `handleKeybinds` 早于 ClientTickPost 消费，drain 无效）。
+- **受伤自动完全退出**：`enter` 采样血量基线；`onClientTickPost` 检测 `getHealth()` 下降沿或死亡 → `WandscapePanelState.closePanel()`（保留相机缓存，回原版第一人称）。
+- **进入音效移到控制器**：`OverviewClientState.enterOverview` 原引用 `WandscapeSounds` 触发 `DeferredRegister` 静态初始化，在无 MC Bootstrap 的单元测试抛 `ExceptionInInitializerError`；按纯状态 holder 范式把 `playUI` 移到 `OverviewFlightController.enter()`，`enterOverview` 仅剩纯逻辑可单测。
 
-**为什么 Forecast 不直接调用 GlobalTaskPool，而是通过 BuildingApi.enqueueWork() 发给 Node 建筑？** 遵循现有架构模式。BuildingTaskSource 是建筑→任务的唯一桥接点，Forecast 在其上游注入高优先级 WorkItem。这样做的好处：(1) BuildingTaskPool 自动保证每建筑仅一个 head task；(2) 任务经正常调度器分配，NPC 按能力接取；(3) 排队机制天然防重复。直接调 GlobalTaskPool 会绕过建筑队列机制。
+**为什么**：相机位置是用户飞行设定的持久值（应跨关闭保留），玩家旋转快照只在单次空中会话作冻结基准（不应跨会话）——两者生命周期不同必须分离。每帧冻结/相机类型 reconcile 是状态机自愈（同光标自愈范式），比在每个 enter/exit 转换点打补丁更鲁棒。必须冻 yBodyRot/yHeadRot：`LivingEntityRenderer` 用 yBodyRot 画身体、`yBodyRot` 在 `tickHeadTurn` 以 30%/tick 跟随 yRot，只冻 yRot 第三人称模型仍会随鼠标抽搐。
 
-**为什么优先级分组写在 Java 而非 Config TOML？** 类别→优先级的映射通常不需要服务器管理员调整。硬编码在 Java switch 中代码简洁、零配置负担。如果未来出现需要自定义优先级的场景，可迁移到 Config TOML，当前阶段不增加不必要的配置复杂度。
-
-**为什么 shutdown 建筑需要 shutdownReason 字段？** 区分"因维护费不足自动下线"和"手动 shutdown"。在结算时自动重启只针对 `reason="maintenance"` 的建筑，避免因玩家手动下线（如装饰建筑要改造）而被突然重启。
-
-## 任务队列 UI（Task Queue UI）
-
-**为什么 QueueEntry 从纯文本 summary 扩充为 6 字段？** 纯文本 "Synthesize minecraft:stone_bricks x64" 超长且容易被截断。服务端结构化分类（category + itemOrRecipeId + quantity）让客户端能渲染为 `[icon] [Category] ×N` 三列，最长标签不超过 10 字符（"Synthesize"），彻底消除截断问题。
-
-**为什么 itemOrRecipeId 解析图标只在客户端 TaskQueuePanel 做，服务端也填充？** 服务端填充结构化字段（不传方块/物品对象）避免序列化体积膨胀；客户端 fallback 到 legacy summary 保证与旧版协议兼容（向后兼容设计）。
-
-**为什么 hit-test 从单重循环重构为两段式（先定位列再判断 active）？** 原始实现 `for col 0..2` 中 col=0 不可用时直接 `return empty()` 退出，导致 col=1/2 永远无法命中。两段式把"定位鼠标在哪一列"和"该列按钮是否可用"两个判断分离，互不干扰，逻辑更清晰。
-
-**为什么 TaskQueuePanel 图标仅尝试解析 itemOrRecipeId，不解析 recipe outputItem？** Recipe 输出物品需要额外查 ProductionRecipeLoader，属于 production 模块内部细节。TaskQueuePanel 在 shared/ui/component/，不能跨模块引用。服务端 `extractItemId()` 已提取 recipe_id（字符串），客户端解析该字符串对应物品——若 recipe_id 对应无实际物品（纯配方 ID），icon 留空即可，文字标签不受影响。
-
-## 道路系统
-
-**为什么选 MST 自动生成而非玩家手动规划？** 保证连通性，总路长最短。玩家后期可手动调整（预留数据结构）。
-
-**为什么路径选 L 形而非直线？** 轴对齐确定性强。曼哈顿距离与 L 形一致，MST 计算简单。
-
-**为什么道路纯装饰不与寻路耦合？** 解耦降低复杂度。NPC 寻路不受道路有无影响。道路美观价值独立于功能。
-
-## 道路编辑器
-
-**为什么玩家干预建路用 [Enter] 确认而非右键即发？** 右键在编辑器中负载过重（选起点 / 加路径点 / 选终点）。终点选定后展示完整预览路面让玩家目视确认，Enter 键确认是明确的"执行"信号。Backspace 可逐级撤销（终点→路径点→起点），Escape 一键取消，容错性高。
-
-**为什么放置方块记录到 RoadEdge.placedBlocks 而非运行时重新扫描？** 拆除时无法可靠区分道路方块和玩家放置的同款方块（如 stone_bricks）。RoadEventListener.enqueueEdge 和 triggerDecorationForEdge 在生成 tiles 时同步记录所有位置的 PathPoint 到 edge，确保拆除100%覆盖，不误删不残留。
-
-**为什么编辑器点击用 GLFW 原生输入而非 mc.options.keyAttack.consumeClick()？** ClientTickEvent.Post 触发时 MC 主 tick 已消费按键事件，consumeClick() 返回 false。GLFW.glfwGetMouseButton/glfwGetKey 读取 OS 原生按键状态 + 上升沿检测绕过了 MC 的输入消费机制。同时 Pre tick 中 drain consumeClick 阻止原版攻击/交互响应。
-
-**为什么预览路径在客户端计算而非发包请求服务端？** PathGenerator.lShape3D 在 core/ 层是纯函数，零 MC 依赖，客户端可直接调用。实时跟随准星更新预览（每帧 rebuild），发包会造成不必要的网络延迟和带宽消耗。
-
-## 数据驱动法杖需求与立即失败（2026-06-23）
-
-**为什么 wand_level 用统一的 JSON 对象而非分散字段（gathering_level / required_wand_level）？** 节点和配方共用同一套行为标签（BUILDING/GATHERING/CRAFTING/RITUAL/…），分开字段会导致命名不一致和解析代码重复。统一的 `{"gathering": 1, "building": 0}` 格式语义清晰：0=显式移除需求，缺省=deriver 默认值，≥1=覆盖等级。
-
-**为什么 overrides 的 0 是"移除"而非"等级 0"？** 等级 0 的 BehaviourLevel 不存在（最低为 1）。用 0 表示移除是常见 DSL 惯例（类 Docker Compose 的 `replicas: 0`），避免引入额外的 nullable wrapper。
-
-**为什么系统不再生成 FAILED 任务？** 原设计中 FAILED 用于"能力不匹配"场景（如无所需法杖），由 FailureAnalyzerSystem 自动 craft_wand 修复。2026-07-30 重构后，资源短缺走 AWAITING_RESOURCES → ResourceSupplySystem 自动补货路径，法杖制作等策略决策留给玩家手动管理。FAILED 枚举值保留（NBT 兼容），但 failTask() 和 TaskFailureReason 已删除。TaskState.FAILED 视为终态，与 COMPLETED 同等待遇（isActive=false、不计入 persistable、不计入 size）。
-
-**为什么 FAILED 分析被 ResourceSupplySystem 替代？** 原 FailureAnalyzerSystem 计划实现两种自动修复：（1）WandRequirementUnmet → craft_wand，（2）ResourceUnavailable → gather。其中（1）是策略决策（选哪种法杖），应由玩家决定；（2）是执行层冗余（已有 ResourceShortageHandler + onResourceAdded 处理）。ResourceSupplySystem 专注于执行层:扫描 AWAITING_RESOURCES 任务 → 聚合需求 → 合成/采集，不涉及策略判断。
-
-## 任务系统重构 v2（2026-06-25）
-
-**为什么 NPC 队列存 NpcTaskPackage 而非裸 AtomicOp？** 裸 op 没有立场位置（stance）。NPC 执行到一半被紧急任务打断后，手里只剩一串不知道属于哪个位置的 op，无法正确导航回原位。NpcTaskPackage 是自包含工作单元：source + sequence + stance + priority，包切换时 NPC 自动导航到新 stance。
-
-**为什么用包挂起栈 (suspensionStack) 而非简单抢占？** 紧急任务（法杖装配/传送）可能嵌套——NPC 在执行任务包时被卡住传送打断，传送完成后应恢复原任务包继续。挂起栈保存 (package, stepIndex, timestamp)，紧急任务完成后 resumeLatest() 恢复。
-
-**为什么 BuildingTaskPool 只暴露 head task 到全局池？** 之前 BuildingTaskSource.poll() 每 20 tick 遍历建筑列表，对每个建筑取出一个 WorkItem 直接发布到 GlobalTaskPool，不检查建筑是否已有活跃任务。导致一个工作站队列中的 N 个任务同时进入全局池，多个 NPC 同时前往同一建筑。BuildingTaskPool 确保每建筑只有一个 head task 竞争，head 完成后 onHeadCompleted 才 promote 下一个。
-
-**为什么法杖生命周期用显式状态机而非 idle timer？** 旧方案：TaskExecutionSystem 中 60 tick 空闲超时自动归还法杖。问题：NPC 可能在等待资源/魔力恢复，超时误归还法杖导致任务中断。WandLifecycle 显式状态机由 SchedulerSystem 在分配时预留法杖(WandLifecycle.reserve)，任务完成或失败时释放，消除借还循环。
-
-**为什么 GlobalTaskPool 用 TreeSet 而非简单的 List + sort？** TreeSet 维护 assignableSet 的恒定排序（priority desc → createdAt asc → id asc）。状态变更时 add/remove 是 O(log n)，无需每次全量排序。优先旧任务打破平局，保证确定性。
-
-**为什么 SchedulerSystem 从 task→NPC 贪心改为 NPC→task 反向匹配？** 旧方案：遍历 assignable 任务，每个任务找最佳 NPC，第一个匹配的任务就分配——导致高优先级任务"抢"走所有 NPC。新方案：遍历 idle NPC，每个 NPC 找最佳任务——NPC 优先，消除任务间竞争。
-
-## 智能资源调度级联（2026-06-25）
-
-**为什么资源短缺时不直接创建 gather 任务，而是先尝试 synthesize？** 并非所有资源都能直接采集。`stone_bricks` 等合成品只能通过 `production:synthesize` 生产。直接创建 `gather:stone_bricks` 任务会因仓库永远无此物品而永久卡在 AWAITING_RESOURCES。先检查合成配方→有则创建 synthesize 任务→合成缺元素时再由 synthesize executor 抛出 ResourceShortageException→自动级联创建 gather 任务。三级调度链（建筑→合成→采集）让殖民地全自动运作。
-
-**为什么 ResourceShortageHandler 用 @FunctionalInterface 注入而非在 EventDrivenTaskSource 硬编码？** EventDrivenTaskSource 在 core/ 层，不能引用 production 模块的合成配方数据。FunctionalInterface 将合成判断逻辑推迟到 engine 层注入，core 只负责调用，不关心实现细节。EngineBootstrap 在 bootstrap 时设置 handler，形成干净的依赖方向。
-
-**为什么 EventDrivenTaskSource 之前只在测试中实例化？** 早期开发阶段，事件驱动任务生成（TaskAwaitingResources→gather）仅用于单元测试验证逻辑。生产环境中 BuildingTaskSource 的主动轮询（supplyNodeBuildings）覆盖了节点采集，但资源短缺的被动响应被遗漏。2026-06-25 在 EngineBootstrap 中实例化并注入 handler，补齐生产环境的被动响应链。
-
-**为什么 synthesize/decompose/craft_wand/brew_potion 的 thenRun 中捕 ResourceShortageException 而非让 TaskExecutionSystem 处理？** 这四个操作是异步的（有 channel_ticks 倒计时），实际执行在 `tickAll()` 的 thenRun 回调中，与 TaskExecutionSystem 不在同一调用栈。thenRun 中捕获异常后直接调 `world.taskPool.markAwaitingResources()` 并释放 NPC，层级比 TaskExecutionSystem 更低但逻辑等价——任务进入 AWAITING_RESOURCES 后由 EventDrivenTaskSource 级联创建供应任务。
-
-## 交互区设计修正（2026-06-26）
-
-**为什么 interaction_radius 从"向外扩展范围"改为"包围盒内部作为游客AI寻路目标"？** 原始设计将 interaction_radius 理解为右击检测的扩展范围——interaction_radius>0 时从包围盒外也可交互。但用户实际意图是建筑的包围盒内部区域本身就是交互区，游客 AI 应导航到包围盒内的可步行位置与建筑交互。interaction_radius 的正确语义是：0=必须在包围盒内部交互（默认），>0=可从包围盒外额外扩展N格交互。
-
-**为什么 getTouristInteractionTarget() 放 BuildingSavedData 而非 BuildingApiImpl？** BuildingSavedData 持有所有建筑索引和包围盒数据，计算交互目标(包围盒中心螺旋搜索可步行位置)是纯建筑数据的查询，不依赖 Level（Level 作为参数传入仅用于方块状态检查）。API 层仅做薄委托。
-
-## 游客偏好与满意度系统（2026-06-26）
-
-**为什么游客偏好从三维度（舒适/魔法/奇观）改为按建筑类型（buildingTypeId）？** 三维度偏好对玩家不可见，衰减逻辑（降低主导维度平分到另两个）难以理解。按建筑类型偏好更直观：游客用过体育馆 → 对体育馆偏好降低 → 下次更倾向选图书馆/商店等其他类型。偏好同时驱动建筑选择（加权随机）和满意度获取（matchScore = typePref × threeValueSum），一个值驱动两个行为。
-
-**为什么满意度使用截断+平方根+硬上限公式？** 原始公式 `typePref × threeSum / divisor` 在默认值下可产生 120 点满意度，一次交互即拉满 100，level 完全不参与计算。新公式引入三层约束：(1) 截断——建筑三值和 < level × 3 时 Δsat=0，高级游客需要高品质建筑；(2) 平方根——递减收益，避免一次拉满；(3) 硬上限 25——保证至少 4 次不同建筑交互才满。这使满意度成为有梯度的长线追求。
-
-**为什么建筑三值贡献从同类建筑二值（有/无）改为每实例独立计算？** 装饰辐射、shutdown 状态、商店货物库存都是每建筑实例独立变化的。同类建筑按 count × config 值计算无法区分"两栋都正常"和"一栋正常一栋 shutdown"。改为遍历 BuildSource.allBuildings()，每栋独立检查 isStructureIntact()/isShutdown()/shopHasStock/货物三值，精确反映每栋建筑的实际贡献。intactCounts 保留用于 isTypeContributing()/getIntactCount() 查询。
-
-**为什么商店货物增加 comfort/magic/wonder 字段？** 商店的三值不再仅是建筑基础值，而是基础值 + 所有有货 goods 的三值合计。货物品类越多，商店三值越高，对殖民地总体贡献越大，游客满意度也越高。这使货物管理成为经营决策：玩家需要在"多进货提高三值"和"控制进货成本"之间权衡。
-
-**为什么满意度 100% 后不立即离开（回归 jingying.md 原始设计）？** 立即离开会让满意游客瞬间消失，玩家失去看到"满意游客在殖民地中漫步"的视觉反馈。改为：满意度首次达到 100% 时法师简历即时存入酒馆，游客继续留在殖民地直到精力耗尽/夜间/超时后自然离开。100% 满意度游客不会入住宾馆（已无需继续消费），避免占用宾馆资源。
-
-**为什么增加空闲超时作为第三离开条件（与 jingying.md 的两条件模型偏离）？** jingying.md 只有精力耗尽和夜幕两个离开条件。实际游戏中存在"游客在街上持续 idle 但不触发离开"的边界情况：建筑无货/无空位导致 planNextBuilding 返回空，游客无限期 idle。空闲超时（TOURIST_DESPAWN_TIMEOUT_TICKS）兜底清理这些僵尸游客，防止内存泄漏和世界实体堆积。
-
-**为什么货物种类由 JSON 固定而非玩家自由设定？** jingying.md 原始设计是"玩家设定进货清单"，但拖拽式进货清单需要物品浏览器+搜索+NBT匹配的完整 GUI，远超出 MVP 范围。JSON 固定货物种类实现商店类型差异化（面包店 vs 药水店由不同 JSON 定义），新增商店类型只需加 JSON 文件。玩家仍可通过 GUI 调整每种货物的 max_stock（库存深度决策），但不增减货物种类。
-
-## 游客交互冷却与闲逛合并（2026-07-31）
-
-**为什么冷却期间游客强制闲逛/逛景点而非站定？** 原实现中，服务交互后的全局冷却只在 `planNextBuilding` 里跳过服务建筑，但 `hasBuildingsAvailable()` 不检查冷却 → `decideNextMode` 反复选中 VISITING_BUILDING → `startBuildingVisit` 里 planNextBuilding 又失败 → 退回 WANDERING。这个每 15–25 秒一次的模式抖动会反复 stop 导航、甚至卡进 `tickOutdoorNav` 的空目标等待循环，视觉上"死死固定在一个点"。新实现：冷却期间 `decideNextMode` 直接短路为 WANDERING/EXPLORING_POI——游客自由移动但永不选择建筑访问，冷却结束自然恢复。这与现有闲逛状态合二为一，不引入新状态机。
-
-**为什么冷却覆盖商店而不仅是服务？** 原实现只有服务建筑设置冷却，商店可被连续扫街（逛完一家立刻进下一家），节奏突兀。改为每次成功的商店/服务交互都进入一段休息期，形成"一次交互 → 闲逛休息 → 下一建筑"的稳定节奏。商店交互失败（无货）不触发冷却，游客可立即转投其他商店。
-
-**为什么冷却期间允许逛景点？** 用户的"移动不受限制"指向自由移动——随机闲逛与 POI 游览都保留，只是不进入建筑交互。冷却期间 50% 概率逛景点（有 POI 时）、否则锚点附近闲逛。
-
-**为什么交互时长与冷却合并（到达即交互，交互时长=冷却时长）？** 原设计里 `interaction_duration_ticks` 是到达交互点后的**站定倒计时**（商店/服务建筑 2400 tick=120 秒），游客站在交互点纹丝不动，效果（满意度/精力/行程记录）要等倒计时结束才一次性落地——视觉上"AI 死了"、行程记录一直为空，且永远不进入闲逛。这与"冷却期间自由移动"的设计相悖。合并方案：**到达交互点立即完成交互**（满意度/精力/行程记录当场记录），建筑的 `interaction_duration_ticks`（shop 与 service 都有）直接作为**冷却时长**——交互完游客立即进入闲逛/逛景点，直到该时长结束。全局 `SERVICE_COOLDOWN_TICKS` 配置移除，单一数据源改为每建筑的 JSON 字段。
-
-**为什么硬兜底传送改为一次性救援而非每 tick 传送？** 原实现中 `totalNavTicks` 只在进入室内导航/切换模式时重置，硬兜底分支传送后只重置 `noMoveTicks`。游客在交互点站定（面包店 `interaction_duration_ticks=2400`，120 秒）时计数器照常累计，一旦超过 400 就**每 tick** 触发兜底：传送回固定点、提前 return 跳过交互倒计时 → 交互永不完成、游客永久卡死，且 /tp 或击打都被下一 tick 的 snap 回去（表现为 tp 免疫）。修复：(1) 三个兜底分支传送后同步重置 `totalNavTicks`，兜底变成"确实卡住才隔段时间拉一次"；(2) 交互结束进入 exitingPhase 时重置计数器，避免长倒计时后 exit 立即被兜底锁定。此后的交互时长合并方案进一步移除了站定倒计时，这类"交互中卡死"的整类问题不再存在。
-
-## 综合面板 (WandscapePanel)
-
-**为什么面板用 Overlay 渲染（RenderGuiEvent.Post）而非 Screen？** Screen 方案会隐藏准心、使投影控制器 `mc.screen != null` 提前返回导致所有子模式失效。Overlay 方案渲染在游戏 GUI 之上，不干扰世界渲染和输入系统，准心保留。Cursor 通过 C 键手动控制 MouseHandler.releaseMouse()/grabMouse() 实现 UI 交互切换。
-
-**为什么建筑右键门控放服务端而非客户端取消事件？** BuildingInteractHandler 是服务端类，客户端取消 `RightClickBlock` 事件不可靠（服务端仍可能收到）。改为服务端维护 `PanelStateTracker.panelOpenPlayers` 集合，面板打开时 C→S 通知服务器，右键处理前检查该集合。面板关闭时移除，玩家断线自动清理。
-
-**为什么 V 键从三态循环改为面板开关？** 原三态循环（Normal→Projection→Road→Normal）选择不直观，无法直接跳到目标模式。面板底部页签可任意切换模式，V 键简化为面板开关单一职责。旧版 V 键循环逻辑移至 WandscapePanelState.enterSubMode()/exitCurrentSubMode()。
-
-## 统一指标聚合 (ColonyMetricsService，2026-07-29)
-
-**为什么创建 ColonyMetricsService 而非让每个消费者各自查询不同 API？** 三个消费者（PanelStateTracker、PanelStateTogglePacket、AchievementService）都需要查询同一组殖民地指标。让每个消费者分别调 5+ 个 API 意味着：(1) ~150 行重复聚合代码 (2) 每个消费者必须知道所有 API 的存在 (3) 新增指标需要改所有消费者。ColonyMetricsService 是 Facade 模式——它不持有数据、不写数据、不包含业务逻辑，只是将已有 API 的查询结果聚合到一个 record。这减少了**消费者**的耦合度（一个依赖而非五个），而没有增加系统本身的耦合度（已有的跨 API 依赖已经存在）。
-
-**为什么 ColonyMetricsService 放在 engine/service/ 而非作为独立模块？** engine/ 是唯一能合法引用所有模块的层（它需要调到 BuildingApi、TouristApi、NpcApi、WarehouseApi 和 ColonyLevelManager）。放在 engine/ 同时允许它访问 WandscapeEngine.getColonyLevelManager()——ColonyLevelManager 不像其他模块那样有 shared/api 接口，而是直接挂在 WandscapeEngine 上。
-
-**为什么 ColonyMetricsSnapshot 包含 shutdown/broken 建筑名称列表这种 UI 数据？** 这些列表有两种消费者：HUD 警告浮层（UI）和成就系统（未来可能需要统计"累计 N 栋建筑关停"）。两种场景都需要按原样传递列表。若只传计数，成就系统无法派生列表。若切分成"UI 专用列表 + 核心数值"两个 record，消费者需要调用两个方法再自行组装——正好是我们想避免的重复组装。
-
-**为什么面板从底部页签改为左侧侧边栏 + 顶部全宽 HUD？** 底部页签占据屏幕下方 48px，与 MC 原版快捷栏区域冲突，可显示信息量有限。新布局将模式切换移至左侧 36px 竖排侧边栏（Build/Road/Stats/Warning），顶部 28px 全宽 HUD 展示殖民地全貌（名称等级、三值、天数、游客、NPC、停摆、元素储量），信息密度更高且不遮挡中心视野。侧边栏警告图标带红色圆点徽章，点击弹出关停建筑列表浮层，让玩家在任意面板模式下都能感知殖民地健康状态。
-
-## 懒加载道路斑块（Lazy Road Blob）系统（2026-06-28）
-
-**为什么要加入玩家自定义道路寻路？** 当前 RoadRouter 只在系统 RoadNetwork（MST 生成的道路 edges）上寻路。玩家手动铺设的 cobblestone/stone_bricks 等方块不被识别为道路——NPC 走到玩家铺的路上不会获得 on-road 加速。自定义道路让玩家可以用铺路代替编辑器，玩法更自由。
-
-**为什么选 BFS 懒发现 + 编号缓存而非监听 BlockPlace 事件？** 监听放置事件在玩家铺路时持续增加服务器负担（每方块触发一次事件），而 BFS 懒加载只在 NPC 需要寻路时才扫描。铺路时 0 开销，寻路时代价是一次性的（缓存后同区域后续寻路 O(1) 命中）。这符合 Minecraft 的性能优化哲学——"不见兔子不撒鹰"。
-
-**为什么斑块用 centroid 虚拟节点作为虫洞而非 O(n²) 全网状连接？** 每个斑块可能有数百个边界点。若所有边界点互相连接（O(n²) edges），图会爆炸。改用 centroid 虚拟节点作为星型中心——每个边界点连接到 centroid（O(n) edges），路径 = entry→centroid→exit。代价是对非凸形状的高估（经过 centroid 绕路），但实践中玩家铺的道路多为矩形或直线，误差可接受。
-
-**为什么不持久化 RoadBlobCache 到 NBT？** 斑块数据可从世界方块完全推导（BFS 扫描），不需要跨会话持久化。每次世界加载后首次寻路时重新扫描即可。避免 NBT 膨胀和脏数据漂移（块卸载/重加载导致部分方块不可见时缓存不完整）。
-
-**为什么边界只在 XZ 平面检查（不检查 Y±1）？** 楼梯/斜坡的每个台阶天然是边界——NPC 可以在任意台阶上/下道路。检查 Y±1 会让平坦道路的内部方块也成为边界（因为上方无方块），失去"内部 vs 边界"的区分意义。Y 变体通过 centroid 虫洞自动处理——BFS 已经将楼梯的所有台阶纳入同一个斑块。
-
-**为什么核心数据结构和引擎扫描分开为 core/RoadBlobCache + engine/RoadBlobExplorer？** 遵循 core/ 零 MC 依赖规则。RoadBlobCache 是纯 Java 集合操作（Map/Set/BFS），可在单元测试中验证。RoadBlobExplorer 需要 Level/BlockState/TagKey，放在 engine/。RoadRouter.buildGraph() 只读 RoadBlobCache，是纯核心逻辑。
-
-## UI 主题统一（2026-07-29）
-
-**为什么所有单页 Screen 统一用 MedievalScreen MINIMAL 而非保留 WandscapeTheme RTS 风格？** 项目存在 3 套视觉风格（FULL 羊皮纸精灵 / RTS 代码绘制 / 硬编码杂色），风格不统一。统一到 MINIMAL 后：所有 Screen 共享渐变玻璃面板 + 发光边框 + 紫色标题栏 + MedievalColors 调色板，玩家感受一致。新 Screen 只需 `extends MedievalScreen` 即自动获得整套风格。
-
-**为什么删除 DecorationLevel 枚举？** 枚举定义了 FULL/MINIMAL/NONE 三个级别，但只有 MINIMAL 被使用。保留枚举造成虚假的灵活性——"未来可能切回 FULL"的假设无实际需求支撑。删除后 MedievalScreen 代码减少分支，render() 和 renderBackground() 不再有 switch/if。
-
-**为什么 WandscapeTheme 限用于 V 面板覆盖层而非所有 UI？** BUILD/ROAD/STATS 覆盖层渲染在世界之上（HUD 层），使用 `RenderType.guiOverlay()` 和不同的透明度需求。Screen 渲染在独立的 GUI 层，有 dim 背景 + 居中面板。两层视觉上下文不同，强行统一到一套主题会牺牲各自的优势。WandscapeTheme 保留为覆盖层工具集，MedievalColors 作为 Screen 调色板。
-
-**为什么边框用 2 环发光渐变而非斜边（beveled）？** 斜边边框在不同方向使用不同颜色（上/左亮，下/右暗），角部颜色突变突兀。发光边框每环四边颜色统一，靠内外环不同透明度制造景深，角部自然平滑。
-
-## 包重构（2026-07-04）
-
-**为什么把 core/ 拆分为 core/ + op/ + task/ + road/？** 原 `core/` 承载了 5 个无关子系统（ECS、原子操作、任务引擎、路网算法、调度系统），77 个文件混杂在一起。每个子系统有独立的演化速度和变更理由，放在同一包中导致：
-- 开发者修改任务系统时不得不浏览路网代码
-- 新增原子操作类型需要了解整个 ECS 框架
-- 单元测试边界模糊（task 测试和 road 测试混在 core 测试文件夹）
-
-拆分为独立顶级包后，每个包有清晰的职责边界和独立的变更范围。
-
-**为什么 engine/road/ 移到 road/engine/，engine/colony/ 并入 engine 根？** 道路的 MC 实现（RoadBuilder、RoadSavedData）和纯核心算法（MstCalculator、RoadNetwork）属于同一子系统，不应因"一个零 MC 一个依赖 MC"就拆到两个顶级包。road/engine/ 作为 road/ 包内的实现层，自然保持与 core/ 同级的情理距离。ColonyApiImpl 只有 1 个文件，不值得独立子包。
-
-**为什么 task/network/ 和 shared/ui/task/ 也并入 task/？** 任务的网络层和客户端 GUI 是任务系统的横向切片，与引擎层的 dsl/pool/scheduler 属同一子系统。放在 task/ 下后开发者只需要了解一个顶级包。编辑器 UI（TaskEditorScreen 及其相关网络包）已于 2026-07-29 删除，但包结构原则不变。
-
-**为什么不把所有包统一成 api/internal 结构？** core/、op/、task/ 的 engine/dsl/scheduler 属于纯 Java 基础设施层，被多个 MC 模块引用但自身不引用 MC——它们是框架代码而非模块。road/algorith/、engine/boundary/、task/network/ 等仍是模块的标准 api/internal/client 模式。两套模式并行，取决于包的角色是"基础设施"还是"游戏模块"。
-
-## 包重构第二轮：System 归属整理（2026-07-04）
-
-**为什么 ManaRegenSystem 从 core/ecs/ 移到 core/component/？** `core/ecs/` 是 ECS 框架包（World、System 接口、ComponentStore），应只放抽象和基础设施。`ManaRegenSystem` 是具体实现——它做的事情就是遍历所有 ManaPool 并调用 `pool.regen()`，与 ManaPool 紧耦合。把实现和框架混在一起会模糊包的职责边界。放在 `core/component/` 后，开发者看到 ManaPool 就能在同一包找到其配套处理器，搜索成本更低。
-
-**为什么 engine/system/ 拆分为 system/ + service/？** `engine/system/` 里混了两类完全不同的事物：(1) 实现 `core/ecs/System` 接口、注册到 `World.tick()` 的真正 ECS System；(2) 通过 `world.eventBus.subscribe()` 注册的纯事件订阅者。前者是 ECS 调度的组成部分，后者是旁路服务。混在一起让开发者无法从包名判断"这个 System 是 tick 驱动的还是事件驱动的"。拆分后 `engine/system/` 只放 ECS System，`engine/service/` 只放事件订阅者，各自职责单一。
-
-**为什么 StatsSystem/AchievementSystem 改名？** 叫 "System" 意味着它跟 NavigationSystem 和 ResourceSupplySystem 是同类事物——但实际上它既不实现 `core/ecs/System`，也不被 tick 驱动。命名误导比命名不统一更糟糕，因为会让新开发者花费无意义的精力去理解它们之间的异同。`StatsService` 和 `AchievementService` 准确表达了它们的实际角色：记录数据、提供服务。
-
-## 样条线模型编辑器 (Spline Model Editor) (2026-07-08)
-
-**为什么样条线编辑器是独立几何模型编辑器而非直接接入 road/ 铺设？** 用户希望样条线专注于纯几何线段（类似 Houdini 风格的 Curve 节点），让其上的宽度、方块材质或高级平铺（Sweep/Array）完全由后续的蓝图阵列系统读取样条线来自由决定。这极大地解耦了“路径几何”与“物理平铺物”，提供极高的扩展性。
-
-**为什么采用绝对世界坐标编辑，相对第一个点保存？** 在 3D 世界中直接用绝对坐标能够让玩家直观地在场景中通过 Gizmo 轴在任意坐标拉伸曲线。而在序列化为 JSON 模板时，通过以第一个锚点为 $(0, 0, 0)$ 原点计算所有点和控制柄的偏移，实现了模板的局部化导出。这使得同一条曲线可以随意应用（平铺）到任意世界原点，消除了绝对坐标的耦合。
-
-## 道路系统重构：Spline 物流系统与客户端平滑 (2026-07-09)
-
-**为什么物资运输要转移到客户端使用 Spline 进行插值？** 原来的设计是服务端每 tick 计算一次坐标并同步给客户端，导致大量发包开销，而且一旦网络延迟，物资就会颠簸卡顿。改为在 TransportStartPacket 发送时，将整个运输路线（包含多个 SplineLeg）一次性发给客户端。客户端使用 `TransportItemEntity` 自主进行 60 FPS 帧率平滑插值（根据 elapsed / duration 计算 `u` 并调用 `spline.evaluate(u)`），既减少了服务器运算和网络带宽消耗，又实现了绝对丝滑的贝塞尔曲线飞行。服务端仅在 `ItemTransportManager` 中维持一个虚拟倒计时（`elapsed++`），到时间直接完成。
-
-**为什么 SplineLeg 增加真正的 Arc Length 采样计算，而不用起终点直线距离？** 在升级为贝塞尔曲线（bz3）道路后，一条连续的弯曲样条线可能物理跨度只有 5 格（如掉头弯），但实际弧长有 50 格。如果只算起终点直线距离，那么 50 格的弯道会被错误地当做 5 格来分配持续时间（duration）。这会导致物资在客户端以惊人的超速（比如 0.25 秒内飞完 50 格）“瞬移”。通过在 `getApproxLength()` 中对 `uStart` 到 `uEnd` 按 10 个步长进行分段采样累加距离，以极小的 CPU 开销换取了极为精确的弧长，让物资在弯道上能保持严格匀速。
-
-**为什么 ResourceRequestExecutor.finish 不再减去 alreadyHas？** 发现了一个深藏的“双重扣除”Bug。当任务中含有多个并发步骤，或者 NPC 因为先前任务失败（比如 TransformOp 因为某种原因被中断）而包里残留了 1 个资源时。`execute()` 阶段计算 shortfall = need - alreadyHas 已经是扣除后的净需求，并且按照 shortfall 从仓库发起运输。当这批货物运达时，`finish()` 直接 `inv.add(need)` 即可。如果 `finish()` 再减一次 `alreadyHas`，就会导致实际给 NPC 的比需要的还少 1 个，最终在 `AsyncTransformExecutor` 中因为 `inv.hasEnough` 失败而阻断后续任务。修正后彻底解决了道路建造中途意外中断的僵尸路段问题。
-
-## 资源供需重构：有需求才采集（2026-07-31）
-
-### 现状核验：Workstation 自动合成是否存在？现在这套逻辑对吗？
-
-**结论：自动合成已实现，且链路完整正确。**
-
-逐段核实源码后的链路：
-
-1. **建造/补货发出请求**：蓝图的 `request_resource` op → `AtomicOp.ResourceRequestOp` → `ResourceRequestExecutor.execute`（`engine/boundary/ResourceRequestExecutor.java:104`）。
-2. **仓库物品不足 → 抛异常**：`execute` 先对全部需求做 all-or-nothing `hasEnough` 检查（`:126`），任一不足即 `failedFuture(ResourceShortageException)`，不产生部分取物。
-3. **任务挂起**：`TaskExecutionSystem` 捕获异常（`task/scheduler/TaskExecutionSystem.java:249`）→ `taskPool.markAwaitingResources` → 任务转 AWAITING_RESOURCES、保存 stepIndex、释放 NPC。
-4. **自动合成**：`markAwaitingResources` 调 `resourceShortageHandler`（`task/engine/pool/GlobalTaskPool.java:270`）→ `EngineBootstrap.createShortageHandler`（`engine/bootstrap/EngineBootstrap.java:213`）：该资源有 `production:synthesize` 配方且未 in-flight → 找 crafting_station → 入队 `production:synthesize`（priority 40）。无配方则返回 false。
-5. **兜底补货**：`ResourceSupplySystem.scanStuckTasks` 每 40 tick 扫描（`engine/system/ResourceSupplySystem.java:62`）：资源已够 → `wakeupTask`；不够 → `trySupplyResource` 先合成、再无配方时 `tryGatherElement` 采集元素。
-6. **补足后继续**：合成/采集完成 → `resources.addResource` → `WarehouseManager.addResource`（`warehouse/WarehouseManager.java:254`）→ `resourceAddedListener.onResourceAdded` → `GlobalTaskPool.onResourceAdded`（`task/engine/pool/GlobalTaskPool.java:404`）→ 匹配资源的 AWAITING_RESOURCES 任务全部可满足时 → 回到 PENDING_ASSIGN → 重新分配 → NPC 从保存的 stepIndex 续跑。
-
-即"元素/物品不足 → 自动合成任务 → 足了继续任务"的设想**已经是现状**。
-
-### 但"NPC 一直在 gather"的根因
-
-自动合成没问题，问题在**采集侧有三个触发器并存**，其中一个是无条件触发：
-
-| 触发器 | 触发条件 | 优先级 | 需求驱动 |
-|---|---|---|---|
-| `BuildingTaskSource.supplyNodeBuildings` | **无条件**，每 20 tick 对所有空闲 node 入队 gather | 15 | ❌ |
-| `MaintenanceForecastSystem.enqueueGatherTasks` | 元素储备 < 维护费×reserveDays | 55 | ✅ 维护需求 |
-| `ResourceSupplySystem.tryGatherElement` | 生产任务缺元素 | 40 | ✅ 生产需求 |
-
-`supplyNodeBuildings`（`engine/source/BuildingTaskSource.java:72` 调用、`:126-169` 实现，commit 95b71d3 引入，早于 ResourceSupplySystem）是"NPC 一直在 gather"的主因：即使仓库已满，每个空闲 node 永远排着一个 gather，NPC 永远不停。用户日志中 wind 已累计 10139 仍在采集，正符合该无条件行为。
-
-### 目标系统：有需求才采集
-
-采集只在两类需求下发生：
-
-1. **维护需求**：维护费 × `reserveDays`（默认 2 天）→ `MaintenanceForecastSystem` 入队采集。
-2. **生产需求**：Workstation / Crafting_Station 等消耗元素时元素不足 → `ResourceShortageException` → `ResourceSupplySystem` 采集。
-
-无需求不采集。两个需求触发器已存在，只需**删除无条件触发器**并修复以下缺口。
-
-### 修改方案
-
-1. **删除 `BuildingTaskSource.supplyNodeBuildings`**（BuildingTaskSource.java:72 调用 + :126-169 方法）。两处需求采集已覆盖全部采集场景，无条件采集只会造成"永远在 gather"。
-
-2. **修正采集入仓的 colony 归属**：`executeGather` 的 `addResource` 走 `WarehouseManager.findStorageColony()`——取**跨殖民地的首个 storage 建筑**。多殖民地时，node 采集的元素可能入到别的 colony，而 Forecast 按 **node 所在 colony** 读 `getElement()`，导致需求永不满足 → 每周期再入队高优先级采集。修正：`executeGather` 从 WorkItem 的 `anchor` 解析 node 所在 colony，直接 `addElement(nodeColony, ...)` + 触发 onResourceAdded（或给 `addResource` 增加 colony 参数）。
-
-3. **Forecast 无匹配 node 兜底**：缺的元素没有对应 node 时，`enqueueGatherTasks` 一个都不入队，但 shortfall 仍在 → 每 6000 tick 报警一次、永不解决。改为：无匹配 node → `Log.warn` 一次并进入冷却（防刷屏），不反复报警。
-
-4. **Forecast 采集优先级越过高审批门**：`FORECAST_GATHER_PRIORITY=55 ≥ 50`，而 `autoApproveTasks` 默认 false → forecast 的采集任务会进 PENDING_APPROVAL 等玩家审批，"自动预防维护关机"实际失效。对齐修复任务先例（priority=49 绕过审批门，见上文），改为 **49**（仍高于生产采集 40、手动发布 15）。
-
-5. **（可选）Forecast 采集量封顶**：当前对 shortfall 元素的所有空闲 node 全部入队，不按缺口量封顶。可改为按 shortfall / amountPerHarvest 计算所需采集次数再入队，避免过量采集。
-
-### 不做的事
-
-- 不改 `WarehouseApi` / `ColonyResourceAccess` 的**跨殖民地求和**语义——`available()` 求和正是生产需求的正确定义（任何殖民地的元素都能补给生产任务）。
-- 不改 `DailySettlementSystem`（维护费扣费与自动重启逻辑已正确）。
-
-## 守卫系统设计（2026-08-02）
-
-守卫闭环：怪物进入建筑 AABB 水平 +10 区 → 发布 `guard:attack` → 空闲 NPC 原地视线施法 → 光束每 tick 伤害束内 Enemy → 直到 +15 区内无怪才完成。
-
-- **滞回区间**：攻击/目标区 = 建筑包围盒水平 X/Z ± 10，Y 不扩展；任务完成/脱离区 = ± 15，Y 不扩展。有怪进 +10 触发守卫，持续到 +15 无怪才结束——避免怪物卡在 10 格边缘导致守卫反复进/出。
-- **Y 不扩展**：只做水平扩展，否则会索敌到地下洞穴怪物，光束打不到。
-- **不走路**：守卫 op `target() = null`（无 stance/导航），NPC 原地施法；射程由光束 200 格覆盖，只需视线（LOS）。
-- **持续任务**：一次守卫 = 一个持续 `guard:attack` 任务，执行器在 `tickAll` 循环（施法→等光束→重选最近→再施法），期间 NPC 保持 ACTIVE 不被改派；+15 区无怪才 complete。
-- **复用**：伤害与视觉完全复用 `MagicCaster.castNpcAt`/`MagicCastManager`/`MagicBeamEntity`（每 tick magic 伤害），不写 EntityOps stub。
-- **优先级 49**：< 50 避开 `autoApproveTasks=false` 的 PENDING_APPROVAL 门（同修复任务先例），且高于普通建造任务 ~40。
-- **主动切换最近目标**：执行器每 ~10 tick 重选最近 `Enemy` 并把当前光束 `MagicBeamEntity.retarget()` 到新目标——光束持续跟随最近怪物，而不是每束只锁一个。
-- **隔墙智能寻路**：LOS（持杖手→目标中心）被方块挡时，执行器经 `MovementOps.navigateTo` 向怪物位置寻路（寻路绕过墙体），LOS 一清就 `cancelNavigation` 停手施法；任务完成时停寻路、光束快速淡出。
-
-## NPC 自防御（2026-08-02）
-
-NPC 不再"只会挨打"：主动仇恨半径内无条件攻击 + 被非玩家打伤后仇恨反击；优先级最高，暂停当前任务打完恢复。**独立于守卫任务**（守卫=建筑中心全局池；自防御=NPC 中心私有队列抢占），复用同一战斗引擎。
-
-- **私有队列抢占，不走全局池**：自防御注入 `NpcTaskQueue`（`suspendCurrent`→`startPackage("self_defense")`），绕过 `GlobalTaskPool`/`SchedulerSystem`——因为是 NPC 个体反应、需抢占当前任务，且不能进 PENDING_APPROVAL。完成后队列 `resumeLatest` 自动恢复原包（stepIndex 不丢）。`NpcTaskQueue` 的 suspend/resume 基础设施此前无生产调用，自防御是首个真实消费者。
-- **抢占边界**：挂起时若 NPC 正卡异步 op（`pendingFuture` 未完成），先分离 future（底层执行器独立推进、完成后 `World.startAsyncOp` 自动清理；导航 future 取消导航），否则任务执行系统会一直等旧 future、不执行自防御包；挂起栈满（深度3）跳过不覆盖当前包。
-- **syncStepToPool 修复**：`TaskExecutionSystem.syncStepToPool` 现只在当前包为 `global:*` 时同步 stepIndex——否则自防御的 step 会覆盖被挂起全局任务的进度，恢复后从错误步骤继续。这是自防御抢占引入的核心修复。
-- **仇恨 Enemy-only**：只对 `Enemy` 记仇/攻击。光束伤害（`MagicBeamEntity`）只伤 Enemy，对非 Enemy 记仇会导致反击打不死的空转；玩家/其它 NPC 伤害排除（友伤）。
-- **互相战斗（光束归属）**：守卫与自防御的光束伤害记为 NPC 造成（`DamageSources.indirectMagic(casterNpc, beam)` → `source.getEntity()=NPC`），怪物 `HurtByTargetGoal` 会反击 NPC → 受伤仇恨实际触发；玩家施法保持 `magic()`（无施法者）。配合 `HostileTargetingHandler`（NPC 已是村民级索敌目标），闭环成立。
-- **主动切换目标**：自防御复用 `GuardCombat`（光束重定向/LOS/隔墙寻路/施法节流），每 ~10 tick 重选目标（仇恨优先→半径最近），光束持续跟随最近怪物。
-- **只看得到的目标**：仇恨与主动侦测的目标都要求 LOS（持杖手→目标中心无方块挡）——地下/隔墙不可见的怪物不锁为目标，避免对够不着的怪空耗寻路施法。
-- **配置**：`guard.selfDefenseRange`(16 主动仇恨半径)、`guard.hateRange`(48 反击距离)、`guard.hateDurationTicks`(600 记仇时长，每次被打刷新)。自防御半径 16 压过骷髅弓射程 15，仇恨半径 48 覆盖凋零跟随 40。
-- **版本**：v1.7.0a（第二位 +1 新子系统）。
+**约束保留**：`MixinOverviewCamera` 不动（TAIL 只覆写 position/rotation，不影响 `Camera.detached`，第三人称下 local player 由 `LevelRenderer` 正常渲染）；`closePanel()` / `exitCurrentSubMode()` 路径不改（都走 `exit()` → `exitOverview()` suspend，缓存自然保留）。

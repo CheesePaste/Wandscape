@@ -11,9 +11,11 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
@@ -34,6 +36,7 @@ import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
@@ -118,7 +121,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         CompletableFuture<Void> future = world.startAsyncOp(
                 "block_interact_" + action + "_" + op.target());
-        pending.add(new Pending(future, op, world, npcId, op.channelTicks()));
+        pending.add(new Pending(future, op, world, npcId, effectiveChannel(world, npcId, op.channelTicks())));
 
         future.thenRun(() -> {
             try {
@@ -133,9 +136,15 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             }
         });
 
-        Log.debug(TAG, "block_interact {}: NPC {} channeling at {} ({} ticks)",
-                action, npcId, op.target(), op.channelTicks());
         return future;
+    }
+
+    /** Effective channel duration for this NPC: base channelTicks divided by WORK_SPEED. */
+    private static int effectiveChannel(World world, long npcId, int baseTicks) {
+        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
+        float work = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : 1f;
+        if (work <= 1f) return baseTicks;
+        return Math.max(1, (int) Math.ceil(baseTicks / work));
     }
 
     /** Called every MC tick. Decrements countdowns and completes futures. */
@@ -161,13 +170,25 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         pending.removeIf(p -> p.future().isDone());
 
         if (!toComplete.isEmpty()) {
-            Log.debug(TAG, "block_interact tickAll: {} completed, {} remaining",
-                    toComplete.size(), pending.size());
         }
     }
 
     public boolean hasPendingOps() {
         return !pending.isEmpty();
+    }
+
+    /**
+     * Channel progress for the async op targeting {@code target}.
+     * @return {remainingTicks, totalTicks}, or {-1, -1} if no channel is running there.
+     */
+    public int[] getChannelProgress(GridPos target) {
+        for (Pending p : pending) {
+            GridPos t = p.op().target();
+            if (t != null && t.equals(target)) {
+                return new int[]{p.remainingTicks(), p.op().channelTicks()};
+            }
+        }
+        return new int[]{-1, -1};
     }
 
     // ── Action implementations ──
@@ -261,10 +282,23 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                         List.of(new ResourceStack(new ResourceId(shortId), count)));
         }
 
-        Map<ElementType, Long> yield = mappings.getSeedValues(itemId);
+        // Decompose returns 1/N of the item's element value (anti item-duplication):
+        // source is decompose_yield, falling back to build_cost — same lookup as shop sale profit.
+        Map<ElementType, Long> yield = mappings.getItemElementValue(itemId);
 
         if (yield.isEmpty()) {
-            Log.warn(TAG, "decompose: no seed values for {}", itemId);
+            Log.warn(TAG, "decompose: no element value for {}", itemId);
+            return;
+        }
+
+        long totalValue = 0;
+        for (var v : yield.values()) totalValue += v;
+
+        // Refuse up front when count × total value < divisor: the batch would
+        // burn items and yield 0 elements (floor division truncates to zero).
+        if (count * totalValue < WandscapeConstants.DECOMPOSE_DIVISOR) {
+            Log.warn(TAG, "decompose: refuse {} x{} — total value {} < {}", itemId, count,
+                    count * totalValue, WandscapeConstants.DECOMPOSE_DIVISOR);
             return;
         }
 
@@ -278,10 +312,11 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : yield.entrySet()) {
-            long total = entry.getValue() * count;
+            long total = (entry.getValue() * count) / WandscapeConstants.DECOMPOSE_DIVISOR;
+            if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
-            Log.info(TAG, "decompose: {} x{} → {} x{}", itemId, count,
-                    entry.getKey().name().toLowerCase(), total);
+            Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, count,
+                    entry.getKey().name().toLowerCase(), total, WandscapeConstants.DECOMPOSE_DIVISOR);
         }
 
         spawnCompletionParticles(npcId);
@@ -479,7 +514,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         String itemId = resolveElementItem(elementName);
         if (itemId == null) {
-            Log.debug(TAG, "gather transport: no visual item for element '{}', skipping", elementName);
             return;
         }
 
@@ -491,8 +525,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         ItemKey key = ItemKey.of(itemId, null);
         transporter.send(key, amount, from, to, npc.level(), npcId, route);
-        Log.debug(TAG, "gather transport: {} x{}({}) NPC→warehouse",
-                elementName, amount, itemId);
     }
 
     /** Launch transport animation for produced items (synthesize/craft_wand/brew_potion). */
@@ -507,8 +539,6 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         TransportRoute route = planRoute(colonyId, from, to, npc.level());
 
         transporter.send(outputKey, count, from, to, npc.level(), npcId, route);
-        Log.debug(TAG, "production transport: {} x{} NPC→warehouse",
-                outputKey.itemId(), count);
     }
 
     /** Map an element name to a representative MC block ID for visual transport. */

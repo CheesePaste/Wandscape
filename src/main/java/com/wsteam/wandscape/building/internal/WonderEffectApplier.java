@@ -9,6 +9,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.data.WonderConfig;
 import com.wsteam.wandscape.shared.data.WonderEffect;
 import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
@@ -18,6 +20,7 @@ import com.wsteam.wandscape.shared.event.WonderEffectChangedEvent;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -155,6 +158,7 @@ public final class WonderEffectApplier {
             }
             NeoForge.EVENT_BUS.post(new WonderEffectChangedEvent(
                     buildingId, colonyId, List.of(), false));
+            playWonderSound(buildingId, false);
             recalculateAll();
             Log.info(TAG, "[Wonder] Effects removed for building={}",
                     buildingId.toString().substring(0, 8));
@@ -182,7 +186,20 @@ public final class WonderEffectApplier {
         if (anyApplied) {
             NeoForge.EVENT_BUS.post(new WonderEffectChangedEvent(
                     buildingId, colonyId, effects, true));
+            playWonderSound(buildingId, true);
         }
+    }
+
+    /** 奇观生效/移除音：按建筑锚点播放。 */
+    private static void playWonderSound(UUID buildingId, boolean active) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        BuildingSavedData sd = BuildingSavedData.get(level);
+        if (sd == null) return;
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return;
+        SoundService.playAt(level, state.getAnchor(), WandscapeSounds.WONDER_EFFECT,
+                SoundSource.BLOCKS, active ? 0.7f : 0.5f, 1.0f);
     }
 
     private static ServerLevel getServerLevel() {

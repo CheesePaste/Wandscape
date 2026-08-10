@@ -40,6 +40,8 @@ public class BuildingState implements BuildingData {
     private UUID colonyId;
     private boolean shutdown;
     private boolean structureIntact;
+    /** Sticky flag: set once construction completes, never reset (drives the ghost). */
+    private boolean hasEverCompleted;
     private boolean demolishing;
     private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
     @Nullable
@@ -82,6 +84,7 @@ public class BuildingState implements BuildingData {
     public BoundingBox getBounds() { return bounds; }
     @Nullable public UUID getColonyId() { return colonyId; }
     @Override public boolean isStructureIntact() { return structureIntact; }
+    @Override public boolean hasEverCompleted() { return hasEverCompleted; }
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
     public boolean hasWork() {
@@ -113,6 +116,7 @@ public class BuildingState implements BuildingData {
     public void setColonyId(@Nullable UUID colonyId) { this.colonyId = colonyId; }
     public void setShutdown(boolean shutdown) { this.shutdown = shutdown; }
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
+    public void setHasEverCompleted(boolean completed) { this.hasEverCompleted = completed; }
     public void setDemolishing(boolean demolishing) { this.demolishing = demolishing; }
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
     public int getRotationSteps() { return rotationSteps; }

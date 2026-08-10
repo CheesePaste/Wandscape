@@ -5,8 +5,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.wsteam.wandscape.core.boundary.BlockOps;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
 import com.wsteam.wandscape.core.component.Inventory;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
@@ -15,6 +19,8 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -34,6 +40,10 @@ import com.wsteam.wandscape.shared.log.Log;
 public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> {
 
     private static final String TAG = "AsyncTransformExecutor";
+
+    /** NPC 施法音节流间隔（tick）：与 WandscapeBlockOps 方块放置/拆除音同频，避免每块方块都播 Evoker 施法声刷屏。 */
+    private static final int NPC_CAST_THROTTLE_TICKS = 10;
+
     private final int delayTicks;
 
     record Pending(CompletableFuture<Void> future, AtomicOp.TransformOp op, World world,
@@ -67,11 +77,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
                             new ResourceShortageException(List.of(op.consumable())));
                 }
                 inv.remove(op.consumable().resource(), op.consumable().amount());
-                Log.debug(TAG, "TransformOp consumable: -{} x{} from NPC {}",
-                        op.consumable().resource().id(), op.consumable().amount(), npcId);
             } else {
-                Log.debug(TAG, "TransformOp free block (no element mapping): {} — placing directly",
-                        op.consumable().resource().id());
             }
         }
 
@@ -93,7 +99,7 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         //    Engine stores this future in TaskExecutor.pendingFuture,
         //    does NOT re-invoke execute(). When complete() fires, engine
         //    advances stepIndex and calls execute() for the NEXT op.
-        pending.add(new Pending(future, op, world, npcId, delayTicks));
+        pending.add(new Pending(future, op, world, npcId, effectiveDelay(world, npcId)));
 
         // Hook: place block when delay expires
         future.thenRun(() -> {
@@ -109,14 +115,26 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
             if (npc != null) {
                 npc.doWorkAnimation(new BlockPos(
                         p.op.target().x(), p.op.target().y(), p.op.target().z()));
+                // NPC 施法放置音（守卫/自防御不走这里，避免与 GuardCombat 开火音重叠）
+                // 节流与方块放置/拆除音同频：整栋楼连续施工时不会每块都响
+                if (npc.level() instanceof ServerLevel sl) {
+                    SoundService.playAtThrottled(sl, p.op.target().x() + 0.5,
+                            p.op.target().y() + 0.5, p.op.target().z() + 0.5,
+                            WandscapeSounds.NPC_CAST, SoundSource.NEUTRAL, 0.5f, 1.0f,
+                            NPC_CAST_THROTTLE_TICKS);
+                }
             }
-            Log.debug(TAG, "async TransformOp placed: {}→{} at {}",
-                    p.op.from().id(), p.op.to().id(), p.op.target());
         });
 
-        Log.debug(TAG, "async TransformOp: {}→{} at {} ({} tick delay)",
-                op.from().id(), op.to().id(), op.target(), delayTicks);
         return future;
+    }
+
+    /** Effective per-block delay for this NPC: base delayTicks divided by WORK_SPEED. */
+    private int effectiveDelay(World world, long npcId) {
+        EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
+        float work = eq != null ? eq.getAttribute(AttributeType.WORK_SPEED) : 1f;
+        if (work <= 1f) return delayTicks;
+        return Math.max(1, (int) Math.ceil(delayTicks / work));
     }
 
     /** Called every MC tick. Decrements countdowns and completes futures. */
@@ -142,8 +160,6 @@ public class AsyncTransformExecutor implements OpExecutor<AtomicOp.TransformOp> 
         }
 
         if (!toComplete.isEmpty()) {
-            Log.debug(TAG, "async tickAll: {} completed, {} remaining",
-                    toComplete.size(), pending.size());
         }
     }
 

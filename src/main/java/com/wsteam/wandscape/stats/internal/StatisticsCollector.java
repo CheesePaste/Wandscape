@@ -38,7 +38,9 @@ public final class StatisticsCollector {
     // Intra-day tracking per colony
     private final Map<UUID, Integer> touristsArrived = new HashMap<>();
     private final Map<UUID, Integer> touristsDeparted = new HashMap<>();
-    private final Map<UUID, Integer> totalSatisfaction = new HashMap<>();
+    private final Map<UUID, Integer> touristComfortTotal = new HashMap<>();
+    private final Map<UUID, Integer> touristMagicTotal = new HashMap<>();
+    private final Map<UUID, Integer> touristWonderTotal = new HashMap<>();
     // Latest evaluation values (carried over between days)
     private final Map<UUID, Integer> comfortMap = new HashMap<>();
     private final Map<UUID, Integer> magicMap = new HashMap<>();
@@ -77,7 +79,9 @@ public final class StatisticsCollector {
         // Merge intra-day tourist counts
         int a = touristsArrived.getOrDefault(colonyId, 0);
         int d = touristsDeparted.getOrDefault(colonyId, 0);
-        int sat = totalSatisfaction.getOrDefault(colonyId, 0);
+        int tc = touristComfortTotal.getOrDefault(colonyId, 0);
+        int tm = touristMagicTotal.getOrDefault(colonyId, 0);
+        int tw = touristWonderTotal.getOrDefault(colonyId, 0);
         int comfort = comfortMap.getOrDefault(colonyId, 0);
         int magic = magicMap.getOrDefault(colonyId, 0);
         int wonder = wonderMap.getOrDefault(colonyId, 0);
@@ -86,7 +90,7 @@ public final class StatisticsCollector {
                 report.day(),
                 report.totalConsumed(),
                 paid, shutdown, restarted,
-                a, d, sat,
+                a, d, tc, tm, tw,
                 comfort, magic, wonder);
 
         data.addSnapshot(colonyId, snapshot);
@@ -94,7 +98,9 @@ public final class StatisticsCollector {
         // Reset intra-day counters (preserve evaluation values)
         touristsArrived.put(colonyId, 0);
         touristsDeparted.put(colonyId, 0);
-        totalSatisfaction.put(colonyId, 0);
+        touristComfortTotal.put(colonyId, 0);
+        touristMagicTotal.put(colonyId, 0);
+        touristWonderTotal.put(colonyId, 0);
 
         // Push updated stats to all panel-open players in this colony
         pushStatsToPlayers(server, colonyId, data);
@@ -110,7 +116,12 @@ public final class StatisticsCollector {
     public void onTouristDeparted(TouristDepartedEvent event) {
         UUID colonyId = event.getColonyId();
         touristsDeparted.merge(colonyId, 1, Integer::sum);
-        totalSatisfaction.merge(colonyId, event.getSatisfaction(), Integer::sum);
+        var fill = event.getFill();
+        if (fill != null) {
+            touristComfortTotal.merge(colonyId, fill.comfort(), Integer::sum);
+            touristMagicTotal.merge(colonyId, fill.magic(), Integer::sum);
+            touristWonderTotal.merge(colonyId, fill.wonder(), Integer::sum);
+        }
     }
 
     @SubscribeEvent

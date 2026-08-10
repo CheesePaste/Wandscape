@@ -23,16 +23,17 @@ import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.MaintenanceForecastSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlock;
-import com.wsteam.wandscape.building.scanner.BuildingScannerBlockEntity;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerExportPacket;
-import com.wsteam.wandscape.building.scanner.network.BuildingScannerSyncPacket;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlock;
+import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.ScannerBlock;
+import com.wsteam.wandscape.building.scanner.ScannerBlockEntity;
+import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
+import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
 import com.wsteam.wandscape.command.ColonyCommand;
 import com.wsteam.wandscape.command.FillBuildingCommand;
 import com.wsteam.wandscape.command.AuditElementsCommand;
 import com.wsteam.wandscape.command.GenerateElementMappingsCommand;
 import com.wsteam.wandscape.command.LogFilterCommand;
-import com.wsteam.wandscape.command.ManaCommand;
 import com.wsteam.wandscape.command.NavTestCommand;
 import com.wsteam.wandscape.command.PublishBlueprintCommand;
 import com.wsteam.wandscape.command.RecoveryCommand;
@@ -41,22 +42,25 @@ import com.wsteam.wandscape.command.ConsumeWarehouseCommand;
 import com.wsteam.wandscape.command.StressTestCommand;
 import com.wsteam.wandscape.command.TransportCommand;
 import com.wsteam.wandscape.command.TouristCommand;
-import com.wsteam.wandscape.command.MagicCommand;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.magic.internal.MagicCastManager;
 import com.wsteam.wandscape.magic.internal.MagicCircleLoader;
-import com.wsteam.wandscape.magic.internal.MagicInteractHandler;
+import com.wsteam.wandscape.magic.internal.SpellbookLoader;
+import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
 import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.AltarCastRequestPacket;
+import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
@@ -77,6 +81,7 @@ import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.projection.network.ProjectionPlacePacket;
+import com.wsteam.wandscape.projection.network.ProjectionSlotsRefreshPacket;
 import com.wsteam.wandscape.projection.network.ProjectionNetwork;
 import com.wsteam.wandscape.projection.network.BuildingDebugRequestPacket;
 import com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket;
@@ -90,27 +95,34 @@ import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
-import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.engine.TaskPoolSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
 import com.wsteam.wandscape.engine.service.ColonyMetricsService;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
+import com.wsteam.wandscape.npc.entity.EvilMage;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.internal.NpcApiImpl;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
+import com.wsteam.wandscape.npc.network.NpcRenamePacket;
+import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
+import com.wsteam.wandscape.tourist.internal.MarkerPreviewManager;
 import com.wsteam.wandscape.tourist.internal.TavernApiImpl;
 import com.wsteam.wandscape.tourist.internal.TavernRecruitStorage;
 import com.wsteam.wandscape.tourist.internal.TouristApiImpl;
+import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.wand.internal.WandApiImpl;
 import com.wsteam.wandscape.wand.internal.WandPresetLoader;
 import com.wsteam.wandscape.wand.item.WandItem;
+import com.wsteam.wandscape.guidebook.item.GuideBookItem;
+import com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket;
 import com.wsteam.wandscape.engine.transport.TransportItemEntity;
 import com.wsteam.wandscape.engine.transport.TransportStartPacket;
 
@@ -133,6 +145,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -184,12 +197,24 @@ public class Wandscape {
     public static final WandPresetLoader WAND_PRESET_LOADER = new WandPresetLoader(DATA_LOADER);
     public static final WandApiImpl WAND_API = new WandApiImpl();
 
+    // ---- 指南书（右键打开教程首页） ----
+    public static final DeferredItem<Item> GUIDE_BOOK = ITEMS.register("guide_book",
+            () -> new GuideBookItem(new Item.Properties()));
+
     // ---- 03 element-system ----
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
     public static final ElementApiImpl ELEMENT_API = new ElementApiImpl(ELEMENT_MAPPING_LOADER);
 
     // ---- magic: magic circle loader (magic_circles 类目) ----
     public static final MagicCircleLoader MAGIC_CIRCLE_LOADER = new MagicCircleLoader(DATA_LOADER);
+    // ---- magic: spellbook loader (magic_spells 类目) ----
+    public static final SpellbookLoader SPELLBOOK_LOADER = new SpellbookLoader(DATA_LOADER);
+    // ---- magic: 施法决策 API（P3 玩家策略 + 条件） ----
+    public static final SpellcastingApiImpl SPELLCASTING_API = new SpellcastingApiImpl();
+
+    static {
+        WandscapeApis.setSpellcastingApi(SPELLCASTING_API);
+    }
 
     // ---- 10 production-stations: loader ----
     public static ProductionRecipeLoader PRODUCTION_RECIPE_LOADER;
@@ -201,6 +226,14 @@ public class Wandscape {
                             .sized(0.6f, 1.8f)
                             .clientTrackingRange(10)
                             .build("wandscape_npc"));
+
+    // ---- 敌对测试法师：与 NPC 法师同外观/属性/施法管线，索敌生存玩家 ----
+    public static final DeferredHolder<EntityType<?>, EntityType<EvilMage>> EVIL_MAGE =
+            ENTITIES.register("evil_mage", () ->
+                    EntityType.Builder.of(EvilMage::new, MobCategory.MONSTER)
+                            .sized(0.6f, 1.8f)
+                            .clientTrackingRange(10)
+                            .build("evil_mage"));
 
     // ---- 07 npc-system: particles ----
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CAST_BOLT =
@@ -226,6 +259,15 @@ public class Wandscape {
                             0xFFD700,  // gold highlight
                             new Item.Properties()));
 
+    // ---- 敌对测试法师 spawn egg（深红/黑） ----
+    public static final DeferredItem<Item> EVIL_MAGE_SPAWN_EGG =
+            ITEMS.register("evil_mage_spawn_egg", () ->
+                    new DeferredSpawnEggItem(
+                            () -> (EntityType<? extends Mob>) (EntityType<?>) EVIL_MAGE.get(),
+                            0x8B0000,  // dark red background
+                            0x1A1A1A,  // black highlight
+                            new Item.Properties()));
+
     // ---- tourist-system: entity ----
     public static final DeferredHolder<EntityType<?>, EntityType<TouristEntity>> TOURIST =
             ENTITIES.register("tourist", () ->
@@ -243,34 +285,64 @@ public class Wandscape {
                             0xFFFFFF,  // white highlight
                             new Item.Properties()));
 
-    // ---- building-scanner block ----
+    // ---- building-scanner blocks ----
+    // Creative Building Scanner (full-featured, for creators) — renamed from building_scanner to
+    // creative_building_scanner; the plain id "building_scanner" now belongs to the Survival scanner.
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.createBlocks(MODID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
 
-    // Forward reference: wired in BUILDING_SCANNER_BE's supplier below
-    private static Supplier<BlockEntityType<BuildingScannerBlockEntity>> beTypeRef = () -> {
-        Log.warn(TAG, "beTypeRef called before initialization — falling back to registry lookup");
+    // Forward reference: wired in each scanner BE's supplier below
+    private static Supplier<BlockEntityType<CreativeScannerBlockEntity>> creativeScannerBeTypeRef = () -> {
+        Log.warn(TAG, "creativeScannerBeTypeRef called before initialization — falling back to registry lookup");
+        var rl = ResourceLocation.fromNamespaceAndPath(MODID, "creative_building_scanner");
+        var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
+        return (BlockEntityType<CreativeScannerBlockEntity>) reg.get(rl);
+    };
+    private static Supplier<BlockEntityType<ScannerBlockEntity>> survivalScannerBeTypeRef = () -> {
+        Log.warn(TAG, "survivalScannerBeTypeRef called before initialization — falling back to registry lookup");
         var rl = ResourceLocation.fromNamespaceAndPath(MODID, "building_scanner");
         var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
-        return (BlockEntityType<BuildingScannerBlockEntity>) reg.get(rl);
+        return (BlockEntityType<ScannerBlockEntity>) reg.get(rl);
     };
 
+    public static final DeferredHolder<Block, Block> CREATIVE_BUILDING_SCANNER = BLOCKS.register("creative_building_scanner",
+            () -> (Block) new CreativeScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+                    creativeScannerBeTypeRef));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeScannerBlockEntity>> CREATIVE_BUILDING_SCANNER_BE =
+            BLOCK_ENTITY_TYPES.register("creative_building_scanner",
+                    () -> {
+                        BlockEntityType<CreativeScannerBlockEntity> type = BlockEntityType.Builder.of(
+                                (pos, state) -> new CreativeScannerBlockEntity(creativeScannerBeTypeRef.get(), pos, state),
+                                CREATIVE_BUILDING_SCANNER.get()).build(null);
+                        creativeScannerBeTypeRef = () -> type;
+                        return type;
+                    });
+
+    public static final DeferredItem<Item> CREATIVE_BUILDING_SCANNER_ITEM =
+            ITEMS.register("creative_building_scanner", () -> new BlockItem(CREATIVE_BUILDING_SCANNER.get(), new Item.Properties()));
+
     public static final DeferredHolder<Block, Block> BUILDING_SCANNER = BLOCKS.register("building_scanner",
-            () -> (Block) new BuildingScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
-                    beTypeRef));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BuildingScannerBlockEntity>> BUILDING_SCANNER_BE =
+            () -> (Block) new ScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
+                    survivalScannerBeTypeRef));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ScannerBlockEntity>> BUILDING_SCANNER_BE =
             BLOCK_ENTITY_TYPES.register("building_scanner",
                     () -> {
-                        BlockEntityType<BuildingScannerBlockEntity> type = BlockEntityType.Builder.of(
-                                (pos, state) -> new BuildingScannerBlockEntity(beTypeRef.get(), pos, state),
+                        BlockEntityType<ScannerBlockEntity> type = BlockEntityType.Builder.of(
+                                (pos, state) -> new ScannerBlockEntity(survivalScannerBeTypeRef.get(), pos, state),
                                 BUILDING_SCANNER.get()).build(null);
-                        beTypeRef = () -> type;
+                        survivalScannerBeTypeRef = () -> type;
                         return type;
                     });
 
     public static final DeferredItem<Item> BUILDING_SCANNER_ITEM =
             ITEMS.register("building_scanner", () -> new BlockItem(BUILDING_SCANNER.get(), new Item.Properties()));
+
+    public static final DeferredHolder<Block, Block> INTERACT_SPOT_MARKER = BLOCKS.register("interact_spot_marker",
+            () -> (Block) new com.wsteam.wandscape.building.scanner.InteractSpotMarkerBlock(
+                    BlockBehaviour.Properties.of().strength(2.0f).noOcclusion()));
+    public static final DeferredItem<Item> INTERACT_SPOT_MARKER_ITEM =
+            ITEMS.register("interact_spot_marker", () -> new BlockItem(INTERACT_SPOT_MARKER.get(), new Item.Properties()));
 
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WANDSCAPE_TAB =
@@ -280,8 +352,12 @@ public class Wandscape {
                     .displayItems((params, output) -> {
                         output.accept(WAND.get());
                         output.accept(WANDSCAPE_NPC_EGG.get());
+                        output.accept(EVIL_MAGE_SPAWN_EGG.get());
                         output.accept(TOURIST_SPAWN_EGG.get());
+                        output.accept(CREATIVE_BUILDING_SCANNER_ITEM.get());
                         output.accept(BUILDING_SCANNER_ITEM.get());
+                        output.accept(INTERACT_SPOT_MARKER_ITEM.get());
+                        output.accept(GUIDE_BOOK.get());
                     })
                     .build());
 
@@ -289,6 +365,8 @@ public class Wandscape {
     private final BuildingApiImpl buildingApi = new BuildingApiImpl();
     private final BuildingConfigLoader configLoader = BuildingConfigLoader.getInstance();
     public static final BlueprintConfigLoader BLUEPRINT_CONFIG_LOADER = new BlueprintConfigLoader();
+    public static final com.wsteam.wandscape.road.data.RoadPresetLoader ROAD_PRESET_LOADER =
+            com.wsteam.wandscape.road.data.RoadPresetLoader.getInstance();
     private DecorationBonusSystem decorationBonusSystem;
     private ShopStockManager shopStockManager;
     private WonderEffectApplier wonderEffectApplier;
@@ -305,11 +383,13 @@ public class Wandscape {
         CREATIVE_MODE_TABS.register(modEventBus);
         BLOCKS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
+        WandscapeSounds.SOUNDS.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(HostileTargetingHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.SelfDefenseHandler.class);
-        NeoForge.EVENT_BUS.register(MagicInteractHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.guard.NpcSpellPowerHandler.class);
+        NeoForge.EVENT_BUS.register(com.wsteam.wandscape.npc.internal.NpcDeathHandler.class);
         NeoForge.EVENT_BUS.register(BuildingInteractHandler.class);
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
@@ -322,9 +402,13 @@ public class Wandscape {
         BuildingInteractHandler.setShopStockManager(shopStockManager);
         TouristSpawnSystem.register();
         HotelStayHandler.register();
+        MarkerPreviewManager.register();
         WarehouseNotificationHandler.register();
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        // Keep log verbosity in sync with the config (applies on load and reload)
+        modEventBus.addListener(this::onModConfig);
 
         // Register API implementations
         WandscapeApis.setBuildingApi(buildingApi);
@@ -338,6 +422,7 @@ public class Wandscape {
         // Register config loaders with data loader
         configLoader.registerWith(DATA_LOADER);
         BLUEPRINT_CONFIG_LOADER.registerWith(DATA_LOADER);
+        ROAD_PRESET_LOADER.registerWith(DATA_LOADER);
         WandscapeEngine.setBlueprintConfigLoader(BLUEPRINT_CONFIG_LOADER);
 
         // Production recipe loader
@@ -348,6 +433,10 @@ public class Wandscape {
         WandscapeApis.setWandApi(WAND_API);
         WandscapeApis.setElementApi(ELEMENT_API);
         Log.info(TAG, "Wandscape common setup — wand, element, buildings, npc ready");
+    }
+
+    private void onModConfig(ModConfigEvent event) {
+        Log.setVerbose(Config.DEBUG.get());
     }
 
     private void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
@@ -386,6 +475,15 @@ public class Wandscape {
                         TownHallOpenPacket.TYPE,
                         TownHallOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> TownHallOpenPacket.handleClient(packet))
+                .playToClient(
+                        AltarOpenPacket.TYPE,
+                        AltarOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> AltarOpenPacket.handleClient(packet))
+                .playToServer(
+                        AltarCastRequestPacket.TYPE,
+                        AltarCastRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> AltarCastRequestPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToClient(
                         PotionStationPacket.TYPE,
                         PotionStationPacket.STREAM_CODEC,
@@ -450,6 +548,10 @@ public class Wandscape {
                         ProjectionPlacePacket.STREAM_CODEC,
                         (packet, ctx) -> ProjectionPlacePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToClient(
+                        ProjectionSlotsRefreshPacket.TYPE,
+                        ProjectionSlotsRefreshPacket.STREAM_CODEC,
+                        (packet, ctx) -> ProjectionSlotsRefreshPacket.handleClient(packet))
                 // ── Overview ──
                 .playToServer(
                         OverviewInteractPacket.TYPE,
@@ -477,14 +579,14 @@ public class Wandscape {
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Building Scanner ──
                 .playToServer(
-                        BuildingScannerSyncPacket.TYPE,
-                        BuildingScannerSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingScannerSyncPacket.handleServer(packet,
+                        ScannerSyncPacket.TYPE,
+                        ScannerSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> ScannerSyncPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
-                        BuildingScannerExportPacket.TYPE,
-                        BuildingScannerExportPacket.STREAM_CODEC,
-                        (packet, ctx) -> BuildingScannerExportPacket.handleServer(packet,
+                        ScannerExportPacket.TYPE,
+                        ScannerExportPacket.STREAM_CODEC,
+                        (packet, ctx) -> ScannerExportPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
                         com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,
@@ -523,11 +625,32 @@ public class Wandscape {
                         NpcEquipPacket.STREAM_CODEC,
                         (packet, ctx) -> NpcEquipPacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        NpcStrategyPacket.TYPE,
+                        NpcStrategyPacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcStrategyPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        NpcRenamePacket.TYPE,
+                        NpcRenamePacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcRenamePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Tourist info screen ──
                 .playToClient(
                         TouristDataPacket.TYPE,
                         TouristDataPacket.STREAM_CODEC,
                         (packet, ctx) -> TouristDataPacket.handleClient(packet))
+                // ── Tourist purchase / service bubble ──
+                .playToClient(
+                        com.wsteam.wandscape.tourist.network.TouristBubblePacket.TYPE,
+                        com.wsteam.wandscape.tourist.network.TouristBubblePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.tourist.network.TouristBubblePacket.handleClient(packet))
+                // ── Colony day/night ambient ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ColonyAmbientPacket
+                                .handleClient(packet))
                 // ── Colony name update ──
                 .playToServer(
                         com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket.TYPE,
@@ -555,11 +678,31 @@ public class Wandscape {
                         MagicCircleCastPacket.TYPE,
                         MagicCircleCastPacket.STREAM_CODEC,
                         (packet, ctx) -> MagicCircleCastPacket.handleClient(packet))
+                // ── Particle burst (colored FX) ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.ParticleBurstPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.ParticleBurstPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.ParticleBurstPacket.handleClient(packet))
                 // ── Guide test ──
                 .playToClient(
                         com.wsteam.wandscape.shared.network.GuideTestPacket.TYPE,
                         com.wsteam.wandscape.shared.network.GuideTestPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideTestPacket.handleClient(packet))
+                // ── Guide book (right-click to open tutorial home) ──
+                .playToClient(
+                        GuideBookOpenPacket.TYPE,
+                        GuideBookOpenPacket.STREAM_CODEC,
+                        (packet, ctx) -> GuideBookOpenPacket.handleClient(packet))
+                // ── Guide progress (onboarding persistence) ──
+                .playToClient(
+                        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.TYPE,
+                        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.handleClient(packet))
+                .playToServer(
+                        com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.TYPE,
+                        com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.shared.network.GuideProgressUpdatePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Spline Road Editor ──
                 .playToClient(
                         com.wsteam.wandscape.road.network.SplineEditorEnterPacket.TYPE,
@@ -569,6 +712,7 @@ public class Wandscape {
 
     private void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(WANDSCAPE_NPC.get(), WandscapeNpc.createAttributes().build());
+        event.put(EVIL_MAGE.get(), WandscapeNpc.createAttributes().build());
         event.put(TOURIST.get(), TouristEntity.createAttributes().build());
     }
 
@@ -587,6 +731,11 @@ public class Wandscape {
         var metricsService = ColonyMetricsService.create();
         com.wsteam.wandscape.shared.registry.WandscapeApis.setColonyMetricsApi(metricsService);
         Log.info(TAG, "ColonyMetricsService registered");
+
+        // Register server-authoritative tutorial progress evaluator
+        com.wsteam.wandscape.shared.registry.WandscapeApis.setGuideProgressApi(
+                new com.wsteam.wandscape.engine.service.GuideProgressService());
+        Log.info(TAG, "GuideProgressService registered");
 
         BuildCompleteListener.register();
         DemolishCompleteListener.register();
@@ -640,6 +789,10 @@ public class Wandscape {
             Log.info(TAG, "Task persistence wired — pool has {} active tasks", world.taskPool.size());
         }
 
+        // Chunk load manager — force-loads active building footprints on demand so
+        // colonies keep building/producing while their chunks are unloaded.
+        ChunkLoadManager.get().init(level);
+
         // Road persistence + API
         var roadSaved = RoadSavedData.getOrCreate(level);
         WandscapeEngine.setRoadSavedData(roadSaved);
@@ -664,6 +817,10 @@ public class Wandscape {
         TouristSpawnSystem.setLevelManager(colonyLevelManager);
         Log.info(TAG, "Colony level system wired");
 
+        // Tourist sim — drives unloaded tourists from data shadows.
+        TouristSimSystem.register(level);
+        Log.info(TAG, "Tourist sim system wired");
+
         // Wire manual task publishing for GUI (network layer reads PlayerManualSource from engine)
         if (world != null && world.taskPool != null) {
             PlayerManualSource playerSource = new PlayerManualSource(world.taskPool);
@@ -676,6 +833,8 @@ public class Wandscape {
     public void onServerStopped(ServerStoppedEvent event) {
         Log.info(TAG, "Wandscape server stopped — resetting engine.");
         buildingApi.setLevel(null);
+        ChunkLoadManager.get().reset();
+        TouristSimSystem.reset();
         WandscapeEngine.reset();
         EntityComponentBridge.INSTANCE.clear();
     }
@@ -700,7 +859,6 @@ public class Wandscape {
                 .then(AuditElementsCommand.node())
                 .then(LogFilterCommand.node())
                 .then(FillBuildingCommand.fillNode())
-                .then(ManaCommand.node())
                 .then(NavTestCommand.node())
                 .then(ColonyCommand.node())
                 .then(PublishBlueprintCommand.buildNode())
@@ -710,7 +868,6 @@ public class Wandscape {
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
                 .then(TransportCommand.node())
-                .then(MagicCommand.node())
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())
                 .then(com.wsteam.wandscape.command.SplineEditorCommand.node());
@@ -726,8 +883,14 @@ public class Wandscape {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
+        // Colony ambient: 建筑包围盒+20格内玩家昼夜环境音门控（服务端判断+发包）
+        com.wsteam.wandscape.building.internal.ColonyAmbientTracker.tick(event.getServer());
+
         // Magic cast: 法阵动画结束后生成信标光束（不依赖 ECS）
         MagicCastManager.tick();
+
+        // Altar: 每 tick 推进所有祭坛的魔法冷却（SavedData，按祭坛独立）
+        com.wsteam.wandscape.building.internal.AltarCastHandler.tick(event.getServer().overworld());
 
         var world = WandscapeEngine.getWorld();
         if (world == null) return;
@@ -762,6 +925,17 @@ public class Wandscape {
         var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
         if (selfDefenseExec != null) selfDefenseExec.tick(world);
 
+        // ①g2 Tick altar cast channeling countdowns (altar-only magic channel → effect fire)
+        var altarCastExec = WandscapeEngine.getAltarCastExecutor();
+        if (altarCastExec != null) altarCastExec.tickAll();
+
+        // ①h Tick raid trigger scanner + victory tracker (colonies live in the overworld)
+        var raidLevel = event.getServer().overworld();
+        if (raidLevel != null) {
+            com.wsteam.wandscape.raid.RaidTriggerScanner.INSTANCE.tick(raidLevel);
+            com.wsteam.wandscape.raid.ColonyRaidTracker.INSTANCE.tick(raidLevel);
+        }
+
         // ② Sync MC entity positions → ECS
         EntityComponentBridge.INSTANCE.syncPositions(world);
 
@@ -779,32 +953,6 @@ public class Wandscape {
                     world.getNextEntityId() - 1,
                     world.taskPool != null ? world.taskPool.size() : 0,
                     world.hasPendingAsyncOps() ? 1 : 0);
-
-            // Mana debug: send NPC mana values to the player who enabled debug
-            if (WandscapeEngine.isManaDebug()) {
-                ServerPlayer target = WandscapeEngine.getManaDebugTarget();
-                if (target != null && !target.isRemoved()) {
-                    var manaEntities = world.query(ManaPool.class);
-                    StringBuilder sb = new StringBuilder("[Wandscape Mana] ");
-                    if (manaEntities.isEmpty()) {
-                        sb.append("no entities");
-                    } else {
-                        for (int i = 0; i < manaEntities.size(); i++) {
-                            long id = manaEntities.get(i);
-                            ManaPool pool = world.get(id, ManaPool.class);
-                            if (pool != null) {
-                                if (i > 0) sb.append(" | ");
-                                sb.append(String.format("NPC-%d: %.0f/%d",
-                                        id, pool.current(), pool.max()));
-                            }
-                        }
-                    }
-                    target.sendSystemMessage(Component.literal(sb.toString()));
-                } else {
-                    WandscapeEngine.setManaDebug(false);
-                    WandscapeEngine.setManaDebugTarget(null);
-                }
-            }
         }
     }
 }

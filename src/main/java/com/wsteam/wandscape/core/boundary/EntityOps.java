@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.core.boundary;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.core.types.EffectId;
 import com.wsteam.wandscape.core.types.EntityId;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -14,4 +16,18 @@ public interface EntityOps {
 
     /** Get the position of an external entity. */
     GridPos getPosition(EntityId entity);
+
+    /** Get the current mana of an NPC by ECS entity id (scheduler mana gate). */
+    float getCurrentMana(long npcId);
+
+    /**
+     * Spawn a decoration entity (item frame, painting) from trimmed NBT during
+     * building construction.
+     *
+     * @param pos         the block cell the entity occupies
+     * @param entityType  entity registry id (e.g. "minecraft:item_frame")
+     * @param facing      Direction name (e.g. "north"), empty string keeps the NBT's embedded facing
+     * @param nbtBase64   base64-encoded compressed entity NBT (position-rebased, relative to anchor)
+     */
+    void spawnDecoration(GridPos pos, String entityType, String facing, @Nullable String nbtBase64);
 }

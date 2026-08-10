@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:well_known",
+  "display": {
+    "icon": {"id": "minecraft:nether_star"},
+    "title": {"translate": "advancements.wandscape.famous.title"},
+    "description": {"translate": "advancements.wandscape.famous.description"},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

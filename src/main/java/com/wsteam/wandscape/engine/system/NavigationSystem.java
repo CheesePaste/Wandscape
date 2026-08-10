@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
 import com.wsteam.wandscape.core.component.TaskExecutor;
@@ -12,7 +11,10 @@ import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
+import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
 import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
+import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
@@ -47,6 +49,10 @@ public class NavigationSystem implements System {
     private static final double STUCK_MIN_PROGRESS = 2.0;
     private static final int PATHFIND_TIMEOUT = 200;
     private static final int MAX_REPATH = 5;
+    /** Base cooldown (ticks) between self_teleport casts; divided by SPELL_SPEED. */
+    private static final int TELEPORT_COOLDOWN_TICKS = 300;
+    /** 传送固定魔力消耗。 */
+    private static final int TELEPORT_MANA_COST = 30;
 
     private int tickCounter;
 
@@ -104,7 +110,7 @@ public class NavigationSystem implements System {
 
             switch (nav.mode) {
                 case PATHFINDING -> tickPathfinding(nav, npc, npcId, world);
-                case TELEPORT_WAITING -> tickTeleportWaiting(nav, npc, npcId, world);
+                case TELEPORT_WAITING -> tickTeleportWaiting(nav, npcId, world);
                 case TELEPORT_RITUAL -> { /* ritual in private queue; arrival checked at top */ }
             }
         }
@@ -228,11 +234,9 @@ public class NavigationSystem implements System {
                 t.x() + 0.5, t.y() + 1, t.z() + 0.5, NAV_SPEED);
     }
 
-    // ---- TELEPORT WAITING (mana-gated, for non-zero-cost rituals) ----
+    // ---- TELEPORT WAITING (spell-cooldown-gated, placeholder mode) ----
 
-    private void tickTeleportWaiting(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
-        ManaPool mana = world.get(npcId, ManaPool.class);
-        if (mana == null || mana.current() <= 0) return; // wait for mana regen
+    private void tickTeleportWaiting(NavigationState nav, long npcId, World world) {
         switchToRitualTeleport(nav, npcId, world);
     }
 
@@ -247,10 +251,28 @@ public class NavigationSystem implements System {
      * to complete before advancing. No packages are suspended or enqueued —
      * the current package stays in place and continues from its current step
      * once the NPC arrives at the target.
+     *
+     * <p>Teleport is a spell: gated by a per-NPC cooldown (base
+     * {@code TELEPORT_COOLDOWN_TICKS}, shortened by SPELL_SPEED). On cooldown,
+     * fall back to walking rather than standing.
      */
     private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         GridPos target = nav.target;
+
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        // 门控：施法互斥锁 + 传送独立 CD + 固定魔力（magic_spells/teleport.json 数据驱动，缺失回退常量），
+        // 任一不满足回退走路（而不是站等）。锁时长 = self_teleport 引导 tick（与 WandscapeRitualOps 引导时长对齐，防止引导期间并发施法）。
+        MagicDef tp = SpellbookLoader.getSpec("teleport");
+        int tpCd = tp != null ? tp.baseCooldown() : TELEPORT_COOLDOWN_TICKS;
+        int tpMana = tp != null ? tp.manaCost() : TELEPORT_MANA_COST;
+        if (npc != null && !npc.tryCastSpell("teleport", tpCd, tpMana,
+                WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT))) {
+            Log.info(TAG, "[NavSys] NPC {} — teleport gated (lock/CD/mana), falling back to walking", npcId);
+            nav.mode = NavigationState.Mode.PATHFINDING;
+            nav.startTick = 0;
+            return;
+        }
 
         // ── Clear the failed nav future from TaskExecutor ──
         if (exec != null) {

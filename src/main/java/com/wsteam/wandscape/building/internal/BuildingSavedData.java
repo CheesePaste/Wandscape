@@ -60,6 +60,7 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_COLONY = "colony";
     private static final String TAG_SHUTDOWN = "shutdown";
     private static final String TAG_INTACT = "intact";
+    private static final String TAG_EVER_COMPLETED = "ever_completed";
     private static final String TAG_QUEUE = "queue";
     private static final String TAG_CURRENT_TASK = "current_task";
     private static final String TAG_COMFORT = "comfort";
@@ -163,13 +164,9 @@ public class BuildingSavedData extends SavedData {
         UUID fallbackId = getBuildingIdAt(pos);
         if (fallbackId != null) {
             BuildingState state = buildings.get(fallbackId);
-            Log.debug(TAG, "[Debug] getBuildingAt fallback hit: pos={} buildingId={} type={}",
-                    pos, fallbackId.toString().substring(0, 8), state != null ? state.getBuildingTypeId() : "?");
             return state;
         }
 
-        Log.debug(TAG, "[Debug] getBuildingAt miss: pos={} posIndexSize={} chunkIndexSize={}",
-                pos, posIndex.size(), chunkIndex.size());
         return null;
     }
 
@@ -221,10 +218,9 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Computes the tourist interaction target position for tourist AI.
-     * Iterates {@code tourist_interact_aabb} from building config if defined,
-     * spiral-scanning each zone for walkable ground.
-     * Falls back to spiral scan inside the building's bounding box.
+     * Computes the tourist interaction target position for tourist AI:
+     * 第一个 interact spot 的世界坐标（anchor + 旋转偏移）。
+     * 0-spot 建筑对游客无效（无 spiral-scan 兜底）→ 返回 null。
      *
      * @param buildingId the building to target
      * @param level      the world level (for block-state queries)
@@ -236,10 +232,9 @@ public class BuildingSavedData extends SavedData {
     }
 
     /**
-     * Computes the precise tourist interaction position within the building.
-     * Iterates {@code tourist_interact_aabb} from building config if defined,
-     * spiral-scanning each zone for walkable ground.
-     * Falls back to spiral scan inside the building's bounding box.
+     * Computes the precise tourist interaction position: 第一个 interact spot 的世界坐标
+     * （anchor + 旋转偏移）。寻路目标 = 一个 spot 点。
+     * 0-spot 建筑对游客无效（无 spiral-scan 兜底，用户拍板）→ 返回 null。
      */
     @Nullable
     public BlockPos getTouristInteractPoint(UUID buildingId, Level level) {
@@ -247,26 +242,13 @@ public class BuildingSavedData extends SavedData {
         if (state == null || state.isShutdown() || !state.isStructureIntact()) return null;
 
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
-
-        // 1. Iterate tourist_interact_aabb entries: for each, compute world-space AABB and spiral-scan
-        if (config != null && !config.touristInteractAabb().isEmpty()) {
-            BlockPos anchor = state.getAnchor();
-            int rotationSteps = state.getRotationSteps();
-            for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
-                BuildingConfig.BoundaryBox rotatedZone = com.wsteam.wandscape.projection.BuildingRotation
-                        .rotateBoundary(zone, rotationSteps);
-                BoundingBox worldZone = computeWorldBox(anchor, rotatedZone);
-                BlockPos result = spiralScanWalkable(worldZone, level, /* inside= */ true);
-                if (result != null) return result;
-            }
+        if (config == null || config.interactSpots() == null || config.interactSpots().isEmpty()) {
+            return null;
         }
-
-        // 2. Fallback: spiral scan inside building boundary
-        BoundingBox bounds = state.getBounds();
-        BlockPos spiralResult = spiralScanWalkable(bounds, level, /* inside= */ true);
-        if (spiralResult != null) return spiralResult;
-
-        return state.getAnchor();
+        BuildingConfig.InteractSpot spot = config.interactSpots().get(0);
+        BlockOffset rotated = com.wsteam.wandscape.projection.BuildingRotation
+                .rotateOffset(spot.pos(), state.getRotationSteps());
+        return state.getAnchor().offset(rotated.x(), rotated.y(), rotated.z());
     }
 
     /**
@@ -323,45 +305,6 @@ public class BuildingSavedData extends SavedData {
         if (outsideResult != null) return outsideResult;
 
         return anchor;
-    }
-
-    /**
-     * Spiral-scans for walkable ground (air above solid) within the given bounding box.
-     * @param inside if true, only returns positions inside bounds; if false, only outside
-     */
-    @Nullable
-    private BlockPos spiralScanWalkable(BoundingBox bounds, Level level, boolean inside) {
-        int bx = bounds.maxX() - bounds.minX();
-        int bz = bounds.maxZ() - bounds.minZ();
-        if (bx < 1) bx = 1;
-        if (bz < 1) bz = 1;
-
-        int cx = (bounds.minX() + bounds.maxX()) / 2;
-        int cz = (bounds.minZ() + bounds.maxZ()) / 2;
-        int maxR = Math.max(bx, bz) + 1;
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
-
-        for (int r = 0; r <= maxR; r++) {
-            for (int dx = -r; dx <= r; dx++) {
-                for (int dz = -r; dz <= r; dz++) {
-                    if (Math.abs(dx) != r && Math.abs(dz) != r) continue;
-                    int x = cx + dx;
-                    int z = cz + dz;
-                    boolean inBounds = x >= bounds.minX() && x <= bounds.maxX()
-                            && z >= bounds.minZ() && z <= bounds.maxZ();
-                    if (inside != inBounds) continue;
-
-                    for (int y = bounds.maxY(); y >= bounds.minY(); y--) {
-                        mp.set(x, y, z);
-                        if (level.getBlockState(mp).isAir()
-                                && level.getBlockState(mp.below()).isSolid()) {
-                            return mp.immutable();
-                        }
-                    }
-                }
-            }
-        }
-        return null;
     }
 
     /**
@@ -483,9 +426,6 @@ public class BuildingSavedData extends SavedData {
         });
 
         setDirty();
-        Log.debug(TAG, "registered building {} type={} at {} patternSize={} posIndexSize={}",
-                state.getBuildingId().toString().substring(0, 8),
-                state.getBuildingTypeId(), state.getAnchor(), newPattern.size(), posIndex.size());
     }
 
     /**
@@ -544,9 +484,6 @@ public class BuildingSavedData extends SavedData {
         }
 
         setDirty();
-        Log.debug(TAG, "unregistered building {} type={} at {}",
-                buildingId.toString().substring(0, 8),
-                state.getBuildingTypeId(), state.getAnchor());
         return state;
     }
 
@@ -571,6 +508,7 @@ public class BuildingSavedData extends SavedData {
             }
             entry.putBoolean(TAG_SHUTDOWN, state.isShutdown());
             entry.putBoolean(TAG_INTACT, state.isStructureIntact());
+            entry.putBoolean(TAG_EVER_COMPLETED, state.hasEverCompleted());
             entry.putInt(TAG_COMFORT, state.getComfort());
             entry.putInt(TAG_MAGIC, state.getMagic());
             entry.putInt(TAG_WONDER, state.getWonder());
@@ -686,6 +624,11 @@ public class BuildingSavedData extends SavedData {
             }
             state.setShutdown(entry.getBoolean(TAG_SHUTDOWN));
             state.setStructureIntact(entry.getBoolean(TAG_INTACT));
+            // Migration: older saves lack the flag; a currently-intact building
+            // was necessarily built, so infer it completed construction.
+            state.setHasEverCompleted(entry.contains(TAG_EVER_COMPLETED)
+                    ? entry.getBoolean(TAG_EVER_COMPLETED)
+                    : state.isStructureIntact());
             if (entry.hasUUID(TAG_CURRENT_TASK)) {
                 state.setCurrentTaskId(entry.getUUID(TAG_CURRENT_TASK));
             }

@@ -1,9 +1,9 @@
 {
   "item": "minecraft:crossbow",
   "build_cost": {
+    "dark": 4,
     "wood": 8,
-    "metal": 96,
-    "dark": 4
+    "metal": 96
   },
   "decompose_yield": {},
   "decomposable": false,

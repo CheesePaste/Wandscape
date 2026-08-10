@@ -1,9 +1,9 @@
 {
   "block": "minecraft:green_bed",
   "build_cost": {
+    "dark": 24,
     "wood": 38,
-    "wind": 32,
-    "dark": 24
+    "wind": 32
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.shared.data;
 
+import java.util.Map;
+
 import com.google.gson.annotations.SerializedName;
 public enum ElementType {
     @SerializedName("earth") EARTH("earth"),
@@ -25,5 +27,13 @@ public enum ElementType {
             if (type.id.equals(id)) return type;
         }
         throw new IllegalArgumentException("Unknown element type: " + id);
+    }
+
+    /** 是否每种元素存量都 ≥ cost（缺元素按 0 记）。纯逻辑，可单测。 */
+    public static boolean allEnough(Map<ElementType, Long> balances, long cost) {
+        for (ElementType t : values()) {
+            if (balances.getOrDefault(t, 0L) < cost) return false;
+        }
+        return true;
     }
 }

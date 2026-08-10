@@ -7,7 +7,7 @@ import com.wsteam.wandscape.shared.log.Log;
 /**
  * Subscribes to {@link NarrativeEventTriggered} and records per-colony statistics.
  *
- * <p>Skeleton — stats tracking (visit counts, satisfaction trends, element throughput)
+ * <p>Skeleton — stats tracking (visit counts, bar-fill trends, element throughput)
  * will be implemented in a future phase.
  */
 public final class StatsService {
@@ -27,6 +27,5 @@ public final class StatsService {
 
     private static void onEvent(NarrativeEventTriggered event) {
         // TODO: record stats (type counts, game-time distribution, etc.)
-        Log.debug(TAG, "stat event: %s", event);
     }
 }

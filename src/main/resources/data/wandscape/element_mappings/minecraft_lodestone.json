@@ -1,7 +1,7 @@
 {
   "block": "minecraft:lodestone",
   "build_cost": {
-    "earth": 8,
+    "earth": 16,
     "metal": 33792,
     "fire": 16384
   },

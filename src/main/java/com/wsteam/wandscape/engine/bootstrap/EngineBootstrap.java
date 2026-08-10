@@ -1,10 +1,8 @@
 package com.wsteam.wandscape.engine.bootstrap;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.CoreBootstrap;
@@ -24,7 +22,6 @@ import com.wsteam.wandscape.task.source.WorkbenchSource;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintInterpreter;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
-import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.boundary.AsyncTransformExecutor;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
@@ -45,14 +42,8 @@ import com.wsteam.wandscape.guard.GuardBlueprints;
 import com.wsteam.wandscape.guard.GuardTaskSource;
 import com.wsteam.wandscape.guard.executor.GuardAttackExecutor;
 import com.wsteam.wandscape.guard.executor.SelfDefenseExecutor;
-import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.building.executor.AltarCastExecutor;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
-
-import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -169,6 +160,13 @@ public final class EngineBootstrap {
         WandscapeEngine.setSelfDefenseExecutor(selfDefenseExec);
         Log.info(TAG, "  SelfDefenseExecutor registered");
 
+        // 7c. Register altar cast executor (NPC casts an altar-only magic at the altar;
+        //     channeling countdown driven by onServerTick tickAll)
+        AltarCastExecutor altarCastExec = new AltarCastExecutor();
+        world.opExecutors.register(altarCastExec);
+        WandscapeEngine.setAltarCastExecutor(altarCastExec);
+        Log.info(TAG, "  AltarCastExecutor registered");
+
         // 8. Register NavigationSystem (drives all NPC movement via NavigationState)
         NavigationSystem navSystem = new NavigationSystem();
         world.addSystem(navSystem);
@@ -180,7 +178,8 @@ public final class EngineBootstrap {
 
         // 9. Override TransformOp executor with async version (V2.5 gating demo)
         //    Set to 0 for sync (no gating), >0 for N-tick delay per block.
-        int asyncDelay = 1; // 5 MC tick delay per TransformOp
+        //    保持 1 tick：建造即时感更好（WORK_SPEED 作用于采集/合成的大 channelTicks）。
+        int asyncDelay = 1;
         if (asyncDelay > 0) {
             AsyncTransformExecutor asyncExec = new AsyncTransformExecutor(asyncDelay);
             world.opExecutors.register(asyncExec); // overwrites default TransformExecutor
@@ -225,80 +224,13 @@ public final class EngineBootstrap {
     }
 
     /**
-     * Build the engine-layer {@link ResourceShortageHandler} that checks
-     * synthesize recipes before falling back to gather tasks.
+     * Build the engine-layer {@link ResourceShortageHandler}. Delegates to
+     * {@link ResourceSupplySystem#enqueueSynthesize} — enqueues a synthesize
+     * work item at a workstation when a recipe exists, else falls through to
+     * the default gather behavior (driven by {@link ResourceSupplySystem}).
      */
     private static ResourceShortageHandler createShortageHandler(World world) {
-        return (resource, amount, location) -> {
-            // 1. Check if a synthesize recipe exists for this resource
-            var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
-            if (recipes == null) return false;
-            String recipeKey = stripMcPrefix(resource.id());
-            var recipe = recipes.getSynthesizeRecipe(recipeKey);
-            if (recipe == null) return false;
-
-            // 2. Check if a synthesize task for this recipe is already in-flight
-            if (isSynthesizeInFlight(recipeKey, world)) return false;
-
-            // 3. Find a crafting station
-            BuildingApi api;
-            try {
-                api = WandscapeApis.getBuildingApi();
-            } catch (IllegalStateException e) {
-                return false;
-            }
-            List<UUID> stations = api.getBuildingsByCategory(null, "crafting_station");
-            if (stations.isEmpty()) return false;
-
-            UUID stationId = stations.get(0);
-            var building = api.getBuilding(stationId);
-            if (building == null) return false;
-            BlockPos stationPos = building.getPosition();
-
-            // 4. Enqueue synthesize work
-            Map<String, JsonElement> params = new LinkedHashMap<>();
-            params.put("anchor", posToJsonArray(stationPos));
-            params.put("recipe_id", new JsonPrimitive(recipeKey));
-            params.put("count", new JsonPrimitive(amount));
-            params.put("channel_ticks", new JsonPrimitive(200));
-            params.put("mana_cost", new JsonPrimitive(5));
-
-            WorkItem work = new WorkItem("production:synthesize", params, 40);
-            api.enqueueWork(stationId, work);
-
-            Log.info(TAG, "[EngineBootstrap] shortage {} x{} → enqueued synthesize:{} at station {}",
-                    resource, amount, recipeKey, stationId.toString().substring(0, 8));
-            return true;
-        };
-    }
-
-    /** Check if a synthesize task for the given recipe is already active in the pool. */
-    private static boolean isSynthesizeInFlight(String recipeId, World world) {
-        for (var t : world.taskPool.all()) {
-            if (t.state == TaskState.COMPLETED) continue;
-            if (!"production:synthesize".equals(t.blueprintId)) continue;
-            var recipeParam = t.taskParams.get("recipe_id");
-            if (recipeParam != null && recipeParam.isJsonPrimitive()
-                    && recipeId.equals(recipeParam.getAsString())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static JsonArray posToJsonArray(BlockPos pos) {
-        JsonArray arr = new JsonArray();
-        arr.add(pos.getX());
-        arr.add(pos.getY());
-        arr.add(pos.getZ());
-        return arr;
-    }
-
-    /** Strip "minecraft:" prefix from a resource ID for recipe key matching. */
-    private static String stripMcPrefix(String id) {
-        if (id.startsWith("minecraft:")) {
-            return id.substring("minecraft:".length());
-        }
-        return id;
+        return (resource, amount, location) ->
+                ResourceSupplySystem.enqueueSynthesize(resource.id(), amount, world);
     }
 }

@@ -10,15 +10,19 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
 import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
 import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -124,8 +128,6 @@ public class BuildingApiImpl implements BuildingApi {
                     .computeIfAbsent(colonyId, k -> new ConcurrentHashMap<>())
                     .merge(state.getBuildingTypeId(), 1, Integer::sum);
         }
-        Log.debug(TAG, "registered building {} type={} at {}",
-                state.getBuildingId(), state.getBuildingTypeId(), state.getAnchor());
 
         // Notify downstream systems (e.g. tourist spawner, colony evaluation)
         // so they react to building registration regardless of whether an NPC
@@ -165,6 +167,8 @@ public class BuildingApiImpl implements BuildingApi {
         // Clear shop stock too — otherwise a demolished shop still sells goods.
         sd.removeShopData(state.getBuildingId());
         sd.unregister(state.getBuildingId());
+        // Notify engine services (e.g. ChunkLoadManager) to release the footprint lease.
+        NeoForge.EVENT_BUS.post(new BuildingRemovedEvent(state.getBuildingId(), state.getColonyId()));
     }
 
     // ---- Shutdown/Restart ----
@@ -195,6 +199,12 @@ public class BuildingApiImpl implements BuildingApi {
                 // Apply category-specific graded shutdown penalties
                 applyShutdownPenalties(sd, state, cid, category);
                 NeoForge.EVENT_BUS.post(new BuildingShutdownEvent(buildingId, cid, reason));
+
+                // ── 关停：屋顶灰烟 ──
+                if (serverLevel instanceof ServerLevel srv) {
+                    ParticleService.burstAt(srv, ParticleTypes.LARGE_SMOKE,
+                            ParticleService.boundsCenterAbove(state.getBounds(), 0), 20, 1.2, 0.05);
+                }
             }
 
             sd.setDirty();
@@ -223,6 +233,12 @@ public class BuildingApiImpl implements BuildingApi {
                     sd.addBuildingContribution(cid, state.getBuildingTypeId());
                 }
                 NeoForge.EVENT_BUS.post(new BuildingRestartedEvent(buildingId, cid));
+
+                // ── 重启：上升星光 ──
+                if (serverLevel instanceof ServerLevel srv) {
+                    ParticleService.burstAt(srv, ParticleTypes.END_ROD,
+                            ParticleService.boundsCenterAbove(state.getBounds(), 0), 15, 1.0, 0.08);
+                }
             }
             sd.setDirty();
         }
@@ -237,7 +253,7 @@ public class BuildingApiImpl implements BuildingApi {
     private void applyShutdownPenalties(BuildingSavedData sd, BuildingState state,
                                         UUID colonyId, String category) {
         switch (category) {
-            case "shop", "basic", "government", "storage", "tavern":
+            case "shop", "basic", "government", "storage", "tavern", "relax", "atm":
                 sd.removeBuildingContribution(colonyId, state.getBuildingTypeId());
                 Log.info(TAG, "[Shutdown] {} '{}': contribution zeroed",
                         category, state.getBuildingId().toString().substring(0, 8));
@@ -307,7 +323,6 @@ public class BuildingApiImpl implements BuildingApi {
         if (state == null) return;
 
         if (state.isDemolishing()) {
-            Log.debug(TAG, "demolishBuilding: {} already being demolished", buildingId);
             return;
         }
 
@@ -376,32 +391,19 @@ public class BuildingApiImpl implements BuildingApi {
         for (BuildingState state : sd.getAllBuildings()) {
             String id8 = state.getBuildingId().toString().substring(0, 8);
             if (colonyId != null && !java.util.Objects.equals(colonyId, state.getColonyId())) {
-                Log.debug(TAG, "[BldgAPI] skip {} colony mismatch: filter={} state={}",
-                        id8,
-                        colonyId != null ? colonyId.toString().substring(0, 8) : "null",
-                        state.getColonyId() != null ? state.getColonyId().toString().substring(0, 8) : "null");
                 continue;
             }
             if (currentTasks.containsKey(state.getBuildingId())) {
-                Log.debug(TAG, "[BldgAPI] skip {} has active task", id8);
                 continue;
             }
             if (!state.hasWork()) {
-                Log.debug(TAG, "[BldgAPI] skip {} queue={} shutdown={} noWork=true",
-                        id8, state.getTaskQueue().size(), state.isShutdown());
                 continue;
             }
-            if (!serverLevel.isLoaded(state.getAnchor())) {
-                Log.debug(TAG, "[BldgAPI] skip {} anchor={} not loaded",
-                        id8, state.getAnchor());
-                continue;
-            }
+            // No longer skip unloaded anchors: BuildingTaskSource force-loads the
+            // building's footprint before dispatching, so the colony keeps building
+            // even while its chunks are unloaded.
             result.add(state.getBuildingId());
         }
-        Log.debug(TAG, "[BldgAPI] getBuildingsWithPendingWork(colonyId={}) → {} buildings: {}",
-                colonyId != null ? colonyId.toString().substring(0, 8) : "null",
-                result.size(),
-                result.stream().map(u -> u.toString().substring(0, 8)).toList());
         return result;
     }
 
@@ -489,9 +491,6 @@ public class BuildingApiImpl implements BuildingApi {
             result.add(state.getBuildingId());
         }
 
-        Log.debug(TAG, "[BldgAPI] getBuildingsByCategory(colonyId={} cat={}) → {} / {} total (skip_colony={} skip_cat={})",
-                colonyId != null ? colonyId.toString().substring(0, 8) : "null",
-                category, result.size(), total, skippedColony, skippedCat);
         return result;
     }
 
@@ -553,10 +552,6 @@ public class BuildingApiImpl implements BuildingApi {
         Deque<WorkItem> queue = state.getTaskQueue();
         if (index < 0 || index >= queue.size()) {
             Log.warn(TAG, "removeFromQueue: index {} out of range (size={}) for {}", index, queue.size(), buildingId);
-            return false;
-        }
-        if (index == 0) {
-            Log.warn(TAG, "removeFromQueue: refused to remove index 0 (current task) at {}", buildingId);
             return false;
         }
 
@@ -685,6 +680,12 @@ public class BuildingApiImpl implements BuildingApi {
         return PlacementResult.ok(buildingId, firstFree);
     }
 
+    @Override
+    public boolean isFirstFreeClaimed(UUID colonyId, String buildingTypeId) {
+        BuildingSavedData sd = getSavedData();
+        return sd != null && colonyId != null && sd.isFirstFreeClaimed(colonyId, buildingTypeId);
+    }
+
     // ---- Helpers ----
 
     @Override
@@ -716,7 +717,6 @@ public class BuildingApiImpl implements BuildingApi {
                 }
             }
         }
-        Log.debug(TAG, "[BldgAPI] findBeds({}) → {}/{} blocks in boundary", buildingId, found, total);
         return beds;
     }
 
@@ -759,7 +759,6 @@ public class BuildingApiImpl implements BuildingApi {
                 }
             }
         }
-        Log.debug(TAG, "[BldgAPI] sampleWalkableGround({}) → {} samples", buildingId, result.size());
         return result;
     }
 

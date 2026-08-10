@@ -33,6 +33,7 @@ public final class DefaultOpExecutors {
     /** Register all default executors and condition evaluators. */
     public static void registerAll(OpExecutorRegistry registry) {
         registry.register(new TransformExecutor());
+        registry.register(new SpawnDecorationExecutor());
         registry.register(new BlockInteractExecutor());
         registry.register(new EntityInteractExecutor());
         registry.register(new RitualExecutor());
@@ -68,6 +69,23 @@ public final class DefaultOpExecutors {
             if (blockOps != null) {
                 blockOps.setBlock(op.target(), op.to());
                 blockOps.setBlockEntityData(op.target(), op.blockNbtBase64());
+            }
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    /**
+     * Spawn a decoration entity (item frame / painting) from trimmed NBT.
+     * Sync — runs on the server thread at op execution.
+     */
+    static class SpawnDecorationExecutor implements OpExecutor<AtomicOp.SpawnDecorationOp> {
+        @Override public Class<AtomicOp.SpawnDecorationOp> opType() { return AtomicOp.SpawnDecorationOp.class; }
+
+        @Override
+        public CompletableFuture<Void> execute(AtomicOp.SpawnDecorationOp op, World world, long npcId) {
+            EntityOps entityOps = world.entityOps;
+            if (entityOps != null) {
+                entityOps.spawnDecoration(op.target(), op.entityType(), op.facing(), op.nbtBase64());
             }
             return CompletableFuture.completedFuture(null);
         }

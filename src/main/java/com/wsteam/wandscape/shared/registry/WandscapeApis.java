@@ -10,7 +10,6 @@ public final class WandscapeApis {
     private static HouseApi houseApi;
     private static TavernApi tavernApi;
     private static ColonyApi colonyApi;
-    private static ManaPoolApi manaPoolApi;
     private static RoadApi roadApi;
     private static TouristApi touristApi;
     private static ColonyMetricsApi colonyMetricsApi;
@@ -41,12 +40,16 @@ public final class WandscapeApis {
         if (npcApi == null) throw new IllegalStateException("Module NpcSystem not loaded");
         return npcApi;
     }
+    @javax.annotation.Nullable
+    public static NpcApi getNpcApiSilently() { return npcApi; }
     public static void setNpcApi(NpcApi api) { npcApi = api; }
 
     public static BuildingApi getBuildingApi() {
         if (buildingApi == null) throw new IllegalStateException("Module BuildingCore not loaded");
         return buildingApi;
     }
+    @javax.annotation.Nullable
+    public static BuildingApi getBuildingApiSilently() { return buildingApi; }
     public static void setBuildingApi(BuildingApi api) { buildingApi = api; }
 
     public static HouseApi getHouseApi() {
@@ -69,12 +72,6 @@ public final class WandscapeApis {
     public static ColonyApi getColonyApiSilently() { return colonyApi; }
     public static void setColonyApi(ColonyApi api) { colonyApi = api; }
 
-    public static ManaPoolApi getManaPoolApi() {
-        if (manaPoolApi == null) throw new IllegalStateException("Module HousingManaPool not loaded");
-        return manaPoolApi;
-    }
-    public static void setManaPoolApi(ManaPoolApi api) { manaPoolApi = api; }
-
     public static RoadApi getRoadApi() {
         if (roadApi == null) throw new IllegalStateException("Module RoadSystem not loaded");
         return roadApi;
@@ -96,4 +93,18 @@ public final class WandscapeApis {
     @javax.annotation.Nullable
     public static ColonyMetricsApi getColonyMetricsApiSilently() { return colonyMetricsApi; }
     public static void setColonyMetricsApi(ColonyMetricsApi api) { colonyMetricsApi = api; }
+
+    private static GuideProgressApi guideProgressApi;
+    @javax.annotation.Nullable
+    public static GuideProgressApi getGuideProgressApiSilently() { return guideProgressApi; }
+    public static void setGuideProgressApi(GuideProgressApi api) { guideProgressApi = api; }
+
+    private static SpellcastingApi spellcastingApi;
+    public static SpellcastingApi getSpellcastingApi() {
+        if (spellcastingApi == null) throw new IllegalStateException("SpellcastingApi not loaded");
+        return spellcastingApi;
+    }
+    @javax.annotation.Nullable
+    public static SpellcastingApi getSpellcastingApiSilently() { return spellcastingApi; }
+    public static void setSpellcastingApi(SpellcastingApi api) { spellcastingApi = api; }
 }

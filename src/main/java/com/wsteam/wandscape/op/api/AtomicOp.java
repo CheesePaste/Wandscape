@@ -18,15 +18,14 @@ public sealed interface AtomicOp
                 AtomicOp.BlockInteractOp,
                 AtomicOp.EntityInteractOp,
                 AtomicOp.RitualOp,
+                AtomicOp.AltarCastOp,
                 AtomicOp.ResourceRequestOp,
                 AtomicOp.EmitEventOp,
                 AtomicOp.IfConditionOp,
                 AtomicOp.ParallelOp,
                 AtomicOp.AttackMonsterOp,
-                AtomicOp.SelfDefenseOp {
-
-    /** Base mana cost for this operation (before wand efficiency). */
-    float baseManaCost();
+                AtomicOp.SelfDefenseOp,
+                AtomicOp.SpawnDecorationOp {
 
     /**
      * The world position this operation acts on, or {@code null} if positionless
@@ -77,11 +76,6 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return 0.2f;
-        }
-
-        @Override
         public GridPos target() {
             return target;
         }
@@ -90,18 +84,12 @@ public sealed interface AtomicOp
     /**
      * Interact with a block — sync (toggle/activate/open_gui) or async (gather/decompose/synthesize).
      * Async actions use channelTicks for timing and params for action-specific data.
-     * Mana cost and channelTicks are configurable from the blueprint (unlike RitualOp).
+     * channelTicks is configurable from the blueprint (unlike RitualOp).
      */
     record BlockInteractOp(GridPos target, InteractAction action,
-                           Map<String, String> params, int channelTicks,
-                           float manaCost) implements AtomicOp {
+                           Map<String, String> params, int channelTicks) implements AtomicOp {
         public BlockInteractOp {
             if (params == null) params = Collections.emptyMap();
-        }
-
-        @Override
-        public float baseManaCost() {
-            return manaCost;
         }
 
         @Override
@@ -113,11 +101,6 @@ public sealed interface AtomicOp
     /** Apply an effect to a non-NPC entity. */
     record EntityInteractOp(EntityId entityId, EffectId effect, int strength, int duration) implements AtomicOp {
         @Override
-        public float baseManaCost() {
-            return 1.0f;
-        }
-
-        @Override
         public GridPos target() {
             return null; // targets an entity by ID, not a grid position
         }
@@ -126,20 +109,14 @@ public sealed interface AtomicOp
     /**
      * Guard combat: cast a magic circle + beam at the nearest hostile within a defended
      * building zone. Positionless — the caster does NOT walk; the executor re-scans the
-     * zone each cycle and casts at whatever it can see.
+     * zone each cycle and casts at whatever it can see. 施法视觉（法阵/颜色）由 beam
+     * 魔法的 MagicDef 定义，不随任务参数传递。
      *
      * @param attackRange  horizontal X/Z expansion where monsters are attacked (Y unchanged)
      * @param releaseRange horizontal X/Z expansion; the guard task completes only when no
      *                     monster remains inside it (hysteresis, >= attackRange)
-     * @param circleId     magic circle spec id for the cast visual
-     * @param color        beam color (ARGB)
      */
-    record AttackMonsterOp(int attackRange, int releaseRange, String circleId, int color) implements AtomicOp {
-        @Override
-        public float baseManaCost() {
-            return 0f; // guard casts are mana-free initially (M6 knob later)
-        }
-
+    record AttackMonsterOp(int attackRange, int releaseRange) implements AtomicOp {
         @Override
         public GridPos target() {
             return null; // no stance / no navigation — cast from current position
@@ -152,17 +129,11 @@ public sealed interface AtomicOp
      * NPC's private task queue, preempting the current task and resuming after.
      * Positionless — the caster does NOT walk; the executor re-scans around the NPC
      * each cycle and prioritizes a hated attacker (a non-player that hurt the NPC).
+     * 施法视觉（法阵/颜色）由 beam 魔法的 MagicDef 定义，不随任务参数传递。
      *
      * @param radius   spherical distance around the NPC where hostile mobs are attacked
-     * @param circleId magic circle spec id for the cast visual
-     * @param color    beam color (ARGB)
      */
-    record SelfDefenseOp(int radius, String circleId, int color) implements AtomicOp {
-        @Override
-        public float baseManaCost() {
-            return 0f; // self-defense casts are mana-free initially (M6 knob later)
-        }
-
+    record SelfDefenseOp(int radius) implements AtomicOp {
         @Override
         public GridPos target() {
             return null; // no stance / no navigation — cast from current position
@@ -177,15 +148,8 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return switch (ritual.id()) {
-                case "self_teleport", "item_teleport", "player_summon" -> 0;
-                case "warding" -> 15f;
-                case "group_vigor" -> 20f;
-                case "rain_call", "clear_weather" -> 30f;
-                case "portal_gate" -> 45f;
-                default -> 15f;
-            };
+        public GridPos target() {
+            return target;
         }
 
         /** Channeling duration in ticks (0 = instant). Hardcoded per ritual type. */
@@ -198,6 +162,22 @@ public sealed interface AtomicOp
                 case "portal_gate" -> 1800;
                 default -> 0;
             };
+        }
+    }
+
+    /**
+     * 祭坛施法：NPC 走到祭坛旁（target = 祭坛中心），引导 {@code duration} tick 后释放魔法效果。
+     * 蓝耗扣在**接取该任务的 NPC** 身上；冷却按祭坛（params["altar"] = building UUID）独立存放
+     * （AltarCastState），与 NPC 自身每魔法 CD 解耦。
+     *
+     * @param target  祭坛包围盒中心（stance/寻路锚点）
+     * @param magicId 要施放的魔法 id（MagicDef，须 altarOnly）
+     * @param params  altar=<buildingId>、duration、mana_cost（调度器分派门槛读 mana_cost）
+     */
+    record AltarCastOp(GridPos target, String magicId,
+                       Map<String, String> params) implements AtomicOp {
+        public AltarCastOp {
+            if (params == null) params = Collections.emptyMap();
         }
 
         @Override
@@ -228,11 +208,6 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return 0.0f; // Teleportation cost handled by the ritual inserted into private queue
-        }
-
-        @Override
         public GridPos target() {
             return null; // warehouse request, no world position
         }
@@ -246,11 +221,6 @@ public sealed interface AtomicOp
     record EmitEventOp(String eventName, Map<String, String> templateParams) implements AtomicOp {
         public EmitEventOp {
             if (templateParams == null) templateParams = Collections.emptyMap();
-        }
-
-        @Override
-        public float baseManaCost() {
-            return 0;
         }
 
         @Override
@@ -279,13 +249,24 @@ public sealed interface AtomicOp
         }
 
         @Override
-        public float baseManaCost() {
-            return 0;
-        }
-
-        @Override
         public GridPos target() {
             return null; // conditional logic, no world position
+        }
+    }
+
+    /**
+     * Spawn a decoration entity (item frame, painting) during building construction.
+     * The entity is rebuilt from trimmed NBT at the target block cell.
+     *
+     * @param entityType entity registry id (e.g. "minecraft:item_frame")
+     * @param facing     Direction name (e.g. "north"), may be empty to keep NBT's embedded facing
+     * @param nbtBase64  base64-encoded compressed entity NBT (position-rebased, relative to anchor)
+     */
+    record SpawnDecorationOp(GridPos target, String entityType, String facing,
+                             @Nullable String nbtBase64) implements AtomicOp {
+        @Override
+        public GridPos target() {
+            return target;
         }
     }
 
@@ -303,11 +284,6 @@ public sealed interface AtomicOp
     record ParallelOp(List<AtomicOp> steps) implements AtomicOp {
         public ParallelOp {
             steps = List.copyOf(steps);
-        }
-
-        @Override
-        public float baseManaCost() {
-            return 0; // each sub-op carries its own mana cost
         }
 
         @Override

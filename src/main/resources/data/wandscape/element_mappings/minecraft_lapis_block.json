@@ -1,8 +1,8 @@
 {
   "block": "minecraft:lapis_block",
   "build_cost": {
-    "metal": 72,
-    "water": 36
+    "water": 36,
+    "metal": 72
   },
   "decompose_yield": {},
   "decomposable": false,

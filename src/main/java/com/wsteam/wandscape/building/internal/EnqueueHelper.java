@@ -3,9 +3,7 @@ package com.wsteam.wandscape.building.internal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -14,17 +12,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
 import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.data.ItemKey;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
-import com.wsteam.wandscape.wand.internal.WandPresetLoader.WandPreset;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -40,14 +36,12 @@ public final class EnqueueHelper {
 
     private static final String TAG = "EnqueueHelper";
 
-    /** Guard: seed warehouse only once per session. */
-    private static boolean warehouseSeeded = false;
-
     private EnqueueHelper() {}
 
     /**
      * Register a building with {@link BuildingApi} if it hasn't been registered yet.
-     * On the first-ever registration, seeds the colony warehouse with starter items.
+     * On each colony's first building registration, seeds that colony's warehouse
+     * with starter elements (once per colony).
      *
      * @param pos            the anchor position
      * @param config         the building config
@@ -104,14 +98,10 @@ public final class EnqueueHelper {
             // Assign colony if one exists nearby
             ColonyApiImpl.get().assignColonyIfPossible(state);
 
-            // First building registered → seed warehouse so it has materials to build itself
-            if (!warehouseSeeded && state.getColonyId() != null) {
-                boolean ok = seedBuilderWand(state.getColonyId());
-                if (ok) {
-                    warehouseSeeded = true;
-                } else {
-                    Log.warn(TAG, "[Enqueue] warehouse seed failed — will retry on next registration");
-                }
+            // First building registered for this colony → seed warehouse with starter
+            // elements (per-colony, persisted in ColonyItemBank).
+            if (state.getColonyId() != null) {
+                seedInitialElementsIfNeeded(state.getColonyId());
             }
 
             return state;
@@ -188,6 +178,11 @@ public final class EnqueueHelper {
             if (!params.containsKey("blocks_nbt")) {
                 params.put("blocks_nbt", blockNbtToJson(config));
             }
+            // Auto-add entities if not provided by bind (older building JSONs) so the
+            // blueprint's for_each $entities always has a value — empty means no decorations.
+            if (!params.containsKey("entities")) {
+                params.put("entities", entitiesToJson(config));
+            }
             if (config.boundary() != null) {
                 if (sd != null && buildingId != null) {
                     params.put("clear_offsets", computeClearOffsetsFiltered(config, sd, pos, buildingId));
@@ -233,15 +228,15 @@ public final class EnqueueHelper {
                     params.put("blocks_nbt", rotateBlockNbtJson(
                             params.get("blocks_nbt").getAsJsonObject(), rotationSteps));
                 }
+                // Rotate decoration entities (offsets + facing strings, NBT opaque)
+                if (params.containsKey("entities")) {
+                    params.put("entities", rotateEntitiesJson(
+                            params.get("entities").getAsJsonArray(), rotationSteps));
+                }
                 // Rotate clear_offsets
                 if (params.containsKey("clear_offsets")) {
                     params.put("clear_offsets", rotateOffsetsJson(
                             params.get("clear_offsets").getAsJsonArray(), rotationSteps));
-                }
-                // Rotate tourist_interact_aabb
-                if (params.containsKey("tourist_interact_aabb")) {
-                    params.put("tourist_interact_aabb", rotateTouristInteractAabbJson(
-                            params.get("tourist_interact_aabb").getAsJsonArray(), rotationSteps));
                 }
                 // Rotate door_offset
                 if (params.containsKey("door_offset")) {
@@ -276,7 +271,7 @@ public final class EnqueueHelper {
             case "magic" -> new JsonPrimitive(config.magic());
             case "wonder" -> new JsonPrimitive(config.wonder());
             case "boundary" -> boundaryToJson(config);
-            case "tourist_interact_aabb" -> touristInteractAabbToJson(config);
+            case "entities" -> entitiesToJson(config);
             case "door_offset" -> config.doorOffset() != null
                     ? offsetToJson(config.doorOffset()) : new JsonArray();
             default -> null;
@@ -342,6 +337,22 @@ public final class EnqueueHelper {
             obj.addProperty(entry.getKey(), entry.getValue());
         }
         return obj;
+    }
+
+    /** Serialize decoration entities to a JSON array of {offset, type, facing, nbt}. */
+    static JsonArray entitiesToJson(BuildingConfig config) {
+        JsonArray arr = new JsonArray();
+        for (BuildingConfig.DecorationEntity ent : config.entities()) {
+            JsonObject obj = new JsonObject();
+            obj.add("offset", offsetToJson(ent.offset()));
+            obj.addProperty("type", ent.type());
+            obj.addProperty("facing", ent.facing());
+            if (ent.nbtBase64() != null) {
+                obj.addProperty("nbt", ent.nbtBase64());
+            }
+            arr.add(obj);
+        }
+        return arr;
     }
 
     private static JsonElement boundaryToJson(BuildingConfig config) {
@@ -410,47 +421,32 @@ public final class EnqueueHelper {
 
     // ──────────────── Warehouse seed ────────────────
 
+    /** Amount of each element seeded into the first colony warehouse. */
+    private static final long INITIAL_ELEMENT_COUNT = 2000;
+
     /**
-     * Seed the colony warehouse on first building registration.
-     * 1x builder_wand + 64 of every non-air block used by any building config.
+     * Seed the colony warehouse once per colony, on its first building registration.
+     * Items start empty; the colony receives 2000 of every element type.
+     * Idempotent across restarts — the seeded marker persists in ColonyItemBank.
      */
-    private static boolean seedBuilderWand(UUID colonyId) {
-        if (colonyId == null) colonyId = new UUID(0, 0);
+    private static void seedInitialElementsIfNeeded(UUID colonyId) {
         Level level = getServerLevel();
-        if (level == null) return false;
+        if (level == null) return;
         ColonyItemBank bank = ColonyItemBank.get(level);
         if (bank == null) {
-            Log.warn(TAG, "[Enqueue] seedBuilderWand: ColonyItemBank not available");
-            return false;
+            Log.warn(TAG, "[Enqueue] seedInitialElements: ColonyItemBank not available");
+            return;
         }
+        if (bank.isSeeded(colonyId)) return;
 
-        // 1x builder_wand
-        WandPreset preset = Wandscape.WAND_PRESET_LOADER.getPreset("builder_wand");
-        if (preset != null) {
-            ItemKey wandKey = ItemKey.of("wandscape:wand", preset.nbt().copy());
-            if (bank.count(colonyId, wandKey) == 0) {
-                bank.add(colonyId, wandKey, 1);
-                Log.info(TAG, "[Enqueue] seeded builder_wand (colony={})",
-                        colonyId.toString().substring(0, 8));
-            }
+        for (ElementType element : ElementType.values()) {
+            bank.addElement(colonyId, element, INITIAL_ELEMENT_COUNT);
         }
+        bank.markSeeded(colonyId);
 
-        // 64x of every unique non-air block across ALL building configs
-        Set<String> seen = new java.util.LinkedHashSet<>();
-        for (BuildingConfig cfg : BuildingConfigLoader.getInstance().getAll().values()) {
-            for (String blockId : cfg.blockMapping().values()) {
-                String cleanId = blockId.replaceAll("\\[.*?\\]", "").trim();
-                if ("minecraft:air".equals(cleanId)) continue;
-                seen.add(cleanId);
-            }
-        }
-        for (String blockId : seen) {
-            bank.add(colonyId, ItemKey.of(blockId, null), 64);
-        }
-
-        Log.info(TAG, "[Enqueue] seeded warehouse: builder_wand + 64x{} unique materials (colony={})",
-                seen.size(), colonyId.toString().substring(0, 8));
-        return true;
+        Log.info(TAG, "[Enqueue] seeded warehouse: {} elements x{} (colony={})",
+                ElementType.values().length, INITIAL_ELEMENT_COUNT,
+                colonyId.toString().substring(0, 8));
     }
 
     private static Level getServerLevel() {
@@ -501,6 +497,28 @@ public final class EnqueueHelper {
         return result;
     }
 
+    /** Rotate a JSON array of decoration entity objects: offset + facing rotate, NBT stays opaque. */
+    static JsonArray rotateEntitiesJson(JsonArray entities, int steps) {
+        JsonArray result = new JsonArray();
+        for (int i = 0; i < entities.size(); i++) {
+            JsonObject ent = entities.get(i).getAsJsonObject();
+            JsonArray offArr = ent.getAsJsonArray("offset");
+            BlockOffset off = new BlockOffset(
+                    offArr.get(0).getAsInt(), offArr.get(1).getAsInt(), offArr.get(2).getAsInt());
+            BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
+            JsonObject rotatedEnt = new JsonObject();
+            rotatedEnt.add("offset", offsetToJson(rotated));
+            rotatedEnt.addProperty("type", ent.get("type").getAsString());
+            rotatedEnt.addProperty("facing", BuildingRotation.rotateFacing(
+                    ent.get("facing").getAsString(), steps));
+            if (ent.has("nbt")) {
+                rotatedEnt.addProperty("nbt", ent.get("nbt").getAsString());
+            }
+            result.add(rotatedEnt);
+        }
+        return result;
+    }
+
     /** Rotate a JSON array of [x,y,z] clear offsets. */
     private static JsonArray rotateOffsetsJson(JsonArray offsets, int steps) {
         JsonArray result = new JsonArray();
@@ -509,39 +527,6 @@ public final class EnqueueHelper {
             BlockOffset off = new BlockOffset(pos.get(0).getAsInt(), pos.get(1).getAsInt(), pos.get(2).getAsInt());
             BlockOffset rotated = BuildingRotation.rotateOffset(off, steps);
             result.add(offsetToJson(rotated));
-        }
-        return result;
-    }
-
-    /** Serialize tourist_interact_aabb list to a JSON array of boundary objects. */
-    private static JsonElement touristInteractAabbToJson(BuildingConfig config) {
-        JsonArray arr = new JsonArray();
-        for (BuildingConfig.BoundaryBox zone : config.touristInteractAabb()) {
-            JsonObject obj = new JsonObject();
-            obj.add("min", offsetToJson(zone.min()));
-            obj.add("max", offsetToJson(zone.max()));
-            arr.add(obj);
-        }
-        return arr;
-    }
-
-    /** Rotate a JSON array of tourist interact AABB boundary objects. */
-    private static JsonArray rotateTouristInteractAabbJson(JsonArray zones, int steps) {
-        JsonArray result = new JsonArray();
-        for (int i = 0; i < zones.size(); i++) {
-            JsonObject zone = zones.get(i).getAsJsonObject();
-            JsonArray minArr = zone.getAsJsonArray("min");
-            JsonArray maxArr = zone.getAsJsonArray("max");
-            BlockOffset min = new BlockOffset(
-                    minArr.get(0).getAsInt(), minArr.get(1).getAsInt(), minArr.get(2).getAsInt());
-            BlockOffset max = new BlockOffset(
-                    maxArr.get(0).getAsInt(), maxArr.get(1).getAsInt(), maxArr.get(2).getAsInt());
-            BuildingConfig.BoundaryBox rotated = BuildingRotation.rotateBoundary(
-                    new BuildingConfig.BoundaryBox(min, max), steps);
-            JsonObject rotatedZone = new JsonObject();
-            rotatedZone.add("min", offsetToJson(rotated.min()));
-            rotatedZone.add("max", offsetToJson(rotated.max()));
-            result.add(rotatedZone);
         }
         return result;
     }

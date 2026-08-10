@@ -11,6 +11,7 @@ import com.wsteam.wandscape.production.internal.RecipeUnlockChecker;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.Wandscape;
 
 import net.minecraft.core.BlockPos;
@@ -125,8 +126,16 @@ public record RequestProductionTaskPacket(
                 params.put("recipe_id", new JsonPrimitive(pkt.recipeOrItemId));
             }
             params.put("count", new JsonPrimitive(pkt.quantity));
-            params.put("channel_ticks", new JsonPrimitive(120)); // 6s
-            params.put("mana_cost", new JsonPrimitive(5));
+            // Channel duration scales with quantity: workstation 10 ticks/item,
+            // crafting station 1200 ticks/item (per unit).
+            int channelTicks = switch (pkt.action) {
+                case "synthesize", "decompose" ->
+                        WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
+                case "craft_wand" ->
+                        WandscapeConstants.CRAFTING_STATION_CRAFT_TICKS_PER_UNIT * pkt.quantity;
+                default -> 120; // brew_potion, unchanged
+            };
+            params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
             WorkItem work = new WorkItem(blueprintId, params, 10);
 

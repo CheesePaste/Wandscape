@@ -60,7 +60,7 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
         }
 
         // Create new colony at townHallAnchor using ColonyCommand.createColonyAt
-        String result = ColonyCommand.createColonyAt(level, packet.townHallAnchor, name);
+        String result = ColonyCommand.createColonyAt(level, packet.townHallAnchor, name, player.getUUID());
         if (result == null || result.startsWith("[Wandscape] no government")
                 || result.startsWith("[Wandscape] Failed")) {
             sendMessage(player, result != null ? result : "[Wandscape] 创建殖民地失败。");
@@ -73,6 +73,17 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
             linkTownHall(colonyApi, packet.townHallAnchor, colonyId);
             Log.info(TAG, "[Colony] Town hall at {} linked to new colony {}",
                     packet.townHallAnchor, colonyId.toString().substring(0, 8));
+        }
+
+        // Refresh the client's building-area cache immediately: the just-created
+        // colony's town hall must appear on the client so the onboarding guide
+        // advances and the panel overlay shows its boundary (no panel reopen needed).
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.sendToPlayer(player, packet.townHallAnchor);
+
+        // Push tutorial progress — the new colony's town hall completes the first step.
+        var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+        if (guideApi != null) {
+            guideApi.sendToPlayer(player, colonyId);
         }
 
         sendMessage(player, result);

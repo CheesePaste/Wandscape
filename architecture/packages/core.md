@@ -14,7 +14,16 @@ World（中央容器：ComponentStore + System 列表 + 边界引用）、System
 
 ## 组件
 
-Position / ManaPool / EquipmentComponent / TaskExecutor / NpcTaskQueue / Inventory / NavigationState / ColonyMember / ColonyMetadata / SuspensionContext。配套 System：ManaRegenSystem（每 tick 恢复 ManaPool，虽实现 ECS System 但因紧耦合 ManaPool 归入 component/ 而非 ecs/ 框架包）。
+Position / EquipmentComponent / TaskExecutor / NpcTaskQueue / Inventory / NavigationState / ColonyMember / ColonyMetadata / SuspensionContext（共 9 个）。
+
+### NPC 属性模型
+
+NPC 只有 7 个属性：`MAX_HP` / `MOVE_SPEED` / `SPELL_POWER` / `WORK_SPEED` / `SPELL_SPEED` / `ARMOR_VALUE` / `MAX_MANA`。魔力为第 7 属性（默认 200），当前魔力/每魔法独立 CD/施法互斥锁在 `MagicState`（`core/component/`，由 `WandscapeNpc` 持有）。属性值存于 `EquipmentComponent`：base（来自 `NpcAttributes`，招募/默认值） + 装备 modifier，**所有装备加成一律加法**（`effective = base + Σmodifier`，`ModifierOperation` 只有 ADDITION）。运行时各机制读取：
+- `SPELL_POWER` → NPC 对敌对生物的魔法伤害倍率，在伤害核算入口统一乘（`guard/NpcSpellPowerHandler`，`LivingIncomingDamageEvent`；判定伤害源是 NPC 且目标为 `Enemy`）——任何未来魔法自动生效，不在单个魔法里写乘算
+- `WORK_SPEED` → 采集/合成耗时：`实际 = 基础tick / WORK_SPEED`（`WandscapeBlockInteractExecutor`；建造 TransformOp 保持 1 tick 即时感，不随 WORK_SPEED）
+- `SPELL_SPEED` → 各魔法 CD：`实际CD = 基础 / SPELL_SPEED`（光束 400、传送 300；施法时间不参与，CD 在施法锁结束后起算）
+- `MAX_MANA` → 魔力上限（NPC 首 tick 满蓝 seed，每 `Config.npc.manaRegenTicks`=10 回 1 点）
+- `MAX_HP` / `MOVE_SPEED` / `ARMOR_VALUE` → 推送到 vanilla 实体属性（WandscapeNpc 每 tick）
 
 ## 边界接口 (boundary/)
 

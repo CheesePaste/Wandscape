@@ -14,8 +14,8 @@ import net.minecraft.core.BlockPos;
 /**
  * Builds a {@code node:gather} {@link WorkItem} from a node building's
  * {@link BuildingConfig.NodeConfig}. Mirrors the auto-supply construction in
- * {@code BuildingTaskSource}, except {@code amount} and {@code mana_cost} are
- * scaled by the number of harvests requested by the player.
+ * {@code BuildingTaskSource}, except {@code amount} is scaled by the number of
+ * harvests requested by the player.
  */
 public final class NodeGatherTaskFactory {
 
@@ -30,7 +30,6 @@ public final class NodeGatherTaskFactory {
         params.put("element", new JsonPrimitive(config.element()));
         params.put("amount", new JsonPrimitive(config.amountPerHarvest() * count));
         params.put("channel_ticks", new JsonPrimitive(config.channelTicks()));
-        params.put("mana_cost", new JsonPrimitive(config.manaCost() * count));
         return new WorkItem(config.blueprint(), params, GATHER_PRIORITY);
     }
 

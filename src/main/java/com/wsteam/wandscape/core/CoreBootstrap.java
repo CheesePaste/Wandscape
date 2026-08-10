@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.core;
 
 import com.wsteam.wandscape.core.component.*;
-import com.wsteam.wandscape.core.component.ManaRegenSystem;
 import com.wsteam.wandscape.core.ecs.HashMapComponentStore;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.event.SimpleEventBus;
@@ -9,6 +8,7 @@ import com.wsteam.wandscape.op.executor.OpExecutorRegistry;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.scheduler.SchedulerSystem;
 import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
@@ -49,11 +49,9 @@ public final class CoreBootstrap {
         world.movementOps = config.movementOps();
         world.colonyResources = config.colonyResources();
         world.eventBus = new SimpleEventBus();
-        Log.debug(TAG, "boundary services injected");
 
         // 2. Register component stores
         world.registerComponent(Position.class, new HashMapComponentStore<>());
-        world.registerComponent(ManaPool.class, new HashMapComponentStore<>());
         world.registerComponent(TaskExecutor.class, new HashMapComponentStore<>());
         world.registerComponent(Inventory.class, new HashMapComponentStore<>());
         world.registerComponent(ColonyMember.class, new HashMapComponentStore<>());
@@ -79,12 +77,10 @@ public final class CoreBootstrap {
         sysBp.subscribePermanentTriggers(world.eventBus, world.taskPool);
 
         // 7. Register systems (in order)
-        world.addSystem(new ManaRegenSystem());
         world.addSystem(new SystemBlueprintSystem(sysBp));
         world.addSystem(new TaskSourcePoller(config.taskSources()));
         world.addSystem(new SchedulerSystem());
         world.addSystem(new TaskExecutionSystem(world.taskPool));
-        Log.debug(TAG, "%d systems registered", world.systemCount());
 
         Log.info(TAG, "bootstrap complete - %d component stores, %d systems, %d task sources",
                 world.stores().size(), world.systemCount(), config.taskSources().size());
@@ -98,18 +94,18 @@ public final class CoreBootstrap {
      */
     public static long createNpc(World world, int x, int y, int z,
                                   UUID colonyId,
-                                  int manaMax, int manaRegen) {
+                                  NpcAttributes attrs) {
         long entity = world.createEntity();
         world.addComponent(entity, new Position(new GridPos(x, y, z)));
-        world.addComponent(entity, new ManaPool(manaMax, manaMax, manaRegen));
         EquipmentComponent eq = new EquipmentComponent();
+        eq.seedBaseValues(attrs);
         eq.equipDefaultWand();
         world.addComponent(entity, eq);
         world.addComponent(entity, new TaskExecutor());
         world.addComponent(entity, new Inventory(27)); // standard 27-slot inventory
         world.addComponent(entity, new ColonyMember(colonyId));
-        Log.info(TAG, "createNpc #%d pos=(%d,%d,%d) mana=%d colony=%s",
-                entity, x, y, z, manaMax,
+        Log.info(TAG, "createNpc #%d pos=(%d,%d,%d) attrs=%s colony=%s",
+                entity, x, y, z, attrs,
                 colonyId.toString().substring(0, 8));
         return entity;
     }

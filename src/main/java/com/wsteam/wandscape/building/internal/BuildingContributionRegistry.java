@@ -77,8 +77,6 @@ public final class BuildingContributionRegistry {
                         (k, v) -> v == null || v <= 1 ? null : v - 1);
             }
         }
-        Log.debug(TAG, "[Registry] Shop stock changed: building={} type={} hasStock={}",
-                buildingId.toString().substring(0, 8), buildingTypeId, hasStock);
     }
 
     // ── Mutation (called from BuildingSavedData) ──────────────────────────────

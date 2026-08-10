@@ -22,6 +22,8 @@ import com.wsteam.wandscape.core.event.TaskCompleted;
 
 import java.util.*;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
@@ -104,9 +106,21 @@ public class GlobalTaskPool {
 
     /** Add a task from a request. Automatically determines if approval is needed. */
     public long addTask(TaskRequest request) {
+        return addTaskWithId(request, nextTaskId++);
+    }
+
+    /**
+     * Add a task with a fixed id (used by persistence load). The task's
+     * {@code id} field is set to the given id so it always matches its pool key —
+     * otherwise {@code taskPool.get(task.id)} / {@code assignLight(task.id)} resolve
+     * to the wrong entry (or null) after a reload, which can leave a ghost task in
+     * the assignable set that re-assigns the same underlying task to a new NPC
+     * every heartbeat.
+     */
+    public long addTaskWithId(TaskRequest request, long id) {
         CompiledBlueprint compiled = compiler.compile(request, null);
         TaskSequence seq = compiled.sequence();
-        long id = nextTaskId++;
+        if (id >= nextTaskId) nextTaskId = id + 1;
 
         TaskState initialState;
         ApprovalInfo approval = null;
@@ -229,7 +243,6 @@ public class GlobalTaskPool {
             exec.releaseGlobalTask();
         }
         task.assignedNpcId = null;
-        Log.debug(TAG, "releaseNpc #%d ← NPC %d", taskId, npcId);
     }
 
     // ── State transitions ──
@@ -301,7 +314,6 @@ public class GlobalTaskPool {
         GlobalTask task = tasksById.get(taskId);
         if (task != null) {
             task.stepIndex = newStepIndex;
-            Log.debug(TAG, "advanceStep #%d → %d/%d", taskId, newStepIndex, task.sequence.size());
         }
     }
 
@@ -311,7 +323,6 @@ public class GlobalTaskPool {
         if (!trigger.eventName().equals(event.name())) return;
 
         if (!matchesFilter(trigger.paramFilter(), event.params())) {
-            Log.debug(TAG, "trigger %s → filter mismatch for event %s", trigger.eventName(), event);
             return;
         }
 
@@ -330,8 +341,6 @@ public class GlobalTaskPool {
         if (trigger.dedupKey() != null) {
             String dedupValue = event.params().get(trigger.dedupKey());
             if (dedupValue != null && isDuplicate(resolvedBpId, trigger.dedupKey(), dedupValue)) {
-                Log.debug(TAG, "trigger %s → dedup skip: %s=%s already in flight",
-                        trigger.eventName(), trigger.dedupKey(), dedupValue);
                 return;
             }
         }
@@ -463,12 +472,24 @@ public class GlobalTaskPool {
 
     /** Add a task loaded from persistence, preserving its original ID. */
     public void addLoadedTask(GlobalTask task, long originalId) {
-        tasksById.values().removeIf(existing -> existing == task && existing.id != originalId);
+        // Idempotency: evict any prior copy under this id so a reload can't leave
+        // a stale duplicate in tasksById / assignableSet.
+        GlobalTask existing = tasksById.remove(originalId);
+        if (existing != null && existing != task) {
+            assignableSet.remove(existing);
+        }
+        // Evict a stale key the same object may be parked under (e.g. a temp id).
+        tasksById.values().removeIf(v -> v == task && v.id != originalId);
         tasksById.put(originalId, task);
         if (originalId >= nextTaskId) {
             nextTaskId = originalId + 1;
         }
-        addToAssignable(task);
+        // Only PENDING_ASSIGN tasks belong in the assignable set.
+        if (task.state == TaskState.PENDING_ASSIGN) {
+            addToAssignable(task);
+        } else {
+            assignableSet.remove(task);
+        }
         Log.info(TAG, "loadTask #%d '%s' state=%s step=%d/%d",
                 originalId, task.sequence.label(), task.state,
                 task.stepIndex, task.sequence.size());
@@ -512,6 +533,31 @@ public class GlobalTaskPool {
     public boolean isActive(long taskId) {
         GlobalTask t = tasksById.get(taskId);
         return t != null && t.state != TaskState.COMPLETED;
+    }
+
+    /**
+     * True if any non-COMPLETED task has {@code blueprintId} and its params contain
+     * all of {@code requiredParams} (exact JsonElement equality). {@code blueprintId}
+     * may be null to match any blueprint. Used to lock/dedupe pending work on the same
+     * subject (e.g. one altar cast per altar+magic while the previous task is queued
+     * or being channeled).
+     */
+    public boolean hasActiveTask(@Nullable String blueprintId,
+                                 Map<String, JsonElement> requiredParams) {
+        for (GlobalTask t : tasksById.values()) {
+            if (t.state == TaskState.COMPLETED) continue;
+            if (blueprintId != null && !blueprintId.equals(t.blueprintId)) continue;
+            if (paramsMatch(t.taskParams, requiredParams)) return true;
+        }
+        return false;
+    }
+
+    private static boolean paramsMatch(Map<String, JsonElement> taskParams,
+                                       Map<String, JsonElement> required) {
+        for (Map.Entry<String, JsonElement> e : required.entrySet()) {
+            if (!e.getValue().equals(taskParams.get(e.getKey()))) return false;
+        }
+        return true;
     }
 
     public Collection<GlobalTask> all() {

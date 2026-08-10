@@ -6,8 +6,7 @@
     "anchor": "pos",
     "recipe_id": "string",
     "count": "int",
-    "channel_ticks": "int",
-    "mana_cost": "int"
+    "channel_ticks": "int"
   },
   "steps": [
     {
@@ -15,7 +14,6 @@
       "action": "craft_wand",
       "at": "$anchor",
       "channel_ticks": "$channel_ticks",
-      "mana_cost": "$mana_cost",
       "params": {
         "recipe_id": "$recipe_id",
         "count": "$count"

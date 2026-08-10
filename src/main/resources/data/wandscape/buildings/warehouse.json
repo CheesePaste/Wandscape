@@ -1,6 +1,6 @@
 {
   "id": "warehouse",
-  "display_name": "殖民地仓库",
+  "display_name": "仓库",
   "category": "storage",
   "first_free": true,
   "pattern": [

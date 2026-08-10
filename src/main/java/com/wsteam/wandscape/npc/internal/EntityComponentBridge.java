@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.component.*;
 import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
@@ -59,7 +60,6 @@ public final class EntityComponentBridge {
     /** ECS component types that make up an NPC. */
     private static final Class<?>[] NPC_COMPONENTS = {
             Position.class,
-            ManaPool.class,
             TaskExecutor.class,
             EquipmentComponent.class,
             Inventory.class,
@@ -131,13 +131,13 @@ public final class EntityComponentBridge {
         // (chunk unload/reload). Only trust this path if the UUID is still known.
         if (npc.ecsEntityId > 0 && ecsIdByUuid.containsKey(npc.getUUID())
                 && world.has(npc.ecsEntityId, Position.class)) {
-            Log.debug(TAG, "NPC {} reconnecting to ECS entity {}", npc.getUUID(), npc.ecsEntityId);
             world.addComponent(npc.ecsEntityId,
                     new Position(
                             new GridPos(npc.getBlockX(), npc.getBlockY(), npc.getBlockZ())));
             npcByEcsId.put(npc.ecsEntityId, npc);
             ecsIdByUuid.put(npc.getUUID(), npc.ecsEntityId);
             fillDeferredInventory(npc, world);
+            npc.syncArmorAttributes();
             return;
         }
 
@@ -159,18 +159,12 @@ public final class EntityComponentBridge {
             }
         }
 
+        NpcAttributes attrs = new NpcAttributes(
+                npc.maxHp, npc.moveSpeed, npc.spellPower, npc.workSpeed,
+                npc.spellSpeed, npc.armorValue, npc.maxMana);
         long ecsId = CoreBootstrap.createNpc(world,
                 npc.getBlockX(), npc.getBlockY(), npc.getBlockZ(),
-                colony, npc.maxMana, npc.manaRegenRate);
-
-        // Apply current mana from NBT if it was consumed before save
-        ManaPool mana = world.get(ecsId, ManaPool.class);
-        if (mana != null && npc.currentMana < mana.max()) {
-            float toConsume = mana.current() - npc.currentMana;
-            if (toConsume > 0) {
-                mana.consume(toConsume);
-            }
-        }
+                colony, attrs);
 
         npc.ecsEntityId = ecsId;
         npcByEcsId.put(ecsId, npc);
@@ -182,6 +176,8 @@ public final class EntityComponentBridge {
 
         // Fill deferred inventory items (e.g. from colony creation command)
         fillDeferredInventory(npc, world);
+        // Seed armor attribute modifiers (equipment component was just created)
+        npc.syncArmorAttributes();
     }
 
     /** Fill inventory items that were scheduled before ECS registration. */

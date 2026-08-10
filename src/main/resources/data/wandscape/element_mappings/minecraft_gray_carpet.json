@@ -1,9 +1,9 @@
 {
   "block": "minecraft:gray_carpet",
   "build_cost": {
+    "dark": 5,
     "wood": 13,
-    "wind": 13,
-    "dark": 5
+    "wind": 13
   },
   "decompose_yield": {},
   "decomposable": false,

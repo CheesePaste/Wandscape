@@ -3,6 +3,7 @@ package com.wsteam.wandscape.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristCooldownDebug;
 import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
@@ -22,7 +23,7 @@ import java.util.List;
  * /wandscape tourist list
  * /wandscape tourist spawn
  * /wandscape tourist state &lt;name|all&gt; &lt;state&gt;
- * /wandscape tourist cooldown &lt;service|visited|preference|all&gt; &lt;on|off&gt;
+ * /wandscape tourist cooldown &lt;visited|all&gt; &lt;on|off&gt;
  * </pre>
  */
 public final class TouristCommand {
@@ -61,18 +62,18 @@ public final class TouristCommand {
 
         for (TouristEntity t : tourists) {
             String appearance = t.isMage() ? "法师" : "市民";
-            lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | 满意%d%%",
+            BarRatio br = BarRatio.of(t.getComfortSat(), t.getComfortNeed(),
+                    t.getMagicSat(), t.getMagicNeed(), t.getWonderSat(), t.getWonderNeed());
+            lines.add(String.format("  %s | %s | %s | Lv.%d | 精力%d | C%d%% M%d%% W%d%%",
                     t.getTouristName(), appearance,
                     t.getCurrentState().getDisplayName(),
-                    t.getLevel(), t.getEnergy(), t.getSatisfaction()));
+                    t.getLevel(), t.getEnergy(), br.comfort(), br.magic(), br.wonder()));
         }
 
         // Show debug flag state
         lines.add("");
-        lines.add("--- Cooldown Debug ---");
-        lines.add("  service : " + (TouristCooldownDebug.skipServiceCooldown ? "DISABLED (skip)" : "ENABLED (normal)"));
+        lines.add("--- Debug ---");
         lines.add("  visited : " + (TouristCooldownDebug.skipVisitedBuildings ? "DISABLED (skip)" : "ENABLED (normal)"));
-        lines.add("  pref    : " + (TouristCooldownDebug.skipPreferenceDecay ? "DISABLED (skip)" : "ENABLED (normal)"));
 
         String msg = String.join("\n", lines);
         src.sendSuccess(() -> Component.literal(msg), false);
@@ -160,14 +161,8 @@ public final class TouristCommand {
         }
 
         switch (layer) {
-            case "service" -> {
-                TouristCooldownDebug.skipServiceCooldown = !enable;
-            }
             case "visited" -> {
                 TouristCooldownDebug.skipVisitedBuildings = !enable;
-            }
-            case "preference", "pref" -> {
-                TouristCooldownDebug.skipPreferenceDecay = !enable;
             }
             case "all" -> {
                 if (enable) {
@@ -178,7 +173,7 @@ public final class TouristCommand {
             }
             default -> {
                 ctx.getSource().sendFailure(Component.literal(
-                        "Unknown layer: '" + layer + "'. Valid: service, visited, preference, all"));
+                        "Unknown layer: '" + layer + "'. Valid: visited, all"));
                 return 0;
             }
         }
@@ -210,9 +205,7 @@ public final class TouristCommand {
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestLayers(
             CommandContext<CommandSourceStack> ctx,
             com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
-        builder.suggest("service");
         builder.suggest("visited");
-        builder.suggest("preference");
         builder.suggest("all");
         return builder.buildFuture();
     }

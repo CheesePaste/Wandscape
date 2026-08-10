@@ -18,6 +18,8 @@ import java.util.*;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonElement;
+
 /**
  * Assigns global tasks to idle NPCs.
  * Runs every 2 ticks (configurable heartbeat).
@@ -43,7 +45,7 @@ public class SchedulerSystem implements System {
 
         // 1. Find all idle NPCs with full component set
         List<Long> idleNpcs = new ArrayList<>();
-        for (long entity : world.query(Position.class, ManaPool.class, TaskExecutor.class,
+        for (long entity : world.query(Position.class, TaskExecutor.class,
                 EquipmentComponent.class, Inventory.class, ColonyMember.class)) {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
@@ -53,7 +55,6 @@ public class SchedulerSystem implements System {
         }
 
         if (idleNpcs.isEmpty()) {
-            Log.debug(TAG, "heartbeat - no idle NPCs");
             return;
         }
 
@@ -64,21 +65,6 @@ public class SchedulerSystem implements System {
             if (member != null) {
                 npcsByColony.computeIfAbsent(member.colonyId(), k -> new ArrayList<>()).add(npcId);
             }
-        }
-
-        Log.debug(TAG, "heartbeat - colony_count=%d idle_npcs=%d assignable_tasks=%d",
-                npcsByColony.size(),
-                idleNpcs.size(), world.taskPool.getAssignableTasks().size());
-        for (long eid : idleNpcs) {
-            EquipmentComponent eq = world.get(eid, EquipmentComponent.class);
-            ManaPool mp = world.get(eid, ManaPool.class);
-            ColonyMember cm = world.get(eid, ColonyMember.class);
-            Log.debug(TAG, "  idle NPC %d colony=%s equipped=%s mana=%.1f/%d",
-                    eid,
-                    cm != null ? cm.colonyId().toString().substring(0, 8) : "?",
-                    eq != null ? String.valueOf(eq.getEquippedPreset(EquipmentSlot.WAND)) : "none",
-                    mp != null ? mp.current() : -1,
-                    mp != null ? mp.max() : -1);
         }
 
         GlobalTaskPool taskPool = world.taskPool;
@@ -100,10 +86,16 @@ public class SchedulerSystem implements System {
                 // Skip if another NPC is already working on the same target position
                 GridPos taskTarget = extractTaskTarget(task);
                 if (taskTarget != null && occupiedTargets.contains(taskTarget)) {
-                    Log.debug(TAG, "skip #%d '%s' — target %s already occupied",
-                            task.id, task.sequence.label(), taskTarget);
                     continue;
                 }
+
+                // 任务可声明殖民地归属 + 魔力门槛（如祭坛施法）：
+                // 只分给指定殖民地的 NPC，且其当前魔力必须 ≥ 任务蓝耗（不足则任务挂起，等回蓝）。
+                String taskColony = taskColonyFilter(task);
+                if (taskColony != null && !taskColony.equals(entry.getKey().toString())) {
+                    continue;
+                }
+                int manaRequirement = taskManaRequirement(task);
 
                 // Find the best NPC for this task
                 long bestNpc = -1;
@@ -114,14 +106,16 @@ public class SchedulerSystem implements System {
                     EquipmentComponent eq = world.get(npcId, EquipmentComponent.class);
                     if (eq == null) continue;
 
+                    // 魔力门槛：接取前当前魔力 ≥ 任务蓝耗（否则跳过，等魔力恢复后下轮再评）
+                    if (manaRequirement > 0 && (world.entityOps == null
+                            || world.entityOps.getCurrentMana(npcId) < manaRequirement)) {
+                        continue;
+                    }
+
                     // Ensure NPC has a wand equipped
                     if (!eq.hasEquipment(EquipmentSlot.WAND)) {
                         eq.equipDefaultWand();
                     }
-
-                    // Check mana: at least enough for first step
-                    ManaPool mana = world.get(npcId, ManaPool.class);
-                    if (mana == null || mana.isEmpty()) continue;
 
                     // Calculate horizontal distance from NPC to task target
                     double distance = 0;
@@ -134,10 +128,10 @@ public class SchedulerSystem implements System {
                         }
                     }
 
-                    // Temp score: proximity + mana efficiency
+                    // Score: proximity + work speed (faster workers favored)
                     float proximity = 10f / (10f + (float) distance);
-                    float manaEff = eq.getAttribute(AttributeType.MANA_COST_MULTIPLIER);
-                    double score = proximity * 0.6f + (1f - manaEff) * 0.4f;
+                    float workEff = Math.min(eq.getAttribute(AttributeType.WORK_SPEED), 4f);
+                    double score = proximity * 0.6f + (workEff - 1f) * 0.4f;
 
                     if (score > bestScore) {
                         bestScore = score;
@@ -183,6 +177,25 @@ public class SchedulerSystem implements System {
             if (t != null) return t;
         }
         return null;
+    }
+
+    /** 任务声明的殖民地归属（params["colony_id"]）；无 = 不限殖民地。 */
+    @Nullable
+    private static String taskColonyFilter(GlobalTask task) {
+        JsonElement el = task.taskParams.get("colony_id");
+        return el != null && el.isJsonPrimitive() ? el.getAsString() : null;
+    }
+
+    /** 任务要求的接取魔力门槛（params["mana_cost"]）；无 = 0（不限）。 */
+    private static int taskManaRequirement(GlobalTask task) {
+        JsonElement el = task.taskParams.get("mana_cost");
+        if (el != null && el.isJsonPrimitive()) {
+            try {
+                return el.getAsInt();
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
     }
 
     /** Manually trigger a scheduling heartbeat (for testing). */

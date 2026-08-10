@@ -2,9 +2,9 @@
 
 所有包的公共层，50+ 文件。无实现代码，只有接口/数据/事件/UI组件。新增 ColonyMetricsApi（实时全量指标聚合）和 ColonyMetricsSnapshot（统一指标数据 record）。
 
-## api/ — 12 个模块接口
+## api/ — 11 个模块接口
 
-BuildingApi / ColonyApi / ColonyMetricsApi / ElementApi / HouseApi / ManaPoolApi / NpcApi / RoadApi / TavernApi / TouristApi / WandApi / WarehouseApi。全部已实现，实现类在对应模块的 internal/ 下。ColonyMetricsApi 由 engine/service/ColonyMetricsService 实现。
+BuildingApi / ColonyApi / ColonyMetricsApi / ElementApi / HouseApi / NpcApi / RoadApi / TavernApi / TouristApi / WandApi / WarehouseApi。全部已实现，实现类在对应模块的 internal/ 下。ColonyMetricsApi 由 engine/service/ColonyMetricsService 实现。
 
 ## entity/ — 实体行为契约
 
@@ -42,9 +42,10 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 
 | 子包 | 内容 |
 |------|------|
-| component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / SearchBar / TaskQueuePanel / Slider 等 |
+| component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / TaskQueuePanel / Slider 等 |
 | panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen |
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
+| (根) | ReplayScreenGuard(回放兼容：ReforgedPlay/ReplayMod 播放中取消所有 MedievalScreen 打开) |
 | animation/ | MedievalAnimation |
 | markdown/ | AST节点(Header/Text/Image/Quote/List) + MarkdownParser(纯Java解析) + MarkdownRenderWidget(MC渲染控件) + navigation(DocumentHistoryStack历史栈+DocumentLoader文档读取) + texture(MarkdownTextureManager全能图像管理) |
 | skin/ | SkinSprite(精灵图坐标) / SkinRender(9-slice/按钮/关闭按钮/进度条/箭头图标) |

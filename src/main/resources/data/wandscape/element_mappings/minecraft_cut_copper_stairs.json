@@ -1,7 +1,7 @@
 {
   "block": "minecraft:cut_copper_stairs",
   "build_cost": {
-    "metal": 18
+    "metal": 108
   },
   "decompose_yield": {},
   "decomposable": false,

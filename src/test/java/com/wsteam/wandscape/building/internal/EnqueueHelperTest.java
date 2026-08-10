@@ -7,19 +7,48 @@ import java.util.Map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.data.BuildingConfig.BlueprintRef;
 import com.wsteam.wandscape.building.data.BuildingConfig.BoundaryBox;
+import com.wsteam.wandscape.building.data.BuildingConfig.DecorationEntity;
+import com.wsteam.wandscape.shared.api.ElementApi;
+import com.wsteam.wandscape.shared.data.AtmConfig;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
+import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
+
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("EnqueueHelper.computeClearOffsets")
 class EnqueueHelperTest {
+
+    /** buildWorkItem 解析 material_list 需要 ElementApi；测试环境注册一个全空映射。 */
+    @BeforeAll
+    static void registerElementApi() {
+        WandscapeApis.setElementApi(new ElementApi() {
+            @Override public ElementType fromId(String id) { return ElementType.fromId(id); }
+            @Override public boolean hasElementMapping(String blockOrItemId) { return false; }
+            @Override public Map<ElementType, Long> getBuildCost(BlockState block) { return Map.of(); }
+            @Override public Map<ElementType, Long> getDecomposeYield(BlockState block) { return Map.of(); }
+            @Override public boolean isDecomposable(BlockState block) { return false; }
+            @Override public Map<ElementType, Long> getBuildCost(ItemStack stack) { return Map.of(); }
+            @Override public Map<ElementType, Long> getDecomposeYield(ItemStack stack) { return Map.of(); }
+            @Override public boolean isDecomposable(ItemStack stack) { return false; }
+        });
+    }
 
     private static BlockOffset off(int x, int y, int z) {
         return new BlockOffset(x, y, z);
@@ -38,7 +67,7 @@ class EnqueueHelperTest {
     @DisplayName("town_hall: clear entire boundary box (18 positions), anchor included")
     void townHallFullBox() {
         BuildingConfig cfg = new BuildingConfig(
-                "town_hall", "Test", "basic",
+                "town_hall", "Test", "", "basic",
                 List.of(
                         off(-1, 0, -1), off(-1, 0, 0), off(-1, 0, 1),
                         off(0, 0, -1),                     off(0, 0, 1),
@@ -63,7 +92,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, null, List.of(), false  // nodeConfig, firstFree
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -90,7 +119,7 @@ class EnqueueHelperTest {
     @DisplayName("single-block building: anchor-only boundary → clear anchor")
     void singleBlockClear() {
         BuildingConfig cfg = new BuildingConfig(
-                "earth_node", "Test", "node",
+                "earth_node", "Test", "", "node",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:lodestone"),
                 Map.of(), /* blockNbt */
@@ -99,7 +128,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, null, List.of(), false  // nodeConfig, firstFree
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -112,7 +141,7 @@ class EnqueueHelperTest {
     @DisplayName("large 3×3×3 boundary: all 27 positions cleared")
     void largeBoundaryFullBox() {
         BuildingConfig cfg = new BuildingConfig(
-                "test_large", "Test", "basic",
+                "test_large", "Test", "", "basic",
                 List.of(off(0, 0, 0)),
                 Map.of("0,0,0", "minecraft:stone"),
                 Map.of(), /* blockNbt */
@@ -121,7 +150,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, -1, -1), off(1, 1, 1)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, null, List.of(), false  // nodeConfig, firstFree
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -146,5 +175,47 @@ class EnqueueHelperTest {
             keys.add(pos.get(0).getAsInt() + "," + pos.get(1).getAsInt() + "," + pos.get(2).getAsInt());
         }
         return keys;
+    }
+
+    @Test
+    @DisplayName("buildWorkItem: entities 参数透传 + 旋转")
+    @org.junit.jupiter.api.Disabled("buildWorkItem 全流程触发 BuiltInRegistries（rotateBlockStateString），需要 MC Bootstrap，纯 JUnit 环境不可跑——留待集成测试")
+    void entitiesPassThroughAndRotate() {
+        BuildingConfig cfg = new BuildingConfig(
+                "gallery", "Gallery", "", "custom",
+                List.of(off(0, 0, 0)),
+                Map.of("0,0,0", "minecraft:stone"),
+                Map.of(), /* blockNbt */
+                0, 0, 0,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
+                new BlueprintRef("build:clear_and_build",
+                        Map.of("offsets", "$pattern", "blocks", "$block_mapping", "name", "$display_name")),
+                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false,
+                List.of(new DecorationEntity(off(1, 2, 0), "minecraft:item_frame", "north", "b64"))
+        );
+
+        // 无旋转：entities 原样透传
+        WorkItem w0 = EnqueueHelper.buildWorkItem(cfg, new BlockPos(10, 64, 10), "custom", 1, null, null, 0);
+        JsonArray e0 = w0.params().get("entities").getAsJsonArray();
+        assertEquals(1, e0.size());
+        JsonObject ent0 = e0.get(0).getAsJsonObject();
+        assertEquals(1, ent0.get("offset").getAsJsonArray().get(0).getAsInt());
+        assertEquals(2, ent0.get("offset").getAsJsonArray().get(1).getAsInt());
+        assertEquals(0, ent0.get("offset").getAsJsonArray().get(2).getAsInt());
+        assertEquals("minecraft:item_frame", ent0.get("type").getAsString());
+        assertEquals("north", ent0.get("facing").getAsString());
+        assertEquals("b64", ent0.get("nbt").getAsString());
+
+        // 旋转 1 步：offset [1,2,0] → [0,2,1]，facing north → east
+        WorkItem w1 = EnqueueHelper.buildWorkItem(cfg, new BlockPos(10, 64, 10), "custom", 1, null, null, 1);
+        JsonArray e1 = w1.params().get("entities").getAsJsonArray();
+        JsonObject ent1 = e1.get(0).getAsJsonObject();
+        assertEquals(0, ent1.get("offset").getAsJsonArray().get(0).getAsInt());
+        assertEquals(2, ent1.get("offset").getAsJsonArray().get(1).getAsInt());
+        assertEquals(1, ent1.get("offset").getAsJsonArray().get(2).getAsInt());
+        assertEquals("east", ent1.get("facing").getAsString());
+        assertEquals("b64", ent1.get("nbt").getAsString());
     }
 }

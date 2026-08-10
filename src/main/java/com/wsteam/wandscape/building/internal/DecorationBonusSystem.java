@@ -14,7 +14,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Periodically computes decoration radiation: decoration buildings radiate
@@ -111,7 +110,5 @@ public final class DecorationBonusSystem {
             cache.update(target.getBuildingId(), bonusComfort, bonusMagic, bonusWonder);
         }
 
-        Log.debug(TAG, "[Decoration] Scan complete: {} sources → {} targets",
-                sources.size(), targets.size());
     }
 }

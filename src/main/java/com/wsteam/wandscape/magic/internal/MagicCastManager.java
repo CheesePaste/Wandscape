@@ -9,12 +9,15 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
@@ -70,6 +73,8 @@ public final class MagicCastManager {
                 beam.bindCaster(pc.casterNpc());
                 beam.bindTarget(pc.targetNpc());
                 pc.level().addFreshEntity(beam);
+                SoundService.playAt(pc.level(), pc.source().x, pc.source().y, pc.source().z,
+                        WandscapeSounds.MAGIC_BEAM, SoundSource.NEUTRAL, 0.6f, 1.0f);
                 Log.info(TAG, "beam spawned id={} source={} target={} color=#{} life={} caster={} targetNpc={} time={}",
                         beam.getId(), pc.source(), pc.target(), Integer.toHexString(pc.color()),
                         pc.lifeTicks(), pc.caster().toString().substring(0, 8),

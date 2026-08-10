@@ -7,12 +7,12 @@ import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.TemplateResolver;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.task.engine.dsl.Blueprint;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
-import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -34,8 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for untested engine subsystems: scheduler scoring, RitualOp lifecycle,
- * private queue mechanics, approval flow, TemplateResolver edges, mana regen,
- * and task interrupts.
+ * private queue mechanics, approval flow, TemplateResolver edges, and task interrupts.
  */
 public class CoreSystemsTest {
 
@@ -70,8 +69,8 @@ public class CoreSystemsTest {
             // NPC-A: high range (6), BUILDING:1, mid efficiency (0.9), at (1,64,0)
             // NPC-B: low range (1), BUILDING:3, good efficiency (0.7), at (2,64,0)
             // Task target at (10,64,0): NPC-B dist=8 < NPC-A dist=9, so NPC-B wins
-            npcHighRange = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, 100, 5);
-            npcHighLevel = CoreBootstrap.createNpc(world, 2, 64, 0, colonyId, 100, 5);
+            npcHighRange = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+            npcHighLevel = CoreBootstrap.createNpc(world, 2, 64, 0, colonyId, NpcAttributes.defaults());
         }
 
         @Test
@@ -114,24 +113,62 @@ public class CoreSystemsTest {
         }
 
         @Test
-        void npcWithEmptyMana_notAssigned() {
-            // Drain one NPC's mana completely
-            ManaPool manaNpcB = world.get(npcHighLevel, ManaPool.class);
-            manaNpcB.consume(manaNpcB.current());
-            assertTrue(manaNpcB.isEmpty());
+        void reload_loadedTasksKeepOriginalId_singleOwnerPerTask() {
+            // Regression: 退出世界重进后同一任务被多个 NPC 反复接取。
+            // 根因：taskFromNbt 原先用 pool.addTask() 给任务分配临时 id，再用
+            // addLoadedTask() 把同一对象 re-key 到保存的 id。GlobalTask.id 是 final，
+            // 字段不会跟着变 → 任务 id 字段与池 key 不一致。调度器 assignLight(task.id)
+            // 因此查到错误任务或 null，幽灵任务留在 assignableSet，每个心跳把同一个
+            // 底层任务重新分配给一个新空闲 NPC。修复：加载直接用原始 id 建任务
+            // （addTaskWithId），使 id 字段恒等于池 key。
+            registerSimpleBp("test:load_a",
+                    AtomicOp.TransformOp.place(center.add(10, 0, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 1, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 2, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 3, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 4, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 5, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 6, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 7, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 8, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 9, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 10, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(10, 11, 0), BlockType.STONE));
+            registerSimpleBp("test:load_b",
+                    AtomicOp.TransformOp.place(center.add(20, 0, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(20, 1, 0), BlockType.STONE),
+                    AtomicOp.TransformOp.place(center.add(20, 2, 0), BlockType.STONE));
+            // A third, far-away NPC that stays idle — the old ghost would hand the
+            // same task to it every heartbeat.
+            long spare = CoreBootstrap.createNpc(world, 50, 64, 50, colonyId, NpcAttributes.defaults());
 
-            // Only npcHighRange has mana → should get assigned
-            registerSimpleBp("test:mana_skip",
-                    AtomicOp.TransformOp.place(center.add(5, 0, 5), BlockType.STONE));
+            // Simulate the load path: two saved tasks whose saved ids (7 and 1) don't
+            // line up with load order (7 loads first, so the old flow gave it temp id 1).
+            long taskA = world.taskPool.addTaskWithId(makeRequest("test:load_a", center, 10), 7);
+            long taskB = world.taskPool.addTaskWithId(makeRequest("test:load_b", center, 10), 1);
+            world.taskPool.addLoadedTask(world.taskPool.get(taskA), 7);
+            world.taskPool.addLoadedTask(world.taskPool.get(taskB), 1);
 
-            long taskId = world.taskPool.addTask(
-                    makeRequest("test:mana_skip", center, 10));
-            tickN(10);
+            // Invariant (root fix): a loaded task's id field always equals its pool key.
+            assertEquals(7, world.taskPool.get(taskA).id,
+                    "loaded task id must equal its pool key");
+            assertEquals(1, world.taskPool.get(taskB).id,
+                    "loaded task id must equal its pool key");
 
-            GlobalTask task = world.taskPool.get(taskId);
-            assertEquals(TaskState.COMPLETED, task.state,
-                    "Task should complete via NPC with mana");
-            assertFalse(mock.isAir(center.add(5, 0, 5)));
+            // Both tasks get claimed by the two near NPCs; the far spare stays idle.
+            tickN(4);
+            GlobalTask a = world.taskPool.get(taskA);
+            assertNotEquals(TaskState.PENDING_ASSIGN, a.state, "task A should be claimed");
+            assertNotEquals(spare, (long) a.assignedNpcId, "spare must not steal task A");
+            long ownerA = a.assignedNpcId;
+
+            // Keep heartbeating while the spare remains idle — the owner must not rotate.
+            tickN(8);
+            GlobalTask a2 = world.taskPool.get(taskA);
+            assertEquals(ownerA, (long) a2.assignedNpcId,
+                    "task A must stay with its original owner across heartbeats");
+            assertNotEquals(spare, (long) a2.assignedNpcId,
+                    "task A must not be re-assigned to the spare idle NPC");
         }
 
         // ---- helpers ----
@@ -178,7 +215,7 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
         }
 
         @Test
@@ -263,7 +300,7 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
         }
 
         @Test
@@ -427,7 +464,7 @@ public class CoreSystemsTest {
             // Create NPC and tick
             UUID colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, 0, 64, 0, 50);
-            CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
+            CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
 
             tickN(10);
 
@@ -532,66 +569,6 @@ public class CoreSystemsTest {
     }
 
     // ===================================================================
-    // 6. ManaRegenSystem — regen per tick, cap at max
-    // ===================================================================
-
-    @Nested
-    class ManaRegenTests {
-        private World world;
-        private long npc;
-
-        @BeforeEach
-        void setUp() {
-            MockBoundary mock = new MockBoundary();
-            mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
-            BlueprintRegistry blueprints = new BlueprintRegistry();
-            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
-                    new SystemBlueprintRegistry(), false);
-            world = CoreBootstrap.bootstrap(config);
-            DefaultOpExecutors.registerAll(world.opExecutors);
-
-            GridPos center = new GridPos(0, 64, 0);
-            UUID colonyId = UUID.randomUUID();
-            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
-
-            // max=100, starts full at 100, consume to 50, then regen has room
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
-        }
-
-        @Test
-        void manaRegeneratesByRegenPerTick() {
-            ManaPool mana = world.get(npc, ManaPool.class);
-            mana.consume(50);
-            assertEquals(50, mana.current(), "consumed 50 from 100 → 50");
-
-            world.tick(1.0f);
-            assertEquals(55, mana.current(), "50 + 5 regen = 55");
-        }
-
-        @Test
-        void manaCapsAtMax() {
-            ManaPool mana = world.get(npc, ManaPool.class);
-            mana.add(1000);
-            assertEquals(100, mana.current(), "Should cap at max=100");
-
-            world.tick(1.0f);
-            assertEquals(100, mana.current(), "Stays at max");
-        }
-
-        @Test
-        void manaConsumed_thenRegenerates() {
-            ManaPool mana = world.get(npc, ManaPool.class);
-            mana.consume(20);
-            assertEquals(80, mana.current());
-
-            world.tick(1.0f);
-            assertEquals(85, mana.current(), "80 + 5 regen");
-            world.tick(1.0f);
-            assertEquals(90, mana.current(), "85 + 5 regen");
-        }
-    }
-
-    // ===================================================================
     // 7. Task interrupt — records and releases NPC
     // ===================================================================
 
@@ -615,7 +592,7 @@ public class CoreSystemsTest {
             colonyId = UUID.randomUUID();
             CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
+            npc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
         }
 
         @Test

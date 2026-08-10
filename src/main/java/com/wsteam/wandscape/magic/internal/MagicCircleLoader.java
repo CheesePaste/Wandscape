@@ -8,7 +8,7 @@ import com.wsteam.wandscape.shared.registry.WandscapeDataRegistry;
 
 /**
  * 注册 {@code data/wandscape/magic_circles/*.json}，客户端/服务端均可按 id 查 spec。
- * 数据契约见 {@code magicarchitecture/magic-circles.md}，由 Web 编辑器导出。
+ * 数据契约见 {@code architecture/magic/magic-circles.md}，由 Web 编辑器导出。
  */
 public class MagicCircleLoader {
     private static final String CATEGORY = "magic_circles";

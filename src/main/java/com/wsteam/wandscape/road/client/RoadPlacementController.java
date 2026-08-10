@@ -82,10 +82,9 @@ public final class RoadPlacementController {
 
         long window = mc.getWindow().getWindow();
 
-        // ESC must work in both PLACING (cursor in game) and BAR (cursor lifted) phases.
-        // When cursor is lifted (mouse released), vanilla MC does NOT open the PauseScreen
-        // on ESC — it grabs the mouse back instead. So we cannot rely on ScreenEvent.Opening
-        // to handle ESC; we do it here directly.
+        // ESC is defensive cleanup for the rare case where road placement is still
+        // active after the panel has been closed. While the panel is open, ESC is
+        // intercepted by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
         handleEscapeInput(mc, window);
 
         // Cursor lifted → panel UI mode: drain all input
@@ -152,10 +151,6 @@ public final class RoadPlacementController {
         if (RoadPlacementState.isReady()) {
             // PLAN_END → right-click: clear all, return to IDLE
             RoadPlacementState.clearAll();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Road] §eCleared — right-click to set new start"), true);
-            }
         } else if (RoadPlacementState.isDestroyFill()) {
             // Destroy/Fill: capture reference block + position
             RoadPlacementState.setStartPos(ghostPos);
@@ -164,19 +159,9 @@ public final class RoadPlacementController {
                     ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
                     : "unknown";
             RoadPlacementState.setRefBlockId(blockName);
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Destroy/Fill] §aRef block: " + blockName + " at Y=" + ghostPos.getY()
-                                + " §7— left-click to set area, right-click to move ref"), true);
-            }
         } else {
             // IDLE or PLAN_START → right-click: set / overwrite startPos
             RoadPlacementState.setStartPos(ghostPos);
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Road] §aStart point set at " + ghostPos.toShortString()
-                                + " §7— left-click to set end, right-click to move start"), true);
-            }
         }
     }
 
@@ -188,11 +173,6 @@ public final class RoadPlacementController {
 
         // PLAN_START or PLAN_END → set / overwrite endPos
         RoadPlacementState.setEndPos(ghostPos);
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal(tag() + " §aEnd point set at " + ghostPos.toShortString()
-                            + " §7— Enter to publish, right-click to clear, Backspace to undo end"), true);
-        }
     }
 
     // ── Keyboard handling (no ESC — handled by handleEscapeInput) ──
@@ -281,30 +261,18 @@ public final class RoadPlacementController {
         if (RoadPlacementState.hasEnd()) {
             // PLAN_END → clear end, back to PLAN_START
             RoadPlacementState.clearEndPos();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Road] §eEnd point cleared — set new end or Backspace to cancel"), true);
-            }
         } else if (RoadPlacementState.isPlanning()) {
             // PLAN_START → clear start, back to IDLE
             RoadPlacementState.clearStartPos();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Road] §eCancelled"), true);
-            }
         }
     }
 
     // ── ESC handling (runs before cursorLifted guard) ──
 
     /**
-     * Handles ESC in BAR phase only (cursor lifted). PLACING phase ESC is handled by
-     * {@code WandscapePanelController.onScreenOpen} via PauseScreen interception,
-     * matching BUILD mode behavior.
-     *
-     * <p>After BAR → exit we also consume the key press to prevent the vanilla
-     * KeyboardHandler from calling {@code pauseGame()} on the same ESC press
-     * (ScreenEvent.Opening can't catch it because activeSubMode is already NONE).</p>
+     * Defensive ESC cleanup for the rare case where road placement is still active
+     * after the panel has been closed. While the panel is open, ESC is intercepted
+     * by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
      */
     private static void handleEscapeInput(Minecraft mc, long window) {
         boolean escapeDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
@@ -317,12 +285,8 @@ public final class RoadPlacementController {
                 && RoadPlacementState.getRoadPhase() != RoadPlacementState.RoadPhase.PLACING) {
             WandscapePanelState.exitCurrentSubMode();
             WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Road] §eExited road placement mode"), true);
-            }
         }
-        // When panel is open, ESC handled by WandscapePanelController via ScreenEvent.Opening
+        // With the panel open, ESC is handled by WandscapePanelController instead
     }
 
     // ── Input draining ──

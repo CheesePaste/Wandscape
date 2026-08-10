@@ -31,6 +31,19 @@ public sealed interface StepNode {
     }
 
     /**
+     * Spawn a decoration entity (item frame, painting). JSON type: {@code "spawn_entity"}.
+     * → {@link AtomicOp.SpawnDecorationOp}
+     *
+     * @param at         position expression — the block cell the entity occupies
+     * @param entityType expression evaluating to the entity registry id (e.g. "minecraft:item_frame")
+     * @param facing     expression evaluating to a Direction name ("north"…), empty string keeps NBT's facing
+     * @param nbt        optional expression evaluating to base64-encoded entity NBT (position-rebased)
+     */
+    record SpawnEntityStep(ExprNode at, ExprNode entityType, ExprNode facing,
+                           @javax.annotation.Nullable ExprNode nbt) implements StepNode {
+    }
+
+    /**
      * Remove/break a block. JSON type: {@code "remove"}.
      * → {@link AtomicOp.TransformOp#remove}
      */
@@ -49,11 +62,10 @@ public sealed interface StepNode {
      * @param action       the interaction type (toggle/activate/open_gui/gather/decompose/synthesize)
      * @param params       action-specific key-value pairs (e.g. element, amount)
      * @param channelTicks channeling duration in ticks (0 = instant for sync actions)
-     * @param manaCost     mana consumed by this interaction (configurable, unlike RitualOp)
      */
     record BlockInteractStep(ExprNode at, String action,
                              Map<String, ExprNode> params,
-                             ExprNode channelTicks, ExprNode manaCost) implements StepNode {
+                             ExprNode channelTicks) implements StepNode {
         public BlockInteractStep {
             if (params == null) params = Map.of();
         }
@@ -74,6 +86,20 @@ public sealed interface StepNode {
     record RitualStep(ExprNode ritual, ExprNode at,
                       Map<String, ExprNode> params) implements StepNode {
         public RitualStep {
+            if (params == null) params = Map.of();
+        }
+    }
+
+    /**
+     * Cast an altar-only magic at the given position. JSON type: {@code "altar_cast"}.
+     * → {@link AtomicOp.AltarCastOp}
+     * Channeling duration is carried in {@code params["duration"]} (the magic's
+     * altar_duration); mana cost and altar building UUID ride along for the scheduler
+     * gate and the per-altar cooldown state.
+     */
+    record AltarCastStep(ExprNode at, ExprNode magicId,
+                         Map<String, ExprNode> params) implements StepNode {
+        public AltarCastStep {
             if (params == null) params = Map.of();
         }
     }

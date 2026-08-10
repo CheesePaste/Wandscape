@@ -1,7 +1,9 @@
 package com.wsteam.wandscape.building.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,6 +15,7 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.road.core.TransportRoute;
 import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
@@ -26,19 +29,19 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Manages shop inventory: dynamic restock on low stock, tourist purchases.
  *
- * <p>Each shop building has its own stock map. When a purchase drops an item's
- * stock below maxStock/3, an automatic restock is triggered that fills goods
+ * <p>Each shop building has its own stock map. When a purchase leaves an item's
+ * stock below maxStock, an automatic restock is triggered that fills goods
  * to their maxStock by deducting element costs from the colony bank.
  *
  * <p>Stock data is persisted through {@link BuildingSavedData} so that inventory
@@ -55,6 +58,21 @@ public final class ShopStockManager {
 
     /** Buildings currently being restocked (prevents duplicate concurrent restocks). */
     private final Set<UUID> restockingInProgress = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Shops that triggered production (synthesize) for goods the warehouse
+     * couldn't supply. Retried periodically so once the produced item lands
+     * in the warehouse, the shop is refilled without waiting for a purchase
+     * or the next daily settlement.
+     */
+    private final Set<UUID> pendingRestock = ConcurrentHashMap.newKeySet();
+
+    /** Ticks between pending-restock retries (≈5s). */
+    private static final int RESTOCK_RETRY_INTERVAL_TICKS = 100;
+    private int restockRetryTicks = 0;
+
+    /** Random picker for which affordable good a tourist buys. */
+    private final Random random = new Random();
 
     @javax.annotation.Nullable
     private static ShopStockManager active;
@@ -231,32 +249,103 @@ public final class ShopStockManager {
 
     // ── Operations ──
 
+    /** Result of a tourist bulk purchase: what was bought, how many, and total wallet spent. */
+    public record PurchaseResult(String itemId, int count, long spent) {}
+
     /**
-     * Tourist purchases one unit of an item.
-     *
-     * @return true if purchase succeeded (stock was available)
+     * Universal-element wallet price for one unit of a good: the sum of all
+     * per-element profits the colony receives (each element × (1 + profitRate)).
+     * Returns 0 for goods with no element mapping.
      */
-    public boolean purchase(UUID buildingId, String itemId, UUID colonyId) {
+    public static long walletPrice(ShopConfig shopConfig, ShopGoodDef good) {
+        double profitRate = shopConfig != null ? shopConfig.profitRate() : 0.0;
+        long total = 0;
+        for (var entry : getItemElementValue(good.itemId()).entrySet()) {
+            total += (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
+        }
+        return total;
+    }
+
+    /**
+     * Tourist buys from a shop with their universal-element wallet.
+     *
+     * <p>Each shopping trip draws a random budget fraction a ∈ [0.2, 1] of the
+     * tourist's initial wallet (capped at the current balance), then selects one
+     * random in-stock good whose unit price fits within that budget and buys as
+     * many units as the budget allows (capped by stock). The tourist never spends
+     * more than the current wallet, so a single expensive good no longer empties
+     * the wallet and leaves nothing for later trips.
+     *
+     * @return the purchase result, or null if nothing was buyable
+     */
+    @Nullable
+    public PurchaseResult purchaseAffordable(UUID buildingId, UUID colonyId, int wallet, int initialWallet) {
+        if (wallet <= 0) return null;
         BuildingSavedData savedData = getSavedData();
-        if (savedData == null) return false;
+        if (savedData == null) return null;
+        Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
+        if (s.isEmpty()) return null;
+        BuildingState state = getBuildingState(buildingId);
+        if (state == null) return null;
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null || config.shop() == null) return null;
+
+        // Trip budget: random 20%–100% of the initial wallet, capped at what remains.
+        double a = 0.2 + 0.8 * random.nextDouble();
+        long budget = (long) (a * initialWallet);
+        if (budget > wallet) budget = wallet;
+
+        // Selectable = in-stock goods the tourist can afford at least one unit of
+        // this trip (unit price within budget). No debt: goods beyond the budget
+        // are simply not buyable now.
+        List<ShopGoodDef> selectable = new ArrayList<>();
+        for (ShopGoodDef good : config.shop().goods()) {
+            if (s.getOrDefault(good.itemId(), 0) <= 0) continue;
+            long price = walletPrice(config.shop(), good);
+            if (price > 0 && price <= budget) selectable.add(good);
+        }
+        if (selectable.isEmpty()) return null;
+
+        ShopGoodDef chosen = selectable.get(random.nextInt(selectable.size()));
+        long price = walletPrice(config.shop(), chosen);
+        int stock = s.getOrDefault(chosen.itemId(), 0);
+
+        // Buy as many units as the trip budget allows, capped by stock. No +1: a
+        // good the budget can't cover is not bought at all.
+        int qty = (int) Math.min(stock, budget / price);
+
+        int bought = purchase(buildingId, chosen.itemId(), colonyId, qty);
+        if (bought <= 0) return null;
+        return new PurchaseResult(chosen.itemId(), bought, price * bought);
+    }
+
+    /**
+     * Tourist purchases {@code count} units of an item (or as many as are in stock).
+     *
+     * @return the number of units actually purchased (0 if the purchase failed)
+     */
+    public int purchase(UUID buildingId, String itemId, UUID colonyId, int count) {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null || count <= 0) return 0;
 
         Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
         int current = s.getOrDefault(itemId, 0);
-        if (current <= 0) return false;
+        if (current <= 0) return 0;
 
         ServerLevel level = getServerLevel();
-        if (level == null) return false;
+        if (level == null) return 0;
         BuildingState state = savedData.getBuilding(buildingId);
-        if (state == null) return false;
+        if (state == null) return 0;
 
         BuildingConfig config = BuildingConfigLoader.getInstance()
                 .get(state.getBuildingTypeId());
-        if (config == null || config.shop() == null) return false;
+        if (config == null || config.shop() == null) return 0;
 
         ShopGoodDef good = findGood(config.shop(), itemId);
-        if (good == null) return false;
+        if (good == null) return 0;
 
-        int newStock = current - 1;
+        int qty = Math.min(count, current);
+        int newStock = current - qty;
         s.put(itemId, newStock);
         savedData.setDirty();
         updateHasStock(buildingId, s);
@@ -267,14 +356,15 @@ public final class ShopStockManager {
             double profitRate = config.shop().profitRate();
             Map<ElementType, Long> elementValue = getItemElementValue(itemId);
             for (var entry : elementValue.entrySet()) {
-                long profit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
-                bank.addElement(colonyId, entry.getKey(), profit);
+                long perUnit = (long) Math.ceil(entry.getValue() * (1.0 + profitRate));
+                bank.addElement(colonyId, entry.getKey(), perUnit * qty);
             }
+            bank.recordPurchase(colonyId);
         }
 
-        // Dynamic restock: if stock dropped below 1/3 of max, trigger auto-restock
+        // Dynamic restock: if stock is no longer full, trigger auto-restock
         int maxStock = getMaxStock(buildingId, itemId);
-        if (maxStock > 0 && newStock < maxStock / 3) {
+        if (maxStock > 0 && newStock < maxStock) {
             ColonyItemBank bank = ColonyItemBank.get(level);
             if (bank != null && restockingInProgress.add(buildingId)) {
                 restock(buildingId, config.shop(), colonyId, bank);
@@ -282,9 +372,7 @@ public final class ShopStockManager {
             }
         }
 
-        Log.debug(TAG, "[Shop] Purchase: building={} item={} remaining={}",
-                buildingId.toString().substring(0, 8), itemId, newStock);
-        return true;
+        return qty;
     }
 
     // ── Internal ──
@@ -317,6 +405,7 @@ public final class ShopStockManager {
         }
 
         boolean changed = false;
+        boolean supplyPending = false;
 
         for (ShopGoodDef good : shopConfig.goods()) {
             Map<String, Integer> s = savedData.getOrCreateShopStock(buildingId);
@@ -329,10 +418,21 @@ public final class ShopStockManager {
             ItemKey itemKey = ItemKey.of(good.itemId(), null);
             long availableInWarehouse = bank.available(colonyId, itemKey);
             int canAfford = (int) Math.min(needed, availableInWarehouse);
-            if (canAfford <= 0) continue;
+
+            if (canAfford <= 0) {
+                // Warehouse has none of the item — request production so a
+                // later retry can fill the shop once the item is synthesized.
+                if (requestSynthesize(good.itemId(), needed)) supplyPending = true;
+                continue;
+            }
 
             // Consume items from warehouse immediately (they are in transit)
             bank.consume(colonyId, itemKey, canAfford);
+
+            if (canAfford < needed && requestSynthesize(good.itemId(), needed - canAfford)) {
+                // Partial fill — request production for the remaining shortfall.
+                supplyPending = true;
+            }
 
             if (hasTransport && warehousePos != null) {
                 // Launch async transport visualization from warehouse to shop.
@@ -355,12 +455,73 @@ public final class ShopStockManager {
             }
         }
 
+        // Keep the shop in the retry set only while future production could still
+        // fill a short good; drop it once everything is stocked or unsynthesizable.
+        if (supplyPending) {
+            pendingRestock.add(buildingId);
+        } else {
+            pendingRestock.remove(buildingId);
+        }
+
         if (changed) {
             savedData.setDirty();
             Map<String, Integer> finalStock = savedData.getOrCreateShopStock(buildingId);
             updateHasStock(buildingId, finalStock);
             NeoForge.EVENT_BUS.post(new ShopRestockedEvent(buildingId, colonyId));
-            Log.debug(TAG, "[Shop] Restocked building={}", buildingId.toString().substring(0, 8));
+        }
+    }
+
+    /**
+     * Ask the engine supply chain to synthesize {@code itemId} (at a workstation)
+     * because the warehouse is short. The produced item lands in the warehouse;
+     * the pending-restock retry picks it up on a later tick.
+     *
+     * @return true if the shortfall is being handled (recipe found, task queued or
+     *         already in flight); false if it cannot be synthesized right now
+     */
+    private boolean requestSynthesize(String itemId, int amount) {
+        try {
+            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, WandscapeEngine.getWorld());
+        } catch (Exception e) {
+            Log.warn(TAG, "[Shop] requestSynthesize({} x{}) failed: {}", itemId, amount, e.getMessage());
+            return false;
+        }
+    }
+
+    // ── Pending-restock retry ──
+
+    /** Re-attempt restock for shops awaiting produced goods, on a slow heartbeat. */
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        if (pendingRestock.isEmpty()) return;
+        if (++restockRetryTicks < RESTOCK_RETRY_INTERVAL_TICKS) return;
+        restockRetryTicks = 0;
+        retryPendingRestocks();
+    }
+
+    private void retryPendingRestocks() {
+        BuildingSavedData savedData = getSavedData();
+        if (savedData == null) return;
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+
+        for (UUID buildingId : List.copyOf(pendingRestock)) {
+            BuildingState state = savedData.getBuilding(buildingId);
+            if (state == null || state.isShutdown() || !state.isStructureIntact()) {
+                pendingRestock.remove(buildingId);
+                continue;
+            }
+            UUID colonyId = state.getColonyId();
+            if (colonyId == null) continue;
+            BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+            if (config == null || config.shop() == null) {
+                pendingRestock.remove(buildingId);
+                continue;
+            }
+            // restock() re-derives supplyPending and updates the pending set itself.
+            restock(buildingId, config.shop(), colonyId, bank);
         }
     }
 
@@ -382,10 +543,6 @@ public final class ShopStockManager {
         transporter.send(key, amount, warehousePos, shopPos, level, 0, route, false)
             .thenRun(() -> onTransportArrived(buildingId, itemId, amount));
 
-        Log.debug(TAG, "[Shop] Transport: {} × {} from {} → {} (route={} legs)",
-                amount, itemId, warehousePos.toShortString(),
-                shopPos.toShortString(),
-                route != null ? route.legs().size() : 0);
     }
 
     /** Called when all transport units arrive — just logs. Stock already added at restock time. */
@@ -398,8 +555,6 @@ public final class ShopStockManager {
                     buildingId.toString().substring(0, 8), amount, itemId);
             return;
         }
-        Log.debug(TAG, "[Shop] Transport arrived: {} × {} at {}",
-                amount, itemId, buildingId.toString().substring(0, 8));
     }
 
     /**
@@ -447,18 +602,7 @@ public final class ShopStockManager {
     private static Map<ElementType, Long> getItemElementValue(String itemId) {
         var loader = com.wsteam.wandscape.Wandscape.ELEMENT_MAPPING_LOADER;
         if (loader == null) return Map.of();
-
-        ResourceLocation rl = ResourceLocation.tryParse(itemId);
-        if (rl == null) return Map.of();
-
-        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
-
-        // Prefer decompose_yield (what you get back when decomposing); fall back to build_cost
-        Map<ElementType, Long> source = loader.getItemDecomposeYield(item);
-        if (source.isEmpty()) {
-            source = loader.getItemBuildCost(item);
-        }
-        return source;
+        return loader.getItemElementValue(itemId);
     }
 
     // ── Daily restock ──
@@ -476,12 +620,11 @@ public final class ShopStockManager {
 
         for (BuildingState state : savedData.getAllBuildings()) {
             if (!colonyId.equals(state.getColonyId())) continue;
-            if (!"shop".equals(state.getCategory())) continue;
             if (state.isShutdown() || !state.isStructureIntact()) continue;
 
             BuildingConfig config = BuildingConfigLoader.getInstance()
                     .get(state.getBuildingTypeId());
-            if (config == null || config.shop() == null) continue;
+            if (config == null || config.shop() == ShopConfig.NONE) continue;
 
             restock(state.getBuildingId(), config.shop(), colonyId, bank);
         }

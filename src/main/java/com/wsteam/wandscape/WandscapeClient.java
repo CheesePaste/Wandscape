@@ -25,15 +25,20 @@ import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.NodeScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
 import com.wsteam.wandscape.building.client.TavernScreen;
+import com.wsteam.wandscape.building.client.AltarScreen;
 import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
-import com.wsteam.wandscape.building.scanner.client.BuildingScannerRenderer;
+import com.wsteam.wandscape.building.client.ConstructionGhostRenderer;
+import com.wsteam.wandscape.building.scanner.client.ScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
+import com.wsteam.wandscape.engine.sound.ColonyAmbientSystem;
 import com.wsteam.wandscape.npc.client.NpcScreen;
+import com.wsteam.wandscape.npc.client.NpcStrategyScreen;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.tourist.client.TouristScreen;
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
@@ -48,6 +53,7 @@ import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -55,6 +61,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
@@ -91,9 +98,25 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping PANEL_AREAS_TOGGLE = new KeyMapping(
+            "key.wandscape.building_areas",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B,
+            "key.categories.wandscape"
+    );
+
+    public static final KeyMapping OVERVIEW_TOGGLE = new KeyMapping(
+            "key.wandscape.overview",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_G,
+            "key.categories.wandscape"
+    );
+
     public WandscapeClient(ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, WandscapeClient::onPlayerLoggingIn);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, WandscapeClient::onPlayerLoggingOut);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, e -> MagicCircleEmitter.tick());
         RoadPlacementController.register();
         RoadPlacementRenderer.register();
@@ -103,20 +126,24 @@ public class WandscapeClient {
         BuildingDebugOverlay.register();
         TouristDebugRenderer.register();
         BuildingAreaRenderer.register();
+        ConstructionGhostRenderer.register();
 
         // Wandscape Panel
         WandscapePanelController.register();
         WandscapePanelOverlay.register();
         com.wsteam.wandscape.shared.ui.util.WandscapeHighlightRenderer.register();
 
+        // Replay mod compat: don't open UI screens during ReplayMod/ReforgedPlay playback
+        com.wsteam.wandscape.shared.ui.ReplayScreenGuard.register();
+
         // Overview mode
         OverviewFlightController.register();
         OverviewRenderer.register();
 
-        // Spline Road Editor (native overlay + world interaction)
+        // Spline Road Editor (ImGui visual editor + world interaction)
         com.wsteam.wandscape.road.client.SplineEditorController.register();
         com.wsteam.wandscape.road.client.SplineEditorRenderer.register();
-        com.wsteam.wandscape.road.client.SplineEditorOverlay.register();
+        com.wsteam.wandscape.imgui.ImGuiManager.register();
     }
 
     @SubscribeEvent
@@ -175,17 +202,24 @@ public class WandscapeClient {
         TavernOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(
                     new TavernScreen(packet.buildingPos(), packet.colonyId(),
-                            packet.mageResumes()));
+                            packet.recruitCount(), packet.mageResumes()));
         });
         HotelOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(new HotelScreen(
-                    packet.buildingPos(), packet.colonyId(), packet.buildingId(),
+                    packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
                     packet.maxOccupancy(), packet.currentOccupancy(),
                     packet.guestNames()));
         });
+        AltarOpenPacket.setClientHandler(packet -> {
+            Minecraft.getInstance().setScreen(new AltarScreen(
+                    packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
+                    packet.spells()));
+        });
         NpcDataPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
-            if (mc.screen instanceof NpcScreen existing) {
+            if (mc.screen instanceof NpcStrategyScreen strategyScreen) {
+                strategyScreen.apply(packet);
+            } else if (mc.screen instanceof NpcScreen existing) {
                 existing.apply(packet);
             } else {
                 mc.setScreen(new NpcScreen(packet));
@@ -199,13 +233,15 @@ public class WandscapeClient {
                 mc.setScreen(new TouristScreen(packet));
             }
         });
+        com.wsteam.wandscape.shared.network.ColonyAmbientPacket.setClientHandler(packet ->
+                ColonyAmbientSystem.setState(packet.playing(), packet.day()));
         ShopOpenPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof ShopScreen existing) {
                 existing.updateFrom(packet.stock(), packet.maxStocks());
             } else {
                 mc.setScreen(new ShopScreen(packet.buildingPos(), packet.colonyId(),
-                        packet.buildingId(), packet.stock(), packet.maxStocks()));
+                        packet.buildingId(), packet.creator(), packet.stock(), packet.maxStocks()));
             }
         });
 
@@ -214,7 +250,8 @@ public class WandscapeClient {
             net.minecraft.client.Minecraft.getInstance().setScreen(
                     new com.wsteam.wandscape.building.client.TownHallScreen(
                             packet.buildingPos(), packet.colonyId(),
-                            packet.colonyName(), packet.level(), packet.experience(), packet.expToNext()));
+                            packet.colonyName(), packet.level(), packet.experience(),
+                            packet.expToNext(), packet.founderName()));
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists
@@ -229,6 +266,19 @@ public class WandscapeClient {
                     new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(packet.markdownContent()));
         });
 
+        // Guide book: right-click opens the tutorial home (index_guide), locale-resolved
+        com.wsteam.wandscape.guidebook.network.GuideBookOpenPacket.setClientHandler(packet -> {
+            String docPath = packet.docPath();
+            String content = com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader.loadMarkdown(docPath);
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new com.wsteam.wandscape.shared.ui.guide.GuideTestScreen(null, content, docPath));
+        });
+
+        // Guide progress seed — apply saved tutorial step/dismissal on panel open
+        com.wsteam.wandscape.shared.network.GuideProgressSyncPacket.setClientHandler(packet ->
+                com.wsteam.wandscape.shared.ui.guidance.GuideSession.applySync(
+                        packet.stepIndex(), packet.dismissed()));
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 
@@ -237,11 +287,18 @@ public class WandscapeClient {
         event.register(PROJECTION_TOGGLE);
         event.register(PANEL_CURSOR_TOGGLE);
         event.register(GUIDE_TOGGLE);
+        event.register(PANEL_AREAS_TOGGLE);
+        event.register(OVERVIEW_TOGGLE);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
+        ColonyAmbientSystem.tick();
+        // When the building search box is focused, letter keys must type into it,
+        // not trigger panel hotkeys — so swallow V/C/H clicks while it's focused.
+        boolean searchFocused = WandscapePanelState.isBuildingBarSearchFocused();
         while (PROJECTION_TOGGLE.consumeClick()) {
             // V key: toggle Wandscape panel open/close
+            if (searchFocused) continue;
             if (WandscapePanelState.isPanelOpen()) {
                 WandscapePanelState.closePanel();
             } else {
@@ -250,12 +307,14 @@ public class WandscapeClient {
         }
         while (PANEL_CURSOR_TOGGLE.consumeClick()) {
             // C key: lift/release cursor within the panel
+            if (searchFocused) continue;
             if (WandscapePanelState.isPanelOpen()) {
                 WandscapePanelState.toggleCursor();
             }
         }
         while (GUIDE_TOGGLE.consumeClick()) {
             // H key: open guide — panel has its own handler; this covers non-panel contexts
+            if (searchFocused) continue;
             if (!WandscapePanelState.isPanelOpen()) {
                 openGuideIndex();
             }
@@ -271,13 +330,29 @@ public class WandscapeClient {
         }
     }
 
+    /** Welcome message on world join — points new players at the V-key building panel. */
+    private static void onPlayerLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+        var player = event.getPlayer();
+        if (player != null) {
+            player.displayClientMessage(Component.translatable("message.wandscape.town.welcome"), false);
+        }
+    }
+
+    /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
+    private static void onPlayerLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        WandscapePanelState.reset();
+    }
+
     @SubscribeEvent
     static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(Wandscape.WANDSCAPE_NPC.get(), WandscapeNpcRenderer::new);
+        // 敌对测试法师复用同款渲染器（模型/纹理/帽子/名牌），外观与 NPC 法师一致
+        event.registerEntityRenderer(Wandscape.EVIL_MAGE.get(), WandscapeNpcRenderer::new);
         event.registerEntityRenderer(Wandscape.TOURIST.get(), TouristRenderer::new);
         event.registerEntityRenderer(Wandscape.TRANSPORT_ITEM.get(), com.wsteam.wandscape.client.renderer.TransportItemEntityRenderer::new);
         event.registerEntityRenderer(Wandscape.MAGIC_BEAM.get(), MagicBeamEntityRenderer::new);
-        event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), BuildingScannerRenderer::new);
+        event.registerBlockEntityRenderer(Wandscape.CREATIVE_BUILDING_SCANNER_BE.get(), ScannerRenderer::new);
+        event.registerBlockEntityRenderer(Wandscape.BUILDING_SCANNER_BE.get(), ScannerRenderer::new);
     }
 
     @SubscribeEvent

@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.core.event;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.boundary.EventBus;
 
 import java.util.*;
@@ -26,7 +25,6 @@ public class SimpleEventBus implements EventBus {
     @SuppressWarnings("unchecked")
     public <T> void emit(T event) {
         queue.add(event);
-        Log.debug(TAG, "emit %s", event);
     }
 
     @Override
@@ -34,9 +32,6 @@ public class SimpleEventBus implements EventBus {
     public <T> Subscription subscribe(Class<T> type, Consumer<T> handler) {
         Consumer<Object> erased = (Consumer<Object>) handler;
         subscribers.computeIfAbsent(type, k -> new ArrayList<>()).add(erased);
-        Log.debug(TAG, "subscribe(%s) - %d handlers total",
-                type.getSimpleName(),
-                subscribers.get(type).size());
         return new Subscription(type, erased);
     }
 
@@ -44,7 +39,6 @@ public class SimpleEventBus implements EventBus {
     public void unsubscribe(Subscription sub) {
         if (sub != null) {
             deferredRemovals.add(sub);
-            Log.debug(TAG, "unsubscribe deferred (%s)", sub.eventType().getSimpleName());
         }
     }
 
@@ -53,26 +47,22 @@ public class SimpleEventBus implements EventBus {
     public void dispatch() {
         // 1. Deliver queued events
         if (!queue.isEmpty()) {
-            Log.debug(TAG, "dispatch begin - %d queued events", queue.size());
             List<Object> toDispatch = new ArrayList<>(queue);
             queue.clear();
 
             for (Object event : toDispatch) {
                 List<Consumer<Object>> handlers = subscribers.get(event.getClass());
                 if (handlers != null) {
-                    Log.debug(TAG, "dispatch %s → %d handlers", event, handlers.size());
                     for (Consumer<Object> handler : handlers) {
                         handler.accept(event);
                     }
                 } else {
-                    Log.debug(TAG, "dispatch %s → no handlers", event);
                 }
             }
         }
 
         // 2. Execute deferred removals (take effect after dispatch)
         if (!deferredRemovals.isEmpty()) {
-            Log.debug(TAG, "processing %d deferred unsubscribes", deferredRemovals.size());
             for (Subscription sub : deferredRemovals) {
                 List<Consumer<Object>> handlers = subscribers.get(sub.eventType());
                 if (handlers != null) {

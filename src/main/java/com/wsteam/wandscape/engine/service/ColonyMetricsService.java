@@ -44,12 +44,10 @@ public final class ColonyMetricsService implements ColonyMetricsApi {
         // 3. Tourist metrics
         int touristCount = 0;
         int overnightStayerCount = 0;
-        int avgSatisfaction = 0;
         var touristApi = WandscapeApis.getTouristApiSilently();
         if (touristApi != null) {
             touristCount = touristApi.getTouristCount(colonyId);
             overnightStayerCount = touristApi.getOvernightStayerCount(colonyId);
-            avgSatisfaction = touristApi.getAverageSatisfaction(colonyId);
         }
 
         // 4. Building anomalies — single building list traversal
@@ -106,7 +104,7 @@ public final class ColonyMetricsService implements ColonyMetricsApi {
         return new ColonyMetricsSnapshot(
                 colonyId, comfort, magic, wonder,
                 name, lvl, exp,
-                touristCount, overnightStayerCount, avgSatisfaction,
+                touristCount, overnightStayerCount,
                 npcIdleCount, npcTotalCount,
                 earthAmount, woodAmount, waterAmount, fireAmount, windAmount, metalAmount, darkAmount,
                 shutdownCount, shutdownBuildingNames, shutdownBuildingIds,

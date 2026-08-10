@@ -2,7 +2,7 @@
   "block": "minecraft:waxed_weathered_cut_copper_slab",
   "build_cost": {
     "wood": 32,
-    "metal": 9
+    "metal": 36
   },
   "decompose_yield": {},
   "decomposable": false,

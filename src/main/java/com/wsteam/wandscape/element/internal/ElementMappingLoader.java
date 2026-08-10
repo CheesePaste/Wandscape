@@ -20,7 +20,7 @@ public class ElementMappingLoader {
 
     private final WandscapeDataRegistry<ElementMappingConfig> registry;
 
-    /** Seed values loaded from element_seeds.json — used for Workstation decomposition. */
+    /** Seed values loaded from element_seeds.json — base-material values, kept for reporting/count. */
     private final Map<String, Map<ElementType, Long>> seedValues = new LinkedHashMap<>();
 
     public ElementMappingLoader(WandscapeDataLoader dataLoader) {
@@ -61,6 +61,19 @@ public class ElementMappingLoader {
     public Map<ElementType, Long> getItemBuildCost(Item item) {
         ElementMappingConfig config = findConfigByItem(item);
         return config != null ? config.buildCost() : Map.of();
+    }
+
+    /**
+     * Canonical element value of an item: decompose_yield preferred, build_cost fallback.
+     * Shared by shop sale profit and workstation decomposition.
+     */
+    public Map<ElementType, Long> getItemElementValue(String itemId) {
+        ResourceLocation rl = ResourceLocation.tryParse(itemId);
+        if (rl == null) return Map.of();
+        Item item = BuiltInRegistries.ITEM.get(rl);
+        Map<ElementType, Long> source = getItemDecomposeYield(item);
+        if (source.isEmpty()) source = getItemBuildCost(item);
+        return source;
     }
 
     private ElementMappingConfig findConfig(BlockState state) {
@@ -111,16 +124,6 @@ public class ElementMappingLoader {
                 seedValues.put(itemId, values);
             }
         }
-    }
-
-    /** Check if an item has seed values (can be decomposed at a Workstation). */
-    public boolean hasSeedValue(String itemId) {
-        return seedValues.containsKey(itemId);
-    }
-
-    /** Get the element values for a seed item. */
-    public Map<ElementType, Long> getSeedValues(String itemId) {
-        return seedValues.getOrDefault(itemId, Map.of());
     }
 
     public int getSeedCount() {

@@ -53,6 +53,13 @@ public final class BlueprintInterpreter {
         Objects.requireNonNull(definition, "definition must not be null");
         Objects.requireNonNull(params, "params must not be null");
 
+        // Apply defaults for optional params omitted by the caller
+        if (!definition.defaults().isEmpty()) {
+            Map<String, JsonElement> filled = new HashMap<>(params);
+            definition.defaults().forEach((name, defVal) -> filled.putIfAbsent(name, defVal));
+            params = filled;
+        }
+
         // Validate required params
         validateParams(definition, params);
 
@@ -100,6 +107,15 @@ public final class BlueprintInterpreter {
                         : null;
                 yield List.of(AtomicOp.TransformOp.place(at, block, consumable, nbt));
             }
+            case StepNode.SpawnEntityStep s -> {
+                GridPos at = evalPos(s.at(), context, "spawn_entity.at");
+                String type = evalString(s.entityType(), context, "spawn_entity.entity_type");
+                String facing = evalString(s.facing(), context, "spawn_entity.facing");
+                String nbt = s.nbt() != null
+                        ? evalString(s.nbt(), context, "spawn_entity.nbt")
+                        : null;
+                yield List.of(new AtomicOp.SpawnDecorationOp(at, type, facing, nbt));
+            }
             case StepNode.RemoveStep s -> {
                 GridPos at = evalPos(s.at(), context, "remove.at");
                 BlockType from = new BlockType(evalString(s.from(), context, "remove.from"));
@@ -115,13 +131,12 @@ public final class BlueprintInterpreter {
                 GridPos at = evalPos(s.at(), context, "block_interact.at");
                 InteractAction action = new InteractAction(s.action());
                 int channelTicks = evalInt(s.channelTicks(), context, "block_interact.channel_ticks");
-                float manaCost = (float) evalInt(s.manaCost(), context, "block_interact.mana_cost");
                 Map<String, String> params = new LinkedHashMap<>();
                 for (var entry : s.params().entrySet()) {
                     params.put(entry.getKey(),
                             evalString(entry.getValue(), context, "block_interact.params." + entry.getKey()));
                 }
-                yield List.of(new AtomicOp.BlockInteractOp(at, action, params, channelTicks, manaCost));
+                yield List.of(new AtomicOp.BlockInteractOp(at, action, params, channelTicks));
             }
             case StepNode.EntityInteractStep s -> {
                 String targetStr = evalString(s.target(), context, "entity_interact.target");
@@ -140,6 +155,16 @@ public final class BlueprintInterpreter {
                             evalString(entry.getValue(), context, "ritual.params." + entry.getKey()));
                 }
                 yield List.of(new AtomicOp.RitualOp(ritual, at, params));
+            }
+            case StepNode.AltarCastStep s -> {
+                GridPos at = evalPos(s.at(), context, "altar_cast.at");
+                String magicId = evalString(s.magicId(), context, "altar_cast.magic_id");
+                Map<String, String> params = new LinkedHashMap<>();
+                for (var entry : s.params().entrySet()) {
+                    params.put(entry.getKey(),
+                            evalString(entry.getValue(), context, "altar_cast.params." + entry.getKey()));
+                }
+                yield List.of(new AtomicOp.AltarCastOp(at, magicId, params));
             }
             case StepNode.RequestResourceStep s -> {
                 List<ResourceStack> stacks;
@@ -193,7 +218,7 @@ public final class BlueprintInterpreter {
                 String level = s.level();
                 switch (level) {
                     case "warn" -> Log.warn(TAG, "%s", text);
-                    case "debug" -> Log.debug(TAG, "%s", text);
+                    case "debug" -> { /* FINE logs removed */ }
                     default -> Log.info(TAG, "%s", text);
                 }
                 yield List.of(); // No AtomicOp
@@ -312,6 +337,9 @@ public final class BlueprintInterpreter {
             JsonElement value = evaluate(valueExpr, context);
             calleeContext.put(paramName, value);
         }
+
+        // Apply callee defaults for optional params omitted from the with block
+        calleeDef.defaults().forEach((name, defVal) -> calleeContext.putIfAbsent(name, defVal));
 
         // Validate: all declared params must be provided
         for (var paramEntry : calleeDef.params().entrySet()) {
@@ -655,7 +683,6 @@ public final class BlueprintInterpreter {
         } catch (NumberFormatException ignored) {}
 
         // 3. Fallback: deterministic 64-bit non-negative hash (FNV-1a)
-        Log.debug(TAG, "parseEntityId: hash fallback for '{}' (not a UUID or numeric ID)", str);
         long hash = 0xCBF29CE484222325L;
         for (int i = 0; i < str.length(); i++) {
             hash ^= str.charAt(i);

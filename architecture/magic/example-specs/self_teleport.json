@@ -1,0 +1,315 @@
+{
+  "id": "self_teleport_c",
+  "duration_ticks": 200,
+  "height": 0.1,
+  "elements": [
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "radius": 0,
+      "particle": "sculk_soul",
+      "color": "#ddd6fe",
+      "rotation_offset_deg": 0,
+      "rotate_speed": 0,
+      "start": 0,
+      "anim": {
+        "scale": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "alpha": [
+          [
+            0,
+            0
+          ],
+          [
+            0.15,
+            1
+          ],
+          [
+            0.85,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "rotation": [],
+        "easing": "smoothstep"
+      },
+      "type": "glyph",
+      "count": 1,
+      "sprite": "rune_teleport",
+      "scale": 0.5,
+      "trail_ticks": 10,
+      "head_scale": 1.35,
+      "tail_scale": 0.35
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "radius": 1,
+      "particle": "glow",
+      "color": "#6d28d9",
+      "rotation_offset_deg": 0,
+      "rotate_speed": 9,
+      "start": 0.1,
+      "anim": {
+        "scale": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "alpha": [
+          [
+            0,
+            0
+          ],
+          [
+            0.15,
+            1
+          ],
+          [
+            0.85,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "rotation": [],
+        "easing": "smoothstep"
+      },
+      "mode": "beads",
+      "density": 1.5,
+      "trail_ticks": 10,
+      "y_offset": 0,
+      "type": "ring"
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "radius": 3,
+      "particle": "enchant",
+      "color": "#ddd6fe",
+      "rotation_offset_deg": 20,
+      "rotate_speed": -16,
+      "start": 0.34,
+      "anim": {
+        "scale": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "alpha": [
+          [
+            0,
+            0
+          ],
+          [
+            0.15,
+            1
+          ],
+          [
+            0.85,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "rotation": [],
+        "easing": "smoothstep"
+      },
+      "type": "glyph",
+      "count": 6,
+      "sprite": "rune_teleport",
+      "scale": 0.2,
+      "trail_ticks": 12,
+      "head_scale": 1.35,
+      "tail_scale": 0.35
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "radius": 3.4,
+      "particle": "glow",
+      "color": "#6d28d9",
+      "rotation_offset_deg": 0,
+      "rotate_speed": -16,
+      "start": 0.28,
+      "anim": {
+        "scale": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "alpha": [
+          [
+            0,
+            0
+          ],
+          [
+            0.15,
+            1
+          ],
+          [
+            0.85,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "rotation": [],
+        "easing": "smoothstep"
+      },
+      "mode": "beads",
+      "density": 1.8,
+      "trail_ticks": 10,
+      "y_offset": 0,
+      "type": "star",
+      "points": 6,
+      "inner_ratio": 0.5
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "radius": 4.4,
+      "particle": "glow",
+      "color": "#6d28d9",
+      "rotation_offset_deg": 0,
+      "rotate_speed": 26,
+      "start": 0.48,
+      "anim": {
+        "scale": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "alpha": [
+          [
+            0,
+            0
+          ],
+          [
+            0.15,
+            1
+          ],
+          [
+            0.85,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "rotation": [],
+        "easing": "smoothstep"
+      },
+      "mode": "beads",
+      "density": 1.5,
+      "trail_ticks": 10,
+      "y_offset": 0,
+      "type": "ring"
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "radius": 5.2,
+      "particle": "endRod",
+      "color": "#a78bfa",
+      "rotation_offset_deg": 0,
+      "rotate_speed": -14,
+      "start": 0.56,
+      "anim": {
+        "scale": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "alpha": [
+          [
+            0,
+            0
+          ],
+          [
+            0.15,
+            1
+          ],
+          [
+            0.85,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "rotation": [],
+        "easing": "smoothstep"
+      },
+      "type": "glyph",
+      "count": 12,
+      "sprite": "rune_teleport",
+      "scale": 0.45,
+      "trail_ticks": 20,
+      "head_scale": 1.35,
+      "tail_scale": 0.35
+    }
+  ]
+}

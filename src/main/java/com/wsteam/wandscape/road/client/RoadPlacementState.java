@@ -3,6 +3,7 @@ package com.wsteam.wandscape.road.client;
 import java.util.List;
 
 import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.road.data.RoadPresetLoader;
 
 import net.minecraft.core.BlockPos;
 import com.wsteam.wandscape.shared.log.Log;
@@ -38,8 +39,6 @@ public final class RoadPlacementState {
     /** The block ID right-clicked as reference in DESTROY_FILL mode. */
     private static volatile String refBlockId = "";
 
-    private static final List<RoadPreset> presets = RoadPreset.DEFAULT_PRESETS;
-
     // ── Double-click tracking (mirrors WandscapePanelState.BUILD pattern) ──
     private static volatile long lastPresetClickTime = 0;
     private static volatile int lastPresetClickIndex = -1;
@@ -54,10 +53,9 @@ public final class RoadPlacementState {
     public static void enterProjection() {
         projecting = true;
         roadPhase = RoadPhase.BAR;
-        startPos = null;
-        endPos = null;
-        ghostPos = null;
-        Log.info(TAG, "[RoadPlacement] Entered placement mode");
+        // Preserve startPos/endPos/ghostPos/activeTool/selectedPresetIndex/refBlockId
+        // across suspend/resume within a session. Fields start null so first entry is clean.
+        Log.info(TAG, "[RoadPlacement] Entered placement mode (selection preserved)");
     }
 
     public static void exitProjection() {
@@ -71,26 +69,30 @@ public final class RoadPlacementState {
         Log.info(TAG, "[RoadPlacement] Exited placement mode");
     }
 
+    /**
+     * Suspend road placement without clearing the selection (positions, tool, preset,
+     * ref block). Used when temporarily leaving ROAD so in-progress placement survives
+     * re-entry. Full clear is {@link #exitProjection()}, called only on disconnect.
+     */
+    public static void suspendProjection() {
+        projecting = false;
+        Log.info(TAG, "[RoadPlacement] Suspended placement mode (selection preserved)");
+    }
+
     // ── Phase ──
 
     public static RoadPhase getRoadPhase() { return roadPhase; }
 
-    /** Enter BAR phase: clear positions, cursor lifted for preset selection overlay. */
+    /** Enter BAR phase (preset selection overlay). Preserves in-progress positions/tool. */
     public static void enterBar() {
         roadPhase = RoadPhase.BAR;
-        activeTool = ToolMode.REPLACE;
-        clearAll();
-        ghostPos = null;
-        refBlockId = "";
-        Log.info(TAG, "[RoadPlacement] Entered BAR phase");
+        Log.info(TAG, "[RoadPlacement] Entered BAR phase (positions preserved)");
     }
 
-    /** Enter PLACING phase: clear positions, cursor in game for start/end point selection. */
+    /** Enter PLACING phase (in-world start/end selection). Preserves in-progress positions/tool. */
     public static void enterPlacing() {
         roadPhase = RoadPhase.PLACING;
-        clearAll();
-        ghostPos = null;
-        Log.info(TAG, "[RoadPlacement] Entered PLACING phase");
+        Log.info(TAG, "[RoadPlacement] Entered PLACING phase (positions preserved)");
     }
 
     // ── Tool mode ──
@@ -136,14 +138,22 @@ public final class RoadPlacementState {
 
     public static int getSelectedPresetIndex() { return selectedPresetIndex; }
     public static void setSelectedPresetIndex(int idx) {
-        if (idx >= 0 && idx < presets.size()) {
+        if (idx >= 0 && idx < RoadPresetLoader.getInstance().getAll().size()) {
             selectedPresetIndex = idx;
             SplineEditorClientState.rebuildDynamicTemplate();
         }
     }
 
-    public static RoadPreset getSelectedPreset() { return presets.get(selectedPresetIndex); }
-    public static List<RoadPreset> getPresets() { return presets; }
+    public static RoadPreset getSelectedPreset() {
+        List<RoadPreset> all = RoadPresetLoader.getInstance().getAll();
+        if (selectedPresetIndex < 0 || selectedPresetIndex >= all.size()) {
+            return RoadPreset.DEFAULT_PRESETS.get(0);
+        }
+        return all.get(selectedPresetIndex);
+    }
+    public static List<RoadPreset> getPresets() {
+        return RoadPresetLoader.getInstance().getAll();
+    }
 
     // ── Positions ──
 

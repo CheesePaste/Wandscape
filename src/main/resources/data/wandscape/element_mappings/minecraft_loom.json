@@ -1,8 +1,8 @@
 {
   "block": "minecraft:loom",
   "build_cost": {
-    "wood": 4,
-    "dark": 4
+    "dark": 4,
+    "wood": 4
   },
   "decompose_yield": {},
   "decomposable": false,

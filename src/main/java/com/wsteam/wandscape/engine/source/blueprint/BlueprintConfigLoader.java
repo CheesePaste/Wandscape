@@ -88,15 +88,22 @@ public final class BlueprintConfigLoader {
             params = parseParams(obj.getAsJsonObject("params"));
         }
 
+        // Parse defaults (optional params: callers may omit them, interpreter fills these)
+        Map<String, JsonElement> defaults = Collections.emptyMap();
+        if (obj.has("defaults")) {
+            defaults = parseDefaults(obj.getAsJsonObject("defaults"));
+        }
+
         // Parse steps
         List<StepNode> steps = Collections.emptyList();
         if (obj.has("steps")) {
             steps = parseSteps(obj.getAsJsonArray("steps"));
         }
 
-        BlueprintDefinition def = new BlueprintDefinition(id, params, steps, displayName, description);
+        BlueprintDefinition def = new BlueprintDefinition(id, params, steps, displayName, description, defaults);
         definitions.put(id, def);
-        Log.info(TAG, "loaded blueprint: %s (params=%d steps=%d)", id, params.size(), steps.size());
+        Log.info(TAG, "loaded blueprint: %s (params=%d defaults=%d steps=%d)",
+                id, params.size(), defaults.size(), steps.size());
         return def;
     }
 
@@ -119,6 +126,14 @@ public final class BlueprintConfigLoader {
         return Collections.unmodifiableMap(params);
     }
 
+    private Map<String, JsonElement> parseDefaults(JsonObject obj) {
+        Map<String, JsonElement> defaults = new LinkedHashMap<>();
+        for (var entry : obj.entrySet()) {
+            defaults.put(entry.getKey(), entry.getValue());
+        }
+        return Collections.unmodifiableMap(defaults);
+    }
+
     // ─────────────────────────────────────────────────────────────────
     // Steps parsing
     // ─────────────────────────────────────────────────────────────────
@@ -139,11 +154,13 @@ public final class BlueprintConfigLoader {
     private StepNode parseStep(String type, JsonObject obj) {
         return switch (type) {
             case "place" -> parsePlace(obj);
+            case "spawn_entity" -> parseSpawnEntity(obj);
             case "remove" -> parseRemove(obj);
             case "convert" -> parseConvert(obj);
             case "block_interact" -> parseBlockInteract(obj);
             case "entity_interact" -> parseEntityInteract(obj);
             case "ritual" -> parseRitual(obj);
+            case "altar_cast" -> parseAltarCast(obj);
             case "request_resource" -> parseRequestResource(obj);
             case "emit_event" -> parseEmitEvent(obj);
             case "for_each" -> parseForEach(obj);
@@ -168,6 +185,16 @@ public final class BlueprintConfigLoader {
         return new StepNode.PlaceStep(at, block, consumable, nbt);
     }
 
+    private StepNode parseSpawnEntity(JsonObject obj) {
+        ExprNode at = parseExpr(obj.get("at"));
+        ExprNode type = parseExpr(obj.get("entity_type"));
+        ExprNode facing = obj.has("facing")
+                ? parseExpr(obj.get("facing"))
+                : new ExprNode.LiteralString("");
+        ExprNode nbt = obj.has("nbt") ? parseExpr(obj.get("nbt")) : null;
+        return new StepNode.SpawnEntityStep(at, type, facing, nbt);
+    }
+
     private StepNode parseRemove(JsonObject obj) {
         ExprNode at = parseExpr(obj.get("at"));
         ExprNode from = parseExpr(obj.get("from"));
@@ -186,8 +213,6 @@ public final class BlueprintConfigLoader {
         String action = obj.get("action").getAsString();
         ExprNode channelTicks = obj.has("channel_ticks") ? parseExpr(obj.get("channel_ticks"))
                 : new ExprNode.LiteralInt(0);
-        ExprNode manaCost = obj.has("mana_cost") ? parseExpr(obj.get("mana_cost"))
-                : new ExprNode.LiteralInt(1);
         Map<String, ExprNode> params = new LinkedHashMap<>();
         if (obj.has("params")) {
             JsonObject paramsObj = obj.getAsJsonObject("params");
@@ -195,7 +220,7 @@ public final class BlueprintConfigLoader {
                 params.put(entry.getKey(), parseExpr(entry.getValue()));
             }
         }
-        return new StepNode.BlockInteractStep(at, action, params, channelTicks, manaCost);
+        return new StepNode.BlockInteractStep(at, action, params, channelTicks);
     }
 
     private StepNode parseEntityInteract(JsonObject obj) {
@@ -217,6 +242,19 @@ public final class BlueprintConfigLoader {
             }
         }
         return new StepNode.RitualStep(ritual, at, params);
+    }
+
+    private StepNode parseAltarCast(JsonObject obj) {
+        ExprNode at = parseExpr(obj.get("at"));
+        ExprNode magicId = parseExpr(obj.get("magic_id"));
+        Map<String, ExprNode> params = new LinkedHashMap<>();
+        if (obj.has("params")) {
+            JsonObject paramsObj = obj.getAsJsonObject("params");
+            for (var entry : paramsObj.entrySet()) {
+                params.put(entry.getKey(), parseExpr(entry.getValue()));
+            }
+        }
+        return new StepNode.AltarCastStep(at, magicId, params);
     }
 
     private StepNode parseRequestResource(JsonObject obj) {

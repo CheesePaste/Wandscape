@@ -4,9 +4,20 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.BooleanValue DEBUG = BUILDER
+            .comment("Verbose logging: show INFO/DEBUG log messages. "
+                    + "When false (default), only WARN/ERROR messages are logged.")
+            .define("general.debug", false);
+
     public static final ModConfigSpec.IntValue COLONY_RADIUS = BUILDER
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);
+
+    public static final ModConfigSpec.IntValue MAX_CONCURRENT_BUILDINGS = BUILDER
+            .comment("Maximum number of buildings force-loaded for construction/production at once. "
+                    + "While a colony's chunks are unloaded, the active building's footprint is "
+                    + "force-loaded to run real block placement; this caps the concurrent cost.")
+            .defineInRange("general.maxConcurrentBuildings", 3, 1, 32);
 
     public static final ModConfigSpec.IntValue SCHEDULER_HEARTBEAT_TICKS = BUILDER
             .comment("Scheduler heartbeat interval in ticks (40 ticks = 2 seconds)")
@@ -28,25 +39,17 @@ public class Config {
             .comment("Number of consecutive stuck checks before NPC teleports")
             .defineInRange("scheduler.stuckMaxRetries", 3, 1, 10);
 
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_MAX_HEALTH = BUILDER
-            .comment("Default NPC max health")
-            .defineInRange("npc.defaultMaxHealth", 40, 10, 200);
+    public static final ModConfigSpec.IntValue NPC_REGEN_GRACE_TICKS = BUILDER
+            .comment("Ticks after taking damage before out-of-combat health regen resumes (100 = 5s)")
+            .defineInRange("npc.regenGraceTicks", 100, 20, 1000);
 
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_MAX_MANA = BUILDER
-            .comment("Default NPC max mana")
-            .defineInRange("npc.defaultMaxMana", 100, 20, 500);
+    public static final ModConfigSpec.IntValue NPC_REGEN_INTERVAL_TICKS = BUILDER
+            .comment("Ticks per 1 HP healed once out-of-combat regen is active (80 = 4s)")
+            .defineInRange("npc.regenIntervalTicks", 80, 20, 400);
 
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_SPELL_POWER = BUILDER
-            .comment("Default NPC spell power")
-            .defineInRange("npc.defaultSpellPower", 1, 1, 10);
-
-    public static final ModConfigSpec.IntValue DEFAULT_NPC_MANA_REGEN = BUILDER
-            .comment("Default NPC mana regen per tick")
-            .defineInRange("npc.defaultManaRegen", 2, 0, 20);
-
-    public static final ModConfigSpec.DoubleValue HOUSE_MANA_REGEN_MULTIPLIER = BUILDER
-            .comment("Mana regen multiplier when NPC is in assigned house")
-            .defineInRange("npc.houseManaRegenMultiplier", 3.0, 1.0, 10.0);
+    public static final ModConfigSpec.IntValue NPC_MANA_REGEN_TICKS = BUILDER
+            .comment("Ticks per 1 mana regenerated (10 = 1 point every 0.5s)")
+            .defineInRange("npc.manaRegenTicks", 10, 1, 100);
 
     public static final ModConfigSpec.IntValue NPC_WALK_THRESHOLD = BUILDER
             .comment("Max distance in blocks for NPC pathfinding; beyond this they teleport")
@@ -59,14 +62,6 @@ public class Config {
     public static final ModConfigSpec.IntValue PER_WAND_LEVEL_RANGE = BUILDER
             .comment("Additional range per wand level")
             .defineInRange("wand.perWandLevelRange", 8, 0, 32);
-
-    public static final ModConfigSpec.DoubleValue DEFAULT_MANA_COST_MULTIPLIER = BUILDER
-            .comment("Default mana cost multiplier for wands (lower = cheaper)")
-            .defineInRange("wand.defaultManaCostMultiplier", 1.0, 0.3, 1.0);
-
-    public static final ModConfigSpec.IntValue DEFAULT_WAND_RANGE = BUILDER
-            .comment("Default wand range")
-            .defineInRange("wand.defaultWandRange", 1, 1, 5);
 
     // ---- Road system ----
 
@@ -166,8 +161,10 @@ public class Config {
             .defineInRange("tourist.spawnWindowStart", 1000, 0, 24000);
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_WINDOW_END = BUILDER
-            .comment("Spawn window end (game time tick) — no new spawns after this")
-            .defineInRange("tourist.spawnWindowEnd", 13000, 0, 24000);
+            .comment("Spawn window end (game time tick) — no new spawns after this. "
+                    + "默认 8000（约 14:00）：游客集中在上午到，最晚的也有整个下午逛、傍晚走向旅店，"
+                    + "避免黄昏/夜晚才生成导致当晚因路由不到旅店被清场。")
+            .defineInRange("tourist.spawnWindowEnd", 8000, 0, 24000);
 
     public static final ModConfigSpec.IntValue TOURIST_DEPARTURE_WINDOW_START = BUILDER
             .comment("Night departure window start (game time tick)")
@@ -181,8 +178,16 @@ public class Config {
             .comment("Max random delay ticks before night departure (0-this)")
             .defineInRange("tourist.departureDelayMaxTicks", 1500, 0, 6000);
 
+    public static final ModConfigSpec.IntValue TOURIST_RESCUE_ROAD_RADIUS = BUILDER
+            .comment("Max blocks a rescue teleport searches for a road before falling back to building periphery")
+            .defineInRange("tourist.rescueRoadRadius", 96, 16, 512);
+
+    public static final ModConfigSpec.IntValue TOURIST_RESCUE_PERIPHERY_RADIUS = BUILDER
+            .comment("Max blocks a rescue teleport scans outward for open ground outside all buildings")
+            .defineInRange("tourist.rescuePeripheryRadius", 24, 8, 128);
+
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
-            .comment("Experience granted when tourist level == colony level (at 100% satisfaction)")
+            .comment("Experience granted when tourist level == colony level (满条离场时)")
             .defineInRange("colony.expEqualLevel", 100, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
@@ -237,19 +242,57 @@ public class Config {
                      "Micro-navigation supports opening doors and walking around furniture.")
             .defineInRange("tourist.microNavSwitchDistance", 5, 2, 16);
 
-    public static final ModConfigSpec.IntValue TOURIST_LEVEL_SATISFACTION_THRESHOLD = BUILDER
-            .comment("Per-level three-value threshold. A building's three-value sum must be "
-                    + ">= tourist.level × this to grant any satisfaction. Below = 0 gain.")
-            .defineInRange("tourist.levelSatisfactionThreshold", 3, 1, 10);
+    public static final ModConfigSpec.IntValue TOURIST_BASE_WALLET = BUILDER
+            .comment("Starting universal-element wallet for a level-1 tourist. "
+                    + "Reference prices: bread ~16, cake ~750, golden apple ~2684.")
+            .defineInRange("tourist.baseWallet", 200, 0, 1000000);
 
-    public static final ModConfigSpec.IntValue TOURIST_MAX_SATISFACTION_PER_VISIT = BUILDER
-            .comment("Maximum satisfaction a tourist can gain from a single building visit")
-            .defineInRange("tourist.maxSatisfactionPerVisit", 30, 10, 50);
+    public static final ModConfigSpec.IntValue TOURIST_WALLET_PER_LEVEL = BUILDER
+            .comment("Additional universal-element wallet per tourist level. "
+                    + "Wallet = baseWallet + level × walletPerLevel.")
+            .defineInRange("tourist.walletPerLevel", 300, 0, 1000000);
 
-    public static final ModConfigSpec.IntValue TOURIST_PREFERENCE_DECAY = BUILDER
-            .comment("How much a tourist's preference for a building type decreases "
-                    + "after visiting it.")
-            .defineInRange("tourist.preferenceDecay", 15, 0, 30);
+    // ── 游客经济改造：三条需求条 / 精力循环 / 停留 / 视野 / ATM（Block 0 新增）──
+
+    public static final ModConfigSpec.DoubleValue TOURIST_BAR_GAIN_COEFF = BUILDER
+            .comment("每条需求条填充 = round(建筑该维值 × 该系数)，封顶 need。默认 1.0 = 增益等于 JSON 值。")
+            .defineInRange("tourist.barGainCoeff", 1.0, 0.1, 10.0);
+
+    public static final ModConfigSpec.DoubleValue TOURIST_ENERGY_RESTORE_THRESHOLD = BUILDER
+            .comment("精力低于此比例（0~1）时，游客强烈偏向恢复（relax）建筑。")
+            .defineInRange("tourist.energyRestoreThreshold", 0.25, 0.0, 1.0);
+
+    public static final ModConfigSpec.IntValue TOURIST_QUEUE_WAIT_TOLERANCE_TICKS = BUILDER
+            .comment("spot 全满排队等待上限（tick），超时放弃去别处。")
+            .defineInRange("tourist.queueWaitToleranceTicks", 2400, 0, 24000);
+
+    public static final ModConfigSpec.DoubleValue TOURIST_QUEUE_SLOT_SPACING = BUILDER
+            .comment("排队站位间距（格）：队首紧贴正在交互的游客，后续沿该 spot 朝向一个贴一个向后排开。")
+            .defineInRange("tourist.queueSlotSpacing", 1.0, 0.5, 8.0);
+
+    public static final ModConfigSpec.IntValue TOURIST_STAY_MIN_DAYS = BUILDER
+            .comment("游客最少停留天数（离境截止下限）。")
+            .defineInRange("tourist.stayMinDays", 2, 1, 7);
+
+    public static final ModConfigSpec.IntValue TOURIST_STAY_MAX_DAYS = BUILDER
+            .comment("游客最多停留天数（离境截止上限）。")
+            .defineInRange("tourist.stayMaxDays", 4, 1, 7);
+
+    public static final ModConfigSpec.IntValue TOURIST_VISION_RADIUS = BUILDER
+            .comment("游客视野半径（格）：目标选择只看半径内且已加载的建筑；视野内无目标 → 闲逛。")
+            .defineInRange("tourist.visionRadius", 48, 8, 256);
+
+    public static final ModConfigSpec.DoubleValue TOURIST_ATM_TRAVEL_FUND_MULTIPLIER = BUILDER
+            .comment("生成时 travelFund = 随身现金 × 该系数（ATM 分批取现的池子上限，防无限取现）。")
+            .defineInRange("tourist.atmTravelFundMultiplier", 3.0, 1.0, 10.0);
+
+    public static final ModConfigSpec.IntValue TOURIST_NEED_BASE = BUILDER
+            .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。默认 150 = 1 级均衡 50/50/50。")
+            .defineInRange("tourist.needBase", 150, 50, 2000);
+
+    public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
+            .comment("游客每级需求增量。")
+            .defineInRange("tourist.needPerLevel", 20, 0, 500);
 
     // ---- Guard (守卫) system ----
 
@@ -279,6 +322,35 @@ public class Config {
             .comment("NPC hate memory (ticks): how long the NPC keeps a grudge against a non-player attacker "
                     + "before forgetting, unless it gets hurt again (600 = 30s).")
             .defineInRange("guard.hateDurationTicks", 600, 20, 72000);
+
+    // ---- Raid (袭击) system ----
+
+    public static final ModConfigSpec.IntValue RAID_TRIGGER_RANGE = BUILDER
+            .comment("Raid trigger radius: a player carrying Bad Omen (RAID_OMEN/BAD_OMEN) within this horizontal "
+                    + "X/Z expansion of a non-shutdown building's AABB (Y unchanged) starts a raid centered on the "
+                    + "colony's town hall.")
+            .defineInRange("raid.triggerRange", 10, 1, 64);
+
+    public static final ModConfigSpec.IntValue RAID_VILLAGE_RANGE = BUILDER
+            .comment("Raid village radius: ServerLevel.isVillage returns true within this horizontal distance of a "
+                    + "colony's town hall, so the vanilla Raid treats the colony as a village (won't stop/LOSS, "
+                    + "spawns waves around it).")
+            .defineInRange("raid.villageRange", 16, 1, 64);
+
+    public static final ModConfigSpec.IntValue RAID_NEARBY_RADIUS = BUILDER
+            .comment("Raid nearby radius (blocks): while an active raid's center is within this distance of a "
+                    + "colony's town hall, no new raid is triggered for that colony (one raid at a time).")
+            .defineInRange("raid.nearbyRadius", 64, 8, 256);
+
+    public static final ModConfigSpec.IntValue RAID_CHECK_INTERVAL = BUILDER
+            .comment("Raid trigger scan interval (ticks): how often the scanner checks for bad-omen players near "
+                    + "buildings.")
+            .defineInRange("raid.checkIntervalTicks", 20, 5, 200);
+
+    public static final ModConfigSpec.ConfigValue<String> PARTICLE_LEVEL = BUILDER
+            .comment("Particle effect level: OFF disables all mod particles, LOW halves count, "
+                    + "NORMAL default, HIGH doubles count.")
+            .define("particle.level", "NORMAL");
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

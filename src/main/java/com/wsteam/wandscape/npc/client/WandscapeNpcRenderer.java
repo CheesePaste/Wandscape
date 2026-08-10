@@ -12,6 +12,7 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
+import com.wsteam.wandscape.shared.ui.I18n;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -83,8 +84,9 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         return TEXTURES[variant];
     }
 
-    private static final float STATUS_SCALE = 0.025F;
-    private static final float STATUS_Y_OFFSET = 0.45F; // slightly below vanilla nametag
+    private static final float NAME_SCALE = 0.025F;
+    private static final float NAME_Y_OFFSET = 0.45F; // name right above the head
+    private static final float STATUS_Y_OFFSET = 0.70F; // status above the name
 
     @Override
     public void render(WandscapeNpc entity, float entityYaw, float partialTicks,
@@ -106,34 +108,63 @@ public class WandscapeNpcRenderer extends HumanoidMobRenderer<WandscapeNpc, Huma
         }
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
 
-        SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
-                AmbientTextPools::getNpcText);
+        // GUI 展示克隆（NPC 面板 3D 模型）跳过气泡与名牌
+        if (entity.guiDisplayMode) return;
 
-        // Render status text above NPC head
-        String status = entity.getStatusText();
-        if (!status.isEmpty()) {
-            renderStatusText(entity, status, poseStack, buffer, packedLight);
+        // 敌对法师等不显示闲聊气泡（showsSpeechBubbles=false）
+        if (entity.showsSpeechBubbles()) {
+            SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
+                    AmbientTextPools::getNpcText);
         }
+
+        // Name above the head, status above the name
+        renderNamePlate(entity, poseStack, buffer, packedLight);
     }
 
-    private void renderStatusText(WandscapeNpc entity, String text, PoseStack poseStack,
-                                  MultiBufferSource buffer, int packedLight) {
-        Component displayName = Component.literal("§7" + text); // gray italics-like
-        Font font = this.getFont();
+    /** Suppress the vanilla nametag — the name is drawn by {@link #renderNamePlate}. */
+    @Override
+    public boolean shouldShowName(WandscapeNpc entity) {
+        return false;
+    }
+
+    /** Render the mage's name (white) with its status (gray) above it. */
+    private void renderNamePlate(WandscapeNpc entity, PoseStack poseStack,
+                                 MultiBufferSource buffer, int packedLight) {
         double dist = this.entityRenderDispatcher.distanceToSqr(entity);
         if (dist > 4096.0) return; // >64 blocks, don't render
 
-        poseStack.pushPose();
-        poseStack.translate(0, entity.getBbHeight() + STATUS_Y_OFFSET, 0);
-        poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
-        poseStack.scale(STATUS_SCALE, -STATUS_SCALE, STATUS_SCALE);
-        Matrix4f matrix4f = poseStack.last().pose();
-
-        float x = (float)(-font.width(displayName) / 2);
+        Font font = this.getFont();
         int bgAlpha = (int)(Minecraft.getInstance().options.getBackgroundOpacity(0.25F) * 255.0F) << 24;
-        font.drawInBatch(displayName, x, 0, 0xDDDDDD, false, matrix4f, buffer,
+
+        // Status above the name (gray)
+        String statusKey = entity.getStatusText();
+        if (!statusKey.isEmpty()) {
+            Component status = I18n.name("npc.wandscape.state." + statusKey, WandscapeNpc.statusFallback(statusKey))
+                    .copy().withStyle(style -> style.withColor(0xAAAAAA));
+            poseStack.pushPose();
+            poseStack.translate(0, entity.getBbHeight() + STATUS_Y_OFFSET, 0);
+            poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+            poseStack.scale(NAME_SCALE, -NAME_SCALE, NAME_SCALE);
+            Matrix4f m = poseStack.last().pose();
+            float sx = -font.width(status) / 2f;
+            font.drawInBatch(status, sx, 0, 0xAAAAAA, false, m, buffer,
+                    Font.DisplayMode.SEE_THROUGH, bgAlpha, packedLight);
+            font.drawInBatch(status, sx, 0, -1, false, m, buffer,
+                    Font.DisplayMode.NORMAL, 0, packedLight);
+            poseStack.popPose();
+        }
+
+        // Name below the status (right above the head, white)
+        Component name = Component.literal(entity.getNpcName());
+        poseStack.pushPose();
+        poseStack.translate(0, entity.getBbHeight() + NAME_Y_OFFSET, 0);
+        poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+        poseStack.scale(NAME_SCALE, -NAME_SCALE, NAME_SCALE);
+        Matrix4f m2 = poseStack.last().pose();
+        float nx = -font.width(name) / 2f;
+        font.drawInBatch(name, nx, 0, 0xFFFFFF, false, m2, buffer,
                 Font.DisplayMode.SEE_THROUGH, bgAlpha, packedLight);
-        font.drawInBatch(displayName, x, 0, -1, false, matrix4f, buffer,
+        font.drawInBatch(name, nx, 0, -1, false, m2, buffer,
                 Font.DisplayMode.NORMAL, 0, packedLight);
         poseStack.popPose();
     }

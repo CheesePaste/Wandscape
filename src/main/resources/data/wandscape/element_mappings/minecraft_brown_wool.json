@@ -1,9 +1,9 @@
 {
   "block": "minecraft:brown_wool",
   "build_cost": {
+    "dark": 8,
     "wood": 8,
-    "wind": 8,
-    "dark": 8
+    "wind": 8
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -82,10 +82,8 @@ public class World {
             if (ex != null) {
                 Log.warn(TAG, "asyncOp '%s' failed: %s", label, ex.getMessage());
             } else {
-                Log.debug(TAG, "asyncOp '%s' resolved — %d pending", label, pendingFutures.size());
             }
         });
-        Log.debug(TAG, "asyncOp started '%s' — %d pending total", label, pendingFutures.size());
         return future;
     }
 
@@ -100,14 +98,12 @@ public class World {
 
     public long createEntity() {
         long id = nextEntityId++;
-        Log.debug(TAG, "createEntity() -> %d", id);
         return id;
     }
 
     /** Register a component store for the given type (called once during setup). */
     public <T> void registerComponent(Class<T> type, ComponentStore<T> store) {
         stores.put(type, store);
-        Log.debug(TAG, "registerComponent(%s)", type.getSimpleName());
     }
 
     /** Add a component to an entity. Fails if the store was never registered. */
@@ -118,7 +114,6 @@ public class World {
             throw new IllegalStateException("No ComponentStore registered for " + component.getClass().getSimpleName());
         }
         store.add(entity, component);
-        Log.debug(TAG, "entity %d + %s", entity, component);
     }
 
     /** Get a component by type. Returns null if absent. */
@@ -139,7 +134,6 @@ public class World {
         ComponentStore<T> store = getStore(type);
         if (store != null) {
             store.remove(entity);
-            Log.debug(TAG, "entity %d - %s", entity, type.getSimpleName());
         }
     }
 
@@ -199,10 +193,6 @@ public class World {
 
     /** Execute all systems in registration order. */
     public void tick(float delta) {
-        Log.debug(TAG, "tick begin (delta=%.1f) - entities=%d tasks=%d events=%d",
-                delta, nextEntityId - 1,
-                taskPool != null ? taskPool.size() : 0,
-                eventBus instanceof SimpleEventBus eb ? eb.queueSize() : 0);
 
         for (System sys : systems) {
             sys.update(this, delta);
@@ -211,7 +201,6 @@ public class World {
         if (eventBus instanceof SimpleEventBus eb) {
             eb.dispatch();
         }
-        Log.debug(TAG, "tick end");
     }
 
     // ---- Internal helpers ----

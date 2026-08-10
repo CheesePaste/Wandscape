@@ -3,18 +3,31 @@ package com.wsteam.wandscape.npc.entity;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.core.component.CastStrategyComponent;
 import com.wsteam.wandscape.core.component.ColonyMember;
-import com.wsteam.wandscape.core.component.ManaPool;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
+import com.wsteam.wandscape.core.component.MagicState;
 import com.wsteam.wandscape.core.component.NavigationState;
+import com.wsteam.wandscape.core.component.SpellbookComponent;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.AttributeModifier;
+import com.wsteam.wandscape.core.types.AttributeType;
+import com.wsteam.wandscape.core.types.EquipmentSlot;
+import com.wsteam.wandscape.core.types.ModifierOperation;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
@@ -24,6 +37,9 @@ import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -37,6 +53,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -77,19 +94,226 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public UUID colonyId = EntityComponentBridge.PLACEHOLDER_COLONY;
 
     // ============================================================
-    // Attributes (ECS is authoritative at runtime; these are NBT transit)
+    // Attributes (ECS EquipmentComponent is authoritative at runtime:
+    // base = these fields + equipment modifiers; these fields are NBT transit)
     // ============================================================
 
-    public int currentMana = 100;
-    public int maxMana = 100;
-    public int manaRegenRate = 2;
-    public int spellPower = 1;
+    public float maxHp = NpcAttributes.defaults().maxHp();
+    public float moveSpeed = NpcAttributes.defaults().moveSpeed();
+    public float spellPower = NpcAttributes.defaults().spellPower();
+    public float workSpeed = NpcAttributes.defaults().workSpeed();
+    public float spellSpeed = NpcAttributes.defaults().spellSpeed();
+    public float armorValue = NpcAttributes.defaults().armorValue();
+    public float maxMana = NpcAttributes.defaults().maxMana();
+
+    // ============================================================
+    // 魔力值 + 每魔法独立 CD + 施法互斥锁（纯逻辑在 core/component/MagicState）
+    // 魔力上限 = 第 7 属性 MAX_MANA（ECS EquipmentComponent 权威，getEffectiveAttribute 读取）
+    // ============================================================
+
+    public final MagicState magic = new MagicState();
+
+    /** 会哪些魔法（magicId 列表，P3；默认 [beam]）。决策层已知表来源。 */
+    public final SpellbookComponent spellbook = new SpellbookComponent();
+
+    /** 施法策略（玩家可控：预设 + 自定义优先级）。GuardCombat 经 CastBrain.resolvePriority 消费。 */
+    public final CastStrategyComponent castStrategy = new CastStrategyComponent();
+
+    /** 当前魔力。 */
+    public float getCurrentMana() {
+        return magic.getMana();
+    }
+
+    /** 魔力上限（第 7 属性有效值）。 */
+    public float getMaxMana() {
+        return getEffectiveAttribute(AttributeType.MAX_MANA);
+    }
+
+    /**
+     * 原子施放门控：互斥锁 + 该魔法独立 CD + 固定魔力消耗，全满足才成功。
+     * 成功后占用 {@code lockDurationTicks} 的施法互斥锁；CD 在锁占用期间冻结、锁释放后
+     * 才开始倒计时（施法时间不计入 CD），CD 基础值按 SPELL_SPEED 缩短（向上取整）。
+     */
+    public boolean tryCastSpell(String magicId, int baseCooldown, int manaCost, int lockDurationTicks) {
+        return magic.tryCast(magicId, baseCooldown, manaCost, lockDurationTicks,
+                getEffectiveAttribute(AttributeType.SPELL_SPEED));
+    }
+
+    /**
+     * 祭坛施法门控：扣蓝 + 占互斥锁，不设置本 NPC 的每魔法 CD
+     * （祭坛 CD 按建筑独立存放，见 {@code MagicState#tryAltarCast}）。
+     */
+    public boolean tryAltarCast(int manaCost, int lockDurationTicks) {
+        return magic.tryAltarCast(manaCost, lockDurationTicks);
+    }
+
+    /**
+     * 该法师的魔法光束能伤害的目标判定钩子。默认只伤敌对生物（{@link Enemy}）——
+     * 殖民地 NPC 的光束**永不伤害玩家**、其它 NPC 或村民。敌对法师等子类
+     * 覆盖为「Enemy 或 生存玩家」，用于实战测试。光束伤害（{@code MagicBeamEntity}）、
+     * SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）与战斗快照敌数（{@code GuardCombat}）
+     * 三处统一走此钩子，保证「NPC 伤不了玩家、邪恶法师能伤生存玩家」的边界唯一且一致。
+     */
+    public boolean canBeamHurt(LivingEntity target) {
+        return target instanceof Enemy;
+    }
+
+    /** 头顶是否显示闲聊气泡（客户端渲染器用）。敌对法师等子类覆盖为 false。 */
+    public boolean showsSpeechBubbles() {
+        return true;
+    }
+
+    // ============================================================
+    // 脱战生命恢复：受击后封伤 grace tick，之后每 interval tick 回 1 HP。
+    // 剩余值 NBT 持久（tick 数可跨存档）。
+    // ============================================================
+
+    private int regenCooldown = 0;
+    private int regenAccum = 0;
+
+    /** 受击时调用（SelfDefenseHandler）：重置脱战封伤计时。 */
+    public void markRecentlyDamaged() {
+        regenCooldown = Config.NPC_REGEN_GRACE_TICKS.get();
+        regenAccum = 0;
+    }
+
+    /** 每 server tick：脱战封伤计时递减，封伤过后按 interval 累计回血。 */
+    private void tickHealthRegen() {
+        if (regenCooldown > 0) {
+            regenCooldown--;
+            return;
+        }
+        if (getHealth() < getMaxHealth()) {
+            regenAccum++;
+            if (regenAccum >= Config.NPC_REGEN_INTERVAL_TICKS.get()) {
+                regenAccum = 0;
+                heal(1f);
+            }
+        } else {
+            regenAccum = 0;
+        }
+    }
+
+    /**
+     * 读取 NPC 有效属性（ECS EquipmentComponent：base + 装备加成）。
+     * ECS 不可用时回退到 NBT transit 字段。
+     */
+    public float getEffectiveAttribute(AttributeType type) {
+        World world = WandscapeEngine.getWorld();
+        if (world != null && ecsEntityId > 0) {
+            EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+            if (eq != null) return eq.getAttribute(type);
+        }
+        return switch (type) {
+            case MAX_HP -> maxHp;
+            case MOVE_SPEED -> moveSpeed;
+            case SPELL_POWER -> spellPower;
+            case WORK_SPEED -> workSpeed;
+            case SPELL_SPEED -> spellSpeed;
+            case ARMOR_VALUE -> armorValue;
+            case MAX_MANA -> maxMana;
+        };
+    }
+
+    /** 上次推送到 vanilla 的属性值（防每 tick 重复 setBaseValue）。 */
+    private float appliedMaxHp = -1;
+    private float appliedMoveSpeed = -1;
+    private float appliedArmor = -1;
+
+    /** 把有效属性推送到 vanilla 实体（最大生命/移速/护甲）。 */
+    private void applyEffectiveAttributes() {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || ecsEntityId <= 0) return;
+        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+        if (eq == null) return;
+        float maxHp = eq.getAttribute(AttributeType.MAX_HP);
+        float speed = eq.getAttribute(AttributeType.MOVE_SPEED);
+        float armor = eq.getAttribute(AttributeType.ARMOR_VALUE);
+        if (Math.abs(maxHp - appliedMaxHp) > 0.001f) {
+            appliedMaxHp = maxHp;
+            this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(maxHp);
+            if (getHealth() > maxHp) setHealth(maxHp);
+        }
+        if (Math.abs(speed - appliedMoveSpeed) > 0.001f) {
+            appliedMoveSpeed = speed;
+            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(speed);
+        }
+        if (Math.abs(armor - appliedArmor) > 0.001f) {
+            appliedArmor = armor;
+            this.getAttribute(Attributes.ARMOR).setBaseValue(armor);
+        }
+    }
 
     // ============================================================
     // Inventory
     // ============================================================
 
     public final SimpleContainer inventory = new SimpleContainer(27);
+
+    // ============================================================
+    // Armor slots (4). Stored separately from vanilla equipment slots so the
+    // wizard robe appearance is never overridden — armor only affects stats.
+    // ============================================================
+
+    public static final int ARMOR_SLOT_COUNT = 4;
+
+    /** 盔甲格顺序：0=头盔 1=胸甲 2=护腿 3=靴子。 */
+    public final SimpleContainer armorInventory = new SimpleContainer(ARMOR_SLOT_COUNT);
+
+    /** 盔甲槽索引 → 原版装备槽（读物品属性/判断装备槽用）。 */
+    public static final net.minecraft.world.entity.EquipmentSlot[] ARMOR_VANILLA_SLOTS = {
+            net.minecraft.world.entity.EquipmentSlot.HEAD,
+            net.minecraft.world.entity.EquipmentSlot.CHEST,
+            net.minecraft.world.entity.EquipmentSlot.LEGS,
+            net.minecraft.world.entity.EquipmentSlot.FEET
+    };
+
+    public ItemStack getArmorItem(int slot) {
+        return armorInventory.getItem(slot);
+    }
+
+    public void setArmorItem(int slot, ItemStack stack) {
+        armorInventory.setItem(slot, stack);
+    }
+
+    /** 从物品的原版 ARMOR 属性修饰符求单件盔甲的护甲值（外观不渲染，仅数值生效）。 */
+    public static float armorValueOf(ItemStack stack) {
+        if (stack.isEmpty()) return 0f;
+        float total = 0f;
+        for (var entry : stack.getAttributeModifiers().modifiers()) {
+            if (entry.attribute().is(Attributes.ARMOR)) {
+                total += entry.modifier().amount();
+            }
+        }
+        return Math.max(0f, total);
+    }
+
+    /**
+     * 把 4 个盔甲格的护甲值同步到 ECS EquipmentComponent（每槽一个加法修饰符），
+     * 使 armorValue 同时生效于属性查询（GUI）与伤害减免（vanilla ARMOR）。
+     */
+    public void syncArmorAttributes() {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || ecsEntityId <= 0) return;
+        EquipmentComponent eq = world.get(ecsEntityId, EquipmentComponent.class);
+        if (eq == null) return;
+        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+            EquipmentSlot coreSlot = switch (i) {
+                case 0 -> EquipmentSlot.HEAD;
+                case 1 -> EquipmentSlot.CHEST;
+                case 2 -> EquipmentSlot.LEGS;
+                default -> EquipmentSlot.FEET;
+            };
+            ItemStack stack = armorInventory.getItem(i);
+            if (stack.isEmpty()) {
+                eq.unequip(coreSlot);
+            } else {
+                eq.equip(coreSlot, stack.getItem().getDescriptionId(),
+                        List.of(new AttributeModifier(AttributeType.ARMOR_VALUE,
+                                armorValueOf(stack), ModifierOperation.ADDITION)));
+            }
+        }
+    }
 
     // ============================================================
     // Casting state (synced to client for animation + particles)
@@ -133,6 +357,15 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
 
     public int getHatColor() {
         return this.entityData.get(DATA_HAT_COLOR);
+    }
+
+    /** 恢复外观（复活魔法用）。 */
+    public void setSkinVariant(int variant) {
+        this.entityData.set(DATA_SKIN_VARIANT, variant);
+    }
+
+    public void setHatColor(int color) {
+        this.entityData.set(DATA_HAT_COLOR, color);
     }
 
     public boolean isCasting() {
@@ -180,7 +413,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     // ── Fast path: skip ECS polling for idle NPCs ──
     private int ecsPollCooldown = 0;
 
-    // ── 手动施法（shift+右键）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
+    // ── 手动施法（祭坛施法引导窗口）：窗口内强制 isCasting=true，与 ECS 驱动的施法互不干扰 ──
     private int manualCastTicks = 0;
 
     /**
@@ -223,6 +456,12 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
 
     // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
     public int lastParticleTick = -1;
+
+    /**
+     * 客户端 NPC 面板 3D 展示用的瞬态标记：渲染器据此跳过名牌与气泡。
+     * 仅当该实体是 GUI 展示克隆（不在世界里）时为 true。
+     */
+    public boolean guiDisplayMode = false;
 
     /** Enable or disable idle wandering AI. Called by NavigationSystem. */
     public void setAiWanderingEnabled(boolean enabled) {
@@ -324,6 +563,25 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         super.tick();
         if (level().isClientSide) return;
 
+        // 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
+        tickHealthRegen();
+        applyEffectiveAttributes();
+        // 首 tick 满蓝填充（新 NPC / 旧存档迁移），此后每 10tick 回 1 点
+        if (!magic.isManaSeeded()) {
+            magic.setMana(getMaxMana());
+            magic.markManaSeeded();
+        }
+        magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get());
+
+        tickCastingState();
+    }
+
+    /**
+     * ECS 驱动施法状态同步：casting/status/debug/op/faceTarget。
+     * 子类可覆盖为完全接管（如敌对法师由自己的施法 goal 驱动 {@code isCasting}，
+     * 而非 ECS 任务执行器）。
+     */
+    protected void tickCastingState() {
         boolean manual = manualCastTicks > 0;
         if (manual) manualCastTicks--;
 
@@ -455,77 +713,113 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         // 1. Navigation states (visible even if idle task-wise)
         if (nav != null) {
             switch (nav.mode) {
-                case TELEPORT_WAITING -> { return "等待魔力"; }
-                case TELEPORT_RITUAL   -> { return "等待传送"; }
-                case PATHFINDING       -> { return "移动中"; }
+                case TELEPORT_WAITING -> { return "waiting_magic"; }
+                case TELEPORT_RITUAL   -> { return "waiting_teleport"; }
+                case PATHFINDING       -> { return "moving"; }
             }
         }
 
         // 2. No task executor or no work → idle
-        if (exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null) || exec.state == ExecutorState.IDLE) return "空闲";
+        if (exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null) || exec.state == ExecutorState.IDLE) return "idle";
 
         // 3. Pending async future (navigation or channeled op)
         if (exec.pendingFuture != null && !exec.pendingFuture.isDone()) {
-            if (exec.pendingFutureIsNav) return "移动中";
+            if (exec.pendingFutureIsNav) return "moving";
             // Channeled op in progress
             String kind = exec.currentOpKind;
             if (kind != null) {
                 if (kind.startsWith("block_interact:")) {
                     String action = kind.substring("block_interact:".length());
-                    return actionDisplayName(action);
+                    return actionKey(action);
                 }
                 if (kind.startsWith("ritual:")) {
                     String ritual = kind.substring("ritual:".length());
-                    return ritualDisplayName(ritual);
+                    return ritualKey(ritual);
                 }
-                if (kind.equals("combat")) return "战斗中";
+                if (kind.equals("combat")) return "combat";
             }
-            return "引导中";
+            return "guiding";
         }
 
         // 4. Actively executing
         if (exec.state == ExecutorState.ACTIVE) {
             if (exec.currentSequence != null) {
-                return exec.currentSequence.label();
+                return "task:" + exec.currentSequence.label();
             }
             String kind = exec.currentOpKind;
             if (kind != null) {
                 if (kind.startsWith("block_interact:")) {
-                    return actionDisplayName(kind.substring("block_interact:".length()));
+                    return actionKey(kind.substring("block_interact:".length()));
                 }
                 if (kind.startsWith("ritual:")) {
-                    return ritualDisplayName(kind.substring("ritual:".length()));
+                    return ritualKey(kind.substring("ritual:".length()));
                 }
-                if (kind.equals("transform")) return "建造中";
-                if (kind.equals("combat")) return "战斗中";
+                if (kind.equals("transform")) return "transforming";
+                if (kind.equals("combat")) return "combat";
             }
-            return "执行中";
+            return "executing";
         }
 
-        if (exec.state == ExecutorState.WAITING) return "等待中";
+        if (exec.state == ExecutorState.WAITING) return "waiting";
 
         return "";
     }
 
-    private static String actionDisplayName(String action) {
+    private static String actionKey(String action) {
         return switch (action) {
-            case "gather" -> "采集中";
-            case "place" -> "放置中";
-            case "break" -> "破坏中";
-            case "interact" -> "交互中";
-            case "cast" -> "施法中";
-            default -> "执行: " + action;
+            case "gather" -> "gathering";
+            case "place" -> "placing";
+            case "break" -> "breaking";
+            case "interact" -> "interacting";
+            case "cast" -> "casting";
+            default -> "op:" + action;
         };
     }
 
-    private static String ritualDisplayName(String ritual) {
+    private static String ritualKey(String ritual) {
         return switch (ritual) {
-            case "self_teleport" -> "传送中";
-            case "lightning" -> "召唤雷电";
+            case "self_teleport" -> "teleporting";
+            case "lightning" -> "summon_lightning";
+            case "portal_gate" -> "portal_gate";
+            case "rain_call" -> "rain_call";
+            case "clear_weather" -> "clear_weather";
+            default -> "ritual:" + ritual;
+        };
+    }
+
+    /**
+     * Client-side fallback (zh) for a status key, shown only when the lang
+     * entry is missing. Keys prefixed {@code op:}/{@code ritual:}/{@code task:}
+     * carry dynamic payloads and never resolve via lang — fallback reassembles
+     * the original display text.
+     */
+    public static String statusFallback(String statusKey) {
+        return switch (statusKey) {
+            case "waiting_magic" -> "等待魔力";
+            case "waiting_teleport" -> "等待传送";
+            case "moving" -> "移动中";
+            case "idle" -> "空闲";
+            case "gathering" -> "采集中";
+            case "placing" -> "放置中";
+            case "breaking" -> "破坏中";
+            case "interacting" -> "交互中";
+            case "casting" -> "施法中";
+            case "combat" -> "战斗中";
+            case "guiding" -> "引导中";
+            case "transforming" -> "建造中";
+            case "executing" -> "执行中";
+            case "waiting" -> "等待中";
+            case "teleporting" -> "传送中";
+            case "summon_lightning" -> "召唤雷电";
             case "portal_gate" -> "开启传送门";
             case "rain_call" -> "祈雨";
             case "clear_weather" -> "驱云";
-            default -> "施法: " + ritual;
+            default -> {
+                if (statusKey.startsWith("op:")) yield "执行: " + statusKey.substring(3);
+                if (statusKey.startsWith("ritual:")) yield "施法: " + statusKey.substring(7);
+                if (statusKey.startsWith("task:")) yield statusKey.substring(5);
+                yield statusKey;
+            }
         };
     }
 
@@ -556,6 +850,17 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide) {
+            // Give the mage a name if it doesn't have one (spawn egg / colony spawns;
+            // tavern-recruited and revived mages already carry a name). Assign once —
+            // the custom name persists through save/load, so this is a no-op later.
+            if (!hasCustomName()) {
+                setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(generateRandomNpcName()));
+                setCustomNameVisible(true);
+            }
+            // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
+            if (spellbook.isEmpty()) {
+                spellbook.set(SpellbookComponent.DEFAULT_SPELLS);
+            }
             if (getSkinVariant() < 0) {
                 this.entityData.set(DATA_SKIN_VARIANT, random.nextInt(SKIN_VARIANT_COUNT));
             }
@@ -567,17 +872,29 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                     new ItemStack(Wandscape.WAND.get()));
             // Prevent vanilla despawn — NPC persistence is managed by the colony/engine
             this.setPersistenceRequired();
-            World world = WandscapeEngine.getWorld();
-            if (world != null) {
-                EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
-            } else {
-                // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
-                // Defer registration until the next tick.
-                Log.warn(TAG, "NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
-                        getUUID().toString().substring(0, 8));
-                EntityComponentBridge.INSTANCE.deferJoin(this);
+            if (isColonyNpc()) {
+                World world = WandscapeEngine.getWorld();
+                if (world != null) {
+                    EntityComponentBridge.INSTANCE.onNpcJoinWorld(this, world);
+                    syncArmorAttributes();
+                } else {
+                    // Engine not yet bootstrapped — entity loaded before ServerStartingEvent.
+                    // Defer registration until the next tick.
+                    Log.warn(TAG, "NPC {} onAddedToLevel but Engine World is null — deferring ECS registration",
+                            getUUID().toString().substring(0, 8));
+                    EntityComponentBridge.INSTANCE.deferJoin(this);
+                }
             }
         }
+    }
+
+    /**
+     * 是否作为殖民地 NPC 注册进 ECS（加入任务调度/属性权威/死亡记录等）。
+     * 敌对测试法师等独立实体覆盖为 false：保留外观/魔法表/法杖初始化，但不进 ECS，
+     * 也因此在死亡记录与村民索敌增强中被排除（见 NpcDeathHandler / HostileTargetingHandler）。
+     */
+    public boolean isColonyNpc() {
+        return true;
     }
 
     private int generateRandomHatColor() {
@@ -653,19 +970,45 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         super.addAdditionalSaveData(tag);
         tag.putInt("SkinVariant", getSkinVariant());
         tag.putInt("HatColor", getHatColor());
-        // Read current mana from ECS (the authoritative source at runtime)
-        World world = WandscapeEngine.getWorld();
-        if (world != null && ecsEntityId > 0) {
-            ManaPool mana = world.get(ecsEntityId, ManaPool.class);
-            tag.putInt("currentMana", mana != null ? (int) mana.current() : currentMana);
-        } else {
-            tag.putInt("currentMana", currentMana);
-        }
         tag.putLong("EcsEntityId", ecsEntityId);
-        tag.putInt("maxMana", maxMana);
-        tag.putInt("manaRegenRate", manaRegenRate);
-        tag.putInt("spellPower", spellPower);
+        tag.putFloat("maxHp", maxHp);
+        tag.putFloat("moveSpeed", moveSpeed);
+        tag.putFloat("spellPower", spellPower);
+        tag.putFloat("workSpeed", workSpeed);
+        tag.putFloat("spellSpeed", spellSpeed);
+        tag.putFloat("armorValue", armorValue);
+        tag.putFloat("maxMana", maxMana);
+        tag.putFloat("currentMana", magic.getMana());
+        tag.putInt("manaRegenAccum", magic.getManaRegenAccum());
+        tag.putInt("spellLockTicks", magic.getLockTicks());
+        tag.putBoolean("manaSeeded", magic.isManaSeeded());
+        CompoundTag magicCds = new CompoundTag();
+        for (Map.Entry<String, Integer> e : magic.getCooldowns().entrySet()) {
+            magicCds.putInt(e.getKey(), e.getValue());
+        }
+        tag.put("magicCooldowns", magicCds);
+        tag.putInt("regenCooldown", regenCooldown);
+        tag.putInt("regenAccum", regenAccum);
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
+        // 盔甲格（外观不渲染，仅属性生效）
+        ListTag armorList = new ListTag();
+        for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
+            armorList.add(armorInventory.getItem(i).saveOptional(registryAccess()));
+        }
+        tag.put("armorInventory", armorList);
+        // P3：施法决策（会哪些魔法 + 策略预设 + 自定义优先级）
+        ListTag spellbookIds = new ListTag();
+        for (String id : spellbook.ids()) {
+            spellbookIds.add(StringTag.valueOf(id));
+        }
+        tag.put("spellbookIds", spellbookIds);
+        tag.putString("castStrategyPreset", castStrategy.preset().name());
+        ListTag customPriority = new ListTag();
+        for (String id : castStrategy.customPriority()) {
+            customPriority.add(StringTag.valueOf(id));
+        }
+        tag.put("castStrategyPriority", customPriority);
+        tag.putBoolean("castStrategyConfigured", castStrategy.configured());
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
         }
@@ -682,11 +1025,58 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
             this.entityData.set(DATA_HAT_COLOR, tag.getInt("HatColor"));
         }
         ecsEntityId = tag.getLong("EcsEntityId");
-        currentMana = tag.getInt("currentMana");
-        maxMana = tag.getInt("maxMana");
-        manaRegenRate = tag.getInt("manaRegenRate");
-        spellPower = tag.getInt("spellPower");
+        maxHp = tag.getFloat("maxHp");
+        moveSpeed = tag.getFloat("moveSpeed");
+        spellPower = tag.getFloat("spellPower");
+        workSpeed = tag.getFloat("workSpeed");
+        spellSpeed = tag.getFloat("spellSpeed");
+        armorValue = tag.getFloat("armorValue");
+        maxMana = tag.getFloat("maxMana");
+        Map<String, Integer> cds = new HashMap<>();
+        if (tag.contains("magicCooldowns")) {
+            CompoundTag mc = tag.getCompound("magicCooldowns");
+            for (String key : mc.getAllKeys()) {
+                cds.put(key, mc.getInt(key));
+            }
+        }
+        magic.load(tag.getFloat("currentMana"), tag.getInt("manaRegenAccum"),
+                tag.getInt("spellLockTicks"), tag.getBoolean("manaSeeded"), cds);
+        regenCooldown = tag.getInt("regenCooldown");
+        regenAccum = tag.getInt("regenAccum");
         hasDefaultWand = tag.getBoolean("hasDefaultWand");
+        // 盔甲格恢复（旧存档无字段 → 空）
+        if (tag.contains("armorInventory", Tag.TAG_LIST)) {
+            ListTag armorList = tag.getList("armorInventory", Tag.TAG_COMPOUND);
+            for (int i = 0; i < ARMOR_SLOT_COUNT && i < armorList.size(); i++) {
+                armorInventory.setItem(i,
+                        ItemStack.parseOptional(registryAccess(), armorList.getCompound(i)));
+            }
+        }
+        // P3：施法决策恢复（旧存档无字段 → 保持默认 [beam] / balanced）
+        if (tag.contains("spellbookIds")) {
+            ListTag sl = tag.getList("spellbookIds", Tag.TAG_STRING);
+            List<String> ids = new ArrayList<>(sl.size());
+            for (int i = 0; i < sl.size(); i++) {
+                ids.add(sl.getString(i));
+            }
+            spellbook.set(ids);
+        }
+        castStrategy.setPreset(tag.getString("castStrategyPreset"));
+        if (tag.contains("castStrategyPriority")) {
+            ListTag pl = tag.getList("castStrategyPriority", Tag.TAG_STRING);
+            List<String> pri = new ArrayList<>(pl.size());
+            for (int i = 0; i < pl.size(); i++) {
+                pri.add(pl.getString(i));
+            }
+            castStrategy.setCustomPriority(pri);
+        }
+        // configured 恢复：新存档有显式标记；旧存档无标记时，CUSTOM 预设视为已配置（沿用显式列表），
+        // 否则按预设推导（行为与旧版一致）。须在 setCustomPriority 之后覆盖（后者会置 configured=true）。
+        if (tag.contains("castStrategyConfigured")) {
+            castStrategy.setConfigured(tag.getBoolean("castStrategyConfigured"));
+        } else {
+            castStrategy.setConfigured("CUSTOM".equals(tag.getString("castStrategyPreset")));
+        }
         if (tag.hasUUID("colonyId")) {
             colonyId = tag.getUUID("colonyId");
         }
@@ -715,9 +1105,20 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                 ? new UUID(0, exec.globalTaskId) : null;
     }
 
-    /** In-game display name for the NPC. */
+    /** In-game display name for the NPC (resolved to the current language). */
     public String getNpcName() {
-        return hasCustomName() ? getCustomName().getString() : "Wizard";
+        if (!hasCustomName()) return "Wizard";
+        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(getCustomName().getString());
+    }
+
+    // ── Auto-generated mage names ──
+    // Only used when a mage has no custom name (spawn egg / colony spawns).
+    // Tavern-recruited and revived mages keep their own names. Mages and
+    // tourists share one name pool (shared.data.CharacterNames).
+
+    /** Roll a random name key from the shared bilingual character name pool. */
+    public static String generateRandomNpcName() {
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey();
     }
 
     // ============================================================

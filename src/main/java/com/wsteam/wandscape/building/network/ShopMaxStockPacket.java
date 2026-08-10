@@ -42,9 +42,21 @@ public record ShopMaxStockPacket(UUID buildingId, BlockPos buildingPos,
         // Send refreshed shop data back to player
         Map<String, Integer> stock = manager.getStock(packet.buildingId);
         Map<String, Integer> maxStocks = manager.getAllMaxStocks(packet.buildingId);
+        String creator = resolveCreator(packet.buildingPos, player.serverLevel());
         var refresh = new ShopOpenPacket(packet.buildingPos, packet.colonyId,
-                packet.buildingId, stock, maxStocks);
+                packet.buildingId, creator, stock, maxStocks);
         PacketDistributor.sendToPlayer(player, refresh);
+    }
+
+    /** Resolve the shop building's config creator (for the bottom-left label). */
+    private static String resolveCreator(BlockPos pos, net.minecraft.server.level.ServerLevel level) {
+        var sd = com.wsteam.wandscape.building.internal.BuildingSavedData.get(level);
+        if (sd == null) return "";
+        var state = sd.getBuildingAt(pos);
+        if (state == null) return "";
+        var config = com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance()
+                .get(state.getBuildingTypeId());
+        return config != null ? config.creator() : "";
     }
 
     // ── StreamCodec helpers ──

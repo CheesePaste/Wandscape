@@ -1,15 +1,19 @@
 package com.wsteam.wandscape.building.network;
 
+import java.util.Random;
 import java.util.UUID;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.component.ColonyMember;
+import com.wsteam.wandscape.core.component.EquipmentComponent;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.shared.data.MageAttributeRoller;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -24,6 +28,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 /**
  * Client→server packet: player clicks "Recruit NPC" in the tavern GUI.
@@ -79,10 +84,31 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                 return;
             }
 
-            // 3. Find spawn position near the tavern
+            // 2.5 招募计费门控（仅「招募 NPC」收费）：每殖民地首次免费，之后每次需每种元素 10000
+            com.wsteam.wandscape.shared.api.TavernApi tavernApi = null;
+            try {
+                tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            } catch (IllegalStateException ignored) {}
+            if (tavernApi != null && !tavernApi.canAffordRecruit(colonyId)) {
+                sp.displayClientMessage(
+                        Component.literal("[Wandscape] Insufficient elements: recruiting costs "
+                                + WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT
+                                + " of every element (first recruit free)."),
+                        false);
+                return;
+            }
+
+            // 3. Roll recruit attributes: random² 偏斜分布 + 殖民地等级加成
+            //    （模拟殖民地等级游客投出的简历——与法师游客掷简历同一公式）
+            var levelMgr = WandscapeEngine.getColonyLevelManager();
+            int colonyLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
+            var candidate = MageAttributeRoller.roll(colonyLevel,
+                    new Random(level.random.nextLong()));
+
+            // 4. Find spawn position near the tavern
             BlockPos spawnPos = findSpawnPos(level, pkt.buildingPos);
 
-            // 4. Spawn NPC
+            // 5. Spawn NPC
             var npc = Wandscape.WANDSCAPE_NPC.get().spawn(level, spawnPos, MobSpawnType.COMMAND);
             if (npc == null) {
                 sp.displayClientMessage(
@@ -93,16 +119,36 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
 
-            // 5. Fix ECS state (spawn() already triggered onNpcJoinWorld)
+            // 6. Apply rolled attributes + 满蓝入职
+            npc.maxHp = candidate.maxHp();
+            npc.moveSpeed = candidate.moveSpeed();
+            npc.spellPower = candidate.spellPower();
+            npc.workSpeed = candidate.workSpeed();
+            npc.spellSpeed = candidate.spellSpeed();
+            npc.armorValue = candidate.armorValue();
+            npc.maxMana = candidate.maxMana();
+            npc.magic.setMana(candidate.maxMana());
+
+            // 7. Fix ECS state (spawn() already triggered onNpcJoinWorld)
             fixEcsAfterSpawn(npc, colonyId);
 
-            Log.info(TAG, "[Tourist] Recruited NPC {} for colony {} at {}",
-                    npc.getUUID().toString().substring(0, 8),
+            // 7.5 生成成功后再扣费计数（首次免费）
+            if (tavernApi != null) {
+                tavernApi.chargeRecruit(colonyId);
+            }
+
+            Log.info(TAG, "[Tourist] Recruited mage Lv.{} for colony {} at {}",
+                    candidate.level(),
                     colonyId.toString().substring(0, 8),
                     spawnPos.toShortString());
 
             sp.displayClientMessage(
-                    Component.literal("[Wandscape] NPC recruited! " + spawnPos.toShortString()),
+                    Component.literal("[Wandscape] Mage recruited! Lv." + candidate.level()
+                            + " 强度:" + fmt(candidate.spellPower())
+                            + " 工速:" + fmt(candidate.workSpeed())
+                            + " 施速:" + fmt(candidate.spellSpeed())
+                            + " 护甲:" + fmt(candidate.armorValue())
+                            + " " + spawnPos.toShortString()),
                     false);
         });
     }
@@ -150,8 +196,14 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         // Apply mage stats from resume
         npc.setCustomName(Component.literal(resume.touristName()));
         npc.setCustomNameVisible(true);
-        // Mage-specific attributes are applied via NPC stat system on spawn
-        // The resume stats (maxMana, spellPower, etc.) will be used by the NPC system
+        npc.maxHp = resume.maxHp();
+        npc.moveSpeed = resume.moveSpeed();
+        npc.spellPower = resume.spellPower();
+        npc.workSpeed = resume.workSpeed();
+        npc.spellSpeed = resume.spellSpeed();
+        npc.armorValue = resume.armorValue();
+        npc.maxMana = resume.maxMana();
+        npc.magic.setMana(resume.maxMana()); // 满蓝入职
 
         fixEcsAfterSpawn(npc, colonyId);
 
@@ -163,9 +215,15 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         sp.displayClientMessage(
                 Component.literal("[Wandscape] Mage " + resume.touristName()
                         + " recruited! Lv." + resume.level()
-                        + " MP:" + resume.maxMana()
-                        + " SP:" + resume.spellPower()),
+                        + " 强度:" + fmt(resume.spellPower())
+                        + " 工速:" + fmt(resume.workSpeed())
+                        + " 施速:" + fmt(resume.spellSpeed())
+                        + " 护甲:" + fmt(resume.armorValue())),
                 false);
+    }
+
+    private static String fmt(float v) {
+        return String.format("%.1f", v);
     }
 
     /** Find a valid spawn position near the tavern. */
@@ -197,13 +255,21 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
         return origin.above(2);
     }
 
-    /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId. */
+    /** Mirror of ColonyCommand.fixEcsAfterSpawn — correct PLACEHOLDER_COLONY → real colonyId,
+     *  and re-seed ECS base attributes from the resume (the NPC spawned with defaults). */
     private static void fixEcsAfterSpawn(WandscapeNpc npc, UUID colonyId) {
         World ecsWorld = WandscapeEngine.getWorld();
         if (ecsWorld == null) return;
 
         Long ecsId = EntityComponentBridge.INSTANCE.getEcsId(npc.getUUID());
         if (ecsId == null) return;
+
+        // Re-seed ECS base attributes from the resume's rolled values
+        EquipmentComponent eq = ecsWorld.get(ecsId, EquipmentComponent.class);
+        if (eq != null) {
+            eq.seedBaseValues(new NpcAttributes(npc.maxHp, npc.moveSpeed, npc.spellPower,
+                    npc.workSpeed, npc.spellSpeed, npc.armorValue, npc.maxMana));
+        }
 
         var member = ecsWorld.get(ecsId,
                 ColonyMember.class);

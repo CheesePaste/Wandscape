@@ -1,9 +1,9 @@
 {
   "block": "minecraft:prismarine_stairs",
   "build_cost": {
-    "earth": 96,
     "water": 96,
-    "dark": 96
+    "dark": 96,
+    "earth": 96
   },
   "decompose_yield": {},
   "decomposable": false,

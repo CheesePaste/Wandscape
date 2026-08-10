@@ -7,7 +7,7 @@ public record ColonyMetricsSnapshot(
         UUID colonyId,
         int comfort, int magic, int wonder,
         String colonyName, int colonyLevel, int colonyExperience,
-        int touristCount, int overnightStayerCount, int averageSatisfaction,
+        int touristCount, int overnightStayerCount,
         int npcIdleCount, int npcTotalCount,
         int earthAmount, int woodAmount, int waterAmount, int fireAmount,
         int windAmount, int metalAmount, int darkAmount,
@@ -16,7 +16,7 @@ public record ColonyMetricsSnapshot(
 
     public static final ColonyMetricsSnapshot EMPTY = new ColonyMetricsSnapshot(
             null, 0, 0, 0, "", 1, 0,
-            0, 0, 0,
+            0, 0,
             0, 0,
             0, 0, 0, 0, 0, 0, 0,
             0, List.of(), List.of(),

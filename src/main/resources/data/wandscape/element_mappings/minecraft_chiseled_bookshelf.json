@@ -1,8 +1,7 @@
 {
   "block": "minecraft:chiseled_bookshelf",
   "build_cost": {
-    "wood": 15,
-    "dark": 3
+    "wood": 15
   },
   "decompose_yield": {},
   "decomposable": false,

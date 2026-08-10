@@ -11,9 +11,25 @@ freecam/
 *.ipr
 out/
 !**/src/**/out/
+magicarchitecture/
+spec/
+### Claude (local working files, kept out of the repo) ###
+.claude/
+magiccircles/
+CLAUDE.local.md
+### Dev tools (maintained outside the repo) ###
+tools/
 
+### Root branding icons (kept local only) ###
+/wandscape-icon.png
+/wandscape-icon.svg
+/wandscape-icon-v2.png
+/wandscape-icon-v2-400.png
+/wandscape-icon-v2.svg
 
-**/.claude/settings.local.json
+### Icon source assets (svg 已应用进模组 resources，源文件不入库) ###
+assets_src/
+
 /assets/
 ### Eclipse ###
 .apt_generated
@@ -55,11 +71,8 @@ TEMPLATE_LICENSE.txt
 reasonix.toml
 .reasonix/
 
-### Claude skill cache ###
-.claude/skills/minecraft-source/scripts/cache/
-
 ### Third-party reference examples (GPL-3.0, read-only, not part of the mod) ###
-magicarchitecture/usefulmagic-examples/
+architecture/magic/usefulmagic-examples/
 
 ### Python cache ###
 __pycache__/
@@ -69,3 +82,9 @@ __pycache__/
 gen_icons.py
 fix_icons.py
 generate_icons.js
+
+### 废弃的指南重写临时目录（已 revert，残留不入库） ###
+guide_rewrite_temp/
+
+### CurseForge description (local only, not part of the mod) ###
+curseforge-description.md

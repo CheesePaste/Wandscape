@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.ElementPanel;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
@@ -65,7 +66,7 @@ public class WarehouseScreen extends MedievalScreen {
 
     public WarehouseScreen() {
         super(Component.literal("Colony Warehouse"), PW, PH);
-        setTitleBar("Colony Warehouse");
+        setTitleBar(I18n.name("gui.wandscape.warehouse.title", "Colony Warehouse"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "warehouse_guide";
@@ -112,11 +113,11 @@ public class WarehouseScreen extends MedievalScreen {
         int searchH = font.lineHeight + 6;
 
         searchInput = new EditBox(font, rightX + 1, tabY + 2, rightW - 2, font.lineHeight,
-                Component.literal("Search items..."));
+                I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         searchInput.setBordered(false);
         searchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         searchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        searchInput.setHint(Component.literal("Search items..."));
+        searchInput.setHint(I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         searchInput.setCanLoseFocus(true);
         searchInput.setResponder(this::applyFilter);
 
@@ -152,11 +153,11 @@ public class WarehouseScreen extends MedievalScreen {
         int sbW = (leftPos + PW - 8) - sbX;
         int sbY = getInventoryY();
         exchangeSearchInput = new EditBox(font, sbX + 1, sbY + 1, sbW - 2, font.lineHeight,
-                Component.literal("Search items..."));
+                I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         exchangeSearchInput.setBordered(false);
         exchangeSearchInput.setTextColor(MedievalColors.TEXT_WARM_WHITE);
         exchangeSearchInput.setTextColorUneditable(MedievalColors.TEXT_MUTED);
-        exchangeSearchInput.setHint(Component.literal("Search items..."));
+        exchangeSearchInput.setHint(I18n.name("gui.wandscape.warehouse.search", "Search items..."));
         exchangeSearchInput.setCanLoseFocus(true);
         exchangeSearchInput.setResponder(this::applyExchangeFilter);
     }
@@ -168,6 +169,7 @@ public class WarehouseScreen extends MedievalScreen {
             protected void renderRow(GuiGraphics g, ItemEntry item, int rx, int ry, int index,
                                      boolean selected, boolean hovered) {
                 var registryItem = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(item.itemId()));
+                Component name;
                 if (registryItem != null && registryItem != Items.AIR) {
                     ItemStack icon = new ItemStack(registryItem);
                     if (item.nbt() != null && !item.nbt().isEmpty()) {
@@ -175,9 +177,10 @@ public class WarehouseScreen extends MedievalScreen {
                                 net.minecraft.world.item.component.CustomData.of(item.nbt().copy()));
                     }
                     g.renderItem(icon, rx, ry + 2);
+                    name = icon.getHoverName();
+                } else {
+                    name = Component.literal(item.itemId());
                 }
-
-                String name = formatItemName(item.itemId());
                 int textColor = selected ? MedievalColors.BORDER_GOLD
                         : hovered ? MedievalColors.TEXT_WARM_WHITE
                         : MedievalColors.TEXT_MUTED;
@@ -190,7 +193,8 @@ public class WarehouseScreen extends MedievalScreen {
                         MedievalColors.TEXT_MUTED);
 
                 if (showHint && hovered) {
-                    String hint = "L-click: withdraw 1  |  R-click: withdraw " + MAX_QTY;
+                    String hint = I18n.name("gui.wandscape.warehouse.withdraw_hint",
+                            "L-click: withdraw 1 | R-click: withdraw %s", MAX_QTY).getString();
                     g.drawString(Minecraft.getInstance().font, hint, rx + 20, ry + 14,
                             MedievalColors.TEXT_MUTED);
                 }
@@ -243,7 +247,10 @@ public class WarehouseScreen extends MedievalScreen {
     // ── Tabs ──
 
     private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
-        String[] tabs = { "Overview", "Exchange" };
+        String[] tabs = {
+                I18n.name("gui.wandscape.warehouse.overview", "Overview").getString(),
+                I18n.name("gui.wandscape.warehouse.exchange", "Exchange").getString()
+        };
         int ty = topPos + headerHeight + 2;
         int tx = leftPos + 8;
         int padH = 10;
@@ -279,8 +286,8 @@ public class WarehouseScreen extends MedievalScreen {
             int invY = getInventoryY();
             g.fill(leftPos + 8, invY - 2, leftPos + PW - 8, invY - 1,
                     MedievalColors.BORDER_GOLD_DARK);
-            g.drawString(font, "Player Inventory", leftPos + 8, invY,
-                    MedievalColors.TEXT_MUTED);
+            g.drawString(font, I18n.name("gui.wandscape.warehouse.player_inventory", "Player Inventory"),
+                    leftPos + 8, invY, MedievalColors.TEXT_MUTED);
         }
     }
 
@@ -389,7 +396,10 @@ public class WarehouseScreen extends MedievalScreen {
     }
 
     private int getTabAt(double mouseX, double mouseY) {
-        String[] tabs = { "Overview", "Exchange" };
+        String[] tabs = {
+                I18n.name("gui.wandscape.warehouse.overview", "Overview").getString(),
+                I18n.name("gui.wandscape.warehouse.exchange", "Exchange").getString()
+        };
         int ty = topPos + headerHeight + 2;
         int tx = leftPos + 8;
         int padH = 10;
@@ -490,12 +500,6 @@ public class WarehouseScreen extends MedievalScreen {
     }
 
     // ── Helpers ──
-
-    private static String formatItemName(String itemId) {
-        int colon = itemId.indexOf(':');
-        String path = colon >= 0 ? itemId.substring(colon + 1) : itemId;
-        return path.replace('_', ' ');
-    }
 
     private static String formatCount(long n) {
         if (n < 1000) return String.valueOf(n);

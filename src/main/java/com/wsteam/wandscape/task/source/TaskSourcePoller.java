@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.task.source;
 
-import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.core.ecs.System;
 import com.wsteam.wandscape.core.ecs.World;
 
@@ -8,7 +7,7 @@ import java.util.List;
 
 /**
  * Polls all registered TaskSources on their configured intervals.
- * Runs second in the tick order (after ManaRegenSystem).
+ * Runs second in the tick order.
  */
 public class TaskSourcePoller implements System {
 
@@ -27,7 +26,6 @@ public class TaskSourcePoller implements System {
 
         for (TaskSource source : sources) {
             if (tickCounter % source.pollIntervalTicks() == 0) {
-                Log.debug(TAG, "polling %s (tick %d)", source.getClass().getSimpleName(), tickCounter);
                 source.poll(world.taskPool, world);
             }
         }

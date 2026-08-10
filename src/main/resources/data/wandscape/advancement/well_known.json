@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:renowned",
+  "display": {
+    "icon": {"id": "minecraft:diamond"},
+    "title": {"translate": "advancements.wandscape.well_known.title"},
+    "description": {"translate": "advancements.wandscape.well_known.description"},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

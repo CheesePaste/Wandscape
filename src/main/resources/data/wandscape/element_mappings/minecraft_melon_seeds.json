@@ -1,8 +1,8 @@
 {
   "item": "minecraft:melon_seeds",
   "build_cost": {
-    "wood": 2,
-    "water": 2
+    "water": 2,
+    "wood": 2
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -6,8 +6,16 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.engine.service.ParticleService;
+import com.wsteam.wandscape.engine.service.SoundService;
+import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.shared.event.ColonyLevelUpEvent;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.sounds.SoundSource;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Business logic for colony leveling and experience.
@@ -53,6 +61,12 @@ public final class ColonyLevelManager {
         return data.getName(colonyId);
     }
 
+    /** 直接设置殖民地等级（调试/测试用），经验清零。 */
+    public void setLevel(UUID colonyId, int level) {
+        data.setLevel(colonyId, Math.max(1, level));
+        data.setExperience(colonyId, 0);
+    }
+
     /** Set the display name for a colony. */
     public void setColonyName(UUID colonyId, String name) {
         if (name != null && !name.isEmpty()) {
@@ -72,7 +86,7 @@ public final class ColonyLevelManager {
 
     /**
      * Return the experience a tourist of the given level contributes
-     * when departing with 100% satisfaction.
+     * when departing with all three bars full.
      *
      * @param colonyLevel the colony's current level
      * @param touristLevel the tourist's level
@@ -113,10 +127,35 @@ public final class ColonyLevelManager {
             if (levelUpCallback != null) {
                 levelUpCallback.accept(new ColonyLevelUpEvent(colonyId, level, newLevel, overflow));
             }
+            fireLevelUpCelebration(colonyId);
         } else {
             data.setExperience(colonyId, total);
         }
         return true;
+    }
+
+    /** 升级庆祝：在殖民地市政厅位置放烟花。粒子纯装饰，API 未就绪时静默跳过。 */
+    private static void fireLevelUpCelebration(UUID colonyId) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        try {
+            var api = WandscapeApis.getBuildingApi();
+            for (var bd : api.getColonyBuildings(colonyId)) {
+                if ("government".equals(bd.getCategory())) {
+                    var bounds = bd.getBounds();
+                    if (bounds != null) {
+                        ParticleService.celebrateAt(server.overworld(),
+                                ParticleService.boundsCenterAbove(bounds, 2), 5);
+                    } else {
+                        ParticleService.celebrateAt(server.overworld(), bd.getPosition().getCenter(), 5);
+                    }
+                    SoundService.playAt(server.overworld(), bd.getPosition(),
+                            WandscapeSounds.COLONY_LEVEL_UP, SoundSource.NEUTRAL, 0.8f, 1.0f);
+                    return;
+                }
+            }
+        } catch (IllegalStateException e) {
+        }
     }
 
     private static String shortId(UUID id) {

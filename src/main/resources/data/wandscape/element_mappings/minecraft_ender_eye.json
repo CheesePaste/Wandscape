@@ -1,8 +1,8 @@
 {
   "item": "minecraft:ender_eye",
   "build_cost": {
-    "fire": 32,
-    "dark": 64
+    "dark": 64,
+    "fire": 32
   },
   "decompose_yield": {},
   "decomposable": false,

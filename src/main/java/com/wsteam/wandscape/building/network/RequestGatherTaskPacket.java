@@ -75,10 +75,10 @@ public record RequestGatherTaskPacket(
             BuildingApi api = WandscapeApis.getBuildingApi();
             api.enqueueWork(buildingId, work);
 
-            Log.info(TAG, "[GatherTask] enqueued {} x{} at building {} (harvests={}, mana={})",
+            Log.info(TAG, "[GatherTask] enqueued {} x{} at building {} (harvests={})",
                     config.nodeConfig().element(), config.nodeConfig().amountPerHarvest() * pkt.harvests,
                     buildingId.toString().substring(0, 8),
-                    Math.max(pkt.harvests, 1), config.nodeConfig().manaCost() * Math.max(pkt.harvests, 1));
+                    Math.max(pkt.harvests, 1));
         });
     }
 

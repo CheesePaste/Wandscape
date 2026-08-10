@@ -16,12 +16,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
+import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.DecorationConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
+import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
+
+import net.minecraft.core.Direction;
 /**
  * Parsed from {@code data/wandscape/buildings/<id>.json}.
  * Immutable — created once at JSON load time.
@@ -29,6 +34,7 @@ import com.wsteam.wandscape.shared.data.WonderConfig;
 public record BuildingConfig(
         String id,
         @SerializedName("display_name") String displayName,
+        @SerializedName("creator") String creator,
         String category,
         List<BlockOffset> pattern,
         @SerializedName("block_mapping") Map<String, String> blockMapping,
@@ -46,9 +52,13 @@ public record BuildingConfig(
         @SerializedName("wonder_config") WonderConfig wonderConfig,
         ShopConfig shop,
         ServiceConfig service,
+        RelaxConfig relax,
+        AtmConfig atm,
         @SerializedName("door_offset") @Nullable BlockOffset doorOffset,
-        @SerializedName("tourist_interact_aabb") List<BoundaryBox> touristInteractAabb,
-        @SerializedName("first_free") boolean firstFree
+        @SerializedName("interact_spots") List<InteractSpot> interactSpots,
+        @SerializedName("first_free") boolean firstFree,
+        @SerializedName("deprecated") boolean deprecated,
+        @SerializedName("entities") List<DecorationEntity> entities
 ) {
     public record QueueDef(
             int capacity,
@@ -70,12 +80,8 @@ public record BuildingConfig(
             String blueprint,
             String element,
             @SerializedName("amount_per_harvest") int amountPerHarvest,
-            @SerializedName("channel_ticks") int channelTicks,
-            @SerializedName("mana_cost") int manaCost
+            @SerializedName("channel_ticks") int channelTicks
     ) {
-        public NodeConfig {
-            if (manaCost <= 0) manaCost = 5; // default 5 mana
-        }
     }
 
     /**
@@ -119,6 +125,45 @@ public record BuildingConfig(
         }
     }
 
+    /** 交互位：相对 anchor 的坐标 + 动作种类 + 朝向。spot 数量 = 该建筑同时交互的游客人数上限。 */
+    public record InteractSpot(
+            BlockOffset pos,
+            Activity action,
+            Direction facing
+    ) {
+        public InteractSpot {
+            if (pos == null) {
+                throw new IllegalArgumentException("interact spot pos must not be null");
+            }
+            if (action == null) action = Activity.BROWSE;
+            if (facing == null || facing.getAxis() == Direction.Axis.Y) facing = Direction.SOUTH;
+        }
+    }
+
+    /**
+     * 装饰实体（物品展示框/画等悬挂实体）：相对 anchor 的偏移 + 实体类型 + 朝向 + 修剪后实体 NBT。
+     * 由扫描器导出；建造时经 spawn_entity 步骤重建。offset 为实体所在的方块格。
+     * facing 是 Direction 字符串（如 "north"），独立成字段以便旋转只动结构化字段、不碰 base64。
+     */
+    public record DecorationEntity(
+            BlockOffset offset,
+            String type,
+            String facing,
+            @Nullable String nbtBase64
+    ) {
+        public DecorationEntity {
+            if (offset == null) {
+                throw new IllegalArgumentException("decoration entity offset must not be null");
+            }
+        }
+    }
+
+    /** 该建筑是不是游客交互目标（四类旅游 category 之一）。 */
+    public boolean isTouristTarget() {
+        return shop() != ShopConfig.NONE || service() != ServiceConfig.NONE
+                || relax() != RelaxConfig.NONE || atm() != AtmConfig.NONE;
+    }
+
     /**
      * Custom Gson deserializer that applies defaults for missing optional sections.
      */
@@ -130,6 +175,7 @@ public record BuildingConfig(
 
             String id = getString(obj, "id", "");
             String displayName = getString(obj, "display_name", "");
+            String creator = getString(obj, "creator", "");
             String category = getString(obj, "category", "basic");
 
             // Pattern
@@ -252,6 +298,18 @@ public record BuildingConfig(
                 service = context.deserialize(obj.get("service"), ServiceConfig.class);
             }
 
+            // Relax config (only for category=relax): 回复精力
+            RelaxConfig relax = RelaxConfig.NONE;
+            if (obj.has("relax")) {
+                relax = context.deserialize(obj.get("relax"), RelaxConfig.class);
+            }
+
+            // Atm config (only for category=atm): 取现
+            AtmConfig atm = AtmConfig.NONE;
+            if (obj.has("atm")) {
+                atm = context.deserialize(obj.get("atm"), AtmConfig.class);
+            }
+
             // Door offset: position of the building door relative to anchor.
             // When not specified, entry point is computed via heuristic spiral scan.
             BlockOffset doorOffset = null;
@@ -264,28 +322,51 @@ public record BuildingConfig(
             // type in a colony does not consume warehouse materials.
             boolean firstFree = getBoolean(obj, "first_free", false);
 
-            // Tourist interact AABB list: multiple interaction zones relative to anchor.
-            // When not specified, interaction point is computed via spiral scan inside building boundary.
-            List<BoundaryBox> touristInteractAabb = List.of();
-            if (obj.has("tourist_interact_aabb")) {
-                JsonArray zonesArr = obj.getAsJsonArray("tourist_interact_aabb");
-                List<BoundaryBox> zones = new ArrayList<>();
-                BlockOffset.Deserializer offsetDs3 = new BlockOffset.Deserializer();
-                for (JsonElement zoneEl : zonesArr) {
-                    JsonObject zoneObj = zoneEl.getAsJsonObject();
-                    BlockOffset zMin = offsetDs3.deserialize(zoneObj.get("min"), BlockOffset.class, context);
-                    BlockOffset zMax = offsetDs3.deserialize(zoneObj.get("max"), BlockOffset.class, context);
-                    zones.add(new BoundaryBox(zMin, zMax));
+            // Deprecated flag: config still loads (old-map buildings keep working),
+            // but the building is hidden from the placement panel (BUILD_PROJECTION bar).
+            boolean deprecated = getBoolean(obj, "deprecated", false);
+
+            // Interact spots: 交互位列表（相对 anchor 坐标 + 动作种类）。
+            // 旧 tourist_interact_aabb 顶层字段不再解析；0-spot 建筑对游客无效（Block 3 过滤，无兜底）。
+            List<InteractSpot> interactSpots = List.of();
+            if (obj.has("interact_spots")) {
+                JsonArray spotsArr = obj.getAsJsonArray("interact_spots");
+                List<InteractSpot> spots = new ArrayList<>();
+                BlockOffset.Deserializer spotDs = new BlockOffset.Deserializer();
+                for (JsonElement spotEl : spotsArr) {
+                    JsonObject spotObj = spotEl.getAsJsonObject();
+                    BlockOffset pos = spotDs.deserialize(spotObj.get("pos"), BlockOffset.class, context);
+                    String actionStr = spotObj.has("action") ? spotObj.get("action").getAsString() : "";
+                    String facingStr = spotObj.has("facing") ? spotObj.get("facing").getAsString() : "";
+                    Direction facing = Direction.byName(facingStr); // 非法/缺省 → compact 构造回退 SOUTH
+                    spots.add(new InteractSpot(pos, Activity.fromJsonString(actionStr), facing));
                 }
-                touristInteractAabb = List.copyOf(zones);
+                interactSpots = List.copyOf(spots);
             }
 
-            return new BuildingConfig(id, displayName, category,
+            // Decoration entities: 装饰实体列表（物品展示框/画）。缺省空列表。
+            List<DecorationEntity> entities = List.of();
+            if (obj.has("entities")) {
+                JsonArray entsArr = obj.getAsJsonArray("entities");
+                List<DecorationEntity> ents = new ArrayList<>();
+                BlockOffset.Deserializer entDs = new BlockOffset.Deserializer();
+                for (JsonElement entEl : entsArr) {
+                    JsonObject entObj = entEl.getAsJsonObject();
+                    BlockOffset offset = entDs.deserialize(entObj.get("offset"), BlockOffset.class, context);
+                    String type = getString(entObj, "type", "");
+                    String facing = getString(entObj, "facing", "");
+                    String nbt = entObj.has("nbt") ? entObj.get("nbt").getAsString() : null;
+                    ents.add(new DecorationEntity(offset, type, facing, nbt));
+                }
+                entities = List.copyOf(ents);
+            }
+
+            return new BuildingConfig(id, displayName, creator, category,
                     pattern, blockMapping, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
-                    maintenanceCost, decoration, wonderConfig, shop, service,
-                    doorOffset, touristInteractAabb, firstFree);
+                    maintenanceCost, decoration, wonderConfig, shop, service, relax, atm,
+                    doorOffset, interactSpots, firstFree, deprecated, entities);
         }
 
         private static String getString(JsonObject obj, String key, String def) {

@@ -2,7 +2,7 @@
   "item": "minecraft:pumpkin_pie",
   "build_cost": {
     "earth": 1,
-    "wood": 20,
+    "wood": 26,
     "wind": 1
   },
   "decompose_yield": {},

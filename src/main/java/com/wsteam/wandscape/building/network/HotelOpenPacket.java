@@ -19,6 +19,7 @@ import static com.wsteam.wandscape.Wandscape.MODID;
  * Server→client packet: opens the Hotel GUI with occupancy info.
  */
 public record HotelOpenPacket(BlockPos buildingPos, UUID colonyId, UUID buildingId,
+                               String creator,
                                int maxOccupancy, int currentOccupancy,
                                List<String> guestNames)
         implements CustomPacketPayload {
@@ -46,6 +47,7 @@ public record HotelOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
         tag.putLong("pos", pkt.buildingPos.asLong());
         tag.putUUID("colony", pkt.colonyId);
         tag.putUUID("building", pkt.buildingId);
+        tag.putString("creator", pkt.creator);
         tag.putInt("maxOcc", pkt.maxOccupancy);
         tag.putInt("curOcc", pkt.currentOccupancy);
         ListTag names = new ListTag();
@@ -60,7 +62,7 @@ public record HotelOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
         CompoundTag tag = buf.readNbt();
         if (tag == null) {
             return new HotelOpenPacket(BlockPos.ZERO, new UUID(0, 0),
-                    new UUID(0, 0), 0, 0, List.of());
+                    new UUID(0, 0), "", 0, 0, List.of());
         }
         List<String> names = new ArrayList<>();
         ListTag list = tag.getList("guests", ListTag.TAG_STRING);
@@ -71,6 +73,7 @@ public record HotelOpenPacket(BlockPos buildingPos, UUID colonyId, UUID building
                 BlockPos.of(tag.getLong("pos")),
                 tag.getUUID("colony"),
                 tag.getUUID("building"),
+                tag.getString("creator"),
                 tag.getInt("maxOcc"),
                 tag.getInt("curOcc"),
                 names);

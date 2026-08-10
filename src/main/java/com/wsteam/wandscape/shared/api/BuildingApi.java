@@ -110,6 +110,13 @@ public interface BuildingApi {
     PlacementResult placeBuilding(BlockPos anchor, String buildingTypeId, int rotationSteps);
 
     /**
+     * Whether this colony has already claimed the first-free build of a building type
+     * (i.e. {@code first_free: true} in its config, and a building of that type has
+     * already been placed for free here). Returns false when the first build is still free.
+     */
+    boolean isFirstFreeClaimed(UUID colonyId, String buildingTypeId);
+
+    /**
      * Scan the building's boundary AABB for bed blocks.
      * Returns world-coordinate positions of every bed block found.
      * Each bed (two halves) produces two entries.
@@ -146,9 +153,7 @@ public interface BuildingApi {
 
     /**
      * Get the precise interaction point inside the building.
-     * Iterates {@code tourist_interact_aabb} from building config if defined, spiral-scanning
-     * each zone for walkable ground. Falls back to spiral scan inside the building's
-     * bounding box.
+     * 第一个 interact spot 的世界坐标（anchor + 旋转偏移）；0-spot 建筑返回 null（无兜底）。
      */
     @Nullable
     BlockPos getTouristInteractPoint(UUID buildingId);

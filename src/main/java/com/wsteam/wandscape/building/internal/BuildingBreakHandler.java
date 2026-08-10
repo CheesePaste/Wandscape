@@ -19,12 +19,14 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Listens for block break and explosion events.
- * Marks affected buildings as {@code structureIntact = false} and enqueues a
- * partial repair WorkItem targeting only the damaged positions.
+ * Marks affected buildings as {@code structureIntact = false} so the player can
+ * see the damage and trigger a repair. Repair is only ever initiated by the
+ * player (see {@link #triggerRepair}) — never enqueued automatically.
  */
 public final class BuildingBreakHandler {
     private static final String TAG = "BuildingBreakHandler";
@@ -70,6 +72,10 @@ public final class BuildingBreakHandler {
         state.setStructureIntact(false);
         data.setDirty();
 
+        // Refresh client caches so a newly-broken building gains a ghost footprint.
+        com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                ServerLifecycleHooks.getCurrentServer(), state.getAnchor());
+
         // Remove contribution
         UUID colonyId = state.getColonyId();
         if (colonyId != null) {
@@ -87,8 +93,7 @@ public final class BuildingBreakHandler {
             colonyApi.onBuildingDestroyed(state);
         }
 
-        enqueueRepairForOffsets(state, config, damaged);
-        Log.info(TAG, "[Building] {} BROKEN at {} — {}/{} blocks damaged (>= 1/3), repair enqueued",
+        Log.info(TAG, "[Building] {} BROKEN at {} — {}/{} blocks damaged (>= 1/3), awaiting manual repair",
                 state.getBuildingTypeId(), state.getAnchor(), damaged.size(), config.pattern().size());
     }
 
@@ -127,6 +132,10 @@ public final class BuildingBreakHandler {
             state.setStructureIntact(false);
             data.setDirty();
 
+            // Refresh client caches so a newly-broken building gains a ghost footprint.
+            com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                    ServerLifecycleHooks.getCurrentServer(), state.getAnchor());
+
             // Remove contribution
             UUID colonyId = state.getColonyId();
             if (colonyId != null) {
@@ -137,52 +146,9 @@ public final class BuildingBreakHandler {
                 }
             }
 
-            enqueueRepairForOffsets(state, config, damaged);
-            Log.info(TAG, "[Building] {} BROKEN by explosion at {} — {}/{} blocks damaged (>= 1/3), repair enqueued",
+            Log.info(TAG, "[Building] {} BROKEN by explosion at {} — {}/{} blocks damaged (>= 1/3), awaiting manual repair",
                     state.getBuildingTypeId(), state.getAnchor(), damaged.size(), config.pattern().size());
         }
-    }
-
-    /**
-     * Enqueue a partial repair targeting specific world positions.
-     * Used when the damaged positions are known from the break/explosion event.
-     */
-    static void enqueueRepairForPositions(BuildingState state, List<BlockPos> damagedWorldPositions) {
-        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
-        if (config == null) {
-            Log.warn(TAG, "[Building] Cannot enqueue repair — config not found: {}", state.getBuildingTypeId());
-            return;
-        }
-
-        int rotationSteps = state.getRotationSteps();
-        java.util.Map<String, String> blockMapping = rotationSteps != 0
-                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
-                        config.blockMapping(), rotationSteps)
-                : config.blockMapping();
-
-        BlockPos anchor = state.getAnchor();
-        JsonArray offsets = new JsonArray();
-        JsonObject blocks = new JsonObject();
-
-        for (BlockPos worldPos : damagedWorldPositions) {
-            int dx = worldPos.getX() - anchor.getX();
-            int dy = worldPos.getY() - anchor.getY();
-            int dz = worldPos.getZ() - anchor.getZ();
-            String key = dx + "," + dy + "," + dz;
-            String blockSpec = blockMapping.get(key);
-            if (blockSpec == null) continue;
-
-            JsonArray off = new JsonArray();
-            off.add(dx);
-            off.add(dy);
-            off.add(dz);
-            offsets.add(off);
-            blocks.addProperty(key, blockSpec);
-        }
-
-        if (offsets.isEmpty()) return;
-
-        enqueueRepairWorkItem(state, config, offsets, blocks);
     }
 
     /**
@@ -196,9 +162,14 @@ public final class BuildingBreakHandler {
                 ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockMapping(
                         config.blockMapping(), rotationSteps)
                 : config.blockMapping();
+        java.util.Map<String, String> blockNbt = rotationSteps != 0
+                ? com.wsteam.wandscape.projection.BuildingRotation.rotateBlockNbt(
+                        config.blockNbt(), rotationSteps)
+                : config.blockNbt();
 
         JsonArray offsets = new JsonArray();
         JsonObject blocks = new JsonObject();
+        JsonObject blocksNbt = new JsonObject();
 
         for (BlockOffset offset : damagedOffsets) {
             String key = offset.toKey();
@@ -211,20 +182,42 @@ public final class BuildingBreakHandler {
             off.add(offset.z());
             offsets.add(off);
             blocks.addProperty(key, blockSpec);
+
+            // Carry over the block's NBT (e.g. container contents) so the
+            // repaired block matches the original, not just the block state.
+            if (blockNbt != null) {
+                String nbt = blockNbt.get(key);
+                if (nbt != null) {
+                    blocksNbt.addProperty(key, nbt);
+                }
+            }
         }
 
         if (offsets.isEmpty()) return;
 
-        enqueueRepairWorkItem(state, config, offsets, blocks);
+        enqueueRepairWorkItem(state, config, offsets, blocks, blocksNbt, rotationSteps);
     }
 
     private static void enqueueRepairWorkItem(BuildingState state, BuildingConfig config,
-                                               JsonArray offsets, JsonObject blocks) {
+                                               JsonArray offsets, JsonObject blocks,
+                                               JsonObject blocksNbt, int rotationSteps) {
         Map<String, JsonElement> params = new HashMap<>();
         params.put("anchor", posToJsonArray(state.getAnchor()));
         params.put("offsets", offsets);
         params.put("blocks", blocks);
+        params.put("blocks_nbt", blocksNbt);
         params.put("name", new JsonPrimitive(config.displayName()));
+
+        // Restore decorative entities too — replay the full list (idempotent:
+        // spawnDecoration clears the cell before spawning, so undamaged ones are
+        // re-confirmed without loss and lost ones come back). Skipped when none.
+        if (!config.entities().isEmpty()) {
+            JsonArray entities = EnqueueHelper.entitiesToJson(config);
+            if (rotationSteps != 0) {
+                entities = EnqueueHelper.rotateEntitiesJson(entities, rotationSteps);
+            }
+            params.put("entities", entities);
+        }
 
         // Compute material_list + material_counts from damaged blocks so the
         // build:place_structure blueprint can request resources from the warehouse.
@@ -261,10 +254,12 @@ public final class BuildingBreakHandler {
     private record RepairMaterialData(JsonArray list, JsonObject counts) {}
 
     /**
-     * Manually trigger a repair scan and enqueue repair work for a broken building.
-     * Called from the anomaly system when the player clicks "修复" (Repair).
+     * Manually trigger a repair scan and enqueue repair work for a building with
+     * any damage (minor < 1/3 or broken >= 1/3).
+     * Called from the V-panel Repair button or the anomaly system.
      *
-     * @return true if repair was enqueued, false if building is intact or not found
+     * @return true if a repair was enqueued, false if the building has no damage
+     *         or was not found
      */
     public static boolean triggerRepair(Level level, UUID buildingId) {
         BuildingSavedData data = BuildingSavedData.get(level);
@@ -273,23 +268,26 @@ public final class BuildingBreakHandler {
         BuildingState state = data.getBuilding(buildingId);
         if (state == null) return false;
 
-        if (state.isStructureIntact()) return false; // not broken
-
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         if (config == null) return false;
 
         List<BlockOffset> damaged = BuildCompleteListener.findDamagedBlocks(level, state.getAnchor(), config, state.getRotationSteps());
         if (damaged.isEmpty()) {
-            // No damaged blocks found — mark as intact
-            state.setStructureIntact(true);
-            UUID colonyId = state.getColonyId();
-            if (colonyId != null) {
-                data.addBuildingContribution(colonyId, state.getBuildingTypeId());
+            // No damaged blocks found — nothing to repair. If the building was
+            // marked broken, restore its intact state and contribution.
+            if (!state.isStructureIntact()) {
+                state.setStructureIntact(true);
+                UUID colonyId = state.getColonyId();
+                if (colonyId != null) {
+                    data.addBuildingContribution(colonyId, state.getBuildingTypeId());
+                }
+                data.setDirty();
+                com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.broadcastToColony(
+                        ServerLifecycleHooks.getCurrentServer(), state.getAnchor());
+                Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {} — marked intact",
+                        state.getBuildingTypeId(), state.getAnchor());
             }
-            data.setDirty();
-            Log.info(TAG, "[Building] Repair triggered but no damage found for {} at {} — marked intact",
-                    state.getBuildingTypeId(), state.getAnchor());
-            return true;
+            return false;
         }
 
         enqueueRepairForOffsets(state, config, damaged);

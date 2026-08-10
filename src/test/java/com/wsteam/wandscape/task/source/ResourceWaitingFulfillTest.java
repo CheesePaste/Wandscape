@@ -7,6 +7,7 @@ import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
 import com.wsteam.wandscape.core.component.Inventory;
@@ -70,7 +71,7 @@ public class ResourceWaitingFulfillTest {
         GridPos center = new GridPos(0, 64, 0);
         CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
 
-        builderNpc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, 100, 5);
+        builderNpc = CoreBootstrap.createNpc(world, 0, 64, 0, colonyId, NpcAttributes.defaults());
     }
 
     @Test

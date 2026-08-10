@@ -36,9 +36,10 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
 
 ## 代码发现
 
-1. 结构查询（类/调用链/位置）优先用 **codebase-memory-mcp**：`search_graph` → `trace_path` → `get_code_snippet`
-2. MC/NeoForge API 必须用 `minecraft-source` skill 查源码，不靠记忆
-3. 大改后重新索引：`index_repository '{"repo_path":"."}'`
+1. 结构查询（类/调用链/位置）优先用结构化索引/图查询工具（可用时）；否则用 Grep/Glob/Agent(Explore) 兜底
+2. MC/NeoForge API 必须查源码、不靠记忆（本地 sources jar / 反编译 / 在线源码均可）
+3. 大改后重新建立索引（若有索引工具）
+4. 本机可用的具体工具及用法见 `CLAUDE.local.md`（可选，不入库）
 
 ## 提交规则
 
@@ -50,15 +51,37 @@ core/     ← 纯 Java 21，零 MC 依赖。不依赖 shared/
   - `fix:` 修复 bug，`refactor:` 重构，`feat:` 新功能，`doc:` 文档，`chore:` 杂项
 - **未版本管理的文件必须处理**：新文件要么 `git add` 纳入版本，要么加 `.gitignore` 排除。不允许有未处理的 untracked files。`.gitignore` 改完后立即 commit。
 
-## 版本管理（alpha）
+## 版本管理
 
-- **自动更新版本号**：每次实质性更改（代码/资源/JSON/配置，即影响 jar 内容）提交时，同步递增 `gradle.properties` 的 `mod_version` 并一起 commit。当前 alpha 方案：补丁号递增、保留 `a` 后缀，bug修复，小功能改进改第三位，功能重构改第二位，第三位归零，大的新功能上线/破坏性大重构改第一位，第二，三位归零。纯文档（`docs/`、`architecture/`、`CLAUDE.md`）不递增。
-- **清理 build/libs/ 旧版本**：仅当第二位（次版本号）变化时清理旧 jar。例如 1.2.x → 1.3.0 时删除所有 1.2.x 的 `wandscape-*.jar`；仅第三位（补丁号）变化（如 1.2.0 → 1.2.1）**不删除**旧 jar，保留补丁迭代便于回退。
+- **版本号仅在重大更新时递增**：任务全部做完、最后一次提交时，若本次改动属重大更新则同步递增 `gradle.properties` 的 `mod_version` 并一起 commit——功能重构改第二位、第三位归零；大的新功能上线/破坏性大重构改第一位、第二三位归零。日常改动（bug 修复、小功能改进）**不递增版本号**，避免第三位过大、玩家识别不出最新版。若只完成一步/两步、任务还要继续，则只 commit 不递增版本号，等整个任务完成时再统一递增。纯文档（`docs/`、`architecture/`、`CLAUDE.md`）不递增。
+- **清理 build/libs/ 旧版本**：仅当第二位（次版本号）变化时清理旧 jar。例如 1.2.x → 1.3.0 时删除所有 1.2.x 的 `wandscape-*.jar`；仅第三位（补丁号）变化不删除旧 jar。
+- **不准撤回私自提交**
+
+### 发布 release 流程
+
+里程碑发布（进入新阶段/次版本号变化/大版本重置）按以下顺序操作：
+
+1. 更新 `gradle.properties` 的 `mod_version`；若后缀方案变化（如 a→b），同步改本文件版本规则
+2. 按上方规则清理 `build/libs/` 旧 jar
+3. **release commit**：`chore: mod_version <旧> → <新> — 发布 <新>（关键词/）`，如 `chore: mod_version 1.10.39a → 1.0.0b — 发布 1.0.0b（进入 Beta：多语言适配/新手引导/供应链闭环/游客经济）`，与版本号/规则改动一起提交
+4. 打 tag：`git tag v<版本>`（如 `v1.0.0b`）
+5. push：`git push origin main && git push origin v<版本>`
+6. 构建 jar：`./gradlew build` 产出 `build/libs/wandscape-<版本>.jar`（**发布必须带 jar 资产**，漏了要补 `gh release upload`）
+7. 创建 release：`gh release create v<版本> --title "Wandscape <版本>" --notes "<正文>"`
+8. 上传 jar：`gh release upload v<版本> build/libs/wandscape-<版本>.jar --clobber`
+
+### release 正文排版
+
+- 标题：`# Wandscape <版本号>`
+- 引言段：自上次 release 版本发布以来，模组经历哪些版本迭代，本次一并发布：<本次主要板块>；里程碑发布在引言点明（如「正式进入 Beta 阶段」）
+- 分区：emoji + 分区标题（🌍 多语言 / 🎓 新手引导 / 🔗 供应链 / 👛 经济 / 🐛 修复 等），每区 3-6 条要点
+- 条目：一句一个要点，保留关键细节（数字/版本号/具体机制），只列用户可感知的重要更改，琐碎内部改动不写
+- 汇总区间：`git log --oneline <上次release tag>..HEAD`，结合各 commit 描述按主题归类
 
 ## 工作流
 
 - **澄清后再写**：需求模糊时先 `grill-me` skill 追问，不直接动代码
-- 写代码前读 architecture/README.md → search_graph 查关键类 → roadmap.md 确认阶段
+- 写代码前读 architecture/README.md → 用结构查询工具查关键类 → roadmap.md 确认阶段
 - 写代码时：新接口→`shared/api/`，新事件→`shared/event/`，注册→更新 package 文件
 - 写完后：改设计→`docs/decisions.md`，发现问题→`docs/gaps.md`
 

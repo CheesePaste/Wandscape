@@ -3,6 +3,7 @@ package com.wsteam.wandscape.shared.client.bubble;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.data.Emotion;
 import com.wsteam.wandscape.shared.data.VisitMemory;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
@@ -41,7 +43,7 @@ public final class AmbientTextPools {
     );
 
     @Nullable
-    public static String getTouristText(LivingEntity entity) {
+    public static Component getTouristText(LivingEntity entity) {
         if (!(entity instanceof TouristEntity tourist)) return null;
 
         TouristState state = tourist.getCurrentState();
@@ -49,35 +51,67 @@ public final class AmbientTextPools {
         // IDLE and SLEEPING use fixed pools regardless of emotion
         if (state == TouristState.IDLE || state == TouristState.SLEEPING) {
             List<String> pool = IDLE_TEXTS.get(state);
-            return pool != null ? pool.get(RNG.nextInt(pool.size())) : null;
+            if (pool == null || pool.isEmpty()) return null;
+            int idx = RNG.nextInt(pool.size());
+            return bubble("bubble.wandscape.tourist.idle." + state.name().toLowerCase() + "." + idx,
+                    pool.get(idx));
         }
 
-        Emotion emotion = Emotion.fromSatisfaction(tourist.getSatisfaction());
+        Emotion emotion = Emotion.fromBarRatio(minRatioPct(tourist));
 
         // 50% chance to use a building reference if we have recent visits
         List<VisitMemory> visits = tourist.getRecentVisits();
         if (!visits.isEmpty() && RNG.nextFloat() < 0.5f) {
-            String text = pickText(BUILDING_TEXTS, emotion, state);
-            if (text != null) {
+            Picked picked = pick(BUILDING_TEXTS, emotion, state);
+            if (picked != null) {
                 VisitMemory mem = visits.get(RNG.nextInt(visits.size()));
                 String buildingName = mem.buildingDisplayName();
                 if (buildingName != null && !buildingName.isEmpty()) {
-                    return text.replace(BUILDING_PLACEHOLDER, buildingName);
+                    String key = "bubble.wandscape.tourist.building." + emotion.name().toLowerCase()
+                            + "." + state.name().toLowerCase() + "." + picked.idx();
+                    Component building = (mem.buildingTypeId() == null || mem.buildingTypeId().isEmpty())
+                            ? Component.literal(buildingName)
+                            : I18n.name("building.wandscape." + mem.buildingTypeId(), buildingName);
+                    return bubble(key, picked.text(), building);
                 }
             }
         }
 
-        return pickText(GENERIC_TEXTS, emotion, state);
+        Picked generic = pick(GENERIC_TEXTS, emotion, state);
+        if (generic == null) return null;
+        return bubble("bubble.wandscape.tourist.generic." + emotion.name().toLowerCase()
+                + "." + state.name().toLowerCase() + "." + generic.idx(), generic.text());
     }
 
+    /** 三条需求条填充率的最小值（min-ratio×100），驱动闲逛气泡情绪。 */
+    private static int minRatioPct(TouristEntity tourist) {
+        int c = pct(tourist.getComfortSat(), tourist.getComfortNeed());
+        int m = pct(tourist.getMagicSat(), tourist.getMagicNeed());
+        int w = pct(tourist.getWonderSat(), tourist.getWonderNeed());
+        return Math.min(Math.min(c, m), w);
+    }
+
+    private static int pct(int sat, int need) {
+        return need <= 0 ? 0 : (int) Math.floor(sat * 100.0 / need);
+    }
+
+    /** One selected pool entry with its stable index (used to derive the lang key). */
+    private record Picked(int idx, String text) {}
+
     @Nullable
-    private static String pickText(Map<Emotion, Map<TouristState, List<String>>> pool,
-                                   Emotion emotion, TouristState state) {
+    private static Picked pick(Map<Emotion, Map<TouristState, List<String>>> pool,
+                               Emotion emotion, TouristState state) {
         Map<TouristState, List<String>> stateMap = pool.get(emotion);
         if (stateMap == null) return null;
         List<String> candidates = stateMap.get(state);
         if (candidates == null || candidates.isEmpty()) return null;
-        return candidates.get(RNG.nextInt(candidates.size()));
+        int idx = RNG.nextInt(candidates.size());
+        return new Picked(idx, candidates.get(idx));
+    }
+
+    /** Build a translatable bubble component; {@code {building}} placeholders map to {@code %s} args. */
+    private static Component bubble(String key, String fallback, Object... args) {
+        return Component.translatableWithFallback(key, fallback.replace(BUILDING_PLACEHOLDER, "%s"), args);
     }
 
     // ── NPC wizard text pools ───────────────────────────────────────
@@ -85,24 +119,24 @@ public final class AmbientTextPools {
     private static final Map<String, List<String>> NPC_STATUS_TEXTS = new ConcurrentHashMap<>();
 
     static {
-        NPC_STATUS_TEXTS.put("空闲", List.of(
+        NPC_STATUS_TEXTS.put("idle", List.of(
                 "休息一下", "今天也挺忙的", "歇会儿", "站着发呆",
                 "待会儿再干", "忙碌的一天啊", "嗯…想想下一步"
         ));
-        NPC_STATUS_TEXTS.put("采集中", List.of(
+        NPC_STATUS_TEXTS.put("gathering", List.of(
                 "加把劲", "材料还不少", "这是好东西", "收获不错",
                 "再采一点", "今天的成果不错", "这片区域资源丰富"
         ));
-        NPC_STATUS_TEXTS.put("建造中", List.of(
+        NPC_STATUS_TEXTS.put("transforming", List.of(
                 "快完成了", "完美", "一砖一瓦", "结构稳固",
                 "尺寸刚好", "接下来是这边…", "就差一点了"
         ));
-        NPC_STATUS_TEXTS.put("移动中", List.of(
+        NPC_STATUS_TEXTS.put("moving", List.of(
                 "该去工作了", "去那边看看", "还有活要干", "走起",
                 "不能闲着", "下一站", "时间不等人"
         ));
-        // "施法中" is matched via opKind below, but also add fallback
-        NPC_STATUS_TEXTS.put("施法中", List.of(
+        // "casting" is matched via opKind below, but also add fallback
+        NPC_STATUS_TEXTS.put("casting", List.of(
                 "魔力汇聚…", "就是现在！", "法术释放", "感受元素的力量",
                 "能量充盈", "就是这种感觉", "集中…"
         ));
@@ -119,44 +153,48 @@ public final class AmbientTextPools {
 
         // Fallback for any unrecognized status
         NPC_STATUS_TEXTS.put("__fallback__", List.of(
-                "这个殖民地真不错", "环境宜人", "继续努力", "日子一天天过",
+                "这座魔法小镇真不错", "环境宜人", "继续努力", "日子一天天过",
                 "希望一切顺利"
         ));
     }
 
     @Nullable
-    public static String getNpcText(LivingEntity entity) {
+    public static Component getNpcText(LivingEntity entity) {
         if (!(entity instanceof WandscapeNpc npc)) return null;
 
-        String status = npc.getStatusText();
         String opKind = npc.getOpKind();
 
         // Try matching by opKind prefix first (more specific)
         if (opKind != null && !opKind.isEmpty()) {
-            // Check if it starts with known patterns
             String baseKey = null;
             if (opKind.startsWith("ritual:")) baseKey = "ritual";
             else if (opKind.startsWith("block_interact:")) baseKey = "block_interact";
             else if (opKind.startsWith("transform")) baseKey = "transform";
+            if (baseKey != null) return pickNpcText(baseKey);
+        }
 
-            if (baseKey != null) {
-                List<String> pool = NPC_STATUS_TEXTS.get(baseKey);
-                if (pool != null) return pool.get(RNG.nextInt(pool.size()));
+        // Try matching by status key (WandscapeNpc returns stable keys, not zh text)
+        String statusKey = npc.getStatusText();
+        if (statusKey != null && !statusKey.isEmpty()) {
+            switch (statusKey) {
+                case "idle" -> { return pickNpcText("idle"); }
+                case "gathering" -> { return pickNpcText("gathering"); }
+                case "moving" -> { return pickNpcText("moving"); }
+                case "transforming" -> { return pickNpcText("transforming"); }
+                case "casting" -> { return pickNpcText("casting"); }
+                default -> {}
             }
         }
 
-        // Try matching by status text
-        if (status != null && !status.isEmpty()) {
-            for (var entry : NPC_STATUS_TEXTS.entrySet()) {
-                if (status.contains(entry.getKey())) {
-                    return entry.getValue().get(RNG.nextInt(entry.getValue().size()));
-                }
-            }
-        }
+        return pickNpcText("__fallback__");
+    }
 
-        // Fallback
-        List<String> fallback = NPC_STATUS_TEXTS.get("__fallback__");
-        return fallback.get(RNG.nextInt(fallback.size()));
+    private static Component pickNpcText(String poolKey) {
+        List<String> pool = NPC_STATUS_TEXTS.get(poolKey);
+        if (pool == null || pool.isEmpty()) pool = NPC_STATUS_TEXTS.get("__fallback__");
+        if (pool == null || pool.isEmpty()) return null;
+        int idx = RNG.nextInt(pool.size());
+        return bubble("bubble.wandscape.npc." + poolKey + "." + idx, pool.get(idx));
     }
 
     // ── Hardcoded text tables ──────────────────────────────────────
@@ -170,7 +208,7 @@ public final class AmbientTextPools {
                         "这个建筑太棒了", "迫不及待想进去了"
                 ),
                 TouristState.EXPLORING, List.of(
-                        "这里的风景太美了！", "真是个漂亮的地方", "殖民地的建设真不错",
+                        "这里的风景太美了！", "真是个漂亮的地方", "魔法小镇的建设真不错",
                         "每一步都是风景", "空气清新，心情舒畅"
                 ),
                 TouristState.WANDERING, List.of(
@@ -185,8 +223,8 @@ public final class AmbientTextPools {
                         "去逛逛", "来都来了"
                 ),
                 TouristState.EXPLORING, List.of(
-                        "殖民地的街道很整洁", "空气真好", "绿化做得不错",
-                        "设计得很用心", "这个殖民地发展得挺好"
+                        "魔法小镇的街道很整洁", "空气真好", "绿化做得不错",
+                        "设计得很用心", "这座魔法小镇发展得挺好"
                 ),
                 TouristState.WANDERING, List.of(
                         "嗯…去哪里好呢", "稍微走走吧", "漫步一下",

@@ -4,11 +4,11 @@ import com.wsteam.wandscape.core.boundary.MockBoundary;
 import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.component.Position;
-import com.wsteam.wandscape.core.component.ManaPool;
 import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
 import com.wsteam.wandscape.core.types.BlockType;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
@@ -45,7 +45,7 @@ public class WorldEcsTest {
 
         @BeforeEach
         void setUp() {
-            // Bootstrap a minimal world with Position and ManaPool stores
+            // Bootstrap a minimal world with Position store
             MockBoundary mock = new MockBoundary();
             CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock,
                     java.util.List.of(), new BlueprintRegistry(),
@@ -82,26 +82,26 @@ public class WorldEcsTest {
         @Test
         void removeComponent_onlyRemovesSpecifiedType() {
             world.addComponent(entity, Position.of(10, 64, 20));
-            world.addComponent(entity, new ManaPool(100, 100, 5));
+            world.addComponent(entity, new TaskExecutor());
 
             world.removeComponent(entity, Position.class);
 
             assertFalse(world.has(entity, Position.class),
                     "Position should be removed");
-            assertTrue(world.has(entity, ManaPool.class),
-                    "ManaPool should still be present");
-            assertNotNull(world.get(entity, ManaPool.class));
+            assertTrue(world.has(entity, TaskExecutor.class),
+                    "TaskExecutor should still be present");
+            assertNotNull(world.get(entity, TaskExecutor.class));
         }
 
         @Test
         void removeComponent_entityDisappearsFromQuery() {
             world.addComponent(entity, Position.of(10, 64, 20));
-            world.addComponent(entity, new ManaPool(100, 100, 5));
+            world.addComponent(entity, new TaskExecutor());
 
-            assertTrue(world.query(Position.class, ManaPool.class).contains(entity));
+            assertTrue(world.query(Position.class, TaskExecutor.class).contains(entity));
 
             world.removeComponent(entity, Position.class);
-            assertFalse(world.query(Position.class, ManaPool.class).contains(entity),
+            assertFalse(world.query(Position.class, TaskExecutor.class).contains(entity),
                     "Entity should drop from intersection query after component removed");
         }
     }
@@ -143,9 +143,9 @@ public class WorldEcsTest {
 
             // Create 2 NPCs with TaskExecutors, assign one task
             long npc1 = CoreBootstrap.createNpc(world, 0, 64, 0,
-                    java.util.UUID.randomUUID(), 100, 5);
+                    java.util.UUID.randomUUID(), NpcAttributes.defaults());
             long npc2 = CoreBootstrap.createNpc(world, 5, 64, 0,
-                    java.util.UUID.randomUUID(), 100, 5);
+                    java.util.UUID.randomUUID(), NpcAttributes.defaults());
 
             world.taskPool.assignLight(t1, npc1, world);
             // Simulate what TaskExecutionSystem.startNextPending would do

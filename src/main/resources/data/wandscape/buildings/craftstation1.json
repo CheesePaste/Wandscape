@@ -1,7 +1,8 @@
 {
   "id": "craftstation1",
-  "display_name": "craftstation1",
+  "display_name": "Crafting Station",
   "category": "crafting_station",
+  "first_free": true,
   "pattern": [
     [
       0,

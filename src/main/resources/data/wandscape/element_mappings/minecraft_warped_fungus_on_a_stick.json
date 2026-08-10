@@ -1,8 +1,8 @@
 {
   "item": "minecraft:warped_fungus_on_a_stick",
   "build_cost": {
-    "wood": 10,
-    "dark": 8
+    "dark": 8,
+    "wood": 10
   },
   "decompose_yield": {},
   "decomposable": false,

@@ -8,11 +8,15 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -33,7 +37,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  * <p>不是子弹：整段光束同时可见、不做位移。若指定了施法 NPC 与目标生物，每 tick 动态跟踪——
  * 源点跟随 NPC 持杖手（沿目标方向前移 {@link #STAFF_CENTER_OFFSET}），目标跟随生物当前坐标；
  * 客户端据此渲染，光束随 NPC 转向。无目标时退化为固定源点→固定终点。
- * 光束粗细随时间动画——先慢慢变宽、再快速变窄（{@link #getWidthFactor}）。
+ * 光束粗细随时间动画——先平滑变宽、再平滑变窄（{@link #getWidthFactor}）。
  * 纯视觉实体：无 AI/碰撞/存档，短命后自毁；每 tick 对束内敌对生物造成伤害。
  */
 public class MagicBeamEntity extends Entity {
@@ -55,17 +59,27 @@ public class MagicBeamEntity extends Entity {
     public static final double STAFF_CENTER_OFFSET = 1.0;
     /** 光束最大长度（方块）：沿目标方向射线检测第一个方块为止，未命中取此长度。 */
     public static final double BEAM_RANGE = 200.0;
-    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后快速变细到消失。 */
+    /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后平滑变细到消失。 */
     public static final float PEAK_T = 0.86f;
     /** 峰值时的光束/光晕半径（方块）。 */
     public static final float MAX_BEAM_RADIUS = 0.5f;
     public static final float MAX_GLOW_RADIUS = 0.7f;
-    /** 宽度乘子下限：光束从「特别细」开始，随法阵时长逐渐变宽。 */
-    private static final float MIN_WIDTH = 0.02f;
-    /** 宽窄动画缓动指数：>1 使「变宽」更慢、「变窄」更快。 */
-    private static final float WIDTH_POWER = 1.4f;
-    /** 光束满宽时每 tick 对束内敌对生物造成的伤害（当前按宽度因子正比，后续可加其他因素）。 */
-    private static final float BEAM_DAMAGE = 2.0f;
+    /** 宽度/伤害乘子下限：开头即有少量伤害，不再近乎零伤。 */
+    private static final float MIN_WIDTH = 0.1f;
+    /**
+     * 光束伤害类型（{@code data/wandscape/damage_type/beam.json}）：**不用原版 magic /
+     * indirect_magic**——它们在 {@code damage_type/bypasses_armor} tag 里会绕过护甲减伤且不掉护甲
+     * 耐久。自定义类型走正常护甲流程：护甲减伤、耐久按命中伤害递减、死亡消息沿用
+     * {@code death.attack.magic}（被魔法杀死）。
+     */
+    public static final ResourceKey<DamageType> BEAM_DAMAGE_TYPE =
+            ResourceKey.create(Registries.DAMAGE_TYPE,
+                    ResourceLocation.fromNamespaceAndPath("wandscape", "beam"));
+    /**
+     * 光束满宽（wf=1）时每 tick 对束内目标造成的伤害 = 平滑曲线峰值。
+     * 总伤 ≈ BEAM_DAMAGE × 寿命 × (0.5 + 0.5×MIN_WIDTH) ≈ 60/目标/次施法。
+     */
+    private static final float BEAM_DAMAGE = 0.5f;
 
     /** 施法 NPC 实体引用（服务端跟踪用，null=静态光束）。 */
     private WandscapeNpc casterNpc;
@@ -193,6 +207,17 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
+     * 光束能否伤害该目标。默认只伤敌对生物（{@link Enemy}）——普通 NPC / 玩家施法的
+     * 光束**永远不会伤到玩家、NPC 或村民**；施法者是 {@code WandscapeNpc} 时按其
+     * {@code canBeamHurt} 判定（敌对法师覆盖为也伤生存玩家），保证「NPC 伤不了玩家、
+     * 邪恶法师能伤生存玩家」的边界唯一。
+     */
+    private boolean canDamage(LivingEntity mob) {
+        if (mob instanceof Enemy) return true;
+        return casterNpc != null && !casterNpc.isRemoved() && casterNpc.canBeamHurt(mob);
+    }
+
+    /**
      * 每 tick 对光束圆柱内的敌对生物（Monster）造成伤害，伤害正比于当前宽度因子。
      * 命中测试：实体中心到光束轴线段的距离 ≤ 束径 + 半体型宽。重置无敌帧使其可逐 tick 结算。
      */
@@ -206,26 +231,37 @@ public class MagicBeamEntity extends Entity {
         Vec3 ndir = dir.normalize();
         float wf = getWidthFactor(0);
         float radius = Math.max(0.05f, MAX_BEAM_RADIUS * wf);
+        // SPELL_POWER 倍率由 NpcSpellPowerHandler 在伤害核算入口统一应用，不在此处单独乘
         float damage = BEAM_DAMAGE * wf;
 
         AABB box = new AABB(start, tgt.getCenter()).inflate(radius + 1.0);
-        for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof Enemy)) {
+        for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof LivingEntity)) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved()) continue;
+            if (!canDamage(mob)) continue;
             Vec3 center = mob.getBoundingBox().getCenter();
             double proj = center.subtract(start).dot(ndir);
             if (proj < -0.5 || proj > length + 0.5) continue;
             Vec3 closest = start.add(ndir.scale(Mth.clamp(proj, 0, length)));
             double eff = radius + mob.getBbWidth() / 2.0;
             if (center.distanceToSqr(closest) <= eff * eff) {
+                // 光束只造成伤害、不造成击退：本类型不在 no_knockback 标签，hurt() 会按源点
+                // 方向击退——先记速度再恢复以抵消。伤害/记仇/反击不受影响。
+                // 重置无敌帧使其可逐 tick 结算（帧伤节奏，测试反馈保留）。
                 mob.invulnerableTime = 0;
+                Vec3 pre = mob.getDeltaMovement();
                 if (casterNpc != null && !casterNpc.isRemoved()) {
-                    // NPC 施法：伤害记为 NPC 造成（source.getEntity()=NPC）→ 怪物 HurtByTargetGoal
-                    // 会反击 NPC，触发自防御的受伤仇恨，形成互相战斗。
-                    mob.hurt(level().damageSources().indirectMagic(casterNpc, this), damage);
+                    // NPC 施法：伤害记为 NPC 造成 → 怪物 HurtByTargetGoal 反击 NPC，触发自防御受伤仇恨。
+                    // 参数顺序是坑：source(key, A, B) 的参数名(causingEntity, directEntity)与
+                    // DamageSource 构造器(directEntity, causingEntity)错位，getEntity() 返回 B，
+                    // 所以 B 必须是 NPC。否则 LivingEntity.hurt 里 setLastHurtByMob 拿到光束实体
+                    // （非 LivingEntity）永不记仇，且 NpcSpellPowerHandler/AchievementService 的
+                    // source.getEntity() instanceof WandscapeNpc 判定也失效（SPELL_POWER 倍率不结算）。
+                    mob.hurt(level().damageSources().source(BEAM_DAMAGE_TYPE, this, casterNpc), damage);
                 } else {
                     // 玩家/静态施法：无施法者，保持原行为（不记仇恨）。
-                    mob.hurt(level().damageSources().magic(), damage);
+                    mob.hurt(level().damageSources().source(BEAM_DAMAGE_TYPE), damage);
                 }
+                mob.setDeltaMovement(pre);
             }
         }
     }
@@ -236,21 +272,16 @@ public class MagicBeamEntity extends Entity {
     }
 
     /**
-     * 宽度乘子 [MIN_WIDTH, 1]：t ∈ [0, PEAK_T] 慢慢变宽（k^WIDTH_POWER），
-     * t ∈ [PEAK_T, 1] 快速变窄（(1-k)^WIDTH_POWER）。
-     * 恒大于 0，避免 renderBeaconBeam 内部除以 beamRadius 时为 0。
+     * 宽度乘子 [MIN_WIDTH, 1]：半余弦平滑曲线——t ∈ [0, PEAK_T] 平滑变宽至满值、
+     * t ∈ [PEAK_T, 1] 平滑变窄回下限。两端与接点斜率均为 0（ease-in-out），
+     * 开头不再近乎零伤、峰值不再突兀。恒 ≥ MIN_WIDTH > 0，避免 renderBeaconBeam 除以 0。
      */
     public float getWidthFactor(float partialTick) {
         float t = getAge(partialTick);
-        float factor;
-        if (t <= PEAK_T) {
-            float k = Math.max(0f, t / PEAK_T);
-            factor = (float) Math.pow(k, WIDTH_POWER);
-        } else {
-            float k = Math.min(1f, (t - PEAK_T) / (1f - PEAK_T));
-            factor = (float) Math.pow(1f - k, WIDTH_POWER);
-        }
-        return Math.max(MIN_WIDTH, factor);
+        float k = t <= PEAK_T ? t / PEAK_T : (t - PEAK_T) / (1f - PEAK_T);
+        float ease = 0.5f * (1f - (float) Math.cos(Math.PI * k)); // 平滑 0→1
+        float shape = t <= PEAK_T ? ease : 1f - ease;
+        return MIN_WIDTH + (1f - MIN_WIDTH) * shape;
     }
 
     /** 纯显示实体不入存档，避免世界重载后残留光束。 */

@@ -1,7 +1,8 @@
 {
   "id": "nodedark",
-  "display_name": "nodedark",
+  "display_name": "Dark Node",
   "category": "node",
+  "first_free": true,
   "pattern": [
     [
       0,
@@ -1815,8 +1816,7 @@
     "blueprint": "node:gather",
     "element": "dark",
     "amount_per_harvest": 10,
-    "channel_ticks": 1200,
-    "mana_cost": 25
+    "channel_ticks": 1200
   },
   "blueprint": {
     "id": "build:clear_and_build",

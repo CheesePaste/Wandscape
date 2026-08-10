@@ -14,6 +14,7 @@ import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
 import com.wsteam.wandscape.task.scheduler.TaskExecutionSystem;
 import com.wsteam.wandscape.core.types.BlockType;
 import com.wsteam.wandscape.core.types.GridPos;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
@@ -109,9 +110,9 @@ public class TaskExecutionNavTest {
                 new TaskRequest(bpId, Map.of(), 10));
     }
 
-    /** Create a standard NPC with full mana and a basic wand. */
+    /** Create a standard NPC with full attributes. */
     private static long createNpc(World world, int x, int y, int z, UUID colonyId) {
-        return CoreBootstrap.createNpc(world, x, y, z, colonyId, 200, 10);
+        return CoreBootstrap.createNpc(world, x, y, z, colonyId, NpcAttributes.defaults());
     }
 
     /** Assign a task to an NPC using the Phase 6 package-driven model. */

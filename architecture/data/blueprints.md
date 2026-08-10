@@ -15,6 +15,9 @@
     "name": "string",
     "anchor": "pos"
   },
+  "defaults": {
+    "entities": []
+  },
   "steps": [
     {
       "type": "for_each",
@@ -41,6 +44,8 @@
 }
 ```
 
+`defaults`（可选）：声明可选参数的默认值，调用方省略时解释器自动填入（`interpret` 入口与 `call` 步骤的 callee 上下文都生效）；显式传入优先。`build:place_structure`/`build:clear_and_build` 的 `entities` 用它缺省为空数组——旧建筑/修复任务没有装饰实体也不报错。
+
 ## 参数类型 (ParamType)
 
 | 类型 | 说明 |
@@ -51,6 +56,7 @@
 | list\<pos\> | 位置数组 |
 | list\<string\> | 字符串数组 |
 | map\<string,string\> | 字符串映射 |
+| list\<map\<string,string\>\> | JSON 对象数组（装饰实体等，`for_each` 可遍历） |
 
 ## 步骤类型 (12 种)
 

@@ -40,14 +40,10 @@ public class BuildingTaskPool {
                     item.blueprintId(), item.params(), item.priority());
             long taskId = pool.addTaskFromBuilding(request, buildingId);
             queue.setHeadTaskId(taskId);
-            Log.debug(TAG, "building {} head published #{} blueprint={}",
-                    buildingId.toString().substring(0, 8), taskId, item.blueprintId());
             return taskId;
         }
 
         queue.enqueue(item);
-        Log.debug(TAG, "building {} queued (behind head #{}), pending={}",
-                buildingId.toString().substring(0, 8), queue.getHeadTaskId(), queue.pendingSize());
         return -1;
     }
 
@@ -71,7 +67,6 @@ public class BuildingTaskPool {
                     buildingId.toString().substring(0, 8), taskId,
                     next.blueprintId(), queue.pendingSize());
         } else {
-            Log.debug(TAG, "building {} queue empty", buildingId.toString().substring(0, 8));
             queues.remove(buildingId); // clean up empty queue
         }
     }

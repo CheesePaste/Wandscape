@@ -1,12 +1,12 @@
 {
   "block": "minecraft:sticky_piston",
   "build_cost": {
+    "water": 32,
+    "dark": 32,
     "earth": 4,
     "wood": 6,
     "metal": 72,
-    "fire": 4,
-    "water": 32,
-    "dark": 32
+    "fire": 4
   },
   "decompose_yield": {},
   "decomposable": false,

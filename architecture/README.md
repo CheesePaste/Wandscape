@@ -1,6 +1,12 @@
-# architecture/ — 代码结构事实
+# architecture/ — 代码结构快照（历史）
 
-本目录是项目代码结构的**唯一真相来源**。docs/ 只放设计推理和路线图。源代码是权威的——这里不重复代码。
+> **⚠️ 本目录为历史快照，部分内容已过时。** 当前文档以 **`docs/`** 为准（基于真实源码重写）：
+> - 架构/数据流/依赖规则 → `docs/architecture.md`
+> - 各模块详解 → `docs/modules/`
+> - 数据 JSON 格式 → `docs/data/`
+> - 本目录与代码的差异清单 → `docs/gaps.md`
+
+本页保留的是旧包结构描述，仅作迁移参考。源代码始终是权威。
 
 ## 包地图
 
@@ -8,15 +14,20 @@
 Wandscape.java        @Mod 入口，注册物品/实体/粒子/菜单，生命周期事件
 Config.java           NeoForge TOML 配置，所有可调参数
 │
-├── tourist/          游客实体 + 行为 AI + 道路联动（生成/移动/交互/离开/宾馆）
+├── tourist/          游客实体 + 行为 AI + 道路联动（生成/移动/交互/离开/宾馆/影子模拟）
 │   ├── entity/       TouristEntity (extends PathfinderMob，非 WandscapeNpc)
-│   ├── data/         TouristAttributes (level/energy/satisfaction/preferences/appearance)
-│   ├── api/          TouristApi
-│   └── internal/     TouristSpawnSystem/TouristMoveGoal/TouristInteractGoal/...
+│   └── internal/     TouristSpawnSystem/TouristMoveGoal/TouristSimulation/TouristState/
+│                     TouristSimSystem/TouristShadow/TouristSimRegistry（游客卸载 sim：区块卸载时
+│                     影子数据直线移动+交互+离开，加载时刷回实体）/HotelStayHandler/NarrativeGenerator/
+│                     TavernApiImpl/TouristApiImpl
+│                     （注：属性在 TouristEntity 字段中，无独立 data/ 子包；TouristApi 在 shared/api）
 │
 ├── core/             ECS 核心框架（精简），纯 Java 21，零 MC 依赖
 │   ├── ecs/          World + System + ComponentStore + CoreBootstrap
-│   ├── component/    10 组件 + ManaRegenSystem(与ManaPool紧耦合): Position/ManaPool/EquipmentComponent/...
+│   ├── component/    9 组件: Position/EquipmentComponent/TaskExecutor/NpcTaskQueue/Inventory/
+│   │                 NavigationState/ColonyMember/ColonyMetadata/SuspensionContext
+│   │                 （NPC 属性收敛为 6 个：MAX_HP/MOVE_SPEED/SPELL_POWER/WORK_SPEED/
+│   │                 SPELL_SPEED/ARMOR_VALUE；装备加成仅加法）
 │   ├── boundary/     8 个接口：BlockOps/EntityOps/RitualOps/MovementOps/ColonyResourceAccess/EventBus/ResourceAddedListener/ResourceShortageHandler
 │   ├── event/        领域事件(SimpleEventBus) + TaskCompleted/CustomEvent/NarrativeEventTriggered
 │   └── types/        基础record: GridPos/BlockType/ResourceId/EffectId/InteractAction/AttributeType/EquipmentSlot/EquipmentPreset/...
@@ -47,17 +58,20 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   ├── boundary/     WandscapeBlockOps/WandscapeMovementOps/WandscapeRitualOps/WandscapeEntityOps + AsyncTransformExecutor + ResourceRequestExecutor
 │   ├── source/       BuildingTaskSource(20tick轮询→发布TaskRequest) + BlueprintConfigLoader
 │   ├── system/       ECS System（注册到World.tick()）NavigationSystem + ResourceSupplySystem
-│   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService
+│   ├── service/      非ECS服务（EventBus订阅者）ColonyMetricsService + StatsService + AchievementService + SoundService(统一音效播放/节流)
+│   │                 + ChunkLoadManager/ChunkLeaseData（建造时按需强加载建筑 footprint，殖民地区块卸载时照常施工）
+│   ├── sound/        WandscapeSounds — 全部自定义 SoundEvent 注册点（逻辑id→sounds.json→音频）
 │   └── transport/    ItemTransportManager (单实体视觉合并表现与自定义金边暗灰底气泡悬浮数量渲染)
 │
 ├── shared/           所有包依赖的公共层
 │   ├── api/          12 个模块接口(含 ColonyMetricsApi) + registry/WandscapeApis.java(静态定位器)
 │   ├── data/         21+个record/enum(含ColonyMetricsSnapshot/WorkItem/MaintenanceCost/BlueprintInfo/Emotion/...)
-│   ├── event/        13 个 NeoForge 事件(模块间通信 + 模拟经营事件)
+│   ├── event/        15 个 NeoForge 事件(模块间通信 + 模拟经营事件) + ColonyLevelUpEvent(record 回调，非总线)
 │   ├── log/          Log 工具类 + LogFilter 运行时白名单过滤器
 │   └── ui/           共享UI组件库(MedievalScreen MINIMAL风格/Button/ScrollableList/...)
 │
-├── building/         建筑管理(零自定义方块/BE，全部SavedData)。
+├── building/         建筑管理(除扫描器外无自定义方块/BE，状态存于 SavedData；现有两个自定义方块/BE：
+│                     creative_building_scanner 创造扫描器 + building_scanner 生存扫描器)。
 │                     category: basic/node/storage/workstation/crafting_station/
 │                               potion_station/shop/service/decoration/wonder/tavern
 │                     系统: 每日结算(DailySettlementSystem) + 维护费预测(MaintenanceForecastSystem)
@@ -88,7 +102,12 @@ Config.java           NeoForge TOML 配置，所有可调参数
 ├── guard/            守卫任务系统(建筑周边怪物检测→守卫任务→NPC原地施法)
 │   ├── executor/     GuardAttackExecutor(持续异步循环，施法→等光束→重选)
 │   └── GuardZone/GuardTaskSource/GuardBlueprints/GuardConstants/GuardCommand
-├── equipment/        装备系统(EquipmentSlot/AttributeType/EquipmentPreset/EquipmentComponent)
+├── raid/             袭击机制(复用原版村庄袭击：玩家带不祥之兆近建筑10格→市政厅中心触发)
+│   ├── RaidTriggerScanner(触发扫描器) + ColonyRaidTracker(胜利跟踪→事件)
+│   └── RaidTownHall(市政厅定位) + MixinServerLevel(isVillage 钩子)
+├── equipment/        （无独立包）装备系统是 cross-cutting：core/component/EquipmentComponent
+│                     + core/types/(EquipmentSlot/AttributeType/EquipmentPreset/AttributeModifier)，
+│                     桥接在 npc/internal/EntityComponentBridge
 ```
 
 ## 数据流（核心路径）
@@ -97,11 +116,13 @@ Config.java           NeoForge TOML 配置，所有可调参数
 BuildingConfig JSON → BuildingConfigLoader
   → EnqueueHelper → WorkItem 入 BuildingState.taskQueue
   → BuildingTaskSource.poll(每20tick)
-  → TaskRequest → task/engine/pool/GlobalTaskPool.addTask()
+     ├─ ChunkLoadManager.leaseBuilding(强加载建筑 footprint，预算内)   ← 区块卸载时也施工
+     └─ TaskRequest → task/engine/pool/GlobalTaskPool.addTask()
   → task/scheduler/SchedulerSystem(每2tick评分: proximity×0.5 + efficiency×0.3 + attributes×0.2)
   → NPC领取 → task/scheduler/TaskExecutionSystem
   → AtomicOp → op/executor/OpExecutor → engine/boundary/WandscapeBlockOps(MC世界实际方块操作)
   → emit_event → BuildCompleteListener → BuildingSavedData.structureIntact=true
+  → head完成且队列排空 → ChunkLoadManager.releaseBuilding(区块可卸载)
 ```
 
 ### 模拟经营数据流
@@ -115,7 +136,7 @@ BuildingConfig JSON → BuildingConfigLoader
 
 商店运作 (每日清晨):
   ShopStockManager.restock() → ColonyItemBank扣元素 → 填充库存
-  → 游客购物 → 消耗货品 → ColonyItemBank入元素(1.2X)
+  → 游客购物 purchase → 消耗货品 → ColonyItemBank入元素 ceil(价值×(1+profitRate))（如 breadshop 0.3→1.3X）
 
 装饰辐射 (每200tick):
   DecorationBonusSystem → 遍历功能建筑 → 曼哈顿距离内装饰累加
@@ -145,7 +166,7 @@ ColonyMetricsService.getSnapshot(colonyId)   ← 统一查询入口
 消费者:
   PanelStateTracker          → ColonyStatsSyncPacket → 客户端 HUD
   PanelStateTogglePacket     → ColonyStatsSyncPacket → 面板首次打开
-  AchievementService         → 成就评估触发器
+  AchievementService         → 条件达成时授予 vanilla 进度（data/wandscape/advancement/）
 ```
 
 ## 依赖规则
@@ -169,7 +190,7 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 想看什么 | 打开 |
 |---------|------|
 | ECS核心框架（组件/边界/事件/类型） | [packages/core.md](packages/core.md) |
-| 原子操作（8种 AtomicOp + 执行框架） | [packages/op.md](packages/op.md) |
+| 原子操作（10种 AtomicOp + 执行框架） | [packages/op.md](packages/op.md) |
 | 任务系统（引擎/调度/源/编辑器网络） | [packages/task.md](packages/task.md) |
 | MC桥接/异步执行/方块操作/导航 | [packages/engine.md](packages/engine.md) |
 | API接口/事件/数据类型/UI组件 | [packages/shared.md](packages/shared.md) |
@@ -186,10 +207,11 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 道路系统（数据/算法/MC实现/编辑器） | [packages/road.md](packages/road.md) |
 | 统计系统 | [packages/stats.md](packages/stats.md) |
 | 装备系统 | [packages/equipment.md](packages/equipment.md) |
-| 魔法阵模块设计 | [packages/magic.md](../magicarchitecture/magic.md) |
+| 魔法阵模块设计 | [magic/magic.md](magic/magic.md) |
 | 守卫任务系统 | [packages/guard.md](packages/guard.md) |
+| 袭击机制 | [packages/raid.md](packages/raid.md) |
 | 建筑JSON格式 | [data/buildings.md](data/buildings.md) |
-| 魔法阵JSON格式 | [data/magic-circles.md](../magicarchitecture/magic-circles.md) |
+| 魔法阵JSON格式 | [magic/magic-circles.md](magic/magic-circles.md) |
 | 蓝图DSL格式 | [data/blueprints.md](data/blueprints.md) |
-| 模拟经营设计推理 | [../docs/simulation.md](../docs/simulation.md) |
+| 模拟经营（游客）详解 | [../docs/modules/tourist.md](../docs/modules/tourist.md) |
 | 编码规范和反模式 | [conventions.md](conventions.md) |

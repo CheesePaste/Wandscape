@@ -6,10 +6,14 @@
     "offsets": "list<pos>",
     "blocks": "map<string,string>",
     "blocks_nbt": "map<string,string>",
+    "entities": "list<map<string,string>>",
     "name": "string",
     "anchor": "pos",
     "material_list": "list<string>",
     "material_counts": "map<string,string>"
+  },
+  "defaults": {
+    "entities": []
   },
   "steps": [
     {
@@ -31,6 +35,20 @@
           "at": {"+": ["$anchor", "$off"]},
           "block": {"get": ["$blocks", {"keyof": "$off"}]},
           "nbt": {"get": ["$blocks_nbt", {"keyof": "$off"}]}
+        }
+      ]
+    },
+    {
+      "type": "for_each",
+      "list": "$entities",
+      "var": "ent",
+      "steps": [
+        {
+          "type": "spawn_entity",
+          "at": {"+": ["$anchor", {"get": ["$ent", "offset"]}]},
+          "entity_type": {"get": ["$ent", "type"]},
+          "facing": {"get": ["$ent", "facing"]},
+          "nbt": {"get": ["$ent", "nbt"]}
         }
       ]
     },

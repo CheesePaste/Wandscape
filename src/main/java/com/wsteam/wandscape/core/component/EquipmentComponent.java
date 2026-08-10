@@ -4,6 +4,7 @@ import com.wsteam.wandscape.core.types.AttributeModifier;
 import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.core.types.EquipmentSlot;
 import com.wsteam.wandscape.core.types.ModifierOperation;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 
 import java.util.Collections;
 import java.util.EnumMap;
@@ -24,19 +25,22 @@ public class EquipmentComponent {
     /** NPC base attribute values (no equipment). */
     private static final EnumMap<AttributeType, Float> BASE_VALUES = new EnumMap<>(AttributeType.class);
     static {
-        BASE_VALUES.put(AttributeType.RANGE, 1f);
-        BASE_VALUES.put(AttributeType.MANA_COST_MULTIPLIER, 1f);
-        BASE_VALUES.put(AttributeType.MAX_MANA, 100f);
-        BASE_VALUES.put(AttributeType.MANA_REGEN, 5f);
-        BASE_VALUES.put(AttributeType.MAX_HP, 20f);
-        BASE_VALUES.put(AttributeType.MOVE_SPEED, 0.1f);
+        BASE_VALUES.put(AttributeType.MAX_HP, 40f);
+        BASE_VALUES.put(AttributeType.MOVE_SPEED, 0.3f);
+        BASE_VALUES.put(AttributeType.SPELL_POWER, 1f);
+        BASE_VALUES.put(AttributeType.WORK_SPEED, 1f);
+        BASE_VALUES.put(AttributeType.SPELL_SPEED, 1f);
+        BASE_VALUES.put(AttributeType.ARMOR_VALUE, 0f);
+        BASE_VALUES.put(AttributeType.MAX_MANA, 200f);
     }
 
-    /** Default wand modifiers (range=1, mana_cost_mult=1.0 → no change from base). */
+    /** Default wand modifiers (neutral — no change from base). */
     private static final List<AttributeModifier> DEFAULT_WAND_MODIFIERS = List.of(
-            new AttributeModifier(AttributeType.RANGE, 0f, ModifierOperation.ADDITION),
-            new AttributeModifier(AttributeType.MANA_COST_MULTIPLIER, 0f, ModifierOperation.ADDITION)
+            new AttributeModifier(AttributeType.SPELL_POWER, 0f, ModifierOperation.ADDITION)
     );
+
+    /** Per-NPC base value overrides (from recruitment); falls back to {@link #BASE_VALUES}. */
+    private final EnumMap<AttributeType, Float> baseOverrides = new EnumMap<>(AttributeType.class);
 
     /** Slot → equipped preset ID. */
     private final Map<EquipmentSlot, String> equipped = new EnumMap<>(EquipmentSlot.class);
@@ -51,6 +55,21 @@ public class EquipmentComponent {
     private boolean hasDefaultWand;
 
     public EquipmentComponent() {
+        recalculateAll();
+    }
+
+    /**
+     * Seed per-NPC base attribute values (from recruitment). Overrides the static
+     * defaults; re-computes effective values immediately.
+     */
+    public void seedBaseValues(NpcAttributes attrs) {
+        baseOverrides.put(AttributeType.MAX_HP, attrs.maxHp());
+        baseOverrides.put(AttributeType.MOVE_SPEED, attrs.moveSpeed());
+        baseOverrides.put(AttributeType.SPELL_POWER, attrs.spellPower());
+        baseOverrides.put(AttributeType.WORK_SPEED, attrs.workSpeed());
+        baseOverrides.put(AttributeType.SPELL_SPEED, attrs.spellSpeed());
+        baseOverrides.put(AttributeType.ARMOR_VALUE, attrs.armorValue());
+        baseOverrides.put(AttributeType.MAX_MANA, attrs.maxMana());
         recalculateAll();
     }
 
@@ -114,18 +133,6 @@ public class EquipmentComponent {
     }
 
     /**
-     * Compute the effective mana value used by the scheduler.
-     * <p>
-     * {@code effectiveMana = currentMana / manaCostMultiplier}
-     * <p>
-     * A lower multiplier means the NPC gets more effective mana from the same pool.
-     */
-    public float getEffectiveMana(float currentMana) {
-        float mult = getAttribute(AttributeType.MANA_COST_MULTIPLIER);
-        return mult > 0f ? currentMana / mult : currentMana;
-    }
-
-    /**
      * Returns an unmodifiable view of the slot → presetId map.
      */
     public Map<EquipmentSlot, String> getAllEquipped() {
@@ -144,49 +151,21 @@ public class EquipmentComponent {
     /**
      * Recalculate all effective attributes from scratch.
      * <p>
-     * Order of operations (aligned with Minecraft's AttributeModifier):
-     * <ol>
-     *   <li>Start with BASE_VALUES
-     *   <li>Apply MULTIPLY_BASE: {@code base * (1 + sum(multBase))}
-     *   <li>Apply ADDITION: {@code result + sum(add)}
-     *   <li>Apply MULTIPLY_TOTAL: {@code result * (1 + sum(multTotal))}
-     * </ol>
+     * All equipment modifiers are additive: {@code effective = base + sum(modifiers)}.
      */
     private void recalculateAll() {
-        // Reset to base values
         effectiveAttributes.clear();
-        effectiveAttributes.putAll(BASE_VALUES);
 
-        // Accumulate modifiers by operation type
         EnumMap<AttributeType, Float> sumAdd = new EnumMap<>(AttributeType.class);
-        EnumMap<AttributeType, Float> sumMultBase = new EnumMap<>(AttributeType.class);
-        EnumMap<AttributeType, Float> sumMultTotal = new EnumMap<>(AttributeType.class);
-
         for (List<AttributeModifier> mods : equippedModifiers.values()) {
             for (AttributeModifier mod : mods) {
-                switch (mod.operation()) {
-                    case ADDITION -> sumAdd.merge(mod.type(), mod.amount(), Float::sum);
-                    case MULTIPLY_BASE -> sumMultBase.merge(mod.type(), mod.amount(), Float::sum);
-                    case MULTIPLY_TOTAL -> sumMultTotal.merge(mod.type(), mod.amount(), Float::sum);
-                }
+                sumAdd.merge(mod.type(), mod.amount(), Float::sum);
             }
         }
 
-        // Apply modifiers in order: MULTIPLY_BASE → ADDITION → MULTIPLY_TOTAL
         for (AttributeType type : AttributeType.values()) {
-            float base = BASE_VALUES.getOrDefault(type, 0f);
-            float value = base;
-
-            float multBase = sumMultBase.getOrDefault(type, 0f);
-            value = base * (1f + multBase);
-
-            float add = sumAdd.getOrDefault(type, 0f);
-            value = value + add;
-
-            float multTotal = sumMultTotal.getOrDefault(type, 0f);
-            value = value * (1f + multTotal);
-
-            effectiveAttributes.put(type, value);
+            float base = baseOverrides.getOrDefault(type, BASE_VALUES.getOrDefault(type, 0f));
+            effectiveAttributes.put(type, base + sumAdd.getOrDefault(type, 0f));
         }
     }
 }

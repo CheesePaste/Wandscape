@@ -16,7 +16,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * Persists colony level and experience.
  *
  * <p>Each colony has a level (starting at 1) and accumulated experience.
- * Experience is gained when tourists depart with 100% satisfaction.
+ * Experience is gained when tourists depart with all three bars full.
  * Stored as world SavedData under "wandscape_colony_levels".
  */
 public class ColonyLevelData extends SavedData {
