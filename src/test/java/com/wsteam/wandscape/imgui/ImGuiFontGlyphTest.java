@@ -5,6 +5,8 @@ import imgui.ImFontConfig;
 import imgui.ImGui;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,7 +20,13 @@ import static org.junit.jupiter.api.Assertions.*;
  * so Chinese renders as "?????" regardless of font. The production code now
  * builds the range array by hand with explicit (short) casts. This test
  * proves that path produces real glyphs, before and after GC pressure.
+ *
+ * <p>Windows-only: it loads the hard-coded {@code C:\Windows\Fonts\simhei.ttf} and
+ * requires the Windows ImGui native library (natives-windows jar). On Linux/macOS
+ * CI this test cannot pass (no simhei, no .dll), so it is skipped there — the
+ * Windows dev machine keeps full coverage.</p>
  */
+@EnabledOnOs(OS.WINDOWS)
 public class ImGuiFontGlyphTest {
 
     private static final String SIMHEI = "C:\\Windows\\Fonts\\simhei.ttf";
