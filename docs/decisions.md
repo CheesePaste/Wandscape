@@ -2,6 +2,22 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-10：游客目标选择偏好改为「总三值满意度增益」+ 晃悠根因分析
+
+**需求**（用户实测）：游客在建筑附近（spot 有空位）仍一直晃悠不去逛，尤其「一维数值夸张、另两条很低」的游客；Comfort 侧重游客 Comfort 满条后仍被高 Comfort 建筑吸走。
+
+**决策**：
+- **满意度偏好 = 总三值满意度增益**：`score(满意度) = Σ_d min(需求缺口_d, round(建筑该维值 × TOURIST_BAR_GAIN_COEFF))`，即「这次访问能把总三值满意度提升多少（潜在总三值 − 现在三值）」，与 `fillBars` 实际结算逐维一致。旧式 `Σ 需求缺口 × 建筑值` 会把单维数值夸张（如 Comfort 90/其余 0）的建筑权重抬得过高——Comfort 满条的游客仍被高 Comfort 建筑吸走，浪费访问、另两条常年填不满。增益式下均衡建筑（30/30/30）比单维夸张（90/0/0）总增益更高（90>80），游客会优先去能把三条总满意度抬得更高的地方。精力/钱包紧急加分、排队惩罚不变。
+
+**晃悠根因分析**（用户问「太挑剔还是视野太小」）：
+- **不是挑剔**：`weightedPick` 兜底权重 0.5，候选非空必选；视野内无目标才闲逛。真正挡住目标是**过滤**而非评分：
+- **① visited 耗尽**：`visitedBuildings` 一次停留不重置（红线 #8，防挂机），小/同质殖民地很快把视野内（48 格）建筑逛完 → 闲逛，直到漂到新的未逛建筑附近。
+- **② 傍晚旅店锁（与「一维夸张两维低」最吻合）**：`selectNextTarget` 里 `nightHotel = 夜晚 && !满条` → 未满条游客夜晚只能去旅店；而离场窗口 18000 才开。13000–18000 视野内无旅店 → 闲逛 5000 tick。一维夸张两维低的游客几乎永远不满条 → **每天傍晚都晃悠**。
+- **③ gap×value 评分浪费访问**：侧重 Comfort（80/35/35）游客起步被 Comfort 90 建筑吸走（score 7200 > 均衡 4500），但实际总增益 80<90——另两条常年低 → 加剧 ② + 更快逛完视野内建筑。
+- **④ 精力 0 → 只去 relax**（无恢复建筑 → 闲逛，不离场，goal 非协商项）。视野 48 是次要因素（殖民地建筑更分散时确实够不着，可按需调 `TOURIST_VISION_RADIUS`）。
+
+**本次改动只修 ③**（明确要求）；① 是设计红线不碰；② 属设计取舍（见 gap/后续），待用户拍板。
+
 ## 2026-08-10：修复游客交互时长/满意度 2 倍 + 下调 1 级需求
 
 **需求**（用户实测）：花店 `interaction_duration_ticks=2400` 实测 ~4800 tick；满意度三值比 JSON 大一倍（10/3/2 → +20/+6/+4）。要求 1 级游客三条 need = 40% 均衡 50/50/50、60% 侧重 80/35/35 类。
@@ -25,7 +41,7 @@
 - **`interact_spots` 取代 `tourist_interact_aabb`**：每点带动作（`Activity` 子集 browse/eat/bathe/view/pay/rest/withdraw），**spot 数量 = 同时交互人数上限**（全满排队，超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃）；交互时长由模式预设块 `interaction_duration_ticks` 决定（与 spot 无关）；0-spot 游客目标建筑不选（**无 spiral-scan 兜底**）。旧字段不保留 JSON 兼容解析。
 - **交互位唯一真源 = world 里 `interact_spot_marker` 方块**：BE 不存 spot 列表；放置=标记、右键循环动作、潜行右键移除，action 存 blockstate（无 BE/NBT）。导出扫 boundary 内 marker → `interact_spots`，marker 格跳过 pattern（创作者自行留空该格）。
 - **四类 category 保持独立（不合并）**：`shop`（卖物品）/`service`（产元素+耗精力，`max_occupancy>0`=旅店）/`relax`（回精力）/`atm`（取现 `min(withdrawAmount, travelFund)`）；统一成 `interact` 的 `interaction` 块 → **二阶段**（`architecture/plan/phase-2/`）。动作只决定游客活动状态/粒子，精力/经济效果由模式预设块决定。
-- **目标选择 = Find-Best-Action，只看视野内**（`TOURIST_VISION_RADIUS` 且已加载）：`Σ(需求缺口×建筑值) + 精力紧急(relax) + 钱包紧急(atm) − 排队惩罚`；视野内无目标 → 闲逛；精力 0 → 只能去 relax、无则闲逛（**不离场**）。
+- **目标选择 = Find-Best-Action，只看视野内**（`TOURIST_VISION_RADIUS` 且已加载）：`Σ(总三值满意度增益) + 精力紧急(relax) + 钱包紧急(atm) − 排队惩罚`；视野内无目标 → 闲逛；精力 0 → 只能去 relax、无则闲逛（**不离场**）。
 - **停留上限 + `visitedBuildings` 不重置**：停留 2-4 天（`departureDeadline`），整个停留一栋建筑只逛一次，防挂机。
 - **`Activity` 枚举放 `shared/data`**（building/data 要引用，避免跨模块直接引用）；`TouristState` 保持移动标签不扩展为状态机。
 - **瞬时头顶条移除**：删 `SatisfactionBarRenderer`；气泡仍在（图标+文案），不画 before→after 进度条。

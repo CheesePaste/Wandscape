@@ -28,7 +28,9 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 
 ## 目标选择（Find-Best-Action，只看视野内）
 
-`score(b) = Σ_d max(0, need_d−sat_d) × value_d + 精力紧急加分(relax) + 钱包紧急加分(atm) − 排队惩罚(spot 全满)`
+`score(b) = Σ_d min(缺口_d, round(value_d × TOURIST_BAR_GAIN_COEFF)) + 精力紧急加分(relax) + 钱包紧急加分(atm) − 排队惩罚(spot 全满)`
+
+- 满意度偏好 = **总三值满意度增益**（潜在总三值 − 现在三值，逐维 `min(需求缺口, round(值×coeff))` 与 `fillBars` 结算一致）：避免单维数值夸张的建筑过度吸走游客（Comfort 满条仍去高 Comfort 建筑 = 浪费访问）。
 
 - 候选只取 **`TOURIST_VISION_RADIUS` 内且区块已加载**（实体寻路）的可交互建筑；0-spot 建筑不选（无兜底）。
 - 视野内无合适目标 → **闲逛**，直到视野出现合适的；绝不跨城寻路。

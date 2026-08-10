@@ -40,7 +40,7 @@ import net.minecraft.server.level.ServerLevel;
  * SavedData-backed systems ({@code ShopStockManager}, {@code ColonyItemBank},
  * {@code BuildingSavedData}) — none require a loaded chunk.
  *
- * <p>Goal 语义：填三条无惩罚；目标选择 = Find-Best-Action（需求缺口 × 建筑值 + 精力/钱包紧急加分
+ * <p>Goal 语义：填三条无惩罚；目标选择 = Find-Best-Action（总三值满意度增益 + 精力/钱包紧急加分
  * − 排队惩罚），只看视野内；spot 单点交互、spot 数量 = 同时交互人数上限（全满排队）。
  */
 public final class TouristSimulation {
@@ -320,7 +320,7 @@ public final class TouristSimulation {
      * <p>规则（goal.md 非协商项）：
      * <ul>
      *   <li>只看视野内（TOURIST_VISION_RADIUS 且 requireLoaded 时区块已加载）的可交互建筑；视野内无合适目标 → 返回 null（调用方闲逛）。</li>
-     *   <li>评分 = Σ(需求缺口 × 建筑该维值) + 精力紧急加分（relax）+ 钱包紧急加分（atm）− 排队惩罚（spot 全满）。</li>
+     *   <li>评分 = Σ(该维实际增益 min(缺口, round(值×coeff))) + 精力紧急加分（relax）+ 钱包紧急加分（atm）− 排队惩罚（spot 全满）。</li>
      *   <li>精力 0 → 只能去 relax.energyRestore()>0 建筑。</li>
      *   <li>夜晚且未满条 → 去旅店（service.maxOccupancy>0 且有空位）；满条夜晚由离场逻辑处理。</li>
      *   <li>0-spot 建筑对游客无效（无兜底）。</li>
@@ -379,16 +379,12 @@ public final class TouristSimulation {
         return weightedPick(level, t, candidates);
     }
 
-    /** Find-Best-Action 评分：Σ(需求缺口×建筑值) + 精力/钱包紧急加分 − 排队惩罚。 */
+    /** Find-Best-Action 评分：满意度偏好（总三值增益） + 精力/钱包紧急加分 − 排队惩罚。 */
     public static double buildingScore(ServerLevel level, TouristStateHost t, BuildingState state) {
         int[] v = effectiveValues(level, state.getBuildingId());
         int[] need = {t.getComfortNeed(), t.getMagicNeed(), t.getWonderNeed()};
         int[] sat = {t.getComfortSat(), t.getMagicSat(), t.getWonderSat()};
-        double score = 0;
-        for (int d = 0; d < 3; d++) {
-            int gap = Math.max(0, need[d] - sat[d]);
-            score += gap * v[d];
-        }
+        double score = satisfactionGain(need, sat, v, Config.TOURIST_BAR_GAIN_COEFF.get());
 
         BuildingConfig cfg = getConfig(level, state.getBuildingId());
         if (cfg != null) {
@@ -414,6 +410,26 @@ public final class TouristSimulation {
             }
         }
         return score;
+    }
+
+    /**
+     * 满意度偏好 = 这次访问能把「总三值满意度」提升多少（潜在总三值 − 现在三值）。
+     * 每维增益 = min(需求缺口, round(建筑该维值 × coeff))，与 {@link #fillBars} 实际结算一致。
+     *
+     * <p>相比旧式「Σ 需求缺口 × 建筑值」：不会因某一维数值夸张就过度吸走游客（例如 Comfort
+     * 满条的游客仍去高 Comfort 建筑——那是浪费访问，另两条永远填不满）；均衡建筑常比单维夸张
+     * 建筑总增益更高，游客会优先去能把三条总满意度抬得更高的地方。
+     *
+     * <p>纯计算（不依赖 MC 运行时），可 JUnit 单测。
+     */
+    static double satisfactionGain(int[] need, int[] sat, int[] values, double coeff) {
+        double gain = 0;
+        for (int d = 0; d < 3; d++) {
+            int gap = Math.max(0, need[d] - sat[d]);
+            if (gap <= 0 || values[d] <= 0) continue;
+            gain += Math.min(gap, (int) Math.round(values[d] * coeff));
+        }
+        return gain;
     }
 
     @Nullable
