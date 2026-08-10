@@ -201,11 +201,14 @@ public final class TouristSimSystem {
                 if (body != null && body.isAlive()) {
                     body.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
                 }
-                // sim 接管：实体的瞬时占位/排队不延续，sim 从头占位/排队
-                // （onRemovedFromLevel 已释放实体的 spot/queue）。
-                s.setInteractTicksLeft(0);
-                s.setQueueSpotIndex(-1);
-                s.setOccupiedSpot(-1);
+                // 实体→sim 切换瞬间才清瞬时交互/排队状态（onRemovedFromLevel 已释放实体的 spot/queue）。
+                // 不能每 tick 重置——否则排队中的 shadow 每次被踢出队尾、交互中的被清零，
+                // 排队/交互永不推进（游客原地卡死）。
+                if (s.isHydrated()) {
+                    s.setInteractTicksLeft(0);
+                    s.setQueueSpotIndex(-1);
+                    s.setOccupiedSpot(-1);
+                }
                 simmedCount++;
                 simStep(level, s);
             }
