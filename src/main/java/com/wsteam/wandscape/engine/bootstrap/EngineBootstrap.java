@@ -126,6 +126,7 @@ public final class EngineBootstrap {
                 blueprints,
                 sysBlueprints,
                 com.wsteam.wandscape.Config.AUTO_APPROVE_TASKS.get(),
+                com.wsteam.wandscape.Config.SCHEDULER_HEARTBEAT_TICKS.get(),
                 new BuildingTaskPool()
         );
 

@@ -79,7 +79,7 @@ public final class CoreBootstrap {
         // 7. Register systems (in order)
         world.addSystem(new SystemBlueprintSystem(sysBp));
         world.addSystem(new TaskSourcePoller(config.taskSources()));
-        world.addSystem(new SchedulerSystem());
+        world.addSystem(new SchedulerSystem(config.schedulerHeartbeatTicks()));
         world.addSystem(new TaskExecutionSystem(world.taskPool));
 
         Log.info(TAG, "bootstrap complete - %d component stores, %d systems, %d task sources",

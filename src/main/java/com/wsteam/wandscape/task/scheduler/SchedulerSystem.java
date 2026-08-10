@@ -22,26 +22,28 @@ import com.google.gson.JsonElement;
 
 /**
  * Assigns global tasks to idle NPCs.
- * Runs every 2 ticks (configurable heartbeat).
+ * Runs every {@code heartbeatInterval} ticks (interval wired from
+ * {@code Config.SCHEDULER_HEARTBEAT_TICKS} at bootstrap).
  * <p>
  * Phase 3 (migration): uses EquipmentComponent for scoring.
  * Scoring: proximity × 0.6 + mana efficiency × 0.4 (temp, being replaced by attribute-weighted).
  */
 public class SchedulerSystem implements System {
 
-    private static final int HEARTBEAT_INTERVAL = 2; // ticks between scheduling runs
+    private final int heartbeatInterval;
     private int tickCounter = 0;
 
     private static final String TAG = "Scheduler";
 
-    /** No-arg constructor. */
-    public SchedulerSystem() {
+    /** @param heartbeatInterval ticks between scheduling runs */
+    public SchedulerSystem(int heartbeatInterval) {
+        this.heartbeatInterval = heartbeatInterval;
     }
 
     @Override
     public void update(World world, float delta) {
         tickCounter++;
-        if (tickCounter % HEARTBEAT_INTERVAL != 0) return;
+        if (tickCounter % heartbeatInterval != 0) return;
 
         // 1. Find all idle NPCs with full component set
         List<Long> idleNpcs = new ArrayList<>();
@@ -200,7 +202,7 @@ public class SchedulerSystem implements System {
 
     /** Manually trigger a scheduling heartbeat (for testing). */
     public void forceHeartbeat() {
-        tickCounter = HEARTBEAT_INTERVAL;
+        tickCounter = heartbeatInterval;
     }
 
     public void resetCounter() {

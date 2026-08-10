@@ -65,7 +65,7 @@ public class ResourceWaitingFulfillTest {
         DefaultOpExecutors.registerAll(world.opExecutors);
         manualSource = new PlayerManualSource(world.taskPool);
 
-        scheduler = new SchedulerSystem();
+        scheduler = new SchedulerSystem(2);
 
         colonyId = UUID.randomUUID();
         GridPos center = new GridPos(0, 64, 0);

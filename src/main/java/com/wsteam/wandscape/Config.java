@@ -20,8 +20,9 @@ public class Config {
             .defineInRange("general.maxConcurrentBuildings", 3, 1, 32);
 
     public static final ModConfigSpec.IntValue SCHEDULER_HEARTBEAT_TICKS = BUILDER
-            .comment("Scheduler heartbeat interval in ticks (40 ticks = 2 seconds)")
-            .defineInRange("scheduler.heartbeatTicks", 40, 10, 200);
+            .comment("Scheduler heartbeat interval in ticks: how often idle NPCs are matched "
+                    + "to pending tasks (20 ticks = 1 second)")
+            .defineInRange("scheduler.heartbeatTicks", 20, 10, 200);
 
     public static final ModConfigSpec.DoubleValue SAME_BUILDING_CONTINUATION_BONUS = BUILDER
             .comment("Score bonus for NPC continuing tasks on the same building")

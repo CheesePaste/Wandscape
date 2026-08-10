@@ -5,8 +5,6 @@ public final class WandscapeConstants {
 
     public static final String BUILDING_CATEGORY_GOVERNMENT = "government";
 
-    public static final int SCHEDULER_HEARTBEAT_TICKS = 40;
-
     public static final double SAME_BUILDING_CONTINUATION_BONUS = 50.0;
 
     public static final int QUEUE_TOWNHALL = 5;
