@@ -164,6 +164,8 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
+        }
+
         // ── Top Bar Help ? button ──
         if (mouseY <= WandscapePanelOverlay.TOP_BAR_H) {
             int helpX = screenW - 24;
