@@ -49,12 +49,10 @@ public final class TouristSimulation {
 
     /** 精力低于此比例 → relax 建筑紧急加分（Config.TOURIST_ENERGY_RESTORE_THRESHOLD 的补充启发值）。 */
     private static final double ENERGY_URGENCY_BONUS = 2000;
-    /** 钱包低于初始 1/4 → ATM 紧急加分。 */
-    private static final double WALLET_LOW_BONUS = 2000;
-    /** 钱包=0 → ATM 大幅加分（优先取现继续逛）。 */
-    private static final double WALLET_EMPTY_BONUS = 4000;
-    /** spot 全满或有人排队 → 排队惩罚（远大于单次增益，热点建筑强烈分流；有空位建筑优先）。 */
-    private static final double QUEUE_PENALTY = 3000;
+    /** 钱包低于初始 1/4 → ATM 取现加分（与单次满意度增益同量级，不再碾压选店）。 */
+    private static final double WALLET_LOW_BONUS = 50;
+    /** 钱包=0 → ATM 取现加分稍高（优先取现继续逛）。 */
+    private static final double WALLET_EMPTY_BONUS = 100;
 
     private TouristSimulation() {
     }
@@ -477,12 +475,12 @@ public final class TouristSimulation {
                     score += WALLET_LOW_BONUS;
                 }
             }
-            // 排队惩罚：spot 全满或已有人排队减分——spot 空但队长的间隙也持续降权，
-            // 避免新游客挤进热点建筑；多建同类型 = 有空位 → 排队短。
+            // 排队惩罚 = 等比例降权：spot 全满时按总排队人数等比缩小
+            // （1 人 -25%、2 人 -50%、3 人 -75%，封顶 -75%）。多建同类型 = 排队短 = 降权轻；
+            // 不再像固定 -3000 那样把满店压到权重地板，排队短的好店仍比空置低价值建筑更受欢迎。
             if (cfg.interactSpots() != null && !cfg.interactSpots().isEmpty()
-                    && (TouristSpotManager.getActive().isFull(state.getBuildingId(), cfg.interactSpots().size())
-                    || TouristSpotManager.getActive().totalQueueLength(state.getBuildingId()) > 0)) {
-                score -= QUEUE_PENALTY;
+                    && TouristSpotManager.getActive().isFull(state.getBuildingId(), cfg.interactSpots().size())) {
+                score *= queuePenaltyMultiplier(TouristSpotManager.getActive().totalQueueLength(state.getBuildingId()));
             }
         }
         return score;
@@ -506,6 +504,16 @@ public final class TouristSimulation {
             gain += Math.min(gap, (int) Math.round(values[d] * coeff));
         }
         return gain;
+    }
+
+    /**
+     * 排队惩罚乘数：spot 全满时，按该建筑总排队人数等比降权。
+     * 1 人 ×0.75、2 人 ×0.5、3 人 ×0.25，封顶 ×0.25（人再多不再加深）；0 人 ×1.0（无惩罚）。
+     * 纯计算（不依赖 MC 运行时），可 JUnit 单测。
+     */
+    static double queuePenaltyMultiplier(int queueLen) {
+        if (queueLen <= 0) return 1.0;
+        return Math.max(0.25, 1.0 - 0.25 * queueLen);
     }
 
     @Nullable

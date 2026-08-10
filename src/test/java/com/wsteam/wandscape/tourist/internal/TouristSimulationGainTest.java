@@ -49,4 +49,14 @@ class TouristSimulationGainTest {
         int[] sat = {0, 0, 0};
         assertEquals(35, TouristSimulation.satisfactionGain(need, sat, new int[]{0, 40, 0}, 1.0));
     }
+
+    /** 排队惩罚乘数：0 人无惩罚，1/2/3 人各 -25%/-50%/-75%，封顶 -75%。 */
+    @Test
+    void queuePenaltyScalesWithQueueLength() {
+        assertEquals(1.0, TouristSimulation.queuePenaltyMultiplier(0));
+        assertEquals(0.75, TouristSimulation.queuePenaltyMultiplier(1), 1e-9);
+        assertEquals(0.5, TouristSimulation.queuePenaltyMultiplier(2), 1e-9);
+        assertEquals(0.25, TouristSimulation.queuePenaltyMultiplier(3), 1e-9);
+        assertEquals(0.25, TouristSimulation.queuePenaltyMultiplier(10), 1e-9, "排队多人封顶 -75% 降权");
+    }
 }
