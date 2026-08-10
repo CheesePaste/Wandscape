@@ -13,13 +13,23 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
+import com.wsteam.wandscape.shared.data.Activity;
+import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.shared.data.Emotion;
+import com.wsteam.wandscape.shared.data.MageAttributeRoller;
+import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.entity.VillagerLike;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
+import com.wsteam.wandscape.tourist.internal.TouristSpawnSystem;
+import com.wsteam.wandscape.tourist.internal.TouristSimSystem;
+import com.wsteam.wandscape.tourist.internal.TouristStateHost;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.tourist.internal.TouristState;
 
@@ -27,16 +37,19 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -45,8 +58,10 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import com.wsteam.wandscape.tourist.network.TouristDataPacket;
@@ -59,10 +74,10 @@ import com.wsteam.wandscape.tourist.network.TouristDataPacket;
  *
  * <p>95% tourist appearance (skins from {@code textures/entity/tourist}),
  * 5% mage appearance (skins from {@code textures/entity/wizard}).
- * Mage tourists carry mana/spell-power stats; when their satisfaction reaches 100%,
+ * Mage tourists carry mana/spell-power stats; when their three bars are full,
  * their data is stored in the tavern as a recruitment resume.
  */
-public class TouristEntity extends PathfinderMob implements VillagerLike {
+public class TouristEntity extends PathfinderMob implements VillagerLike, TouristStateHost {
 
     private static final String TAG = "TouristEntity";
 
@@ -100,6 +115,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     /** 0 = TOURIST, 1 = MAGE. */
     private static final EntityDataAccessor<Byte> DATA_APPEARANCE =
             SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BYTE);
+    /** 当前活动动作（Activity ordinal，-1 = 无）。同步给客户端驱动姿态/粒子渲染。 */
+    private static final EntityDataAccessor<Integer> DATA_ACTIVITY =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
+    /** 预览假人标记（客户端用于跳过气泡渲染）。 */
+    private static final EntityDataAccessor<Boolean> DATA_PREVIEW =
+            SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     // ── Debug synched data (for TouristDebugRenderer) ──
 
@@ -119,6 +140,14 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     // ── Identity ──
 
     private String touristName = "";
+
+    /**
+     * True when this entity was restored from saved world data (chunk load)
+     * rather than freshly spawned. Fresh spawns get adopted into the tourist sim
+     * shadow registry; disk-loaded bodies that outlived their departed shadow are
+     * left for the sim's orphan sweep to discard.
+     */
+    private boolean loadedFromDisk;
 
     // ── State label (synced by TouristMoveGoal) ──
 
@@ -144,22 +173,43 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
 
     // ── Tourist attributes ──
 
-    private int energy = 100;
-    private int satisfaction;
+    private int energy = WandscapeConstants.TOURIST_MAX_ENERGY;
     private int level = 1;
+    /** Universal-element spending money. Higher tourist levels start with more. */
+    private int wallet;
+    /** The wallet the tourist arrived with — caps each shopping trip's budget. */
+    private int initialWallet;
 
-    // ── Per-building-type preference (buildingTypeId → 5..100, default 50) ──
+    // ── 三条需求条（fill/need）＋ 画像 / 活动 / 停留 / 总旅费（Block 2） ──
 
-    private final Map<String, Integer> typePreferences = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final int DEFAULT_TYPE_PREFERENCE = 40;
-    private static final int MIN_TYPE_PREFERENCE = 5;
-    private static final int MAX_TYPE_PREFERENCE = 100;
+    private int comfortSat, magicSat, wonderSat;
+    private int comfortNeed = 100, magicNeed = 100, wonderNeed = 100;
+    /** 活动状态存 synched data（DATA_ACTIVITY），客户端渲染姿态/粒子用。 */
+    private int activityTicks;
+    private int occupiedSpot = -1;
+    private int nightsStayed;
+    private long departureDeadline = Long.MAX_VALUE;
+    private int travelFund;
 
-    // ── Mage-only attributes (stored in tavern recruitment resume at 100% satisfaction) ──
+    /** 预览模式（交互位 marker 的演示假人）：不参与 AI/生成/离开，仅站桩循环做动作。 */
+    private boolean previewMode;
 
-    private int maxMana = 100;
-    private int manaRegenRate = 2;
-    private int spellPower = 1;
+    /** 活动期间锁定的朝向 yaw（null=不锁定）。交互动作时锁定面向 spot，防 LookControl/MoveControl 拉偏。 */
+    @javax.annotation.Nullable
+    private Float frozenYaw;
+
+    /** 用餐（EAT）时手持的食物（registry id，缺省面包）。 */
+    private String heldFoodItem = "minecraft:bread";
+
+    // ── Mage-only attributes (stored in tavern recruitment resume at three-bars-full) ──
+
+    private float maxHp = 40f;
+    private float moveSpeed = 0.3f;
+    private float spellPower = 1f;
+    private float workSpeed = 1f;
+    private float spellSpeed = 1f;
+    private float armorValue = 0f;
+    private float maxMana = 200f;
 
     /** Whether the mage resume has already been stored in the tavern for this tourist. */
     private boolean mageResumeStored;
@@ -182,15 +232,13 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     /** Tick count when the tourist checked into the hotel. */
     private int hotelCheckinTime;
 
+    /** Position to return to when checking out of the hotel in the morning
+     *  (the spot where the tourist stood before teleporting into a bed). */
+    @Nullable
+    private BlockPos wakeUpPos;
+
     /** Set of building IDs the tourist has already visited this trip. */
     private final Set<UUID> visitedBuildings = new HashSet<>();
-
-    /** Per-building cooldown end ticks (buildingId → game tick when cooldown expires). */
-    private final Map<UUID, Integer> serviceCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
-
-    /** Global rest-cooldown end tick after interacting with any building (shop/service).
-     *  During this, the tourist wanders or visits POIs and skips building visits. */
-    private int serviceCooldownEndTick;
 
     // ── Narrative memory (journey diary) ──
 
@@ -225,6 +273,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         super.defineSynchedData(builder);
         builder.define(DATA_SKIN_VARIANT, -1);
         builder.define(DATA_APPEARANCE, (byte) 0);
+        builder.define(DATA_ACTIVITY, -1);
+        builder.define(DATA_PREVIEW, false);
         builder.define(DEBUG_COMMUTE_TARGET, Optional.empty());
         builder.define(DEBUG_ENTRY_POINT, Optional.empty());
         builder.define(DEBUG_INTERACT_POINT, Optional.empty());
@@ -236,8 +286,16 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         return entityData.get(DATA_SKIN_VARIANT);
     }
 
+    public void setSkinVariant(int variant) {
+        entityData.set(DATA_SKIN_VARIANT, variant);
+    }
+
     public Appearance getAppearance() {
         return entityData.get(DATA_APPEARANCE) == 1 ? Appearance.MAGE : Appearance.TOURIST;
+    }
+
+    public void setAppearance(Appearance appearance) {
+        entityData.set(DATA_APPEARANCE, (byte) (appearance == Appearance.MAGE ? 1 : 0));
     }
 
     public boolean isMage() {
@@ -259,6 +317,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!this.isAlive()) return super.mobInteract(player, hand);
+        // 预览假人不可交互（右键不出面板）
+        if (previewMode) return InteractionResult.PASS;
 
         if (level().isClientSide) {
             return InteractionResult.SUCCESS;
@@ -277,24 +337,74 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         super.onAddedToLevel();
         syncName();
 
-        if (getSkinVariant() < 0) {
-            // Step 1: roll appearance (5% mage)
-            boolean mage = random.nextDouble() < MAGE_CHANCE;
-            int variant;
-
-            if (mage) {
-                variant = random.nextInt(WIZARD_SKIN_COUNT);
-                // Scale mage stats by level (spawn system pre-sets level based on colony level)
-                double scale = 0.8 + this.level * 0.2;
-                maxMana = (int) Math.round((80 + random.nextInt(121)) * scale);     // 80–200 × scale
-                manaRegenRate = Math.max(1, (int) Math.round((1 + random.nextInt(5)) * scale));   // 1–5 × scale
-                spellPower = Math.max(1, (int) Math.round((1 + random.nextInt(4)) * scale));      // 1–4 × scale
-            } else {
-                variant = random.nextInt(TOURIST_SKIN_COUNT);
+        // Spawn-egg tourists arrive without a name or colony — fill both in so
+        // they get a display name and can plan building visits. System-spawned
+        // tourists already set these before addFreshEntity, so this is a no-op
+        // for them. Server-authoritative.
+        if (!level().isClientSide) {
+            if (touristName.isEmpty()) {
+                setTouristName(TouristSpawnSystem.generateRandomTouristName());
             }
+            if (colonyId == null) {
+                var colonyApi = WandscapeApis.getColonyApiSilently();
+                if (colonyApi != null) {
+                    UUID detected = colonyApi.getColonyId(blockPosition());
+                    if (detected != null) {
+                        setColonyId(detected);
+                    }
+                }
+            }
+            // Spawn-egg / command tourists bypass applySpawnDefaults — give them the full
+            // random-spawn defaults (rolled level, wallet, persona needs, stay window, travel
+            // fund) so they behave like a randomly generated tourist. Only truly-uninitialized
+            // fresh tourists qualify (deadline is still the Long.MAX_VALUE sentinel): system-
+            // spawned and shadow-restored tourists already carry valid values and must not be
+            // re-rolled, or their level/wallet/persona get wiped on every load.
+            if (!previewMode) {
+                if (!loadedFromDisk && getDepartureDeadline() == Long.MAX_VALUE) {
+                    TouristSpawnSystem.applyRandomSpawnDefaults(this, colonyId, level().getGameTime());
+                }
+                // 兜底：applyRandomSpawnDefaults 失败（系统未注册）或旧存档缺少停留字段时仍补停留窗口。
+                ensureStayWindow(level().getGameTime());
+            }
+            // Roll appearance (5% mage + skin variant) BEFORE adopt so the sim shadow captures
+            // the rolled values. Adopting first exports the uninitialized -1 / non-mage state,
+            // and importToEntity then overwrites the entity with them on the first observed sim
+            // tick — every tourist would render the default skin and mages would vanish.
+            if (getSkinVariant() < 0) {
+                // Step 1: roll appearance (5% mage)
+                boolean mage = random.nextDouble() < MAGE_CHANCE;
+                int variant;
 
-            entityData.set(DATA_SKIN_VARIANT, variant);
-            entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
+                if (mage) {
+                    variant = random.nextInt(WIZARD_SKIN_COUNT);
+                    // 偏斜分布 random⁴（多数偏低、偶发高值 → 自然出专精），等级做加法叠加（更公平）
+                    RecruitmentCandidate roll = MageAttributeRoller.roll(level,
+                            new java.util.Random(random.nextLong()));
+                    maxHp = roll.maxHp();
+                    maxMana = roll.maxMana();
+                    moveSpeed = roll.moveSpeed();
+                    spellPower = roll.spellPower();
+                    workSpeed = roll.workSpeed();
+                    spellSpeed = roll.spellSpeed();
+                    armorValue = roll.armorValue();
+                } else {
+                    variant = random.nextInt(TOURIST_SKIN_COUNT);
+                }
+
+                entityData.set(DATA_SKIN_VARIANT, variant);
+                entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
+            }
+            // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
+            // them now, else the sim's orphan sweep discards them as departed
+            // bodies. Disk-loaded bodies (loadedFromDisk) are left for that sweep.
+            // Preview mannequins are never adopted (no sim, no departure).
+            if (!previewMode && !loadedFromDisk) {
+                TouristSimSystem sim = TouristSimSystem.getActive();
+                if (sim != null && sim.getRegistry() != null && sim.getRegistry().get(getUUID()) == null) {
+                    sim.adoptTourist(this);
+                }
+            }
         }
 
         // Re-establish hotel check-in when entity is loaded from disk
@@ -316,10 +426,91 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     }
 
     @Override
-    public boolean shouldBeSaved() { return true; }
+    public boolean shouldBeSaved() { return !previewMode; }
+
+    /** 预览假人免疫伤害（仅站桩演示，不能被炸死/打掉）。 */
+    @Override
+    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (previewMode) return false;
+        return super.hurt(source, amount);
+    }
 
     @Override
     public boolean removeWhenFarAway(double d) { return false; }
+
+    /**
+     * 锁定朝向：交互动作/预览期间（frozenYaw != null），在整帧 tick 末尾强制把
+     * yRot/yBodyRot/yHeadRot 设回锁定值——LookControl/MoveControl/BodyRotationControl
+     * 在 aiStep 里会用 setYRot 覆盖 spot 朝向，这里收尾兜底保证游客不转身。
+     */
+    @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide && frozenYaw != null) {
+            float yaw = frozenYaw;
+            this.setYRot(yaw);
+            this.yRotO = yaw;
+            this.yBodyRot = yaw;
+            this.yBodyRotO = yaw;
+            this.setYHeadRot(yaw);
+            this.yHeadRotO = yaw;
+        }
+    }
+
+    /**
+     * Only fresh spawns go through finalizeSpawn — clear the disk-load flag so a
+     * spawn egg carrying custom entity NBT isn't mistaken for a restored body.
+     */
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
+            MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+        SpawnGroupData data = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+        this.loadedFromDisk = false;
+        return data;
+    }
+
+    /**
+     * A killed/discarded tourist must fully die. Its data shadow would otherwise
+     * make the sim respawn it at its old position — clear the shadow, free hotel
+     * occupancy and the colony's population slot.
+     */
+    @Override
+    public void onRemovedFromLevel() {
+        super.onRemovedFromLevel();
+        RemovalReason reason = getRemovalReason();
+        if (level().isClientSide || reason == null) return;
+        if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
+            onTouristKilled();
+        }
+    }
+
+    private void onTouristKilled() {
+        // 预览假人：无 shadow/无离场，禁止任何 departure 副作用
+        if (previewMode) return;
+        UUID colonyId = getColonyId();
+        if (getCheckedInBuildingId() != null) {
+            HotelStayHandler hotel = HotelStayHandler.getActive();
+            if (hotel != null && level() instanceof ServerLevel sl) {
+                hotel.checkOut(this, sl);
+            }
+        }
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null) {
+            sim.removeShadow(getUUID());
+        }
+        if (colonyId != null) {
+            var api = WandscapeApis.getTouristApiSilently();
+            if (api != null) {
+                api.registerDeparture(getUUID(), colonyId,
+                        BarRatio.of(getComfortSat(), getComfortNeed(), getMagicSat(), getMagicNeed(),
+                                getWonderSat(), getWonderNeed()));
+            }
+        }
+    }
+
+    /** Time base for cooldown comparisons — mirrors {@link TouristStateHost#timeBase()}. */
+    @Override
+    public int timeBase() { return this.tickCount; }
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -339,25 +530,38 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         }
         tag.putInt("wanderRadius", wanderRadius);
         tag.putInt("energy", energy);
-        tag.putInt("satisfaction", satisfaction);
         tag.putInt("level", level);
+        tag.putInt("wallet", wallet);
+        tag.putInt("initialWallet", initialWallet);
 
-        // Save per-building-type preferences as a flat compound
-        CompoundTag prefs = new CompoundTag();
-        for (var entry : typePreferences.entrySet()) {
-            prefs.putInt(entry.getKey(), entry.getValue());
-        }
-        tag.put("typePreferences", prefs);
+        // ── 三条需求条 / 活动 / 停留 / 总旅费（Block 2）──
+        tag.putInt("comfortSat", comfortSat);
+        tag.putInt("magicSat", magicSat);
+        tag.putInt("wonderSat", wonderSat);
+        tag.putInt("comfortNeed", comfortNeed);
+        tag.putInt("magicNeed", magicNeed);
+        tag.putInt("wonderNeed", wonderNeed);
+        if (getCurrentActivity() != null) tag.putString("currentActivity", getCurrentActivity().name());
+        tag.putInt("activityTicks", activityTicks);
+        tag.putInt("occupiedSpot", occupiedSpot);
+        tag.putInt("nightsStayed", nightsStayed);
+        tag.putLong("departureDeadline", departureDeadline);
+        tag.putInt("travelFund", travelFund);
 
-        tag.putInt("maxMana", maxMana);
-        tag.putInt("manaRegenRate", manaRegenRate);
-        tag.putInt("spellPower", spellPower);
+        tag.putFloat("maxHp", maxHp);
+        tag.putFloat("moveSpeed", moveSpeed);
+        tag.putFloat("spellPower", spellPower);
+        tag.putFloat("workSpeed", workSpeed);
+        tag.putFloat("spellSpeed", spellSpeed);
+        tag.putFloat("armorValue", armorValue);
+        tag.putFloat("maxMana", maxMana);
         tag.putBoolean("mageResumeStored", mageResumeStored);
 
         if (colonyId != null) tag.putUUID("colonyId", colonyId);
         if (targetBuildingId != null) tag.putUUID("targetBuildingId", targetBuildingId);
         if (targetBuildingCategory != null) tag.putString("targetBuildingCategory", targetBuildingCategory);
         if (checkedInBuildingId != null) tag.putUUID("checkedInBuildingId", checkedInBuildingId);
+        if (wakeUpPos != null) tag.putLong("wakeUpPos", wakeUpPos.asLong());
 
         // Save visited building IDs
         ListTag visitedList = new ListTag();
@@ -368,23 +572,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         }
         tag.put("visitedBuildings", visitedList);
 
-        // Save service cooldowns as remaining ticks (absolute tickCount values are not portable)
-        ListTag cooldownList = new ListTag();
-        for (var entry : serviceCooldowns.entrySet()) {
-            int remaining = entry.getValue() - this.tickCount;
-            if (remaining > 0) {
-                CompoundTag entryTag = new CompoundTag();
-                entryTag.putUUID("buildingId", entry.getKey());
-                entryTag.putInt("remaining", remaining);
-                cooldownList.add(entryTag);
-            }
-        }
-        tag.put("serviceCooldowns", cooldownList);
-        int remainingGlobal = serviceCooldownEndTick - this.tickCount;
-        if (remainingGlobal > 0) {
-            tag.putInt("serviceCooldownRemaining", remainingGlobal);
-        }
-
         // Save visit memories (journey diary)
         ListTag visitsList = new ListTag();
         for (VisitMemory v : recentVisits) {
@@ -393,8 +580,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
             vt.putString("buildingDisplayName", v.buildingDisplayName());
             vt.putString("category", v.category());
             vt.putLong("gameTime", v.gameTime());
-            vt.putInt("satisfactionBefore", v.satisfactionBefore());
-            vt.putInt("satisfactionDelta", v.satisfactionDelta());
+            vt.putInt("comfortDelta", v.comfortDelta());
+            vt.putInt("magicDelta", v.magicDelta());
+            vt.putInt("wonderDelta", v.wonderDelta());
             vt.putInt("energyDelta", v.energyDelta());
             vt.putString("whatHappened", v.whatHappened());
             visitsList.add(vt);
@@ -407,6 +595,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        // Restored from world data — not a fresh spawn (see loadedFromDisk).
+        this.loadedFromDisk = true;
         this.touristName = tag.getString("touristName");
 
         if (tag.contains("currentState")) {
@@ -429,28 +619,45 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         this.wanderAnchor = tag.contains("wanderAnchor") ? BlockPos.of(tag.getLong("wanderAnchor")) : null;
         this.wanderRadius = tag.getInt("wanderRadius");
         // Clamp values in case of corrupted data
-        this.energy = Math.clamp(tag.getInt("energy"), 0, 200);
-        this.satisfaction = Math.clamp(tag.getInt("satisfaction"), 0, 100);
+        this.energy = Math.clamp(tag.getInt("energy"), 0, WandscapeConstants.TOURIST_MAX_ENERGY);
         this.level = Math.max(1, tag.getInt("level"));
+        this.wallet = Math.max(0, tag.getInt("wallet"));
+        this.initialWallet = Math.max(0, tag.getInt("initialWallet"));
 
-        // Restore per-building-type preferences
-        this.typePreferences.clear();
-        if (tag.contains("typePreferences")) {
-            CompoundTag prefs = tag.getCompound("typePreferences");
-            for (String key : prefs.getAllKeys()) {
-                this.typePreferences.put(key, prefs.getInt(key));
+        // ── 三条需求条 / 活动 / 停留 / 总旅费（Block 2；旧档无 key 走字段默认）──
+        if (tag.contains("comfortNeed")) this.comfortNeed = Math.max(1, tag.getInt("comfortNeed"));
+        if (tag.contains("magicNeed")) this.magicNeed = Math.max(1, tag.getInt("magicNeed"));
+        if (tag.contains("wonderNeed")) this.wonderNeed = Math.max(1, tag.getInt("wonderNeed"));
+        this.comfortSat = Math.clamp(tag.getInt("comfortSat"), 0, comfortNeed);
+        this.magicSat = Math.clamp(tag.getInt("magicSat"), 0, magicNeed);
+        this.wonderSat = Math.clamp(tag.getInt("wonderSat"), 0, wonderNeed);
+        if (tag.contains("currentActivity")) {
+            try {
+                setCurrentActivity(Activity.valueOf(tag.getString("currentActivity")));
+            } catch (IllegalArgumentException e) {
+                setCurrentActivity(null);
             }
         }
+        this.activityTicks = Math.max(0, tag.getInt("activityTicks"));
+        this.occupiedSpot = tag.getInt("occupiedSpot");
+        this.nightsStayed = Math.max(0, tag.getInt("nightsStayed"));
+        if (tag.contains("departureDeadline")) this.departureDeadline = tag.getLong("departureDeadline");
+        if (tag.contains("travelFund")) this.travelFund = Math.max(0, tag.getInt("travelFund"));
 
-        this.maxMana = tag.getInt("maxMana");
-        this.manaRegenRate = tag.getInt("manaRegenRate");
-        this.spellPower = tag.getInt("spellPower");
+        this.maxHp = tag.getFloat("maxHp");
+        this.moveSpeed = tag.getFloat("moveSpeed");
+        this.spellPower = tag.getFloat("spellPower");
+        this.workSpeed = tag.getFloat("workSpeed");
+        this.spellSpeed = tag.getFloat("spellSpeed");
+        this.armorValue = tag.getFloat("armorValue");
+        this.maxMana = tag.getFloat("maxMana");
         this.mageResumeStored = tag.getBoolean("mageResumeStored");
 
         this.colonyId = tag.hasUUID("colonyId") ? tag.getUUID("colonyId") : null;
         this.targetBuildingId = tag.hasUUID("targetBuildingId") ? tag.getUUID("targetBuildingId") : null;
         this.targetBuildingCategory = tag.contains("targetBuildingCategory") ? tag.getString("targetBuildingCategory") : null;
         this.checkedInBuildingId = tag.hasUUID("checkedInBuildingId") ? tag.getUUID("checkedInBuildingId") : null;
+        this.wakeUpPos = tag.contains("wakeUpPos") ? BlockPos.of(tag.getLong("wakeUpPos")) : null;
 
         // Restore visited building IDs
         this.visitedBuildings.clear();
@@ -464,24 +671,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
             }
         }
 
-        // Restore service cooldowns from remaining ticks (reconstruct absolute endTick for current session)
-        this.serviceCooldowns.clear();
-        if (tag.contains("serviceCooldowns")) {
-            ListTag cooldownList = tag.getList("serviceCooldowns", Tag.TAG_COMPOUND);
-            for (int i = 0; i < cooldownList.size(); i++) {
-                CompoundTag entry = cooldownList.getCompound(i);
-                if (entry.hasUUID("buildingId")) {
-                    int remaining = entry.getInt("remaining");
-                    if (remaining > 0) {
-                        this.serviceCooldowns.put(entry.getUUID("buildingId"), this.tickCount + remaining);
-                    }
-                }
-            }
-        }
-        this.serviceCooldownEndTick = tag.contains("serviceCooldownRemaining")
-                ? this.tickCount + tag.getInt("serviceCooldownRemaining")
-                : 0;
-
         // Restore visit memories
         this.recentVisits.clear();
         if (tag.contains("recentVisits")) {
@@ -493,11 +682,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
                         vt.getString("buildingDisplayName"),
                         vt.getString("category"),
                         vt.getLong("gameTime"),
-                        vt.getInt("satisfactionBefore"),
-                        vt.getInt("satisfactionDelta"),
+                        vt.getInt("comfortDelta"),
+                        vt.getInt("magicDelta"),
+                        vt.getInt("wonderDelta"),
                         vt.getInt("energyDelta"),
                         vt.getString("whatHappened"),
-                        Emotion.fromDelta(vt.getInt("satisfactionDelta"))
+                        Emotion.fromDelta(vt.getInt("comfortDelta") + vt.getInt("magicDelta") + vt.getInt("wonderDelta"))
                 ));
             }
         }
@@ -551,7 +741,14 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
 
     // ──────────────────────── Getters / Setters ────────────────────────
 
-    public String getTouristName() { return touristName; }
+    /** Display name resolved to the current language (legacy literal names pass through). */
+    public String getTouristName() {
+        return com.wsteam.wandscape.shared.data.CharacterNames.localizedString(touristName);
+    }
+
+    /** Raw name key (or legacy literal) — used when copying between entity and shadow. */
+    public String getTouristNameKey() { return touristName; }
+
     public void setTouristName(String name) { this.touristName = name; syncName(); }
 
     public TouristState getCurrentState() { return currentState; }
@@ -575,10 +772,27 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     public void setPoiList(List<BlockPos> pois) { this.poiList = List.copyOf(pois); }
 
     public int getEnergy() { return energy; }
-    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, 200); }
+    public void setEnergy(int e) { this.energy = Math.clamp(e, 0, WandscapeConstants.TOURIST_MAX_ENERGY); }
 
-    public int getSatisfaction() { return satisfaction; }
-    public void setSatisfaction(int s) { this.satisfaction = Math.clamp(s, 0, 100); }
+    // ── 三条需求条（fill/need）──
+
+    @Override public int getComfortSat() { return comfortSat; }
+    @Override public void setComfortSat(int v) { this.comfortSat = Math.clamp(v, 0, Math.max(0, comfortNeed)); }
+    @Override public int getMagicSat() { return magicSat; }
+    @Override public void setMagicSat(int v) { this.magicSat = Math.clamp(v, 0, Math.max(0, magicNeed)); }
+    @Override public int getWonderSat() { return wonderSat; }
+    @Override public void setWonderSat(int v) { this.wonderSat = Math.clamp(v, 0, Math.max(0, wonderNeed)); }
+    @Override public int getComfortNeed() { return comfortNeed; }
+    @Override public void setComfortNeed(int v) { this.comfortNeed = Math.max(1, v); }
+    @Override public int getMagicNeed() { return magicNeed; }
+    @Override public void setMagicNeed(int v) { this.magicNeed = Math.max(1, v); }
+    @Override public int getWonderNeed() { return wonderNeed; }
+    @Override public void setWonderNeed(int v) { this.wonderNeed = Math.max(1, v); }
+
+    /** 满条 = 三条 ratio 全 1。 */
+    @Override public boolean isFullySatisfied() {
+        return comfortSat >= comfortNeed && magicSat >= magicNeed && wonderSat >= wonderNeed;
+    }
 
     public boolean isMageResumeStored() { return mageResumeStored; }
     public void setMageResumeStored(boolean v) { this.mageResumeStored = v; }
@@ -586,29 +800,90 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     public int getLevel() { return level; }
     public void setLevel(int l) { this.level = Math.max(1, l); }
 
-    // ── Preferences ──
+    public int getWallet() { return wallet; }
+    public void setWallet(int w) { this.wallet = Math.max(0, w); }
 
-    /** Returns this tourist's preference for a building type (5–100, default 50). */
-    public int getTypePreference(String buildingTypeId) {
-        return typePreferences.getOrDefault(buildingTypeId, DEFAULT_TYPE_PREFERENCE);
+    public int getInitialWallet() { return initialWallet; }
+    public void setInitialWallet(int w) { this.initialWallet = Math.max(0, w); }
+
+    /** Spend from the universal wallet; clamps at 0 if the amount exceeds the balance. */
+    public void spendWallet(long amount) {
+        this.wallet = (int) Math.max(0, (long) this.wallet - amount);
     }
 
-    /** Adjust preference for a building type by delta (clamped to 5–100). */
-    public void adjustTypePreference(String buildingTypeId, int delta) {
-        int current = getTypePreference(buildingTypeId);
-        int next = Math.clamp(current + delta, MIN_TYPE_PREFERENCE, MAX_TYPE_PREFERENCE);
-        if (next == DEFAULT_TYPE_PREFERENCE) {
-            typePreferences.remove(buildingTypeId); // keep map small
-        } else {
-            typePreferences.put(buildingTypeId, next);
+    // ── 活动 / 停留 / 总旅费 ──
+
+    @Nullable public Activity getCurrentActivity() {
+        int o = entityData.get(DATA_ACTIVITY);
+        Activity[] values = Activity.values();
+        return o < 0 || o >= values.length ? null : values[o];
+    }
+    public void setCurrentActivity(@Nullable Activity a) {
+        entityData.set(DATA_ACTIVITY, a == null ? -1 : a.ordinal());
+    }
+    public int getActivityTicks() { return activityTicks; }
+    public void setActivityTicks(int t) { this.activityTicks = Math.max(0, t); }
+
+    /** 预览假人（交互位演示）：不参与 AI/生成/离开，仅站桩循环做动作。 */
+    public boolean isPreview() { return entityData.get(DATA_PREVIEW); }
+    public void setPreview(boolean v) {
+        entityData.set(DATA_PREVIEW, v);
+        this.previewMode = v;
+    }
+
+    /** 锁定朝向（交互动作/预览时用）；null=解锁。 */
+    @javax.annotation.Nullable
+    public Float getFrozenYaw() { return frozenYaw; }
+    public void setFrozenYaw(@javax.annotation.Nullable Float yaw) { this.frozenYaw = yaw; }
+
+    /** 用餐时手持的食物 registry id（非法值回退面包）。 */
+    public String getHeldFoodItem() { return heldFoodItem; }
+    public void setHeldFoodItem(String id) {
+        if (id != null && !id.isBlank()) this.heldFoodItem = id;
+    }
+    public int getOccupiedSpot() { return occupiedSpot; }
+    public void setOccupiedSpot(int i) { this.occupiedSpot = i; }
+    public int getNightsStayed() { return nightsStayed; }
+    public void setNightsStayed(int n) { this.nightsStayed = Math.max(0, n); }
+    public long getDepartureDeadline() { return departureDeadline; }
+    public void setDepartureDeadline(long t) { this.departureDeadline = t; }
+
+    /**
+     * 兜底：刷怪蛋/旧存档游客可能没走过 {@code applySpawnDefaults}，停留字段仍是初始值
+     * （arrivalTime=0、departureDeadline=Long.MAX_VALUE）——信息屏「共 X 天」会溢出成巨数，
+     * 且永远不会按停留到点离场。给它们补一个 2~4 天的窗口。幂等：已设好窗口的游客不受影响。
+     */
+    public void ensureStayWindow(long gameTime) {
+        long arrival = getArrivalTime();
+        if (arrival <= 0L) {
+            arrival = gameTime;
+            setArrivalTime(arrival);
+        }
+        long deadline = getDepartureDeadline();
+        if (deadline == Long.MAX_VALUE || deadline < arrival) {
+            int stayMin = Config.TOURIST_STAY_MIN_DAYS.get();
+            int stayMax = Config.TOURIST_STAY_MAX_DAYS.get();
+            long stayTicks = (stayMin + random.nextInt(stayMax - stayMin + 1)) * 24000L;
+            setDepartureDeadline(arrival + stayTicks);
         }
     }
 
+    public int getTravelFund() { return travelFund; }
+    public void setTravelFund(int v) { this.travelFund = Math.max(0, v); }
+
+    /** 游客当前位置（视野过滤用）。 */
+    @Override
+    public BlockPos touristPos() { return blockPosition(); }
+
     // ── Mage-only ──
 
-    public int getMaxMana() { return maxMana; }
-    public int getManaRegenRate() { return manaRegenRate; }
-    public int getSpellPower() { return spellPower; }
+    public float getMaxHp() { return maxHp; }
+    public float getMoveSpeed() { return moveSpeed; }
+    public float getSpellPower() { return spellPower; }
+    public float getWorkSpeed() { return workSpeed; }
+    public float getSpellSpeed() { return spellSpeed; }
+    public float getArmor() { return armorValue; }
+    public float getMaxMana() { return maxMana; }
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }
@@ -625,6 +900,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     public int getHotelCheckinTime() { return hotelCheckinTime; }
     public void setHotelCheckinTime(int time) { this.hotelCheckinTime = time; }
 
+    @Nullable public BlockPos getWakeUpPos() { return wakeUpPos; }
+    public void setWakeUpPos(@Nullable BlockPos pos) { this.wakeUpPos = pos; }
+
     public Set<UUID> getVisitedBuildings() { return visitedBuildings; }
     public void addVisitedBuilding(UUID buildingId) {
         if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return;
@@ -633,32 +911,6 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
     public boolean hasVisitedBuilding(UUID buildingId) {
         if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipVisitedBuildings) return false;
         return visitedBuildings.contains(buildingId);
-    }
-
-    // ── Service cooldown ──
-
-    /** Returns the tick when the cooldown for a specific service building expires, or 0. */
-    public int getServiceCooldown(UUID buildingId) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return 0;
-        return serviceCooldowns.getOrDefault(buildingId, 0);
-    }
-
-    /** Set a cooldown for a specific service building until the given tick. */
-    public void setServiceCooldown(UUID buildingId, int endTick) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
-        serviceCooldowns.put(buildingId, endTick);
-    }
-
-    /** Returns the global service cooldown end tick (0 = no cooldown). */
-    public int getServiceCooldownEndTick() {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return 0;
-        return serviceCooldownEndTick;
-    }
-
-    /** Set the global service cooldown end tick. */
-    public void setServiceCooldownEndTick(int endTick) {
-        if (com.wsteam.wandscape.tourist.internal.TouristCooldownDebug.skipServiceCooldown) return;
-        this.serviceCooldownEndTick = endTick;
     }
 
     // ── Narrative memory (journey diary) ──
@@ -710,5 +962,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike {
         entityData.set(DEBUG_INDOOR_PHASE, indoor);
     }
 
-    private void syncName() { setCustomName(Component.literal(touristName)); }
+    private void syncName() {
+        setCustomName(com.wsteam.wandscape.shared.data.CharacterNames.displayComponent(touristName));
+    }
 }

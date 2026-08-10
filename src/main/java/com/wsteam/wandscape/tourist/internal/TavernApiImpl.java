@@ -7,8 +7,12 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.shared.api.TavernApi;
+import com.wsteam.wandscape.shared.api.WarehouseApi;
+import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.MageResume;
 import com.wsteam.wandscape.shared.data.RecruitmentCandidate;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -55,12 +59,14 @@ public class TavernApiImpl implements TavernApi {
 
     @Override
     public void receiveMageResume(UUID colonyId, String touristName, int level,
-                                   int maxMana, int manaRegenRate, int spellPower, int skinVariant) {
+                                   float maxHp, float moveSpeed, float spellPower,
+                                   float workSpeed, float spellSpeed, float armorValue,
+                                   float maxMana, int skinVariant) {
         TavernRecruitStorage s = getStorage();
         if (s == null) return;
 
-        MageResume resume = new MageResume(touristName, level, maxMana,
-                manaRegenRate, spellPower, skinVariant, System.currentTimeMillis());
+        MageResume resume = new MageResume(touristName, level, maxHp, moveSpeed, spellPower,
+                workSpeed, spellSpeed, armorValue, maxMana, skinVariant, System.currentTimeMillis());
         s.addResume(colonyId, resume);
         Log.info(TAG, "[Tourist] Received mage resume: {} (Lv.{}) for colony {}",
                 touristName, level, colonyId.toString().substring(0, 8));
@@ -88,6 +94,41 @@ public class TavernApiImpl implements TavernApi {
                 resume != null ? resume.touristName() : "null",
                 colonyId.toString().substring(0, 8));
         return resume;
+    }
+
+    @Override
+    public int getRecruitCount(UUID colonyId) {
+        TavernRecruitStorage s = getStorage();
+        return s != null ? s.getRecruitCount(colonyId) : 0;
+    }
+
+    @Override
+    public boolean canAffordRecruit(UUID colonyId) {
+        TavernRecruitStorage s = getStorage();
+        if (s == null) return false;
+        if (s.getRecruitCount(colonyId) == 0) return true; // 首次免费
+        WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
+        return wh != null && ElementType.allEnough(wh.getAllElements(colonyId),
+                WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT);
+    }
+
+    @Override
+    public boolean chargeRecruit(UUID colonyId) {
+        TavernRecruitStorage s = getStorage();
+        if (s == null) return false;
+        long cost = WandscapeConstants.TAVERN_RECRUIT_COST_PER_ELEMENT;
+        if (s.getRecruitCount(colonyId) == 0) {
+            s.incrementRecruitCount(colonyId); // 首次免费
+            return true;
+        }
+        WarehouseApi wh = WandscapeApis.getWarehouseApiSilently();
+        if (wh == null) return false;
+        if (!ElementType.allEnough(wh.getAllElements(colonyId), cost)) return false;
+        for (ElementType t : ElementType.values()) {
+            wh.consumeElement(colonyId, t, cost);
+        }
+        s.incrementRecruitCount(colonyId);
+        return true;
     }
 
     @Nullable

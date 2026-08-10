@@ -14,22 +14,25 @@ import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
+import com.wsteam.wandscape.engine.service.ChunkLoadManager;
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
+import com.wsteam.wandscape.shared.data.BarRatio;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -42,9 +45,9 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p><b>Three-phase daily cycle:</b>
  * <ul>
  *   <li>Morning (0-1000): daily reset, hotel checkout
- *   <li>Spawn window (1000-13000): tourists spawn at distributed random times
+ *   <li>Spawn window (1000-8000): tourists spawn at distributed random times
  *   <li>Evening (13000-18000): no new spawns, existing tourists continue interactions
- *   <li>Night departure (18000-24000): satisfaction-based departure + hotel routing
+ *   <li>Night departure (18000-24000): 满条夜晚离场 / 入旅店 + hotel routing
  * </ul>
  *
  * <p><b>Spawn count:</b> base(6) + colonyLevel × levelSpawnBonus(3), randomized × 0.8~1.2
@@ -115,26 +118,39 @@ public final class TouristSpawnSystem {
             if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
                 continue;
             }
-            BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
-            if (interactionTarget == null) interactionTarget = target.getPosition();
 
-            TouristEntity tourist = new TouristEntity(
-                    com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-            tourist.setTouristName(instance.generateTouristName());
-            tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
-            tourist.setLevel(ps.level);
-            tourist.setTargetBuildingId(ps.buildingId());
-            tourist.setTargetBuildingCategory(target.getCategory());
-            tourist.setColonyId(target.getColonyId());
-            tourist.setCommuteTarget(interactionTarget);
-            tourist.setArrivalTime(level.getGameTime());
-            tourist.applyState(TouristState.VISITING);
-            level.addFreshEntity(tourist);
+            ChunkPos cp = new ChunkPos(ps.spawnPos);
+            ChunkLoadManager.get().acquireChunk(cp);
+            try {
+                // Reuse the stuck-rescue picker so a spawn never lands on a roof or
+                // inside a building: road first, then safe ground near the building.
+                BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), target.getColonyId(), ps.buildingId());
+                if (ground == null) continue;
+                TouristEntity tourist = new TouristEntity(
+                        com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
+                tourist.setTouristName(generateRandomTouristName());
+                tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
+                tourist.setLevel(ps.level);
+                tourist.setWallet(startingWallet(ps.level));
+                tourist.setInitialWallet(startingWallet(ps.level));
+                // Block 2：生成默认值（画像 need / 停留截止 / 总旅费）；不指派初始目标，出生即闲逛，目标由 Block 3 视野内 Find-Best-Action 决定。
+                instance.applySpawnDefaults(tourist, ps.level, level.getGameTime());
+                tourist.setColonyId(target.getColonyId());
+                tourist.setArrivalTime(level.getGameTime());
+                tourist.applyState(TouristState.VISITING);
+                level.addFreshEntity(tourist);
 
-            // Register arrival
-            var touristApi = getTouristApi();
-            if (touristApi != null) {
-                touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                // Register arrival
+                var touristApi = getTouristApi();
+                if (touristApi != null) {
+                    touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                }
+
+                // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                TouristSimSystem sim = TouristSimSystem.getActive();
+                if (sim != null) sim.adoptTourist(tourist);
+            } finally {
+                ChunkLoadManager.get().releaseChunk(cp);
             }
         }
     }
@@ -160,7 +176,7 @@ public final class TouristSpawnSystem {
             countOvernightStayers(level);
         }
 
-        // ── Spawn window (1000-13000) ──
+        // ── Spawn window (1000-8000) ──
         boolean inSpawnWindow = dayTime >= Config.TOURIST_SPAWN_WINDOW_START.get()
                 && dayTime < Config.TOURIST_SPAWN_WINDOW_END.get();
         if (inSpawnWindow) {
@@ -211,11 +227,11 @@ public final class TouristSpawnSystem {
             return;
         }
 
-        // Collect valid shop/service targets
+        // Collect valid four-category tourist targets (shop/service/relax/atm)
         List<BuildingState> touristTargets = getTouristTargets(level, allBuildings);
         if (touristTargets.isEmpty()) {
-            Log.warn(TAG, "[Tourist] No intact shop/service buildings available — "
-                    + "tourists have no targets. Build shops or service buildings to attract tourists.");
+            Log.warn(TAG, "[Tourist] No intact tourist-target buildings available — "
+                    + "tourists have no targets. Build shop/service/relax/atm buildings to attract tourists.");
             return;
         }
 
@@ -249,7 +265,7 @@ public final class TouristSpawnSystem {
         int windowStart = Config.TOURIST_SPAWN_WINDOW_START.get();
         int windowDuration = Config.TOURIST_SPAWN_WINDOW_END.get() - windowStart;
         for (int i = 0; i < toSpawn; i++) {
-            BlockPos spawnPos = pickSpawnPos(spawnCandidates, level);
+            BlockPos spawnPos = pickSpawnPos(spawnCandidates);
             if (spawnPos == null) continue;
 
             // Pick tourist level based on colony level distribution
@@ -284,38 +300,53 @@ public final class TouristSpawnSystem {
         for (PendingSpawn ps : pendingSpawns) {
             if (dayTime >= ps.spawnTime()) {
                 // Re-validate the target at spawn time — the building may have been
-                // demolished after scheduling. Never spawn a tourist heading to a ghost.
+                // demolished after scheduling. Never spawn a tourist near a ghost.
                 var target = buildingApi.getBuilding(ps.buildingId());
                 if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
-                    Log.debug(TAG, "[Tourist] dropping pending spawn — target building gone/demolished: {}",
-                            ps.buildingId().toString().substring(0, 8));
                     continue;
                 }
-                BlockPos interactionTarget = buildingApi.getTouristInteractionTarget(ps.buildingId());
-                if (interactionTarget == null) interactionTarget = target.getPosition();
 
-                TouristEntity tourist = new TouristEntity(
-                        com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
-                tourist.setTouristName(generateTouristName());
-                tourist.setPos(ps.spawnPos.getX() + 0.5, ps.spawnPos.getY(), ps.spawnPos.getZ() + 0.5);
-                tourist.setLevel(ps.level);
-                tourist.setTargetBuildingId(ps.buildingId());
-                tourist.setTargetBuildingCategory(target.getCategory());
-                tourist.setColonyId(target.getColonyId());
-                tourist.setCommuteTarget(interactionTarget);
-                tourist.setArrivalTime(level.getGameTime());
-                tourist.applyState(TouristState.VISITING);
-                level.addFreshEntity(tourist);
+                // Momentarily force-load the spawn chunk so the landing spot is resolved
+                // against real blocks (block reads on unloaded chunks return AIR) and to
+                // avoid addFreshEntity-on-unloaded-chunk edge cases. The tourist then sims
+                // from its shadow until the chunk is loaded again.
+                ChunkPos cp = new ChunkPos(ps.spawnPos);
+                ChunkLoadManager.get().acquireChunk(cp);
+                try {
+                    // Reuse the stuck-rescue picker so a spawn never lands on a roof or
+                    // inside a building: road first, then safe ground near the building.
+                    BlockPos ground = TouristTeleport.findSafeSpot(level, ps.spawnPos(), target.getColonyId(), ps.buildingId());
+                    if (ground == null) continue;
+                    TouristEntity tourist = new TouristEntity(
+                            com.wsteam.wandscape.Wandscape.TOURIST.get(), level);
+                    tourist.setTouristName(generateRandomTouristName());
+                    tourist.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
+                    tourist.setLevel(ps.level);
+                    tourist.setWallet(startingWallet(ps.level));
+                    tourist.setInitialWallet(startingWallet(ps.level));
+                    // Block 2：生成默认值（画像 need / 停留截止 / 总旅费）；不指派初始目标，出生即闲逛，目标由 Block 3 视野内 Find-Best-Action 决定。
+                    applySpawnDefaults(tourist, ps.level, level.getGameTime());
+                    tourist.setColonyId(target.getColonyId());
+                    tourist.setArrivalTime(level.getGameTime());
+                    tourist.applyState(TouristState.VISITING);
+                    level.addFreshEntity(tourist);
 
-                // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
-                var touristApi = getTouristApi();
-                if (touristApi != null) {
-                    touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                    // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
+                    var touristApi = getTouristApi();
+                    if (touristApi != null) {
+                        touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
+                    }
+
+                    // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                    TouristSimSystem sim = TouristSimSystem.getActive();
+                    if (sim != null) sim.adoptTourist(tourist);
+
+                    Log.info(TAG, "[Tourist] {} (Lv.{}) spawned at {} (colony {})",
+                            tourist.getTouristName(), ps.level, ground.toShortString(),
+                            target.getColonyId());
+                } finally {
+                    ChunkLoadManager.get().releaseChunk(cp);
                 }
-
-                Log.info(TAG, "[Tourist] {} (Lv.{}) spawned, heading to {} '{}' at {}",
-                        tourist.getTouristName(), ps.level, target.getCategory(),
-                        target.getBuildingTypeId(), interactionTarget.toShortString());
             } else {
                 remaining.add(ps);
             }
@@ -344,16 +375,85 @@ public final class TouristSpawnSystem {
         return Math.max(1, level);
     }
 
+    /**
+     * Block 2 生成默认值：画像 roll（按等级缩放三条 need）＋ 停留截止（2~4 天）＋ 总旅费（ATM 取现池）。
+     * 出生不指派目标建筑，由 Block 3 的视野内 Find-Best-Action 决定。
+     */
+    private void applySpawnDefaults(TouristEntity tourist, int touristLevel, long gameTime) {
+        rollAndSetPersona(tourist, touristLevel);
+        int stayMin = Config.TOURIST_STAY_MIN_DAYS.get();
+        int stayMax = Config.TOURIST_STAY_MAX_DAYS.get();
+        long stayTicks = (stayMin + random.nextInt(stayMax - stayMin + 1)) * 24000L;
+        tourist.setDepartureDeadline(gameTime + stayTicks);
+        tourist.setTravelFund((int) Math.round(startingWallet(touristLevel)
+                * Config.TOURIST_ATM_TRAVEL_FUND_MULTIPLIER.get()));
+    }
+
+    /**
+     * 刷怪蛋/命令生成的游客补齐随机生成默认值，使其等同于随机生成的游客：
+     * 按殖民地等级 roll 等级（无殖民地/等级管理器时按 1）、按等级算随身现金与总旅费、
+     * roll 画像三条 need、补 2~4 天停留窗口与 arrivalTime。磁盘加载（有 NBT）的游客不走这里。
+     */
+    public static void applyRandomSpawnDefaults(TouristEntity tourist, @Nullable UUID colonyId, long gameTime) {
+        if (instance == null) {
+            Log.warn(TAG, "[Tourist] SpawnSystem not registered — cannot apply random defaults");
+            return;
+        }
+        int colonyLevel = (colonyId != null && instance.levelManager != null)
+                ? instance.levelManager.getLevel(colonyId) : 1;
+        int touristLevel = instance.rollTouristLevel(colonyLevel);
+        tourist.setLevel(touristLevel);
+        int start = instance.startingWallet(touristLevel);
+        tourist.setWallet(start);
+        tourist.setInitialWallet(start);
+        instance.applySpawnDefaults(tourist, touristLevel, gameTime);
+        tourist.setArrivalTime(gameTime);
+    }
+
+    /**
+     * 画像 roll：40% 均衡 {1,1,1}；20% 舒适 {1.6,0.7,0.7}；20% 魔法 {0.7,1.6,0.7}；20% 奇观 {0.7,0.7,1.6}。
+     * 三条 need = 总需求 × 画像权重占比，总需求 = BASE + (level-1)×PER_LEVEL（等级越高越难满足）。
+     * 1 级（totalNeed=150）：均衡 → 50/50/50；侧重 → 80/35/35（及其置换）。
+     */
+    private void rollAndSetPersona(TouristEntity t, int touristLevel) {
+        double r = random.nextDouble();
+        double[] w = r < 0.4 ? PERSONA_WEIGHTS[0]
+                  : r < 0.6 ? PERSONA_WEIGHTS[1]
+                  : r < 0.8 ? PERSONA_WEIGHTS[2]
+                  : PERSONA_WEIGHTS[3];
+        int totalNeed = Config.TOURIST_NEED_BASE.get() + (touristLevel - 1) * Config.TOURIST_NEED_PER_LEVEL.get();
+        int[] need = personaNeeds(totalNeed, w);
+        t.setComfortNeed(need[0]);
+        t.setMagicNeed(need[1]);
+        t.setWonderNeed(need[2]);
+    }
+
+    private static final double[][] PERSONA_WEIGHTS = {
+            {1.0, 1.0, 1.0}, {1.6, 0.7, 0.7}, {0.7, 1.6, 0.7}, {0.7, 0.7, 1.6}
+    };
+
+    /** 纯计算（可单测）：把 totalNeed 按画像权重占比分配到三条 need。 */
+    static int[] personaNeeds(int totalNeed, double[] w) {
+        double sum = w[0] + w[1] + w[2];
+        return new int[]{
+                (int) Math.round(totalNeed * w[0] / sum),
+                (int) Math.round(totalNeed * w[1] / sum),
+                (int) Math.round(totalNeed * w[2] / sum)
+        };
+    }
+
     // ════════════════════════════════════════════════════════════════
     // Cleanup
     // ════════════════════════════════════════════════════════════════
 
     /**
-     * Cleanup logic applying to all times of day:
+     * Cleanup logic applying to all times of day（Block 2 D6）：
      * <ul>
-     *   <li>Energy depleted → leave</li>
-     *   <li>Idle timeout → leave</li>
-     *   <li>Night-specific: handled by {@link #processNightDepartures}</li>
+     *   <li>满条法师 → 即时存简历</li>
+     *   <li>到点（departureDeadline）→ 离场</li>
+     *   <li>idle 超时 → 离场</li>
+     *   <li>精力 0 不再离场（goal.md：无恢复建筑 → 闲逛，不离场）</li>
+     *   <li>夜晚离场由 {@link #processNightDepartures} 处理</li>
      * </ul>
      */
     private void cleanupTourists(ServerLevel level, boolean inDepartureWindow) {
@@ -362,47 +462,26 @@ public final class TouristSpawnSystem {
         for (var entity : level.getAllEntities()) {
             if (!(entity instanceof TouristEntity t)) continue;
             if (!t.isAlive()) continue;
+            if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
             // Checked into hotel — safe, HotelStayHandler heartbeat manages them
             if (t.getCheckedInBuildingId() != null) continue;
 
-            // Store mage resume instantly when satisfaction first reaches 100%
-            if (t.getSatisfaction() >= 100 && t.isMage() && !t.isMageResumeStored()) {
+            // Store mage resume instantly when fully satisfied
+            if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
                 storeMageResume(t);
                 t.setMageResumeStored(true);
             }
 
-            // In departure window, satisfaction-based logic is handled by processNightDepartures
+            // In departure window, night logic is handled by processNightDepartures
             if (inDepartureWindow) continue;
 
-            int sat = t.getSatisfaction();
-            boolean energyDepleted = t.getEnergy() <= 0;
-            boolean isIdle = t.getCommuteTarget() == null;
-            boolean idleTimeout = isIdle && t.tickCount > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
-
-            // Daytime/evening: standard departure conditions (energy, idle timeout, night)
-            long dayTime = level.getDayTime() % 24000;
-            boolean isNight = dayTime >= 13000;
-
-            if (sat >= 100) {
-                // 满意度已满 → 离开
-                if (energyDepleted || (isNight && isIdle) || idleTimeout) {
-                    toRemove.add(t);
-                }
-            } else if (sat >= 50) {
-                // 50-99: 精力耗尽或夜晚 → 引导去酒店
-                if (energyDepleted || isNight) {
-                    if (!tryRouteToHotel(t, level)) {
-                        toRemove.add(t);
-                    }
-                } else if (idleTimeout) {
-                    toRemove.add(t);
-                }
-            } else {
-                // sat < 50: 满意度不足 → 离开
-                if (energyDepleted || (isNight && isIdle) || idleTimeout) {
-                    toRemove.add(t);
-                }
+            // 白天/傍晚：到点 或 idle 超时 → 离场
+            boolean deadlineReached = level.getGameTime() >= t.getDepartureDeadline();
+            boolean idleTimeout = t.getCommuteTarget() == null
+                    && t.tickCount > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
+            if (deadlineReached || idleTimeout) {
+                toRemove.add(t);
             }
         }
 
@@ -413,12 +492,11 @@ public final class TouristSpawnSystem {
     }
 
     /**
-     * Night departure window: satisfaction-based departure and hotel routing.
-     *
+     * Night departure window（18000-24000，Block 2 D6）：
      * <ul>
-     *   <li>Satisfaction &lt; 50: leave (with 0-1500 tick random delay)</li>
-     *   <li>Satisfaction = 100: leave (with delay, resume already stored)</li>
-     *   <li>Satisfaction 50-99: route to hotel (no delay), no vacancy → leave</li>
+     *   <li>到点 → 离场（满条才给经验）</li>
+     *   <li>满条 → 开心离场（随机延迟错峰，简历已存）</li>
+     *   <li>非满条 → 入旅店；无旅店/满 → 离场</li>
      * </ul>
      */
     private void processNightDepartures(ServerLevel level) {
@@ -428,32 +506,36 @@ public final class TouristSpawnSystem {
         for (var entity : level.getAllEntities()) {
             if (!(entity instanceof TouristEntity t)) continue;
             if (!t.isAlive()) continue;
+            if (t.isPreview()) continue; // 预览假人：不参与生成/离开
             if (t.getCheckedInBuildingId() != null) continue;
 
-            // Store mage resume instantly (already done in cleanupTourists, but double-check)
-            if (t.getSatisfaction() >= 100 && t.isMage() && !t.isMageResumeStored()) {
+            // Store mage resume instantly when fully satisfied
+            if (t.isFullySatisfied() && t.isMage() && !t.isMageResumeStored()) {
                 storeMageResume(t);
                 t.setMageResumeStored(true);
             }
 
-            int sat = t.getSatisfaction();
+            // 到点 → 离场
+            if (gameTime >= t.getDepartureDeadline()) {
+                toRemove.add(t);
+                pendingDepartures.remove(t.getUUID());
+                continue;
+            }
 
-            if (sat < 50 || sat >= 100) {
-                // Check if departure delay is already assigned
+            if (t.isFullySatisfied()) {
+                // 满条 → 开心离场：随机延迟错峰
                 Long departAt = pendingDepartures.get(t.getUUID());
                 if (departAt == null) {
-                    // Assign random delay 0-1500 ticks
                     int delay = random.nextInt(Config.TOURIST_DEPARTURE_DELAY_MAX_TICKS.get() + 1);
                     departAt = gameTime + delay;
                     pendingDepartures.put(t.getUUID(), departAt);
                 }
-                // Check if delay elapsed
                 if (gameTime >= departAt) {
                     toRemove.add(t);
                     pendingDepartures.remove(t.getUUID());
                 }
-            } else if (sat >= 50) {
-                // 50-99: route to hotel, no vacancy → leave
+            } else {
+                // 非满条 → 夜晚入旅店；无旅店/满 → 离场
                 pendingDepartures.remove(t.getUUID());
                 if (!tryRouteToHotel(t, level)) {
                     toRemove.add(t);
@@ -472,10 +554,10 @@ public final class TouristSpawnSystem {
     // ════════════════════════════════════════════════════════════════
 
     /**
-     * Grant colony experience when a tourist departs with 100% satisfaction.
+     * Grant colony experience when a tourist departs with all three bars full.
      */
     private void grantExperience(TouristEntity t) {
-        if (t.getSatisfaction() < 100) return;
+        if (!t.isFullySatisfied()) return;
         if (levelManager == null) return;
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return;
@@ -483,7 +565,7 @@ public final class TouristSpawnSystem {
         int contribution = ColonyLevelManager.computeExpContribution(colonyLevel, t.getLevel());
         if (contribution > 0) {
             levelManager.addExperience(colonyId, contribution);
-            Log.info(TAG, "[Tourist] {} (Lv.{}) granted {} exp to colony Lv.{} (sat=100%)",
+            Log.info(TAG, "[Tourist] {} (Lv.{}) granted {} exp to colony Lv.{} (满条)",
                     t.getTouristName(), t.getLevel(), contribution, colonyLevel);
         }
     }
@@ -494,8 +576,9 @@ public final class TouristSpawnSystem {
         try {
             var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
             tavernApi.receiveMageResume(colonyId, t.getTouristName(), t.getLevel(),
-                    t.getMaxMana(), t.getManaRegenRate(), t.getSpellPower(),
-                    t.getSkinVariant());
+                    t.getMaxHp(), t.getMoveSpeed(), t.getSpellPower(),
+                    t.getWorkSpeed(), t.getSpellSpeed(), t.getArmor(),
+                    t.getMaxMana(), t.getSkinVariant());
             Log.info(TAG, "[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
         } catch (IllegalStateException e) {
             Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}",
@@ -516,36 +599,37 @@ public final class TouristSpawnSystem {
         }
 
         UUID colonyId = t.getColonyId();
-        int satisfaction = t.getSatisfaction();
+        BarRatio fill = BarRatio.of(t.getComfortSat(), t.getComfortNeed(),
+                t.getMagicSat(), t.getMagicNeed(), t.getWonderSat(), t.getWonderNeed());
+        int barRatioPct = fill.minPct(); // 离场语调（min-ratio×100）
 
-        // Grant colony experience if satisfaction 100%
-        if (satisfaction >= 100) {
+        // Grant colony experience only when fully satisfied
+        if (t.isFullySatisfied()) {
             grantExperience(t);
         }
 
         // Safety net: store mage resume at departure if not already stored
-        if (t.isMage() && satisfaction >= 100 && !t.isMageResumeStored()) {
+        if (t.isMage() && t.isFullySatisfied() && !t.isMageResumeStored()) {
             storeMageResume(t);
         }
 
         // Register departure via TouristApi → fires TouristDepartedEvent
         var touristApi = getTouristApi();
         if (touristApi != null && colonyId != null) {
-            touristApi.registerDeparture(t.getUUID(), colonyId, satisfaction);
+            touristApi.registerDeparture(t.getUUID(), colonyId, fill);
         }
 
-        // Generate departure narrative and broadcast to nearby players
+        // Remove the data shadow — a departed tourist has no sim state left.
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null) sim.removeShadow(t.getUUID());
+
+        // Generate departure narrative (no on-screen text — silent by design)
         int visitCount = t.getRecentVisits().size();
-        String departureText = NarrativeGenerator.generateDepartureSummary(
-                t.getTouristName(), satisfaction, visitCount);
-        showNearbyActionBar(t, departureText, level);
 
         NarrativeEvent departureEvent = NarrativeGenerator.generateDeparture(
-                t.getTouristName(), satisfaction, visitCount, t.level().getGameTime());
+                t.getTouristName(), barRatioPct, visitCount, t.level().getGameTime());
         emitNarrativeEvent(departureEvent);
 
-        Log.debug(TAG, "[Tourist] {} departed (energy={} satisfaction={} mage={})",
-                t.getTouristName(), t.getEnergy(), satisfaction, t.isMage());
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -574,6 +658,9 @@ public final class TouristSpawnSystem {
             if (!isHotelBuilding(b.getBuildingId())) continue;
             // 酒店豁免 visitedBuildings：白天逛过 inn 不应阻止夜晚入住
             if (!hotel.hasVacancy(b.getBuildingId())) continue;
+            // Only route to a hotel whose chunk is loaded — a loaded tourist can't
+            // path into an unloaded chunk.
+            if (!level.isLoaded(b.getPosition())) continue;
 
             BlockPos target = api.getTouristInteractionTarget(b.getBuildingId());
             if (target == null) continue;
@@ -581,9 +668,9 @@ public final class TouristSpawnSystem {
             t.setTargetBuildingId(b.getBuildingId());
             t.setTargetBuildingCategory("service");
             t.setCommuteTarget(target);
-            Log.info(TAG, "[Tourist] {} routed to hotel {} (sat={} energy={})",
+            Log.info(TAG, "[Tourist] {} routed to hotel {} (bars={}/{}/{} energy={})",
                     t.getTouristName(), b.getBuildingId().toString().substring(0, 8),
-                    t.getSatisfaction(), t.getEnergy());
+                    t.getComfortSat(), t.getMagicSat(), t.getWonderSat(), t.getEnergy());
             return true;
         }
         return false;
@@ -607,7 +694,9 @@ public final class TouristSpawnSystem {
         BuildingSavedData savedData = BuildingSavedData.get(level);
         for (BuildingData b : allBuildings) {
             String cat = b.getCategory();
-            if (!"shop".equals(cat) && !"service".equals(cat)) continue;
+            if (!"shop".equals(cat) && !"service".equals(cat) && !"relax".equals(cat) && !"atm".equals(cat)) {
+                continue;
+            }
             if (b.isShutdown() || !b.isStructureIntact()) continue;
             BuildingState state = savedData.getBuilding(b.getBuildingId());
             if (state != null) targets.add(state);
@@ -627,6 +716,13 @@ public final class TouristSpawnSystem {
     }
 
     private int countExistingTourists(ServerLevel level) {
+        // The shadow registry is the authoritative population (loaded entities + unloaded
+        // shadows). Counting only live entities would ignore unloaded tourists and let the
+        // colony over-spawn past its cap.
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            return sim.getRegistry().getShadows().size();
+        }
         int count = 0;
         for (var entity : level.getAllEntities()) {
             if (entity instanceof TouristEntity t && t.isAlive()) {
@@ -643,6 +739,15 @@ public final class TouristSpawnSystem {
             if (entity instanceof TouristEntity t && t.isAlive() && t.getCheckedInBuildingId() != null) {
                 UUID colonyId = t.getColonyId();
                 if (colonyId != null) overnightCounts.merge(colonyId, 1, Integer::sum);
+            }
+        }
+        // Include unloaded (sim) guests — their shadows carry the check-in state.
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            for (TouristShadow s : sim.getRegistry().getShadows().values()) {
+                if (s.getCheckedInBuildingId() != null && s.getColonyId() != null) {
+                    overnightCounts.merge(s.getColonyId(), 1, Integer::sum);
+                }
             }
         }
         var touristApi = getTouristApi();
@@ -682,52 +787,23 @@ public final class TouristSpawnSystem {
         return positions;
     }
 
-    private BlockPos pickSpawnPos(List<BlockPos> candidates, ServerLevel level) {
+    /** Pick a random spawn candidate (road point or building anchor) with a small jitter. */
+    private BlockPos pickSpawnPos(List<BlockPos> candidates) {
         if (candidates.isEmpty()) return null;
         BlockPos picked = candidates.get(random.nextInt(candidates.size()));
-        return findGround(level, picked.offset(
-                random.nextInt(10) - 5, 0, random.nextInt(10) - 5));
-    }
-
-    private BlockPos findGround(ServerLevel level, BlockPos pos) {
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
-                pos.getX(), Math.min(level.getMaxBuildHeight() - 1, 120), pos.getZ());
-        while (mp.getY() > level.getMinBuildHeight()) {
-            if (!level.getBlockState(mp).isAir()
-                    && level.getBlockState(mp.above()).isAir())
-                return mp.above().immutable();
-            mp.move(0, -1, 0);
-        }
-        return pos;
+        return picked.offset(
+                random.nextInt(10) - 5, 0, random.nextInt(10) - 5);
     }
 
     // ── Name generation ──
 
-    private static final String[] TOURIST_SURNAMES = {
-        "王","李","张","刘","陈","杨","赵","黄","周","吴",
-        "游客","旅人","行者","访客","商贾"
-    };
-    private static final String[] TOURIST_GIVENS = {
-        "明","华","文","伟","芳","丽","强","勇","静",
-        "慧","敏","俊","杰","兰","玲","超","平","刚","涛"
-    };
-
-    private String generateTouristName() {
-        String surname = TOURIST_SURNAMES[random.nextInt(TOURIST_SURNAMES.length)];
-        String given = TOURIST_GIVENS[random.nextInt(TOURIST_GIVENS.length)];
-        return surname + given;
+    public static String generateRandomTouristName() {
+        return com.wsteam.wandscape.shared.data.CharacterNames.generateRandomNameKey();
     }
 
-    // ── Action bar ──
-
-    private static void showNearbyActionBar(TouristEntity t, String msg, ServerLevel level) {
-        if (level.isClientSide) return;
-        Component comp = Component.literal(msg);
-        for (ServerPlayer p : level.getEntitiesOfClass(
-                ServerPlayer.class,
-                t.getBoundingBox().inflate(32))) {
-            p.sendSystemMessage(comp, true);
-        }
+    /** Universal-element starting wallet: base + level × per-level bonus. */
+    private static int startingWallet(int level) {
+        return Config.TOURIST_BASE_WALLET.get() + Math.max(0, level) * Config.TOURIST_WALLET_PER_LEVEL.get();
     }
 
     // ── Colony ID helper ──

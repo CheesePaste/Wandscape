@@ -1,0 +1,658 @@
+package com.wsteam.wandscape.tourist.internal;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
+
+import com.wsteam.wandscape.Config;
+import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
+import com.wsteam.wandscape.shared.api.BuildingApi;
+import com.wsteam.wandscape.shared.api.TouristApi;
+import com.wsteam.wandscape.shared.data.BarRatio;
+import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.shared.log.Log;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+/**
+ * Drives tourists when no player can observe them.
+ *
+ * <p>Every tourist has a {@link TouristShadow}. Every {@code SIM_INTERVAL} ticks
+ * this system walks all shadows and switches per tourist by whether any player is
+ * within simulation distance. Chunk state is deliberately NOT used: spawn chunks
+ * stay "loaded"/"ticking" even with the player far away, yet the real AI doesn't
+ * behave for unobserved tourists — so player proximity is the only reliable signal:
+ * <ul>
+ *   <li><b>Observed</b> — the physical entity runs the real AI; the shadow mirrors it.
+ *       On the unobserved→observed transition the shadow wins (sim may have moved the
+ *       tourist), then the entity takes over.</li>
+ *   <li><b>Unobserved</b> — the physical body is detached (UNLOADED_TO_CHUNK, shadow
+ *       survives) and the sim advances the shadow: constant-speed straight-line
+ *       movement (no terrain, no pathfinding), shop/service/hotel interactions and
+ *       cooldowns via the shared {@link TouristSimulation} economy, then departure
+ *       on night / energy exhaustion.</li>
+ * </ul>
+ *
+ * <p>Orphaned entity bodies (departed tourists whose shadow was deleted) are
+ * discarded when their chunk loads, per the "依赖 vanilla 身体 + 孤儿清除" model.
+ */
+public final class TouristSimSystem {
+
+    private static final String TAG = "TouristSimSystem";
+    /** Sim runs every tick — per-tourist work is a few arithmetic ops (negligible). */
+    private static final int SIM_INTERVAL = 1;
+    /** Constant straight-line speed per tick: 0.5 blocks/tick (matches entity speed). */
+    private static final double SPEED = 0.5;
+    private static final double ARRIVE_RANGE = 1.0;
+    private static final int WANDER_RADIUS = 24;
+
+    private int tickCounter;
+    private int simStepLogCounter;
+    private TouristSimRegistry registry;
+    private final Random random = new Random();
+
+    @Nullable
+    private static TouristSimSystem instance;
+
+    private TouristSimSystem() {
+    }
+
+    @Nullable
+    public static TouristSimSystem getActive() {
+        return instance;
+    }
+
+    /** Create/reset the sim system and its registry for a server start. */
+    public static TouristSimSystem register(ServerLevel level) {
+        instance = new TouristSimSystem();
+        instance.registry = TouristSimRegistry.getOrCreate(level);
+        // Adopt any existing live tourists so an upgrade doesn't orphan them.
+        instance.adoptExistingEntities(level);
+        NeoForge.EVENT_BUS.register(instance);
+        return instance;
+    }
+
+    public static void reset() {
+        if (instance != null) {
+            NeoForge.EVENT_BUS.unregister(instance);
+            instance = null;
+        }
+    }
+
+    public TouristSimRegistry getRegistry() {
+        return registry;
+    }
+
+    /**
+     * Create (or refresh) the data shadow for a live entity. Called when a
+     * tourist spawns so the sim can track it once its chunk unloads.
+     */
+    public void adoptTourist(TouristEntity t) {
+        if (registry == null) return;
+        TouristShadow s = new TouristShadow();
+        s.setTouristId(t.getUUID());
+        s.setTouristName(t.getTouristNameKey());
+        s.setMage(t.isMage());
+        s.setSkinVariant(t.getSkinVariant());
+        s.setMaxHp(t.getMaxHp());
+        s.setMoveSpeed(t.getMoveSpeed());
+        s.setSpellPower(t.getSpellPower());
+        s.setWorkSpeed(t.getWorkSpeed());
+        s.setSpellSpeed(t.getSpellSpeed());
+        s.setArmor(t.getArmor());
+        s.setMaxMana(t.getMaxMana());
+        exportToShadow(t, s);
+        registry.put(t.getUUID(), s);
+        Log.info(TAG, "[Tourist][diag] adopted shadow {} at ({},{}), commute={}, target={}",
+                s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
+                s.getCommuteTarget(), s.getTargetBuildingId());
+    }
+
+    /** Remove a tourist's shadow (called when a loaded tourist departs). */
+    public void removeShadow(UUID touristId) {
+        if (registry != null) {
+            registry.remove(touristId);
+        }
+    }
+
+    // ── Server tick driver ──
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        ServerLevel level = server.overworld();
+        if (level == null || registry == null) {
+            if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick skipped (server/level/registry null)");
+            return;
+        }
+        if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick firing, shadows={}", registry.getShadows().size());
+
+        if (++tickCounter % SIM_INTERVAL != 0) return;
+        runTick(level);
+    }
+
+    private void runTick(ServerLevel level) {
+        Map<UUID, TouristShadow> shadows = registry.getShadows();
+        if (shadows.isEmpty()) return;
+
+        // Index live entities for O(1) lookup + orphan scan.
+        Map<UUID, TouristEntity> entities = new java.util.HashMap<>();
+        for (var e : level.getAllEntities()) {
+            if (e instanceof TouristEntity t) {
+                if (!t.isAlive()) continue;
+                if (t.isPreview()) continue; // 预览假人：无 shadow，不参与 sim/孤儿清除
+                entities.put(t.getUUID(), t);
+                // Orphan: no shadow → departed tourist, clear the residual body.
+                // (A chunk-unload race can briefly move a shadow to another chunk while
+                // the body is still loaded — do NOT discard by position difference, that
+                // kills freshly spawned tourists.)
+                if (!shadows.containsKey(t.getUUID())) {
+                    Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
+                    t.discard();
+                }
+            }
+        }
+
+        int observedCount = 0, simmedCount = 0, stuckCount = 0;
+        for (TouristShadow s : new ArrayList<>(shadows.values())) {
+            // The sim drives a tourist whenever no player can observe it. Chunk state is
+            // an unreliable proxy here: spawn chunks stay "loaded"/"ticking" even with the
+            // player far away (so isLoaded/isPositionTicking never let the sim take over),
+            // yet the real AI doesn't actually behave for unobserved tourists. Player
+            // proximity is the signal that decides whether the physical entity runs.
+            boolean observed = hasObserver(level, s);
+            if (observed) {
+                observedCount++;
+                if (entities.get(s.getTouristId()) == null) stuckCount++;
+                handleLoaded(level, s, entities.get(s.getTouristId()));
+            } else {
+                // Detach the physical body (UNLOADED_TO_CHUNK ≠ KILLED/DISCARDED, so the
+                // shadow survives) so it can't double-run real AI against the sim's shadow.
+                TouristEntity body = entities.get(s.getTouristId());
+                if (body != null && body.isAlive()) {
+                    body.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                }
+                simmedCount++;
+                simStep(level, s);
+            }
+        }
+        if (tickCounter % 200 == 0) {
+            Log.info(TAG, "[Tourist][diag] runTick shadows={} observed={} (entity-null={}) simmed={}",
+                    shadows.size(), observedCount, stuckCount, simmedCount);
+        }
+    }
+
+    /** True when a non-spectator player is within simulation distance of the tourist. */
+    private boolean hasObserver(ServerLevel level, TouristShadow s) {
+        double range = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
+        double sq = range * range;
+        double x = s.getPosX();
+        double z = s.getPosZ();
+        for (net.minecraft.server.level.ServerPlayer p : level.players()) {
+            if (p.isSpectator()) continue;
+            double dx = p.getX() - x;
+            double dz = p.getZ() - z;
+            if (dx * dx + dz * dz < sq) return true;
+        }
+        return false;
+    }
+
+    // ── Loaded path ──
+
+    private void handleLoaded(ServerLevel level, TouristShadow s, @Nullable TouristEntity entity) {
+        if (entity == null) {
+            if (!s.isHydrated()) {
+                spawnEntity(level, s);
+                s.markHydrated();
+            }
+            // entity == null && hydrated: the chunk is mid-unload (entity already removed
+            // from the loaded list while isLoaded is still briefly true) or the tourist was
+            // killed (onRemovedFromLevel already removed the shadow). Do nothing — the
+            // chunk finishes unloading and simStep takes over. Never drop the shadow here:
+            // that orphaned the surviving entity and mass-killed tourists on world load.
+            return;
+        }
+        if (!s.isHydrated()) {
+            // Shadow wins on the unloaded→loaded transition (sim may have moved the tourist).
+            importToEntity(entity, s);
+            s.markHydrated();
+        } else {
+            // Live entity is the source while loaded.
+            exportToShadow(entity, s);
+        }
+    }
+
+    /** Create a physical entity from the shadow at the shadow's position. */
+    private void spawnEntity(ServerLevel level, TouristShadow s) {
+        if (s.getTouristId() == null) return;
+        TouristEntity tourist = new TouristEntity(Wandscape.TOURIST.get(), level);
+        // The body must BE this shadow's tourist. Without this, the fresh body gets a
+        // random UUID and onAddedToLevel's auto-adopt registers it as a brand-new shadow,
+        // leaving the original shadow as a ghost that respawns bodies — duplicating the
+        // tourist exponentially across unload/reload cycles (and making duplicates unkillable).
+        tourist.setUUID(s.getTouristId());
+        importToEntity(tourist, s);
+        level.addFreshEntity(tourist);
+        Log.info(TAG, "[Tourist] spawned entity {} from shadow at {}", shortId(s.getTouristId()),
+                tourist.blockPosition().toShortString());
+    }
+
+    // ── Shadow ↔ entity sync ──
+
+    private void importToEntity(TouristEntity e, TouristShadow s) {
+        e.setTouristName(s.getTouristNameKey());
+        e.setSkinVariant(s.getSkinVariant());
+        e.setAppearance(s.isMage() ? TouristEntity.Appearance.MAGE : TouristEntity.Appearance.TOURIST);
+        e.setPos(s.getPosX(), s.getPosY(), s.getPosZ());
+        // The sim ignores terrain — the shadow's Y may have drifted into the ground
+        // or air. Snap to the nearest ground surface now that the chunk is loaded.
+        // The shadow straight-lines through terrain, so its column can be over a
+        // building: never hydrate onto a roof — relocate outside all buildings.
+        if (e.level() instanceof ServerLevel sl) {
+            BlockPos ground = groundAt(sl, e.getX(), e.getY(), e.getZ());
+            if (ground != null) {
+                if (TouristTeleport.isRoofInsideBuilding(sl, ground, s.getColonyId())) {
+                    BlockPos safe = TouristTeleport.findSafeSpot(sl, ground, s.getColonyId(), s.getTargetBuildingId());
+                    if (safe != null) ground = safe;
+                }
+                e.setPos(ground.getX() + 0.5, ground.getY(), ground.getZ() + 0.5);
+            }
+        }
+        e.setLevel(s.getLevel());
+        e.setWallet(s.getWallet());
+        e.setInitialWallet(s.getInitialWallet());
+        e.setEnergy(s.getEnergy());
+        e.setComfortSat(s.getComfortSat());
+        e.setMagicSat(s.getMagicSat());
+        e.setWonderSat(s.getWonderSat());
+        e.setComfortNeed(s.getComfortNeed());
+        e.setMagicNeed(s.getMagicNeed());
+        e.setWonderNeed(s.getWonderNeed());
+        e.setCurrentActivity(s.getCurrentActivity());
+        e.setActivityTicks(s.getActivityTicks());
+        e.setOccupiedSpot(s.getOccupiedSpot());
+        e.setNightsStayed(s.getNightsStayed());
+        e.setDepartureDeadline(s.getDepartureDeadline());
+        e.setTravelFund(s.getTravelFund());
+        e.setColonyId(s.getColonyId());
+        e.setTargetBuildingId(s.getTargetBuildingId());
+        e.setTargetBuildingCategory(s.getTargetBuildingCategory());
+        e.setCommuteTarget(s.getCommuteTarget());
+        e.setCheckedInBuildingId(s.getCheckedInBuildingId());
+        e.setHotelCheckinTime(s.getHotelCheckinTime());
+        e.setWakeUpPos(s.getWakeUpPos());
+        e.setArrivalTime(s.getArrivalTime());
+        e.setMageResumeStored(s.isMageResumeStored());
+        // Shadow may carry the pre-Block-2 defaults (arrival=0 / deadline=Long.MAX_VALUE) —
+        // heal so the info screen's stay-day count and deadline departure stay sane.
+        e.ensureStayWindow(e.level().getGameTime());
+        for (UUID id : s.getVisitedBuildings()) e.addVisitedBuilding(id);
+        for (var v : s.getRecentVisits()) e.addVisitMemory(v);
+        e.applyState(com.wsteam.wandscape.tourist.internal.TouristState.VISITING);
+    }
+
+    private void exportToShadow(TouristEntity e, TouristShadow s) {
+        s.setPosition(e.getX(), e.getY(), e.getZ());
+        s.setLevel(e.getLevel());
+        s.setWallet(e.getWallet());
+        s.setInitialWallet(e.getInitialWallet());
+        s.setEnergy(e.getEnergy());
+        s.setComfortSat(e.getComfortSat());
+        s.setMagicSat(e.getMagicSat());
+        s.setWonderSat(e.getWonderSat());
+        s.setComfortNeed(e.getComfortNeed());
+        s.setMagicNeed(e.getMagicNeed());
+        s.setWonderNeed(e.getWonderNeed());
+        s.setCurrentActivity(e.getCurrentActivity());
+        s.setActivityTicks(e.getActivityTicks());
+        s.setOccupiedSpot(e.getOccupiedSpot());
+        s.setNightsStayed(e.getNightsStayed());
+        s.setDepartureDeadline(e.getDepartureDeadline());
+        s.setTravelFund(e.getTravelFund());
+        s.setColonyId(e.getColonyId());
+        s.setTargetBuildingId(e.getTargetBuildingId());
+        s.setTargetBuildingCategory(e.getTargetBuildingCategory());
+        s.setCommuteTarget(e.getCommuteTarget());
+        s.setCheckedInBuildingId(e.getCheckedInBuildingId());
+        s.setHotelCheckinTime(e.getHotelCheckinTime());
+        s.setWakeUpPos(e.getWakeUpPos());
+        s.setArrivalTime(e.getArrivalTime());
+        s.setMageResumeStored(e.isMageResumeStored());
+        s.getVisitedBuildings().clear();
+        s.getVisitedBuildings().addAll(e.getVisitedBuildings());
+        s.clearRecentVisits();
+        for (var v : e.getRecentVisits()) s.addVisitMemory(v);
+    }
+
+    // ── Unloaded sim step ──
+
+    private void simStep(ServerLevel level, TouristShadow s) {
+        if (++simStepLogCounter % 100 == 0) {
+            Log.info(TAG, "[Tourist][diag] simStep {} pos=({},{}) commute={} target={} bars={}/{}/{} energy={} tick={}",
+                    s.getTouristName(), (int) s.getPosX(), (int) s.getPosZ(),
+                    s.getCommuteTarget() != null ? s.getCommuteTarget().toShortString() : "null",
+                    s.getTargetBuildingId() != null ? s.getTargetBuildingId().toString().substring(0, 8) : "null",
+                    s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy(), s.simTick());
+        }
+        s.advanceSimTick(SIM_INTERVAL);
+        s.markUnhydrated();
+
+        UUID hotel = s.getCheckedInBuildingId();
+        if (hotel != null) {
+            long dayTime = level.getDayTime() % 24000;
+            if (dayTime >= 1000 && dayTime < 1200) {
+                // Morning checkout: 住店晚数 +1、精力回 100，回到入住前站位。
+                s.setCheckedInBuildingId(null);
+                s.setHotelCheckinTime(0);
+                s.setNightsStayed(s.getNightsStayed() + 1);
+                s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+                s.setCommuteTarget(null);
+                BlockPos wake = s.getWakeUpPos();
+                if (wake != null) {
+                    s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
+                    s.setWakeUpPos(null);
+                }
+            }
+            return;
+        }
+
+        BlockPos commute = s.getCommuteTarget();
+        if (commute != null) {
+            if (moveToward(s, commute)) {
+                if (s.getTargetBuildingId() != null) {
+                    interact(level, s);
+                } else {
+                    s.setCommuteTarget(null);
+                }
+            }
+        } else {
+            decideNext(level, s);
+        }
+
+        checkDeparture(level, s);
+    }
+
+    private boolean moveToward(TouristShadow s, BlockPos target) {
+        double tx = target.getX() + 0.5;
+        double ty = target.getY();
+        double tz = target.getZ() + 0.5;
+        double dx = tx - s.getPosX();
+        double dy = ty - s.getPosY();
+        double dz = tz - s.getPosZ();
+        double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist <= ARRIVE_RANGE) {
+            s.setPosition(tx, ty, tz);
+            return true;
+        }
+        double step = Math.min(SPEED, dist);
+        s.setPosition(
+                s.getPosX() + dx / dist * step,
+                s.getPosY() + dy / dist * step,
+                s.getPosZ() + dz / dist * step);
+        return false;
+    }
+
+    private void decideNext(ServerLevel level, TouristShadow s) {
+        BuildingState chosen = TouristSimulation.selectNextTarget(level, s, false);
+        if (chosen != null) {
+            s.setTargetBuildingId(chosen.getBuildingId());
+            s.setTargetBuildingCategory(chosen.getCategory());
+            BlockPos target = TouristSimulation.spotWorldPos(level, chosen.getBuildingId(), 0);
+            s.setCommuteTarget(target != null ? target : chosen.getAnchor());
+            return;
+        }
+        wander(s);
+    }
+
+    /** Scan down a few blocks for the first solid-with-air-above surface; null if none nearby. */
+    private static @Nullable BlockPos groundAt(ServerLevel level, double x, double y, double z) {
+        int startY = Math.clamp((int) y + 1, level.getMinBuildHeight() + 1, level.getMaxBuildHeight() - 1);
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos((int) x, startY, (int) z);
+        for (int i = 0; i < 16; i++) {
+            if (!level.getBlockState(mp).isAir() && level.getBlockState(mp.above()).isAir()) {
+                return mp.above().immutable();
+            }
+            mp.move(0, -1, 0);
+        }
+        return null;
+    }
+
+    private void wander(TouristShadow s) {
+        double a = random.nextDouble() * 2 * Math.PI;
+        double r = random.nextDouble() * WANDER_RADIUS;
+        s.setCommuteTarget(new BlockPos(
+                (int) (s.getPosX() + Math.cos(a) * r),
+                (int) s.getPosY(),
+                (int) (s.getPosZ() + Math.sin(a) * r)));
+    }
+
+    private void interact(ServerLevel level, TouristShadow s) {
+        UUID buildingId = s.getTargetBuildingId();
+        UUID colonyId = s.getColonyId();
+        if (buildingId == null || colonyId == null) return;
+
+        BuildingApi api = getBuildingApi();
+        BuildingData data = api != null ? api.getBuilding(buildingId) : null;
+        if (data == null || data.isShutdown() || !data.isStructureIntact()) {
+            s.setCommuteTarget(null);
+            s.setTargetBuildingId(null);
+            s.setTargetBuildingCategory(null);
+            return;
+        }
+
+        boolean isHotel = TouristSimulation.isHotelBuilding(level, buildingId);
+        if (isHotel) {
+            long dayTime = level.getDayTime() % 24000;
+            boolean isNight = dayTime >= 13000;
+            // 夜晚 + 未满条 → 入住（满条游客夜晚等离场）；入住只睡觉回精力，不填三条
+            if (isNight && !s.isFullySatisfied() && hasHotelVacancy(level, buildingId)) {
+                s.setCheckedInBuildingId(buildingId);
+                s.setHotelCheckinTime(s.simTick());
+                s.addVisitedBuilding(buildingId);
+                String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+                var hotelCfg = TouristSimulation.getConfig(level, buildingId);
+                String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
+                        ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
+                TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
+                        level.getGameTime(), 0, 0, 0, 0, "入住");
+                s.setCommuteTarget(null);
+                s.setTargetBuildingId(null);
+                s.setTargetBuildingCategory(null);
+                Log.info(TAG, "[Tourist] {} (sim) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
+                return;
+            }
+            // 白天/满条 → 当普通 service 交互（fall through）
+        }
+
+        String category = s.getTargetBuildingCategory();
+        var result = switch (category == null ? "" : category) {
+            case "shop" -> TouristSimulation.performShopInteraction(level, s, buildingId, colonyId);
+            case "relax" -> TouristSimulation.performRelaxInteraction(level, s, buildingId, colonyId);
+            case "atm" -> TouristSimulation.performAtmInteraction(level, s, buildingId, colonyId);
+            default -> TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
+        };
+        if (result != null) {
+            Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → bars {}/{}/{}, energy {}",
+                    s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
+                    s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
+            // 与实体路径一致：交互记入行程（买不起记「逛了一圈什么也没买」）
+            String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+            var bldCfg = TouristSimulation.getConfig(level, buildingId);
+            String bldName = (bldCfg != null && bldCfg.displayName() != null && !bldCfg.displayName().isEmpty())
+                    ? bldCfg.displayName() : (bldType != null ? bldType : "建筑");
+            TouristSimulation.addVisitMemory(s, bldType, bldName, category,
+                    level.getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                    result.energyDelta(), result.whatHappened());
+        } else {
+            Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
+                    s.getTouristName(), shortId(buildingId), category);
+        }
+
+        s.addVisitedBuilding(buildingId);
+        s.setCommuteTarget(null);
+        s.setTargetBuildingId(null);
+        s.setTargetBuildingCategory(null);
+    }
+
+    /** Hotel vacancy derived from the shadow registry (covers loaded + unloaded tourists). */
+    private boolean hasHotelVacancy(ServerLevel level, UUID buildingId) {
+        var config = TouristSimulation.getConfig(level, buildingId);
+        if (config == null || config.service() == null) return false;
+        int max = config.service().maxOccupancy();
+        if (max <= 0) return false;
+        int occupied = 0;
+        for (TouristShadow s : registry.getShadows().values()) {
+            if (buildingId.equals(s.getCheckedInBuildingId())) occupied++;
+        }
+        return occupied < max;
+    }
+
+    // ── Departure ──
+
+    private void checkDeparture(ServerLevel level, TouristShadow s) {
+        if (s.getCheckedInBuildingId() != null) return;
+
+        if (s.isFullySatisfied() && s.isMage() && !s.isMageResumeStored()) {
+            storeMageResume(s);
+            s.setMageResumeStored(true);
+        }
+
+        long dayTime = level.getDayTime() % 24000;
+        boolean isNight = dayTime >= 13000;
+        boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
+        boolean idleTimeout = isIdle && s.simTick() > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
+
+        // D6 离场（goal.md）：到点 / 满条夜晚 / 夜晚无旅店 / idle 超时
+        boolean leave;
+        if (level.getGameTime() >= s.getDepartureDeadline()) {
+            leave = true;
+        } else if (s.isFullySatisfied()) {
+            // 满条等夜晚再离场（白天满条先开心闲逛）
+            leave = isNight || idleTimeout;
+        } else if (isNight) {
+            // 夜晚 + 未满条：入旅店；无旅店/满 → 离场
+            leave = !routeToHotel(level, s);
+        } else {
+            leave = idleTimeout;
+        }
+        if (leave) {
+            depart(level, s);
+        }
+    }
+
+    private boolean routeToHotel(ServerLevel level, TouristShadow s) {
+        UUID colonyId = s.getColonyId();
+        if (colonyId == null) return false;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        for (BuildingData b : api.getColonyBuildings(colonyId)) {
+            if (!"service".equals(b.getCategory())) continue;
+            if (b.isShutdown() || !b.isStructureIntact()) continue;
+            if (!TouristSimulation.isHotelBuilding(level, b.getBuildingId())) continue;
+            if (!hasHotelVacancy(level, b.getBuildingId())) continue;
+            s.setTargetBuildingId(b.getBuildingId());
+            s.setTargetBuildingCategory("service");
+            s.setCommuteTarget(b.getPosition());
+            return true;
+        }
+        return false;
+    }
+
+    private void depart(ServerLevel level, TouristShadow s) {
+        grantExperience(s);
+        if (s.isMage() && s.isFullySatisfied() && !s.isMageResumeStored()) {
+            storeMageResume(s);
+        }
+        TouristApi touristApi = getTouristApi();
+        if (touristApi != null && s.getColonyId() != null) {
+            BarRatio fill = BarRatio.of(s.getComfortSat(), s.getComfortNeed(),
+                    s.getMagicSat(), s.getMagicNeed(), s.getWonderSat(), s.getWonderNeed());
+            touristApi.registerDeparture(s.getTouristId(), s.getColonyId(), fill);
+        }
+        registry.remove(s.getTouristId());
+        Log.info(TAG, "[Tourist] {} (sim) departed (bars={}/{}/{} energy={})",
+                s.getTouristName(), s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
+    }
+
+    private void grantExperience(TouristShadow s) {
+        if (!s.isFullySatisfied()) return;
+        ColonyLevelManager lm = WandscapeEngine.getColonyLevelManager();
+        if (lm == null || s.getColonyId() == null) return;
+        int colonyLevel = lm.getLevel(s.getColonyId());
+        int contribution = ColonyLevelManager.computeExpContribution(colonyLevel, s.getLevel());
+        if (contribution > 0) {
+            lm.addExperience(s.getColonyId(), contribution);
+        }
+    }
+
+    private void storeMageResume(TouristShadow s) {
+        if (s.getColonyId() == null) return;
+        try {
+            WandscapeApis.getTavernApi().receiveMageResume(
+                    s.getColonyId(), s.getTouristName(), s.getLevel(),
+                    s.getMaxHp(), s.getMoveSpeed(), s.getSpellPower(),
+                    s.getWorkSpeed(), s.getSpellSpeed(), s.getArmor(),
+                    s.getMaxMana(), s.getSkinVariant());
+        } catch (IllegalStateException e) {
+            Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}", s.getTouristName());
+        }
+    }
+
+    // ── Startup adoption ──
+
+    /** Create shadows for any live entities that predate this system (upgrade path). */
+    private void adoptExistingEntities(ServerLevel level) {
+        int adopted = 0;
+        for (var e : level.getAllEntities()) {
+            if (e instanceof TouristEntity t && t.isAlive() && !t.isPreview() && registry.get(t.getUUID()) == null) {
+                adoptTourist(t);
+                adopted++;
+            }
+        }
+        if (adopted > 0) {
+            Log.info(TAG, "[Tourist] adopted {} existing entities into shadow registry", adopted);
+        }
+    }
+
+    // ── Helpers ──
+
+    @Nullable
+    private static BuildingApi getBuildingApi() {
+        try {
+            return WandscapeApis.getBuildingApi();
+        } catch (IllegalStateException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static TouristApi getTouristApi() {
+        try {
+            return WandscapeApis.getTouristApi();
+        } catch (IllegalStateException e) {
+            return null;
+        }
+    }
+
+    private static String shortId(UUID id) {
+        return id.toString().substring(0, 8);
+    }
+}

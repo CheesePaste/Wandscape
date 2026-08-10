@@ -19,7 +19,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Persists mage tourist resumes that reached 100% satisfaction.
+ * Persists mage tourist resumes whose three bars were full.
  * Max 5 entries per colony, oldest evicted on overflow.
  *
  * <p>Stored as world SavedData under "wandscape_tavern_recruits".
@@ -30,6 +30,8 @@ public class TavernRecruitStorage extends SavedData {
     private static final int MAX_PER_COLONY = 5;
 
     private final Map<UUID, List<MageResume>> colonyResumes = new ConcurrentHashMap<>();
+    /** colonyId → 酒馆「招募 NPC」累计成功次数（首次免费，之后每次扣元素）。 */
+    private final Map<UUID, Integer> recruitCounts = new ConcurrentHashMap<>();
 
     private TavernRecruitStorage() {}
 
@@ -44,7 +46,6 @@ public class TavernRecruitStorage extends SavedData {
         list.add(resume);
         while (list.size() > MAX_PER_COLONY) {
             MageResume removed = list.remove(0);
-            Log.debug(TAG, "[Tourist] Evicted oldest resume: {}", removed.touristName());
         }
         setDirty();
         Log.info(TAG, "[Tourist] Mage resume stored for colony {}: {} (Lv.{})",
@@ -78,6 +79,19 @@ public class TavernRecruitStorage extends SavedData {
         return resume;
     }
 
+    // ── 招募计数（每殖民地「招募 NPC」次数，首次免费） ──
+
+    /** 殖民地累计成功招募 NPC 的次数。 */
+    public int getRecruitCount(UUID colonyId) {
+        return recruitCounts.getOrDefault(colonyId, 0);
+    }
+
+    /** 记录一次成功招募。 */
+    public void incrementRecruitCount(UUID colonyId) {
+        recruitCounts.merge(colonyId, 1, Integer::sum);
+        setDirty();
+    }
+
     // ── SavedData serialization ──
 
     private static final String TAG_COLONIES = "colonies";
@@ -85,11 +99,17 @@ public class TavernRecruitStorage extends SavedData {
     private static final String TAG_RESUMES = "resumes";
     private static final String TAG_NAME = "name";
     private static final String TAG_LEVEL = "level";
-    private static final String TAG_MAX_MANA = "maxMana";
-    private static final String TAG_MANA_REGEN = "manaRegen";
+    private static final String TAG_MAX_HP = "maxHp";
+    private static final String TAG_MOVE_SPEED = "moveSpeed";
     private static final String TAG_SPELL_POWER = "spellPower";
+    private static final String TAG_WORK_SPEED = "workSpeed";
+    private static final String TAG_SPELL_SPEED = "spellSpeed";
+    private static final String TAG_ARMOR_VALUE = "armorValue";
+    private static final String TAG_MAX_MANA = "maxMana";
     private static final String TAG_SKIN_VARIANT = "skinVariant";
     private static final String TAG_TIMESTAMP = "timestamp";
+    private static final String TAG_RECRUIT_COUNTS = "recruitCounts";
+    private static final String TAG_RECRUIT_COUNT = "count";
 
     static TavernRecruitStorage load(CompoundTag tag, HolderLookup.Provider provider) {
         TavernRecruitStorage storage = new TavernRecruitStorage();
@@ -104,15 +124,23 @@ public class TavernRecruitStorage extends SavedData {
                 resumes.add(new MageResume(
                         rt.getString(TAG_NAME),
                         rt.getInt(TAG_LEVEL),
-                        rt.getInt(TAG_MAX_MANA),
-                        rt.getInt(TAG_MANA_REGEN),
-                        rt.getInt(TAG_SPELL_POWER),
+                        rt.getFloat(TAG_MAX_HP),
+                        rt.getFloat(TAG_MOVE_SPEED),
+                        rt.getFloat(TAG_SPELL_POWER),
+                        rt.getFloat(TAG_WORK_SPEED),
+                        rt.getFloat(TAG_SPELL_SPEED),
+                        rt.getFloat(TAG_ARMOR_VALUE),
+                        rt.getFloat(TAG_MAX_MANA),
                         rt.getInt(TAG_SKIN_VARIANT),
                         rt.getLong(TAG_TIMESTAMP)));
             }
             storage.colonyResumes.put(colonyId, resumes);
         }
-        Log.debug(TAG, "[Tourist] Loaded {} colonies from disk", storage.colonyResumes.size());
+        ListTag counts = tag.getList(TAG_RECRUIT_COUNTS, Tag.TAG_COMPOUND);
+        for (int i = 0; i < counts.size(); i++) {
+            CompoundTag ct = counts.getCompound(i);
+            storage.recruitCounts.put(ct.getUUID(TAG_COLONY_ID), ct.getInt(TAG_RECRUIT_COUNT));
+        }
         return storage;
     }
 
@@ -127,9 +155,13 @@ public class TavernRecruitStorage extends SavedData {
                 CompoundTag rt = new CompoundTag();
                 rt.putString(TAG_NAME, r.touristName());
                 rt.putInt(TAG_LEVEL, r.level());
-                rt.putInt(TAG_MAX_MANA, r.maxMana());
-                rt.putInt(TAG_MANA_REGEN, r.manaRegenRate());
-                rt.putInt(TAG_SPELL_POWER, r.spellPower());
+                rt.putFloat(TAG_MAX_HP, r.maxHp());
+                rt.putFloat(TAG_MOVE_SPEED, r.moveSpeed());
+                rt.putFloat(TAG_SPELL_POWER, r.spellPower());
+                rt.putFloat(TAG_WORK_SPEED, r.workSpeed());
+                rt.putFloat(TAG_SPELL_SPEED, r.spellSpeed());
+                rt.putFloat(TAG_ARMOR_VALUE, r.armorValue());
+                rt.putFloat(TAG_MAX_MANA, r.maxMana());
                 rt.putInt(TAG_SKIN_VARIANT, r.skinVariant());
                 rt.putLong(TAG_TIMESTAMP, r.timestamp());
                 resumesTag.add(rt);
@@ -138,6 +170,14 @@ public class TavernRecruitStorage extends SavedData {
             colonies.add(colonyTag);
         }
         tag.put(TAG_COLONIES, colonies);
+        ListTag counts = new ListTag();
+        for (var entry : recruitCounts.entrySet()) {
+            CompoundTag ct = new CompoundTag();
+            ct.putUUID(TAG_COLONY_ID, entry.getKey());
+            ct.putInt(TAG_RECRUIT_COUNT, entry.getValue());
+            counts.add(ct);
+        }
+        tag.put(TAG_RECRUIT_COUNTS, counts);
         return tag;
     }
 

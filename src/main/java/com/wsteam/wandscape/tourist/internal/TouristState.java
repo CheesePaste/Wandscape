@@ -29,4 +29,9 @@ public enum TouristState {
     public String getDisplayName() {
         return displayName;
     }
+
+    /** Lang key for client rendering: {@code tourist.wandscape.state.<lowercase-name>}. */
+    public String getDisplayNameKey() {
+        return "tourist.wandscape.state." + name().toLowerCase();
+    }
 }

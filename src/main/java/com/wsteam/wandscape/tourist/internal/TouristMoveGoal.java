@@ -10,21 +10,22 @@ import javax.annotation.Nullable;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
-import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
-import com.wsteam.wandscape.projection.BuildingRotation;
+import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.road.core.RoadNetwork;
+import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.RoadApi;
+import com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
+import com.wsteam.wandscape.tourist.network.TouristBubblePacket;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -35,6 +36,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
@@ -121,11 +124,24 @@ public class TouristMoveGoal extends Goal {
     /** The building entry point — macro navigation destination, fallback for micro exit. */
     @Nullable
     private BlockPos entryPoint;
-    /** The precise interaction point inside the building. */
+    /** The precise interaction point inside the building (spot 世界坐标). */
     @Nullable
     private BlockPos interactPoint;
-    /** World-space tourist interact AABB zones for indoor arrival detection (Y-expanded for entity height). */
-    private List<BoundingBox> touristInteractZones = List.of();
+    /** 当前占用的 spot 下标（-1 = 未占用）。 */
+    private int claimedSpot = -1;
+    /** True：游客正在 spot 上做动作（duration 倒计时中，做完才结算）。 */
+    private boolean performingActivity;
+    /** True：游客在建筑旁排队等待空 spot（spot 全满）。 */
+    private boolean queueing;
+    /** 排队已持续的 tick 数（超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处）。 */
+    private int queueTicks;
+    /** 排在哪一个 spot 的队（-1 = 未排队）；队伍沿该 spot 朝向排开。 */
+    private int queueSpotIndex = -1;
+    /** 排队到位判定：与站位距离平方 ≤ 该值即视为站定（≈1.4 格内）。 */
+    private static final double QUEUE_ARRIVE_DIST_SQ = 2.0;
+    /** 上次导航的排队站位（目标没变就不重算 A*，避免每 tick 抖动）。 */
+    @Nullable
+    private BlockPos queueNavTarget;
 
     /** Push current debug state to entity synched data for client-side renderer. */
     private void syncDebugData() {
@@ -145,12 +161,23 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return tourist.isAlive();
+        // 预览假人：不参与 AI，站桩循环做动作
+        return tourist.isAlive() && !tourist.isPreview();
     }
 
     @Override
     public boolean canContinueToUse() {
         return tourist.isAlive();
+    }
+
+    /**
+     * 交互时长/排队容忍等 goal 内计时器以真实 tick 计：vanilla 默认 goal 每 2 个游戏 tick
+     * 才 tick 一次（Mob.serverAiStep 按 (tickCount+id)%2 交替），必须覆盖此方法让 tick 每帧跑，
+     * 否则 interaction_duration_ticks=2400 实测会变成 4800 tick（半速倒计时）。
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
     }
 
     // ── Entry / exit ──
@@ -168,6 +195,7 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public void stop() {
+        clearSpotState();
         tourist.getNavigation().stop();
         waypoints = null;
         wpIndex = 0;
@@ -273,9 +301,30 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        // Target chunk unloaded while en route → can't path there; re-plan to a
+        // loaded building (or wander). Prevents stalling at the load boundary.
+        if (!tourist.level().isLoaded(target)) {
+            tourist.setCommuteTarget(null);
+            tourist.setTargetBuildingId(null);
+            tourist.setTargetBuildingCategory(null);
+            planNextBuilding();
+            if (tourist.getCommuteTarget() != null) {
+                beginNavigation(tourist.getCommuteTarget(), touristSpeed);
+            } else {
+                switchMode(MoveMode.WANDERING);
+                startWander();
+            }
+            return;
+        }
+
         // Check if we're close enough to the building to switch to indoor micro-nav
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId != null && isWithinDistanceOfBbox(buildingId, Config.MICRO_NAV_SWITCH_DISTANCE.get())) {
+            // Hotels: check in the moment the tourist reaches the building — it
+            // teleports into a bed, no need to reach the exact interact point.
+            if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                return;
+            }
             switchToIndoorNav();
             return;
         }
@@ -293,14 +342,12 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (noMoveTicks > 100 || totalNavTicks > 600) {
-            Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting near {}", tourist.getTouristName(), target.toShortString());
-            BlockPos tpTarget = currentTarget(target);
-            if (tpTarget != null) {
-                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
-                if (ground != null) tpTarget = ground;
-                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
-                noMoveTicks = 0;
-                totalNavTicks = 0;
+            noMoveTicks = 0;
+            totalNavTicks = 0;
+            BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
+            if (tp != null) {
+                Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
             }
             return;
         }
@@ -346,6 +393,17 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
+        // 活动中（在 spot 上做动作）：duration 倒计时，结束才结算
+        if (performingActivity) {
+            tickActivity();
+            return;
+        }
+        // 排队中（spot 全满）：轮询空 spot，超时放弃去别处
+        if (queueing) {
+            tickQueue();
+            return;
+        }
+
         var nav = tourist.getNavigation();
         BlockPos pos = tourist.blockPosition();
 
@@ -359,19 +417,19 @@ public class TouristMoveGoal extends Goal {
         }
 
         if (noMoveTicks > 100 || totalNavTicks > 400) {
+            noMoveTicks = 0;
+            totalNavTicks = 0;
             if (exitingPhase) {
-                // Leaving the building: keep teleporting toward the entry ground.
-                BlockPos tpTarget = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
-                if (tpTarget == null) {
+                // Leaving the building: teleport to safe ground just outside the entry.
+                BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(),
+                        entryPoint != null ? entryPoint : tourist.getCommuteTarget(),
+                        tourist.getColonyId());
+                if (tp == null) {
                     finishBuildingStop();
                     return;
                 }
-                BlockPos ground = findGround(tpTarget.getX(), tpTarget.getY(), tpTarget.getZ());
-                if (ground != null) tpTarget = ground;
-                Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tpTarget.toShortString());
-                tourist.setPos(tpTarget.getX() + 0.5, tpTarget.getY(), tpTarget.getZ() + 0.5);
-                noMoveTicks = 0;
-                totalNavTicks = 0;
+                Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
             } else {
                 // Stuck navigating to the interact point. Do NOT teleport back onto the
                 // interact point — that just re-loops. Abandon the visit instead.
@@ -394,8 +452,6 @@ public class TouristMoveGoal extends Goal {
             double distSqr = pos.distSqr(exitTarget);
             if (distSqr < 4.0 || !isInsideBuilding(buildingId)) {
                 // Reached exit point or left building → back to macro
-                Log.debug(TAG, "[Tourist] {} exited building, switching to macro nav",
-                        tourist.getTouristName());
                 finishBuildingStop();
                 return;
             }
@@ -427,48 +483,12 @@ public class TouristMoveGoal extends Goal {
         // do NOT re-derive ground via findGround — it scans from Y+5 downward and can
         // land on the roof/shelf above the interaction floor.
 
-        // Arrival check: if interact_zones exist, check AABB containment (Y ±2 for entity height);
-        // otherwise fall back to distance check
-        boolean arrived;
-        if (!touristInteractZones.isEmpty()) {
-            arrived = false;
-            for (BoundingBox zone : touristInteractZones) {
-                if (zone.isInside(pos)) {
-                    arrived = true;
-                    break;
-                }
-            }
-        } else {
-            double distSqr = pos.distSqr(target);
-            arrived = distSqr <= 4.0;
-        }
-
-        if (arrived) {
-            // Arrived at interact point — perform the interaction immediately.
-            // Effects (satisfaction/energy/itinerary) are recorded now, and the
-            // building's interaction_duration doubles as the rest-cooldown: the
-            // tourist then wanders / visits POIs during that window.
+        // 到达判定：与目标 spot 点的距离（spot 单点寻路，无 AABB 交互区）
+        double distSqr = pos.distSqr(target);
+        if (distSqr <= 4.0) {
+            // 到达 spot → 开始活动（站着做该 spot 的动作，duration 结束才结算）
             tourist.getNavigation().stop();
-
-            boolean hotelStayed = performBuildingInteraction();
-            if (hotelStayed) {
-                return; // Hotel check-in handled everything
-            }
-            // After interaction, start exiting
-            if (entryPoint != null && isInsideBuilding(buildingId)) {
-                exitingPhase = true;
-                stuckTicks = 0;
-                noMoveTicks = 0;
-                totalNavTicks = 0;
-                BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
-                BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
-                nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
-                Log.debug(TAG, "[Tourist] {} interaction done, exiting to {}",
-                        tourist.getTouristName(), entryPoint.toShortString());
-            } else {
-                // Not inside building or no entry point → finish directly
-                finishBuildingStop();
-            }
+            startActivityAtSpot();
             return;
         }
 
@@ -483,6 +503,230 @@ public class TouristMoveGoal extends Goal {
         }
     }
 
+    /** 到达 spot：认领（若未认领）并开始做该 spot 的动作（duration 倒计时）。 */
+    private void startActivityAtSpot() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId == null) {
+            finishBuildingStop();
+            return;
+        }
+        ServerLevel level = serverLevel();
+        int spot = claimedSpot;
+        if (spot < 0) {
+            if (level == null) {
+                finishBuildingStop();
+                return;
+            }
+            spot = TouristSimulation.claimSpot(level, buildingId);
+            if (spot < 0) {
+                // spot 全满 → 排队
+                startQueueing();
+                return;
+            }
+            claimedSpot = spot;
+        }
+        // 精确落到 spot 中心再开始交互：游客移动有误差，直接 setPos 钉死，保证整队与 spot 对齐
+        BlockPos sp = TouristSimulation.spotWorldPos(level, buildingId, spot);
+        if (sp != null) {
+            tourist.setPos(sp.getX() + 0.5, sp.getY(), sp.getZ() + 0.5);
+            tourist.getNavigation().stop();
+        }
+        Activity action = TouristSimulation.interactSpotAction(level, buildingId, spot);
+        int duration = Math.max(1, TouristSimulation.interactionDuration(level, buildingId));
+        tourist.setCurrentActivity(action);
+        tourist.setOccupiedSpot(spot);
+        tourist.setActivityTicks(duration);
+        performingActivity = true;
+        queueing = false;
+        faceSpot(level, buildingId, spot);
+        // EAT：手里拿上食物（进食粒子从嘴边冒）
+        if (action == Activity.EAT) {
+            tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, heldFoodStack());
+        }
+    }
+
+    /** 游客用餐手持的食物栈（非法 id 回退面包）。 */
+    private net.minecraft.world.item.ItemStack heldFoodStack() {
+        ResourceLocation rl = ResourceLocation.tryParse(tourist.getHeldFoodItem());
+        var item = rl != null ? net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl) : null;
+        if (item == null || item == net.minecraft.world.item.Items.AIR) {
+            item = net.minecraft.world.item.Items.BREAD;
+        }
+        return new net.minecraft.world.item.ItemStack(item);
+    }
+
+    /** 活动期间面向 spot 朝向（游客做动作时面朝该方向；锁定朝向防转身）。 */
+    private void faceSpot(ServerLevel level, UUID buildingId, int spot) {
+        float yaw = TouristSimulation.spotFacing(level, buildingId, spot).toYRot();
+        tourist.setFrozenYaw(yaw);
+        tourist.setYRot(yaw);
+        tourist.setYHeadRot(yaw);
+        tourist.yBodyRot = yaw;
+    }
+
+    /** 活动倒计时：duration 结束 → 释放 spot + 结算（四类交互）+ 退出。 */
+    private void tickActivity() {
+        // 活动期间持续面向 spot（look 控制/随机张望可能拉偏 yaw）
+        UUID bid = tourist.getTargetBuildingId();
+        if (bid != null && claimedSpot >= 0 && tourist.level() instanceof ServerLevel sl) {
+            faceSpot(sl, bid, claimedSpot);
+        }
+        int remaining = tourist.getActivityTicks() - 1;
+        tourist.setActivityTicks(remaining);
+        if (remaining > 0) return;
+
+        UUID buildingId = tourist.getTargetBuildingId();
+        TouristSimulation.releaseSpot(buildingId, claimedSpot);
+        claimedSpot = -1;
+        tourist.setCurrentActivity(null);
+        tourist.setOccupiedSpot(-1);
+        tourist.setFrozenYaw(null);
+        tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        performingActivity = false;
+
+        if (buildingId != null) {
+            performBuildingInteraction();
+        }
+
+        // After interaction, start exiting
+        if (entryPoint != null && buildingId != null && isInsideBuilding(buildingId)) {
+            exitingPhase = true;
+            stuckTicks = 0;
+            noMoveTicks = 0;
+            totalNavTicks = 0;
+            BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
+            BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
+            tourist.getNavigation().moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
+        } else {
+            finishBuildingStop();
+        }
+    }
+
+    /** 排队等待：轮询本队 spot 空位，超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处。 */
+    private void tickQueue() {
+        if (++queueTicks > Config.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS.get()) {
+            abandonBuildingVisit();
+            return;
+        }
+        ServerLevel level = serverLevel();
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (level == null || buildingId == null || queueSpotIndex < 0) {
+            abandonBuildingVisit();
+            return;
+        }
+        // 严格 FIFO：只有本队队首可认领该 spot 空位（队首离队后下一个自然成为队首）
+        if (TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID()) == 0) {
+            int spot = TouristSimulation.claimSpotAt(level, buildingId, queueSpotIndex);
+            if (spot >= 0) {
+                leaveQueue();
+                claimedSpot = spot;
+                queueing = false;
+                queueTicks = 0;
+                BlockPos target = TouristSimulation.spotWorldPos(level, buildingId, spot);
+                if (target == null) {
+                    clearSpotState();
+                    finishBuildingStop();
+                    return;
+                }
+                interactPoint = target;
+                tourist.setFrozenYaw(null);
+                // 队首就在 spot 背后 1 格，直接精确落到 spot 上开始交互（消除移动误差）
+                tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
+                tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+                return;
+            }
+        }
+        navigateToQueueSlot();
+    }
+
+    /** 进入排队状态（spot 全满）：排到队最短的 spot 后，沿该 spot 朝向站成一列。 */
+    private void startQueueing() {
+        queueing = true;
+        queueTicks = 0;
+        tourist.setCurrentActivity(Activity.QUEUE);
+        tourist.setFrozenYaw(null);
+        ServerLevel level = serverLevel();
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (level != null && buildingId != null) {
+            int total = TouristSimulation.interactSpotCount(level, buildingId);
+            if (total > 0) {
+                // 均匀分布：排到当前队最短（并列取最小下标）的 spot 后
+                int spot = TouristSpotManager.getActive().shortestQueueSpot(buildingId, total);
+                TouristSpotManager.getActive().joinQueue(buildingId, spot, tourist.getUUID());
+                queueSpotIndex = spot;
+            }
+        }
+        navigateToQueueSlot();
+    }
+
+    /** 导航到本队当前队序对应的站位（沿 spot 朝向向后排开），到位后朝向与 spot 一致。 */
+    private void navigateToQueueSlot() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        ServerLevel level = serverLevel();
+        if (buildingId == null || level == null || queueSpotIndex < 0) {
+            tourist.getNavigation().stop();
+            return;
+        }
+        int slot = TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID());
+        if (slot < 0) {
+            tourist.getNavigation().stop();
+            return;
+        }
+        BlockPos raw = TouristSimulation.queueSlotPos(level, buildingId, queueSpotIndex, slot);
+        BlockPos ground = raw != null ? findGround(raw.getX(), raw.getY(), raw.getZ()) : null;
+        BlockPos target = ground != null ? ground : raw;
+        if (target == null) {
+            tourist.getNavigation().stop();
+            return;
+        }
+        // 已到位且目标没变：精确落到站位中心（游客移动有误差，直接 setPos 钉死保证队形整齐），
+        // 朝向与 spot 的 facing 一致（和交互游客同向）
+        boolean sameTarget = target.equals(queueNavTarget);
+        boolean arrived = tourist.blockPosition().distSqr(target) <= QUEUE_ARRIVE_DIST_SQ;
+        if (sameTarget && arrived) {
+            tourist.getNavigation().stop();
+            tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
+            if (tourist.getFrozenYaw() == null) {
+                float yaw = TouristSimulation.spotFacing(level, buildingId, queueSpotIndex).toYRot();
+                tourist.setFrozenYaw(yaw);
+            }
+            return;
+        }
+        // 需移动：队序前移（目标变化）换目标，或导航已结束（被撞开/寻路失败）重新引导
+        tourist.setFrozenYaw(null);
+        if (!sameTarget || tourist.getNavigation().isDone()) {
+            queueNavTarget = target;
+            tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+        }
+    }
+
+    /** 离开建筑所有队列（幂等），清排队状态。 */
+    private void leaveQueue() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId != null) {
+            TouristSpotManager.getActive().leaveAllQueues(buildingId, tourist.getUUID());
+        }
+        queueSpotIndex = -1;
+        queueNavTarget = null;
+    }
+
+    /** 清空 spot 占用与活动/排队状态（所有清理路径共用）。 */
+    private void clearSpotState() {
+        leaveQueue();
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (claimedSpot >= 0) {
+            TouristSimulation.releaseSpot(buildingId, claimedSpot);
+        }
+        claimedSpot = -1;
+        performingActivity = false;
+        queueing = false;
+        queueTicks = 0;
+        tourist.setCurrentActivity(null);
+        tourist.setOccupiedSpot(-1);
+        tourist.setFrozenYaw(null);
+        tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+    }
+
     /** Switch from outdoor macro-nav to indoor micro-nav. */
     private void switchToIndoorNav() {
         indoorPhase = true;
@@ -495,14 +739,29 @@ public class TouristMoveGoal extends Goal {
         noMoveTicks = 0;
         totalNavTicks = 0;
         usingRoad = false;
-        BlockPos target = interactPoint;
-        if (target == null) target = tourist.getCommuteTarget();
-        if (target != null) {
-            tourist.getNavigation().moveTo(
-                    target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
-            Log.debug(TAG, "[Tourist] {} switching to indoor micro-nav → {}",
-                    tourist.getTouristName(), target.toShortString());
+
+        // 到达建筑：认领一个空 spot（spot 数 = 同时交互人数上限），导航到该 spot 世界坐标。
+        // spot 全满 → 排队（均匀分散到队最短的 spot 后，沿该 spot 朝向站一列）。
+        ServerLevel level = serverLevel();
+        UUID buildingId = tourist.getTargetBuildingId();
+        int spot = -1;
+        if (level != null && buildingId != null) {
+            spot = TouristSimulation.claimSpot(level, buildingId);
         }
+        if (spot >= 0) {
+            claimedSpot = spot;
+            BlockPos target = TouristSimulation.spotWorldPos(level, buildingId, spot);
+            interactPoint = target;
+            if (target != null) {
+                tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+                return;
+            }
+            // spot 坐标算不出（建筑已消失）→ 放弃本次访问
+            clearSpotState();
+            finishBuildingStop();
+            return;
+        }
+        startQueueing();
     }
 
     /** Check if the tourist is within {@code dist} blocks of a building's bounding box. */
@@ -530,21 +789,11 @@ public class TouristMoveGoal extends Goal {
         return bbox.isInside(tourist.blockPosition());
     }
 
-    private void onBuildingArrived() {
-        boolean hotelStayed = performBuildingInteraction();
-        if (!hotelStayed) {
-            finishBuildingStop();
-        }
-    }
-
     /**
-     * Execute the building interaction (shop, service, or hotel check-in).
-     * Does NOT handle navigation cleanup or mode switching — callers must
-     * handle that themselves.
-     *
-     * @return true if the tourist checked into a hotel (caller should stop navigation)
+     * Execute the building interaction（四类：shop/service/relax/atm 按 category 分发）。
+     * 在 spot 活动结束后由 {@link #tickActivity()} 调用。
      */
-    private boolean performBuildingInteraction() {
+    private void performBuildingInteraction() {
         tourist.getNavigation().stop();
         waypoints = null;
         wpIndex = 0;
@@ -552,13 +801,12 @@ public class TouristMoveGoal extends Goal {
 
         UUID buildingId = tourist.getTargetBuildingId();
         if (buildingId == null) {
-            return false;
+            return;
         }
 
         // Re-validate the target building still exists and is operational. A building
         // may be demolished/damaged while the tourist was en route — never settle an
-        // interaction against a ghost. Returning true tells the caller to stop
-        // navigation; finishBuildingStop already re-planned the next move.
+        // interaction against a ghost.
         BuildingApi api = getBuildingApi();
         var target = api != null ? api.getBuilding(buildingId) : null;
         if (target == null || target.isShutdown() || !target.isStructureIntact() || target.isDemolishing()) {
@@ -566,57 +814,78 @@ public class TouristMoveGoal extends Goal {
                     tourist.getTouristName(), shortId(buildingId),
                     target == null ? "removed" : target.getBuildingTypeId());
             finishBuildingStop();
-            return true;
+            return;
         }
 
         String category = tourist.getTargetBuildingCategory();
-        String bldType = getBuildingTypeId(buildingId);
-        boolean isHotel = isHotelBuilding(buildingId);
-
-        if (isHotel) {
-            long dayTime = tourist.level().getDayTime() % 24000;
-            boolean isNight = dayTime >= 13000;
-            int sat = tourist.getSatisfaction();
-            boolean energyDepleted = tourist.getEnergy() <= 0;
-            // 入住条件: 满意度 >= 50 且 < 100, 同时 到了夜晚 或 精力耗尽
-            if (sat >= 50 && sat < 100 && (isNight || energyDepleted)) {
-                HotelStayHandler hotel = HotelStayHandler.getActive();
-                UUID colonyId = tourist.getColonyId();
-                if (hotel != null && colonyId != null && hotel.checkIn(tourist, buildingId, colonyId)) {
-                    tourist.addVisitedBuilding(buildingId);
-                    applyPreferenceDecay(buildingId);
-                    tourist.setCommuteTarget(null);
-                    tourist.setTargetBuildingId(null);
-                    tourist.setTargetBuildingCategory(null);
-                    indoorPhase = false;
-                    exitingPhase = false;
-                    syncDebugData();
-                    showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
-
-                    // Emit HOTEL_CHECKIN narrative
-                    long gameTime = tourist.level().getGameTime();
-                    String bldName = getBuildingDisplayName(buildingId, bldType);
-                    NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
-                            tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
-                    emitNarrativeEvent(checkinEvent);
-
-                    return true;
-                }
+        if (isHotelBuilding(buildingId)) {
+            // 夜晚 + 未满条 → 入住；条件不满足（白天/满条）→ 当普通 service 交互
+            if (tryHotelCheckIn(buildingId, getBuildingTypeId(buildingId))) {
+                return;
             }
-            // Daytime or conditions not met: fall through to regular service interaction
         }
 
-        if ("shop".equals(category)) {
-            interactWithShop(buildingId);
-        } else if ("service".equals(category)) {
-            interactWithService(buildingId);
+        switch (category == null ? "" : category) {
+            case "shop" -> interactWithShop(buildingId);
+            case "relax" -> interactWithRelax(buildingId);
+            case "atm" -> interactWithAtm(buildingId);
+            default -> interactWithService(buildingId);
         }
 
         tourist.addVisitedBuilding(buildingId);
-        return false;
+    }
+
+    /**
+     * Check a tourist into a hotel and settle it into a free bed. Also called
+     * from {@link #tickOutdoorNav()} the moment the tourist reaches the hotel
+     * building, so lodging never depends on reaching the exact interact point
+     * (an unreachable one used to leave the tourist standing still at night and
+     * trip the stuck-teleport fallback).
+     *
+     * @return true if the tourist checked in (caller must stop navigation)
+     */
+    private boolean tryHotelCheckIn(UUID buildingId, @Nullable String bldType) {
+        if (!isHotelBuilding(buildingId)) return false;
+        long dayTime = tourist.level().getDayTime() % 24000;
+        boolean isNight = dayTime >= 13000;
+        // 夜晚 + 未满条 → 入住（满条游客夜晚等离场，不入旅店）
+        if (!(isNight && !tourist.isFullySatisfied())) return false;
+
+        HotelStayHandler hotel = HotelStayHandler.getActive();
+        UUID colonyId = tourist.getColonyId();
+        if (hotel == null || colonyId == null) return false;
+        if (!hotel.checkIn(tourist, buildingId, colonyId)) return false;
+
+        tourist.addVisitedBuilding(buildingId);
+        hotel.settleIntoBed(tourist, serverLevel(), buildingId);
+
+        // 入住只睡觉回精力（清晨退房精力回 100），不填三条——旅店不管白天精力，只管夜晚住宿
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        ServerLevel level = serverLevel();
+        if (level != null) {
+            TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
+                    level.getGameTime(), 0, 0, 0, 0, "入住");
+        }
+
+        tourist.setCommuteTarget(null);
+        tourist.setTargetBuildingId(null);
+        tourist.setTargetBuildingCategory(null);
+        indoorPhase = false;
+        exitingPhase = false;
+        clearSpotState();
+        syncDebugData();
+        showActionBar("✨ " + tourist.getTouristName() + " 入住了旅馆 " + (bldType != null ? bldType : "?") + "!");
+
+        // Emit HOTEL_CHECKIN narrative
+        long gameTime = tourist.level().getGameTime();
+        NarrativeEvent checkinEvent = NarrativeGenerator.generateHotelCheckin(
+                tourist.getTouristName(), bldType != null ? bldType : "unknown", bldName, gameTime);
+        emitNarrativeEvent(checkinEvent);
+        return true;
     }
 
     private void finishBuildingStop() {
+        clearSpotState();
         tourist.setCommuteTarget(null);
         tourist.setTargetBuildingId(null);
         tourist.setTargetBuildingCategory(null);
@@ -625,7 +894,6 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
-        touristInteractZones = List.of();
         syncDebugData();
 
         // Probability-based next mode
@@ -646,20 +914,20 @@ public class TouristMoveGoal extends Goal {
     private void abandonBuildingVisit() {
         UUID failed = tourist.getTargetBuildingId();
 
-        // Teleport to a safe, walkable ground spot near the entry point (already outside the bbox).
+        // Teleport to safe ground near the entry point (outside the bbox, road-preferred).
         BlockPos safe = entryPoint != null ? entryPoint : tourist.getCommuteTarget();
         if (safe == null) safe = tourist.blockPosition();
-        BlockPos ground = findGround(safe.getX(), safe.getY(), safe.getZ());
-        if (ground != null) safe = ground;
-        tourist.setPos(safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5);
-
-        if (failed != null) {
-            // Avoid re-targeting the same trap for a while, but do NOT set the global
-            // rest cooldown — the tourist should still be able to visit other buildings.
-            int avoidTicks = Math.max(1200, getInteractionDuration(failed) / 2);
-            tourist.setServiceCooldown(failed, tourist.tickCount + avoidTicks);
+        BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), safe, tourist.getColonyId());
+        if (tp != null) {
+            tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
         }
 
+        // 放弃也算「逛过」：本次停留不再尝试该建筑（冷却已删除，靠 visitedBuildings 防重选卡死）。
+        if (failed != null) {
+            tourist.addVisitedBuilding(failed);
+        }
+
+        clearSpotState();
         tourist.setCommuteTarget(null);
         tourist.setTargetBuildingId(null);
         tourist.setTargetBuildingCategory(null);
@@ -667,7 +935,6 @@ public class TouristMoveGoal extends Goal {
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
-        touristInteractZones = List.of();
         noMoveTicks = 0;
         totalNavTicks = 0;
         lastPos = null;
@@ -709,14 +976,12 @@ public class TouristMoveGoal extends Goal {
             }
 
             if (noMoveTicks > 100 || totalNavTicks > 400) {
-                BlockPos wp = currentTarget();
-                if (wp != null) {
-                    Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), wp.toShortString());
-                    BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
-                    if (ground != null) wp = ground;
-                    tourist.setPos(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5);
-                    noMoveTicks = 0;
-                    totalNavTicks = 0;
+                noMoveTicks = 0;
+                totalNavTicks = 0;
+                BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
+                if (tp != null) {
+                    Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
                 }
                 return;
             }
@@ -879,14 +1144,15 @@ public class TouristMoveGoal extends Goal {
                 }
             }
             if (noMoveTicks > WANDER_STUCK_TICKS) {
-                BlockPos ground = findGround(anchor.getX(), anchor.getY(), anchor.getZ());
-                BlockPos tp = ground != null ? ground : anchor;
-                Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
-                tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), null);
                 nav.stop();
                 noMoveTicks = 0;
                 lastNodeIndex = -1;
                 lastPos = null;
+                if (tp != null) {
+                    Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
+                    tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                }
                 return;
             }
         } else {
@@ -993,13 +1259,6 @@ public class TouristMoveGoal extends Goal {
      * strolls to POIs but never selects a building visit until the cooldown ends.
      */
     private MoveMode decideNextMode(@Nullable MoveMode from) {
-        // Rest cooldown: free movement (wander or POI strolling), never a building visit.
-        if (isInRestCooldown()) {
-            return (!tourist.getPoiList().isEmpty() && tourist.getRandom().nextDouble() < 0.5)
-                    ? MoveMode.EXPLORING_POI
-                    : MoveMode.WANDERING;
-        }
-
         double roll = tourist.getRandom().nextDouble();
         double bProb, pProb; // building, poi probabilities
 
@@ -1026,37 +1285,24 @@ public class TouristMoveGoal extends Goal {
         return MoveMode.WANDERING;
     }
 
-    /** Quick check whether any valid building targets exist. */
+    /** Quick check whether any valid building targets exist（复用共享 Find-Best-Action 目标选择）。 */
     private boolean hasBuildingsAvailable() {
-        UUID colonyId = tourist.getColonyId();
-        if (colonyId == null) return false;
-        BuildingApi api = getBuildingApi();
-        if (api == null) return false;
-        List<BuildingData> all = api.getColonyBuildings(colonyId);
-        if (all.isEmpty()) return false;
-        for (BuildingData b : all) {
-            String cat = b.getCategory();
-            if (!"shop".equals(cat) && !"service".equals(cat)) continue;
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
-            if (tourist.hasVisitedBuilding(b.getBuildingId())) continue;
-            return true;
-        }
-        return false;
+        ServerLevel level = serverLevel();
+        if (level == null) return false;
+        return TouristSimulation.selectNextTarget(level, tourist, true) != null;
     }
 
     private void switchMode(MoveMode next) {
         if (currentMode != next) {
-            Log.debug(TAG, "[Tourist] {} mode {} → {}",
-                    tourist.getTouristName(), currentMode, next);
         }
         currentMode = next;
+        clearSpotState();
         waypoints = null;
         wpIndex = 0;
         indoorPhase = false;
         exitingPhase = false;
         entryPoint = null;
         interactPoint = null;
-        touristInteractZones = List.of();
         syncDebugData();
         tourist.getNavigation().stop();
         // Sync display state with actual movement
@@ -1097,161 +1343,40 @@ public class TouristMoveGoal extends Goal {
         }
     }
 
-    private void planNextBuilding() {
-        UUID colonyId = tourist.getColonyId();
-        if (colonyId == null) return;
-
-        BuildingApi api = getBuildingApi();
-        if (api == null) return;
-
-        List<BuildingData> allBuildings = api.getColonyBuildings(colonyId);
-        if (allBuildings.isEmpty()) return;
-
+    /** Notify nearby players of a purchase / service bubble event above this tourist. */
+    private void sendBubble(int iconKind, @Nullable String iconId, int count) {
         ServerLevel level = getServerLevel();
         if (level == null) return;
-
-        long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000;
-
-        List<BuildingState> shopTargets = new ArrayList<>();
-        List<BuildingState> serviceTargets = new ArrayList<>();
-        List<BuildingState> hotelTargets = new ArrayList<>();
-
-        BuildingSavedData savedData = BuildingSavedData.get(level);
-        if (savedData == null) return;
-
-        boolean inServiceCooldown = tourist.getServiceCooldownEndTick() > tourist.tickCount;
-
-        for (BuildingData b : allBuildings) {
-            String cat = b.getCategory();
-            if (!"shop".equals(cat) && !"service".equals(cat)) continue;
-            if (b.isShutdown() || !b.isStructureIntact()) continue;
-            // 白天普通逛过 inn 会记入 visitedBuildings，但夜晚不应阻止入住 → 酒店豁免该排除
-            boolean nightHotel = isNight && "service".equals(cat) && isHotelBuilding(b.getBuildingId());
-            if (!nightHotel && tourist.hasVisitedBuilding(b.getBuildingId())) continue;
-
-            if ("service".equals(cat) && tourist.getServiceCooldown(b.getBuildingId()) > tourist.tickCount)
-                continue;
-
-            BuildingState state = savedData.getBuilding(b.getBuildingId());
-            if (state == null) continue;
-
-            if ("shop".equals(cat)) {
-                ShopStockManager stock = ShopStockManager.getActive();
-                if (stock != null && stock.hasStock(b.getBuildingId())) {
-                    shopTargets.add(state);
-                }
-            } else {
-                if (inServiceCooldown) continue;
-
-                if (isHotelBuilding(b.getBuildingId())) {
-                    if (isNight) {
-                        // Night: hotel is a check-in target
-                        HotelStayHandler hotel = HotelStayHandler.getActive();
-                        if (hotel != null && hotel.hasVacancy(b.getBuildingId())) {
-                            hotelTargets.add(state);
-                        }
-                    } else {
-                        // Daytime: hotel acts as a regular service building
-                        serviceTargets.add(state);
-                    }
-                } else {
-                    serviceTargets.add(state);
-                }
-            }
+        TouristBubblePacket packet =
+                new TouristBubblePacket(tourist.getId(), iconKind, iconId, count);
+        for (ServerPlayer p : level.getEntitiesOfClass(
+                ServerPlayer.class, tourist.getBoundingBox().inflate(32))) {
+            PacketDistributor.sendToPlayer(p, packet);
         }
+    }
 
-        int sat = tourist.getSatisfaction();
+    private void planNextBuilding() {
+        ServerLevel level = serverLevel();
+        if (level == null) return;
 
-        BuildingState chosen = null;
-        if (isNight && sat >= 50 && sat < 100 && !hotelTargets.isEmpty()) {
-            chosen = weightedPick(hotelTargets);
-        } else if (!shopTargets.isEmpty()) {
-            chosen = weightedPick(shopTargets);
-        } else if (!serviceTargets.isEmpty()) {
-            chosen = weightedPick(serviceTargets);
-        }
-
+        BuildingState chosen = TouristSimulation.selectNextTarget(level, tourist, true);
         if (chosen == null) {
-            StringBuilder report = new StringBuilder();
-            report.append(String.format(
-                    "[Tourist] %s | NO BUILDING | colony=%s | phase=%s | sat=%d | night=%s | visited=%d | cooldown=%s",
+            Log.info(TAG, "[Tourist] {} | NO BUILDING | colony={} | night={} | visited={} | energy={} | bars={}/{}/{} (need {}/{}/{})",
                     tourist.getTouristName(), tourist.getColonyId(),
-                    isNight ? "night" : "day", sat, isNight,
-                    tourist.getVisitedBuildings().size(),
-                    inServiceCooldown ? "YES" : "no"));
-
-            int total = allBuildings.size();
-            int noShopService = 0, shutdown = 0, notIntact = 0, alreadyVisited = 0;
-            int svcCooldown = 0, noStock = 0, hotelFull = 0, noState = 0;
-
-            for (BuildingData b : allBuildings) {
-                String cat = b.getCategory();
-                if (!"shop".equals(cat) && !"service".equals(cat)) { noShopService++; continue; }
-                if (b.isShutdown()) { shutdown++; continue; }
-                if (!b.isStructureIntact()) { notIntact++; continue; }
-                if (tourist.hasVisitedBuilding(b.getBuildingId())) { alreadyVisited++; continue; }
-                if ("service".equals(cat) && tourist.getServiceCooldown(b.getBuildingId()) > tourist.tickCount) { svcCooldown++; continue; }
-
-                BuildingState state = savedData.getBuilding(b.getBuildingId());
-                if (state == null) { noState++; continue; }
-
-                if ("shop".equals(cat)) {
-                    ShopStockManager stockMgr = ShopStockManager.getActive();
-                    if (stockMgr != null && !stockMgr.hasStock(b.getBuildingId())) { noStock++; }
-                } else {
-                    if (inServiceCooldown) { svcCooldown++; continue; }
-                    if (isHotelBuilding(b.getBuildingId())) {
-                        HotelStayHandler hotel = HotelStayHandler.getActive();
-                        if (hotel != null && !hotel.hasVacancy(b.getBuildingId())) { hotelFull++; }
-                    }
-                }
-            }
-
-            report.append(String.format(
-                    "\n  ALL=%d | shop+service=%d | shutdown=%d | not_intact=%d | visited=%d | svc_cooldown=%d | no_stock=%d | hotel_full=%d | no_state=%d",
-                    total, total - noShopService,
-                    shutdown, notIntact, alreadyVisited, svcCooldown, noStock, hotelFull, noState));
-            report.append(String.format(
-                    "\n  hotel_targets=%d | shop_targets=%d | service_targets=%d",
-                    hotelTargets.size(), shopTargets.size(), serviceTargets.size()));
-
-            Log.info(TAG, report.toString());
+                    (level.getDayTime() % 24000) >= 13000,
+                    tourist.getVisitedBuildings().size(), tourist.getEnergy(),
+                    tourist.getComfortSat(), tourist.getMagicSat(), tourist.getWonderSat(),
+                    tourist.getComfortNeed(), tourist.getMagicNeed(), tourist.getWonderNeed());
             return;
         }
 
-        // Resolve entry point (macro nav destination) and interact point (micro nav destination)
-        entryPoint = api.getEntryPoint(chosen.getBuildingId());
+        BuildingApi api = getBuildingApi();
+        // Resolve entry point (macro nav destination) and spot point (micro nav destination)。
+        // interactPoint 暂取第一个 spot 的世界坐标；实际 spot 下标在 switchToIndoorNav 认领后确定。
+        entryPoint = api != null ? api.getEntryPoint(chosen.getBuildingId()) : null;
         if (entryPoint == null) entryPoint = chosen.getAnchor();
-        interactPoint = api.getTouristInteractPoint(chosen.getBuildingId());
+        interactPoint = TouristSimulation.spotWorldPos(level, chosen.getBuildingId(), 0);
         if (interactPoint == null) interactPoint = chosen.getAnchor();
-
-        // Compute world-space tourist interact zones for indoor arrival detection.
-        // Zones MUST be rotated by the building's rotationSteps — interactPoint and the
-        // rendered orange box are already rotated; an unrotated zone here makes the arrival
-        // check fail for rotated buildings (tourist stands inside the zone but never
-        // "arrives" → VISITING stuck).
-        BuildingConfig chosenConfig = BuildingConfigLoader.getInstance().get(chosen.getBuildingTypeId());
-        BlockPos chosenAnchor = chosen.getAnchor();
-        int rotationSteps = chosen.getRotationSteps();
-        if (chosenConfig != null && !chosenConfig.touristInteractAabb().isEmpty()) {
-            List<BoundingBox> zones = new ArrayList<>();
-            for (BuildingConfig.BoundaryBox zone : chosenConfig.touristInteractAabb()) {
-                BuildingConfig.BoundaryBox rotated = BuildingRotation.rotateBoundary(zone, rotationSteps);
-                int yMin = chosenAnchor.getY() + rotated.min().y() - 2; // 2 below for character feet
-                int yMax = chosenAnchor.getY() + rotated.max().y() + 2; // 2 above for character head
-                zones.add(new BoundingBox(
-                        chosenAnchor.getX() + rotated.min().x(),
-                        yMin,
-                        chosenAnchor.getZ() + rotated.min().z(),
-                        chosenAnchor.getX() + rotated.max().x(),
-                        yMax,
-                        chosenAnchor.getZ() + rotated.max().z()));
-            }
-            touristInteractZones = List.copyOf(zones);
-        } else {
-            touristInteractZones = List.of();
-        }
         indoorPhase = false;
         exitingPhase = false;
         syncDebugData();
@@ -1260,205 +1385,116 @@ public class TouristMoveGoal extends Goal {
         tourist.setTargetBuildingCategory(chosen.getCategory());
         // Macro navigation starts toward the entry point
         tourist.setCommuteTarget(entryPoint);
-        Log.debug(TAG, "[Tourist] {} next stop: {} '{}' entry={} interact={}",
-                tourist.getTouristName(), chosen.getCategory(),
-                chosen.getBuildingTypeId(),
-                entryPoint.toShortString(), interactPoint.toShortString());
-    }
-
-    /** True while the post-interaction rest cooldown is active (wander freely, skip building visits). */
-    private boolean isInRestCooldown() {
-        return tourist.getServiceCooldownEndTick() > tourist.tickCount;
-    }
-
-    /**
-     * Apply the post-interaction rest cooldown after a successful building visit.
-     * The building's {@code interaction_duration_ticks} doubles as the cooldown
-     * length — after interacting, the tourist wanders / visits POIs for that
-     * window and cannot interact with any building until it expires.
-     */
-    private void applyInteractionCooldown(UUID buildingId) {
-        int cooldownTicks = getInteractionDuration(buildingId);
-        if (cooldownTicks <= 0) return;
-        int endTick = tourist.tickCount + cooldownTicks;
-        tourist.setServiceCooldown(buildingId, endTick);
-        tourist.setServiceCooldownEndTick(endTick);
     }
 
     private void interactWithShop(UUID buildingId) {
-        ShopStockManager stockManager = ShopStockManager.getActive();
-        if (stockManager == null) return;
-
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
         UUID colonyId = tourist.getColonyId();
         if (colonyId == null) return;
 
-        String purchased = com.wsteam.wandscape.building.internal.ShopInteractionHandler.interact(
-                stockManager, tourist.getUUID(), buildingId, colonyId);
-        if (purchased != null) {
-            int satBefore = tourist.getSatisfaction();
-            int gain = computeSatisfactionGain(buildingId);
-            tourist.setSatisfaction(satBefore + gain);
-            tourist.setEnergy(tourist.getEnergy() - 20);
-            applyPreferenceDecay(buildingId);
-            applyInteractionCooldown(buildingId);
+        var result = TouristSimulation.performShopInteraction(level, tourist, buildingId, colonyId);
+        if (result == null) return;
 
-            String bldType = getBuildingTypeId(buildingId);
-            String bldName = getBuildingDisplayName(buildingId, bldType);
-            VisitMemory memory = new VisitMemory.Builder()
-                    .buildingTypeId(bldType != null ? bldType : "unknown")
-                    .buildingDisplayName(bldName)
-                    .category("shop")
-                    .gameTime(tourist.level().getGameTime())
-                    .satisfactionBefore(satBefore)
-                    .satisfactionDelta(gain)
-                    .energyDelta(-20)
-                    .whatHappened(purchased)
-                    .build();
-            tourist.addVisitMemory(memory);
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "shop",
+                tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                result.energyDelta(), result.whatHappened());
 
-            NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
-            emitNarrativeEvent(shopEvent);
+        NarrativeEvent shopEvent = NarrativeGenerator.generateVisit(memory);
+        emitNarrativeEvent(shopEvent);
 
-            String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
-            showActionBar("🛒 " + narrative + " | 满意+" + gain + " 精力-20");
-        }
+        var purchase = result.purchase();
+        sendBubble(purchase != null ? TransientBubbleStore.ICON_ITEM : TransientBubbleStore.ICON_NONE,
+                purchase != null ? purchase.itemId() : null,
+                purchase != null ? purchase.count() : 0);
+
+        sparkleSatisfaction();
     }
 
     private void interactWithService(UUID buildingId) {
-        var config = BuildingConfigLoader.getInstance().get(getBuildingTypeId(buildingId));
-        if (config == null || config.service() == null) return;
-
-        var svc = config.service();
-        int satBefore = tourist.getSatisfaction();
-        int energyCost = svc.energyPerUse();
-        tourist.setEnergy(tourist.getEnergy() - energyCost);
-        int gain = computeSatisfactionGain(buildingId);
-        tourist.setSatisfaction(satBefore + gain);
-        applyPreferenceDecay(buildingId);
-
-        applyInteractionCooldown(buildingId);
-
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
         UUID colonyId = tourist.getColonyId();
-        if (colonyId != null && !svc.elementOutput().isEmpty()) {
-            ServerLevel level = getServerLevel();
-            if (level != null) {
-                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level);
-                if (bank != null) {
-                    for (var entry : svc.elementOutput().entrySet()) {
-                        try {
-                            var elementType = com.wsteam.wandscape.shared.data.ElementType.fromId(entry.getKey());
-                            bank.addElement(colonyId, elementType, entry.getValue());
-                        } catch (IllegalArgumentException e) {
-                            Log.warn(TAG, "[Tourist] Unknown element type '{}' in service {} elementOutput",
-                                    entry.getKey(), shortId(buildingId));
-                        }
-                    }
-                }
-            }
-        }
+        if (colonyId == null) return;
 
-        String bldType = getBuildingTypeId(buildingId);
+        var result = TouristSimulation.performServiceInteraction(level, tourist, buildingId, colonyId);
+        if (result == null) return;
+
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
         String bldName = getBuildingDisplayName(buildingId, bldType);
-        VisitMemory memory = new VisitMemory.Builder()
-                .buildingTypeId(bldType != null ? bldType : "unknown")
-                .buildingDisplayName(bldName)
-                .category("service")
-                .gameTime(tourist.level().getGameTime())
-                .satisfactionBefore(satBefore)
-                .satisfactionDelta(gain)
-                .energyDelta(-energyCost)
-                .whatHappened("服务")
-                .build();
-        tourist.addVisitMemory(memory);
+        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
+                tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                result.energyDelta(), result.whatHappened());
 
         NarrativeEvent serviceEvent = NarrativeGenerator.generateVisit(memory);
         emitNarrativeEvent(serviceEvent);
 
-        String narrative = NarrativeGenerator.generateActionBarText(memory, tourist.getTouristName());
-        showActionBar("🔧 " + narrative + " | 满意+" + gain + " 精力-" + energyCost);
-    }
-
-    // ── Preference / satisfaction ──
-
-    private int[] getEffectiveValues(@Nullable UUID buildingId) {
-        var config = BuildingConfigLoader.getInstance().get(getBuildingTypeId(buildingId));
-        if (config == null) return new int[]{0, 0, 0};
-        int c = config.comfort();
-        int m = config.magic();
-        int w = config.wonder();
-        if ("shop".equals(config.category())) {
-            ShopStockManager stockMgr = ShopStockManager.getActive();
-            if (stockMgr != null) {
-                c += stockMgr.getGoodsBonusComfort(buildingId);
-                m += stockMgr.getGoodsBonusMagic(buildingId);
-                w += stockMgr.getGoodsBonusWonder(buildingId);
-            }
-        }
-        return new int[]{c, m, w};
-    }
-
-    private int threeValueSum(@Nullable UUID buildingId) {
-        int[] v = getEffectiveValues(buildingId);
-        return v[0] + v[1] + v[2];
-    }
-
-    private int computeMatchScore(@Nullable UUID buildingId) {
-        String typeId = getBuildingTypeId(buildingId);
-        if (typeId == null) return 0;
-        int typePref = tourist.getTypePreference(typeId);
-        int sum = threeValueSum(buildingId);
-        return typePref * sum;
-    }
-
-    private int computeSatisfactionGain(@Nullable UUID buildingId) {
-        int threeSum = threeValueSum(buildingId);
-        int threshold = tourist.getLevel() * Config.TOURIST_LEVEL_SATISFACTION_THRESHOLD.get();
-        String typeId = getBuildingTypeId(buildingId);
-        int typePref = typeId != null ? tourist.getTypePreference(typeId) : 50;
-
-        if (threeSum < threshold) {
-            // Below threshold → negative satisfaction (diminishing sqrt, same as positive side)
-            int deficit = threshold - threeSum;
-            int baseScore = typePref * (deficit + 1);
-            int penalty = -(int) Math.sqrt(baseScore);
-            return Math.max(penalty, -15);
+        var config = TouristSimulation.getConfig(level, buildingId);
+        if (config != null && config.service() != null && !config.service().elementOutput().isEmpty()) {
+            var entries = List.copyOf(config.service().elementOutput().entrySet());
+            var pick = entries.get(tourist.level().random.nextInt(entries.size()));
+            sendBubble(TransientBubbleStore.ICON_ELEMENT, pick.getKey(), pick.getValue());
+        } else {
+            sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
         }
 
-        int baseScore = typePref * (threeSum - threshold + 1);
-        int gain = (int) Math.sqrt(baseScore);
-        return Math.min(gain, Config.TOURIST_MAX_SATISFACTION_PER_VISIT.get());
+        sparkleSatisfaction();
     }
 
-    private void applyPreferenceDecay(UUID buildingId) {
-        if (TouristCooldownDebug.skipPreferenceDecay) return;
-        int decay = Config.TOURIST_PREFERENCE_DECAY.get();
-        if (decay <= 0) return;
-        String typeId = getBuildingTypeId(buildingId);
-        if (typeId == null) return;
-        tourist.adjustTypePreference(typeId, -decay);
-        Log.debug(TAG, "[Tourist] {} decay preference for {} → {}",
-                tourist.getTouristName(), typeId, tourist.getTypePreference(typeId));
+    /** Relax 建筑：歇脚回精力 + 填条。 */
+    private void interactWithRelax(UUID buildingId) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        UUID colonyId = tourist.getColonyId();
+        if (colonyId == null) return;
+
+        var result = TouristSimulation.performRelaxInteraction(level, tourist, buildingId, colonyId);
+        if (result == null) return;
+
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "relax",
+                tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                result.energyDelta(), result.whatHappened());
+
+        NarrativeEvent relaxEvent = NarrativeGenerator.generateVisit(memory);
+        emitNarrativeEvent(relaxEvent);
+
+        sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
+        sparkleSatisfaction();
     }
 
-    @Nullable
-    private BuildingState weightedPick(List<BuildingState> candidates) {
-        if (candidates.isEmpty()) return null;
+    /** ATM 建筑：取现补钱包 + 填条。 */
+    private void interactWithAtm(UUID buildingId) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        UUID colonyId = tourist.getColonyId();
+        if (colonyId == null) return;
 
-        int[] weights = new int[candidates.size()];
-        int totalWeight = 0;
-        for (int i = 0; i < candidates.size(); i++) {
-            int score = computeMatchScore(candidates.get(i).getBuildingId());
-            weights[i] = Math.max(1, score);
-            totalWeight += weights[i];
-        }
+        var result = TouristSimulation.performAtmInteraction(level, tourist, buildingId, colonyId);
+        if (result == null) return;
 
-        int roll = tourist.getRandom().nextInt(totalWeight);
-        int cumulative = 0;
-        for (int i = 0; i < candidates.size(); i++) {
-            cumulative += weights[i];
-            if (roll < cumulative) return candidates.get(i);
-        }
-        return candidates.get(candidates.size() - 1);
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        String bldName = getBuildingDisplayName(buildingId, bldType);
+        VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "atm",
+                tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                result.energyDelta(), result.whatHappened());
+
+        NarrativeEvent atmEvent = NarrativeGenerator.generateVisit(memory);
+        emitNarrativeEvent(atmEvent);
+
+        sendBubble(TransientBubbleStore.ICON_NONE, null, 0);
+        sparkleSatisfaction();
+    }
+
+    /** 满意度提升：游客位置撒金色星光（四类交互共用）。粒子纯装饰，缺失静默跳过。 */
+    private void sparkleSatisfaction() {
+        ServerLevel level = getServerLevel();
+        if (level == null) return;
+        ParticleService.burstColored(level, tourist.position().add(0, 1.2, 0),
+                1.0f, 0.85f, 0.30f, 10, 0.12f, 25, false);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -1476,9 +1512,6 @@ public class TouristMoveGoal extends Goal {
         usingRoad = planRoute(target);
         wpIndex = 1;
         moveToNext(speed, target);
-        Log.debug(TAG, "[Tourist] {} heading to {} via {}",
-                tourist.getTouristName(), target.toShortString(),
-                usingRoad ? "road" : "direct");
     }
 
     private boolean planRoute(BlockPos target) {
@@ -1567,29 +1600,6 @@ public class TouristMoveGoal extends Goal {
         return Config.ARRIVAL_RADIUS.get();
     }
 
-    /**
-     * Get the interaction duration (in ticks) for the current building.
-     * Tourist will stand still at the interact point for this duration
-     * before the interaction effects are applied.
-     */
-    private int getInteractionDuration(UUID buildingId) {
-        if (buildingId == null) return 0;
-        BuildingApi api = getBuildingApi();
-        if (api == null) return 0;
-        var data = api.getBuilding(buildingId);
-        if (data == null) return 0;
-        var config = BuildingConfigLoader.getInstance().get(data.getBuildingTypeId());
-        if (config == null) return 0;
-        String cat = config.category();
-        if ("shop".equals(cat) && config.shop() != null) {
-            return config.shop().interactionDurationTicks();
-        }
-        if ("service".equals(cat) && config.service() != null) {
-            return config.service().interactionDurationTicks();
-        }
-        return 0;
-    }
-
     /** Universal insurance: if stuck on a floating surface (building roof) while roaming, teleport down. */
     private boolean tickRoofRescue() {
         // Never interfere with an active building interaction or POI stand-still.
@@ -1603,15 +1613,15 @@ public class TouristMoveGoal extends Goal {
         if (++roofStuckTicks <= ROOF_STUCK_TICKS) return false;
         if (!isStandingOnFloatingSurface()) return false;
 
-        BlockPos below = findGroundBelow(pos.getX(), pos.getY() - 1, pos.getZ());
-        if (below == null) return false;
-        Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing down to {}", tourist.getTouristName(), below.toShortString());
+        BlockPos tp = TouristTeleport.findSafeSpot(serverLevel(), pos, tourist.getColonyId(), tourist.getTargetBuildingId());
         tourist.getNavigation().stop();
-        tourist.setPos(below.getX() + 0.5, below.getY(), below.getZ() + 0.5);
-        noMoveTicks = 0;
-        totalNavTicks = 0;
         rescueLastPos = null;
         roofStuckTicks = 0;
+        if (tp == null) return false;
+        Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing to {}", tourist.getTouristName(), tp.toShortString());
+        tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+        noMoveTicks = 0;
+        totalNavTicks = 0;
         return true;
     }
 
@@ -1622,21 +1632,6 @@ public class TouristMoveGoal extends Goal {
         if (!lvl.getBlockState(feet).isAir()) return false;
         if (!lvl.getBlockState(feet.below()).isSolid()) return false;
         return lvl.getBlockState(feet.below(2)).isAir();
-    }
-
-    /** Scan downward from {@code startY} for the first walkable spot (air above solid). */
-    @Nullable
-    private BlockPos findGroundBelow(int x, int startY, int z) {
-        var lvl = tourist.level();
-        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos(
-                x, Math.min(lvl.getMaxBuildHeight() - 1, startY), z);
-        while (mp.getY() > lvl.getMinBuildHeight()) {
-            if (lvl.getBlockState(mp).isAir() && lvl.getBlockState(mp.below()).isSolid()) {
-                return mp.immutable();
-            }
-            mp.move(0, -1, 0);
-        }
-        return null;
     }
 
     /**
@@ -1683,6 +1678,13 @@ public class TouristMoveGoal extends Goal {
     private static ServerLevel getServerLevel() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server != null ? server.overworld() : null;
+    }
+
+    /** The tourist's own server level (goals tick server-side), falling back to the overworld. */
+    @Nullable
+    private ServerLevel serverLevel() {
+        if (tourist.level() instanceof ServerLevel sl) return sl;
+        return getServerLevel();
     }
 
     private static void emitNarrativeEvent(NarrativeEvent ne) {

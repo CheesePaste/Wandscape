@@ -8,19 +8,26 @@ import java.util.stream.Stream;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.Wandscape;
+import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 
 import com.wsteam.wandscape.shared.client.bubble.AmbientTextPools;
 import com.wsteam.wandscape.shared.client.bubble.SpeechBubbleRenderer;
 
-import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
-public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, HumanoidModel<TouristEntity>> {
+public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, TouristHumanoidModel> {
 
     private static final ResourceLocation[] TOURIST_TEXTURES = detectTextures(
             "textures/entity/tourist");
@@ -53,15 +60,67 @@ public class TouristRenderer extends HumanoidMobRenderer<TouristEntity, Humanoid
     }
 
     public TouristRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+        super(ctx, new TouristHumanoidModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5f);
+        // 让手持物品（EAT 时手里的食物）渲染在手上
+        this.addLayer(new ItemInHandLayer<>(this, ctx.getItemInHandRenderer()));
     }
 
     @Override
     public void render(TouristEntity entity, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
-        SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
-                AmbientTextPools::getTouristText);
+        spawnActivityParticles(entity);
+        // 预览假人：只显示动作姿态/粒子，不弹闲聊气泡
+        if (!entity.isPreview()) {
+            SpeechBubbleRenderer.renderBubble(entity, poseStack, buffer, packedLight,
+                    AmbientTextPools::getTouristText);
+        }
+    }
+
+    /** 按 activity 发射装饰粒子（泡澡蒸汽/冥想魔法/取现金币）；节流，未知活动无粒子。 */
+    private void spawnActivityParticles(TouristEntity entity) {
+        Activity activity = entity.getCurrentActivity();
+        if (activity == null) return;
+        if (!(entity.level() instanceof ClientLevel cl)) return;
+
+        if (activity == Activity.EAT) {
+            spawnEatParticles(entity, cl);
+            return;
+        }
+        if (entity.tickCount % 8 != 0) return;
+        var spec = ActivityVisuals.safeFor(activity).particles();
+        if (spec == null) return;
+        double x = entity.getX();
+        double y = entity.getY() + 1.4;
+        double z = entity.getZ();
+        for (int i = 0; i < spec.count(); i++) {
+            cl.addParticle(spec.type(),
+                    x + (entity.getRandom().nextDouble() - 0.5) * spec.spread(),
+                    y + (entity.getRandom().nextDouble() - 0.5) * spec.spread(),
+                    z + (entity.getRandom().nextDouble() - 0.5) * spec.spread(),
+                    0, 0.02, 0);
+        }
+    }
+
+    /** 进食粒子：像玩家吃东西一样，从嘴边冒出食物的碎屑（ItemParticleOption，用主手持物）。 */
+    private void spawnEatParticles(TouristEntity entity, ClientLevel cl) {
+        if (entity.tickCount % 6 != 0) return;
+        ItemStack food = entity.getMainHandItem();
+        if (food.isEmpty()) food = new ItemStack(Items.BREAD);
+
+        float yaw = entity.getYRot() * (float) (Math.PI / 180.0);
+        float pitch = entity.getXRot() * (float) (Math.PI / 180.0);
+        for (int i = 0; i < 2; i++) {
+            Vec3 speed = new Vec3((entity.getRandom().nextFloat() - 0.5F) * 0.1D,
+                    entity.getRandom().nextFloat() * 0.1D + 0.1D, 0.0D);
+            speed = speed.xRot(-pitch).yRot(-yaw);
+            Vec3 mouth = new Vec3((entity.getRandom().nextFloat() - 0.5F) * 0.3D,
+                    -entity.getRandom().nextFloat() * 0.4D - 0.2D, 0.6D);
+            mouth = mouth.xRot(-pitch).yRot(-yaw)
+                    .add(entity.getX(), entity.getEyeY() - 0.1D, entity.getZ());
+            cl.addParticle(new ItemParticleOption(ParticleTypes.ITEM, food),
+                    mouth.x, mouth.y, mouth.z, speed.x, speed.y + 0.05D, speed.z);
+        }
     }
 
     @Override
