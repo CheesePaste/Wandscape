@@ -20,7 +20,7 @@
 
 每 `CHECK_INTERVAL=100` tick 检查。时段由 Config 划分：生成窗口 [1000, 8000]（约 07:00–14:00，集中在上午、最晚下午到），离境窗口 [18000, 24000]。
 
-- **生成数**：`targetCount` = 均匀整数区间 `[base(4)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)]`，即 1 级 4~7、2 级 5~8、3 级 6~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；生成时间在 [1000, 8000] 窗口内**均匀排布**；`toSpawn = targetCount - existing`（existing 用影子注册表计数）。
+- **生成数**：`targetCount` = 均匀整数区间 `[base(5)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)]`，即 1 级 5~7、2 级 6~8、3 级 7~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；生成时间在 [1000, 8000] 窗口内**均匀排布**；`toSpawn = targetCount - existing`（existing 用影子注册表计数）。
 - **条件**：需已注册殖民地 + 存在完整 shop/service 目标。生成点取道路网 COMPLETE 边端点，无路用建筑位置。等级分布：colonyLevel-1/+1 = 40/40/20%。生成时强制加载区块、`registerArrival` + `sim.adoptTourist`。
 - **离开**：sat<50 或 sat=100 → 夜晚带 0-1500 tick 随机延迟离开；sat 50-99 → 引导去旅馆，无房则离开。白天/傍晚：能量耗尽、夜晚且空闲、空闲超时 `TOURIST_DESPAWN_TIMEOUT_TICKS=36000`。100% 满意度 → `grantExperience`。
 
@@ -77,4 +77,4 @@
 
 - **购物**：TouristMoveGoal → TouristSimulation.performShopInteraction → ShopInteractionHandler → ShopStockManager.purchaseAffordable → purchase 扣库存、按 profitRate 向 ColonyItemBank 存元素、recordPurchase；游客 spendWallet、精力 -20。
 - **服务**：精力 -energyPerUse，elementOutput 全部写入 ColonyItemBank.addElement。
-- **满意度→经验**：离境且 sat=100 → ColonyLevelManager.computeExpContribution：游客等级<殖民地→0；==→100；>→500。升级公式 `expToNext=(level+1)×1000`。
+- **满意度→经验**：离境且 sat=100 → ColonyLevelManager.computeExpContribution：游客等级<殖民地→0；==→200；>→500。升级公式 `expToNext=level×1000`。

@@ -151,7 +151,7 @@ public class Config {
     public static final ModConfigSpec.IntValue TOURIST_BASE_SPAWN_COUNT = BUILDER
             .comment("Daily spawn count lower bound at colony level 1. "
                     + "每日生成数 = 均匀区间 [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth]")
-            .defineInRange("tourist.baseSpawnCount", 4, 1, 100);
+            .defineInRange("tourist.baseSpawnCount", 5, 1, 100);
 
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SPAWN_BONUS = BUILDER
             .comment("Additional tourists per colony level (both lower and upper bounds +1 per level)")
@@ -159,7 +159,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_RANGE_WIDTH = BUILDER
             .comment("Daily spawn count fluctuation width: target ∈ [lower, lower+width]. "
-                    + "默认 3 = 1 级 4~7、2 级 5~8、3 级 6~9")
+                    + "默认 3 = 1 级 5~7、2 级 6~8、3 级 7~9")
             .defineInRange("tourist.spawnRangeWidth", 3, 0, 50);
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_WINDOW_START = BUILDER

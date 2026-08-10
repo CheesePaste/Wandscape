@@ -27,8 +27,8 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  *   <li>tourist level &gt; colony level → {@link Config#COLONY_EXP_ABOVE_LEVEL}</li>
  * </ul>
  *
- * <p>Level-up formula: expToNext(level) = (level + 1) × 1000
- * <br>1→2: 2000, 2→3: 3000, 3→4: 4000, etc.
+ * <p>Level-up formula: expToNext(level) = level × 1000
+ * <br>1→2: 1000, 2→3: 2000, 3→4: 3000, etc.
  */
 public final class ColonyLevelManager {
     private static final String TAG = "ColonyLevelManager";
@@ -76,7 +76,7 @@ public final class ColonyLevelManager {
 
     /** Calculate experience needed to reach the next level from the given level. */
     public static int expToNext(int currentLevel) {
-        return (currentLevel + 1) * 1000;
+        return currentLevel * 1000;
     }
 
     /** Calculate experience needed for the colony's next level. */
