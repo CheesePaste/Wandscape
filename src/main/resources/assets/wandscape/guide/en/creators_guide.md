@@ -4,13 +4,13 @@ Wandscape is grown by developers, architects and players who love Minecraft and 
 
 ## Lead Designer & Lead Developer
 - **CheesePaste**
-- https://space.bilibili.com/514121566
+- [https://space.bilibili.com/514121566](https://space.bilibili.com/514121566)
 
 ## Lead Developers
 - **Victory FX**
-- https://space.bilibili.com/630432283
+- [https://space.bilibili.com/630432283](https://space.bilibili.com/630432283)
 - **Flamtingo**
-- https://space.bilibili.com/1506072626
+- [https://space.bilibili.com/1506072626](https://space.bilibili.com/1506072626)
 
 ## Architects
 
@@ -29,17 +29,17 @@ List the programmers who took part in developing the mod:
 - ...
 
 ## Support Us
-- https://ifdian.net/a/CheesePaste
+- [https://ifdian.net/a/CheesePaste](https://ifdian.net/a/CheesePaste)
 
 ## Official Platforms (Partial)
-- **bilibili**: https://space.bilibili.com/514121566
-- **discord**: https://discord.gg/da8ZPuQ7Ys
-- **github**: https://github.com/CheesePaste/Wandscape
-- **curseforge**: https://www.curseforge.com/minecraft/mc-mods/wandscape
+- **bilibili**: [https://space.bilibili.com/514121566](https://space.bilibili.com/514121566)
+- **discord**: [https://discord.gg/da8ZPuQ7Ys](https://discord.gg/da8ZPuQ7Ys)
+- **github**: [https://github.com/CheesePaste/Wandscape](https://github.com/CheesePaste/Wandscape)
+- **curseforge**: [https://www.curseforge.com/minecraft/mc-mods/wandscape](https://www.curseforge.com/minecraft/mc-mods/wandscape)
 - **modrinth**: To be added
 - **mc百科**: To be added
 ## Feedback
-- https://github.com/CheesePaste/Wandscape/issues
+- [https://github.com/CheesePaste/Wandscape/issues](https://github.com/CheesePaste/Wandscape/issues)
 ---
 
 [📖 Back to Guide Home](guide:index_guide)

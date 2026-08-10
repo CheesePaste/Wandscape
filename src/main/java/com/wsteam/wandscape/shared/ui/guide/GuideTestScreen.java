@@ -1,12 +1,18 @@
 package com.wsteam.wandscape.shared.ui.guide;
 
+import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentHistoryStack;
 import com.wsteam.wandscape.shared.ui.markdown.navigation.DocumentLoader;
 import com.wsteam.wandscape.shared.ui.markdown.widget.MarkdownRenderWidget;
+import net.minecraft.Util;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Interactive Markdown Guide Screen supporting inter-document navigation,
@@ -90,8 +96,14 @@ public class GuideTestScreen extends MedievalScreen {
             return;
         }
 
-        // 2. External URL — gracefully ignored (not opened in-game)
+        // 2. External URL — open in the OS browser through the vanilla confirmation screen
         if (isExternalUrl(target)) {
+            try {
+                URI uri = Util.parseAndValidateUntrustedUri(target);
+                ConfirmLinkScreen.confirmLinkNow(this, uri, false);
+            } catch (URISyntaxException e) {
+                Log.warn("Guide", "Ignore invalid external link: {}", target);
+            }
             return;
         }
 
@@ -113,7 +125,7 @@ public class GuideTestScreen extends MedievalScreen {
         loadDocument(docPath);
     }
 
-    /** Whether a link target is an external URL with a known scheme (not opened in-game). */
+    /** Whether a link target is an external URL with a known scheme (http/https/mailto/ftp/file). */
     private static boolean isExternalUrl(String target) {
         int colon = target.indexOf(':');
         if (colon <= 0) {
