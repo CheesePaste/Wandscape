@@ -216,7 +216,7 @@ public final class WandscapePanelState {
             closeBuildingBar();
         }
         if (cursorLifted) {
-            releaseCursor();
+            grabMouseForGame();
         }
         panelOpen = false;
         showBuildingAreas = false;
@@ -426,7 +426,7 @@ public final class WandscapePanelState {
         return false;
     }
 
-    private static void releaseCursor() {
+    private static void grabMouseForGame() {
         Minecraft.getInstance().mouseHandler.grabMouse();
     }
 

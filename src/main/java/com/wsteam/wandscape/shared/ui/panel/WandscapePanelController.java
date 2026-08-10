@@ -35,6 +35,12 @@ public final class WandscapePanelController {
 
     private static boolean registered = false;
 
+    // Cursor-reconciler edge tracking — see onClientTickPost. Lets the reconciler
+    // re-assert the OS cursor only on real transitions instead of every tick.
+    private static boolean lastPanelOpen = false;
+    private static boolean lastScreenOpen = false;
+    private static boolean lastReconciledLifted = false;
+
     private WandscapePanelController() {}
 
     public static void register() {
@@ -71,20 +77,39 @@ public final class WandscapePanelController {
     }
 
     static void onClientTickPost(ClientTickEvent.Post event) {
-        if (!WandscapePanelState.isPanelOpen()) return;
-
+        boolean panelOpen = WandscapePanelState.isPanelOpen();
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) return;
 
-        // Reconcile the OS cursor to cursorLifted every tick (when no Screen is open).
-        // Bidirectional: prevents both "cursor stuck hidden" and "cursor stuck shown"
-        // after transitions that grab/release the mouse. Screens manage their own cursor.
-        if (mc.screen == null) {
-            if (WandscapePanelState.isCursorLifted()) {
+        // Panel closed (or no world): nothing to reconcile. Keep edge-tracking in
+        // sync so the next open/close transitions fire correctly.
+        if (!panelOpen || mc.level == null || mc.player == null) {
+            lastPanelOpen = panelOpen;
+            lastScreenOpen = mc.screen != null;
+            return;
+        }
+
+        boolean screenOpen = mc.screen != null;
+        boolean panelJustOpened = !lastPanelOpen;
+        boolean screenJustClosed = lastScreenOpen && !screenOpen;
+        lastPanelOpen = panelOpen;
+        lastScreenOpen = screenOpen;
+
+        // Screens manage their own cursor; re-assert once after a Screen closes
+        // (vanilla grabs the mouse when a Screen closes).
+        if (screenOpen) return;
+
+        // Edge-triggered: only touch the OS cursor when the desired state actually
+        // changes, when the panel just opened, or right after a Screen closed.
+        // Calling grabMouse() every tick re-centers + hides the cursor and fights
+        // transient grabs (e.g. the spline editor's right-drag camera), so avoid it.
+        boolean desired = WandscapePanelState.isCursorLifted();
+        if (panelJustOpened || screenJustClosed || desired != lastReconciledLifted) {
+            if (desired) {
                 mc.mouseHandler.releaseMouse();
             } else {
                 mc.mouseHandler.grabMouse();
             }
+            lastReconciledLifted = desired;
         }
     }
 
