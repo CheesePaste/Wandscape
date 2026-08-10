@@ -1,9 +1,9 @@
 {
-  "parent": "wandscape:treasury_5k",
+  "parent": "wandscape:full_coffers",
   "display": {
     "icon": {"id": "minecraft:diamond_block"},
-    "title": {"translate": "advancements.wandscape.treasury_50k.title"},
-    "description": {"translate": "advancements.wandscape.treasury_50k.description"},
+    "title": {"translate": "advancements.wandscape.dragons_hoard.title"},
+    "description": {"translate": "advancements.wandscape.dragons_hoard.description"},
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

@@ -1,9 +1,9 @@
 {
-  "parent": "wandscape:well_connected_5",
+  "parent": "wandscape:first_roads",
   "display": {
     "icon": {"id": "minecraft:powered_rail"},
-    "title": {"translate": "advancements.wandscape.well_connected_15.title"},
-    "description": {"translate": "advancements.wandscape.well_connected_15.description"},
+    "title": {"translate": "advancements.wandscape.well_connected.title"},
+    "description": {"translate": "advancements.wandscape.well_connected.description"},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

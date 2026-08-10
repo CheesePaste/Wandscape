@@ -2,8 +2,8 @@
   "parent": "wandscape:start",
   "display": {
     "icon": {"id": "minecraft:emerald_block"},
-    "title": {"translate": "advancements.wandscape.treasury_5k.title"},
-    "description": {"translate": "advancements.wandscape.treasury_5k.description"},
+    "title": {"translate": "advancements.wandscape.full_coffers.title"},
+    "description": {"translate": "advancements.wandscape.full_coffers.description"},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

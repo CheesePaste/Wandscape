@@ -1,9 +1,9 @@
 {
-  "parent": "wandscape:peak_season_10",
+  "parent": "wandscape:bustling",
   "display": {
     "icon": {"id": "minecraft:beacon"},
-    "title": {"translate": "advancements.wandscape.peak_season_20.title"},
-    "description": {"translate": "advancements.wandscape.peak_season_20.description"},
+    "title": {"translate": "advancements.wandscape.tourist_boom.title"},
+    "description": {"translate": "advancements.wandscape.tourist_boom.description"},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

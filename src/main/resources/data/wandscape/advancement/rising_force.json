@@ -2,8 +2,8 @@
   "parent": "wandscape:new_recruit",
   "display": {
     "icon": {"id": "minecraft:golden_pickaxe"},
-    "title": {"translate": "advancements.wandscape.growing_workforce_5.title"},
-    "description": {"translate": "advancements.wandscape.growing_workforce_5.description"},
+    "title": {"translate": "advancements.wandscape.rising_force.title"},
+    "description": {"translate": "advancements.wandscape.rising_force.description"},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

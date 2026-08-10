@@ -1,9 +1,9 @@
 {
-  "parent": "wandscape:growing_workforce_5",
+  "parent": "wandscape:rising_force",
   "display": {
     "icon": {"id": "minecraft:netherite_pickaxe"},
-    "title": {"translate": "advancements.wandscape.growing_workforce_10.title"},
-    "description": {"translate": "advancements.wandscape.growing_workforce_10.description"},
+    "title": {"translate": "advancements.wandscape.full_roster.title"},
+    "description": {"translate": "advancements.wandscape.full_roster.description"},
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

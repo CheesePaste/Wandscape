@@ -67,17 +67,17 @@ public final class AchievementService {
     private static final ResourceLocation FIRST_VISITOR = loc("first_visitor");
     private static final ResourceLocation GUEST_OF_HONOR = loc("guest_of_honor");
     private static final ResourceLocation OVERNIGHT_GUEST = loc("overnight_guest");
-    private static final ResourceLocation PEAK_SEASON_10 = loc("peak_season_10");
-    private static final ResourceLocation PEAK_SEASON_20 = loc("peak_season_20");
-    private static final ResourceLocation PEAK_SEASON_50 = loc("peak_season_50");
+    private static final ResourceLocation BUSTLING = loc("bustling");
+    private static final ResourceLocation TOURIST_BOOM = loc("tourist_boom");
+    private static final ResourceLocation RUSH_HOUR = loc("rush_hour");
     private static final ResourceLocation WIZARDS_INTEREST = loc("a_wizards_interest");
     private static final ResourceLocation NEW_RECRUIT = loc("new_recruit");
-    private static final ResourceLocation WORKFORCE_5 = loc("growing_workforce_5");
-    private static final ResourceLocation WORKFORCE_10 = loc("growing_workforce_10");
-    private static final ResourceLocation TREASURY_5K = loc("treasury_5k");
-    private static final ResourceLocation TREASURY_50K = loc("treasury_50k");
-    private static final ResourceLocation WELL_CONNECTED_5 = loc("well_connected_5");
-    private static final ResourceLocation WELL_CONNECTED_15 = loc("well_connected_15");
+    private static final ResourceLocation RISING_FORCE = loc("rising_force");
+    private static final ResourceLocation FULL_ROSTER = loc("full_roster");
+    private static final ResourceLocation FULL_COFFERS = loc("full_coffers");
+    private static final ResourceLocation DRAGONS_HOARD = loc("dragons_hoard");
+    private static final ResourceLocation FIRST_ROADS = loc("first_roads");
+    private static final ResourceLocation WELL_CONNECTED = loc("well_connected");
     private static final ResourceLocation MASTER_BUILDER = loc("master_builder");
     private static final ResourceLocation RAID_VETERAN = loc("raid_veteran");
     private static final ResourceLocation STEADY_HAND = loc("steady_hand");
@@ -277,9 +277,9 @@ public final class AchievementService {
         TouristApi api = WandscapeApis.getTouristApiSilently();
         if (api == null) return;
         int count = api.getTouristCount(colonyId);
-        if (count >= 50) grant(PEAK_SEASON_50);
-        if (count >= 30) grant(PEAK_SEASON_20);
-        if (count >= 10) grant(PEAK_SEASON_10);
+        if (count >= 50) grant(RUSH_HOUR);
+        if (count >= 30) grant(TOURIST_BOOM);
+        if (count >= 10) grant(BUSTLING);
     }
 
     private static void checkOvernightGuest(UUID colonyId) {
@@ -304,8 +304,8 @@ public final class AchievementService {
         NpcApi api = WandscapeApis.getNpcApiSilently();
         if (api == null) return;
         int count = api.getNpcCount(colonyId);
-        if (count >= 10) grant(WORKFORCE_10);
-        if (count >= 5) grant(WORKFORCE_5);
+        if (count >= 10) grant(FULL_ROSTER);
+        if (count >= 5) grant(RISING_FORCE);
     }
 
     /** 仓库任一元素存量。 */
@@ -316,16 +316,16 @@ public final class AchievementService {
         for (long v : api.getAllElements(colonyId).values()) {
             if (v > max) max = v;
         }
-        if (max >= 500000) grant(TREASURY_50K);
-        if (max >= 50000) grant(TREASURY_5K);
+        if (max >= 500000) grant(DRAGONS_HOARD);
+        if (max >= 50000) grant(FULL_COFFERS);
     }
 
     /** 路网路段数（MST 自动生成 + 玩家手铺）。 */
     private static void checkRoads(UUID colonyId) {
         try {
             int edges = WandscapeApis.getRoadApi().getEdges(colonyId).size();
-            if (edges >= 50) grant(WELL_CONNECTED_15);
-            if (edges >= 15) grant(WELL_CONNECTED_5);
+            if (edges >= 50) grant(WELL_CONNECTED);
+            if (edges >= 15) grant(FIRST_ROADS);
         } catch (Exception e) {
             // 道路系统未加载
         }

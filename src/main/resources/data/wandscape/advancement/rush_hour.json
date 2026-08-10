@@ -1,9 +1,9 @@
 {
-  "parent": "wandscape:peak_season_20",
+  "parent": "wandscape:tourist_boom",
   "display": {
     "icon": {"id": "minecraft:campfire"},
-    "title": {"translate": "advancements.wandscape.peak_season_50.title"},
-    "description": {"translate": "advancements.wandscape.peak_season_50.description"},
+    "title": {"translate": "advancements.wandscape.rush_hour.title"},
+    "description": {"translate": "advancements.wandscape.rush_hour.description"},
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,
