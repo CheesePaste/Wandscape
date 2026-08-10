@@ -119,6 +119,11 @@ public interface TouristStateHost {
     default int getTravelFund() { return 0; }
     default void setTravelFund(int v) {}
 
+    // ── ATM 取现冷却（timeBase 绝对时间：0 = 从未取现，冷却到点前不重选 ATM）──
+
+    default int getLastAtmWithdrawTime() { return 0; }
+    default void setLastAtmWithdrawTime(int t) {}
+
     // ── 当前位置（视野过滤用；实体返回 blockPosition，影子返回 shadow 坐标）──
 
     @Nullable

@@ -191,6 +191,8 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     private int nightsStayed;
     private long departureDeadline = Long.MAX_VALUE;
     private int travelFund;
+    /** ATM 上次成功取现的 timeBase（tickCount）时刻；0 = 从未取现。取现冷却起点。 */
+    private int lastAtmWithdrawTime;
 
     /** 预览模式（交互位 marker 的演示假人）：不参与 AI/生成/离开，仅站桩循环做动作。 */
     private boolean previewMode;
@@ -572,6 +574,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         tag.putInt("nightsStayed", nightsStayed);
         tag.putLong("departureDeadline", departureDeadline);
         tag.putInt("travelFund", travelFund);
+        tag.putInt("lastAtmWithdrawTime", lastAtmWithdrawTime);
 
         tag.putFloat("maxHp", maxHp);
         tag.putFloat("moveSpeed", moveSpeed);
@@ -668,6 +671,7 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
         this.nightsStayed = Math.max(0, tag.getInt("nightsStayed"));
         if (tag.contains("departureDeadline")) this.departureDeadline = tag.getLong("departureDeadline");
         if (tag.contains("travelFund")) this.travelFund = Math.max(0, tag.getInt("travelFund"));
+        if (tag.contains("lastAtmWithdrawTime")) this.lastAtmWithdrawTime = tag.getInt("lastAtmWithdrawTime");
 
         this.maxHp = tag.getFloat("maxHp");
         this.moveSpeed = tag.getFloat("moveSpeed");
@@ -895,6 +899,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
 
     public int getTravelFund() { return travelFund; }
     public void setTravelFund(int v) { this.travelFund = Math.max(0, v); }
+
+    public int getLastAtmWithdrawTime() { return lastAtmWithdrawTime; }
+    public void setLastAtmWithdrawTime(int t) { this.lastAtmWithdrawTime = t; }
 
     /** 游客当前位置（视野过滤用）。 */
     @Override

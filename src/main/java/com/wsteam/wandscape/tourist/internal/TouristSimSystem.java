@@ -313,6 +313,7 @@ public final class TouristSimSystem {
         e.setNightsStayed(s.getNightsStayed());
         e.setDepartureDeadline(s.getDepartureDeadline());
         e.setTravelFund(s.getTravelFund());
+        e.setLastAtmWithdrawTime(s.getLastAtmWithdrawTime());
         e.setColonyId(s.getColonyId());
         e.setTargetBuildingId(s.getTargetBuildingId());
         e.setTargetBuildingCategory(s.getTargetBuildingCategory());
@@ -348,6 +349,7 @@ public final class TouristSimSystem {
         s.setNightsStayed(e.getNightsStayed());
         s.setDepartureDeadline(e.getDepartureDeadline());
         s.setTravelFund(e.getTravelFund());
+        s.setLastAtmWithdrawTime(e.getLastAtmWithdrawTime());
         s.setColonyId(e.getColonyId());
         s.setTargetBuildingId(e.getTargetBuildingId());
         s.setTargetBuildingCategory(e.getTargetBuildingCategory());

@@ -71,8 +71,7 @@
     "interaction_duration_ticks": 1200
   },
   "atm": {                              // 仅 category=atm（取现）
-    "withdraw_amount": 50,
-    "interaction_duration_ticks": 1200
+    "interaction_duration_ticks": 1200  // 单次取现 = 初始钱包随机 20%~50%，封顶 travelFund 池子
   },
   "door_offset": [x,y,z],               // 可选：入口位置，缺省螺旋扫描
   "interact_spots": [                   // 交互位列表（相对 anchor），见下节
@@ -98,7 +97,7 @@
 | `shop` | `shop{}` | 卖物品（钱包购货、殖民地收元素） | `goods`、`profit_rate`、`interaction_duration_ticks` |
 | `service` | `service{}` | 产元素 + 消耗精力；`max_occupancy>0`=旅店（夜晚住宿） | `energy_per_use`、`element_output`、`max_occupancy`、`interaction_duration_ticks` |
 | `relax` | `relax{}` | 回复精力（白天恢复建筑） | `energy_restore`、`interaction_duration_ticks` |
-| `atm` | `atm{}` | 从 travelFund 取现补钱包 | `withdraw_amount`、`interaction_duration_ticks` |
+| `atm` | `atm{}` | 从 travelFund 取现补钱包（单次=初始钱包随机 20%~50%，封顶池子） | `interaction_duration_ticks` |
 
 > 一阶段四个 category 保持独立，**不合并**；统一成 `interact` 的 `interaction` 块是二阶段（延后）。
 

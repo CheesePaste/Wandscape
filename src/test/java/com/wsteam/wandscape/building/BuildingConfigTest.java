@@ -227,11 +227,10 @@ class BuildingConfigTest {
 
             String atmJson = """
                 {"id":"atm1","category":"atm",
-                 "atm":{"withdraw_amount":50,"interaction_duration_ticks":1200},
+                 "atm":{"interaction_duration_ticks":1200},
                  "interact_spots":[{"pos":[0,0,0],"action":"withdraw"}]}
                 """;
             BuildingConfig atmCfg = GSON.fromJson(atmJson, BuildingConfig.class);
-            assertEquals(50, atmCfg.atm().withdrawAmount());
             assertEquals(1200, atmCfg.atm().interactionDurationTicks());
             assertEquals(Activity.WITHDRAW, atmCfg.interactSpots().get(0).action());
 
@@ -255,7 +254,7 @@ class BuildingConfigTest {
                 {"id":"r","category":"relax","relax":{"energy_restore":40,"interaction_duration_ticks":100}}""";
             assertTrue(GSON.fromJson(relaxJson, BuildingConfig.class).isTouristTarget());
             String atmJson = """
-                {"id":"a","category":"atm","atm":{"withdraw_amount":50,"interaction_duration_ticks":100}}""";
+                {"id":"a","category":"atm","atm":{"interaction_duration_ticks":100}}""";
             assertTrue(GSON.fromJson(atmJson, BuildingConfig.class).isTouristTarget());
             String basicJson = "{\"id\":\"b\",\"category\":\"basic\"}";
             assertFalse(GSON.fromJson(basicJson, BuildingConfig.class).isTouristTarget());

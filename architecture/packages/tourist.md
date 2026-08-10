@@ -14,7 +14,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 - **画像**：40% 均衡 `{1,1,1}`、20% 舒适 `{1.6,0.7,0.7}`、20% 魔法 `{0.7,1.6,0.7}`、20% 奇观 `{0.7,0.7,1.6}`。三条 need = `totalNeed × 权重占比`，`totalNeed = TOURIST_NEED_BASE + (level-1)×TOURIST_NEED_PER_LEVEL` —— **等级越高总需求越高、越难满足**（自然难度曲线；1 级 totalNeed=150：均衡 50/50/50、侧重 80/35/35）。
 - **精力循环**：shop/service 交互消耗精力，`relax` 建筑回精力（clamp 到 `TOURIST_MAX_ENERGY`），旅店只管夜晚睡觉。精力 0 且视野内无恢复建筑 → **闲逛**（不离场）。
 - **钱包 / 总旅费**：`wallet`（随身现金）买货；`travelFund = startingWallet × TOURIST_ATM_TRAVEL_FUND_MULTIPLIER`（ATM 分批取现的池子，防无限取现）。
-- **停留**：`departureDeadline = arrivalTime + rand(2~4)×24000`；`nightsStayed` 住店晚数。**`visitedBuildings` 停留期不重置**（防挂机，一栋建筑整个停留只逛一次）。
+- **停留**：`departureDeadline = arrivalTime + rand(2~4)×24000`；`nightsStayed` 住店晚数。**`visitedBuildings` 停留期不重置**（防挂机，一栋建筑整个停留只逛一次；**ATM 例外**——`atmReusable` 判定下豁免 visited 可分批取现，靠取现冷却控节奏，visited 本身仍不重置）。
 
 ## 行为系统
 
@@ -44,7 +44,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 | `shop` | `shop{}` | 购物（钱包买货、殖民地收元素）；精力 -20 | `goods`、`profit_rate`、`interaction_duration_ticks` |
 | `service` | `service{}` | 产元素 + 消耗精力；`max_occupancy>0`=旅店（夜晚） | `energy_per_use`、`element_output`、`max_occupancy`、`interaction_duration_ticks` |
 | `relax` | `relax{}` | 回精力（白天恢复建筑） | `energy_restore`、`interaction_duration_ticks` |
-| `atm` | `atm{}` | 取现补钱包（`min(withdrawAmount, travelFund)`） | `withdraw_amount`、`interaction_duration_ticks` |
+| `atm` | `atm{}` | 取现补钱包（单次=初始钱包随机 20%~50%，封顶 travelFund） | `interaction_duration_ticks` |
 
 - 交互时长 = 模式预设块 `interaction_duration_ticks`（与 spot 无关）。
 - 动作（`Activity`）只决定游客在 spot 上的活动状态/粒子；**精力/经济效果由 category 模式预设块决定**。

@@ -26,7 +26,7 @@ Each tourist has a **profile**: favoring Comfort, Magic, or Wonder, and prioriti
 3. **Overnight**: if night falls before they've had enough, sleep at the **hotel** and continue with full energy in the morning.
 4. **Departure**: tourists with **all three need bars full** leave at night, and the town gains **experience**; unsatisfied tourists also leave but give no experience.
 
-Tourists stay **2~4 days** and visit each building only once during the whole stay.
+Tourists stay **2~4 days** and visit each building only once during the whole stay (**ATMs are the exception**: while travel money is still left and the wallet runs low again, they can go back for another withdrawal after a short cooldown — money comes out in batches).
 
 ## Three Support Buildings
 

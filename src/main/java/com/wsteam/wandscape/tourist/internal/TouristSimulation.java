@@ -314,6 +314,10 @@ public final class TouristSimulation {
         return new InteractionResult(null, delta[0], delta[1], delta[2], gained, "歇脚恢复精力");
     }
 
+    /** ATM 单次取现 = 初始钱包的随机 [min, max] 比例（新模型；池子 travelFund 封顶防无限取现）。 */
+    private static final double ATM_WITHDRAW_MIN_RATIO = 0.2;
+    private static final double ATM_WITHDRAW_MAX_RATIO = 0.5;
+
     /** ATM visit: withdraw from travelFund into the wallet (capped), fill bars. */
     @Nullable
     public static InteractionResult performAtmInteraction(ServerLevel level,
@@ -321,14 +325,37 @@ public final class TouristSimulation {
         BuildingConfig cfg = getConfig(level, buildingId);
         if (cfg == null || cfg.atm() == AtmConfig.NONE) return null;
 
-        var a = cfg.atm();
-        int amount = Math.min(a.withdrawAmount(), t.getTravelFund());
+        // 单次取现 = 初始钱包的随机 20%~50%（封顶 travelFund 池子）——单次取不完，配合取现冷却分批取。
+        double ratio = ATM_WITHDRAW_MIN_RATIO + level.getRandom().nextDouble()
+                * (ATM_WITHDRAW_MAX_RATIO - ATM_WITHDRAW_MIN_RATIO);
+        int desired = Math.max(1, (int) Math.round(t.getInitialWallet() * ratio));
+        int amount = Math.min(desired, t.getTravelFund());
         if (amount > 0) {
             t.setWallet(t.getWallet() + amount);
             t.setTravelFund(t.getTravelFund() - amount);
+            t.setLastAtmWithdrawTime(t.timeBase());
         }
         int[] delta = fillBars(level, t, buildingId);
         return new InteractionResult(null, delta[0], delta[1], delta[2], 0, "取钱 " + amount);
+    }
+
+    /**
+     * ATM 可重新取现（豁免 visitedBuildings 的条件）：池子有余额 + 钱包低于初始 1/4 + 冷却已过。
+     * 只豁免不重置——visitedBuildings 仍累计（红线 #8），靠本判定让游客整段停留分批取现，
+     * 而不是清空已逛集合。cooldownTicks 由调用方注入（Config），便于纯函数单测。
+     */
+    private static boolean atmReusable(TouristStateHost t, AtmConfig atm, int cooldownTicks) {
+        if (atm == null || atm == AtmConfig.NONE) return false;
+        return atmReusable(t.getTravelFund(), t.getWallet(), t.getInitialWallet(),
+                t.getLastAtmWithdrawTime(), t.timeBase(), cooldownTicks);
+    }
+
+    /** 纯判定（可 JUnit）：lastWithdrawTime==0（从未取现）恒可去；否则取现间隔需 ≥ cooldownTicks。 */
+    static boolean atmReusable(int travelFund, int wallet, int initialWallet,
+            int lastWithdrawTime, int timeBase, int cooldownTicks) {
+        if (travelFund <= 0) return false;
+        if (wallet >= Math.max(1, initialWallet / 4)) return false;
+        return lastWithdrawTime == 0 || timeBase - lastWithdrawTime >= cooldownTicks;
     }
 
     /** Mark a visit memory on the host (journey diary). Returns the memory for narrative use. */
@@ -379,6 +406,7 @@ public final class TouristSimulation {
         boolean nightHotel = isNight && !t.isFullySatisfied();
 
         int visionSq = Config.TOURIST_VISION_RADIUS.get() * Config.TOURIST_VISION_RADIUS.get();
+        int atmCooldown = Config.TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS.get();
 
         List<BuildingState> normal = new ArrayList<>();
         List<BuildingState> hotels = new ArrayList<>();
@@ -404,7 +432,8 @@ public final class TouristSimulation {
                     if (hasHotelVacancy(level, b.getBuildingId())) hotels.add(state);
                 } else {
                     if (energyEmpty && (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0)) continue;
-                    if (t.hasVisitedBuilding(b.getBuildingId())) continue;
+                    // ATM 可重新取现时豁免 visited（池子有余额 + 钱包低 + 冷却过）；其余按 visited 门
+                    if (!atmReusable(t, cfg.atm(), atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
                     normal.add(state);
                 }
                 continue;
@@ -414,7 +443,7 @@ public final class TouristSimulation {
                 // 精力 0 → 只能去恢复建筑（relax.energyRestore>0）；无恢复建筑 → 闲逛（不离场）
                 if (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0) continue;
             }
-            if (t.hasVisitedBuilding(b.getBuildingId())) continue;
+            if (!atmReusable(t, cfg.atm(), atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
             normal.add(state);
         }
         List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;
@@ -437,8 +466,10 @@ public final class TouristSimulation {
             if (isRelax && energyRatio < Config.TOURIST_ENERGY_RESTORE_THRESHOLD.get()) {
                 score += ENERGY_URGENCY_BONUS;
             }
-            // 钱包低/空 → ATM 取现（取现补钱包继续逛）
-            boolean isAtm = cfg.atm() != AtmConfig.NONE && cfg.atm().withdrawAmount() > 0;
+            // 钱包低/空 + 池子有余额 + 冷却已过 → ATM 取现（取现补钱包继续逛）；
+            // 池子空/冷却中不加分——免得游客因偏好跑去 ATM 却一分钱取不到。
+            boolean isAtm = cfg.atm() != AtmConfig.NONE
+                    && atmReusable(t, cfg.atm(), Config.TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS.get());
             if (isAtm) {
                 if (t.getWallet() <= 0) {
                     score += WALLET_EMPTY_BONUS;

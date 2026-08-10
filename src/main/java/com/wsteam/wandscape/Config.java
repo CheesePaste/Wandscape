@@ -293,6 +293,11 @@ public class Config {
             .comment("生成时 travelFund = 随身现金 × 该系数（ATM 分批取现的池子上限，防无限取现）。")
             .defineInRange("tourist.atmTravelFundMultiplier", 3.0, 1.0, 10.0);
 
+    public static final ModConfigSpec.IntValue TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS = BUILDER
+            .comment("ATM 取现冷却（tick，1 游戏日=24000）：上次成功取现后多久才能再去 ATM。"
+                    + "配合钱包低阈值控制「分批取现」节奏，防止游客连跑 ATM 一次性清空池子。")
+            .defineInRange("tourist.atmWithdrawCooldownTicks", 2400, 0, 24000);
+
     public static final ModConfigSpec.IntValue TOURIST_NEED_BASE = BUILDER
             .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。默认 150 = 1 级均衡 50/50/50。")
             .defineInRange("tourist.needBase", 150, 50, 2000);

@@ -86,6 +86,8 @@ public final class TouristShadow implements TouristStateHost {
     private int nightsStayed;
     private long departureDeadline = Long.MAX_VALUE;
     private int travelFund;
+    /** ATM 上次成功取现的 timeBase（simTick）时刻；0 = 从未取现。取现冷却起点。 */
+    private int lastAtmWithdrawTime;
 
     @Nullable
     private UUID colonyId;
@@ -238,6 +240,9 @@ public final class TouristShadow implements TouristStateHost {
     public int getTravelFund() { return travelFund; }
     public void setTravelFund(int v) { this.travelFund = Math.max(0, v); }
 
+    public int getLastAtmWithdrawTime() { return lastAtmWithdrawTime; }
+    public void setLastAtmWithdrawTime(int t) { this.lastAtmWithdrawTime = t; }
+
     /** 游客当前位置（视野过滤用；影子坐标）。 */
     @Override
     public BlockPos touristPos() { return new BlockPos((int) posX, (int) posY, (int) posZ); }
@@ -310,6 +315,7 @@ public final class TouristShadow implements TouristStateHost {
         tag.putInt("nightsStayed", nightsStayed);
         tag.putLong("departureDeadline", departureDeadline);
         tag.putInt("travelFund", travelFund);
+        tag.putInt("lastAtmWithdrawTime", lastAtmWithdrawTime);
 
         if (colonyId != null) tag.putUUID("colony", colonyId);
         if (checkedInBuildingId != null) tag.putUUID("hotel", checkedInBuildingId);
@@ -386,6 +392,7 @@ public final class TouristShadow implements TouristStateHost {
         s.nightsStayed = Math.max(0, tag.getInt("nightsStayed"));
         if (tag.contains("departureDeadline")) s.departureDeadline = tag.getLong("departureDeadline");
         if (tag.contains("travelFund")) s.travelFund = Math.max(0, tag.getInt("travelFund"));
+        if (tag.contains("lastAtmWithdrawTime")) s.lastAtmWithdrawTime = tag.getInt("lastAtmWithdrawTime");
 
         s.colonyId = tag.hasUUID("colony") ? tag.getUUID("colony") : null;
         s.checkedInBuildingId = tag.hasUUID("hotel") ? tag.getUUID("hotel") : null;
