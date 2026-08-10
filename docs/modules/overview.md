@@ -10,9 +10,9 @@
 
 静态相机状态（camX/Y/Z、yaw、pitch）+ 目标（targetBlockPos/targetBuildingId/targetEntityId）+ 玩家旋转快照（prevYaw/prevPitch，每次进入刷新）+ 相机缓存标志 `aerialCacheValid`。
 
-- `enterOverview`：每次刷新玩家快照；`aerialCacheValid` 为假时算「角色后上方 45°」默认（camPitch=45、位置=脚位 − 水平前向×14、Y+14、camYaw=玩家朝向）并置缓存有效；为真则原样保留 cam 字段（用户上次飞到的位置）。
-- `exitOverview`：suspend 语义——只落 active 标志 + 清瞬态准星目标，**保留 cam 字段与 aerialCacheValid**，下次进入复用。
-- `hardReset`：清零全部含缓存标志，仅 `WandscapePanelState.reset()`（断开连接）调用，防止上一世界的相机位置泄漏到下一世界。
+- `enterOverview`：每次刷新玩家快照；缓存失效（首次建立 / 玩家水平离开缓存锚点超 8 格）时算「角色后上方 45°」默认（camPitch=45、位置=脚位 − 水平前向×14、Y+14、camYaw=玩家朝向）并记锚点；否则原样保留 cam 字段（用户上次飞到的位置）。即「误触关闭原地重开」复用相机、「走远后重开」重算合适位置。
+- `exitOverview`：suspend 语义——只落 active 标志 + 清瞬态准星目标，**保留 cam 字段与 aerialCacheValid**，下次进入按上方规则决定复用或重算。
+- `hardReset`：清零全部含缓存标志与锚点，仅 `WandscapePanelState.reset()`（断开连接）调用，防止上一世界的相机位置泄漏到下一世界。
 
 ## OverviewFlightController
 
