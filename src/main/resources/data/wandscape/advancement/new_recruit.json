@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:a_wizards_interest",
+  "display": {
+    "icon": {"id": "minecraft:evoker_spawn_egg"},
+    "title": {"translate": "advancements.wandscape.new_recruit.title"},
+    "description": {"translate": "advancements.wandscape.new_recruit.description"},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:peak_season_10",
+  "display": {
+    "icon": {"id": "minecraft:beacon"},
+    "title": {"translate": "advancements.wandscape.peak_season_20.title"},
+    "description": {"translate": "advancements.wandscape.peak_season_20.description"},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

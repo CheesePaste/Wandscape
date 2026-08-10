@@ -3,6 +3,7 @@ package com.wsteam.wandscape.engine.service;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
@@ -11,10 +12,17 @@ import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.ColonyApi;
+import com.wsteam.wandscape.shared.api.NpcApi;
+import com.wsteam.wandscape.shared.api.TavernApi;
+import com.wsteam.wandscape.shared.api.TouristApi;
+import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.shared.event.ColonyLevelUpEvent;
 import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;
+import com.wsteam.wandscape.shared.event.DailySettlementEvent;
 import com.wsteam.wandscape.shared.event.ShopRestockedEvent;
+import com.wsteam.wandscape.shared.event.TouristArrivedEvent;
+import com.wsteam.wandscape.shared.event.TouristDepartedEvent;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
@@ -56,11 +64,30 @@ public final class AchievementService {
     private static final ResourceLocation FULL_HOUSE = loc("full_house");
     private static final ResourceLocation GRAND_WONDER = loc("grand_wonder");
     private static final ResourceLocation HERO_OF_WANDSCAPE = loc("hero_of_wandscape");
+    private static final ResourceLocation FIRST_VISITOR = loc("first_visitor");
+    private static final ResourceLocation GUEST_OF_HONOR = loc("guest_of_honor");
+    private static final ResourceLocation OVERNIGHT_GUEST = loc("overnight_guest");
+    private static final ResourceLocation PEAK_SEASON_10 = loc("peak_season_10");
+    private static final ResourceLocation PEAK_SEASON_20 = loc("peak_season_20");
+    private static final ResourceLocation WIZARDS_INTEREST = loc("a_wizards_interest");
+    private static final ResourceLocation NEW_RECRUIT = loc("new_recruit");
+    private static final ResourceLocation WORKFORCE_5 = loc("growing_workforce_5");
+    private static final ResourceLocation WORKFORCE_10 = loc("growing_workforce_10");
+    private static final ResourceLocation TREASURY_5K = loc("treasury_5k");
+    private static final ResourceLocation TREASURY_50K = loc("treasury_50k");
+    private static final ResourceLocation WELL_CONNECTED_5 = loc("well_connected_5");
+    private static final ResourceLocation WELL_CONNECTED_15 = loc("well_connected_15");
+    private static final ResourceLocation MASTER_BUILDER = loc("master_builder");
+    private static final ResourceLocation RAID_VETERAN = loc("raid_veteran");
+    private static final ResourceLocation STEADY_HAND = loc("steady_hand");
 
     /** Periodic full re-scan interval in ticks. Safety net for the hotel-full condition
      *  (no event) and for re-granting to players who log in later. */
     private static final int SCAN_INTERVAL = 100;
     private static int tickCounter;
+
+    /** colonyId → 连续无维护停摆天数（steady_hand）。 */
+    private static final Map<UUID, Integer> settlementStreak = new ConcurrentHashMap<>();
 
     private AchievementService() {}
 
@@ -75,6 +102,9 @@ public final class AchievementService {
         NeoForge.EVENT_BUS.addListener(AchievementService::onBuildingPlaced);
         NeoForge.EVENT_BUS.addListener(AchievementService::onShopRestocked);
         NeoForge.EVENT_BUS.addListener(AchievementService::onRaidVictory);
+        NeoForge.EVENT_BUS.addListener(AchievementService::onTouristArrived);
+        NeoForge.EVENT_BUS.addListener(AchievementService::onTouristDeparted);
+        NeoForge.EVENT_BUS.addListener(AchievementService::onDailySettlement);
         NeoForge.EVENT_BUS.addListener(AchievementService::onServerTick);
         Log.info(TAG, "registered on engine EventBus + NeoForge EVENT_BUS");
     }
@@ -98,6 +128,27 @@ public final class AchievementService {
 
     private static void onRaidVictory(ColonyRaidVictoryEvent event) {
         grant(HERO_OF_WANDSCAPE);
+        if (event.getOmenLevel() >= 2) grant(RAID_VETERAN);
+    }
+
+    private static void onTouristArrived(TouristArrivedEvent event) {
+        grant(FIRST_VISITOR);
+    }
+
+    private static void onTouristDeparted(TouristDepartedEvent event) {
+        if (event.getFill().minPct() >= 100) grant(GUEST_OF_HONOR);
+    }
+
+    private static void onDailySettlement(DailySettlementEvent event) {
+        UUID colonyId = event.getReport().colonyId();
+        for (DailySettlementEvent.BuildingSettlementResult r : event.getReport().buildingResults()) {
+            if (r.wasShutdown()) {
+                settlementStreak.remove(colonyId);
+                return;
+            }
+        }
+        int streak = settlementStreak.merge(colonyId, 1, Integer::sum);
+        if (streak >= 7) grant(STEADY_HAND);
     }
 
     // ---- Periodic safety net (hotel full + catch-up re-grant) ----
@@ -114,6 +165,13 @@ public final class AchievementService {
                 checkWonder(colonyId);
                 checkHotelFull(colonyId);
                 checkAllShopsFull(colonyId);
+                checkTouristPeak(colonyId);
+                checkOvernightGuest(colonyId);
+                checkRecruitment(colonyId);
+                checkWorkforce(colonyId);
+                checkTreasury(colonyId);
+                checkRoads(colonyId);
+                checkCustomBuilding(colonyId);
             }
         } catch (Exception e) {
             Log.warn(TAG, "Full achievement scan failed: %s", e.getMessage());
@@ -211,6 +269,71 @@ public final class AchievementService {
             if (mgr.getStockCount(buildingId, e.getKey()) < e.getValue()) return;
         }
         if (hasGood) grant(FULLY_STOCKED);
+    }
+
+    /** 同时在场游客数峰值（等级高了会填满 20 上限）。 */
+    private static void checkTouristPeak(UUID colonyId) {
+        TouristApi api = WandscapeApis.getTouristApiSilently();
+        if (api == null) return;
+        int count = api.getTouristCount(colonyId);
+        if (count >= 20) grant(PEAK_SEASON_20);
+        if (count >= 10) grant(PEAK_SEASON_10);
+    }
+
+    private static void checkOvernightGuest(UUID colonyId) {
+        TouristApi api = WandscapeApis.getTouristApiSilently();
+        if (api == null) return;
+        if (api.getOvernightStayerCount(colonyId) >= 1) grant(OVERNIGHT_GUEST);
+    }
+
+    /** 酒馆：法师简历 + 招募计数。 */
+    private static void checkRecruitment(UUID colonyId) {
+        TavernApi api;
+        try {
+            api = WandscapeApis.getTavernApi();
+        } catch (IllegalStateException e) {
+            return;
+        }
+        if (!api.getMageResumes(colonyId).isEmpty()) grant(WIZARDS_INTEREST);
+        if (api.getRecruitCount(colonyId) >= 1) grant(NEW_RECRUIT);
+    }
+
+    private static void checkWorkforce(UUID colonyId) {
+        NpcApi api = WandscapeApis.getNpcApiSilently();
+        if (api == null) return;
+        int count = api.getNpcCount(colonyId);
+        if (count >= 10) grant(WORKFORCE_10);
+        if (count >= 5) grant(WORKFORCE_5);
+    }
+
+    /** 仓库任一元素存量。 */
+    private static void checkTreasury(UUID colonyId) {
+        WarehouseApi api = WandscapeApis.getWarehouseApiSilently();
+        if (api == null) return;
+        long max = 0;
+        for (long v : api.getAllElements(colonyId).values()) {
+            if (v > max) max = v;
+        }
+        if (max >= 50000) grant(TREASURY_50K);
+        if (max >= 5000) grant(TREASURY_5K);
+    }
+
+    /** 路网路段数（MST 自动生成 + 玩家手铺）。 */
+    private static void checkRoads(UUID colonyId) {
+        try {
+            int edges = WandscapeApis.getRoadApi().getEdges(colonyId).size();
+            if (edges >= 15) grant(WELL_CONNECTED_15);
+            if (edges >= 5) grant(WELL_CONNECTED_5);
+        } catch (Exception e) {
+            // 道路系统未加载
+        }
+    }
+
+    /** 自定义扫描建筑（生存扫描器导出，category=custom）。 */
+    private static void checkCustomBuilding(UUID colonyId) {
+        BuildingApi api = buildingApi();
+        if (api == null) return;
+        if (!api.getBuildingsByCategory(colonyId, "custom").isEmpty()) grant(MASTER_BUILDER);
     }
 
     // ---- Granting ----

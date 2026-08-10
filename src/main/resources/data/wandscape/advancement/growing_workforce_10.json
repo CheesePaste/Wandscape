@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:growing_workforce_5",
+  "display": {
+    "icon": {"id": "minecraft:netherite_pickaxe"},
+    "title": {"translate": "advancements.wandscape.growing_workforce_10.title"},
+    "description": {"translate": "advancements.wandscape.growing_workforce_10.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

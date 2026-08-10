@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:start",
+  "display": {
+    "icon": {"id": "minecraft:writable_book"},
+    "title": {"translate": "advancements.wandscape.a_wizards_interest.title"},
+    "description": {"translate": "advancements.wandscape.a_wizards_interest.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

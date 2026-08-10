@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:treasury_5k",
+  "display": {
+    "icon": {"id": "minecraft:diamond_block"},
+    "title": {"translate": "advancements.wandscape.treasury_50k.title"},
+    "description": {"translate": "advancements.wandscape.treasury_50k.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:hero_of_wandscape",
+  "display": {
+    "icon": {"id": "minecraft:netherite_sword"},
+    "title": {"translate": "advancements.wandscape.raid_veteran.title"},
+    "description": {"translate": "advancements.wandscape.raid_veteran.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}
