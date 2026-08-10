@@ -18,7 +18,7 @@
 
 ## 生命周期（TouristSpawnSystem）
 
-每 `CHECK_INTERVAL=100` tick 检查。时段由 Config 划分：生成窗口 [1000, 13000]，离境窗口 [18000, 24000]。
+每 `CHECK_INTERVAL=100` tick 检查。时段由 Config 划分：生成窗口 [1000, 8000]（约 07:00–14:00，集中在上午、最晚下午到），离境窗口 [18000, 24000]。
 
 - **生成数**：`rawTarget = base(6) + colonyLevel×levelSpawnBonus(3)`，`targetCount = round(rawTarget×(0.8~1.2))`，clamp [1, TOURIST_MAX_PER_COLONY=20] 且 ≤ MAX_TOURISTS=30；`toSpawn = targetCount - existing`（existing 用影子注册表计数）。
 - **条件**：需已注册殖民地 + 存在完整 shop/service 目标。生成点取道路网 COMPLETE 边端点，无路用建筑位置。等级分布：colonyLevel-1/+1 = 40/40/20%。生成时强制加载区块、`registerArrival` + `sim.adoptTourist`。

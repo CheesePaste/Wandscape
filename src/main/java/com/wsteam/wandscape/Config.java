@@ -161,8 +161,10 @@ public class Config {
             .defineInRange("tourist.spawnWindowStart", 1000, 0, 24000);
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_WINDOW_END = BUILDER
-            .comment("Spawn window end (game time tick) — no new spawns after this")
-            .defineInRange("tourist.spawnWindowEnd", 13000, 0, 24000);
+            .comment("Spawn window end (game time tick) — no new spawns after this. "
+                    + "默认 8000（约 14:00）：游客集中在上午到，最晚的也有整个下午逛、傍晚走向旅店，"
+                    + "避免黄昏/夜晚才生成导致当晚因路由不到旅店被清场。")
+            .defineInRange("tourist.spawnWindowEnd", 8000, 0, 24000);
 
     public static final ModConfigSpec.IntValue TOURIST_DEPARTURE_WINDOW_START = BUILDER
             .comment("Night departure window start (game time tick)")

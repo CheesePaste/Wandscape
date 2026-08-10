@@ -45,7 +45,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p><b>Three-phase daily cycle:</b>
  * <ul>
  *   <li>Morning (0-1000): daily reset, hotel checkout
- *   <li>Spawn window (1000-13000): tourists spawn at distributed random times
+ *   <li>Spawn window (1000-8000): tourists spawn at distributed random times
  *   <li>Evening (13000-18000): no new spawns, existing tourists continue interactions
  *   <li>Night departure (18000-24000): 满条夜晚离场 / 入旅店 + hotel routing
  * </ul>
@@ -176,7 +176,7 @@ public final class TouristSpawnSystem {
             countOvernightStayers(level);
         }
 
-        // ── Spawn window (1000-13000) ──
+        // ── Spawn window (1000-8000) ──
         boolean inSpawnWindow = dayTime >= Config.TOURIST_SPAWN_WINDOW_START.get()
                 && dayTime < Config.TOURIST_SPAWN_WINDOW_END.get();
         if (inSpawnWindow) {

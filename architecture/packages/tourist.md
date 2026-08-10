@@ -63,7 +63,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 
 ```
 每日清晨 (dayTime<1000) → 重置生成计划 + 清点住店游客
-1000-13000 生成窗口 → TouristSpawnSystem:
+1000-8000 生成窗口 → TouristSpawnSystem:
      roll 画像（40/20/20/20）+ 三条 need（等级缩放）+ 停留截止 + travelFund
      不指派目标 → 出生即闲逛
 白天 → TouristMoveGoal 周期性 planNextBuilding:
