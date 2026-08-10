@@ -59,7 +59,7 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 - **V-panel**: fly over your town in a bird's-eye overview, place buildings remotely, and check stats without walking anywhere.
 - **Roads**: a road network generates itself as your town grows — or paint your own with the road brush, and use the spline editor for curvy routes. Tourists and mages walk your roads.
 - **Building scanner**: box-select any existing structure and export it as a reusable blueprint. It's craftable in survival, so your own hand-built masterpiece can be scanned and rebuilt anywhere.
-- **15 vanilla advancements**: build 50 buildings, reach colony level 30, fill an inn to capacity, own a building bigger than 50×50, repel a raid… and one for the day an NPC slays an enderman.
+- **14 vanilla advancements**: build 50 buildings, reach colony level 30, fill an inn to capacity, own a building bigger than 50×50, repel a raid.
 - **Daily stats** with 30-day trend summaries, so you always know how the town is doing.
 
 ## FAQ

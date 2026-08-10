@@ -55,7 +55,7 @@
 - `ChunkLeaseData`（`wandscape_chunk_leases`）：持久化 buildingId → chunks。
 - **ColonyMetricsService**：getSnapshot 汇总舒适/魔法/奇观、等级/经验/名、游客数/过夜/满意度、停摆/破损建筑、NPC 空闲/总数、7 元素量。
 - `StatsService`：订阅 NarrativeEventTriggered，onEvent 目前为 TODO 空实现。
-- **AchievementService**：**授予原版进度**（PlayerAdvancements.award），15 个 id；事件快路径 + 每 100 tick 全量重扫；条件：建筑数 1/5/10/20/50、等级 2/5/10/20/30、>50×50 奇观、酒店满员、商店全满、末影人击杀、袭击胜利。
+- **AchievementService**：**授予原版进度**（PlayerAdvancements.award），14 个 id；事件快路径 + 每 100 tick 全量重扫；条件：建筑数 1/5/10/20/50、等级 2/5/10/20/30、>50×50 奇观、酒店满员、商店全满、袭击胜利。
 - `GuideProgressService`：纯函数 `computeStep` 返回 0-9 步，同步 GuideProgressSyncPacket；`GuideServerContext` 纯接口供单测。
 
 ## sound/

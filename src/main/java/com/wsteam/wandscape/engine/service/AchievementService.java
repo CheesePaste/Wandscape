@@ -9,7 +9,6 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
-import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.ColonyApi;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
@@ -25,10 +24,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerAdvancements;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -55,7 +52,6 @@ public final class AchievementService {
     private static final ResourceLocation WELL_KNOWN = loc("well_known");
     private static final ResourceLocation FAMOUS = loc("famous");
     private static final ResourceLocation LEGENDARY = loc("legendary");
-    private static final ResourceLocation SLAYER_OF_THE_END = loc("slayer_of_the_end");
     private static final ResourceLocation FULLY_STOCKED = loc("fully_stocked");
     private static final ResourceLocation FULL_HOUSE = loc("full_house");
     private static final ResourceLocation GRAND_WONDER = loc("grand_wonder");
@@ -78,7 +74,6 @@ public final class AchievementService {
 
         NeoForge.EVENT_BUS.addListener(AchievementService::onBuildingPlaced);
         NeoForge.EVENT_BUS.addListener(AchievementService::onShopRestocked);
-        NeoForge.EVENT_BUS.addListener(AchievementService::onLivingDeath);
         NeoForge.EVENT_BUS.addListener(AchievementService::onRaidVictory);
         NeoForge.EVENT_BUS.addListener(AchievementService::onServerTick);
         Log.info(TAG, "registered on engine EventBus + NeoForge EVENT_BUS");
@@ -99,12 +94,6 @@ public final class AchievementService {
 
     private static void onShopRestocked(ShopRestockedEvent event) {
         checkShopFull(event.getBuildingId());
-    }
-
-    private static void onLivingDeath(LivingDeathEvent event) {
-        if (event.getEntity().getType() != EntityType.ENDERMAN) return;
-        if (!(event.getSource().getEntity() instanceof WandscapeNpc)) return;
-        grant(SLAYER_OF_THE_END);
     }
 
     private static void onRaidVictory(ColonyRaidVictoryEvent event) {
