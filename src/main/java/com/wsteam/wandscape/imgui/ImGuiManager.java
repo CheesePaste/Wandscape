@@ -102,7 +102,7 @@ public class ImGuiManager {
         File embeddedFont = extractResourceFontToTemp("fonts/chinese.ttf");
         if (embeddedFont != null && embeddedFont.exists()) {
             try {
-                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(embeddedFont.getAbsolutePath(), 17.0f, fontConfig);
+                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(embeddedFont.getAbsolutePath(), 20.0f, fontConfig);
                 // native AddFont returns NULL on failure → Java wraps it as ImFont(0),
                 // so "!= null" is never a valid success check.
                 if (f != null && f.ptr != 0) {
@@ -119,7 +119,7 @@ public class ImGuiManager {
             String systemFontPath = findSystemFontPath();
             if (systemFontPath != null) {
                 try {
-                    ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(systemFontPath, 17.0f, fontConfig);
+                    ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(systemFontPath, 20.0f, fontConfig);
                     if (f != null && f.ptr != 0) {
                         mainFont = f;
                         Log.info("ImGui", "[Font] Successfully loaded system CJK font from: " + systemFontPath);
@@ -135,7 +135,7 @@ public class ImGuiManager {
             Log.warn("ImGui", "[Font] CJK font loading failed completely! Fallback to Roboto-Regular.");
             File tempRoboto = extractResourceFontToTemp("fonts/Roboto-Regular.ttf");
             if (tempRoboto != null && tempRoboto.exists()) {
-                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(tempRoboto.getAbsolutePath(), 18.0f);
+                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(tempRoboto.getAbsolutePath(), 20.0f);
                 if (f == null || f.ptr == 0) {
                     ImGui.getIO().getFonts().addFontDefault();
                 }
@@ -154,7 +154,7 @@ public class ImGuiManager {
             iconConfig.setOversampleV(2);
             // Same lifetime requirement as the CJK ranges above.
             iconConfig.setGlyphRanges(new short[]{ (short)0xe000, (short)0xf8ff, 0 });
-            ImGui.getIO().getFonts().addFontFromFileTTF(tempFaFile.getAbsolutePath(), 15.0f, iconConfig);
+            ImGui.getIO().getFonts().addFontFromFileTTF(tempFaFile.getAbsolutePath(), 17.0f, iconConfig);
             iconConfig.destroy();
         }
 

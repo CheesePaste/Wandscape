@@ -92,15 +92,20 @@ public final class SplineEditorImGui {
             SplineModel model = SplineEditorClientState.getModel();
 
             // ── 左缘拖柄：按住向右拖加宽 / 向左拖收窄，窗口始终紧贴右缘 ──
-            ImGui.setCursorPos(0, 0);
-            ImGui.invisibleButton("##PanelSplitter", SPLITTER_W, ImGui.getWindowHeight());
-            boolean splitterHeld = ImGui.isItemActive();
+            // 注意：内容区起点在窗口 padding(12px) 处，cursorPos 要回退负值让按钮 hitbox
+            // 真正覆盖窗口左缘 0px 起（否则用户对着左缘白线拖，按钮在 12px 内，永远点不到）。
+            long win = mc.getWindow().getWindow();
+            ImGui.setCursorPos(-12.0f, 0.0f);
+            ImGui.invisibleButton("##PanelSplitter", SPLITTER_W + 12.0f, ImGui.getWindowHeight());
             boolean splitterHovered = ImGui.isItemHovered();
+            // ImGui 的 item active 只在按钮 hitbox 内按下才算；加 GLFW 左键兜底，
+            // 鼠标压在左缘拖柄附近时即使未命中 item 也能拖（防边缘 1-2px 点不到）。
+            boolean glfwLeftDown = win != 0L && GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            boolean splitterHeld = ImGui.isItemActive() || (splitterHovered && glfwLeftDown);
             if (splitterHeld) {
                 panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth + ImGui.getIO().getMouseDeltaX()));
             }
             // hover 时切 EW resize 光标，离开恢复
-            long win = mc.getWindow().getWindow();
             if (splitterHovered) {
                 if (resizeCursor == 0L) {
                     resizeCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_RESIZE_EW_CURSOR);
