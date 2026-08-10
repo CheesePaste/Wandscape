@@ -3,6 +3,7 @@ package com.wsteam.wandscape.projection.client;
 import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
+import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -13,6 +14,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -177,10 +179,12 @@ public final class ProjectionFlightController {
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
 
-        // Pinned: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
+        // Pinned: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController.
+        // The mouse ray must actually hit the ghost building — the camera-center ray alone (which
+        // determines the ghost position) is not a valid aim in overview where the cursor may be free.
         if (ProjectionClientState.isPinned()) {
             boolean overGizmo = BuildGizmoController.getHoveredAxis() != BuildGizmoController.AxisDrag.NONE;
-            if (leftClicked && !overGizmo) {
+            if (leftClicked && !overGizmo && isMouseRayHittingGhost(mc)) {
                 long now = System.currentTimeMillis();
                 if (now - lastLeftClickTime < 400) {
                     openConstructionScreen(mc);
@@ -221,6 +225,41 @@ public final class ProjectionFlightController {
             openConstructionScreen(mc);
             Log.info(TAG, "[Projection] Ghost pinned at {}", ghostPos);
         }
+    }
+
+    /** Ray distance for the ghost hit test (matches gizmo reach). */
+    private static final double HIT_REACH = 128.0;
+
+    /**
+     * Mouse-ray hit test against the pinned ghost building's world AABB
+     * (boundary rotated to the current rotation steps, same offsets as the
+     * rendered outline). Double-click submit must be aimed with the actual
+     * cursor ray — the camera-center ray is not sufficient in overview,
+     * where the cursor may be free while the camera looks elsewhere.
+     */
+    public static boolean isMouseRayHittingGhost(Minecraft mc) {
+        BlockPos pos = ProjectionClientState.getGhostPos();
+        if (pos == null || mc.level == null) return false;
+
+        var slots = ProjectionClientState.getBuildingSlots();
+        int index = ProjectionClientState.getSelectedSlotIndex();
+        BuildingConfig config = (slots.isEmpty() || index < 0 || index >= slots.size())
+                ? null : BuildingConfigLoader.getInstance().get(slots.get(index).id());
+        if (config == null || config.boundary() == null) return false;
+
+        BuildingConfig.BoundaryBox boundary =
+                BuildingRotation.rotateBoundary(config.boundary(), ProjectionClientState.getRotationSteps());
+
+        double x0 = pos.getX() + boundary.min().x() + 0.5;
+        double y0 = pos.getY() + boundary.min().y() + 0.5;
+        double z0 = pos.getZ() + boundary.min().z() + 0.5;
+        double x1 = pos.getX() + boundary.max().x() + 0.5;
+        double y1 = pos.getY() + boundary.max().y() + 0.5;
+        double z1 = pos.getZ() + boundary.max().z() + 0.5;
+
+        Vec3 origin = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 dir = com.wsteam.wandscape.road.client.RoadPlacementController.getMouseWorldRay(mc);
+        return new AABB(x0, y0, z0, x1, y1, z1).clip(origin, origin.add(dir.scale(HIT_REACH))).isPresent();
     }
 
     /** Open the construction screen for the pinned ghost position (also used by overview mode). */

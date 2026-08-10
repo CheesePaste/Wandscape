@@ -347,11 +347,14 @@ public final class OverviewFlightController {
                 rmbDragDistance = 0.0;
             }
 
-            // Pinned ghost: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
+            // Pinned ghost: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController.
+            // The mouse ray must hit the ghost building — camera-center ray (which sets ghost pos) is not a valid aim
+            // when the cursor is free.
             if (ProjectionClientState.isPinned()) {
                 boolean overGizmo = com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis()
                         != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
-                if (leftClicked && !overGizmo) {
+                if (leftClicked && !overGizmo
+                        && ProjectionFlightController.isMouseRayHittingGhost(mc)) {
                     long now = System.currentTimeMillis();
                     if (now - lastLeftClickTime < 400) {
                         ProjectionFlightController.openConstructionScreen(mc);
