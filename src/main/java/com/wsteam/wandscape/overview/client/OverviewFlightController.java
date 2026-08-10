@@ -237,12 +237,14 @@ public final class OverviewFlightController {
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
 
         if (forward != 0 || strafe != 0 || vertical != 0) {
-            Vec3 fwd = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw());
+            // Full 3D look direction (pitch + yaw) so W flies upward when looking up
+            Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
+            Vec3 up = right.cross(fwd).normalize();
             double move = flyingSpeed * elapsed;
-            double moveX = (fwd.x * forward + right.x * strafe) * move;
-            double moveZ = (fwd.z * forward + right.z * strafe) * move;
-            double moveY = vertical * move;
+            double moveX = (fwd.x * forward + right.x * strafe + up.x * vertical) * move;
+            double moveY = (fwd.y * forward + right.y * strafe + up.y * vertical) * move;
+            double moveZ = (fwd.z * forward + right.z * strafe + up.z * vertical) * move;
             OverviewClientState.setCamPosition(
                     OverviewClientState.getCamX() + moveX,
                     OverviewClientState.getCamY() + moveY,
@@ -308,11 +310,11 @@ public final class OverviewFlightController {
                 rmbDragDistance = 0.0;
             }
 
-            // Pinned ghost: left-click cancels (back to hand-following), right-click opens the construction screen
+            // Pinned ghost: left-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
             if (ProjectionClientState.isPinned()) {
-                if (leftClicked) {
-                    ProjectionClientState.setPinned(false);
-                } else if (rightReleased && rmbDragDistance < 5.0) {
+                boolean overGizmo = com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis()
+                        != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
+                if (leftClicked && !overGizmo) {
                     ProjectionFlightController.openConstructionScreen(mc);
                 }
             }

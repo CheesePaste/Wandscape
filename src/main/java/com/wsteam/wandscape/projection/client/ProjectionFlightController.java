@@ -176,11 +176,10 @@ public final class ProjectionFlightController {
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
 
-        // Pinned: left-click cancels (back to hand-following), right-click opens the construction screen
+        // Pinned: left-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController
         if (ProjectionClientState.isPinned()) {
-            if (leftClicked) {
-                ProjectionClientState.setPinned(false);
-            } else if (rightClicked) {
+            boolean overGizmo = BuildGizmoController.getHoveredAxis() != BuildGizmoController.AxisDrag.NONE;
+            if (leftClicked && !overGizmo) {
                 openConstructionScreen(mc);
             }
             return;

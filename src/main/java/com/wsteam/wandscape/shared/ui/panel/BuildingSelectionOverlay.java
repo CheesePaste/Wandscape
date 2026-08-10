@@ -85,7 +85,8 @@ public final class BuildingSelectionOverlay {
                 && ProjectionClientState.isProjecting()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
                 && WandscapePanelState.isBuildingBarOpen()
-                && !rightDown;
+                && !rightDown
+                && !ProjectionClientState.isPinned();
     }
 
     static int getSlotsSize() {
