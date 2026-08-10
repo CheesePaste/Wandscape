@@ -3,7 +3,6 @@ package com.wsteam.wandscape.projection.client;
 import org.lwjgl.glfw.GLFW;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.projection.BuildingRotation;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.shared.api.BuildingApi;
@@ -14,7 +13,6 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -27,7 +25,9 @@ import com.wsteam.wandscape.shared.log.Log;
  * Per-tick input handler for ground-based building placement mode.
  *
  * <p>Player walks to the build site normally. Ghost preview raycasts from
- * the camera position. Right-click places the selected building.
+ * the camera position. Left-click rotates the building; right-click toggles
+ * the pin (lock) for gizmo fine-tuning. Construction is submitted only via
+ * the panel "提交施工" button.
  * Movement is blocked globally by WandscapePanelController when the cursor is lifted.
  */
 public final class ProjectionFlightController {
@@ -42,7 +42,6 @@ public final class ProjectionFlightController {
     private static boolean wasRightDown = false;
     private static boolean wasEscapeDown = false;
     private static boolean wasScreenOpen = false;
-    private static long lastLeftClickTime = 0;
 
     private static boolean registered = false;
 
@@ -179,36 +178,19 @@ public final class ProjectionFlightController {
         wasLeftDown = leftDown;
         wasRightDown = rightDown;
 
-        // Pinned: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController.
-        // The mouse ray must actually hit the ghost building — the camera-center ray alone (which
-        // determines the ghost position) is not a valid aim in overview where the cursor may be free.
-        if (ProjectionClientState.isPinned()) {
-            boolean overGizmo = BuildGizmoController.getHoveredAxis() != BuildGizmoController.AxisDrag.NONE;
-            if (leftClicked && !overGizmo && isMouseRayHittingGhost(mc)) {
-                long now = System.currentTimeMillis();
-                if (now - lastLeftClickTime < 400) {
-                    openConstructionScreen(mc);
-                    lastLeftClickTime = 0;
-                } else {
-                    lastLeftClickTime = now;
-                }
-            }
-            return;
-        }
-
-        // Left-click: rotate building 90° CCW
+        // Left-click: rotate the building 90° CCW — works pinned or not. When the ghost is
+        // pinned the click may instead start a gizmo drag (BuildGizmoController handles it),
+        // so skip rotation while hovering or dragging an axis.
         if (leftClicked) {
-            ProjectionClientState.rotate();
-            int steps = ProjectionClientState.getRotationSteps();
-            String direction = switch (steps) {
-                case 1 -> "90°";
-                case 2 -> "180°";
-                case 3 -> "270°";
-                default -> "0°";
-            };
+            boolean overGizmo = BuildGizmoController.getHoveredAxis() != BuildGizmoController.AxisDrag.NONE
+                    || BuildGizmoController.getDraggingAxis() != BuildGizmoController.AxisDrag.NONE;
+            if (!overGizmo) {
+                ProjectionClientState.rotate();
+            }
         }
 
-        // Right-click: pin the ghost at its position and open the construction screen
+        // Right-click: toggle pin (lock) for gizmo fine-tuning. Construction is only via the
+        // panel "提交施工" button — right-click no longer opens the construction screen.
         if (rightClicked) {
             BlockPos ghostPos = ProjectionClientState.getGhostPos();
             if (ghostPos == null) {
@@ -221,48 +203,12 @@ public final class ProjectionFlightController {
                 }
                 return;
             }
-            ProjectionClientState.setPinned(true);
-            openConstructionScreen(mc);
-            Log.info(TAG, "[Projection] Ghost pinned at {}", ghostPos);
+            ProjectionClientState.setPinned(!ProjectionClientState.isPinned());
+            Log.info(TAG, "[Projection] Ghost pin toggled to {}", ProjectionClientState.isPinned());
         }
     }
 
-    /** Ray distance for the ghost hit test (matches gizmo reach). */
-    private static final double HIT_REACH = 128.0;
-
-    /**
-     * Mouse-ray hit test against the pinned ghost building's world AABB
-     * (boundary rotated to the current rotation steps, same offsets as the
-     * rendered outline). Double-click submit must be aimed with the actual
-     * cursor ray — the camera-center ray is not sufficient in overview,
-     * where the cursor may be free while the camera looks elsewhere.
-     */
-    public static boolean isMouseRayHittingGhost(Minecraft mc) {
-        BlockPos pos = ProjectionClientState.getGhostPos();
-        if (pos == null || mc.level == null) return false;
-
-        var slots = ProjectionClientState.getBuildingSlots();
-        int index = ProjectionClientState.getSelectedSlotIndex();
-        BuildingConfig config = (slots.isEmpty() || index < 0 || index >= slots.size())
-                ? null : BuildingConfigLoader.getInstance().get(slots.get(index).id());
-        if (config == null || config.boundary() == null) return false;
-
-        BuildingConfig.BoundaryBox boundary =
-                BuildingRotation.rotateBoundary(config.boundary(), ProjectionClientState.getRotationSteps());
-
-        double x0 = pos.getX() + boundary.min().x() + 0.5;
-        double y0 = pos.getY() + boundary.min().y() + 0.5;
-        double z0 = pos.getZ() + boundary.min().z() + 0.5;
-        double x1 = pos.getX() + boundary.max().x() + 0.5;
-        double y1 = pos.getY() + boundary.max().y() + 0.5;
-        double z1 = pos.getZ() + boundary.max().z() + 0.5;
-
-        Vec3 origin = mc.gameRenderer.getMainCamera().getPosition();
-        Vec3 dir = com.wsteam.wandscape.road.client.RoadPlacementController.getMouseWorldRay(mc);
-        return new AABB(x0, y0, z0, x1, y1, z1).clip(origin, origin.add(dir.scale(HIT_REACH))).isPresent();
-    }
-
-    /** Open the construction screen for the pinned ghost position (also used by overview mode). */
+    /** Open the construction screen for the ghost position (also used by overview mode). */
     public static void openConstructionScreen(Minecraft mc) {
         BlockPos pos = ProjectionClientState.getGhostPos();
         if (pos == null) return;

@@ -11,7 +11,7 @@ Tourists spend travel money on goods; elements flow into the warehouse based on 
 
 ## Operation
 
-**Left-click the shop in overview mode** to open the panel and set each good's **max stock** (0~64). The system auto-restocks from the warehouse; max stock decides how long a good lasts.
+**Aim your crosshair at the shop and right-click** to open the panel and set each good's **max stock** (0~64). The system auto-restocks from the warehouse; max stock decides how long a good lasts.
 
 > A shop needs three things to function: an **interact spot**, goods with **matching values**, and **road access**.
 

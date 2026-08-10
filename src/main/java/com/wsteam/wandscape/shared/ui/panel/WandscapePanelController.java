@@ -93,6 +93,9 @@ public final class WandscapePanelController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
+        // Tab 已被面板用作抬/放光标，抑制原版玩家列表在 Tab 按下时闪烁
+        mc.options.keyPlayerList.setDown(false);
+
         long window = mc.getWindow().getWindow();
         boolean screenOpen = mc.screen != null;
         boolean screenJustClosed = lastScreenOpen && !screenOpen;
@@ -189,15 +192,16 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
-            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverRotateButton(mouseX, mouseY, screenW)) {
-                com.wsteam.wandscape.projection.client.ProjectionClientState.rotate();
-                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
-                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
-                event.setCanceled(true);
-                return;
-            }
             if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverSubmitButton(mouseX, mouseY, screenW)) {
-                com.wsteam.wandscape.projection.client.ProjectionFlightController.openConstructionScreen(mc);
+                if (com.wsteam.wandscape.projection.client.ProjectionClientState.getGhostPos() == null) {
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§c")
+                                    .append(com.wsteam.wandscape.shared.ui.I18n.name(
+                                            "message.wandscape.projection.no_target",
+                                            "没有可施工的位置 — 先对准地面")), true);
+                } else {
+                    com.wsteam.wandscape.projection.client.ProjectionFlightController.openConstructionScreen(mc);
+                }
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
                 event.setCanceled(true);
@@ -421,6 +425,36 @@ public final class WandscapePanelController {
             return;
         }
 
+        // Tab: toggle cursor raise/lower (replaces the old C key). Only when panel is open.
+        if (key == GLFW.GLFW_KEY_TAB && WandscapePanelState.isPanelOpen()) {
+            WandscapePanelState.toggleCursor();
+            return;
+        }
+
+        // 1/2/3/4: quick-switch into Build/Road/Stats/Warning（吞掉原版快捷栏切换）。
+        // 面板开着时数字键切子模式，面板关着则保持原版快捷栏。
+        if (WandscapePanelState.isPanelOpen()) {
+            int digit = switch (key) {
+                case GLFW.GLFW_KEY_1 -> 0;
+                case GLFW.GLFW_KEY_2 -> 1;
+                case GLFW.GLFW_KEY_3 -> 2;
+                case GLFW.GLFW_KEY_4 -> 3;
+                default -> -1;
+            };
+            if (digit >= 0) {
+                // InputEvent.Key fires after KeyMapping.click() but before the next
+                // handleKeybinds(), so consuming the hotbar click here suppresses the
+                // vanilla hotbar slot switch for this digit.
+                mc.options.keyHotbarSlots[digit].consumeClick();
+                if (digit < 3) {
+                    handleTabClick(digit);
+                } else {
+                    mc.setScreen(new AnomalyScreen());
+                }
+                return;
+            }
+        }
+
         // Search bar input only accepted once the box has been clicked/activated
         if (!BuildingSelectionOverlay.isActive()) return;
         if (!WandscapePanelState.isBuildingBarSearchFocused()) return;
@@ -469,6 +503,8 @@ public final class WandscapePanelController {
                     || after == WandscapePanelState.SubMode.ROAD_PROJECTION
                     || after == WandscapePanelState.SubMode.STATS) {
                 WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
+                // 地面/STATS 退出后子模式清空 → 回常态抓取
+                WandscapePanelState.syncCursorToState();
             }
             return;
         }

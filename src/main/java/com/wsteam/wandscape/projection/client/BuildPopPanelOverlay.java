@@ -12,14 +12,14 @@ import net.minecraft.core.BlockPos;
 
 /**
  * Right-side pop panel for Build Projection mode.
- * Displays target building coordinates (X, Y, Z), Lock/Unlock button, Rotation button,
- * and a Submit button (visible only when pinned).
+ * Displays target building coordinates (X, Y, Z), Lock/Unlock button, rotation
+ * angle readout, and a Submit button (always shown — construction does not
+ * require pinning first). Rotation itself is done with left-click on the ghost.
  */
 public final class BuildPopPanelOverlay {
 
     public static final int PANEL_W = 164;
-    public static final int PANEL_H_UNPINNED = 112;
-    public static final int PANEL_H_PINNED = 140;
+    public static final int PANEL_H = 112;
     public static final int PANEL_RIGHT_MARGIN = 8;
     public static final int PANEL_TOP_MARGIN = WandscapePanelOverlay.TOP_BAR_H + 8;
 
@@ -59,7 +59,7 @@ public final class BuildPopPanelOverlay {
     }
 
     private static int getPanelH() {
-        return ProjectionClientState.isPinned() ? PANEL_H_PINNED : PANEL_H_UNPINNED;
+        return PANEL_H;
     }
 
     public static void render(GuiGraphics g, Font font, int screenW, int screenH, double mouseX, double mouseY) {
@@ -103,33 +103,22 @@ public final class BuildPopPanelOverlay {
         g.fill(RenderType.guiOverlay(), btnLockX, btnLockY + BTN_H - 1, btnLockX + BTN_W, btnLockY + BTN_H, 0, lockAccent);
         g.drawCenteredString(font, isPinned ? "🔓 解锁" : "📌 锁定", btnLockX + BTN_W / 2, btnLockY + 4, hoverLock ? 0xFFFFFFFF : 0xFFCCCCCC);
 
-        // Rotation angle & button
+        // Rotation angle (read-only — rotate the ghost with left-click)
         y = panelY + ROT_Y;
         int rotDeg = ProjectionClientState.getRotationSteps() * 90;
-        String rotStr = "§7朝向: §e" + rotDeg + "°";
-        g.drawString(font, rotStr, panelX + 8, y + 3, 0xFFFFFFFF, false);
+        g.drawString(font, "§7朝向: §e" + rotDeg + "°", panelX + 8, y + 3, 0xFFFFFFFF, false);
 
-        int btnRotX = panelX + PANEL_W - BTN_W - BTN_RIGHT_PAD;
-        int btnRotY = y;
-        boolean hoverRot = mouseX >= btnRotX && mouseX <= btnRotX + BTN_W && mouseY >= btnRotY && mouseY <= btnRotY + BTN_H;
-        int rotBg = hoverRot ? 0xFF282C34 : 0xFF1C1F26;
-        g.fill(RenderType.guiOverlay(), btnRotX, btnRotY, btnRotX + BTN_W, btnRotY + btnRotY + BTN_H - btnRotY, 0, rotBg);
-        g.fill(RenderType.guiOverlay(), btnRotX, btnRotY + BTN_H - 1, btnRotX + BTN_W, btnRotY + BTN_H, 0, 0xFF2B62C8);
-        g.drawCenteredString(font, "↺ 旋转", btnRotX + BTN_W / 2, btnRotY + 4, hoverRot ? 0xFFFFFFFF : 0xFFCCCCCC);
+        // Submit button (always shown — construction does not require pinning first)
+        y = panelY + SUBMIT_Y;
+        int submitW = PANEL_W - 16;
+        int submitX = panelX + 8;
+        int submitY = y;
 
-        // Submit button (only when pinned)
-        if (isPinned) {
-            y = panelY + SUBMIT_Y;
-            int submitW = PANEL_W - 16;
-            int submitX = panelX + 8;
-            int submitY = y;
-
-            boolean hoverSubmit = mouseX >= submitX && mouseX <= submitX + submitW && mouseY >= submitY && mouseY <= submitY + BTN_H;
-            int submitBg = hoverSubmit ? 0xFF1A4D2E : 0xFF14381F;
-            g.fill(RenderType.guiOverlay(), submitX, submitY, submitX + submitW, submitY + BTN_H, 0, submitBg);
-            g.fill(RenderType.guiOverlay(), submitX, submitY + BTN_H - 1, submitX + submitW, submitY + BTN_H, 0, 0xFF28A745);
-            g.drawCenteredString(font, "✓ 提交施工", submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
-        }
+        boolean hoverSubmit = mouseX >= submitX && mouseX <= submitX + submitW && mouseY >= submitY && mouseY <= submitY + BTN_H;
+        int submitBg = hoverSubmit ? 0xFF1A4D2E : 0xFF14381F;
+        g.fill(RenderType.guiOverlay(), submitX, submitY, submitX + submitW, submitY + BTN_H, 0, submitBg);
+        g.fill(RenderType.guiOverlay(), submitX, submitY + BTN_H - 1, submitX + submitW, submitY + BTN_H, 0, 0xFF28A745);
+        g.drawCenteredString(font, "✓ 提交施工", submitX + submitW / 2, submitY + 4, hoverSubmit ? 0xFFFFFFFF : 0xFFAADDBB);
     }
 
     public static boolean isOverPanel(double mouseX, double mouseY, int screenW) {
@@ -149,18 +138,8 @@ public final class BuildPopPanelOverlay {
         return mouseX >= btnX && mouseX <= btnX + BTN_W && mouseY >= btnY && mouseY <= btnY + BTN_H;
     }
 
-    public static boolean isOverRotateButton(double mouseX, double mouseY, int screenW) {
-        if (!isActive()) return false;
-        int panelX = getPanelX(screenW);
-        int panelY = getPanelY();
-        int btnX = panelX + PANEL_W - BTN_W - BTN_RIGHT_PAD;
-        int btnY = panelY + ROT_Y;
-        return mouseX >= btnX && mouseX <= btnX + BTN_W && mouseY >= btnY && mouseY <= btnY + BTN_H;
-    }
-
     public static boolean isOverSubmitButton(double mouseX, double mouseY, int screenW) {
         if (!isActive()) return false;
-        if (!ProjectionClientState.isPinned()) return false;
         int panelX = getPanelX(screenW);
         int panelY = getPanelY();
         int submitW = PANEL_W - 16;

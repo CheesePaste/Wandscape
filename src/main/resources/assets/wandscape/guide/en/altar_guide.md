@@ -4,7 +4,7 @@ The facility for casting **ritual spells**. The currently available ritual spell
 
 ## Casting a Ritual Spell
 
-1. Press **V** to open the panel, then **left-click the altar in overview mode** to open the Altar panel.
+1. Press **V** to open the panel, then **aim your crosshair at the altar and right-click** to open the Altar panel.
 2. The list shows castable spells; each row marks **name / mana cost / cooldown / channel duration**.
 3. **Single-click** a row to select it (highlights only, does not cast).
 4. Click **Submit** in the bottom right — the colony dispatches a wizard with enough mana to walk to the altar and cast; the magic circle unfolds at the altar's center.

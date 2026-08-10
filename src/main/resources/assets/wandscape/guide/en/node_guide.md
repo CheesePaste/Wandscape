@@ -8,7 +8,7 @@ The town has **7 elements**: **Earth / Wood / Water / Fire / Metal / Wind / Dark
 
 ## Using It
 
-Place a node → **left-click it in overview mode** to open the panel:
+Place a node → **aim your crosshair at it and right-click** to open the panel:
 
 - The panel shows what this node produces, how much each harvest yields, and how long the channel takes.
 - The slider sets the **harvest count** (1~10), and the panel calculates the total output.

@@ -10,7 +10,6 @@ import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.overview.network.OverviewEntityInteractPacket;
 import com.wsteam.wandscape.overview.network.OverviewInteractPacket;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
-import com.wsteam.wandscape.projection.client.ProjectionFlightController;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
@@ -79,7 +78,6 @@ public final class OverviewFlightController {
     private static boolean wasGrabbed = false;
     private static int skipFrames = 0;
     private static double rmbDragDistance = 0.0;
-    private static long lastLeftClickTime = 0;
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
@@ -355,7 +353,6 @@ public final class OverviewFlightController {
 
             boolean leftClicked = leftDown && !wasLeftDown;
             boolean rightClicked = rightDown && !wasRightDown;
-            boolean rightReleased = !rightDown && wasRightDown;
             wasLeftDown = leftDown;
             wasRightDown = rightDown;
 
@@ -363,30 +360,60 @@ public final class OverviewFlightController {
                 rmbDragDistance = 0.0;
             }
 
-            // Pinned ghost: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController.
-            // The mouse ray must hit the ghost building — camera-center ray (which sets ghost pos) is not a valid aim
-            // when the cursor is free.
-            if (ProjectionClientState.isPinned()) {
-                boolean overGizmo = com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis()
-                        != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
-                if (leftClicked && !overGizmo
-                        && ProjectionFlightController.isMouseRayHittingGhost(mc)) {
-                    long now = System.currentTimeMillis();
-                    if (now - lastLeftClickTime < 400) {
-                        ProjectionFlightController.openConstructionScreen(mc);
-                        lastLeftClickTime = 0;
-                    } else {
-                        lastLeftClickTime = now;
-                    }
+            // Build submode (projecting): left-click rotates the building — works pinned or not.
+            // Skip when aiming at a gizmo axis (drag) or clicking any panel/bar/sidebar UI region,
+            // so a UI click doesn't accidentally rotate the ghost.
+            if (ProjectionClientState.isProjecting()) {
+                if (leftClicked && !isOverGizmo() && !isOverBuildUi(mc)) {
+                    ProjectionClientState.rotate();
                 }
-            } else if (!ProjectionClientState.isProjecting() && leftClicked) {
-                // Left-click interaction: NPC / tourist entity or building
-                handleLeftClickInteraction();
+            } else {
+                // 常态（OVERVIEW/NONE，无子模式）+ 游戏层抓取：准心右键交互建筑/NPC。
+                // Build/Road/Stats 子模式内不做建筑/NPC 交互（目标是建建筑不是交互）。
+                var sub = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode();
+                boolean normalState = sub == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.OVERVIEW
+                        || sub == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE;
+                boolean grabbed = !com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+                if (normalState && grabbed && rightClicked) {
+                    handleTargetInteraction();
+                }
             }
         }
 
         // ── Drain all vanilla actions ──
         drainVanillaInput(mc);
+    }
+
+    /** Whether the cursor is hovering or dragging a gizmo axis — that click belongs to the gizmo. */
+    private static boolean isOverGizmo() {
+        com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag hovered =
+                com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis();
+        com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag dragging =
+                com.wsteam.wandscape.projection.client.BuildGizmoController.getDraggingAxis();
+        return hovered != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE
+                || dragging != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
+    }
+
+    /**
+     * Whether the mouse cursor is over a BUILD-mode UI region (right pop panel, building bar,
+     * sidebar, or top bar). Clicks there must not rotate the ghost.
+     */
+    private static boolean isOverBuildUi(Minecraft mc) {
+        double guiScale = mc.getWindow().getGuiScale();
+        double mouseX = mc.mouseHandler.xpos() / guiScale;
+        double mouseY = mc.mouseHandler.ypos() / guiScale;
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
+
+        if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverPanel(mouseX, mouseY, screenW)) return true;
+        if (com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.isActive()) {
+            int barY = com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.getBarY(screenH);
+            if (mouseY >= barY && mouseY <= barY + com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay.BAR_HEIGHT) {
+                return true;
+            }
+        }
+        return com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
+                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -497,7 +524,12 @@ public final class OverviewFlightController {
     private static void performRaycast(Minecraft mc) {
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
-        Vec3 rayDir = getMouseWorldRay(mc);
+        // 常态（抓取）用准心（相机中心线）；自由光标（子模式/Tab 抬起）用鼠标射线。
+        boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
+                && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
+        Vec3 rayDir = cursorLifted
+                ? getMouseWorldRay(mc)
+                : new Vec3(camera.getLookVector().x(), camera.getLookVector().y(), camera.getLookVector().z());
         Vec3 end = origin.add(rayDir.scale(REACH));
 
         // ── Block raycast ──
@@ -566,14 +598,14 @@ public final class OverviewFlightController {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // ── Left-click interaction ──
+    // ── Target interaction ──
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * Left-click interaction in overview mode (non-projection).
-     * Handles NPC/tourist entity interaction and building interaction.
+     * 与当前准心下的实体/建筑交互（发送交互包，服务端打开对应 GUI）。
+     * 仅常态（OVERVIEW/NONE + 抓取）右键触发；子模式内不做交互。
      */
-    private static void handleLeftClickInteraction() {
+    private static void handleTargetInteraction() {
         // Entity under crosshair → interact (NPC / tourist)
         int entityId = OverviewClientState.getTargetEntityId();
         if (entityId >= 0) {

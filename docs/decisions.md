@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-10：V 面板交互嫁接——旧常态（准心右键）+ 新四模式 + 数字键/Tab
+
+**需求**（用户指令）：把旧 V 面板（ffc5358c 时代）的常态交互与新 V 面板的四种模式融合。常态（无子模式）改为**游戏层**——鼠标抓取、屏幕中心准心瞄准、**右键**交互建筑/NPC（不再自由光标左键）；`1/2/3/4` 快速切换 Build/Road/Stats/Warning；`Tab` 抬/放光标（替换已移除的 C 键）；退出子模式回到常态抓取。只有 Build/Road 是「新模式」（自由光标），Stats/Warning 是边缘系统保留旧模式；Build/Road 内删掉左键及建筑/NPC 交互（目标是建建筑不是交互）。
+
+**决策**：
+- **修复根因**：`WandscapePanelState.isCursorLifted()` 从 `return panelOpen` 改回真实 `cursorLifted` 字段——这是「面板一开就持久自由光标」的根源。新增 `syncCursorToState()` 在子模式迁移时重算光标意图：OVERVIEW/NONE/STATS → 抓取；BUILD/ROAD → 抬起。手动 Tab 翻转不被覆盖。
+- **常态交互**：OverviewFlightController 射线源按光标状态选（抓取=相机中心准心 / 抬起=鼠标射线）；仅常态（OVERVIEW/NONE + 抓取）右键触发 `OverviewEntityInteractPacket`/`OverviewInteractPacket`。Build/Road/Stats 子模式内不做建筑/NPC 交互。
+- **快捷键**：`InputEvent.Key` 里 `1/2/3/4` → 先 `keyHotbarSlots[i].consumeClick()` 吞掉原版快捷栏切换（Key 事件在 handleKeybinds 前触发，吞点击即阻止切栏），`1/2/3` 进子模式、`4` 开 AnomalyScreen；`Tab` → `toggleCursor()`（BUILD 开/关建筑条，其余翻转光标）。面板开着时在 `onClientTickPost` 里 `keyPlayerList.setDown(false)` 抑制 Tab 原版玩家列表闪烁。
+
+**为什么**：自由光标 + 左键交互把「常态」从原版第一人称拉成了「鼠标点建筑」，与玩家「飞行时准心右键交互、数字键切模式」的直觉相悖；Build/Road 是施工工具，交互会误开建筑面板干扰施工。
+
+**注意**：数字键只在面板开着时接管快捷栏（面板关 = 原版行为）；STATS 保持抓取（纯覆盖层），Warning 直接开 AnomalyScreen；不引入旧提交 ac99924f 的 LEGACY/FREE_CURSOR 双模式与 M 键。
+
 ## 2026-08-10：游客闲逛约束到道路——目标 = custom_roads 标签方块 + 沿路漂移 + 硬上限
 
 **需求**（用户实测）：游客闲逛目标 = 锚点附近**随机地面点**，锚点每走出半径一半就整体漂移且无上限，时间一长游客越逛越远、在野外乱走。用户要求「闲逛要在道路上面闲逛，不能乱逛」。

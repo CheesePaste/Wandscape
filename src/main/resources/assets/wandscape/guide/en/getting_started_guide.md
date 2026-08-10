@@ -8,9 +8,9 @@ From an empty plot of land to a magic town that earns money, it only takes eight
 
 ## Step 1: Place the Town Hall
 
-Press **V** to open the panel → the **Build** icon on the left → the **Government** category → select the Town Hall, **double-click** to enter placement → move the ghost preview to an empty spot, press **📌 Lock** on the right panel (or **Enter**) to pin it → press **✓ Submit** to open the construction screen, then **Submit** to build.
+Press **V** to open the panel → the **Build** icon on the left → the **Government** category → select the Town Hall, **double-click** to enter placement → move the ghost preview to an empty spot, **left-click** to rotate the facing if needed → press **✓ Submit** on the right panel to open the construction screen, then **Submit** to build. If the position needs fine-tuning: press **📌 Lock** (or **Enter**) to pin it first, drag the **3D axis gizmo** to move it, then submit.
 
-The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, **left-click it in overview mode** to name your town — that counts as opening for business.
+The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, **aim your crosshair at it and right-click** to name your town — that counts as opening for business.
 
 (By the way: most buildings are **free on first build**, and the build bar marks them with a "First Free" badge. When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds — don't squander them.)
 
@@ -33,7 +33,7 @@ Tourists **only walk on paved roads**. No roads means no tourists — a shop can
 
 Elements are the town's currency: building, crafting, and maintenance all cost them. **Element nodes** are the mint — each type of node produces one fixed element, and wizards will come to harvest automatically.
 
-**Left-click a node in overview mode** to open its panel, set the harvest count, and click **Publish Gather**. Short on an element? Build a few more matching nodes.
+**Aim your crosshair at a node and right-click** to open its panel, set the harvest count, and click **Publish Gather**. Short on an element? Build a few more matching nodes.
 
 ## Step 5: Build Production Workshops
 

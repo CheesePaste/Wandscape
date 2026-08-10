@@ -103,7 +103,8 @@ public final class WandscapePanelState {
     private WandscapePanelState() {}
 
     public static boolean isPanelOpen() { return panelOpen; }
-    public static boolean isCursorLifted() { return panelOpen; }
+    /** 真实光标意图：受控（false，游戏层）或抬起（true，UI 层）。与面板开关解耦。 */
+    public static boolean isCursorLifted() { return cursorLifted; }
     public static SubMode getActiveSubMode() { return activeSubMode; }
     public static UUID getColonyId() { return colonyId; }
     public static int getComfort() { return comfort; }
@@ -194,10 +195,11 @@ public final class WandscapePanelState {
 
     public static void openPanel() {
         panelOpen = true;
-        cursorLifted = true;
+        // 常态 = 游戏层（抓取鼠标/准心/右键交互），不再默认抬光标
+        cursorLifted = false;
         Minecraft mc = Minecraft.getInstance();
         if (mc.mouseHandler != null) {
-            mc.mouseHandler.releaseMouse();
+            mc.mouseHandler.grabMouse();
         }
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
@@ -310,9 +312,38 @@ public final class WandscapePanelState {
         cursorLifted = false;
     }
 
+    /**
+     * 状态迁移时重算光标意图。常态（OVERVIEW/NONE）与 STATS（旧模式纯覆盖层）保持游戏层；
+     * BUILD/ROAD（新模式）抬起光标。手动 Tab 翻转不在此覆盖，仅在迁移时调用。
+     */
+    public static void syncCursorToState() {
+        if (!panelOpen) {
+            cursorLifted = false;
+            return;
+        }
+        switch (activeSubMode) {
+            case OVERVIEW, NONE, STATS -> cursorLifted = false;
+            case BUILD_PROJECTION, ROAD_PROJECTION -> cursorLifted = true;
+        }
+    }
+
+    /**
+     * Tab 键：切换光标/建筑条（替换原 C 键）。
+     * BUILD 里开/关建筑条（开=抬光标）；其余子模式翻转光标意图。
+     */
     public static void toggleCursor() {
-        // C key mouse grab removed — V panel maintains persistent free cursor with RMB camera drag
-        // （origin/main 的 C 键切换 bar/placing 实现在本分支无调用点，5650adb6 已整体移除 C 键）
+        if (!panelOpen) return;
+
+        if (activeSubMode == SubMode.BUILD_PROJECTION) {
+            if (buildingBarOpen) {
+                closeBuildingBar();
+            } else {
+                openBuildingBar();
+            }
+            return;
+        }
+
+        cursorLifted = !cursorLifted;
     }
 
     // ── Building selection bar ──
@@ -344,8 +375,8 @@ public final class WandscapePanelState {
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
         lastClickIndex = -1;
-        // 不放下光标：V 面板是持久自由光标（openBuildingBar 置 true 后保持），
-        // 关 bar 只影响 bar 本身，光标意图由面板层决定（与 origin 的「关 bar 归游戏」不同）。
+        // BUILD 是新模式（自由光标）：关 bar 不放下光标，光标意图由 syncCursorToState 在
+        // 子模式迁移时决定（退出 BUILD → OVERVIEW 常态 → 抓取）。
     }
 
     /** Double-click: enter PLACING phase (bar closed, cursor in game, ghost visible). */
@@ -425,6 +456,7 @@ public final class WandscapePanelState {
                     liftCursorForUI();
                 }
             }
+            syncCursorToState();
             return;
         }
 
@@ -443,9 +475,9 @@ public final class WandscapePanelState {
                 com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                 liftCursorForUI();
             }
-            case STATS -> liftCursorForUI();
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
         }
+        syncCursorToState();
     }
 
     public static void exitCurrentSubMode() {
@@ -462,6 +494,7 @@ public final class WandscapePanelState {
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
+                    syncCursorToState();
                     return;
                 }
             }
@@ -478,6 +511,7 @@ public final class WandscapePanelState {
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
+                    syncCursorToState();
                     return;
                 }
             }
@@ -486,6 +520,7 @@ public final class WandscapePanelState {
                 // so leaving must return to pure overview (handlePanelEscape/G-key rely on this).
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
+                    syncCursorToState();
                     return;
                 }
             }
@@ -493,5 +528,6 @@ public final class WandscapePanelState {
                 com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
             }
         }
+        syncCursorToState();
     }
 }

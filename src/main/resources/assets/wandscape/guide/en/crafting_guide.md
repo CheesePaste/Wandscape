@@ -4,7 +4,7 @@ The dedicated facility for making **wands**. Wands decide a wizard's combat stre
 
 ## Using It
 
-Place the Crafting Station → **left-click it in overview mode** to open the panel → pick a wand blueprint (searchable by name) → set the quantity → **Submit**.
+Place the Crafting Station → **aim your crosshair at it and right-click** to open the panel → pick a wand blueprint (searchable by name) → set the quantity → **Submit**.
 
 The task queue panel shows the wizards' crafting progress. One wand takes about **1 minute** of channeling; batch orders process in queue order.
 

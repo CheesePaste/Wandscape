@@ -7,7 +7,7 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 - Hire directly with the Tavern's "**Recruit NPC**" (first recruit free).
 - Take in the **mage tourist resumes** at the tavern — tourists with all three need bars full leave a resume, and you can recruit them for free.
 
-## The Panel (Left-click a Wizard in Overview Mode to Open)
+## The Panel (Aim Your Crosshair at a Wizard and Right-Click to Open)
 
 **Left side · Equipment (5 slots)**
 
