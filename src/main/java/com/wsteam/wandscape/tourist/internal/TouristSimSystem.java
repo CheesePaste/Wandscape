@@ -148,9 +148,11 @@ public final class TouristSimSystem {
         }
         if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick firing, shadows={}", registry.getShadows().size());
 
-        // 幽灵占位自愈保险：占用者游客已不在世界 → 释放该 spot 并清其排队（兜底漏清理路径）。
+        // 幽灵占位自愈保险：占用者已不在世界且无 shadow（sim 驱动中实体 detach 但 shadow 在场不算幽灵）
+        // → 释放该 spot 并清其排队（兜底漏清理路径）。
         if (++spotPurgeCounter % SPOT_PURGE_INTERVAL == 0) {
-            int cleaned = TouristSpotManager.getActive().purgeMissing(uuid -> level.getEntity(uuid) != null);
+            int cleaned = TouristSpotManager.getActive().purgeMissing(
+                    uuid -> level.getEntity(uuid) != null || registry.getShadows().containsKey(uuid));
             if (cleaned > 0) Log.info(TAG, "[Tourist] purged {} ghost spot(s)", cleaned);
         }
 
@@ -199,6 +201,11 @@ public final class TouristSimSystem {
                 if (body != null && body.isAlive()) {
                     body.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
                 }
+                // sim 接管：实体的瞬时占位/排队不延续，sim 从头占位/排队
+                // （onRemovedFromLevel 已释放实体的 spot/queue）。
+                s.setInteractTicksLeft(0);
+                s.setQueueSpotIndex(-1);
+                s.setOccupiedSpot(-1);
                 simmedCount++;
                 simStep(level, s);
             }
@@ -252,6 +259,8 @@ public final class TouristSimSystem {
     /** Create a physical entity from the shadow at the shadow's position. */
     private void spawnEntity(ServerLevel level, TouristShadow s) {
         if (s.getTouristId() == null) return;
+        // sim 占的 spot/队不迁移给实体——实体走 TouristMoveGoal 重新占位/排队。
+        releaseShadowSpots(s);
         TouristEntity tourist = new TouristEntity(Wandscape.TOURIST.get(), level);
         // The body must BE this shadow's tourist. Without this, the fresh body gets a
         // random UUID and onAddedToLevel's auto-adopt registers it as a brand-new shadow,
@@ -383,6 +392,23 @@ public final class TouristSimSystem {
             return;
         }
 
+        // ── 交互中：在交互点等 interactionDuration 倒计时结束才结算（与实体一致，防 sim 0CD 刷产出）──
+        if (s.getInteractTicksLeft() > 0) {
+            s.setInteractTicksLeft(s.getInteractTicksLeft() - SIM_INTERVAL);
+            if (s.getInteractTicksLeft() <= 0) {
+                settleInteraction(level, s);
+            }
+            checkDeparture(level, s);
+            return;
+        }
+
+        // ── 排队中：仅队首可认领空 spot（与实体一致，spot 串行化限制并发交互）──
+        if (s.getQueueSpotIndex() >= 0) {
+            tryClaimQueuedSpot(level, s);
+            checkDeparture(level, s);
+            return;
+        }
+
         BlockPos commute = s.getCommuteTarget();
         if (commute != null) {
             if (moveToward(s, commute)) {
@@ -491,34 +517,117 @@ public final class TouristSimSystem {
             // 白天/满条 → 当普通 service 交互（fall through）
         }
 
-        String category = s.getTargetBuildingCategory();
-        var result = switch (category == null ? "" : category) {
-            case "shop" -> TouristSimulation.performShopInteraction(level, s, buildingId, colonyId);
-            case "relax" -> TouristSimulation.performRelaxInteraction(level, s, buildingId, colonyId);
-            case "atm" -> TouristSimulation.performAtmInteraction(level, s, buildingId, colonyId);
-            default -> TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
-        };
-        if (result != null) {
-            Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → bars {}/{}/{}, energy {}",
-                    s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
-                    s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
-            // 与实体路径一致：交互记入行程（买不起记「逛了一圈什么也没买」）
-            String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
-            var bldCfg = TouristSimulation.getConfig(level, buildingId);
-            String bldName = (bldCfg != null && bldCfg.displayName() != null && !bldCfg.displayName().isEmpty())
-                    ? bldCfg.displayName() : (bldType != null ? bldType : "建筑");
-            TouristSimulation.addVisitMemory(s, bldType, bldName, category,
-                    level.getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
-                    result.energyDelta(), result.whatHappened());
+        // 占 spot 启动交互时长（与实体一致）；spot 全满 → 排队（每 spot 一队，均匀分散到队最短的 spot）。
+        int total = TouristSimulation.interactSpotCount(level, buildingId);
+        int spot = TouristSpotManager.getActive().claim(buildingId, total, s.getTouristId());
+        if (spot >= 0) {
+            s.setOccupiedSpot(spot);
+            s.setInteractTicksLeft(TouristSimulation.interactionDuration(level, buildingId));
         } else {
-            Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
-                    s.getTouristName(), shortId(buildingId), category);
+            int spotIdx = TouristSpotManager.getActive().shortestQueueSpot(buildingId, total);
+            TouristSpotManager.getActive().joinQueue(buildingId, spotIdx, s.getTouristId());
+            s.setQueueSpotIndex(spotIdx);
         }
+    }
 
-        s.addVisitedBuilding(buildingId);
+    /** 排队轮询：仅队首可认领空 spot；认领成功启动交互时长。建筑失效/target 已变 → 退出排队。 */
+    private void tryClaimQueuedSpot(ServerLevel level, TouristShadow s) {
+        UUID buildingId = s.getTargetBuildingId();
+        int spotIdx = s.getQueueSpotIndex();
+        if (buildingId == null || spotIdx < 0) {
+            s.setQueueSpotIndex(-1);
+            return;
+        }
+        // 建筑失效（被拆/停用）→ 退出排队重规划
+        BuildingApi api = getBuildingApi();
+        BuildingData data = api != null ? api.getBuilding(buildingId) : null;
+        if (data == null || data.isShutdown() || !data.isStructureIntact()) {
+            TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
+            s.setQueueSpotIndex(-1);
+            s.setCommuteTarget(null);
+            s.setTargetBuildingId(null);
+            s.setTargetBuildingCategory(null);
+            return;
+        }
+        // 已不在目标建筑的队里（target 被 routeToHotel 等改掉）→ 退出排队，走移动/重规划
+        if (TouristSpotManager.getActive().queuePosition(buildingId, spotIdx, s.getTouristId()) < 0) {
+            s.setQueueSpotIndex(-1);
+            return;
+        }
+        if (TouristSpotManager.getActive().queuePosition(buildingId, spotIdx, s.getTouristId()) != 0) {
+            return; // 非队首，继续等
+        }
+        int total = TouristSimulation.interactSpotCount(level, buildingId);
+        int spot = TouristSpotManager.getActive().claimAt(buildingId, spotIdx, total, s.getTouristId());
+        if (spot >= 0) {
+            TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
+            s.setQueueSpotIndex(-1);
+            s.setOccupiedSpot(spot);
+            s.setInteractTicksLeft(TouristSimulation.interactionDuration(level, buildingId));
+        }
+    }
+
+    /** 交互时长结束：结算产出/记行程/标记已逛，释放 spot 并清队，重新规划下一目标。 */
+    private void settleInteraction(ServerLevel level, TouristShadow s) {
+        UUID buildingId = s.getTargetBuildingId();
+        UUID colonyId = s.getColonyId();
+        String category = s.getTargetBuildingCategory();
+        if (buildingId != null && colonyId != null) {
+            var result = switch (category == null ? "" : category) {
+                case "shop" -> TouristSimulation.performShopInteraction(level, s, buildingId, colonyId);
+                case "relax" -> TouristSimulation.performRelaxInteraction(level, s, buildingId, colonyId);
+                case "atm" -> TouristSimulation.performAtmInteraction(level, s, buildingId, colonyId);
+                default -> TouristSimulation.performServiceInteraction(level, s, buildingId, colonyId);
+            };
+            if (result != null) {
+                Log.info(TAG, "[Tourist] {} (sim) {} at {} '{}' → bars {}/{}/{}, energy {}",
+                        s.getTouristName(), result.whatHappened(), shortId(buildingId), category,
+                        s.getComfortSat(), s.getMagicSat(), s.getWonderSat(), s.getEnergy());
+                // 与实体路径一致：交互记入行程（买不起记「逛了一圈什么也没买」）
+                String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+                var bldCfg = TouristSimulation.getConfig(level, buildingId);
+                String bldName = (bldCfg != null && bldCfg.displayName() != null && !bldCfg.displayName().isEmpty())
+                        ? bldCfg.displayName() : (bldType != null ? bldType : "建筑");
+                TouristSimulation.addVisitMemory(s, bldType, bldName, category,
+                        level.getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
+                        result.energyDelta(), result.whatHappened());
+            } else {
+                Log.info(TAG, "[Tourist] {} (sim) nothing buyable at {} '{}'",
+                        s.getTouristName(), shortId(buildingId), category);
+            }
+            s.addVisitedBuilding(buildingId);
+        }
+        // 释放占位 / 清队
+        int spot = s.getOccupiedSpot();
+        if (buildingId != null && spot >= 0) {
+            TouristSpotManager.getActive().release(buildingId, spot);
+        }
+        s.setOccupiedSpot(-1);
+        if (buildingId != null && s.getQueueSpotIndex() >= 0) {
+            TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
+        }
+        s.setQueueSpotIndex(-1);
+        s.setInteractTicksLeft(0);
         s.setCommuteTarget(null);
         s.setTargetBuildingId(null);
         s.setTargetBuildingCategory(null);
+    }
+
+    /** 释放 shadow 占用的 spot 与排队（实体化/离场前调用，防 sim 占位残留卡死实体）。 */
+    private void releaseShadowSpots(TouristShadow s) {
+        UUID buildingId = s.getTargetBuildingId();
+        if (buildingId != null) {
+            int spot = s.getOccupiedSpot();
+            if (spot >= 0) {
+                TouristSpotManager.getActive().release(buildingId, spot);
+            }
+            if (s.getQueueSpotIndex() >= 0) {
+                TouristSpotManager.getActive().leaveAllQueues(buildingId, s.getTouristId());
+            }
+        }
+        s.setOccupiedSpot(-1);
+        s.setQueueSpotIndex(-1);
+        s.setInteractTicksLeft(0);
     }
 
     /** Hotel vacancy derived from the shadow registry (covers loaded + unloaded tourists). */
@@ -548,6 +657,9 @@ public final class TouristSimSystem {
         boolean isNight = dayTime >= 13000;
         boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
         boolean idleTimeout = isIdle && s.simTick() > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
+        // 交互/排队中：不转旅店（routeToHotel 会改 target 打断当前交互），先完成当前交互，
+        // 完成后 decideNext 的夜晚逻辑自会选旅店。
+        boolean interacting = s.getInteractTicksLeft() > 0 || s.getQueueSpotIndex() >= 0;
 
         // D6 离场（goal.md）：到点 / 满条夜晚 / 夜晚无旅店 / idle 超时
         boolean leave;
@@ -557,8 +669,8 @@ public final class TouristSimSystem {
             // 满条等夜晚再离场（白天满条先开心闲逛）
             leave = isNight || idleTimeout;
         } else if (isNight) {
-            // 夜晚 + 未满条：入旅店；无旅店/满 → 离场
-            leave = !routeToHotel(level, s);
+            // 夜晚 + 未满条：入旅店；无旅店/满 → 离场。交互/排队中先完成交互，不打断。
+            leave = interacting ? false : !routeToHotel(level, s);
         } else {
             leave = idleTimeout;
         }
@@ -586,6 +698,7 @@ public final class TouristSimSystem {
     }
 
     private void depart(ServerLevel level, TouristShadow s) {
+        releaseShadowSpots(s);
         grantExperience(s);
         if (s.isMage() && s.isFullySatisfied() && !s.isMageResumeStored()) {
             storeMageResume(s);
