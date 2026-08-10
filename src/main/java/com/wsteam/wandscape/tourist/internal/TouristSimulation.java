@@ -322,7 +322,7 @@ public final class TouristSimulation {
      *   <li>只看视野内（TOURIST_VISION_RADIUS 且 requireLoaded 时区块已加载）的可交互建筑；视野内无合适目标 → 返回 null（调用方闲逛）。</li>
      *   <li>评分 = Σ(该维实际增益 min(缺口, round(值×coeff))) + 精力紧急加分（relax）+ 钱包紧急加分（atm）− 排队惩罚（spot 全满）。</li>
      *   <li>精力 0 → 只能去 relax.energyRestore()>0 建筑。</li>
-     *   <li>夜晚且未满条 → 去旅店（service.maxOccupancy>0 且有空位）；满条夜晚由离场逻辑处理。</li>
+     *   <li>夜晚且未满条 → 优先旅店（service.maxOccupancy>0 且有空位）；视野内无旅店 → 回退普通建筑（傍晚不干晃），18000 后由离场窗口接管（入旅店/离场）；满条夜晚由离场逻辑处理。</li>
      *   <li>0-spot 建筑对游客无效（无兜底）。</li>
      * </ul>
      *
@@ -348,7 +348,8 @@ public final class TouristSimulation {
 
         int visionSq = Config.TOURIST_VISION_RADIUS.get() * Config.TOURIST_VISION_RADIUS.get();
 
-        List<BuildingState> candidates = new ArrayList<>();
+        List<BuildingState> normal = new ArrayList<>();
+        List<BuildingState> hotels = new ArrayList<>();
         for (BuildingData b : allBuildings) {
             if (b.isShutdown() || !b.isStructureIntact()) continue;
             BuildingState state = getState(level, b.getBuildingId());
@@ -363,18 +364,28 @@ public final class TouristSimulation {
             if (dx * dx + dz * dz > visionSq) continue;
             if (requireLoaded && !level.isLoaded(state.getAnchor())) continue;
 
-            // visited（旅店豁免：夜晚入住不应被白天逛过阻挡）
             boolean hotel = isHotelBuilding(level, b.getBuildingId());
-            if (!nightHotel && t.hasVisitedBuilding(b.getBuildingId())) continue;
-
             if (nightHotel) {
-                if (!hotel || !hasHotelVacancy(level, b.getBuildingId())) continue;
-            } else if (energyEmpty) {
+                // 夜晚 + 未满条：优先旅店（不查 visited，白天逛过不阻挡夜晚入住）；
+                // 视野内无旅店 → 回退普通建筑（尊重 visited、精力 0 只去 relax），傍晚不干晃。
+                if (hotel) {
+                    if (hasHotelVacancy(level, b.getBuildingId())) hotels.add(state);
+                } else {
+                    if (energyEmpty && (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0)) continue;
+                    if (t.hasVisitedBuilding(b.getBuildingId())) continue;
+                    normal.add(state);
+                }
+                continue;
+            }
+
+            if (energyEmpty) {
                 // 精力 0 → 只能去恢复建筑（relax.energyRestore>0）；无恢复建筑 → 闲逛（不离场）
                 if (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0) continue;
             }
-            candidates.add(state);
+            if (t.hasVisitedBuilding(b.getBuildingId())) continue;
+            normal.add(state);
         }
+        List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;
         if (candidates.isEmpty()) return null;
         return weightedPick(level, t, candidates);
     }
