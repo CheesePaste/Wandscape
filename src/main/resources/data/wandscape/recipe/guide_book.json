@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "minecraft:dirt" },
+    { "item": "minecraft:oak_log" },
+    { "item": "minecraft:cobblestone" },
+    { "item": "minecraft:wheat_seeds" }
+  ],
+  "result": {
+    "id": "wandscape:guide_book",
+    "count": 1
+  }
+}

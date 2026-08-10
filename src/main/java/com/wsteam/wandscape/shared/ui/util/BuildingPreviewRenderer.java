@@ -191,13 +191,11 @@ public final class BuildingPreviewRenderer {
         try {
             rl = ResourceLocation.parse(baseId);
         } catch (Exception e) {
-            Log.debug(TAG,"[Preview] Bad block id '{}': {}", rawId, e.getMessage());
             return null;
         }
 
         Block block = BuiltInRegistries.BLOCK.get(rl);
         if (block == null) {
-            Log.debug(TAG,"[Preview] Unknown block '{}'", baseId);
             return null;
         }
 

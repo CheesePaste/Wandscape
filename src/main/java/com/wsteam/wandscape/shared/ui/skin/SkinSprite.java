@@ -181,23 +181,25 @@ public record SkinSprite(int u, int v, int width, int height) {
     public static final int RIGHT_ARROW_SHEET_W = 84;
     public static final int RIGHT_ARROW_SHEET_H = 14;
 
-    // ── Sprite definitions — up_arrow (56×21, 3 states) ──
+    // ── Sprite definitions — up_arrow (56×21) ──
+    // Sheet has two clean arrows: normal/hover at x=27, pressed (vertically shifted) at x=41.
 
     public static final SkinSprite[] UP_ARROW_STATES = {
-        at(2, 0).size(27, 21),
-        at(31, 0).size(13, 21),
-        at(46, 0).size(10, 21),
+        at(27, 0).size(15, 21),
+        at(27, 0).size(15, 21),
+        at(41, 0).size(15, 21),
     };
 
     public static final int UP_ARROW_SHEET_W = 56;
     public static final int UP_ARROW_SHEET_H = 21;
 
-    // ── Sprite definitions — down_arrow (56×21, 3 states) ──
+    // ── Sprite definitions — down_arrow (56×21) ──
+    // Sheet has two clean arrows: normal/hover at x=27, pressed (vertically shifted) at x=41.
 
     public static final SkinSprite[] DOWN_ARROW_STATES = {
-        at(2, 0).size(27, 21),
-        at(31, 0).size(13, 21),
-        at(46, 0).size(10, 21),
+        at(27, 0).size(15, 21),
+        at(27, 0).size(15, 21),
+        at(41, 0).size(15, 21),
     };
 
     public static final int DOWN_ARROW_SHEET_W = 56;

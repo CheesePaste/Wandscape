@@ -87,15 +87,9 @@ public final class BuildingSelectionOverlay {
     public static void render(GuiGraphics g, Font font, int screenW, int screenH,
                                double mouseX, double mouseY) {
         if (!isActive()) {
-            Log.debug(TAG, "[Bar] NOT active: panel={} projecting={} subMode={} barOpen={}",
-                    WandscapePanelState.isPanelOpen(),
-                    ProjectionClientState.isProjecting(),
-                    WandscapePanelState.getActiveSubMode(),
-                    WandscapePanelState.isBuildingBarOpen());
             return;
         }
 
-        Log.debug(TAG, "[Bar] ACTIVE: slots={} filtered={}", getSlotsSize(), getFilteredSlots().size());
         int barY = screenH - BAR_HEIGHT;
 
         // Background
@@ -158,22 +152,26 @@ public final class BuildingSelectionOverlay {
     }
 
     private static final List<String> CATEGORY_ORDER = List.of(
-            "All", "government", "storage", "service", "shop", "workstation", "crafting_station", "node"
+            "All", "government", "storage", "service", "shop", "relax", "atm", "workstation", "node"
+    );
+
+    /** Categories merged into the 生产工坊 (workstation) tab instead of getting their own tab. */
+    private static final Set<String> WORKSHOP_MERGED_CATEGORIES = Set.of(
+            "crafting_station", "potion_station", "tavern"
     );
 
     public static String getCategoryDisplayName(String cat) {
-        if (cat == null) return "未知";
-        return switch (cat) {
-            case "All" -> "全部";
-            case "government" -> "市政厅";
-            case "storage" -> "仓库/存储";
-            case "service" -> "服务/旅店";
-            case "shop" -> "商业/商店";
-            case "workstation" -> "生产工坊";
-            case "crafting_station" -> "法宝合成";
-            case "node" -> "元素节点";
-            default -> cat;
-        };
+        if (cat == null) return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape.all", "All").getString();
+        return com.wsteam.wandscape.shared.ui.I18n.name("category.wandscape." + cat.toLowerCase(), cat).getString();
+    }
+
+    /** @return true if the mouse is over the search box (click focuses it for keyboard input). */
+    public static boolean isOverSearchBox(double mouseX, double mouseY, int screenW, int screenH) {
+        if (!isActive()) return false;
+        int barY = getBarY(screenH);
+        int searchX = screenW - GRID_PAD_X - SEARCH_W;
+        return mouseX >= searchX && mouseX <= searchX + SEARCH_W
+                && mouseY >= barY + 2 && mouseY <= barY + 2 + SEARCH_H;
     }
 
     public static int getCategoryAt(double mouseX, double mouseY, int screenW, int screenH) {
@@ -222,6 +220,7 @@ public final class BuildingSelectionOverlay {
         for (BuildingSlot slot : ProjectionClientState.getBuildingSlots()) {
             present.add(slot.category());
         }
+        present.removeAll(WORKSHOP_MERGED_CATEGORIES);
         List<String> sorted = new ArrayList<>();
         for (String cat : CATEGORY_ORDER) {
             if (present.contains(cat)) {
@@ -237,9 +236,15 @@ public final class BuildingSelectionOverlay {
         String cat = WandscapePanelState.getBuildingBarCategory();
         String search = WandscapePanelState.getBuildingBarSearch().toLowerCase();
         return ProjectionClientState.getBuildingSlots().stream()
-                .filter(s -> "All".equals(cat) || s.category().equals(cat))
+                .filter(s -> "All".equals(cat) || matchesCategory(s.category(), cat))
                 .filter(s -> search.isEmpty() || s.displayName().toLowerCase().contains(search))
                 .toList();
+    }
+
+    /** A slot belongs to the selected tab when its category matches, or it's merged into the workstation tab. */
+    private static boolean matchesCategory(String slotCategory, String selectedCategory) {
+        if (selectedCategory.equals(slotCategory)) return true;
+        return "workstation".equals(selectedCategory) && WORKSHOP_MERGED_CATEGORIES.contains(slotCategory);
     }
 
     private static int renderCategoryTabs(GuiGraphics g, Font font, List<String> cats,
@@ -268,10 +273,14 @@ public final class BuildingSelectionOverlay {
 
     private static void renderSearchBar(GuiGraphics g, Font font, int x, int y,
                                          double mouseX, double mouseY) {
-        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, SEARCH_W, SEARCH_H, false, false);
+        boolean focused = WandscapePanelState.isBuildingBarSearchFocused();
+        com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, x, y, SEARCH_W, SEARCH_H, focused, false);
 
         String text = WandscapePanelState.getBuildingBarSearch();
-        String display = text.isEmpty() ? "Search" : text;
+        // Placeholder hint only shows while unfocused; a focused empty box shows just the cursor
+        String display = text.isEmpty()
+                ? (focused ? "" : com.wsteam.wandscape.shared.ui.I18n.name("gui.wandscape.common.search", "Search").getString())
+                : text;
         int textColor = text.isEmpty() ? 0xFF666666 : 0xFFFFFFFF;
 
         int maxChars = (SEARCH_W - 4) / 6;
@@ -279,6 +288,11 @@ public final class BuildingSelectionOverlay {
             display = display.substring(0, maxChars);
         }
         g.drawString(font, display, x + 3, y + 2, textColor);
+        if (focused) {
+            g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                    x + 3 + font.width(display), y + 2, x + 4 + font.width(display), y + SEARCH_H - 2,
+                    0, 0xFFFFFFFF);
+        }
     }
 
     private static void renderBuildingGrid(GuiGraphics g, Font font, List<BuildingSlot> slots,
@@ -370,15 +384,34 @@ public final class BuildingSelectionOverlay {
                     }
                 }
 
-                // Truncated name
-                String name = slot.displayName();
-                int nameW = font.width(name);
+                // First-free still available: green "首免" badge top-left
+                if (!locked && slot.firstFreeAvailable()) {
+                    String tag = com.wsteam.wandscape.shared.ui.I18n.name(
+                            "gui.wandscape.badge.first_free", "First Free").getString();
+                    int tagW = font.width(tag) + 4;
+                    int tagH = 9;
+                    int tagX = cellX + 1;
+                    int tagY = cellY + 1;
+                    g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                            tagX, tagY, tagX + tagW, tagY + tagH, 0, 0xEE1B5E20);
+                    g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(),
+                            tagX, tagY, tagX + tagW, tagY + 1, 0, 0xFF66BB6A);
+                    g.drawString(font, tag, tagX + 2, tagY + 1, 0xFFFFFFFF);
+                }
+
+                // Localized name (lang key, fallback to display_name); truncate by component width
+                net.minecraft.network.chat.Component nameComp =
+                        com.wsteam.wandscape.shared.ui.I18n.name("building.wandscape." + slot.id(), slot.displayName());
+                int nameW = font.width(nameComp);
                 if (nameW > CELL_W - 4) {
-                    while (nameW > CELL_W - 8 && name.length() > 1) {
-                        name = name.substring(0, name.length() - 1);
-                        nameW = font.width(name + ".");
+                    String text = nameComp.getString();
+                    int tW = font.width(text);
+                    while (tW > CELL_W - 8 && text.length() > 1) {
+                        text = text.substring(0, text.length() - 1);
+                        tW = font.width(text + ".");
                     }
-                    name = name + ".";
+                    nameComp = net.minecraft.network.chat.Component.literal(text + ".");
+                    nameW = font.width(nameComp);
                 }
                 int nameX = cellX + (CELL_W - nameW) / 2;
                 int nameY = cellY + CELL_H - 12;
@@ -390,7 +423,7 @@ public final class BuildingSelectionOverlay {
                 } else {
                     nameColor = selected ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_WONDER : (hovered ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_DIM);
                 }
-                g.drawString(font, name, nameX, nameY, nameColor);
+                g.drawString(font, nameComp, nameX, nameY, nameColor);
             }
         }
     }

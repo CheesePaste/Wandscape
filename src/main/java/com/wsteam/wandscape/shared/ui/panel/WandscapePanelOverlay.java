@@ -7,6 +7,7 @@ import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
 import com.wsteam.wandscape.road.client.RoadPlacementOverlay;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.theme.WandscapeTheme;
 
 import net.minecraft.client.Minecraft;
@@ -16,6 +17,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -63,6 +65,15 @@ public final class WandscapePanelOverlay {
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
 
+        // Flush any pending HUD batches (chat text etc.) BEFORE rendering the panel, so the
+        // panel content composites above them instead of sharing a sorted text buffer.
+        g.flush();
+
+        // Clear the depth buffer so depth-tested panel elements (sidebar icons, 3D previews)
+        // are not culled by depth written by earlier HUD/chat batches.
+        RenderSystem.clearDepth(1.0);
+        RenderSystem.clear(256, Minecraft.ON_OSX);
+
         // Building selection bar
         BuildingSelectionOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
@@ -76,6 +87,9 @@ public final class WandscapePanelOverlay {
         renderFills(g, mc.font, screenW, screenH, mx, my);
         g.bufferSource().endBatch(RenderType.guiOverlay());
         renderTexts(g, mc.font, screenW, screenH, mx, my);
+
+        // Push the panel's remaining text/previews out in this pass so they stay above chat.
+        g.flush();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -210,8 +224,15 @@ public final class WandscapePanelOverlay {
         }
 
         // First-time guidance
-        if (WandscapePanelState.shouldShowGuidance()) {
-            renderGuidance(g, font, screenW, screenH, mx, my);
+        if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
+            boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
+            boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
+            boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
+            com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.render(g, font, screenW, mx, my,
+                    TOP_BAR_H,
+                    com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
+                            com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep()),
+                    buildMode, isPlacing, isBar);
         }
 
         // Stats content (shifted right of sidebar)
@@ -269,7 +290,7 @@ public final class WandscapePanelOverlay {
 
         // 5. Day
         long day = mc.level != null ? mc.level.getDayTime() / 24000 + 1 : 1;
-        String dayText = "Day " + day;
+        String dayText = I18n.name("gui.wandscape.panel.day", "Day %s", day).getString();
         drawText(g, font, dayText, x, textY1, WandscapeTheme.COLOR_TEXT_DIM);
         x += font.width(dayText) + 10;
 
@@ -283,7 +304,8 @@ public final class WandscapePanelOverlay {
         x += font.width(touristText) + 10;
 
         // 7. NPC idle/total
-        String npcText = WandscapePanelState.getNpcIdleCount() + "/" + WandscapePanelState.getNpcTotalCount() + " NPC";
+        String npcText = I18n.name("gui.wandscape.panel.npc_count", "%s/%s NPC",
+                WandscapePanelState.getNpcIdleCount(), WandscapePanelState.getNpcTotalCount()).getString();
         drawText(g, font, npcText, x, textY1, WandscapeTheme.COLOR_TEXT_NORMAL);
 
         // 8. Warning icon+count at far right of first row (total anomalies)
@@ -332,148 +354,16 @@ public final class WandscapePanelOverlay {
             WandscapePanelState.getWindAmount(),
             WandscapePanelState.getDarkAmount()
         };
-        int[] colors = {0xFF8B6914, 0xFF2E8B57, 0xFF4A90D9, 0xFFB22222, 0xFFA0A0A0, 0xFF87CEEB, 0xFF6B3FA0};
 
         for (int i = 0; i < elementIds.length; i++) {
             var icon = WandscapeTheme.elementIcon(elementIds[i]);
-            WandscapeTheme.drawIcon(g, icon, x, y, s, s, colors[i]);
+            int color = WandscapeTheme.elementColor(elementIds[i]);
+            WandscapeTheme.drawIcon(g, icon, x, y, s, s, color);
             x += s + 2;
             String val = String.valueOf(amounts[i]);
-            drawText(g, font, val, x, textY, colors[i]);
+            drawText(g, font, val, x, textY, color);
             x += font.width(val) + 6;
         }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ── First-time guidance ──
-    // ═══════════════════════════════════════════════════════════════
-
-    /** Layout of the "Getting Started" guidance box. Single source of truth for render + hit-test. */
-    private record GuidanceBox(int x, int y, int w, int h, int closeX, int closeY, int closeS,
-                               String title, java.util.List<String> lines, String hint) {}
-
-    private static GuidanceBox guidanceBox(Font font, int screenW) {
-        int pad = 10;
-        int lineH = font.lineHeight;
-
-        boolean hasTownHall = false;
-        boolean hasWarehouse = false;
-        var buildings = com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket.getCached();
-        for (var b : buildings) {
-            if (com.wsteam.wandscape.shared.registry.WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.category())) {
-                hasTownHall = true;
-            }
-            if ("warehouse".equals(b.buildingTypeId())) {
-                hasWarehouse = true;
-            }
-        }
-
-        String title;
-        java.util.List<String> lines = new java.util.ArrayList<>();
-        String hint;
-
-        boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
-        boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
-        boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
-
-        if (!hasTownHall) {
-            title = "🚩 新手引导 (1/2)：建造市政厅";
-            if (isPlacing) {
-                lines.add("§7✓ 1. 已选中市政厅蓝图");
-                lines.add("§7✓ 2. 建筑虚影已在世界中显现");
-                lines.add("§a▶ 3. 移动视角选择空地，§e右键点击确认建造");
-                hint = "💡 提示：按 R 键或左键可旋转建筑朝向";
-            } else if (buildMode && isBar) {
-                lines.add("§7✓ 1. 已打开建造面板");
-                lines.add("§a▶ 2. 在下方列表找到并§e双击【市政厅】");
-                lines.add("§7  3. 在世界中右键点击确认放置");
-                hint = "💡 提示：双击卡片即可开启建筑放置定位";
-            } else {
-                lines.add("§a▶ 1. 点击左侧边栏 🏛️【建造】图标");
-                lines.add("§7  2. 在【市政】分类中找到【市政厅】");
-                lines.add("§7  3. 双击卡片并在世界中右键放置蓝图");
-                hint = "💡 提示：市政厅是殖民地招募法师与管理的核心";
-            }
-        } else {
-            title = "🚩 新手引导 (2/2)：建造仓库";
-            if (isPlacing) {
-                lines.add("§7✓ 1. 已选中仓库蓝图");
-                lines.add("§7✓ 2. 建筑虚影已在世界中显现");
-                lines.add("§a▶ 3. 移动视角选择空地，§e右键点击确认建造");
-                hint = "💡 提示：寻找平坦空地，右键确认建造";
-            } else if (buildMode && isBar) {
-                lines.add("§7✓ 1. 已打开建造面板");
-                lines.add("§a▶ 2. 切换至【存储】分类，§e双击【仓库】");
-                lines.add("§7  3. 在世界中右键点击确认放置");
-                hint = "💡 提示：双击卡片即可开启建筑放置定位";
-            } else {
-                lines.add("§a▶ 1. 点击左侧边栏 🏛️【建造】图标");
-                lines.add("§7  2. 在【存储】分类中找到【仓库】");
-                lines.add("§7  3. 双击卡片并在世界中右键放置蓝图");
-                hint = "💡 提示：仓库用于安全存放居民采掘与合成的物资";
-            }
-        }
-
-        int maxW = font.width(title);
-        for (String l : lines) {
-            maxW = Math.max(maxW, font.width(l));
-        }
-        maxW = Math.max(maxW, font.width(hint));
-
-        int boxW = maxW + pad * 2 + 12;
-        int boxH = pad * 2 + lineH * (lines.size() + 2) + 12;
-
-        int x = screenW - boxW - 8;
-        int y = TOP_BAR_H + 4;
-
-        int closeS = 9;
-        int closeX = x + boxW - closeS - 7;
-        int closeY = y + 6;
-        return new GuidanceBox(x, y, boxW, boxH, closeX, closeY, closeS, title, lines, hint);
-    }
-
-    /** @return true if the mouse is over the guidance close (×) button. */
-    public static boolean isGuidanceCloseClicked(Font font, double mx, double my, int screenW) {
-        GuidanceBox b = guidanceBox(font, screenW);
-        return mx >= b.closeX && mx <= b.closeX + b.closeS
-                && my >= b.closeY && my <= b.closeY + b.closeS;
-    }
-
-    private static void renderGuidance(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my) {
-        GuidanceBox b = guidanceBox(font, screenW);
-        int pad = 10;
-        int lineH = font.lineHeight;
-
-        // Background
-        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + b.h, 0, 0xEE14161B);
-        // Border
-        int col = 0xFFD4A338;
-        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + 1, 0, col);
-        g.fill(RenderType.guiOverlay(), b.x, b.y + b.h - 1, b.x + b.w, b.y + b.h, 0, col);
-        g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + 1, b.y + b.h, 0, col);
-        g.fill(RenderType.guiOverlay(), b.x + b.w - 1, b.y, b.x + b.w, b.y + b.h, 0, col);
-
-        int tx = b.x + pad;
-        int ty = b.y + pad;
-        drawText(g, font, b.title, tx, ty, 0xFFFFD700);
-        ty += lineH + 5;
-        g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, 0x44D4A338);
-
-        for (String line : b.lines) {
-            drawText(g, font, line, tx, ty, 0xFFFFFFFF);
-            ty += lineH + 2;
-        }
-
-        ty += 3;
-        drawText(g, font, b.hint, tx, ty, 0xFFAAAAAA);
-
-        // Close (×) button, top-right
-        boolean hover = isGuidanceCloseClicked(font, mx, my, screenW);
-        if (hover) {
-            g.fill(RenderType.guiOverlay(), b.closeX - 2, b.closeY - 2,
-                    b.closeX + b.closeS + 2, b.closeY + b.closeS + 2, 0, 0x55FF4444);
-        }
-        drawText(g, font, "×", b.closeX + 1, b.closeY, hover ? 0xFFFFFFFF : 0xAA888888);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -494,13 +384,13 @@ public final class WandscapePanelOverlay {
         int colW = (boxW - pad * 3) / 2;
 
         if (stats == null || stats.snapshotCount() == 0) {
-            drawText(g, font, "No statistics available yet.", leftX + pad, topY + pad,
-                    WandscapeTheme.COLOR_TEXT_DIM);
+            drawText(g, font, I18n.name("gui.wandscape.stats.none", "No statistics available yet.").getString(),
+                    leftX + pad, topY + pad, WandscapeTheme.COLOR_TEXT_DIM);
             return;
         }
 
         // ── Header (full width) ──
-        String header = "Colony Statistics  |  Day " + stats.currentDay();
+        String header = I18n.name("gui.wandscape.stats.title", "Colony Statistics  |  Day %s", stats.currentDay()).getString();
         drawText(g, font, header, leftX + pad, topY + pad, WandscapeTheme.COLOR_TEXT_NORMAL);
         int sepY = topY + pad + font.lineHeight + 2;
         g.fill(leftX + pad, sepY, leftX + boxW - pad, sepY + 1, WandscapeTheme.COLOR_BORDER_NORMAL);
@@ -510,26 +400,30 @@ public final class WandscapePanelOverlay {
         int lx = leftX + pad;
         int y = y0;
 
-        drawText(g, font, "Maintenance", lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.stats.maintenance", "Maintenance").getString(), lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
-        drawText(g, font, "  Paid: " + stats.buildingsPaid(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.paid", "Paid: %s", stats.buildingsPaid()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  Shut: " + stats.buildingsShutdown(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.shut", "Shut: %s", stats.buildingsShutdown()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH + 4;
 
-        drawText(g, font, "Tourists", lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.stats.tourists", "Tourists").getString(), lx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
-        drawText(g, font, "  In:  " + stats.touristsArrived(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.arrived", "In: %s", stats.touristsArrived()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  Out: " + stats.touristsDeparted(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.departed", "Out: %s", stats.touristsDeparted()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
         y += lineH;
-        drawText(g, font, "  Sat:  " + stats.avgSatisfaction() + "%", lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.tourist_comfort", "Fill C: %s%%", stats.avgComfortRatio()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.tourist_magic", "Fill M: %s%%", stats.avgMagicRatio()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
+        y += lineH;
+        drawText(g, font, "  " + I18n.name("gui.wandscape.stats.tourist_wonder", "Fill W: %s%%", stats.avgWonderRatio()).getString(), lx, y, WandscapeTheme.COLOR_TEXT_DIM);
 
         // ── Right column: elements consumed ──
         int rx = lx + colW + pad;
         y = y0;
 
-        drawText(g, font, "Elements (30d)", rx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
+        drawText(g, font, I18n.name("gui.wandscape.stats.elements_30d", "Elements (30d)").getString(), rx, y, WandscapeTheme.COLOR_TEXT_ACTIVE);
         y += lineH;
 
         var elements = stats.totalElementsConsumed();
@@ -544,7 +438,8 @@ public final class WandscapePanelOverlay {
                 g.fill(rx + 2, y + 4, rx + 10, y + 12, dotColor);
                 // Element name + count
                 drawText(g, font,
-                        types[i].getId() + ": " + formatElementCount(amount),
+                        I18n.name("element.wandscape." + types[i].getId(), types[i].getId()).getString()
+                                + ": " + formatElementCount(amount),
                         rx + 14, y, WandscapeTheme.COLOR_TEXT_DIM);
                 y += lineH;
                 if (i == 3) { y += 1; } // small gap after fire
@@ -553,15 +448,7 @@ public final class WandscapePanelOverlay {
     }
 
     private static int elementColor(ElementType type) {
-        return switch (type) {
-            case EARTH -> 0xFF8B6914;
-            case WOOD  -> 0xFF2E8B57;
-            case WATER -> 0xFF4A90D9;
-            case FIRE  -> 0xFFB22222;
-            case METAL -> 0xFF808080;
-            case WIND  -> 0xFF87CEEB;
-            case DARK  -> 0xFF4B0082;
-        };
+        return WandscapeTheme.elementColor(type.getId());
     }
 
     private static String formatElementCount(long n) {

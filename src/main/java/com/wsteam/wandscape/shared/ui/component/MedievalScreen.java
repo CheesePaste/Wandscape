@@ -8,6 +8,7 @@ import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -22,7 +23,7 @@ public abstract class MedievalScreen extends Screen {
     protected final int panelWidth;
     protected final int panelHeight;
     protected int headerHeight = 22;
-    protected String titleBarText;
+    protected Component titleBarText;
     protected int titleXOffset = 10;
     protected final List<MedievalAnimation> animations = new ArrayList<>();
 
@@ -48,14 +49,14 @@ public abstract class MedievalScreen extends Screen {
         this.panelHeight = panelHeight;
     }
 
-    protected void setTitleBar(String text) {
-        this.titleBarText = (text != null && !text.isEmpty()) ? text : null;
+    protected void setTitleBar(Component title) {
+        this.titleBarText = title;
     }
 
     @Override
     protected void init() {
         this.leftPos = (this.width - panelWidth) / 2;
-        this.topPos = (this.height - panelHeight) / 2;
+        this.topPos = Math.max(2, (this.height - panelHeight) / 2);
         if (showCloseButton) {
             closeBtnX = leftPos + panelWidth - closeBtnW - 6;
             closeBtnY = topPos + (headerHeight - closeBtnH) / 2;
@@ -80,13 +81,18 @@ public abstract class MedievalScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (showHelpButton && helpDocumentPath != null) {
-            if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode) || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_F1) {
-                openHelpDocument();
-                return true;
-            }
+        // Let a focused text box consume the key first (typing letters incl. H);
+        // only open the help document when H is pressed outside any edit box.
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        if (showHelpButton && helpDocumentPath != null
+                && !(getFocused() instanceof EditBox box && box.canConsumeInput())
+                && com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(keyCode, scanCode)) {
+            openHelpDocument();
+            return true;
+        }
+        return false;
     }
 
     @Override

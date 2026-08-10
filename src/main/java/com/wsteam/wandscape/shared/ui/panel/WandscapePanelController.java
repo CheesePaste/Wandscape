@@ -20,8 +20,8 @@ import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Input controller for the Wandscape comprehensive panel.
- * Handles Escape key to close the panel and mouse clicks on UI tabs
- * when the cursor is lifted (C key toggled).
+ * Handles the Escape exit pipeline (spline editor → PLACING cursor raise → sub-mode → panel),
+ * mouse clicks on UI tabs when the cursor is lifted (C key toggled), and the building search box.
  */
 public final class WandscapePanelController {
 
@@ -46,7 +46,7 @@ public final class WandscapePanelController {
         bus.addListener(InputEvent.MouseButton.Pre.class, WandscapePanelController::onMouseButtonPre);
         bus.addListener(InputEvent.MouseScrollingEvent.class, WandscapePanelController::onMouseScroll);
         bus.addListener(InputEvent.Key.class, WandscapePanelController::onKey);
-        bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpen);
+        bus.addListener(ScreenEvent.Opening.class, WandscapePanelController::onScreenOpening);
         Log.info(TAG, "[Panel] Controller registered");
     }
 
@@ -76,10 +76,15 @@ public final class WandscapePanelController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        // Enforce cursor state: when a Screen closes, MC grabs the mouse back to game.
-        // If cursor was lifted, re-release it to the UI layer.
-        if (WandscapePanelState.isCursorLifted() && mc.screen == null) {
-            mc.mouseHandler.releaseMouse();
+        // Reconcile the OS cursor to cursorLifted every tick (when no Screen is open).
+        // Bidirectional: prevents both "cursor stuck hidden" and "cursor stuck shown"
+        // after transitions that grab/release the mouse. Screens manage their own cursor.
+        if (mc.screen == null) {
+            if (WandscapePanelState.isCursorLifted()) {
+                mc.mouseHandler.releaseMouse();
+            } else {
+                mc.mouseHandler.grabMouse();
+            }
         }
     }
 
@@ -98,15 +103,31 @@ public final class WandscapePanelController {
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
         // ── Guidance close (×) button — dismiss "Getting Started" guide ──
-        if (WandscapePanelState.shouldShowGuidance()
-                && WandscapePanelOverlay.isGuidanceCloseClicked(mc.font, mouseX, mouseY, screenW)) {
-            WandscapePanelState.dismissGuidance();
-            event.setCanceled(true);
-            return;
+        if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
+            boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
+            boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
+            boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
+            if (com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.isCloseClicked(mc.font, mouseX, mouseY,
+                    screenW, WandscapePanelOverlay.TOP_BAR_H,
+                    com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
+                            com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep()),
+                    buildMode, isPlacing, isBar)) {
+                com.wsteam.wandscape.shared.ui.guidance.GuideSession.dismiss();
+                event.setCanceled(true);
+                return;
+            }
         }
 
         // ── Building selection bar handling ──
         if (BuildingSelectionOverlay.isActive()) {
+            // Search box click activates keyboard input; any other bar click deactivates it
+            if (BuildingSelectionOverlay.isOverSearchBox(mouseX, mouseY, screenW, screenH)) {
+                WandscapePanelState.setBuildingBarSearchFocused(true);
+                event.setCanceled(true);
+                return;
+            }
+            WandscapePanelState.setBuildingBarSearchFocused(false);
+
             // Scrollbar click — jump to position
             if (BuildingSelectionOverlay.isOverScrollbar(mouseX, screenW)) {
                 int barY = BuildingSelectionOverlay.getBarY(screenH);
@@ -153,31 +174,28 @@ public final class WandscapePanelController {
             if (toolMode != null) {
                 RoadPlacementState.setActiveTool(toolMode);
                 if (toolMode == RoadPlacementState.ToolMode.SPLINE) {
-                    // SPLINE mode: keep the V-panel open and embed the native spline editor.
-                    // SplineEditorController takes over world input (right-click camera, WASD flight, gizmo drag).
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                    if (mc.player != null) {
-                        mc.player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(
-                                        "[Spline Editor] §a右侧面板编辑样条 — 右键转视角, WASD 飞行, 左键加点/选点, 拖轴移动, ESC 退出"),
-                                true);
+                    if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+                        com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                        com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
+                    } else {
+                        WandscapePanelState.exitCurrentSubMode();
+                        WandscapePanelState.closePanel();
+                        com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
+                        com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                     }
                 } else {
                     // REPLACE / FILL / DESTROY_FILL: leave the spline editor, enter PLACING phase as before
                     if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
                         com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                        com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
                     }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
-                    if (mc.player != null) {
-                        String hint = switch (toolMode) {
-                            case FILL -> "[Fill] §aRight-click set corner 1, Left-click set corner 2, Enter to submit";
-                            case DESTROY_FILL -> "[Destroy/Fill] §aRight-click a block to set ref height & block, Left-click to set area, Enter to submit";
-                            default -> "[Road Replace] §aRight-click set start, Left-click set end, Enter to submit";
-                        };
-                        mc.player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(hint), true);
-                    }
+                    String hint = switch (toolMode) {
+                        case FILL -> "[Fill] Right-click set corner 1, Left-click set corner 2, Enter to submit";
+                        case DESTROY_FILL -> "[Destroy/Fill] Right-click a block to set ref height & block, Left-click to set area, Enter to submit";
+                        default -> "[Road Replace] Right-click set start, Left-click set end, Enter to submit";
+                    };
                 }
                 event.setCanceled(true);
                 return;
@@ -190,16 +208,11 @@ public final class WandscapePanelController {
                     // Double-click: confirm preset, enter PLACING phase (overlay hidden, cursor in game)
                     if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
                         com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                        com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
                     }
                     RoadPlacementState.enterPlacing();
                     WandscapePanelState.releaseCursorToGame();
-                    if (mc.player != null) {
-                        String name = RoadPlacementState.getSelectedPreset().displayName();
-                        mc.player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(
-                                        "[Road] §aPlacing: " + name + " §7— Right-click set start, Left-click set end, ESC to reselect"),
-                                true);
-                    }
+                    String name = RoadPlacementState.getSelectedPreset().displayName();
                 }
                 // Single click: highlight only (handlePresetDoubleClick already set selectedPresetIndex)
                 event.setCanceled(true);
@@ -268,6 +281,7 @@ public final class WandscapePanelController {
         // Switching away from the ROAD tab while the spline editor is open leaves it.
         if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
             com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+            com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
         }
         WandscapePanelState.SubMode targetMode = switch (tabIndex) {
             case 0 -> WandscapePanelState.SubMode.BUILD_PROJECTION;
@@ -280,12 +294,8 @@ public final class WandscapePanelController {
 
         WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
         if (current == targetMode) {
-            // Clicking the active tab: deactivate (exit sub-mode, stay in panel)
-            WandscapePanelState.exitCurrentSubMode();
-            // If exitCurrentSubMode returned to overview, don't override with NONE
-            if (WandscapePanelState.getActiveSubMode() != WandscapePanelState.SubMode.OVERVIEW) {
-                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            }
+            // Clicking the already-active tab is a no-op (avoid misclick discarding work).
+            // Use ESC to exit a sub-mode.
             return;
         }
 
@@ -311,18 +321,15 @@ public final class WandscapePanelController {
             if (config == null || !BuildingUnlockChecker.isUnlocked(WandscapePanelState.getColonyId(), config)) return;
         }
         boolean doubleClicked = WandscapePanelState.handleBuildingSlotClick(slotIndex);
-        if (doubleClicked) {
-            // Select building, close bar, enter PLACING phase (cursor in game, ghost visible)
+        // Single click: switch the held building while keeping the bar open.
+        if (slotIndex >= 0) {
             ProjectionClientState.setSelectedSlotIndex(slotIndex);
+        }
+        if (doubleClicked) {
+            // Double click: close bar, enter PLACING phase (cursor in game, ghost visible)
             WandscapePanelState.enterPlacingPhase();
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                String name = (slotIndex >= 0 && slotIndex < slots.size())
-                        ? slots.get(slotIndex).displayName() : "???";
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("[Build] §aSelected: " + name + " §7— ESC to reselect"),
-                        true);
-            }
+            String name = (slotIndex >= 0 && slotIndex < slots.size())
+                    ? slots.get(slotIndex).displayName() : "???";
         }
     }
 
@@ -335,52 +342,116 @@ public final class WandscapePanelController {
         if (mc.screen != null) return;
 
         int key = event.getKey();
+        int scanCode = event.getScanCode();
+        int mods = event.getModifiers();
 
-        // B key: toggle interaction area overlay (works whenever panel is open)
-        if (key == GLFW.GLFW_KEY_B && WandscapePanelState.isPanelOpen()) {
-            WandscapePanelState.toggleBuildingAreas();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "[Panel] Building areas: " + (WandscapePanelState.isShowBuildingAreas() ? "§aON" : "§7OFF")),
-                        true);
+        // Focused search box: route printable/backspace keys into it FIRST, so
+        // global hotkeys (H/G/B) don't hijack letters while typing a name.
+        if (BuildingSelectionOverlay.isActive() && WandscapePanelState.isBuildingBarSearchFocused()) {
+            if (handleSearchInput(key, mods)) {
+                return;
             }
+        }
+
+        // Building areas overlay toggle (works whenever panel is open)
+        if (com.wsteam.wandscape.WandscapeClient.PANEL_AREAS_TOGGLE.matches(key, scanCode)
+                && WandscapePanelState.isPanelOpen()) {
+            WandscapePanelState.toggleBuildingAreas();
             return;
         }
 
-        // G key: toggle overview mode ↔ ground mode (only when panel is open)
-        if (key == GLFW.GLFW_KEY_G && WandscapePanelState.isPanelOpen()) {
+        // Overview mode ↔ ground mode toggle (only when panel is open)
+        if (com.wsteam.wandscape.WandscapeClient.OVERVIEW_TOGGLE.matches(key, scanCode)
+                && WandscapePanelState.isPanelOpen()) {
             handleGKeyToggle();
             return;
         }
 
         // Guide key: open guide document (only when panel is open)
-        if ((com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, event.getScanCode()) || key == GLFW.GLFW_KEY_F1) && WandscapePanelState.isPanelOpen()) {
+        if (com.wsteam.wandscape.WandscapeClient.GUIDE_TOGGLE.matches(key, scanCode)
+                && WandscapePanelState.isPanelOpen()) {
             openPanelHelpDocument();
             return;
         }
 
+        // Search bar input only accepted once the box has been clicked/activated
         if (!BuildingSelectionOverlay.isActive()) return;
-        int mods = event.getModifiers();
+        if (!WandscapePanelState.isBuildingBarSearchFocused()) return;
+        handleSearchInput(key, mods);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── Escape exit pipeline (replaces the vanilla pause screen) ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * While the panel is open, ESC is intercepted here instead of opening the vanilla
+     * pause menu. Each press walks one step down the exit pipeline (innermost first):
+     * spline editor → PLACING cursor raise → sub-mode exit → panel close.
+     */
+    static void onScreenOpening(ScreenEvent.Opening event) {
+        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!(event.getScreen() instanceof PauseScreen)) return;
+        event.setCanceled(true);
+        handlePanelEscape();
+    }
+
+    private static void handlePanelEscape() {
+        // 1. Spline road editor: ESC exits edit mode, stays in the ROAD selection bar
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+            com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
+            return;
+        }
+
+        WandscapePanelState.SubMode sub = WandscapePanelState.getActiveSubMode();
+
+        // 2. BUILD / ROAD in PLACING (crosshair in game): ESC == C key — raise the cursor
+        boolean placing = (sub == WandscapePanelState.SubMode.BUILD_PROJECTION
+                && WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING)
+                || (sub == WandscapePanelState.SubMode.ROAD_PROJECTION
+                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.PLACING);
+        if (placing) {
+            WandscapePanelState.toggleCursor();
+            return;
+        }
+
+        // 3. Sub-mode active → exit it, keep the panel open
+        if (sub != WandscapePanelState.SubMode.NONE && sub != WandscapePanelState.SubMode.OVERVIEW) {
+            WandscapePanelState.exitCurrentSubMode();
+            // Ground-mode / STATS exit leaves the sub-mode set — drop to the bare panel
+            WandscapePanelState.SubMode after = WandscapePanelState.getActiveSubMode();
+            if (after == WandscapePanelState.SubMode.BUILD_PROJECTION
+                    || after == WandscapePanelState.SubMode.ROAD_PROJECTION
+                    || after == WandscapePanelState.SubMode.STATS) {
+                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
+            }
+            return;
+        }
+
+        // 4. Bare panel (overview or no sub-mode) → close it
+        WandscapePanelState.closePanel();
+    }
+
+    /** Type printable chars / backspace into the building search box. @return true if consumed. */
+    private static boolean handleSearchInput(int key, int mods) {
         boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
-
-        // ESC handled by ScreenEvent.Opening to suppress pause menu
-
         if (key == GLFW.GLFW_KEY_BACKSPACE) {
             String current = WandscapePanelState.getBuildingBarSearch();
             if (!current.isEmpty()) {
                 WandscapePanelState.setBuildingBarSearch(current.substring(0, current.length() - 1));
             }
-            return;
+            return true;
         }
-
         String ch = keyToChar(key, shift);
         if (ch != null) {
             String current = WandscapePanelState.getBuildingBarSearch();
             if (current.length() < 32) {
                 WandscapePanelState.setBuildingBarSearch(current + ch);
             }
+            return true;
         }
+        return false;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -388,28 +459,18 @@ public final class WandscapePanelController {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * G key: toggle between overview camera and ground (build projection) mode.
+     * G key: toggle between overview camera and ground (first-person) mode.
      * Only effective when the panel is open.
      */
     private static void handleGKeyToggle() {
         // Check if overview camera is currently active (pure overview OR overview+build/road)
         if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
-            // Overview → Ground mode: save current submode to restore after exit
-            WandscapePanelState.SubMode prevSubMode = WandscapePanelState.getActiveSubMode();
+            // Overview → Ground mode: exit the overview camera and return to a clean panel
+            // state. Must NOT auto-open the building panel (BUILD_PROJECTION opens the
+            // building selection bar via enterSubMode's overview-branch).
             WandscapePanelState.exitCurrentSubMode();
             com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
-            // Restore the submode that was active (ROAD, or default BUILD for everything else)
-            if (prevSubMode == WandscapePanelState.SubMode.ROAD_PROJECTION) {
-                WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.ROAD_PROJECTION);
-            } else {
-                WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.BUILD_PROJECTION);
-            }
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "[Panel] §aGround mode — G for overview"), true);
-            }
+            WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
         } else {
             // Ground → Overview mode
             WandscapePanelState.SubMode current = WandscapePanelState.getActiveSubMode();
@@ -418,12 +479,6 @@ public final class WandscapePanelController {
                 WandscapePanelState.exitCurrentSubMode();
             }
             WandscapePanelState.enterSubMode(WandscapePanelState.SubMode.OVERVIEW);
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "[Panel] §aOverview mode — WASD move, Scroll zoom, G for ground"), true);
-            }
         }
     }
 
@@ -444,58 +499,6 @@ public final class WandscapePanelController {
         }
         WandscapePanelState.setBuildingBarScrollOffset(current);
         event.setCanceled(true);
-    }
-
-    // ── Suppress pause menu when in build mode ──
-
-    static void onScreenOpen(ScreenEvent.Opening event) {
-        if (!(event.getScreen() instanceof PauseScreen)) return;
-
-        // BAR phase: building selection bar is open — cancel pause, exit sub-mode
-        if (BuildingSelectionOverlay.isActive()) {
-            event.setCanceled(true);
-            WandscapePanelState.exitCurrentSubMode();
-            WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-            return;
-        }
-
-        // PLACING phase: ghost is visible, cursor in game — cancel pause, return to bar
-        if (WandscapePanelState.isPanelOpen()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING) {
-            event.setCanceled(true);
-            ProjectionClientState.setGhostPos(null);
-            WandscapePanelState.returnToBar();
-            Minecraft.getInstance().player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("[Build] §7Select another building or ESC to cancel"),
-                    true);
-            return;
-        }
-
-        // ROAD BAR phase: overlay visible, cursor lifted — cancel pause, exit road mode
-        if (WandscapePanelState.isPanelOpen()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
-            event.setCanceled(true);
-            WandscapePanelState.exitCurrentSubMode();
-            Minecraft.getInstance().player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("[Road] §eExited road placement mode"),
-                    true);
-            return;
-        }
-
-        // ROAD PLACING phase: cursor in game — cancel pause, return to BAR
-        if (WandscapePanelState.isPanelOpen()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.PLACING) {
-            event.setCanceled(true);
-            RoadPlacementState.enterBar();
-            WandscapePanelState.liftCursorForUI();
-            Minecraft.getInstance().player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("[Road] §eReturned to preset selection — double-click to resume"),
-                    true);
-            return;
-        }
     }
 
     /** Compute number of building grid columns for the current screen width. */

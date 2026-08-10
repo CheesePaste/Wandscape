@@ -11,12 +11,9 @@ import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
 import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Client-side static state holder for the Wandscape comprehensive panel.
@@ -70,7 +67,9 @@ public final class WandscapePanelState {
             int buildingsRestarted,
             int touristsArrived,
             int touristsDeparted,
-            int avgSatisfaction,
+            int avgComfortRatio,
+            int avgMagicRatio,
+            int avgWonderRatio,
             int comfort,
             int magic,
             int wonder,
@@ -78,7 +77,7 @@ public final class WandscapePanelState {
             int snapshotCount
     ) {
         public static final StatsSummary EMPTY = new StatsSummary(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
     }
 
     private static volatile StatsSummary statsSummary = StatsSummary.EMPTY;
@@ -86,18 +85,12 @@ public final class WandscapePanelState {
     // ── Interaction area overlay (B key toggle) ──
     private static volatile boolean showBuildingAreas = false;
 
-    // ── First-time guidance ──
-    /** Whether the "build Town Hall & Warehouse" guide should be shown in the overlay. */
-    private static volatile boolean showGuidance = true;
-    private static boolean guidanceEverShown = false;
-    /** Set when the player manually dismisses the guide (× button) — suppresses re-show on sync. */
-    private static volatile boolean guidanceDismissed = false;
-
     public static boolean isShowBuildingAreas() { return showBuildingAreas; }
     public static void toggleBuildingAreas() { showBuildingAreas = !showBuildingAreas; }
 
     // ── Building selection bar ──
     private static volatile boolean buildingBarOpen = false;
+    private static volatile boolean buildingBarSearchFocused = false;
     private static volatile String buildingBarCategory = "All";
     private static volatile String buildingBarSearch = "";
     private static volatile int buildingBarSelectedIndex = -1;
@@ -200,17 +193,16 @@ public final class WandscapePanelState {
     }
 
     public static void openPanel() {
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+            com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
+        }
         panelOpen = true;
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
         // Default to overview mode
         enterSubMode(SubMode.OVERVIEW);
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("[Panel] Opened — V: close, G: switch mode"), true);
-        }
 
         if (!panelEverOpened) {
             panelEverOpened = true;
@@ -238,59 +230,69 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Panel] Closed"), true);
-        }
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ── First-time guidance ──
-    // ═══════════════════════════════════════════════════════════════
 
     /**
-     * Whether the "build Town Hall & Warehouse" guide should show.
-     * True when the colony has no town_hall or no warehouse, and not yet dismissed.
+     * Hard-reset all panel + related client UI state. Called on client disconnect so state
+     * from the previous world does not leak into the next one. Unlike {@link #closePanel()},
+     * performs no network sends and no cursor/mouse changes.
      */
-    public static boolean shouldShowGuidance() {
-        if (guidanceDismissed) return false;
-        if (!showGuidance) return false;
-        var buildings = BuildingAreaSyncPacket.getCached();
-        if (buildings.isEmpty()) return true;
-        boolean hasTownHall = false;
-        boolean hasWarehouse = false;
-        for (var b : buildings) {
-            if (WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.category())) hasTownHall = true;
-            if ("warehouse".equals(b.buildingTypeId())) hasWarehouse = true;
+    public static void reset() {
+        com.wsteam.wandscape.overview.client.OverviewFlightController.exit();
+        // 清空空中视角相机缓存（exitOverview 是 suspend 语义、保留缓存），
+        // 防止上一世界的相机位置泄漏到下一世界
+        com.wsteam.wandscape.overview.client.OverviewClientState.hardReset();
+        if (ProjectionClientState.isProjecting()) {
+            ProjectionClientState.exitProjection();
         }
-        return !hasTownHall || !hasWarehouse;
-    }
+        if (RoadPlacementState.isProjecting()) {
+            RoadPlacementState.exitProjection();
+        }
+        if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
+            com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+            com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
+        }
+        BuildingDebugClientState.setActive(false);
 
-    /** Dismiss guidance (called when player opens building bar or on manual dismiss). */
-    public static void dismissGuidance() {
-        showGuidance = false;
-        guidanceDismissed = true;
-    }
-
-    /** Evaluate guidance based on the latest building cache. Called after BuildingAreaSyncPacket arrives. */
-    public static void evaluateGuidance() {
-        if (guidanceDismissed) {
-            showGuidance = false;
-            return;
-        }
-        var buildings = BuildingAreaSyncPacket.getCached();
-        showGuidance = buildings.isEmpty()
-                || buildings.stream().noneMatch(
-                        e -> WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(e.category()))
-                || buildings.stream().noneMatch(e -> "warehouse".equals(e.buildingTypeId()));
-        if (showGuidance && !guidanceEverShown) {
-            guidanceEverShown = true;
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("§e[新手引导] §f请建造【市政厅】与【仓库】以开启殖民地管理！"), true);
-            }
-        }
+        panelOpen = false;
+        cursorLifted = false;
+        activeSubMode = SubMode.NONE;
+        colonyId = null;
+        comfort = 0;
+        magic = 0;
+        wonder = 0;
+        colonyName = "";
+        colonyLevel = 1;
+        colonyExperience = 0;
+        touristCount = 0;
+        overnightStayerCount = 0;
+        shutdownCount = 0;
+        npcIdleCount = 0;
+        npcTotalCount = 0;
+        earthAmount = 0;
+        woodAmount = 0;
+        waterAmount = 0;
+        fireAmount = 0;
+        windAmount = 0;
+        metalAmount = 0;
+        darkAmount = 0;
+        shutdownBuildingNames = List.of();
+        shutdownBuildingIds = List.of();
+        brokenCount = 0;
+        brokenBuildingIds = List.of();
+        brokenBuildingNames = List.of();
+        warningOverlayActive = false;
+        statsSummary = StatsSummary.EMPTY;
+        showBuildingAreas = false;
+        buildingBarOpen = false;
+        buildingBarSearchFocused = false;
+        buildingBarCategory = "All";
+        buildingBarSearch = "";
+        buildingBarSelectedIndex = -1;
+        buildingBarScrollOffset = 0;
+        buildPhase = BuildPhase.BAR;
+        lastClickTime = 0;
+        lastClickIndex = -1;
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
@@ -342,16 +344,8 @@ public final class WandscapePanelState {
         Minecraft mc = Minecraft.getInstance();
         if (cursorLifted) {
             mc.mouseHandler.releaseMouse();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Panel] Cursor lifted — click tabs to switch mode"), true);
-            }
         } else {
             mc.mouseHandler.grabMouse();
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Panel] Cursor released to game"), true);
-            }
         }
     }
 
@@ -360,17 +354,20 @@ public final class WandscapePanelState {
     public static boolean isBuildingBarOpen() { return buildingBarOpen; }
     public static BuildPhase getBuildPhase() { return buildPhase; }
 
+    /** Search box only accepts keyboard input once clicked/activated. */
+    public static boolean isBuildingBarSearchFocused() { return buildingBarSearchFocused; }
+    public static void setBuildingBarSearchFocused(boolean focused) { buildingBarSearchFocused = focused; }
+
     public static void openBuildingBar() {
         buildingBarOpen = true;
-        buildingBarCategory = "All";
-        buildingBarSearch = "";
+        buildingBarSearchFocused = false;
+        // Preserve category/search/scroll from last open (selection cache). Resync the
+        // highlighted slot from the persisted projection selection.
         buildingBarSelectedIndex = ProjectionClientState.getSelectedSlotIndex();
-        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
-        // Clear ghost — no preview while selecting
-        ProjectionClientState.setGhostPos(null);
+        // Keep ghost/pinned so toggling the bar does not discard a placement in progress.
         if (!cursorLifted) {
             cursorLifted = true;
             Minecraft.getInstance().mouseHandler.releaseMouse();
@@ -379,10 +376,9 @@ public final class WandscapePanelState {
 
     public static void closeBuildingBar() {
         buildingBarOpen = false;
-        buildingBarCategory = "All";
-        buildingBarSearch = "";
+        buildingBarSearchFocused = false;
+        // Preserve category/search/scroll (selection cache). selectedIndex resyncs on reopen.
         buildingBarSelectedIndex = -1;
-        buildingBarScrollOffset = 0;
         lastClickTime = 0;
         lastClickIndex = -1;
         if (cursorLifted) {
@@ -492,7 +488,7 @@ public final class WandscapePanelState {
                 buildPhase = BuildPhase.BAR;
                 if (ProjectionClientState.isProjecting()) {
                     PacketDistributor.sendToServer(new ProjectionExitPacket());
-                    ProjectionClientState.exitProjection();
+                    ProjectionClientState.suspendProjection();
                 }
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
@@ -501,12 +497,8 @@ public final class WandscapePanelState {
                 }
             }
             case ROAD_PROJECTION -> {
-                // Closing the ROAD mode / panel leaves the embedded spline editor.
-                if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-                }
                 if (RoadPlacementState.isProjecting()) {
-                    RoadPlacementState.exitProjection();
+                    RoadPlacementState.suspendProjection();
                     releaseCursorToGame();
                 }
                 // If entered from overview, go back to pure overview

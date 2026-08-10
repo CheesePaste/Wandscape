@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.shared.ui.component;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.skin.SkinRender;
 import com.wsteam.wandscape.shared.ui.skin.SkinSprite;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
@@ -28,8 +30,9 @@ import java.util.Map;
  * <p>Category icons are drawn from Minecraft's own item/block registry.
  * If the itemOrRecipeId cannot be resolved, a generic placeholder is shown.
  *
- * <p>Index 0 (current task) is locked — all buttons disabled.
- * Index 1 cannot move up; last index cannot move down.
+ * <p>The top row is the locked currently-executing task (see {@link #setCurrent}),
+ * with a progress bar. Pending rows below are all actionable: first pending
+ * cannot move up; last pending cannot move down.
  */
 public class TaskQueuePanel extends AbstractWidget {
 
@@ -75,8 +78,32 @@ public class TaskQueuePanel extends AbstractWidget {
         }
     }
 
+    /**
+     * The building's currently executing (head) task + its progress.
+     * Channel tasks ({@code channelTotalTicks > 0}) show a countdown; multi-step
+     * tasks fall back to step progress.
+     */
+    public record CurrentInfo(
+            Entry entry,
+            int stepIndex,
+            int totalSteps,
+            int channelRemainingTicks,
+            int channelTotalTicks
+    ) {}
+
     private final List<Entry> entries = new ArrayList<>();
     private final int rowHeight = 16;
+
+    // ── Current (executing) task ──
+    private static final int CURRENT_ROW_H = 18;
+    @javax.annotation.Nullable
+    private Entry currentEntry;
+    private int currentStep;
+    private int currentTotalSteps;
+    private int currentChannelRemaining;
+    private int currentChannelTotal;
+    /** Smoothed remaining channel ticks, decremented per client tick between refreshes. */
+    private double animatedRemaining;
 
     /** Callbacks wired by the parent Screen. */
     private java.util.function.IntConsumer onDelete;
@@ -103,6 +130,9 @@ public class TaskQueuePanel extends AbstractWidget {
     private static final int ARROW_STATE_DISABLED = 2;
     private static final int CLOSE_STATE_DISABLED = 3;
 
+    // Normal and hover share the same arrow sprite; hover is brightened to stay distinguishable.
+    private static final float HOVER_BRIGHTEN = 1.6F;
+
     public TaskQueuePanel(int x, int y, int width, int height) {
         super(x, y, width, height, Component.literal("Task Queue"));
     }
@@ -124,6 +154,71 @@ public class TaskQueuePanel extends AbstractWidget {
 
     public List<Entry> getEntries() {
         return Collections.unmodifiableList(entries);
+    }
+
+    /**
+     * Replace the currently executing (head) task shown at the top of the panel.
+     * Pass null when the building has no active head task.
+     */
+    public void setCurrent(@javax.annotation.Nullable CurrentInfo info) {
+        if (info == null) {
+            this.currentEntry = null;
+            this.currentStep = 0;
+            this.currentTotalSteps = 0;
+            this.currentChannelRemaining = 0;
+            this.currentChannelTotal = 0;
+            this.animatedRemaining = 0;
+            return;
+        }
+        this.currentEntry = info.entry();
+        this.currentStep = info.stepIndex();
+        this.currentTotalSteps = info.totalSteps();
+        this.currentChannelRemaining = info.channelRemainingTicks();
+        this.currentChannelTotal = info.channelTotalTicks();
+        this.animatedRemaining = Math.max(0, info.channelRemainingTicks());
+    }
+
+    /** Decrement the animated channel countdown by one client tick. Call from the parent Screen's tick(). */
+    public void tickProgress() {
+        if (currentEntry != null && currentChannelTotal > 0 && animatedRemaining > 0) {
+            animatedRemaining = Math.max(0, animatedRemaining - 1);
+        }
+    }
+
+    /** Fraction 0..1 through the current task (channel-based, else step-based). */
+    private float progressFraction() {
+        if (currentEntry == null) return 0;
+        if (currentChannelTotal > 0) {
+            float frac = 1f - (float) animatedRemaining / Math.max(1, currentChannelTotal);
+            return Math.max(0, Math.min(1, frac));
+        }
+        if (currentTotalSteps > 0) {
+            return (float) currentStep / Math.max(1, currentTotalSteps);
+        }
+        return 0;
+    }
+
+    /** Short "time remaining" label for the current task row. */
+    private String timeLabel() {
+        if (currentEntry == null) return "";
+        if (currentChannelTotal > 0) {
+            int sec = (int) Math.ceil(animatedRemaining / 20.0);
+            if (sec >= 60) return String.format("%d:%02d", sec / 60, sec % 60);
+            return "≈" + sec + "s";
+        }
+        if (currentTotalSteps > 0) {
+            return currentStep + "/" + currentTotalSteps;
+        }
+        return "";
+    }
+
+    /** Simple track + gold fill progress bar. */
+    private static void drawProgressBar(GuiGraphics g, int x, int y, int w, int h, float frac) {
+        g.fill(x, y, x + w, y + h, 0x66000000);
+        int fw = Math.round(w * frac);
+        if (fw > 0) {
+            g.fill(x, y, x + fw, y + h, 0xFFD4A840);
+        }
     }
 
     /** Resolve a cached ItemStack for the given resource id, or null. */
@@ -164,20 +259,22 @@ public class TaskQueuePanel extends AbstractWidget {
         int rightPad     = 4;  // padding between button area and panel right edge
         int colRightStart = getX() + width - BTN_AREA_W - rightPad;
 
-        // Title
-        g.drawString(Minecraft.getInstance().font, "Queue",
-                getX() + CONTENT_LEFT_PAD, getY() + topPadding, MedievalColors.TEXT_WARM_WHITE, false);
-
         // Row area
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4; // 4px bottom padding
 
+        // ── Current (executing) task — top row, locked, with progress bar ──
+        int rowStartY = textY;
+        if (currentEntry != null) {
+            rowStartY = textY + CURRENT_ROW_H;
+            renderCurrentRow(g, textY);
+        }
+
         for (int row = 0; row < entries.size(); row++) {
-            if (textY + rowHeight > listBottom) break;
+            int rowBaseY = rowStartY + row * rowHeight;
+            if (rowBaseY + rowHeight > listBottom) break;
 
             Entry e = entries.get(row);
-            boolean isCurrent = (e.index == 0);
-            int rowBaseY = textY + row * rowHeight;
 
             // Alternating row background
             if (row % 2 == 1) {
@@ -195,10 +292,9 @@ public class TaskQueuePanel extends AbstractWidget {
 
             // ── Category label + quantity ──
             int labelX = contentX + ICON_SIZE + ICON_GAP;
-            String label = categoryLabel(e.category);
-            int labelColor = isCurrent ? MedievalColors.ACCENT_GOLD : MedievalColors.TEXT_DIM;
+            Component label = categoryLabel(e.category);
             g.drawString(Minecraft.getInstance().font, label,
-                    labelX, centerY - 4, labelColor);
+                    labelX, centerY - 4, MedievalColors.TEXT_DIM);
 
             // Quantity right-aligned in the text column (left of buttons)
             int textColEnd = colRightStart - 2;
@@ -212,9 +308,9 @@ public class TaskQueuePanel extends AbstractWidget {
             // ── Action buttons ──
             int btnY = rowBaseY + (rowHeight - BTN_H) / 2;
 
-            boolean canUp    = !isCurrent && onMoveUp != null    && e.index > 1;
-            boolean canDown  = !isCurrent && onMoveDown != null  && e.index < entries.size() - 1;
-            boolean canDelete = !isCurrent && onDelete != null;
+            boolean canUp    = onMoveUp != null    && e.index > 0;
+            boolean canDown  = onMoveDown != null  && e.index < entries.size() - 1;
+            boolean canDelete = onDelete != null;
 
             drawUpBtn  (g, colRightStart,                  btnY, canUp,    mouseX, mouseY,
                         () -> { if (canUp    && onMoveUp != null)    onMoveUp.accept(e.index);    });
@@ -225,19 +321,50 @@ public class TaskQueuePanel extends AbstractWidget {
         }
     }
 
+    /** Draw the locked current-task row: icon + label + remaining time + progress bar. */
+    private void renderCurrentRow(GuiGraphics g, int rowY) {
+        // Gold-tinted highlight so the running task stands out from pending rows
+        g.fill(getX() + 1, rowY, getX() + width - 1, rowY + CURRENT_ROW_H - 1, 0x44D4A840);
+
+        int contentX = getX() + CONTENT_LEFT_PAD;
+        // Current row has no buttons — time text and progress bar can use the full panel width,
+        // keeping them clear of long category labels.
+        int textRight = getX() + width - 4;
+
+        ItemStack icon = resolveIcon(currentEntry.itemOrRecipeId());
+        if (icon != null) {
+            renderIcon(g, icon, contentX, rowY, CURRENT_ROW_H);
+        }
+
+        int labelX = contentX + ICON_SIZE + ICON_GAP;
+        Component label = categoryLabel(currentEntry.category());
+        g.drawString(Minecraft.getInstance().font, label, labelX, rowY + 2, MedievalColors.ACCENT_GOLD);
+
+        String time = timeLabel();
+        if (!time.isEmpty()) {
+            int timeW = Minecraft.getInstance().font.width(time);
+            g.drawString(Minecraft.getInstance().font, time, textRight - timeW, rowY + 2, MedievalColors.TEXT_MUTED);
+        }
+
+        // Progress bar spans from the label start to the right text edge
+        int barW = Math.max(8, textRight - labelX);
+        drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction());
+    }
+
     /**
-     * Map internal category key to a short display label.
+     * Map internal category key to a short display label (localized).
      * Keep strings short so they fit on one line with the icon.
      */
-    private static String categoryLabel(String cat) {
+    private static Component categoryLabel(String cat) {
+        String key = "gui.wandscape.queue.category." + cat;
         return switch (cat) {
-            case "decompose" -> "Decompose";
-            case "synthesize" -> "Synthesize";
-            case "craft"      -> "Craft Wand";
-            case "brew"       -> "Brew";
-            case "build"      -> "Build";
-            case "gather"     -> "Gather";
-            default           -> cat;
+            case "decompose" -> I18n.name(key, "Decompose");
+            case "synthesize" -> I18n.name(key, "Synthesize");
+            case "craft"      -> I18n.name(key, "Craft Wand");
+            case "brew"       -> I18n.name(key, "Brew");
+            case "build"      -> I18n.name(key, "Build");
+            case "gather"     -> I18n.name(key, "Gather");
+            default           -> I18n.name(key, cat);
         };
     }
 
@@ -250,7 +377,7 @@ public class TaskQueuePanel extends AbstractWidget {
                     ? ARROW_STATE_HOVER
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
-        SkinRender.drawUpArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        renderArrow(g, btnX, btnY, state, true);
         storePressAction(btnX, btnY, active, onPress);
     }
 
@@ -261,8 +388,24 @@ public class TaskQueuePanel extends AbstractWidget {
                     ? ARROW_STATE_HOVER
                     : ARROW_STATE_NORMAL)
                 : ARROW_STATE_DISABLED;
-        SkinRender.drawDownArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        renderArrow(g, btnX, btnY, state, false);
         storePressAction(btnX, btnY, active, onPress);
+    }
+
+    /**
+     * Draws an up/down arrow sprite, brightening it on hover so the shared
+     * normal sprite stays visually distinguishable. Shader color is always reset.
+     */
+    private void renderArrow(GuiGraphics g, int btnX, int btnY, int state, boolean up) {
+        if (state == ARROW_STATE_HOVER) {
+            RenderSystem.setShaderColor(HOVER_BRIGHTEN, HOVER_BRIGHTEN, HOVER_BRIGHTEN, 1.0F);
+        }
+        if (up) {
+            SkinRender.drawUpArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        } else {
+            SkinRender.drawDownArrow(g, btnX, btnY, BTN_W, BTN_H, state);
+        }
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     private void drawCloseBtn(GuiGraphics g, int btnX, int btnY,
@@ -297,13 +440,13 @@ public class TaskQueuePanel extends AbstractWidget {
         int topPadding = 4;
         int textY     = getY() + topPadding + 10;
         int listBottom = getY() + height - 4;
+        int rowStartY = textY + (currentEntry != null ? CURRENT_ROW_H : 0);
 
         for (int row = entries.size() - 1; row >= 0; row--) {
-            int rowBaseY = textY + row * rowHeight;
+            int rowBaseY = rowStartY + row * rowHeight;
             if (rowBaseY + rowHeight < textY || rowBaseY > listBottom) continue;
 
             Entry e = entries.get(row);
-            boolean isCurrent = (e.index == 0);
             int btnY = rowBaseY + (rowHeight - BTN_H) / 2;
             if (my < btnY || my > btnY + BTN_H) continue;
 
@@ -321,15 +464,15 @@ public class TaskQueuePanel extends AbstractWidget {
             Runnable action;
             switch (col) {
                 case 0 -> { // ↑
-                    active = !isCurrent && onMoveUp != null && e.index > 1;
+                    active = onMoveUp != null && e.index > 0;
                     action = () -> { if (active && onMoveUp != null) onMoveUp.accept(e.index); };
                 }
                 case 1 -> { // ↓
-                    active = !isCurrent && onMoveDown != null && e.index < entries.size() - 1;
+                    active = onMoveDown != null && e.index < entries.size() - 1;
                     action = () -> { if (active && onMoveDown != null) onMoveDown.accept(e.index); };
                 }
                 default -> { // ×
-                    active = !isCurrent && onDelete != null;
+                    active = onDelete != null;
                     action = () -> { if (active && onDelete != null) onDelete.accept(e.index); };
                 }
             }

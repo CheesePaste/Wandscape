@@ -33,6 +33,8 @@ public final class MedievalColors {
     public static final int DANGER_RED        = 0xFF8B0000;
     public static final int SUCCESS_GREEN     = 0xFF2E8B57;
     public static final int INFO_BLUE         = 0xFF4A90D9;
+    /** 魔力条填充色（模组魔法主题青蓝）。 */
+    public static final int MANA_BLUE         = 0xFF42A5F5;
 
     // ── Scrollbar ──
     public static final int SCROLLBAR_TRACK   = 0xFF1A0E04;

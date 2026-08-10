@@ -37,7 +37,7 @@ public class AnomalyScreen extends MedievalScreen {
 
     public AnomalyScreen() {
         super(Component.literal("Anomaly Report"), PANEL_W, PANEL_H);
-        setTitleBar("异常报告");
+        setTitleBar(Component.literal("异常报告"));
         this.showCloseButton = true;
         this.showHelpButton = true;
         this.helpDocumentPath = "anomaly_guide";

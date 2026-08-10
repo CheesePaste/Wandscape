@@ -69,6 +69,24 @@ public final class WandscapeTheme {
     }
 
     /**
+     * Map element type ID to its display tint color (ARGB). Matches the
+     * V-key panel top bar rendering. Icons are white-channel PNGs tinted at
+     * draw time.
+     */
+    public static int elementColor(String elementId) {
+        return switch (elementId) {
+            case "earth" -> 0xFF8B6914;
+            case "wood"  -> 0xFF2E8B57;
+            case "water" -> 0xFF4A90D9;
+            case "fire"  -> 0xFFB22222;
+            case "metal" -> 0xFFA0A0A0;
+            case "wind"  -> 0xFF87CEEB;
+            case "dark"  -> 0xFF6B3FA0;
+            default -> 0xFFCCCCCC;
+        };
+    }
+
+    /**
      * Draws a crisp RTS-style box with a translucent background and 1px border.
      * Always uses NO_DEPTH_TEST (guiOverlay) to render on top of everything.
      */
