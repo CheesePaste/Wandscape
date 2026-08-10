@@ -45,7 +45,6 @@ public final class RoadPlacementController {
     private static final double REACH = 64.0;
 
     // ── Input edge detection ──
-    private static boolean wasRightDown = false;
     private static boolean wasLeftDown = false;
     private static boolean wasEnterDown = false;
     private static boolean wasBackspaceDown = false;
@@ -132,54 +131,39 @@ public final class RoadPlacementController {
         }
     }
 
-    // ── Mouse button handling ──
+    // ── Mouse button handling (Left-click drag-box selection for REPLACE, FILL, DESTROY_FILL) ──
+
+    private static boolean isLmbDragging = false;
 
     private static void handleMouseButtons(Minecraft mc, long window) {
-        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        RoadPlacementState.ToolMode tool = RoadPlacementState.getActiveTool();
+        if (tool == RoadPlacementState.ToolMode.SPLINE) return;
 
-        boolean rightClicked = rightDown && !wasRightDown;
+        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         boolean leftClicked = leftDown && !wasLeftDown;
-        wasRightDown = rightDown;
+        boolean leftReleased = !leftDown && wasLeftDown;
         wasLeftDown = leftDown;
 
-        if (rightClicked) {
-            handleRightClick(mc);
-        }
-        if (leftClicked) {
-            handleLeftClick(mc);
-        }
-    }
-
-    private static void handleRightClick(Minecraft mc) {
         BlockPos ghostPos = RoadPlacementState.getGhostPos();
-        if (ghostPos == null) return;
 
-        if (RoadPlacementState.isReady()) {
-            // PLAN_END → right-click: clear all, return to IDLE
-            RoadPlacementState.clearAll();
-        } else if (RoadPlacementState.isDestroyFill()) {
-            // Destroy/Fill: capture reference block + position
+        if (leftClicked && ghostPos != null) {
+            // Press LMB: start selection box/area
             RoadPlacementState.setStartPos(ghostPos);
-            BlockState state = mc.level != null ? mc.level.getBlockState(ghostPos) : null;
-            String blockName = state != null
-                    ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
-                    : "unknown";
-            RoadPlacementState.setRefBlockId(blockName);
-        } else {
-            // IDLE or PLAN_START → right-click: set / overwrite startPos
-            RoadPlacementState.setStartPos(ghostPos);
+            RoadPlacementState.setEndPos(ghostPos);
+            if (tool == RoadPlacementState.ToolMode.DESTROY_FILL) {
+                BlockState state = mc.level != null ? mc.level.getBlockState(ghostPos) : null;
+                String blockName = state != null
+                        ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
+                        : "minecraft:stone";
+                RoadPlacementState.setRefBlockId(blockName);
+            }
+            isLmbDragging = true;
+        } else if (leftDown && isLmbDragging && ghostPos != null) {
+            // Drag LMB: dynamically update endPos to expand selection box/area
+            RoadPlacementState.setEndPos(ghostPos);
+        } else if (leftReleased) {
+            isLmbDragging = false;
         }
-    }
-
-    private static void handleLeftClick(Minecraft mc) {
-        BlockPos ghostPos = RoadPlacementState.getGhostPos();
-        if (ghostPos == null) return;
-
-        if (!RoadPlacementState.isPlanning()) return; // IDLE → no action
-
-        // PLAN_START or PLAN_END → set / overwrite endPos
-        RoadPlacementState.setEndPos(ghostPos);
     }
 
     // ── Keyboard handling (no ESC — handled by handleEscapeInput) ──
