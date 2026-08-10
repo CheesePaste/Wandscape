@@ -266,6 +266,10 @@ public class Config {
             .comment("spot 全满排队等待上限（tick），超时放弃去别处。")
             .defineInRange("tourist.queueWaitToleranceTicks", 2400, 0, 24000);
 
+    public static final ModConfigSpec.DoubleValue TOURIST_QUEUE_SLOT_SPACING = BUILDER
+            .comment("排队站位间距（格）：队首紧贴正在交互的游客，后续沿该 spot 朝向一个贴一个向后排开。")
+            .defineInRange("tourist.queueSlotSpacing", 1.0, 0.5, 8.0);
+
     public static final ModConfigSpec.IntValue TOURIST_STAY_MIN_DAYS = BUILDER
             .comment("游客最少停留天数（离境截止下限）。")
             .defineInRange("tourist.stayMinDays", 2, 1, 7);

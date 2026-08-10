@@ -195,6 +195,13 @@ public final class TouristSimulation {
         return TouristSpotManager.getActive().claim(buildingId, total);
     }
 
+    /** 认领指定 spot（供排在该 spot 队首的游客用）；已被占返回 -1。 */
+    public static int claimSpotAt(ServerLevel level, UUID buildingId, int spotIndex) {
+        int total = interactSpotCount(level, buildingId);
+        if (total <= 0) return -1;
+        return TouristSpotManager.getActive().claimAt(buildingId, spotIndex, total);
+    }
+
     /** 释放已占用的 spot。 */
     public static void releaseSpot(UUID buildingId, int spotIndex) {
         TouristSpotManager.getActive().release(buildingId, spotIndex);
@@ -205,6 +212,31 @@ public final class TouristSimulation {
         int total = interactSpotCount(level, buildingId);
         if (total <= 0) return 0;
         return TouristSpotManager.getActive().freeSpotCount(buildingId, total);
+    }
+
+    // ── 排队站位 ──
+
+    /**
+     * 排在第 {@code spotIndex} 个 spot 后、队序 {@code queuePosition} 的站位世界坐标：
+     * 队首（0）= spot 背后 1 个间距，之后沿 **spot 的 facing 方向的反方向** 逐个排开，
+     * 即游客面朝与交互游客相同的方向、一个贴一个。
+     *
+     * @param queuePosition 队序（0 = 紧贴正在交互的游客）
+     * @return 该站位；spot 坐标缺失时返回 null
+     */
+    @Nullable
+    public static BlockPos queueSlotPos(ServerLevel level, UUID buildingId, int spotIndex, int queuePosition) {
+        BlockPos spot = spotWorldPos(level, buildingId, spotIndex);
+        if (spot == null || queuePosition < 0) return null;
+        Direction facing = spotFacing(level, buildingId, spotIndex);
+        double d = Config.TOURIST_QUEUE_SLOT_SPACING.get() * (queuePosition + 1);
+        // 沿 facing 反方向向后排（facing 恒为水平轴，队列是一条直线、非斜线）
+        int dx = -facing.getStepX();
+        int dz = -facing.getStepZ();
+        return new BlockPos(
+                (int) Math.round(spot.getX() + dx * d),
+                spot.getY(),
+                (int) Math.round(spot.getZ() + dz * d));
     }
 
     // ── Interactions ──

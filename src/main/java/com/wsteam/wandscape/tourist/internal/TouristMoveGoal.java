@@ -135,6 +135,13 @@ public class TouristMoveGoal extends Goal {
     private boolean queueing;
     /** 排队已持续的 tick 数（超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处）。 */
     private int queueTicks;
+    /** 排在哪一个 spot 的队（-1 = 未排队）；队伍沿该 spot 朝向排开。 */
+    private int queueSpotIndex = -1;
+    /** 排队到位判定：与站位距离平方 ≤ 该值即视为站定（≈1.4 格内）。 */
+    private static final double QUEUE_ARRIVE_DIST_SQ = 2.0;
+    /** 上次导航的排队站位（目标没变就不重算 A*，避免每 tick 抖动）。 */
+    @Nullable
+    private BlockPos queueNavTarget;
 
     /** Push current debug state to entity synched data for client-side renderer. */
     private void syncDebugData() {
@@ -589,7 +596,7 @@ public class TouristMoveGoal extends Goal {
         }
     }
 
-    /** 排队等待：轮询空 spot，超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处。 */
+    /** 排队等待：轮询本队 spot 空位，超 TOURIST_QUEUE_WAIT_TOLERANCE_TICKS 放弃去别处。 */
     private void tickQueue() {
         if (++queueTicks > Config.TOURIST_QUEUE_WAIT_TOLERANCE_TICKS.get()) {
             abandonBuildingVisit();
@@ -597,36 +604,105 @@ public class TouristMoveGoal extends Goal {
         }
         ServerLevel level = serverLevel();
         UUID buildingId = tourist.getTargetBuildingId();
-        if (level == null || buildingId == null) {
+        if (level == null || buildingId == null || queueSpotIndex < 0) {
             abandonBuildingVisit();
             return;
         }
-        int spot = TouristSimulation.claimSpot(level, buildingId);
-        if (spot < 0) return; // 继续等
-        claimedSpot = spot;
-        queueing = false;
-        queueTicks = 0;
-        BlockPos target = TouristSimulation.spotWorldPos(level, buildingId, spot);
-        if (target == null) {
-            clearSpotState();
-            finishBuildingStop();
-            return;
+        // 严格 FIFO：只有本队队首可认领该 spot 空位（队首离队后下一个自然成为队首）
+        if (TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID()) == 0) {
+            int spot = TouristSimulation.claimSpotAt(level, buildingId, queueSpotIndex);
+            if (spot >= 0) {
+                leaveQueue();
+                claimedSpot = spot;
+                queueing = false;
+                queueTicks = 0;
+                BlockPos target = TouristSimulation.spotWorldPos(level, buildingId, spot);
+                if (target == null) {
+                    clearSpotState();
+                    finishBuildingStop();
+                    return;
+                }
+                interactPoint = target;
+                tourist.setFrozenYaw(null);
+                tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+                return;
+            }
         }
-        interactPoint = target;
-        tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+        navigateToQueueSlot();
     }
 
-    /** 进入排队状态（spot 全满，在建筑旁等；仅机制，无可见标记）。 */
+    /** 进入排队状态（spot 全满）：排到队最短的 spot 后，沿该 spot 朝向站成一列。 */
     private void startQueueing() {
         queueing = true;
         queueTicks = 0;
         tourist.setCurrentActivity(Activity.QUEUE);
         tourist.setFrozenYaw(null);
-        tourist.getNavigation().stop();
+        ServerLevel level = serverLevel();
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (level != null && buildingId != null) {
+            int total = TouristSimulation.interactSpotCount(level, buildingId);
+            if (total > 0) {
+                // 均匀分布：排到当前队最短（并列取最小下标）的 spot 后
+                int spot = TouristSpotManager.getActive().shortestQueueSpot(buildingId, total);
+                TouristSpotManager.getActive().joinQueue(buildingId, spot, tourist.getUUID());
+                queueSpotIndex = spot;
+            }
+        }
+        navigateToQueueSlot();
+    }
+
+    /** 导航到本队当前队序对应的站位（沿 spot 朝向向后排开），到位后朝向与 spot 一致。 */
+    private void navigateToQueueSlot() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        ServerLevel level = serverLevel();
+        if (buildingId == null || level == null || queueSpotIndex < 0) {
+            tourist.getNavigation().stop();
+            return;
+        }
+        int slot = TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID());
+        if (slot < 0) {
+            tourist.getNavigation().stop();
+            return;
+        }
+        BlockPos raw = TouristSimulation.queueSlotPos(level, buildingId, queueSpotIndex, slot);
+        BlockPos ground = raw != null ? findGround(raw.getX(), raw.getY(), raw.getZ()) : null;
+        BlockPos target = ground != null ? ground : raw;
+        if (target == null) {
+            tourist.getNavigation().stop();
+            return;
+        }
+        // 已到位且目标没变：站定并朝向 spot 的 facing（和交互游客同向）
+        boolean sameTarget = target.equals(queueNavTarget);
+        boolean arrived = tourist.blockPosition().distSqr(target) <= QUEUE_ARRIVE_DIST_SQ;
+        if (sameTarget && arrived) {
+            tourist.getNavigation().stop();
+            if (tourist.getFrozenYaw() == null) {
+                float yaw = TouristSimulation.spotFacing(level, buildingId, queueSpotIndex).toYRot();
+                tourist.setFrozenYaw(yaw);
+            }
+            return;
+        }
+        // 需移动：队序前移（目标变化）换目标，或导航已结束（被撞开/寻路失败）重新引导
+        tourist.setFrozenYaw(null);
+        if (!sameTarget || tourist.getNavigation().isDone()) {
+            queueNavTarget = target;
+            tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+        }
+    }
+
+    /** 离开建筑所有队列（幂等），清排队状态。 */
+    private void leaveQueue() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId != null) {
+            TouristSpotManager.getActive().leaveAllQueues(buildingId, tourist.getUUID());
+        }
+        queueSpotIndex = -1;
+        queueNavTarget = null;
     }
 
     /** 清空 spot 占用与活动/排队状态（所有清理路径共用）。 */
     private void clearSpotState() {
+        leaveQueue();
         UUID buildingId = tourist.getTargetBuildingId();
         if (claimedSpot >= 0) {
             TouristSimulation.releaseSpot(buildingId, claimedSpot);
@@ -655,7 +731,7 @@ public class TouristMoveGoal extends Goal {
         usingRoad = false;
 
         // 到达建筑：认领一个空 spot（spot 数 = 同时交互人数上限），导航到该 spot 世界坐标。
-        // spot 全满 → 排队（在建筑旁等空位）。
+        // spot 全满 → 排队（均匀分散到队最短的 spot 后，沿该 spot 朝向站一列）。
         ServerLevel level = serverLevel();
         UUID buildingId = tourist.getTargetBuildingId();
         int spot = -1;
