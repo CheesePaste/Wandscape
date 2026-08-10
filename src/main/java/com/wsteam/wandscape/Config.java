@@ -142,19 +142,25 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER
             .comment("Maximum simultaneous tourists per colony")
-            .defineInRange("tourist.maxPerColony", 20, 5, 100);
+            .defineInRange("tourist.maxPerColony", 100, 5, 500);
 
     public static final ModConfigSpec.IntValue TOURIST_DESPAWN_TIMEOUT_TICKS = BUILDER
             .comment("Ticks before an idle tourist despawns (36000 ticks = 30 minutes)")
             .defineInRange("tourist.despawnTimeoutTicks", 36000, 12000, 72000);
 
     public static final ModConfigSpec.IntValue TOURIST_BASE_SPAWN_COUNT = BUILDER
-            .comment("Base number of tourists spawned each morning")
-            .defineInRange("tourist.baseSpawnCount", 6, 1, 50);
+            .comment("Daily spawn count lower bound at colony level 1. "
+                    + "每日生成数 = 均匀区间 [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth]")
+            .defineInRange("tourist.baseSpawnCount", 4, 1, 100);
 
     public static final ModConfigSpec.IntValue TOURIST_LEVEL_SPAWN_BONUS = BUILDER
-            .comment("Additional tourists per colony level")
-            .defineInRange("tourist.levelSpawnBonus", 3, 1, 20);
+            .comment("Additional tourists per colony level (both lower and upper bounds +1 per level)")
+            .defineInRange("tourist.levelSpawnBonus", 1, 0, 10);
+
+    public static final ModConfigSpec.IntValue TOURIST_SPAWN_RANGE_WIDTH = BUILDER
+            .comment("Daily spawn count fluctuation width: target ∈ [lower, lower+width]. "
+                    + "默认 3 = 1 级 4~7、2 级 5~8、3 级 6~9")
+            .defineInRange("tourist.spawnRangeWidth", 3, 0, 50);
 
     public static final ModConfigSpec.IntValue TOURIST_SPAWN_WINDOW_START = BUILDER
             .comment("Spawn window start (game time tick)")

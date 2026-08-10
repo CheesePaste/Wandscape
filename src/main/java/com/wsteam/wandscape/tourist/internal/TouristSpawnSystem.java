@@ -50,7 +50,9 @@ import com.wsteam.wandscape.shared.log.Log;
  *   <li>Night departure (18000-24000): 满条夜晚离场 / 入旅店 + hotel routing
  * </ul>
  *
- * <p><b>Spawn count:</b> base(6) + colonyLevel × levelSpawnBonus(3), randomized × 0.8~1.2
+ * <p><b>Spawn count:</b> uniform integer range
+ * [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth],
+ * spawn times spread evenly across the spawn window
  * <br><b>Tourist level distribution:</b> colonyLevel-1 (40%), colonyLevel (40%), colonyLevel+1 (20%)
  */
 public final class TouristSpawnSystem {
@@ -60,8 +62,6 @@ public final class TouristSpawnSystem {
     private static final int CHECK_INTERVAL = 100;
     /** Tick offset after departure window start before first purge. */
     private static final int DEPARTURE_INITIAL_DELAY = 200;
-    /** Max active tourists hard cap. */
-    private static final int MAX_TOURISTS = 30;
 
     // ── Daily spawn schedule ──
 
@@ -246,14 +246,14 @@ public final class TouristSpawnSystem {
         // Count existing tourists
         int existing = countExistingTourists(level);
 
-        // Compute target count: base + colonyLevel × bonus, randomized × 0.8~1.2
+        // Compute target count: uniform integer range
+        // [base+(lv-1)×levelSpawnBonus, base+(lv-1)×levelSpawnBonus+spawnRangeWidth]
         int colonyLevel = levelManager != null ? levelManager.getLevel(colonyId) : 1;
-        int base = Config.TOURIST_BASE_SPAWN_COUNT.get();
-        int levelBonus = colonyLevel * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
-        int rawTarget = base + levelBonus;
-        int targetCount = (int) Math.round(rawTarget * (0.8 + random.nextDouble() * 0.4));
+        int lower = Config.TOURIST_BASE_SPAWN_COUNT.get()
+                + (colonyLevel - 1) * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
+        int upper = lower + Config.TOURIST_SPAWN_RANGE_WIDTH.get();
+        int targetCount = lower + (upper > lower ? random.nextInt(upper - lower + 1) : 0);
         targetCount = Math.max(1, Math.min(targetCount, Config.TOURIST_MAX_PER_COLONY.get()));
-        targetCount = Math.min(targetCount, MAX_TOURISTS);
 
         int toSpawn = Math.max(0, targetCount - existing);
         if (toSpawn <= 0) return;
@@ -261,7 +261,7 @@ public final class TouristSpawnSystem {
         // Collect spawn positions
         List<BlockPos> spawnCandidates = collectSpawnPositions(level, allBuildings);
 
-        // Create pending spawns with random levels and spawn times distributed across the window
+        // Create pending spawns with random levels and spawn times spread evenly across the window
         int windowStart = Config.TOURIST_SPAWN_WINDOW_START.get();
         int windowDuration = Config.TOURIST_SPAWN_WINDOW_END.get() - windowStart;
         for (int i = 0; i < toSpawn; i++) {
@@ -276,8 +276,8 @@ public final class TouristSpawnSystem {
             // at spawn time, so a building demolished after scheduling can't ghost it.
             BuildingState target = touristTargets.get(random.nextInt(touristTargets.size()));
 
-            // Assign random spawn time distributed across the spawn window
-            int spawnTime = windowStart + (windowDuration > 0 ? random.nextInt(windowDuration) : 0);
+            // Assign spawn time spread evenly across the spawn window (1000-8000)
+            int spawnTime = windowStart + (i * windowDuration) / toSpawn;
 
             pendingSpawns.add(new PendingSpawn(touristLevel, spawnTime, spawnPos, target.getBuildingId()));
         }
@@ -702,17 +702,6 @@ public final class TouristSpawnSystem {
             if (state != null) targets.add(state);
         }
         return targets;
-    }
-
-    private int computeTargetCount(BuildingApi api) {
-        UUID colonyId = null;
-        int base = Config.TOURIST_BASE_SPAWN_COUNT.get();
-        int levelBonus = 0;
-        if (levelManager != null && colonyId != null) {
-            levelBonus = levelManager.getLevel(colonyId) * Config.TOURIST_LEVEL_SPAWN_BONUS.get();
-        }
-        int raw = base + levelBonus;
-        return (int) Math.round(raw * (0.8 + random.nextDouble() * 0.4));
     }
 
     private int countExistingTourists(ServerLevel level) {
