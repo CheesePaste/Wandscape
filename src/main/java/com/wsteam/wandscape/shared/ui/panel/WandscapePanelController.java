@@ -122,6 +122,14 @@ public final class WandscapePanelController {
 
         // ── Build mode right pop panel handling ──
         if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isActive()) {
+            if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverLockButton(mouseX, mouseY, screenW)) {
+                boolean curPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
+                com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(!curPinned);
+                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                event.setCanceled(true);
+                return;
+            }
             if (com.wsteam.wandscape.projection.client.BuildPopPanelOverlay.isOverRotateButton(mouseX, mouseY, screenW)) {
                 com.wsteam.wandscape.projection.client.ProjectionClientState.rotate();
                 mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
@@ -311,6 +319,18 @@ public final class WandscapePanelController {
             if (handleSearchInput(key, mods)) {
                 return;
             }
+        }
+
+        // Enter key in Build mode: toggle Lock / Pinned state (Phase 1 ↔ Phase 2)
+        if ((key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER)
+                && WandscapePanelState.isPanelOpen()
+                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
+                && com.wsteam.wandscape.projection.client.ProjectionClientState.isProjecting()) {
+            boolean curPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
+            com.wsteam.wandscape.projection.client.ProjectionClientState.setPinned(!curPinned);
+            mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                    net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            return;
         }
 
         // Building areas overlay toggle (works whenever panel is open)

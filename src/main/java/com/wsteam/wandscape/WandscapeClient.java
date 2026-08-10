@@ -116,6 +116,8 @@ public class WandscapeClient {
         RoadPlacementRenderer.register();
         ProjectionRenderer.register();
         ProjectionFlightController.register();
+        com.wsteam.wandscape.projection.client.BuildGizmoController.register();
+        com.wsteam.wandscape.projection.client.BuildGizmoRenderer.register();
         BuildingDebugController.register();
         BuildingDebugOverlay.register();
         TouristDebugRenderer.register();

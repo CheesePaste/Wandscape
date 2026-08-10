@@ -475,7 +475,7 @@ public final class OverviewFlightController {
             UUID buildingId = findBuildingAt(hitPos);
             OverviewClientState.setTarget(hitPos, buildingId);
 
-            // When build mode is projecting in overview, sync ghost from the same raycast
+            // When build mode is projecting in overview, sync ghost from camera center raycast
             if (ProjectionClientState.isProjecting()) {
                 if (ProjectionClientState.isPinned()) {
                     // Ghost stays fixed — only re-check overlap against the fixed position
@@ -487,11 +487,25 @@ public final class OverviewFlightController {
                 } else {
                     long window = mc.getWindow().getWindow();
                     boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-                    if (rightDown) {
-                        BlockPos placePos = hitPos.relative(blockHit.getDirection());
-                        ProjectionClientState.setGhostPos(placePos);
+
+                    // Camera center raycast (crosshair center)
+                    Vector3f jLook = camera.getLookVector();
+                    Vec3 centerLookVec = new Vec3(jLook.x(), jLook.y(), jLook.z());
+                    Vec3 centerEnd = origin.add(centerLookVec.scale(REACH));
+                    ClipContext centerCtx = new ClipContext(origin, centerEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
+                    BlockHitResult centerHit = mc.level.clip(centerCtx);
+
+                    if (centerHit.getType() == HitResult.Type.BLOCK) {
+                        BlockPos centerPlacePos = centerHit.getBlockPos().relative(centerHit.getDirection());
+                        if (rightDown || ProjectionClientState.getGhostPos() == null) {
+                            ProjectionClientState.setGhostPos(centerPlacePos);
+                        }
+                    }
+
+                    BlockPos curGhost = ProjectionClientState.getGhostPos();
+                    if (curGhost != null) {
                         var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                        boolean overlap = api != null && api.getBuildingAt(placePos) != null;
+                        boolean overlap = api != null && api.getBuildingAt(curGhost) != null;
                         ProjectionClientState.setOverlapDetected(overlap);
                     }
                 }
@@ -499,10 +513,6 @@ public final class OverviewFlightController {
         } else {
             OverviewClientState.clearTarget();
             OverviewClientState.clearTargetEntity();
-            if (ProjectionClientState.isProjecting() && !ProjectionClientState.isPinned()) {
-                ProjectionClientState.setGhostPos(null);
-                ProjectionClientState.setOverlapDetected(false);
-            }
         }
     }
 

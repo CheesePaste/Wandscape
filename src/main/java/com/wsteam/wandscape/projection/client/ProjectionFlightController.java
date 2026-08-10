@@ -130,7 +130,10 @@ public final class ProjectionFlightController {
             return;
         }
 
-        // Perform a long-range raycast from camera
+        long window = mc.getWindow().getWindow();
+        boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+
+        // Perform a long-range raycast from camera center
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
         Vec3 lookVec = new Vec3(camera.getLookVector().x(),
@@ -148,16 +151,17 @@ public final class ProjectionFlightController {
 
         if (hit.getType() == HitResult.Type.BLOCK) {
             BlockPos targetPos = hit.getBlockPos();
-            // Place on the face the player is looking at (adjacent block)
             BlockPos placePos = targetPos.relative(hit.getDirection());
-            ProjectionClientState.setGhostPos(placePos);
+            if (rightDown || ProjectionClientState.getGhostPos() == null) {
+                ProjectionClientState.setGhostPos(placePos);
+            }
+        }
 
-            // Check overlap with existing buildings
+        BlockPos curGhost = ProjectionClientState.getGhostPos();
+        if (curGhost != null) {
             BuildingApi api = WandscapeApis.getBuildingApi();
-            boolean overlap = api != null && api.getBuildingAt(placePos) != null;
+            boolean overlap = api != null && api.getBuildingAt(curGhost) != null;
             ProjectionClientState.setOverlapDetected(overlap);
-        } else {
-            ProjectionClientState.setGhostPos(null);
         }
     }
 

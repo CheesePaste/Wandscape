@@ -109,7 +109,7 @@ public final class RoadPlacementController {
 
     // ── Mouse Raycasting & Ghost position ──
 
-    private static Vec3 getMouseWorldRay(Minecraft mc) {
+    public static Vec3 getMouseWorldRay(Minecraft mc) {
         long window = mc.getWindow().getWindow();
         double[] mx = new double[1], my = new double[1];
         org.lwjgl.glfw.GLFW.glfwGetCursorPos(window, mx, my);
