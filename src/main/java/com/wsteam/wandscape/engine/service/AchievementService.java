@@ -69,6 +69,7 @@ public final class AchievementService {
     private static final ResourceLocation OVERNIGHT_GUEST = loc("overnight_guest");
     private static final ResourceLocation PEAK_SEASON_10 = loc("peak_season_10");
     private static final ResourceLocation PEAK_SEASON_20 = loc("peak_season_20");
+    private static final ResourceLocation PEAK_SEASON_50 = loc("peak_season_50");
     private static final ResourceLocation WIZARDS_INTEREST = loc("a_wizards_interest");
     private static final ResourceLocation NEW_RECRUIT = loc("new_recruit");
     private static final ResourceLocation WORKFORCE_5 = loc("growing_workforce_5");
@@ -128,7 +129,7 @@ public final class AchievementService {
 
     private static void onRaidVictory(ColonyRaidVictoryEvent event) {
         grant(HERO_OF_WANDSCAPE);
-        if (event.getOmenLevel() >= 2) grant(RAID_VETERAN);
+        if (event.getOmenLevel() >= 5) grant(RAID_VETERAN);
     }
 
     private static void onTouristArrived(TouristArrivedEvent event) {
@@ -276,7 +277,8 @@ public final class AchievementService {
         TouristApi api = WandscapeApis.getTouristApiSilently();
         if (api == null) return;
         int count = api.getTouristCount(colonyId);
-        if (count >= 20) grant(PEAK_SEASON_20);
+        if (count >= 50) grant(PEAK_SEASON_50);
+        if (count >= 30) grant(PEAK_SEASON_20);
         if (count >= 10) grant(PEAK_SEASON_10);
     }
 
@@ -314,16 +316,16 @@ public final class AchievementService {
         for (long v : api.getAllElements(colonyId).values()) {
             if (v > max) max = v;
         }
-        if (max >= 50000) grant(TREASURY_50K);
-        if (max >= 5000) grant(TREASURY_5K);
+        if (max >= 500000) grant(TREASURY_50K);
+        if (max >= 50000) grant(TREASURY_5K);
     }
 
     /** 路网路段数（MST 自动生成 + 玩家手铺）。 */
     private static void checkRoads(UUID colonyId) {
         try {
             int edges = WandscapeApis.getRoadApi().getEdges(colonyId).size();
-            if (edges >= 15) grant(WELL_CONNECTED_15);
-            if (edges >= 5) grant(WELL_CONNECTED_5);
+            if (edges >= 50) grant(WELL_CONNECTED_15);
+            if (edges >= 15) grant(WELL_CONNECTED_5);
         } catch (Exception e) {
             // 道路系统未加载
         }

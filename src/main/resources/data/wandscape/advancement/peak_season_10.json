@@ -1,5 +1,5 @@
 {
-  "parent": "wandscape:start",
+  "parent": "wandscape:first_visitor",
   "display": {
     "icon": {"id": "minecraft:compass"},
     "title": {"translate": "advancements.wandscape.peak_season_10.title"},

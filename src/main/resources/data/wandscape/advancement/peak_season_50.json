@@ -1,0 +1,15 @@
+{
+  "parent": "wandscape:peak_season_20",
+  "display": {
+    "icon": {"id": "minecraft:campfire"},
+    "title": {"translate": "advancements.wandscape.peak_season_50.title"},
+    "description": {"translate": "advancements.wandscape.peak_season_50.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grant": {"trigger": "minecraft:impossible"}
+  }
+}
