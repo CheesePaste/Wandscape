@@ -33,6 +33,9 @@ public final class SelfDefenseHandler {
         if (!(event.getEntity() instanceof WandscapeNpc npc)) return;
         if (npc.level().isClientSide) return;
 
+        // 任何伤害都重置脱战回血计时（回血仅在脱战后生效）
+        npc.markRecentlyDamaged();
+
         LivingEntity attacker = attackerFrom(event.getSource());
         if (attacker == null || attacker instanceof Player || attacker instanceof WandscapeNpc) return;
         if (!(attacker instanceof Enemy)) return;

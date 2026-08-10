@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.guard.executor;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -57,11 +56,9 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
     private static final int SELF_DEFENSE_PRIORITY = 90;
 
     private record Pending(CompletableFuture<Void> future, World world, long npcId, int remainingTicks,
-                           int radius, String circleId, int color) {}
+                           int radius) {}
 
     private final List<Pending> pending = new ArrayList<>();
-    /** npcId → 上次成功施法的 gameTime（施法节流，跨轮共享）。 */
-    private final Map<Long, Long> lastCastTick = new HashMap<>();
     private int detectTickCounter = 0;
 
     @Override
@@ -76,8 +73,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             return CompletableFuture.completedFuture(null);
         }
         CompletableFuture<Void> future = world.startAsyncOp("self_defense");
-        pending.add(new Pending(future, world, npcId, 1,
-                op.radius(), op.circleId(), op.color()));
+        pending.add(new Pending(future, world, npcId, 1, op.radius()));
         return future;
     }
 
@@ -119,8 +115,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
                 continue; // 挂起栈满，不能覆盖当前包
             }
             queue.startPackage(NpcTaskPackage.system("self_defense",
-                    new AtomicOp.SelfDefenseOp(Config.GUARD_SELF_DEFENSE_RANGE.get(),
-                            MagicCaster.DEFAULT_CIRCLE, MagicCaster.DEFAULT_COLOR),
+                    new AtomicOp.SelfDefenseOp(Config.GUARD_SELF_DEFENSE_RANGE.get()),
                     null, SELF_DEFENSE_PRIORITY));
             Log.info(TAG, "NPC {} engages self-defense target={} preempted={}",
                     npcId, target.getName().getString(), hadPackage ? "yes" : "idle");
@@ -182,17 +177,14 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         for (Pending p : pending) {
             int remaining = p.remainingTicks() - 1;
             if (remaining > 0) {
-                next.add(new Pending(p.future(), p.world(), p.npcId(), remaining,
-                        p.radius(), p.circleId(), p.color()));
+                next.add(new Pending(p.future(), p.world(), p.npcId(), remaining, p.radius()));
                 continue;
             }
             int wait = runCycle(p);
             if (wait < 0) {
                 toComplete.add(p.future());
-                lastCastTick.remove(p.npcId());
             } else {
-                next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, wait),
-                        p.radius(), p.circleId(), p.color()));
+                next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, wait), p.radius()));
             }
         }
 
@@ -218,8 +210,9 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             npc.clearHatedAttackerIfExpired(level);
             return -1;
         }
+        // 施法视觉（法阵/颜色）由 beam MagicDef 定义（magic_spells/beam.json），随魔法数据走
         GuardCombat.engage(level, npc, target, p.world(), p.npcId(),
-                p.circleId(), p.color(), lastCastTick);
+                MagicCaster.beamCircleId(), MagicCaster.beamColor());
         return RECHECK_TICKS;
     }
 }

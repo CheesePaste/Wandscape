@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.wsteam.wandscape.Config;
-import com.wsteam.wandscape.magic.internal.MagicCaster;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintSteps;
@@ -25,20 +24,13 @@ public final class GuardBlueprints {
     private static TaskSequence attackSteps(Map<String, JsonElement> params) {
         int attackRange = intParam(params, "attackRange", Config.GUARD_RANGE.get());
         int releaseRange = intParam(params, "releaseRange", Config.GUARD_RELEASE_RANGE.get());
-        String circle = strParam(params, "circle", MagicCaster.DEFAULT_CIRCLE);
-        int color = intParam(params, "color", MagicCaster.DEFAULT_COLOR);
         return new TaskSequence(
-                List.of(new AtomicOp.AttackMonsterOp(attackRange, releaseRange, circle, color)),
+                List.of(new AtomicOp.AttackMonsterOp(attackRange, releaseRange)),
                 "Guard attack");
     }
 
     private static int intParam(Map<String, JsonElement> params, String key, int def) {
         JsonElement el = params.get(key);
         return el != null && el.isJsonPrimitive() ? el.getAsInt() : def;
-    }
-
-    private static String strParam(Map<String, JsonElement> params, String key, String def) {
-        JsonElement el = params.get(key);
-        return el != null && el.isJsonPrimitive() ? el.getAsString() : def;
     }
 }
