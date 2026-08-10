@@ -215,9 +215,6 @@ public final class WandscapePanelState {
         if (buildingBarOpen) {
             closeBuildingBar();
         }
-        if (cursorLifted) {
-            grabMouseForGame();
-        }
         panelOpen = false;
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(false);
@@ -226,6 +223,9 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
+        // Panel closed → the per-tick reconciler no longer runs, so return the
+        // cursor to gameplay (grabbed) directly here.
+        grabMouseForGame();
     }
 
     /**
@@ -291,21 +291,18 @@ public final class WandscapePanelState {
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
+    // These only set the intent flag `cursorLifted`. The OS cursor (grab/release +
+    // position restore) is applied solely by WandscapePanelController.onClientTickPost,
+    // so sub-mode transitions never race by grabbing then immediately releasing.
 
-    /** Lift cursor: release mouse for UI interaction (preset selection overlay). */
+    /** Lift cursor: show/free it for UI interaction. */
     public static void liftCursorForUI() {
-        if (!cursorLifted) {
-            cursorLifted = true;
-            Minecraft.getInstance().mouseHandler.releaseMouse();
-        }
+        cursorLifted = true;
     }
 
-    /** Release cursor to game: grab mouse for in-world interaction. */
+    /** Release cursor to game: hide/lock it for in-world interaction. */
     public static void releaseCursorToGame() {
-        if (cursorLifted) {
-            cursorLifted = false;
-            Minecraft.getInstance().mouseHandler.grabMouse();
-        }
+        cursorLifted = false;
     }
 
     public static void toggleCursor() {
@@ -336,12 +333,6 @@ public final class WandscapePanelState {
         }
 
         cursorLifted = !cursorLifted;
-        Minecraft mc = Minecraft.getInstance();
-        if (cursorLifted) {
-            mc.mouseHandler.releaseMouse();
-        } else {
-            mc.mouseHandler.grabMouse();
-        }
     }
 
     // ── Building selection bar ──
@@ -363,10 +354,7 @@ public final class WandscapePanelState {
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
         // Keep ghost/pinned so toggling the bar does not discard a placement in progress.
-        if (!cursorLifted) {
-            cursorLifted = true;
-            Minecraft.getInstance().mouseHandler.releaseMouse();
-        }
+        cursorLifted = true;
     }
 
     public static void closeBuildingBar() {
@@ -376,10 +364,7 @@ public final class WandscapePanelState {
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
         lastClickIndex = -1;
-        if (cursorLifted) {
-            cursorLifted = false;
-            Minecraft.getInstance().mouseHandler.grabMouse();
-        }
+        cursorLifted = false;
     }
 
     /** Double-click: enter PLACING phase (bar closed, cursor in game, ghost visible). */
@@ -465,11 +450,13 @@ public final class WandscapePanelState {
             case BUILD_PROJECTION -> {
                 buildPhase = BuildPhase.BAR;
                 PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                if (!buildingBarOpen) openBuildingBar();
             }
             case ROAD_PROJECTION -> {
                 RoadPlacementState.enterProjection();
                 liftCursorForUI();
             }
+            case STATS -> liftCursorForUI();
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
         }
     }
