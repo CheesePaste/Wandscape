@@ -235,7 +235,7 @@ public enum Activity {
   - `TOURIST_ENERGY_RESTORE_THRESHOLD`（double，默认 0.25）——精力低于此比例强烈偏向恢复（relax）建筑
   - `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS`（int，默认 2400）——排队等待上限
   - `TOURIST_STAY_MIN_DAYS`（int，默认 2）、`TOURIST_STAY_MAX_DAYS`（int，默认 4）——`departureDeadline = arrivalTime + rand(2~4) × 24000`
-  - `TOURIST_VISION_RADIUS`（int，默认 48）——**视野**：目标选择只看半径内（且已加载）的建筑；视野内无合适目标 → 闲逛
+  - `TOURIST_VISION_RADIUS`（int，默认 64）——**视野**：目标选择只看半径内（且已加载）的建筑；视野内无合适目标 → 闲逛
   - `TOURIST_ATM_TRAVEL_FUND_MULTIPLIER`（double，默认 2.0）——生成时 `travelFund = startingWallet × multiplier`（总旅费 = 随身现金的倍数，ATM 分批取现的池子）
   - 画像分布权重（可硬编码于 Block 2 生成处，或 Config：`TOURIST_PERSONA_BALANCED/COMFORT/MAGIC/WONDER`）
 - **画像需求与等级正相关**（Block 2 生成时 roll）：

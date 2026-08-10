@@ -287,7 +287,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue TOURIST_VISION_RADIUS = BUILDER
             .comment("游客视野半径（格）：目标选择只看半径内且已加载的建筑；视野内无目标 → 闲逛。")
-            .defineInRange("tourist.visionRadius", 48, 8, 256);
+            .defineInRange("tourist.visionRadius", 64, 8, 256);
 
     public static final ModConfigSpec.DoubleValue TOURIST_ATM_TRAVEL_FUND_MULTIPLIER = BUILDER
             .comment("生成时 travelFund = 随身现金 × 该系数（ATM 分批取现的池子上限，防无限取现）。")
