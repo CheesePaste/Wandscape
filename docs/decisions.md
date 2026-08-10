@@ -2,6 +2,16 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-10：游客生成防高 tick rate——生成路径每 tick flush
+
+**需求**（用户实测）：把游戏 tick rate 调成极端值（如 1000）后，游客「来不及生成」——每天实际到达远少于固定新增数（只剩 1~2 人）。原因：`onServerTick` 开头 `tickCounter % CHECK_INTERVAL(100) != 0` 直接 return，生成路径只在每 100 tick 跑一次；高 tick rate 下游戏时间在两次 flush 之间推进得比窗口 [1000, 8000] 还快，`flushPendingSpawns` 还没跑、窗口就过去了，未到的 pending 在次日清晨重置时被 `pendingSpawns.clear()` 丢弃。
+
+**决策**：`onServerTick` 拆成两段——**生成路径（清晨重置 + 调度 + flush）每 tick 执行**，不经过 CHECK_INTERVAL 门；重型工作（`cleanupTourists`/`processNightDepartures`）保持每 100 tick。每个游客的到达时间仍在 [1000, 8000] 内**随机**取，错峰到达；只要某个 pending 的 spawnTime 已到，下一次 tick 就立即生成，窗口内绝不漏。
+
+**为什么**：生成路径本身很便宜（遍历 ≤7 个 pending 做一次 dayTime 比较，真正 spawn 每天只有 5~7 次、含一次 findSafeSpot），每 tick 跑无性能负担；换来的是高 tick rate 下每日新增可靠落地。保持随机错峰到达，不改成一次性生成。
+
+**注意**：若 tick rate 极端到整个生成窗口在**两次服务器 tick 之间**被跳过（当天完全无生成），游戏时间逻辑无法兜底，属于该设置本身的限制。
+
 ## 2026-08-10：游客生成改为「每天固定新增」，废弃目标人口模型
 
 **需求**（用户实测）：1 级每天生成 5~7 个游客，但殖民地已有游客（尤其前一晚住店的游客仍占着坑）时，当天新生成数明显变少——`toSpawn = targetCount - existing` 把「每日新增」做成了「维持目标人口」。

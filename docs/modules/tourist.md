@@ -20,7 +20,7 @@
 
 每 `CHECK_INTERVAL=100` tick 检查。时段由 Config 划分：生成窗口 [1000, 8000]（约 07:00–14:00，集中在上午、最晚下午到），离境窗口 [18000, 24000]。
 
-- **生成数**：`toSpawn` = 均匀整数区间 `[base(5)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)-1]`，即 1 级 5~7、2 级 6~8、3 级 7~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；生成时间在 [1000, 8000] 窗口内**均匀排布**；**每天固定新增 toSpawn 个**，不因殖民地已有游客（含住店客）而扣减。
+- **生成数**：`toSpawn` = 均匀整数区间 `[base(5)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)-1]`，即 1 级 5~7、2 级 6~8、3 级 7~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；**每天固定新增 toSpawn 个**，不因殖民地已有游客（含住店客）而扣减；每个游客的到达时间在 [1000, 8000] 窗口内**随机**取（错峰到达）；`onServerTick` 对生成路径**每 tick flush**（不等 `CHECK_INTERVAL=100`），高 tick rate（如 1000）下窗口也不会被跳过——防护「来不及生成」。
 - **条件**：需已注册殖民地 + 存在完整 shop/service 目标。生成点取道路网 COMPLETE 边端点，无路用建筑位置。等级分布：colonyLevel-1/+1 = 40/40/20%。生成时强制加载区块；**到达登记（`registerArrival`）与 shadow 收养统一在 `TouristEntity.onAddedToLevel` 单点完成**（覆盖系统生成/刷怪蛋/命令；sim 再水合实体与磁盘加载体排除，避免重复触发 TouristArrivedEvent）。
 - **离开**：sat<50 或 sat=100 → 夜晚带 0-1500 tick 随机延迟离开；sat 50-99 → 引导去旅馆，无房则离开。白天/傍晚：能量耗尽、夜晚且空闲、空闲超时 `TOURIST_DESPAWN_TIMEOUT_TICKS=36000`。100% 满意度 → `grantExperience`。
 - **住店客免疫清场**：入住后（`checkedInBuildingId` 常驻）只按停留截止（`departureDeadline`）或**满条当晚开心离场**（用户确认），不被夜晚/闲置清掉——`cleanupTourists`/`processNightDepartures`/sim `checkDeparture` 对住店客只判截止/满条。

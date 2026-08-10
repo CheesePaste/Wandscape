@@ -157,21 +157,21 @@ public final class TouristSpawnSystem {
         ServerLevel level = server.overworld();
         if (level == null) return;
 
-        tickCounter++;
-        if (tickCounter % CHECK_INTERVAL != 0) return;
-
         long dayTime = level.getDayTime() % 24000;
         long day = level.getDayTime() / 24000;
 
-        // ── Morning: reset schedule flag + count overnight stayers ──
+        // ── Morning: reset schedule flag + count overnight stayers（每 tick 检查，便宜）──
         if (dayTime < 1000 && scheduleDay != day) {
             scheduleCreated = false;
             pendingSpawns.clear();
-            scheduleDay = -1;
+            scheduleDay = day;
             countOvernightStayers(level);
         }
 
-        // ── Spawn window (1000-8000) ──
+        // ── Spawn window (1000-8000)：每 tick flush，不等 CHECK_INTERVAL ──
+        // 高 tick rate（如 1000）下游戏时间推进更快：若只在每 CHECK_INTERVAL tick 才
+        // flush，生成窗口可能被跳过去、每日游客「来不及生成」。改为每 tick flush，
+        // 每个 pending 的随机 spawnTime 一到就立即生成，窗口内绝不漏。
         boolean inSpawnWindow = dayTime >= Config.TOURIST_SPAWN_WINDOW_START.get()
                 && dayTime < Config.TOURIST_SPAWN_WINDOW_END.get();
         if (inSpawnWindow) {
@@ -181,6 +181,10 @@ public final class TouristSpawnSystem {
             }
             flushPendingSpawns(level);
         }
+
+        // ── 周期性重型工作（每 CHECK_INTERVAL tick）──
+        tickCounter++;
+        if (tickCounter % CHECK_INTERVAL != 0) return;
 
         // ── Night departure window (18000-24000) ──
         boolean inDepartureWindow = dayTime >= Config.TOURIST_DEPARTURE_WINDOW_START.get()
@@ -249,7 +253,9 @@ public final class TouristSpawnSystem {
         // Collect spawn positions
         List<BlockPos> spawnCandidates = collectSpawnPositions(level, allBuildings);
 
-        // Create pending spawns with random levels and spawn times spread evenly across the window
+        // Create pending spawns. 生成时间在 [windowStart, windowEnd) 内随机取，
+        // 每天游客错峰到达。高 tick rate 防护在 onServerTick（每 tick flush），
+        // 不在这里——这里只负责把到达时间随机分布到生成窗口内。
         int windowStart = Config.TOURIST_SPAWN_WINDOW_START.get();
         int windowDuration = Config.TOURIST_SPAWN_WINDOW_END.get() - windowStart;
         for (int i = 0; i < toSpawn; i++) {
@@ -264,8 +270,8 @@ public final class TouristSpawnSystem {
             // at spawn time, so a building demolished after scheduling can't ghost it.
             BuildingState target = touristTargets.get(random.nextInt(touristTargets.size()));
 
-            // Assign spawn time spread evenly across the spawn window (1000-8000)
-            int spawnTime = windowStart + (i * windowDuration) / toSpawn;
+            int spawnTime = windowDuration > 0
+                    ? windowStart + random.nextInt(windowDuration) : windowStart;
 
             pendingSpawns.add(new PendingSpawn(touristLevel, spawnTime, spawnPos, target.getBuildingId()));
         }
