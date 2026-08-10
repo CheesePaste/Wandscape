@@ -265,7 +265,7 @@ public class TouristMoveGoal extends Goal {
         if (tourist.getRecentVisits().isEmpty()) {
             long dayTime = tourist.level().getDayTime() % 24000;
             String dayPhase = dayTime < 6000 ? "morning"
-                    : dayTime < 13000 ? "afternoon" : "night";
+                    : dayTime < Config.TOURIST_NIGHT_START.get() ? "afternoon" : "night";
             NarrativeEvent arrival = NarrativeGenerator.generateArrival(
                     tourist.getTouristName(), dayPhase, tourist.level().getGameTime());
             showActionBar(arrival.text());
@@ -847,7 +847,7 @@ public class TouristMoveGoal extends Goal {
     private boolean tryHotelCheckIn(UUID buildingId, @Nullable String bldType) {
         if (!isHotelBuilding(buildingId)) return false;
         long dayTime = tourist.level().getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000;
+        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         // 夜晚 + 未满条 → 入住（满条游客夜晚等离场，不入旅店）
         if (!(isNight && !tourist.isFullySatisfied())) return false;
 
@@ -1364,7 +1364,7 @@ public class TouristMoveGoal extends Goal {
         if (chosen == null) {
             Log.info(TAG, "[Tourist] {} | NO BUILDING | colony={} | night={} | visited={} | energy={} | bars={}/{}/{} (need {}/{}/{})",
                     tourist.getTouristName(), tourist.getColonyId(),
-                    (level.getDayTime() % 24000) >= 13000,
+                    (level.getDayTime() % 24000) >= Config.TOURIST_NIGHT_START.get(),
                     tourist.getVisitedBuildings().size(), tourist.getEnergy(),
                     tourist.getComfortSat(), tourist.getMagicSat(), tourist.getWonderSat(),
                     tourist.getComfortNeed(), tourist.getMagicNeed(), tourist.getWonderNeed());

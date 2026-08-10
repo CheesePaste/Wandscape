@@ -501,7 +501,7 @@ public final class TouristSimSystem {
         boolean isHotel = TouristSimulation.isHotelBuilding(level, buildingId);
         if (isHotel) {
             long dayTime = level.getDayTime() % 24000;
-            boolean isNight = dayTime >= 13000;
+            boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
             // 夜晚 + 未满条 → 入住（满条游客夜晚等离场）；入住也填一次满意值（利好玩家的特性），清晨退房精力回 100
             if (isNight && !s.isFullySatisfied() && hasHotelVacancy(level, buildingId)) {
                 s.setCheckedInBuildingId(buildingId);
@@ -660,7 +660,7 @@ public final class TouristSimSystem {
         }
 
         long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000;
+        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         boolean isIdle = s.getCommuteTarget() == null && s.getTargetBuildingId() == null;
         boolean idleTimeout = isIdle && s.simTick() > Config.TOURIST_DESPAWN_TIMEOUT_TICKS.get();
         // 交互/排队中：不转旅店（routeToHotel 会改 target 打断当前交互），先完成当前交互，

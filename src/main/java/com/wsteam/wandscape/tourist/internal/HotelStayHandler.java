@@ -185,38 +185,40 @@ public final class HotelStayHandler {
     }
 
     /**
-     * After a successful check-in, teleport the tourist onto a free bed in the
-     * hotel to sleep (visual only — no stat effects). If no bed is free, the
-     * tourist simply stays where it is until morning checkout.
+     * After a successful check-in, force the tourist to sleep — 入住即强制躺床：
+     * 有空床躺空床；床不够（全被占用）就躺最近一张床；旅店一张床都没有 → 卡原地不动。
+     * 床上睡觉纯视觉（不改床方块占用状态，无占用泄漏），床位分配只记在内存。
      */
     public void settleIntoBed(TouristEntity tourist, ServerLevel level, UUID buildingId) {
         tourist.setWakeUpPos(tourist.blockPosition());
-        BlockPos bed = findFreeBed(level, buildingId, tourist.blockPosition());
-        if (bed == null) {
-            Log.info(TAG, "[Tourist] {} checked into {} but no free bed — staying put",
-                    tourist.getTouristName(), shortId(buildingId));
+        BlockPos bed = findBed(level, buildingId, tourist.blockPosition(), true);
+        if (bed == null) bed = findBed(level, buildingId, tourist.blockPosition(), false); // 床不够 → 躺第一张（最近）
+        if (bed != null) {
+            tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
+            tourist.setSleepingPos(bed);
+            tourist.applyState(TouristState.SLEEPING);
+            touristToBed.put(tourist.getUUID(), bed);
+            Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
+                    tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
             return;
         }
-        // Visual-only sleeping: lie on the bed without mutating the bed's occupied
-        // property (no block updates, and no stuck-occupied leak if the chunk
-        // unloads mid-sleep). Bed assignment is tracked in memory instead.
-        tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
-        tourist.setSleepingPos(bed);
-        tourist.applyState(TouristState.SLEEPING);
-        touristToBed.put(tourist.getUUID(), bed);
-        Log.info(TAG, "[Tourist] {} sleeping in bed at {} (hotel {})",
-                tourist.getTouristName(), bed.toShortString(), shortId(buildingId));
+        // 没床 → 卡原地（不动，等清晨晨起）
+        Log.info(TAG, "[Tourist] {} checked into {} but the hotel has no beds — staying put",
+                tourist.getTouristName(), shortId(buildingId));
     }
 
-    /** Nearest unoccupied bed (head half) inside the hotel's bounding box, or null. */
+    /**
+     * 旅店里最近的一张床（head 半）。{@code requireUnassigned}=true 时跳过已分配给其它
+     * 住店客的床；false 时不看占用分配（床不够的兜底，纯视觉可共用），仅跳过原版 OCCUPIED 的床。
+     */
     @Nullable
-    private BlockPos findFreeBed(ServerLevel level, UUID buildingId, BlockPos near) {
+    private BlockPos findBed(ServerLevel level, UUID buildingId, BlockPos near, boolean requireUnassigned) {
         BuildingState state = getBuildingState(buildingId);
         if (state == null) return null;
         BoundingBox box = state.getBounds();
         if (box == null) return null;
 
-        Set<BlockPos> assigned = new HashSet<>(touristToBed.values());
+        Set<BlockPos> assigned = requireUnassigned ? new HashSet<>(touristToBed.values()) : Set.of();
         BlockPos best = null;
         double bestSq = Double.MAX_VALUE;
         for (int x = box.minX(); x <= box.maxX(); x++) {

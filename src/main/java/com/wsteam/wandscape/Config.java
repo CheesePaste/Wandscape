@@ -306,10 +306,15 @@ public class Config {
             .comment("游客每级需求增量。")
             .defineInRange("tourist.needPerLevel", 20, 0, 500);
 
+    public static final ModConfigSpec.IntValue TOURIST_NIGHT_START = BUILDER
+            .comment("游客「夜晚」开始时刻（game time tick）：夜晚后游客优先去旅店、可入住、住店客回店睡觉。"
+                    + "默认 14000（约 19:40），比原版天黑稍晚，让游客白天/傍晚多逛一会儿。")
+            .defineInRange("tourist.nightStart", 14000, 0, 24000);
+
     public static final ModConfigSpec.IntValue TOURIST_EVENING_ROUTING_START = BUILDER
             .comment("傍晚路由开始时刻（game time tick）：无旅店的未满条游客从此刻起停止当前任务去旅店，"
-                    + "避免天黑后还在逛商店、夜晚无旅店被清场。默认 16000（约 19:00，已在夜晚）。"
-                    + "旅店入住仍要求夜晚（>=13000）；此值只需早于离场窗口起点 18000 即可保证来得及。")
+                    + "避免天黑后还在逛商店、夜晚无旅店被清场。默认 16000（约 21:00，夜晚中）。"
+                    + "旅店入住仍要求夜晚（>=nightStart）；此值只需早于离场窗口起点 18000 即可保证来得及。")
             .defineInRange("tourist.eveningRoutingStart", 16000, 0, 24000);
 
     public static final ModConfigSpec.IntValue TOURIST_HOTEL_TELEPORT_DISTANCE = BUILDER

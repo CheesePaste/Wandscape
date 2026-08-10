@@ -399,7 +399,7 @@ public final class TouristSimulation {
         if (touristPos == null) return null;
 
         long dayTime = level.getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000;
+        boolean isNight = dayTime >= Config.TOURIST_NIGHT_START.get();
         boolean energyEmpty = t.getEnergy() <= 0;
         boolean nightHotel = isNight && !t.isFullySatisfied();
 

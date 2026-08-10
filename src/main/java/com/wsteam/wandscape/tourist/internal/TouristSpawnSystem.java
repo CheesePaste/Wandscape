@@ -46,7 +46,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <ul>
  *   <li>Morning (0-1000): daily reset, hotel checkout
  *   <li>Spawn window (1000-8000): tourists spawn at distributed random times
- *   <li>Evening (13000-18000): no new spawns, existing tourists continue interactions
+ *   <li>Evening (14000-18000): no new spawns, existing tourists continue interactions
  *   <li>Night departure (18000-24000): 满条夜晚离场 / 入旅店 + hotel routing
  * </ul>
  *
