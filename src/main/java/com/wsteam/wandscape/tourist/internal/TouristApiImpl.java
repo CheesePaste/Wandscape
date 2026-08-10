@@ -26,6 +26,16 @@ public class TouristApiImpl implements TouristApi {
 
     @Override
     public int getTouristCount(UUID colonyId) {
+        if (colonyId == null) return 0;
+        // sim 影子注册表是权威人口（SavedData 持久化，重启后仍恢复）——覆盖已加载实体、
+        // 未加载 shadow 与磁盘加载的游客。内存 colonyTourists map 重启即清空，仅当 sim
+        // 未激活（registry 为 null）时兜底，避免最早期启动窗口读到 0。
+        TouristSimSystem sim = TouristSimSystem.getActive();
+        if (sim != null && sim.getRegistry() != null) {
+            return (int) sim.getRegistry().getShadows().values().stream()
+                    .filter(s -> colonyId.equals(s.getColonyId()))
+                    .count();
+        }
         Set<UUID> tourists = colonyTourists.get(colonyId);
         return tourists != null ? tourists.size() : 0;
     }

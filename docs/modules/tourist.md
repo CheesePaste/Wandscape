@@ -32,6 +32,7 @@
 - **影子↔身体 UUID 一致**：`spawnEntity` 用 `setUUID(shadow.touristId)` 生成身体——否则身体带随机新 UUID，`onAddedToLevel` 自动收养会把它注册成**另一个影子**，原影子沦为幽灵持续复活身体 → 卸载/重载指数级复制，且复制体 kill 不掉。磁盘加载的身体保留自身 UUID（与影子匹配）。
 - **新鲜生成自动收养 + 到达登记**：非磁盘加载的游客（刷怪蛋等）在 `onAddedToLevel` 自动 `sim.adoptTourist` 并 `registerArrival`（`loadedFromDisk` 区分：`readAdditionalSaveData` 置 true，`finalizeSpawn` 置 false；registry 已有该 shadow 的再水合实体跳过）。磁盘加载且已离境的身体仍走孤儿 discard，避免复活。
 - `TouristSimRegistry`（SavedData `wandscape_tourist_sim`）：`ConcurrentHashMap<UUID, TouristShadow>`。
+- **游客计数权威来源**：`TouristApiImpl.getTouristCount(colonyId)` 按 shadow 的 colonyId 统计影子注册表——注册表持久化，重启后已存在的游客仍计入；内存 `colonyTourists` map 仅作 sim 未激活时的兜底。
 
 ## TouristState / TouristStateHost
 
