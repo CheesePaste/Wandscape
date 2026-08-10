@@ -21,7 +21,7 @@
 每 `CHECK_INTERVAL=100` tick 检查。时段由 Config 划分：生成窗口 [1000, 8000]（约 07:00–14:00，集中在上午、最晚下午到），离境窗口 [18000, 24000]。
 
 - **生成数**：`targetCount` = 均匀整数区间 `[base(5)+(lv-1)×levelSpawnBonus(1), +spawnRangeWidth(3)]`，即 1 级 5~7、2 级 6~8、3 级 7~9，clamp [1, TOURIST_MAX_PER_COLONY=100]；生成时间在 [1000, 8000] 窗口内**均匀排布**；`toSpawn = targetCount - existing`（existing 用影子注册表计数）。
-- **条件**：需已注册殖民地 + 存在完整 shop/service 目标。生成点取道路网 COMPLETE 边端点，无路用建筑位置。等级分布：colonyLevel-1/+1 = 40/40/20%。生成时强制加载区块、`registerArrival` + `sim.adoptTourist`。
+- **条件**：需已注册殖民地 + 存在完整 shop/service 目标。生成点取道路网 COMPLETE 边端点，无路用建筑位置。等级分布：colonyLevel-1/+1 = 40/40/20%。生成时强制加载区块；**到达登记（`registerArrival`）与 shadow 收养统一在 `TouristEntity.onAddedToLevel` 单点完成**（覆盖系统生成/刷怪蛋/命令；sim 再水合实体与磁盘加载体排除，避免重复触发 TouristArrivedEvent）。
 - **离开**：sat<50 或 sat=100 → 夜晚带 0-1500 tick 随机延迟离开；sat 50-99 → 引导去旅馆，无房则离开。白天/傍晚：能量耗尽、夜晚且空闲、空闲超时 `TOURIST_DESPAWN_TIMEOUT_TICKS=36000`。100% 满意度 → `grantExperience`。
 
 ## 影子模拟（TouristSimSystem / TouristSimulation / TouristShadow / TouristSimRegistry）
@@ -30,7 +30,7 @@
 - 影子直线匀速移动 SPEED=0.5/tick、ARRIVE_RANGE=1.0、WANDER_RADIUS=24；到建筑锚点走 shop/service/hotel 交互与冷却；酒店满员由影子注册表派生。
 - 实体↔影子转换：加载过渡**影子胜出**（importToEntity），冷却以各自 timeBase 互转；孤儿实体（无影子）被 discard。
 - **影子↔身体 UUID 一致**：`spawnEntity` 用 `setUUID(shadow.touristId)` 生成身体——否则身体带随机新 UUID，`onAddedToLevel` 自动收养会把它注册成**另一个影子**，原影子沦为幽灵持续复活身体 → 卸载/重载指数级复制，且复制体 kill 不掉。磁盘加载的身体保留自身 UUID（与影子匹配）。
-- **新鲜生成自动收养**：非磁盘加载的游客（刷怪蛋等）在 `onAddedToLevel` 自动 `sim.adoptTourist`（`loadedFromDisk` 区分：`readAdditionalSaveData` 置 true，`finalizeSpawn` 置 false）。磁盘加载且已离境的身体仍走孤儿 discard，避免复活。
+- **新鲜生成自动收养 + 到达登记**：非磁盘加载的游客（刷怪蛋等）在 `onAddedToLevel` 自动 `sim.adoptTourist` 并 `registerArrival`（`loadedFromDisk` 区分：`readAdditionalSaveData` 置 true，`finalizeSpawn` 置 false；registry 已有该 shadow 的再水合实体跳过）。磁盘加载且已离境的身体仍走孤儿 discard，避免复活。
 - `TouristSimRegistry`（SavedData `wandscape_tourist_sim`）：`ConcurrentHashMap<UUID, TouristShadow>`。
 
 ## TouristState / TouristStateHost

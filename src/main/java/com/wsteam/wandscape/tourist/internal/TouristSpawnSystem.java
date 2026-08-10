@@ -140,13 +140,8 @@ public final class TouristSpawnSystem {
                 tourist.applyState(TouristState.VISITING);
                 level.addFreshEntity(tourist);
 
-                // Register arrival
-                var touristApi = getTouristApi();
-                if (touristApi != null) {
-                    touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
-                }
-
                 // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                // 到达登记由 TouristEntity.onAddedToLevel 单点完成（覆盖刷怪蛋/命令路径）。
                 TouristSimSystem sim = TouristSimSystem.getActive();
                 if (sim != null) sim.adoptTourist(tourist);
             } finally {
@@ -331,13 +326,8 @@ public final class TouristSpawnSystem {
                     tourist.applyState(TouristState.VISITING);
                     level.addFreshEntity(tourist);
 
-                    // Register arrival → updates TouristApi colonyTourists map + fires TouristArrivedEvent
-                    var touristApi = getTouristApi();
-                    if (touristApi != null) {
-                        touristApi.registerArrival(tourist.getUUID(), target.getColonyId());
-                    }
-
                     // Create the data shadow so the sim can track this tourist when its chunk unloads.
+                    // 到达登记由 TouristEntity.onAddedToLevel 单点完成（覆盖刷怪蛋/命令路径）。
                     TouristSimSystem sim = TouristSimSystem.getActive();
                     if (sim != null) sim.adoptTourist(tourist);
 

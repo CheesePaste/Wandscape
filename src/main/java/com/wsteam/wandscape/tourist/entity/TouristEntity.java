@@ -403,6 +403,17 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
             if (!previewMode && !loadedFromDisk) {
                 TouristSimSystem sim = TouristSimSystem.getActive();
                 if (sim != null && sim.getRegistry() != null && sim.getRegistry().get(getUUID()) == null) {
+                    // 到达登记：让殖民地游客计数包含本实体。覆盖所有 fresh 生成路径
+                    // （系统生成/刷怪蛋/命令）——生成系统不再自行调用 registerArrival，
+                    // 此处恰好每游客触发一次。sim 从 shadow 再水合出的实体（registry
+                    // 已有该 uuid）与磁盘加载体（loadedFromDisk）在此被排除，避免重复
+                    // 触发 TouristArrivedEvent 虚增「游客到达」统计。
+                    if (colonyId != null) {
+                        var api = WandscapeApis.getTouristApiSilently();
+                        if (api != null) {
+                            api.registerArrival(getUUID(), colonyId);
+                        }
+                    }
                     sim.adoptTourist(this);
                 }
             }
