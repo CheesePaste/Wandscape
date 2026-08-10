@@ -110,9 +110,9 @@ tourist.setTravelFund((int) Math.round(startingWallet(ps.level)
 tourist.applyState(TouristState.VISITING);                       // 保留；无 target 时 goal 首 tick 覆盖
 ```
 ```java
-/** 画像 roll：40% 均衡 {1,1,1}；20% 舒适 {1.4,0.8,0.8}；20% 魔法 {0.8,1.4,0.8}；20% 奇观 {0.8,0.8,1.4}。 */
+/** 画像 roll：40% 均衡 {1,1,1}；20% 舒适 {1.6,0.7,0.7}；20% 魔法 {0.7,1.6,0.7}；20% 奇观 {0.7,0.7,1.6}。 */
 private static final double[][] PERSONA_WEIGHTS = {
-        {1.0, 1.0, 1.0}, {1.4, 0.8, 0.8}, {0.8, 1.4, 0.8}, {0.8, 0.8, 1.4} };
+        {1.0, 1.0, 1.0}, {1.6, 0.7, 0.7}, {0.7, 1.6, 0.7}, {0.7, 0.7, 1.6} };
 
 /** 实例方法（forceSpawn 为 static，经 instance. 调用）；用实例 random。 */
 private void rollAndSetPersona(TouristEntity t, int touristLevel) {

@@ -253,8 +253,8 @@ public class Config {
     // ── 游客经济改造：三条需求条 / 精力循环 / 停留 / 视野 / ATM（Block 0 新增）──
 
     public static final ModConfigSpec.DoubleValue TOURIST_BAR_GAIN_COEFF = BUILDER
-            .comment("每条需求条填充 = round(建筑该维值 × 该系数)，封顶 need。")
-            .defineInRange("tourist.barGainCoeff", 2.0, 0.1, 10.0);
+            .comment("每条需求条填充 = round(建筑该维值 × 该系数)，封顶 need。默认 1.0 = 增益等于 JSON 值。")
+            .defineInRange("tourist.barGainCoeff", 1.0, 0.1, 10.0);
 
     public static final ModConfigSpec.DoubleValue TOURIST_ENERGY_RESTORE_THRESHOLD = BUILDER
             .comment("精力低于此比例（0~1）时，游客强烈偏向恢复（relax）建筑。")
@@ -281,8 +281,8 @@ public class Config {
             .defineInRange("tourist.atmTravelFundMultiplier", 2.0, 1.0, 10.0);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_BASE = BUILDER
-            .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。")
-            .defineInRange("tourist.needBase", 300, 50, 2000);
+            .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。默认 150 = 1 级均衡 50/50/50。")
+            .defineInRange("tourist.needBase", 150, 50, 2000);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
             .comment("游客每级需求增量。")

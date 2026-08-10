@@ -231,7 +231,7 @@ public enum Activity {
 
 `Config.java` 游客段（当前 :141-265）：
 - **新增**：
-  - `TOURIST_BAR_GAIN_COEFF`（double，默认 2.0）——每条填充 = `round(value_d × coeff)`，封顶 need
+  - `TOURIST_BAR_GAIN_COEFF`（double，默认 1.0）——每条填充 = `round(value_d × coeff)`，封顶 need
   - `TOURIST_ENERGY_RESTORE_THRESHOLD`（double，默认 0.25）——精力低于此比例强烈偏向恢复（relax）建筑
   - `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS`（int，默认 2400）——排队等待上限
   - `TOURIST_STAY_MIN_DAYS`（int，默认 2）、`TOURIST_STAY_MAX_DAYS`（int，默认 4）——`departureDeadline = arrivalTime + rand(2~4) × 24000`
@@ -240,11 +240,11 @@ public enum Activity {
   - 画像分布权重（可硬编码于 Block 2 生成处，或 Config：`TOURIST_PERSONA_BALANCED/COMFORT/MAGIC/WONDER`）
 - **画像需求与等级正相关**（Block 2 生成时 roll）：
   ```
-  weightShare_d = persona 各维权重占比（均衡 1/3；偏置如 140/80/80 归一化到 1.0）
+  weightShare_d = persona 各维权重占比（均衡 1/3；偏置如 80/35/35 归一化到 1.0）
   totalNeed      = TOURIST_NEED_BASE + (touristLevel − 1) × TOURIST_NEED_PER_LEVEL
   need_d         = round(totalNeed × weightShare_d)
   ```
-  `TOURIST_NEED_BASE`（默认 300）、`TOURIST_NEED_PER_LEVEL`（默认 50）→ 等级越高总需求越高、**越难满足**。
+  `TOURIST_NEED_BASE`（默认 150）、`TOURIST_NEED_PER_LEVEL`（默认 50）→ 等级越高总需求越高、**越难满足**。
 - **暂不删除（Block 5 清扫删除）**：`TOURIST_LEVEL_SATISFACTION_THRESHOLD`、`TOURIST_MAX_SATISFACTION_PER_VISIT`、`TOURIST_PREFERENCE_DECAY`。读取方全在 Block 3 文件（`TouristSimulation` :100/:112/:128、`TouristMoveGoal` :1437），**Block 0 删除会破坏自身「编译全绿」**。Block 3 迁移读取（fillBars / need-gap）后它们成死键，由 Block 5 归入 grep 零残留一并删除。
 
 `shared/registry/WandscapeConstants.java`：确认 `TOURIST_MAX_ENERGY`(=100) 存在；如需要加 `TOURIST_BAR_BASE`(=100)。
