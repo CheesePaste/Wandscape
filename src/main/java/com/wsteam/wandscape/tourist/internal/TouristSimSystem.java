@@ -502,7 +502,7 @@ public final class TouristSimSystem {
         if (isHotel) {
             long dayTime = level.getDayTime() % 24000;
             boolean isNight = dayTime >= 13000;
-            // 夜晚 + 未满条 → 入住（满条游客夜晚等离场）；入住只睡觉回精力，不填三条
+            // 夜晚 + 未满条 → 入住（满条游客夜晚等离场）；入住也填一次满意值（利好玩家的特性），清晨退房精力回 100
             if (isNight && !s.isFullySatisfied() && hasHotelVacancy(level, buildingId)) {
                 s.setCheckedInBuildingId(buildingId);
                 s.setHotelCheckinTime(s.simTick());
@@ -511,8 +511,9 @@ public final class TouristSimSystem {
                 var hotelCfg = TouristSimulation.getConfig(level, buildingId);
                 String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
                         ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
+                int[] delta = TouristSimulation.fillBars(level, s, buildingId);
                 TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
-                        level.getGameTime(), 0, 0, 0, 0, "入住");
+                        level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
                 s.setCommuteTarget(null);
                 s.setTargetBuildingId(null);
                 s.setTargetBuildingCategory(null);

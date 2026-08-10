@@ -859,12 +859,13 @@ public class TouristMoveGoal extends Goal {
         tourist.addVisitedBuilding(buildingId);
         hotel.settleIntoBed(tourist, serverLevel(), buildingId);
 
-        // 入住只睡觉回精力（清晨退房精力回 100），不填三条——旅店不管白天精力，只管夜晚住宿
+        // 入住也填一次满意值（利好玩家的特性：住宿贡献三条，不只回精力；清晨退房精力回 100 不变）
         String bldName = getBuildingDisplayName(buildingId, bldType);
         ServerLevel level = serverLevel();
         if (level != null) {
+            int[] delta = TouristSimulation.fillBars(level, tourist, buildingId);
             TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
-                    level.getGameTime(), 0, 0, 0, 0, "入住");
+                    level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
         }
 
         tourist.setCommuteTarget(null);

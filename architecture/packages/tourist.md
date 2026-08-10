@@ -12,7 +12,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 
 - **三条需求条** `comfort/magic/wonder` 各带 `sat`（填充量）/`need`（需求上限）。填充无惩罚：`sat += round(建筑该维值 × TOURIST_BAR_GAIN_COEFF)`，封顶 need。**满条 = 三条 ratio 全 1**（`isFullySatisfied()`）。
 - **画像**：40% 均衡 `{1,1,1}`、20% 舒适 `{1.6,0.7,0.7}`、20% 魔法 `{0.7,1.6,0.7}`、20% 奇观 `{0.7,0.7,1.6}`。三条 need = `totalNeed × 权重占比`，`totalNeed = TOURIST_NEED_BASE + (level-1)×TOURIST_NEED_PER_LEVEL` —— **等级越高总需求越高、越难满足**（自然难度曲线；1 级 totalNeed=150：均衡 50/50/50、侧重 80/35/35）。
-- **精力循环**：shop/service 交互消耗精力，`relax` 建筑回精力（clamp 到 `TOURIST_MAX_ENERGY`），旅店只管夜晚睡觉。精力 0 且视野内无恢复建筑 → **闲逛**（不离场）。
+- **精力循环**：shop/service 交互消耗精力，`relax` 建筑回精力（clamp 到 `TOURIST_MAX_ENERGY`），旅店夜晚入住也填一次三条（利好玩家的特性）。精力 0 且视野内无恢复建筑 → **闲逛**（不离场）。
 - **钱包 / 总旅费**：`wallet`（随身现金）买货；`travelFund = startingWallet × TOURIST_ATM_TRAVEL_FUND_MULTIPLIER`（ATM 分批取现的池子，防无限取现）。
 - **停留**：`departureDeadline = arrivalTime + rand(2~4)×24000`；`nightsStayed` 住店晚数。**`visitedBuildings` 停留期不重置**（防挂机，一栋建筑整个停留只逛一次；**ATM 例外**——`atmReusable` 判定下豁免 visited 可分批取现，靠取现冷却控节奏，visited 本身仍不重置）。
 
@@ -22,7 +22,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 - **TouristSimulation**（共享交互经济）— `fillBars` 填三条、四类交互结算（shop 购物 / service 产元素+耗精力 / relax 回精力 / atm 取钱）、**Find-Best-Action 目标选择**（视野内）、spot 认领/释放。实体路径与影子 sim 路径共用本类，一套逻辑无漂移。
 - **TouristMoveGoal**（实体 AI）— MoveMode 状态机：`VISITING_BUILDING`（spot 单点导航 + 占用/活动/释放 + 排队）/ `EXPLORING_POI` / `WANDERING`。
 - **TouristSimSystem**（影子 sim）— 游客区块卸载后由 shadow 直线移动推进，镜像 `TouristSimulation` 交互与 D6 离场；玩家靠近时实体接管（shadow 胜出 → importToEntity）。
-- **HotelStayHandler** — 夜晚旅店（`service.maxOccupancy>0`）：入住 → 睡床（视觉）→ 清晨退房精力回 100、`nightsStayed++`、回到入住站位。
+- **HotelStayHandler** — 夜晚旅店（`service.maxOccupancy>0`）：入住 → 睡床（视觉）+ 填一次三条 → 清晨退房精力回 100、`nightsStayed++`、回到入住站位。
 - **TouristSpotManager** — spot 占用（buildingId → 占用下标集合）。**spot 数量 = 该建筑同时交互人数上限**；全满 → 排队（在建筑旁等，超 `TOURIST_QUEUE_WAIT_TOLERANCE_TICKS` 放弃去别处）。仅机制，无可见标记。
 - **ActivityVisuals / TouristHumanoidModel**（client）— `Activity → (Pose/骨骼角度/粒子)` 注册表，`setupAnim` 缓动插值；未知动作兜底 `BROWSE`，渲染不崩。
 
