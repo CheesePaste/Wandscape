@@ -247,6 +247,20 @@ public final class SplineEditorImGui {
         ImGui.popStyleColor(2);
     }
 
+    private static BlockPos getCapturedFeetPosition(Minecraft mc) {
+        if (SplineEditorClientState.isEditing()) {
+            return BlockPos.containing(
+                    SplineEditorClientState.getCamX(),
+                    SplineEditorClientState.getCamY() - 1.0,
+                    SplineEditorClientState.getCamZ()
+            );
+        }
+        if (mc.player != null) {
+            return mc.player.blockPosition().below();
+        }
+        return BlockPos.ZERO;
+    }
+
     // ── Mode 3: 铲平垫平 (DESTROY_FILL) ──
     private static void drawDestroyFillModeTab(Minecraft mc) {
         ImGui.spacing();
@@ -257,8 +271,9 @@ public final class SplineEditorImGui {
         } else {
             ImGui.textColored(0.40f, 0.85f, 0.40f, 1.00f, "参照方块: " + refBlock);
         }
-        if (mc.player != null && ImGui.button("捕捉脚下方块为参照", -1, 24)) {
-            BlockPos feet = mc.player.blockPosition().below();
+
+        if (ImGui.button("捕捉脚下方块为参照", -1, 24)) {
+            BlockPos feet = getCapturedFeetPosition(mc);
             RoadPlacementState.setStartPos(feet);
             if (mc.level != null) {
                 var st = mc.level.getBlockState(feet);
@@ -345,8 +360,8 @@ public final class SplineEditorImGui {
             }
         } else {
             ImGui.textDisabled("  [未设置点位]");
-            if (mc.player != null && ImGui.button("捕捉脚下位点##SetFeetStart", -1, 24)) {
-                RoadPlacementState.setStartPos(mc.player.blockPosition().below());
+            if (ImGui.button("捕捉脚下位点##SetFeetStart", -1, 24)) {
+                RoadPlacementState.setStartPos(getCapturedFeetPosition(mc));
             }
         }
     }
@@ -377,8 +392,8 @@ public final class SplineEditorImGui {
             }
         } else {
             ImGui.textDisabled("  [未设置点位]");
-            if (mc.player != null && ImGui.button("捕捉脚下位点##SetFeetEnd", -1, 24)) {
-                RoadPlacementState.setEndPos(mc.player.blockPosition().below());
+            if (ImGui.button("捕捉脚下位点##SetFeetEnd", -1, 24)) {
+                RoadPlacementState.setEndPos(getCapturedFeetPosition(mc));
             }
         }
     }
@@ -785,8 +800,10 @@ public final class SplineEditorImGui {
         ImGui.pushStyleColor(ImGuiCol.Button, 0.20f, 0.28f, 0.42f, 0.90f);
         if (ImGui.button(ICON_LOAD + " \u8bfb\u53d6 JSON \u6a21\u677f", halfW, 28)) {
             String name = templateNameInput.get().trim();
-            if (!name.isEmpty() && mc.player != null) {
-                Vec3 pos = mc.player.position();
+            if (!name.isEmpty()) {
+                Vec3 pos = SplineEditorClientState.isEditing()
+                        ? new Vec3(SplineEditorClientState.getCamX(), SplineEditorClientState.getCamY(), SplineEditorClientState.getCamZ())
+                        : (mc.player != null ? mc.player.position() : Vec3.ZERO);
                 SplineVec3 placementOrigin = new SplineVec3(pos.x, pos.y, pos.z);
                 SplineEditorClientState.loadTemplate(name, placementOrigin);
             }
