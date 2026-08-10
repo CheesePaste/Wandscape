@@ -378,14 +378,56 @@ public final class OverviewFlightController {
         }
     }
 
-    /** Intercept mouse buttons — but only when no screen is open. */
+    private static Vec3 getMouseWorldRay(Minecraft mc) {
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        int w = mc.getWindow().getWidth();
+        int h = mc.getWindow().getHeight();
+
+        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+
+        Camera cam = mc.gameRenderer.getMainCamera();
+        float fov = (float) mc.options.fov().get();
+        float fovRad = (float) Math.toRadians(fov);
+        float aspect = (float) w / Math.max(h, 1);
+        float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
+
+        Vector3f jLook = cam.getLookVector();
+        Vector3f jUp   = cam.getUpVector();
+        Vector3f jLeft = cam.getLeftVector();
+
+        Vec3 forward = new Vec3(jLook.x, jLook.y, jLook.z);
+        Vec3 up      = new Vec3(jUp.x,   jUp.y,   jUp.z);
+        Vec3 right   = new Vec3(jLeft.x, jLeft.y, jLeft.z).scale(-1.0);
+
+        return forward
+                .add(right.scale(ndcX * tanHalfFov * aspect))
+                .add(up.scale(ndcY * tanHalfFov))
+                .normalize();
+    }
+
+    /** Intercept mouse buttons — but only when no screen or UI panel is taking input. */
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!OverviewClientState.isActive()) return;
         Minecraft mc = Minecraft.getInstance();
-        // Don't block mouse clicks when a screen is open (allow UI interaction)
         if (mc.screen != null) return;
-        // Cancel all mouse buttons in overview mode
-        // Right-click is handled in ClientTickEvent.Post instead
+
+        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
+                && imgui.ImGui.getIO().getWantCaptureMouse();
+        if (imguiWantsMouse) return;
+
+        double guiScale = mc.getWindow().getGuiScale();
+        double mouseX = mc.mouseHandler.xpos() / guiScale;
+        double mouseY = mc.mouseHandler.ypos() / guiScale;
+        int screenH = mc.getWindow().getGuiScaledHeight();
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
+                && (com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
+                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH))) {
+            return;
+        }
+
         event.setCanceled(true);
     }
 
@@ -396,9 +438,8 @@ public final class OverviewFlightController {
     private static void performRaycast(Minecraft mc) {
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
-        Vector3f look = camera.getLookVector();
-        Vec3 lookVec = new Vec3(look.x(), look.y(), look.z());
-        Vec3 end = origin.add(lookVec.scale(REACH));
+        Vec3 rayDir = getMouseWorldRay(mc);
+        Vec3 end = origin.add(rayDir.scale(REACH));
 
         // ── Block raycast ──
         ClipContext ctx = new ClipContext(

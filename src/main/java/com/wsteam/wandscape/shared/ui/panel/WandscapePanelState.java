@@ -309,39 +309,7 @@ public final class WandscapePanelState {
     }
 
     public static void toggleCursor() {
-        if (!panelOpen) return;
-
-        // Build projection mode: C toggles the building selection bar
-        if (activeSubMode == SubMode.BUILD_PROJECTION) {
-            if (buildingBarOpen) {
-                closeBuildingBar();
-            } else {
-                openBuildingBar();
-            }
-            return;
-        }
-
-        // Road projection mode: C toggles BAR ↔ PLACING
-        if (activeSubMode == SubMode.ROAD_PROJECTION) {
-            if (RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
-                // BAR → PLACING
-                RoadPlacementState.enterPlacing();
-                releaseCursorToGame();
-            } else {
-                // PLACING → BAR
-                RoadPlacementState.enterBar();
-                liftCursorForUI();
-            }
-            return;
-        }
-
-        cursorLifted = !cursorLifted;
-        Minecraft mc = Minecraft.getInstance();
-        if (cursorLifted) {
-            mc.mouseHandler.releaseMouse();
-        } else {
-            mc.mouseHandler.grabMouse();
-        }
+        // C key mouse grab removed — V panel maintains persistent free cursor with RMB camera drag
     }
 
     // ── Building selection bar ──
@@ -376,10 +344,6 @@ public final class WandscapePanelState {
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
         lastClickIndex = -1;
-        if (cursorLifted) {
-            cursorLifted = false;
-            Minecraft.getInstance().mouseHandler.grabMouse();
-        }
     }
 
     /** Double-click: enter PLACING phase (bar closed, cursor in game, ghost visible). */
@@ -504,7 +468,6 @@ public final class WandscapePanelState {
                     RoadPlacementState.suspendProjection();
                     com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
                     com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
-                    releaseCursorToGame();
                 }
                 // If entered from overview, go back to pure overview
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {

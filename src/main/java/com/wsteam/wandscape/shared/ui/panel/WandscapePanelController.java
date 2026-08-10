@@ -350,16 +350,6 @@ public final class WandscapePanelController {
 
         WandscapePanelState.SubMode sub = WandscapePanelState.getActiveSubMode();
 
-        // 2. BUILD / ROAD in PLACING (crosshair in game): ESC == C key — raise the cursor
-        boolean placing = (sub == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING)
-                || (sub == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.PLACING);
-        if (placing) {
-            WandscapePanelState.toggleCursor();
-            return;
-        }
-
         // 3. Sub-mode active → exit it, keep the panel open
         if (sub != WandscapePanelState.SubMode.NONE && sub != WandscapePanelState.SubMode.OVERVIEW) {
             WandscapePanelState.exitCurrentSubMode();
