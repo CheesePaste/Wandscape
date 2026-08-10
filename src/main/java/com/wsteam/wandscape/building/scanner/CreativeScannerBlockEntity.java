@@ -125,6 +125,10 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     // ── Service element output (only for category=service) ──
     private final Map<String, Integer> serviceElementOutput = new HashMap<>();
 
+    public CreativeScannerBlockEntity(BlockPos pos, BlockState state) {
+        this(com.wsteam.wandscape.Wandscape.CREATIVE_BUILDING_SCANNER_BE.get(), pos, state);
+    }
+
     public CreativeScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }

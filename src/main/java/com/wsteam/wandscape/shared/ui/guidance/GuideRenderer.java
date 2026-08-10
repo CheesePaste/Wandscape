@@ -2,14 +2,16 @@ package com.wsteam.wandscape.shared.ui.guidance;
 
 import java.util.List;
 
+import com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
+
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 
 /**
- * Renders the onboarding guidance box (dark background, gold border) top-right
- * of the screen. Pure layout/render + hit-test — no panel-state dependency.
- * Visual style is intentionally identical to the original V-panel guidance box.
+ * Renders the onboarding guidance box (dark background, gold border) at the
+ * bottom-left corner of the screen. Supports clicking to collapse/expand.
  */
 public final class GuideRenderer {
 
@@ -21,49 +23,72 @@ public final class GuideRenderer {
     private static final int BOX_LINE = 0xFFFFFFFF;
     private static final int BOX_HINT = 0xFFAAAAAA;
     private static final int BOX_DIVIDER = 0x44D4A338;
-    private static final int CLOSE_HOVER_BG = 0x55FF4444;
-    private static final int CLOSE_IDLE = 0xAA888888;
-    private static final int CLOSE_HOVER = 0xFFFFFFFF;
+    private static final int BTN_HOVER_BG = 0x55FF4444;
+    private static final int BTN_TOGGLE_HOVER_BG = 0x554488FF;
+    private static final int BTN_IDLE = 0xAA888888;
+    private static final int BTN_HOVER = 0xFFFFFFFF;
 
-    /** Single source of truth for layout, shared by render + hit-test. */
-    private record Box(int x, int y, int w, int h, int closeX, int closeY, int closeS,
-                       String title, List<String> lines, String hint) {}
+    private record Box(int x, int y, int w, int h,
+                       int closeX, int closeY, int closeS,
+                       int toggleX, int toggleY, int toggleS,
+                       String title, List<String> lines, String hint, boolean collapsed) {}
 
-    private static Box layout(Font font, int screenW, int topBarH, GuideStep step,
-                              boolean buildMode, boolean isPlacing, boolean isBar) {
+    private static Box layout(Font font, int screenW, int screenH, GuideStep step,
+                              boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         int pad = 10;
         int lineH = font.lineHeight;
-        List<String> lines = step.linesFor(buildMode, isPlacing, isBar);
+        boolean collapsed = GuideSession.isCollapsed();
+        List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
 
-        int maxW = font.width(step.title());
-        for (String l : lines) {
-            maxW = Math.max(maxW, font.width(l));
+        String titleStr = step.title() + (collapsed ? " §7[点击展开]" : "");
+        int maxW = font.width(titleStr);
+        if (!collapsed) {
+            for (String l : lines) {
+                maxW = Math.max(maxW, font.width(l));
+            }
+            maxW = Math.max(maxW, font.width(step.hint()));
         }
-        maxW = Math.max(maxW, font.width(step.hint()));
 
-        int boxW = maxW + pad * 2 + 12;
-        int boxH = pad * 2 + lineH * (lines.size() + 2) + 12;
-        int x = screenW - boxW - 8;
-        int y = topBarH + 4;
+        int boxW = maxW + pad * 2 + 28;
+        int boxH = collapsed ? (pad * 2 + lineH) : (pad * 2 + lineH * (lines.size() + 2) + 12);
 
-        int closeS = 9;
-        int closeX = x + boxW - closeS - 7;
+        int x = WandscapePanelOverlay.SIDEBAR_W + 8;
+        int bottomMargin = (buildMode && isBar) ? BuildingSelectionOverlay.BAR_HEIGHT + 8 : 8;
+        int y = screenH - bottomMargin - boxH;
+
+        int btnS = 9;
+        int closeX = x + boxW - btnS - 7;
         int closeY = y + 6;
-        return new Box(x, y, boxW, boxH, closeX, closeY, closeS, step.title(), lines, step.hint());
+
+        int toggleX = closeX - btnS - 6;
+        int toggleY = y + 6;
+
+        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, step.title(), lines, step.hint(), collapsed);
     }
 
-    /** @return true if the mouse is over the guidance close (×) button. */
-    public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int topBarH,
-                                         GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar) {
-        Box b = layout(font, screenW, topBarH, step, buildMode, isPlacing, isBar);
-        return mx >= b.closeX && mx <= b.closeX + b.closeS
-                && my >= b.closeY && my <= b.closeY + b.closeS;
+    public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,
+                                         GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
+        return mx >= b.closeX - 2 && mx <= b.closeX + b.closeS + 2
+                && my >= b.closeY - 2 && my <= b.closeY + b.closeS + 2;
     }
 
-    public static void render(GuiGraphics g, Font font, int screenW, double mx, double my,
-                              int topBarH, GuideStep step,
-                              boolean buildMode, boolean isPlacing, boolean isBar) {
-        Box b = layout(font, screenW, topBarH, step, buildMode, isPlacing, isBar);
+    public static boolean isCollapseClicked(Font font, double mx, double my, int screenW, int screenH,
+                                            GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
+        if (b.collapsed) {
+            boolean overBox = mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
+            boolean overClose = mx >= b.closeX - 2 && mx <= b.closeX + b.closeS + 2 && my >= b.closeY - 2 && my <= b.closeY + b.closeS + 2;
+            return overBox && !overClose;
+        }
+        return mx >= b.toggleX - 2 && mx <= b.toggleX + b.toggleS + 2
+                && my >= b.toggleY - 2 && my <= b.toggleY + b.toggleS + 2;
+    }
+
+    public static void render(GuiGraphics g, Font font, int screenW, int screenH, double mx, double my,
+                              GuideStep step,
+                              boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         int pad = 10;
         int lineH = font.lineHeight;
 
@@ -77,25 +102,39 @@ public final class GuideRenderer {
 
         int tx = b.x + pad;
         int ty = b.y + pad;
-        drawText(g, font, b.title, tx, ty, BOX_TITLE);
-        ty += lineH + 5;
-        g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, BOX_DIVIDER);
 
-        for (String line : b.lines) {
-            drawText(g, font, line, tx, ty, BOX_LINE);
-            ty += lineH + 2;
+        if (b.collapsed) {
+            drawText(g, font, b.title + " §7[折叠中]", tx, ty, BOX_TITLE);
+        } else {
+            drawText(g, font, b.title, tx, ty, BOX_TITLE);
+            ty += lineH + 5;
+            g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, BOX_DIVIDER);
+
+            for (String line : b.lines) {
+                drawText(g, font, line, tx, ty, BOX_LINE);
+                ty += lineH + 2;
+            }
+
+            ty += 3;
+            drawText(g, font, b.hint, tx, ty, BOX_HINT);
         }
 
-        ty += 3;
-        drawText(g, font, b.hint, tx, ty, BOX_HINT);
+        // Toggle (▼ / ▲) button
+        boolean hoverToggle = isCollapseClicked(font, mx, my, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
+        if (hoverToggle) {
+            g.fill(RenderType.guiOverlay(), b.toggleX - 2, b.toggleY - 2,
+                    b.toggleX + b.toggleS + 2, b.toggleY + b.toggleS + 2, 0, BTN_TOGGLE_HOVER_BG);
+        }
+        String toggleIcon = b.collapsed ? "▲" : "▼";
+        drawText(g, font, toggleIcon, b.toggleX + 1, b.toggleY, hoverToggle ? BTN_HOVER : BTN_IDLE);
 
-        // Close (×) button, top-right
-        boolean hover = isCloseClicked(font, mx, my, screenW, topBarH, step, buildMode, isPlacing, isBar);
-        if (hover) {
+        // Close (×) button
+        boolean hoverClose = isCloseClicked(font, mx, my, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
+        if (hoverClose) {
             g.fill(RenderType.guiOverlay(), b.closeX - 2, b.closeY - 2,
-                    b.closeX + b.closeS + 2, b.closeY + b.closeS + 2, 0, CLOSE_HOVER_BG);
+                    b.closeX + b.closeS + 2, b.closeY + b.closeS + 2, 0, BTN_HOVER_BG);
         }
-        drawText(g, font, "×", b.closeX + 1, b.closeY, hover ? CLOSE_HOVER : CLOSE_IDLE);
+        drawText(g, font, "×", b.closeX + 1, b.closeY, hoverClose ? BTN_HOVER : BTN_IDLE);
     }
 
     private static void drawText(GuiGraphics g, Font font, String text, float x, float y, int color) {

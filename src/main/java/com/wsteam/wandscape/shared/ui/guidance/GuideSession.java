@@ -41,6 +41,16 @@ public final class GuideSession {
         }
     }
 
+    private static volatile boolean collapsed = false;
+
+    public static boolean isCollapsed() {
+        return collapsed;
+    }
+
+    public static void toggleCollapsed() {
+        collapsed = !collapsed;
+    }
+
     /** Dismiss the guide (× button); persisted via the server. */
     public static void dismiss() {
         dismissed = true;

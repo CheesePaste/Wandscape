@@ -2,9 +2,6 @@ package com.wsteam.wandscape.shared.network;
 
 import java.util.function.Consumer;
 
-import com.wsteam.wandscape.building.client.TownHallCreateScreen;
-
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

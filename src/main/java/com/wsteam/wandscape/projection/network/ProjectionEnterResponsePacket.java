@@ -40,27 +40,11 @@ public record ProjectionEnterResponsePacket(
         return TYPE;
     }
 
-    // ── Client handler ──
+    private static java.util.function.Consumer<ProjectionEnterResponsePacket> clientHandler = packet -> {};
+    public static void setClientHandler(java.util.function.Consumer<ProjectionEnterResponsePacket> handler) { clientHandler = handler; }
 
     public static void handleClient(ProjectionEnterResponsePacket packet) {
-        var mc = net.minecraft.client.Minecraft.getInstance();
-        if (mc.player == null) return;
-
-        if (packet.granted) {
-            ProjectionClientState.enterProjection(packet.bodyAnchor, packet.buildingSlots);
-            // Auto-open building selection bar
-            WandscapePanelState.openBuildingBar();
-        } else {
-            ProjectionClientState.exitProjection();
-            WandscapePanelState.closeBuildingBar();
-            if (WandscapePanelState.isPanelOpen()) {
-                WandscapePanelState.setSubMode(WandscapePanelState.SubMode.NONE);
-                WandscapePanelState.closeBuildingBar();
-            }
-            mc.player.displayClientMessage(
-                    Component.literal("[Projection] §eCannot enter projection mode"),
-                    true);
-        }
+        clientHandler.accept(packet);
     }
 
     // ── StreamCodec ──

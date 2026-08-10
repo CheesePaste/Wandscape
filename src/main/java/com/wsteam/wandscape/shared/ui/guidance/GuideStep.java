@@ -13,12 +13,15 @@ public record GuideStep(
         String title,
         List<String> defaultLines,
         List<String> barLines,
-        List<String> placingLines,
+        List<String> aimingLines,
+        List<String> pinnedLines,
         String hint) {
 
     /** Lines to show for the given build phase. */
-    public List<String> linesFor(boolean buildMode, boolean isPlacing, boolean isBar) {
-        if (isPlacing) return placingLines;
+    public List<String> linesFor(boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
+        if (isPlacing) {
+            return isPinned ? pinnedLines : aimingLines;
+        }
         if (buildMode && isBar) return barLines;
         return defaultLines;
     }

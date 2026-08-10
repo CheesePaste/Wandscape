@@ -273,16 +273,20 @@ public final class ColonyCommand {
         }
 
         ColonyApi colonyApi = ColonyApiImpl.get();
-        UUID colonyId = colonyApi.getColonyId(player.blockPosition());
+        UUID colonyId = colonyApi.getColonyByFounder(player.getUUID());
+        if (colonyId == null) {
+            colonyId = colonyApi.getColonyId(player.blockPosition());
+        }
         if (colonyId == null) {
             ctx.getSource().sendFailure(Component.literal(
-                    "[Wandscape] No colony within 256 blocks of your position"));
+                    "[Wandscape] 你当前没有所属的殖民地，附近 256 格内也没有发现殖民地。"));
             return 0;
         }
 
-        colonyApi.deleteColony(colonyId);
+        final UUID targetColonyId = colonyId;
+        colonyApi.deleteColony(targetColonyId);
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "[Wandscape] Colony " + colonyId.toString().substring(0, 8) + " destroyed"),
+                "[Wandscape] 成功销毁殖民地 " + targetColonyId.toString().substring(0, 8)),
                 true);
         return Command.SINGLE_SUCCESS;
     }

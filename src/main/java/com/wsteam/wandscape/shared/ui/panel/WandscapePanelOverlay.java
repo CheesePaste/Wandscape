@@ -224,11 +224,11 @@ public final class WandscapePanelOverlay {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
             boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
-            com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.render(g, font, screenW, mx, my,
-                    TOP_BAR_H,
+            boolean isPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
+            com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.render(g, font, screenW, screenH, mx, my,
                     com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
                             com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep()),
-                    buildMode, isPlacing, isBar);
+                    buildMode, isPlacing, isBar, isPinned);
         }
 
         // Stats content (shifted right of sidebar)

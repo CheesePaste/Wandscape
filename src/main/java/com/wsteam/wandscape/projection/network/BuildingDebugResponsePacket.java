@@ -49,21 +49,11 @@ public record BuildingDebugResponsePacket(
         return TYPE;
     }
 
-    // ── Client handler ──
+    private static java.util.function.Consumer<BuildingDebugResponsePacket> clientHandler = packet -> {};
+    public static void setClientHandler(java.util.function.Consumer<BuildingDebugResponsePacket> handler) { clientHandler = handler; }
 
     public static void handleClient(BuildingDebugResponsePacket packet) {
-        Log.info(TAG, "[Debug] Received debug response for '{}' at {}",
-                packet.buildingTypeId(), packet.anchor());
-        net.minecraft.client.Minecraft.getInstance().execute(() -> {
-            boolean active = com.wsteam.wandscape.projection.client.BuildingDebugClientState.isActive();
-            boolean hasPos = com.wsteam.wandscape.projection.client.BuildingDebugClientState.getLastRequestedPos() != null;
-            if (active && hasPos) {
-                com.wsteam.wandscape.projection.client.BuildingDebugClientState.setCachedData(packet);
-                Log.info(TAG, "[Debug] Response cached: type={} id={}", packet.buildingTypeId(), packet.buildingId());
-            } else {
-                Log.warn(TAG, "[Debug] Response dropped: active={} hasPos={} type={}", active, hasPos, packet.buildingTypeId());
-            }
-        });
+        clientHandler.accept(packet);
     }
 
     // ── StreamCodec ──
