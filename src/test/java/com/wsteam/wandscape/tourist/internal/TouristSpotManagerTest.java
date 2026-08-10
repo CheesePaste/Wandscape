@@ -133,6 +133,22 @@ class TouristSpotManagerTest {
         assertEquals(0, m.claimAt(B, 0, 2)); // 清空后可重新认领
     }
 
+    /** 幽灵占用自愈：占用者已不在世界 → 释放该 spot 并清其排队；存活者不动。 */
+    @Test
+    void purgeMissingReleasesGhostOccupantsOnly() {
+        TouristSpotManager m = new TouristSpotManager();
+        m.claim(B, 2, A); // spot 0 存活游客占
+        m.claim(B, 2, C); // spot 1 幽灵游客占
+        m.joinQueue(B, 0, C); // 幽灵也排了队
+        // 存活检测：只有 A 在场
+        assertEquals(1, m.purgeMissing(uuid -> uuid.equals(A)));
+        assertEquals(1, m.freeSpotCount(B, 2)); // spot 1 释放，spot 0 仍被占
+        assertEquals(0, m.totalQueueLength(B)); // 幽灵的排队被清
+        // 全存活 → 不再清理
+        assertEquals(0, m.purgeMissing(uuid -> true));
+        assertEquals(1, m.freeSpotCount(B, 2));
+    }
+
     /** 指定 spot 认领：只能认领空位，已被占返回 -1。 */
     @Test
     void claimAtClaimsOnlyFreeSpot() {

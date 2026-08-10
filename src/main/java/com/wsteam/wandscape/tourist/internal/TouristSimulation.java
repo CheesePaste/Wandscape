@@ -188,18 +188,18 @@ public final class TouristSimulation {
         return BuildingRotation.rotateDirection(facing, state.getRotationSteps());
     }
 
-    /** 认领一个空 spot 并占用；全满返回 -1（游客排队等待）。 */
-    public static int claimSpot(ServerLevel level, UUID buildingId) {
+    /** 认领一个空 spot 并占用；全满返回 -1（游客排队等待）。记录占用者供幽灵自愈探测。 */
+    public static int claimSpot(ServerLevel level, UUID buildingId, UUID touristId) {
         int total = interactSpotCount(level, buildingId);
         if (total <= 0) return -1;
-        return TouristSpotManager.getActive().claim(buildingId, total);
+        return TouristSpotManager.getActive().claim(buildingId, total, touristId);
     }
 
-    /** 认领指定 spot（供排在该 spot 队首的游客用）；已被占返回 -1。 */
-    public static int claimSpotAt(ServerLevel level, UUID buildingId, int spotIndex) {
+    /** 认领指定 spot（供排在该 spot 队首的游客用）；已被占返回 -1。记录占用者供幽灵自愈探测。 */
+    public static int claimSpotAt(ServerLevel level, UUID buildingId, int spotIndex, UUID touristId) {
         int total = interactSpotCount(level, buildingId);
         if (total <= 0) return -1;
-        return TouristSpotManager.getActive().claimAt(buildingId, spotIndex, total);
+        return TouristSpotManager.getActive().claimAt(buildingId, spotIndex, total, touristId);
     }
 
     /** 释放已占用的 spot。 */

@@ -517,7 +517,7 @@ public class TouristMoveGoal extends Goal {
                 finishBuildingStop();
                 return;
             }
-            spot = TouristSimulation.claimSpot(level, buildingId);
+            spot = TouristSimulation.claimSpot(level, buildingId, tourist.getUUID());
             if (spot < 0) {
                 // spot 全满 → 排队
                 startQueueing();
@@ -616,7 +616,7 @@ public class TouristMoveGoal extends Goal {
         }
         // 严格 FIFO：只有本队队首可认领该 spot 空位（队首离队后下一个自然成为队首）
         if (TouristSpotManager.getActive().queuePosition(buildingId, queueSpotIndex, tourist.getUUID()) == 0) {
-            int spot = TouristSimulation.claimSpotAt(level, buildingId, queueSpotIndex);
+            int spot = TouristSimulation.claimSpotAt(level, buildingId, queueSpotIndex, tourist.getUUID());
             if (spot >= 0) {
                 leaveQueue();
                 claimedSpot = spot;
@@ -746,7 +746,7 @@ public class TouristMoveGoal extends Goal {
         UUID buildingId = tourist.getTargetBuildingId();
         int spot = -1;
         if (level != null && buildingId != null) {
-            spot = TouristSimulation.claimSpot(level, buildingId);
+            spot = TouristSimulation.claimSpot(level, buildingId, tourist.getUUID());
         }
         if (spot >= 0) {
             claimedSpot = spot;

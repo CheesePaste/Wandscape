@@ -7,6 +7,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.annotation.Nullable;
+
 /**
  * 交互位（spot）占用管理：spot 数量 = 该建筑同时交互的游客人数上限。
  *
@@ -21,6 +23,9 @@ public final class TouristSpotManager {
 
     /** buildingId → 已占用的 spot 下标集合。 */
     private final Map<UUID, Set<Integer>> occupancy = new ConcurrentHashMap<>();
+
+    /** buildingId → spot 下标 → 占用者游客 UUID（幽灵自愈探测用；无占用者时缺省）。 */
+    private final Map<UUID, Map<Integer, UUID>> occupants = new ConcurrentHashMap<>();
 
     /** buildingId → spot 下标 → 该队游客 UUID 列表（队首 = 下标 0，FIFO）。 */
     private final Map<UUID, Map<Integer, List<UUID>>> queue = new ConcurrentHashMap<>();
@@ -38,17 +43,26 @@ public final class TouristSpotManager {
     /** 清空全部占用与排队（服务端停止/世界卸载时调用；静态单例跨世界存活，否则残留幽灵占位）。 */
     public void clear() {
         occupancy.clear();
+        occupants.clear();
         queue.clear();
     }
 
-    /** 认领一个空 spot 并占用。 */
+    /** 认领一个空 spot 并占用（不记占用者）。 */
     public int claim(UUID buildingId, int totalSpots) {
+        return claim(buildingId, totalSpots, null);
+    }
+
+    /** 认领一个空 spot 并占用，记录占用者（供幽灵自愈探测）。 */
+    public int claim(UUID buildingId, int totalSpots, @Nullable UUID touristId) {
         if (totalSpots <= 0) return -1;
         Set<Integer> taken = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
         synchronized (taken) {
             for (int i = 0; i < totalSpots; i++) {
                 if (!taken.contains(i)) {
                     taken.add(i);
+                    if (touristId != null) {
+                        occupants.computeIfAbsent(buildingId, k -> new ConcurrentHashMap<>()).put(i, touristId);
+                    }
                     return i;
                 }
             }
@@ -56,13 +70,21 @@ public final class TouristSpotManager {
         return -1;
     }
 
-    /** 认领指定 spot（供排在该 spot 队首的游客用）；已被占返回 -1。 */
+    /** 认领指定 spot（供排在该 spot 队首的游客用）；已被占返回 -1（不记占用者）。 */
     public int claimAt(UUID buildingId, int spotIndex, int totalSpots) {
+        return claimAt(buildingId, spotIndex, totalSpots, null);
+    }
+
+    /** 认领指定 spot（供排在该 spot 队首的游客用），记录占用者；已被占返回 -1。 */
+    public int claimAt(UUID buildingId, int spotIndex, int totalSpots, @Nullable UUID touristId) {
         if (spotIndex < 0 || spotIndex >= totalSpots) return -1;
         Set<Integer> taken = occupancy.computeIfAbsent(buildingId, k -> ConcurrentHashMap.newKeySet());
         synchronized (taken) {
             if (!taken.contains(spotIndex)) {
                 taken.add(spotIndex);
+                if (touristId != null) {
+                    occupants.computeIfAbsent(buildingId, k -> new ConcurrentHashMap<>()).put(spotIndex, touristId);
+                }
                 return spotIndex;
             }
         }
@@ -79,6 +101,38 @@ public final class TouristSpotManager {
                 occupancy.remove(buildingId, taken);
             }
         }
+        Map<Integer, UUID> occ = occupants.get(buildingId);
+        if (occ != null) {
+            occ.remove(spotIndex);
+            if (occ.isEmpty()) {
+                occupants.remove(buildingId, occ);
+            }
+        }
+    }
+
+    /**
+     * 幽灵占用自愈保险：占用者游客已不在世界（{@code alive.test(uuid)} 为 false）→ 释放该 spot
+     * 并清其排队登记。周期性调用可兜底任何漏清理路径，防止建筑被幽灵占位/排队饿死。
+     *
+     * @return 本次清理的 spot 数（>0 说明出现过残留）。
+     */
+    public int purgeMissing(java.util.function.Predicate<UUID> alive) {
+        int cleaned = 0;
+        for (var e : occupants.entrySet()) {
+            UUID buildingId = e.getKey();
+            Map<Integer, UUID> spots = e.getValue();
+            if (spots.isEmpty()) continue;
+            for (var se : List.copyOf(spots.entrySet())) {
+                Integer spot = se.getKey();
+                UUID tourist = se.getValue();
+                if (tourist != null && !alive.test(tourist)) {
+                    release(buildingId, spot);
+                    leaveAllQueues(buildingId, tourist);
+                    cleaned++;
+                }
+            }
+        }
+        return cleaned;
     }
 
     public boolean isSpotFree(UUID buildingId, int spotIndex) {

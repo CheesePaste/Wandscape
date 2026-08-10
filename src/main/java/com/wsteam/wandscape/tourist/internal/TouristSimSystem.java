@@ -58,6 +58,8 @@ public final class TouristSimSystem {
     private static final String TAG = "TouristSimSystem";
     /** Sim runs every tick — per-tourist work is a few arithmetic ops (negligible). */
     private static final int SIM_INTERVAL = 1;
+    /** 幽灵占位自愈探测间隔（tick）：周期释放占用者已消失的交互点，兜底任何漏清理路径。 */
+    private static final int SPOT_PURGE_INTERVAL = 100;
     /** Constant straight-line speed per tick: 0.5 blocks/tick (matches entity speed). */
     private static final double SPEED = 0.5;
     private static final double ARRIVE_RANGE = 1.0;
@@ -65,6 +67,7 @@ public final class TouristSimSystem {
 
     private int tickCounter;
     private int simStepLogCounter;
+    private int spotPurgeCounter;
     private TouristSimRegistry registry;
     private final Random random = new Random();
 
@@ -144,6 +147,12 @@ public final class TouristSimSystem {
             return;
         }
         if (tickCounter == 0) Log.info(TAG, "[Tourist][diag] onServerTick firing, shadows={}", registry.getShadows().size());
+
+        // 幽灵占位自愈保险：占用者游客已不在世界 → 释放该 spot 并清其排队（兜底漏清理路径）。
+        if (++spotPurgeCounter % SPOT_PURGE_INTERVAL == 0) {
+            int cleaned = TouristSpotManager.getActive().purgeMissing(uuid -> level.getEntity(uuid) != null);
+            if (cleaned > 0) Log.info(TAG, "[Tourist] purged {} ghost spot(s)", cleaned);
+        }
 
         if (++tickCounter % SIM_INTERVAL != 0) return;
         runTick(level);
