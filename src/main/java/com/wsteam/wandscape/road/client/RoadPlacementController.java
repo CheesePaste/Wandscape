@@ -107,18 +107,46 @@ public final class RoadPlacementController {
         drainAttackUse(mc);
     }
 
-    // ── Ghost position ──
+    // ── Mouse Raycasting & Ghost position ──
+
+    private static Vec3 getMouseWorldRay(Minecraft mc) {
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        org.lwjgl.glfw.GLFW.glfwGetCursorPos(window, mx, my);
+        int w = mc.getWindow().getWidth();
+        int h = mc.getWindow().getHeight();
+
+        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+
+        Camera cam = mc.gameRenderer.getMainCamera();
+        float fov = (float) mc.options.fov().get();
+        float fovRad = (float) Math.toRadians(fov);
+        float aspect = (float) w / Math.max(h, 1);
+        float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
+
+        org.joml.Vector3f jLook = cam.getLookVector();
+        org.joml.Vector3f jUp   = cam.getUpVector();
+        org.joml.Vector3f jLeft = cam.getLeftVector();
+
+        Vec3 forward = new Vec3(jLook.x, jLook.y, jLook.z);
+        Vec3 up      = new Vec3(jUp.x,   jUp.y,   jUp.z);
+        Vec3 right   = new Vec3(jLeft.x, jLeft.y, jLeft.z).scale(-1.0);
+
+        return forward
+                .add(right.scale(ndcX * tanHalfFov * aspect))
+                .add(up.scale(ndcY * tanHalfFov))
+                .normalize();
+    }
 
     private static void updateGhostPosition(Minecraft mc) {
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
-        Vec3 lookVec = new Vec3(camera.getLookVector().x(),
-                camera.getLookVector().y(),
-                camera.getLookVector().z());
+        Vec3 rayDir = getMouseWorldRay(mc);
 
         var clipCtx = new ClipContext(
                 origin,
-                origin.add(lookVec.scale(REACH)),
+                origin.add(rayDir.scale(REACH)),
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
                 mc.player);
