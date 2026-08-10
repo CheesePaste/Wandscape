@@ -525,6 +525,12 @@ public class TouristMoveGoal extends Goal {
             }
             claimedSpot = spot;
         }
+        // 精确落到 spot 中心再开始交互：游客移动有误差，直接 setPos 钉死，保证整队与 spot 对齐
+        BlockPos sp = TouristSimulation.spotWorldPos(level, buildingId, spot);
+        if (sp != null) {
+            tourist.setPos(sp.getX() + 0.5, sp.getY(), sp.getZ() + 0.5);
+            tourist.getNavigation().stop();
+        }
         Activity action = TouristSimulation.interactSpotAction(level, buildingId, spot);
         int duration = Math.max(1, TouristSimulation.interactionDuration(level, buildingId));
         tourist.setCurrentActivity(action);
@@ -624,6 +630,8 @@ public class TouristMoveGoal extends Goal {
                 }
                 interactPoint = target;
                 tourist.setFrozenYaw(null);
+                // 队首就在 spot 背后 1 格，直接精确落到 spot 上开始交互（消除移动误差）
+                tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
                 tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
                 return;
             }
@@ -671,11 +679,13 @@ public class TouristMoveGoal extends Goal {
             tourist.getNavigation().stop();
             return;
         }
-        // 已到位且目标没变：站定并朝向 spot 的 facing（和交互游客同向）
+        // 已到位且目标没变：精确落到站位中心（游客移动有误差，直接 setPos 钉死保证队形整齐），
+        // 朝向与 spot 的 facing 一致（和交互游客同向）
         boolean sameTarget = target.equals(queueNavTarget);
         boolean arrived = tourist.blockPosition().distSqr(target) <= QUEUE_ARRIVE_DIST_SQ;
         if (sameTarget && arrived) {
             tourist.getNavigation().stop();
+            tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
             if (tourist.getFrozenYaw() == null) {
                 float yaw = TouristSimulation.spotFacing(level, buildingId, queueSpotIndex).toYRot();
                 tourist.setFrozenYaw(yaw);
