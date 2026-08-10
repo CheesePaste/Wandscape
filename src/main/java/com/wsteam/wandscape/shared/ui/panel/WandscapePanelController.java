@@ -35,11 +35,16 @@ public final class WandscapePanelController {
 
     private static boolean registered = false;
 
-    // Cursor-reconciler edge tracking — see onClientTickPost. Lets the reconciler
-    // re-assert the OS cursor only on real transitions instead of every tick.
-    private static boolean lastPanelOpen = false;
+    // Cursor reconciliation state — see onClientTickPost. The reconciler keeps the
+    // OS cursor aligned with `cursorLifted` every tick (recovering from vanilla
+    // grabs that would otherwise leave it hidden), defers to the spline editor's
+    // right-drag camera grab, and restores the cursor to its last free position on
+    // release so it doesn't snap to window center after a grab.
     private static boolean lastScreenOpen = false;
-    private static boolean lastReconciledLifted = false;
+    private static boolean lastDesiredLifted = false;
+    private static double savedCursorX;
+    private static double savedCursorY;
+    private static boolean hasSavedCursor = false;
 
     private WandscapePanelController() {}
 
@@ -77,40 +82,66 @@ public final class WandscapePanelController {
     }
 
     static void onClientTickPost(ClientTickEvent.Post event) {
-        boolean panelOpen = WandscapePanelState.isPanelOpen();
-        Minecraft mc = Minecraft.getInstance();
-
-        // Panel closed (or no world): nothing to reconcile. Keep edge-tracking in
-        // sync so the next open/close transitions fire correctly.
-        if (!panelOpen || mc.level == null || mc.player == null) {
-            lastPanelOpen = panelOpen;
-            lastScreenOpen = mc.screen != null;
+        if (!WandscapePanelState.isPanelOpen()) {
+            // Reset edge-tracking so the next panel session reconciles cleanly.
+            lastScreenOpen = false;
+            lastDesiredLifted = false;
+            hasSavedCursor = false;
             return;
         }
 
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
+
+        long window = mc.getWindow().getWindow();
         boolean screenOpen = mc.screen != null;
-        boolean panelJustOpened = !lastPanelOpen;
         boolean screenJustClosed = lastScreenOpen && !screenOpen;
-        lastPanelOpen = panelOpen;
+        boolean cursorLifted = WandscapePanelState.isCursorLifted();
+        boolean splineCam = com.wsteam.wandscape.road.client.SplineEditorController.isCameraActive();
         lastScreenOpen = screenOpen;
 
-        // Screens manage their own cursor; re-assert once after a Screen closes
+        // Record the cursor's free position whenever it is genuinely visible/free:
+        // while a Screen is open, or while steadily lifted. Skip the grab→free
+        // transition tick, the frame a Screen just closed (vanilla re-grabbed), and
+        // the spline editor's camera grab — in all those the cursor is still hidden.
+        // The saved position is restored on release so the cursor doesn't jump to
+        // window center after a grab.
+        boolean cursorFree = screenOpen
+                || (cursorLifted && lastDesiredLifted && !splineCam && !screenJustClosed);
+        if (cursorFree) {
+            double[] mx = new double[1], my = new double[1];
+            GLFW.glfwGetCursorPos(window, mx, my);
+            savedCursorX = mx[0];
+            savedCursorY = my[0];
+            hasSavedCursor = true;
+        }
+
+        // A Screen owns cursor visibility; only re-assert right after it closes
         // (vanilla grabs the mouse when a Screen closes).
         if (screenOpen) return;
 
-        // Edge-triggered: only touch the OS cursor when the desired state actually
-        // changes, when the panel just opened, or right after a Screen closed.
-        // Calling grabMouse() every tick re-centers + hides the cursor and fights
-        // transient grabs (e.g. the spline editor's right-drag camera), so avoid it.
-        boolean desired = WandscapePanelState.isCursorLifted();
-        if (panelJustOpened || screenJustClosed || desired != lastReconciledLifted) {
-            if (desired) {
-                mc.mouseHandler.releaseMouse();
-            } else {
-                mc.mouseHandler.grabMouse();
-            }
-            lastReconciledLifted = desired;
+        // The spline editor's right-drag camera grab owns the cursor while active —
+        // reconciling here would release it and break camera rotation.
+        if (splineCam) {
+            lastDesiredLifted = false;   // force a restore transition when it releases
+            return;
         }
+
+        // Every-tick re-assert recovers from vanilla grabs that would otherwise
+        // leave the cursor hidden when it should be visible (and vice-versa).
+        boolean desired = cursorLifted;
+        boolean justTransitioned = (desired != lastDesiredLifted);
+        if (desired) {
+            mc.mouseHandler.releaseMouse();
+            // On a fresh grab→free transition (or right after a Screen closed), put
+            // the cursor back where it last was instead of window center.
+            if ((justTransitioned || screenJustClosed) && hasSavedCursor) {
+                GLFW.glfwSetCursorPos(window, savedCursorX, savedCursorY);
+            }
+        } else {
+            mc.mouseHandler.grabMouse();
+        }
+        lastDesiredLifted = desired;
     }
 
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {

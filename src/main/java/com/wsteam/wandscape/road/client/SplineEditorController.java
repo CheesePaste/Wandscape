@@ -39,6 +39,11 @@ public final class SplineEditorController {
         flyingSpeed = Math.max(0.02f, Math.min(5.0f, speed));
     }
 
+    /** True while the player is holding RMB to rotate the editor camera (cursor grabbed). */
+    public static boolean isCameraActive() {
+        return cameraActive;
+    }
+
     public static void register() {
         if (registered) return;
         registered = true;
