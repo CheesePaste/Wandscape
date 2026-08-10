@@ -24,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Clean UTF-8 Chinese Localized ImGui Studio Interface for Road Placement & Spline Editor.
@@ -58,6 +59,13 @@ public final class SplineEditorImGui {
     private static final float[] uiOffsetPitch = new float[]{0.0f};
     private static final float[] uiOffsetYaw = new float[]{0.0f};
 
+    // ── Panel geometry: width is user-draggable from the left edge (window stays right-aligned) ──
+    private static float panelWidth = 370.0f;
+    private static final float SPLITTER_W = 5.0f;
+    private static final float MIN_PANEL_W = 300.0f;
+    private static long resizeCursor = 0L;
+    private static boolean resizeCursorActive = false;
+
     // Dynamic Template Generator UI binding
     private static final int[] uiDynamicWidth = new int[]{5};
     private static final int[] uiDynamicDepth = new int[]{1};
@@ -69,7 +77,10 @@ public final class SplineEditorImGui {
         Minecraft mc = Minecraft.getInstance();
         var io = ImGui.getIO();
 
-        float width = 370.0f;
+        // 宽度可调（左缘拖柄拖动），每帧保持紧贴右缘
+        float maxW = Math.max(480.0f, io.getDisplaySizeX() * 0.85f);
+        panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth));
+        float width = panelWidth;
         ImGui.setNextWindowPos(io.getDisplaySizeX() - width, 0, ImGuiCond.Always);
         ImGui.setNextWindowSize(width, io.getDisplaySizeY(), ImGuiCond.Always);
 
@@ -79,6 +90,34 @@ public final class SplineEditorImGui {
 
         if (ImGui.begin("道路制作工坊", flags)) {
             SplineModel model = SplineEditorClientState.getModel();
+
+            // ── 左缘拖柄：按住向右拖加宽 / 向左拖收窄，窗口始终紧贴右缘 ──
+            ImGui.setCursorPos(0, 0);
+            ImGui.invisibleButton("##PanelSplitter", SPLITTER_W, ImGui.getWindowHeight());
+            boolean splitterHeld = ImGui.isItemActive();
+            boolean splitterHovered = ImGui.isItemHovered();
+            if (splitterHeld) {
+                panelWidth = Math.max(MIN_PANEL_W, Math.min(maxW, panelWidth + ImGui.getIO().getMouseDeltaX()));
+            }
+            // hover 时切 EW resize 光标，离开恢复
+            long win = mc.getWindow().getWindow();
+            if (splitterHovered) {
+                if (resizeCursor == 0L) {
+                    resizeCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_RESIZE_EW_CURSOR);
+                }
+                GLFW.glfwSetCursor(win, resizeCursor);
+                resizeCursorActive = true;
+            } else if (resizeCursorActive) {
+                GLFW.glfwSetCursor(win, 0L);
+                resizeCursorActive = false;
+            }
+            // 可见的拖柄竖线
+            var drawList = ImGui.getWindowDrawList();
+            float splitterLineX = ImGui.getWindowPos().x + SPLITTER_W * 0.5f;
+            drawList.addLine(splitterLineX, ImGui.getWindowPos().y,
+                    splitterLineX, ImGui.getWindowPos().y + ImGui.getWindowHeight(), 0x66FFFFFF, 1.0f);
+
+            ImGui.setCursorPos(12.0f, 12.0f);
 
             // ── Banner Header ──
             drawHeaderBanner(model);
@@ -402,11 +441,13 @@ public final class SplineEditorImGui {
     private static void drawHeaderBanner(SplineModel model) {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
         ImGui.pushStyleColor(ImGuiCol.Border, 0.78f, 0.63f, 0.25f, 0.50f);
-        ImGui.beginChild("HeaderBanner", 0, 56, true);
+        ImGui.beginChild("HeaderBanner", 0, 80, true);
         {
             ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
+            ImGui.spacing();
+            ImGui.spacing();
 
             String toolName = switch (RoadPlacementState.getActiveTool()) {
                 case REPLACE -> "直线替换";
