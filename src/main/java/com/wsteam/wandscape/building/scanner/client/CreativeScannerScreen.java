@@ -342,9 +342,12 @@ public class CreativeScannerScreen extends MedievalScreen {
         maintCostY = y - 14;
 
         addCustomButton(lx + 240, y - 15, 80, 20, "+ 添加消耗", () -> {
-            scanner.addMaintenanceCost("earth", 1);
-            syncToServer();
-            needsRebuild = true;
+            String el = nextUnusedElement(scanner.getMaintenanceCost());
+            if (el != null) {
+                scanner.addMaintenanceCost(el, 1);
+                syncToServer();
+                needsRebuild = true;
+            }
         });
 
         for (var entry : scanner.getMaintenanceCost().entrySet()) {
@@ -481,9 +484,12 @@ public class CreativeScannerScreen extends MedievalScreen {
             elemOutY = y - 14;
 
             addCustomButton(lx + 240, y - 15, 80, 20, "+ 添加产出", () -> {
-                scanner.addServiceElementOutput("earth", 1);
-                syncToServer();
-                needsRebuild = true;
+                String el = nextUnusedElement(scanner.getServiceElementOutput());
+                if (el != null) {
+                    scanner.addServiceElementOutput(el, 1);
+                    syncToServer();
+                    needsRebuild = true;
+                }
             });
 
             for (var entry : scanner.getServiceElementOutput().entrySet()) {
@@ -1238,6 +1244,14 @@ public class CreativeScannerScreen extends MedievalScreen {
         if (s == null || s.isEmpty()) return 0;
         try { return Integer.parseInt(s); }
         catch (NumberFormatException e) { return 0; }
+    }
+
+    /** Returns the first element not yet present in the given cost map, or null if all are used. */
+    private static String nextUnusedElement(Map<String, Integer> current) {
+        for (String el : ELEMENTS) {
+            if (!current.containsKey(el)) return el;
+        }
+        return null;
     }
 
     private static int intOrZero(String s) {
