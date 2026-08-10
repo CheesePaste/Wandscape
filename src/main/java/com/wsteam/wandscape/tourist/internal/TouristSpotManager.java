@@ -134,6 +134,17 @@ public final class TouristSpotManager {
         return q == null ? 0 : q.size();
     }
 
+    /** 该建筑所有 spot 的排队总人数（正在占位交互的不算）。0 = 无人排队。 */
+    public int totalQueueLength(UUID buildingId) {
+        Map<Integer, List<UUID>> spots = queue.get(buildingId);
+        if (spots == null) return 0;
+        int n = 0;
+        for (List<UUID> q : spots.values()) {
+            n += q.size();
+        }
+        return n;
+    }
+
     /** 队最短的 spot（均匀分散排队人群）；并列取最小编号。totalSpots>0 时恒返回有效下标。 */
     public int shortestQueueSpot(UUID buildingId, int totalSpots) {
         int best = -1;

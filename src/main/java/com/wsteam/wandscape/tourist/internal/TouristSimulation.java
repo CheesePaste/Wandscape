@@ -446,9 +446,11 @@ public final class TouristSimulation {
                     score += WALLET_LOW_BONUS;
                 }
             }
-            // 排队惩罚：spot 全满减分（多建同类型 = 有空位 → 排队短）
+            // 排队惩罚：spot 全满或已有人排队减分——spot 空但队长的间隙也持续降权，
+            // 避免新游客挤进热点建筑；多建同类型 = 有空位 → 排队短。
             if (cfg.interactSpots() != null && !cfg.interactSpots().isEmpty()
-                    && TouristSpotManager.getActive().isFull(state.getBuildingId(), cfg.interactSpots().size())) {
+                    && (TouristSpotManager.getActive().isFull(state.getBuildingId(), cfg.interactSpots().size())
+                    || TouristSpotManager.getActive().totalQueueLength(state.getBuildingId()) > 0)) {
                 score -= QUEUE_PENALTY;
             }
         }

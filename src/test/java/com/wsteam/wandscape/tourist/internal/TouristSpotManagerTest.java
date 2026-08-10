@@ -103,6 +103,22 @@ class TouristSpotManagerTest {
         assertEquals(1, m.shortestQueueSpot(B, 3));
     }
 
+    /** 排队总人数 = 各 spot 队人数之和；无人排队为 0，离队后递减。 */
+    @Test
+    void totalQueueLengthSumsAcrossSpots() {
+        TouristSpotManager m = new TouristSpotManager();
+        assertEquals(0, m.totalQueueLength(B));
+        m.joinQueue(B, 0, A);
+        m.joinQueue(B, 0, B);
+        m.joinQueue(B, 1, C);
+        assertEquals(3, m.totalQueueLength(B));
+        m.leaveAllQueues(B, A);
+        assertEquals(2, m.totalQueueLength(B));
+        m.leaveAllQueues(B, B);
+        m.leaveAllQueues(B, C);
+        assertEquals(0, m.totalQueueLength(B));
+    }
+
     /** 指定 spot 认领：只能认领空位，已被占返回 -1。 */
     @Test
     void claimAtClaimsOnlyFreeSpot() {
