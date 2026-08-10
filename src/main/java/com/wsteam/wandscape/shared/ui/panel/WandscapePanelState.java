@@ -408,8 +408,10 @@ public final class WandscapePanelState {
     public static void enterSubMode(SubMode mode) {
         SubMode prev = activeSubMode;
 
-        // OVERVIEW → BUILD_PROJECTION or ROAD_PROJECTION: keep overview camera active
-        if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION)) {
+        // OVERVIEW → BUILD_PROJECTION / ROAD_PROJECTION / STATS: keep overview camera active
+        // (STATS is an overlay tab — closing it must return to the overview camera, not kill it)
+        if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION
+                || mode == SubMode.STATS)) {
             activeSubMode = mode;
             switch (mode) {
                 case BUILD_PROJECTION -> {
@@ -475,6 +477,14 @@ public final class WandscapePanelState {
                     com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
                 }
                 // If entered from overview, go back to pure overview
+                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                    activeSubMode = SubMode.OVERVIEW;
+                    return;
+                }
+            }
+            case STATS -> {
+                // STATS is a pure overlay tab: entered from overview the camera stays active,
+                // so leaving must return to pure overview (handlePanelEscape/G-key rely on this).
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     return;
