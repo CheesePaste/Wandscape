@@ -930,12 +930,14 @@ public class TouristMoveGoal extends Goal {
         // 住店客夜晚回店：直接强制躺床（不复填满意值/不重复叙事）
         hotel.settleIntoBed(tourist, serverLevel(), buildingId);
 
+        // 先清 spot 再清目标：clearSpotState 靠 getTargetBuildingId() 定位释放位，
+        // 若先置 null，占用的 spot（如白天在自家旅店做的服务位）会用 null 建筑 key 释放 → NPE。
+        clearSpotState();
         tourist.setCommuteTarget(null);
         tourist.setTargetBuildingId(null);
         tourist.setTargetBuildingCategory(null);
         indoorPhase = false;
         exitingPhase = false;
-        clearSpotState();
         syncDebugData();
         return true;
     }

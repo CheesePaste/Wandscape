@@ -9,6 +9,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.shared.log.Log;
+
 /**
  * 交互位（spot）占用管理：spot 数量 = 该建筑同时交互的游客人数上限。
  *
@@ -29,6 +31,8 @@ public final class TouristSpotManager {
 
     /** buildingId → spot 下标 → 该队游客 UUID 列表（队首 = 下标 0，FIFO）。 */
     private final Map<UUID, Map<Integer, List<UUID>>> queue = new ConcurrentHashMap<>();
+
+    private static final String TAG = "TouristSpotManager";
 
     private static final TouristSpotManager ACTIVE = new TouristSpotManager();
 
@@ -94,6 +98,10 @@ public final class TouristSpotManager {
     /** 释放一个已占用的 spot。 */
     public void release(UUID buildingId, int spotIndex) {
         if (spotIndex < 0) return;
+        if (buildingId == null) {
+            Log.warn(TAG, "release(null, {}) skipped — 无建筑 key 的 spot 释放", spotIndex);
+            return;
+        }
         Set<Integer> taken = occupancy.get(buildingId);
         if (taken != null) {
             taken.remove(spotIndex);
