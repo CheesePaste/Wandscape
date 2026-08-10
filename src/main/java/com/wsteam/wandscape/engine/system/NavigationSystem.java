@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.component.Position;
 import com.wsteam.wandscape.core.component.TaskExecutor;
@@ -38,15 +39,11 @@ public class NavigationSystem implements System {
     private static final String TAG = "NavigationSystem";
 
     static final double STOP_RANGE_SQ = 25.0; // 5²
-    private static final int PATHFIND_MAX_RANGE = 64;
     /** Road routing kicks in for hops beyond this XZ distance. */
     private static final double ROAD_ROUTE_MIN_DIST_SQ = 24.0 * 24.0;
     /** Horizontal distance to a road waypoint before advancing to the next. */
     private static final double WAYPOINT_ARRIVE_SQ = 2.25;
     static final double NAV_SPEED = 1.0;
-    private static final int STUCK_CHECK_INTERVAL = 60;
-    private static final int MAX_STUCK_CHECKS = 3;
-    private static final double STUCK_MIN_PROGRESS = 2.0;
     private static final int PATHFIND_TIMEOUT = 200;
     private static final int MAX_REPATH = 5;
     /** Base cooldown (ticks) between self_teleport casts; divided by SPELL_SPEED. */
@@ -88,9 +85,9 @@ public class NavigationSystem implements System {
                 nav.lastCheckX = npc.getX();
                 nav.lastCheckZ = npc.getZ();
 
-                // Distance > 64 → skip pathfinding, use self_teleport ritual
+                // Distance > walkThreshold → skip pathfinding, use self_teleport ritual
                 if (nav.mode == NavigationState.Mode.PATHFINDING
-                        && hDistSq > (long) PATHFIND_MAX_RANGE * PATHFIND_MAX_RANGE) {
+                        && hDistSq > (long) Config.NPC_WALK_THRESHOLD.get() * Config.NPC_WALK_THRESHOLD.get()) {
                     switchToRitualTeleport(nav, npcId, world);
                     continue;
                 }
@@ -170,14 +167,14 @@ public class NavigationSystem implements System {
         }
 
         // Stuck check
-        if (tickCounter - nav.lastCheckTick >= STUCK_CHECK_INTERVAL) {
+        if (tickCounter - nav.lastCheckTick >= Config.STUCK_CHECK_INTERVAL_TICKS.get()) {
             double progress = Math.abs(npc.getX() - nav.lastCheckX)
                     + Math.abs(npc.getZ() - nav.lastCheckZ);
-            if (progress < STUCK_MIN_PROGRESS) {
+            if (progress < Config.STUCK_MIN_MOVE_DISTANCE.get()) {
                 nav.stuckChecks++;
                 Log.info(TAG, "[NavSys] NPC {} — stuck check #{}, progress={}",
                         npcId, nav.stuckChecks, String.format("%.2f", progress));
-                if (nav.stuckChecks >= MAX_STUCK_CHECKS) {
+                if (nav.stuckChecks >= Config.STUCK_MAX_RETRIES.get()) {
                     Log.info(TAG, "[NavSys] NPC {} — stuck, switching to teleport", npcId);
                     switchToRitualTeleport(nav, npcId, world);
                     return;
