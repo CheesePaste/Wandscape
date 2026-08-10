@@ -122,9 +122,9 @@ public final class SplineEditorController {
             mc.player.setDeltaMovement(Vec3.ZERO);
 
             // World clicks belong to the editor when the cursor is over the 3D world
-            // (!imguiWantsMouse); ImGui already consumed anything over its panels.
+            // (!imguiWantsMouse) and tool mode is SPLINE; ImGui already consumed anything over its panels.
             // When a vanilla screen (guide) is open, its widgets own the clicks.
-            if (!imguiWantsMouse && mc.screen == null) {
+            if (!imguiWantsMouse && mc.screen == null && RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
                 SplineEditorInputHandler.handleClicks(mc, window);
             }
         }

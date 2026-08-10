@@ -54,6 +54,7 @@ public final class SplineEditorRenderer {
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (!SplineEditorClientState.isEditing()) return;
+        if (RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) return;
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
 
         Minecraft mc = Minecraft.getInstance();
