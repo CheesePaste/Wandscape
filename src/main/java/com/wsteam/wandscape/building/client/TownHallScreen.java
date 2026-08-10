@@ -127,7 +127,7 @@ public class TownHallScreen extends MedievalScreen {
 
         Component[] expLines = {
             I18n.name("gui.wandscape.townhall.exp_lt", "游客等级 < 魔法小镇等级 → 0 经验"),
-            I18n.name("gui.wandscape.townhall.exp_eq", "游客等级 = 魔法小镇等级 → 100 经验"),
+            I18n.name("gui.wandscape.townhall.exp_eq", "游客等级 = 魔法小镇等级 → 200 经验"),
             I18n.name("gui.wandscape.townhall.exp_gt", "游客等级 > 魔法小镇等级 → 500 经验")
         };
         for (Component line : expLines) {

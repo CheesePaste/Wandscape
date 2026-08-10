@@ -194,7 +194,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
             .comment("Experience granted when tourist level == colony level (满条离场时)")
-            .defineInRange("colony.expEqualLevel", 100, 0, 10000);
+            .defineInRange("colony.expEqualLevel", 200, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
             .comment("Experience granted when tourist level > colony level")

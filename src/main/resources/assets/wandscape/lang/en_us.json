@@ -91,7 +91,7 @@
   "gui.wandscape.townhall.level": "Town Level %s",
   "gui.wandscape.townhall.exp_source": "Experience source (when a tourist's three bars are full):",
   "gui.wandscape.townhall.exp_lt": "Tourist level < town level → 0 XP",
-  "gui.wandscape.townhall.exp_eq": "Tourist level = town level → 100 XP",
+  "gui.wandscape.townhall.exp_eq": "Tourist level = town level → 200 XP",
   "gui.wandscape.townhall.exp_gt": "Tourist level > town level → 500 XP",
   "gui.wandscape.townhall.hint": "Click the name box to change the town name; it saves automatically when done",
   "gui.wandscape.townhall_create.title": "Create Town",
