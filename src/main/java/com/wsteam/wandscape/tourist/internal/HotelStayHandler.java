@@ -34,18 +34,18 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
- * Manages hotel/inn stays for tourists.
+ * Manages hotel/inn stays for tourists（住店客机制）.
  *
  * <p>Hotels are service buildings with {@link ServiceConfig#maxOccupancy()} &gt; 0.
- * Tourists check in at night (when not fully satisfied — 满条游客夜晚等离场) and
- * stay until morning checkout at dayTime=1000, when energy is restored to 100.
+ * Tourists check in at night (when not fully satisfied — 满条游客夜晚等离场) and become
+ * **住店客**：登记常驻（清晨晨起保留登记、白天外出、夜晚回店睡），离场/被杀才退房。
  *
  * <p>During the day, hotels behave as regular service buildings —
  * three bars come from the normal service interaction, not from sleeping.
  *
  * <p>Checked-in tourists are stored in a per-building occupancy set.
- * On morning (dayTime 1000-1200), all guests are automatically checked out
- * with full energy restoration.
+ * On morning (dayTime 1000-1200), guests are woken up ({@link #wakeUp}) with full
+ * energy restoration but KEEP their registration — the guest list is not cleared.
  */
 public final class HotelStayHandler {
     private static final String TAG = "HotelStayHandler";

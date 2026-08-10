@@ -96,7 +96,7 @@ public final class TouristShadow implements TouristStateHost {
     @Nullable
     private UUID checkedInBuildingId;
     private int hotelCheckinTime;
-    /** Position to return to on morning checkout (the pre-bed spot). */
+    /** Position to return to on morning wake-up (the pre-bed spot). */
     @Nullable
     private BlockPos wakeUpPos;
 
