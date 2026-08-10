@@ -244,7 +244,13 @@ public final class SplineEditorClientState {
         draggingAxis = AxisDrag.NONE;
         SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+            camX = com.wsteam.wandscape.overview.client.OverviewClientState.getCamX();
+            camY = com.wsteam.wandscape.overview.client.OverviewClientState.getCamY();
+            camZ = com.wsteam.wandscape.overview.client.OverviewClientState.getCamZ();
+            camYaw = com.wsteam.wandscape.overview.client.OverviewClientState.getCamYaw();
+            camPitch = com.wsteam.wandscape.overview.client.OverviewClientState.getCamPitch();
+        } else if (mc.player != null) {
             camX = mc.player.getX();
             camY = mc.player.getEyeY(); // better to start at eye level
             camZ = mc.player.getZ();
@@ -263,6 +269,9 @@ public final class SplineEditorClientState {
         draggingAxis = AxisDrag.NONE;
         if (topDown) exitTopDown();
         SplineEditorController.resetInputState();
+        // 退出编辑时一并隐藏 ImGui 工作坊。若只 exitEditMode 而忘了 setVisible(false)，
+        // onRenderFramePost 会因 showGui 残留渲染出「调试控制台」测试面板（ESC 退出路径曾中招）。
+        ImGuiManager.setVisible(false);
         Log.info(TAG, "[SplineEditor] Exited edit mode");
     }
 

@@ -74,10 +74,19 @@ public final class BuildingSelectionOverlay {
     }
 
     public static boolean isActive() {
+        Minecraft mc = Minecraft.getInstance();
+        boolean rightDown = false;
+        if (mc != null && mc.getWindow() != null && mc.getWindow().getWindow() != 0L) {
+            rightDown = org.lwjgl.glfw.GLFW.glfwGetMouseButton(
+                    mc.getWindow().getWindow(),
+                    org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        }
         return WandscapePanelState.isPanelOpen()
                 && ProjectionClientState.isProjecting()
                 && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION
-                && WandscapePanelState.isBuildingBarOpen();
+                && WandscapePanelState.isBuildingBarOpen()
+                && !rightDown
+                && !ProjectionClientState.isPinned();
     }
 
     static int getSlotsSize() {

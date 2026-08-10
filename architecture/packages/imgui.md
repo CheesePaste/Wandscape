@@ -8,6 +8,7 @@ ImGui 生命周期管理器 + 渲染调度中枢。F12 切换显隐。
 WandscapeClient (按键注册)
   → ImGuiManager.toggle() (控制显隐)
   → 每帧 dispatch:
+    → SplineEditorImGui.render() (道路制作工坊面板，收口 Replace / Fill / DestroyFill / Spline 4大模式)
     → BuildingEditorImGui.render() (建筑编辑器面板)
     → BlueprintEditorImGui.render() (蓝图节点编辑器面板)
 ```

@@ -45,7 +45,6 @@ public final class RoadPlacementController {
     private static final double REACH = 64.0;
 
     // ── Input edge detection ──
-    private static boolean wasRightDown = false;
     private static boolean wasLeftDown = false;
     private static boolean wasEnterDown = false;
     private static boolean wasBackspaceDown = false;
@@ -87,9 +86,16 @@ public final class RoadPlacementController {
         // intercepted by WandscapePanelController's exit pipeline (ScreenEvent.Opening).
         handleEscapeInput(mc, window);
 
-        // Cursor lifted → panel UI mode: drain all input
+        // Cursor lifted → panel UI mode
         boolean cursorLifted = WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted();
+        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
+                && imgui.ImGui.getIO().getWantCaptureMouse();
         if (cursorLifted) {
+            // When cursor is over 3D world (outside ImGui window), handle world clicks for Replace/Fill/DestroyFill!
+            if (!imguiWantsMouse && RoadPlacementState.getActiveTool() != RoadPlacementState.ToolMode.SPLINE) {
+                updateGhostPosition(mc);
+                handleMouseButtons(mc, window);
+            }
             drainVanillaInput(mc);
             return;
         }
@@ -101,18 +107,46 @@ public final class RoadPlacementController {
         drainAttackUse(mc);
     }
 
-    // ── Ghost position ──
+    // ── Mouse Raycasting & Ghost position ──
+
+    public static Vec3 getMouseWorldRay(Minecraft mc) {
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        org.lwjgl.glfw.GLFW.glfwGetCursorPos(window, mx, my);
+        int w = mc.getWindow().getWidth();
+        int h = mc.getWindow().getHeight();
+
+        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+
+        Camera cam = mc.gameRenderer.getMainCamera();
+        float fov = (float) mc.options.fov().get();
+        float fovRad = (float) Math.toRadians(fov);
+        float aspect = (float) w / Math.max(h, 1);
+        float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
+
+        org.joml.Vector3f jLook = cam.getLookVector();
+        org.joml.Vector3f jUp   = cam.getUpVector();
+        org.joml.Vector3f jLeft = cam.getLeftVector();
+
+        Vec3 forward = new Vec3(jLook.x, jLook.y, jLook.z);
+        Vec3 up      = new Vec3(jUp.x,   jUp.y,   jUp.z);
+        Vec3 right   = new Vec3(jLeft.x, jLeft.y, jLeft.z).scale(-1.0);
+
+        return forward
+                .add(right.scale(ndcX * tanHalfFov * aspect))
+                .add(up.scale(ndcY * tanHalfFov))
+                .normalize();
+    }
 
     private static void updateGhostPosition(Minecraft mc) {
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
-        Vec3 lookVec = new Vec3(camera.getLookVector().x(),
-                camera.getLookVector().y(),
-                camera.getLookVector().z());
+        Vec3 rayDir = getMouseWorldRay(mc);
 
         var clipCtx = new ClipContext(
                 origin,
-                origin.add(lookVec.scale(REACH)),
+                origin.add(rayDir.scale(REACH)),
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
                 mc.player);
@@ -125,54 +159,39 @@ public final class RoadPlacementController {
         }
     }
 
-    // ── Mouse button handling ──
+    // ── Mouse button handling (Left-click drag-box selection for REPLACE, FILL, DESTROY_FILL) ──
+
+    private static boolean isLmbDragging = false;
 
     private static void handleMouseButtons(Minecraft mc, long window) {
-        boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        RoadPlacementState.ToolMode tool = RoadPlacementState.getActiveTool();
+        if (tool == RoadPlacementState.ToolMode.SPLINE) return;
 
-        boolean rightClicked = rightDown && !wasRightDown;
+        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         boolean leftClicked = leftDown && !wasLeftDown;
-        wasRightDown = rightDown;
+        boolean leftReleased = !leftDown && wasLeftDown;
         wasLeftDown = leftDown;
 
-        if (rightClicked) {
-            handleRightClick(mc);
-        }
-        if (leftClicked) {
-            handleLeftClick(mc);
-        }
-    }
-
-    private static void handleRightClick(Minecraft mc) {
         BlockPos ghostPos = RoadPlacementState.getGhostPos();
-        if (ghostPos == null) return;
 
-        if (RoadPlacementState.isReady()) {
-            // PLAN_END → right-click: clear all, return to IDLE
-            RoadPlacementState.clearAll();
-        } else if (RoadPlacementState.isDestroyFill()) {
-            // Destroy/Fill: capture reference block + position
+        if (leftClicked && ghostPos != null) {
+            // Press LMB: start selection box/area
             RoadPlacementState.setStartPos(ghostPos);
-            BlockState state = mc.level != null ? mc.level.getBlockState(ghostPos) : null;
-            String blockName = state != null
-                    ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
-                    : "unknown";
-            RoadPlacementState.setRefBlockId(blockName);
-        } else {
-            // IDLE or PLAN_START → right-click: set / overwrite startPos
-            RoadPlacementState.setStartPos(ghostPos);
+            RoadPlacementState.setEndPos(ghostPos);
+            if (tool == RoadPlacementState.ToolMode.DESTROY_FILL) {
+                BlockState state = mc.level != null ? mc.level.getBlockState(ghostPos) : null;
+                String blockName = state != null
+                        ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
+                        : "minecraft:stone";
+                RoadPlacementState.setRefBlockId(blockName);
+            }
+            isLmbDragging = true;
+        } else if (leftDown && isLmbDragging && ghostPos != null) {
+            // Drag LMB: dynamically update endPos to expand selection box/area
+            RoadPlacementState.setEndPos(ghostPos);
+        } else if (leftReleased) {
+            isLmbDragging = false;
         }
-    }
-
-    private static void handleLeftClick(Minecraft mc) {
-        BlockPos ghostPos = RoadPlacementState.getGhostPos();
-        if (ghostPos == null) return;
-
-        if (!RoadPlacementState.isPlanning()) return; // IDLE → no action
-
-        // PLAN_START or PLAN_END → set / overwrite endPos
-        RoadPlacementState.setEndPos(ghostPos);
     }
 
     // ── Keyboard handling (no ESC — handled by handleEscapeInput) ──

@@ -20,7 +20,6 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -37,7 +36,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Per-frame controller for overview (bird's eye) mode.
  *
  * <p>Handles WASD movement (in render event for smooth frame-rate-independent motion),
- * mouse look, raycasting, and right-click building interaction.
+ * mouse look, raycasting, and left-click NPC/building interaction.
  * Camera position/rotation is overridden by {@code MixinOverviewCamera}'s TAIL inject into
  * {@link Camera#setup}.</p>
  */
@@ -69,6 +68,9 @@ public final class OverviewFlightController {
      * cursor, so the mouse baseline must be reset to prevent a camera jump.
      */
     private static boolean wasGrabbed = false;
+    private static int skipFrames = 0;
+    private static double rmbDragDistance = 0.0;
+    private static long lastLeftClickTime = 0;
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
@@ -182,11 +184,16 @@ public final class OverviewFlightController {
         double dx = mx[0] - OverviewClientState.lastMouseX;
         double dy = my[0] - OverviewClientState.lastMouseY;
 
-        // Only rotate when no screen open and cursor not lifted to panel
+        // Only rotate when no screen open and cursor not lifted to panel (or holding RMB)
         if (mc.screen == null) {
             boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
                     && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
-            boolean grabbed = !cursorLifted;
+            boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            boolean grabbed = !cursorLifted || rightDown;
+
+            if (rightDown) {
+                rmbDragDistance += Math.abs(dx) + Math.abs(dy);
+            }
 
             // Detect cursor transition: free → grabbed. The cursor is "free"
             // whenever a Screen is open or the panel cursor is lifted.
@@ -194,6 +201,13 @@ public final class OverviewFlightController {
             // the baseline the delta from the old free position to center
             // causes a sudden camera rotation.
             if (!wasGrabbed && grabbed) {
+                skipFrames = 2;
+                OverviewClientState.lastMouseX = mx[0];
+                OverviewClientState.lastMouseY = my[0];
+                dx = 0;
+                dy = 0;
+            } else if (skipFrames > 0) {
+                skipFrames--;
                 OverviewClientState.lastMouseX = mx[0];
                 OverviewClientState.lastMouseY = my[0];
                 dx = 0;
@@ -201,12 +215,13 @@ public final class OverviewFlightController {
             }
             wasGrabbed = grabbed;
 
-            if (grabbed) {
+            if (grabbed && skipFrames == 0) {
                 OverviewClientState.addCamRotation((float) dx * MOUSE_SENSITIVITY, (float) dy * MOUSE_SENSITIVITY);
             }
         } else {
             // Screen is open → cursor is free
             wasGrabbed = false;
+            skipFrames = 0;
         }
 
         OverviewClientState.lastMouseX = mx[0];
@@ -222,25 +237,64 @@ public final class OverviewFlightController {
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
 
         if (forward != 0 || strafe != 0 || vertical != 0) {
-            Vec3 fwd = Vec3.directionFromRotation(0, OverviewClientState.getCamYaw());
+            // Full 3D look direction (pitch + yaw) so W flies upward when looking up
+            Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
+            Vec3 up = right.cross(fwd).normalize();
             double move = flyingSpeed * elapsed;
-            double moveX = (fwd.x * forward + right.x * strafe) * move;
-            double moveZ = (fwd.z * forward + right.z * strafe) * move;
-            double moveY = vertical * move;
+            double moveX = (fwd.x * forward + right.x * strafe + up.x * vertical) * move;
+            double moveY = (fwd.y * forward + right.y * strafe + up.y * vertical) * move;
+            double moveZ = (fwd.z * forward + right.z * strafe + up.z * vertical) * move;
             OverviewClientState.setCamPosition(
                     OverviewClientState.getCamX() + moveX,
                     OverviewClientState.getCamY() + moveY,
                     OverviewClientState.getCamZ() + moveZ);
         }
 
+        // ── Update building ghost position every render frame (not just 20Hz tick) ──
+        updateGhostPositionPerFrame(mc);
+
         // 冻结玩家旋转到进入快照（AFTER_SKY 早于实体渲染，时机正好）：
         // 抵消 MouseHandler.turnPlayer 污染 + 稳定第三人称玩家模型朝向
         freezePlayerRotation(mc.player);
     }
 
+    /**
+     * Per-frame ghost position update using camera center raycast.
+     * Runs at render FPS (60+) instead of tick rate (20Hz) for responsive tracking.
+     */
+    private static void updateGhostPositionPerFrame(Minecraft mc) {
+        if (!ProjectionClientState.isProjecting()) return;
+        if (ProjectionClientState.isPinned()) return;
+
+        Camera camera = mc.gameRenderer.getMainCamera();
+        Vec3 origin = camera.getPosition();
+        Vector3f jLook = camera.getLookVector();
+        Vec3 centerLookVec = new Vec3(jLook.x(), jLook.y(), jLook.z());
+        Vec3 centerEnd = origin.add(centerLookVec.scale(REACH));
+        ClipContext centerCtx = new ClipContext(origin, centerEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player);
+        BlockHitResult centerHit = mc.level.clip(centerCtx);
+
+        long window = mc.getWindow().getWindow();
+        boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+
+        if (centerHit.getType() == HitResult.Type.BLOCK) {
+            BlockPos centerPlacePos = centerHit.getBlockPos().relative(centerHit.getDirection());
+            if (rightDown || ProjectionClientState.getGhostPos() == null) {
+                ProjectionClientState.setGhostPos(centerPlacePos);
+            }
+        }
+
+        BlockPos curGhost = ProjectionClientState.getGhostPos();
+        if (curGhost != null) {
+            var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
+            boolean overlap = api != null && api.getBuildingAt(curGhost) != null;
+            ProjectionClientState.setOverlapDetected(overlap);
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════
-    // ── Client Tick: raycast + right-click + input drain ──
+    // ── Client Tick: raycast + click handling + input drain ──
     // ═══════════════════════════════════════════════════════════════════
 
     static void onClientTickPost(ClientTickEvent.Post event) {
@@ -285,33 +339,33 @@ public final class OverviewFlightController {
 
             boolean leftClicked = leftDown && !wasLeftDown;
             boolean rightClicked = rightDown && !wasRightDown;
+            boolean rightReleased = !rightDown && wasRightDown;
             wasLeftDown = leftDown;
             wasRightDown = rightDown;
 
-            // Pinned ghost: left-click cancels (back to hand-following), right-click opens the construction screen
-            if (ProjectionClientState.isPinned()) {
-                if (leftClicked) {
-                    ProjectionClientState.setPinned(false);
-                } else if (rightClicked) {
-                    ProjectionFlightController.openConstructionScreen(mc);
-                }
-            } else {
-                // Left-click: rotate building 90° CCW (only when build mode is active)
-                if (leftClicked && ProjectionClientState.isProjecting()) {
-                    ProjectionClientState.rotate();
-                    int steps = ProjectionClientState.getRotationSteps();
-                    String direction = switch (steps) {
-                        case 1 -> "§e90°";
-                        case 2 -> "§e180°";
-                        case 3 -> "§e270°";
-                        default -> "§70°";
-                    };
-                    Log.info(TAG, "[Overview] Rotation: {}", direction);
-                }
+            if (rightClicked) {
+                rmbDragDistance = 0.0;
+            }
 
-                if (rightClicked) {
-                    handleRightClick();
+            // Pinned ghost: double-click outside Gizmo opens construction screen; Gizmo drag handled by BuildGizmoController.
+            // The mouse ray must hit the ghost building — camera-center ray (which sets ghost pos) is not a valid aim
+            // when the cursor is free.
+            if (ProjectionClientState.isPinned()) {
+                boolean overGizmo = com.wsteam.wandscape.projection.client.BuildGizmoController.getHoveredAxis()
+                        != com.wsteam.wandscape.projection.client.BuildGizmoController.AxisDrag.NONE;
+                if (leftClicked && !overGizmo
+                        && ProjectionFlightController.isMouseRayHittingGhost(mc)) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastLeftClickTime < 400) {
+                        ProjectionFlightController.openConstructionScreen(mc);
+                        lastLeftClickTime = 0;
+                    } else {
+                        lastLeftClickTime = now;
+                    }
                 }
+            } else if (!ProjectionClientState.isProjecting() && leftClicked) {
+                // Left-click interaction: NPC / tourist entity or building
+                handleLeftClickInteraction();
             }
         }
 
@@ -367,14 +421,56 @@ public final class OverviewFlightController {
         }
     }
 
-    /** Intercept mouse buttons — but only when no screen is open. */
+    private static Vec3 getMouseWorldRay(Minecraft mc) {
+        long window = mc.getWindow().getWindow();
+        double[] mx = new double[1], my = new double[1];
+        GLFW.glfwGetCursorPos(window, mx, my);
+        int w = mc.getWindow().getWidth();
+        int h = mc.getWindow().getHeight();
+
+        float ndcX = (float) (2.0 * mx[0] / w - 1.0);
+        float ndcY = (float) (1.0 - 2.0 * my[0] / h);
+
+        Camera cam = mc.gameRenderer.getMainCamera();
+        float fov = (float) mc.options.fov().get();
+        float fovRad = (float) Math.toRadians(fov);
+        float aspect = (float) w / Math.max(h, 1);
+        float tanHalfFov = (float) Math.tan(fovRad * 0.5f);
+
+        Vector3f jLook = cam.getLookVector();
+        Vector3f jUp   = cam.getUpVector();
+        Vector3f jLeft = cam.getLeftVector();
+
+        Vec3 forward = new Vec3(jLook.x, jLook.y, jLook.z);
+        Vec3 up      = new Vec3(jUp.x,   jUp.y,   jUp.z);
+        Vec3 right   = new Vec3(jLeft.x, jLeft.y, jLeft.z).scale(-1.0);
+
+        return forward
+                .add(right.scale(ndcX * tanHalfFov * aspect))
+                .add(up.scale(ndcY * tanHalfFov))
+                .normalize();
+    }
+
+    /** Intercept mouse buttons — but only when no screen or UI panel is taking input. */
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!OverviewClientState.isActive()) return;
         Minecraft mc = Minecraft.getInstance();
-        // Don't block mouse clicks when a screen is open (allow UI interaction)
         if (mc.screen != null) return;
-        // Cancel all mouse buttons in overview mode
-        // Right-click is handled in ClientTickEvent.Post instead
+
+        boolean imguiWantsMouse = com.wsteam.wandscape.imgui.ImGuiManager.isInitialized()
+                && imgui.ImGui.getIO().getWantCaptureMouse();
+        if (imguiWantsMouse) return;
+
+        double guiScale = mc.getWindow().getGuiScale();
+        double mouseX = mc.mouseHandler.xpos() / guiScale;
+        double mouseY = mc.mouseHandler.ypos() / guiScale;
+        int screenH = mc.getWindow().getGuiScaledHeight();
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
+                && (com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInTopBar(mouseY, screenH)
+                || com.wsteam.wandscape.shared.ui.panel.WandscapePanelController.isInSidebar(mouseX, mouseY, screenH))) {
+            return;
+        }
+
         event.setCanceled(true);
     }
 
@@ -385,9 +481,8 @@ public final class OverviewFlightController {
     private static void performRaycast(Minecraft mc) {
         Camera camera = mc.gameRenderer.getMainCamera();
         Vec3 origin = camera.getPosition();
-        Vector3f look = camera.getLookVector();
-        Vec3 lookVec = new Vec3(look.x(), look.y(), look.z());
-        Vec3 end = origin.add(lookVec.scale(REACH));
+        Vec3 rayDir = getMouseWorldRay(mc);
+        Vec3 end = origin.add(rayDir.scale(REACH));
 
         // ── Block raycast ──
         ClipContext ctx = new ClipContext(
@@ -431,30 +526,18 @@ public final class OverviewFlightController {
             UUID buildingId = findBuildingAt(hitPos);
             OverviewClientState.setTarget(hitPos, buildingId);
 
-            // When build mode is projecting in overview, sync ghost from the same raycast
-            if (ProjectionClientState.isProjecting()) {
-                if (ProjectionClientState.isPinned()) {
-                    // Ghost stays fixed — only re-check overlap against the fixed position
-                    BlockPos fixed = ProjectionClientState.getGhostPos();
-                    if (fixed != null) {
-                        var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                        ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
-                    }
-                } else {
-                    BlockPos placePos = hitPos.relative(blockHit.getDirection());
-                    ProjectionClientState.setGhostPos(placePos);
+            // When build mode is projecting in overview, check overlap for pinned ghost
+            // (Ghost position update is handled per-frame in updateGhostPositionPerFrame)
+            if (ProjectionClientState.isProjecting() && ProjectionClientState.isPinned()) {
+                BlockPos fixed = ProjectionClientState.getGhostPos();
+                if (fixed != null) {
                     var api = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
-                    boolean overlap = api != null && api.getBuildingAt(placePos) != null;
-                    ProjectionClientState.setOverlapDetected(overlap);
+                    ProjectionClientState.setOverlapDetected(api != null && api.getBuildingAt(fixed) != null);
                 }
             }
         } else {
             OverviewClientState.clearTarget();
             OverviewClientState.clearTargetEntity();
-            if (ProjectionClientState.isProjecting() && !ProjectionClientState.isPinned()) {
-                ProjectionClientState.setGhostPos(null);
-                ProjectionClientState.setOverlapDetected(false);
-            }
         }
     }
 
@@ -467,17 +550,15 @@ public final class OverviewFlightController {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // ── Right-click handling ──
+    // ── Left-click interaction ──
     // ═══════════════════════════════════════════════════════════════════
 
-    private static void handleRightClick() {
-        // Branch 1: Building selected via Build bar → pin the ghost preview
-        if (ProjectionClientState.isProjecting()) {
-            pinGhost();
-            return;
-        }
-
-        // Branch 2: Entity under crosshair → interact (NPC / tourist)
+    /**
+     * Left-click interaction in overview mode (non-projection).
+     * Handles NPC/tourist entity interaction and building interaction.
+     */
+    private static void handleLeftClickInteraction() {
+        // Entity under crosshair → interact (NPC / tourist)
         int entityId = OverviewClientState.getTargetEntityId();
         if (entityId >= 0) {
             PacketDistributor.sendToServer(new OverviewEntityInteractPacket(entityId));
@@ -485,32 +566,12 @@ public final class OverviewFlightController {
             return;
         }
 
-        // Branch 3: No building selected, ray hits building → interact
+        // Ray hits building → interact
         BlockPos target = OverviewClientState.getTargetBlockPos();
         if (target != null && OverviewClientState.getTargetBuildingId() != null) {
             PacketDistributor.sendToServer(new OverviewInteractPacket(target));
             Log.info(TAG, "[Overview] Interacting with building at {}", target);
         }
-    }
-
-    /** Pin the selected building's ghost at the current overview raycast position
-     *  and open the construction screen. */
-    private static void pinGhost() {
-        Minecraft mc = Minecraft.getInstance();
-        BlockPos ghostPos = ProjectionClientState.getGhostPos();
-        if (ghostPos == null) {
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("[Overview] §c").append(
-                                com.wsteam.wandscape.shared.ui.I18n.name(
-                                        "message.wandscape.overview.cannot_pin",
-                                        "无法固定 — 准星没有对准方块")), true);
-            }
-            return;
-        }
-        ProjectionClientState.setPinned(true);
-        ProjectionFlightController.openConstructionScreen(mc);
-        Log.info(TAG, "[Overview] Ghost pinned at {}", ghostPos);
     }
 
     // ═══════════════════════════════════════════════════════════════════

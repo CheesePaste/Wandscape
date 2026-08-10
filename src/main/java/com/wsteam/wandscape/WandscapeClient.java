@@ -84,12 +84,6 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    public static final KeyMapping PANEL_CURSOR_TOGGLE = new KeyMapping(
-            "key.wandscape.panel_cursor",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_C,
-            "key.categories.wandscape"
-    );
 
     public static final KeyMapping GUIDE_TOGGLE = new KeyMapping(
             "key.wandscape.guide",
@@ -122,6 +116,8 @@ public class WandscapeClient {
         RoadPlacementRenderer.register();
         ProjectionRenderer.register();
         ProjectionFlightController.register();
+        com.wsteam.wandscape.projection.client.BuildGizmoController.register();
+        com.wsteam.wandscape.projection.client.BuildGizmoRenderer.register();
         BuildingDebugController.register();
         BuildingDebugOverlay.register();
         TouristDebugRenderer.register();
@@ -285,7 +281,6 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(PROJECTION_TOGGLE);
-        event.register(PANEL_CURSOR_TOGGLE);
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
         event.register(OVERVIEW_TOGGLE);
@@ -303,13 +298,6 @@ public class WandscapeClient {
                 WandscapePanelState.closePanel();
             } else {
                 WandscapePanelState.openPanel();
-            }
-        }
-        while (PANEL_CURSOR_TOGGLE.consumeClick()) {
-            // C key: lift/release cursor within the panel
-            if (searchFocused) continue;
-            if (WandscapePanelState.isPanelOpen()) {
-                WandscapePanelState.toggleCursor();
             }
         }
         while (GUIDE_TOGGLE.consumeClick()) {

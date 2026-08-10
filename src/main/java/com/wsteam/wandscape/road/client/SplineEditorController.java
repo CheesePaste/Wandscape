@@ -26,6 +26,7 @@ public final class SplineEditorController {
     private static boolean wasEscapeDown = false;
     private static boolean wasGDown = false;
     private static boolean cameraActive = false;
+    private static int skipFrames = 0;
     private static boolean topDownWasGrabbed = false;
     private static boolean registered = false;
 
@@ -37,6 +38,11 @@ public final class SplineEditorController {
 
     public static void setFlyingSpeed(float speed) {
         flyingSpeed = Math.max(0.02f, Math.min(5.0f, speed));
+    }
+
+    /** True while the player is holding RMB to rotate the editor camera (cursor grabbed). */
+    public static boolean isCameraActive() {
+        return cameraActive;
     }
 
     public static void register() {
@@ -53,6 +59,7 @@ public final class SplineEditorController {
 
     static void resetInputState() {
         cameraActive = false;
+        skipFrames = 0;
         wasEscapeDown = false;
         wasHelpDown = false;
         wasGDown = false;
@@ -121,10 +128,10 @@ public final class SplineEditorController {
             // Lock movement when not rotating
             mc.player.setDeltaMovement(Vec3.ZERO);
 
-            // World clicks belong to the editor when the cursor is over the
-            // world; ImGui already consumed anything over its panels.
+            // World clicks belong to the editor when the cursor is over the 3D world
+            // (!imguiWantsMouse) and tool mode is SPLINE; ImGui already consumed anything over its panels.
             // When a vanilla screen (guide) is open, its widgets own the clicks.
-            if (!imguiWantsMouse && !cursorLifted && mc.screen == null) {
+            if (!imguiWantsMouse && mc.screen == null && RoadPlacementState.getActiveTool() == RoadPlacementState.ToolMode.SPLINE) {
                 SplineEditorInputHandler.handleClicks(mc, window);
             }
         }
@@ -139,6 +146,7 @@ public final class SplineEditorController {
     }
 
     private static long lastFrameNanos = 0;
+    private static boolean wasCameraActive = false;
 
     static void onRenderLevelStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
         if (!SplineEditorClientState.isEditing()) return;
@@ -146,13 +154,7 @@ public final class SplineEditorController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-        
-        // Sync rotation natively from player every frame.
-        // Top-down view owns its rotation (MixinSplineEditorCamera applies it),
-        // so it must not be overwritten by the player's look direction.
-        if (!SplineEditorClientState.isTopDown()) {
-            SplineEditorClientState.setCamRotation(mc.player.getYRot(), mc.player.getXRot());
-        }
+        long window = mc.getWindow().getWindow();
 
         // Frame-time delta
         long now = System.nanoTime();
@@ -165,16 +167,40 @@ public final class SplineEditorController {
         if (SplineEditorClientState.isTopDown()) {
             boolean imguiReady = ImGuiManager.isInitialized();
             boolean imguiWantsKb = imguiReady && ImGui.getIO().getWantCaptureKeyboard();
-            handleTopDownCamera(mc, mc.getWindow().getWindow(), elapsed, imguiWantsKb);
+            handleTopDownCamera(mc, window, elapsed, imguiWantsKb);
             return;
         }
 
-        // If not holding right-click or if ImGui is capturing input, don't fly
         boolean imguiReady = ImGuiManager.isInitialized();
         boolean imguiWantsKb = imguiReady && ImGui.getIO().getWantCaptureKeyboard();
+
+        // 3D freecam mouse look while holding right-click
+        if (cameraActive) {
+            double[] mx = new double[1], my = new double[1];
+            GLFW.glfwGetCursorPos(window, mx, my);
+            if (!wasCameraActive) {
+                SplineEditorClientState.setLastMouse(mx[0], my[0]);
+                wasCameraActive = true;
+                skipFrames = 2;
+            }
+            double dx = mx[0] - SplineEditorClientState.getLastMouseX();
+            double dy = my[0] - SplineEditorClientState.getLastMouseY();
+
+            if (skipFrames > 0) {
+                skipFrames--;
+                SplineEditorClientState.setLastMouse(mx[0], my[0]);
+            } else {
+                SplineEditorClientState.addCamRotation((float) dx * 0.15f, (float) dy * 0.15f);
+                SplineEditorClientState.setLastMouse(mx[0], my[0]);
+            }
+        } else {
+            wasCameraActive = false;
+            skipFrames = 0;
+        }
+
+        // If not holding right-click or if ImGui is capturing input, don't fly
         if (!cameraActive || imguiWantsKb) return;
 
-        long window = mc.getWindow().getWindow();
         float forward = 0, strafe = 0, vertical = 0;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) forward -= 1;

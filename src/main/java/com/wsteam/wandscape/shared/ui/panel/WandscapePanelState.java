@@ -103,7 +103,7 @@ public final class WandscapePanelState {
     private WandscapePanelState() {}
 
     public static boolean isPanelOpen() { return panelOpen; }
-    public static boolean isCursorLifted() { return cursorLifted; }
+    public static boolean isCursorLifted() { return panelOpen; }
     public static SubMode getActiveSubMode() { return activeSubMode; }
     public static UUID getColonyId() { return colonyId; }
     public static int getComfort() { return comfort; }
@@ -194,6 +194,11 @@ public final class WandscapePanelState {
 
     public static void openPanel() {
         panelOpen = true;
+        cursorLifted = true;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.mouseHandler != null) {
+            mc.mouseHandler.releaseMouse();
+        }
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(true);
         PacketDistributor.sendToServer(new PanelStateTogglePacket(true));
@@ -215,9 +220,6 @@ public final class WandscapePanelState {
         if (buildingBarOpen) {
             closeBuildingBar();
         }
-        if (cursorLifted) {
-            releaseCursor();
-        }
         panelOpen = false;
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(false);
@@ -226,6 +228,9 @@ public final class WandscapePanelState {
         buildPhase = BuildPhase.BAR;
         warningOverlayActive = false;
         PacketDistributor.sendToServer(new PanelStateTogglePacket(false));
+        // Panel closed → the per-tick reconciler no longer runs, so return the
+        // cursor to gameplay (grabbed) directly here.
+        grabMouseForGame();
     }
 
     /**
@@ -291,57 +296,23 @@ public final class WandscapePanelState {
     }
 
     // ── Cursor helpers (shared by BUILD and ROAD modes) ──
+    // These only set the intent flag `cursorLifted`. The OS cursor (grab/release +
+    // position restore) is applied solely by WandscapePanelController.onClientTickPost,
+    // so sub-mode transitions never race by grabbing then immediately releasing.
 
-    /** Lift cursor: release mouse for UI interaction (preset selection overlay). */
+    /** Lift cursor: show/free it for UI interaction. */
     public static void liftCursorForUI() {
-        if (!cursorLifted) {
-            cursorLifted = true;
-            Minecraft.getInstance().mouseHandler.releaseMouse();
-        }
+        cursorLifted = true;
     }
 
-    /** Release cursor to game: grab mouse for in-world interaction. */
+    /** Release cursor to game: hide/lock it for in-world interaction. */
     public static void releaseCursorToGame() {
-        if (cursorLifted) {
-            cursorLifted = false;
-            Minecraft.getInstance().mouseHandler.grabMouse();
-        }
+        cursorLifted = false;
     }
 
     public static void toggleCursor() {
-        if (!panelOpen) return;
-
-        // Build projection mode: C toggles the building selection bar
-        if (activeSubMode == SubMode.BUILD_PROJECTION) {
-            if (buildingBarOpen) {
-                closeBuildingBar();
-            } else {
-                openBuildingBar();
-            }
-            return;
-        }
-
-        // Road projection mode: C toggles BAR ↔ PLACING
-        if (activeSubMode == SubMode.ROAD_PROJECTION) {
-            if (RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
-                // BAR → PLACING
-                RoadPlacementState.enterPlacing();
-                releaseCursorToGame();
-            } else {
-                // PLACING → BAR
-                RoadPlacementState.enterBar();
-                liftCursorForUI();
-            }
-            return;
-        }
-
-        cursorLifted = !cursorLifted;
-        Minecraft mc = Minecraft.getInstance();
-        if (cursorLifted) {
-            mc.mouseHandler.releaseMouse();
-        } else {
-            mc.mouseHandler.grabMouse();
-        }
+        // C key mouse grab removed — V panel maintains persistent free cursor with RMB camera drag
+        // （origin/main 的 C 键切换 bar/placing 实现在本分支无调用点，5650adb6 已整体移除 C 键）
     }
 
     // ── Building selection bar ──
@@ -363,10 +334,7 @@ public final class WandscapePanelState {
         lastClickIndex = -1;
         buildPhase = BuildPhase.BAR;
         // Keep ghost/pinned so toggling the bar does not discard a placement in progress.
-        if (!cursorLifted) {
-            cursorLifted = true;
-            Minecraft.getInstance().mouseHandler.releaseMouse();
-        }
+        cursorLifted = true;
     }
 
     public static void closeBuildingBar() {
@@ -376,10 +344,8 @@ public final class WandscapePanelState {
         buildingBarSelectedIndex = -1;
         lastClickTime = 0;
         lastClickIndex = -1;
-        if (cursorLifted) {
-            cursorLifted = false;
-            Minecraft.getInstance().mouseHandler.grabMouse();
-        }
+        // 不放下光标：V 面板是持久自由光标（openBuildingBar 置 true 后保持），
+        // 关 bar 只影响 bar 本身，光标意图由面板层决定（与 origin 的「关 bar 归游戏」不同）。
     }
 
     /** Double-click: enter PLACING phase (bar closed, cursor in game, ghost visible). */
@@ -426,7 +392,7 @@ public final class WandscapePanelState {
         return false;
     }
 
-    private static void releaseCursor() {
+    private static void grabMouseForGame() {
         Minecraft.getInstance().mouseHandler.grabMouse();
     }
 
@@ -439,8 +405,10 @@ public final class WandscapePanelState {
     public static void enterSubMode(SubMode mode) {
         SubMode prev = activeSubMode;
 
-        // OVERVIEW → BUILD_PROJECTION or ROAD_PROJECTION: keep overview camera active
-        if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION)) {
+        // OVERVIEW → BUILD_PROJECTION / ROAD_PROJECTION / STATS: keep overview camera active
+        // (STATS is an overlay tab — closing it must return to the overview camera, not kill it)
+        if (prev == SubMode.OVERVIEW && (mode == SubMode.BUILD_PROJECTION || mode == SubMode.ROAD_PROJECTION
+                || mode == SubMode.STATS)) {
             activeSubMode = mode;
             switch (mode) {
                 case BUILD_PROJECTION -> {
@@ -452,6 +420,8 @@ public final class WandscapePanelState {
                 }
                 case ROAD_PROJECTION -> {
                     RoadPlacementState.enterProjection();
+                    com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
+                    com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                     liftCursorForUI();
                 }
             }
@@ -465,11 +435,15 @@ public final class WandscapePanelState {
             case BUILD_PROJECTION -> {
                 buildPhase = BuildPhase.BAR;
                 PacketDistributor.sendToServer(new ProjectionEnterPacket());
+                if (!buildingBarOpen) openBuildingBar();
             }
             case ROAD_PROJECTION -> {
                 RoadPlacementState.enterProjection();
+                com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
+                com.wsteam.wandscape.imgui.ImGuiManager.setVisible(true);
                 liftCursorForUI();
             }
+            case STATS -> liftCursorForUI();
             case OVERVIEW -> com.wsteam.wandscape.overview.client.OverviewFlightController.enter();
         }
     }
@@ -498,9 +472,18 @@ public final class WandscapePanelState {
                 }
                 if (RoadPlacementState.isProjecting()) {
                     RoadPlacementState.suspendProjection();
-                    releaseCursorToGame();
+                    com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
+                    com.wsteam.wandscape.imgui.ImGuiManager.setVisible(false);
                 }
                 // If entered from overview, go back to pure overview
+                if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+                    activeSubMode = SubMode.OVERVIEW;
+                    return;
+                }
+            }
+            case STATS -> {
+                // STATS is a pure overlay tab: entered from overview the camera stays active,
+                // so leaving must return to pure overview (handlePanelEscape/G-key rely on this).
                 if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
                     activeSubMode = SubMode.OVERVIEW;
                     return;

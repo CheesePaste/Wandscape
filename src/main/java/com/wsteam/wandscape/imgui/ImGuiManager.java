@@ -55,7 +55,12 @@ public class ImGuiManager {
     public static void setVisible(boolean visible) {
         if (showGui == visible) return;
         ensureInit();
-        toggle();
+        showGui = visible;
+        if (visible) {
+            releaseMouse();
+        }
+        // 隐藏时不抢鼠标：退出编辑器后面板（overlay）可能仍开着，光标状态由面板管线决定。
+        // toggle()（F12）保留对称的 grab/release。
     }
 
     public static void init(long windowHandle) {

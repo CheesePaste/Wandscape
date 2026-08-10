@@ -20,10 +20,13 @@ import imgui.type.ImDouble;
 import imgui.type.ImInt;
 import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Clean UTF-8 Chinese Localized ImGui Studio Interface for Spline Road Editor.
+ * Clean UTF-8 Chinese Localized ImGui Studio Interface for Road Placement & Spline Editor.
  */
 public final class SplineEditorImGui {
     private static final String TAG = "SplineEditorImGui";
@@ -74,61 +77,351 @@ public final class SplineEditorImGui {
 
         ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.WindowPadding, 12.0f, 14.0f);
 
-        if (ImGui.begin("\u9053\u8def\u5236\u4f5c\u5de5\u574a", flags)) {
+        if (ImGui.begin("道路制作工坊", flags)) {
             SplineModel model = SplineEditorClientState.getModel();
 
-            // \u2500\u2500 Banner Header \u2500\u2500
+            // ── Banner Header ──
             drawHeaderBanner(model);
 
-            // \u2500\u2500 Main TabBar \u2500\u2500
-            if (ImGui.beginTabBar("SplineStudioTabBar", imgui.flag.ImGuiTabBarFlags.None)) {
-                
-                // \u2500\u2500 TAB 1: \u66f2\u7ebf\u7f16\u8f91 \u2500\u2500
-                if (ImGui.beginTabItem(ICON_ROAD + " \u66f2\u7ebf\u7f16\u8f91")) {
-                    drawCurveNodesTab(model, mc);
-                    ImGui.endTabItem();
-                }
+            // ── Mode Switcher Bar ──
+            drawToolModeSelector();
 
-                // \u2500\u2500 TAB 2: \u9635\u5217\u751f\u6210 \u2500\u2500
-                if (ImGui.beginTabItem(ICON_CUBE + " \u9635\u5217\u751f\u6210")) {
-                    drawArrayStudioTab();
-                    ImGui.endTabItem();
-                }
+            RoadPlacementState.ToolMode currentTool = RoadPlacementState.getActiveTool();
 
-                // \u2500\u2500 TAB 3: \u6a21\u677f\u4e0e\u5de5\u5177 \u2500\u2500
-                if (ImGui.beginTabItem(ICON_SAVE + " \u6a21\u677f\u4e0e\u5de5\u5177")) {
-                    drawTemplatesTab(model, mc);
-                    ImGui.endTabItem();
+            switch (currentTool) {
+                case REPLACE -> drawReplaceModeTab(mc);
+                case FILL -> drawFillModeTab(mc);
+                case DESTROY_FILL -> drawDestroyFillModeTab(mc);
+                case SPLINE -> {
+                    // ── Main TabBar for Spline Mode ──
+                    if (ImGui.beginTabBar("SplineStudioTabBar", imgui.flag.ImGuiTabBarFlags.None)) {
+                        if (ImGui.beginTabItem(ICON_ROAD + " 曲线编辑")) {
+                            drawCurveNodesTab(model, mc);
+                            ImGui.endTabItem();
+                        }
+                        if (ImGui.beginTabItem(ICON_CUBE + " 阵列生成")) {
+                            drawArrayStudioTab();
+                            ImGui.endTabItem();
+                        }
+                        if (ImGui.beginTabItem(ICON_SAVE + " 模板与工具")) {
+                            drawTemplatesTab(model, mc);
+                            ImGui.endTabItem();
+                        }
+                        ImGui.endTabBar();
+                    }
                 }
-
-                ImGui.endTabBar();
             }
 
-            // \u2500\u2500 Bottom Action Footer \u2500\u2500
+            // ── Bottom Action Footer ──
             drawBottomFooter();
         }
         ImGui.end();
         ImGui.popStyleVar();
     }
 
-    // \u2500\u2500 Header Banner \u2500\u2500
+    // ── Tool Mode Switcher ──
+    private static void drawToolModeSelector() {
+        WandscapeImGuiTheme.drawSectionHeader(ICON_EDIT, "模式选择");
+        RoadPlacementState.ToolMode currentTool = RoadPlacementState.getActiveTool();
+
+        float availW = ImGui.getContentRegionAvailX();
+        float btnW = (availW - 9.0f) / 4.0f;
+
+        drawModeButton("替换", RoadPlacementState.ToolMode.REPLACE, currentTool, btnW);
+        ImGui.sameLine();
+        drawModeButton("填充", RoadPlacementState.ToolMode.FILL, currentTool, btnW);
+        ImGui.sameLine();
+        drawModeButton("铲平", RoadPlacementState.ToolMode.DESTROY_FILL, currentTool, btnW);
+        ImGui.sameLine();
+        drawModeButton("样条", RoadPlacementState.ToolMode.SPLINE, currentTool, btnW);
+
+        ImGui.spacing();
+    }
+
+    private static void drawModeButton(String label, RoadPlacementState.ToolMode mode, RoadPlacementState.ToolMode activeTool, float width) {
+        boolean selected = (mode == activeTool);
+        if (selected) {
+            ImGui.pushStyleColor(ImGuiCol.Button, 0.35f, 0.28f, 0.48f, 1.00f);
+            ImGui.pushStyleColor(ImGuiCol.Border, 0.95f, 0.78f, 0.30f, 0.90f);
+        } else {
+            ImGui.pushStyleColor(ImGuiCol.Button, 0.16f, 0.14f, 0.20f, 0.85f);
+            ImGui.pushStyleColor(ImGuiCol.Border, 0.40f, 0.35f, 0.25f, 0.40f);
+        }
+
+        if (ImGui.button(label, width, 26)) {
+            RoadPlacementState.setActiveTool(mode);
+        }
+        ImGui.popStyleColor(2);
+    }
+
+    // ── Mode 1: 直线替换 (REPLACE) ──
+    private static void drawReplaceModeTab(Minecraft mc) {
+        ImGui.spacing();
+        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "铺设方块预设");
+        drawPresetSelectorCombo();
+
+        ImGui.spacing();
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "铺设路线起终点");
+        drawStartPosLabelControls(mc, "起点坐标 (Start)");
+        ImGui.spacing();
+        drawEndPosLabelControls(mc, "终点坐标 (End)");
+
+        ImGui.spacing();
+        BlockPos start = RoadPlacementState.getStartPos();
+        BlockPos end = RoadPlacementState.getEndPos();
+        if (start != null && end != null) {
+            int dx = Math.abs(end.getX() - start.getX()) + 1;
+            int dz = Math.abs(end.getZ() - start.getZ()) + 1;
+            double dist = Math.sqrt((double)(end.getX() - start.getX()) * (end.getX() - start.getX()) + (double)(end.getZ() - start.getZ()) * (end.getZ() - start.getZ()));
+            WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, "铺设数据评估");
+            ImGui.text(String.format("覆盖跨度: %d × %d 方块范围", dx, dz));
+            ImGui.text(String.format("直线距离: %.1f 方块", dist));
+        } else {
+            WandscapeImGuiTheme.textMuted("提示: 请选择起点与终点（可在世界中右键/左键点击）");
+        }
+
+        ImGui.spacing();
+        ImGui.spacing();
+
+        ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
+        ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
+        if (ImGui.button(ICON_CUBE + " 下发直线铺设任务", -1, 36)) {
+            if (RoadPlacementState.isReady()) {
+                String presetId = RoadPlacementState.getSelectedPreset().id();
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.RoadPlacePacket(presetId, start, end));
+                Log.info(TAG, "[RoadReplace] Published road place: preset={} start={} end={}", presetId, start, end);
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(Component.literal("[Road] §aRoad task submitted! NPC will pave the path."), true);
+                }
+                RoadPlacementState.clearAll();
+            }
+        }
+        WandscapeImGuiTheme.drawTooltip("下发直线地表道路替换任务给法师 NPC");
+        ImGui.popStyleColor(2);
+    }
+
+    // ── Mode 2: 立方体填充 (FILL) ──
+    private static void drawFillModeTab(Minecraft mc) {
+        ImGui.spacing();
+        WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "填充方块预设");
+        drawPresetSelectorCombo();
+
+        ImGui.spacing();
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "3D 立方体对角点");
+        drawStartPosLabelControls(mc, "角点 1 (Start)");
+        ImGui.spacing();
+        drawEndPosLabelControls(mc, "角点 2 (End)");
+
+        ImGui.spacing();
+        BlockPos start = RoadPlacementState.getStartPos();
+        BlockPos end = RoadPlacementState.getEndPos();
+        if (start != null && end != null) {
+            int dx = Math.abs(end.getX() - start.getX()) + 1;
+            int dy = Math.abs(end.getY() - start.getY()) + 1;
+            int dz = Math.abs(end.getZ() - start.getZ()) + 1;
+            long volume = (long) dx * dy * dz;
+            WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, "立方体体积评估");
+            ImGui.text(String.format("尺寸: %d (宽) × %d (高) × %d (深)", dx, dy, dz));
+            ImGui.text(String.format("总体积: %d 个方块", volume));
+        } else {
+            WandscapeImGuiTheme.textMuted("提示: 请选择两个对角点（可在世界中右键/左键点击）");
+        }
+
+        ImGui.spacing();
+        ImGui.spacing();
+
+        ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
+        ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
+        if (ImGui.button(ICON_CUBE + " 下发立方体填充任务", -1, 36)) {
+            if (RoadPlacementState.isReady()) {
+                String presetId = RoadPlacementState.getSelectedPreset().id();
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.FillBoxPacket(presetId, start, end));
+                Log.info(TAG, "[FillBox] Published fill box: preset={} start={} end={}", presetId, start, end);
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(Component.literal("[Fill] §aFill task submitted! NPC will fill the cube."), true);
+                }
+                RoadPlacementState.clearAll();
+            }
+        }
+        WandscapeImGuiTheme.drawTooltip("下发 3D 立方体填充任务给法师 NPC");
+        ImGui.popStyleColor(2);
+    }
+
+    private static BlockPos getCapturedFeetPosition(Minecraft mc) {
+        if (SplineEditorClientState.isEditing()) {
+            return BlockPos.containing(
+                    SplineEditorClientState.getCamX(),
+                    SplineEditorClientState.getCamY() - 1.0,
+                    SplineEditorClientState.getCamZ()
+            );
+        }
+        if (mc.player != null) {
+            return mc.player.blockPosition().below();
+        }
+        return BlockPos.ZERO;
+    }
+
+    // ── Mode 3: 铲平垫平 (DESTROY_FILL) ──
+    private static void drawDestroyFillModeTab(Minecraft mc) {
+        ImGui.spacing();
+        WandscapeImGuiTheme.drawSectionHeader(ICON_CUBE, "参照基准方块");
+        String refBlock = RoadPlacementState.getRefBlockId();
+        if (refBlock.isEmpty()) {
+            ImGui.textDisabled("未捕获参照方块 (在世界中右键点击方块捕获)");
+        } else {
+            ImGui.textColored(0.40f, 0.85f, 0.40f, 1.00f, "参照方块: " + refBlock);
+        }
+
+        if (ImGui.button("捕捉脚下方块为参照", -1, 24)) {
+            BlockPos feet = getCapturedFeetPosition(mc);
+            RoadPlacementState.setStartPos(feet);
+            if (mc.level != null) {
+                var st = mc.level.getBlockState(feet);
+                String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
+                RoadPlacementState.setRefBlockId(id);
+            }
+        }
+
+        ImGui.spacing();
+        WandscapeImGuiTheme.drawSectionHeader(ICON_POINT, "平整区域边界");
+        drawStartPosLabelControls(mc, "边界起点 (Start)");
+        ImGui.spacing();
+        drawEndPosLabelControls(mc, "边界终点 (End)");
+
+        ImGui.spacing();
+        BlockPos start = RoadPlacementState.getStartPos();
+        BlockPos end = RoadPlacementState.getEndPos();
+        if (start != null && end != null) {
+            int dx = Math.abs(end.getX() - start.getX()) + 1;
+            int dz = Math.abs(end.getZ() - start.getZ()) + 1;
+            WandscapeImGuiTheme.drawSectionHeader(ICON_ROAD, "平整面积评估");
+            ImGui.text(String.format("底面尺寸: %d × %d 方块", dx, dz));
+            ImGui.text(String.format("平整面积: %d 平方方块", dx * dz));
+        } else {
+            WandscapeImGuiTheme.textMuted("提示: 请选择起点与终点以确定平整区域");
+        }
+
+        ImGui.spacing();
+        ImGui.spacing();
+
+        ImGui.pushStyleColor(ImGuiCol.Button, 0.22f, 0.45f, 0.25f, 0.90f);
+        ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.30f, 0.60f, 0.32f, 1.00f);
+        if (ImGui.button(ICON_TRASH + " 下发地形平整任务", -1, 36)) {
+            if (RoadPlacementState.isReady()) {
+                PacketDistributor.sendToServer(new com.wsteam.wandscape.road.network.DestroyFillPacket(start, end));
+                Log.info(TAG, "[DestroyFill] Published destroy fill: start={} end={}", start, end);
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(Component.literal("[Destroy/Fill] §aTerrain flatten task submitted! NPC will flatten the area."), true);
+                }
+                RoadPlacementState.clearAll();
+            }
+        }
+        WandscapeImGuiTheme.drawTooltip("下发地形铲平/垫平任务给法师 NPC");
+        ImGui.popStyleColor(2);
+    }
+
+    // ── Helper UI Controls for Presets & Points ──
+    private static void drawPresetSelectorCombo() {
+        List<RoadPreset> presets = RoadPlacementState.getPresets();
+        int currentIdx = RoadPlacementState.getSelectedPresetIndex();
+        String[] presetNames = presets.stream().map(RoadPreset::displayName).toArray(String[]::new);
+
+        ImInt selectedPresetInt = new ImInt(currentIdx);
+        ImGui.pushItemWidth(-1);
+        if (ImGui.combo("##RoadPlacementPresetCombo", selectedPresetInt, presetNames)) {
+            RoadPlacementState.setSelectedPresetIndex(selectedPresetInt.get());
+        }
+        ImGui.popItemWidth();
+    }
+
+    private static void drawStartPosLabelControls(Minecraft mc, String label) {
+        BlockPos start = RoadPlacementState.getStartPos();
+        WandscapeImGuiTheme.textMuted(label + ":");
+        if (start != null) {
+            ImInt px = new ImInt(start.getX());
+            ImInt py = new ImInt(start.getY());
+            ImInt pz = new ImInt(start.getZ());
+
+            ImGui.pushItemWidth(65);
+            boolean cx = ImGui.inputInt("X##StartX", px, 0, 0);
+            ImGui.sameLine();
+            boolean cy = ImGui.inputInt("Y##StartY", py, 0, 0);
+            ImGui.sameLine();
+            boolean cz = ImGui.inputInt("Z##StartZ", pz, 0, 0);
+            ImGui.popItemWidth();
+
+            if (cx || cy || cz) {
+                RoadPlacementState.setStartPos(new BlockPos(px.get(), py.get(), pz.get()));
+            }
+
+            ImGui.sameLine();
+            if (ImGui.button("清除##ClearStart", 42, 20)) {
+                RoadPlacementState.clearStartPos();
+            }
+        } else {
+            ImGui.textDisabled("  [未设置点位]");
+            if (ImGui.button("捕捉脚下位点##SetFeetStart", -1, 24)) {
+                RoadPlacementState.setStartPos(getCapturedFeetPosition(mc));
+            }
+        }
+    }
+
+    private static void drawEndPosLabelControls(Minecraft mc, String label) {
+        BlockPos end = RoadPlacementState.getEndPos();
+        WandscapeImGuiTheme.textMuted(label + ":");
+        if (end != null) {
+            ImInt px = new ImInt(end.getX());
+            ImInt py = new ImInt(end.getY());
+            ImInt pz = new ImInt(end.getZ());
+
+            ImGui.pushItemWidth(65);
+            boolean cx = ImGui.inputInt("X##EndX", px, 0, 0);
+            ImGui.sameLine();
+            boolean cy = ImGui.inputInt("Y##EndY", py, 0, 0);
+            ImGui.sameLine();
+            boolean cz = ImGui.inputInt("Z##EndZ", pz, 0, 0);
+            ImGui.popItemWidth();
+
+            if (cx || cy || cz) {
+                RoadPlacementState.setEndPos(new BlockPos(px.get(), py.get(), pz.get()));
+            }
+
+            ImGui.sameLine();
+            if (ImGui.button("清除##ClearEnd", 42, 20)) {
+                RoadPlacementState.clearEndPos();
+            }
+        } else {
+            ImGui.textDisabled("  [未设置点位]");
+            if (ImGui.button("捕捉脚下位点##SetFeetEnd", -1, 24)) {
+                RoadPlacementState.setEndPos(getCapturedFeetPosition(mc));
+            }
+        }
+    }
+
+    // ── Header Banner ──
     private static void drawHeaderBanner(SplineModel model) {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
         ImGui.pushStyleColor(ImGuiCol.Border, 0.78f, 0.63f, 0.25f, 0.50f);
         ImGui.beginChild("HeaderBanner", 0, 56, true);
         {
-            ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE \u9053\u8def\u5236\u4f5c\u5de5\u574a");
+            ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
 
-            String modeStr = SplineEditorClientState.getEditMode() == SplineEditorClientState.EditMode.ADD ? "\u6dfb\u52a0\u8282\u70b9" : "\u7f16\u8f91\u8282\u70b9";
-            String topDownStr = SplineEditorClientState.isTopDown() ? "2D \u4fef\u77b0" : "3D \u81ea\u7531";
-            ImGui.textColored(0.40f, 0.75f, 0.95f, 1.00f, String.format("\u63a7\u5236\u70b9: %d  |  \u6a21\u5f0f: %s  |  \u89c6\u89d2: %s", model.getPoints().size(), modeStr, topDownStr));
+            String toolName = switch (RoadPlacementState.getActiveTool()) {
+                case REPLACE -> "直线替换";
+                case FILL -> "立方体填充";
+                case DESTROY_FILL -> "铲平垫平";
+                case SPLINE -> "样条曲线";
+            };
+            String topDownStr = SplineEditorClientState.isTopDown() ? "2D 俯瞰" : "3D 自由";
+            ImGui.textColored(0.40f, 0.75f, 0.95f, 1.00f, String.format("模式: %s  |  视角: %s", toolName, topDownStr));
         }
         ImGui.endChild();
         ImGui.popStyleColor(2);
         ImGui.spacing();
     }
+
 
     // \u2500\u2500 Tab 1: \u66f2\u7ebf\u7f16\u8f91 \u2500\u2500
     private static void drawCurveNodesTab(SplineModel model, Minecraft mc) {
@@ -507,8 +800,10 @@ public final class SplineEditorImGui {
         ImGui.pushStyleColor(ImGuiCol.Button, 0.20f, 0.28f, 0.42f, 0.90f);
         if (ImGui.button(ICON_LOAD + " \u8bfb\u53d6 JSON \u6a21\u677f", halfW, 28)) {
             String name = templateNameInput.get().trim();
-            if (!name.isEmpty() && mc.player != null) {
-                Vec3 pos = mc.player.position();
+            if (!name.isEmpty()) {
+                Vec3 pos = SplineEditorClientState.isEditing()
+                        ? new Vec3(SplineEditorClientState.getCamX(), SplineEditorClientState.getCamY(), SplineEditorClientState.getCamZ())
+                        : (mc.player != null ? mc.player.position() : Vec3.ZERO);
                 SplineVec3 placementOrigin = new SplineVec3(pos.x, pos.y, pos.z);
                 SplineEditorClientState.loadTemplate(name, placementOrigin);
             }
