@@ -746,7 +746,7 @@ public final class TouristSimSystem {
     }
 
     private boolean routeToHotel(ServerLevel level, TouristShadow s) {
-        BuildingState hotel = TouristSimulation.findHotelTarget(level, s, false, false);
+        BuildingState hotel = TouristSimulation.findHotelTarget(level, s, false);
         if (hotel == null) return false;
         s.setTargetBuildingId(hotel.getBuildingId());
         s.setTargetBuildingCategory("service");
@@ -759,7 +759,7 @@ public final class TouristSimSystem {
      * 旅店可用才打断（无旅店则保持原状，离场窗口兜底）。
      */
     private boolean routeToHotelForEvening(ServerLevel level, TouristShadow s) {
-        BuildingState hotel = TouristSimulation.findHotelTarget(level, s, false, false);
+        BuildingState hotel = TouristSimulation.findHotelTarget(level, s, false);
         if (hotel == null) return false;
         releaseShadowSpots(s);
         s.setCommuteTarget(null);

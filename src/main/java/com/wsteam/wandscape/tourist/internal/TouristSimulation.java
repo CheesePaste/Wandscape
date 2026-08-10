@@ -543,35 +543,20 @@ public final class TouristSimulation {
     }
 
     /**
-     * 找一个可入住的旅店（实体与 sim 共用，含「住店客夜晚回店」）。
-     *
-     * <p>住店客（{@code preferOwn} 且已有 {@code checkedInBuildingId}）优先回**自己旅店**——
-     * 已登记不需查空位；自己旅店失效则回退任意可用旅店。
-     * 否则在殖民地全部 intact 旅店中选**水平距离最近**、有空位的（需已加载的由 {@code requireLoaded} 把关）。
+     * 找一个可入住的旅店（实体与 sim 共用）：在殖民地全部 intact 旅店中选**水平距离最近**、
+     * 有空位的（需已加载的由 {@code requireLoaded} 把关）。
+     * 住店客回**自己**旅店不经过这里（各自在调用方直接解析，需区分「旅店失效解除登记」）。
      *
      * @param requireLoaded 实体寻路需要目标区块已加载；sim（直线移动）传 false
-     * @param preferOwn     优先返回住店客自己的旅店
      * @return 目标旅店 BuildingState；无可用旅店返回 null
      */
     @javax.annotation.Nullable
     public static BuildingState findHotelTarget(ServerLevel level, TouristStateHost t,
-            boolean requireLoaded, boolean preferOwn) {
+            boolean requireLoaded) {
         UUID colonyId = t.getColonyId();
         if (colonyId == null) return null;
         BuildingApi api = getBuildingApi();
         if (api == null) return null;
-
-        // 住店客：先看自己旅店是否仍有效（已登记，不需空位）
-        UUID own = t.getCheckedInBuildingId();
-        if (preferOwn && own != null) {
-            BuildingState ownState = getState(level, own);
-            if (ownState != null && isHotelBuilding(level, own)) {
-                var data = api.getBuilding(own);
-                if (data != null && !data.isShutdown() && data.isStructureIntact()) {
-                    return ownState;
-                }
-            }
-        }
 
         // 任意可用旅店：最近优先
         BlockPos touristPos = t.touristPos();

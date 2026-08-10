@@ -989,7 +989,7 @@ public class TouristMoveGoal extends Goal {
      */
     private boolean eveningRouteToHotel() {
         if (targetingHotel()) return false;
-        BuildingState hotel = TouristSimulation.findHotelTarget(serverLevel(), tourist, true, false);
+        BuildingState hotel = TouristSimulation.findHotelTarget(serverLevel(), tourist, true);
         if (hotel == null) return false;
         BuildingApi api = getBuildingApi();
         BlockPos target = api != null ? api.getTouristInteractionTarget(hotel.getBuildingId()) : null;
