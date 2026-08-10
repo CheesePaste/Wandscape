@@ -16,7 +16,6 @@ import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Camera;
-import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
@@ -51,8 +50,6 @@ public final class OverviewFlightController {
 
     private static boolean registered = false;
 
-    /** 进入前玩家的相机类型，退出时恢复（渲染玩家实体用第三人称）。 */
-    private static CameraType prevCameraType = null;
     /** 受伤检测的血量基线：进入时采样，下降沿触发自动退出。 */
     private static float lastHealth = 0f;
 
@@ -100,9 +97,7 @@ public final class OverviewFlightController {
         OverviewClientState.enterOverview(
                 mc.player.getX(), mc.player.getY(), mc.player.getZ(),
                 mc.player.getYRot(), mc.player.getXRot());
-        // 切第三人称以渲染玩家实体；存原相机类型供 exit 恢复；采样血量作受伤检测基线
-        prevCameraType = mc.options.getCameraType();
-        mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        // 采样血量作受伤检测基线（玩家模型渲染由 MixinOverviewCamera 强制 detached 处理）
         lastHealth = mc.player.getHealth();
         SoundService.playUI(WandscapeSounds.OVERVIEW_ENTER, 1.0f);
         // Initialize last mouse position to current cursor
@@ -117,11 +112,6 @@ public final class OverviewFlightController {
 
     public static void exit() {
         Minecraft mc = Minecraft.getInstance();
-        // 恢复原相机类型
-        if (prevCameraType != null) {
-            mc.options.setCameraType(prevCameraType);
-            prevCameraType = null;
-        }
         // 显式落定玩家旋转到进入快照：每帧冻结只在 active 时跑，退出瞬间 active 已落，
         // 残留的鼠标漂移会让视角「甩头」，故在此强制写回快照值
         if (mc.player != null) {
@@ -161,12 +151,6 @@ public final class OverviewFlightController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-
-        // 每帧把相机类型拉回第三人称：F5 在 handleKeybinds（早于 ClientTickEvent.Post）就已
-        // consume 并 cycle，drain 无效，必须用 reconcile 才能稳住「渲染玩家实体」
-        if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) {
-            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-        }
 
         long window = mc.getWindow().getWindow();
 
