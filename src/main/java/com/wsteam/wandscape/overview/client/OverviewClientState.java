@@ -16,12 +16,20 @@ public final class OverviewClientState {
     private static final double CHASE_VERT = 14.0;
     private static final float CHASE_PITCH = 45.0f;
 
+    /** 玩家水平离开缓存锚点超过此距离（格）则视空中相机缓存失效，重新生成默认位置——
+     *  覆盖「误触关闭后立即原地重开」（位移≈0，命中缓存）vs「走远后重开」（失效重算）。 */
+    private static final double CACHE_INVALIDATE_DISTANCE = 8.0;
+    private static final double CACHE_INVALIDATE_DISTANCE_SQ = CACHE_INVALIDATE_DISTANCE * CACHE_INVALIDATE_DISTANCE;
+
     private static volatile boolean active = false;
     private static double camX, camY, camZ;
     private static float camYaw, camPitch;
 
-    /** 相机位置缓存是否有效：跨 enter/exit 保留整个会话，仅 {@link #hardReset()}（断开连接）清零。 */
+    /** 相机位置缓存是否有效：跨 enter/exit 保留，但玩家走远或断开连接后失效。 */
     private static volatile boolean aerialCacheValid = false;
+
+    /** 相机缓存锚点：建立缓存时的玩家水平位置。重开时玩家离开此点过远则缓存失效。 */
+    private static double cacheAnchorX, cacheAnchorZ;
 
     /** Block position currently under the crosshair (may be null). */
     private static volatile BlockPos targetBlockPos = null;
@@ -55,17 +63,25 @@ public final class OverviewClientState {
         prevYaw = yaw;
         prevPitch = pitch;
 
-        if (!aerialCacheValid) {
-            // 首次进入：角色后上方 45° 斜视（能看到地平线 + 玩家背影），取代旧的正上方、视角正下
+        // 缓存失效条件：从未建立，或玩家已离开缓存锚点（水平位移超阈值）。
+        // 让「误触关闭后立即原地重开」复用相机，而「走远后重开」重新算合适位置。
+        double dx = px - cacheAnchorX;
+        double dz = pz - cacheAnchorZ;
+        boolean cacheStale = !aerialCacheValid
+                || (dx * dx + dz * dz) > CACHE_INVALIDATE_DISTANCE_SQ;
+        if (cacheStale) {
+            // 角色后上方 45° 斜视（能看到地平线 + 玩家背影），取代旧的正上方、视角正下
             Vec3 fwd = Vec3.directionFromRotation(0f, yaw); // 玩家水平前向
             camX = px - fwd.x * CHASE_HORIZ;
             camZ = pz - fwd.z * CHASE_HORIZ;
             camY = py + CHASE_VERT;
             camYaw = yaw;            // 与玩家同朝向 → 看到玩家背影
             camPitch = CHASE_PITCH;  // 俯视 45°
+            cacheAnchorX = px;
+            cacheAnchorZ = pz;
             aerialCacheValid = true;
         }
-        // 缓存有效时：camX/Y/Z/yaw/pitch 原样保留（用户上次飞到的位置）
+        // 缓存有效且未走远：camX/Y/Z/yaw/pitch 原样保留（用户上次飞到的位置）
 
         targetBlockPos = null;
         targetBuildingId = null;
@@ -99,6 +115,7 @@ public final class OverviewClientState {
         targetBuildingId = null;
         targetEntityId = -1;
         aerialCacheValid = false;
+        cacheAnchorX = cacheAnchorZ = 0;
     }
 
     // ── Camera ──
