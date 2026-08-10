@@ -244,7 +244,13 @@ public final class SplineEditorClientState {
         draggingAxis = AxisDrag.NONE;
         SplineEditorController.resetInputState();
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
+        if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) {
+            camX = com.wsteam.wandscape.overview.client.OverviewClientState.getCamX();
+            camY = com.wsteam.wandscape.overview.client.OverviewClientState.getCamY();
+            camZ = com.wsteam.wandscape.overview.client.OverviewClientState.getCamZ();
+            camYaw = com.wsteam.wandscape.overview.client.OverviewClientState.getCamYaw();
+            camPitch = com.wsteam.wandscape.overview.client.OverviewClientState.getCamPitch();
+        } else if (mc.player != null) {
             camX = mc.player.getX();
             camY = mc.player.getEyeY(); // better to start at eye level
             camZ = mc.player.getZ();

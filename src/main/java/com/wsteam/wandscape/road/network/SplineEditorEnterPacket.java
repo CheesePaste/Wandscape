@@ -30,9 +30,12 @@ public record SplineEditorEnterPacket(boolean enter) implements CustomPacketPayl
     public static void handleClient(SplineEditorEnterPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (packet.enter()) {
+                com.wsteam.wandscape.road.client.RoadPlacementState.setActiveTool(com.wsteam.wandscape.road.client.RoadPlacementState.ToolMode.SPLINE);
+                com.wsteam.wandscape.road.client.RoadPlacementState.enterProjection();
                 SplineEditorClientState.enterEditMode();
                 ImGuiManager.setVisible(true);
             } else {
+                com.wsteam.wandscape.road.client.RoadPlacementState.exitProjection();
                 SplineEditorClientState.exitEditMode();
                 ImGuiManager.setVisible(false);
             }

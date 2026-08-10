@@ -77,13 +77,6 @@ public final class WandscapePanelOverlay {
         // Building selection bar
         BuildingSelectionOverlay.render(g, mc.font, screenW, screenH, mx, my);
 
-        // Road placement preset bar
-        if (WandscapePanelState.isCursorLifted()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
-            RoadPlacementOverlay.render(g, mc.font, screenW, screenH, mx, my);
-        }
-
         renderFills(g, mc.font, screenW, screenH, mx, my);
         g.bufferSource().endBatch(RenderType.guiOverlay());
         renderTexts(g, mc.font, screenW, screenH, mx, my);

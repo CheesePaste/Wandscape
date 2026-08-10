@@ -80,7 +80,9 @@ public final class WandscapePanelController {
         // Bidirectional: prevents both "cursor stuck hidden" and "cursor stuck shown"
         // after transitions that grab/release the mouse. Screens manage their own cursor.
         if (mc.screen == null) {
-            if (WandscapePanelState.isCursorLifted()) {
+            long win = mc.getWindow().getWindow();
+            boolean rightDown = win != 0L && org.lwjgl.glfw.GLFW.glfwGetMouseButton(win, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            if (WandscapePanelState.isCursorLifted() && !rightDown) {
                 mc.mouseHandler.releaseMouse();
             } else {
                 mc.mouseHandler.grabMouse();
@@ -162,56 +164,6 @@ public final class WandscapePanelController {
                 event.setCanceled(true);
                 return;
             }
-        }
-
-        // ── Road placement overlay (preset selection) ──
-        // Single-click = highlight, double-click = confirm → enter PLACING phase
-        if (RoadPlacementState.isProjecting()
-                && WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.ROAD_PROJECTION
-                && RoadPlacementState.getRoadPhase() == RoadPlacementState.RoadPhase.BAR) {
-            
-            RoadPlacementState.ToolMode toolMode = RoadPlacementOverlay.getToolModeClicked(mouseX, mouseY, screenW, screenH);
-            if (toolMode != null) {
-                RoadPlacementState.setActiveTool(toolMode);
-                if (toolMode == RoadPlacementState.ToolMode.SPLINE) {
-                    // SPLINE mode: keep the V-panel open and embed the native spline editor.
-                    // SplineEditorController takes over world input (right-click camera, WASD flight, gizmo drag).
-                    com.wsteam.wandscape.road.client.SplineEditorClientState.enterEditMode();
-                } else {
-                    // REPLACE / FILL / DESTROY_FILL: leave the spline editor, enter PLACING phase as before
-                    if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-                        com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-                    }
-                    RoadPlacementState.enterPlacing();
-                    WandscapePanelState.releaseCursorToGame();
-                    String hint = switch (toolMode) {
-                        case FILL -> "[Fill] Right-click set corner 1, Left-click set corner 2, Enter to submit";
-                        case DESTROY_FILL -> "[Destroy/Fill] Right-click a block to set ref height & block, Left-click to set area, Enter to submit";
-                        default -> "[Road Replace] Right-click set start, Left-click set end, Enter to submit";
-                    };
-                }
-                event.setCanceled(true);
-                return;
-            }
-
-            int presetIdx = RoadPlacementOverlay.getPresetAt(mouseX, mouseY, screenW, screenH);
-            if (presetIdx >= 0) {
-                boolean doubleClicked = RoadPlacementState.handlePresetDoubleClick(presetIdx);
-                if (doubleClicked) {
-                    // Double-click: confirm preset, enter PLACING phase (overlay hidden, cursor in game)
-                    if (com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
-                        com.wsteam.wandscape.road.client.SplineEditorClientState.exitEditMode();
-                    }
-                    RoadPlacementState.enterPlacing();
-                    WandscapePanelState.releaseCursorToGame();
-                    String name = RoadPlacementState.getSelectedPreset().displayName();
-                }
-                // Single click: highlight only (handlePresetDoubleClick already set selectedPresetIndex)
-                event.setCanceled(true);
-                return;
-            }
-        }
-
         // ── Top Bar Help ? button ──
         if (mouseY <= WandscapePanelOverlay.TOP_BAR_H) {
             int helpX = screenW - 24;

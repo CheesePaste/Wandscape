@@ -69,6 +69,7 @@ public final class OverviewFlightController {
      * cursor, so the mouse baseline must be reset to prevent a camera jump.
      */
     private static boolean wasGrabbed = false;
+    private static double rmbDragDistance = 0.0;
 
     // ── Frame-time tracking for smooth movement ──
     private static long lastFrameNanos = 0;
@@ -182,11 +183,16 @@ public final class OverviewFlightController {
         double dx = mx[0] - OverviewClientState.lastMouseX;
         double dy = my[0] - OverviewClientState.lastMouseY;
 
-        // Only rotate when no screen open and cursor not lifted to panel
+        // Only rotate when no screen open and cursor not lifted to panel (or holding RMB)
         if (mc.screen == null) {
             boolean cursorLifted = com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()
                     && com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isCursorLifted();
-            boolean grabbed = !cursorLifted;
+            boolean rightDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            boolean grabbed = !cursorLifted || rightDown;
+
+            if (rightDown) {
+                rmbDragDistance += Math.abs(dx) + Math.abs(dy);
+            }
 
             // Detect cursor transition: free → grabbed. The cursor is "free"
             // whenever a Screen is open or the panel cursor is lifted.
@@ -285,14 +291,19 @@ public final class OverviewFlightController {
 
             boolean leftClicked = leftDown && !wasLeftDown;
             boolean rightClicked = rightDown && !wasRightDown;
+            boolean rightReleased = !rightDown && wasRightDown;
             wasLeftDown = leftDown;
             wasRightDown = rightDown;
+
+            if (rightClicked) {
+                rmbDragDistance = 0.0;
+            }
 
             // Pinned ghost: left-click cancels (back to hand-following), right-click opens the construction screen
             if (ProjectionClientState.isPinned()) {
                 if (leftClicked) {
                     ProjectionClientState.setPinned(false);
-                } else if (rightClicked) {
+                } else if (rightReleased && rmbDragDistance < 5.0) {
                     ProjectionFlightController.openConstructionScreen(mc);
                 }
             } else {
@@ -309,7 +320,7 @@ public final class OverviewFlightController {
                     Log.info(TAG, "[Overview] Rotation: {}", direction);
                 }
 
-                if (rightClicked) {
+                if (rightReleased && rmbDragDistance < 5.0) {
                     handleRightClick();
                 }
             }

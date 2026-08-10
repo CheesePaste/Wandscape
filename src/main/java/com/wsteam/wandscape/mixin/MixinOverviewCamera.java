@@ -24,7 +24,7 @@ public abstract class MixinOverviewCamera {
     @Inject(method = "setup", at = @At("TAIL"))
     private void onSetupTail(BlockGetter level, Entity entity, boolean detached,
                              boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
-        if (OverviewClientState.isActive()) {
+        if (OverviewClientState.isActive() && !com.wsteam.wandscape.road.client.SplineEditorClientState.isEditing()) {
             setPosition(
                     OverviewClientState.getCamX(),
                     OverviewClientState.getCamY(),
