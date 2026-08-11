@@ -1,6 +1,6 @@
 {
   "id": "altar1",
-  "display_name": "Altar",
+  "display_name": "祭坛",
   "category": "altar",
   "pattern": [
     [-2, 0, -2],

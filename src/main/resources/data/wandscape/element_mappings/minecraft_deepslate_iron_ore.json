@@ -1,7 +1,7 @@
 {
   "block": "minecraft:deepslate_iron_ore",
   "build_cost": {
-    "metal": 32,
+    "metal": 64,
     "earth": 2
   },
   "decompose_yield": {},

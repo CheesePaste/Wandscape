@@ -1,8 +1,8 @@
 {
-  "block": "minecraft:diamond_ore",
+  "item": "minecraft:pitcher_pod",
   "build_cost": {
-    "metal": 1024,
-    "earth": 1
+    "wood": 32,
+    "dark": 32
   },
   "decompose_yield": {},
   "decomposable": false,

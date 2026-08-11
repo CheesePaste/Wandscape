@@ -1,8 +1,8 @@
 {
-  "block": "minecraft:diamond_ore",
+  "item": "minecraft:elytra",
   "build_cost": {
-    "metal": 1024,
-    "earth": 1
+    "wind": 2048,
+    "dark": 2048
   },
   "decompose_yield": {},
   "decomposable": false,

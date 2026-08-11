@@ -1,6 +1,6 @@
 {
   "id": "nodewood",
-  "display_name": "Wood Node",
+  "display_name": "木元素节点",
   "category": "node",
   "first_free": true,
   "pattern": [

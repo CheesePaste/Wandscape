@@ -1,8 +1,13 @@
 {
   "block": "minecraft:sniffer_egg",
   "build_cost": {
-    "earth": 16,
-    "wood": 4
+    "earth": 128,
+    "wood": 128,
+    "water": 128,
+    "fire": 128,
+    "metal": 128,
+    "wind": 128,
+    "dark": 128
   },
   "decompose_yield": {},
   "decomposable": false,

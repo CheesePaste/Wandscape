@@ -1,6 +1,6 @@
 {
   "id": "nodemetal",
-  "display_name": "Metal Node",
+  "display_name": "金元素节点",
   "category": "node",
   "first_free": true,
   "pattern": [

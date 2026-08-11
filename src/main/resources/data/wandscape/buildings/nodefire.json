@@ -1,6 +1,6 @@
 {
   "id": "nodefire",
-  "display_name": "Fire Node",
+  "display_name": "火元素节点",
   "category": "node",
   "first_free": true,
   "pattern": [

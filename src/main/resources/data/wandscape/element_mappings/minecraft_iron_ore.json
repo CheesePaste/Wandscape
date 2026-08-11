@@ -1,7 +1,7 @@
 {
   "block": "minecraft:iron_ore",
   "build_cost": {
-    "metal": 32,
+    "metal": 64,
     "earth": 1
   },
   "decompose_yield": {},

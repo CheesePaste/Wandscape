@@ -1,6 +1,6 @@
 {
   "id": "inn1",
-  "display_name": "Inn",
+  "display_name": "旅馆",
   "category": "service",
   "first_free": true,
   "pattern": [

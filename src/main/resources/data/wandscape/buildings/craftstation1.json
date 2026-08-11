@@ -1,6 +1,6 @@
 {
   "id": "craftstation1",
-  "display_name": "Crafting Station",
+  "display_name": "合成站",
   "category": "crafting_station",
   "first_free": true,
   "pattern": [

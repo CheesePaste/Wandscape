@@ -1,7 +1,7 @@
 {
   "block": "minecraft:coal_ore",
   "build_cost": {
-    "fire": 4,
+    "fire": 8,
     "earth": 1
   },
   "decompose_yield": {},

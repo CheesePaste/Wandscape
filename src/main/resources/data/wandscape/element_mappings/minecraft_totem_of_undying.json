@@ -1,8 +1,8 @@
 {
-  "block": "minecraft:diamond_ore",
+  "item": "minecraft:totem_of_undying",
   "build_cost": {
-    "metal": 1024,
-    "earth": 1
+    "wind": 2048,
+    "wood": 2048
   },
   "decompose_yield": {},
   "decomposable": false,
