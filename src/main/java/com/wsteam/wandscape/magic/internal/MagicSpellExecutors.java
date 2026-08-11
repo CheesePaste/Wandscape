@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -55,6 +56,8 @@ public final class MagicSpellExecutors {
             case "heal" -> castHeal(level, npc, target, def, effCircle);
             case "meteor" -> castMeteor(level, npc, target, def, effCircle);
             case "petrification" -> castPetrification(level, npc, def, effCircle);
+            case "enfeeble_field" -> castEnfeebleField(level, npc, def, effCircle);
+            case "fortification" -> castFortification(level, npc, def, effCircle);
             default -> {
                 Log.warn(TAG, "未知魔法执行器 id={}", def.id());
                 yield false;
@@ -165,6 +168,89 @@ public final class MagicSpellExecutors {
         return true;
     }
 
+    // ── 5. 群体诅咒魔法 (Enfeeble Field) ──
+    // 喷溅式 AoE：施法瞬间对半径内所有敌对生物施加迟缓 I + 虚弱 I + 护甲削减（30 秒）。
+
+    private static final int ENFEEBLE_DEBUFF_TICKS = 300; // 15s
+    private static final double ENFEEBLE_RADIUS = 5.8;    // 与法阵最大半径对齐
+
+    public static boolean castEnfeebleField(ServerLevel level, WandscapeNpc npc,
+                                            MagicDef def, String circleId) {
+        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
+        int durationTicks = spec != null ? spec.durationTicks : 140;
+
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+            return false;
+        }
+
+        Vec3 pos = npc.position();
+        UUID effectId = UUID.randomUUID();
+
+        // 施法者脚下广播魔法阵
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+
+        // 收集半径内所有敌对生物，施加三层 debuff
+        AABB box = npc.getBoundingBox().inflate(ENFEEBLE_RADIUS);
+        int hitCount = 0;
+        for (Entity e : level.getEntities((Entity) null, box,
+                entity -> entity instanceof LivingEntity le && le.isAlive()
+                        && (le instanceof Enemy || npc.canBeamHurt(le)))) {
+            LivingEntity target = (LivingEntity) e;
+            target.addEffect(new MobEffectInstance(
+                    MobEffects.MOVEMENT_SLOWDOWN,
+                    ENFEEBLE_DEBUFF_TICKS, 0)); // 迟缓 I
+            target.addEffect(new MobEffectInstance(
+                    MobEffects.WEAKNESS,
+                    ENFEEBLE_DEBUFF_TICKS, 0)); // 虚弱 I
+            target.addEffect(new MobEffectInstance(
+                    WandscapeEffects.ARMOR_SHRED,
+                    ENFEEBLE_DEBUFF_TICKS, 0)); // 护甲 -4
+            hitCount++;
+        }
+
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WARDEN_SONIC_BOOM,
+                SoundSource.NEUTRAL, 0.5f, 0.4f);
+        Log.info(TAG, "castEnfeebleField caster={} hits={} debuffTicks={}",
+                npc.getUUID().toString().substring(0, 8), hitCount, ENFEEBLE_DEBUFF_TICKS);
+        return true;
+    }
+
+    // ── 6. 战争赐福 (Fortification) ──
+    // 自我增益：护甲 +4 + 力量 I + 迅捷 I（30 秒）。
+
+    private static final int FORTIFICATION_BUFF_TICKS = 300; // 15s
+
+    public static boolean castFortification(ServerLevel level, WandscapeNpc npc,
+                                            MagicDef def, String circleId) {
+        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
+        int durationTicks = spec != null ? spec.durationTicks : 120;
+
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+            return false;
+        }
+
+        Vec3 pos = npc.position();
+        UUID effectId = UUID.randomUUID();
+
+        // 自身脚下广播金色赐福法阵
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+
+        npc.addEffect(new MobEffectInstance(WandscapeEffects.FORTIFICATION,
+                FORTIFICATION_BUFF_TICKS, 0));                     // 护甲 +4
+        npc.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST,
+                FORTIFICATION_BUFF_TICKS, 0));                     // 力量 I
+        npc.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,
+                FORTIFICATION_BUFF_TICKS, 0));                     // 迅捷 I
+
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE,
+                SoundSource.NEUTRAL, 0.7f, 1.0f);
+        Log.info(TAG, "castFortification caster={} buffTicks={}",
+                npc.getUUID().toString().substring(0, 8), FORTIFICATION_BUFF_TICKS);
+        return true;
+    }
+
     // ── 4. 为玩家直接施加/测试魔法 ──
 
     public static boolean castForPlayer(net.minecraft.server.level.ServerPlayer player, MagicDef def) {
@@ -232,6 +318,44 @@ public final class MagicSpellExecutors {
                         new MagicCircleCastPacket(effectId, source, dir, circleId));
                 MagicCastManager.schedule(level, effectId, source, targetPos, color,
                         MagicCaster.BEAM_SPAWN_DELAY, 120, null, null);
+                yield true;
+            }
+            case "enfeeble_field" -> {
+                Vec3 pos = player.position();
+                UUID effectId = UUID.randomUUID();
+                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                        new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+
+                AABB box = player.getBoundingBox().inflate(5.8);
+                int hitCount = 0;
+                for (Entity e : level.getEntities((Entity) null, box,
+                        entity -> entity instanceof LivingEntity le && le.isAlive()
+                                && (le instanceof Enemy || le instanceof net.minecraft.world.entity.player.Player))) {
+                    LivingEntity target = (LivingEntity) e;
+                    target.addEffect(new MobEffectInstance(
+                            MobEffects.MOVEMENT_SLOWDOWN, 300, 0));
+                    target.addEffect(new MobEffectInstance(
+                            MobEffects.WEAKNESS, 300, 0));
+                    target.addEffect(new MobEffectInstance(
+                            WandscapeEffects.ARMOR_SHRED, 300, 0));
+                    hitCount++;
+                }
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WARDEN_SONIC_BOOM,
+                        SoundSource.NEUTRAL, 0.5f, 0.4f);
+                Log.info(TAG, "castEnfeebleField player hits={}", hitCount);
+                yield true;
+            }
+            case "fortification" -> {
+                Vec3 pos = player.position();
+                UUID effectId = UUID.randomUUID();
+                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                        new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                player.addEffect(new MobEffectInstance(WandscapeEffects.FORTIFICATION, 300, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 300, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, 0));
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE,
+                        SoundSource.NEUTRAL, 0.7f, 1.0f);
+                Log.info(TAG, "castFortification player");
                 yield true;
             }
             default -> {

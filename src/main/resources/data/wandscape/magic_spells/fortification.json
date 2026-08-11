@@ -1,0 +1,15 @@
+{
+  "id": "fortification",
+  "category": "defense",
+  "mana_cost": 65,
+  "base_cooldown": 1200,
+  "range": 0,
+  "target_mode": "self",
+  "conditions": {
+    "no_effect": "wandscape:fortification"
+  },
+  "effect": {
+    "circle_id": "fortification",
+    "color": "#f59e0b"
+  }
+}
