@@ -77,9 +77,9 @@ class ConstructionSiteDataTest {
     }
 
     @Test
-    @DisplayName("Estimate.of: 全备齐 / 无工作站 / 并行工作站 各分支")
+    @DisplayName("Estimate.of: 全备齐 / 无工作站 / 并行工作站 / 剩余方块口径")
     void estimateBranches() {
-        // 全备齐：开工即 0，完工 = placeCD × totalBlocks
+        // 全备齐：开工即 0，完工 = placeCD × remainingBlocks（剩余 100 块）
         ConstructionSiteDataPacket.Estimate ready =
                 ConstructionSiteDataPacket.Estimate.of(0, 100, 0, 10, 1);
         assertTrue(ready.canEstimate());
@@ -103,5 +103,11 @@ class ConstructionSiteDataTest {
                 ConstructionSiteDataPacket.Estimate.of(50, 100, 1, 10, 1);
         assertEquals(500, single.startTicks());
         assertEquals(600, single.completeTicks());
+
+        // 已建 60 块、剩 40 块：完工按剩余算 → 500 + 40，而非总方块 100
+        ConstructionSiteDataPacket.Estimate remaining =
+                ConstructionSiteDataPacket.Estimate.of(50, 40, 1, 10, 1);
+        assertEquals(500, remaining.startTicks());
+        assertEquals(540, remaining.completeTicks());
     }
 }

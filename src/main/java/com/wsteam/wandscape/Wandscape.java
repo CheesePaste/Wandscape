@@ -58,7 +58,6 @@ import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
-import com.wsteam.wandscape.building.network.ConstructionSiteRefreshPacket;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.BuildingInfoPacket;
 import com.wsteam.wandscape.building.network.AltarCastRequestPacket;
@@ -498,11 +497,6 @@ public class Wandscape {
                         ConstructionSiteDataPacket.TYPE,
                         ConstructionSiteDataPacket.STREAM_CODEC,
                         (packet, ctx) -> ConstructionSiteDataPacket.handleClient(packet))
-                .playToServer(
-                        ConstructionSiteRefreshPacket.TYPE,
-                        ConstructionSiteRefreshPacket.STREAM_CODEC,
-                        (packet, ctx) -> ConstructionSiteRefreshPacket.handleServer(packet,
-                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         RoadPlacePacket.TYPE,
                         RoadPlacePacket.STREAM_CODEC,

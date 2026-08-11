@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket.MaterialEntry;
-import com.wsteam.wandscape.building.network.ConstructionSiteRefreshPacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.component.ScrollableList;
@@ -19,14 +18,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * 工地面板：展示未建成建筑的建造材料需求与供应状态。
  *
  * <p>顶部两条预计时间（开工/完工），下方 {@link ScrollableList} 逐行列出方块：
  * 左图标+名、中需求数量、右供应状态（已备齐/制作中/待制作）。尺寸与
- * {@code WorkstationScreen} 一致（400×220）。每 20 tick 向服务端请求刷新。
+ * {@code WorkstationScreen} 一致（400×220）。数据在打开面板时由服务端算一次快照，
+ * 不做周期刷新（避免超大建筑反复扫描世界）。
  */
 public class ConstructionSiteScreen extends MedievalScreen {
 
@@ -41,8 +40,6 @@ public class ConstructionSiteScreen extends MedievalScreen {
     // Right edge of the middle "x需求" column (relative to row x).
     private static final int MID_COL_X = 210;
 
-    private static final int REFRESH_INTERVAL = 20;
-
     private UUID buildingId;
     private String buildingName = "";
     private List<MaterialEntry> materials = new ArrayList<>();
@@ -52,7 +49,6 @@ public class ConstructionSiteScreen extends MedievalScreen {
     private boolean completed;
 
     private ScrollableList<MaterialEntry> list;
-    private int refreshCounter;
 
     public ConstructionSiteScreen(ConstructionSiteDataPacket packet) {
         super(Component.literal("Construction Site"), PW, PH);
@@ -173,17 +169,5 @@ public class ConstructionSiteScreen extends MedievalScreen {
             case ConstructionSiteDataPacket.STATUS_CRAFTING -> MedievalColors.ACCENT_GOLD;
             default -> MedievalColors.TEXT_DIM;
         };
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        if (completed) return;
-        if (++refreshCounter >= REFRESH_INTERVAL) {
-            refreshCounter = 0;
-            if (buildingId != null) {
-                PacketDistributor.sendToServer(new ConstructionSiteRefreshPacket(buildingId));
-            }
-        }
     }
 }

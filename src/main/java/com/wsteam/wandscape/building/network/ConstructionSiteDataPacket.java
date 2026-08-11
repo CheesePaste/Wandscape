@@ -1,11 +1,14 @@
 package com.wsteam.wandscape.building.network;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildCompleteListener;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.building.internal.EnqueueHelper;
@@ -60,9 +63,10 @@ public record ConstructionSiteDataPacket(
     public record MaterialEntry(String blockId, int required, long stock, int status) {}
 
     /** Pure time estimate — {@code startTicks} is when all materials are assembled and
-     *  placement can begin; {@code completeTicks} adds per-block construction time. */
+     *  placement can begin; {@code completeTicks} adds per-block construction time for the
+     *  {@code remainingBlocks} still to place (remaining time, not total build duration). */
     public record Estimate(int startTicks, int completeTicks, boolean canEstimate) {
-        public static Estimate of(int sumMissing, int totalBlocks, int workingCount,
+        public static Estimate of(int sumMissing, int remainingBlocks, int workingCount,
                                   int craftCD, int placeCD) {
             boolean can = true;
             int start;
@@ -74,7 +78,7 @@ public record ConstructionSiteDataPacket(
             } else {
                 start = (int) Math.ceil((double) sumMissing * craftCD / workingCount);
             }
-            return new Estimate(start, start + placeCD * totalBlocks, can);
+            return new Estimate(start, start + placeCD * remainingBlocks, can);
         }
     }
 
@@ -86,10 +90,32 @@ public record ConstructionSiteDataPacket(
     // ── Server-side assembly ──
 
     /**
+     * 5 秒快照 CD：同一建筑在窗口期内重复打开面板直接返回上次快照（时间不变）。
+     * 面板只在打开时算一次，而 {@code findDamagedBlocks} 对超大建筑（10 万方块）单次
+     * 扫描约 5-10ms，若不缓存，玩家反复右键会持续触发世界扫描拖垮服务端。
+     */
+    private static final Map<UUID, CacheEntry> SNAPSHOT_CACHE = new HashMap<>();
+    private static final long SNAPSHOT_CACHE_TTL_MS = 5_000;
+
+    private record CacheEntry(ConstructionSiteDataPacket packet, long timestampMs) {}
+
+    private static void pruneStaleCache() {
+        long now = System.currentTimeMillis();
+        SNAPSHOT_CACHE.entrySet().removeIf(e -> now - e.getValue().timestampMs() >= SNAPSHOT_CACHE_TTL_MS);
+    }
+
+    /**
      * Assemble the construction-site snapshot for a building from its blueprint demand,
      * the colony warehouse stock, and in-flight workstation synthesis.
      */
     public static ConstructionSiteDataPacket from(Level level, BuildingState state) {
+        UUID buildingId = state.getBuildingId();
+        pruneStaleCache();
+        CacheEntry cached = SNAPSHOT_CACHE.get(buildingId);
+        if (cached != null) {
+            return cached.packet(); // 5s CD 内，返回同一快照，时间不变
+        }
+
         UUID colonyId = state.getColonyId() != null ? state.getColonyId() : new UUID(0, 0);
         BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
         String name = config != null ? config.displayName() : state.getBuildingTypeId();
@@ -97,9 +123,13 @@ public record ConstructionSiteDataPacket(
         ColonyItemBank bank = ColonyItemBank.get(level);
         List<MaterialEntry> materials = new ArrayList<>();
         int sumMissing = 0;
-        int totalBlocks = 0;
 
+        // 剩余未建方块：仅面板打开时算一次（findDamagedBlocks 对超大建筑有成本，
+        // 故不做实时刷新）。
+        int remainingBlocks = 0;
         if (config != null) {
+            remainingBlocks = BuildCompleteListener.findDamagedBlocks(
+                    level, state.getAnchor(), config, state.getRotationSteps()).size();
             for (var e : EnqueueHelper.computeMaterialCounts(config).entrySet()) {
                 String pureId = e.getKey();
                 int required = e.getValue();
@@ -116,21 +146,22 @@ public record ConstructionSiteDataPacket(
                 }
                 long missing = Math.max(0L, required - stock);
                 sumMissing += (int) Math.min(Integer.MAX_VALUE, missing);
-                totalBlocks += required;
                 materials.add(new MaterialEntry(pureId, required, stock, status));
             }
         }
 
         int workingCount = ResourceSupplySystem.countSynthesizingWorkstations(
                 colonyId, WandscapeEngine.getWorld());
-        Estimate est = Estimate.of(sumMissing, totalBlocks, workingCount,
+        Estimate est = Estimate.of(sumMissing, remainingBlocks, workingCount,
                 WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT,
                 WandscapeConstants.CONSTRUCTION_PLACE_TICKS_PER_UNIT);
 
-        return new ConstructionSiteDataPacket(
-                state.getBuildingId(), state.getAnchor(), name,
+        ConstructionSiteDataPacket packet = new ConstructionSiteDataPacket(
+                buildingId, state.getAnchor(), name,
                 materials, est.startTicks(), est.completeTicks(), est.canEstimate(),
                 state.hasEverCompleted());
+        SNAPSHOT_CACHE.put(buildingId, new CacheEntry(packet, System.currentTimeMillis()));
+        return packet;
     }
 
     // ── Client handler ──
