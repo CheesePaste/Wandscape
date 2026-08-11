@@ -1,15 +1,16 @@
 {
   "id": "meteor",
   "category": "aoe",
-  "mana_cost": 70,
-  "base_cooldown": 500,
+  "mana_cost": 40,
+  "base_cooldown": 300,
   "range": 24,
   "target_mode": "hostile_nearest",
   "conditions": {
-    "min_enemies": 1
+    "min_enemies": 3
   },
   "effect": {
     "circle_id": "meteor_magic_circle",
-    "color": "#E74C3C"
+    "color": "#E74C3C",
+    "damage": 12
   }
 }

@@ -34,6 +34,8 @@ public final class NpcSpellPowerHandler {
         if (event.getEntity().level().isClientSide) return;
         if (!(event.getSource().getEntity() instanceof WandscapeNpc npc)) return;
         if (npc.isRemoved()) return;
+        // 和平模式：不造成任何魔法伤害（兜底，光束伤害入口另有门控）
+        if (npc.isPeaceMode()) return;
         // 目标必须可被该法师伤害：Enemy 恒可，其余按 canBeamHurt（普通 NPC 只伤 Enemy，
         // 敌对法师覆盖为也伤生存玩家）。NPC 的魔法永远伤不到普通玩家。
         if (!(event.getEntity() instanceof Enemy) && !npc.canBeamHurt(event.getEntity())) return;

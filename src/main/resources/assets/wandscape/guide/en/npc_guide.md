@@ -34,6 +34,11 @@ Wizards carry out the colony's building, gathering, crafting, and combat. How mu
 - In fights they pick spells by your [Cast Strategy](strategy_guide.md).
 - A **nameplate** above the head shows the name and status, so you can see what each wizard is doing.
 
+## Behavior Settings (Bottom of the Panel)
+
+- **Peace / Cancel Peace**: the wizard stops attacking any creature — no more guarding or self-defense, and an active beam stops immediately (revival, building, and crafting still work). Use it to put a wizard on pure production.
+- **Follow / Cancel Follow**: the wizard follows you — when you get more than **5 blocks** away it walks over and stops within 3 blocks. Handy when taking a wizard on a trip or moving camp.
+
 ## Tips
 
 - **Wands first**: Spell Power directly decides combat strength; give the good wands to your main wizards.

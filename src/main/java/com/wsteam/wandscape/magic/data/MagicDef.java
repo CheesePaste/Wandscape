@@ -22,6 +22,7 @@ public record MagicDef(
         TargetMode targetMode,
         @Nullable String effectCircleId,
         @Nullable Integer effectColor,
+        @Nullable Double effectDamage,
         boolean altarOnly,
         int altarCooldown,
         int altarDuration,
@@ -34,6 +35,7 @@ public record MagicDef(
         range = Math.max(0, range);
         altarCooldown = Math.max(0, altarCooldown);
         altarDuration = Math.max(0, altarDuration);
+        effectDamage = effectDamage != null && effectDamage < 0 ? null : effectDamage;
         conditions = conditions != null ? conditions : SpellConditions.NONE;
     }
 
@@ -58,17 +60,19 @@ public record MagicDef(
 
         String circleId = null;
         Integer color = null;
+        Double damage = null;
         if (obj.has("effect") && obj.get("effect").isJsonObject()) {
             JsonObject effect = obj.getAsJsonObject("effect");
             circleId = getString(effect, "circle_id", null);
             color = parseColorHex(getString(effect, "color", null));
+            damage = effect.has("damage") ? effect.get("damage").getAsDouble() : null;
         }
         boolean altarOnly = getBool(obj, "altar_only", false);
         int altarCooldown = (int) Math.round(getDouble(obj, "altar_cooldown", 0));
         int altarDuration = (int) Math.round(getDouble(obj, "altar_duration", 0));
         SpellConditions conditions = SpellConditions.fromJson(obj.get("conditions"));
         return new MagicDef(defId, category, manaCost, baseCooldown, range, targetMode,
-                circleId, color, altarOnly, altarCooldown, altarDuration, conditions);
+                circleId, color, damage, altarOnly, altarCooldown, altarDuration, conditions);
     }
 
     /** "#A8E0FF" → 0xFFA8E0FF；非法/缺失返回 null。 */

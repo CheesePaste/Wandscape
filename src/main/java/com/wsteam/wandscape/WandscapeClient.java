@@ -21,6 +21,8 @@ import com.wsteam.wandscape.production.client.CraftingStationScreen;
 import com.wsteam.wandscape.production.client.WorkstationScreen;
 import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.client.ConstructionSiteScreen;
+import com.wsteam.wandscape.building.client.BuildingInfoScreen;
 import com.wsteam.wandscape.building.client.HotelScreen;
 import com.wsteam.wandscape.building.client.NodeScreen;
 import com.wsteam.wandscape.building.client.ShopScreen;
@@ -30,7 +32,9 @@ import com.wsteam.wandscape.building.client.BuildingAreaRenderer;
 import com.wsteam.wandscape.building.client.ConstructionGhostRenderer;
 import com.wsteam.wandscape.building.scanner.client.ScannerRenderer;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.BuildingInfoPacket;
 import com.wsteam.wandscape.building.network.AltarOpenPacket;
+import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
@@ -182,6 +186,14 @@ public class WandscapeClient {
                 Minecraft.getInstance().setScreen(ns);
             }
         });
+        ConstructionSiteDataPacket.setClientHandler(packet -> {
+            var screen = Minecraft.getInstance().screen;
+            if (screen instanceof ConstructionSiteScreen cs && cs.matches(packet.buildingId())) {
+                cs.updateData(packet);
+            } else {
+                Minecraft.getInstance().setScreen(new ConstructionSiteScreen(packet));
+            }
+        });
         TaskQueueDataPacket.setClientHandler(packet -> {
             var screen = Minecraft.getInstance().screen;
             if (screen instanceof WorkstationScreen ws) {
@@ -218,6 +230,8 @@ public class WandscapeClient {
                     packet.buildingPos(), packet.colonyId(), packet.buildingId(), packet.creator(),
                     packet.spells()));
         });
+        BuildingInfoPacket.setClientHandler(packet ->
+                Minecraft.getInstance().setScreen(new BuildingInfoScreen(packet)));
         NpcDataPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof NpcStrategyScreen strategyScreen) {

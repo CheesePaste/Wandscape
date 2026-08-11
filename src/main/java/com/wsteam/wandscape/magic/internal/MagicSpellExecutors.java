@@ -53,7 +53,7 @@ public final class MagicSpellExecutors {
 
         return switch (def.id()) {
             case MagicCaster.BEAM_MAGIC_ID -> MagicCaster.castNpcAt(level, npc, target, effCircle, effColor);
-            case "heal" -> castHeal(level, npc, target, def, effCircle);
+            case "heal" -> castHeal(level, npc, def, effCircle);
             case "meteor" -> castMeteor(level, npc, target, def, effCircle);
             case "petrification" -> castPetrification(level, npc, def, effCircle);
             case "enfeeble_field" -> castEnfeebleField(level, npc, def, effCircle);
@@ -69,26 +69,30 @@ public final class MagicSpellExecutors {
 
     // ── 1. 治疗魔法 (Heal) ──
 
-    public static boolean castHeal(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
+    /** 治疗光环覆盖半径（方块）。GuardCombat 的 L0 紧急奶扫描范围须与此一致，保证施放必然够得着目标。 */
+    public static final float HEAL_RADIUS = 6.0f;
+
+    public static boolean castHeal(ServerLevel level, WandscapeNpc npc,
                                   MagicDef def, String circleId) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 120;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
-        LivingEntity centerEntity = target != null && target.isAlive() ? target : npc;
-        Vec3 pos = centerEntity.position();
+        // 治疗以施法者自身为圆心：法阵跟随施法者，覆盖半径内友方 + 施法者自己
+        // （落单法师低血时 L0 自奶依赖此圆心；不用战斗 target，避免奶错目标）。
+        Vec3 pos = npc.position();
         UUID effectId = UUID.randomUUID();
 
-        // 广播法阵在地面生成
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(centerEntity,
+        // 广播法阵在施法者脚下生成
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
         // 注册持续治疗任务（6秒=120t，每20t治疗4生命）
         MagicEventHandler.addHealAura(new MagicEventHandler.HealAura(
-                level, pos, centerEntity, level.getGameTime() + durationTicks, 4.0f, 6.0));
+                level, pos, npc, level.getGameTime() + durationTicks, 4.0f, HEAL_RADIUS));
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.2f);
         Log.info(TAG, "castHeal caster={} pos={} duration={}", npc.getUUID().toString().substring(0, 8), pos, durationTicks);
@@ -97,15 +101,19 @@ public final class MagicSpellExecutors {
 
     // ── 2. 陨石魔法 (Meteor) ──
 
+    /** 陨石伤害缺省值（magic_spells/meteor.json 未配 effect.damage 时兜底）。 */
+    private static final float METEOR_DEFAULT_DAMAGE = 10.0f;
+
     public static boolean castMeteor(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
                                     MagicDef def, String circleId) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 120;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
+        float damage = def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE;
         Vec3 pos = npc.position();
         UUID effectId = UUID.randomUUID();
 
@@ -136,7 +144,7 @@ public final class MagicSpellExecutors {
             fallingBlock.disableDrop();
 
             MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
-                    level, fallingBlock, npc, spawnPos.getY(), targetPos.y, 10.0f, 4.0));
+                    level, fallingBlock, npc, spawnPos.getY(), targetPos.y, damage, 4.0));
         }
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);
@@ -151,7 +159,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 100;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
@@ -181,7 +189,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 140;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
@@ -228,7 +236,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 120;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
@@ -263,7 +271,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 200;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
@@ -309,7 +317,7 @@ public final class MagicSpellExecutors {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         int durationTicks = spec != null ? spec.durationTicks : 15;
 
-        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks / 2)) {
             return false;
         }
 
@@ -377,7 +385,8 @@ public final class MagicSpellExecutors {
                     fallingBlock.dropItem = false;
                     fallingBlock.disableDrop();
                     MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
-                            level, fallingBlock, null, spawnPos.getY(), targetPos.y, 10.0f, 4.0));
+                            level, fallingBlock, null, spawnPos.getY(), targetPos.y,
+                            def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE, 4.0));
                 }
 
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);

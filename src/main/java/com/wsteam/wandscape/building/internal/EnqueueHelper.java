@@ -279,10 +279,15 @@ public final class EnqueueHelper {
     }
 
     /**
-     * Compute deduped material_list + material_counts from pattern → block_mapping.
-     * Skips air blocks. Returns a record with list (unique types) and counts (type→total).
+     * Compute deduped material counts (pure block id → total) from pattern → block_mapping.
+     * Skips air blocks. Blocks without an element mapping are "free" materials and are
+     * skipped (not requested from the warehouse); blockstate properties are stripped
+     * before counting so mappings registered for bare block IDs match.
+     *
+     * <p>Public for the construction-site panel, which reuses the same demand口径.
+     * Returns an empty map when the building needs no warehouse-supplied materials.
      */
-    private static MaterialData computeMaterialData(BuildingConfig config) {
+    public static Map<String, Integer> computeMaterialCounts(BuildingConfig config) {
         var counts = new java.util.LinkedHashMap<String, Integer>();
         var elementApi = WandscapeApis.getElementApi();
         for (var offset : config.pattern()) {
@@ -291,11 +296,18 @@ public final class EnqueueHelper {
             // Strip blockstate properties (e.g. "[facing=south]") before checking
             // element mappings — mappings are registered for bare block IDs only.
             String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
-            // Blocks without element mappings are considered "free" materials
-            // and should not be requested from the warehouse.
             if (!elementApi.hasElementMapping(pureId)) continue;
             counts.merge(pureId, 1, Integer::sum);
         }
+        return counts;
+    }
+
+    /**
+     * Compute deduped material_list + material_counts from pattern → block_mapping.
+     * Returns a record with list (unique types) and counts (type→total).
+     */
+    private static MaterialData computeMaterialData(BuildingConfig config) {
+        var counts = computeMaterialCounts(config);
         if (counts.isEmpty()) return null;
         JsonArray list = new JsonArray();
         JsonObject map = new JsonObject();

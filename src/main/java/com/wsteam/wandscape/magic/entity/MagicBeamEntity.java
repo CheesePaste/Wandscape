@@ -213,6 +213,8 @@ public class MagicBeamEntity extends Entity {
      * 邪恶法师能伤生存玩家」的边界唯一。
      */
     private boolean canDamage(LivingEntity mob) {
+        // 和平模式：该 NPC 的光束立即停手（执行器层面的拦截在下一轮才生效，这里即时兜底）
+        if (casterNpc != null && casterNpc.isPeaceMode()) return false;
         if (mob instanceof Enemy) return true;
         return casterNpc != null && !casterNpc.isRemoved() && casterNpc.canBeamHurt(mob);
     }

@@ -48,7 +48,9 @@ public record NpcDataPacket(
         List<String> priority,
         List<ItemStack> armorStacks,
         int skinVariant,
-        int hatColor
+        int hatColor,
+        boolean peaceMode,
+        boolean followMode
 ) implements CustomPacketPayload {
 
     public static final Type<NpcDataPacket> TYPE =
@@ -102,6 +104,8 @@ public record NpcDataPacket(
         }
         buf.writeInt(pkt.skinVariant);
         buf.writeInt(pkt.hatColor);
+        buf.writeBoolean(pkt.peaceMode);
+        buf.writeBoolean(pkt.followMode);
     }
 
     private static void writeStringList(RegistryFriendlyByteBuf buf, List<String> list) {
@@ -136,10 +140,13 @@ public record NpcDataPacket(
         }
         int skinVariant = buf.readInt();
         int hatColor = buf.readInt();
+        boolean peaceMode = buf.readBoolean();
+        boolean followMode = buf.readBoolean();
         return new NpcDataPacket(entityId, npcName, currentHealth, maxHealth,
                 currentMana, maxMana, moveSpeed, spellPower, workSpeed, spellSpeed,
                 armorValue, wandStack, isDefaultWand, strategyPreset, knownSpells,
-                spellCategories, priority, armorStacks, skinVariant, hatColor);
+                spellCategories, priority, armorStacks, skinVariant, hatColor,
+                peaceMode, followMode);
     }
 
     private static List<String> readStringList(RegistryFriendlyByteBuf buf) {
@@ -221,7 +228,9 @@ public record NpcDataPacket(
                 priority,
                 armorStacks,
                 npc.getSkinVariant(),
-                npc.getHatColor()
+                npc.getHatColor(),
+                npc.isPeaceMode(),
+                npc.isFollowMode()
         );
     }
 }

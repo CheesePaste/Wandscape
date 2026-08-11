@@ -6,7 +6,7 @@
   "range": 16,
   "target_mode": "ally_lowest_hp",
   "conditions": {
-    "ally_hp_max": 0.9
+    "ally_hp_max": 0.7
   },
   "effect": {
     "circle_id": "heal_magic_circle",

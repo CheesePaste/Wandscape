@@ -70,7 +70,7 @@ class MagicDefTest {
         assertEquals(MagicDef.TargetMode.ALLY_LOWEST_HP, heal.targetMode());
         assertEquals("heal_magic_circle", heal.effectCircleId());
         assertEquals(0xFF2ECC71, heal.effectColor());
-        assertEquals(0.9f, heal.conditions().allyHpMax(), 1e-6f);
+        assertEquals(0.7f, heal.conditions().allyHpMax(), 1e-6f);
     }
 
     @Test
@@ -79,13 +79,14 @@ class MagicDefTest {
         assertNotNull(meteor, "meteor.json should be on classpath");
         assertEquals("meteor", meteor.id());
         assertEquals(MagicDef.Category.AOE, meteor.category());
-        assertEquals(70, meteor.manaCost());
-        assertEquals(500, meteor.baseCooldown());
+        assertEquals(40, meteor.manaCost());
+        assertEquals(300, meteor.baseCooldown());
         assertEquals(24, meteor.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, meteor.targetMode());
         assertEquals("meteor_magic_circle", meteor.effectCircleId());
         assertEquals(0xFFE74C3C, meteor.effectColor());
-        assertEquals(1, meteor.conditions().minEnemies());
+        assertEquals(3, meteor.conditions().minEnemies());
+        assertEquals(12.0, meteor.effectDamage(), 1e-9);
     }
 
     @Test
@@ -136,6 +137,7 @@ class MagicDefTest {
         assertEquals(MagicDef.TargetMode.NONE, def.targetMode());
         assertNull(def.effectCircleId());
         assertNull(def.effectColor());
+        assertNull(def.effectDamage());
     }
 
     @Test

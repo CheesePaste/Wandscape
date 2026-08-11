@@ -92,6 +92,8 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             long npcId = entry.getKey();
             WandscapeNpc npc = entry.getValue();
             if (npc == null || npc.isRemoved() || npc.level().isClientSide) continue;
+            // 和平模式：不参与自防御（不主动索敌、不反击）
+            if (npc.isPeaceMode()) continue;
 
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
             if (exec == null) continue;
@@ -203,6 +205,8 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
         if (npc == null || npc.isRemoved()) return -1;
         if (!(npc.level() instanceof ServerLevel level)) return -1;
+        // 战斗中途开启和平模式 → 立即结束自防御，队列恢复挂起任务
+        if (npc.isPeaceMode()) return -1;
 
         LivingEntity target = resolveTarget(npc, level);
         if (target == null) {

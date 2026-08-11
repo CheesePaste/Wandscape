@@ -17,8 +17,9 @@
 - 交互 `mobInteract` 右键发 NpcDataPacket 打开界面。
 - 生命周期：onAddedToLevel 设随机 skin/hat、**无 custom name 时自动命名**（`generateRandomNpcName` → 共享 `shared/data/CharacterNames` 池的 lang key，`setCustomName(translatable key)` 客户端按语言显示中/英文名；酒馆招募/复活的名保留）、发默认 wand、setPersistenceRequired，调 EntityComponentBridge.onNpcJoinWorld 或 deferJoin；onRemovedFromLevel 仅 KILLED/DISCARDED 时释放 global task/取消运输/销毁 ECS（CHANGED_DIMENSION 与 unload 保留）。
 - **盔甲格**：`armorInventory`（SimpleContainer 4，顺序 头盔/胸甲/护腿/靴子），与 vanilla 装备槽分开存放 → 法袍外观不被覆盖（外形不渲染，仅数值生效）。`armorValueOf(stack)` 累加物品原版 `Attributes.ARMOR` 修饰符得单件护甲值；`syncArmorAttributes()` 把 4 槽护甲值以加法修饰符写回 ECS EquipmentComponent（HEAD/CHEST/LEGS/FEET），GUI 显示与伤害减免（vanilla ARMOR）都生效。onNpcJoinWorld（含重连/延迟注册）后调用。
-- NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/armorInventory/colonyId。
+- NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/armorInventory/colonyId/**PeaceMode/FollowMode/FollowerUuid**。
 - 仇恨表 `setHatedAttacker/getHatedAttacker`。
+- **和平/跟随模式**：`peaceMode`（不攻击任何生物，守卫/自卫/光束伤害分层全阻断）、`followMode`+`followerUuid`（跟随目标玩家）。`FollowPlayerGoal`（优先级 1，vanilla PathNavigation）在空闲时走向距离 >5 格的玩家、<3 格停；ECS 任务/施法接管时让路。
 
 ## EntityComponentBridge
 
@@ -35,8 +36,9 @@
 
 ## 网络
 
-- `NpcDataPacket`（S→C）：信息屏，含 entityId/名字/血量/7 属性/wandStack/isDefaultWand/strategyPreset+魔法表+优先级/armorStacks(4)/skinVariant/hatColor；from() 从 ECS EquipmentComponent 读有效属性。
+- `NpcDataPacket`（S→C）：信息屏，含 entityId/名字/血量/7 属性/wandStack/isDefaultWand/strategyPreset+魔法表+优先级/armorStacks(4)/skinVariant/hatColor/**peaceMode/followMode**；from() 从 ECS EquipmentComponent 读有效属性。
 - `NpcEquipPacket`（C→S）：equip/unequip wand + equip/unequip armor（4 槽）。handleEquip 校验 WandItem、读 wand preset 的 attributes（均为 ADDITION），换物品并同步 ECS eq.unequip/equip；handleUnequip 拒绝卸默认 wand，回默认 wand。handleEquipArmor 用 `npc.getEquipmentSlotForItem` 判定盔甲槽（不信任客户端）、交换物品并 `syncArmorAttributes()`；handleUnequipArmor 回收背包。
+- `NpcTogglePacket`（C→S）：切换单个 NPC 行为——`peace`（和平：不攻击任何生物）/`follow`（跟随：目标玩家距离 >5 格时走向玩家）。服务端应用后回发 `NpcDataPacket` 刷新面板按钮文字（与改名/换装同模式）。
 
 ## 客户端
 
@@ -44,7 +46,7 @@
 - `WandscapeNpcModel`：casting 时 rightArm.xRot = CAST_ARM_ANGLE + getXRot()。
 - `WizardHatModel/WizardHatLayer`：hat 几何，Layer 用 entityCutoutNoCull + hatColor 着色，brim edge 金色不着色。
 - `CastBoltParticle`：固定亮星粒子，lifetime 10-15 tick，全亮。
-- `NpcScreen`：MedievalScreen（300×230）。左侧 **5 个同尺寸 18×18 金边装备槽**（4 盔甲 + 法杖，空槽显示部位占位图标：原版 E 的盔甲 sprite / 法杖图标）+ **原版装备栏风格 3D 展示**（`renderEntityInInventoryFollowsMouse` 渲染从包数据构建的展示克隆，皮肤变体/帽子颜色/当前法杖；槽列与属性区之间留空隙）；右侧属性区（生命/魔力条 + 移速/法术强度/工作速度/施法速度/护甲值）；底部 4 行背包。点背包 WandItem → EQUIP、盔甲物品 → EQUIP_ARMOR（按物品装备槽）。
+- `NpcScreen`：MedievalScreen（300×258）。左侧 **5 个同尺寸 18×18 金边装备槽**（4 盔甲 + 法杖，空槽显示部位占位图标：原版 E 的盔甲 sprite / 法杖图标）+ **原版装备栏风格 3D 展示**（`renderEntityInInventoryFollowsMouse` 渲染从包数据构建的展示克隆，皮肤变体/帽子颜色/当前法杖；槽列与属性区之间留空隙）；右侧属性区（生命/魔力条 + 移速/法术强度/工作速度/施法速度/护甲值）；底部 4 行背包。点背包 WandItem → EQUIP、盔甲物品 → EQUIP_ARMOR（按物品装备槽）。底部整行按钮（背包区下方，右对齐）：**[和平/取消和平]** **[跟随/取消跟随]** **[策略]** **[关闭]**——前两者发 `NpcTogglePacket` 切换行为（乐观翻转按钮文字 + 服务端回发确认）。
 
 ## MageResume（shared/data/）
 

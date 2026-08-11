@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +58,7 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
@@ -454,6 +456,62 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         }
     }
 
+    /** 无条件清除仇恨（和平模式开启时调用，避免解除和平后立刻寻仇）。 */
+    public void clearHatedAttacker() {
+        hatedAttackerUuid = null;
+        hateExpiryTick = 0;
+    }
+
+    // ── 普通攻击（L2 兜底）冷却：无有效魔法时的近战物理攻击，2s 攻速，服务端瞬时态 ──
+    private long nextMeleeAttackTick = 0;
+
+    /** 普通攻击是否就绪（距上次攻击已过攻速间隔）。 */
+    public boolean canMeleeAttack(long gameTime) {
+        return gameTime >= nextMeleeAttackTick;
+    }
+
+    /** 记录一次普通攻击：下次可用 = now + cooldownTicks。 */
+    public void markMeleeAttack(long gameTime, int cooldownTicks) {
+        this.nextMeleeAttackTick = gameTime + cooldownTicks;
+    }
+
+    // ============================================================
+    // 和平 / 跟随 模式（玩家在 NPC 面板右下角切换，NBT 持久化）
+    // ============================================================
+
+    /** 和平模式：不攻击任何生物（自防御/守卫/光束伤害全部关闭）。 */
+    private boolean peaceMode = false;
+
+    /** 跟随模式：目标玩家距离超过 5 格时走向玩家。 */
+    private boolean followMode = false;
+
+    /** 跟随目标玩家（跟随模式开启时记录发起玩家）。 */
+    private UUID followerUuid = null;
+
+    public boolean isPeaceMode() {
+        return peaceMode;
+    }
+
+    public void setPeaceMode(boolean value) {
+        this.peaceMode = value;
+    }
+
+    public boolean isFollowMode() {
+        return followMode;
+    }
+
+    public void setFollowMode(boolean value) {
+        this.followMode = value;
+    }
+
+    public UUID getFollowerUuid() {
+        return followerUuid;
+    }
+
+    public void setFollowerUuid(UUID uuid) {
+        this.followerUuid = uuid;
+    }
+
     // ── Client-side: last tick particles were spawned (throttle to 1×/tick) ──
     public int lastParticleTick = -1;
 
@@ -520,6 +578,8 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     protected void registerGoals() {
         // Priority 0: don't drown
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        // Priority 1: 跟随模式——目标玩家距离 >5 格时走向玩家（被 ECS 任务/施法接管时自动让路）
+        this.goalSelector.addGoal(1, new FollowPlayerGoal());
         // Priority 5: wander around when idle (suppressed when MovementOps controls navigation)
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6) {
             @Override
@@ -996,6 +1056,11 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         tag.putInt("regenCooldown", regenCooldown);
         tag.putInt("regenAccum", regenAccum);
         tag.putBoolean("hasDefaultWand", hasDefaultWand);
+        tag.putBoolean("PeaceMode", peaceMode);
+        tag.putBoolean("FollowMode", followMode);
+        if (followerUuid != null) {
+            tag.putUUID("FollowerUuid", followerUuid);
+        }
         // 盔甲格（外观不渲染，仅属性生效）
         ListTag armorList = new ListTag();
         for (int i = 0; i < ARMOR_SLOT_COUNT; i++) {
@@ -1050,6 +1115,13 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         regenCooldown = tag.getInt("regenCooldown");
         regenAccum = tag.getInt("regenAccum");
         hasDefaultWand = tag.getBoolean("hasDefaultWand");
+        peaceMode = tag.getBoolean("PeaceMode");
+        followMode = tag.getBoolean("FollowMode");
+        if (tag.hasUUID("FollowerUuid")) {
+            followerUuid = tag.getUUID("FollowerUuid");
+        } else {
+            followerUuid = null;
+        }
         // 盔甲格恢复（旧存档无字段 → 空）
         if (tag.contains("armorInventory", Tag.TAG_LIST)) {
             ListTag armorList = tag.getList("armorInventory", Tag.TAG_COMPOUND);
@@ -1146,6 +1218,74 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
                     target.getY() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
                     target.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.5,
                     0, 0, 0);
+        }
+    }
+
+    // ============================================================
+    // 跟随模式：目标玩家距离 > 5 格时走向玩家（独立于 ECS 导航，空闲时才生效）
+    // ============================================================
+
+    /** 跟随起步距离平方（5²）。 */
+    private static final double FOLLOW_START_DIST_SQ = 5.0 * 5.0;
+    /** 跟随停止距离平方（3²）：进入该范围后停下，避免在 5 格边界反复启停。 */
+    private static final double FOLLOW_STOP_DIST_SQ = 3.0 * 3.0;
+    /** 跟随移动速度系数（作用于基础移速）。 */
+    private static final double FOLLOW_SPEED = 1.0;
+
+    private class FollowPlayerGoal extends Goal {
+        private int repathCooldown = 0;
+
+        FollowPlayerGoal() {
+            setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Nullable
+        private Player follower() {
+            if (followerUuid == null) return null;
+            if (!(level() instanceof ServerLevel serverLevel)) return null;
+            Entity e = serverLevel.getEntity(followerUuid);
+            return (e instanceof Player p && p.isAlive() && !p.isRemoved()) ? p : null;
+        }
+
+        /** ECS 任务/施法/手动引导接管时让路，跟随不抢导航。
+         *  isEngineIdle 直读 ECS（无轮询延迟），任务一入队立即让路。 */
+        private boolean busy() {
+            return !isEngineIdle() || suppressWandering || isCasting() || manualCastTicks > 0;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!followMode || busy()) return false;
+            Player p = follower();
+            return p != null && distanceToSqr(p) > FOLLOW_START_DIST_SQ;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (!followMode || busy()) return false;
+            Player p = follower();
+            return p != null && distanceToSqr(p) > FOLLOW_STOP_DIST_SQ;
+        }
+
+        @Override
+        public void tick() {
+            Player p = follower();
+            if (p == null) return;
+            if (getNavigation().isDone()) {
+                getNavigation().moveTo(p, FOLLOW_SPEED);
+            } else if (--repathCooldown <= 0) {
+                getNavigation().moveTo(p, FOLLOW_SPEED);
+                repathCooldown = 10;
+            }
+        }
+
+        @Override
+        public void stop() {
+            // 任务/施法接管时不清 navigation（NavigationSystem 自己会驱动/重寻路）；
+            // 仅在空闲状态下取消（如玩家取消跟随）。
+            if (!suppressWandering && !isCasting()) {
+                getNavigation().stop();
+            }
         }
     }
 }

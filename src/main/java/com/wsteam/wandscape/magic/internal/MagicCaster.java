@@ -103,7 +103,8 @@ public final class MagicCaster {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null || target == null || target.isRemoved() || !target.isAlive()) return false;
 
-        int lockDuration = BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL;
+        // 锁 = 引导全程的一半：缩短施法互斥窗口，守卫施法后能更快自奶/反击，避免站桩被打死
+        int lockDuration = (BEAM_SPAWN_DELAY + spec.durationTicks + BEAM_TAIL) / 2;
         if (!npc.tryCastSpell(BEAM_MAGIC_ID, beamBaseCooldown(), beamManaCost(), lockDuration)) return false;
 
         UUID effectId = npc.getUUID();

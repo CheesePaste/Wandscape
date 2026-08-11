@@ -23,7 +23,7 @@
 - **道路装饰**：`RoadConfig.getDecorationConfig` 无调用方——Config 里有 `road.decoration.*`（路灯/长椅）设置，但 `RoadBuilder` **未接入**装饰生成。
 - **`potion_station`**：`BuildingInteractHandler` 对 potion_station 只提示"not yet implemented"；`PotionStationPacket.handleClient` 空实现，**无 GUI**。配方 JSON 有 2 个药水配方（mana/stamina）但无法在游戏中生产。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
-- **施法决策已集中（P1-P3 落地）**：守卫/自防御经 `CastBrain` 选魔法，CD/蓝/射程/视觉数据驱动；条件决策（`SpellConditions`/`WorldSnapshot`）与玩家策略（`SpellbookComponent`/`CastStrategyComponent`/`NpcStrategyScreen`，经 `SpellcastingApi`）已落地，已知列表来自 NPC spellbook + 玩家策略；自动施法永不选 `altarOnly` 魔法（祭坛专属）。**战斗魔法面仍窄**（当前仅 beam），等第二个战斗魔法（AOE/单攻变体）落地再建 `MagicOp` 效果分发。完整方案见 [spell-casting.md](spell-casting.md)。
+- **施法决策已集中（P1-P3 落地）**：守卫/自防御经 `CastBrain` 选魔法，CD/蓝/射程/视觉数据驱动；条件决策（`SpellConditions`/`WorldSnapshot`）与玩家策略（`SpellbookComponent`/`CastStrategyComponent`/`NpcStrategyScreen`，经 `SpellcastingApi`）已落地，已知列表来自 NPC spellbook + 玩家策略；自动施法永不选 `altarOnly` 魔法（祭坛专属）。**战斗魔法已多面化**：默认法术书 `[beam, heal, meteor, petrification]` 已按 id 在 `MagicSpellExecutors` switch 分发（单体/AOE/治疗/防御）；`MagicOp` 效果分发仍延后（switch 够用，建单实现 sealed 层级是死代码）。完整方案见 [spell-casting.md](spell-casting.md)。
 - **祭坛施法（P5 已实现）**：`altar1` 建筑类别 + `AltarScreen`（V 面板右键祭坛）+ NPC 走到祭坛旁执行 `AltarCastOp`（扣接取任务 NPC 的蓝，`SchedulerSystem` 按 `mana_cost` 门槛分派）；每祭坛每魔法 CD 存 `AltarCastState`（SavedData，祭坛间不共享）；`altarOnly` 魔法（revive）禁止 NPC 直接施放——shift+右键复活已移除，复活 = 最近死去（`ColonyDeathRegistry.latest`）在祭坛中心最上方重生。见 [spell-casting.md](spell-casting.md) 第十章。
 - **`TavernApi.getCandidates/refreshCandidates/recruitCandidate`**：占位（返回空/false）；实际招募走 `TavernRecruitPacket.handleRecruitMage` + `receiveMageResume/recruitMage`。
 - **`WorkbenchSource`**：V1 stub（POLL_INTERVAL=30，poll 空）。

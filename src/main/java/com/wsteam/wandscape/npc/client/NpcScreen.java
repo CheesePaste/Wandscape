@@ -7,6 +7,7 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
+import com.wsteam.wandscape.npc.network.NpcTogglePacket;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
@@ -40,7 +41,7 @@ public class NpcScreen extends MedievalScreen {
     private static final int PW = 300;
     private static final int PH = 230;
     private static final int SLOT_SIZE = 18;
-    private static final int SLOT_PITCH = 19;
+    private static final int SLOT_PITCH = 18;
 
     // NPC data
     private final int entityId;
@@ -50,6 +51,8 @@ public class NpcScreen extends MedievalScreen {
     private float moveSpeed, spellPower, workSpeed, spellSpeed, armorValue;
     private ItemStack wandStack;
     private boolean isDefaultWand;
+    private boolean peaceMode;
+    private boolean followMode;
     private String strategyPreset = "BALANCED";
     private List<String> knownSpells = List.of();
     private List<String> spellCategories = List.of();
@@ -72,6 +75,10 @@ public class NpcScreen extends MedievalScreen {
     private EditBox nameBox;
     /** 服务端已确认的名字（与 nameBox 一致时跳过重复发送）。 */
     private String lastServerName = "";
+
+    // ── 底部行为切换按钮（和平 / 跟随） ──
+    private MedievalButton peaceButton;
+    private MedievalButton followButton;
 
     public NpcScreen(NpcDataPacket packet) {
         super(Component.literal("NPC Info"), PW, PH);
@@ -103,6 +110,9 @@ public class NpcScreen extends MedievalScreen {
         this.armorStacks = packet.armorStacks();
         this.skinVariant = packet.skinVariant();
         this.hatColor = packet.hatColor();
+        this.peaceMode = packet.peaceMode();
+        this.followMode = packet.followMode();
+        refreshToggleButtons();
         rebuildDisplayNpc();
         // 名字：仅当输入框未聚焦时才回写（避免打断正在编辑），且值相同则不触发重发
         this.lastServerName = packet.npcName();
@@ -157,6 +167,24 @@ public class NpcScreen extends MedievalScreen {
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
 
+        // 和平 / 跟随 切换按钮（策略按钮左侧，同一行排布）：
+        // 点击即乐观翻转本地状态刷新文字，再发包给服务端确认（服务端回发 NpcDataPacket 同步）。
+        peaceButton = new MedievalButton(
+                leftPos + PW - 272, topPos + PH - 22, 80, 16,
+                peaceLabel(), () -> {
+            peaceMode = !peaceMode;
+            refreshToggleButtons();
+            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PEACE, peaceMode));
+        });
+        followButton = new MedievalButton(
+                leftPos + PW - 188, topPos + PH - 22, 80, 16,
+                followLabel(), () -> {
+            followMode = !followMode;
+            refreshToggleButtons();
+            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_FOLLOW, followMode));
+        });
+        addRenderableWidget(peaceButton);
+        addRenderableWidget(followButton);
         // 策略按钮（打开施法策略屏）
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 104, topPos + PH - 22, 46, 16,
@@ -167,6 +195,24 @@ public class NpcScreen extends MedievalScreen {
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 54, topPos + PH - 22, 46, 16,
                 I18n.name("gui.wandscape.common.close", "Close"), () -> Minecraft.getInstance().setScreen(null)));
+    }
+
+    /** 和平按钮文字：开启时显示「取消和平」，未开启显示「和平」。 */
+    private Component peaceLabel() {
+        return I18n.name(peaceMode ? "gui.wandscape.npc.peaceOff" : "gui.wandscape.npc.peace",
+                peaceMode ? "Cancel Peace" : "Peace");
+    }
+
+    /** 跟随按钮文字：跟随中显示「取消跟随」，否则显示「跟随」。 */
+    private Component followLabel() {
+        return I18n.name(followMode ? "gui.wandscape.npc.followOff" : "gui.wandscape.npc.follow",
+                followMode ? "Cancel Follow" : "Follow");
+    }
+
+    /** 依据当前模式刷新两个切换按钮的文字（apply 时与服务端同步）。 */
+    private void refreshToggleButtons() {
+        if (peaceButton != null) peaceButton.setMessage(peaceLabel());
+        if (followButton != null) followButton.setMessage(followLabel());
     }
 
     /** 名字框每次变更：非空且与服务端不同则自动发送改名包（写好了自动保存）。 */
@@ -185,7 +231,7 @@ public class NpcScreen extends MedievalScreen {
         var font = Minecraft.getInstance().font;
         int leftCol = leftPos + 12;
         int rightCol = leftPos + 118;
-        int contentTop = topPos + headerHeight + 6;
+        int contentTop = topPos + headerHeight + 4;
 
         // ── Equipment slots (left): 4 armor + 1 wand, all same size, gold border ──
         int slotX = leftCol;
@@ -304,16 +350,16 @@ public class NpcScreen extends MedievalScreen {
         g.drawString(font, String.format("%.1f", armorValue), rightCol + labelW, attrY, MedievalColors.TEXT_MUTED);
 
         // ── Divider ──
-        int divY = contentTop + 106;
+        int divY = contentTop + 96;
         g.fill(leftCol, divY, leftPos + PW - 12, divY + 1, MedievalColors.BORDER_GOLD_DARK);
 
         // ── Inventory section (bottom) ──
-        int invLabelY = divY + 6;
+        int invLabelY = divY + 2;
         g.drawString(font, I18n.name("gui.wandscape.npc.inventory", "Inventory"),
                 leftCol, invLabelY, MedievalColors.ACCENT_GOLD);
 
         int gridX = leftCol + 2;
-        int gridY = divY + 19;
+        int gridY = divY + 12;
         int cols = 9;
         this.gridX = gridX;
         this.gridY = gridY;

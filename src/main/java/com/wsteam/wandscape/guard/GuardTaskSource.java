@@ -8,6 +8,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
+import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
@@ -55,6 +57,13 @@ public final class GuardTaskSource implements TaskSource {
         LivingEntity threat = findThreat(level);
         if (threat == null) return;
 
+        // 和平模式：殖民地没有会战斗的 NPC → 不发布守卫任务
+        // （否则和平 NPC 反复接任务立即完成，造成每轮轮询的空转）
+        if (!hasAggressiveNpc()) {
+            Log.info(TAG, "all colony NPCs peaceful — guard task suppressed");
+            return;
+        }
+
         // 已有一个活跃守卫任务 → 不重复发布
         if (activeTaskId != 0) return;
 
@@ -74,5 +83,13 @@ public final class GuardTaskSource implements TaskSource {
         AABB queryBox = GuardScanner.unionAabb(zones);
         if (queryBox == null) return null;
         return GuardScanner.nearestInZones(level, zones, queryBox.getCenter());
+    }
+
+    /** 是否存在未开启和平模式的殖民地 NPC（有则守卫任务有人能接）。 */
+    private static boolean hasAggressiveNpc() {
+        for (WandscapeNpc npc : EntityComponentBridge.INSTANCE.allNpcs().values()) {
+            if (npc != null && !npc.isPeaceMode() && !npc.isRemoved()) return true;
+        }
+        return false;
     }
 }

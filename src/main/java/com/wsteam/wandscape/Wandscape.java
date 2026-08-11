@@ -57,7 +57,10 @@ import com.wsteam.wandscape.production.network.CraftingStationPacket;
 import com.wsteam.wandscape.production.network.PotionStationPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket;
+import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
+import com.wsteam.wandscape.building.network.ConstructionSiteRefreshPacket;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
+import com.wsteam.wandscape.building.network.BuildingInfoPacket;
 import com.wsteam.wandscape.building.network.AltarCastRequestPacket;
 import com.wsteam.wandscape.building.network.AltarOpenPacket;
 import com.wsteam.wandscape.building.network.ShopMaxStockPacket;
@@ -107,6 +110,7 @@ import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.npc.network.NpcEquipPacket;
 import com.wsteam.wandscape.npc.network.NpcRenamePacket;
 import com.wsteam.wandscape.npc.network.NpcStrategyPacket;
+import com.wsteam.wandscape.npc.network.NpcTogglePacket;
 import com.wsteam.wandscape.tourist.entity.TouristEntity;
 import com.wsteam.wandscape.tourist.internal.HotelStayHandler;
 import com.wsteam.wandscape.tourist.internal.MarkerPreviewManager;
@@ -465,6 +469,10 @@ public class Wandscape {
                         HotelOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> HotelOpenPacket.handleClient(packet))
                 .playToClient(
+                        BuildingInfoPacket.TYPE,
+                        BuildingInfoPacket.STREAM_CODEC,
+                        (packet, ctx) -> BuildingInfoPacket.handleClient(packet))
+                .playToClient(
                         TownHallOpenPacket.TYPE,
                         TownHallOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> TownHallOpenPacket.handleClient(packet))
@@ -485,6 +493,16 @@ public class Wandscape {
                         TaskQueueDataPacket.TYPE,
                         TaskQueueDataPacket.STREAM_CODEC,
                         (packet, ctx) -> TaskQueueDataPacket.handleClient(packet))
+                // ── Construction-site panel (under-construction building) ──
+                .playToClient(
+                        ConstructionSiteDataPacket.TYPE,
+                        ConstructionSiteDataPacket.STREAM_CODEC,
+                        (packet, ctx) -> ConstructionSiteDataPacket.handleClient(packet))
+                .playToServer(
+                        ConstructionSiteRefreshPacket.TYPE,
+                        ConstructionSiteRefreshPacket.STREAM_CODEC,
+                        (packet, ctx) -> ConstructionSiteRefreshPacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
                         RoadPlacePacket.TYPE,
                         RoadPlacePacket.STREAM_CODEC,
@@ -632,6 +650,11 @@ public class Wandscape {
                         NpcRenamePacket.TYPE,
                         NpcRenamePacket.STREAM_CODEC,
                         (packet, ctx) -> NpcRenamePacket.handleServer(packet,
+                                (net.minecraft.server.level.ServerPlayer) ctx.player()))
+                .playToServer(
+                        NpcTogglePacket.TYPE,
+                        NpcTogglePacket.STREAM_CODEC,
+                        (packet, ctx) -> NpcTogglePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Tourist info screen ──
                 .playToClient(

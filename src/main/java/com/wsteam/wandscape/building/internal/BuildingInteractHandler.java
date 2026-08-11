@@ -9,6 +9,8 @@ import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.network.ConstructionSiteDataPacket;
+import com.wsteam.wandscape.building.network.BuildingInfoPacket;
 import com.wsteam.wandscape.building.network.HotelOpenPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
 import com.wsteam.wandscape.building.network.AltarOpenPacket;
@@ -78,6 +80,13 @@ public final class BuildingInteractHandler {
      */
     public static void handleInteraction(ServerPlayer player, Level level,
                                           net.minecraft.core.BlockPos pos, BuildingState state) {
+        // Under-construction building → open the construction-site panel
+        // (required materials, warehouse/synthesis status, time estimates).
+        if (!state.hasEverCompleted()) {
+            PacketDistributor.sendToPlayer(player, ConstructionSiteDataPacket.from(level, state));
+            return;
+        }
+
         String category = state.getCategory();
         UUID colonyId = state.getColonyId();
 
@@ -168,6 +177,8 @@ public final class BuildingInteractHandler {
                                     AltarCastHandler.listSpells(sl, state.getBuildingId())));
                 }
             }
+            case "service", "relax", "decoration", "atm" ->
+                    openInfoPanel(player, state, category, bldConfig);
             default -> {
                 Log.info(TAG, "[Building] Right-click: type={} at={} intact={} shutdown={} queue={}",
                         state.getBuildingTypeId(), state.getAnchor(),
@@ -183,6 +194,30 @@ public final class BuildingInteractHandler {
                 }
             }
         }
+    }
+
+    private static void openInfoPanel(ServerPlayer player, BuildingState state,
+                                      String category, BuildingConfig config) {
+        if (config == null) {
+            Log.warn(TAG, "[Building] {} category={} has no config — nothing to show",
+                    state.getBuildingTypeId(), category);
+            return;
+        }
+        var svc = config.service();
+        var relax = config.relax();
+        var atm = config.atm();
+        int duration = switch (category) {
+            case "relax" -> relax != null ? relax.interactionDurationTicks() : 0;
+            case "atm" -> atm != null ? atm.interactionDurationTicks() : 0;
+            default -> svc != null ? svc.interactionDurationTicks() : 0;
+        };
+        PacketDistributor.sendToPlayer(player, new BuildingInfoPacket(
+                state.getAnchor(), state.getBuildingTypeId(), category,
+                svc != null ? svc.elementOutput() : Map.of(),
+                svc != null ? svc.energyPerUse() : 0,
+                relax != null ? relax.energyRestore() : 0,
+                duration,
+                config.creator()));
     }
 
     @SubscribeEvent

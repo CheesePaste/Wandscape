@@ -43,7 +43,9 @@
 
 ```
 L0 硬性覆盖（不可配置，保命/不打断）
-  ├─ 自身血量 < 阈值           → 治疗魔法 / 脱离战场（无视玩家策略）
+  ├─ 自身或范围内友方血量 < 阈值 → 治疗魔法（无视玩家策略）✅ 已实现：GuardCombat.l0EmergencyHeal
+  │                              （自身或治疗半径内友方血比 < 0.35 且会 heal → 强制施奶；
+  │                                heal 以自身为圆心，可同时奶到范围内友方与自身）
   ├─ LOS 被方块挡住           → 停止施法、转寻路（现有 GuardCombat 逻辑）
   ├─ 施法互斥锁被占用          → 不打断当前施法，等下一轮
   └─ 导航失败需传送           → 走 utility 传送（导航回退，属硬性路径）
@@ -54,7 +56,8 @@ L1 玩家策略层（可配置）
       每 tick 从上往下扫：第一个"CD 已过 + 蓝够 + 有有效目标 + conditions 满足"的魔法即施放
 
 L2 兜底层
-  └─ 列表全不可施 → 基础攻击 / 走位 / 待命（现有行为保持）
+  └─ 列表全不可施 → 普通攻击（✅ 已实现：GuardCombat.normalAttack，物理 5 伤基础 / 2s 攻速 / 不耗蓝，
+     白色 CastBolt 粒子线，同建筑交互射线） / 走位 / 待命
 ```
 
 关键点：**L0 必须永远先于 L1**（保命逻辑不能被玩家把治疗调成最低优先级而饿死）；L1 玩家改的是**分类或魔法间的排序**，不是触发条件本身。
@@ -109,14 +112,14 @@ L2 兜底层
 
 ```jsonc
 "conditions": {
-  "min_enemies": 3,                     // AOE：范围敌人数 ≥ 3 才施放
+  "min_enemies": 3,                     // AOE：范围敌人数 ≥ 3 才施放（meteor 实际配 3）
   "self_hp_max": 0.6,                   // DEFENSE：自身血量 < 60% 才开盾
-  "ally_hp_max": 0.5,                   // SUPPORT 治疗：友方最低血量 < 50% 才奶
+  "ally_hp_max": 0.7,                   // SUPPORT 治疗：友方最低血量 < 70% 才奶（heal 实际配 0.7）
   "no_effect": "minecraft:absorption"   // 自身无此状态才施放（防盾/buff 叠加）
 }
 ```
 
-**防御 vs 治疗的血线竞争**靠阈值错开解决，不靠运行时互斥：护盾配 `self_hp_max: 0.6`（血量偏高时保命），治疗配 `ally_hp_max: 0.5`（低血线才奶）——两者天然不会同时抢。
+**防御 vs 治疗的血线竞争**靠阈值错开解决，不靠运行时互斥：护盾配 `self_hp_max: 0.6`（血量偏高时保命），治疗配 `ally_hp_max: 0.7`（血线偏低才奶）——两者天然不会同时抢。heal 的 `ally_hp_max` 只管 **队友**（快照 `allyLowestHpRatio` 排除施法者自己），**自己或治疗半径（6 格）内友方掉血走 L0 硬性覆盖**（见第四节）——L0 现也管濒死队友，L1 的 `ally_hp_max` 只是正常线，不依赖它保命。
 
 ### 5.3 `WorldSnapshot` — CastBrain 的输入（✅ 已实现，纯数据 record，可单测）
 
@@ -199,7 +202,7 @@ npc/internal/ReviveHandler.java     ✅ 复活效果：spawnFromRecordAt（指�
       ├─ L0 硬性覆盖：血量危机/LOS/互斥锁 → 硬性魔法 或 直接返回"不施放"
       ├─ L1 按 priority 列表从上往下扫：
       │     MagicState.canCast(magicId) && 蓝够 && 快照目标规则命中 && conditions 满足 → 选中
-      └─ L2 兜底：基础攻击/走位/待命
+      └─ L2 兜底：普通攻击（GuardCombat.normalAttack，物理/5伤×SPELL_POWER/2s/不耗蓝）/走位/待命
   → 选出魔法 → 按 id 分发（当前仅 beam → MagicCaster/MagicCastManager/MagicBeamEntity；
       未来 TeleportOp→WandscapeRitualOps、ReviveOp→仪式系统）
   → 门控仍走 npc.tryCastSpell（MagicState 不变）
@@ -325,3 +328,18 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 - 效果实现 → `magic/internal/`（beam）、`engine/boundary/`（teleport）、`npc/internal/`（复活），`MagicOp` 只做分发。
 - 模块间通过 `SpellcastingApi` + 事件，不跨包 new 类（铁律 1）。
 - **不做全条件脚本**（FFXII 式）：触发器是 `target_mode` + 内置 `conditions` 阈值，不是玩家可写的判定——避免翻译与理解负担。
+
+## 十四、默认法术数值平衡调整（2026-08-11）
+
+对默认法术书 `[beam, heal, meteor, petrification]` 的四类魔法做一轮实测后调整：
+
+| 魔法 | 调整 | 理由 |
+|---|---|---|
+| meteor | 蓝 70→**40**、CD 500→**300**、单颗伤害 10→**12**（`effect.damage` 数据驱动）、`min_enemies` 1→**3** | 原 70 蓝/500CD 换单目标 10 伤，是四魔法里最弱、最贵、却排 balanced 第一优先级的浪费发；降本增效 + 只在聚团（敌数≥3）时砸，避免单体遭遇战先甩陨石 |
+| heal | **以施法者自身为圆心**（原以战斗目标怪物为圆心，常奶错位置白扣蓝）、`ally_hp_max` 0.9→**0.7** | 目标错位 bug：`ally_lowest_hp` 只判"附近有受伤友方"，效果却落在怪物脚下；圆心改自身后同时服务 L0 紧急奶。阈值回调避免高频过奶 |
+| L0 硬性覆盖 | **新增** `GuardCombat.l0EmergencyHeal`：自身**或治疗半径内友方**血比 < **0.35** 且会 heal → 无视玩家策略/conditions 强制施奶 | 落实第四节 L0 设计：落单/受伤法师不再死于攻击循环，玩家把治疗调低也饿不死保命；范围内队友濒死时提前开奶，避免来不及施法 |
+| `MagicDef` | 新增 `effectDamage` 字段（`effect.damage` 可选，负值归 null） | 效果伤害随 mana/CD 一起数据驱动，未来伤害类魔法免改代码 |
+
+> 平衡基准：maxMana 100、回蓝 1 点/10t（0.5s）。beam 单目标约 60 伤/32s 总间隔、meteor 聚团 3×12 伤/23s 总间隔——单体 beam 依旧最凶，meteor 定位为"廉价聚团清杂"，不再与 beam 抢单体。
+
+**施法锁减半（同日）**：所有战斗魔法（beam + heal/meteor/petrification/enfeeble_field/fortification/conversion/desperation）的施法互斥锁时长**减半**（`MagicCaster` 光束 = `(前摇+法阵+收尾)/2`，`MagicSpellExecutors` 其余 = `法阵时长/2`）；施法效果时长（治疗光环/增益/光束伤害）**不变**。锁本只用于防施法重叠，不必覆盖整个法阵/光束动画——锁太长会让守卫长时间站桩、且连危机自奶都放不出，实测极易被打死。减半后：光束 12s→6s、conversion 10s→5s、enfeeble 7s→3.5s、heal/meteor/fortification 6s→3s、petrification 5s→2.5s、desperation 0.75s→0.35s。

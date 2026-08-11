@@ -2,6 +2,29 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-11：NPC 普通攻击（L2 兜底，无有效魔法时）
+
+**需求**（用户指令）：NPC 没有有效魔法可用时（如满血不该用治疗、魔法全在 CD/蓝不足）用普通攻击兜底——发射与建筑交互一致的白色粒子线，单体伤害 5 点，攻速 2s，不耗蓝。
+
+**决策**：
+- **挂在 `GuardCombat.engage` 的 L2 兜底**：`CastBrain.select` 返回 null（列表全不可施 / conditions 不满足）即普攻，守卫/自防御共用；施法互斥锁占用期间不普攻（不打断引导视觉）；冷却存 `WandscapeNpc` 瞬时字段（2s=40t，服务端瞬时态不持久化）。
+- **伤害 5 点 × SPELL_POWER**：新伤害类型 `wandscape:melee`（`data/wandscape/damage_type/melee.json`，物理近战走正常护甲流程）；`damageSources().source(key, npc, npc)` 使 `getEntity()`=NPC → 怪物 `HurtByTargetGoal` 反击（记仇自防御）+ `NpcSpellPowerHandler` 按法术强度结算。用户选定「5 点×法术强度」而非固定 5，因此不改统一伤害钩子。
+- **白色粒子线复用建筑交互的 CastBolt 粒子**：服务端 `sendParticles(Wandscape.CAST_BOLT, …)` 沿持杖手→目标身体中心 0.4 步长撒白色星点，与 NPC 做建筑交互时渲染器画的射线同一粒子，零新美术。
+
+**为什么**：L2 原为「现有行为保持 = 站着挨打」，普攻让无蓝/CD 中的 NPC 不再空转；白色线复用既有 CastBolt 视觉；伤害走统一 SPELL_POWER 钩子（不破坏「任何 NPC 伤害源 `getEntity()`=NPC」契约，也不碰 `NpcSpellPowerHandler`）。
+
+## 2026-08-11：NPC 面板新增「和平/跟随」行为切换
+
+**需求**（用户指令）：NPC 右键面板加两个切换按钮——**和平**（不攻击任何生物）与**跟随**（离玩家 >5 格时走向玩家），放在策略按钮左侧。
+
+**决策**：
+- **状态存实体 + NBT 持久**：`WandscapeNpc` 增 `peaceMode`/`followMode`/`followerUuid` 字段并读写 NBT；经 `NpcDataPacket` 下发客户端渲染按钮文字，`NpcTogglePacket` 客户端→服务端切换后回发 `NpcDataPacket` 刷新（与改名/换装同模式）。跟随目标 = 开启跟随的玩家（UUID 持久）。
+- **和平 = 攻击路径全阻断，分层兜底**：目标选择层（`SelfDefenseExecutor` 跳过和平 NPC；守卫任务中途开启即完成）、施法层（`GuardCombat.engage` 和平门控，L0 紧急自奶不受影响——治疗不是攻击）、伤害层（`MagicBeamEntity.canDamage` + `NpcSpellPowerHandler` 和平即 0 伤害，活跃光束立即停手）。`GuardTaskSource` 殖民地全和平时不再发布守卫任务，避免和平 NPC 反复接任务立即完成的空转。
+- **跟随 = 原版 Goal，不与 ECS 导航打架**：`FollowPlayerGoal`（优先级 1，高于闲逛 5）用 vanilla `PathNavigation` 直行，起步 >5²、停止 <3²（滞回防启停抖）；ECS 任务/施法接管（`suppressWandering`/`isCasting`）时自动让路，stop 只在空闲态清导航。
+- **面板加高 28px**：背包 hotbar 占满底部、策略/关闭按钮在右下角，两按钮直接放策略左侧会压到 hotbar → `PH 230→258`，四个按钮整行移到背包区下方。
+
+**为什么**：和平/跟随是「玩家对单个 NPC 的行为指令」，必须服务端权威（防作弊）+ 可存档；和平要覆盖 NPC 全部出手入口（守卫/自卫/光束/AOE）而非只挡一处，否则「不攻击」破口；跟随若走 ECS 任务导航会与调度打架，用独立 Goal + 让路判定最干净。
+
 ## 2026-08-11：relax 可重复逛——精力低豁免 visited 门
 
 **需求**（用户实测）：游客精力不足时会去找 relax 建筑，但 relax 逛过一次就被 `visitedBuildings` 挡死 → 精力耗尽后唯一能去的恢复建筑不可达，游客原地闲逛到精力 0 卡死（无恢复建筑 → 闲逛不离场）。

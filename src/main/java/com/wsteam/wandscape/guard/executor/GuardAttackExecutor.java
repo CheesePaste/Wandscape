@@ -99,6 +99,14 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
         if (npc == null || npc.isRemoved()) return -1;
         if (!(npc.level() instanceof ServerLevel level)) return -1;
+        // 守卫生效到和平模式：立即完成任务并让光束淡出（任务会被 GuardTaskSource 重新发布，
+        // 交给非和平 NPC；全殖民地都和平则不再发布守卫任务）
+        if (npc.isPeaceMode()) {
+            MagicBeamEntity beam = GuardCombat.findActiveBeam(level, npc);
+            if (beam != null) beam.setLifetime(5);
+            GuardCombat.cancelNavigation(p.world(), p.npcId());
+            return -1;
+        }
 
         List<GuardZone> attackZones = GuardScanner.zones(level, p.attackRange());
         if (attackZones.isEmpty()) return -1; // 无建筑可守 → 完成

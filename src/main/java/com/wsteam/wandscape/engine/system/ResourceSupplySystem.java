@@ -142,6 +142,16 @@ public class ResourceSupplySystem implements System {
      * prefix-insensitively so bare ("bread") and full ("minecraft:bread") ids aggregate.
      */
     private static int countSynthesizeInFlight(String itemId, @Nullable World world) {
+        return countSynthesizeInFlight(itemId, null, world);
+    }
+
+    /**
+     * Colony-scoped variant of {@link #countSynthesizeInFlight(String, World)}. When
+     * {@code colonyId} is non-null, only that colony's workstations are considered for
+     * the queued portion (running pool tasks are always global — tasks don't expose a
+     * colony filter cheaply).
+     */
+    public static int countSynthesizeInFlight(String itemId, @Nullable UUID colonyId, @Nullable World world) {
         String key = stripMcPrefix(itemId);
         int total = 0;
 
@@ -156,7 +166,7 @@ public class ResourceSupplySystem implements System {
 
         BuildingApi api = getBuildingApi();
         if (api != null) {
-            for (UUID stationId : api.getBuildingsByCategory(null, "workstation")) {
+            for (UUID stationId : api.getBuildingsByCategory(colonyId, "workstation")) {
                 for (WorkItem item : api.getQueue(stationId)) {
                     if (!"production:synthesize".equals(item.blueprintId())) continue;
                     if (!sameRecipe(key, item.params().get("recipe_id"))) continue;
@@ -165,6 +175,50 @@ public class ResourceSupplySystem implements System {
             }
         }
         return total;
+    }
+
+    /**
+     * Number of workstation buildings (optionally colony-scoped) currently working on a
+     * {@code production:synthesize} task — either a running pool task anchored to them or
+     * a synthesize item still sitting in their queue. This is the "工作中工作站数量"
+     * divisor for the construction-site panel's start-time estimate.
+     */
+    public static int countSynthesizingWorkstations(@Nullable UUID colonyId, @Nullable World world) {
+        BuildingApi api = getBuildingApi();
+        if (api == null) return 0;
+
+        // Anchors of workstations with a running synthesize task (head was dequeued,
+        // so it no longer appears in the queue).
+        var runningAnchors = new HashSet<BlockPos>();
+        if (world != null) {
+            for (GlobalTask t : world.taskPool.all()) {
+                if (t.state == TaskState.COMPLETED) continue;
+                if (!"production:synthesize".equals(t.blueprintId)) continue;
+                JsonElement anchor = t.taskParams.get("anchor");
+                if (anchor != null && anchor.isJsonArray() && anchor.getAsJsonArray().size() >= 3) {
+                    JsonArray a = anchor.getAsJsonArray();
+                    runningAnchors.add(new BlockPos(
+                            a.get(0).getAsInt(), a.get(1).getAsInt(), a.get(2).getAsInt()));
+                }
+            }
+        }
+
+        int count = 0;
+        for (UUID stationId : api.getBuildingsByCategory(colonyId, "workstation")) {
+            BuildingData bd = api.getBuilding(stationId);
+            BlockPos pos = bd != null ? bd.getPosition() : null;
+            boolean working = pos != null && runningAnchors.contains(pos);
+            if (!working) {
+                for (WorkItem item : api.getQueue(stationId)) {
+                    if ("production:synthesize".equals(item.blueprintId())) {
+                        working = true;
+                        break;
+                    }
+                }
+            }
+            if (working) count++;
+        }
+        return count;
     }
 
     private static boolean sameRecipe(String strippedKey, JsonElement recipeParam) {
