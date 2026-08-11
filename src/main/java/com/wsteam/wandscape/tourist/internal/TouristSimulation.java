@@ -89,6 +89,11 @@ public final class TouristSimulation {
     public static int[] effectiveValues(ServerLevel level, UUID buildingId) {
         BuildingConfig cfg = getConfig(level, buildingId);
         if (cfg == null) return new int[]{0, 0, 0};
+        return effectiveValues(cfg, buildingId);
+    }
+
+    /** Package-private: use pre-fetched config to skip redundant SavedData lookup. */
+    static int[] effectiveValues(BuildingConfig cfg, UUID buildingId) {
         int c = cfg.comfort();
         int m = cfg.magic();
         int w = cfg.wonder();
@@ -431,6 +436,8 @@ public final class TouristSimulation {
 
         List<BuildingState> normal = new ArrayList<>();
         List<BuildingState> hotels = new ArrayList<>();
+        // Cache configs per building so weightedPick → buildingScore skips redundant getConfig() lookups.
+        java.util.Map<UUID, BuildingConfig> cfgCache = new java.util.HashMap<>();
         for (BuildingData b : allBuildings) {
             if (b.isShutdown() || !b.isStructureIntact()) continue;
             BuildingState state = getState(level, b.getBuildingId());
@@ -445,17 +452,21 @@ public final class TouristSimulation {
             if (dx * dx + dz * dz > visionSq) continue;
             if (requireLoaded && !level.isLoaded(state.getAnchor())) continue;
 
-            boolean hotel = isHotelBuilding(level, b.getBuildingId());
+            boolean hotel = cfg.service() != ServiceConfig.NONE && cfg.service().maxOccupancy() > 0;
             if (nightHotel) {
                 // 夜晚 + 未满条：优先旅店（不查 visited，白天逛过不阻挡夜晚入住）；
                 // 视野内无旅店 → 回退普通建筑（尊重 visited、精力 0 只去 relax），傍晚不干晃。
                 if (hotel) {
-                    if (hasHotelVacancy(level, b.getBuildingId())) hotels.add(state);
+                    if (hasHotelVacancy(level, b.getBuildingId())) {
+                        hotels.add(state);
+                        cfgCache.put(state.getBuildingId(), cfg);
+                    }
                 } else {
                     if (energyEmpty && (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0)) continue;
                     // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
                     if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
                     normal.add(state);
+                    cfgCache.put(state.getBuildingId(), cfg);
                 }
                 continue;
             }
@@ -467,20 +478,27 @@ public final class TouristSimulation {
             // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
             if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
             normal.add(state);
+            cfgCache.put(state.getBuildingId(), cfg);
         }
         List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;
         if (candidates.isEmpty()) return null;
-        return weightedPick(level, t, candidates);
+        return weightedPick(level, t, candidates, cfgCache);
     }
 
     /** Find-Best-Action 评分：满意度偏好（总三值增益） + 精力/钱包紧急加分 − 排队惩罚。 */
     public static double buildingScore(ServerLevel level, TouristStateHost t, BuildingState state) {
-        int[] v = effectiveValues(level, state.getBuildingId());
+        return buildingScore(level, t, state, getConfig(level, state.getBuildingId()));
+    }
+
+    /** Package-private variant: use pre-fetched config to skip redundant SavedData + ConfigLoader lookups. */
+    static double buildingScore(ServerLevel level, TouristStateHost t, BuildingState state,
+            @Nullable BuildingConfig cfg) {
+        int[] v = cfg != null ? effectiveValues(cfg, state.getBuildingId())
+                : effectiveValues(level, state.getBuildingId());
         int[] need = {t.getComfortNeed(), t.getMagicNeed(), t.getWonderNeed()};
         int[] sat = {t.getComfortSat(), t.getMagicSat(), t.getWonderSat()};
         double score = satisfactionGain(need, sat, v, Config.TOURIST_BAR_GAIN_COEFF.get());
 
-        BuildingConfig cfg = getConfig(level, state.getBuildingId());
         if (cfg != null) {
             // 精力低 → 偏向恢复（relax）建筑（加分与单次满意度增益同量级）
             double energyRatio = t.getEnergy() / (double) WandscapeConstants.TOURIST_MAX_ENERGY;
@@ -542,12 +560,13 @@ public final class TouristSimulation {
 
     @Nullable
     private static BuildingState weightedPick(ServerLevel level, TouristStateHost t,
-            List<BuildingState> candidates) {
+            List<BuildingState> candidates, java.util.Map<UUID, BuildingConfig> cfgCache) {
         if (candidates.isEmpty()) return null;
         double[] weights = new double[candidates.size()];
         double total = 0;
         for (int i = 0; i < candidates.size(); i++) {
-            double score = Math.max(0.5, buildingScore(level, t, candidates.get(i)));
+            BuildingState s = candidates.get(i);
+            double score = Math.max(0.5, buildingScore(level, t, s, cfgCache.get(s.getBuildingId())));
             weights[i] = score;
             total += score;
         }

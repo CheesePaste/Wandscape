@@ -398,6 +398,12 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                 entityData.set(DATA_SKIN_VARIANT, variant);
                 entityData.set(DATA_APPEARANCE, (byte) (mage ? 1 : 0));
             }
+            // Register in the live-entity cache for O(1) tick lookup (all non-preview,
+            // including disk-loaded). Must be before the shadow-adopt block so the sim
+            // tick that follows can find this entity without a full world scan.
+            if (!previewMode) {
+                TouristSimSystem.registerEntity(this);
+            }
             // Freshly-created tourists (spawn egg) have no sim shadow yet — adopt
             // them now, else the sim's orphan sweep discards them as departed
             // bodies. Disk-loaded bodies (loadedFromDisk) are left for that sweep.
@@ -505,6 +511,9 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                     spots.release(bid, occupied);
                 }
             }
+            // Unregister from the live-entity cache so subsequent ticks don't
+            // see a stale/detached entity reference.
+            TouristSimSystem.unregisterEntity(getUUID());
         }
         if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
             onTouristKilled();
