@@ -48,12 +48,10 @@ public final class WandscapeEffects {
      * 护甲 +4 通过 attribute modifier 直接叠加，vanilla 公式自动处理正护甲减伤。
      */
     public static class FortificationEffect extends MobEffect {
-        private static final String MODIFIER_UUID = "f1e2d3c4-b5a6-7890-abcd-ef1234567891";
-
         public FortificationEffect() {
             super(MobEffectCategory.BENEFICIAL, 0xF59E0B);
             addAttributeModifier(Attributes.ARMOR,
-                    java.util.UUID.fromString(MODIFIER_UUID),
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("wandscape", "effect.fortification"),
                     4.0, AttributeModifier.Operation.ADD_VALUE);
         }
     }
@@ -76,6 +74,7 @@ public final class WandscapeEffects {
      * {@link MagicEventHandler#onLivingDamage} 处理护甲反转，
      * {@code MagicSpellExecutors} 施放时按 {@code amplifier = floor(armor² / 48)}
      * 计算力量等级（≤5 甲无奖励，二次增长匹配承伤的指数上升）。
+     */
     public static class DesperationEffect extends MobEffect {
         public DesperationEffect() {
             super(MobEffectCategory.BENEFICIAL, 0xDC2626);
