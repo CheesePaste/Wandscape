@@ -20,7 +20,6 @@ import com.wsteam.wandscape.building.internal.DailySettlementSystem;
 import com.wsteam.wandscape.stats.internal.StatisticsCollector;
 import com.wsteam.wandscape.building.internal.DecorationBonusSystem;
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
-import com.wsteam.wandscape.building.internal.MaintenanceForecastSystem;
 import com.wsteam.wandscape.building.internal.ShopStockManager;
 import com.wsteam.wandscape.building.internal.WonderEffectApplier;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlock;
@@ -381,7 +380,6 @@ public class Wandscape {
         NeoForge.EVENT_BUS.register(BuildingBreakHandler.class);
         NeoForge.EVENT_BUS.register(com.wsteam.wandscape.shared.network.PanelStateTracker.class);
         DailySettlementSystem.register();
-        MaintenanceForecastSystem.register();
         StatisticsCollector.register();
         decorationBonusSystem = DecorationBonusSystem.register();
         shopStockManager = ShopStockManager.register();

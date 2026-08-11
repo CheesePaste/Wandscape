@@ -222,18 +222,9 @@ public class Config {
             .comment("Settlement window: time-of-day ticks within which daily settlement triggers (0 = exact 0:00 only)")
             .defineInRange("maintenance.settlementWindowTicks", 10, 0, 100);
 
-    public static final ModConfigSpec.IntValue MAINTENANCE_RESERVE_DAYS = BUILDER
-            .comment("How many days of maintenance to keep as reserve. " +
-                     "If reserves fall below this, the forecast system triggers proactive gathering.")
-            .defineInRange("maintenance.reserveDays", 2, 1, 14);
-
     public static final ModConfigSpec.BooleanValue AUTO_RESTART_SHUTDOWN = BUILDER
             .comment("Whether to automatically restart maintenance-shutdown buildings when surplus elements become available")
             .define("maintenance.autoRestart", true);
-
-    public static final ModConfigSpec.IntValue FORECAST_INTERVAL_TICKS = BUILDER
-            .comment("Interval in ticks between maintenance forecast scans (6000 ticks = 1/4 MC day)")
-            .defineInRange("maintenance.forecastIntervalTicks", 6000, 1200, 24000);
 
     // ---- Service system ----
 
