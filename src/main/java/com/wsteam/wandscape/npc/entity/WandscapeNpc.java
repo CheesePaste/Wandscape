@@ -860,6 +860,12 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
             // P3：默认魔法表（新 NPC / 旧存档迁移），此后玩家可改 spellbook
             if (spellbook.isEmpty()) {
                 spellbook.set(SpellbookComponent.DEFAULT_SPELLS);
+            } else {
+                for (String defaultSpell : SpellbookComponent.DEFAULT_SPELLS) {
+                    if (!spellbook.knows(defaultSpell)) {
+                        spellbook.add(defaultSpell);
+                    }
+                }
             }
             if (getSkinVariant() < 0) {
                 this.entityData.set(DATA_SKIN_VARIANT, random.nextInt(SKIN_VARIANT_COUNT));

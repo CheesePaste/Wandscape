@@ -16,8 +16,9 @@ class SpellbookComponentTest {
         assertTrue(sb.isEmpty());
         sb.set(SpellbookComponent.DEFAULT_SPELLS);
         assertFalse(sb.isEmpty());
-        assertEquals(List.of("beam"), sb.ids());
+        assertEquals(List.of("beam", "heal", "meteor", "petrification"), sb.ids());
         assertTrue(sb.knows("beam"));
+        assertTrue(sb.knows("heal"));
         assertFalse(sb.knows("fireball"));
     }
 
