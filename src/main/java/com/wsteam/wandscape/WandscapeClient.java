@@ -73,8 +73,6 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import com.wsteam.wandscape.shared.log.Log;
 
-@Mod(value = Wandscape.MODID, dist = Dist.CLIENT)
-@EventBusSubscriber(modid = Wandscape.MODID, value = Dist.CLIENT)
 public class WandscapeClient {
 
     public static final KeyMapping PROJECTION_TOGGLE = new KeyMapping(
@@ -114,9 +112,10 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
-    public WandscapeClient(ModContainer container) {
+    public static void init(net.neoforged.bus.api.IEventBus modEventBus, ModContainer container) {
+        modEventBus.register(WandscapeClient.class);
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
-        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, this::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, WandscapeClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, WandscapeClient::onPlayerLoggingIn);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, WandscapeClient::onPlayerLoggingOut);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, e -> MagicCircleEmitter.tick());
@@ -283,6 +282,104 @@ public class WandscapeClient {
                 com.wsteam.wandscape.shared.ui.guidance.GuideSession.applySync(
                         packet.stepIndex(), packet.dismissed()));
 
+        com.wsteam.wandscape.engine.transport.TransportStartPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            var level = mc.level;
+            if (level == null) return;
+            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.tryParse(packet.itemKey().itemId()));
+            if (item == null) return;
+            var stack = new net.minecraft.world.item.ItemStack(item, packet.count());
+            if (packet.itemKey().nbt() != null && !packet.itemKey().nbt().isEmpty()) {
+                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.of(packet.itemKey().nbt().copy()));
+            }
+            var center = net.minecraft.world.phys.Vec3.atCenterOf(packet.from());
+            var entity = new com.wsteam.wandscape.engine.transport.TransportItemEntity(level, center.x, center.y + 0.5, center.z, stack);
+            entity.setRoute(packet.route());
+            entity.setId(-level.random.nextInt(Integer.MAX_VALUE));
+            level.addEntity(entity);
+        });
+
+        com.wsteam.wandscape.projection.network.BuildingDebugResponsePacket.setClientHandler(packet -> {
+            Minecraft.getInstance().execute(() -> {
+                boolean active = com.wsteam.wandscape.projection.client.BuildingDebugClientState.isActive();
+                boolean hasPos = com.wsteam.wandscape.projection.client.BuildingDebugClientState.getLastRequestedPos() != null;
+                if (active && hasPos) {
+                    com.wsteam.wandscape.projection.client.BuildingDebugClientState.setCachedData(packet);
+                }
+            });
+        });
+
+        com.wsteam.wandscape.projection.network.ProjectionEnterResponsePacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.player == null) return;
+            if (packet.granted()) {
+                com.wsteam.wandscape.projection.client.ProjectionClientState.enterProjection(packet.bodyAnchor(), packet.buildingSlots());
+                com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.openBuildingBar();
+            } else {
+                com.wsteam.wandscape.projection.client.ProjectionClientState.exitProjection();
+                com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
+                if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelOpen()) {
+                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.setSubMode(com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.NONE);
+                    com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.closeBuildingBar();
+                }
+                mc.player.displayClientMessage(Component.translatable("message.wandscape.projection.rejected"), false);
+            }
+        });
+
+        com.wsteam.wandscape.shared.network.MagicCircleCastPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl) {
+                com.wsteam.wandscape.magic.client.MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId());
+            }
+        });
+
+        com.wsteam.wandscape.shared.network.ParticleBurstPacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (!(mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl)) return;
+            var rand = cl.random;
+            for (int i = 0; i < packet.count(); i++) {
+                double ox, oy, oz, vx, vy, vz;
+                if (packet.vertical()) {
+                    ox = (rand.nextDouble() - 0.5) * 0.6;
+                    oy = rand.nextDouble() * 3.5;
+                    oz = (rand.nextDouble() - 0.5) * 0.6;
+                    vx = 0;
+                    vy = 0.03 + rand.nextDouble() * 0.05;
+                    vz = 0;
+                } else {
+                    double theta = rand.nextDouble() * Math.PI * 2;
+                    double phi = Math.acos(2 * rand.nextDouble() - 1);
+                    double sp = 0.1 + rand.nextDouble() * 0.3;
+                    ox = (rand.nextDouble() - 0.5) * 0.4;
+                    oy = (rand.nextDouble() - 0.5) * 0.4;
+                    oz = (rand.nextDouble() - 0.5) * 0.4;
+                    vx = Math.sin(phi) * Math.cos(theta) * sp;
+                    vy = Math.cos(phi) * sp * 0.5 + 0.03;
+                    vz = Math.sin(phi) * Math.sin(theta) * sp;
+                }
+                com.wsteam.wandscape.magic.client.MagicCircleDotParticle.spawnMoving(cl, packet.pos().x + ox, packet.pos().y + oy, packet.pos().z + oz,
+                        vx, vy, vz, packet.r(), packet.g(), packet.b(),
+                        packet.size(), 0.9f, packet.lifetime());
+            }
+        });
+
+        com.wsteam.wandscape.tourist.network.TouristBubblePacket.setClientHandler(packet -> {
+            var mc = Minecraft.getInstance();
+            if (mc.level == null) return;
+            var e = mc.level.getEntity(packet.entityId());
+            if (e == null) return;
+            com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore.trigger(
+                    e.getUUID(), packet.iconKind(), packet.iconId(), packet.count(), e.tickCount);
+        });
+
+        com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.setClientHandler(packet -> {
+            for (String jsonStr : packet.jsonConfigs()) {
+                com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().registerFromJsonString(jsonStr);
+            }
+            Log.info("Wandscape", "Received and registered {} building configs from server", packet.jsonConfigs().size());
+        });
+
         Log.info("Wandscape", "Wandscape client setup complete");
     }
 
@@ -295,7 +392,7 @@ public class WandscapeClient {
         event.register(OVERVIEW_TOGGLE);
     }
 
-    private void onClientTick(ClientTickEvent.Post event) {
+    private static void onClientTick(ClientTickEvent.Post event) {
         ColonyAmbientSystem.tick();
         // When the building search box is focused, letter keys must type into it,
         // not trigger panel hotkeys — so swallow V/C/H clicks while it's focused.

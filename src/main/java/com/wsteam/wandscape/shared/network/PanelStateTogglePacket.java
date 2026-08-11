@@ -51,20 +51,6 @@ public record PanelStateTogglePacket(boolean open) implements CustomPacketPayloa
                 if (colonyId == null) {
                     colonyId = colonyApi.getColonyId(player.blockPosition());
                 }
-                if (colonyId == null) {
-                    // 首免修复：把「首次放市政厅没殖民地才创建」提前到面板打开时。
-                    // 殖民地必须在首座建筑（市政厅）放置前就存在，否则 placeBuilding
-                    // 的 first_free 判定拿不到 colonyId，首免永不触发。
-                    colonyId = ColonyCommand.ensureColonyNear(
-                            player.serverLevel(), player.blockPosition(),
-                            player.getGameProfile().getName() + "的殖民地",
-                            player.getUUID());
-                    if (colonyId != null) {
-                        player.sendSystemMessage(Component.literal(
-                                "[Wandscape] 殖民地尚未建立，已自动创建「"
-                                        + player.getGameProfile().getName() + "的殖民地」——放置市政厅后自动关联。"));
-                    }
-                }
                 if (colonyId != null) {
                     ColonyMetricsApi metricsApi = WandscapeApis.getColonyMetricsApiSilently();
                     if (metricsApi != null) {

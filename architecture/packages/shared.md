@@ -44,6 +44,7 @@ MINIMAL 风格：渐变玻璃面板 + 发光边框 + MedievalColors 调色板。
 |------|------|
 | component/ | MedievalScreen(基类) / MedievalButton / TabBar / ScrollableList / ElementPanel / ProgressIndicator / TaskQueuePanel / Slider 等 |
 | panel/ | WandscapePanelState + PanelController + PanelOverlay(顶部HUD栏+左侧侧边栏+STATS面板+警告浮层) + BuildingSelectionOverlay + AnomalyScreen |
+| guidance/ | GuideSession + GuideStep + GuideRegistry + GuideRenderer (左下角四态新手引导弹窗：默认/选卡/射线瞄准/锁定微调，支持点击 ▼/▲ 折叠/展开) |
 | util/ | BuildingPreviewRenderer + WandscapeHighlightRenderer + RenderUtil |
 | (根) | ReplayScreenGuard(回放兼容：ReforgedPlay/ReplayMod 播放中取消所有 MedievalScreen 打开) |
 | animation/ | MedievalAnimation |

@@ -19,6 +19,10 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public class ScannerBlockEntity extends CreativeScannerBlockEntity {
 
+    public ScannerBlockEntity(BlockPos pos, BlockState state) {
+        this(com.wsteam.wandscape.Wandscape.BUILDING_SCANNER_BE.get(), pos, state);
+    }
+
     public ScannerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
         setCategory("custom");

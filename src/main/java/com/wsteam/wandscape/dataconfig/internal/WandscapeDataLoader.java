@@ -64,6 +64,22 @@ public class WandscapeDataLoader extends SimpleJsonResourceReloadListener {
                         cat + "/" + entry.getKey().getPath() + ".json");
                 all.put(newKey, entry.getValue());
             }
+
+            // Fallback listResources search to ensure data/ resources are also loaded on client
+            var found = manager.listResources(cat, loc -> loc.getPath().endsWith(".json"));
+            for (var entry : found.entrySet()) {
+                ResourceLocation loc = entry.getKey();
+                String path = loc.getPath();
+                ResourceLocation newKey = ResourceLocation.fromNamespaceAndPath(loc.getNamespace(), path);
+                if (!all.containsKey(newKey)) {
+                    try (var reader = entry.getValue().openAsReader()) {
+                        JsonElement json = com.google.gson.JsonParser.parseReader(reader);
+                        all.put(newKey, json);
+                    } catch (Exception e) {
+                        Log.warn(TAG, "Failed to read resource '{}': {}", loc, e.getMessage());
+                    }
+                }
+            }
         }
         return all;
     }

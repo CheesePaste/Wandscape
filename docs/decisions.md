@@ -15,6 +15,26 @@
 
 **注意**：数字键只在面板开着时接管快捷栏（面板关 = 原版行为）；STATS 保持抓取（纯覆盖层），Warning 直接开 AnomalyScreen；不引入旧提交 ac99924f 的 LEGACY/FREE_CURSOR 双模式与 M 键。
 
+## 2026-08-10：移除 WandscapeClient 的 `@Mod` 声明，修复专用服务器识别为“纯客户端模组”问题
+
+**需求**（用户反馈）：模组放入 Dedicated Server（专用服务器）后，服务器与客户端无法正常注册，提示“这是个纯客户端模组，注册完成不了”。
+
+**决策**：
+- **移除客户端类上的重复 `@Mod`**：删除 `WandscapeClient.java` 类上的 `@Mod(value = Wandscape.MODID, dist = Dist.CLIENT)`。NeoForge 下一个 jar 内每个 modid 只能有一个 `@Mod` 主入口类；在客户端类上标注带 `dist = Dist.CLIENT` 的同名 `@Mod` 会导致专用服务端加载时认定该模组只在 Client 端生效（Client-Only），引发连接握手与注册失败。
+- **重构客户端初始化入口**：将 `WandscapeClient` 的构造函数重构为静态 `public static void init(IEventBus modEventBus, ModContainer container)` 方法，并在 `Wandscape.java` 主构造函数末尾根据 `FMLEnvironment.dist == Dist.CLIENT` 物理侧判断安全调用。
+- **清理与标准化事件订阅**：移除过时且易混淆的 `@EventBusSubscriber(bus = Bus.MOD)`，在 `init` 方法内部显式使用 `modEventBus.register(WandscapeClient.class)` 将客户端渲染、按键、粒子与 ReloadListener 订阅到 MOD 事件总线。
+- **清除 Common/Network 层的客户端类泄露 (Client Class Leak)**：创建 `ScannerClientHelper` 与 `ClientSoundHelper`，隔离 `CreativeScannerBlock`/`ScannerBlock`/`SoundService` 中对 `net.minecraft.client.*`（如 `Minecraft`/`Screen`）的硬引用；将 7 个 S→C 网络包的 Handler 统一升级为 `setClientHandler` 委托模式，杜绝 Server 装载字节码时触发的 `invalid dist DEDICATED_SERVER`。
+- **修复注册未绑定 (Unbound Value) NPE**：为 `CreativeScannerBlockEntity` 与 `ScannerBlockEntity` 增加两参构造函数并使用 `Wandscape.XXX_BE::get` 方法引用，移除错乱的 `creativeScannerBeTypeRef`，解决 `BlockEntityType` 注册阶段解包未绑定 Block 的 NPE。
+- **修复多人服务器配置缺失与建造模式不可用 (BuildingConfig Sync)**：
+  1) `WandscapeDataLoader.prepare` 增加 `manager.listResources` 回退机制，确保客户端侧资源重载也能装载 Mod Jar 内置的 `data/wandscape/buildings/*.json` 兜底配置。
+  2) 新建 `BuildingConfigSyncPacket` 网络包并在 `OnDatapackSyncEvent` 阶段广播，专用服务器（Dedicated Server）在玩家进服或数据包 reload 时自动把最新 `BuildingConfig` 同步下发给客户端，解决多人联机下客户端报 `Config not found for slot` 以及【建造模式无法使用】的问题。
+- **重构殖民地建立与初始法师生成流程 (Colony Founding & Initial Mage Fix)**：
+  1) 移除 `PanelStateTogglePacket` 中玩家按 V 键时静默、偷摸自动建殖民地的隐藏逻辑，消除静默自动创建引发的法师生成失败死锁以及对【殖民地命名弹窗】的无限锁死拦截。
+  2) 调整 `BuildingApiImpl.placeBuilding` 逻辑，支持未绑定 `colonyId` 时的首免费（`firstFree`）市政厅放置。
+  3) 恢复放置/右键市政厅时的正规【创建殖民地】客户端命名弹窗；玩家确认提交名称后正规建立殖民地，并在市政厅前举行诞生烟花广播与刷出第 1 名带法杖及首批施工建材的初始法师（适用于单人与多人 Dedicated Server 专用服务器）。
+
+**为什么**：NeoForge/FML 对物理侧和 `@Mod` 入口有严格规定，重复标注客户端 `@Mod` 破坏了服务器端网络握手的模组列表匹配逻辑；通过逻辑判定 (`FMLEnvironment.dist`) + 显式 `modEventBus.register`，既保留了模组在客户端的全部视觉 UI 逻辑，又恢复了在 Dedicated Server 下的标准双侧注册与正常联机。
+
 ## 2026-08-10：游客闲逛约束到道路——目标 = custom_roads 标签方块 + 沿路漂移 + 硬上限
 
 **需求**（用户实测）：游客闲逛目标 = 锚点附近**随机地面点**，锚点每走出半径一半就整体漂移且无上限，时间一长游客越逛越远、在野外乱走。用户要求「闲逛要在道路上面闲逛，不能乱逛」。

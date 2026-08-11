@@ -169,17 +169,23 @@ public final class WandscapePanelController {
         double mouseX = mc.mouseHandler.xpos() / guiScale;
         double mouseY = mc.mouseHandler.ypos() / guiScale;
 
-        // ── Guidance close (×) button — dismiss "Getting Started" guide ──
+        // ── Guidance buttons handling (close × / collapse ➖ / expand ➕) ──
         if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
             boolean buildMode = WandscapePanelState.getActiveSubMode() == WandscapePanelState.SubMode.BUILD_PROJECTION;
             boolean isPlacing = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.PLACING;
             boolean isBar = WandscapePanelState.getBuildPhase() == WandscapePanelState.BuildPhase.BAR;
+            boolean isPinned = com.wsteam.wandscape.projection.client.ProjectionClientState.isPinned();
+            var step = com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
+                    com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep());
             if (com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.isCloseClicked(mc.font, mouseX, mouseY,
-                    screenW, WandscapePanelOverlay.TOP_BAR_H,
-                    com.wsteam.wandscape.shared.ui.guidance.GuideRegistry.step(
-                            com.wsteam.wandscape.shared.ui.guidance.GuideSession.currentStep()),
-                    buildMode, isPlacing, isBar)) {
+                    screenW, screenH, step, buildMode, isPlacing, isBar, isPinned)) {
                 com.wsteam.wandscape.shared.ui.guidance.GuideSession.dismiss();
+                event.setCanceled(true);
+                return;
+            }
+            if (com.wsteam.wandscape.shared.ui.guidance.GuideRenderer.isCollapseClicked(mc.font, mouseX, mouseY,
+                    screenW, screenH, step, buildMode, isPlacing, isBar, isPinned)) {
+                com.wsteam.wandscape.shared.ui.guidance.GuideSession.toggleCollapsed();
                 event.setCanceled(true);
                 return;
             }

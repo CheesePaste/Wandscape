@@ -143,13 +143,14 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -158,6 +159,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -295,48 +297,28 @@ public class Wandscape {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
 
-    // Forward reference: wired in each scanner BE's supplier below
-    private static Supplier<BlockEntityType<CreativeScannerBlockEntity>> creativeScannerBeTypeRef = () -> {
-        Log.warn(TAG, "creativeScannerBeTypeRef called before initialization — falling back to registry lookup");
-        var rl = ResourceLocation.fromNamespaceAndPath(MODID, "creative_building_scanner");
-        var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
-        return (BlockEntityType<CreativeScannerBlockEntity>) reg.get(rl);
-    };
-    private static Supplier<BlockEntityType<ScannerBlockEntity>> survivalScannerBeTypeRef = () -> {
-        Log.warn(TAG, "survivalScannerBeTypeRef called before initialization — falling back to registry lookup");
-        var rl = ResourceLocation.fromNamespaceAndPath(MODID, "building_scanner");
-        var reg = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE;
-        return (BlockEntityType<ScannerBlockEntity>) reg.get(rl);
-    };
-
     public static final DeferredHolder<Block, Block> CREATIVE_BUILDING_SCANNER = BLOCKS.register("creative_building_scanner",
             () -> (Block) new CreativeScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
-                    creativeScannerBeTypeRef));
+                    Wandscape.CREATIVE_BUILDING_SCANNER_BE::get));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeScannerBlockEntity>> CREATIVE_BUILDING_SCANNER_BE =
             BLOCK_ENTITY_TYPES.register("creative_building_scanner",
-                    () -> {
-                        BlockEntityType<CreativeScannerBlockEntity> type = BlockEntityType.Builder.of(
-                                (pos, state) -> new CreativeScannerBlockEntity(creativeScannerBeTypeRef.get(), pos, state),
-                                CREATIVE_BUILDING_SCANNER.get()).build(null);
-                        creativeScannerBeTypeRef = () -> type;
-                        return type;
-                    });
+                    () -> BlockEntityType.Builder.of(
+                            CreativeScannerBlockEntity::new,
+                            CREATIVE_BUILDING_SCANNER.get()).build(null));
 
     public static final DeferredItem<Item> CREATIVE_BUILDING_SCANNER_ITEM =
             ITEMS.register("creative_building_scanner", () -> new BlockItem(CREATIVE_BUILDING_SCANNER.get(), new Item.Properties()));
 
     public static final DeferredHolder<Block, Block> BUILDING_SCANNER = BLOCKS.register("building_scanner",
             () -> (Block) new ScannerBlock(BlockBehaviour.Properties.of().strength(2.0f).noOcclusion(),
-                    survivalScannerBeTypeRef));
+                    Wandscape.BUILDING_SCANNER_BE::get));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ScannerBlockEntity>> BUILDING_SCANNER_BE =
             BLOCK_ENTITY_TYPES.register("building_scanner",
-                    () -> {
-                        BlockEntityType<ScannerBlockEntity> type = BlockEntityType.Builder.of(
-                                (pos, state) -> new ScannerBlockEntity(survivalScannerBeTypeRef.get(), pos, state),
-                                BUILDING_SCANNER.get()).build(null);
-                        survivalScannerBeTypeRef = () -> type;
-                        return type;
-                    });
+                    () -> BlockEntityType.Builder.of(
+                            ScannerBlockEntity::new,
+                            BUILDING_SCANNER.get()).build(null));
 
     public static final DeferredItem<Item> BUILDING_SCANNER_ITEM =
             ITEMS.register("building_scanner", () -> new BlockItem(BUILDING_SCANNER.get(), new Item.Properties()));
@@ -432,6 +414,10 @@ public class Wandscape {
 
         // Production recipe loader
         PRODUCTION_RECIPE_LOADER = new ProductionRecipeLoader(DATA_LOADER, ELEMENT_MAPPING_LOADER);
+
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            WandscapeClient.init(modEventBus, modContainer);
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -463,6 +449,10 @@ public class Wandscape {
                         ShopOpenPacket.TYPE,
                         ShopOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> ShopOpenPacket.handleClient(packet))
+                .playToClient(
+                        com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.TYPE,
+                        com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.handleClient(packet))
                 .playToServer(
                         ShopMaxStockPacket.TYPE,
                         ShopMaxStockPacket.STREAM_CODEC,
@@ -865,7 +855,6 @@ public class Wandscape {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         var dispatcher = event.getDispatcher();
         var root = Commands.literal("wandscape")
-                .requires(src -> src.hasPermission(2))
                 .then(GenerateElementMappingsCommand.node())
                 .then(AuditElementsCommand.node())
                 .then(LogFilterCommand.node())
@@ -966,5 +955,21 @@ public class Wandscape {
                     world.taskPool != null ? world.taskPool.size() : 0,
                     world.hasPendingAsyncOps() ? 1 : 0);
         }
+    }
+
+    @SubscribeEvent
+    public void onDatapackSync(net.neoforged.neoforge.event.OnDatapackSyncEvent event) {
+        var rawJsons = configLoader.getRawJsons();
+        java.util.List<String> jsonList = new java.util.ArrayList<>();
+        for (var json : rawJsons.values()) {
+            jsonList.add(json.toString());
+        }
+        var packet = new com.wsteam.wandscape.building.network.BuildingConfigSyncPacket(jsonList);
+        if (event.getPlayer() != null) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(event.getPlayer(), packet);
+        } else {
+            net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(packet);
+        }
+        Log.info(TAG, "Synced {} building configs on DatapackSync", jsonList.size());
     }
 }

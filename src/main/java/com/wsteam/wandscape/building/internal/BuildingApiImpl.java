@@ -660,16 +660,15 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingSavedData sd = getSavedData();
 
         boolean firstFree = config.firstFree()
-                && colonyId != null
                 && sd != null
-                && !sd.isFirstFreeClaimed(colonyId, buildingTypeId);
+                && (colonyId == null || !sd.isFirstFreeClaimed(colonyId, buildingTypeId));
 
         WorkItem workItem = EnqueueHelper.buildWorkItem(
                 config, anchor, buildingTypeId, 0,
                 sd, buildingId, rotationSteps,
                 firstFree);
 
-        if (firstFree && sd != null) {
+        if (firstFree && sd != null && colonyId != null) {
             sd.claimFirstFree(colonyId, buildingTypeId);
         }
 

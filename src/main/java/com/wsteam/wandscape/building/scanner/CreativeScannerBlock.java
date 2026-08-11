@@ -4,9 +4,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.wsteam.wandscape.building.scanner.client.CreativeScannerScreen;
+import com.wsteam.wandscape.building.scanner.client.ScannerClientHelper;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -57,7 +56,7 @@ public class CreativeScannerBlock extends Block implements EntityBlock {
         if (level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof CreativeScannerBlockEntity scanner) {
-                Minecraft.getInstance().setScreen(new CreativeScannerScreen(scanner));
+                ScannerClientHelper.openCreativeScanner(scanner);
             }
         }
         return InteractionResult.SUCCESS;

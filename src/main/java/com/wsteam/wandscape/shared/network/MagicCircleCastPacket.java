@@ -1,11 +1,8 @@
 package com.wsteam.wandscape.shared.network;
 
 import java.util.UUID;
+import java.util.function.Consumer;
 
-import com.wsteam.wandscape.magic.client.MagicCircleEmitter;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -14,14 +11,6 @@ import net.minecraft.world.phys.Vec3;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
-/**
- * 服务端→客户端：通知客户端开始渲染一座魔法阵。
- *
- * @param effectId 本次施放唯一 id（emitter 用它管理生命周期）
- * @param pos      法阵中心世界坐标
- * @param axis     法阵平面法线（法杖朝向），覆盖 spec 元素 axis，使法阵垂直于法杖
- * @param circleId 魔法阵 spec id（data/wandscape/magic_circles/）
- */
 public record MagicCircleCastPacket(UUID effectId, Vec3 pos, Vec3 axis, String circleId)
         implements CustomPacketPayload {
 
@@ -31,16 +20,16 @@ public record MagicCircleCastPacket(UUID effectId, Vec3 pos, Vec3 axis, String c
     public static final StreamCodec<RegistryFriendlyByteBuf, MagicCircleCastPacket> STREAM_CODEC =
             StreamCodec.of(MagicCircleCastPacket::write, MagicCircleCastPacket::read);
 
+    private static Consumer<MagicCircleCastPacket> clientHandler = packet -> {};
+    public static void setClientHandler(Consumer<MagicCircleCastPacket> handler) { clientHandler = handler; }
+
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 
     public static void handleClient(MagicCircleCastPacket packet) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level instanceof ClientLevel cl) {
-            MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId());
-        }
+        clientHandler.accept(packet);
     }
 
     static void write(RegistryFriendlyByteBuf buf, MagicCircleCastPacket pkt) {

@@ -32,6 +32,7 @@ public final class BuildingConfigLoader {
     private static BuildingConfigLoader INSTANCE;
 
     private final Map<String, BuildingConfig> configs = new ConcurrentHashMap<>();
+    private final Map<String, JsonElement> rawJsons = new ConcurrentHashMap<>();
 
     private BuildingConfigLoader() {}
 
@@ -40,6 +41,21 @@ public final class BuildingConfigLoader {
             INSTANCE = new BuildingConfigLoader();
         }
         return INSTANCE;
+    }
+
+    /** All raw JSON elements for server-to-client network sync. */
+    public Map<String, JsonElement> getRawJsons() {
+        return Map.copyOf(rawJsons);
+    }
+
+    /** Register a building config from JSON string at runtime. */
+    public void registerFromJsonString(String jsonStr) {
+        try {
+            JsonElement json = com.google.gson.JsonParser.parseString(jsonStr);
+            registerFromJson(json);
+        } catch (Exception e) {
+            Log.warn(TAG, "Failed to register config from JSON string: {}", e.getMessage());
+        }
     }
 
     /**
@@ -99,6 +115,7 @@ public final class BuildingConfigLoader {
             return null;
         }
         configs.put(config.id(), config);
+        rawJsons.put(config.id(), json);
         Log.info(TAG, "loaded BuildingConfig: {} (category={}, blocks={})", config.id(), config.category(), config.pattern().size());
         return config;
     }

@@ -50,11 +50,8 @@ public final class SoundService {
     }
 
     /** 客户端 UI 音效（走主音量通道，无空间衰减）。只应在客户端调用。 */
-    @OnlyIn(Dist.CLIENT)
     public static void playUI(DeferredHolder<SoundEvent, SoundEvent> sound, float pitch) {
-        if (sound == null || !sound.isBound()) return;
-        net.minecraft.client.Minecraft.getInstance().getSoundManager()
-                .play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(sound.get(), pitch));
+        com.wsteam.wandscape.engine.service.client.ClientSoundHelper.playUI(sound, pitch);
     }
 
     /** 带节流的播放：同一音效在 minIntervalTicks 内只播一次，防止高频 tick 刷屏。 */
