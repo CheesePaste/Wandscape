@@ -14,6 +14,7 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
@@ -38,6 +39,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+
+import org.joml.Vector3f;
 
 @EventBusSubscriber(modid = Wandscape.MODID)
 public final class MagicEventHandler {
@@ -71,7 +74,7 @@ public final class MagicEventHandler {
         METEORS.add(tracker);
     }
 
-    /** 注册陨石落地冲击波：一圈一圈向外扩散的发光环（GLOW + END_ROD）。 */
+    /** 注册陨石落地冲击波：一圈一圈向外扩散的红色发光环。 */
     public static synchronized void addShockwave(ServerLevel level, Vec3 center, double maxRadius) {
         SHOCKWAVES.add(new Shockwave(level, center, maxRadius, SHOCKWAVE_TICKS, SHOCKWAVE_TICKS));
     }
@@ -164,15 +167,17 @@ public final class MagicEventHandler {
                 entity.discard();
                 it.remove();
 
-                // 发光冲击波：一圈圈向外扩散的 GLOW + END_ROD 发光环
+                // 发光冲击波：一圈圈向外扩散的红色发光环
                 addShockwave(level, impactPos, meteor.radius());
             }
         }
     }
 
-    // ── 陨石冲击波：一圈一圈向外扩散的发光冲击环（GLOW + END_ROD） ──
+    // ── 陨石冲击波：一圈一圈向外扩散的红色发光冲击环 ──
 
     private static final int SHOCKWAVE_TICKS = 12; // 扩散持续时间（tick）
+    private static final ParticleOptions METEOR_SHOCKWAVE_PARTICLE =
+            new DustParticleOptions(new Vector3f(1.0f, 0.2f, 0.1f), 1.0f);
 
     private static synchronized void tickShockwaves() {
         if (SHOCKWAVES.isEmpty()) return;
@@ -190,7 +195,7 @@ public final class MagicEventHandler {
         }
     }
 
-    /** 在半径 radius 处生成一圈发光粒子；半径增大时加密粒子，首帧附加中心上升爆闪。 */
+    /** 在半径 radius 处生成一圈红色发光粒子；半径增大时加密粒子，首帧附加中心上升爆闪。 */
     private static void spawnShockwaveRing(ServerLevel level, Vec3 center, double radius) {
         double y = center.y + 0.15;
         int count = Math.max(16, (int) Math.round(radius * 8.0));
@@ -198,11 +203,10 @@ public final class MagicEventHandler {
             double angle = 2.0 * Math.PI * i / count;
             double x = center.x + Math.cos(angle) * radius;
             double z = center.z + Math.sin(angle) * radius;
-            ParticleOptions particle = (i % 3 == 0) ? ParticleTypes.END_ROD : ParticleTypes.GLOW;
-            level.sendParticles(particle, x, y, z, 1, 0.15, 0.0, 0.15, 0.0);
+            level.sendParticles(METEOR_SHOCKWAVE_PARTICLE, x, y, z, 1, 0.15, 0.0, 0.15, 0.0);
         }
         if (radius < 0.4) {
-            level.sendParticles(ParticleTypes.END_ROD, center.x, center.y + 0.3, center.z,
+            level.sendParticles(METEOR_SHOCKWAVE_PARTICLE, center.x, center.y + 0.3, center.z,
                     16, 0.5, 0.8, 0.5, 0.06);
         }
     }
