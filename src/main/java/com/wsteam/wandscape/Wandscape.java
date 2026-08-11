@@ -594,6 +594,11 @@ public class Wandscape {
                         (packet, ctx) -> ScannerExportPacket.handleServer(packet,
                                 (ServerPlayer) ctx.player()))
                 .playToServer(
+                        com.wsteam.wandscape.building.scanner.network.ScannerValuePacket.TYPE,
+                        com.wsteam.wandscape.building.scanner.network.ScannerValuePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.building.scanner.network.ScannerValuePacket.handleServer(packet,
+                                (ServerPlayer) ctx.player()))
+                .playToServer(
                         com.wsteam.wandscape.road.network.SplineBuildPacket.TYPE,
                         com.wsteam.wandscape.road.network.SplineBuildPacket.STREAM_CODEC,
                         (packet, ctx) -> com.wsteam.wandscape.road.network.SplineBuildPacket.handleServer(packet, (ServerPlayer) ctx.player()))

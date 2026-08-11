@@ -33,7 +33,7 @@
 
 - **创造建筑扫描器**（`creative_building_scanner`，原名 `building_scanner` 改名而来）：完整创作者工具，Type 可选全部类别（含 `custom`），支持 SAVE/CORNER 配对、四类游客模式预设编辑（shop/service/relax/atm）、维护费/三值/节点配置、预设、ROAD 导出。**交互位唯一真源 = world 里的 `interact_spot_marker` 方块**（放置=标记 spot、右键循环动作、潜行右键移除，action 存 blockstate），BE 不存 spot 列表；导出扫 boundary 内 marker → `interact_spots`（marker 格跳过 pattern，创作者自行留空）。
 - **建筑扫描器**（`building_scanner`）：简化版，专供生存玩家复制自己的建筑供 NPC 重建。类别锁定 `custom`（不可修改，导出无维护费/交互区，三值恒0），GUI 仅尺寸/门偏移/ID/Name/导出 + ROAD 模式。方块可合成（金锭×4 + 紫水晶碎片×4 + 工作台）。
-- 两者共用 `ScannerExportPacket`（导出到 datapack 并热注册）与 `ScannerSyncPacket`；渲染共用 `ScannerRenderer`。
+- 两者共用 `ScannerExportPacket`（导出到 datapack 并热注册）、`ScannerSyncPacket` 与 `ScannerValuePacket`（服务端算 boundary 内元素价值并打到聊天区）；渲染共用 `ScannerRenderer`。
 
 ### 模拟经营系统
 

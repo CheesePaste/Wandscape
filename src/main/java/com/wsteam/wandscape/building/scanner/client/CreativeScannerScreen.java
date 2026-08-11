@@ -11,6 +11,7 @@ import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity;
 import com.wsteam.wandscape.building.scanner.CreativeScannerBlockEntity.ShopGoodData;
 import com.wsteam.wandscape.building.scanner.network.ScannerExportPacket;
 import com.wsteam.wandscape.building.scanner.network.ScannerSyncPacket;
+import com.wsteam.wandscape.building.scanner.network.ScannerValuePacket;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
@@ -564,6 +565,7 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         addCustomButton(lx + 4, exportBtnY, 95, 22, "扫描区域", () -> doScan());
         addCustomButton(lx + 105, exportBtnY, 215, 22, "导出建筑 JSON", () -> doExport());
+        addCustomButton(lx + 4, exportBtnY + 26, 170, 22, "计算区域价值", () -> doValue());
 
         int bottom = exportBtnY + 60;
         int visibleBottom = Math.min(topPos + PH - 6, height - 12);
@@ -891,6 +893,17 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
         PacketDistributor.sendToServer(new ScannerExportPacket(scanner.getBlockPos()));
         scanResult = Component.literal("已发起导出: " + id);
+    }
+
+    private void doValue() {
+        BlockPos wMin = scanner.getWorldMin();
+        BlockPos wMax = scanner.getWorldMax();
+        if (wMin == null || wMax == null) {
+            scanResult = Component.literal("未定义 3D 边界");
+            return;
+        }
+        PacketDistributor.sendToServer(new ScannerValuePacket(scanner.getBlockPos()));
+        scanResult = Component.literal("已发起价值计算，结果见聊天区");
     }
 
     private void syncToServer() {
