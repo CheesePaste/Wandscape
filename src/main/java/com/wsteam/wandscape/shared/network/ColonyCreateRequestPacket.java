@@ -90,13 +90,12 @@ public record ColonyCreateRequestPacket(BlockPos townHallAnchor, String name)
     }
 
     private static void linkTownHall(ColonyApi colonyApi, BlockPos anchor, UUID colonyId) {
-        // onBuildingIntact links an intact town hall to an existing colony
-        // (origin match). If the building is still under construction it will
-        // be linked automatically when it becomes intact later.
         var buildingApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getBuildingApi();
         if (buildingApi == null) return;
         var building = buildingApi.getBuildingAt(anchor);
-        if (building != null) {
+        if (building instanceof com.wsteam.wandscape.building.internal.BuildingState state) {
+            state.setColonyId(colonyId);
+            colonyApi.assignColonyIfPossible(building);
             colonyApi.onBuildingIntact(building);
         }
     }
