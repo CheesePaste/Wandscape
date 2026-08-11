@@ -14,6 +14,7 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -49,8 +50,12 @@ public final class MagicEventHandler {
     public record MeteorTracker(ServerLevel level, FallingBlockEntity entity,
                                 WandscapeNpc caster, double targetY, float damage, double radius) {}
 
+    public record Shockwave(ServerLevel level, Vec3 center, double maxRadius,
+                            int totalTicks, int remaining) {}
+
     private static final List<HealAura> HEAL_AURAS = new ArrayList<>();
     private static final List<MeteorTracker> METEORS = new ArrayList<>();
+    private static final List<Shockwave> SHOCKWAVES = new ArrayList<>();
 
     // ── 感化 ──
     // 受感化影响的生物 UUID → 到期 tick，用于 ServerTick 每 0.5s 重定向攻击目标。
@@ -66,6 +71,11 @@ public final class MagicEventHandler {
         METEORS.add(tracker);
     }
 
+    /** 注册陨石落地冲击波：一圈一圈向外扩散的发光环（GLOW + END_ROD）。 */
+    public static synchronized void addShockwave(ServerLevel level, Vec3 center, double maxRadius) {
+        SHOCKWAVES.add(new Shockwave(level, center, maxRadius, SHOCKWAVE_TICKS, SHOCKWAVE_TICKS));
+    }
+
     /** 注册一个被感化的实体（由 MagicSpellExecutors 在施放时调用）。 */
     public static synchronized void addConversion(LivingEntity entity, int durationTicks) {
         CONVERSIONS.put(entity.getUUID(),
@@ -77,6 +87,7 @@ public final class MagicEventHandler {
     public static void onServerTick(ServerTickEvent.Post event) {
         tickHealAuras();
         tickMeteors();
+        tickShockwaves();
         tickConversions();
     }
 
@@ -152,7 +163,47 @@ public final class MagicEventHandler {
                 // 移除陨石实体，不上方块
                 entity.discard();
                 it.remove();
+
+                // 发光冲击波：一圈圈向外扩散的 GLOW + END_ROD 发光环
+                addShockwave(level, impactPos, meteor.radius());
             }
+        }
+    }
+
+    // ── 陨石冲击波：一圈一圈向外扩散的发光冲击环（GLOW + END_ROD） ──
+
+    private static final int SHOCKWAVE_TICKS = 12; // 扩散持续时间（tick）
+
+    private static synchronized void tickShockwaves() {
+        if (SHOCKWAVES.isEmpty()) return;
+        for (int i = 0; i < SHOCKWAVES.size(); i++) {
+            Shockwave sw = SHOCKWAVES.get(i);
+            double progress = 1.0 - (double) sw.remaining() / sw.totalTicks();
+            spawnShockwaveRing(sw.level(), sw.center(), sw.maxRadius() * progress);
+            if (sw.remaining() <= 1) {
+                SHOCKWAVES.remove(i);
+                i--;
+            } else {
+                SHOCKWAVES.set(i, new Shockwave(sw.level(), sw.center(), sw.maxRadius(),
+                        sw.totalTicks(), sw.remaining() - 1));
+            }
+        }
+    }
+
+    /** 在半径 radius 处生成一圈发光粒子；半径增大时加密粒子，首帧附加中心上升爆闪。 */
+    private static void spawnShockwaveRing(ServerLevel level, Vec3 center, double radius) {
+        double y = center.y + 0.15;
+        int count = Math.max(16, (int) Math.round(radius * 8.0));
+        for (int i = 0; i < count; i++) {
+            double angle = 2.0 * Math.PI * i / count;
+            double x = center.x + Math.cos(angle) * radius;
+            double z = center.z + Math.sin(angle) * radius;
+            ParticleOptions particle = (i % 3 == 0) ? ParticleTypes.END_ROD : ParticleTypes.GLOW;
+            level.sendParticles(particle, x, y, z, 1, 0.15, 0.0, 0.15, 0.0);
+        }
+        if (radius < 0.4) {
+            level.sendParticles(ParticleTypes.END_ROD, center.x, center.y + 0.3, center.z,
+                    16, 0.5, 0.8, 0.5, 0.06);
         }
     }
 
