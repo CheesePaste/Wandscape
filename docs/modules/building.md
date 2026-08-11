@@ -73,7 +73,7 @@ wonder 类且完整非关停生效；三种效果：`StatMod(target,value)` / `P
 
 ## 交互界面（BuildingInteractHandler）
 
-`handleInteraction` 按类别分发：government 无殖民地 → ColonyCreatePromptPacket；government 有殖民地 → TownHallOpenPacket（等级/经验/创建者名）；service(maxOccupancy>0) → HotelOpenPacket；storage → WarehouseDataPacket；workstation → WorkstationDataPacket；crafting_station → CraftingStationPacket；node → NodeDataPacket；shop → ensureStockInitialized + ShopOpenPacket；tavern → TavernOpenPacket（法师简历）；potion_station → "未实现"提示。触发限定 `PanelStateTracker.isPanelOpen`，先精确方块命中再 AABB 回退。屏幕均为 MedievalScreen 子类，靠收包打开。
+`handleInteraction` 按类别分发：government 无殖民地 → ColonyCreatePromptPacket；government 有殖民地 → TownHallOpenPacket（等级/经验/创建者名）；service(maxOccupancy>0) → HotelOpenPacket；storage → WarehouseDataPacket；workstation → WorkstationDataPacket；crafting_station → CraftingStationPacket；node → NodeDataPacket；shop → ensureStockInitialized + ShopOpenPacket；tavern → TavernOpenPacket（法师简历）；potion_station → "未实现"提示；service(非旅馆)/relax/decoration/atm → BuildingInfoPacket（通用信息面板 BuildingInfoScreen：service 显示产出元素 icon+数量、消耗精力/时间，relax 显示回复精力/时间，decoration/atm 一句话介绍，底部显示制作者）。触发限定 `PanelStateTracker.isPanelOpen`，先精确方块命中再 AABB 回退。屏幕均为 MedievalScreen 子类，靠收包打开。
 
 ## 扫描器（scanner/）
 

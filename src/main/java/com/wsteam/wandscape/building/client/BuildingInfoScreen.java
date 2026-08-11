@@ -16,7 +16,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.FormattedCharSequence;
 /**
  * Generic right-click info panel for tourist-building categories without a
  * dedicated screen (service non-hotel / relax / decoration / atm). Panel size
@@ -82,21 +82,14 @@ public class BuildingInfoScreen extends MedievalScreen {
         }
     }
 
-    private void renderService(GuiGraphics g,  Font font, int x, int y) {
+    private void renderService(GuiGraphics g, Font font, int x, int y) {
         g.drawString(font, i18n("gui.wandscape.info.element_output", "Element Output"),
                 x, y, MedievalColors.ACCENT_GOLD);
         y += 12;
 
-        for (var entry : elementOutput.entrySet()) {
-            ElementType type;
-            try {
-                type = ElementType.fromId(entry.getKey());
-            } catch (IllegalArgumentException ex) {
-                Log.warn(TAG, "Unknown element '{}' in service {} output", entry.getKey(), buildingTypeId);
-                continue;
-            }
-            int amount = entry.getValue();
-            if (amount <= 0) continue;
+        for (ElementType type : ElementType.values()) {
+            Integer amount = elementOutput.get(type.getId());
+            if (amount == null || amount <= 0) continue;
 
             // Same element icon texture + tint as the warehouse panel
             WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(type.getId()),
@@ -122,7 +115,7 @@ public class BuildingInfoScreen extends MedievalScreen {
                 formatDuration(interactionDurationTicks));
     }
 
-    private void renderRelax(GuiGraphics g,  Font font, int x, int y) {
+    private void renderRelax(GuiGraphics g, Font font, int x, int y) {
         drawInfoLine(g, font, x, y, i18n("gui.wandscape.info.energy_restore", "Energy Restore"),
                 String.valueOf(energyRestore));
         y += 12;
@@ -130,17 +123,17 @@ public class BuildingInfoScreen extends MedievalScreen {
                 formatDuration(interactionDurationTicks));
     }
 
-    private void renderIntro(GuiGraphics g,  Font font, int x, int y, String key) {
+    private void renderIntro(GuiGraphics g, Font font, int x, int y, String key) {
         String text = I18n.name(key, "").getString();
-        List<FormattedText> lines = font.split(Component.literal(text), PW - 32);
-        for (FormattedText line : lines) {
-            g.drawString(font, line.getString(), x, y, MedievalColors.TEXT_WARM_WHITE);
+        List<FormattedCharSequence> lines = font.split(Component.literal(text), PW - 32);
+        for (FormattedCharSequence line : lines) {
+            g.drawString(font, line, x, y, MedievalColors.TEXT_WARM_WHITE);
             y += 12;
             if (y > topPos + PH - 40) break;
         }
     }
 
-    private void drawInfoLine(GuiGraphics g,  Font font, int x, int y, String label, String value) {
+    private void drawInfoLine(GuiGraphics g, Font font, int x, int y, String label, String value) {
         g.drawString(font, label, x, y, MedievalColors.TEXT_WARM_WHITE);
         g.drawString(font, value, x + 140, y, MedievalColors.TEXT_MUTED);
     }

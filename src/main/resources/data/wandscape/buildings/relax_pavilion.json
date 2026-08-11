@@ -1,0 +1,94 @@
+{
+  "id": "relax_pavilion",
+  "display_name": "歇脚亭",
+  "creator": "Wandscape",
+  "category": "relax",
+  "first_free": true,
+  "pattern": [
+    [-1, 0, -1],
+    [0, 0, -1],
+    [1, 0, -1],
+    [-1, 0, 0],
+    [1, 0, 0],
+    [-1, 0, 1],
+    [0, 0, 1],
+    [1, 0, 1],
+    [-1, 1, -1],
+    [1, 1, -1],
+    [-1, 1, 1],
+    [1, 1, 1],
+    [0, 1, 1],
+    [-1, 1, 0],
+    [1, 1, 0],
+    [-1, 2, -1],
+    [0, 2, -1],
+    [1, 2, -1],
+    [-1, 2, 0],
+    [0, 2, 0],
+    [1, 2, 0],
+    [-1, 2, 1],
+    [0, 2, 1],
+    [1, 2, 1]
+  ],
+  "block_mapping": {
+    "-1,0,-1": "minecraft:stone_bricks",
+    "0,0,-1": "minecraft:stone_bricks",
+    "1,0,-1": "minecraft:stone_bricks",
+    "-1,0,0": "minecraft:stone_bricks",
+    "1,0,0": "minecraft:stone_bricks",
+    "-1,0,1": "minecraft:stone_bricks",
+    "0,0,1": "minecraft:stone_bricks",
+    "1,0,1": "minecraft:stone_bricks",
+    "-1,1,-1": "minecraft:oak_log",
+    "1,1,-1": "minecraft:oak_log",
+    "-1,1,1": "minecraft:oak_log",
+    "1,1,1": "minecraft:oak_log",
+    "0,1,1": "minecraft:oak_planks",
+    "-1,1,0": "minecraft:oak_planks",
+    "1,1,0": "minecraft:oak_planks",
+    "-1,2,-1": "minecraft:oak_planks",
+    "0,2,-1": "minecraft:oak_planks",
+    "1,2,-1": "minecraft:oak_planks",
+    "-1,2,0": "minecraft:oak_planks",
+    "0,2,0": "minecraft:oak_planks",
+    "1,2,0": "minecraft:oak_planks",
+    "-1,2,1": "minecraft:oak_planks",
+    "0,2,1": "minecraft:oak_planks",
+    "1,2,1": "minecraft:oak_planks"
+  },
+  "comfort": 5,
+  "magic": 2,
+  "wonder": 2,
+
+  "queue": {
+    "capacity": 0,
+    "task_types": []
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [-1, 0, -1],
+    "max": [1, 2, 1]
+  },
+  "door_offset": [0, 0, -1],
+  "relax": {
+    "energy_restore": 35,
+    "interaction_duration_ticks": 600
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "name": "$display_name"
+    }
+  },
+  "interact_spots": [
+    {
+      "pos": [0, 0, 0],
+      "action": "rest",
+      "facing": "south"
+    }
+  ]
+}
