@@ -646,6 +646,12 @@ public class BuildingApiImpl implements BuildingApi {
             return PlacementResult.fail("Unknown building type: " + buildingTypeId);
         }
 
+        UUID tempColonyId = com.wsteam.wandscape.engine.ColonyApiImpl.get().getColonyId(anchor);
+        if (!BuildingUnlockChecker.isUnlocked(tempColonyId, config)) {
+            String reason = BuildingUnlockChecker.getLockReason(tempColonyId, config);
+            return PlacementResult.fail(reason != null ? reason : "Building is locked");
+        }
+
         // Register (overlap check happens inside → BuildingSavedData.register).
         // The anchor is a reference point only (may sit outside the building's own
         // boundary, e.g. scanner placed in front), so use the returned state

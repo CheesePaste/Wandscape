@@ -25,27 +25,40 @@ public final class BuildingUnlockChecker {
      */
     public static boolean isUnlocked(@Nullable UUID colonyId, BuildingConfig config) {
         if (config == null) return false;
+
+        boolean isGovernment = "government".equals(config.category()) || config.firstFree();
+        if (colonyId == null) {
+            return isGovernment;
+        }
+
+        if (isGovernment) return true;
         BuildingConfig.UnlockRequirement req = config.unlockRequirement();
         if (req == BuildingConfig.UnlockRequirement.NONE) return true;
-        if ("government".equals(config.category()) || config.firstFree()) return true;
 
         var levelMgr = WandscapeEngine.getColonyLevelManager();
-        int currentLevel = (colonyId != null && levelMgr != null) ? levelMgr.getLevel(colonyId) : 1;
+        int currentLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
         return currentLevel >= req.minColonyLevel();
     }
 
     @Nullable
     public static String getLockReason(@Nullable UUID colonyId, BuildingConfig config) {
         if (config == null) return "Invalid building config";
+
+        boolean isGovernment = "government".equals(config.category()) || config.firstFree();
+        if (colonyId == null) {
+            if (isGovernment) return null;
+            return "需要先建造市政厅建立殖民地";
+        }
+
+        if (isGovernment) return null;
         BuildingConfig.UnlockRequirement req = config.unlockRequirement();
         if (req == BuildingConfig.UnlockRequirement.NONE) return null;
-        if ("government".equals(config.category()) || config.firstFree()) return null;
 
         var levelMgr = WandscapeEngine.getColonyLevelManager();
-        int currentLevel = (colonyId != null && levelMgr != null) ? levelMgr.getLevel(colonyId) : 1;
+        int currentLevel = levelMgr != null ? levelMgr.getLevel(colonyId) : 1;
         int required = req.minColonyLevel();
         if (currentLevel < required) {
-            return "Requires colony level %d (current: %d)".formatted(required, currentLevel);
+            return "需要殖民地等级 %d (当前: %d)".formatted(required, currentLevel);
         }
         return null;
     }
