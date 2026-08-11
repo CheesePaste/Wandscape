@@ -1,0 +1,15 @@
+{
+  "id": "conversion",
+  "category": "single_target",
+  "mana_cost": 30,
+  "base_cooldown": 900,
+  "range": 16,
+  "target_mode": "hostile_nearest",
+  "conditions": {
+    "min_enemies": 1
+  },
+  "effect": {
+    "circle_id": "conversion",
+    "color": "#f472b6"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "id": "desperation",
+  "duration_ticks": 15,
+  "height": 0.08,
+  "elements": [
+    {
+      "type": "ring",
+      "radius": 3.5,
+      "particle": "glow",
+      "color": "#dc2626",
+      "mode": "beads",
+      "density": 1.6,
+      "rotate_speed": -30,
+      "start": 0.0,
+      "anim": {
+        "scale": [[0, 0.8], [0.3, 1.1], [1, 0.9]],
+        "alpha": [[0, 0], [0.15, 1], [0.8, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 2.2,
+      "particle": "glow",
+      "color": "#ef4444",
+      "mode": "beads",
+      "density": 1.5,
+      "rotate_speed": 22,
+      "start": 0.06,
+      "anim": {
+        "scale": [[0, 0], [0.3, 1.05], [1, 0.85]],
+        "alpha": [[0, 0], [0.12, 1], [0.8, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "star",
+      "radius": 1.5,
+      "points": 5,
+      "inner_ratio": 0.6,
+      "particle": "glow",
+      "color": "#dc2626",
+      "mode": "beads",
+      "density": 1.8,
+      "rotate_speed": -18,
+      "start": 0.12,
+      "anim": {
+        "scale": [[0, 0], [0.3, 1.1], [1, 0.9]],
+        "alpha": [[0, 0], [0.1, 1], [0.78, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 0.3,
+      "particle": "glow",
+      "color": "#fca5a5",
+      "mode": "beads",
+      "density": 2.5,
+      "rotate_speed": 30,
+      "start": 0.18,
+      "anim": {
+        "scale": [[0, 0], [0.3, 1.2], [1, 1.0]],
+        "alpha": [[0, 0], [0.08, 1], [0.75, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    }
+  ]
+}

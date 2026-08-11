@@ -58,6 +58,8 @@ public final class MagicSpellExecutors {
             case "petrification" -> castPetrification(level, npc, def, effCircle);
             case "enfeeble_field" -> castEnfeebleField(level, npc, def, effCircle);
             case "fortification" -> castFortification(level, npc, def, effCircle);
+            case "conversion" -> castConversion(level, npc, target, def, effCircle);
+            case "desperation" -> castDesperation(level, npc, def, effCircle);
             default -> {
                 Log.warn(TAG, "未知魔法执行器 id={}", def.id());
                 yield false;
@@ -251,6 +253,88 @@ public final class MagicSpellExecutors {
         return true;
     }
 
+    // ── 7. 感化 (Conversion) ──
+    // 单体控制：长前摇（200t），低消耗，使敌对生物倒戈攻击附近敌人。
+
+    private static final int CONVERSION_DEBUFF_TICKS = 400; // 20s
+
+    public static boolean castConversion(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
+                                          MagicDef def, String circleId) {
+        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
+        int durationTicks = spec != null ? spec.durationTicks : 200;
+
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+            return false;
+        }
+
+        if (target == null || !target.isAlive()) {
+            Log.warn(TAG, "castConversion 目标无效 caster={}", npc.getUUID().toString().substring(0, 8));
+            return false;
+        }
+
+        Vec3 pos = target.position();
+        UUID effectId = UUID.randomUUID();
+
+        // 目标脚下广播感化法阵
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(target,
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+
+        target.addEffect(new MobEffectInstance(WandscapeEffects.CONVERSION,
+                CONVERSION_DEBUFF_TICKS, 0));
+        MagicEventHandler.addConversion(target, CONVERSION_DEBUFF_TICKS);
+
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
+                SoundSource.NEUTRAL, 0.6f, 1.3f);
+        Log.info(TAG, "castConversion caster={} target={} debuffTicks={}",
+                npc.getUUID().toString().substring(0, 8),
+                target.getName().getString(), CONVERSION_DEBUFF_TICKS);
+        return true;
+    }
+
+    // ── 8. 背水 (Desperation) ──
+    // 自我增益：0 前摇，极高代价输出模式。
+    // 有效护甲 = −A/2，力量等级 = floor((A²+55)/55) − 1（二次增长 + 基线补偿）。
+
+    private static final int DESPERATION_BUFF_TICKS = 300; // 15s
+
+    /** 根据护甲值计算背水力量等级（amplifier，0 = 力量 I）。
+     *  ≤5 护甲无奖励，6+ 按 A²/48 二次增长。 */
+    public static int desperationStrengthAmplifier(float armor) {
+        if (armor <= 5.0f) return 0;
+        return (int) (armor * armor / 48.0f);
+    }
+
+    public static boolean castDesperation(ServerLevel level, WandscapeNpc npc,
+                                           MagicDef def, String circleId) {
+        MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
+        int durationTicks = spec != null ? spec.durationTicks : 15;
+
+        if (!npc.tryCastSpell(def.id(), def.baseCooldown(), def.manaCost(), durationTicks)) {
+            return false;
+        }
+
+        Vec3 pos = npc.position();
+        UUID effectId = UUID.randomUUID();
+
+        // 自身脚下广播深红背水法阵
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+
+        float armor = npc.getArmorValue();
+        int strengthAmp = desperationStrengthAmplifier(armor);
+
+        npc.addEffect(new MobEffectInstance(WandscapeEffects.DESPERATION,
+                DESPERATION_BUFF_TICKS, 0));
+        npc.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST,
+                DESPERATION_BUFF_TICKS, strengthAmp));
+
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN,
+                SoundSource.NEUTRAL, 0.4f, 0.8f);
+        Log.info(TAG, "castDesperation caster={} armor={} strengthAmp={} buffTicks={}",
+                npc.getUUID().toString().substring(0, 8), armor, strengthAmp, DESPERATION_BUFF_TICKS);
+        return true;
+    }
+
     // ── 4. 为玩家直接施加/测试魔法 ──
 
     public static boolean castForPlayer(net.minecraft.server.level.ServerPlayer player, MagicDef def) {
@@ -356,6 +440,53 @@ public final class MagicSpellExecutors {
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BELL_RESONATE,
                         SoundSource.NEUTRAL, 0.7f, 1.0f);
                 Log.info(TAG, "castFortification player");
+                yield true;
+            }
+            case "conversion" -> {
+                // 玩家感化：搜索视线方向最近敌对生物
+                Vec3 eye = player.getEyePosition();
+                Vec3 look = player.getLookAngle();
+                LivingEntity target = null;
+                double bestDist = Double.MAX_VALUE;
+                for (Entity e : level.getEntities((Entity) null,
+                        player.getBoundingBox().inflate(16.0),
+                        entity -> entity instanceof Enemy && entity.isAlive())) {
+                    Vec3 toTarget = e.position().subtract(eye);
+                    double dist = toTarget.length();
+                    if (dist < bestDist && dist <= 16.0) {
+                        // 粗略视线检查：夹角 < 30°
+                        double dot = look.dot(toTarget.normalize());
+                        if (dot > 0.866) { // cos 30°
+                            target = (LivingEntity) e;
+                            bestDist = dist;
+                        }
+                    }
+                }
+                if (target != null) {
+                    Vec3 pos = target.position();
+                    UUID effectId = UUID.randomUUID();
+                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(target,
+                            new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                    target.addEffect(new MobEffectInstance(WandscapeEffects.CONVERSION, 400, 0));
+                    MagicEventHandler.addConversion(target, 400);
+                    level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EVOKER_CAST_SPELL,
+                            SoundSource.NEUTRAL, 0.6f, 1.3f);
+                    Log.info(TAG, "castConversion player target={}", target.getName().getString());
+                }
+                yield true;
+            }
+            case "desperation" -> {
+                Vec3 pos = player.position();
+                UUID effectId = UUID.randomUUID();
+                PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                        new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                float armor = player.getArmorValue();
+                int strengthAmp = desperationStrengthAmplifier(armor);
+                player.addEffect(new MobEffectInstance(WandscapeEffects.DESPERATION, 300, 0));
+                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 300, strengthAmp));
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN,
+                        SoundSource.NEUTRAL, 0.4f, 0.8f);
+                Log.info(TAG, "castDesperation player armor={} strengthAmp={}", armor, strengthAmp);
                 yield true;
             }
             default -> {

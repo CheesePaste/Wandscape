@@ -20,6 +20,12 @@ public final class WandscapeEffects {
     public static final DeferredHolder<MobEffect, FortificationEffect> FORTIFICATION =
             Wandscape.MOB_EFFECTS.register("fortification", FortificationEffect::new);
 
+    public static final DeferredHolder<MobEffect, ConversionEffect> CONVERSION =
+            Wandscape.MOB_EFFECTS.register("conversion", ConversionEffect::new);
+
+    public static final DeferredHolder<MobEffect, DesperationEffect> DESPERATION =
+            Wandscape.MOB_EFFECTS.register("desperation", DesperationEffect::new);
+
     public static class PetrificationEffect extends MobEffect {
         public PetrificationEffect() {
             super(MobEffectCategory.BENEFICIAL, 0x7F8C8D);
@@ -49,6 +55,30 @@ public final class WandscapeEffects {
             addAttributeModifier(Attributes.ARMOR,
                     java.util.UUID.fromString(MODIFIER_UUID),
                     4.0, AttributeModifier.Operation.ADD_VALUE);
+        }
+    }
+
+    /**
+     * 感化效果：减益（HARMFUL），粉色粒子。
+     * 使敌对生物倒戈攻击附近其他敌对生物。目标重定向由
+     * {@link MagicEventHandler#tickConversions} 每 0.5s 处理。
+     */
+    public static class ConversionEffect extends MobEffect {
+        public ConversionEffect() {
+            super(MobEffectCategory.HARMFUL, 0xF472B6);
+        }
+    }
+
+    /**
+     * 背水效果：增益（BENEFICIAL），深红色粒子。
+     * 有效护甲 = −当前护甲/2（装备越好反噬越重但获得力量补偿）。
+     * 护甲公式修正与力量等级均由外部处理：
+     * {@link MagicEventHandler#onLivingDamage} 处理护甲反转，
+     * {@code MagicSpellExecutors} 施放时按 {@code amplifier = floor(armor² / 48)}
+     * 计算力量等级（≤5 甲无奖励，二次增长匹配承伤的指数上升）。
+    public static class DesperationEffect extends MobEffect {
+        public DesperationEffect() {
+            super(MobEffectCategory.BENEFICIAL, 0xDC2626);
         }
     }
 }

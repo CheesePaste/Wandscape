@@ -1,8 +1,11 @@
 package com.wsteam.wandscape.magic.internal;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -12,14 +15,18 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
@@ -29,6 +36,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 @EventBusSubscriber(modid = Wandscape.MODID)
 public final class MagicEventHandler {
@@ -44,6 +52,12 @@ public final class MagicEventHandler {
     private static final List<HealAura> HEAL_AURAS = new ArrayList<>();
     private static final List<MeteorTracker> METEORS = new ArrayList<>();
 
+    // ── 感化 ──
+    // 受感化影响的生物 UUID → 到期 tick，用于 ServerTick 每 0.5s 重定向攻击目标。
+    // 由 MagicSpellExecutors 在施加效果时写入。
+    private record ConversionEntry(UUID entityId, ResourceKey<Level> dimension, long expireTick) {}
+    private static final Map<UUID, ConversionEntry> CONVERSIONS = new HashMap<>();
+
     public static synchronized void addHealAura(HealAura aura) {
         HEAL_AURAS.add(aura);
     }
@@ -52,10 +66,18 @@ public final class MagicEventHandler {
         METEORS.add(tracker);
     }
 
+    /** 注册一个被感化的实体（由 MagicSpellExecutors 在施放时调用）。 */
+    public static synchronized void addConversion(LivingEntity entity, int durationTicks) {
+        CONVERSIONS.put(entity.getUUID(),
+                new ConversionEntry(entity.getUUID(), entity.level().dimension(),
+                        entity.level().getGameTime() + durationTicks));
+    }
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         tickHealAuras();
         tickMeteors();
+        tickConversions();
     }
 
     private static synchronized void tickHealAuras() {
@@ -134,9 +156,74 @@ public final class MagicEventHandler {
         }
     }
 
+    // ── 感化：每 0.5s 重定向受感化生物的攻击目标 ──
+
+    /** 感化目标搜索半径（方块）。 */
+    private static final double CONVERSION_SEARCH_RANGE = 16.0;
+    /** 感化处理间隔（tick）。 */
+    private static final int CONVERSION_TICK_INTERVAL = 10;
+
+    private static synchronized void tickConversions() {
+        if (CONVERSIONS.isEmpty()) return;
+
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        long now = server.getTickCount();
+
+        Iterator<Map.Entry<UUID, ConversionEntry>> it = CONVERSIONS.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<UUID, ConversionEntry> entry = it.next();
+            ConversionEntry conv = entry.getValue();
+
+            if (now >= conv.expireTick()) {
+                it.remove();
+                continue;
+            }
+
+            // 每 10 tick (0.5s) 处理一次
+            if (now % CONVERSION_TICK_INTERVAL != 0) continue;
+
+            ServerLevel level = server.getLevel(conv.dimension());
+            if (level == null) continue;
+
+            Entity entity = level.getEntity(conv.entityId());
+            if (!(entity instanceof Mob mob && mob.isAlive()
+                    && mob.hasEffect(WandscapeEffects.CONVERSION))) {
+                it.remove();
+                continue;
+            }
+
+            // 已有有效敌对目标（Enemy 且非自身）则保留，否则重选
+            LivingEntity currentTarget = mob.getTarget();
+            if (currentTarget != null && currentTarget.isAlive()
+                    && currentTarget instanceof Enemy
+                    && currentTarget != mob) {
+                continue;
+            }
+
+            // 搜索附近最近的 Enemy
+            AABB box = mob.getBoundingBox().inflate(CONVERSION_SEARCH_RANGE);
+            List<Mob> enemies = level.getEntitiesOfClass(Mob.class, box,
+                    e -> e instanceof Enemy && e.isAlive() && e != mob);
+            if (!enemies.isEmpty()) {
+                Mob nearest = enemies.get(0);
+                double nearestDist = mob.distanceToSqr(nearest);
+                for (int i = 1; i < enemies.size(); i++) {
+                    double d = mob.distanceToSqr(enemies.get(i));
+                    if (d < nearestDist) {
+                        nearest = enemies.get(i);
+                        nearestDist = d;
+                    }
+                }
+                mob.setTarget(nearest);
+            }
+        }
+    }
+
     /**
      * 石化 Buff 减伤逻辑：受到伤害 -2，低于 2 彻底无视（归 0）。
      * 护甲削减：有效护甲 = 当前护甲 − shredAmount，可负，负值 = 增伤。
+     * 背水：有效护甲 = −当前护甲/2（反转减伤为增伤）。
      */
     @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
@@ -174,6 +261,22 @@ public final class MagicEventHandler {
             float vanillaMultiplier = 1.0f - Math.min(20.0f, Math.max(0.0f, armor)) / 25.0f;
             float desiredMultiplier = 1.0f
                     - Math.min(20.0f, Math.max(-shredAmount, effectiveArmor)) / 25.0f;
+
+            if (vanillaMultiplier > 0.001f) {
+                float raw = event.getNewDamage();
+                event.setNewDamage(raw * (desiredMultiplier / vanillaMultiplier));
+            }
+        }
+
+        // ── 背水：有效护甲 = −当前护甲/2（护甲反转 → 护甲越高受伤越重） ──
+        if (entity.hasEffect(WandscapeEffects.DESPERATION)) {
+            float armor = entity.getArmorValue();              // 当前护甲（0-30）
+            float effectiveArmor = -armor * 0.5f;              // 反转：护甲10 → −5
+            float worst = -armor * 0.5f;                       // 下界 = 反转值（最负）
+
+            float vanillaMultiplier = 1.0f - Math.min(20.0f, Math.max(0.0f, armor)) / 25.0f;
+            float desiredMultiplier = 1.0f
+                    - Math.min(20.0f, Math.max(worst, effectiveArmor)) / 25.0f;
 
             if (vanillaMultiplier > 0.001f) {
                 float raw = event.getNewDamage();
