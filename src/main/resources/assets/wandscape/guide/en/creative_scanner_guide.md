@@ -11,7 +11,6 @@ Place two blocks: **SAVE (main)** and **CORNER (corner point)**, fill in the sam
 - **Boundary**: ±1 buttons for X/Y/Z to fine-tune the bounding box size.
 - **Door Offset**: auto-detect doors; cycle through multiple doors.
 - **Metadata**: building ID, name, creator, the Comfort/Magic/Wonder values, unlock level.
-- **Maintenance**: add per-element daily costs one by one.
 - **Preset Saving**: save the whole configuration as a preset and load it directly next time.
 
 ## Tourist Interact Spots

@@ -1780,11 +1780,7 @@
   "comfort": 0,
   "magic": 5,
   "wonder": 0,
-  "maintenance_cost": {
-    "costs": {
-      "water": 5
-    }
-  },
+
   "queue": {
     "capacity": 5,
     "task_types": [

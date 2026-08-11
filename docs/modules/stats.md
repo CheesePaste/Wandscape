@@ -12,10 +12,10 @@
 
 ## StatisticsData（SavedData）
 
-key `wandscape_statistics`；`MAX_SNAPSHOTS=30` 滚动窗口，新快照 addFirst/删末尾。`computeSummary` 汇总快照：累加 buildings/tourists/satisfaction、取最新 comfort/magic/wonder、avgSatisfaction=总满意/离店数、聚合 elementsConsumed。
+key `wandscape_statistics`；`MAX_SNAPSHOTS=30` 滚动窗口，新快照 addFirst/删末尾。`computeSummary` 汇总快照：累加 buildings/tourists/satisfaction、取最新 comfort/magic/wonder、avgSatisfaction=总满意/离店数。
 
 ## 数据类
 
-- `ColonyDailySnapshot`：不可变 record（day/elementsConsumed/buildingsPaid/Shutdown/Restarted/touristsArrived/Departed/totalSatisfaction/comfort/magic/wonder），NBT 存取。
-- `ColonyStatsSummary`：聚合结果 record（+avgSatisfaction/totalElementsConsumed/snapshotCount），含 EMPTY 常量。
+- `ColonyDailySnapshot`：不可变 record（day/touristsArrived/Departed/totalSatisfaction/comfort/magic/wonder），NBT 存取。
+- `ColonyStatsSummary`：聚合结果 record（+avgSatisfaction/snapshotCount），含 EMPTY 常量。
 - `StatsSyncPacket`（S→C）：推 summary，handleClient 写入 `WandscapePanelState.StatsSummary`。

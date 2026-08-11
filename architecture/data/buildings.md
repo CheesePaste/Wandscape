@@ -17,10 +17,6 @@
   "comfort": 5,
   "magic": 3,
   "wonder": 2,
-  "maintenance_cost": {
-    "interval_ticks": 12000,
-    "costs": { "earth": 4, "wood": 2 }
-  },
   "queue": {
     "capacity": 5,
     "task_types": ["building"]
@@ -54,7 +50,6 @@
 | pattern | [x,y,z][] | 相对 anchor 的偏移列表。单方块建筑写 `[[0,0,0]]` |
 | block_mapping | {"x,y,z":"mod:block"} | pattern 中每个偏移→原版方块 ID |
 | comfort/magic/wonder | int | 建筑三值。规则因 category 而异(见下方"三值计入规则") |
-| maintenance_cost | {interval_ticks, costs} | **新格式**。维护周期间隔 + Map<元素类型, 数量>。默认 interval_ticks=12000 |
 | queue | {capacity, task_types} | 建筑内部队列容量和允许的任务类型 |
 | boundary | {min:[x,y,z], max:[x,y,z]} | 建筑 AABB（相对 anchor）。用于重叠检测 |
 | blueprint | {id, bind} | DSL 模式。id="build:xxx"，bind 的 $field 引用上方 JSON 字段。无此字段时 fallback 到 DataDrivenSteps 遗留路径 |
@@ -67,7 +62,7 @@
 | interaction_radius | int/{x,y,z}/{min,max} | 右键交互区扩展（默认 0）。>0 时玩家可从建筑边界外此范围内右键交互。支持三种格式：uniform int、per-axis {x,y,z}、explicit box {min,max} |
 | tourist_interact_aabb | [{min:[x,y,z], max:[x,y,z]}] | **替代旧字段 interact_offset**。室内游客导航目标区域列表（相对于 anchor）。游客 AI 遍历列表，对每个 AABB 螺旋扫描可步行地面，使用第一个找到的位置。未指定时回退到建筑 boundary 包围盒内扫描 |
 | entities | [{offset, type, facing, nbt}] | **扫描器导出**。装饰实体列表（物品展示框/发光框/画），NPC 建造时经 `spawn_entity` 步骤重建。offset 为实体所在方块格（相对 anchor），facing 为 Direction 字符串（如 "north"），nbt 为修剪后实体 NBT（base64，位置已重定基为相对偏移）。建筑旋转时 offset 与 facing 同步旋转 |
-| deprecated | boolean | 默认 false。为 true 时配置照常加载、旧地图上已放置的建筑功能全部保留（维护费/任务/修复/拆除），但**从建筑面板（BUILD_PROJECTION 建筑栏）隐藏**，无法再新建。用于模组版本更新中"保留旧 id + 隐藏面板"的软废弃 |
+| deprecated | boolean | 默认 false。为 true 时配置照常加载、旧地图上已放置的建筑功能全部保留（任务/修复/拆除），但**从建筑面板（BUILD_PROJECTION 建筑栏）隐藏**，无法再新建。用于模组版本更新中"保留旧 id + 隐藏面板"的软废弃 |
 
 ## 三值计入规则
 
@@ -203,7 +198,6 @@
 }
 ```
 
-- **无维护费**：不写 `maintenance_cost` 字段。`DailySettlementSystem` 对空成本直接跳过（标记已支付、不关停）。
 - **游客不可交互**：游客系统只将 `shop`/`service` 建筑作为交互目标，`custom` 类别天然被排除，不会生成游客交互区。
 - **三值恒 0**：`comfort`/`magic`/`wonder` 全为 0，对殖民地三值无贡献。
 - 用途：生存玩家用**建筑扫描器**（`building_scanner`）框选自己建造的建筑导出，让 NPC 用蓝图重建；创造建筑扫描器（`creative_building_scanner`）的 Type 也能切到 `custom`。
@@ -224,38 +218,9 @@
 ```
 
 - `deprecated: true` 时该建筑**从建筑面板（BUILD_PROJECTION 建筑栏）隐藏**，无法再选择新建。
-- 配置仍正常加载（`BuildingConfigLoader.get(id)` 命中），**旧地图上已放置的同 id 建筑功能全部保留**：维护费结算、任务队列、损坏检测/修复、拆除、商店补货、游客交互均不受影响。
+- 配置仍正常加载（`BuildingConfigLoader.get(id)` 命中），**旧地图上已放置的同 id 建筑功能全部保留**：任务队列、损坏检测/修复、拆除、商店补货、游客交互均不受影响。
 - 用途：模组版本更新中软废弃某建筑——保留原 id 让旧存档建筑继续运转，同时从面板隐藏避免新玩家再建造。需要换新建筑时用 `deprecated: true` 标记旧 id，另起新 id 的 JSON，不必硬删或改名。
 - 文件位置无特殊要求：`deprecated/` 子文件夹只是组织习惯，加载器递归扫描且注册键用 JSON 内 `id`，隐藏语义完全由 `deprecated` 字段决定。
-
-## 维护费 (所有建筑)
-
-```json
-{
-  "maintenance_cost": {
-    "interval_ticks": 12000,
-    "costs": { "earth": 4, "wood": 2 }
-  }
-}
-```
-
-- `interval_ticks`: 扣费周期，默认 12000（半天）
-- `costs`: 每周期消耗的元素种类和数量
-- 元素不足 → shutdown。shutdown 期间不产生维护费（防止死档）
-- 新建筑有宽限期（Config 可配），宽限期内免维护费，到时间后再触发
-
-### Shutdown 分级效果
-
-| 建筑类别 | Shutdown 效果 |
-|----------|--------------|
-| shop | 完全关闭，游客无法交互。三值贡献归零 |
-| service | 仍可使用，但游客交互产出元素**减半** |
-| decoration | 对周围建筑的三值辐射**归零** |
-| wonder | 全局效果**暂停**（防止连锁 bug） |
-| workstation / node | 工作时间 **+100%**，产出 **-50%** |
-| basic / storage / tavern | 三值贡献归零 |
-| custom | 三值恒 0、无维护费，通常不触发关停 |
-| **所有建筑** | **不产生维护费** |
 
 ## 节点建筑额外字段
 

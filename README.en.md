@@ -25,7 +25,6 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 - ~20 buildings in 9 categories — town hall, warehouse, 7 element nodes, 4 shops, tavern, inn, workstation, crafting and brewing stations…
 - Blueprint construction: mages build block by block, restock materials, and repair damage automatically.
 - Comfort / Magic / Wonder values feed tourist satisfaction, which turns into colony experience — level up to unlock more buildings and recipes.
-- Upkeep is settled daily — low on elements? Buildings **suspend gracefully instead of breaking**, and restart automatically when resupplied. No soft-locks, ever.
 - A forecast system even spots shortages *before* they happen and queues extra gathering, so you're rarely caught short.
 
 ## ⚗️ Seven elements, one economy
@@ -66,11 +65,11 @@ No micromanagement tutorials, no chore lists. Press **H** for the in-game guide 
 
 **Do I have to micromanage everything?** No. Mages pick up work on their own — gathering, building, crafting. You decide what to build and where; they handle the rest.
 
-**What happens if I run out of elements?** Buildings suspend and wait instead of breaking. Resupply them and they restart by themselves — the mod is designed so you can never soft-lock yourself.
+**What happens if I run out of elements?** Building and crafting wait for supplies instead of failing, and continue automatically once resupplied — the mod is designed so you can never soft-lock yourself.
 
 **Does it change vanilla gameplay?** Almost nothing. No new ores, no rebalanced mechanics — Wandscape is data-driven, adds only a handful of items (a wand, a scanner or two), and most systems are configurable via TOML. It plays nice with modpacks.
 
-**Is running a town a chore?** We designed against that: remote management, no busywork maintenance, everything recoverable. You're the mayor, not the errand boy.
+**Is running a town a chore?** We designed against that: remote management, no busywork chores, everything recoverable. You're the mayor, not the errand boy.
 
 ## Dev Environment
 
@@ -120,7 +119,7 @@ architecture/magic/                   # magic circle contract (spec/principles/e
 
 1. **High compatibility** — no vanilla behavior changes; JSON data-driven; block mapping via tags; `/reload` hot-reload
 2. **Atomic design** — modules communicate via `WandscapeApis` + EventBus, no cross-package direct references
-3. **Stability first** — every failure path has a fallback; no crashes or soft-locks; auto tiered shutdown on upkeep shortfall
+3. **Stability first** — every failure path has a fallback; no crashes or soft-locks; building damage protection
 4. **Engine requests, adapters implement** — `core/` has zero MC dependency; MC implementations live in `engine/`
 5. **Don't punish players** — remote management panel, mages work on their own, everything recoverable
 6. **Performance** — single-entity logistics merging with gold-framed bubble counters to avoid entity-spawn lag

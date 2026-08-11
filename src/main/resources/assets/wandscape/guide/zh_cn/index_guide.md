@@ -40,9 +40,9 @@ Wandscape 是个模拟经营模组：你放下建筑，**法师 NPC 替你干活
 - [施法策略指南](strategy_guide.md)
 - [游客系统指南](tourist_guide.md)——三条需求条、画像与四类游客建筑
 
-## ⚠️ 经营与维护
+## ⚠️ 经营与故障
 
-- [建筑故障与维护](anomaly_guide.md)
+- [建筑故障](anomaly_guide.md)
 
 ## 🛠️ 创作者工具
 

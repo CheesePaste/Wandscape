@@ -229,7 +229,7 @@
   "advancements.wandscape.raid_veteran.title": "风雨同舟",
   "advancements.wandscape.raid_veteran.description": "在不祥之兆等级 5 及以上的袭击中获胜",
   "advancements.wandscape.steady_hand.title": "安居乐业",
-  "advancements.wandscape.steady_hand.description": "连续 7 天没有建筑因维护费停摆",
+  "advancements.wandscape.steady_hand.description": "连续 7 天没有建筑停摆",
 
   "wandscape.subtitle.magic_cast": "法杖施法",
   "wandscape.subtitle.magic_beam": "魔法光束发射",
@@ -302,9 +302,6 @@
   "element.wandscape.dark": "暗",
   "gui.wandscape.stats.none": "暂无统计数据",
   "gui.wandscape.stats.title": "魔法小镇统计 | 第 %s 天",
-  "gui.wandscape.stats.maintenance": "维护费",
-  "gui.wandscape.stats.paid": "已支付: %s",
-  "gui.wandscape.stats.shut": "已关闭: %s",
   "gui.wandscape.building_action.repair": "修复",
   "gui.wandscape.building_action.shutdown": "关闭",
   "gui.wandscape.building_action.restart": "重启",

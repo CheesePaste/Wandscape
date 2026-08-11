@@ -1040,12 +1040,7 @@
   "comfort": 4,
   "magic": 4,
   "wonder": 4,
-  "maintenance_cost": {
-    "costs": {
-      "dark": 2,
-      "fire": 2
-    }
-  },
+
   "queue": {
     "capacity": 10,
     "task_types": [

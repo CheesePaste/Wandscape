@@ -16960,17 +16960,7 @@
   "comfort": 10,
   "magic": 10,
   "wonder": 10,
-  "maintenance_cost": {
-    "costs": {
-      "earth": 5,
-      "metal": 5,
-      "dark": 5,
-      "fire": 5,
-      "wood": 5,
-      "water": 5,
-      "wind": 5
-    }
-  },
+
   "queue": {
     "capacity": 5,
     "task_types": [

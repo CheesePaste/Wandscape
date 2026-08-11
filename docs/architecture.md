@@ -56,7 +56,7 @@ com.wsteam.wandscape
 │
 ├── building/               建筑管理（含两个自定义方块/BE：扫描器）
 │   ├── data/                BuildingConfig/BlockOffset
-│   ├── internal/            生命周期监听/每日结算/维护预测/装饰加成/商店库存/奇观效果/贡献注册
+│   ├── internal/            生命周期监听/每日结算/装饰加成/商店库存/奇观效果/贡献注册
 │   ├── scanner/             创造扫描器 + 生存扫描器（方块/BE/模式/导出）
 │   ├── client/              市政厅/酒店/商店/酒馆/节点屏幕
 │   └── network/             建筑相关网络包
@@ -138,11 +138,9 @@ BuildingConfig JSON → BuildingConfigLoader
   → 游客购物 purchase → 扣库存 → 按 (1+profitRate) 向 ColonyItemBank 入元素
   → 缺货 → ResourceSupplySystem.enqueueSynthesize 补货
 
-维护费（每日 0:00）:
-  DailySettlementSystem → 按 MaintenancePriority 结算 → ColonyItemBank 扣元素
-  → 付不起 → shutdown("maintenance") → BuildingShutdownEvent
-  MaintenanceForecastSystem（每 6000 tick）→ 元素 < 日耗×reserveDays
-  → 对空闲 node 建筑入队高优采集任务 → MaintenanceForecastWarningEvent
+每日结算:
+  DailySettlementSystem → 每游戏日发 DailySettlementEvent（SettlementReport(colonyId, day)）
+  → ShopStockManager 商店补货 + StatisticsCollector 统计快照 订阅
 
 装饰加成（每 200 tick）:
   DecorationBonusSystem → 曼哈顿距离内装饰累加三值

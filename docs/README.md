@@ -22,7 +22,7 @@ Wandscape 是一个 Minecraft NeoForge 1.21.1 模组，包含两大系统：
 | 原子操作系统（10 种 AtomicOp + 执行框架） | [modules/op.md](modules/op.md) |
 | 任务系统（蓝图 DSL/任务池/调度/任务源） | [modules/task.md](modules/task.md) |
 | 引擎适配层（bootstrap/边界实现/寻路/服务/音效/运输） | [modules/engine.md](modules/engine.md) |
-| 建筑模块（生命周期/每日结算/维护/装饰/商店/奇观/扫描器） | [modules/building.md](modules/building.md) |
+| 建筑模块（生命周期/每日结算/装饰/商店/奇观/扫描器） | [modules/building.md](modules/building.md) |
 | 游客模块（生成/移动/影子模拟/满意度/酒店/酒馆/叙事） | [modules/tourist.md](modules/tourist.md) |
 | 游客偏好系统（三值需求/画像/精力/钱包/spot 排队/目标选择评分） | [simulation.md](simulation.md) |
 | NPC 模块（实体/ECS 桥接/7 属性/装备/渲染） | [modules/npc.md](modules/npc.md) |

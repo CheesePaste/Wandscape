@@ -31,7 +31,7 @@ Tourists **only walk on paved roads**. No roads means no tourists — a shop can
 
 ## Step 4: Build Element Nodes
 
-Elements are the town's currency: building, crafting, and maintenance all cost them. **Element nodes** are the mint — each type of node produces one fixed element, and wizards will come to harvest automatically.
+Elements are the town's currency: building and crafting both cost them. **Element nodes** are the mint — each type of node produces one fixed element, and wizards will come to harvest automatically.
 
 **Aim your crosshair at a node and right-click** to open its panel, set the harvest count, and click **Publish Gather**. Short on an element? Build a few more matching nodes.
 
@@ -61,9 +61,9 @@ Wizards don't fall from the sky — recruit them at the **Tavern**:
 
 Tourists with **all three need bars full** leave satisfied at night, and the town gains experience; when the experience is full, the Town Hall **levels up**, unlocking advanced buildings and raising the population cap. The more satisfied your tourists, the higher the **reputation** you accumulate — and the richer the tourists who come to town afterwards. It is a positive loop: better town → more satisfied tourists → even better town.
 
-## Don't Forget: Maintenance
+## Don't Forget
 
-Settlement happens every day, and each building must pay its **maintenance cost** (in elements). If the warehouse runs empty, buildings **shut down**. The ⚠️ icon in the V panel's sidebar lists stopped and broken buildings — handle them in one click. To run smoothly, always keep a little reserve in the warehouse.
+Buildings may **shut down** from **structural damage**. The ⚠️ icon in the V panel's sidebar lists stopped and broken buildings — handle them in one click. The daily settlement still runs as usual — shops restock and stats snapshots fire.
 
 ---
 

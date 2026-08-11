@@ -56,12 +56,7 @@
   "comfort": 2,
   "magic": 2,
   "wonder": 4,
-  "maintenance_cost": {
-    "costs": {
-      "earth": 3,
-      "metal": 3
-    }
-  },
+
   "queue": {
     "capacity": 0,
     "task_types": []

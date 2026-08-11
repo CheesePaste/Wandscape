@@ -65,7 +65,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │
 ├── shared/           所有包依赖的公共层
 │   ├── api/          12 个模块接口(含 ColonyMetricsApi) + registry/WandscapeApis.java(静态定位器)
-│   ├── data/         21+个record/enum(含ColonyMetricsSnapshot/WorkItem/MaintenanceCost/BlueprintInfo/Emotion/...)
+│   ├── data/         21+个record/enum(含ColonyMetricsSnapshot/WorkItem/BlueprintInfo/Emotion/...)
 │   ├── event/        15 个 NeoForge 事件(模块间通信 + 模拟经营事件) + ColonyLevelUpEvent(record 回调，非总线)
 │   ├── log/          Log 工具类 + LogFilter 运行时白名单过滤器
 │   └── ui/           共享UI组件库(MedievalScreen MINIMAL风格/Button/ScrollableList/...)
@@ -74,7 +74,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │                     creative_building_scanner 创造扫描器 + building_scanner 生存扫描器)。
 │                     category: basic/node/storage/workstation/crafting_station/
 │                               potion_station/shop/service/decoration/wonder/tavern
-│                     系统: 每日结算(DailySettlementSystem) + 维护费预测(MaintenanceForecastSystem)
+│                     系统: 每日结算(DailySettlementSystem)
 │                           + 装饰辐射(DecorationBonusSystem) + 商店库存(ShopStockManager) + 奇观效果(WonderEffectApplier)
 │   ├── client/       HotelScreen/ShopScreen/TavernScreen/TownHallScreen (MedievalScreen MINIMAL)
 │   └── network/      建筑相关网络包
@@ -142,10 +142,9 @@ BuildingConfig JSON → BuildingConfigLoader
   DecorationBonusSystem → 遍历功能建筑 → 曼哈顿距离内装饰累加
   → cap(建筑自身×100%) → BuildingContributionRegistry.getSnapshot()计入
 
-维护费:
-  DailySettlementSystem → 每日0:00按优先级结算 → ColonyItemBank扣元素
-  MaintenanceForecastSystem → 元素低于阈值 → 节点建筑高优采集(WorkItem)
-  → 不足 → shutdown(分级效果) → BuildingShutdownEvent
+每日结算:
+  DailySettlementSystem → 每游戏日发 DailySettlementEvent
+  → 触发商店补货(ShopStockManager) / 统计快照(StatisticsCollector)
 
 奇观效果:
   WonderEffectApplier → 建筑intact+非shutdown → 应用modifier
@@ -194,7 +193,7 @@ building/wand/...  ← 通过WandscapeApis + NeoForge EventBus通信，不可跨
 | 任务系统（引擎/调度/源/编辑器网络） | [packages/task.md](packages/task.md) |
 | MC桥接/异步执行/方块操作/导航 | [packages/engine.md](packages/engine.md) |
 | API接口/事件/数据类型/UI组件 | [packages/shared.md](packages/shared.md) |
-| 建筑管理/SavedData/维护费/商店/装饰/奇观 | [packages/building.md](packages/building.md) |
+| 建筑管理/SavedData/商店/装饰/奇观 | [packages/building.md](packages/building.md) |
 | 游客实体/生成/移动/交互/离开 | [packages/tourist.md](packages/tourist.md) |
 | NPC实体/ECS桥接/渲染 | [packages/npc.md](packages/npc.md) |
 | 法杖物品/NBT | [packages/wand.md](packages/wand.md) |

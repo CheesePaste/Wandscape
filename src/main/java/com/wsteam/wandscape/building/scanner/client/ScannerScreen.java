@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * Survival Building Scanner GUI built on the same MedievalScreen MINIMAL theme as
  * {@link CreativeScannerScreen}, but intentionally stripped down:
- * category is locked to {@code custom} (no maintenance / no tourist interaction),
+ * category is locked to {@code custom} (no tourist interaction),
  * and only size (boundary), door offset, building ID/name and export are exposed.
  * ROAD target mode is preserved.
  */

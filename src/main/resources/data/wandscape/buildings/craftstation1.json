@@ -1027,12 +1027,7 @@
   "comfort": 2,
   "magic": 8,
   "wonder": 2,
-  "maintenance_cost": {
-    "costs": {
-      "metal": 2,
-      "wind": 2
-    }
-  },
+
   "queue": {
     "capacity": 60,
     "task_types": [

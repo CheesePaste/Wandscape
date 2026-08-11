@@ -1,4 +1,4 @@
-# ⚠️ Building Failures & Maintenance
+# ⚠️ Building Failures
 
 When buildings stop or break, handle them in the Anomaly Report. Most problems resolve in one click.
 
@@ -14,7 +14,7 @@ When a building has a problem, the **⚠️ warning icon in the V panel's sideba
 
 ## Two Kinds of Problems
 
-**Stopped (maintenance unpaid)**: at the daily settlement, maintenance costs (in elements) are deducted by building type; when the warehouse runs out, buildings shut down. Stopped buildings don't work or contribute. Click "**Restart**" to pay from the warehouse and bring it back online.
+**Stopped (manual or structural damage)**: buildings the player shut down manually, or that stopped due to structural damage. Stopped buildings don't work or contribute. Click "**Restart**" to bring them back online.
 
 **Broken (physical damage)**: when a building is damaged by monsters, explosions, or similar beyond about **1/3**, it counts as broken and stops contributing. Click "**Repair**" and the system dispatches wizards to fix it per the blueprint.
 
@@ -22,8 +22,6 @@ When a building has a problem, the **⚠️ warning icon in the V panel's sideba
 
 - **Keep an element reserve in the warehouse**: build more [Element Nodes](node_guide.md) to gather, and decompose surplus materials at the [Workstation](workstation_guide.md) to top up elements.
 - **Damage doesn't auto-repair**: you must click "Repair" to trigger it.
-
-> Buildings copied with the scanner have **no maintenance cost** and never shut down from unpaid maintenance.
 
 ---
 

@@ -233,7 +233,7 @@
   "advancements.wandscape.raid_veteran.title": "Raid Veteran",
   "advancements.wandscape.raid_veteran.description": "Win a raid at Bad Omen level 5 or higher",
   "advancements.wandscape.steady_hand.title": "Steady Hand",
-  "advancements.wandscape.steady_hand.description": "Go 7 days without a building shutting down from upkeep",
+  "advancements.wandscape.steady_hand.description": "Go 7 days without any building shutting down",
 
   "wandscape.configuration.title": "Wandscape Configs",
   "wandscape.configuration.section.wandscape.common.toml": "Wandscape Configs",
@@ -314,9 +314,6 @@
   "element.wandscape.dark": "Dark",
   "gui.wandscape.stats.none": "No statistics available yet.",
   "gui.wandscape.stats.title": "Colony Statistics  |  Day %s",
-  "gui.wandscape.stats.maintenance": "Maintenance",
-  "gui.wandscape.stats.paid": "Paid: %s",
-  "gui.wandscape.stats.shut": "Shut: %s",
   "gui.wandscape.building_action.repair": "Repair",
   "gui.wandscape.building_action.shutdown": "Shutdown",
   "gui.wandscape.building_action.restart": "Restart",

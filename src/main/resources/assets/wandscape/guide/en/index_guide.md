@@ -40,9 +40,9 @@ Tourists only walk on paved roads. No roads means no tourists; shops won't get v
 - [Cast Strategy Guide](strategy_guide.md)
 - [Tourist System Guide](tourist_guide.md) — the three need bars, profiles, and four types of tourist buildings
 
-## ⚠️ Operations & Maintenance
+## ⚠️ Operations & Failures
 
-- [Building Failures & Maintenance](anomaly_guide.md)
+- [Building Failures](anomaly_guide.md)
 
 ## 🛠️ Creator Tools
 

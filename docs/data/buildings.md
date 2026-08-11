@@ -48,9 +48,6 @@
     "amount_per_harvest": 10,
     "channel_ticks": 1200
   },
-  "maintenance_cost": {
-    "costs": {"earth": 5, "metal": 5}   // 元素:数量，默认空
-  },
   "decoration": {"radius": 8},          // 仅 category=decoration，默认 8
   "wonder_config": {"effects": [...]},  // 已解析但当前无建筑 JSON 使用（见 gaps）
   "shop": {                             // 仅 category=shop
@@ -108,10 +105,10 @@
 > 各建筑 JSON 在 `buildings/deprecated/` 下的仍会加载（旧存档兼容）但不出现在放置面板。
 > `tavern`/`altar1` 保持原 category（招募/祭坛功能按 category 字符串判定），即使有 `interact_spots` 也非游客目标（无四类模式预设块）。
 
-## 三值 & 维护费示例
+## 三值示例
 
-- warehouse（storage）：comfort2/magic1/wonder1，维护 earth2+wood2，queue 容量 0。
-- nodedark（node）：magic5，维护 dark5，node_config 用 node:gather/dark/10/1200。
-- townhall1（government）：三值全 10，维护 earth5+metal5+dark5，door_offset [18,1,4]。
+- warehouse（storage）：comfort2/magic1/wonder1，queue 容量 0。
+- nodedark（node）：magic5，node_config 用 node:gather/dark/10/1200。
+- townhall1（government）：三值全 10，door_offset [18,1,4]。
 - breadshop（shop）：shop.goods 6 种食品各带三值，profit_rate 0.3，duration 2400。
 - tavern：有 door_offset 与 `interact_spots`（保持 tavern，非游客目标）。

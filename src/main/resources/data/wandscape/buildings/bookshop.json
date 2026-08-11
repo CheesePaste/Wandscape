@@ -2531,12 +2531,7 @@
   "comfort": 3,
   "magic": 10,
   "wonder": 2,
-  "maintenance_cost": {
-    "costs": {
-      "earth": 4,
-      "wood": 4
-    }
-  },
+
   "queue": {
     "capacity": 5,
     "task_types": [

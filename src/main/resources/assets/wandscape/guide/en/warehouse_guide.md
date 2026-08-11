@@ -1,6 +1,6 @@
 # 📦 Warehouse
 
-Stores all the town's elements and materials. Building, crafting, and maintenance deduct from here, and tourists' spending income returns here. **NPCs can only use materials stored in the warehouse.**
+Stores all the town's elements and materials. Building and crafting deduct from here, and tourists' spending income returns here. **NPCs can only use materials stored in the warehouse.**
 
 ## Two Tabs
 
@@ -22,7 +22,7 @@ When you place your first building, the warehouse automatically receives **2000 
 
 ## Element Consumption
 
-Maintenance, building, and crafting all consume elements. When short, gather from [Element Nodes](node_guide.md) or replenish by decomposing at the [Workstation](workstation_guide.md).
+Building and crafting both consume elements. When short, gather from [Element Nodes](node_guide.md) or replenish by decomposing at the [Workstation](workstation_guide.md).
 
 ## Tips
 

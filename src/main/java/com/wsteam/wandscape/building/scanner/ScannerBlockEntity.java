@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Block entity for the Survival Building Scanner.
  * Category is permanently locked to {@code custom}: tourists never interact with it,
- * it carries no maintenance cost, and comfort/magic/wonder are always zero.
+ * and comfort/magic/wonder are always zero.
  * All other logic (boundary/door/id/name/NBT/door detection) is inherited from the
  * full CreativeScannerBlockEntity — getters are overridden so the invariant holds
  * even if stale or hostile NBT is loaded.

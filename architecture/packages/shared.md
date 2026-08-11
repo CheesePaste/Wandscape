@@ -14,14 +14,13 @@ BuildingApi / ColonyApi / ColonyMetricsApi / ElementApi / HouseApi / NpcApi / Ro
 
 WandscapeApis（静态服务定位器，未注册时抛异常）/ WandscapeConstants（TOML 未覆盖时的硬编码 fallback）/ WandscapeDataRegistry（泛型数据查询接口）
 
-## event/ — 13 个事件
+## event/ — 12 个事件
 
 | 事件 | 发布者 | 触发时机 |
 |------|--------|---------|
 | ColonyCreatedEvent | engine | 殖民地创建 |
 | ColonyLevelUpEvent | engine | 殖民地升级 |
-| DailySettlementEvent | building | 每日维护结算 |
-| MaintenanceForecastWarningEvent | building | 维护费预警 |
+| DailySettlementEvent | building | 每日结算 |
 | ShopRestockedEvent | building | 商店补货 |
 | TouristArrivedEvent | tourist | 游客到达 |
 | TouristDepartedEvent | tourist | 游客离开 |

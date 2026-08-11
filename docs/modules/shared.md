@@ -31,13 +31,12 @@
 
 ## data/（数据类）
 
-- `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/isShutdown/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/getMaintenanceCost/...。
+- `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/isShutdown/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/...。
 - `CharacterNames`：法师与游客共享的**双语**随机名池（44 个名字，`wandscape.character_name.<i>` lang key：zh 中文 / en 拼音），`generateRandomNameKey()` 生成 key，`displayComponent` 返回 translatable 组件（客户端按语言渲染），`localizedString` 解析当前语言（无 lang 条目时回退中文，旧存档纯中文名原样通过）。游客 `getTouristName()` 解析、`getTouristNameKey()` 存 key；NPC 自动命名 `setCustomName(displayComponent(key))`。
 - `ColonyMetricsSnapshot` record：colonyId + 三评 + 名称/等级/经验 + 游客数/过夜数/平均满意度 + NPC 空闲/总数 + 七元素 + 停机/损坏名单；EMPTY、totalAnomalyCount()。
 - `ElementType` enum：EARTH/WOOD/WATER/FIRE/METAL/WIND/DARK。
 - `Emotion` enum：DELIGHTED/PLEASED/SATISFIED/NEUTRAL/DISAPPOINTED/UPSET。
 - `ExecutionResult(success, errorMessage)`、`InterruptRecord(npcId, timestamp)`、`ItemKey(itemId, nbt)`、`MageResume`（见 npc 模块）、`RecruitmentCandidate`、`VisitMemory`（builder）、`BlueprintInfo(id, displayName, description, params)`。
-- `MaintenanceCostConfig(Map<ElementType,Integer> costs)` NONE；`MaintenancePriority` CRITICAL/HIGH/NORMAL/LOW。
 - `NarrativeEvent(type, gameTime, emotion, text)`；`NarrativeEventType` 10 种，chronicleWorthy（SATISFACTION_MILESTONE/PREFERENCE_SHIFT/MAGE_RECRUIT/DEPARTURE_SUMMARY）。
 - `NpcData` interface：getNpcId/getName/getMaxHealth/getCurrentHealth/getSpellPower/getWorkSpeed/getSpellSpeed/getArmorValue/isIdle/...。
 - `ParamTypeInfo` enum：STRING/INT/POS/LIST_POS/LIST_STRING/MAP_STRING_STRING。
@@ -47,7 +46,7 @@
 - `WorkItem(blueprintId, params, priority)`。
 - `GuideProgressSavedData`（`wandscape_guide_progress`）：内嵌 record GuideProgress(stepIndex, dismissed)。
 
-## event/（16 个 NeoForge 事件）
+## event/（15 个 NeoForge 事件）
 
 | 事件 | 触发者 |
 |---|---|
@@ -57,8 +56,7 @@
 | ColonyEvaluationChangedEvent(old/new 三评) | BuildingContributionRegistry |
 | **ColonyLevelUpEvent**（record，非总线） | ColonyLevelManager.levelUpCallback |
 | ColonyRaidStartedEvent / ColonyRaidVictoryEvent | raid/ |
-| DailySettlementEvent(带 SettlementReport) | DailySettlementSystem |
-| MaintenanceForecastWarningEvent(shortfall/dailyCost) | MaintenanceForecastSystem |
+| DailySettlementEvent(带 SettlementReport(colonyId, day)) | DailySettlementSystem |
 | ResourceInsufficientEvent | WarehouseManager |
 | ShopRestockedEvent | ShopStockManager |
 | TouristArrivedEvent / TouristDepartedEvent | TouristApiImpl |

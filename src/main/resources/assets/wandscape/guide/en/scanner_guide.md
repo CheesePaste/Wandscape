@@ -8,9 +8,8 @@ Turn a building you have finished into a blueprint, and wizards can rebuild it e
 
 ## Scanned Buildings
 
-The scanner stores buildings under the **custom** category, with two traits:
+The scanner stores buildings under the **custom** category:
 
-- **No maintenance cost** — it can never shut down for failing to pay.
 - **No tourists come** — no three-stat contribution, not part of the economy.
 
 This kind of building produces no income and draws no tourists; it only copies a building you placed by hand so NPCs can rebuild it.
