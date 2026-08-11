@@ -2,30 +2,46 @@ package com.wsteam.wandscape.overview.client;
 
 import java.util.UUID;
 
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * World-space renderer for overview mode.
+ * Renderer for overview (bird's eye) mode.
  *
- * <p>When the crosshair targets a building, renders a white wireframe
- * around the full bounding box (all 12 edges) to highlight the building.</p>
+ * <p>World-space: when the crosshair targets a building/entity, renders a white
+ * wireframe around the full bounding box (all 12 edges) to highlight it.</p>
+ *
+ * <p>Screen-space: overview forces the camera to third-person (to render the player
+ * model), which makes vanilla {@code Gui.renderCrosshair} skip — it only draws in
+ * first person. Since overview aiming raycasts from the screen center
+ * ({@code OverviewFlightController.performRaycast}), re-draw the vanilla crosshair
+ * here so the player knows where they are aiming.</p>
  */
 public final class OverviewRenderer {
 
     private static final String TAG = "OverviewRenderer";
+
+    /** Vanilla crosshair sprite — same one {@code Gui.renderCrosshair} blits. */
+    private static final ResourceLocation CROSSHAIR = ResourceLocation.withDefaultNamespace("hud/crosshair");
+    private static final int CROSSHAIR_SIZE = 15;
 
     // White (#FFFFFFFF) — no color semantics
     private static final int LINE_R = 0xFF;
@@ -41,7 +57,36 @@ public final class OverviewRenderer {
         if (registered) return;
         registered = true;
         NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, OverviewRenderer::onRenderLevelStage);
+        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, OverviewRenderer::onRenderGuiPost);
         Log.info(TAG, "Overview renderer registered");
+    }
+
+    /**
+     * Draw the crosshair at screen center while the overview camera is active and the
+     * aim follows the camera (cursor grabbed). When the cursor is lifted the aim follows
+     * the mouse instead of the center, so no crosshair — it would mislead.
+     */
+    static void onRenderGuiPost(RenderGuiEvent.Post event) {
+        if (!OverviewClientState.isActive()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
+        if (mc.screen != null) return;
+        if (WandscapePanelState.isPanelOpen() && WandscapePanelState.isCursorLifted()) return;
+
+        GuiGraphics g = event.getGuiGraphics();
+        int w = g.guiWidth();
+        int h = g.guiHeight();
+        // Same inverted blend as vanilla so the crosshair stays visible on any background.
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(
+                GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR,
+                GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR,
+                GlStateManager.SourceFactor.ONE,
+                GlStateManager.DestFactor.ZERO);
+        g.blitSprite(CROSSHAIR, (w - CROSSHAIR_SIZE) / 2, (h - CROSSHAIR_SIZE) / 2, CROSSHAIR_SIZE, CROSSHAIR_SIZE);
+        g.flush();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
     }
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
