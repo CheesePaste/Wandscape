@@ -646,9 +646,9 @@ public class Wandscape {
                         (packet, ctx) -> NpcRenamePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 .playToServer(
-                        NpcTogglePacket.TYPE,
-                        NpcTogglePacket.STREAM_CODEC,
-                        (packet, ctx) -> NpcTogglePacket.handleServer(packet,
+                        com.wsteam.wandscape.npc.network.NpcModePacket.TYPE,
+                        com.wsteam.wandscape.npc.network.NpcModePacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.npc.network.NpcModePacket.handleServer(packet,
                                 (net.minecraft.server.level.ServerPlayer) ctx.player()))
                 // ── Tourist info screen ──
                 .playToClient(

@@ -82,10 +82,8 @@ public final class GuardCombat {
         // 无视玩家策略/conditions 强制施奶；只门控 CD/蓝/互斥锁，失败回落 L1。
         if (l0EmergencyHeal(level, npc, circleId, color)) return;
 
-        // 和平模式：不施法、不追击、不重定向光束（自防御/守卫执行器在目标选择层已拦下，
-        // 这里兜底）。L0 紧急自奶不受影响——治疗不是攻击。
-        if (npc.isPeaceMode()) return;
-
+        // 和平模式：不施法、不追击、不重定向光束
+        if (npc.isPeaceful()) return;
         MagicBeamEntity beam = findActiveBeam(level, npc);
         if (beam != null) {
             beam.retarget(target); // 主动切换：光束持续指向最近的怪物

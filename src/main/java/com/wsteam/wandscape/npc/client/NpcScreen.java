@@ -62,6 +62,10 @@ public class NpcScreen extends MedievalScreen {
             ItemStack.EMPTY, ItemStack.EMPTY);
     private int skinVariant;
     private int hatColor;
+    private boolean isFollowing;
+    private boolean isPeaceful;
+    private MedievalButton followBtn;
+    private MedievalButton peacefulBtn;
     /** 客户端 3D 展示克隆（不入世界，仅用于面板渲染）。 */
     private WandscapeNpc displayNpc;
 
@@ -110,10 +114,10 @@ public class NpcScreen extends MedievalScreen {
         this.armorStacks = packet.armorStacks();
         this.skinVariant = packet.skinVariant();
         this.hatColor = packet.hatColor();
-        this.peaceMode = packet.peaceMode();
-        this.followMode = packet.followMode();
-        refreshToggleButtons();
+        this.isFollowing = packet.isFollowing();
+        this.isPeaceful = packet.isPeaceful();
         rebuildDisplayNpc();
+        updateModeButtonText();
         // 名字：仅当输入框未聚焦时才回写（避免打断正在编辑），且值相同则不触发重发
         this.lastServerName = packet.npcName();
         if (nameBox != null && !nameBox.isFocused()
@@ -167,24 +171,17 @@ public class NpcScreen extends MedievalScreen {
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
 
-        // 和平 / 跟随 切换按钮（策略按钮左侧，同一行排布）：
-        // 点击即乐观翻转本地状态刷新文字，再发包给服务端确认（服务端回发 NpcDataPacket 同步）。
-        peaceButton = new MedievalButton(
-                leftPos + PW - 272, topPos + PH - 22, 80, 16,
-                peaceLabel(), () -> {
-            peaceMode = !peaceMode;
-            refreshToggleButtons();
-            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_PEACE, peaceMode));
-        });
-        followButton = new MedievalButton(
-                leftPos + PW - 188, topPos + PH - 22, 80, 16,
-                followLabel(), () -> {
-            followMode = !followMode;
-            refreshToggleButtons();
-            PacketDistributor.sendToServer(new NpcTogglePacket(entityId, NpcTogglePacket.FLAG_FOLLOW, followMode));
-        });
-        addRenderableWidget(peaceButton);
-        addRenderableWidget(followButton);
+        // 跟随与和平模式按钮
+        followBtn = addRenderableWidget(new MedievalButton(
+                leftPos + PW - 208, topPos + PH - 22, 48, 16,
+                Component.literal(""),
+                this::toggleFollowMode));
+        peacefulBtn = addRenderableWidget(new MedievalButton(
+                leftPos + PW - 156, topPos + PH - 22, 48, 16,
+                Component.literal(""),
+                this::togglePeacefulMode));
+        updateModeButtonText();
+
         // 策略按钮（打开施法策略屏）
         addRenderableWidget(new MedievalButton(
                 leftPos + PW - 104, topPos + PH - 22, 46, 16,
@@ -197,22 +194,26 @@ public class NpcScreen extends MedievalScreen {
                 I18n.name("gui.wandscape.common.close", "Close"), () -> Minecraft.getInstance().setScreen(null)));
     }
 
-    /** 和平按钮文字：开启时显示「取消和平」，未开启显示「和平」。 */
-    private Component peaceLabel() {
-        return I18n.name(peaceMode ? "gui.wandscape.npc.peaceOff" : "gui.wandscape.npc.peace",
-                peaceMode ? "Cancel Peace" : "Peace");
+    private void toggleFollowMode() {
+        this.isFollowing = !this.isFollowing;
+        updateModeButtonText();
+        PacketDistributor.sendToServer(new com.wsteam.wandscape.npc.network.NpcModePacket(entityId, isFollowing, isPeaceful));
     }
 
-    /** 跟随按钮文字：跟随中显示「取消跟随」，否则显示「跟随」。 */
-    private Component followLabel() {
-        return I18n.name(followMode ? "gui.wandscape.npc.followOff" : "gui.wandscape.npc.follow",
-                followMode ? "Cancel Follow" : "Follow");
+    private void togglePeacefulMode() {
+        this.isPeaceful = !this.isPeaceful;
+        updateModeButtonText();
+        PacketDistributor.sendToServer(new com.wsteam.wandscape.npc.network.NpcModePacket(entityId, isFollowing, isPeaceful));
     }
 
-    /** 依据当前模式刷新两个切换按钮的文字（apply 时与服务端同步）。 */
-    private void refreshToggleButtons() {
-        if (peaceButton != null) peaceButton.setMessage(peaceLabel());
-        if (followButton != null) followButton.setMessage(followLabel());
+    private void updateModeButtonText() {
+        if (followBtn != null) {
+            followBtn.setMessage(Component.literal(isFollowing ? "Follow: ON" : "Follow: OFF"));
+        }
+        if (peacefulBtn != null) {
+            peacefulBtn.setMessage(Component.literal(isPeaceful ? "Peace: ON" : "Peace: OFF"));
+        }
+>>>>>>> 37bc38a1 (feat(npc): 给NPC增加跟随模式与和平模式及界面切换按钮)
     }
 
     /** 名字框每次变更：非空且与服务端不同则自动发送改名包（写好了自动保存）。 */

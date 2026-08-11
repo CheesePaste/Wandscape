@@ -157,6 +157,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
      * 三处统一走此钩子，保证「NPC 伤不了玩家、邪恶法师能伤生存玩家」的边界唯一且一致。
      */
     public boolean canBeamHurt(LivingEntity target) {
+        if (isPeaceful()) return false;
         return target instanceof Enemy;
     }
 
@@ -407,6 +408,34 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
      * {@code NavigationSystem} can control navigation without AI interference.
      */
     private boolean suppressWandering = false;
+
+    // ── NPC Mode: 跟随 (Following) 与 和平 (Peaceful) ──
+    private boolean isFollowing = false;
+    private boolean isPeaceful = false;
+    private UUID followOwnerUuid = null;
+
+    public boolean isFollowing() {
+        return isFollowing;
+    }
+
+    public boolean isPeaceful() {
+        return isPeaceful;
+    }
+
+    public UUID getFollowOwnerUuid() {
+        return followOwnerUuid;
+    }
+
+    public void setFollowing(boolean following, @Nullable UUID ownerUuid) {
+        this.isFollowing = following;
+        if (ownerUuid != null) {
+            this.followOwnerUuid = ownerUuid;
+        }
+    }
+
+    public void setPeaceful(boolean peaceful) {
+        this.isPeaceful = peaceful;
+    }
 
     // ── Dirty guards: only sync entity data when values actually change ──
     private String lastSyncedOpKind = "";
@@ -1083,12 +1112,25 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         if (colonyId != null) {
             tag.putUUID("colonyId", colonyId);
         }
-        // Inventory save deferred to stage 3+ (wand contents)
+        tag.putBoolean("isFollowing", isFollowing);
+        tag.putBoolean("isPeaceful", isPeaceful);
+        if (followOwnerUuid != null) {
+            tag.putUUID("followOwnerUuid", followOwnerUuid);
+        }
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        if (tag.contains("isFollowing")) {
+            isFollowing = tag.getBoolean("isFollowing");
+        }
+        if (tag.contains("isPeaceful")) {
+            isPeaceful = tag.getBoolean("isPeaceful");
+        }
+        if (tag.hasUUID("followOwnerUuid")) {
+            followOwnerUuid = tag.getUUID("followOwnerUuid");
+        }
         if (tag.contains("SkinVariant")) {
             this.entityData.set(DATA_SKIN_VARIANT, tag.getInt("SkinVariant"));
         }

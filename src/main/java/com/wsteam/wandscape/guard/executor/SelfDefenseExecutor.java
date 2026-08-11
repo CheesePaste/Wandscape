@@ -140,6 +140,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
      *  地下/隔墙看不见的怪物不锁为目标。 */
     @Nullable
     private static LivingEntity resolveTarget(WandscapeNpc npc, ServerLevel level) {
+        if (npc.isPeaceful()) return null;
         int hateRange = Config.GUARD_HATE_RANGE.get();
         LivingEntity hated = npc.getHatedAttacker(level);
         if (hated != null && !(hated instanceof Player)
