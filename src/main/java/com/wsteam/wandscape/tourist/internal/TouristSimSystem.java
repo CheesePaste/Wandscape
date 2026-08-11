@@ -73,6 +73,24 @@ public final class TouristSimSystem {
     private TouristSimRegistry registry;
     private final Random random = new Random();
 
+    /** Live tourist entities keyed by UUID — O(1) lookup for tick loops, avoiding level.getAllEntities(). */
+    private static final java.util.Map<UUID, TouristEntity> LIVE_TOURISTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Register a spawned/loaded tourist entity for O(1) tick lookup. Called from TouristEntity.onAddedToLevel. */
+    public static void registerEntity(TouristEntity t) {
+        if (!t.isPreview()) LIVE_TOURISTS.put(t.getUUID(), t);
+    }
+
+    /** Unregister a killed/discarded/unloaded tourist entity. Called from TouristEntity.onRemovedFromLevel. */
+    public static void unregisterEntity(UUID id) {
+        LIVE_TOURISTS.remove(id);
+    }
+
+    /** Snapshot of currently live tourist entities (safe to iterate; backed by ConcurrentHashMap). */
+    public static java.util.Collection<TouristEntity> getLiveTourists() {
+        return LIVE_TOURISTS.values();
+    }
+
     @Nullable
     private static TouristSimSystem instance;
 
@@ -166,21 +184,31 @@ public final class TouristSimSystem {
         Map<UUID, TouristShadow> shadows = registry.getShadows();
         if (shadows.isEmpty()) return;
 
+        // Pre-compute player probes and sim-range once per tick (was O(S×P) alloc per shadow).
+        double simRange = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
+        double simRangeSq = simRange * simRange;
+        java.util.List<PlayerProbe> probeList = new java.util.ArrayList<>();
+        for (var p : level.players()) {
+            if (!p.isSpectator()) probeList.add(new PlayerProbe(p.getX(), p.getZ()));
+        }
+        PlayerProbe[] probes = probeList.toArray(new PlayerProbe[0]);
+
         // Index live entities for O(1) lookup + orphan scan.
+        // Uses the static LIVE_TOURISTS cache (populated by TouristEntity lifecycle)
+        // instead of level.getAllEntities() — that iterates every entity in the world
+        // (items, mobs, xp orbs, …) every tick, which is the #1 CPU hog.
         Map<UUID, TouristEntity> entities = new java.util.HashMap<>();
-        for (var e : level.getAllEntities()) {
-            if (e instanceof TouristEntity t) {
-                if (!t.isAlive()) continue;
-                if (t.isPreview()) continue; // 预览假人：无 shadow，不参与 sim/孤儿清除
-                entities.put(t.getUUID(), t);
-                // Orphan: no shadow → departed tourist, clear the residual body.
-                // (A chunk-unload race can briefly move a shadow to another chunk while
-                // the body is still loaded — do NOT discard by position difference, that
-                // kills freshly spawned tourists.)
-                if (!shadows.containsKey(t.getUUID())) {
-                    Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
-                    t.discard();
-                }
+        for (TouristEntity t : LIVE_TOURISTS.values()) {
+            if (!t.isAlive()) continue;
+            if (t.isPreview()) continue; // 预览假人：无 shadow，不参与 sim/孤儿清除
+            entities.put(t.getUUID(), t);
+            // Orphan: no shadow → departed tourist, clear the residual body.
+            // (A chunk-unload race can briefly move a shadow to another chunk while
+            // the body is still loaded — do NOT discard by position difference, that
+            // kills freshly spawned tourists.)
+            if (!shadows.containsKey(t.getUUID())) {
+                Log.info(TAG, "[Tourist] discarding orphan body {} (departed)", shortId(t.getUUID()));
+                t.discard();
             }
         }
 
@@ -191,7 +219,7 @@ public final class TouristSimSystem {
             // player far away (so isLoaded/isPositionTicking never let the sim take over),
             // yet the real AI doesn't actually behave for unobserved tourists. Player
             // proximity is the signal that decides whether the physical entity runs.
-            boolean observed = hasObserver(level, s);
+            boolean observed = probes.length > 0 && hasObserver(simRangeSq, s.getPosX(), s.getPosZ(), probes);
             if (observed) {
                 observedCount++;
                 if (entities.get(s.getTouristId()) == null) stuckCount++;
@@ -221,17 +249,20 @@ public final class TouristSimSystem {
         }
     }
 
-    /** True when a non-spectator player is within simulation distance of the tourist. */
-    private boolean hasObserver(ServerLevel level, TouristShadow s) {
-        double range = level.getServer().getPlayerList().getSimulationDistance() * 16.0;
-        double sq = range * range;
-        double x = s.getPosX();
-        double z = s.getPosZ();
-        for (net.minecraft.server.level.ServerPlayer p : level.players()) {
-            if (p.isSpectator()) continue;
-            double dx = p.getX() - x;
-            double dz = p.getZ() - z;
-            if (dx * dx + dz * dz < sq) return true;
+    /** Pre-computed player positions for observer checks (refreshed once per runTick). */
+    private static final class PlayerProbe {
+        final double x, z;
+        PlayerProbe(double x, double z) { this.x = x; this.z = z; }
+    }
+
+    /** True when a non-spectator player is within simulation distance of the tourist.
+     *  @param probes pre-computed player positions (refreshed once per runTick to avoid
+     *         O(shadows × players) iterator allocations). */
+    private static boolean hasObserver(double simRangeSq, double sx, double sz, PlayerProbe[] probes) {
+        for (PlayerProbe p : probes) {
+            double dx = p.x - sx;
+            double dz = p.z - sz;
+            if (dx * dx + dz * dz < simRangeSq) return true;
         }
         return false;
     }
@@ -854,9 +885,13 @@ public final class TouristSimSystem {
     private void adoptExistingEntities(ServerLevel level) {
         int adopted = 0;
         for (var e : level.getAllEntities()) {
-            if (e instanceof TouristEntity t && t.isAlive() && !t.isPreview() && registry.get(t.getUUID()) == null) {
-                adoptTourist(t);
-                adopted++;
+            if (e instanceof TouristEntity t && t.isAlive() && !t.isPreview()) {
+                // Seed the live-entity cache so subsequent ticks skip getAllEntities().
+                registerEntity(t);
+                if (registry.get(t.getUUID()) == null) {
+                    adoptTourist(t);
+                    adopted++;
+                }
             }
         }
         if (adopted > 0) {

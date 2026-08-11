@@ -448,8 +448,7 @@ public final class TouristSpawnSystem {
     private void cleanupTourists(ServerLevel level, boolean inDepartureWindow) {
         List<TouristEntity> toRemove = new ArrayList<>();
 
-        for (var entity : level.getAllEntities()) {
-            if (!(entity instanceof TouristEntity t)) continue;
+        for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
@@ -498,8 +497,7 @@ public final class TouristSpawnSystem {
         long gameTime = level.getGameTime();
         List<TouristEntity> toRemove = new ArrayList<>();
 
-        for (var entity : level.getAllEntities()) {
-            if (!(entity instanceof TouristEntity t)) continue;
+        for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
             if (!t.isAlive()) continue;
             if (t.isPreview()) continue; // 预览假人：不参与生成/离开
 
@@ -718,8 +716,8 @@ public final class TouristSpawnSystem {
     /** Count tourists currently checked into hotels per colony and store as overnight stayers. */
     private void countOvernightStayers(ServerLevel level) {
         java.util.Map<UUID, Integer> overnightCounts = new java.util.HashMap<>();
-        for (var entity : level.getAllEntities()) {
-            if (entity instanceof TouristEntity t && t.isAlive() && t.getCheckedInBuildingId() != null) {
+        for (TouristEntity t : TouristSimSystem.getLiveTourists()) {
+            if (t.isAlive() && t.getCheckedInBuildingId() != null) {
                 UUID colonyId = t.getColonyId();
                 if (colonyId != null) overnightCounts.merge(colonyId, 1, Integer::sum);
             }
