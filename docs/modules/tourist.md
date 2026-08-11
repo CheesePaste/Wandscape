@@ -13,7 +13,7 @@
 - 属性：MOVEMENT_SPEED 0.5、FOLLOW_RANGE 64、MAX_HEALTH 20。AI：FloatGoal(0)/OpenDoorGoal(1)/TouristMoveGoal(2)/RandomLookAroundGoal(3)。`createNavigation` → WandscapeNavigation。
 - 钱包：`wallet`+`initialWallet`，spendWallet 钳到 0；`travelFund`（总旅费 = ATM 取现池，见 simulation.md）。能量 0-100（`TOURIST_MAX_ENERGY`）。
 - 法师属性 maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue。
-- **无物品背包**，仅 `recentVisits` 记忆（上限 24 FIFO）+ visitedBuildings（停留期不重置，ATM 缺钱时豁免可分批取现）+ lastAtmWithdrawTime（取现冷却）。不可被推动，`removeWhenFarAway=false`。
+- **无物品背包**，仅 `recentVisits` 记忆（上限 24 FIFO）+ visitedBuildings（停留期不重置，ATM 缺钱 / relax 精力低豁免可重复）+ lastAtmWithdrawTime（取现冷却）。不可被推动，`removeWhenFarAway=false`。
 - **救援传送（被困兜底，`TouristTeleport`）只落点建筑外**：优先最近已建成道路（`rescueRoadRadius`），无路则建筑外围（入口点/bbox 面/外扩环扫，`rescuePeripheryRadius`），绝不传进建筑或房顶；找不到安全点则不传送。影子→实体水合若落在建筑房顶也改传安全点（`TouristSimSystem.importToEntity`）。
 
 ## 生命周期（TouristSpawnSystem）
@@ -83,5 +83,5 @@
 
 - **购物**：TouristMoveGoal → TouristSimulation.performShopInteraction → ShopInteractionHandler → ShopStockManager.purchaseAffordable → purchase 扣库存、按 profitRate 向 ColonyItemBank 存元素、recordPurchase；游客 spendWallet、精力 -20。
 - **服务**：精力 -energyPerUse，elementOutput 全部写入 ColonyItemBank.addElement。
-- **ATM 取现**：单次取现 = 初始钱包随机 20%~50%（封顶 travelFund 池子）；`atmReusable` 判定（池子有余额 + 钱包低于初始 1/4 + 取现冷却已过）通过时豁免 visited 可重复取现（分批取现），池子空/冷却中不选——不会因偏好白跑 ATM 取 0。`visitedBuildings` 停留期不重置（红线 #8，ATM 是唯一豁免）。
+- **ATM 取现**：单次取现 = 初始钱包随机 20%~50%（封顶 travelFund 池子）；`atmReusable` 判定（池子有余额 + 钱包低于初始 1/4 + 取现冷却已过）通过时豁免 visited 可重复取现（分批取现），池子空/冷却中不选——不会因偏好白跑 ATM 取 0。`visitedBuildings` 停留期不重置（红线 #8；ATM 缺钱 / relax 精力低是豁免例外）。
 - **满意度→经验**：离境且 sat=100 → ColonyLevelManager.computeExpContribution：游客等级<殖民地→0；==→200；>→500。升级公式 `expToNext=level×1000`。
