@@ -11,7 +11,7 @@ WandscapeNpc 承载 ECS 桥接、法杖、魔力池、任务执行器等完整�
 ## 数据模型（三条需求条 + 画像 + 停留）
 
 - **三条需求条** `comfort/magic/wonder` 各带 `sat`（填充量）/`need`（需求上限）。填充无惩罚：`sat += round(建筑该维值 × TOURIST_BAR_GAIN_COEFF)`，封顶 need。**满条 = 三条 ratio 全 1**（`isFullySatisfied()`）。
-- **画像**：40% 均衡 `{1,1,1}`、20% 舒适 `{1.6,0.7,0.7}`、20% 魔法 `{0.7,1.6,0.7}`、20% 奇观 `{0.7,0.7,1.6}`。三条 need = `totalNeed × 权重占比`，`totalNeed = TOURIST_NEED_BASE + (level-1)×TOURIST_NEED_PER_LEVEL` —— **等级越高总需求越高、越难满足**（自然难度曲线；1 级 totalNeed=150：均衡 50/50/50、侧重 80/35/35）。
+- **画像**：40% 均衡 `{1,1,1}`、20% 舒适 `{1.6,0.7,0.7}`、20% 魔法 `{0.7,1.6,0.7}`、20% 奇观 `{0.7,0.7,1.6}`。三条 need = `totalNeed × 权重占比`，`totalNeed = TOURIST_NEED_BASE + (level-1)×TOURIST_NEED_PER_LEVEL` —— **等级越高总需求越高、越难满足**（自然难度曲线；1 级 totalNeed=60：均衡 20/20/20、侧重 32/14/14）。
 - **精力循环**：shop/service 交互消耗精力，`relax` 建筑回精力（clamp 到 `TOURIST_MAX_ENERGY`），旅店夜晚入住也填一次三条（利好玩家的特性）。精力 0 且视野内无恢复建筑 → **闲逛**（不离场）。
 - **钱包 / 总旅费**：`wallet`（随身现金）买货；`travelFund = startingWallet × TOURIST_ATM_TRAVEL_FUND_MULTIPLIER`（ATM 分批取现的池子，防无限取现）。
 - **停留**：`departureDeadline = arrivalTime + rand(2~4)×24000`；`nightsStayed` 住店晚数。**`visitedBuildings` 停留期不重置**（防挂机，一栋建筑整个停留只逛一次；**ATM 例外**——`atmReusable` 判定下豁免 visited 可分批取现，靠取现冷却控节奏，visited 本身仍不重置）。

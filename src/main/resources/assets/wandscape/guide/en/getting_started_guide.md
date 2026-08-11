@@ -40,7 +40,7 @@ Elements are the town's currency: building and crafting both cost them. **Elemen
 Two big things live in the **Workshop** category of the build panel:
 
 - The **Crafting Station** makes **wands** — wands decide a wizard's combat strength. There are three tiers, Basic/Adept/Master; the latter two require a high enough colony level to unlock.
-- The **Workstation** **decomposes** unneeded high-tier building materials into elements (about a 1/5 return — for emergencies), and can also **synthesize** high-tier blocks and equipment from elements.
+- The **Workstation** **decomposes** unneeded high-tier building materials into elements (about a 1/10 return — for emergencies), and can also **synthesize** high-tier blocks and equipment from elements.
 
 ## Step 6: Build Shops, a Hotel, and Supplies
 

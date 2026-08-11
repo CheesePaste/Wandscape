@@ -4,7 +4,7 @@ The Workstation is the element exchange: it **decomposes** unneeded high-tier ma
 
 ## Two Tabs
 
-**Decompose**: turns items with elemental value (high-tier building materials, ores, and the like) back into elements. Note there is an **about 1/5 discount** — fine for emergency element top-ups, but you won't get rich off it.
+**Decompose**: turns items with elemental value (high-tier building materials, ores, and the like) back into elements. Note there is an **about 1/10 discount** — fine for emergency element top-ups, but you won't get rich off it.
 
 **Synthesize**: combines elements + materials into high-tier blocks, equipment, and special items. Synthesize recipes have colony level gates; those below your level stay locked.
 

@@ -290,3 +290,13 @@
 **为什么**：相机位置是用户飞行设定的持久值（应跨关闭保留），玩家旋转快照只在单次空中会话作冻结基准（不应跨会话）——两者生命周期不同必须分离。每帧冻结/相机类型 reconcile 是状态机自愈（同光标自愈范式），比在每个 enter/exit 转换点打补丁更鲁棒。必须冻 yBodyRot/yHeadRot：`LivingEntityRenderer` 用 yBodyRot 画身体、`yBodyRot` 在 `tickHeadTurn` 以 30%/tick 跟随 yRot，只冻 yRot 第三人称模型仍会随鼠标抽搐。
 
 **约束保留**：`MixinOverviewCamera` 不动（TAIL 只覆写 position/rotation，不影响 `Camera.detached`，第三人称下 local player 由 `LevelRenderer` 正常渲染）；`closePanel()` / `exitCurrentSubMode()` 路径不改（都走 `exit()` → `exitOverview()` suspend，缓存自然保留）。
+
+## 2026-08：游客 1 级需求基数下调 + 分解折价加深
+
+**需求**：1 级游客均衡需求 50/50/50 对早期殖民地仍偏高、喂满偏慢；分解 1/5 折价让元素应急获取偏易，弱化工坊/商店经济。
+
+**决策**：
+- `TOURIST_NEED_BASE` 默认 150 → **60**（`tourist.needBase`），`TOURIST_NEED_PER_LEVEL` 保持 20 —— 1 级均衡 20/20/20、侧重 32/14/14；每级 +20 的难度曲线不变。
+- `DECOMPOSE_DIVISOR` 5 → **10**：分解产出 = 元素值 × 1/10 向下取整；提前拒绝阈值随之变为 count×总价值 < 10。
+
+**影响**：游客更容易喂满三条（满条给经验更快），1 级新手更顺；分解折价加深，应急补充变贵、鼓励正常获取元素。

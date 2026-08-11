@@ -20,8 +20,8 @@
 
 - 每条 = `fill / need`。`need` 由画像 + 等级决定，`fill` 从 0 起步。
 - **画像 roll**（`TouristSpawnSystem.rollAndSetPersona`）：40% 均衡 `{1,1,1}`；20% 舒适 `{1.6,0.7,0.7}`；20% 魔法 `{0.7,1.6,0.7}`；20% 奇观 `{0.7,0.7,1.6}`。
-- `totalNeed = NEED_BASE(150) + (level−1) × NEED_PER_LEVEL(20)`；`need_d = round(totalNeed × w_d / Σw)`。
-- 1 级游客：均衡 50/50/50；侧重 80/35/35（及其置换）。等级越高总需求越大、越难喂饱。
+- `totalNeed = NEED_BASE(60) + (level−1) × NEED_PER_LEVEL(20)`；`need_d = round(totalNeed × w_d / Σw)`。
+- 1 级游客：均衡 20/20/20；侧重 32/14/14（及其置换）。等级越高总需求越大、越难喂饱。
 - 满条 = 三条 fill 全到 need。**满条才给经验**（防刷，里程碑不是流水）；夜晚满条由离场窗口处理。
 
 ### 精力（Energy）
@@ -109,7 +109,7 @@ score = 满意度增益 satisfactionGain
 | 项（Config / 常量） | 默认 | 含义 |
 |---|---|---|
 | `TOURIST_BAR_GAIN_COEFF` | 1.0 | 每维增益 = round(建筑值 × coeff)，封顶缺口 |
-| `TOURIST_NEED_BASE` / `NEED_PER_LEVEL` | 150 / 20 | 1 级总需求 / 每级增量 |
+| `TOURIST_NEED_BASE` / `NEED_PER_LEVEL` | 60 / 20 | 1 级总需求 / 每级增量 |
 | `TOURIST_BASE_WALLET` / `WALLET_PER_LEVEL` | 200 / 300 | 随身现金 = base + level × per-level |
 | `TOURIST_ATM_TRAVEL_FUND_MULTIPLIER` | 3.0 | travelFund = 现金 × 系数（取现池上限） |
 | `TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS` | 2400 | 两次取现最小间隔 |

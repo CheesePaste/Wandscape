@@ -29,8 +29,8 @@ public final class WandscapeConstants {
     /** 酒馆「招募 NPC」自第二次起每种元素的价格。 */
     public static final long TAVERN_RECRUIT_COST_PER_ELEMENT = 10_000;
 
-    /** 分解产出 = 物品元素值 / 该除数（1/5，防物品复制）。 */
-    public static final long DECOMPOSE_DIVISOR = 5;
+    /** 分解产出 = 物品元素值 / 该除数（1/10，防物品复制）。 */
+    public static final long DECOMPOSE_DIVISOR = 10;
 
     public static final int STUCK_CHECK_INTERVAL_TICKS = 60;
     public static final double STUCK_MIN_MOVE_DISTANCE = 2.0;
