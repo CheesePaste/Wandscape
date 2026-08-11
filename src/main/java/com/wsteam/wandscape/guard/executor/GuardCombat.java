@@ -18,6 +18,7 @@ import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -27,6 +28,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -72,9 +74,9 @@ public final class GuardCombat {
         }
 
         if (!hasLineOfSight(npc, target)) {
-            // 看不见（隔墙）：旧光束会在墙上拖拽，先让它快速消失；然后寻路到能打到的位置
+            // 看不见（隔墙）：旧光束会在墙上拖拽，先让它快速消失；然后寻路到能打到的安全落点
             if (beam != null) beam.setLifetime(5);
-            navigateToward(world, npcId, target);
+            navigateToward(level, npc, world, npcId, target);
             return;
         }
 
@@ -172,8 +174,11 @@ public final class GuardCombat {
     /** 持杖手 → 目标身体中心 射线无方块阻挡（起点沿方向前移 0.5 避免自贴墙误判）。 */
     public static boolean hasLineOfSight(WandscapeNpc npc, LivingEntity target) {
         if (!(npc.level() instanceof ServerLevel level)) return false;
-        Vec3 from = npc.getStaffPosition();
-        Vec3 to = target.getBoundingBox().getCenter();
+        return positionHasLineOfSight(level, npc.getStaffPosition(), target.getBoundingBox().getCenter());
+    }
+
+    /** 两点间射线无方块阻挡（起点沿方向前移 0.5 避免自贴墙误判）；{@code from} 一般为持杖手位置。 */
+    private static boolean positionHasLineOfSight(ServerLevel level, Vec3 from, Vec3 to) {
         Vec3 delta = to.subtract(from);
         double dist = delta.length();
         if (dist < 0.1) return true;
@@ -185,15 +190,71 @@ public final class GuardCombat {
 
     // ── 寻路 ──
 
-    /** LOS 被挡时，向目标位置寻路（寻路会绕过墙体，LOS 一清就停手施法）。 */
-    public static void navigateToward(World world, long npcId, LivingEntity target) {
+    /** 与目标交战的期望水平间距（方块）：贴脸落点会被近战 / 苦力怕爆炸波及，故保留安全距离。 */
+    private static final double ENGAGE_STANDOFF = 6.0;
+    /** 以目标为圆心、standoff 半径环上的候选采样数。 */
+    private static final int ENGAGE_SAMPLES = 16;
+
+    /**
+     * LOS 被挡时，向目标附近一个安全的交战落点寻路（绕墙走到能打到的位置）。
+     *
+     * <p>落点 = 以目标为圆心、{@link #ENGAGE_STANDOFF} 半径的环上，优先选「与目标有视线」且
+     * 「尽量靠近守卫」的格子；环上无有视线落点则退化为最近的可站立格。这样无论走路还是传送兜底
+     * （NavigationSystem 寻路失败会传送直达 nav 目标），守卫都**不会落在怪物脸上**——
+     * 避免被苦力怕贴身爆炸秒杀。
+     */
+    private static void navigateToward(ServerLevel level, WandscapeNpc npc, World world,
+                                       long npcId, LivingEntity target) {
         if (world == null || world.movementOps == null) return;
+        if (target == null || !target.isAlive()) return;
         NavigationState nav = world.get(npcId, NavigationState.class);
         if (nav != null && nav.mode != NavigationState.Mode.IDLE) return; // 已在寻路中
 
-        Vec3 mobPos = target.position();
-        world.movementOps.navigateTo(npcId,
-                Mth.floor(mobPos.x), Mth.floor(mobPos.y), Mth.floor(mobPos.z));
+        BlockPos dest = findEngagePos(level, npc, target);
+        world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+    }
+
+    /** 选择交战落点：目标为圆心、standoff 半径环上「有视线且尽量靠近守卫」的格子；返回站立脚底 Y。 */
+    private static BlockPos findEngagePos(ServerLevel level, WandscapeNpc npc, LivingEntity target) {
+        Vec3 mobCenter = target.getBoundingBox().getCenter();
+        Vec3 guardPos = npc.getStaffPosition();
+        double towardGuard = Math.atan2(guardPos.z - mobCenter.z, guardPos.x - mobCenter.x);
+
+        BlockPos best = null;                 // 有视线的候选中最靠近守卫的
+        double bestLosDistSq = Double.MAX_VALUE;
+        BlockPos fallback = null;             // 无任何有视线候选时的最近可站立格
+        double fallbackDistSq = Double.MAX_VALUE;
+
+        for (int i = 0; i < ENGAGE_SAMPLES; i++) {
+            double angle = towardGuard + Math.PI * 2 * i / ENGAGE_SAMPLES;
+            int bx = Mth.floor(mobCenter.x + Math.cos(angle) * ENGAGE_STANDOFF);
+            int bz = Mth.floor(mobCenter.z + Math.sin(angle) * ENGAGE_STANDOFF);
+            int groundY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
+            BlockPos cand = new BlockPos(bx, groundY + 1, bz);
+            double dSq = cand.distToCenterSqr(guardPos.x, guardPos.y, guardPos.z);
+            if (dSq < fallbackDistSq) {
+                fallbackDistSq = dSq;
+                fallback = cand;
+            }
+            if (positionHasLineOfSight(level, staffOf(cand), mobCenter) && dSq < bestLosDistSq) {
+                bestLosDistSq = dSq;
+                best = cand;
+            }
+        }
+        if (best != null) return best;
+        if (fallback != null) return fallback;
+
+        // 极端兜底：沿守卫→目标连线、目标身前 standoff 处（绝不压到目标）
+        Vec3 dir = mobCenter.subtract(guardPos);
+        if (dir.lengthSqr() < 0.01) dir = new Vec3(1, 0, 0);
+        Vec3 fb = mobCenter.subtract(dir.normalize().scale(ENGAGE_STANDOFF));
+        int groundY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(fb.x), Mth.floor(fb.z));
+        return new BlockPos(Mth.floor(fb.x), groundY + 1, Mth.floor(fb.z));
+    }
+
+    /** 站立落点（脚底）上持杖手的大致高度位置。 */
+    private static Vec3 staffOf(BlockPos pos) {
+        return new Vec3(pos.getX() + 0.5, pos.getY() + 1.6, pos.getZ() + 0.5);
     }
 
     /** 停止寻路（LOS 已通过 / 要施法时调用），让 NPC 站定。 */

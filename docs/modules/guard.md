@@ -20,7 +20,7 @@
 - `GuardTaskSource`：pollInterval=20；overworld 内找威胁：攻击区有存活 Enemy 且无活跃任务 → 发布 `guard:attack` 任务（params: attackRange/releaseRange/circle/color，优先级 `GUARD_PRIORITY=49`）。
 - `GuardBlueprints`：代码注册 `guard:attack` → `[AtomicOp.AttackMonsterOp(attackRange, releaseRange, circle, color)]`。
 - `GuardAttackExecutor`：持续异步循环（由 Wandscape.onServerTick 驱动）；RECHECK_TICKS=10；runCycle 重算攻击区→最近 Enemy；无目标→看脱离区无怪→光束淡出+cancelNavigation+完成；有怪→待命重试。future 未完成前 NPC 保持 ACTIVE 不被改派。
-- `GuardCombat.engage`：有活跃光束→beam.retarget 主动切换；LOS 被挡→光束快淡出 + navigateToward；LOS 通→cancelNavigation + `MagicCaster.castNpcAt`（CD/蓝/锁在 MagicCaster 内部门控：光束 50 蓝、基础 CD 400/SPELL_SPEED（锁结束后起算）、施法互斥锁全程），成功后杖尖 burstColored + GUARD_FIRE 音。
+- `GuardCombat.engage`：有活跃光束→beam.retarget 主动切换；LOS 被挡→光束快淡出 + navigateToward（落点为怪物周围 6 格「有视线 + 可站立」的安全交战点，杜绝传送兜底落到怪脸上被苦力怕炸）；LOS 通→cancelNavigation + `MagicCaster.castNpcAt`（CD/蓝/锁在 MagicCaster 内部门控：光束 50 蓝、基础 CD 400/SPELL_SPEED（锁结束后起算）、施法互斥锁全程），成功后杖尖 burstColored + GUARD_FIRE 音。
 - `GuardCommand`：`/wandscape guard status`（perm 2）打印 zones/threat/releaseClear/activeGuards。
 
 ## NPC 主动防御

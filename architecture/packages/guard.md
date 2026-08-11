@@ -45,5 +45,5 @@
 - 守卫依赖 `BuildingApi.getBuildingBounds(UUID)` 取建筑 AABB（跨模块不直接引用 building/internal）；自防御只依赖 `EntityComponentBridge` + 自身半径扫描。
 - 伤害与视觉完全复用 `magic/`（`MagicCaster.castNpcAt` + `MagicCastManager` + `MagicBeamEntity` 每 tick 伤害）。
 - 守卫任务分发走 `TaskRequest → GlobalTaskPool → SchedulerSystem`（铁律 6）；自防御不走全局池，直接注入私有队列。
-- 守卫任务 `AttackMonsterOp.target() = null` → 任务本身无站位；LOS 可见时 NPC 原地施法，LOS 被挡时执行器经 `MovementOps.navigateTo` 寻路绕到能打到的位置。
+- 守卫任务 `AttackMonsterOp.target() = null` → 任务本身无站位；LOS 可见时 NPC 原地施法，LOS 被挡时执行器经 `MovementOps.navigateTo` 寻路到怪物周围的安全交战点（`GuardCombat.findEngagePos`：目标为圆心、standoff 6 格环上「有视线 + 可站立」优先，传送兜底也不落怪脸）。
 - `guard/executor/` 的 `tickAll()` / `tick(world)` 由 `Wandscape.onServerTick` 驱动（经 `WandscapeEngine` 钩子）。
