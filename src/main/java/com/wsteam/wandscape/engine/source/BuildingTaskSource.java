@@ -6,8 +6,10 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.task.source.TaskSource;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
 import com.wsteam.wandscape.task.engine.pool.GlobalTaskPool;
 import com.wsteam.wandscape.task.engine.pool.TaskRequest;
+import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -48,21 +50,35 @@ public class BuildingTaskSource implements TaskSource {
 
         BuildingTaskPool btp = world.buildingTaskPool;
 
-        // ── 1. Cleanup: detect completed building head tasks, promote next ──
+        // ── 1. Cleanup: detect finished or resource-parked building head tasks ──
         if (btp != null) {
             for (var entry : btp.getAll().entrySet()) {
                 UUID buildingId = entry.getKey();
+                btp.pruneParked(buildingId, pool);
+
                 Long headId = entry.getValue().getHeadTaskId();
-                if (headId != null && !pool.isActive(headId)) {
-                    btp.onHeadCompleted(buildingId, pool);
-                    api.clearCurrentTask(buildingId);
-                    Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
-                            buildingId.toString().substring(0, 8), headId);
-                    // Queue fully drained → release the footprint lease so the
-                    // chunks can unload again.
-                    if (!btp.hasHead(buildingId)) {
-                        ChunkLoadManager.get().releaseBuilding(buildingId);
+                if (headId != null) {
+                    GlobalTask head = pool.get(headId);
+                    if (head == null || head.state == TaskState.COMPLETED) {
+                        btp.onHeadCompleted(buildingId, pool);
+                        api.clearCurrentTask(buildingId);
+                        Log.info(TAG, "[BuildingTaskSource] cleanup building {} head #{} completed",
+                                buildingId.toString().substring(0, 8), headId);
+                    } else if (head.state == TaskState.AWAITING_RESOURCES) {
+                        // Head is parked waiting for elements — release the head slot so the
+                        // next queued WorkItem (which may be craftable) can be published. The
+                        // parked task stays in the pool and resumes when its elements arrive.
+                        btp.parkHead(buildingId, headId);
+                        api.clearCurrentTask(buildingId);
+                        Log.info(TAG, "[BuildingTaskSource] building {} head #{} parked on resource shortage",
+                                buildingId.toString().substring(0, 8), headId);
                     }
+                }
+
+                // Release the footprint lease only when the building has no active head AND no
+                // parked (resource-waiting) tasks that may still resume.
+                if (!btp.hasHead(buildingId) && !btp.hasParked(buildingId)) {
+                    ChunkLoadManager.get().releaseBuilding(buildingId);
                 }
             }
         }
