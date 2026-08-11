@@ -178,6 +178,9 @@ public class GlobalTaskPool {
         if (task != null) {
             task.buildingId = buildingId;
             task.isBuildingHead = true;
+            if (task.state == TaskState.PENDING_APPROVAL) {
+                transitionToPendingAssign(task);
+            }
         }
         return taskId;
     }
