@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:plenty_pottery_shard",
+  "build_cost": {
+    "earth": 128,
+    "wind": 128
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

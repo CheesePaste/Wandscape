@@ -1,6 +1,6 @@
 {
   "id": "potionstation1",
-  "display_name": "Potion Station",
+  "display_name": "药水工坊",
   "category": "potion_station",
   "first_free": true,
   "pattern": [

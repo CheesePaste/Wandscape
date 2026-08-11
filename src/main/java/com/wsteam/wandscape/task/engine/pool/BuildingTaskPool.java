@@ -2,9 +2,11 @@ package com.wsteam.wandscape.task.engine.pool;
 
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -68,6 +70,51 @@ public class BuildingTaskPool {
                     next.blueprintId(), queue.pendingSize());
         } else {
             queues.remove(buildingId); // clean up empty queue
+        }
+    }
+
+    /**
+     * Park a building's head task that went {@code AWAITING_RESOURCES} (e.g. an
+     * element shortage during synthesis / craft). Frees the head slot so the next
+     * WorkItem can be published; the parked task stays in the {@link GlobalTaskPool}
+     * and resumes on its own once its resources arrive.
+     */
+    public void parkHead(UUID buildingId, long taskId) {
+        BuildingTaskQueue queue = queues.get(buildingId);
+        if (queue == null) return;
+        Long head = queue.getHeadTaskId();
+        if (head != null && head == taskId) {
+            queue.clearHead();
+        }
+        queue.addParked(taskId);
+    }
+
+    public boolean hasParked(UUID buildingId) {
+        BuildingTaskQueue queue = queues.get(buildingId);
+        return queue != null && queue.hasParked();
+    }
+
+    /** Snapshot of parked task ids for a building (debug/UI). */
+    public Set<Long> getParkedTaskIds(UUID buildingId) {
+        BuildingTaskQueue queue = queues.get(buildingId);
+        return queue != null ? queue.getParkedTaskIds() : Set.of();
+    }
+
+    /** Drop parked tasks whose global task has completed or vanished. */
+    public void pruneParked(UUID buildingId, GlobalTaskPool pool) {
+        BuildingTaskQueue queue = queues.get(buildingId);
+        if (queue == null) return;
+        if (queue.hasParked()) {
+            for (long taskId : queue.getParkedTaskIds()) {
+                GlobalTask task = pool.get(taskId);
+                if (task == null || task.state == TaskState.COMPLETED) {
+                    queue.removeParked(taskId);
+                }
+            }
+        }
+        // Clean up a queue left empty after its parked tasks completed with no new head.
+        if (!queue.hasHead() && !queue.hasParked() && !queue.hasPending()) {
+            queues.remove(buildingId, queue);
         }
     }
 

@@ -1,6 +1,6 @@
 {
   "id": "nodeearth",
-  "display_name": "Earth Node",
+  "display_name": "土元素节点",
   "category": "node",
   "first_free": true,
   "pattern": [

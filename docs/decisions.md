@@ -2,6 +2,17 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-11：relax 可重复逛——精力低豁免 visited 门
+
+**需求**（用户实测）：游客精力不足时会去找 relax 建筑，但 relax 逛过一次就被 `visitedBuildings` 挡死 → 精力耗尽后唯一能去的恢复建筑不可达，游客原地闲逛到精力 0 卡死（无恢复建筑 → 闲逛不离场）。
+
+**决策**：
+- **`visitedBuildings` 停留期不重置是红线（#8），不碰**——沿 ATM 先例，给 relax 单独**豁免**：新增 `relaxReusable` 判定（精力比 `energy/maxEnergy < TOURIST_ENERGY_RESTORE_THRESHOLD(0.25)`，即默认 energy < 25；**精力 0 恒可去**，不受阈值影响）通过时，`selectNextTarget` 跳过 visited 过滤，游客可反复回同一 relax 歇脚回精力；判定不通过（精力充足）仍按 visited 门。
+- **判定与 `buildingScore` 的 relax 紧急加分共用同一阈值**：精力低于阈值时 relax 既豁免 visited 又 +100 紧急加分，行为自洽（真正需要时稳定选 relax）。
+- **只豁免不重置**：`visitedBuildings` 仍累计，靠精力比门槛让游客在真正需要时回 relax，而不是整段停留反复刷同一栋。
+
+**为什么**：relax 是精力循环的「白天恢复载体」，精力 0 时是唯一合法目标；visited 一次性门把它也挡掉 = 精力循环断链。用**豁免 + 精力门槛**而非**重置 visited**，保住防挂机红线（#8）——ATM 是「缺钱」例外，relax 是「缺精力」例外，同构。
+
 ## 2026-08-10：V 面板交互嫁接——旧常态（准心右键）+ 新四模式 + 数字键/Tab
 
 **需求**（用户指令）：把旧 V 面板（ffc5358c 时代）的常态交互与新 V 面板的四种模式融合。常态（无子模式）改为**游戏层**——鼠标抓取、屏幕中心准心瞄准、**右键**交互建筑/NPC（不再自由光标左键）；`1/2/3/4` 快速切换 Build/Road/Stats/Warning；`Tab` 抬/放光标（替换已移除的 C 键）；退出子模式回到常态抓取。只有 Build/Road 是「新模式」（自由光标），Stats/Warning 是边缘系统保留旧模式；Build/Road 内删掉左键及建筑/NPC 交互（目标是建建筑不是交互）。
@@ -290,3 +301,13 @@
 **为什么**：相机位置是用户飞行设定的持久值（应跨关闭保留），玩家旋转快照只在单次空中会话作冻结基准（不应跨会话）——两者生命周期不同必须分离。每帧冻结/相机类型 reconcile 是状态机自愈（同光标自愈范式），比在每个 enter/exit 转换点打补丁更鲁棒。必须冻 yBodyRot/yHeadRot：`LivingEntityRenderer` 用 yBodyRot 画身体、`yBodyRot` 在 `tickHeadTurn` 以 30%/tick 跟随 yRot，只冻 yRot 第三人称模型仍会随鼠标抽搐。
 
 **约束保留**：`MixinOverviewCamera` 不动（TAIL 只覆写 position/rotation，不影响 `Camera.detached`，第三人称下 local player 由 `LevelRenderer` 正常渲染）；`closePanel()` / `exitCurrentSubMode()` 路径不改（都走 `exit()` → `exitOverview()` suspend，缓存自然保留）。
+
+## 2026-08：游客 1 级需求基数下调 + 分解折价加深
+
+**需求**：1 级游客均衡需求 50/50/50 对早期殖民地仍偏高、喂满偏慢；分解 1/5 折价让元素应急获取偏易，弱化工坊/商店经济。
+
+**决策**：
+- `TOURIST_NEED_BASE` 默认 150 → **60**（`tourist.needBase`），`TOURIST_NEED_PER_LEVEL` 保持 20 —— 1 级均衡 20/20/20、侧重 32/14/14；每级 +20 的难度曲线不变。
+- `DECOMPOSE_DIVISOR` 5 → **10**：分解产出 = 元素值 × 1/10 向下取整；提前拒绝阈值随之变为 count×总价值 < 10。
+
+**影响**：游客更容易喂满三条（满条给经验更快），1 级新手更顺；分解折价加深，应急补充变贵、鼓励正常获取元素。

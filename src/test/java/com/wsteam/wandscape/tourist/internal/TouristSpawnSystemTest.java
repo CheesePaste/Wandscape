@@ -7,27 +7,27 @@ import org.junit.jupiter.api.Test;
 class TouristSpawnSystemTest {
 
     @Test
-    void personaNeedsLevel1BalancedIsFiftyFiftyFifty() {
-        assertArrayEquals(new int[]{50, 50, 50},
-                TouristSpawnSystem.personaNeeds(150, new double[]{1.0, 1.0, 1.0}));
+    void personaNeedsLevel1BalancedIsTwentyTwentyTwenty() {
+        assertArrayEquals(new int[]{20, 20, 20},
+                TouristSpawnSystem.personaNeeds(60, new double[]{1.0, 1.0, 1.0}));
     }
 
     @Test
-    void personaNeedsLevel1FocusedComfortIsEightyThirtyFive() {
-        assertArrayEquals(new int[]{80, 35, 35},
-                TouristSpawnSystem.personaNeeds(150, new double[]{1.6, 0.7, 0.7}));
+    void personaNeedsLevel1FocusedComfortIsThirtyTwoFourteenFourteen() {
+        assertArrayEquals(new int[]{32, 14, 14},
+                TouristSpawnSystem.personaNeeds(60, new double[]{1.6, 0.7, 0.7}));
     }
 
     @Test
-    void personaNeedsLevel1FocusedMagicIsThirtyEightyThirtyFive() {
-        assertArrayEquals(new int[]{35, 80, 35},
-                TouristSpawnSystem.personaNeeds(150, new double[]{0.7, 1.6, 0.7}));
+    void personaNeedsLevel1FocusedMagicIsFourteenThirtyTwoFourteen() {
+        assertArrayEquals(new int[]{14, 32, 14},
+                TouristSpawnSystem.personaNeeds(60, new double[]{0.7, 1.6, 0.7}));
     }
 
     @Test
-    void personaNeedsLevel1FocusedWonderIsThirtyFiveThirtyEighty() {
-        assertArrayEquals(new int[]{35, 35, 80},
-                TouristSpawnSystem.personaNeeds(150, new double[]{0.7, 0.7, 1.6}));
+    void personaNeedsLevel1FocusedWonderIsFourteenFourteenThirtyTwo() {
+        assertArrayEquals(new int[]{14, 14, 32},
+                TouristSpawnSystem.personaNeeds(60, new double[]{0.7, 0.7, 1.6}));
     }
 
     @Test

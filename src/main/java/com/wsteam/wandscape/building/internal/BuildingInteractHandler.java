@@ -226,7 +226,7 @@ public final class BuildingInteractHandler {
         Map<String, Map<ElementType, Long>> itemElementValues = new LinkedHashMap<>();
         for (var entry : bank.getSnapshot(colonyId).entrySet()) {
             // Every warehouse item with a real element value is decomposable
-            // (1/5 yield); items without a mapping yield nothing and are hidden.
+            // (1/10 yield); items without a mapping yield nothing and are hidden.
             Map<ElementType, Long> value = elemLoader.getItemElementValue(entry.getKey().itemId());
             if (value.isEmpty()) continue;
             decomposableItems.put(entry.getKey(), entry.getValue());

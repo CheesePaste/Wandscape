@@ -356,6 +356,29 @@ public final class TouristSimulation {
         return lastWithdrawTime == 0 || timeBase - lastWithdrawTime >= cooldownTicks;
     }
 
+    /**
+     * Relax 可重复逛（豁免 visited 门）：精力低于恢复阈值时，relax 建筑可反复歇脚回精力。
+     * 否则精力耗尽后唯一能去的 relax 逛过一次就被 visited 门挡死，游客闲逛至精力 0 卡死。
+     * 只豁免不重置——visitedBuildings 仍累计（红线 #8），靠精力比本判定让游客在真正需要时回 relax。
+     */
+    private static boolean relaxReusable(TouristStateHost t, RelaxConfig relax) {
+        if (relax == null || relax == RelaxConfig.NONE) return false;
+        if (relax.energyRestore() <= 0) return false;
+        return relaxReusable(t.getEnergy(), WandscapeConstants.TOURIST_MAX_ENERGY,
+                Config.TOURIST_ENERGY_RESTORE_THRESHOLD.get());
+    }
+
+    /** 纯判定（可 JUnit）：精力 0 恒可去（精力耗尽必须能自救，不受阈值影响）；否则精力比 < threshold 时可重复去。 */
+    static boolean relaxReusable(int energy, int maxEnergy, double threshold) {
+        return energy <= 0 || energy < threshold * maxEnergy;
+    }
+
+    /** 该建筑当前可否豁免 visited 门（ATM 缺钱分批取现 / 精力低重复歇脚 relax）。 */
+    private static boolean exemptFromVisited(TouristStateHost t, BuildingConfig cfg, int atmCooldownTicks) {
+        return atmReusable(t, cfg.atm(), atmCooldownTicks)
+                || relaxReusable(t, cfg.relax());
+    }
+
     /** Mark a visit memory on the host (journey diary). Returns the memory for narrative use. */
     public static com.wsteam.wandscape.shared.data.VisitMemory addVisitMemory(TouristStateHost t,
             @Nullable String buildingTypeId, @Nullable String displayName, String category, long gameTime,
@@ -430,8 +453,8 @@ public final class TouristSimulation {
                     if (hasHotelVacancy(level, b.getBuildingId())) hotels.add(state);
                 } else {
                     if (energyEmpty && (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0)) continue;
-                    // ATM 可重新取现时豁免 visited（池子有余额 + 钱包低 + 冷却过）；其余按 visited 门
-                    if (!atmReusable(t, cfg.atm(), atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
+                    // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
+                    if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
                     normal.add(state);
                 }
                 continue;
@@ -441,7 +464,8 @@ public final class TouristSimulation {
                 // 精力 0 → 只能去恢复建筑（relax.energyRestore>0）；无恢复建筑 → 闲逛（不离场）
                 if (cfg.relax() == RelaxConfig.NONE || cfg.relax().energyRestore() <= 0) continue;
             }
-            if (!atmReusable(t, cfg.atm(), atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
+            // ATM 可重新取现 / 精力低可重复歇脚 relax 时豁免 visited；其余按 visited 门
+            if (!exemptFromVisited(t, cfg, atmCooldown) && t.hasVisitedBuilding(b.getBuildingId())) continue;
             normal.add(state);
         }
         List<BuildingState> candidates = nightHotel && !hotels.isEmpty() ? hotels : normal;

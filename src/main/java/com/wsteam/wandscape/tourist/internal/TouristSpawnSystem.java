@@ -402,7 +402,7 @@ public final class TouristSpawnSystem {
     /**
      * 画像 roll：40% 均衡 {1,1,1}；20% 舒适 {1.6,0.7,0.7}；20% 魔法 {0.7,1.6,0.7}；20% 奇观 {0.7,0.7,1.6}。
      * 三条 need = 总需求 × 画像权重占比，总需求 = BASE + (level-1)×PER_LEVEL（等级越高越难满足）。
-     * 1 级（totalNeed=150）：均衡 → 50/50/50；侧重 → 80/35/35（及其置换）。
+     * 1 级（totalNeed=60）：均衡 → 20/20/20；侧重 → 32/14/14（及其置换）。
      */
     private void rollAndSetPersona(TouristEntity t, int touristLevel) {
         double r = random.nextDouble();

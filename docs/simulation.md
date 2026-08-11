@@ -7,7 +7,7 @@
 游客每一次「选下一站」走同一条管道：
 
 1. **收集候选**：视野内（`TOURIST_VISION_RADIUS`）已加载、结构完好、营业中、有交互位（spot）的建筑。
-2. **过滤**：已逛过（visited）的剔除（ATM 缺钱豁免）；精力 0 只去 relax；夜晚未满条优先旅店。
+2. **过滤**：已逛过（visited）的剔除（ATM 缺钱 / relax 精力低豁免）；精力 0 只去 relax；夜晚未满条优先旅店。
 3. **评分**：`score = 满意度增益 + 精力/钱包紧急加分`，spot 全满时**乘以排队降权乘数**。
 4. **加权抽取**：按 score 加权随机选一栋（`Math.max(0.5, score)` 兜底，候选非空必选）。
 5. 走到目标 → 占一个 spot 做动作 → 交互结算 → 填三条 → 再选下一站。
@@ -20,8 +20,8 @@
 
 - 每条 = `fill / need`。`need` 由画像 + 等级决定，`fill` 从 0 起步。
 - **画像 roll**（`TouristSpawnSystem.rollAndSetPersona`）：40% 均衡 `{1,1,1}`；20% 舒适 `{1.6,0.7,0.7}`；20% 魔法 `{0.7,1.6,0.7}`；20% 奇观 `{0.7,0.7,1.6}`。
-- `totalNeed = NEED_BASE(150) + (level−1) × NEED_PER_LEVEL(20)`；`need_d = round(totalNeed × w_d / Σw)`。
-- 1 级游客：均衡 50/50/50；侧重 80/35/35（及其置换）。等级越高总需求越大、越难喂饱。
+- `totalNeed = NEED_BASE(60) + (level−1) × NEED_PER_LEVEL(20)`；`need_d = round(totalNeed × w_d / Σw)`。
+- 1 级游客：均衡 20/20/20；侧重 32/14/14（及其置换）。等级越高总需求越大、越难喂饱。
 - 满条 = 三条 fill 全到 need。**满条才给经验**（防刷，里程碑不是流水）；夜晚满条由离场窗口处理。
 
 ### 精力（Energy）
@@ -38,7 +38,7 @@
 
 ### 停留（visited 记忆）
 
-- `visitedBuildings`：整个停留期**不重置**（红线 #8 防挂机），同一建筑只逛一次；ATM 是唯一豁免。
+- `visitedBuildings`：整个停留期**不重置**（红线 #8 防挂机），同一建筑只逛一次；ATM（缺钱）与 relax（精力低）是豁免。
 - 停留 2–4 天（`departureDeadline`），到点离场。
 
 ## 三、候选过滤（`selectNextTarget`）
@@ -47,7 +47,7 @@
 
 1. **视野**：建筑锚点与游客水平距离 ≤ `TOURIST_VISION_RADIUS(48)`；实体寻路（requireLoaded=true）还要求目标区块已加载。
 2. **可用性**：非 shutdown、结构完整、`isTouristTarget`、`interact_spots` 非空（0-spot 建筑对游客无效）。
-3. **visited 门**：已逛过 → 剔除；**ATM 豁免**：`atmReusable` 通过（travelFund>0 且 wallet<initialWallet/4 且取现冷却已过）时 ATM 跳过 visited 门，可分批取现。
+3. **visited 门**：已逛过 → 剔除；**豁免**：`atmReusable` 通过（travelFund>0 且 wallet<initialWallet/4 且取现冷却已过）时 ATM 跳过 visited 门，可分批取现；`relaxReusable` 通过（精力比 < `TOURIST_ENERGY_RESTORE_THRESHOLD`(0.25)，默认 energy<25；精力 0 恒可去）时 relax 跳过 visited 门，可重复歇脚回精力。
 4. **精力 0**：只能去 relax（energyRestore>0）；无恢复建筑 → 闲逛，**不离场**。
 5. **夜晚 + 未满条**：优先旅店（`service.maxOccupancy>0` 且有空位，不查 visited）；视野内无旅店 → 回退普通建筑（仍尊重 visited、精力 0 只去 relax），避免傍晚干晃 5000 tick。
 
@@ -109,7 +109,7 @@ score = 满意度增益 satisfactionGain
 | 项（Config / 常量） | 默认 | 含义 |
 |---|---|---|
 | `TOURIST_BAR_GAIN_COEFF` | 1.0 | 每维增益 = round(建筑值 × coeff)，封顶缺口 |
-| `TOURIST_NEED_BASE` / `NEED_PER_LEVEL` | 150 / 20 | 1 级总需求 / 每级增量 |
+| `TOURIST_NEED_BASE` / `NEED_PER_LEVEL` | 60 / 20 | 1 级总需求 / 每级增量 |
 | `TOURIST_BASE_WALLET` / `WALLET_PER_LEVEL` | 200 / 300 | 随身现金 = base + level × per-level |
 | `TOURIST_ATM_TRAVEL_FUND_MULTIPLIER` | 3.0 | travelFund = 现金 × 系数（取现池上限） |
 | `TOURIST_ATM_WITHDRAW_COOLDOWN_TICKS` | 2400 | 两次取现最小间隔 |
@@ -128,7 +128,7 @@ score = 满意度增益 satisfactionGain
 - **多样城镇，不堆最强**：画像自组织，要喂饱不同画像自然补三类建筑——行为引导而非规则逼迫。
 - **多建同类型 = 多交互位 = 排队短**：真实收益，玩家看到「这家店火爆，该多开一家」。
 - **满条才给经验**：经验是里程碑不是流水。
-- **visited 不重置**：防挂机；ATM 唯一豁免（配合冷却分批取现）。
+- **visited 不重置**：防挂机；ATM（缺钱）与 relax（缺精力）豁免（分别靠取现冷却/精力阈值控节奏，visited 本身仍累计）。
 
 ## 十、相关文档
 

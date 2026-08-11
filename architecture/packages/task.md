@@ -27,7 +27,7 @@
 
 ## 任务池
 
-GlobalTaskPool：TreeSet 排序(PENDING_ASSIGN 优先级 desc → createdAt asc → id asc)。AWAITING_RESOURCES 休眠队列 → ResourceFulfilled 事件唤醒。BuildingTaskPool：建筑→队列映射，仅 head task 进入全局池。
+GlobalTaskPool：TreeSet 排序(PENDING_ASSIGN 优先级 desc → createdAt asc → id asc)。AWAITING_RESOURCES 休眠队列 → ResourceFulfilled 事件唤醒。BuildingTaskPool：建筑→队列映射，仅 head task 进入全局池；head 因资源（元素）不足进入 AWAITING_RESOURCES 时被「暂存」(park)——释放头槽位让下一个可执行 WorkItem 晋升，被暂存任务留在池中待资源到齐自行恢复，`pruneParked` 在任务完成后清除。
 
 ## 调度
 

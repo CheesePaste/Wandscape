@@ -403,7 +403,7 @@ public class WorkstationScreen extends MedievalScreen {
 
     /**
      * Draw the per-item decompose yield as [icon]xY.Z — 1/DECOMPOSE_DIVISOR of the item's
-     * element value. Integer value / 5 is always a multiple of 0.2, so one decimal is exact.
+     * element value. Integer value / 10 is always a multiple of 0.1, so one decimal is exact.
      */
     private static void drawElementYield(GuiGraphics g, Map<ElementType, Long> value, int x, int y) {
         if (value == null || value.isEmpty()) return;

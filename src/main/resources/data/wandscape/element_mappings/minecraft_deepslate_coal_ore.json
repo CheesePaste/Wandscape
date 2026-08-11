@@ -1,7 +1,7 @@
 {
   "block": "minecraft:deepslate_coal_ore",
   "build_cost": {
-    "fire": 4,
+    "fire": 8,
     "earth": 2
   },
   "decompose_yield": {},

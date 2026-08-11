@@ -1,6 +1,6 @@
 {
   "id": "atm",
-  "display_name": "自动取款机",
+  "display_name": "ATM",
   "category": "atm",
   "first_free": true,
   "pattern": [

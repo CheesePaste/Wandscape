@@ -282,8 +282,8 @@ public class Config {
             .defineInRange("tourist.atmWithdrawCooldownTicks", 2400, 0, 24000);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_BASE = BUILDER
-            .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。默认 150 = 1 级均衡 50/50/50。")
-            .defineInRange("tourist.needBase", 150, 50, 2000);
+            .comment("游客总需求基数：totalNeed = BASE + (level-1)×PER_LEVEL，等级越高越难满足。默认 60 = 1 级均衡 20/20/20。")
+            .defineInRange("tourist.needBase", 60, 50, 2000);
 
     public static final ModConfigSpec.IntValue TOURIST_NEED_PER_LEVEL = BUILDER
             .comment("游客每级需求增量。")

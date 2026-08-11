@@ -36,7 +36,7 @@ public final class GuideSession {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
-                        Component.literal("§e[新手引导] §f跟随引导，逐步建设你的殖民地！"), true);
+                        Component.literal("§e[新手引导] §f跟随引导，逐步建设你的魔法小镇！"), true);
             }
         }
     }

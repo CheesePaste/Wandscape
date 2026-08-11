@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:totem_of_undying",
+  "build_cost": {
+    "wind": 2048,
+    "wood": 2048
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

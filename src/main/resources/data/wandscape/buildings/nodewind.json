@@ -1,6 +1,6 @@
 {
   "id": "nodewind",
-  "display_name": "Wind Node",
+  "display_name": "风元素节点",
   "category": "node",
   "first_free": true,
   "pattern": [
