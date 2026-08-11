@@ -125,9 +125,9 @@ public class ConstructionSiteScreen extends MedievalScreen {
         super.render(g, mouseX, mouseY, partialTick);
         int textX = leftPos + 8;
         int lineY = topPos + headerHeight + TIME_LINE1_Y;
-        g.drawString(font, I18n.name("gui.wandscape.constructionsite.start_time", "预计开工")
+        g.drawString(font, I18n.name("gui.wandscape.constructionsite.start_time", "预计开工").getString()
                 + ": " + startLabel(), textX, lineY, MedievalColors.TEXT_WARM_WHITE);
-        g.drawString(font, I18n.name("gui.wandscape.constructionsite.complete_time", "预计完工")
+        g.drawString(font, I18n.name("gui.wandscape.constructionsite.complete_time", "预计完工").getString()
                 + ": " + completeLabel(), textX, lineY + TIME_LINE_GAP, MedievalColors.TEXT_WARM_WHITE);
     }
 
