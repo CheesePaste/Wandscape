@@ -30,7 +30,7 @@
   2) 新建 `BuildingConfigSyncPacket` 网络包并在 `OnDatapackSyncEvent` 阶段广播，专用服务器（Dedicated Server）在玩家进服或数据包 reload 时自动把最新 `BuildingConfig` 同步下发给客户端，解决多人联机下客户端报 `Config not found for slot` 以及【建造模式无法使用】的问题。
 - **重构殖民地建立与初始法师生成流程 (Colony Founding & Initial Mage Fix)**：
   1) 移除 `PanelStateTogglePacket` 中玩家按 V 键时静默、偷摸自动建殖民地的隐藏逻辑，消除静默自动创建引发的法师生成失败死锁以及对【殖民地命名弹窗】的无限锁死拦截。
-  2) 调整 `BuildingApiImpl.placeBuilding` 逻辑，支持未绑定 `colonyId` 时的首免费（`firstFree`）市政厅放置。
+  2) 调整 `BuildingApiImpl.placeBuilding` 与 `BuildingUnlockChecker` 门控逻辑：未建立殖民地（`colonyId == null`）时，系统限制唯一允许建造的只有【市政厅】（`category="government"` 带有 `firstFree` 标记的启动建筑），其它非政府建筑在选单及服务端均锁定提示 `"需要先建造市政厅建立殖民地"`。
   3) 恢复放置/右键市政厅时的正规【创建殖民地】客户端命名弹窗；玩家确认提交名称后正规建立殖民地，并在市政厅前举行诞生烟花广播与刷出第 1 名带法杖及首批施工建材的初始法师（适用于单人与多人 Dedicated Server 专用服务器）。
 
 **为什么**：NeoForge/FML 对物理侧和 `@Mod` 入口有严格规定，重复标注客户端 `@Mod` 破坏了服务器端网络握手的模组列表匹配逻辑；通过逻辑判定 (`FMLEnvironment.dist`) + 显式 `modEventBus.register`，既保留了模组在客户端的全部视觉 UI 逻辑，又恢复了在 Dedicated Server 下的标准双侧注册与正常联机。
