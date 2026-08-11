@@ -213,7 +213,6 @@ public class NpcScreen extends MedievalScreen {
         if (peacefulBtn != null) {
             peacefulBtn.setMessage(Component.literal(isPeaceful ? "Peace: ON" : "Peace: OFF"));
         }
->>>>>>> 37bc38a1 (feat(npc): 给NPC增加跟随模式与和平模式及界面切换按钮)
     }
 
     /** 名字框每次变更：非空且与服务端不同则自动发送改名包（写好了自动保存）。 */
