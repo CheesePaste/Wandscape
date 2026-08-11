@@ -947,6 +947,15 @@ public class Wandscape {
 
         // Heartbeat every ~5 seconds (100 MC ticks)
         if (mcTickCount % 100 == 0) {
+            var colonyApi = WandscapeApis.getColonyApiSilently();
+            if (colonyApi != null) {
+                var overworld = event.getServer().overworld();
+                if (overworld != null) {
+                    for (var colonyId : colonyApi.getAllColonyIds()) {
+                        com.wsteam.wandscape.npc.internal.ReviveHandler.checkAndAutoReviveColony(overworld, colonyId);
+                    }
+                }
+            }
             Log.info(TAG, "[Engine] engineTick=#{} mcTick=#{} — entities={} tasks_in_pool={} pendingAsync={}",
                     engineTickCount, mcTickCount,
                     world.getNextEntityId() - 1,

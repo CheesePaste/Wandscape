@@ -304,6 +304,7 @@ npc/                                  DeathRecord.latest + ColonyDeathRegistry.l
 - 祭坛施法进任务系统（NPC 移动/交互是任务），不进 CastBrain 自动决策表；`CastBrain.select` 再加 altarOnly 跳过作防御性保证。
 - 引导时长与法阵视觉对齐：`altar_duration` 设为该魔法 circle spec 的 `durationTicks`（revive → revive_ritual = 600）。
 - **发布即锁定，施放结束才起 CD**：玩家提交后该祭坛+魔法被任务池锁定（`GlobalTaskPool.hasActiveTask("magic:altar_cast", {altar, magic_id})`，覆盖已发布未施放 + 施放中），任务完成（施放结束）即解锁；祭坛 CD 在 `fireEffect` 起算，接续锁定窗口无缝隙——防止玩家在 NPC 接取前反复点击刷多次施法。客户端以 `AltarSpellInfo.locked` + 本地 submitted 集显示「施法中/已安排」并禁用 Submit。
+- **全灭保底自动复活**：当殖民地所有 NPC 阵亡（活着的 NPC 为 0 且死亡表存在记录）时，系统自动触发全灭保底（`ReviveHandler.checkAndAutoReviveColony`），在市政厅（`town_hall`）门口播放闪耀绿色复活魔法视觉并自动复活一名离世成员，避免全员阵亡后无法师施发复活的瘫痪死锁局面。
 
 ## 十二、分阶段实施
 

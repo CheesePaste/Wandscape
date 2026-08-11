@@ -16,6 +16,9 @@ import com.wsteam.wandscape.npc.data.DeathRecord;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
+import com.wsteam.wandscape.building.internal.BuildingState;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -29,8 +32,8 @@ import net.minecraft.world.phys.Vec3;
  * 恢复身份/外观/属性/装备/背包。入口已迁移为**祭坛唯一**（AltarCastExecutor 调用
  * {@link #spawnFromRecordAt}）；shift+右键直接施放已移除（MagicInteractHandler 删除）。
  *
- * <p>虚弱复活：生成即 1 血 0 蓝，靠脱战回血与魔力回复缓慢恢复。
- * 失败（生成位置无地可放等）保留死亡记录，玩家可重试。
+ * <p>全灭保底：当殖民地所有 NPC 均已阵亡时，全灭保底自动在市政厅门口释放复活魔法复活离世成员。
+ * 虚弱复活：生成即 1 血 0 蓝，靠脱战回血与魔力回复缓慢恢复。
  */
 public final class ReviveHandler {
 
@@ -40,6 +43,52 @@ public final class ReviveHandler {
     public static final String REVIVE_MAGIC_ID = "revive";
 
     private ReviveHandler() {}
+
+    /**
+     * 检查并执行殖民地全灭自动复活保底。
+     * 当某殖民地存活 NPC 为 0、但存在死亡记录时，自动在市政厅门口释放复活魔法复活最近死亡的一名 NPC。
+     */
+    public static boolean checkAndAutoReviveColony(ServerLevel level, UUID colonyId) {
+        if (colonyId == null) return false;
+        ColonyDeathRegistry deathReg = ColonyDeathRegistry.get(level);
+        DeathRecord latestRec = deathReg.latestInColony(colonyId);
+        if (latestRec == null) return false;
+
+        // 检查世界上该殖民地活着的 NPC 数量
+        World world = WandscapeEngine.getWorld();
+        if (world != null) {
+            for (var entry : EntityComponentBridge.INSTANCE.allNpcs().entrySet()) {
+                WandscapeNpc npc = entry.getValue();
+                if (npc != null && !npc.isRemoved() && npc.isAlive()) {
+                    ColonyMember member = world.get(entry.getKey(), ColonyMember.class);
+                    if (member != null && colonyId.equals(member.colonyId())) {
+                        return false; // 尚有幸存者，不触发保底
+                    }
+                }
+            }
+        }
+
+        // 确认全灭：定位市政厅门口/入口
+        BlockPos townHallPos = resolveTownHallDoorOrAnchor(level, colonyId, new BlockPos(latestRec.x(), latestRec.y(), latestRec.z()));
+        spawnFromRecordAt(level, latestRec, townHallPos);
+        Log.info(TAG, "全灭保底触发：殖民地 {} 成员全灭，已自动在市政厅门口 ({}) 释放复活魔法唤醒 {}",
+                colonyId.toString().substring(0, 8), townHallPos.toShortString(), latestRec.name());
+        return true;
+    }
+
+    private static BlockPos resolveTownHallDoorOrAnchor(ServerLevel level, UUID colonyId, BlockPos fallback) {
+        BuildingSavedData savedData = BuildingSavedData.get(level);
+        if (savedData != null) {
+            for (BuildingState b : savedData.getAllBuildings()) {
+                if (colonyId.equals(b.getColonyId()) && "town_hall".equals(b.getBuildingTypeId())) {
+                    BlockPos entry = savedData.getTouristInteractPoint(b.getBuildingId(), level);
+                    if (entry != null) return entry;
+                    return b.getAnchor();
+                }
+            }
+        }
+        return fallback;
+    }
 
     /** 在指定位置生成新 NPC，恢复死亡快照，删除记录。 */
     public static void spawnFromRecordAt(ServerLevel level, DeathRecord rec, BlockPos desiredPos) {

@@ -61,5 +61,8 @@ public final class NpcDeathHandler {
         Log.info(TAG, "NPC {} ({}) died at {},{},{} — death record saved, inventory {} stacks",
                 rec.npcId().toString().substring(0, 8), rec.name(),
                 rec.x(), rec.y(), rec.z(), inv.size());
+
+        // NPC 阵亡时立即轮询全灭检测：若全员阵亡，自动在市政厅门口释放复活魔法
+        ReviveHandler.checkAndAutoReviveColony(level, colony);
     }
 }
