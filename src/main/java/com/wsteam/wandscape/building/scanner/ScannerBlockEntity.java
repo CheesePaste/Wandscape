@@ -32,9 +32,6 @@ public class ScannerBlockEntity extends CreativeScannerBlockEntity {
     public String getCategory() { return "custom"; }
 
     @Override
-    public Map<String, Integer> getMaintenanceCost() { return Map.of(); }
-
-    @Override
     public int getComfort() { return 0; }
 
     @Override

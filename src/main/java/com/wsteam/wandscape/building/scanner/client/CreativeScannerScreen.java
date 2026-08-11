@@ -85,10 +85,6 @@ public class CreativeScannerScreen extends MedievalScreen {
     // ── Elements list for selectors ──
     private static final List<String> ELEMENTS = List.of("earth", "wood", "water", "fire", "metal", "wind", "dark");
 
-    // ── Maintenance cost ──
-    private int maintCostY;
-    private final List<CostRow> maintRows = new ArrayList<>();
-
     // ── Node config fields (category=node) ──
     private String currentNodeElem;
     private EditBox nodeAmount, nodeChannel;
@@ -150,7 +146,6 @@ public class CreativeScannerScreen extends MedievalScreen {
         super.init();
         customButtons.clear();
         insetFields.clear();
-        maintRows.clear();
         goodRows.clear();
         elemOutRows.clear();
 
@@ -336,33 +331,6 @@ public class CreativeScannerScreen extends MedievalScreen {
             syncToServer();
         });
         y += ROW_H + 8;
-
-        // ── Maintenance cost section ──
-        addSectionHeader(y, "❖ 周期维护费");
-        y += 16;
-        maintCostY = y - 14;
-
-        addCustomButton(lx + 240, y - 15, 80, 20, "+ 添加消耗", () -> {
-            String el = nextUnusedElement(scanner.getMaintenanceCost());
-            if (el != null) {
-                scanner.addMaintenanceCost(el, 1);
-                syncToServer();
-                needsRebuild = true;
-            }
-        });
-
-        for (var entry : scanner.getMaintenanceCost().entrySet()) {
-            String el = entry.getKey();
-            maintRows.add(new CostRow(lx + 4, y, el, entry.getValue(),
-                    () -> {
-                        scanner.removeMaintenanceCost(el);
-                        syncToServer();
-                        needsRebuild = true;
-                    },
-                    this::syncMaintCost));
-            y += ROW_H + 2;
-        }
-        y += 8;
 
         // ── Node config (category=node) ──
         String cat = scanner.getCategory();
@@ -834,17 +802,6 @@ public class CreativeScannerScreen extends MedievalScreen {
         }
     }
 
-    private void syncMaintCost() {
-        Map<String, Integer> map = new HashMap<>();
-        for (CostRow r : maintRows) {
-            if (r.amount() > 0) {
-                map.put(r.element(), r.amount());
-            }
-        }
-        scanner.setMaintenanceCost(map);
-        syncToServer();
-    }
-
     private void syncServiceElemOutput() {
         Map<String, Integer> map = new HashMap<>();
         for (CostRow r : elemOutRows) {
@@ -973,15 +930,6 @@ public class CreativeScannerScreen extends MedievalScreen {
         tag.putInt("wonder", scanner.getWonder());
         tag.putInt("unlock_min_level", scanner.getUnlockMinLevel());
 
-        ListTag mcList = new ListTag();
-        for (var entry : scanner.getMaintenanceCost().entrySet()) {
-            CompoundTag et = new CompoundTag();
-            et.putString("element", entry.getKey());
-            et.putInt("amount", entry.getValue());
-            mcList.add(et);
-        }
-        tag.put("maintenance_cost", mcList);
-
         CompoundTag ncTag = new CompoundTag();
         ncTag.putString("blueprint", scanner.getNodeBlueprint());
         ncTag.putString("element", scanner.getNodeElement());
@@ -1039,15 +987,6 @@ public class CreativeScannerScreen extends MedievalScreen {
             if (arr.length == 3) scanner.setDoorOffset(BlockOffset.of(arr[0], arr[1], arr[2]));
         } else {
             scanner.setDoorOffset(null);
-        }
-
-        scanner.setMaintenanceCost(Map.of());
-        if (tag.contains("maintenance_cost", Tag.TAG_LIST)) {
-            ListTag list = tag.getList("maintenance_cost", Tag.TAG_COMPOUND);
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag et = list.getCompound(i);
-                scanner.addMaintenanceCost(et.getString("element"), et.getInt("amount"));
-            }
         }
 
         if (tag.contains("node_config", Tag.TAG_COMPOUND)) {
@@ -1184,8 +1123,6 @@ public class CreativeScannerScreen extends MedievalScreen {
 
         drawHdr(gui, "❖ 解锁门槛", lx, unlockY);
         drawLbl(gui, "最低等级", lx + COL2, unlockY + ROW_H - 4);
-
-        drawHdr(gui, "❖ 周期维护费", lx, maintCostY);
 
         if ("node".equals(scanner.getCategory())) {
             drawHdr(gui, "❖ 节点配置", lx, nodeCatY);

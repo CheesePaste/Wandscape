@@ -20,7 +20,6 @@ import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.DecorationConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ServiceConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
@@ -47,7 +46,6 @@ public record BuildingConfig(
         @Nullable BoundaryBox boundary,
         @Nullable BlueprintRef blueprint,
         @Nullable NodeConfig nodeConfig,
-        @SerializedName("maintenance_cost") MaintenanceCostConfig maintenanceCost,
         DecorationConfig decoration,
         @SerializedName("wonder_config") WonderConfig wonderConfig,
         ShopConfig shop,
@@ -260,20 +258,6 @@ public record BuildingConfig(
                 nodeConfig = context.deserialize(obj.get("node_config"), NodeConfig.class);
             }
 
-            // Maintenance cost (all buildings, defaults to NONE)
-            MaintenanceCostConfig maintenanceCost = MaintenanceCostConfig.NONE;
-            if (obj.has("maintenance_cost")) {
-                JsonObject mcObj = obj.getAsJsonObject("maintenance_cost");
-                Map<ElementType, Integer> costs = new HashMap<>();
-                if (mcObj.has("costs")) {
-                    JsonObject costsObj = mcObj.getAsJsonObject("costs");
-                    for (var entry : costsObj.entrySet()) {
-                        costs.put(ElementType.fromId(entry.getKey()), entry.getValue().getAsInt());
-                    }
-                }
-                maintenanceCost = new MaintenanceCostConfig(Map.copyOf(costs));
-            }
-
             // Decoration config (only for category=decoration)
             DecorationConfig decoration = null;
             if (obj.has("decoration")) {
@@ -365,7 +349,7 @@ public record BuildingConfig(
                     pattern, blockMapping, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
-                    maintenanceCost, decoration, wonderConfig, shop, service, relax, atm,
+                    decoration, wonderConfig, shop, service, relax, atm,
                     doorOffset, interactSpots, firstFree, deprecated, entities);
         }
 

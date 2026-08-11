@@ -1,7 +1,6 @@
 package com.wsteam.wandscape.shared.ui.panel;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import com.wsteam.wandscape.projection.client.BuildingDebugClientState;
@@ -10,7 +9,6 @@ import com.wsteam.wandscape.projection.data.BuildingSlot;
 import com.wsteam.wandscape.projection.network.ProjectionEnterPacket;
 import com.wsteam.wandscape.projection.network.ProjectionExitPacket;
 import com.wsteam.wandscape.road.client.RoadPlacementState;
-import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.network.PanelStateTogglePacket;
 
 import net.minecraft.client.Minecraft;
@@ -62,9 +60,6 @@ public final class WandscapePanelState {
 
     public record StatsSummary(
             long currentDay,
-            int buildingsPaid,
-            int buildingsShutdown,
-            int buildingsRestarted,
             int touristsArrived,
             int touristsDeparted,
             int avgComfortRatio,
@@ -73,11 +68,10 @@ public final class WandscapePanelState {
             int comfort,
             int magic,
             int wonder,
-            Map<ElementType, Long> totalElementsConsumed,
             int snapshotCount
     ) {
         public static final StatsSummary EMPTY = new StatsSummary(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Map.of(), 0);
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     private static volatile StatsSummary statsSummary = StatsSummary.EMPTY;

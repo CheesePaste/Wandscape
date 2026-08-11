@@ -17,6 +17,7 @@ import com.wsteam.wandscape.shared.api.TavernApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
 import com.wsteam.wandscape.shared.api.WarehouseApi;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
+import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
 import com.wsteam.wandscape.shared.event.ColonyLevelUpEvent;
 import com.wsteam.wandscape.shared.event.ColonyRaidVictoryEvent;
 import com.wsteam.wandscape.shared.event.DailySettlementEvent;
@@ -87,7 +88,7 @@ public final class AchievementService {
     private static final int SCAN_INTERVAL = 100;
     private static int tickCounter;
 
-    /** colonyId → 连续无维护停摆天数（steady_hand）。 */
+    /** colonyId → 连续无建筑停摆天数（steady_hand）。 */
     private static final Map<UUID, Integer> settlementStreak = new ConcurrentHashMap<>();
 
     private AchievementService() {}
@@ -105,6 +106,7 @@ public final class AchievementService {
         NeoForge.EVENT_BUS.addListener(AchievementService::onRaidVictory);
         NeoForge.EVENT_BUS.addListener(AchievementService::onTouristArrived);
         NeoForge.EVENT_BUS.addListener(AchievementService::onTouristDeparted);
+        NeoForge.EVENT_BUS.addListener(AchievementService::onBuildingShutdown);
         NeoForge.EVENT_BUS.addListener(AchievementService::onDailySettlement);
         NeoForge.EVENT_BUS.addListener(AchievementService::onServerTick);
         Log.info(TAG, "registered on engine EventBus + NeoForge EVENT_BUS");
@@ -142,14 +144,16 @@ public final class AchievementService {
 
     private static void onDailySettlement(DailySettlementEvent event) {
         UUID colonyId = event.getReport().colonyId();
-        for (DailySettlementEvent.BuildingSettlementResult r : event.getReport().buildingResults()) {
-            if (r.wasShutdown()) {
-                settlementStreak.remove(colonyId);
-                return;
-            }
-        }
         int streak = settlementStreak.merge(colonyId, 1, Integer::sum);
         if (streak >= 7) grant(STEADY_HAND);
+    }
+
+    /** 任何建筑停摆（手动/结构损坏）都重置连续天数。 */
+    private static void onBuildingShutdown(BuildingShutdownEvent event) {
+        UUID colonyId = event.getColonyId();
+        if (colonyId != null) {
+            settlementStreak.remove(colonyId);
+        }
     }
 
     // ---- Periodic safety net (hotel full + catch-up re-grant) ----

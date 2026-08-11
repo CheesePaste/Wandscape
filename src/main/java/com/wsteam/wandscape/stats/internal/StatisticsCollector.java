@@ -68,14 +68,6 @@ public final class StatisticsCollector {
         var report = event.getReport();
         UUID colonyId = report.colonyId();
 
-        // Count settlement results
-        int paid = 0, shutdown = 0, restarted = 0;
-        for (var br : report.buildingResults()) {
-            if (br.paid() && !br.wasRestarted()) paid++;
-            if (br.wasShutdown()) shutdown++;
-            if (br.wasRestarted()) restarted++;
-        }
-
         // Merge intra-day tourist counts
         int a = touristsArrived.getOrDefault(colonyId, 0);
         int d = touristsDeparted.getOrDefault(colonyId, 0);
@@ -88,8 +80,6 @@ public final class StatisticsCollector {
 
         ColonyDailySnapshot snapshot = new ColonyDailySnapshot(
                 report.day(),
-                report.totalConsumed(),
-                paid, shutdown, restarted,
                 a, d, tc, tm, tw,
                 comfort, magic, wonder);
 

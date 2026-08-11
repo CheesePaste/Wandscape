@@ -56,7 +56,6 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     private static final String KEY_ATM_DURATION = "atm_duration";
 
     // ── New field NBT keys ──
-    private static final String KEY_MAINTENANCE_COST = "maintenance_cost";
     private static final String KEY_NODE_CONFIG = "node_config";
     private static final String KEY_SHOP_GOODS = "shop_goods";
     private static final String KEY_SERVICE_ELEMENT_OUTPUT = "service_element_output";
@@ -109,9 +108,6 @@ public class CreativeScannerBlockEntity extends BlockEntity {
 
     // ── Atm config ──
     private int atmWithdrawAmount, atmInteractionDurationTicks;
-
-    // ── Maintenance cost ──
-    private Map<String, Integer> maintenanceCost = new HashMap<>();
 
     // ── Node config (only for category=node) ──
     private String nodeBlueprint = "";
@@ -314,20 +310,6 @@ public class CreativeScannerBlockEntity extends BlockEntity {
     public int getAtmInteractionDurationTicks() { return atmInteractionDurationTicks; }
     public void setAtmInteractionDurationTicks(int v) { this.atmInteractionDurationTicks = Math.max(0, v); }
 
-    // ── Maintenance cost ──
-
-    public Map<String, Integer> getMaintenanceCost() { return Collections.unmodifiableMap(maintenanceCost); }
-    public void setMaintenanceCost(Map<String, Integer> map) {
-        maintenanceCost.clear();
-        if (map != null) maintenanceCost.putAll(map);
-    }
-    public void addMaintenanceCost(String element, int amount) {
-        maintenanceCost.put(element, amount);
-    }
-    public void removeMaintenanceCost(String element) {
-        maintenanceCost.remove(element);
-    }
-
     // ── Node config ──
 
     public String getNodeBlueprint() { return nodeBlueprint; }
@@ -423,16 +405,6 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         tag.putInt(KEY_ATM_WITHDRAW, atmWithdrawAmount);
         tag.putInt(KEY_ATM_DURATION, atmInteractionDurationTicks);
 
-        // Maintenance cost
-        ListTag mcList = new ListTag();
-        for (var entry : maintenanceCost.entrySet()) {
-            CompoundTag et = new CompoundTag();
-            et.putString(KEY_ENTRY_ELEMENT, entry.getKey());
-            et.putInt(KEY_ENTRY_AMOUNT, entry.getValue());
-            mcList.add(et);
-        }
-        tag.put(KEY_MAINTENANCE_COST, mcList);
-
         // Node config
         CompoundTag ncTag = new CompoundTag();
         ncTag.putString(KEY_NC_BLUEPRINT, nodeBlueprint);
@@ -514,16 +486,6 @@ public class CreativeScannerBlockEntity extends BlockEntity {
         relaxInteractionDurationTicks = tag.getInt(KEY_RELAX_DURATION);
         atmWithdrawAmount = tag.getInt(KEY_ATM_WITHDRAW);
         atmInteractionDurationTicks = tag.getInt(KEY_ATM_DURATION);
-
-        // Maintenance cost
-        maintenanceCost.clear();
-        if (tag.contains(KEY_MAINTENANCE_COST, Tag.TAG_LIST)) {
-            ListTag list = tag.getList(KEY_MAINTENANCE_COST, Tag.TAG_COMPOUND);
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag et = list.getCompound(i);
-                maintenanceCost.put(et.getString(KEY_ENTRY_ELEMENT), et.getInt(KEY_ENTRY_AMOUNT));
-            }
-        }
 
         // Node config
         if (tag.contains(KEY_NODE_CONFIG, Tag.TAG_COMPOUND)) {

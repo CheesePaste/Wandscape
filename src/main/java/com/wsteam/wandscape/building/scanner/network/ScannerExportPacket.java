@@ -253,17 +253,6 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         root.addProperty("magic", scanner.getMagic());
         root.addProperty("wonder", scanner.getWonder());
 
-        // Maintenance cost
-        if (!scanner.getMaintenanceCost().isEmpty()) {
-            JsonObject mcObj = new JsonObject();
-            JsonObject costs = new JsonObject();
-            for (var entry : scanner.getMaintenanceCost().entrySet()) {
-                costs.addProperty(entry.getKey(), entry.getValue());
-            }
-            mcObj.add("costs", costs);
-            root.add("maintenance_cost", mcObj);
-        }
-
         // Queue
         JsonObject queue = new JsonObject();
         queue.addProperty("capacity", 5);

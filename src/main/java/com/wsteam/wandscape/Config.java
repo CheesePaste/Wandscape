@@ -211,20 +211,12 @@ public class Config {
             .comment("Interval in ticks between decoration radiation recalculations")
             .defineInRange("decoration.scanIntervalTicks", 200, 40, 1200);
 
-    // ---- Maintenance system ----
-
-    public static final ModConfigSpec.IntValue MAINTENANCE_GRACE_PERIOD_TICKS = BUILDER
-            .comment("Grace period in ticks after building placement before maintenance costs begin")
-            .defineInRange("maintenance.gracePeriodTicks", 24000, 0, 240000);
+    // ---- Daily settlement ----
 
     /** Daily settlement happens when timeOfDay ≤ this threshold. */
     public static final ModConfigSpec.IntValue SETTLEMENT_WINDOW_TICKS = BUILDER
             .comment("Settlement window: time-of-day ticks within which daily settlement triggers (0 = exact 0:00 only)")
-            .defineInRange("maintenance.settlementWindowTicks", 10, 0, 100);
-
-    public static final ModConfigSpec.BooleanValue AUTO_RESTART_SHUTDOWN = BUILDER
-            .comment("Whether to automatically restart maintenance-shutdown buildings when surplus elements become available")
-            .define("maintenance.autoRestart", true);
+            .defineInRange("settlement.windowTicks", 10, 0, 100);
 
     // ---- Service system ----
 

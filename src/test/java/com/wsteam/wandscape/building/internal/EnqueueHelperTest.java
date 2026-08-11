@@ -16,7 +16,6 @@ import com.wsteam.wandscape.building.data.BuildingConfig.DecorationEntity;
 import com.wsteam.wandscape.shared.api.ElementApi;
 import com.wsteam.wandscape.shared.data.AtmConfig;
 import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.RelaxConfig;
 import com.wsteam.wandscape.shared.data.ShopConfig;
 import com.wsteam.wandscape.shared.data.WonderConfig;
@@ -92,7 +91,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, 0, -1), off(1, 1, 1)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -128,7 +127,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -150,7 +149,7 @@ class EnqueueHelperTest {
                 BuildingConfig.UnlockRequirement.NONE,
                 new BoundaryBox(off(-1, -1, -1), off(1, 1, 1)),
                 null,
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()  // nodeConfig, firstFree, deprecated, entities
         );
 
         JsonElement result = EnqueueHelper.computeClearOffsets(cfg);
@@ -192,7 +191,7 @@ class EnqueueHelperTest {
                 new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
                 new BlueprintRef("build:clear_and_build",
                         Map.of("offsets", "$pattern", "blocks", "$block_mapping", "name", "$display_name")),
-                null, MaintenanceCostConfig.NONE, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false,
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false,
                 List.of(new DecorationEntity(off(1, 2, 0), "minecraft:item_frame", "north", "b64"))
         );
 

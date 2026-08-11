@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.stats.data.ColonyDailySnapshot;
 import com.wsteam.wandscape.stats.data.ColonyStatsSummary;
 
@@ -85,9 +84,6 @@ public final class StatisticsData extends SavedData {
         LinkedList<ColonyDailySnapshot> list = colonySnapshots.get(colonyId);
         if (list == null || list.isEmpty()) return ColonyStatsSummary.EMPTY;
 
-        int buildingsPaid = 0;
-        int buildingsShutdown = 0;
-        int buildingsRestarted = 0;
         int touristsArrived = 0;
         int touristsDeparted = 0;
         int touristComfortTotal = 0;
@@ -97,22 +93,14 @@ public final class StatisticsData extends SavedData {
         int comfort = 0;
         int magic = 0;
         int wonder = 0;
-        Map<ElementType, Long> totalConsumed = new HashMap<>();
 
         for (ColonyDailySnapshot snap : list) {
-            buildingsPaid += snap.buildingsPaid();
-            buildingsShutdown += snap.buildingsShutdown();
-            buildingsRestarted += snap.buildingsRestarted();
             touristsArrived += snap.touristsArrived();
             touristsDeparted += snap.touristsDeparted();
             touristComfortTotal += snap.touristComfortTotal();
             touristMagicTotal += snap.touristMagicTotal();
             touristWonderTotal += snap.touristWonderTotal();
             currentDay = Math.max(currentDay, snap.day());
-
-            for (var entry : snap.elementsConsumed().entrySet()) {
-                totalConsumed.merge(entry.getKey(), entry.getValue(), Long::sum);
-            }
         }
 
         // Fresh evaluation values from the most recent snapshot
@@ -133,11 +121,10 @@ public final class StatisticsData extends SavedData {
 
         return new ColonyStatsSummary(
                 currentDay,
-                buildingsPaid, buildingsShutdown, buildingsRestarted,
                 touristsArrived, touristsDeparted,
                 avgComfortRatio, avgMagicRatio, avgWonderRatio,
                 comfort, magic, wonder,
-                Map.copyOf(totalConsumed), list.size());
+                list.size());
     }
 
     // ── NBT ──

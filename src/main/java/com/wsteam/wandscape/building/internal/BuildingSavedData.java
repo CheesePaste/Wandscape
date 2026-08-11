@@ -10,8 +10,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.ShopGoodDef;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.ColonyEvaluationChangedEvent;
@@ -70,10 +68,6 @@ public class BuildingSavedData extends SavedData {
     private static final String TAG_QUEUE_ITEM_BLUEPRINT = "blueprint";
     private static final String TAG_QUEUE_ITEM_PARAMS = "params_json";
     private static final String TAG_QUEUE_ITEM_PRIORITY = "priority";
-    private static final String TAG_MAINTENANCE_COSTS = "maint_costs";
-    private static final String TAG_LAST_MAINTENANCE_TICK = "last_maint_tick";
-    private static final String TAG_MAINTENANCE_PAID = "maint_paid";
-    private static final String TAG_LAST_SETTLEMENT_DAY = "last_settlement_day";
     private static final String TAG_SHUTDOWN_REASON = "shutdown_reason";
 
     // NBT keys for shop inventory persistence
@@ -518,15 +512,6 @@ public class BuildingSavedData extends SavedData {
                 entry.putUUID(TAG_CURRENT_TASK, state.getCurrentTaskId());
             }
 
-            // Maintenance tracking
-            CompoundTag costsTag = new CompoundTag();
-            for (var costEntry : state.getMaintenanceCost().costs().entrySet()) {
-                costsTag.putInt(costEntry.getKey().name(), costEntry.getValue());
-            }
-            entry.put(TAG_MAINTENANCE_COSTS, costsTag);
-            entry.putLong(TAG_LAST_MAINTENANCE_TICK, state.getLastMaintenanceTick());
-            entry.putBoolean(TAG_MAINTENANCE_PAID, state.isMaintenancePaid());
-            entry.putLong(TAG_LAST_SETTLEMENT_DAY, state.getLastSettlementDay());
             String reason = state.getShutdownReason();
             if (!reason.isEmpty()) {
                 entry.putString(TAG_SHUTDOWN_REASON, reason);
@@ -649,22 +634,13 @@ public class BuildingSavedData extends SavedData {
                 state.getTaskQueue().addLast(new WorkItem(blueprint, params, priority));
             }
 
-            // Maintenance tracking (interval_ticks removed — costs are now daily)
-            if (entry.contains(TAG_MAINTENANCE_COSTS)) {
-                Map<ElementType, Integer> costsMap = new HashMap<>();
-                CompoundTag costsTag = entry.getCompound(TAG_MAINTENANCE_COSTS);
-                for (String key : costsTag.getAllKeys()) {
-                    costsMap.put(ElementType.valueOf(key), costsTag.getInt(key));
-                }
-                state.setMaintenanceCost(new MaintenanceCostConfig(costsMap));
-            }
-            state.setLastMaintenanceTick(entry.getLong(TAG_LAST_MAINTENANCE_TICK));
-            if (entry.contains(TAG_MAINTENANCE_PAID)) {
-                state.setMaintenancePaid(entry.getBoolean(TAG_MAINTENANCE_PAID));
-            }
-            state.setLastSettlementDay(entry.getLong(TAG_LAST_SETTLEMENT_DAY));
             if (entry.contains(TAG_SHUTDOWN_REASON)) {
                 state.setShutdownReason(entry.getString(TAG_SHUTDOWN_REASON));
+            }
+            // 维护费已删除：旧存档因维护费停摆的建筑一次性复活，防止永久停摆
+            if ("maintenance".equals(state.getShutdownReason())) {
+                state.setShutdown(false);
+                state.setShutdownReason("");
             }
 
             // Pattern positions (precise overlap detection)

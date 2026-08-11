@@ -9,7 +9,6 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.shared.data.BuildingData;
-import com.wsteam.wandscape.shared.data.MaintenanceCostConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
 
 import net.minecraft.core.BlockPos;
@@ -29,11 +28,7 @@ public class BuildingState implements BuildingData {
     private final int wonder;
     private final int queueCapacity;
 
-    // ── Maintenance tracking ──
-    private MaintenanceCostConfig maintenanceCost = MaintenanceCostConfig.NONE;
-    private long lastMaintenanceTick;
-    private boolean maintenancePaid;
-    private long lastSettlementDay;
+    // ── Shutdown tracking ──
     private String shutdownReason = "";
 
     @Nullable
@@ -95,12 +90,8 @@ public class BuildingState implements BuildingData {
         return first != null && "build:place_structure".equals(first.blueprintId());
     }
 
-    // ── Maintenance getters ──
+    // ── Shutdown getter ──
 
-    public MaintenanceCostConfig getMaintenanceCost() { return maintenanceCost; }
-    public long getLastMaintenanceTick() { return lastMaintenanceTick; }
-    public boolean isMaintenancePaid() { return maintenancePaid; }
-    @Override public long getLastSettlementDay() { return lastSettlementDay; }
     @Override public String getShutdownReason() { return shutdownReason; }
 
     // ── Pattern positions getter/setter ──
@@ -122,11 +113,7 @@ public class BuildingState implements BuildingData {
     public int getRotationSteps() { return rotationSteps; }
     public void setRotationSteps(int steps) { this.rotationSteps = steps & 3; }
 
-    // ── Maintenance setters ──
+    // ── Shutdown setter ──
 
-    public void setMaintenanceCost(MaintenanceCostConfig cost) { this.maintenanceCost = cost; }
-    public void setLastMaintenanceTick(long tick) { this.lastMaintenanceTick = tick; }
-    public void setMaintenancePaid(boolean paid) { this.maintenancePaid = paid; }
-    public void setLastSettlementDay(long day) { this.lastSettlementDay = day; }
     public void setShutdownReason(String reason) { this.shutdownReason = reason; }
 }

@@ -35,20 +35,8 @@ public interface BuildingData {
     /** Whether the building is being demolished by an NPC task. */
     default boolean isDemolishing() { return false; }
 
-    /** Snapshot of the building's maintenance cost config. */
-    MaintenanceCostConfig getMaintenanceCost();
-
-    /** Last game tick when maintenance was processed. */
-    long getLastMaintenanceTick();
-
-    /** Whether the last maintenance cycle was paid in full. */
-    boolean isMaintenancePaid();
-
     /** Reason for shutdown, or empty string if not shut down. */
     default String getShutdownReason() { return ""; }
-
-    /** Last game day when daily settlement processed this building. */
-    default long getLastSettlementDay() { return 0; }
 
     /** Number of 90° CCW rotation steps applied to the building (0-3). */
     default int getRotationSteps() { return 0; }
