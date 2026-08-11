@@ -136,7 +136,7 @@ public final class MagicSpellExecutors {
             fallingBlock.disableDrop();
 
             MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
-                    level, fallingBlock, npc, targetPos.y, 10.0f, 4.0));
+                    level, fallingBlock, npc, spawnPos.getY(), targetPos.y, 10.0f, 4.0));
         }
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);
@@ -377,7 +377,7 @@ public final class MagicSpellExecutors {
                     fallingBlock.dropItem = false;
                     fallingBlock.disableDrop();
                     MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
-                            level, fallingBlock, null, targetPos.y, 10.0f, 4.0));
+                            level, fallingBlock, null, spawnPos.getY(), targetPos.y, 10.0f, 4.0));
                 }
 
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);

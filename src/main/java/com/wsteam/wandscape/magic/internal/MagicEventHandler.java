@@ -14,6 +14,8 @@ import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -38,6 +40,8 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import org.joml.Vector3f;
+
 @EventBusSubscriber(modid = Wandscape.MODID)
 public final class MagicEventHandler {
 
@@ -47,10 +51,15 @@ public final class MagicEventHandler {
                            long expireTick, float healAmount, double radius) {}
 
     public record MeteorTracker(ServerLevel level, FallingBlockEntity entity,
-                                WandscapeNpc caster, double targetY, float damage, double radius) {}
+                                WandscapeNpc caster, double spawnY, double targetY,
+                                float damage, double radius) {}
+
+    public record Shockwave(ServerLevel level, Vec3 center, double maxRadius,
+                            int totalTicks, int remaining) {}
 
     private static final List<HealAura> HEAL_AURAS = new ArrayList<>();
     private static final List<MeteorTracker> METEORS = new ArrayList<>();
+    private static final List<Shockwave> SHOCKWAVES = new ArrayList<>();
 
     // ── 感化 ──
     // 受感化影响的生物 UUID → 到期 tick，用于 ServerTick 每 0.5s 重定向攻击目标。
@@ -66,6 +75,11 @@ public final class MagicEventHandler {
         METEORS.add(tracker);
     }
 
+    /** 注册陨石落地冲击波：一圈一圈向外扩散的红色发光环。 */
+    public static synchronized void addShockwave(ServerLevel level, Vec3 center, double maxRadius) {
+        SHOCKWAVES.add(new Shockwave(level, center, maxRadius, SHOCKWAVE_TICKS, SHOCKWAVE_TICKS));
+    }
+
     /** 注册一个被感化的实体（由 MagicSpellExecutors 在施放时调用）。 */
     public static synchronized void addConversion(LivingEntity entity, int durationTicks) {
         CONVERSIONS.put(entity.getUUID(),
@@ -77,6 +91,7 @@ public final class MagicEventHandler {
     public static void onServerTick(ServerTickEvent.Post event) {
         tickHealAuras();
         tickMeteors();
+        tickShockwaves();
         tickConversions();
     }
 
@@ -127,8 +142,13 @@ public final class MagicEventHandler {
                 continue;
             }
 
-            // 撞击条件：接近目标 Y 坐标、触底或停滞
-            boolean landed = entity.onGround() || entity.getY() <= meteor.targetY() + 0.5 || entity.getDeltaMovement().lengthSqr() < 0.001;
+            // 撞击条件：触底、接近目标 Y，或已离开出生点开始下落后停滞（防悬浮在半空卡住）。
+            // 刚生成的陨石 deltaMovement 为 0，不能算落地——必须已落下离开出生点才启用停滞检查，
+            // 否则 NPC 施法（与 tickMeteors 同在 ServerTickEvent.Post 触发）会让陨石在出生点半空瞬爆。
+            boolean falling = entity.getY() < meteor.spawnY() - 0.5;
+            boolean landed = entity.onGround()
+                    || entity.getY() <= meteor.targetY() + 0.5
+                    || (falling && entity.getDeltaMovement().lengthSqr() < 0.001);
 
             if (landed) {
                 Vec3 impactPos = entity.position();
@@ -152,7 +172,48 @@ public final class MagicEventHandler {
                 // 移除陨石实体，不上方块
                 entity.discard();
                 it.remove();
+
+                // 发光冲击波：一圈圈向外扩散的红色发光环
+                addShockwave(level, impactPos, meteor.radius());
             }
+        }
+    }
+
+    // ── 陨石冲击波：一圈一圈向外扩散的红色发光冲击环 ──
+
+    private static final int SHOCKWAVE_TICKS = 12; // 扩散持续时间（tick）
+    private static final ParticleOptions METEOR_SHOCKWAVE_PARTICLE =
+            new DustParticleOptions(new Vector3f(1.0f, 0.2f, 0.1f), 1.0f);
+
+    private static synchronized void tickShockwaves() {
+        if (SHOCKWAVES.isEmpty()) return;
+        for (int i = 0; i < SHOCKWAVES.size(); i++) {
+            Shockwave sw = SHOCKWAVES.get(i);
+            double progress = 1.0 - (double) sw.remaining() / sw.totalTicks();
+            spawnShockwaveRing(sw.level(), sw.center(), sw.maxRadius() * progress);
+            if (sw.remaining() <= 1) {
+                SHOCKWAVES.remove(i);
+                i--;
+            } else {
+                SHOCKWAVES.set(i, new Shockwave(sw.level(), sw.center(), sw.maxRadius(),
+                        sw.totalTicks(), sw.remaining() - 1));
+            }
+        }
+    }
+
+    /** 在半径 radius 处生成一圈红色发光粒子；半径增大时加密粒子，首帧附加中心上升爆闪。 */
+    private static void spawnShockwaveRing(ServerLevel level, Vec3 center, double radius) {
+        double y = center.y + 0.15;
+        int count = Math.max(16, (int) Math.round(radius * 8.0));
+        for (int i = 0; i < count; i++) {
+            double angle = 2.0 * Math.PI * i / count;
+            double x = center.x + Math.cos(angle) * radius;
+            double z = center.z + Math.sin(angle) * radius;
+            level.sendParticles(METEOR_SHOCKWAVE_PARTICLE, x, y, z, 1, 0.15, 0.0, 0.15, 0.0);
+        }
+        if (radius < 0.4) {
+            level.sendParticles(METEOR_SHOCKWAVE_PARTICLE, center.x, center.y + 0.3, center.z,
+                    16, 0.5, 0.8, 0.5, 0.06);
         }
     }
 
