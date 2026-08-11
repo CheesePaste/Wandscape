@@ -51,7 +51,8 @@ public final class MagicEventHandler {
                            long expireTick, float healAmount, double radius) {}
 
     public record MeteorTracker(ServerLevel level, FallingBlockEntity entity,
-                                WandscapeNpc caster, double targetY, float damage, double radius) {}
+                                WandscapeNpc caster, double spawnY, double targetY,
+                                float damage, double radius) {}
 
     public record Shockwave(ServerLevel level, Vec3 center, double maxRadius,
                             int totalTicks, int remaining) {}
@@ -141,8 +142,13 @@ public final class MagicEventHandler {
                 continue;
             }
 
-            // 撞击条件：接近目标 Y 坐标、触底或停滞
-            boolean landed = entity.onGround() || entity.getY() <= meteor.targetY() + 0.5 || entity.getDeltaMovement().lengthSqr() < 0.001;
+            // 撞击条件：触底、接近目标 Y，或已离开出生点开始下落后停滞（防悬浮在半空卡住）。
+            // 刚生成的陨石 deltaMovement 为 0，不能算落地——必须已落下离开出生点才启用停滞检查，
+            // 否则 NPC 施法（与 tickMeteors 同在 ServerTickEvent.Post 触发）会让陨石在出生点半空瞬爆。
+            boolean falling = entity.getY() < meteor.spawnY() - 0.5;
+            boolean landed = entity.onGround()
+                    || entity.getY() <= meteor.targetY() + 0.5
+                    || (falling && entity.getDeltaMovement().lengthSqr() < 0.001);
 
             if (landed) {
                 Vec3 impactPos = entity.position();
