@@ -26,7 +26,7 @@ public final class BuildingUnlockChecker {
     public static boolean isUnlocked(@Nullable UUID colonyId, BuildingConfig config) {
         if (config == null) return false;
 
-        boolean isGovernment = "government".equals(config.category()) || config.firstFree();
+        boolean isGovernment = "government".equals(config.category());
         if (colonyId == null) {
             return isGovernment;
         }
@@ -44,7 +44,7 @@ public final class BuildingUnlockChecker {
     public static String getLockReason(@Nullable UUID colonyId, BuildingConfig config) {
         if (config == null) return "Invalid building config";
 
-        boolean isGovernment = "government".equals(config.category()) || config.firstFree();
+        boolean isGovernment = "government".equals(config.category());
         if (colonyId == null) {
             if (isGovernment) return null;
             return "需要先建造市政厅建立殖民地";
