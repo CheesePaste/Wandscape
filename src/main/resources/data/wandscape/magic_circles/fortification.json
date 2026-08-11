@@ -1,0 +1,119 @@
+{
+  "id": "fortification",
+  "duration_ticks": 120,
+  "height": 0.08,
+  "elements": [
+    {
+      "type": "ring",
+      "radius": 4.0,
+      "particle": "glow",
+      "color": "#f59e0b",
+      "mode": "beads",
+      "density": 1.5,
+      "rotate_speed": -24,
+      "start": 0.0,
+      "anim": {
+        "scale": [[0, 0], [0.35, 1.0], [0.9, 1.0], [1, 0.75]],
+        "alpha": [[0, 0], [0.2, 1], [0.85, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 4.0,
+      "particle": "glow",
+      "color": "#fde68a",
+      "mode": "beads",
+      "density": 1.5,
+      "rotation_offset_deg": 5,
+      "rotate_speed": -24,
+      "start": 0.02,
+      "anim": {
+        "scale": [[0, 0], [0.35, 1.0], [0.9, 1.0], [1, 0.75]],
+        "alpha": [[0, 0], [0.2, 1], [0.85, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "star",
+      "radius": 3.3,
+      "points": 8,
+      "inner_ratio": 0.5,
+      "particle": "glow",
+      "color": "#d97706",
+      "mode": "beads",
+      "density": 1.8,
+      "rotate_speed": 16,
+      "start": 0.06,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.05], [0.9, 1.0], [1, 0.8]],
+        "alpha": [[0, 0], [0.18, 1], [0.85, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "glyph",
+      "radius": 2.4,
+      "count": 8,
+      "sprite": "rune",
+      "scale": 0.35,
+      "particle": "endRod",
+      "color": "#fbbf24",
+      "rotation_offset_deg": 22.5,
+      "rotate_speed": 16,
+      "start": 0.10,
+      "anim": {
+        "scale": [[0, 0], [0.45, 1.0], [1, 0.95]],
+        "alpha": [[0, 0], [0.16, 1], [0.9, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "polygon",
+      "radius": 1.6,
+      "sides": 4,
+      "particle": "glow",
+      "color": "#f59e0b",
+      "mode": "beads",
+      "density": 1.8,
+      "rotation_offset_deg": 45,
+      "rotate_speed": -12,
+      "start": 0.16,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.0], [1, 0.85]],
+        "alpha": [[0, 0], [0.18, 1], [0.85, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 0.8,
+      "particle": "enchant",
+      "color": "#d97706",
+      "mode": "beads",
+      "density": 1.8,
+      "rotate_speed": 28,
+      "start": 0.22,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.1], [1, 1.0]],
+        "alpha": [[0, 0], [0.18, 1], [0.85, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    },
+    {
+      "type": "ring",
+      "radius": 0.3,
+      "particle": "endRod",
+      "color": "#fde68a",
+      "mode": "beads",
+      "density": 2.2,
+      "rotate_speed": -38,
+      "start": 0.28,
+      "anim": {
+        "scale": [[0, 0], [0.4, 1.2], [1, 1.0]],
+        "alpha": [[0, 0], [0.14, 1], [0.9, 1], [1, 0]],
+        "easing": "smoothstep"
+      }
+    }
+  ]
+}

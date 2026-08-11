@@ -136,11 +136,15 @@ public final class MagicEventHandler {
 
     /**
      * 石化 Buff 减伤逻辑：受到伤害 -2，低于 2 彻底无视（归 0）。
+     * 护甲削减：有效护甲 = 当前护甲 − shredAmount，可负，负值 = 增伤。
      */
     @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
         LivingEntity entity = event.getEntity();
-        if (entity != null && entity.hasEffect(WandscapeEffects.PETRIFICATION)) {
+        if (entity == null) return;
+
+        // ── 石化减伤 ──
+        if (entity.hasEffect(WandscapeEffects.PETRIFICATION)) {
             float originalDamage = event.getNewDamage();
             float reducedDamage = Math.max(0.0f, originalDamage - 2.0f);
             event.setNewDamage(reducedDamage);
@@ -155,6 +159,26 @@ public final class MagicEventHandler {
 
             Log.info(TAG, "Petrification damage reduction: raw={}, final={} for entity={}",
                     originalDamage, reducedDamage, entity.getName().getString());
+        }
+
+        // ── 护甲削减（可负 = 增伤） ──
+        if (entity.hasEffect(WandscapeEffects.ARMOR_SHRED)) {
+            int amplifier = entity.getEffect(WandscapeEffects.ARMOR_SHRED).getAmplifier();
+            float shredAmount = 4.0f * (amplifier + 1);       // 每级 -4 护甲
+            float armor = entity.getArmorValue();              // 当前护甲（0-30）
+            float effectiveArmor = armor - shredAmount;        // 可负
+
+            // vanilla 会在 Pre 之后计算：final = raw × (1 − clamp(armor, 0, 20) / 25)
+            // 我们要：            final = raw × (1 − clamp(effectiveArmor, −shredAmount, 20) / 25)
+            // → 调整 Pre 值使 vanilla 处理后等于目标值
+            float vanillaMultiplier = 1.0f - Math.min(20.0f, Math.max(0.0f, armor)) / 25.0f;
+            float desiredMultiplier = 1.0f
+                    - Math.min(20.0f, Math.max(-shredAmount, effectiveArmor)) / 25.0f;
+
+            if (vanillaMultiplier > 0.001f) {
+                float raw = event.getNewDamage();
+                event.setNewDamage(raw * (desiredMultiplier / vanillaMultiplier));
+            }
         }
     }
 }
