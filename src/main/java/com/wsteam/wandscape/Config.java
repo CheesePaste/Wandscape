@@ -334,6 +334,12 @@ public class Config {
                     + "before forgetting, unless it gets hurt again (600 = 30s).")
             .defineInRange("guard.hateDurationTicks", 600, 20, 72000);
 
+    public static final ModConfigSpec.IntValue GUARD_PEACE_FLEE_RANGE = BUILDER
+            .comment("Peace-mode flee radius (blocks): a peace-mode NPC breaks its current task to back away "
+                    + "when a hostile mob is within this visible distance, then resumes once the threat leaves. "
+                    + "Smaller than selfDefenseRange since peace NPCs shouldn't be constantly evading.")
+            .defineInRange("guard.peaceFleeRange", 8, 2, 32);
+
     // ---- Raid (袭击) system ----
 
     public static final ModConfigSpec.IntValue RAID_TRIGGER_RANGE = BUILDER

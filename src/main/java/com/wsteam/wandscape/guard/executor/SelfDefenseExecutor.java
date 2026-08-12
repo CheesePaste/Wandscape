@@ -35,10 +35,12 @@ import net.minecraft.world.phys.Vec3;
  * <ol>
  *   <li>节流侦测（每 {@link #DETECT_INTERVAL_TICKS} tick）：遍历所有 NPC，有有效目标
  *       （仇恨目标优先、否则半径内最近 {@code Enemy}）且未在战斗中 → **抢占**：暂停当前包
- *       （{@link NpcTaskQueue#suspendCurrent}，挂起栈满则跳过），注入 {@code self_defense} 包。</li>
+ *       （{@link NpcTaskQueue#suspendCurrent}，挂起栈满则跳过），注入 {@code self_defense} 包。
+ *       <b>和平模式 NPC 不索敌不反击</b>，但被怪贴到 {@code Config.GUARD_PEACE_FLEE_RANGE} 内时
+ *       同样抢占注入——持续循环按「逃跑」处理（{@link GuardCombat#navigateAway} 后撤）。</li>
  *   <li>持续循环（每 {@link #RECHECK_TICKS} tick 一轮）：重解析目标 → 无目标则 complete future
  *       （队列 {@code finishCurrentPackage} 自动 {@code resumeLatest} 恢复原包）；有目标则交给
- *       {@link GuardCombat#engage} 战斗（光束重定向 / LOS / 寻路 / 施法）。</li>
+ *       {@link GuardCombat#engage} 战斗（光束重定向 / LOS / 寻路 / 施法 / 风筝走位）。</li>
  * </ol>
  *
  * <p>抢占边界：挂起前若 NPC 正卡在异步 op（{@code pendingFuture} 未完成），先分离该 future
@@ -50,6 +52,8 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
     private static final String TAG = "SelfDefense";
     /** 循环重检间隔（tick）：重选目标 / LOS 重查 / 施法节拍。 */
     private static final int RECHECK_TICKS = 10;
+    /** 和平模式逃跑循环重检间隔（tick）。 */
+    private static final int FLEE_RECHECK_TICKS = 10;
     /** 侦测间隔（tick）：遍历 NPC 检查是否需抢占。 */
     private static final int DETECT_INTERVAL_TICKS = 4;
     /** 自防御包优先级（仅日志/文档意义；队列按 LIFO 挂起栈 + FIFO 执行，非按此排序）。 */
@@ -92,36 +96,55 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             long npcId = entry.getKey();
             WandscapeNpc npc = entry.getValue();
             if (npc == null || npc.isRemoved() || npc.level().isClientSide) continue;
-            // 和平模式：不参与自防御（不主动索敌、不反击）
-            if (npc.isPeaceMode()) continue;
 
             TaskExecutor exec = world.get(npcId, TaskExecutor.class);
             if (exec == null) continue;
             NpcTaskQueue queue = exec.npcQueue;
             if (isAlreadyFighting(exec, queue, world)) continue;
-
             if (!(npc.level() instanceof ServerLevel level)) continue;
+
+            // 和平模式：不主动索敌、不反击，但被怪贴到 peaceFleeRange 内会临时逃离
+            if (npc.isPeaceMode()) {
+                LivingEntity threat = nearestVisibleEnemyAround(npc, level,
+                        Config.GUARD_PEACE_FLEE_RANGE.get());
+                if (threat != null) {
+                    injectSelfDefense(world, npcId, exec, queue, level, "flee",
+                            threat.getName().getString());
+                }
+                continue;
+            }
+
             LivingEntity target = resolveTarget(npc, level);
             if (target == null) continue;
 
-            // 抢占：若正卡在异步 op，分离 pendingFuture，让任务执行系统转到自防御包
-            if (exec.pendingFuture != null) {
-                if (exec.pendingFutureIsNav && world.movementOps != null) {
-                    world.movementOps.cancelNavigation(npcId);
-                }
-                exec.pendingFuture = null;
-                exec.pendingFutureIsNav = false;
-            }
-            boolean hadPackage = queue.currentPackage() != null;
-            if (hadPackage && queue.suspendCurrent(level.getGameTime()) == null) {
-                continue; // 挂起栈满，不能覆盖当前包
-            }
-            queue.startPackage(NpcTaskPackage.system("self_defense",
-                    new AtomicOp.SelfDefenseOp(Config.GUARD_SELF_DEFENSE_RANGE.get()),
-                    null, SELF_DEFENSE_PRIORITY));
-            Log.info(TAG, "NPC {} engages self-defense target={} preempted={}",
-                    npcId, target.getName().getString(), hadPackage ? "yes" : "idle");
+            injectSelfDefense(world, npcId, exec, queue, level, "self-defense",
+                    target.getName().getString());
         }
+    }
+
+    /**
+     * 抢占注入 self_defense 包（正常战斗 / 和平逃跑共用）：
+     * 若正卡在异步 op，先分离 pendingFuture，让任务执行系统转到自防御包；挂起栈满则放弃。
+     */
+    private static void injectSelfDefense(World world, long npcId,
+                                          TaskExecutor exec, NpcTaskQueue queue, ServerLevel level,
+                                          String what, String targetName) {
+        if (exec.pendingFuture != null) {
+            if (exec.pendingFutureIsNav && world.movementOps != null) {
+                world.movementOps.cancelNavigation(npcId);
+            }
+            exec.pendingFuture = null;
+            exec.pendingFutureIsNav = false;
+        }
+        boolean hadPackage = queue.currentPackage() != null;
+        if (hadPackage && queue.suspendCurrent(level.getGameTime()) == null) {
+            return; // 挂起栈满，不能覆盖当前包
+        }
+        queue.startPackage(NpcTaskPackage.system("self_defense",
+                new AtomicOp.SelfDefenseOp(Config.GUARD_SELF_DEFENSE_RANGE.get()),
+                null, SELF_DEFENSE_PRIORITY));
+        Log.info(TAG, "NPC {} engages {} target={} preempted={}",
+                npcId, what, targetName, hadPackage ? "yes" : "idle");
     }
 
     /** 当前包已是自防御 / 建筑守卫（guard:attack）时不再叠加。 */
@@ -205,8 +228,16 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
         if (npc == null || npc.isRemoved()) return -1;
         if (!(npc.level() instanceof ServerLevel level)) return -1;
-        // 战斗中途开启和平模式 → 立即结束自防御，队列恢复挂起任务
-        if (npc.isPeaceMode()) return -1;
+        // 和平模式：不战斗，只逃离可见威胁；无威胁 → 完成（队列恢复挂起任务）。
+        // 战斗中途开启和平 → 同样转入逃离（原逻辑是立即结束自防御）。
+        if (npc.isPeaceMode()) {
+            LivingEntity threat = nearestVisibleEnemyAround(npc, level,
+                    Config.GUARD_PEACE_FLEE_RANGE.get());
+            if (threat == null) return -1;
+            GuardCombat.navigateAway(level, npc, p.world(), p.npcId(),
+                    threat.getBoundingBox().getCenter());
+            return FLEE_RECHECK_TICKS;
+        }
 
         LivingEntity target = resolveTarget(npc, level);
         if (target == null) {

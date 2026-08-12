@@ -60,6 +60,18 @@ public final class GuardCombat {
 
     private static final String TAG = "GuardCombat";
 
+    // ── 走位（风筝/群殴）参数：硬编码与 ENGAGE_STANDOFF 同风格；peaceFleeRange 在 Config ──
+    /** 风筝触发距离（水平，方块）：目标进入此距离 → 后撤拉开。近战攻击范围 ~3、苦力怕爆炸半径 ~3。 */
+    private static final double KITE_START_DIST = 3.5;
+    /** 后撤目标间距（方块）：离威胁点保持此距离（beam 射程 200，远够得着）。 */
+    private static final double KITE_STANDOFF = 9.0;
+    /** 群殴阈值：附近可见敌数 ≥ 此值 → 主动拉开避免被围殴。 */
+    private static final int CROWD_THRESHOLD = 3;
+    /** 群殴扫描半径（方块）：此范围内数可见敌数 + 取质心。 */
+    private static final double CROWD_RADIUS = 10.0;
+    /** 后撤落点采样数（角度分档）。 */
+    private static final int RETREAT_SAMPLES = 16;
+
     // ── 单轮战斗动作：光束重定向 / LOS / 寻路 / 施法 ──
 
     /**
@@ -84,12 +96,21 @@ public final class GuardCombat {
         if (l0EmergencyHeal(level, npc, circleId, color)) return;
 
         // 和平模式：不施法、不追击、不重定向光束（自防御/守卫执行器在目标选择层已拦下，
-        // 这里兜底）。L0 紧急自奶不受影响——治疗不是攻击。
+        // 这里兜底；和平 NPC 的逃跑走位在 SelfDefenseExecutor 处理）。L0 紧急自奶不受影响。
         if (npc.isPeaceMode()) return;
 
         MagicBeamEntity beam = findActiveBeam(level, npc);
         if (beam != null) {
             beam.retarget(target); // 主动切换：光束持续指向最近的怪物
+        }
+
+        // ── 群殴规避：附近可见敌数 ≥ CROWD_THRESHOLD → 往敌方质心反方向走位（边走边打），
+        //    别被围在墙角群殴。走位由 ECS 导航驱动（suppressWandering → 施法不被停移动）。──
+        Crowd crowd = scanCrowd(level, npc);
+        if (crowd.count >= CROWD_THRESHOLD) {
+            navigateAway(level, npc, world, npcId, crowd.centroid);
+            if (beam == null) castSelected(level, npc, target, circleId, color);
+            return;
         }
 
         if (!hasLineOfSight(npc, target)) {
@@ -99,30 +120,47 @@ public final class GuardCombat {
             return;
         }
 
-        // 看得见：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
+        // ── 战斗风筝：LOS 可见但目标贴脸（近战范围/爆炸半径内）→ 后撤拉开距离（边走边打）。
+        //    落点只选可站立 + 有 LOS 的格子，贴墙被堵死时静默站定继续打，不会寻路进墙/卡死。──
+        if (horizontalDistSq(npc, target) < KITE_START_DIST * KITE_START_DIST) {
+            navigateAway(level, npc, world, npcId, target.getBoundingBox().getCenter());
+            if (beam == null) castSelected(level, npc, target, circleId, color);
+            return;
+        }
+
+        // 看得见且安全距离：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
         // 无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
         cancelNavigation(world, npcId);
         npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
         if (beam == null) {
-            // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
-            List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
-                    CastBrain.knownSpells(npc.spellbook.ids()));
-            WorldSnapshot snapshot = buildSnapshot(level, npc);
-            MagicDef chosen = CastBrain.select(known,
-                    def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), snapshot);
-            if (chosen == null) {
-                // L2 兜底：无有效魔法（列表全不可施 / conditions 不满足）→ 普通攻击（物理，不耗蓝，2s 攻速）
-                normalAttack(level, npc, target);
-                return;
-            }
-            boolean ok = MagicSpellExecutors.dispatch(level, npc, target, chosen, circleId, color);
-            if (ok) {
-                // 杖尖彩色爆闪（施法颜色）
-                float[] rgb = rgbOf(color);
-                ParticleService.burstColored(level, npc.getStaffPosition(), rgb[0], rgb[1], rgb[2], 6, 0.10f, 15, false);
-                SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
-                        WandscapeSounds.GUARD_FIRE, SoundSource.NEUTRAL, 0.6f, 1.0f);
-            }
+            castSelected(level, npc, target, circleId, color);
+        }
+    }
+
+    /**
+     * 经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）；选不出 → L2 普通攻击兜底。
+     * 站定施法与风筝/群殴走位三处共用——走位期间也能开火（光束独立于施法者每 tick 跟随并径向伤害）。
+     */
+    private static void castSelected(ServerLevel level, WandscapeNpc npc, LivingEntity target,
+                                     String circleId, int color) {
+        // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
+        List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
+                CastBrain.knownSpells(npc.spellbook.ids()));
+        WorldSnapshot snapshot = buildSnapshot(level, npc);
+        MagicDef chosen = CastBrain.select(known,
+                def -> npc.magic.canCast(def.id()) && npc.magic.getMana() >= def.manaCost(), snapshot);
+        if (chosen == null) {
+            // L2 兜底：无有效魔法（列表全不可施 / conditions 不满足）→ 普通攻击（物理，不耗蓝，2s 攻速）
+            normalAttack(level, npc, target);
+            return;
+        }
+        boolean ok = MagicSpellExecutors.dispatch(level, npc, target, chosen, circleId, color);
+        if (ok) {
+            // 杖尖彩色爆闪（施法颜色）
+            float[] rgb = rgbOf(color);
+            ParticleService.burstColored(level, npc.getStaffPosition(), rgb[0], rgb[1], rgb[2], 6, 0.10f, 15, false);
+            SoundService.playAt(level, npc.getX(), npc.getY(), npc.getZ(),
+                    WandscapeSounds.GUARD_FIRE, SoundSource.NEUTRAL, 0.6f, 1.0f);
         }
     }
 
@@ -403,6 +441,89 @@ public final class GuardCombat {
     /** 站立落点（脚底）上持杖手的大致高度位置。 */
     private static Vec3 staffOf(BlockPos pos) {
         return new Vec3(pos.getX() + 0.5, pos.getY() + 1.6, pos.getZ() + 0.5);
+    }
+
+    // ── 走位：战斗风筝 / 群殴规避 / 和平逃跑后撤 ──
+
+    private record Crowd(int count, Vec3 centroid) {}
+
+    /** 半径 {@link #CROWD_RADIUS} 内「LOS 可见且存活」的 Enemy 计数与位置质心（群殴判定用）。 */
+    private static Crowd scanCrowd(ServerLevel level, WandscapeNpc npc) {
+        Vec3 sum = Vec3.ZERO;
+        int count = 0;
+        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(CROWD_RADIUS),
+                e -> e instanceof Enemy)) {
+            if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
+            if (!hasLineOfSight(npc, mob)) continue;
+            sum = sum.add(e.position());
+            count++;
+        }
+        return new Crowd(count, count == 0 ? npc.position() : sum.scale(1.0 / count));
+    }
+
+    /** 与目标水平距离平方（贴脸判定用，不看高度差）。 */
+    private static double horizontalDistSq(WandscapeNpc npc, LivingEntity target) {
+        double dx = npc.getX() - target.getX();
+        double dz = npc.getZ() - target.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    /**
+     * 向威胁点（目标中心 / 敌方质心）的**反方向**后撤：由 ECS 导航驱动
+     * （suppressWandering → 施法不被强制停移动），落点不可站立时静默放弃（站定继续打）。
+     * 守卫/自防御/和平逃跑共用。
+     */
+    public static void navigateAway(ServerLevel level, WandscapeNpc npc, World world,
+                                    long npcId, Vec3 threat) {
+        if (world == null || world.movementOps == null) return;
+        BlockPos dest = findRetreatPos(level, npc, threat);
+        if (dest == null) return;
+        world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+    }
+
+    /**
+     * 后撤落点：威胁点周围 {@link #KITE_STANDOFF} 环上、采样角集中在「远离威胁」方向 ±半圆
+     * （向身后/侧后方退，不绕到怪物对面）；优先「有 LOS 且离 NPC 最近」的可站立格，
+     * 退化「最近可站立格」，极端兜底沿 NPC→威胁 反方向退 2 格（不可站立返回 null）。
+     */
+    private static BlockPos findRetreatPos(ServerLevel level, WandscapeNpc npc, Vec3 threat) {
+        Vec3 npcPos = npc.getStaffPosition();
+        Vec3 away = npcPos.subtract(threat);
+        if (away.lengthSqr() < 0.01) away = new Vec3(1, 0, 0);
+        double baseAngle = Math.atan2(away.z, away.x);
+        int threatFeetY = Mth.floor(threat.y);
+
+        BlockPos best = null;
+        double bestLosDistSq = Double.MAX_VALUE;
+        BlockPos fallback = null;
+        double fallbackDistSq = Double.MAX_VALUE;
+
+        for (int i = 0; i < RETREAT_SAMPLES; i++) {
+            double angle = baseAngle + (i - RETREAT_SAMPLES / 2) * Math.PI / (RETREAT_SAMPLES - 1);
+            int bx = Mth.floor(threat.x + Math.cos(angle) * KITE_STANDOFF);
+            int bz = Mth.floor(threat.z + Math.sin(angle) * KITE_STANDOFF);
+            int standY = findStandingYNear(level, bx, bz, threatFeetY);
+            if (standY == Integer.MIN_VALUE) continue;
+            BlockPos cand = new BlockPos(bx, standY, bz);
+            double dSq = cand.distToCenterSqr(npcPos.x, npcPos.y, npcPos.z);
+            if (dSq < fallbackDistSq) {
+                fallbackDistSq = dSq;
+                fallback = cand;
+            }
+            if (positionHasLineOfSight(level, staffOf(cand), threat) && dSq < bestLosDistSq) {
+                bestLosDistSq = dSq;
+                best = cand;
+            }
+        }
+        if (best != null) return best;
+        if (fallback != null) return fallback;
+
+        Vec3 dir = away.normalize();
+        int x = Mth.floor(npcPos.x - dir.x * 2);
+        int z = Mth.floor(npcPos.z - dir.z * 2);
+        int y = findStandingYNear(level, x, z, threatFeetY);
+        if (y == Integer.MIN_VALUE) return null;
+        return new BlockPos(x, y, z);
     }
 
     /** 停止寻路（LOS 已通过 / 要施法时调用），让 NPC 站定。 */
