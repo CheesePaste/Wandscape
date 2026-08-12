@@ -47,8 +47,12 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  */
 public class MagicBeamEntity extends Entity {
 
-    /** 光束终点（Vec3 精确坐标：目标身体中心 / 方块命中点）。1.21.1 无 OPTIONAL_VEC3，用 VECTOR3F 现造。 */
-    private static final EntityDataSerializer<Optional<Vec3>> OPTIONAL_VEC3 = EntityDataSerializer.forValueType(
+    /**
+     * 光束终点（Vec3 精确坐标：目标身体中心 / 方块命中点）。1.21.1 无 OPTIONAL_VEC3，用 VECTOR3F 现造。
+     * 自定义 serializer 必须注册到 {@code NeoForgeRegistries.ENTITY_DATA_SERIALIZERS}（见 Wandscape），
+     * 否则 SynchedEntityData.define 会因取不到 serializer ID 抛 Unregistered serializer。
+     */
+    public static final EntityDataSerializer<Optional<Vec3>> OPTIONAL_VEC3 = EntityDataSerializer.forValueType(
             ByteBufCodecs.VECTOR3F
                     .map(v -> new Vec3(v.x, v.y, v.z), v -> new Vector3f((float) v.x, (float) v.y, (float) v.z))
                     .apply(ByteBufCodecs::optional));

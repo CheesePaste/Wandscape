@@ -133,6 +133,7 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -165,6 +166,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import com.wsteam.wandscape.shared.log.Log;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
@@ -191,6 +193,12 @@ public class Wandscape {
             DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
     public static final DeferredRegister<net.minecraft.world.effect.MobEffect> MOB_EFFECTS =
             DeferredRegister.create(Registries.MOB_EFFECT, MODID);
+    /** 自定义 EntityDataSerializer 必须注册到 ENTITY_DATA_SERIALIZERS（NeoForge 限制 vanilla 表），否则 SynchedEntityData 取不到 ID。 */
+    public static final DeferredRegister<EntityDataSerializer<?>> ENTITY_DATA_SERIALIZERS =
+            DeferredRegister.create(NeoForgeRegistries.ENTITY_DATA_SERIALIZERS, MODID);
+    /** 光束终点序列化器（Optional<Vec3>），供 MagicBeamEntity 同步身体中心/方块命中点。 */
+    public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<?>> BEAM_TARGET_SERIALIZER =
+            ENTITY_DATA_SERIALIZERS.register("beam_target", () -> MagicBeamEntity.OPTIONAL_VEC3);
 
     // ---- Debug target ----
     public static BlockPos debugDiamondTarget = null;
@@ -371,6 +379,7 @@ public class Wandscape {
         BLOCKS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
         MOB_EFFECTS.register(modEventBus);
+        ENTITY_DATA_SERIALIZERS.register(modEventBus);
         WandscapeSounds.SOUNDS.register(modEventBus);
         com.wsteam.wandscape.magic.internal.WandscapeEffects.PETRIFICATION.getId();
 
