@@ -90,7 +90,7 @@ L2 兜底层
 | 分类 | 覆盖 | 典型魔法 | 决策要点 |
 |---|---|---|---|
 | `single_target` 单体攻击 | beam、火球、闪电 | 单体高伤/持续伤 | 无条件，有敌即可 |
-| `aoe` 群体攻击 | meteor(陨石)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ N 才施放**（防浪费蓝），否则回落单体 |
+| `aoe` 群体攻击 | meteor(陨石)、爆炸、火焰风暴 | 范围伤害 | **敌数 ≥ 1 才施放**（防浪费蓝）；meteor 保底：总量恒 3 颗，敌少时集中砸最近目标 |
 | `defense` 防御 | petrification(石化减伤)、护盾、结界 | 保命/免伤 | 自身血量阈值 + **无同类状态**（防叠加）；与治疗的血线竞争靠预设排序+阈值错开 |
 | `support` 支援 | heal(持续治疗)、增益（力量/急速） | 回血/预铺 buff | 治疗响应式（谁血低奶谁）、增益预判式（开战前上），靠 target_mode 区分 |
 | `utility` 杂项 | 传送、复活、召唤、天气 | 非战斗 | L0 硬性路径 / 玩家命令 |
@@ -112,7 +112,7 @@ L2 兜底层
 
 ```jsonc
 "conditions": {
-  "min_enemies": 3,                     // AOE：范围敌人数 ≥ 3 才施放（meteor 实际配 3）
+  "min_enemies": 1,                     // AOE：范围敌人数 ≥ 1 才施放（meteor 实际配 1：保底总量恒 3 颗，敌少集中砸最近目标）
   "self_hp_max": 0.6,                   // DEFENSE：自身血量 < 60% 才开盾
   "ally_hp_max": 0.7,                   // SUPPORT 治疗：友方最低血量 < 70% 才奶（heal 实际配 0.7）
   "no_effect": "minecraft:absorption"   // 自身无此状态才施放（防盾/buff 叠加）
@@ -335,11 +335,20 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 
 | 魔法 | 调整 | 理由 |
 |---|---|---|
-| meteor | 蓝 70→**40**、CD 500→**300**、单颗伤害 10→**12**（`effect.damage` 数据驱动）、`min_enemies` 1→**3** | 原 70 蓝/500CD 换单目标 10 伤，是四魔法里最弱、最贵、却排 balanced 第一优先级的浪费发；降本增效 + 只在聚团（敌数≥3）时砸，避免单体遭遇战先甩陨石 |
+| meteor | 蓝 70→**40**、CD 500→**300**、单颗伤害 10→**12**（`effect.damage` 数据驱动）、`min_enemies` 1→**3**（**08-12 反转**：见第十五节） | 原 70 蓝/500CD 换单目标 10 伤，是四魔法里最弱、最贵、却排 balanced 第一优先级的浪费发；降本增效 + 只在聚团（敌数≥3）时砸，避免单体遭遇战先甩陨石 |
 | heal | **以施法者自身为圆心**（原以战斗目标怪物为圆心，常奶错位置白扣蓝）、`ally_hp_max` 0.9→**0.7** | 目标错位 bug：`ally_lowest_hp` 只判"附近有受伤友方"，效果却落在怪物脚下；圆心改自身后同时服务 L0 紧急奶。阈值回调避免高频过奶 |
 | L0 硬性覆盖 | **新增** `GuardCombat.l0EmergencyHeal`：自身**或治疗半径内友方**血比 < **0.35** 且会 heal → 无视玩家策略/conditions 强制施奶 | 落实第四节 L0 设计：落单/受伤法师不再死于攻击循环，玩家把治疗调低也饿不死保命；范围内队友濒死时提前开奶，避免来不及施法 |
 | `MagicDef` | 新增 `effectDamage` 字段（`effect.damage` 可选，负值归 null） | 效果伤害随 mana/CD 一起数据驱动，未来伤害类魔法免改代码 |
 
-> 平衡基准：maxMana 100、回蓝 1 点/10t（0.5s）。beam 单目标约 60 伤/32s 总间隔、meteor 聚团 3×12 伤/23s 总间隔——单体 beam 依旧最凶，meteor 定位为"廉价聚团清杂"，不再与 beam 抢单体。
+> 平衡基准：maxMana 100、回蓝 1 点/10t（0.5s）。beam 单目标约 60 伤/32s 总间隔、meteor 总量恒 3×12 伤/23s 总间隔（敌少时集中砸最近目标，见第十五节）——单体 beam 依旧最凶，meteor 定位为"廉价清杂"，敌少时也能当单体爆发用。
 
 **施法锁减半（同日）**：所有战斗魔法（beam + heal/meteor/petrification/enfeeble_field/fortification/conversion/desperation）的施法互斥锁时长**减半**（`MagicCaster` 光束 = `(前摇+法阵+收尾)/2`，`MagicSpellExecutors` 其余 = `法阵时长/2`）；施法效果时长（治疗光环/增益/光束伤害）**不变**。锁本只用于防施法重叠，不必覆盖整个法阵/光束动画——锁太长会让守卫长时间站桩、且连危机自奶都放不出，实测极易被打死。减半后：光束 12s→6s、conversion 10s→5s、enfeeble 7s→3.5s、heal/meteor/fortification 6s→3s、petrification 5s→2.5s、desperation 0.75s→0.35s。
+
+## 十五、meteor 保底集中砸（2026-08-12）
+
+反转第十四节「只在聚团（敌数≥3）时砸」的设定：**陨石总量恒为 3 颗**，按目标数分配，使单颗伤害调整也不会在敌少时把总伤害打没。
+
+- `meteor.json` `min_enemies` 3→**1**：敌数 ≥ 1 即可施放（快照仍按 NPC 16 格内 `Enemy` 计数）。
+- **分配规则**（按距施法者近→远）：1 敌 → 该敌独占 3 颗；2 敌 → 最近 2 颗 + 次近 1 颗；≥3 敌 → 最近 3 个各 1 颗。实现 `MagicSpellExecutors.distributeMeteors`（纯函数，可单测）+ `spawnMeteorsAt`（同目标多颗水平小偏移散开，仍在 4 格溅射半径内）。
+- **落地伤害**：`MagicEventHandler.tickMeteors` 每次命中前重置 `target.invulnerableTime = 0`——同目标 10 tick 内落多颗陨石只有第一颗结算，不重置则保底 = 12 伤而非 36 伤（与 `GuardCombat.normalAttack` 同款做法）。
+- 玩家命令 `/wandscape magic cast meteor`（`castForPlayer`）同步用同一分配；0 敌人时保留视线前方 6 格落 1 颗的调试兜底。

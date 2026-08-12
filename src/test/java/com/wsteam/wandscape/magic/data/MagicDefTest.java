@@ -85,7 +85,7 @@ class MagicDefTest {
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, meteor.targetMode());
         assertEquals("meteor_magic_circle", meteor.effectCircleId());
         assertEquals(0xFFE74C3C, meteor.effectColor());
-        assertEquals(3, meteor.conditions().minEnemies());
+        assertEquals(1, meteor.conditions().minEnemies());
         assertEquals(12.0, meteor.effectDamage(), 1e-9);
     }
 

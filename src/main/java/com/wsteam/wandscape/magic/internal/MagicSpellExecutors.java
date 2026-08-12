@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.magic.internal;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -104,6 +105,39 @@ public final class MagicSpellExecutors {
     /** 陨石伤害缺省值（magic_spells/meteor.json 未配 effect.damage 时兜底）。 */
     private static final float METEOR_DEFAULT_DAMAGE = 10.0f;
 
+    /** 陨石总量（保底）：无论敌数多少，一次施放恒砸 3 颗，保证总伤害量不因敌少而缩水。 */
+    static final int METEOR_TOTAL = 3;
+
+    /** 同目标多颗陨石的水平散开半径（方块），保证视觉上可分辨、且仍在 4 格溅射半径内。 */
+    private static final double METEOR_STACK_SPREAD = 0.8;
+
+    /** 3 颗陨石按目标数分配（返回近→远每个目标的陨石颗数）：0→[] 1→[3] 2→[2,1] ≥3→[1,1,1]。
+     *  剩余陨石堆给最近目标（保底：1 敌独占 3 颗、2 敌最近 2 颗次近 1 颗）。 */
+    static int[] distributeMeteors(int targetCount) {
+        int n = Math.min(METEOR_TOTAL, Math.max(0, targetCount));
+        int[] counts = new int[n];
+        for (int i = 0; i < n; i++) counts[i] = 1;
+        if (n > 0) counts[0] += METEOR_TOTAL - n;
+        return counts;
+    }
+
+    /** 在目标头顶 14 格生成 count 颗陨石，水平小偏移（≤0.8 格）散开、全部砸向该目标（落在半径 4 内）。
+     *  caster 为空（玩家命令）时陨石不跳过施法者。 */
+    private static void spawnMeteorsAt(ServerLevel level, @Nullable WandscapeNpc caster,
+                                       Vec3 pos, int count, float damage, double radius) {
+        for (int j = 0; j < count; j++) {
+            double angle = j * (2.0 * Math.PI / Math.max(1, count));
+            Vec3 p = new Vec3(pos.x + Math.cos(angle) * METEOR_STACK_SPREAD, pos.y,
+                    pos.z + Math.sin(angle) * METEOR_STACK_SPREAD);
+            BlockPos spawnPos = BlockPos.containing(p.x, p.y + 14.0, p.z);
+            FallingBlockEntity fallingBlock = FallingBlockEntity.fall(level, spawnPos, Blocks.MAGMA_BLOCK.defaultBlockState());
+            fallingBlock.dropItem = false;
+            fallingBlock.disableDrop();
+            MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
+                    level, fallingBlock, caster, spawnPos.getY(), p.y, damage, radius));
+        }
+    }
+
     public static boolean castMeteor(ServerLevel level, WandscapeNpc npc, @Nullable LivingEntity target,
                                     MagicDef def, String circleId) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
@@ -121,30 +155,23 @@ public final class MagicSpellExecutors {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
-        // 收集最多 3 个周围生物（优先包含 target，再选半径 16 内的其他敌对生物）
+        // 收集陨石目标：选中的 target + 半径 16 内其他敌对生物，按距施法者近→远排序；
+        // 保底分配 3 颗陨石（敌少集中砸最近目标，总量恒 3 颗，见 distributeMeteors）
         List<LivingEntity> targets = new ArrayList<>();
         if (target != null && target.isAlive() && !target.isRemoved()) {
             targets.add(target);
         }
         AABB box = npc.getBoundingBox().inflate(16.0);
         for (Entity e : level.getEntities((Entity) null, box, e -> e instanceof Enemy && e.isAlive() && e != target)) {
-            if (targets.size() >= 3) break;
             if (e instanceof LivingEntity le) {
                 targets.add(le);
             }
         }
+        targets.sort(Comparator.comparingDouble(t -> npc.distanceToSqr(t)));
 
-        // 为每个目标在头上 14 格生成陨石 (FallingBlockEntity 岩浆块)
-        for (LivingEntity t : targets) {
-            Vec3 targetPos = t.position();
-            BlockPos spawnPos = BlockPos.containing(targetPos.x, targetPos.y + 14.0, targetPos.z);
-
-            FallingBlockEntity fallingBlock = FallingBlockEntity.fall(level, spawnPos, Blocks.MAGMA_BLOCK.defaultBlockState());
-            fallingBlock.dropItem = false;
-            fallingBlock.disableDrop();
-
-            MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
-                    level, fallingBlock, npc, spawnPos.getY(), targetPos.y, damage, 4.0));
+        int[] counts = distributeMeteors(targets.size());
+        for (int i = 0; i < counts.length; i++) {
+            spawnMeteorsAt(level, npc, targets.get(i).position(), counts[i], damage, 4.0);
         }
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);
@@ -368,25 +395,26 @@ public final class MagicSpellExecutors {
                 PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
-                List<Vec3> targetPositions = new ArrayList<>();
+                float damage = def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE;
+
+                // 收集陨石目标：16 格内敌对生物按近→远排序，保底分配 3 颗（同 castMeteor）；
+                // 无目标 → 视线前方 6 格落 1 颗（调试命令兜底）
+                List<LivingEntity> enemies = new ArrayList<>();
                 AABB box = player.getBoundingBox().inflate(16.0);
                 for (Entity e : level.getEntities((Entity) null, box, e -> e instanceof Enemy && e.isAlive())) {
-                    if (targetPositions.size() >= 3) break;
-                    targetPositions.add(e.position());
+                    if (e instanceof LivingEntity le) {
+                        enemies.add(le);
+                    }
                 }
-                if (targetPositions.isEmpty()) {
+                if (enemies.isEmpty()) {
                     Vec3 look = player.getLookAngle();
-                    targetPositions.add(pos.add(look.x * 6, 0, look.z * 6));
-                }
-
-                for (Vec3 targetPos : targetPositions) {
-                    BlockPos spawnPos = BlockPos.containing(targetPos.x, targetPos.y + 14.0, targetPos.z);
-                    FallingBlockEntity fallingBlock = FallingBlockEntity.fall(level, spawnPos, Blocks.MAGMA_BLOCK.defaultBlockState());
-                    fallingBlock.dropItem = false;
-                    fallingBlock.disableDrop();
-                    MagicEventHandler.addMeteorTracker(new MagicEventHandler.MeteorTracker(
-                            level, fallingBlock, null, spawnPos.getY(), targetPos.y,
-                            def.effectDamage() != null ? def.effectDamage().floatValue() : METEOR_DEFAULT_DAMAGE, 4.0));
+                    spawnMeteorsAt(level, null, pos.add(look.x * 6, 0, look.z * 6), 1, damage, 4.0);
+                } else {
+                    enemies.sort(Comparator.comparingDouble(t -> player.distanceToSqr(t)));
+                    int[] counts = distributeMeteors(enemies.size());
+                    for (int i = 0; i < counts.length; i++) {
+                        spawnMeteorsAt(level, null, enemies.get(i).position(), counts[i], damage, 4.0);
+                    }
                 }
 
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 1.0f, 0.8f);

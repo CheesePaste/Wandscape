@@ -166,6 +166,8 @@ public final class MagicEventHandler {
                 List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, area, LivingEntity::isAlive);
                 for (LivingEntity target : targets) {
                     if (meteor.caster() != null && target == meteor.caster()) continue;
+                    // 同目标多颗陨石叠伤（保底集中砸）：重置无敌帧保证每颗都结算，否则后落的被伤害免疫吞掉
+                    target.invulnerableTime = 0;
                     target.hurt(level.damageSources().indirectMagic(meteor.caster(), meteor.caster()), meteor.damage());
                 }
 
