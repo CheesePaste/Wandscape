@@ -174,7 +174,6 @@ public final class ColonyCommand {
             if (npc == null) {
                 return "[Wandscape] Failed to spawn NPC at " + spawnPos;
             }
-            npc.setInvulnerable(true);
             npc.setPersistenceRequired();
             npc.colonyId = colonyId;
 
