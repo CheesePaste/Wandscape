@@ -48,7 +48,6 @@ public final class SplineEditorClientState {
     private static double topDownPrevX, topDownPrevY, topDownPrevZ;
     private static float topDownPrevYaw, topDownPrevPitch;
     private static double lastMouseX, lastMouseY;
-    private static float topDownSpeed = 10.0f; // blocks per second
 
     public static double getCamX() { return camX; }
     public static double getCamY() { return camY; }
@@ -103,14 +102,6 @@ public final class SplineEditorClientState {
         camYaw = topDownPrevYaw;
         camPitch = topDownPrevPitch;
         Log.info(TAG, "[SplineEditor] Top-down view disabled");
-    }
-
-    public static float getTopDownSpeed() {
-        return topDownSpeed;
-    }
-
-    public static void setTopDownSpeed(float speed) {
-        topDownSpeed = speed;
     }
 
     public static double getLastMouseX() {

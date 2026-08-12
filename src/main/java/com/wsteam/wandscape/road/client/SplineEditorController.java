@@ -21,7 +21,6 @@ import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
  */
 public final class SplineEditorController {
     private static final String TAG = "SplineEditorController";
-    private static volatile float flyingSpeed = 0.15f;
 
     private static boolean wasEscapeDown = false;
     private static boolean wasGDown = false;
@@ -32,14 +31,6 @@ public final class SplineEditorController {
     private static boolean registered = false;
 
     private SplineEditorController() {}
-
-    public static float getFlyingSpeed() {
-        return flyingSpeed;
-    }
-
-    public static void setFlyingSpeed(float speed) {
-        flyingSpeed = Math.max(0.02f, Math.min(5.0f, speed));
-    }
 
     /** True while the player is holding RMB to rotate the editor camera (cursor grabbed). */
     public static boolean isCameraActive() {
@@ -199,8 +190,9 @@ public final class SplineEditorController {
             skipFrames = 0;
         }
 
-        // If not holding right-click or if ImGui is capturing input, don't fly
-        if (!cameraActive || imguiWantsKb) return;
+        // ImGui 捕获键盘输入时（如编辑框打字）不飞行；否则 WASD 始终飞行相机，
+        // 与 V 面板鸟瞰一致——右键仅用于拖动旋转视角，不再要求按住右键才飞。
+        if (imguiWantsKb) return;
 
         float forward = 0, strafe = 0, vertical = 0;
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) forward += 1;
@@ -212,20 +204,14 @@ public final class SplineEditorController {
                 || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS) vertical -= 1;
 
         if (forward != 0 || strafe != 0 || vertical != 0) {
-            boolean sprintDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                    || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-            
             Vec3 fwd = Vec3.directionFromRotation(SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
             Vec3 right = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw()).cross(new Vec3(0, 1, 0)).normalize();
-            
-            float speed = flyingSpeed * 20.0f; // Scale it to be comparable to previous logic (BPS)
-            if (sprintDown) speed *= 2.0f;
-            
-            double move = speed * elapsed;
+
+            double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
             double moveY = (fwd.y * forward + vertical) * move;
-            
+
             SplineEditorClientState.setCamPosition(
                     SplineEditorClientState.getCamX() + moveX,
                     SplineEditorClientState.getCamY() + moveY,
@@ -272,7 +258,7 @@ public final class SplineEditorController {
         if (forward != 0 || strafe != 0 || vertical != 0) {
             Vec3 fwd = Vec3.directionFromRotation(0, SplineEditorClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
-            double move = SplineEditorClientState.getTopDownSpeed() * elapsed;
+            double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe) * move;
             double moveZ = (fwd.z * forward + right.z * strafe) * move;
             double moveY = vertical * move;
@@ -300,50 +286,19 @@ public final class SplineEditorController {
         if (!SplineEditorClientState.isEditing()) return;
         if (ImGuiManager.isInitialized() && imgui.ImGui.getIO().getWantCaptureMouse()) return;
 
-        Minecraft mc = Minecraft.getInstance();
-        long window = mc.getWindow().getWindow();
-
-        // Top-down view: scroll moves along the look direction (vertical zoom when
-        // looking straight down), Ctrl+scroll adjusts the pan speed — same as overview.
-        if (SplineEditorClientState.isTopDown()) {
-            event.setCanceled(true);
-            double delta = event.getScrollDeltaY();
-            if (delta == 0) return;
-            boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                    || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-            if (ctrlDown) {
-                float factor = (float) Math.pow(1.3, delta);
-                SplineEditorClientState.setTopDownSpeed(
-                        Math.max(1.0f, Math.min(100.0f, SplineEditorClientState.getTopDownSpeed() * factor)));
-                if (mc.player != null) {
-                    mc.player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal(
-                                    String.format("[SplineEditor] §eTop-Down Speed: %.1f", SplineEditorClientState.getTopDownSpeed())), true);
-                }
-            } else {
-                Vec3 dir = Vec3.directionFromRotation(
-                        SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
-                double move = delta * 4.0;
-                SplineEditorClientState.setCamPosition(
-                        SplineEditorClientState.getCamX() + dir.x * move,
-                        SplineEditorClientState.getCamY() + dir.y * move,
-                        SplineEditorClientState.getCamZ() + dir.z * move);
-            }
-            return;
-        }
-
-        // 3D Freecam mode: directly adjust flying speed with mouse scroll wheel (no Ctrl needed)
         event.setCanceled(true);
         double delta = event.getScrollDeltaY();
         if (delta == 0) return;
 
-        float factor = (float) Math.pow(1.2, delta);
-        flyingSpeed = Math.max(0.02f, Math.min(5.0f, flyingSpeed * factor));
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal(
-                            String.format("[SplineEditor] §eFreecam Speed: %.2f (BPS: %.1f)", flyingSpeed, flyingSpeed * 20.0f)), true);
-        }
+        // 滚轮统一沿视线方向移动（俯视=垂直缩放，3D=前进/后退）。不调速——
+        // 飞行速度固定与 V 面板鸟瞰一致。
+        Vec3 dir = Vec3.directionFromRotation(
+                SplineEditorClientState.getCamPitch(), SplineEditorClientState.getCamYaw());
+        double move = delta * 4.0;
+        SplineEditorClientState.setCamPosition(
+                SplineEditorClientState.getCamX() + dir.x * move,
+                SplineEditorClientState.getCamY() + dir.y * move,
+                SplineEditorClientState.getCamZ() + dir.z * move);
     }
 
     private static boolean wasHelpDown = false;

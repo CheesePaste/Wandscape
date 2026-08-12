@@ -27,7 +27,7 @@ The panel has two states — understand these and you have the basics:
 
 ## Flying in Overview Mode
 
-Flying works the same as creative mode: **WASD** to pan, **Space / Shift** to ascend/descend, **scroll wheel** to zoom. To inspect a building up close, fly closer; hold **Ctrl + scroll wheel** to adjust flight speed. In the normal state just move the mouse to rotate the camera; in the Build / Road sub-modes hold right-click and drag instead.
+Flying works the same as creative mode: **WASD** to pan, **Space / Shift** to ascend/descend, **scroll wheel** to zoom. To inspect a building up close, fly closer; flight speed is fixed and can be adjusted in the mod config under `panel.flySpeed`. In the normal state just move the mouse to rotate the camera; in the Build / Road sub-modes hold right-click and drag instead.
 
 ## The Three Sidebar Tabs
 

@@ -8,11 +8,11 @@ Press **V** → the **Roads** icon → click **Spline**; an edit panel appears o
 
 ## Camera Controls
 
-After entering the editor, **WASD no longer moves the character, but controls the camera**. Flying works the same as creative mode: **hold right-click + WASD/Space/Shift** to fly, **scroll wheel** to adjust speed, **Ctrl** to go faster.
+After entering the editor, **WASD no longer moves the character, but controls the camera**. Flying works the same as overview mode: **WASD/Space/Shift** to fly at any time, **right-click drag** to rotate the view, **scroll wheel** to zoom. Flight speed is fixed and can be adjusted in the mod config under `panel.flySpeed`.
 
 Two editor-only keys: **G** switches to 2D top-down view, **H** opens this guide.
 
-Release right-click to free the cursor and click the panel or control points in the world.
+With the cursor free, click the panel or control points in the world; right-click drag rotates the view.
 
 ## Drawing a Curve
 

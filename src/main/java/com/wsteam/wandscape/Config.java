@@ -9,6 +9,13 @@ public class Config {
                     + "When false (default), only WARN/ERROR messages are logged.")
             .define("general.debug", false);
 
+    // ---- V 面板 ----
+
+    public static final ModConfigSpec.DoubleValue FLY_SPEED = BUILDER
+            .comment("V 面板相机飞行速度（格/秒）：鸟瞰 / 道路（含样条 3D 与俯视）/ 建造子模式共用。"
+                    + "已移除游戏内滚轮/Ctrl 调速，改此值即可整体调整。")
+            .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
+
     public static final ModConfigSpec.IntValue COLONY_RADIUS = BUILDER
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);
