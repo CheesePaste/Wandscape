@@ -18,10 +18,7 @@ import java.util.List;
  *       ONLY inside build/road sub-modes, so the interaction steps never claim that.</li>
  *   <li>After placing a building the building bar reopens (still build mode), so every
  *       interaction step first tells the player to exit build mode (press 1 or ESC).</li>
- *   <li>Switching tabs uses the hard-coded number keys 1/2; clicking the sidebar icons
- *       requires lifting the cursor first — the cursor key is rebindable, so the
- *       {@code {光标键}} placeholder is resolved to the actual key name by
- *       {@code GuideRenderer}.</li>
+ *   <li>Switching tabs uses the hard-coded number keys 1/2/3/4 (建造/道路/统计/异常).</li>
  * </ul>
  *
  * <p>Readability: every character must be clearly visible — no gray/dark text
@@ -46,7 +43,7 @@ public final class GuideRegistry {
             "townhall",
             "🚩 新手引导 (1/10)：建造市政厅",
             List.of(
-                    "§b① 按 §e1§b 打开【建造】页签（或按 {光标键} 抬起鼠标后点左侧建造图标）",
+                    "§b① 按 §e1§b 打开【建造】页签",
                     "§b② 点【§e市政厅§b】卡片，§e双击§b进入放置",
                     "§b③ §e按住右键拖动§b转视角，把建筑放到你要的位置",
                     "§b④ §e左键§b旋转朝向，点右侧【§e提交施工§b】→【§e提交§b】",

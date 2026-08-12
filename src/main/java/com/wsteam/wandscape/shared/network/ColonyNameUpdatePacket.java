@@ -27,12 +27,18 @@ public record ColonyNameUpdatePacket(UUID colonyId, String name) implements Cust
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handleServer(ColonyNameUpdatePacket packet, ServerPlayer player) {
-        if (packet.name == null || packet.name.isEmpty()) return;
-        // Limit name length
-        String name = packet.name.length() > 30 ? packet.name.substring(0, 30) : packet.name;
-        var levelMgr = WandscapeEngine.getColonyLevelManager();
-        if (levelMgr != null) {
-            levelMgr.setColonyName(packet.colonyId, name);
+        if (packet.name() == null || packet.name().isBlank()) return;
+        var levelMgr = com.wsteam.wandscape.engine.WandscapeEngine.getColonyLevelManager();
+        if (levelMgr == null) return;
+        String name = packet.name().trim();
+        if (name.length() > 30) name = name.substring(0, 30);
+        levelMgr.setColonyName(packet.colonyId(), name);
+
+        var metricsApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyMetricsApiSilently();
+        if (metricsApi != null) {
+            var snap = metricsApi.getSnapshot(packet.colonyId());
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    ColonyStatsSyncPacket.fromSnapshot(snap));
         }
     }
 

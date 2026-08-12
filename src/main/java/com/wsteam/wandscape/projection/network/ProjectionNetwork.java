@@ -110,10 +110,15 @@ public final class ProjectionNetwork {
                 .filter(c -> c.blueprint() != null) // only buildings with a build blueprint
                 .filter(c -> !c.deprecated()) // deprecated buildings stay functional but are hidden from placement
                 .map(c -> {
-                    boolean firstFreeAvailable = c.firstFree()
-                            && colonyId != null
-                            && buildingApi != null
-                            && !buildingApi.isFirstFreeClaimed(colonyId, c.id());
+                    boolean isGov = "government".equals(c.category());
+                    boolean firstFreeAvailable;
+                    if (colonyId == null) {
+                        firstFreeAvailable = isGov && c.firstFree();
+                    } else {
+                        firstFreeAvailable = !isGov && c.firstFree()
+                                && buildingApi != null
+                                && !buildingApi.isFirstFreeClaimed(colonyId, c.id());
+                    }
                     return new BuildingSlot(c.id(), c.displayName(), c.category(), firstFreeAvailable);
                 })
                 .sorted(java.util.Comparator.comparingInt((BuildingSlot s) -> categoryPriority(s.category()))

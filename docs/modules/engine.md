@@ -55,7 +55,7 @@
 - `ChunkLeaseData`（`wandscape_chunk_leases`）：持久化 buildingId → chunks。
 - **ColonyMetricsService**：getSnapshot 汇总舒适/魔法/奇观、等级/经验/名、游客数/过夜/满意度、停摆/破损建筑、NPC 空闲/总数、7 元素量。
 - `StatsService`：订阅 NarrativeEventTriggered，onEvent 目前为 TODO 空实现。
-- **AchievementService**：**授予原版进度**（PlayerAdvancements.award），31 个 id；事件快路径 + 每 100 tick 全量重扫；条件：建筑数 1/5/10/20/50、等级 2/5/10/20/30、>50×50 奇观、酒店满员、商店全满、游客到访/满满意离场/过夜/在场峰值 10/30/50、法师简历/酒馆招募/法师数 5/10、元素存量 50k/500k、路网 15/50、自定义扫描建筑、袭击胜利（英雄 + omen≥5 风雨同舟）、连续 7 天无建筑停摆。
+- **AchievementService**：**授予原版进度**（PlayerAdvancements.award，授予对应殖民地 Founder 玩家），31 个 id；事件快路径 + 每 100 tick 全量重扫；条件：建筑数 1/5/10/20/50、等级 2/5/10/20/30、>50×50 奇观、酒店满员、商店全满、游客到访/满满意离场/过夜/在场峰值 10/30/50、法师简历/酒馆招募/法师数 5/10、元素存量 50k/500k、路网 15/50、自定义扫描建筑、袭击胜利（英雄 + omen≥5 风雨同舟）、连续 7 天无建筑停摆。
 - `GuideProgressService`：服务端权威引导进度。纯函数 `computeStep` 返回 0-10 步（市政厅/仓库/存入/工作站/合成/铺路/面包店补货/节点发布采集/祭坛/旅馆入住），其中存入/合成/铺路/发布采集 4 步依赖 `ColonyItemBank` 的玩家动作计数；`GuideServerContext` 纯接口供单测。各动作包处理后调 `sendToPlayer` 即时推进。
 
 ## sound/

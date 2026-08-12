@@ -126,26 +126,26 @@ public final class AchievementService {
     }
 
     private static void onShopRestocked(ShopRestockedEvent event) {
-        checkShopFull(event.getBuildingId());
+        checkShopFull(event.getColonyId(), event.getBuildingId());
     }
 
     private static void onRaidVictory(ColonyRaidVictoryEvent event) {
-        grant(HERO_OF_WANDSCAPE);
-        if (event.getOmenLevel() >= 5) grant(RAID_VETERAN);
+        grant(event.getColonyId(), HERO_OF_WANDSCAPE);
+        if (event.getOmenLevel() >= 5) grant(event.getColonyId(), RAID_VETERAN);
     }
 
     private static void onTouristArrived(TouristArrivedEvent event) {
-        grant(FIRST_VISITOR);
+        grant(event.getColonyId(), FIRST_VISITOR);
     }
 
     private static void onTouristDeparted(TouristDepartedEvent event) {
-        if (event.getFill().minPct() >= 100) grant(GUEST_OF_HONOR);
+        if (event.getFill().minPct() >= 100) grant(event.getColonyId(), GUEST_OF_HONOR);
     }
 
     private static void onDailySettlement(DailySettlementEvent event) {
         UUID colonyId = event.getReport().colonyId();
         int streak = settlementStreak.merge(colonyId, 1, Integer::sum);
-        if (streak >= 7) grant(STEADY_HAND);
+        if (streak >= 7) grant(colonyId, STEADY_HAND);
     }
 
     /** 任何建筑停摆（手动/结构损坏）都重置连续天数。 */
@@ -194,22 +194,22 @@ public final class AchievementService {
         } catch (Exception e) {
             return;
         }
-        if (count >= 1) grant(START);
-        if (count >= 5) grant(HAMLET);
-        if (count >= 10) grant(TOWN);
-        if (count >= 20) grant(PROSPEROUS_TOWN);
-        if (count >= 50) grant(BIG_TOWN);
+        if (count >= 1) grant(colonyId, START);
+        if (count >= 5) grant(colonyId, HAMLET);
+        if (count >= 10) grant(colonyId, TOWN);
+        if (count >= 20) grant(colonyId, PROSPEROUS_TOWN);
+        if (count >= 50) grant(colonyId, BIG_TOWN);
     }
 
     private static void checkLevel(UUID colonyId) {
         ColonyLevelManager mgr = WandscapeEngine.getColonyLevelManager();
         if (mgr == null) return;
         int level = mgr.getLevel(colonyId);
-        if (level >= 2) grant(LEVEL_UP);
-        if (level >= 5) grant(RENOWNED);
-        if (level >= 10) grant(WELL_KNOWN);
-        if (level >= 20) grant(FAMOUS);
-        if (level >= 30) grant(LEGENDARY);
+        if (level >= 2) grant(colonyId, LEVEL_UP);
+        if (level >= 5) grant(colonyId, RENOWNED);
+        if (level >= 10) grant(colonyId, WELL_KNOWN);
+        if (level >= 20) grant(colonyId, FAMOUS);
+        if (level >= 30) grant(colonyId, LEGENDARY);
     }
 
     /** Wonder-category building whose bounding box exceeds 50×50 blocks. */
@@ -219,7 +219,7 @@ public final class AchievementService {
         for (UUID wonderId : api.getBuildingsByCategory(colonyId, "wonder")) {
             BoundingBox bb = api.getBuildingBounds(wonderId);
             if (bb != null && bb.getXSpan() > 50 && bb.getZSpan() > 50) {
-                grant(GRAND_WONDER);
+                grant(colonyId, GRAND_WONDER);
                 return;
             }
         }
@@ -242,7 +242,7 @@ public final class AchievementService {
             }
             if (cfg == null || cfg.service() == null || cfg.service().maxOccupancy() <= 0) continue;
             if (hotel.getOccupancy(bId) >= cfg.service().maxOccupancy()) {
-                grant(FULL_HOUSE);
+                grant(colonyId, FULL_HOUSE);
                 return;
             }
         }
@@ -252,12 +252,12 @@ public final class AchievementService {
         BuildingApi api = buildingApi();
         if (api == null) return;
         for (UUID bId : api.getBuildingsByCategory(colonyId, "shop")) {
-            checkShopFull(bId);
+            checkShopFull(colonyId, bId);
         }
     }
 
     /** Every good of the shop has been restocked up to its configured cap. */
-    private static void checkShopFull(UUID buildingId) {
+    private static void checkShopFull(@javax.annotation.Nullable UUID colonyId, UUID buildingId) {
         ShopStockManager mgr = ShopStockManager.getActive();
         if (mgr == null) return;
         Map<String, Integer> maxs;
@@ -273,7 +273,7 @@ public final class AchievementService {
             hasGood = true;
             if (mgr.getStockCount(buildingId, e.getKey()) < e.getValue()) return;
         }
-        if (hasGood) grant(FULLY_STOCKED);
+        if (hasGood) grant(colonyId, FULLY_STOCKED);
     }
 
     /** 同时在场游客数峰值（等级高了会填满 20 上限）。 */
@@ -281,15 +281,15 @@ public final class AchievementService {
         TouristApi api = WandscapeApis.getTouristApiSilently();
         if (api == null) return;
         int count = api.getTouristCount(colonyId);
-        if (count >= 50) grant(RUSH_HOUR);
-        if (count >= 30) grant(TOURIST_BOOM);
-        if (count >= 10) grant(BUSTLING);
+        if (count >= 50) grant(colonyId, RUSH_HOUR);
+        if (count >= 30) grant(colonyId, TOURIST_BOOM);
+        if (count >= 10) grant(colonyId, BUSTLING);
     }
 
     private static void checkOvernightGuest(UUID colonyId) {
         TouristApi api = WandscapeApis.getTouristApiSilently();
         if (api == null) return;
-        if (api.getOvernightStayerCount(colonyId) >= 1) grant(OVERNIGHT_GUEST);
+        if (api.getOvernightStayerCount(colonyId) >= 1) grant(colonyId, OVERNIGHT_GUEST);
     }
 
     /** 酒馆：法师简历 + 招募计数。 */
@@ -300,16 +300,16 @@ public final class AchievementService {
         } catch (IllegalStateException e) {
             return;
         }
-        if (!api.getMageResumes(colonyId).isEmpty()) grant(WIZARDS_INTEREST);
-        if (api.getRecruitCount(colonyId) >= 1) grant(NEW_RECRUIT);
+        if (!api.getMageResumes(colonyId).isEmpty()) grant(colonyId, WIZARDS_INTEREST);
+        if (api.getRecruitCount(colonyId) >= 1) grant(colonyId, NEW_RECRUIT);
     }
 
     private static void checkWorkforce(UUID colonyId) {
         NpcApi api = WandscapeApis.getNpcApiSilently();
         if (api == null) return;
         int count = api.getNpcCount(colonyId);
-        if (count >= 10) grant(FULL_ROSTER);
-        if (count >= 5) grant(RISING_FORCE);
+        if (count >= 10) grant(colonyId, FULL_ROSTER);
+        if (count >= 5) grant(colonyId, RISING_FORCE);
     }
 
     /** 仓库任一元素存量。 */
@@ -320,16 +320,16 @@ public final class AchievementService {
         for (long v : api.getAllElements(colonyId).values()) {
             if (v > max) max = v;
         }
-        if (max >= 500000) grant(DRAGONS_HOARD);
-        if (max >= 50000) grant(FULL_COFFERS);
+        if (max >= 500000) grant(colonyId, DRAGONS_HOARD);
+        if (max >= 50000) grant(colonyId, FULL_COFFERS);
     }
 
     /** 路网路段数（MST 自动生成 + 玩家手铺）。 */
     private static void checkRoads(UUID colonyId) {
         try {
             int edges = WandscapeApis.getRoadApi().getEdges(colonyId).size();
-            if (edges >= 50) grant(WELL_CONNECTED);
-            if (edges >= 15) grant(FIRST_ROADS);
+            if (edges >= 50) grant(colonyId, WELL_CONNECTED);
+            if (edges >= 15) grant(colonyId, FIRST_ROADS);
         } catch (Exception e) {
             // 道路系统未加载
         }
@@ -339,23 +339,36 @@ public final class AchievementService {
     private static void checkCustomBuilding(UUID colonyId) {
         BuildingApi api = buildingApi();
         if (api == null) return;
-        if (!api.getBuildingsByCategory(colonyId, "custom").isEmpty()) grant(MASTER_BUILDER);
+        if (!api.getBuildingsByCategory(colonyId, "custom").isEmpty()) grant(colonyId, MASTER_BUILDER);
     }
 
     // ---- Granting ----
 
-    private static void grant(ResourceLocation id) {
+    private static void grant(@javax.annotation.Nullable UUID colonyId, ResourceLocation id) {
+        if (colonyId == null) return;
+        ColonyApi colonyApi = WandscapeApis.getColonyApiSilently();
+        if (colonyApi == null) return;
+        UUID founderId = colonyApi.getFounder(colonyId);
+
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
+
+        ServerPlayer player = null;
+        if (founderId != null) {
+            player = server.getPlayerList().getPlayer(founderId);
+        } else if (server.getPlayerList().getPlayers().size() == 1) {
+            player = server.getPlayerList().getPlayers().getFirst();
+        }
+
+        if (player == null) return;
+
         try {
             AdvancementHolder holder = server.getAdvancements().get(id);
             if (holder == null) return;
-            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                PlayerAdvancements pa = player.getAdvancements();
-                if (!pa.getOrStartProgress(holder).isDone()) {
-                    for (String criterion : pa.getOrStartProgress(holder).getRemainingCriteria()) {
-                        pa.award(holder, criterion);
-                    }
+            PlayerAdvancements pa = player.getAdvancements();
+            if (!pa.getOrStartProgress(holder).isDone()) {
+                for (String criterion : pa.getOrStartProgress(holder).getRemainingCriteria()) {
+                    pa.award(holder, criterion);
                 }
             }
         } catch (Exception e) {

@@ -64,6 +64,14 @@ public record ProjectionEnterPacket() implements CustomPacketPayload {
         if (colonyApi != null) {
             colonyId = colonyApi.getColonyId(player.blockPosition());
         }
+        if (colonyId != null) {
+            var metricsApi = WandscapeApis.getColonyMetricsApiSilently();
+            if (metricsApi != null) {
+                var snap = metricsApi.getSnapshot(colonyId);
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                        com.wsteam.wandscape.shared.network.ColonyStatsSyncPacket.fromSnapshot(snap));
+            }
+        }
         List<BuildingSlot> slots = ProjectionNetwork.getAvailableBuildings(colonyId);
         BlockPos bodyAnchor = player.blockPosition();
 

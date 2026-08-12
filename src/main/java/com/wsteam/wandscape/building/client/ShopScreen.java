@@ -65,10 +65,13 @@ public class ShopScreen extends MedievalScreen {
     public void updateFrom(Map<String, Integer> newStock, Map<String, Integer> newMaxStocks) {
         this.stock = new LinkedHashMap<>(newStock);
         this.maxStocks = new LinkedHashMap<>(newMaxStocks);
-        this.itemIds = this.maxStocks.keySet().toArray(new String[0]);
-        resolveIcons();
-        clearWidgets();
-        init();
+        String[] newKeys = this.maxStocks.keySet().toArray(new String[0]);
+        if (!java.util.Arrays.equals(this.itemIds, newKeys)) {
+            this.itemIds = newKeys;
+            resolveIcons();
+            clearWidgets();
+            init();
+        }
     }
 
     private void resolveIcons() {

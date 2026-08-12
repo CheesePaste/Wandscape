@@ -434,10 +434,14 @@ public final class WandscapePanelController {
             return;
         }
 
-        // Cursor toggle key (default Tab): raise/lower the cursor. Only when panel is open.
+        // Cursor toggle key (default Tab): if tutorial guidance is active, toggle tutorial panel collapse; otherwise raise/lower cursor.
         if (com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.matches(key, scanCode)
                 && WandscapePanelState.isPanelOpen()) {
-            WandscapePanelState.toggleCursor();
+            if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
+                com.wsteam.wandscape.shared.ui.guidance.GuideSession.toggleCollapsed();
+            } else {
+                WandscapePanelState.toggleCursor();
+            }
             return;
         }
 

@@ -37,11 +37,10 @@ public final class GuideRenderer {
         int pad = 6;
         int lineH = font.lineHeight;
         boolean collapsed = GuideSession.isCollapsed();
-        List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned)
-                .stream().map(GuideRenderer::resolve).toList();
-        String hint = resolve(step.hint());
+        List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
+        String hint = step.hint();
 
-        String titleStr = resolve(step.title()) + (collapsed ? " §e[点击展开]" : "");
+        String titleStr = step.title() + (collapsed ? " §e[点击展开]" : "");
         int maxW = font.width(titleStr);
         if (!collapsed) {
             for (String l : lines) {
@@ -67,24 +66,6 @@ public final class GuideRenderer {
         int toggleY = y + 6;
 
         return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, step.title(), lines, hint, collapsed);
-    }
-
-    /**
-     * Substitute the {@code {光标键}} placeholder with the player's actual cursor-toggle
-     * key name (default Tab; rebindable, e.g. players may use C). Falls back to "Tab".
-     */
-    private static String resolve(String s) {
-        if (s == null) return null;
-        if (!s.contains("{光标键}")) return s;
-        return s.replace("{光标键}", cursorKeyName());
-    }
-
-    private static String cursorKeyName() {
-        try {
-            return com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.getTranslatedKeyMessage().getString();
-        } catch (Throwable t) {
-            return "Tab";
-        }
     }
 
     public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,

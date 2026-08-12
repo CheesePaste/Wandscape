@@ -422,14 +422,14 @@ public final class ShopStockManager {
             if (canAfford <= 0) {
                 // Warehouse has none of the item — request production so a
                 // later retry can fill the shop once the item is synthesized.
-                if (requestSynthesize(good.itemId(), needed)) supplyPending = true;
+                if (requestSynthesize(colonyId, good.itemId(), needed)) supplyPending = true;
                 continue;
             }
 
             // Consume items from warehouse immediately (they are in transit)
             bank.consume(colonyId, itemKey, canAfford);
 
-            if (canAfford < needed && requestSynthesize(good.itemId(), needed - canAfford)) {
+            if (canAfford < needed && requestSynthesize(colonyId, good.itemId(), needed - canAfford)) {
                 // Partial fill — request production for the remaining shortfall.
                 supplyPending = true;
             }
@@ -479,11 +479,11 @@ public final class ShopStockManager {
      * @return true if the shortfall is being handled (recipe found, task queued or
      *         already in flight); false if it cannot be synthesized right now
      */
-    private boolean requestSynthesize(String itemId, int amount) {
+    private boolean requestSynthesize(@Nullable UUID colonyId, String itemId, int amount) {
         try {
-            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, WandscapeEngine.getWorld());
+            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, colonyId, WandscapeEngine.getWorld());
         } catch (Exception e) {
-            Log.warn(TAG, "[Shop] requestSynthesize({} x{}) failed: {}", itemId, amount, e.getMessage());
+            Log.warn(TAG, "[Shop] requestSynthesize({} x{} colony={}) failed: {}", itemId, amount, colonyId, e.getMessage());
             return false;
         }
     }

@@ -110,7 +110,6 @@
 - 建筑交互：V 面板**俯瞰（OVERVIEW）是自由视角**——移动鼠标转视角、WASD 移动、滚轮缩放；准心对准建筑**右键点一下**打开界面。**右键拖动转视角只在建造/道路子模式**，交互步骤不这样写。
 - **交互前先退出建造**：放置后建造列表会重新打开（仍是建造模式），所以每个交互步骤先教「按 1 或 ESC 退出建造」，再右键建筑。（例外：放置政府建筑会**自动弹出命名界面**创建殖民地，无需退出建造/右键——见 projection.md。）
 - `GuideRenderer`：屏幕**右下角**覆盖框，可折叠/关闭（按钮随框在右侧）；padding 收紧少挡视野。
-- `{光标键}` 占位：文案中"抬起鼠标"处写 `{光标键}`，渲染时替换为 `WandscapeClient.PANEL_CURSOR_TOGGLE` 的实际键名（默认 Tab，可改绑）。
 - `GuideSession`：客户端静态状态 serverStep/dismissed；applySync 弹 toast、dismiss() 发 GuideProgressUpdatePacket。
 - 每玩家进度持久化于 `GuideProgressSavedData`（stepIndex+dismissed）。
 
