@@ -157,6 +157,8 @@ public record WarehouseActionPacket(
         // Remove deposited items from player's hand
         handStack.shrink(toDeposit);
 
+        recordPlayerDeposit(colonyId, sp);
+
         Log.info(TAG, "[WarehouseAction] deposit {}x {} from player {} (colony={})",
                 toDeposit, rl, sp.getName().getString(),
                 colonyId.toString().substring(0, 8));
@@ -184,6 +186,8 @@ public record WarehouseActionPacket(
         api.insertItems(colonyId, List.of(depositStack));
         slotStack.shrink(toDeposit);
 
+        recordPlayerDeposit(colonyId, sp);
+
         Log.info(TAG, "[WarehouseAction] deposit_from_slot {}x {} from slot {} (colony={})",
                 toDeposit, pkt.itemId(), slot,
                 colonyId.toString().substring(0, 8));
@@ -195,6 +199,14 @@ public record WarehouseActionPacket(
     }
 
     // ── Refresh ───────────────────────────────────────────────────────────
+
+    /** Record a player warehouse deposit and re-push onboarding progress. */
+    private static void recordPlayerDeposit(UUID colonyId, ServerPlayer sp) {
+        var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(sp.serverLevel());
+        if (bank != null) bank.recordPlayerDeposit(colonyId);
+        var guideApi = WandscapeApis.getGuideProgressApiSilently();
+        if (guideApi != null) guideApi.sendToPlayer(sp, colonyId);
+    }
 
     /** Send a fresh WarehouseDataPacket to the player so the GUI updates. */
     private static void sendRefresh(WarehouseApi api, UUID colonyId,

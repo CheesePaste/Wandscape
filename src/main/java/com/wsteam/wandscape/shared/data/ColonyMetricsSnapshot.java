@@ -12,7 +12,9 @@ public record ColonyMetricsSnapshot(
         int earthAmount, int woodAmount, int waterAmount, int fireAmount,
         int windAmount, int metalAmount, int darkAmount,
         int shutdownCount, List<String> shutdownBuildingNames, List<UUID> shutdownBuildingIds,
-        int brokenCount, List<UUID> brokenBuildingIds, List<String> brokenBuildingNames) {
+        int brokenCount, List<UUID> brokenBuildingIds, List<String> brokenBuildingNames,
+        int underConstructionCount, List<UUID> underConstructionBuildingIds,
+        List<String> underConstructionBuildingNames, List<Boolean> underConstructionStarted) {
 
     public static final ColonyMetricsSnapshot EMPTY = new ColonyMetricsSnapshot(
             null, 0, 0, 0, "", 1, 0,
@@ -20,7 +22,8 @@ public record ColonyMetricsSnapshot(
             0, 0,
             0, 0, 0, 0, 0, 0, 0,
             0, List.of(), List.of(),
-            0, List.of(), List.of());
+            0, List.of(), List.of(),
+            0, List.of(), List.of(), List.of());
 
     public int totalAnomalyCount() {
         return shutdownCount + brokenCount;

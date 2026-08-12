@@ -12,11 +12,21 @@
 - 服务端 `ProjectionEnterPacket.handleServer`：validateEntry 校验 → addProjecting → 回 ProjectionEnterResponsePacket；已投影则 toggle 关闭。客户端 handleClient granted 时 enterProjection + 自动开 building bar。
 - 退出：ESC（面板未开）发 ProjectionExitPacket，或 exitCurrentSubMode。
 
+## 玩家建造流程（新手引导与之一致）
+
+1. **V 开面板** → 默认 OVERVIEW；**按 1**（或抬起鼠标——默认 Tab、可改绑——后点左侧建造图标）进入 BUILD_PROJECTION，下方出现建造列表（默认分类「全部」）。
+2. 点卡片选中，**双击**卡片进入放置（列表关闭、建筑虚影出现）。
+3. **虚影跟随准心**；按住右键拖动转视角、**左键**旋转建筑朝向。
+4. 点右侧面板【**提交施工**】（BuildPopPanel，右上角）→ 打开 ConstructionScreen → 点【**提交**】派发建造。
+5. **放置政府建筑（市政厅）且该位置无殖民地** → 服务端自动发 `ColonyCreatePromptPacket`，**自动弹出命名界面**（TownHallCreateScreen），输入名称创建魔法小镇——**无需退出建造/右键**。
+
+> 右键语义：**俯瞰（OVERVIEW）下点一下建筑 = 打开建筑界面**（BuildingInteractHandler）；俯瞰是**自由视角**（移动鼠标转视角、WASD 移动、滚轮缩放），右键拖动转视角只在建造/道路子模式。建造放置**不需要右键锁定**——锁定（右键/Enter）仅供 Gizmo 精确微调，非必选；放置走右侧面板【提交施工】。
+
 ## 客户端状态与控制
 
 - `ProjectionClientState`：静态 volatile 字段——projecting/bodyAnchor/selectedSlotIndex/ghostPos/overlapDetected/pinned/rotationSteps(0-3, 90°CCW)/buildingSlots。enterProjection 重新装入服务端 slots、把 selectedSlotIndex 钳到合法区间、丢弃未 pin 的准星跟随位置，但**保留 rotation/pin/已选 slot**（会话内 suspend/resume 缓存）；播 PROJECTION_ENTER 音。suspendProjection 只落 projecting 标志、保留全部选取（切 tab/G/ESC/关面板用）；exitProjection 全清态（仅 `reset()` 登出时调）。
 - **选取缓存语义**：建筑/朝向/pin 在会话内跨模式切换（切 tab/按 G/ESC/关面板/开关建筑条）保留，仅登出（`WandscapePanelState.reset()`）或显式提交（ConstructionScreen.submit 后清虚影 + unpin）/撤销清空。建筑条的开/关不再重置分类/搜索/滚动。
-- `ProjectionFlightController`：每 tick 输入处理，**仅当 projection 激活且 overview 未激活时运行**。64 格 raycast 求 ghost 落点 + overlap；左键 90° 旋转；右键 pin 并打开 ConstructionScreen；面板未开时 ESC 退出；滚轮事件被取消。
+- `ProjectionFlightController`：每 tick 输入处理，**仅当 projection 激活且 overview 未激活时运行**（overview 下 ghost 位置由 OverviewFlightController 每帧 raycast 更新）。64 格 raycast 求 ghost 落点 + overlap；**左键 90° 旋转**建筑朝向；**右键仅切换 pin（锁定/解锁，供 Gizmo 精确微调）——不再打开施工界面**；**施工只能点右侧面板【提交施工】**（`BuildPopPanel` → `openConstructionScreen`）；面板未开时 ESC 退出；滚轮事件被取消。
 - `ProjectionRenderer`：AFTER_TRIPWIRE_BLOCKS；用 BuildingGhostRenderer 渲染半透明幽灵方块，旋转后边界画白线框（pinned 非重叠）/红框（重叠）。
 
 ## ProjectionNetwork（服务端）
@@ -30,7 +40,9 @@ UUID 集合 projectingPlayers，addProjecting/removeProjecting/isProjecting/remo
 
 ## ConstructionScreen
 
-中世纪风格屏：3D 预览、X/Y/Z 输入框实时改 ghost 位置 + overlap 检查；Submit 发 ProjectionPlacePacket，unpin、关屏、重开 building bar；overlap/非法坐标拒绝。
+**由点右侧面板【提交施工】打开**（`BuildPopPanel` 的 Submit 按钮 → `ProjectionFlightController.openConstructionScreen`）。中世纪风格屏：3D 预览、X/Y/Z 输入框实时改 ghost 位置 + overlap 检查；【提交】发 ProjectionPlacePacket，unpin、关屏、重开 building bar；overlap/非法坐标拒绝。关闭不提交则 ghost 保持 pin。
+
+> 历史：旧版"右键 pin 并打开 ConstructionScreen"已废弃——右键现在只切换 pin，施工入口改为面板【提交施工】。
 
 ## 服务端放置
 
@@ -41,7 +53,7 @@ UUID 集合 projectingPlayers，addProjecting/removeProjecting/isProjecting/remo
 - `BuildingDebugController`：每 tick 自动 raycast（64 格），200ms 限速 + 按建筑 UUID 去重发 BuildingDebugRequestPacket。
 - `BuildingDebugClientState`：静态缓存 + 250ms 防抖窗口。
 - `BuildingDebugOverlay`：渲染信息框（名称/类别/状态/三值/队列）+ Repair/Shutdown-Restart/Destroy 按钮（自左到右），点击发 BuildingActionPacket。
-- `BuildingDebugRequestPacket` 服务端读 BuildingSavedData，shop 类别叠加库存商品加成；响应含 `needsRepair`（`BuildCompleteListener.findDamagedBlocks` 判是否有任意损坏块）；`BuildingActionPacket` 处理 shutdown/restart/destroy/repair。
+- `BuildingDebugRequestPacket` 服务端读 BuildingSavedData，shop 类别叠加库存商品加成；响应含 `needsRepair`（`BuildCompleteListener.findDamagedBlocks` 判是否有任意损坏块）+ `underConstruction`/`constructionStarted`（未完工建筑状态显示"等待材料/建造中"，禁用修复按钮）；`BuildingActionPacket` 处理 shutdown/restart/destroy/repair。
 - > **注意**：BuildingDebugClientState.setActive 现由 V 面板开合驱动；旧注释 "G key" 已过时（G 键现为 overview 切换）。
 
 ## network/ 包

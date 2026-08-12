@@ -18,6 +18,7 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.building.internal.BuildingState;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ColorParticleOption;
@@ -76,15 +77,20 @@ public final class ReviveHandler {
         return true;
     }
 
+    /** 定位殖民地市政厅门口：category=government 建筑优先用 door_offset 的可站入口点。 */
     private static BlockPos resolveTownHallDoorOrAnchor(ServerLevel level, UUID colonyId, BlockPos fallback) {
         BuildingSavedData savedData = BuildingSavedData.get(level);
         if (savedData != null) {
             for (BuildingState b : savedData.getAllBuildings()) {
-                if (colonyId.equals(b.getColonyId()) && "town_hall".equals(b.getBuildingTypeId())) {
-                    BlockPos entry = savedData.getTouristInteractPoint(b.getBuildingId(), level);
-                    if (entry != null) return entry;
-                    return b.getAnchor();
-                }
+                if (!colonyId.equals(b.getColonyId())) continue;
+                if (!WandscapeConstants.BUILDING_CATEGORY_GOVERNMENT.equals(b.getCategory())) continue;
+                // 门口：door_offset 外可站地面（市政厅门口）
+                BlockPos door = savedData.getEntryPoint(b.getBuildingId(), level);
+                if (door != null) return door;
+                // 交互点（interact spot 世界坐标）
+                BlockPos spot = savedData.getTouristInteractPoint(b.getBuildingId(), level);
+                if (spot != null) return spot;
+                return b.getAnchor();
             }
         }
         return fallback;

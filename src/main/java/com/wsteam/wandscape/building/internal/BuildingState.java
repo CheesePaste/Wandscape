@@ -37,6 +37,8 @@ public class BuildingState implements BuildingData {
     private boolean structureIntact;
     /** Sticky flag: set once construction completes, never reset (drives the ghost). */
     private boolean hasEverCompleted;
+    /** Sticky flag: set once construction work is claimed by an NPC, never reset. */
+    private boolean constructionStarted;
     private boolean demolishing;
     private final Deque<WorkItem> taskQueue = new ArrayDeque<>();
     @Nullable
@@ -80,6 +82,7 @@ public class BuildingState implements BuildingData {
     @Nullable public UUID getColonyId() { return colonyId; }
     @Override public boolean isStructureIntact() { return structureIntact; }
     @Override public boolean hasEverCompleted() { return hasEverCompleted; }
+    @Override public boolean isConstructionStarted() { return constructionStarted; }
     @Nullable public UUID getCurrentTaskId() { return currentTaskId; }
     public Deque<WorkItem> getTaskQueue() { return taskQueue; }
     public boolean hasWork() {
@@ -108,6 +111,7 @@ public class BuildingState implements BuildingData {
     public void setShutdown(boolean shutdown) { this.shutdown = shutdown; }
     public void setStructureIntact(boolean intact) { this.structureIntact = intact; }
     public void setHasEverCompleted(boolean completed) { this.hasEverCompleted = completed; }
+    public void setConstructionStarted(boolean started) { this.constructionStarted = started; }
     public void setDemolishing(boolean demolishing) { this.demolishing = demolishing; }
     public void setCurrentTaskId(@Nullable UUID taskId) { this.currentTaskId = taskId; }
     public int getRotationSteps() { return rotationSteps; }

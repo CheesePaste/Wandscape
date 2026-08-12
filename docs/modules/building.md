@@ -42,7 +42,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
   → 完成后 emit CustomEvent build_complete
 ```
 
-- `EnqueueHelper.registerIfAbsent`：先 `getBuildingAt` 判占位，建 BuildingState、`api.registerBuilding`、assignColonyIfPossible；**首个建筑时给仓库每元素种 2000**。
+- `EnqueueHelper.registerIfAbsent`：先 `getBuildingAt` 判占位，建 BuildingState、`api.registerBuilding`、assignColonyIfPossible；**首个建筑时给仓库每元素种 6000**（`colony.initialElementCount` 可配）。
 - `BuildCompleteListener`：订阅 `build_complete`，`findDamagedBlocks` 逐块比对 block_mapping（含方块态属性）；损坏≥1/3 判 broken → `BuildingBreakHandler.enqueueRepairForOffsets`；完好 → 分配殖民地 + BuildingPlacedEvent + 烟花 + addBuildingContribution。
 - `DemolishCompleteListener`：订阅 `demolish_complete`，unregisterBuilding + colonyApi.onBuildingDestroyed。
 - `BuildingBreakHandler`：BreakEvent/ExplosionEvent 复检，broken 则 structureIntact=false、删贡献、town_hall 则删殖民地；**不自动入队修复**（修复只能玩家触发）。`triggerRepair` 供"修复"按钮（V 面板 Repair 或 AnomalyScreen）：复检损坏块（**轻微 <1/3 与 broken ≥1/3 都修**）→ 入队 `build:place_structure` 修复任务（优先 49, addFirst）。

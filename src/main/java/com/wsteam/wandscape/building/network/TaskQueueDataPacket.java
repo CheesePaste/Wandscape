@@ -63,13 +63,19 @@ public record TaskQueueDataPacket(
      * The building's currently executing (head) task.
      * {@code entry} mirrors the same display fields as a {@link QueueEntry}.
      * Progress is either channel-based ({@code channelTotalTicks > 0}) or step-based.
+     *
+     * <p>{@code pending} is true when the task has a channel configured
+     * ({@code channelTotalTicks > 0}) but the channel has not started yet
+     * (e.g. the NPC is still travelling to the station). The client shows a
+     * "waiting" label instead of a progress bar + countdown in that state.
      */
     public record CurrentTask(
             QueueEntry entry,
             int stepIndex,
             int totalSteps,
             int channelRemainingTicks,
-            int channelTotalTicks
+            int channelTotalTicks,
+            boolean pending
     ) {}
 
     private static Consumer<TaskQueueDataPacket> clientHandler;
@@ -100,6 +106,7 @@ public record TaskQueueDataPacket(
             buf.writeVarInt(current.totalSteps());
             buf.writeVarInt(current.channelRemainingTicks());
             buf.writeVarInt(current.channelTotalTicks());
+            buf.writeBoolean(current.pending());
         }
     }
 
@@ -126,7 +133,8 @@ public record TaskQueueDataPacket(
                     buf.readVarInt(),
                     buf.readVarInt(),
                     buf.readVarInt(),
-                    buf.readVarInt());
+                    buf.readVarInt(),
+                    buf.readBoolean());
         }
         return new TaskQueueDataPacket(pos, entries, current);
     }

@@ -48,8 +48,8 @@ import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
-import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.road.engine.RoadSegmentListener;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
@@ -97,6 +97,7 @@ import com.wsteam.wandscape.task.source.PlayerManualSource;
 import com.wsteam.wandscape.dataconfig.internal.WandscapeDataLoader;
 import com.wsteam.wandscape.element.internal.ElementApiImpl;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.element.item.ElementItem;
 import com.wsteam.wandscape.engine.TaskPoolSavedData;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.bootstrap.EngineBootstrap;
@@ -169,7 +170,10 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.data.ElementType;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 @Mod(Wandscape.MODID)
@@ -220,6 +224,17 @@ public class Wandscape {
     // ---- 03 element-system ----
     public static final ElementMappingLoader ELEMENT_MAPPING_LOADER = new ElementMappingLoader(DATA_LOADER);
     public static final ElementApiImpl ELEMENT_API = new ElementApiImpl(ELEMENT_MAPPING_LOADER);
+
+    // 元素物品（代表一种元素，供 JEI/配方展示；获得后自动存入所在殖民地仓库）
+    public static final Map<ElementType, DeferredItem<Item>> ELEMENT_ITEMS = createElementItems();
+    private static Map<ElementType, DeferredItem<Item>> createElementItems() {
+        EnumMap<ElementType, DeferredItem<Item>> map = new EnumMap<>(ElementType.class);
+        for (ElementType type : ElementType.values()) {
+            map.put(type, ITEMS.register("element_" + type.getId(),
+                    () -> new ElementItem(new Item.Properties().stacksTo(1), type)));
+        }
+        return map;
+    }
 
     // ---- magic: magic circle loader (magic_circles 类目) ----
     public static final MagicCircleLoader MAGIC_CIRCLE_LOADER = new MagicCircleLoader(DATA_LOADER);
@@ -354,6 +369,7 @@ public class Wandscape {
                         output.accept(BUILDING_SCANNER_ITEM.get());
                         output.accept(INTERACT_SPOT_MARKER_ITEM.get());
                         output.accept(GUIDE_BOOK.get());
+                        ELEMENT_ITEMS.values().forEach(item -> output.accept(item.get()));
                     })
                     .build());
 
@@ -805,7 +821,7 @@ public class Wandscape {
         }
 
         // ---- Road system ----
-        RoadEventListener.register();
+        RoadSegmentListener.register();
 
         // Load persisted tasks from previous session
         ServerLevel level = event.getServer().overworld();

@@ -40,6 +40,7 @@ public final class BuildingDebugOverlay {
     private static final int TEXT_GREEN = 0xFF88CC88;
     private static final int TEXT_YELLOW = 0xFFFFCC66;
     private static final int TEXT_RED = 0xFFFF8888;
+    private static final int TEXT_BLUE = 0xFF88AAFF;
     private static final int TEXT_DIM = 0xFF888888;
     private static final int PAD_X = 10;
     private static final int PAD_Y = 5;
@@ -188,7 +189,7 @@ public final class BuildingDebugOverlay {
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
-        boolean repairEnabled = data.needsRepair();
+        boolean repairEnabled = data.needsRepair() && !data.underConstruction();
         boolean hoverRepair = repairEnabled && mx >= repairX && mx <= repairX + repairW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverShutdown = mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverDestroy = mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
@@ -243,7 +244,7 @@ public final class BuildingDebugOverlay {
         double my = mc.mouseHandler.ypos() / guiScale;
 
         // Check repair button (left) — only usable when the building has any damage
-        if (data.needsRepair()
+        if (data.needsRepair() && !data.underConstruction()
                 && mx >= btnRepairX && mx <= btnRepairX + btnRepairW
                 && my >= btnRepairY && my <= btnRepairY + BTN_HEIGHT) {
             event.setCanceled(true);
@@ -275,12 +276,20 @@ public final class BuildingDebugOverlay {
 
     private static Component getStatusText(BuildingDebugResponsePacket data) {
         if (data.shutdown()) return I18n.name("gui.wandscape.building_status.stopped", "Stopped");
+        if (data.underConstruction()) {
+            return data.constructionStarted()
+                    ? I18n.name("gui.wandscape.building_status.under_construction", "Under Construction")
+                    : I18n.name("gui.wandscape.building_status.waiting_materials", "Waiting for Materials");
+        }
         if (!data.intact()) return I18n.name("gui.wandscape.building_status.broken", "Broken");
         return I18n.name("gui.wandscape.building_status.ok", "Operational");
     }
 
     private static int getStatusColor(BuildingDebugResponsePacket data) {
         if (data.shutdown()) return TEXT_RED;
+        if (data.underConstruction()) {
+            return data.constructionStarted() ? TEXT_BLUE : TEXT_STAT;
+        }
         if (!data.intact()) return TEXT_YELLOW;
         return TEXT_GREEN;
     }

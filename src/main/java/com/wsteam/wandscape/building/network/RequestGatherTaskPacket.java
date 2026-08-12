@@ -75,6 +75,14 @@ public record RequestGatherTaskPacket(
             BuildingApi api = WandscapeApis.getBuildingApi();
             api.enqueueWork(buildingId, work);
 
+            // A player-published gather task counts toward onboarding step 8.
+            if (state.getColonyId() != null) {
+                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level);
+                if (bank != null) bank.recordGatherPublished(state.getColonyId());
+                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+                if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());
+            }
+
             Log.info(TAG, "[GatherTask] enqueued {} x{} at building {} (harvests={})",
                     config.nodeConfig().element(), config.nodeConfig().amountPerHarvest() * pkt.harvests,
                     buildingId.toString().substring(0, 8),

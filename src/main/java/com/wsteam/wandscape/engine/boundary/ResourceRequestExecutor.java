@@ -34,12 +34,14 @@ import com.wsteam.wandscape.shared.log.Log;
  *
  * <p><b>All-or-nothing semantics:</b> every item in the request is checked
  * against the warehouse before any is reserved. If any item is short, the
- * entire request fails — no partial items leak into the NPC inventory.
+ * entire request fails — no partial deduction.
  *
  * <p><b>Staggered launch:</b> the first item launches immediately; subsequent
  * items launch one per {@link #STAGGER_TICKS} ticks for a visual stream effect.
- * The returned future completes when ALL transports have arrived and inventory
- * has been credited.
+ * The flight is cosmetic — items never enter the NPC inventory. When all
+ * transports have arrived, the reserved materials are committed (deducted from
+ * the warehouse) in one batch. This is the "charge at construction start" point:
+ * bulk, once, and independent of NPC backpack capacity.
  *
  * <p>On resource shortage throws {@link ResourceShortageException}
  * (wrapped in a failed future), which the engine recognizes and
@@ -253,14 +255,13 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
     private void finish(CompletableFuture<Void> doneFuture, List<ResourceStack> needs,
                         ColonyResourceAccess resources, World world, long npcId) {
-        Inventory inv = world.get(npcId, Inventory.class);
+        // Materials are deducted here (construction start) — they never enter the
+        // NPC backpack, so a full inventory can't block the charge.
         for (ResourceStack need : needs) {
-            if (inv == null || !inv.add(need)) {
+            if (!resources.commit(need.resource(), need.amount())) {
                 resources.release(need.resource(), need.amount());
-                Log.warn(TAG, "[ResourceReq] NPC {} inventory full for {}, released {}",
-                        npcId, need.resource().id(), need.amount());
-            } else {
-                resources.commit(need.resource(), need.amount());
+                Log.warn(TAG, "[ResourceReq] commit failed for {} x{}, released reservation",
+                        need.resource().id(), need.amount());
             }
         }
 

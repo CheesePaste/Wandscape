@@ -35,7 +35,6 @@ import com.wsteam.wandscape.engine.system.NavigationSystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.road.engine.RoadTaskSource;
 import com.wsteam.wandscape.engine.source.BuildingTaskSource;
 import com.wsteam.wandscape.engine.source.blueprint.BlueprintConfigLoader;
 import com.wsteam.wandscape.guard.GuardBlueprints;
@@ -86,7 +85,6 @@ public final class EngineBootstrap {
         List<TaskSource> taskSources = new ArrayList<>();
         taskSources.add(new BuildingTaskSource());
         taskSources.add(new WorkbenchSource());
-        taskSources.add(new RoadTaskSource());
         taskSources.add(new GuardTaskSource());
 
         // 4. Build boundary implementations

@@ -77,6 +77,7 @@ public record BuildingDebugRequestPacket(BlockPos pos) implements CustomPacketPa
                 state.getBuildingId(), typeId, displayName, state.getCategory(),
                 state.getColonyId(), state.getAnchor(),
                 state.isStructureIntact(), needsRepair, state.isShutdown(),
+                !state.hasEverCompleted(), state.isConstructionStarted(),
                 comfort, magic, wonder,
                 state.getQueueCapacity(),
                 queueSnapshot, state.getCurrentTaskId()

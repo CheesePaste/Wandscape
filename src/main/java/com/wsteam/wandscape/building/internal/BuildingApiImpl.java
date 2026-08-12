@@ -425,6 +425,12 @@ public class BuildingApiImpl implements BuildingApi {
         WorkItem item = state.getTaskQueue().pollFirst();
         if (item != null) {
             sd.setDirty();
+            // Sticky "under construction" marker: once an NPC claims a not-yet-
+            // completed building's work, it is being built and never reverts to
+            // waiting-for-materials. Completed buildings already started long ago.
+            if (!state.hasEverCompleted() && !state.isConstructionStarted()) {
+                state.setConstructionStarted(true);
+            }
             // Demolition task has been claimed by an NPC — remove the building
             // data NOW instead of waiting for the fragile blueprint tail
             // (for_each → emit_event). Block destruction uses the snapshot params
@@ -448,6 +454,14 @@ public class BuildingApiImpl implements BuildingApi {
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null || state.isShutdown() || state.isDemolishing()) return;
 
+        // Merge a production task into the adjacent (tail) task when it targets the same
+        // recipe — restocking otherwise floods the queue with x1/x2 entries. A merge
+        // consumes no queue slot, so it must run before the capacity check.
+        if (mergeSameRecipeTail(state.getTaskQueue(), work)) {
+            sd.setDirty();
+            return;
+        }
+
         boolean isConstruction = work.blueprintId().startsWith("build:");
 
         if (isConstruction) {
@@ -469,6 +483,57 @@ public class BuildingApiImpl implements BuildingApi {
 
         state.getTaskQueue().addLast(work);
         sd.setDirty();
+    }
+
+    // ---- Production task merging ----
+
+    /** Params that scale with quantity; excluded from the merge signature, summed on merge. */
+    private static final Set<String> PRODUCTION_SCALED_PARAMS = Set.of("count", "channel_ticks");
+
+    /**
+     * Identity of a production task for merging: blueprint + every param except
+     * count/channel_ticks (anchor, recipe/item id, ...). Returns null for non-production
+     * blueprints so they are never merged.
+     */
+    static String productionSignature(WorkItem w) {
+        if (w == null || !w.blueprintId().startsWith("production:")) return null;
+        StringBuilder sb = new StringBuilder(w.blueprintId()).append('|');
+        w.params().entrySet().stream()
+                .filter(e -> !PRODUCTION_SCALED_PARAMS.contains(e.getKey()))
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> sb.append(e.getKey()).append('=').append(e.getValue()).append(';'));
+        return sb.toString();
+    }
+
+    /**
+     * Absorb {@code incoming} into the queue tail when the tail is an adjacent production
+     * task for the same recipe. Counts and channel ticks sum — executing both requests
+     * sequentially is equivalent to the single merged task. Returns true when merged; the
+     * incoming task then consumes no queue slot.
+     */
+    static boolean mergeSameRecipeTail(Deque<WorkItem> queue, WorkItem incoming) {
+        String sig = productionSignature(incoming);
+        if (sig == null) return false;
+        WorkItem tail = queue.peekLast();
+        if (tail == null || !sig.equals(productionSignature(tail))) return false;
+
+        Map<String, JsonElement> params = new LinkedHashMap<>(tail.params());
+        params.put("count", new JsonPrimitive(
+                mergeParamInt(tail.params(), "count") + mergeParamInt(incoming.params(), "count")));
+        params.put("channel_ticks", new JsonPrimitive(
+                mergeParamInt(tail.params(), "channel_ticks")
+                        + mergeParamInt(incoming.params(), "channel_ticks")));
+
+        queue.removeLast();
+        queue.addLast(new WorkItem(tail.blueprintId(), params, tail.priority()));
+        Log.info(TAG, "enqueueWork: merged adjacent {} tasks at building {} — count={}",
+                tail.blueprintId(), tail.params().get("anchor"), params.get("count"));
+        return true;
+    }
+
+    private static int mergeParamInt(Map<String, JsonElement> params, String key) {
+        JsonElement el = params.get(key);
+        return (el instanceof JsonPrimitive p && p.isNumber()) ? p.getAsInt() : 0;
     }
 
     @Override

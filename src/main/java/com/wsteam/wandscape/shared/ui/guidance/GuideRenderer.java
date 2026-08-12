@@ -3,7 +3,6 @@ package com.wsteam.wandscape.shared.ui.guidance;
 import java.util.List;
 
 import com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay;
-import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -11,7 +10,7 @@ import net.minecraft.client.renderer.RenderType;
 
 /**
  * Renders the onboarding guidance box (dark background, gold border) at the
- * bottom-left corner of the screen. Supports clicking to collapse/expand.
+ * bottom-right corner of the screen. Supports clicking to collapse/expand.
  */
 public final class GuideRenderer {
 
@@ -21,7 +20,7 @@ public final class GuideRenderer {
     private static final int BOX_BORDER = 0xFFD4A338;
     private static final int BOX_TITLE = 0xFFFFD700;
     private static final int BOX_LINE = 0xFFFFFFFF;
-    private static final int BOX_HINT = 0xFFAAAAAA;
+    private static final int BOX_HINT = 0xFFFFD84A;
     private static final int BOX_DIVIDER = 0x44D4A338;
     private static final int BTN_HOVER_BG = 0x55FF4444;
     private static final int BTN_TOGGLE_HOVER_BG = 0x554488FF;
@@ -35,24 +34,27 @@ public final class GuideRenderer {
 
     private static Box layout(Font font, int screenW, int screenH, GuideStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
-        int pad = 10;
+        int pad = 6;
         int lineH = font.lineHeight;
         boolean collapsed = GuideSession.isCollapsed();
         List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
+        String hint = step.hint();
 
-        String titleStr = step.title() + (collapsed ? " §7[按Tab展开]" : " §7[按Tab折叠]");
+        String titleStr = step.title() + (collapsed ? " §e[点击展开]" : "");
         int maxW = font.width(titleStr);
         if (!collapsed) {
             for (String l : lines) {
                 maxW = Math.max(maxW, font.width(l));
             }
-            maxW = Math.max(maxW, font.width(step.hint()));
+            maxW = Math.max(maxW, font.width(hint));
         }
 
-        int boxW = maxW + pad * 2 + 28;
-        int boxH = collapsed ? (pad * 2 + lineH) : (pad * 2 + lineH * (lines.size() + 2) + 12);
+        int boxW = maxW + pad * 2 + 24;
+        int boxH = collapsed ? (pad * 2 + lineH) : (pad * 2 + lineH * (lines.size() + 2) + 6);
 
-        int x = WandscapePanelOverlay.SIDEBAR_W + 8;
+        // Right side of the screen (bottom-right, above the build bar when open).
+        int margin = 8;
+        int x = screenW - boxW - margin;
         int bottomMargin = (buildMode && isBar) ? BuildingSelectionOverlay.BAR_HEIGHT + 8 : 8;
         int y = screenH - bottomMargin - boxH;
 
@@ -63,7 +65,7 @@ public final class GuideRenderer {
         int toggleX = closeX - btnS - 6;
         int toggleY = y + 6;
 
-        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, step.title(), lines, step.hint(), collapsed);
+        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, step.title(), lines, hint, collapsed);
     }
 
     public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,
@@ -89,7 +91,7 @@ public final class GuideRenderer {
                               GuideStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
-        int pad = 10;
+        int pad = 6;
         int lineH = font.lineHeight;
 
         // Background
@@ -104,18 +106,18 @@ public final class GuideRenderer {
         int ty = b.y + pad;
 
         if (b.collapsed) {
-            drawText(g, font, b.title + " §7[折叠中 (按Tab展开)]", tx, ty, BOX_TITLE);
+            drawText(g, font, b.title + " §e[点击展开]", tx, ty, BOX_TITLE);
         } else {
-            drawText(g, font, b.title + " §7[按Tab折叠]", tx, ty, BOX_TITLE);
-            ty += lineH + 5;
+            drawText(g, font, b.title, tx, ty, BOX_TITLE);
+            ty += lineH + 2;
             g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, BOX_DIVIDER);
 
             for (String line : b.lines) {
                 drawText(g, font, line, tx, ty, BOX_LINE);
-                ty += lineH + 2;
+                ty += lineH + 1;
             }
 
-            ty += 3;
+            ty += 2;
             drawText(g, font, b.hint, tx, ty, BOX_HINT);
         }
 

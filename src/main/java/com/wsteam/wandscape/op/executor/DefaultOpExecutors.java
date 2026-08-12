@@ -146,8 +146,9 @@ public final class DefaultOpExecutors {
      *
      * <p>All-or-nothing: computes shortfall for every item first,
      * then checks warehouse for each. If any item is short, fails the
-     * entire request without reserving or adding any items — no partial
-     * fulfillment that would leak items into the NPC inventory.
+     * entire request without reserving or deducting anything — no partial
+     * fulfillment. On success, deducts all reserved materials in one batch
+     * (construction-start charge); items never enter the NPC inventory.
      */
     static class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequestOp> {
         @Override public Class<AtomicOp.ResourceRequestOp> opType() { return AtomicOp.ResourceRequestOp.class; }
@@ -193,31 +194,15 @@ public final class DefaultOpExecutors {
                 }
             }
 
-            // ── Phase 4: add ALL to NPC inventory ──
-            if (inv == null) {
-                for (ResourceStack need : needs) {
-                    resources.release(need.resource(), need.amount());
-                }
-                return CompletableFuture.failedFuture(
-                        new IllegalStateException("NPC " + npcId + " has no inventory"));
-            }
+            // ── Phase 4: deduct ALL (construction start, bulk) ──
+            // Materials never enter the NPC backpack — a full inventory can't
+            // block the charge.
             for (ResourceStack need : needs) {
-                if (!inv.add(need)) {
-                    // Roll back: release reserved and remove added items
-                    for (int j = 0; j < needs.indexOf(need); j++) {
-                        resources.release(needs.get(j).resource(), needs.get(j).amount());
-                        // Best-effort inventory rollback (inventory has no remove for
-                        // this path — the exception will halt task processing anyway)
-                    }
+                if (!resources.commit(need.resource(), need.amount())) {
                     resources.release(need.resource(), need.amount());
                     return CompletableFuture.failedFuture(
-                            new IllegalStateException("NPC " + npcId + " inventory full for " + need));
+                            new IllegalStateException("Resource commit failed for " + need));
                 }
-            }
-
-            // ── Phase 5: commit ALL ──
-            for (ResourceStack need : needs) {
-                resources.commit(need.resource(), need.amount());
             }
             return CompletableFuture.completedFuture(null);
         }

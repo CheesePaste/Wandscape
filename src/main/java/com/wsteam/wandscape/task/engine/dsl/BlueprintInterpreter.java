@@ -528,7 +528,10 @@ public final class BlueprintInterpreter {
 
         JsonElement result = mapEl.getAsJsonObject().get(keyStr);
         if (result == null) {
-            Log.warn(TAG, "MapGet: key '%s' not found in map, using empty string", keyStr);
+            // Normal for sparse maps like blocks_nbt (most blocks have no custom NBT) —
+            // info so construction doesn't flood the console (only shown with verbose on).
+            // A missing block id in `$blocks` (which would build air) is still visible then.
+            Log.info(TAG, "MapGet: key '%s' not found in map, using empty string", keyStr);
             return new JsonPrimitive("");
         }
         return result;

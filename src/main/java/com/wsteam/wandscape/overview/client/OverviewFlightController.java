@@ -43,7 +43,7 @@ public final class OverviewFlightController {
 
     private static final String TAG = "OverviewFlightController";
     private static final double REACH = 64.0;
-    private static double flyingSpeed = 10.0;     // blocks per second
+    /** 滚轮缩放步长（格/格），飞行速度见 Config.panel.flySpeed。 */
     private static final double SCROLL_SPEED = 4.0;
     private static final float MOUSE_SENSITIVITY = 0.15f;
     /**
@@ -255,7 +255,7 @@ public final class OverviewFlightController {
             Vec3 fwd = Vec3.directionFromRotation(OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
             Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
             Vec3 up = right.cross(fwd).normalize();
-            double move = flyingSpeed * elapsed;
+            double move = com.wsteam.wandscape.Config.FLY_SPEED.get() * elapsed;
             double moveX = (fwd.x * forward + right.x * strafe + up.x * vertical) * move;
             double moveY = (fwd.y * forward + right.y * strafe + up.y * vertical) * move;
             double moveZ = (fwd.z * forward + right.z * strafe + up.z * vertical) * move;
@@ -445,23 +445,14 @@ public final class OverviewFlightController {
         double delta = event.getScrollDeltaY();
         if (delta == 0) return;
 
-        long window = mc.getWindow().getWindow();
-        boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-
-        if (ctrlDown) {
-            float factor = (float) Math.pow(1.3, delta);
-            flyingSpeed = Math.max(1.0, Math.min(100.0, flyingSpeed * factor));
-            Log.info(TAG, "[Overview] Speed: %.1f", flyingSpeed);
-        } else {
-            Vec3 dir = Vec3.directionFromRotation(
-                    OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
-            double move = delta * SCROLL_SPEED;
-            OverviewClientState.setCamPosition(
-                    OverviewClientState.getCamX() + dir.x * move,
-                    OverviewClientState.getCamY() + dir.y * move,
-                    OverviewClientState.getCamZ() + dir.z * move);
-        }
+        // 滚轮沿视线方向移动（缩放）。飞行速度固定走 Config.panel.flySpeed，不在此调速。
+        Vec3 dir = Vec3.directionFromRotation(
+                OverviewClientState.getCamPitch(), OverviewClientState.getCamYaw());
+        double move = delta * SCROLL_SPEED;
+        OverviewClientState.setCamPosition(
+                OverviewClientState.getCamX() + dir.x * move,
+                OverviewClientState.getCamY() + dir.y * move,
+                OverviewClientState.getCamZ() + dir.z * move);
     }
 
     private static Vec3 getMouseWorldRay(Minecraft mc) {

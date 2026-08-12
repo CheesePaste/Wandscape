@@ -52,6 +52,10 @@ public final class WandscapePanelState {
     private static volatile int brokenCount = 0;
     private static volatile List<UUID> brokenBuildingIds = List.of();
     private static volatile List<String> brokenBuildingNames = List.of();
+    private static volatile int underConstructionCount = 0;
+    private static volatile List<UUID> underConstructionBuildingIds = List.of();
+    private static volatile List<String> underConstructionBuildingNames = List.of();
+    private static volatile List<Boolean> underConstructionStarted = List.of();
 
     // ── Sidebar warning overlay toggle ──
     private static volatile boolean warningOverlayActive = false;
@@ -129,6 +133,12 @@ public final class WandscapePanelState {
     public static List<UUID> getBrokenBuildingIds() { return brokenBuildingIds; }
     public static List<String> getBrokenBuildingNames() { return brokenBuildingNames; }
 
+    /** Buildings still under construction (never completed) — not anomalies. */
+    public static int getUnderConstructionCount() { return underConstructionCount; }
+    public static List<UUID> getUnderConstructionBuildingIds() { return underConstructionBuildingIds; }
+    public static List<String> getUnderConstructionBuildingNames() { return underConstructionBuildingNames; }
+    public static List<Boolean> getUnderConstructionStarted() { return underConstructionStarted; }
+
     /** Total anomalies across all types (shutdown + broken). */
     public static int getTotalAnomalyCount() { return shutdownCount + brokenCount; }
 
@@ -160,7 +170,11 @@ public final class WandscapePanelState {
                                       List<UUID> shutdownIds,
                                       int brokenCount,
                                       List<UUID> brokenIds,
-                                      List<String> brokenNames) {
+                                      List<String> brokenNames,
+                                      int underConstructionCount,
+                                      List<UUID> underConstructionIds,
+                                      List<String> underConstructionNames,
+                                      List<Boolean> underConstructionStarted) {
         setColonyStats(colonyId, comfort, magic, wonder, name, level, experience);
         WandscapePanelState.touristCount = touristCount;
         WandscapePanelState.overnightStayerCount = overnightStayerCount;
@@ -179,6 +193,13 @@ public final class WandscapePanelState {
         WandscapePanelState.brokenCount = brokenCount;
         WandscapePanelState.brokenBuildingIds = brokenIds != null ? brokenIds : List.of();
         WandscapePanelState.brokenBuildingNames = brokenNames != null ? brokenNames : List.of();
+        WandscapePanelState.underConstructionCount = underConstructionCount;
+        WandscapePanelState.underConstructionBuildingIds =
+                underConstructionIds != null ? underConstructionIds : List.of();
+        WandscapePanelState.underConstructionBuildingNames =
+                underConstructionNames != null ? underConstructionNames : List.of();
+        WandscapePanelState.underConstructionStarted =
+                underConstructionStarted != null ? underConstructionStarted : List.of();
     }
 
     private static boolean panelEverOpened = false;
@@ -277,6 +298,10 @@ public final class WandscapePanelState {
         brokenCount = 0;
         brokenBuildingIds = List.of();
         brokenBuildingNames = List.of();
+        underConstructionCount = 0;
+        underConstructionBuildingIds = List.of();
+        underConstructionBuildingNames = List.of();
+        underConstructionStarted = List.of();
         warningOverlayActive = false;
         statsSummary = StatsSummary.EMPTY;
         showBuildingAreas = false;

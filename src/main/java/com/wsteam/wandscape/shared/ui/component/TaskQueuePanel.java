@@ -81,14 +81,17 @@ public class TaskQueuePanel extends AbstractWidget {
     /**
      * The building's currently executing (head) task + its progress.
      * Channel tasks ({@code channelTotalTicks > 0}) show a countdown; multi-step
-     * tasks fall back to step progress.
+     * tasks fall back to step progress. {@code pending} means the task has a channel
+     * configured but it has not started yet (NPC en route) — show a waiting label
+     * instead of a progress bar + countdown.
      */
     public record CurrentInfo(
             Entry entry,
             int stepIndex,
             int totalSteps,
             int channelRemainingTicks,
-            int channelTotalTicks
+            int channelTotalTicks,
+            boolean pending
     ) {}
 
     private final List<Entry> entries = new ArrayList<>();
@@ -102,6 +105,8 @@ public class TaskQueuePanel extends AbstractWidget {
     private int currentTotalSteps;
     private int currentChannelRemaining;
     private int currentChannelTotal;
+    /** Channel task accepted but not started (NPC en route): show waiting label, no animation. */
+    private boolean currentPending;
     /** Smoothed remaining channel ticks, decremented per client tick between refreshes. */
     private double animatedRemaining;
 
@@ -167,6 +172,7 @@ public class TaskQueuePanel extends AbstractWidget {
             this.currentTotalSteps = 0;
             this.currentChannelRemaining = 0;
             this.currentChannelTotal = 0;
+            this.currentPending = false;
             this.animatedRemaining = 0;
             return;
         }
@@ -175,19 +181,20 @@ public class TaskQueuePanel extends AbstractWidget {
         this.currentTotalSteps = info.totalSteps();
         this.currentChannelRemaining = info.channelRemainingTicks();
         this.currentChannelTotal = info.channelTotalTicks();
+        this.currentPending = info.pending();
         this.animatedRemaining = Math.max(0, info.channelRemainingTicks());
     }
 
     /** Decrement the animated channel countdown by one client tick. Call from the parent Screen's tick(). */
     public void tickProgress() {
-        if (currentEntry != null && currentChannelTotal > 0 && animatedRemaining > 0) {
+        if (currentEntry != null && !currentPending && currentChannelTotal > 0 && animatedRemaining > 0) {
             animatedRemaining = Math.max(0, animatedRemaining - 1);
         }
     }
 
     /** Fraction 0..1 through the current task (channel-based, else step-based). */
     private float progressFraction() {
-        if (currentEntry == null) return 0;
+        if (currentEntry == null || currentPending) return 0;
         if (currentChannelTotal > 0) {
             float frac = 1f - (float) animatedRemaining / Math.max(1, currentChannelTotal);
             return Math.max(0, Math.min(1, frac));
@@ -198,9 +205,10 @@ public class TaskQueuePanel extends AbstractWidget {
         return 0;
     }
 
-    /** Short "time remaining" label for the current task row. */
+    /** Short "time remaining" label for the current task row, or a waiting label when not started. */
     private String timeLabel() {
         if (currentEntry == null) return "";
+        if (currentPending) return pendingLabel();
         if (currentChannelTotal > 0) {
             int sec = (int) Math.ceil(animatedRemaining / 20.0);
             if (sec >= 60) return String.format("%d:%02d", sec / 60, sec % 60);
@@ -210,6 +218,20 @@ public class TaskQueuePanel extends AbstractWidget {
             return currentStep + "/" + currentTotalSteps;
         }
         return "";
+    }
+
+    /** Localized "waiting to start" label for a pending channel task. */
+    private String pendingLabel() {
+        String cat = currentEntry.category();
+        return switch (cat) {
+            case "decompose" -> I18n.name("gui.wandscape.queue.pending.decompose", "待分解").getString();
+            case "synthesize" -> I18n.name("gui.wandscape.queue.pending.synthesize", "待合成").getString();
+            case "craft"      -> I18n.name("gui.wandscape.queue.pending.craft", "待制作").getString();
+            case "brew"       -> I18n.name("gui.wandscape.queue.pending.brew", "待炼制").getString();
+            case "build"      -> I18n.name("gui.wandscape.queue.pending.build", "待建造").getString();
+            case "gather"     -> I18n.name("gui.wandscape.queue.pending.gather", "待采集").getString();
+            default           -> I18n.name("gui.wandscape.queue.pending.other", "待执行").getString();
+        };
     }
 
     /** Simple track + gold fill progress bar. */
@@ -346,9 +368,12 @@ public class TaskQueuePanel extends AbstractWidget {
             g.drawString(Minecraft.getInstance().font, time, textRight - timeW, rowY + 2, MedievalColors.TEXT_MUTED);
         }
 
-        // Progress bar spans from the label start to the right text edge
-        int barW = Math.max(8, textRight - labelX);
-        drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction());
+        // Progress bar spans from the label start to the right text edge.
+        // Skipped while the channel task is pending (not started yet) — a waiting label shows instead.
+        if (!currentPending) {
+            int barW = Math.max(8, textRight - labelX);
+            drawProgressBar(g, labelX, rowY + 13, barW, 3, progressFraction());
+        }
     }
 
     /**

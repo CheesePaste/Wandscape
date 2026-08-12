@@ -142,6 +142,16 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
                     WandscapeSounds.TASK_PUBLISH, SoundSource.PLAYERS, 0.4f, 1.0f);
             Log.info(TAG, "[Road] Published task #{}: preset={} from={} to={} tiles={}",
                     taskId, packet.presetId(), start.toShortString(), end.toShortString(), tiles.size());
+
+            // Manual road placement counts toward onboarding step 6.
+            var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
+            UUID colonyId = colonyApi != null ? colonyApi.getColonyId(player.blockPosition()) : null;
+            if (colonyId != null) {
+                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(player.serverLevel());
+                if (bank != null) bank.recordPlayerRoadPlace(colonyId);
+                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+                if (guideApi != null) guideApi.sendToPlayer(player, colonyId);
+            }
         } catch (Exception e) {
             Log.warn(TAG, "[Road] Failed to publish road task: {}", e.getMessage());
         }

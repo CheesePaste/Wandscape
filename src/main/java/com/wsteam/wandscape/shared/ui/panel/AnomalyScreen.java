@@ -28,8 +28,8 @@ public class AnomalyScreen extends MedievalScreen {
     private static final int BTN_W = 50;
     private static final int BTN_H = 18;
 
-    private record AnomalyEntry(UUID buildingId, String buildingName, Type type) {
-        enum Type { BROKEN, SHUTDOWN }
+    private record AnomalyEntry(UUID buildingId, String buildingName, Type type, boolean started) {
+        enum Type { BROKEN, SHUTDOWN, UNDER_CONSTRUCTION }
     }
 
     private List<AnomalyEntry> entries = List.of();
@@ -55,13 +55,26 @@ public class AnomalyScreen extends MedievalScreen {
         var shutdownNames = WandscapePanelState.getShutdownBuildingNames();
         int n = Math.min(shutdownIds.size(), shutdownNames.size());
         for (int i = 0; i < n; i++) {
-            list.add(new AnomalyEntry(shutdownIds.get(i), shutdownNames.get(i), AnomalyEntry.Type.SHUTDOWN));
+            list.add(new AnomalyEntry(shutdownIds.get(i), shutdownNames.get(i),
+                    AnomalyEntry.Type.SHUTDOWN, false));
         }
         var brokenIds = WandscapePanelState.getBrokenBuildingIds();
         var brokenNames = WandscapePanelState.getBrokenBuildingNames();
         n = Math.min(brokenIds.size(), brokenNames.size());
         for (int i = 0; i < n; i++) {
-            list.add(new AnomalyEntry(brokenIds.get(i), brokenNames.get(i), AnomalyEntry.Type.BROKEN));
+            list.add(new AnomalyEntry(brokenIds.get(i), brokenNames.get(i),
+                    AnomalyEntry.Type.BROKEN, false));
+        }
+        // Under-construction buildings are NOT anomalies but are listed so the
+        // player sees they're still being built (等待材料/建造中) instead of mistaking
+        // them for damaged.
+        var ucIds = WandscapePanelState.getUnderConstructionBuildingIds();
+        var ucNames = WandscapePanelState.getUnderConstructionBuildingNames();
+        var ucStarted = WandscapePanelState.getUnderConstructionStarted();
+        n = Math.min(ucIds.size(), Math.min(ucNames.size(), ucStarted.size()));
+        for (int i = 0; i < n; i++) {
+            list.add(new AnomalyEntry(ucIds.get(i), ucNames.get(i),
+                    AnomalyEntry.Type.UNDER_CONSTRUCTION, ucStarted.get(i)));
         }
         this.entries = list;
     }
@@ -106,26 +119,39 @@ public class AnomalyScreen extends MedievalScreen {
                     MedievalColors.TEXT_WARM_WHITE, false);
 
             // Type badge
+            boolean isUnderConstruction = entry.type == AnomalyEntry.Type.UNDER_CONSTRUCTION;
             boolean isBroken = entry.type == AnomalyEntry.Type.BROKEN;
-            int badgeColor = isBroken ? MedievalColors.DANGER_RED : MedievalColors.BORDER_GOLD_DARK;
-            String badgeText = isBroken ? "损坏" : "关闭";
+            int badgeColor;
+            String badgeText;
+            if (isUnderConstruction) {
+                badgeColor = MedievalColors.INFO_BLUE;
+                badgeText = entry.started() ? "建造中" : "等待材料";
+            } else if (isBroken) {
+                badgeColor = MedievalColors.DANGER_RED;
+                badgeText = "损坏";
+            } else {
+                badgeColor = MedievalColors.BORDER_GOLD_DARK;
+                badgeText = "关闭";
+            }
             int badgeW = font.width(badgeText) + 8;
             int badgeX = cx + cw - 125;
             int badgeY = rowY + (ROW_H - 14) / 2;
             g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + 14, badgeColor | 0xCC000000);
             g.drawString(font, badgeText, badgeX + 4, badgeY + 3, MedievalColors.TEXT_WARM_WHITE, false);
 
-            // Action button
-            String btnText = isBroken ? "修复" : "营业";
-            int btnX = cx + cw - BTN_W;
-            int btnY = rowY + (ROW_H - BTN_H) / 2;
-            int btnColor = isBroken ? MedievalColors.SUCCESS_GREEN : MedievalColors.INFO_BLUE;
-            boolean btnHovered = mouseX >= btnX && mouseX < btnX + BTN_W
-                    && mouseY >= btnY && mouseY < btnY + BTN_H;
-            int fillColor = btnHovered ? btnColor : (btnColor & 0x00FFFFFF) | 0xAA000000;
-            g.fill(btnX, btnY, btnX + BTN_W, btnY + BTN_H, fillColor);
-            g.drawString(font, btnText, btnX + (BTN_W - font.width(btnText)) / 2,
-                    btnY + (BTN_H - 9) / 2, MedievalColors.TEXT_WARM_WHITE, false);
+            // Action button — under-construction buildings have no repair/restart action
+            if (!isUnderConstruction) {
+                String btnText = isBroken ? "修复" : "营业";
+                int btnX = cx + cw - BTN_W;
+                int btnY = rowY + (ROW_H - BTN_H) / 2;
+                int btnColor = isBroken ? MedievalColors.SUCCESS_GREEN : MedievalColors.INFO_BLUE;
+                boolean btnHovered = mouseX >= btnX && mouseX < btnX + BTN_W
+                        && mouseY >= btnY && mouseY < btnY + BTN_H;
+                int fillColor = btnHovered ? btnColor : (btnColor & 0x00FFFFFF) | 0xAA000000;
+                g.fill(btnX, btnY, btnX + BTN_W, btnY + BTN_H, fillColor);
+                g.drawString(font, btnText, btnX + (BTN_W - font.width(btnText)) / 2,
+                        btnY + (BTN_H - 9) / 2, MedievalColors.TEXT_WARM_WHITE, false);
+            }
         }
 
         g.disableScissor();
@@ -137,9 +163,10 @@ public class AnomalyScreen extends MedievalScreen {
             RenderUtil.drawScrollbar(g, cx + cw - 4, listY, 4, listH, totalH, scrollOffset);
         }
 
-        // Summary footer
-        String summary = "共 " + entries.size() + " 个异常  |  关闭: " + WandscapePanelState.getShutdownCount()
-                + "  |  损坏: " + WandscapePanelState.getBrokenCount();
+        // Summary footer — 建造中 buildings are listed but are not anomalies
+        String summary = "共 " + entries.size() + " 项  |  关闭: " + WandscapePanelState.getShutdownCount()
+                + "  |  损坏: " + WandscapePanelState.getBrokenCount()
+                + "  |  建造中: " + WandscapePanelState.getUnderConstructionCount();
         g.drawString(font, summary, cx, listY + listH + 4, MedievalColors.TEXT_MUTED, false);
     }
 
@@ -160,6 +187,7 @@ public class AnomalyScreen extends MedievalScreen {
             if (rowY + ROW_H < listY || rowY > listY + listH) continue;
 
             var entry = entries.get(i);
+            if (entry.type == AnomalyEntry.Type.UNDER_CONSTRUCTION) continue;
             boolean isBroken = entry.type == AnomalyEntry.Type.BROKEN;
             int btnX = cx + cw - BTN_W;
             int btnY = rowY + (ROW_H - BTN_H) / 2;

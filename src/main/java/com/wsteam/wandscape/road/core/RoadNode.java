@@ -11,8 +11,6 @@ import com.wsteam.wandscape.core.types.GridPos;
 public record RoadNode(UUID nodeId, GridPos pos, NodeType type) {
 
     public enum NodeType {
-        /** Node at a building's anchor position. */
-        BUILDING,
         /** Node where two road edges cross. */
         INTERSECTION,
         /** Node whose associated building no longer exists. */

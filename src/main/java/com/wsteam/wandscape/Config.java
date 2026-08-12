@@ -9,6 +9,13 @@ public class Config {
                     + "When false (default), only WARN/ERROR messages are logged.")
             .define("general.debug", false);
 
+    // ---- V 面板 ----
+
+    public static final ModConfigSpec.DoubleValue FLY_SPEED = BUILDER
+            .comment("V 面板相机飞行速度（格/秒）：鸟瞰 / 道路（含样条 3D 与俯视）/ 建造子模式共用。"
+                    + "已移除游戏内滚轮/Ctrl 调速，改此值即可整体调整。")
+            .defineInRange("panel.flySpeed", 15.0, 1.0, 200.0);
+
     public static final ModConfigSpec.IntValue COLONY_RADIUS = BUILDER
             .comment("Default colony radius in blocks")
             .defineInRange("general.colonyRadius", 128, 16, 512);
@@ -64,80 +71,16 @@ public class Config {
             .comment("Additional range per wand level")
             .defineInRange("wand.perWandLevelRange", 8, 0, 32);
 
-    // ---- Road system ----
-
-    public static final ModConfigSpec.IntValue ROAD_BUILDING_THRESHOLD = BUILDER
-            .comment("Minimum number of buildings before road network is generated")
-            .defineInRange("road.buildingThreshold", 3, 2, 50);
-
-    public static final ModConfigSpec.IntValue ROAD_SEGMENT_MAX_LENGTH = BUILDER
-            .comment("Maximum tiles per road segment")
-            .defineInRange("road.segmentMaxLength", 16, 4, 64);
-
-    public static final ModConfigSpec.IntValue ROAD_DEFAULT_WIDTH = BUILDER
-            .comment("Default road width in blocks (1-5)")
-            .defineInRange("road.defaultWidth", 3, 1, 5);
-
-    public static final ModConfigSpec.IntValue ROAD_MAX_CUT_DEPTH = BUILDER
-            .comment("Maximum depth the road will excavate into terrain before logging a warning (0 = no limit)")
-            .defineInRange("road.maxCutDepth", 8, 0, 64);
-
-    public static final ModConfigSpec.IntValue ROAD_MAX_FILL_HEIGHT = BUILDER
-            .comment("Maximum height the road will fill below surface before logging a warning (0 = no limit)")
-            .defineInRange("road.maxFillHeight", 6, 0, 64);
-
-    public static final ModConfigSpec.ConfigValue<String> ROAD_SURFACE_PALETTE = BUILDER
-            .comment("Weighted block palette for road surface. Format: \"modid:block=weight,...\""
-                    + " — weights are relative, total need not be 100.")
-            .define("road.surfacePalette",
-                    "minecraft:stone_bricks=50,minecraft:andesite=25,minecraft:stone=25");
-
-    // ---- Road pillars ----
-
-    public static final ModConfigSpec.BooleanValue ROAD_PILLAR_ENABLED = BUILDER
-            .comment("Whether viaduct pillars are generated below elevated road segments")
-            .define("road.pillar.enabled", true);
-
-    public static final ModConfigSpec.IntValue ROAD_PILLAR_SPACING = BUILDER
-            .comment("Spacing in path points between pillars (higher = sparser)")
-            .defineInRange("road.pillar.spacing", 4, 2, 16);
-
-    public static final ModConfigSpec.ConfigValue<String> ROAD_PILLAR_BLOCK = BUILDER
-            .comment("Block used for viaduct support pillars under elevated roads")
-            .define("road.pillar.block", "minecraft:stone_bricks");
-
-    // ---- Road decoration ----
-
-    public static final ModConfigSpec.BooleanValue ROAD_DECORATION_ENABLED = BUILDER
-            .comment("Whether road decoration (lamps, benches) is generated")
-            .define("road.decoration.enabled", true);
-
-    public static final ModConfigSpec.IntValue ROAD_DECORATION_LAMP_SPACING = BUILDER
-            .comment("Distance in blocks between lamps along roads (0 = disabled)")
-            .defineInRange("road.decoration.lampSpacing", 8, 0, 64);
-
-    public static final ModConfigSpec.IntValue ROAD_DECORATION_BENCH_SPACING = BUILDER
-            .comment("Distance in blocks between benches along roads (0 = disabled)")
-            .defineInRange("road.decoration.benchSpacing", 24, 0, 64);
-
-    public static final ModConfigSpec.ConfigValue<String> ROAD_DECORATION_LAMP_POST = BUILDER
-            .comment("Block used for lamp posts")
-            .define("road.decoration.lampPost", "minecraft:oak_fence");
-
-    public static final ModConfigSpec.ConfigValue<String> ROAD_DECORATION_LAMP_LIGHT = BUILDER
-            .comment("Block used for the light source on top of lamp posts")
-            .define("road.decoration.lampLight", "minecraft:lantern");
-
-    public static final ModConfigSpec.ConfigValue<String> ROAD_DECORATION_BENCH_BLOCK = BUILDER
-            .comment("Block used for benches (supports [facing=...] state)")
-            .define("road.decoration.benchBlock", "minecraft:oak_stairs");
-
     // ---- Colony autonomy ----
 
     public static final ModConfigSpec.BooleanValue AUTO_APPROVE_TASKS = BUILDER
             .comment("When true, all colony tasks skip the player-approval gate and are assigned automatically.")
             .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
             .define("general.autoApproveTasks", false);
+
+    public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
+            .comment("每种元素在殖民地仓库首次建立时的初始数量（每殖民地一次，只种一次）。")
+            .defineInRange("colony.initialElementCount", 6000, 0, 1000000);
 
     // ---- Tourist system ----
 

@@ -84,7 +84,7 @@ com.wsteam.wandscape
 2. **`onRegisterPayloads`**：注册全部网络包（约 40 个 payload，playToClient/playToServer）。
 3. **`onServerStarting`**：
    - `EngineBootstrap.bootstrap()` 装配 ECS World 与系统；
-   - 注册 `ColonyMetricsService`、`GuideProgressService`、`BuildCompleteListener`、`DemolishCompleteListener`、`RoadEventListener`；
+   - 注册 `ColonyMetricsService`、`GuideProgressService`、`BuildCompleteListener`、`DemolishCompleteListener`、`RoadSegmentListener`；
    - 装载 SavedData：`TaskPoolSavedData`、`RoadSavedData`、`TavernRecruitStorage`、`ColonyLevelData`；
    - 初始化 `ChunkLoadManager`、`TouristSimSystem`、`PlayerManualSource`；
    - 加载 `element_seeds.json` 种子值。
@@ -157,7 +157,7 @@ ColonyMetricsService.getSnapshot(colonyId)
   → BuildingApi.getColonySnapshot（三值，单次遍历）
   → ColonyLevelManager（等级/经验/名称）
   → TouristApi（游客数/过夜/满意度）
-  → BuildingApi.getColonyBuildings（关停/损坏计数）
+  → BuildingApi.getColonyBuildings（关停/损坏/建造中计数）
   → NpcApi（NPC 总数/空闲数）
   → WarehouseApi.getAllElements（7 元素储量）
   → ColonyMetricsSnapshot
@@ -172,6 +172,5 @@ ColonyMetricsService.getSnapshot(colonyId)
 2. `equipment/` 包不存在——装备是 cross-cutting（`core/component/EquipmentComponent` + `core/types/`，桥接在 `npc/internal/`）。
 3. `ColonyLevelUpEvent` 是 record 回调（`levelUpCallback`），不是 NeoForge 总线事件。
 4. 建筑系统现含自定义方块/BE（扫描器），不再是"零自定义方块"。
-5. 新手引导步骤硬编码在 `GuideRegistry`（9 步），`assets/wandscape/guide/*.md` 仅服务游戏内 Markdown 文档阅读器。
+5. 新手引导步骤硬编码在 `GuideRegistry`（10 步），`assets/wandscape/guide/*.md` 仅服务游戏内 Markdown 文档阅读器。
 6. `ResourceRequestExecutor` 实际每 5 tick 发一件（非 1/tick）。
-7. `road_templates/`、`road_tiers.json`、`road_rules/` 当前无代码读取（`RoadPresetLoader` 只读 `road_presets` 类别，无对应文件）。

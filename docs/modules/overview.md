@@ -16,7 +16,7 @@
 
 ## OverviewFlightController
 
-- 移动在 `RenderLevelStageEvent.AFTER_SKY` 处理（帧率无关 WASD/Space/Shift）；`MovementInputUpdateEvent` 清零玩家移动；滚轮沿视线推拉、Ctrl 调速；onMouseButtonPre 取消世界点击（豁免 top bar/sidebar 供面板 UI）。
+- 移动在 `RenderLevelStageEvent.AFTER_SKY` 处理（帧率无关 WASD/Space/Shift，速度固定走 `Config.panel.flySpeed`，不提供游戏内调速）；`MovementInputUpdateEvent` 清零玩家移动；滚轮沿视线推拉（缩放）；onMouseButtonPre 取消世界点击（豁免 top bar/sidebar 供面板 UI）。
 - **渲染玩家实体**：`enter` 切第三人称（`CameraType.THIRD_PERSON_BACK`）、`exit` 恢复原相机类型；`onRenderLevelStage` 每帧 reconcile 相机类型（F5 在 `handleKeybinds` 早于 ClientTickPost 消费，drain 无效，必须每帧拉回）。
 - **防玩家视角污染**：`onRenderLevelStage` 末尾每帧把玩家旋转（yRot/xRot/yRotO/xRotO + yBodyRot/yBodyRotO + yHeadRot/yHeadRotO）冻结回进入快照，抵消原版 `MouseHandler.turnPlayer`；`exit` 显式落定防退出瞬间甩头。两个「玩家视角」（原版 + 地面模式）共享这一份玩家旋转。
 - **受伤自动退出**：`enter` 采样血量基线；`onClientTickPost` 检测血量下降沿或死亡 → `WandscapePanelState.closePanel()` 完全退出控制面板（保留空中相机缓存），回原版第一人称夺回操控。

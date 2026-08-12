@@ -20,7 +20,7 @@ WandscapeEngine 单例持有：World + AsyncTransformExecutor + 各边界实现 
 
 ## TaskSource 实现 (source/)
 
-BuildingTaskSource（每 20tick 轮询：清理完成/资源暂存 → 发布 WorkItem → TaskRequest 入池，是 BE→引擎的唯一桥梁）。发布前 `ChunkLoadManager.leaseBuilding` 强加载建筑 footprint（预算内），head 完成、且无暂存（AWAITING_RESOURCES）任务后 `releaseBuilding` 让区块卸载；`BuildingRemovedEvent` 触发拆除/注销释放。/ BlueprintConfigLoader / DataDrivenSteps（遗留 fallback）。纯 core 的 TaskSource 在 `task/source/`，RoadTaskSource 在 `road/engine/`。
+BuildingTaskSource（每 20tick 轮询：清理完成/资源暂存 → 发布 WorkItem → TaskRequest 入池，是 BE→引擎的唯一桥梁）。发布前 `ChunkLoadManager.leaseBuilding` 强加载建筑 footprint（预算内），head 完成、且无暂存（AWAITING_RESOURCES）任务后 `releaseBuilding` 让区块卸载；`BuildingRemovedEvent` 触发拆除/注销释放。/ BlueprintConfigLoader / DataDrivenSteps（遗留 fallback）。纯 core 的 TaskSource 在 `task/source/`。
 
 ## 按需强加载 (service/)
 

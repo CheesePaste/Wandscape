@@ -17,7 +17,7 @@
 | `GuideProgressApi` | sendToPlayer(player, colonyId) |
 | `HouseApi` | getAssignedNpc/isOccupied/assignNpc/unassignNpc/getVacantHouses |
 | `NpcApi` | getColonyNpcs/getIdleNpcs/getNpc/assignHouse + 默认 getNpcCount/getIdleNpcCount |
-| `RoadApi` | getNetwork/getEdges/requestFullRebuild/requestIncrementalUpdate/getBuildingThreshold/getRoadBlock/getBlobCache/removeEdge |
+| `RoadApi` | getNetwork/getEdges/getBlobCache/removeEdge |
 | `TavernApi` | getCandidates/refreshCandidates/recruitCandidate/receiveMageResume/getMageResumes/recruitMage + getRecruitCount/canAffordRecruit/chargeRecruit（「招募 NPC」计费，每殖民地首次免费） |
 | `TouristApi` | getTouristCount/getTouristsInColony/spawnTourist/getAverageSatisfaction/registerArrival/registerDeparture/getOvernightStayerCount |
 | `WandApi` | getWandColor(ItemStack) |
@@ -31,9 +31,9 @@
 
 ## data/（数据类）
 
-- `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/isShutdown/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/...。
+- `BuildingData` interface：getBuildingId/getColonyId/getBuildingTypeId/getCategory/getPosition/isShutdown/getComfort/getMagic/getWonder/getQueueCapacity/isStructureIntact/hasEverCompleted/isConstructionStarted/...。
 - `CharacterNames`：法师与游客共享的**双语**随机名池（44 个名字，`wandscape.character_name.<i>` lang key：zh 中文 / en 拼音），`generateRandomNameKey()` 生成 key，`displayComponent` 返回 translatable 组件（客户端按语言渲染），`localizedString` 解析当前语言（无 lang 条目时回退中文，旧存档纯中文名原样通过）。游客 `getTouristName()` 解析、`getTouristNameKey()` 存 key；NPC 自动命名 `setCustomName(displayComponent(key))`。
-- `ColonyMetricsSnapshot` record：colonyId + 三评 + 名称/等级/经验 + 游客数/过夜数/平均满意度 + NPC 空闲/总数 + 七元素 + 停机/损坏名单；EMPTY、totalAnomalyCount()。
+- `ColonyMetricsSnapshot` record：colonyId + 三评 + 名称/等级/经验 + 游客数/过夜数/平均满意度 + NPC 空闲/总数 + 七元素 + 停机/损坏/建造中（含 等待材料/建造中 phase）名单；EMPTY、totalAnomalyCount()（只计停机+损坏，建造中不算异常）。
 - `ElementType` enum：EARTH/WOOD/WATER/FIRE/METAL/WIND/DARK。
 - `Emotion` enum：DELIGHTED/PLEASED/SATISFIED/NEUTRAL/DISAPPOINTED/UPSET。
 - `ExecutionResult(success, errorMessage)`、`InterruptRecord(npcId, timestamp)`、`ItemKey(itemId, nbt)`、`MageResume`（见 npc 模块）、`RecruitmentCandidate`、`VisitMemory`（builder）、`BlueprintInfo(id, displayName, description, params)`。
@@ -83,11 +83,35 @@
 
 ## guidance/（新手引导）
 
-- **步骤硬编码**于 `GuideRegistry`（9 步）：townhall/warehouse/node/workstation/craft_station/shop/inn/tavern/level_up，每步三种文案（default/bar/placing）。
-- `GuideStep(id, title, defaultLines, barLines, placingLines, hint)`；`linesFor(buildMode, isPlacing, isBar)`。
+游戏内 V 面板的覆盖式引导。步骤内容硬编码于 `GuideRegistry`（10 步），服务端权威计算进度，客户端只渲染。
+
+**步骤与判定**（`GuideProgressService.computeStep` 0-10 步，顺序与 `GuideRegistry.STEPS` 一一对应）：
+
+| # | 步骤 | 完成判定 |
+|---|---|---|
+| 1 | 建造市政厅 | 有 category=government 建筑 |
+| 2 | 建造仓库 | 有 typeId=warehouse 建筑 |
+| 3 | 右键仓库放入物品 | `ColonyItemBank.getPlayerDepositCount>0`（WarehouseActionPacket 记录） |
+| 4 | 建造工作站 | 有 category=workstation 建筑 |
+| 5 | 右键工作站合成 | `getPlayerSynthesizeCount>0`（RequestProductionTaskPacket 记录） |
+| 6 | 铺设道路 | `getPlayerRoadPlaceCount>0`（RoadPlacePacket 记录） |
+| 7 | 建造面包店补充货物 | 有 typeId=breadshop 且该商店有库存 `hasShopStock` |
+| 8 | 建造节点发布采集 | 有 category=node 且 `getGatherPublishedCount>0`（RequestGatherTaskPacket 记录） |
+| 9 | 建造祭坛 | 有 category=altar 建筑（只判建造，不需真复活） |
+| 10 | 建造旅馆游客入住 | 有 max_occupancy>0 的 service 建筑且 `getOvernightStayerCount>0` |
+
+玩家动作计数（存入/合成/铺路/发布采集）持久化在 `ColonyItemBank`（仿 `purchaseCounts` 的 NBT）；每个动作包处理后立即调 `GuideProgressApi.sendToPlayer` 即时推进，无需重开面板。
+
+**结构与渲染**：
+
+- `GuideStep(id, title, defaultLines, barLines, aimingLines, pinnedLines, hint)`；`linesFor(buildMode, isPlacing, isBar, isPinned)` 按建造阶段（列表/瞄准/锁定）选文案。
+- 文案全用亮色（§f/§e/§a/§b），**无灰字（§7/§8）**；按键/按钮/建筑名 §e、步骤说明 §b、完成项 §a。
+- 教程教的建造流程（与真实交互一致，操作优先）：按 1 开建造 → 点卡片双击放置 → **按住右键拖动转视角定位** → 左键旋转朝向 → 点右侧面板【提交施工】→ 施工界面【提交】。
+- 建筑交互：V 面板**俯瞰（OVERVIEW）是自由视角**——移动鼠标转视角、WASD 移动、滚轮缩放；准心对准建筑**右键点一下**打开界面。**右键拖动转视角只在建造/道路子模式**，交互步骤不这样写。
+- **交互前先退出建造**：放置后建造列表会重新打开（仍是建造模式），所以每个交互步骤先教「按 1 或 ESC 退出建造」，再右键建筑。（例外：放置政府建筑会**自动弹出命名界面**创建殖民地，无需退出建造/右键——见 projection.md。）
+- `GuideRenderer`：屏幕**右下角**覆盖框，可折叠/关闭（按钮随框在右侧）；padding 收紧少挡视野。
 - `GuideSession`：客户端静态状态 serverStep/dismissed；applySync 弹 toast、dismiss() 发 GuideProgressUpdatePacket。
-- `GuideRenderer`：屏幕右上角教程覆盖框。
-- 权威计算在 engine：`GuideProgressService.computeStep` 纯函数返回 0-9 步；持久化 GuideProgressSavedData。
+- 每玩家进度持久化于 `GuideProgressSavedData`（stepIndex+dismissed）。
 
 ## markdown/（游戏内文档阅读器）
 

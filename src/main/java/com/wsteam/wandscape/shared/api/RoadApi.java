@@ -9,8 +9,7 @@ import com.wsteam.wandscape.road.core.RoadBlobCache;
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 /**
- * API for the road system. Provides access to road network state
- * and operations for triggering road construction.
+ * API for the road system. Provides access to the road network state.
  */
 public interface RoadApi {
 
@@ -19,18 +18,6 @@ public interface RoadApi {
 
     /** Get all road edges for a colony. */
     List<RoadEdge> getEdges(UUID colonyId);
-
-    /** Trigger a full MST rebuild and diff against existing network. */
-    void requestFullRebuild(UUID colonyId);
-
-    /** Add a single building to the road network incrementally. */
-    void requestIncrementalUpdate(UUID colonyId, UUID buildingId);
-
-    /** Minimum number of buildings before roads are built. */
-    int getBuildingThreshold();
-
-    /** Get the block ID used for a given road tier. */
-    String getRoadBlock(String tier);
 
     /**
      * Get the lazy road blob cache for a colony.
