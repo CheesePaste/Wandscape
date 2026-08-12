@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.Easing;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec.Element;
@@ -56,14 +58,16 @@ public final class MagicCircleEmitter {
         return "ember".equals(styleId) ? 0.08f : 0.12f;
     }
 
-    /** 注册一个施放中的法阵。axis 为法阵平面法线（法杖朝向），覆盖 spec 元素 axis。 */
-    public static void add(ClientLevel level, UUID effectId, Vec3 pos, Vec3 axis, String circleId) {
+    /** 注册一个施放中的法阵。axis 为法阵平面法线（法杖朝向），覆盖 spec 元素 axis。
+     *  {@code casterUuid} 非空 = 脚下法阵，客户端每 tick 跟随该实体位置（NPC 走位时法阵跟着移动）。 */
+    public static void add(ClientLevel level, UUID effectId, Vec3 pos, Vec3 axis, String circleId,
+                           @Nullable UUID casterUuid) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
         if (spec == null) {
             Log.warn(TAG, "unknown magic circle id: {}", circleId);
             return;
         }
-        ACTIVE.put(effectId, new ActiveCircle(level, spec, pos, axis));
+        ACTIVE.put(effectId, new ActiveCircle(level, spec, pos, axis, casterUuid));
     }
 
     /** ClientTickEvent.Post：推进所有活跃法阵；跟随光束的更新源点/朝向，到 t≥1 移除。 */
@@ -79,8 +83,20 @@ public final class MagicCircleEmitter {
             Map.Entry<UUID, ActiveCircle> e = it.next();
             ActiveCircle c = e.getValue();
             followBeam(e.getKey(), c);
+            followCaster(c);
             c.tick();
             if (c.done) it.remove();
+        }
+    }
+
+    /** 若法阵绑定了施法者实体（脚下法阵），跟随其当前位置（走位时法阵跟着移动）。 */
+    private static void followCaster(ActiveCircle c) {
+        if (c.casterUuid == null) return;
+        for (Entity e : c.level.entitiesForRendering()) {
+            if (e.getUUID().equals(c.casterUuid) && e.isAlive()) {
+                c.pos = e.position();
+                return;
+            }
         }
     }
 
@@ -108,15 +124,17 @@ public final class MagicCircleEmitter {
         final MagicCircleSpec spec;
         Vec3 pos;
         Vec3 axis;
+        @Nullable final UUID casterUuid;
         final long startTick;
         final int durationTicks;
         boolean done;
 
-        ActiveCircle(ClientLevel level, MagicCircleSpec spec, Vec3 pos, Vec3 axis) {
+        ActiveCircle(ClientLevel level, MagicCircleSpec spec, Vec3 pos, Vec3 axis, @Nullable UUID casterUuid) {
             this.level = level;
             this.spec = spec;
             this.pos = pos;
             this.axis = axis.lengthSqr() < 1e-6 ? new Vec3(0, 1, 0) : axis.normalize();
+            this.casterUuid = casterUuid;
             this.startTick = level.getGameTime();
             this.durationTicks = spec.durationTicks;
         }

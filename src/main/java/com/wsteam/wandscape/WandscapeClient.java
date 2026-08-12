@@ -344,7 +344,7 @@ public class WandscapeClient {
         com.wsteam.wandscape.shared.network.MagicCircleCastPacket.setClientHandler(packet -> {
             var mc = Minecraft.getInstance();
             if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel cl) {
-                com.wsteam.wandscape.magic.client.MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId());
+                com.wsteam.wandscape.magic.client.MagicCircleEmitter.add(cl, packet.effectId(), packet.pos(), packet.axis(), packet.circleId(), packet.casterUuid());
             }
         });
 

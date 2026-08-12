@@ -93,7 +93,7 @@ public final class MagicSpellExecutors {
 
         // 广播法阵在施法者脚下生成
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 注册持续治疗任务（6秒=120t，每20t治疗 HEAL_BASE_AMOUNT × SPELL_POWER 生命）：
         // 治疗量与伤害同源走 SPELL_POWER 加成（默认 1.0 → 每脉冲 4 点，强法师奶更多；
@@ -161,7 +161,7 @@ public final class MagicSpellExecutors {
 
         // 施法者脚下广播魔法阵
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 收集陨石目标：选中的 target + 半径 16 内其他敌对生物，按距施法者近→远排序；
         // 保底分配 3 颗陨石（敌少集中砸最近目标，总量恒 3 颗，见 distributeMeteors）
@@ -203,7 +203,7 @@ public final class MagicSpellExecutors {
 
         // 给自身播脚下石化魔法阵
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 给自己施加 30 秒 (600 ticks) 石化 buff
         npc.addEffect(new MobEffectInstance(WandscapeEffects.PETRIFICATION, 600, 0));
@@ -233,7 +233,7 @@ public final class MagicSpellExecutors {
 
         // 施法者脚下广播魔法阵
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         // 收集半径内所有敌对生物，施加三层 debuff
         AABB box = npc.getBoundingBox().inflate(ENFEEBLE_RADIUS);
@@ -280,7 +280,7 @@ public final class MagicSpellExecutors {
 
         // 自身脚下广播金色赐福法阵
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         npc.addEffect(new MobEffectInstance(WandscapeEffects.FORTIFICATION,
                 FORTIFICATION_BUFF_TICKS, 0));                     // 护甲 +4
@@ -361,7 +361,7 @@ public final class MagicSpellExecutors {
 
         // 自身脚下广播深红背水法阵
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
-                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
+                new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId, npc.getUUID()));
 
         float armor = npc.getArmorValue();
         int strengthAmp = desperationStrengthAmplifier(armor);
