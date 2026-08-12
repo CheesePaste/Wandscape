@@ -41,7 +41,7 @@
    - **decompose（工作站分解）**产物写 `colonyResources.addResource(元素名 ResourceId)`（`core/types/ResourceId` 的无冒号元素名，属于 `ColonyResourceAccess` 通道）。
    - **synthesize / craft_wand / brew_potion** 元素消耗走 `ColonyItemBank`（`ElementType`）。
    - 两者数据结构不同（ResourceId vs ElementType），`ColonyItemBank.consume` 对元素"reserve 仅检查"（无保留语义）。重构时应统一。
-2. **`ColonyItemBank` 跨殖民地共享**：每世界存档一个，非每殖民地一个。`seededColonies` 按 colony 记录是否已种籽（首个建筑给每元素 2000）。
+2. **`ColonyItemBank` 跨殖民地共享**：每世界存档一个，非每殖民地一个。`seededColonies` 按 colony 记录是否已种籽（首个建筑给每元素 6000，配置 `colony.initialElementCount` 可调）。
 3. **`ResourceShortageHandler` 兜底链路**：`taskPool.setResourceShortageHandler → ResourceSupplySystem.enqueueSynthesize`（缺元素时合成），但合成又需要元素成本——可能死循环，靠 in-flight 去重缓解。
 4. **`SplineBuildPacket` 端点吸附**：3 格内吸附节点，否则建 ORPHAN 节点；tier 硬编码 "dirt"。
 5. **`nodedark.json` 的 `node_config` 对象有非法尾逗号**（`"channel_ticks": 1200,` 后跟 `}`）。Gson 内部 lenient 模式可解析，故能正常加载；但严格 JSON 校验会失败，建议清理。

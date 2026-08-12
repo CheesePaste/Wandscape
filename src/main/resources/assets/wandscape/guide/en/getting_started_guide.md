@@ -12,7 +12,7 @@ Press **V** to open the panel → the **Build** icon on the left → the **Gover
 
 The Town Hall is the brain of the town — without it you haven't built a town, just a pile of buildings. Once it is built, **aim your crosshair at it and right-click** to name your town — that counts as opening for business.
 
-(By the way: most buildings are **free on first build**, and the build bar marks them with a "First Free" badge. When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds — don't squander them.)
+(By the way: most buildings are **free on first build**, and the build bar marks them with a "First Free" badge. When you place your first building, the warehouse automatically receives **6000 of each element** as startup funds — don't squander them.)
 
 ## Step 2: Build a Warehouse for Materials
 

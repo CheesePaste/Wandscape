@@ -425,6 +425,12 @@ public class BuildingApiImpl implements BuildingApi {
         WorkItem item = state.getTaskQueue().pollFirst();
         if (item != null) {
             sd.setDirty();
+            // Sticky "under construction" marker: once an NPC claims a not-yet-
+            // completed building's work, it is being built and never reverts to
+            // waiting-for-materials. Completed buildings already started long ago.
+            if (!state.hasEverCompleted() && !state.isConstructionStarted()) {
+                state.setConstructionStarted(true);
+            }
             // Demolition task has been claimed by an NPC — remove the building
             // data NOW instead of waiting for the fragile blueprint tail
             // (for_each → emit_event). Block destruction uses the snapshot params

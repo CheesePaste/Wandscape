@@ -78,6 +78,10 @@ public class Config {
             .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
             .define("general.autoApproveTasks", false);
 
+    public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
+            .comment("每种元素在殖民地仓库首次建立时的初始数量（每殖民地一次，只种一次）。")
+            .defineInRange("colony.initialElementCount", 6000, 0, 1000000);
+
     // ---- Tourist system ----
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER

@@ -28,6 +28,17 @@ public interface BuildingData {
         return isStructureIntact();
     }
 
+    /**
+     * Whether construction work has begun placing blocks. Sticky — once an NPC
+     * claims a {@code build:place_structure} task the building is "under
+     * construction" and never reverts to "waiting for materials". Reused by the
+     * anomaly report and debug overlay to label a not-yet-completed building's
+     * phase.
+     */
+    default boolean isConstructionStarted() {
+        return hasEverCompleted();
+    }
+
     /** Building's world-space bounding box, for FX placement (particles/sounds). */
     @Nullable
     default BoundingBox getBounds() { return null; }

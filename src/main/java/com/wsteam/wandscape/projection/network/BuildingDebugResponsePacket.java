@@ -28,6 +28,8 @@ public record BuildingDebugResponsePacket(
         boolean intact,
         boolean needsRepair,
         boolean shutdown,
+        boolean underConstruction,
+        boolean constructionStarted,
         int comfort,
         int magic,
         int wonder,
@@ -73,6 +75,8 @@ public record BuildingDebugResponsePacket(
         buf.writeBoolean(pkt.intact());
         buf.writeBoolean(pkt.needsRepair());
         buf.writeBoolean(pkt.shutdown());
+        buf.writeBoolean(pkt.underConstruction());
+        buf.writeBoolean(pkt.constructionStarted());
         buf.writeInt(pkt.comfort());
         buf.writeInt(pkt.magic());
         buf.writeInt(pkt.wonder());
@@ -105,6 +109,8 @@ public record BuildingDebugResponsePacket(
         boolean intact = buf.readBoolean();
         boolean needsRepair = buf.readBoolean();
         boolean shutdown = buf.readBoolean();
+        boolean underConstruction = buf.readBoolean();
+        boolean constructionStarted = buf.readBoolean();
         int comfort = buf.readInt();
         int magic = buf.readInt();
         int wonder = buf.readInt();
@@ -123,7 +129,8 @@ public record BuildingDebugResponsePacket(
 
         return new BuildingDebugResponsePacket(
                 buildingId, typeId, displayName, category, colonyId, anchor,
-                intact, needsRepair, shutdown, comfort, magic, wonder, queueCap,
+                intact, needsRepair, shutdown, underConstruction, constructionStarted,
+                comfort, magic, wonder, queueCap,
                 queue, currentTaskId);
     }
 }

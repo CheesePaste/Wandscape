@@ -343,6 +343,8 @@
   "gui.wandscape.building_status.ok": "Operational",
   "gui.wandscape.building_status.broken": "Broken",
   "gui.wandscape.building_status.stopped": "Stopped",
+  "gui.wandscape.building_status.under_construction": "Under Construction",
+  "gui.wandscape.building_status.waiting_materials": "Waiting for Materials",
   "gui.wandscape.stats.tourists": "Tourists",
   "gui.wandscape.stats.arrived": "In: %s",
   "gui.wandscape.stats.departed": "Out: %s",

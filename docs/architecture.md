@@ -157,7 +157,7 @@ ColonyMetricsService.getSnapshot(colonyId)
   → BuildingApi.getColonySnapshot（三值，单次遍历）
   → ColonyLevelManager（等级/经验/名称）
   → TouristApi（游客数/过夜/满意度）
-  → BuildingApi.getColonyBuildings（关停/损坏计数）
+  → BuildingApi.getColonyBuildings（关停/损坏/建造中计数）
   → NpcApi（NPC 总数/空闲数）
   → WarehouseApi.getAllElements（7 元素储量）
   → ColonyMetricsSnapshot

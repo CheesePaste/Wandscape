@@ -24,7 +24,7 @@ import net.minecraft.network.chat.Component;
  *
  * <p>Usage: {@code /wandscape fill <buildingType> <spacing> <count>}
  * <ul>
- *   <li>{@code buildingType} — config id (e.g. "town_hall", "forest_node")</li>
+ *   <li>{@code buildingType} — config id (e.g. "townhall1", "nodewood")</li>
  *   <li>{@code spacing} — blocks between each anchor (≥ 1)</li>
  *   <li>{@code count} — number of buildings to register (1–64)</li>
  * </ul>

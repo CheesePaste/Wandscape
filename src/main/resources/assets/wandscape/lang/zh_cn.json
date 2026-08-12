@@ -342,6 +342,8 @@
   "gui.wandscape.building_status.ok": "正常",
   "gui.wandscape.building_status.broken": "损坏",
   "gui.wandscape.building_status.stopped": "停摆",
+  "gui.wandscape.building_status.under_construction": "建造中",
+  "gui.wandscape.building_status.waiting_materials": "等待材料",
   "gui.wandscape.stats.tourists": "游客",
   "gui.wandscape.stats.arrived": "到达: %s",
   "gui.wandscape.stats.departed": "离开: %s",

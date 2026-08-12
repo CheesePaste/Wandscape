@@ -22,7 +22,7 @@ When the colony has no warehouse building, the [Town Hall](townhall_guide.md) pa
 
 ## Startup Funds
 
-When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds.
+When you place your first building, the warehouse automatically receives **6000 of each element** as startup funds.
 
 ## Element Consumption
 

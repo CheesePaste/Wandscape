@@ -12,6 +12,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.data.BlockOffset;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.ColonyApiImpl;
@@ -433,12 +434,9 @@ public final class EnqueueHelper {
 
     // ──────────────── Warehouse seed ────────────────
 
-    /** Amount of each element seeded into the first colony warehouse. */
-    private static final long INITIAL_ELEMENT_COUNT = 2000;
-
     /**
      * Seed the colony warehouse once per colony, on its first building registration.
-     * Items start empty; the colony receives 2000 of every element type.
+     * Items start empty; the colony receives {@link Config#INITIAL_ELEMENT_COUNT} of every element type.
      * Idempotent across restarts — the seeded marker persists in ColonyItemBank.
      */
     private static void seedInitialElementsIfNeeded(UUID colonyId) {
@@ -451,13 +449,14 @@ public final class EnqueueHelper {
         }
         if (bank.isSeeded(colonyId)) return;
 
+        long initialCount = Config.INITIAL_ELEMENT_COUNT.get();
         for (ElementType element : ElementType.values()) {
-            bank.addElement(colonyId, element, INITIAL_ELEMENT_COUNT);
+            bank.addElement(colonyId, element, initialCount);
         }
         bank.markSeeded(colonyId);
 
         Log.info(TAG, "[Enqueue] seeded warehouse: {} elements x{} (colony={})",
-                ElementType.values().length, INITIAL_ELEMENT_COUNT,
+                ElementType.values().length, initialCount,
                 colonyId.toString().substring(0, 8));
     }
 
