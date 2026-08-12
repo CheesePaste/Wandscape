@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.guard.GuardScanner;
 import com.wsteam.wandscape.guard.GuardZone;
@@ -139,11 +140,15 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             return new CycleResult(RECHECK_TICKS, 0);
         }
 
-        // 视线与无视线超时处理：持续无视线达到 UNREACHABLE_TIMEOUT_TICKS (200 ticks / 10s) 自动放弃并加黑名单
+        // 视线与无视线超时处理：只有在真正的跨区域寻路赶路中（距离目标>5格且未到达）才暂停计时；
+        // 若到达落点/卡在房顶/静止且无视线，稳健累加无视线超时
         boolean hasLos = GuardCombat.hasLineOfSight(npc, nearest);
-        int nextNoLos = hasLos ? 0 : p.noLosTicks() + RECHECK_TICKS;
+        NavigationState nav = p.world().get(p.npcId(), NavigationState.class);
+        boolean moving = isActuallyMoving(npc, nav);
+
+        int nextNoLos = (hasLos || moving) ? 0 : p.noLosTicks() + RECHECK_TICKS;
         if (!hasLos && nextNoLos >= UNREACHABLE_TIMEOUT_TICKS) {
-            Log.info(TAG, "[GuardAttackExecutor] NPC {} — target '{}' unreachable (no LOS for {} ticks), abandoning task & blacklisting mob #{}",
+            Log.info(TAG, "[GuardAttackExecutor] NPC {} — stationary/stuck without LOS to target '{}' for {} ticks, abandoning task & blacklisting mob #{}",
                     p.npcId(), nearest.getName().getString(), nextNoLos, nearest.getId());
             GuardScanner.blacklistMob(nearest.getId(), level.getGameTime(), UNREACHABLE_BLACK_DURATION_TICKS);
             MagicBeamEntity beam = GuardCombat.findActiveBeam(level, npc);
@@ -157,5 +162,28 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         GuardCombat.engage(level, npc, nearest, p.world(), p.npcId(),
                 MagicCaster.beamCircleId(), MagicCaster.beamColor());
         return new CycleResult(RECHECK_TICKS, nextNoLos);
+    }
+
+    /**
+     * 判断 NPC 是否处于真正的大跨度寻路赶路中：
+     * 1. 处于 PATHFINDING 模式且 target 不为空；
+     * 2. 距离导航目标水平距离 > 5 格 (25.0)；
+     * 3. 导航未完成；
+     * 4. 非传送引导中。
+     * 若已传送到达落点/在房顶小范围打转/在目的地附近/已卡住，均返回 false（允许正常累加无视线超时）。
+     */
+    private static boolean isActuallyMoving(WandscapeNpc npc, NavigationState nav) {
+        if (nav == null || nav.mode != NavigationState.Mode.PATHFINDING || nav.target == null) {
+            return false;
+        }
+        if (npc.isTeleportChanneling(npc.level().getGameTime())) {
+            return false;
+        }
+        if (npc.getNavigation().isDone()) {
+            return false;
+        }
+        double dx = npc.getX() - (nav.target.x() + 0.5);
+        double dz = npc.getZ() - (nav.target.z() + 0.5);
+        return (dx * dx + dz * dz) > 25.0;
     }
 }

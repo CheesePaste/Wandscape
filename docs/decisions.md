@@ -8,7 +8,7 @@
 
 **决策**：
 - **`GuardScanner` 引入不可达黑名单 (`UNREACHABLE_BLACKLIST`)**：`GuardScanner.blacklistMob(entityId, gameTime, 600)` 将目标记录进 30 秒（600 ticks）黑名单。`nearestInZones` 与 `hasMonsterInZones` 在索敌和脱离判定时均忽略黑名单中的怪物，从源头防止任务池在放弃后立即重复发布该怪物的任务。
-- **`GuardAttackExecutor` 增加 10 秒无视线超时放弃**：`Pending` 追踪 `noLosTicks`；若 `hasLineOfSight(npc, nearest)` 为 false，每轮重检 (`RECHECK_TICKS`=10) 累加 `noLosTicks`；持续无视线达到 `UNREACHABLE_TIMEOUT_TICKS`=200（10 秒）时，自动将目标怪物登记入 30 秒黑名单、取消导航、结束战斗态，并完成 (`complete future`) / 放弃当前 `guard:attack` 任务。一旦恢复视线，`noLosTicks` 立即归零。
+- **`GuardAttackExecutor` 增加 10 秒无视线超时放弃与 `isActuallyMoving` 精准移动判定**：`Pending` 追踪 `noLosTicks`；若 `hasLineOfSight(npc, nearest)` 为 false，每轮重检 (`RECHECK_TICKS`=10) 累加 `noLosTicks`。为防止传送/卡在房顶/已在目的地小范围打转时误判为“在赶路”而清零计时，增加 `isActuallyMoving` 精准判定（必须处于 `PATHFINDING` 模式、离目的地水平距离 >5 格、导航未完成且非传送引导中才算赶路中）。若静止/卡住/在落点附近且持续无视线达到 `UNREACHABLE_TIMEOUT_TICKS`=200（10 秒）时，自动将目标怪物登记入 30 秒黑名单、取消导航、结束战斗态，并完成 (`complete future`) / 放弃当前 `guard:attack` 任务。一旦恢复视线或真正大跨度赶路中，`noLosTicks` 归零。
 - **`GuardCombat.findStandingYNear` 修正 Y 轴搜索优先级**：将楼层寻找顺序由自上而下（`+2` 到 `-4`）修改为**优先同层、再上下交替**（`0, +1, -1, +2, -2, -3, -4`）。当怪物在室内/地表时，法师优先选择同层地面，避免误把空腔正上方的屋顶当作首选落脚点。
 
 **为什么**：原守卫系统使用建筑 AABB 索敌，不进行视线与可达性前置检查，且 `findStandingYNear` 优先检查 `+2` 格高度，导致空腔怪刷新时法师极易定位并卡到屋顶；同时 `GuardAttackExecutor` 缺乏无视线超时机制，导致法师在屋顶无法攻击怪却永不脱离。无视线 10 秒超时 + 30 秒黑名单能够在法师无法触及怪物时迅速解脱，恢复自由执行其它任务，且 30 秒内不被该怪骚扰；同层优先的 Y 轴搜索防止法师无脑爬楼顶。
