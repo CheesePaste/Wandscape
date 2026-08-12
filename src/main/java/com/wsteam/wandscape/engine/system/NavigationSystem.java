@@ -214,8 +214,20 @@ public class NavigationSystem implements System {
 
         nav.waypoints = List.of();
         nav.waypointIndex = 0;
-        return npc.getNavigation().moveTo(
+        boolean ok = npc.getNavigation().moveTo(
                 to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
+        if (!ok) {
+            // 诊断：moveTo 返回 false（createPath 未找到路径）。打失败瞬间状态定位根因。
+            var navPath = npc.getNavigation().getPath();
+            Log.info(TAG, "[NavSys] NPC {} moveTo FAIL dest=({},{},{}) from=({},{},{}) "
+                            + "onGround={} y={} stepH={} loaded={} pathNodes={}",
+                    npcId, to.getX(), to.getY(), to.getZ(),
+                    from.getX(), from.getY(), from.getZ(),
+                    npc.onGround(), npc.getY(), npc.maxUpStep(),
+                    npc.level().isLoaded(to),
+                    navPath != null ? navPath.getNodeCount() : -1);
+        }
+        return ok;
     }
 
     /** Issue a moveTo for the current road waypoint, or the final target when out of waypoints. */
@@ -254,6 +266,14 @@ public class NavigationSystem implements System {
      * fall back to walking rather than standing.
      */
     private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
+        // 空中（被怪击退/下落）：原版寻路对悬空起点必失败，此刻传送会白烧 CD+30 蓝——
+        // 等落地后重试。战斗怪贴脸反复击退会让 NPC 频繁短暂离地，而 moveTo 每轮必失败→传送。
+        WandscapeNpc airborne = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        if (airborne != null && !airborne.onGround()) {
+            nav.startTick = 0;
+            return;
+        }
+
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         GridPos target = nav.target;
 
