@@ -10,14 +10,9 @@ public interface GuideServerContext {
 
     boolean hasType(String buildingTypeId);
 
-    /** Shop built AND at least one tourist purchase happened. */
-    boolean hasShopPurchased();
-
     /** Any service building with max_occupancy > 0 AND a tourist is staying overnight. */
     boolean hasInnWithStay();
 
-    /** Tavern built AND at least one NPC has been recruited. */
-    boolean hasTavernRecruited();
-
-    int colonyLevel();
+    /** Whether the colony has at least one completed road segment. */
+    boolean hasRoadBuilt();
 }

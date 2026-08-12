@@ -83,8 +83,8 @@
 
 ## guidance/（新手引导）
 
-- **步骤硬编码**于 `GuideRegistry`（9 步）：townhall/warehouse/node/workstation/craft_station/shop/inn/tavern/level_up，每步三种文案（default/bar/placing）。
-- `GuideStep(id, title, defaultLines, barLines, placingLines, hint)`；`linesFor(buildMode, isPlacing, isBar)`。
+- **步骤硬编码**于 `GuideRegistry`（9 步）：townhall/warehouse/workstation/road/bakery/inn/node/altar/craft_station，每步五种文案（default/bar/aiming/pinned）+ compactAimingLines（瞄准时精简视图）。
+- `GuideStep(id, title, defaultLines, barLines, aimingLines, pinnedLines, hint, compactAimingLines)`；`linesFor(buildMode, isPlacing, isBar, isPinned)`。
 - `GuideSession`：客户端静态状态 serverStep/dismissed；applySync 弹 toast、dismiss() 发 GuideProgressUpdatePacket。
 - `GuideRenderer`：屏幕右上角教程覆盖框。
 - 权威计算在 engine：`GuideProgressService.computeStep` 纯函数返回 0-9 步；持久化 GuideProgressSavedData。

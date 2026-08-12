@@ -12,17 +12,13 @@ class GuideProgressServiceTest {
     private static final class FakeCtx implements GuideServerContext {
         final Set<String> categories = new HashSet<>();
         final Set<String> types = new HashSet<>();
-        boolean shopPurchased;
         boolean innWithStay;
-        boolean tavernRecruited;
-        int level;
+        boolean hasRoadBuilt;
 
         @Override public boolean hasCategory(String category) { return categories.contains(category); }
         @Override public boolean hasType(String buildingTypeId) { return types.contains(buildingTypeId); }
-        @Override public boolean hasShopPurchased() { return shopPurchased; }
         @Override public boolean hasInnWithStay() { return innWithStay; }
-        @Override public boolean hasTavernRecruited() { return tavernRecruited; }
-        @Override public int colonyLevel() { return level; }
+        @Override public boolean hasRoadBuilt() { return hasRoadBuilt; }
     }
 
     private static FakeCtx empty() {
@@ -37,83 +33,80 @@ class GuideProgressServiceTest {
     @Test
     void progressesThroughBuildingSteps() {
         FakeCtx c = empty();
+        // 1 — town hall
         c.categories.add("government");
         assertEquals(1, GuideProgressService.computeStep(c));
 
+        // 2 — warehouse
         c.types.add("warehouse");
         assertEquals(2, GuideProgressService.computeStep(c));
 
-        c.categories.add("node");
+        // 3 — workstation
+        c.categories.add("workstation");
         assertEquals(3, GuideProgressService.computeStep(c));
 
-        c.categories.add("workstation");
+        // 4 — road
+        c.hasRoadBuilt = true;
         assertEquals(4, GuideProgressService.computeStep(c));
 
-        c.categories.add("crafting_station");
+        // 5 — bakery
+        c.types.add("breadshop");
         assertEquals(5, GuideProgressService.computeStep(c));
     }
 
     @Test
-    void shopStepRequiresPurchase() {
+    void roadRequiredBeforeBakery() {
         FakeCtx c = empty();
         c.categories.add("government");
         c.types.add("warehouse");
-        c.categories.add("node");
         c.categories.add("workstation");
-        c.categories.add("crafting_station");
+        c.types.add("breadshop"); // bakery built but no road
 
-        // Shop built but no purchase yet → still on shop step.
-        c.categories.add("shop");
+        // Road not built → stuck at step 3 (waiting for road)
+        assertEquals(3, GuideProgressService.computeStep(c));
+
+        c.hasRoadBuilt = true;
+        assertEquals(5, GuideProgressService.computeStep(c));
+    }
+
+    @Test
+    void innStepRequiresStay() {
+        FakeCtx c = empty();
+        c.categories.add("government");
+        c.types.add("warehouse");
+        c.categories.add("workstation");
+        c.hasRoadBuilt = true;
+        c.types.add("breadshop");
+
+        // Inn built but no overnight stay → stays at 5.
+        c.categories.add("service");
         assertEquals(5, GuideProgressService.computeStep(c));
 
-        c.shopPurchased = true;
+        c.innWithStay = true;
         assertEquals(6, GuideProgressService.computeStep(c));
     }
 
     @Test
-    void innStepRequiresStayAndTavernStepRequiresNpc() {
+    void nodeAndAltarAndCraftStationCompleteTutorial() {
         FakeCtx c = empty();
         c.categories.add("government");
         c.types.add("warehouse");
-        c.categories.add("node");
         c.categories.add("workstation");
-        c.categories.add("crafting_station");
-        c.categories.add("shop");
-        c.shopPurchased = true;
-
-        // Inn built but no overnight stay → stays at 6.
+        c.hasRoadBuilt = true;
+        c.types.add("breadshop");
         c.categories.add("service");
+        c.innWithStay = true;
+
+        // After inn → step 6, node needed
         assertEquals(6, GuideProgressService.computeStep(c));
 
-        c.innWithStay = true;
-        assertEquals(7, GuideProgressService.computeStep(c));
-
-        // Tavern built but no NPC → stays at 7.
-        c.categories.add("tavern");
-        assertEquals(7, GuideProgressService.computeStep(c));
-
-        c.tavernRecruited = true;
-        assertEquals(8, GuideProgressService.computeStep(c));
-    }
-
-    @Test
-    void levelUpCompletesTutorial() {
-        FakeCtx c = empty();
-        c.categories.add("government");
-        c.types.add("warehouse");
         c.categories.add("node");
-        c.categories.add("workstation");
-        c.categories.add("crafting_station");
-        c.categories.add("shop");
-        c.shopPurchased = true;
-        c.categories.add("service");
-        c.innWithStay = true;
-        c.categories.add("tavern");
-        c.tavernRecruited = true;
+        assertEquals(7, GuideProgressService.computeStep(c));
 
+        c.categories.add("altar");
         assertEquals(8, GuideProgressService.computeStep(c));
 
-        c.level = 2;
+        c.categories.add("crafting_station");
         assertEquals(9, GuideProgressService.computeStep(c));
         assertEquals(guideRegistryStepCount(), GuideProgressService.computeStep(c));
     }

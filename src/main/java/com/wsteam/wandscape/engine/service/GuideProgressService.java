@@ -6,14 +6,12 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.shared.api.GuideProgressApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.GuideProgressSavedData;
 import com.wsteam.wandscape.shared.log.Log;
 import com.wsteam.wandscape.shared.network.GuideProgressSyncPacket;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
-import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -49,18 +47,29 @@ public final class GuideProgressService implements GuideProgressApi {
     /**
      * Step completion checks, in order — MUST match {@code GuideRegistry.STEPS}.
      * Returns the number of leading steps satisfied (0..9).
+     * <ol>
+     *   <li>government (town hall)</li>
+     *   <li>warehouse type</li>
+     *   <li>workstation category</li>
+     *   <li>road built</li>
+     *   <li>breadshop type</li>
+     *   <li>inn with stay</li>
+     *   <li>node category</li>
+     *   <li>altar category</li>
+     *   <li>crafting_station category</li>
+     * </ol>
      */
     public static int computeStep(GuideServerContext ctx) {
         int step = 0;
         if (ctx.hasCategory("government")) step++;
         if (ctx.hasType("warehouse")) step++;
-        if (ctx.hasCategory("node")) step++;
         if (ctx.hasCategory("workstation")) step++;
-        if (ctx.hasCategory("crafting_station")) step++;
-        if (ctx.hasShopPurchased()) step++;
+        if (ctx.hasRoadBuilt()) step++;
+        if (ctx.hasType("breadshop")) step++;
         if (ctx.hasInnWithStay()) step++;
-        if (ctx.hasTavernRecruited()) step++;
-        if (ctx.colonyLevel() >= 2) step++;
+        if (ctx.hasCategory("node")) step++;
+        if (ctx.hasCategory("altar")) step++;
+        if (ctx.hasCategory("crafting_station")) step++;
         return step;
     }
 
@@ -94,9 +103,10 @@ public final class GuideProgressService implements GuideProgressApi {
         }
 
         @Override
-        public boolean hasShopPurchased() {
-            return hasCategory("shop")
-                    && ColonyItemBank.get(level).getPurchaseCount(colonyId) > 0;
+        public boolean hasRoadBuilt() {
+            var roadApi = WandscapeApis.getRoadApiSilently();
+            if (roadApi == null) return false;
+            return !roadApi.getEdges(colonyId).isEmpty();
         }
 
         @Override
@@ -116,18 +126,6 @@ public final class GuideProgressService implements GuideProgressApi {
                 }
             }
             return false;
-        }
-
-        @Override
-        public boolean hasTavernRecruited() {
-            if (!hasCategory("tavern")) return false;
-            var npcApi = WandscapeApis.getNpcApiSilently();
-            return npcApi != null && npcApi.getNpcCount(colonyId) > 0;
-        }
-
-        @Override
-        public int colonyLevel() {
-            return WandscapeEngine.getColonyLevelManager().getLevel(colonyId);
         }
     }
 }

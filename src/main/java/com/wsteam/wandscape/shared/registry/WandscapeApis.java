@@ -76,6 +76,8 @@ public final class WandscapeApis {
         if (roadApi == null) throw new IllegalStateException("Module RoadSystem not loaded");
         return roadApi;
     }
+    @javax.annotation.Nullable
+    public static RoadApi getRoadApiSilently() { return roadApi; }
     public static void setRoadApi(RoadApi api) { roadApi = api; }
 
     public static TouristApi getTouristApi() {

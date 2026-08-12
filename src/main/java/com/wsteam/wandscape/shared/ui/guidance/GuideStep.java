@@ -3,9 +3,10 @@ package com.wsteam.wandscape.shared.ui.guidance;
 import java.util.List;
 
 /**
- * A single tutorial step (pure content). Three line variants are shown
+ * A single tutorial step (pure content). Multiple line variants are shown
  * depending on the player's build phase: default (panel idle), building-bar
- * open, or placing a blueprint in world. Step completion is evaluated
+ * open, placing a blueprint in world (compact by default to reduce view
+ * obstruction), or pinned with gizmo. Step completion is evaluated
  * server-side by {@code GuideProgressService.computeStep}.
  */
 public record GuideStep(
@@ -15,12 +16,17 @@ public record GuideStep(
         List<String> barLines,
         List<String> aimingLines,
         List<String> pinnedLines,
-        String hint) {
+        String hint,
+        List<String> compactAimingLines) {
 
     /** Lines to show for the given build phase. */
     public List<String> linesFor(boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         if (isPlacing) {
-            return isPinned ? pinnedLines : aimingLines;
+            if (isPinned) return pinnedLines;
+            // Compact mode during aiming — only the key instruction to avoid
+            // blocking too much of the 3D view while the player aims.
+            return compactAimingLines != null && !compactAimingLines.isEmpty()
+                    ? compactAimingLines : aimingLines;
         }
         if (buildMode && isBar) return barLines;
         return defaultLines;
