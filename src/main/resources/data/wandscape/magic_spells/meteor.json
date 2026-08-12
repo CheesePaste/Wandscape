@@ -6,7 +6,7 @@
   "range": 24,
   "target_mode": "hostile_nearest",
   "conditions": {
-    "min_enemies": 1
+    "min_enemies": 3
   },
   "effect": {
     "circle_id": "meteor_magic_circle",
