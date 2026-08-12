@@ -447,13 +447,11 @@ public final class SplineEditorImGui {
     // ── Header Banner ──
     private static void drawHeaderBanner(SplineModel model) {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
-        ImGui.pushStyleColor(ImGuiCol.Border, 0.78f, 0.63f, 0.25f, 0.50f);
-        ImGui.beginChild("HeaderBanner", 0, 80, true);
-        {
+        int childFlags = imgui.flag.ImGuiWindowFlags.NoScrollbar | imgui.flag.ImGuiWindowFlags.NoScrollWithMouse;
+        if (ImGui.beginChild("HeaderBanner", 0, 52, false, childFlags)) {
             ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
-            ImGui.spacing();
             ImGui.spacing();
 
             String toolName = switch (RoadPlacementState.getActiveTool()) {
@@ -466,7 +464,7 @@ public final class SplineEditorImGui {
             ImGui.textColored(0.40f, 0.75f, 0.95f, 1.00f, String.format("模式: %s  |  视角: %s", toolName, topDownStr));
         }
         ImGui.endChild();
-        ImGui.popStyleColor(2);
+        ImGui.popStyleColor(1);
         ImGui.spacing();
     }
 

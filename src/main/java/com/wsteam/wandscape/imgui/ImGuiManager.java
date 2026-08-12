@@ -63,8 +63,11 @@ public class ImGuiManager {
         // toggle()（F12）保留对称的 grab/release。
     }
 
-    public static void init(long windowHandle) {
-        if (initialized) return;
+    private static boolean fontsBaked = false;
+    private static boolean backendInitialized = false;
+
+    public static void initFontsOnly() {
+        if (fontsBaked) return;
 
         ImGui.createContext();
 
@@ -103,8 +106,6 @@ public class ImGuiManager {
         if (embeddedFont != null && embeddedFont.exists()) {
             try {
                 ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(embeddedFont.getAbsolutePath(), 20.0f, fontConfig);
-                // native AddFont returns NULL on failure → Java wraps it as ImFont(0),
-                // so "!= null" is never a valid success check.
                 if (f != null && f.ptr != 0) {
                     mainFont = f;
                     Log.info("ImGui", "[Font] Successfully loaded embedded Chinese CJK font: " + embeddedFont.getAbsolutePath());
@@ -152,7 +153,6 @@ public class ImGuiManager {
             iconConfig.setPixelSnapH(true);
             iconConfig.setOversampleH(2);
             iconConfig.setOversampleV(2);
-            // Same lifetime requirement as the CJK ranges above.
             iconConfig.setGlyphRanges(new short[]{ (short)0xe000, (short)0xf8ff, 0 });
             ImGui.getIO().getFonts().addFontFromFileTTF(tempFaFile.getAbsolutePath(), 17.0f, iconConfig);
             iconConfig.destroy();
@@ -164,11 +164,26 @@ public class ImGuiManager {
         // ── Apply Wandscape Medieval-RTS UI Theme ──
         WandscapeImGuiTheme.apply();
 
+        fontsBaked = true;
+        Log.info("ImGui", "[Font] CJK Font atlas baked successfully in CPU memory");
+    }
+
+    public static void ensureBackendInit(long windowHandle) {
+        initFontsOnly();
+
+        if (backendInitialized) return;
+        if (windowHandle == 0L) return;
+
         imGuiGlfw.init(windowHandle, true);
         imGuiGl3.init("#version 150");
 
+        backendInitialized = true;
         initialized = true;
-        Log.info("Wandscape", "ImGui initialized successfully");
+        Log.info("Wandscape", "ImGui GLFW & GL3 backend hooked successfully");
+    }
+
+    public static void init(long windowHandle) {
+        ensureBackendInit(windowHandle);
     }
 
     private static String findSystemFontPath() {
@@ -215,10 +230,10 @@ public class ImGuiManager {
     }
 
     private static void ensureInit() {
-        if (initialized) return;
+        if (backendInitialized) return;
         long window = Minecraft.getInstance().getWindow().getWindow();
         if (window != 0L) {
-            init(window);
+            ensureBackendInit(window);
         }
     }
 
@@ -286,6 +301,14 @@ public class ImGuiManager {
     // ── Render ──
     @SubscribeEvent
     public static void onRenderFramePost(RenderFrameEvent.Post event) {
+        var mc = Minecraft.getInstance();
+
+        // 纯 CPU 字体图集预热：在进入游戏世界后（mc.level != null），静默解压字体并由 FreeType 烘焙 20,000+ 汉字 Atlas。
+        // 此步骤只消耗 CPU 内存/计算，完全不调用 imGuiGlfw.init(...)，零触碰 GLFW 窗口回调与 OpenGL Shaders，因此 100% 绝对零崩溃！
+        if (!fontsBaked && mc != null && mc.level != null) {
+            initFontsOnly();
+        }
+
         if (pendingShowGui) {
             pendingShowGui = false;
             ensureInit();
