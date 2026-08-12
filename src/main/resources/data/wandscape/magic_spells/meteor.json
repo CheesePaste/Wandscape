@@ -11,6 +11,6 @@
   "effect": {
     "circle_id": "meteor_magic_circle",
     "color": "#E74C3C",
-    "damage": 12
+    "damage": 15
   }
 }
