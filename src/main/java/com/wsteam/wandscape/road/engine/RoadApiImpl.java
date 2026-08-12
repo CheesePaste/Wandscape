@@ -10,7 +10,7 @@ import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.shared.api.RoadApi;
 /**
  * Default implementation of {@link RoadApi}.
- * Delegates to {@link RoadSavedData} and {@link RoadConfig}.
+ * Delegates to {@link RoadSavedData}.
  */
 public class RoadApiImpl implements RoadApi {
 
@@ -29,27 +29,6 @@ public class RoadApiImpl implements RoadApi {
     @Override
     public List<RoadEdge> getEdges(UUID colonyId) {
         return new ArrayList<>(getNetwork(colonyId).getEdges().values());
-    }
-
-    @Override
-    public void requestFullRebuild(UUID colonyId) {
-        RoadEventListener.triggerRebuild(colonyId);
-    }
-
-    @Override
-    public void requestIncrementalUpdate(UUID colonyId, UUID buildingId) {
-        // V1: incremental add is handled automatically by build_complete events
-        // Manual trigger for future use
-    }
-
-    @Override
-    public int getBuildingThreshold() {
-        return RoadConfig.getInstance().getBuildingThreshold();
-    }
-
-    @Override
-    public String getRoadBlock(String tier) {
-        return RoadConfig.getInstance().getDefaultBlock(tier);
     }
 
     @Override

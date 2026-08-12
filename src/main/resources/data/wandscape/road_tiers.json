@@ -1,8 +1,0 @@
-{
-  "tiers": {
-    "dirt": {
-      "default_block": "minecraft:dirt_path",
-      "rules": "wandscape:road_rules/dirt"
-    }
-  }
-}

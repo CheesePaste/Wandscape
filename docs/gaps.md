@@ -10,17 +10,15 @@
 | 2 | `equipment/` 包 | 不存在。装备是 cross-cutting：`core/component/EquipmentComponent` + `core/types/`（EquipmentSlot/EquipmentPreset/AttributeModifier），桥接在 `npc/internal/` |
 | 3 | `ColonyLevelUpEvent` 是事件 | 是 **record** 回调（`ColonyLevelManager.levelUpCallback`），不在 NeoForge 总线 |
 | 4 | building "零自定义方块/BE，全部SavedData" | 现有自定义方块/BE：`creative_building_scanner` 与 `building_scanner`（含 BE） |
-| 5 | 新手引导数据源是 `assets/wandscape/guide/*.md` | 引导步骤**硬编码**在 `shared/ui/guidance/GuideRegistry`（9 步）；md 只服务 Markdown 文档阅读器（GuideTestScreen） |
+| 5 | 新手引导数据源是 `assets/wandscape/guide/*.md` | 引导步骤**硬编码**在 `shared/ui/guidance/GuideRegistry`（10 步）；md 只服务 Markdown 文档阅读器（GuideTestScreen） |
 | 6 | `ResourceRequestExecutor` "1 item/tick" | 实际 `STAGGER_TICKS=5`（每 5 tick 发一件） |
 | 7 | 建筑扫描器改名 | 原 `building_scanner` 更名 `creative_building_scanner`；`building_scanner` 现为生存扫描器 |
-| 8 | `road_templates/road_tiers/road_rules` 生效 | 当前无代码读取（见下文） |
 | 9 | `BuildingDebugController` "G key" 开关 | G 键现为 overview 切换；BuildingDebug 激活由 V 面板驱动 |
 
 ## 二、已存在但当前未被代码消费（dead data / 未接线）
 
+- **建筑间道路自动生成（MST）已删除（2026-08）**：废弃功能整体移除——`RoadEventListener`/`RoadPlanner`(MST)/`RoadBuilder`/`RoadTaskSource`/`RoadConfig` 及其 `road_templates`/`road_tiers.json`/`road_rules` 数据全部删除。保留手动铺路（`SplineBuildPacket`/`RoadPlacePacket` 等，经 `PlayerManualSource`）与段完成记账 `RoadSegmentListener`。相关架构文档已同步。
 - **`wonder_config`**：`BuildingConfig` 有该字段（`WonderConfig` → `WonderEffect` StatMod/PriceMod/RuleUnlock），但 `buildings/*.json` **无任何文件定义它**。`WonderEffectApplier` 的查询接口在，但当前没有 wonder 类建筑数据。
-- **`road_templates/`、`road_tiers.json`、`road_rules/`**：三个数据文件无代码读取。`RoadTemplate` 由代码构建；`RoadPresetLoader` 注册 `road_presets` 类别，但**没有 road_presets JSON 文件**（预设全部硬编码 DEFAULT_PRESETS）。
-- **道路装饰**：`RoadConfig.getDecorationConfig` 无调用方——Config 里有 `road.decoration.*`（路灯/长椅）设置，但 `RoadBuilder` **未接入**装饰生成。
 - **`potion_station`**：`BuildingInteractHandler` 对 potion_station 只提示"not yet implemented"；`PotionStationPacket.handleClient` 空实现，**无 GUI**。配方 JSON 有 2 个药水配方（mana/stamina）但无法在游戏中生产。
 - **`HouseApi` / `NpcApi.assignHouse`**：恒返回 false（住宅分配 Stage 4 未实现）。
 - **施法决策已集中（P1-P3 落地）**：守卫/自防御经 `CastBrain` 选魔法，CD/蓝/射程/视觉数据驱动；条件决策（`SpellConditions`/`WorldSnapshot`）与玩家策略（`SpellbookComponent`/`CastStrategyComponent`/`NpcStrategyScreen`，经 `SpellcastingApi`）已落地，已知列表来自 NPC spellbook + 玩家策略；自动施法永不选 `altarOnly` 魔法（祭坛专属）。**战斗魔法已多面化**：默认法术书 `[beam, heal, meteor, petrification]` 已按 id 在 `MagicSpellExecutors` switch 分发（单体/AOE/治疗/防御）；`MagicOp` 效果分发仍延后（switch 够用，建单实现 sealed 层级是死代码）。完整方案见 [spell-casting.md](spell-casting.md)。

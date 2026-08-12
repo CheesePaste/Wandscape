@@ -17,7 +17,7 @@
 | `GuideProgressApi` | sendToPlayer(player, colonyId) |
 | `HouseApi` | getAssignedNpc/isOccupied/assignNpc/unassignNpc/getVacantHouses |
 | `NpcApi` | getColonyNpcs/getIdleNpcs/getNpc/assignHouse + 默认 getNpcCount/getIdleNpcCount |
-| `RoadApi` | getNetwork/getEdges/requestFullRebuild/requestIncrementalUpdate/getBuildingThreshold/getRoadBlock/getBlobCache/removeEdge |
+| `RoadApi` | getNetwork/getEdges/getBlobCache/removeEdge |
 | `TavernApi` | getCandidates/refreshCandidates/recruitCandidate/receiveMageResume/getMageResumes/recruitMage + getRecruitCount/canAffordRecruit/chargeRecruit（「招募 NPC」计费，每殖民地首次免费） |
 | `TouristApi` | getTouristCount/getTouristsInColony/spawnTourist/getAverageSatisfaction/registerArrival/registerDeparture/getOvernightStayerCount |
 | `WandApi` | getWandColor(ItemStack) |
@@ -83,11 +83,11 @@
 
 ## guidance/（新手引导）
 
-- **步骤硬编码**于 `GuideRegistry`（9 步）：townhall/warehouse/node/workstation/craft_station/shop/inn/tavern/level_up，每步三种文案（default/bar/placing）。
-- `GuideStep(id, title, defaultLines, barLines, placingLines, hint)`；`linesFor(buildMode, isPlacing, isBar)`。
+- **步骤硬编码**于 `GuideRegistry`（10 步）：townhall/warehouse/deposit/workstation/synthesize/road/breadshop/node/altar/inn，每步四种文案（default/bar/aiming/pinned）。
+- `GuideStep(id, title, defaultLines, barLines, aimingLines, pinnedLines, hint)`；`linesFor(buildMode, isPlacing, isBar, isPinned)`。文案全用亮色（§f/§e/§a/§b），无灰字。
 - `GuideSession`：客户端静态状态 serverStep/dismissed；applySync 弹 toast、dismiss() 发 GuideProgressUpdatePacket。
-- `GuideRenderer`：屏幕右上角教程覆盖框。
-- 权威计算在 engine：`GuideProgressService.computeStep` 纯函数返回 0-9 步；持久化 GuideProgressSavedData。
+- `GuideRenderer`：屏幕右下角教程覆盖框（可折叠/关闭）。
+- 权威计算在 engine：`GuideProgressService.computeStep` 纯函数返回 0-10 步（建造/仓库/存入/工作站/合成/铺路/面包店补货/节点发布采集/祭坛/旅馆入住）；持久化 GuideProgressSavedData。
 
 ## markdown/（游戏内文档阅读器）
 

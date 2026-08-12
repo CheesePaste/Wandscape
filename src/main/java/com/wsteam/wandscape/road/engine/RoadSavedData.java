@@ -29,8 +29,6 @@ public final class RoadSavedData extends SavedData {
 
     private final RoadNetwork network;
     private final RoadBlobCache blobCache;
-    private UUID colonyId;
-    private int buildingCount;
 
     private RoadSavedData() {
         this.network = new RoadNetwork();
@@ -50,18 +48,6 @@ public final class RoadSavedData extends SavedData {
     public RoadNetwork getNetwork() { return network; }
     public RoadBlobCache getBlobCache() { return blobCache; }
 
-    public UUID getColonyId() { return colonyId; }
-    public void setColonyId(UUID colonyId) {
-        this.colonyId = colonyId;
-        setDirty();
-    }
-
-    public int getBuildingCount() { return buildingCount; }
-    public void setBuildingCount(int count) {
-        this.buildingCount = count;
-        setDirty();
-    }
-
     /** Signal that data has changed and needs saving. */
     public void markChanged() {
         setDirty();
@@ -72,11 +58,6 @@ public final class RoadSavedData extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag,
                             net.minecraft.core.HolderLookup.Provider registries) {
-        if (colonyId != null) {
-            tag.putUUID("colonyId", colonyId);
-        }
-        tag.putInt("buildingCount", buildingCount);
-
         ListTag edgeList = new ListTag();
         for (RoadEdge edge : network.getEdges().values()) {
             CompoundTag e = new CompoundTag();
@@ -141,8 +122,7 @@ public final class RoadSavedData extends SavedData {
         }
         tag.put("edges", edgeList);
 
-        Log.info(TAG, "[RoadSavedData] saved colony={} buildingCount={} edges={}",
-                colonyId, buildingCount, edgeList.size());
+        Log.info(TAG, "[RoadSavedData] saved edges={}", edgeList.size());
         return tag;
     }
 
@@ -150,11 +130,6 @@ public final class RoadSavedData extends SavedData {
 
     private static RoadSavedData load(CompoundTag tag) {
         RoadSavedData data = new RoadSavedData();
-
-        if (tag.hasUUID("colonyId")) {
-            data.colonyId = tag.getUUID("colonyId");
-        }
-        data.buildingCount = tag.getInt("buildingCount");
 
         ListTag edgeList = tag.getList("edges", Tag.TAG_COMPOUND);
         for (int i = 0; i < edgeList.size(); i++) {
@@ -230,8 +205,7 @@ public final class RoadSavedData extends SavedData {
             data.network.addEdge(edge);
         }
 
-        Log.info(TAG, "[RoadSavedData] loaded colony={} buildingCount={} edges={}",
-                data.colonyId, data.buildingCount, edgeList.size());
+        Log.info(TAG, "[RoadSavedData] loaded edges={}", edgeList.size());
         return data;
     }
 }

@@ -35,13 +35,6 @@ public class RoadNetwork {
         return Collections.unmodifiableMap(nodes);
     }
 
-    /** Get a building node by its building UUID. */
-    public Optional<RoadNode> getBuildingNode(UUID buildingId) {
-        RoadNode node = nodes.get(buildingId);
-        return (node != null && node.type() == RoadNode.NodeType.BUILDING)
-                ? Optional.of(node) : Optional.empty();
-    }
-
     // ---- Edge operations ----
 
     public void addEdge(RoadEdge edge) {
@@ -118,10 +111,6 @@ public class RoadNetwork {
         return nodes.isEmpty() && edges.isEmpty();
     }
 
-    public int nodeCount() {
-        return nodes.size();
-    }
-
     public int edgeCount() {
         return edges.size();
     }
@@ -183,7 +172,7 @@ public class RoadNetwork {
         return count;
     }
 
-    /** Update a node's type (e.g. BUILDING → ORPHAN after all edges removed). */
+    /** Update a node's type (e.g. ORPHAN → PLAYER after a player claims it). */
     public void updateNodeType(UUID nodeId, RoadNode.NodeType newType) {
         RoadNode old = nodes.get(nodeId);
         if (old != null) {

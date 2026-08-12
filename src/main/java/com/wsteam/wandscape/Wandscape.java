@@ -48,8 +48,8 @@ import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.magic.internal.SpellcastingApiImpl;
 import com.wsteam.wandscape.shared.network.MagicCircleCastPacket;
 import com.wsteam.wandscape.road.engine.RoadApiImpl;
-import com.wsteam.wandscape.road.engine.RoadEventListener;
 import com.wsteam.wandscape.road.engine.RoadSavedData;
+import com.wsteam.wandscape.road.engine.RoadSegmentListener;
 import com.wsteam.wandscape.engine.boundary.WandscapeBlockInteractExecutor;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
 import com.wsteam.wandscape.production.ProductionRecipeLoader;
@@ -805,7 +805,7 @@ public class Wandscape {
         }
 
         // ---- Road system ----
-        RoadEventListener.register();
+        RoadSegmentListener.register();
 
         // Load persisted tasks from previous session
         ServerLevel level = event.getServer().overworld();
