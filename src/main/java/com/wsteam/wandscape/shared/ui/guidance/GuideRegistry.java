@@ -207,13 +207,13 @@ public final class GuideRegistry {
                     "§b① 按 §e1§b 打开【建造】页签",
                     "§b② 点【§e旅馆§b】卡片，§e双击§b进入放置",
                     "§b③ §e按住右键拖动§b转视角定位，点右侧【§e提交施工§b】→【§e提交§b】",
-                    "§b④ 游客夜晚会到旅馆过夜入住"),
+                    "§b④ 游客要到 §e第二天§b 才会到访，夜晚会到旅馆过夜入住"),
             List.of(
                     "§a✓ 建造列表已打开",
                     "§b▶ 点【§e旅馆§b】卡片，§e双击§b进入放置"),
             AIMING_LINES,
             PINNED_LINES,
-            "§e💡 有游客过夜即完成全部引导！继续招募法师、提升满意度可升级小镇");
+            "§e💡 有游客过夜即完成全部引导！继续建造建筑、提升游客满意度可升级小镇");
 
     public static final List<GuideStep> STEPS = List.of(
             TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
