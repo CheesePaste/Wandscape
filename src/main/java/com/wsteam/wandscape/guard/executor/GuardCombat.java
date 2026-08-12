@@ -381,6 +381,7 @@ public final class GuardCombat {
 
         BlockPos dest = findEngagePos(level, npc, target);
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+        markWalkOnly(world, npcId);
     }
 
     /**
@@ -496,7 +497,7 @@ public final class GuardCombat {
     /**
      * 向威胁点（目标中心 / 敌方质心）的**反方向**后撤：由 ECS 导航驱动
      * （suppressWandering → 施法不被强制停移动），落点不可站立时静默放弃（站定继续打）。
-     * 守卫/自防御/和平逃跑共用。
+     * 守卫/自防御/和平逃跑共用。短距离战术导航标记 walkOnly——寻路失败也不传送，避免浪费。
      */
     public static void navigateAway(ServerLevel level, WandscapeNpc npc, World world,
                                     long npcId, Vec3 threat) {
@@ -504,11 +505,19 @@ public final class GuardCombat {
         BlockPos dest = findRetreatPos(level, npc, threat);
         if (dest == null) return;
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+        markWalkOnly(world, npcId);
+    }
+
+    /** 标记短距离战术导航：只走路不传送（见 {@link NavigationState#walkOnly}）。 */
+    private static void markWalkOnly(World world, long npcId) {
+        NavigationState ns = world.get(npcId, NavigationState.class);
+        if (ns != null) ns.walkOnly = true;
     }
 
     /**
      * 后撤落点：威胁点周围 {@link #KITE_STANDOFF} 环上、采样角集中在「远离威胁」方向 ±半圆
-     * （向身后/侧后方退，不绕到怪物对面）；优先「有 LOS 且离 NPC 最近」的可站立格，
+     * （向身后/侧后方退，不绕到怪物对面）；优先「NPC→落点 无墙 且 落点→威胁 有 LOS 且离 NPC 最近」
+     * 的可站立格（NPC→落点 无墙 ≈ 走得过去，源头避免寻路失败→传送），
      * 退化「最近可站立格」，极端兜底沿 NPC→威胁 反方向退 2 格（不可站立返回 null）。
      */
     private static BlockPos findRetreatPos(ServerLevel level, WandscapeNpc npc, Vec3 threat) {
@@ -535,7 +544,9 @@ public final class GuardCombat {
                 fallbackDistSq = dSq;
                 fallback = cand;
             }
-            if (positionHasLineOfSight(level, staffOf(cand), threat) && dSq < bestLosDistSq) {
+            if (positionHasLineOfSight(level, npcPos, staffOf(cand))
+                    && positionHasLineOfSight(level, staffOf(cand), threat)
+                    && dSq < bestLosDistSq) {
                 bestLosDistSq = dSq;
                 best = cand;
             }
