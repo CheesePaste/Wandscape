@@ -333,6 +333,7 @@
   "element.wandscape.metal": "金",
   "element.wandscape.wind": "风",
   "element.wandscape.dark": "暗",
+  "item.wandscape.element.tooltip": "获得后自动存入所在殖民地的仓库元素栏",
   "gui.wandscape.stats.none": "暂无统计数据",
   "gui.wandscape.stats.title": "魔法小镇统计 | 第 %s 天",
   "gui.wandscape.building_action.repair": "修复",

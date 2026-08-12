@@ -34,6 +34,12 @@ EARTH / WOOD / WATER / FIRE / METAL / WIND / DARK（`@SerializedName` 小写 id�
 
 遍历 `BuiltInRegistries.ITEM`，统计缺种子/缺映射项，分 block/item。GameTest 入口：`gametest/ElementAuditRunner`（监听 ServerStartedEvent，仅当系统属性 `wandscape.runAudit=true`），审计报告写 `build/reports/element_audit.txt`，随后 `server.halt(false)` 退出。
 
+## 元素物品（item/ElementItem）
+
+7 种元素各注册一个物品 `element_<id>`（`Wandscape.java` 按 `ElementType` 循环，`ELEMENT_ITEMS` map，进创造模式标签页），图标复用 `textures/gui/icons/element_<id>.png`，显示名复用 `element.wandscape.<id>`。供 JEI/配方展示。
+
+获得即转化：`inventoryTick`（仅玩家自身背包触发）检测到元素物品时，若玩家在殖民地范围内（`ColonyApi.getColonyId`），按数量存入所在殖民地仓库（`WarehouseApi.addElement`）、移除物品并播 `WAREHOUSE` 音效；不在范围内保留物品等待进入殖民地。
+
 ## JSON 结构
 
 见 [data/element_mappings.md](../data/element_mappings.md)。

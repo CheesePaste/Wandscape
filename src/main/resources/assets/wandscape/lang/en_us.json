@@ -334,6 +334,7 @@
   "element.wandscape.metal": "Metal",
   "element.wandscape.wind": "Wind",
   "element.wandscape.dark": "Dark",
+  "item.wandscape.element.tooltip": "Auto-deposits into the nearest colony's warehouse when obtained",
   "gui.wandscape.stats.none": "No statistics available yet.",
   "gui.wandscape.stats.title": "Colony Statistics  |  Day %s",
   "gui.wandscape.building_action.repair": "Repair",
