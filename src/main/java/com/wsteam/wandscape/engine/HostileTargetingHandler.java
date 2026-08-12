@@ -25,10 +25,14 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
  *
  * <p>不枚举「哪些生物追玩家/追村民」——凡是加入世界时目标选择器里已存在对
  * {@link Player} 的 {@link NearestAttackableTargetGoal} 的生物（骷髅 / 史莱姆 /
- * 苦力怕 / 僵尸 / 灾厄等，含其它 mod 的生物），就追加一个同优先级、目标为
- * {@link PlayerLike} 的等价 goal；对 {@link AbstractVillager} 的追加目标为
- * {@link VillagerLike} 的等价 goal。这样天然覆盖玩家级与村民级索敌，且无需随
- * 原版生物增减而维护清单。
+ * 苦力怕 / 僵尸 / 灾厄等，含其它 mod 的生物），就追加一个目标为 {@link PlayerLike}
+ * 的等价 goal；对 {@link AbstractVillager} 的追加目标为 {@link VillagerLike} 的
+ * 等价 goal。这样天然覆盖玩家级与村民级索敌，且无需随原版生物增减而维护清单。
+ *
+ * <p>追加 goal 的优先级**严格低于**该生物所有原版索敌 goal：目标选择器每个 Flag
+ * 同时只运行一个 goal，同优先级会互相锁死（先运行的抢到 TARGET 后对方永远抢不回，
+ * 导致怪物死盯一个目标、无视其它）。低优先级保证原版玩家索敌始终优先——玩家在场就
+ * 打玩家（不回归原版），没有玩家竞争时才把 NPC/游客当目标。
  *
  * <p>自身是 {@link PlayerLike} 的敌对生物（如敌对测试法师）不追加玩家级索敌——
  * 它伤不了殖民地 NPC（光束伤害钩子排除），避免它死盯打不死的目标。
@@ -52,30 +56,36 @@ public final class HostileTargetingHandler {
         if (!(event.getEntity() instanceof Mob mob)) return;
         if (TARGET_TYPE == null) return;
 
-        int villagerPriority = Integer.MAX_VALUE;
-        int playerPriority = Integer.MAX_VALUE;
+        // 记录该生物是否追玩家/追村民，以及所有原版索敌 goal 的最低优先级（最大优先级数字）。
+        boolean huntsVillagers = false;
+        boolean huntsPlayers = false;
+        int lowestNativePriority = 0;
         for (WrappedGoal wrapped : mob.targetSelector.getAvailableGoals()) {
             Goal goal = wrapped.getGoal();
             if (!(goal instanceof NearestAttackableTargetGoal<?> targetGoal)) continue;
             Class<?> type = targetTypeOf(targetGoal);
             if (type == null) continue;
             if (AbstractVillager.class.isAssignableFrom(type)) {
-                villagerPriority = Math.min(villagerPriority, wrapped.getPriority());
+                huntsVillagers = true;
+                lowestNativePriority = Math.max(lowestNativePriority, wrapped.getPriority());
             }
             if (Player.class.isAssignableFrom(type)) {
-                playerPriority = Math.min(playerPriority, wrapped.getPriority());
+                huntsPlayers = true;
+                lowestNativePriority = Math.max(lowestNativePriority, wrapped.getPriority());
             }
         }
-        if (villagerPriority == Integer.MAX_VALUE && playerPriority == Integer.MAX_VALUE) return;
+        if (!huntsVillagers && !huntsPlayers) return;
         // 同一实体可能多次 join（维度传送/chunk 重载）——宽类索敌 goal 已加过则跳过，避免叠加
         if (hasBroadTargetGoal(mob)) return;
 
-        if (villagerPriority != Integer.MAX_VALUE) {
-            mob.targetSelector.addGoal(villagerPriority, villagerLikeGoal(mob));
+        // 追加 goal 必须严格低于所有原版索敌优先级：目标选择器每个 Flag 同时只跑一个 goal，
+        // 同优先级会互相锁死（先运行的抢到 TARGET 后对方永远抢不回）。低优先级保证原版玩家索敌
+        // 始终优先——玩家在场就打玩家（不回归原版），没有玩家竞争时才把 NPC/游客当目标。
+        if (huntsPlayers && !(mob instanceof PlayerLike)) {
+            mob.targetSelector.addGoal(lowestNativePriority + 1, playerLikeGoal(mob));
         }
-        // 自身是玩家级索敌对象（敌对测试法师等）不追加，避免死盯打不死的目标
-        if (playerPriority != Integer.MAX_VALUE && !(mob instanceof PlayerLike)) {
-            mob.targetSelector.addGoal(playerPriority, playerLikeGoal(mob));
+        if (huntsVillagers) {
+            mob.targetSelector.addGoal(lowestNativePriority + 2, villagerLikeGoal(mob));
         }
     }
 
