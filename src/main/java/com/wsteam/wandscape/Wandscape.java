@@ -67,6 +67,7 @@ import com.wsteam.wandscape.building.network.ShopOpenPacket;
 import com.wsteam.wandscape.building.network.TavernOpenPacket;
 import com.wsteam.wandscape.building.network.TavernRecruitPacket;
 import com.wsteam.wandscape.building.network.TownHallOpenPacket;
+import com.wsteam.wandscape.building.network.TownHallWarehouseRequestPacket;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.building.network.NodeDataPacket;
@@ -484,6 +485,10 @@ public class Wandscape {
                         TownHallOpenPacket.TYPE,
                         TownHallOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> TownHallOpenPacket.handleClient(packet))
+                .playToServer(
+                        TownHallWarehouseRequestPacket.TYPE,
+                        TownHallWarehouseRequestPacket.STREAM_CODEC,
+                        (packet, ctx) -> TownHallWarehouseRequestPacket.handleServer(packet, ctx))
                 .playToClient(
                         AltarOpenPacket.TYPE,
                         AltarOpenPacket.STREAM_CODEC,

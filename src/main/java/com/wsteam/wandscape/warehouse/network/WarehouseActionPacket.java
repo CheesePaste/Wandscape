@@ -37,7 +37,8 @@ import com.wsteam.wandscape.shared.log.Log;
  * Client→server packet for warehouse deposit/withdraw actions.
  *
  * <p>Sent when a player clicks Withdraw or Deposit in {@code WarehouseScreen}.
- * The server validates the building still exists and is a storage building,
+ * The server validates the building is a storage building (or a government town
+ * hall acting as a warehouse for a colony without storage),
  * then performs the action and sends back a fresh {@link WarehouseDataPacket}.
  */
 public record WarehouseActionPacket(
@@ -76,7 +77,8 @@ public record WarehouseActionPacket(
             }
 
             BuildingState state = data.getBuilding(buildingId);
-            if (state == null || !"storage".equals(state.getCategory())) {
+            if (state == null || (!"storage".equals(state.getCategory())
+                    && !"government".equals(state.getCategory()))) {
                 Log.warn(TAG, "[WarehouseAction] building {} is not a storage (category={})",
                         buildingId, state != null ? state.getCategory() : "null");
                 return;

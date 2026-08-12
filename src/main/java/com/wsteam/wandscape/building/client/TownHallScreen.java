@@ -2,8 +2,10 @@ package com.wsteam.wandscape.building.client;
 
 import java.util.UUID;
 
+import com.wsteam.wandscape.building.network.TownHallWarehouseRequestPacket;
 import com.wsteam.wandscape.shared.network.ColonyNameUpdatePacket;
 import com.wsteam.wandscape.shared.ui.I18n;
+import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
 
@@ -32,12 +34,14 @@ public class TownHallScreen extends MedievalScreen {
     private final int experience;
     private final int expToNext;
     private final String founderName;
+    /** True when the colony has no storage building — show the warehouse access button. */
+    private final boolean canUseWarehouse;
 
     private EditBox nameBox;
 
     public TownHallScreen(BlockPos buildingPos, UUID colonyId,
                           String colonyName, int level, int experience, int expToNext,
-                          String founderName) {
+                          String founderName, boolean canUseWarehouse) {
         super(I18n.name("gui.wandscape.townhall.title", "Town Hall"), PW, PH);
         setTitleBar(I18n.name("gui.wandscape.townhall.title", "市政厅"));
         this.showCloseButton = true;
@@ -50,6 +54,7 @@ public class TownHallScreen extends MedievalScreen {
         this.experience = experience;
         this.expToNext = expToNext;
         this.founderName = founderName;
+        this.canUseWarehouse = canUseWarehouse;
     }
 
     @Override
@@ -69,6 +74,20 @@ public class TownHallScreen extends MedievalScreen {
         nameBox.setCanLoseFocus(true);
         nameBox.setResponder(this::onNameChanged);
         addRenderableWidget(nameBox);
+
+        if (canUseWarehouse) {
+            int bw = 120;
+            int bh = 16;
+            int bx = leftPos + (PW - bw) / 2;
+            int by = topPos + PH - bh - 12;
+            addRenderableWidget(new MedievalButton(bx, by, bw, bh,
+                    I18n.name("gui.wandscape.townhall.warehouse", "仓库存取"),
+                    this::onWarehouseAccess));
+        }
+    }
+
+    private void onWarehouseAccess() {
+        PacketDistributor.sendToServer(new TownHallWarehouseRequestPacket(buildingPos, colonyId));
     }
 
     private void onNameChanged(String newName) {

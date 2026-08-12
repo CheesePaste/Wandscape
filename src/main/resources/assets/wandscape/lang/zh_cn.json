@@ -90,6 +90,7 @@
   "gui.wandscape.townhall.exp_eq": "游客等级 = 魔法小镇等级 → 200 经验",
   "gui.wandscape.townhall.exp_gt": "游客等级 > 魔法小镇等级 → 500 经验",
   "gui.wandscape.townhall.hint": "点击名称框修改魔法小镇名称，输入完成自动保存",
+  "gui.wandscape.townhall.warehouse": "仓库存取",
   "gui.wandscape.townhall_create.title": "创建魔法小镇",
   "gui.wandscape.townhall_create.prompt": "你的市政厅已建成，但还没有魔法小镇",
   "gui.wandscape.townhall_create.name_label": "魔法小镇名称",

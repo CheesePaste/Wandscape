@@ -286,7 +286,16 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
     private static BlockPos findNearestStorage(UUID colonyId, BlockPos npcPos) {
         BuildingApi api = WandscapeApis.getBuildingApi();
         if (api == null) return null;
-        var ids = api.getBuildingsByCategory(colonyId, "storage");
+        BlockPos storage = nearestBuildingOfCategory(api, colonyId, "storage", npcPos);
+        if (storage != null) return storage;
+        // No warehouse: the town hall acts as the delivery point so material
+        // requests don't hard-fail (and retry forever) on a town-hall-only colony.
+        return nearestBuildingOfCategory(api, colonyId, "government", npcPos);
+    }
+
+    private static BlockPos nearestBuildingOfCategory(BuildingApi api, UUID colonyId,
+                                                       String category, BlockPos npcPos) {
+        var ids = api.getBuildingsByCategory(colonyId, category);
         if (ids == null || ids.isEmpty()) return null;
         BlockPos nearest = null;
         double best = Double.MAX_VALUE;

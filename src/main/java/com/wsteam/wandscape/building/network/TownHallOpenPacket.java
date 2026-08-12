@@ -12,10 +12,12 @@ import net.minecraft.resources.ResourceLocation;
 import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Server→client packet: opens the Town Hall info screen with colony name, level and experience.
+ * {@code canUseWarehouse} is true when the colony has no storage building, so the client
+ * shows a "warehouse access" button letting the town hall act as a warehouse.
  */
 public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
                                  String colonyName, int level, int experience, int expToNext,
-                                 String founderName)
+                                 String founderName, boolean canUseWarehouse)
         implements CustomPacketPayload {
 
     public static final Type<TownHallOpenPacket> TYPE =
@@ -43,10 +45,11 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         buf.writeVarInt(pkt.experience);
         buf.writeVarInt(pkt.expToNext);
         buf.writeUtf(pkt.founderName != null ? pkt.founderName : "");
+        buf.writeBoolean(pkt.canUseWarehouse);
     }
 
     static TownHallOpenPacket read(RegistryFriendlyByteBuf buf) {
-        // Field order MUST match write(): long → UUID → utf → varint×3 → utf.
+        // Field order MUST match write(): long → UUID → utf → varint×3 → utf → boolean.
         BlockPos buildingPos = BlockPos.of(buf.readLong());
         UUID colonyId = buf.readUUID();
         String colonyName = buf.readUtf();
@@ -54,7 +57,8 @@ public record TownHallOpenPacket(BlockPos buildingPos, UUID colonyId,
         int experience = buf.readVarInt();
         int expToNext = buf.readVarInt();
         String founderName = buf.readUtf();
+        boolean canUseWarehouse = buf.readBoolean();
         return new TownHallOpenPacket(buildingPos, colonyId, colonyName, level, experience, expToNext,
-                founderName.isEmpty() ? null : founderName);
+                founderName.isEmpty() ? null : founderName, canUseWarehouse);
     }
 }

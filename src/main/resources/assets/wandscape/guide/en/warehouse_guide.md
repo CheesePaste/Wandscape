@@ -16,6 +16,10 @@ Stores all the town's elements and materials. Building and crafting deduct from 
 
 Click warehouse items to **withdraw**, click inventory items to **deposit**, with adjustable quantities.
 
+## When No Warehouse Building Exists
+
+When the colony has no warehouse building, the [Town Hall](townhall_guide.md) panel shows a Warehouse Access button that temporarily acts as a warehouse for deposits/withdrawals; NPCs also pick up materials from the Town Hall position. Once a warehouse is built, this reverts to normal.
+
 ## Startup Funds
 
 When you place your first building, the warehouse automatically receives **2000 of each element** as startup funds.

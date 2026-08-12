@@ -18,6 +18,10 @@ After placement, **right-click** the Town Hall; the first interaction asks you t
 | Reputation | Accumulated from tourists leaving satisfied; the higher the reputation, the rarer and richer the tourists entering the gate each day |
 | Blueprint selection | Opens the building selection panel to pick buildings and publish construction plans |
 
+## Acting as a Warehouse When None Exists
+
+When the colony has no warehouse building, the Town Hall panel gains a **Warehouse Access** button — clicking it opens the warehouse deposit/withdraw screen so you can supply materials for later construction. Once a warehouse is built, the button disappears and the warehouse building takes over.
+
 ## Leveling Up
 
 When tourists with **all three need bars full** leave satisfied at night, the town gains experience. The higher a tourist's level relative to the town, the more experience they give. When experience is full, you level up automatically, unlocking advanced building blueprints and raising the population cap.

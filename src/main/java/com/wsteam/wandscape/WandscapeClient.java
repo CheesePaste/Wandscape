@@ -268,7 +268,7 @@ public class WandscapeClient {
                     new com.wsteam.wandscape.building.client.TownHallScreen(
                             packet.buildingPos(), packet.colonyId(),
                             packet.colonyName(), packet.level(), packet.experience(),
-                            packet.expToNext(), packet.founderName()));
+                            packet.expToNext(), packet.founderName(), packet.canUseWarehouse()));
         });
 
         // Colony create prompt: town hall right-clicked but no colony exists
