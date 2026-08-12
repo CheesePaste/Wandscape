@@ -133,8 +133,8 @@ public class ResourceWaitingFulfillTest {
 
         Inventory inv = world.get(builderNpc, Inventory.class);
         assertNotNull(inv);
-        assertEquals(10, inv.count(ResourceId.STONE_BRICKS),
-                "NPC should have received 10 stone_bricks from warehouse");
+        assertEquals(0, inv.count(ResourceId.STONE_BRICKS),
+                "Materials are charged at construction start; they never enter the NPC backpack");
 
         assertEquals(45, mock.available(ResourceId.STONE_BRICKS));
     }

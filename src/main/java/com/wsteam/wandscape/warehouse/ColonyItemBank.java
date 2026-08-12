@@ -223,7 +223,7 @@ public class ColonyItemBank extends SavedData {
 
     public boolean consume(UUID colonyId, ItemKey key, long amount) {
         if (amount <= 0) return true;
-        if (available(colonyId, key) < amount) return false;
+        if (count(colonyId, key) < amount) return false;
         Map<ItemKey, Long> items = storage.get(colonyId);
         if (items == null) return false;
         long newCount = items.get(key) - amount;
