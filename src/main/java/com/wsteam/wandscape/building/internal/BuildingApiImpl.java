@@ -665,9 +665,15 @@ public class BuildingApiImpl implements BuildingApi {
         UUID buildingId = state.getBuildingId();
         BuildingSavedData sd = getSavedData();
 
-        boolean firstFree = config.firstFree()
-                && sd != null
-                && (colonyId == null || !sd.isFirstFreeClaimed(colonyId, buildingTypeId));
+        boolean isGov = "government".equals(config.category());
+        boolean firstFree;
+        if (colonyId == null) {
+            firstFree = isGov && config.firstFree();
+        } else {
+            firstFree = !isGov && config.firstFree()
+                    && sd != null
+                    && !sd.isFirstFreeClaimed(colonyId, buildingTypeId);
+        }
 
         WorkItem workItem = EnqueueHelper.buildWorkItem(
                 config, anchor, buildingTypeId, 0,

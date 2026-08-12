@@ -144,6 +144,10 @@ public final class ColonyCommand {
         // ── Step 2: create colonyId ─────────────────────────────────────────
         ColonyApi colonyApi = ColonyApiImpl.get();
         UUID colonyId = colonyApi.createColony(origin, founder);
+        var levelMgr = WandscapeEngine.getColonyLevelManager();
+        if (levelMgr != null && name != null && !name.isBlank()) {
+            levelMgr.setColonyName(colonyId, name);
+        }
         Log.info(TAG, "[Colony] Creating colony '{}' id={} at {}", name,
                 colonyId.toString().substring(0, 8), origin);
 
