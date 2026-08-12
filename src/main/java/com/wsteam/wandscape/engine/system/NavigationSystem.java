@@ -254,15 +254,6 @@ public class NavigationSystem implements System {
      * fall back to walking rather than standing.
      */
     private void switchToRitualTeleport(NavigationState nav, long npcId, World world) {
-        // 短距离战术导航（战斗走位/交战接近，walkOnly）：寻路失败/卡住/超时不回退传送——
-        // 落点只有 6~10 格远，传送白白烧掉 self_teleport 的 CD 与魔力。放弃导航站定，
-        // 战斗态下继续施法（战斗循环下轮会按当前目标重新走位）。
-        if (nav.walkOnly) {
-            Log.info(TAG, "[NavSys] NPC {} — walkOnly nav failed, standing (no teleport)", npcId);
-            nav.reset();
-            return;
-        }
-
         TaskExecutor exec = world.get(npcId, TaskExecutor.class);
         GridPos target = nav.target;
 

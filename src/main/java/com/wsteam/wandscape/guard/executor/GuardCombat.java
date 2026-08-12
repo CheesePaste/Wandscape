@@ -381,7 +381,6 @@ public final class GuardCombat {
 
         BlockPos dest = findEngagePos(level, npc, target);
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
-        markWalkOnly(world, npcId);
     }
 
     /**
@@ -497,7 +496,8 @@ public final class GuardCombat {
     /**
      * 向威胁点（目标中心 / 敌方质心）的**反方向**后撤：由 ECS 导航驱动
      * （suppressWandering → 施法不被强制停移动），落点不可站立时静默放弃（站定继续打）。
-     * 守卫/自防御/和平逃跑共用。短距离战术导航标记 walkOnly——寻路失败也不传送，避免浪费。
+     * 守卫/自防御/和平逃跑共用。寻路失败时 NavigationSystem 会回退 self_teleport——
+     * 正常走位不会失败（见 findRetreatPos 的可达性约束），传送留给狭小地带真正走投无路时逃生。
      */
     public static void navigateAway(ServerLevel level, WandscapeNpc npc, World world,
                                     long npcId, Vec3 threat) {
@@ -505,13 +505,6 @@ public final class GuardCombat {
         BlockPos dest = findRetreatPos(level, npc, threat);
         if (dest == null) return;
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
-        markWalkOnly(world, npcId);
-    }
-
-    /** 标记短距离战术导航：只走路不传送（见 {@link NavigationState#walkOnly}）。 */
-    private static void markWalkOnly(World world, long npcId) {
-        NavigationState ns = world.get(npcId, NavigationState.class);
-        if (ns != null) ns.walkOnly = true;
     }
 
     /**

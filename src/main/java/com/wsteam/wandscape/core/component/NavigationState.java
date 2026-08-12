@@ -56,13 +56,6 @@ public class NavigationState {
     /** Index of the next waypoint in {@link #waypoints} to walk to. */
     public int waypointIndex;
 
-    /**
-     * 短距离战术导航标记（战斗走位/交战接近用）：只允许走路，禁止回退传送。
-     * 寻路失败/卡住/超时时放弃导航站定，而不是浪费一次 6~10 格的 self_teleport。
-     * 长距离任务导航不置此位，仍可传送兜底。
-     */
-    public boolean walkOnly;
-
     /** Reset to idle, clearing all state. */
     public void reset() {
         if (future != null && !future.isDone()) {
@@ -79,6 +72,5 @@ public class NavigationState {
         lastCheckZ = 0;
         waypoints = List.of();
         waypointIndex = 0;
-        walkOnly = false;
     }
 }
