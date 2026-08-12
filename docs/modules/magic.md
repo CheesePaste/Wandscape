@@ -41,4 +41,4 @@
 ## 与其他模块关系
 
 - `GuardCombat` 用 `castNpcAt` 施法（守卫攻击表现）。
-- `NpcSpellPowerHandler` 用 SPELL_POWER 放大 NPC 施法伤害。
+- `NpcSpellPowerHandler` 用 SPELL_POWER 放大 NPC 施法伤害；`heal` 治疗量同样按施法者 SPELL_POWER 放大（`MagicSpellExecutors.castHeal`）。

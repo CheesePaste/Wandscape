@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.magic.data.MagicCircleSpec;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -73,6 +74,9 @@ public final class MagicSpellExecutors {
     /** 治疗光环覆盖半径（方块）。GuardCombat 的 L0 紧急奶扫描范围须与此一致，保证施放必然够得着目标。 */
     public static final float HEAL_RADIUS = 6.0f;
 
+    /** 治疗光环每脉冲基础量（SPELL_POWER=1 时每 20t 治疗量，默认 4 = 2 颗心）；按施法者 SPELL_POWER 放大。 */
+    private static final float HEAL_BASE_AMOUNT = 4.0f;
+
     public static boolean castHeal(ServerLevel level, WandscapeNpc npc,
                                   MagicDef def, String circleId) {
         MagicCircleSpec spec = MagicCircleLoader.getSpec(circleId);
@@ -91,9 +95,13 @@ public final class MagicSpellExecutors {
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
 
-        // 注册持续治疗任务（6秒=120t，每20t治疗4生命）
+        // 注册持续治疗任务（6秒=120t，每20t治疗 HEAL_BASE_AMOUNT × SPELL_POWER 生命）：
+        // 治疗量与伤害同源走 SPELL_POWER 加成（默认 1.0 → 每脉冲 4 点，强法师奶更多；
+        // 玩家命令 castForPlayer 走基础量，玩家无 SPELL_POWER）
+        float healAmount = HEAL_BASE_AMOUNT
+                * Math.max(0f, npc.getEffectiveAttribute(AttributeType.SPELL_POWER));
         MagicEventHandler.addHealAura(new MagicEventHandler.HealAura(
-                level, pos, npc, level.getGameTime() + durationTicks, 4.0f, HEAL_RADIUS));
+                level, pos, npc, level.getGameTime() + durationTicks, healAmount, HEAL_RADIUS));
 
         level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.2f);
         Log.info(TAG, "castHeal caster={} pos={} duration={}", npc.getUUID().toString().substring(0, 8), pos, durationTicks);
@@ -385,7 +393,7 @@ public final class MagicSpellExecutors {
                 PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                         new MagicCircleCastPacket(effectId, pos, new Vec3(0, 1, 0), circleId));
                 MagicEventHandler.addHealAura(new MagicEventHandler.HealAura(
-                        level, pos, player, level.getGameTime() + (MagicCircleLoader.getSpec(circleId) != null ? MagicCircleLoader.getSpec(circleId).durationTicks : 120), 4.0f, 6.0));
+                        level, pos, player, level.getGameTime() + (MagicCircleLoader.getSpec(circleId) != null ? MagicCircleLoader.getSpec(circleId).durationTicks : 120), HEAL_BASE_AMOUNT, 6.0));
                 level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.2f);
                 yield true;
             }

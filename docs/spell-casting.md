@@ -363,3 +363,7 @@ P1/P2 玩家无感知（内部重构），P3 起见 UI。每个阶段完成即�
 - **实现**：`WandscapeNpc.tickIdleSelfHeal()` 每 tick 尝试，实际频率受 heal 魔法 CD（300t）限制；战斗判定 = ECS 当前包为 `self_defense` 或全局任务蓝图 `guard:` 前缀（战斗必然以任务形式占用队列，空闲/建造/采集即非战斗）。
 - **不打断任务**：建造/采集等非战斗任务照常进行，治疗以自身为圆心（光环跟随施法者），与任务互不干扰。
 - **敌对测试法师（EvilMage）除外**：其施法由自身 goal 驱动，不继承自奶，避免给测试敌人加 buff。
+
+## 十七、治疗吃法术强度加成（2026-08-12）
+
+治疗光环的每脉冲治疗量从固定 4 点改为 **基础量 × 施法者 SPELL_POWER**（`MagicSpellExecutors.HEAL_BASE_AMOUNT = 4`，默认 SPELL_POWER=1 → 仍 4 点，强法师奶更多），与伤害加成同源——`castHeal` 施放时取 `npc.getEffectiveAttribute(AttributeType.SPELL_POWER)` 乘入 `HealAura`（L0 紧急奶 / 非战斗自奶 / 常规治疗共用此路径，一并生效）。玩家命令 `castForPlayer` 无 SPELL_POWER，保持基础量 4。
