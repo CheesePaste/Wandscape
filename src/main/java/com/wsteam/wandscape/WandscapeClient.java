@@ -256,7 +256,7 @@ public class WandscapeClient {
             var mc = Minecraft.getInstance();
             if (mc.screen instanceof ShopScreen existing) {
                 existing.updateFrom(packet.stock(), packet.maxStocks());
-            } else {
+            } else if (mc.screen == null) {
                 mc.setScreen(new ShopScreen(packet.buildingPos(), packet.colonyId(),
                         packet.buildingId(), packet.creator(), packet.stock(), packet.maxStocks()));
             }

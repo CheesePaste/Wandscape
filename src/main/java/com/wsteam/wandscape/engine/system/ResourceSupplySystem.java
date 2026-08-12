@@ -105,22 +105,39 @@ public class ResourceSupplySystem implements System {
      *         or a new task was queued); false if it cannot be synthesized right now
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable World world) {
+        return enqueueSynthesize(itemId, amount, null, world);
+    }
+
+    /**
+     * Colony-scoped variant of {@link #enqueueSynthesize(String, int, World)}.
+     */
+    public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId, @Nullable World world) {
         var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
         if (recipes == null) return false;
         if (recipes.getSynthesizeRecipe(itemId) == null) return false;
 
-        int inFlight = countSynthesizeInFlight(itemId, world);
+        int inFlight = countSynthesizeInFlight(itemId, colonyId, world);
         int toAdd = amount - inFlight;
         if (toAdd <= 0) return true; // already covered by queued/running production
 
         BuildingApi api = getBuildingApi();
         if (api == null) return false;
-        List<UUID> stations = api.getBuildingsByCategory(null, "workstation");
+        List<UUID> stations = api.getBuildingsByCategory(colonyId, "workstation");
         if (stations.isEmpty()) return false;
 
-        UUID stationId = stations.get(0);
-        BuildingData building = api.getBuilding(stationId);
-        if (building == null || building.isShutdown()) return false;
+        UUID stationId = null;
+        BuildingData building = null;
+        for (UUID id : stations) {
+            BuildingData bd = api.getBuilding(id);
+            if (bd != null && !bd.isShutdown() && !bd.isDemolishing()) {
+                if (api.getQueue(id).size() < bd.getQueueCapacity()) {
+                    stationId = id;
+                    building = bd;
+                    break;
+                }
+            }
+        }
+        if (stationId == null || building == null) return false;
 
         BlockPos pos = building.getPosition();
         int count = Math.max(toAdd, 1);
