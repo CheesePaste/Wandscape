@@ -6,6 +6,7 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -37,7 +38,12 @@ public final class SelfDefenseHandler {
         npc.markRecentlyDamaged();
 
         LivingEntity attacker = attackerFrom(event.getSource());
-        if (attacker == null || attacker instanceof Player || attacker instanceof WandscapeNpc) return;
+        // 环境伤害（无活体攻击者：窒息/岩浆/火烧/溺水等）→ 传送逃生
+        if (attacker == null) {
+            handleEnvironmentalDamage(event, npc);
+            return;
+        }
+        if (attacker instanceof Player || attacker instanceof WandscapeNpc) return;
         if (!(attacker instanceof Enemy)) return;
 
         long expiry = npc.level().getGameTime() + Config.GUARD_HATE_DURATION_TICKS.get();
@@ -52,5 +58,23 @@ public final class SelfDefenseHandler {
     @Nullable
     private static LivingEntity attackerFrom(DamageSource source) {
         return source.getEntity() instanceof LivingEntity le ? le : null;
+    }
+
+    /**
+     * 环境伤害（窒息/岩浆/火烧/溺水等非生物伤害）处理：
+     * 逃生引导期间屏蔽环境伤害，其余情况尝试发起逃生传送。
+     * 触发本次伤害仍结算一次（保证脱战回血计时正确），引导期间起 shield。
+     */
+    private static void handleEnvironmentalDamage(LivingIncomingDamageEvent event, WandscapeNpc npc) {
+        if (!npc.isColonyNpc()) return;
+        if (!(npc.level() instanceof ServerLevel level)) return;
+
+        long gameTime = level.getGameTime();
+        // 逃生引导期间屏蔽环境伤害（岩浆每 tick 4 点，40HP 撑不到 80 tick 引导结束）
+        if (npc.isEscapeShielded(gameTime)) {
+            event.setCanceled(true);
+            return;
+        }
+        NpcEscapeTeleport.attempt(level, npc);
     }
 }

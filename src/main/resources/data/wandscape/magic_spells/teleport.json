@@ -2,7 +2,7 @@
   "id": "teleport",
   "category": "utility",
   "mana_cost": 30,
-  "base_cooldown": 300,
+  "base_cooldown": 150,
   "range": 0,
   "target_mode": "none"
 }

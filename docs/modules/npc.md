@@ -19,7 +19,8 @@
 - **盔甲格**：`armorInventory`（SimpleContainer 4，顺序 头盔/胸甲/护腿/靴子），与 vanilla 装备槽分开存放 → 法袍外观不被覆盖（外形不渲染，仅数值生效）。`armorValueOf(stack)` 累加物品原版 `Attributes.ARMOR` 修饰符得单件护甲值；`syncArmorAttributes()` 把 4 槽护甲值以加法修饰符写回 ECS EquipmentComponent（HEAD/CHEST/LEGS/FEET），GUI 显示与伤害减免（vanilla ARMOR）都生效。onNpcJoinWorld（含重连/延迟注册）后调用。
 - NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/armorInventory/colonyId/**PeaceMode/FollowMode/FollowerUuid**。
 - 仇恨表 `setHatedAttacker/getHatedAttacker`。
-- **和平/跟随模式**：`peaceMode`（不攻击任何生物，守卫/自卫/光束伤害分层全阻断）、`followMode`+`followerUuid`（跟随目标玩家）。`FollowPlayerGoal`（优先级 1，vanilla PathNavigation）在空闲时走向距离 >5 格的玩家、<3 格停；ECS 任务/施法接管时让路。
+- **AI goals**：`FloatGoal(0)` / `OpenDoorGoal(1)`（撞上门时自动开门，WandscapeNavigation 已设 canPassDoors/canOpenDoors）/ `FollowPlayerGoal(2)` / `RandomStrollGoal(5)`（`suppressWandering` 时让路 NavigationSystem）。
+- **和平/跟随模式**：`peaceMode`（不攻击任何生物，守卫/自卫/光束伤害分层全阻断）、`followMode`+`followerUuid`（跟随目标玩家）。`FollowPlayerGoal`（优先级 2，vanilla PathNavigation）在空闲时走向距离 >5 格的玩家、<3 格停；ECS 任务/施法接管时让路。
 
 ## EntityComponentBridge
 

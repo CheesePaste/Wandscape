@@ -25,7 +25,7 @@ import java.util.List;
  */
 public final class RoadWalkPlanner {
 
-    private static final double SAMPLE_INTERVAL = 12.0;
+    private static final double SAMPLE_INTERVAL = 24.0;
 
     private RoadWalkPlanner() {}
 

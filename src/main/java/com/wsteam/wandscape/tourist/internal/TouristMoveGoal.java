@@ -120,7 +120,14 @@ public class TouristMoveGoal extends Goal {
     /** Last path-node index seen while wandering — the primary stuck-detection signal. */
     private int lastNodeIndex = -1;
     /** Min ticks before re-picking a wander target after the current path finishes. */
-    private static final int WANDER_RECHOOSE_TICKS = 20;
+    private static final int WANDER_RECHOOSE_TICKS = 80;
+    /** Min game ticks between re-issuing navigation when the navigator reports done
+     *  (path finished early or unreachable). Prevents a per-tick synchronous A* hot loop:
+     *  with many tourists, re-running vanilla pathfinding every tick for every stuck tourist
+     *  was the #1 CPU cost (spark: PathNavigation.createPath ≈ 46%). */
+    private static final int REPATH_COOLDOWN_TICKS = 20;
+    /** Game tick of the last navigation re-issue; repaths are throttled against this. */
+    private int lastRepathTick = Integer.MIN_VALUE;
     /** Default wander radius (blocks) around the (drifting) anchor. */
     private static final int WANDER_RADIUS = 12;
     /** 闲逛硬上限：离闲逛起点超过该距离强制折返（格）。 */
@@ -431,8 +438,10 @@ public class TouristMoveGoal extends Goal {
                 stuckTicks = 0;
                 usingRoad = planRoute(target);
                 wpIndex = 1;
+                moveToNext(touristSpeed, target);
+            } else if (repathDue()) {
+                moveToNext(touristSpeed, target);
             }
-            moveToNext(touristSpeed, target);
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
         }
@@ -528,7 +537,9 @@ public class TouristMoveGoal extends Goal {
                 if (++stuckTicks > 40) {
                     stuckTicks = 0;
                 }
-                nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
+                if (allowRepath()) {
+                    nav.moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
+                }
             } else {
                 stuckTicks = Math.max(0, stuckTicks - 1);
             }
@@ -564,7 +575,9 @@ public class TouristMoveGoal extends Goal {
             if (++stuckTicks > 40) {
                 stuckTicks = 0;
             }
-            nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+            if (allowRepath()) {
+                nav.moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
+            }
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
         }
@@ -663,6 +676,7 @@ public class TouristMoveGoal extends Goal {
             totalNavTicks = 0;
             BlockPos exitGround = findGround(entryPoint.getX(), entryPoint.getY(), entryPoint.getZ());
             BlockPos exitTarget = exitGround != null ? exitGround : entryPoint;
+            stampRepath();
             tourist.getNavigation().moveTo(exitTarget.getX() + 0.5, exitTarget.getY(), exitTarget.getZ() + 0.5, touristSpeed);
         } else {
             finishBuildingStop();
@@ -699,6 +713,7 @@ public class TouristMoveGoal extends Goal {
                 tourist.setFrozenYaw(null);
                 // 队首就在 spot 背后 1 格，直接精确落到 spot 上开始交互（消除移动误差）
                 tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
+                stampRepath();
                 tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
                 return;
             }
@@ -761,7 +776,7 @@ public class TouristMoveGoal extends Goal {
         }
         // 需移动：队序前移（目标变化）换目标，或导航已结束（被撞开/寻路失败）重新引导
         tourist.setFrozenYaw(null);
-        if (!sameTarget || tourist.getNavigation().isDone()) {
+        if (!sameTarget || (tourist.getNavigation().isDone() && allowRepath())) {
             queueNavTarget = target;
             tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
         }
@@ -820,6 +835,7 @@ public class TouristMoveGoal extends Goal {
             BlockPos target = TouristSimulation.spotWorldPos(level, buildingId, spot);
             interactPoint = target;
             if (target != null) {
+                stampRepath();
                 tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
                 return;
             }
@@ -1253,7 +1269,7 @@ public class TouristMoveGoal extends Goal {
                 }
                 return;
             }
-            moveToNext(wanderSpeed, wp);
+            if (repathDue()) moveToNext(wanderSpeed, wp);
         } else {
             stuckTicks = Math.max(0, stuckTicks - 1);
         }
@@ -1385,7 +1401,9 @@ public class TouristMoveGoal extends Goal {
             }
             if (back != null) {
                 tourist.setWanderAnchor(back);
-                nav.moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, wanderSpeed);
+                if (allowRepath()) {
+                    nav.moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, wanderSpeed);
+                }
             }
             noMoveTicks = 0;
             lastNodeIndex = -1;
@@ -1404,7 +1422,7 @@ public class TouristMoveGoal extends Goal {
 
         // Too far from anchor → head back
         if (manDist > radius + 3) {
-            if (nav.isDone())
+            if (nav.isDone() && allowRepath())
                 nav.moveTo(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5, wanderSpeed);
             tickWanderEvaluate();
             return;
@@ -1423,8 +1441,10 @@ public class TouristMoveGoal extends Goal {
         }
         if (wanderCooldown <= 0) {
             BlockPos g = pickWanderTarget(anchor, radius);
-            if (g != null)
+            if (g != null) {
+                stampRepath();
                 nav.moveTo(g.getX() + 0.5, g.getY(), g.getZ() + 0.5, wanderSpeed);
+            }
             wanderCooldown = 60 + tourist.getRandom().nextInt(120);
         }
     }
@@ -1853,10 +1873,28 @@ public class TouristMoveGoal extends Goal {
         return raw.offset(dx, 0, dz);
     }
 
+    /** True when enough ticks have passed since the last nav re-issue to allow another. */
+    private boolean repathDue() {
+        return tourist.timeBase() - lastRepathTick >= REPATH_COOLDOWN_TICKS;
+    }
+
+    /** Consumes the repath throttle slot if due; call before a retry {@code moveTo}. */
+    private boolean allowRepath() {
+        if (!repathDue()) return false;
+        lastRepathTick = tourist.timeBase();
+        return true;
+    }
+
+    /** Marks a navigation re-issue so subsequent retries are throttled for {@link #REPATH_COOLDOWN_TICKS}. */
+    private void stampRepath() {
+        lastRepathTick = tourist.timeBase();
+    }
+
     private void moveToNext(double spd, BlockPos fallback) {
         BlockPos wp = currentTarget(fallback);
         BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
         if (ground != null) wp = ground;
+        stampRepath();
         tourist.getNavigation().moveTo(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5, spd);
     }
 

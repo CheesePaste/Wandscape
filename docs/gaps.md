@@ -32,7 +32,7 @@
 ## 三、已知 stub / TODO
 
 - **`WandscapeEntityOps`**：stub（applyEffect/getPosition 空实现）。
-- **`WandscapeRitualOps`**：仅实现 `self_teleport`（teleportTo + PORTAL 粒子），其余 RitualId no-op；channelTicks 硬编码且 self_teleport/item_teleport/player_summon=1（代码注释标 TODO 600）。
+- **`WandscapeRitualOps`**：仅实现 `self_teleport`（安全落点搜索 + teleportTo + PORTAL 粒子），其余 RitualId no-op；channelTicks 硬编码且 self_teleport/item_teleport/player_summon=1（代码注释标 TODO 600）。
 - **`StatsService`**：订阅 NarrativeEventTriggered，onEvent 为空实现（TODO）。
 - **`RitualOp.channelTicks()`**（op/）：self_teleport/item_teleport/player_summon=600、warding=200、group_vigor=400、rain_call/clear_weather=1200、portal_gate=1800——与 `WandscapeRitualOps` 的 1 不一致，需对齐。
 - **`ColonyMetricsService`/`StatsSyncPacket`**：统计面板已同步，但 `WandscapePanelState.StatsSummary` 消费端展示待确认。

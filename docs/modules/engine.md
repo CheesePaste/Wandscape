@@ -32,7 +32,7 @@
 - **WandscapeBlockOps**：目标=服务器主世界。setBlock 经 ChunkLoadManager 临时强加载、evacuateEntities 推开实体积压、放置/拆除音节流 10 tick。toggle/activate/open_gui；activate 失败回退红石脉冲；支持 `[prop=val]` 方块状态语法。
 - **AsyncTransformExecutor**：execute 先扣 consumable 库存，`world.startAsyncOp` 取 Promise，pending 列表倒计时，到点放块 + 工作动画 + NPC_CAST 节流音；`effectiveDelay = delay / WORK_SPEED`；`tickAll` 每 MC tick 减计数（由 `Wandscape.onServerTick` 驱动）。
 - **WandscapeMovementOps**：无内部状态；`navigateTo` 只写 NavigationState（PATHFINDING + target + future），由 NavigationSystem 驱动；`cancelNavigation` 复位 + 恢复 AI 游荡。
-- **WandscapeRitualOps**：硬编码 channelTicks（self_teleport/item_teleport/player_summon=1，warding=200，group_vigor=400，rain_call/clear_weather=1200，portal_gate=1800）；`executeRitual` 目前仅实现 self_teleport（teleportTo + PORTAL 粒子），其余 no-op。
+- **WandscapeRitualOps**：硬编码 channelTicks（self_teleport/item_teleport/player_summon=1，warding=200，group_vigor=400，rain_call/clear_weather=1200，portal_gate=1800）；`executeRitual` 目前仅实现 self_teleport（PORTAL 粒子 + 传送），其余 no-op。**self_teleport 落点经 `findSafeLanding` 搜索**：目标附近环形扫描，要求脚/头两格无碰撞、非液体、脚下实心地面且非房顶薄板（与 TouristTeleport 防房顶一致），杜绝传进建筑窒息/落房顶；找不到安全点回退原目标并 warn。
 - **WandscapeEntityOps**：stub。
 - **WandscapeBlockInteractExecutor**：toggle/activate/open_gui 同步；gather/decompose/synthesize/craft_wand/brew_potion 异步倒计时 + thenRun，缺料抛 ResourceShortageException → markAwaitingResources；WORK_SPEED 缩短。gather 加元素到 ColonyItemBank + 唤醒 AWAITING_RESOURCES + 元素飞行入库动画；synthesize/craft 等产物流入仓库 + 飞行动画。**注意：decompose 产物写 `colonyResources`（ResourceId 元素），而 synthesize/craft/brew 的元素消耗走 ColonyItemBank**（两类存储不同，详见 gaps）。
 - **ResourceRequestExecutor**：**STAGGER_TICKS=5（每 5 tick 发一件，非 1/tick）**；全有或全无预检 + 整批 reserve；finish 入 NPC 库存 + ACTIVE；cancelForNpc 释放预留。

@@ -59,6 +59,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
@@ -475,6 +476,27 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         this.nextMeleeAttackTick = gameTime + cooldownTicks;
     }
 
+    // ── 环境伤害逃生传送（瞬态，不写 NBT）：引导期间屏蔽环境伤害 + 落点扫描节流 ──
+    private long escapeShieldUntilTick = 0;
+    private long nextEscapeScanTick = 0;
+
+    /** 逃生引导期间是否屏蔽环境伤害（岩浆每 tick 4 点，40HP 撑不到引导结束）。 */
+    public boolean isEscapeShielded(long gameTime) {
+        return gameTime < escapeShieldUntilTick;
+    }
+
+    /** 记录一次逃生开始：在引导时长 + 少量余量内屏蔽环境伤害。 */
+    public void markEscapeStarted(long gameTime, int channelTicks) {
+        this.escapeShieldUntilTick = gameTime + channelTicks + 2;
+    }
+
+    /** 逃生落点扫描节流（失败重扫时防每 tick 全扫）：放行时推进 40 tick。 */
+    public boolean consumeEscapeScan(long gameTime) {
+        if (gameTime < nextEscapeScanTick) return false;
+        this.nextEscapeScanTick = gameTime + 40;
+        return true;
+    }
+
     // ============================================================
     // 和平 / 跟随 模式（玩家在 NPC 面板右下角切换，NBT 持久化）
     // ============================================================
@@ -578,8 +600,11 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     protected void registerGoals() {
         // Priority 0: don't drown
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        // Priority 1: 跟随模式——目标玩家距离 >5 格时走向玩家（被 ECS 任务/施法接管时自动让路）
-        this.goalSelector.addGoal(1, new FollowPlayerGoal());
+        // Priority 1: 开门（WandscapeNavigation 已设 canPassDoors/canOpenDoors，
+        // DoorInteractGoal.canUse 据此放行；只有水平撞上门时才触发，避免误开）
+        this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
+        // Priority 2: 跟随模式——目标玩家距离 >5 格时走向玩家（被 ECS 任务/施法接管时自动让路）
+        this.goalSelector.addGoal(2, new FollowPlayerGoal());
         // Priority 5: wander around when idle (suppressed when MovementOps controls navigation)
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6) {
             @Override

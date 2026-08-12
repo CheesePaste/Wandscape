@@ -34,6 +34,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -296,6 +297,9 @@ public final class GuardCombat {
     private static final double ENGAGE_STANDOFF = 6.0;
     /** 以目标为圆心、standoff 半径环上的候选采样数。 */
     private static final int ENGAGE_SAMPLES = 16;
+    /** 交战落点与怪物脚底允许的楼层高度差：往上 2 格（覆盖坑里/台阶上的怪）、往下 4 格（覆盖低洼）。 */
+    private static final int ENGAGE_FLOOR_UP = 2;
+    private static final int ENGAGE_FLOOR_DOWN = -4;
 
     /**
      * LOS 被挡时，向目标附近一个安全的交战落点寻路（绕墙走到能打到的位置）。
@@ -316,10 +320,18 @@ public final class GuardCombat {
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
     }
 
-    /** 选择交战落点：目标为圆心、standoff 半径环上「有视线且尽量靠近守卫」的格子；返回站立脚底 Y。 */
+    /**
+     * 选择交战落点：目标为圆心、standoff 半径环上「有视线且尽量靠近守卫」的格子；返回站立脚底 Y。
+     *
+     * <p>候选高度不取世界最高表面（{@code MOTION_BLOCKING} 会把高层建筑房顶当地面，导致守卫
+     * 传送到楼顶下不来），而是取怪物脚底所在楼层附近的可站立面——怪物在楼下则候选在地面，
+     * 在楼顶则候选在楼顶，始终与怪物同层。列内怪物楼层附近无可站立格（如落在建筑墙体内）
+     * 则跳过该列，避免把守卫送进墙里或楼顶。
+     */
     private static BlockPos findEngagePos(ServerLevel level, WandscapeNpc npc, LivingEntity target) {
         Vec3 mobCenter = target.getBoundingBox().getCenter();
         Vec3 guardPos = npc.getStaffPosition();
+        int mobFeetY = Mth.floor(target.getY());
         double towardGuard = Math.atan2(guardPos.z - mobCenter.z, guardPos.x - mobCenter.x);
 
         BlockPos best = null;                 // 有视线的候选中最靠近守卫的
@@ -331,8 +343,9 @@ public final class GuardCombat {
             double angle = towardGuard + Math.PI * 2 * i / ENGAGE_SAMPLES;
             int bx = Mth.floor(mobCenter.x + Math.cos(angle) * ENGAGE_STANDOFF);
             int bz = Mth.floor(mobCenter.z + Math.sin(angle) * ENGAGE_STANDOFF);
-            int groundY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
-            BlockPos cand = new BlockPos(bx, groundY + 1, bz);
+            int standY = findStandingYNear(level, bx, bz, mobFeetY);
+            if (standY == Integer.MIN_VALUE) continue; // 该列怪物楼层附近无可站立格 → 跳过
+            BlockPos cand = new BlockPos(bx, standY, bz);
             double dSq = cand.distToCenterSqr(guardPos.x, guardPos.y, guardPos.z);
             if (dSq < fallbackDistSq) {
                 fallbackDistSq = dSq;
@@ -350,8 +363,41 @@ public final class GuardCombat {
         Vec3 dir = mobCenter.subtract(guardPos);
         if (dir.lengthSqr() < 0.01) dir = new Vec3(1, 0, 0);
         Vec3 fb = mobCenter.subtract(dir.normalize().scale(ENGAGE_STANDOFF));
-        int groundY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(fb.x), Mth.floor(fb.z));
-        return new BlockPos(Mth.floor(fb.x), groundY + 1, Mth.floor(fb.z));
+        int bx = Mth.floor(fb.x);
+        int bz = Mth.floor(fb.z);
+        int standY = findStandingYNear(level, bx, bz, mobFeetY);
+        if (standY == Integer.MIN_VALUE) {
+            standY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz) + 1;
+        }
+        return new BlockPos(bx, standY, bz);
+    }
+
+    /** 列 (x,z) 上离怪物脚底 {@code nearY} 最近的可站立脚底 Y；楼层差超出
+     *  {@code ENGAGE_FLOOR_UP/DOWN} 或找不到返回 {@link Integer#MIN_VALUE}（调用方跳过该列）。 */
+    private static int findStandingYNear(ServerLevel level, int x, int z, int nearY) {
+        for (int dy = ENGAGE_FLOOR_UP; dy >= ENGAGE_FLOOR_DOWN; dy--) {
+            int y = nearY + dy;
+            if (isStandable(level, x, y, z)) return y;
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    /** 站立位置 {@code (x,y,z)}（y 为脚底）是否可行：脚/头两格无碰撞非液体、脚下有实心地面。 */
+    private static boolean isStandable(ServerLevel level, int x, int y, int z) {
+        BlockPos feet = new BlockPos(x, y, z);
+        BlockPos head = new BlockPos(x, y + 1, z);
+        BlockPos ground = new BlockPos(x, y - 1, z);
+        if (!level.isLoaded(feet) || !level.isLoaded(head) || !level.isLoaded(ground)) return false;
+        BlockState feetState = level.getBlockState(feet);
+        BlockState headState = level.getBlockState(head);
+        if (!feetState.getFluidState().isEmpty() || !headState.getFluidState().isEmpty()) return false;
+        if (!feetState.getCollisionShape(level, feet).isEmpty()
+                || !headState.getCollisionShape(level, head).isEmpty()) {
+            return false;
+        }
+        BlockState groundState = level.getBlockState(ground);
+        if (groundState.isAir()) return false;
+        return !groundState.getCollisionShape(level, ground).isEmpty();
     }
 
     /** 站立落点（脚底）上持杖手的大致高度位置。 */

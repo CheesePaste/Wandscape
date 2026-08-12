@@ -47,7 +47,7 @@ public class NavigationSystem implements System {
     private static final int PATHFIND_TIMEOUT = 200;
     private static final int MAX_REPATH = 5;
     /** Base cooldown (ticks) between self_teleport casts; divided by SPELL_SPEED. */
-    private static final int TELEPORT_COOLDOWN_TICKS = 300;
+    private static final int TELEPORT_COOLDOWN_TICKS = 150;
     /** 传送固定魔力消耗。 */
     private static final int TELEPORT_MANA_COST = 30;
 
@@ -265,9 +265,19 @@ public class NavigationSystem implements System {
         int tpMana = tp != null ? tp.manaCost() : TELEPORT_MANA_COST;
         if (npc != null && !npc.tryCastSpell("teleport", tpCd, tpMana,
                 WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT))) {
-            Log.info(TAG, "[NavSys] NPC {} — teleport gated (lock/CD/mana), falling back to walking", npcId);
+            Log.info(TAG, "[NavSys] NPC {} — teleport gated (lock/CD/mana), walking instead", npcId);
+            // 门控未通过（CD/锁/蓝）：真正开始走路，而不是站桩等 CD。startTick 保持非 0，
+            // 避免下一 tick init 块再次进传送分支形成每 tick 空转（旧行为 startTick=0 → 每 tick
+            // 重试门控 + 该走路时站着，直到 CD 结束才一次性传送）。中途 CD 就绪由
+            // PATHFIND_TIMEOUT/卡住/重寻路失败后再切传送兜住。
             nav.mode = NavigationState.Mode.PATHFINDING;
-            nav.startTick = 0;
+            nav.startTick = tickCounter;
+            if (nav.waypoints.isEmpty()) {
+                if (!startPathfinding(nav, npc, npcId)) {
+                    // 连走路都起不来（如区块未加载）→ 退回原逻辑：下 tick 重试传送门控
+                    nav.startTick = 0;
+                }
+            }
             return;
         }
 

@@ -35,7 +35,7 @@ class MagicDefTest {
         assertEquals("teleport", tp.id());
         assertEquals(MagicDef.Category.UTILITY, tp.category());
         assertEquals(30, tp.manaCost());
-        assertEquals(300, tp.baseCooldown());
+        assertEquals(150, tp.baseCooldown());
         assertEquals(MagicDef.TargetMode.NONE, tp.targetMode());
         assertNull(tp.effectCircleId(), "utility spell has no circle visual");
         assertNull(tp.effectColor());
