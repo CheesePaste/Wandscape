@@ -107,7 +107,8 @@ public class WorkstationScreen extends MedievalScreen {
                 new TaskQueuePanel.Entry(e.index(), e.category(), e.itemOrRecipeId(),
                         e.quantity(), e.blueprintId(), e.summary()),
                 ct.stepIndex(), ct.totalSteps(),
-                ct.channelRemainingTicks(), ct.channelTotalTicks());
+                ct.channelRemainingTicks(), ct.channelTotalTicks(),
+                ct.pending());
     }
 
     /** Send a REFRESH request to the server to get the current task queue. */

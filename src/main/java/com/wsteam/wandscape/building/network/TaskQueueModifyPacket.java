@@ -222,6 +222,7 @@ public record TaskQueueModifyPacket(
 
         int channelTotal = paramInt(params, "channel_ticks", 0);
         int channelRemaining = channelTotal;
+        boolean channelActive = false;
         if (channelTotal > 0) {
             GridPos anchor = anchorOf(params, state);
             if (anchor != null) {
@@ -230,15 +231,18 @@ public record TaskQueueModifyPacket(
                 if (prog[0] >= 0) {
                     channelRemaining = Math.max(0, prog[0]);
                     if (prog[1] > 0) channelTotal = prog[1];
+                    channelActive = true;
                 }
             }
         }
+        // Channel task accepted but not started (NPC en route): show "waiting" instead of a fake countdown.
+        boolean pending = channelTotal > 0 && !channelActive;
 
         TaskQueueDataPacket.QueueEntry entry = new TaskQueueDataPacket.QueueEntry(
                 0, categorize(bid), extractItemId(bid, params),
                 paramInt(params, "count", 0), bid, summarizeWorkItem(bid, params));
         return new TaskQueueDataPacket.CurrentTask(
-                entry, stepIndex, totalSteps, channelRemaining, channelTotal);
+                entry, stepIndex, totalSteps, channelRemaining, channelTotal, pending);
     }
 
     /** Resolve the channel op anchor: the "anchor" param (same source as the compiled op), else the building anchor. */
