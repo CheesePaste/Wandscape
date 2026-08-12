@@ -15,7 +15,6 @@ import com.wsteam.wandscape.magic.entity.MagicBeamEntity;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -33,7 +32,7 @@ public final class MagicCastManager {
     private static final Set<UUID> ACTIVE_CASTERS = new HashSet<>();
 
     private record PendingCast(UUID caster, ServerLevel level, Vec3 source,
-                               BlockPos target, int color, long fireTick, int lifeTicks,
+                               Vec3 target, int color, long fireTick, int lifeTicks,
                                @Nullable WandscapeNpc casterNpc, @Nullable LivingEntity targetNpc) {}
 
     private MagicCastManager() {}
@@ -46,7 +45,7 @@ public final class MagicCastManager {
      * @return 是否登记成功
      */
     public static boolean schedule(ServerLevel level, UUID casterUuid,
-                                   Vec3 source, BlockPos target, int color, int delayTicks, int lifeTicks,
+                                   Vec3 source, Vec3 target, int color, int delayTicks, int lifeTicks,
                                    @Nullable WandscapeNpc casterNpc, @Nullable LivingEntity targetNpc) {
         if (ACTIVE_CASTERS.contains(casterUuid)) return false;
         PENDING.add(new PendingCast(casterUuid, level, source, target, color,

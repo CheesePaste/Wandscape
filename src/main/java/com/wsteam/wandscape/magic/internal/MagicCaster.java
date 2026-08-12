@@ -17,11 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -114,29 +110,18 @@ public final class MagicCaster {
         Vec3 axis = aim.subtract(hand).normalize();
         npc.faceTarget(BlockPos.containing(aim));
         Vec3 source = hand.add(axis.scale(MagicBeamEntity.STAFF_CENTER_OFFSET));
-        BlockPos beamTarget = aimFirstBlock(level, source, axis);
         int c = color != null ? color : resolveColor(npc.getMainHandItem(), null);
 
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(npc,
                 new MagicCircleCastPacket(effectId, source, axis, circleId));
 
-        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, beamTarget, c,
+        boolean ok = MagicCastManager.schedule(level, npc.getUUID(), source, aim, c,
                 BEAM_SPAWN_DELAY, spec.durationTicks + BEAM_TAIL, npc, target);
-        Log.info(TAG, "castNpcBeam id={} circle={} target={} hand={} axis={} source={} scheduled={}",
+        Log.info(TAG, "castNpcBeam id={} circle={} target={} hand={} axis={} source={} aim={} scheduled={}",
                 npc.getUUID().toString().substring(0, 8), circleId,
                 target.getUUID().toString().substring(0, 8),
-                fmt(hand), fmt(axis), fmt(source), ok);
+                fmt(hand), fmt(axis), fmt(source), fmt(aim), ok);
         return ok;
-    }
-
-    /** 沿 dir 射线检测第一个方块（光束终点，穿透生物只被方块挡住）；未命中取 BEAM_RANGE 外一点。 */
-    private static BlockPos aimFirstBlock(ServerLevel level, Vec3 from, Vec3 dir) {
-        HitResult hit = level.clip(new ClipContext(from, from.add(dir.scale(MagicBeamEntity.BEAM_RANGE)),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
-            return bhr.getBlockPos();
-        }
-        return BlockPos.containing(from.add(dir.scale(MagicBeamEntity.BEAM_RANGE)));
     }
 
     /** 调试日志：Vec3 四舍五入两位。 */

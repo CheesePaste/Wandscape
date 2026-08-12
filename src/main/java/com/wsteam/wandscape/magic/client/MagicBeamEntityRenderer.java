@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -23,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
  * <p>注意：{@code EntityRenderDispatcher.render} 已把姿态栈平移到实体位置（即源点），
  * 这里<b>不能再</b>按世界坐标 translate，否则光束会被推到远处。只需旋转 + 抵消
  * {@code renderBeaconBeam} 内部的 translate(0.5,0,0.5)。
- * 光束终点由服务端射线检测到第一个方块为止（穿透生物、只被方块挡住）。
+ * 光束终点：有目标生物时为其身体中心（被方块挡住时截断），无目标时为固定 Vec3。
  */
 public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
 
@@ -34,10 +33,10 @@ public class MagicBeamEntityRenderer extends EntityRenderer<MagicBeamEntity> {
     @Override
     public void render(MagicBeamEntity entity, float entityYaw, float partialTick,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        BlockPos tgtPos = entity.getTarget().orElse(null);
+        Vec3 tgtPos = entity.getTarget().orElse(null);
         if (tgtPos == null) return;
         Vec3 src = entity.getPosition(partialTick);
-        Vec3 dir = tgtPos.getCenter().subtract(src);
+        Vec3 dir = tgtPos.subtract(src);
         double dist = dir.length();
         if (dist < 0.1) return;
         Vec3 ndir = dir.normalize();

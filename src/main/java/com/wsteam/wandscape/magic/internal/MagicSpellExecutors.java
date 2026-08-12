@@ -433,7 +433,7 @@ public final class MagicSpellExecutors {
                 Vec3 hand = player.getEyePosition();
                 Vec3 dir = player.getLookAngle();
                 Vec3 source = hand.add(dir.scale(1.0));
-                BlockPos targetPos = BlockPos.containing(source.add(dir.scale(32.0)));
+                Vec3 targetPos = source.add(dir.scale(32.0));
                 UUID effectId = player.getUUID();
                 PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                         new MagicCircleCastPacket(effectId, source, dir, circleId));

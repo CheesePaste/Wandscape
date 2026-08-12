@@ -17,7 +17,6 @@ import com.wsteam.wandscape.shared.log.Log;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.Entity;
@@ -90,10 +89,10 @@ public final class MagicCircleEmitter {
         for (Entity e : c.level.entitiesForRendering()) {
             if (e instanceof MagicBeamEntity beam && beam.getCasterUuid().isPresent()
                     && beam.getCasterUuid().get().equals(effectId)) {
-                BlockPos tgt = beam.getTarget().orElse(null);
+                Vec3 tgt = beam.getTarget().orElse(null);
                 if (tgt == null) return;
                 Vec3 pos = beam.position();
-                Vec3 axis = tgt.getCenter().subtract(pos);
+                Vec3 axis = tgt.subtract(pos);
                 if (axis.lengthSqr() < 1e-6) return;
                 c.pos = pos;
                 c.axis = axis.normalize();

@@ -7,10 +7,14 @@ import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.log.Log;
 
+import org.joml.Vector3f;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceKey;
@@ -35,15 +39,21 @@ import net.minecraft.world.phys.shapes.CollisionContext;
  * {@code BeaconRenderer.renderBeaconBeam} 渲染（原版 beam shader，可染色、光影下正常）。
  *
  * <p>不是子弹：整段光束同时可见、不做位移。若指定了施法 NPC 与目标生物，每 tick 动态跟踪——
- * 源点跟随 NPC 持杖手（沿目标方向前移 {@link #STAFF_CENTER_OFFSET}），目标跟随生物当前坐标；
+ * 源点跟随 NPC 持杖手（沿目标方向前移 {@link #STAFF_CENTER_OFFSET}），终点跟随生物身体中心
+ * （仅当射线在到达目标前撞到方块——目标在墙后——才截断到方块命中点）；
  * 客户端据此渲染，光束随 NPC 转向。无目标时退化为固定源点→固定终点。
  * 光束粗细随时间动画——先平滑变宽、再平滑变窄（{@link #getWidthFactor}）。
  * 纯视觉实体：无 AI/碰撞/存档，短命后自毁；每 tick 对束内敌对生物造成伤害。
  */
 public class MagicBeamEntity extends Entity {
 
-    private static final EntityDataAccessor<Optional<BlockPos>> DATA_TARGET =
-            SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    /** 光束终点（Vec3 精确坐标：目标身体中心 / 方块命中点）。1.21.1 无 OPTIONAL_VEC3，用 VECTOR3F 现造。 */
+    private static final EntityDataSerializer<Optional<Vec3>> OPTIONAL_VEC3 = EntityDataSerializer.forValueType(
+            ByteBufCodecs.VECTOR3F
+                    .map(v -> new Vec3(v.x, v.y, v.z), v -> new Vector3f((float) v.x, (float) v.y, (float) v.z))
+                    .apply(ByteBufCodecs::optional));
+    private static final EntityDataAccessor<Optional<Vec3>> DATA_TARGET =
+            SynchedEntityData.defineId(MagicBeamEntity.class, OPTIONAL_VEC3);
     private static final EntityDataAccessor<Integer> DATA_COLOR =
             SynchedEntityData.defineId(MagicBeamEntity.class, EntityDataSerializers.INT);
     /** 光束总寿命（tick，由施放方按法阵时长传入并同步）。 */
@@ -57,8 +67,6 @@ public class MagicBeamEntity extends Entity {
     public static final int DEFAULT_LIFETIME_TICKS = 220;
     /** 法阵圆心/光束源点距持杖手沿目标方向的偏移（方块）。 */
     public static final double STAFF_CENTER_OFFSET = 1.0;
-    /** 光束最大长度（方块）：沿目标方向射线检测第一个方块为止，未命中取此长度。 */
-    public static final double BEAM_RANGE = 200.0;
     /** 宽度峰值所在归一化时间（t 归一化 [0,1]）：≈法阵结束点，之后平滑变细到消失。 */
     public static final float PEAK_T = 0.86f;
     /** 峰值时的光束/光晕半径（方块）。 */
@@ -90,7 +98,7 @@ public class MagicBeamEntity extends Entity {
         super(type, level);
     }
 
-    public MagicBeamEntity(Level level, Vec3 source, BlockPos target, int color, int lifeTicks) {
+    public MagicBeamEntity(Level level, Vec3 source, Vec3 target, int color, int lifeTicks) {
         this(Wandscape.MAGIC_BEAM.get(), level);
         setPos(source.x, source.y, source.z);
         setTarget(target);
@@ -98,11 +106,11 @@ public class MagicBeamEntity extends Entity {
         setLifetime(lifeTicks);
     }
 
-    public Optional<BlockPos> getTarget() {
+    public Optional<Vec3> getTarget() {
         return entityData.get(DATA_TARGET);
     }
 
-    public void setTarget(BlockPos pos) {
+    public void setTarget(Vec3 pos) {
         entityData.set(DATA_TARGET, Optional.ofNullable(pos));
     }
 
@@ -179,7 +187,7 @@ public class MagicBeamEntity extends Entity {
 
     /**
      * 每 tick 动态跟踪：施法 NPC 面向目标生物，光束源点跟随 NPC 持杖手（沿目标方向前移
-     * {@link #STAFF_CENTER_OFFSET}），DATA_TARGET 跟随生物当前坐标。目标死亡/消失后冻结最后位置。
+     * {@link #STAFF_CENTER_OFFSET}），终点跟随生物身体中心。目标死亡/消失后冻结最后位置。
      */
     private void trackTarget() {
         if (casterNpc == null || targetMob == null) return;
@@ -192,18 +200,19 @@ public class MagicBeamEntity extends Entity {
         Vec3 aimDir = aim.subtract(hand).normalize();
         Vec3 source = hand.add(aimDir.scale(STAFF_CENTER_OFFSET));
         setPos(source.x, source.y, source.z);
-        // 光束终点 = 沿目标方向第一个方块（穿透生物，只被方块挡住）
-        setTarget(aimFirstBlock(source, aimDir));
+        // 光束终点 = 目标身体中心（精确 Vec3）；射线到达目标前撞到方块（目标在墙后）才截断到方块命中点。
+        // 不钉到第一个方块中心——那是小贴地生物（史莱姆等）瞄不准的根因。
+        setTarget(clipEnd(source, aim));
     }
 
-    /** 沿 dir 射线检测第一个方块；未命中取 BEAM_RANGE 外一点。 */
-    private BlockPos aimFirstBlock(Vec3 from, Vec3 dir) {
-        HitResult hit = level().clip(new ClipContext(from, from.add(dir.scale(BEAM_RANGE)),
+    /** 光束终点：from→to 射线检测，撞到方块则截断到命中点，否则取 to（目标身体中心）。 */
+    private Vec3 clipEnd(Vec3 from, Vec3 to) {
+        HitResult hit = level().clip(new ClipContext(from, to,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
         if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult bhr) {
-            return bhr.getBlockPos();
+            return bhr.getLocation();
         }
-        return BlockPos.containing(from.add(dir.scale(BEAM_RANGE)));
+        return to;
     }
 
     /**
@@ -224,10 +233,10 @@ public class MagicBeamEntity extends Entity {
      * 命中测试：实体中心到光束轴线段的距离 ≤ 束径 + 半体型宽。重置无敌帧使其可逐 tick 结算。
      */
     private void damageTargets() {
-        BlockPos tgt = getTarget().orElse(null);
+        Vec3 tgt = getTarget().orElse(null);
         if (tgt == null) return;
         Vec3 start = position();
-        Vec3 dir = tgt.getCenter().subtract(start);
+        Vec3 dir = tgt.subtract(start);
         double length = dir.length();
         if (length < 0.1) return;
         Vec3 ndir = dir.normalize();
@@ -236,7 +245,7 @@ public class MagicBeamEntity extends Entity {
         // SPELL_POWER 倍率由 NpcSpellPowerHandler 在伤害核算入口统一应用，不在此处单独乘
         float damage = BEAM_DAMAGE * wf;
 
-        AABB box = new AABB(start, tgt.getCenter()).inflate(radius + 1.0);
+        AABB box = new AABB(start, tgt).inflate(radius + 1.0);
         for (Entity e : level().getEntities((Entity) null, box, e -> e instanceof LivingEntity)) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved()) continue;
             if (!canDamage(mob)) continue;
@@ -295,9 +304,9 @@ public class MagicBeamEntity extends Entity {
     /** 渲染剔除包围盒覆盖源点到目标整段，避免相机看向光束末端时被视锥剔除。 */
     @Override
     public AABB getBoundingBoxForCulling() {
-        BlockPos tgt = getTarget().orElse(null);
+        Vec3 tgt = getTarget().orElse(null);
         if (tgt != null) {
-            return new AABB(position(), tgt.getCenter()).inflate(1.0);
+            return new AABB(position(), tgt).inflate(1.0);
         }
         return super.getBoundingBoxForCulling();
     }
