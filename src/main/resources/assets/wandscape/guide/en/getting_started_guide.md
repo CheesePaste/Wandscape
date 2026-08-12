@@ -29,6 +29,8 @@ Tourists **only walk on paved roads**. No roads means no tourists — a shop can
 3. **Hold left-click and drag a box** over the ground to select the area to pave, release to finish, then **Enter** to pave.
 4. Want curves? Draw them with the **Spline (SPLINE)** tool, and let the wizards pave what you drew.
 
+> If materials are short, wait for NPCs to automatically synthesize the required building blocks.
+
 ## Step 4: Build Element Nodes
 
 Elements are the town's currency: building and crafting both cost them. **Element nodes** are the mint — each type of node produces one fixed element, and wizards will come to harvest automatically.

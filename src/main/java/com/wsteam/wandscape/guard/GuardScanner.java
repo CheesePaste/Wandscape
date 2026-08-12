@@ -2,6 +2,8 @@ package com.wsteam.wandscape.guard;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
@@ -39,15 +41,36 @@ public final class GuardScanner {
         return zones;
     }
 
-    /** 各区域并集内存活 Enemy，过滤到任区域内，返回距 {@code from} 最近者；无则 null。 */
+    /** 不可达怪物黑名单（entityId -> 到期游戏 tick），超时未获得视线的怪物在此期间不再被索敌。 */
+    private static final Map<Integer, Long> UNREACHABLE_BLACKLIST = new ConcurrentHashMap<>();
+
+    /** 将特定实体设为不可达黑名单（在 durationTicks 内不再被守卫索敌）。 */
+    public static void blacklistMob(int entityId, long currentGameTime, long durationTicks) {
+        UNREACHABLE_BLACKLIST.put(entityId, currentGameTime + durationTicks);
+    }
+
+    /** 实体是否在不可达黑名单中。过期自动清理。 */
+    public static boolean isBlacklisted(int entityId, long currentGameTime) {
+        Long expire = UNREACHABLE_BLACKLIST.get(entityId);
+        if (expire == null) return false;
+        if (currentGameTime >= expire) {
+            UNREACHABLE_BLACKLIST.remove(entityId);
+            return false;
+        }
+        return true;
+    }
+
+    /** 各区域并集内存活 Enemy，过滤到任区域内且非黑名单，返回距 {@code from} 最近者；无则 null。 */
     @Nullable
     public static LivingEntity nearestInZones(ServerLevel level, List<GuardZone> zones, Vec3 from) {
         AABB queryBox = unionAabb(zones);
         if (queryBox == null) return null;
+        long gameTime = level.getGameTime();
         LivingEntity best = null;
         double bestSq = Double.MAX_VALUE;
         for (Entity e : level.getEntities((Entity) null, queryBox, e -> e instanceof Enemy)) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
+            if (isBlacklisted(mob.getId(), gameTime)) continue;
             if (!inAnyZone(mob, zones)) continue;
             double d = mob.distanceToSqr(from);
             if (d < bestSq) {
@@ -58,12 +81,14 @@ public final class GuardScanner {
         return best;
     }
 
-    /** 任一区域内是否有存活 Enemy（用于脱离判定）。 */
+    /** 任一区域内是否有非黑名单的存活 Enemy（用于脱离判定）。 */
     public static boolean hasMonsterInZones(ServerLevel level, List<GuardZone> zones) {
         AABB queryBox = unionAabb(zones);
         if (queryBox == null) return false;
+        long gameTime = level.getGameTime();
         for (Entity e : level.getEntities((Entity) null, queryBox, e -> e instanceof Enemy)) {
             if (e instanceof LivingEntity mob && !mob.isRemoved() && mob.isAlive()
+                    && !isBlacklisted(mob.getId(), gameTime)
                     && inAnyZone(mob, zones)) {
                 return true;
             }

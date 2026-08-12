@@ -60,8 +60,8 @@ public final class SplineEditorImGui {
     private static final float[] uiOffsetYaw = new float[]{0.0f};
 
     // ── Panel geometry: width is user-draggable from the left edge (window stays right-aligned) ──
-    private static float panelWidth = 370.0f;
-    private static final float MIN_PANEL_W = 300.0f;
+    private static float panelWidth = 440.0f;
+    private static final float MIN_PANEL_W = 340.0f;
 
     // Dynamic Template Generator UI binding
     private static final int[] uiDynamicWidth = new int[]{5};
@@ -380,7 +380,11 @@ public final class SplineEditorImGui {
             ImInt py = new ImInt(start.getY());
             ImInt pz = new ImInt(start.getZ());
 
-            ImGui.pushItemWidth(65);
+            float availW = ImGui.getContentRegionAvailX();
+            float btnW = 50.0f;
+            float inputW = Math.max(50.0f, (availW - btnW - 12.0f) / 3.0f);
+
+            ImGui.pushItemWidth(inputW);
             boolean cx = ImGui.inputInt("X##StartX", px, 0, 0);
             ImGui.sameLine();
             boolean cy = ImGui.inputInt("Y##StartY", py, 0, 0);
@@ -393,7 +397,7 @@ public final class SplineEditorImGui {
             }
 
             ImGui.sameLine();
-            if (ImGui.button("清除##ClearStart", 42, 20)) {
+            if (ImGui.button("清除##ClearStart", btnW, 20)) {
                 RoadPlacementState.clearStartPos();
             }
         } else {
@@ -412,7 +416,11 @@ public final class SplineEditorImGui {
             ImInt py = new ImInt(end.getY());
             ImInt pz = new ImInt(end.getZ());
 
-            ImGui.pushItemWidth(65);
+            float availW = ImGui.getContentRegionAvailX();
+            float btnW = 50.0f;
+            float inputW = Math.max(50.0f, (availW - btnW - 12.0f) / 3.0f);
+
+            ImGui.pushItemWidth(inputW);
             boolean cx = ImGui.inputInt("X##EndX", px, 0, 0);
             ImGui.sameLine();
             boolean cy = ImGui.inputInt("Y##EndY", py, 0, 0);
@@ -425,7 +433,7 @@ public final class SplineEditorImGui {
             }
 
             ImGui.sameLine();
-            if (ImGui.button("清除##ClearEnd", 42, 20)) {
+            if (ImGui.button("清除##ClearEnd", btnW, 20)) {
                 RoadPlacementState.clearEndPos();
             }
         } else {
@@ -439,13 +447,11 @@ public final class SplineEditorImGui {
     // ── Header Banner ──
     private static void drawHeaderBanner(SplineModel model) {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
-        ImGui.pushStyleColor(ImGuiCol.Border, 0.78f, 0.63f, 0.25f, 0.50f);
-        ImGui.beginChild("HeaderBanner", 0, 80, true);
-        {
+        int childFlags = imgui.flag.ImGuiWindowFlags.NoScrollbar | imgui.flag.ImGuiWindowFlags.NoScrollWithMouse;
+        if (ImGui.beginChild("HeaderBanner", 0, 66, false, childFlags)) {
             ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
-            ImGui.spacing();
             ImGui.spacing();
 
             String toolName = switch (RoadPlacementState.getActiveTool()) {
@@ -458,7 +464,7 @@ public final class SplineEditorImGui {
             ImGui.textColored(0.40f, 0.75f, 0.95f, 1.00f, String.format("模式: %s  |  视角: %s", toolName, topDownStr));
         }
         ImGui.endChild();
-        ImGui.popStyleColor(2);
+        ImGui.popStyleColor(1);
         ImGui.spacing();
     }
 
@@ -516,7 +522,11 @@ public final class SplineEditorImGui {
         ImGui.spacing();
         WandscapeImGuiTheme.textMuted("\u6574\u4f53\u5e73\u79fb\u504f\u79fb\u91cf (X, Y, Z):");
         
-        ImGui.pushItemWidth(55);
+        float availShiftW = ImGui.getContentRegionAvailX();
+        float shiftBtnW = 68.0f;
+        float shiftInputW = Math.max(45.0f, (availShiftW - shiftBtnW - 12.0f) / 3.0f);
+
+        ImGui.pushItemWidth(shiftInputW);
         ImGui.inputDouble("##ShiftX", globalShiftX, 0.0, 0.0, "%.1f");
         WandscapeImGuiTheme.drawTooltip("X \u8f74\u5e73\u79fb\u589e\u91cf (\u65b9\u5757)");
         ImGui.sameLine();
@@ -528,7 +538,7 @@ public final class SplineEditorImGui {
         ImGui.popItemWidth();
 
         ImGui.sameLine();
-        if (ImGui.button("\u6574\u4f53\u5e73\u79fb", 60, 24)) {
+        if (ImGui.button("\u6574\u4f53\u5e73\u79fb", shiftBtnW, 24)) {
             SplineVec3 delta = new SplineVec3(globalShiftX.get(), globalShiftY.get(), globalShiftZ.get());
             model.translateAll(delta);
             globalShiftX.set(0.0);
@@ -608,7 +618,9 @@ public final class SplineEditorImGui {
                 ImDouble pz = new ImDouble(targetPos.z());
 
                 ImGui.text("\u4e09\u7ef4\u7cbe\u786e\u5750\u6807:");
-                ImGui.pushItemWidth(75);
+                float availCoordW = ImGui.getContentRegionAvailX();
+                float coordInputW = Math.max(50.0f, (availCoordW - 8.0f) / 3.0f);
+                ImGui.pushItemWidth(coordInputW);
                 boolean mx = ImGui.inputDouble("X##Coord", px, 0.1, 1.0, "%.2f");
                 ImGui.sameLine();
                 boolean my = ImGui.inputDouble("Y##Coord", py, 0.1, 1.0, "%.2f");
@@ -707,7 +719,7 @@ public final class SplineEditorImGui {
             uiDynamicBorder.set(SplineEditorClientState.isDynamicHasBorder());
 
             boolean dynamicChanged = false;
-            ImGui.pushItemWidth(180);
+            ImGui.pushItemWidth(-1);
             if (ImGui.sliderInt("\u9053\u8def\u5bbd\u5ea6 (Width)", uiDynamicWidth, 1, 15, "%d \u683c\u65b9\u5757")) {
                 SplineEditorClientState.setDynamicWidth(uiDynamicWidth[0]);
                 dynamicChanged = true;
@@ -772,7 +784,7 @@ public final class SplineEditorImGui {
         if (SplineEditorClientState.isArrayPreview()) {
             ImGui.spacing();
             uiStepDistance.set(SplineEditorClientState.getArrayStepDistance());
-            ImGui.pushItemWidth(140);
+            ImGui.pushItemWidth(-1);
             if (ImGui.inputDouble("\u91c7\u6837\u6b65\u8ddd (\u683c)", uiStepDistance, 0.5, 1.0, "%.2f")) {
                 SplineEditorClientState.setArrayStepDistance(Math.max(0.1, uiStepDistance.get()));
             }
@@ -786,15 +798,19 @@ public final class SplineEditorImGui {
             uiOffsetPitch[0] = (float) SplineEditorClientState.getArrayOffsetPitch();
             uiOffsetYaw[0] = (float) SplineEditorClientState.getArrayOffsetYaw();
 
+            float availRotW = ImGui.getContentRegionAvailX();
+            float resetBtnW = 68.0f;
+            float sliderW = Math.max(120.0f, availRotW - resetBtnW - 8.0f);
+
             boolean rotChanged = false;
-            ImGui.pushItemWidth(180);
+            ImGui.pushItemWidth(sliderW);
             rotChanged |= ImGui.sliderFloat("\u6eda\u8f6c\u89d2 Roll", uiOffsetRoll, -180.0f, 180.0f, "%.1f \u5ea6");
             rotChanged |= ImGui.sliderFloat("\u4fef\u4ef0\u89d2 Pitch", uiOffsetPitch, -180.0f, 180.0f, "%.1f \u5ea6");
             rotChanged |= ImGui.sliderFloat("\u504f\u822a\u89d2 Yaw", uiOffsetYaw, -180.0f, 180.0f, "%.1f \u5ea6");
             ImGui.popItemWidth();
 
             ImGui.sameLine();
-            if (ImGui.button("0\u00b0 \u91cd\u7f6e")) {
+            if (ImGui.button("0\u00b0 \u91cd\u7f6e", resetBtnW, 0)) {
                 uiOffsetRoll[0] = 0;
                 uiOffsetPitch[0] = 0;
                 uiOffsetYaw[0] = 0;

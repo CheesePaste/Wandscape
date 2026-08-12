@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.wsteam.wandscape.core.component.NavigationState;
 import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.guard.GuardScanner;
 import com.wsteam.wandscape.guard.GuardZone;
@@ -39,8 +40,15 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
     /** 循环重检间隔（tick）：主动切换最近目标 / LOS 重查 / 施法节拍。 */
     private static final int RECHECK_TICKS = 10;
 
+    /** 无视线/不可达超时时间（tick）：连续 10 秒打不到怪且无视线，超时放弃任务。 */
+    private static final int UNREACHABLE_TIMEOUT_TICKS = 200;
+    /** 不可达怪物黑名单时长（tick）：放弃后 30 秒内不再对其触发守卫任务。 */
+    private static final int UNREACHABLE_BLACK_DURATION_TICKS = 600;
+
     private record Pending(CompletableFuture<Void> future, World world, long npcId, int remainingTicks,
-                           int attackRange, int releaseRange) {}
+                           int attackRange, int releaseRange, int noLosTicks) {}
+
+    private record CycleResult(int waitTicks, int noLosTicks) {}
 
     private final List<Pending> pending = new ArrayList<>();
 
@@ -57,7 +65,7 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         }
         CompletableFuture<Void> future = world.startAsyncOp("guard_attack");
         pending.add(new Pending(future, world, npcId, 1,
-                op.attackRange(), op.releaseRange()));
+                op.attackRange(), op.releaseRange(), 0));
         return future;
     }
 
@@ -72,15 +80,15 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             int remaining = p.remainingTicks() - 1;
             if (remaining > 0) {
                 next.add(new Pending(p.future(), p.world(), p.npcId(), remaining,
-                        p.attackRange(), p.releaseRange()));
+                        p.attackRange(), p.releaseRange(), p.noLosTicks()));
                 continue;
             }
-            int wait = runCycle(p);
-            if (wait < 0) {
+            CycleResult res = runCycle(p);
+            if (res.waitTicks() < 0) {
                 toComplete.add(p.future());
             } else {
-                next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, wait),
-                        p.attackRange(), p.releaseRange()));
+                next.add(new Pending(p.future(), p.world(), p.npcId(), Math.max(1, res.waitTicks()),
+                        p.attackRange(), p.releaseRange(), res.noLosTicks()));
             }
         }
 
@@ -94,13 +102,13 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
         }
     }
 
-    /** 一轮守卫循环。返回下次等待 tick 数；负数表示任务完成。 */
-    private int runCycle(Pending p) {
+    /** 一轮守卫循环。返回 CycleResult，waitTicks < 0 表示任务完成/放弃。 */
+    private CycleResult runCycle(Pending p) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
-        if (npc == null || npc.isRemoved()) return -1;
+        if (npc == null || npc.isRemoved()) return new CycleResult(-1, 0);
         if (!(npc.level() instanceof ServerLevel level)) {
             GuardCombat.markCombatEnd(npc);
-            return -1;
+            return new CycleResult(-1, 0);
         }
         // 守卫生效到和平模式：立即完成任务并让光束淡出（任务会被 GuardTaskSource 重新发布，
         // 交给非和平 NPC；全殖民地都和平则不再发布守卫任务）
@@ -109,13 +117,13 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
             if (beam != null) beam.setLifetime(5);
             GuardCombat.cancelNavigation(p.world(), p.npcId());
             GuardCombat.markCombatEnd(npc);
-            return -1;
+            return new CycleResult(-1, 0);
         }
 
         List<GuardZone> attackZones = GuardScanner.zones(level, p.attackRange());
         if (attackZones.isEmpty()) { // 无建筑可守 → 完成
             GuardCombat.markCombatEnd(npc);
-            return -1;
+            return new CycleResult(-1, 0);
         }
 
         LivingEntity nearest = GuardScanner.nearestInZones(level, attackZones, npc.position());
@@ -127,14 +135,55 @@ public final class GuardAttackExecutor implements OpExecutor<AtomicOp.AttackMons
                 if (beam != null) beam.setLifetime(5); // 脱离时让光束快速淡出
                 GuardCombat.cancelNavigation(p.world(), p.npcId()); // 停止寻路，NPC 站定
                 GuardCombat.markCombatEnd(npc);
-                return -1;
+                return new CycleResult(-1, 0);
             }
-            return RECHECK_TICKS;
+            return new CycleResult(RECHECK_TICKS, 0);
+        }
+
+        // 视线与无视线超时处理：只有在真正的跨区域寻路赶路中（距离目标>5格且未到达）才暂停计时；
+        // 若到达落点/卡在房顶/静止且无视线，稳健累加无视线超时
+        boolean hasLos = GuardCombat.hasLineOfSight(npc, nearest);
+        NavigationState nav = p.world().get(p.npcId(), NavigationState.class);
+        boolean moving = isActuallyMoving(npc, nav);
+
+        int nextNoLos = (hasLos || moving) ? 0 : p.noLosTicks() + RECHECK_TICKS;
+        if (!hasLos && nextNoLos >= UNREACHABLE_TIMEOUT_TICKS) {
+            Log.info(TAG, "[GuardAttackExecutor] NPC {} — stationary/stuck without LOS to target '{}' for {} ticks, abandoning task & blacklisting mob #{}",
+                    p.npcId(), nearest.getName().getString(), nextNoLos, nearest.getId());
+            GuardScanner.blacklistMob(nearest.getId(), level.getGameTime(), UNREACHABLE_BLACK_DURATION_TICKS);
+            MagicBeamEntity beam = GuardCombat.findActiveBeam(level, npc);
+            if (beam != null) beam.setLifetime(5);
+            GuardCombat.cancelNavigation(p.world(), p.npcId());
+            GuardCombat.markCombatEnd(npc);
+            return new CycleResult(-1, 0);
         }
 
         // 施法视觉（法阵/颜色）由 beam MagicDef 定义（magic_spells/beam.json），随魔法数据走
         GuardCombat.engage(level, npc, nearest, p.world(), p.npcId(),
                 MagicCaster.beamCircleId(), MagicCaster.beamColor());
-        return RECHECK_TICKS;
+        return new CycleResult(RECHECK_TICKS, nextNoLos);
+    }
+
+    /**
+     * 判断 NPC 是否处于真正的大跨度寻路赶路中：
+     * 1. 处于 PATHFINDING 模式且 target 不为空；
+     * 2. 距离导航目标水平距离 > 5 格 (25.0)；
+     * 3. 导航未完成；
+     * 4. 非传送引导中。
+     * 若已传送到达落点/在房顶小范围打转/在目的地附近/已卡住，均返回 false（允许正常累加无视线超时）。
+     */
+    private static boolean isActuallyMoving(WandscapeNpc npc, NavigationState nav) {
+        if (nav == null || nav.mode != NavigationState.Mode.PATHFINDING || nav.target == null) {
+            return false;
+        }
+        if (npc.isTeleportChanneling(npc.level().getGameTime())) {
+            return false;
+        }
+        if (npc.getNavigation().isDone()) {
+            return false;
+        }
+        double dx = npc.getX() - (nav.target.x() + 0.5);
+        double dz = npc.getZ() - (nav.target.z() + 0.5);
+        return (dx * dx + dz * dz) > 25.0;
     }
 }

@@ -30,7 +30,7 @@ Double-click a card in the bottom bar to pick: **Dirt Path / Road (Stone) / Gras
 | **Backspace** | Undo the last framing |
 | **ESC** | Exit road construction |
 
-After submitting, wizard NPCs pave automatically according to the task; when enough buildings are placed, the town also plans roads automatically to connect them. For fine curves and interchanges, use the [Spline Editor](road_spline_guide.md).
+After submitting, wizard NPCs pave automatically according to the task (if materials are short, wait for NPCs to automatically synthesize the required building blocks); when enough buildings are placed, the town also plans roads automatically to connect them. For fine curves and interchanges, use the [Spline Editor](road_spline_guide.md).
 
 ## Per-Mode Tutorials
 
