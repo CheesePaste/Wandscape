@@ -33,7 +33,13 @@ import com.wsteam.wandscape.npc.network.NpcDataPacket;
 import com.wsteam.wandscape.task.runtime.ExecutorState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.nav.WandscapeNavigation;
+import com.wsteam.wandscape.magic.data.MagicDef;
+import com.wsteam.wandscape.magic.internal.MagicCaster;
+import com.wsteam.wandscape.magic.internal.MagicSpellExecutors;
+import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -195,6 +201,45 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         } else {
             regenAccum = 0;
         }
+    }
+
+    /**
+     * 非战斗自奶：脱离战斗且血量未满、会治疗 → 用治疗魔法把自己补满。
+     * 与战斗内 L0 紧急奶（{@code GuardCombat.l0EmergencyHeal}，血比 &lt; 0.35 才强制奶）互补——
+     * 战斗打完 NPC 常停在 35%~满血之间，L0 不触发、L1 治疗只认友方最低血，于是永远不补满，
+     * 只靠慢速脱战回血。这里补上：不在战斗即视为非战斗，建造/采集等任务不打断（治疗以自身为
+     * 圆心，与任务互不干扰）。施放门控（CD/蓝/互斥锁）由 {@code MagicState#tryCast} 原子复验，
+     * 每 tick 尝试安全，实际频率受 heal 魔法 CD（300t）限制。敌对测试法师（EvilMage）除外，
+     * 其施法由自身 goal 驱动，不给它加自奶。
+     */
+    private void tickIdleSelfHeal() {
+        if (!isColonyNpc()) return;
+        if (getHealth() >= getMaxHealth() - 0.5f) return; // 已满（留 0.5 容差避免浮点/贴满重复奶）
+        if (!spellbook.knows("heal")) return;
+        if (!magic.canCast("heal")) return; // 冷却中 / 施法互斥锁占用
+        if (inActiveCombat()) return;       // 战斗中交给战斗循环 L0/L1
+        if (!(level() instanceof ServerLevel level)) return;
+        MagicDef heal = SpellbookLoader.getSpec("heal");
+        if (heal == null) return;
+        if (magic.getMana() < heal.manaCost()) return;
+        MagicSpellExecutors.dispatch(level, this, this, heal, MagicCaster.DEFAULT_CIRCLE, MagicCaster.DEFAULT_COLOR);
+    }
+
+    /** 是否正处战斗：当前任务包为 self_defense（自防御）或全局任务为 guard: 蓝图（建筑守卫）。
+     *  战斗必然以任务形式占用 ECS 队列，故按此判定——空闲/建造/采集等非战斗任务不拦截自奶。 */
+    private boolean inActiveCombat() {
+        if (ecsEntityId < 0) return false;
+        World world = WandscapeEngine.getWorld();
+        if (world == null) return false;
+        TaskExecutor exec = world.get(ecsEntityId, TaskExecutor.class);
+        if (exec == null) return false;
+        NpcTaskPackage current = exec.npcQueue.currentPackage();
+        if (current != null && "self_defense".equals(current.source())) return true;
+        if (exec.globalTaskId != null && world.taskPool != null) {
+            GlobalTask t = world.taskPool.get(exec.globalTaskId);
+            if (t != null && t.blueprintId != null && t.blueprintId.startsWith("guard:")) return true;
+        }
+        return false;
     }
 
     /**
@@ -658,6 +703,7 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         }
         magic.tickRegen(getMaxMana(), Config.NPC_MANA_REGEN_TICKS.get());
 
+        tickIdleSelfHeal();
         tickCastingState();
     }
 
