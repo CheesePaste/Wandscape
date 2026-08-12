@@ -15,6 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import com.wsteam.wandscape.shared.log.Log;
@@ -68,7 +69,16 @@ public final class ProjectionRenderer {
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        renderGhostPreview(mc, bufferSource, poseStack);
+        renderFaceHighlight(bufferSource, poseStack);
+
+        // Hold Left Alt to hide the ghost preview and inspect the origin point
+        long window = mc.getWindow().getWindow();
+        boolean hidePreview = window != 0L
+                && org.lwjgl.glfw.GLFW.glfwGetKey(window,
+                        org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        if (!hidePreview) {
+            renderGhostPreview(mc, bufferSource, poseStack);
+        }
 
         poseStack.popPose();
     }
@@ -117,6 +127,89 @@ public final class ProjectionRenderer {
         int index = ProjectionClientState.getSelectedSlotIndex();
         if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
         return slots.get(index);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── Face highlight ──
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Gold semi-transparent overlay for the currently selected block face. */
+    private static final int FACE_HIGHLIGHT_R = 200;
+    private static final int FACE_HIGHLIGHT_G = 170;
+    private static final int FACE_HIGHLIGHT_B = 60;
+    private static final int FACE_HIGHLIGHT_A = 80;
+    /** Slight offset from the block face to avoid z-fighting. */
+    private static final float FACE_EPSILON = 0.005f;
+
+    /**
+     * Render a gold semi-transparent quad on the currently selected face
+     * of the hit block, so the player can see which face is the origin base.
+     */
+    private static void renderFaceHighlight(MultiBufferSource.BufferSource bufferSource,
+                                            PoseStack poseStack) {
+        BlockPos hitBlock = ProjectionClientState.getHitBlock();
+        Direction face = ProjectionClientState.getSelectedFace();
+        if (hitBlock == null || face == null) return;
+        // Only show face highlight when projecting and ghost is valid
+        if (!ProjectionClientState.isProjecting()) return;
+
+        PoseStack.Pose pose = poseStack.last();
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.debugQuads());
+
+        float bx = hitBlock.getX();
+        float by = hitBlock.getY();
+        float bz = hitBlock.getZ();
+        float ep = FACE_EPSILON;
+        float one = 1.0f;
+        int r = FACE_HIGHLIGHT_R, g = FACE_HIGHLIGHT_G, b = FACE_HIGHLIGHT_B, a = FACE_HIGHLIGHT_A;
+
+        switch (face) {
+            case UP -> quad(vc, pose,
+                    bx,      by + one + ep, bz,
+                    bx,      by + one + ep, bz + one,
+                    bx + one, by + one + ep, bz + one,
+                    bx + one, by + one + ep, bz,      r, g, b, a);
+            case DOWN -> quad(vc, pose,
+                    bx,      by - ep, bz,
+                    bx + one, by - ep, bz,
+                    bx + one, by - ep, bz + one,
+                    bx,      by - ep, bz + one,        r, g, b, a);
+            case NORTH -> quad(vc, pose,
+                    bx,      by,      bz - ep,
+                    bx + one, by,      bz - ep,
+                    bx + one, by + one, bz - ep,
+                    bx,      by + one, bz - ep,         r, g, b, a);
+            case SOUTH -> quad(vc, pose,
+                    bx + one, by,      bz + one + ep,
+                    bx,      by,      bz + one + ep,
+                    bx,      by + one, bz + one + ep,
+                    bx + one, by + one, bz + one + ep,  r, g, b, a);
+            case WEST -> quad(vc, pose,
+                    bx - ep, by,      bz,
+                    bx - ep, by,      bz + one,
+                    bx - ep, by + one, bz + one,
+                    bx - ep, by + one, bz,              r, g, b, a);
+            case EAST -> quad(vc, pose,
+                    bx + one + ep, by,      bz + one,
+                    bx + one + ep, by,      bz,
+                    bx + one + ep, by + one, bz,
+                    bx + one + ep, by + one, bz + one,  r, g, b, a);
+        }
+
+        bufferSource.endBatch(RenderType.debugQuads());
+    }
+
+    /** Emit a single quad with the given corner vertices. */
+    private static void quad(VertexConsumer vc, PoseStack.Pose pose,
+                             float x1, float y1, float z1,
+                             float x2, float y2, float z2,
+                             float x3, float y3, float z3,
+                             float x4, float y4, float z4,
+                             int r, int g, int b, int a) {
+        vc.addVertex(pose, x1, y1, z1).setColor(r, g, b, a);
+        vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, a);
+        vc.addVertex(pose, x3, y3, z3).setColor(r, g, b, a);
+        vc.addVertex(pose, x4, y4, z4).setColor(r, g, b, a);
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -18,6 +18,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -293,10 +294,22 @@ public final class OverviewFlightController {
         boolean rightDown = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
 
         if (centerHit.getType() == HitResult.Type.BLOCK) {
-            BlockPos centerPlacePos = centerHit.getBlockPos().relative(centerHit.getDirection());
+            BlockPos targetPos = centerHit.getBlockPos();
+
+            // Face selection: auto-select on new block, keep manual choice otherwise
+            BlockPos prevHit = ProjectionClientState.getHitBlock();
+            if (prevHit == null || !prevHit.equals(targetPos)) {
+                ProjectionClientState.setHitBlock(targetPos);
+                ProjectionClientState.setSelectedFace(centerHit.getDirection());
+            }
+
+            Direction face = ProjectionClientState.getSelectedFace();
+            BlockPos centerPlacePos = (face != null) ? targetPos.relative(face) : targetPos;
             if (rightDown || ProjectionClientState.getGhostPos() == null) {
                 ProjectionClientState.setGhostPos(centerPlacePos);
             }
+        } else {
+            ProjectionClientState.resetFaceSelection();
         }
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
@@ -434,16 +447,37 @@ public final class OverviewFlightController {
         input.shiftKeyDown = false;
     }
 
-    /** Scroll → move camera along look direction (or let road mode handle width change). */
+    /** Scroll → move camera along look direction, or cycle building face in build projection mode. */
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!OverviewClientState.isActive()) return;
         Minecraft mc = Minecraft.getInstance();
         // Don't block scroll when a screen is open (allow UI scrolling)
         if (mc.screen != null) return;
-        
+
         event.setCanceled(true);
         double delta = event.getScrollDeltaY();
         if (delta == 0) return;
+
+        // In BUILD_PROJECTION submode: scroll cycles selected face instead of moving camera.
+        // Skip when pinned — accidental scroll would ruin the fine-tuned position.
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.getActiveSubMode()
+                == com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.SubMode.BUILD_PROJECTION
+                && ProjectionClientState.isProjecting()
+                && !ProjectionClientState.isPinned()
+                && ProjectionClientState.getHitBlock() != null) {
+            if (delta > 0) {
+                ProjectionClientState.cycleFaceForward();
+            } else {
+                ProjectionClientState.cycleFaceBackward();
+            }
+            BlockPos hitBlock = ProjectionClientState.getHitBlock();
+            Direction face = ProjectionClientState.getSelectedFace();
+            if (hitBlock != null) {
+                BlockPos newGhost = (face != null) ? hitBlock.relative(face) : hitBlock;
+                ProjectionClientState.setGhostPos(newGhost);
+            }
+            return;
+        }
 
         long window = mc.getWindow().getWindow();
         boolean ctrlDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS

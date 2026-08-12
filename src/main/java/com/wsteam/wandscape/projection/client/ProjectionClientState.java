@@ -10,6 +10,7 @@ import com.wsteam.wandscape.projection.data.BuildingSlot;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -45,6 +46,12 @@ public final class ProjectionClientState {
 
     /** Number of 90° counter-clockwise rotations (0-3). 0 = original orientation. */
     private static volatile int rotationSteps = 0;
+
+    /** The block currently under the crosshair (null = no valid target). */
+    private static volatile BlockPos hitBlock = null;
+
+    /** The currently selected face of {@link #hitBlock} for origin placement. */
+    private static volatile Direction selectedFace = null;
 
     private ProjectionClientState() {}
 
@@ -85,6 +92,8 @@ public final class ProjectionClientState {
         // Drop a stale crosshair-follow position, but keep a pinned placement.
         if (!pinned) {
             ghostPos = null;
+            hitBlock = null;
+            selectedFace = null;
         }
         overlapDetected = false;
 
@@ -112,6 +121,8 @@ public final class ProjectionClientState {
         overlapDetected = false;
         rotationSteps = 0;
         pinned = false;
+        hitBlock = null;
+        selectedFace = null;
         synchronized (buildingSlots) {
             buildingSlots.clear();
         }
@@ -212,6 +223,77 @@ public final class ProjectionClientState {
     /** Reset rotation to 0 (original orientation). */
     public static void resetRotation() {
         rotationSteps = 0;
+    }
+
+    // ── Face selection ──
+
+    /** The block currently under the crosshair, whose face is being selected. */
+    public static BlockPos getHitBlock() {
+        return hitBlock;
+    }
+
+    public static void setHitBlock(BlockPos pos) {
+        hitBlock = pos;
+    }
+
+    /** The currently selected face of the hit block. Null when no block is targeted. */
+    public static Direction getSelectedFace() {
+        return selectedFace;
+    }
+
+    public static void setSelectedFace(Direction face) {
+        selectedFace = face;
+    }
+
+    /**
+     * Cycle to the next placement target: (block)→UP→EAST→WEST→SOUTH→NORTH→DOWN→(block).
+     * "Block itself" means the origin IS the hit block (no face offset).
+     */
+    public static void cycleFaceForward() {
+        if (selectedFace == null) {
+            // Currently on "block itself" — wrap to UP
+            selectedFace = Direction.UP;
+            return;
+        }
+        selectedFace = switch (selectedFace) {
+            case UP    -> Direction.EAST;
+            case EAST  -> Direction.WEST;
+            case WEST  -> Direction.SOUTH;
+            case SOUTH -> Direction.NORTH;
+            case NORTH -> Direction.DOWN;
+            case DOWN  -> null; // "block itself"
+        };
+    }
+
+    /**
+     * Cycle to the previous placement target: (block)→DOWN→NORTH→SOUTH→WEST→EAST→UP→(block).
+     */
+    public static void cycleFaceBackward() {
+        if (selectedFace == null) {
+            // Currently on "block itself" — wrap to DOWN
+            selectedFace = Direction.DOWN;
+            return;
+        }
+        selectedFace = switch (selectedFace) {
+            case DOWN  -> Direction.NORTH;
+            case NORTH -> Direction.SOUTH;
+            case SOUTH -> Direction.WEST;
+            case WEST  -> Direction.EAST;
+            case EAST  -> Direction.UP;
+            case UP    -> null; // "block itself"
+        };
+    }
+
+    /**
+     * Whether the current origin mode is "block itself" (no face offset).
+     * True when there is a hit block but no face selected — origin = the block under crosshair.
+     */
+    public static boolean isBlockOrigin() {
+        return hitBlock != null && selectedFace == null;
+    }
+    public static void resetFaceSelection() {
+        hitBlock = null;
+        selectedFace = null;
     }
 
 }

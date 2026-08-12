@@ -12,6 +12,7 @@ import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -111,18 +112,39 @@ public final class ProjectionFlightController {
      *  Accumulates delta in client state; the tick handler processes it. */
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
-        // Let overview mode handle its own scroll
+        // Let overview mode handle its own scroll (camera zoom)
         if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) return;
         event.setCanceled(true);
 
-        // Building bar open — scroll does NOT cycle building selection (removed per user request)
-        // No scroll-to-switch outside bar — selection is bar-only
+        // Building bar open — scroll does NOT cycle building selection
+        if (WandscapePanelState.isBuildingBarOpen()) return;
+
+        // Pinned: no face switching — accidental scroll would ruin the fine-tuned position
+        if (ProjectionClientState.isPinned()) return;
+
+        // Face selection: scroll wheel cycles through block faces
+        if (ProjectionClientState.getHitBlock() != null) {
+            double delta = event.getScrollDeltaY();
+            if (delta > 0) {
+                ProjectionClientState.cycleFaceForward();
+            } else if (delta < 0) {
+                ProjectionClientState.cycleFaceBackward();
+            }
+            // Update ghost position to match the new selected face (or block itself)
+            BlockPos hitBlock = ProjectionClientState.getHitBlock();
+            Direction face = ProjectionClientState.getSelectedFace();
+            if (hitBlock != null) {
+                BlockPos newGhost = (face != null) ? hitBlock.relative(face) : hitBlock;
+                ProjectionClientState.setGhostPos(newGhost);
+            }
+        }
     }
 
     // ── Ghost position ──
 
     private static void updateGhostPosition(Minecraft mc) {
-        // Pinned: ghost stays fixed — only re-check overlap against the fixed position
+        // Pinned: ghost stays fixed — only re-check overlap against the fixed position.
+        // Face selection still works so the player can switch faces while pinned.
         if (ProjectionClientState.isPinned()) {
             BlockPos fixed = ProjectionClientState.getGhostPos();
             if (fixed != null) {
@@ -142,7 +164,6 @@ public final class ProjectionFlightController {
                 camera.getLookVector().y(),
                 camera.getLookVector().z());
 
-        // Use the MC level's clip for accuracy
         var clipCtx = new net.minecraft.world.level.ClipContext(
                 origin,
                 origin.add(lookVec.scale(PROJECTION_REACH)),
@@ -153,10 +174,23 @@ public final class ProjectionFlightController {
 
         if (hit.getType() == HitResult.Type.BLOCK) {
             BlockPos targetPos = hit.getBlockPos();
-            BlockPos placePos = targetPos.relative(hit.getDirection());
+
+            // Face selection: auto-select the raytrace hit face when crosshair
+            // moves to a new block; keep the player's manual face choice otherwise.
+            BlockPos prevHit = ProjectionClientState.getHitBlock();
+            if (prevHit == null || !prevHit.equals(targetPos)) {
+                ProjectionClientState.setHitBlock(targetPos);
+                ProjectionClientState.setSelectedFace(hit.getDirection());
+            }
+
+            Direction face = ProjectionClientState.getSelectedFace();
+            BlockPos placePos = (face != null) ? targetPos.relative(face) : targetPos;
             if (rightDown || ProjectionClientState.getGhostPos() == null) {
                 ProjectionClientState.setGhostPos(placePos);
             }
+        } else {
+            // No block under crosshair — keep ghostPos but clear face state
+            ProjectionClientState.resetFaceSelection();
         }
 
         BlockPos curGhost = ProjectionClientState.getGhostPos();
