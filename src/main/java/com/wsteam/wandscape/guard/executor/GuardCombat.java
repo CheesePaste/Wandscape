@@ -61,16 +61,32 @@ public final class GuardCombat {
     private static final String TAG = "GuardCombat";
 
     // ── 走位（风筝/群殴）参数：硬编码与 ENGAGE_STANDOFF 同风格；peaceFleeRange 在 Config ──
-    /** 风筝触发距离（水平，方块）：目标进入此距离 → 后撤拉开。近战攻击范围 ~3、苦力怕爆炸半径 ~3。 */
-    private static final double KITE_START_DIST = 3.5;
+    /** 风筝触发距离（水平，方块）：目标进入此距离 → 后撤拉开。近战攻击范围 ~3，取 6 让后撤提前
+     *  （怪还在逼近就开始退，而不是贴脸才退——贴脸才退在长施法（光束）期间几乎触发不了）。 */
+    private static final double KITE_START_DIST = 6.0;
     /** 后撤目标间距（方块）：离威胁点保持此距离（beam 射程 200，远够得着）。 */
-    private static final double KITE_STANDOFF = 9.0;
+    private static final double KITE_STANDOFF = 10.0;
     /** 群殴阈值：附近可见敌数 ≥ 此值 → 主动拉开避免被围殴。 */
     private static final int CROWD_THRESHOLD = 3;
     /** 群殴扫描半径（方块）：此范围内数可见敌数 + 取质心。 */
     private static final double CROWD_RADIUS = 10.0;
     /** 后撤落点采样数（角度分档）。 */
     private static final int RETREAT_SAMPLES = 16;
+
+    // ── 战斗态：禁止 wandering 与施法硬钉，让走位自由（战斗结束由执行器恢复） ──
+    // tickCastingState 在 isCasting() && !suppressWandering 时每 tick 强制停移动——光束等长施法
+    // 会让 isCasting 连续数百 tick 为 true，若战斗间隙（无导航时）不把 suppressWandering 顶住，
+    // NPC 会全程被钉在原地，风筝/群殴走位只剩导航激活的瞬间才动一下。故战斗中保持 true。
+
+    /** 进入战斗态：禁 wandering + 禁施法硬钉（suppressWandering=true）。 */
+    public static void markInCombat(WandscapeNpc npc) {
+        npc.setAiWanderingEnabled(false);
+    }
+
+    /** 战斗结束：恢复 idle wandering（suppressWandering=false）。 */
+    public static void markCombatEnd(WandscapeNpc npc) {
+        npc.setAiWanderingEnabled(true);
+    }
 
     // ── 单轮战斗动作：光束重定向 / LOS / 寻路 / 施法 ──
 
@@ -99,6 +115,9 @@ public final class GuardCombat {
         // 这里兜底；和平 NPC 的逃跑走位在 SelfDefenseExecutor 处理）。L0 紧急自奶不受影响。
         if (npc.isPeaceMode()) return;
 
+        // 战斗态：禁 wandering + 禁施法硬钉，走位由本引擎的导航驱动（战斗结束由执行器 markCombatEnd）
+        markInCombat(npc);
+
         MagicBeamEntity beam = findActiveBeam(level, npc);
         if (beam != null) {
             beam.retarget(target); // 主动切换：光束持续指向最近的怪物
@@ -120,7 +139,7 @@ public final class GuardCombat {
             return;
         }
 
-        // ── 战斗风筝：LOS 可见但目标贴脸（近战范围/爆炸半径内）→ 后撤拉开距离（边走边打）。
+        // ── 战斗风筝：LOS 可见但目标进入威胁距离（KITE_START_DIST）→ 后撤拉开距离（边走边打）。
         //    落点只选可站立 + 有 LOS 的格子，贴墙被堵死时静默站定继续打，不会寻路进墙/卡死。──
         if (horizontalDistSq(npc, target) < KITE_START_DIST * KITE_START_DIST) {
             navigateAway(level, npc, world, npcId, target.getBoundingBox().getCenter());
@@ -130,7 +149,13 @@ public final class GuardCombat {
 
         // 看得见且安全距离：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
         // 无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
-        cancelNavigation(world, npcId);
+        // 站定用战斗安全版 cancel：取消导航但**不恢复 wandering**（markInCombat 夺回战斗态，
+        // 否则通用 cancelNavigation 会 setAiWanderingEnabled(true) 让下 tick 施法硬钉钉住）
+        NavigationState nav = world.get(npcId, NavigationState.class);
+        if (nav != null && nav.mode != NavigationState.Mode.IDLE && world.movementOps != null) {
+            world.movementOps.cancelNavigation(npcId);
+            markInCombat(npc);
+        }
         npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
         if (beam == null) {
             castSelected(level, npc, target, circleId, color);

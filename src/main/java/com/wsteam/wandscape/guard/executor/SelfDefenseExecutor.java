@@ -227,13 +227,21 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
     private int runCycle(Pending p) {
         WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(p.npcId());
         if (npc == null || npc.isRemoved()) return -1;
-        if (!(npc.level() instanceof ServerLevel level)) return -1;
+        if (!(npc.level() instanceof ServerLevel level)) {
+            GuardCombat.markCombatEnd(npc);
+            return -1;
+        }
         // 和平模式：不战斗，只逃离可见威胁；无威胁 → 完成（队列恢复挂起任务）。
         // 战斗中途开启和平 → 同样转入逃离（原逻辑是立即结束自防御）。
         if (npc.isPeaceMode()) {
             LivingEntity threat = nearestVisibleEnemyAround(npc, level,
                     Config.GUARD_PEACE_FLEE_RANGE.get());
-            if (threat == null) return -1;
+            if (threat == null) {
+                GuardCombat.markCombatEnd(npc);
+                return -1;
+            }
+            // 和平逃跑也走战斗态（禁 wandering/施法硬钉），逃跑导航才不被钉住
+            GuardCombat.markInCombat(npc);
             GuardCombat.navigateAway(level, npc, p.world(), p.npcId(),
                     threat.getBoundingBox().getCenter());
             return FLEE_RECHECK_TICKS;
@@ -243,6 +251,7 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         if (target == null) {
             // 无目标：仇恨已死/过期、半径内无怪 → 完成，队列恢复挂起任务
             npc.clearHatedAttackerIfExpired(level);
+            GuardCombat.markCombatEnd(npc);
             return -1;
         }
         // 施法视觉（法阵/颜色）由 beam MagicDef 定义（magic_spells/beam.json），随魔法数据走
