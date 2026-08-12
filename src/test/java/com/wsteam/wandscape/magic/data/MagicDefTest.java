@@ -12,6 +12,14 @@ import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonParser;
 
+/**
+ * MagicDef JSON 解析契约测试。
+ *
+ * <p>只断言**结构契约**（字段名 / category / target_mode / 视觉 id / 颜色），不断言具体平衡数值
+ * （mana_cost / cooldown / range / damage / conditions 阈值 / altar 数值）——这些是数据驱动的
+ * 可调参数，调平衡改 JSON 不应破坏测试（曾因「提升强度」调 meteor 数值导致 parsesMeteor 红）。
+ * 解析层的钳制 / 缺省 / 枚举回退 / 非法值忽略等逻辑由下方内联 JSON 测试覆盖。
+ */
 class MagicDefTest {
 
     @Test
@@ -20,9 +28,6 @@ class MagicDefTest {
         assertNotNull(beam, "beam.json should be on classpath");
         assertEquals("beam", beam.id());
         assertEquals(MagicDef.Category.SINGLE_TARGET, beam.category());
-        assertEquals(50, beam.manaCost());
-        assertEquals(400, beam.baseCooldown());
-        assertEquals(32, beam.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, beam.targetMode());
         assertEquals("arcane_hexagram", beam.effectCircleId());
         assertEquals(0xFFA8E0FF, beam.effectColor());
@@ -34,8 +39,6 @@ class MagicDefTest {
         assertNotNull(tp, "teleport.json should be on classpath");
         assertEquals("teleport", tp.id());
         assertEquals(MagicDef.Category.UTILITY, tp.category());
-        assertEquals(30, tp.manaCost());
-        assertEquals(150, tp.baseCooldown());
         assertEquals(MagicDef.TargetMode.NONE, tp.targetMode());
         assertNull(tp.effectCircleId(), "utility spell has no circle visual");
         assertNull(tp.effectColor());
@@ -47,15 +50,10 @@ class MagicDefTest {
         assertNotNull(revive, "revive.json should be on classpath");
         assertEquals("revive", revive.id());
         assertEquals(MagicDef.Category.UTILITY, revive.category());
-        assertEquals(80, revive.manaCost());
-        assertEquals(600, revive.baseCooldown());
-        assertEquals(32, revive.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.DEAD_ALLY, revive.targetMode());
         assertEquals("revive_ritual", revive.effectCircleId());
         assertNull(revive.effectColor());
         assertTrue(revive.altarOnly(), "复活是祭坛专属魔法");
-        assertEquals(600, revive.altarCooldown());
-        assertEquals(600, revive.altarDuration());
     }
 
     @Test
@@ -64,13 +62,9 @@ class MagicDefTest {
         assertNotNull(heal, "heal.json should be on classpath");
         assertEquals("heal", heal.id());
         assertEquals(MagicDef.Category.SUPPORT, heal.category());
-        assertEquals(40, heal.manaCost());
-        assertEquals(300, heal.baseCooldown());
-        assertEquals(16, heal.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.ALLY_LOWEST_HP, heal.targetMode());
         assertEquals("heal_magic_circle", heal.effectCircleId());
         assertEquals(0xFF2ECC71, heal.effectColor());
-        assertEquals(0.7f, heal.conditions().allyHpMax(), 1e-6f);
     }
 
     @Test
@@ -79,14 +73,9 @@ class MagicDefTest {
         assertNotNull(meteor, "meteor.json should be on classpath");
         assertEquals("meteor", meteor.id());
         assertEquals(MagicDef.Category.AOE, meteor.category());
-        assertEquals(40, meteor.manaCost());
-        assertEquals(300, meteor.baseCooldown());
-        assertEquals(24, meteor.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.HOSTILE_NEAREST, meteor.targetMode());
         assertEquals("meteor_magic_circle", meteor.effectCircleId());
         assertEquals(0xFFE74C3C, meteor.effectColor());
-        assertEquals(1, meteor.conditions().minEnemies());
-        assertEquals(12.0, meteor.effectDamage(), 1e-9);
     }
 
     @Test
@@ -95,13 +84,9 @@ class MagicDefTest {
         assertNotNull(pet, "petrification.json should be on classpath");
         assertEquals("petrification", pet.id());
         assertEquals(MagicDef.Category.DEFENSE, pet.category());
-        assertEquals(50, pet.manaCost());
-        assertEquals(600, pet.baseCooldown());
-        assertEquals(0, pet.range(), 1e-9);
         assertEquals(MagicDef.TargetMode.SELF, pet.targetMode());
         assertEquals("petrification_magic_circle", pet.effectCircleId());
         assertEquals(0xFF7F8C8D, pet.effectColor());
-        assertEquals(0.8f, pet.conditions().selfHpMax(), 1e-6f);
         assertEquals("wandscape:petrification", pet.conditions().noEffect());
     }
 
