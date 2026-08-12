@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:potion",
+  "build_cost": {
+    "earth": 1,
+    "water": 2
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

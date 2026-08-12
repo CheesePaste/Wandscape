@@ -47,6 +47,7 @@
     {"item": "minecraft:turtle_scute",      "values": { "water": 64 },          "name_cn": "海龟鳞甲"},
 
     {"item": "minecraft:water_bucket",      "values": { "water": 8, "metal": 192 },          "name_cn": "水桶"},
+    {"item": "minecraft:potion",            "values": { "earth": 1, "water": 2 },            "name_cn": "水瓶"},
     {"item": "minecraft:ice",               "values": { "water": 8 },                       "name_cn": "冰"},
     {"item": "minecraft:packed_ice",        "values": { "water": 72 },                       "name_cn": "浮冰"},
     {"item": "minecraft:blue_ice",          "values": { "water": 648 },                      "name_cn": "蓝冰"},
