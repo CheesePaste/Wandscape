@@ -40,7 +40,7 @@ public final class GuideRenderer {
         boolean collapsed = GuideSession.isCollapsed();
         List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
 
-        String titleStr = step.title() + (collapsed ? " §7[点击展开]" : "");
+        String titleStr = step.title() + (collapsed ? " §7[按Tab展开]" : " §7[按Tab折叠]");
         int maxW = font.width(titleStr);
         if (!collapsed) {
             for (String l : lines) {
@@ -104,9 +104,9 @@ public final class GuideRenderer {
         int ty = b.y + pad;
 
         if (b.collapsed) {
-            drawText(g, font, b.title + " §7[折叠中]", tx, ty, BOX_TITLE);
+            drawText(g, font, b.title + " §7[折叠中 (按Tab展开)]", tx, ty, BOX_TITLE);
         } else {
-            drawText(g, font, b.title, tx, ty, BOX_TITLE);
+            drawText(g, font, b.title + " §7[按Tab折叠]", tx, ty, BOX_TITLE);
             ty += lineH + 5;
             g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, BOX_DIVIDER);
 
