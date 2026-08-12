@@ -25,8 +25,8 @@
 | `GuardZone.java` | 纯数据 record：`of(bounds, horizontalExpand)` 水平扩展、Y 不变；`contains(x,y,z)`。可单测 |
 | `GuardConstants.java` | `GUARD_PRIORITY=49`（<50 避开 PENDING_APPROVAL）、`POLL_INTERVAL=20`；法阵 id/颜色复用 `MagicCaster` |
 | `GuardBlueprints.java` | 注册 `guard:attack` 代码蓝图：params → `AttackMonsterOp` |
-| `GuardTaskSource.java` | TaskSource：扫描建筑 +10 区 → 有威胁且无活跃守卫任务 → 发布任务；`pool.isActive` 去重 |
-| `executor/GuardAttackExecutor.java` | OpExecutor<AttackMonsterOp>：持续异步循环（每~10 tick 找最近→光束重定向→LOS/寻路→施法），+15 区无怪才 complete |
+| `GuardScanner.java` | 守卫区域扫描工具：扫描建筑外扩守卫区内存活怪物，维护不可达怪物黑名单（`blacklistMob`，到期自动清理），排除黑名单怪物 |
+| `GuardAttackExecutor.java` | OpExecutor<AttackMonsterOp>：持续异步循环（每~10 tick 找最近→光束重定向→LOS/寻路→施法）；无视线累积达 200 tick(10s) 自动放弃任务并把目标设为 30s 黑名单；+15 区无怪才 complete |
 | `executor/GuardCombat.java` | **共享战斗引擎**：光束重定向/LOS/隔墙寻路/施法节流。守卫与自防御复用 |
 | `executor/SelfDefenseExecutor.java` | OpExecutor<SelfDefenseOp>：自防御持续循环 + 侦测抢占注入（`suspendCurrent`→`startPackage`）；`tick(World)` 由 onServerTick 驱动 |
 | `SelfDefenseHandler.java` | NeoForge `LivingIncomingDamageEvent`：NPC 被非玩家 Enemy 打伤 → 记仇（`WandscapeNpc.setHatedAttacker`） |

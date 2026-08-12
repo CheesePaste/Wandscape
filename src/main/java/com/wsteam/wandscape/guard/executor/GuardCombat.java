@@ -442,10 +442,13 @@ public final class GuardCombat {
         return new BlockPos(bx, standY, bz);
     }
 
+    /** 寻找立足点 Y 轴偏移优先顺序：优先同层(0)，再向上/下 1 格，最后 2 格/地下。避免优先选到屋顶。 */
+    private static final int[] Y_OFFSETS_BY_PROXIMITY = {0, 1, -1, 2, -2, -3, -4};
+
     /** 列 (x,z) 上离怪物脚底 {@code nearY} 最近的可站立脚底 Y；楼层差超出
      *  {@code ENGAGE_FLOOR_UP/DOWN} 或找不到返回 {@link Integer#MIN_VALUE}（调用方跳过该列）。 */
     private static int findStandingYNear(ServerLevel level, int x, int z, int nearY) {
-        for (int dy = ENGAGE_FLOOR_UP; dy >= ENGAGE_FLOOR_DOWN; dy--) {
+        for (int dy : Y_OFFSETS_BY_PROXIMITY) {
             int y = nearY + dy;
             if (isStandable(level, x, y, z)) return y;
         }
