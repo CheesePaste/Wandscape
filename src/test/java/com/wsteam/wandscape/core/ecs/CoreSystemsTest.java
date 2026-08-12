@@ -653,4 +653,120 @@ public class CoreSystemsTest {
         }
     }
 
+    // ===================================================================
+    // 8. 跟随模式 — 调度器不派任务 + 执行系统释放手头任务（保留自防御个人包）
+    // ===================================================================
+
+    @Nested
+    class FollowModeTests {
+        private MockBoundary mock;
+        private World world;
+        private UUID colonyId;
+        private GridPos center;
+
+        @BeforeEach
+        void setUp() {
+            mock = new MockBoundary();
+            mock.seedWarehouse(ResourceId.STONE_BRICKS, 200);
+            BlueprintRegistry blueprints = new BlueprintRegistry();
+            CoreBootstrapConfig config = new CoreBootstrapConfig(mock, mock, mock, null, mock, List.of(), blueprints,
+                    new SystemBlueprintRegistry(), false);
+            world = CoreBootstrap.bootstrap(config);
+            DefaultOpExecutors.registerAll(world.opExecutors);
+
+            center = new GridPos(0, 64, 0);
+            colonyId = UUID.randomUUID();
+            CoreBootstrap.createColony(world, center.x(), center.y(), center.z(), 50);
+        }
+
+        @Test
+        void followingNpcIsNeverAssignedTask() {
+            // 唯一 NPC 处于跟随模式 → 任务必须保持待分派，不被接走
+            long npc = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+            mock.setFollowing(npc, true);
+
+            registerSimpleBp("test:follow_only",
+                    AtomicOp.TransformOp.place(center.add(5, 0, 0), BlockType.STONE));
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:follow_only", center, 10));
+
+            tickN(20);
+
+            assertEquals(TaskState.PENDING_ASSIGN, world.taskPool.get(taskId).state,
+                    "跟随 NPC 不接任务 → 任务保持待分派");
+            assertNull(world.get(npc, TaskExecutor.class).globalTaskId,
+                    "跟随 NPC 始终未被分派");
+        }
+
+        @Test
+        void followingNpcExcludedButFreeNpcTakesTask() {
+            // 跟随 NPC 在任务目标旁（若可接必中），空闲 NPC 远离 → 任务由空闲 NPC 完成
+            long npcFollow = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+            long npcFree = CoreBootstrap.createNpc(world, 50, 64, 50, colonyId, NpcAttributes.defaults());
+            mock.setFollowing(npcFollow, true);
+
+            registerSimpleBp("test:follow_free",
+                    AtomicOp.TransformOp.place(center.add(5, 0, 0), BlockType.STONE));
+            long taskId = world.taskPool.addTask(
+                    makeRequest("test:follow_free", center, 10));
+
+            tickN(20);
+
+            assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
+                    "空闲 NPC 接取了任务");
+            assertFalse(mock.isAir(center.add(5, 0, 0)), "任务由空闲 NPC 完成执行");
+            assertNull(world.get(npcFollow, TaskExecutor.class).globalTaskId,
+                    "跟随 NPC 始终未被分派");
+        }
+
+        @Test
+        void enablingFollowReleasesInHandTask() {
+            // 模拟调度器已分派全局任务并推进了一步；开启跟随 → 手头任务释放回任务池
+            long npc = CoreBootstrap.createNpc(world, 1, 64, 0, colonyId, NpcAttributes.defaults());
+            TaskExecutor exec = world.get(npc, TaskExecutor.class);
+
+            GlobalTask task = GlobalTask.createSmall(0,
+                    TaskSequence.of("Build",
+                            AtomicOp.TransformOp.place(new GridPos(5, 64, 0), BlockType.STONE),
+                            AtomicOp.TransformOp.place(new GridPos(5, 65, 0), BlockType.STONE),
+                            AtomicOp.TransformOp.place(new GridPos(5, 66, 0), BlockType.STONE)),
+                    10, List.of(), Map.of());
+            long taskId = world.taskPool.addTask(task);
+            world.taskPool.assignLight(taskId, npc, world);
+            GridPos stance = TaskExecutionSystem.computeTaskStance(task.sequence);
+            exec.npcQueue.enqueueNormal(
+                    NpcTaskPackage.of("global:" + taskId, task.sequence, stance, task.priority));
+
+            tickN(2); // 绑定全局任务并推进几步，仍 IN_PROGRESS
+            assertEquals(TaskState.IN_PROGRESS, world.taskPool.get(taskId).state);
+            assertNotNull(exec.globalTaskId);
+
+            mock.setFollowing(npc, true);
+            tickN(2);
+
+            assertEquals(TaskState.PENDING_ASSIGN, world.taskPool.get(taskId).state,
+                    "跟随开启后手头全局任务被释放回任务池");
+            assertNull(exec.globalTaskId, "NPC 解除全局任务绑定");
+            assertTrue(exec.npcQueue.isIdle(), "NPC 队列无 global 包残留");
+        }
+
+        // ---- helpers ----
+        private void registerSimpleBp(String id, AtomicOp... steps) {
+            world.blueprintRegistry.register(id, new Blueprint(id,
+                    (BlueprintSteps) p -> new TaskSequence(List.of(steps), id)));
+        }
+
+        private TaskRequest makeRequest(String blueprintId, GridPos pos, int priority) {
+            Map<String, JsonElement> params = new HashMap<>();
+            params.put("x", new JsonPrimitive(pos.x()));
+            params.put("y", new JsonPrimitive(pos.y()));
+            params.put("z", new JsonPrimitive(pos.z()));
+            return new TaskRequest(blueprintId, params, priority);
+        }
+
+        private void tickN(int n) {
+            for (int i = 0; i < n; i++) world.tick(1.0f);
+        }
+    }
+
 }

@@ -85,10 +85,14 @@ public final class GuardTaskSource implements TaskSource {
         return GuardScanner.nearestInZones(level, zones, queryBox.getCenter());
     }
 
-    /** 是否存在未开启和平模式的殖民地 NPC（有则守卫任务有人能接）。 */
+    /**
+     * 是否存在未开启和平模式、且不在跟随模式的殖民地 NPC。
+     * 跟随中的 NPC 不会从任务池接取守卫任务（调度器跳过），若全殖民地都跟随，
+     * 守卫任务发布后无人可接会空挂——与和平模式一样抑制发布。
+     */
     private static boolean hasAggressiveNpc() {
         for (WandscapeNpc npc : EntityComponentBridge.INSTANCE.allNpcs().values()) {
-            if (npc != null && !npc.isPeaceMode() && !npc.isRemoved()) return true;
+            if (npc != null && !npc.isPeaceMode() && !npc.isFollowMode() && !npc.isRemoved()) return true;
         }
         return false;
     }

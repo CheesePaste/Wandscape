@@ -70,6 +70,22 @@ public class MockBoundary implements BlockOps, EntityOps, RitualOps, ColonyResou
 
     public void setNpcMana(float v) { this.npcMana = v; }
 
+    /** 处于跟随模式的 NPC id 集合（跟随门控测试用）。 */
+    private final Set<Long> followingNpcs = new HashSet<>();
+
+    public void setFollowing(long npcId, boolean following) {
+        if (following) {
+            followingNpcs.add(npcId);
+        } else {
+            followingNpcs.remove(npcId);
+        }
+    }
+
+    @Override
+    public boolean isFollowing(long npcId) {
+        return followingNpcs.contains(npcId);
+    }
+
     /** 最近一次 spawnDecoration 调用（测试断言用）。 */
     @Nullable
     public SpawnDecorationCall lastSpawnDecoration;

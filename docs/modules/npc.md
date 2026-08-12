@@ -20,7 +20,7 @@
 - NBT 存 SkinVariant/HatColor/EcsEntityId/7 属性/魔力状态（currentMana/manaRegenAccum/spellLockTicks/magicCooldowns/manaSeeded）/回血/hasDefaultWand/armorInventory/colonyId/**PeaceMode/FollowMode/FollowerUuid**。
 - 仇恨表 `setHatedAttacker/getHatedAttacker`。
 - **AI goals**：`FloatGoal(0)` / `OpenDoorGoal(1)`（撞上门时自动开门，WandscapeNavigation 已设 canPassDoors/canOpenDoors）/ `FollowPlayerGoal(2)` / `RandomStrollGoal(5)`（`suppressWandering` 时让路 NavigationSystem）。
-- **和平/跟随模式**：`peaceMode`（不攻击任何生物，守卫/自卫/光束伤害分层全阻断）、`followMode`+`followerUuid`（跟随目标玩家）。`FollowPlayerGoal`（优先级 2，vanilla PathNavigation）在空闲时走向距离 >5 格的玩家、<3 格停；ECS 任务/施法接管时让路。
+- **和平/跟随模式**：`peaceMode`（不攻击任何生物，守卫/自卫/光束伤害分层全阻断）、`followMode`+`followerUuid`（跟随目标玩家）。`FollowPlayerGoal`（优先级 2，vanilla PathNavigation）在空闲时走向距离 >5 格的玩家、<3 格停；ECS 任务/施法接管时让路。**跟随 = 暂停殖民地任务**：调度器（`SchedulerSystem`）把跟随 NPC 从空闲候选中排除（不接任何新任务）；执行器（`TaskExecutionSystem`）对跟随 NPC 释放手头/挂起的 `global:*` 包回任务池（保留 `self_defense` 等个人包），经 `EntityOps.isFollowing` 边界读取实体跟随标记（核心层零 MC 依赖）。`GuardTaskSource` 全殖民地都跟随时不再发布守卫任务（同和平模式，避免发布后无人可接）。
 
 ## EntityComponentBridge
 

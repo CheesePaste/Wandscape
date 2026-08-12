@@ -21,6 +21,13 @@ public interface EntityOps {
     float getCurrentMana(long npcId);
 
     /**
+     * Whether the NPC is in follow mode (following a player). A following NPC
+     * must not be assigned colony tasks, and any in-hand global task is
+     * released so only personal behavior (e.g. self-defense) continues.
+     */
+    boolean isFollowing(long npcId);
+
+    /**
      * Spawn a decoration entity (item frame, painting) from trimmed NBT during
      * building construction.
      *

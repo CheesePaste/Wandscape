@@ -2,6 +2,18 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-12：跟随模式暂停殖民地任务——不接新任务 + 释放手头任务
+
+**需求**（用户指令）：NPC 跟随状态下仍会接取城镇任务（导致被传送走去干活）。要求：**跟随状态不接取任何任务、手头任务也停下，但不影响自防御等个人行为**。
+
+**决策**：
+- **调度器跳过跟随 NPC（治本）**：`SchedulerSystem` 收集空闲 NPC 时经 `EntityOps.isFollowing(npcId)` 排除跟随中的 NPC——新任务不再派给它们（`assignLight` 唯一调用方就是调度器，无绕过路径）。跟随标记存 MC 实体，核心层零 MC 依赖：`EntityOps` 增 `isFollowing` 边界方法，`WandscapeEntityOps` 实现为 `npc.isFollowMode()`，测试用 `MockBoundary` 按 npcId 模拟。
+- **执行器释放手头任务（兜底）**：`TaskExecutionSystem` 在「无工作→idle」分支前加跟随门控——跟随且持有 `global:*` 包（当前/pending/挂起栈任一位置）时 `releaseForFollow`：先 `syncStepToPool` 保留进度 + `returnAndReset` 归还资源，再 `releaseTaskForReassign` 回池供其他 NPC 接取，最后 `dropGlobalPackages` 清空队列里的 global 包。门控放 idle 分支**之前**，因为挂起栈里可能压着被自防御抢断的 global 包（此时 `hasWork()=false` 但 `hasGlobalPackage()=true`，先走 idle 会让该包永驻挂起栈）。
+- **自防御等个人包不受影响**：`dropGlobalPackages` 只删 `global:*` 源头的包，`self_defense` 等个人包保留；释放时若当前包是个人包，其异步 future 由对应执行器独立驱动，`releaseForFollow` 不误清（只有当前包是 global 时才清 `pendingFuture` + 取消导航）。
+- **守卫任务同步抑制**：`GuardTaskSource.hasAggressiveNpc` 同时排除跟随 NPC——全殖民地都跟随时不发布 `guard:attack`（跟随 NPC 不会从池里接守卫任务，发布后无人可接会空挂，与和平模式同构）。
+
+**为什么**：跟随是「玩家把 NPC 当贴身随从」的行为指令，殖民地任务会把人拽走、违背玩家意图；只挡调度器不挡执行器会在「跟随时被抢断的 global 包在自防御后恢复」的边缘情况破口，故两处都做。个人行为（自防御/逃跑）是玩家的贴身保护预期，必须保留——用「source 前缀」而非「队列整体清空」区分，语义最稳。
+
 ## 2026-08-12：NPC 走位——战斗风筝 / 群殴规避 / 和平模式逃跑
 
 **需求**（用户指令）：给 NPC 加走位能力，远离怪物、避免被群殴。用户选定三项：**战斗风筝**（近战怪贴脸后撤拉开、边走边打）、**群殴规避**（被围时往敌方质心反方向走位）、**和平模式逃跑**（不战斗但会躲）。

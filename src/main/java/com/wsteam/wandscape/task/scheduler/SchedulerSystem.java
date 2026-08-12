@@ -46,12 +46,14 @@ public class SchedulerSystem implements System {
         if (tickCounter % heartbeatInterval != 0) return;
 
         // 1. Find all idle NPCs with full component set
+        // 跟随模式：NPC 不接取任何殖民地任务，从空闲候选中排除
         List<Long> idleNpcs = new ArrayList<>();
         for (long entity : world.query(Position.class, TaskExecutor.class,
                 EquipmentComponent.class, Inventory.class, ColonyMember.class)) {
             TaskExecutor exec = world.get(entity, TaskExecutor.class);
             if (exec != null && exec.state == ExecutorState.IDLE
-                    && exec.npcQueue.isIdle() && exec.globalTaskId == null) {
+                    && exec.npcQueue.isIdle() && exec.globalTaskId == null
+                    && (world.entityOps == null || !world.entityOps.isFollowing(entity))) {
                 idleNpcs.add(entity);
             }
         }

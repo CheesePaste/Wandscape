@@ -55,6 +55,12 @@ public class WandscapeEntityOps implements EntityOps {
     }
 
     @Override
+    public boolean isFollowing(long npcId) {
+        WandscapeNpc npc = EntityComponentBridge.INSTANCE.getNpc(npcId);
+        return npc != null && npc.isFollowMode();
+    }
+
+    @Override
     public void spawnDecoration(GridPos pos, String entityType, String facing,
                                 @Nullable String nbtBase64) {
         if (nbtBase64 == null || nbtBase64.isEmpty()) return;

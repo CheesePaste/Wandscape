@@ -204,6 +204,34 @@ public class NpcTaskQueue {
         return currentPackage != null || !pending.isEmpty();
     }
 
+    /** True if any global-task package (source starts with "global:") is queued
+     *  anywhere (current, pending, or suspension stack). */
+    public boolean hasGlobalPackage() {
+        if (currentPackage != null && currentPackage.source().startsWith("global:")) return true;
+        for (NpcTaskPackage p : pending) {
+            if (p.source().startsWith("global:")) return true;
+        }
+        for (SuspensionContext ctx : suspensionStack) {
+            if (ctx.pkg().source().startsWith("global:")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Drop every global-task package (source starts with "global:") from current,
+     * pending, and the suspension stack. Personal/system packages such as
+     * {@code self_defense} are kept. Used when the NPC enters follow mode and
+     * must no longer run colony tasks.
+     */
+    public void dropGlobalPackages() {
+        if (currentPackage != null && currentPackage.source().startsWith("global:")) {
+            currentPackage = null;
+            stepIndex = 0;
+        }
+        pending.removeIf(p -> p.source().startsWith("global:"));
+        suspensionStack.removeIf(ctx -> ctx.pkg().source().startsWith("global:"));
+    }
+
     /** Total ops remaining across current + pending packages. */
     public int totalWorkRemaining() {
         int total = 0;
