@@ -34,6 +34,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -72,13 +73,14 @@ public final class GuardCombat {
     private static final double CROWD_RADIUS = 10.0;
     /** 后撤落点采样数（角度分档）。 */
     private static final int RETREAT_SAMPLES = 16;
+    /** 投掷物躲避走位距离（方块）：沿弹道垂直方向走开此距离，正好让出箭/骷髅头的弹道。 */
+    private static final double DODGE_DIST = 2.5;
 
-    // ── 战斗态：禁止 wandering 与施法硬钉，让走位自由（战斗结束由执行器恢复） ──
-    // tickCastingState 在 isCasting() && !suppressWandering 时每 tick 强制停移动——光束等长施法
-    // 会让 isCasting 连续数百 tick 为 true，若战斗间隙（无导航时）不把 suppressWandering 顶住，
-    // NPC 会全程被钉在原地，风筝/群殴走位只剩导航激活的瞬间才动一下。故战斗中保持 true。
+    // ── 战斗态：禁 wandering，让走位自由（战斗结束由执行器恢复） ──
+    // tickCastingState 已不再因 isCasting 硬钉停移动（游荡 goal 自会尊重施法态），
+    // markInCombat 禁 wandering 只是防止战斗期间 NPC 空闲乱走；走位全由 ECS 导航驱动。
 
-    /** 进入战斗态：禁 wandering + 禁施法硬钉（suppressWandering=true）。 */
+    /** 进入战斗态：禁 wandering（suppressWandering=true）。 */
     public static void markInCombat(WandscapeNpc npc) {
         npc.setAiWanderingEnabled(false);
     }
@@ -115,7 +117,12 @@ public final class GuardCombat {
         // 这里兜底；和平 NPC 的逃跑走位在 SelfDefenseExecutor 处理）。L0 紧急自奶不受影响。
         if (npc.isPeaceMode()) return;
 
-        // 战斗态：禁 wandering + 禁施法硬钉，走位由本引擎的导航驱动（战斗结束由执行器 markCombatEnd）
+        // 传送引导中：定身等法阵展开（不走位、不施法），减伤 75% 由 SelfDefenseHandler 处理
+        if (npc.isTeleportChanneling(level.getGameTime())) {
+            return;
+        }
+
+        // 战斗态：禁 wandering，走位由本引擎的导航驱动（战斗结束由执行器 markCombatEnd）
         markInCombat(npc);
 
         MagicBeamEntity beam = findActiveBeam(level, npc);
@@ -124,7 +131,7 @@ public final class GuardCombat {
         }
 
         // ── 群殴规避：附近可见敌数 ≥ CROWD_THRESHOLD → 往敌方质心反方向走位（边走边打），
-        //    别被围在墙角群殴。走位由 ECS 导航驱动（suppressWandering → 施法不被停移动）。──
+        //    别被围在墙角群殴。走位由 ECS 导航驱动（施法不锁移动）。──
         Crowd crowd = scanCrowd(level, npc);
         if (crowd.count >= CROWD_THRESHOLD) {
             navigateAway(level, npc, world, npcId, crowd.centroid);
@@ -150,7 +157,7 @@ public final class GuardCombat {
         // 看得见且安全距离：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
         // 无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
         // 站定用战斗安全版 cancel：取消导航但**不恢复 wandering**（markInCombat 夺回战斗态，
-        // 否则通用 cancelNavigation 会 setAiWanderingEnabled(true) 让下 tick 施法硬钉钉住）
+        // 否则通用 cancelNavigation 会 setAiWanderingEnabled(true) 放行闲逛）
         NavigationState nav = world.get(npcId, NavigationState.class);
         if (nav != null && nav.mode != NavigationState.Mode.IDLE && world.movementOps != null) {
             world.movementOps.cancelNavigation(npcId);
@@ -252,7 +259,7 @@ public final class GuardCombat {
 
     /** L0 血量危机阈值：自身或治疗范围内友方血量比例低于此值时，无视玩家策略强制施放治疗
      *  （heal 以自身为圆心，可同时奶到范围内友方与自身）。 */
-    private static final float L0_HEAL_THRESHOLD = 0.35f;
+    private static final float L0_HEAL_THRESHOLD = 0.5f;
 
     /**
      * L0 硬性覆盖：自身或治疗半径（{@link MagicSpellExecutors#HEAL_RADIUS}）内友方血量低于阈值
@@ -495,7 +502,7 @@ public final class GuardCombat {
 
     /**
      * 向威胁点（目标中心 / 敌方质心）的**反方向**后撤：由 ECS 导航驱动
-     * （suppressWandering → 施法不被强制停移动），落点不可站立时静默放弃（站定继续打）。
+     * （施法不锁移动，走位导航畅通），落点不可站立时静默放弃（站定继续打）。
      * 守卫/自防御/和平逃跑共用。寻路失败时 NavigationSystem 会回退 self_teleport——
      * 正常走位不会失败（见 findRetreatPos 的可达性约束），传送留给狭小地带真正走投无路时逃生。
      */
@@ -503,6 +510,19 @@ public final class GuardCombat {
                                     long npcId, Vec3 threat) {
         if (world == null || world.movementOps == null) return;
         BlockPos dest = findRetreatPos(level, npc, threat);
+        if (dest == null) return;
+        world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
+    }
+
+    /**
+     * 投掷物躲避（走位式）：朝弹道的垂直方向**走开**让出弹道（不走不跳、不寻路进墙），
+     * 由 ECS 导航驱动、落点不可站立/无墙时静默放弃（站定硬吃）。与 {@link #navigateAway}
+     * 同一个走位形式——只换了躲避方向（垂直弹道而非反方向）。由 {@code ProjectileDodge} 调用。
+     */
+    public static void navigateDodge(ServerLevel level, WandscapeNpc npc, World world,
+                                     long npcId, Projectile proj) {
+        if (world == null || world.movementOps == null) return;
+        BlockPos dest = findDodgePos(level, npc, proj);
         if (dest == null) return;
         world.movementOps.navigateTo(npcId, dest.getX(), dest.getY(), dest.getZ());
     }
@@ -553,6 +573,50 @@ public final class GuardCombat {
         int y = findStandingYNear(level, x, z, threatFeetY);
         if (y == Integer.MIN_VALUE) return null;
         return new BlockPos(x, y, z);
+    }
+
+    /**
+     * 投掷物躲避走位落点：朝弹道**垂直方向**走开 {@link #DODGE_DIST} 格（含少许远离弹道源分量，
+     * 保证是让开而不是迎着弹道跑），优先「NPC→落点 无墙」的可站立格（走过去可达，短躲不至于
+     * 寻路失败）。两个垂直方向都不可达返回 null（站定硬吃，靠减伤/回血兜底）。
+     * 由 {@link #navigateDodge}（guard）调用。
+     */
+    public static BlockPos findDodgePos(ServerLevel level, WandscapeNpc npc, Projectile proj) {
+        Vec3 v = proj.getDeltaMovement();
+        double len = Math.sqrt(v.x * v.x + v.z * v.z);
+        if (len < 0.05) return null;
+        Vec3 npcPos = npc.getStaffPosition();
+        Vec3 away = npcPos.subtract(proj.position());
+        if (away.lengthSqr() < 0.01) away = new Vec3(1, 0, 0);
+        Vec3 awayN = away.normalize();
+
+        // 弹道两个垂直方向，选与「远离弹道源」更接近的那个（侧跳 + 微微后撤）
+        Vec3 perpA = new Vec3(-v.z / len, 0, v.x / len);
+        Vec3 perpB = new Vec3(v.z / len, 0, -v.x / len);
+        Vec3[] candidates = {
+                perpA.dot(awayN) >= perpB.dot(awayN)
+                        ? perpA.scale(0.7).add(awayN.scale(0.3)).normalize()
+                        : perpB.scale(0.7).add(awayN.scale(0.3)).normalize(),
+                perpB.dot(awayN) >= perpA.dot(awayN)
+                        ? perpB.scale(0.7).add(awayN.scale(0.3)).normalize()
+                        : perpA.scale(0.7).add(awayN.scale(0.3)).normalize()
+        };
+
+        int feetY = Mth.floor(npc.getY());
+        int npcBlockX = Mth.floor(npc.getX());
+        int npcBlockZ = Mth.floor(npc.getZ());
+        for (Vec3 dir : candidates) {
+            for (double dist : new double[] { DODGE_DIST, DODGE_DIST * 0.6 }) {
+                int bx = Mth.floor(npcPos.x + dir.x * dist);
+                int bz = Mth.floor(npcPos.z + dir.z * dist);
+                if (bx == npcBlockX && bz == npcBlockZ) continue;
+                int standY = findStandingYNear(level, bx, bz, feetY);
+                if (standY == Integer.MIN_VALUE) continue;
+                BlockPos cand = new BlockPos(bx, standY, bz);
+                if (positionHasLineOfSight(level, npcPos, staffOf(cand))) return cand;
+            }
+        }
+        return null;
     }
 
     /** 停止寻路（LOS 已通过 / 要施法时调用），让 NPC 站定。 */

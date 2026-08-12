@@ -2,6 +2,42 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-12：NPC 玩家级索敌——怪物会主动攻击 NPC，游客仍村民级
+
+**需求**（用户指令）：原来 NPC 和游客都是村民级索敌（VillagerLike，只有僵尸/灾厄追）。改成 **NPC 和玩家一样**（骷髅/史莱姆/苦力怕等也会主动攻击 NPC），**游客保持和村民一样**。
+
+**决策**：
+- **新增 `PlayerLike` 标记接口（shared/entity），NPC 改实现它**：`WandscapeNpc` 从 `implements VillagerLike` 改为 `implements PlayerLike`；游客 `TouristEntity` 保持 `VillagerLike`。标记只表达「获得玩家级索敌」这一行为契约，不引入玩家任何其它行为。
+- **`HostileTargetingHandler` 从只处理村民级扩为双轨**：生物加入世界时扫描目标选择器——凡有对 `Player` 的 `NearestAttackableTargetGoal`（骷髅/史莱姆/苦力怕/僵尸/灾厄等，含其它 mod 生物）→ 追加同优先级、目标宽类 `PathfinderMob`、谓词收窄 `PlayerLike && !Enemy` 的等价 goal；对 `AbstractVillager` 的 → 追加 `VillagerLike && !Enemy` 等价 goal（游客保留原行为）。依旧不枚举生物清单。
+- **敌对测试法师（EvilMage）不追加玩家级索敌**：它是 `PlayerLike`（继承自 NPC）+ `Enemy`，光束伤害钩子打不了殖民地 NPC（`canBeamHurt` 排除）——若给它玩家级索敌，它会死盯打不死的 NPC。故「自身 `instanceof PlayerLike` 的生物跳过玩家级索敌追加」。
+- **已追加标记共用「宽类 `PathfinderMob` 目标」**：两个等价 goal 都用 `PathfinderMob.class` 作目标类（原版生物不会直接索敌该宽类），任一已存在即跳过，防维度传送/chunk 重载时叠加。原「村民级专用」标记升级为共用。
+
+**为什么**：玩家级与村民级的猎食者集合不同——骷髅/史莱姆/苦力怕只追玩家不追村民，若 NPC 只挂村民级，这些生物不会理它。用一个标记接口区分两级索敌，handler 按「生物本身已有的目标类型」自动追加，不硬编码生物清单；`!Enemy` 谓词保证敌对测试法师不会被原版怪当目标。NPC 被更多怪主动攻击后，自防御（`SelfDefenseExecutor` 扫 `Enemy` 反击）+ 投掷物躲避 + 走位会让殖民地有真实的战斗压力，这是玩家想要的效果。
+
+## 2026-08-12：市政厅无仓库时充当仓库——防无 storage 建筑建造卡死
+
+**需求**（用户指令）：殖民地一个仓库（`storage` 建筑）都没有时，试图建造「没有首免」的建筑（该类型首次免费已用过，需扣材料）会不会卡住？能否让市政厅在这种情况下充当仓库？
+
+**决策**：
+- **发货点兜底（治卡死）**：`ResourceRequestExecutor.findNearestStorage` 找不到 `storage` 建筑时回退到本殖民地 `government`（市政厅）建筑位置作物品发射点。此前无 storage 建筑时直接抛 `IllegalStateException("[ResourceReq] no storage...")` → `TaskExecutionSystem` 按普通异常走 `releaseToGlobalPool` → `GlobalTaskPool.releaseTaskForReassign` 无上限重试，哪怕银行里已有物品也永远建不出来。
+- **市政厅仓库存取按钮（治缺料等待）**：`TownHallOpenPacket` 增 `canUseWarehouse`（殖民地无 storage 建筑为 true）；市政厅面板此时显示「仓库存取」按钮（**不替换原面板**），点击发 `TownHallWarehouseRequestPacket` → 服务端校验是 government 建筑后回 `WarehouseDataPacket` 打开 `WarehouseScreen`。`WarehouseActionPacket` 放行 government 建筑，使市政厅可作为存取终端。
+- **材料本质是物理物品，非元素**：非首免建造的 `material_list` 请求物理方块物品；首建注资只给元素各 2000，物品存储为空。所以玩家必须能手动存料——市政厅按钮正是补上「无仓库时的存入入口」。
+
+**为什么**：仓库是抽象银行（`ColonyItemBank`，仓库方块只是终端），但取料送达依赖实体 `storage` 建筑的坐标作发射点，缺了就抛异常被无限重试。让市政厅充当仓库同时补上「发货点」与「存入入口」两端，玩家无需先建仓库也能给非首免建造补料、继续发展。用按钮而非替换面板，保留市政厅的信息功能。
+
+## 2026-08-12：NPC 躲避敌对投掷物——复用走位形式走开，不搞专门跳跃/侧跳
+
+**需求**（用户指令）：NPC 能走位了，但箭、凋零骷髅头等投掷物不会躲。要求**能躲避敌对的投掷物**。用户明确：**别跳跃，就和走位一样走开，复用走位的形式，移速够快就能躲**。
+
+**决策**：
+- **复用 `GuardCombat.navigateAway` 的走位形式，不加导航新模式**：不引入 `NavigationState.DODGE` 模式、不做跳闪/侧跳、不做「躲避后恢复原任务导航」的保存恢复。投掷物躲避就是一个普通的走位导航（`movementOps.navigateTo` 走到安全落点），与战斗风筝/群殴规避/和平逃跑同一套机制——零新移动机制，纯行为补充。
+- **新增 `ProjectileDodge`（guard）侦测**：每 3 tick 扫所有殖民地 NPC 周围 20 格内的敌对投掷物（发射者 `owner instanceof Enemy`：骷髅箭/凋零骷髅头/火球/女巫药水等），**轨迹预判命中才躲**（`willHit` 纯数学：直线飞行最近距离 <1 格且 2~16 tick 内会到，非正对不躲、已飞过不躲、太远不躲），命中则 `GuardCombat.navigateDodge` 沿弹道**垂直方向走开 2.5 格**（DODGE_DIST）让出弹道。单 NPC 冷却 12 tick 防持续弹幕把 NPC 来回拽；传送引导中（定身）跳过。
+- **`findDodgePos` 复用走位落点的可达性约束**：落点只选「NPC→落点 无墙」的可站立格（走过去可达，短躲不寻路进墙、不触发传送兜底）；两个垂直方向都不可达返回 null → 站定硬吃（靠减伤/脱战回血兜底）。
+- **方向是「垂直弹道 + 少许远离弹道源」**：纯反方向（朝弹道源）跑会一直留在弹道上被追上，垂直让开才真正躲掉；0.7 垂直 + 0.3 远离的混合保证是让开而不是迎着弹道跑。
+- **`willHit` 抽成无 MC 依赖的纯数学**（入参全 double），配 JUnit 单测（正对命中/平行偏移/远离/太远/太近/静止/斜向接近）。
+
+**为什么**：投掷物躲避本质是一种走位，现有走位机制（ECS 导航 + 可站立/LOS 落点）完全够用——为它单开一个 DODGE 导航模式 + 保存/恢复原任务导航，复杂度不成比例（一个 2.5 格的短走位不值得打断任务语义）。用户明确不要跳跃/侧跳；「走开 + 移速」即是用户要的形态。弹道垂直方向是让箭/骷髅头真正落空的关键（纯反方向会被直线弹道追上），落点可达性约束让这次「走位」和战斗走位一样不会失败进墙。
+
 ## 2026-08-12：跟随模式暂停殖民地任务——不接新任务 + 释放手头任务
 
 **需求**（用户指令）：NPC 跟随状态下仍会接取城镇任务（导致被传送走去干活）。要求：**跟随状态不接取任何任务、手头任务也停下，但不影响自防御等个人行为**。
@@ -20,8 +56,8 @@
 
 **决策**：
 - **集中改在共用战斗引擎 `GuardCombat.engage`**（守卫 + 自防御自动同时生效）。分支顺序：L0 紧急奶 → 和平 return → beam.retarget → **群殴**（可见敌数 ≥3 → navigateAway 质心反方向）→ LOS 被挡 → 靠近寻路（原有）→ **风筝**（LOS 通但目标进入威胁距离 <6 → navigateAway 到威胁点 10 格外）→ 站定施法（原有）。抽 `castSelected`（CastBrain 选魔法 → dispatch → L2 普攻兜底）三处复用。
-- **走位由 ECS 导航驱动**（`movementOps.navigateTo`）：置 `suppressWandering=true` → `WandscapeNpc.tickCastingState` 的「施法停移动」只在 `!suppressWandering` 时触发 → **边走边打可行**；光束 `MagicBeamEntity` 是独立实体、每 tick 跟随施法者并径向伤害（无 LOS 要求），风筝期间持续输出。
-- **战斗中保持战斗态（施法不硬钉）**：`engage` 每轮 `markInCombat`（`setAiWanderingEnabled(false)` → suppressWandering=true），站定路径用「取消导航但不恢复 wandering」的变体；自防御/守卫执行器在战斗结束时 `markCombatEnd` 恢复。否则光束等长施法会让 `isCasting` 连续数百 tick 为 true，战斗间隙（无导航时）被 `tickCastingState` 每 tick 强制 `getNavigation().stop()+setDeltaMovement(ZERO)` 钉死，风筝只剩导航激活瞬间才动一下——实测「释放光束不走位」即此根因。
+- **走位由 ECS 导航驱动**（`movementOps.navigateTo`）：**施法不再锁移动**——`WandscapeNpc.tickCastingState` 不再有「施法停移动」硬钉（删 `isCasting() && !suppressWandering` 时的 `getNavigation().stop()+setDeltaMovement(ZERO)`），`isCasting` 期间也能走位，光束等长施法不会被钉在原地；空闲乱走由 `RandomStrollGoal` 自己让路（尊重 `isEngineIdle`/`isCasting`/`manualCastTicks`，与 `FollowPlayerGoal.busy()` 同语义），殖民地任务施法期仍不乱走。光束 `MagicBeamEntity` 是独立实体、每 tick 跟随施法者并径向伤害（无 LOS 要求），风筝期间持续输出。
+- **战斗中保持战斗态（禁 wandering）**：`engage` 每轮 `markInCombat`（`setAiWanderingEnabled(false)` → suppressWandering=true）防止战斗期间 NPC 闲逛走神；自防御/守卫执行器在战斗结束时 `markCombatEnd` 恢复。走位全由 ECS 导航驱动，不再依赖"顶住施法硬钉"。
 - **后撤落点可达性**：`findRetreatPos` 增加「NPC→落点 无墙」LOS 约束（走过去可达），源头减少寻路失败→传送。正常走位不失败、不传送；self_teleport 传送回退保留，供狭小地带真正走投无路时逃生（不采用「走位禁传送 walkOnly」——会把狭小地带的逃生也一刀切掉）。
 - **后撤落点安全**：复用 `findStandingYNear`/`isStandable`/`staffOf`/`positionHasLineOfSight`，采样角集中在「远离威胁」±半圆，优先「有 LOS 且离 NPC 最近」的可站立格；贴墙无落点则静默站定继续打（不寻路进墙、不卡死）。
 - **和平模式逃跑**：`SelfDefenseExecutor` 不再跳过和平 NPC——可见怪进入 `guard.peaceFleeRange`（默认 8）时同样抢占注入 `self_defense` 包（抽 `injectSelfDefense` 共用抢占块）；`runCycle` 和平分支 `navigateAway` 后撤、无威胁 complete 恢复挂起任务（复用挂起栈恢复机制）。

@@ -8,7 +8,7 @@
 
 ## WandscapeNpc
 
-- `extends PathfinderMob implements VillagerLike`。注册 `wandscape_npc`（CREATURE, 0.6×1.8, tracking 10）。
+- `extends PathfinderMob implements PlayerLike`（**玩家级索敌**：骷髅/史莱姆/苦力怕/僵尸等所有含玩家索敌的原版敌对生物会主动攻击 NPC，HostileTargetingHandler 追加等价 goal；敌对测试法师自身是 PlayerLike 不追加）。注册 `wandscape_npc`（CREATURE, 0.6×1.8, tracking 10）。游客仍走村民级索敌（VillagerLike）。
 - **7 属性字段**：maxHp/moveSpeed/spellPower/workSpeed/spellSpeed/armorValue/maxMana，默认 `NpcAttributes.defaults()` = (40, 0.3, 1, 1, 1, 0, 200)。vanilla 基础属性：MAX_HEALTH 40、MOVEMENT_SPEED 0.3、ATTACK_DAMAGE 1.0、FOLLOW_RANGE 48。
 - **魔力 + 施法门控**（`core/component/MagicState`）：管理当前魔力、每魔法独立 CD map、施法互斥锁。`npc.tryCastSpell(magicId, baseCD, manaCost, lockTicks)` 原子门控——互斥锁占用 / 该魔法 CD 未过 / 魔力不足任一即拒绝；成功则扣蓝、置该魔法 CD（基础/SPELL_SPEED 向上取整）、占用互斥锁 `lockTicks`。每 tick `tickRegen` 递减锁与各魔法 CD，并每 `Config.NPC_MANA_REGEN_TICKS`(10) 回 1 点魔力（封顶 MAX_MANA）。魔力上限 = 第 7 属性，首 tick 满蓝 seed。
 - **脱战回血**：`markRecentlyDamaged()` 重置 `NPC_REGEN_GRACE_TICKS`(100) 封伤；`tickHealthRegen()` 封伤过后每 `NPC_REGEN_INTERVAL_TICKS`(80) 回 1 HP。

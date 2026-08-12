@@ -27,6 +27,9 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 public final class SelfDefenseHandler {
     private static final String TAG = "SelfDefense";
 
+    /** 传送引导期间伤害乘子（0.25 = 减伤 75%）：定身硬吃时靠减伤存活，而非原免疫。 */
+    private static final float TELEPORT_DAMAGE_MULTIPLIER = 0.25f;
+
     private SelfDefenseHandler() {}
 
     @SubscribeEvent
@@ -36,6 +39,11 @@ public final class SelfDefenseHandler {
 
         // 任何伤害都重置脱战回血计时（回血仅在脱战后生效）
         npc.markRecentlyDamaged();
+
+        // 传送引导期间：减伤 75%（替代原免疫；所有伤害类型适用，含环境伤害）
+        if (npc.isTeleportChanneling(npc.level().getGameTime())) {
+            event.setAmount(event.getAmount() * TELEPORT_DAMAGE_MULTIPLIER);
+        }
 
         LivingEntity attacker = attackerFrom(event.getSource());
         // 环境伤害（无活体攻击者：窒息/岩浆/火烧/溺水等）→ 传送逃生
@@ -62,19 +70,15 @@ public final class SelfDefenseHandler {
 
     /**
      * 环境伤害（窒息/岩浆/火烧/溺水等非生物伤害）处理：
-     * 逃生引导期间屏蔽环境伤害，其余情况尝试发起逃生传送。
-     * 触发本次伤害仍结算一次（保证脱战回血计时正确），引导期间起 shield。
+     * 非引导中且非殖民地 NPC 才发起逃生传送；引导期间减伤已生效，不重复逃生、不再免疫取消。
+     * 触发本次伤害仍结算一次（保证脱战回血计时正确）。
      */
     private static void handleEnvironmentalDamage(LivingIncomingDamageEvent event, WandscapeNpc npc) {
         if (!npc.isColonyNpc()) return;
         if (!(npc.level() instanceof ServerLevel level)) return;
 
-        long gameTime = level.getGameTime();
-        // 逃生引导期间屏蔽环境伤害（岩浆每 tick 4 点，40HP 撑不到 80 tick 引导结束）
-        if (npc.isEscapeShielded(gameTime)) {
-            event.setCanceled(true);
-            return;
-        }
+        // 传送引导期间：减伤已生效，不发起新的逃生传送
+        if (npc.isTeleportChanneling(level.getGameTime())) return;
         NpcEscapeTeleport.attempt(level, npc);
     }
 }

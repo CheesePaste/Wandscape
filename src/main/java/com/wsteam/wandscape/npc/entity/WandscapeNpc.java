@@ -74,7 +74,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.wsteam.wandscape.shared.entity.VillagerLike;
+import com.wsteam.wandscape.shared.entity.PlayerLike;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -88,7 +88,7 @@ import com.wsteam.wandscape.shared.log.Log;
  * <p>Stage 2 (V1 minimal): basic idle AI, no task-driven movement.
  * Subsequent stages add stuck detection, death/grave, house binding, etc.
  */
-public class WandscapeNpc extends PathfinderMob implements VillagerLike {
+public class WandscapeNpc extends PathfinderMob implements PlayerLike {
 
     private static final String TAG = "WandscapeNpc";
 
@@ -205,8 +205,8 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
 
     /**
      * 非战斗自奶：脱离战斗且血量未满、会治疗 → 用治疗魔法把自己补满。
-     * 与战斗内 L0 紧急奶（{@code GuardCombat.l0EmergencyHeal}，血比 &lt; 0.35 才强制奶）互补——
-     * 战斗打完 NPC 常停在 35%~满血之间，L0 不触发、L1 治疗只认友方最低血，于是永远不补满，
+     * 与战斗内 L0 紧急奶（{@code GuardCombat.l0EmergencyHeal}，血比 &lt; 0.5 才强制奶）互补——
+     * 战斗打完 NPC 常停在 50%~满血之间，L0 不触发、L1 治疗只认友方最低血，于是永远不补满，
      * 只靠慢速脱战回血。这里补上：不在战斗即视为非战斗，建造/采集等任务不打断（治疗以自身为
      * 圆心，与任务互不干扰）。施放门控（CD/蓝/互斥锁）由 {@code MagicState#tryCast} 原子复验，
      * 每 tick 尝试安全，实际频率受 heal 魔法 CD（300t）限制。敌对测试法师（EvilMage）除外，
@@ -521,18 +521,18 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         this.nextMeleeAttackTick = gameTime + cooldownTicks;
     }
 
-    // ── 环境伤害逃生传送（瞬态，不写 NBT）：引导期间屏蔽环境伤害 + 落点扫描节流 ──
-    private long escapeShieldUntilTick = 0;
+    // ── 传送引导（瞬态，不写 NBT）：法阵展开期间定身 + 减伤 75%，落点扫描节流 ──
+    private long teleportChannelUntilTick = 0;
     private long nextEscapeScanTick = 0;
 
-    /** 逃生引导期间是否屏蔽环境伤害（岩浆每 tick 4 点，40HP 撑不到引导结束）。 */
-    public boolean isEscapeShielded(long gameTime) {
-        return gameTime < escapeShieldUntilTick;
+    /** 传送引导是否进行中（引导期间定身 + 减伤 75%，见 SelfDefenseHandler）。 */
+    public boolean isTeleportChanneling(long gameTime) {
+        return gameTime < teleportChannelUntilTick;
     }
 
-    /** 记录一次逃生开始：在引导时长 + 少量余量内屏蔽环境伤害。 */
-    public void markEscapeStarted(long gameTime, int channelTicks) {
-        this.escapeShieldUntilTick = gameTime + channelTicks + 2;
+    /** 记录一次传送引导开始：在引导时长 + 少量余量内定身 + 减伤。 */
+    public void markTeleportChanneling(long gameTime, int channelTicks) {
+        this.teleportChannelUntilTick = gameTime + channelTicks + 1;
     }
 
     /** 逃生落点扫描节流（失败重扫时防每 tick 全扫）：放行时推进 40 tick。 */
@@ -650,21 +650,22 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
         // Priority 2: 跟随模式——目标玩家距离 >5 格时走向玩家（被 ECS 任务/施法接管时自动让路）
         this.goalSelector.addGoal(2, new FollowPlayerGoal());
-        // Priority 5: wander around when idle (suppressed when MovementOps controls navigation)
+        // Priority 5: wander around when idle (suppressed when MovementOps controls navigation
+        // or the engine is busy / casting — casting no longer roots movement via tickCastingState)
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.6) {
             @Override
             public boolean canUse() {
-                return !suppressWandering && super.canUse();
+                return !suppressWandering && !noIdleWander() && super.canUse();
             }
 
             @Override
             public boolean canContinueToUse() {
-                return !suppressWandering && super.canContinueToUse();
+                return !suppressWandering && !noIdleWander() && super.canContinueToUse();
             }
 
             @Override
             public void stop() {
-                if (!suppressWandering) {
+                if (!suppressWandering && !noIdleWander()) {
                     super.stop(); // only clear navigation if stopping organically
                 }
                 // When suppressWandering is set, MovementOps owns the navigation —
@@ -692,6 +693,12 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
+
+        // 传送引导：定身（法阵展开期间不跑不躲，靠 SelfDefenseHandler 的减伤 75% 硬吃）
+        if (isTeleportChanneling(level().getGameTime())) {
+            getNavigation().stop();
+            setDeltaMovement(Vec3.ZERO);
+        }
 
         // 脱战回血 + 属性推送 + 魔力回复：idle NPC 也要执行，放在快路 return 之前
         tickHealthRegen();
@@ -771,10 +778,10 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         if (casting != isCasting()) {
             setCasting(casting);
         }
-        if (isCasting() && !suppressWandering) {
-            getNavigation().stop();
-            setDeltaMovement(Vec3.ZERO);
-        }
+        // 施法不再硬钉移动（getNavigation().stop + 清零速度）：光束等长施法会让 isCasting 连续
+        // 数百 tick 为 true，硬钉会把战斗走位（风筝/群殴/投掷物躲避，由 ECS 导航驱动）整个钉死——
+        // 「释放光束不走位」的根因。现在 isCasting 期间也能走位；空闲乱走由游荡 goal 自己让路
+        // （RandomStrollGoal 尊重 isEngineIdle/isCasting，见 registerGoals）。
     }
 
     // ============================================================
@@ -1242,6 +1249,13 @@ public class WandscapeNpc extends PathfinderMob implements VillagerLike {
         if (world == null) return true;
         var exec = world.get(ecsEntityId, TaskExecutor.class);
         return exec == null || !(exec.npcQueue.hasWork() || exec.globalTaskId != null);
+    }
+
+    /** 引擎有任务 / 施法中 / 手动引导时禁止空闲游荡（RandomStrollGoal 让路用）。
+     *  施法不再由 tickCastingState 硬钉停移动（战斗走位需要 isCasting 期间能移动），
+     *  空闲乱走改由游荡 goal 在此自行让路——与 FollowPlayerGoal.busy() 同语义。 */
+    private boolean noIdleWander() {
+        return !isEngineIdle() || isCasting() || manualCastTicks > 0;
     }
 
     @Nullable

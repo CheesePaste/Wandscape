@@ -318,6 +318,11 @@ public class NavigationSystem implements System {
 
         // ── Direct ritual teleport — NO package queue manipulation ──
         if (world.ritualOps != null && target != null) {
+            // 引导期间定身 + 减伤 75%（SelfDefenseHandler 消费；与 tryCastSpell 的锁时长对齐）
+            if (npc != null) {
+                npc.markTeleportChanneling(npc.level().getGameTime(),
+                        WandscapeRitualOps.channelTicks(RitualId.SELF_TELEPORT));
+            }
             CompletableFuture<Void> ritualFuture = world.ritualOps.beginRitual(
                     RitualId.SELF_TELEPORT, target, world, npcId, Map.of());
             if (exec != null) {

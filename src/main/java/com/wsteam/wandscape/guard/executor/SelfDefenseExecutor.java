@@ -242,6 +242,10 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
             }
             // 和平逃跑也走战斗态（禁 wandering/施法硬钉），逃跑导航才不被钉住
             GuardCombat.markInCombat(npc);
+            // 传送引导中：定身等法阵展开（不走位），减伤 75% 由 SelfDefenseHandler 处理
+            if (npc.isTeleportChanneling(level.getGameTime())) {
+                return FLEE_RECHECK_TICKS;
+            }
             GuardCombat.navigateAway(level, npc, p.world(), p.npcId(),
                     threat.getBoundingBox().getCenter());
             return FLEE_RECHECK_TICKS;

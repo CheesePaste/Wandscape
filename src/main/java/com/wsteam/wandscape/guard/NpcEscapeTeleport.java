@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
  * <p>由 {@link SelfDefenseHandler} 在无活体攻击者的伤害事件里调用。只救空闲 NPC
  * （任务中的 NPC 由 {@code NavigationSystem} 的卡住检测→传送兜底，这里不打断任务）。
  * 门控复用 {@link WandscapeNpc#tryCastSpell}（施法互斥锁 + 每魔法 CD + 魔力），
- * 引导期间 {@link WandscapeNpc#isEscapeShielded} 屏蔽环境伤害，防止岩浆引导中途烧死。
+ * 引导期间 {@link WandscapeNpc#markTeleportChanneling} 定身 + 减伤 75%（SelfDefenseHandler 消费）。
  */
 public final class NpcEscapeTeleport {
 
@@ -71,7 +71,8 @@ public final class NpcEscapeTeleport {
                 new GridPos(dest.getX(), dest.getY(), dest.getZ()),
                 world, npc.ecsEntityId, Map.of());
         npc.startManualCast(lockTicks);
-        npc.markEscapeStarted(gameTime, lockTicks);
+        // 引导期间定身 + 减伤 75%（SelfDefenseHandler 消费）；替代原「屏蔽环境伤害」免疫
+        npc.markTeleportChanneling(gameTime, lockTicks);
         Log.info(TAG, "NPC {} — environmental damage, teleport escape → ({},{},{})",
                 npc.getUUID().toString().substring(0, 8), dest.getX(), dest.getY(), dest.getZ());
         return true;

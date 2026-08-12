@@ -101,4 +101,5 @@
 
 - `SpeechBubbleRenderer`（世界空间聊天气泡，淡入淡出）；`TransientBubbleStore`（按实体 UUID 存 Event(iconKind,iconId,count,satBefore,satAfter,startTick)；iconKind ICON_NONE/ICON_ITEM/ICON_ELEMENT）；`SatisfactionBarRenderer`（满意度条 4 格）；`AmbientTextPools`（游客/NPC 随机文本池，key 为 Emotion×TouristState，i18n key `bubble.wandscape.tourist.*`）。
 - `BuildingGhostRenderer`：放置虚影渲染，GHOST_ALPHA=0.40f，hideBuiltBlocks 跳过已建方块。
-- `VillagerLike`：空标记接口，表示"原版敌对生物像对待村民一样索敌"（HostileTargetingHandler 消费）。
+- `VillagerLike`：空标记接口，表示"原版敌对生物像对待村民一样索敌"（游客实现；HostileTargetingHandler 消费）。
+- `PlayerLike`：空标记接口，表示"原版敌对生物像对待玩家一样索敌"（NPC 实现，骷髅/史莱姆等会主动攻击；HostileTargetingHandler 消费）。

@@ -955,6 +955,9 @@ public class Wandscape {
         var selfDefenseExec = WandscapeEngine.getSelfDefenseExecutor();
         if (selfDefenseExec != null) selfDefenseExec.tick(world);
 
+        // ①g1 Tick projectile dodge (walk away from incoming hostile arrows/skulls; throttled)
+        com.wsteam.wandscape.guard.ProjectileDodge.tick(world);
+
         // ①g2 Tick altar cast channeling countdowns (altar-only magic channel → effect fire)
         var altarCastExec = WandscapeEngine.getAltarCastExecutor();
         if (altarCastExec != null) altarCastExec.tickAll();
