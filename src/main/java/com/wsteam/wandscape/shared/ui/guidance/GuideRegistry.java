@@ -5,215 +5,219 @@ import java.util.List;
 /**
  * Ordered onboarding steps (pure content). Completion is evaluated server-side
  * by {@code GuideProgressService.computeStep} — the ORDER here MUST match the
- * checks in that method. Category display names mirror the building bar
- * (BuildingSelectionOverlay.getCategoryDisplayName).
+ * checks in that method. Building names mirror the building-bar card names.
+ *
+ * <p>Content conventions (accuracy-first, from the real interactions):
+ * <ul>
+ *   <li>Placement (build/road sub-modes) is taught as OPERATIONS, in order, no
+ *       passive filler: 按住右键拖动 = 转视角（把建筑放到想要的位置）→ 左键 = 旋转朝向
+ *       → 点右侧【提交施工】→ 施工界面【提交】. The important operations come first;
+ *       the hint line only carries auxiliary info (WASD/scroll/building purpose).</li>
+ *   <li>Building interaction happens in the V-panel OVERVIEW sub-mode, which is a
+ *       free camera: 移动鼠标转视角，WASD 移动，滚轮缩放. Right-drag rotates the view
+ *       ONLY inside build/road sub-modes, so the interaction steps never claim that.</li>
+ *   <li>After placing a building the building bar reopens (still build mode), so every
+ *       interaction step first tells the player to exit build mode (press 1 or ESC).</li>
+ *   <li>Switching tabs uses the hard-coded number keys 1/2; clicking the sidebar icons
+ *       requires lifting the cursor first — the cursor key is rebindable, so the
+ *       {@code {光标键}} placeholder is resolved to the actual key name by
+ *       {@code GuideRenderer}.</li>
+ * </ul>
+ *
+ * <p>Readability: every character must be clearly visible — no gray/dark text
+ * (§7/§8). Keys/buttons/building names use §e gold, instruction lines §b aqua,
+ * completed steps §a green.
  */
 public final class GuideRegistry {
 
     private GuideRegistry() {}
 
+    /** Placement operations shown while aiming the ghost (important operations first). */
+    private static final List<String> AIMING_LINES = List.of(
+            "§b▶ §e按住右键拖动§b转视角，把建筑放到你要的位置",
+            "§b▶ §e左键§b旋转朝向，点右侧【§e提交施工§b】→【§e提交§b】");
+
+    /** Shown when the ghost is pinned (optional gizmo fine-tuning). */
+    private static final List<String> PINNED_LINES = List.of(
+            "§a✓ 已锁定，可拖拽轴线微调",
+            "§b▶ 点右侧【§e提交施工§b】→【§e提交§b】");
+
     private static final GuideStep TOWN_HALL = new GuideStep(
             "townhall",
-            "🚩 新手引导 (1/9)：建造市政厅",
+            "🚩 新手引导 (1/10)：建造市政厅",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】（或点击左侧 🏛️ 图标）",
-                    "§7  2. 在【市政厅】分类中选中【市政厅】卡片",
-                    "§7  3. §e双击卡片§7收回光标，进入 3D 放置定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 打开【建造】页签（或按 {光标键} 抬起鼠标后点左侧建造图标）",
+                    "§b② 点【§e市政厅§b】卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角，把建筑放到你要的位置",
+                    "§b④ §e左键§b旋转朝向，点右侧【§e提交施工§b】→【§e提交§b】",
+                    "§b⑤ 自动弹出命名界面，输入名称创建魔法小镇"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 在下方建造栏§e单击【市政厅】§7选中，§e双击§7进入放置",
-                    "§a▶ 3. 提示：可按 §eTab§7 随时收起/展开下方的建造列表",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
-            List.of(
-                    "§7✓ 1. 建筑虚影正跟随准心移动（瞄准定位中）",
-                    "§a▶ 2. 移动视角瞄准地面；§e左键点击§7（或按 R）旋转朝向",
-                    "§a▶ 3. 按 §eEnter§7 或右侧【📌 锁定】固定位置（也可直接点【✓ 提交施工】）",
-                    "§8  💬 视角操作：按住右键拖动旋转视角，WASD/Shift/Space 飞行"),
-            List.of(
-                    "§7✓ 1. 建筑虚影坐标已锁定",
-                    "§a▶ 2. 鼠标拖拽 3D 轴线 (Gizmo) 精确平移 X/Y/Z",
-                    "§a▶ 3. 双击画面空地或右侧【✓ 提交施工】，按 §eSubmit§7 派发建造",
-                    "§8  💬 取消锁定：按 Esc 回到瞄准状态，再按 Esc 退出放置"),
-            "💡 提示：按 1/2/3/4 可快速切换 建造/道路/统计/异常 页签");
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点【§e市政厅§b】卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 WASD 移动镜头，滚轮缩放");
 
     private static final GuideStep WAREHOUSE = new GuideStep(
             "warehouse",
-            "🚩 新手引导 (2/9)：建造仓库",
+            "🚩 新手引导 (2/10)：建造仓库",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 在【仓库/存储】分类中找到【仓库】",
-                    "§7  3. 单击选中卡片，双击收回光标进入放置",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 打开【建造】页签",
+                    "§b② 点【§e仓库§b】卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角定位，§e左键§b旋转朝向",
+                    "§b④ 点右侧【§e提交施工§b】→【§e提交§b】"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 切换至【仓库/存储】分类，§e单击【仓库】§7选中",
-                    "§a▶ 3. §e双击卡片§7收回光标进入 3D 放置",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
-            List.of(
-                    "§7✓ 1. 仓库蓝图虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，选好合适平地",
-                    "§a▶ 3. 按 §eEnter§7 / 点击【📌 锁定】固定坐标（或点【✓ 提交施工】）",
-                    "§8  💬 视角操作：按住右键拖动旋转视角，WASD/Shift/Space 飞行"),
-            List.of(
-                    "§7✓ 1. 仓库位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】",
-                    "§a▶ 3. 在弹出的施工界面确认材料，点击 §eSubmit§7",
-                    "§8  💬 仓库作用：居民建造、合成与采集的物资均存放于此"),
-            "💡 提示：仓库用于安全存放居民采掘与合成的元素及建材");
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点【§e仓库§b】卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 仓库存放居民采掘/合成的物资与元素，是最重要的建筑");
 
-    private static final GuideStep NODE = new GuideStep(
-            "node",
-            "🚩 新手引导 (3/9)：建造元素节点",
+    private static final GuideStep DEPOSIT = new GuideStep(
+            "deposit",
+            "🚩 新手引导 (3/10)：右键仓库，放入一个物品",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 在【元素节点】分类中找到节点建筑",
-                    "§7  3. 单击选中，双击进入世界定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② §e移动鼠标转视角§b，把准心对准仓库，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e交换§b】页签，点背包一个物品存入仓库"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 切换至【元素节点】分类，§e单击节点§7选中",
-                    "§a▶ 3. §e双击卡片§7收回光标进入 3D 放置",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② §e移动鼠标转视角§b，把准心对准仓库，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e交换§b】页签，点背包一个物品存入仓库"),
             List.of(
-                    "§7✓ 1. 节点虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，按 §eEnter§7 锁定（或直接提交）",
-                    "§8  💬 视角操作：按住右键拖动旋转视角，WASD 飞行"),
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② §e移动鼠标转视角§b，把准心对准仓库，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e交换§b】页签，点背包一个物品存入仓库"),
             List.of(
-                    "§7✓ 1. 节点位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】并 Submit",
-                    "§8  💬 提示：建好后法师会自动去采集节点元素"),
-            "💡 提示：元素节点建成后法师会自动前往采集对应元素");
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② §e移动鼠标转视角§b，把准心对准仓库，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e交换§b】页签，点背包一个物品存入仓库"),
+            "§e💡 俯瞰视角：WASD 移动镜头，滚轮缩放；右键点建筑打开界面");
 
     private static final GuideStep WORKSTATION = new GuideStep(
             "workstation",
-            "🚩 新手引导 (4/9)：建造生产工坊",
+            "🚩 新手引导 (4/10)：建造工作站",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 在【生产工坊】分类中找到工作站",
-                    "§7  3. 单击选中，双击进入世界定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 打开【建造】页签",
+                    "§b② 点【§e工作站§b】卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角定位，§e左键§b旋转朝向",
+                    "§b④ 点右侧【§e提交施工§b】→【§e提交§b】"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 切换至【生产工坊】分类，§e单击工作站§7选中",
-                    "§a▶ 3. §e双击卡片§7进入 3D 放置",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
-            List.of(
-                    "§7✓ 1. 工作站虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，按 §eEnter§7 锁定或提交",
-                    "§8  💬 视角操作：按住右键拖动旋转视角，WASD 飞行"),
-            List.of(
-                    "§7✓ 1. 工作站位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】并 Submit",
-                    "§8  💬 工作站功能：分解建材为元素或用元素合成高阶方块"),
-            "💡 提示：工作站可将建材分解为元素或用元素合成高阶材料");
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点【§e工作站§b】卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 工作站可把建材分解为元素，或用元素合成物品");
 
-    private static final GuideStep CRAFT_STATION = new GuideStep(
-            "craft_station",
-            "🚩 新手引导 (5/9)：建造合成站",
+    private static final GuideStep SYNTHESIZE = new GuideStep(
+            "synthesize",
+            "🚩 新手引导 (5/10)：右键工作站，合成一样物品",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 在【生产工坊】分类中找到合成站",
-                    "§7  3. 单击选中，双击进入世界定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② 把准心对准 §e工作站§b，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e合成§b】页签，选一个配方",
+                    "§b④ 点【§e提交§b】发布合成任务"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 切换至【生产工坊】分类，§e单击合成站§7选中",
-                    "§a▶ 3. §e双击卡片§7进入 3D 放置"),
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② 把准心对准 §e工作站§b，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e合成§b】页签，选一个配方",
+                    "§b④ 点【§e提交§b】发布合成任务"),
             List.of(
-                    "§7✓ 1. 合成站虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，按 §eEnter§7 锁定或提交"),
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② 把准心对准 §e工作站§b，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e合成§b】页签，选一个配方",
+                    "§b④ 点【§e提交§b】发布合成任务"),
             List.of(
-                    "§7✓ 1. 合成站位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】并 Submit"),
-            "💡 提示：合成站可打造魔法师施法所需的武器装备");
+                    "§b① 按 §e1§b 或 §eESC§b 退出建造模式",
+                    "§b② 把准心对准 §e工作站§b，§e右键点一下§b打开界面",
+                    "§b③ 切到【§e合成§b】页签，选一个配方",
+                    "§b④ 点【§e提交§b】发布合成任务"),
+            "§e💡 合成消耗元素、产出存入仓库；NPC 会自动执行任务");
 
-    private static final GuideStep SHOP = new GuideStep(
-            "shop",
-            "🚩 新手引导 (6/9)：建造商店并补充货物",
+    private static final GuideStep ROAD = new GuideStep(
+            "road",
+            "🚩 新手引导 (6/10)：铺设一条道路",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 在【商业/商店】分类中找到商店",
-                    "§7  3. 单击选中，双击进入世界定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e2§b 进入【道路】模式",
+                    "§b② §e左键点一下§b设起点，按住拖动扩大选区",
+                    "§b③ 按 §eEnter§b 铺设道路"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 切换至【商业/商店】分类，§e单击商店§7选中",
-                    "§a▶ 3. §e双击卡片§7进入 3D 放置"),
+                    "§b① 按 §e2§b 进入【道路】模式",
+                    "§b② §e左键点一下§b设起点，按住拖动扩大选区",
+                    "§b③ 按 §eEnter§b 铺设道路"),
             List.of(
-                    "§7✓ 1. 商店虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，按 §eEnter§7 锁定或提交"),
+                    "§b① 按 §e2§b 进入【道路】模式",
+                    "§b② §e左键点一下§b设起点，按住拖动扩大选区",
+                    "§b③ 按 §eEnter§b 铺设道路"),
             List.of(
-                    "§7✓ 1. 商店位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】并 Submit"),
-            "💡 提示：游客在商店消费后，魔法小镇将获得元素与经济收益");
+                    "§b① 按 §e2§b 进入【道路】模式",
+                    "§b② §e左键点一下§b设起点，按住拖动扩大选区",
+                    "§b③ 按 §eEnter§b 铺设道路"),
+            "§e💡 道路让游客与 NPC 沿路移动");
+
+    private static final GuideStep BREADSHOP = new GuideStep(
+            "breadshop",
+            "🚩 新手引导 (7/10)：建造面包店，补充货物",
+            List.of(
+                    "§b① 按 §e1§b 打开【建造】页签",
+                    "§b② 点【§e面包店§b】卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角定位，点右侧【§e提交施工§b】→【§e提交§b】",
+                    "§b④ 按 §e1§b 或 §eESC§b 退出建造，§e右键面包店§b 打开商店补货"),
+            List.of(
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点【§e面包店§b】卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 商店补货自动从仓库/合成获取货物，游客购物带来元素收益");
+
+    private static final GuideStep NODE = new GuideStep(
+            "node",
+            "🚩 新手引导 (8/10)：建造节点，发布采集任务",
+            List.of(
+                    "§b① 按 §e1§b 打开【建造】页签",
+                    "§b② 点一个§e元素节点§b卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角定位，点右侧【§e提交施工§b】→【§e提交§b】",
+                    "§b④ 按 §e1§b 或 §eESC§b 退出建造，§e右键节点§b 点【§e发布采集§b】"),
+            List.of(
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点一个§e元素节点§b卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 发布后 NPC 去节点引导施法，采集元素注入仓库");
+
+    private static final GuideStep ALTAR = new GuideStep(
+            "altar",
+            "🚩 新手引导 (9/10)：建造祭坛",
+            List.of(
+                    "§b① 按 §e1§b 打开【建造】页签",
+                    "§b② 点【§e祭坛§b】卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角定位，点右侧【§e提交施工§b】→【§e提交§b】",
+                    "§b④ 按 §e1§b 或 §eESC§b 退出建造，§e右键祭坛§b 打开施法界面"),
+            List.of(
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点【§e祭坛§b】卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 祭坛用于施放重大魔法：有 NPC 阵亡后可在此选中复活并发布");
 
     private static final GuideStep INN = new GuideStep(
             "inn",
-            "🚩 新手引导 (7/9)：建造旅馆等待游客入住",
+            "🚩 新手引导 (10/10)：建造旅馆，接待游客",
             List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 在【服务/旅馆】分类中找到旅馆",
-                    "§7  3. 单击选中，双击进入世界定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
+                    "§b① 按 §e1§b 打开【建造】页签",
+                    "§b② 点【§e旅馆§b】卡片，§e双击§b进入放置",
+                    "§b③ §e按住右键拖动§b转视角定位，点右侧【§e提交施工§b】→【§e提交§b】",
+                    "§b④ 游客夜晚会到旅馆过夜入住"),
             List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 切换至【服务/旅馆】分类，§e单击旅馆§7选中",
-                    "§a▶ 3. §e双击卡片§7进入 3D 放置"),
-            List.of(
-                    "§7✓ 1. 旅馆虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，按 §eEnter§7 锁定或提交"),
-            List.of(
-                    "§7✓ 1. 旅馆位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】并 Submit"),
-            "💡 提示：旅馆提供过夜住宿，能恢复游客精力并提高满意度");
-
-    private static final GuideStep TAVERN = new GuideStep(
-            "tavern",
-            "🚩 新手引导 (8/9)：建造酒馆招募法师",
-            List.of(
-                    "§a▶ 1. 按快捷键 §e1§a 开启【建造模式】",
-                    "§7  2. 找到【冒险者酒馆】并建造",
-                    "§7  3. 单击选中，双击进入世界定位",
-                    "§8  💬 视角操作：按住右键拖动移动/旋转视角，WASD 移动镜头"),
-            List.of(
-                    "§7✓ 1. 已开启建造模式",
-                    "§a▶ 2. 找到并§e单击【冒险者酒馆】§7选中",
-                    "§a▶ 3. §e双击卡片§7进入 3D 放置"),
-            List.of(
-                    "§7✓ 1. 酒馆虚影正跟随准心移动",
-                    "§a▶ 2. §e左键点击§7旋转朝向，按 §eEnter§7 锁定或提交"),
-            List.of(
-                    "§7✓ 1. 酒馆位置已锁定",
-                    "§a▶ 2. 拖拽 3D 轴线微调，点击右侧【✓ 提交施工】并 Submit"),
-            "💡 提示：招募一名法师后引导前进（满满意度的游客法师会留履历免费招募）");
-
-    private static final GuideStep LEVEL_UP = new GuideStep(
-            "level_up",
-            "🚩 新手引导 (9/9)：魔法小镇升级到 2 级",
-            List.of(
-                    "§7✓ 主要设施与建筑已齐备",
-                    "§a▶ 1. 完善配套设施提升游客满意度至 100%",
-                    "§7  2. 满意游客离场后魔法小镇获得经验并自动升级",
-                    "§8  💬 视角操作：按住右键拖动旋转视角，按 2 进入道路模式铺路"),
-            List.of(
-                    "§7✓ 主要设施与建筑已齐备",
-                    "§a▶ 1. 完善配套设施提升游客满意度至 100%",
-                    "§7  2. 满意游客离场后魔法小镇获得经验并自动升级",
-                    "§8  💬 提示：按 2 铺设道路，按 3 可查看经营统计"),
-            List.of(
-                    "§7✓ 主要设施与建筑已齐备",
-                    "§a▶ 1. 完善配套设施提升游客满意度至 100%",
-                    "§7  2. 满意游客离场后魔法小镇获得经验并自动升级"),
-            List.of(
-                    "§7✓ 主要设施与建筑已齐备",
-                    "§a▶ 1. 完善配套设施提升游客满意度至 100%",
-                    "§7  2. 满意游客离场后魔法小镇获得经验并自动升级"),
-            "💡 提示：按 2 铺设道路连通建筑，按 3 可随时查看经营统计");
+                    "§a✓ 建造列表已打开",
+                    "§b▶ 点【§e旅馆§b】卡片，§e双击§b进入放置"),
+            AIMING_LINES,
+            PINNED_LINES,
+            "§e💡 有游客过夜即完成全部引导！继续招募法师、提升满意度可升级小镇");
 
     public static final List<GuideStep> STEPS = List.of(
-            TOWN_HALL, WAREHOUSE, NODE, WORKSTATION, CRAFT_STATION,
-            SHOP, INN, TAVERN, LEVEL_UP);
+            TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
+            ROAD, BREADSHOP, NODE, ALTAR, INN);
 
     public static GuideStep step(int index) {
         return STEPS.get(index);

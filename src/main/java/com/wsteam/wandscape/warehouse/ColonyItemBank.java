@@ -41,6 +41,10 @@ public class ColonyItemBank extends SavedData {
     private static final String TAG_SEEDED = "seeded";
     private static final String TAG_SEEDED_ID = "id";
     private static final String TAG_PURCHASE_COUNT = "purchases";
+    private static final String TAG_PLAYER_DEPOSITS = "player_deposits";
+    private static final String TAG_PLAYER_SYNTHESIZES = "player_synthesizes";
+    private static final String TAG_GATHER_PUBLISHES = "gather_publishes";
+    private static final String TAG_PLAYER_ROAD_PLACES = "player_road_places";
     // colonyId → items
     private final Map<UUID, Map<ItemKey, Long>> storage = new ConcurrentHashMap<>();
     // colonyId → elements
@@ -49,6 +53,14 @@ public class ColonyItemBank extends SavedData {
     private final Set<UUID> seededColonies = ConcurrentHashMap.newKeySet();
     /** colonyId → cumulative tourist purchases (persisted, drives onboarding step 6). */
     private final Map<UUID, Long> purchaseCounts = new ConcurrentHashMap<>();
+    /** colonyId → cumulative player-initiated warehouse deposits (persisted, onboarding step 3). */
+    private final Map<UUID, Long> playerDepositCounts = new ConcurrentHashMap<>();
+    /** colonyId → cumulative player-published workstation synthesize requests (onboarding step 5). */
+    private final Map<UUID, Long> playerSynthesizeCounts = new ConcurrentHashMap<>();
+    /** colonyId → cumulative player-published node gather tasks (onboarding step 8). */
+    private final Map<UUID, Long> gatherPublishedCounts = new ConcurrentHashMap<>();
+    /** colonyId → cumulative manual road placements (onboarding step 6). */
+    private final Map<UUID, Long> playerRoadPlaceCounts = new ConcurrentHashMap<>();
     // In-memory reservations (not persisted)
     private final Map<UUID, Map<ItemKey, Long>> reservations = new ConcurrentHashMap<>();
     // ── Factory ──
@@ -110,6 +122,26 @@ public class ColonyItemBank extends SavedData {
         return purchaseCounts.getOrDefault(colonyId, 0L);
     }
 
+    /** Cumulative number of times a player deposited items into this colony's warehouse. */
+    public long getPlayerDepositCount(UUID colonyId) {
+        return playerDepositCounts.getOrDefault(colonyId, 0L);
+    }
+
+    /** Cumulative number of synthesize requests a player published at this colony's workstation. */
+    public long getPlayerSynthesizeCount(UUID colonyId) {
+        return playerSynthesizeCounts.getOrDefault(colonyId, 0L);
+    }
+
+    /** Cumulative number of gather tasks a player published at this colony's nodes. */
+    public long getGatherPublishedCount(UUID colonyId) {
+        return gatherPublishedCounts.getOrDefault(colonyId, 0L);
+    }
+
+    /** Cumulative number of roads a player manually placed for this colony. */
+    public long getPlayerRoadPlaceCount(UUID colonyId) {
+        return playerRoadPlaceCounts.getOrDefault(colonyId, 0L);
+    }
+
     /** Whether this colony has already received the initial element seed. */
     public boolean isSeeded(UUID colonyId) {
         return seededColonies.contains(colonyId);
@@ -137,6 +169,30 @@ public class ColonyItemBank extends SavedData {
     /** Record one successful tourist purchase for the colony. */
     public void recordPurchase(UUID colonyId) {
         purchaseCounts.merge(colonyId, 1L, Long::sum);
+        setDirty();
+    }
+
+    /** Record a player deposit into the colony warehouse (drives onboarding step 3). */
+    public void recordPlayerDeposit(UUID colonyId) {
+        playerDepositCounts.merge(colonyId, 1L, Long::sum);
+        setDirty();
+    }
+
+    /** Record a player-published workstation synthesize request (onboarding step 5). */
+    public void recordPlayerSynthesize(UUID colonyId) {
+        playerSynthesizeCounts.merge(colonyId, 1L, Long::sum);
+        setDirty();
+    }
+
+    /** Record a player-published node gather task (onboarding step 8). */
+    public void recordGatherPublished(UUID colonyId) {
+        gatherPublishedCounts.merge(colonyId, 1L, Long::sum);
+        setDirty();
+    }
+
+    /** Record a manually placed road for the colony (onboarding step 6). */
+    public void recordPlayerRoadPlace(UUID colonyId) {
+        playerRoadPlaceCounts.merge(colonyId, 1L, Long::sum);
         setDirty();
     }
 
@@ -228,6 +284,10 @@ public class ColonyItemBank extends SavedData {
         Set<UUID> allColonies = new HashSet<>(storage.keySet());
         allColonies.addAll(elementStorage.keySet());
         allColonies.addAll(purchaseCounts.keySet());
+        allColonies.addAll(playerDepositCounts.keySet());
+        allColonies.addAll(playerSynthesizeCounts.keySet());
+        allColonies.addAll(gatherPublishedCounts.keySet());
+        allColonies.addAll(playerRoadPlaceCounts.keySet());
 
         for (UUID colonyId : allColonies) {
             CompoundTag colonyTag = new CompoundTag();
@@ -267,6 +327,16 @@ public class ColonyItemBank extends SavedData {
             if (purchases > 0) {
                 colonyTag.putLong(TAG_PURCHASE_COUNT, purchases);
             }
+
+            // Onboarding player-action counters (saved only when non-zero)
+            long deposits = playerDepositCounts.getOrDefault(colonyId, 0L);
+            if (deposits > 0) colonyTag.putLong(TAG_PLAYER_DEPOSITS, deposits);
+            long synthesizes = playerSynthesizeCounts.getOrDefault(colonyId, 0L);
+            if (synthesizes > 0) colonyTag.putLong(TAG_PLAYER_SYNTHESIZES, synthesizes);
+            long gathers = gatherPublishedCounts.getOrDefault(colonyId, 0L);
+            if (gathers > 0) colonyTag.putLong(TAG_GATHER_PUBLISHES, gathers);
+            long roadPlaces = playerRoadPlaceCounts.getOrDefault(colonyId, 0L);
+            if (roadPlaces > 0) colonyTag.putLong(TAG_PLAYER_ROAD_PLACES, roadPlaces);
 
             coloniesTag.add(colonyTag);
         }
@@ -323,6 +393,20 @@ public class ColonyItemBank extends SavedData {
             // Cumulative tourist purchases (absent on legacy saves → 0)
             if (colonyTag.contains(TAG_PURCHASE_COUNT)) {
                 bank.purchaseCounts.put(colonyId, colonyTag.getLong(TAG_PURCHASE_COUNT));
+            }
+
+            // Onboarding player-action counters (absent on legacy saves → 0)
+            if (colonyTag.contains(TAG_PLAYER_DEPOSITS)) {
+                bank.playerDepositCounts.put(colonyId, colonyTag.getLong(TAG_PLAYER_DEPOSITS));
+            }
+            if (colonyTag.contains(TAG_PLAYER_SYNTHESIZES)) {
+                bank.playerSynthesizeCounts.put(colonyId, colonyTag.getLong(TAG_PLAYER_SYNTHESIZES));
+            }
+            if (colonyTag.contains(TAG_GATHER_PUBLISHES)) {
+                bank.gatherPublishedCounts.put(colonyId, colonyTag.getLong(TAG_GATHER_PUBLISHES));
+            }
+            if (colonyTag.contains(TAG_PLAYER_ROAD_PLACES)) {
+                bank.playerRoadPlaceCounts.put(colonyId, colonyTag.getLong(TAG_PLAYER_ROAD_PLACES));
             }
         }
 

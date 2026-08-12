@@ -6,7 +6,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
-import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.building.internal.BuildingSavedData;
 import com.wsteam.wandscape.shared.api.GuideProgressApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.data.GuideProgressSavedData;
@@ -21,7 +21,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Server-authoritative onboarding progress. Computes the current step from
- * colony state (buildings, shop purchases, tourist stays, colony level) and
+ * colony state (buildings, player actions, shop stock, tourist stays) and
  * pushes it to the client, which only renders.
  *
  * <p>{@link #computeStep} is pure and MC-free (over {@link GuideServerContext})
@@ -48,19 +48,20 @@ public final class GuideProgressService implements GuideProgressApi {
 
     /**
      * Step completion checks, in order — MUST match {@code GuideRegistry.STEPS}.
-     * Returns the number of leading steps satisfied (0..9).
+     * Returns the number of leading steps satisfied (0..10).
      */
     public static int computeStep(GuideServerContext ctx) {
         int step = 0;
-        if (ctx.hasCategory("government")) step++;
-        if (ctx.hasType("warehouse")) step++;
-        if (ctx.hasCategory("node")) step++;
-        if (ctx.hasCategory("workstation")) step++;
-        if (ctx.hasCategory("crafting_station")) step++;
-        if (ctx.hasShopPurchased()) step++;
-        if (ctx.hasInnWithStay()) step++;
-        if (ctx.hasTavernRecruited()) step++;
-        if (ctx.colonyLevel() >= 2) step++;
+        if (ctx.hasCategory("government")) step++;        // 1 建造市政厅
+        if (ctx.hasType("warehouse")) step++;             // 2 建造仓库
+        if (ctx.hasPlayerDeposited()) step++;             // 3 存入一个物品
+        if (ctx.hasCategory("workstation")) step++;       // 4 建造工作站
+        if (ctx.hasPlayerSynthesized()) step++;           // 5 合成一样物品
+        if (ctx.hasPlayerPlacedRoad()) step++;            // 6 铺设一条道路
+        if (ctx.hasBreadshopStocked()) step++;            // 7 面包店补充货物
+        if (ctx.hasNodeGatherPublished()) step++;         // 8 节点发布采集任务
+        if (ctx.hasCategory("altar")) step++;             // 9 建造祭坛
+        if (ctx.hasInnWithStay()) step++;                 // 10 旅馆游客入住
         return step;
     }
 
@@ -94,9 +95,37 @@ public final class GuideProgressService implements GuideProgressApi {
         }
 
         @Override
-        public boolean hasShopPurchased() {
-            return hasCategory("shop")
-                    && ColonyItemBank.get(level).getPurchaseCount(colonyId) > 0;
+        public boolean hasPlayerDeposited() {
+            return ColonyItemBank.get(level).getPlayerDepositCount(colonyId) > 0;
+        }
+
+        @Override
+        public boolean hasPlayerSynthesized() {
+            return ColonyItemBank.get(level).getPlayerSynthesizeCount(colonyId) > 0;
+        }
+
+        @Override
+        public boolean hasPlayerPlacedRoad() {
+            return ColonyItemBank.get(level).getPlayerRoadPlaceCount(colonyId) > 0;
+        }
+
+        @Override
+        public boolean hasBreadshopStocked() {
+            BuildingSavedData savedData = BuildingSavedData.get(level);
+            if (savedData == null) return false;
+            for (BuildingData b : buildings) {
+                if ("breadshop".equals(b.getBuildingTypeId())
+                        && savedData.hasShopStock(b.getBuildingId())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean hasNodeGatherPublished() {
+            return hasCategory("node")
+                    && ColonyItemBank.get(level).getGatherPublishedCount(colonyId) > 0;
         }
 
         @Override
@@ -116,18 +145,6 @@ public final class GuideProgressService implements GuideProgressApi {
                 }
             }
             return false;
-        }
-
-        @Override
-        public boolean hasTavernRecruited() {
-            if (!hasCategory("tavern")) return false;
-            var npcApi = WandscapeApis.getNpcApiSilently();
-            return npcApi != null && npcApi.getNpcCount(colonyId) > 0;
-        }
-
-        @Override
-        public int colonyLevel() {
-            return WandscapeEngine.getColonyLevelManager().getLevel(colonyId);
         }
     }
 }

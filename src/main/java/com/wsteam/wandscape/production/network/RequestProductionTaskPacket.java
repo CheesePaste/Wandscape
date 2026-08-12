@@ -142,6 +142,14 @@ public record RequestProductionTaskPacket(
             BuildingApi api = WandscapeApis.getBuildingApi();
             api.enqueueWork(buildingId, work);
 
+            // A player-published synthesize request counts toward onboarding step 5.
+            if ("synthesize".equals(pkt.action) && state.getColonyId() != null) {
+                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(level);
+                if (bank != null) bank.recordPlayerSynthesize(state.getColonyId());
+                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
+                if (guideApi != null) guideApi.sendToPlayer(sp, state.getColonyId());
+            }
+
             int queueSize = state.getTaskQueue().size();
             Log.info(TAG, "[ProdTask] enqueued action={} recipe={} x{} at building {} "
                             + "(colony={} blueprint={} queue_size_after={})",
