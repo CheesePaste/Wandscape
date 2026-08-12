@@ -448,7 +448,7 @@ public final class SplineEditorImGui {
     private static void drawHeaderBanner(SplineModel model) {
         ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.11f, 0.22f, 0.85f);
         int childFlags = imgui.flag.ImGuiWindowFlags.NoScrollbar | imgui.flag.ImGuiWindowFlags.NoScrollWithMouse;
-        if (ImGui.beginChild("HeaderBanner", 0, 52, false, childFlags)) {
+        if (ImGui.beginChild("HeaderBanner", 0, 66, false, childFlags)) {
             ImGui.textColored(0.95f, 0.78f, 0.30f, 1.00f, ICON_ROAD + " WANDSCAPE 道路制作工坊");
             ImGui.sameLine();
             WandscapeImGuiTheme.textMuted("v2.0");
