@@ -2,6 +2,18 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-12：工作站相邻同类生产任务自动合并——补货不再被 x1/x2 刷屏
+
+**需求**（用户指令）：工作站里来一个合并机制——**只要任务相邻 + 要合成物品相同，自动合并成一个任务**，避免补货时大量 x1/x2 任务占满工作站队列。
+
+**决策**：
+- **入队时合并队尾同类任务（唯一漏斗）**：生产任务只有两条入队路径——`RequestProductionTaskPacket`（玩家 GUI 点合成）与 `ResourceSupplySystem.enqueueSynthesize`（自动补货），都走 `BuildingApiImpl.enqueueWork`。在 `enqueueWork` 里 `addLast` 前先尝试 `mergeSameRecipeTail`：新任务若以 `production:` 开头、且与队尾任务「签名相同」，则并入队尾——`count`、`channel_ticks` 求和，保留队尾 priority，不占新队列槽位（因此放在容量检查之前）。
+- **「相邻」= 队尾**：新任务恒追加到队尾，唯一相邻的既有任务就是队尾；签名 = blueprint + 除 `count`/`channel_ticks` 外的全部参数（`anchor`、`recipe_id`/`item_id`）排序序列化。中间隔了别的任务（如 build）就不合并。
+- **channel_ticks 求和**：四个生产蓝图（synthesize/decompose/craft_wand/brew_potion）的 `channel_ticks` 都是本任务的通道总时长，两任务合并后求和等价于顺序执行两请求，时长语义不变。
+- **只合并 `production:`**：`build:` 施工、`node:gather` 等不合并（无 count 语义/不适用）。
+
+**为什么**：补货（尤其自动补货 + 玩家手点）会把同一配方拆成大量 x1/x2 独立条目塞满队列（容量 60），既占槽位又难管理。入队合并是纯队列层操作、对调度与蓝图透明，一个漏斗覆盖全部来源；「只合并相邻队尾」严格匹配用户「相邻 + 同类」的定义，不会跨任务强行归并而打乱玩家手动排队的顺序。
+
 ## 2026-08-12：V 面板相机飞行速度统一 + 移除游戏内调速——速度走 Config
 
 **需求**（用户指令）：ROAD 子模式下 WASD 飞行太慢（样条 `0.15×20=3 BPS` vs 鸟瞰 `10 BPS`），要与「正常 V 无子模式」统一；Build 一并核对。速度统一后**全模式提到 15**，并**删除游戏内调速设置**（滚轮/Ctrl 调速），改为 **Config 可调**。
