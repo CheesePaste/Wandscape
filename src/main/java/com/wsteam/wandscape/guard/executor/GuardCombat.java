@@ -98,8 +98,10 @@ public final class GuardCombat {
             return;
         }
 
-        // 看得见：停止移动，无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
+        // 看得见：停止移动，面向目标（每轮战斗循环刷新朝向，目标走位时脸跟着转）。
+        // 无光束则经 CastBrain 选魔法再施放（CD/蓝/锁在 MagicCaster 内部门控原子复验）
         cancelNavigation(world, npcId);
+        npc.faceTarget(BlockPos.containing(target.getBoundingBox().getCenter()));
         if (beam == null) {
             // known = 玩家策略解析出的魔法级优先级；快照（敌数/自血/友方最低血/状态）驱动目标规则与 conditions
             List<MagicDef> known = CastBrain.resolvePriority(npc.castStrategy,
@@ -155,10 +157,14 @@ public final class GuardCombat {
 
         npc.markMeleeAttack(level.getGameTime(), MELEE_COOLDOWN_TICKS);
 
+        // 面向目标：普攻前先转身（脸/身体/手臂朝向目标），粒子线与伤害方向随之对准
+        Vec3 aim = target.getBoundingBox().getCenter();
+        npc.faceTarget(BlockPos.containing(aim));
+
         // 白色粒子线：持杖手 → 目标身体中心，与建筑交互射线的 CastBolt 粒子一致（先打视觉，
         // 即使目标被这一击击杀也不丢特效）
         Vec3 from = npc.getStaffPosition();
-        Vec3 to = target.getBoundingBox().getCenter();
+        Vec3 to = aim;
         Vec3 delta = to.subtract(from);
         double dist = delta.length();
         if (dist >= 0.1) {
