@@ -4,7 +4,7 @@
 
 ## 元素物品（item/ElementItem）
 
-`element/item/ElementItem`：代表一种元素的物品形态（`element_<id>`），图标复用 `textures/gui/icons/element_<id>.png`，供 JEI/配方展示。在 `Wandscape.java` 按 `ElementType` 循环注册为 `ELEMENT_ITEMS` map，进创造模式标签页。
+`element/item/ElementItem`：代表一种元素的物品形态（`element_<id>`），图标 = `textures/gui/icons/element_<id>.png`（白色通道）按 `WandscapeTheme.elementColor(id)` 预染色缩到 16×16 存于 `textures/item/`，供 JEI/配方展示。在 `Wandscape.java` 按 `ElementType` 循环注册为 `ELEMENT_ITEMS` map，进创造模式标签页。
 
 获得即转化：物品在玩家背包内每 tick 检查（`inventoryTick`，仅玩家自身背包触发），若玩家在殖民地范围内（`ColonyApi.getColonyId`），把 `elementType` 按数量存入仓库（`WarehouseApi.addElement`）并移除物品、播 `WAREHOUSE` 音效；不在范围内则保留物品待玩家进入殖民地。显示名复用 `element.wandscape.<id>`。
 

@@ -36,7 +36,9 @@ EARTH / WOOD / WATER / FIRE / METAL / WIND / DARK（`@SerializedName` 小写 id�
 
 ## 元素物品（item/ElementItem）
 
-7 种元素各注册一个物品 `element_<id>`（`Wandscape.java` 按 `ElementType` 循环，`ELEMENT_ITEMS` map，进创造模式标签页），图标复用 `textures/gui/icons/element_<id>.png`，显示名复用 `element.wandscape.<id>`。供 JEI/配方展示。
+7 种元素各注册一个物品 `element_<id>`（`Wandscape.java` 按 `ElementType` 循环，`ELEMENT_ITEMS` map，进创造模式标签页），显示名复用 `element.wandscape.<id>`。供 JEI/配方展示。
+
+图标 = 白色通道的 `textures/gui/icons/element_<id>.png` 按 `WandscapeTheme.elementColor(id)` 预染色后缩到 16×16 存为 `textures/item/element_<id>.png`（与 V 键面板顶栏同色），模型 `layer0` 指向它——64×64 原图直接当物品贴图会因 item/generated 的 16×16 UV 假设渲染错乱。
 
 获得即转化：`inventoryTick`（仅玩家自身背包触发）检测到元素物品时，若玩家在殖民地范围内（`ColonyApi.getColonyId`），按数量存入所在殖民地仓库（`WarehouseApi.addElement`）、移除物品并播 `WAREHOUSE` 音效；不在范围内保留物品等待进入殖民地。
 
