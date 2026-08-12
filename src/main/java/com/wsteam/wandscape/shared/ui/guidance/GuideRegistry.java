@@ -168,7 +168,7 @@ public final class GuideRegistry {
                     "§b▶ 点【§e面包店§b】卡片，§e双击§b进入放置"),
             AIMING_LINES,
             PINNED_LINES,
-            "§e💡 游客要到 §e第二天§b 才会来购物；补货自动从仓库/合成获取货物，游客购物带来元素收益");
+            "§e💡 游客要到 §e第二天§b 才会来购物；补货自动从仓库取货，仓库货物不足时自动合成；游客购物带来元素收益");
 
     private static final GuideStep NODE = new GuideStep(
             "node",
