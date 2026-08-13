@@ -3,9 +3,6 @@ package com.wsteam.wandscape.shared.api;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
-import com.wsteam.wandscape.road.core.RoadBlobCache;
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.road.core.RoadNetwork;
 /**
@@ -18,14 +15,6 @@ public interface RoadApi {
 
     /** Get all road edges for a colony. */
     List<RoadEdge> getEdges(UUID colonyId);
-
-    /**
-     * Get the lazy road blob cache for a colony.
-     * Returns null if the road system is not loaded.
-     * The cache is populated on-demand by BFS exploration.
-     */
-    @Nullable
-    RoadBlobCache getBlobCache(UUID colonyId);
 
     /**
      * Remove a road edge from the network and demolish its blocks in-world.

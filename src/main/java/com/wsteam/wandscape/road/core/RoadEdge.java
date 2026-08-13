@@ -32,7 +32,6 @@ public class RoadEdge {
     private final String tier;
     private final SplineModel spline;
     private final List<PathPoint> cachedPath;
-    private final List<SplinePointCache> detailedPathCache;
     private final List<Long> segmentTaskIds;
     private EdgeStatus status;
     private Long decorationTaskId; // null until decoration enqueued
@@ -49,8 +48,7 @@ public class RoadEdge {
         this.toNodeId = toNodeId;
         this.tier = tier;
         this.spline = spline;
-        this.detailedPathCache = generateDetailedPathCache(spline);
-        this.cachedPath = generatePathCache(this.detailedPathCache);
+        this.cachedPath = generatePathCache(spline);
         this.segmentTaskIds = new ArrayList<>();
         this.status = EdgeStatus.PLANNED;
         this.width = 3;
@@ -65,29 +63,19 @@ public class RoadEdge {
         this.toNodeId = toNodeId;
         this.tier = tier;
         this.spline = spline;
-        this.detailedPathCache = generateDetailedPathCache(spline);
-        this.cachedPath = generatePathCache(this.detailedPathCache);
+        this.cachedPath = generatePathCache(spline);
         this.segmentTaskIds = new ArrayList<>(segmentTaskIds);
         this.status = status;
         this.width = 3;
     }
 
-    private static List<SplinePointCache> generateDetailedPathCache(SplineModel spline) {
-        List<SplinePointCache> list = new ArrayList<>();
+    private static List<PathPoint> generatePathCache(SplineModel spline) {
+        Set<PathPoint> unique = new java.util.LinkedHashSet<>();
         if (spline != null && !spline.getPoints().isEmpty()) {
             for (CurveSample sample : spline.tessellate(0.5)) {
                 SplineVec3 pos = sample.position();
-                PathPoint pt = new PathPoint((int) Math.floor(pos.x()), (int) Math.floor(pos.y()), (int) Math.floor(pos.z()));
-                list.add(new SplinePointCache(pt, sample.u()));
+                unique.add(new PathPoint((int) Math.floor(pos.x()), (int) Math.floor(pos.y()), (int) Math.floor(pos.z())));
             }
-        }
-        return list;
-    }
-
-    private static List<PathPoint> generatePathCache(List<SplinePointCache> detailed) {
-        Set<PathPoint> unique = new java.util.LinkedHashSet<>();
-        for (SplinePointCache cache : detailed) {
-            unique.add(cache.point());
         }
         return new ArrayList<>(unique);
     }
@@ -100,7 +88,6 @@ public class RoadEdge {
     public String getTier() { return tier; }
     public SplineModel getSpline() { return spline; }
     public List<PathPoint> getPath() { return List.copyOf(cachedPath); }
-    public List<SplinePointCache> getDetailedPathCache() { return List.copyOf(detailedPathCache); }
     public List<Long> getSegmentTaskIds() { return List.copyOf(segmentTaskIds); }
     public EdgeStatus getStatus() { return status; }
     public Long getDecorationTaskId() { return decorationTaskId; }
