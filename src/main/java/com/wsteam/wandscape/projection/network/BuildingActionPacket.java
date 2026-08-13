@@ -76,6 +76,17 @@ public record BuildingActionPacket(UUID buildingId, String action) implements Cu
                             player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
                 }
             }
+            case "cancel" -> {
+                // Undo an under-construction building (waiting for materials / being built).
+                boolean ok = api.cancelBuilding(packet.buildingId());
+                if (ok) {
+                    Log.info(TAG, "Player {} cancelled under-construction building {} ({})",
+                            player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
+                } else {
+                    Log.warn(TAG, "Player {} tried to cancel {} ({}) but it cannot be cancelled",
+                            player.getGameProfile().getName(), state.getBuildingTypeId(), packet.buildingId());
+                }
+            }
             default -> Log.warn(TAG, "Unknown action: {}", packet.action());
         }
     }

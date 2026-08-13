@@ -25,7 +25,7 @@
 ## BuildingApiImpl 公开方法
 
 - 查询：getBuilding/getBuildingAt/getColonyBuildings/getBuildingBounds；聚落三值 getColonySnapshot/getColonyComfort/getColonyMagic/getColonyWonder。
-- 生命周期：registerBuilding（重叠检查 + BuildingPlacedEvent）/unregisterBuilding；shutdown(id[,reason])（按类别 applyShutdownPenalties 零贡献 + BuildingShutdownEvent + 灰烟）；restart（恢复贡献 + 星光）；demolishBuilding（置 demolishing + structureIntact=false + 清队列 + 入队 `build:demolish_structure` 优先 49）。
+- 生命周期：registerBuilding（重叠检查 + BuildingPlacedEvent）/unregisterBuilding；shutdown(id[,reason])（按类别 applyShutdownPenalties 零贡献 + BuildingShutdownEvent + 灰烟）；restart（恢复贡献 + 星光）；demolishBuilding（置 demolishing + structureIntact=false + 清队列 + 入队 `build:demolish_structure` 优先 49）；cancelBuilding（**撤销建造中建筑**：未开工 → unregisterState 直接移除；开工 → refundMaterials 全额退还材料 + demolishBuilding 拆已建部分；已完工不可撤销）。
 - 队列：isBuildingOccupied/getBuildingsWithPendingWork/dequeueWork/enqueueWork（上限=queue容量或 5；`enqueueWork(buildingId, work, atFront)` 队首插入供紧急补货；生产任务与相邻同配方任务合并——队尾入队折队尾、队首入队折队首）/getBuildingsByCategory/setCurrentTask/getQueue/removeFromQueue/moveUp/moveDown。
 - 放置：placeBuilding（firstFree 逻辑 + EnqueueHelper.buildWorkItem）；isFirstFreeClaimed；游客交互点：findBeds/sampleWalkableGround/getTouristInteractionTarget/getEntryPoint/getTouristInteractPoint。
 

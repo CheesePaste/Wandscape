@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-13：建造中建筑可撤销——未开工移除、开工拆掉并退还材料
+
+**需求**（用户指令）：放错建筑后悔了却撤销不了。要求建筑「等待材料/建造中」时 V 面板异常报告里可撤销，撤销按钮占「修复」的位置；未开工只停，开工拆掉已建部分并返还资源。
+
+**决策**：
+- **`BuildingApi.cancelBuilding(buildingId)` 新增**：仅未完工（`!hasEverCompleted`）且非拆除中的建筑可撤销。
+  - **未开工**（`!isConstructionStarted`）：材料未从仓库扣除，直接 `unregisterState` 移除建筑，**不返还**（无东西可还，也杜绝「放置→立即撤销→白嫖材料」）。
+  - **开工**（`isConstructionStarted`）：材料在施工开始时已整批 commit 到仓库，先 `refundMaterials` 全额退还（`EnqueueHelper.computeMaterialCounts` → `ColonyItemBank.add` 方块物品，键=裸 block id，与 `build:place_structure` 的 request_resource 消耗键一致），再 `demolishBuilding` 异步拆掉已建部分（复用既有 NPC 拆除管线）。
+- **UI**：异常报告（V 面板侧栏 ⚠️ 打开）里建造中行显示红色「撤销」按钮，点按发 `BuildingActionPacket(action=cancel)`。损坏→修复、关闭→营业不变。
+- **`ColonyMetricsService`**：建造中列表排除 `isDemolishing`，撤销后已标记拆除的建筑不残留「建造中/撤销」项。
+
+**为什么**：材料是「施工开始时整批扣一次」，开工后退全额=正好退掉已扣的；未开工没扣过，退全额会造成刷材料。拆除走既有管线，与拆完整建筑一致（不恢复地形，仅清掉已建块）。
+
+**影响**：放错建筑可在建造期撤销；已建成的建筑不可撤销（仍走拆除）。异常报告建造中行由「无按钮」变为「撤销」。
+
 ## 2026-08-13：删除路网图路由——RoadRouter/blob/TransportRoute 整套移除，改方块条件
 
 **需求**（服务器事故诊断）：服务器（Linux，多模组）上玩家建 3-4 条路后单个 tick 卡满 60 秒被看门狗杀服。线程转储指向 `RoadRouter.buildGraph`。根因：buildGraph 的断点桥接是「端点数 × 全部点数」双层循环，blob 边界点同时进两边 → O(B²)；`custom_roads` 标签含 stone/cobblestone 等常见方块，RTS 模组/铲平铺出的大片路面全被懒扫描成 blob，B 到数千后单次 buildGraph 数秒，每次 `planWithRoads` 都重算 → 服务端持续卡死。本地只画几条路（RoadEdge 网络很小）故不触发。
@@ -29,6 +44,19 @@
 **为什么**：工作站队列是 FIFO（`BuildingTaskSource` 用 `pollFirst` 取任务，WorkItem 的 priority 只影响全局池调度、不改变建筑内队列顺序），补货合成若排在建材料后面，缺货商品要等前面所有合成完成才开工，游客持续买不到货。队首插入让缺货补货抢在建材前开工；通用建材供应不插队，保持原排队语义。
 
 **影响**：商店缺货时补货合成优先执行；玩家手点的其他合成/施工入队顺序不受影响（默认仍队尾）。
+
+## 2026-08-13：补货合成队首插入参与队首同类合并——不再堆积连续 *7/*9
+
+**需求**（用户指令）：补货发布的合成任务加在队首，不走队尾合并同类项，连续多个同物品 *7、*9 挨在一起不被合并；要求队首也做同类合并。
+
+**决策**：
+- **`mergeSameRecipeHead` 新增**：队首插入（`atFront=true`）时若队首是相邻同签名生产任务，折进队首（count/channel_ticks 求和、保留队首位置），否则照旧 `addFirst`。合并消耗零队列槽位，仍在容量检查前执行。
+- **共用合并逻辑**：`mergeWork`（求和）+ `mergeable`（签名判定）抽成私有方法，`mergeSameRecipeTail` 与 `mergeSameRecipeHead` 复用，队尾/队首语义完全对称。
+- **推翻上文「队首插入不参与同类合并」**：原理由「合并会把任务折回队尾、抵消插队」只对队尾合并成立；折进队首后任务仍在最前，插队语义不丢。`countSynthesizeInFlight` 只按「短缺量−在途量」出数，重试会追加新条目（先 x7 再补 x2 → 队首 x2 紧挨 x7），相邻同物品却因跳过合并而堆积。
+
+**为什么**：补货缺货→合成是紧急路径必须插队，但同一物品连续补货/重试不应在队首产生多个相邻条目占槽位；合并进队首既保紧急又去重，`countSynthesizeInFlight` 与合并协同（合并后 inFlight 计数仍是总和）。
+
+**影响**：连续补货短缺合并成一个队首条目（count 累加）；其他物品的队首插队行为不变。
 
 ## 2026-08-12：ImGui 字体烘焙与 GLFW/GL3 Native 钩子解耦——实现零卡顿零崩溃预热
 

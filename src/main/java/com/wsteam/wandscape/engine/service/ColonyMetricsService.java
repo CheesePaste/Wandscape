@@ -75,7 +75,10 @@ public final class ColonyMetricsService implements ColonyMetricsApi {
             brokenCount = brokens.size();
             brokenBuildingIds = brokens.stream().map(b -> b.getBuildingId()).toList();
             brokenBuildingNames = brokens.stream().map(b -> b.getBuildingTypeId()).toList();
-            var constructing = buildings.stream().filter(b -> !b.hasEverCompleted()).toList();
+            // Demolishing buildings are excluded — after a cancel they are being torn
+            // down, so listing them as "建造中" with a stale 撤销 button would mislead.
+            var constructing = buildings.stream()
+                    .filter(b -> !b.hasEverCompleted() && !b.isDemolishing()).toList();
             underConstructionCount = constructing.size();
             underConstructionBuildingIds = constructing.stream().map(b -> b.getBuildingId()).toList();
             underConstructionBuildingNames = constructing.stream().map(b -> b.getBuildingTypeId()).toList();

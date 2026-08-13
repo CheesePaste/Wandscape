@@ -37,6 +37,16 @@ public interface BuildingApi {
     void demolishBuilding(UUID buildingId);
     boolean isDemolishing(UUID buildingId);
 
+    /**
+     * Undo an under-construction (not yet completed) building. Returns true when
+     * the building was cancelled. If construction has started the built parts are
+     * demolished and the full material cost is refunded to the colony warehouse;
+     * if construction has not started the pending building is removed outright
+     * (nothing was consumed, so nothing is refunded). Completed buildings cannot
+     * be cancelled.
+     */
+    boolean cancelBuilding(UUID buildingId);
+
     // ---- Colony stats ----
 
     /** All three evaluation values computed in a single traversal. */

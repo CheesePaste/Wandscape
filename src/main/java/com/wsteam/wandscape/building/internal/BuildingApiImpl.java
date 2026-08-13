@@ -13,11 +13,13 @@ import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.engine.service.ParticleService;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
+import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.shared.event.BuildingPlacedEvent;
 import com.wsteam.wandscape.shared.event.BuildingRemovedEvent;
 import com.wsteam.wandscape.shared.event.BuildingRestartedEvent;
 import com.wsteam.wandscape.shared.event.BuildingShutdownEvent;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -373,6 +375,58 @@ public class BuildingApiImpl implements BuildingApi {
         if (sd == null) return false;
         BuildingState state = sd.getBuilding(buildingId);
         return state != null && state.isDemolishing();
+    }
+
+    @Override
+    public boolean cancelBuilding(UUID buildingId) {
+        BuildingSavedData sd = getSavedData();
+        if (sd == null) return false;
+
+        BuildingState state = sd.getBuilding(buildingId);
+        if (state == null) return false;
+
+        // Only buildings that have not yet completed construction can be undone.
+        // Completed buildings are removed through the normal demolition path instead.
+        if (state.hasEverCompleted() || state.isDemolishing()) return false;
+
+        if (state.isConstructionStarted()) {
+            // Construction started → materials were charged to the warehouse in one
+            // bulk commit at construction start, so refund the full material cost,
+            // then demolish whatever has been built.
+            refundMaterials(state);
+            demolishBuilding(buildingId);
+        } else {
+            // Not started → nothing was consumed; just drop the pending building.
+            unregisterState(state);
+        }
+        return true;
+    }
+
+    /**
+     * Return the full material cost of an under-construction building to its colony
+     * warehouse. Materials are block items keyed by bare block id — the same keying
+     * {@code build:place_structure}'s request_resource step uses to consume them.
+     */
+    private void refundMaterials(BuildingState state) {
+        UUID colonyId = state.getColonyId();
+        if (colonyId == null) return;
+        BuildingConfig config = BuildingConfigLoader.getInstance().get(state.getBuildingTypeId());
+        if (config == null) return;
+        Map<String, Integer> counts = EnqueueHelper.computeMaterialCounts(config);
+        if (counts.isEmpty()) return;
+        Level level = getServerLevel();
+        if (level == null) return;
+        ColonyItemBank bank = ColonyItemBank.get(level);
+        if (bank == null) return;
+
+        int total = 0;
+        for (var entry : counts.entrySet()) {
+            bank.add(colonyId, ItemKey.of(entry.getKey(), null), entry.getValue());
+            total += entry.getValue();
+        }
+        Log.info(TAG, "[Cancel] Refunded {} material items ({} types) to colony {} for {} ({})",
+                total, counts.size(), colonyId.toString().substring(0, 8),
+                state.getBuildingTypeId(), state.getBuildingId().toString().substring(0, 8));
     }
 
     // ---- Task bridge ----
