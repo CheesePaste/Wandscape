@@ -93,11 +93,12 @@ public final class WandscapePanelController {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        // 光标切换键（默认 Tab）已被面板用作抬/放光标：仅当绑定仍在 Tab 时抑制原版
-        // 玩家列表在 Tab 按下时闪烁；玩家改绑后 Tab 恢复原版玩家列表功能。
+        // Tab 用作「折叠/展开新手引导」：仅引导显示期间按下 Tab 折叠引导并抑制原版
+        // 玩家列表闪烁；引导结束后 Tab 恢复原版玩家列表功能。
         // 面板隐藏时放行，让 Tab 回到原版玩家列表。
         if (!WandscapePanelState.isPanelHidden()
-                && com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
+                && com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()
+                && com.wsteam.wandscape.WandscapeClient.GUIDE_FOLD_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
             mc.options.keyPlayerList.setDown(false);
         }
 
@@ -439,14 +440,12 @@ public final class WandscapePanelController {
             return;
         }
 
-        // Cursor toggle key (default Tab): if tutorial guidance is active, toggle tutorial panel collapse; otherwise raise/lower cursor.
-        if (com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.matches(key, scanCode)
-                && WandscapePanelState.isPanelOpen()) {
-            if (com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
-                com.wsteam.wandscape.shared.ui.guidance.GuideSession.toggleCollapsed();
-            } else {
-                WandscapePanelState.toggleCursor();
-            }
+        // Tab key: fold/expand the tutorial guide only (cursor raise is on C).
+        // When no guide is showing, Tab does nothing to the panel.
+        if (com.wsteam.wandscape.WandscapeClient.GUIDE_FOLD_TOGGLE.matches(key, scanCode)
+                && WandscapePanelState.isPanelOpen()
+                && com.wsteam.wandscape.shared.ui.guidance.GuideSession.shouldShow()) {
+            com.wsteam.wandscape.shared.ui.guidance.GuideSession.toggleCollapsed();
             return;
         }
 

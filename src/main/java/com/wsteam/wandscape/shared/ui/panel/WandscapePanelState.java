@@ -357,25 +357,6 @@ public final class WandscapePanelState {
         }
     }
 
-    /**
-     * Tab 键：切换光标/建筑条（替换原 C 键）。
-     * BUILD 里开/关建筑条（开=抬光标）；其余子模式翻转光标意图。
-     */
-    public static void toggleCursor() {
-        if (!panelOpen) return;
-
-        if (activeSubMode == SubMode.BUILD_PROJECTION) {
-            if (buildingBarOpen) {
-                closeBuildingBar();
-            } else {
-                openBuildingBar();
-            }
-            return;
-        }
-
-        cursorLifted = !cursorLifted;
-    }
-
     // ── Building selection bar ──
 
     public static boolean isBuildingBarOpen() { return buildingBarOpen; }
