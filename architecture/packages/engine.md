@@ -37,7 +37,7 @@ NavigationSystem（≤64格寻路 + 卡死检测每60tick/3次→传送）/ Reso
 
 ## 物品运输 (transport/)
 
-ItemTransportManager：样条线数据发客户端（TransportRoute + SplineLeg 列表），服务器仅 elapsed 倒计时判定到达。客户端真插值（TransportItemEntity 用 tickLeg 执行样条线，60FPS 帧率平滑）。自定义渲染胶囊气泡（中性金边暗灰底）。
+ItemTransportManager：直线飞行，服务器发 from/to/duration/onRoad 四元组（TransportStartPacket），服务器仅 elapsed 倒计时判定到达。客户端直线插值（TransportItemEntity，60FPS 帧率平滑；离路加 sin 弧）。onRoad 由服务器沿直线采样地表方块（`custom_roads` 标签）决定——无图，单次 O(采样数)。自定义渲染胶囊气泡（中性金边暗灰底）。
 
 ## 敌对生物索敌（HostileTargetingHandler）
 

@@ -37,7 +37,7 @@ com.wsteam.wandscape
 │   ├── boundary/             WandscapeBlockOps/AsyncTransformExecutor/WandscapeMovementOps/
 │   │                         WandscapeRitualOps/WandscapeEntityOps/WandscapeBlockInteractExecutor/ResourceRequestExecutor
 │   ├── colony/               ColonySavedData/ColonyLevelData/ColonyLevelManager + ColonyApiImpl
-│   ├── nav/                  WandscapeNavigation/RoadWalkPlanner
+│   ├── nav/                  WandscapeNavigation
 │   ├── service/              ChunkLoadManager/ColonyMetricsService/StatsService/AchievementService/
 │   │                         GuideProgressService/ParticleService/SoundService
 │   ├── sound/                WandscapeSounds + ColonyAmbientSystem

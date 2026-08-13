@@ -8,7 +8,7 @@
 {"replace": false, "values": ["minecraft:purpur_block", "minecraft:nether_bricks", "minecraft:dark_prismarine"]}
 ```
 
-`wandscape:custom_roads` 标签标记玩家自建道路方块，用于 `RoadBlobCache` 连通块识别与 `RoadRouter` 虫洞。**当前**值在 `WandscapeTags.Blocks.CUSTOM_ROADS` 读取。
+`wandscape:custom_roads` 标签标记路面方块，用作**方块条件**（无图）：游客漫游目标选路块/脚下判路决定移动速度（`TouristMoveGoal`），物品运输直线采样判上路速度（`ItemTransportManager`）。**当前**值在 `WandscapeTags.Blocks.CUSTOM_ROADS` 读取。
 
 ## 道路预设（RoadPreset，代码 DEFAULT_PRESETS）
 

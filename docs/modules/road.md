@@ -1,36 +1,35 @@
-# road/ — 道路模块 + 物品运输
+# road/ — 道路模块（无图路由）
 
 `src/main/java/com/wsteam/wandscape/road/`
 
 ## 职责
 
-殖民地道路网络：玩家手动铺路/填平/销毁、样条编辑器、NPC/物品沿路寻路、物品运输动画。核心数据模型纯 Java，MC 实现在 `road/engine/`。
+殖民地道路网络：玩家手动铺路/填平/销毁、样条编辑器、道路方块建造任务。**无路网图路由**——移动/运输不再算 Dijkstra，路面只作为方块条件（`wandscape:custom_roads` 标签）影响游客闲逛与物品飞行速度。核心数据模型纯 Java，MC 实现在 `road/engine/`。
 
 ## 核心数据模型（road/core/）
 
-- `RoadNetwork`：图结构，节点 map UUID→RoadNode、边 map UUID→RoadEdge。查询：findNearestNode（XZ 曼哈顿）、findNearestWalkablePathPoint（Y 可走性评分）、findEdgeBetween、updateNodeType、removeEdge/Node。
+- `RoadNetwork`：图结构（**仅元数据**，不用于寻路），节点 map UUID→RoadNode、边 map UUID→RoadEdge。查询：findNearestNode（XZ 曼哈顿）、findNearestWalkablePathPoint（Y 可走性评分）、findEdgeBetween、updateNodeType、removeEdge/Node。
 - `RoadNode(nodeId, GridPos, NodeType)`：NodeType INTERSECTION/ORPHAN/PLAYER。
-- `RoadEdge`：可变边；from/to、tier、spline、cachedPath（spline.tessellate(0.5)）、detailedPathCache、segmentTaskIds、status(PLANNED/BUILDING/COMPLETE)、width(默认3)、pendingSegmentCount、placedBlocks；分段完成用 recordSegmentComplete 按 UUID 去重计数。
-- `RoadBlobCache`：玩家自建道路连通块懒缓存（BFS，`wandscape:custom_roads` 标签）；块边界=任一 XZ 四邻不在本块；MAX_BLOB_SIZE=2000。纯 core。
+- `RoadEdge`：可变边；from/to、tier、spline、cachedPath（spline.tessellate(0.5) 去重）、segmentTaskIds、status(PLANNED/BUILDING/COMPLETE)、width(默认3)、pendingSegmentCount、placedBlocks；分段完成用 recordSegmentComplete 按 UUID 去重计数。cachedPath 供游客出生/救援取路面锚点。
 - `RoadTemplate`：样条沿线阵列生成蓝图（RoadTemplateBlock 列表）。
 - `SplineModel`：纯 Java 3D 三次贝塞尔样条；evaluate(u)→CurveSample(position,tangent,u)、tessellate(step)。
 - `SplinePoint`：anchor + controlPrev/Next + locked（对称锁定）。
 - `SplineVec3`：纯 3D double 向量。
-- `TransportRoute(List<SplineLeg>)`：含 NBT 序列化。
-- 支撑：CurveSample/PathPoint(3D 带 Y)/XZPoint(2D)/SplinePointCache/RouteSegment(遗留)/SplineLeg(spline,uStart,uEnd,offRoad)。
+- 支撑：CurveSample/PathPoint(3D 带 Y)/XZPoint(2D)。
 
-## 算法（road/algorithm/）
+## 路由（已删除）
 
-- `RoadRouter`：物品/NPC 运输路线规划：图=边内相邻点 + 跨断点桥接(MAX_GAP_XZ=6, MAX_GAP_Y=3) + 玩家块质心"虫洞"；Dijkstra 权重按 tick（上路 5/格、离路 10/格）；planNpc 拒绝离路段 |dy|>1；绕路容忍系数 walker 3.0 / item 1.5；合并共线 SplineLeg。
+RoadRouter（buildGraph/Dijkstra/断点桥接/虫洞）、RoadBlobCache/RoadBlobExplorer（懒扫描 blob）、RoadRoutingHelper、RoadWalkPlanner、TransportRoute/SplineLeg（spline 运输路线）已整体删除——buildGraph 端点×全点 O(B²) 是服务端看门狗杀服根因。替代为**方块条件**：
+
+- 物品运输（engine/transport/）：直线采样地表方块，≥1/2 是 `custom_roads` → 上路速度 5 tick/块平飞，否则离路 10 tick/块抛物线。
+- NPC/游客移动：vanilla A* 直寻；游客漫游目标选路块、脚下非路面减速 ×0.8。
 
 ## MC 实现（road/engine/）
 
-- `RoadApiImpl`：getNetwork/getEdges（从 overworld RoadSavedData）、getBlobCache、removeEdge。
+- `RoadApiImpl`：getNetwork/getEdges（从 overworld RoadSavedData）、removeEdge。
 - `RoadSavedData`（`wandscape_roads`）：仅持久化边（spline 的 a/p/n/l、segmentTaskIds、placedBlocks、status、width），节点加载时重建；兼容旧 "path" 字段。
 - `RoadSegmentListener`：订阅引擎 CustomEvent `road_segment_complete`→recordSegmentComplete，全完成置 COMPLETE。
-- `RoadRoutingHelper`：planWithRoads/planNpcWithRoads：经 RoadApi 取网络+缓存→RoadBlobExplorer.scanAndCache→RoadRouter.plan/planNpc；异常静默返回空。
-- `WandscapeTags`：`Blocks.CUSTOM_ROADS` = wandscape:custom_roads（JSON 值：purpur_block/nether_bricks/dark_prismarine）。
-- `RoadBlobExplorer`：两点周围扫描(半径16,垂直4)，对 custom_roads 块 BFS discoverBlob(6方向)。
+- `WandscapeTags`：`Blocks.CUSTOM_ROADS` = wandscape:custom_roads（JSON 值：dirt_path/cobblestone/stone/stone_bricks/gravel/sand 等），游客/运输的方块条件。
 
 ## 预设与 JSON（road/data/）
 
@@ -62,7 +61,7 @@
 
 ## 物品运输（engine/transport/）
 
-- `ItemTransportManager`：管理仓库→NPC 间飞行物品动画。send() 用预规划 route（空则直线回退），按 leg 累加 tick；向 from 区块追踪玩家发 TransportStartPacket；cancelForNpc 退回 ownsItem 已消耗物品；tickAll 到期 complete。速度：离路 10 tick/格、上路 5 tick/格。
-- `TransportItemEntity`：纯视觉 ItemEntity（shouldBeSaved=false）；客户端逐腿样条插值，离路段加 `y += sin(t*PI)*1.5` 跳跃弧；终点 discard。
+- `ItemTransportManager`：管理仓库→NPC 间飞行物品动画。直线飞行（无图）：沿直线采样地表方块（`custom_roads` 标签，上限 128 采样），≥1/2 是路面 → 上路 5 tick/块平飞，否则离路 10 tick/块抛物线；向 from 区块追踪玩家发 TransportStartPacket（from/to/duration/onRoad）；cancelForNpc 退回 ownsItem 已消耗物品；tickAll 到期 complete。
+- `TransportItemEntity`：纯视觉 ItemEntity（shouldBeSaved=false）；客户端直线插值，离路段加 `y += sin(t*PI)*1.5` 跳跃弧；终点 discard。
 - `TransportStartPacket`：S→C，handleClient 生成负 ID 实体。
 - 渲染：`client/renderer/TransportItemEntityRenderer` 在物品上方画**金边暗灰气泡 + "xN" 数量**。

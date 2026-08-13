@@ -2,6 +2,21 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-13：删除路网图路由——RoadRouter/blob/TransportRoute 整套移除，改方块条件
+
+**需求**（服务器事故诊断）：服务器（Linux，多模组）上玩家建 3-4 条路后单个 tick 卡满 60 秒被看门狗杀服。线程转储指向 `RoadRouter.buildGraph`。根因：buildGraph 的断点桥接是「端点数 × 全部点数」双层循环，blob 边界点同时进两边 → O(B²)；`custom_roads` 标签含 stone/cobblestone 等常见方块，RTS 模组/铲平铺出的大片路面全被懒扫描成 blob，B 到数千后单次 buildGraph 数秒，每次 `planWithRoads` 都重算 → 服务端持续卡死。本地只画几条路（RoadEdge 网络很小）故不触发。
+
+**决策**：
+- **整体删除图路由**：`RoadRouter`（buildGraph/Dijkstra/断点桥接/虫洞）、`RoadBlobCache`+`RoadBlobExplorer`（懒扫描）、`RoadRoutingHelper`、`RoadWalkPlanner`、`TransportRoute`/`SplineLeg`/`SplinePointCache`/`RouteSegment`、`RoadApi.getBlobCache`、`RoadEdge.detailedPathCache`——不留桩，杜绝死灰复燃。
+- **替代为方块条件（参考 MineColonies：路=方块+标签，无抽象图）**：
+  - 物品运输改直线飞行：`ItemTransportManager` 沿直线采样地表方块（`custom_roads` 标签，上限 128 采样），≥1/2 是路面 → 上路 5 tick/块平飞，否则离路 10 tick/块抛物线；`TransportStartPacket` 改发 from/to/duration/onRoad。
+  - 游客/NPC 移动改 vanilla A* 直寻（原回退路径直接提升为正式路径）；游客保留方块条件闲逛（目标选路块、锚点沿路漂移、硬上限）并新增「脚下非路面减速 ×0.8」。
+- **保留**：`RoadNetwork`/`RoadEdge` 作元数据（游客出生/救援锚点、成就计数）、样条编辑器与 `road:build_segment` 建造任务（路照建，成装饰地形）、`custom_roads` 标签（方块条件）。
+
+**为什么**：图路由的价值（游客/物品沿路移动）与维护成本（O(B²) 卡死风险、识别不出"石=路"的误伤）不成比例；所有消费方本就有无图回退（直线飞/vanilla A*/传送），删除后功能无损且卡死根因从代码层面消失。
+
+**影响**：物品飞行不再精确贴路（直线+速度分级）；游客长途不再贴路走（A* 直寻+离路减速）；路网数据仅剩元数据用途。
+
 ## 2026-08-13：商店补货合成任务队首插入——缺货商品不被建材合成阻塞
 
 **需求**（用户指令）：shop 补货时商品不足会自动发布合成任务，但该任务追加到 Workstation 队尾，会被前面排队的建材合成长期阻塞，游客买不到货；要求补货任务放到队首。

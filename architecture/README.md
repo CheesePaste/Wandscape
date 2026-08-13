@@ -46,8 +46,7 @@ Config.java           NeoForge TOML 配置，所有可调参数
 │   └── network/      任务编辑器网络包（原 task/network/）
 │
 ├── road/             道路系统（整合原 core/road/ + engine/road/ + road/）
-│   ├── core/         纯数据模型（RoadNetwork/RoadNode/RoadEdge/RoadBlobCache...）
-│   ├── algorithm/    算法（RoadRouter...）
+│   ├── core/         纯数据模型（RoadNetwork/RoadNode/RoadEdge...）
 │   ├── engine/       MC 实现（RoadSavedData/RoadApiImpl/RoadSegmentListener...）
 │   ├── client/       编辑器客户端（原）
 │   ├── network/      网络包（原）

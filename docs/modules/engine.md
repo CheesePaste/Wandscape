@@ -47,7 +47,6 @@
 ## nav/
 
 - `WandscapeNavigation`：继承 GroundPathNavigation，canOpenDoors/canPassDoors=true；A* 预算 = FOLLOW_RANGE×16。
-- `RoadWalkPlanner`：用 `RoadRoutingHelper.planNpcWithRoads` 算路网 Dijkstra 路由，按 SAMPLE_INTERVAL=12 块采样成 waypoint；空列表→调用方回退直寻。
 
 ## service/
 
@@ -70,12 +69,12 @@
 
 ## system/（ECS System，注册到 World）
 
-- **NavigationSystem**：唯一移动驱动器。到达判定 5²；首帧距离²>64² → 切 ritual 传送；道路 waypoint 到点 2.25²、重寻路上限 5、超时 200 tick、卡死 60 tick×3 次 → 传送；远跳（>24²）走 RoadWalkPlanner；`switchToRitualTeleport` 受 `npc.tryCastSpell("teleport", 300, 30, 1)` 门控（互斥锁 + 传送独立 CD 300/SPELL_SPEED + 30 魔力，任一不满足回退走路），经 `world.ritualOps.beginRitual(SELF_TELEPORT)` 并写回 exec.pendingFuture。
+- **NavigationSystem**：唯一移动驱动器。到达判定 5²；首帧距离²>64² → 切 ritual 传送；重寻路上限 5、超时 200 tick、卡死 60 tick×3 次 → 传送；`switchToRitualTeleport` 受 `npc.tryCastSpell("teleport", 300, 30, 1)` 门控（互斥锁 + 传送独立 CD 300/SPELL_SPEED + 30 魔力，任一不满足回退走路），经 `world.ritualOps.beginRitual(SELF_TELEPORT)` 并写回 exec.pendingFuture。
 - **ResourceSupplySystem**：40 tick 心跳。扫描 AWAITING_RESOURCES：可用即唤醒；缺料 `trySupplyResource → enqueueSynthesize`（去重 in-flight）→ `tryGatherElement`（node 建筑匹配元素）。
 
 ## transport/
 
-- **ItemTransportManager**：管理仓库→NPC 间飞行物品动画。`send` 空路由回退直线；时长=离路段 10 tick/块、沿路段 5 tick/块；向 from 区块追踪玩家发 TransportStartPacket；`cancelForNpc` 退回 ownsItem 已消耗物品。
-- **TransportItemEntity**：纯视觉 ItemEntity（shouldBeSaved=false）；客户端逐腿样条插值，离路段加 sin 弧；noGravity/noPhysics/无限拾取延迟；终点 discard。
+- **ItemTransportManager**：管理仓库→NPC 间飞行物品动画。直线飞行，无路网路由——沿直线采样地表方块（`wandscape:custom_roads` 标签），≥1/2 采样是路面 → 上路速度 5 tick/块平飞，否则离路 10 tick/块抛物线；向 from 区块追踪玩家发 TransportStartPacket（含 from/to/duration/onRoad）；`cancelForNpc` 退回 ownsItem 已消耗物品。
+- **TransportItemEntity**：纯视觉 ItemEntity（shouldBeSaved=false）；客户端直线插值，离路加 sin 弧；noGravity/noPhysics/无限拾取延迟；终点 discard。
 - **TransportStartPacket**：S→C，handleClient 生成负 ID 实体。
 - 渲染：`client/renderer/TransportItemEntityRenderer` 在物品上方画**金边暗灰气泡 + "xN" 数量文字**。
