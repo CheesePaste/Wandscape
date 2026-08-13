@@ -54,7 +54,7 @@ public final class GuideRenderer {
         if (collapsed) {
             // Compact tab in the top-right corner — only the expand triangle.
             int s = lineH + pad * 2 + 2;
-            int x = screenW - s - 4;
+            int x = screenW - s;
             int y = topY;
             return new Box(x, y, s, s, 0, 0, 0, 0, 0, 9, 0, "", List.of(), "", true);
         }
@@ -72,9 +72,8 @@ public final class GuideRenderer {
         // Each drawn row advances lineH+1, plus a 1px divider gap and 2px hint gap.
         int boxH = pad * 2 + rows * (lineH + 1) + 3;
 
-        // Top-right corner, just below the top bar.
-        int margin = 8;
-        int x = screenW - boxW - margin;
+        // Top-right corner, flush against the right edge, just below the top bar.
+        int x = screenW - boxW;
         int y = topY;
 
         int btnS = 9;
