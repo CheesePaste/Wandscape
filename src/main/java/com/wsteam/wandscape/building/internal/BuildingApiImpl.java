@@ -447,7 +447,7 @@ public class BuildingApiImpl implements BuildingApi {
     private static final int CONSTRUCTION_CAPACITY = 5;
 
     @Override
-    public void enqueueWork(UUID buildingId, WorkItem work) {
+    public void enqueueWork(UUID buildingId, WorkItem work, boolean atFront) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;
 
@@ -456,8 +456,10 @@ public class BuildingApiImpl implements BuildingApi {
 
         // Merge a production task into the adjacent (tail) task when it targets the same
         // recipe — restocking otherwise floods the queue with x1/x2 entries. A merge
-        // consumes no queue slot, so it must run before the capacity check.
-        if (mergeSameRecipeTail(state.getTaskQueue(), work)) {
+        // consumes no queue slot, so it must run before the capacity check. Front
+        // placement (urgent shop-restock supply) skips the merge so it jumps the line
+        // instead of folding into a tail task that would still run last.
+        if (!atFront && mergeSameRecipeTail(state.getTaskQueue(), work)) {
             sd.setDirty();
             return;
         }
@@ -481,7 +483,11 @@ public class BuildingApiImpl implements BuildingApi {
             }
         }
 
-        state.getTaskQueue().addLast(work);
+        if (atFront) {
+            state.getTaskQueue().addFirst(work);
+        } else {
+            state.getTaskQueue().addLast(work);
+        }
         sd.setDirty();
     }
 

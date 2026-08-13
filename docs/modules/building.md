@@ -26,7 +26,7 @@
 
 - 查询：getBuilding/getBuildingAt/getColonyBuildings/getBuildingBounds；聚落三值 getColonySnapshot/getColonyComfort/getColonyMagic/getColonyWonder。
 - 生命周期：registerBuilding（重叠检查 + BuildingPlacedEvent）/unregisterBuilding；shutdown(id[,reason])（按类别 applyShutdownPenalties 零贡献 + BuildingShutdownEvent + 灰烟）；restart（恢复贡献 + 星光）；demolishBuilding（置 demolishing + structureIntact=false + 清队列 + 入队 `build:demolish_structure` 优先 49）。
-- 队列：isBuildingOccupied/getBuildingsWithPendingWork/dequeueWork/enqueueWork（上限=queue容量或 5）/getBuildingsByCategory/setCurrentTask/getQueue/removeFromQueue/moveUp/moveDown。
+- 队列：isBuildingOccupied/getBuildingsWithPendingWork/dequeueWork/enqueueWork（上限=queue容量或 5；`enqueueWork(buildingId, work, atFront)` 队首插入供紧急补货）/getBuildingsByCategory/setCurrentTask/getQueue/removeFromQueue/moveUp/moveDown。
 - 放置：placeBuilding（firstFree 逻辑 + EnqueueHelper.buildWorkItem）；isFirstFreeClaimed；游客交互点：findBeds/sampleWalkableGround/getTouristInteractionTarget/getEntryPoint/getTouristInteractPoint。
 
 ## 建造生命周期
@@ -60,7 +60,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 
 ### 3. ShopStockManager（商店库存）
 
-库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，breadshop 0.3 → 1.3X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
+库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，breadshop 0.3 → 1.3X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
 
 ### 4. WonderEffectApplier（奇观效果）
 

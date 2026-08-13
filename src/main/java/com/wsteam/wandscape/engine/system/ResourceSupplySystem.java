@@ -105,13 +105,23 @@ public class ResourceSupplySystem implements System {
      *         or a new task was queued); false if it cannot be synthesized right now
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable World world) {
-        return enqueueSynthesize(itemId, amount, null, world);
+        return enqueueSynthesize(itemId, amount, null, world, false);
     }
 
     /**
      * Colony-scoped variant of {@link #enqueueSynthesize(String, int, World)}.
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId, @Nullable World world) {
+        return enqueueSynthesize(itemId, amount, colonyId, world, false);
+    }
+
+    /**
+     * Colony-scoped variant with explicit queue placement. {@code atFront} prepends the
+     * synthesize task ahead of older workstation work — used by urgent shop restock so a
+     * low-stock good is crafted before building-material tasks queued earlier.
+     */
+    public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId,
+                                            @Nullable World world, boolean atFront) {
         var recipes = Wandscape.PRODUCTION_RECIPE_LOADER;
         if (recipes == null) return false;
         if (recipes.getSynthesizeRecipe(itemId) == null) return false;
@@ -147,9 +157,9 @@ public class ResourceSupplySystem implements System {
         params.put("count", new JsonPrimitive(count));
         params.put("channel_ticks", new JsonPrimitive(WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count));
 
-        api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40));
-        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight)",
-                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight);
+        api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40), atFront);
+        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, atFront={})",
+                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, atFront);
         return true;
     }
 

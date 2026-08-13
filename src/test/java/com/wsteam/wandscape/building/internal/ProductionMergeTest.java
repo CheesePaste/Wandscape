@@ -66,9 +66,13 @@ class ProductionMergeTest {
 
     /** Mirrors {@code BuildingApiImpl.enqueueWork}'s tail logic: merge, else append. */
     private static void enqueue(Deque<WorkItem> queue, WorkItem work) {
-        if (!BuildingApiImpl.mergeSameRecipeTail(queue, work)) {
-            queue.addLast(work);
-        }
+        enqueue(queue, work, false);
+    }
+
+    /** Mirrors {@code BuildingApiImpl.enqueueWork}'s merge-or-place logic with explicit placement. */
+    private static void enqueue(Deque<WorkItem> queue, WorkItem work, boolean atFront) {
+        if (!atFront && BuildingApiImpl.mergeSameRecipeTail(queue, work)) return;
+        if (atFront) queue.addFirst(work); else queue.addLast(work);
     }
 
     private static int count(WorkItem w) {
@@ -174,5 +178,52 @@ class ProductionMergeTest {
         assertEquals(1, queue.size());
         assertEquals(10, count(queue.getLast()));
         assertEquals(100, channel(queue.getLast()));
+    }
+
+    // ── Front placement (urgent shop-restock supply) ──
+
+    @Test
+    void frontPlacesAheadOfExistingTasks() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(synthesize("stone_bricks", 8));
+        queue.addLast(synthesize("glass", 4));
+        enqueue(queue, synthesize("bread", 2), true);
+        assertEquals(3, queue.size());
+        assertEquals("bread", recipeOf(queue.getFirst()));
+    }
+
+    @Test
+    void frontPlacementSkipsTailMerge() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(synthesize("bread", 1));
+        enqueue(queue, synthesize("bread", 2), true);
+        // Front placement must NOT fold into the same-recipe tail — the whole point is
+        // jumping the line, and countSynthesizeInFlight already dedups same-item shortfalls.
+        assertEquals(2, queue.size());
+        assertEquals(2, count(queue.getFirst()));
+        assertEquals(1, count(queue.getLast()));
+    }
+
+    @Test
+    void frontPlacementOnEmptyQueue() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        enqueue(queue, synthesize("bread", 2), true);
+        assertEquals(1, queue.size());
+        assertEquals("production:synthesize", queue.getFirst().blueprintId());
+        assertEquals(2, count(queue.getFirst()));
+    }
+
+    @Test
+    void frontPlacementPreservesExistingTail() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(synthesize("bread", 1));
+        enqueue(queue, synthesize("stone_bricks", 8), true);
+        assertEquals(2, queue.size());
+        assertEquals("stone_bricks", recipeOf(queue.getFirst()));
+        assertEquals("bread", recipeOf(queue.getLast()));
+    }
+
+    private static String recipeOf(WorkItem w) {
+        return w.params().get("recipe_id").getAsString();
     }
 }

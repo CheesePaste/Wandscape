@@ -62,7 +62,16 @@ public interface BuildingApi {
     WorkItem dequeueWork(UUID buildingId);
 
     /** Enqueue a WorkItem into the building's FIFO queue (e.g. auto-supply from node buildings). */
-    void enqueueWork(UUID buildingId, WorkItem work);
+    default void enqueueWork(UUID buildingId, WorkItem work) {
+        enqueueWork(buildingId, work, false);
+    }
+
+    /**
+     * Enqueue a WorkItem into the building's queue. When {@code atFront} is true the
+     * item is prepended ahead of older tasks (used by urgent shop-restock supply);
+     * otherwise it merges into an adjacent same-recipe production task or appends.
+     */
+    void enqueueWork(UUID buildingId, WorkItem work, boolean atFront);
 
     /** Get building IDs filtered by category. */
     List<UUID> getBuildingsByCategory(@Nullable UUID colonyId, String category);

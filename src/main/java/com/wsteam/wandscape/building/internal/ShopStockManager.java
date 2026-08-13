@@ -476,12 +476,16 @@ public final class ShopStockManager {
      * because the warehouse is short. The produced item lands in the warehouse;
      * the pending-restock retry picks it up on a later tick.
      *
+     * <p>The synthesize task is prepended to the workstation queue (atFront) so an
+     * out-of-stock good gets crafted before building-material tasks queued earlier —
+     * tourists can't buy while the good is empty, so this restock is time-critical.
+     *
      * @return true if the shortfall is being handled (recipe found, task queued or
      *         already in flight); false if it cannot be synthesized right now
      */
     private boolean requestSynthesize(@Nullable UUID colonyId, String itemId, int amount) {
         try {
-            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, colonyId, WandscapeEngine.getWorld());
+            return ResourceSupplySystem.enqueueSynthesize(itemId, amount, colonyId, WandscapeEngine.getWorld(), true);
         } catch (Exception e) {
             Log.warn(TAG, "[Shop] requestSynthesize({} x{} colony={}) failed: {}", itemId, amount, colonyId, e.getMessage());
             return false;

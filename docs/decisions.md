@@ -2,6 +2,19 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-13：商店补货合成任务队首插入——缺货商品不被建材合成阻塞
+
+**需求**（用户指令）：shop 补货时商品不足会自动发布合成任务，但该任务追加到 Workstation 队尾，会被前面排队的建材合成长期阻塞，游客买不到货；要求补货任务放到队首。
+
+**决策**：
+- **`BuildingApi.enqueueWork` 新增 `atFront` 重载**：`enqueueWork(buildingId, work, atFront)`，原两参版本改为 default 委托 `atFront=false`。`atFront=true` 时跳过队尾合并、`addFirst` 插入队首；容量检查（queue 容量 / 施工 5 上限）与顺序不变。
+- **`ResourceSupplySystem.enqueueSynthesize` 新增 `atFront` 参数**：旧重载委托 `false`（建材短缺的通用供应路径维持原队尾行为）；`ShopStockManager.requestSynthesize` 传 `true`——这是唯一「补货缺货→合成」入口，覆盖动态补货与 pendingRestock 重试两条路径。
+- **队首插入不参与同类合并**：`mergeSameRecipeTail` 只在队尾生效，队首任务跳过合并（合并会把任务折回队尾、抵消插队）。同物品短缺已由 `countSynthesizeInFlight` 按殖民地去重，不会因跳过合并而刷屏。
+
+**为什么**：工作站队列是 FIFO（`BuildingTaskSource` 用 `pollFirst` 取任务，WorkItem 的 priority 只影响全局池调度、不改变建筑内队列顺序），补货合成若排在建材料后面，缺货商品要等前面所有合成完成才开工，游客持续买不到货。队首插入让缺货补货抢在建材前开工；通用建材供应不插队，保持原排队语义。
+
+**影响**：商店缺货时补货合成优先执行；玩家手点的其他合成/施工入队顺序不受影响（默认仍队尾）。
+
 ## 2026-08-12：ImGui 字体烘焙与 GLFW/GL3 Native 钩子解耦——实现零卡顿零崩溃预热
 
 **需求**（用户指令/问题诊断）：首次按下按键 2 调出 ImGui 道路编辑器时有一次约 0.2~0.3 秒的字体烘焙卡顿，且直接对整个 ImGui 预热会导致 GLFW/OpenGL 在启动阶段发生 C++ 崩溃（`-1073741819 / 0xC0000005`）。
