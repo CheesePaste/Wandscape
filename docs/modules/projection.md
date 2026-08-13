@@ -27,7 +27,7 @@
 - `ProjectionClientState`：静态 volatile 字段——projecting/bodyAnchor/selectedSlotIndex/ghostPos/overlapDetected/pinned/rotationSteps(0-3, 90°CCW)/buildingSlots。enterProjection 重新装入服务端 slots、把 selectedSlotIndex 钳到合法区间、丢弃未 pin 的准星跟随位置，但**保留 rotation/pin/已选 slot**（会话内 suspend/resume 缓存）；播 PROJECTION_ENTER 音。suspendProjection 只落 projecting 标志、保留全部选取（切 tab/G/ESC/关面板用）；exitProjection 全清态（仅 `reset()` 登出时调）。`centerAnchor`（+ 纯逻辑 `BuildingCentering.rotatedCenterOffsets`）：把瞄准方块偏移到建筑**旋转后 x/z 包围盒中心**，y 保持瞄准高度不动——这样原点在角落（甚至包围盒外）的建筑也能以准心为中心放置；`rotate()` 绕建筑**当前中心**旋转（anchor 同步平移），建筑原地打转、中心不随旋转偏移。
 - **选取缓存语义**：建筑/朝向/pin 在会话内跨模式切换（切 tab/按 G/ESC/关面板/开关建筑条）保留，仅登出（`WandscapePanelState.reset()`）或显式提交（ConstructionScreen.submit 后清虚影 + unpin）/撤销清空。建筑条的开/关不再重置分类/搜索/滚动。
 - `ProjectionFlightController`：每 tick 输入处理，**仅当 projection 激活且 overview 未激活时运行**（overview 下 ghost 位置由 OverviewFlightController 每帧 raycast 更新）。64 格 raycast 求 ghost 落点 + overlap（落点经 `centerAnchor` 居中）；**左键 90° 旋转**建筑朝向；**右键仅切换 pin（锁定/解锁，供 Gizmo 精确微调）——不再打开施工界面**；**施工只能点右侧面板【提交施工】**（`BuildPopPanel` → `openConstructionScreen`）；面板未开时 ESC 退出；滚轮事件被取消。
-- `ProjectionRenderer`：AFTER_TRIPWIRE_BLOCKS；用 BuildingGhostRenderer 渲染半透明幽灵方块，旋转后边界画白线框（pinned 非重叠）/红框（重叠）。
+- `ProjectionRenderer`：AFTER_TRIPWIRE_BLOCKS；用 BuildingGhostRenderer 渲染半透明幽灵方块，旋转后边界画白线框（pinned 非重叠）/红框（重叠）。ghost VBO 全局旋转用 `Axis.YP.rotationDegrees(-90°*steps)`，与 `rotateOffset`（x'=-z,z'=x）同向——若误用 +90°，steps=1/3（90°/270°）时 ghost 相对服务端建造/边界线框镜像偏位。
 
 ## ProjectionNetwork（服务端）
 

@@ -135,9 +135,11 @@ public final class BuildingGhostVboCache {
 
         PoseStack pose = new PoseStack();
 
-        // Global building rotation around Y axis at origin (0,0,0)
+        // 全局建筑绕 Y 轴旋转（原点 0,0,0）。用 -90°*steps：与 BuildingRotation.rotateOffset
+        // （x'=-z, z'=x）同向，使 ghost 与服务端建造、边界线框、interact/door 偏移一致。
+        // 若用 +90°*steps，对 90/270 步会与 rotateOffset 方向相反，ghost 偏位/镜像。
         if (steps > 0) {
-            pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90f * steps));
+            pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-90f * steps));
         }
 
         for (int i = 0; i < n; i++) {
