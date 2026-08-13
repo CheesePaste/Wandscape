@@ -39,28 +39,36 @@ public final class ProjectionRenderer {
 
     static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
+                && event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        Vec3 camPos = event.getCamera().getPosition();
-        PoseStack poseStack = event.getPoseStack();
-        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-
-        renderGhostPreview(mc, bufferSource, poseStack, event);
-
-        // Boundary wireframe uses camera-space translated poseStack
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
+        if (ghostPos == null) return;
+
         BuildingSlot slot = getSelectedSlot();
         BuildingConfig config = (slot != null) ? BuildingConfigLoader.getInstance().get(slot.id()) : null;
+        if (config == null) return;
 
-        if (ghostPos != null && config != null && config.boundary() != null) {
+        Vec3 camPos = event.getCamera().getPosition();
+        int rotationSteps = ProjectionClientState.getRotationSteps();
+
+        // 1. Render GPU VBO ghost with exact event Camera ModelView matrix (120 FPS)
+        BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
+                camPos, ghostPos, config, rotationSteps);
+
+        // 2. Render Boundary Wireframe
+        if (config.boundary() != null) {
             boolean overlap = ProjectionClientState.isOverlapDetected();
             boolean pinned = ProjectionClientState.isPinned();
 
             BuildingConfig.BoundaryBox boundary =
-                    BuildingRotation.rotateBoundary(config.boundary(), ProjectionClientState.getRotationSteps());
+                    BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
+
+            PoseStack poseStack = event.getPoseStack();
+            MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
             poseStack.pushPose();
             poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
@@ -79,19 +87,6 @@ public final class ProjectionRenderer {
 
             poseStack.popPose();
         }
-    }
-
-    private static void renderGhostPreview(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
-                                           PoseStack poseStack, RenderLevelStageEvent event) {
-        BlockPos ghostPos = ProjectionClientState.getGhostPos();
-        if (ghostPos == null) return;
-
-        BuildingSlot slot = getSelectedSlot();
-        BuildingConfig config = (slot != null) ? BuildingConfigLoader.getInstance().get(slot.id()) : null;
-        if (config == null) return;
-
-        BuildingGhostRenderer.renderGhostVbo(mc, poseStack, event.getProjectionMatrix(),
-                ghostPos, config, ProjectionClientState.getRotationSteps());
     }
 
     private static BuildingSlot getSelectedSlot() {

@@ -26,12 +26,11 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * World-space semi-transparent building ghost renderer facade.
- *
- * <p>Shared by projection placement preview and under-construction building footprint overlay.
  */
 public final class BuildingGhostRenderer {
 
@@ -40,16 +39,16 @@ public final class BuildingGhostRenderer {
 
     private BuildingGhostRenderer() {}
 
-    /** Render full building ghost via GPU VBO static cache (120 FPS). */
-    public static void renderGhostVbo(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                      BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BuildingGhostVboCache.drawGhost(mc, poseStack, projection, anchor, config, rotationSteps);
+    /** Render full building ghost via GPU VBO static cache with camera ModelView (120 FPS). */
+    public static void renderGhostVbo(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
+                                      Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
+        BuildingGhostVboCache.drawGhost(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps);
     }
 
     /** Render under-construction footprint ghost skipping placed blocks via GPU VBO. */
-    public static void renderGhostVboSkipped(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                             BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BuildingGhostVboCache.drawGhostSkipped(mc, poseStack, projection, anchor, config, rotationSteps);
+    public static void renderGhostVboSkipped(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
+                                             Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
+        BuildingGhostVboCache.drawGhostSkipped(mc, cameraModelView, projection, camPos, anchor, config, rotationSteps);
     }
 
     public record RotatedBlockEntry(int rx, int ry, int rz, BlockState state) {}

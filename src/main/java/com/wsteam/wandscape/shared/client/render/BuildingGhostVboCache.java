@@ -35,9 +35,6 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Pre-baked GPU vertex buffers for building ghosts with zero-copy VBO rendering.
- *
- * <p>Bakes a {@link BuildingConfig} at a given rotation into a static
- * {@link VertexBuffer} (config-local coordinates), eliminating per-block CPU draw calls.
  */
 public final class BuildingGhostVboCache {
 
@@ -49,25 +46,25 @@ public final class BuildingGhostVboCache {
 
     private BuildingGhostVboCache() {}
 
-    /** Draw the full ghost building (projection placement preview). */
-    public static void drawGhost(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                 BlockPos anchor, BuildingConfig config, int rotationSteps) {
+    /** Draw the full ghost building using event camera ModelView matrix (120 FPS). */
+    public static void drawGhost(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
+                                 Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
         if (mesh.indexClobbered) {
             restoreFullIndex(mesh);
             mesh.indexClobbered = false;
         }
-        drawVbo(mesh, poseStack, projection, anchor);
+        drawVbo(mesh, cameraModelView, projection, camPos, anchor);
     }
 
-    /** Draw ghost skipping blocks already placed in the world (construction footprint). */
-    public static void drawGhostSkipped(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                        BlockPos anchor, BuildingConfig config, int rotationSteps) {
+    /** Draw ghost skipping placed blocks (under-construction footprint). */
+    public static void drawGhostSkipped(Minecraft mc, Matrix4f cameraModelView, Matrix4f projection,
+                                        Vec3 camPos, BlockPos anchor, BuildingConfig config, int rotationSteps) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
         rebuildMaskedIndex(mc, mesh, anchor);
-        drawVbo(mesh, poseStack, projection, anchor);
+        drawVbo(mesh, cameraModelView, projection, camPos, anchor);
     }
 
     public static void closeAll() {
@@ -249,22 +246,22 @@ public final class BuildingGhostVboCache {
         }
     }
 
-    private static void drawVbo(BakedGhostMesh mesh, PoseStack poseStack, Matrix4f projection, BlockPos anchor) {
-        Vec3 camPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-
-        poseStack.pushPose();
-        // World-space translation relative to camera position
-        poseStack.translate(anchor.getX() - camPos.x, anchor.getY() - camPos.y, anchor.getZ() - camPos.z);
+    private static void drawVbo(BakedGhostMesh mesh, Matrix4f cameraModelView, Matrix4f projection,
+                                Vec3 camPos, BlockPos anchor) {
+        // Construct final ModelView matrix: camera view matrix multiplied by anchor relative translation
+        Matrix4f modelView = new Matrix4f(cameraModelView).translate(
+                (float) (anchor.getX() - camPos.x),
+                (float) (anchor.getY() - camPos.y),
+                (float) (anchor.getZ() - camPos.z));
 
         RenderType rt = RenderType.translucent();
         rt.setupRenderState();
 
         mesh.vbo.bind();
-        mesh.vbo.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getRendertypeTranslucentShader());
+        mesh.vbo.drawWithShader(modelView, projection, GameRenderer.getRendertypeTranslucentShader());
         VertexBuffer.unbind();
 
         rt.clearRenderState();
-        poseStack.popPose();
     }
 
     private static final class BakedGhostMesh {
