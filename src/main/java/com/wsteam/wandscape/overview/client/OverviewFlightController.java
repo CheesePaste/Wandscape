@@ -295,7 +295,7 @@ public final class OverviewFlightController {
         if (centerHit.getType() == HitResult.Type.BLOCK) {
             BlockPos centerPlacePos = centerHit.getBlockPos().relative(centerHit.getDirection());
             if (rightDown || ProjectionClientState.getGhostPos() == null) {
-                ProjectionClientState.setGhostPos(centerPlacePos);
+                ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(centerPlacePos));
             }
         }
 

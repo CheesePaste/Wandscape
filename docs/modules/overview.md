@@ -20,7 +20,7 @@
 - **渲染玩家实体**：`enter` 切第三人称（`CameraType.THIRD_PERSON_BACK`）、`exit` 恢复原相机类型；`onRenderLevelStage` 每帧 reconcile 相机类型（F5 在 `handleKeybinds` 早于 ClientTickPost 消费，drain 无效，必须每帧拉回）。
 - **防玩家视角污染**：`onRenderLevelStage` 末尾每帧把玩家旋转（yRot/xRot/yRotO/xRotO + yBodyRot/yBodyRotO + yHeadRot/yHeadRotO）冻结回进入快照，抵消原版 `MouseHandler.turnPlayer`；`exit` 显式落定防退出瞬间甩头。两个「玩家视角」（原版 + 地面模式）共享这一份玩家旋转。
 - **受伤自动退出**：`enter` 采样血量基线；`onClientTickPost` 检测血量下降沿或死亡 → `WandscapePanelState.closePanel()` 完全退出控制面板（保留空中相机缓存），回原版第一人称夺回操控。
-- onClientTickPost raycast 方块 + 实体（WandscapeNpc/TouristEntity）；射线源按光标状态：抓取=准心（相机中心线）、抬起=鼠标射线。**交互仅在常态（OVERVIEW/NONE + 抓取）**：右键 → 实体 `OverviewEntityInteractPacket` / 建筑 `OverviewInteractPacket`。Build/Road/Stats 子模式不做建筑/NPC 交互（目标是建建筑不是交互）。投影 ghost 位置在 onRenderLevelStage `updateGhostPositionPerFrame` 同步。
+- onClientTickPost raycast 方块 + 实体（WandscapeNpc/TouristEntity）；射线源按光标状态：抓取=准心（相机中心线）、抬起=鼠标射线。**交互仅在常态（OVERVIEW/NONE + 抓取）**：右键 → 实体 `OverviewEntityInteractPacket` / 建筑 `OverviewInteractPacket`。Build/Road/Stats 子模式不做建筑/NPC 交互（目标是建建筑不是交互）。投影 ghost 位置在 onRenderLevelStage `updateGhostPositionPerFrame` 同步（同样经 `ProjectionClientState.centerAnchor` 把建筑 x/z 居中到准心）。
 - 进入音效 `OVERVIEW_ENTER` 在 `enter()` 播放（不在 OverviewClientState，保持状态 holder 纯净可测）。
 
 ## OverviewRenderer

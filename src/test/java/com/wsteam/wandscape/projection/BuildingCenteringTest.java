@@ -1,0 +1,94 @@
+package com.wsteam.wandscape.projection;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import com.wsteam.wandscape.building.data.BlockOffset;
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.shared.data.AtmConfig;
+import com.wsteam.wandscape.shared.data.RelaxConfig;
+import com.wsteam.wandscape.shared.data.ServiceConfig;
+import com.wsteam.wandscape.shared.data.ShopConfig;
+import com.wsteam.wandscape.shared.data.WonderConfig;
+
+@DisplayName("BuildingCentering")
+class BuildingCenteringTest {
+
+    private static BuildingConfig cfg(int[][] offsets) {
+        List<BlockOffset> pattern = new ArrayList<>();
+        for (int[] o : offsets) {
+            pattern.add(new BlockOffset(o[0], o[1], o[2]));
+        }
+        return new BuildingConfig(
+                "test", "Test", "", "basic",
+                pattern, List.of(), List.of(), Map.of(),
+                0, 0, 0,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                null, null, null, null,
+                WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE,
+                null, List.of(), false, false, List.of());
+    }
+
+    @Test
+    @DisplayName("角点原点建筑：偏移使包围盒中心对准瞄准方块")
+    void cornerOriginBuildingCentered() {
+        // 类似 bakery：x[1,10] z[1,9]，原点在包围盒外的一角
+        BuildingConfig bakery = cfg(new int[][] {
+                {1, 0, 1}, {10, 0, 1}, {1, 0, 9}, {10, 0, 9}
+        });
+        assertArrayEquals(new int[] {6, 5},
+                BuildingCentering.rotatedCenterOffsets(bakery, 0),
+                "x 中心 5.5 取整 6，z 中心 5.0 取整 5");
+    }
+
+    @Test
+    @DisplayName("对称建筑（原点在中心）：无需偏移")
+    void symmetricBuildingNoOffset() {
+        // 类似 warehouse：x[-1,1] z[-1,1]，原点即中心
+        BuildingConfig warehouse = cfg(new int[][] {
+                {-1, 0, -1}, {1, 0, -1}, {-1, 0, 1}, {1, 0, 1}, {0, 0, 0}
+        });
+        assertArrayEquals(new int[] {0, 0},
+                BuildingCentering.rotatedCenterOffsets(warehouse, 0));
+    }
+
+    @Test
+    @DisplayName("旋转 90° CCW 后中心随旋转变换（x'=-z, z'=x）")
+    void centerRotatesWithBuilding() {
+        BuildingConfig bakery = cfg(new int[][] {
+                {1, 0, 1}, {10, 0, 1}, {1, 0, 9}, {10, 0, 9}
+        });
+        // 未旋转中心 (5.5, 5.0)；1 步 → (-5.0, 5.5)；2 步 → (-5.5, -5.0)
+        assertArrayEquals(new int[] {-5, 6},
+                BuildingCentering.rotatedCenterOffsets(bakery, 1));
+        assertArrayEquals(new int[] {-5, -5},
+                BuildingCentering.rotatedCenterOffsets(bakery, 2));
+        // 4 步回到原位
+        assertArrayEquals(new int[] {6, 5},
+                BuildingCentering.rotatedCenterOffsets(bakery, 4));
+    }
+
+    @Test
+    @DisplayName("全负偏移：中心取负值且正确取整")
+    void negativeOnlyOffsets() {
+        BuildingConfig neg = cfg(new int[][] {
+                {-3, 0, -2}, {-1, 0, -2}, {-3, 0, 0}, {-1, 0, 0}
+        });
+        assertArrayEquals(new int[] {-2, -1},
+                BuildingCentering.rotatedCenterOffsets(neg, 0));
+    }
+
+    @Test
+    @DisplayName("空 pattern 兜底返回 [0,0]")
+    void emptyPatternNoOffset() {
+        assertArrayEquals(new int[] {0, 0},
+                BuildingCentering.rotatedCenterOffsets(cfg(new int[0][0]), 3));
+    }
+}

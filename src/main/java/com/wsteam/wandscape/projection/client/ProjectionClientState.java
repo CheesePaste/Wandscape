@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.wsteam.wandscape.building.data.BuildingConfig;
+import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
+import com.wsteam.wandscape.projection.BuildingCentering;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
 
 import net.minecraft.client.Minecraft;
@@ -174,6 +177,25 @@ public final class ProjectionClientState {
 
     public static void setGhostPos(BlockPos pos) {
         ghostPos = pos;
+    }
+
+    /** 当前选中的建筑配置；槽位为空或索引越界时返回 null。 */
+    public static BuildingConfig getSelectedConfig() {
+        List<BuildingSlot> slots = getBuildingSlots();
+        int index = selectedSlotIndex;
+        if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
+        return BuildingConfigLoader.getInstance().get(slots.get(index).id());
+    }
+
+    /**
+     * 把瞄准方块偏移到当前选中建筑旋转后 x/z 包围盒中心上：仅移动 x/z，y 保持瞄准位置。
+     * 这样原点在角落（甚至包围盒外）的建筑也能以准心为中心放置。未选中建筑时原样返回。
+     */
+    public static BlockPos centerAnchor(BlockPos placePos) {
+        BuildingConfig config = getSelectedConfig();
+        if (config == null) return placePos;
+        int[] c = BuildingCentering.rotatedCenterOffsets(config, rotationSteps);
+        return new BlockPos(placePos.getX() - c[0], placePos.getY(), placePos.getZ() - c[1]);
     }
 
     // ── Overlap ──

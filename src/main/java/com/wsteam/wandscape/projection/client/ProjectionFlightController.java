@@ -158,7 +158,7 @@ public final class ProjectionFlightController {
             BlockPos targetPos = hit.getBlockPos();
             BlockPos placePos = targetPos.relative(hit.getDirection());
             if (rightDown || ProjectionClientState.getGhostPos() == null) {
-                ProjectionClientState.setGhostPos(placePos);
+                ProjectionClientState.setGhostPos(ProjectionClientState.centerAnchor(placePos));
             }
         }
 
