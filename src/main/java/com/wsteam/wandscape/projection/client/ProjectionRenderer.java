@@ -15,33 +15,19 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * World-space rendering for soul projection mode.
- *
- * <p>Renders:
- * <ul>
- *   <li>Ghost building preview — actual textured block models rendered
- *       semi-transparently at the targeted position via
- *       {@link BuildingGhostRenderer}.</li>
- *   <li>Body anchor meditation beam — translucent purple pillar at the
- *       position where the player left their body.</li>
- *   <li>Red wireframe boundary when overlapping an existing building.</li>
- * </ul>
  */
 public final class ProjectionRenderer {
 
     private static final String TAG = "ProjectionRenderer";
-
     private static boolean registered = false;
 
     private ProjectionRenderer() {}
-
-    // ── Registration ──
 
     public static void register() {
         if (registered) return;
@@ -51,33 +37,14 @@ public final class ProjectionRenderer {
         Log.info(TAG, "[Projection] Renderer registered");
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ── Render handler ──
-    // ═══════════════════════════════════════════════════════════════
-
     static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (!ProjectionClientState.isProjecting()) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
+                && event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        Vec3 camPos = event.getCamera().getPosition();
-        PoseStack poseStack = event.getPoseStack();
-        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-
-        poseStack.pushPose();
-        poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
-
-        renderGhostPreview(mc, bufferSource, poseStack, event);
-
-        poseStack.popPose();
-    }
-
-    // ── Ghost preview (real block rendering) ──
-
-    private static void renderGhostPreview(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
-                                           PoseStack poseStack, RenderLevelStageEvent event) {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) return;
 
@@ -85,47 +52,40 @@ public final class ProjectionRenderer {
         BuildingConfig config = (slot != null) ? BuildingConfigLoader.getInstance().get(slot.id()) : null;
         if (config == null) return;
 
+        Vec3 camPos = event.getCamera().getPosition();
         int rotationSteps = ProjectionClientState.getRotationSteps();
 
-        // Whole-building frustum cull. Boundary is rotated so it matches the
-        // ghost's current rotation (same source as the wireframe below).
-        BuildingConfig.BoundaryBox boundary = config.boundary() != null
-                ? BuildingRotation.rotateBoundary(config.boundary(), rotationSteps)
-                : null;
-        if (boundary != null) {
-            AABB aabb = new AABB(
-                    ghostPos.getX() + boundary.min().x(),
-                    ghostPos.getY() + boundary.min().y(),
-                    ghostPos.getZ() + boundary.min().z(),
-                    ghostPos.getX() + boundary.max().x() + 1,
-                    ghostPos.getY() + boundary.max().y() + 1,
-                    ghostPos.getZ() + boundary.max().z() + 1);
-            if (!event.getFrustum().isVisible(aabb)) return;
-        }
+        // 1. Render GPU VBO ghost with exact event Camera ModelView matrix (120 FPS)
+        BuildingGhostRenderer.renderGhostVbo(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
+                camPos, ghostPos, config, rotationSteps);
 
-        boolean overlap = ProjectionClientState.isOverlapDetected();
-        boolean pinned = ProjectionClientState.isPinned();
+        // 2. Render Boundary Wireframe
+        if (config.boundary() != null) {
+            boolean overlap = ProjectionClientState.isOverlapDetected();
+            boolean pinned = ProjectionClientState.isPinned();
 
-        BuildingGhostRenderer.renderGhostVbo(mc, poseStack, event.getProjectionMatrix(),
-                ghostPos, config, rotationSteps);
+            BuildingConfig.BoundaryBox boundary =
+                    BuildingRotation.rotateBoundary(config.boundary(), rotationSteps);
 
-        // Boundary is rotated so the outline matches the ghost's current rotation —
-        // same source as the white "target building" highlight (WandscapeHighlightRenderer).
-        if (boundary != null) {
+            PoseStack poseStack = event.getPoseStack();
+            MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
-            // Pinned (non-overlap): white wireframe — ghost is fixed, player can walk around to review
+            poseStack.pushPose();
+            poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
+
             if (pinned && !overlap) {
                 VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
                 drawAABBOutline(lineVc, poseStack.last(), ghostPos,
                         boundary.min(), boundary.max(), 255, 255, 255);
                 bufferSource.endBatch(RenderType.lines());
             } else if (overlap) {
-                // Overlap = red wireframe boundary
                 VertexConsumer lineVc = bufferSource.getBuffer(RenderType.lines());
                 drawAABBOutline(lineVc, poseStack.last(), ghostPos,
                         boundary.min(), boundary.max(), 255, 40, 40);
                 bufferSource.endBatch(RenderType.lines());
             }
+
+            poseStack.popPose();
         }
     }
 
@@ -135,10 +95,6 @@ public final class ProjectionRenderer {
         if (slots.isEmpty() || index < 0 || index >= slots.size()) return null;
         return slots.get(index);
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ── Boundary wireframe ──
-    // ═══════════════════════════════════════════════════════════════
 
     private static void drawAABBOutline(VertexConsumer vc, PoseStack.Pose poseEntry,
                                          BlockPos anchor, BlockOffset min, BlockOffset max,

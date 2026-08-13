@@ -45,20 +45,95 @@ public final class BuildingPreviewRenderer {
     private static final float TILT_RAD = (float) Math.toRadians(30);
 
     /**
-     * Cached pattern→BlockState resolution per config. BuildingConfig is immutable and
-     * held strongly by the loader, so a weak key is safe and never leaks. Rendering runs
-     * on the client render thread; synchronizedMap keeps reload-time access safe.
+     * Cached pattern→BlockState resolution and preview metadata per config.
+     * BuildingConfig is immutable and held strongly by the loader, so a weak key is safe and never leaks.
      */
-    private static final Map<BuildingConfig, Map<BlockOffset, BlockState>> RESOLVED_CACHE =
+    private static final Map<BuildingConfig, ConfigPreviewMeta> META_CACHE =
             java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    public record BlockEntry(BlockOffset offset, BlockState state) {}
+
+    public static final class ConfigPreviewMeta {
+        public final Map<BlockOffset, BlockState> resolvedMap;
+        public final List<BlockEntry> fullEntries;
+        public final List<BlockEntry> iconEntries;
+        public final float cx, cy, cz;
+        public final float maxExtent;
+
+        public ConfigPreviewMeta(BuildingConfig config) {
+            this.resolvedMap = buildBlockStates(config);
+            List<BlockEntry> entries = new ArrayList<>(resolvedMap.size());
+            for (var entry : resolvedMap.entrySet()) {
+                entries.add(new BlockEntry(entry.getKey(), entry.getValue()));
+            }
+            this.fullEntries = java.util.Collections.unmodifiableList(entries);
+
+            if (config.pattern().isEmpty()) {
+                this.cx = this.cy = this.cz = 0f;
+                this.maxExtent = 1f;
+                this.iconEntries = fullEntries;
+            } else {
+                int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+                int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+                for (BlockOffset off : config.pattern()) {
+                    if (off.x() < minX) minX = off.x(); if (off.x() > maxX) maxX = off.x();
+                    if (off.y() < minY) minY = off.y(); if (off.y() > maxY) maxY = off.y();
+                    if (off.z() < minZ) minZ = off.z(); if (off.z() > maxZ) maxZ = off.z();
+                }
+                this.cx = (minX + maxX) / 2f;
+                this.cy = (minY + maxY) / 2f;
+                this.cz = (minZ + maxZ) / 2f;
+                float extentX = maxX - minX + 1;
+                float extentY = maxY - minY + 1;
+                float extentZ = maxZ - minZ + 1;
+                this.maxExtent = Math.max(extentX, Math.max(extentY, extentZ));
+
+                // Surface hull & LOD for GUI 38x24px micro-icons:
+                if (fullEntries.size() > 60) {
+                    var occupied = resolvedMap.keySet();
+                    List<BlockEntry> surface = new ArrayList<>();
+                    for (BlockEntry entry : fullEntries) {
+                        BlockOffset off = entry.offset();
+                        boolean isSurface = !occupied.contains(new BlockOffset(off.x() + 1, off.y(), off.z()))
+                                || !occupied.contains(new BlockOffset(off.x() - 1, off.y(), off.z()))
+                                || !occupied.contains(new BlockOffset(off.x(), off.y() + 1, off.z()))
+                                || !occupied.contains(new BlockOffset(off.x(), off.y() - 1, off.z()))
+                                || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() + 1))
+                                || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() - 1));
+                        if (isSurface) {
+                            surface.add(entry);
+                        }
+                    }
+                    if (surface.size() > 60) {
+                        int step = (int) Math.ceil((double) surface.size() / 60.0);
+                        List<BlockEntry> sampled = new ArrayList<>(60);
+                        for (int i = 0; i < surface.size(); i += step) {
+                            sampled.add(surface.get(i));
+                        }
+                        this.iconEntries = java.util.Collections.unmodifiableList(sampled);
+                    } else {
+                        this.iconEntries = java.util.Collections.unmodifiableList(surface);
+                    }
+                } else {
+                    this.iconEntries = fullEntries;
+                }
+            }
+        }
+    }
+
+    public static ConfigPreviewMeta getPreviewMeta(BuildingConfig config) {
+        if (config.pattern().isEmpty()) {
+            return new ConfigPreviewMeta(config);
+        }
+        return META_CACHE.computeIfAbsent(config, ConfigPreviewMeta::new);
+    }
 
     /**
      * Resolve a config's pattern offsets to BlockStates, cached per config so the
      * per-frame renderers don't re-parse every blockstate string every frame.
      */
     public static Map<BlockOffset, BlockState> resolveBlockStates(BuildingConfig config) {
-        if (config.pattern().isEmpty()) return Map.of();
-        return RESOLVED_CACHE.computeIfAbsent(config, BuildingPreviewRenderer::buildBlockStates);
+        return getPreviewMeta(config).resolvedMap;
     }
 
     private static Map<BlockOffset, BlockState> buildBlockStates(BuildingConfig config) {
@@ -75,96 +150,34 @@ public final class BuildingPreviewRenderer {
     private BuildingPreviewRenderer() {}
 
     /**
-     * Render a 3D preview of the building into the given screen rectangle.
-     *
-     * @param g      current GuiGraphics
-     * @param config building to preview
-     * @param x      screen x (top-left)
-     * @param y      screen y (top-left)
-     * @param w      preview width in pixels
-     * @param h      preview height in pixels
+     * Batch-friendly 3D block preview renderer. Expects caller to manage Lighting and DepthTest.
      */
-    public static void renderPreview(GuiGraphics g, BuildingConfig config,
-                                      int x, int y, int w, int h) {
-        List<BlockOffset> pattern = config.pattern();
-        Map<BlockOffset, BlockState> resolved = resolveBlockStates(config);
-        if (pattern.isEmpty() || resolved.isEmpty()) {
-            Log.warn(TAG, "[Preview] Empty pattern or resolved blocks for '{}'", config.id());
-            drawDebugRect(g, x, y, w, h, 0xFFFF0000);
+    public static void renderPreviewBlocks(GuiGraphics g, BuildingConfig config,
+                                           int x, int y, int w, int h) {
+        ConfigPreviewMeta meta = getPreviewMeta(config);
+        if (config.pattern().isEmpty() || meta.resolvedMap.isEmpty()) {
             return;
         }
 
-        // ── 1. Compute building bounds and center ──
-        int minX = 0, minY = 0, minZ = 0, maxX = 0, maxY = 0, maxZ = 0;
-        boolean first = true;
-        for (BlockOffset off : pattern) {
-            if (first) {
-                minX = maxX = off.x(); minY = maxY = off.y(); minZ = maxZ = off.z();
-                first = false;
-            } else {
-                if (off.x() < minX) minX = off.x(); if (off.x() > maxX) maxX = off.x();
-                if (off.y() < minY) minY = off.y(); if (off.y() > maxY) maxY = off.y();
-                if (off.z() < minZ) minZ = off.z(); if (off.z() > maxZ) maxZ = off.z();
-            }
-        }
+        float scale = Math.min(w, h) / meta.maxExtent * 0.55f;
+        List<BlockEntry> entries = meta.iconEntries;
 
-        float cx = (minX + maxX) / 2f;
-        float cy = (minY + maxY) / 2f;
-        float cz = (minZ + maxZ) / 2f;
-
-        float extentX = maxX - minX + 1;
-        float extentY = maxY - minY + 1;
-        float extentZ = maxZ - minZ + 1;
-        float maxExtent = Math.max(extentX, Math.max(extentY, extentZ));
-
-        // Scale so the building fits in the UI rect with padding (0.55f margin)
-        float scale = Math.min(w, h) / maxExtent * 0.55f;
-
-        // ── 2. Resolve block states (cached per config — no per-frame string parsing) ──
-        record BlockEntry(BlockOffset offset, BlockState state) {}
-        List<BlockEntry> entries = new ArrayList<>();
-        for (var entry : resolved.entrySet()) {
-            entries.add(new BlockEntry(entry.getKey(), entry.getValue()));
-        }
-
-        // ── 3. Set up isometric rendering ──
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
         MultiBufferSource.BufferSource bufferSource = g.bufferSource();
         PoseStack pose = g.pose();
 
-        // Auto-rotation angle (full rotation every 8 seconds)
         float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
 
-        // Flush any pending GUI batches to avoid state interference
-        g.flush();
-
         pose.pushPose();
-
-        // Move to the center of the UI rectangle; push Z forward so the model
-        // renders in front of the GUI background (200 is a safe depth).
         pose.translate(x + w / 2f, y + h / 2f, 200);
-
-        // 【CRITICAL】GUI Y-axis points downward; 3D world Y-axis points upward.
-        // Negate Y scale to flip the coordinate system.
         pose.scale(scale, -scale, scale);
-
-        // Isometric rotation: first tilt down, then rotate horizontally
         pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
         pose.mulPose(new Quaternionf().rotateY(rotY));
+        pose.translate(-meta.cx - 0.5f, -meta.cy - 0.5f, -meta.cz - 0.5f);
 
-        // Offset so the building rotates around its own center.
-        // The -0.5f shifts from block-corner to block-center anchoring.
-        pose.translate(-cx - 0.5f, -cy - 0.5f, -cz - 0.5f);
-
-        // Enable hardware depth test for correct occlusion (replaces CPU sorting)
-        RenderSystem.enableDepthTest();
-
-        // Use GUI 3D lighting so blocks appear立体感 rather than flat/dark
-        Lighting.setupFor3DItems();
-
-        // ── 4. Render blocks ──
-        for (BlockEntry entry : entries) {
+        for (int i = 0; i < entries.size(); i++) {
+            BlockEntry entry = entries.get(i);
             BlockOffset off = entry.offset();
             pose.pushPose();
             pose.translate(off.x(), off.y(), off.z());
@@ -178,13 +191,21 @@ public final class BuildingPreviewRenderer {
             pose.popPose();
         }
 
-        // Must flush batches BEFORE disabling depth test!
-        bufferSource.endBatch();
-
-        // ── 5. Restore state ──
         pose.popPose();
+    }
 
-        // Restore flat GUI lighting and disable depth test
+    /**
+     * Standalone 3D preview renderer (manages its own state flush/setup).
+     */
+    public static void renderPreview(GuiGraphics g, BuildingConfig config,
+                                      int x, int y, int w, int h) {
+        g.flush();
+        RenderSystem.enableDepthTest();
+        Lighting.setupFor3DItems();
+
+        renderPreviewBlocks(g, config, x, y, w, h);
+
+        g.bufferSource().endBatch();
         Lighting.setupForFlatItems();
         RenderSystem.disableDepthTest();
     }

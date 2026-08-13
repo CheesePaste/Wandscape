@@ -345,7 +345,43 @@ public final class BuildingSelectionOverlay {
         // Flush cell backgrounds before 3D preview so blocks render on top
         g.bufferSource().endBatch(net.minecraft.client.renderer.RenderType.gui());
 
-        // Pass 2: 3D previews + labels (rendered on top of backgrounds)
+        // Pass 2: Batch 3D previews (1 single setup/flush for all 3D cells)
+        g.flush();
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
+        com.mojang.blaze3d.platform.Lighting.setupFor3DItems();
+
+        for (int row = startRow; row < endRow; row++) {
+            for (int col = 0; col < cols; col++) {
+                int i = row * cols + col;
+                if (i >= slots.size()) break;
+
+                int cellX = gridX + col * CELL_W;
+                int cellY = gridY + (row - startRow) * CELL_H;
+
+                // Viewport Culling: Skip cells outside screen bounds
+                if (cellX + CELL_W < GRID_LEFT || cellX > screenW - SCROLLBAR_W) {
+                    continue;
+                }
+
+                BuildingSlot slot = slots.get(i);
+                boolean locked = !isSlotUnlocked(slot);
+
+                BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
+                if (config != null && !locked) {
+                    int px = cellX + PREVIEW_PAD;
+                    int py = cellY + PREVIEW_PAD;
+                    int pw = CELL_W - PREVIEW_PAD * 2;
+                    int ph = CELL_H - NAME_H - PREVIEW_PAD;
+                    BuildingPreviewRenderer.renderPreviewBlocks(g, config, px, py, pw, ph);
+                }
+            }
+        }
+
+        g.bufferSource().endBatch();
+        com.mojang.blaze3d.platform.Lighting.setupForFlatItems();
+        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
+
+        // Pass 3: Labels, lock overlays and badges (2D GUI pass)
         for (int row = startRow; row < endRow; row++) {
             for (int col = 0; col < cols; col++) {
                 int i = row * cols + col;
@@ -357,15 +393,9 @@ public final class BuildingSelectionOverlay {
                 BuildingSlot slot = slots.get(i);
                 boolean locked = !isSlotUnlocked(slot);
                 boolean selected = slot.id().equals(selectedId) && !locked;
-
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
-                if (config != null && !locked) {
-                    int px = cellX + PREVIEW_PAD;
-                    int py = cellY + PREVIEW_PAD;
-                    int pw = CELL_W - PREVIEW_PAD * 2;
-                    int ph = CELL_H - NAME_H - PREVIEW_PAD;
-                    BuildingPreviewRenderer.renderPreview(g, config, px, py, pw, ph);
-                } else if (config == null) {
+
+                if (config == null) {
                     Log.warn(TAG, "[Bar] Config not found for slot '{}'", slot.id());
                     g.drawCenteredString(font, "?", cellX + CELL_W / 2, cellY + (CELL_H - NAME_H) / 2 - 4, 0xFF666666);
                 }
