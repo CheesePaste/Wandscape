@@ -226,9 +226,23 @@ public final class ProjectionClientState {
         return rotationSteps;
     }
 
-    /** Increment rotation by one step (90° CCW), wrapping at 4. */
+    /**
+     * Increment rotation by one step (90° CCW), wrapping at 4.
+     * 绕建筑当前中心旋转：anchor 同步平移，使建筑原地打转、中心不随旋转偏移
+     * （否则建筑绕 anchor——即未旋转时的中心附近——摆动，偏离准心）。
+     */
     public static void rotate() {
-        rotationSteps = (rotationSteps + 1) & 3;
+        BuildingConfig config = getSelectedConfig();
+        if (config != null && ghostPos != null) {
+            int[] oldC = BuildingCentering.rotatedCenterOffsets(config, rotationSteps);
+            int cx = ghostPos.getX() + oldC[0];
+            int cz = ghostPos.getZ() + oldC[1];
+            rotationSteps = (rotationSteps + 1) & 3;
+            int[] newC = BuildingCentering.rotatedCenterOffsets(config, rotationSteps);
+            ghostPos = new BlockPos(cx - newC[0], ghostPos.getY(), cz - newC[1]);
+        } else {
+            rotationSteps = (rotationSteps + 1) & 3;
+        }
     }
 
     /** Reset rotation to 0 (original orientation). */

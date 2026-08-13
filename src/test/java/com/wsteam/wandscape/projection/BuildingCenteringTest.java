@@ -91,4 +91,30 @@ class BuildingCenteringTest {
         assertArrayEquals(new int[] {0, 0},
                 BuildingCentering.rotatedCenterOffsets(cfg(new int[0][0]), 3));
     }
+
+    @Test
+    @DisplayName("绕中心旋转：4 次旋转后建筑中心始终锚定在原瞄准方块")
+    void rotateAroundCenterKeepsCenterFixed() {
+        BuildingConfig bakery = cfg(new int[][] {
+                {1, 0, 1}, {10, 0, 1}, {1, 0, 9}, {10, 0, 9}
+        });
+        int aimX = 10, aimZ = 20;
+        int[] c0 = BuildingCentering.rotatedCenterOffsets(bakery, 0);
+        int anchorX = aimX - c0[0];
+        int anchorZ = aimZ - c0[1];
+
+        for (int steps = 1; steps <= 4; steps++) {
+            int[] oldC = BuildingCentering.rotatedCenterOffsets(bakery, steps - 1);
+            int[] newC = BuildingCentering.rotatedCenterOffsets(bakery, steps);
+            anchorX += oldC[0] - newC[0];
+            anchorZ += oldC[1] - newC[1];
+
+            int[] curC = BuildingCentering.rotatedCenterOffsets(bakery, steps & 3);
+            assertEquals(aimX, anchorX + curC[0], "步骤 " + steps + "：建筑中心 x 必须保持瞄准方块");
+            assertEquals(aimZ, anchorZ + curC[1], "步骤 " + steps + "：建筑中心 z 必须保持瞄准方块");
+        }
+        // 转满一圈 anchor 回到起点
+        assertEquals(aimX - c0[0], anchorX);
+        assertEquals(aimZ - c0[1], anchorZ);
+    }
 }
