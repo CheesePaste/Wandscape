@@ -123,7 +123,7 @@ public final class BuildingPreviewRenderer {
     private BuildingPreviewRenderer() {}
 
     /**
-     * Batch-friendly 3D block preview renderer. Expects caller to manage Lighting and DepthTest.
+     * Batch-friendly 3D block preview renderer for GUI icons.
      */
     public static void renderPreviewBlocks(GuiGraphics g, BuildingConfig config,
                                            int x, int y, int w, int h) {
@@ -133,7 +133,7 @@ public final class BuildingPreviewRenderer {
         }
 
         float scale = Math.min(w, h) / meta.maxExtent * 0.55f;
-        List<BlockEntry> entries = meta.iconEntries;
+        List<BlockEntry> entries = meta.fullEntries;
 
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
@@ -143,7 +143,7 @@ public final class BuildingPreviewRenderer {
         float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
 
         pose.pushPose();
-        pose.translate(x + w / 2f, y + h / 2f, 200);
+        pose.translate(x + w / 2f, y + h / 2f, 100);
         pose.scale(scale, -scale, scale);
         pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
         pose.mulPose(new Quaternionf().rotateY(rotY));
