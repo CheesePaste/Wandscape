@@ -104,16 +104,8 @@ public final class BuildingPreviewRenderer {
                     }
                 }
 
-                if (surfaceHull.size() > 120) {
-                    int step = (int) Math.ceil((double) surfaceHull.size() / 120.0);
-                    List<BlockEntry> sampled = new ArrayList<>(120);
-                    for (int i = 0; i < surfaceHull.size(); i += step) {
-                        sampled.add(surfaceHull.get(i));
-                    }
-                    this.iconEntries = java.util.Collections.unmodifiableList(sampled);
-                } else {
-                    this.iconEntries = java.util.Collections.unmodifiableList(surfaceHull);
-                }
+                // Keep 100% complete unbroken surface hull for GUI icons (zero gap/missing blocks)
+                this.iconEntries = java.util.Collections.unmodifiableList(surfaceHull);
             }
         }
     }
