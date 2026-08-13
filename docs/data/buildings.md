@@ -113,5 +113,5 @@
 - warehouse（storage）：comfort2/magic1/wonder1，queue 容量 0。
 - nodedark（node）：magic5，node_config 用 node:gather/dark/10/1200。
 - townhall1（government）：三值全 10，door_offset [18,1,4]。
-- bakery（shop）：shop.goods 5 种食品各带三值，profit_rate 0.2，duration 1200。
+- bakery（shop）：shop.goods 5 种食品各带三值，profit_rate 0.4，duration 1200。
 - tavern：有 door_offset 与 `interact_spots`（保持 tavern，非游客目标）。

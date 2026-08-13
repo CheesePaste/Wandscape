@@ -135,7 +135,7 @@ BuildingConfig JSON → BuildingConfigLoader
 
 商店运作 (每日清晨):
   ShopStockManager.restock() → ColonyItemBank扣元素 → 填充库存
-  → 游客购物 purchase → 消耗货品 → ColonyItemBank入元素 ceil(价值×(1+profitRate))（如 bakery 0.2→1.2X）
+  → 游客购物 purchase → 消耗货品 → ColonyItemBank入元素 ceil(价值×(1+profitRate))（如 bakery 0.4→1.4X）
 
 装饰辐射 (每200tick):
   DecorationBonusSystem → 遍历功能建筑 → 曼哈顿距离内装饰累加
