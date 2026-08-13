@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -14,7 +15,6 @@ import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -60,7 +60,8 @@ public final class GuardScanner {
         return true;
     }
 
-    /** 各区域并集内存活 Enemy，过滤到任区域内且非黑名单，返回距 {@code from} 最近者；无则 null。 */
+    /** 各区域并集内存活敌对目标（{@code isHostileTarget}，中立生物须已发怒），
+     *  过滤到任区域内且非黑名单，返回距 {@code from} 最近者；无则 null。 */
     @Nullable
     public static LivingEntity nearestInZones(ServerLevel level, List<GuardZone> zones, Vec3 from) {
         AABB queryBox = unionAabb(zones);
@@ -68,7 +69,8 @@ public final class GuardScanner {
         long gameTime = level.getGameTime();
         LivingEntity best = null;
         double bestSq = Double.MAX_VALUE;
-        for (Entity e : level.getEntities((Entity) null, queryBox, e -> e instanceof Enemy)) {
+        for (Entity e : level.getEntities((Entity) null, queryBox,
+                e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
             if (isBlacklisted(mob.getId(), gameTime)) continue;
             if (!inAnyZone(mob, zones)) continue;
@@ -81,12 +83,13 @@ public final class GuardScanner {
         return best;
     }
 
-    /** 任一区域内是否有非黑名单的存活 Enemy（用于脱离判定）。 */
+    /** 任一区域内是否有非黑名单的存活敌对目标（{@code isHostileTarget}，用于脱离判定）。 */
     public static boolean hasMonsterInZones(ServerLevel level, List<GuardZone> zones) {
         AABB queryBox = unionAabb(zones);
         if (queryBox == null) return false;
         long gameTime = level.getGameTime();
-        for (Entity e : level.getEntities((Entity) null, queryBox, e -> e instanceof Enemy)) {
+        for (Entity e : level.getEntities((Entity) null, queryBox,
+                e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
             if (e instanceof LivingEntity mob && !mob.isRemoved() && mob.isAlive()
                     && !isBlacklisted(mob.getId(), gameTime)
                     && inAnyZone(mob, zones)) {

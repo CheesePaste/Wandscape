@@ -290,8 +290,9 @@ public final class GuardCombat {
     }
 
     /** 半径内可被该法师伤害的存活目标数量（min_enemies 用）。
-     *  默认只数 Enemy；敌对法师（canBeamHurt 覆盖为也伤生存玩家）会把生存玩家计入敌数，
-     *  使 hostile_nearest / min_enemies 对玩家目标成立。 */
+     *  伤害按 Enemy 结算：默认只数 Enemy（含和平中立生物，与伤害口径一致）；敌对法师
+     *  （canBeamHurt 覆盖为也伤生存玩家）会把生存玩家计入敌数，使 hostile_nearest /
+     *  min_enemies 对玩家目标成立。 */
     private static int countEnemies(ServerLevel level, WandscapeNpc npc) {
         int count = 0;
         for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(SNAPSHOT_SCAN_RADIUS),

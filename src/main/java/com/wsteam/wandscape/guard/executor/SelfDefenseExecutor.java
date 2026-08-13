@@ -23,7 +23,6 @@ import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -34,7 +33,7 @@ import net.minecraft.world.phys.Vec3;
  * 包），由 {@link #tick(World)} 驱动（从 {@code Wandscape.onServerTick} 调用）：
  * <ol>
  *   <li>节流侦测（每 {@link #DETECT_INTERVAL_TICKS} tick）：遍历所有 NPC，有有效目标
- *       （仇恨目标优先、否则半径内最近 {@code Enemy}）且未在战斗中 → **抢占**：暂停当前包
+ *       （仇恨目标优先、否则半径内最近 {@code isHostileTarget} 的目标）且未在战斗中 → **抢占**：暂停当前包
  *       （{@link NpcTaskQueue#suspendCurrent}，挂起栈满则跳过），注入 {@code self_defense} 包。
  *       <b>和平模式 NPC 不索敌不反击</b>，但被怪贴到 {@code Config.GUARD_PEACE_FLEE_RANGE} 内时
  *       同样抢占注入——持续循环按「逃跑」处理（{@link GuardCombat#navigateAway} 后撤）。</li>
@@ -159,13 +158,15 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return false;
     }
 
-    /** 目标解析：仇恨目标（存活、非玩家、hateRange 内、可见）优先，否则半径内最近可见 {@code Enemy}。
+    /** 目标解析：仇恨目标（存活、非玩家、hateRange 内、可见、且当前仍是敌对目标）优先，
+     *  否则半径内最近可见 {@code isHostileTarget} 的生物（中立生物须已发怒）。
      *  地下/隔墙看不见的怪物不锁为目标。 */
     @Nullable
     private static LivingEntity resolveTarget(WandscapeNpc npc, ServerLevel level) {
         int hateRange = Config.GUARD_HATE_RANGE.get();
         LivingEntity hated = npc.getHatedAttacker(level);
         if (hated != null && !(hated instanceof Player)
+                && WandscapeNpc.isHostileTarget(hated, level)
                 && npc.distanceToSqr(hated) <= (double) hateRange * hateRange
                 && GuardCombat.hasLineOfSight(npc, hated)) {
             return hated;
@@ -173,13 +174,14 @@ public final class SelfDefenseExecutor implements OpExecutor<AtomicOp.SelfDefens
         return nearestVisibleEnemyAround(npc, level, Config.GUARD_SELF_DEFENSE_RANGE.get());
     }
 
-    /** 半径内最近可见存活 {@code Enemy}（球面距离 + LOS）；无则 null。 */
+    /** 半径内最近可见存活敌对目标（球面距离 + LOS）；无则 null。中立生物须已发怒才算。 */
     @Nullable
     private static LivingEntity nearestVisibleEnemyAround(WandscapeNpc npc, ServerLevel level, int radius) {
         LivingEntity nearest = null;
         double bestSq = (double) radius * radius;
         Vec3 pos = npc.position();
-        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(radius), e -> e instanceof Enemy)) {
+        for (Entity e : level.getEntities((Entity) null, npc.getBoundingBox().inflate(radius),
+                e -> e instanceof LivingEntity le && WandscapeNpc.isHostileTarget(le, level))) {
             if (!(e instanceof LivingEntity mob) || mob.isRemoved() || !mob.isAlive()) continue;
             if (!GuardCombat.hasLineOfSight(npc, mob)) continue;
             double d = mob.distanceToSqr(pos);

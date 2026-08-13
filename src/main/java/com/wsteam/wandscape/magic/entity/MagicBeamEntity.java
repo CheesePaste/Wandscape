@@ -228,6 +228,8 @@ public class MagicBeamEntity extends Entity {
     private boolean canDamage(LivingEntity mob) {
         // 和平模式：该 NPC 的光束立即停手（执行器层面的拦截在下一轮才生效，这里即时兜底）
         if (casterNpc != null && casterNpc.isPeaceMode()) return false;
+        // 伤害按 Enemy 结算：束内 Enemy 一律结算（可能误伤和平中立生物，有意的）；施法者是
+        // WandscapeNpc 时按其 canBeamHurt 判定（敌对法师覆盖为也伤生存玩家）。索敌收紧见 isHostileTarget。
         if (mob instanceof Enemy) return true;
         return casterNpc != null && !casterNpc.isRemoved() && casterNpc.canBeamHurt(mob);
     }

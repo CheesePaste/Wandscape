@@ -59,8 +59,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -157,7 +159,27 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
     }
 
     /**
+     * 该生物当前是否应视为可**索敌**的敌对目标（NPC 目标选择唯一入口，仅用于锁定目标）：
+     * 普通敌对生物（{@link Enemy} 且非中立）恒是；中立生物（{@link NeutralMob}——末影人/僵尸猪人
+     * 等既属 Enemy 又属 NeutralMob）仅在**发怒且怒火指向玩家或殖民地成员**（NPC/村民）时才算——
+     * 平时和平状态绝不主动索敌；对其它怪物发怒（如被骷髅打伤）也不算殖民地威胁。
+     * 注意：这只是「索敌」判定。光束/法术伤害仍按 {@link Enemy} 结算（{@link #canBeamHurt}），
+     * 战斗中可能误伤到正好在束内/溅射范围内的和平中立生物——这是有意的。
+     */
+    public static boolean isHostileTarget(LivingEntity target, Level level) {
+        if (!(target instanceof Enemy)) return false;
+        if (!(target instanceof NeutralMob neutral) || !neutral.isAngry()) return true;
+        if (neutral.isAngryAtAllPlayers(level)) return true;
+        UUID angerAt = neutral.getPersistentAngerTarget();
+        if (angerAt == null) return false;
+        Entity e = level.getEntity(angerAt);
+        return e instanceof Player || e instanceof WandscapeNpc || e instanceof Villager;
+    }
+
+    /**
      * 该法师的魔法光束能伤害的目标判定钩子。默认只伤敌对生物（{@link Enemy}）——
+     * 与 {@link #isHostileTarget}（索敌判定）分开：战斗中对束内 Enemy 一律结算伤害，
+     * 可能误伤正好在束内/溅射范围内的和平中立生物；但 NPC 不会主动索敌锁定它们。
      * 殖民地 NPC 的光束**永不伤害玩家**、其它 NPC 或村民。敌对法师等子类
      * 覆盖为「Enemy 或 生存玩家」，用于实战测试。光束伤害（{@code MagicBeamEntity}）、
      * SPELL_POWER 倍率（{@code NpcSpellPowerHandler}）与战斗快照敌数（{@code GuardCombat}）
