@@ -1,8 +1,5 @@
 package com.wsteam.wandscape;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -55,7 +52,6 @@ import com.wsteam.wandscape.warehouse.network.WarehouseDataPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
-import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;
 import com.wsteam.wandscape.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
@@ -73,9 +69,6 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
-import net.minecraft.server.packs.resources.PreparableReloadListener;
-import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.util.profiling.ProfilerFiller;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
@@ -474,7 +467,6 @@ public class WandscapeClient {
     /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
     private static void onPlayerLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         WandscapePanelState.reset();
-        BuildingGhostRenderer.closeAll();
     }
 
     @SubscribeEvent
@@ -522,17 +514,5 @@ public class WandscapeClient {
     @SubscribeEvent
     static void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(Wandscape.DATA_LOADER);
-        // A datapack reload recreates every BuildingConfig instance, so the GPU
-        // buffers keyed by the old instances are stale — close them so they get
-        // re-baked (not leaked). Runs after DATA_LOADER so new configs are ready.
-        event.registerReloadListener(new PreparableReloadListener() {
-            @Override
-            public CompletableFuture<Void> reload(PreparationBarrier barrier, ResourceManager resourceManager,
-                                                  ProfilerFiller preparationsProfiler, ProfilerFiller reloadProfiler,
-                                                  Executor backgroundExecutor, Executor gameExecutor) {
-                return barrier.wait(CompletableFuture.completedFuture(null))
-                        .thenRun(BuildingGhostRenderer::closeAll);
-            }
-        });
     }
 }

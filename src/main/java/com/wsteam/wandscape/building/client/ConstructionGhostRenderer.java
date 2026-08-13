@@ -9,8 +9,7 @@ import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -51,6 +50,7 @@ public final class ConstructionGhostRenderer {
 
         Vec3 camPos = event.getCamera().getPosition();
         PoseStack poseStack = event.getPoseStack();
+        MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
 
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
@@ -59,22 +59,8 @@ public final class ConstructionGhostRenderer {
             if (entry.completed()) continue;
             BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
             if (config == null) continue;
-
-            // Per-building frustum cull — boundary from the packet is pre-rotated.
-            if (entry.hasBoundary()) {
-                BlockPos anchor = entry.anchor();
-                AABB aabb = new AABB(
-                        anchor.getX() + entry.bMinX(),
-                        anchor.getY() + entry.bMinY(),
-                        anchor.getZ() + entry.bMinZ(),
-                        anchor.getX() + entry.bMaxX() + 1,
-                        anchor.getY() + entry.bMaxY() + 1,
-                        anchor.getZ() + entry.bMaxZ() + 1);
-                if (!event.getFrustum().isVisible(aabb)) continue;
-            }
-
-            BuildingGhostRenderer.renderGhostVboSkipped(mc, poseStack, event.getProjectionMatrix(),
-                    entry.anchor(), config, entry.rotationSteps());
+            BuildingGhostRenderer.renderGhostBlocks(mc, buf, poseStack,
+                    entry.anchor(), config, entry.rotationSteps(), true);
         }
 
         poseStack.popPose();

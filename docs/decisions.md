@@ -2,21 +2,6 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
-## 2026-08-13：建筑 ghost 渲染改 VBO 预烘焙——大建筑投影卡顿根因与代价
-
-**需求**（用户问题诊断）：V 面板 Build 子模式选中大建筑（sea_store 8502 方块）时投影只有 ~40 FPS，GPU 20%、tick 5ms → 瓶颈在**客户端渲染线程**。根因：`BuildingGhostRenderer` 每帧对每个方块调用一次 `BlockRenderDispatcher.renderSingleBlock`（源码核实每次 new 一个 `RandomSource` + PoseStack + quad 装配），8502 方块 × 60fps ≈ 51 万次分配/秒 → 年轻代垃圾 ~100MB/s。**GC 是症状，根因是每帧整栋重 tessellate**。
-
-**决策**：
-- 新建 `BuildingGhostVboCache`：按 `(BuildingConfig, rotationSteps)` 把 ghost 几何烘焙成静态 GPU `VertexBuffer`（config 局部坐标），每帧一次 draw call。烘焙复用原 `renderSingleBlock` 路径（视觉一致），alpha 0.4 / FULL_BRIGHT / AO 阴影直接烤进顶点色。
-- **投影 ghost（纯静态）**：`drawGhost` 全量索引；B 的足迹绘制替换索引后，A 用 `indexClobbered` 标记延迟恢复全量索引，纯投影时不产生索引工作。
-- **建造足迹 overlay（hideBuiltBlocks=true）**：`drawGhostSkipped` 每帧按世界采样跳过已建 cell——跳过 cell 写**退化三角形**（全同索引→零面积→GPU 剔除），保持 `indexCount` 不变仍单次 draw。索引每帧复用 `ByteBufferBuilder` 重建（`uploadIndexBuffer` 成功后 close Result 会触发 `discardResults` 重置 writeOffset，零 GC 复用）。
-- **整栋 AABB 视锥剔除**：`RenderLevelStageEvent.getFrustum().isVisible(AABB)`，投影（旋转后 boundary）与足迹（包内预旋转 boundary）都按建筑级 AABB 剔除。
-- **显存清理**：GPU VBO 必须显式 `close()`（WeakHashMap 只覆盖 CPU 侧）。reload 会换新 `BuildingConfig` 实例，挂 `RegisterClientReloadListenersEvent`（DATA_LOADER 之后）+ `LoggingOut` 调 `closeAll()`。
-
-**为什么**：per-frame 逐方块 tessellate 是渲染线程 CPU 瓶颈，VBO 烘焙把「每帧 8502 次 renderSingleBlock」变成「烘焙期 1 次 + 每帧 1 次 draw」，GC 压力随分配消失。旋转是离散 0-3（`ProjectionFlightController` 左键 +1），`(config, rotationSteps)` 是稳定且有界的缓存键。
-
-**影响 / 待修复（见 gaps.md）**：实测发现投影 ghost **位置错位**——建筑中心落在鼠标准心而非锚定 ghostPos 足迹。疑似 VBO draw 的 model-view/projection 与旧 bufferSource 路径（走 `RenderSystem` 矩阵）坐标空间不一致，待排查。
-
 ## 2026-08-13：商店补货合成任务队首插入——缺货商品不被建材合成阻塞
 
 **需求**（用户指令）：shop 补货时商品不足会自动发布合成任务，但该任务追加到 Workstation 队尾，会被前面排队的建材合成长期阻塞，游客买不到货；要求补货任务放到队首。
