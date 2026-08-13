@@ -477,9 +477,9 @@ public class Wandscape {
                         ShopOpenPacket.STREAM_CODEC,
                         (packet, ctx) -> ShopOpenPacket.handleClient(packet))
                 .playToClient(
-                        com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.TYPE,
-                        com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.STREAM_CODEC,
-                        (packet, ctx) -> com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.handleClient(packet))
+                        com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.TYPE,
+                        com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.STREAM_CODEC,
+                        (packet, ctx) -> com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.handleClient(packet))
                 .playToServer(
                         ShopMaxStockPacket.TYPE,
                         ShopMaxStockPacket.STREAM_CODEC,
@@ -1021,12 +1021,34 @@ public class Wandscape {
         for (var json : rawJsons.values()) {
             jsonList.add(json.toString());
         }
-        var packet = new com.wsteam.wandscape.building.network.BuildingConfigSyncPacket(jsonList);
-        if (event.getPlayer() != null) {
-            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(event.getPlayer(), packet);
-        } else {
-            net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(packet);
+        int totalConfigs = jsonList.size();
+        int totalChunksSent = 0;
+        int totalCompressedBytes = 0;
+        int configIndex = 0;
+        for (String json : jsonList) {
+            byte[] compressed = com.wsteam.wandscape.building.network.BuildingConfigCompressor.compress(json);
+            totalCompressedBytes += compressed.length;
+            int totalChunks = Math.max(1, (compressed.length
+                    + com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES - 1)
+                    / com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES);
+            int chunkIndex = 0;
+            for (int off = 0; off < compressed.length; off += com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES) {
+                int len = Math.min(com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.CHUNK_BYTES,
+                        compressed.length - off);
+                var pkt = new com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket(
+                        configIndex, chunkIndex, totalChunks, totalConfigs,
+                        java.util.Arrays.copyOfRange(compressed, off, off + len));
+                if (event.getPlayer() != null) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(event.getPlayer(), pkt);
+                } else {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(pkt);
+                }
+                chunkIndex++;
+                totalChunksSent++;
+            }
+            configIndex++;
         }
-        Log.info(TAG, "Synced {} building configs on DatapackSync", jsonList.size());
+        Log.info(TAG, "Synced {} building configs ({} chunks, {} compressed bytes) on DatapackSync",
+                totalConfigs, totalChunksSent, totalCompressedBytes);
     }
 }

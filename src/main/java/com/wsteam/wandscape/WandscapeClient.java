@@ -387,12 +387,8 @@ public class WandscapeClient {
                     e.getUUID(), packet.iconKind(), packet.iconId(), packet.count(), e.tickCount);
         });
 
-        com.wsteam.wandscape.building.network.BuildingConfigSyncPacket.setClientHandler(packet -> {
-            for (String jsonStr : packet.jsonConfigs()) {
-                com.wsteam.wandscape.building.internal.BuildingConfigLoader.getInstance().registerFromJsonString(jsonStr);
-            }
-            Log.info("Wandscape", "Received and registered {} building configs from server", packet.jsonConfigs().size());
-        });
+        com.wsteam.wandscape.building.network.BuildingConfigSyncChunkPacket.setClientHandler(
+                com.wsteam.wandscape.building.client.BuildingConfigSyncReceiver::onChunk);
 
         Log.info("Wandscape", "Wandscape client setup complete");
     }
