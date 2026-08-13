@@ -1,6 +1,12 @@
 package com.wsteam.wandscape.shared.client.render;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -11,6 +17,7 @@ import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -20,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * World-space semi-transparent building ghost renderer.
+ * World-space semi-transparent building ghost renderer with zero-GC allocations and LOD caching.
  *
  * <p>Renders the full textured block model of a {@link BuildingConfig} at an
  * anchor position with alpha applied uniformly, so the target footprint reads
@@ -36,6 +43,120 @@ public final class BuildingGhostRenderer {
 
     private BuildingGhostRenderer() {}
 
+    public record RotatedBlockEntry(int rx, int ry, int rz, BlockState state) {}
+
+    public static final class RotatedGhostCache {
+        public final List<RotatedBlockEntry> fullEntries;
+        public final List<RotatedBlockEntry> lodEntries;
+
+        public RotatedGhostCache(BuildingConfig config, int rotationSteps) {
+            Map<BlockOffset, BlockState> blockStates = BuildingPreviewRenderer.resolveBlockStates(config);
+            if (blockStates.isEmpty()) {
+                this.fullEntries = Collections.emptyList();
+                this.lodEntries = Collections.emptyList();
+                return;
+            }
+
+            List<RotatedBlockEntry> entries = new ArrayList<>(blockStates.size());
+            Set<BlockOffset> occupiedRotated = new HashSet<>(blockStates.size());
+
+            for (var entry : blockStates.entrySet()) {
+                BlockOffset originalOffset = entry.getKey();
+                BlockState originalState = entry.getValue();
+
+                BlockOffset rotatedOffset = BuildingRotation.rotateOffset(originalOffset, rotationSteps);
+                BlockState rotatedState = originalState;
+                for (int i = 0; i < rotationSteps; i++) {
+                    rotatedState = rotatedState.rotate(Rotation.CLOCKWISE_90);
+                }
+
+                entries.add(new RotatedBlockEntry(
+                        rotatedOffset.x(), rotatedOffset.y(), rotatedOffset.z(), rotatedState));
+                occupiedRotated.add(rotatedOffset);
+            }
+
+            this.fullEntries = Collections.unmodifiableList(entries);
+            this.lodEntries = this.fullEntries;
+        }
+    }
+
+    private record CacheKey(BuildingConfig config, int rotationSteps) {}
+
+    private static final Map<CacheKey, RotatedGhostCache> ROTATED_CACHE =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
+    public static RotatedGhostCache getRotatedGhostCache(BuildingConfig config, int rotationSteps) {
+        CacheKey key = new CacheKey(config, rotationSteps);
+        return ROTATED_CACHE.computeIfAbsent(key, k -> new RotatedGhostCache(k.config(), k.rotationSteps()));
+    }
+
+    // Zero-GC MultiBufferSource and VertexConsumer wrapper
+    private static final GhostVertexConsumer GHOST_CONSUMER = new GhostVertexConsumer();
+    private static final GhostBufferSource GHOST_BUFFER_SOURCE = new GhostBufferSource(GHOST_CONSUMER);
+
+    private static final class GhostBufferSource implements MultiBufferSource {
+        private MultiBufferSource delegate;
+        private final GhostVertexConsumer consumer;
+
+        public GhostBufferSource(GhostVertexConsumer consumer) {
+            this.consumer = consumer;
+        }
+
+        public void setDelegate(MultiBufferSource delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public VertexConsumer getBuffer(RenderType renderType) {
+            consumer.setDelegate(delegate.getBuffer(renderType));
+            return consumer;
+        }
+    }
+
+    private static final class GhostVertexConsumer implements VertexConsumer {
+        private VertexConsumer real;
+
+        public void setDelegate(VertexConsumer real) {
+            this.real = real;
+        }
+
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            real.addVertex(x, y, z);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int r, int g, int b, int a) {
+            real.setColor(r, g, b, (int) (a * GHOST_ALPHA));
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            real.setUv(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            real.setUv1(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            real.setUv2(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            real.setNormal(x, y, z);
+            return this;
+        }
+    }
+
     /**
      * Render {@code config}'s pattern blocks as a semi-transparent ghost at {@code anchor}.
      *
@@ -48,85 +169,33 @@ public final class BuildingGhostRenderer {
                                           PoseStack poseStack,
                                           BlockPos anchor, BuildingConfig config, int rotationSteps,
                                           boolean hideBuiltBlocks) {
-        Map<BlockOffset, BlockState> blockStates = BuildingPreviewRenderer.resolveBlockStates(config);
-        if (blockStates.isEmpty()) return;
+        RotatedGhostCache cache = getRotatedGhostCache(config, rotationSteps);
+        List<RotatedBlockEntry> entries = cache.lodEntries;
+        if (entries.isEmpty()) return;
 
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
 
-        // GhostBufferSource: wraps every VertexConsumer returned by bufferSource
-        // to multiply alpha on setColor. All default methods (putBulkData, addVertex
-        // with color/light/overlay) transitively call setColor, so alpha is applied
-        // uniformly to all rendering paths.
-        MultiBufferSource ghostSource = renderType -> {
-            VertexConsumer real = bufferSource.getBuffer(renderType);
-            return new VertexConsumer() {
-                @Override
-                public VertexConsumer addVertex(float x, float y, float z) {
-                    real.addVertex(x, y, z);
-                    return this;
-                }
+        // Reuse zero-GC buffer wrapper
+        GHOST_BUFFER_SOURCE.setDelegate(bufferSource);
 
-                @Override
-                public VertexConsumer setColor(int r, int g, int b, int a) {
-                    real.setColor(r, g, b, (int) (a * GHOST_ALPHA));
-                    return this;
-                }
+        for (int i = 0; i < entries.size(); i++) {
+            RotatedBlockEntry entry = entries.get(i);
 
-                @Override
-                public VertexConsumer setUv(float u, float v) {
-                    real.setUv(u, v);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setUv1(int u, int v) {
-                    real.setUv1(u, v);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setUv2(int u, int v) {
-                    real.setUv2(u, v);
-                    return this;
-                }
-
-                @Override
-                public VertexConsumer setNormal(float x, float y, float z) {
-                    real.setNormal(x, y, z);
-                    return this;
-                }
-            };
-        };
-
-        for (var entry : blockStates.entrySet()) {
-            BlockOffset originalOffset = entry.getKey();
-            BlockState originalState = entry.getValue();
-
-            BlockOffset rotatedOffset = BuildingRotation.rotateOffset(originalOffset, rotationSteps);
-            BlockState rotatedState = originalState;
-            for (int i = 0; i < rotationSteps; i++) {
-                rotatedState = rotatedState.rotate(Rotation.CLOCKWISE_90);
-            }
-
-            // A real block wins over the ghost: once the intended block is placed
-            // at this cell, stop rendering its ghost (otherwise the ghost blends
-            // over the block and the cell looks unbuilt).
             if (hideBuiltBlocks) {
-                BlockPos worldPos = anchor.offset(
-                        rotatedOffset.x(), rotatedOffset.y(), rotatedOffset.z());
-                if (mc.level.getBlockState(worldPos).getBlock() == rotatedState.getBlock()) {
+                BlockPos worldPos = anchor.offset(entry.rx(), entry.ry(), entry.rz());
+                if (mc.level.getBlockState(worldPos).getBlock() == entry.state().getBlock()) {
                     continue;
                 }
             }
 
             poseStack.pushPose();
             poseStack.translate(
-                    anchor.getX() + rotatedOffset.x(),
-                    anchor.getY() + rotatedOffset.y(),
-                    anchor.getZ() + rotatedOffset.z());
+                    anchor.getX() + entry.rx(),
+                    anchor.getY() + entry.ry(),
+                    anchor.getZ() + entry.rz());
 
             blockRenderer.renderSingleBlock(
-                    rotatedState, poseStack, ghostSource,
+                    entry.state(), poseStack, GHOST_BUFFER_SOURCE,
                     FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                     ModelData.EMPTY, null);
 
