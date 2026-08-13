@@ -88,35 +88,8 @@ public final class BuildingPreviewRenderer {
                 float extentZ = maxZ - minZ + 1;
                 this.maxExtent = Math.max(extentX, Math.max(extentY, extentZ));
 
-                // Surface hull & LOD for GUI 38x24px micro-icons:
-                if (fullEntries.size() > 60) {
-                    var occupied = resolvedMap.keySet();
-                    List<BlockEntry> surface = new ArrayList<>();
-                    for (BlockEntry entry : fullEntries) {
-                        BlockOffset off = entry.offset();
-                        boolean isSurface = !occupied.contains(new BlockOffset(off.x() + 1, off.y(), off.z()))
-                                || !occupied.contains(new BlockOffset(off.x() - 1, off.y(), off.z()))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y() + 1, off.z()))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y() - 1, off.z()))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() + 1))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() - 1));
-                        if (isSurface) {
-                            surface.add(entry);
-                        }
-                    }
-                    if (surface.size() > 60) {
-                        int step = (int) Math.ceil((double) surface.size() / 60.0);
-                        List<BlockEntry> sampled = new ArrayList<>(60);
-                        for (int i = 0; i < surface.size(); i += step) {
-                            sampled.add(surface.get(i));
-                        }
-                        this.iconEntries = java.util.Collections.unmodifiableList(sampled);
-                    } else {
-                        this.iconEntries = java.util.Collections.unmodifiableList(surface);
-                    }
-                } else {
-                    this.iconEntries = fullEntries;
-                }
+                // Render 100% complete block entries for crisp micro-icons without missing or floating blocks
+                this.iconEntries = fullEntries;
             }
         }
     }
