@@ -3,7 +3,7 @@ package com.wsteam.wandscape.shared.ui.guidance;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,7 +13,8 @@ import net.minecraft.util.FormattedCharSequence;
 
 /**
  * Renders the onboarding guidance box (dark background, gold border) at the
- * bottom-right corner of the screen. Supports clicking to collapse/expand.
+ * top-right corner, its top edge aligned with the top bar. Supports clicking
+ * to collapse/expand.
  */
 public final class GuideRenderer {
 
@@ -47,13 +48,14 @@ public final class GuideRenderer {
         int pad = PAD;
         int lineH = font.lineHeight;
         boolean collapsed = GuideSession.isCollapsed();
-        int bottomMargin = (buildMode && isBar) ? BuildingSelectionOverlay.BAR_HEIGHT + 8 : 8;
+        // Top edge sits right at the bottom edge of the colony top bar.
+        int topY = WandscapePanelOverlay.TOP_BAR_H;
 
         if (collapsed) {
-            // Compact tab hugging the bottom-right corner — only the expand triangle.
+            // Compact tab in the top-right corner — only the expand triangle.
             int s = lineH + pad * 2 + 2;
             int x = screenW - s - 4;
-            int y = screenH - bottomMargin - s;
+            int y = topY;
             return new Box(x, y, s, s, 0, 0, 0, 0, 0, 9, 0, "", List.of(), "", true);
         }
 
@@ -70,10 +72,10 @@ public final class GuideRenderer {
         // Each drawn row advances lineH+1, plus a 1px divider gap and 2px hint gap.
         int boxH = pad * 2 + rows * (lineH + 1) + 3;
 
-        // Right side of the screen (bottom-right, above the build bar when open).
+        // Top-right corner, just below the top bar.
         int margin = 8;
         int x = screenW - boxW - margin;
-        int y = screenH - bottomMargin - boxH;
+        int y = topY;
 
         int btnS = 9;
         int closeX = x + boxW - btnS - 7;
