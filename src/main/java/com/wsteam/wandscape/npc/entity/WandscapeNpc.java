@@ -166,7 +166,7 @@ public class WandscapeNpc extends PathfinderMob implements PlayerLike {
      * 注意：这只是「索敌」判定。光束/法术伤害仍按 {@link Enemy} 结算（{@link #canBeamHurt}），
      * 战斗中可能误伤到正好在束内/溅射范围内的和平中立生物——这是有意的。
      */
-    public static boolean isHostileTarget(LivingEntity target, Level level) {
+    public static boolean isHostileTarget(LivingEntity target, ServerLevel level) {
         if (!(target instanceof Enemy)) return false;
         if (!(target instanceof NeutralMob neutral) || !neutral.isAngry()) return true;
         if (neutral.isAngryAtAllPlayers(level)) return true;
