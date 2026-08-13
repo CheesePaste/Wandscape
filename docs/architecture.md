@@ -120,7 +120,7 @@ BuildingConfig JSON → BuildingConfigLoader
        └─ TaskRequest → GlobalTaskPool.addTask()
   → SchedulerSystem（每 2 tick 评分）→ NPC 领取
   → TaskExecutionSystem → AtomicOp → OpExecutor → WandscapeBlockOps（MC 世界方块）
-  → emit CustomEvent build_complete → BuildCompleteListener（比对 block_mapping → 完成/修复）
+  → emit CustomEvent build_complete → BuildCompleteListener（比对 palette 派生 map → 完成/修复）
   → head 完成且队列排空 → ChunkLoadManager.releaseBuilding
 ```
 

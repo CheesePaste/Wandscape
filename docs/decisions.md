@@ -479,3 +479,20 @@
 - `DECOMPOSE_DIVISOR` 5 → **10**：分解产出 = 元素值 × 1/10 向下取整；提前拒绝阈值随之变为 count×总价值 < 10。
 
 **影响**：游客更容易喂满三条（满条给经验更快），1 级新手更顺；分解折价加深，应急补充变贵、鼓励正常获取元素。
+
+## 2026-08：建筑数据调色板 + 分块网络同步
+
+**需求**：进服同步建筑配置崩溃——`BuildingConfigSyncPacket` 把整店 JSON 当单个字符串发，sea_store 紧凑 519KB 超 `writeUtf` 262144 上限。且只有几万方块就超，未来更大建筑仍会超。
+
+**根因**：① `block_mapping` 是 `{"x,y,z": "完整方块态字符串"}`，每方块重复写完整 ID，占 JSON 66–79%；sea_store 8502 块只有 462 种方块。② 单字段 `writeUtf` 有 262144 硬上限，不拆分就无法根治。
+
+**决策**：
+- **数据格式改调色板**：`block_mapping`（N 条重复 ID）→ `palette`（M 个去重方块态）+ `block_indices`（N 个索引，与 `pattern` 对齐）。`BuildingConfig` 字段换成 palette/blockIndices，`blockMapping()` 改为派生方法（调用方零改动），`blockIdAt(i)` 供快路径。**仅新格式**：解析器拒绝旧 `block_mapping`，全部 39 个建筑 JSON 用脚本迁移。
+- **旋转调色板级**：旋转 = 旋转 pattern 位置 + 旋转每个 palette 方块态一次（M 次而非 N 次），block_indices 不变；蓝图 `blocks` 参数仍传派生 map（WorkItem 走内存无上限，DSL 零改动）。
+- **`block_nbt` 保持 `"x,y,z"` 键**：改索引键要动 DSL `keyof` 函数，block_nbt 只占 10% 不值。
+- **网络分块同步**：`BuildingConfigSyncPacket` 删除，新 `BuildingConfigSyncChunkPacket`——zlib 压缩后按 16KB 切块（`writeByteArray`，避开 writeUtf 上限），客户端 `BuildingConfigSyncReceiver` 按 configIndex+chunkIndex 重组注册；sea_store 紧凑 207K → zlib 约 40K → 3 块。
+- **渲染端缓存**：投影/施工幽灵/面板预览每帧重复做 N 次方块态字符串解析 → 按 config 弱缓存 `Map<BlockOffset,BlockState>`（WeakHashMap，config 不可变不泄漏），渲染走 `blockIdAt(i)` 快路径。
+
+**为什么**：体积（N→M 去重）与结构上限（单字符串→多包分块）是两个独立根因，分别根治才能既当前不崩又未来可扩。调色板复用 MC 区块思路，向后兼容靠解析期转换而非双格式常驻。`block_nbt`/蓝图契约/渲染热路径按"改动面 vs 收益"取舍，最小化波及。
+
+**约束保留**：蓝图 DSL（`build:clear_and_build`/`place_structure` 的 `blocks` map 契约）不动；`blockMapping()` 派生方法保留供事件型调用（完整/破损检查）；老世界 datapack 导出的旧格式文件将无法加载（需用扫描器重新导出）。

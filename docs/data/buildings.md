@@ -14,14 +14,15 @@
   "category": "government",             // string，默认 "basic"。实际值见下
   "first_free": true,                   // bool，可选：殖民地首个该建筑不消耗材料
   "deprecated": true,                   // bool，可选：仍加载（旧存档建筑可用）但隐藏于放置面板
-  "pattern": [[x,y,z], ...],            // 3D 整数偏移数组，必填（建造方块位置）
-  "block_mapping": {
-    "x,y,z": "minecraft:water[level=1]", // 方块态字符串（含 [prop=val] 转义）
-    "x,y,z": "minecraft:polished_diorite_slab[type=top]",
-    "x,y,z": "minecraft:oak_stairs[facing=east,half=top]",
-    "x,y,z": "minecraft:mud_brick_wall[north=tall,west=tall]"
-  },
-  "block_nbt": {"x,y,z": "<base64压缩NBT>"},   // 可选：方块实体 NBT
+  "pattern": [[x,y,z], ...],            // 3D 整数偏移数组，必填（建造方块位置，N 个）
+  "palette": [                           // 必填：去重后的方块态字符串（M 种，首次出现序）
+    "minecraft:water[level=1]",
+    "minecraft:polished_diorite_slab[type=top]",
+    "minecraft:oak_stairs[facing=east,half=top]",
+    "minecraft:mud_brick_wall[north=tall,west=tall]"
+  ],
+  "block_indices": [0, 2, 1, 3, 0, ...], // 必填：N 个 palette 索引，block_indices[i] ↔ pattern[i]
+  "block_nbt": {"x,y,z": "<base64压缩NBT>"},   // 可选：方块实体 NBT（键仍为 "x,y,z"）
   "comfort": 10,                        // int，默认 0（三值之一）
   "magic": 10,                          // int，默认 0
   "wonder": 10,                         // int，默认 0
@@ -37,7 +38,9 @@
     "id": "build:clear_and_build",
     "bind": {                           // 键=蓝图参数名，值=$顶层字段名
       "offsets": "$pattern",
-      "blocks": "$block_mapping",
+      "blocks": "$block_mapping",       // $block_mapping 是 EnqueueHelper 提供的派生参数
+                                        // （由 palette+block_indices 重建的 offset→方块态 map），
+                                        // 非原始 JSON 字段
       "blocks_nbt": "$block_nbt",
       "name": "$display_name"
     }

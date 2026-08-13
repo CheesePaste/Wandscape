@@ -10,9 +10,10 @@
 
 `data/BuildingConfig.java` record，从 `data/wandscape/buildings/<id>.json` 解析（默认值见 Deserializer）。顶层字段（完整 JSON 树见 [data/buildings.md](../data/buildings.md)）：
 
-`id / display_name / category / pattern / block_mapping / block_nbt / comfort / magic / wonder / queue{capacity,task_types} / unlock_requirement{min_colony_level} / boundary{min,max} / blueprint{id,bind($字段)} / node_config{blueprint,element,amount_per_harvest,channel_ticks} / decoration{radius} / wonder_config{effects} / shop{goods,profit_rate,interaction_duration_ticks} / service{energy_per_use,element_output,max_occupancy,interaction_duration_ticks} / door_offset / tourist_interact_aabb[] / first_free / deprecated`
+`id / display_name / category / pattern / palette / block_indices / block_nbt / comfort / magic / wonder / queue{capacity,task_types} / unlock_requirement{min_colony_level} / boundary{min,max} / blueprint{id,bind($字段)} / node_config{blueprint,element,amount_per_harvest,channel_ticks} / decoration{radius} / wonder_config{effects} / shop{goods,profit_rate,interaction_duration_ticks} / service{energy_per_use,element_output,max_occupancy,interaction_duration_ticks} / door_offset / tourist_interact_aabb[] / first_free / deprecated`
 
 > 注：`wonder_config` 字段已解析，但当前 `buildings/*.json` 均未定义它。
+> 注：方块数据用**调色板**：`pattern`（N 个偏移）+ `palette`（M 个去重方块态）+ `block_indices`（N 个索引，与 pattern 对齐）。`block_mapping` 旧格式已废弃（解析器拒绝）。
 
 `category` 实际值（从数据文件，见 data/buildings.md）：`government`（townhall1）、`storage`（warehouse）、`node`（node×7）、`shop`（breadshop/bookshop/flowershop/magicshop）、`service`（inn1/service_hall/deprecated library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）。
 
@@ -34,7 +35,7 @@
 BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
   → placeBuilding → EnqueueHelper.buildWorkItem
       · 解析 blueprint.bind 的 $field 引用
-      · 按 block_mapping 自动算 material_list/counts
+      · 按 palette+block_indices 自动算 material_list/counts
       · boundary → clear_offsets
       · 对 offsets/blocks/nbt/clear_offsets/door/AABB 做 90° 旋转
   → WorkItem 入 BuildingState.taskQueue
@@ -43,7 +44,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 ```
 
 - `EnqueueHelper.registerIfAbsent`：先 `getBuildingAt` 判占位，建 BuildingState、`api.registerBuilding`、assignColonyIfPossible；**首个建筑时给仓库每元素种 6000**（`colony.initialElementCount` 可配）。
-- `BuildCompleteListener`：订阅 `build_complete`，`findDamagedBlocks` 逐块比对 block_mapping（含方块态属性）；损坏≥1/3 判 broken → `BuildingBreakHandler.enqueueRepairForOffsets`；完好 → 分配殖民地 + BuildingPlacedEvent + 烟花 + addBuildingContribution。
+- `BuildCompleteListener`：订阅 `build_complete`，`findDamagedBlocks` 逐块比对 palette 派生 map（含方块态属性）；损坏≥1/3 判 broken → `BuildingBreakHandler.enqueueRepairForOffsets`；完好 → 分配殖民地 + BuildingPlacedEvent + 烟花 + addBuildingContribution。
 - `DemolishCompleteListener`：订阅 `demolish_complete`，unregisterBuilding + colonyApi.onBuildingDestroyed。
 - `BuildingBreakHandler`：BreakEvent/ExplosionEvent 复检，broken 则 structureIntact=false、删贡献、town_hall 则删殖民地；**不自动入队修复**（修复只能玩家触发）。`triggerRepair` 供"修复"按钮（V 面板 Repair 或 AnomalyScreen）：复检损坏块（**轻微 <1/3 与 broken ≥1/3 都修**）→ 入队 `build:place_structure` 修复任务（优先 49, addFirst）。
 
@@ -77,7 +78,7 @@ wonder 类且完整非关停生效；三种效果：`StatMod(target,value)` / `P
 
 ## 扫描器（scanner/）
 
-- **创造模式扫描器** `creative_building_scanner`（原 building_scanner 更名，给创作者）：含 FACING，右键开 CreativeScannerScreen；ScannerMode：BOUNDARY/DOOR/INTERACT/META/EXPORT；BE 另有 BlockMode SAVE/CORNER、TargetMode BUILDING/ROAD；`detectBoundaryFromCorners`（同 structureName 64 格内）、`detectDoors`（只计下半）。导出时扫描边界、跳过空气/扫描器、生成 pattern/block_mapping/block_nbt(base64 压缩 NBT)，写 JSON 到世界 datapack `wandscape_builds` 并即时可建；ROAD 模式导出道路预设。
+- **创造模式扫描器** `creative_building_scanner`（原 building_scanner 更名，给创作者）：含 FACING，右键开 CreativeScannerScreen；ScannerMode：BOUNDARY/DOOR/INTERACT/META/EXPORT；BE 另有 BlockMode SAVE/CORNER、TargetMode BUILDING/ROAD；`detectBoundaryFromCorners`（同 structureName 64 格内）、`detectDoors`（只计下半）。导出时扫描边界、跳过空气/扫描器、生成 pattern/palette/block_indices/block_nbt(base64 压缩 NBT)，写 JSON 到世界 datapack `wandscape_builds` 并即时可建；ROAD 模式导出道路预设。
 - **生存模式扫描器** `building_scanner`：类别锁 "custom"、三值/交互区恒空，配原版合成配方。
 - `ScannerPresetStore`：客户端 `<gameDir>/wandscape/scanner_presets/*.nbt` 的 list/load/save/delete。
 
