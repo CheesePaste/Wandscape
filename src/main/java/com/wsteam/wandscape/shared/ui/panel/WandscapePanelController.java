@@ -450,6 +450,14 @@ public final class WandscapePanelController {
             return;
         }
 
+        // C key: dedicated raise-cursor key — keeps freeing the cursor for UI even
+        // while the tutorial guide is hijacking Tab (fold/expand) during onboarding.
+        if (com.wsteam.wandscape.WandscapeClient.RAISE_CURSOR.matches(key, scanCode)
+                && WandscapePanelState.isPanelOpen()) {
+            WandscapePanelState.liftCursorForUI();
+            return;
+        }
+
         // 1/2/3/4: quick-switch into Build/Road/Stats/Warning（吞掉原版快捷栏切换）。
         // 面板开着时数字键切子模式，面板关着则保持原版快捷栏。
         if (WandscapePanelState.isPanelOpen()) {

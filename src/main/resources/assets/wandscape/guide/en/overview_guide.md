@@ -24,6 +24,7 @@ The panel has two states — understand these and you have the basics:
 | **G** | Toggle overview mode ↔ ground view |
 | **B** | Show / hide building boundary boxes |
 | **H** | Open the help guide |
+| **C** | Raise the cursor (works even while the tutorial is using Tab) |
 | **Tab** | Raise / return the cursor (see below) |
 
 ## Flying in Overview Mode
@@ -38,9 +39,9 @@ Flying works the same as creative mode: **WASD** to pan, **Space / Shift** to as
 
 The **⚠️ warning icon** below the sidebar lights up when a building is stopped or broken. Opening it shows the [Anomaly Report](anomaly_guide.md), where broken buildings can be repaired.
 
-## Raising / Returning the Cursor (Tab)
+## Raising / Returning the Cursor (C / Tab)
 
-In the Build and Road sub-modes the cursor is already lifted so you can click the sidebar, building bar, and right panel — rotate the camera by right-drag, no Tab needed. If you press **Tab** manually: in the Build sub-mode it opens/closes the building bar; in other states it raises/returns the cursor so the pointer can move freely between the panel UI and the world.
+In the Build and Road sub-modes the cursor is already lifted so you can click the sidebar, building bar, and right panel — rotate the camera by right-drag, no C / Tab needed. Press **C** to raise the cursor at any time; if you press **Tab** manually: in the Build sub-mode it opens/closes the building bar; in other states it raises/returns the cursor so the pointer can move freely between the panel UI and the world (during onboarding, Tab is taken by the tutorial guide — use C to raise the cursor instead).
 
 ## Where to Start
 
