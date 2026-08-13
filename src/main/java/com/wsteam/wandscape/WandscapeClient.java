@@ -328,7 +328,7 @@ public class WandscapeClient {
             }
             var center = net.minecraft.world.phys.Vec3.atCenterOf(packet.from());
             var entity = new com.wsteam.wandscape.engine.transport.TransportItemEntity(level, center.x, center.y + 0.5, center.z, stack);
-            entity.setRoute(packet.route());
+            entity.setFlight(packet.from(), packet.to(), packet.duration(), packet.onRoad());
             entity.setId(-level.random.nextInt(Integer.MAX_VALUE));
             level.addEntity(entity);
         });

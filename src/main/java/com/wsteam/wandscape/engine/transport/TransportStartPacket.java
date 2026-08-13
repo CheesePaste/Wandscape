@@ -10,11 +10,15 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 import com.wsteam.wandscape.shared.data.ItemKey;
-import com.wsteam.wandscape.road.core.TransportRoute;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
 
-public record TransportStartPacket(ItemKey itemKey, int count, BlockPos from, TransportRoute route) implements CustomPacketPayload {
+/**
+ * S→C: spawn a flying item visual from {@code from} to {@code to} over
+ * {@code duration} ticks. {@code onRoad} selects the arc/flat flight look.
+ */
+public record TransportStartPacket(ItemKey itemKey, int count, BlockPos from, BlockPos to,
+                                   int duration, boolean onRoad) implements CustomPacketPayload {
 
     public static final Type<TransportStartPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MODID, "transport_start"));
@@ -42,10 +46,9 @@ public record TransportStartPacket(ItemKey itemKey, int count, BlockPos from, Tr
         }
         buf.writeInt(pkt.count());
         buf.writeBlockPos(pkt.from());
-        buf.writeBoolean(!pkt.route().isEmpty());
-        if (!pkt.route().isEmpty()) {
-            buf.writeNbt(pkt.route().toNbt());
-        }
+        buf.writeBlockPos(pkt.to());
+        buf.writeInt(pkt.duration());
+        buf.writeBoolean(pkt.onRoad());
     }
 
     static TransportStartPacket read(RegistryFriendlyByteBuf buf) {
@@ -54,8 +57,10 @@ public record TransportStartPacket(ItemKey itemKey, int count, BlockPos from, Tr
         ItemKey key = new ItemKey(itemId, nbt);
         int count = buf.readInt();
         BlockPos from = buf.readBlockPos();
-        TransportRoute route = buf.readBoolean() ? TransportRoute.fromNbt(buf.readNbt()) : new TransportRoute(java.util.List.of());
-        
-        return new TransportStartPacket(key, count, from, route);
+        BlockPos to = buf.readBlockPos();
+        int duration = buf.readInt();
+        boolean onRoad = buf.readBoolean();
+
+        return new TransportStartPacket(key, count, from, to, duration, onRoad);
     }
 }

@@ -1,61 +1,59 @@
 package com.wsteam.wandscape.engine.transport;
 
-import com.wsteam.wandscape.road.algorithm.RoadRouter;
-import com.wsteam.wandscape.road.core.SplineLeg;
-import com.wsteam.wandscape.road.core.SplineModel;
-import com.wsteam.wandscape.road.core.SplinePoint;
-import com.wsteam.wandscape.road.core.SplineVec3;
-import com.wsteam.wandscape.road.core.TransportRoute;
+import com.wsteam.wandscape.road.engine.WandscapeTags;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.network.PacketDistributor;
-import javax.annotation.Nullable;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
  * Manages in-flight item transport animations between warehouse and NPC.
  *
- * <p>Supports road network routing:
- * <ul>
- *   <li>Off-road: direct line, gentle arc, 20 ticks/block (1 block/sec)</li>
- *   <li>On-road: follows road PathPoints, flat (follows terrain Y), 10 ticks/block (2 blocks/sec)</li>
- * </ul>
- *
- * <p>When no road network is available, falls back to direct transport.
+ * <p>No road graph: the straight flight line is sampled and the ground-block
+ * tag decides the speed — mostly over {@code wandscape:custom_roads} blocks
+ * flies fast and flat, otherwise slow with an arc.
  */
 public class ItemTransportManager {
 
     private static final String TAG = "ItemTransportManager";
+
+    /** Ticks per block of distance for off-road transport (2 blocks/sec). */
+    public static final int TICKS_PER_BLOCK_OFF_ROAD = 10;
+
+    /** Ticks per block of distance for on-road transport (4 blocks/sec). */
+    public static final int TICKS_PER_BLOCK_ON_ROAD = 5;
+
+    /** Minimum fraction of sampled ground blocks that must be road-tagged to count as on-road. */
+    private static final double ON_ROAD_FRACTION = 0.5;
+
+    /** Cap on ground-block samples along the flight line (long flights sample every few blocks). */
+    private static final int MAX_ROAD_SAMPLES = 128;
 
     private final List<ActiveTransport> active = new ArrayList<>();
 
     // ── Public API ──
 
     /**
-     * Send an item along a pre-planned route, or direct if route is empty.
+     * Send an item flying from {@code from} to {@code to}.
      *
      * @param key        the item to transport
-     * @param from       logical start position (for logging)
-     * @param to         logical end position (for logging)
+     * @param from       start position
+     * @param to         end position
      * @param level      the server level to spawn the visual entity in
      * @param ownerNpcId ECS entity ID (for orphan recovery)
-     * @param route      pre-planned route from {@link RoadRouter#plan}, or null/empty
      * @return future that completes when the item reaches its destination
      */
     public CompletableFuture<Void> send(ItemKey key, int count, BlockPos from, BlockPos to,
-                                        Level level, long ownerNpcId,
-                                        @Nullable TransportRoute route) {
-        return send(key, count, from, to, level, ownerNpcId, route, false);
-    }
-
-    /** Convenience overload — direct path without route. */
-    public CompletableFuture<Void> send(ItemKey key, int count, BlockPos from, BlockPos to,
                                         Level level, long ownerNpcId) {
-        return send(key, count, from, to, level, ownerNpcId, null, false);
+        return send(key, count, from, to, level, ownerNpcId, false);
     }
 
     /**
@@ -67,26 +65,13 @@ public class ItemTransportManager {
      */
     public CompletableFuture<Void> send(ItemKey key, int count, BlockPos from, BlockPos to,
                                         Level level, long ownerNpcId,
-                                        @Nullable TransportRoute route,
                                         boolean ownsItem) {
         CompletableFuture<Void> future = new CompletableFuture<>();
 
-        TransportRoute actualRoute = route;
-        if (actualRoute == null || actualRoute.isEmpty()) {
-            // Direct fallback
-            SplineModel gap = new SplineModel();
-            SplineVec3 pA = new SplineVec3(from.getX() + 0.5, from.getY() + 0.5, from.getZ() + 0.5);
-            SplineVec3 pB = new SplineVec3(to.getX() + 0.5, to.getY() + 0.5, to.getZ() + 0.5);
-            gap.getPoints().add(new SplinePoint(pA, pA, pA, true));
-            gap.getPoints().add(new SplinePoint(pB, pB, pB, true));
-            actualRoute = new TransportRoute(List.of(new SplineLeg(gap, 0, 1, true)));
-        }
-
-        int totalTicks = 0;
-        for (SplineLeg leg : actualRoute.legs()) {
-            int ticksPerBlock = leg.offRoad() ? RoadRouter.TICKS_PER_BLOCK_OFF_ROAD : RoadRouter.TICKS_PER_BLOCK_ON_ROAD;
-            totalTicks += Math.max(1, (int) leg.getApproxLength() * ticksPerBlock);
-        }
+        boolean onRoad = isMostlyOverRoad(level, from, to);
+        int dist = Math.max(1, (int) Math.sqrt(from.distSqr(to)));
+        int ticksPerBlock = onRoad ? TICKS_PER_BLOCK_ON_ROAD : TICKS_PER_BLOCK_OFF_ROAD;
+        int totalTicks = dist * ticksPerBlock;
 
         ActiveTransport t = new ActiveTransport(future, key, count,
                 ownerNpcId, totalTicks, 0, ownsItem);
@@ -94,11 +79,36 @@ public class ItemTransportManager {
 
         // Send packet to clients
         if (level instanceof ServerLevel serverLevel) {
-            TransportStartPacket packet = new TransportStartPacket(key, count, from, actualRoute);
+            TransportStartPacket packet = new TransportStartPacket(key, count, from, to, totalTicks, onRoad);
             PacketDistributor.sendToPlayersTrackingChunk(serverLevel, new net.minecraft.world.level.ChunkPos(from), packet);
         }
 
         return future;
+    }
+
+    // ── Road-surface check (block tag, no graph) ──
+
+    /**
+     * Sample the ground blocks under the straight flight line; the flight is
+     * "on road" when at least half the samples match {@code custom_roads}.
+     */
+    private static boolean isMostlyOverRoad(Level level, BlockPos from, BlockPos to) {
+        if (level == null) return false;
+        int dx = to.getX() - from.getX();
+        int dz = to.getZ() - from.getZ();
+        int dist = Math.max(1, Math.abs(dx) + Math.abs(dz));
+        int steps = Math.min(dist, MAX_ROAD_SAMPLES);
+        int onRoad = 0;
+        for (int i = 0; i <= steps; i++) {
+            int x = from.getX() + dx * i / steps;
+            int z = from.getZ() + dz * i / steps;
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+            if (y < level.getMinBuildHeight()) continue;
+            if (level.getBlockState(new BlockPos(x, y, z)).is(WandscapeTags.Blocks.CUSTOM_ROADS)) {
+                onRoad++;
+            }
+        }
+        return (double) onRoad / (steps + 1) >= ON_ROAD_FRACTION;
     }
 
     /**
