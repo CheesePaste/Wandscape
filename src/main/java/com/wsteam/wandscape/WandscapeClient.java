@@ -116,6 +116,13 @@ public class WandscapeClient {
             "key.categories.wandscape"
     );
 
+    public static final KeyMapping PANEL_HIDE_TOGGLE = new KeyMapping(
+            "key.wandscape.panel_hide",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F4,
+            "key.categories.wandscape"
+    );
+
     public static void init(net.neoforged.bus.api.IEventBus modEventBus, ModContainer container) {
         modEventBus.register(WandscapeClient.class);
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
@@ -400,10 +407,20 @@ public class WandscapeClient {
         event.register(GUIDE_TOGGLE);
         event.register(PANEL_AREAS_TOGGLE);
         event.register(OVERVIEW_TOGGLE);
+        event.register(PANEL_HIDE_TOGGLE);
     }
 
     private static void onClientTick(ClientTickEvent.Post event) {
         ColonyAmbientSystem.tick();
+
+        // F4: 专用「隐藏/显示面板」键——切换面板可见性。可见→隐藏；隐藏（含被 F1 隐藏）→显示。
+        // 隐藏后面板不渲染、输入穿透；F1 隐藏全部 GUI 时面板同样隐藏（见 isPanelHidden）。
+        while (PANEL_HIDE_TOGGLE.consumeClick()) {
+            if (WandscapePanelState.isPanelOpen()) {
+                WandscapePanelState.setPanelHidden(!WandscapePanelState.isPanelHidden());
+            }
+        }
+
         // When the building search box is focused, letter keys must type into it,
         // not trigger panel hotkeys — so swallow V/C/H clicks while it's focused.
         boolean searchFocused = WandscapePanelState.isBuildingBarSearchFocused();
@@ -411,7 +428,12 @@ public class WandscapeClient {
             // V key: toggle Wandscape panel open/close
             if (searchFocused) continue;
             if (WandscapePanelState.isPanelOpen()) {
-                WandscapePanelState.closePanel();
+                // 面板开着但被隐藏 → V 恢复显示（保留子模式状态），而非关闭
+                if (WandscapePanelState.isPanelHidden()) {
+                    WandscapePanelState.setPanelHidden(false);
+                } else {
+                    WandscapePanelState.closePanel();
+                }
             } else {
                 WandscapePanelState.openPanel();
             }

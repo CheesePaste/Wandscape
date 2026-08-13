@@ -50,7 +50,7 @@ public final class WandscapePanelOverlay {
 
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
-        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!WandscapePanelState.isPanelOpen() || WandscapePanelState.isPanelHidden()) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;

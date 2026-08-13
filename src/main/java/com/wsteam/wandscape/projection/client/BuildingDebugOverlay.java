@@ -77,6 +77,10 @@ public final class BuildingDebugOverlay {
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         if (!BuildingDebugClientState.isActive()) return;
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()) {
+            buttonsVisible = false;
+            return;
+        }
 
         BuildingDebugResponsePacket data = BuildingDebugClientState.getDisplayData();
         if (data == null) {
@@ -232,6 +236,7 @@ public final class BuildingDebugOverlay {
     @SubscribeEvent
     public static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
         if (!buttonsVisible) return;
+        if (com.wsteam.wandscape.shared.ui.panel.WandscapePanelState.isPanelHidden()) return;
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         Minecraft mc = Minecraft.getInstance();

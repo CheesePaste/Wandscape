@@ -67,7 +67,7 @@ public final class WandscapePanelController {
      * GLFW key states but before the values are applied to player movement.
      */
     static void onMovementInputUpdate(MovementInputUpdateEvent event) {
-        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!WandscapePanelState.isPanelOpen() || WandscapePanelState.isPanelHidden()) return;
         if (!WandscapePanelState.isCursorLifted()) return;
 
         var input = event.getInput();
@@ -95,14 +95,18 @@ public final class WandscapePanelController {
 
         // 光标切换键（默认 Tab）已被面板用作抬/放光标：仅当绑定仍在 Tab 时抑制原版
         // 玩家列表在 Tab 按下时闪烁；玩家改绑后 Tab 恢复原版玩家列表功能。
-        if (com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
+        // 面板隐藏时放行，让 Tab 回到原版玩家列表。
+        if (!WandscapePanelState.isPanelHidden()
+                && com.wsteam.wandscape.WandscapeClient.PANEL_CURSOR_TOGGLE.getKey().getValue() == GLFW.GLFW_KEY_TAB) {
             mc.options.keyPlayerList.setDown(false);
         }
 
         long window = mc.getWindow().getWindow();
         boolean screenOpen = mc.screen != null;
         boolean screenJustClosed = lastScreenOpen && !screenOpen;
-        boolean cursorLifted = WandscapePanelState.isCursorLifted();
+        // 隐藏时视为光标落回游戏层：grab 鼠标，且不把当前（受控）位置计入「自由位置」缓存，
+        // 这样恢复时回到隐藏前抬起位置。
+        boolean cursorLifted = WandscapePanelState.isCursorLifted() && !WandscapePanelState.isPanelHidden();
         boolean splineCam = com.wsteam.wandscape.road.client.SplineEditorController.isCameraActive();
         // RMB 按住 = 视角旋转（V 面板 overview / 样条相机共用），此时必须把 OS 光标锁住
         // 才能拿到连续 GLFW delta；松开后恢复自由。远程对账器没有这一分支，因为那边
@@ -156,7 +160,7 @@ public final class WandscapePanelController {
     }
 
     static void onMouseButtonPre(InputEvent.MouseButton.Pre event) {
-        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!WandscapePanelState.isPanelOpen() || WandscapePanelState.isPanelHidden()) return;
         if (!WandscapePanelState.isCursorLifted()) return;
 
         if (event.getAction() != GLFW.GLFW_PRESS) return;
@@ -388,6 +392,7 @@ public final class WandscapePanelController {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
+        if (WandscapePanelState.isPanelHidden()) return;
 
         int key = event.getKey();
         int scanCode = event.getScanCode();
@@ -485,7 +490,7 @@ public final class WandscapePanelController {
      * spline editor → PLACING cursor raise → sub-mode exit → panel close.
      */
     static void onScreenOpening(ScreenEvent.Opening event) {
-        if (!WandscapePanelState.isPanelOpen()) return;
+        if (!WandscapePanelState.isPanelOpen() || WandscapePanelState.isPanelHidden()) return;
         if (!(event.getScreen() instanceof PauseScreen)) return;
         event.setCanceled(true);
         handlePanelEscape();
@@ -579,7 +584,7 @@ public final class WandscapePanelController {
     // ── Mouse scroll (building selection bar) ──
 
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!BuildingSelectionOverlay.isActive()) return;
+        if (!BuildingSelectionOverlay.isActive() || WandscapePanelState.isPanelHidden()) return;
 
         int maxScroll = BuildingSelectionOverlay.getMaxScrollOffset();
         if (maxScroll <= 0) return;

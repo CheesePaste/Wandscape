@@ -3,6 +3,7 @@ package com.wsteam.wandscape.imgui;
 import com.wsteam.wandscape.road.client.SplineEditorClientState;
 import com.wsteam.wandscape.road.client.SplineEditorImGui;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import imgui.ImFont;
 import imgui.ImFontConfig;
@@ -35,12 +36,12 @@ public class ImGuiManager {
     }
 
     public static boolean wantsMouse() {
-        if (!showGui || !initialized) return false;
+        if (!showGui || WandscapePanelState.isPanelHidden() || !initialized) return false;
         return ImGui.getIO().getWantCaptureMouse();
     }
 
     public static boolean wantsKeyboard() {
-        if (!showGui || !initialized) return false;
+        if (!showGui || WandscapePanelState.isPanelHidden() || !initialized) return false;
         return ImGui.getIO().getWantCaptureKeyboard();
     }
 
@@ -267,7 +268,7 @@ public class ImGuiManager {
     // ── Input interception ──
     @SubscribeEvent
     public static void onKeyInput(InputEvent.Key event) {
-        if (!showGui || !initialized) return;
+        if (!showGui || WandscapePanelState.isPanelHidden() || !initialized) return;
 
         if (event.getKey() == GLFW.GLFW_KEY_F12 && event.getAction() == GLFW.GLFW_PRESS) {
             if (anyEditorActive()) return;
@@ -278,7 +279,7 @@ public class ImGuiManager {
 
     @SubscribeEvent
     public static void onMouseClick(InputEvent.MouseButton.Pre event) {
-        if (!showGui || !initialized) return;
+        if (!showGui || WandscapePanelState.isPanelHidden() || !initialized) return;
         // When a vanilla MC screen is open (e.g. the spline guide document),
         // let the screen handle its own clicks (close button, back/forward…).
         // ImGui already processed the event at the GLFW layer, so canceling
@@ -289,7 +290,7 @@ public class ImGuiManager {
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!showGui || !initialized) return;
+        if (!showGui || WandscapePanelState.isPanelHidden() || !initialized) return;
         if (Minecraft.getInstance().screen != null) return;
         if (anyEditorActive()) {
             event.setCanceled(true);
@@ -317,6 +318,7 @@ public class ImGuiManager {
         }
 
         if (!showGui) return;
+        if (WandscapePanelState.isPanelHidden()) return;
         ensureInit();
 
         imGuiGlfw.newFrame();

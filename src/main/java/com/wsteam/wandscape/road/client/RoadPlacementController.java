@@ -71,6 +71,9 @@ public final class RoadPlacementController {
     static void onClientTickPost(ClientTickEvent.Post event) {
         if (!RoadPlacementState.isProjecting()) return;
 
+        // 面板隐藏时暂停道路放置输入，恢复时继续
+        if (WandscapePanelState.isPanelHidden()) return;
+
         // Overview mode is compatible — OverviewFlightController already skips right-click
         // when road is projecting (see OverviewFlightController.onClientTickPost).
         // Was: if (OverviewClientState.isActive()) return;

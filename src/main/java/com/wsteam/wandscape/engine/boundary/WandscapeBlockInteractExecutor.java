@@ -133,6 +133,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
                     world.taskPool.markAwaitingResources(
                             exec.globalTaskId, npcId, e.requestedItems(), world);
                     exec.releaseGlobalTask();
+                    // 清掉队列里失败的全局任务包，否则下一 tick 会重复引导同一 op
+                    // （第二次短路时 globalTaskId 已为 null，catch 空操作，白白多引导一趟）。
+                    exec.npcQueue.clearCurrentWithoutResume();
                 }
             }
         });

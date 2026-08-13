@@ -19,6 +19,7 @@ The panel has two states — understand these and you have the basics:
 | Key | Action |
 | :--- | :--- |
 | **V** | Open / close the panel |
+| **F4** | Hide / show the panel (does not block the F3 debug screen) |
 | **1 / 2 / 3 / 4** | Quickly switch to **Build / Road / Stats / Warning** |
 | **G** | Toggle overview mode ↔ ground view |
 | **B** | Show / hide building boundary boxes |

@@ -89,6 +89,9 @@ public final class SplineEditorController {
     static void onClientTickPost(ClientTickEvent.Post event) {
         if (!SplineEditorClientState.isEditing()) return;
 
+        // 面板隐藏时暂停样条编辑器输入（不再锁移动/吞输入），恢复时继续
+        if (WandscapePanelState.isPanelHidden()) return;
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 

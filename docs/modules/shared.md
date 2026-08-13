@@ -79,7 +79,7 @@
 - `I18n.name(key, fallback[, args])` → Component.translatableWithFallback。
 - `ReplayScreenGuard`：反射检测 ReplayMod，`ScreenEvent.Opening` 取消任何 MedievalScreen。
 - `WandscapeTheme`（RTS 风格颜色 + 图标 + drawRtsBox）；`MedievalColors`（羊皮纸/金边/紫罗兰配色）；`SkinRender`（9-slice 面板/按钮/箭头/条形图）。
-- 按键：`WandscapeClient` — V=面板、C=游标、H=帮助文档、B=建筑区域、G=总览。
+- 按键：`WandscapeClient` — V=面板、Tab=游标、H=帮助文档、B=建筑区域、G=总览、F4=隐藏/显示面板（只隐藏面板，不挡 F3 调试）。F1（原版隐藏 GUI）隐藏全部时面板同样隐藏并进入休眠（不渲染、不吞输入）。
 
 ## guidance/（新手引导）
 

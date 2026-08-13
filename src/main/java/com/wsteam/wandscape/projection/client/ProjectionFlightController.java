@@ -65,6 +65,9 @@ public final class ProjectionFlightController {
     static void onClientTickPost(ClientTickEvent.Post event) {
         if (!ProjectionClientState.isProjecting()) return;
 
+        // 面板隐藏时暂停建造输入（不更新幽灵/不吞输入），恢复时继续
+        if (WandscapePanelState.isPanelHidden()) return;
+
         // Skip when overview mode is active — OverviewFlightController handles all input
         if (com.wsteam.wandscape.overview.client.OverviewClientState.isActive()) return;
 

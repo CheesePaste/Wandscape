@@ -24,6 +24,7 @@ public final class WandscapePanelState {
     public enum BuildPhase { BAR, PLACING }
 
     private static volatile boolean panelOpen = false;
+    private static volatile boolean panelHidden = false;
     private static volatile boolean cursorLifted = false;
     private static volatile SubMode activeSubMode = SubMode.NONE;
     private static volatile UUID colonyId = null;
@@ -101,6 +102,14 @@ public final class WandscapePanelState {
     private WandscapePanelState() {}
 
     public static boolean isPanelOpen() { return panelOpen; }
+    /** 面板是否从视图中隐藏：F4 专用隐藏键（panelHidden）或原版 F1 隐藏全部 GUI（options.hideGui）。
+     *  隐藏时视觉不渲染、输入穿透，面板仍处于打开态，可恢复。 */
+    public static boolean isPanelHidden() {
+        if (panelHidden) return true;
+        Minecraft mc = Minecraft.getInstance();
+        return mc != null && mc.options != null && mc.options.hideGui;
+    }
+    public static void setPanelHidden(boolean hidden) { panelHidden = hidden; }
     /** 真实光标意图：受控（false，游戏层）或抬起（true，UI 层）。与面板开关解耦。 */
     public static boolean isCursorLifted() { return cursorLifted; }
     public static SubMode getActiveSubMode() { return activeSubMode; }
@@ -238,6 +247,7 @@ public final class WandscapePanelState {
             closeBuildingBar();
         }
         panelOpen = false;
+        panelHidden = false;
         showBuildingAreas = false;
         BuildingDebugClientState.setActive(false);
         cursorLifted = false;
@@ -272,6 +282,7 @@ public final class WandscapePanelState {
         BuildingDebugClientState.setActive(false);
 
         panelOpen = false;
+        panelHidden = false;
         cursorLifted = false;
         activeSubMode = SubMode.NONE;
         colonyId = null;
