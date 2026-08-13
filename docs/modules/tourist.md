@@ -84,4 +84,4 @@
 - **购物**：TouristMoveGoal → TouristSimulation.performShopInteraction → ShopInteractionHandler → ShopStockManager.purchaseAffordable → purchase 扣库存、按 profitRate 向 ColonyItemBank 存元素、recordPurchase；游客 spendWallet、精力 -20。
 - **服务**：精力 -energyPerUse，elementOutput 全部写入 ColonyItemBank.addElement。
 - **ATM 取现**：单次取现 = 初始钱包随机 20%~50%（封顶 travelFund 池子）；`atmReusable` 判定（池子有余额 + 钱包低于初始 1/4 + 取现冷却已过）通过时豁免 visited 可重复取现（分批取现），池子空/冷却中不选——不会因偏好白跑 ATM 取 0。`visitedBuildings` 停留期不重置（红线 #8；ATM 缺钱 / relax 精力低是豁免例外）。
-- **满意度→经验**：离境且 sat=100 → ColonyLevelManager.computeExpContribution：游客等级<殖民地→0；==→200；>→500。升级公式 `expToNext=level×1000`。
+- **满意度→经验**：离境且 sat=100 → ColonyLevelManager.computeExpContribution：游客等级<殖民地→0；==→250；>→500。升级公式 `expToNext=(level+1)×500`（1→2=1000、每级 +500），等级上限 `colony.maxLevel`（默认 30）。

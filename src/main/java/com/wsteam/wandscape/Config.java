@@ -150,11 +150,15 @@ public class Config {
 
     public static final ModConfigSpec.IntValue COLONY_EXP_EQUAL_LEVEL = BUILDER
             .comment("Experience granted when tourist level == colony level (满条离场时)")
-            .defineInRange("colony.expEqualLevel", 200, 0, 10000);
+            .defineInRange("colony.expEqualLevel", 250, 0, 10000);
 
     public static final ModConfigSpec.IntValue COLONY_EXP_ABOVE_LEVEL = BUILDER
             .comment("Experience granted when tourist level > colony level")
             .defineInRange("colony.expAboveLevel", 500, 0, 10000);
+
+    public static final ModConfigSpec.IntValue COLONY_MAX_LEVEL = BUILDER
+            .comment("城镇等级上限：达到后不再累积经验、不再升级")
+            .defineInRange("colony.maxLevel", 30, 1, 100);
 
     // ---- Decoration system ----
 

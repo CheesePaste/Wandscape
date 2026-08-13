@@ -27,8 +27,8 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  *   <li>tourist level &gt; colony level → {@link Config#COLONY_EXP_ABOVE_LEVEL}</li>
  * </ul>
  *
- * <p>Level-up formula: expToNext(level) = level × 1000
- * <br>1→2: 1000, 2→3: 2000, 3→4: 3000, etc.
+ * <p>Level-up formula: expToNext(level) = (level + 1) × 500
+ * <br>1→2: 1000, 2→3: 1500, 3→4: 2000, etc. 等级上限见 {@link Config#COLONY_MAX_LEVEL}。
  */
 public final class ColonyLevelManager {
     private static final String TAG = "ColonyLevelManager";
@@ -61,9 +61,9 @@ public final class ColonyLevelManager {
         return data.getName(colonyId);
     }
 
-    /** 直接设置殖民地等级（调试/测试用），经验清零。 */
+    /** 直接设置殖民地等级（调试/测试用），经验清零。上限 {@link Config#COLONY_MAX_LEVEL}。 */
     public void setLevel(UUID colonyId, int level) {
-        data.setLevel(colonyId, Math.max(1, level));
+        data.setLevel(colonyId, Math.min(Config.COLONY_MAX_LEVEL.get(), Math.max(1, level)));
         data.setExperience(colonyId, 0);
     }
 
@@ -76,7 +76,7 @@ public final class ColonyLevelManager {
 
     /** Calculate experience needed to reach the next level from the given level. */
     public static int expToNext(int currentLevel) {
-        return currentLevel * 1000;
+        return 500 * (currentLevel + 1);
     }
 
     /** Calculate experience needed for the colony's next level. */
@@ -109,6 +109,13 @@ public final class ColonyLevelManager {
         if (amount <= 0) return false;
 
         int level = getLevel(colonyId);
+        int maxLevel = Config.COLONY_MAX_LEVEL.get();
+        if (level >= maxLevel) {
+            Log.info(TAG, "[Colony] Colony {} already at max level Lv.{} — exp ignored",
+                    shortId(colonyId), level);
+            return false;
+        }
+
         int exp = getExperience(colonyId);
         int required = expToNext(level);
         int total = exp + amount;
