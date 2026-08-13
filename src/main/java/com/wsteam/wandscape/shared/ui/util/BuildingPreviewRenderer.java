@@ -140,13 +140,14 @@ public final class BuildingPreviewRenderer {
         MultiBufferSource.BufferSource bufferSource = g.bufferSource();
         PoseStack pose = g.pose();
 
-        float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
+        // Static 45° isometric 3D view (no continuous rotation for maximum FPS)
+        float fixedYaw = 0.7853982f; // 45 degrees
 
         pose.pushPose();
         pose.translate(x + w / 2f, y + h / 2f, 100);
         pose.scale(scale, -scale, scale);
         pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
-        pose.mulPose(new Quaternionf().rotateY(rotY));
+        pose.mulPose(new Quaternionf().rotateY(fixedYaw));
         pose.translate(-meta.cx - 0.5f, -meta.cy - 0.5f, -meta.cz - 0.5f);
 
         for (int i = 0; i < entries.size(); i++) {
