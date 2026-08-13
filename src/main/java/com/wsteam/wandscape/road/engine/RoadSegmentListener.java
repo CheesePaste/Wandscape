@@ -6,9 +6,12 @@ import com.wsteam.wandscape.core.event.CustomEvent;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.road.core.RoadEdge;
 import com.wsteam.wandscape.shared.log.Log;
+import com.wsteam.wandscape.shared.registry.WandscapeApis;
+import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
@@ -47,6 +50,11 @@ public final class RoadSegmentListener {
             Log.warn(TAG, "[Road] onSegmentComplete: no server level");
             return;
         }
+
+        // A manually placed road segment finishing its build counts toward onboarding
+        // step 6. Consume the pending attribution before the edge lookup because the
+        // ROAD-bar Replace tool (RoadPlacePacket) doesn't create a network RoadEdge.
+        countBuiltRoadForOnboarding(level, event.params().get("segment_id"));
 
         String edgeIdStr = event.params().get("edge_id");
         String segIdStr = event.params().get("segment_id");
@@ -99,6 +107,24 @@ public final class RoadSegmentListener {
         edge.setStatus(RoadEdge.EdgeStatus.COMPLETE);
         roadData.markChanged();
         Log.info(TAG, "[Road] edge {} → COMPLETE", edgeIdStr);
+    }
+
+    private static void countBuiltRoadForOnboarding(ServerLevel level, String segIdStr) {
+        RoadPlaceAttribution.Pending pending = RoadPlaceAttribution.consume(segIdStr);
+        if (pending == null) return;
+        var bank = ColonyItemBank.get(level);
+        if (bank != null) {
+            bank.recordPlayerRoadPlace(pending.colonyId());
+        }
+        var guideApi = WandscapeApis.getGuideProgressApiSilently();
+        if (guideApi == null) return;
+        ServerPlayer player = level.getServer() != null
+                ? level.getServer().getPlayerList().getPlayer(pending.playerId()) : null;
+        if (player != null) {
+            guideApi.sendToPlayer(player, pending.colonyId());
+        }
+        Log.info(TAG, "[Road] Built manual road counted for onboarding colony={}",
+                pending.colonyId());
     }
 
     private static ServerLevel getServerLevel() {

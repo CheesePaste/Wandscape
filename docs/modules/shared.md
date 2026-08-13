@@ -94,13 +94,13 @@
 | 3 | 右键仓库放入物品 | `ColonyItemBank.getPlayerDepositCount>0`（WarehouseActionPacket 记录） |
 | 4 | 建造工作站 | 有 category=workstation 建筑 |
 | 5 | 右键工作站合成 | `getPlayerSynthesizeCount>0`（RequestProductionTaskPacket 记录） |
-| 6 | 铺设道路 | `getPlayerRoadPlaceCount>0`（RoadPlacePacket 记录） |
+| 6 | 铺设道路 | `getPlayerRoadPlaceCount>0`（路实际建好 `road_segment_complete` 后由 RoadSegmentListener 记录；发布任务不算） |
 | 7 | 建造面包店补充货物 | 有 typeId=breadshop 且该商店有库存 `hasShopStock` |
 | 8 | 建造节点发布采集 | 有 category=node 且 `getGatherPublishedCount>0`（RequestGatherTaskPacket 记录） |
 | 9 | 建造祭坛 | 有 category=altar 建筑（只判建造，不需真复活） |
 | 10 | 建造旅馆游客入住 | 有 max_occupancy>0 的 service 建筑且 `getOvernightStayerCount>0` |
 
-玩家动作计数（存入/合成/铺路/发布采集）持久化在 `ColonyItemBank`（仿 `purchaseCounts` 的 NBT）；每个动作包处理后立即调 `GuideProgressApi.sendToPlayer` 即时推进，无需重开面板。
+玩家动作计数（存入/合成/铺路/发布采集）持久化在 `ColonyItemBank`（仿 `purchaseCounts` 的 NBT）；存入/合成/发布采集在动作包处理后立即调 `GuideProgressApi.sendToPlayer` 即时推进，铺路例外——发布任务时只登记 `RoadPlaceAttribution`，待 `road_segment_complete`（方块真正落地）后由 `RoadSegmentListener` 记录并推进。
 
 **结构与渲染**：
 
@@ -109,7 +109,7 @@
 - 教程教的建造流程（与真实交互一致，操作优先）：按 1 开建造 → 点卡片双击放置 → **按住右键拖动转视角定位** → 左键旋转朝向 → 点右侧面板【提交施工】→ 施工界面【提交】。
 - 建筑交互：V 面板**俯瞰（OVERVIEW）是自由视角**——移动鼠标转视角、WASD 移动、滚轮缩放；准心对准建筑**右键点一下**打开界面。**右键拖动转视角只在建造/道路子模式**，交互步骤不这样写。
 - **交互前先退出建造**：放置后建造列表会重新打开（仍是建造模式），所以每个交互步骤先教「按 1 或 ESC 退出建造」，再右键建筑。（例外：放置政府建筑会**自动弹出命名界面**创建殖民地，无需退出建造/右键——见 projection.md。）
-- `GuideRenderer`：屏幕**右下角**覆盖框，可折叠/关闭（按钮随框在右侧）；padding 收紧少挡视野。
+- `GuideRenderer`：屏幕**右下角**覆盖框，可折叠/关闭（按钮随框在右侧）；padding 收紧 + 内容宽上限 300（超长行换行）少挡视野。
 - `GuideSession`：客户端静态状态 serverStep/dismissed；applySync 弹 toast、dismiss() 发 GuideProgressUpdatePacket。
 - 每玩家进度持久化于 `GuideProgressSavedData`（stepIndex+dismissed）。
 

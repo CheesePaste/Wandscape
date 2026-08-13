@@ -1,5 +1,6 @@
 package com.wsteam.wandscape.shared.ui.guidance;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay;
@@ -7,6 +8,8 @@ import com.wsteam.wandscape.shared.ui.panel.BuildingSelectionOverlay;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 
 /**
  * Renders the onboarding guidance box (dark background, gold border) at the
@@ -27,30 +30,43 @@ public final class GuideRenderer {
     private static final int BTN_IDLE = 0xAA888888;
     private static final int BTN_HOVER = 0xFFFFFFFF;
 
+    /** Inner padding; kept small so the box stays compact. */
+    private static final int PAD = 4;
+    /** Lines longer than this wrap, so the box never gets wide enough to block the view. */
+    private static final int MAX_CONTENT_WIDTH = 300;
+    /** Room reserved on the right for the ▼/× buttons. */
+    private static final int BTN_EXTRA = 28;
+
     private record Box(int x, int y, int w, int h,
                        int closeX, int closeY, int closeS,
                        int toggleX, int toggleY, int toggleS,
-                       String title, List<String> lines, String hint, boolean collapsed) {}
+                       int textW, String title, List<String> lines, String hint, boolean collapsed) {}
 
     private static Box layout(Font font, int screenW, int screenH, GuideStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
-        int pad = 6;
+        int pad = PAD;
         int lineH = font.lineHeight;
         boolean collapsed = GuideSession.isCollapsed();
         List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
         String hint = step.hint();
 
         String titleStr = step.title() + (collapsed ? " §e[点击展开]" : "");
-        int maxW = font.width(titleStr);
-        if (!collapsed) {
-            for (String l : lines) {
-                maxW = Math.max(maxW, font.width(l));
-            }
-            maxW = Math.max(maxW, font.width(hint));
-        }
+        int naturalW = collapsed ? font.width(titleStr) : naturalWidth(font, titleStr, lines, hint);
+        int textW = Math.min(naturalW, MAX_CONTENT_WIDTH);
 
-        int boxW = maxW + pad * 2 + 24;
-        int boxH = collapsed ? (pad * 2 + lineH) : (pad * 2 + lineH * (lines.size() + 2) + 6);
+        int boxW = textW + pad * 2 + BTN_EXTRA;
+        int boxH;
+        if (collapsed) {
+            boxH = pad * 2 + lineH * wrap(font, titleStr, textW).size();
+        } else {
+            int rows = 1; // title
+            for (String l : lines) {
+                rows += wrap(font, l, textW).size();
+            }
+            rows += wrap(font, hint, textW).size();
+            // Each drawn row advances lineH+1, plus a 1px divider gap and 2px hint gap.
+            boxH = pad * 2 + rows * (lineH + 1) + 3;
+        }
 
         // Right side of the screen (bottom-right, above the build bar when open).
         int margin = 8;
@@ -65,7 +81,25 @@ public final class GuideRenderer {
         int toggleX = closeX - btnS - 6;
         int toggleY = y + 6;
 
-        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, step.title(), lines, hint, collapsed);
+        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, textW, step.title(), lines, hint, collapsed);
+    }
+
+    /** Widest single-line width among the title, lines and hint. */
+    private static int naturalWidth(Font font, String title, List<String> lines, String hint) {
+        int w = font.width(title);
+        for (String l : lines) {
+            w = Math.max(w, font.width(l));
+        }
+        return Math.max(w, font.width(hint));
+    }
+
+    /** Split formatted text into lines: explicit {@code \n} breaks first, then width-based wrap. */
+    private static List<FormattedCharSequence> wrap(Font font, String text, int width) {
+        List<FormattedCharSequence> out = new ArrayList<>();
+        for (String piece : text.split("\n")) {
+            out.addAll(font.split(Component.literal(piece), width));
+        }
+        return out;
     }
 
     public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,
@@ -91,8 +125,7 @@ public final class GuideRenderer {
                               GuideStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
-        int pad = 6;
-        int lineH = font.lineHeight;
+        int pad = PAD;
 
         // Background
         g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + b.w, b.y + b.h, 0, BOX_BG);
@@ -103,22 +136,21 @@ public final class GuideRenderer {
         g.fill(RenderType.guiOverlay(), b.x + b.w - 1, b.y, b.x + b.w, b.y + b.h, 0, BOX_BORDER);
 
         int tx = b.x + pad;
-        int ty = b.y + pad;
+        float ty = b.y + pad;
 
         if (b.collapsed) {
-            drawText(g, font, b.title + " §e[点击展开]", tx, ty, BOX_TITLE);
+            drawWrapped(g, font, b.title + " §e[点击展开]", tx, ty, b.textW, BOX_TITLE);
         } else {
-            drawText(g, font, b.title, tx, ty, BOX_TITLE);
-            ty += lineH + 2;
-            g.fill(RenderType.guiOverlay(), tx, ty - 2, b.x + b.w - pad * 2, ty - 1, 0, BOX_DIVIDER);
+            drawWrapped(g, font, b.title, tx, ty, b.textW, BOX_TITLE);
+            ty += 1;
+            g.fill(RenderType.guiOverlay(), tx, (int) ty - 2, b.x + b.w - pad * 2, (int) ty - 1, 0, BOX_DIVIDER);
 
             for (String line : b.lines) {
-                drawText(g, font, line, tx, ty, BOX_LINE);
-                ty += lineH + 1;
+                ty = drawWrapped(g, font, line, tx, ty, b.textW, BOX_LINE);
             }
 
             ty += 2;
-            drawText(g, font, b.hint, tx, ty, BOX_HINT);
+            drawWrapped(g, font, b.hint, tx, ty, b.textW, BOX_HINT);
         }
 
         // Toggle (▼ / ▲) button
@@ -143,5 +175,16 @@ public final class GuideRenderer {
         font.drawInBatch(text, x, y, color, false,
                 g.pose().last().pose(), g.bufferSource(),
                 Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+    }
+
+    /** Draw a possibly-wrapped string, line by line; returns the Y after the last line. */
+    private static float drawWrapped(GuiGraphics g, Font font, String text, float x, float y, int width, int color) {
+        for (FormattedCharSequence line : wrap(font, text, width)) {
+            font.drawInBatch(line, x, y, color, false,
+                    g.pose().last().pose(), g.bufferSource(),
+                    Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+            y += font.lineHeight + 1;
+        }
+        return y;
     }
 }

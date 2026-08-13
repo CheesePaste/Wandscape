@@ -9,6 +9,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.road.data.RoadPreset;
+import com.wsteam.wandscape.road.engine.RoadPlaceAttribution;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.service.SoundService;
 import com.wsteam.wandscape.engine.sound.WandscapeSounds;
@@ -122,9 +123,10 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             return;
         }
 
+        String segmentId = UUID.randomUUID().toString();
         Map<String, JsonElement> params = new HashMap<>();
         params.put("tiles", tiles);
-        params.put("segment_id", new JsonPrimitive(UUID.randomUUID().toString()));
+        params.put("segment_id", new JsonPrimitive(segmentId));
         params.put("edge_id", new JsonPrimitive(UUID.randomUUID().toString()));
         
         JsonArray list = new JsonArray();
@@ -143,14 +145,13 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
             Log.info(TAG, "[Road] Published task #{}: preset={} from={} to={} tiles={}",
                     taskId, packet.presetId(), start.toShortString(), end.toShortString(), tiles.size());
 
-            // Manual road placement counts toward onboarding step 6.
+            // Manual road placement counts toward onboarding step 6 — but only once
+            // the road is actually built, so register a pending attribution that
+            // RoadSegmentListener consumes on road_segment_complete.
             var colonyApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getColonyApiSilently();
             UUID colonyId = colonyApi != null ? colonyApi.getColonyId(player.blockPosition()) : null;
             if (colonyId != null) {
-                var bank = com.wsteam.wandscape.warehouse.ColonyItemBank.get(player.serverLevel());
-                if (bank != null) bank.recordPlayerRoadPlace(colonyId);
-                var guideApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getGuideProgressApiSilently();
-                if (guideApi != null) guideApi.sendToPlayer(player, colonyId);
+                RoadPlaceAttribution.register(segmentId, player.getUUID(), colonyId);
             }
         } catch (Exception e) {
             Log.warn(TAG, "[Road] Failed to publish road task: {}", e.getMessage());

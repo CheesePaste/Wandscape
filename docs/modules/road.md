@@ -45,7 +45,7 @@
 - `RoadPlacementOverlay`：预设网格 + 4 工具按钮 + 3D 方块预览。
 - `RoadPlacementRenderer`：世界预览（绿 start/红 end、黄色矩形表面填充、FILL 完整 3D 盒）。
 - 网络包（C→S，均经 PlayerManualSource 发布任务，优先级10）：
-  - `RoadPlacePacket`：XZ 矩形，表面 Y=MOTION_BLOCKING-1，preset.pickBlock，>10000 格拒绝，蓝图 `road:build_segment`。
+  - `RoadPlacePacket`：XZ 矩形，表面 Y=MOTION_BLOCKING-1，preset.pickBlock，>10000 格拒绝，蓝图 `road:build_segment`。新手引导「铺设道路」步在发布时仅登记 `RoadPlaceAttribution`（按 segment_id），路实际建好（`road_segment_complete`）后才计数。
   - `FillBoxPacket`：完整 3D 立方（Y 钳制构建高度，跳基岩），`terrain:fill_box`。
   - `DestroyFillPacket`：参考块高/块，高出→break tiles，低→fill tiles 到地面，`terrain:flatten`。
   - `SplineBuildPacket`：tilesJson+splineJson；服务端建 RoadEdge 入 RoadSavedData（端点 3 格内吸附节点，否则建 ORPHAN 节点），发 `road:build_segment`。
