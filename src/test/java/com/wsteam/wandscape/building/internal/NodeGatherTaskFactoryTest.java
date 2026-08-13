@@ -24,7 +24,7 @@ class NodeGatherTaskFactoryTest {
         WorkItem item = NodeGatherTaskFactory.buildWorkItem(new BlockPos(3, 64, -5), CONFIG, 4);
 
         assertEquals("node:gather", item.blueprintId());
-        assertEquals(15, item.priority());
+        assertEquals(com.wsteam.wandscape.shared.registry.WandscapeConstants.TASK_PRIORITY_PLAYER, item.priority());
         assertNotNull(item.params());
 
         assertEquals(3, arrayParam(item.params(), "anchor", 0));

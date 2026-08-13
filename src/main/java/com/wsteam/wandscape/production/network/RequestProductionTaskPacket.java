@@ -137,7 +137,8 @@ public record RequestProductionTaskPacket(
             };
             params.put("channel_ticks", new JsonPrimitive(channelTicks));
 
-            WorkItem work = new WorkItem(blueprintId, params, 10);
+            // 玩家手动发布的生产任务进最高优先级段，排在补货/自动合成之前。
+            WorkItem work = new WorkItem(blueprintId, params, WandscapeConstants.TASK_PRIORITY_PLAYER);
 
             BuildingApi api = WandscapeApis.getBuildingApi();
             api.enqueueWork(buildingId, work);

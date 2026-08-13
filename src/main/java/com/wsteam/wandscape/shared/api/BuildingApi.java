@@ -71,17 +71,14 @@ public interface BuildingApi {
     @Nullable
     WorkItem dequeueWork(UUID buildingId);
 
-    /** Enqueue a WorkItem into the building's FIFO queue (e.g. auto-supply from node buildings). */
-    default void enqueueWork(UUID buildingId, WorkItem work) {
-        enqueueWork(buildingId, work, false);
-    }
-
     /**
-     * Enqueue a WorkItem into the building's queue. When {@code atFront} is true the
-     * item is prepended ahead of older tasks (used by urgent shop-restock supply);
-     * otherwise it merges into an adjacent same-recipe production task or appends.
+     * Enqueue a WorkItem into the building's priority-ordered queue.
+     * Higher-priority tasks run first; a new task joins the tail of its own
+     * priority band and merges into an adjacent same-recipe production task at
+     * that band's tail. Bands: player &gt; restock &gt; auto (see
+     * {@code WandscapeConstants.TASK_PRIORITY_*}).
      */
-    void enqueueWork(UUID buildingId, WorkItem work, boolean atFront);
+    void enqueueWork(UUID buildingId, WorkItem work);
 
     /** Get building IDs filtered by category. */
     List<UUID> getBuildingsByCategory(@Nullable UUID colonyId, String category);

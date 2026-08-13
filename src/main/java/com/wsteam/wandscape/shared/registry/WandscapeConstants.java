@@ -16,6 +16,11 @@ public final class WandscapeConstants {
     public static final int QUEUE_HOUSE = 5;
     public static final int QUEUE_TAVERN = 5;
 
+    /** 建筑任务队列优先级（高→低）：玩家手动发布 > 商店补货 > 自动补产/采集。 */
+    public static final int TASK_PRIORITY_PLAYER = 80;
+    public static final int TASK_PRIORITY_RESTOCK = 60;
+    public static final int TASK_PRIORITY_AUTO = 40;
+
     public static final int WORKSTATION_CRAFT_TICKS_PER_UNIT = 10;
     public static final int CRAFTING_STATION_CRAFT_TICKS_PER_UNIT = 1200;
 

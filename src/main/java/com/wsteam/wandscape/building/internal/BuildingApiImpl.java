@@ -501,19 +501,21 @@ public class BuildingApiImpl implements BuildingApi {
     private static final int CONSTRUCTION_CAPACITY = 5;
 
     @Override
-    public void enqueueWork(UUID buildingId, WorkItem work, boolean atFront) {
+    public void enqueueWork(UUID buildingId, WorkItem work) {
         BuildingSavedData sd = getSavedData();
         if (sd == null) return;
 
         BuildingState state = sd.getBuilding(buildingId);
         if (state == null || state.isShutdown() || state.isDemolishing()) return;
 
-        // Merge a production task into the adjacent (tail) task when it targets the same
-        // recipe — restocking otherwise floods the queue with x1/x2 entries. A merge
-        // consumes no queue slot, so it must run before the capacity check. Front
-        // placement (urgent shop-restock supply) skips the merge so it jumps the line
-        // instead of folding into a tail task that would still run last.
-        if (!atFront && mergeSameRecipeTail(state.getTaskQueue(), work)) {
+        Deque<WorkItem> queue = state.getTaskQueue();
+
+        // Merge a production task into an adjacent same-recipe task at its priority band's
+        // tail so restock x1/x2 requests don't flood the queue with consecutive *7/*9
+        // entries. A merge consumes no queue slot, so it must run before the capacity check.
+        // Band-tail placement means a player task always merges at the top of its band, never
+        // behind lower-priority restock/auto-craft tasks.
+        if (mergeBandTail(queue, work)) {
             sd.setDirty();
             return;
         }
@@ -521,7 +523,7 @@ public class BuildingApiImpl implements BuildingApi {
         boolean isConstruction = work.blueprintId().startsWith("build:");
 
         if (isConstruction) {
-            long buildCount = state.getTaskQueue().stream()
+            long buildCount = queue.stream()
                     .filter(w -> w.blueprintId().startsWith("build:"))
                     .count();
             if (buildCount >= CONSTRUCTION_CAPACITY) {
@@ -530,18 +532,14 @@ public class BuildingApiImpl implements BuildingApi {
                 return;
             }
         } else {
-            if (state.getTaskQueue().size() >= state.getQueueCapacity()) {
+            if (queue.size() >= state.getQueueCapacity()) {
                 Log.warn(TAG, "enqueueWork: building {} queue full (capacity={})",
                         buildingId, state.getQueueCapacity());
                 return;
             }
         }
 
-        if (atFront) {
-            state.getTaskQueue().addFirst(work);
-        } else {
-            state.getTaskQueue().addLast(work);
-        }
+        insertByPriority(queue, work);
         sd.setDirty();
     }
 
@@ -566,29 +564,63 @@ public class BuildingApiImpl implements BuildingApi {
     }
 
     /**
-     * Absorb {@code incoming} into the queue tail when the tail is an adjacent production
-     * task for the same recipe. Counts and channel ticks sum — executing both requests
-     * sequentially is equivalent to the single merged task. Returns true when merged; the
-     * incoming task then consumes no queue slot.
+     * Merge {@code incoming} into the tail of its priority band when that band's last task
+     * is an adjacent same-recipe production task. Counts and channel ticks sum — executing
+     * both requests sequentially is equivalent to the single merged task. Returns true when
+     * merged; the incoming task then consumes no queue slot.
      */
-    static boolean mergeSameRecipeTail(Deque<WorkItem> queue, WorkItem incoming) {
+    static boolean mergeBandTail(Deque<WorkItem> queue, WorkItem incoming) {
+        List<WorkItem> list = new ArrayList<>(queue);
+        for (int i = list.size() - 1; i >= 0; i--) {
+            WorkItem item = list.get(i);
+            if (item.priority() < incoming.priority()) continue;  // below the band, keep scanning
+            if (item.priority() > incoming.priority()) break;     // reached a higher band — no band below
+            if (mergeable(incoming, item)) {
+                WorkItem merged = mergeWork(item, incoming);
+                list.set(i, merged);
+                queue.clear();
+                queue.addAll(list);
+                Log.info(TAG, "enqueueWork: merged {} tasks at building {} — count={}",
+                        merged.blueprintId(), merged.params().get("anchor"), merged.params().get("count"));
+                return true;
+            }
+            break; // band tail is a different task — no merge, insertion lands after it
+        }
+        return false;
+    }
+
+    /**
+     * Insert {@code work} at the tail of its own priority band — after all tasks with
+     * priority {@code >= work.priority()}, before the first lower-priority task — keeping
+     * the queue ordered high-to-low so {@code dequeueWork}'s {@code pollFirst} always
+     * serves the highest priority first.
+     */
+    static void insertByPriority(Deque<WorkItem> queue, WorkItem work) {
+        List<WorkItem> list = new ArrayList<>(queue);
+        int index = 0;
+        while (index < list.size() && list.get(index).priority() >= work.priority()) {
+            index++;
+        }
+        list.add(index, work);
+        queue.clear();
+        queue.addAll(list);
+    }
+
+    /** Whether {@code incoming} and {@code base} are mergeable adjacent production tasks. */
+    private static boolean mergeable(WorkItem incoming, WorkItem base) {
         String sig = productionSignature(incoming);
-        if (sig == null) return false;
-        WorkItem tail = queue.peekLast();
-        if (tail == null || !sig.equals(productionSignature(tail))) return false;
+        return sig != null && sig.equals(productionSignature(base));
+    }
 
-        Map<String, JsonElement> params = new LinkedHashMap<>(tail.params());
+    /** Combine two same-signature production tasks: counts and channel ticks sum. */
+    private static WorkItem mergeWork(WorkItem base, WorkItem incoming) {
+        Map<String, JsonElement> params = new LinkedHashMap<>(base.params());
         params.put("count", new JsonPrimitive(
-                mergeParamInt(tail.params(), "count") + mergeParamInt(incoming.params(), "count")));
+                mergeParamInt(base.params(), "count") + mergeParamInt(incoming.params(), "count")));
         params.put("channel_ticks", new JsonPrimitive(
-                mergeParamInt(tail.params(), "channel_ticks")
+                mergeParamInt(base.params(), "channel_ticks")
                         + mergeParamInt(incoming.params(), "channel_ticks")));
-
-        queue.removeLast();
-        queue.addLast(new WorkItem(tail.blueprintId(), params, tail.priority()));
-        Log.info(TAG, "enqueueWork: merged adjacent {} tasks at building {} — count={}",
-                tail.blueprintId(), tail.params().get("anchor"), params.get("count"));
-        return true;
+        return new WorkItem(base.blueprintId(), params, base.priority());
     }
 
     private static int mergeParamInt(Map<String, JsonElement> params, String key) {

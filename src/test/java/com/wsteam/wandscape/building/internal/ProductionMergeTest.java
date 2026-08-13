@@ -3,8 +3,10 @@ package com.wsteam.wandscape.building.internal;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonArray;
@@ -16,10 +18,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Adjacent same-recipe production task merging in {@link BuildingApiImpl} —
- * keeps restock x1/x2 tasks from flooding the workstation queue.
+ * Priority-band queue behavior in {@link BuildingApiImpl}: a new task joins the tail
+ * of its own priority band, merges into an adjacent same-recipe production task at that
+ * band's tail, and higher-priority bands always run first. Keeps restock x1/x2 tasks
+ * from flooding the workstation queue while player tasks jump the line.
  */
-@DisplayName("BuildingApiImpl.mergeSameRecipeTail")
+@DisplayName("BuildingApiImpl.mergeBandTail/insertByPriority")
 class ProductionMergeTest {
 
     private static JsonElement anchor() {
@@ -31,12 +35,16 @@ class ProductionMergeTest {
     }
 
     private static WorkItem synthesize(String recipe, int count) {
+        return synthesize(recipe, count, 10);
+    }
+
+    private static WorkItem synthesize(String recipe, int count, int priority) {
         Map<String, JsonElement> params = new LinkedHashMap<>();
         params.put("anchor", anchor());
         params.put("recipe_id", new JsonPrimitive(recipe));
         params.put("count", new JsonPrimitive(count));
         params.put("channel_ticks", new JsonPrimitive(10 * count));
-        return new WorkItem("production:synthesize", params, 10);
+        return new WorkItem("production:synthesize", params, priority);
     }
 
     private static WorkItem decompose(String item, int count) {
@@ -64,15 +72,10 @@ class ProductionMergeTest {
         return new WorkItem("production:synthesize", params, 10);
     }
 
-    /** Mirrors {@code BuildingApiImpl.enqueueWork}'s tail logic: merge, else append. */
+    /** Mirrors {@code BuildingApiImpl.enqueueWork}: band-tail merge, else priority insert. */
     private static void enqueue(Deque<WorkItem> queue, WorkItem work) {
-        enqueue(queue, work, false);
-    }
-
-    /** Mirrors {@code BuildingApiImpl.enqueueWork}'s merge-or-place logic with explicit placement. */
-    private static void enqueue(Deque<WorkItem> queue, WorkItem work, boolean atFront) {
-        if (!atFront && BuildingApiImpl.mergeSameRecipeTail(queue, work)) return;
-        if (atFront) queue.addFirst(work); else queue.addLast(work);
+        if (BuildingApiImpl.mergeBandTail(queue, work)) return;
+        BuildingApiImpl.insertByPriority(queue, work);
     }
 
     private static int count(WorkItem w) {
@@ -81,6 +84,15 @@ class ProductionMergeTest {
 
     private static int channel(WorkItem w) {
         return w.params().get("channel_ticks").getAsInt();
+    }
+
+    private static String recipeOf(WorkItem w) {
+        return w.params().get("recipe_id").getAsString();
+    }
+
+    /** Deque has no indexed access; expose one for order assertions. */
+    private static WorkItem at(Deque<WorkItem> queue, int index) {
+        return new ArrayList<>(queue).get(index);
     }
 
     @Test
@@ -135,12 +147,13 @@ class ProductionMergeTest {
     }
 
     @Test
-    void doesNotMergeAcrossBuildTask() {
+    void higherPrioritySynthesizeJumpsAboveBuildTask() {
         Deque<WorkItem> queue = new ArrayDeque<>();
         queue.addLast(build());
         enqueue(queue, synthesize("bread", 1));
         assertEquals(2, queue.size());
-        assertEquals("production:synthesize", queue.getLast().blueprintId());
+        // A production task (priority 10) is served before a build task (priority 5).
+        assertEquals("production:synthesize", queue.getFirst().blueprintId());
     }
 
     @Test
@@ -152,18 +165,20 @@ class ProductionMergeTest {
     }
 
     @Test
-    void mergesOnlyIntoTail_ignoresEarlierSameRecipe() {
+    void mergesIntoBandTail_acrossLowerPriorityTask() {
         Deque<WorkItem> queue = new ArrayDeque<>();
         queue.addLast(synthesize("bread", 1));
-        queue.addLast(build());
-        // Tail is a build task → incoming synthesize appends, does not touch the earlier bread.
+        queue.addLast(build()); // lower-priority band below the bread
+        // A new bread merges into the bread at the top band tail — the lower build task
+        // below it does not block the merge (it is a different, lower band).
         enqueue(queue, synthesize("bread", 1));
-        assertEquals(3, queue.size());
-        assertEquals(1, count(queue.getFirst()));
+        assertEquals(2, queue.size());
+        assertEquals(2, count(queue.getFirst()));
+        assertEquals("production:synthesize", queue.getFirst().blueprintId());
     }
 
     @Test
-    void keepsTailPriority() {
+    void keepsBandTailPriority() {
         Deque<WorkItem> queue = new ArrayDeque<>();
         queue.addLast(synthesize("bread", 1));
         enqueue(queue, synthesize("bread", 1));
@@ -180,50 +195,74 @@ class ProductionMergeTest {
         assertEquals(100, channel(queue.getLast()));
     }
 
-    // ── Front placement (urgent shop-restock supply) ──
+    // ── Priority-band ordering (player > restock > auto) ──
 
     @Test
-    void frontPlacesAheadOfExistingTasks() {
+    void playerTaskInsertsAboveLowerPriorityBands() {
         Deque<WorkItem> queue = new ArrayDeque<>();
-        queue.addLast(synthesize("stone_bricks", 8));
-        queue.addLast(synthesize("glass", 4));
-        enqueue(queue, synthesize("bread", 2), true);
+        queue.addLast(synthesize("glass", 4, 40));   // auto-craft
+        queue.addLast(synthesize("stone", 8, 40));   // auto-craft
+        enqueue(queue, synthesize("bread", 2, 80));  // player task
         assertEquals(3, queue.size());
         assertEquals("bread", recipeOf(queue.getFirst()));
+        assertEquals(80, queue.getFirst().priority());
     }
 
     @Test
-    void frontPlacementSkipsTailMerge() {
+    void restockInsertsBetweenPlayerAndAuto() {
         Deque<WorkItem> queue = new ArrayDeque<>();
-        queue.addLast(synthesize("bread", 1));
-        enqueue(queue, synthesize("bread", 2), true);
-        // Front placement must NOT fold into the same-recipe tail — the whole point is
-        // jumping the line, and countSynthesizeInFlight already dedups same-item shortfalls.
+        queue.addLast(synthesize("bread", 2, 80));   // player task
+        queue.addLast(synthesize("stone", 8, 40));   // auto-craft
+        enqueue(queue, synthesize("glass", 4, 60));  // shop restock
+        assertEquals(3, queue.size());
+        assertEquals("bread", recipeOf(queue.getFirst()));
+        assertEquals("glass", recipeOf(at(queue, 1)));
+        assertEquals(60, at(queue, 1).priority());
+        assertEquals("stone", recipeOf(queue.getLast()));
+    }
+
+    @Test
+    void samePriorityNewTaskGoesToBandTail() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(synthesize("a", 1, 80));
+        queue.addLast(synthesize("b", 1, 80));
+        enqueue(queue, synthesize("c", 1, 80));
+        assertEquals(3, queue.size());
+        assertEquals("a", recipeOf(at(queue, 0)));
+        assertEquals("b", recipeOf(at(queue, 1)));
+        assertEquals("c", recipeOf(at(queue, 2)));
+    }
+
+    @Test
+    void restockDoesNotMergeIntoAutoBand() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(synthesize("bread", 5, 40));   // auto-craft bread
+        enqueue(queue, synthesize("bread", 3, 60));  // restock bread — different band
         assertEquals(2, queue.size());
-        assertEquals(2, count(queue.getFirst()));
-        assertEquals(1, count(queue.getLast()));
+        assertEquals(5, count(queue.getLast()));      // auto-craft untouched
+        assertEquals(60, queue.getFirst().priority());
+        assertEquals(3, count(queue.getFirst()));
     }
 
     @Test
-    void frontPlacementOnEmptyQueue() {
+    void autoDoesNotMergeIntoPlayerBand() {
         Deque<WorkItem> queue = new ArrayDeque<>();
-        enqueue(queue, synthesize("bread", 2), true);
-        assertEquals(1, queue.size());
-        assertEquals("production:synthesize", queue.getFirst().blueprintId());
-        assertEquals(2, count(queue.getFirst()));
-    }
-
-    @Test
-    void frontPlacementPreservesExistingTail() {
-        Deque<WorkItem> queue = new ArrayDeque<>();
-        queue.addLast(synthesize("bread", 1));
-        enqueue(queue, synthesize("stone_bricks", 8), true);
+        queue.addLast(synthesize("bread", 5, 80));   // player bread
+        enqueue(queue, synthesize("bread", 3, 40));  // auto-craft bread — different band
         assertEquals(2, queue.size());
-        assertEquals("stone_bricks", recipeOf(queue.getFirst()));
-        assertEquals("bread", recipeOf(queue.getLast()));
+        assertEquals(5, count(queue.getFirst()));     // player task untouched
+        assertEquals(40, queue.getLast().priority());
+        assertEquals(3, count(queue.getLast()));
     }
 
-    private static String recipeOf(WorkItem w) {
-        return w.params().get("recipe_id").getAsString();
+    @Test
+    void playerMergesAtOwnBandTail_acrossLowerPriority() {
+        Deque<WorkItem> queue = new ArrayDeque<>();
+        queue.addLast(synthesize("bread", 1, 80));   // player bread
+        queue.addLast(synthesize("stone", 8, 40));   // auto-craft
+        enqueue(queue, synthesize("bread", 2, 80));  // another player bread → merges
+        assertEquals(2, queue.size());
+        assertEquals("bread", recipeOf(queue.getFirst()));
+        assertEquals(3, count(queue.getFirst()));
     }
 }

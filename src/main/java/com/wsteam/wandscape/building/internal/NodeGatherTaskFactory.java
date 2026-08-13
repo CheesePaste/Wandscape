@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.shared.data.WorkItem;
+import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 
 import net.minecraft.core.BlockPos;
 
@@ -19,7 +20,8 @@ import net.minecraft.core.BlockPos;
  */
 public final class NodeGatherTaskFactory {
 
-    private static final int GATHER_PRIORITY = 15;
+    // 玩家手动发布的采集任务与玩家生产同级，进最高优先级段（补货/自动合成之前）。
+    private static final int GATHER_PRIORITY = WandscapeConstants.TASK_PRIORITY_PLAYER;
 
     private NodeGatherTaskFactory() {}
 

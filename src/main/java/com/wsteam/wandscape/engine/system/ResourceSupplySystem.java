@@ -116,9 +116,10 @@ public class ResourceSupplySystem implements System {
     }
 
     /**
-     * Colony-scoped variant with explicit queue placement. {@code atFront} prepends the
-     * synthesize task ahead of older workstation work — used by urgent shop restock so a
-     * low-stock good is crafted before building-material tasks queued earlier.
+     * Colony-scoped variant with explicit urgency. {@code atFront} marks the task as shop
+     * restock (补货段, priority 60); otherwise it is auto shortfall supply (自动段,
+     * priority 40). The workstation queue orders by priority band, so a restock task is
+     * served before any auto-craft task queued earlier.
      */
     public static boolean enqueueSynthesize(String itemId, int amount, @Nullable UUID colonyId,
                                             @Nullable World world, boolean atFront) {
@@ -157,9 +158,14 @@ public class ResourceSupplySystem implements System {
         params.put("count", new JsonPrimitive(count));
         params.put("channel_ticks", new JsonPrimitive(WandscapeConstants.WORKSTATION_CRAFT_TICKS_PER_UNIT * count));
 
-        api.enqueueWork(stationId, new WorkItem("production:synthesize", params, 40), atFront);
-        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, atFront={})",
-                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, atFront);
+        // 商店补货（atFront）比自动补产（卡资源缺口的短供）更优先：前者进补货段，
+        // 后者进自动段，队列按优先级分段排序。
+        int priority = atFront
+                ? WandscapeConstants.TASK_PRIORITY_RESTOCK
+                : WandscapeConstants.TASK_PRIORITY_AUTO;
+        api.enqueueWork(stationId, new WorkItem("production:synthesize", params, priority));
+        Log.info(TAG, "shortfall {} x{} → synthesize:{} at workstation {} ({} already in flight, priority={})",
+                itemId, amount, itemId, stationId.toString().substring(0, 8), inFlight, priority);
         return true;
     }
 
@@ -306,7 +312,8 @@ public class ResourceSupplySystem implements System {
             params.put("amount", new JsonPrimitive(nodeConfig.amountPerHarvest()));
             params.put("channel_ticks", new JsonPrimitive(nodeConfig.channelTicks()));
 
-            api.enqueueWork(buildingId, new WorkItem(nodeConfig.blueprint(), params, 40));
+            api.enqueueWork(buildingId, new WorkItem(nodeConfig.blueprint(), params,
+                    WandscapeConstants.TASK_PRIORITY_AUTO));
             Log.info(TAG, "shortfall {} x{} → gather on node {}",
                     element, deficit, buildingId.toString().substring(0, 8));
             return;

@@ -4,18 +4,17 @@
 
 ## 2026-08-13：建造中建筑可撤销——未开工移除、开工拆掉并退还材料
 
-**需求**（用户指令）：放错建筑后悔了却撤销不了。要求建筑「等待材料/建造中」时 V 面板异常报告里可撤销，撤销按钮占「修复」的位置；未开工只停，开工拆掉已建部分并返还资源。
+**需求**（用户指令）：放错建筑后悔了却撤销不了。要求建筑「等待材料/建造中」时准心对准建筑 HUD 的第一个按钮（修复）换成「撤销」；未开工只停，开工拆掉已建部分并返还资源。
 
 **决策**：
 - **`BuildingApi.cancelBuilding(buildingId)` 新增**：仅未完工（`!hasEverCompleted`）且非拆除中的建筑可撤销。
   - **未开工**（`!isConstructionStarted`）：材料未从仓库扣除，直接 `unregisterState` 移除建筑，**不返还**（无东西可还，也杜绝「放置→立即撤销→白嫖材料」）。
   - **开工**（`isConstructionStarted`）：材料在施工开始时已整批 commit 到仓库，先 `refundMaterials` 全额退还（`EnqueueHelper.computeMaterialCounts` → `ColonyItemBank.add` 方块物品，键=裸 block id，与 `build:place_structure` 的 request_resource 消耗键一致），再 `demolishBuilding` 异步拆掉已建部分（复用既有 NPC 拆除管线）。
-- **UI**：异常报告（V 面板侧栏 ⚠️ 打开）里建造中行显示红色「撤销」按钮，点按发 `BuildingActionPacket(action=cancel)`。损坏→修复、关闭→营业不变。
-- **`ColonyMetricsService`**：建造中列表排除 `isDemolishing`，撤销后已标记拆除的建筑不残留「建造中/撤销」项。
+- **UI**：准心 HUD（`BuildingDebugOverlay`，V 面板开启时对准建筑显示）里，建造中/等待材料建筑的第一个按钮「修复」→「撤销」（金色），点按发 `BuildingActionPacket(action=cancel)`；完成/损坏/关闭建筑不变（损坏→修复、关闭→营业/重启、拆除）。异常报告不显示撤销按钮。
 
 **为什么**：材料是「施工开始时整批扣一次」，开工后退全额=正好退掉已扣的；未开工没扣过，退全额会造成刷材料。拆除走既有管线，与拆完整建筑一致（不恢复地形，仅清掉已建块）。
 
-**影响**：放错建筑可在建造期撤销；已建成的建筑不可撤销（仍走拆除）。异常报告建造中行由「无按钮」变为「撤销」。
+**影响**：放错建筑可在建造期撤销；已建成的建筑不可撤销（仍走拆除）。建造中/等待材料建筑准心 HUD 第一个按钮由「修复」变为「撤销」。
 
 ## 2026-08-13：删除路网图路由——RoadRouter/blob/TransportRoute 整套移除，改方块条件
 
@@ -552,3 +551,14 @@
 **为什么**：体积（N→M 去重）与结构上限（单字符串→多包分块）是两个独立根因，分别根治才能既当前不崩又未来可扩。调色板复用 MC 区块思路，向后兼容靠解析期转换而非双格式常驻。`block_nbt`/蓝图契约/渲染热路径按"改动面 vs 收益"取舍，最小化波及。
 
 **约束保留**：蓝图 DSL（`build:clear_and_build`/`place_structure` 的 `blocks` map 契约）不动；`blockMapping()` 派生方法保留供事件型调用（完整/破损检查）；老世界 datapack 导出的旧格式文件将无法加载（需用扫描器重新导出）。
+
+## 2026-08：建筑任务队列按优先级分段排序
+
+**需求**：玩家在工坊发布任务会排到 Workstation 队尾，被自动合成/补货任务堵住半天干不了。原队列是纯 FIFO，补货又用 `atFront` 队首插入，玩家任务永远排在最后。
+
+**决策**：
+- **优先级三段**：`WandscapeConstants.TASK_PRIORITY_PLAYER=80`（玩家手动发布的生产/采集）＞ `TASK_PRIORITY_RESTOCK=60`（商店补货，原 `atFront` 语义改由更高优先级段承担）＞ `TASK_PRIORITY_AUTO=40`（自动补产/采集短供）。
+- **入队改按优先级段插入**：`enqueueWork` 不再 addFirst/addLast，改为 `insertByPriority` 把新任务插到本优先级段队尾（队列保持高→低有序，`dequeueWork` 的 pollFirst 恒出最高优先）；`mergeBandTail` 把同配方生产任务折进本段队尾同类项（取代旧队尾/队首合并）。删掉 `enqueueWork(buildingId, work, atFront)` 三参接口——紧急补货不再靠"插队首"，而是靠更高优先级段。
+- **跨段不合并**：玩家/补货/自动的同配方任务分属不同段，不会互相合并；同段内连续同配方仍合并（count/channel_ticks 累加）。
+
+**为什么**：优先级应编码在任务自身而非"插队"这类位置技巧；段尾插入保证同段内 FIFO 不饿死，段间严格按玩家＞补货＞自动执行。
