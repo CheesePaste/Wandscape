@@ -7,7 +7,6 @@ import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import imgui.ImFont;
 import imgui.ImFontConfig;
-import imgui.ImFontGlyphRangesBuilder;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
 import imgui.gl3.ImGuiImplGl3;
@@ -19,9 +18,6 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 
 import org.lwjgl.glfw.GLFW;
-
-import java.io.File;
-import java.nio.file.Files;
 
 public class ImGuiManager {
     private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
@@ -100,73 +96,44 @@ public class ImGuiManager {
         // config's Java field prevents the array from being GC'd.
         fontConfig.setGlyphRanges(cjkRanges);
 
-        ImFont mainFont = null;
-
-        // 1. Try loading embedded resource Chinese font first if present
-        File embeddedFont = extractResourceFontToTemp("fonts/chinese.ttf");
-        if (embeddedFont != null && embeddedFont.exists()) {
-            try {
-                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(embeddedFont.getAbsolutePath(), 20.0f, fontConfig);
-                if (f != null && f.ptr != 0) {
-                    mainFont = f;
-                    Log.info("ImGui", "[Font] Successfully loaded embedded Chinese CJK font: " + embeddedFont.getAbsolutePath());
-                }
-            } catch (Exception e) {
-                Log.error("ImGui", "[Font] Failed to load embedded Chinese font", e);
-            }
-        }
-
-        // 2. Try native system CJK fonts if embedded font is not available or failed
-        if (mainFont == null) {
-            String systemFontPath = findSystemFontPath();
-            if (systemFontPath != null) {
-                try {
-                    ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(systemFontPath, 20.0f, fontConfig);
-                    if (f != null && f.ptr != 0) {
-                        mainFont = f;
-                        Log.info("ImGui", "[Font] Successfully loaded system CJK font from: " + systemFontPath);
-                    }
-                } catch (Exception e) {
-                    Log.error("ImGui", "[Font] Failed to load system font: " + systemFontPath, e);
-                }
-            }
-        }
-
-        // 3. Fallback to default Roboto if CJK font loading failed
-        if (mainFont == null) {
-            Log.warn("ImGui", "[Font] CJK font loading failed completely! Fallback to Roboto-Regular.");
-            File tempRoboto = extractResourceFontToTemp("fonts/Roboto-Regular.ttf");
-            if (tempRoboto != null && tempRoboto.exists()) {
-                ImFont f = ImGui.getIO().getFonts().addFontFromFileTTF(tempRoboto.getAbsolutePath(), 20.0f);
-                if (f == null || f.ptr == 0) {
-                    ImGui.getIO().getFonts().addFontDefault();
-                }
-            } else {
+        // ── 主字体：内置 SimHei(chinese.ttf)，直接从资源字节内存加载 ──
+        // 旧实现「解压到临时文件 + addFontFromFileTTF」：若 C++ fopen 打开失败，
+        // imgui 原生断言（imAssertCallback 打印后 __debugbreak）会直接杀死进程，
+        // Java 的 catch(Exception) 根本拦不住，整个兜底链形同虚设。
+        // addFontFromMemoryTTF 完全绕开文件路径，内置字体字节打包时已验证有效。
+        byte[] cjkData = loadResourceFont("fonts/chinese.ttf");
+        if (cjkData != null && cjkData.length > 0) {
+            ImFont f = ImGui.getIO().getFonts().addFontFromMemoryTTF(cjkData, 20.0f, fontConfig);
+            if (f == null || f.ptr == 0) {
+                Log.warn("ImGui", "[Font] SimHei memory load returned null, falling back to default font");
                 ImGui.getIO().getFonts().addFontDefault();
             }
+        } else {
+            Log.warn("ImGui", "[Font] fonts/chinese.ttf resource missing, using default font");
+            ImGui.getIO().getFonts().addFontDefault();
         }
+        fontConfig.destroy();
 
-        // 4. Merge FontAwesome icons into main font
-        File tempFaFile = extractResourceFontToTemp("fonts/fa-solid-900.ttf");
-        if (tempFaFile != null && tempFaFile.exists()) {
+        // ── FontAwesome 图标合并（道路编辑器 icon 字形，U+E000–U+F8FF）──
+        byte[] faData = loadResourceFont("fonts/fa-solid-900.ttf");
+        if (faData != null && faData.length > 0) {
             ImFontConfig iconConfig = new ImFontConfig();
             iconConfig.setMergeMode(true);
             iconConfig.setPixelSnapH(true);
             iconConfig.setOversampleH(2);
             iconConfig.setOversampleV(2);
             iconConfig.setGlyphRanges(new short[]{ (short)0xe000, (short)0xf8ff, 0 });
-            ImGui.getIO().getFonts().addFontFromFileTTF(tempFaFile.getAbsolutePath(), 17.0f, iconConfig);
+            ImGui.getIO().getFonts().addFontFromMemoryTTF(faData, 17.0f, iconConfig);
             iconConfig.destroy();
         }
 
-        fontConfig.destroy();
         ImGui.getIO().getFonts().build();
 
         // ── Apply Wandscape Medieval-RTS UI Theme ──
         WandscapeImGuiTheme.apply();
 
         fontsBaked = true;
-        Log.info("ImGui", "[Font] CJK Font atlas baked successfully in CPU memory");
+        Log.info("ImGui", "[Font] Font atlas baked (SimHei CJK + FontAwesome icons)");
     }
 
     public static void ensureBackendInit(long windowHandle) {
@@ -187,45 +154,19 @@ public class ImGuiManager {
         ensureBackendInit(windowHandle);
     }
 
-    private static String findSystemFontPath() {
-        String[] candidatePaths = new String[]{
-            "C:\\Windows\\Fonts\\simhei.ttf",       // SimHei (Standard Chinese TTF)
-            "C:\\Windows\\Fonts\\simkai.ttf",       // KaiTi (Standard Chinese TTF)
-            "C:\\Windows\\Fonts\\fangsong.ttf",     // FangSong (Standard Chinese TTF)
-            "C:\\Windows\\Fonts\\msyh.ttf",         // YaHei TTF variant
-            "C:\\Windows\\Fonts\\simsun.ttc",
-            "C:\\Windows\\Fonts\\msyh.ttc",
-            "/System/Library/Fonts/PingFang.ttc",
-            "/Library/Fonts/Arial Unicode.ttf",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
-        };
-        for (String path : candidatePaths) {
-            java.io.File file = new java.io.File(path);
-            if (file.exists() && file.isFile() && file.length() > 0) {
-                Log.info("ImGui", "[Font] Found candidate system font at " + path + " (size: " + file.length() + " bytes)");
-                return file.getAbsolutePath();
-            }
-        }
-        Log.warn("ImGui", "[Font] No system CJK candidate font file found!");
-        return null;
-    }
-
-    private static File extractResourceFontToTemp(String path) {
+    /** 从 mod 资源包读取字体字节（内存加载，不写临时文件）。 */
+    private static byte[] loadResourceFont(String path) {
         try {
-            var resource = net.minecraft.client.Minecraft.getInstance().getResourceManager()
+            var resource = Minecraft.getInstance().getResourceManager()
                     .getResource(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.wsteam.wandscape.Wandscape.MODID, path));
             if (resource.isPresent()) {
-                File tempFile = File.createTempFile("ws_font_", "_" + new File(path).getName());
-                tempFile.deleteOnExit();
-                try (java.io.InputStream is = resource.get().open();
-                     java.io.FileOutputStream os = new java.io.FileOutputStream(tempFile)) {
-                    is.transferTo(os);
+                try (java.io.InputStream is = resource.get().open()) {
+                    return is.readAllBytes();
                 }
-                return tempFile;
             }
+            Log.warn("ImGui", "[Font] Resource font not found: " + path);
         } catch (Exception e) {
-            Log.error("ImGui", "Failed to extract resource font " + path, e);
+            Log.error("ImGui", "Failed to read resource font " + path, e);
         }
         return null;
     }
