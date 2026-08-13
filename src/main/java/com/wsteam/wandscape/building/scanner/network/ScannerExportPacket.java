@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -106,7 +107,9 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
 
         // Scan blocks in world
         List<BlockOffset> pattern = new ArrayList<>();
-        Map<String, String> blockMapping = new TreeMap<>(); // sorted for visual order
+        List<String> palette = new ArrayList<>();          // 唯一方块状态，首次出现序
+        java.util.Map<String, Integer> paletteIndex = new HashMap<>(); // blockstate → palette idx
+        List<Integer> blockIndices = new ArrayList<>();    // pattern 对齐的 palette 索引
         Map<String, String> blockNbt = new TreeMap<>();    // base64-encoded BlockEntity NBT
 
         for (int x = wMin.getX(); x <= wMax.getX(); x++) {
@@ -129,7 +132,13 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
                     pattern.add(offset);
 
                     String blockId = blockId(state);
-                    blockMapping.put(key, blockId);
+                    Integer pi = paletteIndex.get(blockId);
+                    if (pi == null) {
+                        pi = palette.size();
+                        palette.add(blockId);
+                        paletteIndex.put(blockId, pi);
+                    }
+                    blockIndices.add(pi);
 
                     // Save BlockEntity NBT if present
                     BlockEntity blockEntity = level.getBlockEntity(bp);
@@ -223,12 +232,17 @@ public record ScannerExportPacket(BlockPos pos) implements CustomPacketPayload {
         }
         root.add("pattern", patternArr);
 
-        // Block mapping
-        JsonObject bmObj = new JsonObject();
-        for (var entry : blockMapping.entrySet()) {
-            bmObj.addProperty(entry.getKey(), entry.getValue());
+        // Palette + block_indices (parallel to pattern)
+        JsonArray paletteArr = new JsonArray();
+        for (String bid : palette) {
+            paletteArr.add(bid);
         }
-        root.add("block_mapping", bmObj);
+        root.add("palette", paletteArr);
+        JsonArray idxArr = new JsonArray();
+        for (int i : blockIndices) {
+            idxArr.add(i);
+        }
+        root.add("block_indices", idxArr);
 
         // Block NBT (base64-encoded BlockEntity data)
         if (!blockNbt.isEmpty()) {

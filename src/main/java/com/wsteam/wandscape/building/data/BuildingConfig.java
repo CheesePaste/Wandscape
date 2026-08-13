@@ -36,7 +36,8 @@ public record BuildingConfig(
         @SerializedName("creator") String creator,
         String category,
         List<BlockOffset> pattern,
-        @SerializedName("block_mapping") Map<String, String> blockMapping,
+        List<String> palette,
+        @SerializedName("block_indices") List<Integer> blockIndices,
         @SerializedName("block_nbt") Map<String, String> blockNbt,
         int comfort,
         int magic,
@@ -156,6 +157,23 @@ public record BuildingConfig(
         }
     }
 
+    /** Block state string at {@code patternIndex} (parallel to {@link #pattern()}). */
+    public String blockIdAt(int patternIndex) {
+        return palette.get(blockIndices.get(patternIndex));
+    }
+
+    /**
+     * Derived offset→blockstate map (key "x,y,z"). O(N) each call — prefer
+     * {@link #blockIdAt(int)} in hot paths (material counting, renderers).
+     */
+    public Map<String, String> blockMapping() {
+        Map<String, String> m = new HashMap<>(pattern.size());
+        for (int i = 0; i < pattern.size(); i++) {
+            m.put(pattern.get(i).toKey(), blockIdAt(i));
+        }
+        return Collections.unmodifiableMap(m);
+    }
+
     /** 该建筑是不是游客交互目标（四类旅游 category 之一）。 */
     public boolean isTouristTarget() {
         return shop() != ShopConfig.NONE || service() != ServiceConfig.NONE
@@ -176,6 +194,11 @@ public record BuildingConfig(
             String creator = getString(obj, "creator", "");
             String category = getString(obj, "category", "basic");
 
+            if (obj.has("block_mapping")) {
+                throw new JsonParseException("Building '" + id
+                        + "' uses legacy block_mapping format — migrate to palette + block_indices");
+            }
+
             // Pattern
             List<BlockOffset> pattern = List.of();
             if (obj.has("pattern")) {
@@ -188,15 +211,34 @@ public record BuildingConfig(
                 pattern = List.copyOf(list);
             }
 
-            // Block mapping
-            Map<String, String> blockMapping = Map.of();
-            if (obj.has("block_mapping")) {
-                JsonObject map = obj.getAsJsonObject("block_mapping");
-                Map<String, String> m = new HashMap<>();
-                for (var entry : map.entrySet()) {
-                    m.put(entry.getKey(), entry.getValue().getAsString());
+            // Palette + block_indices (parallel to pattern)
+            List<String> palette = List.of();
+            if (obj.has("palette")) {
+                JsonArray pal = obj.getAsJsonArray("palette");
+                List<String> p = new ArrayList<>(pal.size());
+                for (JsonElement el : pal) {
+                    p.add(el.getAsString());
                 }
-                blockMapping = Map.copyOf(m);
+                palette = List.copyOf(p);
+            }
+            List<Integer> blockIndices = List.of();
+            if (obj.has("block_indices")) {
+                JsonArray idx = obj.getAsJsonArray("block_indices");
+                List<Integer> li = new ArrayList<>(idx.size());
+                for (JsonElement el : idx) {
+                    li.add(el.getAsInt());
+                }
+                blockIndices = List.copyOf(li);
+            }
+            if (blockIndices.size() != pattern.size()) {
+                throw new JsonParseException("Building '" + id + "': block_indices.size()="
+                        + blockIndices.size() + " != pattern.size()=" + pattern.size());
+            }
+            for (int i : blockIndices) {
+                if (i < 0 || i >= palette.size()) {
+                    throw new JsonParseException("Building '" + id + "': block_indices value " + i
+                            + " out of palette range [0," + palette.size() + ")");
+                }
             }
 
             // Block NBT (base64-encoded BlockEntity data)
@@ -346,7 +388,7 @@ public record BuildingConfig(
             }
 
             return new BuildingConfig(id, displayName, creator, category,
-                    pattern, blockMapping, blockNbt,
+                    pattern, palette, blockIndices, blockNbt,
                     comfort, magic, wonder,
                     queue, unlockRequirement, boundary, blueprint, nodeConfig,
                     decoration, wonderConfig, shop, service, relax, atm,

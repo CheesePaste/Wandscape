@@ -130,6 +130,21 @@ public final class BuildingRotation {
     }
 
     /**
+     * Rotate a palette of block state strings by {@code steps} increments of 90°
+     * CCW around Y. Rotating a whole building becomes M rotations (one per distinct
+     * blockstate) instead of N (one per block); block indices stay unchanged.
+     */
+    public static java.util.List<String> rotatePalette(java.util.List<String> palette, int steps) {
+        if (steps <= 0 || palette.isEmpty()) return palette;
+        steps = steps & 3;
+        java.util.List<String> result = new java.util.ArrayList<>(palette.size());
+        for (String blockState : palette) {
+            result.add(rotateBlockStateString(blockState, steps));
+        }
+        return java.util.Collections.unmodifiableList(result);
+    }
+
+    /**
      * Rotate a map of offsets-to-blockIds (block_mapping) by {@code steps}.
      * Keys are "x,y,z" strings, values are block state strings.
      */

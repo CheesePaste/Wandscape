@@ -5,61 +5,130 @@
   "first_free": true,
   "deprecated": true,
   "pattern": [
-    [-1, 0, -1],
-    [0, 0, -1],
-    [1, 0, -1],
-    [-1, 0, 0],
-    [1, 0, 0],
-    [-1, 0, 1],
-    [0, 0, 1],
-    [1, 0, 1],
-    [-1, 1, -1],
-    [1, 1, -1],
-    [-1, 1, 1],
-    [1, 1, 1],
-    [0, 1, 1],
-    [-1, 1, 0],
-    [1, 1, 0],
-    [-1, 2, -1],
-    [0, 2, -1],
-    [1, 2, -1],
-    [-1, 2, 0],
-    [0, 2, 0],
-    [1, 2, 0],
-    [-1, 2, 1],
-    [0, 2, 1],
-    [1, 2, 1]
+    [
+      -1,
+      0,
+      -1
+    ],
+    [
+      0,
+      0,
+      -1
+    ],
+    [
+      1,
+      0,
+      -1
+    ],
+    [
+      -1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      -1,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      -1,
+      1,
+      -1
+    ],
+    [
+      1,
+      1,
+      -1
+    ],
+    [
+      -1,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      1
+    ],
+    [
+      0,
+      1,
+      1
+    ],
+    [
+      -1,
+      1,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      -1,
+      2,
+      -1
+    ],
+    [
+      0,
+      2,
+      -1
+    ],
+    [
+      1,
+      2,
+      -1
+    ],
+    [
+      -1,
+      2,
+      0
+    ],
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      1,
+      2,
+      0
+    ],
+    [
+      -1,
+      2,
+      1
+    ],
+    [
+      0,
+      2,
+      1
+    ],
+    [
+      1,
+      2,
+      1
+    ]
   ],
-  "block_mapping": {
-    "-1,0,-1": "minecraft:stone_bricks",
-    "0,0,-1": "minecraft:stone_bricks",
-    "1,0,-1": "minecraft:stone_bricks",
-    "-1,0,0": "minecraft:stone_bricks",
-    "1,0,0": "minecraft:stone_bricks",
-    "-1,0,1": "minecraft:stone_bricks",
-    "0,0,1": "minecraft:stone_bricks",
-    "1,0,1": "minecraft:stone_bricks",
-    "-1,1,-1": "minecraft:oak_log",
-    "1,1,-1": "minecraft:oak_log",
-    "-1,1,1": "minecraft:oak_log",
-    "1,1,1": "minecraft:oak_log",
-    "0,1,1": "minecraft:oak_planks",
-    "-1,1,0": "minecraft:oak_planks",
-    "1,1,0": "minecraft:oak_planks",
-    "-1,2,-1": "minecraft:oak_planks",
-    "0,2,-1": "minecraft:oak_planks",
-    "1,2,-1": "minecraft:oak_planks",
-    "-1,2,0": "minecraft:oak_planks",
-    "0,2,0": "minecraft:oak_planks",
-    "1,2,0": "minecraft:oak_planks",
-    "-1,2,1": "minecraft:oak_planks",
-    "0,2,1": "minecraft:oak_planks",
-    "1,2,1": "minecraft:oak_planks"
-  },
   "comfort": 6,
   "magic": 2,
   "wonder": 2,
-
   "queue": {
     "capacity": 0,
     "task_types": []
@@ -68,10 +137,22 @@
     "min_colony_level": 1
   },
   "boundary": {
-    "min": [-1, 0, -1],
-    "max": [1, 2, 1]
+    "min": [
+      -1,
+      0,
+      -1
+    ],
+    "max": [
+      1,
+      2,
+      1
+    ]
   },
-  "door_offset": [0, 0, -1],
+  "door_offset": [
+    0,
+    0,
+    -1
+  ],
   "blueprint": {
     "id": "build:clear_and_build",
     "bind": {
@@ -86,9 +167,44 @@
   },
   "interact_spots": [
     {
-      "pos": [0, 0, 0],
+      "pos": [
+        0,
+        0,
+        0
+      ],
       "action": "bathe",
       "facing": "south"
     }
+  ],
+  "palette": [
+    "minecraft:stone_bricks",
+    "minecraft:oak_log",
+    "minecraft:oak_planks"
+  ],
+  "block_indices": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
   ]
 }

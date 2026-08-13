@@ -6,61 +6,130 @@
   "first_free": true,
   "deprecated": true,
   "pattern": [
-    [-1, 0, -1],
-    [0, 0, -1],
-    [1, 0, -1],
-    [-1, 0, 0],
-    [1, 0, 0],
-    [-1, 0, 1],
-    [0, 0, 1],
-    [1, 0, 1],
-    [-1, 1, -1],
-    [1, 1, -1],
-    [-1, 1, 1],
-    [1, 1, 1],
-    [0, 1, 1],
-    [-1, 1, 0],
-    [1, 1, 0],
-    [-1, 2, -1],
-    [0, 2, -1],
-    [1, 2, -1],
-    [-1, 2, 0],
-    [0, 2, 0],
-    [1, 2, 0],
-    [-1, 2, 1],
-    [0, 2, 1],
-    [1, 2, 1]
+    [
+      -1,
+      0,
+      -1
+    ],
+    [
+      0,
+      0,
+      -1
+    ],
+    [
+      1,
+      0,
+      -1
+    ],
+    [
+      -1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      -1,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      -1,
+      1,
+      -1
+    ],
+    [
+      1,
+      1,
+      -1
+    ],
+    [
+      -1,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      1
+    ],
+    [
+      0,
+      1,
+      1
+    ],
+    [
+      -1,
+      1,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      -1,
+      2,
+      -1
+    ],
+    [
+      0,
+      2,
+      -1
+    ],
+    [
+      1,
+      2,
+      -1
+    ],
+    [
+      -1,
+      2,
+      0
+    ],
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      1,
+      2,
+      0
+    ],
+    [
+      -1,
+      2,
+      1
+    ],
+    [
+      0,
+      2,
+      1
+    ],
+    [
+      1,
+      2,
+      1
+    ]
   ],
-  "block_mapping": {
-    "-1,0,-1": "minecraft:stone_bricks",
-    "0,0,-1": "minecraft:stone_bricks",
-    "1,0,-1": "minecraft:stone_bricks",
-    "-1,0,0": "minecraft:stone_bricks",
-    "1,0,0": "minecraft:stone_bricks",
-    "-1,0,1": "minecraft:stone_bricks",
-    "0,0,1": "minecraft:stone_bricks",
-    "1,0,1": "minecraft:stone_bricks",
-    "-1,1,-1": "minecraft:polished_andesite",
-    "1,1,-1": "minecraft:polished_andesite",
-    "-1,1,1": "minecraft:polished_andesite",
-    "1,1,1": "minecraft:polished_andesite",
-    "0,1,1": "minecraft:polished_andesite",
-    "-1,1,0": "minecraft:polished_andesite",
-    "1,1,0": "minecraft:polished_andesite",
-    "-1,2,-1": "minecraft:stone_bricks",
-    "0,2,-1": "minecraft:stone_bricks",
-    "1,2,-1": "minecraft:stone_bricks",
-    "-1,2,0": "minecraft:stone_bricks",
-    "0,2,0": "minecraft:glowstone",
-    "1,2,0": "minecraft:stone_bricks",
-    "-1,2,1": "minecraft:stone_bricks",
-    "0,2,1": "minecraft:stone_bricks",
-    "1,2,1": "minecraft:stone_bricks"
-  },
   "comfort": 3,
   "magic": 3,
   "wonder": 2,
-
   "queue": {
     "capacity": 0,
     "task_types": []
@@ -69,10 +138,22 @@
     "min_colony_level": 1
   },
   "boundary": {
-    "min": [-1, 0, -1],
-    "max": [1, 2, 1]
+    "min": [
+      -1,
+      0,
+      -1
+    ],
+    "max": [
+      1,
+      2,
+      1
+    ]
   },
-  "door_offset": [0, 0, -1],
+  "door_offset": [
+    0,
+    0,
+    -1
+  ],
   "service": {
     "energy_per_use": 12,
     "element_output": {
@@ -94,9 +175,44 @@
   },
   "interact_spots": [
     {
-      "pos": [0, 0, 0],
+      "pos": [
+        0,
+        0,
+        0
+      ],
       "action": "browse",
       "facing": "south"
     }
+  ],
+  "palette": [
+    "minecraft:stone_bricks",
+    "minecraft:polished_andesite",
+    "minecraft:glowstone"
+  ],
+  "block_indices": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0
   ]
 }

@@ -62,29 +62,51 @@ class EnqueueHelperTest {
         return m;
     }
 
+    private record PaletteParts(List<String> palette, List<Integer> indices) {}
+
+    /** Convert a legacy offset→blockstate map to palette + pattern-aligned indices. */
+    private static PaletteParts toPalette(List<BlockOffset> pattern, Map<String, String> mapping) {
+        List<String> palette = new java.util.ArrayList<>();
+        Map<String, Integer> idx = new java.util.HashMap<>();
+        List<Integer> indices = new java.util.ArrayList<>();
+        for (BlockOffset off : pattern) {
+            String bid = mapping.get(off.toKey());
+            if (bid == null) throw new AssertionError("no block mapped for " + off.toKey());
+            Integer i = idx.get(bid);
+            if (i == null) {
+                i = palette.size();
+                palette.add(bid);
+                idx.put(bid, i);
+            }
+            indices.add(i);
+        }
+        return new PaletteParts(palette, indices);
+    }
+
     @Test
     @DisplayName("town_hall: clear entire boundary box (18 positions), anchor included")
     void townHallFullBox() {
+        List<BlockOffset> pattern = List.of(
+                off(-1, 0, -1), off(-1, 0, 0), off(-1, 0, 1),
+                off(0, 0, -1),                     off(0, 0, 1),
+                off(1, 0, -1),  off(1, 0, 0),  off(1, 0, 1),
+                off(-1, 1, -1), off(-1, 1, 1), off(1, 1, -1), off(1, 1, 1));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping(
+                "-1,0,-1", "minecraft:stone_bricks",
+                "-1,0,0", "minecraft:stone_bricks",
+                "-1,0,1", "minecraft:stone_bricks",
+                "0,0,-1", "minecraft:stone_bricks",
+                "0,0,1", "minecraft:stone_bricks",
+                "1,0,-1", "minecraft:stone_bricks",
+                "1,0,0", "minecraft:stone_bricks",
+                "1,0,1", "minecraft:stone_bricks",
+                "-1,1,-1", "minecraft:oak_log",
+                "-1,1,1", "minecraft:oak_log",
+                "1,1,-1", "minecraft:oak_log",
+                "1,1,1", "minecraft:oak_log"));
         BuildingConfig cfg = new BuildingConfig(
                 "town_hall", "Test", "", "basic",
-                List.of(
-                        off(-1, 0, -1), off(-1, 0, 0), off(-1, 0, 1),
-                        off(0, 0, -1),                     off(0, 0, 1),
-                        off(1, 0, -1),  off(1, 0, 0),  off(1, 0, 1),
-                        off(-1, 1, -1), off(-1, 1, 1), off(1, 1, -1), off(1, 1, 1)),
-                makeBlockMapping(
-                        "-1,0,-1", "minecraft:stone_bricks",
-                        "-1,0,0", "minecraft:stone_bricks",
-                        "-1,0,1", "minecraft:stone_bricks",
-                        "0,0,-1", "minecraft:stone_bricks",
-                        "0,0,1", "minecraft:stone_bricks",
-                        "1,0,-1", "minecraft:stone_bricks",
-                        "1,0,0", "minecraft:stone_bricks",
-                        "1,0,1", "minecraft:stone_bricks",
-                        "-1,1,-1", "minecraft:oak_log",
-                        "-1,1,1", "minecraft:oak_log",
-                        "1,1,-1", "minecraft:oak_log",
-                        "1,1,1", "minecraft:oak_log"),
+                pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 5, 3, 2,
                 BuildingConfig.QueueDef.DEFAULT,
@@ -117,10 +139,11 @@ class EnqueueHelperTest {
     @Test
     @DisplayName("single-block building: anchor-only boundary → clear anchor")
     void singleBlockClear() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping("0,0,0", "minecraft:lodestone"));
         BuildingConfig cfg = new BuildingConfig(
                 "earth_node", "Test", "", "node",
-                List.of(off(0, 0, 0)),
-                Map.of("0,0,0", "minecraft:lodestone"),
+                pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 2, 0,
                 BuildingConfig.QueueDef.DEFAULT,
@@ -139,10 +162,11 @@ class EnqueueHelperTest {
     @Test
     @DisplayName("large 3×3×3 boundary: all 27 positions cleared")
     void largeBoundaryFullBox() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping("0,0,0", "minecraft:stone"));
         BuildingConfig cfg = new BuildingConfig(
                 "test_large", "Test", "", "basic",
-                List.of(off(0, 0, 0)),
-                Map.of("0,0,0", "minecraft:stone"),
+                pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 1, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,
@@ -180,10 +204,11 @@ class EnqueueHelperTest {
     @DisplayName("buildWorkItem: entities 参数透传 + 旋转")
     @org.junit.jupiter.api.Disabled("buildWorkItem 全流程触发 BuiltInRegistries（rotateBlockStateString），需要 MC Bootstrap，纯 JUnit 环境不可跑——留待集成测试")
     void entitiesPassThroughAndRotate() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping("0,0,0", "minecraft:stone"));
         BuildingConfig cfg = new BuildingConfig(
                 "gallery", "Gallery", "", "custom",
-                List.of(off(0, 0, 0)),
-                Map.of("0,0,0", "minecraft:stone"),
+                pattern, pal.palette(), pal.indices(),
                 Map.of(), /* blockNbt */
                 0, 0, 0,
                 BuildingConfig.QueueDef.DEFAULT,

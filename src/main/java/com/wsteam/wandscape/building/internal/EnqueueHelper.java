@@ -3,6 +3,7 @@ package com.wsteam.wandscape.building.internal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -219,10 +220,12 @@ public final class EnqueueHelper {
                     params.put("offsets", rotatePatternJson(
                             params.get("offsets").getAsJsonArray(), rotationSteps));
                 }
-                // Rotate block_mapping (keys and block state values)
+                // Rotate blocks map: rotate the palette once (M blockstate rotations
+                // instead of N), then rebuild from already-rotated offsets + rotated palette + indices.
                 if (params.containsKey("blocks")) {
-                    params.put("blocks", rotateBlockMappingJson(
-                            params.get("blocks").getAsJsonObject(), rotationSteps));
+                    var rotatedPalette = BuildingRotation.rotatePalette(config.palette(), rotationSteps);
+                    params.put("blocks", blocksFromPalette(
+                            params.get("offsets").getAsJsonArray(), rotatedPalette, config.blockIndices()));
                 }
                 // Rotate block_nbt (keys only — values are opaque base64 strings)
                 if (params.containsKey("blocks_nbt")) {
@@ -291,9 +294,9 @@ public final class EnqueueHelper {
     public static Map<String, Integer> computeMaterialCounts(BuildingConfig config) {
         var counts = new java.util.LinkedHashMap<String, Integer>();
         var elementApi = WandscapeApis.getElementApi();
-        for (var offset : config.pattern()) {
-            String blockId = config.blockMapping().get(offset.toKey());
-            if (blockId == null || "minecraft:air".equals(blockId)) continue;
+        for (int i = 0; i < config.pattern().size(); i++) {
+            String blockId = config.blockIdAt(i);
+            if ("minecraft:air".equals(blockId)) continue;
             // Strip blockstate properties (e.g. "[facing=south]") before checking
             // element mappings — mappings are registered for bare block IDs only.
             String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
@@ -483,15 +486,15 @@ public final class EnqueueHelper {
         return result;
     }
 
-    /** Rotate a JSON block_mapping object (keys and block state values). */
-    private static JsonObject rotateBlockMappingJson(JsonObject mapping, int steps) {
+    /** Rebuild the blocks map (offset→blockstate) from rotated offsets + rotated palette + indices. */
+    private static JsonObject blocksFromPalette(JsonArray rotatedOffsets,
+                                                List<String> rotatedPalette,
+                                                List<Integer> blockIndices) {
         JsonObject result = new JsonObject();
-        for (var entry : mapping.entrySet()) {
-            BlockOffset off = parseKey(entry.getKey());
-            if (off == null) continue;
-            BlockOffset rotatedOff = BuildingRotation.rotateOffset(off, steps);
-            String rotatedBlock = BuildingRotation.rotateBlockStateString(entry.getValue().getAsString(), steps);
-            result.addProperty(rotatedOff.toKey(), rotatedBlock);
+        for (int i = 0; i < rotatedOffsets.size(); i++) {
+            JsonArray pos = rotatedOffsets.get(i).getAsJsonArray();
+            String key = pos.get(0).getAsInt() + "," + pos.get(1).getAsInt() + "," + pos.get(2).getAsInt();
+            result.addProperty(key, rotatedPalette.get(blockIndices.get(i)));
         }
         return result;
     }

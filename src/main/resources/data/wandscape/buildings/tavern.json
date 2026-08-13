@@ -125,37 +125,9 @@
       1
     ]
   ],
-  "block_mapping": {
-    "0,0,0": "minecraft:barrel",
-    "-1,0,-1": "minecraft:stone_bricks",
-    "0,0,-1": "minecraft:stone_bricks",
-    "1,0,-1": "minecraft:stone_bricks",
-    "-1,0,0": "minecraft:oak_planks",
-    "1,0,0": "minecraft:oak_planks",
-    "0,1,0": "minecraft:lantern",
-    "-1,0,1": "minecraft:stone_bricks",
-    "0,0,1": "minecraft:stone_bricks",
-    "1,0,1": "minecraft:stone_bricks",
-    "-1,1,-1": "minecraft:oak_log",
-    "1,1,-1": "minecraft:oak_log",
-    "-1,1,1": "minecraft:oak_log",
-    "1,1,1": "minecraft:oak_log",
-    "-1,1,0": "minecraft:oak_planks",
-    "1,1,0": "minecraft:oak_planks",
-    "-1,2,-1": "minecraft:oak_planks",
-    "0,2,-1": "minecraft:oak_planks",
-    "1,2,-1": "minecraft:oak_planks",
-    "-1,2,0": "minecraft:oak_planks",
-    "0,2,0": "minecraft:oak_planks",
-    "1,2,0": "minecraft:oak_planks",
-    "-1,2,1": "minecraft:oak_planks",
-    "0,2,1": "minecraft:oak_planks",
-    "1,2,1": "minecraft:oak_planks"
-  },
   "comfort": 3,
   "magic": 1,
   "wonder": 2,
-
   "queue": {
     "capacity": 0,
     "task_types": []
@@ -197,5 +169,37 @@
       ],
       "action": "browse"
     }
+  ],
+  "palette": [
+    "minecraft:stone_bricks",
+    "minecraft:oak_planks",
+    "minecraft:barrel",
+    "minecraft:oak_log"
+  ],
+  "block_indices": [
+    0,
+    0,
+    0,
+    1,
+    2,
+    1,
+    0,
+    0,
+    0,
+    3,
+    3,
+    3,
+    3,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
   ]
 }

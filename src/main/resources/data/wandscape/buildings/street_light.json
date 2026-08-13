@@ -65,20 +65,6 @@
       1
     ]
   ],
-  "block_mapping": {
-    "0,0,1": "minecraft:wall_torch[facing\u003dwest]",
-    "1,0,0": "minecraft:wall_torch",
-    "1,0,1": "minecraft:stone_bricks",
-    "1,0,2": "minecraft:wall_torch[facing\u003dsouth]",
-    "1,1,1": "minecraft:stone_brick_wall",
-    "1,2,1": "minecraft:spruce_fence",
-    "1,3,1": "minecraft:cobblestone_wall",
-    "1,4,1": "minecraft:spruce_fence",
-    "1,4,2": "minecraft:lantern[hanging\u003dtrue]",
-    "1,5,1": "minecraft:spruce_trapdoor[facing\u003dsouth]",
-    "1,5,2": "minecraft:spruce_trapdoor[facing\u003dsouth]",
-    "2,0,1": "minecraft:wall_torch[facing\u003deast]"
-  },
   "comfort": 2,
   "magic": 0,
   "wonder": 1,
@@ -112,5 +98,31 @@
       "entities": "$entities",
       "name": "$display_name"
     }
-  }
+  },
+  "palette": [
+    "minecraft:wall_torch[facing=west]",
+    "minecraft:wall_torch",
+    "minecraft:stone_bricks",
+    "minecraft:wall_torch[facing=south]",
+    "minecraft:stone_brick_wall",
+    "minecraft:spruce_fence",
+    "minecraft:cobblestone_wall",
+    "minecraft:lantern[hanging=true]",
+    "minecraft:spruce_trapdoor[facing=south]",
+    "minecraft:wall_torch[facing=east]"
+  ],
+  "block_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    5,
+    7,
+    8,
+    8,
+    9
+  ]
 }

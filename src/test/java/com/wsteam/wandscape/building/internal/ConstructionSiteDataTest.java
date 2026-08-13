@@ -50,16 +50,12 @@ class ConstructionSiteDataTest {
     @Test
     @DisplayName("computeMaterialCounts: 去重 + 剥 state + 跳过 air 与无映射方块")
     void materialCounts() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0), off(0, 0, 1), off(1, 0, 0), off(1, 0, 1), off(0, 1, 0), off(0, 1, 1));
         BuildingConfig cfg = new BuildingConfig(
                 "test_build", "Test", "", "basic",
-                List.of(off(0, 0, 0), off(0, 0, 1), off(1, 0, 0), off(1, 0, 1), off(0, 1, 0), off(0, 1, 1)),
-                Map.of(
-                        "0,0,0", "minecraft:stone_bricks",
-                        "0,0,1", "minecraft:stone_bricks",
-                        "1,0,0", "minecraft:stone_bricks[facing=north]",
-                        "1,0,1", "minecraft:stone_bricks",
-                        "0,1,0", "minecraft:oak_log",
-                        "0,1,1", "minecraft:air"),
+                pattern,
+                List.of("minecraft:stone_bricks", "minecraft:stone_bricks[facing=north]", "minecraft:oak_log", "minecraft:air"),
+                List.of(0, 0, 1, 0, 2, 3),
                 Map.of(),
                 5, 3, 2,
                 BuildingConfig.QueueDef.DEFAULT,

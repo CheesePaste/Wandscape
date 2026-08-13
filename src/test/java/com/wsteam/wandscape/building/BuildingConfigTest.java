@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 
 import java.util.List;
+import java.util.Map;
 
 class BuildingConfigTest {
 
@@ -59,7 +60,8 @@ class BuildingConfigTest {
               "display_name": "Mage Tower",
               "category": "wonder",
               "pattern": [[0,0,0], [1,0,0], [1,1,0]],
-              "block_mapping": {"0,0,0": "minecraft:stone_bricks", "1,0,0": "wandscape:rune_pillar", "1,1,0": "wandscape:mage_crystal"},
+              "palette": ["minecraft:stone_bricks", "wandscape:rune_pillar", "wandscape:mage_crystal"],
+              "block_indices": [0, 1, 2],
               "comfort": 2,
               "magic": 3,
               "wonder": 5,
@@ -96,12 +98,63 @@ class BuildingConfigTest {
     void singleBlockPattern() {
         String json = """
             {"id": "test", "display_name": "Test", "category": "basic",
-             "pattern": [[0,0,0]], "block_mapping": {"0,0,0": "minecraft:stone"}}
+             "pattern": [[0,0,0]], "palette": ["minecraft:stone"], "block_indices": [0]}
             """;
 
         BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
         assertEquals(1, cfg.pattern().size());
         assertEquals("0,0,0", cfg.pattern().get(0).toKey());
+    }
+
+    @Test
+    void paletteFormatExposesIndicesAndDerivedMapping() {
+        String json = """
+            {"id": "s", "display_name": "S", "category": "basic",
+             "pattern": [[0,0,0], [1,0,0], [0,0,1]],
+             "palette": ["minecraft:stone", "minecraft:oak_log"],
+             "block_indices": [0, 1, 0]}
+            """;
+        BuildingConfig cfg = GSON.fromJson(json, BuildingConfig.class);
+
+        assertEquals(List.of("minecraft:stone", "minecraft:oak_log"), cfg.palette());
+        assertEquals(List.of(0, 1, 0), cfg.blockIndices());
+        assertEquals("minecraft:stone", cfg.blockIdAt(0));
+        assertEquals("minecraft:oak_log", cfg.blockIdAt(1));
+        assertEquals("minecraft:stone", cfg.blockIdAt(2));
+
+        Map<String, String> derived = cfg.blockMapping();
+        assertEquals(3, derived.size());
+        assertEquals("minecraft:stone", derived.get("0,0,0"));
+        assertEquals("minecraft:oak_log", derived.get("1,0,0"));
+        assertEquals("minecraft:stone", derived.get("0,0,1"));
+    }
+
+    @Test
+    void legacyBlockMappingIsRejected() {
+        String json = """
+            {"id": "old", "display_name": "Old", "category": "basic",
+             "pattern": [[0,0,0]], "block_mapping": {"0,0,0": "minecraft:stone"}}
+            """;
+        assertThrows(com.google.gson.JsonParseException.class, () -> GSON.fromJson(json, BuildingConfig.class));
+    }
+
+    @Test
+    void misalignedBlockIndicesAreRejected() {
+        String json = """
+            {"id": "bad", "display_name": "Bad", "category": "basic",
+             "pattern": [[0,0,0], [1,0,0]],
+             "palette": ["minecraft:stone"],
+             "block_indices": [0]}
+            """;
+        assertThrows(com.google.gson.JsonParseException.class, () -> GSON.fromJson(json, BuildingConfig.class));
+
+        String outOfRange = """
+            {"id": "bad2", "display_name": "Bad2", "category": "basic",
+             "pattern": [[0,0,0]],
+             "palette": ["minecraft:stone"],
+             "block_indices": [5]}
+            """;
+        assertThrows(com.google.gson.JsonParseException.class, () -> GSON.fromJson(outOfRange, BuildingConfig.class));
     }
 
     @Nested

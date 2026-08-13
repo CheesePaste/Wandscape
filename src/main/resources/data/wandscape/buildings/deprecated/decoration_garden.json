@@ -6,61 +6,130 @@
   "first_free": true,
   "deprecated": true,
   "pattern": [
-    [-1, 0, -1],
-    [0, 0, -1],
-    [1, 0, -1],
-    [-1, 0, 0],
-    [1, 0, 0],
-    [-1, 0, 1],
-    [0, 0, 1],
-    [1, 0, 1],
-    [-1, 1, -1],
-    [1, 1, -1],
-    [-1, 1, 1],
-    [1, 1, 1],
-    [0, 1, 1],
-    [-1, 1, 0],
-    [1, 1, 0],
-    [-1, 2, -1],
-    [0, 2, -1],
-    [1, 2, -1],
-    [-1, 2, 0],
-    [0, 2, 0],
-    [1, 2, 0],
-    [-1, 2, 1],
-    [0, 2, 1],
-    [1, 2, 1]
+    [
+      -1,
+      0,
+      -1
+    ],
+    [
+      0,
+      0,
+      -1
+    ],
+    [
+      1,
+      0,
+      -1
+    ],
+    [
+      -1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      -1,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      -1,
+      1,
+      -1
+    ],
+    [
+      1,
+      1,
+      -1
+    ],
+    [
+      -1,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      1
+    ],
+    [
+      0,
+      1,
+      1
+    ],
+    [
+      -1,
+      1,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      -1,
+      2,
+      -1
+    ],
+    [
+      0,
+      2,
+      -1
+    ],
+    [
+      1,
+      2,
+      -1
+    ],
+    [
+      -1,
+      2,
+      0
+    ],
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      1,
+      2,
+      0
+    ],
+    [
+      -1,
+      2,
+      1
+    ],
+    [
+      0,
+      2,
+      1
+    ],
+    [
+      1,
+      2,
+      1
+    ]
   ],
-  "block_mapping": {
-    "-1,0,-1": "minecraft:stone_bricks",
-    "0,0,-1": "minecraft:stone_bricks",
-    "1,0,-1": "minecraft:stone_bricks",
-    "-1,0,0": "minecraft:stone_bricks",
-    "1,0,0": "minecraft:stone_bricks",
-    "-1,0,1": "minecraft:stone_bricks",
-    "0,0,1": "minecraft:stone_bricks",
-    "1,0,1": "minecraft:stone_bricks",
-    "-1,1,-1": "minecraft:oak_fence",
-    "1,1,-1": "minecraft:oak_fence",
-    "-1,1,1": "minecraft:oak_fence",
-    "1,1,1": "minecraft:oak_fence",
-    "0,1,1": "minecraft:stone_bricks",
-    "-1,1,0": "minecraft:potted_dandelion",
-    "1,1,0": "minecraft:potted_poppy",
-    "-1,2,-1": "minecraft:oak_leaves",
-    "0,2,-1": "minecraft:oak_leaves",
-    "1,2,-1": "minecraft:oak_leaves",
-    "-1,2,0": "minecraft:oak_leaves",
-    "0,2,0": "minecraft:oak_leaves",
-    "1,2,0": "minecraft:oak_leaves",
-    "-1,2,1": "minecraft:oak_leaves",
-    "0,2,1": "minecraft:oak_leaves",
-    "1,2,1": "minecraft:oak_leaves"
-  },
   "comfort": 5,
   "magic": 2,
   "wonder": 3,
-
   "queue": {
     "capacity": 0,
     "task_types": []
@@ -69,10 +138,22 @@
     "min_colony_level": 1
   },
   "boundary": {
-    "min": [-1, 0, -1],
-    "max": [1, 2, 1]
+    "min": [
+      -1,
+      0,
+      -1
+    ],
+    "max": [
+      1,
+      2,
+      1
+    ]
   },
-  "door_offset": [0, 0, -1],
+  "door_offset": [
+    0,
+    0,
+    -1
+  ],
   "decoration": {
     "radius": 12
   },
@@ -86,9 +167,46 @@
   },
   "interact_spots": [
     {
-      "pos": [0, 0, 0],
+      "pos": [
+        0,
+        0,
+        0
+      ],
       "action": "view",
       "facing": "south"
     }
+  ],
+  "palette": [
+    "minecraft:stone_bricks",
+    "minecraft:oak_fence",
+    "minecraft:potted_dandelion",
+    "minecraft:potted_poppy",
+    "minecraft:oak_leaves"
+  ],
+  "block_indices": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    0,
+    2,
+    3,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
   ]
 }
