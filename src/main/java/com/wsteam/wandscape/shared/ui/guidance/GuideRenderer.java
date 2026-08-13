@@ -46,22 +46,16 @@ public final class GuideRenderer {
                        int toggleX, int toggleY, int toggleS,
                        int wrapW, String title, List<String> lines, String hint, boolean collapsed) {}
 
-    /** Scaled line height used for both layout and vertical advances. */
-    private static int lineH(Font font) {
-        return Math.max(1, Math.round(font.lineHeight * SCALE));
-    }
-
     private static Box layout(Font font, int screenW, int screenH, GuideStep step,
                               boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         int pad = PAD;
-        int lh = lineH(font);
         boolean collapsed = GuideSession.isCollapsed();
         int topY = Math.round(WandscapePanelOverlay.TOP_BAR_H / SCALE);
         int scaledW = Math.round(screenW / SCALE);
 
         if (collapsed) {
             // Compact tab in the top-right corner — only the expand triangle.
-            int s = lh + pad * 2 + 2;
+            int s = font.lineHeight + pad * 2 + 2;
             int x = scaledW - s;
             int y = topY;
             return new Box(x, y, s, s, 0, 0, 0, 0, 0, 9, 0, "", List.of(), "", true);
@@ -70,8 +64,10 @@ public final class GuideRenderer {
         List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
         String hint = step.hint();
 
-        // Wrap everything at one consistent logical width, then size the box to the
-        // widest wrapped piece so there is no empty stretch on the right.
+        // Layout is in pose space (pre-scale): the font draws at logical size there, so
+        // text widths/heights stay logical — the pose scale in render() shrinks everything.
+        // Wrap at one consistent logical width, then size the box to the widest wrapped
+        // piece so no line spills past the flush-right edge.
         int wrapW = Math.min(naturalWidth(font, step.title(), lines, hint), MAX_CONTENT_WIDTH);
         int maxLogicalW = 0;
         int rows = 0;
@@ -90,10 +86,9 @@ public final class GuideRenderer {
             maxLogicalW = Math.max(maxLogicalW, font.width(piece));
         }
 
-        int textW = Math.max(1, Math.round(maxLogicalW * SCALE));
-        int boxW = textW + pad * 2 + BTN_EXTRA;
-        // Each drawn row advances lineH+1, plus a 1px divider gap and 2px hint gap.
-        int boxH = pad * 2 + rows * (lh + 1) + 3;
+        int boxW = maxLogicalW + pad * 2 + BTN_EXTRA;
+        // Each drawn row advances lineHeight+1, plus a 1px divider gap and 2px hint gap.
+        int boxH = pad * 2 + rows * (font.lineHeight + 1) + 3;
 
         // Top-right corner, flush against the right edge, just below the top bar.
         int x = scaledW - boxW;
@@ -171,8 +166,8 @@ public final class GuideRenderer {
             // Collapsed: just the expand triangle, centered in the small tab.
             String icon = "◀";
             boolean hover = isCollapseClicked(font, mx, my, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
-            float ix = b.x + (b.w - font.width(icon) * SCALE) / 2f;
-            float iy = b.y + (b.h - font.lineHeight * SCALE) / 2f;
+            float ix = b.x + (b.w - font.width(icon)) / 2f;
+            float iy = b.y + (b.h - font.lineHeight) / 2f;
             drawText(g, font, icon, ix, iy, hover ? BTN_HOVER : BTN_IDLE);
             g.pose().popPose();
             return;
@@ -217,14 +212,13 @@ public final class GuideRenderer {
                 Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
     }
 
-    /** Draw a possibly-wrapped string, line by line; returns the Y after the last line (scaled units). */
+    /** Draw a possibly-wrapped string, line by line; returns the Y after the last line (pose units). */
     private static float drawWrapped(GuiGraphics g, Font font, String text, float x, float y, int width, int color) {
-        int lh = lineH(font);
         for (FormattedCharSequence line : wrap(font, text, width)) {
             font.drawInBatch(line, x, y, color, false,
                     g.pose().last().pose(), g.bufferSource(),
                     Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
-            y += lh + 1;
+            y += font.lineHeight + 1;
         }
         return y;
     }
