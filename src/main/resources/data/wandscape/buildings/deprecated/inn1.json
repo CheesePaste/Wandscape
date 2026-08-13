@@ -3,6 +3,7 @@
   "display_name": "旅馆",
   "category": "service",
   "first_free": true,
+  "deprecated": true,
   "pattern": [
     [
       0,

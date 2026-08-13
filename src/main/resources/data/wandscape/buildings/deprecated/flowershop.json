@@ -1,0 +1,2609 @@
+{
+  "id": "flowershop",
+  "display_name": "花店",
+  "category": "shop",
+  "deprecated": true,
+  "pattern": [
+    [
+      1,
+      -1,
+      1
+    ],
+    [
+      1,
+      -1,
+      2
+    ],
+    [
+      1,
+      -1,
+      3
+    ],
+    [
+      1,
+      -1,
+      4
+    ],
+    [
+      1,
+      -1,
+      5
+    ],
+    [
+      1,
+      -1,
+      6
+    ],
+    [
+      1,
+      -1,
+      7
+    ],
+    [
+      1,
+      -1,
+      8
+    ],
+    [
+      1,
+      -1,
+      9
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      2
+    ],
+    [
+      1,
+      0,
+      3
+    ],
+    [
+      1,
+      0,
+      4
+    ],
+    [
+      1,
+      0,
+      5
+    ],
+    [
+      1,
+      0,
+      6
+    ],
+    [
+      1,
+      0,
+      7
+    ],
+    [
+      1,
+      0,
+      8
+    ],
+    [
+      1,
+      1,
+      2
+    ],
+    [
+      1,
+      1,
+      3
+    ],
+    [
+      1,
+      1,
+      4
+    ],
+    [
+      1,
+      1,
+      5
+    ],
+    [
+      1,
+      1,
+      6
+    ],
+    [
+      1,
+      1,
+      7
+    ],
+    [
+      1,
+      2,
+      2
+    ],
+    [
+      1,
+      2,
+      7
+    ],
+    [
+      1,
+      3,
+      2
+    ],
+    [
+      1,
+      3,
+      3
+    ],
+    [
+      1,
+      3,
+      4
+    ],
+    [
+      1,
+      3,
+      5
+    ],
+    [
+      1,
+      3,
+      6
+    ],
+    [
+      1,
+      3,
+      7
+    ],
+    [
+      1,
+      4,
+      1
+    ],
+    [
+      1,
+      4,
+      2
+    ],
+    [
+      1,
+      4,
+      3
+    ],
+    [
+      1,
+      4,
+      4
+    ],
+    [
+      1,
+      4,
+      5
+    ],
+    [
+      1,
+      4,
+      6
+    ],
+    [
+      1,
+      4,
+      7
+    ],
+    [
+      1,
+      4,
+      8
+    ],
+    [
+      1,
+      5,
+      2
+    ],
+    [
+      1,
+      5,
+      3
+    ],
+    [
+      1,
+      5,
+      4
+    ],
+    [
+      1,
+      5,
+      5
+    ],
+    [
+      1,
+      5,
+      6
+    ],
+    [
+      1,
+      5,
+      7
+    ],
+    [
+      1,
+      6,
+      4
+    ],
+    [
+      1,
+      6,
+      5
+    ],
+    [
+      2,
+      -1,
+      1
+    ],
+    [
+      2,
+      -1,
+      2
+    ],
+    [
+      2,
+      -1,
+      3
+    ],
+    [
+      2,
+      -1,
+      4
+    ],
+    [
+      2,
+      -1,
+      5
+    ],
+    [
+      2,
+      -1,
+      6
+    ],
+    [
+      2,
+      -1,
+      7
+    ],
+    [
+      2,
+      -1,
+      8
+    ],
+    [
+      2,
+      -1,
+      9
+    ],
+    [
+      2,
+      0,
+      1
+    ],
+    [
+      2,
+      0,
+      2
+    ],
+    [
+      2,
+      0,
+      3
+    ],
+    [
+      2,
+      0,
+      4
+    ],
+    [
+      2,
+      0,
+      5
+    ],
+    [
+      2,
+      0,
+      6
+    ],
+    [
+      2,
+      0,
+      7
+    ],
+    [
+      2,
+      0,
+      8
+    ],
+    [
+      2,
+      1,
+      1
+    ],
+    [
+      2,
+      1,
+      2
+    ],
+    [
+      2,
+      1,
+      3
+    ],
+    [
+      2,
+      1,
+      4
+    ],
+    [
+      2,
+      1,
+      5
+    ],
+    [
+      2,
+      1,
+      6
+    ],
+    [
+      2,
+      1,
+      7
+    ],
+    [
+      2,
+      1,
+      8
+    ],
+    [
+      2,
+      2,
+      1
+    ],
+    [
+      2,
+      2,
+      2
+    ],
+    [
+      2,
+      2,
+      3
+    ],
+    [
+      2,
+      2,
+      4
+    ],
+    [
+      2,
+      2,
+      5
+    ],
+    [
+      2,
+      2,
+      6
+    ],
+    [
+      2,
+      2,
+      7
+    ],
+    [
+      2,
+      2,
+      8
+    ],
+    [
+      2,
+      3,
+      1
+    ],
+    [
+      2,
+      3,
+      2
+    ],
+    [
+      2,
+      3,
+      3
+    ],
+    [
+      2,
+      3,
+      4
+    ],
+    [
+      2,
+      3,
+      5
+    ],
+    [
+      2,
+      3,
+      6
+    ],
+    [
+      2,
+      3,
+      7
+    ],
+    [
+      2,
+      3,
+      8
+    ],
+    [
+      2,
+      4,
+      1
+    ],
+    [
+      2,
+      4,
+      2
+    ],
+    [
+      2,
+      4,
+      3
+    ],
+    [
+      2,
+      4,
+      4
+    ],
+    [
+      2,
+      4,
+      5
+    ],
+    [
+      2,
+      4,
+      6
+    ],
+    [
+      2,
+      4,
+      7
+    ],
+    [
+      2,
+      4,
+      8
+    ],
+    [
+      2,
+      5,
+      2
+    ],
+    [
+      2,
+      5,
+      3
+    ],
+    [
+      2,
+      5,
+      4
+    ],
+    [
+      2,
+      5,
+      5
+    ],
+    [
+      2,
+      5,
+      6
+    ],
+    [
+      2,
+      5,
+      7
+    ],
+    [
+      2,
+      6,
+      4
+    ],
+    [
+      2,
+      6,
+      5
+    ],
+    [
+      3,
+      -1,
+      1
+    ],
+    [
+      3,
+      -1,
+      2
+    ],
+    [
+      3,
+      -1,
+      3
+    ],
+    [
+      3,
+      -1,
+      4
+    ],
+    [
+      3,
+      -1,
+      5
+    ],
+    [
+      3,
+      -1,
+      6
+    ],
+    [
+      3,
+      -1,
+      7
+    ],
+    [
+      3,
+      -1,
+      8
+    ],
+    [
+      3,
+      -1,
+      9
+    ],
+    [
+      3,
+      0,
+      1
+    ],
+    [
+      3,
+      0,
+      2
+    ],
+    [
+      3,
+      0,
+      3
+    ],
+    [
+      3,
+      0,
+      4
+    ],
+    [
+      3,
+      0,
+      5
+    ],
+    [
+      3,
+      0,
+      6
+    ],
+    [
+      3,
+      0,
+      7
+    ],
+    [
+      3,
+      0,
+      8
+    ],
+    [
+      3,
+      1,
+      2
+    ],
+    [
+      3,
+      1,
+      3
+    ],
+    [
+      3,
+      1,
+      4
+    ],
+    [
+      3,
+      1,
+      5
+    ],
+    [
+      3,
+      1,
+      6
+    ],
+    [
+      3,
+      1,
+      7
+    ],
+    [
+      3,
+      2,
+      2
+    ],
+    [
+      3,
+      2,
+      3
+    ],
+    [
+      3,
+      2,
+      4
+    ],
+    [
+      3,
+      2,
+      5
+    ],
+    [
+      3,
+      2,
+      6
+    ],
+    [
+      3,
+      2,
+      7
+    ],
+    [
+      3,
+      3,
+      2
+    ],
+    [
+      3,
+      3,
+      3
+    ],
+    [
+      3,
+      3,
+      4
+    ],
+    [
+      3,
+      3,
+      5
+    ],
+    [
+      3,
+      3,
+      7
+    ],
+    [
+      3,
+      3,
+      8
+    ],
+    [
+      3,
+      4,
+      1
+    ],
+    [
+      3,
+      4,
+      2
+    ],
+    [
+      3,
+      4,
+      7
+    ],
+    [
+      3,
+      4,
+      8
+    ],
+    [
+      3,
+      5,
+      2
+    ],
+    [
+      3,
+      5,
+      3
+    ],
+    [
+      3,
+      5,
+      4
+    ],
+    [
+      3,
+      5,
+      5
+    ],
+    [
+      3,
+      5,
+      6
+    ],
+    [
+      3,
+      5,
+      7
+    ],
+    [
+      3,
+      6,
+      4
+    ],
+    [
+      3,
+      6,
+      5
+    ],
+    [
+      4,
+      -1,
+      1
+    ],
+    [
+      4,
+      -1,
+      2
+    ],
+    [
+      4,
+      -1,
+      3
+    ],
+    [
+      4,
+      -1,
+      4
+    ],
+    [
+      4,
+      -1,
+      5
+    ],
+    [
+      4,
+      -1,
+      6
+    ],
+    [
+      4,
+      -1,
+      7
+    ],
+    [
+      4,
+      -1,
+      8
+    ],
+    [
+      4,
+      -1,
+      9
+    ],
+    [
+      4,
+      0,
+      1
+    ],
+    [
+      4,
+      0,
+      2
+    ],
+    [
+      4,
+      0,
+      3
+    ],
+    [
+      4,
+      0,
+      4
+    ],
+    [
+      4,
+      0,
+      7
+    ],
+    [
+      4,
+      0,
+      8
+    ],
+    [
+      4,
+      1,
+      2
+    ],
+    [
+      4,
+      1,
+      3
+    ],
+    [
+      4,
+      1,
+      7
+    ],
+    [
+      4,
+      2,
+      2
+    ],
+    [
+      4,
+      2,
+      3
+    ],
+    [
+      4,
+      2,
+      7
+    ],
+    [
+      4,
+      3,
+      2
+    ],
+    [
+      4,
+      3,
+      7
+    ],
+    [
+      4,
+      3,
+      8
+    ],
+    [
+      4,
+      4,
+      1
+    ],
+    [
+      4,
+      4,
+      2
+    ],
+    [
+      4,
+      4,
+      7
+    ],
+    [
+      4,
+      4,
+      8
+    ],
+    [
+      4,
+      5,
+      2
+    ],
+    [
+      4,
+      5,
+      3
+    ],
+    [
+      4,
+      5,
+      6
+    ],
+    [
+      4,
+      5,
+      7
+    ],
+    [
+      4,
+      6,
+      4
+    ],
+    [
+      4,
+      6,
+      5
+    ],
+    [
+      5,
+      -1,
+      1
+    ],
+    [
+      5,
+      -1,
+      2
+    ],
+    [
+      5,
+      -1,
+      3
+    ],
+    [
+      5,
+      -1,
+      4
+    ],
+    [
+      5,
+      -1,
+      5
+    ],
+    [
+      5,
+      -1,
+      6
+    ],
+    [
+      5,
+      -1,
+      7
+    ],
+    [
+      5,
+      -1,
+      8
+    ],
+    [
+      5,
+      -1,
+      9
+    ],
+    [
+      5,
+      0,
+      1
+    ],
+    [
+      5,
+      0,
+      2
+    ],
+    [
+      5,
+      0,
+      3
+    ],
+    [
+      5,
+      0,
+      7
+    ],
+    [
+      5,
+      0,
+      8
+    ],
+    [
+      5,
+      1,
+      2
+    ],
+    [
+      5,
+      1,
+      7
+    ],
+    [
+      5,
+      2,
+      2
+    ],
+    [
+      5,
+      2,
+      7
+    ],
+    [
+      5,
+      3,
+      2
+    ],
+    [
+      5,
+      3,
+      7
+    ],
+    [
+      5,
+      3,
+      8
+    ],
+    [
+      5,
+      4,
+      1
+    ],
+    [
+      5,
+      4,
+      2
+    ],
+    [
+      5,
+      4,
+      7
+    ],
+    [
+      5,
+      4,
+      8
+    ],
+    [
+      5,
+      5,
+      2
+    ],
+    [
+      5,
+      5,
+      3
+    ],
+    [
+      5,
+      5,
+      6
+    ],
+    [
+      5,
+      5,
+      7
+    ],
+    [
+      5,
+      6,
+      4
+    ],
+    [
+      5,
+      6,
+      5
+    ],
+    [
+      6,
+      -1,
+      1
+    ],
+    [
+      6,
+      -1,
+      2
+    ],
+    [
+      6,
+      -1,
+      3
+    ],
+    [
+      6,
+      -1,
+      4
+    ],
+    [
+      6,
+      -1,
+      5
+    ],
+    [
+      6,
+      -1,
+      6
+    ],
+    [
+      6,
+      -1,
+      7
+    ],
+    [
+      6,
+      -1,
+      8
+    ],
+    [
+      6,
+      -1,
+      9
+    ],
+    [
+      6,
+      0,
+      1
+    ],
+    [
+      6,
+      0,
+      2
+    ],
+    [
+      6,
+      0,
+      3
+    ],
+    [
+      6,
+      0,
+      4
+    ],
+    [
+      6,
+      0,
+      7
+    ],
+    [
+      6,
+      0,
+      8
+    ],
+    [
+      6,
+      1,
+      1
+    ],
+    [
+      6,
+      1,
+      2
+    ],
+    [
+      6,
+      1,
+      3
+    ],
+    [
+      6,
+      1,
+      7
+    ],
+    [
+      6,
+      2,
+      1
+    ],
+    [
+      6,
+      2,
+      2
+    ],
+    [
+      6,
+      2,
+      3
+    ],
+    [
+      6,
+      2,
+      7
+    ],
+    [
+      6,
+      3,
+      1
+    ],
+    [
+      6,
+      3,
+      2
+    ],
+    [
+      6,
+      3,
+      7
+    ],
+    [
+      6,
+      3,
+      8
+    ],
+    [
+      6,
+      4,
+      1
+    ],
+    [
+      6,
+      4,
+      2
+    ],
+    [
+      6,
+      4,
+      7
+    ],
+    [
+      6,
+      4,
+      8
+    ],
+    [
+      6,
+      5,
+      2
+    ],
+    [
+      6,
+      5,
+      3
+    ],
+    [
+      6,
+      5,
+      6
+    ],
+    [
+      6,
+      5,
+      7
+    ],
+    [
+      6,
+      6,
+      4
+    ],
+    [
+      6,
+      6,
+      5
+    ],
+    [
+      7,
+      -1,
+      1
+    ],
+    [
+      7,
+      -1,
+      2
+    ],
+    [
+      7,
+      -1,
+      3
+    ],
+    [
+      7,
+      -1,
+      4
+    ],
+    [
+      7,
+      -1,
+      5
+    ],
+    [
+      7,
+      -1,
+      6
+    ],
+    [
+      7,
+      -1,
+      7
+    ],
+    [
+      7,
+      -1,
+      8
+    ],
+    [
+      7,
+      -1,
+      9
+    ],
+    [
+      7,
+      0,
+      1
+    ],
+    [
+      7,
+      0,
+      2
+    ],
+    [
+      7,
+      0,
+      3
+    ],
+    [
+      7,
+      0,
+      7
+    ],
+    [
+      7,
+      1,
+      2
+    ],
+    [
+      7,
+      1,
+      3
+    ],
+    [
+      7,
+      1,
+      7
+    ],
+    [
+      7,
+      2,
+      2
+    ],
+    [
+      7,
+      2,
+      7
+    ],
+    [
+      7,
+      3,
+      2
+    ],
+    [
+      7,
+      3,
+      7
+    ],
+    [
+      7,
+      4,
+      1
+    ],
+    [
+      7,
+      4,
+      2
+    ],
+    [
+      7,
+      4,
+      7
+    ],
+    [
+      7,
+      4,
+      8
+    ],
+    [
+      7,
+      5,
+      2
+    ],
+    [
+      7,
+      5,
+      3
+    ],
+    [
+      7,
+      5,
+      6
+    ],
+    [
+      7,
+      5,
+      7
+    ],
+    [
+      7,
+      6,
+      4
+    ],
+    [
+      7,
+      6,
+      5
+    ],
+    [
+      8,
+      -1,
+      1
+    ],
+    [
+      8,
+      -1,
+      2
+    ],
+    [
+      8,
+      -1,
+      3
+    ],
+    [
+      8,
+      -1,
+      4
+    ],
+    [
+      8,
+      -1,
+      5
+    ],
+    [
+      8,
+      -1,
+      6
+    ],
+    [
+      8,
+      -1,
+      7
+    ],
+    [
+      8,
+      -1,
+      8
+    ],
+    [
+      8,
+      -1,
+      9
+    ],
+    [
+      8,
+      0,
+      1
+    ],
+    [
+      8,
+      0,
+      2
+    ],
+    [
+      8,
+      0,
+      3
+    ],
+    [
+      8,
+      0,
+      4
+    ],
+    [
+      8,
+      0,
+      7
+    ],
+    [
+      8,
+      1,
+      2
+    ],
+    [
+      8,
+      1,
+      3
+    ],
+    [
+      8,
+      1,
+      7
+    ],
+    [
+      8,
+      2,
+      2
+    ],
+    [
+      8,
+      2,
+      7
+    ],
+    [
+      8,
+      2,
+      8
+    ],
+    [
+      8,
+      3,
+      2
+    ],
+    [
+      8,
+      3,
+      7
+    ],
+    [
+      8,
+      4,
+      1
+    ],
+    [
+      8,
+      4,
+      2
+    ],
+    [
+      8,
+      4,
+      7
+    ],
+    [
+      8,
+      4,
+      8
+    ],
+    [
+      8,
+      5,
+      2
+    ],
+    [
+      8,
+      5,
+      3
+    ],
+    [
+      8,
+      5,
+      4
+    ],
+    [
+      8,
+      5,
+      5
+    ],
+    [
+      8,
+      5,
+      6
+    ],
+    [
+      8,
+      5,
+      7
+    ],
+    [
+      8,
+      6,
+      4
+    ],
+    [
+      8,
+      6,
+      5
+    ],
+    [
+      9,
+      -1,
+      1
+    ],
+    [
+      9,
+      -1,
+      2
+    ],
+    [
+      9,
+      -1,
+      3
+    ],
+    [
+      9,
+      -1,
+      4
+    ],
+    [
+      9,
+      -1,
+      5
+    ],
+    [
+      9,
+      -1,
+      6
+    ],
+    [
+      9,
+      -1,
+      7
+    ],
+    [
+      9,
+      -1,
+      8
+    ],
+    [
+      9,
+      -1,
+      9
+    ],
+    [
+      9,
+      0,
+      1
+    ],
+    [
+      9,
+      0,
+      2
+    ],
+    [
+      9,
+      0,
+      3
+    ],
+    [
+      9,
+      0,
+      4
+    ],
+    [
+      9,
+      0,
+      5
+    ],
+    [
+      9,
+      0,
+      6
+    ],
+    [
+      9,
+      0,
+      7
+    ],
+    [
+      9,
+      0,
+      8
+    ],
+    [
+      9,
+      1,
+      1
+    ],
+    [
+      9,
+      1,
+      2
+    ],
+    [
+      9,
+      1,
+      3
+    ],
+    [
+      9,
+      1,
+      4
+    ],
+    [
+      9,
+      1,
+      5
+    ],
+    [
+      9,
+      1,
+      6
+    ],
+    [
+      9,
+      1,
+      7
+    ],
+    [
+      9,
+      1,
+      8
+    ],
+    [
+      9,
+      2,
+      1
+    ],
+    [
+      9,
+      2,
+      2
+    ],
+    [
+      9,
+      2,
+      3
+    ],
+    [
+      9,
+      2,
+      4
+    ],
+    [
+      9,
+      2,
+      5
+    ],
+    [
+      9,
+      2,
+      6
+    ],
+    [
+      9,
+      2,
+      7
+    ],
+    [
+      9,
+      2,
+      8
+    ],
+    [
+      9,
+      2,
+      9
+    ],
+    [
+      9,
+      3,
+      1
+    ],
+    [
+      9,
+      3,
+      2
+    ],
+    [
+      9,
+      3,
+      3
+    ],
+    [
+      9,
+      3,
+      4
+    ],
+    [
+      9,
+      3,
+      5
+    ],
+    [
+      9,
+      3,
+      6
+    ],
+    [
+      9,
+      3,
+      7
+    ],
+    [
+      9,
+      3,
+      8
+    ],
+    [
+      9,
+      4,
+      1
+    ],
+    [
+      9,
+      4,
+      2
+    ],
+    [
+      9,
+      4,
+      3
+    ],
+    [
+      9,
+      4,
+      4
+    ],
+    [
+      9,
+      4,
+      5
+    ],
+    [
+      9,
+      4,
+      6
+    ],
+    [
+      9,
+      4,
+      7
+    ],
+    [
+      9,
+      4,
+      8
+    ],
+    [
+      9,
+      5,
+      2
+    ],
+    [
+      9,
+      5,
+      3
+    ],
+    [
+      9,
+      5,
+      4
+    ],
+    [
+      9,
+      5,
+      5
+    ],
+    [
+      9,
+      5,
+      6
+    ],
+    [
+      9,
+      5,
+      7
+    ],
+    [
+      9,
+      6,
+      4
+    ],
+    [
+      9,
+      6,
+      5
+    ],
+    [
+      10,
+      -1,
+      1
+    ],
+    [
+      10,
+      -1,
+      2
+    ],
+    [
+      10,
+      -1,
+      3
+    ],
+    [
+      10,
+      -1,
+      4
+    ],
+    [
+      10,
+      -1,
+      5
+    ],
+    [
+      10,
+      -1,
+      6
+    ],
+    [
+      10,
+      -1,
+      7
+    ],
+    [
+      10,
+      -1,
+      8
+    ],
+    [
+      10,
+      -1,
+      9
+    ],
+    [
+      10,
+      0,
+      1
+    ],
+    [
+      10,
+      0,
+      2
+    ],
+    [
+      10,
+      0,
+      3
+    ],
+    [
+      10,
+      0,
+      4
+    ],
+    [
+      10,
+      0,
+      5
+    ],
+    [
+      10,
+      0,
+      6
+    ],
+    [
+      10,
+      0,
+      7
+    ],
+    [
+      10,
+      0,
+      8
+    ],
+    [
+      10,
+      1,
+      2
+    ],
+    [
+      10,
+      1,
+      5
+    ],
+    [
+      10,
+      1,
+      7
+    ],
+    [
+      10,
+      2,
+      2
+    ],
+    [
+      10,
+      2,
+      7
+    ],
+    [
+      10,
+      2,
+      8
+    ],
+    [
+      10,
+      3,
+      2
+    ],
+    [
+      10,
+      3,
+      7
+    ],
+    [
+      10,
+      4,
+      1
+    ],
+    [
+      10,
+      4,
+      2
+    ],
+    [
+      10,
+      4,
+      3
+    ],
+    [
+      10,
+      4,
+      4
+    ],
+    [
+      10,
+      4,
+      5
+    ],
+    [
+      10,
+      4,
+      6
+    ],
+    [
+      10,
+      4,
+      7
+    ],
+    [
+      10,
+      4,
+      8
+    ],
+    [
+      10,
+      5,
+      2
+    ],
+    [
+      10,
+      5,
+      3
+    ],
+    [
+      10,
+      5,
+      4
+    ],
+    [
+      10,
+      5,
+      5
+    ],
+    [
+      10,
+      5,
+      6
+    ],
+    [
+      10,
+      5,
+      7
+    ],
+    [
+      10,
+      6,
+      4
+    ],
+    [
+      10,
+      6,
+      5
+    ]
+  ],
+  "block_mapping": {
+    "1,-1,1": "minecraft:deepslate_bricks",
+    "1,-1,2": "minecraft:deepslate_bricks",
+    "1,-1,3": "minecraft:deepslate_bricks",
+    "1,-1,4": "minecraft:deepslate_bricks",
+    "1,-1,5": "minecraft:deepslate_bricks",
+    "1,-1,6": "minecraft:deepslate_bricks",
+    "1,-1,7": "minecraft:deepslate_bricks",
+    "1,-1,8": "minecraft:deepslate_bricks",
+    "1,-1,9": "minecraft:deepslate_bricks",
+    "1,0,1": "minecraft:deepslate_brick_stairs[facing=east,half=top,shape=outer_right]",
+    "1,0,2": "minecraft:deepslate_brick_stairs[facing=east,half=top]",
+    "1,0,3": "minecraft:deepslate_brick_stairs[facing=east,half=top]",
+    "1,0,4": "minecraft:deepslate_brick_stairs[facing=east,half=top]",
+    "1,0,5": "minecraft:deepslate_brick_stairs[facing=east,half=top]",
+    "1,0,6": "minecraft:deepslate_brick_stairs[facing=east,half=top]",
+    "1,0,7": "minecraft:deepslate_brick_stairs[facing=east,half=top]",
+    "1,0,8": "minecraft:deepslate_brick_stairs[facing=east,half=top,shape=outer_left]",
+    "1,1,2": "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
+    "1,1,3": "minecraft:deepslate_brick_stairs[half=top]",
+    "1,1,4": "minecraft:wall_torch[facing=west]",
+    "1,1,5": "minecraft:wall_torch[facing=west]",
+    "1,1,6": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "1,1,7": "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
+    "1,2,2": "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
+    "1,2,7": "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
+    "1,3,2": "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
+    "1,3,3": "minecraft:red_wall_banner[facing=west]",
+    "1,3,4": "minecraft:red_wall_banner[facing=west]",
+    "1,3,5": "minecraft:red_wall_banner[facing=west]",
+    "1,3,6": "minecraft:red_wall_banner[facing=west]",
+    "1,3,7": "minecraft:spruce_trapdoor[facing=west,half=top,open=true]",
+    "1,4,1": "minecraft:deepslate_tile_stairs[facing=east,half=top,shape=outer_right]",
+    "1,4,2": "minecraft:deepslate_tile_stairs[half=top,shape=outer_right]",
+    "1,4,3": "minecraft:spruce_fence[east=true,south=true]",
+    "1,4,4": "minecraft:spruce_fence[east=true,north=true,south=true]",
+    "1,4,5": "minecraft:spruce_fence[east=true,north=true,south=true]",
+    "1,4,6": "minecraft:spruce_fence[east=true,north=true]",
+    "1,4,7": "minecraft:deepslate_tile_stairs[facing=south,half=top,shape=outer_left]",
+    "1,4,8": "minecraft:deepslate_tile_stairs[facing=east,half=top,shape=outer_left]",
+    "1,5,2": "minecraft:deepslate_tile_slab",
+    "1,5,3": "minecraft:deepslate_tile_stairs[facing=south]",
+    "1,5,4": "minecraft:spruce_fence[east=true,north=true,south=true]",
+    "1,5,5": "minecraft:spruce_fence[east=true,north=true,south=true]",
+    "1,5,6": "minecraft:deepslate_tile_stairs",
+    "1,5,7": "minecraft:deepslate_tile_slab",
+    "1,6,4": "minecraft:deepslate_tile_stairs[facing=south]",
+    "1,6,5": "minecraft:deepslate_tile_stairs",
+    "10,-1,1": "minecraft:deepslate_bricks",
+    "10,-1,2": "minecraft:deepslate_bricks",
+    "10,-1,3": "minecraft:deepslate_bricks",
+    "10,-1,4": "minecraft:deepslate_bricks",
+    "10,-1,5": "minecraft:deepslate_bricks",
+    "10,-1,6": "minecraft:deepslate_bricks",
+    "10,-1,7": "minecraft:deepslate_bricks",
+    "10,-1,8": "minecraft:deepslate_bricks",
+    "10,-1,9": "minecraft:deepslate_bricks",
+    "10,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top,shape=outer_right]",
+    "10,0,2": "minecraft:deepslate_brick_stairs[facing=west,half=top]",
+    "10,0,3": "minecraft:deepslate_brick_stairs[facing=west,half=top]",
+    "10,0,4": "minecraft:deepslate_brick_stairs[facing=west,half=top]",
+    "10,0,5": "minecraft:deepslate_brick_stairs[facing=west,half=top]",
+    "10,0,6": "minecraft:deepslate_brick_stairs[facing=west,half=top]",
+    "10,0,7": "minecraft:deepslate_brick_stairs[facing=west,half=top]",
+    "10,0,8": "minecraft:deepslate_brick_stairs[facing=west,half=top,shape=outer_right]",
+    "10,1,2": "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "10,1,5": "minecraft:potted_poppy",
+    "10,1,7": "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "10,2,2": "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "10,2,7": "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "10,2,8": "minecraft:red_wall_banner[facing=east]",
+    "10,3,2": "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "10,3,7": "minecraft:spruce_trapdoor[facing=east,half=top,open=true]",
+    "10,4,1": "minecraft:deepslate_tile_stairs[facing=west,half=top,shape=outer_left]",
+    "10,4,2": "minecraft:deepslate_tile_stairs[half=top,shape=outer_left]",
+    "10,4,3": "minecraft:spruce_fence[south=true,west=true]",
+    "10,4,4": "minecraft:spruce_fence[north=true,south=true,west=true]",
+    "10,4,5": "minecraft:spruce_fence[north=true,south=true,west=true]",
+    "10,4,6": "minecraft:spruce_fence[north=true,west=true]",
+    "10,4,7": "minecraft:deepslate_tile_stairs[facing=south,half=top,shape=outer_right]",
+    "10,4,8": "minecraft:deepslate_tile_stairs[facing=west,half=top,shape=outer_right]",
+    "10,5,2": "minecraft:deepslate_tile_slab",
+    "10,5,3": "minecraft:deepslate_tile_stairs[facing=south]",
+    "10,5,4": "minecraft:spruce_fence[north=true,south=true,west=true]",
+    "10,5,5": "minecraft:spruce_fence[north=true,south=true,west=true]",
+    "10,5,6": "minecraft:deepslate_tile_stairs",
+    "10,5,7": "minecraft:deepslate_tile_slab",
+    "10,6,4": "minecraft:deepslate_tile_stairs[facing=south]",
+    "10,6,5": "minecraft:deepslate_tile_stairs",
+    "2,-1,1": "minecraft:deepslate_bricks",
+    "2,-1,2": "minecraft:deepslate_bricks",
+    "2,-1,3": "minecraft:deepslate_bricks",
+    "2,-1,4": "minecraft:deepslate_bricks",
+    "2,-1,5": "minecraft:deepslate_bricks",
+    "2,-1,6": "minecraft:deepslate_bricks",
+    "2,-1,7": "minecraft:deepslate_bricks",
+    "2,-1,8": "minecraft:deepslate_bricks",
+    "2,-1,9": "minecraft:deepslate_bricks",
+    "2,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "2,0,2": "minecraft:spruce_log",
+    "2,0,3": "minecraft:white_terracotta",
+    "2,0,4": "minecraft:white_terracotta",
+    "2,0,5": "minecraft:white_terracotta",
+    "2,0,6": "minecraft:white_terracotta",
+    "2,0,7": "minecraft:spruce_log",
+    "2,0,8": "minecraft:deepslate_brick_stairs[half=top]",
+    "2,1,1": "minecraft:spruce_fence[south=true]",
+    "2,1,2": "minecraft:spruce_log",
+    "2,1,3": "minecraft:deepslate_bricks",
+    "2,1,4": "minecraft:deepslate_bricks",
+    "2,1,5": "minecraft:deepslate_bricks",
+    "2,1,6": "minecraft:deepslate_bricks",
+    "2,1,7": "minecraft:spruce_log",
+    "2,1,8": "minecraft:spruce_trapdoor[facing=south,open=true]",
+    "2,2,1": "minecraft:spruce_fence[south=true]",
+    "2,2,2": "minecraft:spruce_log",
+    "2,2,3": "minecraft:deepslate_bricks",
+    "2,2,4": "minecraft:deepslate_bricks",
+    "2,2,5": "minecraft:deepslate_bricks",
+    "2,2,6": "minecraft:deepslate_bricks",
+    "2,2,7": "minecraft:spruce_log",
+    "2,2,8": "minecraft:spruce_trapdoor[facing=south,open=true]",
+    "2,3,1": "minecraft:spruce_fence[south=true]",
+    "2,3,2": "minecraft:spruce_log",
+    "2,3,3": "minecraft:deepslate_bricks",
+    "2,3,4": "minecraft:deepslate_bricks",
+    "2,3,5": "minecraft:deepslate_bricks",
+    "2,3,6": "minecraft:deepslate_bricks",
+    "2,3,7": "minecraft:spruce_log",
+    "2,3,8": "minecraft:spruce_trapdoor[facing=south,open=true]",
+    "2,4,1": "minecraft:deepslate_tile_stairs[facing=south,half=top]",
+    "2,4,2": "minecraft:spruce_log",
+    "2,4,3": "minecraft:white_terracotta",
+    "2,4,4": "minecraft:white_terracotta",
+    "2,4,5": "minecraft:white_terracotta",
+    "2,4,6": "minecraft:white_terracotta",
+    "2,4,7": "minecraft:spruce_log",
+    "2,4,8": "minecraft:deepslate_tile_stairs[half=top]",
+    "2,5,2": "minecraft:polished_deepslate_slab",
+    "2,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "2,5,4": "minecraft:white_terracotta",
+    "2,5,5": "minecraft:white_terracotta",
+    "2,5,6": "minecraft:polished_deepslate_stairs",
+    "2,5,7": "minecraft:polished_deepslate_slab",
+    "2,6,4": "minecraft:deepslate_tile_slab",
+    "2,6,5": "minecraft:deepslate_tile_slab",
+    "3,-1,1": "minecraft:deepslate_bricks",
+    "3,-1,2": "minecraft:deepslate_bricks",
+    "3,-1,3": "minecraft:deepslate_bricks",
+    "3,-1,4": "minecraft:deepslate_bricks",
+    "3,-1,5": "minecraft:deepslate_bricks",
+    "3,-1,6": "minecraft:deepslate_bricks",
+    "3,-1,7": "minecraft:deepslate_bricks",
+    "3,-1,8": "minecraft:deepslate_bricks",
+    "3,-1,9": "minecraft:deepslate_bricks",
+    "3,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "3,0,2": "minecraft:white_terracotta",
+    "3,0,3": "minecraft:spruce_slab[type=top]",
+    "3,0,4": "minecraft:spruce_slab[type=top]",
+    "3,0,5": "minecraft:spruce_slab[type=top]",
+    "3,0,6": "minecraft:spruce_slab[type=top]",
+    "3,0,7": "minecraft:deepslate_bricks",
+    "3,0,8": "minecraft:deepslate_brick_stairs[half=top]",
+    "3,1,2": "minecraft:glass",
+    "3,1,3": "minecraft:potted_poppy",
+    "3,1,4": "minecraft:potted_dandelion",
+    "3,1,5": "minecraft:potted_blue_orchid",
+    "3,1,6": "minecraft:potted_azure_bluet",
+    "3,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
+    "3,2,2": "minecraft:glass",
+    "3,2,3": "minecraft:spruce_slab[type=top]",
+    "3,2,4": "minecraft:spruce_slab[type=top]",
+    "3,2,5": "minecraft:spruce_slab[type=top]",
+    "3,2,6": "minecraft:wall_torch[facing=east]",
+    "3,2,7": "minecraft:glass",
+    "3,3,2": "minecraft:deepslate_bricks",
+    "3,3,3": "minecraft:potted_oxeye_daisy",
+    "3,3,4": "minecraft:potted_lily_of_the_valley",
+    "3,3,5": "minecraft:potted_pink_tulip",
+    "3,3,7": "minecraft:white_terracotta",
+    "3,3,8": "minecraft:yellow_wool",
+    "3,4,1": "minecraft:deepslate_tile_slab[type=top]",
+    "3,4,2": "minecraft:white_terracotta",
+    "3,4,7": "minecraft:white_terracotta",
+    "3,4,8": "minecraft:deepslate_tile_slab[type=top]",
+    "3,5,2": "minecraft:polished_deepslate_slab",
+    "3,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "3,5,4": "minecraft:lantern[hanging=true]",
+    "3,5,5": "minecraft:lantern[hanging=true]",
+    "3,5,6": "minecraft:polished_deepslate_stairs",
+    "3,5,7": "minecraft:polished_deepslate_slab",
+    "3,6,4": "minecraft:deepslate_tile_slab",
+    "3,6,5": "minecraft:deepslate_tile_slab",
+    "4,-1,1": "minecraft:deepslate_bricks",
+    "4,-1,2": "minecraft:deepslate_bricks",
+    "4,-1,3": "minecraft:deepslate_bricks",
+    "4,-1,4": "minecraft:deepslate_bricks",
+    "4,-1,5": "minecraft:deepslate_bricks",
+    "4,-1,6": "minecraft:deepslate_bricks",
+    "4,-1,7": "minecraft:deepslate_bricks",
+    "4,-1,8": "minecraft:deepslate_bricks",
+    "4,-1,9": "minecraft:deepslate_bricks",
+    "4,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "4,0,2": "minecraft:white_terracotta",
+    "4,0,3": "minecraft:beehive[facing=south]",
+    "4,0,4": "minecraft:oak_button[facing=south]",
+    "4,0,7": "minecraft:deepslate_bricks",
+    "4,0,8": "minecraft:deepslate_brick_stairs[half=top]",
+    "4,1,2": "minecraft:deepslate_bricks",
+    "4,1,3": "minecraft:birch_wall_sign[facing=south]",
+    "4,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
+    "4,2,2": "minecraft:deepslate_bricks",
+    "4,2,3": "minecraft:wall_torch[facing=south]",
+    "4,2,7": "minecraft:glass",
+    "4,3,2": "minecraft:deepslate_bricks",
+    "4,3,7": "minecraft:white_terracotta",
+    "4,3,8": "minecraft:lime_wool",
+    "4,4,1": "minecraft:deepslate_tile_slab[type=top]",
+    "4,4,2": "minecraft:white_terracotta",
+    "4,4,7": "minecraft:white_terracotta",
+    "4,4,8": "minecraft:deepslate_tile_slab[type=top]",
+    "4,5,2": "minecraft:polished_deepslate_slab",
+    "4,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "4,5,6": "minecraft:polished_deepslate_stairs",
+    "4,5,7": "minecraft:polished_deepslate_slab",
+    "4,6,4": "minecraft:deepslate_tile_slab",
+    "4,6,5": "minecraft:deepslate_tile_slab",
+    "5,-1,1": "minecraft:deepslate_bricks",
+    "5,-1,2": "minecraft:deepslate_bricks",
+    "5,-1,3": "minecraft:deepslate_bricks",
+    "5,-1,4": "minecraft:deepslate_bricks",
+    "5,-1,5": "minecraft:deepslate_bricks",
+    "5,-1,6": "minecraft:deepslate_bricks",
+    "5,-1,7": "minecraft:deepslate_bricks",
+    "5,-1,8": "minecraft:deepslate_bricks",
+    "5,-1,9": "minecraft:deepslate_bricks",
+    "5,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "5,0,2": "minecraft:white_terracotta",
+    "5,0,3": "minecraft:crafting_table",
+    "5,0,7": "minecraft:deepslate_bricks",
+    "5,0,8": "minecraft:deepslate_brick_stairs[half=top]",
+    "5,1,2": "minecraft:glass",
+    "5,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
+    "5,2,2": "minecraft:glass",
+    "5,2,7": "minecraft:glass",
+    "5,3,2": "minecraft:deepslate_bricks",
+    "5,3,7": "minecraft:white_terracotta",
+    "5,3,8": "minecraft:yellow_wool",
+    "5,4,1": "minecraft:deepslate_tile_slab[type=top]",
+    "5,4,2": "minecraft:white_terracotta",
+    "5,4,7": "minecraft:white_terracotta",
+    "5,4,8": "minecraft:deepslate_tile_slab[type=top]",
+    "5,5,2": "minecraft:polished_deepslate_slab",
+    "5,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "5,5,6": "minecraft:polished_deepslate_stairs",
+    "5,5,7": "minecraft:polished_deepslate_slab",
+    "5,6,4": "minecraft:deepslate_tile_slab",
+    "5,6,5": "minecraft:deepslate_tile_slab",
+    "6,-1,1": "minecraft:deepslate_bricks",
+    "6,-1,2": "minecraft:deepslate_bricks",
+    "6,-1,3": "minecraft:deepslate_bricks",
+    "6,-1,4": "minecraft:deepslate_bricks",
+    "6,-1,5": "minecraft:deepslate_bricks",
+    "6,-1,6": "minecraft:deepslate_bricks",
+    "6,-1,7": "minecraft:deepslate_bricks",
+    "6,-1,8": "minecraft:deepslate_bricks",
+    "6,-1,9": "minecraft:deepslate_bricks",
+    "6,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "6,0,2": "minecraft:spruce_log",
+    "6,0,3": "minecraft:beehive[facing=south]",
+    "6,0,4": "minecraft:oak_button[facing=south]",
+    "6,0,7": "minecraft:deepslate_bricks",
+    "6,0,8": "minecraft:deepslate_brick_stairs[facing=west,half=top,shape=outer_right]",
+    "6,1,1": "minecraft:spruce_fence[south=true]",
+    "6,1,2": "minecraft:spruce_log",
+    "6,1,3": "minecraft:birch_wall_sign[facing=south]",
+    "6,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
+    "6,2,1": "minecraft:spruce_fence[south=true]",
+    "6,2,2": "minecraft:spruce_log",
+    "6,2,3": "minecraft:wall_torch[facing=south]",
+    "6,2,7": "minecraft:glass",
+    "6,3,1": "minecraft:spruce_fence[south=true]",
+    "6,3,2": "minecraft:spruce_log",
+    "6,3,7": "minecraft:white_terracotta",
+    "6,3,8": "minecraft:lime_wool",
+    "6,4,1": "minecraft:deepslate_tile_stairs[facing=south,half=top]",
+    "6,4,2": "minecraft:spruce_log",
+    "6,4,7": "minecraft:white_terracotta",
+    "6,4,8": "minecraft:deepslate_tile_slab[type=top]",
+    "6,5,2": "minecraft:polished_deepslate_slab",
+    "6,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "6,5,6": "minecraft:polished_deepslate_stairs",
+    "6,5,7": "minecraft:polished_deepslate_slab",
+    "6,6,4": "minecraft:deepslate_tile_slab",
+    "6,6,5": "minecraft:deepslate_tile_slab",
+    "7,-1,1": "minecraft:deepslate_bricks",
+    "7,-1,2": "minecraft:deepslate_bricks",
+    "7,-1,3": "minecraft:deepslate_bricks",
+    "7,-1,4": "minecraft:deepslate_bricks",
+    "7,-1,5": "minecraft:deepslate_bricks",
+    "7,-1,6": "minecraft:deepslate_bricks",
+    "7,-1,7": "minecraft:deepslate_bricks",
+    "7,-1,8": "minecraft:deepslate_bricks",
+    "7,-1,9": "minecraft:deepslate_bricks",
+    "7,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "7,0,2": "minecraft:white_terracotta",
+    "7,0,3": "minecraft:barrel[facing=south]",
+    "7,0,7": "minecraft:bamboo_door",
+    "7,1,2": "minecraft:deepslate_bricks",
+    "7,1,3": "minecraft:barrel[facing=south]",
+    "7,1,7": "minecraft:bamboo_door[half=upper]",
+    "7,2,2": "minecraft:deepslate_bricks",
+    "7,2,7": "minecraft:deepslate_bricks",
+    "7,3,2": "minecraft:deepslate_bricks",
+    "7,3,7": "minecraft:white_terracotta",
+    "7,4,1": "minecraft:deepslate_tile_slab[type=top]",
+    "7,4,2": "minecraft:white_terracotta",
+    "7,4,7": "minecraft:white_terracotta",
+    "7,4,8": "minecraft:deepslate_tile_slab[type=top]",
+    "7,5,2": "minecraft:polished_deepslate_slab",
+    "7,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "7,5,6": "minecraft:polished_deepslate_stairs",
+    "7,5,7": "minecraft:polished_deepslate_slab",
+    "7,6,4": "minecraft:deepslate_tile_slab",
+    "7,6,5": "minecraft:deepslate_tile_slab",
+    "8,-1,1": "minecraft:deepslate_bricks",
+    "8,-1,2": "minecraft:deepslate_bricks",
+    "8,-1,3": "minecraft:deepslate_bricks",
+    "8,-1,4": "minecraft:deepslate_bricks",
+    "8,-1,5": "minecraft:deepslate_bricks",
+    "8,-1,6": "minecraft:deepslate_bricks",
+    "8,-1,7": "minecraft:deepslate_bricks",
+    "8,-1,8": "minecraft:deepslate_bricks",
+    "8,-1,9": "minecraft:deepslate_bricks",
+    "8,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "8,0,2": "minecraft:white_terracotta",
+    "8,0,3": "minecraft:barrel[facing=south]",
+    "8,0,4": "minecraft:barrel[facing=west]",
+    "8,0,7": "minecraft:bamboo_door[hinge=right]",
+    "8,1,2": "minecraft:deepslate_bricks",
+    "8,1,3": "minecraft:wall_torch[facing=south]",
+    "8,1,7": "minecraft:bamboo_door[half=upper,hinge=right]",
+    "8,2,2": "minecraft:deepslate_bricks",
+    "8,2,7": "minecraft:deepslate_bricks",
+    "8,2,8": "minecraft:red_wall_banner[facing=west]",
+    "8,3,2": "minecraft:deepslate_bricks",
+    "8,3,7": "minecraft:white_terracotta",
+    "8,4,1": "minecraft:deepslate_tile_slab[type=top]",
+    "8,4,2": "minecraft:white_terracotta",
+    "8,4,7": "minecraft:white_terracotta",
+    "8,4,8": "minecraft:deepslate_tile_slab[type=top]",
+    "8,5,2": "minecraft:polished_deepslate_slab",
+    "8,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "8,5,4": "minecraft:lantern[hanging=true]",
+    "8,5,5": "minecraft:lantern[hanging=true]",
+    "8,5,6": "minecraft:polished_deepslate_stairs",
+    "8,5,7": "minecraft:polished_deepslate_slab",
+    "8,6,4": "minecraft:deepslate_tile_slab",
+    "8,6,5": "minecraft:deepslate_tile_slab",
+    "9,-1,1": "minecraft:deepslate_bricks",
+    "9,-1,2": "minecraft:deepslate_bricks",
+    "9,-1,3": "minecraft:deepslate_bricks",
+    "9,-1,4": "minecraft:deepslate_bricks",
+    "9,-1,5": "minecraft:deepslate_bricks",
+    "9,-1,6": "minecraft:deepslate_bricks",
+    "9,-1,7": "minecraft:deepslate_bricks",
+    "9,-1,8": "minecraft:deepslate_bricks",
+    "9,-1,9": "minecraft:deepslate_bricks",
+    "9,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
+    "9,0,2": "minecraft:spruce_log",
+    "9,0,3": "minecraft:white_terracotta",
+    "9,0,4": "minecraft:white_terracotta",
+    "9,0,5": "minecraft:white_terracotta",
+    "9,0,6": "minecraft:white_terracotta",
+    "9,0,7": "minecraft:spruce_log",
+    "9,0,8": "minecraft:deepslate_brick_stairs[half=top]",
+    "9,1,1": "minecraft:spruce_fence[south=true]",
+    "9,1,2": "minecraft:spruce_log",
+    "9,1,3": "minecraft:deepslate_bricks",
+    "9,1,4": "minecraft:glass",
+    "9,1,5": "minecraft:glass",
+    "9,1,6": "minecraft:deepslate_bricks",
+    "9,1,7": "minecraft:spruce_log",
+    "9,1,8": "minecraft:lever[face=ceiling,powered=true]",
+    "9,2,1": "minecraft:spruce_fence[south=true]",
+    "9,2,2": "minecraft:spruce_log",
+    "9,2,3": "minecraft:deepslate_bricks",
+    "9,2,4": "minecraft:glass",
+    "9,2,5": "minecraft:glass",
+    "9,2,6": "minecraft:deepslate_bricks",
+    "9,2,7": "minecraft:spruce_log",
+    "9,2,8": "minecraft:redstone_lamp[lit=true]",
+    "9,2,9": "minecraft:red_wall_banner[facing=south]",
+    "9,3,1": "minecraft:spruce_fence[south=true]",
+    "9,3,2": "minecraft:spruce_log",
+    "9,3,3": "minecraft:deepslate_bricks",
+    "9,3,4": "minecraft:deepslate_bricks",
+    "9,3,5": "minecraft:deepslate_bricks",
+    "9,3,6": "minecraft:deepslate_bricks",
+    "9,3,7": "minecraft:spruce_log",
+    "9,3,8": "minecraft:spruce_fence[north=true]",
+    "9,4,1": "minecraft:deepslate_tile_stairs[facing=south,half=top]",
+    "9,4,2": "minecraft:spruce_log",
+    "9,4,3": "minecraft:white_terracotta",
+    "9,4,4": "minecraft:white_terracotta",
+    "9,4,5": "minecraft:white_terracotta",
+    "9,4,6": "minecraft:white_terracotta",
+    "9,4,7": "minecraft:spruce_log",
+    "9,4,8": "minecraft:deepslate_tile_stairs[half=top]",
+    "9,5,2": "minecraft:polished_deepslate_slab",
+    "9,5,3": "minecraft:polished_deepslate_stairs[facing=south]",
+    "9,5,4": "minecraft:white_terracotta",
+    "9,5,5": "minecraft:white_terracotta",
+    "9,5,6": "minecraft:polished_deepslate_stairs",
+    "9,5,7": "minecraft:polished_deepslate_slab",
+    "9,6,4": "minecraft:deepslate_tile_slab",
+    "9,6,5": "minecraft:deepslate_tile_slab"
+  },
+  "block_nbt": {
+    "1,3,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0KQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgBB1nx0MwAAAA==",
+    "1,3,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0aQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgBPRvfRMwAAAA==",
+    "1,3,5": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0GQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDnuqcfMwAAAA==",
+    "1,3,6": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0WQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDpKiy6MwAAAA==",
+    "10,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgA9KV////Pwakq4D0eQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDpt4nSMwAAAA==",
+    "4,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgANKV////PwKkq4D0KQ4GpswUBsHczLzU5KLEtBKrpNTUjMyyVE4GFiCrmAEMAALuXXRAAAAA",
+    "4,1,3": "H4sIAAAAAAAA/62OQQ7CIBQFH9UmvyyMZ+gxvExDKUUihYRPUur93HgpJO7cu3iZ5GUWIwGJYVb6MWVTssD1rniyPu4u2O8FQq+jjwn97Js3gDbDrKxhAnBGN44/EyDH066KWXCCKE2ixqPW+mp8Nr4JnVtw2VwwOqk139jZICHXFEP+Wwk+LNVOdN4AAAA=",
+    "6,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAtKV////PwKkq4D0KQ4GpswUBsHczLzU5KLEtBKrpNTUjMyyVE4GFiCrmAEMAG69FndAAAAA",
+    "6,1,3": "H4sIAAAAAAAA/62OQQrDIBQFn2kDxkXpGXKMXkaMMVZqFPxCTO/XTS5lpLvuu3gMPGYxAhAYJqVfMpuSGe5PRdL6uLlgvxc4eh19TOgn37wBfDVEyhriAK7oxvFnDNyR3FQxMy5gpUmica+1fhrfjQdH52bcVheMTmrJD3I2CIglxZD/VoIT7w4ijd4AAAA=",
+    "7,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBtKV////P8LJwOpZkppbzAACQMEqoOApDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAH7Uil9AAAAA",
+    "7,1,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBtKV////P8rJwOpZkppbzAACQMEqoOApDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAO1PQyBAAAAA",
+    "8,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////P8LJwOpZkppbzAACQMEqoOApDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAHyI8ltAAAAA",
+    "8,0,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////P8LJwOpZkppbzAACQMEqoOBpDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAHIYef5AAAAA",
+    "8,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////Pwakq4D0eQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDqkNfZMwAAAA==",
+    "9,2,9": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBdKV////Pwakq4D0BQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgA6SIyLMwAAAA=="
+  },
+  "comfort": 10,
+  "magic": 3,
+  "wonder": 2,
+
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "building"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      1,
+      -1,
+      1
+    ],
+    "max": [
+      10,
+      6,
+      9
+    ]
+  },
+  "shop": {
+    "goods": [
+      {
+        "item_id": "minecraft:dandelion",
+        "comfort": 1,
+        "magic": 0,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:poppy",
+        "comfort": 1,
+        "magic": 0,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:wither_rose",
+        "comfort": 0,
+        "magic": 3,
+        "wonder": 2
+      },
+      {
+        "item_id": "minecraft:torchflower",
+        "comfort": 2,
+        "magic": 2,
+        "wonder": 2
+      },
+      {
+        "item_id": "minecraft:chorus_flower",
+        "comfort": 0,
+        "magic": 5,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:flower_pot",
+        "comfort": 1,
+        "magic": 1,
+        "wonder": 1
+      }
+    ],
+    "profit_rate": 0.3,
+    "interaction_duration_ticks": 2400
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "blocks_nbt": "$block_nbt",
+      "name": "$display_name"
+    }
+  },
+  "interact_spots": [
+    {
+      "pos": [
+        4,
+        1,
+        8
+      ],
+      "action": "browse"
+    }
+  ]
+}

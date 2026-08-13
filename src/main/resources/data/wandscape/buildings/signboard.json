@@ -1,0 +1,205 @@
+{
+  "id": "signboard",
+  "display_name": "signboard",
+  "creator": "Wandscape",
+  "category": "decoration",
+  "pattern": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      1,
+      2,
+      0
+    ],
+    [
+      1,
+      3,
+      0
+    ],
+    [
+      1,
+      4,
+      0
+    ],
+    [
+      2,
+      0,
+      0
+    ],
+    [
+      2,
+      1,
+      0
+    ],
+    [
+      2,
+      2,
+      0
+    ],
+    [
+      2,
+      3,
+      0
+    ],
+    [
+      2,
+      4,
+      0
+    ],
+    [
+      3,
+      0,
+      0
+    ],
+    [
+      3,
+      1,
+      0
+    ],
+    [
+      3,
+      2,
+      0
+    ],
+    [
+      3,
+      3,
+      0
+    ],
+    [
+      3,
+      4,
+      0
+    ],
+    [
+      4,
+      0,
+      0
+    ],
+    [
+      4,
+      1,
+      0
+    ],
+    [
+      4,
+      2,
+      0
+    ],
+    [
+      4,
+      3,
+      0
+    ],
+    [
+      4,
+      4,
+      0
+    ],
+    [
+      5,
+      0,
+      0
+    ],
+    [
+      5,
+      1,
+      0
+    ],
+    [
+      5,
+      2,
+      0
+    ],
+    [
+      5,
+      3,
+      0
+    ],
+    [
+      5,
+      4,
+      0
+    ]
+  ],
+  "block_mapping": {
+    "1,0,0": "minecraft:andesite_wall[west\u003dlow]",
+    "1,1,0": "minecraft:bamboo_fence",
+    "1,2,0": "minecraft:bamboo_fence",
+    "1,3,0": "minecraft:bamboo_fence",
+    "1,4,0": "minecraft:bamboo_slab",
+    "2,0,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "2,1,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "2,2,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "2,3,0": "minecraft:chain",
+    "2,4,0": "minecraft:birch_trapdoor",
+    "3,0,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "3,1,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "3,2,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "3,3,0": "minecraft:chain",
+    "3,4,0": "minecraft:birch_trapdoor",
+    "4,0,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "4,1,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "4,2,0": "minecraft:bamboo_hanging_sign[attached\u003dtrue]",
+    "4,3,0": "minecraft:chain",
+    "4,4,0": "minecraft:birch_trapdoor",
+    "5,0,0": "minecraft:andesite_wall",
+    "5,1,0": "minecraft:bamboo_fence",
+    "5,2,0": "minecraft:bamboo_fence",
+    "5,3,0": "minecraft:bamboo_fence",
+    "5,4,0": "minecraft:bamboo_slab"
+  },
+  "block_nbt": {
+    "2,0,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTysqNHqDH8DLkl1JKpJAASdHzeR6vgOjOvYvJSyYvmRGAwDCRusmsS2Y4rZSkcWG33nwrcPQquBDRT655A/imUyKjEwdwRDeOP2HgNsmdip5xACtNOjfea63Pxkfji6OzMy6b9VpFWvJ1JW8+i8kaLyCWGHz+2yO8AbeFTOzmAAAA",
+    "2,1,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTysqNHqDH8DLkl1JKpJAASdH7eR2vgOjOvYvJSyYvmRGAwDCRusmsS2Y4rZSkcWG33nwrcPQquBDRT655A/imUyKjEwdwRDeOP2HgNsmdip5xACtNOjfea63Pxkfji6OzMy6b9VpFWvJ1JW8+i8kaLyCWGHz+2yO8AXZrQn3mAAAA",
+    "2,2,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTysqNHqDH8DLkl1JKpJAASdEDehyvgOjOvYvJSyYvmRGAwDCRusmsS2Y4rZSkcWG33nwrcPQquBDRT655A/imUyKjEwdwRDeOP2HgNsmdip5xACtNOjfea63Pxkfji6OzMy6b9VpFWvJ1JW8+i8kaLyCWGHz+2yO8AXReIBXmAAAA",
+    "3,0,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTyspVD9BjeBlCKaVECgmfpOj5PI9XQHTn3sXkJZOXzAhAYJiVvslsSma4bIqk9fFwwX4rcPQ6+pjQz755A/huiJQ1xAGc0U3TTxi4I3moYhacwEqTxsZ7rfXZ+Gh8cXRuwbi7YHRSa75uKtjPIjkbBMSaYsh/e4Q34ppMuOYAAAA\u003d",
+    "3,1,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTyspVD9BjeBlCKaVECgmfpOj9vI5XQHTn3sXkJZOXzAhAYJiVvslsSma4bIqk9fFwwX4rcPQ6+pjQz755A/huiJQ1xAGc0U3TTxi4I3moYhacwEqTxsZ7rfXZ+Gh8cXRuwbi7YHRSa75uKtjPIjkbBMSaYsh/e4Q3I3RCKeYAAAA\u003d",
+    "3,2,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTyspVD9BjeBlCKaVECgmfpOgBPY5XQHTn3sXkJZOXzAhAYJiVvslsSma4bIqk9fFwwX4rcPQ6+pjQz755A/huiJQ1xAGc0U3TTxi4I3moYhacwEqTxsZ7rfXZ+Gh8cXRuwbi7YHRSa75uKtjPIjkbBMSaYsh/e4Q3IUEgQeYAAAA\u003d",
+    "4,0,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTysqV7nsML0N+KaVECgmQFD2f5/EKiO7cu5i8ZPKSGQEIDBOpm8y6ZIbTSkkaF3brzbcCR6+CCxH95Jo3gG86JTI6cQBHdOP4EwZuk9yp6BkHsNKkS+O91vpsfDS+ODo747xZr1WkJV9X8uazmKzxAmKJwee/PcIb0W+zi+YAAAA\u003d",
+    "4,1,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTysqV7nsML0N+KaVECgmQFL2f1/EKiO7cu5i8ZPKSGQEIDBOpm8y6ZIbTSkkaF3brzbcCR6+CCxH95Jo3gG86JTI6cQBHdOP4EwZuk9yp6BkHsNKkS+O91vpsfDS+ODo747xZr1WkJV9X8uazmKzxAmKJwee/PcIbEIG9GuYAAAA\u003d",
+    "4,2,0": "H4sIAAAAAAAA/62OQQ7CIBREh2oTysqV7nsML0N+KaVECgmQFD2gx/EKiO7cu5i8ZPKSGQEIDBOpm8y6ZIbTSkkaF3brzbcCR6+CCxH95Jo3gG86JTI6cQBHdOP4EwZuk9yp6BkHsNKkS+O91vpsfDS+ODo747xZr1WkJV9X8uazmKzxAmKJwee/PcIbErTfcuYAAAA\u003d"
+  },
+  "comfort": 2,
+  "magic": 2,
+  "wonder": 2,
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "building"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      5,
+      4,
+      0
+    ]
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "blocks_nbt": "$block_nbt",
+      "entities": "$entities",
+      "name": "$display_name"
+    }
+  }
+}

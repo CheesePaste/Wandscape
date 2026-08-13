@@ -1,8 +1,10 @@
 {
-  "id": "bathhouse",
-  "display_name": "澡堂",
-  "category": "relax",
+  "id": "service_booth",
+  "display_name": "元素服务小屋",
+  "creator": "Wandscape",
+  "category": "service",
   "first_free": true,
+  "deprecated": true,
   "pattern": [
     [-1, 0, -1],
     [0, 0, -1],
@@ -38,25 +40,25 @@
     "-1,0,1": "minecraft:stone_bricks",
     "0,0,1": "minecraft:stone_bricks",
     "1,0,1": "minecraft:stone_bricks",
-    "-1,1,-1": "minecraft:oak_log",
-    "1,1,-1": "minecraft:oak_log",
-    "-1,1,1": "minecraft:oak_log",
-    "1,1,1": "minecraft:oak_log",
-    "0,1,1": "minecraft:oak_planks",
-    "-1,1,0": "minecraft:oak_planks",
-    "1,1,0": "minecraft:oak_planks",
-    "-1,2,-1": "minecraft:oak_planks",
-    "0,2,-1": "minecraft:oak_planks",
-    "1,2,-1": "minecraft:oak_planks",
-    "-1,2,0": "minecraft:oak_planks",
-    "0,2,0": "minecraft:oak_planks",
-    "1,2,0": "minecraft:oak_planks",
-    "-1,2,1": "minecraft:oak_planks",
-    "0,2,1": "minecraft:oak_planks",
-    "1,2,1": "minecraft:oak_planks"
+    "-1,1,-1": "minecraft:polished_andesite",
+    "1,1,-1": "minecraft:polished_andesite",
+    "-1,1,1": "minecraft:polished_andesite",
+    "1,1,1": "minecraft:polished_andesite",
+    "0,1,1": "minecraft:polished_andesite",
+    "-1,1,0": "minecraft:polished_andesite",
+    "1,1,0": "minecraft:polished_andesite",
+    "-1,2,-1": "minecraft:stone_bricks",
+    "0,2,-1": "minecraft:stone_bricks",
+    "1,2,-1": "minecraft:stone_bricks",
+    "-1,2,0": "minecraft:stone_bricks",
+    "0,2,0": "minecraft:glowstone",
+    "1,2,0": "minecraft:stone_bricks",
+    "-1,2,1": "minecraft:stone_bricks",
+    "0,2,1": "minecraft:stone_bricks",
+    "1,2,1": "minecraft:stone_bricks"
   },
-  "comfort": 6,
-  "magic": 2,
+  "comfort": 3,
+  "magic": 3,
   "wonder": 2,
 
   "queue": {
@@ -71,6 +73,17 @@
     "max": [1, 2, 1]
   },
   "door_offset": [0, 0, -1],
+  "service": {
+    "energy_per_use": 12,
+    "element_output": {
+      "fire": 2,
+      "water": 2,
+      "wind": 1,
+      "earth": 1
+    },
+    "max_occupancy": 0,
+    "interaction_duration_ticks": 800
+  },
   "blueprint": {
     "id": "build:clear_and_build",
     "bind": {
@@ -79,14 +92,10 @@
       "name": "$display_name"
     }
   },
-  "relax": {
-    "energy_restore": 40,
-    "interaction_duration_ticks": 1200
-  },
   "interact_spots": [
     {
       "pos": [0, 0, 0],
-      "action": "bathe",
+      "action": "browse",
       "facing": "south"
     }
   ]

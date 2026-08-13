@@ -1,0 +1,111 @@
+{
+  "id": "long_chair",
+  "display_name": "long chair",
+  "creator": "CheesePaste",
+  "category": "relax",
+  "pattern": [
+    [
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      0,
+      3
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      2
+    ],
+    [
+      1,
+      0,
+      3
+    ],
+    [
+      1,
+      0,
+      4
+    ]
+  ],
+  "block_mapping": {
+    "0,0,1": "minecraft:bamboo_trapdoor[facing\u003dwest,open\u003dtrue]",
+    "0,0,2": "minecraft:bamboo_trapdoor[facing\u003dwest,open\u003dtrue]",
+    "0,0,3": "minecraft:bamboo_trapdoor[facing\u003dwest,open\u003dtrue]",
+    "1,0,0": "minecraft:bamboo_wall_sign",
+    "1,0,1": "minecraft:bamboo_slab",
+    "1,0,2": "minecraft:bamboo_slab",
+    "1,0,3": "minecraft:bamboo_slab",
+    "1,0,4": "minecraft:bamboo_wall_sign[facing\u003dsouth]"
+  },
+  "block_nbt": {
+    "1,0,0": "H4sIAAAAAAAA/62OQQ7CIBQFH61NKAvjGXoML0MopUikkPBJip7PO7mk6M69i5dJXmYxAhAYZ6XvMpuSGS43RdL6uLtgvxc4Bh19TBhm37wRfDNEyhriAE7opulnDNyR3FUxC3qw8pEaH7XWV+Oz8c3RuQXnzQWjk1rzlZwNAmJNMeS/leAAWua5494AAAA\u003d",
+    "1,0,4": "H4sIAAAAAAAA/62OQQ7CIBQFH61NKAvjGXoML0MopUikkPBJip7PW7mg6M69i5dJXmYxAhAYZ6XvMpuSGS43RdL6uLtgvxc4Bh19TBhm37wRfDNEyhriAE7opulnDNyR3FUxC3qw8pEaH7XWV+Oz8c3RuQXnzQWjk1rzlZwNAmJNMeS/leAAhuK0tN4AAAA\u003d"
+  },
+  "comfort": 5,
+  "magic": 0,
+  "wonder": 0,
+  "queue": {
+    "capacity": 5,
+    "task_types": [
+      "building"
+    ]
+  },
+  "unlock_requirement": {
+    "min_colony_level": 1
+  },
+  "boundary": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      2,
+      1,
+      4
+    ]
+  },
+  "interact_spots": [
+    {
+      "pos": [
+        2,
+        0,
+        2
+      ],
+      "action": "rest",
+      "facing": "east"
+    }
+  ],
+  "relax": {
+    "energy_restore": 10,
+    "interaction_duration_ticks": 1200
+  },
+  "blueprint": {
+    "id": "build:clear_and_build",
+    "bind": {
+      "offsets": "$pattern",
+      "blocks": "$block_mapping",
+      "blocks_nbt": "$block_nbt",
+      "entities": "$entities",
+      "name": "$display_name"
+    }
+  }
+}

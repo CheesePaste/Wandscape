@@ -1,7 +1,8 @@
 {
-  "id": "flowershop",
-  "display_name": "花店",
+  "id": "bookshop",
+  "display_name": "书店",
   "category": "shop",
+  "deprecated": true,
   "pattern": [
     [
       1,
@@ -711,6 +712,16 @@
     [
       3,
       4,
+      3
+    ],
+    [
+      3,
+      4,
+      4
+    ],
+    [
+      3,
+      4,
       7
     ],
     [
@@ -816,11 +827,6 @@
     [
       4,
       0,
-      3
-    ],
-    [
-      4,
-      0,
       4
     ],
     [
@@ -841,7 +847,7 @@
     [
       4,
       1,
-      3
+      4
     ],
     [
       4,
@@ -861,12 +867,22 @@
     [
       4,
       2,
+      4
+    ],
+    [
+      4,
+      2,
       7
     ],
     [
       4,
       3,
       2
+    ],
+    [
+      4,
+      3,
+      4
     ],
     [
       4,
@@ -991,6 +1007,11 @@
     [
       5,
       0,
+      4
+    ],
+    [
+      5,
+      0,
       7
     ],
     [
@@ -1146,11 +1167,6 @@
     [
       6,
       0,
-      4
-    ],
-    [
-      6,
-      0,
       7
     ],
     [
@@ -1167,11 +1183,6 @@
       6,
       1,
       2
-    ],
-    [
-      6,
-      1,
-      3
     ],
     [
       6,
@@ -2205,7 +2216,7 @@
     "2,2,5": "minecraft:deepslate_bricks",
     "2,2,6": "minecraft:deepslate_bricks",
     "2,2,7": "minecraft:spruce_log",
-    "2,2,8": "minecraft:spruce_trapdoor[facing=south,open=true]",
+    "2,2,8": "minecraft:spruce_trapdoor[facing=south,half=top,open=true]",
     "2,3,1": "minecraft:spruce_fence[south=true]",
     "2,3,2": "minecraft:spruce_log",
     "2,3,3": "minecraft:deepslate_bricks",
@@ -2213,7 +2224,7 @@
     "2,3,5": "minecraft:deepslate_bricks",
     "2,3,6": "minecraft:deepslate_bricks",
     "2,3,7": "minecraft:spruce_log",
-    "2,3,8": "minecraft:spruce_trapdoor[facing=south,open=true]",
+    "2,3,8": "minecraft:spruce_trapdoor[facing=south,half=top,open=true]",
     "2,4,1": "minecraft:deepslate_tile_stairs[facing=south,half=top]",
     "2,4,2": "minecraft:spruce_log",
     "2,4,3": "minecraft:white_terracotta",
@@ -2241,32 +2252,34 @@
     "3,-1,9": "minecraft:deepslate_bricks",
     "3,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
     "3,0,2": "minecraft:white_terracotta",
-    "3,0,3": "minecraft:spruce_slab[type=top]",
-    "3,0,4": "minecraft:spruce_slab[type=top]",
-    "3,0,5": "minecraft:spruce_slab[type=top]",
-    "3,0,6": "minecraft:spruce_slab[type=top]",
+    "3,0,3": "minecraft:bookshelf",
+    "3,0,4": "minecraft:bookshelf",
+    "3,0,5": "minecraft:bookshelf",
+    "3,0,6": "minecraft:bookshelf",
     "3,0,7": "minecraft:deepslate_bricks",
     "3,0,8": "minecraft:deepslate_brick_stairs[half=top]",
     "3,1,2": "minecraft:glass",
-    "3,1,3": "minecraft:potted_poppy",
-    "3,1,4": "minecraft:potted_dandelion",
-    "3,1,5": "minecraft:potted_blue_orchid",
-    "3,1,6": "minecraft:potted_azure_bluet",
+    "3,1,3": "minecraft:bookshelf",
+    "3,1,4": "minecraft:bookshelf",
+    "3,1,5": "minecraft:bookshelf",
+    "3,1,6": "minecraft:bookshelf",
     "3,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
     "3,2,2": "minecraft:glass",
-    "3,2,3": "minecraft:spruce_slab[type=top]",
-    "3,2,4": "minecraft:spruce_slab[type=top]",
-    "3,2,5": "minecraft:spruce_slab[type=top]",
+    "3,2,3": "minecraft:bookshelf",
+    "3,2,4": "minecraft:bookshelf",
+    "3,2,5": "minecraft:bookshelf",
     "3,2,6": "minecraft:wall_torch[facing=east]",
     "3,2,7": "minecraft:glass",
     "3,3,2": "minecraft:deepslate_bricks",
-    "3,3,3": "minecraft:potted_oxeye_daisy",
-    "3,3,4": "minecraft:potted_lily_of_the_valley",
-    "3,3,5": "minecraft:potted_pink_tulip",
+    "3,3,3": "minecraft:bookshelf",
+    "3,3,4": "minecraft:bookshelf",
+    "3,3,5": "minecraft:bookshelf",
     "3,3,7": "minecraft:white_terracotta",
-    "3,3,8": "minecraft:yellow_wool",
+    "3,3,8": "minecraft:brown_wool",
     "3,4,1": "minecraft:deepslate_tile_slab[type=top]",
     "3,4,2": "minecraft:white_terracotta",
+    "3,4,3": "minecraft:bookshelf",
+    "3,4,4": "minecraft:bookshelf",
     "3,4,7": "minecraft:white_terracotta",
     "3,4,8": "minecraft:deepslate_tile_slab[type=top]",
     "3,5,2": "minecraft:polished_deepslate_slab",
@@ -2288,19 +2301,20 @@
     "4,-1,9": "minecraft:deepslate_bricks",
     "4,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
     "4,0,2": "minecraft:white_terracotta",
-    "4,0,3": "minecraft:beehive[facing=south]",
-    "4,0,4": "minecraft:oak_button[facing=south]",
+    "4,0,4": "minecraft:scaffolding[distance=0]",
     "4,0,7": "minecraft:deepslate_bricks",
     "4,0,8": "minecraft:deepslate_brick_stairs[half=top]",
     "4,1,2": "minecraft:deepslate_bricks",
-    "4,1,3": "minecraft:birch_wall_sign[facing=south]",
+    "4,1,4": "minecraft:scaffolding[distance=0]",
     "4,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
     "4,2,2": "minecraft:deepslate_bricks",
     "4,2,3": "minecraft:wall_torch[facing=south]",
+    "4,2,4": "minecraft:scaffolding[distance=0]",
     "4,2,7": "minecraft:glass",
     "4,3,2": "minecraft:deepslate_bricks",
+    "4,3,4": "minecraft:scaffolding[distance=0]",
     "4,3,7": "minecraft:white_terracotta",
-    "4,3,8": "minecraft:lime_wool",
+    "4,3,8": "minecraft:light_gray_wool",
     "4,4,1": "minecraft:deepslate_tile_slab[type=top]",
     "4,4,2": "minecraft:white_terracotta",
     "4,4,7": "minecraft:white_terracotta",
@@ -2322,7 +2336,8 @@
     "5,-1,9": "minecraft:deepslate_bricks",
     "5,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
     "5,0,2": "minecraft:white_terracotta",
-    "5,0,3": "minecraft:crafting_table",
+    "5,0,3": "minecraft:cartography_table",
+    "5,0,4": "minecraft:birch_button[facing=south]",
     "5,0,7": "minecraft:deepslate_bricks",
     "5,0,8": "minecraft:deepslate_brick_stairs[half=top]",
     "5,1,2": "minecraft:glass",
@@ -2331,7 +2346,7 @@
     "5,2,7": "minecraft:glass",
     "5,3,2": "minecraft:deepslate_bricks",
     "5,3,7": "minecraft:white_terracotta",
-    "5,3,8": "minecraft:yellow_wool",
+    "5,3,8": "minecraft:brown_wool",
     "5,4,1": "minecraft:deepslate_tile_slab[type=top]",
     "5,4,2": "minecraft:white_terracotta",
     "5,4,7": "minecraft:white_terracotta",
@@ -2353,13 +2368,11 @@
     "6,-1,9": "minecraft:deepslate_bricks",
     "6,0,1": "minecraft:deepslate_brick_stairs[facing=south,half=top]",
     "6,0,2": "minecraft:spruce_log",
-    "6,0,3": "minecraft:beehive[facing=south]",
-    "6,0,4": "minecraft:oak_button[facing=south]",
+    "6,0,3": "minecraft:lectern[facing=south,has_book=true]",
     "6,0,7": "minecraft:deepslate_bricks",
     "6,0,8": "minecraft:deepslate_brick_stairs[facing=west,half=top,shape=outer_right]",
     "6,1,1": "minecraft:spruce_fence[south=true]",
     "6,1,2": "minecraft:spruce_log",
-    "6,1,3": "minecraft:birch_wall_sign[facing=south]",
     "6,1,7": "minecraft:spruce_trapdoor[facing=south,half=top]",
     "6,2,1": "minecraft:spruce_fence[south=true]",
     "6,2,2": "minecraft:spruce_log",
@@ -2368,7 +2381,7 @@
     "6,3,1": "minecraft:spruce_fence[south=true]",
     "6,3,2": "minecraft:spruce_log",
     "6,3,7": "minecraft:white_terracotta",
-    "6,3,8": "minecraft:lime_wool",
+    "6,3,8": "minecraft:light_gray_wool",
     "6,4,1": "minecraft:deepslate_tile_stairs[facing=south,half=top]",
     "6,4,2": "minecraft:spruce_log",
     "6,4,7": "minecraft:white_terracotta",
@@ -2503,24 +2516,21 @@
     "9,6,5": "minecraft:deepslate_tile_slab"
   },
   "block_nbt": {
-    "1,3,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0KQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgBB1nx0MwAAAA==",
-    "1,3,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0aQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgBPRvfRMwAAAA==",
-    "1,3,5": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0GQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDnuqcfMwAAAA==",
-    "1,3,6": "H4sIAAAAAAAA/+NiYGBmYKxgYGBgBdKV////Pw6kq4D0WQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDpKiy6MwAAAA==",
-    "10,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgA9KV////Pwakq4D0eQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDpt4nSMwAAAA==",
-    "4,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgANKV////PwKkq4D0KQ4GpswUBsHczLzU5KLEtBKrpNTUjMyyVE4GFiCrmAEMAALuXXRAAAAA",
-    "4,1,3": "H4sIAAAAAAAA/62OQQ7CIBQFH9UmvyyMZ+gxvExDKUUihYRPUur93HgpJO7cu3iZ5GUWIwGJYVb6MWVTssD1rniyPu4u2O8FQq+jjwn97Js3gDbDrKxhAnBGN44/EyDH066KWXCCKE2ixqPW+mp8Nr4JnVtw2VwwOqk139jZICHXFEP+Wwk+LNVOdN4AAAA=",
-    "6,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAtKV////PwKkq4D0KQ4GpswUBsHczLzU5KLEtBKrpNTUjMyyVE4GFiCrmAEMAG69FndAAAAA",
-    "6,1,3": "H4sIAAAAAAAA/62OQQrDIBQFn2kDxkXpGXKMXkaMMVZqFPxCTO/XTS5lpLvuu3gMPGYxAhAYJqVfMpuSGe5PRdL6uLlgvxc4eh19TOgn37wBfDVEyhriAK7oxvFnDNyR3FQxMy5gpUmica+1fhrfjQdH52bcVheMTmrJD3I2CIglxZD/VoIT7w4ijd4AAAA=",
-    "7,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBtKV////P8LJwOpZkppbzAACQMEqoOApDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAH7Uil9AAAAA",
-    "7,1,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBtKV////P8rJwOpZkppbzAACQMEqoOApDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAO1PQyBAAAAA",
-    "8,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////P8LJwOpZkppbzAACQMEqoOApDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAHyI8ltAAAAA",
-    "8,0,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////P8LJwOpZkppbzAACQMEqoOBpDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAHIYef5AAAAA",
-    "8,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgAdKV////Pwakq4D0eQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDqkNfZMwAAAA==",
-    "9,2,9": "H4sIAAAAAAAA/+NiYGBmYKxgYGDgBdKV////Pwakq4D0BQ4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgA6SIyLMwAAAA=="
+    "1,3,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGAwBtKV////Pw6kq4D0Aw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgBaDM6KMwAAAA==",
+    "1,3,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGAwBtKV////Pw6kq4D0Qw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgBUnEUvMwAAAA==",
+    "1,3,5": "H4sIAAAAAAAA/+NiYGBmYKxgYGAwBtKV////Pw6kq4D0Iw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgAHKqgaMwAAAA==",
+    "1,3,6": "H4sIAAAAAAAA/+NiYGBmYKxgYGAwBtKV////Pw6kq4D0Yw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgAJuiO/MwAAAA==",
+    "10,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwAdKV////Pwakq4D0Uw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgD0I4c6MwAAAA==",
+    "6,0,3": "H4sIAAAAAAAA/+NiYOBiYHHKz89mZmBNzi/NK2FgYGDkYGDKTGEQz83MS00uSkwrsSovyixJTMpJjU8CqmRgZmCsACqzANKV////P8LMwBKQmJ4KZP4HClUBqQcQEwQRJuSkJpekFuUxAACCLk7AcQAAAA==",
+    "7,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwBNKV////P8LJwOpZkppbzAACQMEqoOADDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAITRbX5AAAAA",
+    "7,1,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwBNKV////P8rJwOpZkppbzAACQMEqoOADDgamzBQGgdzMvNTkosS0EqukxKKi1BwGABdKpAFAAAAA",
+    "8,0,3": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwAtKV////P8LJwOpZkppbzAACQMEqoOADDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAF4rg3xAAAAA",
+    "8,0,4": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwAtKV////P8LJwOpZkppbzAACQMEqoOBDDgamzBQGgdzMvNTkosS0EqukxKKi1BwGAFC7CNlAAAAA",
+    "8,2,8": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwAtKV////Pwakq4D0Uw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgDxSmUnMwAAAA==",
+    "9,2,9": "H4sIAAAAAAAA/+NiYGBmYKxgYGCwBtKV////Pwakq4D0Mw4GpswUBoHczLzU5KLEtBKrpMS8vNQiBgADbJ/6MwAAAA=="
   },
-  "comfort": 10,
-  "magic": 3,
+  "comfort": 3,
+  "magic": 10,
   "wonder": 2,
 
   "queue": {
@@ -2547,40 +2557,40 @@
   "shop": {
     "goods": [
       {
-        "item_id": "minecraft:dandelion",
-        "comfort": 1,
-        "magic": 0,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:poppy",
-        "comfort": 1,
-        "magic": 0,
-        "wonder": 0
-      },
-      {
-        "item_id": "minecraft:wither_rose",
+        "item_id": "minecraft:book",
         "comfort": 0,
-        "magic": 3,
-        "wonder": 2
+        "magic": 1,
+        "wonder": 0
       },
       {
-        "item_id": "minecraft:torchflower",
-        "comfort": 2,
+        "item_id": "minecraft:bookshelf",
+        "comfort": 1,
         "magic": 2,
-        "wonder": 2
-      },
-      {
-        "item_id": "minecraft:chorus_flower",
-        "comfort": 0,
-        "magic": 5,
         "wonder": 0
       },
       {
-        "item_id": "minecraft:flower_pot",
+        "item_id": "minecraft:chiseled_bookshelf",
         "comfort": 1,
         "magic": 1,
         "wonder": 1
+      },
+      {
+        "item_id": "minecraft:cartography_table",
+        "comfort": 0,
+        "magic": 1,
+        "wonder": 2
+      },
+      {
+        "item_id": "minecraft:writable_book",
+        "comfort": 0,
+        "magic": 3,
+        "wonder": 0
+      },
+      {
+        "item_id": "minecraft:spyglass",
+        "comfort": 0,
+        "magic": 5,
+        "wonder": 0
       }
     ],
     "profit_rate": 0.3,

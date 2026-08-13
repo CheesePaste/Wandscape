@@ -2,6 +2,7 @@
   "id": "service_hall",
   "display_name": "服务大厅",
   "category": "service",
+  "deprecated": true,
   "pattern": [
     [
       -3,

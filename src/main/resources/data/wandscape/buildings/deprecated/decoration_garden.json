@@ -4,6 +4,7 @@
   "creator": "Wandscape",
   "category": "decoration",
   "first_free": true,
+  "deprecated": true,
   "pattern": [
     [-1, 0, -1],
     [0, 0, -1],

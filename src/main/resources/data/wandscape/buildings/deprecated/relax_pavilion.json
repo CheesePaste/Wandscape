@@ -1,9 +1,10 @@
 {
-  "id": "service_booth",
-  "display_name": "元素服务小屋",
+  "id": "relax_pavilion",
+  "display_name": "歇脚亭",
   "creator": "Wandscape",
-  "category": "service",
+  "category": "relax",
   "first_free": true,
+  "deprecated": true,
   "pattern": [
     [-1, 0, -1],
     [0, 0, -1],
@@ -39,25 +40,25 @@
     "-1,0,1": "minecraft:stone_bricks",
     "0,0,1": "minecraft:stone_bricks",
     "1,0,1": "minecraft:stone_bricks",
-    "-1,1,-1": "minecraft:polished_andesite",
-    "1,1,-1": "minecraft:polished_andesite",
-    "-1,1,1": "minecraft:polished_andesite",
-    "1,1,1": "minecraft:polished_andesite",
-    "0,1,1": "minecraft:polished_andesite",
-    "-1,1,0": "minecraft:polished_andesite",
-    "1,1,0": "minecraft:polished_andesite",
-    "-1,2,-1": "minecraft:stone_bricks",
-    "0,2,-1": "minecraft:stone_bricks",
-    "1,2,-1": "minecraft:stone_bricks",
-    "-1,2,0": "minecraft:stone_bricks",
-    "0,2,0": "minecraft:glowstone",
-    "1,2,0": "minecraft:stone_bricks",
-    "-1,2,1": "minecraft:stone_bricks",
-    "0,2,1": "minecraft:stone_bricks",
-    "1,2,1": "minecraft:stone_bricks"
+    "-1,1,-1": "minecraft:oak_log",
+    "1,1,-1": "minecraft:oak_log",
+    "-1,1,1": "minecraft:oak_log",
+    "1,1,1": "minecraft:oak_log",
+    "0,1,1": "minecraft:oak_planks",
+    "-1,1,0": "minecraft:oak_planks",
+    "1,1,0": "minecraft:oak_planks",
+    "-1,2,-1": "minecraft:oak_planks",
+    "0,2,-1": "minecraft:oak_planks",
+    "1,2,-1": "minecraft:oak_planks",
+    "-1,2,0": "minecraft:oak_planks",
+    "0,2,0": "minecraft:oak_planks",
+    "1,2,0": "minecraft:oak_planks",
+    "-1,2,1": "minecraft:oak_planks",
+    "0,2,1": "minecraft:oak_planks",
+    "1,2,1": "minecraft:oak_planks"
   },
-  "comfort": 3,
-  "magic": 3,
+  "comfort": 5,
+  "magic": 2,
   "wonder": 2,
 
   "queue": {
@@ -72,16 +73,9 @@
     "max": [1, 2, 1]
   },
   "door_offset": [0, 0, -1],
-  "service": {
-    "energy_per_use": 12,
-    "element_output": {
-      "fire": 2,
-      "water": 2,
-      "wind": 1,
-      "earth": 1
-    },
-    "max_occupancy": 0,
-    "interaction_duration_ticks": 800
+  "relax": {
+    "energy_restore": 35,
+    "interaction_duration_ticks": 600
   },
   "blueprint": {
     "id": "build:clear_and_build",
@@ -94,7 +88,7 @@
   "interact_spots": [
     {
       "pos": [0, 0, 0],
-      "action": "browse",
+      "action": "rest",
       "facing": "south"
     }
   ]
