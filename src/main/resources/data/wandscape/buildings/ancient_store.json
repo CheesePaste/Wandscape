@@ -39215,7 +39215,7 @@
         "wonder": 5
       }
     ],
-    "profit_rate": 50.0,
+    "profit_rate": 0.5,
     "interaction_duration_ticks": 2400
   },
   "blueprint": {

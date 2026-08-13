@@ -103,7 +103,7 @@
 
 ## category 实际值（当前数据文件）
 
-`government`（townhall1）、`storage`（warehouse）、`node`（nodedark/nodeearth/nodefire/nodemetal/nodewater/nodewind/nodewood）、`shop`（breadshop/bookshop/flowershop/magicshop）、`service`（inn1/service_hall/deprecated-library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）；`relax`/`atm` 为**新增** category（示例 JSON 待补，可用扫描器导出）。
+`government`（townhall1）、`storage`（warehouse）、`node`（nodedark/nodeearth/nodefire/nodemetal/nodewater/nodewind/nodewood）、`shop`（bakery/book_shop/flower_shop/potion_store/sea_store/ancient_store/creature_store）、`service`（inn1/service_hall/deprecated-library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）；`relax`/`atm` 为**新增** category（示例 JSON 待补，可用扫描器导出）。
 
 > 各建筑 JSON 在 `buildings/deprecated/` 下的仍会加载（旧存档兼容）但不出现在放置面板。
 > `tavern`/`altar1` 保持原 category（招募/祭坛功能按 category 字符串判定），即使有 `interact_spots` 也非游客目标（无四类模式预设块）。
@@ -113,5 +113,5 @@
 - warehouse（storage）：comfort2/magic1/wonder1，queue 容量 0。
 - nodedark（node）：magic5，node_config 用 node:gather/dark/10/1200。
 - townhall1（government）：三值全 10，door_offset [18,1,4]。
-- breadshop（shop）：shop.goods 6 种食品各带三值，profit_rate 0.3，duration 2400。
+- bakery（shop）：shop.goods 5 种食品各带三值，profit_rate 0.2，duration 1200。
 - tavern：有 door_offset 与 `interact_spots`（保持 tavern，非游客目标）。

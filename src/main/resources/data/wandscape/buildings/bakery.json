@@ -2232,7 +2232,7 @@
         "wonder": 0
       },
       {
-        "item_id": "minecraft:pumpkin",
+        "item_id": "minecraft:pumpkin_pie",
         "comfort": 0,
         "magic": 0,
         "wonder": 2
@@ -2244,7 +2244,7 @@
         "wonder": 0
       }
     ],
-    "profit_rate": 20.0,
+    "profit_rate": 0.2,
     "interaction_duration_ticks": 1200
   },
   "blueprint": {

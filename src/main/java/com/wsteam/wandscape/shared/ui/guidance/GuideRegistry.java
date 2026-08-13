@@ -152,8 +152,8 @@ public final class GuideRegistry {
                     "§b③ 按 §eEnter§b 铺设道路"),
             "§e💡 道路让游客与 NPC 沿路移动");
 
-    private static final GuideStep BREADSHOP = new GuideStep(
-            "breadshop",
+    private static final GuideStep BAKERY = new GuideStep(
+            "bakery",
             "🚩 新手引导 (7/10)：建造面包店，补充货物",
             List.of(
                     "§b① 按 §e1§b 打开【建造】页签",
@@ -214,7 +214,7 @@ public final class GuideRegistry {
 
     public static final List<GuideStep> STEPS = List.of(
             TOWN_HALL, WAREHOUSE, DEPOSIT, WORKSTATION, SYNTHESIZE,
-            ROAD, BREADSHOP, NODE, ALTAR, INN);
+            ROAD, BAKERY, NODE, ALTAR, INN);
 
     public static GuideStep step(int index) {
         return STEPS.get(index);

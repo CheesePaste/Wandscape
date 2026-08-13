@@ -95,7 +95,7 @@
 | 4 | 建造工作站 | 有 category=workstation 建筑 |
 | 5 | 右键工作站合成 | `getPlayerSynthesizeCount>0`（RequestProductionTaskPacket 记录） |
 | 6 | 铺设道路 | `getPlayerRoadPlaceCount>0`（路实际建好 `road_segment_complete` 后由 RoadSegmentListener 记录；发布任务不算） |
-| 7 | 建造面包店补充货物 | 有 typeId=breadshop 且该商店有库存 `hasShopStock` |
+| 7 | 建造面包店补充货物 | 有 typeId=bakery 且该商店有库存 `hasShopStock` |
 | 8 | 建造节点发布采集 | 有 category=node 且 `getGatherPublishedCount>0`（RequestGatherTaskPacket 记录） |
 | 9 | 建造祭坛 | 有 category=altar 建筑（只判建造，不需真复活） |
 | 10 | 建造旅馆游客入住 | 有 max_occupancy>0 的 service 建筑且 `getOvernightStayerCount>0` |

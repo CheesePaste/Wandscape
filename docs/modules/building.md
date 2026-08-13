@@ -15,7 +15,7 @@
 > 注：`wonder_config` 字段已解析，但当前 `buildings/*.json` 均未定义它。
 > 注：方块数据用**调色板**：`pattern`（N 个偏移）+ `palette`（M 个去重方块态）+ `block_indices`（N 个索引，与 pattern 对齐）。`block_mapping` 旧格式已废弃（解析器拒绝）。
 
-`category` 实际值（从数据文件，见 data/buildings.md）：`government`（townhall1）、`storage`（warehouse）、`node`（node×7）、`shop`（breadshop/bookshop/flowershop/magicshop）、`service`（inn1/service_hall/deprecated library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）。
+`category` 实际值（从数据文件，见 data/buildings.md）：`government`（townhall1）、`storage`（warehouse）、`node`（node×7）、`shop`（bakery/book_shop/flower_shop/potion_store/sea_store/ancient_store/creature_store）、`service`（inn1/service_hall/deprecated library）、`tavern`（tavern）、`crafting_station`（craftstation1）、`potion_station`（potionstation1）、`workstation`（workstation1）。
 
 ## 建筑状态与持久化
 
@@ -60,7 +60,7 @@ BuildingConfig JSON → BuildingConfigLoader → BuildingConfig
 
 ### 3. ShopStockManager（商店库存）
 
-库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，breadshop 0.3 → 1.3X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
+库存持久化于 BuildingSavedData。`purchase` 扣库存 + 按 `ceil(元素价值×(1+profitRate))` 入账（**非固定 1.2X**，bakery 0.2 → 1.2X）；`walletPrice` = 各元素 ceil(v×(1+profitRate)) 之和；`purchaseAffordable`：游客预算 0.2–1.0×初始钱包、qty=floor(budget/price)+1；stock<maxStock 触发动态补货 restock，从仓库 consume 物品、可选 ItemTransportManager 运输动画、缺货走 ResourceSupplySystem.enqueueSynthesize（**队首插入**，抢在建材合成前）、pendingRestock 每 100 tick 重试；onDailySettlement 补货全商店。
 
 ### 4. WonderEffectApplier（奇观效果）
 

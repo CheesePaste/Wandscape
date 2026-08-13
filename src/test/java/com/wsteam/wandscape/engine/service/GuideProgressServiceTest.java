@@ -15,7 +15,7 @@ class GuideProgressServiceTest {
         boolean deposited;
         boolean synthesized;
         boolean roadPlaced;
-        boolean breadshopStocked;
+        boolean bakeryStocked;
         boolean nodeGatherPublished;
         boolean innWithStay;
 
@@ -24,7 +24,7 @@ class GuideProgressServiceTest {
         @Override public boolean hasPlayerDeposited() { return deposited; }
         @Override public boolean hasPlayerSynthesized() { return synthesized; }
         @Override public boolean hasPlayerPlacedRoad() { return roadPlaced; }
-        @Override public boolean hasBreadshopStocked() { return breadshopStocked; }
+        @Override public boolean hasBakeryStocked() { return bakeryStocked; }
         @Override public boolean hasNodeGatherPublished() { return nodeGatherPublished; }
         @Override public boolean hasInnWithStay() { return innWithStay; }
     }
@@ -60,8 +60,8 @@ class GuideProgressServiceTest {
         c.roadPlaced = true;
         assertEquals(6, GuideProgressService.computeStep(c));
 
-        c.types.add("breadshop");
-        c.breadshopStocked = true;
+        c.types.add("bakery");
+        c.bakeryStocked = true;
         assertEquals(7, GuideProgressService.computeStep(c));
 
         c.categories.add("node");
@@ -101,11 +101,11 @@ class GuideProgressServiceTest {
         c.roadPlaced = true;
         assertEquals(6, GuideProgressService.computeStep(c));
 
-        // Breadshop built but not yet stocked → stays at 6.
-        c.types.add("breadshop");
+        // Bakery built but not yet stocked → stays at 6.
+        c.types.add("bakery");
         assertEquals(6, GuideProgressService.computeStep(c));
 
-        c.breadshopStocked = true;
+        c.bakeryStocked = true;
         assertEquals(7, GuideProgressService.computeStep(c));
 
         // Node built but no gather published → stays at 7.
@@ -117,7 +117,7 @@ class GuideProgressServiceTest {
     }
 
     @Test
-    void breadshopNeedsStockAndInnNeedsOvernightStay() {
+    void bakeryNeedsStockAndInnNeedsOvernightStay() {
         FakeCtx c = empty();
         c.categories.add("government");
         c.types.add("warehouse");
@@ -125,8 +125,8 @@ class GuideProgressServiceTest {
         c.categories.add("workstation");
         c.synthesized = true;
         c.roadPlaced = true;
-        c.types.add("breadshop");
-        c.breadshopStocked = true;
+        c.types.add("bakery");
+        c.bakeryStocked = true;
         c.categories.add("node");
         c.nodeGatherPublished = true;
         c.categories.add("altar");

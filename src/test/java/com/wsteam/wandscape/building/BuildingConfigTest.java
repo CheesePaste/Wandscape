@@ -208,7 +208,7 @@ class BuildingConfigTest {
         @Test
         void parseInteractSpotsWithActions() {
             String json = """
-                {"id":"breadshop","category":"shop",
+                {"id":"bakery","category":"shop",
                  "interact_spots":[
                    {"pos":[1,0,1],"action":"browse"},
                    {"pos":[3,0,1],"action":"eat"}

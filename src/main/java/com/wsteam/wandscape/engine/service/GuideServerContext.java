@@ -19,8 +19,8 @@ public interface GuideServerContext {
     /** Player has manually placed at least one road (step 6). */
     boolean hasPlayerPlacedRoad();
 
-    /** A breadshop is built AND has at least one stocked good (step 7). */
-    boolean hasBreadshopStocked();
+    /** A bakery is built AND has at least one stocked good (step 7). */
+    boolean hasBakeryStocked();
 
     /** A node is built AND the player has published at least one gather task (step 8). */
     boolean hasNodeGatherPublished();

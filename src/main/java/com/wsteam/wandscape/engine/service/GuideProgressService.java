@@ -58,7 +58,7 @@ public final class GuideProgressService implements GuideProgressApi {
         if (ctx.hasCategory("workstation")) step++;       // 4 建造工作站
         if (ctx.hasPlayerSynthesized()) step++;           // 5 合成一样物品
         if (ctx.hasPlayerPlacedRoad()) step++;            // 6 铺设一条道路
-        if (ctx.hasBreadshopStocked()) step++;            // 7 面包店补充货物
+        if (ctx.hasBakeryStocked()) step++;             // 7 面包店补充货物
         if (ctx.hasNodeGatherPublished()) step++;         // 8 节点发布采集任务
         if (ctx.hasCategory("altar")) step++;             // 9 建造祭坛
         if (ctx.hasInnWithStay()) step++;                 // 10 旅馆游客入住
@@ -110,11 +110,11 @@ public final class GuideProgressService implements GuideProgressApi {
         }
 
         @Override
-        public boolean hasBreadshopStocked() {
+        public boolean hasBakeryStocked() {
             BuildingSavedData savedData = BuildingSavedData.get(level);
             if (savedData == null) return false;
             for (BuildingData b : buildings) {
-                if ("breadshop".equals(b.getBuildingTypeId())
+                if ("bakery".equals(b.getBuildingTypeId())
                         && savedData.hasShopStock(b.getBuildingId())) {
                     return true;
                 }
