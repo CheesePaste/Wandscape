@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.building.data.BuildingConfig;
-import com.wsteam.wandscape.road.core.TransportRoute;
-import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.system.ResourceSupplySystem;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
@@ -387,18 +385,15 @@ public final class ShopStockManager {
         ItemTransportManager transporter = WandscapeEngine.getTransporter();
         boolean hasTransport = transporter != null && findNearestWarehouse(colonyId) != null;
 
-        // Find warehouse position and plan route once for this restock cycle
+        // Find warehouse position for this restock cycle
         BlockPos warehousePos = null;
-        TransportRoute route = null;
         if (hasTransport) {
             warehousePos = findNearestWarehouse(colonyId);
             if (warehousePos == null) {
                 hasTransport = false;
             } else {
                 BuildingState shopState = savedData.getBuilding(buildingId);
-                if (shopState != null && !shopState.isShutdown()) {
-                    route = planRestockRoute(colonyId, warehousePos, shopState.getAnchor(), level);
-                } else {
+                if (shopState == null || shopState.isShutdown()) {
                     hasTransport = false;
                 }
             }
@@ -444,7 +439,7 @@ public final class ShopStockManager {
                     stock.put(good.itemId(), stock.getOrDefault(good.itemId(), 0) + canAfford);
                     launchRestockTransport(buildingId, good.itemId(), canAfford,
                             level,
-                            warehousePos, shopState.getAnchor(), route);
+                            warehousePos, shopState.getAnchor());
                     changed = true;
                 }
             } else {
@@ -537,14 +532,13 @@ public final class ShopStockManager {
      */
     private void launchRestockTransport(UUID buildingId, String itemId, int amount,
                                         ServerLevel level,
-                                        BlockPos warehousePos, BlockPos shopPos,
-                                        @Nullable TransportRoute route) {
+                                        BlockPos warehousePos, BlockPos shopPos) {
         ItemTransportManager transporter = WandscapeEngine.getTransporter();
         if (transporter == null) return;
 
         ItemKey key = ItemKey.of(itemId, null);
 
-        transporter.send(key, amount, warehousePos, shopPos, level, 0, route, false)
+        transporter.send(key, amount, warehousePos, shopPos, level, 0)
             .thenRun(() -> onTransportArrived(buildingId, itemId, amount));
 
     }
@@ -586,17 +580,6 @@ public final class ShopStockManager {
         } catch (IllegalStateException e) {
             return null;
         }
-    }
-
-    /**
-     * Plan a transport route from warehouse to shop using the road network.
-     * Returns empty list if no road network — caller falls back to direct transport.
-     */
-    private static TransportRoute planRestockRoute(UUID colonyId,
-                                                        BlockPos from, BlockPos to,
-                                                        net.minecraft.world.level.Level level) {
-        return RoadRoutingHelper.planWithRoads(
-                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 
     /**

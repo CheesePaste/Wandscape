@@ -21,8 +21,6 @@ import com.wsteam.wandscape.core.types.AttributeType;
 import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
-import com.wsteam.wandscape.road.core.TransportRoute;
-import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
@@ -612,10 +610,9 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
         BlockPos from = npc.blockPosition();
-        TransportRoute route = planRoute(colonyId, from, to, npc.level());
 
         ItemKey key = ItemKey.of(itemId, null);
-        transporter.send(key, amount, from, to, npc.level(), npcId, route);
+        transporter.send(key, amount, from, to, npc.level(), npcId);
     }
 
     /** Launch transport animation for produced items (synthesize/craft_wand/brew_potion). */
@@ -627,9 +624,8 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         BlockPos storagePos = findNearestStorage(colonyId, npc.blockPosition());
         BlockPos to = storagePos != null ? storagePos : npc.blockPosition().offset(0, 2, 0);
         BlockPos from = npc.blockPosition();
-        TransportRoute route = planRoute(colonyId, from, to, npc.level());
 
-        transporter.send(outputKey, count, from, to, npc.level(), npcId, route);
+        transporter.send(outputKey, count, from, to, npc.level(), npcId);
     }
 
     /** Map an element name to a representative MC block ID for visual transport. */
@@ -723,11 +719,5 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
             if (d < best) { best = d; nearest = p; }
         }
         return nearest;
-    }
-
-    private static TransportRoute planRoute(UUID colonyId, BlockPos from, BlockPos to,
-                                                 net.minecraft.world.level.Level level) {
-        return RoadRoutingHelper.planWithRoads(
-                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 }

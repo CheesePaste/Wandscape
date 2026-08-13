@@ -10,8 +10,6 @@ import com.wsteam.wandscape.op.api.AtomicOp;
 import com.wsteam.wandscape.op.executor.OpExecutor;
 import com.wsteam.wandscape.op.executor.ResourceShortageException;
 import com.wsteam.wandscape.core.types.ResourceStack;
-import com.wsteam.wandscape.road.core.TransportRoute;
-import com.wsteam.wandscape.road.engine.RoadRoutingHelper;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -64,7 +62,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
      * Each resource stack of N items becomes 1 launch entry with a count.
      */
     private record LaunchEntry(ItemKey key, int count, BlockPos from, BlockPos to,
-                               Level level, long npcId, TransportRoute route) {}
+                               Level level, long npcId) {}
 
     private static final class PendingBatch {
         final CompletableFuture<Void> doneFuture;
@@ -160,13 +158,12 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
 
         BlockPos npcPos = npc.blockPosition();
         Level level = npc.level();
-        TransportRoute route = planRoute(colonyId, warehousePos, npcPos, level);
 
         // ── 5. Build flat launch entry list (one entry per item-entity) ──
         List<LaunchEntry> entries = new ArrayList<>();
         for (ResourceStack need : needs) {
             ItemKey key = ItemKey.of(need.resource().id(), null);
-            entries.add(new LaunchEntry(key, need.amount(), warehousePos, npcPos, level, npcId, route));
+            entries.add(new LaunchEntry(key, need.amount(), warehousePos, npcPos, level, npcId));
         }
 
         int totalItems = entries.size();
@@ -273,7 +270,7 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
     }
 
     private CompletableFuture<Void> launch(LaunchEntry e) {
-        return transporter.send(e.key(), e.count(), e.from(), e.to(), e.level(), e.npcId(), e.route());
+        return transporter.send(e.key(), e.count(), e.from(), e.to(), e.level(), e.npcId());
     }
 
     // ── Helpers ──
@@ -308,11 +305,5 @@ public class ResourceRequestExecutor implements OpExecutor<AtomicOp.ResourceRequ
             if (d < best) { best = d; nearest = p; }
         }
         return nearest;
-    }
-
-    private static TransportRoute planRoute(UUID colonyId, BlockPos from, BlockPos to,
-                                                 net.minecraft.world.level.Level level) {
-        return RoadRoutingHelper.planWithRoads(
-                WandscapeApis.getRoadApi(), level, colonyId, from, to);
     }
 }

@@ -13,7 +13,6 @@ import com.wsteam.wandscape.core.ecs.World;
 import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.RitualId;
 import com.wsteam.wandscape.engine.boundary.WandscapeRitualOps;
-import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
 import com.wsteam.wandscape.magic.data.MagicDef;
 import com.wsteam.wandscape.magic.internal.SpellbookLoader;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
@@ -39,10 +38,6 @@ public class NavigationSystem implements System {
     private static final String TAG = "NavigationSystem";
 
     static final double STOP_RANGE_SQ = 25.0; // 5²
-    /** Road routing kicks in for hops beyond this XZ distance. */
-    private static final double ROAD_ROUTE_MIN_DIST_SQ = 24.0 * 24.0;
-    /** Horizontal distance to a road waypoint before advancing to the next. */
-    private static final double WAYPOINT_ARRIVE_SQ = 2.25;
     static final double NAV_SPEED = 1.0;
     private static final int PATHFIND_TIMEOUT = 200;
     private static final int MAX_REPATH = 5;
@@ -118,35 +113,11 @@ public class NavigationSystem implements System {
     private void tickPathfinding(NavigationState nav, WandscapeNpc npc, long npcId, World world) {
         int elapsed = tickCounter - nav.startTick;
 
-        // ── Road-route waypoint advancement ──
-        if (!nav.waypoints.isEmpty()) {
-            int idx = nav.waypointIndex;
-            if (idx < nav.waypoints.size()) {
-                GridPos wp = nav.waypoints.get(idx);
-                double dx = npc.getX() - (wp.x() + 0.5);
-                double dz = npc.getZ() - (wp.z() + 0.5);
-                if (dx * dx + dz * dz <= WAYPOINT_ARRIVE_SQ) {
-                    nav.waypointIndex = idx + 1;
-                    nav.repathCount = 0; // repath budget is per-leg, not per-journey
-                    moveToWaypoint(nav, npc);
-                }
-            } else {
-                // All waypoints walked → navigate directly to the final target
-                nav.waypoints = List.of();
-                nav.waypointIndex = 0;
-                npc.getNavigation().moveTo(
-                        nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
-                return;
-            }
-        }
-
         if (npc.getNavigation().isDone()) {
             if (nav.repathCount < MAX_REPATH) {
                 nav.repathCount++;
-                boolean ok = !nav.waypoints.isEmpty()
-                        ? moveToWaypoint(nav, npc)
-                        : npc.getNavigation().moveTo(
-                                nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
+                boolean ok = npc.getNavigation().moveTo(
+                        nav.target.x() + 0.5, nav.target.y() + 1, nav.target.z() + 0.5, NAV_SPEED);
                 Log.info(TAG, "[NavSys] NPC {} re-path #{}, elapsed={} ok={}",
                         npcId, nav.repathCount, elapsed, ok);
                 if (!ok) {
@@ -189,31 +160,14 @@ public class NavigationSystem implements System {
     }
 
     /**
-     * Initialise pathfinding for a fresh request: long hops route via the
-     * colony road network (coarse waypoints), short hops go straight to
-     * vanilla A*. Returns false if movement cannot start at all.
+     * Initialise pathfinding for a fresh request: vanilla A* to the target.
+     * Returns false if movement cannot start at all.
      */
     private boolean startPathfinding(NavigationState nav, WandscapeNpc npc, long npcId) {
         GridPos target = nav.target;
         BlockPos to = new BlockPos(target.x(), target.y(), target.z());
         BlockPos from = npc.blockPosition();
 
-        if (from.distSqr(to) > ROAD_ROUTE_MIN_DIST_SQ) {
-            List<BlockPos> wps = RoadWalkPlanner.plan(npc.level(), from, to);
-            if (!wps.isEmpty()) {
-                nav.waypoints = wps.stream()
-                        .map(w -> new GridPos(w.getX(), w.getY(), w.getZ()))
-                        .toList();
-                nav.waypointIndex = 0;
-                boolean ok = moveToWaypoint(nav, npc);
-                Log.info(TAG, "[NavSys] NPC {} road route → {} wps, ok={}",
-                        npcId, nav.waypoints.size(), ok);
-                return ok;
-            }
-        }
-
-        nav.waypoints = List.of();
-        nav.waypointIndex = 0;
         boolean ok = npc.getNavigation().moveTo(
                 to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5, NAV_SPEED);
         if (!ok) {
@@ -228,19 +182,6 @@ public class NavigationSystem implements System {
                     navPath != null ? navPath.getNodeCount() : -1);
         }
         return ok;
-    }
-
-    /** Issue a moveTo for the current road waypoint, or the final target when out of waypoints. */
-    private boolean moveToWaypoint(NavigationState nav, WandscapeNpc npc) {
-        int idx = nav.waypointIndex;
-        if (idx < nav.waypoints.size()) {
-            GridPos wp = nav.waypoints.get(idx);
-            return npc.getNavigation().moveTo(
-                    wp.x() + 0.5, wp.y() + 0.5, wp.z() + 0.5, NAV_SPEED);
-        }
-        GridPos t = nav.target;
-        return npc.getNavigation().moveTo(
-                t.x() + 0.5, t.y() + 1, t.z() + 0.5, NAV_SPEED);
     }
 
     // ---- TELEPORT WAITING (spell-cooldown-gated, placeholder mode) ----
@@ -292,11 +233,9 @@ public class NavigationSystem implements System {
             // PATHFIND_TIMEOUT/卡住/重寻路失败后再切传送兜住。
             nav.mode = NavigationState.Mode.PATHFINDING;
             nav.startTick = tickCounter;
-            if (nav.waypoints.isEmpty()) {
-                if (!startPathfinding(nav, npc, npcId)) {
-                    // 连走路都起不来（如区块未加载）→ 退回原逻辑：下 tick 重试传送门控
-                    nav.startTick = 0;
-                }
+            if (!startPathfinding(nav, npc, npcId)) {
+                // 连走路都起不来（如区块未加载）→ 退回原逻辑：下 tick 重试传送门控
+                nav.startTick = 0;
             }
             return;
         }

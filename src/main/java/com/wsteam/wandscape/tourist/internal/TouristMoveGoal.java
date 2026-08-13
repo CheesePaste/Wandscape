@@ -13,15 +13,12 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.core.event.NarrativeEventTriggered;
 import com.wsteam.wandscape.engine.WandscapeEngine;
-import com.wsteam.wandscape.engine.nav.RoadWalkPlanner;
 import com.wsteam.wandscape.engine.service.ParticleService;
-import com.wsteam.wandscape.road.core.RoadNetwork;
 import com.wsteam.wandscape.road.engine.WandscapeTags;
 import com.wsteam.wandscape.shared.data.Activity;
 import com.wsteam.wandscape.shared.data.NarrativeEvent;
 import com.wsteam.wandscape.shared.data.VisitMemory;
 import com.wsteam.wandscape.shared.api.BuildingApi;
-import com.wsteam.wandscape.shared.api.RoadApi;
 import com.wsteam.wandscape.shared.client.bubble.TransientBubbleStore;
 import com.wsteam.wandscape.shared.data.BuildingData;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
@@ -79,10 +76,13 @@ public class TouristMoveGoal extends Goal {
     private MoveMode currentMode = MoveMode.WANDERING;
 
     // ── Shared navigation ──
-    private BlockPos[] waypoints;
-    private int wpIndex;
-    private boolean usingRoad;
+    /** Current POI destination (EXPLORING_POI); null = none. */
+    @Nullable
+    private BlockPos navTarget;
     private int stuckTicks;
+
+    /** 离路行走减速系数（脚下是路面方块 → 全速）。 */
+    private static final double OFF_ROAD_SPEED_FACTOR = 0.8;
 
     // ── Real stuck detection ──
     private BlockPos lastPos;
@@ -218,8 +218,7 @@ public class TouristMoveGoal extends Goal {
     public void stop() {
         clearSpotState();
         tourist.getNavigation().stop();
-        waypoints = null;
-        wpIndex = 0;
+        navTarget = null;
     }
 
     @Override
@@ -421,23 +420,10 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Waypoint advancement
-        BlockPos wp = currentTarget(target);
-        if (wp != null && pos.distSqr(wp) < 2.25) {
-            wpIndex++;
-            if (waypoints != null && wpIndex < waypoints.length) {
-                moveToNext(touristSpeed, target);
-                stuckTicks = 0;
-                return;
-            }
-        }
-
         // Stuck recovery
         if (nav.isDone()) {
             if (++stuckTicks > 40) {
                 stuckTicks = 0;
-                usingRoad = planRoute(target);
-                wpIndex = 1;
                 moveToNext(touristSpeed, target);
             } else if (repathDue()) {
                 moveToNext(touristSpeed, target);
@@ -814,13 +800,11 @@ public class TouristMoveGoal extends Goal {
         indoorPhase = true;
         exitingPhase = false;
         syncDebugData();
-        waypoints = null;
-        wpIndex = 0;
+        navTarget = null;
         stuckTicks = 0;
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
-        usingRoad = false;
 
         // 到达建筑：认领一个空 spot（spot 数 = 同时交互人数上限），导航到该 spot 世界坐标。
         // spot 全满 → 排队（均匀分散到队最短的 spot 后，沿该 spot 朝向站一列）。
@@ -878,8 +862,7 @@ public class TouristMoveGoal extends Goal {
      */
     private void performBuildingInteraction() {
         tourist.getNavigation().stop();
-        waypoints = null;
-        wpIndex = 0;
+        navTarget = null;
         idleTicks = 0;
 
         UUID buildingId = tourist.getTargetBuildingId();
@@ -1178,8 +1161,7 @@ public class TouristMoveGoal extends Goal {
     // ════════════════════════════════════════════════════════════════
 
     private void startPoiExplore() {
-        waypoints = null;
-        wpIndex = 0;
+        navTarget = null;
         stuckTicks = 0;
         poiPauseTicks = 0;
         lastPos = null;
@@ -1231,9 +1213,9 @@ public class TouristMoveGoal extends Goal {
             }
         }
 
-        BlockPos wp = currentTarget();
+        BlockPos wp = navTarget;
         if (wp == null) {
-            // No waypoints — pick another POI, or wander fallback
+            // No destination — pick another POI, or wander fallback
             if (!pickNextPoiAndGo()) {
                 switchMode(MoveMode.WANDERING);
                 startWander();
@@ -1241,20 +1223,10 @@ public class TouristMoveGoal extends Goal {
             return;
         }
 
-        // Waypoint advancement
+        // Arrived at the POI
         if (pos.distSqr(wp) < 2.25) {
-            if (waypoints != null && wpIndex < waypoints.length) {
-                wpIndex++;
-                if (wpIndex < waypoints.length) {
-                    moveToNext(wanderSpeed, wp);
-                    stuckTicks = 0;
-                    return;
-                }
-            }
-            // End of waypoint chain → arrived at POI
             nav.stop();
-            waypoints = null;
-            wpIndex = 0;
+            navTarget = null;
             poiPauseTicks = 100 + tourist.getRandom().nextInt(200);
             return;
         }
@@ -1306,9 +1278,8 @@ public class TouristMoveGoal extends Goal {
         BlockPos target = findGround(rawTarget.getX(), rawTarget.getY(), rawTarget.getZ());
         if (target == null) target = rawTarget;
 
-        usingRoad = planRoute(target);
+        navTarget = target;
         logNav("POI", target);
-        wpIndex = 1; // skip wp[0] (= start pos)
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
@@ -1634,8 +1605,7 @@ public class TouristMoveGoal extends Goal {
         }
         currentMode = next;
         clearSpotState();
-        waypoints = null;
-        wpIndex = 0;
+        navTarget = null;
         indoorPhase = false;
         exitingPhase = false;
         entryPoint = null;
@@ -1839,38 +1809,13 @@ public class TouristMoveGoal extends Goal {
     // ════════════════════════════════════════════════════════════════
 
     private void beginNavigation(BlockPos target, double speed) {
-        waypoints = null;
-        wpIndex = 0;
+        navTarget = null;
         stuckTicks = 0;
         idleTicks = 0;
         lastPos = null;
         noMoveTicks = 0;
         totalNavTicks = 0;
-        usingRoad = planRoute(target);
-        wpIndex = 1;
         moveToNext(speed, target);
-    }
-
-    private boolean planRoute(BlockPos target) {
-        RoadApi roadApi = getRoadApiSilently();
-        if (roadApi == null) return false;
-        RoadNetwork network = roadApi.getNetwork(null);
-        if (network == null || network.isEmpty()) return false;
-
-        BlockPos from = tourist.blockPosition();
-        List<BlockPos> wps = RoadWalkPlanner.plan(roadApi, tourist.level(), from, target);
-        if (wps.isEmpty()) return false;
-
-        waypoints = wps.stream().map(this::jitter).toArray(BlockPos[]::new);
-        return true;
-    }
-
-    /** Deterministic ±0–1 XZ offset so entities don't walk on exactly the same path. */
-    private BlockPos jitter(BlockPos raw) {
-        long seed = tourist.getUUID().hashCode() + raw.hashCode();
-        int dx = (int) ((seed & 3) - 1);         // -1, 0, or +1
-        int dz = (int) (((seed >> 16) & 3) - 1); // -1, 0, or +1
-        return raw.offset(dx, 0, dz);
     }
 
     /** True when enough ticks have passed since the last nav re-issue to allow another. */
@@ -1890,23 +1835,13 @@ public class TouristMoveGoal extends Goal {
         lastRepathTick = tourist.timeBase();
     }
 
-    private void moveToNext(double spd, BlockPos fallback) {
-        BlockPos wp = currentTarget(fallback);
-        BlockPos ground = findGround(wp.getX(), wp.getY(), wp.getZ());
-        if (ground != null) wp = ground;
+    private void moveToNext(double spd, BlockPos dest) {
+        BlockPos ground = findGround(dest.getX(), dest.getY(), dest.getZ());
+        if (ground != null) dest = ground;
+        // 方块条件（无图）：脚下是路面 → 全速；否则减速，让铺路有实际价值。
+        double effectiveSpeed = isOnRoad(tourist.blockPosition()) ? spd : spd * OFF_ROAD_SPEED_FACTOR;
         stampRepath();
-        tourist.getNavigation().moveTo(wp.getX() + 0.5, wp.getY(), wp.getZ() + 0.5, spd);
-    }
-
-    @Nullable
-    private BlockPos currentTarget() {
-        if (waypoints != null && wpIndex < waypoints.length) return waypoints[wpIndex];
-        return null;
-    }
-
-    private BlockPos currentTarget(BlockPos fallback) {
-        BlockPos wp = currentTarget();
-        return wp != null ? wp : fallback;
+        tourist.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, effectiveSpeed);
     }
 
     // ── Logging ──
@@ -1914,15 +1849,9 @@ public class TouristMoveGoal extends Goal {
     private void logNav(String label, BlockPos target) {
         String name = tourist.getTouristName();
         BlockPos from = tourist.blockPosition();
-        if (usingRoad && waypoints != null) {
-            Log.info(TAG, "[Tourist] {} {} ROAD → {} ({} wps, {}→{})",
-                    name, label, target.toShortString(), waypoints.length,
-                    from.toShortString(), target.toShortString());
-        } else {
-            Log.info(TAG, "[Tourist] {} {} VANILLA → {} ({}→{})",
-                    name, label, target.toShortString(),
-                    from.toShortString(), target.toShortString());
-        }
+        Log.info(TAG, "[Tourist] {} {} → {} ({}→{})",
+                name, label, target.toShortString(),
+                from.toShortString(), target.toShortString());
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -2020,12 +1949,6 @@ public class TouristMoveGoal extends Goal {
     @Nullable
     private static BuildingApi getBuildingApi() {
         try { return WandscapeApis.getBuildingApi(); }
-        catch (IllegalStateException e) { return null; }
-    }
-
-    @Nullable
-    private static RoadApi getRoadApiSilently() {
-        try { return WandscapeApis.getRoadApi(); }
         catch (IllegalStateException e) { return null; }
     }
 
