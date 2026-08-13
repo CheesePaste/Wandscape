@@ -30,16 +30,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Pre-baked GPU vertex buffers for building ghosts.
+ * Pre-baked GPU vertex buffers for building ghosts with zero-copy VBO rendering.
  *
  * <p>Bakes a {@link BuildingConfig} at a given rotation into a static
- * {@link VertexBuffer} (config-local coordinates), replacing the old per-frame
- * per-block {@code renderSingleBlock} loop. For a large building that was
- * re-tessellating ~8.5k blocks every frame (the source of the projection FPS
- * drop and its GC churn), a frame is now one draw call.
+ * {@link VertexBuffer} (config-local coordinates), eliminating per-block CPU draw calls.
  */
 public final class BuildingGhostVboCache {
 
@@ -53,27 +51,23 @@ public final class BuildingGhostVboCache {
 
     /** Draw the full ghost building (projection placement preview). */
     public static void drawGhost(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                 BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
+                                 BlockPos anchor, BuildingConfig config, int rotationSteps) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
         if (mesh.indexClobbered) {
             restoreFullIndex(mesh);
             mesh.indexClobbered = false;
         }
-        drawVbo(mesh, projection, anchor, camPos);
+        drawVbo(mesh, poseStack, projection, anchor);
     }
 
-    /**
-     * Draw the ghost skipping cells that already contain the expected block
-     * (under-construction footprint). The skip mask is re-sampled from the
-     * world every call, so it tracks placed blocks live.
-     */
+    /** Draw ghost skipping blocks already placed in the world (construction footprint). */
     public static void drawGhostSkipped(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                        BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
+                                        BlockPos anchor, BuildingConfig config, int rotationSteps) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
         rebuildMaskedIndex(mc, mesh, anchor);
-        drawVbo(mesh, projection, anchor, camPos);
+        drawVbo(mesh, poseStack, projection, anchor);
     }
 
     public static void closeAll() {
@@ -121,11 +115,12 @@ public final class BuildingGhostVboCache {
         List<BlockOffset> pattern = config.pattern();
         int n = pattern.size();
 
-        BlockOffset[] cellOffsets = new BlockOffset[n];
+        BlockOffset[] rotatedOffsets = new BlockOffset[n];
         Block[] cellBlocks = new Block[n];
         BlockState[] cellStates = new BlockState[n];
+
         for (int i = 0; i < n; i++) {
-            cellOffsets[i] = BuildingRotation.rotateOffset(pattern.get(i), steps);
+            rotatedOffsets[i] = BuildingRotation.rotateOffset(pattern.get(i), steps);
             BlockState state = BuildingPreviewRenderer.resolveBlockState(config.blockIdAt(i));
             if (state != null) {
                 for (int r = 0; r < steps; r++) {
@@ -145,28 +140,32 @@ public final class BuildingGhostVboCache {
         int[] quadStart = new int[n];
         int[] quadCount = new int[n];
         int totalQuads = 0;
+
         PoseStack pose = new PoseStack();
+
+        // Global building rotation around Y axis at origin (0,0,0)
+        if (steps > 0) {
+            pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90f * steps));
+        }
+
         for (int i = 0; i < n; i++) {
             BlockState state = cellStates[i];
             if (state == null) {
                 quadStart[i] = totalQuads;
                 continue;
             }
+            BlockOffset origOff = pattern.get(i);
             int before = vertexCount[0];
+            
             pose.pushPose();
-            pose.translate(cellOffsets[i].x(), cellOffsets[i].y(), cellOffsets[i].z());
-
-            // Align block model 3D geometry rotation with offset rotation (around block center)
-            if (steps > 0) {
-                pose.translate(0.5f, 0.5f, 0.5f);
-                pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90f * steps));
-                pose.translate(-0.5f, -0.5f, -0.5f);
-            }
+            pose.translate(origOff.x(), origOff.y(), origOff.z());
 
             mc.getBlockRenderer().renderSingleBlock(
                     state, pose, ghostSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                     ModelData.EMPTY, RenderType.translucent());
+            
             pose.popPose();
+
             quadStart[i] = totalQuads;
             quadCount[i] = (vertexCount[0] - before) / 4;
             totalQuads += quadCount[i];
@@ -189,7 +188,7 @@ public final class BuildingGhostVboCache {
             fp += 6L * indexType.bytes;
         }
 
-        return new BakedGhostMesh(vbo, indexType, quadStart, quadCount, cellOffsets, cellBlocks, fullIndex);
+        return new BakedGhostMesh(vbo, indexType, quadStart, quadCount, rotatedOffsets, cellBlocks, fullIndex);
     }
 
     private static void restoreFullIndex(BakedGhostMesh mesh) {
@@ -200,12 +199,12 @@ public final class BuildingGhostVboCache {
 
     private static void rebuildMaskedIndex(Minecraft mc, BakedGhostMesh mesh, BlockPos anchor) {
         long dest = INDEX_BBB.reserve(mesh.fullIndex.capacity());
-        int n = mesh.cellOffsets.length;
+        int n = mesh.rotatedOffsets.length;
         long p = dest;
         for (int c = 0; c < n; c++) {
             boolean skip = mesh.cellBlocks[c] != null
                     && mc.level.getBlockState(anchor.offset(
-                            mesh.cellOffsets[c].x(), mesh.cellOffsets[c].y(), mesh.cellOffsets[c].z()))
+                            mesh.rotatedOffsets[c].x(), mesh.rotatedOffsets[c].y(), mesh.rotatedOffsets[c].z()))
                             .getBlock() == mesh.cellBlocks[c];
             int start = mesh.quadStart[c];
             int count = mesh.quadCount[c];
@@ -250,18 +249,22 @@ public final class BuildingGhostVboCache {
         }
     }
 
-    private static void drawVbo(BakedGhostMesh mesh, Matrix4f projection, BlockPos anchor, net.minecraft.world.phys.Vec3 camPos) {
-        RenderType rt = RenderType.translucent();
-        Matrix4f modelView = new Matrix4f().translate(
-                (float) (anchor.getX() - camPos.x),
-                (float) (anchor.getY() - camPos.y),
-                (float) (anchor.getZ() - camPos.z));
+    private static void drawVbo(BakedGhostMesh mesh, PoseStack poseStack, Matrix4f projection, BlockPos anchor) {
+        Vec3 camPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 
+        poseStack.pushPose();
+        // World-space translation relative to camera position
+        poseStack.translate(anchor.getX() - camPos.x, anchor.getY() - camPos.y, anchor.getZ() - camPos.z);
+
+        RenderType rt = RenderType.translucent();
         rt.setupRenderState();
+
         mesh.vbo.bind();
-        mesh.vbo.drawWithShader(modelView, projection, GameRenderer.getRendertypeTranslucentShader());
+        mesh.vbo.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getRendertypeTranslucentShader());
         VertexBuffer.unbind();
+
         rt.clearRenderState();
+        poseStack.popPose();
     }
 
     private static final class BakedGhostMesh {
@@ -269,20 +272,20 @@ public final class BuildingGhostVboCache {
         final VertexFormat.IndexType indexType;
         final int[] quadStart;
         final int[] quadCount;
-        final BlockOffset[] cellOffsets;
+        final BlockOffset[] rotatedOffsets;
         final Block[] cellBlocks;
         final ByteBuffer fullIndex;
         boolean indexClobbered;
 
         BakedGhostMesh(VertexBuffer vbo, VertexFormat.IndexType indexType,
                        int[] quadStart, int[] quadCount,
-                       BlockOffset[] cellOffsets, Block[] cellBlocks,
+                       BlockOffset[] rotatedOffsets, Block[] cellBlocks,
                        ByteBuffer fullIndex) {
             this.vbo = vbo;
             this.indexType = indexType;
             this.quadStart = quadStart;
             this.quadCount = quadCount;
-            this.cellOffsets = cellOffsets;
+            this.rotatedOffsets = rotatedOffsets;
             this.cellBlocks = cellBlocks;
             this.fullIndex = fullIndex;
         }

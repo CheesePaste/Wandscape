@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import org.joml.Matrix4f;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wsteam.wandscape.building.data.BlockOffset;
@@ -27,43 +29,27 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * World-space semi-transparent building ghost renderer with zero-GC allocations and LOD caching.
+ * World-space semi-transparent building ghost renderer facade.
  *
- * <p>Renders the full textured block model of a {@link BuildingConfig} at an
- * anchor position with alpha applied uniformly, so the target footprint reads
- * as a "ghost". Shared by the projection placement preview and the
- * under-construction building footprint overlay.
+ * <p>Shared by projection placement preview and under-construction building footprint overlay.
  */
 public final class BuildingGhostRenderer {
 
-    /** Alpha factor for ghost blocks (0.0-1.0). Applied via setColor interception. */
     private static final float GHOST_ALPHA = 0.40f;
-    /** Full brightness: block=15, sky=15 (LightTexture.pack(15,15)). */
     private static final int FULL_BRIGHT = 0xF000F0;
 
     private BuildingGhostRenderer() {}
 
-    /**
-     * Render {@code config}'s full ghost (all cells) at {@code anchor}.
-     * Used by the projection placement preview.
-     *
-     * @param rotationSteps number of 90° CCW rotations (0-3)
-     */
-    public static void renderGhostVbo(Minecraft mc, PoseStack poseStack, org.joml.Matrix4f projection,
-                                      BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
-        BuildingGhostVboCache.drawGhost(mc, poseStack, projection, anchor, config, rotationSteps, camPos);
+    /** Render full building ghost via GPU VBO static cache (120 FPS). */
+    public static void renderGhostVbo(Minecraft mc, PoseStack poseStack, Matrix4f projection,
+                                      BlockPos anchor, BuildingConfig config, int rotationSteps) {
+        BuildingGhostVboCache.drawGhost(mc, poseStack, projection, anchor, config, rotationSteps);
     }
 
-    /**
-     * Render {@code config}'s ghost at {@code anchor}, hiding cells that already
-     * contain the expected block (under-construction footprint). The skip mask is
-     * sampled from the world on every call.
-     *
-     * @param rotationSteps number of 90° CCW rotations (0-3)
-     */
-    public static void renderGhostVboSkipped(Minecraft mc, PoseStack poseStack, org.joml.Matrix4f projection,
-                                             BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
-        BuildingGhostVboCache.drawGhostSkipped(mc, poseStack, projection, anchor, config, rotationSteps, camPos);
+    /** Render under-construction footprint ghost skipping placed blocks via GPU VBO. */
+    public static void renderGhostVboSkipped(Minecraft mc, PoseStack poseStack, Matrix4f projection,
+                                             BlockPos anchor, BuildingConfig config, int rotationSteps) {
+        BuildingGhostVboCache.drawGhostSkipped(mc, poseStack, projection, anchor, config, rotationSteps);
     }
 
     public record RotatedBlockEntry(int rx, int ry, int rz, BlockState state) {}
@@ -113,7 +99,6 @@ public final class BuildingGhostRenderer {
         return ROTATED_CACHE.computeIfAbsent(key, k -> new RotatedGhostCache(k.config(), k.rotationSteps()));
     }
 
-    // Zero-GC MultiBufferSource and VertexConsumer wrapper
     private static final GhostVertexConsumer GHOST_CONSUMER = new GhostVertexConsumer();
     private static final GhostBufferSource GHOST_BUFFER_SOURCE = new GhostBufferSource(GHOST_CONSUMER);
 
@@ -180,14 +165,6 @@ public final class BuildingGhostRenderer {
         }
     }
 
-    /**
-     * Render {@code config}'s pattern blocks as a semi-transparent ghost at {@code anchor}.
-     *
-     * @param rotationSteps number of 90° CCW rotations (0-3)
-     * @param hideBuiltBlocks when true, cells already containing a block of the
-     *                        expected type are skipped so a real block takes
-     *                        priority over the ghost (construction footprint)
-     */
     public static void renderGhostBlocks(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
                                           PoseStack poseStack,
                                           BlockPos anchor, BuildingConfig config, int rotationSteps,
@@ -197,8 +174,6 @@ public final class BuildingGhostRenderer {
         if (entries.isEmpty()) return;
 
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
-
-        // Reuse zero-GC buffer wrapper
         GHOST_BUFFER_SOURCE.setDelegate(bufferSource);
 
         for (int i = 0; i < entries.size(); i++) {
@@ -225,7 +200,6 @@ public final class BuildingGhostRenderer {
             poseStack.popPose();
         }
 
-        // Flush entity-block render types
         bufferSource.endBatch(Sheets.cutoutBlockSheet());
         bufferSource.endBatch(Sheets.translucentCullBlockSheet());
         bufferSource.endBatch(Sheets.translucentItemSheet());
