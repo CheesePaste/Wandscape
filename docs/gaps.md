@@ -46,6 +46,9 @@
 4. **`SplineBuildPacket` 端点吸附**：3 格内吸附节点，否则建 ORPHAN 节点；tier 硬编码 "dirt"。
 5. **`nodedark.json` 的 `node_config` 对象有非法尾逗号**（`"channel_ticks": 1200,` 后跟 `}`）。Gson 内部 lenient 模式可解析，故能正常加载；但严格 JSON 校验会失败，建议清理。
 6. **元素价值口径**：建造用 `build_cost`（EnqueueHelper 算料）、分解用 `getItemElementValue`（decompose_yield → build_cost 回退，×1/divisor 默认 1/5，且 count×总价值<divisor 时拒绝）、商店售卖利润同用 `getItemElementValue`、合成用 `buildCost`——来源尽量统一，`GenerateElementMappingsCommand` 负责保证一致性。
+7. **合成 channel 续跑的两个残余边界（2026-08）**：channel 检查点已持久化（`GlobalTask.channelRemainingTicks`），但仍有：
+   - **完成边界竞态**：channel 跑完产出已入仓、而任务 step 尚未 advance 的那一两个 tick 内若存档重载，任务以 step 0 + 无检查点恢复，会重跑一次 channel → 重复产出。窗口极小（`Wandscape.onServerTick` 先 `blockInteractExec.tickAll()` 产出、同 tick 内 `world.tick()` advance step），未修。
+   - **攻速换算精度**：检查点按"有效 channel tick"（已除原 NPC WORK_SPEED）存，续跑的新 NPC 直接用该 tick 数（不再按新 NPC 攻速换算）。双方攻速不同时，续跑时长略有偏差（更快/更慢），不造成丢产或重复产出。
 
 ## 五、版本相关（历史提交提示）
 

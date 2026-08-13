@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.engine.boundary;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import com.wsteam.wandscape.core.types.GridPos;
 import com.wsteam.wandscape.core.types.ResourceId;
 import com.wsteam.wandscape.core.types.ResourceStack;
 import com.wsteam.wandscape.element.internal.ElementMappingLoader;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.engine.transport.ItemTransportManager;
 import com.wsteam.wandscape.npc.entity.WandscapeNpc;
 import com.wsteam.wandscape.npc.internal.EntityComponentBridge;
@@ -38,6 +40,8 @@ import com.wsteam.wandscape.shared.data.ElementType;
 import com.wsteam.wandscape.shared.data.ItemKey;
 import com.wsteam.wandscape.shared.registry.WandscapeApis;
 import com.wsteam.wandscape.shared.registry.WandscapeConstants;
+import com.wsteam.wandscape.task.engine.pool.GlobalTask;
+import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.warehouse.ColonyItemBank;
 
 import net.minecraft.core.BlockPos;
@@ -86,8 +90,29 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         this.transporter = transporter;
     }
 
-    record Pending(CompletableFuture<Void> future, AtomicOp.BlockInteractOp op,
-                   World world, long npcId, int remainingTicks) {}
+    static final class Pending {
+        final CompletableFuture<Void> future;
+        final AtomicOp.BlockInteractOp op;
+        final World world;
+        final long npcId;
+        /** Owning global task id, or -1 when the channel isn't bound to a task. */
+        final long taskId;
+        /** {@link GlobalTask#channelEpoch} at channel start — stale channels are cancelled. */
+        final int epoch;
+        int remainingTicks;
+        boolean cancelled;
+
+        Pending(CompletableFuture<Void> future, AtomicOp.BlockInteractOp op, World world,
+                long npcId, long taskId, int epoch, int remainingTicks) {
+            this.future = future;
+            this.op = op;
+            this.world = world;
+            this.npcId = npcId;
+            this.taskId = taskId;
+            this.epoch = epoch;
+            this.remainingTicks = remainingTicks;
+        }
+    }
 
     private final List<Pending> pending = new ArrayList<>();
 
@@ -122,20 +147,42 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
 
         CompletableFuture<Void> future = world.startAsyncOp(
                 "block_interact_" + action + "_" + op.target());
-        pending.add(new Pending(future, op, world, npcId, effectiveChannel(world, npcId, op.channelTicks())));
+
+        // Channel duration: resume from the task's persisted checkpoint when a previous
+        // channel was interrupted (task released / world reloaded), else run the full channel.
+        // The checkpoint is NOT cleared here — the first tickAll of this channel overwrites
+        // it, and completing the channel resets it to -1. Clearing it eagerly would lose
+        // progress if this channel is interrupted again before it has ticked once.
+        long taskId = -1;
+        int epoch = 0;
+        int total = effectiveChannel(world, npcId, op.channelTicks());
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        if (exec != null && exec.globalTaskId != null && world.taskPool != null) {
+            GlobalTask task = world.taskPool.get(exec.globalTaskId);
+            if (task != null) {
+                taskId = task.id;
+                if (task.channelRemainingTicks > 0) {
+                    total = Math.min(task.channelRemainingTicks, total);
+                }
+                epoch = ++task.channelEpoch; // invalidate any stale channel from an earlier execution
+            }
+        }
+        Pending p = new Pending(future, op, world, npcId, taskId, epoch, total);
+        pending.add(p);
 
         future.thenRun(() -> {
+            if (p.cancelled) return; // orphaned channel from a released task — don't produce output
             try {
                 executeAsyncAction(op, world, npcId);
             } catch (ResourceShortageException e) {
-                var exec = world.get(npcId, TaskExecutor.class);
-                if (exec != null && exec.globalTaskId != null) {
+                var e2 = world.get(npcId, TaskExecutor.class);
+                if (e2 != null && e2.globalTaskId != null) {
                     world.taskPool.markAwaitingResources(
-                            exec.globalTaskId, npcId, e.requestedItems(), world);
-                    exec.releaseGlobalTask();
+                            e2.globalTaskId, npcId, e.requestedItems(), world);
+                    e2.releaseGlobalTask();
                     // 清掉队列里失败的全局任务包，否则下一 tick 会重复引导同一 op
                     // （第二次短路时 globalTaskId 已为 null，catch 空操作，白白多引导一趟）。
-                    exec.npcQueue.clearCurrentWithoutResume();
+                    e2.npcQueue.clearCurrentWithoutResume();
                 }
             }
         });
@@ -151,30 +198,61 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         return Math.max(1, (int) Math.ceil(baseTicks / work));
     }
 
-    /** Called every MC tick. Decrements countdowns and completes futures. */
+    /** Called every MC tick. Decrements countdowns, checkpoints progress, completes futures. */
     public void tickAll() {
         if (pending.isEmpty()) return;
 
-        List<CompletableFuture<Void>> toComplete = new ArrayList<>();
+        Iterator<Pending> it = pending.iterator();
+        while (it.hasNext()) {
+            Pending p = it.next();
+            if (p.cancelled) {
+                it.remove();
+                continue;
+            }
 
-        for (int i = 0; i < pending.size(); i++) {
-            Pending p = pending.get(i);
-            int remaining = p.remainingTicks() - 1;
+            // Validity: the owning task must still be bound to this NPC and still in
+            // progress under the same epoch. If the task was released / re-assigned /
+            // parked, the channel is orphaned — cancel it so the stale countdown doesn't
+            // complete and produce output a second time after a resume.
+            GlobalTask task = p.taskId >= 0 ? owningTask(p) : null;
+            boolean valid = p.taskId < 0 || (task != null && task.state == TaskState.IN_PROGRESS
+                    && task.assignedNpcId != null && p.npcId == task.assignedNpcId
+                    && task.channelEpoch == p.epoch);
+            if (!valid) {
+                p.cancelled = true;
+                it.remove();
+                p.future.complete(null); // resolves startAsyncOp bookkeeping; thenRun no-ops
+                continue;
+            }
+
+            int remaining = p.remainingTicks - 1;
             if (remaining <= 0) {
-                toComplete.add(p.future());
+                task.channelRemainingTicks = -1; // completed — no checkpoint to resume
+                it.remove();
+                p.future.complete(null); // → thenRun → executeAsyncAction
             } else {
-                pending.set(i, new Pending(p.future(), p.op(), p.world(), p.npcId(), remaining));
+                p.remainingTicks = remaining;
+                if (task.channelRemainingTicks != remaining) {
+                    task.channelRemainingTicks = remaining;
+                    markTaskPoolDirty();
+                }
             }
         }
+    }
 
-        for (CompletableFuture<Void> f : toComplete) {
-            f.complete(null); // → triggers thenRun → executeAsyncAction
-        }
+    /** The global task this channel belongs to, or null if the NPC no longer holds it. */
+    @Nullable
+    private GlobalTask owningTask(Pending p) {
+        TaskExecutor exec = p.world.get(p.npcId, TaskExecutor.class);
+        if (exec == null || exec.globalTaskId == null || exec.globalTaskId != p.taskId) return null;
+        if (p.world.taskPool == null) return null;
+        return p.world.taskPool.get(p.taskId);
+    }
 
-        pending.removeIf(p -> p.future().isDone());
-
-        if (!toComplete.isEmpty()) {
-        }
+    /** Mark the persisted task pool dirty so the latest channel checkpoint is saved. */
+    private static void markTaskPoolDirty() {
+        var sd = WandscapeEngine.getTaskPoolSavedData();
+        if (sd != null) sd.markChanged();
     }
 
     public boolean hasPendingOps() {
@@ -187,9 +265,10 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
      */
     public int[] getChannelProgress(GridPos target) {
         for (Pending p : pending) {
-            GridPos t = p.op().target();
+            if (p.cancelled) continue;
+            GridPos t = p.op.target();
             if (t != null && t.equals(target)) {
-                return new int[]{p.remainingTicks(), p.op().channelTicks()};
+                return new int[]{p.remainingTicks, p.op.channelTicks()};
             }
         }
         return new int[]{-1, -1};

@@ -97,6 +97,11 @@ public final class TaskPoolSavedData extends SavedData {
         tag.putInt("step", task.stepIndex);
         tag.putString("state", task.state.name());
         tag.putInt("priority", task.priority);
+        // Mid-channel crafting checkpoint (block_interact channel): lets a reload
+        // resume the channel instead of restarting the craft from zero.
+        if (task.channelRemainingTicks > 0) {
+            tag.putInt("chan_rem", task.channelRemainingTicks);
+        }
 
         // Building attribution: needed after restart so a restored head task knows
         // which building it belongs to (lease release / duplicate-construction guard).
@@ -232,6 +237,12 @@ public final class TaskPoolSavedData extends SavedData {
             if (task != null) {
                 task.state = state;
                 task.stepIndex = stepIndex;
+
+                // Restore mid-channel crafting checkpoint so the craft resumes,
+                // not restarts, after a reload.
+                if (tag.contains("chan_rem")) {
+                    task.channelRemainingTicks = tag.getInt("chan_rem");
+                }
 
                 // Restore building attribution (see taskToNbt).
                 if (tag.contains("bid")) {

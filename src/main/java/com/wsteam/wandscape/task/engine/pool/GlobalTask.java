@@ -50,6 +50,24 @@ public class GlobalTask {
     public final Deque<InterruptRecord> interruptHistory;
     public final ApprovalInfo approval;
 
+    /**
+     * Persisted channel checkpoint: remaining ticks of the in-flight
+     * {@code block_interact} channel (production synthesize/decompose/craft_wand/
+     * brew_potion, node gather). Written each tick by the executor while the
+     * channel runs, cleared ({@code -1}) when it completes or is consumed on resume.
+     * Survives save/load and task re-assignment so a half-finished craft resumes
+     * mid-channel instead of restarting from zero.
+     */
+    public int channelRemainingTicks = -1;
+
+    /**
+     * Transient per-execution epoch, bumped each time the task's channel op starts.
+     * Lets the executor detect and cancel stale channels from a released task that
+     * was re-assigned (otherwise the orphaned countdown would still produce output).
+     * Not persisted — no channel survives a reload, so resetting to 0 is correct.
+     */
+    public int channelEpoch = 0;
+
     public GlobalTask(
             long id,
             TaskSequence sequence,
