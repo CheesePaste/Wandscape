@@ -88,35 +88,8 @@ public final class BuildingPreviewRenderer {
                 float extentZ = maxZ - minZ + 1;
                 this.maxExtent = Math.max(extentX, Math.max(extentY, extentZ));
 
-                // Surface hull & LOD for GUI 38x24px micro-icons:
-                if (fullEntries.size() > 60) {
-                    var occupied = resolvedMap.keySet();
-                    List<BlockEntry> surface = new ArrayList<>();
-                    for (BlockEntry entry : fullEntries) {
-                        BlockOffset off = entry.offset();
-                        boolean isSurface = !occupied.contains(new BlockOffset(off.x() + 1, off.y(), off.z()))
-                                || !occupied.contains(new BlockOffset(off.x() - 1, off.y(), off.z()))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y() + 1, off.z()))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y() - 1, off.z()))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() + 1))
-                                || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() - 1));
-                        if (isSurface) {
-                            surface.add(entry);
-                        }
-                    }
-                    if (surface.size() > 60) {
-                        int step = (int) Math.ceil((double) surface.size() / 60.0);
-                        List<BlockEntry> sampled = new ArrayList<>(60);
-                        for (int i = 0; i < surface.size(); i += step) {
-                            sampled.add(surface.get(i));
-                        }
-                        this.iconEntries = java.util.Collections.unmodifiableList(sampled);
-                    } else {
-                        this.iconEntries = java.util.Collections.unmodifiableList(surface);
-                    }
-                } else {
-                    this.iconEntries = fullEntries;
-                }
+                // Render 100% complete block entries for crisp micro-icons without missing or floating blocks
+                this.iconEntries = fullEntries;
             }
         }
     }
@@ -150,7 +123,7 @@ public final class BuildingPreviewRenderer {
     private BuildingPreviewRenderer() {}
 
     /**
-     * Batch-friendly 3D block preview renderer. Expects caller to manage Lighting and DepthTest.
+     * Batch-friendly 3D block preview renderer for GUI icons.
      */
     public static void renderPreviewBlocks(GuiGraphics g, BuildingConfig config,
                                            int x, int y, int w, int h) {
@@ -160,7 +133,7 @@ public final class BuildingPreviewRenderer {
         }
 
         float scale = Math.min(w, h) / meta.maxExtent * 0.55f;
-        List<BlockEntry> entries = meta.iconEntries;
+        List<BlockEntry> entries = meta.fullEntries;
 
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
@@ -170,7 +143,7 @@ public final class BuildingPreviewRenderer {
         float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
 
         pose.pushPose();
-        pose.translate(x + w / 2f, y + h / 2f, 200);
+        pose.translate(x + w / 2f, y + h / 2f, 100);
         pose.scale(scale, -scale, scale);
         pose.mulPose(new Quaternionf().rotateX(TILT_RAD));
         pose.mulPose(new Quaternionf().rotateY(rotY));
