@@ -139,25 +139,19 @@ public class AnomalyScreen extends MedievalScreen {
             g.fill(badgeX, badgeY, badgeX + badgeW, badgeY + 14, badgeColor | 0xCC000000);
             g.drawString(font, badgeText, badgeX + 4, badgeY + 3, MedievalColors.TEXT_WARM_WHITE, false);
 
-            // Action button — under-construction buildings get 撤销 (undo) instead of
-            // repair/restart; a not-yet-built building has nothing to repair.
-            String btnText;
-            int btnColor;
-            if (isUnderConstruction) {
-                btnText = "撤销";
-                btnColor = MedievalColors.DANGER_RED;
-            } else {
-                btnText = isBroken ? "修复" : "营业";
-                btnColor = isBroken ? MedievalColors.SUCCESS_GREEN : MedievalColors.INFO_BLUE;
+            // Action button — under-construction buildings have no repair/restart action
+            if (!isUnderConstruction) {
+                String btnText = isBroken ? "修复" : "营业";
+                int btnX = cx + cw - BTN_W;
+                int btnY = rowY + (ROW_H - BTN_H) / 2;
+                int btnColor = isBroken ? MedievalColors.SUCCESS_GREEN : MedievalColors.INFO_BLUE;
+                boolean btnHovered = mouseX >= btnX && mouseX < btnX + BTN_W
+                        && mouseY >= btnY && mouseY < btnY + BTN_H;
+                int fillColor = btnHovered ? btnColor : (btnColor & 0x00FFFFFF) | 0xAA000000;
+                g.fill(btnX, btnY, btnX + BTN_W, btnY + BTN_H, fillColor);
+                g.drawString(font, btnText, btnX + (BTN_W - font.width(btnText)) / 2,
+                        btnY + (BTN_H - 9) / 2, MedievalColors.TEXT_WARM_WHITE, false);
             }
-            int btnX = cx + cw - BTN_W;
-            int btnY = rowY + (ROW_H - BTN_H) / 2;
-            boolean btnHovered = mouseX >= btnX && mouseX < btnX + BTN_W
-                    && mouseY >= btnY && mouseY < btnY + BTN_H;
-            int fillColor = btnHovered ? btnColor : (btnColor & 0x00FFFFFF) | 0xAA000000;
-            g.fill(btnX, btnY, btnX + BTN_W, btnY + BTN_H, fillColor);
-            g.drawString(font, btnText, btnX + (BTN_W - font.width(btnText)) / 2,
-                    btnY + (BTN_H - 9) / 2, MedievalColors.TEXT_WARM_WHITE, false);
         }
 
         g.disableScissor();
@@ -193,20 +187,19 @@ public class AnomalyScreen extends MedievalScreen {
             if (rowY + ROW_H < listY || rowY > listY + listH) continue;
 
             var entry = entries.get(i);
-            boolean isUnderConstruction = entry.type() == AnomalyEntry.Type.UNDER_CONSTRUCTION;
+            if (entry.type() == AnomalyEntry.Type.UNDER_CONSTRUCTION) continue;
             boolean isBroken = entry.type() == AnomalyEntry.Type.BROKEN;
             int btnX = cx + cw - BTN_W;
             int btnY = rowY + (ROW_H - BTN_H) / 2;
 
             if (mouseX >= btnX && mouseX < btnX + BTN_W
                     && mouseY >= btnY && mouseY < btnY + BTN_H) {
-                String action = isUnderConstruction ? "cancel" : (isBroken ? "repair" : "restart");
+                String action = isBroken ? "repair" : "restart";
                 PacketDistributor.sendToServer(new BuildingActionPacket(entry.buildingId(), action));
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player != null) {
-                    String msg = isUnderConstruction
-                            ? "§a已发送撤销指令" : (isBroken ? "§a已发送修复指令" : "§a已发送营业指令");
-                    mc.player.displayClientMessage(Component.literal(msg), true);
+                    mc.player.displayClientMessage(
+                            Component.literal(isBroken ? "§a已发送修复指令" : "§a已发送营业指令"), true);
                 }
                 onClose();
                 return true;

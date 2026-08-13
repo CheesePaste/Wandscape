@@ -49,6 +49,7 @@ public final class BuildingDebugOverlay {
 
     // Button colors
     private static final int BTN_REPAIR_BG = 0xCC2E7D32;
+    private static final int BTN_CANCEL_BG = 0xCCB8860B;
     private static final int BTN_SHUTDOWN_BG = 0xCC8B4513;
     private static final int BTN_RESTART_BG = 0xCC2E7D32;
     private static final int BTN_DESTROY_BG = 0xCC8B0000;
@@ -166,9 +167,14 @@ public final class BuildingDebugOverlay {
         x2 += font.width("Q:") + 2;
         drawText(g, font, queueStr, x2, y2, com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL);
 
-        // ── Buttons: Repair | Shutdown/Restart | Destroy ──
+        // ── Buttons: Repair/Undo | Shutdown/Restart | Destroy ──
         int btnY = boxY + boxH + 2;
-        Component repairLabel = I18n.name("gui.wandscape.building_action.repair", "Repair");
+        // Under-construction buildings aren't damaged yet — the first button becomes
+        // 撤销 (undo) so a mis-placed building can be cancelled instead of a useless repair.
+        boolean underConstruction = data.underConstruction();
+        Component repairLabel = underConstruction
+                ? I18n.name("gui.wandscape.building_action.cancel", "Undo")
+                : I18n.name("gui.wandscape.building_action.repair", "Repair");
         Component shutdownLabel = I18n.name(
                 data.shutdown() ? "gui.wandscape.building_action.restart" : "gui.wandscape.building_action.shutdown",
                 data.shutdown() ? "Restart" : "Shutdown");
@@ -193,15 +199,16 @@ public final class BuildingDebugOverlay {
         double guiScale = mc.getWindow().getGuiScale();
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
-        boolean repairEnabled = data.needsRepair() && !data.underConstruction();
+        boolean repairEnabled = underConstruction || data.needsRepair();
         boolean hoverRepair = repairEnabled && mx >= repairX && mx <= repairX + repairW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverShutdown = mx >= shutdownX && mx <= shutdownX + shutdownW && my >= btnY && my <= btnY + BTN_HEIGHT;
         boolean hoverDestroy = mx >= destroyX && mx <= destroyX + destroyW && my >= btnY && my <= btnY + BTN_HEIGHT;
 
-        // Repair button (green, leftmost) — only usable when the building has any damage
+        // Undo/repair button (leftmost) — undo for under-construction, else repair when damaged
         com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.drawRtsBox(g, repairX, btnY, repairW, BTN_HEIGHT, false, hoverRepair);
+        int repairAccent = underConstruction ? BTN_CANCEL_BG : BTN_REPAIR_BG;
         g.fill(RenderType.guiOverlay(), repairX, btnY + BTN_HEIGHT - 2, repairX + repairW, btnY + BTN_HEIGHT, 0,
-                repairEnabled ? BTN_REPAIR_BG : 0x66445544);
+                repairEnabled ? repairAccent : 0x66445544);
         drawCenteredText(g, font, repairLabel, repairX + repairW / 2, btnY + (BTN_HEIGHT - font.lineHeight) / 2,
                 repairEnabled ? com.wsteam.wandscape.shared.ui.theme.WandscapeTheme.COLOR_TEXT_NORMAL : TEXT_DIM);
 
@@ -248,14 +255,21 @@ public final class BuildingDebugOverlay {
         double mx = mc.mouseHandler.xpos() / guiScale;
         double my = mc.mouseHandler.ypos() / guiScale;
 
-        // Check repair button (left) — only usable when the building has any damage
-        if (data.needsRepair() && !data.underConstruction()
-                && mx >= btnRepairX && mx <= btnRepairX + btnRepairW
+        // Check undo/repair button (left) — undo for under-construction, repair when damaged
+        if (mx >= btnRepairX && mx <= btnRepairX + btnRepairW
                 && my >= btnRepairY && my <= btnRepairY + BTN_HEIGHT) {
-            event.setCanceled(true);
-            PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "repair"));
-            Log.info(TAG, "[Debug] Button click: repair on building {}", shortUuid(data.buildingId()));
-            return;
+            if (data.underConstruction()) {
+                event.setCanceled(true);
+                PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "cancel"));
+                Log.info(TAG, "[Debug] Button click: cancel on building {}", shortUuid(data.buildingId()));
+                return;
+            }
+            if (data.needsRepair()) {
+                event.setCanceled(true);
+                PacketDistributor.sendToServer(new BuildingActionPacket(data.buildingId(), "repair"));
+                Log.info(TAG, "[Debug] Button click: repair on building {}", shortUuid(data.buildingId()));
+                return;
+            }
         }
 
         // Check shutdown / restart button (middle)
