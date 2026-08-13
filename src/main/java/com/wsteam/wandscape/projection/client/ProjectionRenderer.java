@@ -15,6 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import com.wsteam.wandscape.shared.log.Log;
@@ -68,7 +69,7 @@ public final class ProjectionRenderer {
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        renderGhostPreview(mc, bufferSource, poseStack);
+        renderGhostPreview(mc, bufferSource, poseStack, event);
 
         poseStack.popPose();
     }
@@ -76,7 +77,7 @@ public final class ProjectionRenderer {
     // ── Ghost preview (real block rendering) ──
 
     private static void renderGhostPreview(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
-                                           PoseStack poseStack) {
+                                           PoseStack poseStack, RenderLevelStageEvent event) {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) return;
 
@@ -84,17 +85,33 @@ public final class ProjectionRenderer {
         BuildingConfig config = (slot != null) ? BuildingConfigLoader.getInstance().get(slot.id()) : null;
         if (config == null) return;
 
+        int rotationSteps = ProjectionClientState.getRotationSteps();
+
+        // Whole-building frustum cull. Boundary is rotated so it matches the
+        // ghost's current rotation (same source as the wireframe below).
+        BuildingConfig.BoundaryBox boundary = config.boundary() != null
+                ? BuildingRotation.rotateBoundary(config.boundary(), rotationSteps)
+                : null;
+        if (boundary != null) {
+            AABB aabb = new AABB(
+                    ghostPos.getX() + boundary.min().x(),
+                    ghostPos.getY() + boundary.min().y(),
+                    ghostPos.getZ() + boundary.min().z(),
+                    ghostPos.getX() + boundary.max().x() + 1,
+                    ghostPos.getY() + boundary.max().y() + 1,
+                    ghostPos.getZ() + boundary.max().z() + 1);
+            if (!event.getFrustum().isVisible(aabb)) return;
+        }
+
         boolean overlap = ProjectionClientState.isOverlapDetected();
         boolean pinned = ProjectionClientState.isPinned();
 
-        BuildingGhostRenderer.renderGhostBlocks(mc, bufferSource, poseStack,
-                ghostPos, config, ProjectionClientState.getRotationSteps(), false);
+        BuildingGhostRenderer.renderGhostVbo(mc, poseStack, event.getProjectionMatrix(),
+                ghostPos, config, rotationSteps);
 
         // Boundary is rotated so the outline matches the ghost's current rotation —
         // same source as the white "target building" highlight (WandscapeHighlightRenderer).
-        if (config.boundary() != null) {
-            BuildingConfig.BoundaryBox boundary =
-                    BuildingRotation.rotateBoundary(config.boundary(), ProjectionClientState.getRotationSteps());
+        if (boundary != null) {
 
             // Pinned (non-overlap): white wireframe — ghost is fixed, player can walk around to review
             if (pinned && !overlap) {

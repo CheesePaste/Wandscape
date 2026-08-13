@@ -29,6 +29,8 @@
 
 ## 三、已知 stub / TODO
 
+- **建筑投影 ghost 位置错位（VBO 烘焙回归，2026-08-13，严重）**：`BuildingGhostVboCache` 改造后投影 ghost 不再锚定 ghostPos 足迹，而像以建筑中心对准鼠标准心（实测，构建/单测通过）。疑似根因：`drawVbo` 把 `poseStack.last().pose()` + `event.getProjectionMatrix()` 传给 `VertexBuffer.drawWithShader`，与旧路径（`renderSingleBlock` → `BufferSource`/`BufferUploader` 走 `RenderSystem` 的 ModelView/Projection 矩阵）坐标空间不一致；`RenderLevelStageEvent` 在 AFTER_TRIPWIRE_BLOCKS 传的 `posestack = new PoseStack()`（LevelRenderer.java:1006）——需确认它是否已含 `-camPos`，draw 时是否要多乘一次相机平移。修复方向：改用 `event.getModelViewMatrix()`，或核对 draw 的 pose 与烘焙坐标空间。
+
 - **`WandscapeEntityOps`**：stub（applyEffect/getPosition 空实现）。
 - **`WandscapeRitualOps`**：仅实现 `self_teleport`（安全落点搜索 + teleportTo + PORTAL 粒子），其余 RitualId no-op；channelTicks 硬编码且 self_teleport/item_teleport/player_summon=1（代码注释标 TODO 600）。
 - **`StatsService`**：订阅 NarrativeEventTriggered，onEvent 为空实现（TODO）。
