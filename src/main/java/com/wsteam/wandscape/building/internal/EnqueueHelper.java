@@ -221,11 +221,13 @@ public final class EnqueueHelper {
                             params.get("offsets").getAsJsonArray(), rotationSteps));
                 }
                 // Rotate blocks map: rotate the palette once (M blockstate rotations
-                // instead of N), then rebuild from already-rotated offsets + rotated palette + indices.
+                // instead of N), then rebuild from pattern-order offsets + rotated palette + indices.
+                // Must pair against config.pattern() (NOT the sorted $offsets array): blockIndices
+                // is parallel to pattern order, so pairing sorted offsets would scramble blocks.
                 if (params.containsKey("blocks")) {
                     var rotatedPalette = BuildingRotation.rotatePalette(config.palette(), rotationSteps);
                     params.put("blocks", blocksFromPalette(
-                            params.get("offsets").getAsJsonArray(), rotatedPalette, config.blockIndices()));
+                            config.pattern(), rotatedPalette, config.blockIndices(), rotationSteps));
                 }
                 // Rotate block_nbt (keys only — values are opaque base64 strings)
                 if (params.containsKey("blocks_nbt")) {
@@ -486,15 +488,20 @@ public final class EnqueueHelper {
         return result;
     }
 
-    /** Rebuild the blocks map (offset→blockstate) from rotated offsets + rotated palette + indices. */
-    private static JsonObject blocksFromPalette(JsonArray rotatedOffsets,
-                                                List<String> rotatedPalette,
-                                                List<Integer> blockIndices) {
+    /**
+     * Rebuild the blocks map (rotated offset→blockstate) from pattern-order offsets,
+     * a pre-rotated palette and block indices. {@code blockIndices} is parallel to
+     * {@code pattern}, so index alignment is preserved regardless of any other
+     * ordering the offsets array may be in.
+     */
+    static JsonObject blocksFromPalette(List<BlockOffset> pattern,
+                                        List<String> rotatedPalette,
+                                        List<Integer> blockIndices,
+                                        int steps) {
         JsonObject result = new JsonObject();
-        for (int i = 0; i < rotatedOffsets.size(); i++) {
-            JsonArray pos = rotatedOffsets.get(i).getAsJsonArray();
-            String key = pos.get(0).getAsInt() + "," + pos.get(1).getAsInt() + "," + pos.get(2).getAsInt();
-            result.addProperty(key, rotatedPalette.get(blockIndices.get(i)));
+        for (int i = 0; i < pattern.size(); i++) {
+            BlockOffset rotated = BuildingRotation.rotateOffset(pattern.get(i), steps);
+            result.addProperty(rotated.toKey(), rotatedPalette.get(blockIndices.get(i)));
         }
         return result;
     }

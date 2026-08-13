@@ -201,6 +201,30 @@ class EnqueueHelperTest {
     }
 
     @Test
+    @DisplayName("blocksFromPalette: 按 pattern 顺序配对索引——旋转后每格仍是自己的方块")
+    void blocksFromPalettePairsPatternParallel() {
+        // pattern 顺序故意不打乱成排序序（y=1 排在 y=0 前）：若把 blockIndices
+        // 配给排序后 offsets 会把方块张冠李戴。调色板索引必须与 pattern 原始顺序平行。
+        List<BlockOffset> pattern = List.of(off(0, 1, 0), off(0, 0, 0), off(1, 0, 0));
+        List<String> palette = List.of("minecraft:stone", "minecraft:oak_log");
+        List<Integer> indices = List.of(0, 1, 0); // (0,1,0)=stone, (0,0,0)=oak_log, (1,0,0)=stone
+
+        // 旋转 1 步 CCW: (x,y,z) → (-z,y,x)
+        JsonObject m = EnqueueHelper.blocksFromPalette(pattern, palette, indices, 1);
+
+        assertEquals(3, m.size());
+        assertEquals("minecraft:stone", m.get("0,1,0").getAsString());   // (0,1,0)→(0,1,0)
+        assertEquals("minecraft:oak_log", m.get("0,0,0").getAsString());  // (0,0,0)→(0,0,0)
+        assertEquals("minecraft:stone", m.get("0,0,1").getAsString());    // (1,0,0)→(0,0,1)
+
+        // 0 步旋转：原样返回，索引仍与 pattern 平行
+        JsonObject m0 = EnqueueHelper.blocksFromPalette(pattern, palette, indices, 0);
+        assertEquals("minecraft:stone", m0.get("0,1,0").getAsString());
+        assertEquals("minecraft:oak_log", m0.get("0,0,0").getAsString());
+        assertEquals("minecraft:stone", m0.get("1,0,0").getAsString());
+    }
+
+    @Test
     @DisplayName("buildWorkItem: entities 参数透传 + 旋转")
     @org.junit.jupiter.api.Disabled("buildWorkItem 全流程触发 BuiltInRegistries（rotateBlockStateString），需要 MC Bootstrap，纯 JUnit 环境不可跑——留待集成测试")
     void entitiesPassThroughAndRotate() {
