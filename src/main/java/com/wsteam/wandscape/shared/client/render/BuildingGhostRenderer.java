@@ -43,6 +43,29 @@ public final class BuildingGhostRenderer {
 
     private BuildingGhostRenderer() {}
 
+    /**
+     * Render {@code config}'s full ghost (all cells) at {@code anchor}.
+     * Used by the projection placement preview.
+     *
+     * @param rotationSteps number of 90° CCW rotations (0-3)
+     */
+    public static void renderGhostVbo(Minecraft mc, PoseStack poseStack, org.joml.Matrix4f projection,
+                                      BlockPos anchor, BuildingConfig config, int rotationSteps) {
+        BuildingGhostVboCache.drawGhost(mc, poseStack, projection, anchor, config, rotationSteps);
+    }
+
+    /**
+     * Render {@code config}'s ghost at {@code anchor}, hiding cells that already
+     * contain the expected block (under-construction footprint). The skip mask is
+     * sampled from the world on every call.
+     *
+     * @param rotationSteps number of 90° CCW rotations (0-3)
+     */
+    public static void renderGhostVboSkipped(Minecraft mc, PoseStack poseStack, org.joml.Matrix4f projection,
+                                             BlockPos anchor, BuildingConfig config, int rotationSteps) {
+        BuildingGhostVboCache.drawGhostSkipped(mc, poseStack, projection, anchor, config, rotationSteps);
+    }
+
     public record RotatedBlockEntry(int rx, int ry, int rz, BlockState state) {}
 
     public static final class RotatedGhostCache {

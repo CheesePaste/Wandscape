@@ -68,7 +68,7 @@ public final class ProjectionRenderer {
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        renderGhostPreview(mc, bufferSource, poseStack);
+        renderGhostPreview(mc, bufferSource, poseStack, event);
 
         poseStack.popPose();
     }
@@ -76,7 +76,7 @@ public final class ProjectionRenderer {
     // ── Ghost preview (real block rendering) ──
 
     private static void renderGhostPreview(Minecraft mc, MultiBufferSource.BufferSource bufferSource,
-                                           PoseStack poseStack) {
+                                           PoseStack poseStack, RenderLevelStageEvent event) {
         BlockPos ghostPos = ProjectionClientState.getGhostPos();
         if (ghostPos == null) return;
 
@@ -87,8 +87,8 @@ public final class ProjectionRenderer {
         boolean overlap = ProjectionClientState.isOverlapDetected();
         boolean pinned = ProjectionClientState.isPinned();
 
-        BuildingGhostRenderer.renderGhostBlocks(mc, bufferSource, poseStack,
-                ghostPos, config, ProjectionClientState.getRotationSteps(), false);
+        BuildingGhostRenderer.renderGhostVbo(mc, poseStack, event.getProjectionMatrix(),
+                ghostPos, config, ProjectionClientState.getRotationSteps());
 
         // Boundary is rotated so the outline matches the ghost's current rotation —
         // same source as the white "target building" highlight (WandscapeHighlightRenderer).
