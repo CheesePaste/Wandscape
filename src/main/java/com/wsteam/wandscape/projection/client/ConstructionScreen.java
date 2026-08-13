@@ -9,7 +9,7 @@ import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.shared.ui.theme.MedievalColors;
-import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
+import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -127,9 +127,9 @@ public class ConstructionScreen extends MedievalScreen {
             drawInsetField(g, leftPos + BOX_X, y, BOX_W, BOX_H);
         }
 
-        // Flush GUI batch so the 3D preview renders on top of the glass panel
+        // Flush GUI batch so the cached building preview renders on top of the glass panel
         g.bufferSource().endBatch(RenderType.gui());
-        BuildingPreviewRenderer.renderPreview(g, config,
+        BuildingPreviewGifCache.drawFrame(g, config,
                 leftPos + PREVIEW_X, topPos + PREVIEW_Y, PREVIEW_W, PREVIEW_H);
 
         if (status != null) {

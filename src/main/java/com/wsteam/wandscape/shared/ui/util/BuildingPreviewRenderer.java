@@ -88,24 +88,8 @@ public final class BuildingPreviewRenderer {
                 float extentZ = maxZ - minZ + 1;
                 this.maxExtent = Math.max(extentX, Math.max(extentY, extentZ));
 
-                // Extract unbroken surface hull & cap at max 120 blocks for GUI 38x24px micro-icons
-                var occupied = resolvedMap.keySet();
-                List<BlockEntry> surfaceHull = new ArrayList<>();
-                for (BlockEntry entry : fullEntries) {
-                    BlockOffset off = entry.offset();
-                    boolean isSurface = !occupied.contains(new BlockOffset(off.x() + 1, off.y(), off.z()))
-                            || !occupied.contains(new BlockOffset(off.x() - 1, off.y(), off.z()))
-                            || !occupied.contains(new BlockOffset(off.x(), off.y() + 1, off.z()))
-                            || !occupied.contains(new BlockOffset(off.x(), off.y() - 1, off.z()))
-                            || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() + 1))
-                            || !occupied.contains(new BlockOffset(off.x(), off.y(), off.z() - 1));
-                    if (isSurface) {
-                        surfaceHull.add(entry);
-                    }
-                }
-
-                // Keep 100% complete unbroken surface hull for GUI icons (zero gap/missing blocks)
-                this.iconEntries = java.util.Collections.unmodifiableList(surfaceHull);
+                // Render 100% complete block entries for crisp micro-icons without missing or floating blocks
+                this.iconEntries = fullEntries;
             }
         }
     }
@@ -149,14 +133,13 @@ public final class BuildingPreviewRenderer {
         }
 
         float scale = Math.min(w, h) / meta.maxExtent * 0.55f;
-        List<BlockEntry> entries = meta.iconEntries;
+        List<BlockEntry> entries = meta.fullEntries;
 
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
         MultiBufferSource.BufferSource bufferSource = g.bufferSource();
         PoseStack pose = g.pose();
 
-        // Smooth 360° Y-axis rotation over 8 seconds
         float rotY = (System.currentTimeMillis() % 8000) / 8000f * (float) (Math.PI * 2);
 
         pose.pushPose();

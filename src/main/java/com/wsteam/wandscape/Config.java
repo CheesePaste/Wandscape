@@ -328,5 +328,17 @@ public class Config {
                     + "NORMAL default, HIGH doubles count.")
             .define("particle.level", "NORMAL");
 
+    // ---- Building preview GIF ----
+
+    public static final ModConfigSpec.IntValue PREVIEW_RESOLUTION = BUILDER
+            .comment("建筑预览 GIF 烘焙分辨率（像素/边，清晰度）：越高越清晰但每帧占的内存/显存越多。"
+                    + "改后需重启游戏重新烘焙。")
+            .defineInRange("preview.resolution", 128, 48, 256);
+
+    public static final ModConfigSpec.IntValue PREVIEW_FPS = BUILDER
+            .comment("建筑预览 GIF 播放帧率（每秒帧数）：越高旋转越顺滑，但帧数越多、烘焙时间与内存越大"
+                    + "（4 秒转一圈 → 帧数 = fps×4，默认 12 = 48 帧）。改后需重启游戏重新烘焙。")
+            .defineInRange("preview.fps", 12, 4, 60);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

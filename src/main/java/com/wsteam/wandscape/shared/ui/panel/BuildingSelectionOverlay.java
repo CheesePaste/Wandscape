@@ -11,11 +11,12 @@ import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.building.internal.BuildingUnlockChecker;
 import com.wsteam.wandscape.projection.client.ProjectionClientState;
 import com.wsteam.wandscape.projection.data.BuildingSlot;
-import com.wsteam.wandscape.shared.ui.util.BuildingPreviewRenderer;
+import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import com.wsteam.wandscape.shared.log.Log;
 
 /**
@@ -342,13 +343,13 @@ public final class BuildingSelectionOverlay {
             }
         }
 
-        // Flush cell backgrounds before 3D preview so blocks render on top
+        // Flush cell backgrounds before thumbnails so they render on top
         g.bufferSource().endBatch(net.minecraft.client.renderer.RenderType.gui());
 
-        // Pass 2: Batch 3D previews (1 single setup/flush for all 3D cells)
+        // Pass 2: Blit cached building thumbnail frames (pure 2D; baking runs on the central per-frame pump)
         g.flush();
-        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
-        com.mojang.blaze3d.platform.Lighting.setupFor3DItems();
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
 
         for (int row = startRow; row < endRow; row++) {
             for (int col = 0; col < cols; col++) {
@@ -368,14 +369,25 @@ public final class BuildingSelectionOverlay {
 
                 BuildingConfig config = BuildingConfigLoader.getInstance().get(slot.id());
                 if (config != null && !locked) {
-                    int px = cellX + PREVIEW_PAD;
-                    int py = cellY + PREVIEW_PAD;
-                    int pw = CELL_W - PREVIEW_PAD * 2;
-                    int ph = CELL_H - NAME_H - PREVIEW_PAD;
-                    BuildingPreviewRenderer.renderPreviewBlocks(g, config, px, py, pw, ph);
+                    BuildingPreviewGifCache.request(config);
+                    ResourceLocation frameLoc = BuildingPreviewGifCache.getFrameLocation(config);
+                    if (frameLoc != null) {
+                        int px = cellX + PREVIEW_PAD;
+                        int py = cellY + PREVIEW_PAD;
+                        int pw = CELL_W - PREVIEW_PAD * 2;
+                        int ph = CELL_H - NAME_H - PREVIEW_PAD;
+                        int size = Math.min(pw, ph);
+                        int bx = px + (pw - size) / 2;
+                        int by = py + (ph - size) / 2;
+                        g.blit(frameLoc, bx, by, size, size, 0.0F, 0.0F,
+                                BuildingPreviewGifCache.RES, BuildingPreviewGifCache.RES,
+                                BuildingPreviewGifCache.RES, BuildingPreviewGifCache.RES);
+                    }
                 }
             }
         }
+
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 
         g.bufferSource().endBatch();
         com.mojang.blaze3d.platform.Lighting.setupForFlatItems();
@@ -438,13 +450,18 @@ public final class BuildingSelectionOverlay {
                     g.drawString(font, tag, tagX + 2, tagY + 1, 0xFFFFFFFF);
                 }
 
-                // Localized name; fast O(1) truncation by font.plainSubstrByWidth
+                // Localized name (lang key, fallback to display_name); truncate by component width
                 net.minecraft.network.chat.Component nameComp =
                         com.wsteam.wandscape.shared.ui.I18n.name("building.wandscape." + slot.id(), slot.displayName());
                 int nameW = font.width(nameComp);
                 if (nameW > CELL_W - 4) {
-                    String text = font.plainSubstrByWidth(nameComp.getString(), CELL_W - 10);
-                    nameComp = net.minecraft.network.chat.Component.literal(text + "…");
+                    String text = nameComp.getString();
+                    int tW = font.width(text);
+                    while (tW > CELL_W - 8 && text.length() > 1) {
+                        text = text.substring(0, text.length() - 1);
+                        tW = font.width(text + ".");
+                    }
+                    nameComp = net.minecraft.network.chat.Component.literal(text + ".");
                     nameW = font.width(nameComp);
                 }
                 int nameX = cellX + (CELL_W - nameW) / 2;

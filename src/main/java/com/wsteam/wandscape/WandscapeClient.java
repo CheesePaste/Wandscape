@@ -56,6 +56,7 @@ import com.wsteam.wandscape.shared.ui.panel.WandscapePanelController;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelOverlay;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostVboCache;
+import com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache;
 import com.wsteam.wandscape.tourist.client.TouristDebugRenderer;
 import com.wsteam.wandscape.tourist.client.TouristRenderer;
 import net.minecraft.client.KeyMapping;
@@ -151,6 +152,8 @@ public class WandscapeClient {
 
         // Wandscape Panel
         WandscapePanelController.register();
+        // Register the preview bake pump BEFORE the panel overlay so blits see fresh frames
+        com.wsteam.wandscape.shared.ui.util.BuildingPreviewGifCache.register();
         WandscapePanelOverlay.register();
         com.wsteam.wandscape.shared.ui.util.WandscapeHighlightRenderer.register();
 
@@ -169,6 +172,8 @@ public class WandscapeClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
+        // Building preview GIF bake params (clarity + framerate) from config
+        BuildingPreviewGifCache.configure(Config.PREVIEW_RESOLUTION.get(), Config.PREVIEW_FPS.get());
         // Wire server→client packet handlers — open MedievalScreen directly.
         WarehouseDataPacket.setClientHandler(packet -> {
             var screen = Minecraft.getInstance().screen;
@@ -469,6 +474,8 @@ public class WandscapeClient {
         if (player != null) {
             player.displayClientMessage(Component.translatable("message.wandscape.town.welcome"), false);
         }
+        // Pre-warm building preview GIFs in the background so the panel is ready early
+        BuildingPreviewGifCache.warmAll();
     }
 
     /** Reset client panel/UI state on disconnect so it doesn't leak into the next world. */
@@ -530,7 +537,9 @@ public class WandscapeClient {
                                                   ProfilerFiller preparationsProfiler, ProfilerFiller reloadProfiler,
                                                   Executor backgroundExecutor, Executor gameExecutor) {
                 return barrier.wait(CompletableFuture.completedFuture(null))
-                        .thenRun(BuildingGhostVboCache::closeAll);
+                        .thenRun(BuildingGhostVboCache::closeAll)
+                        .thenRun(BuildingPreviewGifCache::closeAll)
+                        .thenRun(BuildingPreviewGifCache::warmAll);
             }
         });
     }
