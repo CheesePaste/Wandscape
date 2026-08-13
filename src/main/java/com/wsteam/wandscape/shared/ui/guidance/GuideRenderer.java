@@ -34,7 +34,7 @@ public final class GuideRenderer {
     private static final int PAD = 4;
     /** Lines longer than this wrap, so the box never gets wide enough to block the view. */
     private static final int MAX_CONTENT_WIDTH = 300;
-    /** Room reserved on the right for the ▼/× buttons. */
+    /** Room reserved on the right for the ▶/× buttons. */
     private static final int BTN_EXTRA = 28;
 
     private record Box(int x, int y, int w, int h,
@@ -47,31 +47,32 @@ public final class GuideRenderer {
         int pad = PAD;
         int lineH = font.lineHeight;
         boolean collapsed = GuideSession.isCollapsed();
+        int bottomMargin = (buildMode && isBar) ? BuildingSelectionOverlay.BAR_HEIGHT + 8 : 8;
+
+        if (collapsed) {
+            // Compact tab hugging the bottom-right corner — only the expand triangle.
+            int s = lineH + pad * 2 + 2;
+            int x = screenW - s - 4;
+            int y = screenH - bottomMargin - s;
+            return new Box(x, y, s, s, 0, 0, 0, 0, 0, 9, 0, "", List.of(), "", true);
+        }
+
         List<String> lines = step.linesFor(buildMode, isPlacing, isBar, isPinned);
         String hint = step.hint();
-
-        String titleStr = step.title() + (collapsed ? " §e[点击展开]" : "");
-        int naturalW = collapsed ? font.width(titleStr) : naturalWidth(font, titleStr, lines, hint);
-        int textW = Math.min(naturalW, MAX_CONTENT_WIDTH);
+        int textW = Math.min(naturalWidth(font, step.title(), lines, hint), MAX_CONTENT_WIDTH);
 
         int boxW = textW + pad * 2 + BTN_EXTRA;
-        int boxH;
-        if (collapsed) {
-            boxH = pad * 2 + lineH * wrap(font, titleStr, textW).size();
-        } else {
-            int rows = 1; // title
-            for (String l : lines) {
-                rows += wrap(font, l, textW).size();
-            }
-            rows += wrap(font, hint, textW).size();
-            // Each drawn row advances lineH+1, plus a 1px divider gap and 2px hint gap.
-            boxH = pad * 2 + rows * (lineH + 1) + 3;
+        int rows = 1; // title
+        for (String l : lines) {
+            rows += wrap(font, l, textW).size();
         }
+        rows += wrap(font, hint, textW).size();
+        // Each drawn row advances lineH+1, plus a 1px divider gap and 2px hint gap.
+        int boxH = pad * 2 + rows * (lineH + 1) + 3;
 
         // Right side of the screen (bottom-right, above the build bar when open).
         int margin = 8;
         int x = screenW - boxW - margin;
-        int bottomMargin = (buildMode && isBar) ? BuildingSelectionOverlay.BAR_HEIGHT + 8 : 8;
         int y = screenH - bottomMargin - boxH;
 
         int btnS = 9;
@@ -81,7 +82,7 @@ public final class GuideRenderer {
         int toggleX = closeX - btnS - 6;
         int toggleY = y + 6;
 
-        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, textW, step.title(), lines, hint, collapsed);
+        return new Box(x, y, boxW, boxH, closeX, closeY, btnS, toggleX, toggleY, btnS, textW, step.title(), lines, hint, false);
     }
 
     /** Widest single-line width among the title, lines and hint. */
@@ -105,6 +106,7 @@ public final class GuideRenderer {
     public static boolean isCloseClicked(Font font, double mx, double my, int screenW, int screenH,
                                          GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
+        if (b.collapsed) return false; // no close button on the collapsed tab
         return mx >= b.closeX - 2 && mx <= b.closeX + b.closeS + 2
                 && my >= b.closeY - 2 && my <= b.closeY + b.closeS + 2;
     }
@@ -113,9 +115,8 @@ public final class GuideRenderer {
                                             GuideStep step, boolean buildMode, boolean isPlacing, boolean isBar, boolean isPinned) {
         Box b = layout(font, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         if (b.collapsed) {
-            boolean overBox = mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
-            boolean overClose = mx >= b.closeX - 2 && mx <= b.closeX + b.closeS + 2 && my >= b.closeY - 2 && my <= b.closeY + b.closeS + 2;
-            return overBox && !overClose;
+            // The whole compact tab toggles back to expanded.
+            return mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
         }
         return mx >= b.toggleX - 2 && mx <= b.toggleX + b.toggleS + 2
                 && my >= b.toggleY - 2 && my <= b.toggleY + b.toggleS + 2;
@@ -135,32 +136,37 @@ public final class GuideRenderer {
         g.fill(RenderType.guiOverlay(), b.x, b.y, b.x + 1, b.y + b.h, 0, BOX_BORDER);
         g.fill(RenderType.guiOverlay(), b.x + b.w - 1, b.y, b.x + b.w, b.y + b.h, 0, BOX_BORDER);
 
+        if (b.collapsed) {
+            // Collapsed: just the expand triangle, centered in the small tab.
+            String icon = "◀";
+            boolean hover = isCollapseClicked(font, mx, my, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
+            float ix = b.x + (b.w - font.width(icon)) / 2f;
+            float iy = b.y + (b.h - font.lineHeight) / 2f;
+            drawText(g, font, icon, ix, iy, hover ? BTN_HOVER : BTN_IDLE);
+            return;
+        }
+
         int tx = b.x + pad;
         float ty = b.y + pad;
 
-        if (b.collapsed) {
-            drawWrapped(g, font, b.title + " §e[点击展开]", tx, ty, b.textW, BOX_TITLE);
-        } else {
-            drawWrapped(g, font, b.title, tx, ty, b.textW, BOX_TITLE);
-            ty += 1;
-            g.fill(RenderType.guiOverlay(), tx, (int) ty - 2, b.x + b.w - pad * 2, (int) ty - 1, 0, BOX_DIVIDER);
+        ty = drawWrapped(g, font, b.title, tx, ty, b.textW, BOX_TITLE);
+        ty += 1;
+        g.fill(RenderType.guiOverlay(), tx, (int) ty - 2, b.x + b.w - pad * 2, (int) ty - 1, 0, BOX_DIVIDER);
 
-            for (String line : b.lines) {
-                ty = drawWrapped(g, font, line, tx, ty, b.textW, BOX_LINE);
-            }
-
-            ty += 2;
-            drawWrapped(g, font, b.hint, tx, ty, b.textW, BOX_HINT);
+        for (String line : b.lines) {
+            ty = drawWrapped(g, font, line, tx, ty, b.textW, BOX_LINE);
         }
 
-        // Toggle (▼ / ▲) button
+        ty += 2;
+        drawWrapped(g, font, b.hint, tx, ty, b.textW, BOX_HINT);
+
+        // Toggle (▶ — folds the box to the right) button
         boolean hoverToggle = isCollapseClicked(font, mx, my, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
         if (hoverToggle) {
             g.fill(RenderType.guiOverlay(), b.toggleX - 2, b.toggleY - 2,
                     b.toggleX + b.toggleS + 2, b.toggleY + b.toggleS + 2, 0, BTN_TOGGLE_HOVER_BG);
         }
-        String toggleIcon = b.collapsed ? "▲" : "▼";
-        drawText(g, font, toggleIcon, b.toggleX + 1, b.toggleY, hoverToggle ? BTN_HOVER : BTN_IDLE);
+        drawText(g, font, "▶", b.toggleX + 1, b.toggleY, hoverToggle ? BTN_HOVER : BTN_IDLE);
 
         // Close (×) button
         boolean hoverClose = isCloseClicked(font, mx, my, screenW, screenH, step, buildMode, isPlacing, isBar, isPinned);
