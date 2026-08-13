@@ -1,6 +1,7 @@
 package com.wsteam.wandscape.shared.ui.util;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +44,34 @@ public final class BuildingPreviewRenderer {
     // Fixed isometric tilt angle (standard 30 degrees)
     private static final float TILT_RAD = (float) Math.toRadians(30);
 
+    /**
+     * Cached pattern→BlockState resolution per config. BuildingConfig is immutable and
+     * held strongly by the loader, so a weak key is safe and never leaks. Rendering runs
+     * on the client render thread; synchronizedMap keeps reload-time access safe.
+     */
+    private static final Map<BuildingConfig, Map<BlockOffset, BlockState>> RESOLVED_CACHE =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    /**
+     * Resolve a config's pattern offsets to BlockStates, cached per config so the
+     * per-frame renderers don't re-parse every blockstate string every frame.
+     */
+    public static Map<BlockOffset, BlockState> resolveBlockStates(BuildingConfig config) {
+        if (config.pattern().isEmpty()) return Map.of();
+        return RESOLVED_CACHE.computeIfAbsent(config, BuildingPreviewRenderer::buildBlockStates);
+    }
+
+    private static Map<BlockOffset, BlockState> buildBlockStates(BuildingConfig config) {
+        Map<BlockOffset, BlockState> result = new HashMap<>();
+        for (int i = 0; i < config.pattern().size(); i++) {
+            BlockState state = resolveBlockState(config.blockIdAt(i));
+            if (state != null) {
+                result.put(config.pattern().get(i), state);
+            }
+        }
+        return java.util.Collections.unmodifiableMap(result);
+    }
+
     private BuildingPreviewRenderer() {}
 
     /**
@@ -58,9 +87,9 @@ public final class BuildingPreviewRenderer {
     public static void renderPreview(GuiGraphics g, BuildingConfig config,
                                       int x, int y, int w, int h) {
         List<BlockOffset> pattern = config.pattern();
-        Map<String, String> blockMapping = config.blockMapping();
-        if (pattern.isEmpty() || blockMapping.isEmpty()) {
-            Log.warn(TAG, "[Preview] Empty pattern or mapping for '{}'", config.id());
+        Map<BlockOffset, BlockState> resolved = resolveBlockStates(config);
+        if (pattern.isEmpty() || resolved.isEmpty()) {
+            Log.warn(TAG, "[Preview] Empty pattern or resolved blocks for '{}'", config.id());
             drawDebugRect(g, x, y, w, h, 0xFFFF0000);
             return;
         }
@@ -91,22 +120,11 @@ public final class BuildingPreviewRenderer {
         // Scale so the building fits in the UI rect with padding (0.55f margin)
         float scale = Math.min(w, h) / maxExtent * 0.55f;
 
-        // ── 2. Resolve block states (no sorting needed — depth test handles it) ──
+        // ── 2. Resolve block states (cached per config — no per-frame string parsing) ──
         record BlockEntry(BlockOffset offset, BlockState state) {}
         List<BlockEntry> entries = new ArrayList<>();
-        for (BlockOffset off : pattern) {
-            String key = off.toKey();
-            String rawId = blockMapping.get(key);
-            if (rawId == null) continue;
-            BlockState state = resolveBlockState(rawId);
-            if (state == null) continue;
-            entries.add(new BlockEntry(off, state));
-        }
-        if (entries.isEmpty()) {
-            Log.warn(TAG, "[Preview] No entries resolved for '{}' (pattern={}, mappingKeys={})",
-                    config.id(), pattern.size(), blockMapping.size());
-            drawDebugRect(g, x, y, w, h, 0xFFFF0000);
-            return;
+        for (var entry : resolved.entrySet()) {
+            entries.add(new BlockEntry(entry.getKey(), entry.getValue()));
         }
 
         // ── 3. Set up isometric rendering ──

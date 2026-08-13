@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.shared.client.render;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -49,7 +48,7 @@ public final class BuildingGhostRenderer {
                                           PoseStack poseStack,
                                           BlockPos anchor, BuildingConfig config, int rotationSteps,
                                           boolean hideBuiltBlocks) {
-        Map<BlockOffset, BlockState> blockStates = resolveBlockStates(config);
+        Map<BlockOffset, BlockState> blockStates = BuildingPreviewRenderer.resolveBlockStates(config);
         if (blockStates.isEmpty()) return;
 
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
@@ -138,22 +137,5 @@ public final class BuildingGhostRenderer {
         bufferSource.endBatch(Sheets.cutoutBlockSheet());
         bufferSource.endBatch(Sheets.translucentCullBlockSheet());
         bufferSource.endBatch(Sheets.translucentItemSheet());
-    }
-
-    private static Map<BlockOffset, BlockState> resolveBlockStates(BuildingConfig config) {
-        Map<String, String> blockMapping = config.blockMapping();
-        if (blockMapping == null || blockMapping.isEmpty()) return Map.of();
-
-        Map<BlockOffset, BlockState> result = new HashMap<>();
-        for (BlockOffset offset : config.pattern()) {
-            String key = offset.toKey();
-            String blockId = blockMapping.get(key);
-            if (blockId == null) continue;
-            BlockState state = BuildingPreviewRenderer.resolveBlockState(blockId);
-            if (state != null) {
-                result.put(offset, state);
-            }
-        }
-        return result;
     }
 }
