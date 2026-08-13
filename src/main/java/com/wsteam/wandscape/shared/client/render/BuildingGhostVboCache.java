@@ -119,11 +119,6 @@ public final class BuildingGhostVboCache {
         for (int i = 0; i < n; i++) {
             rotatedOffsets[i] = BuildingRotation.rotateOffset(pattern.get(i), steps);
             BlockState state = BuildingPreviewRenderer.resolveBlockState(config.blockIdAt(i));
-            if (state != null) {
-                for (int r = 0; r < steps; r++) {
-                    state = state.rotate(Rotation.CLOCKWISE_90);
-                }
-            }
             cellStates[i] = state;
             cellBlocks[i] = state != null ? state.getBlock() : null;
         }
