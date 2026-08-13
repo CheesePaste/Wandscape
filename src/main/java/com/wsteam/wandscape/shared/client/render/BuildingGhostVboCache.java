@@ -51,23 +51,29 @@ public final class BuildingGhostVboCache {
 
     private BuildingGhostVboCache() {}
 
+    /** Draw the full ghost building (projection placement preview). */
     public static void drawGhost(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                 BlockPos anchor, BuildingConfig config, int rotationSteps) {
+                                 BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
         if (mesh.indexClobbered) {
             restoreFullIndex(mesh);
             mesh.indexClobbered = false;
         }
-        drawVbo(mesh, poseStack, projection, anchor);
+        drawVbo(mesh, projection, anchor, camPos);
     }
 
+    /**
+     * Draw the ghost skipping cells that already contain the expected block
+     * (under-construction footprint). The skip mask is re-sampled from the
+     * world every call, so it tracks placed blocks live.
+     */
     public static void drawGhostSkipped(Minecraft mc, PoseStack poseStack, Matrix4f projection,
-                                             BlockPos anchor, BuildingConfig config, int rotationSteps) {
+                                        BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
         BakedGhostMesh mesh = getOrBake(mc, config, rotationSteps);
         if (mesh == null) return;
         rebuildMaskedIndex(mc, mesh, anchor);
-        drawVbo(mesh, poseStack, projection, anchor);
+        drawVbo(mesh, projection, anchor, camPos);
     }
 
     public static void closeAll() {
@@ -244,16 +250,18 @@ public final class BuildingGhostVboCache {
         }
     }
 
-    private static void drawVbo(BakedGhostMesh mesh, PoseStack poseStack, Matrix4f projection, BlockPos anchor) {
+    private static void drawVbo(BakedGhostMesh mesh, Matrix4f projection, BlockPos anchor, net.minecraft.world.phys.Vec3 camPos) {
         RenderType rt = RenderType.translucent();
-        poseStack.pushPose();
-        poseStack.translate(anchor.getX(), anchor.getY(), anchor.getZ());
+        Matrix4f modelView = new Matrix4f().translate(
+                (float) (anchor.getX() - camPos.x),
+                (float) (anchor.getY() - camPos.y),
+                (float) (anchor.getZ() - camPos.z));
+
         rt.setupRenderState();
         mesh.vbo.bind();
-        mesh.vbo.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getRendertypeTranslucentShader());
+        mesh.vbo.drawWithShader(modelView, projection, GameRenderer.getRendertypeTranslucentShader());
         VertexBuffer.unbind();
         rt.clearRenderState();
-        poseStack.popPose();
     }
 
     private static final class BakedGhostMesh {

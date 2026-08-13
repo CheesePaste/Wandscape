@@ -50,8 +50,8 @@ public final class BuildingGhostRenderer {
      * @param rotationSteps number of 90° CCW rotations (0-3)
      */
     public static void renderGhostVbo(Minecraft mc, PoseStack poseStack, org.joml.Matrix4f projection,
-                                      BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BuildingGhostVboCache.drawGhost(mc, poseStack, projection, anchor, config, rotationSteps);
+                                      BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
+        BuildingGhostVboCache.drawGhost(mc, poseStack, projection, anchor, config, rotationSteps, camPos);
     }
 
     /**
@@ -62,8 +62,8 @@ public final class BuildingGhostRenderer {
      * @param rotationSteps number of 90° CCW rotations (0-3)
      */
     public static void renderGhostVboSkipped(Minecraft mc, PoseStack poseStack, org.joml.Matrix4f projection,
-                                             BlockPos anchor, BuildingConfig config, int rotationSteps) {
-        BuildingGhostVboCache.drawGhostSkipped(mc, poseStack, projection, anchor, config, rotationSteps);
+                                             BlockPos anchor, BuildingConfig config, int rotationSteps, net.minecraft.world.phys.Vec3 camPos) {
+        BuildingGhostVboCache.drawGhostSkipped(mc, poseStack, projection, anchor, config, rotationSteps, camPos);
     }
 
     public record RotatedBlockEntry(int rx, int ry, int rz, BlockState state) {}

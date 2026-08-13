@@ -88,7 +88,7 @@ public final class ProjectionRenderer {
         boolean pinned = ProjectionClientState.isPinned();
 
         BuildingGhostRenderer.renderGhostVbo(mc, poseStack, event.getProjectionMatrix(),
-                ghostPos, config, ProjectionClientState.getRotationSteps());
+                ghostPos, config, ProjectionClientState.getRotationSteps(), event.getCamera().getPosition());
 
         // Boundary is rotated so the outline matches the ghost's current rotation —
         // same source as the white "target building" highlight (WandscapeHighlightRenderer).
