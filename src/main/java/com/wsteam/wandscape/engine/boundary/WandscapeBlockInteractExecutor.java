@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.boundary.BlockOps;
 import com.wsteam.wandscape.core.boundary.ColonyResourceAccess;
 import com.wsteam.wandscape.core.component.ColonyMember;
@@ -294,11 +295,13 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         long totalValue = 0;
         for (var v : yield.values()) totalValue += v;
 
+        double divisor = Config.ELEMENT_DECOMPOSE_DIVISOR.get();
+
         // Refuse up front when count × total value < divisor: the batch would
         // burn items and yield 0 elements (floor division truncates to zero).
-        if (count * totalValue < WandscapeConstants.DECOMPOSE_DIVISOR) {
+        if (count * totalValue < divisor) {
             Log.warn(TAG, "decompose: refuse {} x{} — total value {} < {}", itemId, count,
-                    count * totalValue, WandscapeConstants.DECOMPOSE_DIVISOR);
+                    count * totalValue, divisor);
             return;
         }
 
@@ -312,14 +315,20 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : yield.entrySet()) {
-            long total = (entry.getValue() * count) / WandscapeConstants.DECOMPOSE_DIVISOR;
+            long total = (long) ((entry.getValue() * count) / divisor);
             if (total <= 0) continue;
             resources.addResource(new ResourceId(entry.getKey().name().toLowerCase()), (int) total);
             Log.info(TAG, "decompose: {} x{} → {} x{} (1/{} of value)", itemId, count,
-                    entry.getKey().name().toLowerCase(), total, WandscapeConstants.DECOMPOSE_DIVISOR);
+                    entry.getKey().name().toLowerCase(), total, divisor);
         }
 
         spawnCompletionParticles(npcId);
+    }
+
+    /** Element cost to craft/synthesize: base × config multiplier, rounded up so we never underpay. */
+    private static long scaledCraftCost(long base) {
+        double multiplier = Config.ELEMENT_CRAFT_COST_MULTIPLIER.get();
+        return (long) Math.ceil(base * multiplier);
     }
 
     private void executeSynthesize(Map<String, String> params, World world, long npcId) {
@@ -351,7 +360,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         UUID colonyId = findStorageColonyId();
 
         for (var entry : recipe.cost().entrySet()) {
-            long needed = entry.getValue() * count;
+            long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
                 Log.warn(TAG, "synthesize: insufficient {} (need={})", entry.getKey(), needed);
@@ -361,7 +370,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : recipe.cost().entrySet()) {
-            bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
+            bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
         }
 
         ItemKey outputKey = ItemKey.of(recipe.outputItem(), null);
@@ -403,7 +412,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         UUID colonyId = findStorageColonyId();
 
         for (var entry : recipe.cost().entrySet()) {
-            long needed = entry.getValue() * count;
+            long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
                 Log.warn(TAG, "craft_wand: insufficient {} (need={})", entry.getKey(), needed);
@@ -413,7 +422,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : recipe.cost().entrySet()) {
-            bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
+            bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
         }
 
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(recipe.outputItem()));
@@ -465,7 +474,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         UUID colonyId = findStorageColonyId();
 
         for (var entry : recipe.cost().entrySet()) {
-            long needed = entry.getValue() * count;
+            long needed = scaledCraftCost(entry.getValue() * count);
             if (bank.countElement(colonyId, entry.getKey()) < needed) {
                 String elementId = entry.getKey().name().toLowerCase();
                 Log.warn(TAG, "brew_potion: insufficient {} (need={})", entry.getKey(), needed);
@@ -486,7 +495,7 @@ public class WandscapeBlockInteractExecutor implements OpExecutor<AtomicOp.Block
         }
 
         for (var entry : recipe.cost().entrySet()) {
-            bank.consumeElement(colonyId, entry.getKey(), entry.getValue() * count);
+            bank.consumeElement(colonyId, entry.getKey(), scaledCraftCost(entry.getValue() * count));
         }
 
         for (String inputItemId : recipe.inputItems()) {

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.building.network.TaskQueueDataPacket;
 import com.wsteam.wandscape.building.network.TaskQueueModifyPacket;
 import com.wsteam.wandscape.production.network.RequestProductionTaskPacket;
@@ -11,7 +12,6 @@ import com.wsteam.wandscape.production.network.WorkstationDataPacket;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.DecomposableEntry;
 import com.wsteam.wandscape.production.network.WorkstationDataPacket.SynthesizeEntry;
 import com.wsteam.wandscape.shared.data.ElementType;
-import com.wsteam.wandscape.shared.registry.WandscapeConstants;
 import com.wsteam.wandscape.shared.ui.I18n;
 import com.wsteam.wandscape.shared.ui.component.MedievalButton;
 import com.wsteam.wandscape.shared.ui.component.MedievalScreen;
@@ -403,19 +403,20 @@ public class WorkstationScreen extends MedievalScreen {
     }
 
     /**
-     * Draw the per-item decompose yield as [icon]xY.Z — 1/DECOMPOSE_DIVISOR of the item's
-     * element value. Integer value / 10 is always a multiple of 0.1, so one decimal is exact.
+     * Draw the per-item decompose yield as [icon]xY.Z — 1/decomposeDivisor of the item's
+     * element value. The divisor comes from the server-side Config (default 5 = 1/5).
      */
     private static void drawElementYield(GuiGraphics g, Map<ElementType, Long> value, int x, int y) {
         if (value == null || value.isEmpty()) return;
         var font = Minecraft.getInstance().font;
+        double divisor = Config.ELEMENT_DECOMPOSE_DIVISOR.get();
         int cx = x;
         for (var e : value.entrySet()) {
             String id = e.getKey().getId();
             int tint = WandscapeTheme.elementColor(id);
             WandscapeTheme.drawIcon(g, WandscapeTheme.elementIcon(id), cx, y - 2, 9, 9, tint);
             cx += 11;
-            String text = "x" + String.format("%.1f", e.getValue() / (double) WandscapeConstants.DECOMPOSE_DIVISOR);
+            String text = "x" + String.format("%.1f", e.getValue() / divisor);
             g.drawString(font, text, cx, y, tint);
             cx += font.width(text) + 6;
         }

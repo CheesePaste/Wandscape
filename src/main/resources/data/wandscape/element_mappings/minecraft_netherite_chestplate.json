@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:netherite_chestplate",
+  "build_cost": {
+    "fire": 16384,
+    "metal": 41984
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

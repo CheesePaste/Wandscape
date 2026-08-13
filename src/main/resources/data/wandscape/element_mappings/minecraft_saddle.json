@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:saddle",
+  "build_cost": {
+    "earth": 32,
+    "wood": 64,
+    "metal": 64
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

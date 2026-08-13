@@ -1,0 +1,16 @@
+{
+  "item": "minecraft:music_disc_precipice",
+  "build_cost": {
+    "earth": 256,
+    "water": 256,
+    "fire": 256,
+    "wood": 256,
+    "metal": 256,
+    "wind": 256,
+    "dark": 256
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

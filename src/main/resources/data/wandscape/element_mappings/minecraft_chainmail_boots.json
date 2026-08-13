@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:chainmail_boots",
+  "build_cost": {
+    "metal": 312
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

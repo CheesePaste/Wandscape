@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:powder_snow_bucket",
+  "build_cost": {
+    "water": 8,
+    "metal": 192
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

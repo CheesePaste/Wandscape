@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:pufferfish",
+  "build_cost": {
+    "wood": 8,
+    "water": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

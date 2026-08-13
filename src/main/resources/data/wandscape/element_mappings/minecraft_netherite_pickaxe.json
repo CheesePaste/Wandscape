@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:netherite_pickaxe",
+  "build_cost": {
+    "fire": 16384,
+    "metal": 36864,
+    "wood": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

@@ -82,6 +82,18 @@ public class Config {
             .comment("每种元素在殖民地仓库首次建立时的初始数量（每殖民地一次，只种一次）。")
             .defineInRange("colony.initialElementCount", 6000, 0, 1000000);
 
+    // ---- Element system ----
+
+    public static final ModConfigSpec.DoubleValue ELEMENT_DECOMPOSE_DIVISOR = BUILDER
+            .comment("Workstation 分解产出除数：分解物品返回其映射元素值的 1/N。"
+                    + "默认 5 = 1/5（原为硬编码 1/10，回收率偏低）。")
+            .defineInRange("element.decomposeDivisor", 5.0, 1.0, 100.0);
+
+    public static final ModConfigSpec.DoubleValue ELEMENT_CRAFT_COST_MULTIPLIER = BUILDER
+            .comment("合成/制作消耗倍率：Workstation 合成、法杖制作、酿造消耗的元素 × 该系数。"
+                    + "默认 1.0；设为 2.0 则消耗翻倍（消耗向上取整，不会少扣）。")
+            .defineInRange("element.craftCostMultiplier", 1.0, 0.1, 10.0);
+
     // ---- Tourist system ----
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER

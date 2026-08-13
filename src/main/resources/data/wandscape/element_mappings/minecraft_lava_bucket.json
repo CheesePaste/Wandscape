@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:lava_bucket",
+  "build_cost": {
+    "fire": 128,
+    "metal": 192
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

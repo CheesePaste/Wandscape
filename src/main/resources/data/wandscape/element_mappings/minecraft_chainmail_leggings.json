@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:chainmail_leggings",
+  "build_cost": {
+    "metal": 546
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

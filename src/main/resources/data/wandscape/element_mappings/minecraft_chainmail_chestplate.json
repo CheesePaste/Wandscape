@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:chainmail_chestplate",
+  "build_cost": {
+    "metal": 624
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

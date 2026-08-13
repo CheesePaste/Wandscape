@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:netherite_helmet",
+  "build_cost": {
+    "fire": 16384,
+    "metal": 38912
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

@@ -47,6 +47,6 @@
 ## 使用路径
 
 - 建造算料：`ElementApi.getBuildCost`（EnqueueHelper 施工用料）。
-- 分解：`getItemElementValue`（decompose_yield → build_cost 回退）× 1/10 向下取整（Workstation decompose → colonyResources）；count×总价值 < 10 时拒绝分解（防白烧物品）。
+- 分解：`getItemElementValue`（decompose_yield → build_cost 回退）× 1/divisor 向下取整（Workstation decompose → colonyResources）；除数默认 5（Config `element.decomposeDivisor`）；count×总价值 < 除数时拒绝分解（防白烧物品）。
 - 合成：`SynthesizeRecipe.fromElementMapping`（cost = buildCost）。
 - 审计：`ElementAuditor` + `gametest/ElementAuditRunner`（`wandscape.runAudit=true`）。

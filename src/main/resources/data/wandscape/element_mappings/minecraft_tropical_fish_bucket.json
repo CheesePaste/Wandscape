@@ -1,0 +1,12 @@
+{
+  "item": "minecraft:tropical_fish_bucket",
+  "build_cost": {
+    "wood": 8,
+    "water": 16,
+    "metal": 192
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

@@ -1,0 +1,10 @@
+{
+  "item": "minecraft:golden_horse_armor",
+  "build_cost": {
+    "metal": 1792
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

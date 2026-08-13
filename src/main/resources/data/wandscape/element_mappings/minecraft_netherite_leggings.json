@@ -1,0 +1,11 @@
+{
+  "item": "minecraft:netherite_leggings",
+  "build_cost": {
+    "fire": 16384,
+    "metal": 40960
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}

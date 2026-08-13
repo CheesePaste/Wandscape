@@ -1,0 +1,13 @@
+{
+  "item": "minecraft:name_tag",
+  "build_cost": {
+    "dark": 32,
+    "water": 32,
+    "metal": 64,
+    "wood": 4
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "manual"
+}
