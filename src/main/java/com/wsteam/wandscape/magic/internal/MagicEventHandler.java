@@ -159,13 +159,19 @@ public final class MagicEventHandler {
                 level.playSound(null, impactPos.x, impactPos.y, impactPos.z,
                         SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 1.0f, 1.2f);
 
-                // 对半径 4 内生物造成 10 点魔法伤害
+                // 对半径 4 内生物造成魔法伤害。溅射伤害沿用光束的伤害边界（canBeamHurt）：
+                // 默认只伤敌对生物（Enemy）——普通 NPC 的陨石不会伤到友方 NPC / 村民 / 玩家；
+                // 邪恶法师按 canBeamHurt 判定（额外伤生存玩家）。和平模式 NPC 的已落地陨石不结算。
                 AABB area = new AABB(impactPos.x - meteor.radius(), impactPos.y - 2, impactPos.z - meteor.radius(),
                                      impactPos.x + meteor.radius(), impactPos.y + 3, impactPos.z + meteor.radius());
 
-                List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, area, LivingEntity::isAlive);
+                List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, area, e -> {
+                    if (!e.isAlive()) return false;
+                    if (e instanceof Enemy) return true;
+                    WandscapeNpc caster = meteor.caster();
+                    return caster != null && !caster.isRemoved() && !caster.isPeaceMode() && caster.canBeamHurt(e);
+                });
                 for (LivingEntity target : targets) {
-                    if (meteor.caster() != null && target == meteor.caster()) continue;
                     // 同目标多颗陨石叠伤（保底集中砸）：重置无敌帧保证每颗都结算，否则后落的被伤害免疫吞掉
                     target.invulnerableTime = 0;
                     target.hurt(level.damageSources().indirectMagic(meteor.caster(), meteor.caster()), meteor.damage());

@@ -1512,7 +1512,7 @@
   "node_config": {
     "blueprint": "node:gather",
     "element": "fire",
-    "amount_per_harvest": 10,
+    "amount_per_harvest": 30,
     "channel_ticks": 1200
   },
   "blueprint": {
