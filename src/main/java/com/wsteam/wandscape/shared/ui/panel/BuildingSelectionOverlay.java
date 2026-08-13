@@ -438,18 +438,13 @@ public final class BuildingSelectionOverlay {
                     g.drawString(font, tag, tagX + 2, tagY + 1, 0xFFFFFFFF);
                 }
 
-                // Localized name (lang key, fallback to display_name); truncate by component width
+                // Localized name; fast O(1) truncation by font.plainSubstrByWidth
                 net.minecraft.network.chat.Component nameComp =
                         com.wsteam.wandscape.shared.ui.I18n.name("building.wandscape." + slot.id(), slot.displayName());
                 int nameW = font.width(nameComp);
                 if (nameW > CELL_W - 4) {
-                    String text = nameComp.getString();
-                    int tW = font.width(text);
-                    while (tW > CELL_W - 8 && text.length() > 1) {
-                        text = text.substring(0, text.length() - 1);
-                        tW = font.width(text + ".");
-                    }
-                    nameComp = net.minecraft.network.chat.Component.literal(text + ".");
+                    String text = font.plainSubstrByWidth(nameComp.getString(), CELL_W - 10);
+                    nameComp = net.minecraft.network.chat.Component.literal(text + "…");
                     nameW = font.width(nameComp);
                 }
                 int nameX = cellX + (CELL_W - nameW) / 2;
