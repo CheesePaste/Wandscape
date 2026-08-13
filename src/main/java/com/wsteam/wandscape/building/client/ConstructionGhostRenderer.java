@@ -1,6 +1,5 @@
 package com.wsteam.wandscape.building.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.wsteam.wandscape.building.data.BuildingConfig;
 import com.wsteam.wandscape.building.internal.BuildingConfigLoader;
 import com.wsteam.wandscape.shared.client.render.BuildingGhostRenderer;
@@ -9,7 +8,8 @@ import com.wsteam.wandscape.shared.network.BuildingAreaSyncPacket;
 import com.wsteam.wandscape.shared.ui.panel.WandscapePanelState;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -19,8 +19,10 @@ import net.neoforged.neoforge.common.NeoForge;
  * building that is registered but not yet construction-complete.
  *
  * <p>Visible while the Wandscape panel is open, giving the player a clear
- * footprint to align the next building against. The ghost uses the same visual
- * style as the projection placement preview ({@link BuildingGhostRenderer}).
+ * footprint to align the next building against. The ghost is drawn from a
+ * pre-baked GPU VBO (same path as the projection placement preview,
+ * {@link BuildingGhostRenderer#renderGhostVboSkipped}), skipping cells already
+ * placed in the world.
  */
 public final class ConstructionGhostRenderer {
 
@@ -49,20 +51,27 @@ public final class ConstructionGhostRenderer {
         if (mc.level == null) return;
 
         Vec3 camPos = event.getCamera().getPosition();
-        PoseStack poseStack = event.getPoseStack();
-        MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
-
-        poseStack.pushPose();
-        poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
         for (var entry : buildings) {
             if (entry.completed()) continue;
             BuildingConfig config = BuildingConfigLoader.getInstance().get(entry.buildingTypeId());
             if (config == null) continue;
-            BuildingGhostRenderer.renderGhostBlocks(mc, buf, poseStack,
-                    entry.anchor(), config, entry.rotationSteps(), true);
-        }
 
-        poseStack.popPose();
+            // Per-building frustum cull — boundary from the packet is pre-rotated.
+            if (entry.hasBoundary()) {
+                BlockPos anchor = entry.anchor();
+                AABB aabb = new AABB(
+                        anchor.getX() + entry.bMinX(),
+                        anchor.getY() + entry.bMinY(),
+                        anchor.getZ() + entry.bMinZ(),
+                        anchor.getX() + entry.bMaxX() + 1,
+                        anchor.getY() + entry.bMaxY() + 1,
+                        anchor.getZ() + entry.bMaxZ() + 1);
+                if (!event.getFrustum().isVisible(aabb)) continue;
+            }
+
+            BuildingGhostRenderer.renderGhostVboSkipped(mc, event.getModelViewMatrix(), event.getProjectionMatrix(),
+                    camPos, entry.anchor(), config, entry.rotationSteps());
+        }
     }
 }
