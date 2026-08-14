@@ -1,0 +1,10 @@
+{
+  "block": "minecraft:dragon_egg",
+  "build_cost": {
+    "dark": 8
+  },
+  "decompose_yield": {},
+  "decomposable": false,
+  "synthesize": {},
+  "source": "auto_generated"
+}

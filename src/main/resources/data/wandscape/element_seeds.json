@@ -364,7 +364,9 @@
     {"item": "minecraft:green_shulker_box",  "values": { "dark": 64, "earth": 32, "wood": 16 }, "name_cn": "绿色潜影盒"},
     {"item": "minecraft:red_shulker_box",    "values": { "dark": 64, "earth": 32, "wood": 16 }, "name_cn": "红色潜影盒"},
     {"item": "minecraft:black_shulker_box",  "values": { "dark": 64, "earth": 32, "wood": 16 }, "name_cn": "黑色潜影盒"},
+    {"item": "minecraft:dragon_egg",        "values": { "dark": 8 },                         "name_cn": "龙蛋"},
     {"item": "minecraft:dragon_breath",     "values": { "dark": 64, "wind": 64 },          "name_cn": "龙息"},
+    {"item": "minecraft:elytra",            "values": { "wind": 2048, "dark": 2048 },        "name_cn": "鞘翅"},
     {"item": "minecraft:echo_shard",        "values": { "dark": 512, "wind": 256 },          "name_cn": "回响碎片"},
     {"item": "minecraft:experience_bottle", "values": { "dark": 32 },                       "name_cn": "附魔之瓶"},
     {"item": "minecraft:totem_of_undying",  "values": { "wind": 2048, "wood": 2048 },          "name_cn": "不死图腾"},
@@ -377,6 +379,7 @@
     {"item": "minecraft:sculk_shrieker",    "values": { "dark": 64 },                        "name_cn": "幽匿尖啸体"},
     {"item": "minecraft:sculk_vein",        "values": { "dark": 4 },                         "name_cn": "幽匿脉络"},
     {"item": "minecraft:disc_fragment_5",   "values": { "dark": 1024 },                       "name_cn": "唱片碎片"},
+    {"item": "minecraft:nether_star",       "values": { "dark": 32768, "fire": 32768 },       "name_cn": "下界之星"},
 
     {"item": "minecraft:string",            "values": { "dark": 2 },                        "name_cn": "线"},
     {"item": "minecraft:spider_eye",        "values": { "dark": 2, "fire": 2 },             "name_cn": "蜘蛛眼"},
