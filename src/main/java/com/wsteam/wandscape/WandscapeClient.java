@@ -242,9 +242,13 @@ public class WandscapeClient {
             }
         });
         TavernOpenPacket.setClientHandler(packet -> {
-            Minecraft.getInstance().setScreen(
-                    new TavernScreen(packet.buildingPos(), packet.colonyId(),
-                            packet.recruitCount(), packet.mageResumes()));
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof TavernScreen existing) {
+                existing.updateData(packet.recruitCount(), packet.mageResumes());
+            } else {
+                mc.setScreen(new TavernScreen(packet.buildingPos(), packet.colonyId(),
+                        packet.recruitCount(), packet.mageResumes()));
+            }
         });
         HotelOpenPacket.setClientHandler(packet -> {
             Minecraft.getInstance().setScreen(new HotelScreen(
