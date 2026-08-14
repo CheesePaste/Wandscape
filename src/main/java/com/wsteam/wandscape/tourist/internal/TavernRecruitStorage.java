@@ -43,6 +43,16 @@ public class TavernRecruitStorage extends SavedData {
     /** Add a mage resume to the colony's recruitment list. Evicts oldest if over capacity. */
     public void addResume(UUID colonyId, MageResume resume) {
         List<MageResume> list = colonyResumes.computeIfAbsent(colonyId, k -> new ArrayList<>());
+        // Deduplicate: if a resume for the same tourist name is already present, update it rather than duplicating
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).touristName().equals(resume.touristName())) {
+                list.set(i, resume);
+                setDirty();
+                Log.info(TAG, "[Tourist] Updated existing mage resume for colony {}: {} (Lv.{})",
+                        shortId(colonyId), resume.touristName(), resume.level());
+                return;
+            }
+        }
         list.add(resume);
         while (list.size() > MAX_PER_COLONY) {
             MageResume removed = list.remove(0);

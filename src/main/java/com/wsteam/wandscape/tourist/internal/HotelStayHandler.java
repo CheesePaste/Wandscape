@@ -127,7 +127,10 @@ public final class HotelStayHandler {
         }
         BlockPos wakeUp = tourist.getWakeUpPos();
         if (wakeUp != null) {
-            tourist.setPos(wakeUp.getX() + 0.5, wakeUp.getY(), wakeUp.getZ() + 0.5);
+            double floorY = TouristSimulation.getFloorSurfaceY(level, wakeUp);
+            tourist.setPos(wakeUp.getX() + 0.5, floorY, wakeUp.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             tourist.setWakeUpPos(null);
         }
         tourist.applyState(TouristState.IDLE);
@@ -172,7 +175,10 @@ public final class HotelStayHandler {
         }
         BlockPos wakeUp = tourist.getWakeUpPos();
         if (wakeUp != null) {
-            tourist.setPos(wakeUp.getX() + 0.5, wakeUp.getY(), wakeUp.getZ() + 0.5);
+            double floorY = TouristSimulation.getFloorSurfaceY(level, wakeUp);
+            tourist.setPos(wakeUp.getX() + 0.5, floorY, wakeUp.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             tourist.setWakeUpPos(null);
         }
         tourist.applyState(TouristState.IDLE);
@@ -195,6 +201,8 @@ public final class HotelStayHandler {
         if (bed == null) bed = findBed(level, buildingId, tourist.blockPosition(), false); // 床不够 → 躺第一张（最近）
         if (bed != null) {
             tourist.setPos(bed.getX() + 0.5, bed.getY() + 0.6875, bed.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             tourist.setSleepingPos(bed);
             tourist.applyState(TouristState.SLEEPING);
             touristToBed.put(tourist.getUUID(), bed);

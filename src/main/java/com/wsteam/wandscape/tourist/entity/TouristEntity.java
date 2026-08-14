@@ -438,6 +438,19 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
                 hotelCheckinTime = 0;
             }
         }
+
+        // Re-establish active building spot occupation when entity is loaded from disk (e.g. resting on chairs/browsing shops)
+        if (targetBuildingId != null && occupiedSpot >= 0 && getCurrentActivity() != null && activityTicks > 0 && !level().isClientSide) {
+            if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                int claimed = com.wsteam.wandscape.tourist.internal.TouristSimulation.claimSpotAt(sl, targetBuildingId, occupiedSpot, getUUID());
+                if (claimed < 0) {
+                    // Spot already claimed or building no longer valid — clear activity state safely
+                    occupiedSpot = -1;
+                    setCurrentActivity(null);
+                    activityTicks = 0;
+                }
+            }
+        }
     }
 
     @Override
@@ -448,10 +461,11 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     @Override
     public boolean shouldBeSaved() { return !previewMode; }
 
-    /** 预览假人免疫伤害（仅站桩演示，不能被炸死/打掉）。 */
+    /** 预览假人免疫伤害（仅站桩演示，不能被炸死/打掉）；游客免疫摔落伤害（防坐标对齐/微操/半砖导致的异常摔死）。 */
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         if (previewMode) return false;
+        if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) return false;
         return super.hurt(source, amount);
     }
 
@@ -925,6 +939,18 @@ public class TouristEntity extends PathfinderMob implements VillagerLike, Touris
     public float getSpellSpeed() { return spellSpeed; }
     public float getArmor() { return armorValue; }
     public float getMaxMana() { return maxMana; }
+
+    public void setMageAttributes(float maxHp, float moveSpeed, float spellPower,
+                                  float workSpeed, float spellSpeed, float armorValue,
+                                  float maxMana) {
+        this.maxHp = maxHp;
+        this.moveSpeed = moveSpeed;
+        this.spellPower = spellPower;
+        this.workSpeed = workSpeed;
+        this.spellSpeed = spellSpeed;
+        this.armorValue = armorValue;
+        this.maxMana = maxMana;
+    }
 
     @Nullable public UUID getColonyId() { return colonyId; }
     public void setColonyId(@Nullable UUID id) { this.colonyId = id; }

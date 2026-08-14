@@ -214,7 +214,7 @@ public class Wandscape {
 
     // ---- 02 wand-system ----
     public static final DeferredItem<Item> WAND = ITEMS.register("wand",
-            () -> new WandItem(new Item.Properties()));
+            () -> new WandItem(new Item.Properties().stacksTo(1)));
     public static final WandPresetLoader WAND_PRESET_LOADER = new WandPresetLoader(DATA_LOADER);
     public static final WandApiImpl WAND_API = new WandApiImpl();
 
@@ -914,6 +914,7 @@ public class Wandscape {
                 .then(ConsumeWarehouseCommand.node())
                 .then(StressTestCommand.buildNode())
                 .then(TouristCommand.node())
+                .then(com.wsteam.wandscape.command.TavernCommand.node())
                 .then(TransportCommand.node())
                 .then(com.wsteam.wandscape.guard.GuardCommand.node())
                 .then(com.wsteam.wandscape.command.GuideCommand.node())

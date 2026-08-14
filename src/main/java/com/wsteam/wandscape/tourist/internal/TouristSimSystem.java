@@ -1007,6 +1007,7 @@ public final class TouristSimSystem {
                     s.getMaxHp(), s.getMoveSpeed(), s.getSpellPower(),
                     s.getWorkSpeed(), s.getSpellSpeed(), s.getArmor(),
                     s.getMaxMana(), s.getSkinVariant());
+            s.setMageResumeStored(true);
         } catch (IllegalStateException e) {
             Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}", s.getTouristName());
         }

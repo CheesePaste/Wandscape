@@ -182,4 +182,23 @@ class TouristSpotManagerTest {
         assertDoesNotThrow(() -> m.release(B, 0));
         assertEquals(2, m.freeSpotCount(B, 2));
     }
+
+    /** 磁盘加载/重启恢复测试：从存档加载时重新认领已占用的 spot。 */
+    @Test
+    void reloadRestoresOccupancyAndPreventsDoubleClaim() {
+        TouristSpotManager m = new TouristSpotManager();
+        // 模拟服务器刚启动（内存中无占用）
+        assertEquals(1, m.freeSpotCount(B, 1));
+        // 从存档加载恢复游客 A 正在占用 spot 0
+        assertEquals(0, m.claimAt(B, 0, 1, A));
+        assertEquals(0, m.freeSpotCount(B, 1));
+        // 此时新游客 C 试图认领 spot 0 会被拒绝
+        assertEquals(-1, m.claimAt(B, 0, 1, C));
+        assertEquals(-1, m.claim(B, 1, C));
+        // 游客 A 交互完毕释放 spot 0
+        m.release(B, 0);
+        assertEquals(1, m.freeSpotCount(B, 1));
+        // 此时新游客 C 可以认领
+        assertEquals(0, m.claim(B, 1, C));
+    }
 }

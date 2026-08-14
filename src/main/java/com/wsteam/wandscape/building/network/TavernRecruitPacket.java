@@ -24,6 +24,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MobSpawnType;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import static com.wsteam.wandscape.Wandscape.MODID;
@@ -150,6 +151,13 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                             + " 护甲:" + fmt(candidate.armorValue())
                             + " " + spawnPos.toShortString()),
                     false);
+
+            if (tavernApi != null) {
+                PacketDistributor.sendToPlayer(sp,
+                        new TavernOpenPacket(pkt.buildingPos, colonyId,
+                                tavernApi.getRecruitCount(colonyId),
+                                tavernApi.getMageResumes(colonyId)));
+            }
         });
     }
 
@@ -220,6 +228,16 @@ public record TavernRecruitPacket(BlockPos buildingPos, String action)
                         + " 施速:" + fmt(resume.spellSpeed())
                         + " 护甲:" + fmt(resume.armorValue())),
                 false);
+
+        try {
+            var tavernApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getTavernApi();
+            if (tavernApi != null) {
+                PacketDistributor.sendToPlayer(sp,
+                        new TavernOpenPacket(pkt.buildingPos, colonyId,
+                                tavernApi.getRecruitCount(colonyId),
+                                tavernApi.getMageResumes(colonyId)));
+            }
+        } catch (Exception ignored) {}
     }
 
     private static String fmt(float v) {

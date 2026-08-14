@@ -605,6 +605,7 @@ public final class TouristSpawnSystem {
                     t.getMaxHp(), t.getMoveSpeed(), t.getSpellPower(),
                     t.getWorkSpeed(), t.getSpellSpeed(), t.getArmor(),
                     t.getMaxMana(), t.getSkinVariant());
+            t.setMageResumeStored(true);
             Log.info(TAG, "[Tourist] Mage resume stored: {} (Lv.{})", t.getTouristName(), t.getLevel());
         } catch (IllegalStateException e) {
             Log.warn(TAG, "[Tourist] TavernApi not available — mage resume lost: {}",

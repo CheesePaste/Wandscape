@@ -1,7 +1,13 @@
 package com.wsteam.wandscape.engine.transport;
 
+import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
-import net.minecraft.core.BlockPos;
+import com.wsteam.wandscape.road.algorithm.RoadRouter;
+import com.wsteam.wandscape.road.core.CurveSample;
+import com.wsteam.wandscape.road.core.SplineLeg;
+import com.wsteam.wandscape.road.core.SplineVec3;
+import com.wsteam.wandscape.road.core.TransportRoute;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -10,18 +16,19 @@ import net.minecraft.world.level.Level;
 /**
  * A visual-only ItemEntity used by {@link ItemTransportManager} for flying item animations.
  *
- * <p>Flies a straight line from {@code from} to {@code to} over the server-computed
- * duration; off-road flights get a jump arc, on-road flights stay flat.
+ * <p>Follows a multi-leg {@link TransportRoute} calculated along the colony road network:
+ * cruising flat along roads and jumping in arcs over off-road segments.
  *
  * <p>Overrides {@link #shouldBeSaved()} to return {@code false} so these items
  * are never written to disk — preventing frozen floating items after world reload.</p>
  */
 public class TransportItemEntity extends ItemEntity {
-    private BlockPos from;
-    private BlockPos to;
-    private int duration;
-    private int elapsed;
-    private boolean onRoad;
+
+    private TransportRoute route;
+    private int legIndex;
+    private int legElapsed;
+    private int ticksOnRoad = RoadRouter.DEFAULT_TICKS_ON_ROAD;
+    private int ticksOffRoad = RoadRouter.DEFAULT_TICKS_OFF_ROAD;
 
     public TransportItemEntity(EntityType<? extends ItemEntity> type, Level level) {
         super(type, level);
@@ -39,18 +46,24 @@ public class TransportItemEntity extends ItemEntity {
         return false;
     }
 
-    public void setFlight(BlockPos from, BlockPos to, int duration, boolean onRoad) {
-        this.from = from;
-        this.to = to;
-        this.duration = Math.max(1, duration);
-        this.onRoad = onRoad;
+    public void setRoute(TransportRoute route) {
+        this.route = route;
+        this.legIndex = 0;
+        this.legElapsed = 0;
+        try {
+            this.ticksOnRoad = Config.TRANSPORT_TICKS_PER_BLOCK_ON_ROAD.get();
+            this.ticksOffRoad = Config.TRANSPORT_TICKS_PER_BLOCK_OFF_ROAD.get();
+        } catch (Exception ignored) {
+            this.ticksOnRoad = RoadRouter.DEFAULT_TICKS_ON_ROAD;
+            this.ticksOffRoad = RoadRouter.DEFAULT_TICKS_OFF_ROAD;
+        }
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        if (this.level().isClientSide() && this.from != null && this.to != null && this.duration > 0) {
+        if (this.level().isClientSide() && this.route != null && !this.route.isEmpty()) {
             tickClientAnimation();
         }
     }
@@ -60,27 +73,44 @@ public class TransportItemEntity extends ItemEntity {
         this.setNoGravity(true);
         this.setPickUpDelay(Short.MAX_VALUE);
 
-        this.elapsed++;
-        if (this.elapsed >= this.duration) {
+        if (this.legIndex >= this.route.legs().size()) {
             this.discard();
             return;
         }
 
-        double t = (double) this.elapsed / this.duration;
-        double x = from.getX() + 0.5 + (to.getX() - from.getX()) * t;
-        double z = from.getZ() + 0.5 + (to.getZ() - from.getZ()) * t;
-        double y = from.getY() + 0.5 + (to.getY() - from.getY()) * t;
-        if (!this.onRoad) {
-            y += Math.sin(t * Math.PI) * 1.5;
+        SplineLeg leg = this.route.legs().get(this.legIndex);
+        int rate = leg.offRoad() ? ticksOffRoad : ticksOnRoad;
+        int legDuration = Math.max(1, (int) Math.round(leg.getApproxLength() * rate));
+
+        this.legElapsed++;
+        if (this.legElapsed >= legDuration) {
+            this.legElapsed = 0;
+            this.legIndex++;
+            if (this.legIndex >= this.route.legs().size()) {
+                this.discard();
+                return;
+            }
+            leg = this.route.legs().get(this.legIndex);
+            rate = leg.offRoad() ? ticksOffRoad : ticksOnRoad;
+            legDuration = Math.max(1, (int) Math.round(leg.getApproxLength() * rate));
         }
 
-        double nextT = (double) (this.elapsed + 1) / this.duration;
-        double nx = from.getX() + 0.5 + (to.getX() - from.getX()) * nextT;
-        double nz = from.getZ() + 0.5 + (to.getZ() - from.getZ()) * nextT;
-        double ny = from.getY() + 0.5 + (to.getY() - from.getY()) * nextT;
-        if (!this.onRoad) {
-            ny += Math.sin(nextT * Math.PI) * 1.5;
-        }
+        double t = (double) this.legElapsed / legDuration;
+        double u = leg.uStart() + (leg.uEnd() - leg.uStart()) * t;
+
+        CurveSample sample = leg.spline().evaluate(u);
+        SplineVec3 pos = sample.position();
+        double x = pos.x();
+        double y = pos.y() + (leg.offRoad() ? Math.sin(t * Math.PI) * 1.5 : 0.4);
+        double z = pos.z();
+
+        double nextT = (double) (this.legElapsed + 1) / legDuration;
+        double nextU = leg.uStart() + (leg.uEnd() - leg.uStart()) * nextT;
+        CurveSample nextSample = leg.spline().evaluate(nextU);
+        SplineVec3 nextPos = nextSample.position();
+        double nx = nextPos.x();
+        double ny = nextPos.y() + (leg.offRoad() ? Math.sin(nextT * Math.PI) * 1.5 : 0.4);
+        double nz = nextPos.z();
 
         this.xo = this.getX();
         this.yo = this.getY();
@@ -92,5 +122,16 @@ public class TransportItemEntity extends ItemEntity {
         this.setDeltaMovement(nx - x, ny - y, nz - z);
         this.hasImpulse = true;
         this.setPos(x, y, z);
+
+        // Subtle particle trail when cruising along roads
+        if (!leg.offRoad() && this.random.nextInt(3) == 0) {
+            this.level().addParticle(ParticleTypes.PORTAL,
+                    x + (this.random.nextDouble() - 0.5) * 0.2,
+                    y,
+                    z + (this.random.nextDouble() - 0.5) * 0.2,
+                    (this.random.nextDouble() - 0.5) * 0.1,
+                    -0.05,
+                    (this.random.nextDouble() - 0.5) * 0.1);
+        }
     }
 }
