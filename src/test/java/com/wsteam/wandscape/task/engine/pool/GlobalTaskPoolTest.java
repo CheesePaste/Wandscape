@@ -12,16 +12,19 @@ import com.wsteam.wandscape.core.CoreBootstrap;
 import com.wsteam.wandscape.core.CoreBootstrapConfig;
 import com.wsteam.wandscape.core.boundary.MockBoundary;
 import com.wsteam.wandscape.core.boundary.MovementOps;
+import com.wsteam.wandscape.core.component.TaskExecutor;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.core.types.NpcAttributes;
 import com.wsteam.wandscape.task.engine.dsl.BlueprintRegistry;
+import com.wsteam.wandscape.task.runtime.NpcTaskPackage;
 import com.wsteam.wandscape.task.runtime.TaskSequence;
+import com.wsteam.wandscape.task.runtime.TaskState;
 import com.wsteam.wandscape.task.scheduler.SystemBlueprintRegistry;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * GlobalTaskPool.hasActiveTask —— 祭坛施法发布即锁定：同一蓝图 + 参数子集匹配的非 COMPLETED
@@ -94,5 +97,47 @@ class GlobalTaskPoolTest {
         Map<String, JsonElement> otherAltar = new HashMap<>();
         otherAltar.put("altar", new JsonPrimitive(UUID.randomUUID().toString()));
         assertFalse(world.taskPool.hasActiveTask(ALTAR_BLUEPRINT, otherAltar));
+    }
+
+    @Test
+    void cancelTask_removesPendingAssignTask() {
+        long taskId = world.taskPool.addTask(
+                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10));
+        assertEquals(1, world.taskPool.assignableCount());
+
+        long released = world.taskPool.cancelTask(taskId, world);
+
+        assertEquals(-1, released, "pending task has no assigned NPC");
+        assertEquals(TaskState.COMPLETED, world.taskPool.get(taskId).state,
+                "cancelled task must leave the active set");
+        assertEquals(0, world.taskPool.assignableCount(),
+                "cancelled task must not remain assignable");
+        assertFalse(world.taskPool.hasActiveTask(ALTAR_BLUEPRINT, altarParams("revive")),
+                "cancelled task must not keep locking the altar");
+    }
+
+    @Test
+    void cancelTask_releasesAssignedNpc_andDropsItsGlobalPackage() {
+        long npcId = CoreBootstrap.createNpc(world, 0, 64, 0,
+                UUID.randomUUID(), NpcAttributes.defaults());
+        long taskId = world.taskPool.addTask(
+                new TaskRequest(ALTAR_BLUEPRINT, altarParams("revive"), 10));
+        world.taskPool.assignLight(taskId, npcId, world);
+
+        TaskExecutor exec = world.get(npcId, TaskExecutor.class);
+        // assignLight only sets task.assignedNpcId; the executor's globalTaskId is
+        // bound when the NPC actually starts the package — simulate that here.
+        exec.globalTaskId = taskId;
+        TaskSequence seq = world.taskPool.get(taskId).sequence;
+        exec.npcQueue.enqueueNormal(NpcTaskPackage.of("global:" + taskId, seq, null, 10));
+        assertNotNull(exec.globalTaskId, "task bound to NPC");
+        assertTrue(exec.npcQueue.hasGlobalPackage());
+
+        long released = world.taskPool.cancelTask(taskId, world);
+
+        assertEquals(npcId, released, "cancelled task reports the released NPC");
+        assertNull(exec.globalTaskId, "NPC released from the cancelled task");
+        assertFalse(exec.npcQueue.hasGlobalPackage(),
+                "NPC's queued global package dropped so it stops executing");
     }
 }

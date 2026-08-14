@@ -132,4 +132,26 @@ class BuildingTaskPoolTest {
         btp.pruneParked(buildingId, pool);
         assertFalse(btp.hasParked(buildingId));
     }
+
+    @Test
+    void removeBuilding_returnsLiveTaskIds_andClearsQueue() {
+        BuildingTaskPool btp = world.buildingTaskPool;
+        GlobalTaskPool pool = world.taskPool;
+        UUID buildingId = UUID.randomUUID();
+
+        long parked = btp.enqueue(buildingId, synthWork("recipeA"), pool);
+        pool.get(parked).state = TaskState.AWAITING_RESOURCES;
+        btp.parkHead(buildingId, parked);
+        long head = btp.enqueue(buildingId, synthWork("recipeB"), pool);
+        assertTrue(btp.hasHead(buildingId));
+        assertTrue(btp.hasParked(buildingId));
+
+        List<Long> live = btp.removeBuilding(buildingId);
+
+        assertTrue(live.contains(head), "live head task id returned for cancellation");
+        assertTrue(live.contains(parked), "parked task id returned for cancellation");
+        assertFalse(btp.hasHead(buildingId), "building queue fully removed");
+        assertFalse(btp.hasParked(buildingId));
+        assertEquals(0, btp.totalBuildings());
+    }
 }

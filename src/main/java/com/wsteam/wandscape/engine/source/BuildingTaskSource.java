@@ -4,6 +4,7 @@ import java.util.*;
 
 import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.core.ecs.World;
+import com.wsteam.wandscape.engine.WandscapeEngine;
 import com.wsteam.wandscape.task.source.TaskSource;
 import com.wsteam.wandscape.task.engine.pool.BuildingTaskPool;
 import com.wsteam.wandscape.task.engine.pool.GlobalTask;
@@ -148,6 +149,38 @@ public class BuildingTaskSource implements TaskSource {
             return WandscapeApis.getBuildingApi();
         } catch (IllegalStateException e) {
             return null;
+        }
+    }
+
+    /**
+     * Immediately cancel a building's active engine tasks (the head task an NPC
+     * is executing, plus any parked/pending) and drop its per-building task-pool
+     * queue. This is the synchronous counterpart of {@link #poll}'s cleanup:
+     * {@code poll} only reacts to a completed head on the next 20-tick cycle,
+     * which is too slow when a building is undone — the NPC would keep placing
+     * blocks. Stops the NPC mid-task, releases the footprint chunk lease, and
+     * clears the {@link BuildingApi} current-task marker.
+     *
+     * <p>The material flow is intentionally left untouched: an in-flight
+     * {@code request_resource} transport finishes and commits on its own, which
+     * matches {@code cancelBuilding}'s existing "materials are charged in one
+     * bulk commit at construction start" refund assumption.
+     *
+     * <p>Idempotent: a building whose queue was already removed returns no task
+     * ids and is a no-op (safe to call from both undo and demolish paths).
+     */
+    public static void cancelBuildingTasks(UUID buildingId) {
+        World world = WandscapeEngine.getWorld();
+        if (world == null || world.taskPool == null || world.buildingTaskPool == null) return;
+
+        for (long taskId : world.buildingTaskPool.removeBuilding(buildingId)) {
+            world.taskPool.cancelTask(taskId, world);
+        }
+
+        ChunkLoadManager.get().releaseBuilding(buildingId);
+        var api = WandscapeApis.getBuildingApiSilently();
+        if (api != null) {
+            api.clearCurrentTask(buildingId);
         }
     }
 

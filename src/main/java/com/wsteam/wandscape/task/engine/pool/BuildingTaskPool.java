@@ -5,6 +5,8 @@ import com.wsteam.wandscape.shared.data.WorkItem;
 import com.wsteam.wandscape.task.runtime.TaskState;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -145,6 +147,23 @@ public class BuildingTaskPool {
     /** For persistence: all non-empty building queues. */
     public Map<UUID, BuildingTaskQueue> getAll() {
         return Map.copyOf(queues);
+    }
+
+    /**
+     * Remove a building's whole queue (head, parked tasks, pending WorkItems).
+     * Returns the global task ids that were live (head + parked) so the caller
+     * can terminally cancel them in the {@link GlobalTaskPool} — otherwise a
+     * cancelled building's task would keep running (e.g. an NPC still placing
+     * blocks after an undo).
+     */
+    public List<Long> removeBuilding(UUID buildingId) {
+        BuildingTaskQueue queue = queues.remove(buildingId);
+        if (queue == null) return List.of();
+        List<Long> ids = new ArrayList<>();
+        Long head = queue.getHeadTaskId();
+        if (head != null) ids.add(head);
+        ids.addAll(queue.getParkedTaskIds());
+        return ids;
     }
 
     /** For persistence: restore a building queue. */
