@@ -78,6 +78,12 @@ public class Config {
             .comment("Disable to review large build/reconstruction tasks before NPCs start work.")
             .define("general.autoApproveTasks", false);
 
+    public static final ModConfigSpec.BooleanValue COLONY_RUN_WHEN_PLAYER_OFFLINE = BUILDER
+            .comment("是否在殖民地创始人玩家不在线时仍运行其殖民地自动化（NPC 建造/生产、游客经济、每日结算）。"
+                    + "默认 true = 服务器无人也在运行；设为 false = 玩家不在线时其殖民地原地冻结，上线后自动恢复。"
+                    + "无创始人的殖民地视为始终运行。")
+            .define("colony.runWhenPlayerOffline", true);
+
     public static final ModConfigSpec.IntValue INITIAL_ELEMENT_COUNT = BUILDER
             .comment("每种元素在殖民地仓库首次建立时的初始数量（每殖民地一次，只种一次）。")
             .defineInRange("colony.initialElementCount", 6000, 0, 1000000);
@@ -91,14 +97,15 @@ public class Config {
 
     public static final ModConfigSpec.DoubleValue ELEMENT_CRAFT_COST_MULTIPLIER = BUILDER
             .comment("合成/制作消耗倍率：Workstation 合成、法杖制作、酿造消耗的元素 × 该系数。"
-                    + "默认 1.0；设为 2.0 则消耗翻倍（消耗向上取整，不会少扣）。")
+                    + "默认 1.0；设为 2.0 则消耗翻倍（消耗向上取整，不会少扣）。"
+                    + "警告：修改会导致利润率低于该数值的商店不盈利。")
             .defineInRange("element.craftCostMultiplier", 1.0, 0.1, 10.0);
 
     // ---- Tourist system ----
 
     public static final ModConfigSpec.IntValue TOURIST_MAX_PER_COLONY = BUILDER
             .comment("Maximum simultaneous tourists per colony")
-            .defineInRange("tourist.maxPerColony", 100, 5, 500);
+            .defineInRange("tourist.maxPerColony", 150, 5, 500);
 
     public static final ModConfigSpec.IntValue TOURIST_DESPAWN_TIMEOUT_TICKS = BUILDER
             .comment("Ticks before an idle tourist despawns (36000 ticks = 30 minutes)")

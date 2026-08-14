@@ -1,5 +1,7 @@
 package com.wsteam.wandscape.core.boundary;
 
+import java.util.UUID;
+
 import javax.annotation.Nullable;
 
 import com.wsteam.wandscape.core.types.EffectId;
@@ -26,6 +28,14 @@ public interface EntityOps {
      * released so only personal behavior (e.g. self-defense) continues.
      */
     boolean isFollowing(long npcId);
+
+    /**
+     * Whether a colony's autonomous simulation should currently run.
+     * Implemented by the MC adapter: when the colony's founding player is
+     * offline and offline-running is disabled, returns false so NPC task
+     * scheduling/execution for that colony freezes in place.
+     */
+    boolean isColonyActive(java.util.UUID colonyId);
 
     /**
      * Spawn a decoration entity (item frame, painting) from trimmed NBT during

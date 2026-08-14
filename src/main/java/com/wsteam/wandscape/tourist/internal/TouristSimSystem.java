@@ -12,6 +12,7 @@ import com.wsteam.wandscape.Config;
 import com.wsteam.wandscape.Wandscape;
 import com.wsteam.wandscape.building.internal.BuildingState;
 import com.wsteam.wandscape.engine.WandscapeEngine;
+import com.wsteam.wandscape.engine.colony.ColonyActivation;
 import com.wsteam.wandscape.engine.colony.ColonyLevelManager;
 import com.wsteam.wandscape.shared.api.BuildingApi;
 import com.wsteam.wandscape.shared.api.TouristApi;
@@ -227,8 +228,14 @@ public final class TouristSimSystem {
             }
         }
 
-        int observedCount = 0, simmedCount = 0, stuckCount = 0;
+        int observedCount = 0, simmedCount = 0, stuckCount = 0, frozenCount = 0;
         for (TouristShadow s : new ArrayList<>(shadows.values())) {
+            // 创始人不在线 → 冻结殖民地：游客原地冻结——不 sim、不实体化、不离场、不被清。
+            // 冻结期间占位/排队保留（shadow 仍在 registry，spot purge 不误清）。
+            if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
+                frozenCount++;
+                continue;
+            }
             // The sim drives a tourist whenever no player can observe it. Chunk state is
             // an unreliable proxy here: spawn chunks stay "loaded"/"ticking" even with the
             // player far away (so isLoaded/isPositionTicking never let the sim take over),
@@ -259,8 +266,8 @@ public final class TouristSimSystem {
             }
         }
         if (tickCounter % 200 == 0) {
-            Log.info(TAG, "[Tourist][diag] runTick shadows={} observed={} (entity-null={}) simmed={}",
-                    shadows.size(), observedCount, stuckCount, simmedCount);
+            Log.info(TAG, "[Tourist][diag] runTick shadows={} observed={} (entity-null={}) simmed={} frozen={}",
+                    shadows.size(), observedCount, stuckCount, simmedCount, frozenCount);
         }
     }
 
@@ -768,6 +775,10 @@ public final class TouristSimSystem {
             if (t.isAlive() && !t.isPreview()) live.put(t.getUUID(), t);
         }
         for (TouristShadow s : new ArrayList<>(registry.getShadows().values())) {
+            // 创始人不在线 → 冻结殖民地：不随夜晚快进（原地冻结，保留当前状态）
+            if (s.getColonyId() != null && !ColonyActivation.isColonyActive(s.getColonyId())) {
+                continue;
+            }
             s.advanceSimTick((int) skippedTicks);
             releaseShadowSpots(s);
             s.setCommuteTarget(null);

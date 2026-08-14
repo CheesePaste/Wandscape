@@ -2,6 +2,24 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-14：殖民地离线冻结（colony.runWhenPlayerOffline）
+
+**需求**（用户指令）：服务器默认没人时小镇也在运行；要求加一个 Config「不在线是否运行」，默认 true，设为 false 后玩家不在线就不运行它的殖民地（全部自动化暂停 + 原地冻结 + 上线恢复）。
+
+**决策**：
+- **Config 开关**：`colony.runWhenPlayerOffline`（默认 `true` = 服务器无人也运行；`false` = 创始人不在线则其殖民地冻结）。
+- **激活判定**：`engine/colony/ColonyActivation.isColonyActive(colonyId)`——配置为 true 恒激活；false 时查 `ColonyApi.getFounder(colonyId)`，创始人玩家在线才激活；**无创始人视为始终激活**（历史/命令创建的殖民地无法判定在线状态，避免被误冻结）。
+- **core 访问边界**：`EntityOps` 增 `isColonyActive(UUID)`，`WandscapeEntityOps` 委托给 `ColonyActivation`——core 的调度/执行系统不 import MC，经边界接口取 engine 判定（同 `isFollowing` 模式）。
+- **冻结范围（全部自动化）**：
+  - NPC 建造/生产：`SchedulerSystem` 跳过冻结殖民地不分配任务；`TaskExecutionSystem` 跳过冻结殖民地 NPC 不推进执行（原地冻结，保留队列/步骤/async future）；`BuildingTaskSource` 不为冻结殖民地建筑发布新任务（排队工作与占地保留）。
+  - 游客经济：`TouristSpawnSystem` 冻结殖民地不生成/不清除游客；`TouristSimSystem` 冻结殖民地 shadow 不 sim/不实体化/不离场/不快进夜。
+  - 每日结算：`DailySettlementSystem` 跳过冻结殖民地（商店补货/统计随之停）。
+- **原地冻结而非清理**：冻结期间游客停留、NPC 任务挂起、占地保留，创始人上线后全部自动恢复继续——不做离场/取消的清理动作。
+
+**为什么**：无人在线时殖民地仍全速运转（游客来逛、NPC 建造、每日结算）会让「挂机党」的殖民地离线也攒钱/升级，且空服持续跑 force-load 造/产白白耗资源。按创始人判定满足「一人一殖民地」模型；无创始人兜底防误冻。
+
+**影响**：关掉开关后，创始人不在线的殖民地完全冻结（不新游客/不建造/不结算），上线瞬间恢复；游客占位/排队、NPC 任务、建筑 footprint lease 全部保留。
+
 ## 2026-08-14：玩家睡觉跳过夜晚 → 游客夜间批量快进
 
 **需求**（用户指令）：游客夜晚必须找旅馆睡觉否则消失；玩家睡觉会跳过夜晚（NeoForge `SleepFinishedTimeEvent`，时间瞬间从夜间跳到次晨 dawn），离场窗口 18000–24000 被整体跳过，本应离场的游客滞留、人口每晚只增不减。要求睡觉跳夜那一刻在 sim 状态快速模拟「睡→醒」这一整段。

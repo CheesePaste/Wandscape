@@ -75,6 +75,10 @@ public class SchedulerSystem implements System {
 
         // 3. For each colony, match NPCs to tasks
         for (Map.Entry<UUID, List<Long>> entry : npcsByColony.entrySet()) {
+            // 创始人不在线且关闭离线运行 → 冻结该殖民地：不分配任何任务
+            if (world.entityOps != null && !world.entityOps.isColonyActive(entry.getKey())) {
+                continue;
+            }
             List<Long> colonyNpcs = entry.getValue();
             List<GlobalTask> assignable = taskPool.getAssignableTasks();
             if (assignable.isEmpty()) continue;

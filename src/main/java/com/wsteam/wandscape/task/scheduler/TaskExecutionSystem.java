@@ -76,6 +76,14 @@ public class TaskExecutionSystem implements System {
                 continue;
             }
 
+            // ── 0.5 殖民地冻结：创始人不在线且关闭离线运行 → NPC 原地冻结，不推进执行 ──
+            // 保留原状态（队列/步骤/async future），创始人上线后由同一路径恢复。
+            ColonyMember frozenMember = world.get(npcId, ColonyMember.class);
+            if (frozenMember != null && world.entityOps != null
+                    && !world.entityOps.isColonyActive(frozenMember.colonyId())) {
+                continue;
+            }
+
             // ── 1. No work → idle ──
             if (!queue.hasWork() && exec.globalTaskId == null) {
                 if (exec.state != ExecutorState.IDLE) {
