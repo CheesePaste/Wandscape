@@ -26,6 +26,16 @@ public class Config {
                     + "force-loaded to run real block placement; this caps the concurrent cost.")
             .defineInRange("general.maxConcurrentBuildings", 3, 1, 32);
 
+    // ---- Transport (物品运输) ----
+
+    public static final ModConfigSpec.IntValue TRANSPORT_TICKS_PER_BLOCK_ON_ROAD = BUILDER
+            .comment("物品贴路巡航运输速度（tick/格，越小越快）：默认 2（10 格/秒），旧版为 10（2 格/秒）。")
+            .defineInRange("transport.ticksPerBlockOnRoad", 2, 1, 20);
+
+    public static final ModConfigSpec.IntValue TRANSPORT_TICKS_PER_BLOCK_OFF_ROAD = BUILDER
+            .comment("物品离路/直飞运输速度（tick/格，越小越快）：默认 4（5 格/秒），旧版为 20（1 格/秒）。")
+            .defineInRange("transport.ticksPerBlockOffRoad", 4, 1, 40);
+
     public static final ModConfigSpec.IntValue SCHEDULER_HEARTBEAT_TICKS = BUILDER
             .comment("Scheduler heartbeat interval in ticks: how often idle NPCs are matched "
                     + "to pending tasks (20 ticks = 1 second)")

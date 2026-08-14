@@ -30,6 +30,8 @@ import com.wsteam.wandscape.shared.log.Log;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Shared tourist interaction economy, operating on {@link TouristStateHost}.
@@ -240,6 +242,28 @@ public final class TouristSimulation {
                 (int) Math.round(spot.getX() + dx * d),
                 spot.getY(),
                 (int) Math.round(spot.getZ() + dz * d));
+    }
+
+    /**
+     * 计算方块位置的站立表面 Y 坐标（支持半砖/台阶/地毯/雪层等非完整方块，防实体脚部陷入方块或悬空震荡）。
+     * 若 pos 为碰撞方块（如 slab/stairs/carpet），返回 pos.getY() + shape.max(Y)；
+     * 若 pos 为空气但下方有方块，返回 pos.below().getY() + belowShape.max(Y)；
+     * 否则兜底 pos.getY()。
+     */
+    public static double getFloorSurfaceY(@Nullable BlockGetter level, @Nullable BlockPos pos) {
+        if (level == null || pos == null) return pos != null ? pos.getY() : 0.0;
+        BlockState state = level.getBlockState(pos);
+        var shape = state.getCollisionShape(level, pos);
+        if (!shape.isEmpty()) {
+            return pos.getY() + shape.max(Direction.Axis.Y);
+        }
+        BlockPos below = pos.below();
+        BlockState belowState = level.getBlockState(below);
+        var belowShape = belowState.getCollisionShape(level, below);
+        if (!belowShape.isEmpty()) {
+            return below.getY() + belowShape.max(Direction.Axis.Y);
+        }
+        return pos.getY();
     }
 
     // ── Interactions ──

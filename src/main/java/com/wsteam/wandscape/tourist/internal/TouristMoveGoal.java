@@ -205,8 +205,22 @@ public class TouristMoveGoal extends Goal {
 
     @Override
     public void start() {
-        // Only bypass probability when spawner explicitly assigned a building target
-        if (tourist.getCommuteTarget() != null && tourist.getTargetBuildingId() != null) {
+        // 恢复从存档加载的正在进行的建筑交互（如在长椅上休息/在商店浏览等）
+        if (tourist.getOccupiedSpot() >= 0 && tourist.getCurrentActivity() != null
+                && tourist.getActivityTicks() > 0 && tourist.getTargetBuildingId() != null) {
+            currentMode = MoveMode.VISITING_BUILDING;
+            indoorPhase = true;
+            performingActivity = true;
+            claimedSpot = tourist.getOccupiedSpot();
+            ServerLevel sl = serverLevel();
+            if (sl != null) {
+                interactPoint = TouristSimulation.spotWorldPos(sl, tourist.getTargetBuildingId(), claimedSpot);
+                faceSpot(sl, tourist.getTargetBuildingId(), claimedSpot);
+            }
+            if (tourist.getCurrentActivity() == Activity.EAT) {
+                tourist.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, heldFoodStack());
+            }
+        } else if (tourist.getCommuteTarget() != null && tourist.getTargetBuildingId() != null) {
             currentMode = MoveMode.VISITING_BUILDING;
         } else {
             currentMode = decideNextMode(null);
@@ -295,6 +309,10 @@ public class TouristMoveGoal extends Goal {
     // ════════════════════════════════════════════════════════════════
 
     private void startBuildingVisit() {
+        if (performingActivity) {
+            // Already performing activity (restored from saved data) — stay put
+            return;
+        }
         // If no commute target, try to plan one
         if (tourist.getCommuteTarget() == null) {
             planNextBuilding();
@@ -402,6 +420,8 @@ public class TouristMoveGoal extends Goal {
             if (tp != null) {
                 Log.info(TAG, "[Tourist] {} outdoor nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                 tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             }
             return;
         }
@@ -492,6 +512,8 @@ public class TouristMoveGoal extends Goal {
                 }
                 Log.info(TAG, "[Tourist] {} indoor exit fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                 tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             } else {
                 // Stuck navigating to the interact point. Do NOT teleport back onto the
                 // interact point — that just re-loops. Abandon the visit instead.
@@ -594,7 +616,10 @@ public class TouristMoveGoal extends Goal {
         // 精确落到 spot 中心再开始交互：游客移动有误差，直接 setPos 钉死，保证整队与 spot 对齐
         BlockPos sp = TouristSimulation.spotWorldPos(level, buildingId, spot);
         if (sp != null) {
-            tourist.setPos(sp.getX() + 0.5, sp.getY(), sp.getZ() + 0.5);
+            double floorY = TouristSimulation.getFloorSurfaceY(level, sp);
+            tourist.setPos(sp.getX() + 0.5, floorY, sp.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             tourist.getNavigation().stop();
         }
         Activity action = TouristSimulation.interactSpotAction(level, buildingId, spot);
@@ -698,7 +723,10 @@ public class TouristMoveGoal extends Goal {
                 interactPoint = target;
                 tourist.setFrozenYaw(null);
                 // 队首就在 spot 背后 1 格，直接精确落到 spot 上开始交互（消除移动误差）
-                tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
+                double floorY = TouristSimulation.getFloorSurfaceY(level, target);
+                tourist.setPos(target.getX() + 0.5, floorY, target.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 stampRepath();
                 tourist.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, touristSpeed);
                 return;
@@ -747,14 +775,17 @@ public class TouristMoveGoal extends Goal {
             tourist.getNavigation().stop();
             return;
         }
-        // 已到位且目标没变：精确落到站位中心（游客移动有误差，直接 setPos 钉死保证队形整齐），
+        // 已到位且目标没变：首次到达时精确对齐站位中心与地面高度，之后保持静止防高频抖动，
         // 朝向与 spot 的 facing 一致（和交互游客同向）
         boolean sameTarget = target.equals(queueNavTarget);
         boolean arrived = tourist.blockPosition().distSqr(target) <= QUEUE_ARRIVE_DIST_SQ;
         if (sameTarget && arrived) {
             tourist.getNavigation().stop();
-            tourist.setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
             if (tourist.getFrozenYaw() == null) {
+                double floorY = TouristSimulation.getFloorSurfaceY(level, target);
+                tourist.setPos(target.getX() + 0.5, floorY, target.getZ() + 0.5);
+                tourist.resetFallDistance();
+                tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 float yaw = TouristSimulation.spotFacing(level, buildingId, queueSpotIndex).toYRot();
                 tourist.setFrozenYaw(yaw);
             }
@@ -1075,6 +1106,8 @@ public class TouristMoveGoal extends Goal {
                             tourist.getTouristName(), shortId(hotelId),
                             (int) Math.sqrt(tourist.blockPosition().distSqr(target)));
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                    tourist.resetFallDistance();
+                    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 }
             }
         }
@@ -1130,6 +1163,8 @@ public class TouristMoveGoal extends Goal {
         BlockPos tp = TouristTeleport.findSafeSpotNearEntry(serverLevel(), safe, tourist.getColonyId());
         if (tp != null) {
             tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+            tourist.resetFallDistance();
+            tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         }
 
         // 放弃也算「逛过」：本次停留不再尝试该建筑（冷却已删除，靠 visitedBuildings 防重选卡死）。
@@ -1191,6 +1226,8 @@ public class TouristMoveGoal extends Goal {
                 if (tp != null) {
                     Log.info(TAG, "[Tourist] {} POI nav hard fallback. Teleporting to {}", tourist.getTouristName(), tp.toShortString());
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                    tourist.resetFallDistance();
+                    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 }
                 return;
             }
@@ -1353,6 +1390,8 @@ public class TouristMoveGoal extends Goal {
                 if (tp != null) {
                     Log.info(TAG, "[Tourist] {} wander stuck, teleporting to {}", tourist.getTouristName(), tp.toShortString());
                     tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+                    tourist.resetFallDistance();
+                    tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 }
                 return;
             }
@@ -1904,6 +1943,8 @@ public class TouristMoveGoal extends Goal {
         if (tp == null) return false;
         Log.info(TAG, "[Tourist] {} stuck on floating surface, rescuing to {}", tourist.getTouristName(), tp.toShortString());
         tourist.setPos(tp.getX() + 0.5, tp.getY(), tp.getZ() + 0.5);
+        tourist.resetFallDistance();
+        tourist.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         noMoveTicks = 0;
         totalNavTicks = 0;
         return true;

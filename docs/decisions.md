@@ -2,6 +2,49 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-14：物品运输恢复贴路寻路飞行——轻量拓扑寻路 + 5 倍高速 + 零卡死保护
+
+**需求**（用户指令）：8282876b 一刀切将物品运输改为直线飞行，删除了沿玩家自建道路寻路贴路飞行的核心玩法与视觉机制；要求恢复贴路寻路飞行，但解决旧版速度过慢（1~2 格/秒）与服务器 O(B²) 卡死风险。
+
+**根因分析与历史教训**：
+- 旧版 `RoadRouter` 之所以引发服务器事故卡满 60 秒，在于试图用 BFS 懒扫描地表所有 `custom_roads` 方块并组织成数千节点的 Blob，并在主线程每次寻路时执行两两遍历（`allEndpoints × allPoints`，O(B²) 复杂度）构建全连接图。
+- 旧版速度模型过慢（离路 20 ticks/格 = 1 格/秒，贴路 10 ticks/格 = 2 格/秒），导致长途运输严重拖延施工与补货节奏。
+
+**决策**：
+- **纯拓扑路网寻路（零方块 BFS，微秒级计算）**：
+  - 寻路直接基于已建成的 `RoadNetwork`（`RoadEdge` 拓扑端点与相交节点），不扫描地表方块。节点规模受控在数十至上百以内。
+  - 起终点投影接驳（`RoadProjection`）限制最大距离 32 格，超出直接直飞。
+  - A* 寻路设置 300 步硬上限（`MAX_SEARCH_STEPS`），搜索失败/无路时 100% 优雅回退到直飞（`TransportRoute.direct`）。
+  - 绕路比检查（`MAX_DETOUR_FACTOR = 1.8`）：若路网总耗时超过直飞耗时 1.8 倍，智能选择直飞，防止严重反向绕路。
+- **5 倍高速与流畅度提升**：
+  - 贴路巡航速度提升为 **2 ticks/格（10 格/秒）**（原为 10 ticks/格），离路速度提升为 **4 ticks/格（5 格/秒）**（原为 20 ticks/格）。
+  - 新增 `Config.transport.ticksPerBlockOnRoad` 与 `Config.transport.ticksPerBlockOffRoad`，服主可自定义调节。
+- **客户端平滑贴路渲染**：
+  - `TransportItemEntity` 沿 `TransportRoute` 的多段 `SplineLeg` 平滑飞行，贴路段离地 0.4 格平飞并伴随微光流光粒子，离路段平滑抛物线跳跃。
+  - `TransportStartPacket` 采用紧凑流式序列化传输 route 样条数据。
+
+**为什么**：道路是玩家精心建造的基础设施，物流贴路飞行是核心正反馈。彻底剥离方块扫描并收敛为稀疏拓扑图 A*，既完全排除了 O(B²) 卡死风险，又保留并升级了贴路飞行的视觉与功能价值。
+
+## 2026-08-14：游客长椅/交互点重启恢复与半砖防抖防摔死
+
+**需求**（用户反馈）：重启服务器后为夜晚，三个长椅上都有游客在休息，但仍有新游客试图坐上椅子，随后上下剧烈摇晃并被摔死。
+
+**根因分析**：
+1. **Spot 占用未恢复**：`TouristSpotManager` 为内存态单例。重启后虽然 `TouristEntity` 读档还原了 `occupiedSpot`、`currentActivity` 和 `activityTicks`，但 `onAddedToLevel` 未调用 `TouristSpotManager.claimAt` 恢复占用，导致长椅被判定为 0 占用，其他游客（特别是夜晚精力低需要 relax 的游客）仍会选择长椅并重复 claim spot 0。
+2. **Goal 活动未恢复**：`TouristMoveGoal` 在读档后为新对象，`performingActivity` 为 `false`，未感知实体已有的活动，导致重新规划寻路。
+3. **排队高频 `setPos` + 半砖震荡**：`TouristMoveGoal.navigateToQueueSlot` 在到达目标后**每帧（20次/秒）** 调用 `setPos(target.getX() + 0.5, target.getY(), target.getZ() + 0.5)`，而长椅是 `bamboo_slab`（高度 0.5 格）。MC 物理引擎每帧将实体推到 0.5 格表面，下一帧又被 `setPos` 拉回整数 Y（陷入方块），导致 20Hz 垂直剧烈抽搐；`fallDistance` 持续叠加并在落地判定时结算超高跌落伤害将游客摔死。
+
+**决策**：
+- **读档恢复 Spot 占用与活动**：
+  - `TouristEntity.onAddedToLevel` 检测到 `occupiedSpot >= 0 && getCurrentActivity() != null && activityTicks > 0` 时，调用 `TouristSimulation.claimSpotAt` 恢复 `TouristSpotManager` 占用记录（失败则安全清空活动字段）。
+  - `TouristMoveGoal.start` 检测到进行中的活动时，直接恢复 `MoveMode.VISITING_BUILDING`、`indoorPhase = true`、`performingActivity = true`、`claimedSpot` 和 `interactPoint`，`startBuildingVisit` 对进行中活动直接 return 保持原位继续计时。
+- **精确地面高度 + 消除排队每帧 `setPos`**：
+  - 新增 `TouristSimulation.getFloorSurfaceY`，根据方块碰撞箱（`getCollisionShape`）精确计算 Slab、Stairs、Carpet 等非完整方块的站立表面 Y，使实体稳固踩在半砖顶面。
+  - `navigateToQueueSlot` 仅在首次到达站位时对齐一次坐标（锁定 yaw），到位后保持静止，严禁每 tick 重复调用 `setPos`。
+- **摔落伤害与动量保护**：
+  - `TouristEntity.hurt` 对 `DamageTypes.FALL` 免疫伤害，彻底杜绝坐标对齐/微调/半砖碰撞带来的意外暴毙。
+  - 所有 `setPos` 及传送调用处同步调用 `tourist.resetFallDistance()` 与 `tourist.setDeltaMovement(Vec3.ZERO)`。
+
 ## 2026-08-13：Tab 改为只折叠新手引导，光标抬起收归 C 键
 
 **需求**（用户指令）：Tab 在引导激活时被 `GuideSession` 折叠占用，用户实测 Tab 根本抬不起光标；要求 Tab 不再负责抬/放光标，只折叠/展开新手引导。
