@@ -345,6 +345,13 @@ public class TouristMoveGoal extends Goal {
     }
 
     private void tickBuildingVisit() {
+        UUID buildingId = tourist.getTargetBuildingId();
+        if (buildingId != null && !isBuildingValid(buildingId)) {
+            Log.info(TAG, "[Tourist] {} target building {} was destroyed/invalidated while visiting. Aborting visit.",
+                    tourist.getTouristName(), buildingId);
+            abandonBuildingVisit();
+            return;
+        }
         if (indoorPhase) {
             tickIndoorNav();
         } else {
@@ -671,7 +678,10 @@ public class TouristMoveGoal extends Goal {
 
     /** 活动期间面向 spot 朝向（游客做动作时面朝该方向；锁定朝向防转身）。 */
     private void faceSpot(ServerLevel level, UUID buildingId, int spot) {
-        float yaw = TouristSimulation.spotFacing(level, buildingId, spot).toYRot();
+        if (buildingId == null) return;
+        var dir = TouristSimulation.spotFacing(level, buildingId, spot);
+        if (dir == null) return;
+        float yaw = dir.toYRot();
         tourist.setFrozenYaw(yaw);
         tourist.setYRot(yaw);
         tourist.setYHeadRot(yaw);
@@ -680,9 +690,16 @@ public class TouristMoveGoal extends Goal {
 
     /** 活动倒计时：duration 结束 → 释放 spot + 结算（四类交互）+ 退出。 */
     private void tickActivity() {
-        // 活动期间持续面向 spot（look 控制/随机张望可能拉偏 yaw）
         UUID bid = tourist.getTargetBuildingId();
-        if (bid != null && claimedSpot >= 0 && tourist.level() instanceof ServerLevel sl) {
+        if (bid == null || !isBuildingValid(bid)) {
+            Log.info(TAG, "[Tourist] {} activity target {} is destroyed/invalidated. Aborting activity.",
+                    tourist.getTouristName(), bid);
+            clearSpotState();
+            abandonBuildingVisit();
+            return;
+        }
+        // 活动期间持续面向 spot（look 控制/随机张望可能拉偏 yaw）
+        if (claimedSpot >= 0 && tourist.level() instanceof ServerLevel sl) {
             faceSpot(sl, bid, claimedSpot);
         }
         int remaining = tourist.getActivityTicks() - 1;
@@ -1784,6 +1801,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private void interactWithShop(UUID buildingId) {
+        if (buildingId == null) return;
         ServerLevel level = getServerLevel();
         if (level == null) return;
         UUID colonyId = tourist.getColonyId();
@@ -1793,6 +1811,7 @@ public class TouristMoveGoal extends Goal {
         if (result == null) return;
 
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        if (bldType == null) bldType = "shop";
         String bldName = getBuildingDisplayName(buildingId, bldType);
         VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "shop",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
@@ -1810,6 +1829,7 @@ public class TouristMoveGoal extends Goal {
     }
 
     private void interactWithService(UUID buildingId) {
+        if (buildingId == null) return;
         ServerLevel level = getServerLevel();
         if (level == null) return;
         UUID colonyId = tourist.getColonyId();
@@ -1819,6 +1839,7 @@ public class TouristMoveGoal extends Goal {
         if (result == null) return;
 
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        if (bldType == null) bldType = "service";
         String bldName = getBuildingDisplayName(buildingId, bldType);
         VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "service",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
@@ -1841,6 +1862,7 @@ public class TouristMoveGoal extends Goal {
 
     /** Relax 建筑：歇脚回精力 + 填条。 */
     private void interactWithRelax(UUID buildingId) {
+        if (buildingId == null) return;
         ServerLevel level = getServerLevel();
         if (level == null) return;
         UUID colonyId = tourist.getColonyId();
@@ -1850,6 +1872,7 @@ public class TouristMoveGoal extends Goal {
         if (result == null) return;
 
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        if (bldType == null) bldType = "decoration";
         String bldName = getBuildingDisplayName(buildingId, bldType);
         VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "relax",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
@@ -1864,6 +1887,7 @@ public class TouristMoveGoal extends Goal {
 
     /** ATM 建筑：取现补钱包 + 填条。 */
     private void interactWithAtm(UUID buildingId) {
+        if (buildingId == null) return;
         ServerLevel level = getServerLevel();
         if (level == null) return;
         UUID colonyId = tourist.getColonyId();
@@ -1873,6 +1897,7 @@ public class TouristMoveGoal extends Goal {
         if (result == null) return;
 
         String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        if (bldType == null) bldType = "atm";
         String bldName = getBuildingDisplayName(buildingId, bldType);
         VisitMemory memory = TouristSimulation.addVisitMemory(tourist, bldType, bldName, "atm",
                 tourist.level().getGameTime(), result.comfortDelta(), result.magicDelta(), result.wonderDelta(),
@@ -1957,13 +1982,25 @@ public class TouristMoveGoal extends Goal {
     // Helpers
     // ════════════════════════════════════════════════════════════════
 
-    private boolean isHotelBuilding(UUID buildingId) {
-        var config = BuildingConfigLoader.getInstance().get(getBuildingTypeId(buildingId));
+    private boolean isBuildingValid(@javax.annotation.Nullable UUID buildingId) {
+        if (buildingId == null) return false;
+        BuildingApi api = getBuildingApi();
+        if (api == null) return false;
+        var data = api.getBuilding(buildingId);
+        return data != null && !data.isShutdown() && data.isStructureIntact();
+    }
+
+    private boolean isHotelBuilding(@javax.annotation.Nullable UUID buildingId) {
+        if (buildingId == null) return false;
+        String typeId = getBuildingTypeId(buildingId);
+        if (typeId == null) return false;
+        var config = BuildingConfigLoader.getInstance().get(typeId);
         return config != null && config.service() != null && config.service().maxOccupancy() > 0;
     }
 
     @Nullable
-    private String getBuildingTypeId(UUID buildingId) {
+    private String getBuildingTypeId(@javax.annotation.Nullable UUID buildingId) {
+        if (buildingId == null) return null;
         BuildingApi api = getBuildingApi();
         if (api == null) return null;
         var data = api.getBuilding(buildingId);
@@ -1972,11 +2009,12 @@ public class TouristMoveGoal extends Goal {
 
     /** Get the display name for a building, falling back to its type id. */
     private String getBuildingDisplayName(UUID buildingId, @javax.annotation.Nullable String typeId) {
+        if (typeId == null) return "建筑";
         var config = BuildingConfigLoader.getInstance().get(typeId);
         if (config != null && config.displayName() != null && !config.displayName().isEmpty()) {
             return config.displayName();
         }
-        return typeId != null ? typeId : "建筑";
+        return typeId;
     }
 
     private int getInteractionRange() {

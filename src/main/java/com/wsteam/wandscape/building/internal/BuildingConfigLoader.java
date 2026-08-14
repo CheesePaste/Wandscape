@@ -69,13 +69,15 @@ public final class BuildingConfigLoader {
 
     /** Get a config by building type id. */
     @Nullable
-    public BuildingConfig get(String id) {
+    public BuildingConfig get(@Nullable String id) {
+        if (id == null) return null;
         return configs.get(id);
     }
 
     /** Get the first config whose category matches, or null if none. */
     @Nullable
-    public BuildingConfig getByCategory(String category) {
+    public BuildingConfig getByCategory(@Nullable String category) {
+        if (category == null) return null;
         for (BuildingConfig config : configs.values()) {
             if (category.equals(config.category())) {
                 return config;
@@ -90,7 +92,8 @@ public final class BuildingConfigLoader {
     }
 
     /** Check if a building type id is known. */
-    public boolean has(String id) {
+    public boolean has(@Nullable String id) {
+        if (id == null) return false;
         return configs.containsKey(id);
     }
 
