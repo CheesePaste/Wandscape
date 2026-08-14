@@ -295,6 +295,7 @@ public final class TouristCommand {
         // 5. Set Mage attributes
         tourist.setMageAttributes(candidate.maxHp(), candidate.moveSpeed(), candidate.spellPower(),
                 candidate.workSpeed(), candidate.spellSpeed(), candidate.armorValue(), candidate.maxMana());
+        tourist.setMageResumeStored(true);
 
         tourist.applyState(TouristState.VISITING);
         serverLevel.addFreshEntity(tourist);
@@ -313,7 +314,6 @@ public final class TouristCommand {
                         tourist.getMaxHp(), tourist.getMoveSpeed(), tourist.getSpellPower(),
                         tourist.getWorkSpeed(), tourist.getSpellSpeed(), tourist.getArmor(),
                         tourist.getMaxMana(), tourist.getSkinVariant());
-                tourist.setMageResumeStored(true);
             } catch (Exception e) {
                 Log.warn("TouristCommand", "TavernApi not available when storing resume: {}", e.getMessage());
             }
