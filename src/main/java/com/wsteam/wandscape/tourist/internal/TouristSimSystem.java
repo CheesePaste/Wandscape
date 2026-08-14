@@ -28,6 +28,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -178,6 +179,20 @@ public final class TouristSimSystem {
 
         if (++tickCounter % SIM_INTERVAL != 0) return;
         runTick(level);
+    }
+
+    // ── 玩家睡觉跳过夜晚：夜间批量快进（睡→醒，让夜晚后果照常发生）──
+
+    @SubscribeEvent
+    public void onSleepFinished(SleepFinishedTimeEvent event) {
+        if (registry == null) return;
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        if (level != level.getServer().overworld()) return; // 游客只在主世界
+        // ServerLevel.tick 里 setDayTime(EventHooks.onSleepFinished(...))：事件触发时 getDayTime() 仍是旧时刻，
+        // getNewTime() = 次晨 dawn 绝对时刻 → skipped = 被跳过的夜晚 tick 数。
+        long skipped = event.getNewTime() - level.getDayTime();
+        if (skipped <= 0) return;
+        fastForwardNight(level, skipped);
     }
 
     private void runTick(ServerLevel level) {
@@ -733,6 +748,113 @@ public final class TouristSimSystem {
             if (buildingId.equals(s.getCheckedInBuildingId())) occupied++;
         }
         return occupied < max;
+    }
+
+    // ── 夜间快进（玩家睡觉跳过夜晚）──
+
+    /**
+     * 玩家睡觉跳过夜晚时，把「睡→醒」这一整段在 sim 状态批量快进：
+     * 无旅店未满条游客离场、满条游客当晚离场、住店客晨起、有旅店游客入住+晨起——
+     * 让跳过夜晚后游客处于与真实夜晚过去后一致的终态（不积压人口）。
+     * 观察中的活实体随后把快进结果推回实体（importToEntity），否则下一 tick
+     * exportToShadow 会把影子覆盖回实体旧状态、撤销快进。
+     */
+    private void fastForwardNight(ServerLevel level, long skippedTicks) {
+        long wakeGameTime = level.getGameTime() + skippedTicks; // 模拟「醒来」时刻（用于截止判定）
+        Log.info(TAG, "[Tourist] 玩家睡觉跳过夜晚：快进 {} tick 模拟夜间（{} 名游客）",
+                skippedTicks, registry.getShadows().size());
+        Map<UUID, TouristEntity> live = new java.util.HashMap<>();
+        for (TouristEntity t : LIVE_TOURISTS.values()) {
+            if (t.isAlive() && !t.isPreview()) live.put(t.getUUID(), t);
+        }
+        for (TouristShadow s : new ArrayList<>(registry.getShadows().values())) {
+            s.advanceSimTick((int) skippedTicks);
+            releaseShadowSpots(s);
+            s.setCommuteTarget(null);
+            s.setTargetBuildingId(null);
+            s.setTargetBuildingCategory(null);
+
+            // 住店客旅店失效 → 解除登记，按无旅店处理（镜像 routeToOwnHotel 校验）
+            UUID hotel = s.getCheckedInBuildingId();
+            if (hotel != null && !hotelStillValid(level, hotel)) {
+                s.setCheckedInBuildingId(null);
+                s.setHotelCheckinTime(0);
+                hotel = null;
+            }
+
+            boolean deadline = wakeGameTime >= s.getDepartureDeadline();
+            boolean full = s.isFullySatisfied();
+            BuildingState hotelTarget = null;
+            if (!deadline && !full && hotel == null) {
+                hotelTarget = TouristSimulation.findHotelTarget(level, s, false);
+            }
+            switch (nightOutcome(deadline, full, hotel != null, hotelTarget != null)) {
+                case DEPART_DEADLINE, DEPART_FULL, DEPART_NO_HOTEL -> {
+                    depart(level, s);
+                    continue;
+                }
+                case WAKE -> wakeUpShadow(s);
+                case CHECKIN_WAKE -> {
+                    checkInAtNight(level, s, hotelTarget.getBuildingId());
+                    wakeUpShadow(s);
+                }
+            }
+
+            TouristEntity e = live.get(s.getTouristId());
+            if (e != null && e.isAlive()) {
+                if (e.isSleeping()) e.stopSleeping(); // 快进可能已晨起，解除睡姿
+                importToEntity(e, s);
+            }
+        }
+    }
+
+    /** 夜间快进结果判定（纯逻辑，可单测）：deadline/满条 优先于住店/无旅店。 */
+    enum NightOutcome {
+        DEPART_DEADLINE, DEPART_FULL, DEPART_NO_HOTEL, WAKE, CHECKIN_WAKE
+    }
+
+    static NightOutcome nightOutcome(boolean deadlineReached, boolean fullySatisfied,
+            boolean checkedInValid, boolean hotelFound) {
+        if (deadlineReached) return NightOutcome.DEPART_DEADLINE;
+        if (fullySatisfied) return NightOutcome.DEPART_FULL;
+        if (checkedInValid) return NightOutcome.WAKE;
+        return hotelFound ? NightOutcome.CHECKIN_WAKE : NightOutcome.DEPART_NO_HOTEL;
+    }
+
+    /** 晨起：精力回 100、住店晚数 +1、回入住前站位、保留登记（镜像 simStep 晨起分支）。 */
+    private void wakeUpShadow(TouristShadow s) {
+        s.setHotelCheckinTime(0);
+        s.setNightsStayed(s.getNightsStayed() + 1);
+        s.setEnergy(WandscapeConstants.TOURIST_MAX_ENERGY);
+        BlockPos wake = s.getWakeUpPos();
+        if (wake != null) {
+            s.setPosition(wake.getX() + 0.5, wake.getY(), wake.getZ() + 0.5);
+            s.setWakeUpPos(null);
+        }
+    }
+
+    /** 夜晚入住：登记 + 填一次满意值（住宿贡献三条）+ 记「入住」行程（镜像 simStep.interact 入住分支）。 */
+    private void checkInAtNight(ServerLevel level, TouristShadow s, UUID buildingId) {
+        s.setCheckedInBuildingId(buildingId);
+        s.setHotelCheckinTime(s.simTick());
+        s.setWakeUpPos(s.touristPos());
+        s.addVisitedBuilding(buildingId);
+        String bldType = TouristSimulation.getBuildingTypeId(level, buildingId);
+        var hotelCfg = TouristSimulation.getConfig(level, buildingId);
+        String bldName = (hotelCfg != null && hotelCfg.displayName() != null && !hotelCfg.displayName().isEmpty())
+                ? hotelCfg.displayName() : (bldType != null ? bldType : "旅馆");
+        int[] delta = TouristSimulation.fillBars(level, s, buildingId);
+        TouristSimulation.addVisitMemory(s, bldType, bldName, "service",
+                level.getGameTime(), delta[0], delta[1], delta[2], 0, "入住");
+        Log.info(TAG, "[Tourist] {} (快进夜) checked into hotel {}", shortId(s.getTouristId()), shortId(buildingId));
+    }
+
+    /** 住店客旅店是否仍有效（镜像 routeToOwnHotel 校验）。 */
+    private boolean hotelStillValid(ServerLevel level, UUID hotel) {
+        BuildingApi api = getBuildingApi();
+        BuildingData data = api != null ? api.getBuilding(hotel) : null;
+        return data != null && !data.isShutdown() && data.isStructureIntact()
+                && TouristSimulation.isHotelBuilding(level, hotel);
     }
 
     // ── Departure ──

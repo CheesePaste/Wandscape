@@ -25,6 +25,7 @@
 - **离开**：sat<50 或 sat=100 → 夜晚带 0-1500 tick 随机延迟离开；sat 50-99 → 引导去旅馆，无房则离开。白天/傍晚：能量耗尽、夜晚且空闲、空闲超时 `TOURIST_DESPAWN_TIMEOUT_TICKS=36000`。100% 满意度 → `grantExperience`。
 - **住店客免疫清场**：入住后（`checkedInBuildingId` 常驻）只按停留截止（`departureDeadline`）或**满条当晚开心离场**（用户确认），不被夜晚/闲置清掉——`cleanupTourists`/`processNightDepartures`/sim `checkDeparture` 对住店客只判截止/满条。
 - **清场窗口统一 18000–24000**：未观察的 sim 游客与观察中的实体游客一致，都在离场窗口内清无旅店/满条游客（原 sim 从 13000 起提前清人，已对齐）；夜晚阈值 `tourist.nightStart`（默认 14000）起游客优先旅店/可入住，多逛 40 分钟。
+- **玩家睡觉跳过夜晚 → 夜间快进**：玩家睡觉触发 `SleepFinishedTimeEvent`（夜晚被整体跳过、离场窗口不逐 tick 走）时，`TouristSimSystem` 对**影子注册表批量快进「睡→醒」**——无旅店未满条游客离场、满条游客当晚离场、住店客晨起（精力回满/晚数+1/回入住前站位/保留登记）、有旅店未满条游客自动入住+晨起；观察中的活实体同步推回结果（`importToEntity`）。否则夜晚被跳过 → 本应离场的游客滞留、人口每晚只增不减（见 decisions.md）。
 
 ## 影子模拟（TouristSimSystem / TouristSimulation / TouristShadow / TouristSimRegistry）
 

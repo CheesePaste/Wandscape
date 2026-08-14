@@ -2,6 +2,35 @@
 
 本文件记录偏离直觉的设计选择及其原因，供后续开发快速理解「为什么这么做」。
 
+## 2026-08-14：玩家睡觉跳过夜晚 → 游客夜间批量快进
+
+**需求**（用户指令）：游客夜晚必须找旅馆睡觉否则消失；玩家睡觉会跳过夜晚（NeoForge `SleepFinishedTimeEvent`，时间瞬间从夜间跳到次晨 dawn），离场窗口 18000–24000 被整体跳过，本应离场的游客滞留、人口每晚只增不减。要求睡觉跳夜那一刻在 sim 状态快速模拟「睡→醒」这一整段。
+
+**决策**：
+- **触发点 = `SleepFinishedTimeEvent`**（`TouristSimSystem` 订阅，已查 `EventHooks.onSleepFinished` post 到 `NeoForge.EVENT_BUS`）：事件在 `ServerLevel.tick` 的 `setDayTime(EventHooks.onSleepFinished(...))` 参数求值阶段触发，此时 `level.getDayTime()` 仍是旧时刻，`getNewTime()` = 次晨 dawn 绝对时刻 → `skipped = getNewTime() - getDayTime()` 即被跳过的夜晚 tick 数。
+- **批量结算，不逐 tick 跑 `simStep`**：`simStep`/`checkDeparture`/`interact`/`selectNextTarget` 都直接读 `level.getDayTime()`，逐 tick 快进需把模拟时钟穿透到共享的 `TouristSimulation`（会侵入实体路径）。改为对影子注册表做一次「夜间结果批量结算」：`nightOutcome` 纯函数判定（到点→离场；满条→当晚离场；住店客→晨起；无旅店→找旅店，有→入住+晨起，无→离场），复用 `findHotelTarget`/`fillBars`/`depart`/`addVisitMemory`，行为与真实夜晚一致。
+- **覆盖所有游客（含观察中实体）**：影子注册表是人口权威源；观察中的活实体快进后 `importToEntity` 推回（否则下一 tick `exportToShadow` 覆盖影子、撤销快进），住店客实体补 `stopSleeping` 解除睡姿。
+- **`/time set day` 等命令跳夜不触发**该事件，不在本次范围。
+
+**为什么**：不快进则「夜晚必须找旅馆否则消失」规则在玩家天天睡觉时完全失效——游客只进不出，人口积压到上限，经济/排队失衡。批量结算保持规则简单（有旅店入住、无旅店离场），避免距离/走位判定。
+
+**影响**：睡觉跳过夜晚后游客处于与真实夜晚过去后一致的终态（离场/入住/晨起照常发生）；观察中游客在醒来瞬间被推到夜间终态位（如回入住前站位），属「一夜过去」效果。
+
+## 2026-08-14：建筑包围盒区域不自然刷怪
+
+**需求**（用户指令）：加一条设计——建筑包围盒区域内不会刷怪。
+
+**决策**：
+- **拦截点 = `MobSpawnEvent.SpawnPlacementCheck`**：自然刷怪每个候选位置做刷怪规则判定（`SpawnPlacements.checkSpawnRules`）时触发。比 `PositionCheck` 更前置——位置一进包围盒即 `setResult(FAIL)`，实体根本不会被创建（已查 NeoForge 21.1.233 `MobSpawnEvent` 源码确认：本版本**没有**旧版 Forge 的 `FinalizeSpawn` 事件，只有 `SpawnPlacementCheck`/`PositionCheck`）。
+- **只拦 `MobSpawnType.NATURAL`**：刷怪笼/结构刷怪/指令/spawn egg 走原版机制；NPC/游客经 `addFreshEntity` 生成，天然不受影响。
+- **建筑过滤 = 完好且运营中**：`BuildingApi.getBuildingAt(pos)` 查到建筑且 `!isShutdown() && isStructureIntact()` 才拦截——建造中/破损/停摆建筑不提供安全区（与守卫/袭击判定一致）。
+- **查询走 `WandscapeApis.getBuildingApi()`**：跨模块事件订阅统一 API + EventBus，不跨包引用 SavedData；`getBuildingAt` 按 chunkIndex 快速命中，无建筑区块 O(1) 返回，刷怪热路径开销可忽略。
+- **Config 开关**：`building.noSpawnInBuildingArea`（默认 true），服主可关。
+
+**为什么**：玩家建起的城镇夜里在建筑内部刷怪很烦（封闭建筑内部黑暗 → 原版怪直接在脚下生成）；让运营中的建筑成为安全区，既保留刷怪笼/结构刷怪等原版机制，又让殖民地「建起来就安全」。
+
+**影响**：完好运营中的建筑包围盒（含 Y）内不再自然刷怪；建造中/破损/停摆建筑照常刷怪；开关关闭即回退原版行为。
+
 ## 2026-08-13：Tab 改为只折叠新手引导，光标抬起收归 C 键
 
 **需求**（用户指令）：Tab 在引导激活时被 `GuideSession` 折叠占用，用户实测 Tab 根本抬不起光标；要求 Tab 不再负责抬/放光标，只折叠/展开新手引导。
