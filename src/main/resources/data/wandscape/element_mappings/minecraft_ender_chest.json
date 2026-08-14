@@ -4,9 +4,5 @@
     "water": 256,
     "dark": 64,
     "fire": 288
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

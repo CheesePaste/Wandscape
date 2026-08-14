@@ -4,9 +4,5 @@
     "earth": 320,
     "water": 320,
     "dark": 320
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "manual"
+  }
 }

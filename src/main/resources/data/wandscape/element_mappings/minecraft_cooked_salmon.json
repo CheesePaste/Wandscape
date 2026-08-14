@@ -3,9 +3,5 @@
   "build_cost": {
     "water": 8,
     "wood": 8
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

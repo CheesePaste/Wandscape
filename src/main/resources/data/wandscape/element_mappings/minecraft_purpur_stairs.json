@@ -2,9 +2,5 @@
   "block": "minecraft:purpur_stairs",
   "build_cost": {
     "dark": 6
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

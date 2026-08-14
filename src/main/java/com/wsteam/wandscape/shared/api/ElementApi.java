@@ -25,10 +25,5 @@ public interface ElementApi {
     boolean isDisabled(String blockOrItemId);
 
     Map<ElementType, Long> getBuildCost(BlockState block);
-    Map<ElementType, Long> getDecomposeYield(BlockState block);
-    boolean isDecomposable(BlockState block);
-
     Map<ElementType, Long> getBuildCost(ItemStack stack);
-    Map<ElementType, Long> getDecomposeYield(ItemStack stack);
-    boolean isDecomposable(ItemStack stack);
 }

@@ -98,7 +98,7 @@
 ```
 
 - `goods`: 货物种类由 JSON 固定。`maxStock` **不在 JSON 中定义**，玩家通过商店 GUI 的滑动条为每种货物单独调整（0–64，默认 0，需玩家主动拉滑动条才会补货）
-- `restock_cost`: **可选**。每种货物补货 1 件消耗的元素种类和数量。未指定时自动从 `element_mappings` 反查该物品的 `decompose_yield` 作为补货成本。显式指定则覆盖自动推断值
+- `restock_cost`: **可选**。每种货物补货 1 件消耗的元素种类和数量。未指定时自动从 `element_mappings` 反查该物品的 `build_cost` 作为补货成本。显式指定则覆盖自动推断值
 - `comfort`/`magic`/`wonder` (goods 内): 可选，默认 0。有货时该 goods 的三值叠加到商店总三值。货物越丰富商店三值越高
 - `profit_rate`: 利润率。游客购物时殖民地获得 `元素成本 × (1 + profit_rate)` 的元素收入
 - 每日清晨从仓库扣元素补货到 maxStock。未售出货品次日清除

@@ -13,16 +13,15 @@ public record SynthesizeRecipe(
     Map<ElementType, Long> cost,
     RecipeUnlockRequirement unlockRequirement
 ) {
-    /** Build a SynthesizeRecipe from an ElementMappingConfig that has synthesize metadata. */
+    /** Build a SynthesizeRecipe from an ElementMappingConfig that has a non-empty build cost. */
     public static SynthesizeRecipe fromElementMapping(ElementMappingConfig config) {
         String id = config.itemId() != null ? config.itemId() : config.blockId();
         String outputItem = config.itemId() != null ? config.itemId() : config.blockId();
-        var meta = config.synthesize();
         return new SynthesizeRecipe(
             id,
             outputItem,
             config.buildCost(),
-            meta != null ? meta.unlockRequirement() : RecipeUnlockRequirement.NONE
+            RecipeUnlockRequirement.NONE
         );
     }
 

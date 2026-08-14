@@ -4,9 +4,5 @@
     "dark": 48,
     "wood": 50,
     "wind": 48
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

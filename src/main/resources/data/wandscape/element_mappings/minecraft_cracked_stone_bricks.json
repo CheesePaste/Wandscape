@@ -2,9 +2,5 @@
   "block": "minecraft:cracked_stone_bricks",
   "build_cost": {
     "earth": 1
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

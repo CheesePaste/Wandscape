@@ -2,9 +2,5 @@
   "block": "minecraft:snow_block",
   "build_cost": {
     "water": 4
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

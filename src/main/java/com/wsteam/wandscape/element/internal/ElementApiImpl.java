@@ -40,28 +40,7 @@ public class ElementApiImpl implements ElementApi {
     }
 
     @Override
-    public Map<ElementType, Long> getDecomposeYield(BlockState block) {
-        return mappingLoader.getDecomposeYield(block);
-    }
-
-    @Override
-    public boolean isDecomposable(BlockState block) {
-        return mappingLoader.isDecomposable(block);
-    }
-
-    @Override
     public Map<ElementType, Long> getBuildCost(ItemStack stack) {
         return mappingLoader.getItemBuildCost(stack.getItem());
-    }
-
-    @Override
-    public Map<ElementType, Long> getDecomposeYield(ItemStack stack) {
-        return mappingLoader.getItemDecomposeYield(stack.getItem());
-    }
-
-    @Override
-    public boolean isDecomposable(ItemStack stack) {
-        var yield = mappingLoader.getItemDecomposeYield(stack.getItem());
-        return !yield.isEmpty();
     }
 }

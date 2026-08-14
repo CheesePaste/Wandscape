@@ -3,9 +3,5 @@
   "build_cost": {
     "dark": 32768,
     "fire": 32768
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

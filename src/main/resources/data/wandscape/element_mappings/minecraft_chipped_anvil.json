@@ -2,9 +2,5 @@
   "block": "minecraft:chipped_anvil",
   "build_cost": {
     "metal": 1152
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

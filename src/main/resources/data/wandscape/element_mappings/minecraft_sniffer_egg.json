@@ -8,9 +8,5 @@
     "metal": 128,
     "wind": 128,
     "dark": 128
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

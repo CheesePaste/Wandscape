@@ -2,9 +2,5 @@
   "block": "minecraft:weathered_cut_copper_stairs",
   "build_cost": {
     "metal": 108
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

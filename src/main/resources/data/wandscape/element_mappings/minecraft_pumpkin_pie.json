@@ -4,9 +4,5 @@
     "earth": 1,
     "wood": 26,
     "wind": 1
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -2,9 +2,5 @@
   "block": "minecraft:iron_bars",
   "build_cost": {
     "metal": 24
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

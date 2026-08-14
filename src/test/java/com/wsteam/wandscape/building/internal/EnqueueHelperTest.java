@@ -42,11 +42,7 @@ class EnqueueHelperTest {
             @Override public boolean hasElementMapping(String blockOrItemId) { return false; }
             @Override public boolean isDisabled(String blockOrItemId) { return "minecraft:netherite_block".equals(blockOrItemId); }
             @Override public Map<ElementType, Long> getBuildCost(BlockState block) { return Map.of(); }
-            @Override public Map<ElementType, Long> getDecomposeYield(BlockState block) { return Map.of(); }
-            @Override public boolean isDecomposable(BlockState block) { return false; }
             @Override public Map<ElementType, Long> getBuildCost(ItemStack stack) { return Map.of(); }
-            @Override public Map<ElementType, Long> getDecomposeYield(ItemStack stack) { return Map.of(); }
-            @Override public boolean isDecomposable(ItemStack stack) { return false; }
         });
     }
 

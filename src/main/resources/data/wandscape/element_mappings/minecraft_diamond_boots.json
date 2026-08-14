@@ -2,9 +2,5 @@
   "item": "minecraft:diamond_boots",
   "build_cost": {
     "metal": 4096
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

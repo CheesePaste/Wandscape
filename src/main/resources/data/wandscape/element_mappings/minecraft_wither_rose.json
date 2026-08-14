@@ -4,9 +4,5 @@
     "wood": 8,
     "fire": 64,
     "dark": 64
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

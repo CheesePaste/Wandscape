@@ -3,9 +3,5 @@
   "build_cost": {
     "water": 8704,
     "wind": 1024
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

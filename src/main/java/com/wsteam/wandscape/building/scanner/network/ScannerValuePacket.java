@@ -26,8 +26,8 @@ import static com.wsteam.wandscape.Wandscape.MODID;
 /**
  * Client→Server: Requests the element value of the scanner boundary box.
  * The server scans all non-air / non-scanner / non-marker blocks inside the
- * boundary, sums each block's element value (decompose_yield preferred,
- * build_cost fallback — same source as {@code ElementMappingLoader.getItemElementValue}),
+ * boundary, sums each block's element value (= build_cost, same source as
+ * {@code ElementMappingLoader.getItemElementValue}),
  * and prints the per-element totals plus grand total to the player's chat.
  */
 public record ScannerValuePacket(BlockPos pos) implements CustomPacketPayload {
@@ -82,8 +82,7 @@ public record ScannerValuePacket(BlockPos pos) implements CustomPacketPayload {
                             || state.is(com.wsteam.wandscape.Wandscape.INTERACT_SPOT_MARKER.get())) continue;
 
                     blockCount++;
-                    Map<ElementType, Long> value = elementApi.getDecomposeYield(state);
-                    if (value.isEmpty()) value = elementApi.getBuildCost(state);
+                    Map<ElementType, Long> value = elementApi.getBuildCost(state);
                     for (var entry : value.entrySet()) {
                         long amount = entry.getValue();
                         totals.merge(entry.getKey(), amount, Long::sum);

@@ -2,9 +2,5 @@
   "item": "minecraft:disc_fragment_5",
   "build_cost": {
     "dark": 1024
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

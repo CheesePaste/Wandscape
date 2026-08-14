@@ -2,9 +2,5 @@
   "block": "minecraft:spruce_trapdoor",
   "build_cost": {
     "wood": 6
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

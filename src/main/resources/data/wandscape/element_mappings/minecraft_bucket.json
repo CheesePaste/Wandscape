@@ -2,9 +2,5 @@
   "item": "minecraft:bucket",
   "build_cost": {
     "metal": 192
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

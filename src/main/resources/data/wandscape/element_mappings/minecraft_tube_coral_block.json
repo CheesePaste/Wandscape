@@ -4,9 +4,5 @@
     "water": 8,
     "earth": 4,
     "fire": 2
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

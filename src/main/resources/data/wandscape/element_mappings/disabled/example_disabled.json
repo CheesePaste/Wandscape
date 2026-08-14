@@ -3,9 +3,5 @@
   "build_cost": {
     "wood": 8
   },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "disabled": true,
-  "source": "example"
+  "disabled": true
 }

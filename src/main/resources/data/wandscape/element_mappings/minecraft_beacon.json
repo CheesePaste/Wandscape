@@ -5,9 +5,5 @@
     "dark": 32768,
     "earth": 5,
     "fire": 32864
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

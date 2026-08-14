@@ -4,9 +4,5 @@
     "water": 96,
     "dark": 96,
     "earth": 96
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

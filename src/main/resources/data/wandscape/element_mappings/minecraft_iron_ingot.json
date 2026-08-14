@@ -2,9 +2,5 @@
   "item": "minecraft:iron_ingot",
   "build_cost": {
     "metal": 64
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

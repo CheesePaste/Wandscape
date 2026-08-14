@@ -16,91 +16,34 @@ class ElementMappingConfigTest {
         String json = """
             {
               "block": "minecraft:stone",
-              "build_cost": { "earth": 4, "fire": 2 },
-              "decompose_yield": { "earth": 3 },
-              "decomposable": true
+              "build_cost": { "earth": 4, "fire": 2 }
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("stone", JsonParser.parseString(json));
         assertEquals("minecraft:stone", cfg.blockId());
         assertEquals(Map.of(ElementType.EARTH, 4L, ElementType.FIRE, 2L), cfg.buildCost());
-        assertEquals(Map.of(ElementType.EARTH, 3L), cfg.decomposeYield());
-        assertTrue(cfg.decomposable());
+        assertFalse(cfg.disabled());
     }
 
     @Test
     void fromJson_missingBuildCost_returnsEmptyMap() {
         String json = """
             {
-              "block": "minecraft:dirt",
-              "decompose_yield": { "earth": 1 },
-              "decomposable": true
+              "block": "minecraft:dirt"
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("dirt", JsonParser.parseString(json));
         assertTrue(cfg.buildCost().isEmpty());
     }
 
     @Test
-    void fromJson_missingDecomposeYield_returnsEmptyMap() {
+    void fromJson_itemMapping_parsesItemId() {
         String json = """
             {
-              "block": "minecraft:dirt",
-              "build_cost": { "earth": 2 },
-              "decomposable": false
+              "item": "minecraft:diamond",
+              "build_cost": { "metal": 1024 }
             }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("dirt", JsonParser.parseString(json));
-        assertTrue(cfg.decomposeYield().isEmpty());
-    }
-
-    @Test
-    void fromJson_decomposableTrue() {
-        String json = """
-            {
-              "block": "minecraft:oak_log",
-              "build_cost": { "wood": 8 },
-              "decompose_yield": { "wood": 4 },
-              "decomposable": true
-            }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
-        assertTrue(cfg.decomposable());
-    }
-
-    @Test
-    void fromJson_decomposableFalse() {
-        String json = """
-            {
-              "block": "minecraft:stone_bricks",
-              "build_cost": { "earth": 4 },
-              "decompose_yield": {},
-              "decomposable": false
-            }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("brick", JsonParser.parseString(json));
-        assertFalse(cfg.decomposable());
-    }
-
-    @Test
-    void fromJson_decomposableMissing_defaultsFalse() {
-        String json = """
-            {
-              "block": "minecraft:glass",
-              "build_cost": { "fire": 1 },
-              "decompose_yield": {}
-            }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("glass", JsonParser.parseString(json));
-        assertFalse(cfg.decomposable());
-    }
-
-    @Test
-    void fromJson_emptyCostMaps_bothEmpty() {
-        String json = """
-            {
-              "block": "minecraft:air",
-              "build_cost": {},
-              "decompose_yield": {},
-              "decomposable": false
-            }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("air", JsonParser.parseString(json));
-        assertTrue(cfg.buildCost().isEmpty());
-        assertTrue(cfg.decomposeYield().isEmpty());
+        ElementMappingConfig cfg = ElementMappingConfig.fromJson("d", JsonParser.parseString(json));
+        assertEquals("minecraft:diamond", cfg.itemId());
+        assertNull(cfg.blockId());
     }
 
     @Test
@@ -108,9 +51,7 @@ class ElementMappingConfigTest {
         String json = """
             {
               "block": "minecraft:stone",
-              "build_cost": { "earth": 5 },
-              "decompose_yield": {},
-              "decomposable": false
+              "build_cost": { "earth": 5 }
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("s", JsonParser.parseString(json));
         assertEquals(1, cfg.buildCost().size());
@@ -122,9 +63,7 @@ class ElementMappingConfigTest {
         String json = """
             {
               "block": "minecraft:multi",
-              "build_cost": { "earth": 2, "wood": 4, "water": 6 },
-              "decompose_yield": {},
-              "decomposable": false
+              "build_cost": { "earth": 2, "wood": 4, "water": 6 }
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("m", JsonParser.parseString(json));
         assertEquals(3, cfg.buildCost().size());
@@ -138,25 +77,10 @@ class ElementMappingConfigTest {
         String json = """
             {
               "block": "minecraft:stone",
-              "build_cost": { "invalid_element": 5 },
-              "decompose_yield": {},
-              "decomposable": false
+              "build_cost": { "invalid_element": 5 }
             }""";
         assertThrows(IllegalArgumentException.class,
             () -> ElementMappingConfig.fromJson("bad", JsonParser.parseString(json)));
-    }
-
-    @Test
-    void fromJson_blockIdCorrect() {
-        String json = """
-            {
-              "block": "minecraft:stone",
-              "build_cost": {},
-              "decompose_yield": {},
-              "decomposable": false
-            }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("s", JsonParser.parseString(json));
-        assertEquals("minecraft:stone", cfg.blockId());
     }
 
     @Test
@@ -164,9 +88,7 @@ class ElementMappingConfigTest {
         String json = """
             {
               "block": "minecraft:test",
-              "build_cost": { "earth": 9223372036854775807 },
-              "decompose_yield": {},
-              "decomposable": false
+              "build_cost": { "earth": 9223372036854775807 }
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("t", JsonParser.parseString(json));
         assertEquals(Long.MAX_VALUE, cfg.buildCost().get(ElementType.EARTH));
@@ -178,8 +100,6 @@ class ElementMappingConfigTest {
             {
               "block": "minecraft:oak_log",
               "build_cost": { "wood": 8 },
-              "decompose_yield": {},
-              "decomposable": false,
               "disabled": true
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
@@ -187,29 +107,30 @@ class ElementMappingConfigTest {
     }
 
     @Test
-    void fromJson_disabledFalse() {
+    void fromJson_disabledMissing_defaultsFalse() {
         String json = """
             {
               "block": "minecraft:oak_log",
-              "build_cost": { "wood": 8 },
-              "decompose_yield": {},
-              "decomposable": false,
-              "disabled": false
+              "build_cost": { "wood": 8 }
             }""";
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
         assertFalse(cfg.disabled());
     }
 
+    /** Removed/dead keys (decompose_yield/decomposable/synthesize/source) are tolerated. */
     @Test
-    void fromJson_disabledMissing_defaultsFalse() {
+    void fromJson_unknownKeys_ignored() {
         String json = """
             {
-              "block": "minecraft:oak_log",
-              "build_cost": { "wood": 8 },
+              "block": "minecraft:acacia_fence",
+              "build_cost": { "wood": 4 },
               "decompose_yield": {},
-              "decomposable": false
+              "decomposable": false,
+              "synthesize": {},
+              "source": "auto_generated"
             }""";
-        ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
+        ElementMappingConfig cfg = ElementMappingConfig.fromJson("fence", JsonParser.parseString(json));
+        assertEquals(Map.of(ElementType.WOOD, 4L), cfg.buildCost());
         assertFalse(cfg.disabled());
     }
 }

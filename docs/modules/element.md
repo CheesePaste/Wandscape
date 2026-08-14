@@ -20,11 +20,11 @@ EARTH / WOOD / WATER / FIRE / METAL / WIND / DARK（`@SerializedName` 小写 id�
 
 ## ElementMappingConfig record
 
-字段：`blockId / itemId / buildCost / decomposeYield / decomposable / synthesize(SynthesizeMeta{unlockRequirement})`，JSON 键：`block / item / build_cost / decompose_yield / decomposable / synthesize`。block 或 item 二选一作为定位键。`synthesize` 配方从 mapping 推导，id 匹配忽略 `minecraft:` 前缀。
+字段：`blockId / itemId / buildCost / disabled`，JSON 键：`block / item / build_cost / disabled`。block 或 item 二选一作为定位键。合成配方从 mapping 推导（`build_cost` 非空即可合成），id 匹配忽略 `minecraft:` 前缀。
 
 ## ElementApiImpl
 
-`hasElementMapping / fromId / getBuildCost / getDecomposeYield / isDecomposable`（BlockState 与 ItemStack 两组重载；ItemStack 版 = decompose_yield 非空）。
+`fromId / hasElementMapping / isDisabled / getBuildCost`（BlockState 与 ItemStack 两组重载）。
 
 ## ElementValueGenerator
 
@@ -49,6 +49,6 @@ EARTH / WOOD / WATER / FIRE / METAL / WIND / DARK（`@SerializedName` 小写 id�
 ## 与其他模块关系
 
 - **建造消耗**：建筑施工算料用 `getBuildCost`（EnqueueHelper）。
-- **分解**：Workstation decompose → WandscapeBlockInteractExecutor.executeDecompose。仓库存货中有元素价值的物品均可分解，产出 = `getItemElementValue`（decompose_yield → build_cost 回退，与商店售卖同源）的 **1/divisor（向下取整，除数默认 5，Config `element.decomposeDivisor`）**，写入 colonyResources（ResourceId 元素）——防物品复制；count×总价值 < 除数时提前拒绝（不扣物品）。
+- **分解**：Workstation decompose → WandscapeBlockInteractExecutor.executeDecompose。仓库存货中有元素价值的物品均可分解，产出 = `getItemElementValue`（= build_cost，与商店售卖同源）的 **1/divisor（向下取整，除数默认 5，Config `element.decomposeDivisor`）**，写入 colonyResources（ResourceId 元素）——防物品复制；count×总价值 < 除数时提前拒绝（不扣物品）。
 - **合成**：SynthesizeRecipe 从 mapping 推导，`executeSynthesize` 从 ColonyItemBank 扣元素产物品。
 - 映射 JSON 生成：`/wandscape generate_element_mappings`。

@@ -5,9 +5,5 @@
     "wood": 1,
     "fire": 16,
     "wind": 18
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

@@ -2,9 +2,5 @@
   "block": "minecraft:bone_block",
   "build_cost": {
     "dark": 9
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

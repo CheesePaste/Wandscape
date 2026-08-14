@@ -3,9 +3,5 @@
   "build_cost": {
     "dark": 3,
     "wood": 6
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

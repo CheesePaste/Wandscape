@@ -2,9 +2,5 @@
   "item": "minecraft:goat_horn",
   "build_cost": {
     "wind": 1024
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "manual"
+  }
 }

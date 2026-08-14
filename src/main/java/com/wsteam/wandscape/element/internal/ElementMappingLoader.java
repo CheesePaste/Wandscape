@@ -32,30 +32,15 @@ public class ElementMappingLoader {
         return config != null && !config.disabled() ? config.buildCost() : Map.of();
     }
 
-    public Map<ElementType, Long> getDecomposeYield(BlockState state) {
-        ElementMappingConfig config = findConfig(state);
-        return config != null && !config.disabled() ? config.decomposeYield() : Map.of();
-    }
-
     /** Find a representative block ID for an element type (for visual transport). */
     @javax.annotation.Nullable
     public String getRepresentativeBlock(ElementType element) {
         for (ElementMappingConfig config : getAllConfigs()) {
-            if (config.decomposeYield().containsKey(element)) {
+            if (config.buildCost().containsKey(element)) {
                 return config.blockId();
             }
         }
         return null;
-    }
-
-    public boolean isDecomposable(BlockState state) {
-        ElementMappingConfig config = findConfig(state);
-        return config != null && !config.disabled() && config.decomposable();
-    }
-
-    public Map<ElementType, Long> getItemDecomposeYield(Item item) {
-        ElementMappingConfig config = findConfigByItem(item);
-        return config != null && !config.disabled() ? config.decomposeYield() : Map.of();
     }
 
     public Map<ElementType, Long> getItemBuildCost(Item item) {
@@ -64,16 +49,14 @@ public class ElementMappingLoader {
     }
 
     /**
-     * Canonical element value of an item: decompose_yield preferred, build_cost fallback.
+     * Canonical element value of an item — its build_cost.
      * Shared by shop sale profit and workstation decomposition.
      */
     public Map<ElementType, Long> getItemElementValue(String itemId) {
         ResourceLocation rl = ResourceLocation.tryParse(itemId);
         if (rl == null) return Map.of();
         Item item = BuiltInRegistries.ITEM.get(rl);
-        Map<ElementType, Long> source = getItemDecomposeYield(item);
-        if (source.isEmpty()) source = getItemBuildCost(item);
-        return source;
+        return getItemBuildCost(item);
     }
 
     private ElementMappingConfig findConfig(BlockState state) {

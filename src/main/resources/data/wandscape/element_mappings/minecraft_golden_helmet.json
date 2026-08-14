@@ -2,9 +2,5 @@
   "item": "minecraft:golden_helmet",
   "build_cost": {
     "metal": 1280
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

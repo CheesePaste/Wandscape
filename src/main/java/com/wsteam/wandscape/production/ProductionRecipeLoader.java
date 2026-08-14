@@ -57,7 +57,7 @@ public class ProductionRecipeLoader {
         String key = stripMcPrefix(id);
         for (ElementMappingConfig config : configs) {
             String matchId = config.itemId() != null ? config.itemId() : config.blockId();
-            if (matchId != null && key.equals(stripMcPrefix(matchId)) && config.synthesize() != null) {
+            if (matchId != null && key.equals(stripMcPrefix(matchId)) && !config.buildCost().isEmpty()) {
                 return SynthesizeRecipe.fromElementMapping(config);
             }
         }
@@ -71,7 +71,7 @@ public class ProductionRecipeLoader {
     public Collection<SynthesizeRecipe> getAllSynthesizeRecipes() {
         List<SynthesizeRecipe> result = new ArrayList<>();
         for (ElementMappingConfig config : elementMappingLoader.getAllConfigs()) {
-            if (config.synthesize() != null) {
+            if (!config.buildCost().isEmpty()) {
                 result.add(SynthesizeRecipe.fromElementMapping(config));
             }
         }

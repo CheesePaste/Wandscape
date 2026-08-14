@@ -3,9 +3,5 @@
   "build_cost": {
     "earth": 3,
     "metal": 64
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

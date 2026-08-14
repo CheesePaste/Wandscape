@@ -4,9 +4,5 @@
     "metal": 32768,
     "dark": 32768,
     "earth": 65536
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

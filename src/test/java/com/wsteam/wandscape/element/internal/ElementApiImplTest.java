@@ -13,8 +13,8 @@ class ElementApiImplTest {
 
     /**
      * Construct with null mappingLoader — only pure-logic methods are tested here.
-     * Methods requiring BlockState (getBuildCost, getDecomposeYield, isDecomposable)
-     * are not tested because they need a Minecraft runtime.
+     * Methods requiring BlockState (getBuildCost) are not tested because they need
+     * a Minecraft runtime.
      */
     private ElementApiImpl api;
 

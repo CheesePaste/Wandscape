@@ -2,9 +2,5 @@
   "item": "minecraft:iron_horse_armor",
   "build_cost": {
     "metal": 448
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "manual"
+  }
 }

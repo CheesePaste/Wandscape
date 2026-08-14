@@ -2,9 +2,5 @@
   "item": "minecraft:heart_of_the_sea",
   "build_cost": {
     "water": 8192
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

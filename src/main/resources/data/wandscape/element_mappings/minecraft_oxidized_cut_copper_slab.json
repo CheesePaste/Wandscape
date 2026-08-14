@@ -2,9 +2,5 @@
   "block": "minecraft:oxidized_cut_copper_slab",
   "build_cost": {
     "metal": 36
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }

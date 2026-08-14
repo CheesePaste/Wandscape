@@ -4,9 +4,5 @@
     "earth": 1,
     "wood": 1,
     "dark": 1
-  },
-  "decompose_yield": {},
-  "decomposable": false,
-  "synthesize": {},
-  "source": "auto_generated"
+  }
 }
