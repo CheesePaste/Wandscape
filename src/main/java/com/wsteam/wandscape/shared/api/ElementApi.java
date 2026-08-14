@@ -16,6 +16,14 @@ public interface ElementApi {
      */
     boolean hasElementMapping(String blockOrItemId);
 
+    /**
+     * True when an element mapping exists for the block/item but is explicitly
+     * disabled via {@code "disabled": true} — excluded from the element economy.
+     * Callers that must not silently treat a disabled block as a free material
+     * (e.g. building placement) should refuse on this.
+     */
+    boolean isDisabled(String blockOrItemId);
+
     Map<ElementType, Long> getBuildCost(BlockState block);
     Map<ElementType, Long> getDecomposeYield(BlockState block);
     boolean isDecomposable(BlockState block);

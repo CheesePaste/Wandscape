@@ -12,6 +12,8 @@
 
 位置：`data/wandscape/element_mappings/*.json`。`build_cost` 同时是合成消耗，`synthesize` 块存在即表示可合成。原 synthesize_recipes/ 已合并进来。格式参见 [data/buildings.md](../data/buildings.md)。
 
+**`"disabled": true`**：把该方块/物品**彻底排除出元素经济**——不可分解、不可合成、无建造成本；含禁用方块的建筑/道路在放置时被拒绝（不会当作免费材料白嫖）。整合包作者覆盖映射文件加此字段即可 ban 掉某个映射（覆盖须用 `wandscape` 命名空间 + 同文件名，见 [dataconfig.md](dataconfig.md)）。示例：`element_mappings/disabled/example_disabled.json`（该子目录仅存放示例）。
+
 ## 依赖
 
 - shared/api/ElementApi, shared/data/ElementType

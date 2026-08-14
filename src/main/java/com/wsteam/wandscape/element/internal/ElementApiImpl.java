@@ -21,6 +21,11 @@ public class ElementApiImpl implements ElementApi {
     }
 
     @Override
+    public boolean isDisabled(String blockOrItemId) {
+        return mappingLoader.isDisabled(blockOrItemId);
+    }
+
+    @Override
     public ElementType fromId(String id) {
         try {
             return ElementType.valueOf(id.toUpperCase());

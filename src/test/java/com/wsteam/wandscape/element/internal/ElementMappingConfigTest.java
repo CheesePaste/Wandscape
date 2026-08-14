@@ -171,4 +171,45 @@ class ElementMappingConfigTest {
         ElementMappingConfig cfg = ElementMappingConfig.fromJson("t", JsonParser.parseString(json));
         assertEquals(Long.MAX_VALUE, cfg.buildCost().get(ElementType.EARTH));
     }
+
+    @Test
+    void fromJson_disabledTrue() {
+        String json = """
+            {
+              "block": "minecraft:oak_log",
+              "build_cost": { "wood": 8 },
+              "decompose_yield": {},
+              "decomposable": false,
+              "disabled": true
+            }""";
+        ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
+        assertTrue(cfg.disabled());
+    }
+
+    @Test
+    void fromJson_disabledFalse() {
+        String json = """
+            {
+              "block": "minecraft:oak_log",
+              "build_cost": { "wood": 8 },
+              "decompose_yield": {},
+              "decomposable": false,
+              "disabled": false
+            }""";
+        ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
+        assertFalse(cfg.disabled());
+    }
+
+    @Test
+    void fromJson_disabledMissing_defaultsFalse() {
+        String json = """
+            {
+              "block": "minecraft:oak_log",
+              "build_cost": { "wood": 8 },
+              "decompose_yield": {},
+              "decomposable": false
+            }""";
+        ElementMappingConfig cfg = ElementMappingConfig.fromJson("log", JsonParser.parseString(json));
+        assertFalse(cfg.disabled());
+    }
 }

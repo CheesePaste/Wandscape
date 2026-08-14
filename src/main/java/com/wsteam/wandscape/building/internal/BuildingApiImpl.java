@@ -809,6 +809,12 @@ public class BuildingApiImpl implements BuildingApi {
             return PlacementResult.fail(reason != null ? reason : "Building is locked");
         }
 
+        // A disabled block must not be placed as a free material — refuse the whole build.
+        String disabledBlock = EnqueueHelper.findDisabledBlock(config);
+        if (disabledBlock != null) {
+            return PlacementResult.fail("Building uses a disabled block: " + disabledBlock);
+        }
+
         // Register (overlap check happens inside → BuildingSavedData.register).
         // The anchor is a reference point only (may sit outside the building's own
         // boundary, e.g. scanner placed in front), so use the returned state

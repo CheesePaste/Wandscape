@@ -309,6 +309,24 @@ public final class EnqueueHelper {
     }
 
     /**
+     * First block in the pattern whose element mapping is explicitly disabled, or null
+     * when the building uses no disabled blocks. Callers refuse the build on a non-null
+     * result — a disabled block must not be placed as a free material (the "ban → free"
+     * inversion). Mirrors the bare-id iteration of {@link #computeMaterialCounts}.
+     */
+    @Nullable
+    public static String findDisabledBlock(BuildingConfig config) {
+        var elementApi = WandscapeApis.getElementApi();
+        for (int i = 0; i < config.pattern().size(); i++) {
+            String blockId = config.blockIdAt(i);
+            if ("minecraft:air".equals(blockId)) continue;
+            String pureId = blockId.replaceAll("\\[.*?\\]", "").trim();
+            if (elementApi.isDisabled(pureId)) return pureId;
+        }
+        return null;
+    }
+
+    /**
      * Compute deduped material_list + material_counts from pattern → block_mapping.
      * Returns a record with list (unique types) and counts (type→total).
      */

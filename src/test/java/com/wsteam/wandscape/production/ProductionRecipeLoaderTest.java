@@ -25,14 +25,15 @@ class ProductionRecipeLoaderTest {
                 null, "minecraft:bread",
                 Map.of(ElementType.WOOD, 12L),
                 Map.of(), false,
-                new ElementMappingConfig.SynthesizeMeta(RecipeUnlockRequirement.NONE));
+                new ElementMappingConfig.SynthesizeMeta(RecipeUnlockRequirement.NONE),
+                false);
     }
 
     private static ElementMappingConfig nonSynthesizable() {
         return new ElementMappingConfig(
                 null, "minecraft:dirt",
                 Map.of(ElementType.EARTH, 1L),
-                Map.of(), false, null);
+                Map.of(), false, null, false);
     }
 
     @Test

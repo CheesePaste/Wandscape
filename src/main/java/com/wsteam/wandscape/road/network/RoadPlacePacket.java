@@ -116,6 +116,19 @@ public record RoadPlacePacket(String presetId, BlockPos startPos, BlockPos endPo
 
         if (tiles.isEmpty()) return;
 
+        // Disabled blocks must not be placed as free material — refuse without publishing.
+        for (JsonElement tileEl : tiles) {
+            JsonObject tileObj = tileEl.getAsJsonObject();
+            if (tileObj.has("block")) {
+                String pureId = tileObj.get("block").getAsString().replaceAll("\\[.*?\\]", "").trim();
+                if (elementApi.isDisabled(pureId)) {
+                    Log.warn(TAG, "[Road] Refuse — block {} disabled by element mapping", pureId);
+                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cRoad contains a disabled block: " + pureId));
+                    return;
+                }
+            }
+        }
+
         // 5. Push task via PlayerManualSource
         PlayerManualSource source = WandscapeEngine.getPlayerManualSource();
         if (source == null) {

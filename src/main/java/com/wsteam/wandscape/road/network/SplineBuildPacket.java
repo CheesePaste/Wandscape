@@ -56,6 +56,21 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             JsonArray tiles = parsed.getAsJsonArray();
             if (tiles.isEmpty()) return;
 
+            // Disabled blocks must not be placed as free material — refuse before any
+            // RoadEdge/network side effects below.
+            var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
+            for (JsonElement tileEl : tiles) {
+                JsonObject tileObj = tileEl.getAsJsonObject();
+                if (tileObj.has("block")) {
+                    String pureId = tileObj.get("block").getAsString().replaceAll("\\[.*?\\]", "").trim();
+                    if (elementApi.isDisabled(pureId)) {
+                        Log.warn(TAG, "[Spline] Refuse — block {} disabled by element mapping", pureId);
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cSpline road contains a disabled block: " + pureId));
+                        return;
+                    }
+                }
+            }
+
             JsonElement splineParsed = JsonParser.parseString(packet.splineJson());
             com.wsteam.wandscape.road.core.SplineModel model = new com.wsteam.wandscape.road.core.SplineModel();
             
@@ -141,7 +156,6 @@ public record SplineBuildPacket(String tilesJson, String splineJson) implements 
             params.put("edge_id", new JsonPrimitive(edgeId.toString()));
 
             java.util.Map<String, Integer> materials = new java.util.LinkedHashMap<>();
-            var elementApi = com.wsteam.wandscape.shared.registry.WandscapeApis.getElementApi();
             
             for (JsonElement tileEl : tiles) {
                 JsonObject tileObj = tileEl.getAsJsonObject();

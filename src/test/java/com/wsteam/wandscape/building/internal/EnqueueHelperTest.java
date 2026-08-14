@@ -40,6 +40,7 @@ class EnqueueHelperTest {
         WandscapeApis.setElementApi(new ElementApi() {
             @Override public ElementType fromId(String id) { return ElementType.fromId(id); }
             @Override public boolean hasElementMapping(String blockOrItemId) { return false; }
+            @Override public boolean isDisabled(String blockOrItemId) { return "minecraft:netherite_block".equals(blockOrItemId); }
             @Override public Map<ElementType, Long> getBuildCost(BlockState block) { return Map.of(); }
             @Override public Map<ElementType, Long> getDecomposeYield(BlockState block) { return Map.of(); }
             @Override public boolean isDecomposable(BlockState block) { return false; }
@@ -265,5 +266,64 @@ class EnqueueHelperTest {
         assertEquals(1, ent1.get("offset").getAsJsonArray().get(2).getAsInt());
         assertEquals("east", ent1.get("facing").getAsString());
         assertEquals("b64", ent1.get("nbt").getAsString());
+    }
+
+    @Test
+    @DisplayName("findDisabledBlock: 命中禁用的 netherite_block")
+    void findDisabledBlockDetects() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0), off(0, 0, 1));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping(
+                "0,0,0", "minecraft:stone",
+                "0,0,1", "minecraft:netherite_block"));
+        BuildingConfig cfg = new BuildingConfig(
+                "test_disabled", "Test", "", "basic",
+                pattern, pal.palette(), pal.indices(),
+                Map.of(), /* blockNbt */
+                1, 2, 0,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                new BoundaryBox(off(0, 0, 0), off(0, 0, 1)),
+                null,
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()
+        );
+        assertEquals("minecraft:netherite_block", EnqueueHelper.findDisabledBlock(cfg));
+    }
+
+    @Test
+    @DisplayName("findDisabledBlock: 无禁用方块返回 null")
+    void findDisabledBlockNone() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping("0,0,0", "minecraft:stone"));
+        BuildingConfig cfg = new BuildingConfig(
+                "test_disabled", "Test", "", "basic",
+                pattern, pal.palette(), pal.indices(),
+                Map.of(), /* blockNbt */
+                1, 2, 0,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
+                null,
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()
+        );
+        assertNull(EnqueueHelper.findDisabledBlock(cfg));
+    }
+
+    @Test
+    @DisplayName("findDisabledBlock: blockstate 属性剥离后仍命中")
+    void findDisabledBlockStripsState() {
+        List<BlockOffset> pattern = List.of(off(0, 0, 0));
+        PaletteParts pal = toPalette(pattern, makeBlockMapping("0,0,0", "minecraft:netherite_block[facing=north]"));
+        BuildingConfig cfg = new BuildingConfig(
+                "test_disabled", "Test", "", "basic",
+                pattern, pal.palette(), pal.indices(),
+                Map.of(), /* blockNbt */
+                1, 2, 0,
+                BuildingConfig.QueueDef.DEFAULT,
+                BuildingConfig.UnlockRequirement.NONE,
+                new BoundaryBox(off(0, 0, 0), off(0, 0, 0)),
+                null,
+                null, null, WonderConfig.NONE, ShopConfig.NONE, ServiceConfig.NONE, RelaxConfig.NONE, AtmConfig.NONE, null, List.of(), false, false, List.of()
+        );
+        assertEquals("minecraft:netherite_block", EnqueueHelper.findDisabledBlock(cfg));
     }
 }

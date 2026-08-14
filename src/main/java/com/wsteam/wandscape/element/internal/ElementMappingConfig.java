@@ -15,7 +15,8 @@ public record ElementMappingConfig(
     Map<ElementType, Long> buildCost,
     Map<ElementType, Long> decomposeYield,
     boolean decomposable,
-    @Nullable SynthesizeMeta synthesize
+    @Nullable SynthesizeMeta synthesize,
+    boolean disabled
 ) {
     static ElementMappingConfig fromJson(String id, JsonElement json) {
         JsonObject obj = json.getAsJsonObject();
@@ -25,13 +26,14 @@ public record ElementMappingConfig(
         Map<ElementType, Long> buildCost = parseElementMap(obj, "build_cost");
         Map<ElementType, Long> decomposeYield = parseElementMap(obj, "decompose_yield");
         boolean decomposable = obj.has("decomposable") && obj.get("decomposable").getAsBoolean();
+        boolean disabled = obj.has("disabled") && obj.get("disabled").getAsBoolean();
 
         SynthesizeMeta synthesize = null;
         if (obj.has("synthesize")) {
             synthesize = SynthesizeMeta.fromJson(obj.getAsJsonObject("synthesize"));
         }
 
-        return new ElementMappingConfig(blockId, itemId, buildCost, decomposeYield, decomposable, synthesize);
+        return new ElementMappingConfig(blockId, itemId, buildCost, decomposeYield, decomposable, synthesize, disabled);
     }
 
     private static Map<ElementType, Long> parseElementMap(JsonObject obj, String key) {
